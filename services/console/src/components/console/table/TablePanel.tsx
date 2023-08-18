@@ -139,11 +139,15 @@ const TablePanel = (props: Props) => {
 	);
 
 	createEffect(() => {
+		const newParams: Record<string, null | number | boolean> = {};
 		if (!validU32(searchParams[PER_PAGE_PARAM])) {
-			setSearchParams({ [PER_PAGE_PARAM]: DEFAULT_PER_PAGE });
+			newParams[PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
 		}
 		if (!validU32(searchParams[PAGE_PARAM])) {
-			setSearchParams({ [PAGE_PARAM]: DEFAULT_PAGE });
+			newParams[PAGE_PARAM] = DEFAULT_PAGE;
+		}
+		if (Object.keys(newParams).length !== 0) {
+			setSearchParams(newParams);
 		}
 	});
 

@@ -5,7 +5,6 @@ sortOrder: 1
 ---
 
 import { BENCHER_VERSION } from "../../util/ext";
-import CreateToken from "../../components/docs/CreateToken";
 
 ## What is Bencher?
 
@@ -30,7 +29,7 @@ Run: `cargo --version`
 
 You should see something like:
 
-```bash
+```
 $ cargo --version
 cargo 1.65.0 (4bc8f24d3 2022-10-20)
 ```
@@ -40,7 +39,7 @@ If not follow the [instructions for installing `cargo` via `rustup`](https://rus
 
 On Linux or macOS, run:
 
-```bash
+```
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
@@ -49,25 +48,17 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 With `cargo` installed, we can install the `bencher` CLI.
 
 Run:
-<pre>
-  <code>
-    {`cargo install --git https://github.com/bencherdev/bencher --tag v${BENCHER_VERSION} --locked bencher_cli`}
-  </code>
-</pre>
+<pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto; --darkreader-inline-bgcolor: #1d2125;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">{`cargo install --git https://github.com/bencherdev/bencher --tag v${BENCHER_VERSION} --locked bencher_cli`}</span></span></code></pre>
 
 You should see something like:
 
-<pre>
-  <code>
-    {`$ cargo install --git https://github.com/bencherdev/bencher --tag v0.3.3 --locked bencher_cli
-  Installing bencher_cli v${BENCHER_VERSION} (/workspace/bencher/services/cli)
-    Updating crates.io index
-    ...
-    Finished release [optimized] target(s) in 0.27s
-  Installing /workspace/.cargo/bin/bencher
-   Installed package \`bencher_cli v${BENCHER_VERSION} (/workspace/bencher/services/cli)\` (executable \`bencher\`)`}
-  </code>
-</pre>
+<pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto; --darkreader-inline-bgcolor: #1d2125;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">{`$ cargo install --git https://github.com/bencherdev/bencher --tag ${BENCHER_VERSION} --locked bencher_cli`}</span></span>
+<span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">{`  Installing bencher_cli v${BENCHER_VERSION} (/workspace/bencher/services/cli)`}</span></span>
+<span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">    Updating crates.io index</span></span>
+<span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">    ...</span></span>
+<span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">    Finished release [optimized] target(s) in 0.27s</span></span>
+<span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">  Installing /workspace/.cargo/bin/bencher</span></span>
+<span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">{`   Installed package \`bencher_cli v${BENCHER_VERSION} (/workspace/bencher/services/cli)\` (executable \`bencher\`)`}</span></span></code></pre>
 
 Again, it is okay if your output is different. It's just important that this command works.
 
@@ -79,12 +70,8 @@ Run: `bencher --version`
 
 You should see:
 
-<pre>
-  <code>
-    {`$ bencher --version
-bencher ${BENCHER_VERSION}`}
-  </code>
-</pre>
+<pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto; --darkreader-inline-bgcolor: #1d2125;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">$ bencher --version</span></span>
+<span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">{`bencher ${BENCHER_VERSION}`}</span></span></code></pre>
 
 <br />
 
@@ -110,7 +97,7 @@ If you refresh this page, you should now see a `Log out` button in the top right
 In order to use the Bencher API, you will need to create an API token.
 Navigate to `User` > `API Tokens` and click `➕ Add` button.
 
-### <CreateToken />
+### <a href="/auth/signup" target="_blank">Add an API Token</a>
 <br />
 
 Once you have created your new API token, you will need to copy it to your clipboard.
@@ -122,7 +109,7 @@ If you then run: `echo $BENCHER_API_TOKEN`
 
 You should see:
 
-```bash
+```
 $ echo $BENCHER_API_TOKEN
 YOUR_TOKEN
 ```
@@ -142,7 +129,7 @@ Run: `bencher org ls`
 
 You should see something like:
 
-```bash
+```
 $ bencher org ls
 [
   {
@@ -169,7 +156,7 @@ Run: `bencher project create --org YOUR_ORG_SLUG --url http://www.savewalterwhit
 
 You should see something like:
 
-```bash
+```
 $ bencher project create --org saul-goodman --url http://www.savewalterwhite.com "Save Walter White"
 {
   "organization": "4581feb0-6cac-40a9-bd8a-d7865183b01e",
@@ -198,7 +185,7 @@ Run: `bencher mock`
 
 You should see something like:
 
-```json
+```
 $ bencher mock
 {
   "bencher::mock_0": {
@@ -251,7 +238,7 @@ Run: `bencher run --project YOUR_PROJECT_SLUG "bencher mock"`
 
 You should see something like:
 
-```json
+```
 $ bencher run --project save-walter-white-12345 "bencher mock"
 {
   "bencher::mock_0": {
@@ -347,7 +334,7 @@ If you then run: `echo $BENCHER_PROJECT`
 
 You should see:
 
-```bash
+```
 $ echo $BENCHER_PROJECT
 save-walter-white-12345
 ```

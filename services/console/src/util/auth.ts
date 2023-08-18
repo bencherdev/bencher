@@ -1,4 +1,4 @@
-import { createResource, createSignal } from "solid-js";
+import { createSignal } from "solid-js";
 import {
 	JsonProjectPermission,
 	type JsonAuthUser,
@@ -55,12 +55,16 @@ export const removeUser = () => {
 	window.localStorage.removeItem(BENCHER_USER_KEY);
 };
 
-export const [authUser, { refetch }] = createResource(true, async () =>
-	getUserRaw(),
-);
+const [authUsr, setAuthUsr] = createSignal<JsonAuthUser>(getUserRaw());
 setInterval(() => {
-	refetch();
+	const usr = authUsr();
+	const userRaw = getUserRaw();
+	if (usr.toString() !== userRaw.toString()) {
+		setAuthUsr(userRaw);
+	}
 }, 100);
+
+export const authUser = authUsr;
 
 export const isAllowedOrganization = async (
 	params: undefined | Params,

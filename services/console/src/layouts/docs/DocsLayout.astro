@@ -2,19 +2,18 @@
 import BaseLayout from "../BaseLayout.astro";
 import DocsNavbar from "../../components/site/navbar/DocsNavbar";
 import DocsMenu from "../../components/docs/DocsMenu.astro";
-import type { Params } from "astro";
 
 interface Props {
-  params: Params;
   title: string;
   heading?: string;
 }
 
-const { params, title, heading } = Astro.props;
+const { title, heading } = Astro.props;
 ---
 
 <BaseLayout title={title}>
-  <DocsNavbar client:only params={params} />
+  <!-- Note that the DocsNavbar does *not* fill the slot `navbar`. It is a client-side override.  -->
+  <DocsNavbar client:only />
   <div class="is-widescreen">
     <div class="columns is-reverse-mobile">
       <div class="columns">
