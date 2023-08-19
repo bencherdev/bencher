@@ -4,13 +4,14 @@ import {
 	BENCHER_LOGO_URL,
 	BENCHER_VERSION,
 } from "../../../util/ext";
+import BENCHER_NAVBAR_ID from "./id";
 
 const Navbar = () => {
 	const [burger, setBurger] = createSignal(false);
 
 	return (
 		<nav
-			id="bencher_navbar"
+			id={BENCHER_NAVBAR_ID}
 			class="navbar"
 			role="navigation"
 			aria-label="main navigation"

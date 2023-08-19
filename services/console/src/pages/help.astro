@@ -3,11 +3,12 @@ export const prerender = false;
 
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Help from "../components/console/help/Help";
+import HelpRedirect from "../components/console/help/HelpRedirect";
 
-const params = Astro.params;
 const title = "Help";
 ---
 
 <BaseLayout title={title}>
+  <HelpRedirect client:only />
   <Help client:only />
 </BaseLayout>

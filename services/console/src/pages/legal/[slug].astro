@@ -1,6 +1,6 @@
 ---
 import { getCollection } from "astro:content";
-import HeaderLayout from "../../layouts/HeaderLayout.astro";
+import LegalLayout from "../../layouts/legal/LegalLayout.astro";
 // 1. Generate a new path for every collection entry
 export async function getStaticPaths() {
   const pages = await getCollection("legal");
@@ -14,6 +14,6 @@ const { page } = Astro.props;
 const { Content } = await page.render();
 ---
 
-<HeaderLayout title={page.data.title} heading={page.data.heading}>
+<LegalLayout title={page.data.title} heading={page.data.heading}>
   <Content />
-</HeaderLayout>
+</LegalLayout>

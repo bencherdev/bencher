@@ -1,14 +1,15 @@
 import AuthOverride from "../../auth/AuthOverride";
 import { BENCHER_LOGO_URL } from "../../../util/ext";
 import { authUser } from "../../../util/auth";
+import BENCHER_NAVBAR_ID from "./id";
 
-const DocsNavbar = () => {
+const AuthNavbar = () => {
 	const user = authUser();
 
 	return (
-		<AuthOverride elementId="bencher_navbar">
+		<AuthOverride elementId={BENCHER_NAVBAR_ID}>
 			<nav
-				id="bencher_navbar"
+				id={BENCHER_NAVBAR_ID}
 				class="navbar"
 				role="navigation"
 				aria-label="main navigation"
@@ -32,6 +33,9 @@ const DocsNavbar = () => {
 					<div class="navbar-start">
 						<a class="navbar-item" href="/docs">
 							Docs
+						</a>
+						<a class="navbar-item" href="/perf">
+							Public Projects
 						</a>
 					</div>
 
@@ -63,4 +67,4 @@ const DocsNavbar = () => {
 	);
 };
 
-export default DocsNavbar;
+export default AuthNavbar;

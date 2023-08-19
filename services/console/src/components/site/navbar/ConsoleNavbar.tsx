@@ -4,6 +4,7 @@ import ProjectSelect from "./ProjectSelect";
 import { authUser } from "../../../util/auth";
 import type { Params } from "astro";
 import type { JsonAuthUser } from "../../../types/bencher";
+import BENCHER_NAVBAR_ID from "./id";
 
 export interface Props {
 	params: Params;
@@ -17,7 +18,7 @@ const ConsoleNavbar = (props: Props) => {
 
 	return (
 		<nav
-			id="bencher_navbar"
+			id={BENCHER_NAVBAR_ID}
 			class="navbar"
 			role="navigation"
 			aria-label="main navigation"
@@ -52,6 +53,9 @@ const ConsoleNavbar = (props: Props) => {
 				<div class="navbar-start">
 					<a class="navbar-item" href="/docs">
 						Docs
+					</a>
+					<a class="navbar-item" href="/perf">
+						Public Projects
 					</a>
 					<Show
 						when={user && (props.params?.organization || props.params?.project)}

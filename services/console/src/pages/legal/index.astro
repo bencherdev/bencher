@@ -1,12 +1,12 @@
 ---
 import { getCollection } from "astro:content";
-import HeaderLayout from "../../layouts/HeaderLayout.astro";
+import LegalLayout from "../../layouts/legal/LegalLayout.astro";
 
 const pages = await getCollection("legal");
 pages.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 ---
 
-<HeaderLayout title="Legal" heading="Bencher Legal">
+<LegalLayout title="Legal" heading="Bencher Legal">
   <ul>
     {
       pages.map((page) => (
@@ -16,4 +16,4 @@ pages.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
       ))
     }
   </ul>
-</HeaderLayout>
+</LegalLayout>

@@ -1,11 +1,14 @@
 ---
 import AuthLayout from "../../layouts/auth/AuthLayout.astro";
 import AuthForm from "../../components/auth/AuthForm";
+import AuthRedirect from "../../components/auth/AuthRedirect";
 
 const title = "Sign up";
 ---
 
 <AuthLayout title={title}>
+  <AuthRedirect client:only path="/console/organizations" />
+
   <h2 class="title">{title}</h2>
 
   <AuthForm client:only newUser={true} />

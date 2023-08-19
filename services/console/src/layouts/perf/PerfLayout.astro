@@ -1,0 +1,16 @@
+---
+import BaseLayout from "../BaseLayout.astro";
+import AuthNavbar from "../../components/site/navbar/AuthNavbar";
+
+interface Props {
+  title: string;
+}
+
+const { title  } = Astro.props;
+---
+
+<BaseLayout title={title}>
+  <!-- Note that the AuthNavbar does *not* fill the slot `navbar`. It is a client-side override.  -->
+  <AuthNavbar client:only />
+  <slot />
+</BaseLayout>

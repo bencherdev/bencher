@@ -1,11 +1,14 @@
 ---
 import AuthLayout from "../../layouts/auth/AuthLayout.astro";
 import ConfirmForm from "../../components/auth/ConfirmForm";
+import AuthRedirect from "../../components/auth/AuthRedirect";
 
 const title = "Confirm Token";
 ---
 
 <AuthLayout title={title}>
+  <AuthRedirect client:only path="/console/organizations" />
+
   <h2 class="title">{title}</h2>
   <h3 class="subtitle">
     Please check your email for a one-time token. Either click the link or paste
