@@ -10,15 +10,11 @@ import { Operation, Resource, resourceSingular } from "../../../config/types";
 import { authUser } from "../../../util/auth";
 import { validJwt } from "../../../util/valid";
 import { httpGet } from "../../../util/http";
-import { pathname, useSearchParams } from "../../../util/url";
+import { pathname } from "../../../util/url";
 import DeckHeader, { DeckHeaderConfig } from "./header/DeckHeader";
 import Deck, { DeckConfig } from "./hand/Deck";
 import type { Params } from "astro";
-import {
-	NOTIFY_KIND_PARAM,
-	NOTIFY_TEXT_PARAM,
-	NotifyKind,
-} from "../../../util/notify";
+import { NotifyKind, pageNotify } from "../../../util/notify";
 
 interface Props {
 	params: Params;
@@ -35,7 +31,6 @@ const DeckPanel = (props: Props) => {
 	const [bencher_valid] = createResource(
 		async () => await bencher_valid_init(),
 	);
-	const [_searchParams, setSearchParams] = useSearchParams();
 	const user = authUser();
 	const config = createMemo<DeckPanelConfig>(
 		() => consoleConfig[props.resource]?.[Operation.VIEW],
@@ -64,12 +59,12 @@ const DeckPanel = (props: Props) => {
 			.then((resp) => resp?.data)
 			.catch((error) => {
 				console.error(error);
-				setSearchParams({
-					[NOTIFY_KIND_PARAM]: NotifyKind.ERROR,
-					[NOTIFY_TEXT_PARAM]: `Lettuce romaine calm! Failed to get ${resourceSingular(
+				pageNotify(
+					NotifyKind.ERROR,
+					`Lettuce romaine calm! Failed to get ${resourceSingular(
 						props.resource,
 					)}. Please, try again.`,
-				});
+				);
 				return EMPTY_OBJECT;
 			});
 	};

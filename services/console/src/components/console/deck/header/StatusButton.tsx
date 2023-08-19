@@ -2,12 +2,7 @@ import { Switch, type Accessor, Match, Resource, createSignal } from "solid-js";
 import { JsonAlertStatus, type JsonAuthUser } from "../../../../types/bencher";
 import { validJwt } from "../../../../util/valid";
 import { httpPatch } from "../../../../util/http";
-import { useSearchParams } from "../../../../util/url";
-import {
-	NOTIFY_KIND_PARAM,
-	NOTIFY_TEXT_PARAM,
-	NotifyKind,
-} from "../../../../util/notify";
+import { NotifyKind, pageNotify } from "../../../../util/notify";
 
 export interface Props {
 	user: JsonAuthUser;
@@ -17,8 +12,6 @@ export interface Props {
 }
 
 const StatusButton = (props: Props) => {
-	const [_searchParams, setSearchParams] = useSearchParams();
-
 	const [submitting, setSubmitting] = createSignal(false);
 
 	const getStatus = () => {
@@ -50,22 +43,22 @@ const StatusButton = (props: Props) => {
 			.then((_resp) => {
 				setSubmitting(false);
 				props.handleRefresh();
-				setSearchParams({
-					[NOTIFY_KIND_PARAM]: NotifyKind.OK,
-					[NOTIFY_TEXT_PARAM]: isActive
+				pageNotify(
+					NotifyKind.OK,
+					isActive
 						? "Phew, that was a hare-raising experience! Alert has been dismissed."
 						: "We're not out of the woods yet! Alert has been reactivated.",
-				});
+				);
 			})
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
-				setSearchParams({
-					[NOTIFY_KIND_PARAM]: NotifyKind.ERROR,
-					[NOTIFY_TEXT_PARAM]: `Lettuce romaine calm! Failed to ${
+				pageNotify(
+					NotifyKind.ERROR,
+					`Lettuce romaine calm! Failed to ${
 						isActive ? "dismiss" : "reactivate"
 					} alert. Please, try again.`,
-				});
+				);
 			});
 	};
 

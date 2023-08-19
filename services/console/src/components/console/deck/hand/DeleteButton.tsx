@@ -6,9 +6,14 @@ import {
 	Match,
 } from "solid-js";
 import type { JsonAuthUser } from "../../../../types/bencher";
-import { pathname, useNavigate } from "../../../../util/url";
+import { pathname } from "../../../../util/url";
 import { validJwt } from "../../../../util/valid";
 import { httpDelete } from "../../../../util/http";
+import {
+	NotifyKind,
+	navigateNotify,
+	pageNotify,
+} from "../../../../util/notify";
 
 export interface Props {
 	user: JsonAuthUser;
@@ -19,8 +24,6 @@ export interface Props {
 }
 
 const DeleteButton = (props: Props) => {
-	const navigate = useNavigate();
-
 	const [deleteClicked, setDeleteClicked] = createSignal(false);
 	const [deleting, setDeleting] = createSignal(false);
 
@@ -41,29 +44,21 @@ const DeleteButton = (props: Props) => {
 		httpDelete(url, token)
 			.then((_resp) => {
 				setDeleting(false);
-				navigate(props.path(pathname(), data));
-				// navigate(
-				// 	notification_path(
-				// 		props.path(pathname(), props.data()),
-				// 		[],
-				// 		[],
-				// 		NotifyKind.OK,
-				// 		"Delete successful!",
-				// 	),
-				// );
+				navigateNotify(
+					NotifyKind.OK,
+					"That won't turnip again. Delete successful!",
+					props.path(pathname(), data),
+					null,
+					null,
+				);
 			})
 			.catch((error) => {
 				setDeleting(false);
 				console.error(error);
-				// navigate(
-				// 	notification_path(
-				// 		pathname(),
-				// 		[],
-				// 		[],
-				// 		NotifyKind.ERROR,
-				// 		"Failed to delete. Please, try again.",
-				// 	),
-				// );
+				pageNotify(
+					NotifyKind.ERROR,
+					"Lettuce romaine calm! Failed to delete. Please, try again.",
+				);
 			});
 	};
 

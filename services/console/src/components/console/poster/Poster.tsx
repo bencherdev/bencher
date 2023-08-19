@@ -4,17 +4,12 @@ import Field, { FieldConfig, FieldValue } from "../../field/Field";
 import FieldKind from "../../field/kind";
 import { createStore } from "solid-js/store";
 import { authUser } from "../../../util/auth";
-import { pathname, useNavigate, useSearchParams } from "../../../util/url";
+import { pathname, useSearchParams } from "../../../util/url";
 import { validJwt } from "../../../util/valid";
 import { Operation, Resource, resourceSingular } from "../../../config/types";
 import { httpPost, httpPut } from "../../../util/http";
 import type { Params } from "astro";
-import {
-	NOTIFY_KIND_PARAM,
-	NOTIFY_TEXT_PARAM,
-	NotifyKind,
-	navigateNotify,
-} from "../../../util/notify";
+import { NotifyKind, navigateNotify, pageNotify } from "../../../util/notify";
 
 export interface Props {
 	params: Params;
@@ -73,7 +68,6 @@ const Poster = (props: Props) => {
 	const [bencher_valid] = createResource(
 		async () => await bencher_valid_init(),
 	);
-	const [_searchParams, setSearchParams] = useSearchParams();
 	const [form, setForm] = createStore(initForm(props.config?.fields));
 	const [submitting, setSubmitting] = createSignal(false);
 	const [valid, setValid] = createSignal(false);
@@ -154,12 +148,12 @@ const Poster = (props: Props) => {
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
-				setSearchParams({
-					[NOTIFY_KIND_PARAM]: NotifyKind.ERROR,
-					[NOTIFY_TEXT_PARAM]: `Lettuce romaine calm! Failed to post ${resourceSingular(
+				pageNotify(
+					NotifyKind.ERROR,
+					`Lettuce romaine calm! Failed to post ${resourceSingular(
 						props.resource,
 					)}. Please, try again.`,
-				});
+				);
 			});
 	};
 

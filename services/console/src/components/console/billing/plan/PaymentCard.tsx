@@ -13,6 +13,7 @@ import Field, { FieldValue } from "../../../field/Field";
 import FieldKind from "../../../field/kind";
 import { httpPost } from "../../../../util/http";
 import type { Params } from "astro";
+import { NotifyKind, pageNotify } from "../../../../util/notify";
 
 interface Props {
 	params: Params;
@@ -76,28 +77,18 @@ const PaymentCard = (props: Props) => {
 			.then((_resp) => {
 				setSubmitting(false);
 				props.handleRefresh();
-				// navigate(
-				// 	notification_path(
-				// 		pathname(),
-				// 		[],
-				// 		[],
-				// 		NotifyKind.OK,
-				// 		"Successful plan enrollment!",
-				// 	),
-				// );
+				pageNotify(
+					NotifyKind.OK,
+					"Somebunny loves us! Successful plan enrollment.",
+				);
 			})
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
-				// navigate(
-				// 	notification_path(
-				// 		pathname(),
-				// 		[PLAN_PARAM],
-				// 		[],
-				// 		NotifyKind.ERROR,
-				// 		"Failed to enroll. Please, try again.",
-				// 	),
-				// );
+				pageNotify(
+					NotifyKind.ERROR,
+					"Lettuce romaine calm! Failed to enroll. Please, try again.",
+				);
 			});
 	};
 

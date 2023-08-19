@@ -1,6 +1,5 @@
 import { createSignal, type Accessor } from "solid-js";
 import type { JsonAuthUser } from "../../../../../types/bencher";
-import { useSearchParams } from "../../../../../util/url";
 import type CardConfig from "./CardConfig";
 import type { PosterFieldConfig } from "../../../poster/Poster";
 import FieldKind from "../../../../field/kind";
@@ -11,10 +10,9 @@ import { validJwt } from "../../../../../util/valid";
 import { httpPatch } from "../../../../../util/http";
 import type { Params } from "astro";
 import {
-	NOTIFY_KIND_PARAM,
-	NOTIFY_TEXT_PARAM,
 	NotifyKind,
 	navigateNotify,
+	pageNotify,
 } from "../../../../../util/notify";
 
 export interface Props {
@@ -50,8 +48,6 @@ const initForm = (field: PosterFieldConfig, value: FieldValue) => {
 };
 
 const UpdateCard = (props: Props) => {
-	const [_searchParams, setSearchParams] = useSearchParams();
-
 	const [form, setForm] = createStore(initForm(props.card?.field, props.value));
 	const [valid, setValid] = createSignal(false);
 	const [submitting, setSubmitting] = createSignal(false);
@@ -118,19 +114,16 @@ const UpdateCard = (props: Props) => {
 				} else {
 					props.toggleUpdate();
 					props.handleRefresh();
-					setSearchParams({
-						[NOTIFY_KIND_PARAM]: NotifyKind.OK,
-						[NOTIFY_TEXT_PARAM]: text,
-					});
+					pageNotify(NotifyKind.OK, text);
 				}
 			})
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
-				setSearchParams({
-					[NOTIFY_KIND_PARAM]: NotifyKind.ERROR,
-					[NOTIFY_TEXT_PARAM]: `Lettuce romaine calm! Failed to update ${props.card?.field?.label?.toLowerCase()}. Please, try again.`,
-				});
+				pageNotify(
+					NotifyKind.ERROR,
+					`Lettuce romaine calm! Failed to update ${props.card?.field?.label?.toLowerCase()}. Please, try again.`,
+				);
 			});
 	};
 

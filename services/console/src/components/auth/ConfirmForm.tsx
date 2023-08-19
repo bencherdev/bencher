@@ -17,12 +17,7 @@ import { BENCHER_API_URL } from "../../util/ext";
 import { httpPost } from "../../util/http";
 import { setUser } from "../../util/auth";
 import type { Email, Jwt, PlanLevel } from "../../types/bencher";
-import {
-	NOTIFY_KIND_PARAM,
-	NOTIFY_TEXT_PARAM,
-	NotifyKind,
-	navigateNotify,
-} from "../../util/notify";
+import { NotifyKind, navigateNotify, pageNotify } from "../../util/notify";
 
 export interface Props {}
 
@@ -91,24 +86,15 @@ const ConfirmForm = (_props: Props) => {
 						null,
 					);
 				} else {
-					navigateNotify(
-						NotifyKind.ERROR,
-						"Invalid user. Please, try again.",
-						null,
-						[PLAN_PARAM, EMAIL_PARAM],
-						null,
-					);
+					pageNotify(NotifyKind.ERROR, "Invalid user. Please, try again.");
 				}
 			})
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
-				navigateNotify(
+				pageNotify(
 					NotifyKind.ERROR,
 					"Failed to confirm token. Please, try again.",
-					null,
-					[PLAN_PARAM, EMAIL_PARAM],
-					null,
 				);
 			});
 	};
@@ -136,10 +122,10 @@ const ConfirmForm = (_props: Props) => {
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
-				setSearchParams({
-					[NOTIFY_KIND_PARAM]: NotifyKind.ERROR,
-					[NOTIFY_TEXT_PARAM]: `Failed to resend email to ${email()}. Please, try again.`,
-				});
+				pageNotify(
+					NotifyKind.ERROR,
+					`Failed to resend email to ${email()}. Please, try again.`,
+				);
 			});
 
 		setCoolDown(true);

@@ -19,8 +19,8 @@ interface Props {
 const Billing = (props: Props) => {
 	const [searchParams, setSearchParams] = useSearchParams();
 
-	const setPlanLevel = (plan_level: PlanLevel) => {
-		setSearchParams({ [PLAN_PARAM]: plan_level });
+	const setPlanLevel = (planLevel: PlanLevel) => {
+		setSearchParams({ [PLAN_PARAM]: planLevel });
 	};
 	const plan = createMemo(() => searchParams[PLAN_PARAM] as PlanLevel);
 

@@ -1,4 +1,4 @@
-import { hiddenRedirect, pathname, useNavigate } from "./url";
+import { hiddenRedirect, pathname, useNavigate, useSearchParams } from "./url";
 
 export const NOTIFY_KIND_PARAM = "notify_kind";
 export const NOTIFY_TEXT_PARAM = "notify_text";
@@ -102,4 +102,16 @@ export const navigateNotify = (
 		const navigate = useNavigate();
 		navigate(path);
 	}
+};
+
+export const pageNotify = (notifyKind: NotifyKind, notifyText: string) => {
+	const [_searchParams, setSearchParams] = useSearchParams();
+	setSearchParams({
+		[NOTIFY_KIND_PARAM]: notifyKind,
+		[NOTIFY_TEXT_PARAM]: notifyText,
+	});
+	window.scrollTo({
+		top: 0,
+		behavior: "smooth",
+	});
 };

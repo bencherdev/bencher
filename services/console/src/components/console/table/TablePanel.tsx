@@ -24,6 +24,7 @@ import {
 	NOTIFY_TEXT_PARAM,
 	NotifyKind,
 	forwardParams,
+	pageNotify,
 } from "../../../util/notify";
 import { PLAN_PARAM } from "../../auth/auth";
 
@@ -124,12 +125,12 @@ const TablePanel = (props: Props) => {
 			.catch((error) => {
 				setState(TableState.ERR);
 				console.error(error);
-				setSearchParams({
-					[NOTIFY_KIND_PARAM]: NotifyKind.ERROR,
-					[NOTIFY_TEXT_PARAM]: `Lettuce romaine calm! Failed to fetch ${resourcePlural(
+				pageNotify(
+					NotifyKind.ERROR,
+					`Lettuce romaine calm! Failed to fetch ${resourcePlural(
 						props.resource,
 					)}. Please, try again.`,
-				});
+				);
 				return EMPTY_ARRAY;
 			});
 	};

@@ -10,7 +10,7 @@ const HelpHeader = () => {
 					class="button is-outlined"
 					onClick={(e) => {
 						e.preventDefault();
-						navigate("/console");
+						navigate("/console/organizations");
 					}}
 				>
 					<span class="icon">

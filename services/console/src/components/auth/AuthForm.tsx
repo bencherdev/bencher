@@ -10,12 +10,7 @@ import { httpPost } from "../../util/http";
 import { AUTH_FIELDS, EMAIL_PARAM, INVITE_PARAM, PLAN_PARAM } from "./auth";
 import { createStore } from "solid-js/store";
 import { validJwt, validPlanLevel } from "../../util/valid";
-import {
-	NOTIFY_KIND_PARAM,
-	NOTIFY_TEXT_PARAM,
-	NotifyKind,
-	navigateNotify,
-} from "../../util/notify";
+import { NotifyKind, navigateNotify, pageNotify } from "../../util/notify";
 
 export interface Props {
 	newUser: boolean;
@@ -116,12 +111,10 @@ const AuthForm = (props: Props) => {
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
-				setSearchParams({
-					[NOTIFY_KIND_PARAM]: NotifyKind.ERROR,
-					[NOTIFY_TEXT_PARAM]: `Failed to ${
-						props.newUser ? "signup" : "login"
-					}. Please, try again.`,
-				});
+				pageNotify(
+					NotifyKind.ERROR,
+					`Failed to ${props.newUser ? "signup" : "login"}. Please, try again.`,
+				);
 			});
 	};
 

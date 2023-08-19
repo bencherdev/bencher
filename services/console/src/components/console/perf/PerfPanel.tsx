@@ -27,6 +27,7 @@ import type {
 } from "../../../types/bencher";
 import type { TabList } from "./plot/PlotTab";
 import { BENCHER_API_URL } from "../../../util/ext";
+import { NotifyKind, pageNotify } from "../../../util/notify";
 
 const REPORT_PARAM = "report";
 const METRIC_KIND_PARAM = "metric_kind";
@@ -392,6 +393,10 @@ const PerfPanel = (props: Props) => {
 			.then((resp) => resp?.data)
 			.catch((error) => {
 				console.error(error);
+				pageNotify(
+					NotifyKind.ERROR,
+					"Lettuce romaine calm! Failed to get perf. Please, try again.",
+				);
 				return EMPTY_OBJECT;
 			});
 	};

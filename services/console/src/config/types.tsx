@@ -18,33 +18,33 @@ export enum Resource {
 export const resourceSingular = (resource: Resource) => {
 	switch (resource) {
 		case Resource.ORGANIZATIONS:
-			return "an organization";
+			return "organization";
 		case Resource.MEMBERS:
-			return "a member";
+			return "member";
 		case Resource.BILLING:
-			return "your billing";
+			return "billing";
 		case Resource.PROJECTS:
-			return "a project";
+			return "project";
 		case Resource.REPORTS:
-			return "a report";
+			return "report";
 		case Resource.METRIC_KINDS:
-			return "a metric kind";
+			return "metric kind";
 		case Resource.BRANCHES:
-			return "a branch";
+			return "branch";
 		case Resource.TESTBEDS:
-			return "a testbed";
+			return "testbed";
 		case Resource.BENCHMARKS:
-			return "a benchmark";
+			return "benchmark";
 		case Resource.THRESHOLDS:
-			return "a threshold";
+			return "threshold";
 		case Resource.ALERTS:
-			return "an alert";
+			return "alert";
 		case Resource.USERS:
-			return "a user";
+			return "user";
 		case Resource.TOKENS:
-			return "a token";
+			return "token";
 		case Resource.HELP:
-			return "your help";
+			return "help";
 	}
 };
 
