@@ -1,6 +1,6 @@
-import { createSignal, type Accessor, createMemo } from "solid-js";
+import { createSignal, type Accessor } from "solid-js";
 import type { JsonAuthUser } from "../../../../../types/bencher";
-import { useNavigate, useSearchParams } from "../../../../../util/url";
+import { useSearchParams } from "../../../../../util/url";
 import type CardConfig from "./CardConfig";
 import type { PosterFieldConfig } from "../../../poster/Poster";
 import FieldKind from "../../../../field/kind";
@@ -51,8 +51,6 @@ const initForm = (field: PosterFieldConfig, value: FieldValue) => {
 
 const UpdateCard = (props: Props) => {
 	const [_searchParams, setSearchParams] = useSearchParams();
-	const navigate = useNavigate();
-	const pathname = createMemo(() => location.pathname);
 
 	const [form, setForm] = createStore(initForm(props.card?.field, props.value));
 	const [valid, setValid] = createSignal(false);

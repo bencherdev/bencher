@@ -2,7 +2,12 @@ import { Switch, type Accessor, Match, Resource, createSignal } from "solid-js";
 import { JsonAlertStatus, type JsonAuthUser } from "../../../../types/bencher";
 import { validJwt } from "../../../../util/valid";
 import { httpPatch } from "../../../../util/http";
-import { pathname, useNavigate } from "../../../../util/url";
+import { useSearchParams } from "../../../../util/url";
+import {
+	NOTIFY_KIND_PARAM,
+	NOTIFY_TEXT_PARAM,
+	NotifyKind,
+} from "../../../../util/notify";
 
 export interface Props {
 	user: JsonAuthUser;
@@ -12,9 +17,7 @@ export interface Props {
 }
 
 const StatusButton = (props: Props) => {
-	const navigate = useNavigate();
-	// const location = useLocation();
-	// const pathname = createMemo(() => location.pathname);
+	const [_searchParams, setSearchParams] = useSearchParams();
 
 	const [submitting, setSubmitting] = createSignal(false);
 
@@ -42,37 +45,27 @@ const StatusButton = (props: Props) => {
 		}
 
 		setSubmitting(true);
+		const isActive = props.data()?.status === JsonAlertStatus.Active;
 		httpPatch(props.url(), token, data)
 			.then((_resp) => {
 				setSubmitting(false);
-				const status = props.data()?.status;
-				// props.handleRefresh();
-				navigate(pathname());
-				// navigate(
-				// 	notification_path(
-				// 		pathname(),
-				// 		[],
-				// 		[],
-				// 		NotifyKind.OK,
-				// 		`Alert has been ${status === JsonAlertStatus.Active ? "dismissed" : "reactivated"
-				// 		}!`,
-				// 	),
-				// );
+				props.handleRefresh();
+				setSearchParams({
+					[NOTIFY_KIND_PARAM]: NotifyKind.OK,
+					[NOTIFY_TEXT_PARAM]: isActive
+						? "Phew, that was a hare-raising experience! Alert has been dismissed."
+						: "We're not out of the woods yet! Alert has been reactivated.",
+				});
 			})
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
-				const status = props.data()?.status;
-				// navigate(
-				// 	notification_path(
-				// 		pathname(),
-				// 		[],
-				// 		[],
-				// 		NotifyKind.ERROR,
-				// 		`Failed to ${status === JsonAlertStatus.Active ? "dismiss" : "reactivate"
-				// 		} alert. Please, try again.`,
-				// 	),
-				// );
+				setSearchParams({
+					[NOTIFY_KIND_PARAM]: NotifyKind.ERROR,
+					[NOTIFY_TEXT_PARAM]: `Lettuce romaine calm! Failed to ${
+						isActive ? "dismiss" : "reactivate"
+					} alert. Please, try again.`,
+				});
 			});
 	};
 
