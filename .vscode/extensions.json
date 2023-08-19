@@ -1,5 +1,6 @@
 {
   "recommendations": [
+    "astro-build.astro-vscode",
     "eamodio.gitlens",
     "GitHub.copilot",
     "GitHub.vscode-github-actions",

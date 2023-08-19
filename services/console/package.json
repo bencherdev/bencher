@@ -18,20 +18,20 @@
     "@solid-primitives/resize-observer": "^2.0.6",
     "astro": "^2.10.5",
     "axios": "^1.4.0",
-    "d3": "^7.6.1",
-    "solid-js": "^1.7.8",
-    "swagger-ui-dist": "^4.15.5",
-    "htl": "^0.3.1"
-  },
-  "devDependencies": {
-    "@types/d3": "^7.4.0",
     "bulma": "^0.9.4",
     "bulma-divider": "^0.2.0",
     "bulma-pricingtable": "^0.2.0",
     "bulma-switch": "^2.0.4",
+    "d3": "^7.6.1",
+    "solid-js": "^1.7.8",
+    "swagger-ui-dist": "^4.15.5",
+    "htl": "^0.3.1",
+    "vite-plugin-wasm-pack": "^0.1.12"
+  },
+  "devDependencies": {
+    "@types/d3": "^7.4.0",
     "remark-gfm": "^3.0.1",
     "rome": "^11.0.0",
-    "sass": "^1.64.1",
-    "vite-plugin-wasm-pack": "^0.1.12"
+    "sass": "^1.64.1"
   }
 }

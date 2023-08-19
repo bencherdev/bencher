@@ -44,4 +44,4 @@ wasm-bindgen-test = "0.3.33"
 # TODO user per-target profiles
 # https://github.com/rust-lang/cargo/issues/4897
 [package.metadata.wasm-pack.profile.release]
-wasm-opt = true
+wasm-opt = false
