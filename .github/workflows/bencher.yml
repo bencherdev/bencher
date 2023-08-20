@@ -588,26 +588,26 @@ jobs:
   deploy_console_ui_netlify_dev:
     name: Deploy Console UI to Netlify
     runs-on: ubuntu-latest
-    needs: build_console_ui
+    needs: build_bencher_valid_wasm
     steps:
       - uses: actions/checkout@v3
-      - name: Download Console UI Artifact
+      - name: Download `bencher_valid` Artifact
         uses: actions/download-artifact@v3
         with:
-          name: ${{ env.CONSOLE_UI_BUILD_DIST }}
-          path: ./services/console/dist
-      - name: Download Console UI Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ env.CONSOLE_UI_BUILD_NETLIFY }}
-          path: ./services/console/.netlify
+          name: ${{ env.WASM_BENCHER_VALID }}
+          path: ./lib/bencher_valid/pkg
+      - name: Build Console UI
+        working-directory: ./services/console
+        run: |
+          npm install
+          npx astro add netlify -y
       - uses: netlify/actions/cli@master
         with:
           args: |
             deploy \
             --alias ${GITHUB_REF#refs/*/} \
-            --dir /github/workspace/services/console/dist \
-            --message "${{ github.event.head_commit.message }}"
+            --message "${{ github.event.head_commit.message }}" \
+            --build
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
