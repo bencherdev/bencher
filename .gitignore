@@ -20,10 +20,14 @@ deb/
 **.DS_Store
 
 out.txt
-out.md
 
 # Default docker volume
 data/
 
 # Ignore release notes
 release-notes.md
+
+node_modules/
+.netlify
+package.json
+package-lock.json

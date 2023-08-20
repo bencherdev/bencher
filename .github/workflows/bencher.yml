@@ -596,11 +596,6 @@ jobs:
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
           path: ./lib/bencher_valid/pkg
-      - name: Build Console UI
-        working-directory: ./services/console
-        run: |
-          npm install
-          npx astro add netlify -y
       - uses: netlify/actions/cli@master
         with:
           args: |
