@@ -34,6 +34,7 @@ env:
   # Console UI
   CONSOLE_UI_DOCKER_IMAGE: bencher-console-ui
   CONSOLE_UI_BUILD_DIST: bencher-console-ui-dist
+  CONSOLE_UI_BUILD_NETLIFY: bencher-console-ui-netlify
 
 jobs:
   bencher_github_action:
@@ -476,17 +477,22 @@ jobs:
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
           path: ./lib/bencher_valid/pkg
-      - name: Build UI
+      - name: Build Console UI
         working-directory: ./services/console
         run: |
           npm install
           npx astro add netlify -y
           npm run build
-      - name: Upload UI Artifact
+      - name: Upload Console UI Artifact
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.CONSOLE_UI_BUILD_DIST }}
           path: ./services/console/dist
+      - name: Upload Console Netlify Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.CONSOLE_UI_BUILD_NETLIFY }}
+          path: ./services/console/.netlify
 
   # API Fly.io
   deploy_local_api_fly:
@@ -590,9 +596,19 @@ jobs:
         with:
           name: ${{ env.CONSOLE_UI_BUILD_DIST }}
           path: ./services/console/dist
+      - name: Download Console UI Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.CONSOLE_UI_BUILD_NETLIFY }}
+          path: ./services/console/.netlify
       - uses: netlify/actions/cli@master
         with:
-          args: deploy --dir /github/workspace/services/console/dist --alias ${GITHUB_REF#refs/*/} --message "${{ github.event.head_commit.message }}"
+          args: |
+            deploy \
+            --alias ${GITHUB_REF#refs/*/} \
+            --dir /github/workspace/services/console/dist \
+            --functions /github/workspace/services/console/.netlify/functions-internal \
+            --message "${{ github.event.head_commit.message }}"
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
