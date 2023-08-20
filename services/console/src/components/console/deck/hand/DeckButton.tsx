@@ -5,10 +5,11 @@ import DeleteButton from "./DeleteButton";
 import type { Params } from "astro";
 
 export interface Props {
+	apiUrl: string;
 	params: Params;
 	user: JsonAuthUser;
 	config: DeckButtonConfig;
-	url: Accessor<string>;
+	path: Accessor<string>;
 	data: Resource<Record<string, any>>;
 }
 
@@ -16,7 +17,7 @@ export interface DeckButtonConfig {
 	kind: ActionButton;
 	subtitle: string;
 	path: (pathname: string, data: Record<string, any>) => string;
-	is_allowed?: (data: Record<string, any>) => boolean;
+	is_allowed?: (apiUrl: string, data: Record<string, any>) => boolean;
 }
 
 const DeckButton = (props: Props) => {
@@ -31,16 +32,17 @@ const DeckButton = (props: Props) => {
 									when={
 										props.config?.kind === ActionButton.DELETE &&
 										props.config?.is_allowed
-											? props.config?.is_allowed?.(props.params)
+											? props.config?.is_allowed?.(props.apiUrl, props.params)
 											: true
 									}
 								>
 									<DeleteButton
+										apiUrl={props.apiUrl}
 										user={props.user}
-										url={props.url}
+										path={props.path}
 										data={props.data}
 										subtitle={props.config.subtitle}
-										path={props.config.path}
+										redirect={props.config.path}
 									/>
 								</Match>
 							</Switch>

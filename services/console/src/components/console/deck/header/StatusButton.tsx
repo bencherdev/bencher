@@ -5,8 +5,9 @@ import { httpPatch } from "../../../../util/http";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
 
 export interface Props {
+	apiUrl: string;
 	user: JsonAuthUser;
-	url: Accessor<string>;
+	path: Accessor<string>;
 	data: Resource<Record<string, any>>;
 	handleRefresh: () => void;
 }
@@ -39,7 +40,7 @@ const StatusButton = (props: Props) => {
 
 		setSubmitting(true);
 		const isActive = props.data()?.status === JsonAlertStatus.Active;
-		httpPatch(props.url(), token, data)
+		httpPatch(props.apiUrl, props.path(), token, data)
 			.then((_resp) => {
 				setSubmitting(false);
 				props.handleRefresh();

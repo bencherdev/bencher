@@ -6,9 +6,10 @@ import type CardConfig from "./CardConfig";
 import type { Params } from "astro";
 
 export interface Props {
+	apiUrl: string;
 	params: Params;
 	user: JsonAuthUser;
-	url: Accessor<string>;
+	path: Accessor<string>;
 	card: CardConfig;
 	value: boolean | string;
 	handleRefresh: () => void;
@@ -27,6 +28,7 @@ const FieldCard = (props: Props) => {
 			when={update()}
 			fallback={
 				<ViewCard
+					apiUrl={props.apiUrl}
 					params={props.params}
 					card={props.card}
 					value={props.value}
@@ -36,9 +38,10 @@ const FieldCard = (props: Props) => {
 			}
 		>
 			<UpdateCard
+				apiUrl={props.apiUrl}
 				params={props.params}
 				user={props.user}
-				url={props.url}
+				path={props.path}
 				card={props.card}
 				value={props.value}
 				toggleUpdate={toggleUpdate}

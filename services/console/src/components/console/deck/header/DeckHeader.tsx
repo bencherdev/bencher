@@ -6,10 +6,11 @@ import DeckHeaderButton, { DeckHeaderButtonConfig } from "./DeckHeaderButton";
 import type { Params } from "astro";
 
 export interface Props {
+	apiUrl: string;
 	params: Params;
 	user: JsonAuthUser;
 	config: DeckHeaderConfig;
-	url: Accessor<string>;
+	path: Accessor<string>;
 	data: Resource<Record<string, any>>;
 	handleRefresh: () => void;
 }
@@ -65,10 +66,11 @@ const DeckHeader = (props: Props) => {
 							{(button) => (
 								<div class="level-item">
 									<DeckHeaderButton
+										apiUrl={props.apiUrl}
 										params={props.params}
 										user={props.user}
 										button={button}
-										url={props.url}
+										path={props.path}
 										data={props.data}
 										title={title}
 										handleRefresh={props.handleRefresh}

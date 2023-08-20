@@ -4,6 +4,7 @@ import { Button } from "../../../config/types";
 import type { Params } from "astro";
 
 export interface Props {
+	apiUrl: string;
 	params: Params;
 	config: TableHeaderConfig;
 	handleRefresh: () => void;
@@ -29,6 +30,7 @@ const TableHeader = (props: Props) => {
 				<For each={props.config?.buttons}>
 					{(button) => (
 						<TableHeaderButton
+							apiUrl={props.apiUrl}
 							params={props.params}
 							title={title}
 							button={button}
@@ -44,11 +46,12 @@ const TableHeader = (props: Props) => {
 interface TableButton {
 	title: string;
 	kind: Button;
-	is_allowed?: (params: Params) => boolean;
+	is_allowed?: (apiUrl: string, params: Params) => boolean;
 	path: (pathname: string) => string;
 }
 
 const TableHeaderButton = (props: {
+	apiUrl: string;
 	params: Params;
 	title: string;
 	button: TableButton;
@@ -57,7 +60,7 @@ const TableHeaderButton = (props: {
 	const navigate = useNavigate();
 
 	const [isAllowed] = createResource(props.params, (params) =>
-		props.button.is_allowed?.(params),
+		props.button.is_allowed?.(props.apiUrl, params),
 	);
 
 	return (

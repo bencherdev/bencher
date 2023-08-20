@@ -1,4 +1,3 @@
-import { BENCHER_API_URL } from "../../util/ext";
 import type { Params } from "../../util/url";
 import { Button, Card, Display, Operation } from "../types";
 
@@ -12,9 +11,7 @@ const usersConfig = {
 			buttons: [{ kind: Button.REFRESH }],
 		},
 		deck: {
-			url: (params: Params) => {
-				return `/v0/users/${params?.user}`;
-			},
+			url: (params: Params) => `/v0/users/${params?.user}`,
 			cards: [
 				{
 					kind: Card.FIELD,

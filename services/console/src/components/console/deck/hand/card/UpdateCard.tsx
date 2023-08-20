@@ -16,9 +16,10 @@ import {
 } from "../../../../../util/notify";
 
 export interface Props {
+	apiUrl: string;
 	params: Params;
 	user: JsonAuthUser;
-	url: Accessor<string>;
+	path: Accessor<string>;
 	card: CardConfig;
 	value: boolean | string;
 	toggleUpdate: () => void;
@@ -103,8 +104,7 @@ const UpdateCard = (props: Props) => {
 			}
 		}
 
-		const url = props.url();
-		httpPatch(url, token, data)
+		httpPatch(props.apiUrl, props.path(), token, data)
 			.then((_resp) => {
 				setSubmitting(false);
 				const path = updatePath(data);

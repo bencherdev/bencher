@@ -176,6 +176,7 @@ const TablePanel = (props: Props) => {
 	return (
 		<>
 			<TableHeader
+				apiUrl={props.apiUrl}
 				params={props.params}
 				config={config()?.header}
 				handleRefresh={refetch}

@@ -9,7 +9,7 @@ export interface CardConfig {
 	keys?: string[];
 	display: Display;
 	field: PosterFieldConfig;
-	is_allowed: (params: Params) => boolean;
+	is_allowed: (apiUrl: string, params: Params) => boolean;
 	path: (params: Params, data: Record<string, any>) => string;
 }
 

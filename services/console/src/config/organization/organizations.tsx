@@ -1,5 +1,4 @@
 import type { JsonOrganization } from "../../types/bencher";
-import { BENCHER_API_URL } from "../../util/ext";
 import { Button, Card, Display, Row } from "../types";
 import { parentPath, viewSlugPath } from "../util";
 import { Operation } from "../types";

@@ -4,7 +4,6 @@ import { Button, Card, Display, Operation, Row } from "../types";
 import { invitePath, parentPath, viewSlugPath } from "../util";
 import { JsonOrganizationPermission } from "../../types/bencher";
 import { isAllowedOrganization } from "../../util/auth";
-import { BENCHER_API_URL } from "../../util/ext";
 import FieldKind from "../../components/field/kind";
 
 const MEMBER_FIELDS = {
@@ -59,8 +58,9 @@ const MembersConfig = {
 					kind: Button.INVITE,
 					title: "Organization",
 					path: invitePath,
-					is_allowed: (params: Params) =>
+					is_allowed: (apiUrl: string, params: Params) =>
 						isAllowedOrganization(
+							apiUrl,
 							params,
 							JsonOrganizationPermission.CreateRole,
 						),

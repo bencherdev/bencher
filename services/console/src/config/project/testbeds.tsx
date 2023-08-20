@@ -2,7 +2,6 @@ import type { Params } from "astro";
 import { validNonEmpty, validSlug } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, addPath, viewSlugPath } from "../util";
-import { BENCHER_API_URL } from "../../util/ext";
 import type { JsonTestbed } from "../../types/bencher";
 import FieldKind from "../../components/field/kind";
 import { isAllowedProjectDelete, isAllowedProjectEdit } from "../../util/auth";

@@ -7,10 +7,11 @@ import PerfButton from "./PerfButton";
 import type { Params } from "astro";
 
 export interface Props {
+	apiUrl: string;
 	params: Params;
 	user: JsonAuthUser;
 	button: DeckHeaderButtonConfig;
-	url: Accessor<string>;
+	path: Accessor<string>;
 	data: Resource<Record<string, any>>;
 	title: Accessor<string | number | undefined>;
 	handleRefresh: () => void;
@@ -46,8 +47,9 @@ const DeckHeaderButton = (props: Props) => {
 			</Match>
 			<Match when={props.button.kind === Button.STATUS}>
 				<StatusButton
+					apiUrl={props.apiUrl}
 					user={props.user}
-					url={props.url}
+					path={props.path}
 					data={props.data}
 					handleRefresh={props.handleRefresh}
 				/>

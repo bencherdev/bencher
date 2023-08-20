@@ -7,9 +7,10 @@ import type CardConfig from "./CardConfig";
 import type { Params } from "astro";
 
 export interface Props {
+	apiUrl: string;
 	params: Params;
 	user: JsonAuthUser;
-	url: Accessor<string>;
+	path: Accessor<string>;
 	card: CardConfig;
 	data: Resource<Record<string, any>>;
 	handleRefresh: () => void;
@@ -21,9 +22,10 @@ const DeckCard = (props: Props) => {
 		<Switch fallback={<></>}>
 			<Match when={props.card?.kind === Card.FIELD}>
 				<FieldCard
+					apiUrl={props.apiUrl}
 					params={props.params}
 					user={props.user}
-					url={props.url}
+					path={props.path}
 					card={props.card}
 					value={props.card?.key ? props.data()?.[props.card?.key] : null}
 					// refresh={props.refresh}
@@ -36,9 +38,10 @@ const DeckCard = (props: Props) => {
 			</Match>
 			<Match when={props.card?.kind === Card.NESTED_FIELD}>
 				<FieldCard
+					apiUrl={props.apiUrl}
 					params={props.params}
 					user={props.user}
-					url={props.url}
+					path={props.path}
 					card={props.card}
 					value={fmtNestedValue(props.data(), props.card?.keys)}
 					// refresh={props.refresh}

@@ -6,10 +6,11 @@ import type CardConfig from "./card/CardConfig";
 import type { Params } from "astro";
 
 export interface Props {
+	apiUrl: string;
 	params: Params;
 	user: JsonAuthUser;
 	config: DeckConfig;
-	url: Accessor<string>;
+	path: Accessor<string>;
 	data: Resource<Record<string, any>>;
 	handleRefresh: () => void;
 	handleLoopback: (pathname: null | string) => void;
@@ -30,9 +31,10 @@ const Deck = (props: Props) => {
 						<div class="column">
 							<div class="card">
 								<DeckCard
+									apiUrl={props.apiUrl}
 									params={props.params}
 									user={props.user}
-									url={props.url}
+									path={props.path}
 									card={card}
 									data={props.data}
 									// refresh={props.refresh}
@@ -48,10 +50,11 @@ const Deck = (props: Props) => {
 				<For each={props.config?.buttons}>
 					{(button) => (
 						<DeckButton
+							apiUrl={props.apiUrl}
 							params={props.params}
 							user={props.user}
 							config={button}
-							url={props.url}
+							path={props.path}
 							data={props.data}
 						/>
 					)}

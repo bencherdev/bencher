@@ -4,6 +4,7 @@ import type CardConfig from "./CardConfig";
 import type { Params } from "astro";
 
 export interface Props {
+	apiUrl: string;
 	params: Params;
 	card: CardConfig;
 	value: boolean | string;
@@ -12,7 +13,7 @@ export interface Props {
 
 const ViewCard = (props: Props) => {
 	const [is_allowed] = createResource(props.params, (params) =>
-		props.card?.is_allowed?.(params),
+		props.card?.is_allowed?.(props.apiUrl, params),
 	);
 
 	return (

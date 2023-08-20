@@ -2,7 +2,6 @@ import type { Params } from "astro";
 import { validBenchmarkName, validSlug } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation } from "../types";
 import { addPath, parentPath, viewSlugPath } from "../util";
-import { BENCHER_API_URL } from "../../util/ext";
 import type { JsonBenchmark } from "../../types/bencher";
 import FieldKind from "../../components/field/kind";
 import { isAllowedProjectDelete, isAllowedProjectEdit } from "../../util/auth";

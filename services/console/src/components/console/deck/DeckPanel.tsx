@@ -85,18 +85,20 @@ const DeckPanel = (props: Props) => {
 	return (
 		<>
 			<DeckHeader
+				apiUrl={props.apiUrl}
 				params={props.params}
 				user={user}
 				config={config()?.header}
-				url={url}
+				path={path}
 				data={deckData}
 				handleRefresh={refetch}
 			/>
 			<Deck
+				apiUrl={props.apiUrl}
 				params={props.params}
 				user={user}
 				config={config()?.deck}
-				url={url}
+				path={path}
 				data={deckData}
 				// refresh={refresh}
 				handleRefresh={refetch}

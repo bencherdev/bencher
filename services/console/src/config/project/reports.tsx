@@ -1,5 +1,4 @@
 import type { Params } from "astro";
-import { BENCHER_API_URL } from "../../util/ext";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, viewUuidPath } from "../util";
 import { isAllowedProjectDelete } from "../../util/auth";

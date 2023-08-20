@@ -1,7 +1,6 @@
 import type { Params } from "astro";
 import { Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, viewUuidPath } from "../util";
-import { BENCHER_API_URL } from "../../util/ext";
 
 const alertsConfig = {
 	[Operation.LIST]: {

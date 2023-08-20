@@ -1,5 +1,4 @@
 import FieldKind from "../../components/field/kind";
-import { BENCHER_API_URL } from "../../util/ext";
 import type { Params } from "../../util/url";
 import { validNonEmpty, validU32 } from "../../util/valid";
 import { Button, Card, Display, Operation } from "../types";

@@ -1,7 +1,6 @@
 import type { Params } from "astro";
 import FieldKind from "../../components/field/kind";
 import { isAllowedProjectEdit } from "../../util/auth";
-import { BENCHER_API_URL } from "../../util/ext";
 import { validNonEmpty, validSlug, validOptionUrl } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { addPath, parentPath } from "../util";

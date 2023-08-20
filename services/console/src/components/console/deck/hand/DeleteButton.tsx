@@ -16,11 +16,12 @@ import {
 } from "../../../../util/notify";
 
 export interface Props {
+	apiUrl: string;
 	user: JsonAuthUser;
-	url: Accessor<string>;
+	path: Accessor<string>;
 	data: Resource<Record<string, any>>;
 	subtitle: string;
-	path: (pathname: string, data: Record<string, any>) => string;
+	redirect: (pathname: string, data: Record<string, any>) => string;
 }
 
 const DeleteButton = (props: Props) => {
@@ -40,14 +41,13 @@ const DeleteButton = (props: Props) => {
 			return;
 		}
 
-		const url = props.url();
-		httpDelete(url, token)
+		httpDelete(props.apiUrl, props.path(), token)
 			.then((_resp) => {
 				setDeleting(false);
 				navigateNotify(
 					NotifyKind.OK,
 					"That won't turnip again. Delete successful!",
-					props.path(pathname(), data),
+					props.redirect(pathname(), data),
 					null,
 					null,
 				);
