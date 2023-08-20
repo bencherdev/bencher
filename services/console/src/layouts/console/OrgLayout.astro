@@ -4,19 +4,21 @@ import OrgMenu from "../../components/console/menu/OrgMenu";
 import type { Params } from "astro";
 
 interface Props {
+  apiUrl: string;
   params: Params;
   title: string;
   suppressNotification?: boolean;
 }
 
-const { params, title, suppressNotification } = Astro.props;
+const { apiUrl, params, title, suppressNotification } = Astro.props;
 ---
 
 <ConsoleLayout
+  apiUrl={apiUrl}
   params={params}
   title={title}
   suppressNotification={suppressNotification}
 >
-  <OrgMenu client:only slot="menu" params={params} />
+  <OrgMenu client:only slot="menu" apiUrl={apiUrl} params={params} />
   <slot />
 </ConsoleLayout>

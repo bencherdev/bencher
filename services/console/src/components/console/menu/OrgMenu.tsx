@@ -5,6 +5,7 @@ import bencher_valid_init from "bencher_valid";
 import type { Params } from "astro";
 
 interface Props {
+	apiUrl: string;
 	params: Params;
 }
 
@@ -25,6 +26,7 @@ const OrgMenu = (props: Props) => {
 			return false;
 		}
 		return await isAllowedOrganization(
+			props.apiUrl,
 			params(),
 			JsonOrganizationPermission.Manage,
 		);

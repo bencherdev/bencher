@@ -5,7 +5,6 @@ import {
 	JsonOrganizationPermission,
 } from "../types/bencher";
 import { validUser } from "./valid";
-import { BENCHER_API_URL } from "./ext";
 import { httpGet } from "./http";
 import type { Params } from "astro";
 
@@ -67,6 +66,7 @@ setInterval(() => {
 export const authUser = authUsr;
 
 export const isAllowedOrganization = async (
+	apiUrl: string,
 	params: undefined | Params,
 	permission: JsonOrganizationPermission,
 ): Promise<boolean> => {
@@ -74,13 +74,13 @@ export const isAllowedOrganization = async (
 		return false;
 	}
 	return isAllowed(
-		`${BENCHER_API_URL()}/v0/organizations/${
-			params.organization
-		}/allowed/${permission}`,
+		apiUrl,
+		`/v0/organizations/${params.organization}/allowed/${permission}`,
 	);
 };
 
 export const isAllowedProject = async (
+	apiUrl: string,
 	params: undefined | Params,
 	permission: JsonProjectPermission,
 ): Promise<boolean> => {
@@ -88,16 +88,20 @@ export const isAllowedProject = async (
 		return false;
 	}
 	return isAllowed(
-		`${BENCHER_API_URL()}/v0/projects/${params.project}/allowed/${permission}`,
+		apiUrl,
+		`/v0/projects/${params.project}/allowed/${permission}`,
 	);
 };
 
-export const isAllowed = async (url: string): Promise<boolean> => {
+export const isAllowed = async (
+	hostname: string,
+	pathname: string,
+): Promise<boolean> => {
 	const token = authUsr().token;
 	if (!token) {
 		return false;
 	}
-	return await httpGet(url, token)
+	return await httpGet(hostname, pathname, token)
 		.then((resp) => resp?.data?.allowed)
 		.catch((error) => {
 			console.error(error);
@@ -105,11 +109,11 @@ export const isAllowed = async (url: string): Promise<boolean> => {
 		});
 };
 
-export const isAllowedOrganizationEdit = (params: Params) =>
-	isAllowedOrganization(params, JsonOrganizationPermission.Edit);
+export const isAllowedOrganizationEdit = (apiUrl: string, params: Params) =>
+	isAllowedOrganization(apiUrl, params, JsonOrganizationPermission.Edit);
 
-export const isAllowedProjectEdit = (params: Params) =>
-	isAllowedProject(params, JsonProjectPermission.Edit);
+export const isAllowedProjectEdit = (apiUrl: string, params: Params) =>
+	isAllowedProject(apiUrl, params, JsonProjectPermission.Edit);
 
-export const isAllowedProjectDelete = (params: Params) =>
-	isAllowedProject(params, JsonProjectPermission.Delete);
+export const isAllowedProjectDelete = (apiUrl: string, params: Params) =>
+	isAllowedProject(apiUrl, params, JsonProjectPermission.Delete);

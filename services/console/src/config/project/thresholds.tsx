@@ -15,7 +15,7 @@ const paginationUrl = (
 	const searchParams = new URLSearchParams();
 	searchParams.set("per_page", per_page?.toString());
 	searchParams.set("page", page?.toString());
-	const url = `${BENCHER_API_URL()}/v0/projects/${
+	const url = `/v0/projects/${
 		params?.project
 	}/${dimension}?${searchParams.toString()}`;
 	return url;
@@ -115,8 +115,7 @@ const thresholdsConfig = {
 			],
 		},
 		table: {
-			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/projects/${params?.project}/thresholds`,
+			url: (params: Params) => `/v0/projects/${params?.project}/thresholds`,
 			add: {
 				prefix: (
 					<div>
@@ -169,8 +168,7 @@ const thresholdsConfig = {
 			path_to: "Thresholds",
 		},
 		form: {
-			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/projects/${params?.project}/thresholds`,
+			url: (params: Params) => `/v0/projects/${params?.project}/thresholds`,
 			fields: [
 				{
 					kind: FieldKind.RADIO,
@@ -278,9 +276,7 @@ const thresholdsConfig = {
 		},
 		deck: {
 			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/projects/${params?.project}/thresholds/${
-					params?.threshold
-				}`,
+				`/v0/projects/${params?.project}/thresholds/${params?.threshold}`,
 			cards: [
 				{
 					kind: Card.FIELD,
@@ -363,9 +359,7 @@ const thresholdsConfig = {
 		},
 		form: {
 			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/projects/${params?.project}/thresholds/${
-					params?.threshold
-				}`,
+				`/v0/projects/${params?.project}/thresholds/${params?.threshold}`,
 			fields: [
 				{
 					kind: FieldKind.SELECT,

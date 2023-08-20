@@ -17,6 +17,7 @@ import type { Params } from "astro";
 import { NotifyKind, pageNotify } from "../../../util/notify";
 
 interface Props {
+	apiUrl: string;
 	params: Params;
 	resource: Resource;
 }
@@ -35,7 +36,7 @@ const DeckPanel = (props: Props) => {
 	const config = createMemo<DeckPanelConfig>(
 		() => consoleConfig[props.resource]?.[Operation.VIEW],
 	);
-	const url = createMemo(() => config()?.deck?.url(props.params));
+	const path = createMemo(() => config()?.deck?.url(props.params));
 
 	const fetcher = createMemo(() => {
 		return {
@@ -55,7 +56,7 @@ const DeckPanel = (props: Props) => {
 		if (!validJwt(fetcher.token)) {
 			return EMPTY_OBJECT;
 		}
-		return await httpGet(url(), fetcher.token)
+		return await httpGet(props.apiUrl, path(), fetcher.token)
 			.then((resp) => resp?.data)
 			.catch((error) => {
 				console.error(error);

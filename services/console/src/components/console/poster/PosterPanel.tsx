@@ -6,6 +6,7 @@ import consoleConfig from "../../../config/console";
 import type { Params } from "astro";
 
 interface Props {
+	apiUrl: string;
 	params: Params;
 	resource: Resource;
 	operation?: Operation;
@@ -30,6 +31,7 @@ const PosterPanel = (props: Props) => {
 		<>
 			<PosterHeader config={config()?.header} />
 			<Poster
+				apiUrl={props.apiUrl}
 				params={props.params}
 				resource={props.resource}
 				operation={config()?.operation}

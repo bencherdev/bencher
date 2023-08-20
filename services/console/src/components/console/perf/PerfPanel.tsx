@@ -145,6 +145,7 @@ const isBoolParam = (param: undefined | string): boolean => {
 };
 
 export interface Props {
+	apiUrl: string;
 	params: Params;
 	isConsole?: boolean;
 }
@@ -368,8 +369,8 @@ const PerfPanel = (props: Props) => {
 
 		// Don't even send query if there isn't at least one: branch, testbed, and benchmark
 		if (isPlotInit()) {
-			const url = `${BENCHER_API_URL()}/v0/projects/${fetcher.project_slug}`;
-			return await httpGet(url, fetcher.token)
+			const path = `/v0/projects/${fetcher.project_slug}`;
+			return await httpGet(props.apiUrl, path, fetcher.token)
 				.then((resp) => {
 					return {
 						project: resp?.data,
@@ -386,10 +387,10 @@ const PerfPanel = (props: Props) => {
 				searchParams.set(key, value.toString());
 			}
 		}
-		const url = `${BENCHER_API_URL()}/v0/projects/${
+		const path = `/v0/projects/${
 			fetcher.project_slug
 		}/perf?${searchParams.toString()}`;
-		return await httpGet(url, fetcher.token)
+		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => resp?.data)
 			.catch((error) => {
 				console.error(error);
@@ -437,10 +438,10 @@ const PerfPanel = (props: Props) => {
 		const search_params = new URLSearchParams();
 		search_params.set("per_page", fetcher.per_page.toString());
 		search_params.set("page", fetcher.page.toString());
-		const url = `${BENCHER_API_URL()}/v0/projects/${
+		const path = `/v0/projects/${
 			fetcher.project_slug
 		}/${perfTab}?${search_params.toString()}`;
-		return await httpGet(url, fetcher.token)
+		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
 				return resp?.data;
 			})

@@ -5,16 +5,17 @@ import Notification from "../../components/site/Notification";
 import type { Params } from "astro";
 
 interface Props {
+  apiUrl: string;
   params: Params;
   title: string;
   suppressNotification?: undefined | boolean;
 }
 
-const { params, title, suppressNotification } = Astro.props;
+const { apiUrl, params, title, suppressNotification } = Astro.props;
 ---
 
 <BaseLayout title={title}>
-  <ConsoleNavbar client:only slot="navbar" params={params} />
+  <ConsoleNavbar client:only slot="navbar" apiUrl={apiUrl} params={params} />
   <div class="is-widescreen">
     <div class="columns is-reverse-mobile">
       <div class="columns">

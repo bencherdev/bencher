@@ -9,6 +9,7 @@ import type { Params } from "astro";
 import { validJwt } from "../../../util/valid";
 
 interface Props {
+	apiUrl: string;
 	params: Params;
 }
 
@@ -56,10 +57,8 @@ const ConsoleMenu = (props: Props) => {
 		if (!fetcher.project_slug) {
 			return DEFAULT_ALERT_STATS;
 		}
-		const url = `${BENCHER_API_URL()}/v0/projects/${
-			fetcher.project_slug
-		}/stats/alerts`;
-		return await httpGet(url, authUser()?.token)
+		const pathname = `/v0/projects/${fetcher.project_slug}/stats/alerts`;
+		return await httpGet(props.apiUrl, pathname, authUser()?.token)
 			.then((resp) => resp.data)
 			.catch((error) => {
 				console.error(error);

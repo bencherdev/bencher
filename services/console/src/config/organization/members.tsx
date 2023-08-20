@@ -70,7 +70,7 @@ const MembersConfig = {
 		},
 		table: {
 			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/organizations/${params?.organization}/members`,
+				`/v0/organizations/${params?.organization}/members`,
 			add: {
 				prefix: (
 					<div>
@@ -120,7 +120,7 @@ const MembersConfig = {
 		},
 		form: {
 			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/organizations/${params.organization}/members`,
+				`/v0/organizations/${params.organization}/members`,
 			fields: [
 				{
 					kind: FieldKind.INPUT,
@@ -163,9 +163,7 @@ const MembersConfig = {
 		},
 		deck: {
 			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/organizations/${
-					params?.organization
-				}/members/${params?.member}`,
+				`/v0/organizations/${params?.organization}/members/${params?.member}`,
 			cards: [
 				{
 					kind: Card.FIELD,

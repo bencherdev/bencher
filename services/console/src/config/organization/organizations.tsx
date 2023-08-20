@@ -39,7 +39,7 @@ const organizationsConfig = {
 			buttons: [{ kind: Button.REFRESH }],
 		},
 		table: {
-			url: (_pathParams: Params) => `${BENCHER_API_URL()}/v0/organizations`,
+			url: (_params: Params) => `/v0/organizations`,
 			row: {
 				key: "name",
 				items: [
@@ -69,8 +69,7 @@ const organizationsConfig = {
 			buttons: [{ kind: Button.REFRESH }],
 		},
 		deck: {
-			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/organizations/${params?.organization}`,
+			url: (params: Params) => `/v0/organizations/${params?.organization}`,
 			cards: [
 				{
 					kind: Card.FIELD,

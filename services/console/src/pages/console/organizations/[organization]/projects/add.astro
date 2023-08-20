@@ -5,10 +5,16 @@ import OrgLayout from "../../../../../layouts/console/OrgLayout.astro";
 import PosterPanel from "../../../../../components/console/poster/PosterPanel";
 import { Resource } from "../../../../../config/types";
 
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
 const title = "Add Project";
 ---
 
-<OrgLayout params={params} title={title}>
-  <PosterPanel client:only params={params} resource={Resource.PROJECTS} />
+<OrgLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
+  <PosterPanel
+    client:only
+    apiUrl={BENCHER_API_URL}
+    params={params}
+    resource={Resource.PROJECTS}
+  />
 </OrgLayout>

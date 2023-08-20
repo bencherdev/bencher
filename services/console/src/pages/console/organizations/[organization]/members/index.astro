@@ -5,10 +5,16 @@ import OrgLayout from "../../../../../layouts/console/OrgLayout.astro";
 import TablePanel from "../../../../../components/console/table/TablePanel";
 import { Resource } from "../../../../../config/types";
 
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
 const title = "Members";
 ---
 
-<OrgLayout params={params} title={title}>
-  <TablePanel client:only params={params} resource={Resource.MEMBERS} />
+<OrgLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
+  <TablePanel
+    client:only
+    apiUrl={BENCHER_API_URL}
+    params={params}
+    resource={Resource.MEMBERS}
+  />
 </OrgLayout>

@@ -5,10 +5,16 @@ import ProjectLayout from "../../../../../layouts/console/ProjectLayout.astro";
 import TablePanel from "../../../../../components/console/table/TablePanel";
 import { Resource } from "../../../../../config/types";
 
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
 const title = "Alerts";
 ---
 
-<ProjectLayout params={params} title={title}>
-  <TablePanel client:only params={params} resource={Resource.ALERTS} />
+<ProjectLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
+  <TablePanel
+    client:only
+    apiUrl={BENCHER_API_URL}
+    params={params}
+    resource={Resource.ALERTS}
+  />
 </ProjectLayout>

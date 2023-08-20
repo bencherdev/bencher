@@ -39,8 +39,7 @@ const testbedsConfig = {
 			],
 		},
 		table: {
-			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/projects/${params?.project}/testbeds`,
+			url: (params: Params) => `/v0/projects/${params?.project}/testbeds`,
 			add: {
 				prefix: (
 					<div>
@@ -84,8 +83,7 @@ const testbedsConfig = {
 			path_to: "Testbeds",
 		},
 		form: {
-			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/projects/${params?.project}/testbeds`,
+			url: (params: Params) => `/v0/projects/${params?.project}/testbeds`,
 			fields: [
 				{
 					kind: FieldKind.INPUT,
@@ -110,9 +108,7 @@ const testbedsConfig = {
 		},
 		deck: {
 			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/projects/${params?.project}/testbeds/${
-					params?.testbed
-				}`,
+				`/v0/projects/${params?.project}/testbeds/${params?.testbed}`,
 			cards: [
 				{
 					kind: Card.FIELD,

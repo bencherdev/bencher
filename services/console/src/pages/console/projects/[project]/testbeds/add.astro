@@ -5,10 +5,16 @@ import ProjectLayout from "../../../../../layouts/console/ProjectLayout.astro";
 import PosterPanel from "../../../../../components/console/poster/PosterPanel";
 import { Resource } from "../../../../../config/types";
 
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
 const title = "Add Testbed";
 ---
 
-<ProjectLayout params={params} title={title}>
-  <PosterPanel client:only params={params} resource={Resource.TESTBEDS} />
+<ProjectLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
+  <PosterPanel
+    client:only
+    apiUrl={BENCHER_API_URL}
+    params={params}
+    resource={Resource.TESTBEDS}
+  />
 </ProjectLayout>

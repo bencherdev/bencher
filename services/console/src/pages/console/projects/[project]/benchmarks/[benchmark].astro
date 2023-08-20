@@ -5,10 +5,16 @@ import ProjectLayout from "../../../../../layouts/console/ProjectLayout.astro";
 import DeckPanel from "../../../../../components/console/deck/DeckPanel";
 import { Resource } from "../../../../../config/types";
 
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
 const title = "View Benchmark";
 ---
 
-<ProjectLayout params={params} title={title}>
-  <DeckPanel client:only params={params} resource={Resource.BENCHMARKS} />
+<ProjectLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
+  <DeckPanel
+    client:only
+    apiUrl={BENCHER_API_URL}
+    params={params}
+    resource={Resource.BENCHMARKS}
+  />
 </ProjectLayout>

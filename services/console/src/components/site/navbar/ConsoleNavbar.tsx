@@ -7,6 +7,7 @@ import type { JsonAuthUser } from "../../../types/bencher";
 import BENCHER_NAVBAR_ID from "./id";
 
 export interface Props {
+	apiUrl: string;
 	params: Params;
 }
 
@@ -63,6 +64,7 @@ const ConsoleNavbar = (props: Props) => {
 					>
 						<div class="navbar-item">
 							<ProjectSelect
+								apiUrl={props.apiUrl}
 								params={props.params as Params}
 								user={user as JsonAuthUser}
 							/>

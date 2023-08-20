@@ -77,9 +77,7 @@ const projectsConfig = {
 		},
 		table: {
 			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/organizations/${
-					params?.organization
-				}/projects`,
+				`/v0/organizations/${params?.organization}/projects`,
 			add: {
 				prefix: (
 					<div>
@@ -126,7 +124,7 @@ const projectsConfig = {
 		},
 		form: {
 			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/organizations/${params.organization}/projects`,
+				`/v0/organizations/${params.organization}/projects`,
 			fields: [
 				{
 					kind: FieldKind.INPUT,
@@ -168,8 +166,7 @@ const projectsConfig = {
 			buttons: [{ kind: Button.REFRESH }],
 		},
 		deck: {
-			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/projects/${params?.project}`,
+			url: (params: Params) => `/v0/projects/${params?.project}`,
 			cards: [
 				{
 					kind: Card.FIELD,

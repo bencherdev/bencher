@@ -11,9 +11,7 @@ const alertsConfig = {
 			buttons: [{ kind: Button.REFRESH }],
 		},
 		table: {
-			url: (params: Params) => {
-				return `${BENCHER_API_URL()}/v0/projects/${params?.project}/alerts`;
-			},
+			url: (params: Params) => `/v0/projects/${params?.project}/alerts`,
 			add: {
 				prefix: (
 					<div>
@@ -72,9 +70,7 @@ const alertsConfig = {
 		},
 		deck: {
 			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/projects/${params?.project}/alerts/${
-					params?.alert
-				}`,
+				`/v0/projects/${params?.project}/alerts/${params?.alert}`,
 			cards: [
 				{
 					kind: Card.NESTED_FIELD,

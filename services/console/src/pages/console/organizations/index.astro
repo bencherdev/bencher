@@ -1,12 +1,20 @@
 ---
+export const prerender = false;
+
 import UserLayout from "../../../layouts/console/UserLayout.astro";
 import TablePanel from "../../../components/console/table/TablePanel";
 import { Resource } from "../../../config/types";
 
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
 const title = "Organizations";
 ---
 
-<UserLayout params={params} title={title}>
-  <TablePanel client:only params={params} resource={Resource.ORGANIZATIONS} />
+<UserLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
+  <TablePanel
+    client:only
+    apiUrl={BENCHER_API_URL}
+    params={params}
+    resource={Resource.ORGANIZATIONS}
+  />
 </UserLayout>

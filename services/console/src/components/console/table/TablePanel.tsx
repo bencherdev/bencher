@@ -35,6 +35,7 @@ const DEFAULT_PER_PAGE = 8;
 const DEFAULT_PAGE = 1;
 
 interface Props {
+	apiUrl: string;
 	params: Params;
 	resource: Resource;
 }
@@ -108,10 +109,10 @@ const TablePanel = (props: Props) => {
 				searchParams.set(key, value.toString());
 			}
 		}
-		const url = `${config()?.table?.url(
+		const path = `${config()?.table?.url(
 			props.params,
 		)}?${searchParams.toString()}`;
-		return await httpGet(url, fetcher.token)
+		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
 				setState(
 					resp?.data.length === 0

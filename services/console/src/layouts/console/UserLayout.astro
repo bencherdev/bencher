@@ -4,14 +4,15 @@ import UserMenu from "../../components/console/menu/UserMenu";
 import type { Params } from "astro";
 
 interface Props {
+  apiUrl: string;
   params: Params;
   title: string;
 }
 
-const { params, title } = Astro.props;
+const { apiUrl, params, title } = Astro.props;
 ---
 
-<ConsoleLayout params={params} title={title}>
+<ConsoleLayout apiUrl={apiUrl} params={params} title={title}>
   <UserMenu client:only slot="menu" />
   <slot />
 </ConsoleLayout>

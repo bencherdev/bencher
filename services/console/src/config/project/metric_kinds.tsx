@@ -46,8 +46,7 @@ const metricKindsConfig = {
 			],
 		},
 		table: {
-			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/projects/${params?.project}/metric-kinds`,
+			url: (params: Params) => `/v0/projects/${params?.project}/metric-kinds`,
 			add: {
 				prefix: (
 					<div>
@@ -92,8 +91,7 @@ const metricKindsConfig = {
 			path_to: "Metric Kinds",
 		},
 		form: {
-			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/projects/${params?.project}/metric-kinds`,
+			url: (params: Params) => `/v0/projects/${params?.project}/metric-kinds`,
 			fields: [
 				{
 					kind: FieldKind.INPUT,
@@ -127,9 +125,7 @@ const metricKindsConfig = {
 		},
 		deck: {
 			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/projects/${params?.project}/metric-kinds/${
-					params?.metric_kind
-				}`,
+				`/v0/projects/${params?.project}/metric-kinds/${params?.metric_kind}`,
 			cards: [
 				{
 					kind: Card.FIELD,

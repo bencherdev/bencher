@@ -1,11 +1,19 @@
 ---
+export const prerender = false;
+
 import ConsoleLayout from "../../layouts/console/ConsoleLayout.astro";
 import Redirect from "../../components/site/Redirect";
 
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
 const title = "Bencher Console";
 ---
 
-<ConsoleLayout params={params} title={title} suppressNotification={true}>
+<ConsoleLayout
+  apiUrl={BENCHER_API_URL}
+  params={params}
+  title={title}
+  suppressNotification={true}
+>
   <Redirect client:only path="/console/organizations" />
 </ConsoleLayout>

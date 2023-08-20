@@ -12,6 +12,7 @@ import type { Params } from "astro";
 import { NotifyKind, navigateNotify, pageNotify } from "../../../util/notify";
 
 export interface Props {
+	apiUrl: string;
 	params: Params;
 	resource: Resource;
 	operation: Operation;
@@ -77,16 +78,16 @@ const Poster = (props: Props) => {
 	};
 
 	const httpOperation = async (
-		url: string,
+		path: string,
 		token: string,
 		data: Record<string, undefined | number | string>,
 	) => {
 		switch (props.operation) {
 			case Operation.EDIT:
-				return await httpPut(url, token, data);
+				return await httpPut(props.apiUrl, path, token, data);
 			case Operation.ADD:
 			default:
-				return await httpPost(url, token, data);
+				return await httpPost(props.apiUrl, path, token, data);
 		}
 	};
 
@@ -131,8 +132,8 @@ const Poster = (props: Props) => {
 			}
 		}
 
-		const url = props.config?.url?.(props.params);
-		httpOperation(url, token, data)
+		const path = props.config?.url?.(props.params);
+		httpOperation(path, token, data)
 			.then((_resp) => {
 				setSubmitting(false);
 				navigateNotify(

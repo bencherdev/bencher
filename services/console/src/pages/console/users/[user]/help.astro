@@ -4,10 +4,11 @@ export const prerender = false;
 import UserLayout from "../../../../layouts/console/UserLayout.astro";
 import HelpPanel from "../../../../components/console/help/HelpPanel";
 
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
 const title = "View Token";
 ---
 
-<UserLayout params={params} title={title}>
+<UserLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
   <HelpPanel client:only />
 </UserLayout>

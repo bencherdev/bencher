@@ -4,18 +4,15 @@ import ProjectMenu from "../../components/console/menu/ProjectMenu";
 import type { Params } from "astro";
 
 interface Props {
+  apiUrl: string;
   params: Params;
   title: string;
 }
 
-const { params, title } = Astro.props;
+const { apiUrl, params, title } = Astro.props;
 ---
 
-<ConsoleLayout params={params} title={title}>
-  <ProjectMenu
-    client:only
-    slot="menu"
-    params={params}
-  />
+<ConsoleLayout apiUrl={apiUrl} params={params} title={title}>
+  <ProjectMenu client:only slot="menu" apiUrl={apiUrl} params={params} />
   <slot />
 </ConsoleLayout>

@@ -5,14 +5,17 @@ import OrgLayout from "../../../../../layouts/console/OrgLayout.astro";
 import TablePanel from "../../../../../components/console/table/TablePanel";
 import { Resource } from "../../../../../config/types";
 
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
 const title = "Projects";
-
-const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
-console.log(BENCHER_API_URL);
 ---
 
-<OrgLayout params={params} title={title}>
+<OrgLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
   <h1>{BENCHER_API_URL}</h1>
-  <TablePanel client:only params={params} resource={Resource.PROJECTS} />
+  <TablePanel
+    client:only
+    apiUrl={BENCHER_API_URL}
+    params={params}
+    resource={Resource.PROJECTS}
+  />
 </OrgLayout>

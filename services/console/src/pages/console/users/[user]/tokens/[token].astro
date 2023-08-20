@@ -5,12 +5,16 @@ import UserLayout from "../../../../../layouts/console/UserLayout.astro";
 import DeckPanel from "../../../../../components/console/deck/DeckPanel";
 import { Resource } from "../../../../../config/types";
 
-// TODO share state
-// https://docs.astro.build/en/core-concepts/sharing-state/#why-nano-stores
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
 const title = "View Token";
 ---
 
-<UserLayout params={params} title={title}>
-  <DeckPanel client:only params={params} resource={Resource.TOKENS} />
+<UserLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
+  <DeckPanel
+    client:only
+    apiUrl={BENCHER_API_URL}
+    params={params}
+    resource={Resource.TOKENS}
+  />
 </UserLayout>

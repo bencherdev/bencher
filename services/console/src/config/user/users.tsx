@@ -13,7 +13,7 @@ const usersConfig = {
 		},
 		deck: {
 			url: (params: Params) => {
-				return `${BENCHER_API_URL()}/v0/users/${params?.user}`;
+				return `/v0/users/${params?.user}`;
 			},
 			cards: [
 				{

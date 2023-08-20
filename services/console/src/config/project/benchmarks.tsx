@@ -39,9 +39,7 @@ const benchmarksConfig = {
 			],
 		},
 		table: {
-			url: (params: Params) => {
-				return `${BENCHER_API_URL()}/v0/projects/${params?.project}/benchmarks`;
-			},
+			url: (params: Params) => `/v0/projects/${params?.project}/benchmarks`,
 			add: {
 				prefix: (
 					<div>
@@ -77,8 +75,7 @@ const benchmarksConfig = {
 			path_to: "Benchmarks",
 		},
 		form: {
-			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/projects/${params?.project}/benchmarks`,
+			url: (params: Params) => `/v0/projects/${params?.project}/benchmarks`,
 			fields: [
 				{
 					kind: FieldKind.INPUT,
@@ -102,11 +99,8 @@ const benchmarksConfig = {
 			buttons: [{ kind: Button.REFRESH }],
 		},
 		deck: {
-			url: (params: Params) => {
-				return `${BENCHER_API_URL()}/v0/projects/${
-					params?.project
-				}/benchmarks/${params?.benchmark}`;
-			},
+			url: (params: Params) =>
+				`/v0/projects/${params?.project}/benchmarks/${params?.benchmark}`,
 			cards: [
 				{
 					kind: Card.FIELD,

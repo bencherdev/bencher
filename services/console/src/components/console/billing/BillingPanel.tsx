@@ -1,22 +1,3 @@
-// import {
-// 	createMemo,
-// 	createResource,
-// 	createSignal,
-// 	Match,
-// 	Switch,
-// } from "solid-js";
-// import { Host } from "../../config/resources/billing";
-// import MeteredBilling from "./MeteredBilling";
-// import LicensedBilling from "./LicensedBilling";
-// import BillingHeader from "./BillingHeader";
-// import {
-// 	BENCHER_BILLING_API_URL,
-// 	get_options,
-// 	validate_jwt,
-// } from "../../../site/util";
-// import axios from "axios";
-// import Plan from "./Plan";
-
 import bencher_valid_init, { InitOutput } from "bencher_valid";
 import { Match, Switch, createMemo, createResource } from "solid-js";
 import consoleConfig from "../../../config/console";

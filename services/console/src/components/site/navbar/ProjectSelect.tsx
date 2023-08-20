@@ -8,7 +8,6 @@ import {
 	createSignal,
 } from "solid-js";
 import { useNavigate } from "../../../util/url";
-import { BENCHER_API_URL } from "../../../util/ext";
 import { httpGet } from "../../../util/http";
 import {
 	JsonVisibility,
@@ -20,6 +19,7 @@ import type { Params } from "astro";
 const BENCHER_ALL_PROJECTS = "--bencher--all--projects--";
 
 interface Props {
+	apiUrl: string;
 	params: Params;
 	user: JsonAuthUser;
 }
@@ -57,8 +57,8 @@ const ProjectSelect = (props: Props) => {
 		if (!fetcher.project_slug) {
 			return;
 		}
-		const url = `${BENCHER_API_URL()}/v0/projects/${fetcher.project_slug}`;
-		return await httpGet(url, fetcher.token)
+		const path = `/v0/projects/${fetcher.project_slug}`;
+		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
 				let json_project: JsonProject = resp?.data;
 				return json_project.organization;
@@ -112,10 +112,8 @@ const ProjectSelect = (props: Props) => {
 		if (!fetcher.organization) {
 			return [ALL_PROJECTS];
 		}
-		const url = `${BENCHER_API_URL()}/v0/organizations/${
-			fetcher.organization
-		}/projects?per_page=255`;
-		return await httpGet(url, fetcher.token)
+		const path = `/v0/organizations/${fetcher.organization}/projects?per_page=255`;
+		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
 				const json_projects: JsonProject[] = resp?.data;
 				json_projects.push(ALL_PROJECTS);

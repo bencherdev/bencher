@@ -3,12 +3,17 @@ export const prerender = false;
 
 import ProjectLayout from "../../../../layouts/console/ProjectLayout.astro";
 import PerfPanel from "../../../../components/console/perf/PerfPanel";
-import { Resource } from "../../../../config/types";
 
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
 const title = "Project Perf";
 ---
 
-<ProjectLayout params={params} title={title}>
-  <PerfPanel client:only params={params} isConsole={true} />
+<ProjectLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
+  <PerfPanel
+    client:only
+    apiUrl={BENCHER_API_URL}
+    params={params}
+    isConsole={true}
+  />
 </ProjectLayout>

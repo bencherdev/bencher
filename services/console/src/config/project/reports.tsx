@@ -12,8 +12,7 @@ const reportsConfig = {
 			buttons: [{ kind: Button.REFRESH }],
 		},
 		table: {
-			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/projects/${params?.project}/reports`,
+			url: (params: Params) => `/v0/projects/${params?.project}/reports`,
 			add: {
 				prefix: (
 					<div>
@@ -64,9 +63,7 @@ const reportsConfig = {
 		},
 		deck: {
 			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/projects/${params?.project}/reports/${
-					params?.report
-				}`,
+				`/v0/projects/${params?.project}/reports/${params?.report}`,
 			cards: [
 				{
 					kind: Card.FIELD,

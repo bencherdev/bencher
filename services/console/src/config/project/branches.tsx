@@ -39,8 +39,7 @@ const branchesConfig = {
 			],
 		},
 		table: {
-			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/projects/${params?.project}/branches`,
+			url: (params: Params) => `/v0/projects/${params?.project}/branches`,
 			add: {
 				prefix: (
 					<div>
@@ -82,8 +81,7 @@ const branchesConfig = {
 			path_to: "Branches",
 		},
 		form: {
-			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/projects/${params?.project}/branches`,
+			url: (params: Params) => `/v0/projects/${params?.project}/branches`,
 			fields: [
 				{
 					kind: FieldKind.INPUT,
@@ -108,9 +106,7 @@ const branchesConfig = {
 		},
 		deck: {
 			url: (params: Params) =>
-				`${BENCHER_API_URL()}/v0/projects/${params?.project}/branches/${
-					params?.branch
-				}`,
+				`/v0/projects/${params?.project}/branches/${params?.branch}`,
 			cards: [
 				{
 					kind: Card.FIELD,
