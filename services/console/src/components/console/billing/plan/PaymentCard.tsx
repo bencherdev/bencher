@@ -16,10 +16,11 @@ import type { Params } from "astro";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
 
 interface Props {
+	apiUrl: string;
 	params: Params;
 	bencher_valid: Resource<InitOutput>;
 	user: JsonAuthUser;
-	url: string;
+	path: string;
 	plan: Accessor<PlanLevel>;
 	handleRefresh: () => void;
 }
@@ -73,7 +74,7 @@ const PaymentCard = (props: Props) => {
 		};
 
 		setSubmitting(true);
-		httpPost(props.url, token, data)
+		httpPost(props.apiUrl, props.path, token, data)
 			.then((_resp) => {
 				setSubmitting(false);
 				props.handleRefresh();

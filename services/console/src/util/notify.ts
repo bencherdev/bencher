@@ -61,7 +61,7 @@ export const forwardParams = (
 	if (params_str.length === 0) {
 		return pathname;
 	} else {
-		console.log(params_str);
+		// console.log(params_str);
 		return `${pathname}?${params_str}`;
 	}
 };

@@ -6,10 +6,10 @@ import { validPlanLevel } from "../../../../util/valid";
 import { PLAN_PARAM } from "../../../auth/auth";
 import Pricing from "./Pricing";
 import PaymentCard from "./PaymentCard";
-import { BENCHER_API_URL } from "../../../../util/ext";
 import type { Params } from "astro";
 
 interface Props {
+	apiUrl: string;
 	params: Params;
 	bencher_valid: Resource<InitOutput>;
 	user: JsonAuthUser;
@@ -48,12 +48,11 @@ const Billing = (props: Props) => {
 				<br />
 				{plan() !== PlanLevel.Free && (
 					<PaymentCard
+						apiUrl={props.apiUrl}
 						params={props.params}
 						bencher_valid={props.bencher_valid}
 						user={props.user}
-						url={`${BENCHER_API_URL()}/v0/organizations/${
-							props.params.organization
-						}/plan`}
+						path={`/v0/organizations/${props.params.organization}/plan`}
 						plan={plan}
 						handleRefresh={props.handleRefresh}
 					/>

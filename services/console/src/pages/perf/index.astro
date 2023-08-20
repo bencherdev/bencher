@@ -4,9 +4,10 @@ export const prerender = false;
 import PerfLayout from "../../layouts/perf/PerfLayout.astro";
 import PublicProjects from "../../components/perf/PublicProjects";
 
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const title = "Bencher Projects";
 ---
 
 <PerfLayout title={title}>
-  <PublicProjects client:only />
+  <PublicProjects client:only apiUrl={BENCHER_API_URL} />
 </PerfLayout>

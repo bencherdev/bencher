@@ -16,44 +16,16 @@ export const BENCHER_VERSION = `${swagger?.info?.version}`;
 
 export const SWAGGER = swagger;
 
-// Either supply `PUBLIC_BENCHER_API_URL` at build time,
-// or default to the current protocol and hostname at port `61016`.
-// If another endpoint is required, then the UI will need to be re-bundled.
-// https://docs.astro.build/en/guides/environment-variables/#using-the-cli
-export const BENCHER_API_URL: () => string = () => {
-	const url = import.meta.env.BENCHER_API_URL;
-	console.log(url);
-	if (url) {
-		return url;
-	} else {
-		const location = window.location;
-		return `${location.protocol}//${location.hostname}:61016`;
-	}
-};
-
-export const BENCHER_BILLING_API_URL: () => string = () => {
-	const mode = import.meta.env.MODE;
-	switch (mode) {
-		case "development":
-			return BENCHER_API_URL();
-		case "production":
-			return BENCHER_CLOUD_API_URL;
-		default:
-			console.error("Invalid mode: ", mode);
-			return "http://localhost:61016";
-	}
-};
-
 // Change this value to test billing in development mode
 const TEST_BENCHER_BILLING: boolean = true;
 
-export const isBencherCloud = () => {
+export const isBencherCloud = (apiUrl: string) => {
 	const mode = import.meta.env.MODE;
 	switch (mode) {
 		case "development":
 			return TEST_BENCHER_BILLING;
 		case "production":
-			return BENCHER_BILLING_API_URL() === BENCHER_CLOUD_API_URL;
+			return apiUrl === BENCHER_CLOUD_API_URL;
 		default:
 			console.error("Invalid mode: ", mode);
 			return false;

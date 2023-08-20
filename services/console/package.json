@@ -3,7 +3,9 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev",
+    "typeshare": "typeshare ../.. --lang=typescript --output-file=./src/types/bencher.ts",
+    "wasm": "../../scripts/build_wasm.sh",
+    "dev": "npm run typeshare && npm run wasm && astro dev",
     "start": "astro dev",
     "build": "BENCHER_API_URL=placeholder astro build",
     "preview": "astro preview",

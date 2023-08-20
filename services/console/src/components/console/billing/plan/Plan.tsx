@@ -10,7 +10,6 @@ import {
 } from "../../../../types/bencher";
 import type { Params } from "astro";
 import { validJwt } from "../../../../util/valid";
-import { BENCHER_API_URL } from "../../../../util/ext";
 import { httpGet } from "../../../../util/http";
 
 const fmtDateTime = (date_str: undefined | string) => {
@@ -63,6 +62,7 @@ export const fmtUsd = (usd: undefined | number) => {
 };
 
 interface Props {
+	apiUrl: string;
 	params: Params;
 	bencher_valid: Resource<InitOutput>;
 	user: JsonAuthUser;
@@ -90,10 +90,8 @@ const Plan = (props: Props) => {
 		}
 		const start = dateTimeMillis(props.plan()?.current_period_start);
 		const end = dateTimeMillis(props.plan()?.current_period_end);
-		const url = `${BENCHER_API_URL()}/v0/organizations/${
-			fetcher.organization_slug
-		}/usage?start=${start}&end=${end}`;
-		return await httpGet(url, fetcher.token)
+		const path = `/v0/organizations/${fetcher.organization_slug}/usage?start=${start}&end=${end}`;
+		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => resp?.data)
 			.catch((error) => {
 				console.error(error);

@@ -2,7 +2,6 @@ import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import { Show, createMemo, createResource } from "solid-js";
 import { useNavigate } from "../../../util/url";
 import { authUser } from "../../../util/auth";
-import { BENCHER_API_URL } from "../../../util/ext";
 import { httpGet } from "../../../util/http";
 import type { JsonAlertStats } from "../../../types/bencher";
 import type { Params } from "astro";

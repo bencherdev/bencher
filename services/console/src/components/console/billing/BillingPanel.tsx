@@ -5,7 +5,7 @@ import { Operation, Resource } from "../../../config/types";
 import type { Params } from "astro";
 import { Host } from "../../../config/organization/billing";
 import { authUser } from "../../../util/auth";
-import { BENCHER_BILLING_API_URL, isBencherCloud } from "../../../util/ext";
+import { isBencherCloud } from "../../../util/ext";
 import BillingHeader, { BillingHeaderConfig } from "./BillingHeader";
 import LicensedBilling from "./plan/LicensedBilling";
 import type { JsonPlan } from "../../../types/bencher";
@@ -15,6 +15,7 @@ import MeteredBilling from "./plan/MeteredBilling";
 import Plan from "./plan/Plan";
 
 interface Props {
+	apiUrl: string;
 	params: Params;
 }
 
@@ -30,7 +31,7 @@ const BillingPanel = (props: Props) => {
 	);
 	const user = authUser();
 	const host = createMemo(() =>
-		isBencherCloud() ? Host.BENCHER_CLOUD : Host.SELF_HOSTED,
+		isBencherCloud(props.apiUrl) ? Host.BENCHER_CLOUD : Host.SELF_HOSTED,
 	);
 	const config = createMemo<BillingPanelConfig>(
 		() => consoleConfig[Resource.BILLING]?.[host()],
@@ -54,10 +55,8 @@ const BillingPanel = (props: Props) => {
 		if (!validJwt(fetcher.token)) {
 			return null;
 		}
-		const url = `${BENCHER_BILLING_API_URL()}/v0/organizations/${
-			fetcher.params.organization
-		}/plan`;
-		return await httpGet(url, fetcher.token)
+		const path = `/v0/organizations/${fetcher.params.organization}/plan`;
+		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
 				return resp?.data;
 			})
@@ -88,6 +87,7 @@ const BillingPanel = (props: Props) => {
 				</Match>
 				<Match when={config()?.host === Host.BENCHER_CLOUD && plan() === null}>
 					<MeteredBilling
+						apiUrl={props.apiUrl}
 						params={props.params}
 						bencher_valid={bencher_valid}
 						user={user}
@@ -96,6 +96,7 @@ const BillingPanel = (props: Props) => {
 				</Match>
 				<Match when={config()?.host === Host.BENCHER_CLOUD && plan()}>
 					<Plan
+						apiUrl={props.apiUrl}
 						params={props.params}
 						bencher_valid={bencher_valid}
 						user={user}

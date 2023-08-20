@@ -10,5 +10,5 @@ const title = "Billing";
 ---
 
 <OrgLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
-  <BillingPanel client:only params={params} />
+  <BillingPanel client:only apiUrl={BENCHER_API_URL} params={params} />
 </OrgLayout>

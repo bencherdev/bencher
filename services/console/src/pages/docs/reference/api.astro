@@ -1,10 +1,13 @@
 ---
+export const prerender = false;
+
 import DocsLayout from "../../../layouts/docs/DocsLayout.astro";
 import SwaggerPanel from "../../../components/docs/SwaggerPanel";
 
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const title = "REST API";
 ---
 
 <DocsLayout title={title}>
-  <SwaggerPanel client:only />
+  <SwaggerPanel client:only apiUrl={BENCHER_API_URL} />
 </DocsLayout>

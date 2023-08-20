@@ -10,7 +10,6 @@ import { useSearchParams } from "../../util/url";
 import { validU32 } from "../../util/valid";
 import { authUser } from "../../util/auth";
 import type { JsonProject } from "../../types/bencher";
-import { BENCHER_API_URL } from "../../util/ext";
 import { httpGet } from "../../util/http";
 
 // const SORT_PARAM = "sort";
@@ -21,7 +20,11 @@ const PAGE_PARAM = "page";
 const DEFAULT_PER_PAGE = 8;
 const DEFAULT_PAGE = 1;
 
-const PublicProjects = () => {
+export interface Props {
+	apiUrl: string;
+}
+
+const PublicProjects = (props: Props) => {
 	const [searchParams, setSearchParams] = useSearchParams();
 
 	const initParams: Record<string, number> = {};
@@ -66,8 +69,8 @@ const PublicProjects = () => {
 				searchParams.set(key, value.toString());
 			}
 		}
-		const url = `${BENCHER_API_URL()}/v0/projects?${searchParams.toString()}`;
-		return await httpGet(url, fetcher.token)
+		const path = `/v0/projects?${searchParams.toString()}`;
+		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => resp?.data)
 			.catch((error) => {
 				console.error(error);

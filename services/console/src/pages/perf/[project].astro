@@ -4,10 +4,11 @@ export const prerender = false;
 import PerfLayout from "../../layouts/perf/PerfLayout.astro";
 import PublicProject from "../../components/perf/PublicProject";
 
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
 const title = "Bencher Project";
 ---
 
 <PerfLayout title={title}>
-  <PublicProject client:only params={params} />
+  <PublicProject client:only apiUrl={BENCHER_API_URL} params={params} />
 </PerfLayout>

@@ -15,9 +15,9 @@ import type {
 import { setPageTitle } from "../../../util/resource";
 import FieldKind from "../../field/kind";
 import Field from "../../field/Field";
-import { BENCHER_API_URL } from "../../../util/ext";
 
 export interface Props {
+	apiUrl: string;
 	user: JsonAuthUser;
 	perfData: Resource<JsonPerf>;
 	isPlotInit: Accessor<boolean>;
@@ -51,6 +51,7 @@ const PerfHeader = (props: Props) => {
 				</h3>
 			</div>
 			<ShareModal
+				apiUrl={props.apiUrl}
 				user={props.user}
 				perfQuery={props.perfQuery}
 				isPlotInit={props.isPlotInit}
@@ -127,6 +128,7 @@ const PerfHeader = (props: Props) => {
 export default PerfHeader;
 
 export interface ShareProps {
+	apiUrl: string;
 	user: JsonAuthUser;
 	perfQuery: Accessor<PerfQuery>;
 	isPlotInit: Accessor<boolean>;
@@ -171,7 +173,9 @@ const ShareModal = (props: ShareProps) => {
 		if (img_title) {
 			searchParams.set("title", img_title);
 		}
-		const url = `${BENCHER_API_URL()}/v0/projects/${project_slug}/perf/img?${searchParams.toString()}`;
+		const url = `${
+			props.apiUrl
+		}/v0/projects/${project_slug}/perf/img?${searchParams.toString()}`;
 		return url;
 	});
 

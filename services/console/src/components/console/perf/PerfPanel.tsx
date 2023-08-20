@@ -26,7 +26,6 @@ import type {
 	JsonTestbed,
 } from "../../../types/bencher";
 import type { TabList } from "./plot/PlotTab";
-import { BENCHER_API_URL } from "../../../util/ext";
 import { NotifyKind, pageNotify } from "../../../util/notify";
 
 const REPORT_PARAM = "report";
@@ -706,6 +705,7 @@ const PerfPanel = (props: Props) => {
 	return (
 		<>
 			<PerfHeader
+				apiUrl={props.apiUrl}
 				user={user}
 				perfData={perfData}
 				isPlotInit={isPlotInit}
@@ -713,6 +713,7 @@ const PerfPanel = (props: Props) => {
 				handleRefresh={handleRefresh}
 			/>
 			<PerfPlot
+				apiUrl={props.apiUrl}
 				user={user}
 				project_slug={project_slug}
 				isConsole={props.isConsole ?? false}

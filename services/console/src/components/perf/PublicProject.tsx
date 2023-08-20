@@ -2,6 +2,7 @@ import type { Params } from "astro";
 import PerfPanel from "../console/perf/PerfPanel";
 
 export interface Props {
+	apiUrl: string;
 	params: Params;
 }
 
@@ -11,7 +12,11 @@ const PublicProject = (props: Props) => {
 			<div class="container">
 				<div class="columns is-mobile">
 					<div class="column">
-						<PerfPanel params={props.params} isConsole={false} />
+						<PerfPanel
+							apiUrl={props.apiUrl}
+							params={props.params}
+							isConsole={false}
+						/>
 					</div>
 				</div>
 			</div>

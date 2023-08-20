@@ -10,11 +10,11 @@ import {
 import type { JsonAuthUser, JsonMetricKind } from "../../../../types/bencher";
 import { PerfRange } from "../../../../config/types";
 import { httpGet } from "../../../../util/http";
-import { BENCHER_API_URL } from "../../../../util/ext";
 
 const BENCHER_METRIC_KIND = "--bencher--metric--kind--";
 
 export interface Props {
+	apiUrl: string;
 	user: JsonAuthUser;
 	project_slug: Accessor<undefined | string>;
 	isConsole: boolean;
@@ -63,10 +63,10 @@ const PlotHeader = (props: Props) => {
 		const searchParams = new URLSearchParams();
 		searchParams.set("per_page", "255");
 		searchParams.set("page", "1");
-		const url = `${BENCHER_API_URL()}/v0/projects/${
+		const path = `/v0/projects/${
 			fetcher.project
 		}/metric-kinds?${searchParams.toString()}`;
-		return await httpGet(url, fetcher.token)
+		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
 				let data = resp?.data;
 				data.push(SELECT_METRIC_KIND);

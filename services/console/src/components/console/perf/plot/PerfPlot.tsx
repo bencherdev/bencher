@@ -14,6 +14,7 @@ import type {
 } from "../../../../types/bencher";
 
 export interface Props {
+	apiUrl: string;
 	user: JsonAuthUser;
 	project_slug: Accessor<undefined | string>;
 	isConsole: boolean;
@@ -73,6 +74,7 @@ const PerfPlot = (props: Props) => {
 			<div class="column">
 				<nav class="panel">
 					<PlotHeader
+						apiUrl={props.apiUrl}
 						user={props.user}
 						project_slug={props.project_slug}
 						isConsole={props.isConsole}
