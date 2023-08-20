@@ -5,9 +5,11 @@
   "scripts": {
     "typeshare": "typeshare ../.. --lang=typescript --output-file=./src/types/bencher.ts",
     "wasm": "../../scripts/build_wasm.sh",
-    "dev": "npm run typeshare && npm run wasm && astro dev",
+    "setup": "npm run typeshare && npm run wasm",
+    "dev": "npm run setup && astro dev",
     "start": "astro dev",
     "build": "export $(cat .env.runtime) && astro build",
+    "netlify": "npm run setup && npm run build",
     "preview": "astro preview",
     "astro": "astro"
   },

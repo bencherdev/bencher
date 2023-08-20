@@ -1,0 +1,4 @@
+[build]
+base = "services/console"
+publish = "services/console/dist"
+command = "npm run netlify"
