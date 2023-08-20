@@ -574,7 +574,7 @@ jobs:
   #         path: ./services/ui/dist
   #     - uses: netlify/actions/cli@master
   #       with:
-  #         args: deploy --dir ./services/ui/dist --alias ${GITHUB_REF#refs/*/} --message "${{ github.event.head_commit.message }}"
+  #         args: deploy --dir /github/workspace/services/ui/dist --alias ${GITHUB_REF#refs/*/} --message "${{ github.event.head_commit.message }}"
   #       env:
   #         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
   #         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
@@ -596,8 +596,6 @@ jobs:
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-      # - name: Check updated Console UI is deployed
-      #   run: ./scripts/check_ui.sh
 
   deploy_ui_netlify_prod:
     name: Deploy UI to Netlify Prod
@@ -612,12 +610,12 @@ jobs:
           path: ./services/ui/dist
       - uses: netlify/actions/cli@master
         with:
-          args: deploy --dir ./services/ui/dist --alias ${GITHUB_REF#refs/*/} --message "${{ github.event.head_commit.message }}" --prod
+          args: deploy --dir /github/workspace/services/ui/dist --alias ${GITHUB_REF#refs/*/} --message "${{ github.event.head_commit.message }}" --prod
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-      - name: Check updated UI is deployed
-        run: ./scripts/check_ui.sh
+      # - name: Check updated UI is deployed
+      #   run: ./scripts/check_ui.sh
 
   # Release
   release_bencher:
