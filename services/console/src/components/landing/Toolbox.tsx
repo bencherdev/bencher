@@ -11,7 +11,7 @@ const Toolbox = (_props: {}) => {
 	return (
 		<div class="box">
 			<div class="content has-text-centered">
-				<h2>Use Your Favorite Tools</h2>
+				<h2 class="title">Use Your Favorite Benchmark Harness</h2>
 				<br />
 				<br />
 				<div class="columns is-centered is-vcentered">

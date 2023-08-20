@@ -1,7 +1,7 @@
 import { BENCHER_GITHUB_URL } from "../../util/ext";
 
 const Footer = () => (
-	<footer class="footer" style="margin-top:64rem;">
+	<footer class="footer" style="margin-top:1rem;">
 		<div class="container">
 			<div class="content">
 				<nav class="level">
