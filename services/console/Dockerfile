@@ -15,4 +15,6 @@ ENV HOST=0.0.0.0
 ENV PORT=3000
 EXPOSE 3000
 
+ENV BENCHER_API_URL=http://localhost:61016
+
 CMD node ./dist/server/entry.mjs

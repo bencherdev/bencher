@@ -21,9 +21,10 @@ export const SWAGGER = swagger;
 // If another endpoint is required, then the UI will need to be re-bundled.
 // https://docs.astro.build/en/guides/environment-variables/#using-the-cli
 export const BENCHER_API_URL: () => string = () => {
-	const api_url = import.meta.env.PUBLIC_BENCHER_API_URL;
-	if (api_url) {
-		return api_url;
+	const url = import.meta.env.BENCHER_API_URL;
+	console.log(url);
+	if (url) {
+		return url;
 	} else {
 		const location = window.location;
 		return `${location.protocol}//${location.hostname}:61016`;
