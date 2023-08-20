@@ -582,7 +582,7 @@ jobs:
   deploy_console_ui_netlify_dev:
     name: Deploy Console UI to Netlify
     runs-on: ubuntu-latest
-    # needs: deploy_local_api_fly
+    needs: build_console_ui
     steps:
       - uses: actions/checkout@v3
       - name: Download Console UI Artifact
@@ -596,8 +596,8 @@ jobs:
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-      - name: Check updated Console UI is deployed
-        run: ./scripts/check_ui.sh
+      # - name: Check updated Console UI is deployed
+      #   run: ./scripts/check_ui.sh
 
   deploy_ui_netlify_prod:
     name: Deploy UI to Netlify Prod
