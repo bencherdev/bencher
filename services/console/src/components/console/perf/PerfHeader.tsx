@@ -1,4 +1,4 @@
-import createDebounce from "@solid-primitives/debounce";
+import { debounce } from "@solid-primitives/scheduled";
 import {
 	Accessor,
 	createEffect,
@@ -13,6 +13,7 @@ import type {
 	JsonProject,
 } from "../../../types/bencher";
 import { setPageTitle } from "../../../util/resource";
+import { apiUrl } from "../../../util/http";
 import FieldKind from "../../field/kind";
 import Field from "../../field/Field";
 
@@ -142,10 +143,7 @@ const ShareModal = (props: ShareProps) => {
 
 	const [title, setTitle] = createSignal(null);
 
-	const handle_title = createDebounce(
-		(_key, value, _valid) => setTitle(value),
-		250,
-	);
+	const handle_title = debounce((_key, value, _valid) => setTitle(value), 250);
 
 	const perf_page_url = createMemo(
 		() =>
@@ -173,9 +171,10 @@ const ShareModal = (props: ShareProps) => {
 		if (img_title) {
 			searchParams.set("title", img_title);
 		}
-		const url = `${
-			props.apiUrl
-		}/v0/projects/${project_slug}/perf/img?${searchParams.toString()}`;
+		const url = apiUrl(
+			props.apiUrl,
+			`/v0/projects/${project_slug}/perf/img?${searchParams.toString()}`,
+		);
 		return url;
 	});
 

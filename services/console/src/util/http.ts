@@ -8,7 +8,7 @@ enum HttpMethod {
 	DELETE = "DELETE",
 }
 
-const apiHost = (hostname: string): string => {
+export const apiHost = (hostname: string): string => {
 	if (hostname) {
 		return hostname;
 	} else {
@@ -17,7 +17,7 @@ const apiHost = (hostname: string): string => {
 	}
 };
 
-const apiUrl = (hostname: string, pathname: string): string =>
+export const apiUrl = (hostname: string, pathname: string): string =>
 	`${apiHost(hostname)}${pathname}`;
 
 export const httpGet = async (
