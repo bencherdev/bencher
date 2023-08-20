@@ -608,6 +608,7 @@ jobs:
             --alias ${GITHUB_REF#refs/*/} \
             --message "${{ github.event.head_commit.message }}" \
             --build
+            --debug
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
