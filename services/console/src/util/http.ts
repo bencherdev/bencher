@@ -8,65 +8,92 @@ enum HttpMethod {
 	DELETE = "DELETE",
 }
 
-export const httpGet = async (url: string, token: undefined | null | string) =>
-	axios(getOptions(url, token));
-export const getOptions = (url: string, token: undefined | null | string) => {
+const apiHost = (hostname: string): string => {
+	if (hostname) {
+		return hostname;
+	} else {
+		const location = window.location;
+		return `${location.protocol}//${location.hostname}:61016`;
+	}
+};
+
+const apiUrl = (hostname: string, pathname: string): string =>
+	`${apiHost(hostname)}${pathname}`;
+
+export const httpGet = async (
+	hostname: string,
+	pathname: string,
+	token: undefined | null | string,
+) => axios(getOptions(hostname, pathname, token));
+export const getOptions = (
+	hostname: string,
+	pathname: string,
+	token: undefined | null | string,
+) => {
 	return {
-		url: url,
+		url: apiUrl(hostname, pathname),
 		method: HttpMethod.GET,
 		headers: headers(token),
 	};
 };
 
 export const httpPost = async (
-	url: string,
+	hostname: string,
+	pathname: string,
 	token: undefined | null | string,
 	data: {},
-) => axios(postOptions(url, token, data));
+) => axios(postOptions(hostname, pathname, token, data));
 export const postOptions = (
-	url: string,
+	hostname: string,
+	pathname: string,
 	token: undefined | null | string,
 	data: {},
 ) => {
-	return dataOptions(url, HttpMethod.POST, token, data);
+	return dataOptions(hostname, pathname, HttpMethod.POST, token, data);
 };
 
 export const httpPut = async (
-	url: string,
+	hostname: string,
+	pathname: string,
 	token: undefined | null | string,
 	data: {},
-) => axios(putOptions(url, token, data));
+) => axios(putOptions(hostname, pathname, token, data));
 export const putOptions = (
-	url: string,
+	hostname: string,
+	pathname: string,
 	token: undefined | null | string,
 	data: {},
 ) => {
-	return dataOptions(url, HttpMethod.PUT, token, data);
+	return dataOptions(hostname, pathname, HttpMethod.PUT, token, data);
 };
 
 export const httpPatch = async (
-	url: string,
+	hostname: string,
+	pathname: string,
 	token: undefined | null | string,
 	data: {},
-) => axios(pathOptions(url, token, data));
+) => axios(pathOptions(hostname, pathname, token, data));
 export const pathOptions = (
-	url: string,
+	hostname: string,
+	pathname: string,
 	token: undefined | null | string,
 	data: Record<string, any>,
 ) => {
-	return dataOptions(url, HttpMethod.PATCH, token, data);
+	return dataOptions(hostname, pathname, HttpMethod.PATCH, token, data);
 };
 
 export const httpDelete = async (
-	url: string,
+	hostname: string,
+	pathname: string,
 	token: undefined | null | string,
-) => axios(deleteOptions(url, token));
+) => axios(deleteOptions(hostname, pathname, token));
 export const deleteOptions = (
-	url: string,
+	hostname: string,
+	pathname: string,
 	token: undefined | null | string,
 ) => {
 	return {
-		url: url,
+		url: apiUrl(hostname, pathname),
 		method: HttpMethod.DELETE,
 		headers: headers(token),
 	};
@@ -88,13 +115,14 @@ const headers = (token: undefined | null | string) => {
 };
 
 export const dataOptions = (
-	url: string,
+	hostname: string,
+	pathname: string,
 	method: HttpMethod,
 	token: undefined | null | string,
 	data: {},
 ) => {
 	return {
-		url: url,
+		url: apiUrl(hostname, pathname),
 		method: method,
 		headers: headers(token),
 		data: data,

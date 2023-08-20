@@ -1,11 +1,15 @@
-import { createEffect, createResource, createSignal } from "solid-js";
+import {
+	createEffect,
+	createResource,
+	createSignal,
+	createMemo,
+} from "solid-js";
 import bencher_valid_init from "bencher_valid";
 
 import { JsonLogin, JsonSignup, PlanLevel, Jwt } from "../../types/bencher";
 import Field, { FieldHandler } from "../field/Field";
 import FieldKind from "../field/kind";
 import { useSearchParams } from "../../util/url";
-import { BENCHER_API_URL } from "../../util/ext";
 import { httpPost } from "../../util/http";
 import { AUTH_FIELDS, EMAIL_PARAM, INVITE_PARAM, PLAN_PARAM } from "./auth";
 import { createStore } from "solid-js/store";
@@ -13,6 +17,7 @@ import { validJwt, validPlanLevel } from "../../util/valid";
 import { NotifyKind, navigateNotify, pageNotify } from "../../util/notify";
 
 export interface Props {
+	apiUrl: string;
 	newUser: boolean;
 }
 
@@ -23,6 +28,8 @@ const AuthForm = (props: Props) => {
 		async () => await bencher_valid_init(),
 	);
 	const [searchParams, setSearchParams] = useSearchParams();
+
+	const apiUrl = createMemo(() => props.apiUrl);
 
 	const plan = () => searchParams[PLAN_PARAM]?.trim() as PlanLevel;
 	const invite = () => searchParams[INVITE_PARAM]?.trim() as Jwt;
@@ -58,26 +65,19 @@ const AuthForm = (props: Props) => {
 		return false;
 	};
 
-	const post = async (data: JsonAuthForm) => {
-		const url = `${BENCHER_API_URL()}/v0/auth/${
-			props.newUser ? "signup" : "login"
-		}`;
-		return await httpPost(url, null, data);
-	};
-
 	const handleSubmit = () => {
 		setSubmitting(true);
 		const plan_level = plan();
 		const invite_token = invite();
 
-		let auth_form: JsonAuthForm;
+		let authForm: JsonAuthForm;
 		if (props.newUser) {
 			const signup_form = form;
 			const signup: JsonSignup = {
 				name: signup_form.username.value?.trim(),
 				email: signup_form.email.value?.trim(),
 			};
-			auth_form = signup;
+			authForm = signup;
 			if (!plan_level) {
 				setSearchParams({ [PLAN_PARAM]: PlanLevel.Free });
 			}
@@ -86,16 +86,21 @@ const AuthForm = (props: Props) => {
 			const login: JsonLogin = {
 				email: login_form.email.value?.trim(),
 			};
-			auth_form = login;
+			authForm = login;
 		}
 		if (plan_level) {
-			auth_form.plan = plan_level;
+			authForm.plan = plan_level;
 		}
 		if (invite_token) {
-			auth_form.invite = invite_token;
+			authForm.invite = invite_token;
 		}
 
-		post(auth_form)
+		httpPost(
+			apiUrl(),
+			`/v0/auth/${props.newUser ? "signup" : "login"}`,
+			null,
+			authForm,
+		)
 			.then((_resp) => {
 				setSubmitting(false);
 				navigateNotify(
@@ -105,7 +110,7 @@ const AuthForm = (props: Props) => {
 					}! Please confirm token.`,
 					"/auth/confirm",
 					[PLAN_PARAM],
-					[[EMAIL_PARAM, auth_form.email]],
+					[[EMAIL_PARAM, authForm.email]],
 				);
 			})
 			.catch((error) => {

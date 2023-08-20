@@ -1,8 +1,11 @@
 ---
+export const prerender = false;
+
 import AuthLayout from "../../layouts/auth/AuthLayout.astro";
 import AuthForm from "../../components/auth/AuthForm";
 import AuthRedirect from "../../components/auth/AuthRedirect";
 
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const title = "Sign up";
 ---
 
@@ -11,7 +14,7 @@ const title = "Sign up";
 
   <h2 class="title">{title}</h2>
 
-  <AuthForm client:only newUser={true} />
+  <AuthForm client:only apiUrl={BENCHER_API_URL} newUser={true} />
 
   <hr />
 

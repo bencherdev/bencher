@@ -1,8 +1,11 @@
 ---
+export const prerender = false;
+
 import AuthLayout from "../../layouts/auth/AuthLayout.astro";
 import ConfirmForm from "../../components/auth/ConfirmForm";
 import AuthRedirect from "../../components/auth/AuthRedirect";
 
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const title = "Confirm Token";
 ---
 
@@ -15,5 +18,5 @@ const title = "Confirm Token";
     the token here.
   </h3>
 
-  <ConfirmForm client:only />
+  <ConfirmForm client:only apiUrl={BENCHER_API_URL} />
 </AuthLayout>

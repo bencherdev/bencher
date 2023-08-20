@@ -13,15 +13,22 @@ import { AUTH_FIELDS, EMAIL_PARAM, PLAN_PARAM, TOKEN_PARAM } from "./auth";
 import { useSearchParams } from "../../util/url";
 import { validEmail, validJwt, validPlanLevel } from "../../util/valid";
 import { createStore } from "solid-js/store";
-import { BENCHER_API_URL } from "../../util/ext";
 import { httpPost } from "../../util/http";
 import { setUser } from "../../util/auth";
-import type { Email, Jwt, PlanLevel } from "../../types/bencher";
+import type {
+	Email,
+	Jwt,
+	PlanLevel,
+	JsonAuthToken,
+	JsonLogin,
+} from "../../types/bencher";
 import { NotifyKind, navigateNotify, pageNotify } from "../../util/notify";
 
-export interface Props {}
+export interface Props {
+	apiUrl: string;
+}
 
-const ConfirmForm = (_props: Props) => {
+const ConfirmForm = (props: Props) => {
 	const [bencher_valid] = createResource(
 		async () => await bencher_valid_init(),
 	);
@@ -59,19 +66,13 @@ const ConfirmForm = (_props: Props) => {
 		});
 	};
 
-	const post = async () => {
-		const url = `${BENCHER_API_URL()}/v0/auth/confirm`;
-		const no_token = null;
-		const data = {
-			token: token(),
-		};
-		return await httpPost(url, no_token, data);
-	};
-
 	const handleSubmit = () => {
 		setSubmitting(true);
 
-		post()
+		const authToken: JsonAuthToken = {
+			token: token(),
+		};
+		httpPost(props.apiUrl, "/v0/auth/confirm", null, authToken)
 			.then((resp) => {
 				setSubmitting(false);
 				const user = resp.data;
@@ -102,13 +103,11 @@ const ConfirmForm = (_props: Props) => {
 	const handleResendEmail = () => {
 		setSubmitting(true);
 
-		const data = {
+		const login: JsonLogin = {
 			email: email().trim(),
-			plan: plan()?.trim(),
+			plan: plan()?.trim() as PlanLevel,
 		};
-
-		const url = `${BENCHER_API_URL()}/v0/auth/login`;
-		httpPost(url, null, data)
+		httpPost(props.apiUrl, "/v0/auth/login", null, login)
 			.then((_resp) => {
 				setSubmitting(false);
 				navigateNotify(
