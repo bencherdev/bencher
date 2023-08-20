@@ -1,4 +1,4 @@
 [build]
 base = "services/console"
 publish = "dist"
-command = "npm run netlify"
+command = "npm install && npx astro add netlify -y && npm run build"
