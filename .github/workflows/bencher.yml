@@ -607,7 +607,6 @@ jobs:
             deploy \
             --alias ${GITHUB_REF#refs/*/} \
             --dir /github/workspace/services/console/dist \
-            --functions /github/workspace/services/console/.netlify/functions-internal \
             --message "${{ github.event.head_commit.message }}"
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
