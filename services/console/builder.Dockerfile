@@ -45,7 +45,7 @@ COPY services/console/src src
 COPY services/console/astro.config.mjs astro.config.mjs
 COPY services/console/site.js site.js
 COPY services/console/tsconfig.json tsconfig.json
-# COPY services/console/.env.runtime .env.runtime
+COPY services/console/.env.runtime .env.runtime
 
 # https://docs.astro.build/en/guides/integrations-guide/node
 RUN npx astro add node -y

@@ -7,7 +7,7 @@
     "wasm": "../../scripts/build_wasm.sh",
     "dev": "npm run typeshare && npm run wasm && astro dev",
     "start": "astro dev",
-    "build": "BENCHER_API_URL=placeholder astro build",
+    "build": "export $(cat .env.runtime) && astro build",
     "preview": "astro preview",
     "astro": "astro"
   },

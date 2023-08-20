@@ -26,6 +26,6 @@ services:
     environment:
       # Set this to your actual host if different
       - BENCHER_API_URL=http://localhost:61016
-      # - PUBLIC_GOOGLE_ANALYTICS_ID=
+      # - GOOGLE_ANALYTICS_ID=
     # depends_on:
       # - bencher_api
