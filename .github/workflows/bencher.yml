@@ -32,7 +32,6 @@ env:
   UI_DOCKER_IMAGE: bencher-ui
   UI_BUILD_DIST: bencher-ui-dist
   # Console UI
-  CONSOLE_UI_BUILDER_DOCKER_IMAGE: bencher-console-ui-builder
   CONSOLE_UI_DOCKER_IMAGE: bencher-console-ui
   CONSOLE_UI_BUILD_DIST: bencher-console-ui-dist
 
@@ -421,7 +420,7 @@ jobs:
         with:
           context: .
           file: ./services/console/builder.Dockerfile
-          tags: ${{ env.CONSOLE_UI_BUILDER_DOCKER_IMAGE }}
+          tags: ${{ env.UI_BUILDER_DOCKER_IMAGE }}
           build-args: |
             MOLD_VERSION=${{ env.MOLD_VERSION }}
           push: false
