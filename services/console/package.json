@@ -9,7 +9,7 @@
     "dev": "npm run setup && astro dev",
     "start": "astro dev",
     "build": "export $(cat .env.runtime) && astro build",
-    "netlify": "npm run setup && npm run build",
+    "netlify": "npm install && npx astro add netlify -y && npm run build",
     "preview": "astro preview",
     "astro": "astro"
   },

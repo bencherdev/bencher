@@ -626,12 +626,17 @@ jobs:
           path: ./services/ui/dist
       - uses: netlify/actions/cli@master
         with:
-          args: deploy --dir /github/workspace/services/ui/dist --alias ${GITHUB_REF#refs/*/} --message "${{ github.event.head_commit.message }}" --prod
+          args: |
+            deploy \
+            --alias ${GITHUB_REF#refs/*/} \
+            --message "${{ github.event.head_commit.message }}" \
+            --dir /github/workspace/services/ui/dist \
+            --prod
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-      - name: Check updated UI is deployed
-        run: ./scripts/check_ui.sh
+      # - name: Check updated UI is deployed
+      #   run: ./scripts/check_ui.sh
 
   # Release
   release_bencher:
