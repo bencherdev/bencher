@@ -607,7 +607,7 @@ jobs:
             deploy \
             --alias ${GITHUB_REF#refs/*/} \
             --message "${{ github.event.head_commit.message }}" \
-            --build
+            --build \
             --debug
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
