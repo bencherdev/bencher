@@ -1,5 +1,3 @@
 [build]
 base = "services/console"
 publish = "dist"
-# command = "npm install && npx astro add netlify -y && npm run build"
-command = "npm --version"
