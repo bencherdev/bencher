@@ -240,11 +240,11 @@ jobs:
   build_bencher_valid_wasm:
     name: Build `bencher_valid` WASM
     runs-on: ubuntu-latest
-    needs:
-      - cargo_fmt
-      - cargo_clippy
-      - npx_rome_format
-      - npx_rome_lint
+    # needs:
+    #   - cargo_fmt
+    #   - cargo_clippy
+    #   - npx_rome_format
+    #   - npx_rome_lint
     env:
       WASM_PACK_BUILD: "wasm-pack build --target web --features plus,wasm"
     steps:
@@ -596,13 +596,18 @@ jobs:
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
           path: ./lib/bencher_valid/pkg
+      - name: Build Console UI
+        working-directory: ./services/console
+        run: |
+          npm install
+          npx astro add netlify -y
+          npm run build
       - uses: netlify/actions/cli@master
         with:
           args: |
             deploy \
             --alias ${GITHUB_REF#refs/*/} \
             --message "${{ github.event.head_commit.message }}" \
-            --build \
             --debug
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
