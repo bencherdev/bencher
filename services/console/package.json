@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@astrojs/mdx": "^0.19.7",
+    "@astrojs/partytown": "^1.2.3",
     "@astrojs/sitemap": "^2.0.1",
     "@astrojs/solid-js": "^2.2.0",
     "@observablehq/plot": "^0.4.3",
