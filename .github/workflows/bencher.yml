@@ -35,6 +35,8 @@ env:
   CONSOLE_UI_DOCKER_IMAGE: bencher-console-ui
   CONSOLE_UI_BUILD_DIST: bencher-console-ui-dist
   CONSOLE_UI_BUILD_NETLIFY: bencher-console-ui-netlify
+  # Analytics
+  GOOGLE_ANALYTICS_ID: G-9Q5Q2QS45K
 
 jobs:
   bencher_github_action:
@@ -599,9 +601,8 @@ jobs:
       - name: Build Console UI
         working-directory: ./services/console
         run: |
-          npm install
-          npx astro add netlify -y
-          npm run build
+          echo "PUBLIC_GOOGLE_ANALYTICS_ID=${{ env.GOOGLE_ANALYTICS_ID }}" >> .env.production
+          npm run netlify
       - uses: netlify/actions/cli@master
         with:
           args: |

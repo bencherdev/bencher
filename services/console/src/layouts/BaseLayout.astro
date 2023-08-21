@@ -9,6 +9,8 @@ interface Props {
   title: string;
 }
 
+// https://docs.astro.build/en/reference/directives-reference/#definevars
+const PUBLIC_GOOGLE_ANALYTICS_ID = import.meta.env.PUBLIC_GOOGLE_ANALYTICS_ID;
 const { title } = Astro.props;
 
 const pageTitle = fmtPageTitle(title);
@@ -35,6 +37,19 @@ const pageTitle = fmtPageTitle(title);
     <!-- font awesome -->
     <script defer src="https://use.fontawesome.com/releases/v5.15.4/js/all.js"
     ></script>
+    <!-- Google tag (gtag.js) -->
+    <script
+      type="text/partytown"
+      src={`https://www.googletagmanager.com/gtag/js?id=${PUBLIC_GOOGLE_ANALYTICS_ID}`}
+    ></script>
+    <script define:vars={{ PUBLIC_GOOGLE_ANALYTICS_ID }} type="text/partytown">
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+      gtag("config", PUBLIC_GOOGLE_ANALYTICS_ID);
+    </script>
     <!-- <ViewTransitions /> -->
   </head>
   <body>
