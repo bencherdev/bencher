@@ -4,6 +4,20 @@ heading: "Bencher Changelog"
 sortOrder: 4
 ---
 
+## `v0.3.9`
+- Move UI over to [Astro](https://astro.build) with stronger TypeScript
+- Add check for failing Netlify deployments
+- Move default Threshold Boundaries from `0.95` to `0.9`
+
+## `v0.3.8`
+- Segment PR comments by the combination of Project, Branch, Testbed, and Adapter
+- Add a custom PR comment ID argument `--ci-id` to `bencher run` for complex scenarios
+- Another special thank you to [@GitGab19](https://github.com/GitGab19) for all the feedback
+
+## `v0.3.7`
+- Fix slug length validation bug
+- A special thank you to [@GitGab19](https://github.com/GitGab19) for all the feedback
+
 ## `v0.3.6`
 - Fix multi-Metric Kind bug for Perf Plot Report selection
 - Require minimum and maximum sample sizes to be greater than or equal to two
@@ -13,7 +27,7 @@ sortOrder: 4
 - Only start posting CI integrations when an Alert is generated with `--ci-only-on-alert`
 - Fix Threshold boundary calculation bug when standard deviation is zero
 - Add a warning ⚠️ in the Perf Plot UI when a Boundary Limit is not calculated
-- A special thank you to [@untitaker](https://github.com/untitaker) team for all the feedback
+- A special thank you to [@untitaker](https://github.com/untitaker) for all the feedback
 
 ## `v0.3.5`
 - Visualize Threshold lower and upper boundaries and Alerts in Perf Plot

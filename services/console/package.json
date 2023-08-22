@@ -1,7 +1,7 @@
 {
   "name": "bencher-ui",
   "type": "module",
-  "version": "0.0.1",
+  "version": "0.3.9",
   "scripts": {
     "typeshare": "typeshare ../.. --lang=typescript --output-file=./src/types/bencher.ts",
     "wasm": "../../scripts/build_wasm.sh",
