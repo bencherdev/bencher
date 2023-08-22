@@ -30,7 +30,7 @@ fn main() -> Result<(), SwaggerError> {
     // This is run via a `pre-push` git hook
     // So if the `SWAGGER_PATH` below is ever updated
     // also update `./git/hooks/pre-push` accordingly.
-    const SWAGGER_PATH: &str = "../ui/src/components/docs/api/swagger.json";
+    const SWAGGER_PATH: &str = "../console/src/content/api/swagger.json";
 
     info!("Generating OpenAPI JSON file at: {SWAGGER_PATH}");
     let mut api_description = ApiDescription::new();

@@ -14,7 +14,7 @@ npm run build
 cd -
 
 # Update UI version and types
-cd ./services/ui
+cd ./services/console
 npm version $VERSION
 npm run typeshare
 cd -
@@ -22,11 +22,11 @@ cd -
 git add Cargo.toml
 git add Cargo.lock
 git add ./services/action/dist/index.js
-git add ./services/ui/package.json
-git add ./services/ui/package-lock.json
-git add ./services/ui/src/components/docs/api/swagger.json
-git add ./services/ui/src/docs/reference/Changelog.mdx
-git add ./services/ui/src/types/bencher.ts
+git add ./services/console/package.json
+git add ./services/console/package-lock.json
+git add ./services/console/src/content/api/swagger.json
+git add ./services/console/src/content/reference/changelog.mdx
+git add ./services/console/src/types/bencher.ts
 
 TAG="v$VERSION"
 COMMIT="Release $TAG"

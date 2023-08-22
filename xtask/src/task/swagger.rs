@@ -22,7 +22,7 @@ impl Swagger {
         println!("{}", String::from_utf8_lossy(&output.stdout));
         eprintln!("{}", String::from_utf8_lossy(&output.stderr));
 
-        println!("Saved to: ./services/ui/src/components/docs/api/swagger.json");
+        println!("Saved to: ./services/console/src/content/api/swagger.json");
 
         Ok(())
     }

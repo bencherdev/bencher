@@ -1,2 +1,3 @@
 target/
 services/ui/node_modules/
+services/consoles/node_modules/

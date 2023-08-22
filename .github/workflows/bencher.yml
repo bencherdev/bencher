@@ -31,10 +31,6 @@ env:
   UI_BUILDER_DOCKER_IMAGE: bencher-ui-builder
   UI_DOCKER_IMAGE: bencher-ui
   UI_BUILD_DIST: bencher-ui-dist
-  # Console UI
-  CONSOLE_UI_DOCKER_IMAGE: bencher-console-ui
-  CONSOLE_UI_BUILD_DIST: bencher-console-ui-dist
-  CONSOLE_UI_BUILD_NETLIFY: bencher-console-ui-netlify
   # Analytics
   GOOGLE_ANALYTICS_ID: G-9Q5Q2QS45K
 
@@ -204,11 +200,11 @@ jobs:
         run: |
           npm install --include=dev
           npx rome ci --linter-enabled false .
-      - name: Rome format UI
-        working-directory: ./services/ui
-        run: |
-          npm install --include=dev
-          npx rome ci --linter-enabled false .
+      # - name: Rome format UI
+      #   working-directory: ./services/ui
+      #   run: |
+      #     npm install --include=dev
+      #     npx rome ci --linter-enabled false .
       - name: Rome format Console UI
         working-directory: ./services/console
         run: |
@@ -227,11 +223,11 @@ jobs:
         run: |
           npm install --include=dev
           npx rome ci --formatter-enabled false .
-      - name: Rome check UI
-        working-directory: ./services/ui
-        run: |
-          npm install --include=dev
-          npx rome ci --formatter-enabled false .
+      # - name: Rome check UI
+      #   working-directory: ./services/ui
+      #   run: |
+      #     npm install --include=dev
+      #     npx rome ci --formatter-enabled false .
       - name: Rome check Console UI
         working-directory: ./services/console
         run: |
@@ -242,11 +238,6 @@ jobs:
   build_bencher_valid_wasm:
     name: Build `bencher_valid` WASM
     runs-on: ubuntu-latest
-    # needs:
-    #   - cargo_fmt
-    #   - cargo_clippy
-    #   - npx_rome_format
-    #   - npx_rome_lint
     env:
       WASM_PACK_BUILD: "wasm-pack build --target web --features plus,wasm"
     steps:
@@ -269,6 +260,10 @@ jobs:
     name: vitest
     runs-on: ubuntu-latest
     needs:
+      - cargo_fmt
+      - cargo_clippy
+      - npx_rome_format
+      - npx_rome_lint
       - build_bencher_valid_wasm
     steps:
       - uses: actions/checkout@v3
@@ -277,8 +272,13 @@ jobs:
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
           path: ./lib/bencher_valid/pkg
+      # - name: npx vitest
+      #   working-directory: ./services/ui
+      #   run: |
+      #     npm install --include=dev
+      #     npx vitest run
       - name: npx vitest
-        working-directory: ./services/ui
+        working-directory: ./services/console
         run: |
           npm install --include=dev
           npx vitest run
@@ -385,35 +385,35 @@ jobs:
           path: ${{ env.CLI_DEB_DIR }}/${{ env.DEB_FILE }}
 
   # UI Docker
-  build_ui_docker:
-    name: Build UI Docker
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Build Builder Stage
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: ./services/ui/builder.Dockerfile
-          tags: ${{ env.UI_BUILDER_DOCKER_IMAGE }}
-          push: false
-      - name: Build UI
-        uses: docker/build-push-action@v4
-        with:
-          context: ./services/ui
-          tags: ${{ env.UI_DOCKER_IMAGE }}
-          push: false
-      - name: Save UI
-        run: |
-          docker save ${{ env.UI_DOCKER_IMAGE }} \
-          | gzip > ${{ env.UI_DOCKER_IMAGE }}.tar.gz
-      - name: Upload UI Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ env.UI_DOCKER_IMAGE }}.tar.gz
-          path: ./${{ env.UI_DOCKER_IMAGE }}.tar.gz
+  # build_ui_docker:
+  #   name: Build UI Docker
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - name: Build Builder Stage
+  #       uses: docker/build-push-action@v4
+  #       with:
+  #         context: .
+  #         file: ./services/ui/builder.Dockerfile
+  #         tags: ${{ env.UI_BUILDER_DOCKER_IMAGE }}
+  #         push: false
+  #     - name: Build UI
+  #       uses: docker/build-push-action@v4
+  #       with:
+  #         context: ./services/ui
+  #         tags: ${{ env.UI_DOCKER_IMAGE }}
+  #         push: false
+  #     - name: Save UI
+  #       run: |
+  #         docker save ${{ env.UI_DOCKER_IMAGE }} \
+  #         | gzip > ${{ env.UI_DOCKER_IMAGE }}.tar.gz
+  #     - name: Upload UI Artifact
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: ${{ env.UI_DOCKER_IMAGE }}.tar.gz
+  #         path: ./${{ env.UI_DOCKER_IMAGE }}.tar.gz
 
-  build_console_ui_docker:
+  build_ui_docker:
     name: Build Console UI Docker
     runs-on: ubuntu-latest
     steps:
@@ -431,47 +431,52 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: ./services/console
-          tags: ${{ env.CONSOLE_UI_DOCKER_IMAGE }}
+          tags: ${{ env.UI_DOCKER_IMAGE }}
           push: false
       - name: Save Console UI
         run: |
-          docker save ${{ env.CONSOLE_UI_DOCKER_IMAGE }} \
-          | gzip > ${{ env.CONSOLE_UI_DOCKER_IMAGE }}.tar.gz
+          docker save ${{ env.UI_DOCKER_IMAGE }} \
+          | gzip > ${{ env.UI_DOCKER_IMAGE }}.tar.gz
       - name: Upload Console UI Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.CONSOLE_UI_DOCKER_IMAGE }}.tar.gz
-          path: ./${{ env.CONSOLE_UI_DOCKER_IMAGE }}.tar.gz
+          name: ${{ env.UI_DOCKER_IMAGE }}.tar.gz
+          path: ./${{ env.UI_DOCKER_IMAGE }}.tar.gz
 
   # UI
-  build_ui:
-    if: true && !startsWith(github.ref, 'refs/tags/')
-    name: Build UI
-    runs-on: ubuntu-latest
-    needs: build_bencher_valid_wasm
-    steps:
-      - uses: actions/checkout@v3
-      - name: Download `bencher_valid` Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ env.WASM_BENCHER_VALID }}
-          path: ./lib/bencher_valid/pkg
-      - name: Build UI
-        working-directory: ./services/ui
-        run: |
-          npm install
-          npm run build
-      - name: Upload UI Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ env.UI_BUILD_DIST }}
-          path: ./services/ui/dist
+  # build_ui:
+  #   if: true && !startsWith(github.ref, 'refs/tags/')
+  #   name: Build UI
+  #   runs-on: ubuntu-latest
+  #   needs: build_bencher_valid_wasm
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - name: Download `bencher_valid` Artifact
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: ${{ env.WASM_BENCHER_VALID }}
+  #         path: ./lib/bencher_valid/pkg
+  #     - name: Build UI
+  #       working-directory: ./services/ui
+  #       run: |
+  #         npm install
+  #         npm run build
+  #     - name: Upload UI Artifact
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: ${{ env.UI_BUILD_DIST }}
+  #         path: ./services/ui/dist
 
-  build_console_ui:
+  build_ui:
     if: true && !startsWith(github.ref, 'refs/tags/')
     name: Build Console UI
     runs-on: ubuntu-latest
-    needs: build_bencher_valid_wasm
+    needs:
+      - cargo_fmt
+      - cargo_clippy
+      - npx_rome_format
+      - npx_rome_lint
+      - build_bencher_valid_wasm
     steps:
       - uses: actions/checkout@v3
       - name: Download `bencher_valid` Artifact
@@ -482,19 +487,8 @@ jobs:
       - name: Build Console UI
         working-directory: ./services/console
         run: |
-          npm install
-          npx astro add netlify -y
-          npm run build
-      - name: Upload Console UI Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ env.CONSOLE_UI_BUILD_DIST }}
-          path: ./services/console/dist
-      - name: Upload Console Netlify Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ env.CONSOLE_UI_BUILD_NETLIFY }}
-          path: ./services/console/.netlify
+          echo "PUBLIC_GOOGLE_ANALYTICS_ID=${{ env.GOOGLE_ANALYTICS_ID }}" >> .env.production
+          npm run netlify
 
   # API Fly.io
   deploy_local_api_fly:
@@ -587,10 +581,36 @@ jobs:
   #         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
   #         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
 
-  deploy_console_ui_netlify_dev:
+  deploy_ui_netlify_dev:
     name: Deploy Console UI to Netlify
     runs-on: ubuntu-latest
-    needs: build_bencher_valid_wasm
+    needs: deploy_local_api_fly
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download `bencher_valid` Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.WASM_BENCHER_VALID }}
+          path: ./lib/bencher_valid/pkg
+      - name: Build Console UI
+        working-directory: ./services/console
+        run: |
+          echo "PUBLIC_GOOGLE_ANALYTICS_ID=${{ env.GOOGLE_ANALYTICS_ID }}" >> .env.production
+          npm run netlify
+      - uses: netlify/actions/cli@master
+        with:
+          args: |
+            deploy \
+            --alias ${GITHUB_REF#refs/*/} \
+            --message "${{ github.event.head_commit.message }}"
+        env:
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+
+  deploy_ui_netlify_prod:
+    name: Deploy UI to Netlify Prod
+    runs-on: ubuntu-latest
+    needs: deploy_litestream_api_fly
     steps:
       - uses: actions/checkout@v3
       - name: Download `bencher_valid` Artifact
@@ -609,35 +629,12 @@ jobs:
             deploy \
             --alias ${GITHUB_REF#refs/*/} \
             --message "${{ github.event.head_commit.message }}" \
-            --debug
-        env:
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-
-  deploy_ui_netlify_prod:
-    name: Deploy UI to Netlify Prod
-    runs-on: ubuntu-latest
-    needs: deploy_litestream_api_fly
-    steps:
-      - uses: actions/checkout@v3
-      - name: Download UI Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ env.UI_BUILD_DIST }}
-          path: ./services/ui/dist
-      - uses: netlify/actions/cli@master
-        with:
-          args: |
-            deploy \
-            --alias ${GITHUB_REF#refs/*/} \
-            --message "${{ github.event.head_commit.message }}" \
-            --dir /github/workspace/services/ui/dist \
             --prod
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-      # - name: Check updated UI is deployed
-      #   run: ./scripts/check_ui.sh
+      - name: Check updated UI is deployed
+        run: ./scripts/check_ui.sh
 
   # Release
   release_bencher:

@@ -2,7 +2,7 @@ import * as core from "@actions/core";
 import * as toolCache from "@actions/tool-cache";
 import { chmod } from "fs/promises";
 
-import swagger from "../../ui/src/components/docs/api/swagger.json";
+import swagger from "../../console/src/content/api/swagger.json";
 
 const run = async () => {
 	const cli_version = core.getInput("version");

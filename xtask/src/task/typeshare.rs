@@ -17,12 +17,12 @@ impl Typeshare {
     pub async fn exec(&self) -> anyhow::Result<()> {
         let output = Command::new("npm")
             .args(["run", "typeshare"])
-            .current_dir("./services/ui")
+            .current_dir("./services/console")
             .output()?;
         println!("{}", String::from_utf8_lossy(&output.stdout));
         eprintln!("{}", String::from_utf8_lossy(&output.stderr));
 
-        println!("Saved to: ./services/ui/src/types/bencher.ts");
+        println!("Saved to: ./services/console/src/types/bencher.ts");
 
         Ok(())
     }
