@@ -50,14 +50,14 @@ const THRESHOLD_FIELDS = {
 	},
 	lower_boundary: {
 		type: "input",
-		placeholder: "0.95",
+		placeholder: "0.9",
 		icon: "fas fa-arrow-down",
 		help: "Must be between 0.5000 and 1.0000",
 		validate: validBoundary,
 	},
 	upper_boundary: {
 		type: "input",
-		placeholder: "0.95",
+		placeholder: "0.9",
 		icon: "fas fa-arrow-up",
 		help: "Must be between 0.5000 and 1.0000",
 		validate: validBoundary,
@@ -71,7 +71,7 @@ const THRESHOLD_FIELDS = {
 	},
 	max_sample_size: {
 		type: "number",
-		placeholder: "100",
+		placeholder: "30",
 		icon: "fas fa-cubes",
 		help: "Must be an integer greater than or equal to 2",
 		validate: validSampleSize,

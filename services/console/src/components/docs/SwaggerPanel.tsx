@@ -1,6 +1,7 @@
 import { createEffect } from "solid-js";
 import { SwaggerUIBundle } from "swagger-ui-dist";
 import { SWAGGER, BENCHER_CLOUD_API_URL, isBencherCloud } from "../../util/ext";
+import { apiHost } from "../../util/http";
 
 const BENCHER_CLOUD = "Bencher Cloud";
 const BENCHER_SELF_HOSTED = "Bencher Self-Hosted";
@@ -10,13 +11,15 @@ export interface Props {
 }
 
 const SwaggerPanel = (props: Props) => {
+	const url = apiHost(props.apiUrl);
+
 	createEffect(() => {
 		const swagger = SWAGGER;
 		// https://swagger.io/docs/specification/api-host-and-base-path/
 		swagger.servers = [];
-		if (!isBencherCloud(props.apiUrl)) {
+		if (!isBencherCloud(url)) {
 			swagger.servers.push({
-				url: props.apiUrl,
+				url: url,
 				description: BENCHER_SELF_HOSTED,
 			});
 		}
@@ -35,16 +38,15 @@ const SwaggerPanel = (props: Props) => {
 		<div class="content">
 			<blockquote>
 				<p>
-					🐰{" "}
-					{isBencherCloud(props.apiUrl) ? BENCHER_CLOUD : BENCHER_SELF_HOSTED}{" "}
-					API Endpoint:{" "}
+					🐰 {isBencherCloud(url) ? BENCHER_CLOUD : BENCHER_SELF_HOSTED} API
+					Endpoint:{" "}
 					<code>
 						<a
-							href={`${props.apiUrl}/v0/server/version`}
+							href={`${url}/v0/server/version`}
 							target="_blank"
 							rel="noreferrer"
 						>
-							{props.apiUrl}
+							{url}
 						</a>
 					</code>
 				</p>
