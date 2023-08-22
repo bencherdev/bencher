@@ -1,8 +1,9 @@
 <h1>
   <a href="https://bencher.dev">
     <img
-      src="https://bencher.dev/favicon/favicon.ico"
+      src="https://bencher.dev/favicon.svg"
       alt="🐰 Bencher"
+      width=32
     />
   </a>
   Bencher
