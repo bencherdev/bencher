@@ -8,7 +8,7 @@ use bencher_json::{
     JsonConfig, Secret,
 };
 use once_cell::sync::Lazy;
-use tracing::{error, info};
+use slog::{error, info, Logger};
 use url::Url;
 
 use crate::ApiError;
@@ -61,55 +61,68 @@ pub static DEFAULT_SECRET_KEY: Lazy<Secret> = Lazy::new(|| uuid::Uuid::new_v4().
 #[derive(Debug, Clone)]
 pub struct Config(JsonConfig);
 
+impl AsRef<JsonConfig> for Config {
+    fn as_ref(&self) -> &JsonConfig {
+        &self.0
+    }
+}
+
 impl Config {
-    pub async fn load_or_default() -> Result<Self, ApiError> {
-        if let Some(config) = Self::load_env().await? {
+    pub async fn load_or_default(log: &Logger) -> Result<Self, ApiError> {
+        if let Some(config) = Self::load_env(log).await? {
             return Ok(config);
         }
 
-        if let Some(config) = Self::load_file().await? {
+        if let Some(config) = Self::load_file(log).await? {
             return Ok(config);
         }
 
         let config = Self::default();
-        info!("Using default config: {}", sanitize_json(&config.0));
+        info!(log, "Using default config: {}", sanitize_json(&config.0));
         let config_str = if cfg!(debug_assertions) {
             serde_json::to_string_pretty(&config.0)
         } else {
             serde_json::to_string(&config.0)
         }?;
-        Self::write(config_str.as_bytes()).await?;
+        Self::write(log, config_str.as_bytes()).await?;
 
         Ok(config)
     }
 
-    pub async fn load_env() -> Result<Option<Self>, ApiError> {
+    pub async fn load_env(log: &Logger) -> Result<Option<Self>, ApiError> {
         // If the env var is set then failing to read or parse the config is an error
         // However, if it isn't set then just return None
         let config_str = match std::env::var(BENCHER_CONFIG) {
             Ok(config_str) => config_str,
             Err(e) => {
-                info!("Failed to find \"{BENCHER_CONFIG}\" environment variable: {e}");
+                info!(
+                    log,
+                    "Failed to find \"{BENCHER_CONFIG}\" environment variable: {e}"
+                );
                 return Ok(None);
             },
         };
 
         let json_config = serde_json::from_str(&config_str).map_err(|e| {
-            error!("Failed to parse config string from \"{BENCHER_CONFIG}\": {e}");
+            error!(
+                log,
+                "Failed to parse config string from \"{BENCHER_CONFIG}\": {e}"
+            );
             ApiError::ParseConfigString(config_str.clone())
         })?;
         info!(
+            log,
             "Loaded config from env var \"{BENCHER_CONFIG}\": {}",
             sanitize_json(&json_config)
         );
 
         #[cfg(debug_assertions)]
-        Self::write(config_str.as_bytes()).await?;
+        Self::write(log, config_str.as_bytes()).await?;
 
         Ok(Some(Self(json_config)))
     }
 
-    pub async fn load_file() -> Result<Option<Self>, ApiError> {
+    pub async fn load_file(log: &Logger) -> Result<Option<Self>, ApiError> {
         // If the env var is set then failing to read or parse the config is an error
         // However, if it isn't set then just try the default path
         // If there is a file to read at the default path, then that config is expected to parse
@@ -117,17 +130,17 @@ impl Config {
         let (path, config_file) = match std::env::var(BENCHER_CONFIG_PATH) {
             Ok(path) => {
                 let config_file = tokio::fs::read(&path).await.map_err(|e| {
-                    error!("Failed to open config file at {}: {e}", path);
+                    error!(log, "Failed to open config file at {path}: {e}");
                     ApiError::OpenConfigFile(path.clone())
                 })?;
                 (path, config_file)
             },
             Err(e) => {
-                info!("Failed to find \"{BENCHER_CONFIG_PATH}\" environment variable defaulting to \"{DEFAULT_CONFIG_PATH}\": {e}");
+                info!(log, "Failed to find \"{BENCHER_CONFIG_PATH}\" environment variable defaulting to \"{DEFAULT_CONFIG_PATH}\": {e}");
                 let config_file = match tokio::fs::read(DEFAULT_CONFIG_PATH).await {
                     Ok(config_file) => config_file,
                     Err(e) => {
-                        info!("Failed to open config file at default path \"{DEFAULT_CONFIG_PATH}\": {e}");
+                        info!(log, "Failed to open config file at default path \"{DEFAULT_CONFIG_PATH}\": {e}");
                         return Ok(None);
                     },
                 };
@@ -136,10 +149,11 @@ impl Config {
         };
 
         let json_config = serde_json::from_slice(&config_file).map_err(|e| {
-            error!("Failed to parse config file at {path}: {e}");
+            error!(log, "Failed to parse config file at {path}: {e}");
             ApiError::ParseConfigFile(path.clone())
         })?;
         info!(
+            log,
             "Loaded config from file {path}: {}",
             sanitize_json(&json_config)
         );
@@ -147,14 +161,14 @@ impl Config {
         Ok(Some(Self(json_config)))
     }
 
-    pub async fn write(config: impl AsRef<[u8]>) -> Result<(), ApiError> {
+    pub async fn write(log: &Logger, config: impl AsRef<[u8]>) -> Result<(), ApiError> {
         let path = std::env::var(BENCHER_CONFIG_PATH).unwrap_or_else(|e| {
-            info!("Failed to find \"{BENCHER_CONFIG_PATH}\" environment variable defaulting to \"{DEFAULT_CONFIG_PATH}\": {e}");
+            info!(log, "Failed to find \"{BENCHER_CONFIG_PATH}\" environment variable defaulting to \"{DEFAULT_CONFIG_PATH}\": {e}");
             DEFAULT_CONFIG_PATH.into()
         });
 
         tokio::fs::write(&path, config).await.map_err(|e| {
-            error!("Failed to write config file at {path}: {e}");
+            error!(log, "Failed to write config file at {path}: {e}");
             ApiError::WriteConfigFile(path)
         })
     }
@@ -192,6 +206,7 @@ impl Default for Config {
                     level: DEFAULT_LOG_LEVEL,
                 },
             },
+            apm: None,
             #[cfg(feature = "plus")]
             plus: None,
         })

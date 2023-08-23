@@ -1,39 +1,68 @@
 use bencher_api::{
     config::{config_tx::ConfigTx, Config},
+    util::logger::bootstrap_logger,
     ApiError,
 };
+use bencher_json::system::config::JsonApm;
 use dropshot::HttpServer;
-use tracing::{error, info};
+#[cfg(feature = "sentry")]
+use sentry::ClientInitGuard;
+use slog::{error, info, Logger};
 
 #[tokio::main]
 async fn main() -> Result<(), ApiError> {
-    // Install global subscriber configured based on RUST_LOG envvar.
-    let subscriber = tracing_subscriber::FmtSubscriber::new();
-    tracing::subscriber::set_global_default(subscriber)?;
-
+    let log = bootstrap_logger();
+    #[cfg(feature = "sentry")]
+    let guard = sentry::init(sentry::ClientOptions {
+        release: sentry::release_name!(),
+        ..Default::default()
+    });
     info!(
+        &log,
         "\u{1f430} Bencher API Server v{}",
         env!("CARGO_PKG_VERSION")
     );
-    run().await
+    if let Err(e) = run(
+        &log,
+        #[cfg(feature = "sentry")]
+        guard,
+    )
+    .await
+    {
+        error!(&log, "Server failed to run: {e}");
+    }
+    Ok(())
 }
 
-async fn run() -> Result<(), ApiError> {
+async fn run(
+    log: &Logger,
+    #[cfg(feature = "sentry")] mut _guard: ClientInitGuard,
+) -> Result<(), ApiError> {
     loop {
-        let config = Config::load_or_default().await?;
+        let config = Config::load_or_default(log).await?;
+        if let Some(apm) = config.as_ref().apm.as_ref() {
+            match &apm {
+                JsonApm::Sentry { dsn } => {
+                    #[cfg(feature = "sentry")]
+                    {
+                        _guard = sentry::init((
+                            dsn.as_str(),
+                            sentry::ClientOptions {
+                                release: sentry::release_name!(),
+                                ..Default::default()
+                            },
+                        ));
+                    }
+                },
+            }
+        };
         let (restart_tx, mut restart_rx) = tokio::sync::mpsc::channel(1);
         let config_tx = ConfigTx { config, restart_tx };
 
         let handle = tokio::spawn(async move {
-            async fn run_http_server(config_tx: ConfigTx) -> Result<(), ApiError> {
-                HttpServer::try_from(config_tx)?
-                    .await
-                    .map_err(ApiError::RunServer)
-            }
-
-            if let Err(e) = run_http_server(config_tx).await {
-                error!("Server Failure: {e}");
-            }
+            HttpServer::try_from(config_tx)?
+                .await
+                .map_err(ApiError::RunServer)
         });
 
         tokio::select! {
@@ -45,6 +74,7 @@ async fn run() -> Result<(), ApiError> {
                     break;
                 }
             },
+            _ = async {}, if handle.is_finished() => return handle.await.map_err(ApiError::JoinHandle)?,
         }
     }
 

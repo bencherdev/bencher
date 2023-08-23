@@ -6,13 +6,14 @@ edition.workspace = true
 default-run = "api"
 
 [features]
-default = ["plus"]
+default = ["plus", "sentry"]
 plus = [
     "bencher_json/plus",
     "dep:bencher_billing",
     "dep:bencher_license",
     "dep:bencher_plus",
 ]
+sentry = ["dep:sentry"]
 swagger = ["dep:literally"]
 
 [dependencies]
@@ -51,7 +52,9 @@ dropshot = "0.9"
 hyper = "0.14"
 http = "0.2"
 mail-send = "0.4"
+sentry = { version = "0.31.5", optional = true }
 slog = "2.7"
+slog-term = "2.9"
 statrs = "0.16"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["tracing-log"] }

@@ -9,8 +9,10 @@ use crate::{endpoints::Endpoint, model::user::auth::AuthUser};
 
 #[derive(Debug, Error)]
 pub enum ApiError {
-    #[error("Failed to set global default logger")]
+    #[error("Failed to set global default logger: {0}")]
     SetGlobalDefault(#[from] tracing::subscriber::SetGlobalDefaultError),
+    #[error("Failed to join handle: {0}")]
+    JoinHandle(tokio::task::JoinError),
     #[error("Failed to parse role based access control (RBAC) rules: {0}")]
     Polar(oso::OsoError),
     #[error("Failed to create database connection: {0}")]

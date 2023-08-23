@@ -10,10 +10,11 @@ services:
   #     - 61016:61016
   #   volumes:
   #     - "../services/api/data:/data"
-  #     # environment:
-  #     # Set configuration string or filepath
-  #     # - BENCHER_CONFIG=
-  #     # - BENCHER_CONFIG_PATH=
+      # environment:
+      # Set configuration string or filepath
+      # - BENCHER_CONFIG=
+      # - BENCHER_CONFIG_PATH=
+      # - SENTRY_DSN=
 
   bencher_ui:
     build:

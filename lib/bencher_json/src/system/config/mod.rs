@@ -3,6 +3,7 @@ use bencher_valid::{Sanitize, Secret, Url};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+mod apm;
 mod console;
 mod database;
 mod logging;
@@ -12,6 +13,7 @@ mod security;
 mod server;
 mod smtp;
 
+pub use apm::JsonApm;
 pub use console::JsonConsole;
 pub use database::{DataStore, JsonDatabase};
 pub use logging::{IfExists, JsonLogging, LogLevel, ServerLog};
@@ -43,6 +45,7 @@ pub struct JsonConfig {
     pub logging: JsonLogging,
     pub database: JsonDatabase,
     pub smtp: Option<JsonSmtp>,
+    pub apm: Option<JsonApm>,
     #[cfg(feature = "plus")]
     pub plus: Option<JsonPlus>,
 }

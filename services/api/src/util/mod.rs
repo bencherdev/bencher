@@ -5,6 +5,7 @@ use crate::ApiError;
 pub mod cors;
 pub mod error;
 pub mod headers;
+pub mod logger;
 pub mod query;
 pub mod resource_id;
 pub mod same_project;

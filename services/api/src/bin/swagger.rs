@@ -1,8 +1,8 @@
 use std::fs::File;
 
-use bencher_api::endpoints::Api;
+use bencher_api::{endpoints::Api, util::logger::bootstrap_logger};
 use dropshot::{ApiDescription, EndpointTagPolicy, TagConfig, TagDetails};
-use tracing::info;
+use slog::info;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SwaggerError {
@@ -17,11 +17,10 @@ pub enum SwaggerError {
 }
 
 fn main() -> Result<(), SwaggerError> {
-    // Install global subscriber configured based on RUST_LOG envvar.
-    let subscriber = tracing_subscriber::FmtSubscriber::new();
-    tracing::subscriber::set_global_default(subscriber)?;
+    let log = bootstrap_logger();
 
     info!(
+        &log,
         "\u{1f430} Bencher OpenAPI Spec v{}",
         env!("CARGO_PKG_VERSION")
     );
@@ -32,7 +31,7 @@ fn main() -> Result<(), SwaggerError> {
     // also update `./git/hooks/pre-push` accordingly.
     const SWAGGER_PATH: &str = "../console/src/content/api/swagger.json";
 
-    info!("Generating OpenAPI JSON file at: {SWAGGER_PATH}");
+    info!(&log, "Generating OpenAPI JSON file at: {SWAGGER_PATH}");
     let mut api_description = ApiDescription::new();
     Api::register(&mut api_description, false)?;
     let mut swagger_file = File::create(SWAGGER_PATH).map_err(SwaggerError::CreateFile)?;
@@ -61,7 +60,7 @@ fn main() -> Result<(), SwaggerError> {
         .write(&mut swagger_file)
         .map_err(SwaggerError::WriteFile)?;
 
-    info!("Saved OpenAPI JSON file to: {SWAGGER_PATH}");
+    info!(&log, "Saved OpenAPI JSON file to: {SWAGGER_PATH}");
 
     Ok(())
 }

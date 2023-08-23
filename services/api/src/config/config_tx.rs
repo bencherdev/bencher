@@ -16,9 +16,8 @@ use dropshot::{
     ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingIfExists, ConfigLoggingLevel,
     ConfigTls, HttpServer,
 };
-use slog::Logger;
+use slog::{trace, warn, Logger};
 use tokio::sync::mpsc::Sender;
-use tracing::{trace, warn};
 
 use crate::{
     context::{ApiContext, Database, DbConnection, Email, Messenger, SecretKey},
@@ -54,20 +53,24 @@ impl TryFrom<ConfigTx> for HttpServer<ApiContext> {
             database,
             smtp,
             logging,
+            apm: _,
             #[cfg(feature = "plus")]
             plus,
         }) = config;
+        let log = into_log(logging)?;
 
         // TODO Remove deprecated endpoint
         let console = if let Some(console) = console {
             if endpoint.is_some() {
                 warn!(
+                    &log,
                     "DEPRECATED: The `endpoint` is now `console.url`. This value will be ignored."
                 );
             }
             console
         } else if let Some(endpoint) = endpoint {
             warn!(
+                &log,
                 "DEPRECATED: The `endpoint` is now `console.url`. This value will be used for now."
             );
             JsonConsole { url: endpoint }
@@ -79,12 +82,14 @@ impl TryFrom<ConfigTx> for HttpServer<ApiContext> {
         let security = if let Some(security) = security {
             if secret_key.is_some() {
                 warn!(
+                    &log,
                 "DEPRECATED: The `secret_key` is now `security.secret_key`. This value will be ignored."
                 );
             }
             security
         } else if let Some(secret_key) = secret_key {
             warn!(
+                &log,
                 "DEPRECATED: The `secret_key` is now `security.secret_key`. This value will be used for now."
             );
             JsonSecurity {
@@ -96,6 +101,7 @@ impl TryFrom<ConfigTx> for HttpServer<ApiContext> {
         };
 
         let private = into_private(
+            &log,
             console,
             security,
             smtp,
@@ -105,10 +111,9 @@ impl TryFrom<ConfigTx> for HttpServer<ApiContext> {
             plus,
         )?;
         let config_dropshot = into_config_dropshot(server);
-        let log = into_log(logging)?;
 
         let mut api = ApiDescription::new();
-        trace!("Registering server APIs");
+        trace!(&log, "Registering server APIs");
         Api::register(&mut api, true)?;
 
         Ok(
@@ -120,6 +125,7 @@ impl TryFrom<ConfigTx> for HttpServer<ApiContext> {
 }
 
 fn into_private(
+    log: &Logger,
     console: JsonConsole,
     security: JsonSecurity,
     smtp: Option<JsonSmtp>,
@@ -129,7 +135,7 @@ fn into_private(
 ) -> Result<ApiContext, ApiError> {
     let endpoint = console.url.into();
     let database_path = json_database.file.to_string_lossy();
-    diesel_database_url(&database_path);
+    diesel_database_url(log, &database_path);
     let mut database_connection = DbConnection::establish(&database_path)?;
     run_migrations(&mut database_connection)?;
     let data_store = if let Some(data_store) = json_database.data_store {
@@ -163,16 +169,19 @@ fn into_private(
 }
 
 // Set the diesel `DATABASE_URL` env var to the database path
-fn diesel_database_url(database_path: &str) {
+fn diesel_database_url(log: &Logger, database_path: &str) {
     if let Ok(database_url) = std::env::var(DATABASE_URL) {
         if database_url == database_path {
             return;
         }
-        trace!("\"{DATABASE_URL}\" ({database_url}) must be the same value as {database_path}");
+        trace!(
+            log,
+            "\"{DATABASE_URL}\" ({database_url}) must be the same value as {database_path}"
+        );
     } else {
-        trace!("Failed to find \"{DATABASE_URL}\"");
+        trace!(log, "Failed to find \"{DATABASE_URL}\"");
     }
-    trace!("Setting \"{DATABASE_URL}\" to {database_path}");
+    trace!(log, "Setting \"{DATABASE_URL}\" to {database_path}");
     std::env::set_var(DATABASE_URL, database_path);
 }
 

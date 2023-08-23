@@ -63,6 +63,11 @@ Example JSON configuration:
     "secret": "WM3F2u9cqSNdBPLfy9sJ5kk9",
     "from_name": "Bencher",
     "from_email": "info@bencher.example.com"
+  },
+  "apm": {
+    "sentry": {
+      "dsn": "https://0123abc1023abc@987efg987efg.ingest.sentry.io/0123456789"
+    }
   }
 }
 ```
@@ -134,3 +139,11 @@ If not specified, all messages will be sent to `logging` instead.
 | secret     | "WM3F2u9cqSNdBPLfy9sJ5kk9" | ---     | Yes      | Specifies the secret for the username at the SMTP host. Whenever logged, it will appear obfuscated as `************`. |
 | from_name  | "Bencher"                  | ---     | Yes      | Specifies the name that will appear in the from section of all emails.                                                |
 | from_email | "info@bencher.example.com" | ---     | Yes      | Spefifies the email that will appear in the from section of all emails.                                               |
+
+## `apm`
+
+Application Performance Monitoring (APM) is a feature that allows the Bencher API Server to send telemetry to a third-party service.
+
+| Name       | Example                                                           | Default | Required | Description                                                                                                                                         |
+|:----------:|:-----------------------------------------------------------------:|:-------:|:--------:|:---------------------------------------------------------------------------------------------------------------------------------------------------:|
+| sentry.dsn | "https://0123abc1023abc@987efg987efg.ingest.sentry.io/0123456789" | ---     | No       | Sentry [Data Source Name](https://docs.sentry.io/product/sentry-basics/dsn-explainer/). Can also be set with the `SENTRY_DSN` environment variable. |

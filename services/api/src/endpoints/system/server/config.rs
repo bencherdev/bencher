@@ -1,5 +1,6 @@
 use bencher_json::{system::config::JsonUpdateConfig, JsonConfig};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+use slog::Logger;
 
 use crate::{
     config::{Config, BENCHER_CONFIG},
@@ -44,19 +45,23 @@ pub async fn server_config_get(
     let endpoint = Endpoint::new(CONFIG_RESOURCE, Method::GetOne);
 
     let context = rqctx.context();
-    let json = get_one_inner(context, &auth_user)
+    let json = get_one_inner(&rqctx.log, context, &auth_user)
         .await
         .map_err(|e| endpoint.err(e))?;
 
     response_ok!(endpoint, json)
 }
 
-async fn get_one_inner(context: &ApiContext, auth_user: &AuthUser) -> Result<JsonConfig, ApiError> {
+async fn get_one_inner(
+    log: &Logger,
+    context: &ApiContext,
+    auth_user: &AuthUser,
+) -> Result<JsonConfig, ApiError> {
     if !auth_user.is_admin(&context.rbac) {
         return Err(ApiError::Admin(auth_user.id));
     }
 
-    Ok(Config::load_file().await?.unwrap_or_default().into())
+    Ok(Config::load_file(log).await?.unwrap_or_default().into())
 }
 
 #[endpoint {
@@ -73,7 +78,7 @@ pub async fn server_config_put(
 
     let context = rqctx.context();
     let json_config = body.into_inner();
-    let json = put_inner(context, json_config, &auth_user)
+    let json = put_inner(&rqctx.log, context, json_config, &auth_user)
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -81,6 +86,7 @@ pub async fn server_config_put(
 }
 
 async fn put_inner(
+    log: &Logger,
     context: &ApiContext,
     json_config: JsonUpdateConfig,
     auth_user: &AuthUser,
@@ -94,7 +100,7 @@ async fn put_inner(
     // todo() -> add validation here
     let config_str = serde_json::to_string(&config).map_err(ApiError::Serialize)?;
     std::env::set_var(BENCHER_CONFIG, &config_str);
-    Config::write(config_str.as_bytes()).await?;
+    Config::write(log, config_str.as_bytes()).await?;
     let json_config = serde_json::from_str(&config_str).map_err(ApiError::Deserialize)?;
 
     countdown(
