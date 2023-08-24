@@ -5,6 +5,7 @@ use diesel::dsl::count;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+use slog::Logger;
 
 use crate::context::NewUserBody;
 use crate::endpoints::endpoint::pub_response_accepted;
@@ -53,7 +54,7 @@ pub async fn auth_signup_post(
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let endpoint = Endpoint::new(SIGNUP_RESOURCE, Method::Post);
 
-    let json = post_inner(rqctx.context(), body.into_inner())
+    let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner())
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -61,6 +62,7 @@ pub async fn auth_signup_post(
 }
 
 async fn post_inner(
+    log: &Logger,
     context: &ApiContext,
     mut json_signup: JsonSignup,
 ) -> Result<JsonEmpty, ApiError> {
@@ -156,7 +158,7 @@ async fn post_inner(
         subject: Some("Confirm Bencher Signup".into()),
         body: Some(body),
     };
-    context.messenger.send(message).await;
+    context.messenger.send(log, message).await;
 
     if !insert_user.admin {
         let admins = QueryUser::get_admins(conn)?;
@@ -173,7 +175,7 @@ async fn post_inner(
                     invited: invite.is_some(),
                 })),
             };
-            context.messenger.send(message).await;
+            context.messenger.send(log, message).await;
         }
     }
 

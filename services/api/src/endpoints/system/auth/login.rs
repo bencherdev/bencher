@@ -2,6 +2,7 @@ use bencher_json::{JsonEmpty, JsonLogin};
 
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+use slog::Logger;
 
 use crate::endpoints::endpoint::pub_response_accepted;
 use crate::endpoints::endpoint::ResponseAccepted;
@@ -47,14 +48,18 @@ pub async fn auth_login_post(
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let endpoint = Endpoint::new(LOGIN_RESOURCE, Method::Post);
 
-    let json = post_inner(rqctx.context(), body.into_inner())
+    let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner())
         .await
         .map_err(|e| endpoint.err(e))?;
 
     pub_response_accepted!(endpoint, json)
 }
 
-async fn post_inner(context: &ApiContext, json_login: JsonLogin) -> Result<JsonEmpty, ApiError> {
+async fn post_inner(
+    log: &Logger,
+    context: &ApiContext,
+    json_login: JsonLogin,
+) -> Result<JsonEmpty, ApiError> {
     let conn = &mut *context.conn().await;
 
     let query_user = schema::user::table
@@ -124,7 +129,7 @@ async fn post_inner(context: &ApiContext, json_login: JsonLogin) -> Result<JsonE
         subject: Some("Confirm Bencher Login".into()),
         body: Some(body),
     };
-    context.messenger.send(message).await;
+    context.messenger.send(log, message).await;
 
     Ok(JsonEmpty::default())
 }

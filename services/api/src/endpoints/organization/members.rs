@@ -9,6 +9,7 @@ use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
+use slog::Logger;
 use uuid::Uuid;
 
 use crate::{
@@ -171,6 +172,7 @@ pub async fn org_member_post(
     let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::Post);
 
     let json = post_inner(
+        &rqctx.log,
         rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
@@ -183,6 +185,7 @@ pub async fn org_member_post(
 }
 
 async fn post_inner(
+    log: &Logger,
     context: &ApiContext,
     path_params: OrgMembersParams,
     mut json_new_member: JsonNewMember,
@@ -265,7 +268,7 @@ async fn post_inner(
         subject: Some(format!("Invitation to join {org_name}")),
         body: Some(body),
     };
-    context.messenger.send(message).await;
+    context.messenger.send(log, message).await;
 
     Ok(JsonEmpty::default())
 }

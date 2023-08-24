@@ -5,6 +5,7 @@ mod message;
 pub use body::{Body, ButtonBody, NewUserBody};
 pub use email::Email;
 pub use message::Message;
+use slog::{info, Logger};
 
 pub enum Messenger {
     StdOut,
@@ -12,10 +13,10 @@ pub enum Messenger {
 }
 
 impl Messenger {
-    pub async fn send(&self, message: Message) {
+    pub async fn send(&self, log: &Logger, message: Message) {
         match self {
-            Self::StdOut => tracing::info!("{message}"),
-            Self::Email(email) => email.send(message).await,
+            Self::StdOut => info!(log, "{message}"),
+            Self::Email(email) => email.send(log, message).await,
         }
     }
 }

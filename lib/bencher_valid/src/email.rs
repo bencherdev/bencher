@@ -23,7 +23,7 @@ impl FromStr for Email {
 
     fn from_str(email: &str) -> Result<Self, Self::Err> {
         if is_valid_email(email) {
-            Ok(Self(email.into()))
+            Ok(Self(email.to_lowercase()))
         } else {
             Err(ValidError::Email(email.into()))
         }
@@ -75,7 +75,9 @@ pub fn is_valid_email(email: &str) -> bool {
 
 #[cfg(test)]
 mod test {
-    use super::is_valid_email;
+    use std::str::FromStr;
+
+    use super::{is_valid_email, Email};
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -89,6 +91,10 @@ mod test {
         assert_eq!(true, is_valid_email("abc.xyz@example"));
         assert_eq!(true, is_valid_email("abc@example"));
         assert_eq!(true, is_valid_email("a@example"));
+        assert_eq!(
+            Email::from_str("abc.xyz@example.com").unwrap(),
+            Email::from_str("ABC.xYz@Example.coM").unwrap()
+        );
 
         assert_eq!(false, is_valid_email(""));
         assert_eq!(false, is_valid_email(" abc@example.com"));
