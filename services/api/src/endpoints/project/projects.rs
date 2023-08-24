@@ -7,7 +7,6 @@ use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
-use tracing::info;
 
 use crate::{
     context::ApiContext,
@@ -300,12 +299,10 @@ async fn delete_inner(
         auth_user,
         bencher_rbac::project::Permission::Delete,
     )?;
-    info!("Deleting project: {:?}", query_project);
 
     diesel::delete(schema::project::table.filter(schema::project::id.eq(query_project.id)))
         .execute(conn)
         .map_err(api_error!())?;
-    info!("Deleted project: {:?}", query_project);
 
     Ok(JsonEmpty {})
 }

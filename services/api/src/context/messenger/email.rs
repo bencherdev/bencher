@@ -1,6 +1,6 @@
 use bencher_json::Secret;
 use mail_send::{mail_builder::MessageBuilder, SmtpClientBuilder};
-use slog::Logger;
+use slog::{error, trace, Logger};
 
 use crate::ApiError;
 
@@ -18,7 +18,7 @@ pub struct Email {
 }
 
 impl Email {
-    pub async fn send(&self, _log: &Logger, message: Message) {
+    pub async fn send(&self, log: &Logger, message: Message) {
         let mut message_builder = MessageBuilder::new();
 
         message_builder = if let Some(name) = self.from_name.clone() {
@@ -51,6 +51,7 @@ impl Email {
             .credentials((self.username.clone(), String::from(self.secret.clone())))
             .implicit_tls(!self.starttls);
 
+        let send_log = log.clone();
         tokio::spawn(async move {
             async fn send(
                 client_builder: SmtpClientBuilder<String>,
@@ -66,9 +67,12 @@ impl Email {
             }
 
             match send(client_builder, message_builder).await {
-                Ok(_) => tracing::trace!("Email sent email from {from_email} to {to_email}"),
+                Ok(_) => trace!(send_log, "Email sent email from {from_email} to {to_email}"),
                 Err(e) => {
-                    tracing::error!("Failed to send email from {from_email} to {to_email}: {e}");
+                    error!(
+                        send_log,
+                        "Failed to send email from {from_email} to {to_email}: {e}"
+                    );
                 },
             }
         });

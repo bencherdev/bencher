@@ -11,6 +11,7 @@ use bencher_json::{
 };
 use chrono::Utc;
 use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
+use slog::{warn, Logger};
 use uuid::Uuid;
 
 use self::adapter::Adapter;
@@ -66,7 +67,7 @@ impl QueryReport {
         Uuid::from_str(&uuid).map_err(api_error!())
     }
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonReport, ApiError> {
+    pub fn into_json(self, log: &Logger, conn: &mut DbConnection) -> Result<JsonReport, ApiError> {
         let Self {
             id,
             uuid,
@@ -90,14 +91,18 @@ impl QueryReport {
             adapter: Adapter::try_from(adapter)?.into(),
             start_time: to_date_time(start_time)?,
             end_time: to_date_time(end_time)?,
-            results: get_results(conn, id)?,
+            results: get_results(log, conn, id)?,
             alerts: get_alerts(conn, id)?,
             created: to_date_time(created).map_err(api_error!())?,
         })
     }
 }
 
-fn get_results(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportResults, ApiError> {
+fn get_results(
+    log: &Logger,
+    conn: &mut DbConnection,
+    report_id: i32,
+) -> Result<JsonReportResults, ApiError> {
     let mut results = Vec::new();
 
     let mut iteration = 0;
@@ -133,6 +138,7 @@ fn get_results(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportResu
             }
         } else {
             let iteration_results = get_iteration_results(
+                log,
                 conn,
                 &metric_kinds,
                 std::mem::take(&mut metric_kind_benchmarks),
@@ -150,7 +156,8 @@ fn get_results(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportResu
         }
     }
     // Add the last iteration's metric kind and benchmark results
-    let iteration_results = get_iteration_results(conn, &metric_kinds, metric_kind_benchmarks)?;
+    let iteration_results =
+        get_iteration_results(log, conn, &metric_kinds, metric_kind_benchmarks)?;
     results.push(iteration_results);
 
     Ok(results)
@@ -258,6 +265,7 @@ fn get_benchmark_metric(
 }
 
 fn get_iteration_results(
+    log: &Logger,
     conn: &mut DbConnection,
     metric_kinds: &HashMap<i32, JsonMetricKind>,
     metric_kind_benchmarks: HashMap<i32, (Option<ThresholdStatistic>, Vec<JsonBenchmarkMetric>)>,
@@ -265,7 +273,7 @@ fn get_iteration_results(
     let mut iteration_results = Vec::new();
     for (metric_kind_id, (threshold_statistic, benchmarks)) in metric_kind_benchmarks {
         let Some(metric_kind) = metric_kinds.get(&metric_kind_id).cloned() else {
-            tracing::warn!("Metric kind {metric_kind_id} not found in metric kinds list");
+            warn!(log, "Metric kind {metric_kind_id} not found in metric kinds list");
             continue;
         };
 

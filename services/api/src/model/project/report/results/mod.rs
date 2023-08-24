@@ -9,6 +9,7 @@ use bencher_json::{
     BenchmarkName,
 };
 use diesel::RunQueryDsl;
+use slog::Logger;
 
 use crate::{
     context::DbConnection,
@@ -54,6 +55,7 @@ impl ReportResults {
 
     pub fn process(
         &mut self,
+        log: &Logger,
         conn: &mut DbConnection,
         results_array: &[&str],
         adapter: JsonAdapter,
@@ -66,6 +68,7 @@ impl ReportResults {
         if let Some(fold) = settings.fold {
             let results = results_array.fold(fold);
             self.results(
+                log,
                 conn,
                 0,
                 results,
@@ -75,6 +78,7 @@ impl ReportResults {
         } else {
             for (iteration, results) in results_array.inner.into_iter().enumerate() {
                 self.results(
+                    log,
                     conn,
                     iteration,
                     results,
@@ -89,6 +93,7 @@ impl ReportResults {
 
     fn results(
         &mut self,
+        log: &Logger,
         conn: &mut DbConnection,
         iteration: usize,
         results: AdapterResults,
@@ -96,6 +101,7 @@ impl ReportResults {
     ) -> Result<(), ApiError> {
         for (benchmark_name, metrics) in results.inner {
             self.metrics(
+                log,
                 conn,
                 iteration,
                 benchmark_name,
@@ -109,6 +115,7 @@ impl ReportResults {
 
     fn metrics(
         &mut self,
+        log: &Logger,
         conn: &mut DbConnection,
         iteration: usize,
         benchmark_name: BenchmarkName,
@@ -145,7 +152,7 @@ impl ReportResults {
             if !ignore_benchmark {
                 if let Some(detector) = self.detector(conn, metric_kind_id)? {
                     let query_metric = QueryMetric::from_uuid(conn, insert_metric.uuid)?;
-                    detector.detect(conn, benchmark_id, query_metric)?;
+                    detector.detect(log, conn, benchmark_id, query_metric)?;
                 }
             }
         }

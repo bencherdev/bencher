@@ -8,6 +8,7 @@ use diesel::{dsl::count, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
+use slog::Logger;
 use uuid::Uuid;
 
 use crate::{
@@ -78,6 +79,7 @@ pub async fn proj_reports_get(
     let endpoint = Endpoint::new(REPORT_RESOURCE, Method::GetLs);
 
     let json = get_ls_inner(
+        &rqctx.log,
         rqctx.context(),
         auth_user.as_ref(),
         path_params.into_inner(),
@@ -95,6 +97,7 @@ pub async fn proj_reports_get(
 }
 
 async fn get_ls_inner(
+    log: &Logger,
     context: &ApiContext,
     auth_user: Option<&AuthUser>,
     path_params: ProjReportsParams,
@@ -131,7 +134,7 @@ async fn get_ls_inner(
         .load::<QueryReport>(conn)
         .map_err(api_error!())?
         .into_iter()
-        .filter_map(|query| database_map(endpoint, query.into_json(conn)))
+        .filter_map(|query| database_map(endpoint, query.into_json(log, conn)))
         .collect())
 }
 
@@ -153,6 +156,7 @@ pub async fn proj_report_post(
     let endpoint = Endpoint::new(REPORT_RESOURCE, Method::Post);
 
     let json = post_inner(
+        &rqctx.log,
         rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
@@ -165,6 +169,7 @@ pub async fn proj_report_post(
 }
 
 async fn post_inner(
+    log: &Logger,
     context: &ApiContext,
     path_params: ProjReportsParams,
     mut json_report: JsonNewReport,
@@ -253,6 +258,7 @@ async fn post_inner(
     // Process and record the report results
     let mut report_results = ReportResults::new(project_id, branch_id, testbed_id, query_report.id);
     let processed_report = report_results.process(
+        log,
         conn,
         json_report
             .results
@@ -275,7 +281,7 @@ async fn post_inner(
     // until after the metrics usage has been checked
     processed_report?;
 
-    query_report.into_json(conn)
+    query_report.into_json(log, conn)
 }
 
 #[cfg(feature = "plus")]
@@ -375,6 +381,7 @@ pub async fn proj_report_get(
     let endpoint = Endpoint::new(REPORT_RESOURCE, Method::GetOne);
 
     let json = get_one_inner(
+        &rqctx.log,
         rqctx.context(),
         path_params.into_inner(),
         auth_user.as_ref(),
@@ -390,6 +397,7 @@ pub async fn proj_report_get(
 }
 
 async fn get_one_inner(
+    log: &Logger,
     context: &ApiContext,
     path_params: ProjReportParams,
     auth_user: Option<&AuthUser>,
@@ -417,7 +425,7 @@ async fn get_one_inner(
         ))
         .first::<QueryReport>(conn)
         .map_err(api_error!())?
-        .into_json(conn)
+        .into_json(log, conn)
 }
 
 #[endpoint {

@@ -1,7 +1,7 @@
 macro_rules! debug_error {
     ($message:expr, $($field:tt)*) => {
         {
-            tracing::error!($message, $($field)*);
+            // tracing::error!($message, $($field)*);
             debug_assert!(false, $message, $($field)*);
         }
     };
@@ -28,7 +28,7 @@ where
 {
     result.map_or_else(
         |e| {
-            tracing::error!("Failed to parse from database in {context}: {e}");
+            // tracing::error!("Failed to parse from database in {context}: {e}");
             debug_assert!(false, "Failed to parse from database in {context}: {e}");
             None
         },

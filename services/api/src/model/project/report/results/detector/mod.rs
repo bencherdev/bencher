@@ -1,4 +1,5 @@
 use diesel::RunQueryDsl;
+use slog::Logger;
 use uuid::Uuid;
 
 use crate::{
@@ -62,6 +63,7 @@ impl Detector {
     )]
     pub fn detect(
         &self,
+        log: &Logger,
         conn: &mut DbConnection,
         benchmark_id: i32,
         query_metric: QueryMetric,
@@ -78,6 +80,7 @@ impl Detector {
 
         // Check to see if the metric has a boundary check for the given threshold statistic.
         let boundary = MetricsBoundary::new(
+            log,
             query_metric.value,
             metrics_data,
             self.threshold.statistic.test,

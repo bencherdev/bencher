@@ -6,8 +6,6 @@ use slog::info;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SwaggerError {
-    #[error("Failed to set global default logger")]
-    SetGlobalDefault(#[from] tracing::subscriber::SetGlobalDefaultError),
     #[error("Failed to create swagger file: {0}")]
     CreateFile(std::io::Error),
     #[error("Failed to register API: {0}")]

@@ -104,6 +104,7 @@ async fn put_inner(
     let json_config = serde_json::from_str(&config_str).map_err(ApiError::Deserialize)?;
 
     countdown(
+        log,
         context.restart_tx.clone(),
         delay.unwrap_or(DEFAULT_DELAY),
         auth_user.id,

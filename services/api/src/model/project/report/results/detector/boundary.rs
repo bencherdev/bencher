@@ -1,4 +1,5 @@
 use bencher_json::Boundary;
+use slog::Logger;
 
 use crate::{
     model::project::threshold::{alert::Limit, statistic::StatisticKind},
@@ -18,6 +19,7 @@ pub struct MetricsBoundary {
 
 impl MetricsBoundary {
     pub fn new(
+        log: &Logger,
         datum: f64,
         metrics_data: MetricsData,
         test: StatisticKind,
@@ -26,6 +28,7 @@ impl MetricsBoundary {
         upper_boundary: Option<Boundary>,
     ) -> Result<Self, ApiError> {
         Self::new_inner(
+            log,
             datum,
             metrics_data,
             test,
@@ -37,6 +40,7 @@ impl MetricsBoundary {
     }
 
     fn new_inner(
+        log: &Logger,
         datum: f64,
         metrics_data: MetricsData,
         test: StatisticKind,
@@ -69,7 +73,14 @@ impl MetricsBoundary {
                 freedom: (data.len() - 1) as f64,
             },
         };
-        let limits = MetricsLimits::new(mean, std_dev, test_kind, lower_boundary, upper_boundary)?;
+        let limits = MetricsLimits::new(
+            log,
+            mean,
+            std_dev,
+            test_kind,
+            lower_boundary,
+            upper_boundary,
+        )?;
         let outlier = limits.outlier(datum);
 
         Ok(Some(Self { limits, outlier }))

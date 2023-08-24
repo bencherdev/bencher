@@ -1,4 +1,5 @@
 use bencher_json::Boundary;
+use slog::{debug, Logger};
 use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
 
 use crate::{error::api_error, model::project::threshold::alert::Limit, ApiError};
@@ -21,6 +22,7 @@ pub enum TestKind {
 
 impl MetricsLimits {
     pub fn new(
+        log: &Logger,
         mean: f64,
         std_dev: f64,
         test_kind: TestKind,
@@ -34,7 +36,7 @@ impl MetricsLimits {
         Ok(match test_kind {
             // Create a normal distribution and calculate the boundary limits for the threshold based on the boundary percentiles.
             TestKind::Z => {
-                tracing::debug!("Normal distribution: mean={mean}, std_dev={std_dev}");
+                debug!(log, "Normal distribution: mean={mean}, std_dev={std_dev}");
                 let normal = Normal::new(mean, std_dev).map_err(api_error!())?;
                 let lower = lower_boundary.map(|limit| {
                     let abs_limit = normal.inverse_cdf(limit.into());
@@ -48,7 +50,8 @@ impl MetricsLimits {
             },
             // Create a Student's t distribution and calculate the boundary limits for the threshold based on the boundary percentiles.
             TestKind::T { freedom } => {
-                tracing::debug!(
+                debug!(
+                    log,
                     "Students T distribution: mean={mean}, std_dev={std_dev}, freedom={freedom}"
                 );
                 let students_t = StudentsT::new(mean, std_dev, freedom).map_err(api_error!())?;
@@ -109,6 +112,8 @@ mod test {
     use once_cell::sync::Lazy;
     use pretty_assertions::assert_eq;
 
+    use crate::util::logger::bootstrap_logger;
+
     use super::{Limit, MetricsLimit, MetricsLimits, TestKind};
 
     const MEAN: f64 = 0.0;
@@ -127,7 +132,8 @@ mod test {
 
     #[test]
     fn test_limits_z_none() {
-        let limits = MetricsLimits::new(MEAN, STD_DEV, TestKind::Z, None, None).unwrap();
+        let log = bootstrap_logger();
+        let limits = MetricsLimits::new(&log, MEAN, STD_DEV, TestKind::Z, None, None).unwrap();
         assert_eq!(limits.lower, None);
         assert_eq!(limits.upper, None);
 
@@ -149,8 +155,9 @@ mod test {
 
     #[test]
     fn test_limits_z_left() {
+        let log = bootstrap_logger();
         let limits =
-            MetricsLimits::new(MEAN, STD_DEV, TestKind::Z, Some(*PERCENTILE), None).unwrap();
+            MetricsLimits::new(&log, MEAN, STD_DEV, TestKind::Z, Some(*PERCENTILE), None).unwrap();
         assert_eq!(limits.lower, Some(MetricsLimit { value: -Z_LIMIT }));
         assert_eq!(limits.upper, None);
 
@@ -172,8 +179,9 @@ mod test {
 
     #[test]
     fn test_limits_z_right() {
+        let log = bootstrap_logger();
         let limits =
-            MetricsLimits::new(MEAN, STD_DEV, TestKind::Z, None, Some(*PERCENTILE)).unwrap();
+            MetricsLimits::new(&log, MEAN, STD_DEV, TestKind::Z, None, Some(*PERCENTILE)).unwrap();
         assert_eq!(limits.lower, None);
         assert_eq!(limits.upper, Some(MetricsLimit { value: Z_LIMIT }));
 
@@ -195,7 +203,9 @@ mod test {
 
     #[test]
     fn test_limits_z_both() {
+        let log = bootstrap_logger();
         let limits = MetricsLimits::new(
+            &log,
             MEAN,
             STD_DEV,
             TestKind::Z,
@@ -224,9 +234,17 @@ mod test {
 
     #[test]
     fn test_limits_z_docs() {
+        let log = bootstrap_logger();
         let boundary = 0.977.try_into().expect("Failed to create boundary.");
-        let limits =
-            MetricsLimits::new(100.0, 10.0, TestKind::Z, Some(boundary), Some(boundary)).unwrap();
+        let limits = MetricsLimits::new(
+            &log,
+            100.0,
+            10.0,
+            TestKind::Z,
+            Some(boundary),
+            Some(boundary),
+        )
+        .unwrap();
         assert_eq!(
             limits.lower,
             Some(MetricsLimit {
@@ -258,9 +276,16 @@ mod test {
 
     #[test]
     fn test_limits_t_none() {
-        let limits =
-            MetricsLimits::new(MEAN, STD_DEV, TestKind::T { freedom: FREEDOM }, None, None)
-                .unwrap();
+        let log = bootstrap_logger();
+        let limits = MetricsLimits::new(
+            &log,
+            MEAN,
+            STD_DEV,
+            TestKind::T { freedom: FREEDOM },
+            None,
+            None,
+        )
+        .unwrap();
         assert_eq!(limits.lower, None);
         assert_eq!(limits.upper, None);
 
@@ -282,7 +307,9 @@ mod test {
 
     #[test]
     fn test_limits_t_left() {
+        let log = bootstrap_logger();
         let limits = MetricsLimits::new(
+            &log,
             MEAN,
             STD_DEV,
             TestKind::T { freedom: FREEDOM },
@@ -311,7 +338,9 @@ mod test {
 
     #[test]
     fn test_limits_t_right() {
+        let log = bootstrap_logger();
         let limits = MetricsLimits::new(
+            &log,
             MEAN,
             STD_DEV,
             TestKind::T { freedom: FREEDOM },
@@ -340,7 +369,9 @@ mod test {
 
     #[test]
     fn test_limits_t_both() {
+        let log = bootstrap_logger();
         let limits = MetricsLimits::new(
+            &log,
             MEAN,
             STD_DEV,
             TestKind::T { freedom: FREEDOM },

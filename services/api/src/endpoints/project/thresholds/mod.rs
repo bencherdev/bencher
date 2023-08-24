@@ -7,7 +7,6 @@ use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
-use tracing::warn;
 use uuid::Uuid;
 
 use crate::{
@@ -315,7 +314,6 @@ async fn put_inner(
         auth_user,
         Permission::Edit,
     )?;
-    warn!("query_project: {:?}", query_project);
 
     // Get the current threshold
     let query_threshold = schema::threshold::table
@@ -323,7 +321,6 @@ async fn put_inner(
         .filter(schema::threshold::uuid.eq(path_params.threshold.to_string()))
         .first::<QueryThreshold>(conn)
         .map_err(api_error!())?;
-    warn!("threshold: {}", query_threshold.uuid);
 
     // Insert the new statistic
     let insert_statistic =
@@ -332,7 +329,6 @@ async fn put_inner(
         .values(&insert_statistic)
         .execute(conn)
         .map_err(api_error!())?;
-    warn!("statistic: {}", insert_statistic.uuid);
 
     // Update the current threshold to use the new statistic
     diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(query_threshold.id)))
@@ -342,7 +338,6 @@ async fn put_inner(
         )?)
         .execute(conn)
         .map_err(api_error!())?;
-    warn!("Threshold updated");
 
     QueryThreshold::get(conn, query_threshold.id)?.into_json(conn)
 }

@@ -26,10 +26,9 @@ impl Endpoint {
     }
 
     #[allow(clippy::needless_pass_by_value)]
-    pub fn err(&self, e: ApiError) -> ApiError {
-        let api_error = ApiError::Endpoint(*self);
-        tracing::info!("{api_error}: {e}");
-        api_error
+    pub fn err(&self, _e: ApiError) -> ApiError {
+        // tracing::info!("{api_error}: {e}");
+        ApiError::Endpoint(*self)
     }
 
     pub fn pub_response_headers<R, T>(&self, body: R) -> HttpResponseHeaders<R, CorsHeaders>

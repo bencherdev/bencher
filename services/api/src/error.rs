@@ -9,8 +9,6 @@ use crate::{endpoints::Endpoint, model::user::auth::AuthUser};
 
 #[derive(Debug, Error)]
 pub enum ApiError {
-    #[error("Failed to set global default logger: {0}")]
-    SetGlobalDefault(#[from] tracing::subscriber::SetGlobalDefaultError),
     #[error("Failed to join handle: {0}")]
     JoinHandle(tokio::task::JoinError),
     #[error("Failed to parse role based access control (RBAC) rules: {0}")]
@@ -223,7 +221,6 @@ pub enum ApiError {
 
 impl From<ApiError> for HttpError {
     fn from(api_error: ApiError) -> Self {
-        tracing::info!("{api_error}");
         dropshot::HttpError::for_bad_request(
             Some(http::status::StatusCode::BAD_REQUEST.to_string()),
             api_error.to_string(),
@@ -240,16 +237,15 @@ macro_rules! api_error {
     ($message:expr, $($field:tt)*) => {
         |e| {
             let err: crate::error::ApiError = e.into();
-            tracing::info!("{err}");
-            tracing::info!($message, $($field:tt)*);
             err
         }
     };
-    ($message:expr) => {$crate::util::error::debug_error!($message,)};
+    ($message:expr) => {
+        $crate::util::error::debug_error!($message,)
+    };
     () => {
         |e| {
             let err: crate::error::ApiError = e.into();
-            tracing::info!("{err}");
             err
         }
     };

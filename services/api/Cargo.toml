@@ -56,8 +56,6 @@ sentry = { version = "0.31.5", optional = true }
 slog = "2.7"
 slog-term = "2.9"
 statrs = "0.16"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["tracing-log"] }
 
 [dev-dependencies]
 pretty_assertions.workspace = true

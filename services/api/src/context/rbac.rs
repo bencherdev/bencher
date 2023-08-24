@@ -23,11 +23,9 @@ impl Rbac {
         Action: ToPolar,
         Resource: ToPolar,
     {
-        self.0.is_allowed(actor, action, resource).map_err(|e| {
-            let err = ApiError::IsAllowed(e);
-            tracing::info!("{err}");
-            err
-        })
+        self.0
+            .is_allowed(actor, action, resource)
+            .map_err(ApiError::IsAllowed)
     }
 
     pub fn is_allowed_unwrap<Actor, Action, Resource>(
