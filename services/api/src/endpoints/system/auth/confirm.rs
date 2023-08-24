@@ -56,20 +56,21 @@ async fn post_inner(
 ) -> Result<JsonAuthUser, ApiError> {
     let conn = &mut *context.conn().await;
 
-    let token_data = context
+    let claims = context
         .secret_key
         .validate_auth(&json_token.token)
         .map_err(api_error!())?;
 
+    let email = claims.email();
     let user = schema::user::table
-        .filter(schema::user::email.eq(token_data.claims.email()))
+        .filter(schema::user::email.eq(email))
         .first::<QueryUser>(conn)
         .map_err(api_error!())?
         .into_json()?;
 
     let token = context
         .secret_key
-        .new_client(token_data.claims.email().parse()?, CLIENT_TOKEN_TTL)
+        .new_client(email.parse()?, CLIENT_TOKEN_TTL)
         .map_err(api_error!())?;
 
     Ok(JsonAuthUser { user, token })

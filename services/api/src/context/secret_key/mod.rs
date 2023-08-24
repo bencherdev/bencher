@@ -16,6 +16,8 @@ mod claims;
 use audience::Audience;
 use claims::{Claims, OrgClaims};
 
+use self::claims::InviteClaims;
+
 static HEADER: Lazy<Header> = Lazy::new(Header::default);
 static ALGORITHM: Lazy<Algorithm> = Lazy::new(Algorithm::default);
 
@@ -23,6 +25,23 @@ pub struct SecretKey {
     pub issuer: String,
     pub encoding: EncodingKey,
     pub decoding: DecodingKey,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum JwtError {
+    #[error("Failed to decode JSON Web Token ({token}): {error}")]
+    Decode {
+        token: Jwt,
+        error: jsonwebtoken::errors::Error,
+    },
+    #[error("Expired JSON Web Token ({exp} < {now}): {error}")]
+    Expired {
+        exp: u64,
+        now: u64,
+        error: jsonwebtoken::errors::Error,
+    },
+    #[error("Invalid organizational invite: {error}")]
+    Invite { error: jsonwebtoken::errors::Error },
 }
 
 impl SecretKey {
@@ -71,49 +90,51 @@ impl SecretKey {
         self.new_jwt(Audience::Invite, email, ttl, Some(org_claims))
     }
 
-    fn validate(&self, token: &Jwt, audience: &[Audience]) -> Result<TokenData<Claims>, ApiError> {
+    fn validate(&self, token: &Jwt, audience: &[Audience]) -> Result<TokenData<Claims>, JwtError> {
         let mut validation = Validation::new(*ALGORITHM);
         validation.set_audience(audience);
         validation.set_issuer(&[self.issuer.as_str()]);
         validation.set_required_spec_claims(&["aud", "exp", "iss", "sub"]);
 
-        let token_data: TokenData<Claims> = decode(token.as_ref(), &self.decoding, &validation)?;
-        check_expiration(token_data.claims.exp)?;
-
-        Ok(token_data)
+        let token_data: TokenData<Claims> = decode(token.as_ref(), &self.decoding, &validation)
+            .map_err(|error| JwtError::Decode {
+                token: token.clone(),
+                error,
+            })?;
+        let exp = token_data.claims.exp;
+        let now = u64::try_from(Utc::now().timestamp()).expect("Is it 584942419325 yet?");
+        if exp < now {
+            Err(JwtError::Expired {
+                exp,
+                now,
+                error: jsonwebtoken::errors::ErrorKind::ExpiredSignature.into(),
+            })
+        } else {
+            Ok(token_data)
+        }
     }
 
-    pub fn validate_auth(&self, token: &Jwt) -> Result<TokenData<Claims>, ApiError> {
-        self.validate(token, &[Audience::Auth])
+    pub fn validate_auth(&self, token: &Jwt) -> Result<Claims, JwtError> {
+        Ok(self.validate(token, &[Audience::Auth])?.claims)
     }
 
-    pub fn validate_client(&self, token: &Jwt) -> Result<TokenData<Claims>, ApiError> {
-        self.validate(token, &[Audience::Client, Audience::ApiKey])
+    pub fn validate_client(&self, token: &Jwt) -> Result<Claims, JwtError> {
+        Ok(self
+            .validate(token, &[Audience::Client, Audience::ApiKey])?
+            .claims)
     }
 
-    pub fn validate_api_key(&self, token: &Jwt) -> Result<TokenData<Claims>, ApiError> {
-        self.validate(token, &[Audience::ApiKey])
+    pub fn validate_api_key(&self, token: &Jwt) -> Result<Claims, JwtError> {
+        Ok(self.validate(token, &[Audience::ApiKey])?.claims)
     }
 
-    pub fn validate_invite(&self, token: &Jwt) -> Result<TokenData<Claims>, ApiError> {
-        self.validate(token, &[Audience::Invite])
+    pub fn validate_invite(&self, token: &Jwt) -> Result<InviteClaims, JwtError> {
+        self.validate(token, &[Audience::Invite])?.claims.try_into()
     }
 }
 
-fn check_expiration(time: u64) -> Result<(), ApiError> {
-    let now = now()?;
-    if time < now {
-        Err(
-            jsonwebtoken::errors::Error::from(jsonwebtoken::errors::ErrorKind::ExpiredSignature)
-                .into(),
-        )
-    } else {
-        Ok(())
-    }
-}
-
-pub fn now() -> Result<u64, ApiError> {
-    u64::try_from(Utc::now().timestamp()).map_err(Into::into)
+pub fn now() -> u64 {
+    u64::try_from(Utc::now().timestamp()).expect("Today is past 1 Jan 1970.")
 }
 
 #[cfg(test)]
@@ -144,15 +165,12 @@ mod test {
 
         let token = secret_key.new_auth(EMAIL.clone(), TTL).unwrap();
 
-        let token_data = secret_key.validate_auth(&token).unwrap();
+        let claims = secret_key.validate_auth(&token).unwrap();
 
-        assert_eq!(token_data.claims.aud, Audience::Auth.to_string());
-        assert_eq!(token_data.claims.iss, BENCHER_DEV_URL.to_string());
-        assert_eq!(
-            token_data.claims.iat,
-            token_data.claims.exp - u64::from(TTL)
-        );
-        assert_eq!(token_data.claims.sub, EMAIL.to_string());
+        assert_eq!(claims.aud, Audience::Auth.to_string());
+        assert_eq!(claims.iss, BENCHER_DEV_URL.to_string());
+        assert_eq!(claims.iat, claims.exp - u64::from(TTL));
+        assert_eq!(claims.sub, EMAIL.to_string());
     }
 
     #[test]
@@ -172,15 +190,12 @@ mod test {
 
         let token = secret_key.new_client(EMAIL.clone(), TTL).unwrap();
 
-        let token_data = secret_key.validate_client(&token).unwrap();
+        let claims = secret_key.validate_client(&token).unwrap();
 
-        assert_eq!(token_data.claims.aud, Audience::Client.to_string());
-        assert_eq!(token_data.claims.iss, BENCHER_DEV_URL.to_string());
-        assert_eq!(
-            token_data.claims.iat,
-            token_data.claims.exp - u64::from(TTL)
-        );
-        assert_eq!(token_data.claims.sub, EMAIL.to_string());
+        assert_eq!(claims.aud, Audience::Client.to_string());
+        assert_eq!(claims.iss, BENCHER_DEV_URL.to_string());
+        assert_eq!(claims.iat, claims.exp - u64::from(TTL));
+        assert_eq!(claims.sub, EMAIL.to_string());
     }
 
     #[test]
@@ -200,15 +215,12 @@ mod test {
 
         let token = secret_key.new_api_key(EMAIL.clone(), TTL).unwrap();
 
-        let token_data = secret_key.validate_api_key(&token).unwrap();
+        let claims = secret_key.validate_api_key(&token).unwrap();
 
-        assert_eq!(token_data.claims.aud, Audience::ApiKey.to_string());
-        assert_eq!(token_data.claims.iss, BENCHER_DEV_URL.to_string());
-        assert_eq!(
-            token_data.claims.iat,
-            token_data.claims.exp - u64::from(TTL)
-        );
-        assert_eq!(token_data.claims.sub, EMAIL.to_string());
+        assert_eq!(claims.aud, Audience::ApiKey.to_string());
+        assert_eq!(claims.iss, BENCHER_DEV_URL.to_string());
+        assert_eq!(claims.iat, claims.exp - u64::from(TTL));
+        assert_eq!(claims.sub, EMAIL.to_string());
     }
 
     #[test]
@@ -233,19 +245,15 @@ mod test {
             .new_invite(EMAIL.clone(), TTL, org_uuid, role)
             .unwrap();
 
-        let token_data = secret_key.validate_invite(&token).unwrap();
+        let claims = secret_key.validate_invite(&token).unwrap();
 
-        assert_eq!(token_data.claims.aud, Audience::Invite.to_string());
-        assert_eq!(token_data.claims.iss, BENCHER_DEV_URL.to_string());
-        assert_eq!(
-            token_data.claims.iat,
-            token_data.claims.exp - u64::from(TTL)
-        );
-        assert_eq!(token_data.claims.sub, EMAIL.to_string());
+        assert_eq!(claims.aud, Audience::Invite.to_string());
+        assert_eq!(claims.iss, BENCHER_DEV_URL.to_string());
+        assert_eq!(claims.iat, claims.exp - u64::from(TTL));
+        assert_eq!(claims.sub, EMAIL.to_string());
 
-        let org_claims = token_data.claims.org.unwrap();
-        assert_eq!(org_claims.uuid, org_uuid);
-        assert_eq!(org_claims.role, role);
+        assert_eq!(claims.org.uuid, org_uuid);
+        assert_eq!(claims.org.role, role);
     }
 
     #[test]

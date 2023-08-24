@@ -1,15 +1,3 @@
-macro_rules! debug_error {
-    ($message:expr, $($field:tt)*) => {
-        {
-            // tracing::error!($message, $($field)*);
-            debug_assert!(false, $message, $($field)*);
-        }
-    };
-    ($message:expr) => {$crate::util::error::debug_error!($message,)};
-}
-
-pub(crate) use debug_error;
-
 macro_rules! into_json {
     ($context:expr, $($field:tt)*) => {
         |query| {

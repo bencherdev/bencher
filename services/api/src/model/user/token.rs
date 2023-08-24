@@ -130,15 +130,15 @@ impl InsertToken {
 
         let jwt = secret_key.new_api_key(query_user.email.as_str().parse()?, ttl)?;
 
-        let token_data = secret_key.validate_api_key(&jwt.as_ref().parse()?)?;
+        let claims = secret_key.validate_api_key(&jwt.as_ref().parse()?)?;
 
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             user_id: query_user.id,
             name: name.to_string(),
             jwt: jwt.to_string(),
-            creation: token_data.claims.iat as i64,
-            expiration: token_data.claims.exp as i64,
+            creation: claims.iat as i64,
+            expiration: claims.exp as i64,
         })
     }
 }

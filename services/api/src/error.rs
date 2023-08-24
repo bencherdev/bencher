@@ -3,6 +3,7 @@ use bencher_json::ResourceId;
 use bencher_plot::PlotError;
 use bencher_rbac::{Organization, Project};
 use dropshot::HttpError;
+use http::StatusCode;
 use thiserror::Error;
 
 use crate::{endpoints::Endpoint, model::user::auth::AuthUser};
@@ -217,6 +218,9 @@ pub enum ApiError {
     SystemTestbed,
     #[error("No statistic for threshold: {0}")]
     NoThresholdStatistic(String),
+
+    #[error("Failed to parse JWT (JSON Web Token): {0}")]
+    Jwt(#[from] crate::context::JwtError),
 }
 
 impl From<ApiError> for HttpError {
@@ -252,3 +256,30 @@ macro_rules! api_error {
 }
 
 pub(crate) use api_error;
+
+pub fn http_error<E>(status_code: StatusCode, title: &str, body: &str, error: E) -> HttpError
+where
+    E: std::fmt::Display,
+{
+    let error_code = uuid::Uuid::new_v4();
+    let issue_url = github_issue_url(title, &format!("{body}\nError code: {error_code}"));
+    let http_error = HttpError::for_client_error(
+        Some(error_code.to_string()),
+        status_code,
+        format!(
+            "{title}: {error}\nError code: {error_code}\nPlease report this issue: {issue_url}"
+        ),
+    );
+    #[cfg(feature = "sentry")]
+    sentry::capture_error(&http_error);
+    http_error
+}
+
+pub fn github_issue_url(title: &str, body: &str) -> url::Url {
+    let mut url = url::Url::parse("https://github.com/bencherdev/bencher/issues/new")
+        .expect("Bencher GitHub Issues URL");
+    let query =
+        serde_urlencoded::to_string([("title", title), ("body", body), ("labels", "bug")]).ok();
+    url.set_query(query.as_deref());
+    url
+}

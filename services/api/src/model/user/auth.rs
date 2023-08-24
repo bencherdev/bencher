@@ -5,39 +5,14 @@ use bencher_rbac::{
 
 use bencher_json::Jwt;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
-use dropshot::RequestContext;
+use dropshot::{HttpError, RequestContext};
+use http::StatusCode;
 use oso::{PolarValue, ToPolar};
 
 use crate::{
     context::{ApiContext, DbConnection, Rbac},
     schema,
-    util::error::debug_error,
-    ApiError,
 };
-
-macro_rules! auth_header_error {
-    ($message:expr) => {
-        || {
-            // tracing::info!("{}", $message);
-            crate::error::ApiError::AuthHeader($message.into())
-        }
-    };
-}
-
-pub(crate) use auth_header_error;
-
-macro_rules! map_auth_header_error {
-    ($message:expr) => {
-        |_e| {
-            // tracing::info!("{}: {}", $message, e);
-            crate::error::ApiError::AuthHeader($message.into())
-        }
-    };
-}
-
-pub(crate) use map_auth_header_error;
-
-pub const INVALID_JWT: &str = "Invalid JWT (JSON Web Token)";
 
 #[derive(Debug, Clone)]
 pub struct AuthUser {
@@ -76,36 +51,77 @@ impl From<ProjectId> for Project {
 }
 
 impl AuthUser {
-    pub async fn new(rqctx: &RequestContext<ApiContext>) -> Result<Self, ApiError> {
+    pub async fn new(rqctx: &RequestContext<ApiContext>) -> Result<Self, HttpError> {
         let request = &rqctx.request;
 
+        const EXPECTED: &str = "Expected format is `Authorization: Bearer <bencher.api.token>`.\nWhere `<bencher.api.token>` is your Bencher API token.";
         let headers = request
             .headers()
             .get("Authorization")
-            .ok_or_else(auth_header_error!("Missing \"Authorization\" header"))?
+            .ok_or_else(|| {
+                HttpError::for_client_error(
+                    None,
+                    StatusCode::UNAUTHORIZED,
+                    format!("Request is missing \"Authorization\" header.\n{EXPECTED}"),
+                )
+            })?
             .to_str()
-            .map_err(map_auth_header_error!("Invalid \"Authorization\" header"))?;
-        let (_, token) = headers
-            .split_once("Bearer ")
-            .ok_or_else(auth_header_error!("Missing \"Authorization\" Bearer"))?;
-        let jwt: Jwt = token.trim().parse()?;
+            .map_err(|e| {
+                HttpError::for_client_error(
+                    None,
+                    StatusCode::UNAUTHORIZED,
+                    format!("Request has an invalid \"Authorization\" header: {e}\n{EXPECTED}"),
+                )
+            })?;
+        let (_, token) = headers.split_once("Bearer ").ok_or_else(|| {
+            HttpError::for_client_error(
+                None,
+                StatusCode::UNAUTHORIZED,
+                format!("Request is missing \"Authorization\" Bearer.\n{EXPECTED}"),
+            )
+        })?;
+        let token = token.trim();
+        let jwt: Jwt = token.parse().map_err(|e| {
+            HttpError::for_client_error(
+                None,
+                StatusCode::UNAUTHORIZED,
+                format!("Malformed JSON Web Token ({token}): {e}"),
+            )
+        })?;
 
         let context = rqctx.context();
         let conn = &mut *context.conn().await;
-        let token_data = context.secret_key.validate_client(&jwt)?;
+        let claims = context.secret_key.validate_client(&jwt).map_err(|e| {
+            HttpError::for_client_error(
+                None,
+                StatusCode::UNAUTHORIZED,
+                format!("Failed to validate JSON Web Token ({jwt}): {e}"),
+            )
+        })?;
 
+        let email = claims.email();
         let (user_id, admin, locked) = schema::user::table
-            .filter(schema::user::email.eq(token_data.claims.email()))
+            .filter(schema::user::email.eq(email))
             .select((schema::user::id, schema::user::admin, schema::user::locked))
             .first::<(i32, bool, bool)>(conn)
-            .map_err(map_auth_header_error!(INVALID_JWT))?;
+            .map_err(|e| {
+                HttpError::for_client_error(
+                    None,
+                    StatusCode::NOT_FOUND,
+                    format!("Failed to find user ({email}): {e}"),
+                )
+            })?;
 
         if locked {
-            return Err(ApiError::Locked(user_id, token_data.claims.email().into()));
+            return Err(HttpError::for_client_error(
+                None,
+                StatusCode::UNAUTHORIZED,
+                format!("User account is locked ({email})"),
+            ));
         }
 
-        let (org_ids, org_roles) = Self::organization_roles(conn, user_id)?;
-        let (proj_ids, proj_roles) = Self::project_roles(conn, user_id)?;
+        let (org_ids, org_roles) = Self::organization_roles(conn, user_id, email)?;
+        let (proj_ids, proj_roles) = Self::project_roles(conn, user_id, email)?;
         let rbac = RbacUser {
             admin,
             locked,
@@ -124,7 +140,8 @@ impl AuthUser {
     fn organization_roles(
         conn: &mut DbConnection,
         user_id: i32,
-    ) -> Result<(Vec<OrganizationId>, OrganizationRoles), ApiError> {
+        email: &str,
+    ) -> Result<(Vec<OrganizationId>, OrganizationRoles), HttpError> {
         let roles = schema::organization_role::table
             .filter(schema::organization_role::user_id.eq(user_id))
             .order(schema::organization_role::organization_id)
@@ -133,7 +150,15 @@ impl AuthUser {
                 schema::organization_role::role,
             ))
             .load::<(i32, String)>(conn)
-            .map_err(map_auth_header_error!(INVALID_JWT))?;
+            .map_err(|e| {
+                debug_assert!(false, "Failed to query organization roles: {e}");
+                crate::error::http_error(
+                    StatusCode::NOT_FOUND,
+                    "User can't query organization roles",
+                    &format!("My user ({email}) on Bencher failed to query organization roles."),
+                    e,
+                )
+            })?;
 
         let ids = roles
             .iter()
@@ -144,7 +169,13 @@ impl AuthUser {
             .filter_map(|(id, role)| match role.parse() {
                 Ok(role) => Some((id.to_string(), role)),
                 Err(e) => {
-                    debug_error!("Failed to parse organization role \"{role}\": {e}");
+                    debug_assert!(false, "Failed to parse organization role: {e}");
+                    let _ = crate::error::http_error(
+                        StatusCode::NOT_FOUND,
+                        "Failed to parse organization role",
+                        &format!("My user ({email}) on Bencher has an invalid organization role ({role})."),
+                        e,
+                    );
                     None
                 },
             })
@@ -156,7 +187,8 @@ impl AuthUser {
     fn project_roles(
         conn: &mut DbConnection,
         user_id: i32,
-    ) -> Result<(Vec<ProjectId>, ProjectRoles), ApiError> {
+        email: &str,
+    ) -> Result<(Vec<ProjectId>, ProjectRoles), HttpError> {
         let roles = schema::project_role::table
             .filter(schema::project_role::user_id.eq(user_id))
             .inner_join(
@@ -169,7 +201,15 @@ impl AuthUser {
                 schema::project_role::role,
             ))
             .load::<(i32, i32, String)>(conn)
-            .map_err(map_auth_header_error!(INVALID_JWT))?;
+            .map_err(|e| {
+                debug_assert!(false, "Failed to query project roles: {e}");
+                crate::error::http_error(
+                    StatusCode::NOT_FOUND,
+                    "User can't query project roles",
+                    &format!("My user ({email}) on Bencher failed to query project roles."),
+                    e,
+                )
+            })?;
 
         let ids = roles
             .iter()
@@ -183,7 +223,15 @@ impl AuthUser {
             .filter_map(|(_, id, role)| match role.parse() {
                 Ok(role) => Some((id.to_string(), role)),
                 Err(e) => {
-                    debug_error!("Failed to parse project role \"{role}\": {e}");
+                    debug_assert!(false, "Failed to parse project role: {e}");
+                    let _ = crate::error::http_error(
+                        StatusCode::NOT_FOUND,
+                        "Failed to parse project role",
+                        &format!(
+                            "My user ({email}) on Bencher has an invalid project role ({role})."
+                        ),
+                        e,
+                    );
                     None
                 },
             })

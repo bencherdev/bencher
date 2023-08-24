@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::ApiError;
 
-use super::{audience::Audience, now};
+use super::{audience::Audience, now, JwtError};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
@@ -30,7 +30,7 @@ impl Claims {
         ttl: u32,
         org: Option<OrgClaims>,
     ) -> Result<Self, ApiError> {
-        let now = now()?;
+        let now = now();
         Ok(Self {
             aud: audience.into(),
             exp: now.checked_add(u64::from(ttl)).unwrap_or(now),
@@ -44,8 +44,39 @@ impl Claims {
     pub fn email(&self) -> &str {
         &self.sub
     }
+}
 
-    pub fn org(&self) -> Option<&OrgClaims> {
-        self.org.as_ref()
+pub struct InviteClaims {
+    pub aud: String,
+    pub exp: u64,
+    pub iat: u64,
+    pub iss: String,
+    pub sub: String,
+    pub org: OrgClaims,
+}
+
+impl TryFrom<Claims> for InviteClaims {
+    type Error = JwtError;
+
+    fn try_from(claims: Claims) -> Result<Self, Self::Error> {
+        match claims.org {
+            Some(org) => Ok(Self {
+                aud: claims.aud,
+                exp: claims.exp,
+                iat: claims.iat,
+                iss: claims.iss,
+                sub: claims.sub,
+                org,
+            }),
+            None => Err(JwtError::Invite {
+                error: jsonwebtoken::errors::ErrorKind::MissingRequiredClaim("org".into()).into(),
+            }),
+        }
+    }
+}
+
+impl InviteClaims {
+    pub fn email(&self) -> &str {
+        &self.sub
     }
 }

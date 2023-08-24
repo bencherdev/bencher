@@ -1,9 +1,6 @@
 use crate::{
     context::{DbConnection, SecretKey},
-    model::user::{
-        auth::{auth_header_error, INVALID_JWT},
-        QueryUser,
-    },
+    model::user::QueryUser,
     schema::organization_role as organization_role_table,
     ApiError,
 };
@@ -31,20 +28,15 @@ impl InsertOrganizationRole {
         user_id: i32,
     ) -> Result<Self, ApiError> {
         // Validate the invite JWT
-        let token_data = secret_key.validate_invite(invite)?;
+        let claims = secret_key.validate_invite(invite)?;
 
-        // Make sure that there is an `org` field in the claims
-        let org_claims = token_data
-            .claims
-            .org()
-            .ok_or_else(auth_header_error!(INVALID_JWT))?;
-
+        let email = claims.email();
         // Make sure the email in the invite is the same as the email associated with the user
-        let email_user_id = QueryUser::get_id_from_email(conn, token_data.claims.email())?;
+        let email_user_id = QueryUser::get_id_from_email(conn, email)?;
         if user_id != email_user_id {
             return Err(ApiError::InviteEmail {
                 user_id,
-                email: token_data.claims.email().into(),
+                email: email.into(),
                 email_user_id,
             });
         }
@@ -52,8 +44,8 @@ impl InsertOrganizationRole {
         let timestamp = Utc::now().timestamp();
         Ok(InsertOrganizationRole {
             user_id,
-            organization_id: QueryOrganization::get_id(conn, &org_claims.uuid)?,
-            role: org_claims.role.to_string(),
+            organization_id: QueryOrganization::get_id(conn, &claims.org.uuid)?,
+            role: claims.org.role.to_string(),
             created: timestamp,
             modified: timestamp,
         })
