@@ -8,6 +8,7 @@ use bencher_json::{
 };
 use chrono::Utc;
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
+use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::{
@@ -17,7 +18,7 @@ use super::{
 };
 use crate::{
     context::DbConnection,
-    error::api_error,
+    error::{api_error, resource_not_found},
     model::project::threshold::{InsertThreshold, QueryThreshold},
     schema,
     schema::branch as branch_table,
@@ -72,12 +73,12 @@ impl QueryBranch {
         conn: &mut DbConnection,
         project_id: i32,
         branch: &ResourceId,
-    ) -> Result<Self, ApiError> {
+    ) -> Result<Self, HttpError> {
         schema::branch::table
             .filter(schema::branch::project_id.eq(project_id))
             .filter(resource_id(branch)?)
             .first::<Self>(conn)
-            .map_err(api_error!())
+            .map_err(resource_not_found!(Branch, branch.clone()))
     }
 
     pub fn get_branch_version_json(

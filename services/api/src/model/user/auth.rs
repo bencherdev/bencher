@@ -85,7 +85,7 @@ impl AuthUser {
             HttpError::for_client_error(
                 None,
                 StatusCode::UNAUTHORIZED,
-                format!("Malformed JSON Web Token ({token}): {e}"),
+                format!("Malformed JSON Web Token: {e}"),
             )
         })?;
 
@@ -95,7 +95,7 @@ impl AuthUser {
             HttpError::for_client_error(
                 None,
                 StatusCode::UNAUTHORIZED,
-                format!("Failed to validate JSON Web Token ({jwt}): {e}"),
+                format!("Failed to validate JSON Web Token: {e}"),
             )
         })?;
 
@@ -151,8 +151,7 @@ impl AuthUser {
             ))
             .load::<(i32, String)>(conn)
             .map_err(|e| {
-                debug_assert!(false, "Failed to query organization roles: {e}");
-                crate::error::http_error(
+                crate::error::issue_error(
                     StatusCode::NOT_FOUND,
                     "User can't query organization roles",
                     &format!("My user ({email}) on Bencher failed to query organization roles."),
@@ -169,8 +168,7 @@ impl AuthUser {
             .filter_map(|(id, role)| match role.parse() {
                 Ok(role) => Some((id.to_string(), role)),
                 Err(e) => {
-                    debug_assert!(false, "Failed to parse organization role: {e}");
-                    let _ = crate::error::http_error(
+                    let _ = crate::error::issue_error(
                         StatusCode::NOT_FOUND,
                         "Failed to parse organization role",
                         &format!("My user ({email}) on Bencher has an invalid organization role ({role})."),
@@ -202,8 +200,7 @@ impl AuthUser {
             ))
             .load::<(i32, i32, String)>(conn)
             .map_err(|e| {
-                debug_assert!(false, "Failed to query project roles: {e}");
-                crate::error::http_error(
+                crate::error::issue_error(
                     StatusCode::NOT_FOUND,
                     "User can't query project roles",
                     &format!("My user ({email}) on Bencher failed to query project roles."),
@@ -223,8 +220,7 @@ impl AuthUser {
             .filter_map(|(_, id, role)| match role.parse() {
                 Ok(role) => Some((id.to_string(), role)),
                 Err(e) => {
-                    debug_assert!(false, "Failed to parse project role: {e}");
-                    let _ = crate::error::http_error(
+                    let _ = crate::error::issue_error(
                         StatusCode::NOT_FOUND,
                         "Failed to parse project role",
                         &format!(

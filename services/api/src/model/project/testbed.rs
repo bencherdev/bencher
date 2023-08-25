@@ -6,12 +6,13 @@ use bencher_json::{
 };
 use chrono::Utc;
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
+use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::QueryProject;
 use crate::{
     context::DbConnection,
-    error::api_error,
+    error::{api_error, resource_not_found},
     schema,
     schema::testbed as testbed_table,
     util::{
@@ -65,12 +66,12 @@ impl QueryTestbed {
         conn: &mut DbConnection,
         project_id: i32,
         testbed: &ResourceId,
-    ) -> Result<Self, ApiError> {
+    ) -> Result<Self, HttpError> {
         schema::testbed::table
             .filter(schema::testbed::project_id.eq(project_id))
             .filter(resource_id(testbed)?)
             .first::<Self>(conn)
-            .map_err(api_error!())
+            .map_err(resource_not_found!(Testbed, testbed.clone()))
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonTestbed, ApiError> {

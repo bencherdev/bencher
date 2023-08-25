@@ -40,8 +40,17 @@ pub enum BackendError {
     #[error("Failed to serialize response JSON: {0}")]
     SerializeResponse(serde_json::Error),
 
-    #[error("Failed to send request: {0}")]
-    SendFailed(bencher_client::Error<bencher_client::types::Error>),
+    #[error("Invalid request. The request did not conform to API requirements: {0}")]
+    InvalidRequest(String),
+    #[error("Error processing request:\n{0}")]
+    ErrorResponse(ErrorResponse),
+    #[error("Invalid response payload: {0}")]
+    InvalidResponsePayload(reqwest::Error),
+    #[error("Request succeeded with an unexpected response: {0:?}")]
+    UnexpectedResponseOk(reqwest::Response),
+    #[error("Request failed with an unexpected response: {0:?}")]
+    UnexpectedResponseErr(reqwest::Response),
+
     #[error("Failed to send after {0} attempts")]
     SendTimeout(usize),
 }
@@ -140,10 +149,56 @@ impl Backend {
                         sleep(Duration::from_secs(retry_after)).await;
                     }
                 },
-                Err(e) => return Err(BackendError::SendFailed(e)),
+                Err(bencher_client::Error::InvalidRequest(e)) => {
+                    return Err(BackendError::InvalidRequest(e))
+                },
+                Err(bencher_client::Error::ErrorResponse(e)) => {
+                    let status = e.status();
+                    let headers = e.headers().clone();
+                    let http_error = e.into_inner();
+                    return Err(BackendError::ErrorResponse(ErrorResponse {
+                        status,
+                        headers,
+                        request_id: http_error.request_id,
+                        error_code: http_error.error_code,
+                        message: http_error.message,
+                    }));
+                },
+                Err(bencher_client::Error::InvalidResponsePayload(e)) => {
+                    return Err(BackendError::InvalidResponsePayload(e))
+                },
+                Err(bencher_client::Error::UnexpectedResponse(response)) => {
+                    return Err(if response.status().is_success() {
+                        BackendError::UnexpectedResponseOk(response)
+                    } else {
+                        BackendError::UnexpectedResponseErr(response)
+                    })
+                },
             }
         }
 
         Err(BackendError::SendTimeout(attempts))
+    }
+}
+
+#[derive(Debug)]
+pub struct ErrorResponse {
+    status: reqwest::StatusCode,
+    headers: reqwest::header::HeaderMap,
+    request_id: String,
+    error_code: Option<String>,
+    message: String,
+}
+
+impl std::fmt::Display for ErrorResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Status: {}", self.status)?;
+        writeln!(f, "Headers: {:?}", self.headers)?;
+        writeln!(f, "Request ID: {}", self.request_id)?;
+        if let Some(error_code) = &self.error_code {
+            writeln!(f, "Error Code: {error_code}")?;
+        }
+        writeln!(f, "Message: {}", self.message)?;
+        Ok(())
     }
 }

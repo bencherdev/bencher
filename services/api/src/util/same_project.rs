@@ -1,5 +1,6 @@
 use bencher_json::ResourceId;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use dropshot::HttpError;
 
 use crate::{
     context::DbConnection,
@@ -9,7 +10,7 @@ use crate::{
 };
 
 pub struct SameProject {
-    pub project_id: i32,
+    pub project: QueryProject,
     pub branch_id: i32,
     pub testbed_id: i32,
 }
@@ -20,13 +21,13 @@ impl SameProject {
         project: &ResourceId,
         branch: &ResourceId,
         testbed: &ResourceId,
-    ) -> Result<Self, ApiError> {
-        let project_id = QueryProject::from_resource_id(conn, project)?.id;
-        let branch_id = QueryBranch::from_resource_id(conn, project_id, branch)?.id;
-        let testbed_id = QueryTestbed::from_resource_id(conn, project_id, testbed)?.id;
+    ) -> Result<Self, HttpError> {
+        let project = QueryProject::from_resource_id(conn, project)?;
+        let branch_id = QueryBranch::from_resource_id(conn, project.id, branch)?.id;
+        let testbed_id = QueryTestbed::from_resource_id(conn, project.id, testbed)?.id;
 
         Ok(Self {
-            project_id,
+            project,
             branch_id,
             testbed_id,
         })

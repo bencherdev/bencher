@@ -163,7 +163,13 @@ pub async fn proj_report_post(
         &auth_user,
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     response_accepted!(endpoint, json)
 }
@@ -179,7 +185,7 @@ async fn post_inner(
 
     // Verify that the branch and testbed are part of the same project
     let SameProject {
-        project_id,
+        project,
         branch_id,
         testbed_id,
     } = SameProject::validate(
@@ -188,6 +194,7 @@ async fn post_inner(
         &json_report.branch,
         &json_report.testbed,
     )?;
+    let project_id = project.id;
 
     // Verify that the user is allowed
     QueryProject::is_allowed_id(

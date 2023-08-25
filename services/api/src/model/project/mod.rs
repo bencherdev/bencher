@@ -13,11 +13,12 @@ use chrono::Utc;
 #[cfg(feature = "plus")]
 use diesel::JoinOnDsl;
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
+use dropshot::HttpError;
 use uuid::Uuid;
 
 use crate::{
     context::{DbConnection, Rbac},
-    error::api_error,
+    error::{api_error, resource_not_found},
     model::{organization::QueryOrganization, user::auth::AuthUser},
     schema::{self, project as project_table},
     util::{query::fn_get, resource_id::fn_resource_id, slug::unwrap_slug, to_date_time},
@@ -127,11 +128,11 @@ impl QueryProject {
     pub fn from_resource_id(
         conn: &mut DbConnection,
         project: &ResourceId,
-    ) -> Result<Self, ApiError> {
+    ) -> Result<Self, HttpError> {
         schema::project::table
             .filter(resource_id(project)?)
             .first::<QueryProject>(conn)
-            .map_err(api_error!())
+            .map_err(resource_not_found!(Project, project.clone()))
     }
 
     pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {

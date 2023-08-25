@@ -10,6 +10,9 @@ use crate::{endpoints::Endpoint, model::user::auth::AuthUser};
 
 #[derive(Debug, Error)]
 pub enum ApiError {
+    #[error("{0}")]
+    HttpError(#[from] HttpError),
+
     #[error("Failed to join handle: {0}")]
     JoinHandle(tokio::task::JoinError),
     #[error("Failed to parse role based access control (RBAC) rules: {0}")]
@@ -257,7 +260,56 @@ macro_rules! api_error {
 
 pub(crate) use api_error;
 
-pub fn http_error<E>(status_code: StatusCode, title: &str, body: &str, error: E) -> HttpError
+macro_rules! resource_not_found {
+    ($resource:ident, $id:expr) => {
+        |e| crate::error::resource_not_found_error(crate::error::BencherResource::$resource($id), e)
+    };
+}
+
+pub(crate) use resource_not_found;
+
+#[derive(Debug)]
+pub enum BencherResource<Id> {
+    Project(Id),
+    Branch(Id),
+    Testbed(Id),
+}
+
+impl<Id> BencherResource<Id> {
+    pub fn name(&self) -> &str {
+        match self {
+            Self::Project(_) => "Project",
+            Self::Branch(_) => "Branch",
+            Self::Testbed(_) => "Testbed",
+        }
+    }
+
+    pub fn id(&self) -> &Id {
+        match self {
+            Self::Project(id) => id,
+            Self::Branch(id) => id,
+            Self::Testbed(id) => id,
+        }
+    }
+}
+
+pub fn resource_not_found_error<Id, E>(resource: BencherResource<Id>, error: E) -> HttpError
+where
+    Id: std::fmt::Display,
+    E: std::fmt::Display,
+{
+    HttpError::for_client_error(
+        None,
+        StatusCode::NOT_FOUND,
+        format!(
+            "{resource} not found ({id}): {error}",
+            resource = resource.name(),
+            id = resource.id()
+        ),
+    )
+}
+
+pub fn issue_error<E>(status_code: StatusCode, title: &str, body: &str, error: E) -> HttpError
 where
     E: std::fmt::Display,
 {
@@ -270,6 +322,7 @@ where
             "{title}: {error}\nError code: {error_code}\nPlease report this issue: {issue_url}"
         ),
     );
+    debug_assert!(false, "Issue Error Found: {http_error}");
     #[cfg(feature = "sentry")]
     sentry::capture_error(&http_error);
     http_error

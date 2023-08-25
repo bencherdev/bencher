@@ -29,7 +29,7 @@ pub struct SecretKey {
 
 #[derive(Debug, thiserror::Error)]
 pub enum JwtError {
-    #[error("Failed to decode JSON Web Token ({token}): {error}")]
+    #[error("Failed to decode JSON Web Token: {error}")]
     Decode {
         token: Jwt,
         error: jsonwebtoken::errors::Error,

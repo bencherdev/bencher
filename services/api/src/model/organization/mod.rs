@@ -11,6 +11,7 @@ use bencher_json::{
 };
 use bencher_rbac::Organization;
 use chrono::Utc;
+use derive_more::Display;
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
@@ -30,6 +31,40 @@ use crate::{
 
 pub mod member;
 pub mod organization_role;
+
+// https://github.com/diesel-rs/diesel/blob/master/diesel_tests/tests/custom_types.rs
+#[derive(Debug, Clone, Copy, Display, PartialEq, Eq, FromSqlRow, AsExpression)]
+#[diesel(sql_type = diesel::sql_types::Integer)]
+pub struct OrganizationId(i32);
+
+impl From<OrganizationId> for i32 {
+    fn from(id: OrganizationId) -> Self {
+        id.0
+    }
+}
+
+impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for OrganizationId
+where
+    DB: diesel::backend::Backend,
+    i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>,
+{
+    fn to_sql<'b>(
+        &'b self,
+        out: &mut diesel::serialize::Output<'b, '_, DB>,
+    ) -> diesel::serialize::Result {
+        self.0.to_sql(out)
+    }
+}
+
+impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for OrganizationId
+where
+    DB: diesel::backend::Backend,
+    i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
+{
+    fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+        Ok(Self(i32::from_sql(bytes)?))
+    }
+}
 
 #[derive(Insertable)]
 #[diesel(table_name = organization_table)]

@@ -169,7 +169,7 @@ async fn post_inner(
 
     // Verify that the branch and testbed are part of the same project
     let SameProject {
-        project_id,
+        project,
         branch_id,
         testbed_id,
     } = SameProject::validate(
@@ -178,6 +178,8 @@ async fn post_inner(
         &json_threshold.branch,
         &json_threshold.testbed,
     )?;
+    let project_id = project.id;
+
     let metric_kind_id =
         QueryMetricKind::from_resource_id(conn, project_id, &json_threshold.metric_kind)?.id;
 
