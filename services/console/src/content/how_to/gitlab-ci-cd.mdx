@@ -30,6 +30,7 @@ import { BENCHER_VERSION } from "../../util/ext";
   </code>
 </pre>
 
+1. Create a GitLab CI/CD file (ex: `.gitlab-ci.yml`)
 1. Create a GitLab CI/CD `job` (ex: `benchmark_with_bencher`)
 1. Select a Docker image to run your job in (ex: `image: rust:bullseye`)
 1. The Project must already exist. Set the `--project` flag or the `BENCHER_PROJECT` environment variable to the Project slug or UUID. (ex: `BENCHER_PROJECT: save-walter-white`)

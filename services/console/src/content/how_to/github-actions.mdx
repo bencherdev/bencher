@@ -8,33 +8,39 @@ import { BENCHER_VERSION } from "../../util/ext";
 
 <pre>
   <code>
-    {`on: [push, pull_request]
+    {`on:
+  push:
+    branches: main
+  pull_request:
 
 jobs:
   benchmark_with_bencher:
-  name: Track benchmarks with Bencher
-  runs-on: ubuntu-latest
-  env:
-    BENCHER_PROJECT: save-walter-white
-    BENCHER_API_TOKEN: \${{ secrets.BENCHER_API_TOKEN }}
-    BENCHER_ADAPTER: json
-    BENCHER_TESTBED: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v3
-    - uses: bencherdev/bencher@v${BENCHER_VERSION}
-    - name: Benchmark with Bencher
-      run: |
-        bencher run \\
-        --if-branch "$GITHUB_REF_NAME" \\
-        --else-if-branch "$GITHUB_BASE_REF" \\
-        --else-if-branch main \\
-        --err \\
-        --github-actions \${{ secrets.GITHUB_TOKEN }} \\
-        "bencher mock"`}
+    name: Track benchmarks with Bencher
+    runs-on: ubuntu-latest
+    env:
+      BENCHER_PROJECT: save-walter-white
+      BENCHER_API_TOKEN: \${{ secrets.BENCHER_API_TOKEN }}
+      BENCHER_ADAPTER: json
+      BENCHER_TESTBED: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: bencherdev/bencher@v${BENCHER_VERSION}
+      - name: Benchmark with Bencher
+        run: |
+          bencher run \\
+          --if-branch "$GITHUB_REF_NAME" \\
+          --else-if-branch "$GITHUB_BASE_REF" \\
+          --else-if-branch main \\
+          --err \\
+          --github-actions \${{ secrets.GITHUB_TOKEN }} \\
+          "bencher mock"`}
   </code>
 </pre>
 
-1. Create a GitHub Actions `workflow` (ex: `.github/workflows/benchmark.yml`) and make sure that it at least runs on both `push` and `pull_request` events. (ex: `on: [push, pull_request]`). See the [GitHub Actions `on` documentation](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on) for a full overview.
+1. Create a GitHub Actions `workflow` (ex: `.github/workflows/benchmark.yml`).
+1. Specify events the workflow should run `on`. See the [GitHub Actions `on` documentation](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on) for a full overview.
+    1. Run on a `push` **only** to the `main` branch. This prevents pushes to PR branches from running twice!
+    1. Run on a `pull_request` to any branch.
 1. Create a GitHub Actions `job` (ex: `benchmark_with_bencher`)
 1. The Project must already exist. Set the `--project` flag or the `BENCHER_PROJECT` environment variable to the Project slug or UUID. (ex: `BENCHER_PROJECT: save-walter-white`)
 1. Add `BENCHER_API_TOKEN` to your **Repository** secrets (ex: `https://github.com/USERNAME/REPO/settings/secrets/actions`)
