@@ -31,9 +31,19 @@ const pageTitle = fmtPageTitle(title);
     <title>{pageTitle}</title>
     <!-- https://devicon.dev/ -->
     <link
-      rel="stylesheet"
+      rel="preload"
       href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.15.1/devicon.min.css"
+      as="style"
+      onload="
+      this.onload = null; this.rel = 'stylesheet'
+      "
     />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.15.1/devicon.min.css"
+      />
+    </noscript>
     <!-- font awesome -->
     <script defer src="https://use.fontawesome.com/releases/v5.15.4/js/all.js"
     ></script>
