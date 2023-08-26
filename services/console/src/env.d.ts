@@ -1,5 +1,5 @@
 /// <reference path="../.astro/types.d.ts" />
-/// <reference types="astro/client" />
+/// <reference types="@astrojs/image/client" />
 
 interface ImportMetaEnv {
 	// https://docs.astro.build/en/guides/environment-variables

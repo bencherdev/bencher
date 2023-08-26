@@ -15,6 +15,7 @@
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/image": "^0.17.3",
     "@astrojs/mdx": "^0.19.7",
     "@astrojs/partytown": "^1.2.3",
     "@astrojs/sitemap": "^2.0.1",
@@ -30,6 +31,7 @@
     "bulma-switch": "^2.0.4",
     "d3": "^7.6.1",
     "htl": "^0.3.1",
+    "sharp": "^0.32.5",
     "solid-js": "^1.7.8",
     "swagger-ui-dist": "^4.15.5",
     "vite-plugin-wasm-pack": "^0.1.12"

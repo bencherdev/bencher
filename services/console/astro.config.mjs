@@ -6,15 +6,23 @@ import partytown from "@astrojs/partytown";
 import wasmPack from "vite-plugin-wasm-pack";
 import remarkGfm from "remark-gfm";
 
+import image from "@astrojs/image";
+
 // https://astro.build/config
 export default defineConfig({
 	// https://docs.astro.build/en/reference/configuration-reference/#site
 	site: "https://bencher.dev",
 	output: "hybrid",
 	integrations: [
+		// https://docs.astro.build/en/guides/integrations-guide/sitemap
 		sitemap(),
+		// https://docs.astro.build/en/guides/integrations-guide/mdx
 		mdx(),
-		solidJs(),
+		// https://docs.astro.build/en/guides/integrations-guide/image
+		image({
+			serviceEntryPoint: "@astrojs/image/sharp",
+		}),
+		// https://docs.astro.build/en/guides/integrations-guide/partytown
 		partytown({
 			config: {
 				// https://www.kevinzunigacuellar.com/blog/google-analytics-in-astro/
@@ -22,6 +30,8 @@ export default defineConfig({
 				forward: ["dataLayer.push"],
 			},
 		}),
+		// https://docs.astro.build/en/guides/integrations-guide/solid-js/
+		solidJs(),
 	],
 	vite: {
 		plugins: [wasmPack("../../lib/bencher_valid")],
