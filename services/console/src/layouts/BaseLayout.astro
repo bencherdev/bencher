@@ -1,19 +1,20 @@
 ---
+import { SEO } from "astro-seo";
 import "../styles/styles.scss";
 import Navbar from "../components/site/navbar/Navbar";
 import Footer from "../components/site/Footer";
-import { fmtPageTitle } from "../util/resource";
+import { BENCHER_TITLE, BENCHER_DESCRIPTION } from "../util/resource";
 // import { ViewTransitions } from "astro:transitions";
 
 interface Props {
   title: string;
+  description: string;
 }
 
 // https://docs.astro.build/en/reference/directives-reference/#definevars
 const PUBLIC_GOOGLE_ANALYTICS_ID = import.meta.env.PUBLIC_GOOGLE_ANALYTICS_ID;
-const { title } = Astro.props;
+const { title, description } = Astro.props;
 
-const pageTitle = fmtPageTitle(title);
 ---
 
 <!DOCTYPE html>
@@ -25,10 +26,24 @@ const pageTitle = fmtPageTitle(title);
       content="width=device-width, initial-scale=1, shrink-to-fit=no"
     />
     <meta name="theme-color" content="#ffffff" />
-    <meta name="description" content="Catch Performance Regressions in CI" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
-    <title>{pageTitle}</title>
+    <SEO
+      title={title}
+      titleTemplate={`%s | ${BENCHER_TITLE}`}
+      titleDefault={BENCHER_TITLE}
+      description={description ?? BENCHER_DESCRIPTION}
+      openGraph={{
+        basic: {
+          title: {title},
+          type: "website",
+          image: "https://bencher.dev/favicon.svg",
+        }
+      }}
+      twitter={{
+        creator: "@bencherdev"
+      }}
+    />
     <!-- https://devicon.dev/ -->
     <link
       rel="preload"
