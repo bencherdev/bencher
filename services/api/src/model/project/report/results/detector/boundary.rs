@@ -60,7 +60,7 @@ impl MetricsBoundary {
 
         // Get the mean and standard deviation of the historical data.
         let Some(mean) = mean(data) else {
-            return Ok(None)
+            return Ok(None);
         };
         let Some(std_dev) = std_deviation(mean, data) else {
             return Ok(None);

@@ -195,8 +195,12 @@ impl Run {
     }
 
     async fn generate_report(&self) -> Result<Option<JsonNewReport>, RunError> {
-        let Some(branch) = self.branch.resource_id(&self.project, self.dry_run, &self.backend).await? else {
-            return Ok(None)
+        let Some(branch) = self
+            .branch
+            .resource_id(&self.project, self.dry_run, &self.backend)
+            .await?
+        else {
+            return Ok(None);
         };
 
         let start_time = Utc::now();

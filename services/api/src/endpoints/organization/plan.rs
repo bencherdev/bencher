@@ -83,9 +83,10 @@ async fn post_inner(
     // Check to see if there is a Biller
     // The Biller is only available on Bencher Cloud
     let Some(biller) = &context.biller else {
-        return Err(ApiError::BencherCloudOnly(
-            format!("POST /v0/organizations/{}/plan", path_params.organization),
-        ));
+        return Err(ApiError::BencherCloudOnly(format!(
+            "POST /v0/organizations/{}/plan",
+            path_params.organization
+        )));
     };
     let conn = &mut *context.conn().await;
 
@@ -166,9 +167,10 @@ async fn get_one_inner(
     // Check to see if there is a Biller
     // The Biller is only available on Bencher Cloud
     let Some(biller) = &context.biller else {
-        return Err(ApiError::BencherCloudOnly(
-            format!("GET /v0/organizations/{}/plan", path_params.organization),
-        ));
+        return Err(ApiError::BencherCloudOnly(format!(
+            "GET /v0/organizations/{}/plan",
+            path_params.organization
+        )));
     };
     let conn = &mut *context.conn().await;
 

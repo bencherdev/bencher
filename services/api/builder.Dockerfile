@@ -1,5 +1,5 @@
 # https://hub.docker.com/_/rust
-FROM rust:1.71.0-bookworm
+FROM rust:1.72.0-bookworm
 
 RUN apt-get update && \
     apt-get install -y clang

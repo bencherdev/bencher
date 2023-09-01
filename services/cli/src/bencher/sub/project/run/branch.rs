@@ -133,7 +133,7 @@ async fn if_branch(
             cli_println!(
                 "Failed to parse start point branch #{count} \"{start_point}\" for \"{branch_name}\" in project \"{project}\"."
             );
-            continue
+            continue;
         };
 
         let new_branch =

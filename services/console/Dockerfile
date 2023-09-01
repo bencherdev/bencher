@@ -3,7 +3,7 @@
 FROM bencher-ui-builder as builder
 
 # https://hub.docker.com/_/node
-FROM node:lts-alpine
+FROM node:18.17.1-alpine3.18
 COPY --from=builder /usr/src/services/ui/dist /usr/src/services/ui/dist
 COPY --from=builder /usr/src/services/ui/package.json /usr/src/services/ui/package.json
 

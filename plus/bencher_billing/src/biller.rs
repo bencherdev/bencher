@@ -407,10 +407,14 @@ impl Biller {
         default_payment_method: &Option<Expandable<PaymentMethod>>,
     ) -> Result<JsonCardDetails, BillingError> {
         let Some(default_payment_method) = default_payment_method else {
-            return Err(BillingError::NoDefaultPaymentMethod(subscription_id.clone()));
+            return Err(BillingError::NoDefaultPaymentMethod(
+                subscription_id.clone(),
+            ));
         };
         let Some(default_payment_method_info) = default_payment_method.as_object() else {
-            return Err(BillingError::NoDefaultPaymentMethodInfo(default_payment_method.id()));
+            return Err(BillingError::NoDefaultPaymentMethodInfo(
+                default_payment_method.id(),
+            ));
         };
         let Some(card_details) = &default_payment_method_info.card else {
             return Err(BillingError::NoCardDetails(default_payment_method.id()));
@@ -429,7 +433,7 @@ impl Biller {
     ) -> Result<(PlanLevel, u64), BillingError> {
         let subscription_item = Self::get_subscription_item(subscription_id, subscription_items)?;
         let Some(price) = subscription_item.price else {
-            return Err(BillingError::NoPrice(subscription_item.id))
+            return Err(BillingError::NoPrice(subscription_item.id));
         };
 
         let Some(unit_amount) = price.unit_amount else {
@@ -438,10 +442,10 @@ impl Biller {
         let unit_amount = u64::try_from(unit_amount)?;
 
         let Some(product) = price.product else {
-            return Err(BillingError::NoProduct(price.id))
+            return Err(BillingError::NoProduct(price.id));
         };
         let Some(product_info) = product.as_object() else {
-            return Err(BillingError::NoProductInfo(product.id()))
+            return Err(BillingError::NoProductInfo(product.id()));
         };
         // `Bencher Team` or `Bencher Enterprise`
         let Some(product_name) = &product_info.name else {

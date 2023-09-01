@@ -273,7 +273,10 @@ fn get_iteration_results(
     let mut iteration_results = Vec::new();
     for (metric_kind_id, (threshold_statistic, benchmarks)) in metric_kind_benchmarks {
         let Some(metric_kind) = metric_kinds.get(&metric_kind_id).cloned() else {
-            warn!(log, "Metric kind {metric_kind_id} not found in metric kinds list");
+            warn!(
+                log,
+                "Metric kind {metric_kind_id} not found in metric kinds list"
+            );
             continue;
         };
 

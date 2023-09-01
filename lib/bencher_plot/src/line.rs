@@ -91,16 +91,16 @@ impl LinePlot {
             let perf_data = PerfData::new(json_perf);
 
             let Some(perf_data) = perf_data else {
-                  // Return an informative message if there is no perf data found
-                  let _chart_context = ChartBuilder::on(&plot_area)
-                  .margin_top(TITLE_HEIGHT)
-                  .caption(
-                      format!("No Data Found: {}", Utc::now().format(DATE_TIME_FMT)),
-                      (FontFamily::Monospace, 32),
-                  )
-                  .build_cartesian_2d(PerfData::default_x_range(), PerfData::default_y_range())?;
+                // Return an informative message if there is no perf data found
+                let _chart_context = ChartBuilder::on(&plot_area)
+                    .margin_top(TITLE_HEIGHT)
+                    .caption(
+                        format!("No Data Found: {}", Utc::now().format(DATE_TIME_FMT)),
+                        (FontFamily::Monospace, 32),
+                    )
+                    .build_cartesian_2d(PerfData::default_x_range(), PerfData::default_y_range())?;
 
-                  return root_area.present().map_err(Into::into);
+                return root_area.present().map_err(Into::into);
             };
 
             let lines_len = perf_data.lines.len();
