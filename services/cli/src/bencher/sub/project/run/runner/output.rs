@@ -1,56 +1,34 @@
-use std::{fmt, process};
-
-use crate::bencher::sub::RunError;
-
-use super::command::Command;
+use std::fmt;
 
 #[derive(Debug, Clone, Default)]
 pub struct Output {
     pub status: ExitStatus,
     pub stdout: String,
     pub stderr: String,
+    pub result: Option<String>,
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct ExitStatus(i32);
 
-impl TryFrom<&Command> for Output {
-    type Error = RunError;
-
-    fn try_from(command: &Command) -> Result<Self, Self::Error> {
-        std::process::Command::new(command.shell.to_string())
-            .arg(command.flag.to_string())
-            .arg(&command.cmd)
-            .output()
-            .map(Into::into)
-            .map_err(RunError::RunCommand)
-    }
-}
-
-impl From<process::Output> for Output {
-    fn from(output: process::Output) -> Self {
-        let process::Output {
-            status,
-            stdout,
-            stderr,
-        } = output;
-        Self {
-            status: status.into(),
-            stdout: String::from_utf8_lossy(&stdout).to_string(),
-            stderr: String::from_utf8_lossy(&stderr).to_string(),
-        }
-    }
-}
-
-impl From<process::ExitStatus> for ExitStatus {
-    fn from(exit_status: process::ExitStatus) -> Self {
+impl From<std::process::ExitStatus> for ExitStatus {
+    fn from(exit_status: std::process::ExitStatus) -> Self {
         Self(exit_status.code().unwrap_or_default())
     }
 }
 
 impl fmt::Display for Output {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}\n{}\n{}", self.status, self.stdout, self.stderr)
+        let result = if let Some(result) = self.result.as_deref() {
+            format!("\n{result}")
+        } else {
+            String::new()
+        };
+        write!(
+            f,
+            "{}\n{}\n{}{result}",
+            self.status, self.stdout, self.stderr
+        )
     }
 }
 
@@ -63,6 +41,10 @@ impl fmt::Display for ExitStatus {
 impl Output {
     pub fn is_success(&self) -> bool {
         self.status.is_success()
+    }
+
+    pub fn result(self) -> String {
+        self.result.unwrap_or(self.stdout)
     }
 }
 

@@ -18,8 +18,18 @@ pub enum RunError {
     #[error("The subcommand `run` requires either a command argument or results via stdin.")]
     NoCommand,
 
+    #[error("Failed to spawn command: {0}")]
+    SpawnCommand(std::io::Error),
     #[error("Failed to run command: {0}")]
     RunCommand(std::io::Error),
+    #[error("Failed to pipe stdout")]
+    PipeStdout,
+    #[error("Failed to pipe stderr")]
+    PipeStderr,
+    #[error("Failed to join stdout: {0}")]
+    StdoutJoinError(tokio::task::JoinError),
+    #[error("Failed to join stderr: {0}")]
+    StderrJoinError(tokio::task::JoinError),
     #[error("Failed to run command due to a non-zero exit code: {0}")]
     ExitStatus(crate::bencher::sub::Output),
 

@@ -157,6 +157,7 @@ impl Run {
         };
 
         // TODO disable when quiet
+        cli_println!("\nBencher New Report:");
         cli_println!(
             "{}",
             serde_json::to_string_pretty(json_new_report).map_err(RunError::SerializeReport)?
@@ -167,6 +168,7 @@ impl Run {
             return Ok(());
         }
 
+        cli_println!("\nBencher Report:");
         let json_report: JsonReport = self
             .backend
             .send_with(
@@ -206,9 +208,9 @@ impl Run {
         let start_time = Utc::now();
         let mut results = Vec::with_capacity(self.iter);
         for _ in 0..self.iter {
-            let output = self.runner.run()?;
+            let output = self.runner.run().await?;
             if output.is_success() {
-                results.push(output.stdout)
+                results.push(output.result())
             } else if self.allow_failure {
                 cli_eprintln!("Skipping failure:\n{}", output);
             } else {
@@ -217,6 +219,7 @@ impl Run {
         }
 
         // TODO disable when quiet
+        cli_println!("\nBenchmark Harness Results:");
         for result in &results {
             cli_println!("{result}");
         }

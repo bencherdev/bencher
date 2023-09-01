@@ -26,7 +26,7 @@ serde.workspace = true
 serde_json.workspace = true
 tabled.workspace = true
 thiserror.workspace = true
-tokio = { workspace = true, features = ["macros", "rt"] }
+tokio = { workspace = true, features = ["macros", "process", "rt"] }
 url.workspace = true
 uuid = { workspace = true, features = ["v4"] }
 # Crate

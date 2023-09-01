@@ -8,7 +8,7 @@ sortOrder: 4
 - Add optional error monitoring with [Sentry](https://sentry.io)
 - Start API error message improvement
 - Fix Threshold dimension selection bug in UI
-- A special thank you to [@robertorosmaninho](https://github.com/robertorosmaninho) for bug hunting 
+- A special thank you to [@robertorosmaninho](https://github.com/robertorosmaninho) for bug hunting 👾
 
 ## `v0.3.9`
 - Move UI over to [Astro](https://astro.build) with stronger TypeScript

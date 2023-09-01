@@ -56,26 +56,25 @@ impl TryFrom<(CliRunCommand, String)> for Runner {
 }
 
 impl Runner {
-    pub fn run(&self) -> Result<Output, RunError> {
+    pub async fn run(&self) -> Result<Output, RunError> {
         Ok(match self {
             Self::Pipe(pipe) => pipe.output(),
-            Self::Command(command) => command.try_into()?,
+            Self::Command(command) => command.run().await?,
             Self::CommandToFile(command, file_path) => {
-                let mut output: Output = command.try_into()?;
+                let mut output: Output = command.run().await?;
                 let capacity = std::fs::metadata(file_path)
                     .ok()
                     .and_then(|metadata| usize::try_from(metadata.len()).ok())
                     .unwrap_or_default();
-                output.stdout = String::with_capacity(capacity);
+                let mut result = String::with_capacity(capacity);
 
                 let output_file = File::open(file_path).map_err(RunError::OutputFileOpen)?;
                 let buffered = BufReader::new(output_file);
                 for line in buffered.lines() {
-                    output
-                        .stdout
-                        .push_str(&line.map_err(RunError::OutputFileRead)?);
+                    result.push_str(&line.map_err(RunError::OutputFileRead)?);
                 }
 
+                output.result = Some(result);
                 output
             },
         })
