@@ -10,7 +10,7 @@
     "start": "astro dev",
     "test": "npm run setup && vitest",
     "build": "export $(cat .env.runtime) && astro build",
-    "netlify": "npm install && npx astro add netlify -y && npm run build",
+    "netlify": "npm install && npm install @astrojs/netlify@2.6.0 && npx astro add netlify -y && npm run build",
     "preview": "astro preview",
     "astro": "astro"
   },
