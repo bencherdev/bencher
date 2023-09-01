@@ -47,7 +47,8 @@ url = "2.4"
 uuid = "1.4"
 # github.com
 dropshot = { git = "https://github.com/oxidecomputer/dropshot", rev = "bd3bf5853a8fef5757b132cec7f61974bbd37de2" }
-progenitor-client = { git = "https://github.com/oxidecomputer/progenitor", rev = "a2e26c6789dd60605a6eacf083e5efdb470d2d80" }
+progenitor = { git = "https://github.com/oxidecomputer/progenitor", rev = "ca8b4ef6f84760d493001aabee3826e315a84d05" }
+progenitor-client = { git = "https://github.com/oxidecomputer/progenitor", rev = "ca8b4ef6f84760d493001aabee3826e315a84d05" }
 
 # TODO use this to generate wasm builds
 # https://github.com/bencherdev/bencher/issues/48

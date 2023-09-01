@@ -18,8 +18,8 @@ url.workspace = true
 uuid = { workspace = true, features = ["serde", "v4"] }
 
 [build-dependencies]
+progenitor.workspace = true
 serde_json.workspace = true
 # Crate
 prettyplease = "0.2"
-progenitor = { git = "https://github.com/oxidecomputer/progenitor", rev = "f0b6ecaa8d3a45649857712ff86bcdf071f831d1" }
 syn = "2.0"
