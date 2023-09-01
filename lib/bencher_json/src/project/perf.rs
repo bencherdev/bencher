@@ -137,17 +137,14 @@ impl JsonPerfQuery {
     fn urlencoded(&self) -> Result<[(&'static str, Option<String>); 6], UrlEncodedError> {
         QUERY_KEYS
             .into_iter()
-            .zip(
-                [
-                    Some(self.metric_kind()),
-                    Some(self.branches()),
-                    Some(self.testbeds()),
-                    Some(self.benchmarks()),
-                    self.start_time_str(),
-                    self.end_time_str(),
-                ]
-                .into_iter(),
-            )
+            .zip([
+                Some(self.metric_kind()),
+                Some(self.branches()),
+                Some(self.testbeds()),
+                Some(self.benchmarks()),
+                self.start_time_str(),
+                self.end_time_str(),
+            ])
             .collect::<Vec<_>>()
             .try_into()
             .map_err(UrlEncodedError::Vec)

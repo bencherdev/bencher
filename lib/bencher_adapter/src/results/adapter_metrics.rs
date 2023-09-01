@@ -38,7 +38,7 @@ impl AdapterMetrics {
             };
             metric_map.insert(metric_kind, combined_metric);
         }
-        metric_map.extend(other.inner.into_iter());
+        metric_map.extend(other.inner);
         metric_map.into()
     }
 

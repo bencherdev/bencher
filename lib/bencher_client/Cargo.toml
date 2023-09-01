@@ -21,5 +21,5 @@ uuid = { workspace = true, features = ["serde", "v4"] }
 serde_json.workspace = true
 # Crate
 prettyplease = "0.2"
-progenitor = { git = "https://github.com/oxidecomputer/progenitor", rev = "a2e26c6789dd60605a6eacf083e5efdb470d2d80" }
+progenitor = { git = "https://github.com/oxidecomputer/progenitor", rev = "f0b6ecaa8d3a45649857712ff86bcdf071f831d1" }
 syn = "2.0"

@@ -174,7 +174,7 @@ impl AdapterResults {
             };
             results_map.insert(benchmark_name, combined_metrics);
         }
-        results_map.extend(other.inner.into_iter());
+        results_map.extend(other.inner);
         results_map.into()
     }
 

@@ -49,7 +49,7 @@ impl TryFrom<ConfigTx> for HttpServer<ApiContext> {
             secret_key,
             console,
             security,
-            server,
+            mut server,
             database,
             smtp,
             logging,
@@ -110,6 +110,16 @@ impl TryFrom<ConfigTx> for HttpServer<ApiContext> {
             #[cfg(feature = "plus")]
             plus,
         )?;
+        let tls = server.tls.take().map(|json_tls| match json_tls {
+            JsonTls::AsFile {
+                cert_file,
+                key_file,
+            } => ConfigTls::AsFile {
+                cert_file,
+                key_file,
+            },
+            JsonTls::AsBytes { certs, key } => ConfigTls::AsBytes { certs, key },
+        });
         let config_dropshot = into_config_dropshot(server);
 
         let mut api = ApiDescription::new();
@@ -117,7 +127,7 @@ impl TryFrom<ConfigTx> for HttpServer<ApiContext> {
         Api::register(&mut api, true)?;
 
         Ok(
-            dropshot::HttpServerStarter::new(&config_dropshot, api, private, &log)
+            dropshot::HttpServerStarter::new_with_tls(&config_dropshot, api, private, &log, tls)
                 .map_err(ApiError::CreateServer)?
                 .start(),
         )
@@ -226,21 +236,12 @@ fn into_config_dropshot(server: JsonServer) -> ConfigDropshot {
     let JsonServer {
         bind_address,
         request_body_max_bytes,
-        tls,
+        tls: _,
     } = server;
     ConfigDropshot {
         bind_address,
         request_body_max_bytes,
-        tls: tls.map(|json_tls| match json_tls {
-            JsonTls::AsFile {
-                cert_file,
-                key_file,
-            } => ConfigTls::AsFile {
-                cert_file,
-                key_file,
-            },
-            JsonTls::AsBytes { certs, key } => ConfigTls::AsBytes { certs, key },
-        }),
+        default_handler_task_mode: dropshot::HandlerTaskMode::Detached,
     }
 }
 
