@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.3.9"
+    "version": "0.3.10"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -5871,6 +5871,30 @@
           "version"
         ]
       },
+      "JsonApm": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "sentry": {
+                "type": "object",
+                "properties": {
+                  "dsn": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "dsn"
+                ]
+              }
+            },
+            "required": [
+              "sentry"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
       "JsonAuthToken": {
         "type": "object",
         "properties": {
@@ -6168,6 +6192,14 @@
       "JsonConfig": {
         "type": "object",
         "properties": {
+          "apm": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonApm"
+              }
+            ]
+          },
           "console": {
             "nullable": true,
             "allOf": [
