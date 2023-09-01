@@ -29,6 +29,7 @@ export type FieldHandler = (
 export type FieldValueHandler = (value: FieldValue) => void;
 
 export interface Props {
+	apiUrl?: string;
 	params?: Params;
 	kind: FieldKind;
 	fieldKey: string;
@@ -97,6 +98,7 @@ const Field = (props: Props) => {
 			case FieldKind.RADIO:
 				return (
 					<Radio
+						apiUrl={props.apiUrl}
 						value={props.value as RadioValue}
 						config={props.config as RadioConfig}
 						params={props.params}

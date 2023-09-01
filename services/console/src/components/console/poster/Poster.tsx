@@ -195,6 +195,7 @@ const Poster = (props: Props) => {
 					<For each={props.config?.fields}>
 						{(field, _i) => (
 							<Field
+								apiUrl={props.apiUrl}
 								kind={field?.kind}
 								label={form?.[field?.key]?.label}
 								fieldKey={field?.key}
