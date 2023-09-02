@@ -6,8 +6,6 @@ import partytown from "@astrojs/partytown";
 import wasmPack from "vite-plugin-wasm-pack";
 import remarkGfm from "remark-gfm";
 
-import image from "@astrojs/image";
-
 // https://astro.build/config
 export default defineConfig({
 	// https://docs.astro.build/en/reference/configuration-reference/#site
@@ -18,10 +16,6 @@ export default defineConfig({
 		sitemap(),
 		// https://docs.astro.build/en/guides/integrations-guide/mdx
 		mdx(),
-		// https://docs.astro.build/en/guides/integrations-guide/image
-		image({
-			serviceEntryPoint: "@astrojs/image/sharp",
-		}),
 		// https://docs.astro.build/en/guides/integrations-guide/partytown
 		partytown({
 			config: {
@@ -38,9 +32,5 @@ export default defineConfig({
 	},
 	markdown: {
 		remarkPlugins: [remarkGfm],
-	},
-	experimental: {
-		// https://docs.astro.build/en/guides/view-transitions
-		viewTransitions: false,
 	},
 });
