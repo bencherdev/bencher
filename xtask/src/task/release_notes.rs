@@ -41,19 +41,23 @@ impl ReleaseNotes {
 
         let buffered_reader = BufReader::new(changelog_file);
         let mut buffered_writer = BufWriter::new(output_file);
-        for (iter, line) in buffered_reader.lines().enumerate() {
+        let mut header = true;
+        for line in buffered_reader.lines() {
             let line = line?;
-            if iter == 0 {
+            if header {
                 if line.starts_with("## Pending") {
                     anyhow::bail!("Release notes still pending");
+                } else if line.starts_with("##") {
+                    header = false;
                 }
-            } else {
-                if line.starts_with("##") {
-                    break;
-                }
-                buffered_writer.write_all(&[b'\n'])?;
+                continue;
+            }
+
+            if line.starts_with("##") {
+                break;
             }
             buffered_writer.write_all(line.as_bytes())?;
+            buffered_writer.write_all(&[b'\n'])?;
         }
 
         Ok(())
