@@ -35,7 +35,7 @@ const { title, description } = Astro.props;
       description={description ?? BENCHER_DESCRIPTION}
       openGraph={{
         basic: {
-          title: {title},
+          title: title,
           type: "website",
           image: "https://bencher.dev/favicon.svg",
         }
