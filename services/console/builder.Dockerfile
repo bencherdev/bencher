@@ -47,9 +47,4 @@ COPY services/console/site.js site.js
 COPY services/console/tsconfig.json tsconfig.json
 COPY services/console/.env.runtime .env.runtime
 
-# Pin the Astro node version
-RUN npm install @astrojs/node@6.0.0
-# https://docs.astro.build/en/guides/integrations-guide/node
-RUN npx astro add node -y
-
-RUN npm run build
+RUN npm run node
