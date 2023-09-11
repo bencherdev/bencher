@@ -296,7 +296,11 @@ mod plan_kind {
     use bencher_billing::{Biller, SubscriptionId};
     use bencher_license::Licensor;
 
-    use crate::{context::DbConnection, model::project::QueryProject, ApiError};
+    use crate::{
+        context::DbConnection,
+        model::project::{ProjectId, QueryProject},
+        ApiError,
+    };
 
     pub enum PlanKind {
         Metered(SubscriptionId),
@@ -309,7 +313,7 @@ mod plan_kind {
             conn: &mut DbConnection,
             biller: Option<&Biller>,
             licensor: &Licensor,
-            project_id: i32,
+            project_id: ProjectId,
         ) -> Result<Self, ApiError> {
             if let Some(subscription) = QueryProject::get_subscription(conn, project_id)? {
                 if let Some(biller) = biller {
@@ -336,7 +340,7 @@ mod plan_kind {
         pub async fn check_usage(
             &self,
             biller: Option<&Biller>,
-            project_id: i32,
+            project_id: ProjectId,
             usage: u64,
         ) -> Result<(), ApiError> {
             match self {

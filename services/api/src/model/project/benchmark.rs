@@ -8,7 +8,7 @@ use chrono::Utc;
 use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
-use super::{metric::QueryMetric, threshold::boundary::QueryBoundary, QueryProject};
+use super::{metric::QueryMetric, threshold::boundary::QueryBoundary, ProjectId, QueryProject};
 use crate::{
     context::DbConnection,
     error::api_error,
@@ -29,7 +29,7 @@ fn_resource_id!(benchmark);
 pub struct QueryBenchmark {
     pub id: i32,
     pub uuid: String,
-    pub project_id: i32,
+    pub project_id: ProjectId,
     pub name: String,
     pub slug: String,
     pub created: i64,
@@ -42,7 +42,7 @@ impl QueryBenchmark {
 
     pub fn get_id_from_name(
         conn: &mut DbConnection,
-        project_id: i32,
+        project_id: ProjectId,
         name: &str,
     ) -> Result<i32, ApiError> {
         schema::benchmark::table
@@ -64,7 +64,7 @@ impl QueryBenchmark {
 
     pub fn from_uuid(
         conn: &mut DbConnection,
-        project_id: i32,
+        project_id: ProjectId,
         uuid: Uuid,
     ) -> Result<Self, ApiError> {
         schema::benchmark::table
@@ -76,7 +76,7 @@ impl QueryBenchmark {
 
     pub fn from_resource_id(
         conn: &mut DbConnection,
-        project_id: i32,
+        project_id: ProjectId,
         benchmark: &ResourceId,
     ) -> Result<Self, ApiError> {
         schema::benchmark::table
@@ -88,7 +88,7 @@ impl QueryBenchmark {
 
     pub fn get_or_create(
         conn: &mut DbConnection,
-        project_id: i32,
+        project_id: ProjectId,
         name: &str,
     ) -> Result<i32, ApiError> {
         let id = Self::get_id_from_name(conn, project_id, name);
@@ -109,7 +109,7 @@ impl QueryBenchmark {
     fn get_benchmark_json(
         conn: &mut DbConnection,
         uuid: String,
-        project_id: i32,
+        project_id: ProjectId,
         name: String,
         slug: String,
         created: i64,
@@ -192,7 +192,7 @@ impl QueryBenchmark {
 #[diesel(table_name = benchmark_table)]
 pub struct InsertBenchmark {
     pub uuid: String,
-    pub project_id: i32,
+    pub project_id: ProjectId,
     pub name: String,
     pub slug: String,
     pub created: i64,
@@ -226,7 +226,7 @@ impl InsertBenchmark {
         })
     }
 
-    fn from_name(project_id: i32, name: String) -> Self {
+    fn from_name(project_id: ProjectId, name: String) -> Self {
         let slug = format!(
             "{slug}-{rand_suffix}",
             slug = slug::slugify(&name),

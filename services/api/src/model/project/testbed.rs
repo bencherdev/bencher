@@ -9,7 +9,7 @@ use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
 use dropshot::HttpError;
 use uuid::Uuid;
 
-use super::QueryProject;
+use super::{ProjectId, QueryProject};
 use crate::{
     context::DbConnection,
     error::{api_error, resource_not_found},
@@ -30,7 +30,7 @@ fn_resource_id!(testbed);
 pub struct QueryTestbed {
     pub id: i32,
     pub uuid: String,
-    pub project_id: i32,
+    pub project_id: ProjectId,
     pub name: String,
     pub slug: String,
     pub created: i64,
@@ -52,7 +52,7 @@ impl QueryTestbed {
 
     pub fn from_uuid(
         conn: &mut DbConnection,
-        project_id: i32,
+        project_id: ProjectId,
         uuid: Uuid,
     ) -> Result<Self, ApiError> {
         schema::testbed::table
@@ -64,7 +64,7 @@ impl QueryTestbed {
 
     pub fn from_resource_id(
         conn: &mut DbConnection,
-        project_id: i32,
+        project_id: ProjectId,
         testbed: &ResourceId,
     ) -> Result<Self, HttpError> {
         schema::testbed::table
@@ -104,7 +104,7 @@ impl QueryTestbed {
 #[diesel(table_name = testbed_table)]
 pub struct InsertTestbed {
     pub uuid: String,
-    pub project_id: i32,
+    pub project_id: ProjectId,
     pub name: String,
     pub slug: String,
     pub created: i64,
@@ -121,11 +121,15 @@ impl InsertTestbed {
         Ok(Self::from_json_inner(conn, project_id, testbed))
     }
 
-    pub fn localhost(conn: &mut DbConnection, project_id: i32) -> Self {
+    pub fn localhost(conn: &mut DbConnection, project_id: ProjectId) -> Self {
         Self::from_json_inner(conn, project_id, JsonNewTestbed::localhost())
     }
 
-    fn from_json_inner(conn: &mut DbConnection, project_id: i32, testbed: JsonNewTestbed) -> Self {
+    fn from_json_inner(
+        conn: &mut DbConnection,
+        project_id: ProjectId,
+        testbed: JsonNewTestbed,
+    ) -> Self {
         let JsonNewTestbed { name, slug } = testbed;
         let slug = unwrap_child_slug!(conn, project_id, name.as_ref(), slug, testbed, QueryTestbed);
         let timestamp = Utc::now().timestamp();

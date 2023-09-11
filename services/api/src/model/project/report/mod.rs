@@ -22,7 +22,7 @@ use super::{
     metric_kind::QueryMetricKind,
     testbed::QueryTestbed,
     threshold::{alert::QueryAlert, boundary::QueryBoundary, QueryThreshold},
-    QueryProject,
+    ProjectId, QueryProject,
 };
 use crate::{
     context::DbConnection,
@@ -45,7 +45,7 @@ pub struct QueryReport {
     pub id: i32,
     pub uuid: String,
     pub user_id: UserId,
-    pub project_id: i32,
+    pub project_id: ProjectId,
     pub branch_id: i32,
     pub version_id: i32,
     pub testbed_id: i32,
@@ -336,7 +336,7 @@ fn get_alerts(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportAlert
 pub struct InsertReport {
     pub uuid: String,
     pub user_id: UserId,
-    pub project_id: i32,
+    pub project_id: ProjectId,
     pub branch_id: i32,
     pub version_id: i32,
     pub testbed_id: i32,
@@ -349,7 +349,7 @@ pub struct InsertReport {
 impl InsertReport {
     pub fn from_json(
         user_id: UserId,
-        project_id: i32,
+        project_id: ProjectId,
         branch_id: i32,
         version_id: i32,
         testbed_id: i32,

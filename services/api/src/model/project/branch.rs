@@ -14,7 +14,7 @@ use uuid::Uuid;
 use super::{
     threshold::statistic::{InsertStatistic, QueryStatistic},
     version::{InsertBranchVersion, QueryVersion},
-    QueryProject,
+    ProjectId, QueryProject,
 };
 use crate::{
     context::DbConnection,
@@ -37,7 +37,7 @@ fn_resource_id!(branch);
 pub struct QueryBranch {
     pub id: i32,
     pub uuid: String,
-    pub project_id: i32,
+    pub project_id: ProjectId,
     pub name: String,
     pub slug: String,
     pub created: i64,
@@ -59,7 +59,7 @@ impl QueryBranch {
 
     pub fn from_uuid(
         conn: &mut DbConnection,
-        project_id: i32,
+        project_id: ProjectId,
         uuid: Uuid,
     ) -> Result<Self, ApiError> {
         schema::branch::table
@@ -71,7 +71,7 @@ impl QueryBranch {
 
     pub fn from_resource_id(
         conn: &mut DbConnection,
-        project_id: i32,
+        project_id: ProjectId,
         branch: &ResourceId,
     ) -> Result<Self, HttpError> {
         schema::branch::table
@@ -143,7 +143,7 @@ impl QueryBranch {
 #[diesel(table_name = branch_table)]
 pub struct InsertBranch {
     pub uuid: String,
-    pub project_id: i32,
+    pub project_id: ProjectId,
     pub name: String,
     pub slug: String,
     pub created: i64,
@@ -160,11 +160,15 @@ impl InsertBranch {
         Ok(Self::from_json_inner(conn, project_id, branch))
     }
 
-    pub fn main(conn: &mut DbConnection, project_id: i32) -> Self {
+    pub fn main(conn: &mut DbConnection, project_id: ProjectId) -> Self {
         Self::from_json_inner(conn, project_id, JsonNewBranch::main())
     }
 
-    fn from_json_inner(conn: &mut DbConnection, project_id: i32, branch: JsonNewBranch) -> Self {
+    fn from_json_inner(
+        conn: &mut DbConnection,
+        project_id: ProjectId,
+        branch: JsonNewBranch,
+    ) -> Self {
         let JsonNewBranch { name, slug, .. } = branch;
         let slug = unwrap_child_slug!(conn, project_id, name.as_ref(), slug, branch, QueryBranch);
         let timestamp = Utc::now().timestamp();

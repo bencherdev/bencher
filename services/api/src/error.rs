@@ -10,6 +10,7 @@ use crate::{
     endpoints::Endpoint,
     model::{
         organization::OrganizationId,
+        project::ProjectId,
         user::{auth::AuthUser, UserId},
     },
 };
@@ -110,18 +111,18 @@ pub enum ApiError {
     },
     #[error("The branch ({branch_id}) project ID ({branch_project_id}) do not match the project ID ({project_id}).")]
     BranchProject {
-        project_id: i32,
+        project_id: ProjectId,
         branch_id: i32,
-        branch_project_id: i32,
+        branch_project_id: ProjectId,
     },
     #[error("The testbed ({testbed_id}) project ID ({testbed_project_id}) do not match the project ID ({project_id}).")]
     TestbedProject {
-        project_id: i32,
+        project_id: ProjectId,
         testbed_id: i32,
-        testbed_project_id: i32,
+        testbed_project_id: ProjectId,
     },
     #[error("Tried to query a private project: {0}")]
-    PrivateProject(i32),
+    PrivateProject(ProjectId),
     #[error("Anonymous user tried to query private projects")]
     PrivateProjects,
     #[error("Failed to validate: {0}")]
@@ -167,19 +168,19 @@ pub enum ApiError {
     NoPlanOrganization(ResourceId),
     #[cfg(feature = "plus")]
     #[error("Failed to find plan for project: {0}")]
-    NoPlanProject(i32),
+    NoPlanProject(ProjectId),
     #[cfg(feature = "plus")]
     #[error("No Biller but organization has a subscription: {0}")]
     NoBillerOrganization(ResourceId),
     #[cfg(feature = "plus")]
     #[error("No Biller but project has a subscription: {0}")]
-    NoBillerProject(i32),
+    NoBillerProject(ProjectId),
     #[cfg(feature = "plus")]
     #[error("Organization has an inactive plan: {0}")]
     InactivePlanOrganization(ResourceId),
     #[cfg(feature = "plus")]
     #[error("Project has an inactive plan: {0}")]
-    InactivePlanProject(i32),
+    InactivePlanProject(ProjectId),
 
     #[error("Failed to cast integer: {0}")]
     IntError(#[from] std::num::TryFromIntError),

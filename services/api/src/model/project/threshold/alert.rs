@@ -12,7 +12,7 @@ use super::{boundary::QueryBoundary, QueryThreshold};
 use crate::{
     context::DbConnection,
     error::api_error,
-    model::project::{benchmark::QueryBenchmark, report::QueryReport},
+    model::project::{benchmark::QueryBenchmark, report::QueryReport, ProjectId},
     schema,
     schema::alert as alert_table,
     util::{
@@ -71,7 +71,7 @@ impl QueryAlert {
 
     pub fn from_uuid(
         conn: &mut DbConnection,
-        project_id: i32,
+        project_id: ProjectId,
         uuid: Uuid,
     ) -> Result<Self, ApiError> {
         schema::alert::table

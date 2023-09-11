@@ -7,7 +7,8 @@ use uuid::Uuid;
 
 use self::statistic::{InsertStatistic, QueryStatistic};
 use super::{
-    branch::QueryBranch, metric_kind::QueryMetricKind, testbed::QueryTestbed, QueryProject,
+    branch::QueryBranch, metric_kind::QueryMetricKind, testbed::QueryTestbed, ProjectId,
+    QueryProject,
 };
 use crate::{
     context::DbConnection,
@@ -29,7 +30,7 @@ pub mod statistic;
 pub struct QueryThreshold {
     pub id: i32,
     pub uuid: String,
-    pub project_id: i32,
+    pub project_id: ProjectId,
     pub metric_kind_id: i32,
     pub branch_id: i32,
     pub testbed_id: i32,
@@ -135,7 +136,7 @@ impl QueryThreshold {
 #[diesel(table_name = threshold_table)]
 pub struct InsertThreshold {
     pub uuid: String,
-    pub project_id: i32,
+    pub project_id: ProjectId,
     pub metric_kind_id: i32,
     pub branch_id: i32,
     pub testbed_id: i32,
@@ -145,7 +146,12 @@ pub struct InsertThreshold {
 }
 
 impl InsertThreshold {
-    pub fn new(project_id: i32, metric_kind_id: i32, branch_id: i32, testbed_id: i32) -> Self {
+    pub fn new(
+        project_id: ProjectId,
+        metric_kind_id: i32,
+        branch_id: i32,
+        testbed_id: i32,
+    ) -> Self {
         let timestamp = Utc::now().timestamp();
         Self {
             uuid: Uuid::new_v4().to_string(),
@@ -161,7 +167,7 @@ impl InsertThreshold {
 
     pub fn from_json(
         conn: &mut DbConnection,
-        project_id: i32,
+        project_id: ProjectId,
         metric_kind_id: i32,
         branch_id: i32,
         testbed_id: i32,
@@ -199,7 +205,7 @@ impl InsertThreshold {
 
     pub fn lower_boundary(
         conn: &mut DbConnection,
-        project_id: i32,
+        project_id: ProjectId,
         metric_kind_id: i32,
         branch_id: i32,
         testbed_id: i32,
@@ -216,7 +222,7 @@ impl InsertThreshold {
 
     pub fn upper_boundary(
         conn: &mut DbConnection,
-        project_id: i32,
+        project_id: ProjectId,
         metric_kind_id: i32,
         branch_id: i32,
         testbed_id: i32,

@@ -30,12 +30,12 @@ macro_rules! unwrap_child_slug {
 
 pub(crate) use unwrap_child_slug;
 
-pub type SlugExistsFn = dyn FnOnce(&mut DbConnection, Option<i32>, &str) -> bool;
+pub type SlugExistsFn = dyn FnOnce(&mut DbConnection, Option<ProjectId>, &str) -> bool;
 
 #[allow(clippy::expect_used)]
 pub fn validate_slug(
     conn: &mut DbConnection,
-    parent: Option<i32>,
+    parent: Option<ProjectId>,
     name: &str,
     slug: Option<Slug>,
     exists: Box<SlugExistsFn>,
@@ -91,4 +91,4 @@ macro_rules! child_slug_exists {
 
 pub(crate) use child_slug_exists;
 
-use crate::context::DbConnection;
+use crate::{context::DbConnection, model::project::ProjectId};

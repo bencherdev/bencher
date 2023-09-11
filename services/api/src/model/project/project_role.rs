@@ -3,11 +3,13 @@ use diesel::{Insertable, Queryable};
 
 use crate::{model::user::UserId, schema::project_role as project_role_table};
 
+use super::ProjectId;
+
 #[derive(Insertable)]
 #[diesel(table_name = project_role_table)]
 pub struct InsertProjectRole {
     pub user_id: UserId,
-    pub project_id: i32,
+    pub project_id: ProjectId,
     pub role: String,
     pub created: i64,
     pub modified: i64,
@@ -17,7 +19,7 @@ pub struct InsertProjectRole {
 pub struct QueryProjectRole {
     pub id: i32,
     pub user_id: UserId,
-    pub project_id: i32,
+    pub project_id: ProjectId,
     pub role: String,
     pub created: i64,
     pub modified: i64,

@@ -11,7 +11,7 @@ use oso::{PolarValue, ToPolar};
 
 use crate::{
     context::{ApiContext, DbConnection, Rbac},
-    model::organization::OrganizationId,
+    model::{organization::OrganizationId, project::ProjectId},
     schema,
 };
 
@@ -21,7 +21,7 @@ use super::UserId;
 pub struct AuthUser {
     pub id: UserId,
     pub organizations: Vec<OrganizationId>,
-    pub projects: Vec<ProjectId>,
+    pub projects: Vec<OrgProjectId>,
     pub rbac: RbacUser,
 }
 
@@ -34,16 +34,16 @@ impl From<OrganizationId> for Organization {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct ProjectId {
-    pub id: i32,
-    pub organization_id: i32,
+pub struct OrgProjectId {
+    pub organization_id: OrganizationId,
+    pub id: ProjectId,
 }
 
-impl From<ProjectId> for Project {
-    fn from(proj_id: ProjectId) -> Self {
+impl From<OrgProjectId> for Project {
+    fn from(proj_id: OrgProjectId) -> Self {
         Self {
-            id: proj_id.id.to_string(),
             organization_id: proj_id.organization_id.to_string(),
+            id: proj_id.id.to_string(),
         }
     }
 }
@@ -181,7 +181,7 @@ impl AuthUser {
         conn: &mut DbConnection,
         user_id: UserId,
         email: &str,
-    ) -> Result<(Vec<ProjectId>, ProjectRoles), HttpError> {
+    ) -> Result<(Vec<OrgProjectId>, ProjectRoles), HttpError> {
         let roles = schema::project_role::table
             .filter(schema::project_role::user_id.eq(user_id))
             .inner_join(
@@ -193,7 +193,7 @@ impl AuthUser {
                 schema::project_role::project_id,
                 schema::project_role::role,
             ))
-            .load::<(i32, i32, String)>(conn)
+            .load::<(OrganizationId, ProjectId, String)>(conn)
             .map_err(|e| {
                 crate::error::issue_error(
                     StatusCode::NOT_FOUND,
@@ -205,9 +205,9 @@ impl AuthUser {
 
         let ids = roles
             .iter()
-            .map(|(org_id, id, _)| ProjectId {
-                id: *id,
+            .map(|(org_id, id, _)| OrgProjectId {
                 organization_id: *org_id,
+                id: *id,
             })
             .collect();
         let roles = roles
@@ -253,7 +253,11 @@ impl AuthUser {
             .collect()
     }
 
-    pub fn projects(&self, rbac: &Rbac, action: bencher_rbac::project::Permission) -> Vec<i32> {
+    pub fn projects(
+        &self,
+        rbac: &Rbac,
+        action: bencher_rbac::project::Permission,
+    ) -> Vec<ProjectId> {
         self.projects
             .iter()
             .filter_map(|proj_id| {

@@ -19,6 +19,7 @@ use crate::{
         metric::{InsertMetric, QueryMetric},
         metric_kind::QueryMetricKind,
         perf::{InsertPerf, QueryPerf},
+        ProjectId,
     },
     schema, ApiError,
 };
@@ -31,7 +32,7 @@ type MetricKindId = i32;
 
 /// `ReportResults` is used to add benchmarks, perf, metric kinds, metrics, and alerts.
 pub struct ReportResults {
-    pub project_id: i32,
+    pub project_id: ProjectId,
     pub branch_id: i32,
     pub testbed_id: i32,
     pub report_id: i32,
@@ -41,7 +42,7 @@ pub struct ReportResults {
 }
 
 impl ReportResults {
-    pub fn new(project_id: i32, branch_id: i32, testbed_id: i32, report_id: i32) -> Self {
+    pub fn new(project_id: ProjectId, branch_id: i32, testbed_id: i32, report_id: i32) -> Self {
         Self {
             project_id,
             branch_id,

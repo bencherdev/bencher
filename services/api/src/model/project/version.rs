@@ -14,11 +14,13 @@ use crate::{
     ApiError,
 };
 
+use super::ProjectId;
+
 #[derive(Queryable)]
 pub struct QueryVersion {
     pub id: i32,
     pub uuid: String,
-    pub project_id: i32,
+    pub project_id: ProjectId,
     pub number: i32,
     pub hash: Option<String>,
 }
@@ -52,7 +54,7 @@ impl QueryBranchVersion {
 #[diesel(table_name = version_table)]
 pub struct InsertVersion {
     pub uuid: String,
-    pub project_id: i32,
+    pub project_id: ProjectId,
     pub number: i32,
     pub hash: Option<String>,
 }
@@ -67,7 +69,7 @@ pub struct InsertBranchVersion {
 impl InsertVersion {
     pub fn increment(
         conn: &mut DbConnection,
-        project_id: i32,
+        project_id: ProjectId,
         branch_id: i32,
         hash: Option<GitHash>,
     ) -> Result<i32, ApiError> {

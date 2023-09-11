@@ -28,13 +28,15 @@ use crate::{
     ApiError,
 };
 
+use super::ProjectId;
+
 fn_resource_id!(metric_kind);
 
 #[derive(Queryable)]
 pub struct QueryMetricKind {
     pub id: i32,
     pub uuid: String,
-    pub project_id: i32,
+    pub project_id: ProjectId,
     pub name: String,
     pub slug: String,
     pub units: String,
@@ -57,7 +59,7 @@ impl QueryMetricKind {
 
     pub fn from_resource_id(
         conn: &mut DbConnection,
-        project_id: i32,
+        project_id: ProjectId,
         metric_kind: &ResourceId,
     ) -> Result<Self, ApiError> {
         schema::metric_kind::table
@@ -91,7 +93,7 @@ impl QueryMetricKind {
 
     pub fn get_or_create(
         conn: &mut DbConnection,
-        project_id: i32,
+        project_id: ProjectId,
         metric_kind: &ResourceId,
     ) -> Result<i32, ApiError> {
         let query_metric_kind = Self::from_resource_id(conn, project_id, metric_kind);
@@ -132,7 +134,7 @@ impl QueryMetricKind {
 #[diesel(table_name = metric_kind_table)]
 pub struct InsertMetricKind {
     pub uuid: String,
-    pub project_id: i32,
+    pub project_id: ProjectId,
     pub name: String,
     pub slug: String,
     pub units: String,
@@ -150,37 +152,37 @@ impl InsertMetricKind {
         Ok(Self::from_json_inner(conn, project_id, metric_kind))
     }
 
-    pub fn latency(conn: &mut DbConnection, project_id: i32) -> Self {
+    pub fn latency(conn: &mut DbConnection, project_id: ProjectId) -> Self {
         Self::from_json_inner(conn, project_id, JsonNewMetricKind::latency())
     }
 
-    pub fn throughput(conn: &mut DbConnection, project_id: i32) -> Self {
+    pub fn throughput(conn: &mut DbConnection, project_id: ProjectId) -> Self {
         Self::from_json_inner(conn, project_id, JsonNewMetricKind::throughput())
     }
 
-    pub fn instructions(conn: &mut DbConnection, project_id: i32) -> Self {
+    pub fn instructions(conn: &mut DbConnection, project_id: ProjectId) -> Self {
         Self::from_json_inner(conn, project_id, JsonNewMetricKind::instructions())
     }
 
-    pub fn l1_accesses(conn: &mut DbConnection, project_id: i32) -> Self {
+    pub fn l1_accesses(conn: &mut DbConnection, project_id: ProjectId) -> Self {
         Self::from_json_inner(conn, project_id, JsonNewMetricKind::l1_accesses())
     }
 
-    pub fn l2_accesses(conn: &mut DbConnection, project_id: i32) -> Self {
+    pub fn l2_accesses(conn: &mut DbConnection, project_id: ProjectId) -> Self {
         Self::from_json_inner(conn, project_id, JsonNewMetricKind::l2_accesses())
     }
 
-    pub fn ram_accesses(conn: &mut DbConnection, project_id: i32) -> Self {
+    pub fn ram_accesses(conn: &mut DbConnection, project_id: ProjectId) -> Self {
         Self::from_json_inner(conn, project_id, JsonNewMetricKind::ram_accesses())
     }
 
-    pub fn estimated_cycles(conn: &mut DbConnection, project_id: i32) -> Self {
+    pub fn estimated_cycles(conn: &mut DbConnection, project_id: ProjectId) -> Self {
         Self::from_json_inner(conn, project_id, JsonNewMetricKind::estimated_cycles())
     }
 
     fn from_json_inner(
         conn: &mut DbConnection,
-        project_id: i32,
+        project_id: ProjectId,
         metric_kind: JsonNewMetricKind,
     ) -> Self {
         let JsonNewMetricKind { name, slug, units } = metric_kind;

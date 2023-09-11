@@ -41,6 +41,8 @@ pub mod threshold;
 pub mod version;
 pub mod visibility;
 
+crate::util::typed_id::typed_id!(ProjectId);
+
 #[derive(Insertable)]
 #[diesel(table_name = project_table)]
 pub struct InsertProject {
@@ -85,7 +87,7 @@ fn_resource_id!(project);
 
 #[derive(Debug, Clone, Queryable)]
 pub struct QueryProject {
-    pub id: i32,
+    pub id: ProjectId,
     pub uuid: String,
     pub organization_id: OrganizationId,
     pub name: String,
@@ -137,7 +139,7 @@ impl QueryProject {
             .map_err(resource_not_found!(Project, project.clone()))
     }
 
-    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: ProjectId) -> Result<Uuid, ApiError> {
         let uuid: String = schema::project::table
             .filter(schema::project::id.eq(id))
             .select(schema::project::uuid)
@@ -147,7 +149,7 @@ impl QueryProject {
     }
 
     #[cfg(feature = "plus")]
-    pub fn is_public(conn: &mut DbConnection, id: i32) -> Result<bool, ApiError> {
+    pub fn is_public(conn: &mut DbConnection, id: ProjectId) -> Result<bool, ApiError> {
         Visibility::try_from(
             schema::project::table
                 .filter(schema::project::id.eq(id))
@@ -160,7 +162,7 @@ impl QueryProject {
     #[cfg(feature = "plus")]
     pub fn get_subscription(
         conn: &mut DbConnection,
-        id: i32,
+        id: ProjectId,
     ) -> Result<Option<SubscriptionId>, ApiError> {
         let subscription: Option<String> = schema::organization::table
             .left_join(
@@ -180,7 +182,10 @@ impl QueryProject {
     }
 
     #[cfg(feature = "plus")]
-    pub fn get_license(conn: &mut DbConnection, id: i32) -> Result<Option<(Uuid, Jwt)>, ApiError> {
+    pub fn get_license(
+        conn: &mut DbConnection,
+        id: ProjectId,
+    ) -> Result<Option<(Uuid, Jwt)>, ApiError> {
         let (uuid, license): (String, Option<String>) = schema::organization::table
             .left_join(
                 schema::project::table
@@ -215,7 +220,7 @@ impl QueryProject {
     pub fn is_allowed_id(
         conn: &mut DbConnection,
         rbac: &Rbac,
-        project_id: i32,
+        project_id: ProjectId,
         auth_user: &AuthUser,
         permission: bencher_rbac::project::Permission,
     ) -> Result<Self, ApiError> {
