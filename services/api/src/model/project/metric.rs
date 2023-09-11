@@ -11,9 +11,11 @@ use crate::{
 
 use super::metric_kind::MetricKindId;
 
+crate::util::typed_id::typed_id!(MetricId);
+
 #[derive(Queryable, Debug)]
 pub struct QueryMetric {
-    pub id: i32,
+    pub id: MetricId,
     pub uuid: String,
     pub perf_id: i32,
     pub metric_kind_id: MetricKindId,

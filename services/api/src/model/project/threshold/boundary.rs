@@ -7,6 +7,7 @@ use uuid::Uuid;
 use crate::{
     context::DbConnection,
     error::api_error,
+    model::project::metric::MetricId,
     schema,
     schema::boundary as boundary_table,
     util::query::{fn_get, fn_get_id},
@@ -19,7 +20,7 @@ pub struct QueryBoundary {
     pub uuid: String,
     pub threshold_id: i32,
     pub statistic_id: i32,
-    pub metric_id: i32,
+    pub metric_id: MetricId,
     pub lower_limit: Option<f64>,
     pub upper_limit: Option<f64>,
 }
@@ -37,7 +38,7 @@ impl QueryBoundary {
         Uuid::from_str(&uuid).map_err(api_error!())
     }
 
-    pub fn from_metric_id(conn: &mut DbConnection, metric_id: i32) -> Result<Self, ApiError> {
+    pub fn from_metric_id(conn: &mut DbConnection, metric_id: MetricId) -> Result<Self, ApiError> {
         schema::boundary::table
             .filter(schema::boundary::metric_id.eq(metric_id))
             .first::<Self>(conn)
@@ -45,7 +46,7 @@ impl QueryBoundary {
     }
 
     // There may not be a boundary for every metric, so return the default if there isn't one.
-    pub fn get_json(conn: &mut DbConnection, metric_id: i32) -> JsonBoundary {
+    pub fn get_json(conn: &mut DbConnection, metric_id: MetricId) -> JsonBoundary {
         Self::from_metric_id(conn, metric_id)
             .map(|b| b.into_json())
             .unwrap_or_default()
@@ -65,7 +66,7 @@ pub struct InsertBoundary {
     pub uuid: String,
     pub threshold_id: i32,
     pub statistic_id: i32,
-    pub metric_id: i32,
+    pub metric_id: MetricId,
     pub lower_limit: Option<f64>,
     pub upper_limit: Option<f64>,
 }

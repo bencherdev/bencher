@@ -24,6 +24,7 @@ use crate::{
     model::project::{
         benchmark::{BenchmarkId, QueryBenchmark},
         branch::{BranchId, QueryBranch},
+        metric::MetricId,
         metric_kind::{MetricKindId, QueryMetricKind},
         testbed::QueryTestbed,
         threshold::{alert::QueryAlert, boundary::QueryBoundary, QueryThreshold},
@@ -269,7 +270,7 @@ type PerfQuery = (
     i64,
     i32,
     Option<String>,
-    i32,
+    MetricId,
     f64,
     Option<f64>,
     Option<f64>,

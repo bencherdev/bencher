@@ -8,7 +8,11 @@ use chrono::Utc;
 use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
-use super::{metric::QueryMetric, threshold::boundary::QueryBoundary, ProjectId, QueryProject};
+use super::{
+    metric::{MetricId, QueryMetric},
+    threshold::boundary::QueryBoundary,
+    ProjectId, QueryProject,
+};
 use crate::{
     context::DbConnection,
     error::api_error,
@@ -129,7 +133,7 @@ impl QueryBenchmark {
 
     pub fn get_benchmark_metric_json(
         conn: &mut DbConnection,
-        metric_id: i32,
+        metric_id: MetricId,
     ) -> Result<JsonBenchmarkMetric, ApiError> {
         let (uuid, project_id, name, slug, created, modified, value, lower_bound, upper_bound) =
             schema::metric::table
