@@ -19,6 +19,8 @@ use crate::{
 pub mod auth;
 pub mod token;
 
+crate::util::typed_id::typed_id!(UserId);
+
 #[derive(Insertable)]
 #[diesel(table_name = user_table)]
 pub struct InsertUser {
@@ -51,7 +53,7 @@ fn_resource_id!(user);
 
 #[derive(Queryable)]
 pub struct QueryUser {
-    pub id: i32,
+    pub id: UserId,
     pub uuid: String,
     pub name: String,
     pub slug: String,
@@ -62,9 +64,9 @@ pub struct QueryUser {
 
 impl QueryUser {
     fn_get!(user);
-    fn_get_id!(user);
+    fn_get_id!(user, UserId);
 
-    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: UserId) -> Result<Uuid, ApiError> {
         let uuid: String = schema::user::table
             .filter(schema::user::id.eq(id))
             .select(schema::user::uuid)
@@ -73,7 +75,7 @@ impl QueryUser {
         Uuid::from_str(&uuid).map_err(api_error!())
     }
 
-    pub fn get_id_from_email(conn: &mut DbConnection, email: &str) -> Result<i32, ApiError> {
+    pub fn get_id_from_email(conn: &mut DbConnection, email: &str) -> Result<UserId, ApiError> {
         schema::user::table
             .filter(schema::user::email.eq(email))
             .select(schema::user::id)
@@ -81,7 +83,7 @@ impl QueryUser {
             .map_err(api_error!())
     }
 
-    pub fn get_email_from_id(conn: &mut DbConnection, id: i32) -> Result<String, ApiError> {
+    pub fn get_email_from_id(conn: &mut DbConnection, id: UserId) -> Result<String, ApiError> {
         schema::user::table
             .filter(schema::user::id.eq(id))
             .select(schema::user::email)

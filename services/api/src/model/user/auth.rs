@@ -11,26 +11,24 @@ use oso::{PolarValue, ToPolar};
 
 use crate::{
     context::{ApiContext, DbConnection, Rbac},
+    model::organization::OrganizationId,
     schema,
 };
 
+use super::UserId;
+
 #[derive(Debug, Clone)]
 pub struct AuthUser {
-    pub id: i32,
+    pub id: UserId,
     pub organizations: Vec<OrganizationId>,
     pub projects: Vec<ProjectId>,
     pub rbac: RbacUser,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct OrganizationId {
-    pub id: i32,
-}
-
 impl From<OrganizationId> for Organization {
     fn from(org_id: OrganizationId) -> Self {
         Self {
-            id: org_id.id.to_string(),
+            id: org_id.to_string(),
         }
     }
 }
@@ -103,7 +101,7 @@ impl AuthUser {
         let (user_id, admin, locked) = schema::user::table
             .filter(schema::user::email.eq(email))
             .select((schema::user::id, schema::user::admin, schema::user::locked))
-            .first::<(i32, bool, bool)>(conn)
+            .first::<(UserId, bool, bool)>(conn)
             .map_err(|e| {
                 HttpError::for_client_error(
                     None,
@@ -139,7 +137,7 @@ impl AuthUser {
 
     fn organization_roles(
         conn: &mut DbConnection,
-        user_id: i32,
+        user_id: UserId,
         email: &str,
     ) -> Result<(Vec<OrganizationId>, OrganizationRoles), HttpError> {
         let roles = schema::organization_role::table
@@ -149,7 +147,7 @@ impl AuthUser {
                 schema::organization_role::organization_id,
                 schema::organization_role::role,
             ))
-            .load::<(i32, String)>(conn)
+            .load::<(OrganizationId, String)>(conn)
             .map_err(|e| {
                 crate::error::issue_error(
                     StatusCode::NOT_FOUND,
@@ -159,14 +157,11 @@ impl AuthUser {
                 )
             })?;
 
-        let ids = roles
-            .iter()
-            .map(|(id, _)| OrganizationId { id: *id })
-            .collect();
+        let org_ids = roles.iter().map(|(org_id, _)| *org_id).collect();
         let roles = roles
             .into_iter()
-            .filter_map(|(id, role)| match role.parse() {
-                Ok(role) => Some((id.to_string(), role)),
+            .filter_map(|(org_id, role)| match role.parse() {
+                Ok(role) => Some((org_id.to_string(), role)),
                 Err(e) => {
                     let _ = crate::error::issue_error(
                         StatusCode::NOT_FOUND,
@@ -179,12 +174,12 @@ impl AuthUser {
             })
             .collect();
 
-        Ok((ids, roles))
+        Ok((org_ids, roles))
     }
 
     fn project_roles(
         conn: &mut DbConnection,
-        user_id: i32,
+        user_id: UserId,
         email: &str,
     ) -> Result<(Vec<ProjectId>, ProjectRoles), HttpError> {
         let roles = schema::project_role::table
@@ -248,12 +243,12 @@ impl AuthUser {
         &self,
         rbac: &Rbac,
         action: bencher_rbac::organization::Permission,
-    ) -> Vec<i32> {
+    ) -> Vec<OrganizationId> {
         self.organizations
             .iter()
             .filter_map(|org_id| {
                 rbac.is_allowed_unwrap(self, action, Organization::from(*org_id))
-                    .then_some(org_id.id)
+                    .then_some(*org_id)
             })
             .collect()
     }

@@ -1,6 +1,6 @@
 use crate::{
     context::{DbConnection, SecretKey},
-    model::user::QueryUser,
+    model::user::{QueryUser, UserId},
     schema::organization_role as organization_role_table,
     ApiError,
 };
@@ -13,7 +13,7 @@ use super::{OrganizationId, QueryOrganization};
 #[derive(Insertable)]
 #[diesel(table_name = organization_role_table)]
 pub struct InsertOrganizationRole {
-    pub user_id: i32,
+    pub user_id: UserId,
     pub organization_id: OrganizationId,
     pub role: String,
     pub created: i64,
@@ -25,7 +25,7 @@ impl InsertOrganizationRole {
         conn: &mut DbConnection,
         secret_key: &SecretKey,
         invite: &Jwt,
-        user_id: i32,
+        user_id: UserId,
     ) -> Result<Self, ApiError> {
         // Validate the invite JWT
         let claims = secret_key.validate_invite(invite)?;
@@ -55,7 +55,7 @@ impl InsertOrganizationRole {
 #[derive(Queryable)]
 pub struct QueryOrganizationRole {
     pub id: i32,
-    pub user_id: i32,
+    pub user_id: UserId,
     pub organization_id: OrganizationId,
     pub role: String,
     pub created: i64,

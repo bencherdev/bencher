@@ -9,7 +9,7 @@ use crate::{
         endpoint::{response_accepted, ResponseAccepted},
         Endpoint, Method,
     },
-    model::user::auth::AuthUser,
+    model::user::{auth::AuthUser, UserId},
     util::cors::{get_cors, CorsResponse},
     ApiError,
 };
@@ -75,7 +75,7 @@ async fn post_inner(
     Ok(JsonEmpty {})
 }
 
-pub async fn countdown(log: &Logger, restart_tx: Sender<()>, delay: u64, user_id: i32) {
+pub async fn countdown(log: &Logger, restart_tx: Sender<()>, delay: u64, user_id: UserId) {
     let countdown_log = log.clone();
     tokio::spawn(async move {
         for tick in (0..=delay).rev() {

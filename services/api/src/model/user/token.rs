@@ -18,7 +18,7 @@ use crate::{
     ApiError,
 };
 
-use super::{auth::AuthUser, QueryUser};
+use super::{auth::AuthUser, QueryUser, UserId};
 
 macro_rules! same_user {
     ($auth_user:ident, $rbac:expr, $user_id:expr) => {
@@ -34,7 +34,7 @@ pub(crate) use same_user;
 pub struct QueryToken {
     pub id: i32,
     pub uuid: String,
-    pub user_id: i32,
+    pub user_id: UserId,
     pub name: String,
     pub jwt: String,
     pub creation: i64,
@@ -56,7 +56,7 @@ impl QueryToken {
 
     pub fn get_user_token(
         conn: &mut DbConnection,
-        user_id: i32,
+        user_id: UserId,
         uuid: &str,
     ) -> Result<Self, ApiError> {
         schema::token::table
@@ -91,7 +91,7 @@ impl QueryToken {
 #[diesel(table_name = token_table)]
 pub struct InsertToken {
     pub uuid: String,
-    pub user_id: i32,
+    pub user_id: UserId,
     pub name: String,
     pub jwt: String,
     pub creation: i64,

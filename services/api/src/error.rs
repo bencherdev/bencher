@@ -8,7 +8,10 @@ use thiserror::Error;
 
 use crate::{
     endpoints::Endpoint,
-    model::{organization::OrganizationId, user::auth::AuthUser},
+    model::{
+        organization::OrganizationId,
+        user::{auth::AuthUser, UserId},
+    },
 };
 
 #[derive(Debug, Error)]
@@ -80,14 +83,14 @@ pub enum ApiError {
     #[error("{0}")]
     AuthHeader(String),
     #[error("User is not admin and the authenticated user ({0}) does not match the requested user ({1})",)]
-    SameUser(i32, i32),
+    SameUser(UserId, UserId),
     #[error("User account locked: ID {0} email {1}")]
-    Locked(i32, String),
+    Locked(UserId, String),
     #[error("Invitation email ({email}) is connected to user {email_user_id} which doesn't match {user_id}")]
     InviteEmail {
-        user_id: i32,
+        user_id: UserId,
         email: String,
-        email_user_id: i32,
+        email_user_id: UserId,
     },
     #[error("Failed to check permissions: {0}")]
     IsAllowed(oso::OsoError),
@@ -192,13 +195,13 @@ pub enum ApiError {
     #[error("Requested TTL ({requested}) is greater than max ({max})")]
     MaxTtl { requested: u32, max: u32 },
     #[error("User ({0}) cannot create a new organization")]
-    CreateOrganization(i32),
+    CreateOrganization(UserId),
     #[error("Failed to create TLS connection for email: {0}")]
     MailTls(mail_send::Error),
     #[error("Failed to send email: {0}")]
     MailSend(mail_send::Error),
     #[error("User is not an admin: {0}")]
-    Admin(i32),
+    Admin(UserId),
     #[error("Failed to parse organization role: {0}")]
     OrganizationRole(String),
     #[error("Failed to recognize adapter integer: {0}")]

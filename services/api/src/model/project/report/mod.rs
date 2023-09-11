@@ -29,7 +29,7 @@ use crate::{
     error::api_error,
     model::{
         project::{benchmark::QueryBenchmark, perf::QueryPerf},
-        user::QueryUser,
+        user::{QueryUser, UserId},
     },
     schema,
     schema::report as report_table,
@@ -44,7 +44,7 @@ pub mod results;
 pub struct QueryReport {
     pub id: i32,
     pub uuid: String,
-    pub user_id: i32,
+    pub user_id: UserId,
     pub project_id: i32,
     pub branch_id: i32,
     pub version_id: i32,
@@ -335,7 +335,7 @@ fn get_alerts(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportAlert
 #[diesel(table_name = report_table)]
 pub struct InsertReport {
     pub uuid: String,
-    pub user_id: i32,
+    pub user_id: UserId,
     pub project_id: i32,
     pub branch_id: i32,
     pub version_id: i32,
@@ -348,7 +348,7 @@ pub struct InsertReport {
 
 impl InsertReport {
     pub fn from_json(
-        user_id: i32,
+        user_id: UserId,
         project_id: i32,
         branch_id: i32,
         version_id: i32,
