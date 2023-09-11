@@ -10,6 +10,8 @@ use diesel::{Insertable, Queryable};
 
 use super::{OrganizationId, QueryOrganization};
 
+crate::util::typed_id::typed_id!(OrganizationRoleId);
+
 #[derive(Insertable)]
 #[diesel(table_name = organization_role_table)]
 pub struct InsertOrganizationRole {
@@ -54,7 +56,7 @@ impl InsertOrganizationRole {
 
 #[derive(Queryable)]
 pub struct QueryOrganizationRole {
-    pub id: i32,
+    pub id: OrganizationRoleId,
     pub user_id: UserId,
     pub organization_id: OrganizationId,
     pub role: String,

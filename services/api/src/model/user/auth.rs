@@ -35,15 +35,15 @@ impl From<OrganizationId> for Organization {
 
 #[derive(Debug, Clone, Copy)]
 pub struct OrgProjectId {
-    pub organization_id: OrganizationId,
-    pub id: ProjectId,
+    pub org_id: OrganizationId,
+    pub project_id: ProjectId,
 }
 
 impl From<OrgProjectId> for Project {
-    fn from(proj_id: OrgProjectId) -> Self {
+    fn from(org_project_id: OrgProjectId) -> Self {
         Self {
-            organization_id: proj_id.organization_id.to_string(),
-            id: proj_id.id.to_string(),
+            organization_id: org_project_id.org_id.to_string(),
+            id: org_project_id.project_id.to_string(),
         }
     }
 }
@@ -205,9 +205,9 @@ impl AuthUser {
 
         let ids = roles
             .iter()
-            .map(|(org_id, id, _)| OrgProjectId {
-                organization_id: *org_id,
-                id: *id,
+            .map(|(org_id, project_id, _)| OrgProjectId {
+                org_id: *org_id,
+                project_id: *project_id,
             })
             .collect();
         let roles = roles
@@ -260,9 +260,9 @@ impl AuthUser {
     ) -> Vec<ProjectId> {
         self.projects
             .iter()
-            .filter_map(|proj_id| {
-                rbac.is_allowed_unwrap(self, action, Project::from(*proj_id))
-                    .then_some(proj_id.id)
+            .filter_map(|org_project_id| {
+                rbac.is_allowed_unwrap(self, action, Project::from(*org_project_id))
+                    .then_some(org_project_id.project_id)
             })
             .collect()
     }

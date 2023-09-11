@@ -5,6 +5,8 @@ use crate::{model::user::UserId, schema::project_role as project_role_table};
 
 use super::ProjectId;
 
+crate::util::typed_id::typed_id!(ProjectRoleId);
+
 #[derive(Insertable)]
 #[diesel(table_name = project_role_table)]
 pub struct InsertProjectRole {
@@ -17,7 +19,7 @@ pub struct InsertProjectRole {
 
 #[derive(Queryable)]
 pub struct QueryProjectRole {
-    pub id: i32,
+    pub id: ProjectRoleId,
     pub user_id: UserId,
     pub project_id: ProjectId,
     pub role: String,
