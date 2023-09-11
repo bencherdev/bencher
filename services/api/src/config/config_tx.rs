@@ -16,7 +16,7 @@ use dropshot::{
     ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingIfExists, ConfigLoggingLevel,
     ConfigTls, HttpServer,
 };
-use slog::{trace, warn, Logger};
+use slog::{debug, error, info, warn, Logger};
 use tokio::sync::mpsc::Sender;
 
 use crate::{
@@ -42,96 +42,105 @@ impl TryFrom<ConfigTx> for HttpServer<ApiContext> {
     type Error = ApiError;
 
     fn try_from(config_tx: ConfigTx) -> Result<Self, Self::Error> {
-        let ConfigTx { config, restart_tx } = config_tx;
-
-        let Config(JsonConfig {
-            endpoint,
-            secret_key,
-            console,
-            security,
-            mut server,
-            database,
-            smtp,
-            logging,
-            apm: _,
-            #[cfg(feature = "plus")]
-            plus,
-        }) = config;
-        let log = into_log(logging)?;
-
-        // TODO Remove deprecated endpoint
-        let console = if let Some(console) = console {
-            if endpoint.is_some() {
-                warn!(
-                    &log,
-                    "DEPRECATED: The `endpoint` is now `console.url`. This value will be ignored."
-                );
-            }
-            console
-        } else if let Some(endpoint) = endpoint {
-            warn!(
-                &log,
-                "DEPRECATED: The `endpoint` is now `console.url`. This value will be used for now."
-            );
-            JsonConsole { url: endpoint }
-        } else {
-            return Err(ApiError::MissingConfigKey("console.url".into()));
-        };
-
-        // TODO Remove deprecated secret_key
-        let security = if let Some(security) = security {
-            if secret_key.is_some() {
-                warn!(
-                    &log,
-                "DEPRECATED: The `secret_key` is now `security.secret_key`. This value will be ignored."
-                );
-            }
-            security
-        } else if let Some(secret_key) = secret_key {
-            warn!(
-                &log,
-                "DEPRECATED: The `secret_key` is now `security.secret_key`. This value will be used for now."
-            );
-            JsonSecurity {
-                issuer: None,
-                secret_key,
-            }
-        } else {
-            return Err(ApiError::MissingConfigKey("security.secret_key".into()));
-        };
-
-        let private = into_private(
-            &log,
-            console,
-            security,
-            smtp,
-            database,
-            restart_tx,
-            #[cfg(feature = "plus")]
-            plus,
-        )?;
-        let tls = server.tls.take().map(|json_tls| match json_tls {
-            JsonTls::AsFile {
-                cert_file,
-                key_file,
-            } => ConfigTls::AsFile {
-                cert_file,
-                key_file,
-            },
-            JsonTls::AsBytes { certs, key } => ConfigTls::AsBytes { certs, key },
-        });
-        let config_dropshot = into_config_dropshot(server);
-
-        let mut api = ApiDescription::new();
-        trace!(&log, "Registering server APIs");
-        Api::register(&mut api, true)?;
-
-        Ok(
-            dropshot::HttpServerStarter::new_with_tls(&config_dropshot, api, private, &log, tls)
-                .map_err(ApiError::CreateServer)?
-                .start(),
-        )
+        let log = into_log(config_tx.config.0.logging.clone())?;
+        into_inner(&log, config_tx).map_err(|e| {
+            error!(&log, "{e}");
+            e
+        })
     }
+}
+
+fn into_inner(log: &Logger, config_tx: ConfigTx) -> Result<HttpServer<ApiContext>, ApiError> {
+    let ConfigTx { config, restart_tx } = config_tx;
+
+    let Config(JsonConfig {
+        endpoint,
+        secret_key,
+        console,
+        security,
+        mut server,
+        database,
+        smtp,
+        logging: _,
+        apm: _,
+        #[cfg(feature = "plus")]
+        plus,
+    }) = config;
+
+    // TODO Remove deprecated endpoint
+    let console = if let Some(console) = console {
+        if endpoint.is_some() {
+            warn!(
+                log,
+                "DEPRECATED: The `endpoint` is now `console.url`. This value will be ignored."
+            );
+        }
+        console
+    } else if let Some(endpoint) = endpoint {
+        warn!(
+            log,
+            "DEPRECATED: The `endpoint` is now `console.url`. This value will be used for now."
+        );
+        JsonConsole { url: endpoint }
+    } else {
+        return Err(ApiError::MissingConfigKey("console.url".into()));
+    };
+
+    // TODO Remove deprecated secret_key
+    let security = if let Some(security) = security {
+        if secret_key.is_some() {
+            warn!(
+                log,
+            "DEPRECATED: The `secret_key` is now `security.secret_key`. This value will be ignored."
+            );
+        }
+        security
+    } else if let Some(secret_key) = secret_key {
+        warn!(
+            log,
+            "DEPRECATED: The `secret_key` is now `security.secret_key`. This value will be used for now."
+        );
+        JsonSecurity {
+            issuer: None,
+            secret_key,
+        }
+    } else {
+        return Err(ApiError::MissingConfigKey("security.secret_key".into()));
+    };
+
+    debug!(log, "Creating internal configuration");
+    let private = into_private(
+        log,
+        console,
+        security,
+        smtp,
+        database,
+        restart_tx,
+        #[cfg(feature = "plus")]
+        plus,
+    )?;
+    debug!(log, "Configuring TLS");
+    let tls = server.tls.take().map(|json_tls| match json_tls {
+        JsonTls::AsFile {
+            cert_file,
+            key_file,
+        } => ConfigTls::AsFile {
+            cert_file,
+            key_file,
+        },
+        JsonTls::AsBytes { certs, key } => ConfigTls::AsBytes { certs, key },
+    });
+    let config_dropshot = into_config_dropshot(server);
+
+    let mut api = ApiDescription::new();
+    debug!(log, "Registering server APIs");
+    Api::register(&mut api, true)?;
+
+    Ok(
+        dropshot::HttpServerStarter::new_with_tls(&config_dropshot, api, private, log, tls)
+            .map_err(ApiError::CreateServer)?
+            .start(),
+    )
 }
 
 fn into_private(
@@ -146,20 +155,25 @@ fn into_private(
     let endpoint = console.url.into();
     let database_path = json_database.file.to_string_lossy();
     diesel_database_url(log, &database_path);
+    info!(&log, "Connecting to database: {database_path}");
     let mut database_connection = DbConnection::establish(&database_path)?;
+    info!(&log, "Running database migrations");
     run_migrations(&mut database_connection)?;
     let data_store = if let Some(data_store) = json_database.data_store {
         Some(data_store.try_into()?)
     } else {
         None
     };
+    info!(&log, "Loading secret key");
     let secret_key = SecretKey::new(
         security.issuer.unwrap_or_else(|| BENCHER_DOT_DEV.into()),
         security.secret_key,
     );
+    info!(&log, "Configuring Bencher Plus");
     #[cfg(feature = "plus")]
     let Plus { biller, licensor } = Plus::new(&endpoint, plus)?;
 
+    debug!(&log, "Creating API context");
     Ok(ApiContext {
         endpoint,
         secret_key,
@@ -184,14 +198,14 @@ fn diesel_database_url(log: &Logger, database_path: &str) {
         if database_url == database_path {
             return;
         }
-        trace!(
+        debug!(
             log,
             "\"{DATABASE_URL}\" ({database_url}) must be the same value as {database_path}"
         );
     } else {
-        trace!(log, "Failed to find \"{DATABASE_URL}\"");
+        debug!(log, "Failed to find \"{DATABASE_URL}\"");
     }
-    trace!(log, "Setting \"{DATABASE_URL}\" to {database_path}");
+    debug!(log, "Setting \"{DATABASE_URL}\" to {database_path}");
     std::env::set_var(DATABASE_URL, database_path);
 }
 

@@ -8,13 +8,13 @@ use bencher_json::{organization::JsonOrganizationPermission, Jwt};
 use chrono::Utc;
 use diesel::{Insertable, Queryable};
 
-use super::QueryOrganization;
+use super::{OrganizationId, QueryOrganization};
 
 #[derive(Insertable)]
 #[diesel(table_name = organization_role_table)]
 pub struct InsertOrganizationRole {
     pub user_id: i32,
-    pub organization_id: i32,
+    pub organization_id: OrganizationId,
     pub role: String,
     pub created: i64,
     pub modified: i64,
@@ -56,7 +56,7 @@ impl InsertOrganizationRole {
 pub struct QueryOrganizationRole {
     pub id: i32,
     pub user_id: i32,
-    pub organization_id: i32,
+    pub organization_id: OrganizationId,
     pub role: String,
     pub created: i64,
     pub updated: i64,

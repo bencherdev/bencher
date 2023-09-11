@@ -106,7 +106,7 @@ fn_resource_id!(organization);
 
 #[derive(Debug, Clone, Queryable)]
 pub struct QueryOrganization {
-    pub id: i32,
+    pub id: OrganizationId,
     pub uuid: String,
     pub name: String,
     pub slug: String,
@@ -118,9 +118,9 @@ pub struct QueryOrganization {
 
 impl QueryOrganization {
     fn_get!(organization);
-    fn_get_id!(organization);
+    fn_get_id!(organization, OrganizationId);
 
-    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: OrganizationId) -> Result<Uuid, ApiError> {
         let uuid: String = schema::organization::table
             .filter(schema::organization::id.eq(id))
             .select(schema::organization::uuid)
@@ -184,7 +184,7 @@ impl QueryOrganization {
     pub fn is_allowed_id(
         conn: &mut DbConnection,
         rbac: &Rbac,
-        organization_id: i32,
+        organization_id: OrganizationId,
         auth_user: &AuthUser,
         permission: bencher_rbac::organization::Permission,
     ) -> Result<Self, ApiError> {

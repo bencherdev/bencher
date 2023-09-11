@@ -27,6 +27,8 @@ use crate::{
 
 use self::visibility::Visibility;
 
+use super::organization::OrganizationId;
+
 pub mod benchmark;
 pub mod branch;
 pub mod metric;
@@ -43,7 +45,7 @@ pub mod visibility;
 #[diesel(table_name = project_table)]
 pub struct InsertProject {
     pub uuid: String,
-    pub organization_id: i32,
+    pub organization_id: OrganizationId,
     pub name: String,
     pub slug: String,
     pub url: Option<String>,
@@ -85,7 +87,7 @@ fn_resource_id!(project);
 pub struct QueryProject {
     pub id: i32,
     pub uuid: String,
-    pub organization_id: i32,
+    pub organization_id: OrganizationId,
     pub name: String,
     pub slug: String,
     pub url: Option<String>,

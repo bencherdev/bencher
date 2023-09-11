@@ -19,7 +19,7 @@ use crate::{
         Endpoint, Method,
     },
     error::api_error,
-    model::organization::{member::QueryMember, QueryOrganization},
+    model::organization::{member::QueryMember, OrganizationId, QueryOrganization},
     model::user::{auth::AuthUser, QueryUser},
     schema,
     util::{
@@ -439,7 +439,7 @@ async fn delete_inner(
 fn json_member(
     conn: &mut DbConnection,
     user_id: i32,
-    organization_id: i32,
+    organization_id: OrganizationId,
 ) -> Result<JsonMember, ApiError> {
     schema::user::table
         .inner_join(

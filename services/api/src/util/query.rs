@@ -1,11 +1,14 @@
 macro_rules! fn_get {
     ($table:ident) => {
-        pub fn get(
+        pub fn get<Id>(
             conn: &mut crate::context::DbConnection,
-            id: i32,
-        ) -> Result<Self, crate::ApiError> {
+            id: Id,
+        ) -> Result<Self, crate::ApiError>
+        where
+            Id: Into<i32>,
+        {
             schema::$table::table
-                .filter(schema::$table::id.eq(id))
+                .filter(schema::$table::id.eq(id.into()))
                 .first(conn)
                 .map_err(crate::error::api_error!())
         }
@@ -15,11 +18,11 @@ macro_rules! fn_get {
 pub(crate) use fn_get;
 
 macro_rules! fn_get_id {
-    ($table:ident) => {
+    ($table:ident, $id:ident) => {
         pub fn get_id<U>(
             conn: &mut crate::context::DbConnection,
             uuid: &U,
-        ) -> Result<i32, crate::ApiError>
+        ) -> Result<$id, crate::ApiError>
         where
             U: ToString,
         {
@@ -29,6 +32,9 @@ macro_rules! fn_get_id {
                 .first(conn)
                 .map_err(crate::error::api_error!())
         }
+    };
+    ($table:ident) => {
+        fn_get_id!($table, i32);
     };
 }
 

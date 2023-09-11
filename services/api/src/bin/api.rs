@@ -30,6 +30,7 @@ async fn main() -> Result<(), ApiError> {
     .await
     {
         error!(&log, "Server failed to run: {e}");
+        return Err(e);
     }
     Ok(())
 }
@@ -74,7 +75,12 @@ async fn run(
                     break;
                 }
             },
-            _ = async {}, if handle.is_finished() => return handle.await.map_err(ApiError::JoinHandle)?,
+            _ = async {}, if handle.is_finished() => {
+                return match handle.await {
+                    Ok(result) => result,
+                    Err(e) => Err(ApiError::JoinHandle(e))
+                };
+            },
         }
     }
 

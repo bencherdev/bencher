@@ -6,7 +6,10 @@ use dropshot::HttpError;
 use http::StatusCode;
 use thiserror::Error;
 
-use crate::{endpoints::Endpoint, model::user::auth::AuthUser};
+use crate::{
+    endpoints::Endpoint,
+    model::{organization::OrganizationId, user::auth::AuthUser},
+};
 
 #[derive(Debug, Error)]
 pub enum ApiError {
@@ -146,16 +149,16 @@ pub enum ApiError {
     BencherCloudOnly(String),
     #[cfg(feature = "plus")]
     #[error("Organization {0} already has a metered plan: {1}")]
-    PlanMetered(i32, String),
+    PlanMetered(OrganizationId, String),
     #[cfg(feature = "plus")]
     #[error("Organization {0} already has a licensed plan: {1}")]
-    PlanLicensed(i32, String),
+    PlanLicensed(OrganizationId, String),
     #[cfg(feature = "plus")]
     #[error("Failed to parse billing ID: {0}")]
     BillingId(#[from] bencher_billing::ParseIdError),
     #[cfg(feature = "plus")]
     #[error("Failed to find metered plan for organization: {0}")]
-    NoMeteredPlan(i32),
+    NoMeteredPlan(OrganizationId),
     #[cfg(feature = "plus")]
     #[error("Failed to find plan for organization: {0}")]
     NoPlanOrganization(ResourceId),
