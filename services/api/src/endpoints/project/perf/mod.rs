@@ -23,7 +23,7 @@ use crate::{
     error::api_error,
     model::project::{
         benchmark::{BenchmarkId, QueryBenchmark},
-        branch::QueryBranch,
+        branch::{BranchId, QueryBranch},
         metric_kind::QueryMetricKind,
         testbed::QueryTestbed,
         threshold::{alert::QueryAlert, boundary::QueryBoundary, QueryThreshold},
@@ -171,7 +171,7 @@ async fn get_inner(
 #[derive(Clone, Copy, Default)]
 struct Ids {
     metric_kind_id: i32,
-    branch_id: i32,
+    branch_id: BranchId,
     testbed_id: i32,
     benchmark_id: BenchmarkId,
 }

@@ -2,8 +2,10 @@ use chrono::offset::Utc;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 
 use crate::{
-    context::DbConnection, error::api_error, model::project::benchmark::BenchmarkId, schema,
-    ApiError,
+    context::DbConnection,
+    error::api_error,
+    model::project::{benchmark::BenchmarkId, branch::BranchId},
+    schema, ApiError,
 };
 
 use super::threshold::MetricsStatistic;
@@ -16,7 +18,7 @@ impl MetricsData {
     pub fn new(
         conn: &mut DbConnection,
         metric_kind_id: i32,
-        branch_id: i32,
+        branch_id: BranchId,
         testbed_id: i32,
         benchmark_id: BenchmarkId,
         statistic: &MetricsStatistic,

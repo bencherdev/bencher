@@ -7,6 +7,7 @@ use crate::{
     error::api_error,
     model::project::{
         benchmark::BenchmarkId,
+        branch::BranchId,
         metric::QueryMetric,
         threshold::{alert::InsertAlert, boundary::InsertBoundary},
     },
@@ -25,7 +26,7 @@ use threshold::MetricsThreshold;
 #[derive(Debug, Clone)]
 pub struct Detector {
     pub metric_kind_id: i32,
-    pub branch_id: i32,
+    pub branch_id: BranchId,
     pub testbed_id: i32,
     pub threshold: MetricsThreshold,
 }
@@ -34,7 +35,7 @@ impl Detector {
     pub fn new(
         conn: &mut DbConnection,
         metric_kind_id: i32,
-        branch_id: i32,
+        branch_id: BranchId,
         testbed_id: i32,
     ) -> Result<Option<Self>, ApiError> {
         // Check to see if there is a threshold for the branch/testbed/metric kind grouping.

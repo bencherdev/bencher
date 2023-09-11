@@ -3,7 +3,10 @@ use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, 
 
 use crate::{
     context::DbConnection,
-    model::project::threshold::statistic::{map_boundary, StatisticKind},
+    model::project::{
+        branch::BranchId,
+        threshold::statistic::{map_boundary, StatisticKind},
+    },
     schema,
     util::map_u32,
 };
@@ -29,7 +32,7 @@ impl MetricsThreshold {
     pub fn new(
         conn: &mut DbConnection,
         metric_kind_id: i32,
-        branch_id: i32,
+        branch_id: BranchId,
         testbed_id: i32,
     ) -> Option<Self> {
         schema::statistic::table

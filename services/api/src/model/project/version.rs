@@ -14,7 +14,7 @@ use crate::{
     ApiError,
 };
 
-use super::ProjectId;
+use super::{branch::BranchId, ProjectId};
 
 #[derive(Queryable)]
 pub struct QueryVersion {
@@ -28,7 +28,7 @@ pub struct QueryVersion {
 #[derive(Queryable)]
 pub struct QueryBranchVersion {
     pub id: i32,
-    pub branch_id: i32,
+    pub branch_id: BranchId,
     pub version_id: i32,
 }
 
@@ -62,7 +62,7 @@ pub struct InsertVersion {
 #[derive(Insertable)]
 #[diesel(table_name = branch_version_table)]
 pub struct InsertBranchVersion {
-    pub branch_id: i32,
+    pub branch_id: BranchId,
     pub version_id: i32,
 }
 
@@ -70,7 +70,7 @@ impl InsertVersion {
     pub fn increment(
         conn: &mut DbConnection,
         project_id: ProjectId,
-        branch_id: i32,
+        branch_id: BranchId,
         hash: Option<GitHash>,
     ) -> Result<i32, ApiError> {
         // Get the most recent code version number for this branch and increment it.

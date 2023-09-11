@@ -7,8 +7,10 @@ use uuid::Uuid;
 
 use self::statistic::{InsertStatistic, QueryStatistic};
 use super::{
-    branch::QueryBranch, metric_kind::QueryMetricKind, testbed::QueryTestbed, ProjectId,
-    QueryProject,
+    branch::{BranchId, QueryBranch},
+    metric_kind::QueryMetricKind,
+    testbed::QueryTestbed,
+    ProjectId, QueryProject,
 };
 use crate::{
     context::DbConnection,
@@ -32,7 +34,7 @@ pub struct QueryThreshold {
     pub uuid: String,
     pub project_id: ProjectId,
     pub metric_kind_id: i32,
-    pub branch_id: i32,
+    pub branch_id: BranchId,
     pub testbed_id: i32,
     pub statistic_id: Option<i32>,
     pub created: i64,
@@ -138,7 +140,7 @@ pub struct InsertThreshold {
     pub uuid: String,
     pub project_id: ProjectId,
     pub metric_kind_id: i32,
-    pub branch_id: i32,
+    pub branch_id: BranchId,
     pub testbed_id: i32,
     pub statistic_id: Option<i32>,
     pub created: i64,
@@ -149,7 +151,7 @@ impl InsertThreshold {
     pub fn new(
         project_id: ProjectId,
         metric_kind_id: i32,
-        branch_id: i32,
+        branch_id: BranchId,
         testbed_id: i32,
     ) -> Self {
         let timestamp = Utc::now().timestamp();
@@ -169,7 +171,7 @@ impl InsertThreshold {
         conn: &mut DbConnection,
         project_id: ProjectId,
         metric_kind_id: i32,
-        branch_id: i32,
+        branch_id: BranchId,
         testbed_id: i32,
         json_statistic: JsonNewStatistic,
     ) -> Result<i32, ApiError> {
@@ -207,7 +209,7 @@ impl InsertThreshold {
         conn: &mut DbConnection,
         project_id: ProjectId,
         metric_kind_id: i32,
-        branch_id: i32,
+        branch_id: BranchId,
         testbed_id: i32,
     ) -> Result<i32, ApiError> {
         Self::from_json(
@@ -224,7 +226,7 @@ impl InsertThreshold {
         conn: &mut DbConnection,
         project_id: ProjectId,
         metric_kind_id: i32,
-        branch_id: i32,
+        branch_id: BranchId,
         testbed_id: i32,
     ) -> Result<i32, ApiError> {
         Self::from_json(

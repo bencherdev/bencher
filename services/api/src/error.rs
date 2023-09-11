@@ -10,7 +10,7 @@ use crate::{
     endpoints::Endpoint,
     model::{
         organization::OrganizationId,
-        project::ProjectId,
+        project::{branch::BranchId, ProjectId},
         user::{auth::AuthUser, UserId},
     },
 };
@@ -112,7 +112,7 @@ pub enum ApiError {
     #[error("The branch ({branch_id}) project ID ({branch_project_id}) do not match the project ID ({project_id}).")]
     BranchProject {
         project_id: ProjectId,
-        branch_id: i32,
+        branch_id: BranchId,
         branch_project_id: ProjectId,
     },
     #[error("The testbed ({testbed_id}) project ID ({testbed_project_id}) do not match the project ID ({project_id}).")]

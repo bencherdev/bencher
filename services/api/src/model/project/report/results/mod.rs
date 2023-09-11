@@ -16,6 +16,7 @@ use crate::{
     error::api_error,
     model::project::{
         benchmark::{BenchmarkId, QueryBenchmark},
+        branch::BranchId,
         metric::{InsertMetric, QueryMetric},
         metric_kind::QueryMetricKind,
         perf::{InsertPerf, QueryPerf},
@@ -33,7 +34,7 @@ type MetricKindId = i32;
 /// `ReportResults` is used to add benchmarks, perf, metric kinds, metrics, and alerts.
 pub struct ReportResults {
     pub project_id: ProjectId,
-    pub branch_id: i32,
+    pub branch_id: BranchId,
     pub testbed_id: i32,
     pub report_id: i32,
     pub benchmark_cache: HashMap<BenchmarkName, i32>,
@@ -42,7 +43,12 @@ pub struct ReportResults {
 }
 
 impl ReportResults {
-    pub fn new(project_id: ProjectId, branch_id: i32, testbed_id: i32, report_id: i32) -> Self {
+    pub fn new(
+        project_id: ProjectId,
+        branch_id: BranchId,
+        testbed_id: i32,
+        report_id: i32,
+    ) -> Self {
         Self {
             project_id,
             branch_id,

@@ -31,11 +31,13 @@ use crate::{
     ApiError,
 };
 
+crate::util::typed_id::typed_id!(BranchId);
+
 fn_resource_id!(branch);
 
 #[derive(Queryable)]
 pub struct QueryBranch {
-    pub id: i32,
+    pub id: BranchId,
     pub uuid: String,
     pub project_id: ProjectId,
     pub name: String,
@@ -46,9 +48,9 @@ pub struct QueryBranch {
 
 impl QueryBranch {
     fn_get!(branch);
-    fn_get_id!(branch);
+    fn_get_id!(branch, BranchId);
 
-    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: BranchId) -> Result<Uuid, ApiError> {
         let uuid: String = schema::branch::table
             .filter(schema::branch::id.eq(id))
             .select(schema::branch::uuid)
@@ -83,7 +85,7 @@ impl QueryBranch {
 
     pub fn get_branch_version_json(
         conn: &mut DbConnection,
-        branch_id: i32,
+        branch_id: BranchId,
         version_id: i32,
     ) -> Result<JsonBranchVersion, ApiError> {
         let JsonBranch {

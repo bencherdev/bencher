@@ -5,13 +5,17 @@ use dropshot::HttpError;
 use crate::{
     context::DbConnection,
     error::api_error,
-    model::project::{branch::QueryBranch, testbed::QueryTestbed, ProjectId, QueryProject},
+    model::project::{
+        branch::{BranchId, QueryBranch},
+        testbed::QueryTestbed,
+        ProjectId, QueryProject,
+    },
     schema, ApiError,
 };
 
 pub struct SameProject {
     pub project: QueryProject,
-    pub branch_id: i32,
+    pub branch_id: BranchId,
     pub testbed_id: i32,
 }
 
@@ -36,7 +40,7 @@ impl SameProject {
     pub fn validate_ids(
         conn: &mut DbConnection,
         project_id: ProjectId,
-        branch_id: i32,
+        branch_id: BranchId,
         testbed_id: i32,
     ) -> Result<(), ApiError> {
         let branch_project_id = schema::branch::table

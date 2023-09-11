@@ -17,7 +17,7 @@ use uuid::Uuid;
 use self::adapter::Adapter;
 
 use super::{
-    branch::QueryBranch,
+    branch::{BranchId, QueryBranch},
     metric::QueryMetric,
     metric_kind::QueryMetricKind,
     testbed::QueryTestbed,
@@ -46,7 +46,7 @@ pub struct QueryReport {
     pub uuid: String,
     pub user_id: UserId,
     pub project_id: ProjectId,
-    pub branch_id: i32,
+    pub branch_id: BranchId,
     pub version_id: i32,
     pub testbed_id: i32,
     pub adapter: i32,
@@ -337,7 +337,7 @@ pub struct InsertReport {
     pub uuid: String,
     pub user_id: UserId,
     pub project_id: ProjectId,
-    pub branch_id: i32,
+    pub branch_id: BranchId,
     pub version_id: i32,
     pub testbed_id: i32,
     pub adapter: i32,
@@ -350,7 +350,7 @@ impl InsertReport {
     pub fn from_json(
         user_id: UserId,
         project_id: ProjectId,
-        branch_id: i32,
+        branch_id: BranchId,
         version_id: i32,
         testbed_id: i32,
         report: &JsonNewReport,
