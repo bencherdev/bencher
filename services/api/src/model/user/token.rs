@@ -20,6 +20,8 @@ use crate::{
 
 use super::{auth::AuthUser, QueryUser, UserId};
 
+crate::util::typed_id::typed_id!(TokenId);
+
 macro_rules! same_user {
     ($auth_user:ident, $rbac:expr, $user_id:expr) => {
         if !($auth_user.is_admin(&$rbac) || $auth_user.id == $user_id) {
@@ -32,7 +34,7 @@ pub(crate) use same_user;
 
 #[derive(Queryable)]
 pub struct QueryToken {
-    pub id: i32,
+    pub id: TokenId,
     pub uuid: String,
     pub user_id: UserId,
     pub name: String,
@@ -43,9 +45,9 @@ pub struct QueryToken {
 
 impl QueryToken {
     fn_get!(token);
-    fn_get_id!(token);
+    fn_get_id!(token, TokenId);
 
-    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: TokenId) -> Result<Uuid, ApiError> {
         let uuid: String = schema::token::table
             .filter(schema::token::id.eq(id))
             .select(schema::token::uuid)
