@@ -6,6 +6,7 @@ use crate::{
     context::DbConnection,
     error::api_error,
     model::project::{
+        benchmark::BenchmarkId,
         metric::QueryMetric,
         threshold::{alert::InsertAlert, boundary::InsertBoundary},
     },
@@ -65,7 +66,7 @@ impl Detector {
         &self,
         log: &Logger,
         conn: &mut DbConnection,
-        benchmark_id: i32,
+        benchmark_id: BenchmarkId,
         query_metric: QueryMetric,
     ) -> Result<(), ApiError> {
         // Query the historical population/sample data for the benchmark

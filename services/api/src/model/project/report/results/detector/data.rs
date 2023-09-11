@@ -1,7 +1,10 @@
 use chrono::offset::Utc;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 
-use crate::{context::DbConnection, error::api_error, schema, ApiError};
+use crate::{
+    context::DbConnection, error::api_error, model::project::benchmark::BenchmarkId, schema,
+    ApiError,
+};
 
 use super::threshold::MetricsStatistic;
 
@@ -15,7 +18,7 @@ impl MetricsData {
         metric_kind_id: i32,
         branch_id: i32,
         testbed_id: i32,
-        benchmark_id: i32,
+        benchmark_id: BenchmarkId,
         statistic: &MetricsStatistic,
     ) -> Result<Self, ApiError> {
         let mut query = schema::metric::table

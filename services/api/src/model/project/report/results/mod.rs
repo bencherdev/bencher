@@ -15,7 +15,7 @@ use crate::{
     context::DbConnection,
     error::api_error,
     model::project::{
-        benchmark::QueryBenchmark,
+        benchmark::{BenchmarkId, QueryBenchmark},
         metric::{InsertMetric, QueryMetric},
         metric_kind::QueryMetricKind,
         perf::{InsertPerf, QueryPerf},
@@ -165,7 +165,7 @@ impl ReportResults {
         &mut self,
         conn: &mut DbConnection,
         benchmark_name: &str,
-    ) -> Result<i32, ApiError> {
+    ) -> Result<BenchmarkId, ApiError> {
         QueryBenchmark::get_or_create(conn, self.project_id, benchmark_name)
     }
 

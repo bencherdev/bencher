@@ -2,7 +2,15 @@ macro_rules! typed_id {
     ($name:ident) => {
         // https://github.com/diesel-rs/diesel/blob/master/diesel_tests/tests/custom_types.rs
         #[derive(
-            Debug, Clone, Copy, derive_more::Display, PartialEq, Eq, FromSqlRow, AsExpression,
+            Debug,
+            Clone,
+            Copy,
+            Default,
+            PartialEq,
+            Eq,
+            derive_more::Display,
+            FromSqlRow,
+            AsExpression,
         )]
         #[diesel(sql_type = diesel::sql_types::Integer)]
         pub struct $name(i32);

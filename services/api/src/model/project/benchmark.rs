@@ -23,11 +23,13 @@ use crate::{
     ApiError,
 };
 
+crate::util::typed_id::typed_id!(BenchmarkId);
+
 fn_resource_id!(benchmark);
 
 #[derive(Queryable)]
 pub struct QueryBenchmark {
-    pub id: i32,
+    pub id: BenchmarkId,
     pub uuid: String,
     pub project_id: ProjectId,
     pub name: String,
@@ -38,13 +40,13 @@ pub struct QueryBenchmark {
 
 impl QueryBenchmark {
     fn_get!(benchmark);
-    fn_get_id!(benchmark);
+    fn_get_id!(benchmark, BenchmarkId);
 
     pub fn get_id_from_name(
         conn: &mut DbConnection,
         project_id: ProjectId,
         name: &str,
-    ) -> Result<i32, ApiError> {
+    ) -> Result<BenchmarkId, ApiError> {
         schema::benchmark::table
             .filter(schema::benchmark::project_id.eq(project_id))
             .filter(schema::benchmark::name.eq(name))
@@ -53,7 +55,7 @@ impl QueryBenchmark {
             .map_err(api_error!())
     }
 
-    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: BenchmarkId) -> Result<Uuid, ApiError> {
         let uuid: String = schema::benchmark::table
             .filter(schema::benchmark::id.eq(id))
             .select(schema::benchmark::uuid)
@@ -90,7 +92,7 @@ impl QueryBenchmark {
         conn: &mut DbConnection,
         project_id: ProjectId,
         name: &str,
-    ) -> Result<i32, ApiError> {
+    ) -> Result<BenchmarkId, ApiError> {
         let id = Self::get_id_from_name(conn, project_id, name);
 
         if id.is_ok() {

@@ -22,7 +22,7 @@ use crate::{
     },
     error::api_error,
     model::project::{
-        benchmark::QueryBenchmark,
+        benchmark::{BenchmarkId, QueryBenchmark},
         branch::QueryBranch,
         metric_kind::QueryMetricKind,
         testbed::QueryTestbed,
@@ -173,7 +173,7 @@ struct Ids {
     metric_kind_id: i32,
     branch_id: i32,
     testbed_id: i32,
-    benchmark_id: i32,
+    benchmark_id: BenchmarkId,
 }
 
 enum Dimensions {

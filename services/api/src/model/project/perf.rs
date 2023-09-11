@@ -13,13 +13,15 @@ use crate::{
     ApiError,
 };
 
+use super::benchmark::BenchmarkId;
+
 #[derive(Queryable)]
 pub struct QueryPerf {
     pub id: i32,
     pub uuid: String,
     pub report_id: i32,
     pub iteration: i32,
-    pub benchmark_id: i32,
+    pub benchmark_id: BenchmarkId,
 }
 
 impl QueryPerf {
@@ -42,12 +44,12 @@ pub struct InsertPerf {
     pub uuid: String,
     pub report_id: i32,
     pub iteration: i32,
-    pub benchmark_id: i32,
+    pub benchmark_id: BenchmarkId,
 }
 
 impl InsertPerf {
     #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-    pub fn from_json(report_id: i32, iteration: usize, benchmark_id: i32) -> Self {
+    pub fn from_json(report_id: i32, iteration: usize, benchmark_id: BenchmarkId) -> Self {
         InsertPerf {
             uuid: Uuid::new_v4().to_string(),
             report_id,
