@@ -6,6 +6,7 @@ use crate::{
     model::project::{
         branch::BranchId,
         metric_kind::MetricKindId,
+        testbed::TestbedId,
         threshold::statistic::{map_boundary, StatisticKind},
     },
     schema,
@@ -34,7 +35,7 @@ impl MetricsThreshold {
         conn: &mut DbConnection,
         metric_kind_id: MetricKindId,
         branch_id: BranchId,
-        testbed_id: i32,
+        testbed_id: TestbedId,
     ) -> Option<Self> {
         schema::statistic::table
             .inner_join(

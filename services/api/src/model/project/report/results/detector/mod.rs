@@ -10,6 +10,7 @@ use crate::{
         branch::BranchId,
         metric::QueryMetric,
         metric_kind::MetricKindId,
+        testbed::TestbedId,
         threshold::{alert::InsertAlert, boundary::InsertBoundary},
     },
     schema, ApiError,
@@ -28,7 +29,7 @@ use threshold::MetricsThreshold;
 pub struct Detector {
     pub metric_kind_id: MetricKindId,
     pub branch_id: BranchId,
-    pub testbed_id: i32,
+    pub testbed_id: TestbedId,
     pub threshold: MetricsThreshold,
 }
 
@@ -37,7 +38,7 @@ impl Detector {
         conn: &mut DbConnection,
         metric_kind_id: MetricKindId,
         branch_id: BranchId,
-        testbed_id: i32,
+        testbed_id: TestbedId,
     ) -> Result<Option<Self>, ApiError> {
         // Check to see if there is a threshold for the branch/testbed/metric kind grouping.
         // If not, then there will be nothing to detect.

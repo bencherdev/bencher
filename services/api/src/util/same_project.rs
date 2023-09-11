@@ -7,7 +7,7 @@ use crate::{
     error::api_error,
     model::project::{
         branch::{BranchId, QueryBranch},
-        testbed::QueryTestbed,
+        testbed::{QueryTestbed, TestbedId},
         ProjectId, QueryProject,
     },
     schema, ApiError,
@@ -16,7 +16,7 @@ use crate::{
 pub struct SameProject {
     pub project: QueryProject,
     pub branch_id: BranchId,
-    pub testbed_id: i32,
+    pub testbed_id: TestbedId,
 }
 
 impl SameProject {
@@ -41,7 +41,7 @@ impl SameProject {
         conn: &mut DbConnection,
         project_id: ProjectId,
         branch_id: BranchId,
-        testbed_id: i32,
+        testbed_id: TestbedId,
     ) -> Result<(), ApiError> {
         let branch_project_id = schema::branch::table
             .filter(schema::branch::id.eq(branch_id))

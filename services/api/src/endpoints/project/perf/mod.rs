@@ -26,7 +26,7 @@ use crate::{
         branch::{BranchId, QueryBranch},
         metric::MetricId,
         metric_kind::{MetricKindId, QueryMetricKind},
-        testbed::QueryTestbed,
+        testbed::{QueryTestbed, TestbedId},
         threshold::{alert::QueryAlert, boundary::QueryBoundary, QueryThreshold},
         QueryProject,
     },
@@ -173,7 +173,7 @@ async fn get_inner(
 struct Ids {
     metric_kind_id: MetricKindId,
     branch_id: BranchId,
-    testbed_id: i32,
+    testbed_id: TestbedId,
     benchmark_id: BenchmarkId,
 }
 

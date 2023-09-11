@@ -24,11 +24,13 @@ use crate::{
     ApiError,
 };
 
+crate::util::typed_id::typed_id!(TestbedId);
+
 fn_resource_id!(testbed);
 
 #[derive(Queryable)]
 pub struct QueryTestbed {
-    pub id: i32,
+    pub id: TestbedId,
     pub uuid: String,
     pub project_id: ProjectId,
     pub name: String,
@@ -39,9 +41,9 @@ pub struct QueryTestbed {
 
 impl QueryTestbed {
     fn_get!(testbed);
-    fn_get_id!(testbed);
+    fn_get_id!(testbed, TestbedId);
 
-    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: TestbedId) -> Result<Uuid, ApiError> {
         let uuid: String = schema::testbed::table
             .filter(schema::testbed::id.eq(id))
             .select(schema::testbed::uuid)

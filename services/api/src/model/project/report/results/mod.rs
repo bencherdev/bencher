@@ -20,6 +20,7 @@ use crate::{
         metric::{InsertMetric, QueryMetric},
         metric_kind::{MetricKindId, QueryMetricKind},
         perf::{InsertPerf, QueryPerf},
+        testbed::TestbedId,
         ProjectId,
     },
     schema, ApiError,
@@ -33,7 +34,7 @@ use detector::Detector;
 pub struct ReportResults {
     pub project_id: ProjectId,
     pub branch_id: BranchId,
-    pub testbed_id: i32,
+    pub testbed_id: TestbedId,
     pub report_id: i32,
     pub metric_kind_cache: HashMap<MetricKind, MetricKindId>,
     pub detector_cache: HashMap<MetricKindId, Option<Detector>>,
@@ -43,7 +44,7 @@ impl ReportResults {
     pub fn new(
         project_id: ProjectId,
         branch_id: BranchId,
-        testbed_id: i32,
+        testbed_id: TestbedId,
         report_id: i32,
     ) -> Self {
         Self {

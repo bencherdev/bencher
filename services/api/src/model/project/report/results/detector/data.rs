@@ -4,7 +4,9 @@ use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use crate::{
     context::DbConnection,
     error::api_error,
-    model::project::{benchmark::BenchmarkId, branch::BranchId, metric_kind::MetricKindId},
+    model::project::{
+        benchmark::BenchmarkId, branch::BranchId, metric_kind::MetricKindId, testbed::TestbedId,
+    },
     schema, ApiError,
 };
 
@@ -19,7 +21,7 @@ impl MetricsData {
         conn: &mut DbConnection,
         metric_kind_id: MetricKindId,
         branch_id: BranchId,
-        testbed_id: i32,
+        testbed_id: TestbedId,
         benchmark_id: BenchmarkId,
         statistic: &MetricsStatistic,
     ) -> Result<Self, ApiError> {

@@ -9,7 +9,7 @@ use self::statistic::{InsertStatistic, QueryStatistic};
 use super::{
     branch::{BranchId, QueryBranch},
     metric_kind::{MetricKindId, QueryMetricKind},
-    testbed::QueryTestbed,
+    testbed::{QueryTestbed, TestbedId},
     ProjectId, QueryProject,
 };
 use crate::{
@@ -35,7 +35,7 @@ pub struct QueryThreshold {
     pub project_id: ProjectId,
     pub metric_kind_id: MetricKindId,
     pub branch_id: BranchId,
-    pub testbed_id: i32,
+    pub testbed_id: TestbedId,
     pub statistic_id: Option<i32>,
     pub created: i64,
     pub modified: i64,
@@ -141,7 +141,7 @@ pub struct InsertThreshold {
     pub project_id: ProjectId,
     pub metric_kind_id: MetricKindId,
     pub branch_id: BranchId,
-    pub testbed_id: i32,
+    pub testbed_id: TestbedId,
     pub statistic_id: Option<i32>,
     pub created: i64,
     pub modified: i64,
@@ -152,7 +152,7 @@ impl InsertThreshold {
         project_id: ProjectId,
         metric_kind_id: MetricKindId,
         branch_id: BranchId,
-        testbed_id: i32,
+        testbed_id: TestbedId,
     ) -> Self {
         let timestamp = Utc::now().timestamp();
         Self {
@@ -172,7 +172,7 @@ impl InsertThreshold {
         project_id: ProjectId,
         metric_kind_id: MetricKindId,
         branch_id: BranchId,
-        testbed_id: i32,
+        testbed_id: TestbedId,
         json_statistic: JsonNewStatistic,
     ) -> Result<i32, ApiError> {
         // Create the new threshold
@@ -210,7 +210,7 @@ impl InsertThreshold {
         project_id: ProjectId,
         metric_kind_id: MetricKindId,
         branch_id: BranchId,
-        testbed_id: i32,
+        testbed_id: TestbedId,
     ) -> Result<i32, ApiError> {
         Self::from_json(
             conn,
@@ -227,7 +227,7 @@ impl InsertThreshold {
         project_id: ProjectId,
         metric_kind_id: MetricKindId,
         branch_id: BranchId,
-        testbed_id: i32,
+        testbed_id: TestbedId,
     ) -> Result<i32, ApiError> {
         Self::from_json(
             conn,

@@ -10,7 +10,7 @@ use crate::{
     endpoints::Endpoint,
     model::{
         organization::OrganizationId,
-        project::{branch::BranchId, ProjectId},
+        project::{branch::BranchId, testbed::TestbedId, ProjectId},
         user::{auth::AuthUser, UserId},
     },
 };
@@ -118,7 +118,7 @@ pub enum ApiError {
     #[error("The testbed ({testbed_id}) project ID ({testbed_project_id}) do not match the project ID ({project_id}).")]
     TestbedProject {
         project_id: ProjectId,
-        testbed_id: i32,
+        testbed_id: TestbedId,
         testbed_project_id: ProjectId,
     },
     #[error("Tried to query a private project: {0}")]
