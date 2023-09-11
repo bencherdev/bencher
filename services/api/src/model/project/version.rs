@@ -8,35 +8,29 @@ use crate::{
     context::DbConnection,
     error::api_error,
     schema,
-    schema::branch_version as branch_version_table,
     schema::version as version_table,
     util::query::{fn_get, fn_get_id},
     ApiError,
 };
 
-use super::{branch::BranchId, ProjectId};
+use super::{branch::BranchId, branch_version::InsertBranchVersion, ProjectId};
+
+crate::util::typed_id::typed_id!(VersionId);
 
 #[derive(Queryable)]
 pub struct QueryVersion {
-    pub id: i32,
+    pub id: VersionId,
     pub uuid: String,
     pub project_id: ProjectId,
     pub number: i32,
     pub hash: Option<String>,
 }
 
-#[derive(Queryable)]
-pub struct QueryBranchVersion {
-    pub id: i32,
-    pub branch_id: BranchId,
-    pub version_id: i32,
-}
-
 impl QueryVersion {
     fn_get!(version);
-    fn_get_id!(version);
+    fn_get_id!(version, VersionId);
 
-    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: VersionId) -> Result<Uuid, ApiError> {
         let uuid: String = schema::version::table
             .filter(schema::version::id.eq(id))
             .select(schema::version::uuid)
@@ -44,10 +38,6 @@ impl QueryVersion {
             .map_err(api_error!())?;
         Uuid::from_str(&uuid).map_err(api_error!())
     }
-}
-
-impl QueryBranchVersion {
-    fn_get!(branch_version);
 }
 
 #[derive(Insertable)]
@@ -59,20 +49,13 @@ pub struct InsertVersion {
     pub hash: Option<String>,
 }
 
-#[derive(Insertable)]
-#[diesel(table_name = branch_version_table)]
-pub struct InsertBranchVersion {
-    pub branch_id: BranchId,
-    pub version_id: i32,
-}
-
 impl InsertVersion {
     pub fn increment(
         conn: &mut DbConnection,
         project_id: ProjectId,
         branch_id: BranchId,
         hash: Option<GitHash>,
-    ) -> Result<i32, ApiError> {
+    ) -> Result<VersionId, ApiError> {
         // Get the most recent code version number for this branch and increment it.
         // Otherwise, start a new branch code version number count from zero.
         let number = if let Ok(number) = schema::version::table

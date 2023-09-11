@@ -31,6 +31,7 @@ use super::organization::OrganizationId;
 
 pub mod benchmark;
 pub mod branch;
+pub mod branch_version;
 pub mod metric;
 pub mod metric_kind;
 pub mod perf;

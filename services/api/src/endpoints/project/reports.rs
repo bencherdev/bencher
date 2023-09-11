@@ -20,7 +20,7 @@ use crate::{
     error::api_error,
     model::project::{
         report::{results::ReportResults, InsertReport, QueryReport},
-        version::{InsertVersion, QueryVersion},
+        version::{InsertVersion, QueryVersion, VersionId},
         QueryProject,
     },
     model::user::auth::AuthUser,
@@ -225,7 +225,7 @@ async fn post_inner(
             .filter(schema::version::hash.eq(hash.as_ref()))
             .order(schema::version::number.desc())
             .select(schema::version::id)
-            .first::<i32>(conn)
+            .first::<VersionId>(conn)
         {
             version_id
         } else {

@@ -12,8 +12,9 @@ use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::{
+    branch_version::InsertBranchVersion,
     threshold::statistic::{InsertStatistic, QueryStatistic},
-    version::{InsertBranchVersion, QueryVersion},
+    version::{QueryVersion, VersionId},
     ProjectId, QueryProject,
 };
 use crate::{
@@ -86,7 +87,7 @@ impl QueryBranch {
     pub fn get_branch_version_json(
         conn: &mut DbConnection,
         branch_id: BranchId,
-        version_id: i32,
+        version_id: VersionId,
     ) -> Result<JsonBranchVersion, ApiError> {
         let JsonBranch {
             uuid,
@@ -199,7 +200,7 @@ impl InsertBranch {
         let version_ids = schema::branch_version::table
             .filter(schema::branch_version::branch_id.eq(start_point_branch_id))
             .select(schema::branch_version::version_id)
-            .load::<i32>(conn)?;
+            .load::<VersionId>(conn)?;
 
         // Add new branch to all start point branch versions
         for version_id in version_ids {
