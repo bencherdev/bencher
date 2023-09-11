@@ -5,6 +5,7 @@ use crate::{
     context::DbConnection,
     model::project::{
         branch::BranchId,
+        metric_kind::MetricKindId,
         threshold::statistic::{map_boundary, StatisticKind},
     },
     schema,
@@ -31,7 +32,7 @@ pub struct MetricsStatistic {
 impl MetricsThreshold {
     pub fn new(
         conn: &mut DbConnection,
-        metric_kind_id: i32,
+        metric_kind_id: MetricKindId,
         branch_id: BranchId,
         testbed_id: i32,
     ) -> Option<Self> {

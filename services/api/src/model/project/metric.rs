@@ -9,12 +9,14 @@ use crate::{
     ApiError,
 };
 
+use super::metric_kind::MetricKindId;
+
 #[derive(Queryable, Debug)]
 pub struct QueryMetric {
     pub id: i32,
     pub uuid: String,
     pub perf_id: i32,
-    pub metric_kind_id: i32,
+    pub metric_kind_id: MetricKindId,
     pub value: f64,
     pub lower_bound: Option<f64>,
     pub upper_bound: Option<f64>,
@@ -52,14 +54,14 @@ impl QueryMetric {
 pub struct InsertMetric {
     pub uuid: String,
     pub perf_id: i32,
-    pub metric_kind_id: i32,
+    pub metric_kind_id: MetricKindId,
     pub value: f64,
     pub lower_bound: Option<f64>,
     pub upper_bound: Option<f64>,
 }
 
 impl InsertMetric {
-    pub fn from_json(perf_id: i32, metric_kind_id: i32, metric: JsonMetric) -> Self {
+    pub fn from_json(perf_id: i32, metric_kind_id: MetricKindId, metric: JsonMetric) -> Self {
         let JsonMetric {
             value,
             lower_bound,

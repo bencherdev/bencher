@@ -19,7 +19,7 @@ use self::adapter::Adapter;
 use super::{
     branch::{BranchId, QueryBranch},
     metric::QueryMetric,
-    metric_kind::QueryMetricKind,
+    metric_kind::{MetricKindId, QueryMetricKind},
     testbed::QueryTestbed,
     threshold::{alert::QueryAlert, boundary::QueryBoundary, QueryThreshold},
     ProjectId, QueryProject,
@@ -108,7 +108,7 @@ fn get_results(
     let mut iteration = 0;
     let mut metric_kinds = HashMap::new();
     let mut metric_kind_benchmarks =
-        HashMap::<i32, (Option<ThresholdStatistic>, Vec<JsonBenchmarkMetric>)>::new();
+        HashMap::<MetricKindId, (Option<ThresholdStatistic>, Vec<JsonBenchmarkMetric>)>::new();
 
     // Get the perfs for the report
     let perfs = get_perfs(conn, report_id)?;
@@ -186,7 +186,7 @@ fn get_perfs(conn: &mut DbConnection, report_id: i32) -> Result<Vec<QueryPerf>, 
 fn get_metric_kinds(
     conn: &mut DbConnection,
     perf_id: i32,
-) -> Result<HashMap<i32, JsonMetricKind>, ApiError> {
+) -> Result<HashMap<MetricKindId, JsonMetricKind>, ApiError> {
     Ok(schema::metric_kind::table
         .left_join(
             schema::metric::table.on(schema::metric_kind::id.eq(schema::metric::metric_kind_id)),
@@ -218,7 +218,7 @@ struct ThresholdStatistic {
 fn get_benchmark_metric(
     conn: &mut DbConnection,
     perf_id: i32,
-    metric_kind_id: i32,
+    metric_kind_id: MetricKindId,
     benchmark: JsonBenchmark,
 ) -> Result<(Option<ThresholdStatistic>, JsonBenchmarkMetric), ApiError> {
     let query_metric = schema::metric::table
@@ -267,8 +267,11 @@ fn get_benchmark_metric(
 fn get_iteration_results(
     log: &Logger,
     conn: &mut DbConnection,
-    metric_kinds: &HashMap<i32, JsonMetricKind>,
-    metric_kind_benchmarks: HashMap<i32, (Option<ThresholdStatistic>, Vec<JsonBenchmarkMetric>)>,
+    metric_kinds: &HashMap<MetricKindId, JsonMetricKind>,
+    metric_kind_benchmarks: HashMap<
+        MetricKindId,
+        (Option<ThresholdStatistic>, Vec<JsonBenchmarkMetric>),
+    >,
 ) -> Result<JsonReportIteration, ApiError> {
     let mut iteration_results = Vec::new();
     for (metric_kind_id, (threshold_statistic, benchmarks)) in metric_kind_benchmarks {

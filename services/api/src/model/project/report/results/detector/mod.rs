@@ -9,6 +9,7 @@ use crate::{
         benchmark::BenchmarkId,
         branch::BranchId,
         metric::QueryMetric,
+        metric_kind::MetricKindId,
         threshold::{alert::InsertAlert, boundary::InsertBoundary},
     },
     schema, ApiError,
@@ -25,7 +26,7 @@ use threshold::MetricsThreshold;
 
 #[derive(Debug, Clone)]
 pub struct Detector {
-    pub metric_kind_id: i32,
+    pub metric_kind_id: MetricKindId,
     pub branch_id: BranchId,
     pub testbed_id: i32,
     pub threshold: MetricsThreshold,
@@ -34,7 +35,7 @@ pub struct Detector {
 impl Detector {
     pub fn new(
         conn: &mut DbConnection,
-        metric_kind_id: i32,
+        metric_kind_id: MetricKindId,
         branch_id: BranchId,
         testbed_id: i32,
     ) -> Result<Option<Self>, ApiError> {

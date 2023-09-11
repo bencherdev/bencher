@@ -30,11 +30,13 @@ use crate::{
 
 use super::ProjectId;
 
+crate::util::typed_id::typed_id!(MetricKindId);
+
 fn_resource_id!(metric_kind);
 
 #[derive(Queryable)]
 pub struct QueryMetricKind {
-    pub id: i32,
+    pub id: MetricKindId,
     pub uuid: String,
     pub project_id: ProjectId,
     pub name: String,
@@ -46,9 +48,9 @@ pub struct QueryMetricKind {
 
 impl QueryMetricKind {
     fn_get!(metric_kind);
-    fn_get_id!(metric_kind);
+    fn_get_id!(metric_kind, MetricKindId);
 
-    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: MetricKindId) -> Result<Uuid, ApiError> {
         let uuid: String = schema::metric_kind::table
             .filter(schema::metric_kind::id.eq(id))
             .select(schema::metric_kind::uuid)
@@ -95,7 +97,7 @@ impl QueryMetricKind {
         conn: &mut DbConnection,
         project_id: ProjectId,
         metric_kind: &ResourceId,
-    ) -> Result<i32, ApiError> {
+    ) -> Result<MetricKindId, ApiError> {
         let query_metric_kind = Self::from_resource_id(conn, project_id, metric_kind);
 
         let api_error = match query_metric_kind {

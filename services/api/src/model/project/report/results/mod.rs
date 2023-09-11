@@ -18,7 +18,7 @@ use crate::{
         benchmark::{BenchmarkId, QueryBenchmark},
         branch::BranchId,
         metric::{InsertMetric, QueryMetric},
-        metric_kind::QueryMetricKind,
+        metric_kind::{MetricKindId, QueryMetricKind},
         perf::{InsertPerf, QueryPerf},
         ProjectId,
     },
@@ -29,16 +29,13 @@ pub mod detector;
 
 use detector::Detector;
 
-type MetricKindId = i32;
-
 /// `ReportResults` is used to add benchmarks, perf, metric kinds, metrics, and alerts.
 pub struct ReportResults {
     pub project_id: ProjectId,
     pub branch_id: BranchId,
     pub testbed_id: i32,
     pub report_id: i32,
-    pub benchmark_cache: HashMap<BenchmarkName, i32>,
-    pub metric_kind_cache: HashMap<MetricKind, i32>,
+    pub metric_kind_cache: HashMap<MetricKind, MetricKindId>,
     pub detector_cache: HashMap<MetricKindId, Option<Detector>>,
 }
 
@@ -54,7 +51,6 @@ impl ReportResults {
             branch_id,
             testbed_id,
             report_id,
-            benchmark_cache: HashMap::new(),
             metric_kind_cache: HashMap::new(),
             detector_cache: HashMap::new(),
         }
@@ -179,7 +175,7 @@ impl ReportResults {
         &mut self,
         conn: &mut DbConnection,
         metric_kind_key: MetricKind,
-    ) -> Result<i32, ApiError> {
+    ) -> Result<MetricKindId, ApiError> {
         Ok(
             if let Some(id) = self.metric_kind_cache.get(&metric_kind_key) {
                 *id

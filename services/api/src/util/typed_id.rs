@@ -8,6 +8,7 @@ macro_rules! typed_id {
             Default,
             PartialEq,
             Eq,
+            Hash,
             derive_more::Display,
             FromSqlRow,
             AsExpression,

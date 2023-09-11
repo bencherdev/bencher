@@ -8,7 +8,7 @@ use uuid::Uuid;
 use self::statistic::{InsertStatistic, QueryStatistic};
 use super::{
     branch::{BranchId, QueryBranch},
-    metric_kind::QueryMetricKind,
+    metric_kind::{MetricKindId, QueryMetricKind},
     testbed::QueryTestbed,
     ProjectId, QueryProject,
 };
@@ -33,7 +33,7 @@ pub struct QueryThreshold {
     pub id: i32,
     pub uuid: String,
     pub project_id: ProjectId,
-    pub metric_kind_id: i32,
+    pub metric_kind_id: MetricKindId,
     pub branch_id: BranchId,
     pub testbed_id: i32,
     pub statistic_id: Option<i32>,
@@ -139,7 +139,7 @@ impl QueryThreshold {
 pub struct InsertThreshold {
     pub uuid: String,
     pub project_id: ProjectId,
-    pub metric_kind_id: i32,
+    pub metric_kind_id: MetricKindId,
     pub branch_id: BranchId,
     pub testbed_id: i32,
     pub statistic_id: Option<i32>,
@@ -150,7 +150,7 @@ pub struct InsertThreshold {
 impl InsertThreshold {
     pub fn new(
         project_id: ProjectId,
-        metric_kind_id: i32,
+        metric_kind_id: MetricKindId,
         branch_id: BranchId,
         testbed_id: i32,
     ) -> Self {
@@ -170,7 +170,7 @@ impl InsertThreshold {
     pub fn from_json(
         conn: &mut DbConnection,
         project_id: ProjectId,
-        metric_kind_id: i32,
+        metric_kind_id: MetricKindId,
         branch_id: BranchId,
         testbed_id: i32,
         json_statistic: JsonNewStatistic,
@@ -208,7 +208,7 @@ impl InsertThreshold {
     pub fn lower_boundary(
         conn: &mut DbConnection,
         project_id: ProjectId,
-        metric_kind_id: i32,
+        metric_kind_id: MetricKindId,
         branch_id: BranchId,
         testbed_id: i32,
     ) -> Result<i32, ApiError> {
@@ -225,7 +225,7 @@ impl InsertThreshold {
     pub fn upper_boundary(
         conn: &mut DbConnection,
         project_id: ProjectId,
-        metric_kind_id: i32,
+        metric_kind_id: MetricKindId,
         branch_id: BranchId,
         testbed_id: i32,
     ) -> Result<i32, ApiError> {
