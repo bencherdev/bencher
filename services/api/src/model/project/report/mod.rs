@@ -20,6 +20,7 @@ use super::{
     branch::{BranchId, QueryBranch},
     metric::QueryMetric,
     metric_kind::{MetricKindId, QueryMetricKind},
+    perf::PerfId,
     testbed::QueryTestbed,
     threshold::{alert::QueryAlert, boundary::QueryBoundary, QueryThreshold},
     ProjectId, QueryProject,
@@ -185,7 +186,7 @@ fn get_perfs(conn: &mut DbConnection, report_id: i32) -> Result<Vec<QueryPerf>, 
 
 fn get_metric_kinds(
     conn: &mut DbConnection,
-    perf_id: i32,
+    perf_id: PerfId,
 ) -> Result<HashMap<MetricKindId, JsonMetricKind>, ApiError> {
     Ok(schema::metric_kind::table
         .left_join(
@@ -217,7 +218,7 @@ struct ThresholdStatistic {
 
 fn get_benchmark_metric(
     conn: &mut DbConnection,
-    perf_id: i32,
+    perf_id: PerfId,
     metric_kind_id: MetricKindId,
     benchmark: JsonBenchmark,
 ) -> Result<(Option<ThresholdStatistic>, JsonBenchmarkMetric), ApiError> {

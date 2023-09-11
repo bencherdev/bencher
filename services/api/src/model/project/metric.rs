@@ -9,7 +9,7 @@ use crate::{
     ApiError,
 };
 
-use super::metric_kind::MetricKindId;
+use super::{metric_kind::MetricKindId, perf::PerfId};
 
 crate::util::typed_id::typed_id!(MetricId);
 
@@ -17,7 +17,7 @@ crate::util::typed_id::typed_id!(MetricId);
 pub struct QueryMetric {
     pub id: MetricId,
     pub uuid: String,
-    pub perf_id: i32,
+    pub perf_id: PerfId,
     pub metric_kind_id: MetricKindId,
     pub value: f64,
     pub lower_bound: Option<f64>,
@@ -55,7 +55,7 @@ impl QueryMetric {
 #[diesel(table_name = metric_table)]
 pub struct InsertMetric {
     pub uuid: String,
-    pub perf_id: i32,
+    pub perf_id: PerfId,
     pub metric_kind_id: MetricKindId,
     pub value: f64,
     pub lower_bound: Option<f64>,
@@ -63,7 +63,7 @@ pub struct InsertMetric {
 }
 
 impl InsertMetric {
-    pub fn from_json(perf_id: i32, metric_kind_id: MetricKindId, metric: JsonMetric) -> Self {
+    pub fn from_json(perf_id: PerfId, metric_kind_id: MetricKindId, metric: JsonMetric) -> Self {
         let JsonMetric {
             value,
             lower_bound,

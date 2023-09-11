@@ -15,9 +15,11 @@ use crate::{
 
 use super::benchmark::BenchmarkId;
 
+crate::util::typed_id::typed_id!(PerfId);
+
 #[derive(Queryable)]
 pub struct QueryPerf {
-    pub id: i32,
+    pub id: PerfId,
     pub uuid: String,
     pub report_id: i32,
     pub iteration: i32,
@@ -26,9 +28,9 @@ pub struct QueryPerf {
 
 impl QueryPerf {
     fn_get!(perf);
-    fn_get_id!(perf);
+    fn_get_id!(perf, PerfId);
 
-    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: PerfId) -> Result<Uuid, ApiError> {
         let uuid: String = schema::perf::table
             .filter(schema::perf::id.eq(id))
             .select(schema::perf::uuid)
