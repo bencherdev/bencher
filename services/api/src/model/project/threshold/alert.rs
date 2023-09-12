@@ -263,7 +263,7 @@ impl InsertAlert {
             uuid: Uuid::new_v4().to_string(),
             boundary_id: QueryBoundary::get_id(conn, &boundary)?,
             boundary_limit: limit.into(),
-            status: Status::default().into(),
+            status: Status::default(),
             modified: Utc::now().timestamp(),
         };
 
