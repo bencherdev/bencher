@@ -28,9 +28,11 @@ pub mod alert;
 pub mod boundary;
 pub mod statistic;
 
+crate::util::typed_id::typed_id!(ThresholdId);
+
 #[derive(Queryable)]
 pub struct QueryThreshold {
-    pub id: i32,
+    pub id: ThresholdId,
     pub uuid: String,
     pub project_id: ProjectId,
     pub metric_kind_id: MetricKindId,
@@ -43,9 +45,9 @@ pub struct QueryThreshold {
 
 impl QueryThreshold {
     fn_get!(threshold);
-    fn_get_id!(threshold);
+    fn_get_id!(threshold, ThresholdId);
 
-    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: ThresholdId) -> Result<Uuid, ApiError> {
         let uuid: String = schema::threshold::table
             .filter(schema::threshold::id.eq(id))
             .select(schema::threshold::uuid)
@@ -56,7 +58,7 @@ impl QueryThreshold {
 
     pub fn get_with_statistic(
         conn: &mut DbConnection,
-        threshold_id: i32,
+        threshold_id: ThresholdId,
         statistic_id: i32,
     ) -> Result<Self, ApiError> {
         let mut threshold = Self::get(conn, threshold_id)?;
@@ -67,7 +69,7 @@ impl QueryThreshold {
 
     pub fn get_json(
         conn: &mut DbConnection,
-        threshold_id: i32,
+        threshold_id: ThresholdId,
         statistic_id: i32,
     ) -> Result<JsonThreshold, ApiError> {
         Self::get_with_statistic(conn, threshold_id, statistic_id)?.into_json(conn)
@@ -75,7 +77,7 @@ impl QueryThreshold {
 
     pub fn get_threshold_statistic_json(
         conn: &mut DbConnection,
-        threshold_id: i32,
+        threshold_id: ThresholdId,
         statistic_id: i32,
     ) -> Result<JsonThresholdStatistic, ApiError> {
         Self::get_with_statistic(conn, threshold_id, statistic_id)?
@@ -174,7 +176,7 @@ impl InsertThreshold {
         branch_id: BranchId,
         testbed_id: TestbedId,
         json_statistic: JsonNewStatistic,
-    ) -> Result<i32, ApiError> {
+    ) -> Result<ThresholdId, ApiError> {
         // Create the new threshold
         let insert_threshold =
             InsertThreshold::new(project_id, metric_kind_id, branch_id, testbed_id);
@@ -211,7 +213,7 @@ impl InsertThreshold {
         metric_kind_id: MetricKindId,
         branch_id: BranchId,
         testbed_id: TestbedId,
-    ) -> Result<i32, ApiError> {
+    ) -> Result<ThresholdId, ApiError> {
         Self::from_json(
             conn,
             project_id,
@@ -228,7 +230,7 @@ impl InsertThreshold {
         metric_kind_id: MetricKindId,
         branch_id: BranchId,
         testbed_id: TestbedId,
-    ) -> Result<i32, ApiError> {
+    ) -> Result<ThresholdId, ApiError> {
         Self::from_json(
             conn,
             project_id,

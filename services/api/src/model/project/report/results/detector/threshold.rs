@@ -7,7 +7,10 @@ use crate::{
         branch::BranchId,
         metric_kind::MetricKindId,
         testbed::TestbedId,
-        threshold::statistic::{map_boundary, StatisticKind},
+        threshold::{
+            statistic::{map_boundary, StatisticKind},
+            ThresholdId,
+        },
     },
     schema,
     util::map_u32,
@@ -15,7 +18,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct MetricsThreshold {
-    pub id: i32,
+    pub id: ThresholdId,
     pub statistic: MetricsStatistic,
 }
 
@@ -57,7 +60,7 @@ impl MetricsThreshold {
                 schema::statistic::upper_boundary,
             ))
             .first::<(
-                i32,
+                ThresholdId,
                 i32,
                 i32,
                 Option<i64>,

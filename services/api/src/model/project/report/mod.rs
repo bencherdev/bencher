@@ -22,7 +22,7 @@ use super::{
     metric_kind::{MetricKindId, QueryMetricKind},
     perf::PerfId,
     testbed::{QueryTestbed, TestbedId},
-    threshold::{alert::QueryAlert, boundary::QueryBoundary, QueryThreshold},
+    threshold::{alert::QueryAlert, boundary::QueryBoundary, QueryThreshold, ThresholdId},
     version::VersionId,
     ProjectId, QueryProject,
 };
@@ -213,7 +213,7 @@ fn get_metric_kinds(
 }
 
 struct ThresholdStatistic {
-    threshold_id: i32,
+    threshold_id: ThresholdId,
     statistic_id: i32,
 }
 

@@ -14,11 +14,13 @@ use crate::{
     ApiError,
 };
 
+use super::ThresholdId;
+
 #[derive(Queryable)]
 pub struct QueryBoundary {
     pub id: i32,
     pub uuid: String,
-    pub threshold_id: i32,
+    pub threshold_id: ThresholdId,
     pub statistic_id: i32,
     pub metric_id: MetricId,
     pub lower_limit: Option<f64>,
@@ -64,7 +66,7 @@ impl QueryBoundary {
 #[diesel(table_name = boundary_table)]
 pub struct InsertBoundary {
     pub uuid: String,
-    pub threshold_id: i32,
+    pub threshold_id: ThresholdId,
     pub statistic_id: i32,
     pub metric_id: MetricId,
     pub lower_limit: Option<f64>,
