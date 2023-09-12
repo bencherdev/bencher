@@ -5,7 +5,7 @@ use chrono::Utc;
 use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
-use self::statistic::{InsertStatistic, QueryStatistic};
+use self::statistic::{InsertStatistic, QueryStatistic, StatisticId};
 use super::{
     branch::{BranchId, QueryBranch},
     metric_kind::{MetricKindId, QueryMetricKind},
@@ -38,7 +38,7 @@ pub struct QueryThreshold {
     pub metric_kind_id: MetricKindId,
     pub branch_id: BranchId,
     pub testbed_id: TestbedId,
-    pub statistic_id: Option<i32>,
+    pub statistic_id: Option<StatisticId>,
     pub created: i64,
     pub modified: i64,
 }
@@ -59,7 +59,7 @@ impl QueryThreshold {
     pub fn get_with_statistic(
         conn: &mut DbConnection,
         threshold_id: ThresholdId,
-        statistic_id: i32,
+        statistic_id: StatisticId,
     ) -> Result<Self, ApiError> {
         let mut threshold = Self::get(conn, threshold_id)?;
         // IMPORTANT: Set the statistic ID to the one specified and not the current value!
@@ -70,7 +70,7 @@ impl QueryThreshold {
     pub fn get_json(
         conn: &mut DbConnection,
         threshold_id: ThresholdId,
-        statistic_id: i32,
+        statistic_id: StatisticId,
     ) -> Result<JsonThreshold, ApiError> {
         Self::get_with_statistic(conn, threshold_id, statistic_id)?.into_json(conn)
     }
@@ -78,7 +78,7 @@ impl QueryThreshold {
     pub fn get_threshold_statistic_json(
         conn: &mut DbConnection,
         threshold_id: ThresholdId,
-        statistic_id: i32,
+        statistic_id: StatisticId,
     ) -> Result<JsonThresholdStatistic, ApiError> {
         Self::get_with_statistic(conn, threshold_id, statistic_id)?
             .into_threshold_statistic_json(conn)
@@ -144,7 +144,7 @@ pub struct InsertThreshold {
     pub metric_kind_id: MetricKindId,
     pub branch_id: BranchId,
     pub testbed_id: TestbedId,
-    pub statistic_id: Option<i32>,
+    pub statistic_id: Option<StatisticId>,
     pub created: i64,
     pub modified: i64,
 }
@@ -245,7 +245,7 @@ impl InsertThreshold {
 #[derive(Debug, Clone, AsChangeset)]
 #[diesel(table_name = threshold_table)]
 pub struct UpdateThreshold {
-    pub statistic_id: i32,
+    pub statistic_id: StatisticId,
     pub modified: i64,
 }
 

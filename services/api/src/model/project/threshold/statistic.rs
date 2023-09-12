@@ -23,9 +23,11 @@ use crate::{
 
 use super::{QueryThreshold, ThresholdId};
 
+crate::util::typed_id::typed_id!(StatisticId);
+
 #[derive(Queryable, Debug, Clone)]
 pub struct QueryStatistic {
-    pub id: i32,
+    pub id: StatisticId,
     pub uuid: String,
     pub threshold_id: ThresholdId,
     pub test: i32,
@@ -39,9 +41,9 @@ pub struct QueryStatistic {
 
 impl QueryStatistic {
     fn_get!(statistic);
-    fn_get_id!(statistic);
+    fn_get_id!(statistic, StatisticId);
 
-    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: StatisticId) -> Result<Uuid, ApiError> {
         let uuid: String = schema::statistic::table
             .filter(schema::statistic::id.eq(id))
             .select(schema::statistic::uuid)

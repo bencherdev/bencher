@@ -8,7 +8,7 @@ use crate::{
         metric_kind::MetricKindId,
         testbed::TestbedId,
         threshold::{
-            statistic::{map_boundary, StatisticKind},
+            statistic::{map_boundary, StatisticId, StatisticKind},
             ThresholdId,
         },
     },
@@ -24,7 +24,7 @@ pub struct MetricsThreshold {
 
 #[derive(Debug, Clone)]
 pub struct MetricsStatistic {
-    pub id: i32,
+    pub id: StatisticId,
     pub test: StatisticKind,
     pub min_sample_size: Option<u32>,
     pub max_sample_size: Option<u32>,
@@ -61,7 +61,7 @@ impl MetricsThreshold {
             ))
             .first::<(
                 ThresholdId,
-                i32,
+                StatisticId,
                 i32,
                 Option<i64>,
                 Option<i64>,
