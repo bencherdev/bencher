@@ -25,9 +25,11 @@ use crate::{
     ApiError,
 };
 
+crate::util::typed_id::typed_id!(AlertId);
+
 #[derive(Queryable)]
 pub struct QueryAlert {
-    pub id: i32,
+    pub id: AlertId,
     pub uuid: String,
     pub boundary_id: BoundaryId,
     pub boundary_limit: bool,
@@ -37,9 +39,9 @@ pub struct QueryAlert {
 
 impl QueryAlert {
     fn_get!(alert);
-    fn_get_id!(alert);
+    fn_get_id!(alert, AlertId);
 
-    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: AlertId) -> Result<Uuid, ApiError> {
         let uuid: String = schema::alert::table
             .filter(schema::alert::id.eq(id))
             .select(schema::alert::uuid)
