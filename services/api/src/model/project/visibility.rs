@@ -6,6 +6,8 @@ const PUBLIC_INT: i32 = 0;
 #[cfg(feature = "plus")]
 const PRIVATE_INT: i32 = 1;
 
+#[derive(Debug, Clone, Copy, FromSqlRow, AsExpression)]
+#[diesel(sql_type = diesel::sql_types::Integer)]
 #[repr(i32)]
 pub enum Visibility {
     Public = PUBLIC_INT,
@@ -113,5 +115,31 @@ pub mod project_visibility {
         } else {
             Err(ApiError::NoPlanOrganization(organization.clone()))
         }
+    }
+}
+
+impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for Visibility
+where
+    DB: diesel::backend::Backend,
+    i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>,
+{
+    fn to_sql<'b>(
+        &'b self,
+        out: &mut diesel::serialize::Output<'b, '_, DB>,
+    ) -> diesel::serialize::Result {
+        match self {
+            Self::Public => PUBLIC_INT.to_sql(out),
+            Self::Private => PRIVATE_INT.to_sql(out),
+        }
+    }
+}
+
+impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for Visibility
+where
+    DB: diesel::backend::Backend,
+    i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
+{
+    fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+        Ok(Self::try_from(i32::from_sql(bytes)?)?)
     }
 }

@@ -52,7 +52,7 @@ pub struct InsertProject {
     pub name: String,
     pub slug: String,
     pub url: Option<String>,
-    pub visibility: i32,
+    pub visibility: Visibility,
     pub created: i64,
     pub modified: i64,
 }
@@ -77,7 +77,7 @@ impl InsertProject {
             name: name.into(),
             slug,
             url: url.map(|u| u.to_string()),
-            visibility: Visibility::from(visibility.unwrap_or_default()) as i32,
+            visibility: Visibility::from(visibility.unwrap_or_default()),
             created: timestamp,
             modified: timestamp,
         })
@@ -94,17 +94,13 @@ pub struct QueryProject {
     pub name: String,
     pub slug: String,
     pub url: Option<String>,
-    pub visibility: i32,
+    pub visibility: Visibility,
     pub created: i64,
     pub modified: i64,
 }
 
 impl QueryProject {
     fn_get!(project);
-
-    pub fn visibility(&self) -> Result<Visibility, ApiError> {
-        Visibility::try_from(self.visibility)
-    }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonProject, ApiError> {
         let Self {
@@ -124,7 +120,7 @@ impl QueryProject {
             name: NonEmpty::from_str(&name)?,
             slug: Slug::from_str(&slug).map_err(api_error!())?,
             url: ok_url(url.as_deref())?,
-            visibility: Visibility::try_from(visibility)?.into(),
+            visibility: visibility.into(),
             created: to_date_time(created).map_err(api_error!())?,
             modified: to_date_time(modified).map_err(api_error!())?,
         })
@@ -246,7 +242,7 @@ impl QueryProject {
 
         // Check to see if the project is public
         // If so, anyone can access it
-        if project.visibility()?.is_public() {
+        if project.visibility.is_public() {
             Ok(project)
         } else if let Some(auth_user) = auth_user {
             // If there is an `AuthUser` then validate access
