@@ -16,9 +16,11 @@ use crate::{
 
 use super::{statistic::StatisticId, ThresholdId};
 
+crate::util::typed_id::typed_id!(BoundaryId);
+
 #[derive(Queryable)]
 pub struct QueryBoundary {
-    pub id: i32,
+    pub id: BoundaryId,
     pub uuid: String,
     pub threshold_id: ThresholdId,
     pub statistic_id: StatisticId,
@@ -29,9 +31,9 @@ pub struct QueryBoundary {
 
 impl QueryBoundary {
     fn_get!(boundary);
-    fn_get_id!(boundary);
+    fn_get_id!(boundary, BoundaryId);
 
-    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: BoundaryId) -> Result<Uuid, ApiError> {
         let uuid: String = schema::alert::table
             .filter(schema::alert::id.eq(id))
             .select(schema::alert::uuid)

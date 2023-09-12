@@ -8,7 +8,10 @@ use chrono::Utc;
 use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
-use super::{boundary::QueryBoundary, QueryThreshold};
+use super::{
+    boundary::{BoundaryId, QueryBoundary},
+    QueryThreshold,
+};
 use crate::{
     context::DbConnection,
     error::api_error,
@@ -26,7 +29,7 @@ use crate::{
 pub struct QueryAlert {
     pub id: i32,
     pub uuid: String,
-    pub boundary_id: i32,
+    pub boundary_id: BoundaryId,
     pub boundary_limit: bool,
     pub status: i32,
     pub modified: i64,
@@ -47,7 +50,7 @@ impl QueryAlert {
 
     pub fn get_perf_json(
         conn: &mut DbConnection,
-        boundary_id: i32,
+        boundary_id: BoundaryId,
     ) -> Result<JsonPerfAlert, ApiError> {
         let query_alert = schema::alert::table
             .filter(schema::alert::boundary_id.eq(boundary_id))
@@ -220,7 +223,7 @@ impl From<JsonAlertStatus> for Status {
 #[diesel(table_name = alert_table)]
 pub struct InsertAlert {
     pub uuid: String,
-    pub boundary_id: i32,
+    pub boundary_id: BoundaryId,
     pub boundary_limit: bool,
     pub status: i32,
     pub modified: i64,
