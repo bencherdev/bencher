@@ -59,6 +59,20 @@ jobs:
     1. Run your benchmarks and generate a Report from the results. (ex: `"bencher mock"`)
 
 <br/>
+
+> 🐰 In order to run a GitHub Action job safely for a fork PR (that is from an external contributor),
+> you will need to trigger [on the `pull_request_target` event](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target) and then checkout the PR branch.
+> ```
+> - uses: actions/checkout@v3
+>      with:
+>        ref: ${{ github.event.pull_request.head.sha }}
+> ```
+> See this [GitHub Security Lab write up](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
+> on preventing pwn requests for a full overview.
+> Avoid using any sensitive environment variables like `BENCHER_API_TOKEN`.
+> Instead explicitly pass in the API token to `bencher run` like so `--token ${{ secrets.BENCHER_API_TOKEN }}`.
+
+<br/>
 <br/>
 
 > 🐰 Congrats! You have learned how to use Bencher in GitHub Actions! 🎉

@@ -1,4 +1,4 @@
-import { BENCHER_GITHUB_URL } from "../../util/ext";
+import { BENCHER_GITHUB_URL, BENCHER_CHAT_URL } from "../../util/ext";
 
 const Footer = () => (
 	<footer class="footer" style="margin-top:1rem;">
@@ -30,7 +30,7 @@ const Footer = () => (
 						<p>Bencher - Continuous Benchmarking</p>
 					</div>
 				</div>
-				<div class="column">
+				<div class="column is-narrow">
 					<nav class="level is-mobile">
 						<div class="level-item has-text-centered">
 							<a
@@ -42,6 +42,19 @@ const Footer = () => (
 							>
 								<span class="icon has-text-primary">
 									<i class="fab fa-github fa-2x" aria-hidden="true" />
+								</span>
+							</a>
+						</div>
+						<div class="level-item has-text-centered">
+							<a
+								class="navbar-item"
+								href={BENCHER_CHAT_URL}
+								target="_blank"
+								aria-label="Discord"
+								rel="noreferrer"
+							>
+								<span class="icon has-text-primary">
+									<i class="fab fa-discord fa-2x" aria-hidden="true" />
 								</span>
 							</a>
 						</div>

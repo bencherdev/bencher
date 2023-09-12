@@ -101,7 +101,8 @@ impl GitHubActions {
 
         // The name of the event that triggered the workflow. For example, `workflow_dispatch`.
         match std::env::var("GITHUB_EVENT_NAME").ok() {
-            Some(event_name) if event_name == "pull_request" || event_name == "pull_request_target" => {},
+            Some(event_name)
+                if event_name == "pull_request" || event_name == "pull_request_target" => {},
             _ => {
                 cli_println!(
                     "Not running as a GitHub Action pull request. Skipping CI integration."

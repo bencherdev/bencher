@@ -35,6 +35,24 @@ env:
   GOOGLE_ANALYTICS_ID: G-9Q5Q2QS45K
 
 jobs:
+  first_time_interaction:
+    name: Bencher First Time Interaction
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/first-interaction@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          issue-message: |-
+            🐰 Congratulations on your first issue! 🎉
+            If you haven't already, hop on over to our [Discord server](https://discord.gg/yGEsdUh7R4).
+            <br />
+            <p align="center"><a href="https://discord.gg/yGEsdUh7R4"><img src="https://s3.amazonaws.com/public.bencher.dev/discord_invite.png" alt="Bencher Discord Server" /></a></p>
+          pr-message: |-
+            🐰 Congratulations on your first PR! 🎉
+            If you haven't already, hop on over to our [Discord server](https://discord.gg/yGEsdUh7R4).
+            <br />
+            <p align="center"><a href="https://discord.gg/yGEsdUh7R4"><img src="https://s3.amazonaws.com/public.bencher.dev/discord_invite.png" alt="Bencher Discord Server" /></a></p>
+
   bencher_github_action:
     name: Bencher CLI GitHub Action
     runs-on: ubuntu-latest
