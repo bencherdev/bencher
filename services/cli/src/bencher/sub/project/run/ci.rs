@@ -39,6 +39,7 @@ impl TryFrom<CliRunCi> for Option<Ci> {
             ci_only_thresholds,
             ci_only_on_alert,
             ci_id,
+            ci_number,
             github_actions,
         } = ci;
         Ok(github_actions.map(|github_actions| {
@@ -46,6 +47,7 @@ impl TryFrom<CliRunCi> for Option<Ci> {
                 ci_only_thresholds,
                 ci_only_on_alert,
                 ci_id,
+                ci_number,
                 github_actions,
             ))
         }))
@@ -65,6 +67,7 @@ pub struct GitHubActions {
     ci_only_thresholds: bool,
     ci_only_on_alert: bool,
     ci_id: Option<NonEmpty>,
+    ci_number: Option<u64>,
     token: String,
 }
 
@@ -73,12 +76,14 @@ impl GitHubActions {
         ci_only_thresholds: bool,
         ci_only_on_alert: bool,
         ci_id: Option<NonEmpty>,
+        ci_number: Option<u64>,
         token: String,
     ) -> Self {
         Self {
             ci_only_thresholds,
             ci_only_on_alert,
             ci_id,
+            ci_number,
             token,
         }
     }
@@ -100,16 +105,16 @@ impl GitHubActions {
         }
 
         // The name of the event that triggered the workflow. For example, `workflow_dispatch`.
-        match std::env::var("GITHUB_EVENT_NAME").ok() {
-            Some(event_name)
-                if event_name == "pull_request" || event_name == "pull_request_target" => {},
+        let as_other_branch = match std::env::var("GITHUB_EVENT_NAME").ok().as_deref() {
+            Some("pull_request") => false,
+            Some("pull_request_target" | "workflow_run") => true,
             _ => {
                 cli_println!(
-                    "Not running as a GitHub Action pull request. Skipping CI integration."
+                    "Not running as a GitHub Action pull request or as another branch. Skipping CI integration."
                 );
                 return Ok(());
             },
-        }
+        };
 
         // The owner and repository name. For example, octocat/Hello-World.
         let (owner, repo) = match std::env::var("GITHUB_REPOSITORY").ok() {
@@ -117,35 +122,44 @@ impl GitHubActions {
                 if let Some((owner, repo)) = repository.split_once('/') {
                     (owner.to_owned(), repo.to_owned())
                 } else {
-                    cli_eprintln!("GitHub Action running on a pull request but repository is not in the form `owner/repo` ({repository}). Skipping CI integration.");
+                    cli_eprintln!("Repository is not in the form `owner/repo` ({repository}). Skipping CI integration.");
                     return Err(CiError::GitHubRepository(repository));
                 }
             },
             _ => {
-                cli_eprintln!("GitHub Action running on a pull request but failed to get repository. Skipping CI integration.");
+                cli_eprintln!("Failed to get repository. Skipping CI integration.");
                 return Err(CiError::NoGithubRepository);
             },
         };
 
-        // For workflows triggered by `pull_request`, this is the pull request merge branch.
-        // for pull requests it is `refs/pull/<pr_number>/merge`
-        let issue_number = match std::env::var("GITHUB_REF").ok() {
-            Some(github_ref) => {
-                if let Some(issue_number) = github_ref
-                    .strip_prefix("refs/pull/")
-                    .and_then(|r| r.strip_suffix("/merge"))
-                    .and_then(|r| r.parse::<u64>().ok())
-                {
-                    issue_number
-                } else {
-                    cli_eprintln!("GitHub Action running on a pull request but ref is not a pull request ref ({github_ref}). Skipping CI integration.");
-                    return Err(CiError::GitHubRef(github_ref));
-                }
-            },
-            None => {
-                cli_eprintln!("GitHub Action running on a pull request but failed to get ref. Skipping CI integration.");
-                return Err(CiError::NoGitHubRef);
-            },
+        let issue_number = if let Some(number) = self.ci_number {
+            number
+        } else {
+            if as_other_branch {
+                cli_println!("GitHub Action running on a non-pull request branch but no issue number was provided. Skipping CI integration.");
+                return Ok(());
+            }
+
+            // For workflows triggered by `pull_request`, this is the pull request merge branch.
+            // for pull requests it is `refs/pull/<pr_number>/merge`
+            match std::env::var("GITHUB_REF").ok() {
+                Some(github_ref) => {
+                    if let Some(issue_number) = github_ref
+                        .strip_prefix("refs/pull/")
+                        .and_then(|r| r.strip_suffix("/merge"))
+                        .and_then(|r| r.parse::<u64>().ok())
+                    {
+                        issue_number
+                    } else {
+                        cli_eprintln!("GitHub Action running on a pull request but ref is not a pull request ref ({github_ref}). Skipping CI integration.");
+                        return Err(CiError::GitHubRef(github_ref));
+                    }
+                },
+                None => {
+                    cli_eprintln!("GitHub Action running on a pull request but failed to get ref. Skipping CI integration.");
+                    return Err(CiError::NoGitHubRef);
+                },
+            }
         };
 
         let github_client = Octocrab::builder()

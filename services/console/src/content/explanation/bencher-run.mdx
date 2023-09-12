@@ -172,9 +172,20 @@ Requires: `--github-actions`
 
 <br />
 
-Optional: Custom ID for for posting results to CI.
+Optional: Custom ID for posting results to CI.
 By default, Bencher will automatically segment out results by the combination of: Project, Branch, Testbed, and [Adapter](/docs/explanation/adapters).
 Setting a custom ID is useful when Bencher is being run multiple times in the same CI workflow for the same Project, Branch, Testbed, and Adapter combination.
+Requires: `--github-actions`
+
+<br/>
+
+### `--ci-number`
+
+<br />
+
+Optional: Issue number for posting results to CI.
+Bencher will try its best to detect the CI issue number needed to post results.
+However, this isn't always available in complex setups, like using `pull_request_target` or `workflow_run` in GitHub Actions.
 Requires: `--github-actions`
 
 <br />

@@ -60,17 +60,31 @@ jobs:
 
 <br/>
 
-> 🐰 In order to run a GitHub Action job safely for a fork PR (that is from an external contributor),
-> you will need to trigger [on the `pull_request_target` event](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target) and then checkout the PR branch.
-> ```
-> - uses: actions/checkout@v3
->      with:
->        ref: ${{ github.event.pull_request.head.sha }}
-> ```
-> See this [GitHub Security Lab write up](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
-> on preventing pwn requests for a full overview.
-> Avoid using any sensitive environment variables like `BENCHER_API_TOKEN`.
-> Instead explicitly pass in the API token to `bencher run` like so `--token ${{ secrets.BENCHER_API_TOKEN }}`.
+For security reasons, secrets and a read/write `GITHUB_TOKEN` are not available in GitHub Actions for fork PRs. That is if an external contributor opens up a PR the above job will not work. There are two options to work around this:
+
+Run your benchmarks in an on `pull_request` workflow.
+Save the benchmarks results to a file and upload them as an artifact.
+Then chain that workflow with [the `workflow_run` event](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run)
+and use `bencher run` to store your cached benchmark results for that PR.
+See [using data from the triggering workflow](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow) for a full overview.
+The `--ci-number` argument is also required into order to know the GitHub issue number for the triggering PR.
+`${{ github.event.workflow_run.pull_requests[0]?.number }}`
+
+
+Or trigger [on the `pull_request_target` event](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target),
+checkout the PR branch, and run your benchmarks using `bencher run`.
+
+```
+ - uses: actions/checkout@v3
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+```
+See this [GitHub Security Lab write up](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
+on preventing pwn requests for a full overview.
+Avoid using any sensitive environment variables like `BENCHER_API_TOKEN`.
+Instead explicitly pass in the API token to `bencher run` like so `--token ${{ secrets.BENCHER_API_TOKEN }}`.
+This is by far the riskier option!
+`${{ github.event.pull_request.number }}`
 
 <br/>
 <br/>
