@@ -30,12 +30,14 @@ pub mod detector;
 
 use detector::Detector;
 
+use super::ReportId;
+
 /// `ReportResults` is used to add benchmarks, perf, metric kinds, metrics, and alerts.
 pub struct ReportResults {
     pub project_id: ProjectId,
     pub branch_id: BranchId,
     pub testbed_id: TestbedId,
-    pub report_id: i32,
+    pub report_id: ReportId,
     pub metric_kind_cache: HashMap<MetricKind, MetricKindId>,
     pub detector_cache: HashMap<MetricKindId, Option<Detector>>,
 }
@@ -45,7 +47,7 @@ impl ReportResults {
         project_id: ProjectId,
         branch_id: BranchId,
         testbed_id: TestbedId,
-        report_id: i32,
+        report_id: ReportId,
     ) -> Self {
         Self {
             project_id,

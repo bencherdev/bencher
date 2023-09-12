@@ -45,9 +45,11 @@ use crate::{
 mod adapter;
 pub mod results;
 
+crate::util::typed_id::typed_id!(ReportId);
+
 #[derive(Queryable)]
 pub struct QueryReport {
-    pub id: i32,
+    pub id: ReportId,
     pub uuid: String,
     pub user_id: UserId,
     pub project_id: ProjectId,
@@ -61,9 +63,9 @@ pub struct QueryReport {
 }
 
 impl QueryReport {
-    fn_get_id!(report);
+    fn_get_id!(report, ReportId);
 
-    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: ReportId) -> Result<Uuid, ApiError> {
         let uuid: String = schema::report::table
             .filter(schema::report::id.eq(id))
             .select(schema::report::uuid)
@@ -106,7 +108,7 @@ impl QueryReport {
 fn get_results(
     log: &Logger,
     conn: &mut DbConnection,
-    report_id: i32,
+    report_id: ReportId,
 ) -> Result<JsonReportResults, ApiError> {
     let mut results = Vec::new();
 
@@ -168,7 +170,7 @@ fn get_results(
     Ok(results)
 }
 
-fn get_perfs(conn: &mut DbConnection, report_id: i32) -> Result<Vec<QueryPerf>, ApiError> {
+fn get_perfs(conn: &mut DbConnection, report_id: ReportId) -> Result<Vec<QueryPerf>, ApiError> {
     schema::perf::table
     .filter(schema::perf::report_id.eq(report_id))
     .inner_join(
@@ -312,7 +314,7 @@ fn get_iteration_results(
     Ok(iteration_results)
 }
 
-fn get_alerts(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportAlerts, ApiError> {
+fn get_alerts(conn: &mut DbConnection, report_id: ReportId) -> Result<JsonReportAlerts, ApiError> {
     Ok(schema::alert::table
         .left_join(schema::boundary::table.on(schema::alert::boundary_id.eq(schema::boundary::id)))
         .left_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))

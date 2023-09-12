@@ -13,7 +13,7 @@ use crate::{
     ApiError,
 };
 
-use super::benchmark::BenchmarkId;
+use super::{benchmark::BenchmarkId, report::ReportId};
 
 crate::util::typed_id::typed_id!(PerfId);
 
@@ -21,7 +21,7 @@ crate::util::typed_id::typed_id!(PerfId);
 pub struct QueryPerf {
     pub id: PerfId,
     pub uuid: String,
-    pub report_id: i32,
+    pub report_id: ReportId,
     pub iteration: i32,
     pub benchmark_id: BenchmarkId,
 }
@@ -44,14 +44,14 @@ impl QueryPerf {
 #[diesel(table_name = perf_table)]
 pub struct InsertPerf {
     pub uuid: String,
-    pub report_id: i32,
+    pub report_id: ReportId,
     pub iteration: i32,
     pub benchmark_id: BenchmarkId,
 }
 
 impl InsertPerf {
     #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-    pub fn from_json(report_id: i32, iteration: usize, benchmark_id: BenchmarkId) -> Self {
+    pub fn from_json(report_id: ReportId, iteration: usize, benchmark_id: BenchmarkId) -> Self {
         InsertPerf {
             uuid: Uuid::new_v4().to_string(),
             report_id,
