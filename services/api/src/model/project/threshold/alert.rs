@@ -32,7 +32,7 @@ pub struct QueryAlert {
     pub id: AlertId,
     pub uuid: String,
     pub boundary_id: BoundaryId,
-    pub boundary_limit: bool,
+    pub boundary_limit: Limit,
     pub status: Status,
     pub modified: i64,
 }
@@ -68,7 +68,7 @@ impl QueryAlert {
         } = query_alert;
         Ok(JsonPerfAlert {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
-            limit: Limit::from(boundary_limit).into(),
+            limit: boundary_limit.into(),
             status: status.into(),
             modified: to_date_time(modified)?,
         })
@@ -134,34 +134,28 @@ impl QueryAlert {
             iteration: u32::try_from(iteration).map_err(api_error!())?,
             threshold: QueryThreshold::get_json(conn, threshold_id, statistic_id)?,
             benchmark: QueryBenchmark::get_benchmark_metric_json(conn, metric_id)?,
-            limit: Limit::from(boundary_limit).into(),
+            limit: boundary_limit.into(),
             status: status.into(),
             modified: to_date_time(modified)?,
         })
     }
 }
 
-#[derive(Debug, PartialEq)]
+const LOWER_BOOL: bool = false;
+const UPPER_BOOL: bool = true;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, FromSqlRow, AsExpression)]
+#[diesel(sql_type = diesel::sql_types::Bool)]
 pub enum Limit {
-    Lower = 0,
-    Upper = 1,
+    Lower,
+    Upper,
 }
 
 impl From<bool> for Limit {
     fn from(limit: bool) -> Self {
-        if limit {
-            Self::Upper
-        } else {
-            Self::Lower
-        }
-    }
-}
-
-impl From<Limit> for bool {
-    fn from(limit: Limit) -> Self {
         match limit {
-            Limit::Lower => false,
-            Limit::Upper => true,
+            LOWER_BOOL => Self::Lower,
+            UPPER_BOOL => Self::Upper,
         }
     }
 }
@@ -172,6 +166,32 @@ impl From<Limit> for JsonLimit {
             Limit::Lower => Self::Lower,
             Limit::Upper => Self::Upper,
         }
+    }
+}
+
+impl<DB> diesel::serialize::ToSql<diesel::sql_types::Bool, DB> for Limit
+where
+    DB: diesel::backend::Backend,
+    bool: diesel::serialize::ToSql<diesel::sql_types::Bool, DB>,
+{
+    fn to_sql<'b>(
+        &'b self,
+        out: &mut diesel::serialize::Output<'b, '_, DB>,
+    ) -> diesel::serialize::Result {
+        match self {
+            Self::Lower => LOWER_BOOL.to_sql(out),
+            Self::Upper => UPPER_BOOL.to_sql(out),
+        }
+    }
+}
+
+impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Bool, DB> for Limit
+where
+    DB: diesel::backend::Backend,
+    bool: diesel::deserialize::FromSql<diesel::sql_types::Bool, DB>,
+{
+    fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+        Ok(Self::from(bool::from_sql(bytes)?))
     }
 }
 
@@ -248,7 +268,7 @@ where
 pub struct InsertAlert {
     pub uuid: String,
     pub boundary_id: BoundaryId,
-    pub boundary_limit: bool,
+    pub boundary_limit: Limit,
     pub status: Status,
     pub modified: i64,
 }
@@ -257,12 +277,12 @@ impl InsertAlert {
     pub fn from_boundary(
         conn: &mut DbConnection,
         boundary: Uuid,
-        limit: Limit,
+        boundary_limit: Limit,
     ) -> Result<(), ApiError> {
         let insert_alert = InsertAlert {
             uuid: Uuid::new_v4().to_string(),
             boundary_id: QueryBoundary::get_id(conn, &boundary)?,
-            boundary_limit: limit.into(),
+            boundary_limit,
             status: Status::default(),
             modified: Utc::now().timestamp(),
         };
