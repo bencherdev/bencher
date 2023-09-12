@@ -26,6 +26,8 @@ const PYTHON_PYTEST_INT: i32 = 82;
 const RUBY_INT: i32 = 90;
 const RUBY_BENCHMARK_INT: i32 = 91;
 
+#[derive(Debug, Clone, Copy, FromSqlRow, AsExpression)]
+#[diesel(sql_type = diesel::sql_types::Integer)]
 #[repr(i32)]
 pub enum Adapter {
     Magic = MAGIC_INT,
@@ -143,5 +145,52 @@ impl From<Adapter> for JsonAdapter {
             Adapter::Ruby => Self::Ruby,
             Adapter::RubyBenchmark => Self::RubyBenchmark,
         }
+    }
+}
+
+impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for Adapter
+where
+    DB: diesel::backend::Backend,
+    i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>,
+{
+    fn to_sql<'b>(
+        &'b self,
+        out: &mut diesel::serialize::Output<'b, '_, DB>,
+    ) -> diesel::serialize::Result {
+        match self {
+            Self::Magic => MAGIC_INT.to_sql(out),
+            Self::Json => JSON_INT.to_sql(out),
+            Self::Rust => RUST_INT.to_sql(out),
+            Self::RustBench => RUST_BENCH_INT.to_sql(out),
+            Self::RustCriterion => RUST_CRITERION_INT.to_sql(out),
+            Self::RustIai => RUST_IAI_INT.to_sql(out),
+            Self::Cpp => CPP_INT.to_sql(out),
+            Self::CppGoogle => CPP_GOOGLE_INT.to_sql(out),
+            Self::CppCatch2 => CPP_CATCH2_INT.to_sql(out),
+            Self::Go => GO_INT.to_sql(out),
+            Self::GoBench => GO_BENCH_INT.to_sql(out),
+            Self::Java => JAVA_INT.to_sql(out),
+            Self::JavaJmh => JAVA_JMH_INT.to_sql(out),
+            Self::CSharp => C_SHARP_INT.to_sql(out),
+            Self::CSharpDotNet => C_SHARP_DOT_NET_INT.to_sql(out),
+            Self::Js => JS_INT.to_sql(out),
+            Self::JsBenchmark => JS_BENCHMARK_INT.to_sql(out),
+            Self::JsTime => JS_TIME_INT.to_sql(out),
+            Self::Python => PYTHON_INT.to_sql(out),
+            Self::PythonAsv => PYTHON_ASV_INT.to_sql(out),
+            Self::PythonPytest => PYTHON_PYTEST_INT.to_sql(out),
+            Self::Ruby => RUBY_INT.to_sql(out),
+            Self::RubyBenchmark => RUBY_BENCHMARK_INT.to_sql(out),
+        }
+    }
+}
+
+impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for Adapter
+where
+    DB: diesel::backend::Backend,
+    i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
+{
+    fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+        Ok(Self::try_from(i32::from_sql(bytes)?)?)
     }
 }
