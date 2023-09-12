@@ -327,7 +327,7 @@ async fn get_stats_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     let active = schema::alert::table
-        .filter(schema::alert::status.eq(i32::from(Status::Active)))
+        .filter(schema::alert::status.eq(Status::Active))
         .left_join(schema::boundary::table.on(schema::alert::boundary_id.eq(schema::boundary::id)))
         .left_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
         .left_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
