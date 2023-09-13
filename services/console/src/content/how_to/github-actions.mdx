@@ -4,11 +4,8 @@ heading: "How to use Bencher in GitHub Actions"
 sortOrder: 3
 ---
 
-import { BENCHER_VERSION } from "../../util/ext";
-
-<pre>
-  <code>
-    {`on:
+```
+on:
   push:
     branches: main
   pull_request:
@@ -24,7 +21,7 @@ jobs:
       BENCHER_TESTBED: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: bencherdev/bencher@v${BENCHER_VERSION}
+      - uses: bencherdev/bencher@main
       - name: Benchmark with Bencher
         run: |
           bencher run \\
@@ -33,9 +30,8 @@ jobs:
           --else-if-branch main \\
           --err \\
           --github-actions \${{ secrets.GITHUB_TOKEN }} \\
-          "bencher mock"`}
-  </code>
-</pre>
+          "bencher mock"
+```
 
 1. Create a GitHub Actions `workflow` (ex: `.github/workflows/benchmark.yml`).
 1. Specify events the workflow should run `on`. See the [GitHub Actions `on` documentation](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on) for a full overview.
@@ -48,7 +44,7 @@ jobs:
 1. Optional: Set the `--adapter` flag or the `BENCHER_ADAPTER` environment variable to the desired adapter name. If this is not set, then the `magic` Adapter will be used. See [benchmark harness adapters](/docs/explanation/adapters) for a full overview. (ex: `BENCHER_ADAPTER: json`)
 1. Optional: Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the Testbed slug or UUID. The Testbed **must** already exist. If this is not set, then the `localhost` Testbed will be used. (ex: `BENCHER_TESTBED: ubuntu-latest`)
 1. Checkout your source code. (ex: `uses: actions/checkout@v3`)
-1. Install the Bencher CLI using the [GitHub Action](https://github.com/marketplace/actions/bencher-cli). (ex: <code>{`uses: bencherdev/bencher@v${BENCHER_VERSION}`}</code>)
+1. Install the Bencher CLI using the [GitHub Action](https://github.com/marketplace/actions/bencher-cli). (ex: `uses: bencherdev/bencher@main`)
 1. [Track your benchmarks](/docs/how-to/track-benchmarks) with the <code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI subcommand:
     1. There are several options for setting the project branch. See [branch selection](/docs/how-to/branch-selection) for a full overview. The provided command uses [GitHub Action default environment variables](https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables) and it tries to:
         1. Use the current branch data if it already exists. (ex: `--if-branch "$GITHUB_REF_NAME"`)
@@ -60,31 +56,138 @@ jobs:
 
 <br/>
 
-For security reasons, secrets and a read/write `GITHUB_TOKEN` are not available in GitHub Actions for fork PRs. That is if an external contributor opens up a PR the above job will not work. There are two options to work around this:
+## Fork Pull Requests
 
-Run your benchmarks in an on `pull_request` workflow.
-Save the benchmarks results to a file and upload them as an artifact.
-Then chain that workflow with [the `workflow_run` event](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run)
-and use `bencher run` to store your cached benchmark results for that PR.
+For security reasons, secrets such as your `BENCHER_API_TOKEN` and the `GITHUB_TOKEN` are not available in GitHub Actions for fork PRs.
+That is if an external contributor opens up a PR the above job will not work. There are two options to work around this.
+
+### Cache PR Benchmark Results
+
+The first and preferred option is to cache your PR benchmark results and then use a separate workflow to upload them to Bencher.
+
+1. Run your benchmarks in an on `pull_request` workflow.
+1. Save the benchmarks results to a file and upload them as an artifact.
+1. Chain that workflow with [the `workflow_run` event](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run).
+1. Track the PR benchmark results with `bencher run`.
+
+This works because `workflow_run` runs in the context of the repository's default branch,
+where secrets such as your `BENCHER_API_TOKEN` and the `GITHUB_TOKEN` are available.
+Therefore, this will only run if the workflow files are on the default branch.
 See [using data from the triggering workflow](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow) for a full overview.
-The `--ci-number` argument is also required into order to know the GitHub issue number for the triggering PR.
-`${{ github.event.workflow_run.pull_requests[0]?.number }}`
-
-
-Or trigger [on the `pull_request_target` event](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target),
-checkout the PR branch, and run your benchmarks using `bencher run`.
 
 ```
- - uses: actions/checkout@v3
-      with:
-        ref: ${{ github.event.pull_request.head.sha }}
+name: Run and Cache Benchmarks
+
+on: pull_request
+
+jobs:
+  benchmark:
+    name: Run Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Simple Benchmark
+        run: echo '{"my_benchmark": { "latency": { "value": 1.0 }}}' &> benchmark_results.txt
+      - uses: actions/upload-artifact@v3
+        with:
+          name: benchmark_results.txt
+          path: ./benchmark_results.txt
 ```
+
+```
+name: Track Benchmarks with Bencher
+
+on:
+  workflow_run:
+    workflows: [Run and Cache Benchmarks]
+    types:
+      - completed
+
+jobs:
+  track_with_bencher:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      BENCHER_PROJECT: benchmark-fork-prs
+      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+      BENCHER_ADAPTER: json
+    steps:
+      - name: Download Benchmark Results
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               run_id: context.payload.workflow_run.id,
+            });
+            let matchArtifact = allArtifacts.data.artifacts.filter((artifact) => {
+              return artifact.name == "benchmark_results"
+            })[0];
+            let download = await github.rest.actions.downloadArtifact({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               artifact_id: matchArtifact.id,
+               archive_format: 'zip',
+            });
+            let fs = require('fs');
+            fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/benchmark_results.zip`, Buffer.from(download.data));
+      - name: Unzip Benchmark Results
+        run: unzip benchmark_results.zip
+      - uses: bencherdev/bencher@main
+          - name: Benchmark with Bencher
+            run: |
+              cat benchmark_results.txt | bencher run \\
+              --if-branch "${{ github.event.pull_request.head.ref }}" \\
+              --else-if-branch "${{ github.event.pull_request.base.ref }}" \\
+              --else-if-branch main \\
+              --err \\
+              --github-actions \${{ secrets.GITHUB_TOKEN }}
+```
+
+## Benchmark PR Branch from Target Branch
+
+The second option is simpler, but it is much more of a security risk!
+
+1. Trigger [on the `pull_request_target` event](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target).
+1. Checkout the PR branch.
+1. Run and track your benchmarks using `bencher run` directly.
+
 See this [GitHub Security Lab write up](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
+and [this blog post](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
 on preventing pwn requests for a full overview.
 Avoid using any sensitive environment variables like `BENCHER_API_TOKEN`.
 Instead explicitly pass in the API token to `bencher run` like so `--token ${{ secrets.BENCHER_API_TOKEN }}`.
-This is by far the riskier option!
-`${{ github.event.pull_request.number }}`
+Again, this is by far the riskier option!
+
+```
+name: Benchmark with Bencher and Play with Fire 🔥
+
+on: pull_request_target
+
+jobs:
+  benchmark_with_bencher:
+    name: Track benchmarks with Bencher
+    runs-on: ubuntu-latest
+    env:
+      BENCHER_PROJECT: benchmark-fork-prs
+      BENCHER_ADAPTER: json
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: bencherdev/bencher@main
+      - name: Benchmark with Bencher
+        run: |
+          bencher run \\
+          --if-branch "${{ github.event.pull_request.head.ref }}" \\
+          --else-if-branch "${{ github.event.pull_request.base.ref }}" \\
+          --else-if-branch main \\
+          --err \\
+          --github-actions \${{ secrets.GITHUB_TOKEN }} \\
+          --token ${{ secrets.BENCHER_API_TOKEN }} \\
+          "bencher mock"
+```
 
 <br/>
 <br/>

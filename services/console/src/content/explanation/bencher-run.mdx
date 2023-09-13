@@ -179,17 +179,6 @@ Requires: `--github-actions`
 
 <br/>
 
-### `--ci-number`
-
-<br />
-
-Optional: Issue number for posting results to CI.
-Bencher will try its best to detect the CI issue number needed to post results.
-However, this isn't always available in complex setups, like using `pull_request_target` or `workflow_run` in GitHub Actions.
-Requires: `--github-actions`
-
-<br />
-
 ### `--github-actions`
 
 <br />
@@ -199,11 +188,10 @@ When this option is set and `bencher run` is used in GitHub Actions as a part of
 then the results will be added to the pull request as a comment.
 The most convenient way to do this is the [GitHub Actions `GITHUB_TOKEN` environment variable](https://docs.github.com/en/actions/security-guides/automatic-token-authentication).
 
-> 🐰 If you are running inside of a Docker container within GitHub Action, you will need to pass in the following environment variables:
+> 🐰 If you are running inside of a Docker container within GitHub Action, you will need to pass in the following environment variables and mount the path specified by `GITHUB_EVENT_PATH`:
 > - `GITHUB_ACTIONS`
 > - `GITHUB_EVENT_NAME`
-> - `GITHUB_REPOSITORY`
-> - `GITHUB_REF`
+> - `GITHUB_EVENT_PATH`
 
 <br />
 

@@ -4,7 +4,7 @@ use octocrab::{models::CommentId, Octocrab};
 use crate::parser::project::run::CliRunCi;
 
 use super::urls::ReportUrls;
-use crate::{cli_eprintln, cli_println};
+use crate::cli_println;
 
 #[derive(Debug)]
 pub enum Ci {
@@ -13,22 +13,34 @@ pub enum Ci {
 
 #[derive(thiserror::Error, Debug)]
 pub enum CiError {
-    #[error("GitHub Action repository is not valid: {0}")]
-    GitHubRepository(String),
-    #[error("GitHub Action repository not found for pull request")]
-    NoGithubRepository,
-    #[error("GitHub Action ref is not for a pull request: {0}")]
-    GitHubRef(String),
-    #[error("GitHub Action ref not found for pull request")]
-    NoGitHubRef,
+    #[error("{0}")]
+    GitHub(#[from] GitHubError),
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum GitHubError {
+    #[error("Failed to get GitHub Action event path")]
+    NoEventPath,
+    #[error("Failed to read GitHub Action event path ({0}): {1}")]
+    BadEventPath(String, std::io::Error),
+    #[error("Failed to parse GitHub Action event ({0}): {1}")]
+    BadEvent(String, serde_json::Error),
+    #[error("GitHub Action running on event ({0}) but event type is {1:?}")]
+    BadEventType(String, octocrab::models::events::EventType),
+    #[error("GitHub Action event ({0}) missing payload")]
+    NoEventPayload(String),
+    #[error("GitHub Action event ({0}) has the wrong payload")]
+    BadEventPayload(String),
+    #[error("GitHub repository is not in the form `owner/repo` ({0})")]
+    Repository(String),
     #[error("Failed to authenticate as GitHub Action: {0}")]
-    GitHubAuth(octocrab::Error),
+    Auth(octocrab::Error),
     #[error("Failed to list GitHub PR comments: {0}")]
-    GitHubComments(octocrab::Error),
+    Comments(octocrab::Error),
     #[error("Failed to create GitHub PR comment: {0}")]
-    GitHubCreateComment(octocrab::Error),
+    CreateComment(octocrab::Error),
     #[error("Failed to update GitHub PR comment: {0}")]
-    GitHubUpdateComment(octocrab::Error),
+    UpdateComment(octocrab::Error),
 }
 
 impl TryFrom<CliRunCi> for Option<Ci> {
@@ -39,7 +51,6 @@ impl TryFrom<CliRunCi> for Option<Ci> {
             ci_only_thresholds,
             ci_only_on_alert,
             ci_id,
-            ci_number,
             github_actions,
         } = ci;
         Ok(github_actions.map(|github_actions| {
@@ -47,7 +58,6 @@ impl TryFrom<CliRunCi> for Option<Ci> {
                 ci_only_thresholds,
                 ci_only_on_alert,
                 ci_id,
-                ci_number,
                 github_actions,
             ))
         }))
@@ -57,7 +67,9 @@ impl TryFrom<CliRunCi> for Option<Ci> {
 impl Ci {
     pub async fn run(&self, report_urls: &ReportUrls) -> Result<(), CiError> {
         match self {
-            Self::GitHubActions(github_actions) => github_actions.run(report_urls).await,
+            Self::GitHubActions(github_actions) => {
+                github_actions.run(report_urls).await.map_err(Into::into)
+            },
         }
     }
 }
@@ -67,7 +79,6 @@ pub struct GitHubActions {
     ci_only_thresholds: bool,
     ci_only_on_alert: bool,
     ci_id: Option<NonEmpty>,
-    ci_number: Option<u64>,
     token: String,
 }
 
@@ -76,18 +87,17 @@ impl GitHubActions {
         ci_only_thresholds: bool,
         ci_only_on_alert: bool,
         ci_id: Option<NonEmpty>,
-        ci_number: Option<u64>,
         token: String,
     ) -> Self {
         Self {
             ci_only_thresholds,
             ci_only_on_alert,
             ci_id,
-            ci_number,
             token,
         }
     }
-    pub async fn run(&self, report_urls: &ReportUrls) -> Result<(), CiError> {
+
+    pub async fn run(&self, report_urls: &ReportUrls) -> Result<(), GitHubError> {
         // Only post to CI if there are thresholds set
         if self.ci_only_thresholds && !report_urls.has_threshold() {
             cli_println!("No thresholds set. Skipping CI integration.");
@@ -104,68 +114,96 @@ impl GitHubActions {
             },
         }
 
+        // The path to the file on the runner that contains the full event webhook payload. For example, /github/workflow/event.json.
+        let github_event_path = match std::env::var("GITHUB_EVENT_PATH").ok() {
+            Some(github_event_path) => github_event_path,
+            _ => return Err(GitHubError::NoEventPath),
+        };
+        let event_str = std::fs::read_to_string(&github_event_path)
+            .map_err(|e| GitHubError::BadEventPath(github_event_path, e))?;
+        let event: octocrab::models::events::Event = serde_json::from_str(&event_str)
+            .map_err(|e| GitHubError::BadEvent(event_str.clone(), e))?;
+
         // The name of the event that triggered the workflow. For example, `workflow_dispatch`.
-        let as_other_branch = match std::env::var("GITHUB_EVENT_NAME").ok().as_deref() {
-            Some("pull_request") => false,
-            Some("pull_request_target" | "workflow_run") => true,
+        let issue_number = match std::env::var("GITHUB_EVENT_NAME").ok().as_deref() {
+            // https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request
+            // https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target
+            Some(event_name @ ("pull_request" | "pull_request_target")) => {
+                if event.r#type != octocrab::models::events::EventType::PullRequestEvent {
+                    return Err(GitHubError::BadEventType(event_name.into(), event.r#type));
+                }
+
+                let payload = event
+                    .payload
+                    .ok_or_else(|| GitHubError::NoEventPayload(event_name.into()))?
+                    .specific
+                    .ok_or_else(|| GitHubError::NoEventPayload(event_name.into()))?;
+
+                if let octocrab::models::events::payload::EventPayload::PullRequestEvent(payload) =
+                    payload
+                {
+                    payload.number
+                } else {
+                    return Err(GitHubError::BadEventPayload(event_name.into()));
+                }
+            },
+            // https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run
+            Some(event_name @ "workflow_run") => {
+                if event.r#type != octocrab::models::events::EventType::WorkflowRunEvent {
+                    return Err(GitHubError::BadEventType(event_name.into(), event.r#type));
+                }
+
+                // TODO upstream a fix for: https://github.com/XAMPPRocky/octocrab/pull/162
+                let event: serde_json::Value = serde_json::from_str(&event_str)
+                    .map_err(|e| GitHubError::BadEvent(event_str, e))?;
+
+                // https://docs.github.com/en/webhooks/webhook-events-and-payloads#workflow_run
+                let pull_requests = "pull_requests";
+                let index = 0;
+                let number = "number";
+                event
+                    .get(event_name)
+                    .ok_or_else(|| GitHubError::NoEventPayload(event_name.into()))?
+                    .get(pull_requests)
+                    .ok_or_else(|| {
+                        GitHubError::NoEventPayload(format!("{event_name}/{pull_requests}"))
+                    })?
+                    .get(index)
+                    .ok_or_else(|| {
+                        GitHubError::NoEventPayload(format!("{event_name}/{pull_requests}/{index}"))
+                    })?
+                    .get(number)
+                    .ok_or_else(|| {
+                        GitHubError::NoEventPayload(format!(
+                            "{event_name}/{pull_requests}/{index}/{number}"
+                        ))
+                    })?
+                    .as_u64()
+                    .ok_or_else(|| {
+                        GitHubError::BadEventPayload(format!(
+                            "{event_name}/{pull_requests}/{index}/{number}"
+                        ))
+                    })?
+            },
             _ => {
                 cli_println!(
-                    "Not running as a GitHub Action pull request or as another branch. Skipping CI integration."
+                    "Not running as an expected GitHub Action event (`pull_request`, `pull_request_target`, or `workflow_run`). Skipping CI integration."
                 );
                 return Ok(());
             },
         };
 
         // The owner and repository name. For example, octocat/Hello-World.
-        let (owner, repo) = match std::env::var("GITHUB_REPOSITORY").ok() {
-            Some(repository) => {
-                if let Some((owner, repo)) = repository.split_once('/') {
-                    (owner.to_owned(), repo.to_owned())
-                } else {
-                    cli_eprintln!("Repository is not in the form `owner/repo` ({repository}). Skipping CI integration.");
-                    return Err(CiError::GitHubRepository(repository));
-                }
-            },
-            _ => {
-                cli_eprintln!("Failed to get repository. Skipping CI integration.");
-                return Err(CiError::NoGithubRepository);
-            },
-        };
-
-        let issue_number = if let Some(number) = self.ci_number {
-            number
+        let (owner, repo) = if let Some((owner, repo)) = event.repo.name.split_once('/') {
+            (owner.to_owned(), repo.to_owned())
         } else {
-            if as_other_branch {
-                cli_println!("GitHub Action running on a non-pull request branch but no issue number was provided. Skipping CI integration.");
-                return Ok(());
-            }
-
-            // For workflows triggered by `pull_request`, this is the pull request merge branch.
-            // for pull requests it is `refs/pull/<pr_number>/merge`
-            match std::env::var("GITHUB_REF").ok() {
-                Some(github_ref) => {
-                    if let Some(issue_number) = github_ref
-                        .strip_prefix("refs/pull/")
-                        .and_then(|r| r.strip_suffix("/merge"))
-                        .and_then(|r| r.parse::<u64>().ok())
-                    {
-                        issue_number
-                    } else {
-                        cli_eprintln!("GitHub Action running on a pull request but ref is not a pull request ref ({github_ref}). Skipping CI integration.");
-                        return Err(CiError::GitHubRef(github_ref));
-                    }
-                },
-                None => {
-                    cli_eprintln!("GitHub Action running on a pull request but failed to get ref. Skipping CI integration.");
-                    return Err(CiError::NoGitHubRef);
-                },
-            }
+            return Err(GitHubError::Repository(event.repo.name));
         };
 
         let github_client = Octocrab::builder()
             .user_access_token(self.token.clone())
             .build()
-            .map_err(CiError::GitHubAuth)?;
+            .map_err(GitHubError::Auth)?;
 
         // Get the comment ID if it exists
         let comment_id = get_comment(
@@ -184,7 +222,7 @@ impl GitHubActions {
             issue_handler
                 .update_comment(comment_id, body)
                 .await
-                .map_err(CiError::GitHubUpdateComment)?
+                .map_err(GitHubError::UpdateComment)?
         } else {
             if self.ci_only_on_alert && !report_urls.has_alert() {
                 cli_println!("No alerts found. Skipping CI integration.");
@@ -193,7 +231,7 @@ impl GitHubActions {
             issue_handler
                 .create_comment(issue_number, body)
                 .await
-                .map_err(CiError::GitHubCreateComment)?
+                .map_err(GitHubError::CreateComment)?
         };
 
         Ok(())
@@ -206,7 +244,7 @@ pub async fn get_comment(
     repo: &str,
     issue_number: u64,
     bencher_tag: &str,
-) -> Result<Option<CommentId>, CiError> {
+) -> Result<Option<CommentId>, GitHubError> {
     const PER_PAGE: u8 = 100;
 
     let mut page: u32 = 1;
@@ -218,7 +256,7 @@ pub async fn get_comment(
             .page(page)
             .send()
             .await
-            .map_err(CiError::GitHubComments)?;
+            .map_err(GitHubError::Comments)?;
 
         let comments_len = comments.items.len();
         if comments_len == 0 {
