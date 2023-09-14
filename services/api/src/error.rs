@@ -6,10 +6,11 @@ use dropshot::HttpError;
 use http::StatusCode;
 use thiserror::Error;
 
+#[cfg(feature = "plus")]
+use crate::model::organization::OrganizationId;
 use crate::{
     endpoints::Endpoint,
     model::{
-        organization::OrganizationId,
         project::{branch::BranchId, testbed::TestbedId, ProjectId},
         user::{auth::AuthUser, UserId},
     },

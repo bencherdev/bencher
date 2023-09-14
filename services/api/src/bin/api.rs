@@ -42,6 +42,7 @@ async fn run(
     loop {
         let config = Config::load_or_default(log).await?;
         if let Some(apm) = config.as_ref().apm.as_ref() {
+            #[allow(unused_variables)]
             match &apm {
                 JsonApm::Sentry { dsn } => {
                     #[cfg(feature = "sentry")]

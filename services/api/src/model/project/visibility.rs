@@ -129,6 +129,7 @@ where
     ) -> diesel::serialize::Result {
         match self {
             Self::Public => PUBLIC_INT.to_sql(out),
+            #[cfg(feature = "plus")]
             Self::Private => PRIVATE_INT.to_sql(out),
         }
     }

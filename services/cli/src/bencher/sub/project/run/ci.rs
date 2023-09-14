@@ -25,14 +25,24 @@ pub enum GitHubError {
     BadEventPath(String, std::io::Error),
     #[error("Failed to parse GitHub Action event ({0}): {1}")]
     BadEvent(String, serde_json::Error),
-    #[error("GitHub Action running on event ({0}) but event type is {1:?}")]
-    BadEventType(String, octocrab::models::events::EventType),
-    #[error("GitHub Action event ({0}) missing payload")]
-    NoEventPayload(String),
-    #[error("GitHub Action event ({0}) has the wrong payload")]
-    BadEventPayload(String),
-    #[error("GitHub repository is not in the form `owner/repo` ({0})")]
-    Repository(String),
+    #[error("GitHub Action event ({0}) PR number is missing")]
+    NoPRNumber(String),
+    #[error("GitHub Action event ({0}) PR number is invalid")]
+    BadPRNumber(String),
+    #[error("GitHub Action event workflow run is missing")]
+    NoWorkFlowRun,
+    #[error("GitHub Action event workflow run pull requests is missing")]
+    NoPullRequests,
+    #[error("GitHub Action event workflow run pull requests is empty")]
+    EmptyPullRequests,
+    #[error("GitHub Action event repository is missing")]
+    NoRepository,
+    #[error("GitHub Action event repository full name is missing")]
+    NoFullName,
+    #[error("GitHub Action event repository full name is invalid")]
+    BadFullName,
+    #[error("GitHub Action event repository full name is not of the form `owner/repo`: ({0})")]
+    InvalidFullName(String),
     #[error("Failed to authenticate as GitHub Action: {0}")]
     Auth(octocrab::Error),
     #[error("Failed to list GitHub PR comments: {0}")]
@@ -121,69 +131,38 @@ impl GitHubActions {
         };
         let event_str = std::fs::read_to_string(&github_event_path)
             .map_err(|e| GitHubError::BadEventPath(github_event_path, e))?;
-        let event: octocrab::models::events::Event = serde_json::from_str(&event_str)
+        // The event JSON does not match the GitHub API event JSON schema used by Octocrab
+        // Therefore we use serde_json::Value to parse the event
+        let event: serde_json::Value = serde_json::from_str(&event_str)
             .map_err(|e| GitHubError::BadEvent(event_str.clone(), e))?;
 
+        const NUMBER_KEY: &str = "number";
         // The name of the event that triggered the workflow. For example, `workflow_dispatch`.
         let issue_number = match std::env::var("GITHUB_EVENT_NAME").ok().as_deref() {
             // https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request
             // https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target
             Some(event_name @ ("pull_request" | "pull_request_target")) => {
-                if event.r#type != octocrab::models::events::EventType::PullRequestEvent {
-                    return Err(GitHubError::BadEventType(event_name.into(), event.r#type));
-                }
-
-                let payload = event
-                    .payload
-                    .ok_or_else(|| GitHubError::NoEventPayload(event_name.into()))?
-                    .specific
-                    .ok_or_else(|| GitHubError::NoEventPayload(event_name.into()))?;
-
-                if let octocrab::models::events::payload::EventPayload::PullRequestEvent(payload) =
-                    payload
-                {
-                    payload.number
-                } else {
-                    return Err(GitHubError::BadEventPayload(event_name.into()));
-                }
+                // https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+                event
+                    .get(NUMBER_KEY)
+                    .ok_or_else(|| GitHubError::NoPRNumber(event_name.into()))?
+                    .as_u64()
+                    .ok_or_else(|| GitHubError::BadPRNumber(event_name.into()))?
             },
             // https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run
             Some(event_name @ "workflow_run") => {
-                if event.r#type != octocrab::models::events::EventType::WorkflowRunEvent {
-                    return Err(GitHubError::BadEventType(event_name.into(), event.r#type));
-                }
-
-                // TODO upstream a fix for: https://github.com/XAMPPRocky/octocrab/pull/162
-                let event: serde_json::Value = serde_json::from_str(&event_str)
-                    .map_err(|e| GitHubError::BadEvent(event_str, e))?;
-
                 // https://docs.github.com/en/webhooks/webhook-events-and-payloads#workflow_run
-                let pull_requests = "pull_requests";
-                let index = 0;
-                let number = "number";
                 event
                     .get(event_name)
-                    .ok_or_else(|| GitHubError::NoEventPayload(event_name.into()))?
-                    .get(pull_requests)
-                    .ok_or_else(|| {
-                        GitHubError::NoEventPayload(format!("{event_name}/{pull_requests}"))
-                    })?
-                    .get(index)
-                    .ok_or_else(|| {
-                        GitHubError::NoEventPayload(format!("{event_name}/{pull_requests}/{index}"))
-                    })?
-                    .get(number)
-                    .ok_or_else(|| {
-                        GitHubError::NoEventPayload(format!(
-                            "{event_name}/{pull_requests}/{index}/{number}"
-                        ))
-                    })?
+                    .ok_or(GitHubError::NoWorkFlowRun)?
+                    .get("pull_requests")
+                    .ok_or(GitHubError::NoPullRequests)?
+                    .get(0)
+                    .ok_or(GitHubError::EmptyPullRequests)?
+                    .get(NUMBER_KEY)
+                    .ok_or_else(|| GitHubError::NoPRNumber(event_name.into()))?
                     .as_u64()
-                    .ok_or_else(|| {
-                        GitHubError::BadEventPayload(format!(
-                            "{event_name}/{pull_requests}/{index}/{number}"
-                        ))
-                    })?
+                    .ok_or_else(|| GitHubError::BadPRNumber(event_name.into()))?
             },
             _ => {
                 cli_println!(
@@ -193,11 +172,21 @@ impl GitHubActions {
             },
         };
 
+        // Use the full name instead of getting the owner and repo names separately
+        // because the owner name values in the API are nullable
+        // https://docs.github.com/en/rest/repos/repos#get-a-repository
+        let full_name = event
+            .get("repository")
+            .ok_or(GitHubError::NoRepository)?
+            .get("full_name")
+            .ok_or(GitHubError::NoFullName)?
+            .as_str()
+            .ok_or(GitHubError::BadFullName)?;
         // The owner and repository name. For example, octocat/Hello-World.
-        let (owner, repo) = if let Some((owner, repo)) = event.repo.name.split_once('/') {
+        let (owner, repo) = if let Some((owner, repo)) = full_name.split_once('/') {
             (owner.to_owned(), repo.to_owned())
         } else {
-            return Err(GitHubError::Repository(event.repo.name));
+            return Err(GitHubError::InvalidFullName(full_name.into()));
         };
 
         let github_client = Octocrab::builder()
