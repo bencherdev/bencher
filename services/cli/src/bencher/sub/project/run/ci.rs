@@ -25,22 +25,22 @@ pub enum GitHubError {
     BadEventPath(String, std::io::Error),
     #[error("Failed to parse GitHub Action event ({0}): {1}")]
     BadEvent(String, serde_json::Error),
-    #[error("GitHub Action event ({0}) PR number is missing")]
-    NoPRNumber(String),
-    #[error("GitHub Action event ({0}) PR number is invalid")]
-    BadPRNumber(String),
-    #[error("GitHub Action event workflow run is missing")]
-    NoWorkFlowRun,
-    #[error("GitHub Action event workflow run pull requests is missing")]
-    NoPullRequests,
-    #[error("GitHub Action event workflow run pull requests is empty")]
-    EmptyPullRequests,
-    #[error("GitHub Action event repository is missing")]
-    NoRepository,
-    #[error("GitHub Action event repository full name is missing")]
-    NoFullName,
-    #[error("GitHub Action event repository full name is invalid")]
-    BadFullName,
+    #[error("GitHub Action event ({1}) PR number is missing: {0}")]
+    NoPRNumber(String, String),
+    #[error("GitHub Action event ({1}) PR number is invalid: {0}")]
+    BadPRNumber(String, String),
+    #[error("GitHub Action event workflow run is missing: {0}")]
+    NoWorkFlowRun(String),
+    #[error("GitHub Action event workflow run pull requests is missing: {0}")]
+    NoPullRequests(String),
+    #[error("GitHub Action event workflow run pull requests is empty: {0}")]
+    EmptyPullRequests(String),
+    #[error("GitHub Action event repository is missing: {0}")]
+    NoRepository(String),
+    #[error("GitHub Action event repository full name is missing: {0}")]
+    NoFullName(String),
+    #[error("GitHub Action event repository full name is invalid: {0}")]
+    BadFullName(String),
     #[error("GitHub Action event repository full name is not of the form `owner/repo`: ({0})")]
     InvalidFullName(String),
     #[error("Failed to authenticate as GitHub Action: {0}")]
@@ -145,24 +145,24 @@ impl GitHubActions {
                 // https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
                 event
                     .get(NUMBER_KEY)
-                    .ok_or_else(|| GitHubError::NoPRNumber(event_name.into()))?
+                    .ok_or_else(|| GitHubError::NoPRNumber(event_str.clone(), event_name.into()))?
                     .as_u64()
-                    .ok_or_else(|| GitHubError::BadPRNumber(event_name.into()))?
+                    .ok_or_else(|| GitHubError::BadPRNumber(event_str.clone(), event_name.into()))?
             },
             // https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run
             Some(event_name @ "workflow_run") => {
                 // https://docs.github.com/en/webhooks/webhook-events-and-payloads#workflow_run
                 event
                     .get(event_name)
-                    .ok_or(GitHubError::NoWorkFlowRun)?
+                    .ok_or_else(|| GitHubError::NoWorkFlowRun(event_str.clone()))?
                     .get("pull_requests")
-                    .ok_or(GitHubError::NoPullRequests)?
+                    .ok_or_else(|| GitHubError::NoPullRequests(event_str.clone()))?
                     .get(0)
-                    .ok_or(GitHubError::EmptyPullRequests)?
+                    .ok_or_else(|| GitHubError::EmptyPullRequests(event_str.clone()))?
                     .get(NUMBER_KEY)
-                    .ok_or_else(|| GitHubError::NoPRNumber(event_name.into()))?
+                    .ok_or_else(|| GitHubError::NoPRNumber(event_str.clone(), event_name.into()))?
                     .as_u64()
-                    .ok_or_else(|| GitHubError::BadPRNumber(event_name.into()))?
+                    .ok_or_else(|| GitHubError::BadPRNumber(event_str.clone(), event_name.into()))?
             },
             _ => {
                 cli_println!(
@@ -177,11 +177,11 @@ impl GitHubActions {
         // https://docs.github.com/en/rest/repos/repos#get-a-repository
         let full_name = event
             .get("repository")
-            .ok_or(GitHubError::NoRepository)?
+            .ok_or_else(|| GitHubError::NoRepository(event_str.clone()))?
             .get("full_name")
-            .ok_or(GitHubError::NoFullName)?
+            .ok_or_else(|| GitHubError::NoFullName(event_str.clone()))?
             .as_str()
-            .ok_or(GitHubError::BadFullName)?;
+            .ok_or_else(|| GitHubError::BadFullName(event_str.clone()))?;
         // The owner and repository name. For example, octocat/Hello-World.
         let (owner, repo) = if let Some((owner, repo)) = full_name.split_once('/') {
             (owner.to_owned(), repo.to_owned())

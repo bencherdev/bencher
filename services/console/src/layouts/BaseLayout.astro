@@ -4,6 +4,7 @@ import "../styles/styles.scss";
 import Navbar from "../components/site/navbar/Navbar";
 import Footer from "../components/site/Footer";
 import { BENCHER_TITLE, BENCHER_DESCRIPTION } from "../util/resource";
+import { BENCHER_LOGO_URL } from "../util/ext";
 // import { ViewTransitions } from "astro:transitions";
 
 interface Props {
@@ -37,7 +38,11 @@ const { title, description } = Astro.props;
         basic: {
           title: title,
           type: "website",
-          image: "https://bencher.dev/favicon.svg",
+          image: BENCHER_LOGO_URL,
+        },
+        optional: {
+          siteName: "Bencher",
+          description: description ?? BENCHER_DESCRIPTION,
         }
       }}
       twitter={{

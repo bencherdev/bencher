@@ -170,6 +170,7 @@ jobs:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
       BENCHER_ADAPTER: json
       BENCHER_TESTBED: ubuntu-latest
+      BENCHMARK_RESULTS: benchmark_results.txt
     steps:
       - name: Download Benchmark Results
         uses: actions/github-script@v6
@@ -181,8 +182,13 @@ jobs:
                run_id: context.payload.workflow_run.id,
             });
             let matchArtifact = allArtifacts.data.artifacts.filter((artifact) => {
-              return artifact.name == "benchmark_results"
+              return artifact.name == process.env.BENCHMARK_RESULTS
             })[0];
+            if (!matchArtifact) {
+              core.setFailed(
+                `Failed to find benchmark results artifact: ${process.env.BENCHMARK_RESULTS}`
+              );
+            }
             let download = await github.rest.actions.downloadArtifact({
                owner: context.repo.owner,
                repo: context.repo.repo,
@@ -190,13 +196,13 @@ jobs:
                archive_format: 'zip',
             });
             let fs = require('fs');
-            fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/benchmark_results.zip`, Buffer.from(download.data));
+            fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/results.zip`, Buffer.from(download.data));
       - name: Unzip Benchmark Results
-        run: unzip benchmark_results.zip
+        run: unzip results.zip
       - uses: bencherdev/bencher@main
           - name: Track Benchmarks with Bencher
             run: |
-              cat benchmark_results.txt | bencher run \\
+              cat $BENCHMARK_RESULTS | bencher run \\
               --if-branch "${{ github.event.workflow_run.pull_requests[0]?.head.ref }}" \\
               --else-if-branch "${{ github.event.workflow_run.pull_requests[0]?.base.ref }}" \\
               --else-if-branch main \\
