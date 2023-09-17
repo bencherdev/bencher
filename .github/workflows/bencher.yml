@@ -308,7 +308,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Build Builder Stage
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./services/api/builder.Dockerfile
@@ -317,7 +317,7 @@ jobs:
             MOLD_VERSION=${{ env.MOLD_VERSION }}
           push: false
       - name: Build Local API
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: ./services/api
           file: ./services/api/local.Dockerfile
@@ -339,7 +339,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Build Builder Stage
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./services/api/builder.Dockerfile
@@ -348,7 +348,7 @@ jobs:
             MOLD_VERSION=${{ env.MOLD_VERSION }}
           push: false
       - name: Build Litestream API
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: ./services/api
           file: ./services/api/litestream.Dockerfile
@@ -409,14 +409,14 @@ jobs:
   #   steps:
   #     - uses: actions/checkout@v3
   #     - name: Build Builder Stage
-  #       uses: docker/build-push-action@v4
+  #       uses: docker/build-push-action@v5
   #       with:
   #         context: .
   #         file: ./services/ui/builder.Dockerfile
   #         tags: ${{ env.UI_BUILDER_DOCKER_IMAGE }}
   #         push: false
   #     - name: Build UI
-  #       uses: docker/build-push-action@v4
+  #       uses: docker/build-push-action@v5
   #       with:
   #         context: ./services/ui
   #         tags: ${{ env.UI_DOCKER_IMAGE }}
@@ -437,7 +437,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Build Builder Stage
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./services/console/builder.Dockerfile
@@ -446,7 +446,7 @@ jobs:
             MOLD_VERSION=${{ env.MOLD_VERSION }}
           push: false
       - name: Build Console UI
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: ./services/console
           tags: ${{ env.UI_DOCKER_IMAGE }}
