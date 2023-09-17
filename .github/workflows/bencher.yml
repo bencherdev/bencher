@@ -709,7 +709,7 @@ jobs:
         run: docker load < ${{ env.UI_DOCKER_IMAGE }}.tar.gz
       # Login GHCR
       - name: Log in to the Container registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.GITHUB_REGISTRY }}
           username: ${{ github.actor }}
