@@ -31,7 +31,9 @@ crate::util::typed_id::typed_id!(BenchmarkId);
 
 fn_resource_id!(benchmark);
 
-#[derive(Queryable)]
+#[derive(Queryable, Identifiable, Associations)]
+#[diesel(table_name = benchmark_table)]
+#[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryBenchmark {
     pub id: BenchmarkId,
     pub uuid: String,

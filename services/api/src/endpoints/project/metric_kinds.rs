@@ -3,7 +3,7 @@ use bencher_json::{
     JsonMetricKinds, JsonNewMetricKind, JsonPagination, NonEmpty, ResourceId,
 };
 use bencher_rbac::project::Permission;
-use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -112,9 +112,7 @@ async fn get_ls_inner(
     let query_project =
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
-    let mut query = schema::metric_kind::table
-        .filter(schema::metric_kind::project_id.eq(&query_project.id))
-        .into_boxed();
+    let mut query = QueryMetricKind::belonging_to(&query_project).into_boxed();
 
     if let Some(name) = query_params.name.as_ref() {
         query = query.filter(schema::metric_kind::name.eq(name.as_ref()));
@@ -256,12 +254,8 @@ async fn get_one_inner(
     let query_project =
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
-    schema::metric_kind::table
-        .filter(
-            schema::metric_kind::project_id
-                .eq(query_project.id)
-                .and(resource_id(&path_params.metric_kind)?),
-        )
+    QueryMetricKind::belonging_to(&query_project)
+        .filter(resource_id(&path_params.metric_kind)?)
         .first::<QueryMetricKind>(conn)
         .map_err(api_error!())?
         .into_json(conn)

@@ -13,11 +13,16 @@ use crate::{
     ApiError,
 };
 
-use super::{benchmark::BenchmarkId, report::ReportId};
+use super::{
+    benchmark::BenchmarkId,
+    report::{QueryReport, ReportId},
+};
 
 crate::util::typed_id::typed_id!(PerfId);
 
-#[derive(Queryable)]
+#[derive(Queryable, Identifiable, Associations)]
+#[diesel(table_name = perf_table)]
+#[diesel(belongs_to(QueryReport, foreign_key = report_id))]
 pub struct QueryPerf {
     pub id: PerfId,
     pub uuid: String,

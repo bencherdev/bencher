@@ -3,7 +3,7 @@ use bencher_json::{
     JsonDirection, JsonEmpty, JsonPagination, JsonThresholds, ResourceId,
 };
 use bencher_rbac::project::Permission;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -109,9 +109,7 @@ async fn get_ls_inner(
     let query_project =
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
-    let mut query = schema::threshold::table
-        .filter(schema::threshold::project_id.eq(query_project.id))
-        .into_boxed();
+    let mut query = QueryThreshold::belonging_to(&query_project).into_boxed();
 
     query = match pagination_params.order() {
         ProjThresholdsSort::Created => match pagination_params.direction {
@@ -266,8 +264,7 @@ async fn get_one_inner(
     let query_project =
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
-    schema::threshold::table
-        .filter(schema::threshold::project_id.eq(query_project.id))
+    QueryThreshold::belonging_to(&query_project)
         .filter(schema::threshold::uuid.eq(path_params.threshold.to_string()))
         .first::<QueryThreshold>(conn)
         .map_err(api_error!())?
@@ -318,8 +315,7 @@ async fn put_inner(
     )?;
 
     // Get the current threshold
-    let query_threshold = schema::threshold::table
-        .filter(schema::threshold::project_id.eq(query_project.id))
+    let query_threshold = QueryThreshold::belonging_to(&query_project)
         .filter(schema::threshold::uuid.eq(path_params.threshold.to_string()))
         .first::<QueryThreshold>(conn)
         .map_err(api_error!())?;
@@ -379,8 +375,7 @@ async fn delete_inner(
         Permission::Delete,
     )?;
 
-    let query_threshold = schema::threshold::table
-        .filter(schema::threshold::project_id.eq(query_project.id))
+    let query_threshold = QueryThreshold::belonging_to(&query_project)
         .filter(schema::threshold::uuid.eq(path_params.threshold.to_string()))
         .first::<QueryThreshold>(conn)
         .map_err(api_error!())?;

@@ -28,7 +28,9 @@ crate::util::typed_id::typed_id!(TestbedId);
 
 fn_resource_id!(testbed);
 
-#[derive(Queryable)]
+#[derive(Queryable, Identifiable, Associations)]
+#[diesel(table_name = testbed_table)]
+#[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryTestbed {
     pub id: TestbedId,
     pub uuid: String,

@@ -13,11 +13,13 @@ use crate::{
     ApiError,
 };
 
-use super::{branch::BranchId, branch_version::InsertBranchVersion, ProjectId};
+use super::{branch::BranchId, branch_version::InsertBranchVersion, ProjectId, QueryProject};
 
 crate::util::typed_id::typed_id!(VersionId);
 
-#[derive(Queryable)]
+#[derive(Queryable, Identifiable, Associations)]
+#[diesel(table_name = version_table)]
+#[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryVersion {
     pub id: VersionId,
     pub uuid: String,

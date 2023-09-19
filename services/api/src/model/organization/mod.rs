@@ -71,7 +71,8 @@ impl InsertOrganization {
 
 fn_resource_id!(organization);
 
-#[derive(Debug, Clone, Queryable)]
+#[derive(Debug, Clone, Queryable, Identifiable)]
+#[diesel(table_name = organization_table)]
 pub struct QueryOrganization {
     pub id: OrganizationId,
     pub uuid: String,

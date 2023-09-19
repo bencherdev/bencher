@@ -30,7 +30,9 @@ pub mod statistic;
 
 crate::util::typed_id::typed_id!(ThresholdId);
 
-#[derive(Queryable)]
+#[derive(Queryable, Identifiable, Associations)]
+#[diesel(table_name = threshold_table)]
+#[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryThreshold {
     pub id: ThresholdId,
     pub uuid: String,

@@ -47,7 +47,9 @@ pub mod results;
 
 crate::util::typed_id::typed_id!(ReportId);
 
-#[derive(Queryable)]
+#[derive(Queryable, Identifiable, Associations)]
+#[diesel(table_name = report_table)]
+#[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryReport {
     pub id: ReportId,
     pub uuid: String,

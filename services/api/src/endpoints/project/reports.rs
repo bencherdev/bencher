@@ -4,7 +4,7 @@ use bencher_json::{
     JsonDirection, JsonEmpty, JsonNewReport, JsonPagination, JsonReport, JsonReports, ResourceId,
 };
 use bencher_rbac::project::Permission;
-use diesel::{dsl::count, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{dsl::count, BelongingToDsl, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -109,9 +109,7 @@ async fn get_ls_inner(
     let query_project =
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
-    let mut query = schema::report::table
-        .filter(schema::report::project_id.eq(query_project.id))
-        .into_boxed();
+    let mut query = QueryReport::belonging_to(&query_project).into_boxed();
 
     query = match pagination_params.order() {
         ProjReportsSort::DateTime => match pagination_params.direction {
@@ -418,8 +416,7 @@ async fn get_one_inner(
     let query_project =
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
-    schema::report::table
-        .filter(schema::report::project_id.eq(query_project.id))
+    QueryReport::belonging_to(&query_project)
         .filter(schema::report::uuid.eq(path_params.report.to_string()))
         .select((
             schema::report::id,
@@ -474,8 +471,7 @@ async fn delete_inner(
         Permission::Delete,
     )?;
 
-    let (report_id, version_id) = schema::report::table
-        .filter(schema::report::project_id.eq(query_project.id))
+    let (report_id, version_id) = QueryReport::belonging_to(&query_project)
         .filter(schema::report::uuid.eq(path_params.report.to_string()))
         .select((schema::report::id, schema::report::version_id))
         .first::<(i32, i32)>(conn)

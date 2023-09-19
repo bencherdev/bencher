@@ -86,7 +86,9 @@ impl InsertProject {
 
 fn_resource_id!(project);
 
-#[derive(Debug, Clone, Queryable)]
+#[derive(Debug, Clone, Queryable, Identifiable, Associations)]
+#[diesel(table_name = project_table)]
+#[diesel(belongs_to(QueryOrganization, foreign_key = organization_id))]
 pub struct QueryProject {
     pub id: ProjectId,
     pub uuid: String,

@@ -3,7 +3,7 @@ use bencher_json::{
 };
 use bencher_rbac::{organization::Permission, project::Role};
 use chrono::Utc;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -119,9 +119,7 @@ async fn get_ls_inner(
         Permission::View,
     )?;
 
-    let mut query = schema::project::table
-        .filter(schema::project::organization_id.eq(query_organization.id))
-        .into_boxed();
+    let mut query = QueryProject::belonging_to(&query_organization).into_boxed();
 
     if let Some(name) = query_params.name.as_ref() {
         query = query.filter(schema::project::name.eq(name.as_ref()));

@@ -9,11 +9,17 @@ use crate::{
     ApiError,
 };
 
-use super::{metric_kind::MetricKindId, perf::PerfId};
+use super::{
+    metric_kind::{MetricKindId, QueryMetricKind},
+    perf::{PerfId, QueryPerf},
+};
 
 crate::util::typed_id::typed_id!(MetricId);
 
-#[derive(Queryable, Debug)]
+#[derive(Queryable, Identifiable, Associations)]
+#[diesel(table_name = metric_table)]
+#[diesel(belongs_to(QueryPerf, foreign_key = perf_id))]
+#[diesel(belongs_to(QueryMetricKind, foreign_key = metric_kind_id))]
 pub struct QueryMetric {
     pub id: MetricId,
     pub uuid: String,

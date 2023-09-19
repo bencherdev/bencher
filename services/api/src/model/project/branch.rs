@@ -36,7 +36,9 @@ crate::util::typed_id::typed_id!(BranchId);
 
 fn_resource_id!(branch);
 
-#[derive(Queryable)]
+#[derive(Queryable, Identifiable, Associations)]
+#[diesel(table_name = branch_table)]
+#[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryBranch {
     pub id: BranchId,
     pub uuid: String,

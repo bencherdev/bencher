@@ -34,7 +34,9 @@ crate::util::typed_id::typed_id!(MetricKindId);
 
 fn_resource_id!(metric_kind);
 
-#[derive(Queryable)]
+#[derive(Queryable, Identifiable, Associations)]
+#[diesel(table_name = metric_kind_table)]
+#[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryMetricKind {
     pub id: MetricKindId,
     pub uuid: String,
