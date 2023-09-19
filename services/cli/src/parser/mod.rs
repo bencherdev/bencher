@@ -49,7 +49,7 @@ pub enum CliSub {
     Project(CliProject),
 
     /// Run benchmarks
-    Run(CliRun),
+    Run(Box<CliRun>),
     /// Query benchmark data
     Perf(CliPerf),
 
