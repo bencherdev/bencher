@@ -210,6 +210,9 @@ pub struct CliRunCi {
     /// Custom ID for posting results to CI (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_id: Option<NonEmpty>,
+    /// Issue number for posting results to CI (requires: `--github-actions`)
+    #[clap(long, requires = "ci_cd")]
+    pub ci_number: Option<u64>,
     /// GitHub API authentication token for GitHub Actions to comment on PRs (ie `--github-actions ${{ secrets.GITHUB_TOKEN }}`)
     #[clap(long)]
     pub github_actions: Option<String>,

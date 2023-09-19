@@ -127,6 +127,7 @@ jobs:
 
 1. Run your PR benchmarks on `pull_request` events.
 1. Save the PR benchmarks results to a file and upload them as an artifact.
+1. Save the PR number to a file and upload it as an artifact.
 1. Chain that workflow with [the `workflow_run` event](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run).
 1. Track the PR benchmark results with `bencher run`.
 
@@ -134,6 +135,7 @@ This works because `workflow_run` runs in the context of the repository's defaul
 where secrets such as your `BENCHER_API_TOKEN` and the `GITHUB_TOKEN` are available.
 Therefore, these workflows will only run if they exist on the default branch.
 See [using data from the triggering workflow](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow) for a full overview.
+The pull request number used in the initial workflow must be explicitly passed in since it is not available within  `workflow_run` (ex: `--ci-number $(cat $PR_NUMBER)`).
 
 ```
 name: Run and Cache Benchmarks
@@ -152,6 +154,12 @@ jobs:
         with:
           name: benchmark_results.txt
           path: ./benchmark_results.txt
+      - name: Save PR number
+        run: echo ${{ github.event.number }} > ./pr_number
+      - uses: actions/upload-artifact@v3
+        with:
+          name: pr_number
+          path: ./pr_number
 ```
 
 ```
@@ -171,34 +179,39 @@ jobs:
       BENCHER_ADAPTER: json
       BENCHER_TESTBED: ubuntu-latest
       BENCHMARK_RESULTS: benchmark_results.txt
+      PR_NUMBER: pr_number
     steps:
       - name: Download Benchmark Results
         uses: actions/github-script@v6
         with:
           script: |
-            let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
-               owner: context.repo.owner,
-               repo: context.repo.repo,
-               run_id: context.payload.workflow_run.id,
-            });
-            let matchArtifact = allArtifacts.data.artifacts.filter((artifact) => {
-              return artifact.name == process.env.BENCHMARK_RESULTS
-            })[0];
-            if (!matchArtifact) {
-              core.setFailed(
-                `Failed to find benchmark results artifact: ${process.env.BENCHMARK_RESULTS}`
-              );
+            function downloadArtifact(artifactName) {
+              let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.payload.workflow_run.id,
+              });
+              let matchArtifact = allArtifacts.data.artifacts.filter((artifact) => {
+                return artifact.name == artifactName
+              })[0];
+              if (!matchArtifact) {
+                core.setFailed(`Failed to find artifact: ${artifactName}`);
+              }
+              let download = await github.rest.actions.downloadArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: matchArtifact.id,
+                archive_format: 'zip',
+              });
+              let fs = require('fs');
+              fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/${artifactName}.zip`, Buffer.from(download.data));
             }
-            let download = await github.rest.actions.downloadArtifact({
-               owner: context.repo.owner,
-               repo: context.repo.repo,
-               artifact_id: matchArtifact.id,
-               archive_format: 'zip',
-            });
-            let fs = require('fs');
-            fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/results.zip`, Buffer.from(download.data));
+            downloadArtifact(process.env.BENCHMARK_RESULTS);
+            downloadArtifact(process.env.PR_NUMBER);
       - name: Unzip Benchmark Results
-        run: unzip results.zip
+        run: |
+          unzip $BENCHMARK_RESULTS.zip
+          unzip $PR_NUMBER.zip
       - uses: bencherdev/bencher@main
           - name: Track Benchmarks with Bencher
             run: |
@@ -207,7 +220,8 @@ jobs:
               --else-if-branch "${{ github.event.workflow_run.pull_requests[0]?.base.ref }}" \\
               --else-if-branch main \\
               --err \\
-              --github-actions \${{ secrets.GITHUB_TOKEN }}
+              --github-actions \${{ secrets.GITHUB_TOKEN }} \\
+              --ci-number $(cat $PR_NUMBER)
 ```
 
 <br/>

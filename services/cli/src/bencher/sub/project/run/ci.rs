@@ -29,12 +29,10 @@ pub enum GitHubError {
     NoPRNumber(String, String),
     #[error("GitHub Action event ({1}) PR number is invalid: {0}")]
     BadPRNumber(String, String),
-    #[error("GitHub Action event workflow run is missing: {0}")]
-    NoWorkFlowRun(String),
-    #[error("GitHub Action event workflow run pull requests is missing: {0}")]
-    NoPullRequests(String),
-    #[error("GitHub Action event workflow run pull requests is empty: {0}")]
-    EmptyPullRequests(String),
+    #[error(
+        "GitHub Action for workflow run must explicitly set PR number (ex: `--ci-number 123`)"
+    )]
+    NoWorkflowRunPRNumber,
     #[error("GitHub Action event repository is missing: {0}")]
     NoRepository(String),
     #[error("GitHub Action event repository full name is missing: {0}")]
@@ -61,6 +59,7 @@ impl TryFrom<CliRunCi> for Option<Ci> {
             ci_only_thresholds,
             ci_only_on_alert,
             ci_id,
+            ci_number,
             github_actions,
         } = ci;
         Ok(github_actions.map(|github_actions| {
@@ -68,6 +67,7 @@ impl TryFrom<CliRunCi> for Option<Ci> {
                 ci_only_thresholds,
                 ci_only_on_alert,
                 ci_id,
+                ci_number,
                 github_actions,
             ))
         }))
@@ -89,6 +89,7 @@ pub struct GitHubActions {
     ci_only_thresholds: bool,
     ci_only_on_alert: bool,
     ci_id: Option<NonEmpty>,
+    ci_number: Option<u64>,
     token: String,
 }
 
@@ -97,12 +98,14 @@ impl GitHubActions {
         ci_only_thresholds: bool,
         ci_only_on_alert: bool,
         ci_id: Option<NonEmpty>,
+        ci_number: Option<u64>,
         token: String,
     ) -> Self {
         Self {
             ci_only_thresholds,
             ci_only_on_alert,
             ci_id,
+            ci_number,
             token,
         }
     }
@@ -143,26 +146,24 @@ impl GitHubActions {
             // https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target
             Some(event_name @ ("pull_request" | "pull_request_target")) => {
                 // https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
-                event
-                    .get(NUMBER_KEY)
-                    .ok_or_else(|| GitHubError::NoPRNumber(event_str.clone(), event_name.into()))?
-                    .as_u64()
-                    .ok_or_else(|| GitHubError::BadPRNumber(event_str.clone(), event_name.into()))?
+                if let Some(issue_number) = self.ci_number {
+                    issue_number
+                } else {
+                    event
+                        .get(NUMBER_KEY)
+                        .ok_or_else(|| {
+                            GitHubError::NoPRNumber(event_str.clone(), event_name.into())
+                        })?
+                        .as_u64()
+                        .ok_or_else(|| {
+                            GitHubError::BadPRNumber(event_str.clone(), event_name.into())
+                        })?
+                }
             },
             // https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run
-            Some(event_name @ "workflow_run") => {
+            Some("workflow_run") => {
                 // https://docs.github.com/en/webhooks/webhook-events-and-payloads#workflow_run
-                event
-                    .get(event_name)
-                    .ok_or_else(|| GitHubError::NoWorkFlowRun(event_str.clone()))?
-                    .get("pull_requests")
-                    .ok_or_else(|| GitHubError::NoPullRequests(event_str.clone()))?
-                    .get(0)
-                    .ok_or_else(|| GitHubError::EmptyPullRequests(event_str.clone()))?
-                    .get(NUMBER_KEY)
-                    .ok_or_else(|| GitHubError::NoPRNumber(event_str.clone(), event_name.into()))?
-                    .as_u64()
-                    .ok_or_else(|| GitHubError::BadPRNumber(event_str.clone(), event_name.into()))?
+                self.ci_number.ok_or(GitHubError::NoWorkflowRunPRNumber)?
             },
             _ => {
                 cli_println!(
