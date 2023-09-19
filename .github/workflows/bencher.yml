@@ -395,6 +395,7 @@ jobs:
       - name: Build .deb package
         run: |
           ./scripts/deb.sh $CLI_BIN_NAME $(./scripts/version.sh) $CLI_BIN_ARCH $CLI_DEB_DIR
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-an-environment-variable
           echo "DEB_FILE=${CLI_BIN_NAME}_$(./scripts/version.sh)_${CLI_BIN_ARCH}.deb" >> $GITHUB_ENV
       - name: Upload Artifact
         uses: actions/upload-artifact@v3

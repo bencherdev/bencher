@@ -139,7 +139,6 @@ impl GitHubActions {
         let event: serde_json::Value = serde_json::from_str(&event_str)
             .map_err(|e| GitHubError::BadEvent(event_str.clone(), e))?;
 
-        const NUMBER_KEY: &str = "number";
         // The name of the event that triggered the workflow. For example, `workflow_dispatch`.
         let issue_number = match std::env::var("GITHUB_EVENT_NAME").ok().as_deref() {
             // https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request
@@ -150,7 +149,7 @@ impl GitHubActions {
                     issue_number
                 } else {
                     event
-                        .get(NUMBER_KEY)
+                        .get("number")
                         .ok_or_else(|| {
                             GitHubError::NoPRNumber(event_str.clone(), event_name.into())
                         })?

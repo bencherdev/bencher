@@ -127,15 +127,16 @@ jobs:
 
 1. Run your PR benchmarks on `pull_request` events.
 1. Save the PR benchmarks results to a file and upload them as an artifact.
-1. Save the PR number to a file and upload it as an artifact.
+1. Upload the PR event as an artifact.
 1. Chain that workflow with [the `workflow_run` event](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run).
-1. Track the PR benchmark results with `bencher run`.
+1. Extract necessary data from the cached PR event.
+1. Track the cached PR benchmark results with `bencher run`.
 
 This works because `workflow_run` runs in the context of the repository's default branch,
 where secrets such as your `BENCHER_API_TOKEN` and the `GITHUB_TOKEN` are available.
 Therefore, these workflows will only run if they exist on the default branch.
 See [using data from the triggering workflow](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow) for a full overview.
-The pull request number used in the initial workflow must be explicitly passed in since it is not available within  `workflow_run` (ex: `--ci-number $(cat $PR_NUMBER)`).
+The pull request number, head branch, and base branch used in the initial workflow must be explicitly passed in since they are not available within `workflow_run`.
 
 ```
 name: Run and Cache Benchmarks
@@ -154,12 +155,10 @@ jobs:
         with:
           name: benchmark_results.txt
           path: ./benchmark_results.txt
-      - name: Save PR number
-        run: echo ${{ github.event.number }} > ./pr_number
       - uses: actions/upload-artifact@v3
         with:
-          name: pr_number
-          path: ./pr_number
+          name: pr_event.json
+          path: ${{ env.GITHUB_EVENT_PATH }}
 ```
 
 ```
@@ -179,7 +178,7 @@ jobs:
       BENCHER_ADAPTER: json
       BENCHER_TESTBED: ubuntu-latest
       BENCHMARK_RESULTS: benchmark_results.txt
-      PR_NUMBER: pr_number
+      PR_EVENT: pr_event.json
     steps:
       - name: Download Benchmark Results
         uses: actions/github-script@v6
@@ -207,21 +206,30 @@ jobs:
               fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/${artifactName}.zip`, Buffer.from(download.data));
             }
             downloadArtifact(process.env.BENCHMARK_RESULTS);
-            downloadArtifact(process.env.PR_NUMBER);
+            downloadArtifact(process.env.PR_EVENT);
       - name: Unzip Benchmark Results
         run: |
           unzip $BENCHMARK_RESULTS.zip
-          unzip $PR_NUMBER.zip
+          unzip $PR_EVENT.zip
+      - name: Export PR Context
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let fs = require('fs');
+            let prEvent = JSON.parse(fs.readFileSync(process.env.PR_EVENT, {encoding: 'utf8'}));
+            fs.appendFileSync(process.env.GITHUB_ENV, `PR_NUMBER=${prEvent.number}`);
+            fs.appendFileSync(process.env.GITHUB_ENV, `PR_HEAD=${prEvent.pull_request.head.ref}`);
+            fs.appendFileSync(process.env.GITHUB_ENV, `PR_BASE=${prEvent.pull_request.base.ref}`);
       - uses: bencherdev/bencher@main
           - name: Track Benchmarks with Bencher
             run: |
               cat $BENCHMARK_RESULTS | bencher run \\
-              --if-branch "${{ github.event.workflow_run.pull_requests[0]?.head.ref }}" \\
-              --else-if-branch "${{ github.event.workflow_run.pull_requests[0]?.base.ref }}" \\
+              --if-branch "${{ env.PR_HEAD }}" \\
+              --else-if-branch "${{ env.PR_BASE }}" \\
               --else-if-branch main \\
               --err \\
               --github-actions \${{ secrets.GITHUB_TOKEN }} \\
-              --ci-number $(cat $PR_NUMBER)
+              --ci-number ${{ env.PR_NUMBER }}
 ```
 
 <br/>
