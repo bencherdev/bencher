@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.3.10"
+    "version": "0.3.11"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -6201,23 +6201,10 @@
             ]
           },
           "console": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonConsole"
-              }
-            ]
+            "$ref": "#/components/schemas/JsonConsole"
           },
           "database": {
             "$ref": "#/components/schemas/JsonDatabase"
-          },
-          "endpoint": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Url"
-              }
-            ]
           },
           "logging": {
             "$ref": "#/components/schemas/JsonLogging"
@@ -6230,21 +6217,8 @@
               }
             ]
           },
-          "secret_key": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Secret"
-              }
-            ]
-          },
           "security": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonSecurity"
-              }
-            ]
+            "$ref": "#/components/schemas/JsonSecurity"
           },
           "server": {
             "$ref": "#/components/schemas/JsonServer"
@@ -6259,8 +6233,10 @@
           }
         },
         "required": [
+          "console",
           "database",
           "logging",
+          "security",
           "server"
         ]
       },
