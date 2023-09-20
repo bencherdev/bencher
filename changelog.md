@@ -4,6 +4,10 @@ heading: "Bencher Changelog"
 sortOrder: 4
 ---
 
+## Pending `v0.3.11`
+- Add strongly typed IDs for database entities
+- Remove deprecated configuration keys (`endpoint` => `console.url` and `secret_key` => `security.secret_key`)
+
 ## `v0.3.10`
 - Add optional error monitoring with [Sentry](https://sentry.io)
 - Start API error message improvement

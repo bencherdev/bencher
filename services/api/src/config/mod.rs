@@ -181,15 +181,13 @@ impl Config {
 impl Default for Config {
     fn default() -> Self {
         Self(JsonConfig {
-            endpoint: None,
-            secret_key: None,
-            console: Some(JsonConsole {
+            console: JsonConsole {
                 url: DEFAULT_CONSOLE_URL.clone().into(),
-            }),
-            security: Some(JsonSecurity {
+            },
+            security: JsonSecurity {
                 issuer: Some(BENCHER_DOT_DEV.into()),
                 secret_key: DEFAULT_SECRET_KEY.clone(),
-            }),
+            },
             server: JsonServer {
                 bind_address: *DEFAULT_BIND_ADDRESS,
                 request_body_max_bytes: DEFAULT_MAX_BODY_SIZE,

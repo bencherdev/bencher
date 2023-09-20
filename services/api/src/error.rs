@@ -185,8 +185,6 @@ pub enum ApiError {
 
     #[error("Failed to cast integer: {0}")]
     IntError(#[from] std::num::TryFromIntError),
-    #[error("Missing configuration key: {0}")]
-    MissingConfigKey(String),
     #[error("Failed to parse integer: {0}")]
     BadInt(i64),
     #[error("Failed to parse URL encoding: {0}")]

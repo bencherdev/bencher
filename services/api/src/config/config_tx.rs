@@ -16,7 +16,7 @@ use dropshot::{
     ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingIfExists, ConfigLoggingLevel,
     ConfigTls, HttpServer,
 };
-use slog::{debug, error, info, warn, Logger};
+use slog::{debug, error, info, Logger};
 use tokio::sync::mpsc::Sender;
 
 use crate::{
@@ -54,8 +54,6 @@ fn into_inner(log: &Logger, config_tx: ConfigTx) -> Result<HttpServer<ApiContext
     let ConfigTx { config, restart_tx } = config_tx;
 
     let Config(JsonConfig {
-        endpoint,
-        secret_key,
         console,
         security,
         mut server,
@@ -66,47 +64,6 @@ fn into_inner(log: &Logger, config_tx: ConfigTx) -> Result<HttpServer<ApiContext
         #[cfg(feature = "plus")]
         plus,
     }) = config;
-
-    // TODO Remove deprecated endpoint
-    let console = if let Some(console) = console {
-        if endpoint.is_some() {
-            warn!(
-                log,
-                "DEPRECATED: The `endpoint` is now `console.url`. This value will be ignored."
-            );
-        }
-        console
-    } else if let Some(endpoint) = endpoint {
-        warn!(
-            log,
-            "DEPRECATED: The `endpoint` is now `console.url`. This value will be used for now."
-        );
-        JsonConsole { url: endpoint }
-    } else {
-        return Err(ApiError::MissingConfigKey("console.url".into()));
-    };
-
-    // TODO Remove deprecated secret_key
-    let security = if let Some(security) = security {
-        if secret_key.is_some() {
-            warn!(
-                log,
-            "DEPRECATED: The `secret_key` is now `security.secret_key`. This value will be ignored."
-            );
-        }
-        security
-    } else if let Some(secret_key) = secret_key {
-        warn!(
-            log,
-            "DEPRECATED: The `secret_key` is now `security.secret_key`. This value will be used for now."
-        );
-        JsonSecurity {
-            issuer: None,
-            secret_key,
-        }
-    } else {
-        return Err(ApiError::MissingConfigKey("security.secret_key".into()));
-    };
 
     debug!(log, "Creating internal configuration");
     let private = into_private(

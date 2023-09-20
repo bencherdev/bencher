@@ -1,4 +1,4 @@
-use bencher_valid::{Sanitize, Secret, Url};
+use bencher_valid::Sanitize;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -33,14 +33,8 @@ pub struct JsonUpdateConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonConfig {
-    // TODO Remove deprecated endpoint
-    pub endpoint: Option<Url>,
-    // TODO Remove deprecated secret_key
-    pub secret_key: Option<Secret>,
-    // TODO Make mandatory
-    pub console: Option<JsonConsole>,
-    // TODO Make mandatory
-    pub security: Option<JsonSecurity>,
+    pub console: JsonConsole,
+    pub security: JsonSecurity,
     pub server: JsonServer,
     pub logging: JsonLogging,
     pub database: JsonDatabase,
@@ -52,7 +46,7 @@ pub struct JsonConfig {
 
 impl Sanitize for JsonConfig {
     fn sanitize(&mut self) {
-        self.secret_key.sanitize();
+        self.security.sanitize();
         self.database.sanitize();
         self.smtp.sanitize();
         #[cfg(feature = "plus")]
