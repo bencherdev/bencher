@@ -39,7 +39,13 @@ pub async fn server_endpoint_get(
     let endpoint = Endpoint::new(ENDPOINT_RESOURCE, Method::GetOne);
 
     let context = rqctx.context();
-    let json = get_one_inner(context).await.map_err(|e| endpoint.err(e))?;
+    let json = get_one_inner(context).await.map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     if auth_user.is_some() {
         response_ok!(endpoint, json)

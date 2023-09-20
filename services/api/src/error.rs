@@ -1,7 +1,6 @@
 use bencher_json::urlencoded::UrlEncodedError;
 use bencher_json::ResourceId;
 use bencher_plot::PlotError;
-use bencher_rbac::{Organization, Project};
 use dropshot::HttpError;
 use http::StatusCode;
 use thiserror::Error;
@@ -12,7 +11,7 @@ use crate::{
     endpoints::Endpoint,
     model::{
         project::{branch::BranchId, testbed::TestbedId, ProjectId},
-        user::{auth::AuthUser, UserId},
+        user::UserId,
     },
 };
 
@@ -94,22 +93,10 @@ pub enum ApiError {
         email: String,
         email_user_id: UserId,
     },
-    #[error("Failed to check permissions: {0}")]
-    IsAllowed(oso::OsoError),
+
     #[error("Failed to handle JWT (JSON Web Token): {0}")]
     JsonWebToken(#[from] jsonwebtoken::errors::Error),
-    #[error("Permission denied for user ({auth_user:?}) permission ({permission}) on organization ({organization:?}")]
-    IsAllowedOrganization {
-        auth_user: AuthUser,
-        permission: bencher_rbac::organization::Permission,
-        organization: Organization,
-    },
-    #[error("Permission denied for user ({auth_user:?}) permission ({permission}) on project ({project:?}")]
-    IsAllowedProject {
-        auth_user: AuthUser,
-        permission: bencher_rbac::project::Permission,
-        project: Project,
-    },
+
     #[error("The branch ({branch_id}) project ID ({branch_project_id}) do not match the project ID ({project_id}).")]
     BranchProject {
         project_id: ProjectId,
@@ -230,6 +217,8 @@ pub enum ApiError {
 
     #[error("Failed to parse JWT (JSON Web Token): {0}")]
     Jwt(#[from] crate::context::JwtError),
+    #[error("Failed to authorize RBAC (role-based access control): {0}")]
+    Rbac(#[from] crate::context::RbacError),
 }
 
 impl From<ApiError> for HttpError {
@@ -266,37 +255,73 @@ macro_rules! api_error {
 
 pub(crate) use api_error;
 
-macro_rules! resource_not_found {
+macro_rules! resource_not_found_err {
     ($resource:ident, $id:expr) => {
         |e| crate::error::resource_not_found_error(crate::error::BencherResource::$resource($id), e)
     };
 }
 
-pub(crate) use resource_not_found;
+pub(crate) use resource_not_found_err;
 
 #[derive(Debug)]
 pub enum BencherResource<Id> {
     Project(Id),
+    MetricKind(Id),
     Branch(Id),
     Testbed(Id),
+    Benchmark(Id),
 }
 
 impl<Id> BencherResource<Id> {
     pub fn name(&self) -> &str {
         match self {
             Self::Project(_) => "Project",
+            Self::MetricKind(_) => "Metric Kind",
             Self::Branch(_) => "Branch",
             Self::Testbed(_) => "Testbed",
+            Self::Benchmark(_) => "Benchmark",
         }
     }
 
     pub fn id(&self) -> &Id {
         match self {
-            Self::Project(id) => id,
-            Self::Branch(id) => id,
-            Self::Testbed(id) => id,
+            Self::Project(id)
+            | Self::MetricKind(id)
+            | Self::Branch(id)
+            | Self::Testbed(id)
+            | Self::Benchmark(id) => id,
         }
     }
+}
+
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+
+pub fn bad_request_error<E>(error: E) -> HttpError
+where
+    E: std::fmt::Display,
+{
+    HttpError::for_client_error(None, StatusCode::BAD_REQUEST, error.to_string())
+}
+
+pub fn unauthorized_error<E>(error: E) -> HttpError
+where
+    E: std::fmt::Display,
+{
+    HttpError::for_client_error(None, StatusCode::UNAUTHORIZED, error.to_string())
+}
+
+pub fn forbidden_error<E>(error: E) -> HttpError
+where
+    E: std::fmt::Display,
+{
+    HttpError::for_client_error(None, StatusCode::FORBIDDEN, error.to_string())
+}
+
+pub fn not_found_error<E>(error: E) -> HttpError
+where
+    E: std::fmt::Display,
+{
+    HttpError::for_client_error(None, StatusCode::NOT_FOUND, error.to_string())
 }
 
 pub fn resource_not_found_error<Id, E>(resource: BencherResource<Id>, error: E) -> HttpError
@@ -304,15 +329,11 @@ where
     Id: std::fmt::Display,
     E: std::fmt::Display,
 {
-    HttpError::for_client_error(
-        None,
-        StatusCode::NOT_FOUND,
-        format!(
-            "{resource} not found ({id}): {error}",
-            resource = resource.name(),
-            id = resource.id()
-        ),
-    )
+    not_found_error(format!(
+        "{resource} ({id}) not found: {error}",
+        resource = resource.name(),
+        id = resource.id(),
+    ))
 }
 
 pub fn issue_error<E>(status_code: StatusCode, title: &str, body: &str, error: E) -> HttpError

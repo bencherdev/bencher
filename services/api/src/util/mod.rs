@@ -8,7 +8,6 @@ pub mod headers;
 pub mod logger;
 pub mod query;
 pub mod resource_id;
-pub mod same_project;
 pub mod slug;
 pub mod typed_id;
 

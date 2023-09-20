@@ -96,7 +96,13 @@ pub async fn org_members_get(
         endpoint,
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     response_ok!(endpoint, json)
 }
@@ -182,7 +188,13 @@ pub async fn org_member_post(
         &auth_user,
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     response_accepted!(endpoint, json)
 }
@@ -309,7 +321,13 @@ pub async fn org_member_get(
 
     let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await
-        .map_err(|e| endpoint.err(e))?;
+        .map_err(|e| {
+            if let ApiError::HttpError(e) = e {
+                e
+            } else {
+                endpoint.err(e).into()
+            }
+        })?;
 
     response_ok!(endpoint, json)
 }
@@ -353,7 +371,13 @@ pub async fn org_member_patch(
         &auth_user,
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     response_accepted!(endpoint, json)
 }
@@ -405,7 +429,13 @@ pub async fn org_member_delete(
 
     let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await
-        .map_err(|e| endpoint.err(e))?;
+        .map_err(|e| {
+            if let ApiError::HttpError(e) = e {
+                e
+            } else {
+                endpoint.err(e).into()
+            }
+        })?;
 
     response_accepted!(endpoint, json)
 }

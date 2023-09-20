@@ -60,7 +60,13 @@ pub async fn proj_statistic_get(
         auth_user.as_ref(),
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     if auth_user.is_some() {
         response_ok!(endpoint, json)

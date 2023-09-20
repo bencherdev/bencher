@@ -18,7 +18,7 @@ use uuid::Uuid;
 
 use crate::{
     context::{DbConnection, Rbac},
-    error::{api_error, resource_not_found},
+    error::{api_error, forbidden_error, resource_not_found_err, unauthorized_error},
     model::{organization::QueryOrganization, user::auth::AuthUser},
     schema::{self, project as project_table},
     util::{query::fn_get, resource_id::fn_resource_id, slug::unwrap_slug, to_date_time},
@@ -27,7 +27,7 @@ use crate::{
 
 use self::visibility::Visibility;
 
-use super::organization::OrganizationId;
+use super::{organization::OrganizationId, user::auth::BEARER_TOKEN_FORMAT};
 
 pub mod benchmark;
 pub mod branch;
@@ -134,8 +134,8 @@ impl QueryProject {
     ) -> Result<Self, HttpError> {
         schema::project::table
             .filter(resource_id(project)?)
-            .first::<QueryProject>(conn)
-            .map_err(resource_not_found!(Project, project.clone()))
+            .first::<Self>(conn)
+            .map_err(resource_not_found_err!(Project, project.clone()))
     }
 
     pub fn get_uuid(conn: &mut DbConnection, id: ProjectId) -> Result<Uuid, ApiError> {
@@ -202,34 +202,16 @@ impl QueryProject {
         })
     }
 
-    pub fn is_allowed_resource_id(
+    pub fn is_allowed(
         conn: &mut DbConnection,
         rbac: &Rbac,
         project: &ResourceId,
         auth_user: &AuthUser,
         permission: bencher_rbac::project::Permission,
-    ) -> Result<Self, ApiError> {
-        let query_project = QueryProject::from_resource_id(conn, project)?;
-
-        rbac.is_allowed_project(auth_user, permission, &query_project)?;
-
-        Ok(query_project)
-    }
-
-    pub fn is_allowed_id(
-        conn: &mut DbConnection,
-        rbac: &Rbac,
-        project_id: ProjectId,
-        auth_user: &AuthUser,
-        permission: bencher_rbac::project::Permission,
-    ) -> Result<Self, ApiError> {
-        let query_project = schema::project::table
-            .filter(schema::project::id.eq(project_id))
-            .first(conn)
-            .map_err(api_error!())?;
-
-        rbac.is_allowed_project(auth_user, permission, &query_project)?;
-
+    ) -> Result<Self, HttpError> {
+        let query_project = Self::from_resource_id(conn, project)?;
+        rbac.is_allowed_project(auth_user, permission, &query_project)
+            .map_err(forbidden_error)?;
         Ok(query_project)
     }
 
@@ -238,26 +220,26 @@ impl QueryProject {
         rbac: &Rbac,
         project: &ResourceId,
         auth_user: Option<&AuthUser>,
-    ) -> Result<Self, ApiError> {
-        // Get the project
-        let project = QueryProject::from_resource_id(conn, project)?;
-
+    ) -> Result<Self, HttpError> {
+        let query_project = Self::from_resource_id(conn, project)?;
         // Check to see if the project is public
         // If so, anyone can access it
-        if project.visibility.is_public() {
-            Ok(project)
+        if query_project.visibility.is_public() {
+            Ok(query_project)
         } else if let Some(auth_user) = auth_user {
             // If there is an `AuthUser` then validate access
             // Verify that the user is allowed
-            QueryProject::is_allowed_id(
-                conn,
-                rbac,
-                project.id,
+            rbac.is_allowed_project(
                 auth_user,
                 bencher_rbac::project::Permission::View,
+                &query_project,
             )
+            .map_err(forbidden_error)?;
+            Ok(query_project)
         } else {
-            Err(ApiError::PrivateProject(project.id))
+            Err(unauthorized_error(format!(
+                "Project ({query_project:?}) is not public and requires authentication.\n{BEARER_TOKEN_FORMAT}",
+            )))
         }
     }
 }

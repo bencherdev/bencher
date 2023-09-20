@@ -56,7 +56,13 @@ pub async fn server_backup_post(
     let json_restart = body.into_inner();
     let json = post_inner(context, json_restart, &auth_user)
         .await
-        .map_err(|e| endpoint.err(e))?;
+        .map_err(|e| {
+            if let ApiError::HttpError(e) = e {
+                e
+            } else {
+                endpoint.err(e).into()
+            }
+        })?;
 
     response_accepted!(endpoint, json)
 }

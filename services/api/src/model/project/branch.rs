@@ -19,7 +19,7 @@ use super::{
 };
 use crate::{
     context::DbConnection,
-    error::{api_error, resource_not_found},
+    error::{api_error, resource_not_found_err},
     model::project::threshold::{InsertThreshold, QueryThreshold},
     schema,
     schema::branch as branch_table,
@@ -83,7 +83,7 @@ impl QueryBranch {
             .filter(schema::branch::project_id.eq(project_id))
             .filter(resource_id(branch)?)
             .first::<Self>(conn)
-            .map_err(resource_not_found!(Branch, branch.clone()))
+            .map_err(resource_not_found_err!(Branch, branch.clone()))
     }
 
     pub fn get_branch_version_json(
@@ -158,19 +158,6 @@ pub struct InsertBranch {
 impl InsertBranch {
     pub fn from_json(
         conn: &mut DbConnection,
-        project: &ResourceId,
-        branch: JsonNewBranch,
-    ) -> Result<Self, ApiError> {
-        let project_id = QueryProject::from_resource_id(conn, project)?.id;
-        Ok(Self::from_json_inner(conn, project_id, branch))
-    }
-
-    pub fn main(conn: &mut DbConnection, project_id: ProjectId) -> Self {
-        Self::from_json_inner(conn, project_id, JsonNewBranch::main())
-    }
-
-    fn from_json_inner(
-        conn: &mut DbConnection,
         project_id: ProjectId,
         branch: JsonNewBranch,
     ) -> Self {
@@ -185,6 +172,10 @@ impl InsertBranch {
             created: timestamp,
             modified: timestamp,
         }
+    }
+
+    pub fn main(conn: &mut DbConnection, project_id: ProjectId) -> Self {
+        Self::from_json(conn, project_id, JsonNewBranch::main())
     }
 
     pub fn start_point(

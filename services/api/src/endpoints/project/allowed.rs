@@ -51,7 +51,13 @@ pub async fn proj_allowed_get(
 
     let json = get_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await
-        .map_err(|e| endpoint.err(e))?;
+        .map_err(|e| {
+            if let ApiError::HttpError(e) = e {
+                e
+            } else {
+                endpoint.err(e).into()
+            }
+        })?;
 
     response_ok!(endpoint, json)
 }
@@ -64,7 +70,7 @@ async fn get_inner(
     let conn = &mut *context.conn().await;
 
     Ok(JsonAllowed {
-        allowed: QueryProject::is_allowed_resource_id(
+        allowed: QueryProject::is_allowed(
             conn,
             &context.rbac,
             &path_params.project,

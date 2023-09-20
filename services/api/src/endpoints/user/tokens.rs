@@ -92,7 +92,13 @@ pub async fn user_tokens_get(
         endpoint,
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     response_ok!(endpoint, json)
 }
@@ -156,7 +162,13 @@ pub async fn user_token_post(
     let json_token = body.into_inner();
     let json = post_inner(context, path_params.into_inner(), json_token, &auth_user)
         .await
-        .map_err(|e| endpoint.err(e))?;
+        .map_err(|e| {
+            if let ApiError::HttpError(e) = e {
+                e
+            } else {
+                endpoint.err(e).into()
+            }
+        })?;
 
     response_accepted!(endpoint, json)
 }
@@ -226,7 +238,13 @@ pub async fn user_token_get(
     let path_params = path_params.into_inner();
     let json = get_one_inner(context, path_params, &auth_user)
         .await
-        .map_err(|e| endpoint.err(e))?;
+        .map_err(|e| {
+            if let ApiError::HttpError(e) = e {
+                e
+            } else {
+                endpoint.err(e).into()
+            }
+        })?;
 
     response_ok!(endpoint, json)
 }
@@ -267,7 +285,13 @@ pub async fn user_token_patch(
         &auth_user,
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     response_accepted!(endpoint, json)
 }

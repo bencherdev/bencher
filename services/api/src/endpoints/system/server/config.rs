@@ -47,7 +47,13 @@ pub async fn server_config_get(
     let context = rqctx.context();
     let json = get_one_inner(&rqctx.log, context, &auth_user)
         .await
-        .map_err(|e| endpoint.err(e))?;
+        .map_err(|e| {
+            if let ApiError::HttpError(e) = e {
+                e
+            } else {
+                endpoint.err(e).into()
+            }
+        })?;
 
     response_ok!(endpoint, json)
 }
@@ -80,7 +86,13 @@ pub async fn server_config_put(
     let json_config = body.into_inner();
     let json = put_inner(&rqctx.log, context, json_config, &auth_user)
         .await
-        .map_err(|e| endpoint.err(e))?;
+        .map_err(|e| {
+            if let ApiError::HttpError(e) = e {
+                e
+            } else {
+                endpoint.err(e).into()
+            }
+        })?;
 
     response_accepted!(endpoint, json)
 }

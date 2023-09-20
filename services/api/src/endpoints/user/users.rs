@@ -56,7 +56,13 @@ pub async fn user_get(
     let path_params = path_params.into_inner();
     let json = get_one_inner(context, path_params, &auth_user)
         .await
-        .map_err(|e| endpoint.err(e))?;
+        .map_err(|e| {
+            if let ApiError::HttpError(e) = e {
+                e
+            } else {
+                endpoint.err(e).into()
+            }
+        })?;
 
     response_ok!(endpoint, json)
 }

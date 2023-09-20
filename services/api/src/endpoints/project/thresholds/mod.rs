@@ -17,7 +17,9 @@ use crate::{
     },
     error::api_error,
     model::project::{
+        branch::QueryBranch,
         metric_kind::QueryMetricKind,
+        testbed::QueryTestbed,
         threshold::{statistic::InsertStatistic, InsertThreshold, QueryThreshold, UpdateThreshold},
         QueryProject,
     },
@@ -26,7 +28,6 @@ use crate::{
     util::{
         cors::{get_cors, CorsResponse},
         error::into_json,
-        same_project::SameProject,
     },
     ApiError,
 };
@@ -88,7 +89,13 @@ pub async fn proj_thresholds_get(
         endpoint,
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     if auth_user.is_some() {
         response_ok!(endpoint, json)
@@ -152,7 +159,13 @@ pub async fn proj_threshold_post(
         &auth_user,
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     response_accepted!(endpoint, json)
 }
@@ -165,30 +178,21 @@ async fn post_inner(
 ) -> Result<JsonThreshold, ApiError> {
     let conn = &mut *context.conn().await;
 
-    // Verify that the branch and testbed are part of the same project
-    let SameProject {
-        project,
-        branch_id,
-        testbed_id,
-    } = SameProject::validate(
-        conn,
-        &path_params.project,
-        &json_threshold.branch,
-        &json_threshold.testbed,
-    )?;
-    let project_id = project.id;
-
-    let metric_kind_id =
-        QueryMetricKind::from_resource_id(conn, project_id, &json_threshold.metric_kind)?.id;
-
     // Verify that the user is allowed
-    QueryProject::is_allowed_id(
+    let project_id = QueryProject::is_allowed(
         conn,
         &context.rbac,
-        project_id,
+        &path_params.project,
         auth_user,
         Permission::Create,
-    )?;
+    )?
+    .id;
+
+    // Verify that the branch, testbed, and metric kind are part of the same project
+    let branch_id = QueryBranch::from_resource_id(conn, project_id, &json_threshold.branch)?.id;
+    let testbed_id = QueryTestbed::from_resource_id(conn, project_id, &json_threshold.testbed)?.id;
+    let metric_kind_id =
+        QueryMetricKind::from_resource_id(conn, project_id, &json_threshold.metric_kind)?.id;
 
     // Create the new threshold
     let threshold_id = InsertThreshold::from_json(
@@ -245,7 +249,13 @@ pub async fn proj_threshold_get(
         auth_user.as_ref(),
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     if auth_user.is_some() {
         response_ok!(endpoint, json)
@@ -292,7 +302,13 @@ pub async fn proj_threshold_put(
         &auth_user,
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     response_accepted!(endpoint, json)
 }
@@ -306,7 +322,7 @@ async fn put_inner(
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed_resource_id(
+    let query_project = QueryProject::is_allowed(
         conn,
         &context.rbac,
         &path_params.project,
@@ -354,7 +370,13 @@ pub async fn proj_threshold_delete(
 
     let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await
-        .map_err(|e| endpoint.err(e))?;
+        .map_err(|e| {
+            if let ApiError::HttpError(e) = e {
+                e
+            } else {
+                endpoint.err(e).into()
+            }
+        })?;
 
     response_accepted!(endpoint, json)
 }
@@ -367,7 +389,7 @@ async fn delete_inner(
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed_resource_id(
+    let query_project = QueryProject::is_allowed(
         conn,
         &context.rbac,
         &path_params.project,

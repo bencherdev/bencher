@@ -11,11 +11,14 @@ use oso::{PolarValue, ToPolar};
 
 use crate::{
     context::{ApiContext, DbConnection, Rbac},
+    error::{bad_request_error, forbidden_error, not_found_error},
     model::{organization::OrganizationId, project::ProjectId},
     schema,
 };
 
 use super::UserId;
+
+pub const BEARER_TOKEN_FORMAT: &str = "Expected format is `Authorization: Bearer <bencher.api.token>`.\nWhere `<bencher.api.token>` is your Bencher API token.";
 
 #[derive(Debug, Clone)]
 pub struct AuthUser {
@@ -52,70 +55,46 @@ impl AuthUser {
     pub async fn new(rqctx: &RequestContext<ApiContext>) -> Result<Self, HttpError> {
         let request = &rqctx.request;
 
-        const EXPECTED: &str = "Expected format is `Authorization: Bearer <bencher.api.token>`.\nWhere `<bencher.api.token>` is your Bencher API token.";
         let headers = request
             .headers()
             .get("Authorization")
             .ok_or_else(|| {
-                HttpError::for_client_error(
-                    None,
-                    StatusCode::UNAUTHORIZED,
-                    format!("Request is missing \"Authorization\" header.\n{EXPECTED}"),
-                )
+                bad_request_error(format!(
+                    "Request is missing \"Authorization\" header.\n{BEARER_TOKEN_FORMAT}"
+                ))
             })?
             .to_str()
             .map_err(|e| {
-                HttpError::for_client_error(
-                    None,
-                    StatusCode::UNAUTHORIZED,
-                    format!("Request has an invalid \"Authorization\" header: {e}\n{EXPECTED}"),
-                )
+                bad_request_error(format!(
+                    "Request has an invalid \"Authorization\" header: {e}\n{BEARER_TOKEN_FORMAT}"
+                ))
             })?;
         let (_, token) = headers.split_once("Bearer ").ok_or_else(|| {
-            HttpError::for_client_error(
-                None,
-                StatusCode::UNAUTHORIZED,
-                format!("Request is missing \"Authorization\" Bearer.\n{EXPECTED}"),
-            )
+            bad_request_error(format!(
+                "Request is missing \"Authorization\" Bearer.\n{BEARER_TOKEN_FORMAT}"
+            ))
         })?;
         let token = token.trim();
-        let jwt: Jwt = token.parse().map_err(|e| {
-            HttpError::for_client_error(
-                None,
-                StatusCode::UNAUTHORIZED,
-                format!("Malformed JSON Web Token: {e}"),
-            )
-        })?;
+        let jwt: Jwt = token
+            .parse()
+            .map_err(|e| bad_request_error(format!("Malformed JSON Web Token: {e}")))?;
 
         let context = rqctx.context();
         let conn = &mut *context.conn().await;
-        let claims = context.secret_key.validate_client(&jwt).map_err(|e| {
-            HttpError::for_client_error(
-                None,
-                StatusCode::UNAUTHORIZED,
-                format!("Failed to validate JSON Web Token: {e}"),
-            )
-        })?;
+        let claims = context
+            .secret_key
+            .validate_client(&jwt)
+            .map_err(|e| bad_request_error(format!("Failed to validate JSON Web Token: {e}")))?;
 
         let email = claims.email();
         let (user_id, admin, locked) = schema::user::table
             .filter(schema::user::email.eq(email))
             .select((schema::user::id, schema::user::admin, schema::user::locked))
             .first::<(UserId, bool, bool)>(conn)
-            .map_err(|e| {
-                HttpError::for_client_error(
-                    None,
-                    StatusCode::NOT_FOUND,
-                    format!("Failed to find user ({email}): {e}"),
-                )
-            })?;
+            .map_err(|e| not_found_error(format!("Failed to find user ({email}): {e}")))?;
 
         if locked {
-            return Err(HttpError::for_client_error(
-                None,
-                StatusCode::UNAUTHORIZED,
-                format!("User account is locked ({email})"),
-            ));
+            return Err(forbidden_error(format!("User account is locked ({email})")));
         }
 
         let (org_ids, org_roles) = Self::organization_roles(conn, user_id, email)?;

@@ -12,7 +12,7 @@ mod secret_key;
 
 pub use database::{Database, DbConnection};
 pub use messenger::{Body, ButtonBody, Email, Message, Messenger, NewUserBody};
-pub use rbac::Rbac;
+pub use rbac::{Rbac, RbacError};
 pub use secret_key::{JwtError, SecretKey};
 
 pub struct ApiContext {

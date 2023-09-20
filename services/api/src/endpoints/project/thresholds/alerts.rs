@@ -83,7 +83,13 @@ pub async fn proj_alerts_get(
         endpoint,
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     if auth_user.is_some() {
         response_ok!(endpoint, json)
@@ -201,7 +207,13 @@ pub async fn proj_alert_get(
         auth_user.as_ref(),
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     if auth_user.is_some() {
         response_ok!(endpoint, json)
@@ -244,7 +256,13 @@ pub async fn proj_alert_patch(
         &auth_user,
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     response_accepted!(endpoint, json)
 }
@@ -258,15 +276,16 @@ async fn patch_inner(
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed_resource_id(
+    let project_id = QueryProject::is_allowed(
         conn,
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Edit,
-    )?;
+    )?
+    .id;
 
-    let query_alert = QueryAlert::from_uuid(conn, query_project.id, path_params.alert)?;
+    let query_alert = QueryAlert::from_uuid(conn, project_id, path_params.alert)?;
     diesel::update(schema::alert::table.filter(schema::alert::id.eq(query_alert.id)))
         .set(&UpdateAlert::from(json_alert))
         .execute(conn)
@@ -307,7 +326,13 @@ pub async fn proj_alert_stats_get(
         path_params.into_inner(),
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     if auth_user.is_some() {
         response_ok!(endpoint, json)

@@ -19,7 +19,9 @@ use crate::{
     },
     error::api_error,
     model::project::{
+        branch::QueryBranch,
         report::{results::ReportResults, InsertReport, QueryReport},
+        testbed::QueryTestbed,
         version::{InsertVersion, QueryVersion, VersionId},
         QueryProject,
     },
@@ -28,7 +30,6 @@ use crate::{
     util::{
         cors::{get_cors, CorsResponse},
         error::database_map,
-        same_project::SameProject,
     },
     ApiError,
 };
@@ -87,7 +88,13 @@ pub async fn proj_reports_get(
         endpoint,
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     if auth_user.is_some() {
         response_ok!(endpoint, json)
@@ -181,27 +188,19 @@ async fn post_inner(
 ) -> Result<JsonReport, ApiError> {
     let conn = &mut *context.conn().await;
 
-    // Verify that the branch and testbed are part of the same project
-    let SameProject {
-        project,
-        branch_id,
-        testbed_id,
-    } = SameProject::validate(
-        conn,
-        &path_params.project,
-        &json_report.branch,
-        &json_report.testbed,
-    )?;
-    let project_id = project.id;
-
     // Verify that the user is allowed
-    QueryProject::is_allowed_id(
+    let project_id = QueryProject::is_allowed(
         conn,
         &context.rbac,
-        project_id,
+        &path_params.project,
         auth_user,
         Permission::Create,
-    )?;
+    )?
+    .id;
+
+    // Verify that the branch and testbed are part of the same project
+    let branch_id = QueryBranch::from_resource_id(conn, project_id, &json_report.branch)?.id;
+    let testbed_id = QueryTestbed::from_resource_id(conn, project_id, &json_report.testbed)?.id;
 
     // Check to see if the project is public or private
     // If private, then validate that there is an active subscription or license
@@ -396,7 +395,13 @@ pub async fn proj_report_get(
         auth_user.as_ref(),
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     if auth_user.is_some() {
         response_ok!(endpoint, json)
@@ -450,7 +455,13 @@ pub async fn proj_report_delete(
 
     let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await
-        .map_err(|e| endpoint.err(e))?;
+        .map_err(|e| {
+            if let ApiError::HttpError(e) = e {
+                e
+            } else {
+                endpoint.err(e).into()
+            }
+        })?;
 
     response_accepted!(endpoint, json)
 }
@@ -463,7 +474,7 @@ async fn delete_inner(
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed_resource_id(
+    let query_project = QueryProject::is_allowed(
         conn,
         &context.rbac,
         &path_params.project,

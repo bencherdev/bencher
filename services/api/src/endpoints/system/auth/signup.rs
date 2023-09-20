@@ -56,7 +56,13 @@ pub async fn auth_signup_post(
 
     let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner())
         .await
-        .map_err(|e| endpoint.err(e))?;
+        .map_err(|e| {
+            if let ApiError::HttpError(e) = e {
+                e
+            } else {
+                endpoint.err(e).into()
+            }
+        })?;
 
     pub_response_accepted!(endpoint, json)
 }

@@ -12,7 +12,7 @@ use uuid::Uuid;
 use super::{ProjectId, QueryProject};
 use crate::{
     context::DbConnection,
-    error::{api_error, resource_not_found},
+    error::{api_error, resource_not_found_err},
     schema,
     schema::testbed as testbed_table,
     util::{
@@ -75,7 +75,7 @@ impl QueryTestbed {
             .filter(schema::testbed::project_id.eq(project_id))
             .filter(resource_id(testbed)?)
             .first::<Self>(conn)
-            .map_err(resource_not_found!(Testbed, testbed.clone()))
+            .map_err(resource_not_found_err!(Testbed, testbed.clone()))
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonTestbed, ApiError> {
@@ -118,19 +118,6 @@ pub struct InsertTestbed {
 impl InsertTestbed {
     pub fn from_json(
         conn: &mut DbConnection,
-        project: &ResourceId,
-        testbed: JsonNewTestbed,
-    ) -> Result<Self, ApiError> {
-        let project_id = QueryProject::from_resource_id(conn, project)?.id;
-        Ok(Self::from_json_inner(conn, project_id, testbed))
-    }
-
-    pub fn localhost(conn: &mut DbConnection, project_id: ProjectId) -> Self {
-        Self::from_json_inner(conn, project_id, JsonNewTestbed::localhost())
-    }
-
-    fn from_json_inner(
-        conn: &mut DbConnection,
         project_id: ProjectId,
         testbed: JsonNewTestbed,
     ) -> Self {
@@ -145,6 +132,10 @@ impl InsertTestbed {
             created: timestamp,
             modified: timestamp,
         }
+    }
+
+    pub fn localhost(conn: &mut DbConnection, project_id: ProjectId) -> Self {
+        Self::from_json(conn, project_id, JsonNewTestbed::localhost())
     }
 }
 

@@ -90,7 +90,13 @@ pub async fn proj_branches_get(
         endpoint,
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     if auth_user.is_some() {
         response_ok!(endpoint, json)
@@ -155,7 +161,13 @@ pub async fn proj_branch_post(
         &auth_user,
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     response_accepted!(endpoint, json)
 }
@@ -167,12 +179,22 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonBranch, ApiError> {
     let conn = &mut *context.conn().await;
+
+    // Verify that the user is allowed
+    let query_project = QueryProject::is_allowed(
+        conn,
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+        Permission::Create,
+    )?;
+
     // Soft creation
     // If the new branch name already exists then return the existing branch name
     // instead of erroring due to the unique constraint
     // This is useful to help prevent race conditions in CI
     if let Some(true) = json_branch.soft {
-        if let Ok(branch) = schema::branch::table
+        if let Ok(branch) = QueryBranch::belonging_to(&query_project)
             .filter(schema::branch::name.eq(json_branch.name.as_ref()))
             .first::<QueryBranch>(conn)
         {
@@ -180,15 +202,7 @@ async fn post_inner(
         }
     }
     let start_point = json_branch.start_point.take();
-    let insert_branch = InsertBranch::from_json(conn, &path_params.project, json_branch)?;
-    // Verify that the user is allowed
-    QueryProject::is_allowed_id(
-        conn,
-        &context.rbac,
-        insert_branch.project_id,
-        auth_user,
-        Permission::Create,
-    )?;
+    let insert_branch = InsertBranch::from_json(conn, query_project.id, json_branch);
 
     diesel::insert_into(schema::branch::table)
         .values(&insert_branch)
@@ -244,7 +258,13 @@ pub async fn proj_branch_get(
         auth_user.as_ref(),
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     if auth_user.is_some() {
         response_ok!(endpoint, json)
@@ -293,7 +313,13 @@ pub async fn proj_branch_patch(
         &auth_user,
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     response_accepted!(endpoint, json)
 }
@@ -307,15 +333,16 @@ async fn patch_inner(
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed_resource_id(
+    let project_id = QueryProject::is_allowed(
         conn,
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Edit,
-    )?;
+    )?
+    .id;
 
-    let query_branch = QueryBranch::from_resource_id(conn, query_project.id, &path_params.branch)?;
+    let query_branch = QueryBranch::from_resource_id(conn, project_id, &path_params.branch)?;
     if query_branch.is_system() {
         return Err(ApiError::SystemBranch);
     }
@@ -341,7 +368,13 @@ pub async fn proj_branch_delete(
 
     let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await
-        .map_err(|e| endpoint.err(e))?;
+        .map_err(|e| {
+            if let ApiError::HttpError(e) = e {
+                e
+            } else {
+                endpoint.err(e).into()
+            }
+        })?;
 
     response_accepted!(endpoint, json)
 }
@@ -354,15 +387,16 @@ async fn delete_inner(
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed_resource_id(
+    let project_id = QueryProject::is_allowed(
         conn,
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Delete,
-    )?;
+    )?
+    .id;
 
-    let query_branch = QueryBranch::from_resource_id(conn, query_project.id, &path_params.branch)?;
+    let query_branch = QueryBranch::from_resource_id(conn, project_id, &path_params.branch)?;
     if query_branch.is_system() {
         return Err(ApiError::SystemBranch);
     }

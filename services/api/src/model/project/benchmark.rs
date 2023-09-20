@@ -6,6 +6,7 @@ use bencher_json::{
 };
 use chrono::Utc;
 use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
+use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::{
@@ -15,7 +16,7 @@ use super::{
 };
 use crate::{
     context::DbConnection,
-    error::api_error,
+    error::{api_error, resource_not_found_err},
     schema,
     schema::benchmark as benchmark_table,
     util::{
@@ -86,12 +87,12 @@ impl QueryBenchmark {
         conn: &mut DbConnection,
         project_id: ProjectId,
         benchmark: &ResourceId,
-    ) -> Result<Self, ApiError> {
+    ) -> Result<Self, HttpError> {
         schema::benchmark::table
             .filter(schema::benchmark::project_id.eq(project_id))
             .filter(resource_id(benchmark)?)
             .first::<Self>(conn)
-            .map_err(api_error!())
+            .map_err(resource_not_found_err!(Benchmark, benchmark.clone()))
     }
 
     pub fn get_or_create(
@@ -210,10 +211,9 @@ pub struct InsertBenchmark {
 impl InsertBenchmark {
     pub fn from_json(
         conn: &mut DbConnection,
-        project: &ResourceId,
+        project_id: ProjectId,
         benchmark: JsonNewBenchmark,
-    ) -> Result<Self, ApiError> {
-        let project_id = QueryProject::from_resource_id(conn, project)?.id;
+    ) -> Self {
         let JsonNewBenchmark { name, slug } = benchmark;
         let slug = unwrap_child_slug!(
             conn,
@@ -224,14 +224,14 @@ impl InsertBenchmark {
             QueryBenchmark
         );
         let timestamp = Utc::now().timestamp();
-        Ok(Self {
+        Self {
             uuid: Uuid::new_v4().to_string(),
             project_id,
             name: name.into(),
             slug,
             created: timestamp,
             modified: timestamp,
-        })
+        }
     }
 
     fn from_name(project_id: ProjectId, name: String) -> Self {

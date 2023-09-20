@@ -90,7 +90,13 @@ pub async fn proj_metric_kinds_get(
         endpoint,
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     if auth_user.is_some() {
         response_ok!(endpoint, json)
@@ -155,7 +161,13 @@ pub async fn proj_metric_kind_post(
         &auth_user,
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     response_accepted!(endpoint, json)
 }
@@ -168,16 +180,17 @@ async fn post_inner(
 ) -> Result<JsonMetricKind, ApiError> {
     let conn = &mut *context.conn().await;
 
-    let insert_metric_kind =
-        InsertMetricKind::from_json(conn, &path_params.project, json_metric_kind)?;
     // Verify that the user is allowed
-    QueryProject::is_allowed_id(
+    let project_id = QueryProject::is_allowed(
         conn,
         &context.rbac,
-        insert_metric_kind.project_id,
+        &path_params.project,
         auth_user,
         Permission::Create,
-    )?;
+    )?
+    .id;
+
+    let insert_metric_kind = InsertMetricKind::from_json(conn, project_id, json_metric_kind);
 
     // This check is required because not all system metric kinds are created at project init
     // And default metric kinds may be deleted
@@ -233,7 +246,13 @@ pub async fn proj_metric_kind_get(
         auth_user.as_ref(),
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     if auth_user.is_some() {
         response_ok!(endpoint, json)
@@ -282,7 +301,13 @@ pub async fn proj_metric_kind_patch(
         &auth_user,
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     response_accepted!(endpoint, json)
 }
@@ -296,16 +321,17 @@ async fn patch_inner(
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed_resource_id(
+    let project_id = QueryProject::is_allowed(
         conn,
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Edit,
-    )?;
+    )?
+    .id;
 
     let query_metric_kind =
-        QueryMetricKind::from_resource_id(conn, query_project.id, &path_params.metric_kind)?;
+        QueryMetricKind::from_resource_id(conn, project_id, &path_params.metric_kind)?;
     if query_metric_kind.is_system() {
         return Err(ApiError::SystemMetricKind);
     }
@@ -333,7 +359,13 @@ pub async fn proj_metric_kind_delete(
 
     let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await
-        .map_err(|e| endpoint.err(e))?;
+        .map_err(|e| {
+            if let ApiError::HttpError(e) = e {
+                e
+            } else {
+                endpoint.err(e).into()
+            }
+        })?;
 
     response_accepted!(endpoint, json)
 }
@@ -346,16 +378,17 @@ async fn delete_inner(
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed_resource_id(
+    let project_id = QueryProject::is_allowed(
         conn,
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Delete,
-    )?;
+    )?
+    .id;
 
     let query_metric_kind =
-        QueryMetricKind::from_resource_id(conn, query_project.id, &path_params.metric_kind)?;
+        QueryMetricKind::from_resource_id(conn, project_id, &path_params.metric_kind)?;
 
     diesel::delete(
         schema::metric_kind::table.filter(schema::metric_kind::id.eq(query_metric_kind.id)),

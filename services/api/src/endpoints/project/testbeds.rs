@@ -90,7 +90,13 @@ pub async fn proj_testbeds_get(
         endpoint,
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     if auth_user.is_some() {
         response_ok!(endpoint, json)
@@ -155,7 +161,13 @@ pub async fn proj_testbed_post(
         &auth_user,
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     response_accepted!(endpoint, json)
 }
@@ -168,15 +180,17 @@ async fn post_inner(
 ) -> Result<JsonTestbed, ApiError> {
     let conn = &mut *context.conn().await;
 
-    let insert_testbed = InsertTestbed::from_json(conn, &path_params.project, json_testbed)?;
     // Verify that the user is allowed
-    QueryProject::is_allowed_id(
+    let project_id = QueryProject::is_allowed(
         conn,
         &context.rbac,
-        insert_testbed.project_id,
+        &path_params.project,
         auth_user,
         Permission::Create,
-    )?;
+    )?
+    .id;
+
+    let insert_testbed = InsertTestbed::from_json(conn, project_id, json_testbed);
 
     diesel::insert_into(schema::testbed::table)
         .values(&insert_testbed)
@@ -227,7 +241,13 @@ pub async fn proj_testbed_get(
         auth_user.as_ref(),
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     if auth_user.is_some() {
         response_ok!(endpoint, json)
@@ -276,7 +296,13 @@ pub async fn proj_testbed_patch(
         &auth_user,
     )
     .await
-    .map_err(|e| endpoint.err(e))?;
+    .map_err(|e| {
+        if let ApiError::HttpError(e) = e {
+            e
+        } else {
+            endpoint.err(e).into()
+        }
+    })?;
 
     response_accepted!(endpoint, json)
 }
@@ -290,16 +316,16 @@ async fn patch_inner(
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed_resource_id(
+    let project_id = QueryProject::is_allowed(
         conn,
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Edit,
-    )?;
+    )?
+    .id;
 
-    let query_testbed =
-        QueryTestbed::from_resource_id(conn, query_project.id, &path_params.testbed)?;
+    let query_testbed = QueryTestbed::from_resource_id(conn, project_id, &path_params.testbed)?;
     if query_testbed.is_system() {
         return Err(ApiError::SystemTestbed);
     }
@@ -325,7 +351,13 @@ pub async fn proj_testbed_delete(
 
     let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await
-        .map_err(|e| endpoint.err(e))?;
+        .map_err(|e| {
+            if let ApiError::HttpError(e) = e {
+                e
+            } else {
+                endpoint.err(e).into()
+            }
+        })?;
 
     response_accepted!(endpoint, json)
 }
@@ -338,16 +370,16 @@ async fn delete_inner(
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed_resource_id(
+    let project_id = QueryProject::is_allowed(
         conn,
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Delete,
-    )?;
+    )?
+    .id;
 
-    let query_testbed =
-        QueryTestbed::from_resource_id(conn, query_project.id, &path_params.testbed)?;
+    let query_testbed = QueryTestbed::from_resource_id(conn, project_id, &path_params.testbed)?;
     if query_testbed.is_system() {
         return Err(ApiError::SystemTestbed);
     }

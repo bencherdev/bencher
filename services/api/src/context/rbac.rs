@@ -1,7 +1,7 @@
 use bencher_rbac::{Organization, Project};
 use oso::{Oso, ToPolar};
 
-use crate::{model::user::auth::AuthUser, ApiError};
+use crate::model::user::auth::AuthUser;
 
 pub struct Rbac(pub Oso);
 
@@ -11,21 +11,41 @@ impl From<Oso> for Rbac {
     }
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum RbacError {
+    #[error("Failed to check permissions: {0}")]
+    IsAllowed(oso::OsoError),
+    #[error("Permission ({permission}) denied for user ({auth_user:?}) on organization ({organization:?})")]
+    IsAllowedOrganization {
+        auth_user: AuthUser,
+        permission: bencher_rbac::organization::Permission,
+        organization: Organization,
+    },
+    #[error("Permission ({permission}) denied for user ({auth_user:?}) on project ({project:?})")]
+    IsAllowedProject {
+        auth_user: AuthUser,
+        permission: bencher_rbac::project::Permission,
+        project: Project,
+    },
+}
+
 impl Rbac {
     pub fn is_allowed<Actor, Action, Resource>(
         &self,
         actor: Actor,
         action: Action,
         resource: Resource,
-    ) -> Result<bool, ApiError>
+    ) -> Result<bool, RbacError>
     where
         Actor: ToPolar,
         Action: ToPolar,
         Resource: ToPolar,
     {
-        self.0
-            .is_allowed(actor, action, resource)
-            .map_err(ApiError::IsAllowed)
+        self.0.is_allowed(actor, action, resource).map_err(|e| {
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(&e);
+            RbacError::IsAllowed(e)
+        })
     }
 
     pub fn is_allowed_unwrap<Actor, Action, Resource>(
@@ -49,11 +69,11 @@ impl Rbac {
         auth_user: &AuthUser,
         permission: bencher_rbac::organization::Permission,
         organization: impl Into<Organization>,
-    ) -> Result<(), ApiError> {
+    ) -> Result<(), RbacError> {
         let organization = organization.into();
         self.is_allowed_unwrap(auth_user, permission, organization.clone())
             .then_some(())
-            .ok_or_else(|| ApiError::IsAllowedOrganization {
+            .ok_or_else(|| RbacError::IsAllowedOrganization {
                 auth_user: auth_user.clone(),
                 permission,
                 organization,
@@ -65,11 +85,11 @@ impl Rbac {
         auth_user: &AuthUser,
         permission: bencher_rbac::project::Permission,
         project: impl Into<Project>,
-    ) -> Result<(), ApiError> {
+    ) -> Result<(), RbacError> {
         let project = project.into();
         self.is_allowed_unwrap(auth_user, permission, project.clone())
             .then_some(())
-            .ok_or_else(|| ApiError::IsAllowedProject {
+            .ok_or_else(|| RbacError::IsAllowedProject {
                 auth_user: auth_user.clone(),
                 permission,
                 project,
