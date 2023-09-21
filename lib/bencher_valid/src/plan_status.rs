@@ -52,7 +52,7 @@ impl FromStr for PlanStatus {
                 PAUSED => Self::Paused,
                 TRIALING => Self::Trialing,
                 UNPAID => Self::Unpaid,
-                _ => panic!("Invalid plan level"),
+                _ => return Err(ValidError::PlanStatus(plan_status.into())),
             });
         }
 

@@ -25,11 +25,18 @@ pub struct BenchmarkName(String);
 
 impl BenchmarkName {
     pub fn try_push(&mut self, separator: char, other: &Self) -> Result<(), ValidError> {
-        let remaining_capacity = MAX_BENCHMARK_NAME_LEN - self.0.len();
+        let remaining_capacity = MAX_BENCHMARK_NAME_LEN
+            .checked_sub(self.0.len())
+            .unwrap_or_default();
         if other.0.len() < remaining_capacity {
             self.0.push(separator);
             self.0.push_str(other.as_ref());
-            assert!(self.0.len() <= MAX_BENCHMARK_NAME_LEN);
+            debug_assert!(
+                self.0.len() <= MAX_BENCHMARK_NAME_LEN,
+                "Benchmark name length is {} but should be <= {}",
+                self.0.len(),
+                MAX_BENCHMARK_NAME_LEN
+            );
             Ok(())
         } else {
             Err(ValidError::BenchmarkName(format!("{}.{}", self.0, other.0)))

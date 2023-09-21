@@ -1,3 +1,5 @@
+#![allow(clippy::arithmetic_side_effects)]
+
 use derive_more::Display;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -16,7 +18,7 @@ use crate::{error::REGEX_ERROR, ValidError};
 
 #[allow(clippy::expect_used)]
 static NUMBER_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^[[:digit:]]{12,19}$").expect(REGEX_ERROR));
+    Lazy::new(|| Regex::new("^[[:digit:]]{12,19}$").expect(REGEX_ERROR));
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]

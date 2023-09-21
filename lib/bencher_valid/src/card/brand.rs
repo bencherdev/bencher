@@ -51,7 +51,7 @@ impl FromStr for CardBrand {
                 UNIONPAY => Self::Unionpay,
                 VISA => Self::Visa,
                 UNKNOWN => Self::Unknown,
-                _ => panic!("Invalid card brand"),
+                _ => return Err(ValidError::CardBrand(card_brand.into())),
             });
         }
 

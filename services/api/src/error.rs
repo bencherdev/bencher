@@ -257,7 +257,12 @@ pub(crate) use api_error;
 
 macro_rules! resource_not_found_err {
     ($resource:ident, $id:expr) => {
-        |e| crate::error::resource_not_found_error(crate::error::BencherResource::$resource($id), e)
+        |e| {
+            crate::error::resource_not_found_error(
+                &crate::error::BencherResource::$resource($id),
+                e,
+            )
+        }
     };
 }
 
@@ -324,7 +329,7 @@ where
     HttpError::for_client_error(None, StatusCode::NOT_FOUND, error.to_string())
 }
 
-pub fn resource_not_found_error<Id, E>(resource: BencherResource<Id>, error: E) -> HttpError
+pub fn resource_not_found_error<Id, E>(resource: &BencherResource<Id>, error: E) -> HttpError
 where
     Id: std::fmt::Display,
     E: std::fmt::Display,

@@ -37,17 +37,18 @@ const JSON_RESULT: &str = r#"{
 fn adapter_magic_json(c: &mut Criterion) {
     c.bench_function("JsonAdapter::Magic (JSON)", |b| {
         let settings = Settings::default();
-        b.iter(|| JsonAdapter::Magic.convert(JSON_RESULT, settings))
+        b.iter(|| JsonAdapter::Magic.convert(JSON_RESULT, settings));
     });
 }
 
 fn adapter_json(c: &mut Criterion) {
     c.bench_function("JsonAdapter::Json", |b| {
         let settings = Settings::default();
-        b.iter(|| JsonAdapter::Json.convert(JSON_RESULT, settings))
+        b.iter(|| JsonAdapter::Json.convert(JSON_RESULT, settings));
     });
 }
 
+#[allow(clippy::non_ascii_literal)]
 const RUST_RESULT: &str = "
 running 5 tests
 test tests::ignored ... ignored
@@ -63,21 +64,21 @@ test result: ok. 0 passed; 0 failed; 1 ignored; 4 measured; 0 filtered out; fini
 fn adapter_magic_rust(c: &mut Criterion) {
     c.bench_function("JsonAdapter::Magic (Rust)", |b| {
         let settings = Settings::default();
-        b.iter(|| JsonAdapter::Magic.convert(RUST_RESULT, settings))
+        b.iter(|| JsonAdapter::Magic.convert(RUST_RESULT, settings));
     });
 }
 
 fn adapter_rust(c: &mut Criterion) {
     c.bench_function("JsonAdapter::Rust", |b| {
         let settings = Settings::default();
-        b.iter(|| JsonAdapter::Rust.convert(RUST_RESULT, settings))
+        b.iter(|| JsonAdapter::Rust.convert(RUST_RESULT, settings));
     });
 }
 
 fn adapter_rust_bench(c: &mut Criterion) {
     c.bench_function("JsonAdapter::RustBench", |b| {
         let settings = Settings::default();
-        b.iter(|| JsonAdapter::RustBench.convert(RUST_RESULT, settings))
+        b.iter(|| JsonAdapter::RustBench.convert(RUST_RESULT, settings));
     });
 }
 

@@ -40,7 +40,7 @@ impl FromStr for PlanLevel {
                 FREE => Self::Free,
                 TEAM | BENCHER_TEAM => Self::Team,
                 ENTERPRISE | BENCHER_ENTERPRISE => Self::Enterprise,
-                _ => panic!("Invalid plan_level"),
+                _ => return Err(ValidError::PlanLevel(plan_level.into())),
             });
         }
 

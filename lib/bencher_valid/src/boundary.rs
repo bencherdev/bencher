@@ -51,6 +51,7 @@ impl Boundary {
     pub const THREE_NINES: Self = Self(OrderedFloat(0.999));
     pub const FOUR_NINES: Self = Self(OrderedFloat(0.9999));
     pub const FIVE_NINES: Self = Self(OrderedFloat(0.99999));
+    #[allow(clippy::unreadable_literal)]
     pub const SIXTEEN_NINES: Self = Self(OrderedFloat(0.9999999999999999));
     pub const MAX: Self = Self::SIXTEEN_NINES;
 }
