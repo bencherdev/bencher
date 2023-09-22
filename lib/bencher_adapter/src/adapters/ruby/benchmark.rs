@@ -18,9 +18,8 @@ pub struct AdapterRubyBenchmark;
 
 impl Adapter for AdapterRubyBenchmark {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
-        match settings.average {
-            Some(JsonAverage::Mean | JsonAverage::Median) => return None,
-            None => {},
+        if let Some(JsonAverage::Mean | JsonAverage::Median) = settings.average {
+            return None;
         }
 
         let mut benchmark_metrics = Vec::new();
@@ -154,10 +153,10 @@ pub(crate) mod test_ruby_benchmark {
     #[test]
     fn test_adapter_ruby_benchmark_five() {
         let results = convert_ruby_benchmark("five");
-        validate_adapter_ruby_benchmark(results);
+        validate_adapter_ruby_benchmark(&results);
     }
 
-    pub fn validate_adapter_ruby_benchmark(results: AdapterResults) {
+    pub fn validate_adapter_ruby_benchmark(results: &AdapterResults) {
         assert_eq!(results.inner.len(), 5);
 
         let metrics = results.get("for:").unwrap();

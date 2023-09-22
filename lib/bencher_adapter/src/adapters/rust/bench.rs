@@ -109,7 +109,7 @@ pub(crate) mod test_rust_bench {
         assert_eq!(
             None,
             opt_convert_file_path::<AdapterRustBench>(file_path, Settings::default())
-        )
+        );
     }
 
     #[test]
@@ -132,7 +132,7 @@ pub(crate) mod test_rust_bench {
             },
         )
         .unwrap();
-        validate_adapter_rust_bench(results);
+        validate_adapter_rust_bench(&results);
     }
 
     #[test]
@@ -154,7 +154,7 @@ pub(crate) mod test_rust_bench {
         .into_iter()
         .enumerate()
         {
-            assert_eq!(expected, parse_cargo(input), "#{index}: {input}")
+            assert_eq!(expected, parse_cargo(input), "#{index}: {input}");
         }
 
         for (index, input) in [
@@ -167,7 +167,7 @@ pub(crate) mod test_rust_bench {
         .iter()
         .enumerate()
         {
-            assert_eq!(true, parse_cargo(input).is_err(), "#{index}: {input}")
+            assert_eq!(true, parse_cargo(input).is_err(), "#{index}: {input}");
         }
     }
 
@@ -188,14 +188,14 @@ pub(crate) mod test_rust_bench {
     #[test]
     fn test_adapter_rust_many() {
         let results = convert_rust_bench("many");
-        validate_adapter_rust_bench(results);
+        validate_adapter_rust_bench(&results);
     }
 
-    pub fn validate_adapter_rust_bench(results: AdapterResults) {
+    pub fn validate_adapter_rust_bench(results: &AdapterResults) {
         assert_eq!(results.inner.len(), 6);
-        validate_bench_metrics(&results, "tests::benchmark");
-        validate_bench_metrics(&results, "tests::other_benchmark");
-        validate_bench_metrics(&results, "tests::last_benchmark");
+        validate_bench_metrics(results, "tests::benchmark");
+        validate_bench_metrics(results, "tests::other_benchmark");
+        validate_bench_metrics(results, "tests::last_benchmark");
 
         let number = 1_000.0;
         let metrics = results.get("tests::one_digit").unwrap();

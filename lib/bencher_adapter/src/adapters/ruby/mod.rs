@@ -19,6 +19,6 @@ mod test_go {
     #[test]
     fn test_adapter_ruby_benchmark() {
         let results = convert_file_path::<AdapterRuby>("./tool_output/ruby/benchmark/five.txt");
-        test_ruby_benchmark::validate_adapter_ruby_benchmark(results);
+        test_ruby_benchmark::validate_adapter_ruby_benchmark(&results);
     }
 }

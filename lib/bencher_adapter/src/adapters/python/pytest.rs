@@ -52,6 +52,7 @@ pub struct Stats {
 }
 
 impl Pytest {
+    #[allow(clippy::unnecessary_wraps)]
     fn convert(self, settings: Settings) -> Result<Option<AdapterResults>, AdapterError> {
         let benchmarks = self.benchmarks.0;
         let mut benchmark_metrics = Vec::with_capacity(benchmarks.len());
@@ -166,7 +167,7 @@ pub(crate) mod test_python_pytest {
         let file_path = file_path(four);
 
         let results = convert_python_pytest(four);
-        validate_adapter_python_pytest(results);
+        validate_adapter_python_pytest(&results);
 
         let results = opt_convert_file_path::<AdapterPythonPytest>(
             &file_path,
@@ -175,13 +176,13 @@ pub(crate) mod test_python_pytest {
             },
         )
         .unwrap();
-        validate_adapter_python_pytest(results);
+        validate_adapter_python_pytest(&results);
 
         let results = convert_python_pytest_median(four);
-        validate_adapter_python_pytest_median(results);
+        validate_adapter_python_pytest_median(&results);
     }
 
-    pub fn validate_adapter_python_pytest(results: AdapterResults) {
+    pub fn validate_adapter_python_pytest(results: &AdapterResults) {
         assert_eq!(results.inner.len(), 4);
 
         let metrics = results.get("bench.py::test_fib_1").unwrap();
@@ -217,7 +218,7 @@ pub(crate) mod test_python_pytest {
         );
     }
 
-    fn validate_adapter_python_pytest_median(results: AdapterResults) {
+    fn validate_adapter_python_pytest_median(results: &AdapterResults) {
         assert_eq!(results.inner.len(), 4);
 
         let metrics = results.get("bench.py::test_fib_1").unwrap();

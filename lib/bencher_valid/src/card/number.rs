@@ -88,7 +88,7 @@ pub fn validate_luhn(number: &str) -> bool {
     while let Some(c) = iter.next() {
         checksum += checksum_modifier_odd(c);
         if let Some(c) = iter.next() {
-            checksum += checksum_modifier_even(c)
+            checksum += checksum_modifier_even(c);
         }
     }
 

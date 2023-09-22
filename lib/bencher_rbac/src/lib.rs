@@ -55,6 +55,7 @@ mod test {
     static OSO: Lazy<Oso> = Lazy::new(|| init_rbac().expect(OSO_ERROR));
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn test_rbac() {
         let oso = &*OSO;
 

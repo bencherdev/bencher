@@ -21,12 +21,12 @@ mod test_js {
     #[test]
     fn test_adapter_js_benchmark() {
         let results = convert_file_path::<AdapterJs>("./tool_output/js/benchmark/three.txt");
-        test_js_benchmark::validate_adapter_js_benchmark(results);
+        test_js_benchmark::validate_adapter_js_benchmark(&results);
     }
 
     #[test]
     fn test_adapter_js_time() {
         let results = convert_file_path::<AdapterJs>("./tool_output/js/time/four.txt");
-        test_js_time::validate_adapter_js_time(results);
+        test_js_time::validate_adapter_js_time(&results);
     }
 }

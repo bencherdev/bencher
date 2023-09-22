@@ -80,5 +80,5 @@ async fn get_inner(
     auth_user: Option<&AuthUser>,
 ) -> Result<Vec<u8>, ApiError> {
     let json_perf = super::get_inner(context, path_params, json_perf_query, auth_user).await?;
-    LinePlot::new().draw(title, json_perf).map_err(Into::into)
+    LinePlot::new().draw(title, &json_perf).map_err(Into::into)
 }

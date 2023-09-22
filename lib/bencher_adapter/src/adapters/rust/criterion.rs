@@ -166,7 +166,7 @@ pub(crate) mod test_rust_criterion {
         .into_iter()
         .enumerate()
         {
-            assert_eq!(expected, parse_criterion(None, input), "#{index}: {input}")
+            assert_eq!(expected, parse_criterion(None, input), "#{index}: {input}");
         }
     }
 
@@ -180,7 +180,7 @@ pub(crate) mod test_rust_criterion {
             },
         )
         .unwrap();
-        validate_adapter_rust_criterion(results);
+        validate_adapter_rust_criterion(&results);
 
         assert_eq!(
             None,
@@ -196,10 +196,10 @@ pub(crate) mod test_rust_criterion {
     #[test]
     fn test_adapter_rust_criterion() {
         let results = convert_rust_criterion("many");
-        validate_adapter_rust_criterion(results);
+        validate_adapter_rust_criterion(&results);
     }
 
-    pub fn validate_adapter_rust_criterion(results: AdapterResults) {
+    pub fn validate_adapter_rust_criterion(results: &AdapterResults) {
         assert_eq!(results.inner.len(), 5);
 
         let metrics = results.get("file").unwrap();

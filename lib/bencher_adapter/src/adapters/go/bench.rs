@@ -185,7 +185,7 @@ pub(crate) mod test_go_bench {
         .into_iter()
         .enumerate()
         {
-            assert_eq!(expected, parse_go(input), "#{index}: {input}")
+            assert_eq!(expected, parse_go(input), "#{index}: {input}");
         }
     }
 
@@ -199,7 +199,7 @@ pub(crate) mod test_go_bench {
             },
         )
         .unwrap();
-        validate_adapter_go_bench(results);
+        validate_adapter_go_bench(&results);
 
         assert_eq!(
             None,
@@ -215,10 +215,10 @@ pub(crate) mod test_go_bench {
     #[test]
     fn test_adapter_go_bench() {
         let results = convert_go_bench("five");
-        validate_adapter_go_bench(results);
+        validate_adapter_go_bench(&results);
     }
 
-    pub fn validate_adapter_go_bench(results: AdapterResults) {
+    pub fn validate_adapter_go_bench(results: &AdapterResults) {
         assert_eq!(results.inner.len(), 5);
 
         let metrics = results.get("BenchmarkFib10-8").unwrap();

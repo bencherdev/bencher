@@ -60,7 +60,8 @@ impl LinePlot {
         Self::default()
     }
 
-    pub fn draw(&self, title: Option<&str>, json_perf: JsonPerf) -> Result<Vec<u8>, PlotError> {
+    #[allow(clippy::too_many_lines, clippy::items_after_statements)]
+    pub fn draw(&self, title: Option<&str>, json_perf: &JsonPerf) -> Result<Vec<u8>, PlotError> {
         let mut plot_buffer = vec![0; BUFFER_SIZE];
 
         // Use a closure that gets immediately executed here
@@ -140,7 +141,7 @@ impl LinePlot {
                 .y_desc(&perf_data.y_desc)
                 .y_labels(Y_LABELS)
                 .y_label_style((FontFamily::Monospace, 12))
-                .y_label_formatter(&PerfData::y_label_fmt)
+                .y_label_formatter(&|y| PerfData::y_label_fmt(*y))
                 .max_light_lines(4)
                 .draw()?;
 
@@ -233,7 +234,7 @@ struct LineData {
 }
 
 impl PerfData {
-    fn new(json_perf: JsonPerf) -> Option<PerfData> {
+    fn new(json_perf: &JsonPerf) -> Option<PerfData> {
         let mut min_x = None;
         let mut max_x = None;
         let mut min_y = None;
@@ -290,6 +291,7 @@ impl PerfData {
         }
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
     fn x_range(&self) -> Range<DateTime<Utc>> {
         let diff = Duration::seconds(((self.x.1 - self.x.0).num_seconds() as f64 * 0.04) as i64);
         self.x.0..(self.x.1 + diff)
@@ -335,14 +337,16 @@ impl PerfData {
         u32::try_from(y_len).map_err(Into::into)
     }
 
-    fn y_label_fmt(y: &f64) -> String {
-        if *y < 1.0 {
-            Self::decimal_format(*y)
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    fn y_label_fmt(y: f64) -> String {
+        if y < 1.0 {
+            Self::decimal_format(y)
         } else {
-            Self::comma_format(*y as u64)
+            Self::comma_format(y as u64)
         }
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     fn float_len(y: f64) -> usize {
         if y < 1.0 {
             Self::decimal_format(y).len()
@@ -462,7 +466,7 @@ mod test {
     fn test_plot() {
         let plot = LinePlot::new();
         let plot_buffer = plot
-            .draw(Some("Benchmark Adapter Comparison"), JSON_PERF.clone())
+            .draw(Some("Benchmark Adapter Comparison"), &JSON_PERF)
             .unwrap();
         save_jpeg(&plot_buffer, "perf");
     }
@@ -471,10 +475,7 @@ mod test {
     fn test_plot_decimal() {
         let plot = LinePlot::new();
         let plot_buffer = plot
-            .draw(
-                Some("Benchmark Adapter Comparison"),
-                JSON_PERF_DECIMAL.clone(),
-            )
+            .draw(Some("Benchmark Adapter Comparison"), &JSON_PERF_DECIMAL)
             .unwrap();
         save_jpeg(&plot_buffer, "decimal");
     }
@@ -484,7 +485,7 @@ mod test {
         let plot = LinePlot::new();
         let mut json_perf = JSON_PERF.clone();
         json_perf.results.clear();
-        let plot_buffer = plot.draw(None, json_perf).unwrap();
+        let plot_buffer = plot.draw(None, &json_perf).unwrap();
         save_jpeg(&plot_buffer, "empty");
     }
 }

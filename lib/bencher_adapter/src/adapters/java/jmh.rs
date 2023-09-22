@@ -168,7 +168,7 @@ pub(crate) mod test_java_jmh {
             },
         )
         .unwrap();
-        validate_adapter_java_jmh(results);
+        validate_adapter_java_jmh(&results);
 
         assert_eq!(
             None,
@@ -184,10 +184,10 @@ pub(crate) mod test_java_jmh {
     #[test]
     fn test_adapter_java_jmh_six() {
         let results = convert_java_jmh("six");
-        validate_adapter_java_jmh(results);
+        validate_adapter_java_jmh(&results);
     }
 
-    pub fn validate_adapter_java_jmh(results: AdapterResults) {
+    pub fn validate_adapter_java_jmh(results: &AdapterResults) {
         assert_eq!(results.inner.len(), 6);
 
         let metrics = results

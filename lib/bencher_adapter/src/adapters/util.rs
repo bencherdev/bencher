@@ -67,6 +67,7 @@ impl From<Decimal> for Time {
 }
 
 impl Time {
+    #[allow(clippy::cast_precision_loss)]
     fn as_f64(&self) -> f64 {
         match self {
             Self::UInt64(int) => *int as f64,
@@ -87,7 +88,7 @@ pub enum Units {
 
 impl Units {
     #[allow(clippy::float_arithmetic)]
-    pub fn as_nanos(&self) -> f64 {
+    pub fn as_nanos(self) -> f64 {
         match self {
             Self::Pico => 1.0 / 1_000.0,
             Self::Nano => 1.0,
@@ -98,7 +99,7 @@ impl Units {
     }
 
     #[allow(clippy::float_arithmetic)]
-    pub fn as_secs(&self) -> f64 {
+    pub fn as_secs(self) -> f64 {
         match self {
             Self::Pico => 1.0 / 1_000_000_000_000.0,
             Self::Nano => 1.0 / 1_000_000_000.0,

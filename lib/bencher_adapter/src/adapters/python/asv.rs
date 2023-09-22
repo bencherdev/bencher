@@ -113,16 +113,16 @@ pub(crate) mod test_python_asv {
             },
         )
         .unwrap();
-        validate_adapter_python_asv(results);
+        validate_adapter_python_asv(&results);
     }
 
     #[test]
     fn test_adapter_python_asv() {
         let results = convert_python_asv("six");
-        validate_adapter_python_asv(results);
+        validate_adapter_python_asv(&results);
     }
 
-    pub fn validate_adapter_python_asv(results: AdapterResults) {
+    pub fn validate_adapter_python_asv(results: &AdapterResults) {
         assert_eq!(results.inner.len(), 6);
 
         let metrics = results.get("benchmarks.TimeSuite.time_iterkeys").unwrap();

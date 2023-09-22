@@ -121,16 +121,16 @@ pub(crate) mod test_js_benchmark {
             },
         )
         .unwrap();
-        validate_adapter_js_benchmark(results);
+        validate_adapter_js_benchmark(&results);
     }
 
     #[test]
     fn test_adapter_js_benchmark() {
         let results = convert_js_benchmark("three");
-        validate_adapter_js_benchmark(results);
+        validate_adapter_js_benchmark(&results);
     }
 
-    pub fn validate_adapter_js_benchmark(results: AdapterResults) {
+    pub fn validate_adapter_js_benchmark(results: &AdapterResults) {
         assert_eq!(results.inner.len(), 3);
 
         let metrics = results.get("fib(10)").unwrap();

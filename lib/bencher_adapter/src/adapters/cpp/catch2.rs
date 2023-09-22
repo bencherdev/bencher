@@ -189,7 +189,7 @@ pub(crate) mod test_cpp_catch2 {
                 expected,
                 parse_catch2_benchmark_name(input),
                 "#{index}: {input}"
-            )
+            );
         }
     }
 
@@ -203,7 +203,7 @@ pub(crate) mod test_cpp_catch2 {
             },
         )
         .unwrap();
-        validate_adapter_cpp_catch2(results);
+        validate_adapter_cpp_catch2(&results);
 
         assert_eq!(
             None,
@@ -219,10 +219,10 @@ pub(crate) mod test_cpp_catch2 {
     #[test]
     fn test_adapter_cpp_catch2() {
         let results = convert_cpp_catch2("four");
-        validate_adapter_cpp_catch2(results);
+        validate_adapter_cpp_catch2(&results);
     }
 
-    pub fn validate_adapter_cpp_catch2(results: AdapterResults) {
+    pub fn validate_adapter_cpp_catch2(results: &AdapterResults) {
         assert_eq!(results.inner.len(), 4);
 
         let metrics = results.get("Fibonacci 10").unwrap();

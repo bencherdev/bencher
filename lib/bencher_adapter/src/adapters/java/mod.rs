@@ -19,6 +19,6 @@ mod test_java {
     #[test]
     fn test_adapter_java_jmh() {
         let results = convert_file_path::<AdapterJava>("./tool_output/java/jmh/six.json");
-        test_java_jmh::validate_adapter_java_jmh(results);
+        test_java_jmh::validate_adapter_java_jmh(&results);
     }
 }

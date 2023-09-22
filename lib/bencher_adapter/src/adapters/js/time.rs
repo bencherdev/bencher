@@ -21,9 +21,8 @@ pub struct AdapterJsTime;
 
 impl Adapter for AdapterJsTime {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
-        match settings.average {
-            Some(JsonAverage::Mean | JsonAverage::Median) => return None,
-            None => {},
+        if let Some(JsonAverage::Mean | JsonAverage::Median) = settings.average {
+            return None;
         }
 
         let mut benchmark_metrics = Vec::new();
@@ -124,10 +123,10 @@ pub(crate) mod test_js_time {
     #[test]
     fn test_adapter_js_time() {
         let results = convert_js_time("four");
-        validate_adapter_js_time(results);
+        validate_adapter_js_time(&results);
     }
 
-    pub fn validate_adapter_js_time(results: AdapterResults) {
+    pub fn validate_adapter_js_time(results: &AdapterResults) {
         assert_eq!(results.inner.len(), 4);
 
         let metrics = results.get("default").unwrap();

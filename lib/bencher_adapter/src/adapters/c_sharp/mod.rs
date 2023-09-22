@@ -19,6 +19,6 @@ mod test_c_sharp {
     #[test]
     fn test_adapter_c_sharp_dot_net() {
         let results = convert_file_path::<AdapterCSharp>("./tool_output/c_sharp/dot_net/two.json");
-        test_c_sharp_dot_net::validate_adapter_c_sharp_dot_net(results);
+        test_c_sharp_dot_net::validate_adapter_c_sharp_dot_net(&results);
     }
 }

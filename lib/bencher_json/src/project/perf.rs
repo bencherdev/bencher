@@ -252,7 +252,7 @@ pub mod table {
                         metric: metric.metric,
                         lower_limit: BoundaryLimit(metric.boundary.lower_limit),
                         upper_limit: BoundaryLimit(metric.boundary.upper_limit),
-                    })
+                    });
                 }
             }
             Self::new(perf_table)

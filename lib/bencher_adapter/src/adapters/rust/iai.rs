@@ -94,6 +94,7 @@ fn parse_iai_lines(
     Some((name, metrics))
 }
 
+#[allow(clippy::cast_precision_loss)]
 fn parse_iai_metric<'a>(input: &'a str, metric_kind: &'static str) -> IResult<&'a str, JsonMetric> {
     map(
         tuple((
@@ -220,10 +221,10 @@ pub(crate) mod test_rust_iai {
     #[test]
     fn test_adapter_rust_aia() {
         let results = convert_rust_iai("two");
-        validate_adapter_rust_iai(results);
+        validate_adapter_rust_iai(&results);
     }
 
-    pub fn validate_adapter_rust_iai(results: AdapterResults) {
+    pub fn validate_adapter_rust_iai(results: &AdapterResults) {
         assert_eq!(results.inner.len(), 2);
 
         let metrics = results.get("bench_fibonacci_short").unwrap();

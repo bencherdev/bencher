@@ -25,12 +25,12 @@ mod test_go {
     #[test]
     fn test_adapter_python_asv() {
         let results = convert_file_path::<AdapterPython>("./tool_output/python/asv/six.txt");
-        test_python_asv::validate_adapter_python_asv(results);
+        test_python_asv::validate_adapter_python_asv(&results);
     }
 
     #[test]
     fn test_adapter_python_pytest() {
         let results = convert_file_path::<AdapterPython>("./tool_output/python/pytest/four.json");
-        test_python_pytest::validate_adapter_python_pytest(results);
+        test_python_pytest::validate_adapter_python_pytest(&results);
     }
 }

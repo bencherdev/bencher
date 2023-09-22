@@ -127,7 +127,7 @@ pub(crate) mod test_c_sharp_dot_net {
         let file_path = file_path(two);
 
         let results = convert_c_sharp_dot_net(two);
-        validate_adapter_c_sharp_dot_net(results);
+        validate_adapter_c_sharp_dot_net(&results);
 
         let results = opt_convert_file_path::<AdapterCSharpDotNet>(
             &file_path,
@@ -136,13 +136,13 @@ pub(crate) mod test_c_sharp_dot_net {
             },
         )
         .unwrap();
-        validate_adapter_c_sharp_dot_net(results);
+        validate_adapter_c_sharp_dot_net(&results);
 
         let results = convert_c_sharp_dot_net_median(two);
-        validate_adapter_c_sharp_dot_net_median(results);
+        validate_adapter_c_sharp_dot_net_median(&results);
     }
 
-    pub fn validate_adapter_c_sharp_dot_net(results: AdapterResults) {
+    pub fn validate_adapter_c_sharp_dot_net(results: &AdapterResults) {
         assert_eq!(results.inner.len(), 2);
 
         let metrics = results
@@ -166,7 +166,7 @@ pub(crate) mod test_c_sharp_dot_net {
         );
     }
 
-    fn validate_adapter_c_sharp_dot_net_median(results: AdapterResults) {
+    fn validate_adapter_c_sharp_dot_net_median(results: &AdapterResults) {
         assert_eq!(results.inner.len(), 2);
 
         let metrics = results

@@ -95,7 +95,7 @@ pub(crate) mod test_cpp_google {
             },
         )
         .unwrap();
-        validate_adapter_cpp_google(results);
+        validate_adapter_cpp_google(&results);
 
         assert_eq!(
             None,
@@ -111,10 +111,10 @@ pub(crate) mod test_cpp_google {
     #[test]
     fn test_adapter_cpp_google() {
         let results = convert_cpp_google("two");
-        validate_adapter_cpp_google(results);
+        validate_adapter_cpp_google(&results);
     }
 
-    pub fn validate_adapter_cpp_google(results: AdapterResults) {
+    pub fn validate_adapter_cpp_google(results: &AdapterResults) {
         assert_eq!(results.inner.len(), 2);
 
         let metrics = results.get("fib_10").unwrap();

@@ -4,45 +4,24 @@ xtask = "run --manifest-path ./xtask/Cargo.toml --"
 [target.'cfg(all())']
 rustflags = [
     # https://github.com/rust-lang/rust-clippy
-    # warn
     "-Wclippy::all",
-    "-Wclippy::pedantic",
+    # cargo
     "-Wclippy::cargo",
-    "-Wclippy::print_stdout",
-    "-Wclippy::print_stderr",
+    "-Aclippy::cargo_common_metadata",   # Checks to see if all common metadata is defined in Cargo.toml.
+    "-Aclippy::multiple_crate_versions", # Checks to see if multiple versions of a crate are being used.
+    # pedantic
+    "-Wclippy::pedantic",
+    "-Aclippy::missing_errors_doc",      # Checks the doc comments of publicly visible functions that return a Result type and warns if there is no # Errors section.
+    "-Aclippy::missing_panics_doc",      # Checks the doc comments of publicly visible functions that may panic and warns if there is no # Panics section.
+    "-Aclippy::module_name_repetitions", # Detects type names that are prefixed or suffixed by the containing module’s name.
+    "-Aclippy::must_use_candidate",      # Checks for public functions that have no #[must_use] attribute, but return something not already marked must-use, have no mutable arg and mutate no statics.
     # restriction
     # "-Wclippy::restriction",
     # "-Wclippy::arithmetic_side_effects", # Checks any kind of arithmetic operation of any type.
-    # "-Wclippy::as_underscore", # Checks for the usage of as _ conversion using inferred type.
-    # "-Wclippy::dbg_macro", # Checks for usage of the dbg! macro.
-    # allow
-    "-Aclippy::cargo_common_metadata",          # Checks to see if all common metadata is defined in Cargo.toml.
-    "-Aclippy::default_numeric_fallback",       # Checks for usage of unconstrained numeric literals which may cause default numeric fallback in type inference.
-    "-Aclippy::empty_structs_with_brackets",    # Finds structs without fields (a so-called “empty struct”) that are declared with brackets.
-    "-Aclippy::exhaustive_enums",               # Warns on any exported enums that are not tagged #[non_exhaustive]
-    "-Aclippy::exhaustive_structs",             # Warns on any exported structss that are not tagged #[non_exhaustive]
-    "-Aclippy::implicit_return",                # Checks for missing return statements at the end of a block.
-    "-Aclippy::missing_docs_in_private_items",  # Warns if there is missing doc for any private documentable item
-    "-Aclippy::missing_errors_doc",             # Checks the doc comments of publicly visible functions that return a Result type and warns if there is no # Errors section.
-    "-Aclippy::missing_inline_in_public_items", # It lints if an exported function, method, trait method with default impl, or trait method impl is not #[inline].
-    "-Aclippy::missing_panics_doc",             # Checks the doc comments of publicly visible functions that may panic and warns if there is no # Panics section.
-    "-Aclippy::missing_trait_methods",          # Checks if a provided method is used implicitly by a trait implementation.
-    "-Aclippy::min_ident_chars",                # Checks for idents which comprise of a single letter.
-    "-Aclippy::mod_module_files",               # Checks that module layout uses only self named module files, bans mod.rs files.
-    "-Aclippy::module_name_repetitions",        # Detects type names that are prefixed or suffixed by the containing module’s name.
-    "-Aclippy::multiple_crate_versions",        # Checks to see if multiple versions of a crate are being used.
-    "-Aclippy::must_use_candidate",             # Checks for public functions that have no #[must_use] attribute, but return something not already marked must-use, have no mutable arg and mutate no statics.
-    "-Aclippy::pattern_type_mismatch",          # Checks for patterns that aren’t exact representations of the types they are applied to.
-    "-Aclippy::pub_use",                        # Restricts the usage of pub use ...
-    "-Aclippy::pub_with_shorthand",             # Checks for usage of pub(<loc>) with in.
-    "-Aclippy::question_mark_used",             # Checks for expressions that use the question mark operator and rejects them.
-    "-Aclippy::shadow_reuse",                   # Checks for bindings that shadow other bindings already in scope, while reusing the original value.
-    "-Aclippy::shadow_same",                    # Checks for bindings that shadow other bindings already in scope, while just changing reference level or mutability.
-    "-Aclippy::shadow_unrelated",               # Checks for bindings that shadow other bindings already in scope, either without an initialization or with one that does not even use the original value.
-    "-Aclippy::single_call_fn",                 # Checks for functions that are only used once. Does not lint tests.
-    "-Aclippy::single_char_lifetime_names",     # Checks for lifetimes with names which are one character long.
-    "-Aclippy::std_instead_of_alloc",           # Finds items imported through std when available through alloc.
-    "-Aclippy::std_instead_of_core",            # Finds items imported through std when available through core.
+    "-Wclippy::as_underscore", # Checks for the usage of as _ conversion using inferred type.
+    "-Wclippy::dbg_macro",     # Checks for usage of the dbg! macro.
+    "-Wclippy::print_stdout",  # Checks for printing on stdout. The purpose of this lint is to catch debugging remnants.
+    "-Wclippy::print_stderr",  # Checks for printing on stderr. The purpose of this lint is to catch debugging remnants.
 ]
 
 [target.x86_64-unknown-linux-gnu]

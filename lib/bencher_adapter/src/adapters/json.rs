@@ -26,10 +26,10 @@ pub(crate) mod test_json {
     #[test]
     fn test_adapter_json_latency() {
         let results = convert_json("latency");
-        validate_adapter_json_latency(results);
+        validate_adapter_json_latency(&results);
     }
 
-    pub fn validate_adapter_json_latency(results: AdapterResults) {
+    pub fn validate_adapter_json_latency(results: &AdapterResults) {
         assert_eq!(results.inner.len(), 3);
 
         let metrics = results.get("tests::benchmark_a").unwrap();
