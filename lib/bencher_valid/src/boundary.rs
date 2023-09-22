@@ -116,7 +116,7 @@ mod test {
         assert_eq!(false, is_valid_boundary(0.3));
         assert_eq!(false, is_valid_boundary(0.4));
         assert_eq!(false, is_valid_boundary(0.499_999_999_999_999_9));
-        assert_eq!(false, is_valid_boundary(0.999_999_999_999_999_99));
+        assert_eq!(false, is_valid_boundary(1.0));
         assert_eq!(false, is_valid_boundary(1.0));
         assert_eq!(false, is_valid_boundary(2.0));
         assert_eq!(false, is_valid_boundary(3.0));

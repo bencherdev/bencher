@@ -44,7 +44,7 @@ fn parse_asv(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
             tuple((
                 delimited(tag("["), tuple((space0, parse_f64, tag("%"))), tag("]")),
                 space1,
-                take_while1(|c| c == '·'),
+                take_while1(|c| c == '\u{b7}'),
                 space1,
             )),
             take_until1(" "),
@@ -63,7 +63,7 @@ fn parse_asv(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
 
 fn parse_asv_time(input: &str) -> IResult<&str, JsonMetric> {
     map(
-        tuple((parse_f64, tag("±"), parse_f64, parse_units, eof)),
+        tuple((parse_f64, tag("\u{b1}"), parse_f64, parse_units, eof)),
         |(duration, _, range, units, _)| {
             let value = latency_as_nanos(duration, units);
             let bound = latency_as_nanos(range, units);

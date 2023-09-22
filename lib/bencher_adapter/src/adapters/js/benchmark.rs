@@ -59,7 +59,7 @@ fn parse_benchmark_time(input: &str) -> IResult<&str, JsonMetric> {
         tuple((
             tuple((space1, tag("x"), space1)),
             parse_u64,
-            tuple((space1, tag("ops/sec"), space1, tag("±"))),
+            tuple((space1, tag("ops/sec"), space1, tag("\u{b1}"))),
             parse_f64,
             tuple((
                 tag("%"),

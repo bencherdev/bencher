@@ -160,7 +160,7 @@ pub(crate) mod test_rust_criterion {
                         },
                     ),
                 )),
-                "criterion_benchmark                    time:   [16.652 µs 18.019 µs 19.562 µs]",
+                "criterion_benchmark                    time:   [16.652 \u{b5}s 18.019 \u{b5}s 19.562 \u{b5}s]",
             ),
         ]
         .into_iter()
