@@ -136,17 +136,17 @@ pub(crate) mod test_js_benchmark {
         let metrics = results.get("fib(10)").unwrap();
         validate_throughput(
             metrics,
-            1431759.0,
-            Some(372257.3400000001),
-            Some(2491260.66),
+            1_431_759.0,
+            Some(372_257.340_000_000_1),
+            Some(2_491_260.66),
         );
 
         let metrics = results.get("fib(20)").unwrap();
         validate_throughput(
             metrics,
             12146.0,
-            Some(8259.279999999999),
-            Some(16032.720000000001),
+            Some(8_259.279_999_999_999),
+            Some(16_032.720_000_000_001),
         );
 
         let metrics = results.get("benchmark with x 2 many things").unwrap();

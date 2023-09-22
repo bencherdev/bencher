@@ -14,6 +14,7 @@ rustflags = [
     # "-Wclippy::restriction",
     # "-Wclippy::arithmetic_side_effects", # Checks any kind of arithmetic operation of any type.
     # "-Wclippy::as_underscore", # Checks for the usage of as _ conversion using inferred type.
+    # "-Wclippy::dbg_macro", # Checks for usage of the dbg! macro.
     # allow
     "-Aclippy::cargo_common_metadata",          # Checks to see if all common metadata is defined in Cargo.toml.
     "-Aclippy::default_numeric_fallback",       # Checks for usage of unconstrained numeric literals which may cause default numeric fallback in type inference.

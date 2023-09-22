@@ -50,7 +50,7 @@ impl Command {
                 if stdout.is_empty() {
                     stdout = line;
                 } else {
-                    stdout = format!("{}\n{}", stdout, line);
+                    stdout = format!("{stdout}\n{line}");
                 }
             }
 
@@ -68,7 +68,7 @@ impl Command {
                 if stderr.is_empty() {
                     stderr = line;
                 } else {
-                    stderr = format!("{}\n{}", stderr, line);
+                    stderr = format!("{stderr}\n{line}");
                 }
             }
 

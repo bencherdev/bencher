@@ -293,7 +293,7 @@ impl BenchmarkUrls {
     }
 
     fn boundary_has_threshold(boundary: Option<BoundaryParam>) -> bool {
-        boundary.map(|b| !b.is_empty()).unwrap_or(false)
+        boundary.is_some_and(|b| !b.is_empty())
     }
 }
 
@@ -396,10 +396,7 @@ impl AlertUrls {
     }
 
     fn to_url(mut endpoint: Url, project_slug: &Slug, alert: Uuid) -> Url {
-        endpoint.set_path(&format!(
-            "/console/projects/{}/alerts/{}",
-            project_slug, alert
-        ));
+        endpoint.set_path(&format!("/console/projects/{project_slug}/alerts/{alert}"));
         endpoint
     }
 }

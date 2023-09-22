@@ -136,9 +136,9 @@ pub(crate) mod test_java_jmh {
             .unwrap();
         validate_latency(
             metrics,
-            3.3762388731228186e18,
-            Some(3.3619508873788826e18),
-            Some(3.3905268588667546e18),
+            3.376_238_873_122_818_6e18,
+            Some(3.361_950_887_378_882_6e18),
+            Some(3.390_526_858_866_754_6e18),
         );
     }
 
@@ -152,9 +152,9 @@ pub(crate) mod test_java_jmh {
             .unwrap();
         validate_throughput(
             metrics,
-            3376238873.1228185,
-            Some(3361950887.3788824),
-            Some(3390526858.8667545),
+            3_376_238_873.122_818_5,
+            Some(3_361_950_887.378_882_4),
+            Some(3_390_526_858.866_754_5),
         );
     }
 
@@ -195,9 +195,9 @@ pub(crate) mod test_java_jmh {
             .unwrap();
         validate_throughput(
             metrics,
-            152520132.34402195,
-            Some(148999811.56545883),
-            Some(156040453.12258506),
+            152_520_132.344_021_95,
+            Some(148_999_811.565_458_83),
+            Some(156_040_453.122_585_06),
         );
 
         let metrics = results
@@ -205,9 +205,9 @@ pub(crate) mod test_java_jmh {
             .unwrap();
         validate_throughput(
             metrics,
-            29945718.61137783,
-            Some(28668756.96203928),
-            Some(31222680.260716382),
+            29_945_718.611_377_83,
+            Some(28_668_756.962_039_28),
+            Some(31_222_680.260_716_382),
         );
 
         let metrics = results
@@ -215,9 +215,9 @@ pub(crate) mod test_java_jmh {
             .unwrap();
         validate_throughput(
             metrics,
-            7828947.712794046,
-            Some(-1835785.2124654085),
-            Some(17493680.6380535),
+            7_828_947.712_794_046,
+            Some(-1_835_785.212_465_408_5),
+            Some(17_493_680.638_053_5),
         );
 
         let metrics = results
@@ -225,9 +225,9 @@ pub(crate) mod test_java_jmh {
             .unwrap();
         validate_throughput(
             metrics,
-            75813218.87869738,
-            Some(69632899.28708484),
-            Some(81993538.47030993),
+            75_813_218.878_697_38,
+            Some(69_632_899.287_084_84),
+            Some(81_993_538.470_309_93),
         );
 
         let metrics = results
@@ -235,9 +235,9 @@ pub(crate) mod test_java_jmh {
             .unwrap();
         validate_throughput(
             metrics,
-            32709984.76377125,
-            Some(30019340.461257935),
-            Some(35400629.06628457),
+            32_709_984.763_771_25,
+            Some(30_019_340.461_257_935),
+            Some(35_400_629.066_284_57),
         );
 
         let metrics = results
@@ -245,9 +245,9 @@ pub(crate) mod test_java_jmh {
             .unwrap();
         validate_throughput(
             metrics,
-            113640916.67262992,
-            Some(105176321.97352052),
-            Some(122105511.3717393),
+            113_640_916.672_629_92,
+            Some(105_176_321.973_520_52),
+            Some(122_105_511.371_739_3),
         );
     }
 }

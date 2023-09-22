@@ -101,7 +101,7 @@ mod test {
     #[test]
     #[allow(clippy::excessive_precision)]
     fn test_boundary() {
-        assert_eq!(true, is_valid_boundary(0.49999999999999999));
+        assert_eq!(true, is_valid_boundary(0.499_999_999_999_999_99));
         assert_eq!(true, is_valid_boundary(Boundary::MIN.into()));
         assert_eq!(true, is_valid_boundary(Boundary::SIXTY.into()));
         assert_eq!(true, is_valid_boundary(Boundary::SEVENTY.into()));
@@ -115,8 +115,8 @@ mod test {
         assert_eq!(false, is_valid_boundary(0.2));
         assert_eq!(false, is_valid_boundary(0.3));
         assert_eq!(false, is_valid_boundary(0.4));
-        assert_eq!(false, is_valid_boundary(0.4999999999999999));
-        assert_eq!(false, is_valid_boundary(0.99999999999999999));
+        assert_eq!(false, is_valid_boundary(0.499_999_999_999_999_9));
+        assert_eq!(false, is_valid_boundary(0.999_999_999_999_999_99));
         assert_eq!(false, is_valid_boundary(1.0));
         assert_eq!(false, is_valid_boundary(2.0));
         assert_eq!(false, is_valid_boundary(3.0));
@@ -137,7 +137,7 @@ mod test {
         let boundary: Boundary = serde_json::from_str("0.9").unwrap();
         assert_eq!(Boundary(0.9.into()), boundary);
         let boundary: Boundary = serde_json::from_str("0.999999999999999").unwrap();
-        assert_eq!(Boundary(0.999999999999999.into()), boundary);
+        assert_eq!(Boundary(0.999_999_999_999_999.into()), boundary);
 
         let boundary = serde_json::from_str::<Boundary>("-1.0");
         assert!(boundary.is_err());

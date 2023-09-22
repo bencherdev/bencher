@@ -31,7 +31,7 @@ impl Adapter for AdapterRustIai {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         match settings.average {
             None => {},
-            Some(JsonAverage::Mean) | Some(JsonAverage::Median) => return None,
+            Some(JsonAverage::Mean | JsonAverage::Median) => return None,
         }
 
         let mut benchmark_metrics = Vec::new();
@@ -241,11 +241,11 @@ pub(crate) mod test_rust_iai {
         validate_iai(
             metrics,
             [
-                (INSTRUCTIONS_SLUG_STR, 26214735.0),
-                (L1_ACCESSES_SLUG_STR, 35638623.0),
+                (INSTRUCTIONS_SLUG_STR, 26_214_735.0),
+                (L1_ACCESSES_SLUG_STR, 35_638_623.0),
                 (L2_ACCESSES_SLUG_STR, 2.0),
                 (RAM_ACCESSES_SLUG_STR, 1.0),
-                (ESTIMATED_CYCLES_SLUG_STR, 35638668.0),
+                (ESTIMATED_CYCLES_SLUG_STR, 35_638_668.0),
             ],
         );
     }
@@ -270,11 +270,11 @@ pub(crate) mod test_rust_iai {
         validate_iai(
             metrics,
             [
-                (INSTRUCTIONS_SLUG_STR, 18454953.0),
-                (L1_ACCESSES_SLUG_STR, 23447195.0),
+                (INSTRUCTIONS_SLUG_STR, 18_454_953.0),
+                (L1_ACCESSES_SLUG_STR, 23_447_195.0),
                 (L2_ACCESSES_SLUG_STR, 6.0),
                 (RAM_ACCESSES_SLUG_STR, 2.0),
-                (ESTIMATED_CYCLES_SLUG_STR, 23447295.0),
+                (ESTIMATED_CYCLES_SLUG_STR, 23_447_295.0),
             ],
         );
     }

@@ -19,7 +19,7 @@ pub struct AdapterRubyBenchmark;
 impl Adapter for AdapterRubyBenchmark {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         match settings.average {
-            Some(JsonAverage::Mean) | Some(JsonAverage::Median) => return None,
+            Some(JsonAverage::Mean | JsonAverage::Median) => return None,
             None => {},
         }
 
@@ -145,10 +145,10 @@ pub(crate) mod test_ruby_benchmark {
         assert_eq!(results.inner.len(), 2);
 
         let metrics = results.get("sort!").unwrap();
-        validate_latency(metrics, 1460465000.0, None, None);
+        validate_latency(metrics, 1_460_465_000.0, None, None);
 
         let metrics = results.get("sort").unwrap();
-        validate_latency(metrics, 1448327000.0, None, None);
+        validate_latency(metrics, 1_448_327_000.0, None, None);
     }
 
     #[test]
@@ -161,18 +161,18 @@ pub(crate) mod test_ruby_benchmark {
         assert_eq!(results.inner.len(), 5);
 
         let metrics = results.get("for:").unwrap();
-        validate_latency(metrics, 952039000.0, None, None);
+        validate_latency(metrics, 952_039_000.0, None, None);
 
         let metrics = results.get("times:").unwrap();
-        validate_latency(metrics, 984938000.0, None, None);
+        validate_latency(metrics, 984_938_000.0, None, None);
 
         let metrics = results.get("upto:").unwrap();
-        validate_latency(metrics, 946787000.0, None, None);
+        validate_latency(metrics, 946_787_000.0, None, None);
 
         let metrics = results.get(">total:").unwrap();
-        validate_latency(metrics, 2883764000.0, None, None);
+        validate_latency(metrics, 2_883_764_000.0, None, None);
 
         let metrics = results.get(">avg:").unwrap();
-        validate_latency(metrics, 961255000.0, None, None);
+        validate_latency(metrics, 961_255_000.0, None, None);
     }
 }

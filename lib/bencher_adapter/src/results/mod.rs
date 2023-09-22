@@ -42,7 +42,7 @@ impl AdapterResultsArray {
         for results in results_array {
             let parsed_results = adapter
                 .convert(results, settings)
-                .ok_or_else(|| AdapterError::Convert(results.to_string()))?;
+                .ok_or_else(|| AdapterError::Convert((*results).to_string()))?;
             parsed_results_array.push(parsed_results);
         }
         Ok(parsed_results_array.into())

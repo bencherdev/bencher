@@ -124,17 +124,17 @@ pub(crate) mod test_python_pytest {
         let metrics = results.get("bench.py::test_fib_10").unwrap();
         validate_latency(
             metrics,
-            24088.681333229408,
-            Some(17913.59114336808),
-            Some(30263.771523090734),
+            24_088.681_333_229_408,
+            Some(17_913.591_143_368_08),
+            Some(30_263.771_523_090_734),
         );
 
         let metrics = results.get("bench.py::test_fib_20").unwrap();
         validate_latency(
             metrics,
-            2985030.672661863,
-            Some(2810500.507247766),
-            Some(3159560.8380759596),
+            2_985_030.672_661_863,
+            Some(2_810_500.507_247_766),
+            Some(3_159_560.838_075_959_6),
         );
     }
 
@@ -146,17 +146,17 @@ pub(crate) mod test_python_pytest {
         let metrics = results.get("bench.py::test_fib_10").unwrap();
         validate_latency(
             metrics,
-            22300.000000363696,
-            Some(21033.00000000363),
-            Some(23567.00000072376),
+            22_300.000_000_363_696,
+            Some(21_033.000_000_003_63),
+            Some(23_567.000_000_723_76),
         );
 
         let metrics = results.get("bench.py::test_fib_20").unwrap();
         validate_latency(
             metrics,
-            2960582.5000003083,
-            Some(2740893.5000006184),
-            Some(3180271.499999998),
+            2_960_582.500_000_308_3,
+            Some(2_740_893.500_000_618_4),
+            Some(3_180_271.499_999_998),
         );
     }
 
@@ -187,33 +187,33 @@ pub(crate) mod test_python_pytest {
         let metrics = results.get("bench.py::test_fib_1").unwrap();
         validate_latency(
             metrics,
-            149.95610248628836,
-            Some(120.60437053414898),
-            Some(179.30783443842773),
+            149.956_102_486_288_36,
+            Some(120.604_370_534_148_98),
+            Some(179.307_834_438_427_73),
         );
 
         let metrics = results.get("bench.py::test_sleep_2").unwrap();
         validate_latency(
             metrics,
-            2003843046.9999998,
-            Some(2001965388.274841),
-            Some(2005720705.7251585),
+            2_003_843_046.999_999_8,
+            Some(2_001_965_388.274_841),
+            Some(2_005_720_705.725_158_5),
         );
 
         let metrics = results.get("bench.py::test_fib_10").unwrap();
         validate_latency(
             metrics,
-            28857.54012484424,
-            Some(23621.602642835765),
-            Some(34093.47760685271),
+            28_857.540_124_844_24,
+            Some(23_621.602_642_835_765),
+            Some(34_093.477_606_852_71),
         );
 
         let metrics = results.get("bench.py::test_fib_20").unwrap();
         validate_latency(
             metrics,
-            3611916.368852473,
-            Some(3238118.0866346513),
-            Some(3985714.6510702944),
+            3_611_916.368_852_473,
+            Some(3_238_118.086_634_651_3),
+            Some(3_985_714.651_070_294_4),
         );
     }
 
@@ -223,33 +223,33 @@ pub(crate) mod test_python_pytest {
         let metrics = results.get("bench.py::test_fib_1").unwrap();
         validate_latency(
             metrics,
-            143.7600000020467,
-            Some(143.09000000434224),
-            Some(144.42999999975115),
+            143.760_000_002_046_7,
+            Some(143.090_000_004_342_24),
+            Some(144.429_999_999_751_15),
         );
 
         let metrics = results.get("bench.py::test_sleep_2").unwrap();
         validate_latency(
             metrics,
-            2005124842.999999,
-            Some(2002304321.9999988),
-            Some(2007945363.9999993),
+            2_005_124_842.999_999,
+            Some(2_002_304_321.999_998_8),
+            Some(2_007_945_363.999_999_3),
         );
 
         let metrics = results.get("bench.py::test_fib_10").unwrap();
         validate_latency(
             metrics,
-            28052.999999861328,
-            Some(27927.999999732834),
-            Some(28177.99999998982),
+            28_052.999_999_861_328,
+            Some(27_927.999_999_732_834),
+            Some(28_177.999_999_989_82),
         );
 
         let metrics = results.get("bench.py::test_fib_20").unwrap();
         validate_latency(
             metrics,
-            3471104.000000169,
-            Some(3369463.000000072),
-            Some(3572745.000000266),
+            3_471_104.000_000_169,
+            Some(3_369_463.000_000_072),
+            Some(3_572_745.000_000_266),
         );
     }
 }

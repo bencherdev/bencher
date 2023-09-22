@@ -640,7 +640,7 @@ mod test {
         for _ in 0..usage_count {
             let quantity = rand::random::<u8>();
             biller
-                .record_usage(subscription_id, quantity as u64)
+                .record_usage(subscription_id, u64::from(quantity))
                 .await
                 .unwrap();
         }

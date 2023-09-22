@@ -315,7 +315,7 @@ pub mod table {
                 if let Some(limit) = &self.0 {
                     limit.to_string()
                 } else {
-                    "".into()
+                    String::new()
                 }
             )
         }

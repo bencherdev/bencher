@@ -1,6 +1,6 @@
 fn main() {
     let src = "../../services/console/src/content/api/swagger.json";
-    println!("cargo:rerun-if-changed={}", src);
+    println!("cargo:rerun-if-changed={src}");
     let file = std::fs::File::open(src).unwrap();
     let spec = serde_json::from_reader(file).unwrap();
     let mut generator = progenitor::Generator::new(

@@ -22,7 +22,7 @@ pub struct AdapterJsTime;
 impl Adapter for AdapterJsTime {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         match settings.average {
-            Some(JsonAverage::Mean) | Some(JsonAverage::Median) => return None,
+            Some(JsonAverage::Mean | JsonAverage::Median) => return None,
             None => {},
         }
 
@@ -131,17 +131,17 @@ pub(crate) mod test_js_time {
         assert_eq!(results.inner.len(), 4);
 
         let metrics = results.get("default").unwrap();
-        validate_latency(metrics, 7617000000.0, None, None);
+        validate_latency(metrics, 7_617_000_000.0, None, None);
 
         let metrics = results.get("benchmark_1").unwrap();
-        validate_latency(metrics, 12714000000.0, None, None);
+        validate_latency(metrics, 12_714_000_000.0, None, None);
 
         let metrics = results.get("benchmark 2").unwrap();
-        validate_latency(metrics, 9034000000.0, None, None);
+        validate_latency(metrics, 9_034_000_000.0, None, None);
 
         let metrics = results
             .get("benchmark 3: The Third - timer/timerEnd")
             .unwrap();
-        validate_latency(metrics, 8827000000.0, None, None);
+        validate_latency(metrics, 8_827_000_000.0, None, None);
     }
 }

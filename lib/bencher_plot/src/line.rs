@@ -322,8 +322,8 @@ impl PerfData {
 
     fn y_label_area_size(&self) -> Result<u32, PlotError> {
         let y_range = RangedCoordf64::from(self.y_range()).key_points(Y_LABELS);
-        let min = y_range.first().cloned().unwrap_or_default();
-        let max = y_range.last().cloned().unwrap_or_default();
+        let min = y_range.first().copied().unwrap_or_default();
+        let max = y_range.last().copied().unwrap_or_default();
         let buffer = if max < 1.0 {
             40
         } else if max < 1_000.0 {

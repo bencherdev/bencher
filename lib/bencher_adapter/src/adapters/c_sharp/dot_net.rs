@@ -150,9 +150,9 @@ pub(crate) mod test_c_sharp_dot_net {
             .unwrap();
         validate_latency(
             metrics,
-            10362283.085796878,
-            Some(10316580.967427673),
-            Some(10407985.204166083),
+            10_362_283.085_796_878,
+            Some(10_316_580.967_427_673),
+            Some(10_407_985.204_166_083),
         );
 
         let metrics = results
@@ -160,9 +160,9 @@ pub(crate) mod test_c_sharp_dot_net {
             .unwrap();
         validate_latency(
             metrics,
-            20360791.931687497,
-            Some(20312811.199369717),
-            Some(20408772.664005276),
+            20_360_791.931_687_497,
+            Some(20_312_811.199_369_717),
+            Some(20_408_772.664_005_276),
         );
     }
 
@@ -174,9 +174,9 @@ pub(crate) mod test_c_sharp_dot_net {
             .unwrap();
         validate_latency(
             metrics,
-            10360382.6953125,
-            Some(10305689.064843748),
-            Some(10415076.325781252),
+            10_360_382.695_312_5,
+            Some(10_305_689.064_843_748),
+            Some(10_415_076.325_781_252),
         );
 
         let metrics = results
@@ -184,9 +184,9 @@ pub(crate) mod test_c_sharp_dot_net {
             .unwrap();
         validate_latency(
             metrics,
-            20362636.192500003,
-            Some(20283296.5315625),
-            Some(20441975.853437506),
+            20_362_636.192_500_003,
+            Some(20_283_296.531_562_5),
+            Some(20_441_975.853_437_506),
         );
     }
 
@@ -198,17 +198,17 @@ pub(crate) mod test_c_sharp_dot_net {
         let metrics = results.get("Sample.Fib10").unwrap();
         validate_latency(
             metrics,
-            24.4202085009643,
-            Some(24.22208724788593),
-            Some(24.61832975404267),
+            24.420_208_500_964_3,
+            Some(24.222_087_247_885_93),
+            Some(24.618_329_754_042_67),
         );
 
         let metrics = results.get("Sample.Fib20").unwrap();
         validate_latency(
             metrics,
-            51.52008151549559,
-            Some(50.729707813342635),
-            Some(52.310455217648546),
+            51.520_081_515_495_59,
+            Some(50.729_707_813_342_635),
+            Some(52.310_455_217_648_546),
         );
     }
 
@@ -220,17 +220,17 @@ pub(crate) mod test_c_sharp_dot_net {
         let metrics = results.get("Sample.Fib10").unwrap();
         validate_latency(
             metrics,
-            24.419498533010483,
-            Some(24.247002340853214),
-            Some(24.59199472516775),
+            24.419_498_533_010_483,
+            Some(24.247_002_340_853_214),
+            Some(24.591_994_725_167_75),
         );
 
         let metrics = results.get("Sample.Fib20").unwrap();
         validate_latency(
             metrics,
-            51.40195590257645,
-            Some(50.498313307762146),
-            Some(52.30559849739075),
+            51.401_955_902_576_45,
+            Some(50.498_313_307_762_146),
+            Some(52.305_598_497_390_75),
         );
     }
 }
