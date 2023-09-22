@@ -24,6 +24,7 @@ impl Api {
         Self::register_inner(api, http_options).map_err(ApiError::Register)
     }
 
+    #[allow(clippy::too_many_lines)]
     fn register_inner(
         api: &mut ApiDescription<ApiContext>,
         http_options: bool,

@@ -14,7 +14,7 @@ impl TryFrom<CliSwagger> for Swagger {
 }
 
 impl Swagger {
-    pub async fn exec(&self) -> anyhow::Result<()> {
+    pub fn exec(&self) -> anyhow::Result<()> {
         let output = Command::new("cargo")
             .args(["run", "--bin", "swagger", "--features", "swagger"])
             .current_dir("./services/api")

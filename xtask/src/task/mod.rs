@@ -57,12 +57,13 @@ impl Task {
 }
 
 impl Sub {
+    #[allow(clippy::unused_async)]
     pub async fn exec(&self) -> anyhow::Result<()> {
         match self {
             Self::Fmt => Ok(()),
-            Self::ReleaseNotes(release_notes) => release_notes.exec().await,
-            Self::Swagger(swagger) => swagger.exec().await,
-            Self::Typeshare(typeshare) => typeshare.exec().await,
+            Self::ReleaseNotes(release_notes) => release_notes.exec(),
+            Self::Swagger(swagger) => swagger.exec(),
+            Self::Typeshare(typeshare) => typeshare.exec(),
         }
     }
 }

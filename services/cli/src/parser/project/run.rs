@@ -5,8 +5,8 @@ use clap::{ArgGroup, Args, Parser, ValueEnum};
 
 use crate::parser::CliBackend;
 
-#[allow(clippy::option_option, clippy::struct_excessive_bools)]
 #[derive(Parser, Debug)]
+#[allow(clippy::option_option, clippy::struct_excessive_bools)]
 pub struct CliRun {
     /// Project slug or UUID (or set BENCHER_PROJECT)
     #[clap(long)]
@@ -72,6 +72,7 @@ pub struct CliRun {
 }
 
 #[derive(Args, Debug)]
+#[allow(clippy::option_option)]
 pub struct CliRunBranch {
     /// Branch slug or UUID (or set BENCHER_BRANCH) (default is "main")
     #[clap(long)]

@@ -79,7 +79,8 @@ impl Mock {
     #[allow(
         clippy::arithmetic_side_effects,
         clippy::cast_precision_loss,
-        clippy::float_arithmetic
+        clippy::float_arithmetic,
+        clippy::similar_names
     )]
     fn generate_results(&self) -> Result<AdapterResults, MockError> {
         let count = self.count.unwrap_or(DEFAULT_COUNT);

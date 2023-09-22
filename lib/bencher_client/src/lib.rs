@@ -1,5 +1,5 @@
 mod codegen {
-    #![allow(clippy::all)]
+    #![allow(clippy::all, clippy::cargo, clippy::pedantic)]
     include!(concat!(env!("OUT_DIR"), "/codegen.rs"));
 }
 

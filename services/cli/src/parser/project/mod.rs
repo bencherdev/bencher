@@ -109,6 +109,7 @@ pub struct CliProjectView {
 }
 
 #[derive(Parser, Debug)]
+#[allow(clippy::option_option)]
 pub struct CliProjectUpdate {
     /// Project slug or UUID
     pub project: ResourceId,

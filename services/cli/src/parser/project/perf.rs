@@ -5,6 +5,7 @@ use uuid::Uuid;
 use crate::parser::CliBackend;
 
 #[derive(Parser, Debug)]
+#[allow(clippy::option_option)]
 pub struct CliPerf {
     /// Project slug or UUID
     #[clap(long)]

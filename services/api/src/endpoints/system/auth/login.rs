@@ -135,7 +135,7 @@ async fn post_inner(
         subject: Some("Confirm Bencher Login".into()),
         body: Some(body),
     };
-    context.messenger.send(log, message).await;
+    context.messenger.send(log, message);
 
     Ok(JsonEmpty::default())
 }

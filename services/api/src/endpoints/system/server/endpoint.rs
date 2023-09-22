@@ -54,6 +54,7 @@ pub async fn server_endpoint_get(
     }
 }
 
+#[allow(clippy::unused_async)]
 async fn get_one_inner(context: &ApiContext) -> Result<JsonEndpoint, ApiError> {
     Ok(JsonEndpoint {
         endpoint: context.endpoint.clone().into(),

@@ -117,18 +117,18 @@ impl QueryBenchmark {
 
     fn get_benchmark_json(
         conn: &mut DbConnection,
-        uuid: String,
+        uuid: &str,
         project_id: ProjectId,
-        name: String,
-        slug: String,
+        name: &str,
+        slug: &str,
         created: i64,
         modified: i64,
     ) -> Result<JsonBenchmark, ApiError> {
         Ok(JsonBenchmark {
-            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
+            uuid: Uuid::from_str(uuid).map_err(api_error!())?,
             project: QueryProject::get_uuid(conn, project_id)?,
-            name: BenchmarkName::from_str(&name).map_err(api_error!())?,
-            slug: Slug::from_str(&slug).map_err(api_error!())?,
+            name: BenchmarkName::from_str(name).map_err(api_error!())?,
+            slug: Slug::from_str(slug).map_err(api_error!())?,
             created: to_date_time(created).map_err(api_error!())?,
             modified: to_date_time(modified).map_err(api_error!())?,
         })
@@ -157,7 +157,17 @@ impl QueryBenchmark {
                     schema::metric::lower_bound,
                     schema::metric::upper_bound,
                 ))
-                .first(conn)
+                .first::<(
+                    String,
+                    ProjectId,
+                    String,
+                    String,
+                    i64,
+                    i64,
+                    f64,
+                    Option<f64>,
+                    Option<f64>,
+                )>(conn)
                 .map_err(api_error!())?;
 
         let JsonBenchmark {
@@ -167,7 +177,7 @@ impl QueryBenchmark {
             slug,
             created,
             modified,
-        } = Self::get_benchmark_json(conn, uuid, project_id, name, slug, created, modified)?;
+        } = Self::get_benchmark_json(conn, &uuid, project_id, &name, &slug, created, modified)?;
         let metric = QueryMetric::json(value, lower_bound, upper_bound);
         let boundary = QueryBoundary::get_json(conn, metric_id);
 
@@ -193,7 +203,7 @@ impl QueryBenchmark {
             modified,
             ..
         } = self;
-        Self::get_benchmark_json(conn, uuid, project_id, name, slug, created, modified)
+        Self::get_benchmark_json(conn, &uuid, project_id, &name, &slug, created, modified)
     }
 }
 

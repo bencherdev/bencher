@@ -133,7 +133,7 @@ fn get_results(
         // Then add the benchmark to a new benchmarks list for all metric kinds
         // Only keep a single instance of the threshold statistic for each metric kind as it should be the same value for all benchmarks
         if perf.iteration == iteration {
-            for metric_kind_id in metric_kinds.keys().cloned() {
+            for metric_kind_id in metric_kinds.keys().copied() {
                 let (threshold_statistic, benchmark_metric) =
                     get_benchmark_metric(conn, perf.id, metric_kind_id, benchmark.clone())?;
                 if let Some((_, benchmarks)) = metric_kind_benchmarks.get_mut(&metric_kind_id) {
@@ -154,7 +154,7 @@ fn get_results(
             )?;
             results.push(iteration_results);
             iteration = perf.iteration;
-            for metric_kind_id in metric_kinds.keys().cloned() {
+            for metric_kind_id in metric_kinds.keys().copied() {
                 let (threshold_statistic, benchmark_metric) =
                     get_benchmark_metric(conn, perf.id, metric_kind_id, benchmark.clone())?;
                 metric_kind_benchmarks.insert(
@@ -266,7 +266,9 @@ fn get_benchmark_metric(
             name,
             slug,
             metric: query_metric.into_json(),
-            boundary: query_boundary.map(|b| b.into_json()).unwrap_or_default(),
+            boundary: query_boundary
+                .map(QueryBoundary::into_json)
+                .unwrap_or_default(),
             created,
             modified,
         },

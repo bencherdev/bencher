@@ -120,8 +120,7 @@ async fn put_inner(
         context.restart_tx.clone(),
         delay.unwrap_or(DEFAULT_DELAY),
         auth_user.id,
-    )
-    .await;
+    );
 
     Ok(json_config)
 }

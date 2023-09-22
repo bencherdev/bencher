@@ -117,7 +117,7 @@ impl Backend {
             let bearer_token = reqwest::header::HeaderValue::from_str(&format!("Bearer {token}"))
                 .map_err(BackendError::HeaderValue)?;
             headers.insert("Authorization", bearer_token);
-            client_builder = client_builder.default_headers(headers)
+            client_builder = client_builder.default_headers(headers);
         }
 
         let reqwest_client = client_builder.build().map_err(BackendError::BuildClient)?;

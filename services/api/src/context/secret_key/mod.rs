@@ -45,7 +45,7 @@ pub enum JwtError {
 }
 
 impl SecretKey {
-    pub fn new(issuer: String, secret_key: Secret) -> Self {
+    pub fn new(issuer: String, secret_key: &Secret) -> Self {
         Self {
             issuer,
             encoding: EncodingKey::from_secret(secret_key.as_ref().as_bytes()),
@@ -60,7 +60,7 @@ impl SecretKey {
         ttl: u32,
         org: Option<OrgClaims>,
     ) -> Result<Jwt, ApiError> {
-        let claims = Claims::new(audience, self.issuer.clone(), email, ttl, org)?;
+        let claims = Claims::new(audience, self.issuer.clone(), email, ttl, org);
         Ok(Jwt::from_str(&encode(&HEADER, &claims, &self.encoding)?)?)
     }
 
@@ -161,7 +161,7 @@ mod test {
 
     #[test]
     fn test_jwt_auth() {
-        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), DEFAULT_SECRET_KEY.clone());
+        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), &DEFAULT_SECRET_KEY);
 
         let token = secret_key.new_auth(EMAIL.clone(), TTL).unwrap();
 
@@ -175,7 +175,7 @@ mod test {
 
     #[test]
     fn test_jwt_auth_expired() {
-        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), DEFAULT_SECRET_KEY.clone());
+        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), &DEFAULT_SECRET_KEY);
 
         let token = secret_key.new_auth(EMAIL.clone(), 0).unwrap();
 
@@ -186,7 +186,7 @@ mod test {
 
     #[test]
     fn test_jwt_client() {
-        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), DEFAULT_SECRET_KEY.clone());
+        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), &DEFAULT_SECRET_KEY);
 
         let token = secret_key.new_client(EMAIL.clone(), TTL).unwrap();
 
@@ -200,7 +200,7 @@ mod test {
 
     #[test]
     fn test_jwt_client_expired() {
-        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), DEFAULT_SECRET_KEY.clone());
+        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), &DEFAULT_SECRET_KEY);
 
         let token = secret_key.new_client(EMAIL.clone(), 0).unwrap();
 
@@ -211,7 +211,7 @@ mod test {
 
     #[test]
     fn test_jwt_api_key() {
-        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), DEFAULT_SECRET_KEY.clone());
+        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), &DEFAULT_SECRET_KEY);
 
         let token = secret_key.new_api_key(EMAIL.clone(), TTL).unwrap();
 
@@ -225,7 +225,7 @@ mod test {
 
     #[test]
     fn test_jwt_api_key_expired() {
-        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), DEFAULT_SECRET_KEY.clone());
+        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), &DEFAULT_SECRET_KEY);
 
         let token = secret_key.new_api_key(EMAIL.clone(), 0).unwrap();
 
@@ -236,7 +236,7 @@ mod test {
 
     #[test]
     fn test_jwt_invite() {
-        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), DEFAULT_SECRET_KEY.clone());
+        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), &DEFAULT_SECRET_KEY);
 
         let org_uuid = Uuid::new_v4();
         let role = JsonOrganizationRole::Leader;
@@ -258,7 +258,7 @@ mod test {
 
     #[test]
     fn test_jwt_invite_expired() {
-        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), DEFAULT_SECRET_KEY.clone());
+        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), &DEFAULT_SECRET_KEY);
 
         let org_uuid = Uuid::new_v4();
         let role = JsonOrganizationRole::Leader;

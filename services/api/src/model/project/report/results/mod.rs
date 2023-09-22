@@ -110,7 +110,7 @@ impl ReportResults {
                 log,
                 conn,
                 iteration,
-                benchmark_name,
+                &benchmark_name,
                 metrics,
                 #[cfg(feature = "plus")]
                 usage,
@@ -124,7 +124,7 @@ impl ReportResults {
         log: &Logger,
         conn: &mut DbConnection,
         iteration: usize,
-        benchmark_name: BenchmarkName,
+        benchmark_name: &BenchmarkName,
         metrics: AdapterMetrics,
         #[cfg(feature = "plus")] usage: &mut u64,
     ) -> Result<(), ApiError> {
@@ -158,7 +158,7 @@ impl ReportResults {
             if !ignore_benchmark {
                 if let Some(detector) = self.detector(conn, metric_kind_id)? {
                     let query_metric = QueryMetric::from_uuid(conn, insert_metric.uuid)?;
-                    detector.detect(log, conn, benchmark_id, query_metric)?;
+                    detector.detect(log, conn, benchmark_id, &query_metric)?;
                 }
             }
         }

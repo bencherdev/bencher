@@ -301,7 +301,7 @@ mod plan_kind {
 
     pub enum PlanKind {
         Metered(SubscriptionId),
-        Licensed(u64),
+        Licensed { entitlement: u64, prior_usage: u64 },
         None,
     }
 
@@ -325,8 +325,11 @@ mod plan_kind {
                 }
             } else if let Some((uuid, license)) = QueryProject::get_license(conn, project_id)? {
                 let _token_data = licensor.validate_organization(&license, uuid)?;
-                // TODO check license entitlements for usage so far
-                Ok(PlanKind::Licensed(0))
+                // TODO check license entitlements and usage so far
+                Ok(PlanKind::Licensed {
+                    entitlement: u64::MAX,
+                    prior_usage: 0,
+                })
             } else if QueryProject::is_public(conn, project_id)? {
                 Ok(Self::None)
             } else {
@@ -347,8 +350,14 @@ mod plan_kind {
                     };
                     biller.record_usage(subscription, usage).await?;
                 },
-                // TODO check for usage overage
-                Self::Licensed(_) => {},
+                Self::Licensed {
+                    entitlement,
+                    prior_usage,
+                } => {
+                    if *prior_usage + usage > *entitlement {
+                        todo!("Manage license entitlements");
+                    }
+                },
                 Self::None => {},
             }
 

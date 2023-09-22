@@ -283,7 +283,7 @@ async fn post_inner(
         subject: Some(format!("Invitation to join {org_name}")),
         body: Some(body),
     };
-    context.messenger.send(log, message).await;
+    context.messenger.send(log, message);
 
     Ok(JsonEmpty::default())
 }

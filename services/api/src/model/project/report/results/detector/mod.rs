@@ -42,11 +42,8 @@ impl Detector {
     ) -> Result<Option<Self>, ApiError> {
         // Check to see if there is a threshold for the branch/testbed/metric kind grouping.
         // If not, then there will be nothing to detect.
-        let threshold = if let Some(threshold) =
-            MetricsThreshold::new(conn, metric_kind_id, branch_id, testbed_id)
-        {
-            threshold
-        } else {
+        let Some(threshold) = MetricsThreshold::new(conn, metric_kind_id, branch_id, testbed_id)
+        else {
             return Ok(None);
         };
 
@@ -70,7 +67,7 @@ impl Detector {
         log: &Logger,
         conn: &mut DbConnection,
         benchmark_id: BenchmarkId,
-        query_metric: QueryMetric,
+        query_metric: &QueryMetric,
     ) -> Result<(), ApiError> {
         // Query the historical population/sample data for the benchmark
         let metrics_data = MetricsData::new(
@@ -86,7 +83,7 @@ impl Detector {
         let boundary = MetricsBoundary::new(
             log,
             query_metric.value,
-            metrics_data,
+            &metrics_data,
             self.threshold.statistic.test,
             self.threshold.statistic.min_sample_size,
             self.threshold.statistic.lower_boundary,

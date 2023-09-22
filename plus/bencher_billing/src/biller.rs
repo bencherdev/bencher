@@ -289,9 +289,8 @@ impl Biller {
         let quantity = if let Some(quantity) = quantity {
             if quantity == 0 {
                 return Err(BillingError::QuantityZero(quantity));
-            } else {
-                Some(quantity * METRIC_QUANTITY)
             }
+            Some(quantity * METRIC_QUANTITY)
         } else {
             None
         };
@@ -368,7 +367,7 @@ impl Biller {
         let card = Self::get_plan_card(subscription_id, &subscription.default_payment_method)?;
         let (level, unit_amount) = Self::get_plan_price(subscription_id, subscription.items.data)?;
 
-        let status = Self::map_status(&subscription.status);
+        let status = Self::map_status(subscription.status);
 
         Ok(JsonPlan {
             organization,
@@ -480,10 +479,10 @@ impl Biller {
         subscription_id: &SubscriptionId,
     ) -> Result<PlanStatus, BillingError> {
         let subscription = self.get_subscription(subscription_id).await?;
-        Ok(Self::map_status(&subscription.status))
+        Ok(Self::map_status(subscription.status))
     }
 
-    fn map_status(status: &SubscriptionStatus) -> PlanStatus {
+    fn map_status(status: SubscriptionStatus) -> PlanStatus {
         match status {
             SubscriptionStatus::Active => PlanStatus::Active,
             SubscriptionStatus::Canceled => PlanStatus::Canceled,

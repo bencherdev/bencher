@@ -18,7 +18,7 @@ pub struct ReportUrls {
 impl ReportUrls {
     pub fn new(endpoint_url: Url, json_report: JsonReport) -> Self {
         Self {
-            alert_urls: AlertUrls::new(endpoint_url.clone(), &json_report),
+            alert_urls: AlertUrls::new(&endpoint_url, &json_report),
             benchmark_urls: BenchmarkUrls::new(endpoint_url.clone(), &json_report),
             project_slug: json_report.project.slug.clone(),
             json_report,
@@ -26,7 +26,7 @@ impl ReportUrls {
         }
     }
 
-    pub fn html(&self, require_threshold: bool, id: Option<NonEmpty>) -> String {
+    pub fn html(&self, require_threshold: bool, id: Option<&NonEmpty>) -> String {
         let mut html = String::new();
         let html_mut = &mut html;
         self.html_header(html_mut);
@@ -139,7 +139,7 @@ impl ReportUrls {
                     format!(
                         r#"🚨 (<a href="{url}">view plot</a> | <a href="{alert_url}">view alert</a>)"#,
                     )
-                } else if boundary.map(|b| b.is_empty()).unwrap_or(true) {
+                } else if boundary.map(BoundaryParam::is_empty).unwrap_or(true) {
                     format!(r#"➖ (<a href="{url}">view plot</a>)"#)
                 } else {
                     format!(r#"✅ (<a href="{url}">view plot</a>)"#)
@@ -163,20 +163,23 @@ impl ReportUrls {
         ));
     }
 
-    fn html_bencher_tag(&self, html: &mut String, id: Option<NonEmpty>) {
+    fn html_bencher_tag(&self, html: &mut String, id: Option<&NonEmpty>) {
         html.push_str(&self.bencher_tag(id));
     }
 
     // The Bencher tag allows us to easily check whether a comment is a Bencher report when updating
-    pub fn bencher_tag(&self, id: Option<NonEmpty>) -> String {
-        let id = id.as_ref().map(ToString::to_string).unwrap_or_else(|| {
-            format!(
-                "{branch}/{testbed}/{adapter:?}",
-                branch = self.json_report.branch.uuid,
-                testbed = self.json_report.testbed.uuid,
-                adapter = self.json_report.adapter
-            )
-        });
+    pub fn bencher_tag(&self, id: Option<&NonEmpty>) -> String {
+        let id = id.map_or_else(
+            || {
+                format!(
+                    "{branch}/{testbed}/{adapter:?}",
+                    branch = self.json_report.branch.uuid,
+                    testbed = self.json_report.testbed.uuid,
+                    adapter = self.json_report.adapter
+                )
+            },
+            ToString::to_string,
+        );
         format!(
             r#"<div id="bencher.dev/projects/{project}/id/{id}"></div>"#,
             project = self.json_report.project.uuid,
@@ -367,7 +370,7 @@ impl BoundaryParam {
         query_string
     }
 
-    pub fn is_empty(&self) -> bool {
+    pub fn is_empty(self) -> bool {
         !self.lower_boundary && !self.upper_boundary
     }
 }
@@ -375,7 +378,7 @@ impl BoundaryParam {
 pub struct AlertUrls(BTreeMap<(Benchmark, MetricKind), Url>);
 
 impl AlertUrls {
-    pub fn new(endpoint_url: Url, json_report: &JsonReport) -> Self {
+    pub fn new(endpoint_url: &Url, json_report: &JsonReport) -> Self {
         let mut urls = BTreeMap::new();
 
         for alert in &json_report.alerts {

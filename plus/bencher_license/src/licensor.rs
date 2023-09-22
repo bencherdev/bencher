@@ -34,7 +34,7 @@ impl Licensor {
         Ok(Self::SelfHosted { decoding })
     }
 
-    pub fn bencher_cloud(private_pem: Secret) -> Result<Self, LicenseError> {
+    pub fn bencher_cloud(private_pem: &Secret) -> Result<Self, LicenseError> {
         let encoding = encoding_key(private_pem.as_ref())?;
         let decoding = decoding_key()?;
         Ok(Self::BencherCloud { encoding, decoding })
@@ -49,8 +49,7 @@ impl Licensor {
 
     fn decoding(&self) -> &DecodingKey {
         match self {
-            Self::SelfHosted { decoding } => decoding,
-            Self::BencherCloud { decoding, .. } => decoding,
+            Self::SelfHosted { decoding } | Self::BencherCloud { decoding, .. } => decoding,
         }
     }
 
@@ -150,7 +149,7 @@ mod test {
 
     #[test]
     fn test_bencher_cloud_monthly() {
-        let licensor = Licensor::bencher_cloud(PRIVATE_PEM_SECRET.clone()).unwrap();
+        let licensor = Licensor::bencher_cloud(&PRIVATE_PEM_SECRET).unwrap();
         let organization = Uuid::new_v4();
 
         let license = licensor.new_monthly_license(organization).unwrap();
@@ -168,7 +167,7 @@ mod test {
 
     #[test]
     fn test_bencher_cloud_annual() {
-        let licensor = Licensor::bencher_cloud(PRIVATE_PEM_SECRET.clone()).unwrap();
+        let licensor = Licensor::bencher_cloud(&PRIVATE_PEM_SECRET).unwrap();
         let organization = Uuid::new_v4();
 
         let license = licensor.new_annual_license(organization).unwrap();

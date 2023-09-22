@@ -153,6 +153,7 @@ pub enum Limit {
 
 impl From<bool> for Limit {
     fn from(limit: bool) -> Self {
+        #[allow(clippy::match_bool)]
         match limit {
             LOWER_BOOL => Self::Lower,
             UPPER_BOOL => Self::Upper,

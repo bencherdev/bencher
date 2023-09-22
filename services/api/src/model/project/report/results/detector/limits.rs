@@ -15,6 +15,7 @@ pub struct MetricsLimit {
     pub value: f64,
 }
 
+#[derive(Clone, Copy)]
 pub enum TestKind {
     Z,
     T { freedom: f64 },
@@ -107,6 +108,7 @@ impl From<MetricsLimit> for f64 {
 }
 
 #[cfg(test)]
+#[allow(clippy::unreadable_literal)]
 mod test {
     use bencher_json::Boundary;
     use once_cell::sync::Lazy;

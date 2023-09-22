@@ -60,6 +60,7 @@ pub async fn server_restart_post(
     response_accepted!(endpoint, json)
 }
 
+#[allow(clippy::unused_async)]
 async fn post_inner(
     log: &Logger,
     context: &ApiContext,
@@ -75,13 +76,12 @@ async fn post_inner(
         context.restart_tx.clone(),
         json_restart.delay.unwrap_or(DEFAULT_DELAY),
         auth_user.id,
-    )
-    .await;
+    );
 
     Ok(JsonEmpty {})
 }
 
-pub async fn countdown(log: &Logger, restart_tx: Sender<()>, delay: u64, user_id: UserId) {
+pub fn countdown(log: &Logger, restart_tx: Sender<()>, delay: u64, user_id: UserId) {
     let countdown_log = log.clone();
     tokio::spawn(async move {
         for tick in (0..=delay).rev() {

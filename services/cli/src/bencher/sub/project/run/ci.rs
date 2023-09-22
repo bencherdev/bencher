@@ -128,10 +128,10 @@ impl GitHubActions {
         }
 
         // The path to the file on the runner that contains the full event webhook payload. For example, /github/workflow/event.json.
-        let github_event_path = match std::env::var("GITHUB_EVENT_PATH").ok() {
-            Some(github_event_path) => github_event_path,
-            _ => return Err(GitHubError::NoEventPath),
+        let Some(github_event_path) = std::env::var("GITHUB_EVENT_PATH").ok() else {
+            return Err(GitHubError::NoEventPath);
         };
+
         let event_str = std::fs::read_to_string(&github_event_path)
             .map_err(|e| GitHubError::BadEventPath(github_event_path, e))?;
         // The event JSON does not match the GitHub API event JSON schema used by Octocrab
@@ -200,13 +200,13 @@ impl GitHubActions {
             &owner,
             &repo,
             issue_number,
-            &report_urls.bencher_tag(self.ci_id.clone()),
+            &report_urls.bencher_tag(self.ci_id.as_ref()),
         )
         .await?;
 
         // Update or create the comment
         let issue_handler = github_client.issues(owner, repo);
-        let body = report_urls.html(self.ci_only_thresholds, self.ci_id.clone());
+        let body = report_urls.html(self.ci_only_thresholds, self.ci_id.as_ref());
         let _comment = if let Some(comment_id) = comment_id {
             issue_handler
                 .update_comment(comment_id, body)
@@ -262,8 +262,8 @@ pub async fn get_comment(
 
         if comments_len < usize::from(PER_PAGE) {
             return Ok(None);
-        } else {
-            page += 1;
         }
+
+        page += 1;
     }
 }

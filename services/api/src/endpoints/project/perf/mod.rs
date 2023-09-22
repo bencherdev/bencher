@@ -421,7 +421,7 @@ fn perf_metric(
             lower_bound: lower_bound.map(Into::into),
             upper_bound: upper_bound.map(Into::into),
         },
-        boundary: boundary.map(|b| b.into_json()).unwrap_or_default(),
+        boundary: boundary.map(QueryBoundary::into_json).unwrap_or_default(),
         alert,
     })
 }

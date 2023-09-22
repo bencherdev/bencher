@@ -18,7 +18,7 @@ pub struct Email {
 }
 
 impl Email {
-    pub async fn send(&self, log: &Logger, message: Message) {
+    pub fn send(&self, log: &Logger, message: Message) {
         let mut message_builder = MessageBuilder::new();
 
         message_builder = if let Some(name) = self.from_name.clone() {

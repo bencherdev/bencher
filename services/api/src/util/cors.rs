@@ -5,7 +5,7 @@ use http::{header::HeaderValue, StatusCode};
 
 pub type CorsResponse = HttpResponseHeaders<HttpResponseOk<String>>;
 
-// https://githu.com/oxidecomputer/cio/blob/95545d29f25712a917b85593492217f4e989b04c/webhooky/src/cors.rs
+// https://github.com/oxidecomputer/cio/blob/95545d29f25712a917b85593492217f4e989b04c/webhooky/src/cors.rs
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum CorsFailure {
@@ -20,8 +20,7 @@ pub struct CorsError {
 
 impl From<CorsError> for HttpError {
     fn from(_: CorsError) -> Self {
-        // Currently all CORS errors collapse to a Forbidden response, they do not
-        // report on what the expected values are
+        // Currently all CORS errors collapse to a Forbidden response, they do not report on what the expected values are
         HttpError::for_status(None, StatusCode::FORBIDDEN)
     }
 }
@@ -88,6 +87,7 @@ pub fn get_cors_method_header(allowed_methods: &[http::Method]) -> HeaderValue {
     .expect("Converting method to str generated invalid string")
 }
 
+#[allow(clippy::unused_async)]
 pub async fn get_cors_header<C: ServerContext>(
     rqctx: Arc<RequestContext<C>>,
     header_name: &str,
@@ -148,7 +148,7 @@ mod tests {
         assert_eq!(
             Ok(HeaderValue::from_static("https://website.com")),
             validate_header("https://website.com", &["https://website.com"])
-        )
+        );
     }
 
     #[test]
@@ -156,7 +156,7 @@ mod tests {
         assert_eq!(
             HeaderValue::from_static("POST, OPTIONS, GET"),
             get_cors_method_header(&[Method::POST, Method::OPTIONS, Method::GET])
-        )
+        );
     }
 
     #[test]
@@ -164,7 +164,7 @@ mod tests {
         assert_eq!(
             Ok(HeaderValue::from_static("Content-Type")),
             validate_header("Content-Type", &["Content-Type"])
-        )
+        );
     }
 
     #[test]
@@ -175,7 +175,7 @@ mod tests {
                 "Content-Type, X-Nonstandard",
                 &["Content-Type", "X-Nonstandard"]
             )
-        )
+        );
     }
 
     #[test]
@@ -183,7 +183,7 @@ mod tests {
         assert_eq!(
             Ok(HeaderValue::from_static("Content-Type, Content-Type")),
             validate_header("Content-Type, Content-Type", &["Content-Type"])
-        )
+        );
     }
 
     #[test]
@@ -201,6 +201,6 @@ mod tests {
                 failures: vec![CorsFailure::InvalidValue("X-Unsupported-Thing".to_string())],
             }),
             validate_header("X-Unsupported-Thing", &["Content-Type"])
-        )
+        );
     }
 }

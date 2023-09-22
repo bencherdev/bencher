@@ -21,7 +21,7 @@ impl MetricsBoundary {
     pub fn new(
         log: &Logger,
         datum: f64,
-        metrics_data: MetricsData,
+        metrics_data: &MetricsData,
         test: StatisticKind,
         min_sample_size: Option<u32>,
         lower_boundary: Option<Boundary>,
@@ -36,13 +36,13 @@ impl MetricsBoundary {
             lower_boundary,
             upper_boundary,
         )
-        .map(|opt| opt.unwrap_or_default())
+        .map(Option::unwrap_or_default)
     }
 
     fn new_inner(
         log: &Logger,
         datum: f64,
-        metrics_data: MetricsData,
+        metrics_data: &MetricsData,
         test: StatisticKind,
         min_sample_size: Option<u32>,
         lower_boundary: Option<Boundary>,
@@ -69,6 +69,7 @@ impl MetricsBoundary {
         let test_kind = match test {
             StatisticKind::Z => TestKind::Z,
             // T test requires the degrees of freedom to calculate.
+            #[allow(clippy::cast_precision_loss)]
             StatisticKind::T => TestKind::T {
                 freedom: (data.len() - 1) as f64,
             },
@@ -117,6 +118,7 @@ fn variance(mean: f64, data: &[f64]) -> Option<f64> {
 }
 
 #[cfg(test)]
+#[allow(clippy::float_cmp, clippy::unreadable_literal)]
 mod test {
     use pretty_assertions::assert_eq;
 

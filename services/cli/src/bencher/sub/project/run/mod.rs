@@ -42,6 +42,7 @@ const BENCHER_ADAPTER: &str = "BENCHER_ADAPTER";
 const BENCHER_CMD: &str = "BENCHER_CMD";
 
 #[derive(Debug)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct Run {
     project: ResourceId,
     backend: Backend,
@@ -210,7 +211,7 @@ impl Run {
         for _ in 0..self.iter {
             let output = self.runner.run().await?;
             if output.is_success() {
-                results.push(output.result())
+                results.push(output.result());
             } else if self.allow_failure {
                 cli_eprintln!("Skipping failure:\n{}", output);
             } else {

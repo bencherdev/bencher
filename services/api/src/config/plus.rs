@@ -30,7 +30,7 @@ impl Plus {
         let biller = Some(tokio::task::block_in_place(move || {
             Handle::current().block_on(async { Biller::new(plus.billing).await })
         })?);
-        let licensor = Licensor::bencher_cloud(plus.license_pem).map_err(ApiError::License)?;
+        let licensor = Licensor::bencher_cloud(&plus.license_pem).map_err(ApiError::License)?;
 
         Ok(Self { biller, licensor })
     }

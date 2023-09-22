@@ -2,8 +2,6 @@ use bencher_json::{organization::member::JsonOrganizationRole, Email};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::ApiError;
-
 use super::{audience::Audience, now, JwtError};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,16 +27,16 @@ impl Claims {
         email: Email,
         ttl: u32,
         org: Option<OrgClaims>,
-    ) -> Result<Self, ApiError> {
+    ) -> Self {
         let now = now();
-        Ok(Self {
+        Self {
             aud: audience.into(),
             exp: now.checked_add(u64::from(ttl)).unwrap_or(now),
             iat: now,
             iss: issuer,
             sub: email.into(),
             org,
-        })
+        }
     }
 
     pub fn email(&self) -> &str {

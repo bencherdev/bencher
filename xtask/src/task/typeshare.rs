@@ -14,7 +14,7 @@ impl TryFrom<CliTypeshare> for Typeshare {
 }
 
 impl Typeshare {
-    pub async fn exec(&self) -> anyhow::Result<()> {
+    pub fn exec(&self) -> anyhow::Result<()> {
         let output = Command::new("npm")
             .args(["run", "typeshare"])
             .current_dir("./services/console")

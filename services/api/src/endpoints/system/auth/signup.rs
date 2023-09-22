@@ -67,6 +67,7 @@ pub async fn auth_signup_post(
     pub_response_accepted!(endpoint, json)
 }
 
+#[allow(clippy::too_many_lines)]
 async fn post_inner(
     log: &Logger,
     context: &ApiContext,
@@ -164,7 +165,7 @@ async fn post_inner(
         subject: Some("Confirm Bencher Signup".into()),
         body: Some(body),
     };
-    context.messenger.send(log, message).await;
+    context.messenger.send(log, message);
 
     if !insert_user.admin {
         let admins = QueryUser::get_admins(conn)?;
@@ -181,7 +182,7 @@ async fn post_inner(
                     invited: invite.is_some(),
                 })),
             };
-            context.messenger.send(log, message).await;
+            context.messenger.send(log, message);
         }
     }
 

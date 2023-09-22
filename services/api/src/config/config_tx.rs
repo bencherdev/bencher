@@ -124,7 +124,7 @@ fn into_private(
     info!(&log, "Loading secret key");
     let secret_key = SecretKey::new(
         security.issuer.unwrap_or_else(|| BENCHER_DOT_DEV.into()),
-        security.secret_key,
+        &security.secret_key,
     );
     info!(&log, "Configuring Bencher Plus");
     #[cfg(feature = "plus")]
@@ -203,6 +203,7 @@ fn into_messenger(smtp: Option<JsonSmtp>) -> Messenger {
     )
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn into_config_dropshot(server: JsonServer) -> ConfigDropshot {
     let JsonServer {
         bind_address,

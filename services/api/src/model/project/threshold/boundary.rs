@@ -52,7 +52,7 @@ impl QueryBoundary {
     // There may not be a boundary for every metric, so return the default if there isn't one.
     pub fn get_json(conn: &mut DbConnection, metric_id: MetricId) -> JsonBoundary {
         Self::from_metric_id(conn, metric_id)
-            .map(|b| b.into_json())
+            .map(QueryBoundary::into_json)
             .unwrap_or_default()
     }
 

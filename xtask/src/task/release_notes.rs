@@ -26,7 +26,7 @@ impl TryFrom<CliReleaseNotes> for ReleaseNotes {
 }
 
 impl ReleaseNotes {
-    pub async fn exec(&self) -> anyhow::Result<()> {
+    pub fn exec(&self) -> anyhow::Result<()> {
         let changelog_path = self
             .changelog
             .clone()

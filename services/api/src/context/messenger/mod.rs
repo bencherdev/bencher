@@ -13,10 +13,10 @@ pub enum Messenger {
 }
 
 impl Messenger {
-    pub async fn send(&self, log: &Logger, message: Message) {
+    pub fn send(&self, log: &Logger, message: Message) {
         match self {
             Self::StdOut => info!(log, "{message}"),
-            Self::Email(email) => email.send(log, message).await,
+            Self::Email(email) => email.send(log, message),
         }
     }
 }
