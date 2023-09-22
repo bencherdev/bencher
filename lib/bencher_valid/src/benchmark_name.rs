@@ -111,6 +111,7 @@ pub fn is_valid_benchmark_name(benchmark_name: &str) -> bool {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod test {
     use std::str::FromStr;
 

@@ -37,8 +37,6 @@ rustflags = [
     "-Wclippy::inline_asm_x86_intel_syntax",     # Checks for usage of Intel x86 assembly syntax.
     "-Wclippy::integer_division",                # Checks for division of integers
     "-Wclippy::large_include_file",              # Checks for the inclusion of large files via include_bytes!() and include_str!()
-    "-Wclippy::let_underscore_must_use",         # Checks for let _ = <expr> where expr is must use
-    "-Wclippy::let_underscore_untyped",          # Checks for let _ = <expr> without a type annotation, and suggests to either provide one, or remove the let keyword altogether.
     "-Wclippy::little_endian_bytes",             # Checks for the usage of the to_le_bytes method and/or the function from_le_bytes.
     "-Wclippy::lossy_float_literal",             # Checks for whole number float literals that cannot be represented as the underlying type without loss.
     "-Wclippy::map_err_ignore",                  # Checks for instances of map_err(|_| Some::Enum)
@@ -52,7 +50,6 @@ rustflags = [
     "-Wclippy::needless_raw_strings",            # Checks for raw string literals where a string literal can be used instead.
     "-Wclippy::non_ascii_literal",               # Checks for non-ASCII characters in string and char literals.
     "-Wclippy::panic",                           # Checks for usage of panic!.
-    "-Wclippy::panic_in_result_fn",              # Checks for usage of panic!, unimplemented!, todo!, unreachable! or assertions in a function of type result.
     "-Wclippy::partial_pub_fields",              # Checks whether partial fields of a struct are public.
     "-Wclippy::print_stdout",                    # Checks for printing on stdout. The purpose of this lint is to catch debugging remnants.
     "-Wclippy::print_stderr",                    # Checks for printing on stderr. The purpose of this lint is to catch debugging remnants.
@@ -62,7 +59,6 @@ rustflags = [
     "-Wclippy::ref_patterns",                    # Checks for usages of the ref keyword.
     "-Wclippy::rest_pat_in_fully_bound_structs", # Checks for unnecessary ‘…’ pattern binding on struct when all fields are explicitly matched.
     "-Wclippy::same_name_method",                # It lints if a struct has two methods with the same name: one from a trait, another not from trait.
-    "-Wclippy::self_named_module_files",         # Checks that module layout uses only mod.rs files.
     "-Wclippy::semicolon_inside_block",          # Suggests moving the semicolon after a block to the inside of the block, after its last expression.
     "-Wclippy::separated_literal_suffix",        # Warns if literal suffixes are separated by an underscore. To enforce separated literal suffix style, see the unseparated_literal_suffix lint.
     "-Wclippy::str_to_string",                   # This lint checks for .to_string() method calls on values of type &str.
@@ -78,9 +74,7 @@ rustflags = [
     "-Wclippy::unnecessary_safety_comment",      # Checks for // SAFETY: comments on safe code.
     "-Wclippy::unnecessary_safety_doc",          # Checks for the doc comments of publicly visible safe functions and traits and warns if there is a # Safety section.
     "-Wclippy::unnecessary_self_imports",        # Checks for imports ending in ::{self}.
-    "-Wclippy::unneeded_field_pattern",          # Checks for structure field patterns bound to wildcards.
     "-Wclippy::unreachable",                     # Checks for usage of unreachable!.
-    "-Wclippy::unwrap_in_result",                # Checks for functions of type Result that contain expect() or unwrap()
     "-Wclippy::unwrap_used",                     # Checks for .unwrap() or .unwrap_err() calls on Results and .unwrap() call on Options.
     "-Wclippy::use_debug",                       # Checks for usage of Debug formatting. The purpose of this lint is to catch debugging remnants.
     "-Wclippy::verbose_file_reads",              # Checks for usage of File::read_to_end and File::read_to_string.

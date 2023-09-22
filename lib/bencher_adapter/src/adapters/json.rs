@@ -9,6 +9,7 @@ impl Adapter for AdapterJson {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 pub(crate) mod test_json {
     use pretty_assertions::assert_eq;
 

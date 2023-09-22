@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used)]
+
 fn main() {
     let src = "../../services/console/src/content/api/swagger.json";
     println!("cargo:rerun-if-changed={src}");

@@ -37,9 +37,13 @@ impl Adapter for AdapterRustIai {
         let mut benchmark_metrics = Vec::new();
         let lines = input.lines().collect::<Vec<_>>();
         for lines in lines.windows(IAI_METRICS_LINE_COUNT) {
-            let lines = lines
-                .try_into()
-                .expect("Windows struct should always be convertible to array of the same size.");
+            let Ok(lines) = lines.try_into() else {
+                debug_assert!(
+                    false,
+                    "Windows struct should always be convertible to array of the same size."
+                );
+                continue;
+            };
             if let Some((benchmark_name, metrics)) = parse_iai_lines(lines) {
                 benchmark_metrics.push((benchmark_name, metrics));
             }
@@ -134,6 +138,7 @@ fn parse_iai_metric<'a>(input: &'a str, metric_kind: &'static str) -> IResult<&'
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 pub(crate) mod test_rust_iai {
 
     use crate::{

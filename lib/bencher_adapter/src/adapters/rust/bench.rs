@@ -82,6 +82,7 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 pub(crate) mod test_rust_bench {
     use bencher_json::{project::report::JsonAverage, JsonMetric};
     use pretty_assertions::assert_eq;

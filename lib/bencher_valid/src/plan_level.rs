@@ -60,7 +60,7 @@ impl AsRef<str> for PlanLevel {
 
 impl From<PlanLevel> for String {
     fn from(plan_level: PlanLevel) -> Self {
-        plan_level.as_ref().to_string()
+        plan_level.as_ref().to_owned()
     }
 }
 
@@ -99,6 +99,7 @@ pub fn is_valid_plan_level(plan_level: &str) -> bool {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod test {
     use super::is_valid_plan_level;
     use pretty_assertions::assert_eq;

@@ -41,6 +41,7 @@ impl FromStr for ExpirationMonth {
     type Err = ValidError;
 
     fn from_str(expiration_month: &str) -> Result<Self, Self::Err> {
+        #[allow(clippy::map_err_ignore)]
         expiration_month
             .parse::<i32>()
             .map_err(|_| ValidError::ExpirationMonthStr(expiration_month.into()))?

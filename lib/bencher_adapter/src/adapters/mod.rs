@@ -21,7 +21,7 @@ fn print_ln(input: &str) -> IResult<&str, ()> {
 }
 
 #[cfg(test)]
-#[allow(clippy::panic)]
+#[allow(clippy::panic, clippy::unwrap_used)]
 pub(crate) mod test_util {
     use bencher_json::project::{
         metric_kind::{LATENCY_SLUG_STR, THROUGHPUT_SLUG_STR},

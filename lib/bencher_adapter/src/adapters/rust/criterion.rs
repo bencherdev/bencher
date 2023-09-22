@@ -101,6 +101,7 @@ fn parse_criterion_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 pub(crate) mod test_rust_criterion {
     use bencher_json::{project::report::JsonAverage, JsonMetric};
     use pretty_assertions::assert_eq;

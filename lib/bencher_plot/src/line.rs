@@ -153,6 +153,7 @@ impl LinePlot {
                 let box_x_left = std::cmp::max(MIN_GAP, KEY_LEFT_MARGIN - (extra_lines * 8));
                 let box_gap = std::cmp::max(MIN_GAP, BOX_GAP - extra_lines);
                 let box_gaps = lines_len * box_gap;
+                #[allow(clippy::integer_division)]
                 let width = (usize::try_from(IMG_WIDTH)? - box_x_left - box_gaps) / lines_len;
                 (box_x_left, width, box_gap)
             } else {
@@ -417,6 +418,7 @@ const TABLEAU_10: [(u8, u8, u8); 10] = [
     // #bab0ab
     (186, 176, 171),
 ];
+#[allow(clippy::expect_used)]
 static TABLEAU_10_RGB: Lazy<[RGBColor; 10]> = Lazy::new(|| {
     TABLEAU_10
         .into_iter()
@@ -427,6 +429,7 @@ static TABLEAU_10_RGB: Lazy<[RGBColor; 10]> = Lazy::new(|| {
 });
 
 impl LineData {
+    #[allow(clippy::indexing_slicing)]
     fn color(index: usize) -> RGBColor {
         TABLEAU_10_RGB[index % 10]
     }
@@ -440,6 +443,7 @@ impl LineData {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
 mod test {
     use std::{fs::File, io::Write};
 

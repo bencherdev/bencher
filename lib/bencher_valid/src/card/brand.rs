@@ -76,7 +76,7 @@ impl AsRef<str> for CardBrand {
 
 impl From<CardBrand> for String {
     fn from(card_brand: CardBrand) -> Self {
-        card_brand.as_ref().to_string()
+        card_brand.as_ref().to_owned()
     }
 }
 

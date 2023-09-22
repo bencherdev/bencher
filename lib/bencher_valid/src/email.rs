@@ -74,6 +74,7 @@ pub fn is_valid_email(email: &str) -> bool {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod test {
     use std::str::FromStr;
 

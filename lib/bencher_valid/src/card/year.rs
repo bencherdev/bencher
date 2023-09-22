@@ -44,6 +44,7 @@ impl FromStr for ExpirationYear {
     type Err = ValidError;
 
     fn from_str(expiration_year: &str) -> Result<Self, Self::Err> {
+        #[allow(clippy::map_err_ignore)]
         expiration_year
             .parse::<i32>()
             .map_err(|_| ValidError::ExpirationYearStr(expiration_year.into()))?

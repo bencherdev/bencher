@@ -93,6 +93,7 @@ pub fn is_valid_boundary(boundary: f64) -> bool {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod test {
     use pretty_assertions::assert_eq;
 

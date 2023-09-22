@@ -77,7 +77,7 @@ impl AsRef<str> for PlanStatus {
 
 impl From<PlanStatus> for String {
     fn from(plan_status: PlanStatus) -> Self {
-        plan_status.as_ref().to_string()
+        plan_status.as_ref().to_owned()
     }
 }
 

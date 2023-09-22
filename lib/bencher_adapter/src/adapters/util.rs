@@ -124,6 +124,7 @@ impl FromStr for Units {
     type Err = AdapterError;
 
     fn from_str(units_str: &str) -> Result<Self, Self::Err> {
+        #[allow(clippy::map_err_ignore)]
         let (remainder, units) =
             parse_units(units_str).map_err(|_| Self::Err::BenchmarkUnits(units_str.into()))?;
         if remainder.is_empty() {

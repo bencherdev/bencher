@@ -38,6 +38,7 @@ pub fn init_rbac() -> oso::Result<Oso> {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
 mod test {
     use std::collections::HashMap;
 

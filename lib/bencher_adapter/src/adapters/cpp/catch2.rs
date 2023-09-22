@@ -58,10 +58,12 @@ fn parse_catch2<'i>(
     map_res(
         parse_catch2_time,
         |std_dev| -> Result<(BenchmarkName, JsonMetric), NomError> {
+            #[allow(clippy::map_err_ignore)]
             let (benchmark_name_remainder, benchmark_name) =
                 parse_catch2_benchmark_name(benchmark_name_line)
                     .map_err(|_| nom_error(benchmark_name_line))?;
 
+            #[allow(clippy::map_err_ignore)]
             let (mean_remainder, mean) =
                 parse_catch2_time(mean_line).map_err(|_| nom_error(mean_line))?;
 
@@ -146,6 +148,7 @@ fn parse_catch2_prelude(input: &str) -> IResult<&str, Prelude> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 pub(crate) mod test_cpp_catch2 {
     use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;
