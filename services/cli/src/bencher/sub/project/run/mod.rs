@@ -147,12 +147,12 @@ fn map_adapter(adapter: Option<CliRunAdapter>) -> Option<RunAdapter> {
 #[async_trait]
 impl SubCmd for Run {
     async fn exec(&self) -> Result<(), CliError> {
-        self.exec().await.map_err(Into::into)
+        self.exec_inner().await.map_err(Into::into)
     }
 }
 
 impl Run {
-    async fn exec(&self) -> Result<(), RunError> {
+    async fn exec_inner(&self) -> Result<(), RunError> {
         let Some(json_new_report) = &self.generate_report().await? else {
             return Ok(());
         };
@@ -258,7 +258,10 @@ impl Run {
             )
             .await
             .map_err(RunError::GetEndpoint)?;
-        let endpoint_url: Url = json_endpoint.endpoint.into();
+        let endpoint_url: Url = json_endpoint
+            .endpoint
+            .try_into()
+            .map_err(RunError::BadEndpoint)?;
         let report_urls = ReportUrls::new(endpoint_url.clone(), json_report);
 
         // TODO disable when quiet

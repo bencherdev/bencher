@@ -353,7 +353,9 @@ mod plan_kind {
                 Self::Licensed {
                     entitlement,
                     prior_usage,
-                } => {
+                } =>
+                {
+                    #[allow(clippy::todo)]
                     if *prior_usage + usage > *entitlement {
                         todo!("Manage license entitlements");
                     }
@@ -544,11 +546,18 @@ async fn delete_inner(
 
         // For each version greater than this one, decrement the version number
         for (version_id, version_number) in version_map {
-            diesel::update(schema::version::table.filter(schema::version::id.eq(version_id)))
-                .set(schema::version::number.eq(version_number - 1))
-                .execute(conn)
-                .map_err(api_error!())
-                .unwrap();
+            if let Err(e) =
+                diesel::update(schema::version::table.filter(schema::version::id.eq(version_id)))
+                    .set(schema::version::number.eq(version_number - 1))
+                    .execute(conn)
+            {
+                debug_assert!(
+                    false,
+                    "Failed to decrement version ({version_id}) number ({version_number}): {e}"
+                );
+                #[cfg(feature = "sentry")]
+                sentry::capture_error(&e);
+            }
         }
 
         // Finally delete the dangling version

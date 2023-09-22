@@ -152,6 +152,7 @@ async fn if_branch(
         );
     }
 
+    #[allow(clippy::if_then_some_else_none)]
     Ok(if create {
         // If we're just doing a dry run, we don't need to actually create the branch
         Some(if dry_run {

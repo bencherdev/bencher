@@ -67,23 +67,23 @@ impl AwsS3 {
         let (region, accesspoint_arn) = access_point
             .trim_start_matches(ARN_AWS_S3)
             .split_once(COLON)
-            .ok_or_else(|| ApiError::DataStore(access_point.to_string()))?;
+            .ok_or_else(|| ApiError::DataStore(access_point.to_owned()))?;
 
         let config = aws_sdk_s3::Config::builder()
             .credentials_provider(credentials_provider)
-            .region(aws_sdk_s3::config::Region::new(region.to_string()))
+            .region(aws_sdk_s3::config::Region::new(region.to_owned()))
             .build();
         let client = aws_sdk_s3::Client::from_conf(config);
 
         let (account_id, resource) = accesspoint_arn
             .split_once(ACCESSPOINT)
-            .ok_or_else(|| ApiError::DataStore(access_point.to_string()))?;
+            .ok_or_else(|| ApiError::DataStore(access_point.to_owned()))?;
 
         let (bucket_name, bucket_path) =
             if let Some((bucket_name, bucket_path)) = resource.split_once('/') {
-                (bucket_name.to_string(), Some(PathBuf::from(bucket_path)))
+                (bucket_name.to_owned(), Some(PathBuf::from(bucket_path)))
             } else {
-                (resource.to_string(), None)
+                (resource.to_owned(), None)
             };
         let bucket_arn =
             format!("{ARN_AWS_S3}{region}{COLON}{account_id}{ACCESSPOINT}{bucket_name}");
@@ -99,7 +99,7 @@ impl AwsS3 {
         let key = if let Some(bucket_path) = &self.path {
             bucket_path.join(file_name).to_string_lossy().to_string()
         } else {
-            file_name.to_string()
+            file_name.to_owned()
         };
 
         let body = aws_sdk_s3::primitives::ByteStream::from_path(source_path)

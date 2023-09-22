@@ -22,6 +22,8 @@ pub enum ValidError {
     NonEmpty(String),
     #[error("Failed to validate URL: {0}")]
     Url(String),
+    #[error("Failed to translate internal URL ({0}): {1}")]
+    UrlToUrl(crate::Url, url::ParseError),
     #[error("Failed to validate git hash: {0}")]
     GitHash(String),
     #[error("Failed to validate secret: {0}")]

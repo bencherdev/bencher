@@ -106,7 +106,7 @@ impl QueryBenchmark {
             return id;
         }
 
-        let insert_benchmark = InsertBenchmark::from_name(project_id, name.to_string());
+        let insert_benchmark = InsertBenchmark::from_name(project_id, name.to_owned());
         diesel::insert_into(schema::benchmark::table)
             .values(&insert_benchmark)
             .execute(conn)

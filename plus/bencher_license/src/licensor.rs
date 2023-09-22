@@ -126,6 +126,7 @@ pub fn now() -> Result<u64, LicenseError> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod test {
     use bencher_plus::BENCHER_DEV;
     use bencher_valid::Secret;

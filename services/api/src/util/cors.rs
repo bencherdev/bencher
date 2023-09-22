@@ -131,7 +131,7 @@ pub fn validate_header(
         Err(CorsError {
             failures: diff
                 .into_iter()
-                .map(|v| CorsFailure::InvalidValue(v.to_string()))
+                .map(|v| CorsFailure::InvalidValue(v.to_owned()))
                 .collect::<Vec<CorsFailure>>(),
         })
     }
@@ -198,7 +198,7 @@ mod tests {
     fn test_cors_returns_invalid_error_when_missing() {
         assert_eq!(
             Err(CorsError {
-                failures: vec![CorsFailure::InvalidValue("X-Unsupported-Thing".to_string())],
+                failures: vec![CorsFailure::InvalidValue("X-Unsupported-Thing".to_owned())],
             }),
             validate_header("X-Unsupported-Thing", &["Content-Type"])
         );

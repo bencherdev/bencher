@@ -4,7 +4,8 @@ xtask = "run --manifest-path ./xtask/Cargo.toml --"
 [target.'cfg(all())']
 rustflags = [
     # https://doc.rust-lang.org/rustc/lints/listing/index.html
-    # "--deny non_ascii_idents",
+    "-Wnon_ascii_idents",
+    "-Wunsafe_code",
     # https://github.com/rust-lang/rust-clippy
     "-Wclippy::all",
     # cargo
@@ -27,7 +28,6 @@ rustflags = [
     "-Wclippy::filetype_is_file",                # Checks for FileType::is_file().
     "-Wclippy::float_cmp_const",                 # Checks for (in-)equality comparisons on floating-point value and constant, except in functions called *eq* (which probably implement equality for a type involving floats).
     "-Wclippy::fn_to_numeric_cast_any",          # Checks for casts of a function pointer to any integer type.
-    "-Wclippy::format_push_string",              # Detects cases where the result of a format! call is appended to an existing String.
     "-Wclippy::get_unwrap",                      # Checks for usage of .get().unwrap() (or .get_mut().unwrap) on a standard library type which implements Index
     "-Wclippy::host_endian_bytes",               # Checks for the usage of the to_ne_bytes method and/or the function from_ne_bytes.
     "-Wclippy::if_then_some_else_none",          # Checks for if-else that could be written using either bool::then or bool::then_some.
@@ -48,7 +48,6 @@ rustflags = [
     "-Wclippy::multiple_unsafe_ops_per_block",   # Checks for unsafe blocks that contain more than one unsafe operation.
     "-Wclippy::mutex_atomic",                    # Checks for usage of Mutex<X> where an atomic will do.
     "-Wclippy::needless_raw_strings",            # Checks for raw string literals where a string literal can be used instead.
-    "-Wclippy::non_ascii_literal",               # Checks for non-ASCII characters in string and char literals.
     "-Wclippy::panic",                           # Checks for usage of panic!.
     "-Wclippy::partial_pub_fields",              # Checks whether partial fields of a struct are public.
     "-Wclippy::print_stdout",                    # Checks for printing on stdout. The purpose of this lint is to catch debugging remnants.

@@ -1,5 +1,4 @@
 use derive_more::Display;
-use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use std::{fmt, str::FromStr};
@@ -12,11 +11,6 @@ use serde::{
 };
 
 use crate::ValidError;
-
-const NOT_FOUND_STR: &str = "/404";
-#[allow(clippy::unwrap_used)]
-static NOT_FOUND: Lazy<url::Url> =
-    Lazy::new(|| url::Url::from_file_path(std::path::PathBuf::from(NOT_FOUND_STR)).unwrap());
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
@@ -53,18 +47,11 @@ impl From<url::Url> for Url {
     }
 }
 
-impl From<Url> for url::Url {
-    fn from(url: Url) -> Self {
-        match url::Url::from_str(url.as_ref()) {
-            Ok(url) => url,
-            Err(e) => {
-                debug_assert!(
-                    false,
-                    "URL ({url}) was already validated but failed to parse: {e}"
-                );
-                NOT_FOUND.clone()
-            },
-        }
+impl TryFrom<Url> for url::Url {
+    type Error = ValidError;
+
+    fn try_from(url: Url) -> Result<Self, Self::Error> {
+        url::Url::from_str(url.as_ref()).map_err(|e| ValidError::UrlToUrl(url, e))
     }
 }
 
@@ -101,7 +88,7 @@ pub fn is_valid_url(url: &str) -> bool {
 
 #[cfg(test)]
 mod test {
-    use super::{is_valid_url, NOT_FOUND, NOT_FOUND_STR};
+    use super::is_valid_url;
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -112,10 +99,5 @@ mod test {
         assert_eq!(false, is_valid_url(""));
         assert_eq!(false, is_valid_url("bad"));
         assert_eq!(false, is_valid_url("example.com"));
-    }
-
-    #[test]
-    fn test_not_found() {
-        assert_eq!(format!("file://{NOT_FOUND_STR}"), NOT_FOUND.to_string());
     }
 }

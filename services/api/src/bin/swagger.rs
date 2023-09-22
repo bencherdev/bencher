@@ -19,7 +19,7 @@ fn main() -> Result<(), SwaggerError> {
 
     info!(
         &log,
-        "\u{1f430} Bencher OpenAPI Spec v{}",
+        "🐰 Bencher OpenAPI Spec v{}",
         env!("CARGO_PKG_VERSION")
     );
 

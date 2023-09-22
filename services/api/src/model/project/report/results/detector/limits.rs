@@ -108,7 +108,7 @@ impl From<MetricsLimit> for f64 {
 }
 
 #[cfg(test)]
-#[allow(clippy::unreadable_literal)]
+#[allow(clippy::expect_used, clippy::unreadable_literal, clippy::unwrap_used)]
 mod test {
     use bencher_json::Boundary;
     use once_cell::sync::Lazy;

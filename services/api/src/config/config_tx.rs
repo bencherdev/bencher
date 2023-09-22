@@ -109,7 +109,7 @@ fn into_private(
     restart_tx: Sender<()>,
     #[cfg(feature = "plus")] plus: Option<JsonPlus>,
 ) -> Result<ApiContext, ApiError> {
-    let endpoint = console.url.into();
+    let endpoint = console.url.try_into()?;
     let database_path = json_database.file.to_string_lossy();
     diesel_database_url(log, &database_path);
     info!(&log, "Connecting to database: {database_path}");

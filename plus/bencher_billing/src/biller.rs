@@ -25,19 +25,6 @@ pub struct Biller {
     products: Products,
 }
 
-impl Biller {
-    pub async fn new(billing: JsonBilling) -> Result<Self, BillingError> {
-        let JsonBilling {
-            secret_key,
-            products,
-        } = billing;
-        let client = StripeClient::new(secret_key);
-        let products = Products::new(&client, products).await?;
-
-        Ok(Self { client, products })
-    }
-}
-
 #[derive(Debug, Clone)]
 enum ProductPlan {
     Free,
@@ -70,6 +57,17 @@ impl ProductPlan {
 }
 
 impl Biller {
+    pub async fn new(billing: JsonBilling) -> Result<Self, BillingError> {
+        let JsonBilling {
+            secret_key,
+            products,
+        } = billing;
+        let client = StripeClient::new(secret_key);
+        let products = Products::new(&client, products).await?;
+
+        Ok(Self { client, products })
+    }
+
     pub async fn get_or_create_customer(
         &self,
         name: &UserName,
@@ -302,7 +300,7 @@ impl Biller {
         }]);
         create_subscription.default_payment_method = Some(&payment_method.id);
         create_subscription.metadata = Some(
-            [(METADATA_ORGANIZATION.to_string(), organization.to_string())]
+            [(METADATA_ORGANIZATION.to_owned(), organization.to_string())]
                 .into_iter()
                 .collect(),
         );
@@ -530,6 +528,7 @@ fn into_payment_card(card: JsonCard) -> PaymentCard {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod test {
     use bencher_json::{
         organization::metered::{JsonCard, DEFAULT_PRICE_NAME},
@@ -555,19 +554,19 @@ mod test {
             team: JsonProduct {
                 id: "prod_NKz5B9dGhDiSY1".into(),
                 metered: hmap! {
-                    "default".to_string() => "price_1McW12Kal5vzTlmhoPltpBAW".to_string(),
+                    "default".to_owned() => "price_1McW12Kal5vzTlmhoPltpBAW".to_owned(),
                 },
                 licensed: hmap! {
-                    "default".to_string() => "price_1MaJ7kKal5vzTlmh1pbQ5JYR".to_string(),
+                    "default".to_owned() => "price_1MaJ7kKal5vzTlmh1pbQ5JYR".to_owned(),
                 },
             },
             enterprise: JsonProduct {
                 id: "prod_NLC7fDet2C8Nmk".into(),
                 metered: hmap! {
-                    "default".to_string() => "price_1McW2eKal5vzTlmhECLIyVQz".to_string(),
+                    "default".to_owned() => "price_1McW2eKal5vzTlmhECLIyVQz".to_owned(),
                 },
                 licensed: hmap! {
-                    "default".to_string() => "price_1MaViyKal5vzTlmho1MdXIpe".to_string(),
+                    "default".to_owned() => "price_1MaViyKal5vzTlmho1MdXIpe".to_owned(),
                 },
             },
         }

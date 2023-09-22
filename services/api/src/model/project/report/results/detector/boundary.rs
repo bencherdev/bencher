@@ -118,7 +118,7 @@ fn variance(mean: f64, data: &[f64]) -> Option<f64> {
 }
 
 #[cfg(test)]
-#[allow(clippy::float_cmp, clippy::unreadable_literal)]
+#[allow(clippy::float_cmp, clippy::unreadable_literal, clippy::unwrap_used)]
 mod test {
     use pretty_assertions::assert_eq;
 

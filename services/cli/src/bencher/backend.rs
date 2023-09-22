@@ -193,6 +193,7 @@ pub struct ErrorResponse {
 impl std::fmt::Display for ErrorResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Status: {}", self.status)?;
+        #[allow(clippy::use_debug)]
         writeln!(f, "Headers: {:?}", self.headers)?;
         writeln!(f, "Request ID: {}", self.request_id)?;
         if let Some(error_code) = &self.error_code {

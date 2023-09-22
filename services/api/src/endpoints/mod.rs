@@ -1,3 +1,5 @@
+#![allow(clippy::str_to_string)]
+
 use dropshot::ApiDescription;
 
 pub mod endpoint;

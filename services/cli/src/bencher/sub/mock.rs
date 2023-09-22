@@ -55,12 +55,12 @@ impl From<CliMock> for Mock {
 #[async_trait]
 impl SubCmd for Mock {
     async fn exec(&self) -> Result<(), CliError> {
-        self.exec().map_err(Into::into)
+        self.exec_inner().map_err(Into::into)
     }
 }
 
 impl Mock {
-    fn exec(&self) -> Result<(), MockError> {
+    fn exec_inner(&self) -> Result<(), MockError> {
         let adapter_results = self.generate_results()?;
 
         // TODO disable when quiet

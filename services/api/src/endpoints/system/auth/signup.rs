@@ -173,7 +173,7 @@ async fn post_inner(
             let message = Message {
                 to_name: Some(admin.name.clone()),
                 to_email: admin.email.clone(),
-                subject: Some("\u{1f430} New Bencher User".into()),
+                subject: Some("🐰 New Bencher User".into()),
                 body: Some(Body::NewUser(NewUserBody {
                     admin: admin.name.clone(),
                     endpoint: context.endpoint.clone(),

@@ -44,6 +44,8 @@ pub enum RunError {
     SendReport(crate::bencher::BackendError),
     #[error("Failed to get console endpoint: {0}")]
     GetEndpoint(crate::bencher::BackendError),
+    #[error("Invalid console endpoint: {0}")]
+    BadEndpoint(bencher_json::ValidError),
     #[error("Alerts detected ({0})")]
     Alerts(usize),
 

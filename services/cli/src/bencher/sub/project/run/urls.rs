@@ -81,7 +81,8 @@ impl ReportUrls {
                 ),
             ),
         ] {
-            let url = self.endpoint_url.clone().join(&path).unwrap();
+            let url = self.endpoint_url.clone();
+            let url = url.join(&path).unwrap_or(url);
             html.push_str(&format!(
                 r#"<tr><td>{row}</td><td><a href="{url}">{name}</a></td></tr>"#
             ));
@@ -107,10 +108,11 @@ impl ReportUrls {
                 "/console/projects/{}/metric-kinds/{}",
                 self.project_slug, metric_kind.slug
             );
+            let url = self.endpoint_url.clone();
+            let url = url.join(&metric_kind_path).unwrap_or(url);
             html.push_str(&format!(
                 r#"<th><a href="{url}">{name}</a></th>"#,
                 name = metric_kind.name,
-                url = self.endpoint_url.clone().join(&metric_kind_path).unwrap()
             ));
         }
         html.push_str("</tr>");
@@ -121,10 +123,11 @@ impl ReportUrls {
                 "/console/projects/{}/benchmarks/{}",
                 self.project_slug, benchmark.slug
             );
+            let url = self.endpoint_url.clone();
+            let url = url.join(&benchmark_path).unwrap_or(url);
             html.push_str(&format!(
                 r#"<td><a href="{url}">{name}</a></td>"#,
                 name = benchmark.name,
-                url = self.endpoint_url.clone().join(&benchmark_path).unwrap()
             ));
             for (metric_kind, (url, boundary)) in metric_kinds {
                 if require_threshold && !BenchmarkUrls::boundary_has_threshold(*boundary) {
@@ -156,7 +159,9 @@ impl ReportUrls {
         html.push_str(&format!(r#"<br/><small><a href="https://bencher.dev">Bencher - Continuous Benchmarking</a></small>{}<br/><small><a href="https://bencher.dev/docs">Docs</a> | <a href="https://bencher.dev/repo">Repo</a> | <a href="https://bencher.dev/chat">Chat</a> | <a href="https://bencher.dev/help">Help</a></small>"#,
         if self.json_report.project.visibility.is_public() {
             let path = format!("/perf/{}", self.project_slug);
-            format!(r#"<br/><small><a href="{url}">View Public Perf Page</a></small>"#, url = self.endpoint_url.clone().join(&path).unwrap())
+            let url = self.endpoint_url.clone();
+            let url = url.join(&path).unwrap_or(url);
+            format!(r#"<br/><small><a href="{url}">View Public Perf Page</a></small>"#)
         } else {
             String::new()
         }

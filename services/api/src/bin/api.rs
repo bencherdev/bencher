@@ -17,11 +17,7 @@ async fn main() -> Result<(), ApiError> {
         release: sentry::release_name!(),
         ..Default::default()
     });
-    info!(
-        &log,
-        "\u{1f430} Bencher API Server v{}",
-        env!("CARGO_PKG_VERSION")
-    );
+    info!(&log, "🐰 Bencher API Server v{}", env!("CARGO_PKG_VERSION"));
     if let Err(e) = run(
         &log,
         #[cfg(feature = "sentry")]

@@ -44,7 +44,7 @@ impl TryFrom<CliProjectList> for List {
         } = list;
         Ok(Self {
             org,
-            public: if public { Some(public) } else { None },
+            public: public.then_some(public),
             name,
             pagination: pagination.into(),
             backend: backend.try_into()?,

@@ -102,6 +102,7 @@ impl SecretKey {
                 error,
             })?;
         let exp = token_data.claims.exp;
+        #[allow(clippy::expect_used)]
         let now = u64::try_from(Utc::now().timestamp()).expect("Is it 584942419325 yet?");
         if exp < now {
             Err(JwtError::Expired {
@@ -134,10 +135,12 @@ impl SecretKey {
 }
 
 pub fn now() -> u64 {
+    #[allow(clippy::expect_used)]
     u64::try_from(Utc::now().timestamp()).expect("Today is past 1 Jan 1970.")
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod test {
     use std::{thread, time};
 

@@ -3,6 +3,7 @@ use bencher_json::ResourceId;
 use bencher_plot::PlotError;
 use dropshot::HttpError;
 use http::StatusCode;
+use once_cell::sync::Lazy;
 use thiserror::Error;
 
 #[cfg(feature = "plus")]
@@ -360,9 +361,13 @@ where
     http_error
 }
 
+const GITHUB_ISSUE_URL_STR: &str = "https://github.com/bencherdev/bencher/issues/new";
+#[allow(clippy::expect_used)]
+pub static GITHUB_ISSUE_URL: Lazy<url::Url> =
+    Lazy::new(|| GITHUB_ISSUE_URL_STR.parse().expect(GITHUB_ISSUE_URL_STR));
+
 pub fn github_issue_url(title: &str, body: &str) -> url::Url {
-    let mut url = url::Url::parse("https://github.com/bencherdev/bencher/issues/new")
-        .expect("Bencher GitHub Issues URL");
+    let mut url = GITHUB_ISSUE_URL.clone();
     let query =
         serde_urlencoded::to_string([("title", title), ("body", body), ("labels", "bug")]).ok();
     url.set_query(query.as_deref());
