@@ -87,7 +87,6 @@ pub enum Units {
 }
 
 impl Units {
-    #[allow(clippy::float_arithmetic)]
     pub fn as_nanos(self) -> f64 {
         match self {
             Self::Pico => 1.0 / 1_000.0,
@@ -98,7 +97,6 @@ impl Units {
         }
     }
 
-    #[allow(clippy::float_arithmetic)]
     pub fn as_secs(self) -> f64 {
         match self {
             Self::Pico => 1.0 / 1_000_000_000_000.0,

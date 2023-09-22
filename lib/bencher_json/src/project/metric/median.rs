@@ -1,9 +1,5 @@
 pub trait Median {
-    #[allow(
-        clippy::arithmetic_side_effects,
-        clippy::indexing_slicing,
-        clippy::integer_division
-    )]
+    #[allow(clippy::indexing_slicing, clippy::integer_division)]
     fn median(mut array: Vec<Self>) -> Option<Self>
     where
         Self:

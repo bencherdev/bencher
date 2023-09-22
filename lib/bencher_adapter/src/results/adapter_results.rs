@@ -196,7 +196,6 @@ impl std::ops::Add for AdapterResults {
 }
 
 impl std::iter::Sum for AdapterResults {
-    #[allow(clippy::arithmetic_side_effects)]
     fn sum<I>(iter: I) -> Self
     where
         I: Iterator<Item = Self>,
@@ -211,7 +210,6 @@ impl std::iter::Sum for AdapterResults {
 impl std::ops::Div<usize> for AdapterResults {
     type Output = Self;
 
-    #[allow(clippy::arithmetic_side_effects)]
     fn div(self, rhs: usize) -> Self::Output {
         self.inner
             .into_iter()

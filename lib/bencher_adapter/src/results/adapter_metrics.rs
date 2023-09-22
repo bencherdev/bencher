@@ -20,7 +20,6 @@ impl From<MetricsMap> for AdapterMetrics {
 }
 
 impl AdapterMetrics {
-    #[allow(clippy::arithmetic_side_effects)]
     pub(crate) fn combined(self, mut other: Self, kind: CombinedKind) -> Self {
         let mut metric_map = HashMap::new();
         for (metric_kind, metric) in self.inner {
@@ -50,7 +49,6 @@ impl AdapterMetrics {
 impl std::ops::Div<usize> for AdapterMetrics {
     type Output = Self;
 
-    #[allow(clippy::arithmetic_side_effects)]
     fn div(self, rhs: usize) -> Self::Output {
         let mut metric_map = HashMap::new();
         for (metric_kind, metric) in self.inner {

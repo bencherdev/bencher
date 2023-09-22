@@ -88,7 +88,7 @@ impl MetricsBoundary {
     }
 }
 
-#[allow(clippy::cast_precision_loss, clippy::float_arithmetic)]
+#[allow(clippy::cast_precision_loss)]
 fn mean(data: &[f64]) -> Option<f64> {
     if data.is_empty() {
         return None;
@@ -103,7 +103,7 @@ fn std_deviation(mean: f64, data: &[f64]) -> Option<f64> {
         .map(f64::sqrt)
 }
 
-#[allow(clippy::cast_precision_loss, clippy::float_arithmetic)]
+#[allow(clippy::cast_precision_loss)]
 fn variance(mean: f64, data: &[f64]) -> Option<f64> {
     // Do not calculate variance if there are less than 2 data points
     if data.len() < 2 {

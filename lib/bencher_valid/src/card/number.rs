@@ -1,5 +1,3 @@
-#![allow(clippy::arithmetic_side_effects)]
-
 use derive_more::Display;
 use once_cell::sync::Lazy;
 use regex::Regex;

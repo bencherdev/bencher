@@ -17,11 +17,34 @@ rustflags = [
     "-Aclippy::must_use_candidate",      # Checks for public functions that have no #[must_use] attribute, but return something not already marked must-use, have no mutable arg and mutate no statics.
     # restriction
     # "-Wclippy::restriction",
-    # "-Wclippy::arithmetic_side_effects", # Checks any kind of arithmetic operation of any type.
-    "-Wclippy::as_underscore", # Checks for the usage of as _ conversion using inferred type.
-    "-Wclippy::dbg_macro",     # Checks for usage of the dbg! macro.
-    "-Wclippy::print_stdout",  # Checks for printing on stdout. The purpose of this lint is to catch debugging remnants.
-    "-Wclippy::print_stderr",  # Checks for printing on stderr. The purpose of this lint is to catch debugging remnants.
+    "-Wclippy::as_underscore",                  # Checks for the usage of as _ conversion using inferred type.
+    "-Wclippy::big_endian_bytes",               # Checks for the usage of the to_be_bytes method and/or the function from_be_bytes.
+    "-Wclippy::dbg_macro",                      # Checks for usage of the dbg! macro.
+    "-Wclippy::decimal_literal_representation", # Warns if there is a better representation for a numeric literal.
+    "-Wclippy::exit",                           # Detects calls to the exit() function which terminates the program.
+    "-Wclippy::expect_used",                    # Checks for .expect() or .expect_err() calls on Results and .expect() call on Options.
+    "-Wclippy::filetype_is_file",               # Checks for FileType::is_file().
+    "-Wclippy::float_cmp_const",                # Checks for (in-)equality comparisons on floating-point value and constant, except in functions called *eq* (which probably implement equality for a type involving floats).
+    "-Wclippy::fn_to_numeric_cast_any",         # Checks for casts of a function pointer to any integer type.
+    "-Wclippy::format_push_string",             # Detects cases where the result of a format! call is appended to an existing String.
+    "-Wclippy::get_unwrap",                     # Checks for usage of .get().unwrap() (or .get_mut().unwrap) on a standard library type which implements Index
+    "-Wclippy::host_endian_bytes",              # Checks for the usage of the to_ne_bytes method and/or the function from_ne_bytes.
+    "-Wclippy::if_then_some_else_none",         # Checks for if-else that could be written using either bool::then or bool::then_some.
+    "-Wclippy::impl_trait_in_params",           # Lints when impl Trait is being used in a function’s parameters.
+    "-Wclippy::indexing_slicing",               # Checks for usage of indexing or slicing. Arrays are special cases, this lint does report on arrays if we can tell that slicing operations are in bounds and does not lint on constant usize indexing on arrays because that is handled by rustc’s const_err lint.
+    "-Wclippy::inline_asm_x86_att_syntax",      # Checks for usage of AT&T x86 assembly syntax.
+    "-Wclippy::inline_asm_x86_intel_syntax",    # Checks for usage of Intel x86 assembly syntax.
+    "-Wclippy::integer_division",               # Checks for division of integers
+    "-Wclippy::large_include_file",             # Checks for the inclusion of large files via include_bytes!() and include_str!()
+    "-Wclippy::let_underscore_must_use",        # Checks for let _ = <expr> where expr is must use
+    "-Wclippy::let_underscore_untyped",         # Checks for let _ = <expr> without a type annotation, and suggests to either provide one, or remove the let keyword altogether.
+    "-Wclippy::little_endian_bytes",            # Checks for the usage of the to_le_bytes method and/or the function from_le_bytes.
+    "-Wclippy::lossy_float_literal",            # Checks for whole number float literals that cannot be represented as the underlying type without loss.
+
+    "-Wclippy::non_ascii_idents", # Warns if there is a better representation for a numeric literal.
+
+    "-Wclippy::print_stdout", # Checks for printing on stdout. The purpose of this lint is to catch debugging remnants.
+    "-Wclippy::print_stderr", # Checks for printing on stderr. The purpose of this lint is to catch debugging remnants.
 ]
 
 [target.x86_64-unknown-linux-gnu]
