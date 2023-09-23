@@ -8,7 +8,6 @@ use uuid::Uuid;
 
 use crate::{
     context::{DbConnection, Rbac, SecretKey},
-    error::api_error,
     schema,
     schema::token as token_table,
     util::{
@@ -52,8 +51,8 @@ impl QueryToken {
             .filter(schema::token::id.eq(id))
             .select(schema::token::uuid)
             .first(conn)
-            .map_err(api_error!())?;
-        Uuid::from_str(&uuid).map_err(api_error!())
+            .map_err(ApiError::from)?;
+        Uuid::from_str(&uuid).map_err(ApiError::from)
     }
 
     pub fn get_user_token(
@@ -65,7 +64,7 @@ impl QueryToken {
             .filter(schema::token::user_id.eq(user_id))
             .filter(schema::token::uuid.eq(uuid))
             .first::<QueryToken>(conn)
-            .map_err(api_error!())
+            .map_err(ApiError::from)
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonToken, ApiError> {
@@ -79,10 +78,10 @@ impl QueryToken {
             ..
         } = self;
         Ok(JsonToken {
-            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
+            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
             user: QueryUser::get_uuid(conn, user_id)?,
-            name: NonEmpty::from_str(&name).map_err(api_error!())?,
-            token: Jwt::from_str(&jwt).map_err(api_error!())?,
+            name: NonEmpty::from_str(&name).map_err(ApiError::from)?,
+            token: Jwt::from_str(&jwt).map_err(ApiError::from)?,
             creation: to_date_time(creation)?,
             expiration: to_date_time(expiration)?,
         })

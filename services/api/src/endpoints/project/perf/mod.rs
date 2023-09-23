@@ -20,7 +20,6 @@ use crate::{
         endpoint::{pub_response_ok, response_ok, ResponseOk},
         Endpoint, Method,
     },
-    error::api_error,
     model::project::{
         benchmark::{BenchmarkId, QueryBenchmark},
         branch::{BranchId, QueryBranch},
@@ -353,7 +352,7 @@ fn perf_query(
             schema::metric::upper_bound,
         ))
         .load::<PerfQuery>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_iter()
         .filter_map(|query| perf_metric(conn, query))
         .collect();

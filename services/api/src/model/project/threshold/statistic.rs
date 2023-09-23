@@ -10,7 +10,6 @@ use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
-    error::api_error,
     schema,
     schema::statistic as statistic_table,
     util::{
@@ -48,8 +47,8 @@ impl QueryStatistic {
             .filter(schema::statistic::id.eq(id))
             .select(schema::statistic::uuid)
             .first(conn)
-            .map_err(api_error!())?;
-        Uuid::from_str(&uuid).map_err(api_error!())
+            .map_err(ApiError::from)?;
+        Uuid::from_str(&uuid).map_err(ApiError::from)
     }
 
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
@@ -67,7 +66,7 @@ impl QueryStatistic {
             ..
         } = self;
         Ok(JsonStatistic {
-            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
+            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
             threshold: QueryThreshold::get_uuid(conn, threshold_id)?,
             test: test.into(),
             min_sample_size: map_sample_size(min_sample_size)?,
@@ -75,7 +74,7 @@ impl QueryStatistic {
             window: map_u32(window)?,
             lower_boundary: map_boundary(lower_boundary)?,
             upper_boundary: map_boundary(upper_boundary)?,
-            created: to_date_time(created).map_err(api_error!())?,
+            created: to_date_time(created).map_err(ApiError::from)?,
         })
     }
 }

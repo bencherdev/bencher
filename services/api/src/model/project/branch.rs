@@ -19,7 +19,7 @@ use super::{
 };
 use crate::{
     context::DbConnection,
-    error::{api_error, resource_not_found_err},
+    error::resource_not_found_err,
     model::project::threshold::{InsertThreshold, QueryThreshold},
     schema,
     schema::branch as branch_table,
@@ -58,8 +58,8 @@ impl QueryBranch {
             .filter(schema::branch::id.eq(id))
             .select(schema::branch::uuid)
             .first(conn)
-            .map_err(api_error!())?;
-        Uuid::from_str(&uuid).map_err(api_error!())
+            .map_err(ApiError::from)?;
+        Uuid::from_str(&uuid).map_err(ApiError::from)
     }
 
     pub fn from_uuid(
@@ -71,7 +71,7 @@ impl QueryBranch {
             .filter(schema::branch::project_id.eq(project_id))
             .filter(schema::branch::uuid.eq(uuid.to_string()))
             .first::<Self>(conn)
-            .map_err(api_error!())
+            .map_err(ApiError::from)
     }
 
     pub fn from_resource_id(
@@ -106,7 +106,7 @@ impl QueryBranch {
             name,
             slug,
             version: JsonVersion {
-                number: u32::try_from(number).map_err(api_error!())?,
+                number: u32::try_from(number).map_err(ApiError::from)?,
                 hash: if let Some(version_hash) = hash.as_deref() {
                     Some(GitHash::from_str(version_hash)?)
                 } else {
@@ -129,12 +129,12 @@ impl QueryBranch {
             ..
         } = self;
         Ok(JsonBranch {
-            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
+            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
             project: QueryProject::get_uuid(conn, project_id)?,
-            name: BranchName::from_str(&name).map_err(api_error!())?,
-            slug: Slug::from_str(&slug).map_err(api_error!())?,
-            created: to_date_time(created).map_err(api_error!())?,
-            modified: to_date_time(modified).map_err(api_error!())?,
+            name: BranchName::from_str(&name).map_err(ApiError::from)?,
+            slug: Slug::from_str(&slug).map_err(ApiError::from)?,
+            created: to_date_time(created).map_err(ApiError::from)?,
+            modified: to_date_time(modified).map_err(ApiError::from)?,
         })
     }
 
@@ -205,7 +205,7 @@ impl InsertBranch {
             diesel::insert_into(schema::branch_version::table)
                 .values(&insert_branch_version)
                 .execute(conn)
-                .map_err(api_error!())?;
+                .map_err(ApiError::from)?;
         }
 
         if let Some(true) = thresholds {
@@ -228,7 +228,7 @@ impl InsertBranch {
                 diesel::insert_into(schema::threshold::table)
                     .values(&insert_threshold)
                     .execute(conn)
-                    .map_err(api_error!())?;
+                    .map_err(ApiError::from)?;
 
                 // If there is a statistic, clone that too
                 let Some(statistic_id) = query_threshold.statistic_id else {
@@ -250,7 +250,7 @@ impl InsertBranch {
                 diesel::insert_into(schema::statistic::table)
                     .values(&insert_statistic)
                     .execute(conn)
-                    .map_err(api_error!())?;
+                    .map_err(ApiError::from)?;
 
                 // Get the new threshold statistic
                 let statistic_id = QueryStatistic::get_id(conn, &insert_statistic.uuid)?;
@@ -261,7 +261,7 @@ impl InsertBranch {
                 )
                 .set(schema::threshold::statistic_id.eq(statistic_id))
                 .execute(conn)
-                .map_err(api_error!())?;
+                .map_err(ApiError::from)?;
             }
         }
 

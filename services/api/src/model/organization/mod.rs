@@ -16,7 +16,6 @@ use uuid::Uuid;
 
 use crate::{
     context::{DbConnection, Rbac},
-    error::api_error,
     model::user::{auth::AuthUser, InsertUser},
     schema::{self, organization as organization_table},
     util::{
@@ -93,8 +92,8 @@ impl QueryOrganization {
             .filter(schema::organization::id.eq(id))
             .select(schema::organization::uuid)
             .first(conn)
-            .map_err(api_error!())?;
-        Uuid::from_str(&uuid).map_err(api_error!())
+            .map_err(ApiError::from)?;
+        Uuid::from_str(&uuid).map_err(ApiError::from)
     }
 
     pub fn from_resource_id(
@@ -104,7 +103,7 @@ impl QueryOrganization {
         schema::organization::table
             .filter(resource_id(organization)?)
             .first::<QueryOrganization>(conn)
-            .map_err(api_error!())
+            .map_err(ApiError::from)
     }
 
     #[cfg(feature = "plus")]
@@ -159,7 +158,7 @@ impl QueryOrganization {
         let query_organization = schema::organization::table
             .filter(schema::organization::id.eq(organization_id))
             .first(conn)
-            .map_err(api_error!())?;
+            .map_err(ApiError::from)?;
 
         rbac.is_allowed_organization(auth_user, permission, &query_organization)?;
 
@@ -176,11 +175,11 @@ impl QueryOrganization {
             ..
         } = self;
         Ok(JsonOrganization {
-            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
-            name: NonEmpty::from_str(&name).map_err(api_error!())?,
-            slug: Slug::from_str(&slug).map_err(api_error!())?,
-            created: to_date_time(created).map_err(api_error!())?,
-            modified: to_date_time(modified).map_err(api_error!())?,
+            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
+            name: NonEmpty::from_str(&name).map_err(ApiError::from)?,
+            slug: Slug::from_str(&slug).map_err(ApiError::from)?,
+            created: to_date_time(created).map_err(ApiError::from)?,
+            modified: to_date_time(modified).map_err(ApiError::from)?,
         })
     }
 }

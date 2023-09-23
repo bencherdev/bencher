@@ -11,7 +11,7 @@ macro_rules! fn_get {
             schema::$table::table
                 .filter(schema::$table::id.eq(id.into()))
                 .first(conn)
-                .map_err(crate::error::api_error!())
+                .map_err(crate::error::ApiError::from)
         }
     };
 }
@@ -32,7 +32,7 @@ macro_rules! fn_get_id {
                 .filter(schema::$table::uuid.eq(uuid.to_string()))
                 .select(schema::$table::id)
                 .first(conn)
-                .map_err(crate::error::api_error!())
+                .map_err(crate::error::ApiError::from)
         }
     };
 }

@@ -31,7 +31,6 @@ use super::{
 };
 use crate::{
     context::DbConnection,
-    error::api_error,
     model::{
         project::{benchmark::QueryBenchmark, perf::QueryPerf},
         user::{QueryUser, UserId},
@@ -72,8 +71,8 @@ impl QueryReport {
             .filter(schema::report::id.eq(id))
             .select(schema::report::uuid)
             .first(conn)
-            .map_err(api_error!())?;
-        Uuid::from_str(&uuid).map_err(api_error!())
+            .map_err(ApiError::from)?;
+        Uuid::from_str(&uuid).map_err(ApiError::from)
     }
 
     pub fn into_json(self, log: &Logger, conn: &mut DbConnection) -> Result<JsonReport, ApiError> {
@@ -92,7 +91,7 @@ impl QueryReport {
         } = self;
 
         Ok(JsonReport {
-            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
+            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
             user: QueryUser::get(conn, user_id)?.into_json()?,
             project: QueryProject::get(conn, project_id)?.into_json(conn)?,
             branch: QueryBranch::get_branch_version_json(conn, branch_id, version_id)?,
@@ -102,7 +101,7 @@ impl QueryReport {
             end_time: to_date_time(end_time)?,
             results: get_results(log, conn, id)?,
             alerts: get_alerts(conn, id)?,
-            created: to_date_time(created).map_err(api_error!())?,
+            created: to_date_time(created).map_err(ApiError::from)?,
         })
     }
 }
@@ -189,7 +188,7 @@ fn get_perfs(conn: &mut DbConnection, report_id: ReportId) -> Result<Vec<QueryPe
         schema::perf::benchmark_id,
     ))
     .load::<QueryPerf>(conn)
-    .map_err(api_error!())
+    .map_err(ApiError::from)
 }
 
 fn get_metric_kinds(
@@ -213,7 +212,7 @@ fn get_metric_kinds(
             schema::metric_kind::modified,
         ))
         .load::<QueryMetricKind>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_iter()
         .filter_map(|metric_kind| Some((metric_kind.id, metric_kind.into_json(conn).ok()?)))
         .collect())
@@ -234,7 +233,7 @@ fn get_benchmark_metric(
         .filter(schema::metric::perf_id.eq(perf_id))
         .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
         .first::<QueryMetric>(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
     // The boundary is optional, so it may not exist
     let query_boundary = QueryBoundary::from_metric_id(conn, query_metric.id).ok();
 
@@ -337,7 +336,7 @@ fn get_alerts(conn: &mut DbConnection, report_id: ReportId) -> Result<JsonReport
             schema::alert::modified,
         ))
         .load::<QueryAlert>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_iter()
         .filter_map(|alert| {
             database_map("QueryReport::get_alerts", alert.into_json(conn)).map(Into::into)

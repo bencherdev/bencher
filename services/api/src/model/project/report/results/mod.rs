@@ -13,7 +13,6 @@ use slog::Logger;
 
 use crate::{
     context::DbConnection,
-    error::api_error,
     model::project::{
         benchmark::{BenchmarkId, QueryBenchmark},
         branch::BranchId,
@@ -136,7 +135,7 @@ impl ReportResults {
         diesel::insert_into(schema::perf::table)
             .values(&insert_perf)
             .execute(conn)
-            .map_err(api_error!())?;
+            .map_err(ApiError::from)?;
         let perf_id = QueryPerf::get_id(conn, &insert_perf.uuid)?;
 
         for (metric_kind_key, metric) in metrics.inner {
@@ -146,7 +145,7 @@ impl ReportResults {
             diesel::insert_into(schema::metric::table)
                 .values(&insert_metric)
                 .execute(conn)
-                .map_err(api_error!())?;
+                .map_err(ApiError::from)?;
 
             #[cfg(feature = "plus")]
             {

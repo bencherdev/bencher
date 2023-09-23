@@ -16,7 +16,7 @@ use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
-    error::{api_error, resource_not_found_err},
+    error::resource_not_found_err,
     model::project::QueryProject,
     schema,
     schema::metric_kind as metric_kind_table,
@@ -58,8 +58,8 @@ impl QueryMetricKind {
             .filter(schema::metric_kind::id.eq(id))
             .select(schema::metric_kind::uuid)
             .first(conn)
-            .map_err(api_error!())?;
-        Uuid::from_str(&uuid).map_err(api_error!())
+            .map_err(ApiError::from)?;
+        Uuid::from_str(&uuid).map_err(ApiError::from)
     }
 
     pub fn from_resource_id(
@@ -86,13 +86,13 @@ impl QueryMetricKind {
             ..
         } = self;
         Ok(JsonMetricKind {
-            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
+            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
             project: QueryProject::get_uuid(conn, project_id)?,
-            name: NonEmpty::from_str(&name).map_err(api_error!())?,
-            slug: Slug::from_str(&slug).map_err(api_error!())?,
-            units: NonEmpty::from_str(&units).map_err(api_error!())?,
-            created: to_date_time(created).map_err(api_error!())?,
-            modified: to_date_time(modified).map_err(api_error!())?,
+            name: NonEmpty::from_str(&name).map_err(ApiError::from)?,
+            slug: Slug::from_str(&slug).map_err(ApiError::from)?,
+            units: NonEmpty::from_str(&units).map_err(ApiError::from)?,
+            created: to_date_time(created).map_err(ApiError::from)?,
+            modified: to_date_time(modified).map_err(ApiError::from)?,
         })
     }
 
@@ -125,7 +125,7 @@ impl QueryMetricKind {
         diesel::insert_into(schema::metric_kind::table)
             .values(&insert_metric_kind)
             .execute(conn)
-            .map_err(api_error!())?;
+            .map_err(ApiError::from)?;
 
         Self::get_id(conn, &insert_metric_kind.uuid)
     }

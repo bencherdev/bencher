@@ -4,7 +4,6 @@ use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
-    error::api_error,
     schema::{self, metric as metric_table},
     ApiError,
 };
@@ -35,7 +34,7 @@ impl QueryMetric {
         schema::metric::table
             .filter(schema::metric::uuid.eq(uuid))
             .first::<Self>(conn)
-            .map_err(api_error!())
+            .map_err(ApiError::from)
     }
 
     pub fn json(value: f64, lower_bound: Option<f64>, upper_bound: Option<f64>) -> JsonMetric {

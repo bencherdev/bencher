@@ -14,7 +14,6 @@ use crate::{
         endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
-    error::api_error,
     model::project::{
         branch::{InsertBranch, QueryBranch, UpdateBranch},
         QueryProject,
@@ -135,7 +134,7 @@ async fn get_ls_inner(
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryBranch>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_iter()
         .filter_map(into_json!(endpoint, conn))
         .collect())
@@ -207,7 +206,7 @@ async fn post_inner(
     diesel::insert_into(schema::branch::table)
         .values(&insert_branch)
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     // Clone data and optionally thresholds from the start point
     if let Some(start_point) = &start_point {
@@ -217,7 +216,7 @@ async fn post_inner(
     schema::branch::table
         .filter(schema::branch::uuid.eq(&insert_branch.uuid))
         .first::<QueryBranch>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_json(conn)
 }
 
@@ -288,7 +287,7 @@ async fn get_one_inner(
     QueryBranch::belonging_to(&query_project)
         .filter(resource_id(&path_params.branch)?)
         .first::<QueryBranch>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_json(conn)
 }
 
@@ -349,7 +348,7 @@ async fn patch_inner(
     diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
         .set(&UpdateBranch::from(json_branch))
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     QueryBranch::get(conn, query_branch.id)?.into_json(conn)
 }
@@ -402,7 +401,7 @@ async fn delete_inner(
     }
     diesel::delete(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     Ok(JsonEmpty {})
 }

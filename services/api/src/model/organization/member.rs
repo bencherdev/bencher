@@ -4,7 +4,7 @@ use bencher_json::{Email, JsonMember, Slug, UserName};
 use diesel::Queryable;
 use uuid::Uuid;
 
-use crate::{error::api_error, util::to_date_time, ApiError};
+use crate::{util::to_date_time, ApiError};
 
 #[derive(Queryable)]
 pub struct QueryMember {
@@ -29,13 +29,13 @@ impl QueryMember {
             modified,
         } = self;
         Ok(JsonMember {
-            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
-            name: UserName::from_str(&name).map_err(api_error!())?,
-            slug: Slug::from_str(&slug).map_err(api_error!())?,
-            email: Email::from_str(&email).map_err(api_error!())?,
+            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
+            name: UserName::from_str(&name).map_err(ApiError::from)?,
+            slug: Slug::from_str(&slug).map_err(ApiError::from)?,
+            email: Email::from_str(&email).map_err(ApiError::from)?,
             role: role.parse().map_err(ApiError::OrganizationRole)?,
-            created: to_date_time(created).map_err(api_error!())?,
-            modified: to_date_time(modified).map_err(api_error!())?,
+            created: to_date_time(created).map_err(ApiError::from)?,
+            modified: to_date_time(modified).map_err(ApiError::from)?,
         })
     }
 }

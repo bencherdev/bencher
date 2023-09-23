@@ -14,7 +14,6 @@ use crate::{
         endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
-    error::api_error,
     model::{
         project::{
             visibility::{project_visibility::project_visibility, Visibility},
@@ -138,7 +137,7 @@ async fn get_ls_inner(
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryProject>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_iter()
         .filter_map(into_json!(endpoint, conn))
         .collect())
@@ -278,7 +277,7 @@ async fn patch_inner(
     diesel::update(schema::project::table.filter(schema::project::id.eq(query_project.id)))
         .set(&UpdateProject::from(json_project))
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     QueryProject::get(conn, query_project.id)?.into_json(conn)
 }
@@ -327,7 +326,7 @@ async fn delete_inner(
 
     diesel::delete(schema::project::table.filter(schema::project::id.eq(project_id)))
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     Ok(JsonEmpty {})
 }

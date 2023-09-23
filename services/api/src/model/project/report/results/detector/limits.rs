@@ -2,7 +2,7 @@ use bencher_json::Boundary;
 use slog::{debug, Logger};
 use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
 
-use crate::{error::api_error, model::project::threshold::alert::Limit, ApiError};
+use crate::{model::project::threshold::alert::Limit, ApiError};
 
 #[derive(Default)]
 pub struct MetricsLimits {
@@ -38,7 +38,7 @@ impl MetricsLimits {
             // Create a normal distribution and calculate the boundary limits for the threshold based on the boundary percentiles.
             TestKind::Z => {
                 debug!(log, "Normal distribution: mean={mean}, std_dev={std_dev}");
-                let normal = Normal::new(mean, std_dev).map_err(api_error!())?;
+                let normal = Normal::new(mean, std_dev).map_err(ApiError::from)?;
                 let lower = lower_boundary.map(|limit| {
                     let abs_limit = normal.inverse_cdf(limit.into());
                     MetricsLimit::lower(mean, abs_limit)
@@ -55,7 +55,7 @@ impl MetricsLimits {
                     log,
                     "Students T distribution: mean={mean}, std_dev={std_dev}, freedom={freedom}"
                 );
-                let students_t = StudentsT::new(mean, std_dev, freedom).map_err(api_error!())?;
+                let students_t = StudentsT::new(mean, std_dev, freedom).map_err(ApiError::from)?;
                 let lower = lower_boundary.map(|limit| {
                     let abs_limit = students_t.inverse_cdf(limit.into());
                     MetricsLimit::lower(mean, abs_limit)

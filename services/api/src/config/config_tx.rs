@@ -22,7 +22,6 @@ use tokio::sync::mpsc::Sender;
 use crate::{
     context::{ApiContext, Database, DbConnection, Email, Messenger, SecretKey},
     endpoints::Api,
-    error::api_error,
     ApiError,
 };
 
@@ -174,7 +173,7 @@ fn run_migrations(database: &mut DbConnection) -> Result<(), ApiError> {
     // https://www.sqlite.org/foreignkeys.html#fk_enable
     database
         .batch_execute("PRAGMA foreign_keys = ON")
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
     Ok(())
 }
 

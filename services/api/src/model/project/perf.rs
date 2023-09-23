@@ -6,7 +6,6 @@ use uuid::Uuid;
 use crate::{
     context::DbConnection,
     diesel::{ExpressionMethods, QueryDsl, RunQueryDsl},
-    error::api_error,
     schema,
     schema::perf as perf_table,
     util::query::{fn_get, fn_get_id},
@@ -40,8 +39,8 @@ impl QueryPerf {
             .filter(schema::perf::id.eq(id))
             .select(schema::perf::uuid)
             .first(conn)
-            .map_err(api_error!())?;
-        Uuid::from_str(&uuid).map_err(api_error!())
+            .map_err(ApiError::from)?;
+        Uuid::from_str(&uuid).map_err(ApiError::from)
     }
 }
 

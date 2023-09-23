@@ -236,26 +236,6 @@ pub trait WordStr {
     fn plural(&self) -> &str;
 }
 
-macro_rules! api_error {
-    ($message:expr, $($field:tt)*) => {
-        |e| {
-            let err: crate::error::ApiError = e.into();
-            err
-        }
-    };
-    ($message:expr) => {
-        $crate::util::error::debug_error!($message,)
-    };
-    () => {
-        |e| {
-            let err: crate::error::ApiError = e.into();
-            err
-        }
-    };
-}
-
-pub(crate) use api_error;
-
 macro_rules! resource_not_found_err {
     ($resource:ident, $id:expr) => {
         |e| {

@@ -15,7 +15,6 @@ use crate::{
         endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
-    error::api_error,
     model::project::{
         threshold::alert::{QueryAlert, Status, UpdateAlert},
         QueryProject,
@@ -164,7 +163,7 @@ async fn get_ls_inner(
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryAlert>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_iter()
         .filter_map(into_json!(endpoint, conn))
         .collect())
@@ -289,7 +288,7 @@ async fn patch_inner(
     diesel::update(schema::alert::table.filter(schema::alert::id.eq(query_alert.id)))
         .set(&UpdateAlert::from(json_alert))
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     QueryAlert::get(conn, query_alert.id)?.into_json(conn)
 }
@@ -363,7 +362,7 @@ async fn get_stats_inner(
         .left_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
         .select(count(schema::alert::id))
         .first::<i64>(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     Ok(JsonAlertStats {
         active: u64::try_from(active).unwrap_or_default().into(),

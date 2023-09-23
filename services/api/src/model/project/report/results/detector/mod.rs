@@ -4,7 +4,6 @@ use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
-    error::api_error,
     model::project::{
         benchmark::BenchmarkId,
         branch::BranchId,
@@ -101,7 +100,7 @@ impl Detector {
         diesel::insert_into(schema::boundary::table)
             .values(&insert_boundary)
             .execute(conn)
-            .map_err(api_error!())?;
+            .map_err(ApiError::from)?;
 
         // If the boundary check detects an outlier then create an alert for it on the given side.
         if let Some(side) = boundary.outlier {

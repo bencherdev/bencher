@@ -6,7 +6,6 @@ use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
-    error::api_error,
     schema::{self, user as user_table},
     util::{
         query::{fn_get, fn_get_id},
@@ -71,8 +70,8 @@ impl QueryUser {
             .filter(schema::user::id.eq(id))
             .select(schema::user::uuid)
             .first(conn)
-            .map_err(api_error!())?;
-        Uuid::from_str(&uuid).map_err(api_error!())
+            .map_err(ApiError::from)?;
+        Uuid::from_str(&uuid).map_err(ApiError::from)
     }
 
     pub fn get_id_from_email(conn: &mut DbConnection, email: &str) -> Result<UserId, ApiError> {
@@ -80,7 +79,7 @@ impl QueryUser {
             .filter(schema::user::email.eq(email))
             .select(schema::user::id)
             .first(conn)
-            .map_err(api_error!())
+            .map_err(ApiError::from)
     }
 
     pub fn get_email_from_id(conn: &mut DbConnection, id: UserId) -> Result<String, ApiError> {
@@ -88,21 +87,21 @@ impl QueryUser {
             .filter(schema::user::id.eq(id))
             .select(schema::user::email)
             .first(conn)
-            .map_err(api_error!())
+            .map_err(ApiError::from)
     }
 
     pub fn from_resource_id(conn: &mut DbConnection, user: &ResourceId) -> Result<Self, ApiError> {
         schema::user::table
             .filter(resource_id(user)?)
             .first(conn)
-            .map_err(api_error!())
+            .map_err(ApiError::from)
     }
 
     pub fn get_admins(conn: &mut DbConnection) -> Result<Vec<QueryUser>, ApiError> {
         schema::user::table
             .filter(schema::user::admin.eq(true))
             .load::<QueryUser>(conn)
-            .map_err(api_error!())
+            .map_err(ApiError::from)
     }
 
     pub fn into_json(self) -> Result<JsonUser, ApiError> {
@@ -116,10 +115,10 @@ impl QueryUser {
             ..
         } = self;
         Ok(JsonUser {
-            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
-            name: UserName::from_str(&name).map_err(api_error!())?,
-            slug: Slug::from_str(&slug).map_err(api_error!())?,
-            email: Email::from_str(&email).map_err(api_error!())?,
+            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
+            name: UserName::from_str(&name).map_err(ApiError::from)?,
+            slug: Slug::from_str(&slug).map_err(ApiError::from)?,
+            email: Email::from_str(&email).map_err(ApiError::from)?,
             admin,
             locked,
         })

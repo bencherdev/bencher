@@ -12,7 +12,6 @@ use crate::endpoints::endpoint::pub_response_accepted;
 use crate::endpoints::endpoint::ResponseAccepted;
 use crate::endpoints::Endpoint;
 use crate::endpoints::Method;
-use crate::error::api_error;
 use crate::model::organization::{
     organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
 };
@@ -85,7 +84,7 @@ async fn post_inner(
     let count = schema::user::table
         .select(count(schema::user::id))
         .first::<i64>(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
     // The first user to signup is admin
     if count == 0 {
         insert_user.admin = true;
@@ -95,7 +94,7 @@ async fn post_inner(
     diesel::insert_into(schema::user::table)
         .values(&insert_user)
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
     let user_id = QueryUser::get_id(conn, &insert_user.uuid)?;
 
     let insert_org_role = if let Some(invite) = &invite {
@@ -106,7 +105,7 @@ async fn post_inner(
         diesel::insert_into(schema::organization::table)
             .values(&insert_org)
             .execute(conn)
-            .map_err(api_error!())?;
+            .map_err(ApiError::from)?;
         let organization_id = QueryOrganization::get_id(conn, &insert_org.uuid)?;
 
         let timestamp = Utc::now().timestamp();
@@ -123,7 +122,7 @@ async fn post_inner(
     diesel::insert_into(schema::organization_role::table)
         .values(&insert_org_role)
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     let token = context.secret_key.new_auth(email, AUTH_TOKEN_TTL)?;
 

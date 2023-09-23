@@ -14,7 +14,6 @@ use crate::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
-    error::api_error,
     model::{
         organization::QueryOrganization,
         project::{
@@ -142,7 +141,7 @@ async fn get_ls_inner(
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryProject>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_iter()
         .filter_map(into_json!(endpoint, conn))
         .collect())
@@ -213,11 +212,11 @@ async fn post_inner(
     diesel::insert_into(schema::project::table)
         .values(&insert_project)
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
     let query_project = schema::project::table
         .filter(schema::project::uuid.eq(&insert_project.uuid))
         .first::<QueryProject>(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     let timestamp = Utc::now().timestamp();
     // Connect the user to the project as a `Maintainer`
@@ -231,14 +230,14 @@ async fn post_inner(
     diesel::insert_into(schema::project_role::table)
         .values(&insert_proj_role)
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     // Add a `main` branch to the project
     let insert_branch = InsertBranch::main(conn, query_project.id);
     diesel::insert_into(schema::branch::table)
         .values(&insert_branch)
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
     let branch_id = QueryBranch::get_id(conn, &insert_branch.uuid)?;
 
     // Add a `localhost` testbed to the project
@@ -246,7 +245,7 @@ async fn post_inner(
     diesel::insert_into(schema::testbed::table)
         .values(&insert_testbed)
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
     let testbed_id = QueryTestbed::get_id(conn, &insert_testbed.uuid)?;
 
     // Add a `latency` metric kind to the project
@@ -254,7 +253,7 @@ async fn post_inner(
     diesel::insert_into(schema::metric_kind::table)
         .values(&insert_metric_kind)
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
     let metric_kind_id = QueryMetricKind::get_id(conn, &insert_metric_kind.uuid)?;
     // Add a `latency` threshold to the project
     InsertThreshold::upper_boundary(
@@ -270,7 +269,7 @@ async fn post_inner(
     diesel::insert_into(schema::metric_kind::table)
         .values(&insert_metric_kind)
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
     let metric_kind_id = QueryMetricKind::get_id(conn, &insert_metric_kind.uuid)?;
     // Add a `throughput` threshold to the project
     InsertThreshold::lower_boundary(

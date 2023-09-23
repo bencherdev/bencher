@@ -14,7 +14,6 @@ use crate::{
         endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
-    error::api_error,
     model::project::{
         metric_kind::{InsertMetricKind, QueryMetricKind, UpdateMetricKind},
         QueryProject,
@@ -135,7 +134,7 @@ async fn get_ls_inner(
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryMetricKind>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_iter()
         .filter_map(into_json!(endpoint, conn))
         .collect())
@@ -200,12 +199,12 @@ async fn post_inner(
     diesel::insert_into(schema::metric_kind::table)
         .values(&insert_metric_kind)
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     schema::metric_kind::table
         .filter(schema::metric_kind::uuid.eq(&insert_metric_kind.uuid))
         .first::<QueryMetricKind>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_json(conn)
 }
 
@@ -276,7 +275,7 @@ async fn get_one_inner(
     QueryMetricKind::belonging_to(&query_project)
         .filter(resource_id(&path_params.metric_kind)?)
         .first::<QueryMetricKind>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_json(conn)
 }
 
@@ -340,7 +339,7 @@ async fn patch_inner(
     )
     .set(&UpdateMetricKind::from(json_metric_kind))
     .execute(conn)
-    .map_err(api_error!())?;
+    .map_err(ApiError::from)?;
 
     QueryMetricKind::get(conn, query_metric_kind.id)?.into_json(conn)
 }
@@ -394,7 +393,7 @@ async fn delete_inner(
         schema::metric_kind::table.filter(schema::metric_kind::id.eq(query_metric_kind.id)),
     )
     .execute(conn)
-    .map_err(api_error!())?;
+    .map_err(ApiError::from)?;
 
     Ok(JsonEmpty {})
 }

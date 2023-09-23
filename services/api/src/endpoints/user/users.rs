@@ -9,7 +9,6 @@ use crate::{
         endpoint::{response_ok, ResponseOk},
         Endpoint, Method,
     },
-    error::api_error,
     model::{
         user::QueryUser,
         user::{auth::AuthUser, token::same_user},
@@ -77,5 +76,5 @@ async fn get_one_inner(
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
     same_user!(auth_user, context.rbac, query_user.id);
 
-    query_user.into_json().map_err(api_error!())
+    query_user.into_json().map_err(ApiError::from)
 }

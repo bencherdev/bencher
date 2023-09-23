@@ -14,7 +14,6 @@ use super::{
 };
 use crate::{
     context::DbConnection,
-    error::api_error,
     model::project::{benchmark::QueryBenchmark, report::QueryReport, ProjectId},
     schema,
     schema::alert as alert_table,
@@ -46,8 +45,8 @@ impl QueryAlert {
             .filter(schema::alert::id.eq(id))
             .select(schema::alert::uuid)
             .first(conn)
-            .map_err(api_error!())?;
-        Uuid::from_str(&uuid).map_err(api_error!())
+            .map_err(ApiError::from)?;
+        Uuid::from_str(&uuid).map_err(ApiError::from)
     }
 
     pub fn get_perf_json(
@@ -57,7 +56,7 @@ impl QueryAlert {
         let query_alert = schema::alert::table
             .filter(schema::alert::boundary_id.eq(boundary_id))
             .first::<Self>(conn)
-            .map_err(api_error!())?;
+            .map_err(ApiError::from)?;
 
         let QueryAlert {
             uuid,
@@ -67,7 +66,7 @@ impl QueryAlert {
             ..
         } = query_alert;
         Ok(JsonPerfAlert {
-            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
+            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
             limit: boundary_limit.into(),
             status: status.into(),
             modified: to_date_time(modified)?,
@@ -99,7 +98,7 @@ impl QueryAlert {
                 schema::alert::modified,
             ))
             .first::<QueryAlert>(conn)
-            .map_err(api_error!())
+            .map_err(ApiError::from)
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonAlert, ApiError> {
@@ -126,12 +125,12 @@ impl QueryAlert {
             .filter(schema::metric::id.eq(metric_id))
             .select((schema::perf::report_id, schema::perf::iteration))
             .first(conn)
-            .map_err(api_error!())?;
+            .map_err(ApiError::from)?;
 
         Ok(JsonAlert {
-            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
+            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
             report: QueryReport::get_uuid(conn, report_id)?,
-            iteration: u32::try_from(iteration).map_err(api_error!())?,
+            iteration: u32::try_from(iteration).map_err(ApiError::from)?,
             threshold: QueryThreshold::get_json(conn, threshold_id, statistic_id)?,
             benchmark: QueryBenchmark::get_benchmark_metric_json(conn, metric_id)?,
             limit: boundary_limit.into(),
@@ -291,7 +290,7 @@ impl InsertAlert {
         diesel::insert_into(schema::alert::table)
             .values(&insert_alert)
             .execute(conn)
-            .map_err(api_error!())?;
+            .map_err(ApiError::from)?;
 
         Ok(())
     }

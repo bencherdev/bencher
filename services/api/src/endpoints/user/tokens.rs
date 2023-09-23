@@ -14,7 +14,6 @@ use crate::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
-    error::api_error,
     model::{
         user::QueryUser,
         user::{
@@ -139,7 +138,7 @@ async fn get_ls_inner(
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryToken>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_iter()
         .filter_map(into_json!(endpoint, conn))
         .collect())
@@ -193,14 +192,14 @@ async fn post_inner(
     diesel::insert_into(schema::token::table)
         .values(&insert_token)
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     schema::token::table
         .filter(schema::token::uuid.eq(&insert_token.uuid))
         .first::<QueryToken>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_json(conn)
-        .map_err(api_error!())
+        .map_err(ApiError::from)
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -261,7 +260,7 @@ async fn get_one_inner(
 
     QueryToken::get_user_token(conn, query_user.id, &path_params.token.to_string())?
         .into_json(conn)
-        .map_err(api_error!())
+        .map_err(ApiError::from)
 }
 
 #[endpoint {
@@ -313,7 +312,7 @@ async fn patch_inner(
     diesel::update(schema::token::table.filter(schema::token::id.eq(query_token.id)))
         .set(&UpdateToken::from(json_token))
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     QueryToken::get(conn, query_token.id)?.into_json(conn)
 }

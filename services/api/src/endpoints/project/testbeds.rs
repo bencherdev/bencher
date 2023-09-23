@@ -14,7 +14,6 @@ use crate::{
         endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
-    error::api_error,
     model::project::{
         testbed::{InsertTestbed, QueryTestbed, UpdateTestbed},
         QueryProject,
@@ -135,7 +134,7 @@ async fn get_ls_inner(
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryTestbed>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_iter()
         .filter_map(into_json!(endpoint, conn))
         .collect())
@@ -195,12 +194,12 @@ async fn post_inner(
     diesel::insert_into(schema::testbed::table)
         .values(&insert_testbed)
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     schema::testbed::table
         .filter(schema::testbed::uuid.eq(&insert_testbed.uuid))
         .first::<QueryTestbed>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_json(conn)
 }
 
@@ -271,7 +270,7 @@ async fn get_one_inner(
     QueryTestbed::belonging_to(&query_project)
         .filter(resource_id(&path_params.testbed)?)
         .first::<QueryTestbed>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_json(conn)
 }
 
@@ -332,7 +331,7 @@ async fn patch_inner(
     diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))
         .set(&UpdateTestbed::from(json_testbed))
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     QueryTestbed::get(conn, query_testbed.id)?.into_json(conn)
 }
@@ -385,7 +384,7 @@ async fn delete_inner(
     }
     diesel::delete(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     Ok(JsonEmpty {})
 }

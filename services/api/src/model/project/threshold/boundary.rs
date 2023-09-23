@@ -6,7 +6,6 @@ use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
-    error::api_error,
     model::project::metric::MetricId,
     schema,
     schema::boundary as boundary_table,
@@ -38,15 +37,15 @@ impl QueryBoundary {
             .filter(schema::alert::id.eq(id))
             .select(schema::alert::uuid)
             .first(conn)
-            .map_err(api_error!())?;
-        Uuid::from_str(&uuid).map_err(api_error!())
+            .map_err(ApiError::from)?;
+        Uuid::from_str(&uuid).map_err(ApiError::from)
     }
 
     pub fn from_metric_id(conn: &mut DbConnection, metric_id: MetricId) -> Result<Self, ApiError> {
         schema::boundary::table
             .filter(schema::boundary::metric_id.eq(metric_id))
             .first::<Self>(conn)
-            .map_err(api_error!())
+            .map_err(ApiError::from)
     }
 
     // There may not be a boundary for every metric, so return the default if there isn't one.

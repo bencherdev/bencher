@@ -3,7 +3,6 @@ use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 
 use crate::{
     context::DbConnection,
-    error::api_error,
     model::project::{
         benchmark::BenchmarkId, branch::BranchId, metric_kind::MetricKindId, testbed::TestbedId,
     },
@@ -72,7 +71,7 @@ impl MetricsData {
         let data = query
             .select(schema::metric::value)
             .load::<f64>(conn)
-            .map_err(api_error!())?
+            .map_err(ApiError::from)?
             .into_iter()
             .collect();
 

@@ -16,7 +16,7 @@ use super::{
 };
 use crate::{
     context::DbConnection,
-    error::{api_error, resource_not_found_err},
+    error::resource_not_found_err,
     schema,
     schema::benchmark as benchmark_table,
     util::{
@@ -59,7 +59,7 @@ impl QueryBenchmark {
             .filter(schema::benchmark::name.eq(name))
             .select(schema::benchmark::id)
             .first(conn)
-            .map_err(api_error!())
+            .map_err(ApiError::from)
     }
 
     pub fn get_uuid(conn: &mut DbConnection, id: BenchmarkId) -> Result<Uuid, ApiError> {
@@ -67,8 +67,8 @@ impl QueryBenchmark {
             .filter(schema::benchmark::id.eq(id))
             .select(schema::benchmark::uuid)
             .first(conn)
-            .map_err(api_error!())?;
-        Uuid::from_str(&uuid).map_err(api_error!())
+            .map_err(ApiError::from)?;
+        Uuid::from_str(&uuid).map_err(ApiError::from)
     }
 
     pub fn from_uuid(
@@ -80,7 +80,7 @@ impl QueryBenchmark {
             .filter(schema::benchmark::project_id.eq(project_id))
             .filter(schema::benchmark::uuid.eq(uuid.to_string()))
             .first::<Self>(conn)
-            .map_err(api_error!())
+            .map_err(ApiError::from)
     }
 
     pub fn from_resource_id(
@@ -110,7 +110,7 @@ impl QueryBenchmark {
         diesel::insert_into(schema::benchmark::table)
             .values(&insert_benchmark)
             .execute(conn)
-            .map_err(api_error!())?;
+            .map_err(ApiError::from)?;
 
         Self::get_id(conn, &insert_benchmark.uuid)
     }
@@ -125,12 +125,12 @@ impl QueryBenchmark {
         modified: i64,
     ) -> Result<JsonBenchmark, ApiError> {
         Ok(JsonBenchmark {
-            uuid: Uuid::from_str(uuid).map_err(api_error!())?,
+            uuid: Uuid::from_str(uuid).map_err(ApiError::from)?,
             project: QueryProject::get_uuid(conn, project_id)?,
-            name: BenchmarkName::from_str(name).map_err(api_error!())?,
-            slug: Slug::from_str(slug).map_err(api_error!())?,
-            created: to_date_time(created).map_err(api_error!())?,
-            modified: to_date_time(modified).map_err(api_error!())?,
+            name: BenchmarkName::from_str(name).map_err(ApiError::from)?,
+            slug: Slug::from_str(slug).map_err(ApiError::from)?,
+            created: to_date_time(created).map_err(ApiError::from)?,
+            modified: to_date_time(modified).map_err(ApiError::from)?,
         })
     }
 
@@ -168,7 +168,7 @@ impl QueryBenchmark {
                     Option<f64>,
                     Option<f64>,
                 )>(conn)
-                .map_err(api_error!())?;
+                .map_err(ApiError::from)?;
 
         let JsonBenchmark {
             uuid,

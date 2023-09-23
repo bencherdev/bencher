@@ -15,7 +15,6 @@ use crate::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
-    error::api_error,
     model::{
         organization::{
             organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
@@ -132,7 +131,7 @@ async fn get_ls_inner(
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryOrganization>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_iter()
         .filter_map(into_json!(endpoint))
         .collect())
@@ -179,11 +178,11 @@ async fn post_inner(
     diesel::insert_into(schema::organization::table)
         .values(&insert_organization)
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
     let query_organization = schema::organization::table
         .filter(schema::organization::uuid.eq(&insert_organization.uuid))
         .first::<QueryOrganization>(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     let timestamp = Utc::now().timestamp();
     // Connect the user to the organization as a `Maintainer`
@@ -197,7 +196,7 @@ async fn post_inner(
     diesel::insert_into(schema::organization_role::table)
         .values(&insert_org_role)
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     query_organization.into_json()
 }
@@ -316,7 +315,7 @@ async fn patch_inner(
     diesel::update(organization_query)
         .set(&update_organization)
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     QueryOrganization::get(conn, query_organization.id)?.into_json()
 }

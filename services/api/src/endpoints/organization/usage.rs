@@ -14,7 +14,6 @@ use crate::{
         organization::Resource,
         Endpoint, Method,
     },
-    error::api_error,
     model::{organization::QueryOrganization, user::auth::AuthUser},
     schema,
     util::{
@@ -113,7 +112,7 @@ async fn get_inner(
         .filter(schema::report::end_time.le(end_time))
         .select(count(schema::metric::value))
         .first::<i64>(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     Ok(JsonUsage {
         metrics_used: u64::try_from(metrics_used)?.into(),

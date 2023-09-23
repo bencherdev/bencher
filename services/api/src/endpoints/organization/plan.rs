@@ -19,7 +19,6 @@ use crate::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
-    error::api_error,
     model::organization::QueryOrganization,
     model::user::{auth::AuthUser, QueryUser},
     schema,
@@ -113,7 +112,7 @@ async fn post_inner(
     let json_user: JsonUser = schema::user::table
         .filter(schema::user::id.eq(auth_user.id))
         .first::<QueryUser>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_json()?;
 
     // Create a customer for the user
@@ -129,7 +128,7 @@ async fn post_inner(
     // Create a metered subscription for the organization
     let subscription = biller
         .create_metered_subscription(
-            Uuid::from_str(&query_org.uuid).map_err(api_error!())?,
+            Uuid::from_str(&query_org.uuid).map_err(ApiError::from)?,
             &customer,
             &payment_method,
             json_plan.level,
@@ -141,7 +140,7 @@ async fn post_inner(
     diesel::update(schema::organization::table.filter(schema::organization::id.eq(query_org.id)))
         .set(schema::organization::subscription.eq(subscription.id.as_ref()))
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     Ok(JsonEmpty::default())
 }

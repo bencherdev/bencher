@@ -9,7 +9,6 @@ use crate::{
         endpoint::{pub_response_accepted, ResponseAccepted},
         Endpoint, Method,
     },
-    error::api_error,
     model::user::QueryUser,
     schema,
     util::cors::{get_cors, CorsResponse},
@@ -65,19 +64,19 @@ async fn post_inner(
     let claims = context
         .secret_key
         .validate_auth(&json_token.token)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     let email = claims.email();
     let user = schema::user::table
         .filter(schema::user::email.eq(email))
         .first::<QueryUser>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_json()?;
 
     let token = context
         .secret_key
         .new_client(email.parse()?, CLIENT_TOKEN_TTL)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     Ok(JsonAuthUser { user, token })
 }

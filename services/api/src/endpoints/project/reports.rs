@@ -17,7 +17,6 @@ use crate::{
         endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
-    error::api_error,
     model::project::{
         branch::QueryBranch,
         report::{results::ReportResults, InsertReport, QueryReport},
@@ -137,7 +136,7 @@ async fn get_ls_inner(
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryReport>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_iter()
         .filter_map(|query| database_map(endpoint, query.into_json(log, conn)))
         .collect())
@@ -249,12 +248,12 @@ async fn post_inner(
     diesel::insert_into(schema::report::table)
         .values(&insert_report)
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     let query_report = schema::report::table
         .filter(schema::report::uuid.eq(&insert_report.uuid))
         .first::<QueryReport>(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     #[cfg(feature = "plus")]
     let mut usage = 0;
@@ -448,7 +447,7 @@ async fn get_one_inner(
             schema::report::created,
         ))
         .first::<QueryReport>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_json(log, conn)
 }
 
@@ -497,10 +496,10 @@ async fn delete_inner(
         .filter(schema::report::uuid.eq(path_params.report.to_string()))
         .select((schema::report::id, schema::report::version_id))
         .first::<(i32, i32)>(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
     diesel::delete(schema::report::table.filter(schema::report::id.eq(report_id)))
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     // If there are no more reports for this version, delete the version
     // This is necessary because multiple reports can use the same version via a git hash
@@ -510,7 +509,7 @@ async fn delete_inner(
         .filter(schema::report::version_id.eq(version_id))
         .select(count(schema::report::id))
         .first::<i64>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         == 0
     {
         let query_version = QueryVersion::get(conn, version_id)?;
@@ -523,7 +522,7 @@ async fn delete_inner(
             .filter(schema::branch_version::version_id.eq(version_id))
             .select(schema::branch::id)
             .load::<i32>(conn)
-            .map_err(api_error!())?;
+            .map_err(ApiError::from)?;
 
         let mut version_map = HashMap::new();
         // Get all versions greater than this one for each of the branches
@@ -537,7 +536,7 @@ async fn delete_inner(
                 .filter(schema::branch_version::branch_id.eq(branch_id))
                 .select((schema::version::id, schema::version::number))
                 .load::<(i32, i32)>(conn)
-                .map_err(api_error!())?
+                .map_err(ApiError::from)?
                 .into_iter()
                 .for_each(|(version_id, version_number)| {
                     version_map.insert(version_id, version_number);
@@ -563,7 +562,7 @@ async fn delete_inner(
         // Finally delete the dangling version
         diesel::delete(schema::version::table.filter(schema::version::id.eq(version_id)))
             .execute(conn)
-            .map_err(api_error!())?;
+            .map_err(ApiError::from)?;
     }
 
     Ok(JsonEmpty {})

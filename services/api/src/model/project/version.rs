@@ -6,7 +6,6 @@ use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
-    error::api_error,
     schema,
     schema::version as version_table,
     util::query::{fn_get, fn_get_id},
@@ -37,8 +36,8 @@ impl QueryVersion {
             .filter(schema::version::id.eq(id))
             .select(schema::version::uuid)
             .first(conn)
-            .map_err(api_error!())?;
-        Uuid::from_str(&uuid).map_err(api_error!())
+            .map_err(ApiError::from)?;
+        Uuid::from_str(&uuid).map_err(ApiError::from)
     }
 }
 
@@ -86,7 +85,7 @@ impl InsertVersion {
         diesel::insert_into(schema::version::table)
             .values(&insert_version)
             .execute(conn)
-            .map_err(api_error!())?;
+            .map_err(ApiError::from)?;
 
         let version_id = QueryVersion::get_id(conn, &uuid)?;
 
@@ -98,7 +97,7 @@ impl InsertVersion {
         diesel::insert_into(schema::branch_version::table)
             .values(&insert_branch_version)
             .execute(conn)
-            .map_err(api_error!())?;
+            .map_err(ApiError::from)?;
 
         Ok(version_id)
     }

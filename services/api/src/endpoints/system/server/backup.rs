@@ -16,7 +16,6 @@ use crate::{
         endpoint::{response_accepted, ResponseAccepted},
         Endpoint, Method,
     },
-    error::api_error,
     model::user::auth::AuthUser,
     util::cors::{get_cors, CorsResponse},
     ApiError,
@@ -126,7 +125,7 @@ async fn backup_database(context: &ApiContext) -> Result<(PathBuf, String), ApiE
     let file_path_str = file_path.to_string_lossy();
     let query = format!("VACUUM INTO '{file_path_str}'");
 
-    conn.batch_execute(&query).map_err(api_error!())?;
+    conn.batch_execute(&query).map_err(ApiError::from)?;
 
     Ok((file_path, file_name))
 }

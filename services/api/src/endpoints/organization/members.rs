@@ -18,7 +18,6 @@ use crate::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
-    error::api_error,
     model::user::{auth::AuthUser, QueryUser},
     model::{
         organization::{member::QueryMember, OrganizationId, QueryOrganization},
@@ -161,7 +160,7 @@ async fn get_ls_inner(
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryMember>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_iter()
         .filter_map(into_json!(endpoint))
         .collect())
@@ -234,13 +233,13 @@ async fn post_inner(
         .filter(schema::user::id.eq(auth_user.id))
         .select((schema::user::name, schema::user::email))
         .first::<(String, String)>(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     // Create an invite token
     let token = context.secret_key.new_invite(
         json_new_member.email,
         INVITE_TOKEN_TTL,
-        Uuid::from_str(&query_org.uuid).map_err(api_error!())?,
+        Uuid::from_str(&query_org.uuid).map_err(ApiError::from)?,
         json_new_member.role,
     )?;
     let token_string = token.to_string();
@@ -409,7 +408,7 @@ async fn patch_inner(
         )
         .set(schema::organization_role::role.eq(role.to_string()))
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
     }
 
     json_member(conn, query_user.id, query_organization.id)
@@ -464,7 +463,7 @@ async fn delete_inner(
             .filter(schema::organization_role::organization_id.eq(query_organization.id)),
     )
     .execute(conn)
-    .map_err(api_error!())?;
+    .map_err(ApiError::from)?;
 
     Ok(json_member)
 }
@@ -491,6 +490,6 @@ fn json_member(
             schema::organization_role::modified,
         ))
         .first::<QueryMember>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_json()
 }

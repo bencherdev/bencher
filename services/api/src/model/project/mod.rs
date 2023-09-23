@@ -18,7 +18,7 @@ use uuid::Uuid;
 
 use crate::{
     context::{DbConnection, Rbac},
-    error::{api_error, forbidden_error, resource_not_found_err, unauthorized_error},
+    error::{forbidden_error, resource_not_found_err, unauthorized_error},
     model::{organization::QueryOrganization, user::auth::AuthUser},
     schema::{self, project as project_table},
     util::{query::fn_get, resource_id::fn_resource_id, slug::unwrap_slug, to_date_time},
@@ -117,14 +117,14 @@ impl QueryProject {
             ..
         } = self;
         Ok(JsonProject {
-            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
+            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
             organization: QueryOrganization::get_uuid(conn, organization_id)?,
             name: NonEmpty::from_str(&name)?,
-            slug: Slug::from_str(&slug).map_err(api_error!())?,
+            slug: Slug::from_str(&slug).map_err(ApiError::from)?,
             url: ok_url(url.as_deref())?,
             visibility: visibility.into(),
-            created: to_date_time(created).map_err(api_error!())?,
-            modified: to_date_time(modified).map_err(api_error!())?,
+            created: to_date_time(created).map_err(ApiError::from)?,
+            modified: to_date_time(modified).map_err(ApiError::from)?,
         })
     }
 
@@ -143,8 +143,8 @@ impl QueryProject {
             .filter(schema::project::id.eq(id))
             .select(schema::project::uuid)
             .first(conn)
-            .map_err(api_error!())?;
-        Uuid::from_str(&uuid).map_err(api_error!())
+            .map_err(ApiError::from)?;
+        Uuid::from_str(&uuid).map_err(ApiError::from)
     }
 
     #[cfg(feature = "plus")]
@@ -171,7 +171,7 @@ impl QueryProject {
             .filter(schema::project::id.eq(id))
             .select(schema::organization::subscription)
             .first(conn)
-            .map_err(api_error!())?;
+            .map_err(ApiError::from)?;
 
         Ok(if let Some(subscription) = &subscription {
             Some(SubscriptionId::from_str(subscription)?)
@@ -193,7 +193,7 @@ impl QueryProject {
             .filter(schema::project::id.eq(id))
             .select((schema::organization::uuid, schema::organization::license))
             .first(conn)
-            .map_err(api_error!())?;
+            .map_err(ApiError::from)?;
 
         Ok(if let Some(license) = &license {
             Some((Uuid::from_str(&uuid)?, Jwt::from_str(license)?))
@@ -246,7 +246,7 @@ impl QueryProject {
 
 fn ok_url(url: Option<&str>) -> Result<Option<Url>, ApiError> {
     Ok(if let Some(url) = url {
-        Some(Url::from_str(url).map_err(api_error!())?)
+        Some(Url::from_str(url).map_err(ApiError::from)?)
     } else {
         None
     })

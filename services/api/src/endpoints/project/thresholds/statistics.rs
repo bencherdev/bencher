@@ -11,7 +11,6 @@ use crate::{
         endpoint::{pub_response_ok, response_ok, ResponseOk},
         Endpoint, Method,
     },
-    error::api_error,
     model::project::{threshold::statistic::QueryStatistic, QueryProject},
     model::user::auth::AuthUser,
     schema,
@@ -104,6 +103,6 @@ async fn get_one_inner(
             schema::statistic::created,
         ))
         .first::<QueryStatistic>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_json(conn)
 }

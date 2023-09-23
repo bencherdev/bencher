@@ -15,7 +15,6 @@ use crate::{
         endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
-    error::api_error,
     model::project::{
         branch::QueryBranch,
         metric_kind::QueryMetricKind,
@@ -133,7 +132,7 @@ async fn get_ls_inner(
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryThreshold>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_iter()
         .filter_map(into_json!(endpoint, conn))
         .collect())
@@ -208,7 +207,7 @@ async fn post_inner(
     schema::threshold::table
         .filter(schema::threshold::id.eq(threshold_id))
         .first::<QueryThreshold>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_json(conn)
 }
 
@@ -277,7 +276,7 @@ async fn get_one_inner(
     QueryThreshold::belonging_to(&query_project)
         .filter(schema::threshold::uuid.eq(path_params.threshold.to_string()))
         .first::<QueryThreshold>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_json(conn)
 }
 
@@ -334,7 +333,7 @@ async fn put_inner(
     let query_threshold = QueryThreshold::belonging_to(&query_project)
         .filter(schema::threshold::uuid.eq(path_params.threshold.to_string()))
         .first::<QueryThreshold>(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     // Insert the new statistic
     let insert_statistic =
@@ -342,7 +341,7 @@ async fn put_inner(
     diesel::insert_into(schema::statistic::table)
         .values(&insert_statistic)
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     // Update the current threshold to use the new statistic
     diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(query_threshold.id)))
@@ -351,7 +350,7 @@ async fn put_inner(
             &insert_statistic.uuid,
         )?)
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     QueryThreshold::get(conn, query_threshold.id)?.into_json(conn)
 }
@@ -400,10 +399,10 @@ async fn delete_inner(
     let query_threshold = QueryThreshold::belonging_to(&query_project)
         .filter(schema::threshold::uuid.eq(path_params.threshold.to_string()))
         .first::<QueryThreshold>(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
     diesel::delete(schema::threshold::table.filter(schema::threshold::id.eq(query_threshold.id)))
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     Ok(JsonEmpty {})
 }

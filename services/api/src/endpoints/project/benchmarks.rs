@@ -15,7 +15,6 @@ use crate::{
         endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
-    error::api_error,
     model::{
         project::{
             benchmark::{InsertBenchmark, QueryBenchmark, UpdateBenchmark},
@@ -138,7 +137,7 @@ async fn get_ls_inner(
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryBenchmark>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_iter()
         .filter_map(into_json!(endpoint, conn))
         .collect())
@@ -198,12 +197,12 @@ async fn post_inner(
     diesel::insert_into(schema::benchmark::table)
         .values(&insert_benchmark)
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     schema::benchmark::table
         .filter(schema::benchmark::uuid.eq(&insert_benchmark.uuid))
         .first::<QueryBenchmark>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_json(conn)
 }
 
@@ -274,7 +273,7 @@ async fn get_one_inner(
     QueryBenchmark::belonging_to(&query_project)
         .filter(resource_id(&path_params.benchmark)?)
         .first::<QueryBenchmark>(conn)
-        .map_err(api_error!())?
+        .map_err(ApiError::from)?
         .into_json(conn)
 }
 
@@ -333,7 +332,7 @@ async fn patch_inner(
     diesel::update(schema::benchmark::table.filter(schema::benchmark::id.eq(query_benchmark.id)))
         .set(&UpdateBenchmark::from(json_benchmark))
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     QueryBenchmark::get(conn, query_benchmark.id)?.into_json(conn)
 }
@@ -384,7 +383,7 @@ async fn delete_inner(
         QueryBenchmark::from_resource_id(conn, project_id, &path_params.benchmark)?;
     diesel::delete(schema::benchmark::table.filter(schema::benchmark::id.eq(query_benchmark.id)))
         .execute(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     Ok(JsonEmpty {})
 }

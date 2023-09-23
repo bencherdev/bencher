@@ -14,7 +14,6 @@ use super::{
 };
 use crate::{
     context::DbConnection,
-    error::api_error,
     schema::threshold as threshold_table,
     schema::{self},
     util::{
@@ -54,8 +53,8 @@ impl QueryThreshold {
             .filter(schema::threshold::id.eq(id))
             .select(schema::threshold::uuid)
             .first(conn)
-            .map_err(api_error!())?;
-        Uuid::from_str(&uuid).map_err(api_error!())
+            .map_err(ApiError::from)?;
+        Uuid::from_str(&uuid).map_err(ApiError::from)
     }
 
     pub fn get_with_statistic(
@@ -99,7 +98,7 @@ impl QueryThreshold {
             ..
         } = self;
         Ok(JsonThreshold {
-            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
+            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
             project: QueryProject::get_uuid(conn, project_id)?,
             metric_kind: QueryMetricKind::get(conn, metric_kind_id)?.into_json(conn)?,
             branch: QueryBranch::get(conn, branch_id)?.into_json(conn)?,
@@ -109,8 +108,8 @@ impl QueryThreshold {
             } else {
                 return Err(ApiError::NoThresholdStatistic(uuid));
             },
-            created: to_date_time(created).map_err(api_error!())?,
-            modified: to_date_time(modified).map_err(api_error!())?,
+            created: to_date_time(created).map_err(ApiError::from)?,
+            modified: to_date_time(modified).map_err(ApiError::from)?,
         })
     }
 
@@ -126,14 +125,14 @@ impl QueryThreshold {
             ..
         } = self;
         Ok(JsonThresholdStatistic {
-            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
+            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
             project: QueryProject::get_uuid(conn, project_id)?,
             statistic: if let Some(statistic_id) = statistic_id {
                 QueryStatistic::get(conn, statistic_id)?.into_json(conn)?
             } else {
                 return Err(ApiError::NoThresholdStatistic(uuid));
             },
-            created: to_date_time(created).map_err(api_error!())?,
+            created: to_date_time(created).map_err(ApiError::from)?,
         })
     }
 }
@@ -185,7 +184,7 @@ impl InsertThreshold {
         diesel::insert_into(schema::threshold::table)
             .values(&insert_threshold)
             .execute(conn)
-            .map_err(api_error!())?;
+            .map_err(ApiError::from)?;
 
         // Get the new threshold ID
         let threshold_id = QueryThreshold::get_id(conn, &insert_threshold.uuid)?;
@@ -195,7 +194,7 @@ impl InsertThreshold {
         diesel::insert_into(schema::statistic::table)
             .values(&insert_statistic)
             .execute(conn)
-            .map_err(api_error!())?;
+            .map_err(ApiError::from)?;
 
         // Get the new statistic ID
         let statistic_id = QueryStatistic::get_id(conn, &insert_statistic.uuid)?;
@@ -204,7 +203,7 @@ impl InsertThreshold {
         diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(threshold_id)))
             .set(schema::threshold::statistic_id.eq(statistic_id))
             .execute(conn)
-            .map_err(api_error!())?;
+            .map_err(ApiError::from)?;
 
         Ok(threshold_id)
     }

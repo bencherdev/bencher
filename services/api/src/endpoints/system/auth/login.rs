@@ -8,7 +8,6 @@ use crate::endpoints::endpoint::pub_response_accepted;
 use crate::endpoints::endpoint::ResponseAccepted;
 use crate::endpoints::Endpoint;
 use crate::endpoints::Method;
-use crate::error::api_error;
 
 use crate::{
     context::{ApiContext, Body, ButtonBody, Message},
@@ -71,7 +70,7 @@ async fn post_inner(
     let query_user = schema::user::table
         .filter(schema::user::email.eq(json_login.email.as_ref()))
         .first::<QueryUser>(conn)
-        .map_err(api_error!())?;
+        .map_err(ApiError::from)?;
 
     // Check to see if the user account has been locked
     if query_user.locked {
@@ -88,7 +87,7 @@ async fn post_inner(
         diesel::insert_into(schema::organization_role::table)
             .values(&insert_org_role)
             .execute(conn)
-            .map_err(api_error!())?;
+            .map_err(ApiError::from)?;
     }
 
     let token = context

@@ -12,7 +12,7 @@ use uuid::Uuid;
 use super::{ProjectId, QueryProject};
 use crate::{
     context::DbConnection,
-    error::{api_error, resource_not_found_err},
+    error::resource_not_found_err,
     schema,
     schema::testbed as testbed_table,
     util::{
@@ -50,8 +50,8 @@ impl QueryTestbed {
             .filter(schema::testbed::id.eq(id))
             .select(schema::testbed::uuid)
             .first(conn)
-            .map_err(api_error!())?;
-        Uuid::from_str(&uuid).map_err(api_error!())
+            .map_err(ApiError::from)?;
+        Uuid::from_str(&uuid).map_err(ApiError::from)
     }
 
     pub fn from_uuid(
@@ -63,7 +63,7 @@ impl QueryTestbed {
             .filter(schema::testbed::project_id.eq(project_id))
             .filter(schema::testbed::uuid.eq(uuid.to_string()))
             .first::<Self>(conn)
-            .map_err(api_error!())
+            .map_err(ApiError::from)
     }
 
     pub fn from_resource_id(
@@ -89,12 +89,12 @@ impl QueryTestbed {
             ..
         } = self;
         Ok(JsonTestbed {
-            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
+            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
             project: QueryProject::get_uuid(conn, project_id)?,
             name: NonEmpty::from_str(&name)?,
-            slug: Slug::from_str(&slug).map_err(api_error!())?,
-            created: to_date_time(created).map_err(api_error!())?,
-            modified: to_date_time(modified).map_err(api_error!())?,
+            slug: Slug::from_str(&slug).map_err(ApiError::from)?,
+            created: to_date_time(created).map_err(ApiError::from)?,
+            modified: to_date_time(modified).map_err(ApiError::from)?,
         })
     }
 
