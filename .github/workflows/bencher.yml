@@ -60,7 +60,7 @@ jobs:
     # because the version number requested is for the current, in progress release
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build next Bencher CLI GitHub Action
         run: |
           cd services/action
@@ -75,7 +75,7 @@ jobs:
     name: Cargo Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Add fmt
         run: rustup component add rustfmt
       - name: Run fmt
@@ -85,7 +85,7 @@ jobs:
     name: Cargo Clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -104,7 +104,7 @@ jobs:
     env:
       TEST_BILLING_KEY: ${{ secrets.TEST_BILLING_KEY }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -124,7 +124,7 @@ jobs:
       - cargo_fmt
       - cargo_clippy
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -139,7 +139,7 @@ jobs:
       - cargo_fmt
       - cargo_clippy
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -155,7 +155,7 @@ jobs:
       - cargo_fmt
       - cargo_clippy
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -177,7 +177,7 @@ jobs:
       BENCHER_ADAPTER: rust
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -198,7 +198,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -211,7 +211,7 @@ jobs:
     name: Cargo Unused Deps
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -227,7 +227,7 @@ jobs:
     name: Rome Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Rome format Action
         working-directory: ./services/action
         run: |
@@ -250,7 +250,7 @@ jobs:
     # TODO fix all lints
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Rome check Action
         working-directory: ./services/action
         run: |
@@ -274,7 +274,7 @@ jobs:
     env:
       WASM_PACK_BUILD: "wasm-pack build --target web --features plus,wasm"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: jetli/wasm-pack-action@v0.4.0
       - name: WASM pack `bencher_valid`
         working-directory: ./lib/bencher_valid
@@ -299,7 +299,7 @@ jobs:
       - npx_rome_lint
       - build_bencher_valid_wasm
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Download `bencher_valid` Artifact
         uses: actions/download-artifact@v3
         with:
@@ -321,7 +321,7 @@ jobs:
     name: Build Local API
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build Builder Stage
         uses: docker/build-push-action@v4
         with:
@@ -352,7 +352,7 @@ jobs:
     name: Build Litestream API
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build Builder Stage
         uses: docker/build-push-action@v4
         with:
@@ -384,7 +384,7 @@ jobs:
     name: Build CLI
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: goto-bus-stop/setup-zig@v2
       - name: Install zigbuild
         run: cargo install --version 0.16.11  --locked cargo-zigbuild
@@ -402,7 +402,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build_cli_bin
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Download CLI Artifact
         uses: actions/download-artifact@v3
         with:
@@ -423,7 +423,7 @@ jobs:
   #   name: Build UI Docker
   #   runs-on: ubuntu-latest
   #   steps:
-  #     - uses: actions/checkout@v3
+  #     - uses: actions/checkout@v4
   #     - name: Build Builder Stage
   #       uses: docker/build-push-action@v4
   #       with:
@@ -451,7 +451,7 @@ jobs:
     name: Build Console UI Docker
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build Builder Stage
         uses: docker/build-push-action@v4
         with:
@@ -484,7 +484,7 @@ jobs:
   #   runs-on: ubuntu-latest
   #   needs: build_bencher_valid_wasm
   #   steps:
-  #     - uses: actions/checkout@v3
+  #     - uses: actions/checkout@v4
   #     - name: Download `bencher_valid` Artifact
   #       uses: actions/download-artifact@v3
   #       with:
@@ -512,7 +512,7 @@ jobs:
       - npx_rome_lint
       - build_bencher_valid_wasm
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Download `bencher_valid` Artifact
         uses: actions/download-artifact@v3
         with:
@@ -536,7 +536,7 @@ jobs:
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Download Local Artifact
         uses: actions/download-artifact@v3
         with:
@@ -564,7 +564,7 @@ jobs:
     env:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN_ADMIN }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -580,7 +580,7 @@ jobs:
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Download Litestream Artifact
         uses: actions/download-artifact@v3
         with:
@@ -602,7 +602,7 @@ jobs:
   #   runs-on: ubuntu-latest
   #   needs: deploy_local_api_fly
   #   steps:
-  #     - uses: actions/checkout@v3
+  #     - uses: actions/checkout@v4
   #     - name: Download UI Artifact
   #       uses: actions/download-artifact@v3
   #       with:
@@ -620,7 +620,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy_local_api_fly
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Download `bencher_valid` Artifact
         uses: actions/download-artifact@v3
         with:
@@ -646,7 +646,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy_litestream_api_fly
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Download `bencher_valid` Artifact
         uses: actions/download-artifact@v3
         with:
@@ -692,7 +692,7 @@ jobs:
       - build_cli_deb
       - build_ui_docker
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       # Download
       - name: Download Local API Artifact
         uses: actions/download-artifact@v3
