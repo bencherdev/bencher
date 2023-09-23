@@ -120,14 +120,28 @@ jobs:
   api_smoke_test:
     name: API Smoke Test
     runs-on: ubuntu-latest
-    needs:
-      - cargo_fmt
-      - cargo_clippy
     steps:
       - uses: actions/checkout@v3
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
+      - name: Install `bencher` CLI
+        run: cargo install --path services/cli --locked
+      - name: Run API Smoke Test
+        run: ./scripts/smoke_test.sh
+
+  api_smoke_test_compat:
+    name: API Smoke Test Compat
+    runs-on: ubuntu-latest
+    # This will fail whenever there is a breaking change in the API
+    # Pre-1.0 this is okay but good to be aware of
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v3
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
+      - uses: bencherdev/bencher@main
       - name: Run API Smoke Test
         run: ./scripts/smoke_test.sh
 

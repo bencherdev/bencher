@@ -11,6 +11,4 @@ done
 
 RUST_BACKTRACE=full cargo test --features seed --test seed -- --nocapture
 
-cargo install --path . --locked
-
 source ../../scripts/mock.sh
