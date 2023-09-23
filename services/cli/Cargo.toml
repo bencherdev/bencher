@@ -5,7 +5,7 @@ authors.workspace = true
 edition.workspace = true
 
 [features]
-default = ["plus"]
+default = ["plus", "seed"]
 docs = ["dep:clap_mangen"]
 plus = ["bencher_client/plus", "bencher_json/plus"]
 seed = []

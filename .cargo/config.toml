@@ -82,7 +82,6 @@ rustflags = [
     "-Wclippy::string_slice",                    # Checks for slice operations on strings
     "-Wclippy::string_to_string",                # This lint checks for .to_string() method calls on values of type String.
     "-Wclippy::suspicious_xor_used_as_pow",      # Warns for a Bitwise XOR (^) operator being probably confused as a powering. It will not trigger if any of the numbers are not in decimal.
-    "-Wclippy::tests_outside_test_module",       # Triggers when a testing function (marked with the #[test] attribute) isn’t inside a testing module (marked with #[cfg(test)]).
     "-Wclippy::todo",                            # Checks for usage of todo!.
     "-Wclippy::try_err",                         # Checks for usage of Err(x)?.
     "-Wclippy::undocumented_unsafe_blocks",      # Checks for unsafe blocks and impls without a // SAFETY: comment explaining why the unsafe operations performed inside the block are safe.

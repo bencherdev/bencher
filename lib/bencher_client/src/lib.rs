@@ -1,6 +1,7 @@
 mod codegen {
     #![allow(
         unused_qualifications,
+        variant_size_differences,
         clippy::all,
         clippy::cargo,
         clippy::pedantic,

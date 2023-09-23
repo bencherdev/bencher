@@ -28,6 +28,7 @@ const TEST_BENCHER_API_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhd
 
 // cargo test --features seed --test seed
 #[test]
+#[allow(clippy::too_many_lines, clippy::unwrap_used)]
 fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     // cargo run -- auth signup --host http://localhost:61016 --name "Eustace Bagge" eustace.bagge@nowhere.com
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
