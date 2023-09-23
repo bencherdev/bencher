@@ -30,7 +30,7 @@ impl TryFrom<CliAlertStats> for Stats {
 #[async_trait]
 impl SubCmd for Stats {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonAlertStats = self
+        let _json: JsonAlertStats = self
             .backend
             .send_with(
                 |client| async move {

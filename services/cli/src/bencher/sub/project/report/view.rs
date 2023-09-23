@@ -37,7 +37,7 @@ impl TryFrom<CliReportView> for View {
 #[async_trait]
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonReport = self
+        let _json: JsonReport = self
             .backend
             .send_with(
                 |client| async move {

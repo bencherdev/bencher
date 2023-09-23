@@ -47,7 +47,7 @@ impl From<Create> for JsonNewOrganization {
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonOrganization = self
+        let _json: JsonOrganization = self
             .backend
             .send_with(
                 |client| async move { client.organization_post().body(self.clone()).send().await },

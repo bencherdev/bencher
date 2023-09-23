@@ -65,7 +65,7 @@ impl From<Login> for JsonLogin {
 #[async_trait]
 impl SubCmd for Login {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonEmpty = self
+        let _json: JsonEmpty = self
             .backend
             .send_with(
                 |client| async move { client.auth_login_post().body(self.clone()).send().await },

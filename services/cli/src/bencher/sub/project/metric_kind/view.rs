@@ -36,7 +36,7 @@ impl TryFrom<CliMetricKindView> for View {
 #[async_trait]
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonMetricKind = self
+        let _json: JsonMetricKind = self
             .backend
             .send_with(
                 |client| async move {

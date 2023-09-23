@@ -30,7 +30,7 @@ impl TryFrom<CliUserView> for View {
 #[async_trait]
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonUser = self
+        let _json: JsonUser = self
             .backend
             .send_with(
                 |client| async move { client.user_get().user(self.user.clone()).send().await },

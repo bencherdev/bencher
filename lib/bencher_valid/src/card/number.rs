@@ -58,7 +58,7 @@ impl<'de> Deserialize<'de> for CardNumber {
 
 struct CardNumberVisitor;
 
-impl<'de> Visitor<'de> for CardNumberVisitor {
+impl Visitor<'_> for CardNumberVisitor {
     type Value = CardNumber;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

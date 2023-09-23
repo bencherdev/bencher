@@ -53,7 +53,7 @@ impl<'de> Deserialize<'de> for GitHash {
 
 struct GitHashVisitor;
 
-impl<'de> Visitor<'de> for GitHashVisitor {
+impl Visitor<'_> for GitHashVisitor {
     type Value = GitHash;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

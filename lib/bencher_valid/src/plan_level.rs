@@ -75,7 +75,7 @@ impl<'de> Deserialize<'de> for PlanLevel {
 
 struct PlanLevelVisitor;
 
-impl<'de> Visitor<'de> for PlanLevelVisitor {
+impl Visitor<'_> for PlanLevelVisitor {
     type Value = PlanLevel;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

@@ -33,7 +33,7 @@ impl TryFrom<CliOrganizationView> for View {
 #[async_trait]
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonOrganization = self
+        let _json: JsonOrganization = self
             .backend
             .send_with(
                 |client| async move {

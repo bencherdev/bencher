@@ -59,7 +59,7 @@ impl From<Update> for JsonUpdateMetricKind {
 #[async_trait]
 impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonMetricKind = self
+        let _json: JsonMetricKind = self
             .backend
             .send_with(
                 |client| async move {

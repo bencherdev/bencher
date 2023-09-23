@@ -146,7 +146,7 @@ impl<'de> Deserialize<'de> for Units {
 
 struct UnitsVisitor;
 
-impl<'de> Visitor<'de> for UnitsVisitor {
+impl Visitor<'_> for UnitsVisitor {
     type Value = Units;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -203,7 +203,7 @@ pub fn parse_float(input: &str) -> IResult<&str, Vec<&str>> {
 
 pub fn into_number<T>(input: Vec<&str>) -> Result<T, nom::Err<nom::error::Error<&str>>>
 where
-    T: std::str::FromStr,
+    T: FromStr,
 {
     let mut number = String::new();
     for digit in input {

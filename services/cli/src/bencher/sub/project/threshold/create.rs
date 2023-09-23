@@ -78,7 +78,7 @@ impl From<Create> for JsonNewThreshold {
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonThreshold = self
+        let _json: JsonThreshold = self
             .backend
             .send_with(
                 |client| async move {

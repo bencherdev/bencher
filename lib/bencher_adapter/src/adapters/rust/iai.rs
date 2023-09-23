@@ -60,6 +60,7 @@ fn parse_iai_lines(
         lines;
 
     let name = benchmark_name_line.parse().ok()?;
+    #[allow(trivial_casts)]
     let metrics = [
         (
             INSTRUCTIONS_NAME_STR,

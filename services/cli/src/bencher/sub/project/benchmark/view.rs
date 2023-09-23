@@ -36,7 +36,7 @@ impl TryFrom<CliBenchmarkView> for View {
 #[async_trait]
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonBenchmark = self
+        let _json: JsonBenchmark = self
             .backend
             .send_with(
                 |client| async move {

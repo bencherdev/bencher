@@ -53,7 +53,7 @@ impl From<Update> for JsonUpdateBranch {
 #[async_trait]
 impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonBranch = self
+        let _json: JsonBranch = self
             .backend
             .send_with(
                 |client| async move {

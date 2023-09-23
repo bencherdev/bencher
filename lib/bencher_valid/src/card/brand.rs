@@ -91,7 +91,7 @@ impl<'de> Deserialize<'de> for CardBrand {
 
 struct CardBrandVisitor;
 
-impl<'de> Visitor<'de> for CardBrandVisitor {
+impl Visitor<'_> for CardBrandVisitor {
     type Value = CardBrand;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

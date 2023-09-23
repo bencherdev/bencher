@@ -50,7 +50,7 @@ impl From<Update> for JsonUpdateOrganization {
 #[async_trait]
 impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonOrganization = self
+        let _json: JsonOrganization = self
             .backend
             .send_with(
                 |client| async move {

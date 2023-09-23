@@ -69,7 +69,7 @@ impl<'de> Deserialize<'de> for ExpirationYear {
 
 struct ExpirationYearVisitor;
 
-impl<'de> Visitor<'de> for ExpirationYearVisitor {
+impl Visitor<'_> for ExpirationYearVisitor {
     type Value = ExpirationYear;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

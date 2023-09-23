@@ -82,7 +82,7 @@ impl<'de> Deserialize<'de> for Secret {
 
 struct SecretVisitor;
 
-impl<'de> Visitor<'de> for SecretVisitor {
+impl Visitor<'_> for SecretVisitor {
     type Value = Secret;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

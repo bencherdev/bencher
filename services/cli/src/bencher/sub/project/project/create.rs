@@ -67,7 +67,7 @@ impl From<Create> for JsonNewProject {
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonProject = self
+        let _json: JsonProject = self
             .backend
             .send_with(
                 |client| async move {

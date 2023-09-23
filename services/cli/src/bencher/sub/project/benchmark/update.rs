@@ -53,7 +53,7 @@ impl From<Update> for JsonUpdateBenchmark {
 #[async_trait]
 impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonBenchmark = self
+        let _json: JsonBenchmark = self
             .backend
             .send_with(
                 |client| async move {

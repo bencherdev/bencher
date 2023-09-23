@@ -36,7 +36,7 @@ impl TryFrom<CliBranchView> for View {
 #[async_trait]
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonBranch = self
+        let _json: JsonBranch = self
             .backend
             .send_with(
                 |client| async move {

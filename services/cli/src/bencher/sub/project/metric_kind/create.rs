@@ -56,7 +56,7 @@ impl From<Create> for JsonNewMetricKind {
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonMetricKind = self
+        let _json: JsonMetricKind = self
             .backend
             .send_with(
                 |client| async move {

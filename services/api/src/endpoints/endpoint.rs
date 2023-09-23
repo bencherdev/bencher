@@ -85,6 +85,7 @@ impl fmt::Display for Endpoint {
 
 macro_rules! pub_response_ok {
     ($endpoint:expr, $body:expr) => {
+        #[allow(unused_qualifications)]
         Ok($endpoint.pub_response_headers(dropshot::HttpResponseOk($body)))
     };
 }

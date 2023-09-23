@@ -94,7 +94,7 @@ impl From<Card> for JsonCard {
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonEmpty = self
+        let _json: JsonEmpty = self
             .backend
             .send_with(
                 |client| async move {

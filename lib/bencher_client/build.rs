@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used)]
+#![allow(let_underscore_drop, clippy::unwrap_used)]
 
 fn main() {
     let src = "../../services/console/src/content/api/swagger.json";

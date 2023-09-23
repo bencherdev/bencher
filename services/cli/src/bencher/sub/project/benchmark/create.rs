@@ -50,7 +50,7 @@ impl From<Create> for JsonNewBenchmark {
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonBenchmark = self
+        let _json: JsonBenchmark = self
             .backend
             .send_with(
                 |client| async move {

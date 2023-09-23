@@ -28,7 +28,7 @@ impl TryFrom<CliConfigView> for View {
 #[async_trait]
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonConfig = self
+        let _json: JsonConfig = self
             .backend
             .send_with(
                 |client| async move { client.server_config_get().send().await },

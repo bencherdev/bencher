@@ -37,7 +37,7 @@ async fn exec() -> Result<(), CliError> {
 // These macros are needed because the normal ones panic when there's a broken pipe.
 // This is especially problematic for CLI tools that are frequently piped into `head` or `grep -q`
 macro_rules! cli_println {
-    () => (print!("\n"));
+    // () => (print!("\n"));
     ($fmt:expr) => ({
         use std::io::Write;
         let _w = writeln!(std::io::stdout(), $fmt);
@@ -51,7 +51,7 @@ macro_rules! cli_println {
 pub(crate) use cli_println;
 
 macro_rules! cli_eprintln {
-    () => (eprint!("\n"));
+    // () => (eprint!("\n"));
     ($fmt:expr) => ({
         use std::io::Write;
         let _w = writeln!(std::io::stderr(), $fmt);

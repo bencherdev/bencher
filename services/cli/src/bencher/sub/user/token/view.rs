@@ -37,7 +37,7 @@ impl TryFrom<CliTokenView> for View {
 #[async_trait]
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonToken = self
+        let _json: JsonToken = self
             .backend
             .send_with(
                 |client| async move {

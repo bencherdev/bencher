@@ -142,7 +142,7 @@ impl AuthUser {
             .filter_map(|(org_id, role)| match role.parse() {
                 Ok(role) => Some((org_id.to_string(), role)),
                 Err(e) => {
-                    let _ = crate::error::issue_error(
+                    let _err = crate::error::issue_error(
                         StatusCode::NOT_FOUND,
                         "Failed to parse organization role",
                         &format!("My user ({email}) on Bencher has an invalid organization role ({role})."),
@@ -194,7 +194,7 @@ impl AuthUser {
             .filter_map(|(_, id, role)| match role.parse() {
                 Ok(role) => Some((id.to_string(), role)),
                 Err(e) => {
-                    let _ = crate::error::issue_error(
+                    let _err = crate::error::issue_error(
                         StatusCode::NOT_FOUND,
                         "Failed to parse project role",
                         &format!(

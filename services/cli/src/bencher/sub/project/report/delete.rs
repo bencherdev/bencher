@@ -37,7 +37,7 @@ impl TryFrom<CliReportDelete> for Delete {
 #[async_trait]
 impl SubCmd for Delete {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonEmpty = self
+        let _json: JsonEmpty = self
             .backend
             .send_with(
                 |client| async move {

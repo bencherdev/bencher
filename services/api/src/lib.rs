@@ -8,6 +8,7 @@ pub mod context;
 pub mod endpoints;
 pub mod error;
 pub mod model;
+#[allow(unused_qualifications)]
 pub mod schema;
 pub mod util;
 

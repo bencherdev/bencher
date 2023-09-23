@@ -90,7 +90,7 @@ impl<'de> Deserialize<'de> for BenchmarkName {
 
 struct BenchmarkNameVisitor;
 
-impl<'de> Visitor<'de> for BenchmarkNameVisitor {
+impl Visitor<'_> for BenchmarkNameVisitor {
     type Value = BenchmarkName;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

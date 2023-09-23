@@ -77,7 +77,7 @@ impl From<CliPagination<CliProjectsSort>> for Pagination {
 #[async_trait]
 impl SubCmd for List {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonProjects = self
+        let _json: JsonProjects = self
             .backend
             .send_with(
                 |client| async move {

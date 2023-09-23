@@ -36,7 +36,7 @@ impl TryFrom<CliTestbedView> for View {
 #[async_trait]
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonTestbed = self
+        let _json: JsonTestbed = self
             .backend
             .send_with(
                 |client| async move {

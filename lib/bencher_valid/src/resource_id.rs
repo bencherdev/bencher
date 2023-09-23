@@ -65,7 +65,7 @@ impl<'de> Deserialize<'de> for ResourceId {
 
 struct ResourceIdVisitor;
 
-impl<'de> Visitor<'de> for ResourceIdVisitor {
+impl Visitor<'_> for ResourceIdVisitor {
     type Value = ResourceId;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

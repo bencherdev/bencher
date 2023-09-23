@@ -68,7 +68,7 @@ impl From<Invite> for JsonNewMember {
 #[async_trait]
 impl SubCmd for Invite {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonEmpty = self
+        let _json: JsonEmpty = self
             .backend
             .send_with(
                 |client| async move {

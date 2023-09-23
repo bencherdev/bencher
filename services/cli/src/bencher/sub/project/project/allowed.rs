@@ -82,7 +82,7 @@ impl From<Permission> for JsonProjectPermission {
 #[async_trait]
 impl SubCmd for Allowed {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonAllowed = self
+        let _json: JsonAllowed = self
             .backend
             .send_with(
                 |client| async move {

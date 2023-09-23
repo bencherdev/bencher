@@ -28,7 +28,7 @@ impl TryFrom<CliVersion> for Version {
 #[async_trait]
 impl SubCmd for Version {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonApiVersion = self
+        let _json: JsonApiVersion = self
             .backend
             .send_with(
                 |client| async move { client.server_version_get().send().await },

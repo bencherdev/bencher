@@ -12,6 +12,7 @@ pub struct JsonLogging {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]
+#[allow(variant_size_differences)]
 pub enum ServerLog {
     StderrTerminal {
         level: LogLevel,

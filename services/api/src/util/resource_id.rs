@@ -26,6 +26,7 @@ impl TryFrom<&bencher_json::ResourceId> for ResourceId {
 
 macro_rules! fn_resource_id {
     ($table:ident) => {
+        #[allow(unused_qualifications)]
         fn resource_id(
             resource_id: &bencher_json::ResourceId,
         ) -> Result<

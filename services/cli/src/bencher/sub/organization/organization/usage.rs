@@ -45,7 +45,7 @@ impl TryFrom<CliOrganizationUsage> for Usage {
 #[async_trait]
 impl SubCmd for Usage {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonUsage = self
+        let _json: JsonUsage = self
             .backend
             .send_with(
                 |client| async move {

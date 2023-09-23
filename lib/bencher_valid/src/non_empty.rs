@@ -52,7 +52,7 @@ impl<'de> Deserialize<'de> for NonEmpty {
 
 struct NonEmptyVisitor;
 
-impl<'de> Visitor<'de> for NonEmptyVisitor {
+impl Visitor<'_> for NonEmptyVisitor {
     type Value = NonEmpty;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

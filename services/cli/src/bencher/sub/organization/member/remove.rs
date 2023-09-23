@@ -32,7 +32,7 @@ impl TryFrom<CliMemberRemove> for Remove {
 #[async_trait]
 impl SubCmd for Remove {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonMember = self
+        let _json: JsonMember = self
             .backend
             .send_with(
                 |client| async move {

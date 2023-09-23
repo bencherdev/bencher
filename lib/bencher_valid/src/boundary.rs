@@ -67,7 +67,7 @@ impl<'de> Deserialize<'de> for Boundary {
 
 struct BoundaryVisitor;
 
-impl<'de> Visitor<'de> for BoundaryVisitor {
+impl Visitor<'_> for BoundaryVisitor {
     type Value = Boundary;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

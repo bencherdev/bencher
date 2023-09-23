@@ -1,5 +1,11 @@
 mod codegen {
-    #![allow(clippy::all, clippy::cargo, clippy::pedantic, clippy::restriction)]
+    #![allow(
+        unused_qualifications,
+        clippy::all,
+        clippy::cargo,
+        clippy::pedantic,
+        clippy::restriction
+    )]
     include!(concat!(env!("OUT_DIR"), "/codegen.rs"));
 }
 
@@ -39,7 +45,7 @@ from_client!(CardCvc, CardNumber, ExpirationMonth, ExpirationYear);
 macro_rules! try_from_client {
     ($($name:ident),*) => {
         $(
-            impl std::convert::TryFrom<types::$name> for bencher_json::$name  {
+            impl TryFrom<types::$name> for bencher_json::$name  {
                 type Error = serde_json::Error;
 
                 fn try_from(json: types::$name) -> Result<Self, Self::Error> {

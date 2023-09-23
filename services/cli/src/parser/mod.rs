@@ -121,7 +121,7 @@ pub struct CliBackend {
 #[derive(Args, Debug)]
 pub struct CliPagination<T>
 where
-    T: ValueEnum + Clone + std::marker::Send + std::marker::Sync + 'static,
+    T: ValueEnum + Clone + Send + Sync + 'static,
 {
     /// What to sort results by
     #[clap(long)]

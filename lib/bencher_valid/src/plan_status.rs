@@ -98,7 +98,7 @@ impl<'de> Deserialize<'de> for PlanStatus {
 
 struct PlanStatusVisitor;
 
-impl<'de> Visitor<'de> for PlanStatusVisitor {
+impl Visitor<'_> for PlanStatusVisitor {
     type Value = PlanStatus;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

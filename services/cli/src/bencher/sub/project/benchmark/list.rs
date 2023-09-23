@@ -70,7 +70,7 @@ impl From<CliPagination<CliBenchmarksSort>> for Pagination {
 #[async_trait]
 impl SubCmd for List {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonBenchmarks = self
+        let _json: JsonBenchmarks = self
             .backend
             .send_with(
                 |client| async move {

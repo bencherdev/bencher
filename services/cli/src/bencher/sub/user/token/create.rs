@@ -50,7 +50,7 @@ impl From<Create> for JsonNewToken {
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonToken = self
+        let _json: JsonToken = self
             .backend
             .send_with(
                 |client| async move {

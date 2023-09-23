@@ -52,7 +52,7 @@ impl<'de> Deserialize<'de> for Slug {
 
 struct SlugVisitor;
 
-impl<'de> Visitor<'de> for SlugVisitor {
+impl Visitor<'_> for SlugVisitor {
     type Value = Slug;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

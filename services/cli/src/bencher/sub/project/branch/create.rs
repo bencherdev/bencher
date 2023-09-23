@@ -72,7 +72,7 @@ impl From<Create> for JsonNewBranch {
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonBranch = self
+        let _json: JsonBranch = self
             .backend
             .send_with(
                 |client| async move {

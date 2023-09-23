@@ -28,7 +28,7 @@ impl TryFrom<CliEndpoint> for Endpoint {
 #[async_trait]
 impl SubCmd for Endpoint {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonEndpoint = self
+        let _json: JsonEndpoint = self
             .backend
             .send_with(
                 |client| async move { client.server_endpoint_get().send().await },

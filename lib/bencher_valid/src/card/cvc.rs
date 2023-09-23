@@ -57,7 +57,7 @@ impl<'de> Deserialize<'de> for CardCvc {
 
 struct CardCvcVisitor;
 
-impl<'de> Visitor<'de> for CardCvcVisitor {
+impl Visitor<'_> for CardCvcVisitor {
     type Value = CardCvc;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

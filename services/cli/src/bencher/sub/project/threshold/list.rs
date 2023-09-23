@@ -68,7 +68,7 @@ impl From<CliPagination<CliThresholdsSort>> for Pagination {
 #[async_trait]
 impl SubCmd for List {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonThresholds = self
+        let _json: JsonThresholds = self
             .backend
             .send_with(
                 |client| async move {

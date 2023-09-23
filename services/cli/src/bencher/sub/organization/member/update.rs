@@ -46,7 +46,7 @@ impl From<Update> for JsonUpdateMember {
 #[async_trait]
 impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonMember = self
+        let _json: JsonMember = self
             .backend
             .send_with(
                 |client| async move {

@@ -53,7 +53,7 @@ impl<'de> Deserialize<'de> for Email {
 
 struct EmailVisitor;
 
-impl<'de> Visitor<'de> for EmailVisitor {
+impl Visitor<'_> for EmailVisitor {
     type Value = Email;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

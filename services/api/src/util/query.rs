@@ -1,5 +1,6 @@
 macro_rules! fn_get {
     ($table:ident) => {
+        #[allow(unused_qualifications)]
         pub fn get<Id>(
             conn: &mut crate::context::DbConnection,
             id: Id,
@@ -19,6 +20,7 @@ pub(crate) use fn_get;
 
 macro_rules! fn_get_id {
     ($table:ident, $id:ident) => {
+        #[allow(unused_qualifications)]
         pub fn get_id<U>(
             conn: &mut crate::context::DbConnection,
             uuid: &U,
@@ -32,9 +34,6 @@ macro_rules! fn_get_id {
                 .first(conn)
                 .map_err(crate::error::api_error!())
         }
-    };
-    ($table:ident) => {
-        fn_get_id!($table, i32);
     };
 }
 

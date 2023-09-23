@@ -70,7 +70,7 @@ impl From<CliPagination<CliMetricKindsSort>> for Pagination {
 #[async_trait]
 impl SubCmd for List {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonMetricKinds = self
+        let _json: JsonMetricKinds = self
             .backend
             .send_with(
                 |client| async move {
