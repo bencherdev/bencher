@@ -1,9 +1,8 @@
 #![cfg(feature = "seed")]
 
-use std::{env, process::Command};
+use std::process::Command;
 
 use assert_cmd::prelude::*;
-use reqwest::header::TE;
 
 const BENCHER_CMD: &str = "bencher";
 
@@ -20,11 +19,6 @@ const TESTBED_SLUG: &str = "base";
 const METRIC_KIND_ARG: &str = "--metric-kind";
 const METRIC_KIND_SLUG: &str = "screams";
 
-const BENCHER_API_TOKEN: &str = "BENCHER_API_TOKEN";
-const BENCHER_PROJECT: &str = "BENCHER_PROJECT";
-const BENCHER_BRANCH: &str = "BENCHER_BRANCH";
-const BENCHER_TESTBED: &str = "BENCHER_TESTBED";
-
 // Valid until 2027-09-05T19:03:59Z
 const TEST_BENCHER_API_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjoxODIwMTcxMDM5LCJpYXQiOjE2NjIzODY0MDksImlzcyI6ImJlbmNoZXIuZGV2Iiwic3ViIjoibXVyaWVsLmJhZ2dlQG5vd2hlcmUuY29tIn0.sfAJmF9qIl_QRNnh8uLYuODHnxufXt_3m7skcNp1kMs";
 
@@ -32,49 +26,49 @@ const TEST_BENCHER_API_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhd
 #[test]
 #[allow(clippy::too_many_lines, clippy::unwrap_used)]
 fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
-    // // Signup Eustace Bagge first so he is admin
-    // // cargo run -- auth signup --host http://localhost:61016 --name "Eustace Bagge" eustace.bagge@nowhere.com
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args([
-    //     "auth",
-    //     "signup",
-    //     HOST_ARG,
-    //     LOCALHOST,
-    //     "--name",
-    //     "Eustace Bagge",
-    //     "eustace.bagge@nowhere.com",
-    // ]);
-    // let assert = cmd.assert().success();
-    // let _json: bencher_json::JsonEmpty =
-    //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    // Signup Eustace Bagge first so he is admin
+    // cargo run -- auth signup --host http://localhost:61016 --name "Eustace Bagge" eustace.bagge@nowhere.com
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "auth",
+        "signup",
+        HOST_ARG,
+        LOCALHOST,
+        "--name",
+        "Eustace Bagge",
+        "eustace.bagge@nowhere.com",
+    ]);
+    let assert = cmd.assert().success();
+    let _json: bencher_json::JsonEmpty =
+        serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-    // // cargo run -- auth signup --host http://localhost:61016 --name "Muriel Bagge" muriel.bagge@nowhere.com
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args([
-    //     "auth",
-    //     "signup",
-    //     HOST_ARG,
-    //     LOCALHOST,
-    //     "--name",
-    //     "Muriel Bagge",
-    //     "muriel.bagge@nowhere.com",
-    // ]);
-    // let assert = cmd.assert().success();
-    // let _json: bencher_json::JsonEmpty =
-    //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    // cargo run -- auth signup --host http://localhost:61016 --name "Muriel Bagge" muriel.bagge@nowhere.com
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "auth",
+        "signup",
+        HOST_ARG,
+        LOCALHOST,
+        "--name",
+        "Muriel Bagge",
+        "muriel.bagge@nowhere.com",
+    ]);
+    let assert = cmd.assert().success();
+    let _json: bencher_json::JsonEmpty =
+        serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-    // // cargo run -- auth login --host http://localhost:61016 muriel.bagge@nowhere.com
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args([
-    //     "auth",
-    //     "login",
-    //     HOST_ARG,
-    //     LOCALHOST,
-    //     "muriel.bagge@nowhere.com",
-    // ]);
-    // let assert = cmd.assert().success();
-    // let _json: bencher_json::JsonEmpty =
-    //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    // cargo run -- auth login --host http://localhost:61016 muriel.bagge@nowhere.com
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "auth",
+        "login",
+        HOST_ARG,
+        LOCALHOST,
+        "muriel.bagge@nowhere.com",
+    ]);
+    let assert = cmd.assert().success();
+    let _json: bencher_json::JsonEmpty =
+        serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- auth confirm --host http://localhost:61016 [AUTH_TOKEN]
     // cargo run -- token ls --host http://localhost:61016 --user muriel-bagge
@@ -110,166 +104,154 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     let _json: bencher_json::JsonOrganization =
         serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-    // export BENCHER_API_TOKEN=[USER_TOKEN]
-    // env::set_var(BENCHER_API_TOKEN, TEST_BENCHER_API_TOKEN);
+    // cargo run -- project ls --host http://localhost:61016 --public
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args(["project", "ls", HOST_ARG, LOCALHOST, "--public"]);
+    let assert = cmd.assert().success();
+    let projects: bencher_json::JsonProjects =
+        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    assert_eq!(projects.0.len(), 0);
 
-    // // cargo run -- project ls --host http://localhost:61016
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args(["project", "ls", HOST_ARG, LOCALHOST]);
-    // let assert = cmd.assert().success();
-    // let projects: bencher_json::JsonProjects =
-    //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
-    // assert_eq!(projects.0.len(), 0);
+    // cargo run -- project ls --host http://localhost:61016
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "project",
+        "ls",
+        HOST_ARG,
+        LOCALHOST,
+        TOKEN_ARG,
+        TEST_BENCHER_API_TOKEN,
+    ]);
+    let assert = cmd.assert().success();
+    let projects: bencher_json::JsonProjects =
+        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    assert_eq!(projects.0.len(), 0);
 
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args([
-    //     "project",
-    //     "ls",
-    //     HOST_ARG,
-    //     LOCALHOST,
-    //     TOKEN_ARG,
-    //     TEST_BENCHER_API_TOKEN,
-    // ]);
-    // let assert = cmd.assert().success();
-    // let projects: bencher_json::JsonProjects =
-    //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
-    // assert_eq!(projects.0.len(), 0);
+    // cargo run -- project ls --host http://localhost:61016 --org muriel-bagge
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "project",
+        "ls",
+        HOST_ARG,
+        LOCALHOST,
+        TOKEN_ARG,
+        TEST_BENCHER_API_TOKEN,
+        "--org",
+        "muriel-bagge",
+    ]);
+    cmd.assert().success();
+    let assert = cmd.assert().success();
+    let projects: bencher_json::JsonProjects =
+        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    assert_eq!(projects.0.len(), 0);
 
-    // // cargo run -- project ls --host http://localhost:61016 --org muriel-bagge
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args([
-    //     "project",
-    //     "ls",
-    //     HOST_ARG,
-    //     LOCALHOST,
-    //     "--org",
-    //     "muriel-bagge",
-    // ]);
-    // let assert = cmd.assert().success();
-    // let projects: bencher_json::JsonProjects =
-    //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
-    // assert_eq!(projects.0.len(), 0);
+    // cargo run -- project create --host http://localhost:61016 --org muriel-bagge "The Computer"
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "project",
+        "create",
+        HOST_ARG,
+        LOCALHOST,
+        TOKEN_ARG,
+        TEST_BENCHER_API_TOKEN,
+        "--org",
+        "muriel-bagge",
+        "--slug",
+        PROJECT_SLUG,
+        "The Computer",
+    ]);
+    let assert = cmd.assert().success();
+    let _json: bencher_json::JsonProject =
+        serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args([
-    //     "project",
-    //     "ls",
-    //     HOST_ARG,
-    //     LOCALHOST,
-    //     TOKEN_ARG,
-    //     TEST_BENCHER_API_TOKEN,
-    //     "--org",
-    //     "muriel-bagge",
-    // ]);
-    // cmd.assert().success();
-    // let assert = cmd.assert().success();
-    // let projects: bencher_json::JsonProjects =
-    //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
-    // assert_eq!(projects.0.len(), 0);
+    // cargo run -- project ls --host http://localhost:61016
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "project",
+        "ls",
+        HOST_ARG,
+        LOCALHOST,
+        TOKEN_ARG,
+        TEST_BENCHER_API_TOKEN,
+    ]);
+    let assert = cmd.assert().success();
+    let projects: bencher_json::JsonProjects =
+        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    assert_eq!(projects.0.len(), 1);
 
-    // // cargo run -- project create --host http://localhost:61016 --org muriel-bagge "The Computer"
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args([
-    //     "project",
-    //     "create",
-    //     HOST_ARG,
-    //     LOCALHOST,
-    //     TOKEN_ARG,
-    //     TEST_BENCHER_API_TOKEN,
-    //     "--org",
-    //     "muriel-bagge",
-    //     "--slug",
-    //     PROJECT_SLUG,
-    //     "The Computer",
-    // ]);
-    // let assert = cmd.assert().success();
-    // let _json: bencher_json::JsonProject =
-    //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    // cargo run -- project view --host http://localhost:61016 the-computer
+    // View project without token
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args(["project", "view", HOST_ARG, LOCALHOST, PROJECT_SLUG]);
+    let assert = cmd.assert().success();
+    let _json: bencher_json::JsonProject =
+        serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-    // // cargo run -- project ls --host http://localhost:61016
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args(["project", "ls", HOST_ARG, LOCALHOST]);
-    // let assert = cmd.assert().success();
-    // let projects: bencher_json::JsonProjects =
-    //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
-    // assert_eq!(projects.0.len(), 1);
+    // View project with token
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "project",
+        "view",
+        HOST_ARG,
+        LOCALHOST,
+        TOKEN_ARG,
+        TEST_BENCHER_API_TOKEN,
+        PROJECT_SLUG,
+    ]);
+    let assert = cmd.assert().success();
+    let _json: bencher_json::JsonProject =
+        serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-    // // cargo run -- project view --host http://localhost:61016 the-computer
-    // // View project without token
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args(["project", "view", HOST_ARG, LOCALHOST, PROJECT_SLUG]);
-    // let assert = cmd.assert().success();
-    // let _json: bencher_json::JsonProject =
-    //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    // cargo run -- metric-kind ls --host http://localhost:61016 --project the-computer
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "metric-kind",
+        "ls",
+        HOST_ARG,
+        LOCALHOST,
+        PROJECT_ARG,
+        PROJECT_SLUG,
+    ]);
+    let assert = cmd.assert().success();
+    let metric_kinds: bencher_json::JsonMetricKinds =
+        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    assert_eq!(metric_kinds.0.len(), 2);
 
-    // // View project with token
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args([
-    //     "project",
-    //     "view",
-    //     HOST_ARG,
-    //     LOCALHOST,
-    //     TOKEN_ARG,
-    //     TEST_BENCHER_API_TOKEN,
-    //     PROJECT_SLUG,
-    // ]);
-    // let assert = cmd.assert().success();
-    // let _json: bencher_json::JsonProject =
-    //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    // cargo run -- metric-kind create --host http://localhost:61016 --project the-computer --slug decibels-666 --units "decibels" screams-888
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "metric-kind",
+        "create",
+        HOST_ARG,
+        LOCALHOST,
+        TOKEN_ARG,
+        TEST_BENCHER_API_TOKEN,
+        PROJECT_ARG,
+        PROJECT_SLUG,
+        "--slug",
+        METRIC_KIND_SLUG,
+        "--units",
+        "decibels",
+        METRIC_KIND_SLUG,
+    ]);
+    let assert = cmd.assert().success();
+    let _json: bencher_json::JsonMetricKind =
+        serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-    // export BENCHER_PROJECT=[PROJECT_UUID]
-    // env::set_var(BENCHER_PROJECT, json_project.uuid.to_string());
-
-    // // cargo run -- metric-kind ls --host http://localhost:61016 --project the-computer
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args([
-    //     "metric-kind",
-    //     "ls",
-    //     HOST_ARG,
-    //     LOCALHOST,
-    //     PROJECT_ARG,
-    //     PROJECT_SLUG,
-    // ]);
-    // let assert = cmd.assert().success();
-    // let metric_kinds: bencher_json::JsonMetricKinds =
-    //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
-    // assert_eq!(metric_kinds.0.len(), 2);
-
-    // // cargo run -- metric-kind create --host http://localhost:61016 --project the-computer --slug decibels-666 --units "decibels" screams-888
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args([
-    //     "metric-kind",
-    //     "create",
-    //     HOST_ARG,
-    //     LOCALHOST,
-    //     TOKEN_ARG,
-    //     TEST_BENCHER_API_TOKEN,
-    //     PROJECT_ARG,
-    //     PROJECT_SLUG,
-    //     "--slug",
-    //     METRIC_KIND_SLUG,
-    //     "--units",
-    //     "decibels",
-    //     METRIC_KIND_SLUG,
-    // ]);
-    // let assert = cmd.assert().success();
-    // let _json: bencher_json::JsonMetricKind =
-    //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
-
-    // // cargo run -- metric-kind ls --host http://localhost:61016 --project the-computer
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args([
-    //     "metric-kind",
-    //     "ls",
-    //     HOST_ARG,
-    //     LOCALHOST,
-    //     PROJECT_ARG,
-    //     PROJECT_SLUG,
-    // ]);
-    // let assert = cmd.assert().success();
-    // let metric_kinds: bencher_json::JsonMetricKinds =
-    //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
-    // assert_eq!(metric_kinds.0.len(), 3);
+    // cargo run -- metric-kind ls --host http://localhost:61016 --project the-computer
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "metric-kind",
+        "ls",
+        HOST_ARG,
+        LOCALHOST,
+        PROJECT_ARG,
+        PROJECT_SLUG,
+    ]);
+    let assert = cmd.assert().success();
+    let metric_kinds: bencher_json::JsonMetricKinds =
+        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    assert_eq!(metric_kinds.0.len(), 3);
 
     // cargo run -- metric-kind view --host http://localhost:61016 --project the-computer screams-888
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -286,39 +268,39 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     let _json: bencher_json::JsonMetricKind =
         serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-    // // cargo run -- branch ls --host http://localhost:61016 --project the-computer
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args([
-    //     "branch",
-    //     "ls",
-    //     HOST_ARG,
-    //     LOCALHOST,
-    //     PROJECT_ARG,
-    //     PROJECT_SLUG,
-    // ]);
-    // let assert = cmd.assert().success();
-    // let branches: bencher_json::JsonBranches =
-    //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
-    // assert_eq!(branches.0.len(), 1);
+    // cargo run -- branch ls --host http://localhost:61016 --project the-computer
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "branch",
+        "ls",
+        HOST_ARG,
+        LOCALHOST,
+        PROJECT_ARG,
+        PROJECT_SLUG,
+    ]);
+    let assert = cmd.assert().success();
+    let branches: bencher_json::JsonBranches =
+        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    assert_eq!(branches.0.len(), 1);
 
-    // // cargo run -- branch create --host http://localhost:61016 --project the-computer master
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args([
-    //     "branch",
-    //     "create",
-    //     HOST_ARG,
-    //     LOCALHOST,
-    //     TOKEN_ARG,
-    //     TEST_BENCHER_API_TOKEN,
-    //     PROJECT_ARG,
-    //     PROJECT_SLUG,
-    //     "--slug",
-    //     BRANCH_SLUG,
-    //     "master",
-    // ]);
-    // let assert = cmd.assert().success();
-    // let _json: bencher_json::JsonBranch =
-    //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    // cargo run -- branch create --host http://localhost:61016 --project the-computer master
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "branch",
+        "create",
+        HOST_ARG,
+        LOCALHOST,
+        TOKEN_ARG,
+        TEST_BENCHER_API_TOKEN,
+        PROJECT_ARG,
+        PROJECT_SLUG,
+        "--slug",
+        BRANCH_SLUG,
+        "master",
+    ]);
+    let assert = cmd.assert().success();
+    let _json: bencher_json::JsonBranch =
+        serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- branch ls --host http://localhost:61016 --project the-computer
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -350,45 +332,39 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     let _json: bencher_json::JsonBranch =
         serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-    // // export BENCHER_BRANCH=[BRANCH_UUID]
-    // let branch = cmd.output().unwrap().stdout;
-    // let branch: JsonBranch = serde_json::from_slice(&branch).unwrap();
-    // let branch = branch.uuid.to_string();
-    // env::set_var(BENCHER_BRANCH, branch.clone());
+    // cargo run -- testbed ls --host http://localhost:61016 --project the-computer
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "testbed",
+        "ls",
+        HOST_ARG,
+        LOCALHOST,
+        PROJECT_ARG,
+        PROJECT_SLUG,
+    ]);
+    let assert = cmd.assert().success();
+    let testbeds: bencher_json::JsonTestbeds =
+        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    assert_eq!(testbeds.0.len(), 1);
 
-    // // cargo run -- testbed ls --host http://localhost:61016 --project the-computer
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args([
-    //     "testbed",
-    //     "ls",
-    //     HOST_ARG,
-    //     LOCALHOST,
-    //     PROJECT_ARG,
-    //     PROJECT_SLUG,
-    // ]);
-    // let assert = cmd.assert().success();
-    // let testbeds: bencher_json::JsonTestbeds =
-    //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
-    // assert_eq!(testbeds.0.len(), 1);
-
-    // // cargo run -- testbed create --host http://localhost:61016 --project the-computer base
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args([
-    //     "testbed",
-    //     "create",
-    //     HOST_ARG,
-    //     LOCALHOST,
-    //     TOKEN_ARG,
-    //     TEST_BENCHER_API_TOKEN,
-    //     PROJECT_ARG,
-    //     PROJECT_SLUG,
-    //     "--slug",
-    //     TESTBED_SLUG,
-    //     "base",
-    // ]);
-    // let assert = cmd.assert().success();
-    // let _json: bencher_json::JsonTestbed =
-    //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    // cargo run -- testbed create --host http://localhost:61016 --project the-computer base
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "testbed",
+        "create",
+        HOST_ARG,
+        LOCALHOST,
+        TOKEN_ARG,
+        TEST_BENCHER_API_TOKEN,
+        PROJECT_ARG,
+        PROJECT_SLUG,
+        "--slug",
+        TESTBED_SLUG,
+        "base",
+    ]);
+    let assert = cmd.assert().success();
+    let _json: bencher_json::JsonTestbed =
+        serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- testbed ls --host http://localhost:61016 --project the-computer
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -420,55 +396,44 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     let _json: bencher_json::JsonTestbed =
         serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-    // // export BENCHER_TESTBED=[TESTBED_UUID]
-    // let testbed = cmd.output().unwrap().stdout;
-    // let testbed: JsonTestbed = serde_json::from_slice(&testbed).unwrap();
-    // let testbed = testbed.uuid.to_string();
-    // env::set_var(BENCHER_TESTBED, testbed.clone());
+    // cargo run -- threshold ls --host http://localhost:61016 --project the-computer
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "threshold",
+        "ls",
+        HOST_ARG,
+        LOCALHOST,
+        PROJECT_ARG,
+        PROJECT_SLUG,
+    ]);
+    let assert = cmd.assert().success();
+    let testbeds: bencher_json::JsonThresholds =
+        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    assert_eq!(testbeds.0.len(), 2);
 
-    // // // export BENCHER_TESTBED=[TESTBED_UUID]
-    // // let metric_kind = cmd.output().unwrap().stdout;
-    // // let metric_kind: JsonMetricKind = serde_json::from_slice(&metric_kind).unwrap();
-    // // let metric_kind = metric_kind.uuid.to_string();
-
-    // // cargo run -- threshold ls --host http://localhost:61016 --project the-computer
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args([
-    //     "threshold",
-    //     "ls",
-    //     HOST_ARG,
-    //     LOCALHOST,
-    //     PROJECT_ARG,
-    //     PROJECT_SLUG,
-    // ]);
-    // let assert = cmd.assert().success();
-    // let testbeds: bencher_json::JsonThresholds =
-    //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
-    // assert_eq!(testbeds.0.len(), 2);
-
-    // // cargo run -- threshold create --host http://localhost:61016 --metric-kind latency --branch $BENCHER_BRANCH --testbed $BENCHER_TESTBED --test z
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args([
-    //     "threshold",
-    //     "create",
-    //     HOST_ARG,
-    //     LOCALHOST,
-    //     TOKEN_ARG,
-    //     TEST_BENCHER_API_TOKEN,
-    //     PROJECT_ARG,
-    //     PROJECT_SLUG,
-    //     METRIC_KIND_ARG,
-    //     METRIC_KIND_SLUG,
-    //     BRANCH_ARG,
-    //     BRANCH_SLUG,
-    //     TESTBED_ARG,
-    //     TESTBED_SLUG,
-    //     "--test",
-    //     "z",
-    // ]);
-    // let assert = cmd.assert().success();
-    // let _json: bencher_json::JsonThreshold =
-    //     serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    // cargo run -- threshold create --host http://localhost:61016 --metric-kind latency --branch $BENCHER_BRANCH --testbed $BENCHER_TESTBED --test z
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "threshold",
+        "create",
+        HOST_ARG,
+        LOCALHOST,
+        TOKEN_ARG,
+        TEST_BENCHER_API_TOKEN,
+        PROJECT_ARG,
+        PROJECT_SLUG,
+        METRIC_KIND_ARG,
+        METRIC_KIND_SLUG,
+        BRANCH_ARG,
+        BRANCH_SLUG,
+        TESTBED_ARG,
+        TESTBED_SLUG,
+        "--test",
+        "z",
+    ]);
+    let assert = cmd.assert().success();
+    let _json: bencher_json::JsonThreshold =
+        serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- threshold ls --host http://localhost:61016 --project the-computer
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -484,15 +449,6 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     let testbeds: bencher_json::JsonThresholds =
         serde_json::from_slice(&assert.get_output().stdout).unwrap();
     assert_eq!(testbeds.0.len(), 3);
-
-    // // cargo run -- org ls --host http://localhost:61016
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args(["org", "ls", HOST_ARG, LOCALHOST]);
-    // cmd.assert().success();
-
-    // let org = cmd.output().unwrap().stdout;
-    // let mut org: Vec<JsonOrganization> = serde_json::from_slice(&org).unwrap();
-    // let org_uuid = org.pop().unwrap().uuid.to_string();
 
     // cargo run -- member invite --host http://localhost:61016 --email courage@nowhere.com --org <ORG_UUID>
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
