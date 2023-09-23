@@ -6,7 +6,7 @@ const PUBLIC_INT: i32 = 0;
 #[cfg(feature = "plus")]
 const PRIVATE_INT: i32 = 1;
 
-#[derive(Debug, Clone, Copy, FromSqlRow, AsExpression)]
+#[derive(Debug, Clone, Copy, diesel::FromSqlRow, diesel::AsExpression)]
 #[diesel(sql_type = diesel::sql_types::Integer)]
 #[repr(i32)]
 pub enum Visibility {

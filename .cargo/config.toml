@@ -17,8 +17,6 @@ rustflags = [
     "-Wtrivial_numeric_casts",
     "-Wunsafe_code",
     "-Wunsafe_op_in_unsafe_fn",
-    # "-Wunused_crate_dependencies",
-    # "-Wunused_extern_crates",
     "-Wunused_import_braces",
     "-Wunused_lifetimes",
     "-Wunused_macro_rules",

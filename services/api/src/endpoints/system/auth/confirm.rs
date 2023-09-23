@@ -1,10 +1,9 @@
 use bencher_json::{system::auth::JsonAuthUser, JsonAuthToken};
-use diesel::{QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 
 use crate::{
     context::ApiContext,
-    diesel::ExpressionMethods,
     endpoints::{
         endpoint::{pub_response_accepted, ResponseAccepted},
         Endpoint, Method,

@@ -26,7 +26,7 @@ const PYTHON_PYTEST_INT: i32 = 82;
 const RUBY_INT: i32 = 90;
 const RUBY_BENCHMARK_INT: i32 = 91;
 
-#[derive(Debug, Clone, Copy, FromSqlRow, AsExpression)]
+#[derive(Debug, Clone, Copy, diesel::FromSqlRow, diesel::AsExpression)]
 #[diesel(sql_type = diesel::sql_types::Integer)]
 #[repr(i32)]
 pub enum Adapter {

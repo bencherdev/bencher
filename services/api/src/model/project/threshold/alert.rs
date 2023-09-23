@@ -5,7 +5,7 @@ use bencher_json::project::{
     boundary::JsonLimit,
 };
 use chrono::Utc;
-use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
 use super::{
@@ -26,7 +26,7 @@ use crate::{
 
 crate::util::typed_id::typed_id!(AlertId);
 
-#[derive(Queryable)]
+#[derive(diesel::Queryable)]
 pub struct QueryAlert {
     pub id: AlertId,
     pub uuid: String,
@@ -143,7 +143,7 @@ impl QueryAlert {
 const LOWER_BOOL: bool = false;
 const UPPER_BOOL: bool = true;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, FromSqlRow, AsExpression)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, diesel::FromSqlRow, diesel::AsExpression)]
 #[diesel(sql_type = diesel::sql_types::Bool)]
 pub enum Limit {
     Lower,
@@ -198,7 +198,7 @@ where
 const ACTIVE_INT: i32 = 0;
 const DISMISSED_INT: i32 = 1;
 
-#[derive(Debug, Clone, Copy, Default, FromSqlRow, AsExpression)]
+#[derive(Debug, Clone, Copy, Default, diesel::FromSqlRow, diesel::AsExpression)]
 #[diesel(sql_type = diesel::sql_types::Integer)]
 #[repr(i32)]
 pub enum Status {
@@ -263,7 +263,7 @@ where
     }
 }
 
-#[derive(Insertable)]
+#[derive(diesel::Insertable)]
 #[diesel(table_name = alert_table)]
 pub struct InsertAlert {
     pub uuid: String,
@@ -296,7 +296,7 @@ impl InsertAlert {
     }
 }
 
-#[derive(Debug, Clone, AsChangeset)]
+#[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = alert_table)]
 pub struct UpdateAlert {
     pub status: Option<Status>,

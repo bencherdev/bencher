@@ -1,11 +1,10 @@
 use std::str::FromStr;
 
-use diesel::{Insertable, Queryable};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
-    diesel::{ExpressionMethods, QueryDsl, RunQueryDsl},
     schema,
     schema::perf as perf_table,
     util::query::{fn_get, fn_get_id},
@@ -19,7 +18,7 @@ use super::{
 
 crate::util::typed_id::typed_id!(PerfId);
 
-#[derive(Queryable, Identifiable, Associations)]
+#[derive(diesel::Queryable, diesel::Identifiable, diesel::Associations)]
 #[diesel(table_name = perf_table)]
 #[diesel(belongs_to(QueryReport, foreign_key = report_id))]
 pub struct QueryPerf {
@@ -44,7 +43,7 @@ impl QueryPerf {
     }
 }
 
-#[derive(Insertable)]
+#[derive(diesel::Insertable)]
 #[diesel(table_name = perf_table)]
 pub struct InsertPerf {
     pub uuid: String,

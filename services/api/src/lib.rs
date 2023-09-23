@@ -1,8 +1,5 @@
 #![allow(clippy::result_large_err)]
 
-#[macro_use]
-extern crate diesel;
-
 pub mod config;
 pub mod context;
 pub mod endpoints;

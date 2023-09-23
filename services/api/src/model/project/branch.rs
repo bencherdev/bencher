@@ -7,7 +7,7 @@ use bencher_json::{
     BranchName, GitHash, JsonBranch, JsonNewBranch, ResourceId, Slug,
 };
 use chrono::Utc;
-use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 use uuid::Uuid;
 
@@ -36,7 +36,7 @@ crate::util::typed_id::typed_id!(BranchId);
 
 fn_resource_id!(branch);
 
-#[derive(Queryable, Identifiable, Associations)]
+#[derive(diesel::Queryable, diesel::Identifiable, diesel::Associations)]
 #[diesel(table_name = branch_table)]
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryBranch {
@@ -144,7 +144,7 @@ impl QueryBranch {
     }
 }
 
-#[derive(Insertable)]
+#[derive(diesel::Insertable)]
 #[diesel(table_name = branch_table)]
 pub struct InsertBranch {
     pub uuid: String,
@@ -269,7 +269,7 @@ impl InsertBranch {
     }
 }
 
-#[derive(Debug, Clone, AsChangeset)]
+#[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = branch_table)]
 pub struct UpdateBranch {
     pub name: Option<String>,

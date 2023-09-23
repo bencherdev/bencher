@@ -10,7 +10,7 @@ use bencher_json::{
     JsonBenchmark, JsonMetricKind, JsonNewReport, JsonReport,
 };
 use chrono::Utc;
-use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use slog::{warn, Logger};
 use uuid::Uuid;
 
@@ -46,7 +46,7 @@ pub mod results;
 
 crate::util::typed_id::typed_id!(ReportId);
 
-#[derive(Queryable, Identifiable, Associations)]
+#[derive(diesel::Queryable, diesel::Identifiable, diesel::Associations)]
 #[diesel(table_name = report_table)]
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryReport {
@@ -344,7 +344,7 @@ fn get_alerts(conn: &mut DbConnection, report_id: ReportId) -> Result<JsonReport
         .collect())
 }
 
-#[derive(Insertable)]
+#[derive(diesel::Insertable)]
 #[diesel(table_name = report_table)]
 pub struct InsertReport {
     pub uuid: String,

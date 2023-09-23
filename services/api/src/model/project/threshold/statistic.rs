@@ -5,7 +5,7 @@ use bencher_json::{
     Boundary, SampleSize,
 };
 use chrono::Utc;
-use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
 use crate::{
@@ -24,7 +24,7 @@ use super::{QueryThreshold, ThresholdId};
 
 crate::util::typed_id::typed_id!(StatisticId);
 
-#[derive(Queryable, Debug, Clone)]
+#[derive(diesel::Queryable, Debug, Clone)]
 pub struct QueryStatistic {
     pub id: StatisticId,
     pub uuid: String,
@@ -90,7 +90,7 @@ pub fn map_sample_size(sample_size: Option<i64>) -> Result<Option<SampleSize>, A
 const Z_INT: i32 = 0;
 const T_INT: i32 = 1;
 
-#[derive(Debug, Clone, Copy, FromSqlRow, AsExpression)]
+#[derive(Debug, Clone, Copy, diesel::FromSqlRow, diesel::AsExpression)]
 #[diesel(sql_type = diesel::sql_types::Integer)]
 #[repr(i32)]
 pub enum StatisticKind {
@@ -162,7 +162,7 @@ pub fn map_boundary(boundary: Option<f64>) -> Result<Option<Boundary>, ApiError>
     })
 }
 
-#[derive(Insertable)]
+#[derive(diesel::Insertable)]
 #[diesel(table_name = statistic_table)]
 pub struct InsertStatistic {
     pub uuid: String,

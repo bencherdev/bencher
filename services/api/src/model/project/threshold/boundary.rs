@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use bencher_json::project::boundary::JsonBoundary;
-use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
 use crate::{
@@ -17,7 +17,7 @@ use super::{statistic::StatisticId, ThresholdId};
 
 crate::util::typed_id::typed_id!(BoundaryId);
 
-#[derive(Queryable)]
+#[derive(diesel::Queryable)]
 pub struct QueryBoundary {
     pub id: BoundaryId,
     pub uuid: String,
@@ -63,7 +63,7 @@ impl QueryBoundary {
     }
 }
 
-#[derive(Insertable)]
+#[derive(diesel::Insertable)]
 #[diesel(table_name = boundary_table)]
 pub struct InsertBoundary {
     pub uuid: String,

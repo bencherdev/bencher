@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use bencher_json::{Email, JsonSignup, JsonUser, ResourceId, Slug, UserName};
-use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
 use crate::{
@@ -20,7 +20,7 @@ pub mod token;
 
 crate::util::typed_id::typed_id!(UserId);
 
-#[derive(Insertable)]
+#[derive(diesel::Insertable)]
 #[diesel(table_name = user_table)]
 pub struct InsertUser {
     pub uuid: String,
@@ -50,7 +50,7 @@ impl InsertUser {
 
 fn_resource_id!(user);
 
-#[derive(Queryable)]
+#[derive(diesel::Queryable)]
 pub struct QueryUser {
     pub id: UserId,
     pub uuid: String,

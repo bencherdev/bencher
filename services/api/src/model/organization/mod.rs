@@ -11,7 +11,7 @@ use bencher_json::{
 };
 use bencher_rbac::Organization;
 use chrono::Utc;
-use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
 use crate::{
@@ -32,7 +32,7 @@ pub mod organization_role;
 
 crate::util::typed_id::typed_id!(OrganizationId);
 
-#[derive(Insertable)]
+#[derive(diesel::Insertable)]
 #[diesel(table_name = organization_table)]
 pub struct InsertOrganization {
     pub uuid: String,
@@ -70,7 +70,7 @@ impl InsertOrganization {
 
 fn_resource_id!(organization);
 
-#[derive(Debug, Clone, Queryable, Identifiable)]
+#[derive(Debug, Clone, Queryable, diesel::Identifiable)]
 #[diesel(table_name = organization_table)]
 pub struct QueryOrganization {
     pub id: OrganizationId,
@@ -192,7 +192,7 @@ impl From<&QueryOrganization> for Organization {
     }
 }
 
-#[derive(Debug, Clone, AsChangeset)]
+#[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = organization_table)]
 pub struct UpdateOrganization {
     pub name: Option<String>,

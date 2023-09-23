@@ -10,7 +10,7 @@ use bencher_json::{
     JsonMetricKind, JsonNewMetricKind, NonEmpty, ResourceId, Slug,
 };
 use chrono::Utc;
-use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 use uuid::Uuid;
 
@@ -35,7 +35,7 @@ crate::util::typed_id::typed_id!(MetricKindId);
 
 fn_resource_id!(metric_kind);
 
-#[derive(Queryable, Identifiable, Associations)]
+#[derive(diesel::Queryable, diesel::Identifiable, diesel::Associations)]
 #[diesel(table_name = metric_kind_table)]
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryMetricKind {
@@ -135,7 +135,7 @@ impl QueryMetricKind {
     }
 }
 
-#[derive(Insertable)]
+#[derive(diesel::Insertable)]
 #[diesel(table_name = metric_kind_table)]
 pub struct InsertMetricKind {
     pub uuid: String,
@@ -229,7 +229,7 @@ fn is_system(name: &str, slug: &str) -> bool {
     )
 }
 
-#[derive(Debug, Clone, AsChangeset)]
+#[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = metric_kind_table)]
 pub struct UpdateMetricKind {
     pub name: Option<String>,

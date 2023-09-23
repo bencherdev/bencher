@@ -3,7 +3,7 @@ use std::str::FromStr;
 use bencher_json::{
     user::token::JsonUpdateToken, JsonNewToken, JsonToken, Jwt, NonEmpty, ResourceId,
 };
-use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
 use crate::{
@@ -31,7 +31,7 @@ macro_rules! same_user {
 
 pub(crate) use same_user;
 
-#[derive(Queryable)]
+#[derive(diesel::Queryable)]
 pub struct QueryToken {
     pub id: TokenId,
     pub uuid: String,
@@ -88,7 +88,7 @@ impl QueryToken {
     }
 }
 
-#[derive(Insertable)]
+#[derive(diesel::Insertable)]
 #[diesel(table_name = token_table)]
 pub struct InsertToken {
     pub uuid: String,
@@ -144,7 +144,7 @@ impl InsertToken {
     }
 }
 
-#[derive(Debug, Clone, AsChangeset)]
+#[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = token_table)]
 pub struct UpdateToken {
     pub name: Option<String>,

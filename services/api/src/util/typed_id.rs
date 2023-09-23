@@ -10,8 +10,8 @@ macro_rules! typed_id {
             Eq,
             Hash,
             derive_more::Display,
-            FromSqlRow,
-            AsExpression,
+            diesel::FromSqlRow,
+            diesel::AsExpression,
         )]
         #[diesel(sql_type = diesel::sql_types::Integer)]
         pub struct $name(i32);

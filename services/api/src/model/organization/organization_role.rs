@@ -6,13 +6,12 @@ use crate::{
 };
 use bencher_json::{organization::JsonOrganizationPermission, Jwt};
 use chrono::Utc;
-use diesel::{Insertable, Queryable};
 
 use super::{OrganizationId, QueryOrganization};
 
 crate::util::typed_id::typed_id!(OrganizationRoleId);
 
-#[derive(Insertable)]
+#[derive(diesel::Insertable)]
 #[diesel(table_name = organization_role_table)]
 pub struct InsertOrganizationRole {
     pub user_id: UserId,
@@ -54,7 +53,7 @@ impl InsertOrganizationRole {
     }
 }
 
-#[derive(Queryable)]
+#[derive(diesel::Queryable)]
 pub struct QueryOrganizationRole {
     pub id: OrganizationRoleId,
     pub user_id: UserId,

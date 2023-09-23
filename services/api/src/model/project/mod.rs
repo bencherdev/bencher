@@ -12,7 +12,7 @@ use bencher_rbac::{Organization, Project};
 use chrono::Utc;
 #[cfg(feature = "plus")]
 use diesel::JoinOnDsl;
-use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, Queryable, RunQueryDsl};
 use dropshot::HttpError;
 use uuid::Uuid;
 
@@ -44,7 +44,7 @@ pub mod visibility;
 
 crate::util::typed_id::typed_id!(ProjectId);
 
-#[derive(Insertable)]
+#[derive(diesel::Insertable)]
 #[diesel(table_name = project_table)]
 pub struct InsertProject {
     pub uuid: String,
@@ -86,7 +86,7 @@ impl InsertProject {
 
 fn_resource_id!(project);
 
-#[derive(Debug, Clone, Queryable, Identifiable, Associations)]
+#[derive(Debug, Clone, Queryable, diesel::Identifiable, diesel::Associations)]
 #[diesel(table_name = project_table)]
 #[diesel(belongs_to(QueryOrganization, foreign_key = organization_id))]
 pub struct QueryProject {
@@ -277,7 +277,7 @@ impl From<&QueryProject> for Project {
     }
 }
 
-#[derive(Debug, Clone, AsChangeset)]
+#[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = project_table)]
 pub struct UpdateProject {
     pub name: Option<String>,

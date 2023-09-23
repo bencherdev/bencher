@@ -5,7 +5,7 @@ use bencher_json::{
     JsonNewTestbed, JsonTestbed, NonEmpty, ResourceId, Slug,
 };
 use chrono::Utc;
-use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 use uuid::Uuid;
 
@@ -28,7 +28,7 @@ crate::util::typed_id::typed_id!(TestbedId);
 
 fn_resource_id!(testbed);
 
-#[derive(Queryable, Identifiable, Associations)]
+#[derive(diesel::Queryable, diesel::Identifiable, diesel::Associations)]
 #[diesel(table_name = testbed_table)]
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryTestbed {
@@ -104,7 +104,7 @@ impl QueryTestbed {
     }
 }
 
-#[derive(Insertable)]
+#[derive(diesel::Insertable)]
 #[diesel(table_name = testbed_table)]
 pub struct InsertTestbed {
     pub uuid: String,
@@ -139,7 +139,7 @@ impl InsertTestbed {
     }
 }
 
-#[derive(Debug, Clone, AsChangeset)]
+#[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = testbed_table)]
 pub struct UpdateTestbed {
     pub name: Option<String>,

@@ -1,5 +1,5 @@
 use bencher_json::JsonMetric;
-use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
 use crate::{
@@ -15,7 +15,7 @@ use super::{
 
 crate::util::typed_id::typed_id!(MetricId);
 
-#[derive(Queryable, Identifiable, Associations)]
+#[derive(diesel::Queryable, diesel::Identifiable, diesel::Associations)]
 #[diesel(table_name = metric_table)]
 #[diesel(belongs_to(QueryPerf, foreign_key = perf_id))]
 #[diesel(belongs_to(QueryMetricKind, foreign_key = metric_kind_id))]
@@ -56,7 +56,7 @@ impl QueryMetric {
     }
 }
 
-#[derive(Insertable)]
+#[derive(diesel::Insertable)]
 #[diesel(table_name = metric_table)]
 pub struct InsertMetric {
     pub uuid: String,

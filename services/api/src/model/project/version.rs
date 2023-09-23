@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use bencher_json::GitHash;
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
 use crate::{
@@ -16,7 +16,7 @@ use super::{branch::BranchId, branch_version::InsertBranchVersion, ProjectId, Qu
 
 crate::util::typed_id::typed_id!(VersionId);
 
-#[derive(Queryable, Identifiable, Associations)]
+#[derive(diesel::Queryable, diesel::Identifiable, diesel::Associations)]
 #[diesel(table_name = version_table)]
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryVersion {
@@ -41,7 +41,7 @@ impl QueryVersion {
     }
 }
 
-#[derive(Insertable)]
+#[derive(diesel::Insertable)]
 #[diesel(table_name = version_table)]
 pub struct InsertVersion {
     pub uuid: String,

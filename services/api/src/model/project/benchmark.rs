@@ -5,7 +5,7 @@ use bencher_json::{
     BenchmarkName, JsonBenchmark, ResourceId, Slug,
 };
 use chrono::Utc;
-use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 use uuid::Uuid;
 
@@ -32,7 +32,7 @@ crate::util::typed_id::typed_id!(BenchmarkId);
 
 fn_resource_id!(benchmark);
 
-#[derive(Queryable, Identifiable, Associations)]
+#[derive(diesel::Queryable, diesel::Identifiable, diesel::Associations)]
 #[diesel(table_name = benchmark_table)]
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryBenchmark {
@@ -207,7 +207,7 @@ impl QueryBenchmark {
     }
 }
 
-#[derive(Insertable)]
+#[derive(diesel::Insertable)]
 #[diesel(table_name = benchmark_table)]
 pub struct InsertBenchmark {
     pub uuid: String,
@@ -262,7 +262,7 @@ impl InsertBenchmark {
     }
 }
 
-#[derive(Debug, Clone, AsChangeset)]
+#[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = benchmark_table)]
 pub struct UpdateBenchmark {
     pub name: Option<String>,

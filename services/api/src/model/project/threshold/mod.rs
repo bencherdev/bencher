@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use bencher_json::project::threshold::{JsonNewStatistic, JsonThreshold, JsonThresholdStatistic};
 use chrono::Utc;
-use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
 use self::statistic::{InsertStatistic, QueryStatistic, StatisticId};
@@ -29,7 +29,7 @@ pub mod statistic;
 
 crate::util::typed_id::typed_id!(ThresholdId);
 
-#[derive(Queryable, Identifiable, Associations)]
+#[derive(diesel::Queryable, diesel::Identifiable, diesel::Associations)]
 #[diesel(table_name = threshold_table)]
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryThreshold {
@@ -137,7 +137,7 @@ impl QueryThreshold {
     }
 }
 
-#[derive(Insertable)]
+#[derive(diesel::Insertable)]
 #[diesel(table_name = threshold_table)]
 pub struct InsertThreshold {
     pub uuid: String,
@@ -243,7 +243,7 @@ impl InsertThreshold {
     }
 }
 
-#[derive(Debug, Clone, AsChangeset)]
+#[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = threshold_table)]
 pub struct UpdateThreshold {
     pub statistic_id: StatisticId,

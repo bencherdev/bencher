@@ -1,5 +1,4 @@
 use bencher_json::project::JsonProjectPermission;
-use diesel::{Insertable, Queryable};
 
 use crate::{model::user::UserId, schema::project_role as project_role_table};
 
@@ -7,7 +6,7 @@ use super::ProjectId;
 
 crate::util::typed_id::typed_id!(ProjectRoleId);
 
-#[derive(Insertable)]
+#[derive(diesel::Insertable)]
 #[diesel(table_name = project_role_table)]
 pub struct InsertProjectRole {
     pub user_id: UserId,
@@ -17,7 +16,7 @@ pub struct InsertProjectRole {
     pub modified: i64,
 }
 
-#[derive(Queryable)]
+#[derive(diesel::Queryable)]
 pub struct QueryProjectRole {
     pub id: ProjectRoleId,
     pub user_id: UserId,

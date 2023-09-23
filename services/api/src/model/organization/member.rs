@@ -1,12 +1,11 @@
 use std::str::FromStr;
 
 use bencher_json::{Email, JsonMember, Slug, UserName};
-use diesel::Queryable;
 use uuid::Uuid;
 
 use crate::{util::to_date_time, ApiError};
 
-#[derive(Queryable)]
+#[derive(diesel::Queryable)]
 pub struct QueryMember {
     pub uuid: String,
     pub name: String,
