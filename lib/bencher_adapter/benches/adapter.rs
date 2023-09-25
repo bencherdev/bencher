@@ -7,29 +7,29 @@ const JSON_RESULT: &str = r#"{
     "tests::benchmark_1": {
       "latency": {
         "value": 1.0,
-        "lower_bound": 1.0,
-        "upper_bound": 1.0
+        "lower_value": 1.0,
+        "upper_value": 1.0
       }
     },
     "tests::benchmark_2": {
       "latency": {
         "value": 22.0,
-        "lower_bound": 22.0,
-        "upper_bound": 22.0
+        "lower_value": 22.0,
+        "upper_value": 22.0
       }
     },
     "tests::benchmark_3": {
       "latency": {
         "value": 333.0,
-        "lower_bound": 333.0,
-        "upper_bound": 333.0
+        "lower_value": 333.0,
+        "upper_value": 333.0
       }
     },
     "tests::benchmark_4": {
       "latency": {
         "value": 4444.0,
-        "lower_bound": 4444.0,
-        "upper_bound": 4444.0
+        "lower_value": 4444.0,
+        "upper_value": 4444.0
       }
     }
   }"#;

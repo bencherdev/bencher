@@ -6415,12 +6415,12 @@
       "JsonMetric": {
         "type": "object",
         "properties": {
-          "lower_bound": {
+          "lower_value": {
             "nullable": true,
             "type": "number",
             "format": "double"
           },
-          "upper_bound": {
+          "upper_value": {
             "nullable": true,
             "type": "number",
             "format": "double"

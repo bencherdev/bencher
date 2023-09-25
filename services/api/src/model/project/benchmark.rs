@@ -138,7 +138,7 @@ impl QueryBenchmark {
         conn: &mut DbConnection,
         metric_id: MetricId,
     ) -> Result<JsonBenchmarkMetric, ApiError> {
-        let (uuid, project_id, name, slug, created, modified, value, lower_bound, upper_bound) =
+        let (uuid, project_id, name, slug, created, modified, value, lower_value, upper_value) =
             schema::metric::table
                 .filter(schema::metric::id.eq(metric_id))
                 .left_join(schema::perf::table.on(schema::perf::id.eq(schema::metric::perf_id)))
@@ -154,8 +154,8 @@ impl QueryBenchmark {
                     schema::benchmark::created,
                     schema::benchmark::modified,
                     schema::metric::value,
-                    schema::metric::lower_bound,
-                    schema::metric::upper_bound,
+                    schema::metric::lower_value,
+                    schema::metric::upper_value,
                 ))
                 .first::<(
                     String,
@@ -178,7 +178,7 @@ impl QueryBenchmark {
             created,
             modified,
         } = Self::get_benchmark_json(conn, &uuid, project_id, &name, &slug, created, modified)?;
-        let metric = QueryMetric::json(value, lower_bound, upper_bound);
+        let metric = QueryMetric::json(value, lower_value, upper_value);
         let boundary = QueryBoundary::get_json(conn, metric_id);
 
         Ok(JsonBenchmarkMetric {

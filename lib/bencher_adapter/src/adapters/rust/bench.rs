@@ -74,8 +74,8 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
             let variance = Some(latency_as_nanos(variance, units));
             JsonMetric {
                 value,
-                lower_bound: variance.map(|v| value - v),
-                upper_bound: variance.map(|v| value + v),
+                lower_value: variance.map(|v| value - v),
+                upper_value: variance.map(|v| value + v),
             }
         },
     )(input)
@@ -145,8 +145,8 @@ pub(crate) mod test_rust_bench {
                     "tests::is_bench_test".parse().unwrap(),
                     JsonMetric {
                         value: 5_280.0.into(),
-                        lower_bound: Some(4_947.0.into()),
-                        upper_bound: Some(5_613.0.into()),
+                        lower_value: Some(4_947.0.into()),
+                        upper_value: Some(5_613.0.into()),
                     },
                 ),
             )),

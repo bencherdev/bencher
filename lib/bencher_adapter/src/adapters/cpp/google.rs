@@ -57,8 +57,8 @@ impl TryFrom<Google> for Option<AdapterResults> {
             let value = latency_as_nanos(real_time, time_unit);
             let json_metric = JsonMetric {
                 value,
-                lower_bound: None,
-                upper_bound: None,
+                lower_value: None,
+                upper_value: None,
             };
 
             benchmark_metrics.push((name, json_metric));

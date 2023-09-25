@@ -348,8 +348,8 @@ fn perf_query(
             schema::version::hash,
             schema::metric::id,
             schema::metric::value,
-            schema::metric::lower_bound,
-            schema::metric::upper_bound,
+            schema::metric::lower_value,
+            schema::metric::upper_value,
         ))
         .load::<PerfQuery>(conn)
         .map_err(ApiError::from)?
@@ -378,8 +378,8 @@ fn perf_metric(
         version_hash,
         metric_id,
         value,
-        lower_bound,
-        upper_bound,
+        lower_value,
+        upper_value,
     ): PerfQuery,
 ) -> Option<JsonPerfMetric> {
     // The boundary may not exist
@@ -417,8 +417,8 @@ fn perf_metric(
         threshold,
         metric: JsonMetric {
             value: value.into(),
-            lower_bound: lower_bound.map(Into::into),
-            upper_bound: upper_bound.map(Into::into),
+            lower_value: lower_value.map(Into::into),
+            upper_value: upper_value.map(Into::into),
         },
         boundary: boundary.map(QueryBoundary::into_json).unwrap_or_default(),
         alert,

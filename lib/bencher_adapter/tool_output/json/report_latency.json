@@ -2,22 +2,22 @@
     "tests::benchmark_a": {
         "latency": {
             "value": 3247.0,
-            "lower_bound": 1044.0,
-            "upper_bound": 1044.0
+            "lower_value": 1044.0,
+            "upper_value": 1044.0
         }
     },
     "tests::benchmark_b": {
         "latency": {
             "value": 3443.0,
-            "lower_bound": 2275.0,
-            "upper_bound": 2275.0
+            "lower_value": 2275.0,
+            "upper_value": 2275.0
         }
     },
     "tests::benchmark_c": {
         "latency": {
             "value": 3361.0,
-            "lower_bound": 1093.0,
-            "upper_bound": 1093.0
+            "lower_value": 1093.0,
+            "upper_value": 1093.0
         }
     }
 }

@@ -66,24 +66,24 @@ pub(crate) mod test_util {
     pub fn validate_latency(
         metrics: &AdapterMetrics,
         value: f64,
-        lower_bound: Option<f64>,
-        upper_bound: Option<f64>,
+        lower_value: Option<f64>,
+        upper_value: Option<f64>,
     ) {
-        validate_metric(metrics, LATENCY_SLUG_STR, value, lower_bound, upper_bound);
+        validate_metric(metrics, LATENCY_SLUG_STR, value, lower_value, upper_value);
     }
 
     pub fn validate_throughput(
         metrics: &AdapterMetrics,
         value: f64,
-        lower_bound: Option<f64>,
-        upper_bound: Option<f64>,
+        lower_value: Option<f64>,
+        upper_value: Option<f64>,
     ) {
         validate_metric(
             metrics,
             THROUGHPUT_SLUG_STR,
             value,
-            lower_bound,
-            upper_bound,
+            lower_value,
+            upper_value,
         );
     }
 
@@ -91,13 +91,13 @@ pub(crate) mod test_util {
         metrics: &AdapterMetrics,
         key: &str,
         value: f64,
-        lower_bound: Option<f64>,
-        upper_bound: Option<f64>,
+        lower_value: Option<f64>,
+        upper_value: Option<f64>,
     ) {
         assert_eq!(metrics.inner.len(), 1);
         let metric = metrics.get(key).unwrap();
         assert_eq!(metric.value, OrderedFloat::from(value));
-        assert_eq!(metric.lower_bound, lower_bound.map(OrderedFloat::from));
-        assert_eq!(metric.upper_bound, upper_bound.map(OrderedFloat::from));
+        assert_eq!(metric.lower_value, lower_value.map(OrderedFloat::from));
+        assert_eq!(metric.upper_value, upper_value.map(OrderedFloat::from));
     }
 }

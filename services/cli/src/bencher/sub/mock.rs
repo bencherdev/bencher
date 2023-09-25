@@ -98,8 +98,8 @@ impl Mock {
                     inner: hmap! {
                         LATENCY_RESOURCE_ID.clone() => JsonMetric {
                              value: value.into(),
-                             lower_bound: Some((value - variance).into()),
-                             upper_bound: Some((value + variance).into()),
+                             lower_value: Some((value - variance).into()),
+                             upper_value: Some((value + variance).into()),
                         }
                     },
                 },

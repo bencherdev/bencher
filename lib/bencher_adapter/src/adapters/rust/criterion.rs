@@ -85,10 +85,10 @@ fn parse_criterion_metric(input: &str) -> IResult<&str, JsonMetric> {
             )),
             tag("]"),
         ),
-        |(lower_bound, _, value, _, upper_bound)| JsonMetric {
+        |(lower_value, _, value, _, upper_value)| JsonMetric {
             value,
-            lower_bound: Some(lower_bound),
-            upper_bound: Some(upper_bound),
+            lower_value: Some(lower_value),
+            upper_value: Some(upper_value),
         },
     )(input)
 }
@@ -128,8 +128,8 @@ pub(crate) mod test_rust_criterion {
                         "criterion_benchmark".parse().unwrap(),
                         JsonMetric {
                             value: 280.0.into(),
-                            lower_bound: Some(222.2.into()),
-                            upper_bound: Some(333.33.into()),
+                            lower_value: Some(222.2.into()),
+                            upper_value: Some(333.33.into()),
                         },
                     ),
                 )),
@@ -142,8 +142,8 @@ pub(crate) mod test_rust_criterion {
                         "criterion_benchmark".parse().unwrap(),
                         JsonMetric {
                             value: 5.280.into(),
-                            lower_bound: Some(0.222.into()),
-                            upper_bound: Some(0.33333.into()),
+                            lower_value: Some(0.222.into()),
+                            upper_value: Some(0.33333.into()),
                         },
                     ),
                 )),
@@ -156,8 +156,8 @@ pub(crate) mod test_rust_criterion {
                         "criterion_benchmark".parse().unwrap(),
                         JsonMetric {
                             value: 18_019.0.into(),
-                            lower_bound: Some(16_652.0.into()),
-                            upper_bound: Some(19_562.0.into()),
+                            lower_value: Some(16_652.0.into()),
+                            upper_value: Some(19_562.0.into()),
                         },
                     ),
                 )),

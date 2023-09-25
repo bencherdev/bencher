@@ -66,11 +66,11 @@ fn parse_asv_time(input: &str) -> IResult<&str, JsonMetric> {
         tuple((parse_f64, tag("±"), parse_f64, parse_units, eof)),
         |(duration, _, range, units, _)| {
             let value = latency_as_nanos(duration, units);
-            let bound = latency_as_nanos(range, units);
+            let range = latency_as_nanos(range, units);
             JsonMetric {
                 value,
-                lower_bound: Some(value - bound),
-                upper_bound: Some(value + bound),
+                lower_value: Some(value - range),
+                upper_value: Some(value + range),
             }
         },
     )(input)

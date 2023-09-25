@@ -48,8 +48,8 @@ export type BenchmarkName = string;
 
 export interface JsonMetric {
 	value: number;
-	lower_bound?: number;
-	upper_bound?: number;
+	lower_value?: number;
+	upper_value?: number;
 }
 
 export interface JsonBoundary {

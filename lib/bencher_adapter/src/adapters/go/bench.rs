@@ -70,8 +70,8 @@ fn parse_go_bench(input: &str) -> IResult<&str, JsonMetric> {
             let value = latency_as_nanos(duration, units);
             Ok(JsonMetric {
                 value,
-                lower_bound: None,
-                upper_bound: None,
+                lower_value: None,
+                upper_value: None,
             })
         },
     )(input)
@@ -105,8 +105,8 @@ pub(crate) mod test_go_bench {
                         "BenchmarkFib10-8".parse().unwrap(),
                         JsonMetric {
                             value: 325.0.into(),
-                            lower_bound: None,
-                            upper_bound: None,
+                            lower_value: None,
+                            upper_value: None,
                         },
                     ),
                 )),
@@ -119,8 +119,8 @@ pub(crate) mod test_go_bench {
                         "BenchmarkFib20".parse().unwrap(),
                         JsonMetric {
                             value: 40_537.123.into(),
-                            lower_bound: None,
-                            upper_bound: None,
+                            lower_value: None,
+                            upper_value: None,
                         },
                     ),
                 )),
@@ -133,8 +133,8 @@ pub(crate) mod test_go_bench {
                         "BenchmarkFib/my_tabled_benchmark_-_10-8".parse().unwrap(),
                         JsonMetric {
                             value: 325.0.into(),
-                            lower_bound: None,
-                            upper_bound: None,
+                            lower_value: None,
+                            upper_value: None,
                         },
                     ),
                 )),
@@ -147,8 +147,8 @@ pub(crate) mod test_go_bench {
                         "BenchmarkFib/my_tabled_benchmark_-_20".parse().unwrap(),
                         JsonMetric {
                             value: 40_537.123.into(),
-                            lower_bound: None,
-                            upper_bound: None,
+                            lower_value: None,
+                            upper_value: None,
                         },
                     ),
                 )),
@@ -161,8 +161,8 @@ pub(crate) mod test_go_bench {
                         "BenchmarkFib/my/tabled/benchmark_-_20".parse().unwrap(),
                         JsonMetric {
                             value: 40_537.456.into(),
-                            lower_bound: None,
-                            upper_bound: None,
+                            lower_value: None,
+                            upper_value: None,
                         },
                     ),
                 )),
@@ -175,8 +175,8 @@ pub(crate) mod test_go_bench {
                         "BenchmarkFib20WithAuxMetric-8".parse().unwrap(),
                         JsonMetric {
                             value: 25_829.0.into(),
-                            lower_bound: None,
-                            upper_bound: None,
+                            lower_value: None,
+                            upper_value: None,
                         },
                     ),
                 )),

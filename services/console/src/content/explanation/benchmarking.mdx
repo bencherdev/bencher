@@ -35,8 +35,8 @@ The only exception to the above caveat is ignoring a Benchmark. See [suppressing
 
 ### Metrics
 A Metric is a single, point-in-time performance regression test result.
-Up to three Measures may be collected for a single Metric: `value`, `lower_bound`, and `upper_bound`.
-The `value` is required for all Metrics while the `lower_bound` and `upper_bound` are independently optional.
+Up to three Measures may be collected for a single Metric: `value`, `lower_value`, and `upper_value`.
+The `value` is required for all Metrics while the `lower_value` and `upper_value` are independently optional.
 Which Measures are collected is determined by the [benchmark harness adapter](/docs/explanation/adapters).
 
 ### Metric Kind

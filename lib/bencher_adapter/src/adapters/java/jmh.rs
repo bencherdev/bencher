@@ -73,12 +73,12 @@ impl TryFrom<Jmh> for Option<AdapterResults> {
 
                 let time_unit = unit.parse()?;
                 let value = latency_as_nanos(score, time_unit);
-                let lower_bound = latency_as_nanos(score_confidence.0, time_unit);
-                let upper_bound = latency_as_nanos(score_confidence.1, time_unit);
+                let lower_value = latency_as_nanos(score_confidence.0, time_unit);
+                let upper_value = latency_as_nanos(score_confidence.1, time_unit);
                 let json_metric = JsonMetric {
                     value,
-                    lower_bound: Some(lower_bound),
-                    upper_bound: Some(upper_bound),
+                    lower_value: Some(lower_value),
+                    upper_value: Some(upper_value),
                 };
                 AdapterMetricKind::Latency(json_metric)
             } else if let Some((ops_slash, unit)) = score_unit.split_once("ops/") {
@@ -88,12 +88,12 @@ impl TryFrom<Jmh> for Option<AdapterResults> {
 
                 let time_unit = unit.parse()?;
                 let value = throughput_as_secs(score, time_unit);
-                let lower_bound = throughput_as_secs(score_confidence.0, time_unit);
-                let upper_bound = throughput_as_secs(score_confidence.1, time_unit);
+                let lower_value = throughput_as_secs(score_confidence.0, time_unit);
+                let upper_value = throughput_as_secs(score_confidence.1, time_unit);
                 let json_metric = JsonMetric {
                     value,
-                    lower_bound: Some(lower_bound),
-                    upper_bound: Some(upper_bound),
+                    lower_value: Some(lower_value),
+                    upper_value: Some(upper_value),
                 };
                 AdapterMetricKind::Throughput(json_metric)
             } else {

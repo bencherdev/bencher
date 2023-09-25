@@ -90,8 +90,8 @@ fn parse_ruby_benchmark(input: &str) -> IResult<&str, JsonMetric> {
             let value = latency_as_nanos(real, units);
             Ok(JsonMetric {
                 value,
-                lower_bound: None,
-                upper_bound: None,
+                lower_value: None,
+                upper_value: None,
             })
         },
     )(input)

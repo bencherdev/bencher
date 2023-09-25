@@ -70,8 +70,8 @@ fn parse_catch2<'i>(
             if benchmark_name_remainder.is_empty() && mean_remainder.is_empty() {
                 let json_metric = JsonMetric {
                     value: mean,
-                    lower_bound: Some(mean - std_dev),
-                    upper_bound: Some(mean + std_dev),
+                    lower_value: Some(mean - std_dev),
+                    upper_value: Some(mean + std_dev),
                 };
 
                 Ok((benchmark_name, json_metric))

@@ -132,8 +132,8 @@ fn parse_iai_metric<'a>(input: &'a str, metric_kind: &'static str) -> IResult<&'
         )),
         |(_, _, _, _, metric, _)| JsonMetric {
             value: (metric as f64).into(),
-            lower_bound: None,
-            upper_bound: None,
+            lower_value: None,
+            upper_value: None,
         },
     )(input)
 }
@@ -168,8 +168,8 @@ pub(crate) mod test_rust_iai {
         for (key, value) in results {
             let metric = metrics.get(key).unwrap();
             assert_eq!(metric.value, OrderedFloat::from(value));
-            assert_eq!(metric.lower_bound, None);
-            assert_eq!(metric.upper_bound, None);
+            assert_eq!(metric.lower_value, None);
+            assert_eq!(metric.upper_value, None);
         }
     }
 
@@ -181,8 +181,8 @@ pub(crate) mod test_rust_iai {
                 "",
                 JsonMetric {
                     value: 1234.0.into(),
-                    upper_bound: None,
-                    lower_bound: None
+                    upper_value: None,
+                    lower_value: None
                 }
             ))
         );
@@ -193,8 +193,8 @@ pub(crate) mod test_rust_iai {
                 "",
                 JsonMetric {
                     value: 1234.0.into(),
-                    upper_bound: None,
-                    lower_bound: None
+                    upper_value: None,
+                    lower_value: None
                 }
             ))
         );
@@ -205,8 +205,8 @@ pub(crate) mod test_rust_iai {
                 "",
                 JsonMetric {
                     value: 1234.0.into(),
-                    upper_bound: None,
-                    lower_bound: None
+                    upper_value: None,
+                    lower_value: None
                 }
             ))
         );

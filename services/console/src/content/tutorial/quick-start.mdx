@@ -191,36 +191,36 @@ $ bencher mock
   "bencher::mock_0": {
     "latency": {
       "value": 3.7865423396154463,
-      "lower_bound": 3.4078881056539014,
-      "upper_bound": 4.165196573576991
+      "lower_value": 3.4078881056539014,
+      "upper_value": 4.165196573576991
     }
   },
   "bencher::mock_1": {
     "latency": {
       "value": 16.398332128878437,
-      "lower_bound": 14.758498915990593,
-      "upper_bound": 18.03816534176628
+      "lower_value": 14.758498915990593,
+      "upper_value": 18.03816534176628
     }
   },
   "bencher::mock_2": {
     "latency": {
       "value": 20.88091359871672,
-      "lower_bound": 18.792822238845048,
-      "upper_bound": 22.969004958588393
+      "lower_value": 18.792822238845048,
+      "upper_value": 22.969004958588393
     }
   },
   "bencher::mock_3": {
     "latency": {
       "value": 33.88103801203782,
-      "lower_bound": 30.492934210834036,
-      "upper_bound": 37.2691418132416
+      "lower_value": 30.492934210834036,
+      "upper_value": 37.2691418132416
     }
   },
   "bencher::mock_4": {
     "latency": {
       "value": 40.90515638867921,
-      "lower_bound": 36.81464074981129,
-      "upper_bound": 44.99567202754713
+      "lower_value": 36.81464074981129,
+      "upper_value": 44.99567202754713
     }
   }
 }
@@ -244,36 +244,36 @@ $ bencher run --project save-walter-white-12345 "bencher mock"
   "bencher::mock_0": {
     "latency": {
       "value": 0.15496641529475275,
-      "lower_bound": 0.13946977376527747,
-      "upper_bound": 0.17046305682422802
+      "lower_value": 0.13946977376527747,
+      "upper_value": 0.17046305682422802
     }
   },
   "bencher::mock_1": {
     "latency": {
       "value": 18.648298578180437,
-      "lower_bound": 16.783468720362393,
-      "upper_bound": 20.513128435998482
+      "lower_value": 16.783468720362393,
+      "upper_value": 20.513128435998482
     }
   },
   "bencher::mock_2": {
     "latency": {
       "value": 28.20328182167366,
-      "lower_bound": 25.382953639506294,
-      "upper_bound": 31.023610003841025
+      "lower_value": 25.382953639506294,
+      "upper_value": 31.023610003841025
     }
   },
   "bencher::mock_3": {
     "latency": {
       "value": 34.45732560787596,
-      "lower_bound": 31.01159304708836,
-      "upper_bound": 37.903058168663556
+      "lower_value": 31.01159304708836,
+      "upper_value": 37.903058168663556
     }
   },
   "bencher::mock_4": {
     "latency": {
       "value": 44.9237520767597,
-      "lower_bound": 40.43137686908373,
-      "upper_bound": 49.41612728443567
+      "lower_value": 40.43137686908373,
+      "upper_value": 49.41612728443567
     }
   }
 }
@@ -282,7 +282,7 @@ $ bencher run --project save-walter-white-12345 "bencher mock"
   "branch": "master",
   "end_time": "2023-07-18T14:21:27.796871Z",
   "results": [
-    "{\n  \"bencher::mock_0\": {\n    \"latency\": {\n      \"value\": 0.15496641529475275,\n      \"lower_bound\": 0.13946977376527747,\n      \"upper_bound\": 0.17046305682422802\n    }\n  },\n  \"bencher::mock_1\": {\n    \"latency\": {\n      \"value\": 18.648298578180437,\n      \"lower_bound\": 16.783468720362393,\n      \"upper_bound\": 20.513128435998482\n    }\n  },\n  \"bencher::mock_2\": {\n    \"latency\": {\n      \"value\": 28.20328182167366,\n      \"lower_bound\": 25.382953639506294,\n      \"upper_bound\": 31.023610003841025\n    }\n  },\n  \"bencher::mock_3\": {\n    \"latency\": {\n      \"value\": 34.45732560787596,\n      \"lower_bound\": 31.01159304708836,\n      \"upper_bound\": 37.903058168663556\n    }\n  },\n  \"bencher::mock_4\": {\n    \"latency\": {\n      \"value\": 44.9237520767597,\n      \"lower_bound\": 40.43137686908373,\n      \"upper_bound\": 49.41612728443567\n    }\n  }\n}\n"
+    "{\n  \"bencher::mock_0\": {\n    \"latency\": {\n      \"value\": 0.15496641529475275,\n      \"lower_value\": 0.13946977376527747,\n      \"upper_value\": 0.17046305682422802\n    }\n  },\n  \"bencher::mock_1\": {\n    \"latency\": {\n      \"value\": 18.648298578180437,\n      \"lower_value\": 16.783468720362393,\n      \"upper_value\": 20.513128435998482\n    }\n  },\n  \"bencher::mock_2\": {\n    \"latency\": {\n      \"value\": 28.20328182167366,\n      \"lower_value\": 25.382953639506294,\n      \"upper_value\": 31.023610003841025\n    }\n  },\n  \"bencher::mock_3\": {\n    \"latency\": {\n      \"value\": 34.45732560787596,\n      \"lower_value\": 31.01159304708836,\n      \"upper_value\": 37.903058168663556\n    }\n  },\n  \"bencher::mock_4\": {\n    \"latency\": {\n      \"value\": 44.9237520767597,\n      \"lower_value\": 40.43137686908373,\n      \"upper_value\": 49.41612728443567\n    }\n  }\n}\n"
   ],
   "settings": {},
   "start_time": "2023-07-18T14:21:27.773930Z",

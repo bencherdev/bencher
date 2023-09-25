@@ -59,8 +59,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 7.070632155490754,
-                        "lower_bound": 6.363568939941679,
-                        "upper_bound": 7.77769537103983
+                        "lower_value": 6.363568939941679,
+                        "upper_value": 7.77769537103983
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -79,8 +79,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 0.38989849192403,
-                        "lower_bound": 0.35090864273162703,
-                        "upper_bound": 0.42888834111643304
+                        "lower_value": 0.35090864273162703,
+                        "upper_value": 0.42888834111643304
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -99,8 +99,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 8.618085683005877,
-                        "lower_bound": 7.756277114705289,
-                        "upper_bound": 9.479894251306463
+                        "lower_value": 7.756277114705289,
+                        "upper_value": 9.479894251306463
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -119,8 +119,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 2.02750859607544,
-                        "lower_bound": 1.824757736467896,
-                        "upper_bound": 2.230259455682984
+                        "lower_value": 1.824757736467896,
+                        "upper_value": 2.230259455682984
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -139,8 +139,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 1.5980960602930727,
-                        "lower_bound": 1.4382864542637654,
-                        "upper_bound": 1.75790566632238
+                        "lower_value": 1.4382864542637654,
+                        "upper_value": 1.75790566632238
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -159,8 +159,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 7.199331114196812,
-                        "lower_bound": 6.479398002777131,
-                        "upper_bound": 7.919264225616493
+                        "lower_value": 6.479398002777131,
+                        "upper_value": 7.919264225616493
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -179,8 +179,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 6.11864860295499,
-                        "lower_bound": 5.506783742659492,
-                        "upper_bound": 6.730513463250489
+                        "lower_value": 5.506783742659492,
+                        "upper_value": 6.730513463250489
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -199,8 +199,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 1.55004991113737,
-                        "lower_bound": 1.395044920023633,
-                        "upper_bound": 1.705054902251107
+                        "lower_value": 1.395044920023633,
+                        "upper_value": 1.705054902251107
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -247,8 +247,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 10.717940411494348,
-                        "lower_bound": 9.646146370344914,
-                        "upper_bound": 11.789734452643785
+                        "lower_value": 9.646146370344914,
+                        "upper_value": 11.789734452643785
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -267,8 +267,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 11.629722712218056,
-                        "lower_bound": 10.46675044099625,
-                        "upper_bound": 12.792694983439862
+                        "lower_value": 10.46675044099625,
+                        "upper_value": 12.792694983439862
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -287,8 +287,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 19.234737429290924,
-                        "lower_bound": 17.31126368636183,
-                        "upper_bound": 21.158211172220017
+                        "lower_value": 17.31126368636183,
+                        "upper_value": 21.158211172220017
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -307,8 +307,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 13.887107300642333,
-                        "lower_bound": 12.4983965705781,
-                        "upper_bound": 15.275818030706564
+                        "lower_value": 12.4983965705781,
+                        "upper_value": 15.275818030706564
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -327,8 +327,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 12.119943678611468,
-                        "lower_bound": 10.90794931075032,
-                        "upper_bound": 13.331938046472612
+                        "lower_value": 10.90794931075032,
+                        "upper_value": 13.331938046472612
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -347,8 +347,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 11.323306653976232,
-                        "lower_bound": 10.190975988578607,
-                        "upper_bound": 12.455637319373857
+                        "lower_value": 10.190975988578607,
+                        "upper_value": 12.455637319373857
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -367,8 +367,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 19.205238441354258,
-                        "lower_bound": 17.28471459721883,
-                        "upper_bound": 21.12576228548968
+                        "lower_value": 17.28471459721883,
+                        "upper_value": 21.12576228548968
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -387,8 +387,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 14.791563106848365,
-                        "lower_bound": 13.312406796163527,
-                        "upper_bound": 16.2707194175332
+                        "lower_value": 13.312406796163527,
+                        "upper_value": 16.2707194175332
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -435,8 +435,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 20.6971015060427,
-                        "lower_bound": 18.62739135543843,
-                        "upper_bound": 22.76681165664697
+                        "lower_value": 18.62739135543843,
+                        "upper_value": 22.76681165664697
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -455,8 +455,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 24.118021157821826,
-                        "lower_bound": 21.70621904203964,
-                        "upper_bound": 26.52982327360401
+                        "lower_value": 21.70621904203964,
+                        "upper_value": 26.52982327360401
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -475,8 +475,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 29.33519066616913,
-                        "lower_bound": 26.401671599552213,
-                        "upper_bound": 32.268709732786036
+                        "lower_value": 26.401671599552213,
+                        "upper_value": 32.268709732786036
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -495,8 +495,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 26.513651602923844,
-                        "lower_bound": 23.862286442631454,
-                        "upper_bound": 29.16501676321623
+                        "lower_value": 23.862286442631454,
+                        "upper_value": 29.16501676321623
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -515,8 +515,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 26.768095038300785,
-                        "lower_bound": 24.091285534470703,
-                        "upper_bound": 29.44490454213086
+                        "lower_value": 24.091285534470703,
+                        "upper_value": 29.44490454213086
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -535,8 +535,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 21.10788996443799,
-                        "lower_bound": 18.997100967994196,
-                        "upper_bound": 23.218678960881793
+                        "lower_value": 18.997100967994196,
+                        "upper_value": 23.218678960881793
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -555,8 +555,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 23.44133114519035,
-                        "lower_bound": 21.09719803067132,
-                        "upper_bound": 25.78546425970939
+                        "lower_value": 21.09719803067132,
+                        "upper_value": 25.78546425970939
                     },
                     "boundary": {
                         "lower_limit": null,
@@ -575,8 +575,8 @@
                     "threshold": null,
                     "metric": {
                         "value": 20.49978922728023,
-                        "lower_bound": 18.449810304552205,
-                        "upper_bound": 22.54976815000825
+                        "lower_value": 18.449810304552205,
+                        "upper_value": 22.54976815000825
                     },
                     "boundary": {
                         "lower_limit": null,

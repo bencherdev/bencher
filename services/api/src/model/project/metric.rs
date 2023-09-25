@@ -25,8 +25,8 @@ pub struct QueryMetric {
     pub perf_id: PerfId,
     pub metric_kind_id: MetricKindId,
     pub value: f64,
-    pub lower_bound: Option<f64>,
-    pub upper_bound: Option<f64>,
+    pub lower_value: Option<f64>,
+    pub upper_value: Option<f64>,
 }
 
 impl QueryMetric {
@@ -37,22 +37,22 @@ impl QueryMetric {
             .map_err(ApiError::from)
     }
 
-    pub fn json(value: f64, lower_bound: Option<f64>, upper_bound: Option<f64>) -> JsonMetric {
+    pub fn json(value: f64, lower_value: Option<f64>, upper_value: Option<f64>) -> JsonMetric {
         JsonMetric {
             value: value.into(),
-            lower_bound: lower_bound.map(Into::into),
-            upper_bound: upper_bound.map(Into::into),
+            lower_value: lower_value.map(Into::into),
+            upper_value: upper_value.map(Into::into),
         }
     }
 
     pub fn into_json(self) -> JsonMetric {
         let Self {
             value,
-            lower_bound,
-            upper_bound,
+            lower_value,
+            upper_value,
             ..
         } = self;
-        Self::json(value, lower_bound, upper_bound)
+        Self::json(value, lower_value, upper_value)
     }
 }
 
@@ -63,24 +63,24 @@ pub struct InsertMetric {
     pub perf_id: PerfId,
     pub metric_kind_id: MetricKindId,
     pub value: f64,
-    pub lower_bound: Option<f64>,
-    pub upper_bound: Option<f64>,
+    pub lower_value: Option<f64>,
+    pub upper_value: Option<f64>,
 }
 
 impl InsertMetric {
     pub fn from_json(perf_id: PerfId, metric_kind_id: MetricKindId, metric: JsonMetric) -> Self {
         let JsonMetric {
             value,
-            lower_bound,
-            upper_bound,
+            lower_value,
+            upper_value,
         } = metric;
         Self {
             perf_id,
             metric_kind_id,
             uuid: Uuid::new_v4().to_string(),
             value: value.into(),
-            lower_bound: lower_bound.map(Into::into),
-            upper_bound: upper_bound.map(Into::into),
+            lower_value: lower_value.map(Into::into),
+            upper_value: upper_value.map(Into::into),
         }
     }
 }

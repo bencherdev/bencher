@@ -79,11 +79,11 @@ impl DotNet {
                 JsonAverage::Median => (median, interquartile_range),
             };
             let value = latency_as_nanos(average, units);
-            let bound = latency_as_nanos(spread, units);
+            let spread = latency_as_nanos(spread, units);
             let json_metric = JsonMetric {
                 value,
-                lower_bound: Some(value - bound),
-                upper_bound: Some(value + bound),
+                lower_value: Some(value - spread),
+                upper_value: Some(value + spread),
             };
 
             benchmark_metrics.push((benchmark_name, json_metric));

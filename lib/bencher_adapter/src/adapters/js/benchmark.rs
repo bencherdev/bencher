@@ -77,8 +77,8 @@ fn parse_benchmark_time(input: &str) -> IResult<&str, JsonMetric> {
             let error = value * percent_error;
             JsonMetric {
                 value,
-                lower_bound: Some(value - error),
-                upper_bound: Some(value + error),
+                lower_value: Some(value - error),
+                upper_value: Some(value + error),
             }
         },
     )(input)

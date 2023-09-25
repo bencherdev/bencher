@@ -62,8 +62,8 @@ diesel::table! {
         perf_id -> Integer,
         metric_kind_id -> Integer,
         value -> Double,
-        lower_bound -> Nullable<Double>,
-        upper_bound -> Nullable<Double>,
+        lower_value -> Nullable<Double>,
+        upper_value -> Nullable<Double>,
     }
 }
 

@@ -4,6 +4,9 @@ heading: "Bencher Changelog"
 sortOrder: 4
 ---
 
+## Pending `v0.3.12`
+- Change Metric `lower_bound` and `upper_bound` to `lower_value` and `upper_value` respectively
+
 ## `v0.3.11`
 - Add strongly typed IDs for database entities
 - Remove deprecated configuration keys (`endpoint` => `console.url` and `secret_key` => `security.secret_key`)
