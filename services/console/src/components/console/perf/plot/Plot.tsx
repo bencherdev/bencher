@@ -1,5 +1,5 @@
 import { createElementSize } from "@solid-primitives/resize-observer";
-import { Accessor, createMemo, createResource } from "solid-js";
+import { type Accessor, createMemo, createResource } from "solid-js";
 import { createStore } from "solid-js/store";
 import LinePlot from "./LinePlot";
 import PlotKey from "./PlotKey";
@@ -8,6 +8,8 @@ import type { PerfRange } from "../../../../config/types";
 
 export interface Props {
 	range: Accessor<PerfRange>;
+	lower_value: Accessor<boolean>;
+	upper_value: Accessor<boolean>;
 	lower_boundary: Accessor<boolean>;
 	upper_boundary: Accessor<boolean>;
 	perfData: Accessor<JsonPerf>;
@@ -43,6 +45,8 @@ const Plot = (props: Props) => {
 				<LinePlot
 					perfData={props.perfData}
 					range={props.range}
+					lower_value={props.lower_value}
+					upper_value={props.upper_value}
 					lower_boundary={props.lower_boundary}
 					upper_boundary={props.upper_boundary}
 					perfActive={perfActive}

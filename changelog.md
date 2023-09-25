@@ -6,6 +6,7 @@ sortOrder: 4
 
 ## Pending `v0.3.12`
 - Change Metric `lower_bound` and `upper_bound` to `lower_value` and `upper_value` respectively
+- Add ability to visualize `lower_value` and `upper_value` in Perf Plot
 
 ## `v0.3.11`
 - Add strongly typed IDs for database entities

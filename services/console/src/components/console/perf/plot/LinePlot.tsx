@@ -1,6 +1,6 @@
 import * as Plot from "@observablehq/plot";
 import * as d3 from "d3";
-import { Accessor, createEffect, createSignal } from "solid-js";
+import { type Accessor, createEffect, createSignal } from "solid-js";
 import { addTooltips } from "./tooltip";
 import {
 	JsonAlertStatus,
@@ -13,6 +13,8 @@ import { PerfRange } from "../../../../config/types";
 export interface Props {
 	perfData: Accessor<JsonPerf>;
 	range: Accessor<PerfRange>;
+	lower_value: Accessor<boolean>;
+	upper_value: Accessor<boolean>;
 	lower_boundary: Accessor<boolean>;
 	upper_boundary: Accessor<boolean>;
 	perfActive: boolean[];
@@ -24,7 +26,16 @@ enum Position {
 	Upper,
 }
 
-const position_key = (position: Position) => {
+const value_end_position_key = (position: Position) => {
+	switch (position) {
+		case Position.Lower:
+			return "lower_value";
+		case Position.Upper:
+			return "upper_value";
+	}
+};
+
+const boundary_position_key = (position: Position) => {
 	switch (position) {
 		case Position.Lower:
 			return "lower_limit";
@@ -116,10 +127,13 @@ const LinePlot = (props: Props) => {
 			}
 
 			const line_data = [];
+			const alert_data = [];
 			perf_metrics.forEach((perf_metric) => {
-				line_data.push({
+				const datum = {
 					report: perf_metric.report,
 					value: perf_metric.metric?.value,
+					lower_value: perf_metric.metric?.lower_value,
+					upper_value: perf_metric.metric?.upper_value,
 					date_time: new Date(perf_metric.start_time),
 					number: perf_metric.version?.number,
 					hash: perf_metric.version?.hash,
@@ -140,7 +154,11 @@ const LinePlot = (props: Props) => {
 						? perf_metric.metric?.value * 1.1
 						: null,
 					alert: perf_metric.alert,
-				});
+				};
+				line_data.push(datum);
+				if (perf_metric.alert && is_active(perf_metric.alert)) {
+					alert_data.push(datum);
+				}
 				metrics_found = true;
 			});
 
@@ -164,6 +182,32 @@ const LinePlot = (props: Props) => {
 				}),
 			);
 
+			// Lower Value
+			if (props.lower_value()) {
+				plot_arrays.push(
+					Plot.line(line_data, value_end_line(x_axis, Position.Lower, color)),
+				);
+				plot_arrays.push(
+					Plot.dot(
+						line_data,
+						value_end_dot(x_axis, Position.Lower, color, project_slug),
+					),
+				);
+			}
+
+			// Upper Value
+			if (props.upper_value()) {
+				plot_arrays.push(
+					Plot.line(line_data, value_end_line(x_axis, Position.Upper, color)),
+				);
+				plot_arrays.push(
+					Plot.dot(
+						line_data,
+						value_end_dot(x_axis, Position.Upper, color, project_slug),
+					),
+				);
+			}
+
 			// Lower Boundary
 			if (props.lower_boundary()) {
 				plot_arrays.push(
@@ -181,7 +225,7 @@ const LinePlot = (props: Props) => {
 			}
 			alert_arrays.push(
 				Plot.image(
-					line_data,
+					alert_data,
 					alert_image(x_axis, Position.Lower, project_slug),
 				),
 			);
@@ -203,7 +247,7 @@ const LinePlot = (props: Props) => {
 			}
 			alert_arrays.push(
 				Plot.image(
-					line_data,
+					alert_data,
 					alert_image(x_axis, Position.Upper, project_slug),
 				),
 			);
@@ -283,10 +327,41 @@ const to_title = (prefix, datum, suffix) =>
 		datum.hash ? `\nVersion Hash: ${datum.hash}` : ""
 	}\nIteration: ${datum.iteration}${suffix}`;
 
+const value_end_line = (x_axis, position: Position, color) => {
+	return {
+		x: x_axis,
+		y: value_end_position_key(position),
+		stroke: color,
+		strokeWidth: 2,
+		strokeOpacity: 0.9,
+		strokeDasharray: [3],
+	};
+};
+
+const value_end_dot = (x_axis, position: Position, color, project_slug) => {
+	return {
+		x: x_axis,
+		y: value_end_position_key(position),
+		stroke: color,
+		strokeWidth: 2,
+		strokeOpacity: 0.9,
+		fill: color,
+		fillOpacity: 0.9,
+		title: (datum) => value_end_title(position, datum, ""),
+		// TODO enable this when there is an endpoint for getting a historical threshold statistic
+		// That is, the statistic displayed needs to be historical, not current.
+		// Just like with the Alerts.
+		// href: (datum) =>
+		// 	!is_active(datum.alert) &&
+		// 	`/console/projects/${project_slug}/thresholds/${datum.threshold}`,
+		// target: "_blank",
+	};
+};
+
 const boundary_line = (x_axis, position: Position, color) => {
 	return {
 		x: x_axis,
-		y: position_key(position),
+		y: boundary_position_key(position),
 		stroke: color,
 		strokeWidth: 4,
 		strokeOpacity: 0.666,
@@ -297,7 +372,7 @@ const boundary_line = (x_axis, position: Position, color) => {
 const boundary_dot = (x_axis, position: Position, color, project_slug) => {
 	return {
 		x: x_axis,
-		y: position_key(position),
+		y: boundary_position_key(position),
 		stroke: color,
 		strokeWidth: 4,
 		strokeOpacity: 0.666,
@@ -345,7 +420,7 @@ const is_skipped = (position: Position, datum) =>
 const alert_image = (x_axis, position: Position, project_slug) => {
 	return {
 		x: x_axis,
-		y: position_key(position),
+		y: boundary_position_key(position),
 		src: (datum) => (is_active(datum.alert) ? SIREN_URL : null),
 		width: 18,
 		title: (datum) =>
@@ -358,12 +433,23 @@ const alert_image = (x_axis, position: Position, project_slug) => {
 	};
 };
 
+const value_end_title = (position: Position, datum, suffix) =>
+	to_title(
+		`${position_label(position)} Value: ${
+			datum[value_end_position_key(position)]
+		}`,
+		datum,
+		suffix,
+	);
+
 const is_active = (alert: JsonPerfAlert) =>
 	alert?.status && alert.status == JsonAlertStatus.Active;
 
 const limit_title = (position: Position, datum, suffix) =>
 	to_title(
-		`${position_label(position)} Limit: ${datum[position_key(position)]}`,
+		`${position_label(position)} Limit: ${
+			datum[boundary_position_key(position)]
+		}`,
 		datum,
 		suffix,
 	);

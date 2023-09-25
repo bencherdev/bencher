@@ -4,7 +4,7 @@ import {
 	createResource,
 	createSignal,
 } from "solid-js";
-import PerfHeader, { PerfQuery } from "./PerfHeader";
+import PerfHeader, { type PerfQuery } from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
 import { createStore } from "solid-js/store";
 import {
@@ -50,6 +50,8 @@ const TAB_PARAM = "tab";
 const KEY_PARAM = "key";
 const RANGE_PARAM = "range";
 const CLEAR_PARAM = "clear";
+const LOWER_VALUE_PARAM = "lower_value";
+const UPPER_VALUE_PARAM = "upper_value";
 const LOWER_BOUNDARY_PARAM = "lower_boundary";
 const UPPER_BOUNDARY_PARAM = "upper_boundary";
 
@@ -57,6 +59,7 @@ const DEFAULT_PERF_TAB = PerfTab.REPORTS;
 const DEFAULT_PERF_KEY = true;
 const DEFAULT_PERF_RANGE = PerfRange.DATE_TIME;
 const DEFAULT_PERF_CLEAR = false;
+const DEFAULT_PERF_END_VALUE = false;
 const DEFAULT_PERF_BOUNDARY = false;
 
 const DEFAULT_PER_PAGE = 8;
@@ -188,6 +191,12 @@ const PerfPanel = (props: Props) => {
 	if (!isBoolParam(searchParams[CLEAR_PARAM])) {
 		initParams[CLEAR_PARAM] = null;
 	}
+	if (!isBoolParam(searchParams[LOWER_VALUE_PARAM])) {
+		initParams[LOWER_VALUE_PARAM] = null;
+	}
+	if (!isBoolParam(searchParams[UPPER_VALUE_PARAM])) {
+		initParams[UPPER_VALUE_PARAM] = null;
+	}
 	if (!isBoolParam(searchParams[LOWER_BOUNDARY_PARAM])) {
 		initParams[LOWER_BOUNDARY_PARAM] = null;
 	}
@@ -284,6 +293,13 @@ const PerfPanel = (props: Props) => {
 	// It works as a "dirty" bit to indicate that we shouldn't load the first report again.
 	const clear = createMemo(() =>
 		isBoolParamOrDefault(CLEAR_PARAM, DEFAULT_PERF_CLEAR),
+	);
+
+	const lower_value = createMemo(() =>
+		isBoolParamOrDefault(LOWER_VALUE_PARAM, DEFAULT_PERF_END_VALUE),
+	);
+	const upper_value = createMemo(() =>
+		isBoolParamOrDefault(UPPER_VALUE_PARAM, DEFAULT_PERF_END_VALUE),
 	);
 
 	const lower_boundary = createMemo(() =>
@@ -593,6 +609,8 @@ const PerfPanel = (props: Props) => {
 			?.benchmarks?.map((benchmark) => benchmark.uuid);
 		setSearchParams({
 			[CLEAR_PARAM]: true,
+			[LOWER_VALUE_PARAM]: null,
+			[UPPER_VALUE_PARAM]: null,
 			[LOWER_BOUNDARY_PARAM]: null,
 			[UPPER_BOUNDARY_PARAM]: null,
 			[REPORT_PARAM]: report?.uuid,
@@ -670,6 +688,8 @@ const PerfPanel = (props: Props) => {
 			if (clear) {
 				setSearchParams({
 					[CLEAR_PARAM]: true,
+					[LOWER_VALUE_PARAM]: null,
+					[UPPER_VALUE_PARAM]: null,
 					[LOWER_BOUNDARY_PARAM]: null,
 					[UPPER_BOUNDARY_PARAM]: null,
 					[REPORT_PARAM]: null,
@@ -684,6 +704,13 @@ const PerfPanel = (props: Props) => {
 				setSearchParams({ [CLEAR_PARAM]: clear });
 			}
 		}
+	};
+
+	const handleLowerValue = (end: boolean) => {
+		handleBool(LOWER_VALUE_PARAM, end);
+	};
+	const handleUpperValue = (end: boolean) => {
+		handleBool(UPPER_VALUE_PARAM, end);
 	};
 
 	const handleLowerBoundary = (boundary: boolean) => {
@@ -731,6 +758,8 @@ const PerfPanel = (props: Props) => {
 				key={key}
 				range={range}
 				clear={clear}
+				lower_value={lower_value}
+				upper_value={upper_value}
 				lower_boundary={lower_boundary}
 				upper_boundary={upper_boundary}
 				reports_tab={reports_tab}
@@ -752,6 +781,8 @@ const PerfPanel = (props: Props) => {
 				handleKey={handleKey}
 				handleRange={handleRange}
 				handleClear={handleClear}
+				handleLowerValue={handleLowerValue}
+				handleUpperValue={handleUpperValue}
 				handleLowerBoundary={handleLowerBoundary}
 				handleUpperBoundary={handleUpperBoundary}
 				handleReportChecked={handleReportChecked}

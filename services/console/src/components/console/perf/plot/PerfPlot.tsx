@@ -32,6 +32,8 @@ export interface Props {
 	key: Accessor<boolean>;
 	range: Accessor<PerfRange>;
 	clear: Accessor<boolean>;
+	lower_value: Accessor<boolean>;
+	upper_value: Accessor<boolean>;
 	lower_boundary: Accessor<boolean>;
 	upper_boundary: Accessor<boolean>;
 	reports_tab: TabList<JsonReport>;
@@ -53,6 +55,8 @@ export interface Props {
 	handleKey: (key: boolean) => void;
 	handleRange: (range: PerfRange) => void;
 	handleClear: (clear: boolean) => void;
+	handleLowerValue: (lower_value: boolean) => void;
+	handleUpperValue: (upper_value: boolean) => void;
 	handleLowerBoundary: (lower_boundary: boolean) => void;
 	handleUpperBoundary: (upper_boundary: boolean) => void;
 	handleReportChecked: (
@@ -85,6 +89,8 @@ const PerfPlot = (props: Props) => {
 						refresh={props.refresh}
 						range={props.range}
 						clear={props.clear}
+						lower_value={props.lower_value}
+						upper_value={props.upper_value}
 						lower_boundary={props.lower_boundary}
 						upper_boundary={props.upper_boundary}
 						handleMetricKind={props.handleMetricKind}
@@ -92,6 +98,8 @@ const PerfPlot = (props: Props) => {
 						handleEndTime={props.handleEndTime}
 						handleRange={props.handleRange}
 						handleClear={props.handleClear}
+						handleLowerValue={props.handleLowerValue}
+						handleUpperValue={props.handleUpperValue}
 						handleLowerBoundary={props.handleLowerBoundary}
 						handleUpperBoundary={props.handleUpperBoundary}
 					/>
@@ -101,6 +109,8 @@ const PerfPlot = (props: Props) => {
 							fallback={
 								<Plot
 									range={props.range}
+									lower_value={props.lower_value}
+									upper_value={props.upper_value}
 									lower_boundary={props.lower_boundary}
 									upper_boundary={props.upper_boundary}
 									perfData={props.perfData}

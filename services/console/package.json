@@ -32,6 +32,7 @@
     "bulma-divider": "^0.2.0",
     "bulma-pricingtable": "^0.2.0",
     "bulma-switch": "^2.0.4",
+    "bulma-tooltip": "^3.0.2",
     "d3": "^7.8.5",
     "htl": "^0.3.1",
     "solid-js": "^1.7.11",

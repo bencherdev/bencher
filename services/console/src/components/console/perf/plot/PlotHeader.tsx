@@ -1,5 +1,5 @@
 import {
-	Accessor,
+	type Accessor,
 	createEffect,
 	createMemo,
 	createResource,
@@ -25,6 +25,8 @@ export interface Props {
 	refresh: () => void;
 	range: Accessor<PerfRange>;
 	clear: Accessor<boolean>;
+	lower_value: Accessor<boolean>;
+	upper_value: Accessor<boolean>;
 	lower_boundary: Accessor<boolean>;
 	upper_boundary: Accessor<boolean>;
 	handleMetricKind: (metric_kind: null | string) => void;
@@ -32,6 +34,8 @@ export interface Props {
 	handleEndTime: (end_time: string) => void;
 	handleRange: (range: PerfRange) => void;
 	handleClear: (clear: boolean) => void;
+	handleLowerValue: (lower_value: boolean) => void;
+	handleUpperValue: (upper_value: boolean) => void;
 	handleLowerBoundary: (lower_boundary: boolean) => void;
 	handleUpperBoundary: (upper_boundary: boolean) => void;
 }
@@ -121,102 +125,218 @@ const PlotHeader = (props: Props) => {
 	return (
 		<nav class="panel-heading level">
 			<div class="level-left">
-				<select
-					class="card-header-title level-item"
-					title="Select Metric Kind"
-					onInput={(e) => handleInput(e.currentTarget.value)}
-				>
-					<For each={metric_kinds() ?? []}>
-						{(metric_kind: { name: string; slug: string }) => (
-							<option
-								value={metric_kind.slug}
-								selected={metric_kind.slug === selected()}
-							>
-								{metric_kind.name}
-							</option>
-						)}
-					</For>
-				</select>
+				<div class="level-item">
+					<div class="columns">
+						<div class="column">
+							<p>Metric Kind</p>
+							<div class="columns">
+								<div class="column">
+									<select
+										class="card-header-title level-item"
+										title="Select Metric Kind"
+										onInput={(e) => handleInput(e.currentTarget.value)}
+									>
+										<For each={metric_kinds() ?? []}>
+											{(metric_kind: { name: string; slug: string }) => (
+												<option
+													value={metric_kind.slug}
+													selected={metric_kind.slug === selected()}
+												>
+													{metric_kind.name}
+												</option>
+											)}
+										</For>
+									</select>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
 			</div>
 			<div class="level-right">
 				<Show when={!props.isPlotInit()} fallback={<></>}>
 					<>
 						<div class="level-item">
-							<BoundaryButton
-								boundary={props.lower_boundary}
-								handleBoundary={props.handleLowerBoundary}
-								position="Lower"
-								arrow="down"
-							/>
-							<BoundaryButton
-								boundary={props.upper_boundary}
-								handleBoundary={props.handleUpperBoundary}
-								position="Upper"
-								arrow="up"
-							/>
+							<div class="columns">
+								<div class="column">
+									<div
+										class="icon-text"
+										data-tooltip="Display lower/upper Metric values"
+									>
+										<span>⠀Value</span>
+										<span class="icon">
+											<i class="fas fa-info-circle" aria-hidden="true" />
+										</span>
+										<span>⠀</span>
+									</div>
+									<div class="columns">
+										<div class="column">
+											<nav class="level is-mobile">
+												<div class="level-item">
+													<LineArrowButton
+														param_key={props.lower_value}
+														handleParamKey={props.handleLowerValue}
+														position="Lower Value"
+														arrow="down"
+													/>
+													<LineArrowButton
+														param_key={props.upper_value}
+														handleParamKey={props.handleUpperValue}
+														position="Upper Value"
+														arrow="up"
+													/>
+												</div>
+											</nav>
+										</div>
+									</div>
+								</div>
+							</div>
 						</div>
 						<div class="level-item">
-							<button
-								class="button is-outlined is-fullwidth"
-								title={
-									props.range() === PerfRange.DATE_TIME
-										? "Switch to Version Range"
-										: "Switch to Date Range"
-								}
-								onClick={(e) => {
-									e.preventDefault();
-									switch (props.range()) {
-										case PerfRange.DATE_TIME:
-											props.handleRange(PerfRange.VERSION);
-											break;
-										case PerfRange.VERSION:
-											props.handleRange(PerfRange.DATE_TIME);
-											break;
-									}
-								}}
-							>
-								<span class="icon">{range_icon()}</span>
-							</button>
+							<div class="columns">
+								<div class="column">
+									<div
+										class="icon-text"
+										data-tooltip="Display lower/upper Threshold Boundary Limits"
+									>
+										<span>Boundary</span>
+										<span class="icon">
+											<i class="fas fa-info-circle" aria-hidden="true" />
+										</span>
+									</div>
+									<div class="columns">
+										<div class="column">
+											<nav class="level is-mobile">
+												<div class="level-item">
+													<LineArrowButton
+														param_key={props.lower_boundary}
+														handleParamKey={props.handleLowerBoundary}
+														position="Lower Boundary"
+														arrow="down"
+													/>
+													<LineArrowButton
+														param_key={props.upper_boundary}
+														handleParamKey={props.handleUpperBoundary}
+														position="Upper Boundary"
+														arrow="up"
+													/>
+												</div>
+											</nav>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="level-item">
+							<div class="level-item">
+								<div class="columns">
+									<div class="column">
+										<div
+											class="icon-text"
+											data-tooltip="Toggle X-Axis between Date and Branch Version"
+										>
+											<span>⠀X-Axis</span>
+											<span class="icon">
+												<i class="fas fa-info-circle" aria-hidden="true" />
+											</span>
+											<span>⠀</span>
+										</div>
+										<div class="columns">
+											<div class="column">
+												<button
+													class="button is-outlined is-fullwidth"
+													title={
+														props.range() === PerfRange.DATE_TIME
+															? "Switch to Version Range"
+															: "Switch to Date Range"
+													}
+													onClick={(e) => {
+														e.preventDefault();
+														switch (props.range()) {
+															case PerfRange.DATE_TIME:
+																props.handleRange(PerfRange.VERSION);
+																break;
+															case PerfRange.VERSION:
+																props.handleRange(PerfRange.DATE_TIME);
+																break;
+														}
+													}}
+												>
+													<span class="icon">{range_icon()}</span>
+												</button>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
 						</div>
 					</>
 				</Show>
 				<div class="level-item">
 					<nav class="level is-mobile">
 						<div class="level-item">
-							<input
-								title="Start Date"
-								type="date"
-								value={props.start_date() ?? ""}
-								onInput={(e) => props.handleStartTime(e.currentTarget?.value)}
-							/>
-						</div>
-						<div class="level-item has-text-centered">
-							<p>-</p>
+							<div class="columns">
+								<div class="column">
+									<p>Start Date</p>
+									<div class="columns">
+										<div class="column">
+											<input
+												title="Start Date"
+												type="date"
+												value={props.start_date() ?? ""}
+												onInput={(e) =>
+													props.handleStartTime(e.currentTarget?.value)
+												}
+											/>
+										</div>
+									</div>
+								</div>
+							</div>
 						</div>
 						<div class="level-item">
-							<input
-								title="End Date"
-								type="date"
-								value={props.end_date() ?? ""}
-								onInput={(e) => props.handleEndTime(e.currentTarget?.value)}
-							/>
+							<div class="columns">
+								<div class="column">
+									<p>End Date</p>
+									<div class="columns">
+										<div class="column">
+											<input
+												title="End Date"
+												type="date"
+												value={props.end_date() ?? ""}
+												onInput={(e) =>
+													props.handleEndTime(e.currentTarget?.value)
+												}
+											/>
+										</div>
+									</div>
+								</div>
+							</div>
 						</div>
 					</nav>
 				</div>
 				<Show when={!props.isPlotInit()} fallback={<></>}>
 					<div class="level-item">
-						<button
-							class="button is-outlined is-fullwidth"
-							title="Clear Query"
-							onClick={(e) => {
-								e.preventDefault();
-								props.handleClear(true);
-							}}
-						>
-							<span class="icon">
-								<i class="fas fa-times-circle" aria-hidden="true" />
-							</span>
-						</button>
+						<div class="columns">
+							<div class="column">
+								<p>⠀Clear⠀</p>
+								<div class="columns">
+									<div class="column">
+										<button
+											class="button is-outlined is-fullwidth"
+											title="Clear Query"
+											onClick={(e) => {
+												e.preventDefault();
+												props.handleClear(true);
+											}}
+										>
+											<span class="icon">
+												<i class="fas fa-times-circle" aria-hidden="true" />
+											</span>
+										</button>
+									</div>
+								</div>
+							</div>
+						</div>
 					</div>
 				</Show>
 			</div>
@@ -224,21 +344,21 @@ const PlotHeader = (props: Props) => {
 	);
 };
 
-const BoundaryButton = (props: {
-	boundary: Accessor<boolean>;
-	handleBoundary: (boundary: boolean) => void;
+const LineArrowButton = (props: {
+	param_key: Accessor<boolean>;
+	handleParamKey: (param_key: boolean) => void;
 	position: string;
 	arrow: string;
 }) => {
 	return (
 		<button
 			class={`button ${
-				props.boundary() ? "is-primary" : "is-outlined"
+				props.param_key() ? "is-primary" : "is-outlined"
 			} is-fullwidth`}
-			title={`${props.boundary() ? "Hide" : "Show"} ${props.position} Boundary`}
+			title={`${props.param_key() ? "Hide" : "Show"} ${props.position}`}
 			onClick={(e) => {
 				e.preventDefault();
-				props.handleBoundary(!props.boundary());
+				props.handleParamKey(!props.param_key());
 			}}
 		>
 			<span class="icon">
