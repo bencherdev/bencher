@@ -1,6 +1,9 @@
 use derive_more::Display;
 use once_cell::sync::Lazy;
+#[cfg(not(feature = "wasm"))]
 use regex::Regex;
+#[cfg(feature = "wasm")]
+use regex_lite::Regex;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use std::{fmt, str::FromStr};

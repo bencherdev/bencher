@@ -28,7 +28,7 @@ WORKDIR /usr/src/lib
 COPY lib/bencher_valid bencher_valid
 
 WORKDIR /usr/src/lib/bencher_valid
-RUN wasm-pack build --target web --features plus,wasm
+RUN wasm-pack build --target web --no-default-features --features plus,wasm
 
 # https://hub.docker.com/_/node
 FROM node:18.17.1-bookworm

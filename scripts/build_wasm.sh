@@ -10,6 +10,6 @@ WASM_OPT="wasm-opt ="
 
 test $ARCH = "aarch64" && sed -i "s/$WASM_OPT true/$WASM_OPT false/g" $CARGO_TOML; true
 
-wasm-pack build ../../lib/bencher_valid --target web --features plus,wasm
+wasm-pack build ../../lib/bencher_valid --target web --no-default-features --features plus,wasm
 
 test $ARCH = "aarch64" && sed -i "s/$WASM_OPT false/$WASM_OPT true/g" $CARGO_TOML; true

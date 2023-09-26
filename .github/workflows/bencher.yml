@@ -62,8 +62,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build next Bencher CLI GitHub Action
+        working-directory: ./services/action
         run: |
-          cd services/action
           npm install --include=dev
           npm run build
       - uses: bencherdev/bencher@main
@@ -164,9 +164,8 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: cargo check
-        run: |
-          cd services/api
-          cargo check --no-default-features
+        working-directory: ./services/api
+        run: cargo check --no-default-features
 
   cargo_check_cli_minus:
     name: Cargo Check CLI (Minus)
@@ -180,9 +179,8 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: cargo check
-        run: |
-          cd services/cli
-          cargo check --no-default-features
+        working-directory: ./services/cli
+        run: cargo check --no-default-features
 
   # Cargo Benchmark
   cargo_bench:
@@ -292,7 +290,7 @@ jobs:
     name: Build `bencher_valid` WASM
     runs-on: ubuntu-latest
     env:
-      WASM_PACK_BUILD: "wasm-pack build --target web --features plus,wasm"
+      WASM_PACK_BUILD: "wasm-pack build --target web --no-default-features --features plus,wasm"
     steps:
       - uses: actions/checkout@v4
       - uses: jetli/wasm-pack-action@v0.4.0
@@ -307,6 +305,21 @@ jobs:
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
           path: ./lib/bencher_valid/pkg
+
+  test_bencher_valid_wasm:
+    name: Test `bencher_valid` WASM
+    runs-on: ubuntu-latest
+    needs:
+      - cargo_fmt
+      - cargo_clippy
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
+      - name: cargo test `bencher_valid` WASM
+        working-directory: ./lib/bencher_valid
+        run: cargo test --no-default-features --features plus,wasm
 
   # NPM Test
   npx_vitest:
@@ -584,6 +597,7 @@ jobs:
       - cargo_bench
       - cargo_audit
       - cargo_udeps
+      - test_bencher_valid_wasm
       - npx_vitest
       # Build
       - build_litestream_api_docker
@@ -713,6 +727,7 @@ jobs:
       - cargo_bench
       - cargo_audit
       - cargo_udeps
+      - test_bencher_valid_wasm
       - npx_vitest
       # Integrations
       - bencher_github_action

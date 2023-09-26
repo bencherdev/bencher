@@ -1,6 +1,9 @@
 use derive_more::Display;
 use once_cell::sync::Lazy;
+#[cfg(not(feature = "wasm"))]
 use regex::Regex;
+#[cfg(feature = "wasm")]
+use regex_lite::Regex;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use std::{fmt, str::FromStr};
@@ -16,7 +19,7 @@ use crate::{is_valid_len, ValidError, REGEX_ERROR};
 
 #[allow(clippy::expect_used)]
 static NAME_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^[[[:alnum:]] ,\.\-']{1,50}$").expect(REGEX_ERROR));
+    Lazy::new(|| Regex::new(r"^[0-9A-Za-z ,\.\-']{1,50}$").expect(REGEX_ERROR));
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]

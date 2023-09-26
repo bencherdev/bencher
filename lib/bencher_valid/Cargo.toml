@@ -8,9 +8,15 @@ edition.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
+default = ["dep:regex"]
 plus = ["chrono/clock"]
 schema = ["dep:schemars", "ordered-float/schemars"]
-wasm = ["dep:wasm-bindgen", "dep:console_error_panic_hook", "chrono/wasmbind"]
+wasm = [
+    "dep:wasm-bindgen",
+    "dep:console_error_panic_hook",
+    "dep:regex-lite",
+    "chrono/wasmbind",
+]
 
 [dependencies]
 # Workspace
@@ -31,7 +37,8 @@ console_error_panic_hook = { version = "0.1", optional = true }
 email_address = "0.2"
 gix-hash = "0.12"
 git-validate = "0.7"
-regex = "1.9"
+regex = { version = "1.9", optional = true }
+regex-lite = { version = "0.1", optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
 
 [dev-dependencies]

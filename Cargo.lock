@@ -857,6 +857,7 @@ dependencies = [
  "ordered-float",
  "pretty_assertions",
  "regex",
+ "regex-lite",
  "schemars",
  "serde",
  "serde_json",
@@ -3987,6 +3988,12 @@ dependencies = [
  "memchr",
  "regex-syntax 0.7.5",
 ]
+
+[[package]]
+name = "regex-lite"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f96ede7f386ba6e910092e7ccdc04176cface62abebea07ed6b46d870ed95ca2"
 
 [[package]]
 name = "regex-syntax"
