@@ -10,6 +10,11 @@ import {
 } from "../../../../types/bencher";
 import { PerfRange } from "../../../../config/types";
 
+// Source: https://twemoji.twitter.com
+// License: https://creativecommons.org/licenses/by/4.0
+const WARNING_URL = "https://s3.amazonaws.com/public.bencher.dev/warning.png";
+const SIREN_URL = "https://s3.amazonaws.com/public.bencher.dev/siren.png";
+
 export interface Props {
 	perfData: Accessor<JsonPerf>;
 	range: Accessor<PerfRange>;
@@ -44,15 +49,6 @@ const boundary_position_key = (position: Position) => {
 	}
 };
 
-const position_skipped_key = (position: Position) => {
-	switch (position) {
-		case Position.Lower:
-			return "lower_boundary_skipped";
-		case Position.Upper:
-			return "upper_boundary_skipped";
-	}
-};
-
 const position_label = (position: Position) => {
 	switch (position) {
 		case Position.Lower:
@@ -61,6 +57,34 @@ const position_label = (position: Position) => {
 			return "Upper";
 	}
 };
+
+const get_units = (json_perf: JsonPerf) => {
+	const units = json_perf?.metric_kind?.units;
+	if (units) {
+		return units;
+	} else {
+		return "units";
+	}
+};
+
+const get_x_axis = (range: PerfRange): [string, string] => {
+	switch (range) {
+		case PerfRange.DATE_TIME:
+			return ["date_time", "Report Date and Time"];
+		case PerfRange.VERSION:
+			return ["number", "Branch Version Number"];
+	}
+};
+
+const is_active = (alert: JsonPerfAlert) =>
+	alert?.status && alert.status == JsonAlertStatus.Active;
+
+// A boundary is skipped if it is defined but its limit undefined
+// This indicates that the the boundary limit could not be calculated for the metric
+const boundary_skipped = (
+	boundary: undefined | Boundary,
+	limit: undefined | number,
+) => boundary && !limit;
 
 const LinePlot = (props: Props) => {
 	const [is_plotted, set_is_plotted] = createSignal(false);
@@ -82,24 +106,6 @@ const LinePlot = (props: Props) => {
 		}
 	});
 
-	const get_units = (json_perf: JsonPerf) => {
-		const units = json_perf?.metric_kind?.units;
-		if (units) {
-			return units;
-		} else {
-			return "units";
-		}
-	};
-
-	const get_x_axis = () => {
-		switch (props.range()) {
-			case PerfRange.DATE_TIME:
-				return ["date_time", "Report Date and Time"];
-			case PerfRange.VERSION:
-				return ["number", "Branch Version Number"];
-		}
-	};
-
 	const plotted = () => {
 		const json_perf: JsonPerf = props.perfData();
 		// console.log(json_perf);
@@ -113,9 +119,10 @@ const LinePlot = (props: Props) => {
 		}
 
 		const units = get_units(json_perf);
-		const [x_axis, x_axis_label] = get_x_axis();
+		const [x_axis, x_axis_label] = get_x_axis(props.range());
 
 		const plot_arrays = [];
+		const warn_arrays = [];
 		const alert_arrays = [];
 		let metrics_found = false;
 		const colors = d3.schemeTableau10;
@@ -128,6 +135,9 @@ const LinePlot = (props: Props) => {
 
 			const line_data = [];
 			const alert_data = [];
+			const boundary_data = [];
+			const skipped_lower_data = [];
+			const skipped_upper_data = [];
 			perf_metrics.forEach((perf_metric) => {
 				const datum = {
 					report: perf_metric.report,
@@ -138,31 +148,54 @@ const LinePlot = (props: Props) => {
 					number: perf_metric.version?.number,
 					hash: perf_metric.version?.hash,
 					iteration: perf_metric.iteration,
-					threshold: perf_metric.threshold?.uuid,
 					lower_limit: perf_metric.boundary?.lower_limit,
-					lower_boundary_skipped: boundary_skipped(
+					upper_limit: perf_metric.boundary?.upper_limit,
+				};
+				line_data.push(datum);
+
+				const limit_datum = {
+					date_time: datum.date_time,
+					number: datum.number,
+					hash: datum.hash,
+					iteration: datum.iteration,
+					lower_limit: datum.lower_limit,
+					upper_limit: datum.upper_limit,
+				};
+				if (perf_metric.alert && is_active(perf_metric.alert)) {
+					alert_data.push(limit_datum);
+				} else {
+					boundary_data.push(limit_datum);
+				}
+
+				if (
+					boundary_skipped(
 						perf_metric.threshold?.statistic?.lower_boundary,
 						perf_metric.boundary?.lower_limit,
 					)
-						? perf_metric.metric?.value * 0.9
-						: null,
-					upper_limit: perf_metric.boundary?.upper_limit,
-					upper_boundary_skipped: boundary_skipped(
+				) {
+					skipped_lower_data.push({
+						date_time: datum.date_time,
+						number: datum.number,
+						y: perf_metric.metric?.value * 0.9,
+					});
+				}
+				if (
+					boundary_skipped(
 						perf_metric.threshold?.statistic?.upper_boundary,
 						perf_metric.boundary?.upper_limit,
 					)
-						? perf_metric.metric?.value * 1.1
-						: null,
-					alert: perf_metric.alert,
-				};
-				line_data.push(datum);
-				if (perf_metric.alert && is_active(perf_metric.alert)) {
-					alert_data.push(datum);
+				) {
+					skipped_upper_data.push({
+						date_time: datum.date_time,
+						number: datum.number,
+						y: perf_metric.metric?.value * 1.1,
+					});
 				}
+
 				metrics_found = true;
 			});
 
-			const color = colors[index % 10];
+			const color = colors[index % 10] ?? "7f7f7f";
 			// Line
 			plot_arrays.push(
 				Plot.line(line_data, {
@@ -188,10 +221,7 @@ const LinePlot = (props: Props) => {
 					Plot.line(line_data, value_end_line(x_axis, Position.Lower, color)),
 				);
 				plot_arrays.push(
-					Plot.dot(
-						line_data,
-						value_end_dot(x_axis, Position.Lower, color, project_slug),
-					),
+					Plot.dot(line_data, value_end_dot(x_axis, Position.Lower, color)),
 				);
 			}
 
@@ -201,10 +231,7 @@ const LinePlot = (props: Props) => {
 					Plot.line(line_data, value_end_line(x_axis, Position.Upper, color)),
 				);
 				plot_arrays.push(
-					Plot.dot(
-						line_data,
-						value_end_dot(x_axis, Position.Upper, color, project_slug),
-					),
+					Plot.dot(line_data, value_end_dot(x_axis, Position.Upper, color)),
 				);
 			}
 
@@ -214,14 +241,9 @@ const LinePlot = (props: Props) => {
 					Plot.line(line_data, boundary_line(x_axis, Position.Lower, color)),
 				);
 				plot_arrays.push(
-					Plot.dot(
-						line_data,
-						boundary_dot(x_axis, Position.Lower, color, project_slug),
-					),
+					Plot.dot(boundary_data, boundary_dot(x_axis, Position.Lower, color)),
 				);
-				plot_arrays.push(
-					Plot.image(line_data, warning_image(x_axis, Position.Lower)),
-				);
+				warn_arrays.push(Plot.image(skipped_lower_data, warning_image(x_axis)));
 			}
 			alert_arrays.push(
 				Plot.image(
@@ -236,14 +258,9 @@ const LinePlot = (props: Props) => {
 					Plot.line(line_data, boundary_line(x_axis, Position.Upper, color)),
 				);
 				plot_arrays.push(
-					Plot.dot(
-						line_data,
-						boundary_dot(x_axis, Position.Upper, color, project_slug),
-					),
+					Plot.dot(boundary_data, boundary_dot(x_axis, Position.Upper, color)),
 				);
-				plot_arrays.push(
-					Plot.image(line_data, warning_image(x_axis, Position.Upper)),
-				);
+				warn_arrays.push(Plot.image(skipped_upper_data, warning_image(x_axis)));
 			}
 			alert_arrays.push(
 				Plot.image(
@@ -253,7 +270,7 @@ const LinePlot = (props: Props) => {
 			);
 		});
 		// This allows the alert images to appear on top of the plot lines.
-		plot_arrays.push(...alert_arrays);
+		plot_arrays.push(...warn_arrays, ...alert_arrays);
 
 		if (metrics_found) {
 			return (
@@ -306,13 +323,6 @@ const LinePlot = (props: Props) => {
 	return <>{plotted()}</>;
 };
 
-// A boundary is skipped if it is defined but its limit undefined
-// This indicates that the the boundary limit could not be calculated for the metric
-const boundary_skipped = (
-	boundary: undefined | Boundary,
-	limit: undefined | number,
-) => boundary && !limit;
-
 const to_title = (prefix, datum, suffix) =>
 	`${prefix}\n${datum.date_time?.toLocaleString(undefined, {
 		weekday: "short",
@@ -327,7 +337,7 @@ const to_title = (prefix, datum, suffix) =>
 		datum.hash ? `\nVersion Hash: ${datum.hash}` : ""
 	}\nIteration: ${datum.iteration}${suffix}`;
 
-const value_end_line = (x_axis, position: Position, color) => {
+const value_end_line = (x_axis: string, position: Position, color: string) => {
 	return {
 		x: x_axis,
 		y: value_end_position_key(position),
@@ -338,7 +348,7 @@ const value_end_line = (x_axis, position: Position, color) => {
 	};
 };
 
-const value_end_dot = (x_axis, position: Position, color, project_slug) => {
+const value_end_dot = (x_axis: string, position: Position, color: string) => {
 	return {
 		x: x_axis,
 		y: value_end_position_key(position),
@@ -358,7 +368,7 @@ const value_end_dot = (x_axis, position: Position, color, project_slug) => {
 	};
 };
 
-const boundary_line = (x_axis, position: Position, color) => {
+const boundary_line = (x_axis: string, position: Position, color) => {
 	return {
 		x: x_axis,
 		y: boundary_position_key(position),
@@ -369,7 +379,7 @@ const boundary_line = (x_axis, position: Position, color) => {
 	};
 };
 
-const boundary_dot = (x_axis, position: Position, color, project_slug) => {
+const boundary_dot = (x_axis: string, position: Position, color: string) => {
 	return {
 		x: x_axis,
 		y: boundary_position_key(position),
@@ -378,8 +388,7 @@ const boundary_dot = (x_axis, position: Position, color, project_slug) => {
 		strokeOpacity: 0.666,
 		fill: color,
 		fillOpacity: 0.666,
-		title: (datum) =>
-			!is_active(datum.alert) && limit_title(position, datum, ""),
+		title: (datum) => limit_title(position, datum, ""),
 		// TODO enable this when there is an endpoint for getting a historical threshold statistic
 		// That is, the statistic displayed needs to be historical, not current.
 		// Just like with the Alerts.
@@ -390,44 +399,30 @@ const boundary_dot = (x_axis, position: Position, color, project_slug) => {
 	};
 };
 
-const warning_image = (x_axis, position: Position) => {
+const warning_image = (x_axis: string) => {
+	console.log("warning_image");
 	return {
 		x: x_axis,
-		y: position_skipped_key(position),
-		src: (datum) => WARNING_URL,
+		y: "y",
+		src: WARNING_URL,
 		width: 18,
-		title: (datum) =>
-			is_skipped(position, datum) &&
+		title: (_datum) =>
 			"Boundary Limit was not calculated.\nThis can happen for a couple of reasons:\n- There is not enough data yet (n < 2) (Most Common)\n- All the metric values are the same (variance == 0)",
 	};
 };
 
-const skipped_offset = (position: Position, datum) => {
-	if (!is_skipped(position, datum)) {
-		return;
-	}
-	switch (position) {
-		case Position.Lower:
-			return datum.value * 0.9;
-		case Position.Upper:
-			return datum.value * 1.1;
-	}
-};
-const is_skipped = (position: Position, datum) =>
-	(position === Position.Lower && datum.lower_boundary_skipped) ||
-	(position === Position.Upper && datum.upper_boundary_skipped);
-
-const alert_image = (x_axis, position: Position, project_slug) => {
+const alert_image = (
+	x_axis: string,
+	position: Position,
+	project_slug: string,
+) => {
 	return {
 		x: x_axis,
 		y: boundary_position_key(position),
-		src: (datum) => (is_active(datum.alert) ? SIREN_URL : null),
+		src: SIREN_URL,
 		width: 18,
-		title: (datum) =>
-			is_active(datum.alert) &&
-			limit_title(position, datum, "\nClick to view Alert"),
+		title: (datum) => limit_title(position, datum, "\nClick to view Alert"),
 		href: (datum) =>
-			is_active(datum.alert) &&
 			`/console/projects/${project_slug}/alerts/${datum.alert?.uuid}`,
 		target: "_blank",
 	};
@@ -442,9 +437,6 @@ const value_end_title = (position: Position, datum, suffix) =>
 		suffix,
 	);
 
-const is_active = (alert: JsonPerfAlert) =>
-	alert?.status && alert.status == JsonAlertStatus.Active;
-
 const limit_title = (position: Position, datum, suffix) =>
 	to_title(
 		`${position_label(position)} Limit: ${
@@ -453,10 +445,5 @@ const limit_title = (position: Position, datum, suffix) =>
 		datum,
 		suffix,
 	);
-
-// Source: https://twemoji.twitter.com
-// License: https://creativecommons.org/licenses/by/4.0
-const WARNING_URL = "https://s3.amazonaws.com/public.bencher.dev/warning.png";
-const SIREN_URL = "https://s3.amazonaws.com/public.bencher.dev/siren.png";
 
 export default LinePlot;

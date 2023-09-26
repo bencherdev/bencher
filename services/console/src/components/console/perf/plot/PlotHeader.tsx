@@ -54,7 +54,7 @@ const PlotHeader = (props: Props) => {
 		token: undefined | string;
 	}) => {
 		const SELECT_METRIC_KIND = {
-			name: "Metric Kind",
+			name: "Select Metric Kind",
 			slug: BENCHER_METRIC_KIND,
 		};
 		if (!fetcher.project) {
