@@ -1,3 +1,4 @@
+import bencher_valid_init from "bencher_valid";
 import {
 	createEffect,
 	createMemo,
@@ -153,6 +154,9 @@ export interface Props {
 }
 
 const PerfPanel = (props: Props) => {
+	const [bencher_valid] = createResource(
+		async () => await bencher_valid_init(),
+	);
 	const params = createMemo(() => props.params);
 	const [searchParams, setSearchParams] = useSearchParams();
 	const user = authUser();
@@ -592,7 +596,8 @@ const PerfPanel = (props: Props) => {
 		setSearchParams({
 			[CLEAR_PARAM]: true,
 			[REPORT_PARAM]: null,
-			[METRIC_KIND_PARAM]: validSlug(metric_kind) ? metric_kind : null,
+			[METRIC_KIND_PARAM]:
+				bencher_valid() && validSlug(metric_kind) ? metric_kind : null,
 		});
 	};
 

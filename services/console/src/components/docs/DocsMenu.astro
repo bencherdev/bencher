@@ -15,47 +15,50 @@ reference.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 ---
 
 <aside class="menu is-sticky">
-    <p class="menu-label">Tutorial</p>
-    <ul class="menu-list">
-        {
-            tutorial.map((page) => (
-              <li>
-                <a href={`/docs/tutorial/${page.slug}`}>{page.data.title}</a>
-              </li>
-            ))
-          }
-    </ul>
-    <p class="menu-label">How To</p>
-    <ul class="menu-list">
-        {
-            how_to.map((page) => (
-              <li>
-                <a href={`/docs/how-to/${page.slug}`}>{page.data.title}</a>
-              </li>
-            ))
-          }
-    </ul>
-    <p class="menu-label">Explanation</p>
-    <ul class="menu-list">
-        {
-            explanation.map((page) => (
-              <li>
-                <a href={`/docs/explanation/${page.slug}`}>{page.data.title}</a>
-              </li>
-            ))
-          }
-    </ul>
-    <p class="menu-label">Reference</p>
-    <ul class="menu-list">
-      <li>
-        <a href="/docs/reference/api">REST API</a>
-      </li>
-        {
-            reference.map((page) => (
-              <li>
-                <a href={`/docs/reference/${page.slug}`}>{page.data.title}</a>
-              </li>
-            ))
-          }
-    </ul>
+  <p class="menu-label">Tutorial</p>
+  <ul class="menu-list">
+    {
+      tutorial.map((page) => (
+        <li>
+          <a href={`/docs/tutorial/${page.slug}`}>{page.data.title}</a>
+        </li>
+      ))
+    }
+  </ul>
+  <p class="menu-label">How To</p>
+  <ul class="menu-list">
+    {
+      how_to.map((page) => (
+        <li>
+          <a href={`/docs/how-to/${page.slug}`}>{page.data.title}</a>
+        </li>
+      ))
+    }
+  </ul>
+  <p class="menu-label">Explanation</p>
+  <ul class="menu-list">
+    {
+      explanation.map((page) => (
+        <li>
+          <a href={`/docs/explanation/${page.slug}`}>{page.data.title}</a>
+        </li>
+      ))
+    }
+  </ul>
+  <p class="menu-label">Reference</p>
+  <ul class="menu-list">
+    <li>
+      <a href="/docs/reference/api">REST API</a>
+    </li>
+    <li>
+      <a href="/docs/reference/architecture">Architecture</a>
+    </li>
+    {
+      reference.map((page) => (
+        <li>
+          <a href={`/docs/reference/${page.slug}`}>{page.data.title}</a>
+        </li>
+      ))
+    }
+  </ul>
 </aside>

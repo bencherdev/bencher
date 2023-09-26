@@ -98,6 +98,7 @@ const PlotHeader = (props: Props) => {
 
 	createEffect(() => {
 		const slug = props.metric_kind();
+		console.log(slug);
 		if (slug) {
 			setSelected(slug);
 		} else {

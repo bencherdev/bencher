@@ -1,10 +1,10 @@
 import bencher_valid_init from "bencher_valid";
 import { For, Show, createResource, createSignal } from "solid-js";
-import Field, { FieldConfig, FieldValue } from "../../field/Field";
+import Field, { type FieldConfig, type FieldValue } from "../../field/Field";
 import FieldKind from "../../field/kind";
 import { createStore } from "solid-js/store";
 import { authUser } from "../../../util/auth";
-import { pathname, useSearchParams } from "../../../util/url";
+import { pathname } from "../../../util/url";
 import { validJwt } from "../../../util/valid";
 import { Operation, Resource, resourceSingular } from "../../../config/types";
 import { httpPost, httpPut } from "../../../util/http";
