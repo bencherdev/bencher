@@ -162,7 +162,7 @@ const LinePlot = (props: Props) => {
 					upper_limit: datum.upper_limit,
 				};
 				if (perf_metric.alert && is_active(perf_metric.alert)) {
-					alert_data.push(limit_datum);
+					alert_data.push({ ...limit_datum, alert: perf_metric.alert });
 				} else {
 					boundary_data.push(limit_datum);
 				}
