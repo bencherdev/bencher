@@ -20,6 +20,7 @@ deb/
 **.DS_Store
 
 out.txt
+out.json
 
 # Default docker volume
 data/

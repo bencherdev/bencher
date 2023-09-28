@@ -13,6 +13,7 @@ This page will explain the options, flags, and arguments that can be passed to `
 
 The first and only argument to `bencher run` is the optional benchmark command.
 This is the command that will be executed, invoking your benchmark harness.
+It can also be set using the `BENCHER_CMD` environment variable.
 The command is executed in a shell, which can be configured with the `--shell` and `--flag` options.
 Its output is parsed by a benchmark harness adapter, which can be set using the `--adapter` option.
 However, if the benchmark harness outputs to a file then the `--file` option must also be used to specify the output file path.
@@ -27,8 +28,9 @@ The benchmark command can be run multiple times using the `--iter` option,
 and those results can be folded into a single result using the `--fold` option.
 If any of the iterations fail, then the entire command is considered to have failed unless the `--allow-failure` flag is set.
 
-If the benchmark command is not specified, then `bencher run` will read from `stdin` instead.
-This allows you to pipe the output of another command into `bencher run`.
+If the benchmark command is not specified but the `--file` option is, then `bencher run` will read from output file path instead.
+If both the benchmark command and  `--file` option are not specified, then `bencher run` will read from `stdin` instead.
+This allows you to save the output of another command to a file or pipe it into `bencher run`, respectively.
 
 ## Options
 

@@ -3,6 +3,8 @@ title: "Changelog"
 heading: "Bencher Changelog"
 sortOrder: 4
 ---
+## Pending `v0.3.13`
+- Add ability for `bencher run` to read output from a file without running a command argument
 
 ## `v0.3.12`
 - Change Metric `lower_bound` and `upper_bound` to `lower_value` and `upper_value` respectively

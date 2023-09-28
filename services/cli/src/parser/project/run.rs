@@ -98,7 +98,7 @@ pub struct CliRunBranch {
 #[derive(Args, Debug)]
 pub struct CliRunCommand {
     /// Benchmark command output file path
-    #[clap(long, requires = "cmd")]
+    #[clap(long)]
     pub file: Option<PathBuf>,
 
     #[clap(flatten)]

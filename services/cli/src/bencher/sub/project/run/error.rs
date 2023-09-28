@@ -33,8 +33,6 @@ pub enum RunError {
     #[error("Failed to run command due to a non-zero exit code: {0}")]
     ExitStatus(crate::bencher::sub::Output),
 
-    #[error("Failed to open output file: {0}")]
-    OutputFileOpen(std::io::Error),
     #[error("Failed to read from output file: {0}")]
     OutputFileRead(std::io::Error),
 

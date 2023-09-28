@@ -223,13 +223,14 @@ jobs:
       - uses: bencherdev/bencher@main
           - name: Track Benchmarks with Bencher
             run: |
-              cat $BENCHMARK_RESULTS | bencher run \\
+              bencher run \\
               --if-branch "${{ env.PR_HEAD }}" \\
               --else-if-branch "${{ env.PR_BASE }}" \\
               --else-if-branch main \\
               --err \\
               --github-actions \${{ secrets.GITHUB_TOKEN }} \\
-              --ci-number ${{ env.PR_NUMBER }}
+              --ci-number ${{ env.PR_NUMBER }} \\
+              --file $BENCHMARK_RESULTS
 ```
 
 <br/>

@@ -1,9 +1,4 @@
-use std::{
-    convert::{TryFrom, TryInto},
-    fs::File,
-    io::{BufRead, BufReader},
-    path::PathBuf,
-};
+use std::{convert::TryFrom, path::PathBuf};
 
 use crate::parser::project::run::CliRunCommand;
 
@@ -24,34 +19,28 @@ pub enum Runner {
     Pipe(Pipe),
     Command(Command),
     CommandToFile(Command, PathBuf),
+    File(PathBuf),
 }
 
 impl TryFrom<CliRunCommand> for Runner {
     type Error = RunError;
 
-    fn try_from(mut command: CliRunCommand) -> Result<Self, Self::Error> {
-        if let Some(cmd) = command.cmd.take() {
-            (command, cmd).try_into()
-        } else if let Ok(cmd) = std::env::var(BENCHER_CMD) {
-            (command, cmd).try_into()
+    fn try_from(command: CliRunCommand) -> Result<Self, Self::Error> {
+        let cmd_str = command.cmd.or_else(|| std::env::var(BENCHER_CMD).ok());
+        if let Some(cmd_str) = cmd_str {
+            let cmd = Command::try_from((command.shell, cmd_str))?;
+            Ok(if let Some(file) = command.file {
+                Self::CommandToFile(cmd, file)
+            } else {
+                Self::Command(cmd)
+            })
+        } else if let Some(file) = command.file {
+            Ok(Self::File(file))
         } else if let Some(pipe) = Pipe::new() {
             Ok(Self::Pipe(pipe))
         } else {
             Err(RunError::NoCommand)
         }
-    }
-}
-
-impl TryFrom<(CliRunCommand, String)> for Runner {
-    type Error = RunError;
-
-    fn try_from((command, cmd): (CliRunCommand, String)) -> Result<Self, Self::Error> {
-        let cmd = Command::try_from((command.shell, cmd))?;
-        Ok(if let Some(file) = command.file {
-            Self::CommandToFile(cmd, file)
-        } else {
-            Self::Command(cmd)
-        })
     }
 }
 
@@ -61,21 +50,19 @@ impl Runner {
             Self::Pipe(pipe) => pipe.output(),
             Self::Command(command) => command.run().await?,
             Self::CommandToFile(command, file_path) => {
-                let mut output: Output = command.run().await?;
-                let capacity = std::fs::metadata(file_path)
-                    .ok()
-                    .and_then(|metadata| usize::try_from(metadata.len()).ok())
-                    .unwrap_or_default();
-                let mut result = String::with_capacity(capacity);
-
-                let output_file = File::open(file_path).map_err(RunError::OutputFileOpen)?;
-                let buffered = BufReader::new(output_file);
-                for line in buffered.lines() {
-                    result.push_str(&line.map_err(RunError::OutputFileRead)?);
-                }
-
+                let mut output = command.run().await?;
+                let result =
+                    std::fs::read_to_string(file_path).map_err(RunError::OutputFileRead)?;
                 output.result = Some(result);
                 output
+            },
+            Self::File(file_path) => {
+                let result =
+                    std::fs::read_to_string(file_path).map_err(RunError::OutputFileRead)?;
+                Output {
+                    result: Some(result),
+                    ..Default::default()
+                }
             },
         })
     }
