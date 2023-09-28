@@ -9,22 +9,27 @@ services:
     ports:
       - 61016:61016
     environment:
+      # Set litestream configuration
+      - LITESTREAM_DB_PATH=/data/bencher.db
       # Set configuration string or filepath
       # - BENCHER_CONFIG=
       # - BENCHER_CONFIG_PATH=
-      # Set litestream configuration
-      - LITESTREAM_DB_PATH=/data/bencher.db
+      # - SENTRY_DSN=
       # - LITESTREAM_REPLICA_URL=
       # - AWS_ACCESS_KEY_ID=
       # - AWS_SECRET_ACCESS_KEY=
 
   bencher_ui:
     build:
-      context: ../services/ui
+      context: ../services/console
       dockerfile: Dockerfile
     image: bencher-ui
     container_name: bencher_ui
     ports:
-      - 3000:80
+      - 3000:3000
+    environment:
+      # Set this to your actual host if different
+      - BENCHER_API_URL=http://localhost:61016
+      # - GOOGLE_ANALYTICS_ID=
     depends_on:
       - bencher_api

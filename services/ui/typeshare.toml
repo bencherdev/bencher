@@ -1,5 +1,0 @@
-[typescript.type_mappings]
-"Uuid" = "string"
-"DateTime" = "string"
-"OrderedFloat" = "number"
-"BigInt" = "number"
