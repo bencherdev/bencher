@@ -29,5 +29,5 @@ release-notes.md
 
 node_modules/
 .netlify
-package.json
-package-lock.json
+./package.json
+./package-lock.json

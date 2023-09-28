@@ -9,11 +9,11 @@ services:
     image: bencher-api-builder
     container_name: bencher_api_builder
 
-  # bencher-ui-builder:
-  #   build:
-  #     context: ..
-  #     dockerfile: ./services/console/builder.Dockerfile
-  #     args:
-  #       - MOLD_VERSION=2.0.0
-  #   image: bencher-ui-builder
-  #   container_name: bencher_ui_builder
+  bencher-ui-builder:
+    build:
+      context: ..
+      dockerfile: ./services/console/builder.Dockerfile
+      args:
+        - MOLD_VERSION=2.0.0
+    image: bencher-ui-builder
+    container_name: bencher_ui_builder

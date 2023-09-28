@@ -1,3 +1,4 @@
 target/
+services/action/node_modules/
 services/ui/node_modules/
-services/consoles/node_modules/
+services/console/node_modules/
