@@ -4,7 +4,7 @@ heading: "Bencher Changelog"
 sortOrder: 4
 ---
 
-## Pending `v0.3.12`
+## `v0.3.12`
 - Change Metric `lower_bound` and `upper_bound` to `lower_value` and `upper_value` respectively
 - Add ability to visualize `lower_value` and `upper_value` in Perf Plot
 
