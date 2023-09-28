@@ -156,9 +156,6 @@ pub enum ApiError {
     #[error("Failed to find plan for organization: {0}")]
     NoPlanOrganization(ResourceId),
     #[cfg(feature = "plus")]
-    #[error("Failed to find plan for project: {0}")]
-    NoPlanProject(ProjectId),
-    #[cfg(feature = "plus")]
     #[error("No Biller but organization has a subscription: {0}")]
     NoBillerOrganization(ResourceId),
     #[cfg(feature = "plus")]
@@ -167,9 +164,6 @@ pub enum ApiError {
     #[cfg(feature = "plus")]
     #[error("Organization has an inactive plan: {0}")]
     InactivePlanOrganization(ResourceId),
-    #[cfg(feature = "plus")]
-    #[error("Project has an inactive plan: {0}")]
-    InactivePlanProject(ProjectId),
 
     #[error("Failed to cast integer: {0}")]
     IntError(#[from] std::num::TryFromIntError),
@@ -296,6 +290,13 @@ where
     HttpError::for_client_error(None, StatusCode::UNAUTHORIZED, error.to_string())
 }
 
+pub fn payment_required_error<E>(error: E) -> HttpError
+where
+    E: std::fmt::Display,
+{
+    HttpError::for_client_error(None, StatusCode::PAYMENT_REQUIRED, error.to_string())
+}
+
 pub fn forbidden_error<E>(error: E) -> HttpError
 where
     E: std::fmt::Display,
@@ -328,14 +329,13 @@ where
 {
     let error_code = uuid::Uuid::new_v4();
     let issue_url = github_issue_url(title, &format!("{body}\nError code: {error_code}"));
-    let http_error = HttpError::for_client_error(
-        Some(error_code.to_string()),
+    let http_error = HttpError {
+        error_code: Some(error_code.to_string()),
         status_code,
-        format!(
-            "{title}: {error}\nError code: {error_code}\nPlease report this issue: {issue_url}"
-        ),
-    );
-    debug_assert!(false, "Issue Error Found: {http_error}");
+        external_message: format!("{title}: {error}\nPlease report this issue: {issue_url}"),
+        internal_message: format!("INTERNAL ERROR ({error_code}): {error}"),
+    };
+    // debug_assert!(false, "Internal Error Found: {http_error}");
     #[cfg(feature = "sentry")]
     sentry::capture_error(&http_error);
     http_error

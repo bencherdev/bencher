@@ -188,14 +188,14 @@ async fn post_inner(
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
-    let project_id = QueryProject::is_allowed(
+    let project = QueryProject::is_allowed(
         conn,
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Create,
-    )?
-    .id;
+    )?;
+    let project_id = project.id;
 
     // Verify that the branch and testbed are part of the same project
     let branch_id = QueryBranch::from_resource_id(conn, project_id, &json_report.branch)?.id;
@@ -205,7 +205,7 @@ async fn post_inner(
     // If private, then validate that there is an active subscription or license
     #[cfg(feature = "plus")]
     let plan_kind =
-        plan_kind::PlanKind::new(conn, context.biller.as_ref(), &context.licensor, project_id)
+        plan_kind::PlanKind::new(conn, context.biller.as_ref(), &context.licensor, &project)
             .await?;
 
     // If there is a hash then try to see if there is already a code version for
@@ -291,9 +291,12 @@ async fn post_inner(
 mod plan_kind {
     use bencher_billing::{Biller, SubscriptionId};
     use bencher_license::Licensor;
+    use dropshot::HttpError;
+    use http::StatusCode;
 
     use crate::{
         context::DbConnection,
+        error::{issue_error, not_found_error, payment_required_error},
         model::project::{ProjectId, QueryProject},
         ApiError,
     };
@@ -304,35 +307,63 @@ mod plan_kind {
         None,
     }
 
+    #[derive(Debug, thiserror::Error)]
+    pub enum PlanKindError {
+        #[error("Project ({project:?}) has an inactive plan ({subscription_id})")]
+        InactivePlan {
+            project: QueryProject,
+            subscription_id: SubscriptionId,
+        },
+        #[error("No Biller has been configured for the server.")]
+        NoBiller,
+        #[error("No plan (subscription or license) found for private project ({0:?})")]
+        NoPlan(QueryProject),
+    }
+
     impl PlanKind {
         pub async fn new(
             conn: &mut DbConnection,
             biller: Option<&Biller>,
             licensor: &Licensor,
-            project_id: ProjectId,
-        ) -> Result<Self, ApiError> {
-            if let Some(subscription) = QueryProject::get_subscription(conn, project_id)? {
+            project: &QueryProject,
+        ) -> Result<Self, HttpError> {
+            if let Some(subscription_id) = QueryProject::get_subscription(conn, project.id)? {
                 if let Some(biller) = biller {
-                    let plan_status = biller.get_plan_status(&subscription).await?;
+                    let plan_status = biller
+                        .get_plan_status(&subscription_id)
+                        .await
+                        .map_err(not_found_error)?;
                     if plan_status.is_active() {
-                        Ok(PlanKind::Metered(subscription))
+                        Ok(PlanKind::Metered(subscription_id))
                     } else {
-                        Err(ApiError::InactivePlanProject(project_id))
+                        Err(payment_required_error(PlanKindError::InactivePlan {
+                            project: project.clone(),
+                            subscription_id,
+                        }))
                     }
                 } else {
-                    Err(ApiError::NoBillerProject(project_id))
+                    Err(issue_error(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "No Biller",
+                        "Failed to find Biller in Bencher Cloud.",
+                        PlanKindError::NoBiller,
+                    ))
                 }
-            } else if let Some((uuid, license)) = QueryProject::get_license(conn, project_id)? {
-                let _token_data = licensor.validate_organization(&license, uuid)?;
+            } else if let Some((uuid, license)) = QueryProject::get_license(conn, project.id)? {
+                let _token_data = licensor
+                    .validate_organization(&license, uuid)
+                    .map_err(payment_required_error)?;
                 // TODO check license entitlements and usage so far
                 Ok(PlanKind::Licensed {
                     entitlement: u64::MAX,
                     prior_usage: 0,
                 })
-            } else if QueryProject::is_public(conn, project_id)? {
+            } else if project.visibility.is_public() {
                 Ok(Self::None)
             } else {
-                Err(ApiError::NoPlanProject(project_id))
+                Err(payment_required_error(PlanKindError::NoPlan(
+                    project.clone(),
+                )))
             }
         }
 
