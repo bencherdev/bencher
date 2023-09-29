@@ -2,6 +2,8 @@ use std::str::FromStr;
 
 use bencher_json::GitHash;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use dropshot::HttpError;
+use http::StatusCode;
 use uuid::Uuid;
 
 use crate::{
@@ -39,6 +41,33 @@ impl QueryVersion {
             .map_err(ApiError::from)?;
         Uuid::from_str(&uuid).map_err(ApiError::from)
     }
+
+    pub fn get_or_increment(
+        conn: &mut DbConnection,
+        project_id: ProjectId,
+        branch_id: BranchId,
+        hash: Option<&GitHash>,
+    ) -> Result<VersionId, HttpError> {
+        Ok(if let Some(hash) = hash {
+            if let Ok(version_id) = schema::version::table
+                .left_join(
+                    schema::branch_version::table
+                        .on(schema::version::id.eq(schema::branch_version::version_id)),
+                )
+                .filter(schema::branch_version::branch_id.eq(branch_id))
+                .filter(schema::version::hash.eq(hash.as_ref()))
+                .order(schema::version::number.desc())
+                .select(schema::version::id)
+                .first::<VersionId>(conn)
+            {
+                version_id
+            } else {
+                InsertVersion::increment(conn, project_id, branch_id, Some(hash.clone()))?
+            }
+        } else {
+            InsertVersion::increment(conn, project_id, branch_id, None)?
+        })
+    }
 }
 
 #[derive(diesel::Insertable)]
@@ -56,7 +85,7 @@ impl InsertVersion {
         project_id: ProjectId,
         branch_id: BranchId,
         hash: Option<GitHash>,
-    ) -> Result<VersionId, ApiError> {
+    ) -> Result<VersionId, HttpError> {
         // Get the most recent code version number for this branch and increment it.
         // Otherwise, start a new branch code version number count from zero.
         let number = if let Ok(number) = schema::version::table
@@ -69,7 +98,7 @@ impl InsertVersion {
             .order(schema::version::number.desc())
             .first::<i32>(conn)
         {
-            number.checked_add(1).ok_or(ApiError::BadMath)?
+            number.checked_add(1).unwrap_or_default()
         } else {
             0
         };
@@ -85,7 +114,14 @@ impl InsertVersion {
         diesel::insert_into(schema::version::table)
             .values(&insert_version)
             .execute(conn)
-            .map_err(ApiError::from)?;
+            .map_err(|e| {
+                crate::error::issue_error(
+                    StatusCode::CONFLICT,
+                    "Failed to increment branch version number",
+                    &format!("My branch ({branch_id}) in project ({project_id}) on Bencher failed to increment to version number {number}."),
+                    e,
+                )
+            })?;
 
         let version_id = QueryVersion::get_id(conn, &uuid)?;
 
