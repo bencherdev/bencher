@@ -24,15 +24,22 @@ macro_rules! fn_get_id {
         pub fn get_id<U>(
             conn: &mut crate::context::DbConnection,
             uuid: &U,
-        ) -> Result<$id, crate::ApiError>
+        ) -> Result<$id, dropshot::HttpError>
         where
             U: ToString,
         {
+            let uuid_str = uuid.to_string();
             schema::$table::table
-                .filter(schema::$table::uuid.eq(uuid.to_string()))
+                .filter(schema::$table::uuid.eq(&uuid_str))
                 .select(schema::$table::id)
                 .first(conn)
-                .map_err(crate::error::ApiError::from)
+                .map_err(|e| {
+                    let message = format!(
+                        "Failed to query {table} table for uuid {uuid_str}",
+                        table = stringify!($table)
+                    );
+                    crate::error::issue_error(http::StatusCode::NOT_FOUND, &message, &message, e)
+                })
         }
     };
 }

@@ -43,7 +43,7 @@ impl QueryPerf {
     }
 }
 
-#[derive(diesel::Insertable)]
+#[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = perf_table)]
 pub struct InsertPerf {
     pub uuid: String,

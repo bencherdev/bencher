@@ -12,11 +12,12 @@ use bencher_json::{
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
+use http::StatusCode;
 use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
-    error::resource_not_found_err,
+    error::{issue_error, resource_not_found_err},
     model::project::QueryProject,
     schema,
     schema::metric_kind as metric_kind_table,
@@ -100,7 +101,7 @@ impl QueryMetricKind {
         conn: &mut DbConnection,
         project_id: ProjectId,
         metric_kind: &ResourceId,
-    ) -> Result<MetricKindId, ApiError> {
+    ) -> Result<MetricKindId, HttpError> {
         let query_metric_kind = Self::from_resource_id(conn, project_id, metric_kind);
 
         let http_error = match query_metric_kind {
@@ -120,12 +121,21 @@ impl QueryMetricKind {
             L2_ACCESSES_SLUG_STR => InsertMetricKind::l2_accesses(conn, project_id),
             RAM_ACCESSES_SLUG_STR => InsertMetricKind::ram_accesses(conn, project_id),
             ESTIMATED_CYCLES_SLUG_STR => InsertMetricKind::estimated_cycles(conn, project_id),
-            _ => return Err(http_error.into()),
+            _ => return Err(http_error),
         };
         diesel::insert_into(schema::metric_kind::table)
             .values(&insert_metric_kind)
             .execute(conn)
-            .map_err(ApiError::from)?;
+            .map_err(|e| {
+                issue_error(
+                    StatusCode::CONFLICT,
+                    "Failed to create system metric kind",
+                    &format!(
+                        "Failed to create system metric kind ({insert_metric_kind:?}) on Bencher."
+                    ),
+                    e,
+                )
+            })?;
 
         Self::get_id(conn, &insert_metric_kind.uuid)
     }
@@ -135,7 +145,7 @@ impl QueryMetricKind {
     }
 }
 
-#[derive(diesel::Insertable)]
+#[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = metric_kind_table)]
 pub struct InsertMetricKind {
     pub uuid: String,

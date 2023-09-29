@@ -48,7 +48,7 @@ impl QueryVersion {
         branch_id: BranchId,
         hash: Option<&GitHash>,
     ) -> Result<VersionId, HttpError> {
-        Ok(if let Some(hash) = hash {
+        if let Some(hash) = hash {
             if let Ok(version_id) = schema::version::table
                 .left_join(
                     schema::branch_version::table
@@ -60,13 +60,13 @@ impl QueryVersion {
                 .select(schema::version::id)
                 .first::<VersionId>(conn)
             {
-                version_id
+                Ok(version_id)
             } else {
-                InsertVersion::increment(conn, project_id, branch_id, Some(hash.clone()))?
+                InsertVersion::increment(conn, project_id, branch_id, Some(hash.clone()))
             }
         } else {
-            InsertVersion::increment(conn, project_id, branch_id, None)?
-        })
+            InsertVersion::increment(conn, project_id, branch_id, None)
+        }
     }
 }
 
@@ -117,8 +117,8 @@ impl InsertVersion {
             .map_err(|e| {
                 crate::error::issue_error(
                     StatusCode::CONFLICT,
-                    "Failed to increment branch version number",
-                    &format!("My branch ({branch_id}) in project ({project_id}) on Bencher failed to increment to version number {number}."),
+                    "Failed to increment version number",
+                    &format!("My branch ({branch_id}) in project ({project_id}) on Bencher failed to increment version number ({number})."),
                     e,
                 )
             })?;
@@ -133,7 +133,14 @@ impl InsertVersion {
         diesel::insert_into(schema::branch_version::table)
             .values(&insert_branch_version)
             .execute(conn)
-            .map_err(ApiError::from)?;
+            .map_err(|e| {
+                crate::error::issue_error(
+                    StatusCode::CONFLICT,
+                    "Failed to increment branch version number",
+                    &format!("My branch ({branch_id}) in project ({project_id}) on Bencher failed to increment to next version ({version_id})."),
+                    e,
+                )
+            })?;
 
         Ok(version_id)
     }

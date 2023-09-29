@@ -6,6 +6,7 @@ use bencher_json::{
 use bencher_rbac::project::Permission;
 use diesel::{dsl::count, BelongingToDsl, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use http::StatusCode;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use slog::Logger;
@@ -17,11 +18,12 @@ use crate::{
         endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
+    error::issue_error,
     model::project::{
         branch::QueryBranch,
         report::{results::ReportResults, InsertReport, QueryReport},
         testbed::QueryTestbed,
-        version::{InsertVersion, QueryVersion, VersionId},
+        version::QueryVersion,
         QueryProject,
     },
     model::user::auth::AuthUser,
@@ -166,14 +168,7 @@ pub async fn proj_report_post(
         body.into_inner(),
         &auth_user,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
+    .await?;
 
     response_accepted!(endpoint, json)
 }
@@ -184,7 +179,7 @@ async fn post_inner(
     path_params: ProjReportsParams,
     mut json_report: JsonNewReport,
     auth_user: &AuthUser,
-) -> Result<JsonReport, ApiError> {
+) -> Result<JsonReport, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
@@ -211,25 +206,8 @@ async fn post_inner(
     // If there is a hash then try to see if there is already a code version for
     // this branch with that particular hash.
     // Otherwise, create a new code version for this branch with/without the hash.
-    let version_id = if let Some(hash) = &json_report.hash {
-        if let Ok(version_id) = schema::version::table
-            .left_join(
-                schema::branch_version::table
-                    .on(schema::version::id.eq(schema::branch_version::version_id)),
-            )
-            .filter(schema::branch_version::branch_id.eq(branch_id))
-            .filter(schema::version::hash.eq(hash.as_ref()))
-            .order(schema::version::number.desc())
-            .select(schema::version::id)
-            .first::<VersionId>(conn)
-        {
-            version_id
-        } else {
-            InsertVersion::increment(conn, project_id, branch_id, Some(hash.clone()))?
-        }
-    } else {
-        InsertVersion::increment(conn, project_id, branch_id, None)?
-    };
+    let version_id =
+        QueryVersion::get_or_increment(conn, project_id, branch_id, json_report.hash.as_ref())?;
 
     let json_settings = json_report.settings.take().unwrap_or_default();
     let adapter = json_settings.adapter.unwrap_or_default();
@@ -248,27 +226,41 @@ async fn post_inner(
     diesel::insert_into(schema::report::table)
         .values(&insert_report)
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(|e| {
+            issue_error(
+                StatusCode::CONFLICT,
+                "Failed to create new report",
+                &format!("My new report ({insert_report:?}) in project ({project_id}) on Bencher failed to create."),
+                e,
+            )
+        })?;
 
     let query_report = schema::report::table
         .filter(schema::report::uuid.eq(&insert_report.uuid))
         .first::<QueryReport>(conn)
-        .map_err(ApiError::from)?;
+        .map_err(|e| {
+            issue_error(
+                StatusCode::NOT_FOUND,
+                "Failed to find new report that was just created",
+                &format!("Failed to find new report ({insert_report:?}) in project ({project_id}) on Bencher even though it was just created."),
+                e,
+            )
+        })?;
 
     #[cfg(feature = "plus")]
     let mut usage = 0;
 
     // Process and record the report results
     let mut report_results = ReportResults::new(project_id, branch_id, testbed_id, query_report.id);
+    let results_array = json_report
+        .results
+        .iter()
+        .map(AsRef::as_ref)
+        .collect::<Vec<&str>>();
     let processed_report = report_results.process(
         log,
         conn,
-        json_report
-            .results
-            .iter()
-            .map(AsRef::as_ref)
-            .collect::<Vec<&str>>()
-            .as_ref(),
+        &results_array,
         adapter,
         json_settings,
         #[cfg(feature = "plus")]
@@ -280,11 +272,11 @@ async fn post_inner(
         .check_usage(context.biller.as_ref(), project_id, usage)
         .await?;
 
-    // Don't return the error from processing the report
-    // until after the metrics usage has been checked
-    processed_report?;
-
-    query_report.into_json(log, conn)
+    // Don't return the error from processing the report until after the metrics usage has been checked
+    processed_report.and_then(|_| {
+        // If the report was processed successfully, then return the report with the results
+        query_report.into_json(log, conn).map_err(Into::into)
+    })
 }
 
 #[cfg(feature = "plus")]
@@ -298,7 +290,6 @@ mod plan_kind {
         context::DbConnection,
         error::{issue_error, not_found_error, payment_required_error},
         model::project::{ProjectId, QueryProject},
-        ApiError,
     };
 
     pub enum PlanKind {
@@ -344,8 +335,8 @@ mod plan_kind {
                 } else {
                     Err(issue_error(
                         StatusCode::INTERNAL_SERVER_ERROR,
-                        "No Biller",
-                        "Failed to find Biller in Bencher Cloud.",
+                        "No Biller when checking plan kind",
+                        "Failed to find Biller in Bencher Cloud when checking plan kind.",
                         PlanKindError::NoBiller,
                     ))
                 }
@@ -372,22 +363,35 @@ mod plan_kind {
             biller: Option<&Biller>,
             project_id: ProjectId,
             usage: u64,
-        ) -> Result<(), ApiError> {
+        ) -> Result<(), HttpError> {
             match self {
                 Self::Metered(subscription) => {
                     let Some(biller) = biller else {
-                        return Err(ApiError::NoBillerProject(project_id));
+                        return Err(issue_error(
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            "No Biller when checking usage",
+                            "Failed to find Biller in Bencher Cloud when checking usage.",
+                            PlanKindError::NoBiller,
+                        ));
                     };
-                    biller.record_usage(subscription, usage).await?;
+                    biller
+                        .record_usage(subscription, usage)
+                        .await
+                        .map_err(|e| {
+                            issue_error(
+                                StatusCode::BAD_REQUEST,
+                                "Failed to record usage",
+                                &format!("Failed to record usage ({usage}) in project ({project_id}) on Bencher."),
+                                e,
+                            )
+                        })?;
                 },
                 Self::Licensed {
                     entitlement,
                     prior_usage,
-                } =>
-                {
-                    #[allow(clippy::todo)]
+                } => {
                     if *prior_usage + usage > *entitlement {
-                        todo!("Manage license entitlements");
+                        debug_assert!(false, "Manage license entitlements");
                     }
                 },
                 Self::None => {},

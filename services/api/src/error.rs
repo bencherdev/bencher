@@ -328,7 +328,10 @@ where
     E: std::fmt::Display,
 {
     let error_code = uuid::Uuid::new_v4();
-    let issue_url = github_issue_url(title, &format!("{body}\nError code: {error_code}"));
+    let issue_url = github_issue_url(
+        title,
+        &format!("{body}\nError code: {error_code}\nError: {error}"),
+    );
     let http_error = HttpError {
         error_code: Some(error_code.to_string()),
         status_code,

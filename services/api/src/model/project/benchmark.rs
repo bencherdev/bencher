@@ -53,13 +53,13 @@ impl QueryBenchmark {
         conn: &mut DbConnection,
         project_id: ProjectId,
         name: &str,
-    ) -> Result<BenchmarkId, ApiError> {
+    ) -> Result<BenchmarkId, HttpError> {
         schema::benchmark::table
             .filter(schema::benchmark::project_id.eq(project_id))
             .filter(schema::benchmark::name.eq(name))
             .select(schema::benchmark::id)
             .first(conn)
-            .map_err(ApiError::from)
+            .map_err(resource_not_found_err!(Benchmark, name.to_owned()))
     }
 
     pub fn get_uuid(conn: &mut DbConnection, id: BenchmarkId) -> Result<Uuid, ApiError> {
@@ -99,7 +99,7 @@ impl QueryBenchmark {
         conn: &mut DbConnection,
         project_id: ProjectId,
         name: &str,
-    ) -> Result<BenchmarkId, ApiError> {
+    ) -> Result<BenchmarkId, HttpError> {
         let id = Self::get_id_from_name(conn, project_id, name);
 
         if id.is_ok() {

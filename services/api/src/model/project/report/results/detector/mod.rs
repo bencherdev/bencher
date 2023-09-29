@@ -38,27 +38,17 @@ impl Detector {
         metric_kind_id: MetricKindId,
         branch_id: BranchId,
         testbed_id: TestbedId,
-    ) -> Result<Option<Self>, ApiError> {
+    ) -> Option<Self> {
         // Check to see if there is a threshold for the branch/testbed/metric kind grouping.
         // If not, then there will be nothing to detect.
-        let Some(threshold) = MetricsThreshold::new(conn, metric_kind_id, branch_id, testbed_id)
-        else {
-            return Ok(None);
-        };
-
-        Ok(Some(Self {
+        MetricsThreshold::new(conn, metric_kind_id, branch_id, testbed_id).map(|threshold| Self {
             metric_kind_id,
             branch_id,
             testbed_id,
             threshold,
-        }))
+        })
     }
 
-    #[allow(
-        clippy::cast_possible_truncation,
-        clippy::cast_precision_loss,
-        clippy::cast_sign_loss
-    )]
     pub fn detect(
         &self,
         log: &Logger,

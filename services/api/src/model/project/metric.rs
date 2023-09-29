@@ -56,7 +56,7 @@ impl QueryMetric {
     }
 }
 
-#[derive(diesel::Insertable)]
+#[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = metric_table)]
 pub struct InsertMetric {
     pub uuid: String,

@@ -9,10 +9,13 @@ use bencher_json::{
     BenchmarkName,
 };
 use diesel::RunQueryDsl;
+use dropshot::HttpError;
+use http::StatusCode;
 use slog::Logger;
 
 use crate::{
     context::DbConnection,
+    error::{bad_request_error, issue_error},
     model::project::{
         benchmark::{BenchmarkId, QueryBenchmark},
         branch::BranchId,
@@ -22,7 +25,7 @@ use crate::{
         testbed::TestbedId,
         ProjectId,
     },
-    schema, ApiError,
+    schema,
 };
 
 pub mod detector;
@@ -66,9 +69,14 @@ impl ReportResults {
         adapter: JsonAdapter,
         settings: JsonReportSettings,
         #[cfg(feature = "plus")] usage: &mut u64,
-    ) -> Result<(), ApiError> {
+    ) -> Result<(), HttpError> {
         let adapter_settings = AdapterSettings::new(settings.average);
-        let results_array = AdapterResultsArray::new(results_array, adapter, adapter_settings)?;
+        let results_array = AdapterResultsArray::new(results_array, adapter, adapter_settings)
+            .map_err(|e| {
+                bad_request_error(format!(
+                    "Failed to convert results with adapter ({adapter} | {settings:?}): {e}"
+                ))
+            })?;
 
         if let Some(fold) = settings.fold {
             let results = results_array.fold(fold);
@@ -103,7 +111,7 @@ impl ReportResults {
         iteration: usize,
         results: AdapterResults,
         #[cfg(feature = "plus")] usage: &mut u64,
-    ) -> Result<(), ApiError> {
+    ) -> Result<(), HttpError> {
         for (benchmark_name, metrics) in results.inner {
             self.metrics(
                 log,
@@ -126,7 +134,7 @@ impl ReportResults {
         benchmark_name: &BenchmarkName,
         metrics: AdapterMetrics,
         #[cfg(feature = "plus")] usage: &mut u64,
-    ) -> Result<(), ApiError> {
+    ) -> Result<(), HttpError> {
         // If benchmark name is ignored then strip the special suffix before querying
         let (benchmark_name, ignore_benchmark) = benchmark_name.strip_ignore();
         let benchmark_id = self.benchmark_id(conn, benchmark_name)?;
@@ -135,7 +143,14 @@ impl ReportResults {
         diesel::insert_into(schema::perf::table)
             .values(&insert_perf)
             .execute(conn)
-            .map_err(ApiError::from)?;
+            .map_err(|e| {
+                issue_error(
+                    StatusCode::CONFLICT,
+                    "Failed to create perf for report",
+                    &format!("Failed to create new perf ({insert_perf:?}) on Bencher."),
+                    e,
+                )
+            })?;
         let perf_id = QueryPerf::get_id(conn, &insert_perf.uuid)?;
 
         for (metric_kind_key, metric) in metrics.inner {
@@ -145,7 +160,14 @@ impl ReportResults {
             diesel::insert_into(schema::metric::table)
                 .values(&insert_metric)
                 .execute(conn)
-                .map_err(ApiError::from)?;
+                .map_err(|e| {
+                    issue_error(
+                        StatusCode::CONFLICT,
+                        "Failed to create metric report",
+                        &format!("Failed to create new metric ({insert_metric:?}) for perf ({insert_perf:?}) on Bencher."),
+                        e,
+                    )
+                })?;
 
             #[cfg(feature = "plus")]
             {
@@ -155,7 +177,7 @@ impl ReportResults {
 
             // Ignored benchmarks do not get checked against the threshold even if one exists
             if !ignore_benchmark {
-                if let Some(detector) = self.detector(conn, metric_kind_id)? {
+                if let Some(detector) = self.detector(conn, metric_kind_id) {
                     let query_metric = QueryMetric::from_uuid(conn, insert_metric.uuid)?;
                     detector.detect(log, conn, benchmark_id, &query_metric)?;
                 }
@@ -169,15 +191,15 @@ impl ReportResults {
         &mut self,
         conn: &mut DbConnection,
         benchmark_name: &str,
-    ) -> Result<BenchmarkId, ApiError> {
-        QueryBenchmark::get_or_create(conn, self.project_id, benchmark_name)
+    ) -> Result<BenchmarkId, HttpError> {
+        QueryBenchmark::get_or_create(conn, self.project_id, benchmark_name).map_err(Into::into)
     }
 
     fn metric_kind_id(
         &mut self,
         conn: &mut DbConnection,
         metric_kind_key: MetricKind,
-    ) -> Result<MetricKindId, ApiError> {
+    ) -> Result<MetricKindId, HttpError> {
         Ok(
             if let Some(id) = self.metric_kind_cache.get(&metric_kind_key) {
                 *id
@@ -197,16 +219,13 @@ impl ReportResults {
         &mut self,
         conn: &mut DbConnection,
         metric_kind_id: MetricKindId,
-    ) -> Result<Option<Detector>, ApiError> {
-        Ok(
-            if let Some(detector) = self.detector_cache.get(&metric_kind_id) {
-                detector.clone()
-            } else {
-                let detector =
-                    Detector::new(conn, metric_kind_id, self.branch_id, self.testbed_id)?;
-                self.detector_cache.insert(metric_kind_id, detector.clone());
-                detector
-            },
-        )
+    ) -> Option<Detector> {
+        if let Some(detector) = self.detector_cache.get(&metric_kind_id) {
+            detector.clone()
+        } else {
+            let detector = Detector::new(conn, metric_kind_id, self.branch_id, self.testbed_id);
+            self.detector_cache.insert(metric_kind_id, detector.clone());
+            detector
+        }
     }
 }

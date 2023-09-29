@@ -344,7 +344,7 @@ fn get_alerts(conn: &mut DbConnection, report_id: ReportId) -> Result<JsonReport
         .collect())
 }
 
-#[derive(diesel::Insertable)]
+#[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = report_table)]
 pub struct InsertReport {
     pub uuid: String,
