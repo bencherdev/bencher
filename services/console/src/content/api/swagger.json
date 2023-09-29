@@ -3555,6 +3555,40 @@
             "schema": {
               "$ref": "#/components/schemas/ProjReportsSort"
             }
+          },
+          {
+            "in": "query",
+            "name": "branch",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end_time",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start_time",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "in": "query",
+            "name": "testbed",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
           }
         ],
         "responses": {

@@ -6,7 +6,10 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{JsonAlert, JsonMetricKind, JsonProject, JsonTestbed, JsonUser, ResourceId};
+use crate::{
+    urlencoded::{from_millis, from_urlencoded, to_urlencoded, UrlEncodedError},
+    JsonAlert, JsonMetricKind, JsonProject, JsonTestbed, JsonUser, ResourceId,
+};
 
 use super::{
     benchmark::JsonBenchmarkMetric, branch::JsonBranchVersion, threshold::JsonThresholdStatistic,
@@ -123,3 +126,80 @@ pub struct JsonReportResult {
 
 #[typeshare::typeshare]
 pub type JsonReportAlerts = Vec<JsonAlert>;
+
+#[derive(Debug, Clone, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonReportQueryParams {
+    pub branch: Option<String>,
+    pub testbed: Option<String>,
+    pub start_time: Option<i64>,
+    pub end_time: Option<i64>,
+}
+
+#[derive(Debug, Clone)]
+pub struct JsonReportQuery {
+    pub branch: Option<ResourceId>,
+    pub testbed: Option<ResourceId>,
+    pub start_time: Option<DateTime<Utc>>,
+    pub end_time: Option<DateTime<Utc>>,
+}
+
+impl TryFrom<JsonReportQueryParams> for JsonReportQuery {
+    type Error = UrlEncodedError;
+
+    fn try_from(query_params: JsonReportQueryParams) -> Result<Self, Self::Error> {
+        let JsonReportQueryParams {
+            branch,
+            testbed,
+            start_time,
+            end_time,
+        } = query_params;
+
+        let branch = if let Some(branch) = branch {
+            Some(from_urlencoded(&branch)?)
+        } else {
+            None
+        };
+        let testbed = if let Some(testbed) = testbed {
+            Some(from_urlencoded(&testbed)?)
+        } else {
+            None
+        };
+
+        let start_time = if let Some(start_time) = start_time {
+            Some(from_millis(start_time)?)
+        } else {
+            None
+        };
+        let end_time = if let Some(end_time) = end_time {
+            Some(from_millis(end_time)?)
+        } else {
+            None
+        };
+
+        Ok(Self {
+            branch,
+            testbed,
+            start_time,
+            end_time,
+        })
+    }
+}
+
+impl JsonReportQuery {
+    pub fn branch(&self) -> Option<String> {
+        self.branch.as_ref().map(to_urlencoded)
+    }
+
+    pub fn testbed(&self) -> Option<String> {
+        self.testbed.as_ref().map(to_urlencoded)
+    }
+
+    pub fn start_time(&self) -> Option<i64> {
+        self.start_time.as_ref().map(DateTime::timestamp_millis)
+    }
+
+    pub fn end_time(&self) -> Option<i64> {
+        self.end_time.as_ref().map(DateTime::timestamp_millis)
+    }
+}

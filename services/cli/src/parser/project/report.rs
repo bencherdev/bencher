@@ -27,6 +27,22 @@ pub struct CliReportList {
     #[clap(long)]
     pub project: ResourceId,
 
+    /// Branch slug or UUID
+    #[clap(long)]
+    pub branch: Option<ResourceId>,
+
+    /// Testbed slug or UUID
+    #[clap(long)]
+    pub testbed: Option<ResourceId>,
+
+    /// Start time (seconds since epoch)
+    #[clap(long)]
+    pub start_time: Option<i64>,
+
+    /// End time (seconds since epoch)
+    #[clap(long)]
+    pub end_time: Option<i64>,
+
     #[clap(flatten)]
     pub pagination: CliPagination<CliReportsSort>,
 

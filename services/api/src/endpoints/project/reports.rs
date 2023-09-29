@@ -1,10 +1,14 @@
 use std::collections::HashMap;
 
 use bencher_json::{
+    project::report::{JsonReportQuery, JsonReportQueryParams},
     JsonDirection, JsonEmpty, JsonNewReport, JsonPagination, JsonReport, JsonReports, ResourceId,
 };
 use bencher_rbac::project::Permission;
-use diesel::{dsl::count, BelongingToDsl, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{
+    dsl::count, BelongingToDsl, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
+    SelectableHelper,
+};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use http::StatusCode;
 use schemars::JsonSchema;
@@ -63,6 +67,7 @@ pub async fn proj_reports_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjReportsParams>,
     _pagination_params: Query<ProjReportsPagination>,
+    _query_params: Query<JsonReportQueryParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -76,7 +81,14 @@ pub async fn proj_reports_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<ProjReportsParams>,
     pagination_params: Query<ProjReportsPagination>,
+    query_params: Query<JsonReportQueryParams>,
 ) -> Result<ResponseOk<JsonReports>, HttpError> {
+    // Second round of marshaling
+    let json_report_query = query_params
+        .into_inner()
+        .try_into()
+        .map_err(ApiError::from)?;
+
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(REPORT_RESOURCE, Method::GetLs);
 
@@ -86,6 +98,7 @@ pub async fn proj_reports_get(
         auth_user.as_ref(),
         path_params.into_inner(),
         pagination_params.into_inner(),
+        json_report_query,
         endpoint,
     )
     .await
@@ -110,6 +123,7 @@ async fn get_ls_inner(
     auth_user: Option<&AuthUser>,
     path_params: ProjReportsParams,
     pagination_params: ProjReportsPagination,
+    json_report_query: JsonReportQuery,
     endpoint: Endpoint,
 ) -> Result<JsonReports, ApiError> {
     let conn = &mut *context.conn().await;
@@ -117,7 +131,38 @@ async fn get_ls_inner(
     let query_project =
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
-    let mut query = QueryReport::belonging_to(&query_project).into_boxed();
+    let mut query = QueryReport::belonging_to(&query_project)
+        .left_join(schema::branch::table.on(schema::report::branch_id.eq(schema::branch::id)))
+        .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
+        .into_boxed();
+
+    if let Some(branch) = json_report_query.branch.as_ref() {
+        match branch.try_into()? {
+            crate::util::resource_id::ResourceId::Uuid(uuid) => {
+                query = query.filter(schema::branch::uuid.eq(uuid.to_string()));
+            },
+            crate::util::resource_id::ResourceId::Slug(slug) => {
+                query = query.filter(schema::branch::slug.eq(slug.to_string()));
+            },
+        }
+    }
+    if let Some(testbed) = json_report_query.testbed.as_ref() {
+        match testbed.try_into()? {
+            crate::util::resource_id::ResourceId::Uuid(uuid) => {
+                query = query.filter(schema::testbed::uuid.eq(uuid.to_string()));
+            },
+            crate::util::resource_id::ResourceId::Slug(slug) => {
+                query = query.filter(schema::testbed::slug.eq(slug.to_string()));
+            },
+        }
+    }
+
+    if let Some(start_time) = json_report_query.start_time {
+        query = query.filter(schema::report::start_time.ge(start_time.timestamp()));
+    }
+    if let Some(end_time) = json_report_query.end_time {
+        query = query.filter(schema::report::end_time.le(end_time.timestamp()));
+    }
 
     query = match pagination_params.order() {
         ProjReportsSort::DateTime => match pagination_params.direction {
@@ -137,7 +182,8 @@ async fn get_ls_inner(
     Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryReport>(conn)
+        .select(QueryReport::as_select())
+        .load(conn)
         .map_err(ApiError::from)?
         .into_iter()
         .filter_map(|query| database_map(endpoint, query.into_json(log, conn)))

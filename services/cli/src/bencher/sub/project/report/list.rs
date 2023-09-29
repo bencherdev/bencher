@@ -2,10 +2,11 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::{JsonDirection, ProjReportsSort};
-use bencher_json::{JsonReports, ResourceId};
+use bencher_json::{project::report::JsonReportQuery, JsonReports, ResourceId};
+use chrono::{DateTime, Utc};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::Backend, map_timestamp, sub::SubCmd},
     parser::{
         project::report::{CliReportList, CliReportsSort},
         CliPagination,
@@ -13,14 +14,18 @@ use crate::{
     CliError,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct List {
     pub project: ResourceId,
+    pub branch: Option<ResourceId>,
+    pub testbed: Option<ResourceId>,
+    pub start_time: Option<DateTime<Utc>>,
+    pub end_time: Option<DateTime<Utc>>,
     pub pagination: Pagination,
     pub backend: Backend,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Pagination {
     pub sort: Option<ProjReportsSort>,
     pub direction: Option<JsonDirection>,
@@ -34,11 +39,19 @@ impl TryFrom<CliReportList> for List {
     fn try_from(list: CliReportList) -> Result<Self, Self::Error> {
         let CliReportList {
             project,
+            branch,
+            testbed,
+            start_time,
+            end_time,
             pagination,
             backend,
         } = list;
         Ok(Self {
             project,
+            branch,
+            testbed,
+            start_time: map_timestamp(start_time)?,
+            end_time: map_timestamp(end_time)?,
             pagination: pagination.into(),
             backend: backend.try_into()?,
         })
@@ -64,14 +77,48 @@ impl From<CliPagination<CliReportsSort>> for Pagination {
     }
 }
 
+impl From<List> for JsonReportQuery {
+    fn from(list: List) -> Self {
+        let List {
+            branch,
+            testbed,
+            start_time,
+            end_time,
+            ..
+        } = list;
+        Self {
+            branch,
+            testbed,
+            start_time,
+            end_time,
+        }
+    }
+}
+
 #[async_trait]
 impl SubCmd for List {
     async fn exec(&self) -> Result<(), CliError> {
+        let json_report_query: &JsonReportQuery = &self.clone().into();
         let _json: JsonReports = self
             .backend
             .send_with(
                 |client| async move {
                     let mut client = client.proj_reports_get().project(self.project.clone());
+
+                    if let Some(branch) = json_report_query.branch() {
+                        client = client.branch(branch);
+                    }
+                    if let Some(testbed) = json_report_query.testbed() {
+                        client = client.testbed(testbed);
+                    }
+
+                    if let Some(start_time) = json_report_query.start_time() {
+                        client = client.start_time(start_time);
+                    }
+                    if let Some(end_time) = json_report_query.end_time() {
+                        client = client.end_time(end_time);
+                    }
+
                     if let Some(sort) = self.pagination.sort {
                         client = client.sort(sort);
                     }
