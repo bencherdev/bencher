@@ -1,39 +1,27 @@
-use std::{collections::HashMap, str::FromStr};
+use std::str::FromStr;
 
 use bencher_json::{
-    project::{
-        benchmark::JsonBenchmarkMetric,
-        report::{
-            JsonAdapter, JsonReportAlerts, JsonReportIteration, JsonReportResult, JsonReportResults,
-        },
-    },
-    JsonBenchmark, JsonMetricKind, JsonNewReport, JsonReport,
+    project::report::{JsonAdapter, JsonReportAlerts, JsonReportResult, JsonReportResults},
+    JsonNewReport, JsonReport,
 };
 use chrono::Utc;
 use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
-use slog::{warn, Logger};
+use slog::Logger;
 use uuid::Uuid;
 
-use self::adapter::Adapter;
-
-use super::{
-    branch::{BranchId, QueryBranch},
-    metric::QueryMetric,
-    metric_kind::{MetricKindId, QueryMetricKind},
-    perf::PerfId,
-    testbed::{QueryTestbed, TestbedId},
-    threshold::{
-        alert::QueryAlert, boundary::QueryBoundary, statistic::StatisticId, QueryThreshold,
-        ThresholdId,
-    },
-    version::VersionId,
-    ProjectId, QueryProject,
-};
 use crate::{
     context::DbConnection,
     model::{
         project::{
-            benchmark::QueryBenchmark, perf::QueryPerf, threshold::statistic::QueryStatistic,
+            benchmark::QueryBenchmark,
+            branch::{BranchId, QueryBranch},
+            metric::QueryMetric,
+            metric_kind::QueryMetricKind,
+            testbed::{QueryTestbed, TestbedId},
+            threshold::statistic::QueryStatistic,
+            threshold::{alert::QueryAlert, boundary::QueryBoundary, QueryThreshold},
+            version::VersionId,
+            ProjectId, QueryProject,
         },
         user::{QueryUser, UserId},
     },
@@ -45,6 +33,8 @@ use crate::{
 
 mod adapter;
 pub mod results;
+
+use adapter::Adapter;
 
 crate::util::typed_id::typed_id!(ReportId);
 
@@ -123,8 +113,6 @@ fn get_report_results(
     .inner_join(
         schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
     )
-    // It is important to order by the iteration first in order to make sure they are grouped together below
-    // Then ordering by the benchmark name makes sure that the benchmarks are in the same order for each iteration
     .inner_join(
         schema::metric::table.on(schema::perf::id.eq(schema::metric::perf_id)),
     )
@@ -135,6 +123,8 @@ fn get_report_results(
         schema::threshold::table.on(schema::boundary::threshold_id.eq(schema::threshold::id))
         ).inner_join(schema::statistic::table.on(schema::boundary::statistic_id.eq(schema::statistic::id))),
     )
+    // It is important to order by the iteration first in order to make sure they are grouped together below
+    // Then ordering by metric kind and finally benchmark name makes sure that the benchmarks are in the same order for each iteration
     .order((schema::perf::iteration, schema::metric_kind::name, schema::benchmark::name))
     .select((
         schema::perf::iteration,
@@ -281,221 +271,9 @@ fn get_report_results(
         report_iteration.push(result);
     }
     report_results.push(report_iteration);
-
-    slog::debug!(log, "Report results: {report_results:#?}");
+    slog::trace!(log, "Report results: {report_results:#?}");
 
     Ok(report_results)
-}
-
-fn get_results(
-    log: &Logger,
-    conn: &mut DbConnection,
-    report_id: ReportId,
-) -> Result<JsonReportResults, ApiError> {
-    let mut results = Vec::new();
-
-    let mut iteration = 0;
-    let mut metric_kinds = HashMap::new();
-    let mut metric_kind_benchmarks =
-        HashMap::<MetricKindId, (Option<ThresholdStatistic>, Vec<JsonBenchmarkMetric>)>::new();
-
-    // Get the perfs for the report
-    let perfs = get_perfs(conn, report_id)?;
-    for perf in perfs {
-        // Get the metric kinds
-        metric_kinds = get_metric_kinds(conn, perf.id)?;
-
-        // Get the benchmark to use for each metric kind
-        let benchmark = QueryBenchmark::get(conn, perf.benchmark_id)?.into_json(conn)?;
-
-        // If the iteration is the same as the previous one, add the benchmark to the benchmarks list for all metric kinds
-        // Otherwise, create a new iteration result and add it to the results list
-        // Then add the benchmark to a new benchmarks list for all metric kinds
-        // Only keep a single instance of the threshold statistic for each metric kind as it should be the same value for all benchmarks
-        if perf.iteration == iteration {
-            for metric_kind_id in metric_kinds.keys().copied() {
-                let (threshold_statistic, benchmark_metric) =
-                    get_benchmark_metric(conn, perf.id, metric_kind_id, benchmark.clone())?;
-                if let Some((_, benchmarks)) = metric_kind_benchmarks.get_mut(&metric_kind_id) {
-                    benchmarks.push(benchmark_metric);
-                } else {
-                    metric_kind_benchmarks.insert(
-                        metric_kind_id,
-                        (threshold_statistic, vec![benchmark_metric]),
-                    );
-                }
-            }
-        } else {
-            let iteration_results = get_iteration_results(
-                log,
-                conn,
-                &metric_kinds,
-                std::mem::take(&mut metric_kind_benchmarks),
-            )?;
-            results.push(iteration_results);
-            iteration = perf.iteration;
-            for metric_kind_id in metric_kinds.keys().copied() {
-                let (threshold_statistic, benchmark_metric) =
-                    get_benchmark_metric(conn, perf.id, metric_kind_id, benchmark.clone())?;
-                metric_kind_benchmarks.insert(
-                    metric_kind_id,
-                    (threshold_statistic, vec![benchmark_metric]),
-                );
-            }
-        }
-    }
-    // Add the last iteration's metric kind and benchmark results
-    let iteration_results =
-        get_iteration_results(log, conn, &metric_kinds, metric_kind_benchmarks)?;
-    results.push(iteration_results);
-
-    Ok(results)
-}
-
-fn get_perfs(conn: &mut DbConnection, report_id: ReportId) -> Result<Vec<QueryPerf>, ApiError> {
-    schema::perf::table
-    .filter(schema::perf::report_id.eq(report_id))
-    .inner_join(
-        schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
-    )
-    // It is important to order by the iteration first in order to make sure they are grouped together below
-    // Then ordering by the benchmark name makes sure that the benchmarks are in the same order for each iteration
-    .order((schema::perf::iteration, schema::benchmark::name))
-    .select((
-        schema::perf::id,
-        schema::perf::uuid,
-        schema::perf::report_id,
-        schema::perf::iteration,
-        schema::perf::benchmark_id,
-    ))
-    .load::<QueryPerf>(conn)
-    .map_err(ApiError::from)
-}
-
-fn get_metric_kinds(
-    conn: &mut DbConnection,
-    perf_id: PerfId,
-) -> Result<HashMap<MetricKindId, JsonMetricKind>, ApiError> {
-    Ok(schema::metric_kind::table
-        .left_join(
-            schema::metric::table.on(schema::metric_kind::id.eq(schema::metric::metric_kind_id)),
-        )
-        .left_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
-        .filter(schema::perf::id.eq(perf_id))
-        .select((
-            schema::metric_kind::id,
-            schema::metric_kind::uuid,
-            schema::metric_kind::project_id,
-            schema::metric_kind::name,
-            schema::metric_kind::slug,
-            schema::metric_kind::units,
-            schema::metric_kind::created,
-            schema::metric_kind::modified,
-        ))
-        .load::<QueryMetricKind>(conn)
-        .map_err(ApiError::from)?
-        .into_iter()
-        .filter_map(|metric_kind| Some((metric_kind.id, metric_kind.into_json(conn).ok()?)))
-        .collect())
-}
-
-struct ThresholdStatistic {
-    threshold_id: ThresholdId,
-    statistic_id: StatisticId,
-}
-
-fn get_benchmark_metric(
-    conn: &mut DbConnection,
-    perf_id: PerfId,
-    metric_kind_id: MetricKindId,
-    benchmark: JsonBenchmark,
-) -> Result<(Option<ThresholdStatistic>, JsonBenchmarkMetric), ApiError> {
-    let query_metric = schema::metric::table
-        .filter(schema::metric::perf_id.eq(perf_id))
-        .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
-        .first::<QueryMetric>(conn)
-        .map_err(ApiError::from)?;
-    // The boundary is optional, so it may not exist
-    let query_boundary = QueryBoundary::from_metric_id(conn, query_metric.id).ok();
-
-    let threshold_statistic = query_boundary.as_ref().map(
-        |QueryBoundary {
-             threshold_id,
-             statistic_id,
-             ..
-         }| ThresholdStatistic {
-            threshold_id: *threshold_id,
-            statistic_id: *statistic_id,
-        },
-    );
-
-    let JsonBenchmark {
-        uuid,
-        project,
-        name,
-        slug,
-        created,
-        modified,
-    } = benchmark;
-
-    Ok((
-        threshold_statistic,
-        JsonBenchmarkMetric {
-            uuid,
-            project,
-            name,
-            slug,
-            metric: query_metric.into_json(),
-            boundary: query_boundary
-                .map(QueryBoundary::into_json)
-                .unwrap_or_default(),
-            created,
-            modified,
-        },
-    ))
-}
-
-fn get_iteration_results(
-    log: &Logger,
-    conn: &mut DbConnection,
-    metric_kinds: &HashMap<MetricKindId, JsonMetricKind>,
-    metric_kind_benchmarks: HashMap<
-        MetricKindId,
-        (Option<ThresholdStatistic>, Vec<JsonBenchmarkMetric>),
-    >,
-) -> Result<JsonReportIteration, ApiError> {
-    let mut iteration_results = Vec::new();
-    for (metric_kind_id, (threshold_statistic, benchmarks)) in metric_kind_benchmarks {
-        let Some(metric_kind) = metric_kinds.get(&metric_kind_id).cloned() else {
-            warn!(
-                log,
-                "Metric kind {metric_kind_id} not found in metric kinds list"
-            );
-            continue;
-        };
-
-        let threshold = if let Some(ThresholdStatistic {
-            threshold_id,
-            statistic_id,
-        }) = threshold_statistic
-        {
-            Some(QueryThreshold::get_threshold_statistic_json(
-                conn,
-                threshold_id,
-                statistic_id,
-            )?)
-        } else {
-            None
-        };
-
-        let result = JsonReportResult {
-            metric_kind,
-            threshold,
-            benchmarks,
-        };
-        iteration_results.push(result);
-    }
-    Ok(iteration_results)
 }
 
 fn get_alerts(conn: &mut DbConnection, report_id: ReportId) -> Result<JsonReportAlerts, ApiError> {
