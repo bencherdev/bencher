@@ -8,7 +8,7 @@ edition.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["dep:regex"]
+full = ["dep:regex"]
 lite = ["dep:regex-lite"]
 plus = ["chrono/clock"]
 schema = ["dep:schemars", "ordered-float/schemars"]

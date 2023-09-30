@@ -5,6 +5,7 @@ authors.workspace = true
 edition.workspace = true
 
 [features]
+full = ["bencher_valid/full"]
 lite = ["bencher_valid/lite"]
 plus = ["bencher_valid/plus"]
 schema = ["dep:schemars", "ordered-float/schemars"]

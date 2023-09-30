@@ -1,6 +1,6 @@
 use derive_more::Display;
 use once_cell::sync::Lazy;
-#[cfg(not(feature = "lite"))]
+#[cfg(all(feature = "full", not(feature = "lite")))]
 use regex::Regex;
 #[cfg(feature = "lite")]
 use regex_lite::Regex;

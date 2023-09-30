@@ -20,7 +20,7 @@ swagger = ["dep:literally"]
 # Workspace
 bencher_adapter.workspace = true
 bencher_billing = { workspace = true, optional = true }
-bencher_json = { workspace = true, features = ["schema"] }
+bencher_json = { workspace = true, features = ["full", "schema"] }
 bencher_license = { workspace = true, optional = true }
 bencher_plot.workspace = true
 bencher_plus = { workspace = true, optional = true }
