@@ -179,13 +179,15 @@ fn get_report_results(
             )
         ).nullable(),
 
-        // schema::benchmark::id,
-        // schema::benchmark::project_id,
-        // schema::benchmark::uuid,
-        // schema::benchmark::name,
-        // schema::benchmark::slug,
-        // schema::benchmark::created,
-        // schema::benchmark::modified,
+        (
+            schema::benchmark::id,
+            schema::benchmark::uuid,
+            schema::benchmark::project_id,
+            schema::benchmark::name,
+            schema::benchmark::slug,
+            schema::benchmark::created,
+            schema::benchmark::modified,
+        ),
 
         // schema::metric::id,
         // schema::metric::uuid,
@@ -198,14 +200,14 @@ fn get_report_results(
         //     schema::boundary::upper_limit,
         // ).nullable(),
     ))
-    .load::<(i32, QueryMetricKind, Option<(QueryThreshold, QueryStatistic)>)>(conn)
+    .load::<(i32, QueryMetricKind, Option<(QueryThreshold, QueryStatistic)>, QueryBenchmark)>(conn)
     .map_err(ApiError::from)?;
 
     let mut report_results = Vec::new();
     let mut report_iteration = Vec::new();
     let mut iteration = 0;
     let mut report_result: Option<JsonReportResult> = None;
-    for (i, query_metric_kind, threshold_statistic) in results {
+    for (i, query_metric_kind, threshold_statistic, query_benchmark) in results {
         // If onto a new iteration, then add the previous iteration's results to the report results list.
         if i != iteration {
             iteration = i;
@@ -234,6 +236,8 @@ fn get_report_results(
                 report_iteration.push(result);
             }
         }
+
+        let benchmark = query_benchmark.into_json_for_project(project)?;
 
         if let Some(result) = report_result.as_mut() {
         } else {

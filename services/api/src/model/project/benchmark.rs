@@ -115,60 +115,32 @@ impl QueryBenchmark {
         Self::get_id(conn, &insert_benchmark.uuid)
     }
 
-    fn get_benchmark_json(
-        conn: &mut DbConnection,
-        uuid: &str,
-        project_id: ProjectId,
-        name: &str,
-        slug: &str,
-        created: i64,
-        modified: i64,
-    ) -> Result<JsonBenchmark, ApiError> {
-        Ok(JsonBenchmark {
-            uuid: Uuid::from_str(uuid).map_err(ApiError::from)?,
-            project: QueryProject::get_uuid(conn, project_id)?,
-            name: BenchmarkName::from_str(name).map_err(ApiError::from)?,
-            slug: Slug::from_str(slug).map_err(ApiError::from)?,
-            created: to_date_time(created).map_err(ApiError::from)?,
-            modified: to_date_time(modified).map_err(ApiError::from)?,
-        })
-    }
-
     pub fn get_benchmark_metric_json(
         conn: &mut DbConnection,
         metric_id: MetricId,
     ) -> Result<JsonBenchmarkMetric, ApiError> {
-        let (uuid, project_id, name, slug, created, modified, value, lower_value, upper_value) =
-            schema::metric::table
-                .filter(schema::metric::id.eq(metric_id))
-                .left_join(schema::perf::table.on(schema::perf::id.eq(schema::metric::perf_id)))
-                .inner_join(
-                    schema::benchmark::table
-                        .on(schema::benchmark::id.eq(schema::perf::benchmark_id)),
-                )
-                .select((
+        let (query_benchmark, value, lower_value, upper_value) = schema::metric::table
+            .filter(schema::metric::id.eq(metric_id))
+            .left_join(schema::perf::table.on(schema::perf::id.eq(schema::metric::perf_id)))
+            .inner_join(
+                schema::benchmark::table.on(schema::benchmark::id.eq(schema::perf::benchmark_id)),
+            )
+            .select((
+                (
+                    schema::benchmark::id,
                     schema::benchmark::uuid,
                     schema::benchmark::project_id,
                     schema::benchmark::name,
                     schema::benchmark::slug,
                     schema::benchmark::created,
                     schema::benchmark::modified,
-                    schema::metric::value,
-                    schema::metric::lower_value,
-                    schema::metric::upper_value,
-                ))
-                .first::<(
-                    String,
-                    ProjectId,
-                    String,
-                    String,
-                    i64,
-                    i64,
-                    f64,
-                    Option<f64>,
-                    Option<f64>,
-                )>(conn)
-                .map_err(ApiError::from)?;
+                ),
+                schema::metric::value,
+                schema::metric::lower_value,
+                schema::metric::upper_value,
+            ))
+            .first::<(QueryBenchmark, f64, Option<f64>, Option<f64>)>(conn)
+            .map_err(ApiError::from)?;
 
         let JsonBenchmark {
             uuid,
@@ -177,7 +149,7 @@ impl QueryBenchmark {
             slug,
             created,
             modified,
-        } = Self::get_benchmark_json(conn, &uuid, project_id, &name, &slug, created, modified)?;
+        } = query_benchmark.into_json(conn)?;
         let metric = QueryMetric::json(value, lower_value, upper_value);
         let boundary = QueryBoundary::get_json(conn, metric_id);
 
@@ -194,16 +166,27 @@ impl QueryBenchmark {
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonBenchmark, ApiError> {
-        let QueryBenchmark {
+        let project = QueryProject::get_uuid(conn, self.project_id)?;
+        self.into_json_for_project(project)
+    }
+
+    pub fn into_json_for_project(self, project: Uuid) -> Result<JsonBenchmark, ApiError> {
+        let Self {
             uuid,
-            project_id,
             name,
             slug,
             created,
             modified,
             ..
         } = self;
-        Self::get_benchmark_json(conn, &uuid, project_id, &name, &slug, created, modified)
+        Ok(JsonBenchmark {
+            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
+            project,
+            name: BenchmarkName::from_str(&name).map_err(ApiError::from)?,
+            slug: Slug::from_str(&slug).map_err(ApiError::from)?,
+            created: to_date_time(created).map_err(ApiError::from)?,
+            modified: to_date_time(modified).map_err(ApiError::from)?,
+        })
     }
 }
 
