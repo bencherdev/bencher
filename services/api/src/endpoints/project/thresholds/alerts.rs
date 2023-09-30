@@ -3,7 +3,7 @@ use bencher_json::{
     JsonAlert, JsonAlerts, JsonDirection, JsonPagination, ResourceId,
 };
 use bencher_rbac::project::Permission;
-use diesel::{dsl::count, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{dsl::count, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -110,22 +110,17 @@ async fn get_ls_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     let mut query = schema::alert::table
-        .left_join(schema::boundary::table.on(schema::alert::boundary_id.eq(schema::boundary::id)))
-        .left_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
-        .left_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
-        .left_join(
-            schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
+        .inner_join(
+            schema::boundary::table.inner_join(
+                schema::metric::table.inner_join(
+                    schema::perf::table
+                        .inner_join(schema::report::table)
+                        .inner_join(schema::benchmark::table),
+                ),
+            ),
         )
         .filter(schema::benchmark::project_id.eq(query_project.id))
-        .left_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
-        .select((
-            schema::alert::id,
-            schema::alert::uuid,
-            schema::alert::boundary_id,
-            schema::alert::boundary_limit,
-            schema::alert::status,
-            schema::alert::modified,
-        ))
+        .select(QueryAlert::as_select())
         .into_boxed();
 
     query = match pagination_params.order() {
@@ -162,7 +157,7 @@ async fn get_ls_inner(
     Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryAlert>(conn)
+        .load(conn)
         .map_err(ApiError::from)?
         .into_iter()
         .filter_map(into_json!(endpoint, conn))
@@ -352,14 +347,13 @@ async fn get_stats_inner(
 
     let active = schema::alert::table
         .filter(schema::alert::status.eq(Status::Active))
-        .left_join(schema::boundary::table.on(schema::alert::boundary_id.eq(schema::boundary::id)))
-        .left_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
-        .left_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
-        .left_join(
-            schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
+        .inner_join(
+            schema::boundary::table.inner_join(
+                schema::metric::table
+                    .inner_join(schema::perf::table.inner_join(schema::benchmark::table)),
+            ),
         )
         .filter(schema::benchmark::project_id.eq(query_project.id))
-        .left_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
         .select(count(schema::alert::id))
         .first::<i64>(conn)
         .map_err(ApiError::from)?;

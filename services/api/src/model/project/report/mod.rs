@@ -269,21 +269,15 @@ fn get_report_alerts(
     let alerts = schema::alert::table
         .inner_join(
             schema::boundary::table.inner_join(
-                schema::metric::table
-                    .inner_join(schema::metric_kind::table)
-                    .inner_join(
-                        schema::perf::table
-                            .inner_join(schema::report::table)
-                            .inner_join(schema::benchmark::table),
-                    ),
+                schema::metric::table.inner_join(
+                    schema::perf::table
+                        .inner_join(schema::report::table)
+                        .inner_join(schema::benchmark::table),
+                ),
             ),
         )
         .filter(schema::report::id.eq(report_id))
-        .order((
-            schema::perf::iteration,
-            schema::metric_kind::name,
-            schema::benchmark::name,
-        ))
+        .order((schema::perf::iteration, schema::benchmark::name))
         .select((
             schema::report::uuid,
             schema::perf::iteration,
