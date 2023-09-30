@@ -10,7 +10,11 @@ use bencher_json::{
     JsonBenchmark, JsonMetricKind, JsonNewReport, JsonReport,
 };
 use chrono::Utc;
-use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{
+    ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
+    SelectableHelper,
+};
+use mail_send::mail_auth::trust_dns_resolver::proto::op::query;
 use slog::{warn, Logger};
 use uuid::Uuid;
 
@@ -32,7 +36,9 @@ use super::{
 use crate::{
     context::DbConnection,
     model::{
-        project::{benchmark::QueryBenchmark, perf::QueryPerf},
+        project::{
+            benchmark::QueryBenchmark, perf::QueryPerf, threshold::statistic::QueryStatistic,
+        },
         user::{QueryUser, UserId},
     },
     schema,
@@ -90,6 +96,9 @@ impl QueryReport {
             created,
         } = self;
 
+        let project = QueryProject::get(conn, project_id)?.into_json(conn)?;
+        get_report_results(log, conn, project.uuid, id)?;
+
         Ok(JsonReport {
             uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
             user: QueryUser::get(conn, user_id)?.into_json()?,
@@ -107,11 +116,12 @@ impl QueryReport {
 }
 
 fn get_report_results(
+    log: &Logger,
     conn: &mut DbConnection,
     project: Uuid,
     report_id: ReportId,
 ) -> Result<JsonReportResults, ApiError> {
-    let _query = schema::perf::table
+    let results = schema::perf::table
     .filter(schema::perf::report_id.eq(report_id))
     .inner_join(
         schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
@@ -131,56 +141,108 @@ fn get_report_results(
     .order((schema::perf::iteration, schema::metric_kind::name, schema::benchmark::name))
     .select((
         schema::perf::iteration,
-
-        schema::metric_kind::id,
-        schema::metric_kind::uuid,
-        schema::metric_kind::project_id,
-        schema::metric_kind::name,
-        schema::metric_kind::slug,
-        schema::metric_kind::units,
-        schema::metric_kind::created,
-        schema::metric_kind::modified,
-
         (
-            schema::threshold::id,
-            schema::threshold::uuid,
-            schema::threshold::created,
-            schema::threshold::modified,
-            schema::statistic::id,
-            schema::statistic::uuid,
-            schema::statistic::test,
-            schema::statistic::min_sample_size,
-            schema::statistic::max_sample_size,
-            schema::statistic::window,
-            schema::statistic::lower_boundary,
-            schema::statistic::upper_boundary,
-            schema::statistic::created,
-        ).nullable(),
+            schema::metric_kind::id,
+            schema::metric_kind::uuid,
+            schema::metric_kind::project_id,
+            schema::metric_kind::name,
+            schema::metric_kind::slug,
+            schema::metric_kind::units,
+            schema::metric_kind::created,
+            schema::metric_kind::modified
+        ),
+        // (
+        //     schema::threshold::id,
+        //     schema::threshold::uuid,
+        //     schema::threshold::created,
+        //     schema::threshold::modified,
+        //     schema::statistic::id,
+        //     schema::statistic::uuid,
+        //     schema::statistic::test,
+        //     schema::statistic::min_sample_size,
+        //     schema::statistic::max_sample_size,
+        //     schema::statistic::window,
+        //     schema::statistic::lower_boundary,
+        //     schema::statistic::upper_boundary,
+        //     schema::statistic::created,
+        // ).nullable(),
 
-        schema::benchmark::id,
-        schema::benchmark::project_id,
-        schema::benchmark::uuid,
-        schema::benchmark::name,
-        schema::benchmark::slug,
-        schema::benchmark::created,
-        schema::benchmark::modified,
+        // schema::benchmark::id,
+        // schema::benchmark::project_id,
+        // schema::benchmark::uuid,
+        // schema::benchmark::name,
+        // schema::benchmark::slug,
+        // schema::benchmark::created,
+        // schema::benchmark::modified,
 
-        schema::metric::id,
-        schema::metric::uuid,
-        schema::metric::value,
-        schema::metric::lower_value,
-        schema::metric::upper_value,
+        // schema::metric::id,
+        // schema::metric::uuid,
+        // schema::metric::value,
+        // schema::metric::lower_value,
+        // schema::metric::upper_value,
 
-        (
-            schema::boundary::lower_limit,
-            schema::boundary::upper_limit,
-        ).nullable(),
-    ));
+        // (
+        //     schema::boundary::lower_limit,
+        //     schema::boundary::upper_limit,
+        // ).nullable(),
+    ))
+    .load::<(i32, QueryMetricKind)>(conn)
+    .map_err(ApiError::from)?;
 
-    // .load::<()>(conn)
-    // .map_err(ApiError::from);
+    let mut report_results = Vec::new();
+    let mut report_iteration = Vec::new();
+    let mut iteration = 0;
+    let mut report_result: Option<JsonReportResult> = None;
+    for (i, query_metric_kind) in results {
+        // If onto a new iteration, then add the previous iteration's results to the report results list.
+        if i != iteration {
+            iteration = i;
+            report_results.push(report_iteration);
+            report_iteration = Vec::new();
+        }
 
-    todo!()
+        // If there is a current report result, make sure that the metric kind is the same.
+        // Otherwise, add it to the report iteration list.
+        if let Some(result) = report_result.take() {
+            if query_metric_kind.uuid == result.metric_kind.uuid.to_string() {
+                slog::debug!(
+                    log,
+                    "Same metric kind {} | {}",
+                    query_metric_kind.uuid,
+                    result.metric_kind.uuid
+                );
+                report_result = Some(result);
+            } else {
+                slog::debug!(
+                    log,
+                    "Different metric kind {} | {}",
+                    query_metric_kind.uuid,
+                    result.metric_kind.uuid
+                );
+                report_iteration.push(result);
+            }
+        }
+
+        if let Some(result) = report_result.as_mut() {
+        } else {
+            let metric_kind = query_metric_kind.into_json_for_project(project)?;
+            report_result = Some(JsonReportResult {
+                metric_kind,
+                threshold: None,
+                benchmarks: Vec::new(),
+            });
+        }
+    }
+
+    // Cleanup from the last iteration
+    if let Some(result) = report_result.take() {
+        report_iteration.push(result);
+    }
+    report_results.push(report_iteration);
+
+    slog::debug!(log, "Report results: {report_results:#?}");
+
+    Ok(report_results)
 }
 
 fn get_results(

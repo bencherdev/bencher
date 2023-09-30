@@ -15,7 +15,7 @@ use super::{
 
 crate::util::typed_id::typed_id!(MetricId);
 
-#[derive(diesel::Queryable, diesel::Identifiable, diesel::Associations)]
+#[derive(diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable)]
 #[diesel(table_name = metric_table)]
 #[diesel(belongs_to(QueryPerf, foreign_key = perf_id))]
 #[diesel(belongs_to(QueryMetricKind, foreign_key = metric_kind_id))]

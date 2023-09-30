@@ -36,7 +36,7 @@ crate::util::typed_id::typed_id!(MetricKindId);
 
 fn_resource_id!(metric_kind);
 
-#[derive(diesel::Queryable, diesel::Identifiable, diesel::Associations)]
+#[derive(diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable)]
 #[diesel(table_name = metric_kind_table)]
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryMetricKind {
@@ -76,9 +76,13 @@ impl QueryMetricKind {
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonMetricKind, ApiError> {
+        let project = QueryProject::get_uuid(conn, self.project_id)?;
+        self.into_json_for_project(project)
+    }
+
+    pub fn into_json_for_project(self, project: Uuid) -> Result<JsonMetricKind, ApiError> {
         let Self {
             uuid,
-            project_id,
             name,
             slug,
             units,
@@ -88,7 +92,7 @@ impl QueryMetricKind {
         } = self;
         Ok(JsonMetricKind {
             uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
-            project: QueryProject::get_uuid(conn, project_id)?,
+            project,
             name: NonEmpty::from_str(&name).map_err(ApiError::from)?,
             slug: Slug::from_str(&slug).map_err(ApiError::from)?,
             units: NonEmpty::from_str(&units).map_err(ApiError::from)?,

@@ -24,7 +24,8 @@ use super::{QueryThreshold, ThresholdId};
 
 crate::util::typed_id::typed_id!(StatisticId);
 
-#[derive(diesel::Queryable, Debug, Clone)]
+#[derive(Debug, Clone, diesel::Queryable, diesel::Selectable)]
+#[diesel(table_name = statistic_table)]
 pub struct QueryStatistic {
     pub id: StatisticId,
     pub uuid: String,
