@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use bencher_json::project::{
     alert::{JsonAlert, JsonAlertStatus, JsonPerfAlert, JsonUpdateAlert},
+    benchmark::JsonBenchmarkMetric,
     boundary::JsonLimit,
 };
 use chrono::Utc;
@@ -10,13 +11,17 @@ use uuid::Uuid;
 
 use super::{
     boundary::{BoundaryId, QueryBoundary},
-    QueryThreshold,
+    statistic::StatisticId,
+    QueryThreshold, ThresholdId,
 };
 use crate::{
     context::DbConnection,
-    model::project::{benchmark::QueryBenchmark, report::QueryReport, ProjectId},
-    schema,
+    model::project::{
+        benchmark::QueryBenchmark, metric::QueryMetric, report::QueryReport, ProjectId,
+        QueryProject,
+    },
     schema::alert as alert_table,
+    schema::{self, statistic},
     util::{
         query::{fn_get, fn_get_id},
         to_date_time,
@@ -102,37 +107,116 @@ impl QueryAlert {
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonAlert, ApiError> {
+        let (
+            report,
+            iteration,
+            threshold_id,
+            statistic_id,
+            query_benchmark,
+            query_metric,
+            query_boundary,
+        ) = schema::alert::table
+            .filter(schema::alert::id.eq(self.id))
+            .inner_join(
+                schema::boundary::table.on(schema::alert::boundary_id.eq(schema::boundary::id)),
+            )
+            .inner_join(
+                schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)),
+            )
+            .inner_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
+            .inner_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
+            .inner_join(
+                schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
+            )
+            .select((
+                schema::report::uuid,
+                schema::perf::iteration,
+                schema::boundary::threshold_id,
+                schema::boundary::statistic_id,
+                (
+                    schema::benchmark::id,
+                    schema::benchmark::uuid,
+                    schema::benchmark::project_id,
+                    schema::benchmark::name,
+                    schema::benchmark::slug,
+                    schema::benchmark::created,
+                    schema::benchmark::modified,
+                ),
+                (
+                    schema::metric::id,
+                    schema::metric::uuid,
+                    schema::metric::perf_id,
+                    schema::metric::metric_kind_id,
+                    schema::metric::value,
+                    schema::metric::lower_value,
+                    schema::metric::upper_value,
+                ),
+                (
+                    schema::boundary::id,
+                    schema::boundary::uuid,
+                    schema::boundary::threshold_id,
+                    schema::boundary::statistic_id,
+                    schema::boundary::metric_id,
+                    schema::boundary::lower_limit,
+                    schema::boundary::upper_limit,
+                ),
+            ))
+            .first::<(
+                String,
+                i32,
+                ThresholdId,
+                StatisticId,
+                QueryBenchmark,
+                QueryMetric,
+                QueryBoundary,
+            )>(conn)
+            .map_err(ApiError::from)?;
+        let project = QueryProject::get_uuid(conn, query_benchmark.project_id)?;
+        self.into_json_for_report(
+            conn,
+            project,
+            report,
+            iteration,
+            threshold_id,
+            statistic_id,
+            query_benchmark,
+            query_metric,
+            query_boundary,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
+    pub fn into_json_for_report(
+        self,
+        conn: &mut DbConnection,
+        project: Uuid,
+        report: String,
+        iteration: i32,
+        threshold_id: ThresholdId,
+        statistic_id: StatisticId,
+        query_benchmark: QueryBenchmark,
+        query_metric: QueryMetric,
+        query_boundary: QueryBoundary,
+    ) -> Result<JsonAlert, ApiError> {
         let Self {
             uuid,
-            boundary_id,
             boundary_limit,
             status,
             modified,
             ..
         } = self;
-        let QueryBoundary {
-            threshold_id,
-            statistic_id,
-            metric_id,
-            ..
-        } = QueryBoundary::get(conn, boundary_id)?;
-
-        let (report_id, iteration): (_, i32) = schema::perf::table
-            .left_join(schema::metric::table.on(schema::metric::perf_id.eq(schema::perf::id)))
-            .left_join(
-                schema::boundary::table.on(schema::boundary::metric_id.eq(schema::metric::id)),
-            )
-            .filter(schema::metric::id.eq(metric_id))
-            .select((schema::perf::report_id, schema::perf::iteration))
-            .first(conn)
-            .map_err(ApiError::from)?;
-
+        let report = Uuid::from_str(&report).map_err(ApiError::from)?;
+        let benchmark = query_benchmark.into_benchmark_metric_json_for_project(
+            project,
+            query_metric,
+            Some(query_boundary),
+        )?;
         Ok(JsonAlert {
             uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
-            report: QueryReport::get_uuid(conn, report_id)?,
+            report,
             iteration: u32::try_from(iteration).map_err(ApiError::from)?,
             threshold: QueryThreshold::get_json(conn, threshold_id, statistic_id)?,
-            benchmark: QueryBenchmark::into_benchmark_metric_json(conn, metric_id)?,
+            benchmark,
             limit: boundary_limit.into(),
             status: status.into(),
             modified: to_date_time(modified)?,

@@ -36,6 +36,8 @@ pub mod results;
 
 use adapter::Adapter;
 
+use super::threshold::{statistic::StatisticId, ThresholdId};
+
 crate::util::typed_id::typed_id!(ReportId);
 
 #[derive(diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable)]
@@ -138,7 +140,6 @@ fn get_report_results(
             schema::metric_kind::created,
             schema::metric_kind::modified
         ),
-
         (
             (
                 schema::threshold::id,
@@ -164,7 +165,6 @@ fn get_report_results(
                 schema::statistic::created,
             )
         ).nullable(),
-
         (
             schema::benchmark::id,
             schema::benchmark::uuid,
@@ -174,7 +174,6 @@ fn get_report_results(
             schema::benchmark::created,
             schema::benchmark::modified,
         ),
-
         (
             schema::metric::id,
             schema::metric::uuid,
@@ -184,7 +183,6 @@ fn get_report_results(
             schema::metric::lower_value,
             schema::metric::upper_value,
         ),
-
         (
             schema::boundary::id,
             schema::boundary::uuid,
@@ -274,6 +272,112 @@ fn get_report_results(
     slog::trace!(log, "Report results: {report_results:#?}");
 
     Ok(report_results)
+}
+
+#[allow(clippy::too_many_lines)]
+fn get_report_alerts(
+    conn: &mut DbConnection,
+    project: Uuid,
+    report_id: ReportId,
+) -> Result<JsonReportAlerts, ApiError> {
+    let alerts = schema::alert::table
+        .inner_join(schema::boundary::table.on(schema::alert::boundary_id.eq(schema::boundary::id)))
+        .inner_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
+        .inner_join(
+            schema::metric_kind::table
+                .on(schema::metric::metric_kind_id.eq(schema::metric_kind::id)),
+        )
+        .inner_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
+        .inner_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
+        .filter(schema::report::id.eq(report_id))
+        .inner_join(
+            schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
+        )
+        .order((
+            schema::perf::iteration,
+            schema::metric_kind::name,
+            schema::benchmark::name,
+        ))
+        .select((
+            schema::report::uuid,
+            schema::perf::iteration,
+            (
+                schema::alert::id,
+                schema::alert::uuid,
+                schema::alert::boundary_id,
+                schema::alert::boundary_limit,
+                schema::alert::status,
+                schema::alert::modified,
+            ),
+            schema::boundary::threshold_id,
+            schema::boundary::statistic_id,
+            (
+                schema::benchmark::id,
+                schema::benchmark::uuid,
+                schema::benchmark::project_id,
+                schema::benchmark::name,
+                schema::benchmark::slug,
+                schema::benchmark::created,
+                schema::benchmark::modified,
+            ),
+            (
+                schema::metric::id,
+                schema::metric::uuid,
+                schema::metric::perf_id,
+                schema::metric::metric_kind_id,
+                schema::metric::value,
+                schema::metric::lower_value,
+                schema::metric::upper_value,
+            ),
+            (
+                schema::boundary::id,
+                schema::boundary::uuid,
+                schema::boundary::threshold_id,
+                schema::boundary::statistic_id,
+                schema::boundary::metric_id,
+                schema::boundary::lower_limit,
+                schema::boundary::upper_limit,
+            ),
+        ))
+        .load::<(
+            String,
+            i32,
+            QueryAlert,
+            ThresholdId,
+            StatisticId,
+            QueryBenchmark,
+            QueryMetric,
+            QueryBoundary,
+        )>(conn)
+        .map_err(ApiError::from)?;
+
+    let mut report_alerts = Vec::new();
+    for (
+        report,
+        iteration,
+        query_alert,
+        threshold_id,
+        statistic_id,
+        query_benchmark,
+        query_metric,
+        query_boundary,
+    ) in alerts
+    {
+        let json_alert = query_alert.into_json_for_report(
+            conn,
+            project,
+            report,
+            iteration,
+            threshold_id,
+            statistic_id,
+            query_benchmark,
+            query_metric,
+            query_boundary,
+        )?;
+        report_alerts.push(json_alert);
+    }
+
+    Ok(report_alerts)
 }
 
 fn get_alerts(conn: &mut DbConnection, report_id: ReportId) -> Result<JsonReportAlerts, ApiError> {
