@@ -8,7 +8,10 @@ use bencher_json::{
     },
     GitHash, JsonBenchmark, JsonBranch, JsonPerf, JsonPerfQuery, JsonTestbed, ResourceId,
 };
-use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{
+    ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
+    SelectableHelper,
+};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -418,15 +421,7 @@ fn perf_query(
                     schema::alert::modified,
                 ).nullable()
             ).nullable(),
-            (
-                schema::metric::id,
-                schema::metric::uuid,
-                schema::metric::perf_id,
-                schema::metric::metric_kind_id,
-                schema::metric::value,
-                schema::metric::lower_value,
-                schema::metric::upper_value,
-            ),
+            QueryMetric::as_select(),
         ))
         .load::<PerfQuery>(conn)
         .map_err(ApiError::from)?

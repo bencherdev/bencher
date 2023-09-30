@@ -27,7 +27,8 @@ use crate::{
 
 crate::util::typed_id::typed_id!(AlertId);
 
-#[derive(diesel::Queryable)]
+#[derive(diesel::Queryable, diesel::Selectable)]
+#[diesel(table_name = alert_table)]
 pub struct QueryAlert {
     pub id: AlertId,
     pub uuid: String,

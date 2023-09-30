@@ -5,7 +5,10 @@ use bencher_json::{
     JsonNewReport, JsonReport,
 };
 use chrono::Utc;
-use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{
+    ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
+    SelectableHelper,
+};
 use slog::Logger;
 use uuid::Uuid;
 
@@ -131,16 +134,7 @@ fn get_report_results(
     .order((schema::perf::iteration, schema::metric_kind::name, schema::benchmark::name))
     .select((
         schema::perf::iteration,
-        (
-            schema::metric_kind::id,
-            schema::metric_kind::uuid,
-            schema::metric_kind::project_id,
-            schema::metric_kind::name,
-            schema::metric_kind::slug,
-            schema::metric_kind::units,
-            schema::metric_kind::created,
-            schema::metric_kind::modified
-        ),
+        QueryMetricKind::as_select(),
         (
             (
                 schema::threshold::id,
@@ -166,24 +160,8 @@ fn get_report_results(
                 schema::statistic::created,
             )
         ).nullable(),
-        (
-            schema::benchmark::id,
-            schema::benchmark::uuid,
-            schema::benchmark::project_id,
-            schema::benchmark::name,
-            schema::benchmark::slug,
-            schema::benchmark::created,
-            schema::benchmark::modified,
-        ),
-        (
-            schema::metric::id,
-            schema::metric::uuid,
-            schema::metric::perf_id,
-            schema::metric::metric_kind_id,
-            schema::metric::value,
-            schema::metric::lower_value,
-            schema::metric::upper_value,
-        ),
+        QueryBenchmark::as_select(),
+        QueryMetric::as_select(),
         (
             schema::boundary::id,
             schema::boundary::uuid,
@@ -301,43 +279,12 @@ fn get_report_alerts(
         .select((
             schema::report::uuid,
             schema::perf::iteration,
-            (
-                schema::alert::id,
-                schema::alert::uuid,
-                schema::alert::boundary_id,
-                schema::alert::boundary_limit,
-                schema::alert::status,
-                schema::alert::modified,
-            ),
+            QueryAlert::as_select(),
             schema::boundary::threshold_id,
             schema::boundary::statistic_id,
-            (
-                schema::benchmark::id,
-                schema::benchmark::uuid,
-                schema::benchmark::project_id,
-                schema::benchmark::name,
-                schema::benchmark::slug,
-                schema::benchmark::created,
-                schema::benchmark::modified,
-            ),
-            (
-                schema::metric::id,
-                schema::metric::uuid,
-                schema::metric::perf_id,
-                schema::metric::metric_kind_id,
-                schema::metric::value,
-                schema::metric::lower_value,
-                schema::metric::upper_value,
-            ),
-            (
-                schema::boundary::id,
-                schema::boundary::uuid,
-                schema::boundary::threshold_id,
-                schema::boundary::statistic_id,
-                schema::boundary::metric_id,
-                schema::boundary::lower_limit,
-                schema::boundary::upper_limit,
-            ),
+            QueryBenchmark::as_select(),
+            QueryMetric::as_select(),
+            QueryBoundary::as_select(),
         ))
         .load::<(
             String,

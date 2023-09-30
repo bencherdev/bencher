@@ -17,7 +17,8 @@ use super::{statistic::StatisticId, ThresholdId};
 
 crate::util::typed_id::typed_id!(BoundaryId);
 
-#[derive(diesel::Queryable)]
+#[derive(diesel::Queryable, diesel::Selectable)]
+#[diesel(table_name = boundary_table)]
 pub struct QueryBoundary {
     pub id: BoundaryId,
     pub uuid: String,
