@@ -218,6 +218,22 @@ impl QueryAlert {
             modified: to_date_time(modified)?,
         })
     }
+
+    pub fn into_perf_json(self) -> Result<JsonPerfAlert, ApiError> {
+        let QueryAlert {
+            uuid,
+            boundary_limit,
+            status,
+            modified,
+            ..
+        } = self;
+        Ok(JsonPerfAlert {
+            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
+            limit: boundary_limit.into(),
+            status: status.into(),
+            modified: to_date_time(modified)?,
+        })
+    }
 }
 
 const LOWER_BOOL: bool = false;

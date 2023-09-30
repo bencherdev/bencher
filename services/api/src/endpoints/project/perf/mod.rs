@@ -8,7 +8,7 @@ use bencher_json::{
     GitHash, JsonBenchmark, JsonBranch, JsonMetric, JsonPerf, JsonPerfQuery, JsonTestbed,
     ResourceId,
 };
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -26,7 +26,9 @@ use crate::{
         metric::MetricId,
         metric_kind::{MetricKindId, QueryMetricKind},
         testbed::{QueryTestbed, TestbedId},
-        threshold::{alert::QueryAlert, boundary::QueryBoundary, QueryThreshold},
+        threshold::{
+            alert::QueryAlert, boundary::QueryBoundary, statistic::QueryStatistic, QueryThreshold,
+        },
         QueryProject,
     },
     model::user::auth::AuthUser,
@@ -114,6 +116,7 @@ async fn get_inner(
 
     let project =
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
+    let project_uuid = Uuid::from_str(&project.uuid).map_err(ApiError::from)?;
 
     let JsonPerfQuery {
         branches,
@@ -160,7 +163,14 @@ async fn get_inner(
                 let (two_d, query_dimensions) = dimensions.into_query()?;
                 dimensions = two_d;
 
-                perf_query(conn, ids, query_dimensions, times, &mut results)?;
+                perf_query(
+                    conn,
+                    project_uuid,
+                    ids,
+                    query_dimensions,
+                    times,
+                    &mut results,
+                )?;
             }
         }
     }
@@ -275,14 +285,17 @@ type PerfQuery = (
     i64,
     i32,
     Option<String>,
+    Option<(QueryThreshold, QueryStatistic, Option<QueryAlert>)>,
     MetricId,
     f64,
     Option<f64>,
     Option<f64>,
 );
 
+#[allow(clippy::too_many_lines)]
 fn perf_query(
     conn: &mut DbConnection,
+    project: Uuid,
     ids: Ids,
     dimensions: QueryDimensions,
     times: Times,
@@ -303,6 +316,21 @@ fn perf_query(
 
     let mut query = schema::metric::table
         .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
+        .left_join(
+            schema::boundary::table
+                .on(schema::metric::id.eq(schema::boundary::metric_id))
+                .inner_join(
+                    schema::threshold::table
+                        .on(schema::boundary::threshold_id.eq(schema::threshold::id)),
+                )
+                .inner_join(
+                    schema::statistic::table
+                        .on(schema::boundary::statistic_id.eq(schema::statistic::id)),
+                )
+                .left_join(
+                    schema::alert::table.on(schema::boundary::id.eq(schema::alert::boundary_id)),
+                ),
+        )
         .inner_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
         .filter(schema::perf::benchmark_id.eq(benchmark_id))
         .inner_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
@@ -346,6 +374,39 @@ fn perf_query(
             schema::report::end_time,
             schema::version::number,
             schema::version::hash,
+            (
+                (
+                    schema::threshold::id,
+                    schema::threshold::uuid,
+                    schema::threshold::project_id,
+                    schema::threshold::metric_kind_id,
+                    schema::threshold::branch_id,
+                    schema::threshold::testbed_id,
+                    schema::threshold::statistic_id,
+                    schema::threshold::created,
+                    schema::threshold::modified,
+                ),
+                (
+                    schema::statistic::id,
+                    schema::statistic::uuid,
+                    schema::statistic::threshold_id,
+                    schema::statistic::test,
+                    schema::statistic::min_sample_size,
+                    schema::statistic::max_sample_size,
+                    schema::statistic::window,
+                    schema::statistic::lower_boundary,
+                    schema::statistic::upper_boundary,
+                    schema::statistic::created,
+                ),
+                (
+                    schema::alert::id,
+                    schema::alert::uuid,
+                    schema::alert::boundary_id,
+                    schema::alert::boundary_limit,
+                    schema::alert::status,
+                    schema::alert::modified,
+                ).nullable()
+            ).nullable(),
             schema::metric::id,
             schema::metric::value,
             schema::metric::lower_value,
@@ -354,7 +415,7 @@ fn perf_query(
         .load::<PerfQuery>(conn)
         .map_err(ApiError::from)?
         .into_iter()
-        .filter_map(|query| perf_metric(conn, query))
+        .filter_map(|query| perf_metric(conn, project, query))
         .collect();
 
     results.push(JsonPerfMetrics {
@@ -369,6 +430,7 @@ fn perf_query(
 
 fn perf_metric(
     conn: &mut DbConnection,
+    project: Uuid,
     (
         report,
         iteration,
@@ -376,6 +438,7 @@ fn perf_metric(
         end_time,
         version_number,
         version_hash,
+        threshold_statistic,
         metric_id,
         value,
         lower_value,
@@ -383,24 +446,19 @@ fn perf_metric(
     ): PerfQuery,
 ) -> Option<JsonPerfMetric> {
     // The boundary may not exist
-    let boundary = QueryBoundary::from_metric_id(conn, metric_id).ok();
-    let (threshold, alert) = if let Some(QueryBoundary {
-        id,
-        threshold_id,
-        statistic_id,
-        ..
-    }) = boundary.as_ref()
-    {
-        // If a boundary exists, then a threshold and statistic must also exist
-        let threshold =
-            QueryThreshold::get_threshold_statistic_json(conn, *threshold_id, *statistic_id)
-                .ok()?;
-        // The alert may not exist
-        let alert = QueryAlert::get_perf_json(conn, *id).ok();
-        (Some(threshold), alert)
-    } else {
-        (None, None)
-    };
+    let boundary: Option<QueryBoundary> = QueryBoundary::from_metric_id(conn, metric_id).ok();
+
+    let (threshold, alert) =
+        if let Some((query_threshold, query_statistic, query_alert)) = threshold_statistic {
+            let threshold = query_threshold
+                .into_threshold_statistic_json_for_project(project, query_statistic)
+                .ok();
+            let alert = query_alert.and_then(|query_alert| query_alert.into_perf_json().ok());
+            (threshold, alert)
+        } else {
+            (None, None)
+        };
+
     Some(JsonPerfMetric {
         report: Uuid::from_str(&report).ok()?,
         iteration: u32::try_from(iteration).ok()?,
