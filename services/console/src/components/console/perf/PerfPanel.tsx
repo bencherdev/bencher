@@ -529,7 +529,7 @@ const PerfPanel = (props: Props) => {
 			tab() === DEFAULT_PERF_TAB
 		) {
 			const first_metric_kind =
-				first_report?.results?.[first]?.[first].metric_kind?.slug;
+				first_report?.results?.[first]?.[first]?.metric_kind?.slug;
 			handleReportChecked(first, first_metric_kind);
 		}
 	});

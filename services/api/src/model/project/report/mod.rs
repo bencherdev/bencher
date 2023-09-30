@@ -10,11 +10,7 @@ use bencher_json::{
     JsonBenchmark, JsonMetricKind, JsonNewReport, JsonReport,
 };
 use chrono::Utc;
-use diesel::{
-    ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
-    SelectableHelper,
-};
-use mail_send::mail_auth::trust_dns_resolver::proto::op::query;
+use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
 use slog::{warn, Logger};
 use uuid::Uuid;
 
@@ -97,18 +93,18 @@ impl QueryReport {
         } = self;
 
         let project = QueryProject::get(conn, project_id)?.into_json(conn)?;
-        get_report_results(log, conn, project.uuid, id)?;
+        let results = get_report_results(log, conn, project.uuid, id)?;
 
         Ok(JsonReport {
             uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
             user: QueryUser::get(conn, user_id)?.into_json()?,
-            project: QueryProject::get(conn, project_id)?.into_json(conn)?,
+            project,
             branch: QueryBranch::get_branch_version_json(conn, branch_id, version_id)?,
             testbed: QueryTestbed::get(conn, testbed_id)?.into_json(conn)?,
             adapter: adapter.into(),
             start_time: to_date_time(start_time)?,
             end_time: to_date_time(end_time)?,
-            results: get_results(log, conn, id)?,
+            results,
             alerts: get_alerts(conn, id)?,
             created: to_date_time(created).map_err(ApiError::from)?,
         })
@@ -214,10 +210,10 @@ fn get_report_results(
 
     let mut report_results = Vec::new();
     let mut report_iteration = Vec::new();
-    let mut iteration = 0;
+    let mut prev_iteration = None;
     let mut report_result: Option<JsonReportResult> = None;
     for (
-        i,
+        iteration,
         query_metric_kind,
         threshold_statistic,
         query_benchmark,
@@ -225,41 +221,44 @@ fn get_report_results(
         query_boundary,
     ) in results
     {
-        // If onto a new iteration, then add the previous iteration's results to the report results list.
-        if i != iteration {
-            iteration = i;
-            report_results.push(report_iteration);
-            report_iteration = Vec::new();
+        // If onto a new iteration, then add the result to the report iteration list.
+        // Then add the report iteration list to the report results list.
+        if let Some(prev_iteration) = prev_iteration.take() {
+            if iteration != prev_iteration {
+                slog::trace!(log, "Iteration {prev_iteration} => {iteration}");
+                if let Some(result) = report_result.take() {
+                    report_iteration.push(result);
+                }
+                report_results.push(std::mem::take(&mut report_iteration));
+            }
         }
+        prev_iteration = Some(iteration);
 
         // If there is a current report result, make sure that the metric kind is the same.
         // Otherwise, add it to the report iteration list.
         if let Some(result) = report_result.take() {
             if query_metric_kind.uuid == result.metric_kind.uuid.to_string() {
-                slog::trace!(
-                    log,
-                    "Same metric kind {} | {}",
-                    query_metric_kind.uuid,
-                    result.metric_kind.uuid
-                );
                 report_result = Some(result);
             } else {
                 slog::trace!(
                     log,
-                    "Different metric kind {} | {}",
+                    "Metric Kind {} => {}",
+                    result.metric_kind.uuid,
                     query_metric_kind.uuid,
-                    result.metric_kind.uuid
                 );
                 report_iteration.push(result);
             }
         }
 
+        // Create a benchmark metric out of the benchmark, metric, and boundary
         let benchmark_metric = query_benchmark.into_benchmark_metric_json_for_project(
             project,
             query_metric,
             query_boundary,
         )?;
 
+        // If there is a current report result, add the benchmark metric to it.
+        // Otherwise, create a new report result and add the benchmark to it.
         if let Some(result) = report_result.as_mut() {
             result.benchmarks.push(benchmark_metric);
         } else {

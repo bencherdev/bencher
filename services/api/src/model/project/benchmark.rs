@@ -1,10 +1,7 @@
 use std::str::FromStr;
 
 use bencher_json::{
-    project::{
-        benchmark::{JsonBenchmarkMetric, JsonNewBenchmark, JsonUpdateBenchmark},
-        boundary,
-    },
+    project::benchmark::{JsonBenchmarkMetric, JsonNewBenchmark, JsonUpdateBenchmark},
     BenchmarkName, JsonBenchmark, ResourceId, Slug,
 };
 use chrono::Utc;
@@ -210,7 +207,9 @@ impl QueryBenchmark {
             modified,
         } = self.into_json_for_project(project)?;
         let metric = query_metric.into_json();
-        let boundary = query_boundary.map(|b| b.into_json()).unwrap_or_default();
+        let boundary = query_boundary
+            .map(QueryBoundary::into_json)
+            .unwrap_or_default();
         Ok(JsonBenchmarkMetric {
             uuid,
             project,
