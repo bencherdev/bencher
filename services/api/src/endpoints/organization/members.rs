@@ -5,7 +5,7 @@ use bencher_json::{
     JsonDirection, JsonEmpty, JsonMember, JsonMembers, JsonPagination, ResourceId, UserName,
 };
 use bencher_rbac::organization::Permission;
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -125,10 +125,7 @@ async fn get_ls_inner(
     )?;
 
     let mut query = schema::user::table
-        .inner_join(
-            schema::organization_role::table
-                .on(schema::user::id.eq(schema::organization_role::user_id)),
-        )
+        .inner_join(schema::organization_role::table)
         .filter(schema::organization_role::organization_id.eq(query_organization.id))
         .select((
             schema::user::uuid,
@@ -474,10 +471,7 @@ fn json_member(
     organization_id: OrganizationId,
 ) -> Result<JsonMember, ApiError> {
     schema::user::table
-        .inner_join(
-            schema::organization_role::table
-                .on(schema::user::id.eq(schema::organization_role::user_id)),
-        )
+        .inner_join(schema::organization_role::table)
         .filter(schema::organization_role::user_id.eq(user_id))
         .filter(schema::organization_role::organization_id.eq(organization_id))
         .select((

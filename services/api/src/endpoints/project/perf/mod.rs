@@ -9,8 +9,7 @@ use bencher_json::{
     GitHash, JsonBenchmark, JsonBranch, JsonPerf, JsonPerfQuery, JsonTestbed, ResourceId,
 };
 use diesel::{
-    ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
-    SelectableHelper,
+    ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
 };
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
@@ -321,25 +320,24 @@ fn perf_query(
 
     let mut query = schema::metric::table
         .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
+        .inner_join(
+            schema::perf::table.inner_join(
+                schema::report::table
+                    .inner_join(schema::version::table.inner_join(schema::branch_version::table)),
+            ),
+        )
+        // It is important to filter for the branch on the `branch_version` table and not on the branch in the `report` table.
+        // This is because the `branch_version` table is the one that is updated when a branch is cloned/used as a start point.
+        // In contrast, the `report` table is only set to a single branch when the report is created.
+        .filter(schema::branch_version::branch_id.eq(branch_id))
+        .filter(schema::report::testbed_id.eq(testbed_id))
+        .filter(schema::perf::benchmark_id.eq(benchmark_id))
         .left_join(
             schema::boundary::table
-                .on(schema::metric::id.eq(schema::boundary::metric_id))
-                .inner_join(
-                    schema::threshold::table
-                        .on(schema::boundary::threshold_id.eq(schema::threshold::id)),
-                )
-                .inner_join(
-                    schema::statistic::table
-                        .on(schema::boundary::statistic_id.eq(schema::statistic::id)),
-                )
-                .left_join(
-                    schema::alert::table.on(schema::boundary::id.eq(schema::alert::boundary_id)),
-                ),
+                .inner_join(schema::threshold::table)
+                .inner_join(schema::statistic::table)
+                .left_join(schema::alert::table),
         )
-        .inner_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
-        .filter(schema::perf::benchmark_id.eq(benchmark_id))
-        .inner_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
-        .filter(schema::report::testbed_id.eq(testbed_id))
         .into_boxed();
 
     let Times {
@@ -355,15 +353,6 @@ fn perf_query(
     }
 
     let metrics = query
-        // It is important to filter for the branch on the `branch_version` table and not on the branch in the `report` table.
-        // This is because the `branch_version` table is the one that is updated when a branch is cloned/used as a start point.
-        // In contrast, the `report` table is only set to a single branch when the report is created.
-        .inner_join(schema::version::table.on(schema::report::version_id.eq(schema::version::id)))
-        .left_join(
-            schema::branch_version::table
-                .on(schema::version::id.eq(schema::branch_version::version_id)),
-        )
-        .filter(schema::branch_version::branch_id.eq(branch_id))
         // Order by the version number so that the oldest version is first.
         // Because multiple reports can use the same version (via git hash), order by the start time next.
         // Then within a report order by the iteration number.

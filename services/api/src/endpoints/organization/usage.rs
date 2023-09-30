@@ -2,7 +2,7 @@
 
 use bencher_json::{organization::usage::JsonUsage, ResourceId};
 use bencher_rbac::organization::Permission;
-use diesel::{dsl::count, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{dsl::count, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -101,13 +101,12 @@ async fn get_inner(
     let end_time = to_date_time(end)?.timestamp();
 
     let metrics_used = schema::metric::table
-        .left_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
-        .left_join(
-            schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
+        .inner_join(
+            schema::perf::table
+                .inner_join(schema::benchmark::table.inner_join(schema::project::table))
+                .inner_join(schema::report::table),
         )
-        .left_join(schema::project::table.on(schema::benchmark::project_id.eq(schema::project::id)))
         .filter(schema::project::organization_id.eq(query_org.id))
-        .inner_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
         .filter(schema::report::end_time.ge(start_time))
         .filter(schema::report::end_time.le(end_time))
         .select(count(schema::metric::value))

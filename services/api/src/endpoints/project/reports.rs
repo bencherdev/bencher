@@ -6,8 +6,7 @@ use bencher_json::{
 };
 use bencher_rbac::project::Permission;
 use diesel::{
-    dsl::count, BelongingToDsl, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
-    SelectableHelper,
+    dsl::count, BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
 };
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use http::StatusCode;
@@ -132,8 +131,8 @@ async fn get_ls_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     let mut query = QueryReport::belonging_to(&query_project)
-        .left_join(schema::branch::table.on(schema::report::branch_id.eq(schema::branch::id)))
-        .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
+        .inner_join(schema::branch::table)
+        .inner_join(schema::testbed::table)
         .into_boxed();
 
     if let Some(branch) = json_report_query.branch.as_ref() {
@@ -596,10 +595,7 @@ async fn delete_inner(
         let query_version = QueryVersion::get(conn, version_id)?;
         // Get all branches that use this version
         let branches = schema::branch::table
-            .inner_join(
-                schema::branch_version::table
-                    .on(schema::branch_version::branch_id.eq(schema::branch::id)),
-            )
+            .inner_join(schema::branch_version::table)
             .filter(schema::branch_version::version_id.eq(version_id))
             .select(schema::branch::id)
             .load::<i32>(conn)
@@ -610,10 +606,7 @@ async fn delete_inner(
         for branch_id in branches {
             schema::version::table
                 .filter(schema::version::number.gt(query_version.number))
-                .inner_join(
-                    schema::branch_version::table
-                        .on(schema::branch_version::version_id.eq(schema::version::id)),
-                )
+                .inner_join(schema::branch_version::table)
                 .filter(schema::branch_version::branch_id.eq(branch_id))
                 .select((schema::version::id, schema::version::number))
                 .load::<(i32, i32)>(conn)
