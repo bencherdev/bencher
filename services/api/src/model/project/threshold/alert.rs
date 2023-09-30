@@ -50,30 +50,6 @@ impl QueryAlert {
         Uuid::from_str(&uuid).map_err(ApiError::from)
     }
 
-    pub fn get_perf_json(
-        conn: &mut DbConnection,
-        boundary_id: BoundaryId,
-    ) -> Result<JsonPerfAlert, ApiError> {
-        let query_alert = schema::alert::table
-            .filter(schema::alert::boundary_id.eq(boundary_id))
-            .first::<Self>(conn)
-            .map_err(ApiError::from)?;
-
-        let QueryAlert {
-            uuid,
-            boundary_limit,
-            status,
-            modified,
-            ..
-        } = query_alert;
-        Ok(JsonPerfAlert {
-            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
-            limit: boundary_limit.into(),
-            status: status.into(),
-            modified: to_date_time(modified)?,
-        })
-    }
-
     pub fn from_uuid(
         conn: &mut DbConnection,
         project_id: ProjectId,
