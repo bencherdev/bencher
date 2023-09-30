@@ -5,7 +5,9 @@ use bencher_json::{
     BenchmarkName, JsonBenchmark, ResourceId, Slug,
 };
 use chrono::Utc;
-use diesel::{ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{
+    ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
+};
 use dropshot::HttpError;
 use uuid::Uuid;
 
@@ -149,24 +151,8 @@ impl QueryBenchmark {
             // There may or may not be a boundary for any given metric
             .left_join(schema::boundary::table)
             .select((
-                (
-                    schema::benchmark::id,
-                    schema::benchmark::uuid,
-                    schema::benchmark::project_id,
-                    schema::benchmark::name,
-                    schema::benchmark::slug,
-                    schema::benchmark::created,
-                    schema::benchmark::modified,
-                ),
-                (
-                    schema::metric::id,
-                    schema::metric::uuid,
-                    schema::metric::perf_id,
-                    schema::metric::metric_kind_id,
-                    schema::metric::value,
-                    schema::metric::lower_value,
-                    schema::metric::upper_value,
-                ),
+                QueryBenchmark::as_select(),
+                QueryMetric::as_select(),
                 (
                     schema::boundary::id,
                     schema::boundary::uuid,

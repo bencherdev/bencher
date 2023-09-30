@@ -513,19 +513,6 @@ async fn get_one_inner(
 
     QueryReport::belonging_to(&query_project)
         .filter(schema::report::uuid.eq(path_params.report.to_string()))
-        .select((
-            schema::report::id,
-            schema::report::uuid,
-            schema::report::user_id,
-            schema::report::project_id,
-            schema::report::branch_id,
-            schema::report::version_id,
-            schema::report::testbed_id,
-            schema::report::adapter,
-            schema::report::start_time,
-            schema::report::end_time,
-            schema::report::created,
-        ))
         .first::<QueryReport>(conn)
         .map_err(ApiError::from)?
         .into_json(log, conn)
