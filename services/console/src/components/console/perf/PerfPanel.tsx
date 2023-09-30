@@ -28,6 +28,7 @@ import type {
 } from "../../../types/bencher";
 import type { TabList } from "./plot/PlotTab";
 import { NotifyKind, pageNotify } from "../../../util/notify";
+import { dateTimeMillis } from "../../../util/convert";
 
 const REPORT_PARAM = "report";
 const METRIC_KIND_PARAM = "metric_kind";
@@ -66,6 +67,8 @@ const DEFAULT_PERF_BOUNDARY = false;
 const DEFAULT_PER_PAGE = 8;
 const REPORTS_PER_PAGE = 4;
 export const DEFAULT_PAGE = 1;
+
+const DEFAULT_REPORT_HISTORY = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 const addToArray = (array: any[], add: any): string[] => {
 	if (!array.includes(add)) {
@@ -612,12 +615,17 @@ const PerfPanel = (props: Props) => {
 		const benchmarks = report?.results?.[0]
 			?.find((result) => result.metric_kind?.slug === metric_kind_slug)
 			?.benchmarks?.map((benchmark) => benchmark.uuid);
+		const start_time = dateTimeMillis(report?.start_time);
 		setSearchParams({
 			[CLEAR_PARAM]: true,
 			[LOWER_VALUE_PARAM]: null,
 			[UPPER_VALUE_PARAM]: null,
 			[LOWER_BOUNDARY_PARAM]: null,
 			[UPPER_BOUNDARY_PARAM]: null,
+			[START_TIME_PARAM]: start_time
+				? start_time - DEFAULT_REPORT_HISTORY
+				: null,
+			[END_TIME_PARAM]: dateTimeMillis(report?.end_time),
 			[REPORT_PARAM]: report?.uuid,
 			[METRIC_KIND_PARAM]: metric_kind_slug,
 			[BRANCHES_PARAM]: report?.branch?.uuid,
@@ -697,13 +705,13 @@ const PerfPanel = (props: Props) => {
 					[UPPER_VALUE_PARAM]: null,
 					[LOWER_BOUNDARY_PARAM]: null,
 					[UPPER_BOUNDARY_PARAM]: null,
+					[START_TIME_PARAM]: null,
+					[END_TIME_PARAM]: null,
 					[REPORT_PARAM]: null,
 					[METRIC_KIND_PARAM]: null,
 					[BRANCHES_PARAM]: null,
 					[TESTBEDS_PARAM]: null,
 					[BENCHMARKS_PARAM]: null,
-					[START_TIME_PARAM]: null,
-					[END_TIME_PARAM]: null,
 				});
 			} else {
 				setSearchParams({ [CLEAR_PARAM]: clear });
