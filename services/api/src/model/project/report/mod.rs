@@ -115,6 +115,7 @@ impl QueryReport {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn get_report_results(
     log: &Logger,
     conn: &mut DbConnection,
@@ -151,21 +152,32 @@ fn get_report_results(
             schema::metric_kind::created,
             schema::metric_kind::modified
         ),
-        // (
-        //     schema::threshold::id,
-        //     schema::threshold::uuid,
-        //     schema::threshold::created,
-        //     schema::threshold::modified,
-        //     schema::statistic::id,
-        //     schema::statistic::uuid,
-        //     schema::statistic::test,
-        //     schema::statistic::min_sample_size,
-        //     schema::statistic::max_sample_size,
-        //     schema::statistic::window,
-        //     schema::statistic::lower_boundary,
-        //     schema::statistic::upper_boundary,
-        //     schema::statistic::created,
-        // ).nullable(),
+
+        (
+            (
+                schema::threshold::id,
+                schema::threshold::uuid,
+                schema::threshold::project_id,
+                schema::threshold::metric_kind_id,
+                schema::threshold::branch_id,
+                schema::threshold::testbed_id,
+                schema::threshold::statistic_id,
+                schema::threshold::created,
+                schema::threshold::modified,
+            ),
+            (
+                schema::statistic::id,
+                schema::statistic::uuid,
+                schema::statistic::threshold_id,
+                schema::statistic::test,
+                schema::statistic::min_sample_size,
+                schema::statistic::max_sample_size,
+                schema::statistic::window,
+                schema::statistic::lower_boundary,
+                schema::statistic::upper_boundary,
+                schema::statistic::created,
+            )
+        ).nullable(),
 
         // schema::benchmark::id,
         // schema::benchmark::project_id,
@@ -186,14 +198,14 @@ fn get_report_results(
         //     schema::boundary::upper_limit,
         // ).nullable(),
     ))
-    .load::<(i32, QueryMetricKind)>(conn)
+    .load::<(i32, QueryMetricKind, Option<(QueryThreshold, QueryStatistic)>)>(conn)
     .map_err(ApiError::from)?;
 
     let mut report_results = Vec::new();
     let mut report_iteration = Vec::new();
     let mut iteration = 0;
     let mut report_result: Option<JsonReportResult> = None;
-    for (i, query_metric_kind) in results {
+    for (i, query_metric_kind, threshold_statistic) in results {
         // If onto a new iteration, then add the previous iteration's results to the report results list.
         if i != iteration {
             iteration = i;
@@ -205,7 +217,7 @@ fn get_report_results(
         // Otherwise, add it to the report iteration list.
         if let Some(result) = report_result.take() {
             if query_metric_kind.uuid == result.metric_kind.uuid.to_string() {
-                slog::debug!(
+                slog::trace!(
                     log,
                     "Same metric kind {} | {}",
                     query_metric_kind.uuid,
@@ -213,7 +225,7 @@ fn get_report_results(
                 );
                 report_result = Some(result);
             } else {
-                slog::debug!(
+                slog::trace!(
                     log,
                     "Different metric kind {} | {}",
                     query_metric_kind.uuid,
@@ -226,15 +238,20 @@ fn get_report_results(
         if let Some(result) = report_result.as_mut() {
         } else {
             let metric_kind = query_metric_kind.into_json_for_project(project)?;
+            let threshold = if let Some((threshold, statistic)) = threshold_statistic {
+                Some(threshold.into_threshold_statistic_json_for_project(project, statistic)?)
+            } else {
+                None
+            };
             report_result = Some(JsonReportResult {
                 metric_kind,
-                threshold: None,
+                threshold,
                 benchmarks: Vec::new(),
             });
         }
     }
 
-    // Cleanup from the last iteration
+    // Save from the last iteration
     if let Some(result) = report_result.take() {
         report_iteration.push(result);
     }

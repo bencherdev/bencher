@@ -52,11 +52,14 @@ impl QueryStatistic {
         Uuid::from_str(&uuid).map_err(ApiError::from)
     }
 
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonStatistic, ApiError> {
+        let threshold = QueryThreshold::get_uuid(conn, self.threshold_id)?;
+        self.into_json_for_threshold(threshold)
+    }
+
+    pub fn into_json_for_threshold(self, threshold: Uuid) -> Result<JsonStatistic, ApiError> {
         let Self {
             uuid,
-            threshold_id,
             test,
             min_sample_size,
             max_sample_size,
@@ -68,7 +71,7 @@ impl QueryStatistic {
         } = self;
         Ok(JsonStatistic {
             uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
-            threshold: QueryThreshold::get_uuid(conn, threshold_id)?,
+            threshold,
             test: test.into(),
             min_sample_size: map_sample_size(min_sample_size)?,
             max_sample_size: map_sample_size(max_sample_size)?,

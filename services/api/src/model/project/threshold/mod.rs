@@ -117,21 +117,26 @@ impl QueryThreshold {
         self,
         conn: &mut DbConnection,
     ) -> Result<JsonThresholdStatistic, ApiError> {
-        let Self {
-            uuid,
-            project_id,
-            statistic_id,
-            created,
-            ..
-        } = self;
+        let project = QueryProject::get_uuid(conn, self.project_id)?;
+        let statistic = if let Some(statistic_id) = self.statistic_id {
+            QueryStatistic::get(conn, statistic_id)?
+        } else {
+            return Err(ApiError::NoThresholdStatistic(self.uuid));
+        };
+        self.into_threshold_statistic_json_for_project(project, statistic)
+    }
+
+    pub fn into_threshold_statistic_json_for_project(
+        self,
+        project: Uuid,
+        statistic: QueryStatistic,
+    ) -> Result<JsonThresholdStatistic, ApiError> {
+        let Self { uuid, created, .. } = self;
+        let uuid = Uuid::from_str(&uuid).map_err(ApiError::from)?;
         Ok(JsonThresholdStatistic {
-            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
-            project: QueryProject::get_uuid(conn, project_id)?,
-            statistic: if let Some(statistic_id) = statistic_id {
-                QueryStatistic::get(conn, statistic_id)?.into_json(conn)?
-            } else {
-                return Err(ApiError::NoThresholdStatistic(uuid));
-            },
+            uuid,
+            project,
+            statistic: statistic.into_json_for_threshold(uuid)?,
             created: to_date_time(created).map_err(ApiError::from)?,
         })
     }
