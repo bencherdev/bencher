@@ -353,6 +353,18 @@ Run: `bencher mock | bencher run`
 
 <br />
 
+Sometimes you may want to save your results to a file and have `bencher run` pick them up.
+
+Run: `bencher run "bencher mock > results.json" --file results.json`
+
+<br />
+
+Likewise, you may have a separate process run your benchmarks and save your results to a file. Then `bencher run` will just pick them up.
+
+Run: `bencher mock > results.json && bencher run --file results.json`
+
+<br />
+
 Finally, lets seed a lot of data using the `bencher run` `--iter` argument.
 
 Run: `bencher run --iter 16 "bencher mock"`

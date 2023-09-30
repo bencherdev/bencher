@@ -50,6 +50,7 @@ Though Bencher is open source, there is also a hosted version available [Bencher
 
 - Tutorial
   - [Quick Start](https://bencher.dev/docs/tutorial/quick-start)
+  - [Docker](https://bencher.dev/docs/tutorial/docker)
 - How To
   - [Install CLI](https://bencher.dev/docs/how-to/install-cli)
   - [Track Benchmarks](https://bencher.dev/docs/how-to/track-benchmarks)
@@ -58,13 +59,14 @@ Though Bencher is open source, there is also a hosted version available [Bencher
 - Explanation
   - [Benchmarking Overview](https://bencher.dev/docs/explanation/benchmarking)
   - [`bencher run`](https://bencher.dev/docs/explanation/bencher-run)
-  - [Branch Selection](https://bencher.dev/docs/explanation/branch-selection)
   - [Benchmark Adapters](https://bencher.dev/docs/explanation/adapters)
+  - [Branch Selection](https://bencher.dev/docs/explanation/branch-selection)
   - [Thresholds & Alerts](https://bencher.dev/docs/explanation/thresholds)
   - [Continuous Benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking)
   - [Talks](https://bencher.dev/docs/explanation/talks)
 - Reference
   - [REST API](https://bencher.dev/docs/reference/api)
+  - [Architecture](https://bencher.dev/docs/reference/architecture)
   - [Server Config](https://bencher.dev/docs/reference/server-config)
   - [Prior Art](https://bencher.dev/docs/reference/prior-art)
   - [Roadmap](https://bencher.dev/docs/reference/roadmap)
@@ -73,28 +75,28 @@ Though Bencher is open source, there is also a hosted version available [Bencher
 ## Supported Benchmark Harnesses
 
 - {...} JSON
-  - [Custom benchmark harness support](https://bencher.dev/docs/explanation/adapters)
+  - [Custom benchmark harness support](https://bencher.dev/docs/explanation/adapters#-json)
 - #️⃣ C#
-  - [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet)
+  - [BenchmarkDotNet](https://bencher.dev/docs/explanation/adapters/#%EF%B8%8F%E2%83%A3-c-dotnet)
 - ➕ C++
-  - [Catch2](https://github.com/catchorg/Catch2)
-  - [Google Benchmark](https://github.com/google/benchmark)
+  - [Catch2](https://bencher.dev/docs/explanation/adapters#-c-catch2)
+  - [Google Benchmark](https://bencher.dev/docs/explanation/adapters#-c-google)
 - 🕳 Go
-  - [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks)
+  - [go test -bench](https://bencher.dev/docs/explanation/adapters#-go-bench)
 - ☕️ Java
-  - [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh)
+  - [Java Microbenchmark Harness (JMH)](https://bencher.dev/docs/explanation/adapters/#%EF%B8%8F-java-jmh)
 - 🕸 JavaScript
-  - [Benchmark.js](https://github.com/bestiejs/benchmark.js)
-  - [console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd)
+  - [Benchmark.js](https://bencher.dev/docs/explanation/adapters#-javascript-benchmark)
+  - [console.time/console.timeEnd](https://bencher.dev/docs/explanation/adapters#-javascript-time)
 - 🐍 Python
-  - [airspeed velocity](https://github.com/airspeed-velocity/asv)
-  - [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark)
+  - [airspeed velocity](https://bencher.dev/docs/explanation/adapters#-python-asv)
+  - [pytest-benchmark](https://bencher.dev/docs/explanation/adapters#-python-pytest)
 - ♦️ Ruby
-  - [Benchmark](https://github.com/ruby/benchmark)
+  - [Benchmark](https://bencher.dev/docs/explanation/adapters/#%EF%B8%8F-ruby-benchmark)
 - 🦀 Rust
-  - [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)
-  - [Criterion](https://github.com/bheisler/criterion.rs)
-  - [Iai](https://github.com/bheisler/iai)
+  - [libtest bench](https://bencher.dev/docs/explanation/adapters#-rust-bench)
+  - [Criterion](https://bencher.dev/docs/explanation/adapters#-rust-criterion)
+  - [Iai](https://bencher.dev/docs/explanation/adapters#-rust-iai)
 
 For more details see the [explanation of benchmark harness adapters](https://bencher.dev/docs/explanation/adapters).
 
