@@ -1,11 +1,14 @@
 use std::str::FromStr;
 
 use bencher_json::{
-    project::benchmark::{JsonBenchmarkMetric, JsonNewBenchmark, JsonUpdateBenchmark},
+    project::{
+        benchmark::{JsonBenchmarkMetric, JsonNewBenchmark, JsonUpdateBenchmark},
+        boundary,
+    },
     BenchmarkName, JsonBenchmark, ResourceId, Slug,
 };
 use chrono::Utc;
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 use uuid::Uuid;
 
@@ -115,56 +118,6 @@ impl QueryBenchmark {
         Self::get_id(conn, &insert_benchmark.uuid)
     }
 
-    pub fn get_benchmark_metric_json(
-        conn: &mut DbConnection,
-        metric_id: MetricId,
-    ) -> Result<JsonBenchmarkMetric, ApiError> {
-        let (query_benchmark, value, lower_value, upper_value) = schema::metric::table
-            .filter(schema::metric::id.eq(metric_id))
-            .left_join(schema::perf::table.on(schema::perf::id.eq(schema::metric::perf_id)))
-            .inner_join(
-                schema::benchmark::table.on(schema::benchmark::id.eq(schema::perf::benchmark_id)),
-            )
-            .select((
-                (
-                    schema::benchmark::id,
-                    schema::benchmark::uuid,
-                    schema::benchmark::project_id,
-                    schema::benchmark::name,
-                    schema::benchmark::slug,
-                    schema::benchmark::created,
-                    schema::benchmark::modified,
-                ),
-                schema::metric::value,
-                schema::metric::lower_value,
-                schema::metric::upper_value,
-            ))
-            .first::<(QueryBenchmark, f64, Option<f64>, Option<f64>)>(conn)
-            .map_err(ApiError::from)?;
-
-        let JsonBenchmark {
-            uuid,
-            project,
-            name,
-            slug,
-            created,
-            modified,
-        } = query_benchmark.into_json(conn)?;
-        let metric = QueryMetric::json(value, lower_value, upper_value);
-        let boundary = QueryBoundary::get_json(conn, metric_id);
-
-        Ok(JsonBenchmarkMetric {
-            uuid,
-            project,
-            name,
-            slug,
-            metric,
-            boundary,
-            created,
-            modified,
-        })
-    }
-
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonBenchmark, ApiError> {
         let project = QueryProject::get_uuid(conn, self.project_id)?;
         self.into_json_for_project(project)
@@ -186,6 +139,87 @@ impl QueryBenchmark {
             slug: Slug::from_str(&slug).map_err(ApiError::from)?,
             created: to_date_time(created).map_err(ApiError::from)?,
             modified: to_date_time(modified).map_err(ApiError::from)?,
+        })
+    }
+
+    pub fn into_benchmark_metric_json(
+        conn: &mut DbConnection,
+        metric_id: MetricId,
+    ) -> Result<JsonBenchmarkMetric, ApiError> {
+        let (query_benchmark, query_metric, query_boundary) = schema::metric::table
+            .filter(schema::metric::id.eq(metric_id))
+            .left_join(schema::perf::table.on(schema::perf::id.eq(schema::metric::perf_id)))
+            .inner_join(
+                schema::benchmark::table.on(schema::benchmark::id.eq(schema::perf::benchmark_id)),
+            )
+            .left_join(
+                schema::boundary::table.on(schema::metric::id.eq(schema::boundary::metric_id)),
+            )
+            .select((
+                (
+                    schema::benchmark::id,
+                    schema::benchmark::uuid,
+                    schema::benchmark::project_id,
+                    schema::benchmark::name,
+                    schema::benchmark::slug,
+                    schema::benchmark::created,
+                    schema::benchmark::modified,
+                ),
+                (
+                    schema::metric::id,
+                    schema::metric::uuid,
+                    schema::metric::perf_id,
+                    schema::metric::metric_kind_id,
+                    schema::metric::value,
+                    schema::metric::lower_value,
+                    schema::metric::upper_value,
+                ),
+                (
+                    schema::boundary::id,
+                    schema::boundary::uuid,
+                    schema::boundary::threshold_id,
+                    schema::boundary::statistic_id,
+                    schema::boundary::metric_id,
+                    schema::boundary::lower_limit,
+                    schema::boundary::upper_limit,
+                )
+                    .nullable(),
+            ))
+            .first::<(QueryBenchmark, QueryMetric, Option<QueryBoundary>)>(conn)
+            .map_err(ApiError::from)?;
+        let project = QueryProject::get_uuid(conn, query_benchmark.project_id)?;
+        query_benchmark.into_benchmark_metric_json_for_project(
+            project,
+            query_metric,
+            query_boundary,
+        )
+    }
+
+    pub fn into_benchmark_metric_json_for_project(
+        self,
+        project: Uuid,
+        query_metric: QueryMetric,
+        query_boundary: Option<QueryBoundary>,
+    ) -> Result<JsonBenchmarkMetric, ApiError> {
+        let JsonBenchmark {
+            uuid,
+            project,
+            name,
+            slug,
+            created,
+            modified,
+        } = self.into_json_for_project(project)?;
+        let metric = query_metric.into_json();
+        let boundary = query_boundary.map(|b| b.into_json()).unwrap_or_default();
+        Ok(JsonBenchmarkMetric {
+            uuid,
+            project,
+            name,
+            slug,
+            metric,
+            boundary,
+            created,
+            modified,
         })
     }
 }

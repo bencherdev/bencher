@@ -52,7 +52,11 @@ impl QueryMetric {
             upper_value,
             ..
         } = self;
-        Self::json(value, lower_value, upper_value)
+        JsonMetric {
+            value: value.into(),
+            lower_value: lower_value.map(Into::into),
+            upper_value: upper_value.map(Into::into),
+        }
     }
 }
 

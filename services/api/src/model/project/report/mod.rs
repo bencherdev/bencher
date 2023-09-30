@@ -189,25 +189,42 @@ fn get_report_results(
             schema::benchmark::modified,
         ),
 
-        // schema::metric::id,
-        // schema::metric::uuid,
-        // schema::metric::value,
-        // schema::metric::lower_value,
-        // schema::metric::upper_value,
+        (
+            schema::metric::id,
+            schema::metric::uuid,
+            schema::metric::perf_id,
+            schema::metric::metric_kind_id,
+            schema::metric::value,
+            schema::metric::lower_value,
+            schema::metric::upper_value,
+        ),
 
-        // (
-        //     schema::boundary::lower_limit,
-        //     schema::boundary::upper_limit,
-        // ).nullable(),
+        (
+            schema::boundary::id,
+            schema::boundary::uuid,
+            schema::boundary::threshold_id,
+            schema::boundary::statistic_id,
+            schema::boundary::metric_id,
+            schema::boundary::lower_limit,
+            schema::boundary::upper_limit,
+        ).nullable(),
     ))
-    .load::<(i32, QueryMetricKind, Option<(QueryThreshold, QueryStatistic)>, QueryBenchmark)>(conn)
+    .load::<(i32, QueryMetricKind, Option<(QueryThreshold, QueryStatistic)>, QueryBenchmark, QueryMetric, Option<QueryBoundary>)>(conn)
     .map_err(ApiError::from)?;
 
     let mut report_results = Vec::new();
     let mut report_iteration = Vec::new();
     let mut iteration = 0;
     let mut report_result: Option<JsonReportResult> = None;
-    for (i, query_metric_kind, threshold_statistic, query_benchmark) in results {
+    for (
+        i,
+        query_metric_kind,
+        threshold_statistic,
+        query_benchmark,
+        query_metric,
+        query_boundary,
+    ) in results
+    {
         // If onto a new iteration, then add the previous iteration's results to the report results list.
         if i != iteration {
             iteration = i;
@@ -237,9 +254,14 @@ fn get_report_results(
             }
         }
 
-        let benchmark = query_benchmark.into_json_for_project(project)?;
+        let benchmark_metric = query_benchmark.into_benchmark_metric_json_for_project(
+            project,
+            query_metric,
+            query_boundary,
+        )?;
 
         if let Some(result) = report_result.as_mut() {
+            result.benchmarks.push(benchmark_metric);
         } else {
             let metric_kind = query_metric_kind.into_json_for_project(project)?;
             let threshold = if let Some((threshold, statistic)) = threshold_statistic {
@@ -250,7 +272,7 @@ fn get_report_results(
             report_result = Some(JsonReportResult {
                 metric_kind,
                 threshold,
-                benchmarks: Vec::new(),
+                benchmarks: vec![benchmark_metric],
             });
         }
     }
