@@ -4,7 +4,7 @@ use bencher_rbac::{
 };
 
 use bencher_json::Jwt;
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{HttpError, RequestContext};
 use http::StatusCode;
 use oso::{PolarValue, ToPolar};
@@ -163,9 +163,7 @@ impl AuthUser {
     ) -> Result<(Vec<OrgProjectId>, ProjectRoles), HttpError> {
         let roles = schema::project_role::table
             .filter(schema::project_role::user_id.eq(user_id))
-            .inner_join(
-                schema::project::table.on(schema::project_role::project_id.eq(schema::project::id)),
-            )
+            .inner_join(schema::project::table)
             .order(schema::project_role::project_id)
             .select((
                 schema::project::organization_id,

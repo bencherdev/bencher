@@ -1,5 +1,5 @@
 use chrono::offset::Utc;
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 
 use crate::{
     context::DbConnection,
@@ -26,16 +26,20 @@ impl MetricsData {
     ) -> Result<Self, ApiError> {
         let mut query = schema::metric::table
             .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
-            .inner_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
-            .left_join(
-                schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
+            .inner_join(
+                schema::perf::table
+                    .left_join(
+                        schema::report::table
+                            .left_join(schema::version::table.left_join(
+                                schema::branch_version::table.left_join(schema::branch::table),
+                            ))
+                            .left_join(schema::testbed::table),
+                    )
+                    .left_join(schema::benchmark::table),
             )
-            .filter(schema::benchmark::id.eq(benchmark_id))
-            .left_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
-            .left_join(
-                schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)),
-            )
+            .filter(schema::branch::id.eq(branch_id))
             .filter(schema::testbed::id.eq(testbed_id))
+            .filter(schema::benchmark::id.eq(benchmark_id))
             .into_boxed();
 
         if let Some(window) = statistic.window {
@@ -46,23 +50,11 @@ impl MetricsData {
             );
         }
 
-        let mut query = query
-            .left_join(
-                schema::version::table.on(schema::report::version_id.eq(schema::version::id)),
-            )
-            .left_join(
-                schema::branch_version::table
-                    .on(schema::version::id.eq(schema::branch_version::version_id)),
-            )
-            .left_join(
-                schema::branch::table.on(schema::branch_version::branch_id.eq(schema::branch::id)),
-            )
-            .filter(schema::branch::id.eq(branch_id))
-            .order((
-                schema::version::number.desc(),
-                schema::report::start_time.desc(),
-                schema::perf::iteration.desc(),
-            ));
+        let mut query = query.order((
+            schema::version::number.desc(),
+            schema::report::start_time.desc(),
+            schema::perf::iteration.desc(),
+        ));
 
         if let Some(max_sample_size) = statistic.max_sample_size {
             query = query.limit(max_sample_size.into());

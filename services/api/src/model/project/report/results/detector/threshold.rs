@@ -1,5 +1,8 @@
 use bencher_json::Boundary;
-use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{
+    ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
+    SelectableHelper,
+};
 
 use crate::{
     context::DbConnection,
@@ -8,7 +11,7 @@ use crate::{
         metric_kind::MetricKindId,
         testbed::TestbedId,
         threshold::{
-            statistic::{map_boundary, StatisticId, StatisticKind},
+            statistic::{map_boundary, QueryStatistic, StatisticId, StatisticKind},
             ThresholdId,
         },
     },
@@ -49,52 +52,33 @@ impl MetricsThreshold {
             .filter(schema::threshold::metric_kind_id.eq(metric_kind_id))
             .filter(schema::threshold::branch_id.eq(branch_id))
             .filter(schema::threshold::testbed_id.eq(testbed_id))
-            .select((
-                schema::threshold::id,
-                schema::statistic::id,
-                schema::statistic::test,
-                schema::statistic::min_sample_size,
-                schema::statistic::max_sample_size,
-                schema::statistic::window,
-                schema::statistic::lower_boundary,
-                schema::statistic::upper_boundary,
-            ))
-            .first::<(
-                ThresholdId,
-                StatisticId,
-                i32,
-                Option<i64>,
-                Option<i64>,
-                Option<i64>,
-                Option<f64>,
-                Option<f64>,
-            )>(conn)
-            .map(
-                |(
-                    threshold_id,
-                    statistic_id,
+            .select((schema::threshold::id, QueryStatistic::as_select()))
+            .first::<(ThresholdId, QueryStatistic)>(conn)
+            .map(|(threshold_id, query_statistic)| {
+                let QueryStatistic {
+                    id,
                     test,
                     min_sample_size,
                     max_sample_size,
                     window,
                     lower_boundary,
                     upper_boundary,
-                )| {
-                    let statistic = MetricsStatistic {
-                        id: statistic_id,
-                        test: StatisticKind::try_from(test).ok()?,
-                        min_sample_size: map_u32(min_sample_size).ok()?,
-                        max_sample_size: map_u32(max_sample_size).ok()?,
-                        window: map_u32(window).ok()?,
-                        lower_boundary: map_boundary(lower_boundary).ok()?,
-                        upper_boundary: map_boundary(upper_boundary).ok()?,
-                    };
-                    Some(Self {
-                        id: threshold_id,
-                        statistic,
-                    })
-                },
-            )
+                    ..
+                } = query_statistic;
+                let statistic = MetricsStatistic {
+                    id,
+                    test,
+                    min_sample_size: map_u32(min_sample_size).ok()?,
+                    max_sample_size: map_u32(max_sample_size).ok()?,
+                    window: map_u32(window).ok()?,
+                    lower_boundary: map_boundary(lower_boundary).ok()?,
+                    upper_boundary: map_boundary(upper_boundary).ok()?,
+                };
+                Some(Self {
+                    id: threshold_id,
+                    statistic,
+                })
+            })
             .ok()
             .flatten()
     }

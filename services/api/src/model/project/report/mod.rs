@@ -39,8 +39,6 @@ pub mod results;
 
 use adapter::Adapter;
 
-use super::threshold::{statistic::StatisticId, ThresholdId};
-
 crate::util::typed_id::typed_id!(ReportId);
 
 #[derive(diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable)]
@@ -280,8 +278,6 @@ fn get_report_alerts(
             schema::report::uuid,
             schema::perf::iteration,
             QueryAlert::as_select(),
-            schema::boundary::threshold_id,
-            schema::boundary::statistic_id,
             QueryBenchmark::as_select(),
             QueryMetric::as_select(),
             QueryBoundary::as_select(),
@@ -290,8 +286,6 @@ fn get_report_alerts(
             String,
             i32,
             QueryAlert,
-            ThresholdId,
-            StatisticId,
             QueryBenchmark,
             QueryMetric,
             QueryBoundary,
@@ -299,24 +293,12 @@ fn get_report_alerts(
         .map_err(ApiError::from)?;
 
     let mut report_alerts = Vec::new();
-    for (
-        report,
-        iteration,
-        query_alert,
-        threshold_id,
-        statistic_id,
-        query_benchmark,
-        query_metric,
-        query_boundary,
-    ) in alerts
-    {
+    for (report, iteration, query_alert, query_benchmark, query_metric, query_boundary) in alerts {
         let json_alert = query_alert.into_json_for_report(
             conn,
             project,
             report,
             iteration,
-            threshold_id,
-            statistic_id,
             query_benchmark,
             query_metric,
             query_boundary,

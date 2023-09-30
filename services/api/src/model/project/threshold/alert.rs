@@ -5,13 +5,12 @@ use bencher_json::project::{
     boundary::JsonLimit,
 };
 use chrono::Utc;
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
 use uuid::Uuid;
 
 use super::{
     boundary::{BoundaryId, QueryBoundary},
-    statistic::StatisticId,
-    QueryThreshold, ThresholdId,
+    QueryThreshold,
 };
 use crate::{
     context::DbConnection,
@@ -57,101 +56,47 @@ impl QueryAlert {
         uuid: Uuid,
     ) -> Result<Self, ApiError> {
         schema::alert::table
+            .filter(schema::alert::uuid.eq(uuid.to_string()))
             .left_join(
-                schema::boundary::table.on(schema::alert::boundary_id.eq(schema::boundary::id)),
-            )
-            .left_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
-            .left_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
-            .left_join(
-                schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
+                schema::boundary::table.left_join(
+                    schema::metric::table
+                        .left_join(schema::perf::table.left_join(schema::benchmark::table)),
+                ),
             )
             .filter(schema::benchmark::project_id.eq(project_id))
-            .filter(schema::alert::uuid.eq(uuid.to_string()))
-            .select((
-                schema::alert::id,
-                schema::alert::uuid,
-                schema::alert::boundary_id,
-                schema::alert::boundary_limit,
-                schema::alert::status,
-                schema::alert::modified,
-            ))
-            .first::<QueryAlert>(conn)
+            .select(QueryAlert::as_select())
+            .first(conn)
             .map_err(ApiError::from)
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonAlert, ApiError> {
-        let (
-            report,
-            iteration,
-            threshold_id,
-            statistic_id,
-            query_benchmark,
-            query_metric,
-            query_boundary,
-        ) = schema::alert::table
-            .filter(schema::alert::id.eq(self.id))
-            .inner_join(
-                schema::boundary::table.on(schema::alert::boundary_id.eq(schema::boundary::id)),
-            )
-            .inner_join(
-                schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)),
-            )
-            .inner_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
-            .inner_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
-            .inner_join(
-                schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
-            )
-            .select((
-                schema::report::uuid,
-                schema::perf::iteration,
-                schema::boundary::threshold_id,
-                schema::boundary::statistic_id,
-                (
-                    schema::benchmark::id,
-                    schema::benchmark::uuid,
-                    schema::benchmark::project_id,
-                    schema::benchmark::name,
-                    schema::benchmark::slug,
-                    schema::benchmark::created,
-                    schema::benchmark::modified,
-                ),
-                (
-                    schema::metric::id,
-                    schema::metric::uuid,
-                    schema::metric::perf_id,
-                    schema::metric::metric_kind_id,
-                    schema::metric::value,
-                    schema::metric::lower_value,
-                    schema::metric::upper_value,
-                ),
-                (
-                    schema::boundary::id,
-                    schema::boundary::uuid,
-                    schema::boundary::threshold_id,
-                    schema::boundary::statistic_id,
-                    schema::boundary::metric_id,
-                    schema::boundary::lower_limit,
-                    schema::boundary::upper_limit,
-                ),
-            ))
-            .first::<(
-                String,
-                i32,
-                ThresholdId,
-                StatisticId,
-                QueryBenchmark,
-                QueryMetric,
-                QueryBoundary,
-            )>(conn)
-            .map_err(ApiError::from)?;
+        let (report, iteration, query_benchmark, query_metric, query_boundary) =
+            schema::alert::table
+                .filter(schema::alert::id.eq(self.id))
+                .inner_join(
+                    schema::boundary::table.inner_join(
+                        schema::metric::table.inner_join(
+                            schema::perf::table
+                                .inner_join(schema::report::table)
+                                .inner_join(schema::benchmark::table),
+                        ),
+                    ),
+                )
+                .select((
+                    schema::report::uuid,
+                    schema::perf::iteration,
+                    QueryBenchmark::as_select(),
+                    QueryMetric::as_select(),
+                    QueryBoundary::as_select(),
+                ))
+                .first::<(String, i32, QueryBenchmark, QueryMetric, QueryBoundary)>(conn)
+                .map_err(ApiError::from)?;
         let project = QueryProject::get_uuid(conn, query_benchmark.project_id)?;
         self.into_json_for_report(
             conn,
             project,
             report,
             iteration,
-            threshold_id,
-            statistic_id,
             query_benchmark,
             query_metric,
             query_boundary,
@@ -165,8 +110,6 @@ impl QueryAlert {
         project: Uuid,
         report: String,
         iteration: i32,
-        threshold_id: ThresholdId,
-        statistic_id: StatisticId,
         query_benchmark: QueryBenchmark,
         query_metric: QueryMetric,
         query_boundary: QueryBoundary,
@@ -179,6 +122,8 @@ impl QueryAlert {
             ..
         } = self;
         let report = Uuid::from_str(&report).map_err(ApiError::from)?;
+        let threshold_id = query_boundary.threshold_id;
+        let statistic_id = query_boundary.statistic_id;
         let benchmark = query_benchmark.into_benchmark_metric_json_for_project(
             project,
             query_metric,
