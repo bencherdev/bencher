@@ -15,7 +15,7 @@ seed = []
 async-trait.workspace = true
 bencher_adapter.workspace = true
 bencher_client.workspace = true
-bencher_json = { workspace = true, features = ["table"] }
+bencher_json = { workspace = true, features = ["lite", "table"] }
 chrono = { workspace = true, features = ["clock"] }
 clap.workspace = true
 literally.workspace = true
