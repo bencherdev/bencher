@@ -10,7 +10,7 @@ use bencher_json::{
     JsonBenchmark, JsonMetricKind, JsonNewReport, JsonReport,
 };
 use chrono::Utc;
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
 use slog::{warn, Logger};
 use uuid::Uuid;
 
@@ -104,6 +104,83 @@ impl QueryReport {
             created: to_date_time(created).map_err(ApiError::from)?,
         })
     }
+}
+
+fn get_report_results(
+    conn: &mut DbConnection,
+    project: Uuid,
+    report_id: ReportId,
+) -> Result<JsonReportResults, ApiError> {
+    let _query = schema::perf::table
+    .filter(schema::perf::report_id.eq(report_id))
+    .inner_join(
+        schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
+    )
+    // It is important to order by the iteration first in order to make sure they are grouped together below
+    // Then ordering by the benchmark name makes sure that the benchmarks are in the same order for each iteration
+    .inner_join(
+        schema::metric::table.on(schema::perf::id.eq(schema::metric::perf_id)),
+    )
+    .inner_join(
+        schema::metric_kind::table.on(schema::metric::metric_kind_id.eq(schema::metric_kind::id)),
+    )
+    .left_join(schema::boundary::table.on(schema::metric::id.eq(schema::boundary::metric_id)).inner_join(
+        schema::threshold::table.on(schema::boundary::threshold_id.eq(schema::threshold::id))
+        ).inner_join(schema::statistic::table.on(schema::boundary::statistic_id.eq(schema::statistic::id))),
+    )
+    .order((schema::perf::iteration, schema::metric_kind::name, schema::benchmark::name))
+    .select((
+        schema::perf::iteration,
+
+        schema::metric_kind::id,
+        schema::metric_kind::uuid,
+        schema::metric_kind::project_id,
+        schema::metric_kind::name,
+        schema::metric_kind::slug,
+        schema::metric_kind::units,
+        schema::metric_kind::created,
+        schema::metric_kind::modified,
+
+        (
+            schema::threshold::id,
+            schema::threshold::uuid,
+            schema::threshold::created,
+            schema::threshold::modified,
+            schema::statistic::id,
+            schema::statistic::uuid,
+            schema::statistic::test,
+            schema::statistic::min_sample_size,
+            schema::statistic::max_sample_size,
+            schema::statistic::window,
+            schema::statistic::lower_boundary,
+            schema::statistic::upper_boundary,
+            schema::statistic::created,
+        ).nullable(),
+
+        schema::benchmark::id,
+        schema::benchmark::project_id,
+        schema::benchmark::uuid,
+        schema::benchmark::name,
+        schema::benchmark::slug,
+        schema::benchmark::created,
+        schema::benchmark::modified,
+
+        schema::metric::id,
+        schema::metric::uuid,
+        schema::metric::value,
+        schema::metric::lower_value,
+        schema::metric::upper_value,
+
+        (
+            schema::boundary::lower_limit,
+            schema::boundary::upper_limit,
+        ).nullable(),
+    ));
+
+    // .load::<()>(conn)
+    // .map_err(ApiError::from);
+
+    todo!()
 }
 
 fn get_results(
