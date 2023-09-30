@@ -2,7 +2,6 @@ use std::str::FromStr;
 
 use bencher_json::project::{
     alert::{JsonAlert, JsonAlertStatus, JsonPerfAlert, JsonUpdateAlert},
-    benchmark::JsonBenchmarkMetric,
     boundary::JsonLimit,
 };
 use chrono::Utc;
@@ -16,12 +15,9 @@ use super::{
 };
 use crate::{
     context::DbConnection,
-    model::project::{
-        benchmark::QueryBenchmark, metric::QueryMetric, report::QueryReport, ProjectId,
-        QueryProject,
-    },
+    model::project::{benchmark::QueryBenchmark, metric::QueryMetric, ProjectId, QueryProject},
     schema::alert as alert_table,
-    schema::{self, statistic},
+    schema::{self},
     util::{
         query::{fn_get, fn_get_id},
         to_date_time,

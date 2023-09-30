@@ -27,7 +27,7 @@ use crate::{
     },
     schema,
     schema::report as report_table,
-    util::{error::database_map, query::fn_get_id, to_date_time},
+    util::{query::fn_get_id, to_date_time},
     ApiError,
 };
 
@@ -86,6 +86,7 @@ impl QueryReport {
 
         let project = QueryProject::get(conn, project_id)?.into_json(conn)?;
         let results = get_report_results(log, conn, project.uuid, id)?;
+        let alerts = get_report_alerts(conn, project.uuid, id)?;
 
         Ok(JsonReport {
             uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
@@ -97,7 +98,7 @@ impl QueryReport {
             start_time: to_date_time(start_time)?,
             end_time: to_date_time(end_time)?,
             results,
-            alerts: get_alerts(conn, id)?,
+            alerts,
             created: to_date_time(created).map_err(ApiError::from)?,
         })
     }
@@ -274,7 +275,6 @@ fn get_report_results(
     Ok(report_results)
 }
 
-#[allow(clippy::too_many_lines)]
 fn get_report_alerts(
     conn: &mut DbConnection,
     project: Uuid,
@@ -378,33 +378,6 @@ fn get_report_alerts(
     }
 
     Ok(report_alerts)
-}
-
-fn get_alerts(conn: &mut DbConnection, report_id: ReportId) -> Result<JsonReportAlerts, ApiError> {
-    Ok(schema::alert::table
-        .left_join(schema::boundary::table.on(schema::alert::boundary_id.eq(schema::boundary::id)))
-        .left_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
-        .left_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
-        .filter(schema::perf::report_id.eq(report_id))
-        .left_join(
-            schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
-        )
-        .order((schema::benchmark::name.asc(), schema::perf::iteration.asc()))
-        .select((
-            schema::alert::id,
-            schema::alert::uuid,
-            schema::alert::boundary_id,
-            schema::alert::boundary_limit,
-            schema::alert::status,
-            schema::alert::modified,
-        ))
-        .load::<QueryAlert>(conn)
-        .map_err(ApiError::from)?
-        .into_iter()
-        .filter_map(|alert| {
-            database_map("QueryReport::get_alerts", alert.into_json(conn)).map(Into::into)
-        })
-        .collect())
 }
 
 #[derive(Debug, diesel::Insertable)]
