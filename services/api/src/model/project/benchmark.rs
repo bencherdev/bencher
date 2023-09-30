@@ -146,6 +146,7 @@ impl QueryBenchmark {
         let (query_benchmark, query_metric, query_boundary) = schema::metric::table
             .filter(schema::metric::id.eq(metric_id))
             .inner_join(schema::perf::table.inner_join(schema::benchmark::table))
+            // There may or may not be a boundary for any given metric
             .left_join(schema::boundary::table)
             .select((
                 (

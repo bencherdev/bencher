@@ -50,7 +50,7 @@ impl QueryVersion {
     ) -> Result<VersionId, HttpError> {
         if let Some(hash) = hash {
             if let Ok(version_id) = schema::version::table
-                .left_join(schema::branch_version::table)
+                .inner_join(schema::branch_version::table)
                 .filter(schema::branch_version::branch_id.eq(branch_id))
                 .filter(schema::version::hash.eq(hash.as_ref()))
                 .order(schema::version::number.desc())
@@ -86,7 +86,7 @@ impl InsertVersion {
         // Get the most recent code version number for this branch and increment it.
         // Otherwise, start a new branch code version number count from zero.
         let number = if let Ok(number) = schema::version::table
-            .left_join(schema::branch_version::table)
+            .inner_join(schema::branch_version::table)
             .filter(schema::branch_version::branch_id.eq(branch_id))
             .select(schema::version::number)
             .order(schema::version::number.desc())

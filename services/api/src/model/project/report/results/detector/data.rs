@@ -28,14 +28,14 @@ impl MetricsData {
             .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
             .inner_join(
                 schema::perf::table
-                    .left_join(
+                    .inner_join(
                         schema::report::table
-                            .left_join(schema::version::table.left_join(
-                                schema::branch_version::table.left_join(schema::branch::table),
+                            .inner_join(schema::version::table.inner_join(
+                                schema::branch_version::table.inner_join(schema::branch::table),
                             ))
-                            .left_join(schema::testbed::table),
+                            .inner_join(schema::testbed::table),
                     )
-                    .left_join(schema::benchmark::table),
+                    .inner_join(schema::benchmark::table),
             )
             .filter(schema::branch::id.eq(branch_id))
             .filter(schema::testbed::id.eq(testbed_id))

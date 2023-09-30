@@ -57,10 +57,10 @@ impl QueryAlert {
     ) -> Result<Self, ApiError> {
         schema::alert::table
             .filter(schema::alert::uuid.eq(uuid.to_string()))
-            .left_join(
-                schema::boundary::table.left_join(
+            .inner_join(
+                schema::boundary::table.inner_join(
                     schema::metric::table
-                        .left_join(schema::perf::table.left_join(schema::benchmark::table)),
+                        .inner_join(schema::perf::table.inner_join(schema::benchmark::table)),
                 ),
             )
             .filter(schema::benchmark::project_id.eq(project_id))

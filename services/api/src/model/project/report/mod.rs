@@ -124,6 +124,7 @@ fn get_report_results(
     .inner_join(schema::benchmark::table)
     .inner_join(schema::metric::table
         .inner_join(schema::metric_kind::table)
+        // There may or may not be a boundary for any given metric
         .left_join(schema::boundary::table
             .inner_join(schema::threshold::table)
             .inner_join(schema::statistic::table)

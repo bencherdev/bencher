@@ -332,10 +332,12 @@ fn perf_query(
         .filter(schema::branch_version::branch_id.eq(branch_id))
         .filter(schema::report::testbed_id.eq(testbed_id))
         .filter(schema::perf::benchmark_id.eq(benchmark_id))
+        // There may or may not be a boundary for any given metric
         .left_join(
             schema::boundary::table
                 .inner_join(schema::threshold::table)
                 .inner_join(schema::statistic::table)
+                // There may or may not be an alert for any given boundary
                 .left_join(schema::alert::table),
         )
         .into_boxed();

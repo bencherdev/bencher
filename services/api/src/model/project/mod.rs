@@ -162,7 +162,7 @@ impl QueryProject {
         id: ProjectId,
     ) -> Result<Option<SubscriptionId>, ApiError> {
         let subscription: Option<String> = schema::organization::table
-            .left_join(schema::project::table)
+            .inner_join(schema::project::table)
             .filter(schema::project::id.eq(id))
             .select(schema::organization::subscription)
             .first(conn)
@@ -181,7 +181,7 @@ impl QueryProject {
         id: ProjectId,
     ) -> Result<Option<(Uuid, Jwt)>, ApiError> {
         let (uuid, license): (String, Option<String>) = schema::organization::table
-            .left_join(schema::project::table)
+            .inner_join(schema::project::table)
             .filter(schema::project::id.eq(id))
             .select((schema::organization::uuid, schema::organization::license))
             .first(conn)
