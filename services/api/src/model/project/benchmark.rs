@@ -5,7 +5,7 @@ use bencher_json::{
     BenchmarkName, JsonBenchmark, ResourceId, Slug,
 };
 use chrono::Utc;
-use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 use uuid::Uuid;
 
@@ -145,13 +145,8 @@ impl QueryBenchmark {
     ) -> Result<JsonBenchmarkMetric, ApiError> {
         let (query_benchmark, query_metric, query_boundary) = schema::metric::table
             .filter(schema::metric::id.eq(metric_id))
-            .left_join(schema::perf::table.on(schema::perf::id.eq(schema::metric::perf_id)))
-            .inner_join(
-                schema::benchmark::table.on(schema::benchmark::id.eq(schema::perf::benchmark_id)),
-            )
-            .left_join(
-                schema::boundary::table.on(schema::metric::id.eq(schema::boundary::metric_id)),
-            )
+            .inner_join(schema::perf::table.inner_join(schema::benchmark::table))
+            .left_join(schema::boundary::table)
             .select((
                 (
                     schema::benchmark::id,

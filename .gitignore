@@ -19,8 +19,8 @@ deb/
 # Ignore swap files on MacOS
 **.DS_Store
 
-out.txt
-out.json
+out*.txt
+out*.json
 
 # Default docker volume
 data/

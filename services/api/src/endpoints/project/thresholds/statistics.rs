@@ -1,5 +1,5 @@
 use bencher_json::{project::threshold::JsonStatistic, ResourceId};
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
 use dropshot::{endpoint, HttpError, Path, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -85,24 +85,13 @@ async fn get_one_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     schema::statistic::table
-        .left_join(
+        .inner_join(
             schema::threshold::table.on(schema::statistic::threshold_id.eq(schema::threshold::id)),
         )
         .filter(schema::threshold::project_id.eq(query_project.id))
         .filter(schema::statistic::uuid.eq(path_params.statistic.to_string()))
-        .select((
-            schema::statistic::id,
-            schema::statistic::uuid,
-            schema::statistic::threshold_id,
-            schema::statistic::test,
-            schema::statistic::min_sample_size,
-            schema::statistic::max_sample_size,
-            schema::statistic::window,
-            schema::statistic::lower_boundary,
-            schema::statistic::upper_boundary,
-            schema::statistic::created,
-        ))
-        .first::<QueryStatistic>(conn)
+        .select(QueryStatistic::as_select())
+        .first(conn)
         .map_err(ApiError::from)?
         .into_json(conn)
 }

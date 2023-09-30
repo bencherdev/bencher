@@ -10,8 +10,6 @@ use bencher_json::{
 };
 use bencher_rbac::{Organization, Project};
 use chrono::Utc;
-#[cfg(feature = "plus")]
-use diesel::JoinOnDsl;
 use diesel::{ExpressionMethods, QueryDsl, Queryable, RunQueryDsl};
 use dropshot::HttpError;
 use uuid::Uuid;
@@ -164,10 +162,7 @@ impl QueryProject {
         id: ProjectId,
     ) -> Result<Option<SubscriptionId>, ApiError> {
         let subscription: Option<String> = schema::organization::table
-            .left_join(
-                schema::project::table
-                    .on(schema::organization::id.eq(schema::project::organization_id)),
-            )
+            .left_join(schema::project::table)
             .filter(schema::project::id.eq(id))
             .select(schema::organization::subscription)
             .first(conn)
@@ -186,10 +181,7 @@ impl QueryProject {
         id: ProjectId,
     ) -> Result<Option<(Uuid, Jwt)>, ApiError> {
         let (uuid, license): (String, Option<String>) = schema::organization::table
-            .left_join(
-                schema::project::table
-                    .on(schema::organization::id.eq(schema::project::organization_id)),
-            )
+            .left_join(schema::project::table)
             .filter(schema::project::id.eq(id))
             .select((schema::organization::uuid, schema::organization::license))
             .first(conn)

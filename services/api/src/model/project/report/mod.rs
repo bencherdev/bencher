@@ -6,8 +6,7 @@ use bencher_json::{
 };
 use chrono::Utc;
 use diesel::{
-    ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
-    SelectableHelper,
+    ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
 };
 use slog::Logger;
 use uuid::Uuid;
@@ -105,7 +104,15 @@ impl QueryReport {
     }
 }
 
-#[allow(clippy::too_many_lines)]
+type ResultsQuery = (
+    i32,
+    QueryMetricKind,
+    Option<(QueryThreshold, QueryStatistic)>,
+    QueryBenchmark,
+    QueryMetric,
+    Option<QueryBoundary>,
+);
+
 fn get_report_results(
     log: &Logger,
     conn: &mut DbConnection,
@@ -114,18 +121,13 @@ fn get_report_results(
 ) -> Result<JsonReportResults, ApiError> {
     let results = schema::perf::table
     .filter(schema::perf::report_id.eq(report_id))
-    .inner_join(
-        schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
-    )
-    .inner_join(
-        schema::metric::table.on(schema::perf::id.eq(schema::metric::perf_id)),
-    )
-    .inner_join(
-        schema::metric_kind::table.on(schema::metric::metric_kind_id.eq(schema::metric_kind::id)),
-    )
-    .left_join(schema::boundary::table.on(schema::metric::id.eq(schema::boundary::metric_id)).inner_join(
-        schema::threshold::table.on(schema::boundary::threshold_id.eq(schema::threshold::id))
-        ).inner_join(schema::statistic::table.on(schema::boundary::statistic_id.eq(schema::statistic::id))),
+    .inner_join(schema::benchmark::table)
+    .inner_join(schema::metric::table
+        .inner_join(schema::metric_kind::table)
+        .left_join(schema::boundary::table
+            .inner_join(schema::threshold::table)
+            .inner_join(schema::statistic::table)
+        )
     )
     // It is important to order by the iteration first in order to make sure they are grouped together below
     // Then ordering by metric kind and finally benchmark name makes sure that the benchmarks are in the same order for each iteration
@@ -170,9 +172,17 @@ fn get_report_results(
             schema::boundary::upper_limit,
         ).nullable(),
     ))
-    .load::<(i32, QueryMetricKind, Option<(QueryThreshold, QueryStatistic)>, QueryBenchmark, QueryMetric, Option<QueryBoundary>)>(conn)
+    .load::<ResultsQuery>(conn)
     .map_err(ApiError::from)?;
 
+    into_report_results_json(log, project, results)
+}
+
+fn into_report_results_json(
+    log: &Logger,
+    project: Uuid,
+    results: Vec<ResultsQuery>,
+) -> Result<JsonReportResults, ApiError> {
     let mut report_results = Vec::new();
     let mut report_iteration = Vec::new();
     let mut prev_iteration = None;
@@ -257,18 +267,18 @@ fn get_report_alerts(
     report_id: ReportId,
 ) -> Result<JsonReportAlerts, ApiError> {
     let alerts = schema::alert::table
-        .inner_join(schema::boundary::table.on(schema::alert::boundary_id.eq(schema::boundary::id)))
-        .inner_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
         .inner_join(
-            schema::metric_kind::table
-                .on(schema::metric::metric_kind_id.eq(schema::metric_kind::id)),
+            schema::boundary::table.inner_join(
+                schema::metric::table
+                    .inner_join(schema::metric_kind::table)
+                    .inner_join(
+                        schema::perf::table
+                            .inner_join(schema::report::table)
+                            .inner_join(schema::benchmark::table),
+                    ),
+            ),
         )
-        .inner_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
-        .inner_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
         .filter(schema::report::id.eq(report_id))
-        .inner_join(
-            schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
-        )
         .order((
             schema::perf::iteration,
             schema::metric_kind::name,
