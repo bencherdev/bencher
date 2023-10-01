@@ -383,7 +383,11 @@ impl Biller {
         let Some(customer) = customer.as_object() else {
             return Err(BillingError::NoCustomerInfo(customer.id()));
         };
-        let Some(uuid) = customer.metadata.get(METADATA_UUID) else {
+        let Some(uuid) = customer
+            .metadata
+            .as_ref()
+            .and_then(|meta| meta.get(METADATA_UUID))
+        else {
             return Err(BillingError::NoUuid(customer.id.clone()));
         };
         let Some(name) = &customer.name else {
