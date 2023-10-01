@@ -236,7 +236,7 @@ jobs:
       - name: Install nightly toolchain
         run: rustup toolchain install nightly
       - name: Install udeps
-        run: cargo install --version 0.1.40  --locked cargo-udeps
+        run: cargo install --version 0.1.42  --locked cargo-udeps
       - name: Run udeps
         run: cargo +nightly udeps
 

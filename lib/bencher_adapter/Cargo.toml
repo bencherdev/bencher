@@ -6,7 +6,7 @@ edition.workspace = true
 
 [dependencies]
 # Workspace
-bencher_json.workspace = true
+bencher_json = { workspace = true, features = ["full"] }
 literally.workspace = true
 once_cell.workspace = true
 ordered-float.workspace = true
