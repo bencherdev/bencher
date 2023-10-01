@@ -3,6 +3,7 @@
 use std::process::Command;
 
 use assert_cmd::prelude::*;
+use pretty_assertions::assert_eq;
 
 const BENCHER_CMD: &str = "bencher";
 

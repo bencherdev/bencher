@@ -237,8 +237,12 @@ jobs:
         run: rustup toolchain install nightly
       - name: Install udeps
         run: cargo install --version 0.1.42  --locked cargo-udeps
-      - name: Run udeps
-        run: cargo +nightly udeps
+      - name: Run API udeps
+        working-directory: ./services/api
+        run: cargo +nightly udeps --all-targets
+      - name: Run CLI udeps
+        working-directory: ./services/cli
+        run: cargo +nightly udeps --all-targets --features seed
 
   # Pretty JS
   npx_rome_format:
