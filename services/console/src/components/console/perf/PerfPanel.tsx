@@ -68,7 +68,8 @@ const DEFAULT_PER_PAGE = 8;
 const REPORTS_PER_PAGE = 4;
 export const DEFAULT_PAGE = 1;
 
-const DEFAULT_REPORT_HISTORY = 30 * 24 * 60 * 60 * 1000; // 30 days
+// 30 days
+const DEFAULT_REPORT_HISTORY = 30 * 24 * 60 * 60 * 1000;
 
 const addToArray = (array: any[], add: any): string[] => {
 	if (!array.includes(add)) {

@@ -1,9 +1,10 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, time::Duration};
 
 use bencher_json::{
     project::threshold::JsonThresholdStatistic, BenchmarkName, JsonPerfQuery, JsonReport, NonEmpty,
     Slug,
 };
+use chrono::{DateTime, Utc};
 use url::Url;
 use uuid::Uuid;
 
@@ -255,6 +256,8 @@ impl BenchmarkUrls {
             json_report.project.slug.clone(),
             json_report.branch.uuid,
             json_report.testbed.uuid,
+            json_report.start_time,
+            json_report.end_time,
         );
 
         let mut urls = BTreeMap::new();
@@ -310,15 +313,29 @@ struct BenchmarkUrl {
     project_slug: Slug,
     branch: Uuid,
     testbed: Uuid,
+    start_time: DateTime<Utc>,
+    end_time: DateTime<Utc>,
 }
 
+// 30 days
+const DEFAULT_REPORT_HISTORY: Duration = Duration::from_secs(30 * 24 * 60 * 60);
+
 impl BenchmarkUrl {
-    fn new(endpoint: Url, project_slug: Slug, branch: Uuid, testbed: Uuid) -> Self {
+    fn new(
+        endpoint: Url,
+        project_slug: Slug,
+        branch: Uuid,
+        testbed: Uuid,
+        start_time: DateTime<Utc>,
+        end_time: DateTime<Utc>,
+    ) -> Self {
         Self {
             endpoint,
             project_slug,
             branch,
             testbed,
+            start_time,
+            end_time,
         }
     }
 
@@ -328,8 +345,8 @@ impl BenchmarkUrl {
             branches: vec![self.branch],
             testbeds: vec![self.testbed],
             benchmarks: vec![benchmark],
-            start_time: None,
-            end_time: None,
+            start_time: Some(self.start_time - DEFAULT_REPORT_HISTORY),
+            end_time: Some(self.end_time),
         };
 
         let mut url = self.endpoint.clone();
