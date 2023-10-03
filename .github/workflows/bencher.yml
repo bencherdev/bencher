@@ -116,6 +116,22 @@ jobs:
           name: perf.jpeg
           path: ./lib/bencher_plot/perf.jpeg
 
+  open_api_spec:
+    name: OpenAPI Spec
+    runs-on: ubuntu-latest
+    needs:
+      - cargo_fmt
+      - cargo_clippy
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
+      - name: Generate OpenAPI Spec
+        run: cargo xtask swagger
+      - name: Check for changes
+        run: git diff --exit-code
+
   # API Smoke Test
   api_smoke_test:
     name: API Smoke Test
@@ -528,6 +544,7 @@ jobs:
     needs:
       # Test
       - cargo_test
+      - open_api_spec
       - api_smoke_test
       - api_smoke_test_compat
       - cargo_bench
@@ -638,6 +655,7 @@ jobs:
     needs:
       # Test
       - cargo_test
+      - open_api_spec
       - api_smoke_test
       - api_smoke_test_compat
       - cargo_check_api_minus
