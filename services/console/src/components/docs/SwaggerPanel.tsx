@@ -1,32 +1,22 @@
-import { createEffect } from "solid-js";
+import { createEffect, createSignal } from "solid-js";
 import { SwaggerUIBundle } from "swagger-ui-dist";
-import { SWAGGER, BENCHER_CLOUD_API_URL, isBencherCloud } from "../../util/ext";
-import { apiHost } from "../../util/http";
-
-const BENCHER_CLOUD = "Bencher Cloud";
-const BENCHER_SELF_HOSTED = "Bencher Self-Hosted";
+import {
+	BENCHER_CLOUD,
+	BENCHER_SELF_HOSTED,
+	isBencherCloud,
+	swaggerSpec,
+} from "../../util/ext";
 
 export interface Props {
 	apiUrl: string;
 }
 
 const SwaggerPanel = (props: Props) => {
-	const url = apiHost(props.apiUrl);
+	const [url, setUrl] = createSignal("");
 
 	createEffect(() => {
-		const swagger = SWAGGER;
-		// https://swagger.io/docs/specification/api-host-and-base-path/
-		swagger.servers = [];
-		if (!isBencherCloud(url)) {
-			swagger.servers.push({
-				url: url,
-				description: BENCHER_SELF_HOSTED,
-			});
-		}
-		swagger.servers.push({
-			url: BENCHER_CLOUD_API_URL,
-			description: BENCHER_CLOUD,
-		});
+		const [url, swagger] = swaggerSpec(props.apiUrl);
+		setUrl(url);
 		SwaggerUIBundle({
 			dom_id: "#swagger",
 			spec: swagger,
@@ -37,19 +27,29 @@ const SwaggerPanel = (props: Props) => {
 	return (
 		<div class="content">
 			<blockquote>
-				<p>
-					🐰 {isBencherCloud(url) ? BENCHER_CLOUD : BENCHER_SELF_HOSTED} API
-					Endpoint:{" "}
-					<code>
-						<a
-							href={`${url}/v0/server/version`}
-							target="_blank"
-							rel="noreferrer"
-						>
-							{url}
-						</a>
-					</code>
-				</p>
+				<nav class="level">
+					<div class="level-left">
+						<div class="level-item">
+							<p>
+								🐰 {isBencherCloud(url()) ? BENCHER_CLOUD : BENCHER_SELF_HOSTED}{" "}
+								API Endpoint:{" "}
+								<code>
+									<a
+										href={`${url()}/v0/server/version`}
+										target="_blank"
+										rel="noreferrer"
+									>
+										{url()}
+									</a>
+								</code>
+							</p>
+						</div>
+					</div>
+
+					<div class="level-right">
+						<button class="button">View OpenAPI Spec</button>
+					</div>
+				</nav>
 			</blockquote>
 			<hr />
 			<div id="swagger" />

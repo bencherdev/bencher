@@ -18,8 +18,8 @@ export const BENCHER_LOGO_URL: string =
 export const BENCHER_VERSION = `${swagger?.info?.version}`;
 
 export const SWAGGER = swagger;
-const BENCHER_CLOUD = "Bencher Cloud";
-const BENCHER_SELF_HOSTED = "Bencher Self-Hosted";
+export const BENCHER_CLOUD = "Bencher Cloud";
+export const BENCHER_SELF_HOSTED = "Bencher Self-Hosted";
 
 export const swaggerSpec = (apiUrl: string) => {
 	const url = apiHost(apiUrl);
@@ -42,7 +42,7 @@ export const swaggerSpec = (apiUrl: string) => {
 };
 
 // Change this value to test billing in development mode
-const TEST_BENCHER_BILLING: boolean = true;
+const TEST_BENCHER_BILLING: boolean = false;
 
 export const isBencherCloud = (apiUrl: string) => {
 	const mode = import.meta.env.MODE;
