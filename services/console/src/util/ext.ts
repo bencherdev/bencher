@@ -1,4 +1,5 @@
 import swagger from "../content/api/swagger.json";
+import { apiHost } from "./http";
 
 export const BENCHER_SITE_URL = "https://bencher.dev";
 
@@ -17,6 +18,28 @@ export const BENCHER_LOGO_URL: string =
 export const BENCHER_VERSION = `${swagger?.info?.version}`;
 
 export const SWAGGER = swagger;
+const BENCHER_CLOUD = "Bencher Cloud";
+const BENCHER_SELF_HOSTED = "Bencher Self-Hosted";
+
+export const swaggerSpec = (apiUrl: string) => {
+	const url = apiHost(apiUrl);
+
+	const swagger = SWAGGER;
+	// https://swagger.io/docs/specification/api-host-and-base-path/
+	swagger.servers = [];
+	if (!isBencherCloud(url)) {
+		swagger.servers.push({
+			url: url,
+			description: BENCHER_SELF_HOSTED,
+		});
+	}
+	swagger.servers.push({
+		url: BENCHER_CLOUD_API_URL,
+		description: BENCHER_CLOUD,
+	});
+
+	return [url, swagger];
+};
 
 // Change this value to test billing in development mode
 const TEST_BENCHER_BILLING: boolean = true;
