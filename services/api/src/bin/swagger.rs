@@ -1,6 +1,6 @@
 use std::fs::File;
 
-use bencher_api::{endpoints::Api, util::logger::bootstrap_logger};
+use bencher_api::{endpoints::Api, util::logger::bootstrap_logger, API_VERSION, SWAGGER_PATH};
 use dropshot::{ApiDescription, EndpointTagPolicy, TagConfig, TagDetails};
 use slog::info;
 
@@ -17,17 +17,7 @@ pub enum SwaggerError {
 fn main() -> Result<(), SwaggerError> {
     let log = bootstrap_logger();
 
-    info!(
-        &log,
-        "🐰 Bencher OpenAPI Spec v{}",
-        env!("CARGO_PKG_VERSION")
-    );
-
-    const API_VERSION: &str = env!("CARGO_PKG_VERSION");
-    // This is run via a `pre-push` git hook
-    // So if the `SWAGGER_PATH` below is ever updated
-    // also update `./git/hooks/pre-push` accordingly.
-    const SWAGGER_PATH: &str = "../console/src/content/api/swagger.json";
+    info!(&log, "🐰 Bencher OpenAPI Spec v{API_VERSION}",);
 
     info!(&log, "Generating OpenAPI JSON file at: {SWAGGER_PATH}");
     let mut api_description = ApiDescription::new();
@@ -53,6 +43,7 @@ fn main() -> Result<(), SwaggerError> {
             "users" => TagDetails { description: Some("Users".into()), external_docs: None},
             "tokens" => TagDetails { description: Some("API Tokens".into()), external_docs: None},
             "server" => TagDetails { description: Some("Server".into()), external_docs: None},
+            "spec" => TagDetails { description: Some("OpenAPI Spec".into()), external_docs: None},
     }})
         .openapi(bencher_api::config::API_NAME, API_VERSION)
         .write(&mut swagger_file)

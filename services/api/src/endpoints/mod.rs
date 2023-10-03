@@ -220,6 +220,7 @@ impl Api {
 
         // Server
         if http_options {
+            api.register(system::server::spec::server_spec_options)?;
             api.register(system::server::ping::server_ping_options)?;
             api.register(system::server::version::server_version_options)?;
             api.register(system::server::endpoint::server_endpoint_options)?;
@@ -227,6 +228,7 @@ impl Api {
             api.register(system::server::config::server_config_options)?;
             api.register(system::server::backup::server_backup_options)?;
         }
+        api.register(system::server::spec::server_spec_get)?;
         api.register(system::server::ping::server_ping_get)?;
         api.register(system::server::version::server_version_get)?;
         api.register(system::server::endpoint::server_endpoint_get)?;

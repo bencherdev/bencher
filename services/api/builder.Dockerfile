@@ -32,6 +32,9 @@ RUN cargo init xtask
 WORKDIR /usr/src/services
 RUN cargo init cli
 
+WORKDIR /usr/src/services/console/src/content/api
+COPY services/console/src/content/api/swagger.json swagger.json
+
 WORKDIR /usr/src/services/api
 COPY services/api/src src
 COPY services/api/Cargo.toml Cargo.toml

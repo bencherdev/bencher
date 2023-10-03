@@ -5201,6 +5201,61 @@
         }
       }
     },
+    "/v0/server/spec": {
+      "get": {
+        "tags": [
+          "server",
+          "spec"
+        ],
+        "operationId": "server_spec_get",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/server/version": {
       "get": {
         "tags": [
@@ -8369,6 +8424,10 @@
     {
       "name": "server",
       "description": "Server"
+    },
+    {
+      "name": "spec",
+      "description": "OpenAPI Spec"
     },
     {
       "name": "statistics",

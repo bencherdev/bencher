@@ -1,7 +1,7 @@
 use bencher_api::{
     config::{config_tx::ConfigTx, Config},
     util::logger::bootstrap_logger,
-    ApiError,
+    ApiError, API_VERSION,
 };
 use bencher_json::system::config::JsonApm;
 use dropshot::HttpServer;
@@ -17,7 +17,7 @@ async fn main() -> Result<(), ApiError> {
         release: sentry::release_name!(),
         ..Default::default()
     });
-    info!(&log, "🐰 Bencher API Server v{}", env!("CARGO_PKG_VERSION"));
+    info!(&log, "🐰 Bencher API Server v{API_VERSION}");
     if let Err(e) = run(
         &log,
         #[cfg(feature = "sentry")]

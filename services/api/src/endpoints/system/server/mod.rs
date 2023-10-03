@@ -7,6 +7,7 @@ pub mod config;
 pub mod endpoint;
 pub mod ping;
 pub mod restart;
+pub mod spec;
 pub mod version;
 
 #[derive(Debug, Display, Clone, Copy)]
@@ -16,6 +17,7 @@ pub enum Resource {
     Endpoint,
     Ping,
     Restart,
+    Spec,
     Version,
 }
 
@@ -27,6 +29,7 @@ impl WordStr for Resource {
             Self::Endpoint => "endpoint",
             Self::Ping => "ping",
             Self::Restart => "restart",
+            Self::Spec => "spec",
             Self::Version => "version",
         }
     }
@@ -38,6 +41,7 @@ impl WordStr for Resource {
             Self::Endpoint => "endpoints",
             Self::Ping => "pings",
             Self::Restart => "restarts",
+            Self::Spec => "specs",
             Self::Version => "versions",
         }
     }
