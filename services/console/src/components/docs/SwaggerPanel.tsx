@@ -5,6 +5,7 @@ import {
 	BENCHER_SELF_HOSTED,
 	isBencherCloud,
 	swaggerSpec,
+	BENCHER_VERSION,
 } from "../../util/ext";
 
 export interface Props {
@@ -47,10 +48,25 @@ const SwaggerPanel = (props: Props) => {
 					</div>
 
 					<div class="level-right">
-						<button class="button">View OpenAPI Spec</button>
+						<a
+							class="button is-fullwidth"
+							href={`${url()}/v0/server/spec`}
+							target="_blank"
+							rel="noreferrer"
+						>
+							View OpenAPI Spec
+						</a>
 					</div>
 				</nav>
 			</blockquote>
+			<h2>🦀 Rust Client</h2>
+			<p>
+				If you're writing in Rust consider using the Bencher Rust API Client.
+			</p>
+			<code>
+				bencher_client = {"{"} git = "https://github.com/bencherdev/bencher",
+				tag = "v{BENCHER_VERSION}" {"}"}
+			</code>
 			<hr />
 			<div id="swagger" />
 			<br />

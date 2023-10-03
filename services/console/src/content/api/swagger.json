@@ -5243,7 +5243,9 @@
             },
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/JsonSpec"
+                }
               }
             }
           },
@@ -7542,6 +7544,7 @@
           "username"
         ]
       },
+      "JsonSpec": {},
       "JsonStartPoint": {
         "type": "object",
         "properties": {

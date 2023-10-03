@@ -46,6 +46,7 @@ pub use system::{
     endpoint::JsonEndpoint,
     ping::JsonPing,
     restart::JsonRestart,
+    spec::JsonSpec,
     version::JsonApiVersion,
 };
 pub use user::{

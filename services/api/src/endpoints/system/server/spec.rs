@@ -1,6 +1,6 @@
+use bencher_json::JsonSpec;
 use dropshot::{endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, RequestContext};
 use http::StatusCode;
-use serde_json::Value;
 
 use crate::{
     context::ApiContext,
@@ -37,7 +37,7 @@ pub async fn server_spec_options(
 }]
 pub async fn server_spec_get(
     _rqctx: RequestContext<ApiContext>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<Value>, CorsHeaders>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseOk<JsonSpec>, CorsHeaders>, HttpError> {
     let endpoint = Endpoint::new(SPEC_RESOURCE, Method::GetOne);
     let spec = serde_json::from_str(SWAGGER_SPEC).map_err(|e| {
         issue_error(

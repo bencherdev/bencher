@@ -9,6 +9,7 @@ sortOrder: 4
 - Improve Report creation error messages
 - Add filtering Reports by Branch, Testbed, and start/end time
 - Add one month historical default when viewing Reports in the Perf Plot
+- Add endpoint `/v0/server/spec` to view OpenAPI spec JSON
 - Remove old UI source and scripts
 
 ## `v0.3.12`

@@ -8,6 +8,8 @@ pub enum CliServer {
     Ping(CliPing),
     /// Server version
     Version(CliVersion),
+    /// Server OpenAPI Spec
+    Spec(CliSpec),
     /// View server endpoint
     Endpoint(CliEndpoint),
     /// Restart server
@@ -27,6 +29,12 @@ pub struct CliPing {
 
 #[derive(Parser, Debug)]
 pub struct CliVersion {
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliSpec {
     #[clap(flatten)]
     pub backend: CliBackend,
 }
