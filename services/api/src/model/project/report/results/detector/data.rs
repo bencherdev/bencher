@@ -5,10 +5,11 @@ use slog::{warn, Logger};
 
 use crate::{
     context::DbConnection,
+    error::not_found_error,
     model::project::{
         benchmark::BenchmarkId, branch::BranchId, metric_kind::MetricKindId, testbed::TestbedId,
     },
-    schema, ApiError,
+    schema,
 };
 
 use super::threshold::MetricsStatistic;
@@ -50,9 +51,10 @@ impl MetricsData {
             if let Some(start_time) = now.checked_sub(window.into()) {
                 query = query.filter(schema::report::start_time.ge(start_time));
             } else {
+                debug_assert!(false, "window > i64::MIN");
                 warn!(
                     log,
-                    "Window is too large, ignoring: window {window} > now {now}"
+                    "Window is too large, ignoring. But this should never happen: window {window} > i64::MIN for now {now}"
                 );
             }
         }
@@ -70,7 +72,7 @@ impl MetricsData {
         let data = query
             .select(schema::metric::value)
             .load::<f64>(conn)
-            .map_err(ApiError::from)?
+            .map_err(not_found_error)?
             .into_iter()
             .collect();
 

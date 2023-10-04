@@ -676,6 +676,7 @@ dependencies = [
  "bencher_billing",
  "bencher_json",
  "bencher_license",
+ "bencher_logger",
  "bencher_plot",
  "bencher_plus",
  "bencher_rbac",
@@ -701,7 +702,6 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "slog",
- "slog-term",
  "slug",
  "statrs",
  "thiserror",
@@ -723,6 +723,19 @@ dependencies = [
  "thiserror",
  "tokio",
  "uuid 1.4.1",
+]
+
+[[package]]
+name = "bencher_boundary"
+version = "0.3.13"
+dependencies = [
+ "bencher_json",
+ "bencher_logger",
+ "once_cell",
+ "pretty_assertions",
+ "slog",
+ "statrs",
+ "thiserror",
 ]
 
 [[package]]
@@ -805,6 +818,14 @@ dependencies = [
  "serde_json",
  "thiserror",
  "uuid 1.4.1",
+]
+
+[[package]]
+name = "bencher_logger"
+version = "0.3.13"
+dependencies = [
+ "slog",
+ "slog-term",
 ]
 
 [[package]]

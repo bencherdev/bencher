@@ -22,6 +22,7 @@ bencher_adapter.workspace = true
 bencher_billing = { workspace = true, optional = true }
 bencher_json = { workspace = true, features = ["full", "schema"] }
 bencher_license = { workspace = true, optional = true }
+bencher_logger.workspace = true
 bencher_plot.workspace = true
 bencher_plus = { workspace = true, optional = true }
 bencher_rbac.workspace = true
@@ -38,6 +39,7 @@ serde_urlencoded.workspace = true
 ordered-float.workspace = true
 oso.workspace = true
 rand.workspace = true
+slog.workspace = true
 slug.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["fs", "rt-multi-thread"] }
@@ -54,8 +56,6 @@ hyper = "0.14"
 http = "0.2"
 mail-send = "0.4"
 sentry = { version = "0.31", optional = true }
-slog = "2.7"
-slog-term = "2.9"
 statrs = "0.16"
 
 [dev-dependencies]

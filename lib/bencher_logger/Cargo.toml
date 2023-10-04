@@ -1,0 +1,10 @@
+[package]
+name = "bencher_logger"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+slog.workspace = true
+# Crate
+slog-term = "2.9"
