@@ -2,6 +2,8 @@ use std::process::Command;
 
 use crate::parser::CliSwagger;
 
+const SWAGGER_PATH: &str = "./services/console/src/content/api/swagger.json";
+
 #[derive(Debug)]
 pub struct Swagger {}
 
@@ -29,7 +31,10 @@ impl Swagger {
             )
         })?;
 
-        println!("Saved to: ./services/console/src/content/api/swagger.json");
+        println!("Saved to: {SWAGGER_PATH}");
+
+        let swagger_spec_str = std::fs::read_to_string(SWAGGER_PATH)?;
+        let _swagger_spec: bencher_json::JsonSpec = serde_json::from_str(&swagger_spec_str)?;
 
         Ok(())
     }

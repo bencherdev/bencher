@@ -5956,8 +5956,10 @@ name = "xtask"
 version = "0.3.13"
 dependencies = [
  "anyhow",
+ "bencher_json",
  "camino",
  "clap",
+ "serde_json",
  "tokio",
 ]
 
