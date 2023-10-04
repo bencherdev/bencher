@@ -1,4 +1,5 @@
 use diesel::RunQueryDsl;
+use dropshot::HttpError;
 use slog::Logger;
 use uuid::Uuid;
 
@@ -55,9 +56,10 @@ impl Detector {
         conn: &mut DbConnection,
         benchmark_id: BenchmarkId,
         query_metric: &QueryMetric,
-    ) -> Result<(), ApiError> {
+    ) -> Result<(), HttpError> {
         // Query the historical population/sample data for the benchmark
         let metrics_data = MetricsData::new(
+            log,
             conn,
             self.metric_kind_id,
             self.branch_id,
@@ -94,7 +96,7 @@ impl Detector {
 
         // If the boundary check detects an outlier then create an alert for it on the given side.
         if let Some(side) = boundary.outlier {
-            InsertAlert::from_boundary(conn, boundary_uuid, side)
+            InsertAlert::from_boundary(conn, boundary_uuid, side).map_err(Into::into)
         } else {
             Ok(())
         }

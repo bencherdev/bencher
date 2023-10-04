@@ -178,7 +178,14 @@ impl ReportResults {
             // Ignored benchmarks do not get checked against the threshold even if one exists
             if !ignore_benchmark {
                 if let Some(detector) = self.detector(conn, metric_kind_id) {
-                    let query_metric = QueryMetric::from_uuid(conn, insert_metric.uuid)?;
+                    let query_metric = QueryMetric::from_uuid(conn, insert_metric.uuid.clone()).map_err(|e| {
+                        issue_error(
+                            StatusCode::NOT_FOUND,
+                            "Failed to find metric",
+                            &format!("Failed to find new metric ({insert_metric:?}) for perf ({insert_perf:?}) even though it was just created on Bencher."),
+                            e,
+                        )
+                    })?;
                     detector.detect(log, conn, benchmark_id, &query_metric)?;
                 }
             }

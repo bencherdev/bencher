@@ -1,5 +1,7 @@
 use chrono::offset::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use dropshot::HttpError;
+use slog::{warn, Logger};
 
 use crate::{
     context::DbConnection,
@@ -17,13 +19,14 @@ pub struct MetricsData {
 
 impl MetricsData {
     pub fn new(
+        log: &Logger,
         conn: &mut DbConnection,
         metric_kind_id: MetricKindId,
         branch_id: BranchId,
         testbed_id: TestbedId,
         benchmark_id: BenchmarkId,
         statistic: &MetricsStatistic,
-    ) -> Result<Self, ApiError> {
+    ) -> Result<Self, HttpError> {
         let mut query = schema::metric::table
             .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
             .inner_join(
@@ -44,10 +47,14 @@ impl MetricsData {
 
         if let Some(window) = statistic.window {
             let now = Utc::now().timestamp();
-            query = query.filter(
-                schema::report::start_time
-                    .ge(now.checked_sub(window.into()).ok_or(ApiError::BadMath)?),
-            );
+            if let Some(start_time) = now.checked_sub(window.into()) {
+                query = query.filter(schema::report::start_time.ge(start_time));
+            } else {
+                warn!(
+                    log,
+                    "Window is too large, ignoring: window {window} > now {now}"
+                );
+            }
         }
 
         let mut query = query.order((

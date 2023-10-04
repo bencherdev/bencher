@@ -1,11 +1,12 @@
 use bencher_json::JsonMetric;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use dropshot::HttpError;
 use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
+    error::resource_not_found_err,
     schema::{self, metric as metric_table},
-    ApiError,
 };
 
 use super::{
@@ -30,11 +31,11 @@ pub struct QueryMetric {
 }
 
 impl QueryMetric {
-    pub fn from_uuid(conn: &mut DbConnection, uuid: String) -> Result<Self, ApiError> {
+    pub fn from_uuid(conn: &mut DbConnection, uuid: String) -> Result<Self, HttpError> {
         schema::metric::table
-            .filter(schema::metric::uuid.eq(uuid))
+            .filter(schema::metric::uuid.eq(&uuid))
             .first::<Self>(conn)
-            .map_err(ApiError::from)
+            .map_err(resource_not_found_err!(Metric, uuid))
     }
 
     pub fn json(value: f64, lower_value: Option<f64>, upper_value: Option<f64>) -> JsonMetric {

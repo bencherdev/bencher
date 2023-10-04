@@ -250,6 +250,7 @@ pub enum BencherResource<Id> {
     Branch(Id),
     Testbed(Id),
     Benchmark(Id),
+    Metric(Id),
 }
 
 impl<Id> BencherResource<Id> {
@@ -260,6 +261,7 @@ impl<Id> BencherResource<Id> {
             Self::Branch(_) => "Branch",
             Self::Testbed(_) => "Testbed",
             Self::Benchmark(_) => "Benchmark",
+            Self::Metric(_) => "Metric",
         }
     }
 
@@ -269,7 +271,8 @@ impl<Id> BencherResource<Id> {
             | Self::MetricKind(id)
             | Self::Branch(id)
             | Self::Testbed(id)
-            | Self::Benchmark(id) => id,
+            | Self::Benchmark(id)
+            | Self::Metric(id) => id,
         }
     }
 }
