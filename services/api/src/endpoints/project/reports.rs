@@ -21,7 +21,7 @@ use crate::{
         endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
-    error::issue_error,
+    error::{issue_error, resource_insert_err},
     model::project::{
         branch::QueryBranch,
         report::{results::ReportResults, InsertReport, QueryReport},
@@ -271,14 +271,7 @@ async fn post_inner(
     diesel::insert_into(schema::report::table)
         .values(&insert_report)
         .execute(conn)
-        .map_err(|e| {
-            issue_error(
-                StatusCode::CONFLICT,
-                "Failed to create new report",
-                &format!("My new report ({insert_report:?}) in project ({project_id}) on Bencher failed to create."),
-                e,
-            )
-        })?;
+        .map_err(resource_insert_err!(Report, insert_report))?;
 
     let query_report = schema::report::table
         .filter(schema::report::uuid.eq(&insert_report.uuid))

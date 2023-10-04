@@ -3,11 +3,11 @@ use std::str::FromStr;
 use bencher_json::GitHash;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
-use http::StatusCode;
 use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
+    error::resource_insert_err,
     schema,
     schema::version as version_table,
     util::query::{fn_get, fn_get_id},
@@ -67,7 +67,7 @@ impl QueryVersion {
     }
 }
 
-#[derive(diesel::Insertable)]
+#[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = version_table)]
 pub struct InsertVersion {
     pub uuid: String,
@@ -108,14 +108,7 @@ impl InsertVersion {
         diesel::insert_into(schema::version::table)
             .values(&insert_version)
             .execute(conn)
-            .map_err(|e| {
-                crate::error::issue_error(
-                    StatusCode::CONFLICT,
-                    "Failed to increment version number",
-                    &format!("My branch ({branch_id}) in project ({project_id}) on Bencher failed to increment version number ({number})."),
-                    e,
-                )
-            })?;
+            .map_err(resource_insert_err!(Version, insert_version))?;
 
         let version_id = QueryVersion::get_id(conn, &uuid)?;
 
@@ -127,14 +120,7 @@ impl InsertVersion {
         diesel::insert_into(schema::branch_version::table)
             .values(&insert_branch_version)
             .execute(conn)
-            .map_err(|e| {
-                crate::error::issue_error(
-                    StatusCode::CONFLICT,
-                    "Failed to increment branch version number",
-                    &format!("My branch ({branch_id}) in project ({project_id}) on Bencher failed to increment to next version ({version_id})."),
-                    e,
-                )
-            })?;
+            .map_err(resource_insert_err!(BranchVersion, insert_branch_version))?;
 
         Ok(version_id)
     }

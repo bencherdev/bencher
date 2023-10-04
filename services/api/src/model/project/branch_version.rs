@@ -17,7 +17,7 @@ impl QueryBranchVersion {
     fn_get!(branch_version);
 }
 
-#[derive(diesel::Insertable)]
+#[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = branch_version_table)]
 pub struct InsertBranchVersion {
     pub branch_id: BranchId,

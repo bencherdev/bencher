@@ -12,12 +12,11 @@ use bencher_json::{
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
-use http::StatusCode;
 use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
-    error::{issue_error, resource_not_found_err},
+    error::{resource_insert_err, resource_not_found_err},
     model::project::QueryProject,
     schema,
     schema::metric_kind as metric_kind_table,
@@ -130,16 +129,7 @@ impl QueryMetricKind {
         diesel::insert_into(schema::metric_kind::table)
             .values(&insert_metric_kind)
             .execute(conn)
-            .map_err(|e| {
-                issue_error(
-                    StatusCode::CONFLICT,
-                    "Failed to create system metric kind",
-                    &format!(
-                        "Failed to create system metric kind ({insert_metric_kind:?}) on Bencher."
-                    ),
-                    e,
-                )
-            })?;
+            .map_err(resource_insert_err!(MetricKind, insert_metric_kind))?;
 
         Self::get_id(conn, &insert_metric_kind.uuid)
     }

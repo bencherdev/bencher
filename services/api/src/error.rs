@@ -230,6 +230,58 @@ pub trait WordStr {
     fn plural(&self) -> &str;
 }
 
+#[derive(Debug)]
+pub enum BencherResource<Id> {
+    Project(Id),
+    Report(Id),
+    MetricKind(Id),
+    Branch(Id),
+    Version(Id),
+    BranchVersion(Id),
+    Testbed(Id),
+    Benchmark(Id),
+    Perf(Id),
+    Metric(Id),
+    Boundary(Id),
+    Alert(Id),
+}
+
+impl<Id> BencherResource<Id> {
+    pub fn name(&self) -> &str {
+        match self {
+            Self::Project(_) => "Project",
+            Self::Report(_) => "Report",
+            Self::MetricKind(_) => "Metric Kind",
+            Self::Branch(_) => "Branch",
+            Self::Version(_) => "Version",
+            Self::BranchVersion(_) => "Branch Version",
+            Self::Testbed(_) => "Testbed",
+            Self::Benchmark(_) => "Benchmark",
+            Self::Perf(_) => "Perf",
+            Self::Metric(_) => "Metric",
+            Self::Boundary(_) => "Boundary",
+            Self::Alert(_) => "Alert",
+        }
+    }
+
+    pub fn id(&self) -> &Id {
+        match self {
+            Self::Project(id)
+            | Self::Report(id)
+            | Self::MetricKind(id)
+            | Self::Branch(id)
+            | Self::Version(id)
+            | Self::BranchVersion(id)
+            | Self::Testbed(id)
+            | Self::Benchmark(id)
+            | Self::Perf(id)
+            | Self::Metric(id)
+            | Self::Boundary(id)
+            | Self::Alert(id) => id,
+        }
+    }
+}
+
 macro_rules! resource_not_found_err {
     ($resource:ident, $id:expr) => {
         |e| {
@@ -243,39 +295,19 @@ macro_rules! resource_not_found_err {
 
 pub(crate) use resource_not_found_err;
 
-#[derive(Debug)]
-pub enum BencherResource<Id> {
-    Project(Id),
-    MetricKind(Id),
-    Branch(Id),
-    Testbed(Id),
-    Benchmark(Id),
-    Metric(Id),
+macro_rules! resource_insert_err {
+    ($resource:ident, $value:expr) => {
+        |e| {
+            crate::error::resource_insert_error(
+                &crate::error::BencherResource::$resource(()),
+                &$value,
+                e,
+            )
+        }
+    };
 }
 
-impl<Id> BencherResource<Id> {
-    pub fn name(&self) -> &str {
-        match self {
-            Self::Project(_) => "Project",
-            Self::MetricKind(_) => "Metric Kind",
-            Self::Branch(_) => "Branch",
-            Self::Testbed(_) => "Testbed",
-            Self::Benchmark(_) => "Benchmark",
-            Self::Metric(_) => "Metric",
-        }
-    }
-
-    pub fn id(&self) -> &Id {
-        match self {
-            Self::Project(id)
-            | Self::MetricKind(id)
-            | Self::Branch(id)
-            | Self::Testbed(id)
-            | Self::Benchmark(id)
-            | Self::Metric(id) => id,
-        }
-    }
-}
+pub(crate) use resource_insert_err;
 
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
 
@@ -324,6 +356,20 @@ where
         resource = resource.name(),
         id = resource.id(),
     ))
+}
+
+pub fn resource_insert_error<V, E>(resource: &BencherResource<()>, value: V, error: E) -> HttpError
+where
+    V: std::fmt::Debug,
+    E: std::fmt::Display,
+{
+    let name = resource.name();
+    issue_error(
+        http::StatusCode::CONFLICT,
+        &format!("Failed to create new {name}"),
+        &format!("My new {name} ({value:?}) failed to create."),
+        error,
+    )
 }
 
 pub fn issue_error<E>(status_code: StatusCode, title: &str, body: &str, error: E) -> HttpError

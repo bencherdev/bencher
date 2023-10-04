@@ -1,13 +1,12 @@
 use bencher_boundary::MetricsBoundary;
 use diesel::RunQueryDsl;
 use dropshot::HttpError;
-use http::StatusCode;
 use slog::Logger;
 use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
-    error::{bad_request_error, issue_error},
+    error::{bad_request_error, resource_insert_err},
     model::project::{
         benchmark::BenchmarkId,
         branch::BranchId,
@@ -93,14 +92,7 @@ impl Detector {
         diesel::insert_into(schema::boundary::table)
             .values(&insert_boundary)
             .execute(conn)
-            .map_err(|e| {
-                issue_error(
-                    StatusCode::CONFLICT,
-                    "Failed to create new boundary",
-                    &format!("My new boundary ({insert_boundary:?}) failed to create."),
-                    e,
-                )
-            })?;
+            .map_err(resource_insert_err!(Boundary, insert_boundary))?;
 
         // If the boundary check detects an outlier then create an alert for it on the given side.
         if let Some(limit) = boundary.outlier {

@@ -15,7 +15,7 @@ use slog::Logger;
 
 use crate::{
     context::DbConnection,
-    error::{bad_request_error, issue_error},
+    error::{bad_request_error, issue_error, resource_insert_err},
     model::project::{
         benchmark::{BenchmarkId, QueryBenchmark},
         branch::BranchId,
@@ -143,14 +143,7 @@ impl ReportResults {
         diesel::insert_into(schema::perf::table)
             .values(&insert_perf)
             .execute(conn)
-            .map_err(|e| {
-                issue_error(
-                    StatusCode::CONFLICT,
-                    "Failed to create perf for report",
-                    &format!("Failed to create new perf ({insert_perf:?}) on Bencher."),
-                    e,
-                )
-            })?;
+            .map_err(resource_insert_err!(Perf, insert_perf))?;
         let perf_id = QueryPerf::get_id(conn, &insert_perf.uuid)?;
 
         for (metric_kind_key, metric) in metrics.inner {
@@ -160,14 +153,7 @@ impl ReportResults {
             diesel::insert_into(schema::metric::table)
                 .values(&insert_metric)
                 .execute(conn)
-                .map_err(|e| {
-                    issue_error(
-                        StatusCode::CONFLICT,
-                        "Failed to create metric report",
-                        &format!("Failed to create new metric ({insert_metric:?}) for perf ({insert_perf:?}) on Bencher."),
-                        e,
-                    )
-                })?;
+                .map_err(resource_insert_err!(Metric, insert_metric))?;
 
             #[cfg(feature = "plus")]
             {

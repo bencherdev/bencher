@@ -7,7 +7,6 @@ use bencher_json::project::{
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
 use dropshot::HttpError;
-use http::StatusCode;
 use uuid::Uuid;
 
 use super::{
@@ -16,7 +15,7 @@ use super::{
 };
 use crate::{
     context::DbConnection,
-    error::issue_error,
+    error::resource_insert_err,
     model::project::{benchmark::QueryBenchmark, metric::QueryMetric, ProjectId, QueryProject},
     schema::alert as alert_table,
     schema::{self},
@@ -320,14 +319,7 @@ impl InsertAlert {
         diesel::insert_into(schema::alert::table)
             .values(&insert_alert)
             .execute(conn)
-            .map_err(|e| {
-                issue_error(
-                    StatusCode::CONFLICT,
-                    "Failed to create new alert",
-                    &format!("My new alert ({insert_alert:?}) for boundary ({boundary} | {boundary_limit:?}) on Bencher failed to create."),
-                    e,
-                )
-            })?;
+            .map_err(resource_insert_err!(Alert, insert_alert))?;
 
         Ok(())
     }
