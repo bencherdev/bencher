@@ -31,7 +31,7 @@ use crate::{
         threshold::{
             alert::QueryAlert, boundary::QueryBoundary, statistic::QueryStatistic, QueryThreshold,
         },
-        QueryProject,
+        ProjectUuid, QueryProject,
     },
     model::user::auth::AuthUser,
     schema,
@@ -118,7 +118,6 @@ async fn get_inner(
 
     let project =
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
-    let project_uuid = Uuid::from_str(&project.uuid).map_err(ApiError::from)?;
 
     let JsonPerfQuery {
         branches,
@@ -167,7 +166,7 @@ async fn get_inner(
 
                 perf_query(
                     conn,
-                    project_uuid,
+                    project.uuid,
                     ids,
                     query_dimensions,
                     times,
@@ -299,7 +298,7 @@ type PerfQuery = (
 #[allow(clippy::too_many_lines)]
 fn perf_query(
     conn: &mut DbConnection,
-    project: Uuid,
+    project_uuid: ProjectUuid,
     ids: Ids,
     dimensions: QueryDimensions,
     times: Times,
@@ -417,7 +416,7 @@ fn perf_query(
         .load::<PerfQuery>(conn)
         .map_err(ApiError::from)?
         .into_iter()
-        .filter_map(|query| perf_metric(project, query))
+        .filter_map(|query| perf_metric(project_uuid, query))
         .collect();
 
     results.push(JsonPerfMetrics {
@@ -431,7 +430,7 @@ fn perf_query(
 }
 
 fn perf_metric(
-    project: Uuid,
+    project_uuid: ProjectUuid,
     (
         report,
         iteration,
@@ -459,7 +458,7 @@ fn perf_metric(
             let boundary = query_boundary.into_json();
             let threshold = Some(
                 query_threshold
-                    .into_threshold_statistic_json_for_project(project, query_statistic)
+                    .into_threshold_statistic_json_for_project(project_uuid, query_statistic)
                     .ok()?,
             );
             let alert = if let Some(query_alert) = query_alert {

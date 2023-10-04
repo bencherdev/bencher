@@ -19,7 +19,12 @@ use crate::{
     error::{forbidden_error, resource_not_found_err, unauthorized_error},
     model::{organization::QueryOrganization, user::auth::AuthUser},
     schema::{self, project as project_table},
-    util::{query::fn_get, resource_id::fn_resource_id, slug::unwrap_slug, to_date_time},
+    util::{
+        query::{fn_get, fn_get_uuid},
+        resource_id::fn_resource_id,
+        slug::unwrap_slug,
+        to_date_time,
+    },
     ApiError,
 };
 
@@ -41,11 +46,12 @@ pub mod version;
 pub mod visibility;
 
 crate::util::typed_id::typed_id!(ProjectId);
+crate::util::typed_uuid::typed_uuid!(ProjectUuid);
 
 #[derive(diesel::Insertable)]
 #[diesel(table_name = project_table)]
 pub struct InsertProject {
-    pub uuid: String,
+    pub uuid: ProjectUuid,
     pub organization_id: OrganizationId,
     pub name: String,
     pub slug: String,
@@ -70,7 +76,7 @@ impl InsertProject {
         let slug = unwrap_slug!(conn, name.as_ref(), slug, project, QueryProject);
         let timestamp = Utc::now().timestamp();
         Ok(Self {
-            uuid: Uuid::new_v4().to_string(),
+            uuid: ProjectUuid::new(),
             organization_id: QueryOrganization::from_resource_id(conn, organization)?.id,
             name: name.into(),
             slug,
@@ -89,7 +95,7 @@ fn_resource_id!(project);
 #[diesel(belongs_to(QueryOrganization, foreign_key = organization_id))]
 pub struct QueryProject {
     pub id: ProjectId,
-    pub uuid: String,
+    pub uuid: ProjectUuid,
     pub organization_id: OrganizationId,
     pub name: String,
     pub slug: String,
@@ -101,6 +107,7 @@ pub struct QueryProject {
 
 impl QueryProject {
     fn_get!(project);
+    fn_get_uuid!(project, ProjectId, ProjectUuid);
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonProject, ApiError> {
         let Self {
@@ -115,8 +122,8 @@ impl QueryProject {
             ..
         } = self;
         Ok(JsonProject {
-            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
-            organization: QueryOrganization::get_uuid(conn, organization_id)?,
+            uuid: uuid.into(),
+            organization: QueryOrganization::get_uuid(conn, organization_id)?.into(),
             name: NonEmpty::from_str(&name)?,
             slug: Slug::from_str(&slug).map_err(ApiError::from)?,
             url: ok_url(url.as_deref())?,
@@ -134,15 +141,6 @@ impl QueryProject {
             .filter(resource_id(project)?)
             .first::<Self>(conn)
             .map_err(resource_not_found_err!(Project, project.clone()))
-    }
-
-    pub fn get_uuid(conn: &mut DbConnection, id: ProjectId) -> Result<Uuid, ApiError> {
-        let uuid: String = schema::project::table
-            .filter(schema::project::id.eq(id))
-            .select(schema::project::uuid)
-            .first(conn)
-            .map_err(ApiError::from)?;
-        Uuid::from_str(&uuid).map_err(ApiError::from)
     }
 
     #[cfg(feature = "plus")]

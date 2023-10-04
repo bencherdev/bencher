@@ -130,7 +130,7 @@ impl QueryBranch {
         } = self;
         Ok(JsonBranch {
             uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
-            project: QueryProject::get_uuid(conn, project_id)?,
+            project: QueryProject::get_uuid(conn, project_id)?.into(),
             name: BranchName::from_str(&name).map_err(ApiError::from)?,
             slug: Slug::from_str(&slug).map_err(ApiError::from)?,
             created: to_date_time(created).map_err(ApiError::from)?,

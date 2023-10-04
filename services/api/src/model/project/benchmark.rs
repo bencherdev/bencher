@@ -14,7 +14,7 @@ use uuid::Uuid;
 use super::{
     metric::{MetricId, QueryMetric},
     threshold::boundary::QueryBoundary,
-    ProjectId, QueryProject,
+    ProjectId, ProjectUuid, QueryProject,
 };
 use crate::{
     context::DbConnection,
@@ -31,6 +31,7 @@ use crate::{
 };
 
 crate::util::typed_id::typed_id!(BenchmarkId);
+// crate::util::typed_uuid::typed_uuid!(BenchmarkUuid);
 
 fn_resource_id!(benchmark);
 
@@ -118,11 +119,14 @@ impl QueryBenchmark {
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonBenchmark, ApiError> {
-        let project = QueryProject::get_uuid(conn, self.project_id)?;
-        self.into_json_for_project(project)
+        let project_uuid = QueryProject::get_uuid(conn, self.project_id)?;
+        self.into_json_for_project(project_uuid)
     }
 
-    pub fn into_json_for_project(self, project: Uuid) -> Result<JsonBenchmark, ApiError> {
+    pub fn into_json_for_project(
+        self,
+        project_uuid: ProjectUuid,
+    ) -> Result<JsonBenchmark, ApiError> {
         let Self {
             uuid,
             name,
@@ -133,7 +137,7 @@ impl QueryBenchmark {
         } = self;
         Ok(JsonBenchmark {
             uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
-            project,
+            project: project_uuid.into(),
             name: BenchmarkName::from_str(&name).map_err(ApiError::from)?,
             slug: Slug::from_str(&slug).map_err(ApiError::from)?,
             created: to_date_time(created).map_err(ApiError::from)?,
@@ -166,9 +170,9 @@ impl QueryBenchmark {
             ))
             .first::<(QueryBenchmark, QueryMetric, Option<QueryBoundary>)>(conn)
             .map_err(ApiError::from)?;
-        let project = QueryProject::get_uuid(conn, query_benchmark.project_id)?;
+        let project_uuid = QueryProject::get_uuid(conn, query_benchmark.project_id)?;
         query_benchmark.into_benchmark_metric_json_for_project(
-            project,
+            project_uuid,
             query_metric,
             query_boundary,
         )
@@ -176,7 +180,7 @@ impl QueryBenchmark {
 
     pub fn into_benchmark_metric_json_for_project(
         self,
-        project: Uuid,
+        project_uuid: ProjectUuid,
         query_metric: QueryMetric,
         query_boundary: Option<QueryBoundary>,
     ) -> Result<JsonBenchmarkMetric, ApiError> {
@@ -187,7 +191,7 @@ impl QueryBenchmark {
             slug,
             created,
             modified,
-        } = self.into_json_for_project(project)?;
+        } = self.into_json_for_project(project_uuid)?;
         let metric = query_metric.into_json();
         let boundary = query_boundary
             .map(QueryBoundary::into_json)

@@ -16,7 +16,9 @@ use super::{
 use crate::{
     context::DbConnection,
     error::resource_insert_err,
-    model::project::{benchmark::QueryBenchmark, metric::QueryMetric, ProjectId, QueryProject},
+    model::project::{
+        benchmark::QueryBenchmark, metric::QueryMetric, ProjectId, ProjectUuid, QueryProject,
+    },
     schema::alert as alert_table,
     schema::{self},
     util::{
@@ -109,7 +111,7 @@ impl QueryAlert {
     pub fn into_json_for_report(
         self,
         conn: &mut DbConnection,
-        project: Uuid,
+        project_uuid: ProjectUuid,
         report: String,
         iteration: i32,
         query_benchmark: QueryBenchmark,
@@ -127,7 +129,7 @@ impl QueryAlert {
         let threshold_id = query_boundary.threshold_id;
         let statistic_id = query_boundary.statistic_id;
         let benchmark = query_benchmark.into_benchmark_metric_json_for_project(
-            project,
+            project_uuid,
             query_metric,
             Some(query_boundary),
         )?;

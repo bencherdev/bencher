@@ -6,8 +6,8 @@ use chrono::Utc;
 use jsonwebtoken::{decode, encode, Algorithm, Header, TokenData, Validation};
 use jsonwebtoken::{DecodingKey, EncodingKey};
 use once_cell::sync::Lazy;
-use uuid::Uuid;
 
+use crate::model::organization::OrganizationUuid;
 use crate::ApiError;
 
 mod audience;
@@ -80,7 +80,7 @@ impl SecretKey {
         &self,
         email: Email,
         ttl: u32,
-        org_uuid: Uuid,
+        org_uuid: OrganizationUuid,
         role: JsonOrganizationRole,
     ) -> Result<Jwt, ApiError> {
         let org_claims = OrgClaims {
@@ -241,7 +241,7 @@ mod test {
     fn test_jwt_invite() {
         let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), &DEFAULT_SECRET_KEY);
 
-        let org_uuid = Uuid::new_v4();
+        let org_uuid = Uuid::new_v4().into();
         let role = JsonOrganizationRole::Leader;
 
         let token = secret_key
@@ -263,7 +263,7 @@ mod test {
     fn test_jwt_invite_expired() {
         let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), &DEFAULT_SECRET_KEY);
 
-        let org_uuid = Uuid::new_v4();
+        let org_uuid = Uuid::new_v4().into();
         let role = JsonOrganizationRole::Leader;
 
         let token = secret_key

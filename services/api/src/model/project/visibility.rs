@@ -109,7 +109,7 @@ pub mod project_visibility {
                 Err(ApiError::NoBillerOrganization(organization.clone()))
             }
         } else if let Some((uuid, license)) = QueryOrganization::get_license(conn, organization)? {
-            let _token_data = licensor.validate_organization(&license, uuid)?;
+            let _token_data = licensor.validate_organization(&license, uuid.into())?;
             // TODO check license entitlements for usage so far
             Ok(())
         } else {

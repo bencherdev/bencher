@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use bencher_json::{
     organization::member::{JsonNewMember, JsonUpdateMember},
     JsonDirection, JsonEmpty, JsonMember, JsonMembers, JsonPagination, ResourceId, UserName,
@@ -10,7 +8,6 @@ use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use slog::Logger;
-use uuid::Uuid;
 
 use crate::{
     context::{ApiContext, Body, ButtonBody, DbConnection, Message},
@@ -236,7 +233,7 @@ async fn post_inner(
     let token = context.secret_key.new_invite(
         json_new_member.email,
         INVITE_TOKEN_TTL,
-        Uuid::from_str(&query_org.uuid).map_err(ApiError::from)?,
+        query_org.uuid,
         json_new_member.role,
     )?;
     let token_string = token.to_string();

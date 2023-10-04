@@ -16,7 +16,9 @@ COPY .cargo/config.toml config.toml
 
 WORKDIR /usr/src/lib
 COPY lib/bencher_adapter bencher_adapter
+COPY lib/bencher_boundary bencher_boundary
 COPY lib/bencher_json bencher_json
+COPY lib/bencher_logger bencher_logger
 COPY lib/bencher_plot bencher_plot
 COPY lib/bencher_rbac bencher_rbac
 COPY lib/bencher_valid bencher_valid

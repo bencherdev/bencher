@@ -1,7 +1,5 @@
 #![cfg(feature = "plus")]
 
-use std::str::FromStr;
-
 use bencher_json::{
     organization::metered::{JsonNewPlan, JsonPlan, DEFAULT_PRICE_NAME},
     JsonEmpty, JsonUser, ResourceId,
@@ -11,7 +9,6 @@ use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
-use uuid::Uuid;
 
 use crate::{
     context::ApiContext,
@@ -128,7 +125,7 @@ async fn post_inner(
     // Create a metered subscription for the organization
     let subscription = biller
         .create_metered_subscription(
-            Uuid::from_str(&query_org.uuid).map_err(ApiError::from)?,
+            query_org.uuid.into(),
             &customer,
             &payment_method,
             json_plan.level,

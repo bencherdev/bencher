@@ -45,3 +45,21 @@ macro_rules! fn_get_id {
 }
 
 pub(crate) use fn_get_id;
+
+macro_rules! fn_get_uuid {
+    ($table:ident, $id:ident, $uuid:ident) => {
+        #[allow(unused_qualifications)]
+        pub fn get_uuid(
+            conn: &mut crate::context::DbConnection,
+            id: $id,
+        ) -> Result<$uuid, dropshot::HttpError> {
+            schema::$table::table
+                .filter(schema::$table::id.eq(id))
+                .select(schema::$table::uuid)
+                .first(conn)
+                .map_err(crate::error::not_found_error)
+        }
+    };
+}
+
+pub(crate) use fn_get_uuid;

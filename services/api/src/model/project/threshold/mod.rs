@@ -10,7 +10,7 @@ use super::{
     branch::{BranchId, QueryBranch},
     metric_kind::{MetricKindId, QueryMetricKind},
     testbed::{QueryTestbed, TestbedId},
-    ProjectId, QueryProject,
+    ProjectId, ProjectUuid, QueryProject,
 };
 use crate::{
     context::DbConnection,
@@ -99,7 +99,7 @@ impl QueryThreshold {
         } = self;
         Ok(JsonThreshold {
             uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
-            project: QueryProject::get_uuid(conn, project_id)?,
+            project: QueryProject::get_uuid(conn, project_id)?.into(),
             metric_kind: QueryMetricKind::get(conn, metric_kind_id)?.into_json(conn)?,
             branch: QueryBranch::get(conn, branch_id)?.into_json(conn)?,
             testbed: QueryTestbed::get(conn, testbed_id)?.into_json(conn)?,
@@ -117,25 +117,25 @@ impl QueryThreshold {
         self,
         conn: &mut DbConnection,
     ) -> Result<JsonThresholdStatistic, ApiError> {
-        let project = QueryProject::get_uuid(conn, self.project_id)?;
+        let project_uuid = QueryProject::get_uuid(conn, self.project_id)?;
         let statistic = if let Some(statistic_id) = self.statistic_id {
             QueryStatistic::get(conn, statistic_id)?
         } else {
             return Err(ApiError::NoThresholdStatistic(self.uuid));
         };
-        self.into_threshold_statistic_json_for_project(project, statistic)
+        self.into_threshold_statistic_json_for_project(project_uuid, statistic)
     }
 
     pub fn into_threshold_statistic_json_for_project(
         self,
-        project: Uuid,
+        project_uuid: ProjectUuid,
         statistic: QueryStatistic,
     ) -> Result<JsonThresholdStatistic, ApiError> {
         let Self { uuid, created, .. } = self;
         let uuid = Uuid::from_str(&uuid).map_err(ApiError::from)?;
         Ok(JsonThresholdStatistic {
             uuid,
-            project,
+            project: project_uuid.into(),
             statistic: statistic.into_json_for_threshold(uuid)?,
             created: to_date_time(created).map_err(ApiError::from)?,
         })

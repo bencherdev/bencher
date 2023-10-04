@@ -90,7 +90,7 @@ impl QueryTestbed {
         } = self;
         Ok(JsonTestbed {
             uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
-            project: QueryProject::get_uuid(conn, project_id)?,
+            project: QueryProject::get_uuid(conn, project_id)?.into(),
             name: NonEmpty::from_str(&name)?,
             slug: Slug::from_str(&slug).map_err(ApiError::from)?,
             created: to_date_time(created).map_err(ApiError::from)?,
