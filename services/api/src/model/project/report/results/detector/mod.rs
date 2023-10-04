@@ -1,10 +1,13 @@
+use bencher_boundary::MetricsBoundary;
 use diesel::RunQueryDsl;
 use dropshot::HttpError;
+use http::StatusCode;
 use slog::Logger;
 use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
+    error::{bad_request_error, issue_error},
     model::project::{
         benchmark::BenchmarkId,
         branch::BranchId,
@@ -13,16 +16,13 @@ use crate::{
         testbed::TestbedId,
         threshold::{alert::InsertAlert, boundary::InsertBoundary},
     },
-    schema, ApiError,
+    schema,
 };
 
-mod boundary;
 pub mod data;
-mod limits;
 pub mod threshold;
 
-use boundary::MetricsBoundary;
-use data::MetricsData;
+use data::metrics_data;
 use threshold::MetricsThreshold;
 
 #[derive(Debug, Clone)]
@@ -58,7 +58,7 @@ impl Detector {
         query_metric: &QueryMetric,
     ) -> Result<(), HttpError> {
         // Query the historical population/sample data for the benchmark
-        let metrics_data = MetricsData::new(
+        let metrics_data = metrics_data(
             log,
             conn,
             self.metric_kind_id,
@@ -73,11 +73,12 @@ impl Detector {
             log,
             query_metric.value,
             &metrics_data,
-            self.threshold.statistic.test,
+            self.threshold.statistic.test.into(),
             self.threshold.statistic.min_sample_size,
             self.threshold.statistic.lower_boundary,
             self.threshold.statistic.upper_boundary,
-        )?;
+        )
+        .map_err(bad_request_error)?;
 
         let boundary_uuid = Uuid::new_v4();
         let insert_boundary = InsertBoundary {
@@ -92,11 +93,18 @@ impl Detector {
         diesel::insert_into(schema::boundary::table)
             .values(&insert_boundary)
             .execute(conn)
-            .map_err(ApiError::from)?;
+            .map_err(|e| {
+                issue_error(
+                    StatusCode::CONFLICT,
+                    "Failed to create new boundary",
+                    &format!("My new boundary ({insert_boundary:?}) failed to create."),
+                    e,
+                )
+            })?;
 
         // If the boundary check detects an outlier then create an alert for it on the given side.
-        if let Some(side) = boundary.outlier {
-            InsertAlert::from_boundary(conn, boundary_uuid, side).map_err(Into::into)
+        if let Some(limit) = boundary.outlier {
+            InsertAlert::from_boundary(conn, boundary_uuid, limit.into())
         } else {
             Ok(())
         }

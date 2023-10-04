@@ -1,19 +1,15 @@
+use bencher_json::project::boundary::JsonLimit;
+use bencher_json::project::threshold::JsonStatisticKind;
 use bencher_json::Boundary;
 use slog::Logger;
 
 use crate::limits::{MetricsLimits, TestKind};
-use crate::{BoundaryError, MetricsData, StatisticKind};
+use crate::{BoundaryError, MetricsData};
 
 #[derive(Debug, Default)]
 pub struct MetricsBoundary {
     pub limits: MetricsLimits,
-    pub outlier: Option<Limit>,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Limit {
-    Lower,
-    Upper,
+    pub outlier: Option<JsonLimit>,
 }
 
 impl MetricsBoundary {
@@ -21,7 +17,7 @@ impl MetricsBoundary {
         log: &Logger,
         datum: f64,
         metrics_data: &MetricsData,
-        test: StatisticKind,
+        test: JsonStatisticKind,
         min_sample_size: Option<u32>,
         lower_boundary: Option<Boundary>,
         upper_boundary: Option<Boundary>,
@@ -42,7 +38,7 @@ impl MetricsBoundary {
         log: &Logger,
         datum: f64,
         metrics_data: &MetricsData,
-        test: StatisticKind,
+        test: JsonStatisticKind,
         min_sample_size: Option<u32>,
         lower_boundary: Option<Boundary>,
         upper_boundary: Option<Boundary>,
@@ -66,10 +62,10 @@ impl MetricsBoundary {
         };
 
         let test_kind = match test {
-            StatisticKind::Z => TestKind::Z,
+            JsonStatisticKind::Z => TestKind::Z,
             // T test requires the degrees of freedom to calculate.
             #[allow(clippy::cast_precision_loss)]
-            StatisticKind::T => TestKind::T {
+            JsonStatisticKind::T => TestKind::T {
                 freedom: (data.len() - 1) as f64,
             },
         };

@@ -6,6 +6,8 @@ use bencher_json::project::{
 };
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
+use dropshot::HttpError;
+use http::StatusCode;
 use uuid::Uuid;
 
 use super::{
@@ -14,6 +16,7 @@ use super::{
 };
 use crate::{
     context::DbConnection,
+    error::issue_error,
     model::project::{benchmark::QueryBenchmark, metric::QueryMetric, ProjectId, QueryProject},
     schema::alert as alert_table,
     schema::{self},
@@ -187,6 +190,15 @@ impl From<Limit> for JsonLimit {
     }
 }
 
+impl From<JsonLimit> for Limit {
+    fn from(limit: JsonLimit) -> Self {
+        match limit {
+            JsonLimit::Lower => Self::Lower,
+            JsonLimit::Upper => Self::Upper,
+        }
+    }
+}
+
 impl<DB> diesel::serialize::ToSql<diesel::sql_types::Bool, DB> for Limit
 where
     DB: diesel::backend::Backend,
@@ -281,7 +293,7 @@ where
     }
 }
 
-#[derive(diesel::Insertable)]
+#[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = alert_table)]
 pub struct InsertAlert {
     pub uuid: String,
@@ -296,7 +308,7 @@ impl InsertAlert {
         conn: &mut DbConnection,
         boundary: Uuid,
         boundary_limit: Limit,
-    ) -> Result<(), ApiError> {
+    ) -> Result<(), HttpError> {
         let insert_alert = InsertAlert {
             uuid: Uuid::new_v4().to_string(),
             boundary_id: QueryBoundary::get_id(conn, &boundary)?,
@@ -308,7 +320,14 @@ impl InsertAlert {
         diesel::insert_into(schema::alert::table)
             .values(&insert_alert)
             .execute(conn)
-            .map_err(ApiError::from)?;
+            .map_err(|e| {
+                issue_error(
+                    StatusCode::CONFLICT,
+                    "Failed to create new alert",
+                    &format!("My new alert ({insert_alert:?}) for boundary ({boundary} | {boundary_limit:?}) on Bencher failed to create."),
+                    e,
+                )
+            })?;
 
         Ok(())
     }

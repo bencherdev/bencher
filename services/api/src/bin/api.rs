@@ -1,6 +1,5 @@
 use bencher_api::{
     config::{config_tx::ConfigTx, Config},
-    util::logger::bootstrap_logger,
     ApiError, API_VERSION,
 };
 use bencher_json::system::config::JsonApm;
@@ -11,7 +10,7 @@ use slog::{error, info, Logger};
 
 #[tokio::main]
 async fn main() -> Result<(), ApiError> {
-    let log = bootstrap_logger();
+    let log = bencher_logger::bootstrap_logger();
     #[cfg(feature = "sentry")]
     let guard = sentry::init(sentry::ClientOptions {
         release: sentry::release_name!(),

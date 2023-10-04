@@ -1,6 +1,6 @@
 use std::fs::File;
 
-use bencher_api::{endpoints::Api, util::logger::bootstrap_logger, API_VERSION, SWAGGER_PATH};
+use bencher_api::{endpoints::Api, API_VERSION, SWAGGER_PATH};
 use dropshot::{ApiDescription, EndpointTagPolicy, TagConfig, TagDetails};
 use slog::info;
 
@@ -15,7 +15,7 @@ pub enum SwaggerError {
 }
 
 fn main() -> Result<(), SwaggerError> {
-    let log = bootstrap_logger();
+    let log = bencher_logger::bootstrap_logger();
 
     info!(&log, "🐰 Bencher OpenAPI Spec v{API_VERSION}",);
 

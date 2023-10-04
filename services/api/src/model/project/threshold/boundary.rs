@@ -64,7 +64,7 @@ impl QueryBoundary {
     }
 }
 
-#[derive(diesel::Insertable)]
+#[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = boundary_table)]
 pub struct InsertBoundary {
     pub uuid: String,

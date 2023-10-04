@@ -47,8 +47,8 @@ pub enum ApiError {
     Url(#[from] url::ParseError),
     #[error("Failed to inline CSS: {0}")]
     CssInline(#[from] css_inline::InlineError),
-    #[error("Failed to run stats: {0}")]
-    Statrs(#[from] statrs::StatsError),
+    #[error("{0}")]
+    Boundary(#[from] bencher_boundary::BoundaryError),
     #[error("Failed to run adapter: {0}")]
     Adapter(#[from] bencher_adapter::AdapterError),
     #[error("Failed to find env var: {0}")]
