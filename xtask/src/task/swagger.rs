@@ -22,6 +22,13 @@ impl Swagger {
         println!("{}", String::from_utf8_lossy(&output.stdout));
         eprintln!("{}", String::from_utf8_lossy(&output.stderr));
 
+        output.status.success().then_some(()).ok_or_else(|| {
+            anyhow::anyhow!(
+                "Failed to generate swagger.json. Exit code: {:?}",
+                output.status.code()
+            )
+        })?;
+
         println!("Saved to: ./services/console/src/content/api/swagger.json");
 
         Ok(())

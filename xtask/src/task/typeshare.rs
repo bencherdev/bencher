@@ -22,6 +22,13 @@ impl Typeshare {
         println!("{}", String::from_utf8_lossy(&output.stdout));
         eprintln!("{}", String::from_utf8_lossy(&output.stderr));
 
+        output.status.success().then_some(()).ok_or_else(|| {
+            anyhow::anyhow!(
+                "Failed to generate typeshare. Exit code: {:?}",
+                output.status.code()
+            )
+        })?;
+
         println!("Saved to: ./services/console/src/types/bencher.ts");
 
         Ok(())
