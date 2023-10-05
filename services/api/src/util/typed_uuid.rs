@@ -43,15 +43,18 @@ macro_rules! typed_uuid {
         impl<DB> diesel::serialize::ToSql<diesel::sql_types::Text, DB> for $name
         where
             DB: diesel::backend::Backend,
-            str: diesel::serialize::ToSql<diesel::sql_types::Text, DB>,
+            for<'a> String: diesel::serialize::ToSql<diesel::sql_types::Text, DB>
+                + Into<
+                    <DB::BindCollector<'a> as diesel::query_builder::BindCollector<'a, DB>>::Buffer,
+                >,
         {
             fn to_sql<'b>(
                 &'b self,
                 out: &mut diesel::serialize::Output<'b, '_, DB>,
             ) -> diesel::serialize::Result {
-                // TODO it may be worth imitating this impl
-                // https://docs.rs/diesel/2.1.2/src/diesel/pg/types/uuid.rs.html#23
-                std::str::from_utf8(self.0.as_bytes())?.to_sql(out)
+                // https://docs.rs/diesel/latest/diesel/serialize/trait.ToSql.html#examples
+                out.set_value(self.to_string());
+                Ok(diesel::serialize::IsNull::No)
             }
         }
 

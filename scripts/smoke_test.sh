@@ -9,6 +9,4 @@ while ! nc -z localhost 61016; do
   sleep 1
 done
 
-RUST_BACKTRACE=full cargo test --features seed --test seed -- --nocapture
-
-source ../../scripts/mock.sh
+source ../../scripts/seed.sh

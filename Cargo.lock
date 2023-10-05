@@ -695,7 +695,6 @@ dependencies = [
  "once_cell",
  "ordered-float",
  "oso",
- "pretty_assertions",
  "rand 0.8.5",
  "schemars",
  "sentry",

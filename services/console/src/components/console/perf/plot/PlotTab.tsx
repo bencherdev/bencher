@@ -1,4 +1,4 @@
-import { For, type Accessor, Switch, Match } from "solid-js";
+import { For, type Accessor, Switch, Match, createMemo } from "solid-js";
 import { PerfTab } from "../../../../config/types";
 import type {
 	JsonBenchmark,
@@ -73,6 +73,25 @@ const PlotTab = (props: Props) => {
 				return props.benchmarks_tab;
 			default:
 				return [];
+		}
+	};
+
+	const reportsLength = createMemo(() => props.reports_tab.length);
+	const branchesLength = createMemo(() => props.branches_tab.length);
+	const testbedsLength = createMemo(() => props.testbeds_tab.length);
+	const benchmarksLength = createMemo(() => props.benchmarks_tab.length);
+	const getTabLength = () => {
+		switch (props.tab()) {
+			case PerfTab.REPORTS:
+				return reportsLength;
+			case PerfTab.BRANCHES:
+				return branchesLength;
+			case PerfTab.TESTBEDS:
+				return testbedsLength;
+			case PerfTab.BENCHMARKS:
+				return benchmarksLength;
+			default:
+				return () => 0;
 		}
 	};
 
@@ -174,9 +193,9 @@ const PlotTab = (props: Props) => {
 							<br />
 							<Pagination
 								size={PaginationSize.SMALL}
-								data_len={getTab()?.length}
-								per_page={getPerPage()?.()}
-								page={getPage()?.()}
+								data_len={getTabLength()}
+								per_page={getPerPage()}
+								page={getPage()}
 								handlePage={getHandlePage()}
 							/>
 							<br />

@@ -139,6 +139,7 @@ const TablePanel = (props: Props) => {
 		fetcher,
 		getData,
 	);
+	const tableDataLength = createMemo(() => tableData()?.length);
 
 	createEffect(() => {
 		const newParams: Record<string, null | number | boolean> = {};
@@ -192,9 +193,9 @@ const TablePanel = (props: Props) => {
 				<div class="container">
 					<Pagination
 						size={PaginationSize.REGULAR}
-						data_len={tableData()?.length}
-						per_page={per_page()}
-						page={page()}
+						data_len={tableDataLength}
+						per_page={per_page}
+						page={page}
 						handlePage={handlePage}
 					/>
 				</div>

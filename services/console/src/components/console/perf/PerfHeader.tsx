@@ -1,10 +1,10 @@
 import { debounce } from "@solid-primitives/scheduled";
 import {
-	Accessor,
+	type Accessor,
 	createEffect,
 	createMemo,
 	createSignal,
-	Resource,
+	type Resource,
 	Show,
 } from "solid-js";
 import type {

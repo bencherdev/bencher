@@ -1,5 +1,5 @@
 import {
-	Accessor,
+	type Accessor,
 	createEffect,
 	createMemo,
 	createResource,
@@ -78,6 +78,7 @@ const PublicProjects = (props: Props) => {
 			});
 	};
 	const [projects] = createResource<JsonProject[]>(fetcher, fetchProjects);
+	const projectsLength = createMemo(() => projects()?.length);
 
 	createEffect(() => {
 		const newParams: Record<string, number> = {};
@@ -118,7 +119,7 @@ const PublicProjects = (props: Props) => {
 									</a>
 								)}
 							</For>
-							{projects()?.length === 0 && page() !== 1 && (
+							{projectsLength() === 0 && page() !== 1 && (
 								<div class="box">
 									<BackButton page={page} handlePage={handlePage} />
 								</div>
@@ -129,9 +130,9 @@ const PublicProjects = (props: Props) => {
 				</div>
 				<Pagination
 					size={PaginationSize.REGULAR}
-					data_len={projects()?.length}
-					per_page={per_page()}
-					page={page()}
+					data_len={projectsLength}
+					per_page={per_page}
+					page={page}
 					handlePage={handlePage}
 				/>
 			</div>

@@ -1,3 +1,5 @@
+import type { Accessor } from "solid-js";
+
 export enum PaginationSize {
 	SMALL = "is-small",
 	REGULAR = "",
@@ -7,9 +9,9 @@ export enum PaginationSize {
 
 const Pagination = (props: {
 	size: PaginationSize;
-	data_len: undefined | number;
-	per_page: number;
-	page: number;
+	data_len: Accessor<undefined | number>;
+	per_page: Accessor<number>;
+	page: Accessor<number>;
 	handlePage: (page: number) => void;
 }) => {
 	return (
@@ -21,16 +23,16 @@ const Pagination = (props: {
 			<button
 				class="pagination-previous"
 				title="Go to previous page"
-				disabled={props.page < 2}
+				disabled={props.page() < 2}
 				onClick={(e) => {
 					e.preventDefault();
-					props.handlePage(props.page - 1);
+					props.handlePage(props.page() - 1);
 				}}
 			>
 				Previous
 			</button>
 			<ul class="pagination-list">
-				{props.page > 2 && (
+				{props.page() > 2 && (
 					<li>
 						<button
 							class="pagination-link"
@@ -44,45 +46,45 @@ const Pagination = (props: {
 						</button>
 					</li>
 				)}
-				{props.page > 3 && (
+				{props.page() > 3 && (
 					<li>
 						<span class="pagination-ellipsis">&hellip;</span>
 					</li>
 				)}
-				{props.page > 1 && (
+				{props.page() > 1 && (
 					<li>
 						<button
 							class="pagination-link"
-							title={`Go to page ${props.page - 1}`}
+							title={`Go to page ${props.page() - 1}`}
 							onClick={(e) => {
 								e.preventDefault();
-								props.handlePage(props.page - 1);
+								props.handlePage(props.page() - 1);
 							}}
 						>
-							{props.page - 1}
+							{props.page() - 1}
 						</button>
 					</li>
 				)}
 				<li>
 					<button
 						class="pagination-link is-current"
-						title={`Page ${props.page}`}
+						title={`Page ${props.page()}`}
 						aria-current="page"
 					>
-						{props.page ? props.page : 0}
+						{props.page() ? props.page() : 0}
 					</button>
 				</li>
-				{props.data_len === props.per_page && (
+				{props.data_len() === props.per_page() && (
 					<li>
 						<button
 							class="pagination-link"
-							title={`Go to page ${props.page + 1}`}
+							title={`Go to page ${props.page() + 1}`}
 							onClick={(e) => {
 								e.preventDefault();
-								props.handlePage(props.page + 1);
+								props.handlePage(props.page() + 1);
 							}}
 						>
-							{props.page + 1}
+							{props.page() + 1}
 						</button>
 					</li>
 				)}
@@ -90,10 +92,10 @@ const Pagination = (props: {
 			<button
 				class="pagination-next"
 				title="Go to next page"
-				disabled={props.data_len < props.per_page}
+				disabled={props.data_len() < props.per_page()}
 				onClick={(e) => {
 					e.preventDefault();
-					props.handlePage(props.page + 1);
+					props.handlePage(props.page() + 1);
 				}}
 			>
 				Next page

@@ -27,12 +27,12 @@ export interface RadioConfig {
 
 const Radio = (props: Props) => {
 	const params = createMemo(() => props.params);
-	const per_page = 8;
+	const per_page = createMemo(() => 8);
 	const [page, setPage] = createSignal(1);
 
 	const fetcher = createMemo(() => {
 		return {
-			url: props.config?.url(params(), per_page, page()),
+			url: props.config?.url(params(), per_page(), page()),
 			token: authUser()?.token,
 		};
 	});
@@ -48,6 +48,7 @@ const Radio = (props: Props) => {
 			});
 	};
 	const [data] = createResource(fetcher, getRadio);
+	const dataLength = createMemo(() => data()?.length);
 
 	return (
 		<>
@@ -90,7 +91,7 @@ const Radio = (props: Props) => {
 									</>
 								)}
 							</For>
-							{data()?.length === 0 && page() !== 1 && (
+							{dataLength() === 0 && page() !== 1 && (
 								<BackButton
 									name={props.config?.name}
 									page={page()}
@@ -105,9 +106,9 @@ const Radio = (props: Props) => {
 				<div class="column is-half">
 					<Pagination
 						size={PaginationSize.SMALL}
-						data_len={data()?.length}
+						data_len={dataLength}
 						per_page={per_page}
-						page={page()}
+						page={page}
 						handlePage={setPage}
 					/>
 				</div>
