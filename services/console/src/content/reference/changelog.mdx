@@ -4,11 +4,31 @@ heading: "Bencher Changelog"
 sortOrder: 4
 ---
 
-## Pending `v0.3.10`
+## Pending `v0.3.14`
+- Move default Threshold Boundaries from `0.9` to `0.85`
+
+## `v0.3.13`
+- Add ability for `bencher run` to read output from a file without running a command argument
+- Improve Report creation error messages
+- Add filtering Reports by Branch, Testbed, and start/end time
+- Add one month historical default when viewing Reports in the Perf Plot
+- Add endpoint `/v0/server/spec` to view OpenAPI spec JSON
+- Remove old UI source and scripts
+
+## `v0.3.12`
+- Change Metric `lower_bound` and `upper_bound` to `lower_value` and `upper_value` respectively
+- Add ability to visualize `lower_value` and `upper_value` in Perf Plot
+
+## `v0.3.11`
+- Add strongly typed IDs for database entities
+- Remove deprecated configuration keys (`endpoint` => `console.url` and `secret_key` => `security.secret_key`)
+
+## `v0.3.10`
 - Add optional error monitoring with [Sentry](https://sentry.io)
 - Start API error message improvement
 - Fix Threshold dimension selection bug in UI
-- A special thank you to [@robertorosmaninho](https://github.com/robertorosmaninho) for bug hunting 
+- Display benchmark harness results in realtime via `bencher run`
+- A special thank you to [@robertorosmaninho](https://github.com/robertorosmaninho) for bug hunting 👾
 
 ## `v0.3.9`
 - Move UI over to [Astro](https://astro.build) with stronger TypeScript
