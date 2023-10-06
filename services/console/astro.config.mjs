@@ -14,7 +14,14 @@ export default defineConfig({
 	integrations: [
 		// https://docs.astro.build/en/guides/integrations-guide/sitemap
 		sitemap({
-			filter: sitemapFilter,
+			// https://docs.astro.build/en/guides/integrations-guide/sitemap/#filter
+			filter: (page) =>
+				!(
+					page.includes("bencher.dev/console") ||
+					page.includes("bencher.dev/chat") ||
+					page.includes("bencher.dev/demo") ||
+					page.includes("bencher.dev/repo")
+				),
 		}),
 		// https://docs.astro.build/en/guides/integrations-guide/mdx
 		mdx(),
@@ -36,12 +43,3 @@ export default defineConfig({
 		remarkPlugins: [remarkGfm],
 	},
 });
-
-// https://docs.astro.build/en/guides/integrations-guide/sitemap/#filter
-const sitemapFilter = (page) =>
-	!(
-		page.includes("bencher.dev/console") ||
-		page.includes("bencher.dev/chat") ||
-		page.includes("bencher.dev/demo") ||
-		page.includes("bencher.dev/repo")
-	);
