@@ -6,8 +6,9 @@ import SwaggerPanel from "../../../components/docs/SwaggerPanel";
 
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const title = "REST API";
+const description = "The REST API for continuous benchmarking with Bencher";
 ---
 
-<DocsLayout title={title}>
+<DocsLayout title={title} description={description}>
   <SwaggerPanel client:only apiUrl={BENCHER_API_URL} />
 </DocsLayout>

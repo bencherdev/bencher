@@ -6,9 +6,11 @@ import Help from "../components/console/help/Help";
 import HelpRedirect from "../components/console/help/HelpRedirect";
 
 const title = "Help";
+const titleFmt = (title: string) => `🛟 ${title}`;
+const description = "Get help with Bencher and continuous benchmarking";
 ---
 
-<BaseLayout title={title}>
+<BaseLayout title={title} titleFmt={titleFmt} description={description}>
   <HelpRedirect client:only />
   <Help client:only />
 </BaseLayout>

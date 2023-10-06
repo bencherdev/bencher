@@ -9,6 +9,9 @@ const params = Astro.params;
 const title = "Project Perf";
 ---
 
-<PerfLayout title={title}>
+<PerfLayout
+  title={title}
+  description="View benchmark performance of this public project on Bencher"
+>
   <PublicProject client:only apiUrl={BENCHER_API_URL} params={params} />
 </PerfLayout>

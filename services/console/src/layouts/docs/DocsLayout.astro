@@ -5,13 +5,18 @@ import DocsMenu from "../../components/docs/DocsMenu.astro";
 
 interface Props {
   title: string;
+  description: string;
   heading?: string;
 }
 
-const { title, heading } = Astro.props;
+const { title, description, heading } = Astro.props;
 ---
 
-<BaseLayout title={title}>
+<BaseLayout
+  title={title}
+  titleFmt={(title) => `📖 ${title}`}
+  description={description}
+>
   <!-- Note that the AuthNavbar does *not* fill the slot `navbar`. It is a client-side override.  -->
   <AuthNavbar client:only />
   <div class="is-widescreen">

@@ -15,9 +15,11 @@ const reference = await getCollection("reference");
 reference.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 
 const title = "Bencher Docs";
+const description =
+  "Table of contents for the Bencher documentation. Learn how to setup continuous benchmarking for your project.";
 ---
 
-<DocsLayout title={title} heading={title}>
+<DocsLayout title={title} description={description} heading={title}>
   <div class="menu">
     <p class="menu-label">Tutorial</p>
     <ul class="menu-list">

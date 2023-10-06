@@ -164,11 +164,11 @@ const PlotHeader = (props: Props) => {
 										class="icon-text"
 										data-tooltip="Display lower/upper Metric values"
 									>
-										<span>⠀Value</span>
+										<span style="padding-left: 1em">Value</span>
 										<span class="icon">
 											<i class="fas fa-info-circle" aria-hidden="true" />
 										</span>
-										<span>⠀</span>
+										<span style="padding-right: 1em"></span>
 									</div>
 									<div class="columns">
 										<div class="column">
@@ -236,11 +236,11 @@ const PlotHeader = (props: Props) => {
 											class="icon-text"
 											data-tooltip="Toggle X-Axis between Date and Branch Version"
 										>
-											<span>⠀X-Axis</span>
+											<span style="padding-left: 0.5em">X-Axis</span>
 											<span class="icon">
 												<i class="fas fa-info-circle" aria-hidden="true" />
 											</span>
-											<span>⠀</span>
+											<span style="padding-right: 0.5em"></span>
 										</div>
 										<div class="columns">
 											<div class="column">
@@ -319,7 +319,7 @@ const PlotHeader = (props: Props) => {
 					<div class="level-item">
 						<div class="columns">
 							<div class="column">
-								<p>⠀Clear⠀</p>
+								<p style="padding-left: 1em;padding-right: 1em;">Clear</p>
 								<div class="columns">
 									<div class="column">
 										<button

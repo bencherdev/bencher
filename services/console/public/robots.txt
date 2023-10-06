@@ -1,5 +1,8 @@
 User-agent: *
 Disallow: /console$
 Disallow: /console/
+Disallow: /chat$
 Disallow: /demo$
 Disallow: /repo$
+
+Sitemap: https://bencher.dev/sitemap-index.xml

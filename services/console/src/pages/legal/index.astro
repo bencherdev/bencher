@@ -6,7 +6,11 @@ const pages = await getCollection("legal");
 pages.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 ---
 
-<LegalLayout title="Legal" heading="Bencher Legal">
+<LegalLayout
+  title="Legal"
+  description="Legal terms and conditions for Bencher software and services"
+  heading="Bencher Legal"
+>
   <ul>
     {
       pages.map((page) => (

@@ -3,9 +3,14 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import PricingTable from "../components/pricing/PricingTable";
 import { BENCHER_CALENDLY_URL } from "../util/ext";
 import AuthRedirect from "../components/auth/AuthRedirect";
+
+const title = "Pricing";
+const titleFmt = (title: string) => `🐰 ${title}`;
+const description =
+  "Free for all public projects. Use Bencher to setup continuous benchmarking today!";
 ---
 
-<BaseLayout title="Pricing">
+<BaseLayout title={title} titleFmt={titleFmt} description={description}>
   <AuthRedirect client:only path="/console/organizations?plan=team" />
   <div>
     <section class="hero">
@@ -56,8 +61,8 @@ import AuthRedirect from "../components/auth/AuthRedirect";
               <a href="/perf" target="_blank" rel="noreferrer">
                 all Public Projects are available here
               </a>
-              . If you are using Bencher Self-Hosted, then anyone with access to
-              your network will likewise be able to see all Public Projects.
+               . If you are using Bencher Self-Hosted, then anyone with access
+              to your network will likewise be able to see all Public Projects.
             </p>
           </div>
         </div>
@@ -174,9 +179,9 @@ import AuthRedirect from "../components/auth/AuthRedirect";
           >
             open core
           </a>{" "}
-          business model and generate almost all our revenue with subscriptions to
-          paid tiers. We recognize that we must balance the need to generate income
-          with the needs of the open source project.
+           business model and generate almost all our revenue with subscriptions
+          to paid tiers. We recognize that we must balance the need to generate
+          income with the needs of the open source project.
           <h3 class="title">Commitments</h3>
           <ul>
             <li>

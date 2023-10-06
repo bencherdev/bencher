@@ -16,6 +16,9 @@
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "rust-lang.rust-analyzer"
   },
+  "[astro]": {
+    "editor.formatOnSave": false,
+  },
   "[javascript]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "rome.rome"

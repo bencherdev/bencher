@@ -3,31 +3,58 @@ import { BENCHER_GITHUB_URL, BENCHER_CHAT_URL } from "../../util/ext";
 const Footer = () => (
 	<footer class="footer" style="margin-top:1rem;">
 		<div class="container">
-			<div class="content">
-				<nav class="level">
-					<div class="level-left">
-						<div class="level-item has-text-centered">
-							<p>
-								<a href="/legal/terms-of-use">Terms of Use</a>
-							</p>
-						</div>
-						<div class="level-item has-text-centered">
-							<p>
-								<a href="/legal/privacy">Privacy Policy</a>
-							</p>
-						</div>
-						<div class="level-item has-text-centered">
-							<p>
-								<a href="/legal/license">License Agreement</a>
-							</p>
-						</div>
-					</div>
-				</nav>
-			</div>
-			<div class="columns is-mobile">
+			<div class="columns is-vcentered is-mobile">
 				<div class="column">
 					<div class="content">
-						<p>Bencher - Continuous Benchmarking</p>
+						<h4 class="title">🐰 Bencher - Continuous Benchmarking</h4>
+						<nav class="level">
+							<div class="level-left">
+								<div class="level-item has-text-centered">
+									<p>
+										<a href="/docs">Docs</a>
+									</p>
+								</div>
+								<div class="level-item has-text-centered">
+									<p>
+										<a href="/pricing">Pricing</a>
+									</p>
+								</div>
+								<div class="level-item has-text-centered">
+									<p>
+										<a href="/help">Help</a>
+									</p>
+								</div>
+								<div class="level-item has-text-centered">
+									<p>
+										<a href="/legal">Legal</a>
+									</p>
+								</div>
+								<div class="level-item has-text-centered">
+									<p>
+										<a href="/sitemap-index.xml">Sitemap</a>
+									</p>
+								</div>
+							</div>
+						</nav>
+						<nav class="level">
+							<div class="level-left">
+								<div class="level-item has-text-centered">
+									<p>
+										<a href="/legal/terms-of-use">Terms of Use</a>
+									</p>
+								</div>
+								<div class="level-item has-text-centered">
+									<p>
+										<a href="/legal/privacy">Privacy Policy</a>
+									</p>
+								</div>
+								<div class="level-item has-text-centered">
+									<p>
+										<a href="/legal/license">License Agreement</a>
+									</p>
+								</div>
+							</div>
+						</nav>
 					</div>
 				</div>
 				<div class="column is-narrow">

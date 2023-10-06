@@ -9,13 +9,13 @@ import { BENCHER_LOGO_URL } from "../util/ext";
 
 interface Props {
   title: string;
+  titleFmt?: undefined | ((title: string) => string);
   description: string;
 }
 
 // https://docs.astro.build/en/reference/directives-reference/#definevars
 const PUBLIC_GOOGLE_ANALYTICS_ID = import.meta.env.PUBLIC_GOOGLE_ANALYTICS_ID;
-const { title, description } = Astro.props;
-
+const { title, titleFmt, description } = Astro.props;
 ---
 
 <!DOCTYPE html>
@@ -28,6 +28,7 @@ const { title, description } = Astro.props;
     />
     <meta name="theme-color" content="#ffffff" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
     <meta name="generator" content={Astro.generator} />
     <SEO
       title={title}
@@ -36,17 +37,17 @@ const { title, description } = Astro.props;
       description={description ?? BENCHER_DESCRIPTION}
       openGraph={{
         basic: {
-          title: title,
+          title: titleFmt ? titleFmt(title) : title,
           type: "website",
           image: BENCHER_LOGO_URL,
         },
         optional: {
-          siteName: "Bencher",
+          siteName: "🐰 Bencher",
           description: description ?? BENCHER_DESCRIPTION,
-        }
+        },
       }}
       twitter={{
-        creator: "@bencherdev"
+        creator: "@bencherdev",
       }}
     />
     <!-- https://devicon.dev/ -->
@@ -54,9 +55,7 @@ const { title, description } = Astro.props;
       rel="preload"
       href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.15.1/devicon.min.css"
       as="style"
-      onload="
-      this.onload = null; this.rel = 'stylesheet'
-      "
+      onload="this.onload = null; this.rel = 'stylesheet'"
     />
     <noscript>
       <link
@@ -65,8 +64,7 @@ const { title, description } = Astro.props;
       />
     </noscript>
     <!-- font awesome -->
-    <script defer src="https://use.fontawesome.com/releases/v5.15.4/js/all.js"
-    ></script>
+    <script defer src="https://use.fontawesome.com/releases/v5.15.4/js/all.js"></script>
     <!-- Google tag (gtag.js) -->
     <script
       type="text/partytown"

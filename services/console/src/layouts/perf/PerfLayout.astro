@@ -4,12 +4,14 @@ import AuthNavbar from "../../components/site/navbar/AuthNavbar";
 
 interface Props {
   title: string;
+  titleFmt?: (title: string) => string;
+  description: string;
 }
 
-const { title } = Astro.props;
+const { title, titleFmt, description } = Astro.props;
 ---
 
-<BaseLayout title={title}>
+<BaseLayout title={title} titleFmt={titleFmt} description={description}>
   <!-- Note that the AuthNavbar does *not* fill the slot `navbar`. It is a client-side override.  -->
   <AuthNavbar client:only />
   <slot />

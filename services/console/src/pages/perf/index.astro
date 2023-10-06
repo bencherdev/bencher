@@ -8,6 +8,10 @@ const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const title = "Bencher Projects";
 ---
 
-<PerfLayout title={title}>
+<PerfLayout
+  title={title}
+  titleFmt={(title) => `📈 ${title}`}
+  description="View benchmark performance of public projects on Bencher"
+>
   <PublicProjects client:only apiUrl={BENCHER_API_URL} />
 </PerfLayout>

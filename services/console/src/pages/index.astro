@@ -4,11 +4,14 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import Toolbox from "../components/landing/Toolbox";
 import { BENCHER_CALENDLY_URL } from "../util/ext";
 import AuthRedirect from "../components/auth/AuthRedirect";
-
-const title = "";
+import { BENCHER_DESCRIPTION, BENCHER_TITLE } from "../util/resource";
 ---
 
-<BaseLayout title={title}>
+<BaseLayout
+  title={BENCHER_TITLE}
+  titleFmt={(title: string) => `🐰 ${title}`}
+  description={BENCHER_DESCRIPTION}
+>
   <AuthRedirect client:only path="/console/organizations" />
   <section class="section is-medium">
     <div class="container">
@@ -94,8 +97,9 @@ const title = "";
                 <div class="content">
                   <p>
                     Run your benchmarks locally or in CI using your favorite
-                    benchmarking tools. The <code>bencher</code> CLI simply wraps
-                    your existing benchmark harness and stores its results.
+                    benchmarking tools. The <code>bencher</code> CLI simply
+                    wraps your existing benchmark harness and stores its
+                    results.
                   </p>
                   <br />
                 </div>
