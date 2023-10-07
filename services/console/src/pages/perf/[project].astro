@@ -13,7 +13,7 @@ const projectResponse = await fetch(getProjectUrl);
 const jsonProject: JsonProject = await projectResponse.json();
 
 const title = `${jsonProject.name}`;
-const description = `View code benchmark performance for ${jsonProject.name} on Bencher`;
+const description = `View ${jsonProject.name} continuous benchmarking results and performance regressions on Bencher`;
 ---
 
 <PerfLayout
