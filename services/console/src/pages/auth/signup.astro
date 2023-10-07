@@ -7,9 +7,10 @@ import AuthRedirect from "../../components/auth/AuthRedirect";
 
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const title = "Sign up";
+const description = "Sign up for Bencher and start catching performance regressions before they make it to production";
 ---
 
-<AuthLayout title={title}>
+<AuthLayout title={title} description={description}>
   <AuthRedirect client:only="solid-js" path="/console" />
 
   <h2 class="title">{title}</h2>

@@ -4,14 +4,15 @@ import Notification from "../../components/site/Notification";
 
 interface Props {
   title: string;
+  description: string;
 }
 
-const { title } = Astro.props;
+const { title, description } = Astro.props;
 ---
 
-<BaseLayout title={title}>
+<BaseLayout title={title} description={description}>
   <Notification client:only="solid-js" />
-  <section class="section">
+  <section class="section" style="margin-bottom:32rem;">
     <div class="container">
       <div class="columns is-centered">
         <div class="column is-two-fifths">

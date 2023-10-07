@@ -3,8 +3,9 @@ import AuthLayout from "../../layouts/auth/AuthLayout.astro";
 import Logout from "../../components/auth/Logout";
 
 const title = "Logout";
+const description = "Logout from your Bencher account";
 ---
 
-<AuthLayout title={title}>
+<AuthLayout title={title} description={description}>
   <Logout client:only="solid-js" />
 </AuthLayout>
