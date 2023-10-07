@@ -5,8 +5,6 @@ import { validNonEmpty, validSlug, validOptionUrl } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { addPath, parentPath } from "../util";
 import type { JsonProject } from "../../types/bencher";
-import { pathname, useSearchParams } from "../../util/url";
-import { PLAN_PARAM } from "../../components/auth/auth";
 
 const PROJECT_FIELDS = {
 	name: {
@@ -52,17 +50,6 @@ const VISIBILITY_VALUE = {
 const projectsConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
-		redirect: (tableData: JsonProject[]) => {
-			if (tableData?.length !== 0) {
-				return null;
-			}
-			const [searchParams, _setSearchParams] = useSearchParams();
-			const plan = searchParams[PLAN_PARAM];
-			if (!plan) {
-				return null;
-			}
-			return `${parentPath(pathname())}/billing`;
-		},
 		header: {
 			title: "Projects",
 			buttons: [

@@ -15,18 +15,11 @@ import {
 } from "../../../config/types";
 import { httpGet } from "../../../util/http";
 import { authUser } from "../../../util/auth";
-import bencher_valid_init, { InitOutput } from "bencher_valid";
-import TableHeader, { TableHeaderConfig } from "./TableHeader";
-import Table, { TableConfig, TableState } from "./Table";
+import bencher_valid_init, { type InitOutput } from "bencher_valid";
+import TableHeader, { type TableHeaderConfig } from "./TableHeader";
+import Table, { type TableConfig, TableState } from "./Table";
 import type { Params } from "astro";
-import {
-	NOTIFY_KIND_PARAM,
-	NOTIFY_TEXT_PARAM,
-	NotifyKind,
-	forwardParams,
-	pageNotify,
-} from "../../../util/notify";
-import { PLAN_PARAM } from "../../auth/auth";
+import { NotifyKind, pageNotify } from "../../../util/notify";
 
 const PER_PAGE_PARAM = "per_page";
 const PAGE_PARAM = "page";
@@ -159,20 +152,6 @@ const TablePanel = (props: Props) => {
 			setSearchParams({ [PAGE_PARAM]: page });
 		}
 	};
-
-	const redirect = createMemo(() => config()?.redirect?.(tableData()));
-	createEffect(() => {
-		const path = redirect();
-		if (path) {
-			navigate(
-				forwardParams(
-					path,
-					[NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM, PLAN_PARAM],
-					null,
-				),
-			);
-		}
-	});
 
 	return (
 		<>

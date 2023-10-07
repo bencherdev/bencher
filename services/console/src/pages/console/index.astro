@@ -1,19 +1,15 @@
 ---
 export const prerender = false;
 
-import ConsoleLayout from "../../layouts/console/ConsoleLayout.astro";
-import Redirect from "../../components/site/Redirect";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ConsoleRedirect from "../../components/console/ConsoleRedirect";
 
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
-const params = Astro.params;
 const title = "Bencher Console";
 ---
 
-<ConsoleLayout
-  apiUrl={BENCHER_API_URL}
-  params={params}
-  title={title}
-  suppressNotification={true}
->
-  <Redirect client:only path="/console" />
-</ConsoleLayout>
+<BaseLayout title={title} description={title}>
+  <div slot="navbar"></div>
+  <ConsoleRedirect client:only apiUrl={BENCHER_API_URL} />
+  <div slot="footer"></div>
+</BaseLayout>
