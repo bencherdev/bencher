@@ -154,7 +154,7 @@ const isBoolParam = (param: undefined | string): boolean => {
 export interface Props {
 	apiUrl: string;
 	params: Params;
-	isConsole?: boolean;
+	isConsole: boolean;
 }
 
 const PerfPanel = (props: Props) => {
@@ -747,6 +747,7 @@ const PerfPanel = (props: Props) => {
 		<>
 			<PerfHeader
 				apiUrl={props.apiUrl}
+				isConsole={props.isConsole}
 				user={user}
 				perfData={perfData}
 				isPlotInit={isPlotInit}

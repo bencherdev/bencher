@@ -19,6 +19,7 @@ import Field from "../../field/Field";
 
 export interface Props {
 	apiUrl: string;
+	isConsole: boolean;
 	user: JsonAuthUser;
 	perfData: Resource<JsonPerf>;
 	isPlotInit: Accessor<boolean>;
@@ -41,7 +42,9 @@ const PerfHeader = (props: Props) => {
 	const project = createMemo(() => props.perfData()?.project);
 
 	createEffect(() => {
-		setPageTitle(project()?.name);
+		if (props.isConsole) {
+			setPageTitle(project()?.name);
+		}
 	});
 
 	return (
