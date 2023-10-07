@@ -13,6 +13,6 @@ const { apiUrl, params, title } = Astro.props;
 ---
 
 <ConsoleLayout apiUrl={apiUrl} params={params} title={title}>
-  <ProjectMenu client:only slot="menu" apiUrl={apiUrl} params={params} />
+  <ProjectMenu client:only="solid-js" slot="menu" apiUrl={apiUrl} params={params} />
   <slot />
 </ConsoleLayout>

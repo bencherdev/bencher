@@ -10,7 +10,7 @@ const { title } = Astro.props;
 ---
 
 <BaseLayout title={title}>
-  <Notification client:only />
+  <Notification client:only="solid-js" />
   <section class="section">
     <div class="container">
       <div class="columns is-centered">

@@ -16,7 +16,7 @@ const description = "Sign up for Bencher! Add continuous benchmarking to your pr
 ---
 
 <BaseLayout title={title} description={description}>
-  <ConsoleNavbar client:only slot="navbar" apiUrl={apiUrl} params={params} />
+  <ConsoleNavbar client:only="solid-js" slot="navbar" apiUrl={apiUrl} params={params} />
   <div class="is-widescreen">
     <div class="columns is-reverse-mobile">
       <div class="columns">
@@ -25,7 +25,7 @@ const description = "Sign up for Bencher! Add continuous benchmarking to your pr
         </div>
       </div>
       <div class="column is-10">
-        <Notification client:only suppress={suppressNotification} />
+        <Notification client:only="solid-js" suppress={suppressNotification} />
         <section class="section">
           <div class="continer">
             <slot />

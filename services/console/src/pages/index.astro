@@ -11,7 +11,7 @@ import { BENCHER_DESCRIPTION, BENCHER_TITLE } from "../util/resource";
   title={BENCHER_TITLE}
   description={BENCHER_DESCRIPTION}
 >
-  <AuthRedirect client:only path="/console" />
+  <AuthRedirect client:only="solid-js" path="/console" />
   <section class="section is-medium">
     <div class="container">
       <div class="columns is-centered is-vcentered">

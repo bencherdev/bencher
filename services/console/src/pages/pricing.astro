@@ -10,7 +10,7 @@ const description =
 ---
 
 <BaseLayout title={title} description={description}>
-  <AuthRedirect client:only path="/console?plan=team" />
+  <AuthRedirect client:only="solid-js" path="/console?plan=team" />
   <div>
     <section class="hero">
       <div class="hero-body">
@@ -33,7 +33,7 @@ const description =
     </section>
     <hr />
     <section class="section">
-      <PricingTable client:only />
+      <PricingTable client:only="solid-js" />
     </section>
 
     <br />

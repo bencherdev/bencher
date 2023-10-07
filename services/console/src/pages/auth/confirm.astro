@@ -10,7 +10,7 @@ const title = "Confirm Token";
 ---
 
 <AuthLayout title={title}>
-  <AuthRedirect client:only path="/console" />
+  <AuthRedirect client:only="solid-js" path="/console" />
 
   <h2 class="title">{title}</h2>
   <h3 class="subtitle">
@@ -18,5 +18,5 @@ const title = "Confirm Token";
     the token here.
   </h3>
 
-  <ConfirmForm client:only apiUrl={BENCHER_API_URL} />
+  <ConfirmForm client:only="solid-js" apiUrl={BENCHER_API_URL} />
 </AuthLayout>

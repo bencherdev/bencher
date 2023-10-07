@@ -18,7 +18,7 @@ const { title, description, heading } = Astro.props;
   description={description}
 >
   <!-- Note that the AuthNavbar does *not* fill the slot `navbar`. It is a client-side override.  -->
-  <AuthNavbar client:only />
+  <AuthNavbar client:only="solid-js" />
   <div class="is-widescreen">
     <div class="columns is-reverse-mobile">
       <div class="columns">

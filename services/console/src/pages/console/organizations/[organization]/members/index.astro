@@ -12,7 +12,7 @@ const title = "Members";
 
 <OrgLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
   <TablePanel
-    client:only
+    client:only="solid-js"
     apiUrl={BENCHER_API_URL}
     params={params}
     resource={Resource.MEMBERS}

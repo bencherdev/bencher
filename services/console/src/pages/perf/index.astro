@@ -13,5 +13,5 @@ const title = "Bencher Projects";
   titleFmt={(title) => `📈 ${title}`}
   description="View continuous benchmarking results and performance regressions for public projects on Bencher"
 >
-  <PublicProjects client:only apiUrl={BENCHER_API_URL} />
+  <PublicProjects client:only="solid-js" apiUrl={BENCHER_API_URL} />
 </PerfLayout>

@@ -15,12 +15,12 @@ const tokenId = "add-an-api-token";
   heading={quickStart.frontmatter.heading}
 >
   <Content />
-  <AuthOverride client:only elementId={signupId}>
+  <AuthOverride client:only="solid-js" elementId={signupId}>
     <h4 id={signupId}>✅ You are signed up for Bencher Cloud</h4>
   </AuthOverride>
-  <AuthOverride client:only elementId={tokenId}>
+  <AuthOverride client:only="solid-js" elementId={tokenId}>
     <h4 id={tokenId}>
-      <AddAnApiToken client:only />
+      <AddAnApiToken client:only="solid-js" />
     </h4>
   </AuthOverride>
 </DocsLayout>

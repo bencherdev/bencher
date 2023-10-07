@@ -12,7 +12,7 @@ const title = "View Metric Kind";
 
 <ProjectLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
   <DeckPanel
-    client:only
+    client:only="solid-js"
     apiUrl={BENCHER_API_URL}
     params={params}
     resource={Resource.METRIC_KINDS}
