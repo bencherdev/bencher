@@ -3,16 +3,23 @@ export const prerender = false;
 
 import PerfLayout from "../../layouts/perf/PerfLayout.astro";
 import PublicProject from "../../components/perf/PublicProject";
+import type { JsonProject } from "../../types/bencher";
 
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
-const title = "Project Perf";
+const getProjectUrl =  `${BENCHER_API_URL}/v0/projects/${params.project}`;
+
+const projectResponse = await fetch(getProjectUrl);
+const jsonProject: JsonProject = await projectResponse.json();
+
+const title = `${jsonProject.name}`;
+const description = `View code benchmark performance for ${jsonProject.name} on Bencher`;
 ---
 
 <PerfLayout
   title={title}
-  titleFmt={(title) => `📉 ${title}`}
-  description="View code benchmark performance of this public project on Bencher"
+  titleFmt={(title) => `📈 ${title}`}
+  description={description}
 >
   <PublicProject client:only apiUrl={BENCHER_API_URL} params={params} />
 </PerfLayout>
