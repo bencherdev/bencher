@@ -11,7 +11,8 @@ const title = "Project Perf";
 
 <PerfLayout
   title={title}
-  description="View benchmark performance of this public project on Bencher"
+  titleFmt={(title) => `📉 ${title}`}
+  description="View code benchmark performance of this public project on Bencher"
 >
   <PublicProject client:only apiUrl={BENCHER_API_URL} params={params} />
 </PerfLayout>

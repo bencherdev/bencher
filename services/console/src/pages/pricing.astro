@@ -5,12 +5,11 @@ import { BENCHER_CALENDLY_URL } from "../util/ext";
 import AuthRedirect from "../components/auth/AuthRedirect";
 
 const title = "Pricing";
-const titleFmt = (title: string) => `🐰 ${title}`;
 const description =
-  "Free for all public projects. Use Bencher to setup continuous benchmarking today!";
+  "Free for all public projects. Use Bencher to setup continuous benchmarking and catch performance regressions in CI.";
 ---
 
-<BaseLayout title={title} titleFmt={titleFmt} description={description}>
+<BaseLayout title={title} description={description}>
   <AuthRedirect client:only path="/console/organizations?plan=team" />
   <div>
     <section class="hero">

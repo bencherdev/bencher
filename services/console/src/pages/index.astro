@@ -9,7 +9,6 @@ import { BENCHER_DESCRIPTION, BENCHER_TITLE } from "../util/resource";
 
 <BaseLayout
   title={BENCHER_TITLE}
-  titleFmt={(title: string) => `🐰 ${title}`}
   description={BENCHER_DESCRIPTION}
 >
   <AuthRedirect client:only path="/console/organizations" />

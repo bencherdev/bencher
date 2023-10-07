@@ -41,7 +41,8 @@ export const fmtNestedValue = (
 };
 
 export const BENCHER_TITLE = "Bencher - Continuous Benchmarking";
-export const BENCHER_DESCRIPTION = "Catch Performance Regressions in CI";
+export const BENCHER_DESCRIPTION =
+	"Catch performance regressions in CI with continuous benchmarking";
 
 export const fmtPageTitle = (title: undefined | string) =>
 	title ? `${title} | ${BENCHER_TITLE}` : BENCHER_TITLE;
