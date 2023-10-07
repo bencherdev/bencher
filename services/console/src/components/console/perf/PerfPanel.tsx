@@ -23,6 +23,7 @@ import type {
 	JsonBenchmark,
 	JsonBranch,
 	JsonPerf,
+	JsonProject,
 	JsonReport,
 	JsonTestbed,
 } from "../../../types/bencher";
@@ -155,6 +156,7 @@ export interface Props {
 	apiUrl: string;
 	params: Params;
 	isConsole: boolean;
+	project?: JsonProject;
 }
 
 const PerfPanel = (props: Props) => {
@@ -371,6 +373,40 @@ const PerfPanel = (props: Props) => {
 	};
 
 	const project_slug = createMemo(() => params().project);
+	const projectFetcher = createMemo(() => {
+		return {
+			project_slug: project_slug(),
+			refresh: refresh(),
+			token: user?.token,
+		};
+	});
+
+	const getProject = async (fetcher: {
+		project_slug: string;
+		refresh: number;
+		token: string;
+	}) => {
+		const EMPTY_OBJECT = {};
+		if (props.isConsole && typeof fetcher.token !== "string") {
+			return EMPTY_OBJECT;
+		}
+
+		if (props.project) {
+			return props.project;
+		}
+		const path = `/v0/projects/${fetcher.project_slug}`;
+		return await httpGet(props.apiUrl, path, fetcher.token)
+			.then((resp) => {
+				return resp?.data;
+			})
+			.catch((error) => {
+				console.error(error);
+				return EMPTY_OBJECT;
+			});
+	};
+
+	const [project] = createResource<JsonProject>(projectFetcher, getProject);
+
 	const perfFetcher = createMemo(() => {
 		return {
 			project_slug: project_slug(),
@@ -386,24 +422,14 @@ const PerfPanel = (props: Props) => {
 		token: string;
 	}) => {
 		const EMPTY_OBJECT = {};
-		if (props.isConsole && typeof fetcher.token !== "string") {
+		// Don't even send query if there isn't at least one: branch, testbed, and benchmark
+		if (
+			(props.isConsole && typeof fetcher.token !== "string") ||
+			isPlotInit()
+		) {
 			return EMPTY_OBJECT;
 		}
 
-		// Don't even send query if there isn't at least one: branch, testbed, and benchmark
-		if (isPlotInit()) {
-			const path = `/v0/projects/${fetcher.project_slug}`;
-			return await httpGet(props.apiUrl, path, fetcher.token)
-				.then((resp) => {
-					return {
-						project: resp?.data,
-					} as JsonPerf;
-				})
-				.catch((error) => {
-					console.error(error);
-					return EMPTY_OBJECT;
-				});
-		}
 		const searchParams = new URLSearchParams();
 		for (const [key, value] of Object.entries(fetcher.perfQuery)) {
 			if (value) {
@@ -749,7 +775,7 @@ const PerfPanel = (props: Props) => {
 				apiUrl={props.apiUrl}
 				isConsole={props.isConsole}
 				user={user}
-				perfData={perfData}
+				project={project}
 				isPlotInit={isPlotInit}
 				perfQuery={perfQuery}
 				handleRefresh={handleRefresh}
@@ -758,7 +784,7 @@ const PerfPanel = (props: Props) => {
 				apiUrl={props.apiUrl}
 				user={user}
 				project_slug={project_slug}
-				isConsole={props.isConsole ?? false}
+				isConsole={props.isConsole}
 				isPlotInit={isPlotInit}
 				metric_kind={metric_kind}
 				report={report}

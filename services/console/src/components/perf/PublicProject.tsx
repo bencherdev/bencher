@@ -1,9 +1,11 @@
 import type { Params } from "astro";
 import PerfPanel from "../console/perf/PerfPanel";
+import type { JsonProject } from "../../types/bencher";
 
 export interface Props {
 	apiUrl: string;
 	params: Params;
+	project: JsonProject;
 }
 
 const PublicProject = (props: Props) => {
@@ -16,6 +18,7 @@ const PublicProject = (props: Props) => {
 							apiUrl={props.apiUrl}
 							params={props.params}
 							isConsole={false}
+							project={props.project}
 						/>
 					</div>
 				</div>

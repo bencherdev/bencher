@@ -7,11 +7,7 @@ import {
 	type Resource,
 	Show,
 } from "solid-js";
-import type {
-	JsonAuthUser,
-	JsonPerf,
-	JsonProject,
-} from "../../../types/bencher";
+import type { JsonAuthUser, JsonProject } from "../../../types/bencher";
 import { setPageTitle } from "../../../util/resource";
 import { apiUrl } from "../../../util/http";
 import FieldKind from "../../field/kind";
@@ -21,7 +17,7 @@ export interface Props {
 	apiUrl: string;
 	isConsole: boolean;
 	user: JsonAuthUser;
-	perfData: Resource<JsonPerf>;
+	project: Resource<JsonProject>;
 	isPlotInit: Accessor<boolean>;
 	perfQuery: Accessor<PerfQuery>;
 	handleRefresh: () => void;
@@ -39,11 +35,9 @@ export interface PerfQuery {
 const PerfHeader = (props: Props) => {
 	const [share, setShare] = createSignal(false);
 
-	const project = createMemo(() => props.perfData()?.project);
-
 	createEffect(() => {
 		if (props.isConsole) {
-			setPageTitle(project()?.name);
+			setPageTitle(props.project()?.name);
 		}
 	});
 
@@ -51,7 +45,7 @@ const PerfHeader = (props: Props) => {
 		<div class="columns is-centered">
 			<div class="column">
 				<h3 class="title is-3" style="overflow-wrap:anywhere;">
-					{project()?.name}
+					{props.project()?.name}
 				</h3>
 			</div>
 			<ShareModal
@@ -59,19 +53,19 @@ const PerfHeader = (props: Props) => {
 				user={props.user}
 				perfQuery={props.perfQuery}
 				isPlotInit={props.isPlotInit}
-				project={project}
+				project={props.project}
 				share={share}
 				setShare={setShare}
 			/>
 			<div class="column is-narrow">
 				<nav class="level">
 					<div class="level-right">
-						<Show when={project()?.url} fallback={<></>}>
+						<Show when={props.project()?.url} fallback={<></>}>
 							<div class="level-item">
 								<a
 									class="button is-outlined is-fullwidth"
-									title={`View ${project()?.name} website`}
-									href={project()?.url ?? ""}
+									title={`View ${props.project()?.name} website`}
+									href={props.project()?.url ?? ""}
 									rel="noreferrer nofollow"
 									target="_blank"
 								>
@@ -85,13 +79,13 @@ const PerfHeader = (props: Props) => {
 						<Show when={!props.isPlotInit()} fallback={<></>}>
 							<nav class="level is-mobile">
 								<Show
-									when={project()?.visibility === "public"}
+									when={props.project()?.visibility === "public"}
 									fallback={<></>}
 								>
 									<div class="level-item">
 										<button
 											class="button is-outlined is-fullwidth"
-											title={`Share ${project()?.name}`}
+											title={`Share ${props.project()?.name}`}
 											onClick={(e) => {
 												e.preventDefault();
 												setShare(true);
