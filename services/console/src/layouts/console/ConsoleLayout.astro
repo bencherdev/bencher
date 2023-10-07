@@ -12,9 +12,10 @@ interface Props {
 }
 
 const { apiUrl, params, title, suppressNotification } = Astro.props;
+const description = "Sign up for Bencher! Add continuous benchmarking to your project and catch performance regressions in CI.";
 ---
 
-<BaseLayout title={title}>
+<BaseLayout title={title} description={description}>
   <ConsoleNavbar client:only slot="navbar" apiUrl={apiUrl} params={params} />
   <div class="is-widescreen">
     <div class="columns is-reverse-mobile">

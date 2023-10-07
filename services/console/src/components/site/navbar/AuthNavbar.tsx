@@ -15,11 +15,7 @@ const AuthNavbar = () => {
 				aria-label="main navigation"
 			>
 				<div class="navbar-brand">
-					<a
-						class="navbar-item"
-						title="Console Home"
-						href="/console/organizations"
-					>
+					<a class="navbar-item" title="Console Home" href="/console">
 						<img
 							src={BENCHER_LOGO_URL}
 							width="152"
@@ -52,7 +48,7 @@ const AuthNavbar = () => {
 							</a>
 						</div>
 						<div class="navbar-item">
-							<a class="button is-outlined" href="/console/organizations">
+							<a class="button is-outlined" href="/console">
 								<span class="icon has-text-primary">
 									<i class="fas fa-angle-left" aria-hidden="true" />
 								</span>

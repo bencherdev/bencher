@@ -1,22 +1,5 @@
 ---
 export const prerender = false;
 
-import OrgLayout from "../../../../layouts/console/OrgLayout.astro";
-import Redirect from "../../../../components/site/Redirect";
-
-const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
-const params = Astro.params;
-const title = "Organizations";
+return Astro.redirect(`/console/organizations/${Astro.params.organization}/projects`);
 ---
-
-<OrgLayout
-  apiUrl={BENCHER_API_URL}
-  params={params}
-  title={title}
-  suppressNotification={true}
->
-  <Redirect
-    client:only
-    path={`/console/organizations/${params.organization}/projects`}
-  />
-</OrgLayout>

@@ -10,7 +10,7 @@ const description =
 ---
 
 <BaseLayout title={title} description={description}>
-  <AuthRedirect client:only path="/console/organizations?plan=team" />
+  <AuthRedirect client:only path="/console?plan=team" />
   <div>
     <section class="hero">
       <div class="hero-body">

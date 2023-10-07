@@ -25,11 +25,7 @@ const ConsoleNavbar = (props: Props) => {
 			aria-label="main navigation"
 		>
 			<div class="navbar-brand">
-				<a
-					class="navbar-item"
-					title="Console Home"
-					href="/console/organizations"
-				>
+				<a class="navbar-item" title="Console Home" href="/console">
 					<img
 						src={BENCHER_LOGO_URL}
 						width="152"

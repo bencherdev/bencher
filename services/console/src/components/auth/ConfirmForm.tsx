@@ -82,7 +82,7 @@ const ConfirmForm = (props: Props) => {
 						`Hoppy to ${plan() ? "meet you" : "see you again"}, ${
 							user.user.name
 						}!`,
-						"/console/organizations",
+						"/console",
 						[PLAN_PARAM],
 						null,
 					);
