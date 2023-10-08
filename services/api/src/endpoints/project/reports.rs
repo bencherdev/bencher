@@ -327,7 +327,10 @@ mod plan_kind {
     use crate::{
         context::DbConnection,
         error::{issue_error, not_found_error, payment_required_error},
-        model::{organization::LicenseUsage, project::QueryProject},
+        model::{
+            organization::{LicenseUsage, QueryOrganization},
+            project::QueryProject,
+        },
     };
 
     pub enum PlanKind {
@@ -363,7 +366,8 @@ mod plan_kind {
             licensor: &Licensor,
             project: &QueryProject,
         ) -> Result<Self, HttpError> {
-            if let Some(subscription_id) = project.get_subscription(conn)? {
+            let query_organization = QueryOrganization::get(conn, project.organization_id)?;
+            if let Some(subscription_id) = query_organization.get_subscription()? {
                 if let Some(biller) = biller {
                     let plan_status = biller
                         .get_plan_status(&subscription_id)
@@ -385,7 +389,7 @@ mod plan_kind {
                         PlanKindError::NoBiller,
                     ))
                 }
-            } else if let Some((query_organization, license)) = project.get_license(conn)? {
+            } else if let Some(license) = query_organization.get_license()? {
                 let LicenseUsage {
                     entitlements,
                     usage,

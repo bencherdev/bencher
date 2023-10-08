@@ -116,7 +116,8 @@ pub mod project_visibility {
         licensor: &Licensor,
         organization: &ResourceId,
     ) -> Result<(), HttpError> {
-        if let Some(subscription_id) = QueryOrganization::get_subscription(conn, organization)? {
+        let query_organization = QueryOrganization::from_resource_id(conn, organization)?;
+        if let Some(subscription_id) = query_organization.get_subscription()? {
             if let Some(biller) = biller {
                 let plan_status = biller
                     .get_plan_status(&subscription_id)
@@ -140,9 +141,7 @@ pub mod project_visibility {
                     ProjectVisibilityError::NoBiller,
                 ))
             }
-        } else if let Some((query_organization, license)) =
-            QueryOrganization::get_license(conn, organization)?
-        {
+        } else if let Some(license) = query_organization.get_license()? {
             query_organization
                 .check_license_usage(conn, licensor, &license)
                 .map(|_| ())

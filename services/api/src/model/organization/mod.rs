@@ -103,18 +103,13 @@ impl QueryOrganization {
     }
 
     #[cfg(feature = "plus")]
-    pub fn get_subscription(
-        conn: &mut DbConnection,
-        organization: &ResourceId,
-    ) -> Result<Option<bencher_billing::SubscriptionId>, HttpError> {
-        let organization = Self::from_resource_id(conn, organization)?;
-
-        Ok(if let Some(subscription) = &organization.subscription {
+    pub fn get_subscription(&self) -> Result<Option<bencher_billing::SubscriptionId>, HttpError> {
+        Ok(if let Some(subscription) = &self.subscription {
             Some(bencher_billing::SubscriptionId::from_str(subscription).map_err(|e| {
                 crate::error::issue_error(
                     http::StatusCode::INTERNAL_SERVER_ERROR,
                     "Failed to parse subscription ID",
-                    &format!("Failed to parse subscription ID ({subscription}) for organization ({organization:?})"),
+                    &format!("Failed to parse subscription ID ({subscription}) for organization ({self:?})"),
                     e,
                 )
             })?)
@@ -124,22 +119,16 @@ impl QueryOrganization {
     }
 
     #[cfg(feature = "plus")]
-    pub fn get_license(
-        conn: &mut DbConnection,
-        organization: &ResourceId,
-    ) -> Result<Option<(Self, bencher_json::Jwt)>, HttpError> {
-        let organization = Self::from_resource_id(conn, organization)?;
-
-        Ok(if let Some(license) = &organization.license {
-            let license_jwt = bencher_json::Jwt::from_str(license).map_err(|e| {
+    pub fn get_license(&self) -> Result<Option<bencher_json::Jwt>, HttpError> {
+        Ok(if let Some(license) = &self.license {
+            Some( bencher_json::Jwt::from_str(license).map_err(|e| {
                 crate::error::issue_error(
                     http::StatusCode::INTERNAL_SERVER_ERROR,
                     "Failed to parse subscription license",
-                    &format!("Failed to parse subscription license ({license}) for organization ({organization:?})"),
+                    &format!("Failed to parse subscription license ({license}) for organization ({self:?})"),
                     e,
                 )
-            })?;
-            Some((organization, license_jwt))
+            })?)
         } else {
             None
         })

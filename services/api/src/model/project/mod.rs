@@ -1,9 +1,5 @@
 use std::{str::FromStr, string::ToString};
 
-#[cfg(feature = "plus")]
-use bencher_billing::SubscriptionId;
-#[cfg(feature = "plus")]
-use bencher_json::Jwt;
 use bencher_json::{
     project::{JsonProjectPatch, JsonProjectPatchNull, JsonUpdateProject},
     JsonNewProject, JsonProject, NonEmpty, ResourceId, Slug, Url,
@@ -151,55 +147,6 @@ impl QueryProject {
                 .first::<i32>(conn)?,
         )
         .map(Visibility::is_public)
-    }
-
-    #[cfg(feature = "plus")]
-    pub fn get_subscription(
-        &self,
-        conn: &mut DbConnection,
-    ) -> Result<Option<SubscriptionId>, HttpError> {
-        let subscription: Option<String> = schema::organization::table
-            .filter(schema::organization::id.eq(self.organization_id))
-            .select(schema::organization::subscription)
-            .first(conn)
-            .map_err(resource_not_found_err!(Organization, self.organization_id))?;
-
-        Ok(if let Some(subscription) = &subscription {
-            Some(SubscriptionId::from_str(subscription).map_err(|e| {
-                crate::error::issue_error(
-                    http::StatusCode::INTERNAL_SERVER_ERROR,
-                    "Failed to parse subscription ID",
-                    &format!(
-                        "Failed to parse subscription ID ({subscription}) for project ({self:?})"
-                    ),
-                    e,
-                )
-            })?)
-        } else {
-            None
-        })
-    }
-
-    #[cfg(feature = "plus")]
-    pub fn get_license(
-        &self,
-        conn: &mut DbConnection,
-    ) -> Result<Option<(QueryOrganization, Jwt)>, HttpError> {
-        let query_organization = QueryOrganization::get(conn, self.organization_id)?;
-
-        Ok(if let Some(license) = &query_organization.license {
-            let license_jwt = Jwt::from_str(license).map_err(|e| {
-                crate::error::issue_error(
-                    http::StatusCode::INTERNAL_SERVER_ERROR,
-                    "Failed to parse subscription license",
-                    &format!("Failed to parse subscription license ({license}) for project ({self:?}) organization ({query_organization:?})"),
-                    e,
-                )
-            })?;
-            Some((query_organization, license_jwt))
-        } else {
-            None
-        })
     }
 
     pub fn is_allowed(
