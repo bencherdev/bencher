@@ -232,6 +232,7 @@ pub trait WordStr {
 
 #[derive(Debug)]
 pub enum BencherResource<Id> {
+    Organization(Id),
     Project(Id),
     Report(Id),
     MetricKind(Id),
@@ -249,6 +250,7 @@ pub enum BencherResource<Id> {
 impl<Id> BencherResource<Id> {
     pub fn name(&self) -> &str {
         match self {
+            Self::Organization(_) => "Organization",
             Self::Project(_) => "Project",
             Self::Report(_) => "Report",
             Self::MetricKind(_) => "Metric Kind",
@@ -266,7 +268,8 @@ impl<Id> BencherResource<Id> {
 
     pub fn id(&self) -> &Id {
         match self {
-            Self::Project(id)
+            Self::Organization(id)
+            | Self::Project(id)
             | Self::Report(id)
             | Self::MetricKind(id)
             | Self::Branch(id)

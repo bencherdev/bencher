@@ -1,11 +1,13 @@
 use bencher_json::JsonMetric;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{dsl::count, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
+use http::StatusCode;
 use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
-    error::resource_not_found_err,
+    error::{issue_error, resource_not_found_err},
+    model::organization::OrganizationId,
     schema::{self, metric as metric_table},
 };
 
@@ -38,6 +40,35 @@ impl QueryMetric {
             .filter(schema::metric::uuid.eq(&uuid))
             .first::<Self>(conn)
             .map_err(resource_not_found_err!(Metric, uuid))
+    }
+
+    pub fn usage(
+        conn: &mut DbConnection,
+        organization_id: OrganizationId,
+        start_time: i64,
+        end_time: i64,
+    ) -> Result<u64, HttpError> {
+        schema::metric::table
+            .inner_join(
+                schema::perf::table
+                    .inner_join(schema::benchmark::table.inner_join(schema::project::table))
+                    .inner_join(schema::report::table),
+            )
+            .filter(schema::project::organization_id.eq(organization_id))
+            .filter(schema::report::end_time.ge(start_time))
+            .filter(schema::report::end_time.le(end_time))
+            .select(count(schema::metric::value))
+            .first::<i64>(conn)
+            .map_err(resource_not_found_err!(Organization, organization_id))?
+            .try_into()
+            .map_err(|e| {
+                issue_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Failed to count metric usage",
+                    &format!("Failed to count metric usage for organization ({organization_id}) between {start_time} and {end_time}."),
+                e
+                )}
+            )
     }
 
     pub fn json(value: f64, lower_value: Option<f64>, upper_value: Option<f64>) -> JsonMetric {
