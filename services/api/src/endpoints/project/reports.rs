@@ -327,12 +327,12 @@ mod plan_kind {
     use crate::{
         context::DbConnection,
         error::{issue_error, not_found_error, payment_required_error},
-        model::project::QueryProject,
+        model::{organization::LicenseUsage, project::QueryProject},
     };
 
     pub enum PlanKind {
         Metered(SubscriptionId),
-        Licensed { entitlement: u64, prior_usage: u64 },
+        Licensed { entitlements: u64, prior_usage: u64 },
         None,
     }
 
@@ -347,6 +347,13 @@ mod plan_kind {
         NoBiller,
         #[error("No plan (subscription or license) found for private project ({0:?})")]
         NoPlan(QueryProject),
+        #[error("License usage exceeded for project ({project:?}). {prior_usage} + {usage} > {entitlements}")]
+        Overage {
+            project: QueryProject,
+            entitlements: u64,
+            prior_usage: u64,
+            usage: u64,
+        },
     }
 
     impl PlanKind {
@@ -356,7 +363,7 @@ mod plan_kind {
             licensor: &Licensor,
             project: &QueryProject,
         ) -> Result<Self, HttpError> {
-            if let Some(subscription_id) = QueryProject::get_subscription(conn, project.id)? {
+            if let Some(subscription_id) = project.get_subscription(conn)? {
                 if let Some(biller) = biller {
                     let plan_status = biller
                         .get_plan_status(&subscription_id)
@@ -378,14 +385,14 @@ mod plan_kind {
                         PlanKindError::NoBiller,
                     ))
                 }
-            } else if let Some((uuid, license)) = QueryProject::get_license(conn, project.id)? {
-                let _token_data = licensor
-                    .validate_organization(&license, uuid)
-                    .map_err(payment_required_error)?;
-                // TODO check license entitlements and usage so far
+            } else if let Some((query_organization, license)) = project.get_license(conn)? {
+                let LicenseUsage {
+                    entitlements,
+                    usage,
+                } = query_organization.check_license_usage(conn, licensor, &license)?;
                 Ok(PlanKind::Licensed {
-                    entitlement: u64::MAX,
-                    prior_usage: 0,
+                    entitlements,
+                    prior_usage: usage,
                 })
             } else if project.visibility.is_public() {
                 Ok(Self::None)
@@ -425,11 +432,16 @@ mod plan_kind {
                         })?;
                 },
                 Self::Licensed {
-                    entitlement,
+                    entitlements,
                     prior_usage,
                 } => {
-                    if *prior_usage + usage > *entitlement {
-                        debug_assert!(false, "Manage license entitlements");
+                    if *prior_usage + usage > *entitlements {
+                        return Err(payment_required_error(PlanKindError::Overage {
+                            project: project.clone(),
+                            entitlements: *entitlements,
+                            prior_usage: *prior_usage,
+                            usage,
+                        }));
                     }
                 },
                 Self::None => {},

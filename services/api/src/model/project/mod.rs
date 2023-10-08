@@ -12,7 +12,6 @@ use bencher_rbac::{Organization, Project};
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, Queryable, RunQueryDsl};
 use dropshot::HttpError;
-use uuid::Uuid;
 
 use crate::{
     context::{DbConnection, Rbac},
@@ -156,18 +155,26 @@ impl QueryProject {
 
     #[cfg(feature = "plus")]
     pub fn get_subscription(
+        &self,
         conn: &mut DbConnection,
-        id: ProjectId,
-    ) -> Result<Option<SubscriptionId>, ApiError> {
+    ) -> Result<Option<SubscriptionId>, HttpError> {
         let subscription: Option<String> = schema::organization::table
-            .inner_join(schema::project::table)
-            .filter(schema::project::id.eq(id))
+            .filter(schema::organization::id.eq(self.organization_id))
             .select(schema::organization::subscription)
             .first(conn)
-            .map_err(ApiError::from)?;
+            .map_err(resource_not_found_err!(Organization, self.organization_id))?;
 
         Ok(if let Some(subscription) = &subscription {
-            Some(SubscriptionId::from_str(subscription)?)
+            Some(SubscriptionId::from_str(subscription).map_err(|e| {
+                crate::error::issue_error(
+                    http::StatusCode::INTERNAL_SERVER_ERROR,
+                    "Failed to parse subscription ID",
+                    &format!(
+                        "Failed to parse subscription ID ({subscription}) for project ({self:?})"
+                    ),
+                    e,
+                )
+            })?)
         } else {
             None
         })
@@ -175,18 +182,21 @@ impl QueryProject {
 
     #[cfg(feature = "plus")]
     pub fn get_license(
+        &self,
         conn: &mut DbConnection,
-        id: ProjectId,
-    ) -> Result<Option<(Uuid, Jwt)>, ApiError> {
-        let (uuid, license): (String, Option<String>) = schema::organization::table
-            .inner_join(schema::project::table)
-            .filter(schema::project::id.eq(id))
-            .select((schema::organization::uuid, schema::organization::license))
-            .first(conn)
-            .map_err(ApiError::from)?;
+    ) -> Result<Option<(QueryOrganization, Jwt)>, HttpError> {
+        let query_organization = QueryOrganization::get(conn, self.organization_id)?;
 
-        Ok(if let Some(license) = &license {
-            Some((Uuid::from_str(&uuid)?, Jwt::from_str(license)?))
+        Ok(if let Some(license) = &query_organization.license {
+            let license_jwt = Jwt::from_str(license).map_err(|e| {
+                crate::error::issue_error(
+                    http::StatusCode::INTERNAL_SERVER_ERROR,
+                    "Failed to parse subscription license",
+                    &format!("Failed to parse subscription license ({license}) for project ({self:?}) organization ({query_organization:?})"),
+                    e,
+                )
+            })?;
+            Some((query_organization, license_jwt))
         } else {
             None
         })
