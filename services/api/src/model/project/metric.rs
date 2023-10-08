@@ -1,13 +1,11 @@
 use bencher_json::JsonMetric;
-use diesel::{dsl::count, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
-use http::StatusCode;
 use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
-    error::{issue_error, resource_not_found_err},
-    model::organization::OrganizationId,
+    error::resource_not_found_err,
     schema::{self, metric as metric_table},
 };
 
@@ -42,9 +40,10 @@ impl QueryMetric {
             .map_err(resource_not_found_err!(Metric, uuid))
     }
 
+    #[cfg(feature = "plus")]
     pub fn usage(
         conn: &mut DbConnection,
-        organization_id: OrganizationId,
+        organization_id: crate::model::organization::OrganizationId,
         start_time: i64,
         end_time: i64,
     ) -> Result<u64, HttpError> {
@@ -57,13 +56,13 @@ impl QueryMetric {
             .filter(schema::project::organization_id.eq(organization_id))
             .filter(schema::report::end_time.ge(start_time))
             .filter(schema::report::end_time.le(end_time))
-            .select(count(schema::metric::value))
+            .select(diesel::dsl::count(schema::metric::value))
             .first::<i64>(conn)
             .map_err(resource_not_found_err!(Organization, organization_id))?
             .try_into()
             .map_err(|e| {
-                issue_error(
-                    StatusCode::INTERNAL_SERVER_ERROR,
+                crate::error::issue_error(
+                    http::StatusCode::INTERNAL_SERVER_ERROR,
                     "Failed to count metric usage",
                     &format!("Failed to count metric usage for organization ({organization_id}) between {start_time} and {end_time}."),
                 e

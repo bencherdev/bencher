@@ -2,7 +2,6 @@
 
 use bencher_json::{organization::usage::JsonUsage, ResourceId};
 use bencher_rbac::organization::Permission;
-use diesel::{dsl::count, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -14,8 +13,7 @@ use crate::{
         organization::Resource,
         Endpoint, Method,
     },
-    model::{organization::QueryOrganization, user::auth::AuthUser},
-    schema,
+    model::{organization::QueryOrganization, project::metric::QueryMetric, user::auth::AuthUser},
     util::{
         cors::{get_cors, CorsResponse},
         to_date_time,
@@ -99,21 +97,7 @@ async fn get_inner(
     let OrgUsageQuery { start, end } = query_params;
     let start_time = to_date_time(start)?.timestamp();
     let end_time = to_date_time(end)?.timestamp();
+    let metrics_used = QueryMetric::usage(conn, query_org.id, start_time, end_time)?.into();
 
-    let metrics_used = schema::metric::table
-        .inner_join(
-            schema::perf::table
-                .inner_join(schema::benchmark::table.inner_join(schema::project::table))
-                .inner_join(schema::report::table),
-        )
-        .filter(schema::project::organization_id.eq(query_org.id))
-        .filter(schema::report::end_time.ge(start_time))
-        .filter(schema::report::end_time.le(end_time))
-        .select(count(schema::metric::value))
-        .first::<i64>(conn)
-        .map_err(ApiError::from)?;
-
-    Ok(JsonUsage {
-        metrics_used: u64::try_from(metrics_used)?.into(),
-    })
+    Ok(JsonUsage { metrics_used })
 }
