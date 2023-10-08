@@ -58,18 +58,37 @@ impl Licensor {
         audience: Audience,
         billing_cycle: BillingCycle,
         organization: Uuid,
+        entitlements: u64,
     ) -> Result<Jwt, LicenseError> {
-        let claims = Claims::new(audience, billing_cycle, organization)?;
+        let claims = Claims::new(audience, billing_cycle, organization, entitlements)?;
         let encoding = self.encoding()?;
         Ok(Jwt::from_str(&encode(&HEADER, &claims, encoding)?)?)
     }
 
-    pub fn new_monthly_license(&self, organization: Uuid) -> Result<Jwt, LicenseError> {
-        self.new_license(Audience::Bencher, BillingCycle::Monthly, organization)
+    pub fn new_monthly_license(
+        &self,
+        organization: Uuid,
+        entitlements: u64,
+    ) -> Result<Jwt, LicenseError> {
+        self.new_license(
+            Audience::Bencher,
+            BillingCycle::Monthly,
+            organization,
+            entitlements,
+        )
     }
 
-    pub fn new_annual_license(&self, organization: Uuid) -> Result<Jwt, LicenseError> {
-        self.new_license(Audience::Bencher, BillingCycle::Annual, organization)
+    pub fn new_annual_license(
+        &self,
+        organization: Uuid,
+        entitlements: u64,
+    ) -> Result<Jwt, LicenseError> {
+        self.new_license(
+            Audience::Bencher,
+            BillingCycle::Annual,
+            organization,
+            entitlements,
+        )
     }
 
     pub fn validate(&self, license: &Jwt) -> Result<TokenData<Claims>, LicenseError> {
@@ -93,10 +112,22 @@ impl Licensor {
         if token_data.claims.sub == organization {
             Ok(token_data)
         } else {
-            Err(LicenseError::SubjectOrganization(
-                organization,
-                token_data.claims.sub,
-            ))
+            Err(LicenseError::Subject {
+                provided: organization,
+                license: token_data.claims.sub,
+            })
+        }
+    }
+
+    pub fn validate_usage(&self, claims: &Claims, usage: u64) -> Result<u64, LicenseError> {
+        let entitlements = claims.ent;
+        if usage > entitlements {
+            Err(LicenseError::Entitlements {
+                usage,
+                entitlements,
+            })
+        } else {
+            Ok(entitlements)
         }
     }
 }
@@ -143,17 +174,25 @@ mod test {
     fn test_self_hosted() {
         let licensor = Licensor::self_hosted().unwrap();
         let organization = Uuid::new_v4();
+        let entitlements = 1_000;
 
-        assert!(licensor.new_monthly_license(organization).is_err());
-        assert!(licensor.new_annual_license(organization).is_err());
+        assert!(licensor
+            .new_monthly_license(organization, entitlements)
+            .is_err());
+        assert!(licensor
+            .new_annual_license(organization, entitlements)
+            .is_err());
     }
 
     #[test]
     fn test_bencher_cloud_monthly() {
         let licensor = Licensor::bencher_cloud(&PRIVATE_PEM_SECRET).unwrap();
         let organization = Uuid::new_v4();
+        let entitlements = 1_000;
 
-        let license = licensor.new_monthly_license(organization).unwrap();
+        let license = licensor
+            .new_monthly_license(organization, entitlements)
+            .unwrap();
 
         let token_data = licensor.validate(&license).unwrap();
 
@@ -164,14 +203,18 @@ mod test {
             token_data.claims.exp - u64::from(BillingCycle::Monthly)
         );
         assert_eq!(token_data.claims.sub, organization);
+        assert_eq!(token_data.claims.ent, entitlements);
     }
 
     #[test]
     fn test_bencher_cloud_annual() {
         let licensor = Licensor::bencher_cloud(&PRIVATE_PEM_SECRET).unwrap();
         let organization = Uuid::new_v4();
+        let entitlements = 1_000;
 
-        let license = licensor.new_annual_license(organization).unwrap();
+        let license = licensor
+            .new_annual_license(organization, entitlements)
+            .unwrap();
 
         let token_data = licensor.validate(&license).unwrap();
 
@@ -182,5 +225,6 @@ mod test {
             token_data.claims.exp - u64::from(BillingCycle::Annual)
         );
         assert_eq!(token_data.claims.sub, organization);
+        assert_eq!(token_data.claims.ent, entitlements);
     }
 }

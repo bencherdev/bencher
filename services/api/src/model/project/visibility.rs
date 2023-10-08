@@ -58,24 +58,43 @@ impl Visibility {
 pub mod project_visibility {
     use bencher_json::project::JsonVisibility;
 
-    use crate::ApiError;
-
-    pub fn project_visibility(visibility: Option<JsonVisibility>) -> Result<(), ApiError> {
+    pub fn project_visibility(visibility: Option<JsonVisibility>) -> Result<(), HttpError> {
         visibility
             .unwrap_or_default()
             .is_public()
             .then_some(())
-            .ok_or(ApiError::CreatePrivateProject)
+            .ok_or(crate::error::payment_required_error(format!(
+                "Private projects are only available with the an active Bencher Plus plan. Please upgrade your plan at: https://bencher.dev/pricing"
+            )))
     }
 }
 
 #[cfg(feature = "plus")]
 pub mod project_visibility {
-    use bencher_billing::Biller;
+    use bencher_billing::{Biller, SubscriptionId};
     use bencher_json::{project::JsonVisibility, ResourceId};
     use bencher_license::Licensor;
+    use dropshot::HttpError;
+    use http::StatusCode;
 
-    use crate::{context::DbConnection, model::organization::QueryOrganization, ApiError};
+    use crate::{
+        context::DbConnection,
+        error::{issue_error, not_found_error, payment_required_error},
+        model::organization::QueryOrganization,
+    };
+
+    #[derive(Debug, thiserror::Error)]
+    pub enum ProjectVisibilityError {
+        #[error("Organization ({organization:?}) has an inactive plan ({subscription_id})")]
+        InactivePlan {
+            organization: ResourceId,
+            subscription_id: SubscriptionId,
+        },
+        #[error("No Biller has been configured for the server.")]
+        NoBiller,
+        #[error("No plan (subscription or license) found for organization ({0})")]
+        NoPlan(ResourceId),
+    }
 
     pub async fn project_visibility(
         conn: &mut DbConnection,
@@ -83,7 +102,7 @@ pub mod project_visibility {
         licensor: &Licensor,
         organization: &ResourceId,
         visibility: Option<JsonVisibility>,
-    ) -> Result<(), ApiError> {
+    ) -> Result<(), HttpError> {
         if visibility.unwrap_or_default().is_public() {
             Ok(())
         } else {
@@ -96,24 +115,41 @@ pub mod project_visibility {
         biller: Option<&Biller>,
         licensor: &Licensor,
         organization: &ResourceId,
-    ) -> Result<(), ApiError> {
-        if let Some(subscription) = QueryOrganization::get_subscription(conn, organization)? {
+    ) -> Result<(), HttpError> {
+        if let Some(subscription_id) = QueryOrganization::get_subscription(conn, organization)? {
             if let Some(biller) = biller {
-                let plan_status = biller.get_plan_status(&subscription).await?;
+                let plan_status = biller
+                    .get_plan_status(&subscription_id)
+                    .await
+                    .map_err(not_found_error)?;
                 if plan_status.is_active() {
                     Ok(())
                 } else {
-                    Err(ApiError::InactivePlanOrganization(organization.clone()))
+                    Err(payment_required_error(
+                        ProjectVisibilityError::InactivePlan {
+                            organization: organization.clone(),
+                            subscription_id,
+                        },
+                    ))
                 }
             } else {
-                Err(ApiError::NoBillerOrganization(organization.clone()))
+                Err(issue_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "No Biller when checking plan kind",
+                    "Failed to find Biller in Bencher Cloud when checking plan kind for organization.",
+                    ProjectVisibilityError::NoBiller,
+                ))
             }
-        } else if let Some((uuid, license)) = QueryOrganization::get_license(conn, organization)? {
-            let _token_data = licensor.validate_organization(&license, uuid.into())?;
-            // TODO check license entitlements for usage so far
-            Ok(())
+        } else if let Some((query_organization, license)) =
+            QueryOrganization::get_license(conn, organization)?
+        {
+            query_organization
+                .check_license_usage(conn, licensor, &license)
+                .map(|_| ())
         } else {
-            Err(ApiError::NoPlanOrganization(organization.clone()))
+            Err(payment_required_error(ProjectVisibilityError::NoPlan(
+                organization.clone(),
+            )))
         }
     }
 }

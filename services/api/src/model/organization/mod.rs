@@ -1,10 +1,6 @@
 use std::str::FromStr;
 use std::string::ToString;
 
-#[cfg(feature = "plus")]
-use bencher_billing::SubscriptionId;
-#[cfg(feature = "plus")]
-use bencher_json::Jwt;
 use bencher_json::{
     organization::JsonUpdateOrganization, JsonNewOrganization, JsonOrganization, NonEmpty,
     ResourceId, Slug,
@@ -12,9 +8,11 @@ use bencher_json::{
 use bencher_rbac::Organization;
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, Queryable, RunQueryDsl};
+use dropshot::HttpError;
 
 use crate::{
     context::{DbConnection, Rbac},
+    error::resource_not_found_err,
     model::user::{auth::AuthUser, InsertUser},
     schema::{self, organization as organization_table},
     util::{
@@ -83,6 +81,12 @@ pub struct QueryOrganization {
     pub modified: i64,
 }
 
+#[cfg(feature = "plus")]
+pub struct LicenseUsage {
+    pub entitlements: u64,
+    pub usage: u64,
+}
+
 impl QueryOrganization {
     fn_get!(organization);
     fn_get_id!(organization, OrganizationId);
@@ -91,22 +95,29 @@ impl QueryOrganization {
     pub fn from_resource_id(
         conn: &mut DbConnection,
         organization: &ResourceId,
-    ) -> Result<Self, ApiError> {
+    ) -> Result<Self, HttpError> {
         schema::organization::table
             .filter(resource_id(organization)?)
             .first::<QueryOrganization>(conn)
-            .map_err(ApiError::from)
+            .map_err(resource_not_found_err!(Organization, organization.clone()))
     }
 
     #[cfg(feature = "plus")]
     pub fn get_subscription(
         conn: &mut DbConnection,
-        resource_id: &ResourceId,
-    ) -> Result<Option<SubscriptionId>, ApiError> {
-        let organization = Self::from_resource_id(conn, resource_id)?;
+        organization: &ResourceId,
+    ) -> Result<Option<bencher_billing::SubscriptionId>, HttpError> {
+        let organization = Self::from_resource_id(conn, organization)?;
 
         Ok(if let Some(subscription) = &organization.subscription {
-            Some(SubscriptionId::from_str(subscription)?)
+            Some(bencher_billing::SubscriptionId::from_str(subscription).map_err(|e| {
+                crate::error::issue_error(
+                    http::StatusCode::INTERNAL_SERVER_ERROR,
+                    "Failed to parse subscription ID",
+                    &format!("Failed to parse subscription ID ({subscription}) for organization ({organization:?})"),
+                    e,
+                )
+            })?)
         } else {
             None
         })
@@ -115,14 +126,68 @@ impl QueryOrganization {
     #[cfg(feature = "plus")]
     pub fn get_license(
         conn: &mut DbConnection,
-        resource_id: &ResourceId,
-    ) -> Result<Option<(OrganizationUuid, Jwt)>, ApiError> {
-        let organization = Self::from_resource_id(conn, resource_id)?;
+        organization: &ResourceId,
+    ) -> Result<Option<(Self, bencher_json::Jwt)>, HttpError> {
+        let organization = Self::from_resource_id(conn, organization)?;
 
         Ok(if let Some(license) = &organization.license {
-            Some((organization.uuid, Jwt::from_str(license)?))
+            let license_jwt = bencher_json::Jwt::from_str(license).map_err(|e| {
+                crate::error::issue_error(
+                    http::StatusCode::INTERNAL_SERVER_ERROR,
+                    "Failed to parse subscription license",
+                    &format!("Failed to parse subscription license ({license}) for organization ({organization:?})"),
+                    e,
+                )
+            })?;
+            Some((organization, license_jwt))
         } else {
             None
+        })
+    }
+
+    #[cfg(feature = "plus")]
+    pub fn check_license_usage(
+        &self,
+        conn: &mut DbConnection,
+        licensor: &bencher_license::Licensor,
+        license: &bencher_json::Jwt,
+    ) -> Result<LicenseUsage, HttpError> {
+        let token_data = licensor
+            .validate_organization(license, self.uuid.into())
+            .map_err(crate::error::payment_required_error)?;
+
+        let start_time = i64::try_from(token_data.claims.iat).map_err(|e| {
+            crate::error::issue_error(
+                http::StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to parse license start time",
+                &format!(
+                    "Failed to parse license start time ({start}).",
+                    start = token_data.claims.iat,
+                ),
+                e,
+            )
+        })?;
+        let end_time = i64::try_from(token_data.claims.exp).map_err(|e| {
+            crate::error::issue_error(
+                http::StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to parse license end time",
+                &format!(
+                    "Failed to parse license end time ({end}).",
+                    end = token_data.claims.exp
+                ),
+                e,
+            )
+        })?;
+
+        let usage =
+            super::project::metric::QueryMetric::usage(conn, self.id, start_time, end_time)?;
+        let entitlements = licensor
+            .validate_usage(&token_data.claims, usage)
+            .map_err(crate::error::payment_required_error)?;
+
+        Ok(LicenseUsage {
+            entitlements,
+            usage,
         })
     }
 

@@ -12,6 +12,7 @@ pub struct Claims {
     pub iat: u64,    // Issued at (as UTC timestamp)
     pub iss: String, // Issuer
     pub sub: Uuid,   // Subject (whom token refers to)
+    pub ent: u64,    // Entitlements (max number of metrics allowed)
 }
 
 impl Claims {
@@ -19,6 +20,7 @@ impl Claims {
         audience: Audience,
         billing_cycle: BillingCycle,
         organization: Uuid,
+        entitlements: u64,
     ) -> Result<Self, LicenseError> {
         let now = now()?;
         Ok(Self {
@@ -27,6 +29,7 @@ impl Claims {
             iat: now,
             iss: BENCHER_DEV.into(),
             sub: organization,
+            ent: entitlements,
         })
     }
 

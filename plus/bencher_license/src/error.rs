@@ -15,6 +15,10 @@ pub enum LicenseError {
     Valid(#[from] bencher_valid::ValidError),
     #[error("Failed to cast integer: {0}")]
     IntError(#[from] std::num::TryFromIntError),
-    #[error("Provided organization {0} does not match license subject organization: {1}")]
-    SubjectOrganization(Uuid, Uuid),
+    #[error(
+        "Provided organization ({provided}) does not match license subject organization ({license})"
+    )]
+    Subject { provided: Uuid, license: Uuid },
+    #[error("The usage ({usage}) exceeds the license entitlements ({entitlements})")]
+    Entitlements { usage: u64, entitlements: u64 },
 }

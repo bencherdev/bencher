@@ -307,7 +307,7 @@ async fn post_inner(
 
     #[cfg(feature = "plus")]
     plan_kind
-        .check_usage(context.biller.as_ref(), project_id, usage)
+        .check_usage(context.biller.as_ref(), &project, usage)
         .await?;
 
     // Don't return the error from processing the report until after the metrics usage has been checked
@@ -327,7 +327,7 @@ mod plan_kind {
     use crate::{
         context::DbConnection,
         error::{issue_error, not_found_error, payment_required_error},
-        model::project::{ProjectId, QueryProject},
+        model::project::QueryProject,
     };
 
     pub enum PlanKind {
@@ -374,7 +374,7 @@ mod plan_kind {
                     Err(issue_error(
                         StatusCode::INTERNAL_SERVER_ERROR,
                         "No Biller when checking plan kind",
-                        "Failed to find Biller in Bencher Cloud when checking plan kind.",
+                        "Failed to find Biller in Bencher Cloud when checking plan kind for project.",
                         PlanKindError::NoBiller,
                     ))
                 }
@@ -399,7 +399,7 @@ mod plan_kind {
         pub async fn check_usage(
             &self,
             biller: Option<&Biller>,
-            project_id: ProjectId,
+            project: &QueryProject,
             usage: u64,
         ) -> Result<(), HttpError> {
             match self {
@@ -419,7 +419,7 @@ mod plan_kind {
                             issue_error(
                                 StatusCode::BAD_REQUEST,
                                 "Failed to record usage",
-                                &format!("Failed to record usage ({usage}) in project ({project_id}) on Bencher."),
+                                &format!("Failed to record usage ({usage}) in project ({project_id}) on Bencher.", project_id= project.id),
                                 e,
                             )
                         })?;

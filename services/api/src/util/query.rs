@@ -63,3 +63,37 @@ macro_rules! fn_get_uuid {
 }
 
 pub(crate) use fn_get_uuid;
+
+// pub(crate) use fn_from_resource_id;
+
+// macro_rules! fn_get_uuid {
+//     ($parent:ident, $table:ident, $id:ident, $uuid:ident) => {
+//         #[allow(unused_qualifications)]
+//         pub fn from_resource_id(
+//             conn: &mut DbConnection,
+//             parent: $parent,
+//             benchmark: &ResourceId,
+//         ) -> Result<Self, HttpError> {
+//             crate::resource_id::fn_resource_id!($table);
+
+//             schema::$table::table
+//                 .filter(schema::benchmark::project_id.eq(project_id))
+//                 .filter(resource_id(benchmark)?)
+//                 .first::<Self>(conn)
+//                 .map_err(resource_not_found_err!(Benchmark, benchmark.clone()))
+//         }
+
+//         pub fn get_uuid(
+//             conn: &mut crate::context::DbConnection,
+//             id: $id,
+//         ) -> Result<$uuid, dropshot::HttpError> {
+//             schema::$table::table
+//                 .filter(schema::$table::id.eq(id))
+//                 .select(schema::$table::uuid)
+//                 .first(conn)
+//                 .map_err(crate::error::not_found_error)
+//         }
+//     };
+// }
+
+// pub(crate) use fn_from_resource_id;
