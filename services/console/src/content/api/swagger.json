@@ -1123,7 +1123,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonEmpty"
+                  "$ref": "#/components/schemas/JsonPlan"
                 }
               }
             }

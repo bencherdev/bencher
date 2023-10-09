@@ -57,6 +57,7 @@ impl Visibility {
 #[cfg(not(feature = "plus"))]
 pub mod project_visibility {
     use bencher_json::project::JsonVisibility;
+    use dropshot::HttpError;
 
     pub fn project_visibility(visibility: Option<JsonVisibility>) -> Result<(), HttpError> {
         visibility

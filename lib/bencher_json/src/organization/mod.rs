@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 pub mod member;
 #[cfg(feature = "plus")]
-pub mod metered;
+pub mod plan;
 #[cfg(feature = "plus")]
 pub mod usage;
 

@@ -1,5 +1,5 @@
 use bencher_json::{
-    organization::metered::{JsonCard, JsonCardDetails, JsonCustomer, JsonPlan},
+    organization::plan::{JsonCard, JsonCardDetails, JsonCustomer, JsonPlan},
     system::config::JsonBilling,
     Email, PlanLevel, PlanStatus, UserName,
 };
@@ -122,43 +122,6 @@ impl Biller {
             .map_err(Into::into)
     }
 
-    // pub async fn get_or_create_payment_method(
-    //     &self,
-    //     customer: &Customer,
-    //     payment_card: PaymentCard,
-    // ) -> Result<PaymentMethod, BillingError> {
-    //     if let Some(payment_method) = self.get_payment_method(customer).await? {
-    //         Ok(payment_method)
-    //     } else {
-    //         self.create_payment_method(customer, payment_card).await
-    //     }
-    // }
-
-    // pub async fn get_payment_method(
-    //     &self,
-    //     customer: &Customer,
-    // ) -> Result<Option<PaymentMethod>, BillingError> {
-    //     let list_payment_methods = ListPaymentMethods {
-    //         type_: Some(PaymentMethodTypeFilter::Card),
-    //         customer: Some(customer.id.clone()),
-    //         ..Default::default()
-    //     };
-    //     let mut payment_methods = PaymentMethod::list(&self.client, &list_payment_methods).await?;
-
-    //     if let Some(payment_method) = payment_methods.data.pop() {
-    //         if payment_methods.data.is_empty() {
-    //             Ok(Some(payment_method))
-    //         } else {
-    //             Err(BillingError::MultiplePaymentMethods(
-    //                 payment_method,
-    //                 payment_methods.data,
-    //             ))
-    //         }
-    //     } else {
-    //         Ok(None)
-    //     }
-    // }
-
     // WARNING: Use caution when calling this directly as multiple payment methods can be created
     pub async fn create_payment_method(
         &self,
@@ -184,21 +147,6 @@ impl Biller {
         .await
         .map_err(Into::into)
     }
-
-    // pub async fn get_or_create_subscription(
-    //     &self,
-    //     organization: Uuid,
-    //     customer: &Customer,
-    //     payment_method: &PaymentMethod,
-    //     product_plan: ProductPlan,
-    // ) -> Result<Subscription, BillingError> {
-    //     if let Some(subscription) = self.get_subscription(organization, customer).await? {
-    //         Ok(subscription)
-    //     } else {
-    //         self.create_subscription(organization, customer, payment_method, product_plan)
-    //             .await
-    //     }
-    // }
 
     pub async fn create_metered_subscription(
         &self,
@@ -535,7 +483,7 @@ fn into_payment_card(card: JsonCard) -> PaymentCard {
 #[allow(clippy::unwrap_used)]
 mod test {
     use bencher_json::{
-        organization::metered::{JsonCard, DEFAULT_PRICE_NAME},
+        organization::plan::{JsonCard, DEFAULT_PRICE_NAME},
         system::config::{JsonBilling, JsonProduct, JsonProducts},
         PlanLevel,
     };

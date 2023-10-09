@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{organization::metered::JsonPlan, ResourceId};
+use bencher_json::{JsonPlan, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},

@@ -121,7 +121,7 @@ impl QueryOrganization {
     #[cfg(feature = "plus")]
     pub fn get_license(&self) -> Result<Option<bencher_json::Jwt>, HttpError> {
         Ok(if let Some(license) = &self.license {
-            Some( bencher_json::Jwt::from_str(license).map_err(|e| {
+            Some(bencher_json::Jwt::from_str(license).map_err(|e| {
                 crate::error::issue_error(
                     http::StatusCode::INTERNAL_SERVER_ERROR,
                     "Failed to parse subscription license",

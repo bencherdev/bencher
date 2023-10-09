@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::{JsonCard, JsonNewPlan};
-use bencher_json::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear, JsonEmpty, ResourceId};
+use bencher_json::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear, JsonPlan, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -94,7 +94,7 @@ impl From<Card> for JsonCard {
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonEmpty = self
+        let _json: JsonPlan = self
             .backend
             .send_with(
                 |client| async move {

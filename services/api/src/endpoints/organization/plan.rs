@@ -1,8 +1,8 @@
 #![cfg(feature = "plus")]
 
 use bencher_json::{
-    organization::metered::{JsonNewPlan, JsonPlan, DEFAULT_PRICE_NAME},
-    JsonEmpty, JsonUser, ResourceId,
+    organization::plan::{JsonNewPlan, JsonPlan, DEFAULT_PRICE_NAME},
+    JsonUser, ResourceId,
 };
 use bencher_rbac::organization::Permission;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -54,7 +54,7 @@ pub async fn org_plan_post(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<OrgPlanParams>,
     body: TypedBody<JsonNewPlan>,
-) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
+) -> Result<ResponseAccepted<JsonPlan>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(PLAN_RESOURCE, Method::Post);
 
@@ -81,7 +81,7 @@ async fn post_inner(
     path_params: OrgPlanParams,
     json_plan: JsonNewPlan,
     auth_user: &AuthUser,
-) -> Result<JsonEmpty, ApiError> {
+) -> Result<JsonPlan, ApiError> {
     // Check to see if there is a Biller
     // The Biller is only available on Bencher Cloud
     let Some(biller) = &context.biller else {
@@ -139,7 +139,7 @@ async fn post_inner(
         .execute(conn)
         .map_err(ApiError::from)?;
 
-    Ok(JsonEmpty::default())
+    biller.get_plan(&subscription.id).await.map_err(Into::into)
 }
 
 #[endpoint {

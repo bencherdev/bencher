@@ -19,7 +19,7 @@ pub mod urlencoded;
 pub mod user;
 
 #[cfg(feature = "plus")]
-pub use organization::{metered::JsonPlan, usage::JsonUsage};
+pub use organization::{plan::JsonPlan, usage::JsonUsage};
 
 pub use big_int::BigInt;
 pub use organization::{
