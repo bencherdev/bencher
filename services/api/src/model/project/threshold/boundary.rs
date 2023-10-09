@@ -1,16 +1,14 @@
-use std::str::FromStr;
-
-use bencher_json::project::boundary::JsonBoundary;
+use bencher_json::{project::boundary::JsonBoundary, BoundaryUuid};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use uuid::Uuid;
+use dropshot::HttpError;
 
 use crate::{
     context::DbConnection,
+    error::resource_not_found_err,
     model::project::metric::MetricId,
     schema,
     schema::boundary as boundary_table,
-    util::query::{fn_get, fn_get_id},
-    ApiError,
+    util::query::{fn_get, fn_get_id, fn_get_uuid},
 };
 
 use super::{statistic::StatisticId, ThresholdId};
@@ -21,7 +19,7 @@ crate::util::typed_id::typed_id!(BoundaryId);
 #[diesel(table_name = boundary_table)]
 pub struct QueryBoundary {
     pub id: BoundaryId,
-    pub uuid: String,
+    pub uuid: BoundaryUuid,
     pub threshold_id: ThresholdId,
     pub statistic_id: StatisticId,
     pub metric_id: MetricId,
@@ -32,21 +30,13 @@ pub struct QueryBoundary {
 impl QueryBoundary {
     fn_get!(boundary);
     fn_get_id!(boundary, BoundaryId);
+    fn_get_uuid!(boundary, BoundaryId, BoundaryUuid);
 
-    pub fn get_uuid(conn: &mut DbConnection, id: BoundaryId) -> Result<Uuid, ApiError> {
-        let uuid: String = schema::alert::table
-            .filter(schema::alert::id.eq(id))
-            .select(schema::alert::uuid)
-            .first(conn)
-            .map_err(ApiError::from)?;
-        Uuid::from_str(&uuid).map_err(ApiError::from)
-    }
-
-    pub fn from_metric_id(conn: &mut DbConnection, metric_id: MetricId) -> Result<Self, ApiError> {
+    pub fn from_metric_id(conn: &mut DbConnection, metric_id: MetricId) -> Result<Self, HttpError> {
         schema::boundary::table
             .filter(schema::boundary::metric_id.eq(metric_id))
             .first::<Self>(conn)
-            .map_err(ApiError::from)
+            .map_err(resource_not_found_err!(Boundary, metric_id))
     }
 
     // There may not be a boundary for every metric, so return the default if there isn't one.
@@ -67,7 +57,7 @@ impl QueryBoundary {
 #[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = boundary_table)]
 pub struct InsertBoundary {
-    pub uuid: String,
+    pub uuid: BoundaryUuid,
     pub threshold_id: ThresholdId,
     pub statistic_id: StatisticId,
     pub metric_id: MetricId,

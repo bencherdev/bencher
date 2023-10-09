@@ -1,6 +1,5 @@
-use bencher_json::ResourceId;
+use bencher_json::{ReportUuid, ResourceId};
 use clap::{Parser, Subcommand, ValueEnum};
-use uuid::Uuid;
 
 use super::run::CliRun;
 use crate::parser::{CliBackend, CliPagination};
@@ -64,7 +63,7 @@ pub struct CliReportView {
     pub project: ResourceId,
 
     /// Report UUID
-    pub report: Uuid,
+    pub report: ReportUuid,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -77,7 +76,7 @@ pub struct CliReportDelete {
     pub project: ResourceId,
 
     /// Report UUID
-    pub report: Uuid,
+    pub report: ReportUuid,
 
     #[clap(flatten)]
     pub backend: CliBackend,

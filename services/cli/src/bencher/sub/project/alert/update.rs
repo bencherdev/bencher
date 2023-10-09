@@ -2,8 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::{JsonAlertStatus, JsonUpdateAlert};
-use bencher_json::{JsonAlert, ResourceId};
-use uuid::Uuid;
+use bencher_json::{AlertUuid, JsonAlert, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -14,7 +13,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Update {
     pub project: ResourceId,
-    pub alert: Uuid,
+    pub alert: AlertUuid,
     pub status: Option<Status>,
     pub backend: Backend,
 }

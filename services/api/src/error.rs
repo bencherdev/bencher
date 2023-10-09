@@ -1,5 +1,5 @@
-use bencher_json::urlencoded::UrlEncodedError;
 use bencher_json::ResourceId;
+use bencher_json::{urlencoded::UrlEncodedError, ThresholdUuid};
 use bencher_plot::PlotError;
 use dropshot::HttpError;
 use http::StatusCode;
@@ -208,7 +208,7 @@ pub enum ApiError {
     #[error("Cannot update a system Testbed")]
     SystemTestbed,
     #[error("No statistic for threshold: {0}")]
-    NoThresholdStatistic(String),
+    NoThresholdStatistic(ThresholdUuid),
 
     #[error("Failed to parse JWT (JSON Web Token): {0}")]
     Jwt(#[from] crate::context::JwtError),

@@ -4,13 +4,15 @@ use schemars::JsonSchema;
 use serde::ser::{self, SerializeStruct};
 use serde::{Deserialize, Serialize, Serializer};
 use url::Url;
-use uuid::Uuid;
 
 use crate::urlencoded::{
     from_millis, from_urlencoded, from_urlencoded_list, to_urlencoded, to_urlencoded_list,
     UrlEncodedError,
 };
-use crate::{JsonBenchmark, JsonBranch, JsonMetricKind, JsonProject, JsonTestbed, ResourceId};
+use crate::{
+    BenchmarkUuid, BranchUuid, JsonBenchmark, JsonBranch, JsonMetricKind, JsonProject, JsonTestbed,
+    ReportUuid, ResourceId, TestbedUuid,
+};
 
 use super::alert::JsonPerfAlert;
 use super::boundary::JsonBoundary;
@@ -26,6 +28,8 @@ const QUERY_KEYS: [&str; 6] = [
     "start_time",
     "end_time",
 ];
+
+crate::typed_uuid::typed_uuid!(PerfUuid);
 
 /// `JsonPerfQueryParams` is the actual query parameters accepted by the server.
 /// All query parameter values are therefore scalar values.
@@ -49,9 +53,9 @@ pub struct JsonPerfQueryParams {
 #[derive(Debug, Clone)]
 pub struct JsonPerfQuery {
     pub metric_kind: ResourceId,
-    pub branches: Vec<Uuid>,
-    pub testbeds: Vec<Uuid>,
-    pub benchmarks: Vec<Uuid>,
+    pub branches: Vec<BranchUuid>,
+    pub testbeds: Vec<TestbedUuid>,
+    pub benchmarks: Vec<BenchmarkUuid>,
     pub start_time: Option<DateTime<Utc>>,
     pub end_time: Option<DateTime<Utc>>,
 }
@@ -208,7 +212,7 @@ pub struct JsonPerfMetrics {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfMetric {
-    pub report: Uuid,
+    pub report: ReportUuid,
     pub iteration: u32,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,

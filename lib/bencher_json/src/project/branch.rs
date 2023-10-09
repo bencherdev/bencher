@@ -6,7 +6,11 @@ use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+
+use crate::ProjectUuid;
+
+crate::typed_uuid::typed_uuid!(BranchUuid);
+crate::typed_uuid::typed_uuid!(VersionUuid);
 
 pub const BRANCH_MAIN_STR: &str = "main";
 #[allow(clippy::expect_used)]
@@ -61,8 +65,8 @@ crate::from_vec!(JsonBranches[JsonBranch]);
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBranch {
-    pub uuid: Uuid,
-    pub project: Uuid,
+    pub uuid: BranchUuid,
+    pub project: ProjectUuid,
     pub name: BranchName,
     pub slug: Slug,
     pub created: DateTime<Utc>,
@@ -79,8 +83,8 @@ impl fmt::Display for JsonBranch {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBranchVersion {
-    pub uuid: Uuid,
-    pub project: Uuid,
+    pub uuid: BranchUuid,
+    pub project: ProjectUuid,
     pub name: BranchName,
     pub slug: Slug,
     pub version: JsonVersion,

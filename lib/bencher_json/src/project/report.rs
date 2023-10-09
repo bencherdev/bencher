@@ -4,7 +4,6 @@ use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use crate::{
     urlencoded::{from_millis, from_urlencoded, to_urlencoded, UrlEncodedError},
@@ -14,6 +13,8 @@ use crate::{
 use super::{
     benchmark::JsonBenchmarkMetric, branch::JsonBranchVersion, threshold::JsonThresholdStatistic,
 };
+
+crate::typed_uuid::typed_uuid!(ReportUuid);
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -95,7 +96,7 @@ crate::from_vec!(JsonReports[JsonReport]);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReport {
-    pub uuid: Uuid,
+    pub uuid: ReportUuid,
     pub user: JsonUser,
     pub project: JsonProject,
     pub branch: JsonBranchVersion,

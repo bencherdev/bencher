@@ -4,12 +4,11 @@ use bencher_json::{
     project::branch::{
         JsonBranchVersion, JsonStartPoint, JsonUpdateBranch, JsonVersion, BRANCH_MAIN_STR,
     },
-    BranchName, GitHash, JsonBranch, JsonNewBranch, ResourceId, Slug,
+    BranchName, BranchUuid, GitHash, JsonBranch, JsonNewBranch, ResourceId, Slug,
 };
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
-use uuid::Uuid;
 
 use super::{
     branch_version::InsertBranchVersion,
@@ -24,7 +23,7 @@ use crate::{
     schema,
     schema::branch as branch_table,
     util::{
-        query::{fn_get, fn_get_id},
+        query::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
         slug::unwrap_child_slug,
         to_date_time,
@@ -41,7 +40,7 @@ fn_resource_id!(branch);
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryBranch {
     pub id: BranchId,
-    pub uuid: String,
+    pub uuid: BranchUuid,
     pub project_id: ProjectId,
     pub name: String,
     pub slug: String,
@@ -52,26 +51,18 @@ pub struct QueryBranch {
 impl QueryBranch {
     fn_get!(branch);
     fn_get_id!(branch, BranchId);
-
-    pub fn get_uuid(conn: &mut DbConnection, id: BranchId) -> Result<Uuid, ApiError> {
-        let uuid: String = schema::branch::table
-            .filter(schema::branch::id.eq(id))
-            .select(schema::branch::uuid)
-            .first(conn)
-            .map_err(ApiError::from)?;
-        Uuid::from_str(&uuid).map_err(ApiError::from)
-    }
+    fn_get_uuid!(branch, BranchId, BranchUuid);
 
     pub fn from_uuid(
         conn: &mut DbConnection,
         project_id: ProjectId,
-        uuid: Uuid,
-    ) -> Result<Self, ApiError> {
+        uuid: BranchUuid,
+    ) -> Result<Self, HttpError> {
         schema::branch::table
             .filter(schema::branch::project_id.eq(project_id))
             .filter(schema::branch::uuid.eq(uuid.to_string()))
             .first::<Self>(conn)
-            .map_err(ApiError::from)
+            .map_err(resource_not_found_err!(Branch, uuid))
     }
 
     pub fn from_resource_id(
@@ -129,8 +120,8 @@ impl QueryBranch {
             ..
         } = self;
         Ok(JsonBranch {
-            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
-            project: QueryProject::get_uuid(conn, project_id)?.into(),
+            uuid,
+            project: QueryProject::get_uuid(conn, project_id)?,
             name: BranchName::from_str(&name).map_err(ApiError::from)?,
             slug: Slug::from_str(&slug).map_err(ApiError::from)?,
             created: to_date_time(created).map_err(ApiError::from)?,
@@ -147,7 +138,7 @@ impl QueryBranch {
 #[derive(diesel::Insertable)]
 #[diesel(table_name = branch_table)]
 pub struct InsertBranch {
-    pub uuid: String,
+    pub uuid: BranchUuid,
     pub project_id: ProjectId,
     pub name: String,
     pub slug: String,
@@ -165,7 +156,7 @@ impl InsertBranch {
         let slug = unwrap_child_slug!(conn, project_id, name.as_ref(), slug, branch, QueryBranch);
         let timestamp = Utc::now().timestamp();
         Self {
-            uuid: Uuid::new_v4().to_string(),
+            uuid: BranchUuid::new(),
             project_id,
             name: name.into(),
             slug,

@@ -1,13 +1,12 @@
 use std::str::FromStr;
 
-use bencher_json::Secret;
 use bencher_json::{organization::member::JsonOrganizationRole, Email, Jwt};
+use bencher_json::{OrganizationUuid, Secret};
 use chrono::Utc;
 use jsonwebtoken::{decode, encode, Algorithm, Header, TokenData, Validation};
 use jsonwebtoken::{DecodingKey, EncodingKey};
 use once_cell::sync::Lazy;
 
-use crate::model::organization::OrganizationUuid;
 use crate::ApiError;
 
 mod audience;

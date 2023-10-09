@@ -2,11 +2,12 @@ use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use crate::{BigInt, JsonThreshold};
 
-use super::{benchmark::JsonBenchmarkMetric, boundary::JsonLimit};
+use super::{benchmark::JsonBenchmarkMetric, boundary::JsonLimit, report::ReportUuid};
+
+crate::typed_uuid::typed_uuid!(AlertUuid);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -18,8 +19,8 @@ crate::from_vec!(JsonAlerts[JsonAlert]);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonAlert {
-    pub uuid: Uuid,
-    pub report: Uuid,
+    pub uuid: AlertUuid,
+    pub report: ReportUuid,
     pub iteration: u32,
     pub threshold: JsonThreshold,
     pub benchmark: JsonBenchmarkMetric,
@@ -55,7 +56,7 @@ pub struct JsonUpdateAlert {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfAlert {
-    pub uuid: Uuid,
+    pub uuid: AlertUuid,
     pub limit: JsonLimit,
     pub status: JsonAlertStatus,
     pub modified: DateTime<Utc>,

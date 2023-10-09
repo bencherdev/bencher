@@ -1,6 +1,5 @@
-use bencher_json::ResourceId;
+use bencher_json::{AlertUuid, ResourceId};
 use clap::{Parser, Subcommand, ValueEnum};
-use uuid::Uuid;
 
 use crate::parser::{CliBackend, CliPagination};
 
@@ -48,7 +47,7 @@ pub struct CliAlertView {
     pub project: ResourceId,
 
     /// Alert UUID
-    pub alert: Uuid,
+    pub alert: AlertUuid,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -61,7 +60,7 @@ pub struct CliAlertUpdate {
     pub project: ResourceId,
 
     /// Alert UUID
-    pub alert: Uuid,
+    pub alert: AlertUuid,
 
     /// Alert status
     #[clap(long)]

@@ -21,7 +21,7 @@ swagger = ["dep:literally"]
 bencher_adapter.workspace = true
 bencher_billing = { workspace = true, optional = true }
 bencher_boundary.workspace = true
-bencher_json = { workspace = true, features = ["full", "schema"] }
+bencher_json = { workspace = true, features = ["full", "db", "schema"] }
 bencher_license = { workspace = true, optional = true }
 bencher_logger.workspace = true
 bencher_plot.workspace = true
@@ -29,6 +29,7 @@ bencher_plus = { workspace = true, optional = true }
 bencher_rbac.workspace = true
 chrono.workspace = true
 derive_more.workspace = true
+diesel = { workspace = true, features = ["chrono", "sqlite"] }
 dropshot.workspace = true
 jsonwebtoken.workspace = true
 literally = { workspace = true, optional = true }
@@ -51,7 +52,6 @@ async-compression = { version = "0.4", features = ["tokio", "gzip"] }
 aws-credential-types = "0.56"
 aws-sdk-s3 = "0.31"
 css-inline = "0.11"
-diesel = { version = "2.1", features = ["chrono", "sqlite"] }
 diesel_migrations = "2.1"
 hyper = "0.14"
 http = "0.2"

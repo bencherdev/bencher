@@ -1,8 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{project::threshold::JsonStatistic, ResourceId};
-use uuid::Uuid;
+use bencher_json::{project::threshold::JsonStatistic, ResourceId, StatisticUuid};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -13,7 +12,7 @@ use crate::{
 #[derive(Debug)]
 pub struct View {
     pub project: ResourceId,
-    pub statistic: Uuid,
+    pub statistic: StatisticUuid,
     pub backend: Backend,
 }
 

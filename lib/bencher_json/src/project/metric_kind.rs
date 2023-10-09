@@ -8,7 +8,8 @@ use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+
+use crate::ProjectUuid;
 
 const METRIC_KIND_NAME_ERROR: &str = "Failed to parse metric kind name.";
 const METRIC_KIND_SLUG_ERROR: &str = "Failed to parse metric kind slug.";
@@ -115,6 +116,8 @@ static ESTIMATED_CYCLES_UNITS: Lazy<NonEmpty> = Lazy::new(|| {
         .expect(METRIC_KIND_UNITS_ERROR)
 });
 
+crate::typed_uuid::typed_uuid!(MetricKindUuid);
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewMetricKind {
@@ -191,8 +194,8 @@ crate::from_vec!(JsonMetricKinds[JsonMetricKind]);
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMetricKind {
-    pub uuid: Uuid,
-    pub project: Uuid,
+    pub uuid: MetricKindUuid,
+    pub project: ProjectUuid,
     pub name: NonEmpty,
     pub slug: Slug,
     pub units: NonEmpty,

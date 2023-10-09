@@ -1,12 +1,9 @@
-use std::str::FromStr;
-
 use bencher_json::{
     project::threshold::{JsonNewStatistic, JsonStatistic, JsonStatisticKind},
-    Boundary, SampleSize,
+    Boundary, SampleSize, StatisticUuid, ThresholdUuid,
 };
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
@@ -14,7 +11,7 @@ use crate::{
     schema::statistic as statistic_table,
     util::{
         map_u32,
-        query::{fn_get, fn_get_id},
+        query::{fn_get, fn_get_id, fn_get_uuid},
         to_date_time,
     },
     ApiError,
@@ -28,7 +25,7 @@ crate::util::typed_id::typed_id!(StatisticId);
 #[diesel(table_name = statistic_table)]
 pub struct QueryStatistic {
     pub id: StatisticId,
-    pub uuid: String,
+    pub uuid: StatisticUuid,
     pub threshold_id: ThresholdId,
     pub test: StatisticKind,
     pub min_sample_size: Option<i64>,
@@ -42,22 +39,17 @@ pub struct QueryStatistic {
 impl QueryStatistic {
     fn_get!(statistic);
     fn_get_id!(statistic, StatisticId);
-
-    pub fn get_uuid(conn: &mut DbConnection, id: StatisticId) -> Result<Uuid, ApiError> {
-        let uuid: String = schema::statistic::table
-            .filter(schema::statistic::id.eq(id))
-            .select(schema::statistic::uuid)
-            .first(conn)
-            .map_err(ApiError::from)?;
-        Uuid::from_str(&uuid).map_err(ApiError::from)
-    }
+    fn_get_uuid!(statistic, StatisticId, StatisticUuid);
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonStatistic, ApiError> {
         let threshold = QueryThreshold::get_uuid(conn, self.threshold_id)?;
         self.into_json_for_threshold(threshold)
     }
 
-    pub fn into_json_for_threshold(self, threshold: Uuid) -> Result<JsonStatistic, ApiError> {
+    pub fn into_json_for_threshold(
+        self,
+        threshold: ThresholdUuid,
+    ) -> Result<JsonStatistic, ApiError> {
         let Self {
             uuid,
             test,
@@ -70,7 +62,7 @@ impl QueryStatistic {
             ..
         } = self;
         Ok(JsonStatistic {
-            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
+            uuid,
             threshold,
             test: test.into(),
             min_sample_size: map_sample_size(min_sample_size)?,
@@ -169,7 +161,7 @@ pub fn map_boundary(boundary: Option<f64>) -> Result<Option<Boundary>, ApiError>
 #[derive(diesel::Insertable)]
 #[diesel(table_name = statistic_table)]
 pub struct InsertStatistic {
-    pub uuid: String,
+    pub uuid: StatisticUuid,
     pub threshold_id: ThresholdId,
     pub test: StatisticKind,
     pub min_sample_size: Option<i64>,
@@ -194,7 +186,7 @@ impl From<QueryStatistic> for InsertStatistic {
             ..
         } = query_statistic;
         Self {
-            uuid: Uuid::new_v4().to_string(),
+            uuid: StatisticUuid::new(),
             threshold_id,
             test,
             min_sample_size,
@@ -221,7 +213,7 @@ impl InsertStatistic {
             upper_boundary,
         } = json_statistic;
         Ok(Self {
-            uuid: Uuid::new_v4().to_string(),
+            uuid: StatisticUuid::new(),
             threshold_id,
             test: StatisticKind::from(test),
             min_sample_size: min_sample_size.map(|ss| u32::from(ss).into()),

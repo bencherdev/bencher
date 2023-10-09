@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use bencher_json::{
     project::metric_kind::{
-        JsonUpdateMetricKind, ESTIMATED_CYCLES_NAME_STR, ESTIMATED_CYCLES_SLUG_STR,
+        JsonUpdateMetricKind, MetricKindUuid, ESTIMATED_CYCLES_NAME_STR, ESTIMATED_CYCLES_SLUG_STR,
         INSTRUCTIONS_NAME_STR, INSTRUCTIONS_SLUG_STR, L1_ACCESSES_NAME_STR, L1_ACCESSES_SLUG_STR,
         L2_ACCESSES_NAME_STR, L2_ACCESSES_SLUG_STR, LATENCY_NAME_STR, LATENCY_SLUG_STR,
         RAM_ACCESSES_NAME_STR, RAM_ACCESSES_SLUG_STR, THROUGHPUT_NAME_STR, THROUGHPUT_SLUG_STR,
@@ -12,7 +12,6 @@ use bencher_json::{
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
-use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
@@ -21,7 +20,7 @@ use crate::{
     schema,
     schema::metric_kind as metric_kind_table,
     util::{
-        query::{fn_get, fn_get_id},
+        query::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
         slug::unwrap_child_slug,
         to_date_time,
@@ -40,7 +39,7 @@ fn_resource_id!(metric_kind);
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryMetricKind {
     pub id: MetricKindId,
-    pub uuid: String,
+    pub uuid: MetricKindUuid,
     pub project_id: ProjectId,
     pub name: String,
     pub slug: String,
@@ -52,15 +51,7 @@ pub struct QueryMetricKind {
 impl QueryMetricKind {
     fn_get!(metric_kind);
     fn_get_id!(metric_kind, MetricKindId);
-
-    pub fn get_uuid(conn: &mut DbConnection, id: MetricKindId) -> Result<Uuid, ApiError> {
-        let uuid: String = schema::metric_kind::table
-            .filter(schema::metric_kind::id.eq(id))
-            .select(schema::metric_kind::uuid)
-            .first(conn)
-            .map_err(ApiError::from)?;
-        Uuid::from_str(&uuid).map_err(ApiError::from)
-    }
+    fn_get_uuid!(metric_kind, MetricKindId, MetricKindUuid);
 
     pub fn from_resource_id(
         conn: &mut DbConnection,
@@ -93,8 +84,8 @@ impl QueryMetricKind {
             ..
         } = self;
         Ok(JsonMetricKind {
-            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
-            project: project_uuid.into(),
+            uuid,
+            project: project_uuid,
             name: NonEmpty::from_str(&name).map_err(ApiError::from)?,
             slug: Slug::from_str(&slug).map_err(ApiError::from)?,
             units: NonEmpty::from_str(&units).map_err(ApiError::from)?,
@@ -145,7 +136,7 @@ impl QueryMetricKind {
 #[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = metric_kind_table)]
 pub struct InsertMetricKind {
-    pub uuid: String,
+    pub uuid: MetricKindUuid,
     pub project_id: ProjectId,
     pub name: String,
     pub slug: String,
@@ -171,7 +162,7 @@ impl InsertMetricKind {
         );
         let timestamp = Utc::now().timestamp();
         Self {
-            uuid: Uuid::new_v4().to_string(),
+            uuid: MetricKindUuid::new(),
             project_id,
             name: name.into(),
             slug,

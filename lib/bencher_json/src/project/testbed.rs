@@ -6,7 +6,8 @@ use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+
+use crate::ProjectUuid;
 
 pub const TESTBED_LOCALHOST_STR: &str = "localhost";
 #[allow(clippy::expect_used)]
@@ -23,6 +24,8 @@ static TESTBED_LOCALHOST_SLUG: Lazy<Option<Slug>> = Lazy::new(|| {
             .expect("Failed to parse testbed slug."),
     )
 });
+
+crate::typed_uuid::typed_uuid!(TestbedUuid);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -50,8 +53,8 @@ crate::from_vec!(JsonTestbeds[JsonTestbed]);
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonTestbed {
-    pub uuid: Uuid,
-    pub project: Uuid,
+    pub uuid: TestbedUuid,
+    pub project: ProjectUuid,
     pub name: NonEmpty,
     pub slug: Slug,
     pub created: DateTime<Utc>,

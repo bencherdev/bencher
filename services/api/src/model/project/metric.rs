@@ -1,7 +1,6 @@
-use bencher_json::JsonMetric;
+use bencher_json::{JsonMetric, MetricUuid};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
-use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
@@ -24,7 +23,7 @@ crate::util::typed_id::typed_id!(MetricId);
 #[diesel(belongs_to(QueryMetricKind, foreign_key = metric_kind_id))]
 pub struct QueryMetric {
     pub id: MetricId,
-    pub uuid: String,
+    pub uuid: MetricUuid,
     pub perf_id: PerfId,
     pub metric_kind_id: MetricKindId,
     pub value: f64,
@@ -33,9 +32,9 @@ pub struct QueryMetric {
 }
 
 impl QueryMetric {
-    pub fn from_uuid(conn: &mut DbConnection, uuid: String) -> Result<Self, HttpError> {
+    pub fn from_uuid(conn: &mut DbConnection, uuid: MetricUuid) -> Result<Self, HttpError> {
         schema::metric::table
-            .filter(schema::metric::uuid.eq(&uuid))
+            .filter(schema::metric::uuid.eq(uuid))
             .first::<Self>(conn)
             .map_err(resource_not_found_err!(Metric, uuid))
     }
@@ -96,7 +95,7 @@ impl QueryMetric {
 #[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = metric_table)]
 pub struct InsertMetric {
-    pub uuid: String,
+    pub uuid: MetricUuid,
     pub perf_id: PerfId,
     pub metric_kind_id: MetricKindId,
     pub value: f64,
@@ -112,9 +111,9 @@ impl InsertMetric {
             upper_value,
         } = metric;
         Self {
+            uuid: MetricUuid::new(),
             perf_id,
             metric_kind_id,
-            uuid: Uuid::new_v4().to_string(),
             value: value.into(),
             lower_value: lower_value.map(Into::into),
             upper_value: upper_value.map(Into::into),

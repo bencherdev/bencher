@@ -198,7 +198,7 @@ async fn post_inner(
         .execute(conn)
         .map_err(ApiError::from)?;
 
-    query_organization.into_json()
+    query_organization.into_json().map_err(Into::into)
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -259,6 +259,7 @@ async fn get_one_inner(
         Permission::View,
     )?
     .into_json()
+    .map_err(Into::into)
 }
 
 #[endpoint {
@@ -317,5 +318,7 @@ async fn patch_inner(
         .execute(conn)
         .map_err(ApiError::from)?;
 
-    QueryOrganization::get(conn, query_organization.id)?.into_json()
+    QueryOrganization::get(conn, query_organization.id)?
+        .into_json()
+        .map_err(Into::into)
 }

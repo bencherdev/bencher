@@ -1,13 +1,12 @@
 use bencher_json::{
     project::threshold::{JsonNewThreshold, JsonThreshold, JsonUpdateThreshold},
-    JsonDirection, JsonEmpty, JsonPagination, JsonThresholds, ResourceId,
+    JsonDirection, JsonEmpty, JsonPagination, JsonThresholds, ResourceId, ThresholdUuid,
 };
 use bencher_rbac::project::Permission;
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
-use uuid::Uuid;
 
 use crate::{
     context::ApiContext,
@@ -214,7 +213,7 @@ async fn post_inner(
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjThresholdParams {
     pub project: ResourceId,
-    pub threshold: Uuid,
+    pub threshold: ThresholdUuid,
 }
 
 #[allow(clippy::unused_async)]
@@ -274,7 +273,7 @@ async fn get_one_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     QueryThreshold::belonging_to(&query_project)
-        .filter(schema::threshold::uuid.eq(path_params.threshold.to_string()))
+        .filter(schema::threshold::uuid.eq(path_params.threshold))
         .first::<QueryThreshold>(conn)
         .map_err(ApiError::from)?
         .into_json(conn)
@@ -347,7 +346,7 @@ async fn put_inner(
     diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(query_threshold.id)))
         .set(&UpdateThreshold::new_statistic(
             conn,
-            &insert_statistic.uuid,
+            insert_statistic.uuid,
         )?)
         .execute(conn)
         .map_err(ApiError::from)?;

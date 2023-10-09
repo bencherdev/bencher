@@ -1,8 +1,8 @@
 use bencher_boundary::MetricsBoundary;
+use bencher_json::BoundaryUuid;
 use diesel::RunQueryDsl;
 use dropshot::HttpError;
 use slog::Logger;
-use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
@@ -79,9 +79,9 @@ impl Detector {
         )
         .map_err(bad_request_error)?;
 
-        let boundary_uuid = Uuid::new_v4();
+        let boundary_uuid = BoundaryUuid::new();
         let insert_boundary = InsertBoundary {
-            uuid: boundary_uuid.to_string(),
+            uuid: boundary_uuid,
             threshold_id: self.threshold.id,
             statistic_id: self.threshold.statistic.id,
             metric_id: query_metric.id,

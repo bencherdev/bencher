@@ -2,14 +2,13 @@ use std::str::FromStr;
 
 use bencher_json::{
     project::benchmark::{JsonBenchmarkMetric, JsonNewBenchmark, JsonUpdateBenchmark},
-    BenchmarkName, JsonBenchmark, ResourceId, Slug,
+    BenchmarkName, BenchmarkUuid, JsonBenchmark, ResourceId, Slug,
 };
 use chrono::Utc;
 use diesel::{
     ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
 };
 use dropshot::HttpError;
-use uuid::Uuid;
 
 use super::{
     metric::{MetricId, QueryMetric},
@@ -22,7 +21,7 @@ use crate::{
     schema,
     schema::benchmark as benchmark_table,
     util::{
-        query::{fn_get, fn_get_id},
+        query::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
         slug::unwrap_child_slug,
         to_date_time,
@@ -31,7 +30,6 @@ use crate::{
 };
 
 crate::util::typed_id::typed_id!(BenchmarkId);
-// crate::util::typed_uuid::typed_uuid!(BenchmarkUuid);
 
 fn_resource_id!(benchmark);
 
@@ -40,7 +38,7 @@ fn_resource_id!(benchmark);
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryBenchmark {
     pub id: BenchmarkId,
-    pub uuid: String,
+    pub uuid: BenchmarkUuid,
     pub project_id: ProjectId,
     pub name: String,
     pub slug: String,
@@ -51,6 +49,7 @@ pub struct QueryBenchmark {
 impl QueryBenchmark {
     fn_get!(benchmark);
     fn_get_id!(benchmark, BenchmarkId);
+    fn_get_uuid!(benchmark, BenchmarkId, BenchmarkUuid);
 
     pub fn get_id_from_name(
         conn: &mut DbConnection,
@@ -65,25 +64,16 @@ impl QueryBenchmark {
             .map_err(resource_not_found_err!(Benchmark, name.to_owned()))
     }
 
-    pub fn get_uuid(conn: &mut DbConnection, id: BenchmarkId) -> Result<Uuid, ApiError> {
-        let uuid: String = schema::benchmark::table
-            .filter(schema::benchmark::id.eq(id))
-            .select(schema::benchmark::uuid)
-            .first(conn)
-            .map_err(ApiError::from)?;
-        Uuid::from_str(&uuid).map_err(ApiError::from)
-    }
-
     pub fn from_uuid(
         conn: &mut DbConnection,
         project_id: ProjectId,
-        uuid: Uuid,
-    ) -> Result<Self, ApiError> {
+        uuid: BenchmarkUuid,
+    ) -> Result<Self, HttpError> {
         schema::benchmark::table
             .filter(schema::benchmark::project_id.eq(project_id))
             .filter(schema::benchmark::uuid.eq(uuid.to_string()))
             .first::<Self>(conn)
-            .map_err(ApiError::from)
+            .map_err(resource_not_found_err!(Benchmark, uuid))
     }
 
     pub fn from_resource_id(
@@ -136,8 +126,8 @@ impl QueryBenchmark {
             ..
         } = self;
         Ok(JsonBenchmark {
-            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
-            project: project_uuid.into(),
+            uuid,
+            project: project_uuid,
             name: BenchmarkName::from_str(&name).map_err(ApiError::from)?,
             slug: Slug::from_str(&slug).map_err(ApiError::from)?,
             created: to_date_time(created).map_err(ApiError::from)?,
@@ -212,7 +202,7 @@ impl QueryBenchmark {
 #[derive(diesel::Insertable)]
 #[diesel(table_name = benchmark_table)]
 pub struct InsertBenchmark {
-    pub uuid: String,
+    pub uuid: BenchmarkUuid,
     pub project_id: ProjectId,
     pub name: String,
     pub slug: String,
@@ -235,15 +225,7 @@ impl InsertBenchmark {
             benchmark,
             QueryBenchmark
         );
-        let timestamp = Utc::now().timestamp();
-        Self {
-            uuid: Uuid::new_v4().to_string(),
-            project_id,
-            name: name.into(),
-            slug,
-            created: timestamp,
-            modified: timestamp,
-        }
+        Self::new(project_id, name.into(), slug)
     }
 
     fn from_name(project_id: ProjectId, name: String) -> Self {
@@ -252,9 +234,13 @@ impl InsertBenchmark {
             slug = slug::slugify(&name),
             rand_suffix = rand::random::<u32>()
         );
+        Self::new(project_id, name, slug)
+    }
+
+    fn new(project_id: ProjectId, name: String, slug: String) -> Self {
         let timestamp = Utc::now().timestamp();
         Self {
-            uuid: Uuid::new_v4().to_string(),
+            uuid: BenchmarkUuid::new(),
             project_id,
             name,
             slug,

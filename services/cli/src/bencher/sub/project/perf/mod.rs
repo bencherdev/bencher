@@ -1,10 +1,9 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{JsonPerf, JsonPerfQuery, ResourceId};
+use bencher_json::{BenchmarkUuid, BranchUuid, JsonPerf, JsonPerfQuery, ResourceId, TestbedUuid};
 use chrono::{DateTime, Utc};
 use tabled::Table;
-use uuid::Uuid;
 
 use crate::{bencher::backend::Backend, cli_println, parser::project::perf::CliPerf, CliError};
 
@@ -19,9 +18,9 @@ use table_style::TableStyle;
 pub struct Perf {
     project: ResourceId,
     metric_kind: ResourceId,
-    branches: Vec<Uuid>,
-    testbeds: Vec<Uuid>,
-    benchmarks: Vec<Uuid>,
+    branches: Vec<BranchUuid>,
+    testbeds: Vec<TestbedUuid>,
+    benchmarks: Vec<BenchmarkUuid>,
     start_time: Option<DateTime<Utc>>,
     end_time: Option<DateTime<Utc>>,
     table: Option<Option<TableStyle>>,

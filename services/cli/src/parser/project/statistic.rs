@@ -1,6 +1,5 @@
-use bencher_json::ResourceId;
+use bencher_json::{ResourceId, StatisticUuid};
 use clap::{Parser, Subcommand};
-use uuid::Uuid;
 
 use crate::parser::CliBackend;
 
@@ -18,7 +17,7 @@ pub struct CliStatisticView {
     pub project: ResourceId,
 
     /// Statistic UUID
-    pub statistic: Uuid,
+    pub statistic: StatisticUuid,
 
     #[clap(flatten)]
     pub backend: CliBackend,

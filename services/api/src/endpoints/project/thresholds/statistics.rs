@@ -1,9 +1,8 @@
-use bencher_json::{project::threshold::JsonStatistic, ResourceId};
+use bencher_json::{project::threshold::JsonStatistic, ResourceId, StatisticUuid};
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
 use dropshot::{endpoint, HttpError, Path, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
-use uuid::Uuid;
 
 use crate::{
     context::ApiContext,
@@ -25,7 +24,7 @@ const STATISTIC_RESOURCE: Resource = Resource::Statistic;
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjStatisticParams {
     pub project: ResourceId,
-    pub statistic: Uuid,
+    pub statistic: StatisticUuid,
 }
 
 #[allow(clippy::unused_async)]
@@ -89,7 +88,7 @@ async fn get_one_inner(
             schema::threshold::table.on(schema::statistic::threshold_id.eq(schema::threshold::id)),
         )
         .filter(schema::threshold::project_id.eq(query_project.id))
-        .filter(schema::statistic::uuid.eq(path_params.statistic.to_string()))
+        .filter(schema::statistic::uuid.eq(path_params.statistic))
         .select(QueryStatistic::as_select())
         .first(conn)
         .map_err(ApiError::from)?

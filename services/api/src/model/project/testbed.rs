@@ -2,12 +2,11 @@ use std::str::FromStr;
 
 use bencher_json::{
     project::testbed::{JsonUpdateTestbed, TESTBED_LOCALHOST_STR},
-    JsonNewTestbed, JsonTestbed, NonEmpty, ResourceId, Slug,
+    JsonNewTestbed, JsonTestbed, NonEmpty, ResourceId, Slug, TestbedUuid,
 };
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
-use uuid::Uuid;
 
 use super::{ProjectId, QueryProject};
 use crate::{
@@ -16,7 +15,7 @@ use crate::{
     schema,
     schema::testbed as testbed_table,
     util::{
-        query::{fn_get, fn_get_id},
+        query::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
         slug::unwrap_child_slug,
         to_date_time,
@@ -33,7 +32,7 @@ fn_resource_id!(testbed);
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryTestbed {
     pub id: TestbedId,
-    pub uuid: String,
+    pub uuid: TestbedUuid,
     pub project_id: ProjectId,
     pub name: String,
     pub slug: String,
@@ -44,26 +43,18 @@ pub struct QueryTestbed {
 impl QueryTestbed {
     fn_get!(testbed);
     fn_get_id!(testbed, TestbedId);
-
-    pub fn get_uuid(conn: &mut DbConnection, id: TestbedId) -> Result<Uuid, ApiError> {
-        let uuid: String = schema::testbed::table
-            .filter(schema::testbed::id.eq(id))
-            .select(schema::testbed::uuid)
-            .first(conn)
-            .map_err(ApiError::from)?;
-        Uuid::from_str(&uuid).map_err(ApiError::from)
-    }
+    fn_get_uuid!(testbed, TestbedId, TestbedUuid);
 
     pub fn from_uuid(
         conn: &mut DbConnection,
         project_id: ProjectId,
-        uuid: Uuid,
-    ) -> Result<Self, ApiError> {
+        uuid: TestbedUuid,
+    ) -> Result<Self, HttpError> {
         schema::testbed::table
             .filter(schema::testbed::project_id.eq(project_id))
             .filter(schema::testbed::uuid.eq(uuid.to_string()))
             .first::<Self>(conn)
-            .map_err(ApiError::from)
+            .map_err(resource_not_found_err!(Testbed, uuid))
     }
 
     pub fn from_resource_id(
@@ -89,8 +80,8 @@ impl QueryTestbed {
             ..
         } = self;
         Ok(JsonTestbed {
-            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
-            project: QueryProject::get_uuid(conn, project_id)?.into(),
+            uuid,
+            project: QueryProject::get_uuid(conn, project_id)?,
             name: NonEmpty::from_str(&name)?,
             slug: Slug::from_str(&slug).map_err(ApiError::from)?,
             created: to_date_time(created).map_err(ApiError::from)?,
@@ -107,7 +98,7 @@ impl QueryTestbed {
 #[derive(diesel::Insertable)]
 #[diesel(table_name = testbed_table)]
 pub struct InsertTestbed {
-    pub uuid: String,
+    pub uuid: TestbedUuid,
     pub project_id: ProjectId,
     pub name: String,
     pub slug: String,
@@ -125,7 +116,7 @@ impl InsertTestbed {
         let slug = unwrap_child_slug!(conn, project_id, name.as_ref(), slug, testbed, QueryTestbed);
         let timestamp = Utc::now().timestamp();
         Self {
-            uuid: Uuid::new_v4().to_string(),
+            uuid: TestbedUuid::new(),
             project_id,
             name: name.into(),
             slug,

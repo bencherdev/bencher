@@ -4,13 +4,14 @@ use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 pub mod member;
 #[cfg(feature = "plus")]
 pub mod plan;
 #[cfg(feature = "plus")]
 pub mod usage;
+
+crate::typed_uuid::typed_uuid!(OrganizationUuid);
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -29,7 +30,7 @@ crate::from_vec!(JsonOrganizations[JsonOrganization]);
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonOrganization {
-    pub uuid: Uuid,
+    pub uuid: OrganizationUuid,
     pub name: NonEmpty,
     pub slug: Slug,
     pub created: DateTime<Utc>,

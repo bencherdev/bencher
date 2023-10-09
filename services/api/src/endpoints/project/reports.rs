@@ -2,7 +2,8 @@ use std::collections::HashMap;
 
 use bencher_json::{
     project::report::{JsonReportQuery, JsonReportQueryParams},
-    JsonDirection, JsonEmpty, JsonNewReport, JsonPagination, JsonReport, JsonReports, ResourceId,
+    JsonDirection, JsonEmpty, JsonNewReport, JsonPagination, JsonReport, JsonReports, ReportUuid,
+    ResourceId,
 };
 use bencher_rbac::project::Permission;
 use diesel::{
@@ -13,7 +14,6 @@ use http::StatusCode;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use slog::Logger;
-use uuid::Uuid;
 
 use crate::{
     context::ApiContext,
@@ -459,7 +459,7 @@ mod plan_kind {
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjReportParams {
     pub project: ResourceId,
-    pub report: Uuid,
+    pub report: ReportUuid,
 }
 
 #[allow(clippy::unused_async)]

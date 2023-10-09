@@ -3,7 +3,7 @@ use std::string::ToString;
 
 use bencher_json::{
     organization::JsonUpdateOrganization, JsonNewOrganization, JsonOrganization, NonEmpty,
-    ResourceId, Slug,
+    OrganizationUuid, ResourceId, Slug,
 };
 use bencher_rbac::Organization;
 use chrono::Utc;
@@ -12,7 +12,7 @@ use dropshot::HttpError;
 
 use crate::{
     context::{DbConnection, Rbac},
-    error::resource_not_found_err,
+    error::{forbidden_error, resource_not_found_err},
     model::user::{auth::AuthUser, InsertUser},
     schema::{self, organization as organization_table},
     util::{
@@ -28,7 +28,6 @@ pub mod member;
 pub mod organization_role;
 
 crate::util::typed_id::typed_id!(OrganizationId);
-crate::util::typed_uuid::typed_uuid!(OrganizationUuid);
 
 #[derive(diesel::Insertable)]
 #[diesel(table_name = organization_table)]
@@ -98,7 +97,7 @@ impl QueryOrganization {
     ) -> Result<Self, HttpError> {
         schema::organization::table
             .filter(resource_id(organization)?)
-            .first::<QueryOrganization>(conn)
+            .first::<Self>(conn)
             .map_err(resource_not_found_err!(Organization, organization.clone()))
     }
 
@@ -186,11 +185,10 @@ impl QueryOrganization {
         organization: &ResourceId,
         auth_user: &AuthUser,
         permission: bencher_rbac::organization::Permission,
-    ) -> Result<Self, ApiError> {
-        let query_organization = QueryOrganization::from_resource_id(conn, organization)?;
-
-        rbac.is_allowed_organization(auth_user, permission, &query_organization)?;
-
+    ) -> Result<Self, HttpError> {
+        let query_organization = Self::from_resource_id(conn, organization)?;
+        rbac.is_allowed_organization(auth_user, permission, &query_organization)
+            .map_err(forbidden_error)?;
         Ok(query_organization)
     }
 
@@ -200,18 +198,14 @@ impl QueryOrganization {
         organization_id: OrganizationId,
         auth_user: &AuthUser,
         permission: bencher_rbac::organization::Permission,
-    ) -> Result<Self, ApiError> {
-        let query_organization = schema::organization::table
-            .filter(schema::organization::id.eq(organization_id))
-            .first(conn)
-            .map_err(ApiError::from)?;
-
-        rbac.is_allowed_organization(auth_user, permission, &query_organization)?;
-
+    ) -> Result<Self, HttpError> {
+        let query_organization = Self::get(conn, organization_id)?;
+        rbac.is_allowed_organization(auth_user, permission, &query_organization)
+            .map_err(forbidden_error)?;
         Ok(query_organization)
     }
 
-    pub fn into_json(self) -> Result<JsonOrganization, ApiError> {
+    pub fn into_json(self) -> Result<JsonOrganization, HttpError> {
         let Self {
             uuid,
             name,
@@ -221,7 +215,7 @@ impl QueryOrganization {
             ..
         } = self;
         Ok(JsonOrganization {
-            uuid: uuid.into(),
+            uuid,
             name: NonEmpty::from_str(&name).map_err(ApiError::from)?,
             slug: Slug::from_str(&slug).map_err(ApiError::from)?,
             created: to_date_time(created).map_err(ApiError::from)?,

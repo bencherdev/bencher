@@ -1,13 +1,13 @@
-use std::str::FromStr;
-
-use bencher_json::project::{
-    alert::{JsonAlert, JsonAlertStatus, JsonPerfAlert, JsonUpdateAlert},
-    boundary::JsonLimit,
+use bencher_json::{
+    project::{
+        alert::{JsonAlert, JsonAlertStatus, JsonPerfAlert, JsonUpdateAlert},
+        boundary::JsonLimit,
+    },
+    AlertUuid, BoundaryUuid, ReportUuid,
 };
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
 use dropshot::HttpError;
-use uuid::Uuid;
 
 use super::{
     boundary::{BoundaryId, QueryBoundary},
@@ -15,14 +15,14 @@ use super::{
 };
 use crate::{
     context::DbConnection,
-    error::resource_insert_err,
+    error::{resource_insert_err, resource_not_found_err},
     model::project::{
         benchmark::QueryBenchmark, metric::QueryMetric, ProjectId, ProjectUuid, QueryProject,
     },
     schema::alert as alert_table,
     schema::{self},
     util::{
-        query::{fn_get, fn_get_id},
+        query::{fn_get, fn_get_id, fn_get_uuid},
         to_date_time,
     },
     ApiError,
@@ -34,7 +34,7 @@ crate::util::typed_id::typed_id!(AlertId);
 #[diesel(table_name = alert_table)]
 pub struct QueryAlert {
     pub id: AlertId,
-    pub uuid: String,
+    pub uuid: AlertUuid,
     pub boundary_id: BoundaryId,
     pub boundary_limit: Limit,
     pub status: Status,
@@ -44,21 +44,13 @@ pub struct QueryAlert {
 impl QueryAlert {
     fn_get!(alert);
     fn_get_id!(alert, AlertId);
-
-    pub fn get_uuid(conn: &mut DbConnection, id: AlertId) -> Result<Uuid, ApiError> {
-        let uuid: String = schema::alert::table
-            .filter(schema::alert::id.eq(id))
-            .select(schema::alert::uuid)
-            .first(conn)
-            .map_err(ApiError::from)?;
-        Uuid::from_str(&uuid).map_err(ApiError::from)
-    }
+    fn_get_uuid!(alert, AlertId, AlertUuid);
 
     pub fn from_uuid(
         conn: &mut DbConnection,
         project_id: ProjectId,
-        uuid: Uuid,
-    ) -> Result<Self, ApiError> {
+        uuid: AlertUuid,
+    ) -> Result<Self, HttpError> {
         schema::alert::table
             .filter(schema::alert::uuid.eq(uuid.to_string()))
             .inner_join(
@@ -70,11 +62,11 @@ impl QueryAlert {
             .filter(schema::benchmark::project_id.eq(project_id))
             .select(QueryAlert::as_select())
             .first(conn)
-            .map_err(ApiError::from)
+            .map_err(resource_not_found_err!(Alert, uuid))
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonAlert, ApiError> {
-        let (report, iteration, query_benchmark, query_metric, query_boundary) =
+        let (report_uuid, iteration, query_benchmark, query_metric, query_boundary) =
             schema::alert::table
                 .filter(schema::alert::id.eq(self.id))
                 .inner_join(
@@ -93,13 +85,13 @@ impl QueryAlert {
                     QueryMetric::as_select(),
                     QueryBoundary::as_select(),
                 ))
-                .first::<(String, i32, QueryBenchmark, QueryMetric, QueryBoundary)>(conn)
+                .first::<(ReportUuid, i32, QueryBenchmark, QueryMetric, QueryBoundary)>(conn)
                 .map_err(ApiError::from)?;
-        let project = QueryProject::get_uuid(conn, query_benchmark.project_id)?;
+        let project_uuid = QueryProject::get_uuid(conn, query_benchmark.project_id)?;
         self.into_json_for_report(
             conn,
-            project,
-            report,
+            project_uuid,
+            report_uuid,
             iteration,
             query_benchmark,
             query_metric,
@@ -112,7 +104,7 @@ impl QueryAlert {
         self,
         conn: &mut DbConnection,
         project_uuid: ProjectUuid,
-        report: String,
+        report_uuid: ReportUuid,
         iteration: i32,
         query_benchmark: QueryBenchmark,
         query_metric: QueryMetric,
@@ -125,7 +117,6 @@ impl QueryAlert {
             modified,
             ..
         } = self;
-        let report = Uuid::from_str(&report).map_err(ApiError::from)?;
         let threshold_id = query_boundary.threshold_id;
         let statistic_id = query_boundary.statistic_id;
         let benchmark = query_benchmark.into_benchmark_metric_json_for_project(
@@ -134,8 +125,8 @@ impl QueryAlert {
             Some(query_boundary),
         )?;
         Ok(JsonAlert {
-            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
-            report,
+            uuid,
+            report: report_uuid,
             iteration: u32::try_from(iteration).map_err(ApiError::from)?,
             threshold: QueryThreshold::get_json(conn, threshold_id, statistic_id)?,
             benchmark,
@@ -154,7 +145,7 @@ impl QueryAlert {
             ..
         } = self;
         Ok(JsonPerfAlert {
-            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
+            uuid,
             limit: boundary_limit.into(),
             status: status.into(),
             modified: to_date_time(modified)?,
@@ -297,7 +288,7 @@ where
 #[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = alert_table)]
 pub struct InsertAlert {
-    pub uuid: String,
+    pub uuid: AlertUuid,
     pub boundary_id: BoundaryId,
     pub boundary_limit: Limit,
     pub status: Status,
@@ -307,12 +298,12 @@ pub struct InsertAlert {
 impl InsertAlert {
     pub fn from_boundary(
         conn: &mut DbConnection,
-        boundary: Uuid,
+        boundary_uuid: BoundaryUuid,
         boundary_limit: Limit,
     ) -> Result<(), HttpError> {
         let insert_alert = InsertAlert {
-            uuid: Uuid::new_v4().to_string(),
-            boundary_id: QueryBoundary::get_id(conn, &boundary)?,
+            uuid: AlertUuid::new(),
+            boundary_id: QueryBoundary::get_id(conn, &boundary_uuid)?,
             boundary_limit,
             status: Status::default(),
             modified: Utc::now().timestamp(),

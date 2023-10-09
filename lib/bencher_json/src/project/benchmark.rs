@@ -5,11 +5,12 @@ use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
-use crate::JsonMetric;
+use crate::{JsonMetric, ProjectUuid};
 
 use super::boundary::JsonBoundary;
+
+crate::typed_uuid::typed_uuid!(BenchmarkUuid);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -21,8 +22,8 @@ crate::from_vec!(JsonBenchmarks[JsonBenchmark]);
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBenchmark {
-    pub uuid: Uuid,
-    pub project: Uuid,
+    pub uuid: BenchmarkUuid,
+    pub project: ProjectUuid,
     pub name: BenchmarkName,
     pub slug: Slug,
     pub created: DateTime<Utc>,
@@ -39,8 +40,8 @@ impl fmt::Display for JsonBenchmark {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBenchmarkMetric {
-    pub uuid: Uuid,
-    pub project: Uuid,
+    pub uuid: BenchmarkUuid,
+    pub project: ProjectUuid,
     pub name: BenchmarkName,
     pub slug: Slug,
     pub metric: JsonMetric,

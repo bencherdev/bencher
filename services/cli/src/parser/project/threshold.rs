@@ -1,6 +1,5 @@
-use bencher_json::ResourceId;
+use bencher_json::{ResourceId, ThresholdUuid};
 use clap::{Parser, Subcommand, ValueEnum};
-use uuid::Uuid;
 
 use crate::parser::{CliBackend, CliPagination};
 
@@ -113,7 +112,7 @@ pub struct CliThresholdView {
     pub project: ResourceId,
 
     /// Threshold UUID
-    pub threshold: Uuid,
+    pub threshold: ThresholdUuid,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -126,7 +125,7 @@ pub struct CliThresholdUpdate {
     pub project: ResourceId,
 
     /// Threshold UUID
-    pub threshold: Uuid,
+    pub threshold: ThresholdUuid,
 
     #[clap(flatten)]
     pub statistic: CliStatisticCreate,
@@ -142,7 +141,7 @@ pub struct CliThresholdDelete {
     pub project: ResourceId,
 
     /// Threshold UUID
-    pub threshold: Uuid,
+    pub threshold: ThresholdUuid,
 
     #[clap(flatten)]
     pub backend: CliBackend,

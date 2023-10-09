@@ -6,7 +6,8 @@ use bencher_json::{
         branch::JsonVersion,
         perf::{JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
     },
-    GitHash, JsonBenchmark, JsonBranch, JsonPerf, JsonPerfQuery, JsonTestbed, ResourceId,
+    GitHash, JsonBenchmark, JsonBranch, JsonPerf, JsonPerfQuery, JsonTestbed, ProjectUuid,
+    ReportUuid, ResourceId,
 };
 use diesel::{
     ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
@@ -14,7 +15,6 @@ use diesel::{
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
-use uuid::Uuid;
 
 use crate::{
     context::{ApiContext, DbConnection},
@@ -31,7 +31,7 @@ use crate::{
         threshold::{
             alert::QueryAlert, boundary::QueryBoundary, statistic::QueryStatistic, QueryThreshold,
         },
-        ProjectUuid, QueryProject,
+        QueryProject,
     },
     model::user::auth::AuthUser,
     schema,
@@ -280,7 +280,7 @@ struct Times {
 }
 
 type PerfQuery = (
-    String,
+    ReportUuid,
     i32,
     i64,
     i64,
@@ -432,7 +432,7 @@ fn perf_query(
 fn perf_metric(
     project_uuid: ProjectUuid,
     (
-        report,
+        report_uuid,
         iteration,
         start_time,
         end_time,
@@ -472,7 +472,7 @@ fn perf_metric(
         };
 
     Some(JsonPerfMetric {
-        report: Uuid::from_str(&report).ok()?,
+        report: report_uuid,
         iteration: u32::try_from(iteration).ok()?,
         start_time: to_date_time(start_time).ok()?,
         end_time: to_date_time(end_time).ok()?,

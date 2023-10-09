@@ -15,6 +15,7 @@ pub mod organization;
 pub mod pagination;
 pub mod project;
 pub mod system;
+pub(crate) mod typed_uuid;
 pub mod urlencoded;
 pub mod user;
 
@@ -24,20 +25,24 @@ pub use organization::{plan::JsonPlan, usage::JsonUsage};
 pub use big_int::BigInt;
 pub use organization::{
     member::{JsonMember, JsonMembers},
-    JsonNewOrganization, JsonOrganization, JsonOrganizations,
+    JsonNewOrganization, JsonOrganization, JsonOrganizations, OrganizationUuid,
 };
 pub use pagination::{JsonDirection, JsonPagination};
 pub use project::{
-    alert::{JsonAlert, JsonAlertStats, JsonAlerts},
-    benchmark::{JsonBenchmark, JsonBenchmarks},
-    branch::{JsonBranch, JsonBranches, JsonNewBranch},
-    metric::JsonMetric,
+    alert::{AlertUuid, JsonAlert, JsonAlertStats, JsonAlerts},
+    benchmark::{BenchmarkUuid, JsonBenchmark, JsonBenchmarks},
+    boundary::{BoundaryUuid, JsonBoundaries, JsonBoundary},
+    branch::{BranchUuid, JsonBranch, JsonBranches, JsonNewBranch, VersionUuid},
+    metric::{JsonMetric, MetricUuid},
     metric_kind::{JsonMetricKind, JsonMetricKinds, JsonNewMetricKind},
-    perf::{JsonPerf, JsonPerfQuery},
-    report::{JsonNewReport, JsonReport, JsonReports},
-    testbed::{JsonNewTestbed, JsonTestbed, JsonTestbeds},
-    threshold::{JsonNewThreshold, JsonStatistic, JsonThreshold, JsonThresholds},
-    JsonNewProject, JsonProject, JsonProjects,
+    perf::{JsonPerf, JsonPerfQuery, PerfUuid},
+    report::{JsonNewReport, JsonReport, JsonReports, ReportUuid},
+    testbed::{JsonNewTestbed, JsonTestbed, JsonTestbeds, TestbedUuid},
+    threshold::{
+        JsonNewThreshold, JsonStatistic, JsonThreshold, JsonThresholds, StatisticUuid,
+        ThresholdUuid,
+    },
+    JsonNewProject, JsonProject, JsonProjects, ProjectUuid,
 };
 pub use system::{
     auth::{JsonAuthToken, JsonAuthUser, JsonLogin, JsonSignup},

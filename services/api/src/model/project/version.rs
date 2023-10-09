@@ -1,17 +1,13 @@
-use std::str::FromStr;
-
-use bencher_json::GitHash;
+use bencher_json::{GitHash, VersionUuid};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
-use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
     error::resource_insert_err,
     schema,
     schema::version as version_table,
-    util::query::{fn_get, fn_get_id},
-    ApiError,
+    util::query::{fn_get, fn_get_id, fn_get_uuid},
 };
 
 use super::{branch::BranchId, branch_version::InsertBranchVersion, ProjectId, QueryProject};
@@ -23,7 +19,7 @@ crate::util::typed_id::typed_id!(VersionId);
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryVersion {
     pub id: VersionId,
-    pub uuid: String,
+    pub uuid: VersionUuid,
     pub project_id: ProjectId,
     pub number: i32,
     pub hash: Option<String>,
@@ -32,15 +28,7 @@ pub struct QueryVersion {
 impl QueryVersion {
     fn_get!(version);
     fn_get_id!(version, VersionId);
-
-    pub fn get_uuid(conn: &mut DbConnection, id: VersionId) -> Result<Uuid, ApiError> {
-        let uuid: String = schema::version::table
-            .filter(schema::version::id.eq(id))
-            .select(schema::version::uuid)
-            .first(conn)
-            .map_err(ApiError::from)?;
-        Uuid::from_str(&uuid).map_err(ApiError::from)
-    }
+    fn_get_uuid!(version, VersionId, VersionUuid);
 
     pub fn get_or_increment(
         conn: &mut DbConnection,
@@ -70,7 +58,7 @@ impl QueryVersion {
 #[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = version_table)]
 pub struct InsertVersion {
-    pub uuid: String,
+    pub uuid: VersionUuid,
     pub project_id: ProjectId,
     pub number: i32,
     pub hash: Option<String>,
@@ -97,9 +85,9 @@ impl InsertVersion {
             0
         };
 
-        let uuid = Uuid::new_v4();
+        let version_uuid = VersionUuid::new();
         let insert_version = InsertVersion {
-            uuid: uuid.to_string(),
+            uuid: version_uuid,
             project_id,
             number,
             hash: hash.map(Into::into),
@@ -110,7 +98,7 @@ impl InsertVersion {
             .execute(conn)
             .map_err(resource_insert_err!(Version, insert_version))?;
 
-        let version_id = QueryVersion::get_id(conn, &uuid)?;
+        let version_id = QueryVersion::get_id(conn, &version_uuid)?;
 
         let insert_branch_version = InsertBranchVersion {
             branch_id,

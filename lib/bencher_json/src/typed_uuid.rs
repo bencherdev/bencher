@@ -1,6 +1,7 @@
 macro_rules! typed_uuid {
     ($name:ident) => {
         // https://github.com/diesel-rs/diesel/blob/master/diesel_tests/tests/custom_types.rs
+        #[typeshare::typeshare]
         #[derive(
             Debug,
             Clone,
@@ -12,10 +13,10 @@ macro_rules! typed_uuid {
             derive_more::Display,
             serde::Serialize,
             serde::Deserialize,
-            diesel::FromSqlRow,
-            diesel::AsExpression,
         )]
-        #[diesel(sql_type = diesel::sql_types::Text)]
+        #[cfg_attr(feature = "schema", derive(JsonSchema))]
+        #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+        #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
         #[allow(unused_qualifications)]
         pub struct $name(uuid::Uuid);
 
@@ -34,12 +35,21 @@ macro_rules! typed_uuid {
         }
 
         #[allow(unused_qualifications)]
-        impl From<$name> for bencher_json::ResourceId {
+        impl From<$name> for crate::ResourceId {
             fn from(uuid: $name) -> Self {
                 uuid.0.into()
             }
         }
 
+        impl std::str::FromStr for $name {
+            type Err = uuid::Error;
+
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                Ok(Self(uuid::Uuid::parse_str(s)?))
+            }
+        }
+
+        #[cfg(feature = "db")]
         impl<DB> diesel::serialize::ToSql<diesel::sql_types::Text, DB> for $name
         where
             DB: diesel::backend::Backend,
@@ -58,6 +68,7 @@ macro_rules! typed_uuid {
             }
         }
 
+        #[cfg(feature = "db")]
         impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Text, DB> for $name
         where
             DB: diesel::backend::Backend,

@@ -3,9 +3,11 @@ use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
-use crate::{JsonBranch, JsonMetricKind, JsonTestbed, ResourceId};
+use crate::{JsonBranch, JsonMetricKind, JsonTestbed, ProjectUuid, ResourceId};
+
+crate::typed_uuid::typed_uuid!(ThresholdUuid);
+crate::typed_uuid::typed_uuid!(StatisticUuid);
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -62,8 +64,8 @@ crate::from_vec!(JsonThresholds[JsonThreshold]);
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonThreshold {
-    pub uuid: Uuid,
-    pub project: Uuid,
+    pub uuid: ThresholdUuid,
+    pub project: ProjectUuid,
     pub metric_kind: JsonMetricKind,
     pub branch: JsonBranch,
     pub testbed: JsonTestbed,
@@ -76,8 +78,8 @@ pub struct JsonThreshold {
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonStatistic {
-    pub uuid: Uuid,
-    pub threshold: Uuid,
+    pub uuid: StatisticUuid,
+    pub threshold: ThresholdUuid,
     pub test: JsonStatisticKind,
     pub min_sample_size: Option<SampleSize>,
     pub max_sample_size: Option<SampleSize>,
@@ -100,8 +102,8 @@ pub enum JsonStatisticKind {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonThresholdStatistic {
-    pub uuid: Uuid,
-    pub project: Uuid,
+    pub uuid: ThresholdUuid,
+    pub project: ProjectUuid,
     pub statistic: JsonStatistic,
     pub created: DateTime<Utc>,
 }

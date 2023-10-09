@@ -1,12 +1,11 @@
 use std::{collections::BTreeMap, time::Duration};
 
 use bencher_json::{
-    project::threshold::JsonThresholdStatistic, BenchmarkName, JsonPerfQuery, JsonReport, NonEmpty,
-    Slug,
+    project::threshold::JsonThresholdStatistic, AlertUuid, BenchmarkName, BenchmarkUuid,
+    BranchUuid, JsonPerfQuery, JsonReport, NonEmpty, Slug, TestbedUuid,
 };
 use chrono::{DateTime, Utc};
 use url::Url;
-use uuid::Uuid;
 
 pub struct ReportUrls {
     endpoint_url: Url,
@@ -311,8 +310,8 @@ impl BenchmarkUrls {
 struct BenchmarkUrl {
     endpoint: Url,
     project_slug: Slug,
-    branch: Uuid,
-    testbed: Uuid,
+    branch: BranchUuid,
+    testbed: TestbedUuid,
     start_time: DateTime<Utc>,
     end_time: DateTime<Utc>,
 }
@@ -324,8 +323,8 @@ impl BenchmarkUrl {
     fn new(
         endpoint: Url,
         project_slug: Slug,
-        branch: Uuid,
-        testbed: Uuid,
+        branch: BranchUuid,
+        testbed: TestbedUuid,
         start_time: DateTime<Utc>,
         end_time: DateTime<Utc>,
     ) -> Self {
@@ -339,7 +338,12 @@ impl BenchmarkUrl {
         }
     }
 
-    fn to_url(&self, metric_kind: Slug, benchmark: Uuid, boundary: Option<BoundaryParam>) -> Url {
+    fn to_url(
+        &self,
+        metric_kind: Slug,
+        benchmark: BenchmarkUuid,
+        boundary: Option<BoundaryParam>,
+    ) -> Url {
         let json_perf_query = JsonPerfQuery {
             metric_kind: metric_kind.into(),
             branches: vec![self.branch],
@@ -420,7 +424,7 @@ impl AlertUrls {
         Self(urls)
     }
 
-    fn to_url(mut endpoint: Url, project_slug: &Slug, alert: Uuid) -> Url {
+    fn to_url(mut endpoint: Url, project_slug: &Slug, alert: AlertUuid) -> Url {
         endpoint.set_path(&format!("/console/projects/{project_slug}/alerts/{alert}"));
         endpoint
     }

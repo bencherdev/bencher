@@ -2,10 +2,8 @@ use std::{convert::TryFrom, str::FromStr};
 
 use bencher_client::types::{JsonNewBranch, JsonStartPoint};
 use bencher_json::{
-    project::branch::BRANCH_MAIN_STR, BranchName, JsonBranch, JsonBranches, ResourceId,
+    project::branch::BRANCH_MAIN_STR, BranchName, BranchUuid, JsonBranch, JsonBranches, ResourceId,
 };
-
-use uuid::Uuid;
 
 use crate::{bencher::backend::Backend, cli_println, parser::project::run::CliRunBranch};
 
@@ -118,7 +116,7 @@ async fn if_branch(
     create: bool,
     dry_run: bool,
     backend: &Backend,
-) -> Result<Option<Uuid>, BranchError> {
+) -> Result<Option<BranchUuid>, BranchError> {
     let branch = get_branch(project, branch_name, backend).await?;
 
     if branch.is_some() {
@@ -156,7 +154,7 @@ async fn if_branch(
     Ok(if create {
         // If we're just doing a dry run, we don't need to actually create the branch
         Some(if dry_run {
-            Uuid::new_v4()
+            BranchUuid::new()
         } else {
             create_branch(project, branch_name, None, backend).await?
         })
@@ -169,7 +167,7 @@ async fn get_branch(
     project: &ResourceId,
     branch_name: &BranchName,
     backend: &Backend,
-) -> Result<Option<Uuid>, BranchError> {
+) -> Result<Option<BranchUuid>, BranchError> {
     let json_branches: JsonBranches = backend
         .send_with(
             |client| async move {
@@ -207,7 +205,7 @@ async fn create_branch(
     branch_name: &BranchName,
     start_point: Option<ResourceId>,
     backend: &Backend,
-) -> Result<Uuid, BranchError> {
+) -> Result<BranchUuid, BranchError> {
     // Default to cloning the thresholds from the start point branch
     let start_point = start_point.map(|branch| JsonStartPoint {
         branch: branch.into(),

@@ -788,6 +788,7 @@ dependencies = [
  "bencher_valid",
  "chrono",
  "derive_more",
+ "diesel",
  "once_cell",
  "ordered-float",
  "percent-encoding",

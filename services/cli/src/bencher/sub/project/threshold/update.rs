@@ -2,8 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::JsonUpdateThreshold;
-use bencher_json::{JsonThreshold, ResourceId};
-use uuid::Uuid;
+use bencher_json::{JsonThreshold, ResourceId, ThresholdUuid};
 
 use super::statistic::Statistic;
 use crate::{
@@ -15,7 +14,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Update {
     pub project: ResourceId,
-    pub threshold: Uuid,
+    pub threshold: ThresholdUuid,
     pub statistic: Statistic,
     pub backend: Backend,
 }

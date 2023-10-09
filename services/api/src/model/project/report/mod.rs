@@ -1,15 +1,12 @@
-use std::str::FromStr;
-
 use bencher_json::{
     project::report::{JsonAdapter, JsonReportAlerts, JsonReportResult, JsonReportResults},
-    JsonNewReport, JsonReport,
+    JsonNewReport, JsonReport, ReportUuid,
 };
 use chrono::Utc;
 use diesel::{
     ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
 };
 use slog::Logger;
-use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
@@ -29,7 +26,10 @@ use crate::{
     },
     schema,
     schema::report as report_table,
-    util::{query::fn_get_id, to_date_time},
+    util::{
+        query::{fn_get_id, fn_get_uuid},
+        to_date_time,
+    },
     ApiError,
 };
 
@@ -47,7 +47,7 @@ crate::util::typed_id::typed_id!(ReportId);
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryReport {
     pub id: ReportId,
-    pub uuid: String,
+    pub uuid: ReportUuid,
     pub user_id: UserId,
     pub project_id: ProjectId,
     pub branch_id: BranchId,
@@ -61,15 +61,7 @@ pub struct QueryReport {
 
 impl QueryReport {
     fn_get_id!(report, ReportId);
-
-    pub fn get_uuid(conn: &mut DbConnection, id: ReportId) -> Result<Uuid, ApiError> {
-        let uuid: String = schema::report::table
-            .filter(schema::report::id.eq(id))
-            .select(schema::report::uuid)
-            .first(conn)
-            .map_err(ApiError::from)?;
-        Uuid::from_str(&uuid).map_err(ApiError::from)
-    }
+    fn_get_uuid!(report, ReportId, ReportUuid);
 
     pub fn into_json(self, log: &Logger, conn: &mut DbConnection) -> Result<JsonReport, ApiError> {
         let Self {
@@ -91,7 +83,7 @@ impl QueryReport {
         let alerts = get_report_alerts(conn, query_project.uuid, id)?;
 
         Ok(JsonReport {
-            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
+            uuid,
             user: QueryUser::get(conn, user_id)?.into_json()?,
             project: query_project.into_json(conn)?,
             branch: QueryBranch::get_branch_version_json(conn, branch_id, version_id)?,
@@ -215,7 +207,7 @@ fn into_report_results_json(
         // If there is a current report result, make sure that the metric kind is the same.
         // Otherwise, add it to the report iteration list.
         if let Some(result) = report_result.take() {
-            if query_metric_kind.uuid == result.metric_kind.uuid.to_string() {
+            if query_metric_kind.uuid == result.metric_kind.uuid {
                 report_result = Some(result);
             } else {
                 slog::trace!(
@@ -290,7 +282,7 @@ fn get_report_alerts(
             QueryBoundary::as_select(),
         ))
         .load::<(
-            String,
+            ReportUuid,
             i32,
             QueryAlert,
             QueryBenchmark,
@@ -300,11 +292,13 @@ fn get_report_alerts(
         .map_err(ApiError::from)?;
 
     let mut report_alerts = Vec::new();
-    for (report, iteration, query_alert, query_benchmark, query_metric, query_boundary) in alerts {
+    for (report_uuid, iteration, query_alert, query_benchmark, query_metric, query_boundary) in
+        alerts
+    {
         let json_alert = query_alert.into_json_for_report(
             conn,
             project_uuid,
-            report,
+            report_uuid,
             iteration,
             query_benchmark,
             query_metric,
@@ -319,7 +313,7 @@ fn get_report_alerts(
 #[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = report_table)]
 pub struct InsertReport {
-    pub uuid: String,
+    pub uuid: ReportUuid,
     pub user_id: UserId,
     pub project_id: ProjectId,
     pub branch_id: BranchId,
@@ -342,7 +336,7 @@ impl InsertReport {
         adapter: JsonAdapter,
     ) -> Self {
         Self {
-            uuid: Uuid::new_v4().to_string(),
+            uuid: ReportUuid::new(),
             user_id,
             project_id,
             branch_id,

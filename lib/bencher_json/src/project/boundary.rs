@@ -3,6 +3,8 @@ use ordered_float::OrderedFloat;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+crate::typed_uuid::typed_uuid!(BoundaryUuid);
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBoundaries(pub Vec<JsonBoundary>);

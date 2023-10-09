@@ -1,7 +1,5 @@
-use bencher_json::{organization::member::JsonOrganizationRole, Email};
+use bencher_json::{organization::member::JsonOrganizationRole, Email, OrganizationUuid};
 use serde::{Deserialize, Serialize};
-
-use crate::model::organization::OrganizationUuid;
 
 use super::{audience::Audience, now, JwtError};
 

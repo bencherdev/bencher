@@ -11,6 +11,8 @@ mod median;
 pub use mean::Mean;
 pub use median::Median;
 
+crate::typed_uuid::typed_uuid!(MetricUuid);
+
 #[typeshare::typeshare]
 #[derive(Debug, Copy, Clone, Default, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

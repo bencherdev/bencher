@@ -6,7 +6,8 @@ use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize};
-use uuid::Uuid;
+
+use crate::OrganizationUuid;
 
 pub mod alert;
 pub mod benchmark;
@@ -18,6 +19,8 @@ pub mod perf;
 pub mod report;
 pub mod testbed;
 pub mod threshold;
+
+crate::typed_uuid::typed_uuid!(ProjectUuid);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -38,8 +41,8 @@ crate::from_vec!(JsonProjects[JsonProject]);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonProject {
-    pub uuid: Uuid,
-    pub organization: Uuid,
+    pub uuid: ProjectUuid,
+    pub organization: OrganizationUuid,
     pub name: NonEmpty,
     pub slug: Slug,
     pub url: Option<Url>,

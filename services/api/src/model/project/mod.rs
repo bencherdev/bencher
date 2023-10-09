@@ -2,7 +2,7 @@ use std::{str::FromStr, string::ToString};
 
 use bencher_json::{
     project::{JsonProjectPatch, JsonProjectPatchNull, JsonUpdateProject},
-    JsonNewProject, JsonProject, NonEmpty, ResourceId, Slug, Url,
+    JsonNewProject, JsonProject, NonEmpty, ProjectUuid, ResourceId, Slug, Url,
 };
 use bencher_rbac::{Organization, Project};
 use chrono::Utc;
@@ -41,7 +41,6 @@ pub mod version;
 pub mod visibility;
 
 crate::util::typed_id::typed_id!(ProjectId);
-crate::util::typed_uuid::typed_uuid!(ProjectUuid);
 
 #[derive(diesel::Insertable)]
 #[diesel(table_name = project_table)]
@@ -117,8 +116,8 @@ impl QueryProject {
             ..
         } = self;
         Ok(JsonProject {
-            uuid: uuid.into(),
-            organization: QueryOrganization::get_uuid(conn, organization_id)?.into(),
+            uuid,
+            organization: QueryOrganization::get_uuid(conn, organization_id)?,
             name: NonEmpty::from_str(&name)?,
             slug: Slug::from_str(&slug).map_err(ApiError::from)?,
             url: ok_url(url.as_deref())?,

@@ -10,7 +10,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::BigInt;
+use crate::{BigInt, OrganizationUuid};
 
 pub const DEFAULT_PRICE_NAME: &str = "default";
 
@@ -34,7 +34,7 @@ pub struct JsonCard {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPlan {
-    pub organization: Uuid,
+    pub organization: OrganizationUuid,
     pub customer: JsonCustomer,
     pub card: JsonCardDetails,
     pub level: PlanLevel,

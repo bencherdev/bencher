@@ -1,13 +1,12 @@
 use bencher_json::{
     project::alert::{JsonAlertStats, JsonUpdateAlert},
-    JsonAlert, JsonAlerts, JsonDirection, JsonPagination, ResourceId,
+    AlertUuid, JsonAlert, JsonAlerts, JsonDirection, JsonPagination, ResourceId,
 };
 use bencher_rbac::project::Permission;
 use diesel::{dsl::count, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
-use uuid::Uuid;
 
 use crate::{
     context::ApiContext,
@@ -167,7 +166,7 @@ async fn get_ls_inner(
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjAlertParams {
     pub project: ResourceId,
-    pub alert: Uuid,
+    pub alert: AlertUuid,
 }
 
 #[allow(clippy::unused_async)]
