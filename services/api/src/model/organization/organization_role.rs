@@ -45,7 +45,7 @@ impl InsertOrganizationRole {
         let timestamp = Utc::now().timestamp();
         Ok(InsertOrganizationRole {
             user_id,
-            organization_id: QueryOrganization::get_id(conn, &claims.org.uuid)?,
+            organization_id: QueryOrganization::get_id(conn, claims.org.uuid)?,
             role: claims.org.role.to_string(),
             created: timestamp,
             modified: timestamp,

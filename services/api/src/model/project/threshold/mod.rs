@@ -45,8 +45,8 @@ pub struct QueryThreshold {
 }
 
 impl QueryThreshold {
-    fn_get!(threshold);
-    fn_get_id!(threshold, ThresholdId);
+    fn_get!(threshold, ThresholdId);
+    fn_get_id!(threshold, ThresholdId, ThresholdUuid);
     fn_get_uuid!(threshold, ThresholdId, ThresholdUuid);
 
     pub fn get_with_statistic(
@@ -183,7 +183,7 @@ impl InsertThreshold {
             .map_err(ApiError::from)?;
 
         // Get the new threshold ID
-        let threshold_id = QueryThreshold::get_id(conn, &insert_threshold.uuid)?;
+        let threshold_id = QueryThreshold::get_id(conn, insert_threshold.uuid)?;
 
         // Create the new statistic
         let insert_statistic = InsertStatistic::from_json(threshold_id, json_statistic)?;
@@ -193,7 +193,7 @@ impl InsertThreshold {
             .map_err(ApiError::from)?;
 
         // Get the new statistic ID
-        let statistic_id = QueryStatistic::get_id(conn, &insert_statistic.uuid)?;
+        let statistic_id = QueryStatistic::get_id(conn, insert_statistic.uuid)?;
 
         // Set the new statistic for the new threshold
         diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(threshold_id)))
@@ -252,7 +252,7 @@ impl UpdateThreshold {
         statistic_uuid: StatisticUuid,
     ) -> Result<Self, ApiError> {
         Ok(Self {
-            statistic_id: QueryStatistic::get_id(conn, &statistic_uuid)?,
+            statistic_id: QueryStatistic::get_id(conn, statistic_uuid)?,
             modified: Utc::now().timestamp(),
         })
     }

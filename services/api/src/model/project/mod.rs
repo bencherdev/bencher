@@ -42,46 +42,6 @@ pub mod visibility;
 
 crate::util::typed_id::typed_id!(ProjectId);
 
-#[derive(diesel::Insertable)]
-#[diesel(table_name = project_table)]
-pub struct InsertProject {
-    pub uuid: ProjectUuid,
-    pub organization_id: OrganizationId,
-    pub name: String,
-    pub slug: String,
-    pub url: Option<String>,
-    pub visibility: Visibility,
-    pub created: i64,
-    pub modified: i64,
-}
-
-impl InsertProject {
-    pub fn from_json(
-        conn: &mut DbConnection,
-        organization: &ResourceId,
-        project: JsonNewProject,
-    ) -> Result<Self, ApiError> {
-        let JsonNewProject {
-            name,
-            slug,
-            url,
-            visibility,
-        } = project;
-        let slug = unwrap_slug!(conn, name.as_ref(), slug, project, QueryProject);
-        let timestamp = Utc::now().timestamp();
-        Ok(Self {
-            uuid: ProjectUuid::new(),
-            organization_id: QueryOrganization::from_resource_id(conn, organization)?.id,
-            name: name.into(),
-            slug,
-            url: url.map(|u| u.to_string()),
-            visibility: Visibility::from(visibility.unwrap_or_default()),
-            created: timestamp,
-            modified: timestamp,
-        })
-    }
-}
-
 fn_resource_id!(project);
 
 #[derive(Debug, Clone, Queryable, diesel::Identifiable, diesel::Associations)]
@@ -100,7 +60,7 @@ pub struct QueryProject {
 }
 
 impl QueryProject {
-    fn_get!(project);
+    fn_get!(project, ProjectId);
     fn_get_uuid!(project, ProjectId, ProjectUuid);
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonProject, ApiError> {
@@ -139,13 +99,12 @@ impl QueryProject {
 
     #[cfg(feature = "plus")]
     pub fn is_public(conn: &mut DbConnection, id: ProjectId) -> Result<bool, ApiError> {
-        Visibility::try_from(
-            schema::project::table
-                .filter(schema::project::id.eq(id))
-                .select(schema::project::visibility)
-                .first::<i32>(conn)?,
-        )
-        .map(Visibility::is_public)
+        schema::project::table
+            .filter(schema::project::id.eq(id))
+            .select(schema::project::visibility)
+            .first::<Visibility>(conn)
+            .map(Visibility::is_public)
+            .map_err(Into::into)
     }
 
     pub fn is_allowed(
@@ -223,13 +182,53 @@ impl From<&QueryProject> for Project {
     }
 }
 
+#[derive(diesel::Insertable)]
+#[diesel(table_name = project_table)]
+pub struct InsertProject {
+    pub uuid: ProjectUuid,
+    pub organization_id: OrganizationId,
+    pub name: String,
+    pub slug: String,
+    pub url: Option<String>,
+    pub visibility: Visibility,
+    pub created: i64,
+    pub modified: i64,
+}
+
+impl InsertProject {
+    pub fn from_json(
+        conn: &mut DbConnection,
+        organization: &ResourceId,
+        project: JsonNewProject,
+    ) -> Result<Self, ApiError> {
+        let JsonNewProject {
+            name,
+            slug,
+            url,
+            visibility,
+        } = project;
+        let slug = unwrap_slug!(conn, name.as_ref(), slug, project, QueryProject);
+        let timestamp = Utc::now().timestamp();
+        Ok(Self {
+            uuid: ProjectUuid::new(),
+            organization_id: QueryOrganization::from_resource_id(conn, organization)?.id,
+            name: name.into(),
+            slug,
+            url: url.map(|u| u.to_string()),
+            visibility: Visibility::from(visibility.unwrap_or_default()),
+            created: timestamp,
+            modified: timestamp,
+        })
+    }
+}
+
 #[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = project_table)]
 pub struct UpdateProject {
     pub name: Option<String>,
     pub slug: Option<String>,
     pub url: Option<Option<String>>,
-    pub visibility: Option<i32>,
+    pub visibility: Option<Visibility>,
     pub modified: i64,
 }
 
@@ -259,7 +258,7 @@ impl From<JsonUpdateProject> for UpdateProject {
             name: name.map(Into::into),
             slug: slug.map(Into::into),
             url: url.map(|url| url.map(Into::into)),
-            visibility: visibility.map(|v| Visibility::from(v) as i32),
+            visibility: visibility.map(Into::into),
             modified: Utc::now().timestamp(),
         }
     }

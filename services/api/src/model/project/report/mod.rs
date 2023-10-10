@@ -60,7 +60,7 @@ pub struct QueryReport {
 }
 
 impl QueryReport {
-    fn_get_id!(report, ReportId);
+    fn_get_id!(report, ReportId, ReportUuid);
     fn_get_uuid!(report, ReportId, ReportUuid);
 
     pub fn into_json(self, log: &Logger, conn: &mut DbConnection) -> Result<JsonReport, ApiError> {

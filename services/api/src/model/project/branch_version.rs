@@ -14,7 +14,7 @@ pub struct QueryBranchVersion {
 }
 
 impl QueryBranchVersion {
-    fn_get!(branch_version);
+    fn_get!(branch_version, BranchVersionId);
 }
 
 #[derive(Debug, diesel::Insertable)]

@@ -28,8 +28,8 @@ pub struct QueryBoundary {
 }
 
 impl QueryBoundary {
-    fn_get!(boundary);
-    fn_get_id!(boundary, BoundaryId);
+    fn_get!(boundary, BoundaryId);
+    fn_get_id!(boundary, BoundaryId, BoundaryUuid);
     fn_get_uuid!(boundary, BoundaryId, BoundaryUuid);
 
     pub fn from_metric_id(conn: &mut DbConnection, metric_id: MetricId) -> Result<Self, HttpError> {

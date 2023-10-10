@@ -29,44 +29,6 @@ pub mod organization_role;
 
 crate::util::typed_id::typed_id!(OrganizationId);
 
-#[derive(diesel::Insertable)]
-#[diesel(table_name = organization_table)]
-pub struct InsertOrganization {
-    pub uuid: OrganizationUuid,
-    pub name: String,
-    pub slug: String,
-    pub created: i64,
-    pub modified: i64,
-}
-
-impl InsertOrganization {
-    pub fn from_json(conn: &mut DbConnection, organization: JsonNewOrganization) -> Self {
-        let JsonNewOrganization { name, slug } = organization;
-        let slug = unwrap_slug!(conn, name.as_ref(), slug, organization, QueryOrganization);
-        let timestamp = Utc::now().timestamp();
-        Self {
-            uuid: OrganizationUuid::new(),
-            name: name.into(),
-            slug,
-            created: timestamp,
-            modified: timestamp,
-        }
-    }
-
-    pub fn from_user(insert_user: &InsertUser) -> Self {
-        let timestamp = Utc::now().timestamp();
-        Self {
-            uuid: OrganizationUuid::new(),
-            name: insert_user.name.clone(),
-            slug: insert_user.slug.clone(),
-            created: timestamp,
-            modified: timestamp,
-        }
-    }
-}
-
-fn_resource_id!(organization);
-
 #[derive(Debug, Clone, Queryable, diesel::Identifiable)]
 #[diesel(table_name = organization_table)]
 pub struct QueryOrganization {
@@ -87,8 +49,8 @@ pub struct LicenseUsage {
 }
 
 impl QueryOrganization {
-    fn_get!(organization);
-    fn_get_id!(organization, OrganizationId);
+    fn_get!(organization, OrganizationId);
+    fn_get_id!(organization, OrganizationId, OrganizationUuid);
     fn_get_uuid!(organization, OrganizationId, OrganizationUuid);
 
     pub fn from_resource_id(
@@ -231,6 +193,44 @@ impl From<&QueryOrganization> for Organization {
         }
     }
 }
+
+#[derive(diesel::Insertable)]
+#[diesel(table_name = organization_table)]
+pub struct InsertOrganization {
+    pub uuid: OrganizationUuid,
+    pub name: String,
+    pub slug: String,
+    pub created: i64,
+    pub modified: i64,
+}
+
+impl InsertOrganization {
+    pub fn from_json(conn: &mut DbConnection, organization: JsonNewOrganization) -> Self {
+        let JsonNewOrganization { name, slug } = organization;
+        let slug = unwrap_slug!(conn, name.as_ref(), slug, organization, QueryOrganization);
+        let timestamp = Utc::now().timestamp();
+        Self {
+            uuid: OrganizationUuid::new(),
+            name: name.into(),
+            slug,
+            created: timestamp,
+            modified: timestamp,
+        }
+    }
+
+    pub fn from_user(insert_user: &InsertUser) -> Self {
+        let timestamp = Utc::now().timestamp();
+        Self {
+            uuid: OrganizationUuid::new(),
+            name: insert_user.name.clone(),
+            slug: insert_user.slug.clone(),
+            created: timestamp,
+            modified: timestamp,
+        }
+    }
+}
+
+fn_resource_id!(organization);
 
 #[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = organization_table)]

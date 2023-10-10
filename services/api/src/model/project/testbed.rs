@@ -41,8 +41,8 @@ pub struct QueryTestbed {
 }
 
 impl QueryTestbed {
-    fn_get!(testbed);
-    fn_get_id!(testbed, TestbedId);
+    fn_get!(testbed, TestbedId);
+    fn_get_id!(testbed, TestbedId, TestbedUuid);
     fn_get_uuid!(testbed, TestbedId, TestbedUuid);
 
     pub fn from_uuid(

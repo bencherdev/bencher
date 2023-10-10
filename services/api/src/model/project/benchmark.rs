@@ -47,8 +47,8 @@ pub struct QueryBenchmark {
 }
 
 impl QueryBenchmark {
-    fn_get!(benchmark);
-    fn_get_id!(benchmark, BenchmarkId);
+    fn_get!(benchmark, BenchmarkId);
+    fn_get_id!(benchmark, BenchmarkId, BenchmarkUuid);
     fn_get_uuid!(benchmark, BenchmarkId, BenchmarkUuid);
 
     pub fn get_id_from_name(
@@ -105,7 +105,7 @@ impl QueryBenchmark {
             .execute(conn)
             .map_err(ApiError::from)?;
 
-        Self::get_id(conn, &insert_benchmark.uuid)
+        Self::get_id(conn, insert_benchmark.uuid)
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonBenchmark, ApiError> {

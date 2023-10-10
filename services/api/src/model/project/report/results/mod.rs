@@ -144,7 +144,7 @@ impl ReportResults {
             .values(&insert_perf)
             .execute(conn)
             .map_err(resource_insert_err!(Perf, insert_perf))?;
-        let perf_id = QueryPerf::get_id(conn, &insert_perf.uuid)?;
+        let perf_id = QueryPerf::get_id(conn, insert_perf.uuid)?;
 
         for (metric_kind_key, metric) in metrics.inner {
             let metric_kind_id = self.metric_kind_id(conn, metric_kind_key)?;

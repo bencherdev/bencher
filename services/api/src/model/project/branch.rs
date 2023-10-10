@@ -49,8 +49,8 @@ pub struct QueryBranch {
 }
 
 impl QueryBranch {
-    fn_get!(branch);
-    fn_get_id!(branch, BranchId);
+    fn_get!(branch, BranchId);
+    fn_get_id!(branch, BranchId, BranchUuid);
     fn_get_uuid!(branch, BranchId, BranchUuid);
 
     pub fn from_uuid(
@@ -97,7 +97,7 @@ impl QueryBranch {
             name,
             slug,
             version: JsonVersion {
-                number: u32::try_from(number).map_err(ApiError::from)?,
+                number,
                 hash: if let Some(version_hash) = hash.as_deref() {
                     Some(GitHash::from_str(version_hash)?)
                 } else {
@@ -178,7 +178,7 @@ impl InsertBranch {
 
         let start_point_branch_id =
             QueryBranch::from_resource_id(conn, self.project_id, branch)?.id;
-        let new_branch_id = QueryBranch::get_id(conn, &self.uuid)?;
+        let new_branch_id = QueryBranch::get_id(conn, self.uuid)?;
 
         // Get all versions for the start point branch
         let version_ids = schema::branch_version::table
@@ -227,7 +227,7 @@ impl InsertBranch {
                 };
 
                 // Get the new threshold
-                let threshold_id = QueryThreshold::get_id(conn, &insert_threshold.uuid)?;
+                let threshold_id = QueryThreshold::get_id(conn, insert_threshold.uuid)?;
 
                 // Get the current threshold statistic
                 let query_statistic = schema::statistic::table
@@ -244,7 +244,7 @@ impl InsertBranch {
                     .map_err(ApiError::from)?;
 
                 // Get the new threshold statistic
-                let statistic_id = QueryStatistic::get_id(conn, &insert_statistic.uuid)?;
+                let statistic_id = QueryStatistic::get_id(conn, insert_statistic.uuid)?;
 
                 // Set the new statistic for the new threshold
                 diesel::update(

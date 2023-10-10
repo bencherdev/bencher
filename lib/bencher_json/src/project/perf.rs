@@ -234,7 +234,8 @@ pub mod table {
     use tabled::{Table, Tabled};
 
     use crate::{
-        JsonBenchmark, JsonBranch, JsonMetric, JsonMetricKind, JsonPerf, JsonProject, JsonTestbed,
+        project::branch::VersionNumber, JsonBenchmark, JsonBranch, JsonMetric, JsonMetricKind,
+        JsonPerf, JsonProject, JsonTestbed,
     };
 
     impl From<JsonPerf> for Table {
@@ -282,7 +283,7 @@ pub mod table {
         #[tabled(rename = "End Time")]
         pub end_time: DateTime<Utc>,
         #[tabled(rename = "Version Number")]
-        pub version_number: u32,
+        pub version_number: VersionNumber,
         #[tabled(rename = "Version Hash")]
         pub version_hash: VersionHash,
         #[tabled(rename = "Metric Value")]

@@ -42,8 +42,8 @@ pub struct QueryAlert {
 }
 
 impl QueryAlert {
-    fn_get!(alert);
-    fn_get_id!(alert, AlertId);
+    fn_get!(alert, AlertId);
+    fn_get_id!(alert, AlertId, AlertUuid);
     fn_get_uuid!(alert, AlertId, AlertUuid);
 
     pub fn from_uuid(
@@ -303,7 +303,7 @@ impl InsertAlert {
     ) -> Result<(), HttpError> {
         let insert_alert = InsertAlert {
             uuid: AlertUuid::new(),
-            boundary_id: QueryBoundary::get_id(conn, &boundary_uuid)?,
+            boundary_id: QueryBoundary::get_id(conn, boundary_uuid)?,
             boundary_limit,
             status: Status::default(),
             modified: Utc::now().timestamp(),

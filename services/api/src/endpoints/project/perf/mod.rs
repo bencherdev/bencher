@@ -3,7 +3,7 @@ use std::str::FromStr;
 use bencher_json::{
     project::{
         boundary::JsonBoundary,
-        branch::JsonVersion,
+        branch::{JsonVersion, VersionNumber},
         perf::{JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
     },
     GitHash, JsonBenchmark, JsonBranch, JsonPerf, JsonPerfQuery, JsonTestbed, ProjectUuid,
@@ -277,7 +277,7 @@ type PerfQuery = (
     i32,
     i64,
     i64,
-    i32,
+    VersionNumber,
     Option<String>,
     Option<(
         QueryBoundary,
@@ -436,7 +436,7 @@ fn perf_metric(
     ): PerfQuery,
 ) -> Option<JsonPerfMetric> {
     let version = JsonVersion {
-        number: u32::try_from(version_number).ok()?,
+        number: version_number,
         hash: if let Some(version_hash) = version_hash.as_deref() {
             Some(GitHash::from_str(version_hash).ok()?)
         } else {

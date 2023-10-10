@@ -26,8 +26,8 @@ pub struct QueryPerf {
 }
 
 impl QueryPerf {
-    fn_get!(perf);
-    fn_get_id!(perf, PerfId);
+    fn_get!(perf, PerfId);
+    fn_get_id!(perf, PerfId, PerfUuid);
     fn_get_uuid!(perf, PerfId, PerfUuid);
 }
 

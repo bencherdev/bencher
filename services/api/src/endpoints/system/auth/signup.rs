@@ -90,7 +90,7 @@ async fn post_inner(
         .values(&insert_user)
         .execute(conn)
         .map_err(ApiError::from)?;
-    let user_id = QueryUser::get_id(conn, &insert_user.uuid)?;
+    let user_id = QueryUser::get_id(conn, insert_user.uuid)?;
 
     let insert_org_role = if let Some(invite) = &invite {
         InsertOrganizationRole::from_jwt(conn, &context.secret_key, invite, user_id)?
@@ -101,7 +101,7 @@ async fn post_inner(
             .values(&insert_org)
             .execute(conn)
             .map_err(ApiError::from)?;
-        let organization_id = QueryOrganization::get_id(conn, &insert_org.uuid)?;
+        let organization_id = QueryOrganization::get_id(conn, insert_org.uuid)?;
 
         let timestamp = Utc::now().timestamp();
         // Connect the user to the organization as a `Leader`

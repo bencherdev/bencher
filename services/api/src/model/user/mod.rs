@@ -61,8 +61,8 @@ pub struct QueryUser {
 }
 
 impl QueryUser {
-    fn_get!(user);
-    fn_get_id!(user, UserId);
+    fn_get!(user, UserId);
+    fn_get_id!(user, UserId, UserUuid);
     fn_get_uuid!(user, UserId, UserUuid);
 
     pub fn get_id_from_email(conn: &mut DbConnection, email: &str) -> Result<UserId, ApiError> {

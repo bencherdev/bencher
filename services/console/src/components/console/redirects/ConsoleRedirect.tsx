@@ -64,7 +64,7 @@ const ConsoleRedirect = (props: Props) => {
 			return;
 		}
 		if (orgs.length !== 1) {
-			navigate("/v0/organizations");
+			navigate("/console/organizations");
 			return;
 		}
 		const org = orgs[0] as JsonOrganization;

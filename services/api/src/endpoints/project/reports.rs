@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
 use bencher_json::{
-    project::report::{JsonReportQuery, JsonReportQueryParams},
+    project::{
+        branch::VersionNumber,
+        report::{JsonReportQuery, JsonReportQueryParams},
+    },
     JsonDirection, JsonEmpty, JsonNewReport, JsonPagination, JsonReport, JsonReports, ReportUuid,
     ResourceId,
 };
@@ -26,10 +29,10 @@ use crate::{
     },
     error::{issue_error, resource_insert_err},
     model::project::{
-        branch::QueryBranch,
-        report::{results::ReportResults, InsertReport, QueryReport},
+        branch::{BranchId, QueryBranch},
+        report::{results::ReportResults, InsertReport, QueryReport, ReportId},
         testbed::QueryTestbed,
-        version::QueryVersion,
+        version::{QueryVersion, VersionId},
         QueryProject,
     },
     model::user::auth::AuthUser,
@@ -567,7 +570,7 @@ async fn delete_inner(
     let (report_id, version_id) = QueryReport::belonging_to(&query_project)
         .filter(schema::report::uuid.eq(path_params.report.to_string()))
         .select((schema::report::id, schema::report::version_id))
-        .first::<(i32, i32)>(conn)
+        .first::<(ReportId, VersionId)>(conn)
         .map_err(ApiError::from)?;
     diesel::delete(schema::report::table.filter(schema::report::id.eq(report_id)))
         .execute(conn)
@@ -590,7 +593,7 @@ async fn delete_inner(
             .inner_join(schema::branch_version::table)
             .filter(schema::branch_version::version_id.eq(version_id))
             .select(schema::branch::id)
-            .load::<i32>(conn)
+            .load::<BranchId>(conn)
             .map_err(ApiError::from)?;
 
         let mut version_map = HashMap::new();
@@ -601,7 +604,7 @@ async fn delete_inner(
                 .inner_join(schema::branch_version::table)
                 .filter(schema::branch_version::branch_id.eq(branch_id))
                 .select((schema::version::id, schema::version::number))
-                .load::<(i32, i32)>(conn)
+                .load::<(VersionId, VersionNumber)>(conn)
                 .map_err(ApiError::from)?
                 .into_iter()
                 .for_each(|(version_id, version_number)| {
@@ -613,7 +616,7 @@ async fn delete_inner(
         for (version_id, version_number) in version_map {
             if let Err(e) =
                 diesel::update(schema::version::table.filter(schema::version::id.eq(version_id)))
-                    .set(schema::version::number.eq(version_number - 1))
+                    .set(schema::version::number.eq(version_number.decrement()))
                     .execute(conn)
             {
                 debug_assert!(

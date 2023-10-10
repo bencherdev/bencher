@@ -231,7 +231,7 @@ async fn post_inner(
         .values(&insert_branch)
         .execute(conn)
         .map_err(ApiError::from)?;
-    let branch_id = QueryBranch::get_id(conn, &insert_branch.uuid)?;
+    let branch_id = QueryBranch::get_id(conn, insert_branch.uuid)?;
 
     // Add a `localhost` testbed to the project
     let insert_testbed = InsertTestbed::localhost(conn, query_project.id);
@@ -239,7 +239,7 @@ async fn post_inner(
         .values(&insert_testbed)
         .execute(conn)
         .map_err(ApiError::from)?;
-    let testbed_id = QueryTestbed::get_id(conn, &insert_testbed.uuid)?;
+    let testbed_id = QueryTestbed::get_id(conn, insert_testbed.uuid)?;
 
     // Add a `latency` metric kind to the project
     let insert_metric_kind = InsertMetricKind::latency(conn, query_project.id);
@@ -247,7 +247,7 @@ async fn post_inner(
         .values(&insert_metric_kind)
         .execute(conn)
         .map_err(ApiError::from)?;
-    let metric_kind_id = QueryMetricKind::get_id(conn, &insert_metric_kind.uuid)?;
+    let metric_kind_id = QueryMetricKind::get_id(conn, insert_metric_kind.uuid)?;
     // Add a `latency` threshold to the project
     InsertThreshold::upper_boundary(
         conn,
@@ -263,7 +263,7 @@ async fn post_inner(
         .values(&insert_metric_kind)
         .execute(conn)
         .map_err(ApiError::from)?;
-    let metric_kind_id = QueryMetricKind::get_id(conn, &insert_metric_kind.uuid)?;
+    let metric_kind_id = QueryMetricKind::get_id(conn, insert_metric_kind.uuid)?;
     // Add a `throughput` threshold to the project
     InsertThreshold::lower_boundary(
         conn,

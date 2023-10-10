@@ -1,4 +1,4 @@
-use bencher_json::{GitHash, VersionUuid};
+use bencher_json::{project::branch::VersionNumber, GitHash, VersionUuid};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
@@ -21,13 +21,13 @@ pub struct QueryVersion {
     pub id: VersionId,
     pub uuid: VersionUuid,
     pub project_id: ProjectId,
-    pub number: i32,
+    pub number: VersionNumber,
     pub hash: Option<String>,
 }
 
 impl QueryVersion {
-    fn_get!(version);
-    fn_get_id!(version, VersionId);
+    fn_get!(version, VersionId);
+    fn_get_id!(version, VersionId, VersionUuid);
     fn_get_uuid!(version, VersionId, VersionUuid);
 
     pub fn get_or_increment(
@@ -60,7 +60,7 @@ impl QueryVersion {
 pub struct InsertVersion {
     pub uuid: VersionUuid,
     pub project_id: ProjectId,
-    pub number: i32,
+    pub number: VersionNumber,
     pub hash: Option<String>,
 }
 
@@ -78,11 +78,11 @@ impl InsertVersion {
             .filter(schema::branch_version::branch_id.eq(branch_id))
             .select(schema::version::number)
             .order(schema::version::number.desc())
-            .first::<i32>(conn)
+            .first::<VersionNumber>(conn)
         {
-            number.checked_add(1).unwrap_or_default()
+            number.increment()
         } else {
-            0
+            VersionNumber::default()
         };
 
         let version_uuid = VersionUuid::new();
@@ -98,7 +98,7 @@ impl InsertVersion {
             .execute(conn)
             .map_err(resource_insert_err!(Version, insert_version))?;
 
-        let version_id = QueryVersion::get_id(conn, &version_uuid)?;
+        let version_id = QueryVersion::get_id(conn, version_uuid)?;
 
         let insert_branch_version = InsertBranchVersion {
             branch_id,

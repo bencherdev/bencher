@@ -49,8 +49,8 @@ pub struct QueryMetricKind {
 }
 
 impl QueryMetricKind {
-    fn_get!(metric_kind);
-    fn_get_id!(metric_kind, MetricKindId);
+    fn_get!(metric_kind, MetricKindId);
+    fn_get_id!(metric_kind, MetricKindId, MetricKindUuid);
     fn_get_uuid!(metric_kind, MetricKindId, MetricKindUuid);
 
     pub fn from_resource_id(
@@ -125,7 +125,7 @@ impl QueryMetricKind {
             .execute(conn)
             .map_err(resource_insert_err!(MetricKind, insert_metric_kind))?;
 
-        Self::get_id(conn, &insert_metric_kind.uuid)
+        Self::get_id(conn, insert_metric_kind.uuid)
     }
 
     pub fn is_system(&self) -> bool {

@@ -42,8 +42,8 @@ pub struct QueryToken {
 }
 
 impl QueryToken {
-    fn_get!(token);
-    fn_get_id!(token, TokenId);
+    fn_get!(token, TokenId);
+    fn_get_id!(token, TokenId, TokenUuid);
     fn_get_uuid!(token, TokenId, TokenUuid);
 
     pub fn get_user_token(

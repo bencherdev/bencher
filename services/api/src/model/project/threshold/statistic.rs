@@ -37,8 +37,8 @@ pub struct QueryStatistic {
 }
 
 impl QueryStatistic {
-    fn_get!(statistic);
-    fn_get_id!(statistic, StatisticId);
+    fn_get!(statistic, StatisticId);
+    fn_get_id!(statistic, StatisticId, StatisticUuid);
     fn_get_uuid!(statistic, StatisticId, StatisticUuid);
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonStatistic, ApiError> {

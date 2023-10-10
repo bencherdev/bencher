@@ -107,7 +107,7 @@ async fn get_ls_inner(
 
     // All users should just see the public projects if the query is for public projects
     if let Some(true) = query_params.public {
-        query = query.filter(schema::project::visibility.eq(Visibility::Public as i32));
+        query = query.filter(schema::project::visibility.eq(Visibility::Public));
     } else if let Some(auth_user) = auth_user {
         if !auth_user.is_admin(&context.rbac) {
             let projects =
