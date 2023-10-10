@@ -1,5 +1,19 @@
 [typescript.type_mappings]
+# Typed UUIDs
 "Uuid" = "string"
+"OrganizationUuid" = "Uuid"
+"ProjectUuid" = "Uuid"
+"ReportUuid" = "Uuid"
+"MetricKindUuid" = "Uuid"
+"BranchUuid" = "Uuid"
+"TestbedUuid" = "Uuid"
+"BenchmarkUuid" = "Uuid"
+"ThresholdUuid" = "Uuid"
+"StatisticUuid" = "Uuid"
+"AlertUuid" = "Uuid"
+"UserUuid" = "Uuid"
+"TokenUuid" = "Uuid"
+# Other types
 "DateTime" = "string"
 "OrderedFloat" = "number"
 "BigInt" = "number"

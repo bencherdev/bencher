@@ -1,17 +1,16 @@
 use std::str::FromStr;
 
 use bencher_json::{
-    user::token::JsonUpdateToken, JsonNewToken, JsonToken, Jwt, NonEmpty, ResourceId,
+    user::token::JsonUpdateToken, JsonNewToken, JsonToken, Jwt, NonEmpty, ResourceId, TokenUuid,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use uuid::Uuid;
 
 use crate::{
     context::{DbConnection, Rbac, SecretKey},
     schema,
     schema::token as token_table,
     util::{
-        query::{fn_get, fn_get_id},
+        query::{fn_get, fn_get_id, fn_get_uuid},
         to_date_time,
     },
     ApiError,
@@ -34,7 +33,7 @@ pub(crate) use same_user;
 #[derive(diesel::Queryable)]
 pub struct QueryToken {
     pub id: TokenId,
-    pub uuid: String,
+    pub uuid: TokenUuid,
     pub user_id: UserId,
     pub name: String,
     pub jwt: String,
@@ -45,15 +44,7 @@ pub struct QueryToken {
 impl QueryToken {
     fn_get!(token);
     fn_get_id!(token, TokenId);
-
-    pub fn get_uuid(conn: &mut DbConnection, id: TokenId) -> Result<Uuid, ApiError> {
-        let uuid: String = schema::token::table
-            .filter(schema::token::id.eq(id))
-            .select(schema::token::uuid)
-            .first(conn)
-            .map_err(ApiError::from)?;
-        Uuid::from_str(&uuid).map_err(ApiError::from)
-    }
+    fn_get_uuid!(token, TokenId, TokenUuid);
 
     pub fn get_user_token(
         conn: &mut DbConnection,
@@ -78,7 +69,7 @@ impl QueryToken {
             ..
         } = self;
         Ok(JsonToken {
-            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
+            uuid,
             user: QueryUser::get_uuid(conn, user_id)?,
             name: NonEmpty::from_str(&name).map_err(ApiError::from)?,
             token: Jwt::from_str(&jwt).map_err(ApiError::from)?,
@@ -91,7 +82,7 @@ impl QueryToken {
 #[derive(diesel::Insertable)]
 #[diesel(table_name = token_table)]
 pub struct InsertToken {
-    pub uuid: String,
+    pub uuid: TokenUuid,
     pub user_id: UserId,
     pub name: String,
     pub jwt: String,
@@ -134,7 +125,7 @@ impl InsertToken {
         let claims = secret_key.validate_api_key(&jwt.as_ref().parse()?)?;
 
         Ok(Self {
-            uuid: Uuid::new_v4().to_string(),
+            uuid: TokenUuid::new(),
             user_id: query_user.id,
             name: name.to_string(),
             jwt: jwt.to_string(),

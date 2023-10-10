@@ -1,14 +1,13 @@
 use std::str::FromStr;
 
-use bencher_json::{Email, JsonSignup, JsonUser, ResourceId, Slug, UserName};
+use bencher_json::{Email, JsonSignup, JsonUser, ResourceId, Slug, UserName, UserUuid};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
     schema::{self, user as user_table},
     util::{
-        query::{fn_get, fn_get_id},
+        query::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
         slug::unwrap_slug,
     },
@@ -23,7 +22,7 @@ crate::util::typed_id::typed_id!(UserId);
 #[derive(diesel::Insertable)]
 #[diesel(table_name = user_table)]
 pub struct InsertUser {
-    pub uuid: String,
+    pub uuid: UserUuid,
     pub name: String,
     pub slug: String,
     pub email: String,
@@ -38,7 +37,7 @@ impl InsertUser {
         } = signup;
         let slug = unwrap_slug!(conn, name.as_ref(), slug, user, QueryUser);
         Ok(Self {
-            uuid: Uuid::new_v4().to_string(),
+            uuid: UserUuid::new(),
             name: name.into(),
             slug,
             email: email.into(),
@@ -53,7 +52,7 @@ fn_resource_id!(user);
 #[derive(diesel::Queryable)]
 pub struct QueryUser {
     pub id: UserId,
-    pub uuid: String,
+    pub uuid: UserUuid,
     pub name: String,
     pub slug: String,
     pub email: String,
@@ -64,15 +63,7 @@ pub struct QueryUser {
 impl QueryUser {
     fn_get!(user);
     fn_get_id!(user, UserId);
-
-    pub fn get_uuid(conn: &mut DbConnection, id: UserId) -> Result<Uuid, ApiError> {
-        let uuid: String = schema::user::table
-            .filter(schema::user::id.eq(id))
-            .select(schema::user::uuid)
-            .first(conn)
-            .map_err(ApiError::from)?;
-        Uuid::from_str(&uuid).map_err(ApiError::from)
-    }
+    fn_get_uuid!(user, UserId, UserUuid);
 
     pub fn get_id_from_email(conn: &mut DbConnection, email: &str) -> Result<UserId, ApiError> {
         schema::user::table
@@ -115,7 +106,7 @@ impl QueryUser {
             ..
         } = self;
         Ok(JsonUser {
-            uuid: Uuid::from_str(&uuid).map_err(ApiError::from)?,
+            uuid,
             name: UserName::from_str(&name).map_err(ApiError::from)?,
             slug: Slug::from_str(&slug).map_err(ApiError::from)?,
             email: Email::from_str(&email).map_err(ApiError::from)?,

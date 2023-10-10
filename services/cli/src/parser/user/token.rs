@@ -1,6 +1,5 @@
-use bencher_json::{NonEmpty, ResourceId};
+use bencher_json::{NonEmpty, ResourceId, TokenUuid};
 use clap::{Parser, Subcommand, ValueEnum};
-use uuid::Uuid;
 
 use crate::parser::{CliBackend, CliPagination};
 
@@ -69,7 +68,7 @@ pub struct CliTokenView {
     pub user: ResourceId,
 
     /// Token UUID
-    pub token: Uuid,
+    pub token: TokenUuid,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -86,7 +85,7 @@ pub struct CliTokenUpdate {
     pub name: Option<NonEmpty>,
 
     /// Token UUID
-    pub token: Uuid,
+    pub token: TokenUuid,
 
     #[clap(flatten)]
     pub backend: CliBackend,

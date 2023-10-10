@@ -1,3 +1,8 @@
+// This exists solely to export a `Uuid` type to Typescript that then aliases to `string`.
+#[typeshare::typeshare]
+#[allow(dead_code)]
+pub struct Uuid(pub uuid::Uuid);
+
 macro_rules! typed_uuid {
     ($name:ident) => {
         // https://github.com/diesel-rs/diesel/blob/master/diesel_tests/tests/custom_types.rs
@@ -49,6 +54,13 @@ macro_rules! typed_uuid {
             }
         }
 
+        impl $name {
+            #[allow(unused_qualifications)]
+            pub fn new() -> Self {
+                Self(uuid::Uuid::new_v4())
+            }
+        }
+
         #[cfg(feature = "db")]
         impl<DB> diesel::serialize::ToSql<diesel::sql_types::Text, DB> for $name
         where
@@ -76,13 +88,6 @@ macro_rules! typed_uuid {
         {
             fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
                 Ok(Self(String::from_sql(bytes)?.as_str().parse()?))
-            }
-        }
-
-        impl $name {
-            #[allow(unused_qualifications)]
-            pub fn new() -> Self {
-                Self(uuid::Uuid::new_v4())
             }
         }
     };

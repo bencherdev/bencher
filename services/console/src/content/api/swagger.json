@@ -1830,8 +1830,7 @@
             "name": "alert",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "$ref": "#/components/schemas/AlertUuid"
             }
           },
           {
@@ -1904,8 +1903,7 @@
             "name": "alert",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "$ref": "#/components/schemas/AlertUuid"
             }
           },
           {
@@ -3737,8 +3735,7 @@
             "name": "report",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "$ref": "#/components/schemas/ReportUuid"
             }
           }
         ],
@@ -3811,8 +3808,7 @@
             "name": "report",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "$ref": "#/components/schemas/ReportUuid"
             }
           }
         ],
@@ -3887,8 +3883,7 @@
             "name": "statistic",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "$ref": "#/components/schemas/StatisticUuid"
             }
           }
         ],
@@ -4620,8 +4615,7 @@
             "name": "threshold",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "$ref": "#/components/schemas/ThresholdUuid"
             }
           }
         ],
@@ -4694,8 +4688,7 @@
             "name": "threshold",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "$ref": "#/components/schemas/ThresholdUuid"
             }
           }
         ],
@@ -4778,8 +4771,7 @@
             "name": "threshold",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "$ref": "#/components/schemas/ThresholdUuid"
             }
           }
         ],
@@ -5739,8 +5731,16 @@
       }
     },
     "schemas": {
+      "AlertUuid": {
+        "type": "string",
+        "format": "uuid"
+      },
       "BenchmarkName": {
         "type": "string"
+      },
+      "BenchmarkUuid": {
+        "type": "string",
+        "format": "uuid"
       },
       "BigInt": {
         "type": "integer",
@@ -5753,6 +5753,10 @@
       },
       "BranchName": {
         "type": "string"
+      },
+      "BranchUuid": {
+        "type": "string",
+        "format": "uuid"
       },
       "CardBrand": {
         "type": "string",
@@ -5891,8 +5895,7 @@
             "format": "date-time"
           },
           "report": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/ReportUuid"
           },
           "status": {
             "$ref": "#/components/schemas/JsonAlertStatus"
@@ -5901,8 +5904,7 @@
             "$ref": "#/components/schemas/JsonThreshold"
           },
           "uuid": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/AlertUuid"
           }
         },
         "required": [
@@ -6055,15 +6057,13 @@
             "$ref": "#/components/schemas/BenchmarkName"
           },
           "project": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/ProjectUuid"
           },
           "slug": {
             "$ref": "#/components/schemas/Slug"
           },
           "uuid": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/BenchmarkUuid"
           }
         },
         "required": [
@@ -6096,15 +6096,13 @@
             "$ref": "#/components/schemas/BenchmarkName"
           },
           "project": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/ProjectUuid"
           },
           "slug": {
             "$ref": "#/components/schemas/Slug"
           },
           "uuid": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/BenchmarkUuid"
           }
         },
         "required": [
@@ -6169,15 +6167,13 @@
             "$ref": "#/components/schemas/BranchName"
           },
           "project": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/ProjectUuid"
           },
           "slug": {
             "$ref": "#/components/schemas/Slug"
           },
           "uuid": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/BranchUuid"
           }
         },
         "required": [
@@ -6204,15 +6200,13 @@
             "$ref": "#/components/schemas/BranchName"
           },
           "project": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/ProjectUuid"
           },
           "slug": {
             "$ref": "#/components/schemas/Slug"
           },
           "uuid": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/BranchUuid"
           },
           "version": {
             "$ref": "#/components/schemas/JsonVersion"
@@ -6352,8 +6346,7 @@
             "$ref": "#/components/schemas/UserName"
           },
           "uuid": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/UserUuid"
           }
         },
         "required": [
@@ -6483,8 +6476,7 @@
             "$ref": "#/components/schemas/Slug"
           },
           "uuid": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/UserUuid"
           }
         },
         "required": [
@@ -6540,8 +6532,7 @@
             "$ref": "#/components/schemas/NonEmpty"
           },
           "project": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/ProjectUuid"
           },
           "slug": {
             "$ref": "#/components/schemas/Slug"
@@ -6550,8 +6541,7 @@
             "$ref": "#/components/schemas/NonEmpty"
           },
           "uuid": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/MetricKindUuid"
           }
         },
         "required": [
@@ -6898,8 +6888,7 @@
             "$ref": "#/components/schemas/Slug"
           },
           "uuid": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/OrganizationUuid"
           }
         },
         "required": [
@@ -6968,8 +6957,7 @@
             "$ref": "#/components/schemas/JsonAlertStatus"
           },
           "uuid": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/AlertUuid"
           }
         },
         "required": [
@@ -7006,8 +6994,7 @@
             "$ref": "#/components/schemas/JsonMetric"
           },
           "report": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/ReportUuid"
           },
           "start_time": {
             "type": "string",
@@ -7088,8 +7075,7 @@
             "$ref": "#/components/schemas/PlanLevel"
           },
           "organization": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/OrganizationUuid"
           },
           "status": {
             "$ref": "#/components/schemas/PlanStatus"
@@ -7179,8 +7165,7 @@
             "$ref": "#/components/schemas/NonEmpty"
           },
           "organization": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/OrganizationUuid"
           },
           "slug": {
             "$ref": "#/components/schemas/Slug"
@@ -7194,8 +7179,7 @@
             ]
           },
           "uuid": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/ProjectUuid"
           },
           "visibility": {
             "$ref": "#/components/schemas/JsonVisibility"
@@ -7338,8 +7322,7 @@
             "$ref": "#/components/schemas/JsonUser"
           },
           "uuid": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/ReportUuid"
           }
         },
         "required": [
@@ -7595,8 +7578,7 @@
             "$ref": "#/components/schemas/JsonStatisticKind"
           },
           "threshold": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/ThresholdUuid"
           },
           "upper_boundary": {
             "nullable": true,
@@ -7607,8 +7589,7 @@
             ]
           },
           "uuid": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/StatisticUuid"
           },
           "window": {
             "nullable": true,
@@ -7646,15 +7627,13 @@
             "$ref": "#/components/schemas/NonEmpty"
           },
           "project": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/ProjectUuid"
           },
           "slug": {
             "$ref": "#/components/schemas/Slug"
           },
           "uuid": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/TestbedUuid"
           }
         },
         "required": [
@@ -7690,8 +7669,7 @@
             "format": "date-time"
           },
           "project": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/ProjectUuid"
           },
           "statistic": {
             "$ref": "#/components/schemas/JsonStatistic"
@@ -7700,8 +7678,7 @@
             "$ref": "#/components/schemas/JsonTestbed"
           },
           "uuid": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/ThresholdUuid"
           }
         },
         "required": [
@@ -7723,15 +7700,13 @@
             "format": "date-time"
           },
           "project": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/ProjectUuid"
           },
           "statistic": {
             "$ref": "#/components/schemas/JsonStatistic"
           },
           "uuid": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/ThresholdUuid"
           }
         },
         "required": [
@@ -7823,12 +7798,10 @@
             "$ref": "#/components/schemas/Jwt"
           },
           "user": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/UserUuid"
           },
           "uuid": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/TokenUuid"
           }
         },
         "required": [
@@ -8104,8 +8077,7 @@
             "$ref": "#/components/schemas/Slug"
           },
           "uuid": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/UserUuid"
           }
         },
         "required": [
@@ -8162,8 +8134,16 @@
           "critical"
         ]
       },
+      "MetricKindUuid": {
+        "type": "string",
+        "format": "uuid"
+      },
       "NonEmpty": {
         "type": "string"
+      },
+      "OrganizationUuid": {
+        "type": "string",
+        "format": "uuid"
       },
       "PlanLevel": {
         "type": "string",
@@ -8185,6 +8165,14 @@
           "trialing",
           "unpaid"
         ]
+      },
+      "ProjectUuid": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "ReportUuid": {
+        "type": "string",
+        "format": "uuid"
       },
       "ResourceId": {
         "type": "string"
@@ -8252,11 +8240,31 @@
       "Slug": {
         "type": "string"
       },
+      "StatisticUuid": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "TestbedUuid": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "ThresholdUuid": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "TokenUuid": {
+        "type": "string",
+        "format": "uuid"
+      },
       "Url": {
         "type": "string"
       },
       "UserName": {
         "type": "string"
+      },
+      "UserUuid": {
+        "type": "string",
+        "format": "uuid"
       },
       "JsonDirection": {
         "type": "string",

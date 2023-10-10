@@ -3,7 +3,10 @@ use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+
+use crate::UserUuid;
+
+crate::typed_uuid::typed_uuid!(TokenUuid);
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -22,8 +25,8 @@ crate::from_vec!(JsonTokens[JsonToken]);
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonToken {
-    pub uuid: Uuid,
-    pub user: Uuid,
+    pub uuid: TokenUuid,
+    pub user: UserUuid,
     pub name: NonEmpty,
     pub token: Jwt,
     pub creation: DateTime<Utc>,

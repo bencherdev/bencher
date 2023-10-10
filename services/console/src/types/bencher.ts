@@ -7,8 +7,8 @@ export type NonEmpty = string;
 export type Slug = string;
 
 export interface JsonMetricKind {
-	uuid: string;
-	project: string;
+	uuid: Uuid;
+	project: Uuid;
 	name: NonEmpty;
 	slug: Slug;
 	units: NonEmpty;
@@ -26,8 +26,8 @@ export type SampleSize = number;
 export type Boundary = number;
 
 export interface JsonStatistic {
-	uuid: string;
-	threshold: string;
+	uuid: Uuid;
+	threshold: Uuid;
 	test: JsonStatisticKind;
 	min_sample_size?: SampleSize;
 	max_sample_size?: SampleSize;
@@ -38,8 +38,8 @@ export interface JsonStatistic {
 }
 
 export interface JsonThresholdStatistic {
-	uuid: string;
-	project: string;
+	uuid: Uuid;
+	project: Uuid;
 	statistic: JsonStatistic;
 	created: string;
 }
@@ -58,8 +58,8 @@ export interface JsonBoundary {
 }
 
 export interface JsonBenchmarkMetric {
-	uuid: string;
-	project: string;
+	uuid: Uuid;
+	project: Uuid;
 	name: BenchmarkName;
 	slug: Slug;
 	metric: JsonMetric;
@@ -81,8 +81,8 @@ export type JsonReportResults = JsonReportIteration[];
 export type BranchName = string;
 
 export interface JsonBranch {
-	uuid: string;
-	project: string;
+	uuid: Uuid;
+	project: Uuid;
 	name: BranchName;
 	slug: Slug;
 	created: string;
@@ -90,8 +90,8 @@ export interface JsonBranch {
 }
 
 export interface JsonTestbed {
-	uuid: string;
-	project: string;
+	uuid: Uuid;
+	project: Uuid;
 	name: NonEmpty;
 	slug: Slug;
 	created: string;
@@ -99,8 +99,8 @@ export interface JsonTestbed {
 }
 
 export interface JsonThreshold {
-	uuid: string;
-	project: string;
+	uuid: Uuid;
+	project: Uuid;
 	metric_kind: JsonMetricKind;
 	branch: JsonBranch;
 	testbed: JsonTestbed;
@@ -120,8 +120,8 @@ export enum JsonAlertStatus {
 }
 
 export interface JsonAlert {
-	uuid: string;
-	report: string;
+	uuid: Uuid;
+	report: Uuid;
 	iteration: number;
 	threshold: JsonThreshold;
 	benchmark: JsonBenchmarkMetric;
@@ -131,6 +131,8 @@ export interface JsonAlert {
 }
 
 export type JsonReportAlerts = JsonAlert[];
+
+export type Uuid = string;
 
 export type CardCvc = string;
 
@@ -156,8 +158,16 @@ export type Url = string;
 
 export type UserName = string;
 
+export interface JsonOrganization {
+	uuid: Uuid;
+	name: NonEmpty;
+	slug: Slug;
+	created: string;
+	modified: string;
+}
+
 export interface JsonCustomer {
-	uuid: string;
+	uuid: Uuid;
 	name: UserName;
 	email: Email;
 }
@@ -198,7 +208,7 @@ export enum PlanStatus {
 }
 
 export interface JsonPlan {
-	organization: string;
+	organization: Uuid;
 	customer: JsonCustomer;
 	card: JsonCardDetails;
 	level: PlanLevel;
@@ -206,14 +216,6 @@ export interface JsonPlan {
 	current_period_start: string;
 	current_period_end: string;
 	status: PlanStatus;
-}
-
-export interface JsonOrganization {
-	uuid: string;
-	name: NonEmpty;
-	slug: Slug;
-	created: string;
-	modified: string;
 }
 
 export interface JsonUsage {
@@ -229,15 +231,15 @@ export interface JsonUpdateAlert {
 }
 
 export interface JsonPerfAlert {
-	uuid: string;
+	uuid: Uuid;
 	limit: JsonLimit;
 	status: JsonAlertStatus;
 	modified: string;
 }
 
 export interface JsonBenchmark {
-	uuid: string;
-	project: string;
+	uuid: Uuid;
+	project: Uuid;
 	name: BenchmarkName;
 	slug: Slug;
 	created: string;
@@ -250,8 +252,8 @@ export interface JsonVersion {
 }
 
 export interface JsonBranchVersion {
-	uuid: string;
-	project: string;
+	uuid: Uuid;
+	project: Uuid;
 	name: BranchName;
 	slug: Slug;
 	version: JsonVersion;
@@ -265,8 +267,8 @@ export enum JsonVisibility {
 }
 
 export interface JsonProject {
-	uuid: string;
-	organization: string;
+	uuid: Uuid;
+	organization: Uuid;
 	name: NonEmpty;
 	slug: Slug;
 	url?: Url;
@@ -276,7 +278,7 @@ export interface JsonProject {
 }
 
 export interface JsonPerfMetric {
-	report: string;
+	report: Uuid;
 	iteration: number;
 	start_time: string;
 	end_time: string;
@@ -303,7 +305,7 @@ export interface JsonPerf {
 }
 
 export interface JsonUser {
-	uuid: string;
+	uuid: Uuid;
 	name: UserName;
 	slug: Slug;
 	email: Email;
@@ -338,7 +340,7 @@ export enum JsonAdapter {
 }
 
 export interface JsonReport {
-	uuid: string;
+	uuid: Uuid;
 	user: JsonUser;
 	project: JsonProject;
 	branch: JsonBranchVersion;
@@ -375,8 +377,8 @@ export interface JsonAuthUser {
 }
 
 export interface JsonToken {
-	uuid: string;
-	user: string;
+	uuid: Uuid;
+	user: Uuid;
 	name: NonEmpty;
 	token: Jwt;
 	creation: string;

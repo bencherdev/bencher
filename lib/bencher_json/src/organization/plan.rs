@@ -8,9 +8,8 @@ use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
-use crate::{BigInt, OrganizationUuid};
+use crate::{BigInt, OrganizationUuid, UserUuid};
 
 pub const DEFAULT_PRICE_NAME: &str = "default";
 
@@ -48,7 +47,7 @@ pub struct JsonPlan {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonCustomer {
-    pub uuid: Uuid,
+    pub uuid: UserUuid,
     pub name: UserName,
     pub email: Email,
 }

@@ -34,7 +34,7 @@ pub use project::{
     boundary::{BoundaryUuid, JsonBoundaries, JsonBoundary},
     branch::{BranchUuid, JsonBranch, JsonBranches, JsonNewBranch, VersionUuid},
     metric::{JsonMetric, MetricUuid},
-    metric_kind::{JsonMetricKind, JsonMetricKinds, JsonNewMetricKind},
+    metric_kind::{JsonMetricKind, JsonMetricKinds, JsonNewMetricKind, MetricKindUuid},
     perf::{JsonPerf, JsonPerfQuery, PerfUuid},
     report::{JsonNewReport, JsonReport, JsonReports, ReportUuid},
     testbed::{JsonNewTestbed, JsonTestbed, JsonTestbeds, TestbedUuid},
@@ -55,8 +55,8 @@ pub use system::{
     version::JsonApiVersion,
 };
 pub use user::{
-    token::{JsonNewToken, JsonToken, JsonTokens},
-    JsonUser,
+    token::{JsonNewToken, JsonToken, JsonTokens, TokenUuid},
+    JsonUser, UserUuid,
 };
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

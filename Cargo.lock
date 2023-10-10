@@ -761,7 +761,6 @@ dependencies = [
  "thiserror",
  "tokio",
  "url",
- "uuid 1.4.1",
 ]
 
 [[package]]
@@ -3103,9 +3102,9 @@ dependencies = [
 
 [[package]]
 name = "octocrab"
-version = "0.30.1"
+version = "0.31.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbed1b1298bc70dd4ae89fd44dd7c13f0a1c80a506d731eb1b939f14f5e367de"
+checksum = "4aaba1d81f0a75db85fa78fd78d1d083ff99400959ac956273b97fbb6582dae5"
 dependencies = [
  "arc-swap",
  "async-trait",

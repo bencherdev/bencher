@@ -39,6 +39,21 @@ from_client!(
     UserName
 );
 
+from_client!(
+    OrganizationUuid,
+    ProjectUuid,
+    ReportUuid,
+    MetricKindUuid,
+    BranchUuid,
+    TestbedUuid,
+    BenchmarkUuid,
+    ThresholdUuid,
+    StatisticUuid,
+    AlertUuid,
+    UserUuid,
+    TokenUuid
+);
+
 #[cfg(feature = "plus")]
 from_client!(CardCvc, CardNumber, ExpirationMonth, ExpirationYear);
 

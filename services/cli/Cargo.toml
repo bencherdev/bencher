@@ -28,10 +28,9 @@ tabled.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["macros", "process", "rt"] }
 url.workspace = true
-uuid = { workspace = true, features = ["v4"] }
 # Crate
 clap_mangen = { version = "0.2", optional = true }
-octocrab = "0.30"
+octocrab = "0.31"
 
 [dev-dependencies]
 # Workspace

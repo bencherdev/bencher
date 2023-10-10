@@ -5,7 +5,8 @@ use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+
+use crate::UserUuid;
 
 pub const MEMBER_ROLE: &str = "member";
 pub const LEADER_ROLE: &str = "leader";
@@ -27,7 +28,7 @@ crate::from_vec!(JsonMembers[JsonMember]);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMember {
-    pub uuid: Uuid,
+    pub uuid: UserUuid,
     pub name: UserName,
     pub slug: Slug,
     pub email: Email,
