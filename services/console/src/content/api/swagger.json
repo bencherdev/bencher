@@ -8101,9 +8101,7 @@
             ]
           },
           "number": {
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+            "$ref": "#/components/schemas/VersionNumber"
           }
         },
         "required": [
@@ -8265,6 +8263,11 @@
       "UserUuid": {
         "type": "string",
         "format": "uuid"
+      },
+      "VersionNumber": {
+        "type": "integer",
+        "format": "uint32",
+        "minimum": 0
       },
       "JsonDirection": {
         "type": "string",
