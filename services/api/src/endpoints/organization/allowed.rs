@@ -7,16 +7,12 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{response_ok, ResponseOk},
-        Endpoint, Method,
+        Endpoint,
     },
     model::{organization::QueryOrganization, user::auth::AuthUser},
     util::cors::{get_cors, CorsResponse},
     ApiError,
 };
-
-use super::Resource;
-
-const PERMISSION_RESOURCE: Resource = Resource::OrganizationPermission;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgAllowedParams {
@@ -47,7 +43,7 @@ pub async fn org_allowed_get(
     path_params: Path<OrgAllowedParams>,
 ) -> Result<ResponseOk<JsonAllowed>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(PERMISSION_RESOURCE, Method::GetOne);
+    let endpoint = Endpoint::GetOne;
 
     let json = get_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await

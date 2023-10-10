@@ -12,7 +12,7 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
-        Endpoint, Method,
+        Endpoint,
     },
     model::{
         organization::QueryOrganization,
@@ -33,10 +33,6 @@ use crate::{
     },
     ApiError,
 };
-
-use super::Resource;
-
-const PROJECT_RESOURCE: Resource = Resource::Project;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgProjectsParams {
@@ -84,7 +80,7 @@ pub async fn org_projects_get(
     query_params: Query<OrgProjectsQuery>,
 ) -> Result<ResponseOk<JsonProjects>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetLs);
+    let endpoint = Endpoint::GetLs;
 
     let json = get_ls_inner(
         rqctx.context(),
@@ -158,7 +154,7 @@ pub async fn org_project_post(
     body: TypedBody<JsonNewProject>,
 ) -> Result<ResponseAccepted<JsonProject>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::Post);
+    let endpoint = Endpoint::Post;
 
     let json = post_inner(
         rqctx.context(),

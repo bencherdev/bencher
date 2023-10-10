@@ -6,7 +6,7 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{pub_response_accepted, ResponseAccepted},
-        Endpoint, Method,
+        Endpoint,
     },
     model::user::QueryUser,
     schema,
@@ -14,9 +14,7 @@ use crate::{
     ApiError,
 };
 
-use super::{Resource, CLIENT_TOKEN_TTL};
-
-const CONFIRM_RESOURCE: Resource = Resource::Confirm;
+use super::CLIENT_TOKEN_TTL;
 
 #[allow(clippy::unused_async)]
 #[endpoint {
@@ -39,7 +37,7 @@ pub async fn auth_confirm_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonAuthToken>,
 ) -> Result<ResponseAccepted<JsonAuthUser>, HttpError> {
-    let endpoint = Endpoint::new(CONFIRM_RESOURCE, Method::Post);
+    let endpoint = Endpoint::Post;
 
     let json = post_inner(rqctx.context(), body.into_inner())
         .await

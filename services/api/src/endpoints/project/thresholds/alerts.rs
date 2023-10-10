@@ -12,7 +12,7 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
-        Endpoint, Method,
+        Endpoint,
     },
     model::project::{
         threshold::alert::{QueryAlert, Status, UpdateAlert},
@@ -26,10 +26,6 @@ use crate::{
     },
     ApiError,
 };
-
-use super::Resource;
-
-const ALERT_RESOURCE: Resource = Resource::Alert;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjAlertsParams {
@@ -71,7 +67,7 @@ pub async fn proj_alerts_get(
     pagination_params: Query<ProjAlertsPagination>,
 ) -> Result<ResponseOk<JsonAlerts>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::new(ALERT_RESOURCE, Method::GetLs);
+    let endpoint = Endpoint::GetLs;
 
     let json = get_ls_inner(
         rqctx.context(),
@@ -192,7 +188,7 @@ pub async fn proj_alert_get(
     path_params: Path<ProjAlertParams>,
 ) -> Result<ResponseOk<JsonAlert>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::new(ALERT_RESOURCE, Method::GetOne);
+    let endpoint = Endpoint::GetOne;
 
     let json = get_one_inner(
         rqctx.context(),
@@ -239,7 +235,7 @@ pub async fn proj_alert_patch(
     body: TypedBody<JsonUpdateAlert>,
 ) -> Result<ResponseAccepted<JsonAlert>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(ALERT_RESOURCE, Method::Patch);
+    let endpoint = Endpoint::Patch;
 
     let context = rqctx.context();
     let json = patch_inner(
@@ -311,7 +307,7 @@ pub async fn proj_alert_stats_get(
     path_params: Path<ProjAlertsParams>,
 ) -> Result<ResponseOk<JsonAlertStats>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::new(ALERT_RESOURCE, Method::GetLs);
+    let endpoint = Endpoint::GetLs;
 
     let json = get_stats_inner(
         rqctx.context(),

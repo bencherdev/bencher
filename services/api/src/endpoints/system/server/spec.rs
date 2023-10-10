@@ -3,17 +3,13 @@ use dropshot::{endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, Request
 
 use crate::{
     context::ApiContext,
-    endpoints::{endpoint::pub_response_ok, Endpoint, Method},
+    endpoints::{endpoint::pub_response_ok, Endpoint},
     util::{
         cors::{get_cors, CorsResponse},
         headers::CorsHeaders,
     },
     SWAGGER_SPEC,
 };
-
-use super::Resource;
-
-const SPEC_RESOURCE: Resource = Resource::Spec;
 
 #[allow(clippy::unused_async)]
 #[endpoint {
@@ -36,6 +32,6 @@ pub async fn server_spec_options(
 pub async fn server_spec_get(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonSpec>, CorsHeaders>, HttpError> {
-    let endpoint = Endpoint::new(SPEC_RESOURCE, Method::GetOne);
+    let endpoint = Endpoint::GetOne;
     pub_response_ok!(endpoint, SWAGGER_SPEC.clone())
 }

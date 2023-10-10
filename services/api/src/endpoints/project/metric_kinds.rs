@@ -12,7 +12,7 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
-        Endpoint, Method,
+        Endpoint,
     },
     model::project::{
         metric_kind::{InsertMetricKind, QueryMetricKind, UpdateMetricKind},
@@ -27,10 +27,6 @@ use crate::{
     },
     ApiError,
 };
-
-use super::Resource;
-
-const METRIC_KIND_RESOURCE: Resource = Resource::MetricKind;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjMetricKindsParams {
@@ -78,7 +74,7 @@ pub async fn proj_metric_kinds_get(
     query_params: Query<ProjMetricKindsQuery>,
 ) -> Result<ResponseOk<JsonMetricKinds>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::new(METRIC_KIND_RESOURCE, Method::GetLs);
+    let endpoint = Endpoint::GetLs;
 
     let json = get_ls_inner(
         rqctx.context(),
@@ -151,7 +147,7 @@ pub async fn proj_metric_kind_post(
     body: TypedBody<JsonNewMetricKind>,
 ) -> Result<ResponseAccepted<JsonMetricKind>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(METRIC_KIND_RESOURCE, Method::Post);
+    let endpoint = Endpoint::Post;
 
     let json = post_inner(
         rqctx.context(),
@@ -237,7 +233,7 @@ pub async fn proj_metric_kind_get(
     path_params: Path<ProjMetricKindParams>,
 ) -> Result<ResponseOk<JsonMetricKind>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::new(METRIC_KIND_RESOURCE, Method::GetOne);
+    let endpoint = Endpoint::GetOne;
 
     let json = get_one_inner(
         rqctx.context(),
@@ -290,7 +286,7 @@ pub async fn proj_metric_kind_patch(
     body: TypedBody<JsonUpdateMetricKind>,
 ) -> Result<ResponseAccepted<JsonMetricKind>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(METRIC_KIND_RESOURCE, Method::Patch);
+    let endpoint = Endpoint::Patch;
 
     let context = rqctx.context();
     let json = patch_inner(
@@ -354,7 +350,7 @@ pub async fn proj_metric_kind_delete(
     path_params: Path<ProjMetricKindParams>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(METRIC_KIND_RESOURCE, Method::Delete);
+    let endpoint = Endpoint::Delete;
 
     let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await

@@ -7,7 +7,6 @@ use slog::Logger;
 use crate::endpoints::endpoint::pub_response_accepted;
 use crate::endpoints::endpoint::ResponseAccepted;
 use crate::endpoints::Endpoint;
-use crate::endpoints::Method;
 
 use crate::{
     context::{ApiContext, Body, ButtonBody, Message},
@@ -18,11 +17,8 @@ use crate::{
     ApiError,
 };
 
-use super::Resource;
 use super::AUTH_TOKEN_TTL;
 use super::TOKEN_ARG;
-
-const LOGIN_RESOURCE: Resource = Resource::Login;
 
 #[allow(clippy::unused_async)]
 #[endpoint {
@@ -45,7 +41,7 @@ pub async fn auth_login_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonLogin>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
-    let endpoint = Endpoint::new(LOGIN_RESOURCE, Method::Post);
+    let endpoint = Endpoint::Post;
 
     let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner())
         .await

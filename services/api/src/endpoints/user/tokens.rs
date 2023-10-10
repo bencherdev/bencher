@@ -12,7 +12,7 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
-        Endpoint, Method,
+        Endpoint,
     },
     model::{
         user::QueryUser,
@@ -28,10 +28,6 @@ use crate::{
     },
     ApiError,
 };
-
-use super::Resource;
-
-const TOKEN_RESOURCE: Resource = Resource::Token;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct UserTokensParams {
@@ -79,7 +75,7 @@ pub async fn user_tokens_get(
     query_params: Query<UserTokensQuery>,
 ) -> Result<ResponseOk<JsonTokens>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(TOKEN_RESOURCE, Method::GetLs);
+    let endpoint = Endpoint::GetLs;
 
     let context = rqctx.context();
     let json = get_ls_inner(
@@ -155,7 +151,7 @@ pub async fn user_token_post(
     body: TypedBody<JsonNewToken>,
 ) -> Result<ResponseAccepted<JsonToken>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(TOKEN_RESOURCE, Method::Post);
+    let endpoint = Endpoint::Post;
 
     let context = rqctx.context();
     let json_token = body.into_inner();
@@ -231,7 +227,7 @@ pub async fn user_token_get(
     path_params: Path<UserTokenParams>,
 ) -> Result<ResponseOk<JsonToken>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(TOKEN_RESOURCE, Method::GetOne);
+    let endpoint = Endpoint::GetOne;
 
     let context = rqctx.context();
     let path_params = path_params.into_inner();
@@ -274,7 +270,7 @@ pub async fn user_token_patch(
     body: TypedBody<JsonUpdateToken>,
 ) -> Result<ResponseAccepted<JsonToken>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(TOKEN_RESOURCE, Method::Patch);
+    let endpoint = Endpoint::Patch;
 
     let context = rqctx.context();
     let json = patch_inner(

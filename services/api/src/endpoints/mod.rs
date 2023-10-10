@@ -3,16 +3,12 @@
 use dropshot::ApiDescription;
 
 pub mod endpoint;
-pub mod method;
 pub mod organization;
 pub mod project;
-pub mod resource;
 pub mod system;
 pub mod user;
 
 pub use endpoint::Endpoint;
-pub use method::Method;
-pub use resource::Resource;
 
 use crate::{context::ApiContext, ApiError};
 

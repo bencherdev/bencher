@@ -9,9 +9,7 @@ use slog::Logger;
 
 use crate::context::NewUserBody;
 use crate::endpoints::endpoint::pub_response_accepted;
-use crate::endpoints::endpoint::ResponseAccepted;
-use crate::endpoints::Endpoint;
-use crate::endpoints::Method;
+use crate::endpoints::endpoint::{Endpoint, ResponseAccepted};
 use crate::model::organization::{
     organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
 };
@@ -24,11 +22,8 @@ use crate::{
     util::cors::{get_cors, CorsResponse},
 };
 
-use super::Resource;
 use super::AUTH_TOKEN_TTL;
 use super::TOKEN_ARG;
-
-const SIGNUP_RESOURCE: Resource = Resource::Signup;
 
 #[allow(clippy::unused_async)]
 #[endpoint {
@@ -51,7 +46,7 @@ pub async fn auth_signup_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonSignup>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
-    let endpoint = Endpoint::new(SIGNUP_RESOURCE, Method::Post);
+    let endpoint = Endpoint::Post;
 
     let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner())
         .await

@@ -13,7 +13,7 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
-        Endpoint, Method,
+        Endpoint,
     },
     model::{
         organization::{
@@ -29,10 +29,6 @@ use crate::{
     },
     ApiError,
 };
-
-use super::Resource;
-
-const ORGANIZATION_RESOURCE: Resource = Resource::Organization;
 
 pub type OrganizationsPagination = JsonPagination<OrganizationsSort>;
 
@@ -73,7 +69,7 @@ pub async fn organizations_get(
     query_params: Query<OrganizationsQuery>,
 ) -> Result<ResponseOk<JsonOrganizations>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::GetLs);
+    let endpoint = Endpoint::GetLs;
 
     let json = get_ls_inner(
         rqctx.context(),
@@ -147,7 +143,7 @@ pub async fn organization_post(
     body: TypedBody<JsonNewOrganization>,
 ) -> Result<ResponseAccepted<JsonOrganization>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::Post);
+    let endpoint = Endpoint::Post;
 
     let json = post_inner(rqctx.context(), body.into_inner(), &auth_user)
         .await
@@ -229,7 +225,7 @@ pub async fn organization_get(
     path_params: Path<OrganizationParams>,
 ) -> Result<ResponseOk<JsonOrganization>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::GetOne);
+    let endpoint = Endpoint::GetOne;
 
     let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await
@@ -273,7 +269,7 @@ pub async fn organization_patch(
     body: TypedBody<JsonUpdateOrganization>,
 ) -> Result<ResponseAccepted<JsonOrganization>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::Patch);
+    let endpoint = Endpoint::Patch;
 
     let context = rqctx.context();
     let json = patch_inner(

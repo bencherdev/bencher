@@ -17,18 +17,28 @@ pub struct CorsHeaders {
 impl CorsHeaders {
     pub fn new_origin_all(methods: String, headers: String, credentials: Option<bool>) -> Self {
         CorsHeaders {
-            access_control_allow_origin: "*".into(),
+            access_control_allow_origin: "*".to_owned(),
             access_control_allow_methods: methods,
             access_control_allow_headers: headers,
             access_control_allow_credentials: credentials,
         }
     }
 
-    pub fn new_pub(methods: String) -> Self {
-        Self::new_origin_all(methods, "Content-Type".into(), None)
+    pub fn new_pub<T>(methods: &T) -> Self
+    where
+        T: ToString,
+    {
+        Self::new_origin_all(methods.to_string(), "Content-Type".to_owned(), None)
     }
 
-    pub fn new_auth(methods: String) -> Self {
-        Self::new_origin_all(methods, "Content-Type, Authorization".into(), None)
+    pub fn new_auth<T>(methods: &T) -> Self
+    where
+        T: ToString,
+    {
+        Self::new_origin_all(
+            methods.to_string(),
+            "Content-Type, Authorization".to_owned(),
+            None,
+        )
     }
 }

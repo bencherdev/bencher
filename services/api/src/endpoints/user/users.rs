@@ -7,7 +7,7 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{response_ok, ResponseOk},
-        Endpoint, Method,
+        Endpoint,
     },
     model::{
         user::QueryUser,
@@ -16,10 +16,6 @@ use crate::{
     util::cors::{get_cors, CorsResponse},
     ApiError,
 };
-
-use super::Resource;
-
-const USER_RESOURCE: Resource = Resource::User;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct UserParams {
@@ -49,7 +45,7 @@ pub async fn user_get(
     path_params: Path<UserParams>,
 ) -> Result<ResponseOk<JsonUser>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(USER_RESOURCE, Method::GetOne);
+    let endpoint = Endpoint::GetOne;
 
     let context = rqctx.context();
     let path_params = path_params.into_inner();

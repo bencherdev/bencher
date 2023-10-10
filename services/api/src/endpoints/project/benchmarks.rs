@@ -13,7 +13,7 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
-        Endpoint, Method,
+        Endpoint,
     },
     model::{
         project::{
@@ -30,10 +30,6 @@ use crate::{
     },
     ApiError,
 };
-
-use super::Resource;
-
-const BENCHMARK_RESOURCE: Resource = Resource::Benchmark;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjBenchmarksParams {
@@ -81,7 +77,7 @@ pub async fn proj_benchmarks_get(
     query_params: Query<ProjBenchmarksQuery>,
 ) -> Result<ResponseOk<JsonBenchmarks>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::new(BENCHMARK_RESOURCE, Method::GetLs);
+    let endpoint = Endpoint::GetLs;
 
     let json = get_ls_inner(
         rqctx.context(),
@@ -154,7 +150,7 @@ pub async fn proj_benchmark_post(
     body: TypedBody<JsonNewBenchmark>,
 ) -> Result<ResponseAccepted<JsonBenchmark>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(BENCHMARK_RESOURCE, Method::Post);
+    let endpoint = Endpoint::Post;
 
     let json = post_inner(
         rqctx.context(),
@@ -235,7 +231,7 @@ pub async fn proj_benchmark_get(
     path_params: Path<ProjBenchmarkParams>,
 ) -> Result<ResponseOk<JsonBenchmark>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::new(BENCHMARK_RESOURCE, Method::GetOne);
+    let endpoint = Endpoint::GetOne;
 
     let json = get_one_inner(
         rqctx.context(),
@@ -288,7 +284,7 @@ pub async fn proj_benchmark_patch(
     body: TypedBody<JsonUpdateBenchmark>,
 ) -> Result<ResponseAccepted<JsonBenchmark>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(BENCHMARK_RESOURCE, Method::Patch);
+    let endpoint = Endpoint::Patch;
 
     let context = rqctx.context();
     let json = patch_inner(
@@ -347,7 +343,7 @@ pub async fn proj_benchmark_delete(
     path_params: Path<ProjBenchmarkParams>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(BENCHMARK_RESOURCE, Method::Delete);
+    let endpoint = Endpoint::Delete;
 
     let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await

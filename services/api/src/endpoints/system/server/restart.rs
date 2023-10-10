@@ -7,16 +7,12 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{response_accepted, ResponseAccepted},
-        Endpoint, Method,
+        Endpoint,
     },
     model::user::{auth::AuthUser, UserId},
     util::cors::{get_cors, CorsResponse},
     ApiError,
 };
-
-use super::Resource;
-
-const RESTART_RESOURCE: Resource = Resource::Restart;
 
 pub const DEFAULT_DELAY: u64 = 3;
 
@@ -43,7 +39,7 @@ pub async fn server_restart_post(
     body: TypedBody<JsonRestart>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(RESTART_RESOURCE, Method::Post);
+    let endpoint = Endpoint::Post;
 
     let context = rqctx.context();
     let json_restart = body.into_inner();

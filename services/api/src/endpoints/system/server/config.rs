@@ -7,19 +7,14 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
-        Endpoint, Method,
+        Endpoint,
     },
     model::user::auth::AuthUser,
     util::cors::{get_cors, CorsResponse},
     ApiError,
 };
 
-use super::{
-    restart::{countdown, DEFAULT_DELAY},
-    Resource,
-};
-
-const CONFIG_RESOURCE: Resource = Resource::Config;
+use super::restart::{countdown, DEFAULT_DELAY};
 
 #[allow(clippy::unused_async)]
 #[endpoint {
@@ -42,7 +37,7 @@ pub async fn server_config_get(
     rqctx: RequestContext<ApiContext>,
 ) -> Result<ResponseOk<JsonConfig>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(CONFIG_RESOURCE, Method::GetOne);
+    let endpoint = Endpoint::GetOne;
 
     let context = rqctx.context();
     let json = get_one_inner(&rqctx.log, context, &auth_user)
@@ -80,7 +75,7 @@ pub async fn server_config_put(
     body: TypedBody<JsonUpdateConfig>,
 ) -> Result<ResponseAccepted<JsonConfig>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(CONFIG_RESOURCE, Method::Put);
+    let endpoint = Endpoint::Put;
 
     let context = rqctx.context();
     let json_config = body.into_inner();

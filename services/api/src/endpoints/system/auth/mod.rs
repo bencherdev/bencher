@@ -1,7 +1,3 @@
-use derive_more::Display;
-
-use crate::WordStr;
-
 pub mod confirm;
 pub mod login;
 pub mod signup;
@@ -16,28 +12,3 @@ pub const CLIENT_TOKEN_TTL: u32 = 30 * 24 * 60 * 60;
 #[cfg(feature = "plus")]
 const PLAN_ARG: &str = "plan";
 const TOKEN_ARG: &str = "token";
-
-#[derive(Debug, Display, Clone, Copy)]
-pub enum Resource {
-    Confirm,
-    Login,
-    Signup,
-}
-
-impl WordStr for Resource {
-    fn singular(&self) -> &str {
-        match self {
-            Self::Confirm => "confirmation",
-            Self::Login => "login",
-            Self::Signup => "signup",
-        }
-    }
-
-    fn plural(&self) -> &str {
-        match self {
-            Self::Confirm => "confirmations",
-            Self::Login => "logins",
-            Self::Signup => "signups",
-        }
-    }
-}

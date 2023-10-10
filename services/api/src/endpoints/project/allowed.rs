@@ -7,16 +7,12 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{response_ok, ResponseOk},
-        Endpoint, Method,
+        Endpoint,
     },
     model::{project::QueryProject, user::auth::AuthUser},
     util::cors::{get_cors, CorsResponse},
     ApiError,
 };
-
-use super::Resource;
-
-const PERMISSION_RESOURCE: Resource = Resource::ProjectPermission;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjAllowedParams {
@@ -47,7 +43,7 @@ pub async fn proj_allowed_get(
     path_params: Path<ProjAllowedParams>,
 ) -> Result<ResponseOk<JsonAllowed>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(PERMISSION_RESOURCE, Method::GetOne);
+    let endpoint = Endpoint::GetOne;
 
     let json = get_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await

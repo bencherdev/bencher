@@ -6,15 +6,13 @@ use hyper::Body;
 
 use crate::{
     context::ApiContext,
-    endpoints::{Endpoint, Method},
+    endpoints::Endpoint,
     model::user::auth::AuthUser,
     util::cors::{get_cors, CorsResponse},
     ApiError,
 };
 
-use super::{ProjPerfParams, Resource};
-
-const PERF_IMG_RESOURCE: Resource = Resource::PerfImg;
+use super::ProjPerfParams;
 
 #[allow(clippy::unused_async)]
 #[endpoint {
@@ -46,7 +44,7 @@ pub async fn proj_perf_img_get(
     let json_perf_query = json_perf_query_params.try_into().map_err(ApiError::from)?;
 
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::new(PERF_IMG_RESOURCE, Method::GetLs);
+    let endpoint = Endpoint::GetLs;
 
     let jpeg = get_inner(
         rqctx.context(),

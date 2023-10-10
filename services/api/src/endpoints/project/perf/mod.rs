@@ -20,7 +20,7 @@ use crate::{
     context::{ApiContext, DbConnection},
     endpoints::{
         endpoint::{pub_response_ok, response_ok, ResponseOk},
-        Endpoint, Method,
+        Endpoint,
     },
     model::project::{
         benchmark::{BenchmarkId, QueryBenchmark},
@@ -43,10 +43,6 @@ use crate::{
 };
 
 pub mod img;
-
-use super::Resource;
-
-const PERF_RESOURCE: Resource = Resource::Perf;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjPerfParams {
@@ -84,7 +80,7 @@ pub async fn proj_perf_get(
         .map_err(ApiError::from)?;
 
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::new(PERF_RESOURCE, Method::GetLs);
+    let endpoint = Endpoint::GetLs;
 
     let json = get_inner(
         rqctx.context(),

@@ -8,7 +8,7 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{pub_response_ok, response_ok, ResponseOk},
-        Endpoint, Method,
+        Endpoint,
     },
     model::project::{threshold::statistic::QueryStatistic, QueryProject},
     model::user::auth::AuthUser,
@@ -16,10 +16,6 @@ use crate::{
     util::cors::{get_cors, CorsResponse},
     ApiError,
 };
-
-use super::Resource;
-
-const STATISTIC_RESOURCE: Resource = Resource::Statistic;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjStatisticParams {
@@ -50,7 +46,7 @@ pub async fn proj_statistic_get(
     path_params: Path<ProjStatisticParams>,
 ) -> Result<ResponseOk<JsonStatistic>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::new(STATISTIC_RESOURCE, Method::GetOne);
+    let endpoint = Endpoint::GetOne;
 
     let json = get_one_inner(
         rqctx.context(),

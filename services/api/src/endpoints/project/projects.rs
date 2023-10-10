@@ -12,7 +12,7 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
-        Endpoint, Method,
+        Endpoint,
     },
     model::{
         project::{
@@ -28,10 +28,6 @@ use crate::{
     },
     ApiError,
 };
-
-use super::Resource;
-
-const PROJECT_RESOURCE: Resource = Resource::Project;
 
 pub type ProjectsPagination = JsonPagination<ProjectsSort>;
 
@@ -73,7 +69,7 @@ pub async fn projects_get(
     query_params: Query<ProjectsQuery>,
 ) -> Result<ResponseOk<JsonProjects>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetLs);
+    let endpoint = Endpoint::GetLs;
 
     let json = get_ls_inner(
         rqctx.context(),
@@ -171,7 +167,7 @@ pub async fn project_get(
     path_params: Path<ProjectParams>,
 ) -> Result<ResponseOk<JsonProject>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetOne);
+    let endpoint = Endpoint::GetOne;
 
     let json = get_one_inner(
         rqctx.context(),
@@ -216,7 +212,7 @@ pub async fn project_patch(
     body: TypedBody<JsonUpdateProject>,
 ) -> Result<ResponseAccepted<JsonProject>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::Patch);
+    let endpoint = Endpoint::Patch;
 
     let context = rqctx.context();
     let json = patch_inner(
@@ -292,7 +288,7 @@ pub async fn project_delete(
     path_params: Path<ProjectParams>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::Delete);
+    let endpoint = Endpoint::Delete;
 
     let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await

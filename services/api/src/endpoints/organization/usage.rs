@@ -10,8 +10,7 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{response_ok, ResponseOk},
-        organization::Resource,
-        Endpoint, Method,
+        Endpoint,
     },
     model::{organization::QueryOrganization, project::metric::QueryMetric, user::auth::AuthUser},
     util::{
@@ -20,8 +19,6 @@ use crate::{
     },
     ApiError,
 };
-
-const USAGE_RESOURCE: Resource = Resource::Usage;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgUsageParams {
@@ -59,7 +56,7 @@ pub async fn org_usage_get(
     query_params: Query<OrgUsageQuery>,
 ) -> Result<ResponseOk<JsonUsage>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(USAGE_RESOURCE, Method::GetOne);
+    let endpoint = Endpoint::GetOne;
 
     let json = get_inner(
         rqctx.context(),

@@ -12,7 +12,7 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
-        Endpoint, Method,
+        Endpoint,
     },
     model::project::{
         branch::{InsertBranch, QueryBranch, UpdateBranch},
@@ -27,10 +27,6 @@ use crate::{
     },
     ApiError,
 };
-
-use super::Resource;
-
-const BRANCH_RESOURCE: Resource = Resource::Branch;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjBranchesParams {
@@ -78,7 +74,7 @@ pub async fn proj_branches_get(
     query_params: Query<ProjBranchesQuery>,
 ) -> Result<ResponseOk<JsonBranches>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::new(BRANCH_RESOURCE, Method::GetLs);
+    let endpoint = Endpoint::GetLs;
 
     let json = get_ls_inner(
         rqctx.context(),
@@ -151,7 +147,7 @@ pub async fn proj_branch_post(
     body: TypedBody<JsonNewBranch>,
 ) -> Result<ResponseAccepted<JsonBranch>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(BRANCH_RESOURCE, Method::Post);
+    let endpoint = Endpoint::Post;
 
     let json = post_inner(
         rqctx.context(),
@@ -249,7 +245,7 @@ pub async fn proj_branch_get(
     path_params: Path<ProjBranchParams>,
 ) -> Result<ResponseOk<JsonBranch>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::new(BRANCH_RESOURCE, Method::GetOne);
+    let endpoint = Endpoint::GetOne;
 
     let json = get_one_inner(
         rqctx.context(),
@@ -302,7 +298,7 @@ pub async fn proj_branch_patch(
     body: TypedBody<JsonUpdateBranch>,
 ) -> Result<ResponseAccepted<JsonBranch>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(BRANCH_RESOURCE, Method::Patch);
+    let endpoint = Endpoint::Patch;
 
     let context = rqctx.context();
     let json = patch_inner(
@@ -363,7 +359,7 @@ pub async fn proj_branch_delete(
     path_params: Path<ProjBranchParams>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(BRANCH_RESOURCE, Method::Delete);
+    let endpoint = Endpoint::Delete;
 
     let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await

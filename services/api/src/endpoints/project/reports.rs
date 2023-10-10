@@ -19,7 +19,7 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
-        Endpoint, Method,
+        Endpoint,
     },
     error::{issue_error, resource_insert_err},
     model::project::{
@@ -37,10 +37,6 @@ use crate::{
     },
     ApiError,
 };
-
-use super::Resource;
-
-const REPORT_RESOURCE: Resource = Resource::Report;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjReportsParams {
@@ -89,7 +85,7 @@ pub async fn proj_reports_get(
         .map_err(ApiError::from)?;
 
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::new(REPORT_RESOURCE, Method::GetLs);
+    let endpoint = Endpoint::GetLs;
 
     let json = get_ls_inner(
         &rqctx.log,
@@ -204,7 +200,7 @@ pub async fn proj_report_post(
     body: TypedBody<JsonNewReport>,
 ) -> Result<ResponseAccepted<JsonReport>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(REPORT_RESOURCE, Method::Post);
+    let endpoint = Endpoint::Post;
 
     let json = post_inner(
         &rqctx.log,
@@ -485,7 +481,7 @@ pub async fn proj_report_get(
     path_params: Path<ProjReportParams>,
 ) -> Result<ResponseOk<JsonReport>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::new(REPORT_RESOURCE, Method::GetOne);
+    let endpoint = Endpoint::GetOne;
 
     let json = get_one_inner(
         &rqctx.log,
@@ -537,7 +533,7 @@ pub async fn proj_report_delete(
     path_params: Path<ProjReportParams>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(REPORT_RESOURCE, Method::Delete);
+    let endpoint = Endpoint::Delete;
 
     let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await

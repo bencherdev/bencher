@@ -14,16 +14,13 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{response_accepted, ResponseAccepted},
-        Endpoint, Method,
+        Endpoint,
     },
     model::user::auth::AuthUser,
     util::cors::{get_cors, CorsResponse},
     ApiError,
 };
 
-use super::Resource;
-
-const BACKUP_RESOURCE: Resource = Resource::Backup;
 const BUFFER_SIZE: usize = 1024;
 
 #[allow(clippy::unused_async)]
@@ -49,7 +46,7 @@ pub async fn server_backup_post(
     body: TypedBody<JsonBackup>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(BACKUP_RESOURCE, Method::Post);
+    let endpoint = Endpoint::Post;
 
     let context = rqctx.context();
     let json_restart = body.into_inner();

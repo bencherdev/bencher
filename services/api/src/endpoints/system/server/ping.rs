@@ -3,16 +3,12 @@ use dropshot::{endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, Request
 
 use crate::{
     context::ApiContext,
-    endpoints::{endpoint::pub_response_ok, Endpoint, Method},
+    endpoints::{endpoint::pub_response_ok, Endpoint},
     util::{
         cors::{get_cors, CorsResponse},
         headers::CorsHeaders,
     },
 };
-
-use super::Resource;
-
-const PING_RESOURCE: Resource = Resource::Ping;
 
 #[allow(clippy::unused_async)]
 #[endpoint {
@@ -35,6 +31,6 @@ pub async fn server_ping_options(
 pub async fn server_ping_get(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonPing>, CorsHeaders>, HttpError> {
-    let endpoint = Endpoint::new(PING_RESOURCE, Method::GetOne);
+    let endpoint = Endpoint::GetOne;
     pub_response_ok!(endpoint, JsonPing::Pong)
 }

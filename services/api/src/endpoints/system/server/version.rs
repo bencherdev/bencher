@@ -3,16 +3,13 @@ use dropshot::{endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, Request
 
 use crate::{
     context::ApiContext,
-    endpoints::{endpoint::pub_response_ok, Endpoint, Method},
+    endpoints::{endpoint::pub_response_ok, Endpoint},
     util::{
         cors::{get_cors, CorsResponse},
         headers::CorsHeaders,
     },
 };
 
-use super::Resource;
-
-const VERSION_RESOURCE: Resource = Resource::Version;
 const API_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[allow(clippy::unused_async)]
@@ -36,7 +33,7 @@ pub async fn server_version_options(
 pub async fn server_version_get(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonApiVersion>, CorsHeaders>, HttpError> {
-    let endpoint = Endpoint::new(VERSION_RESOURCE, Method::GetOne);
+    let endpoint = Endpoint::GetOne;
     let json = JsonApiVersion {
         version: API_VERSION.into(),
     };

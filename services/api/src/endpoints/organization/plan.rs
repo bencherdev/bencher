@@ -14,7 +14,7 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
-        Endpoint, Method,
+        Endpoint,
     },
     model::organization::QueryOrganization,
     model::user::{auth::AuthUser, QueryUser},
@@ -22,10 +22,6 @@ use crate::{
     util::cors::{get_cors, CorsResponse},
     ApiError,
 };
-
-use super::Resource;
-
-const PLAN_RESOURCE: Resource = Resource::Plan;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgPlanParams {
@@ -56,7 +52,7 @@ pub async fn org_plan_post(
     body: TypedBody<JsonNewPlan>,
 ) -> Result<ResponseAccepted<JsonPlan>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(PLAN_RESOURCE, Method::Post);
+    let endpoint = Endpoint::Post;
 
     let json = post_inner(
         rqctx.context(),
@@ -152,7 +148,7 @@ pub async fn org_plan_get(
     path_params: Path<OrgPlanParams>,
 ) -> Result<ResponseOk<JsonPlan>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(PLAN_RESOURCE, Method::GetOne);
+    let endpoint = Endpoint::GetOne;
 
     let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await

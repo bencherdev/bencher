@@ -13,7 +13,7 @@ use crate::{
     context::{ApiContext, Body, ButtonBody, DbConnection, Message},
     endpoints::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
-        Endpoint, Method,
+        Endpoint,
     },
     model::user::{auth::AuthUser, QueryUser},
     model::{
@@ -27,10 +27,6 @@ use crate::{
     },
     ApiError,
 };
-
-use super::Resource;
-
-const MEMBER_RESOURCE: Resource = Resource::Member;
 
 // TODO Custom max TTL
 pub const INVITE_TOKEN_TTL: u32 = u32::MAX;
@@ -81,7 +77,7 @@ pub async fn org_members_get(
     query_params: Query<OrgMembersQuery>,
 ) -> Result<ResponseOk<JsonMembers>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::GetLs);
+    let endpoint = Endpoint::GetLs;
 
     let json = get_ls_inner(
         rqctx.context(),
@@ -171,7 +167,7 @@ pub async fn org_member_post(
     body: TypedBody<JsonNewMember>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::Post);
+    let endpoint = Endpoint::Post;
 
     let json = post_inner(
         &rqctx.log,
@@ -310,7 +306,7 @@ pub async fn org_member_get(
     path_params: Path<OrgMemberParams>,
 ) -> Result<ResponseOk<JsonMember>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::GetOne);
+    let endpoint = Endpoint::GetOne;
 
     let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await
@@ -355,7 +351,7 @@ pub async fn org_member_patch(
     body: TypedBody<JsonUpdateMember>,
 ) -> Result<ResponseAccepted<JsonMember>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::Patch);
+    let endpoint = Endpoint::Patch;
 
     let json = patch_inner(
         rqctx.context(),
@@ -418,7 +414,7 @@ pub async fn org_member_delete(
     path_params: Path<OrgMemberParams>,
 ) -> Result<ResponseAccepted<JsonMember>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::Delete);
+    let endpoint = Endpoint::Delete;
 
     let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await
