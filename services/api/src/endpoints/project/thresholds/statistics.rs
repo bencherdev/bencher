@@ -7,14 +7,12 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{pub_response_ok, response_ok, ResponseOk},
+        endpoint::{pub_response_ok, response_ok, CorsResponse, ResponseOk},
         Endpoint,
     },
     model::project::{threshold::statistic::QueryStatistic, QueryProject},
     model::user::auth::AuthUser,
-    schema,
-    util::cors::{get_cors, CorsResponse},
-    ApiError,
+    schema, ApiError,
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -33,7 +31,7 @@ pub async fn proj_statistic_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjStatisticParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::GetOne]))
 }
 
 #[endpoint {

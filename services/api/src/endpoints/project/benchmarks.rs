@@ -12,7 +12,10 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
+        endpoint::{
+            pub_response_ok, response_accepted, response_ok, CorsResponse, ResponseAccepted,
+            ResponseOk,
+        },
         Endpoint,
     },
     model::{
@@ -23,11 +26,7 @@ use crate::{
         user::auth::AuthUser,
     },
     schema,
-    util::{
-        cors::{get_cors, CorsResponse},
-        error::into_json,
-        resource_id::fn_resource_id,
-    },
+    util::{error::into_json, resource_id::fn_resource_id},
     ApiError,
 };
 
@@ -62,7 +61,7 @@ pub async fn proj_benchmarks_options(
     _pagination_params: Query<ProjBenchmarksPagination>,
     _query_params: Query<ProjBenchmarksQuery>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::GetLs, Endpoint::Post]))
 }
 
 #[endpoint {
@@ -218,7 +217,11 @@ pub async fn proj_benchmark_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjBenchmarkParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[
+        Endpoint::GetOne,
+        Endpoint::Patch,
+        Endpoint::Delete,
+    ]))
 }
 
 #[endpoint {

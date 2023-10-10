@@ -12,7 +12,7 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
+        endpoint::{response_accepted, response_ok, CorsResponse, ResponseAccepted, ResponseOk},
         Endpoint,
     },
     model::{
@@ -23,10 +23,7 @@ use crate::{
         user::auth::AuthUser,
     },
     schema,
-    util::{
-        cors::{get_cors, CorsResponse},
-        error::into_json,
-    },
+    util::error::into_json,
     ApiError,
 };
 
@@ -55,7 +52,7 @@ pub async fn organizations_options(
     _pagination_params: Query<OrganizationsPagination>,
     _query_params: Query<OrganizationsQuery>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::GetLs, Endpoint::Post]))
 }
 
 #[endpoint {
@@ -212,7 +209,7 @@ pub async fn organization_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OrganizationParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::GetOne, Endpoint::Patch]))
 }
 
 #[endpoint {

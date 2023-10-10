@@ -5,13 +5,11 @@ use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{pub_response_accepted, ResponseAccepted},
+        endpoint::{pub_response_accepted, CorsResponse, ResponseAccepted},
         Endpoint,
     },
     model::user::QueryUser,
-    schema,
-    util::cors::{get_cors, CorsResponse},
-    ApiError,
+    schema, ApiError,
 };
 
 use super::CLIENT_TOKEN_TTL;
@@ -25,7 +23,7 @@ use super::CLIENT_TOKEN_TTL;
 pub async fn auth_confirm_options(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::Post]))
 }
 
 #[endpoint {

@@ -11,7 +11,7 @@ use uuid::Uuid;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
+        endpoint::{response_accepted, response_ok, CorsResponse, ResponseAccepted, ResponseOk},
         Endpoint,
     },
     model::{
@@ -22,10 +22,7 @@ use crate::{
         },
     },
     schema,
-    util::{
-        cors::{get_cors, CorsResponse},
-        error::into_json,
-    },
+    util::error::into_json,
     ApiError,
 };
 
@@ -60,7 +57,7 @@ pub async fn user_tokens_options(
     _pagination_params: Query<UserTokensPagination>,
     _query_params: Query<UserTokensQuery>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::GetLs, Endpoint::Post]))
 }
 
 #[endpoint {
@@ -214,7 +211,7 @@ pub async fn user_token_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<UserTokenParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::GetOne, Endpoint::Patch]))
 }
 
 #[endpoint {

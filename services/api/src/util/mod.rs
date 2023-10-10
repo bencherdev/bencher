@@ -2,7 +2,6 @@ use chrono::{DateTime, TimeZone, Utc};
 
 use crate::ApiError;
 
-pub mod cors;
 pub mod error;
 pub mod headers;
 pub mod query;

@@ -6,11 +6,10 @@ use tokio::sync::mpsc::Sender;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{response_accepted, ResponseAccepted},
+        endpoint::{response_accepted, CorsResponse, ResponseAccepted},
         Endpoint,
     },
     model::user::{auth::AuthUser, UserId},
-    util::cors::{get_cors, CorsResponse},
     ApiError,
 };
 
@@ -26,7 +25,7 @@ pub async fn server_restart_options(
     _rqctx: RequestContext<ApiContext>,
     _body: TypedBody<JsonRestart>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::Post]))
 }
 
 #[endpoint {

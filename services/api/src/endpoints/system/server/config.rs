@@ -6,11 +6,10 @@ use crate::{
     config::{Config, BENCHER_CONFIG},
     context::ApiContext,
     endpoints::{
-        endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
+        endpoint::{response_accepted, response_ok, CorsResponse, ResponseAccepted, ResponseOk},
         Endpoint,
     },
     model::user::auth::AuthUser,
-    util::cors::{get_cors, CorsResponse},
     ApiError,
 };
 
@@ -25,7 +24,7 @@ use super::restart::{countdown, DEFAULT_DELAY};
 pub async fn server_config_options(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::GetOne]))
 }
 
 #[endpoint {

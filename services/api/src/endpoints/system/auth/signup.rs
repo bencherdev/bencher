@@ -9,6 +9,7 @@ use slog::Logger;
 
 use crate::context::NewUserBody;
 use crate::endpoints::endpoint::pub_response_accepted;
+use crate::endpoints::endpoint::CorsResponse;
 use crate::endpoints::endpoint::{Endpoint, ResponseAccepted};
 use crate::model::organization::{
     organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
@@ -19,7 +20,6 @@ use crate::{
     context::{ApiContext, Body, ButtonBody, Message},
     model::user::InsertUser,
     schema,
-    util::cors::{get_cors, CorsResponse},
 };
 
 use super::AUTH_TOKEN_TTL;
@@ -34,7 +34,7 @@ use super::TOKEN_ARG;
 pub async fn auth_signup_options(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::Post]))
 }
 
 #[endpoint {

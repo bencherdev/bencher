@@ -5,6 +5,7 @@ use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use slog::Logger;
 
 use crate::endpoints::endpoint::pub_response_accepted;
+use crate::endpoints::endpoint::CorsResponse;
 use crate::endpoints::endpoint::ResponseAccepted;
 use crate::endpoints::Endpoint;
 
@@ -12,9 +13,7 @@ use crate::{
     context::{ApiContext, Body, ButtonBody, Message},
     model::organization::organization_role::InsertOrganizationRole,
     model::user::QueryUser,
-    schema,
-    util::cors::{get_cors, CorsResponse},
-    ApiError,
+    schema, ApiError,
 };
 
 use super::AUTH_TOKEN_TTL;
@@ -29,7 +28,7 @@ use super::TOKEN_ARG;
 pub async fn auth_login_options(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::Post]))
 }
 
 #[endpoint {

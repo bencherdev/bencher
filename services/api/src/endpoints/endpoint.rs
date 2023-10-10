@@ -6,6 +6,7 @@ use serde::Serialize;
 
 use crate::{util::headers::CorsHeaders, ApiError};
 
+pub type CorsResponse = HttpResponseHeaders<HttpResponseOk<String>, CorsHeaders>;
 pub type ResponseOk<T> = HttpResponseHeaders<HttpResponseOk<T>, CorsHeaders>;
 pub type ResponseAccepted<T> = HttpResponseHeaders<HttpResponseAccepted<T>, CorsHeaders>;
 
@@ -32,6 +33,13 @@ impl From<Endpoint> for http::Method {
 }
 
 impl Endpoint {
+    pub fn cors(endpoints: &[Self]) -> CorsResponse {
+        HttpResponseHeaders::new(
+            HttpResponseOk(String::new()),
+            CorsHeaders::new_cors(endpoints),
+        )
+    }
+
     #[allow(clippy::needless_pass_by_value)]
     pub fn err(self, _e: ApiError) -> ApiError {
         // tracing::info!("{api_error}: {e}");

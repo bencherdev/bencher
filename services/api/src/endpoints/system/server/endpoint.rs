@@ -4,11 +4,10 @@ use dropshot::{endpoint, HttpError, RequestContext};
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{pub_response_ok, response_ok, ResponseOk},
+        endpoint::{pub_response_ok, response_ok, CorsResponse, ResponseOk},
         Endpoint,
     },
     model::user::auth::AuthUser,
-    util::cors::{get_cors, CorsResponse},
     ApiError,
 };
 
@@ -21,7 +20,7 @@ use crate::{
 pub async fn server_endpoint_options(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::GetOne]))
 }
 
 #[endpoint {

@@ -11,7 +11,10 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
+        endpoint::{
+            pub_response_ok, response_accepted, response_ok, CorsResponse, ResponseAccepted,
+            ResponseOk,
+        },
         Endpoint,
     },
     model::project::{
@@ -23,10 +26,7 @@ use crate::{
     },
     model::user::auth::AuthUser,
     schema,
-    util::{
-        cors::{get_cors, CorsResponse},
-        error::into_json,
-    },
+    util::error::into_json,
     ApiError,
 };
 
@@ -59,7 +59,7 @@ pub async fn proj_thresholds_options(
     _path_params: Path<ProjThresholdsParams>,
     _pagination_params: Query<ProjThresholdsPagination>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::GetLs, Endpoint::Post]))
 }
 
 #[endpoint {
@@ -222,7 +222,11 @@ pub async fn proj_threshold_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjThresholdParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[
+        Endpoint::GetOne,
+        Endpoint::Put,
+        Endpoint::Delete,
+    ]))
 }
 
 #[endpoint {

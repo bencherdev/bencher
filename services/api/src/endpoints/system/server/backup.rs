@@ -10,6 +10,7 @@ use tokio::fs::remove_file;
 use tokio::io::{AsyncReadExt, BufWriter};
 use tokio::io::{AsyncWriteExt, BufReader};
 
+use crate::endpoints::endpoint::CorsResponse;
 use crate::{
     context::ApiContext,
     endpoints::{
@@ -17,7 +18,6 @@ use crate::{
         Endpoint,
     },
     model::user::auth::AuthUser,
-    util::cors::{get_cors, CorsResponse},
     ApiError,
 };
 
@@ -33,7 +33,7 @@ pub async fn server_backup_options(
     _rqctx: RequestContext<ApiContext>,
     _body: TypedBody<JsonRestart>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::Post]))
 }
 
 #[endpoint {

@@ -1,12 +1,11 @@
 use bencher_json::JsonPing;
-use dropshot::{endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, RequestContext};
+use dropshot::{endpoint, HttpError, RequestContext};
 
 use crate::{
     context::ApiContext,
-    endpoints::{endpoint::pub_response_ok, Endpoint},
-    util::{
-        cors::{get_cors, CorsResponse},
-        headers::CorsHeaders,
+    endpoints::{
+        endpoint::{pub_response_ok, CorsResponse, ResponseOk},
+        Endpoint,
     },
 };
 
@@ -19,7 +18,7 @@ use crate::{
 pub async fn server_ping_options(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::Post]))
 }
 
 #[allow(clippy::unused_async)]
@@ -30,7 +29,7 @@ pub async fn server_ping_options(
 }]
 pub async fn server_ping_get(
     _rqctx: RequestContext<ApiContext>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<JsonPing>, CorsHeaders>, HttpError> {
+) -> Result<ResponseOk<JsonPing>, HttpError> {
     let endpoint = Endpoint::GetOne;
     pub_response_ok!(endpoint, JsonPing::Pong)
 }

@@ -19,7 +19,7 @@ use serde::Deserialize;
 use crate::{
     context::{ApiContext, DbConnection},
     endpoints::{
-        endpoint::{pub_response_ok, response_ok, ResponseOk},
+        endpoint::{pub_response_ok, response_ok, CorsResponse, ResponseOk},
         Endpoint,
     },
     model::project::{
@@ -35,10 +35,7 @@ use crate::{
     },
     model::user::auth::AuthUser,
     schema,
-    util::{
-        cors::{get_cors, CorsResponse},
-        to_date_time,
-    },
+    util::to_date_time,
     ApiError,
 };
 
@@ -60,7 +57,7 @@ pub async fn proj_perf_options(
     _path_params: Path<ProjPerfParams>,
     _query_params: Query<JsonPerfQueryParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::GetLs]))
 }
 
 #[endpoint {

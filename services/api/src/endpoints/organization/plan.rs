@@ -13,14 +13,12 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
+        endpoint::{response_accepted, response_ok, CorsResponse, ResponseAccepted, ResponseOk},
         Endpoint,
     },
     model::organization::QueryOrganization,
     model::user::{auth::AuthUser, QueryUser},
-    schema,
-    util::cors::{get_cors, CorsResponse},
-    ApiError,
+    schema, ApiError,
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -38,7 +36,7 @@ pub async fn org_plan_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OrgPlanParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::Post, Endpoint::GetOne]))
 }
 
 #[endpoint {

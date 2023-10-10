@@ -11,7 +11,7 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
+        endpoint::{response_accepted, response_ok, CorsResponse, ResponseAccepted, ResponseOk},
         Endpoint,
     },
     model::{
@@ -27,10 +27,7 @@ use crate::{
         user::auth::AuthUser,
     },
     schema,
-    util::{
-        cors::{get_cors, CorsResponse},
-        error::into_json,
-    },
+    util::error::into_json,
     ApiError,
 };
 
@@ -65,7 +62,7 @@ pub async fn org_projects_options(
     _pagination_params: Query<OrgProjectsPagination>,
     _query_params: Query<OrgProjectsQuery>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::GetLs, Endpoint::Post]))
 }
 
 #[endpoint {

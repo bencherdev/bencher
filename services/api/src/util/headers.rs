@@ -24,6 +24,19 @@ impl CorsHeaders {
         }
     }
 
+    pub fn new_cors<T>(methods: &[T]) -> Self
+    where
+        T: ToString,
+    {
+        let methods = methods
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<String>>()
+            .join(", ");
+
+        Self::new_origin_all(methods, "*".to_owned(), None)
+    }
+
     pub fn new_pub<T>(methods: &T) -> Self
     where
         T: ToString,

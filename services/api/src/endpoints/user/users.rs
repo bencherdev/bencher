@@ -6,14 +6,13 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{response_ok, ResponseOk},
+        endpoint::{response_ok, CorsResponse, ResponseOk},
         Endpoint,
     },
     model::{
         user::QueryUser,
         user::{auth::AuthUser, token::same_user},
     },
-    util::cors::{get_cors, CorsResponse},
     ApiError,
 };
 
@@ -32,7 +31,7 @@ pub async fn user_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<UserParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::GetOne]))
 }
 
 #[endpoint {

@@ -1,12 +1,11 @@
 use bencher_json::JsonApiVersion;
-use dropshot::{endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, RequestContext};
+use dropshot::{endpoint, HttpError, RequestContext};
 
 use crate::{
     context::ApiContext,
-    endpoints::{endpoint::pub_response_ok, Endpoint},
-    util::{
-        cors::{get_cors, CorsResponse},
-        headers::CorsHeaders,
+    endpoints::{
+        endpoint::{pub_response_ok, CorsResponse, ResponseOk},
+        Endpoint,
     },
 };
 
@@ -21,7 +20,7 @@ const API_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub async fn server_version_options(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::GetOne]))
 }
 
 #[allow(clippy::unused_async)]
@@ -32,7 +31,7 @@ pub async fn server_version_options(
 }]
 pub async fn server_version_get(
     _rqctx: RequestContext<ApiContext>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<JsonApiVersion>, CorsHeaders>, HttpError> {
+) -> Result<ResponseOk<JsonApiVersion>, HttpError> {
     let endpoint = Endpoint::GetOne;
     let json = JsonApiVersion {
         version: API_VERSION.into(),

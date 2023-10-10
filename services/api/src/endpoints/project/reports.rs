@@ -18,7 +18,10 @@ use slog::Logger;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
+        endpoint::{
+            pub_response_ok, response_accepted, response_ok, CorsResponse, ResponseAccepted,
+            ResponseOk,
+        },
         Endpoint,
     },
     error::{issue_error, resource_insert_err},
@@ -31,10 +34,7 @@ use crate::{
     },
     model::user::auth::AuthUser,
     schema,
-    util::{
-        cors::{get_cors, CorsResponse},
-        error::database_map,
-    },
+    util::error::database_map,
     ApiError,
 };
 
@@ -64,7 +64,7 @@ pub async fn proj_reports_options(
     _pagination_params: Query<ProjReportsPagination>,
     _query_params: Query<JsonReportQueryParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::GetLs, Endpoint::Post]))
 }
 
 #[endpoint {
@@ -468,7 +468,7 @@ pub async fn proj_report_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjReportParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::GetOne, Endpoint::Delete]))
 }
 
 #[endpoint {

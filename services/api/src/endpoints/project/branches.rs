@@ -11,7 +11,10 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
+        endpoint::{
+            pub_response_ok, response_accepted, response_ok, CorsResponse, ResponseAccepted,
+            ResponseOk,
+        },
         Endpoint,
     },
     model::project::{
@@ -20,11 +23,7 @@ use crate::{
     },
     model::user::auth::AuthUser,
     schema,
-    util::{
-        cors::{get_cors, CorsResponse},
-        error::into_json,
-        resource_id::fn_resource_id,
-    },
+    util::{error::into_json, resource_id::fn_resource_id},
     ApiError,
 };
 
@@ -59,7 +58,7 @@ pub async fn proj_branches_options(
     _pagination_params: Query<ProjBranchesPagination>,
     _query_params: Query<ProjBranchesQuery>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::GetLs, Endpoint::Post]))
 }
 
 #[endpoint {
@@ -232,7 +231,11 @@ pub async fn proj_branch_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjBranchParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[
+        Endpoint::GetOne,
+        Endpoint::Patch,
+        Endpoint::Delete,
+    ]))
 }
 
 #[endpoint {

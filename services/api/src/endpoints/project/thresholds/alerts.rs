@@ -11,7 +11,10 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
+        endpoint::{
+            pub_response_ok, response_accepted, response_ok, CorsResponse, ResponseAccepted,
+            ResponseOk,
+        },
         Endpoint,
     },
     model::project::{
@@ -20,10 +23,7 @@ use crate::{
     },
     model::user::auth::AuthUser,
     schema,
-    util::{
-        cors::{get_cors, CorsResponse},
-        error::into_json,
-    },
+    util::error::into_json,
     ApiError,
 };
 
@@ -53,7 +53,7 @@ pub async fn proj_alerts_options(
     _path_params: Path<ProjAlertsParams>,
     _pagination_params: Query<ProjAlertsPagination>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::GetLs]))
 }
 
 #[endpoint {
@@ -175,7 +175,7 @@ pub async fn proj_alert_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjAlertParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::GetOne, Endpoint::Patch]))
 }
 
 #[endpoint {
@@ -294,7 +294,7 @@ pub async fn proj_alert_stats_options(
     _path_params: Path<ProjAlertsParams>,
     _pagination_params: Query<ProjAlertsPagination>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::GetLs]))
 }
 
 #[endpoint {

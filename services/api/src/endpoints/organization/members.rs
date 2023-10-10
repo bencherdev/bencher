@@ -12,7 +12,7 @@ use slog::Logger;
 use crate::{
     context::{ApiContext, Body, ButtonBody, DbConnection, Message},
     endpoints::{
-        endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
+        endpoint::{response_accepted, response_ok, CorsResponse, ResponseAccepted, ResponseOk},
         Endpoint,
     },
     model::user::{auth::AuthUser, QueryUser},
@@ -21,10 +21,7 @@ use crate::{
         user::UserId,
     },
     schema,
-    util::{
-        cors::{get_cors, CorsResponse},
-        error::into_json,
-    },
+    util::error::into_json,
     ApiError,
 };
 
@@ -62,7 +59,7 @@ pub async fn org_members_options(
     _pagination_params: Query<OrgMembersPagination>,
     _query_params: Query<OrgMembersQuery>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::GetLs, Endpoint::Post]))
 }
 
 #[endpoint {
@@ -293,7 +290,11 @@ pub async fn org_member_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OrgMemberParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[
+        Endpoint::GetOne,
+        Endpoint::Patch,
+        Endpoint::Delete,
+    ]))
 }
 
 #[endpoint {

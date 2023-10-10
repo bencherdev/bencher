@@ -9,14 +9,11 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{response_ok, ResponseOk},
+        endpoint::{response_ok, CorsResponse, ResponseOk},
         Endpoint,
     },
     model::{organization::QueryOrganization, project::metric::QueryMetric, user::auth::AuthUser},
-    util::{
-        cors::{get_cors, CorsResponse},
-        to_date_time,
-    },
+    util::to_date_time,
     ApiError,
 };
 
@@ -42,7 +39,7 @@ pub async fn org_usage_options(
     _path_params: Path<OrgUsageParams>,
     _query_params: Query<OrgUsageQuery>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
+    Ok(Endpoint::cors(&[Endpoint::GetOne]))
 }
 
 #[endpoint {
