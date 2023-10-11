@@ -37,7 +37,7 @@ impl JsonNewStatistic {
             min_sample_size: None,
             max_sample_size: Some(SampleSize::THIRTY),
             window: None,
-            lower_boundary: Some(Boundary::EIGHTY_FIVE),
+            lower_boundary: Some(Boundary::EIGHTY),
             upper_boundary: None,
         }
     }
@@ -49,7 +49,7 @@ impl JsonNewStatistic {
             max_sample_size: Some(SampleSize::THIRTY),
             window: None,
             lower_boundary: None,
-            upper_boundary: Some(Boundary::EIGHTY_FIVE),
+            upper_boundary: Some(Boundary::EIGHTY),
         }
     }
 }

@@ -116,10 +116,10 @@ const Footer = (props: {
 	return (
 		<div class="plan-footer">
 			<Show
-				when={props.plan === props.plan}
+				when={props.active === props.plan}
 				fallback={
 					<div class="columns is-centered">
-						<div class="column is-four-fifths">
+						<div class="column is-11">
 							<button
 								class="button is-fullwidth"
 								onClick={(e) => {

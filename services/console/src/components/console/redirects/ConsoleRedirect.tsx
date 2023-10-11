@@ -1,6 +1,6 @@
 import bencher_valid_init, { type InitOutput } from "bencher_valid";
 
-import { authUser } from "../../../util/auth";
+import { authUser, removeUser } from "../../../util/auth";
 import {
 	NOTIFY_KIND_PARAM,
 	NOTIFY_TEXT_PARAM,
@@ -36,7 +36,7 @@ const ConsoleRedirect = (props: Props) => {
 		token: string;
 	}) => {
 		if (!bencher_valid()) {
-			return null;
+			return undefined;
 		}
 
 		if (!validJwt(fetcher.token)) {
@@ -60,7 +60,12 @@ const ConsoleRedirect = (props: Props) => {
 
 	createEffect(() => {
 		const orgs = organizations();
-		if (orgs === undefined || orgs === null) {
+		if (orgs === undefined) {
+			return;
+		}
+		if (orgs === null) {
+			removeUser();
+			navigate("/auth/login");
 			return;
 		}
 		if (orgs.length !== 1) {

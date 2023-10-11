@@ -42,7 +42,7 @@ export const swaggerSpec = (apiUrl: string) => {
 };
 
 // Change this value to test billing in development mode
-const TEST_BENCHER_BILLING: boolean = false;
+const TEST_BENCHER_BILLING: boolean = true;
 
 export const isBencherCloud = (apiUrl: string) => {
 	const mode = import.meta.env.MODE;

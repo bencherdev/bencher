@@ -3,6 +3,7 @@ import BaseLayout from "../BaseLayout.astro";
 import ConsoleNavbar from "../../components/site/navbar/ConsoleNavbar";
 import Notification from "../../components/site/Notification";
 import type { Params } from "astro";
+import AnonRedirect from "../../components/console/redirects/AnonRedirect";
 
 interface Props {
   apiUrl: string;
@@ -17,6 +18,7 @@ const description = "Sign up for Bencher! Add continuous benchmarking to your pr
 
 <BaseLayout title={title} description={description}>
   <ConsoleNavbar client:only="solid-js" slot="navbar" apiUrl={apiUrl} params={params} />
+  <AnonRedirect client:only="solid-js" path="/auth/login" />
   <div class="is-widescreen">
     <div class="columns is-reverse-mobile">
       <div class="columns">
