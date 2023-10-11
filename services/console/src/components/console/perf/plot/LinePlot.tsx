@@ -400,7 +400,6 @@ const boundary_dot = (x_axis: string, position: Position, color: string) => {
 };
 
 const warning_image = (x_axis: string) => {
-	console.log("warning_image");
 	return {
 		x: x_axis,
 		y: "y",

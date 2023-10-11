@@ -75,7 +75,6 @@ const ConsoleRedirect = (props: Props) => {
 		const org = orgs[0] as JsonOrganization;
 
 		const plan = searchParams[PLAN_PARAM];
-		console.log(plan);
 		if (plan) {
 			navigate(
 				forwardParams(

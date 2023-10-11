@@ -27,6 +27,12 @@ impl Api {
         api: &mut ApiDescription<ApiContext>,
         http_options: bool,
     ) -> Result<(), String> {
+        // Root
+        if http_options {
+            api.register(system::root::server_root_options)?;
+        }
+        api.register(system::root::server_root_get)?;
+
         // Auth
         if http_options {
             api.register(system::auth::signup::auth_signup_options)?;

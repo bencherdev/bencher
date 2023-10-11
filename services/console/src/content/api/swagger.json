@@ -5,6 +5,62 @@
     "version": "0.3.13"
   },
   "paths": {
+    "/": {
+      "get": {
+        "tags": [
+          "server"
+        ],
+        "operationId": "server_root_get",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonEmpty"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/auth/confirm": {
       "post": {
         "tags": [
