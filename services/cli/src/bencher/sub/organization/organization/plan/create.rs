@@ -1,22 +1,20 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_client::types::{JsonCard, JsonNewPlan};
+use bencher_client::types::{JsonCard, JsonNewPlan, PlanLevel};
 use bencher_json::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear, JsonPlan, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    parser::organization::plan::{CliPlanCard, CliPlanCreate},
+    parser::organization::plan::{CliPlanCard, CliPlanCreate, CliPlanLevel},
     CliError,
 };
-
-use super::level::Level;
 
 #[derive(Debug, Clone)]
 pub struct Create {
     pub org: ResourceId,
     pub card: Card,
-    pub level: Level,
+    pub level: PlanLevel,
     pub backend: Backend,
 }
 
@@ -47,6 +45,16 @@ impl TryFrom<CliPlanCreate> for Create {
     }
 }
 
+impl From<CliPlanLevel> for PlanLevel {
+    fn from(level: CliPlanLevel) -> Self {
+        match level {
+            CliPlanLevel::Free => Self::Free,
+            CliPlanLevel::Team => Self::Team,
+            CliPlanLevel::Enterprise => Self::Enterprise,
+        }
+    }
+}
+
 impl From<CliPlanCard> for Card {
     fn from(card: CliPlanCard) -> Self {
         let CliPlanCard {
@@ -69,7 +77,7 @@ impl From<Create> for JsonNewPlan {
         let Create { card, level, .. } = create;
         Self {
             card: card.into(),
-            level: level.into(),
+            level,
         }
     }
 }

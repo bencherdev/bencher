@@ -8,7 +8,6 @@ mod delete;
 mod list;
 mod update;
 mod view;
-mod visibility;
 
 #[derive(Debug)]
 pub enum Project {

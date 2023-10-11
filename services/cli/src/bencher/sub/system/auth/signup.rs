@@ -2,10 +2,10 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::JsonSignup;
+#[cfg(feature = "plus")]
+use bencher_client::types::PlanLevel;
 use bencher_json::{Email, JsonEmpty, Jwt, Slug, UserName};
 
-#[cfg(feature = "plus")]
-use crate::bencher::sub::organization::organization::plan::level::Level;
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
     parser::system::auth::CliAuthSignup,
@@ -18,7 +18,7 @@ pub struct Signup {
     pub slug: Option<Slug>,
     pub email: Email,
     #[cfg(feature = "plus")]
-    pub plan: Option<Level>,
+    pub plan: Option<PlanLevel>,
     pub invite: Option<Jwt>,
     pub backend: Backend,
 }
@@ -64,7 +64,7 @@ impl From<Signup> for JsonSignup {
             slug: slug.map(Into::into),
             email: email.into(),
             #[cfg(feature = "plus")]
-            plan: plan.map(Into::into),
+            plan,
             #[cfg(not(feature = "plus"))]
             plan: None,
             invite: invite.map(Into::into),

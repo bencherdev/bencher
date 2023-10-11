@@ -14,14 +14,8 @@ use crate::{
 pub struct Update {
     pub project: ResourceId,
     pub alert: AlertUuid,
-    pub status: Option<Status>,
+    pub status: Option<AlertStatus>,
     pub backend: Backend,
-}
-
-#[derive(Debug, Clone)]
-pub enum Status {
-    Active,
-    Dismissed,
 }
 
 impl TryFrom<CliAlertUpdate> for Update {
@@ -43,7 +37,7 @@ impl TryFrom<CliAlertUpdate> for Update {
     }
 }
 
-impl From<CliAlertStatus> for Status {
+impl From<CliAlertStatus> for AlertStatus {
     fn from(status: CliAlertStatus) -> Self {
         match status {
             CliAlertStatus::Active => Self::Active,
@@ -55,12 +49,7 @@ impl From<CliAlertStatus> for Status {
 impl From<Update> for JsonUpdateAlert {
     fn from(update: Update) -> Self {
         let Update { status, .. } = update;
-        Self {
-            status: status.map(|s| match s {
-                Status::Active => AlertStatus::Active,
-                Status::Dismissed => AlertStatus::Dismissed,
-            }),
-        }
+        Self { status }
     }
 }
 

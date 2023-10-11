@@ -2,34 +2,7 @@ use bencher_client::types::Adapter;
 
 use crate::parser::project::run::CliRunAdapter;
 
-#[derive(Debug, Clone, Copy)]
-pub enum RunAdapter {
-    Magic,
-    Json,
-    CSharp,
-    CSharpDotNet,
-    Cpp,
-    CppCatch2,
-    CppGoogle,
-    Go,
-    GoBench,
-    Java,
-    JavaJmh,
-    Js,
-    JsBenchmark,
-    JsTime,
-    Python,
-    PythonAsv,
-    PythonPytest,
-    Ruby,
-    RubyBenchmark,
-    Rust,
-    RustBench,
-    RustCriterion,
-    RustIai,
-}
-
-impl From<CliRunAdapter> for RunAdapter {
+impl From<CliRunAdapter> for Adapter {
     fn from(adapter: CliRunAdapter) -> Self {
         match adapter {
             CliRunAdapter::Magic => Self::Magic,
@@ -55,36 +28,6 @@ impl From<CliRunAdapter> for RunAdapter {
             CliRunAdapter::RustBench => Self::RustBench,
             CliRunAdapter::RustCriterion => Self::RustCriterion,
             CliRunAdapter::RustIai => Self::RustIai,
-        }
-    }
-}
-
-impl From<RunAdapter> for Adapter {
-    fn from(adapter: RunAdapter) -> Self {
-        match adapter {
-            RunAdapter::Magic => Self::Magic,
-            RunAdapter::Json => Self::Json,
-            RunAdapter::CSharp => Self::CSharp,
-            RunAdapter::CSharpDotNet => Self::CSharpDotNet,
-            RunAdapter::Cpp => Self::Cpp,
-            RunAdapter::CppCatch2 => Self::CppCatch2,
-            RunAdapter::CppGoogle => Self::CppGoogle,
-            RunAdapter::Go => Self::Go,
-            RunAdapter::GoBench => Self::GoBench,
-            RunAdapter::Java => Self::Java,
-            RunAdapter::JavaJmh => Self::JavaJmh,
-            RunAdapter::Js => Self::Js,
-            RunAdapter::JsBenchmark => Self::JsBenchmark,
-            RunAdapter::JsTime => Self::JsTime,
-            RunAdapter::Python => Self::Python,
-            RunAdapter::PythonAsv => Self::PythonAsv,
-            RunAdapter::PythonPytest => Self::PythonPytest,
-            RunAdapter::Ruby => Self::Ruby,
-            RunAdapter::RubyBenchmark => Self::RubyBenchmark,
-            RunAdapter::Rust => Self::Rust,
-            RunAdapter::RustBench => Self::RustBench,
-            RunAdapter::RustCriterion => Self::RustCriterion,
-            RunAdapter::RustIai => Self::RustIai,
         }
     }
 }

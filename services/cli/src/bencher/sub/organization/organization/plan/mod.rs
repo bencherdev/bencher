@@ -5,7 +5,6 @@ use async_trait::async_trait;
 use crate::{bencher::sub::SubCmd, parser::organization::plan::CliOrganizationPlan, CliError};
 
 mod create;
-pub mod level;
 mod view;
 
 #[derive(Debug)]

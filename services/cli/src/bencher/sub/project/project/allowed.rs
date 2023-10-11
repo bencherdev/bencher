@@ -13,7 +13,7 @@ use crate::{
 #[derive(Debug)]
 pub struct Allowed {
     pub project: ResourceId,
-    pub perm: Permission,
+    pub perm: JsonProjectPermission,
     pub backend: Backend,
 }
 
@@ -34,20 +34,7 @@ impl TryFrom<CliProjectAllowed> for Allowed {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum Permission {
-    View,
-    Create,
-    Edit,
-    Delete,
-    Manage,
-    ViewRole,
-    CreateRole,
-    EditRole,
-    DeleteRole,
-}
-
-impl From<CliProjectPermission> for Permission {
+impl From<CliProjectPermission> for JsonProjectPermission {
     fn from(permission: CliProjectPermission) -> Self {
         match permission {
             CliProjectPermission::View => Self::View,
@@ -59,22 +46,6 @@ impl From<CliProjectPermission> for Permission {
             CliProjectPermission::CreateRole => Self::CreateRole,
             CliProjectPermission::EditRole => Self::EditRole,
             CliProjectPermission::DeleteRole => Self::DeleteRole,
-        }
-    }
-}
-
-impl From<Permission> for JsonProjectPermission {
-    fn from(permission: Permission) -> Self {
-        match permission {
-            Permission::View => Self::View,
-            Permission::Create => Self::Create,
-            Permission::Edit => Self::Edit,
-            Permission::Delete => Self::Delete,
-            Permission::Manage => Self::Manage,
-            Permission::ViewRole => Self::ViewRole,
-            Permission::CreateRole => Self::CreateRole,
-            Permission::EditRole => Self::EditRole,
-            Permission::DeleteRole => Self::DeleteRole,
         }
     }
 }

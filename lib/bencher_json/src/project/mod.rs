@@ -224,7 +224,9 @@ impl Visibility {
 
 #[cfg(feature = "db")]
 mod visibility {
-    use super::{Visibility, PRIVATE_INT, PUBLIC_INT};
+    #[cfg(feature = "plus")]
+    use super::PRIVATE_INT;
+    use super::{Visibility, PUBLIC_INT};
 
     #[derive(Debug, thiserror::Error)]
     pub enum VisibilityError {

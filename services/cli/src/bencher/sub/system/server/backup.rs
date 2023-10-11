@@ -13,14 +13,9 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Backup {
     pub compress: Option<bool>,
-    pub data_store: Option<BackupDataStore>,
+    pub data_store: Option<JsonDataStore>,
     pub rm: Option<bool>,
     pub backend: Backend,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum BackupDataStore {
-    AwsS3,
 }
 
 impl TryFrom<CliBackup> for Backup {
@@ -42,7 +37,7 @@ impl TryFrom<CliBackup> for Backup {
     }
 }
 
-impl From<CliBackupDataStore> for BackupDataStore {
+impl From<CliBackupDataStore> for JsonDataStore {
     fn from(data_store: CliBackupDataStore) -> Self {
         match data_store {
             CliBackupDataStore::AwsS3 => Self::AwsS3,
@@ -60,16 +55,8 @@ impl From<Backup> for JsonBackup {
         } = backup;
         Self {
             compress,
+            data_store,
             rm,
-            data_store: data_store.map(Into::into),
-        }
-    }
-}
-
-impl From<BackupDataStore> for JsonDataStore {
-    fn from(data_store: BackupDataStore) -> Self {
-        match data_store {
-            BackupDataStore::AwsS3 => Self::AwsS3,
         }
     }
 }

@@ -1,15 +1,12 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_client::types::JsonNewProject;
+use bencher_client::types::{JsonNewProject, Visibility};
 use bencher_json::{JsonProject, NonEmpty, ResourceId, Slug, Url};
 
 use crate::{
-    bencher::{
-        backend::Backend,
-        sub::{project::project::visibility::Visibility, SubCmd},
-    },
-    parser::project::CliProjectCreate,
+    bencher::{backend::Backend, sub::SubCmd},
+    parser::project::{CliProjectCreate, CliProjectVisibility},
     CliError,
 };
 
@@ -46,6 +43,16 @@ impl TryFrom<CliProjectCreate> for Create {
     }
 }
 
+impl From<CliProjectVisibility> for Visibility {
+    fn from(visibility: CliProjectVisibility) -> Self {
+        match visibility {
+            CliProjectVisibility::Public => Self::Public,
+            #[cfg(feature = "plus")]
+            CliProjectVisibility::Private => Self::Private,
+        }
+    }
+}
+
 impl From<Create> for JsonNewProject {
     fn from(create: Create) -> Self {
         let Create {
@@ -59,7 +66,7 @@ impl From<Create> for JsonNewProject {
             name: name.into(),
             slug: slug.map(Into::into),
             url: url.map(Into::into),
-            visibility: visibility.map(Into::into),
+            visibility,
         }
     }
 }

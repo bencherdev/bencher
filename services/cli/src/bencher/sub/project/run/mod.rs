@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_client::types::{JsonNewReport, JsonReportSettings};
+use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings};
 use bencher_json::{
     project::testbed::TESTBED_LOCALHOST_STR, GitHash, JsonEndpoint, JsonReport, ResourceId,
 };
@@ -25,12 +25,9 @@ mod fold;
 pub mod runner;
 mod urls;
 
-use adapter::RunAdapter;
-use average::Average;
 use branch::Branch;
 use ci::Ci;
 pub use error::RunError;
-use fold::Fold;
 use runner::Runner;
 
 use crate::bencher::SubCmd;
@@ -50,10 +47,10 @@ pub struct Run {
     branch: Branch,
     hash: Option<GitHash>,
     testbed: ResourceId,
-    adapter: Option<RunAdapter>,
-    average: Option<Average>,
+    adapter: Option<Adapter>,
+    average: Option<JsonAverage>,
     iter: usize,
-    fold: Option<Fold>,
+    fold: Option<JsonFold>,
     backdate: Option<DateTime<Utc>>,
     allow_failure: bool,
     err: bool,
@@ -130,7 +127,7 @@ fn unwrap_testbed(testbed: Option<ResourceId>) -> Result<ResourceId, RunError> {
     })
 }
 
-fn map_adapter(adapter: Option<CliRunAdapter>) -> Option<RunAdapter> {
+fn map_adapter(adapter: Option<CliRunAdapter>) -> Option<Adapter> {
     if let Some(adapter) = adapter {
         Some(adapter.into())
     } else if let Ok(env_adapter) = std::env::var(BENCHER_ADAPTER) {
@@ -242,9 +239,9 @@ impl Run {
             end_time,
             results,
             settings: Some(JsonReportSettings {
-                adapter: self.adapter.map(Into::into),
-                average: self.average.map(Into::into),
-                fold: self.fold.map(Into::into),
+                adapter: self.adapter,
+                average: self.average,
+                fold: self.fold,
             }),
         }))
     }
