@@ -1,5 +1,8 @@
 use bencher_json::{
-    project::report::{JsonAdapter, JsonReportAlerts, JsonReportResult, JsonReportResults},
+    project::{
+        perf::Iteration,
+        report::{Adapter, JsonReportAlerts, JsonReportResult, JsonReportResults},
+    },
     JsonNewReport, JsonReport, ReportUuid,
 };
 use chrono::Utc;
@@ -33,10 +36,7 @@ use crate::{
     ApiError,
 };
 
-mod adapter;
 pub mod results;
-
-use adapter::Adapter;
 
 use super::ProjectUuid;
 
@@ -88,7 +88,7 @@ impl QueryReport {
             project: query_project.into_json(conn)?,
             branch: QueryBranch::get_branch_version_json(conn, branch_id, version_id)?,
             testbed: QueryTestbed::get(conn, testbed_id)?.into_json(conn)?,
-            adapter: adapter.into(),
+            adapter,
             start_time: to_date_time(start_time)?,
             end_time: to_date_time(end_time)?,
             results,
@@ -99,7 +99,7 @@ impl QueryReport {
 }
 
 type ResultsQuery = (
-    i32,
+    Iteration,
     QueryMetricKind,
     Option<(QueryThreshold, QueryStatistic)>,
     QueryBenchmark,
@@ -283,7 +283,7 @@ fn get_report_alerts(
         ))
         .load::<(
             ReportUuid,
-            i32,
+            Iteration,
             QueryAlert,
             QueryBenchmark,
             QueryMetric,
@@ -333,7 +333,7 @@ impl InsertReport {
         version_id: VersionId,
         testbed_id: TestbedId,
         report: &JsonNewReport,
-        adapter: JsonAdapter,
+        adapter: Adapter,
     ) -> Self {
         Self {
             uuid: ReportUuid::new(),
@@ -342,7 +342,7 @@ impl InsertReport {
             branch_id,
             version_id,
             testbed_id,
-            adapter: adapter.into(),
+            adapter,
             start_time: report.start_time.timestamp(),
             end_time: report.end_time.timestamp(),
             created: Utc::now().timestamp(),

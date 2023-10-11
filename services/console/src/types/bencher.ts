@@ -20,7 +20,7 @@ export interface JsonMetricKind {
 	modified: string;
 }
 
-export enum JsonStatisticKind {
+export enum StatisticKind {
 	Z = "z",
 	T = "t",
 }
@@ -32,7 +32,7 @@ export type Boundary = number;
 export interface JsonStatistic {
 	uuid: Uuid;
 	threshold: Uuid;
-	test: JsonStatisticKind;
+	test: StatisticKind;
 	min_sample_size?: SampleSize;
 	max_sample_size?: SampleSize;
 	window?: number;
@@ -113,12 +113,12 @@ export interface JsonThreshold {
 	modified: string;
 }
 
-export enum JsonLimit {
+export enum BoundaryLimit {
 	Lower = "lower",
 	Upper = "upper",
 }
 
-export enum JsonAlertStatus {
+export enum AlertStatus {
 	Active = "active",
 	Dismissed = "dismissed",
 }
@@ -126,11 +126,11 @@ export enum JsonAlertStatus {
 export interface JsonAlert {
 	uuid: Uuid;
 	report: Uuid;
-	iteration: number;
+	iteration: Iteration;
 	threshold: JsonThreshold;
 	benchmark: JsonBenchmarkMetric;
-	limit: JsonLimit;
-	status: JsonAlertStatus;
+	limit: BoundaryLimit;
+	status: AlertStatus;
 	modified: string;
 }
 
@@ -231,13 +231,13 @@ export interface JsonAlertStats {
 }
 
 export interface JsonUpdateAlert {
-	status?: JsonAlertStatus;
+	status?: AlertStatus;
 }
 
 export interface JsonPerfAlert {
 	uuid: Uuid;
-	limit: JsonLimit;
-	status: JsonAlertStatus;
+	limit: BoundaryLimit;
+	status: AlertStatus;
 	modified: string;
 }
 
@@ -265,7 +265,7 @@ export interface JsonBranchVersion {
 	modified: string;
 }
 
-export enum JsonVisibility {
+export enum Visibility {
 	Public = "public",
 	Private = "private",
 }
@@ -276,7 +276,7 @@ export interface JsonProject {
 	name: NonEmpty;
 	slug: Slug;
 	url?: Url;
-	visibility: JsonVisibility;
+	visibility: Visibility;
 	created: string;
 	modified: string;
 }
@@ -317,18 +317,22 @@ export interface JsonUser {
 	locked: boolean;
 }
 
-export enum JsonAdapter {
+export enum Adapter {
 	Magic = "magic",
 	Json = "json",
-	CSharp = "c_sharp",
-	CSharpDotNet = "c_sharp_dot_net",
+	Rust = "rust",
+	RustBench = "rust_bench",
+	RustCriterion = "rust_criterion",
+	RustIai = "rust_iai",
 	Cpp = "cpp",
-	CppCatch2 = "cpp_catch2",
 	CppGoogle = "cpp_google",
+	CppCatch2 = "cpp_catch2",
 	Go = "go",
 	GoBench = "go_bench",
 	Java = "java",
 	JavaJmh = "java_jmh",
+	CSharp = "c_sharp",
+	CSharpDotNet = "c_sharp_dot_net",
 	Js = "js",
 	JsBenchmark = "js_benchmark",
 	JsTime = "js_time",
@@ -337,10 +341,6 @@ export enum JsonAdapter {
 	PythonPytest = "python_pytest",
 	Ruby = "ruby",
 	RubyBenchmark = "ruby_benchmark",
-	Rust = "rust",
-	RustBench = "rust_bench",
-	RustCriterion = "rust_criterion",
-	RustIai = "rust_iai",
 }
 
 export interface JsonReport {
@@ -351,7 +351,7 @@ export interface JsonReport {
 	testbed: JsonTestbed;
 	start_time: string;
 	end_time: string;
-	adapter: JsonAdapter;
+	adapter: Adapter;
 	results: JsonReportResults;
 	alerts: JsonReportAlerts;
 	created: string;

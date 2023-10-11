@@ -3,7 +3,7 @@ import * as d3 from "d3";
 import { type Accessor, createEffect, createSignal } from "solid-js";
 import { addTooltips } from "./tooltip";
 import {
-	JsonAlertStatus,
+	AlertStatus,
 	type Boundary,
 	type JsonPerf,
 	type JsonPerfAlert,
@@ -77,7 +77,7 @@ const get_x_axis = (range: PerfRange): [string, string] => {
 };
 
 const is_active = (alert: JsonPerfAlert) =>
-	alert?.status && alert.status == JsonAlertStatus.Active;
+	alert?.status && alert.status == AlertStatus.Active;
 
 // A boundary is skipped if it is defined but its limit undefined
 // This indicates that the the boundary limit could not be calculated for the metric

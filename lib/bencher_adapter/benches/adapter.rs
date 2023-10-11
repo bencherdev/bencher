@@ -1,7 +1,7 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use bencher_adapter::{Adapter, Settings};
-use bencher_json::project::report::JsonAdapter;
+use bencher_adapter::{Adaptable, Settings};
+use bencher_json::project::report::Adapter;
 
 const JSON_RESULT: &str = r#"{
     "tests::benchmark_1": {
@@ -35,16 +35,16 @@ const JSON_RESULT: &str = r#"{
   }"#;
 
 fn adapter_magic_json(c: &mut Criterion) {
-    c.bench_function("JsonAdapter::Magic (JSON)", |b| {
+    c.bench_function("Adapter::Magic (JSON)", |b| {
         let settings = Settings::default();
-        b.iter(|| JsonAdapter::Magic.convert(JSON_RESULT, settings));
+        b.iter(|| Adapter::Magic.convert(JSON_RESULT, settings));
     });
 }
 
 fn adapter_json(c: &mut Criterion) {
-    c.bench_function("JsonAdapter::Json", |b| {
+    c.bench_function("Adapter::Json", |b| {
         let settings = Settings::default();
-        b.iter(|| JsonAdapter::Json.convert(JSON_RESULT, settings));
+        b.iter(|| Adapter::Json.convert(JSON_RESULT, settings));
     });
 }
 
@@ -62,23 +62,23 @@ test result: ok. 0 passed; 0 failed; 1 ignored; 4 measured; 0 filtered out; fini
 ";
 
 fn adapter_magic_rust(c: &mut Criterion) {
-    c.bench_function("JsonAdapter::Magic (Rust)", |b| {
+    c.bench_function("Adapter::Magic (Rust)", |b| {
         let settings = Settings::default();
-        b.iter(|| JsonAdapter::Magic.convert(RUST_RESULT, settings));
+        b.iter(|| Adapter::Magic.convert(RUST_RESULT, settings));
     });
 }
 
 fn adapter_rust(c: &mut Criterion) {
-    c.bench_function("JsonAdapter::Rust", |b| {
+    c.bench_function("Adapter::Rust", |b| {
         let settings = Settings::default();
-        b.iter(|| JsonAdapter::Rust.convert(RUST_RESULT, settings));
+        b.iter(|| Adapter::Rust.convert(RUST_RESULT, settings));
     });
 }
 
 fn adapter_rust_bench(c: &mut Criterion) {
-    c.bench_function("JsonAdapter::RustBench", |b| {
+    c.bench_function("Adapter::RustBench", |b| {
         let settings = Settings::default();
-        b.iter(|| JsonAdapter::RustBench.convert(RUST_RESULT, settings));
+        b.iter(|| Adapter::RustBench.convert(RUST_RESULT, settings));
     });
 }
 

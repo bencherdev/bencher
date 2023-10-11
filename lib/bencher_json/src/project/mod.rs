@@ -28,7 +28,7 @@ pub struct JsonNewProject {
     pub name: NonEmpty,
     pub slug: Option<Slug>,
     pub url: Option<Url>,
-    pub visibility: Option<JsonVisibility>,
+    pub visibility: Option<Visibility>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -46,7 +46,7 @@ pub struct JsonProject {
     pub name: NonEmpty,
     pub slug: Slug,
     pub url: Option<Url>,
-    pub visibility: JsonVisibility,
+    pub visibility: Visibility,
     pub created: DateTime<Utc>,
     pub modified: DateTime<Utc>,
 }
@@ -83,7 +83,7 @@ pub struct JsonProjectPatch {
     pub name: Option<NonEmpty>,
     pub slug: Option<Slug>,
     pub url: Option<Url>,
-    pub visibility: Option<JsonVisibility>,
+    pub visibility: Option<Visibility>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -92,7 +92,7 @@ pub struct JsonProjectPatchNull {
     pub name: Option<NonEmpty>,
     pub slug: Option<Slug>,
     pub url: (),
-    pub visibility: Option<JsonVisibility>,
+    pub visibility: Option<Visibility>,
 }
 
 impl<'de> Deserialize<'de> for JsonUpdateProject {
@@ -190,7 +190,7 @@ impl<'de> Deserialize<'de> for JsonUpdateProject {
 }
 
 impl JsonUpdateProject {
-    pub fn visibility(&self) -> Option<JsonVisibility> {
+    pub fn visibility(&self) -> Option<Visibility> {
         match self {
             Self::Patch(patch) => patch.visibility,
             Self::Null(patch) => patch.visibility,
@@ -198,20 +198,70 @@ impl JsonUpdateProject {
     }
 }
 
+const PUBLIC_INT: i32 = 0;
+#[cfg(feature = "plus")]
+const PRIVATE_INT: i32 = 1;
+
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
 #[serde(rename_all = "snake_case")]
-pub enum JsonVisibility {
+#[repr(i32)]
+pub enum Visibility {
     #[default]
-    Public,
+    Public = PUBLIC_INT,
     #[cfg(feature = "plus")]
-    Private,
+    Private = PRIVATE_INT,
 }
 
-impl JsonVisibility {
-    pub fn is_public(&self) -> bool {
+impl Visibility {
+    pub fn is_public(self) -> bool {
         matches!(self, Self::Public)
+    }
+}
+
+#[cfg(feature = "db")]
+mod visibility {
+    use super::{Visibility, PRIVATE_INT, PUBLIC_INT};
+
+    #[derive(Debug, thiserror::Error)]
+    pub enum VisibilityError {
+        #[error("Invalid visibility value: {0}")]
+        Invalid(i32),
+    }
+
+    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for Visibility
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>,
+    {
+        fn to_sql<'b>(
+            &'b self,
+            out: &mut diesel::serialize::Output<'b, '_, DB>,
+        ) -> diesel::serialize::Result {
+            match self {
+                Self::Public => PUBLIC_INT.to_sql(out),
+                #[cfg(feature = "plus")]
+                Self::Private => PRIVATE_INT.to_sql(out),
+            }
+        }
+    }
+
+    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for Visibility
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
+    {
+        fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+            match i32::from_sql(bytes)? {
+                PUBLIC_INT => Ok(Self::Public),
+                #[cfg(feature = "plus")]
+                PRIVATE_INT => Ok(Self::Private),
+                value => Err(Box::new(VisibilityError::Invalid(value))),
+            }
+        }
     }
 }
 

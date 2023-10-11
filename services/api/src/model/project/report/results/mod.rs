@@ -7,7 +7,7 @@ use bencher_adapter::{
 use bencher_json::{
     project::{
         perf::Iteration,
-        report::{JsonAdapter, JsonReportSettings},
+        report::{Adapter, JsonReportSettings},
     },
     BenchmarkName,
 };
@@ -69,7 +69,7 @@ impl ReportResults {
         log: &Logger,
         conn: &mut DbConnection,
         results_array: &[&str],
-        adapter: JsonAdapter,
+        adapter: Adapter,
         settings: JsonReportSettings,
         #[cfg(feature = "plus")] usage: &mut u64,
     ) -> Result<(), HttpError> {

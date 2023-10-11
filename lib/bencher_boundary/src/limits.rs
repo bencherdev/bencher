@@ -1,4 +1,4 @@
-use bencher_json::{project::boundary::JsonLimit, Boundary};
+use bencher_json::{project::boundary::BoundaryLimit, Boundary};
 use slog::{debug, Logger};
 use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
 
@@ -81,19 +81,19 @@ impl MetricsLimits {
     }
 
     // An outlier occurs when the  datum exceeds a boundary limit.
-    pub fn outlier(&self, datum: f64) -> Option<JsonLimit> {
+    pub fn outlier(&self, datum: f64) -> Option<BoundaryLimit> {
         match (self.lower.as_ref(), self.upper.as_ref()) {
             (Some(lower), Some(upper)) => {
                 if datum < lower.value {
-                    Some(JsonLimit::Lower)
+                    Some(BoundaryLimit::Lower)
                 } else if datum > upper.value {
-                    Some(JsonLimit::Upper)
+                    Some(BoundaryLimit::Upper)
                 } else {
                     None
                 }
             },
-            (Some(lower), None) => (datum < lower.value).then_some(JsonLimit::Lower),
-            (None, Some(upper)) => (datum > upper.value).then_some(JsonLimit::Upper),
+            (Some(lower), None) => (datum < lower.value).then_some(BoundaryLimit::Lower),
+            (None, Some(upper)) => (datum > upper.value).then_some(BoundaryLimit::Upper),
             (None, None) => None,
         }
     }
@@ -121,7 +121,7 @@ impl From<MetricsLimit> for f64 {
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unreadable_literal, clippy::unwrap_used)]
 mod test {
-    use bencher_json::{project::boundary::JsonLimit, Boundary};
+    use bencher_json::{project::boundary::BoundaryLimit, Boundary};
     use bencher_logger::bootstrap_logger;
     use once_cell::sync::Lazy;
     use pretty_assertions::assert_eq;
@@ -174,7 +174,7 @@ mod test {
         assert_eq!(limits.upper, None);
 
         let side = limits.outlier(DATUM_NEGATIVE_OUTLIER);
-        assert_eq!(side, Some(JsonLimit::Lower));
+        assert_eq!(side, Some(BoundaryLimit::Lower));
 
         let side = limits.outlier(DATUM_NEGATIVE);
         assert_eq!(side, None);
@@ -210,7 +210,7 @@ mod test {
         assert_eq!(side, None);
 
         let side = limits.outlier(DATUM_POSITIVE_OUTLIER);
-        assert_eq!(side, Some(JsonLimit::Upper));
+        assert_eq!(side, Some(BoundaryLimit::Upper));
     }
 
     #[test]
@@ -229,7 +229,7 @@ mod test {
         assert_eq!(limits.upper, Some(MetricsLimit { value: Z_LIMIT }));
 
         let side = limits.outlier(DATUM_NEGATIVE_OUTLIER);
-        assert_eq!(side, Some(JsonLimit::Lower));
+        assert_eq!(side, Some(BoundaryLimit::Lower));
 
         let side = limits.outlier(DATUM_NEGATIVE);
         assert_eq!(side, None);
@@ -241,7 +241,7 @@ mod test {
         assert_eq!(side, None);
 
         let side = limits.outlier(DATUM_POSITIVE_OUTLIER);
-        assert_eq!(side, Some(JsonLimit::Upper));
+        assert_eq!(side, Some(BoundaryLimit::Upper));
     }
 
     #[test]
@@ -271,7 +271,7 @@ mod test {
         );
 
         let side = limits.outlier(75.0);
-        assert_eq!(side, Some(JsonLimit::Lower));
+        assert_eq!(side, Some(BoundaryLimit::Lower));
 
         let side = limits.outlier(90.0);
         assert_eq!(side, None);
@@ -283,7 +283,7 @@ mod test {
         assert_eq!(side, None);
 
         let side = limits.outlier(125.0);
-        assert_eq!(side, Some(JsonLimit::Upper));
+        assert_eq!(side, Some(BoundaryLimit::Upper));
     }
 
     #[test]
@@ -333,7 +333,7 @@ mod test {
         assert_eq!(limits.upper, None);
 
         let side = limits.outlier(DATUM_NEGATIVE_OUTLIER);
-        assert_eq!(side, Some(JsonLimit::Lower));
+        assert_eq!(side, Some(BoundaryLimit::Lower));
 
         let side = limits.outlier(DATUM_NEGATIVE);
         assert_eq!(side, None);
@@ -376,7 +376,7 @@ mod test {
         assert_eq!(side, None);
 
         let side = limits.outlier(DATUM_POSITIVE_OUTLIER);
-        assert_eq!(side, Some(JsonLimit::Upper));
+        assert_eq!(side, Some(BoundaryLimit::Upper));
     }
 
     #[test]
@@ -395,7 +395,7 @@ mod test {
         assert_eq!(limits.upper, Some(MetricsLimit { value: T_LIMIT }));
 
         let side = limits.outlier(DATUM_NEGATIVE_OUTLIER);
-        assert_eq!(side, Some(JsonLimit::Lower));
+        assert_eq!(side, Some(BoundaryLimit::Lower));
 
         let side = limits.outlier(DATUM_NEGATIVE);
         assert_eq!(side, None);
@@ -407,6 +407,6 @@ mod test {
         assert_eq!(side, None);
 
         let side = limits.outlier(DATUM_POSITIVE_OUTLIER);
-        assert_eq!(side, Some(JsonLimit::Upper));
+        assert_eq!(side, Some(BoundaryLimit::Upper));
     }
 }

@@ -1,7 +1,7 @@
 use std::{str::FromStr, string::ToString};
 
 use bencher_json::{
-    project::{JsonProjectPatch, JsonProjectPatchNull, JsonUpdateProject},
+    project::{JsonProjectPatch, JsonProjectPatchNull, JsonUpdateProject, Visibility},
     JsonNewProject, JsonProject, NonEmpty, ProjectUuid, ResourceId, Slug, Url,
 };
 use bencher_rbac::{Organization, Project};
@@ -22,8 +22,6 @@ use crate::{
     },
     ApiError,
 };
-
-use self::visibility::Visibility;
 
 use super::{organization::OrganizationId, user::auth::BEARER_TOKEN_FORMAT};
 
@@ -81,7 +79,7 @@ impl QueryProject {
             name: NonEmpty::from_str(&name)?,
             slug: Slug::from_str(&slug).map_err(ApiError::from)?,
             url: ok_url(url.as_deref())?,
-            visibility: visibility.into(),
+            visibility,
             created: to_date_time(created).map_err(ApiError::from)?,
             modified: to_date_time(modified).map_err(ApiError::from)?,
         })
@@ -98,13 +96,13 @@ impl QueryProject {
     }
 
     #[cfg(feature = "plus")]
-    pub fn is_public(conn: &mut DbConnection, id: ProjectId) -> Result<bool, ApiError> {
+    pub fn is_public(conn: &mut DbConnection, id: ProjectId) -> Result<bool, HttpError> {
         schema::project::table
             .filter(schema::project::id.eq(id))
             .select(schema::project::visibility)
             .first::<Visibility>(conn)
             .map(Visibility::is_public)
-            .map_err(Into::into)
+            .map_err(resource_not_found_err!(Project, id))
     }
 
     pub fn is_allowed(
@@ -215,7 +213,7 @@ impl InsertProject {
             name: name.into(),
             slug,
             url: url.map(|u| u.to_string()),
-            visibility: Visibility::from(visibility.unwrap_or_default()),
+            visibility: visibility.unwrap_or_default(),
             created: timestamp,
             modified: timestamp,
         })
@@ -258,7 +256,7 @@ impl From<JsonUpdateProject> for UpdateProject {
             name: name.map(Into::into),
             slug: slug.map(Into::into),
             url: url.map(|url| url.map(Into::into)),
-            visibility: visibility.map(Into::into),
+            visibility,
             modified: Utc::now().timestamp(),
         }
     }

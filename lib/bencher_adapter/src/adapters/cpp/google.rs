@@ -5,12 +5,12 @@ use serde::Deserialize;
 use crate::{
     adapters::util::{latency_as_nanos, Units},
     results::adapter_results::AdapterResults,
-    Adapter, AdapterError, Settings,
+    Adaptable, AdapterError, Settings,
 };
 
 pub struct AdapterCppGoogle;
 
-impl Adapter for AdapterCppGoogle {
+impl Adaptable for AdapterCppGoogle {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         match settings.average {
             Some(JsonAverage::Mean) | None => {},

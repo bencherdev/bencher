@@ -6,12 +6,12 @@ use serde::Deserialize;
 use crate::{
     adapters::util::{latency_as_nanos, throughput_as_secs},
     results::adapter_results::{AdapterMetricKind, AdapterResults},
-    Adapter, AdapterError, Settings,
+    Adaptable, AdapterError, Settings,
 };
 
 pub struct AdapterJavaJmh;
 
-impl Adapter for AdapterJavaJmh {
+impl Adaptable for AdapterJavaJmh {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         match settings.average {
             Some(JsonAverage::Mean) | None => {},

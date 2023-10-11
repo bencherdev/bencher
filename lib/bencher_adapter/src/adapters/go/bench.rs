@@ -14,12 +14,12 @@ use crate::{
         latency_as_nanos, parse_benchmark_name, parse_f64, parse_u64, parse_units, NomError,
     },
     results::adapter_results::AdapterResults,
-    Adapter, Settings,
+    Adaptable, Settings,
 };
 
 pub struct AdapterGoBench;
 
-impl Adapter for AdapterGoBench {
+impl Adaptable for AdapterGoBench {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         match settings.average {
             Some(JsonAverage::Mean) | None => {},

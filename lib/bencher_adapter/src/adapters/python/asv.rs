@@ -12,12 +12,12 @@ use crate::{
         latency_as_nanos, nom_error, parse_benchmark_name, parse_f64, parse_units, NomError,
     },
     results::adapter_results::AdapterResults,
-    Adapter, Settings,
+    Adaptable, Settings,
 };
 
 pub struct AdapterPythonAsv;
 
-impl Adapter for AdapterPythonAsv {
+impl Adaptable for AdapterPythonAsv {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         match settings.average {
             Some(JsonAverage::Median) | None => {},

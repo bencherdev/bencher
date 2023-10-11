@@ -10,9 +10,9 @@ import {
 import { useNavigate } from "../../../util/url";
 import { httpGet } from "../../../util/http";
 import {
-	JsonVisibility,
+	Visibility,
 	type JsonProject,
-	JsonAuthUser,
+	type JsonAuthUser,
 } from "../../../types/bencher";
 import type { Params } from "astro";
 
@@ -99,7 +99,7 @@ const ProjectSelect = (props: Props) => {
 			slug: BENCHER_ALL_PROJECTS,
 			uuid: "",
 			organization: "",
-			visibility: JsonVisibility.Public,
+			visibility: Visibility.Public,
 			created: "",
 			modified: "",
 		};

@@ -1,11 +1,11 @@
 use crate::{
-    results::adapter_results::AdapterResults, Adapter, AdapterCSharp, AdapterCpp, AdapterGo,
+    results::adapter_results::AdapterResults, Adaptable, AdapterCSharp, AdapterCpp, AdapterGo,
     AdapterJava, AdapterJs, AdapterJson, AdapterPython, AdapterRuby, AdapterRust, Settings,
 };
 
 pub struct AdapterMagic;
 
-impl Adapter for AdapterMagic {
+impl Adaptable for AdapterMagic {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         AdapterJson::parse(input, settings)
             .or_else(|| AdapterCSharp::parse(input, settings))

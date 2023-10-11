@@ -6,12 +6,12 @@ use serde::Deserialize;
 use crate::{
     adapters::util::{latency_as_nanos, Units},
     results::adapter_results::AdapterResults,
-    Adapter, AdapterError, Settings,
+    Adaptable, AdapterError, Settings,
 };
 
 pub struct AdapterPythonPytest;
 
-impl Adapter for AdapterPythonPytest {
+impl Adaptable for AdapterPythonPytest {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         serde_json::from_str::<Pytest>(input)
             .ok()?

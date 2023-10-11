@@ -5731,6 +5731,41 @@
       }
     },
     "schemas": {
+      "Adapter": {
+        "type": "string",
+        "enum": [
+          "magic",
+          "json",
+          "rust",
+          "rust_bench",
+          "rust_criterion",
+          "rust_iai",
+          "cpp",
+          "cpp_google",
+          "cpp_catch2",
+          "go",
+          "go_bench",
+          "java",
+          "java_jmh",
+          "c_sharp",
+          "c_sharp_dot_net",
+          "js",
+          "js_benchmark",
+          "js_time",
+          "python",
+          "python_asv",
+          "python_pytest",
+          "ruby",
+          "ruby_benchmark"
+        ]
+      },
+      "AlertStatus": {
+        "type": "string",
+        "enum": [
+          "active",
+          "dismissed"
+        ]
+      },
       "AlertUuid": {
         "type": "string",
         "format": "uuid"
@@ -5750,6 +5785,13 @@
       "Boundary": {
         "type": "number",
         "format": "double"
+      },
+      "BoundaryLimit": {
+        "type": "string",
+        "enum": [
+          "lower",
+          "upper"
+        ]
       },
       "BranchName": {
         "type": "string"
@@ -5853,34 +5895,6 @@
         "format": "uint32",
         "minimum": 0
       },
-      "JsonAdapter": {
-        "type": "string",
-        "enum": [
-          "magic",
-          "json",
-          "c_sharp",
-          "c_sharp_dot_net",
-          "cpp",
-          "cpp_catch2",
-          "cpp_google",
-          "go",
-          "go_bench",
-          "java",
-          "java_jmh",
-          "js",
-          "js_benchmark",
-          "js_time",
-          "python",
-          "python_asv",
-          "python_pytest",
-          "ruby",
-          "ruby_benchmark",
-          "rust",
-          "rust_bench",
-          "rust_criterion",
-          "rust_iai"
-        ]
-      },
       "JsonAlert": {
         "type": "object",
         "properties": {
@@ -5888,12 +5902,10 @@
             "$ref": "#/components/schemas/JsonBenchmarkMetric"
           },
           "iteration": {
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+            "$ref": "#/components/schemas/Iteration"
           },
           "limit": {
-            "$ref": "#/components/schemas/JsonLimit"
+            "$ref": "#/components/schemas/BoundaryLimit"
           },
           "modified": {
             "type": "string",
@@ -5903,7 +5915,7 @@
             "$ref": "#/components/schemas/ReportUuid"
           },
           "status": {
-            "$ref": "#/components/schemas/JsonAlertStatus"
+            "$ref": "#/components/schemas/AlertStatus"
           },
           "threshold": {
             "$ref": "#/components/schemas/JsonThreshold"
@@ -5932,13 +5944,6 @@
         },
         "required": [
           "active"
-        ]
-      },
-      "JsonAlertStatus": {
-        "type": "string",
-        "enum": [
-          "active",
-          "dismissed"
         ]
       },
       "JsonAlerts": {
@@ -6408,13 +6413,6 @@
           "median"
         ]
       },
-      "JsonLimit": {
-        "type": "string",
-        "enum": [
-          "lower",
-          "upper"
-        ]
-      },
       "JsonLogging": {
         "type": "object",
         "properties": {
@@ -6721,7 +6719,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonVisibility"
+                "$ref": "#/components/schemas/Visibility"
               }
             ]
           }
@@ -6831,7 +6829,7 @@
             ]
           },
           "test": {
-            "$ref": "#/components/schemas/JsonStatisticKind"
+            "$ref": "#/components/schemas/StatisticKind"
           },
           "testbed": {
             "$ref": "#/components/schemas/ResourceId"
@@ -6952,14 +6950,14 @@
         "type": "object",
         "properties": {
           "limit": {
-            "$ref": "#/components/schemas/JsonLimit"
+            "$ref": "#/components/schemas/BoundaryLimit"
           },
           "modified": {
             "type": "string",
             "format": "date-time"
           },
           "status": {
-            "$ref": "#/components/schemas/JsonAlertStatus"
+            "$ref": "#/components/schemas/AlertStatus"
           },
           "uuid": {
             "$ref": "#/components/schemas/AlertUuid"
@@ -7185,7 +7183,7 @@
             "$ref": "#/components/schemas/ProjectUuid"
           },
           "visibility": {
-            "$ref": "#/components/schemas/JsonVisibility"
+            "$ref": "#/components/schemas/Visibility"
           }
         },
         "required": [
@@ -7229,7 +7227,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonVisibility"
+                "$ref": "#/components/schemas/Visibility"
               }
             ]
           }
@@ -7264,7 +7262,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonVisibility"
+                "$ref": "#/components/schemas/Visibility"
               }
             ]
           }
@@ -7283,7 +7281,7 @@
         "type": "object",
         "properties": {
           "adapter": {
-            "$ref": "#/components/schemas/JsonAdapter"
+            "$ref": "#/components/schemas/Adapter"
           },
           "alerts": {
             "type": "array",
@@ -7375,7 +7373,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonAdapter"
+                "$ref": "#/components/schemas/Adapter"
               }
             ]
           },
@@ -7578,7 +7576,7 @@
             ]
           },
           "test": {
-            "$ref": "#/components/schemas/JsonStatisticKind"
+            "$ref": "#/components/schemas/StatisticKind"
           },
           "threshold": {
             "$ref": "#/components/schemas/ThresholdUuid"
@@ -7606,13 +7604,6 @@
           "test",
           "threshold",
           "uuid"
-        ]
-      },
-      "JsonStatisticKind": {
-        "type": "string",
-        "enum": [
-          "z",
-          "t"
         ]
       },
       "JsonTestbed": {
@@ -7829,7 +7820,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonAlertStatus"
+                "$ref": "#/components/schemas/AlertStatus"
               }
             ]
           }
@@ -8016,7 +8007,7 @@
             ]
           },
           "test": {
-            "$ref": "#/components/schemas/JsonStatisticKind"
+            "$ref": "#/components/schemas/StatisticKind"
           },
           "upper_boundary": {
             "nullable": true,
@@ -8109,13 +8100,6 @@
         },
         "required": [
           "number"
-        ]
-      },
-      "JsonVisibility": {
-        "type": "string",
-        "enum": [
-          "public",
-          "private"
         ]
       },
       "Jwt": {
@@ -8241,6 +8225,13 @@
       "Slug": {
         "type": "string"
       },
+      "StatisticKind": {
+        "type": "string",
+        "enum": [
+          "z",
+          "t"
+        ]
+      },
       "StatisticUuid": {
         "type": "string",
         "format": "uuid"
@@ -8271,6 +8262,13 @@
         "type": "integer",
         "format": "uint32",
         "minimum": 0
+      },
+      "Visibility": {
+        "type": "string",
+        "enum": [
+          "public",
+          "private"
+        ]
       },
       "JsonDirection": {
         "type": "string",

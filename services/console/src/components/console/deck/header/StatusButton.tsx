@@ -1,5 +1,5 @@
 import { Switch, type Accessor, Match, Resource, createSignal } from "solid-js";
-import { JsonAlertStatus, type JsonAuthUser } from "../../../../types/bencher";
+import { AlertStatus, type JsonAuthUser } from "../../../../types/bencher";
 import { validJwt } from "../../../../util/valid";
 import { httpPatch } from "../../../../util/http";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
@@ -17,10 +17,10 @@ const StatusButton = (props: Props) => {
 
 	const getStatus = () => {
 		switch (props.data()?.status) {
-			case JsonAlertStatus.Active:
-				return { status: JsonAlertStatus.Dismissed };
-			case JsonAlertStatus.Dismissed:
-				return { status: JsonAlertStatus.Active };
+			case AlertStatus.Active:
+				return { status: AlertStatus.Dismissed };
+			case AlertStatus.Dismissed:
+				return { status: AlertStatus.Active };
 			default:
 				console.error("Unknown status");
 				return;
@@ -39,7 +39,7 @@ const StatusButton = (props: Props) => {
 		}
 
 		setSubmitting(true);
-		const isActive = props.data()?.status === JsonAlertStatus.Active;
+		const isActive = props.data()?.status === AlertStatus.Active;
 		httpPatch(props.apiUrl, props.path(), token, data)
 			.then((_resp) => {
 				setSubmitting(false);
@@ -65,7 +65,7 @@ const StatusButton = (props: Props) => {
 
 	return (
 		<Switch fallback={<></>}>
-			<Match when={props.data()?.status === JsonAlertStatus.Active}>
+			<Match when={props.data()?.status === AlertStatus.Active}>
 				<button
 					class="button is-primary is-fullwidth"
 					title="Dismiss alert"
@@ -81,7 +81,7 @@ const StatusButton = (props: Props) => {
 					<span>Dismiss</span>
 				</button>
 			</Match>
-			<Match when={props.data()?.status === JsonAlertStatus.Dismissed}>
+			<Match when={props.data()?.status === AlertStatus.Dismissed}>
 				<button
 					class="button is-outlined is-fullwidth"
 					title="Reactivate alert"

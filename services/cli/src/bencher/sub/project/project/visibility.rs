@@ -1,5 +1,3 @@
-use bencher_client::types::JsonVisibility;
-
 use crate::parser::project::CliProjectVisibility;
 
 #[derive(Debug, Clone, Copy)]
@@ -19,7 +17,7 @@ impl From<CliProjectVisibility> for Visibility {
     }
 }
 
-impl From<Visibility> for JsonVisibility {
+impl From<Visibility> for bencher_client::types::Visibility {
     fn from(visibility: Visibility) -> Self {
         match visibility {
             Visibility::Public => Self::Public,

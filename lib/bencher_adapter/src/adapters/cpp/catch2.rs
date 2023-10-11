@@ -14,12 +14,12 @@ use crate::{
         NomError, Units,
     },
     results::adapter_results::AdapterResults,
-    Adapter, Settings,
+    Adaptable, Settings,
 };
 
 pub struct AdapterCppCatch2;
 
-impl Adapter for AdapterCppCatch2 {
+impl Adaptable for AdapterCppCatch2 {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         match settings.average {
             Some(JsonAverage::Mean) | None => {},

@@ -20,14 +20,14 @@ use nom::{
 use crate::{
     adapters::util::{parse_f64, parse_u64},
     results::adapter_results::{AdapterResults, IaiMetricKind},
-    Adapter, Settings,
+    Adaptable, Settings,
 };
 
 pub struct AdapterRustIai;
 
 const IAI_METRICS_LINE_COUNT: usize = 6;
 
-impl Adapter for AdapterRustIai {
+impl Adaptable for AdapterRustIai {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         match settings.average {
             None => {},
@@ -143,8 +143,8 @@ fn parse_iai_metric<'a>(input: &'a str, metric_kind: &'static str) -> IResult<&'
 pub(crate) mod test_rust_iai {
 
     use crate::{
-        adapters::test_util::convert_file_path, results::adapter_metrics::AdapterMetrics, Adapter,
-        AdapterResults,
+        adapters::test_util::convert_file_path, results::adapter_metrics::AdapterMetrics,
+        Adaptable, AdapterResults,
     };
     use bencher_json::{
         project::metric_kind::{

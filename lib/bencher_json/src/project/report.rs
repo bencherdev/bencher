@@ -1,6 +1,5 @@
 use bencher_valid::GitHash;
 use chrono::{DateTime, Utc};
-use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -31,40 +30,155 @@ pub struct JsonNewReport {
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportSettings {
-    pub adapter: Option<JsonAdapter>,
+    pub adapter: Option<Adapter>,
     pub average: Option<JsonAverage>,
     pub fold: Option<JsonFold>,
 }
 
+const MAGIC_INT: i32 = 0;
+const JSON_INT: i32 = 10;
+const RUST_INT: i32 = 20;
+const RUST_BENCH_INT: i32 = 21;
+const RUST_CRITERION_INT: i32 = 22;
+const RUST_IAI_INT: i32 = 23;
+const CPP_INT: i32 = 30;
+const CPP_GOOGLE_INT: i32 = 31;
+const CPP_CATCH2_INT: i32 = 32;
+const GO_INT: i32 = 40;
+const GO_BENCH_INT: i32 = 41;
+const JAVA_INT: i32 = 50;
+const JAVA_JMH_INT: i32 = 51;
+const C_SHARP_INT: i32 = 60;
+const C_SHARP_DOT_NET_INT: i32 = 61;
+const JS_INT: i32 = 70;
+const JS_BENCHMARK_INT: i32 = 71;
+const JS_TIME_INT: i32 = 72;
+const PYTHON_INT: i32 = 80;
+const PYTHON_ASV_INT: i32 = 81;
+const PYTHON_PYTEST_INT: i32 = 82;
+const RUBY_INT: i32 = 90;
+const RUBY_BENCHMARK_INT: i32 = 91;
+
 #[typeshare::typeshare]
-#[derive(Debug, Clone, Copy, Default, Display, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, derive_more::Display, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
 #[serde(rename_all = "snake_case")]
-pub enum JsonAdapter {
+#[repr(i32)]
+pub enum Adapter {
     #[default]
-    Magic,
-    Json,
-    CSharp,
-    CSharpDotNet,
-    Cpp,
-    CppCatch2,
-    CppGoogle,
-    Go,
-    GoBench,
-    Java,
-    JavaJmh,
-    Js,
-    JsBenchmark,
-    JsTime,
-    Python,
-    PythonAsv,
-    PythonPytest,
-    Ruby,
-    RubyBenchmark,
-    Rust,
-    RustBench,
-    RustCriterion,
-    RustIai,
+    Magic = MAGIC_INT,
+    Json = JSON_INT,
+    Rust = RUST_INT,
+    RustBench = RUST_BENCH_INT,
+    RustCriterion = RUST_CRITERION_INT,
+    RustIai = RUST_IAI_INT,
+    Cpp = CPP_INT,
+    CppGoogle = CPP_GOOGLE_INT,
+    CppCatch2 = CPP_CATCH2_INT,
+    Go = GO_INT,
+    GoBench = GO_BENCH_INT,
+    Java = JAVA_INT,
+    JavaJmh = JAVA_JMH_INT,
+    CSharp = C_SHARP_INT,
+    CSharpDotNet = C_SHARP_DOT_NET_INT,
+    Js = JS_INT,
+    JsBenchmark = JS_BENCHMARK_INT,
+    JsTime = JS_TIME_INT,
+    Python = PYTHON_INT,
+    PythonAsv = PYTHON_ASV_INT,
+    PythonPytest = PYTHON_PYTEST_INT,
+    Ruby = RUBY_INT,
+    RubyBenchmark = RUBY_BENCHMARK_INT,
+}
+
+#[cfg(feature = "db")]
+mod adapter {
+    use super::{
+        Adapter, CPP_CATCH2_INT, CPP_GOOGLE_INT, CPP_INT, C_SHARP_DOT_NET_INT, C_SHARP_INT,
+        GO_BENCH_INT, GO_INT, JAVA_INT, JAVA_JMH_INT, JSON_INT, JS_BENCHMARK_INT, JS_INT,
+        JS_TIME_INT, MAGIC_INT, PYTHON_ASV_INT, PYTHON_INT, PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT,
+        RUBY_INT, RUST_BENCH_INT, RUST_CRITERION_INT, RUST_IAI_INT, RUST_INT,
+    };
+
+    #[derive(Debug, thiserror::Error)]
+    pub enum AdapterError {
+        #[error("Invalid adapter value: {0}")]
+        Invalid(i32),
+    }
+
+    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for Adapter
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>,
+    {
+        fn to_sql<'b>(
+            &'b self,
+            out: &mut diesel::serialize::Output<'b, '_, DB>,
+        ) -> diesel::serialize::Result {
+            match self {
+                Self::Magic => MAGIC_INT.to_sql(out),
+                Self::Json => JSON_INT.to_sql(out),
+                Self::Rust => RUST_INT.to_sql(out),
+                Self::RustBench => RUST_BENCH_INT.to_sql(out),
+                Self::RustCriterion => RUST_CRITERION_INT.to_sql(out),
+                Self::RustIai => RUST_IAI_INT.to_sql(out),
+                Self::Cpp => CPP_INT.to_sql(out),
+                Self::CppGoogle => CPP_GOOGLE_INT.to_sql(out),
+                Self::CppCatch2 => CPP_CATCH2_INT.to_sql(out),
+                Self::Go => GO_INT.to_sql(out),
+                Self::GoBench => GO_BENCH_INT.to_sql(out),
+                Self::Java => JAVA_INT.to_sql(out),
+                Self::JavaJmh => JAVA_JMH_INT.to_sql(out),
+                Self::CSharp => C_SHARP_INT.to_sql(out),
+                Self::CSharpDotNet => C_SHARP_DOT_NET_INT.to_sql(out),
+                Self::Js => JS_INT.to_sql(out),
+                Self::JsBenchmark => JS_BENCHMARK_INT.to_sql(out),
+                Self::JsTime => JS_TIME_INT.to_sql(out),
+                Self::Python => PYTHON_INT.to_sql(out),
+                Self::PythonAsv => PYTHON_ASV_INT.to_sql(out),
+                Self::PythonPytest => PYTHON_PYTEST_INT.to_sql(out),
+                Self::Ruby => RUBY_INT.to_sql(out),
+                Self::RubyBenchmark => RUBY_BENCHMARK_INT.to_sql(out),
+            }
+        }
+    }
+
+    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for Adapter
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
+    {
+        fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+            match i32::from_sql(bytes)? {
+                MAGIC_INT => Ok(Self::Magic),
+                JSON_INT => Ok(Self::Json),
+                RUST_INT => Ok(Self::Rust),
+                RUST_BENCH_INT => Ok(Self::RustBench),
+                RUST_CRITERION_INT => Ok(Self::RustCriterion),
+                RUST_IAI_INT => Ok(Self::RustIai),
+                CPP_INT => Ok(Self::Cpp),
+                CPP_GOOGLE_INT => Ok(Self::CppGoogle),
+                CPP_CATCH2_INT => Ok(Self::CppCatch2),
+                GO_INT => Ok(Self::Go),
+                GO_BENCH_INT => Ok(Self::GoBench),
+                JAVA_INT => Ok(Self::Java),
+                JAVA_JMH_INT => Ok(Self::JavaJmh),
+                C_SHARP_INT => Ok(Self::CSharp),
+                C_SHARP_DOT_NET_INT => Ok(Self::CSharpDotNet),
+                JS_INT => Ok(Self::Js),
+                JS_BENCHMARK_INT => Ok(Self::JsBenchmark),
+                JS_TIME_INT => Ok(Self::JsTime),
+                PYTHON_INT => Ok(Self::Python),
+                PYTHON_ASV_INT => Ok(Self::PythonAsv),
+                PYTHON_PYTEST_INT => Ok(Self::PythonPytest),
+                RUBY_INT => Ok(Self::Ruby),
+                RUBY_BENCHMARK_INT => Ok(Self::RubyBenchmark),
+                value => Err(Box::new(AdapterError::Invalid(value))),
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
@@ -103,7 +217,7 @@ pub struct JsonReport {
     pub testbed: JsonTestbed,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
-    pub adapter: JsonAdapter,
+    pub adapter: Adapter,
     pub results: JsonReportResults,
     pub alerts: JsonReportAlerts,
     pub created: DateTime<Utc>,

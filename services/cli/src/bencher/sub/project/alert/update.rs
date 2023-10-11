@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_client::types::{JsonAlertStatus, JsonUpdateAlert};
+use bencher_client::types::{AlertStatus, JsonUpdateAlert};
 use bencher_json::{AlertUuid, JsonAlert, ResourceId};
 
 use crate::{
@@ -57,8 +57,8 @@ impl From<Update> for JsonUpdateAlert {
         let Update { status, .. } = update;
         Self {
             status: status.map(|s| match s {
-                Status::Active => JsonAlertStatus::Active,
-                Status::Dismissed => JsonAlertStatus::Dismissed,
+                Status::Active => AlertStatus::Active,
+                Status::Dismissed => AlertStatus::Dismissed,
             }),
         }
     }

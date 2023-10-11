@@ -1,11 +1,11 @@
 pub mod jmh;
 
-use crate::{Adapter, AdapterResults, Settings};
+use crate::{Adaptable, AdapterResults, Settings};
 use jmh::AdapterJavaJmh;
 
 pub struct AdapterJava;
 
-impl Adapter for AdapterJava {
+impl Adaptable for AdapterJava {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         AdapterJavaJmh::parse(input, settings)
     }

@@ -14,12 +14,12 @@ use crate::{
         latency_as_nanos, nom_error, parse_benchmark_name_chars, parse_u64, parse_units, NomError,
     },
     results::adapter_results::AdapterResults,
-    Adapter, Settings,
+    Adaptable, Settings,
 };
 
 pub struct AdapterJsTime;
 
-impl Adapter for AdapterJsTime {
+impl Adaptable for AdapterJsTime {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         if let Some(JsonAverage::Mean | JsonAverage::Median) = settings.average {
             return None;

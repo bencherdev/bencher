@@ -15,12 +15,12 @@ use crate::{
         Units,
     },
     results::adapter_results::AdapterResults,
-    Adapter, Settings,
+    Adaptable, Settings,
 };
 
 pub struct AdapterJsBenchmark;
 
-impl Adapter for AdapterJsBenchmark {
+impl Adaptable for AdapterJsBenchmark {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         match settings.average {
             Some(JsonAverage::Median) | None => {},

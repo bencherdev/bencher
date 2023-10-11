@@ -32,12 +32,12 @@ pub(crate) mod test_util {
 
     use crate::{
         results::{adapter_metrics::AdapterMetrics, adapter_results::AdapterResults},
-        Adapter, Settings,
+        Adaptable, Settings,
     };
 
     pub fn convert_file_path<A>(file_path: &str) -> AdapterResults
     where
-        A: Adapter,
+        A: Adaptable,
     {
         opt_convert_file_path::<A>(file_path, Settings::default())
             .unwrap_or_else(|| panic!("Failed to convert contents of {file_path}"))
@@ -45,7 +45,7 @@ pub(crate) mod test_util {
 
     pub fn convert_file_path_median<A>(file_path: &str) -> AdapterResults
     where
-        A: Adapter,
+        A: Adaptable,
     {
         let settings = Settings {
             average: Some(JsonAverage::Median),
@@ -56,7 +56,7 @@ pub(crate) mod test_util {
 
     pub fn opt_convert_file_path<A>(file_path: &str, settings: Settings) -> Option<AdapterResults>
     where
-        A: Adapter,
+        A: Adaptable,
     {
         let contents = std::fs::read_to_string(file_path)
             .unwrap_or_else(|e| panic!("Failed to read test file {file_path}: {e}"));

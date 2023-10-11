@@ -1,13 +1,13 @@
 pub mod benchmark;
 pub mod time;
 
-use crate::{Adapter, AdapterResults, Settings};
+use crate::{Adaptable, AdapterResults, Settings};
 use benchmark::AdapterJsBenchmark;
 use time::AdapterJsTime;
 
 pub struct AdapterJs;
 
-impl Adapter for AdapterJs {
+impl Adaptable for AdapterJs {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         AdapterJsBenchmark::parse(input, settings).or_else(|| AdapterJsTime::parse(input, settings))
     }

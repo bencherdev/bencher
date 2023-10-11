@@ -3,12 +3,12 @@ pub mod criterion;
 pub mod iai;
 
 use self::{criterion::AdapterRustCriterion, iai::AdapterRustIai};
-use crate::{Adapter, AdapterResults, Settings};
+use crate::{Adaptable, AdapterResults, Settings};
 use bench::AdapterRustBench;
 
 pub struct AdapterRust;
 
-impl Adapter for AdapterRust {
+impl Adaptable for AdapterRust {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         AdapterRustBench::parse(input, settings)
             .or_else(|| AdapterRustCriterion::parse(input, settings))

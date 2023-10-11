@@ -72,7 +72,7 @@ impl Detector {
             log,
             query_metric.value,
             &metrics_data,
-            self.threshold.statistic.test.into(),
+            self.threshold.statistic.test,
             self.threshold.statistic.min_sample_size,
             self.threshold.statistic.lower_boundary,
             self.threshold.statistic.upper_boundary,
@@ -95,8 +95,8 @@ impl Detector {
             .map_err(resource_insert_err!(Boundary, insert_boundary))?;
 
         // If the boundary check detects an outlier then create an alert for it on the given side.
-        if let Some(limit) = boundary.outlier {
-            InsertAlert::from_boundary(conn, boundary_uuid, limit.into())
+        if let Some(boundary_limit) = boundary.outlier {
+            InsertAlert::from_boundary(conn, boundary_uuid, boundary_limit)
         } else {
             Ok(())
         }

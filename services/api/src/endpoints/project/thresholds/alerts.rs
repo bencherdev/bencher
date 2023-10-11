@@ -1,5 +1,5 @@
 use bencher_json::{
-    project::alert::{JsonAlertStats, JsonUpdateAlert},
+    project::alert::{AlertStatus, JsonAlertStats, JsonUpdateAlert},
     AlertUuid, JsonAlert, JsonAlerts, JsonDirection, JsonPagination, ResourceId,
 };
 use bencher_rbac::project::Permission;
@@ -18,7 +18,7 @@ use crate::{
         Endpoint,
     },
     model::project::{
-        threshold::alert::{QueryAlert, Status, UpdateAlert},
+        threshold::alert::{QueryAlert, UpdateAlert},
         QueryProject,
     },
     model::user::auth::AuthUser,
@@ -341,7 +341,7 @@ async fn get_stats_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     let active = schema::alert::table
-        .filter(schema::alert::status.eq(Status::Active))
+        .filter(schema::alert::status.eq(AlertStatus::Active))
         .inner_join(
             schema::boundary::table.inner_join(
                 schema::metric::table

@@ -3,12 +3,12 @@ use std::collections::HashMap;
 use bencher_json::{
     project::{
         metric::Mean,
-        report::{JsonAdapter, JsonFold},
+        report::{Adapter, JsonFold},
     },
     ResourceId,
 };
 
-use crate::{Adapter, AdapterError, Settings};
+use crate::{Adaptable, AdapterError, Settings};
 
 pub mod adapter_metrics;
 pub mod adapter_results;
@@ -35,7 +35,7 @@ impl From<ResultsArray> for AdapterResultsArray {
 impl AdapterResultsArray {
     pub fn new(
         results_array: &[&str],
-        adapter: JsonAdapter,
+        adapter: Adapter,
         settings: Settings,
     ) -> Result<Self, AdapterError> {
         let mut parsed_results_array = Vec::new();

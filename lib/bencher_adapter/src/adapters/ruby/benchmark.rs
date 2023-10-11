@@ -11,12 +11,12 @@ use nom::{
 use crate::{
     adapters::util::{latency_as_nanos, parse_benchmark_name_chars, parse_f64, NomError, Units},
     results::adapter_results::AdapterResults,
-    Adapter, Settings,
+    Adaptable, Settings,
 };
 
 pub struct AdapterRubyBenchmark;
 
-impl Adapter for AdapterRubyBenchmark {
+impl Adaptable for AdapterRubyBenchmark {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         if let Some(JsonAverage::Mean | JsonAverage::Median) = settings.average {
             return None;

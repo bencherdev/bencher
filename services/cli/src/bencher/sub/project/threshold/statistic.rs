@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use bencher_client::types::JsonStatisticKind;
+use bencher_client::types::StatisticKind;
 use bencher_json::{Boundary, SampleSize};
 
 use crate::{
@@ -10,7 +10,7 @@ use crate::{
 
 #[derive(Debug, Clone, Copy)]
 pub struct Statistic {
-    pub test: JsonStatisticKind,
+    pub test: StatisticKind,
     pub min_sample_size: Option<SampleSize>,
     pub max_sample_size: Option<SampleSize>,
     pub window: Option<u32>,
@@ -57,7 +57,7 @@ fn map_boundary(boundary: Option<f64>) -> Result<Option<Boundary>, CliError> {
     })
 }
 
-impl From<CliStatisticKind> for JsonStatisticKind {
+impl From<CliStatisticKind> for StatisticKind {
     fn from(kind: CliStatisticKind) -> Self {
         match kind {
             CliStatisticKind::Z => Self::Z,

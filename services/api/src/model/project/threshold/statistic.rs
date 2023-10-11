@@ -1,5 +1,5 @@
 use bencher_json::{
-    project::threshold::{JsonNewStatistic, JsonStatistic, JsonStatisticKind},
+    project::threshold::{JsonNewStatistic, JsonStatistic, StatisticKind},
     Boundary, SampleSize, StatisticUuid, ThresholdUuid,
 };
 use chrono::Utc;
@@ -64,7 +64,7 @@ impl QueryStatistic {
         Ok(JsonStatistic {
             uuid,
             threshold,
-            test: test.into(),
+            test,
             min_sample_size: map_sample_size(min_sample_size)?,
             max_sample_size: map_sample_size(max_sample_size)?,
             window: map_u32(window)?,
@@ -81,73 +81,6 @@ pub fn map_sample_size(sample_size: Option<i64>) -> Result<Option<SampleSize>, A
     } else {
         None
     })
-}
-
-const Z_INT: i32 = 0;
-const T_INT: i32 = 1;
-
-#[derive(Debug, Clone, Copy, diesel::FromSqlRow, diesel::AsExpression)]
-#[diesel(sql_type = diesel::sql_types::Integer)]
-#[repr(i32)]
-pub enum StatisticKind {
-    Z = Z_INT,
-    T = T_INT,
-}
-
-impl TryFrom<i32> for StatisticKind {
-    type Error = ApiError;
-
-    fn try_from(kind: i32) -> Result<Self, Self::Error> {
-        match kind {
-            Z_INT => Ok(Self::Z),
-            T_INT => Ok(Self::T),
-            _ => Err(ApiError::StatisticKind(kind)),
-        }
-    }
-}
-
-impl From<JsonStatisticKind> for StatisticKind {
-    fn from(kind: JsonStatisticKind) -> Self {
-        match kind {
-            JsonStatisticKind::Z => Self::Z,
-            JsonStatisticKind::T => Self::T,
-        }
-    }
-}
-
-impl From<StatisticKind> for JsonStatisticKind {
-    fn from(kind: StatisticKind) -> Self {
-        match kind {
-            StatisticKind::Z => Self::Z,
-            StatisticKind::T => Self::T,
-        }
-    }
-}
-
-impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for StatisticKind
-where
-    DB: diesel::backend::Backend,
-    i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>,
-{
-    fn to_sql<'b>(
-        &'b self,
-        out: &mut diesel::serialize::Output<'b, '_, DB>,
-    ) -> diesel::serialize::Result {
-        match self {
-            Self::Z => Z_INT.to_sql(out),
-            Self::T => T_INT.to_sql(out),
-        }
-    }
-}
-
-impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for StatisticKind
-where
-    DB: diesel::backend::Backend,
-    i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
-{
-    fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
-        Ok(Self::try_from(i32::from_sql(bytes)?)?)
-    }
 }
 
 pub fn map_boundary(boundary: Option<f64>) -> Result<Option<Boundary>, ApiError> {
@@ -215,7 +148,7 @@ impl InsertStatistic {
         Ok(Self {
             uuid: StatisticUuid::new(),
             threshold_id,
-            test: StatisticKind::from(test),
+            test,
             min_sample_size: min_sample_size.map(|ss| u32::from(ss).into()),
             max_sample_size: max_sample_size.map(|ss| u32::from(ss).into()),
             window: window.map(Into::into),

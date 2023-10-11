@@ -14,12 +14,12 @@ use crate::{
         latency_as_nanos, nom_error, parse_benchmark_name, parse_f64, parse_units, NomError,
     },
     results::adapter_results::AdapterResults,
-    Adapter, Settings,
+    Adaptable, Settings,
 };
 
 pub struct AdapterRustCriterion;
 
-impl Adapter for AdapterRustCriterion {
+impl Adaptable for AdapterRustCriterion {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         match settings.average {
             Some(JsonAverage::Mean) | None => {},
@@ -108,7 +108,7 @@ pub(crate) mod test_rust_criterion {
 
     use crate::{
         adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
-        Adapter, AdapterResults, Settings,
+        Adaptable, AdapterResults, Settings,
     };
 
     use super::{parse_criterion, AdapterRustCriterion};
@@ -241,7 +241,7 @@ pub(crate) mod test_rust_criterion {
         let results = convert_rust_criterion("dogfood");
         assert_eq!(results.inner.len(), 4);
 
-        let metrics = results.get("JsonAdapter::Magic (JSON)").unwrap();
+        let metrics = results.get("Adapter::Magic (JSON)").unwrap();
         validate_latency(
             metrics,
             3_463.200_000_000_000_3,
@@ -249,13 +249,13 @@ pub(crate) mod test_rust_criterion {
             Some(3_464.100_000_000_000_3),
         );
 
-        let metrics = results.get("JsonAdapter::Json").unwrap();
+        let metrics = results.get("Adapter::Json").unwrap();
         validate_latency(metrics, 3479.6, Some(3_479.299_999_999_999_7), Some(3480.0));
 
-        let metrics = results.get("JsonAdapter::Magic (Rust)").unwrap();
+        let metrics = results.get("Adapter::Magic (Rust)").unwrap();
         validate_latency(metrics, 14726.0, Some(14721.0), Some(14730.0));
 
-        let metrics = results.get("JsonAdapter::Rust").unwrap();
+        let metrics = results.get("Adapter::Rust").unwrap();
         validate_latency(metrics, 14884.0, Some(14881.0), Some(14887.0));
     }
 }

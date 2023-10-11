@@ -10,12 +10,12 @@ use nom::{
 use crate::{
     adapters::util::{latency_as_nanos, parse_benchmark_name, parse_u64, parse_units, NomError},
     results::adapter_results::AdapterResults,
-    Adapter, Settings,
+    Adaptable, Settings,
 };
 
 pub struct AdapterRustBench;
 
-impl Adapter for AdapterRustBench {
+impl Adaptable for AdapterRustBench {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         match settings.average {
             Some(JsonAverage::Median) | None => {},

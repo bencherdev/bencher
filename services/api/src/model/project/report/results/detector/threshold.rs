@@ -1,4 +1,4 @@
-use bencher_json::Boundary;
+use bencher_json::{project::threshold::StatisticKind, Boundary};
 use diesel::{
     ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
     SelectableHelper,
@@ -11,7 +11,7 @@ use crate::{
         metric_kind::MetricKindId,
         testbed::TestbedId,
         threshold::{
-            statistic::{map_boundary, QueryStatistic, StatisticId, StatisticKind},
+            statistic::{map_boundary, QueryStatistic, StatisticId},
             ThresholdId,
         },
     },

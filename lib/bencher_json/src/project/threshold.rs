@@ -22,7 +22,7 @@ pub struct JsonNewThreshold {
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewStatistic {
-    pub test: JsonStatisticKind,
+    pub test: StatisticKind,
     pub min_sample_size: Option<SampleSize>,
     pub max_sample_size: Option<SampleSize>,
     pub window: Option<u32>,
@@ -33,7 +33,7 @@ pub struct JsonNewStatistic {
 impl JsonNewStatistic {
     pub fn lower_boundary() -> Self {
         Self {
-            test: JsonStatisticKind::T,
+            test: StatisticKind::T,
             min_sample_size: None,
             max_sample_size: Some(SampleSize::THIRTY),
             window: None,
@@ -44,7 +44,7 @@ impl JsonNewStatistic {
 
     pub fn upper_boundary() -> Self {
         Self {
-            test: JsonStatisticKind::T,
+            test: StatisticKind::T,
             min_sample_size: None,
             max_sample_size: Some(SampleSize::THIRTY),
             window: None,
@@ -80,7 +80,7 @@ pub struct JsonThreshold {
 pub struct JsonStatistic {
     pub uuid: StatisticUuid,
     pub threshold: ThresholdUuid,
-    pub test: JsonStatisticKind,
+    pub test: StatisticKind,
     pub min_sample_size: Option<SampleSize>,
     pub max_sample_size: Option<SampleSize>,
     pub window: Option<u32>,
@@ -89,13 +89,60 @@ pub struct JsonStatistic {
     pub created: DateTime<Utc>,
 }
 
+const Z_INT: i32 = 0;
+const T_INT: i32 = 1;
+
 #[typeshare::typeshare]
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, derive_more::Display, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
 #[serde(rename_all = "snake_case")]
-pub enum JsonStatisticKind {
-    Z,
-    T,
+#[repr(i32)]
+pub enum StatisticKind {
+    Z = Z_INT,
+    T = T_INT,
+}
+
+#[cfg(feature = "db")]
+mod statistic_kind {
+    use super::{StatisticKind, T_INT, Z_INT};
+
+    #[derive(Debug, thiserror::Error)]
+    pub enum StatisticKindError {
+        #[error("Invalid statistic kind value: {0}")]
+        Invalid(i32),
+    }
+
+    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for StatisticKind
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>,
+    {
+        fn to_sql<'b>(
+            &'b self,
+            out: &mut diesel::serialize::Output<'b, '_, DB>,
+        ) -> diesel::serialize::Result {
+            match self {
+                Self::Z => T_INT.to_sql(out),
+                Self::T => Z_INT.to_sql(out),
+            }
+        }
+    }
+
+    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for StatisticKind
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
+    {
+        fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+            match i32::from_sql(bytes)? {
+                T_INT => Ok(Self::Z),
+                Z_INT => Ok(Self::T),
+                value => Err(Box::new(StatisticKindError::Invalid(value))),
+            }
+        }
+    }
 }
 
 #[typeshare::typeshare]

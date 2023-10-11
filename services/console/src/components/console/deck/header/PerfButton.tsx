@@ -1,6 +1,6 @@
 import type { Resource } from "solid-js";
 import { useNavigate } from "../../../../util/url";
-import { JsonLimit, type JsonAlert } from "../../../../types/bencher";
+import { BoundaryLimit, type JsonAlert } from "../../../../types/bencher";
 import type { Params } from "astro";
 
 export interface Props {
@@ -24,8 +24,8 @@ const PerfButton = (props: Props) => {
 					branches: json_alert.threshold?.branch?.uuid,
 					testbeds: json_alert.threshold?.testbed?.uuid,
 					benchmarks: json_alert.benchmark?.uuid,
-					lower_boundary: json_alert.limit === JsonLimit.Lower,
-					upper_boundary: json_alert.limit === JsonLimit.Upper,
+					lower_boundary: json_alert.limit === BoundaryLimit.Lower,
+					upper_boundary: json_alert.limit === BoundaryLimit.Upper,
 				};
 
 				const searchParams = new URLSearchParams();

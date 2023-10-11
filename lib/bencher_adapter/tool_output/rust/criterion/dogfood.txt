@@ -22,24 +22,24 @@ test adapters::rust::test_rust::test_parse_panic ... ignored
 
 test result: ok. 0 passed; 0 failed; 19 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-JsonAdapter::Magic (JSON)
+Adapter::Magic (JSON)
                         time:   [3.4623 µs 3.4632 µs 3.4641 µs]
 Found 4 outliers among 100 measurements (4.00%)
   3 (3.00%) high mild
   1 (1.00%) high severe
 
-JsonAdapter::Json       time:   [3.4793 µs 3.4796 µs 3.4800 µs]
+Adapter::Json       time:   [3.4793 µs 3.4796 µs 3.4800 µs]
 Found 4 outliers among 100 measurements (4.00%)
   1 (1.00%) low mild
   2 (2.00%) high mild
   1 (1.00%) high severe
 
-JsonAdapter::Magic (Rust)
+Adapter::Magic (Rust)
                         time:   [14.721 µs 14.726 µs 14.730 µs]
 Found 1 outliers among 100 measurements (1.00%)
   1 (1.00%) high mild
 
-JsonAdapter::Rust       time:   [14.881 µs 14.884 µs 14.887 µs]
+Adapter::Rust       time:   [14.881 µs 14.884 µs 14.887 µs]
 Found 1 outliers among 100 measurements (1.00%)
   1 (1.00%) high mild
 

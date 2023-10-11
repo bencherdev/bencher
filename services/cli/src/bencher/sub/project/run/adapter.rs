@@ -1,4 +1,4 @@
-use bencher_client::types::JsonAdapter;
+use bencher_client::types::Adapter;
 
 use crate::parser::project::run::CliRunAdapter;
 
@@ -59,7 +59,7 @@ impl From<CliRunAdapter> for RunAdapter {
     }
 }
 
-impl From<RunAdapter> for JsonAdapter {
+impl From<RunAdapter> for Adapter {
     fn from(adapter: RunAdapter) -> Self {
         match adapter {
             RunAdapter::Magic => Self::Magic,

@@ -1,6 +1,6 @@
 use bencher_json::{
-    project::JsonUpdateProject, JsonDirection, JsonEmpty, JsonPagination, JsonProject,
-    JsonProjects, NonEmpty, ResourceId,
+    project::{JsonUpdateProject, Visibility},
+    JsonDirection, JsonEmpty, JsonPagination, JsonProject, JsonProjects, NonEmpty, ResourceId,
 };
 use bencher_rbac::project::Permission;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -19,8 +19,7 @@ use crate::{
     },
     model::{
         project::{
-            visibility::{project_visibility::project_visibility, Visibility},
-            QueryProject, UpdateProject,
+            visibility::project_visibility::project_visibility, QueryProject, UpdateProject,
         },
         user::auth::AuthUser,
     },

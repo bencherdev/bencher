@@ -1,65 +1,9 @@
-use bencher_json::project::JsonVisibility;
-
-use crate::ApiError;
-
-const PUBLIC_INT: i32 = 0;
-#[cfg(feature = "plus")]
-const PRIVATE_INT: i32 = 1;
-
-#[derive(Debug, Clone, Copy, diesel::FromSqlRow, diesel::AsExpression)]
-#[diesel(sql_type = diesel::sql_types::Integer)]
-#[repr(i32)]
-pub enum Visibility {
-    Public = PUBLIC_INT,
-    #[cfg(feature = "plus")]
-    Private = PRIVATE_INT,
-}
-
-impl TryFrom<i32> for Visibility {
-    type Error = ApiError;
-
-    fn try_from(visibility: i32) -> Result<Self, Self::Error> {
-        match visibility {
-            PUBLIC_INT => Ok(Self::Public),
-            #[cfg(feature = "plus")]
-            PRIVATE_INT => Ok(Self::Private),
-            _ => Err(ApiError::VisibilityInt(visibility)),
-        }
-    }
-}
-
-impl From<JsonVisibility> for Visibility {
-    fn from(visibility: JsonVisibility) -> Self {
-        match visibility {
-            JsonVisibility::Public => Self::Public,
-            #[cfg(feature = "plus")]
-            JsonVisibility::Private => Self::Private,
-        }
-    }
-}
-
-impl From<Visibility> for JsonVisibility {
-    fn from(visibility: Visibility) -> Self {
-        match visibility {
-            Visibility::Public => Self::Public,
-            #[cfg(feature = "plus")]
-            Visibility::Private => Self::Private,
-        }
-    }
-}
-
-impl Visibility {
-    pub fn is_public(self) -> bool {
-        JsonVisibility::from(self).is_public()
-    }
-}
-
 #[cfg(not(feature = "plus"))]
 pub mod project_visibility {
-    use bencher_json::project::JsonVisibility;
+    use bencher_json::project::Visibility;
     use dropshot::HttpError;
 
-    pub fn project_visibility(visibility: Option<JsonVisibility>) -> Result<(), HttpError> {
+    pub fn project_visibility(visibility: Option<Visibility>) -> Result<(), HttpError> {
         visibility
             .unwrap_or_default()
             .is_public()
@@ -73,7 +17,7 @@ pub mod project_visibility {
 #[cfg(feature = "plus")]
 pub mod project_visibility {
     use bencher_billing::{Biller, SubscriptionId};
-    use bencher_json::{project::JsonVisibility, ResourceId};
+    use bencher_json::{project::Visibility, ResourceId};
     use bencher_license::Licensor;
     use dropshot::HttpError;
     use http::StatusCode;
@@ -102,7 +46,7 @@ pub mod project_visibility {
         biller: Option<&Biller>,
         licensor: &Licensor,
         organization: &ResourceId,
-        visibility: Option<JsonVisibility>,
+        visibility: Option<Visibility>,
     ) -> Result<(), HttpError> {
         if visibility.unwrap_or_default().is_public() {
             Ok(())
@@ -151,32 +95,5 @@ pub mod project_visibility {
                 organization.clone(),
             )))
         }
-    }
-}
-
-impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for Visibility
-where
-    DB: diesel::backend::Backend,
-    i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>,
-{
-    fn to_sql<'b>(
-        &'b self,
-        out: &mut diesel::serialize::Output<'b, '_, DB>,
-    ) -> diesel::serialize::Result {
-        match self {
-            Self::Public => PUBLIC_INT.to_sql(out),
-            #[cfg(feature = "plus")]
-            Self::Private => PRIVATE_INT.to_sql(out),
-        }
-    }
-}
-
-impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for Visibility
-where
-    DB: diesel::backend::Backend,
-    i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
-{
-    fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
-        Ok(Self::try_from(i32::from_sql(bytes)?)?)
     }
 }

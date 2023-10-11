@@ -16,12 +16,12 @@ use adapters::{
         bench::AdapterRustBench, criterion::AdapterRustCriterion, iai::AdapterRustIai, AdapterRust,
     },
 };
-use bencher_json::project::report::{JsonAdapter, JsonAverage};
+use bencher_json::project::report::{Adapter, JsonAverage};
 pub use bencher_json::{BenchmarkName, JsonMetric};
 pub use error::AdapterError;
 pub use results::{adapter_results::AdapterResults, AdapterResultsArray};
 
-pub trait Adapter {
+pub trait Adaptable {
     fn convert(&self, input: &str, settings: Settings) -> Option<AdapterResults> {
         Self::parse(input, settings)
     }
@@ -29,32 +29,32 @@ pub trait Adapter {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults>;
 }
 
-impl Adapter for JsonAdapter {
+impl Adaptable for Adapter {
     fn convert(&self, input: &str, settings: Settings) -> Option<AdapterResults> {
         match self {
-            JsonAdapter::Magic => AdapterMagic::parse(input, settings),
-            JsonAdapter::Json => AdapterJson::parse(input, settings),
-            JsonAdapter::CSharp => AdapterCSharp::parse(input, settings),
-            JsonAdapter::CSharpDotNet => AdapterCSharpDotNet::parse(input, settings),
-            JsonAdapter::Cpp => AdapterCpp::parse(input, settings),
-            JsonAdapter::CppCatch2 => AdapterCppCatch2::parse(input, settings),
-            JsonAdapter::CppGoogle => AdapterCppGoogle::parse(input, settings),
-            JsonAdapter::Go => AdapterGo::parse(input, settings),
-            JsonAdapter::GoBench => AdapterGoBench::parse(input, settings),
-            JsonAdapter::Java => AdapterJava::parse(input, settings),
-            JsonAdapter::JavaJmh => AdapterJavaJmh::parse(input, settings),
-            JsonAdapter::Js => AdapterJs::parse(input, settings),
-            JsonAdapter::JsBenchmark => AdapterJsBenchmark::parse(input, settings),
-            JsonAdapter::JsTime => AdapterJsTime::parse(input, settings),
-            JsonAdapter::Python => AdapterPython::parse(input, settings),
-            JsonAdapter::PythonAsv => AdapterPythonAsv::parse(input, settings),
-            JsonAdapter::PythonPytest => AdapterPythonPytest::parse(input, settings),
-            JsonAdapter::Ruby => AdapterRuby::parse(input, settings),
-            JsonAdapter::RubyBenchmark => AdapterRubyBenchmark::parse(input, settings),
-            JsonAdapter::Rust => AdapterRust::parse(input, settings),
-            JsonAdapter::RustBench => AdapterRustBench::parse(input, settings),
-            JsonAdapter::RustCriterion => AdapterRustCriterion::parse(input, settings),
-            JsonAdapter::RustIai => AdapterRustIai::parse(input, settings),
+            Adapter::Magic => AdapterMagic::parse(input, settings),
+            Adapter::Json => AdapterJson::parse(input, settings),
+            Adapter::CSharp => AdapterCSharp::parse(input, settings),
+            Adapter::CSharpDotNet => AdapterCSharpDotNet::parse(input, settings),
+            Adapter::Cpp => AdapterCpp::parse(input, settings),
+            Adapter::CppCatch2 => AdapterCppCatch2::parse(input, settings),
+            Adapter::CppGoogle => AdapterCppGoogle::parse(input, settings),
+            Adapter::Go => AdapterGo::parse(input, settings),
+            Adapter::GoBench => AdapterGoBench::parse(input, settings),
+            Adapter::Java => AdapterJava::parse(input, settings),
+            Adapter::JavaJmh => AdapterJavaJmh::parse(input, settings),
+            Adapter::Js => AdapterJs::parse(input, settings),
+            Adapter::JsBenchmark => AdapterJsBenchmark::parse(input, settings),
+            Adapter::JsTime => AdapterJsTime::parse(input, settings),
+            Adapter::Python => AdapterPython::parse(input, settings),
+            Adapter::PythonAsv => AdapterPythonAsv::parse(input, settings),
+            Adapter::PythonPytest => AdapterPythonPytest::parse(input, settings),
+            Adapter::Ruby => AdapterRuby::parse(input, settings),
+            Adapter::RubyBenchmark => AdapterRubyBenchmark::parse(input, settings),
+            Adapter::Rust => AdapterRust::parse(input, settings),
+            Adapter::RustBench => AdapterRustBench::parse(input, settings),
+            Adapter::RustCriterion => AdapterRustCriterion::parse(input, settings),
+            Adapter::RustIai => AdapterRustIai::parse(input, settings),
         }
     }
 

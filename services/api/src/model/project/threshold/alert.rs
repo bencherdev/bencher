@@ -1,7 +1,8 @@
 use bencher_json::{
     project::{
-        alert::{JsonAlert, JsonAlertStatus, JsonPerfAlert, JsonUpdateAlert},
-        boundary::JsonLimit,
+        alert::{AlertStatus, JsonAlert, JsonPerfAlert, JsonUpdateAlert},
+        boundary::BoundaryLimit,
+        perf::Iteration,
     },
     AlertUuid, BoundaryUuid, ReportUuid,
 };
@@ -36,8 +37,8 @@ pub struct QueryAlert {
     pub id: AlertId,
     pub uuid: AlertUuid,
     pub boundary_id: BoundaryId,
-    pub boundary_limit: Limit,
-    pub status: Status,
+    pub boundary_limit: BoundaryLimit,
+    pub status: AlertStatus,
     pub modified: i64,
 }
 
@@ -85,7 +86,13 @@ impl QueryAlert {
                     QueryMetric::as_select(),
                     QueryBoundary::as_select(),
                 ))
-                .first::<(ReportUuid, i32, QueryBenchmark, QueryMetric, QueryBoundary)>(conn)
+                .first::<(
+                    ReportUuid,
+                    Iteration,
+                    QueryBenchmark,
+                    QueryMetric,
+                    QueryBoundary,
+                )>(conn)
                 .map_err(ApiError::from)?;
         let project_uuid = QueryProject::get_uuid(conn, query_benchmark.project_id)?;
         self.into_json_for_report(
@@ -105,7 +112,7 @@ impl QueryAlert {
         conn: &mut DbConnection,
         project_uuid: ProjectUuid,
         report_uuid: ReportUuid,
-        iteration: i32,
+        iteration: Iteration,
         query_benchmark: QueryBenchmark,
         query_metric: QueryMetric,
         query_boundary: QueryBoundary,
@@ -127,11 +134,11 @@ impl QueryAlert {
         Ok(JsonAlert {
             uuid,
             report: report_uuid,
-            iteration: u32::try_from(iteration).map_err(ApiError::from)?,
+            iteration,
             threshold: QueryThreshold::get_json(conn, threshold_id, statistic_id)?,
             benchmark,
-            limit: boundary_limit.into(),
-            status: status.into(),
+            limit: boundary_limit,
+            status,
             modified: to_date_time(modified)?,
         })
     }
@@ -146,142 +153,10 @@ impl QueryAlert {
         } = self;
         Ok(JsonPerfAlert {
             uuid,
-            limit: boundary_limit.into(),
-            status: status.into(),
+            limit: boundary_limit,
+            status,
             modified: to_date_time(modified)?,
         })
-    }
-}
-
-const LOWER_BOOL: bool = false;
-const UPPER_BOOL: bool = true;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, diesel::FromSqlRow, diesel::AsExpression)]
-#[diesel(sql_type = diesel::sql_types::Bool)]
-pub enum Limit {
-    Lower,
-    Upper,
-}
-
-impl From<bool> for Limit {
-    fn from(limit: bool) -> Self {
-        #[allow(clippy::match_bool)]
-        match limit {
-            LOWER_BOOL => Self::Lower,
-            UPPER_BOOL => Self::Upper,
-        }
-    }
-}
-
-impl From<Limit> for JsonLimit {
-    fn from(limit: Limit) -> Self {
-        match limit {
-            Limit::Lower => Self::Lower,
-            Limit::Upper => Self::Upper,
-        }
-    }
-}
-
-impl From<JsonLimit> for Limit {
-    fn from(limit: JsonLimit) -> Self {
-        match limit {
-            JsonLimit::Lower => Self::Lower,
-            JsonLimit::Upper => Self::Upper,
-        }
-    }
-}
-
-impl<DB> diesel::serialize::ToSql<diesel::sql_types::Bool, DB> for Limit
-where
-    DB: diesel::backend::Backend,
-    bool: diesel::serialize::ToSql<diesel::sql_types::Bool, DB>,
-{
-    fn to_sql<'b>(
-        &'b self,
-        out: &mut diesel::serialize::Output<'b, '_, DB>,
-    ) -> diesel::serialize::Result {
-        match self {
-            Self::Lower => LOWER_BOOL.to_sql(out),
-            Self::Upper => UPPER_BOOL.to_sql(out),
-        }
-    }
-}
-
-impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Bool, DB> for Limit
-where
-    DB: diesel::backend::Backend,
-    bool: diesel::deserialize::FromSql<diesel::sql_types::Bool, DB>,
-{
-    fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
-        Ok(Self::from(bool::from_sql(bytes)?))
-    }
-}
-
-const ACTIVE_INT: i32 = 0;
-const DISMISSED_INT: i32 = 1;
-
-#[derive(Debug, Clone, Copy, Default, diesel::FromSqlRow, diesel::AsExpression)]
-#[diesel(sql_type = diesel::sql_types::Integer)]
-#[repr(i32)]
-pub enum Status {
-    #[default]
-    Active = ACTIVE_INT,
-    Dismissed = DISMISSED_INT,
-}
-
-impl TryFrom<i32> for Status {
-    type Error = ApiError;
-
-    fn try_from(status: i32) -> Result<Self, Self::Error> {
-        match status {
-            ACTIVE_INT => Ok(Self::Active),
-            DISMISSED_INT => Ok(Self::Dismissed),
-            _ => Err(ApiError::BadAlertStatus(status)),
-        }
-    }
-}
-
-impl From<Status> for JsonAlertStatus {
-    fn from(status: Status) -> Self {
-        match status {
-            Status::Active => Self::Active,
-            Status::Dismissed => Self::Dismissed,
-        }
-    }
-}
-
-impl From<JsonAlertStatus> for Status {
-    fn from(status: JsonAlertStatus) -> Self {
-        match status {
-            JsonAlertStatus::Active => Self::Active,
-            JsonAlertStatus::Dismissed => Self::Dismissed,
-        }
-    }
-}
-
-impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for Status
-where
-    DB: diesel::backend::Backend,
-    i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>,
-{
-    fn to_sql<'b>(
-        &'b self,
-        out: &mut diesel::serialize::Output<'b, '_, DB>,
-    ) -> diesel::serialize::Result {
-        match self {
-            Self::Active => ACTIVE_INT.to_sql(out),
-            Self::Dismissed => DISMISSED_INT.to_sql(out),
-        }
-    }
-}
-
-impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for Status
-where
-    DB: diesel::backend::Backend,
-    i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
-{
-    fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
-        Ok(Self::try_from(i32::from_sql(bytes)?)?)
     }
 }
 
@@ -290,8 +165,8 @@ where
 pub struct InsertAlert {
     pub uuid: AlertUuid,
     pub boundary_id: BoundaryId,
-    pub boundary_limit: Limit,
-    pub status: Status,
+    pub boundary_limit: BoundaryLimit,
+    pub status: AlertStatus,
     pub modified: i64,
 }
 
@@ -299,13 +174,13 @@ impl InsertAlert {
     pub fn from_boundary(
         conn: &mut DbConnection,
         boundary_uuid: BoundaryUuid,
-        boundary_limit: Limit,
+        boundary_limit: BoundaryLimit,
     ) -> Result<(), HttpError> {
         let insert_alert = InsertAlert {
             uuid: AlertUuid::new(),
             boundary_id: QueryBoundary::get_id(conn, boundary_uuid)?,
             boundary_limit,
-            status: Status::default(),
+            status: AlertStatus::default(),
             modified: Utc::now().timestamp(),
         };
 
@@ -321,7 +196,7 @@ impl InsertAlert {
 #[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = alert_table)]
 pub struct UpdateAlert {
-    pub status: Option<Status>,
+    pub status: Option<AlertStatus>,
     pub modified: i64,
 }
 
@@ -329,7 +204,7 @@ impl From<JsonUpdateAlert> for UpdateAlert {
     fn from(update: JsonUpdateAlert) -> Self {
         let JsonUpdateAlert { status } = update;
         Self {
-            status: status.map(Into::into),
+            status,
             modified: Utc::now().timestamp(),
         }
     }
