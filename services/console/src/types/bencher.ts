@@ -4,6 +4,8 @@
 
 export type VersionNumber = number;
 
+export type Iteration = number;
+
 export type NonEmpty = string;
 
 export type Slug = string;
@@ -281,7 +283,7 @@ export interface JsonProject {
 
 export interface JsonPerfMetric {
 	report: Uuid;
-	iteration: number;
+	iteration: Iteration;
 	start_time: string;
 	end_time: string;
 	version: JsonVersion;

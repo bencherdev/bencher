@@ -4,7 +4,7 @@ use bencher_json::{
     project::{
         boundary::JsonBoundary,
         branch::{JsonVersion, VersionNumber},
-        perf::{JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
+        perf::{Iteration, JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
     },
     GitHash, JsonBenchmark, JsonBranch, JsonPerf, JsonPerfQuery, JsonTestbed, ProjectUuid,
     ReportUuid, ResourceId,
@@ -274,7 +274,7 @@ struct Times {
 
 type PerfQuery = (
     ReportUuid,
-    i32,
+    Iteration,
     i64,
     i64,
     VersionNumber,
@@ -466,7 +466,7 @@ fn perf_metric(
 
     Some(JsonPerfMetric {
         report: report_uuid,
-        iteration: u32::try_from(iteration).ok()?,
+        iteration,
         start_time: to_date_time(start_time).ok()?,
         end_time: to_date_time(end_time).ok()?,
         version,

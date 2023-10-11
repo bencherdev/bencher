@@ -5,7 +5,10 @@ use bencher_adapter::{
     AdapterResults, AdapterResultsArray, Settings as AdapterSettings,
 };
 use bencher_json::{
-    project::report::{JsonAdapter, JsonReportSettings},
+    project::{
+        perf::Iteration,
+        report::{JsonAdapter, JsonReportSettings},
+    },
     BenchmarkName,
 };
 use diesel::RunQueryDsl;
@@ -83,7 +86,7 @@ impl ReportResults {
             self.results(
                 log,
                 conn,
-                0,
+                Iteration::default(),
                 results,
                 #[cfg(feature = "plus")]
                 usage,
@@ -93,7 +96,7 @@ impl ReportResults {
                 self.results(
                     log,
                     conn,
-                    iteration,
+                    iteration.into(),
                     results,
                     #[cfg(feature = "plus")]
                     usage,
@@ -108,7 +111,7 @@ impl ReportResults {
         &mut self,
         log: &Logger,
         conn: &mut DbConnection,
-        iteration: usize,
+        iteration: Iteration,
         results: AdapterResults,
         #[cfg(feature = "plus")] usage: &mut u64,
     ) -> Result<(), HttpError> {
@@ -130,7 +133,7 @@ impl ReportResults {
         &mut self,
         log: &Logger,
         conn: &mut DbConnection,
-        iteration: usize,
+        iteration: Iteration,
         benchmark_name: &BenchmarkName,
         metrics: AdapterMetrics,
         #[cfg(feature = "plus")] usage: &mut u64,

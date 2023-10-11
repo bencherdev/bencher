@@ -1,4 +1,4 @@
-use bencher_json::PerfUuid;
+use bencher_json::{project::perf::Iteration, PerfUuid};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 
 use crate::{
@@ -21,7 +21,7 @@ pub struct QueryPerf {
     pub id: PerfId,
     pub uuid: PerfUuid,
     pub report_id: ReportId,
-    pub iteration: i32,
+    pub iteration: Iteration,
     pub benchmark_id: BenchmarkId,
 }
 
@@ -36,17 +36,16 @@ impl QueryPerf {
 pub struct InsertPerf {
     pub uuid: PerfUuid,
     pub report_id: ReportId,
-    pub iteration: i32,
+    pub iteration: Iteration,
     pub benchmark_id: BenchmarkId,
 }
 
 impl InsertPerf {
-    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-    pub fn from_json(report_id: ReportId, iteration: usize, benchmark_id: BenchmarkId) -> Self {
+    pub fn from_json(report_id: ReportId, iteration: Iteration, benchmark_id: BenchmarkId) -> Self {
         InsertPerf {
             uuid: PerfUuid::new(),
             report_id,
-            iteration: iteration as i32,
+            iteration,
             benchmark_id,
         }
     }

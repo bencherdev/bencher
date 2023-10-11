@@ -5848,6 +5848,11 @@
           "append"
         ]
       },
+      "Iteration": {
+        "type": "integer",
+        "format": "uint32",
+        "minimum": 0
+      },
       "JsonAdapter": {
         "type": "string",
         "enum": [
@@ -6986,9 +6991,7 @@
             "format": "date-time"
           },
           "iteration": {
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+            "$ref": "#/components/schemas/Iteration"
           },
           "metric": {
             "$ref": "#/components/schemas/JsonMetric"
