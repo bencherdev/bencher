@@ -35,7 +35,7 @@ pub struct QueryToken {
     pub id: TokenId,
     pub uuid: TokenUuid,
     pub user_id: UserId,
-    pub name: String,
+    pub name: NonEmpty,
     pub jwt: String,
     pub creation: i64,
     pub expiration: i64,
@@ -71,7 +71,7 @@ impl QueryToken {
         Ok(JsonToken {
             uuid,
             user: QueryUser::get_uuid(conn, user_id)?,
-            name: NonEmpty::from_str(&name).map_err(ApiError::from)?,
+            name,
             token: Jwt::from_str(&jwt).map_err(ApiError::from)?,
             creation: to_date_time(creation)?,
             expiration: to_date_time(expiration)?,
@@ -84,7 +84,7 @@ impl QueryToken {
 pub struct InsertToken {
     pub uuid: TokenUuid,
     pub user_id: UserId,
-    pub name: String,
+    pub name: NonEmpty,
     pub jwt: String,
     pub creation: i64,
     pub expiration: i64,
@@ -127,7 +127,7 @@ impl InsertToken {
         Ok(Self {
             uuid: TokenUuid::new(),
             user_id: query_user.id,
-            name: name.to_string(),
+            name,
             jwt: jwt.to_string(),
             creation: claims.iat as i64,
             expiration: claims.exp as i64,
@@ -138,14 +138,12 @@ impl InsertToken {
 #[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = token_table)]
 pub struct UpdateToken {
-    pub name: Option<String>,
+    pub name: Option<NonEmpty>,
 }
 
 impl From<JsonUpdateToken> for UpdateToken {
     fn from(update: JsonUpdateToken) -> Self {
         let JsonUpdateToken { name } = update;
-        Self {
-            name: name.map(Into::into),
-        }
+        Self { name }
     }
 }

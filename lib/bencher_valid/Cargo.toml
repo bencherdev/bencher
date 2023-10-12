@@ -8,8 +8,9 @@ edition.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-full = ["dep:regex"]
+full = ["dep:rand", "dep:regex"]
 lite = ["dep:regex-lite"]
+db = ["dep:diesel"]
 plus = ["chrono/clock"]
 schema = ["dep:schemars", "ordered-float/schemars"]
 wasm = [
@@ -23,8 +24,10 @@ wasm = [
 # Workspace
 chrono = { workspace = true, optional = true }
 derive_more.workspace = true
+diesel = { workspace = true, optional = true }
 once_cell.workspace = true
 ordered-float = { workspace = true, features = ["serde"] }
+rand = { workspace = true, optional = true }
 schemars = { workspace = true, optional = true }
 serde.workspace = true
 slug.workspace = true

@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{Slug, MAX_BENCHMARK_NAME_LEN};
+use bencher_json::Slug;
 
 macro_rules! unwrap_slug {
     ($conn:expr, $name:expr, $slug:expr, $table:ident, $query:ident) => {
@@ -39,29 +39,22 @@ pub fn validate_slug(
     name: &str,
     slug: Option<Slug>,
     exists: Box<SlugExistsFn>,
-) -> String {
-    let slug = if let Some(slug) = slug {
+) -> Slug {
+    let mut slug = if let Some(slug) = slug {
         slug.into()
     } else {
         slug::slugify(name)
     };
 
-    let slug = if exists(conn, parent, &slug) {
-        let rand_suffix = rand::random::<u32>().to_string();
-        let slug = if slug.len() + 1 + rand_suffix.len() > MAX_BENCHMARK_NAME_LEN {
-            let mid = MAX_BENCHMARK_NAME_LEN - (1 + rand_suffix.len());
-            slug::slugify(slug.split_at(mid).0)
-        } else {
-            slug
-        };
-        format!("{slug}-{rand_suffix}")
-    } else if slug.len() > MAX_BENCHMARK_NAME_LEN {
-        slug::slugify(slug.split_at(MAX_BENCHMARK_NAME_LEN).0)
-    } else {
-        slug
-    };
+    if slug.len() > Slug::MAX {
+        slug = slug::slugify(slug.split_at(Slug::MAX).0);
+    }
 
-    Slug::from_str(&slug).expect("Invalid slug").into()
+    if exists(conn, parent, &slug) {
+        Slug::new(&slug)
+    } else {
+        Slug::from_str(&slug).expect("Invalid slug")
+    }
 }
 
 macro_rules! slug_exists {

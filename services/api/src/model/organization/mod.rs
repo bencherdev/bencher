@@ -34,8 +34,8 @@ crate::util::typed_id::typed_id!(OrganizationId);
 pub struct QueryOrganization {
     pub id: OrganizationId,
     pub uuid: OrganizationUuid,
-    pub name: String,
-    pub slug: String,
+    pub name: NonEmpty,
+    pub slug: Slug,
     pub subscription: Option<String>,
     pub license: Option<String>,
     pub created: i64,
@@ -178,8 +178,8 @@ impl QueryOrganization {
         } = self;
         Ok(JsonOrganization {
             uuid,
-            name: NonEmpty::from_str(&name).map_err(ApiError::from)?,
-            slug: Slug::from_str(&slug).map_err(ApiError::from)?,
+            name,
+            slug,
             created: to_date_time(created).map_err(ApiError::from)?,
             modified: to_date_time(modified).map_err(ApiError::from)?,
         })
@@ -198,8 +198,8 @@ impl From<&QueryOrganization> for Organization {
 #[diesel(table_name = organization_table)]
 pub struct InsertOrganization {
     pub uuid: OrganizationUuid,
-    pub name: String,
-    pub slug: String,
+    pub name: NonEmpty,
+    pub slug: Slug,
     pub created: i64,
     pub modified: i64,
 }
@@ -211,7 +211,7 @@ impl InsertOrganization {
         let timestamp = Utc::now().timestamp();
         Self {
             uuid: OrganizationUuid::new(),
-            name: name.into(),
+            name,
             slug,
             created: timestamp,
             modified: timestamp,
@@ -222,7 +222,7 @@ impl InsertOrganization {
         let timestamp = Utc::now().timestamp();
         Self {
             uuid: OrganizationUuid::new(),
-            name: insert_user.name.clone(),
+            name: insert_user.name.clone().into(),
             slug: insert_user.slug.clone(),
             created: timestamp,
             modified: timestamp,
@@ -235,8 +235,8 @@ fn_resource_id!(organization);
 #[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = organization_table)]
 pub struct UpdateOrganization {
-    pub name: Option<String>,
-    pub slug: Option<String>,
+    pub name: Option<NonEmpty>,
+    pub slug: Option<Slug>,
     pub modified: i64,
 }
 
@@ -244,8 +244,8 @@ impl From<JsonUpdateOrganization> for UpdateOrganization {
     fn from(update: JsonUpdateOrganization) -> Self {
         let JsonUpdateOrganization { name, slug } = update;
         Self {
-            name: name.map(Into::into),
-            slug: slug.map(Into::into),
+            name,
+            slug,
             modified: Utc::now().timestamp(),
         }
     }

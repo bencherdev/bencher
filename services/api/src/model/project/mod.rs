@@ -49,8 +49,8 @@ pub struct QueryProject {
     pub id: ProjectId,
     pub uuid: ProjectUuid,
     pub organization_id: OrganizationId,
-    pub name: String,
-    pub slug: String,
+    pub name: NonEmpty,
+    pub slug: Slug,
     pub url: Option<String>,
     pub visibility: Visibility,
     pub created: i64,
@@ -76,8 +76,8 @@ impl QueryProject {
         Ok(JsonProject {
             uuid,
             organization: QueryOrganization::get_uuid(conn, organization_id)?,
-            name: NonEmpty::from_str(&name)?,
-            slug: Slug::from_str(&slug).map_err(ApiError::from)?,
+            name,
+            slug,
             url: ok_url(url.as_deref())?,
             visibility,
             created: to_date_time(created).map_err(ApiError::from)?,
@@ -185,8 +185,8 @@ impl From<&QueryProject> for Project {
 pub struct InsertProject {
     pub uuid: ProjectUuid,
     pub organization_id: OrganizationId,
-    pub name: String,
-    pub slug: String,
+    pub name: NonEmpty,
+    pub slug: Slug,
     pub url: Option<String>,
     pub visibility: Visibility,
     pub created: i64,
@@ -210,7 +210,7 @@ impl InsertProject {
         Ok(Self {
             uuid: ProjectUuid::new(),
             organization_id: QueryOrganization::from_resource_id(conn, organization)?.id,
-            name: name.into(),
+            name,
             slug,
             url: url.map(|u| u.to_string()),
             visibility: visibility.unwrap_or_default(),
@@ -223,8 +223,8 @@ impl InsertProject {
 #[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = project_table)]
 pub struct UpdateProject {
-    pub name: Option<String>,
-    pub slug: Option<String>,
+    pub name: Option<NonEmpty>,
+    pub slug: Option<Slug>,
     pub url: Option<Option<String>>,
     pub visibility: Option<Visibility>,
     pub modified: i64,
@@ -253,8 +253,8 @@ impl From<JsonUpdateProject> for UpdateProject {
             },
         };
         Self {
-            name: name.map(Into::into),
-            slug: slug.map(Into::into),
+            name,
+            slug,
             url: url.map(|url| url.map(Into::into)),
             visibility,
             modified: Utc::now().timestamp(),

@@ -41,7 +41,7 @@ pub struct QueryBenchmark {
     pub uuid: BenchmarkUuid,
     pub project_id: ProjectId,
     pub name: String,
-    pub slug: String,
+    pub slug: Slug,
     pub created: i64,
     pub modified: i64,
 }
@@ -129,7 +129,7 @@ impl QueryBenchmark {
             uuid,
             project: project_uuid,
             name: BenchmarkName::from_str(&name).map_err(ApiError::from)?,
-            slug: Slug::from_str(&slug).map_err(ApiError::from)?,
+            slug,
             created: to_date_time(created).map_err(ApiError::from)?,
             modified: to_date_time(modified).map_err(ApiError::from)?,
         })
@@ -205,7 +205,7 @@ pub struct InsertBenchmark {
     pub uuid: BenchmarkUuid,
     pub project_id: ProjectId,
     pub name: String,
-    pub slug: String,
+    pub slug: Slug,
     pub created: i64,
     pub modified: i64,
 }
@@ -229,15 +229,11 @@ impl InsertBenchmark {
     }
 
     fn from_name(project_id: ProjectId, name: String) -> Self {
-        let slug = format!(
-            "{slug}-{rand_suffix}",
-            slug = slug::slugify(&name),
-            rand_suffix = rand::random::<u32>()
-        );
+        let slug = Slug::new(&name);
         Self::new(project_id, name, slug)
     }
 
-    fn new(project_id: ProjectId, name: String, slug: String) -> Self {
+    fn new(project_id: ProjectId, name: String, slug: Slug) -> Self {
         let timestamp = Utc::now().timestamp();
         Self {
             uuid: BenchmarkUuid::new(),
@@ -254,7 +250,7 @@ impl InsertBenchmark {
 #[diesel(table_name = benchmark_table)]
 pub struct UpdateBenchmark {
     pub name: Option<String>,
-    pub slug: Option<String>,
+    pub slug: Option<Slug>,
     pub modified: i64,
 }
 
@@ -263,7 +259,7 @@ impl From<JsonUpdateBenchmark> for UpdateBenchmark {
         let JsonUpdateBenchmark { name, slug } = update;
         Self {
             name: name.map(Into::into),
-            slug: slug.map(Into::into),
+            slug,
             modified: Utc::now().timestamp(),
         }
     }

@@ -7,7 +7,7 @@ edition.workspace = true
 [features]
 full = ["bencher_valid/full"]
 lite = ["bencher_valid/lite"]
-db = ["diesel"]
+db = ["diesel", "bencher_valid/db"]
 plus = ["bencher_valid/plus"]
 schema = ["dep:schemars", "ordered-float/schemars"]
 table = ["dep:tabled"]

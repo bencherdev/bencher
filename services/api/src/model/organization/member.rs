@@ -7,8 +7,8 @@ use crate::{util::to_date_time, ApiError};
 #[derive(diesel::Queryable)]
 pub struct QueryMember {
     pub uuid: UserUuid,
-    pub name: String,
-    pub slug: String,
+    pub name: UserName,
+    pub slug: Slug,
     pub email: String,
     pub role: String,
     pub created: i64,
@@ -28,8 +28,8 @@ impl QueryMember {
         } = self;
         Ok(JsonMember {
             uuid,
-            name: UserName::from_str(&name).map_err(ApiError::from)?,
-            slug: Slug::from_str(&slug).map_err(ApiError::from)?,
+            name,
+            slug,
             email: Email::from_str(&email).map_err(ApiError::from)?,
             role: role.parse().map_err(ApiError::OrganizationRole)?,
             created: to_date_time(created).map_err(ApiError::from)?,

@@ -25,7 +25,7 @@ mod user_name;
 pub use crate::git_hash::GitHash;
 pub use crate::slug::Slug;
 pub use crate::url::Url;
-pub use benchmark_name::{BenchmarkName, MAX_BENCHMARK_NAME_LEN};
+pub use benchmark_name::BenchmarkName;
 pub use boundary::Boundary;
 pub use branch_name::BranchName;
 #[cfg(feature = "plus")]

@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use bencher_json::{
     project::metric_kind::{
         JsonUpdateMetricKind, MetricKindUuid, ESTIMATED_CYCLES_NAME_STR, ESTIMATED_CYCLES_SLUG_STR,
@@ -41,9 +39,9 @@ pub struct QueryMetricKind {
     pub id: MetricKindId,
     pub uuid: MetricKindUuid,
     pub project_id: ProjectId,
-    pub name: String,
-    pub slug: String,
-    pub units: String,
+    pub name: NonEmpty,
+    pub slug: Slug,
+    pub units: NonEmpty,
     pub created: i64,
     pub modified: i64,
 }
@@ -86,9 +84,9 @@ impl QueryMetricKind {
         Ok(JsonMetricKind {
             uuid,
             project: project_uuid,
-            name: NonEmpty::from_str(&name).map_err(ApiError::from)?,
-            slug: Slug::from_str(&slug).map_err(ApiError::from)?,
-            units: NonEmpty::from_str(&units).map_err(ApiError::from)?,
+            name,
+            slug,
+            units,
             created: to_date_time(created).map_err(ApiError::from)?,
             modified: to_date_time(modified).map_err(ApiError::from)?,
         })
@@ -138,9 +136,9 @@ impl QueryMetricKind {
 pub struct InsertMetricKind {
     pub uuid: MetricKindUuid,
     pub project_id: ProjectId,
-    pub name: String,
-    pub slug: String,
-    pub units: String,
+    pub name: NonEmpty,
+    pub slug: Slug,
+    pub units: NonEmpty,
     pub created: i64,
     pub modified: i64,
 }
@@ -164,9 +162,9 @@ impl InsertMetricKind {
         Self {
             uuid: MetricKindUuid::new(),
             project_id,
-            name: name.into(),
+            name,
             slug,
-            units: units.into(),
+            units,
             created: timestamp,
             modified: timestamp,
         }
@@ -230,9 +228,9 @@ fn is_system(name: &str, slug: &str) -> bool {
 #[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = metric_kind_table)]
 pub struct UpdateMetricKind {
-    pub name: Option<String>,
-    pub slug: Option<String>,
-    pub units: Option<String>,
+    pub name: Option<NonEmpty>,
+    pub slug: Option<Slug>,
+    pub units: Option<NonEmpty>,
     pub modified: i64,
 }
 
@@ -240,9 +238,9 @@ impl From<JsonUpdateMetricKind> for UpdateMetricKind {
     fn from(update: JsonUpdateMetricKind) -> Self {
         let JsonUpdateMetricKind { name, slug, units } = update;
         Self {
-            name: name.map(Into::into),
-            slug: slug.map(Into::into),
-            units: units.map(Into::into),
+            name,
+            slug,
+            units,
             modified: Utc::now().timestamp(),
         }
     }

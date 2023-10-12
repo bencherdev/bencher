@@ -43,7 +43,7 @@ pub struct QueryBranch {
     pub uuid: BranchUuid,
     pub project_id: ProjectId,
     pub name: String,
-    pub slug: String,
+    pub slug: Slug,
     pub created: i64,
     pub modified: i64,
 }
@@ -123,7 +123,7 @@ impl QueryBranch {
             uuid,
             project: QueryProject::get_uuid(conn, project_id)?,
             name: BranchName::from_str(&name).map_err(ApiError::from)?,
-            slug: Slug::from_str(&slug).map_err(ApiError::from)?,
+            slug,
             created: to_date_time(created).map_err(ApiError::from)?,
             modified: to_date_time(modified).map_err(ApiError::from)?,
         })
@@ -141,7 +141,7 @@ pub struct InsertBranch {
     pub uuid: BranchUuid,
     pub project_id: ProjectId,
     pub name: String,
-    pub slug: String,
+    pub slug: Slug,
     pub created: i64,
     pub modified: i64,
 }
@@ -264,7 +264,7 @@ impl InsertBranch {
 #[diesel(table_name = branch_table)]
 pub struct UpdateBranch {
     pub name: Option<String>,
-    pub slug: Option<String>,
+    pub slug: Option<Slug>,
     pub modified: i64,
 }
 
@@ -273,7 +273,7 @@ impl From<JsonUpdateBranch> for UpdateBranch {
         let JsonUpdateBranch { name, slug } = update;
         Self {
             name: name.map(Into::into),
-            slug: slug.map(Into::into),
+            slug,
             modified: Utc::now().timestamp(),
         }
     }

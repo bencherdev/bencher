@@ -154,7 +154,7 @@ async fn post_inner(
             .unwrap_or_default(),
     }));
     let message = Message {
-        to_name: Some(insert_user.name.clone()),
+        to_name: Some(insert_user.name.clone().into()),
         to_email: insert_user.email.clone(),
         subject: Some("Confirm Bencher Signup".into()),
         body: Some(body),
@@ -165,13 +165,13 @@ async fn post_inner(
         let admins = QueryUser::get_admins(conn)?;
         for admin in admins {
             let message = Message {
-                to_name: Some(admin.name.clone()),
+                to_name: Some(admin.name.clone().into()),
                 to_email: admin.email.clone(),
                 subject: Some("🐰 New Bencher User".into()),
                 body: Some(Body::NewUser(NewUserBody {
-                    admin: admin.name.clone(),
+                    admin: admin.name.clone().into(),
                     endpoint: context.endpoint.clone(),
-                    name: insert_user.name.clone(),
+                    name: insert_user.name.clone().into(),
                     email: insert_user.email.clone(),
                     invited: invite.is_some(),
                 })),

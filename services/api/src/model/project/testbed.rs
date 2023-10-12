@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use bencher_json::{
     project::testbed::{JsonUpdateTestbed, TESTBED_LOCALHOST_STR},
     JsonNewTestbed, JsonTestbed, NonEmpty, ResourceId, Slug, TestbedUuid,
@@ -34,8 +32,8 @@ pub struct QueryTestbed {
     pub id: TestbedId,
     pub uuid: TestbedUuid,
     pub project_id: ProjectId,
-    pub name: String,
-    pub slug: String,
+    pub name: NonEmpty,
+    pub slug: Slug,
     pub created: i64,
     pub modified: i64,
 }
@@ -82,8 +80,8 @@ impl QueryTestbed {
         Ok(JsonTestbed {
             uuid,
             project: QueryProject::get_uuid(conn, project_id)?,
-            name: NonEmpty::from_str(&name)?,
-            slug: Slug::from_str(&slug).map_err(ApiError::from)?,
+            name,
+            slug,
             created: to_date_time(created).map_err(ApiError::from)?,
             modified: to_date_time(modified).map_err(ApiError::from)?,
         })
@@ -100,8 +98,8 @@ impl QueryTestbed {
 pub struct InsertTestbed {
     pub uuid: TestbedUuid,
     pub project_id: ProjectId,
-    pub name: String,
-    pub slug: String,
+    pub name: NonEmpty,
+    pub slug: Slug,
     pub created: i64,
     pub modified: i64,
 }
@@ -118,7 +116,7 @@ impl InsertTestbed {
         Self {
             uuid: TestbedUuid::new(),
             project_id,
-            name: name.into(),
+            name,
             slug,
             created: timestamp,
             modified: timestamp,
@@ -133,8 +131,8 @@ impl InsertTestbed {
 #[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = testbed_table)]
 pub struct UpdateTestbed {
-    pub name: Option<String>,
-    pub slug: Option<String>,
+    pub name: Option<NonEmpty>,
+    pub slug: Option<Slug>,
     pub modified: i64,
 }
 
@@ -142,8 +140,8 @@ impl From<JsonUpdateTestbed> for UpdateTestbed {
     fn from(update: JsonUpdateTestbed) -> Self {
         let JsonUpdateTestbed { name, slug } = update;
         Self {
-            name: name.map(Into::into),
-            slug: slug.map(Into::into),
+            name,
+            slug,
             modified: Utc::now().timestamp(),
         }
     }

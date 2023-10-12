@@ -19,42 +19,14 @@ pub mod token;
 
 crate::util::typed_id::typed_id!(UserId);
 
-#[derive(diesel::Insertable)]
-#[diesel(table_name = user_table)]
-pub struct InsertUser {
-    pub uuid: UserUuid,
-    pub name: String,
-    pub slug: String,
-    pub email: String,
-    pub admin: bool,
-    pub locked: bool,
-}
-
-impl InsertUser {
-    pub fn from_json(conn: &mut DbConnection, signup: JsonSignup) -> Result<Self, ApiError> {
-        let JsonSignup {
-            name, slug, email, ..
-        } = signup;
-        let slug = unwrap_slug!(conn, name.as_ref(), slug, user, QueryUser);
-        Ok(Self {
-            uuid: UserUuid::new(),
-            name: name.into(),
-            slug,
-            email: email.into(),
-            admin: false,
-            locked: false,
-        })
-    }
-}
-
 fn_resource_id!(user);
 
 #[derive(diesel::Queryable)]
 pub struct QueryUser {
     pub id: UserId,
     pub uuid: UserUuid,
-    pub name: String,
-    pub slug: String,
+    pub name: UserName,
+    pub slug: Slug,
     pub email: String,
     pub admin: bool,
     pub locked: bool,
@@ -107,11 +79,39 @@ impl QueryUser {
         } = self;
         Ok(JsonUser {
             uuid,
-            name: UserName::from_str(&name).map_err(ApiError::from)?,
-            slug: Slug::from_str(&slug).map_err(ApiError::from)?,
+            name,
+            slug,
             email: Email::from_str(&email).map_err(ApiError::from)?,
             admin,
             locked,
+        })
+    }
+}
+
+#[derive(diesel::Insertable)]
+#[diesel(table_name = user_table)]
+pub struct InsertUser {
+    pub uuid: UserUuid,
+    pub name: UserName,
+    pub slug: Slug,
+    pub email: String,
+    pub admin: bool,
+    pub locked: bool,
+}
+
+impl InsertUser {
+    pub fn from_json(conn: &mut DbConnection, signup: JsonSignup) -> Result<Self, ApiError> {
+        let JsonSignup {
+            name, slug, email, ..
+        } = signup;
+        let slug = unwrap_slug!(conn, name.as_ref(), slug, user, QueryUser);
+        Ok(Self {
+            uuid: UserUuid::new(),
+            name,
+            slug,
+            email: email.into(),
+            admin: false,
+            locked: false,
         })
     }
 }
