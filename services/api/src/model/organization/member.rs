@@ -1,8 +1,6 @@
 use bencher_json::{
-    organization::member::OrganizationRole, Email, JsonMember, Slug, UserName, UserUuid,
+    organization::member::OrganizationRole, DateTime, Email, JsonMember, Slug, UserName, UserUuid,
 };
-
-use crate::{util::to_date_time, ApiError};
 
 #[derive(diesel::Queryable)]
 pub struct QueryMember {
@@ -11,12 +9,12 @@ pub struct QueryMember {
     pub slug: Slug,
     pub email: Email,
     pub role: OrganizationRole,
-    pub created: i64,
-    pub modified: i64,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 impl QueryMember {
-    pub fn into_json(self) -> Result<JsonMember, ApiError> {
+    pub fn into_json(self) -> JsonMember {
         let Self {
             uuid,
             name,
@@ -26,14 +24,14 @@ impl QueryMember {
             created,
             modified,
         } = self;
-        Ok(JsonMember {
+        JsonMember {
             uuid,
             name,
             slug,
             email,
             role,
-            created: to_date_time(created).map_err(ApiError::from)?,
-            modified: to_date_time(modified).map_err(ApiError::from)?,
-        })
+            created,
+            modified,
+        }
     }
 }

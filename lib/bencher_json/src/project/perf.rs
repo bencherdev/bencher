@@ -1,4 +1,3 @@
-use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::ser::{self, SerializeStruct};
@@ -6,12 +5,11 @@ use serde::{Deserialize, Serialize, Serializer};
 use url::Url;
 
 use crate::urlencoded::{
-    from_millis, from_urlencoded, from_urlencoded_list, to_urlencoded, to_urlencoded_list,
-    UrlEncodedError,
+    from_urlencoded, from_urlencoded_list, to_urlencoded, to_urlencoded_list, UrlEncodedError,
 };
 use crate::{
-    BenchmarkUuid, BranchUuid, JsonBenchmark, JsonBranch, JsonMetricKind, JsonProject, JsonTestbed,
-    ReportUuid, ResourceId, TestbedUuid,
+    BenchmarkUuid, BranchUuid, DateTime, DateTimeMillis, JsonBenchmark, JsonBranch, JsonMetricKind,
+    JsonProject, JsonTestbed, ReportUuid, ResourceId, TestbedUuid,
 };
 
 use super::alert::JsonPerfAlert;
@@ -44,8 +42,8 @@ pub struct JsonPerfQueryParams {
     pub branches: String,
     pub testbeds: String,
     pub benchmarks: String,
-    pub start_time: Option<i64>,
-    pub end_time: Option<i64>,
+    pub start_time: Option<DateTimeMillis>,
+    pub end_time: Option<DateTimeMillis>,
 }
 
 /// `JsonPerfQuery` is the full, strongly typed version of `JsonPerfQueryParams`.
@@ -56,8 +54,8 @@ pub struct JsonPerfQuery {
     pub branches: Vec<BranchUuid>,
     pub testbeds: Vec<TestbedUuid>,
     pub benchmarks: Vec<BenchmarkUuid>,
-    pub start_time: Option<DateTime<Utc>>,
-    pub end_time: Option<DateTime<Utc>>,
+    pub start_time: Option<DateTime>,
+    pub end_time: Option<DateTime>,
 }
 
 impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
@@ -80,24 +78,13 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
         let testbeds = from_urlencoded_list(&testbeds)?;
         let benchmarks = from_urlencoded_list(&benchmarks)?;
 
-        let start_time = if let Some(start_time) = start_time {
-            Some(from_millis(start_time)?)
-        } else {
-            None
-        };
-        let end_time = if let Some(end_time) = end_time {
-            Some(from_millis(end_time)?)
-        } else {
-            None
-        };
-
         Ok(Self {
             metric_kind,
             branches,
             testbeds,
             benchmarks,
-            start_time,
-            end_time,
+            start_time: start_time.map(Into::into),
+            end_time: end_time.map(Into::into),
         })
     }
 }
@@ -170,12 +157,12 @@ impl JsonPerfQuery {
         to_urlencoded_list(&self.benchmarks)
     }
 
-    pub fn start_time(&self) -> Option<i64> {
-        self.start_time.as_ref().map(DateTime::timestamp_millis)
+    pub fn start_time(&self) -> Option<DateTimeMillis> {
+        self.start_time.map(Into::into)
     }
 
-    pub fn end_time(&self) -> Option<i64> {
-        self.end_time.as_ref().map(DateTime::timestamp_millis)
+    pub fn end_time(&self) -> Option<DateTimeMillis> {
+        self.end_time.map(Into::into)
     }
 
     fn start_time_str(&self) -> Option<String> {
@@ -193,8 +180,8 @@ impl JsonPerfQuery {
 pub struct JsonPerf {
     pub project: JsonProject,
     pub metric_kind: JsonMetricKind,
-    pub start_time: Option<DateTime<Utc>>,
-    pub end_time: Option<DateTime<Utc>>,
+    pub start_time: Option<DateTime>,
+    pub end_time: Option<DateTime>,
     pub results: Vec<JsonPerfMetrics>,
 }
 
@@ -214,8 +201,8 @@ pub struct JsonPerfMetrics {
 pub struct JsonPerfMetric {
     pub report: ReportUuid,
     pub iteration: Iteration,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    pub start_time: DateTime,
+    pub end_time: DateTime,
     pub version: JsonVersion,
     // Threshold is necessary for each metric as the statistic may change over time
     pub threshold: Option<JsonThresholdStatistic>,
@@ -274,13 +261,12 @@ pub mod table {
     use std::fmt;
 
     use bencher_valid::GitHash;
-    use chrono::{DateTime, Utc};
     use ordered_float::OrderedFloat;
     use tabled::{Table, Tabled};
 
     use crate::{
-        project::branch::VersionNumber, JsonBenchmark, JsonBranch, JsonMetric, JsonMetricKind,
-        JsonPerf, JsonProject, JsonTestbed,
+        project::branch::VersionNumber, DateTime, JsonBenchmark, JsonBranch, JsonMetric,
+        JsonMetricKind, JsonPerf, JsonProject, JsonTestbed,
     };
 
     use super::Iteration;
@@ -326,9 +312,9 @@ pub mod table {
         #[tabled(rename = "Iteration")]
         pub iteration: Iteration,
         #[tabled(rename = "Start Time")]
-        pub start_time: DateTime<Utc>,
+        pub start_time: DateTime,
         #[tabled(rename = "End Time")]
-        pub end_time: DateTime<Utc>,
+        pub end_time: DateTime,
         #[tabled(rename = "Version Number")]
         pub version_number: VersionNumber,
         #[tabled(rename = "Version Hash")]

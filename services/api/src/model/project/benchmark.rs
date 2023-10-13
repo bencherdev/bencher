@@ -1,8 +1,7 @@
 use bencher_json::{
     project::benchmark::{JsonBenchmarkMetric, JsonNewBenchmark, JsonUpdateBenchmark},
-    BenchmarkName, BenchmarkUuid, JsonBenchmark, ResourceId, Slug,
+    BenchmarkName, BenchmarkUuid, DateTime, JsonBenchmark, ResourceId, Slug,
 };
-use chrono::Utc;
 use diesel::{
     ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
 };
@@ -15,14 +14,13 @@ use super::{
 };
 use crate::{
     context::DbConnection,
-    error::resource_not_found_err,
+    error::{resource_insert_err, resource_not_found_err},
     schema,
     schema::benchmark as benchmark_table,
     util::{
         query::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
         slug::unwrap_child_slug,
-        to_date_time,
     },
     ApiError,
 };
@@ -40,8 +38,8 @@ pub struct QueryBenchmark {
     pub project_id: ProjectId,
     pub name: BenchmarkName,
     pub slug: Slug,
-    pub created: i64,
-    pub modified: i64,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 impl QueryBenchmark {
@@ -99,20 +97,17 @@ impl QueryBenchmark {
         diesel::insert_into(schema::benchmark::table)
             .values(&insert_benchmark)
             .execute(conn)
-            .map_err(ApiError::from)?;
+            .map_err(resource_insert_err!(Benchmark, insert_benchmark))?;
 
         Self::get_id(conn, insert_benchmark.uuid)
     }
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonBenchmark, ApiError> {
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonBenchmark, HttpError> {
         let project_uuid = QueryProject::get_uuid(conn, self.project_id)?;
-        self.into_json_for_project(project_uuid)
+        Ok(self.into_json_for_project(project_uuid))
     }
 
-    pub fn into_json_for_project(
-        self,
-        project_uuid: ProjectUuid,
-    ) -> Result<JsonBenchmark, ApiError> {
+    pub fn into_json_for_project(self, project_uuid: ProjectUuid) -> JsonBenchmark {
         let Self {
             uuid,
             name,
@@ -121,14 +116,14 @@ impl QueryBenchmark {
             modified,
             ..
         } = self;
-        Ok(JsonBenchmark {
+        JsonBenchmark {
             uuid,
             project: project_uuid,
             name,
             slug,
-            created: to_date_time(created).map_err(ApiError::from)?,
-            modified: to_date_time(modified).map_err(ApiError::from)?,
-        })
+            created,
+            modified,
+        }
     }
 
     pub fn into_benchmark_metric_json(
@@ -177,7 +172,7 @@ impl QueryBenchmark {
             slug,
             created,
             modified,
-        } = self.into_json_for_project(project_uuid)?;
+        } = self.into_json_for_project(project_uuid);
         let metric = query_metric.into_json();
         let boundary = query_boundary
             .map(QueryBoundary::into_json)
@@ -195,15 +190,15 @@ impl QueryBenchmark {
     }
 }
 
-#[derive(diesel::Insertable)]
+#[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = benchmark_table)]
 pub struct InsertBenchmark {
     pub uuid: BenchmarkUuid,
     pub project_id: ProjectId,
     pub name: BenchmarkName,
     pub slug: Slug,
-    pub created: i64,
-    pub modified: i64,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 impl InsertBenchmark {
@@ -223,7 +218,7 @@ impl InsertBenchmark {
     }
 
     fn new(project_id: ProjectId, name: BenchmarkName, slug: Slug) -> Self {
-        let timestamp = Utc::now().timestamp();
+        let timestamp = DateTime::now();
         Self {
             uuid: BenchmarkUuid::new(),
             project_id,
@@ -240,7 +235,7 @@ impl InsertBenchmark {
 pub struct UpdateBenchmark {
     pub name: Option<BenchmarkName>,
     pub slug: Option<Slug>,
-    pub modified: i64,
+    pub modified: DateTime,
 }
 
 impl From<JsonUpdateBenchmark> for UpdateBenchmark {
@@ -249,7 +244,7 @@ impl From<JsonUpdateBenchmark> for UpdateBenchmark {
         Self {
             name,
             slug,
-            modified: Utc::now().timestamp(),
+            modified: DateTime::now(),
         }
     }
 }

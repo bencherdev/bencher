@@ -4,9 +4,8 @@ use bencher_json::{
         boundary::BoundaryLimit,
         perf::Iteration,
     },
-    AlertUuid, BoundaryUuid, ReportUuid,
+    AlertUuid, BoundaryUuid, DateTime, ReportUuid,
 };
-use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
 use dropshot::HttpError;
 
@@ -22,10 +21,7 @@ use crate::{
     },
     schema::alert as alert_table,
     schema::{self},
-    util::{
-        query::{fn_get, fn_get_id, fn_get_uuid},
-        to_date_time,
-    },
+    util::query::{fn_get, fn_get_id, fn_get_uuid},
     ApiError,
 };
 
@@ -39,7 +35,7 @@ pub struct QueryAlert {
     pub boundary_id: BoundaryId,
     pub boundary_limit: BoundaryLimit,
     pub status: AlertStatus,
-    pub modified: i64,
+    pub modified: DateTime,
 }
 
 impl QueryAlert {
@@ -139,7 +135,7 @@ impl QueryAlert {
             benchmark,
             limit: boundary_limit,
             status,
-            modified: to_date_time(modified)?,
+            modified,
         })
     }
 
@@ -155,7 +151,7 @@ impl QueryAlert {
             uuid,
             limit: boundary_limit,
             status,
-            modified: to_date_time(modified)?,
+            modified,
         })
     }
 }
@@ -167,7 +163,7 @@ pub struct InsertAlert {
     pub boundary_id: BoundaryId,
     pub boundary_limit: BoundaryLimit,
     pub status: AlertStatus,
-    pub modified: i64,
+    pub modified: DateTime,
 }
 
 impl InsertAlert {
@@ -181,7 +177,7 @@ impl InsertAlert {
             boundary_id: QueryBoundary::get_id(conn, boundary_uuid)?,
             boundary_limit,
             status: AlertStatus::default(),
-            modified: Utc::now().timestamp(),
+            modified: DateTime::now(),
         };
 
         diesel::insert_into(schema::alert::table)
@@ -197,7 +193,7 @@ impl InsertAlert {
 #[diesel(table_name = alert_table)]
 pub struct UpdateAlert {
     pub status: Option<AlertStatus>,
-    pub modified: i64,
+    pub modified: DateTime,
 }
 
 impl From<JsonUpdateAlert> for UpdateAlert {
@@ -205,7 +201,7 @@ impl From<JsonUpdateAlert> for UpdateAlert {
         let JsonUpdateAlert { status } = update;
         Self {
             status,
-            modified: Utc::now().timestamp(),
+            modified: DateTime::now(),
         }
     }
 }

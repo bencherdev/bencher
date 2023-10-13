@@ -1,7 +1,6 @@
 use std::{fmt, str::FromStr};
 
-use bencher_valid::{NonEmpty, Slug, Url};
-use chrono::{DateTime, Utc};
+use bencher_valid::{DateTime, NonEmpty, Slug, Url};
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -47,8 +46,8 @@ pub struct JsonProject {
     pub slug: Slug,
     pub url: Option<Url>,
     pub visibility: Visibility,
-    pub created: DateTime<Utc>,
-    pub modified: DateTime<Utc>,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 impl fmt::Display for JsonProject {

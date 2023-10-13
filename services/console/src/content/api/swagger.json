@@ -1397,8 +1397,7 @@
             "name": "end",
             "required": true,
             "schema": {
-              "type": "integer",
-              "format": "int64"
+              "$ref": "#/components/schemas/DateTimeMillis"
             }
           },
           {
@@ -1406,8 +1405,7 @@
             "name": "start",
             "required": true,
             "schema": {
-              "type": "integer",
-              "format": "int64"
+              "$ref": "#/components/schemas/DateTimeMillis"
             }
           }
         ],
@@ -3384,9 +3382,7 @@
             "in": "query",
             "name": "end_time",
             "schema": {
-              "nullable": true,
-              "type": "integer",
-              "format": "int64"
+              "$ref": "#/components/schemas/DateTimeMillis"
             }
           },
           {
@@ -3401,9 +3397,7 @@
             "in": "query",
             "name": "start_time",
             "schema": {
-              "nullable": true,
-              "type": "integer",
-              "format": "int64"
+              "$ref": "#/components/schemas/DateTimeMillis"
             }
           },
           {
@@ -3509,9 +3503,7 @@
             "in": "query",
             "name": "end_time",
             "schema": {
-              "nullable": true,
-              "type": "integer",
-              "format": "int64"
+              "$ref": "#/components/schemas/DateTimeMillis"
             }
           },
           {
@@ -3526,9 +3518,7 @@
             "in": "query",
             "name": "start_time",
             "schema": {
-              "nullable": true,
-              "type": "integer",
-              "format": "int64"
+              "$ref": "#/components/schemas/DateTimeMillis"
             }
           },
           {
@@ -3622,18 +3612,14 @@
             "in": "query",
             "name": "end_time",
             "schema": {
-              "nullable": true,
-              "type": "integer",
-              "format": "int64"
+              "$ref": "#/components/schemas/DateTimeMillis"
             }
           },
           {
             "in": "query",
             "name": "start_time",
             "schema": {
-              "nullable": true,
-              "type": "integer",
-              "format": "int64"
+              "$ref": "#/components/schemas/DateTimeMillis"
             }
           },
           {
@@ -5905,6 +5891,10 @@
           }
         ]
       },
+      "DateTime": {
+        "type": "string",
+        "format": "date-time"
+      },
       "Email": {
         "type": "string"
       },
@@ -5964,8 +5954,7 @@
             "$ref": "#/components/schemas/BoundaryLimit"
           },
           "modified": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "report": {
             "$ref": "#/components/schemas/ReportUuid"
@@ -6112,12 +6101,10 @@
         "type": "object",
         "properties": {
           "created": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "modified": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "name": {
             "$ref": "#/components/schemas/BenchmarkName"
@@ -6148,15 +6135,13 @@
             "$ref": "#/components/schemas/JsonBoundary"
           },
           "created": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "metric": {
             "$ref": "#/components/schemas/JsonMetric"
           },
           "modified": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "name": {
             "$ref": "#/components/schemas/BenchmarkName"
@@ -6222,12 +6207,10 @@
         "type": "object",
         "properties": {
           "created": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "modified": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "name": {
             "$ref": "#/components/schemas/BranchName"
@@ -6255,12 +6238,10 @@
         "type": "object",
         "properties": {
           "created": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "modified": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "name": {
             "$ref": "#/components/schemas/BranchName"
@@ -6515,15 +6496,13 @@
         "type": "object",
         "properties": {
           "created": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "email": {
             "$ref": "#/components/schemas/Email"
           },
           "modified": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "name": {
             "$ref": "#/components/schemas/UserName"
@@ -6580,12 +6559,10 @@
         "type": "object",
         "properties": {
           "created": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "modified": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "name": {
             "$ref": "#/components/schemas/NonEmpty"
@@ -6791,8 +6768,7 @@
             "$ref": "#/components/schemas/ResourceId"
           },
           "end_time": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "hash": {
             "nullable": true,
@@ -6817,8 +6793,7 @@
             ]
           },
           "start_time": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "testbed": {
             "$ref": "#/components/schemas/ResourceId"
@@ -6933,12 +6908,10 @@
         "type": "object",
         "properties": {
           "created": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "modified": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "name": {
             "$ref": "#/components/schemas/NonEmpty"
@@ -6969,8 +6942,11 @@
         "properties": {
           "end_time": {
             "nullable": true,
-            "type": "string",
-            "format": "date-time"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
           },
           "metric_kind": {
             "$ref": "#/components/schemas/JsonMetricKind"
@@ -6986,8 +6962,11 @@
           },
           "start_time": {
             "nullable": true,
-            "type": "string",
-            "format": "date-time"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
           }
         },
         "required": [
@@ -7003,8 +6982,7 @@
             "$ref": "#/components/schemas/BoundaryLimit"
           },
           "modified": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "status": {
             "$ref": "#/components/schemas/AlertStatus"
@@ -7035,8 +7013,7 @@
             "$ref": "#/components/schemas/JsonBoundary"
           },
           "end_time": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "iteration": {
             "$ref": "#/components/schemas/Iteration"
@@ -7048,8 +7025,7 @@
             "$ref": "#/components/schemas/ReportUuid"
           },
           "start_time": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "threshold": {
             "nullable": true,
@@ -7205,12 +7181,10 @@
         "type": "object",
         "properties": {
           "created": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "modified": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "name": {
             "$ref": "#/components/schemas/NonEmpty"
@@ -7343,12 +7317,10 @@
             "$ref": "#/components/schemas/JsonBranchVersion"
           },
           "created": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "end_time": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "project": {
             "$ref": "#/components/schemas/JsonProject"
@@ -7363,8 +7335,7 @@
             }
           },
           "start_time": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "testbed": {
             "$ref": "#/components/schemas/JsonTestbed"
@@ -7598,8 +7569,7 @@
         "type": "object",
         "properties": {
           "created": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "lower_boundary": {
             "nullable": true,
@@ -7660,12 +7630,10 @@
         "type": "object",
         "properties": {
           "created": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "modified": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "name": {
             "$ref": "#/components/schemas/NonEmpty"
@@ -7702,15 +7670,13 @@
             "$ref": "#/components/schemas/JsonBranch"
           },
           "created": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "metric_kind": {
             "$ref": "#/components/schemas/JsonMetricKind"
           },
           "modified": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "project": {
             "$ref": "#/components/schemas/ProjectUuid"
@@ -7740,8 +7706,7 @@
         "type": "object",
         "properties": {
           "created": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "project": {
             "$ref": "#/components/schemas/ProjectUuid"
@@ -7828,12 +7793,10 @@
         "type": "object",
         "properties": {
           "creation": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "expiration": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "name": {
             "$ref": "#/components/schemas/NonEmpty"
@@ -8364,6 +8327,13 @@
         "enum": [
           "name"
         ]
+      },
+      "DateTimeMillis": {
+        "$ref": "#/components/schemas/TimestampMillis"
+      },
+      "TimestampMillis": {
+        "type": "integer",
+        "format": "int64"
       },
       "ProjectsSort": {
         "type": "string",

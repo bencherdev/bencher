@@ -1,8 +1,7 @@
 use bencher_json::{
     project::branch::{JsonBranchVersion, JsonStartPoint, JsonUpdateBranch, BRANCH_MAIN_STR},
-    BranchName, BranchUuid, JsonBranch, JsonNewBranch, ResourceId, Slug,
+    BranchName, BranchUuid, DateTime, JsonBranch, JsonNewBranch, ResourceId, Slug,
 };
-use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
@@ -22,7 +21,6 @@ use crate::{
         query::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
         slug::unwrap_child_slug,
-        to_date_time,
     },
     ApiError,
 };
@@ -40,8 +38,8 @@ pub struct QueryBranch {
     pub project_id: ProjectId,
     pub name: BranchName,
     pub slug: Slug,
-    pub created: i64,
-    pub modified: i64,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 impl QueryBranch {
@@ -112,8 +110,8 @@ impl QueryBranch {
             project: QueryProject::get_uuid(conn, project_id)?,
             name,
             slug,
-            created: to_date_time(created).map_err(ApiError::from)?,
-            modified: to_date_time(modified).map_err(ApiError::from)?,
+            created,
+            modified,
         })
     }
 
@@ -130,8 +128,8 @@ pub struct InsertBranch {
     pub project_id: ProjectId,
     pub name: BranchName,
     pub slug: Slug,
-    pub created: i64,
-    pub modified: i64,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 impl InsertBranch {
@@ -142,7 +140,7 @@ impl InsertBranch {
     ) -> Self {
         let JsonNewBranch { name, slug, .. } = branch;
         let slug = unwrap_child_slug!(conn, project_id, name.as_ref(), slug, branch, QueryBranch);
-        let timestamp = Utc::now().timestamp();
+        let timestamp = DateTime::now();
         Self {
             uuid: BranchUuid::new(),
             project_id,
@@ -253,7 +251,7 @@ impl InsertBranch {
 pub struct UpdateBranch {
     pub name: Option<BranchName>,
     pub slug: Option<Slug>,
-    pub modified: i64,
+    pub modified: DateTime,
 }
 
 impl From<JsonUpdateBranch> for UpdateBranch {
@@ -262,7 +260,7 @@ impl From<JsonUpdateBranch> for UpdateBranch {
         Self {
             name,
             slug,
-            modified: Utc::now().timestamp(),
+            modified: DateTime::now(),
         }
     }
 }

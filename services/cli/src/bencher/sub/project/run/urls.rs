@@ -2,9 +2,8 @@ use std::{collections::BTreeMap, time::Duration};
 
 use bencher_json::{
     project::threshold::JsonThresholdStatistic, AlertUuid, BenchmarkName, BenchmarkUuid,
-    BranchUuid, JsonPerfQuery, JsonReport, NonEmpty, Slug, TestbedUuid,
+    BranchUuid, DateTime, JsonPerfQuery, JsonReport, NonEmpty, Slug, TestbedUuid,
 };
-use chrono::{DateTime, Utc};
 use url::Url;
 
 pub struct ReportUrls {
@@ -52,6 +51,7 @@ impl ReportUrls {
                 "Report",
                 self.json_report
                     .start_time
+                    .into_inner()
                     .format("%a, %B %e, %Y at %X %Z")
                     .to_string(),
                 format!(
@@ -312,8 +312,8 @@ struct BenchmarkUrl {
     project_slug: Slug,
     branch: BranchUuid,
     testbed: TestbedUuid,
-    start_time: DateTime<Utc>,
-    end_time: DateTime<Utc>,
+    start_time: DateTime,
+    end_time: DateTime,
 }
 
 // 30 days
@@ -325,8 +325,8 @@ impl BenchmarkUrl {
         project_slug: Slug,
         branch: BranchUuid,
         testbed: TestbedUuid,
-        start_time: DateTime<Utc>,
-        end_time: DateTime<Utc>,
+        start_time: DateTime,
+        end_time: DateTime,
     ) -> Self {
         Self {
             endpoint,
@@ -349,7 +349,7 @@ impl BenchmarkUrl {
             branches: vec![self.branch],
             testbeds: vec![self.testbed],
             benchmarks: vec![benchmark],
-            start_time: Some(self.start_time - DEFAULT_REPORT_HISTORY),
+            start_time: Some((self.start_time.into_inner() - DEFAULT_REPORT_HISTORY).into()),
             end_time: Some(self.end_time),
         };
 

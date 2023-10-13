@@ -156,10 +156,10 @@ async fn get_ls_inner(
     }
 
     if let Some(start_time) = json_report_query.start_time {
-        query = query.filter(schema::report::start_time.ge(start_time.timestamp()));
+        query = query.filter(schema::report::start_time.ge(start_time));
     }
     if let Some(end_time) = json_report_query.end_time {
-        query = query.filter(schema::report::end_time.le(end_time.timestamp()));
+        query = query.filter(schema::report::end_time.le(end_time));
     }
 
     query = match pagination_params.order() {

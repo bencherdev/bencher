@@ -1,7 +1,6 @@
 use std::{fmt, str::FromStr};
 
-use bencher_valid::{Email, Slug, UserName};
-use chrono::{DateTime, Utc};
+use bencher_valid::{DateTime, Email, Slug, UserName};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -33,8 +32,8 @@ pub struct JsonMember {
     pub slug: Slug,
     pub email: Email,
     pub role: OrganizationRole,
-    pub created: DateTime<Utc>,
-    pub modified: DateTime<Utc>,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

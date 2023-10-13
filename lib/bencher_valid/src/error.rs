@@ -12,6 +12,12 @@ pub enum ValidError {
     Slug(String),
     #[error("Failed to validate email: {0}")]
     Email(String),
+    #[error("Failed to validate date time: {0}")]
+    DateTime(i64),
+    #[error("Failed to parse date time: {0}")]
+    DateTimeStr(std::num::ParseIntError),
+    #[error("Failed to validate date time millis: {0}")]
+    DateTimeMillis(i64),
     #[error("Failed to validate JWT (JSON Web Token): {0}")]
     Jwt(String),
     #[error("Failed to validate branch name: {0}")]

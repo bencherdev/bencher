@@ -113,3 +113,15 @@ try_from_client!(
 
 #[cfg(feature = "plus")]
 try_from_client!(JsonPlan, JsonUsage);
+
+impl From<bencher_json::DateTime> for types::DateTime {
+    fn from(date_time: bencher_json::DateTime) -> Self {
+        Self(date_time.into_inner())
+    }
+}
+
+impl From<bencher_json::DateTimeMillis> for types::DateTimeMillis {
+    fn from(date_time: bencher_json::DateTimeMillis) -> Self {
+        Self(types::TimestampMillis(date_time.into()))
+    }
+}

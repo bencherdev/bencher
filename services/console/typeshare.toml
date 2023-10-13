@@ -17,3 +17,4 @@
 "DateTime" = "string"
 "OrderedFloat" = "number"
 "BigInt" = "number"
+"TimestampMillis" = "number"

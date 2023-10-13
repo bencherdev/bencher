@@ -1,10 +1,9 @@
 use bencher_json::{
     organization::{member::OrganizationRole, JsonUpdateOrganization},
-    JsonDirection, JsonNewOrganization, JsonOrganization, JsonOrganizations, JsonPagination,
-    NonEmpty, ResourceId,
+    DateTime, JsonDirection, JsonNewOrganization, JsonOrganization, JsonOrganizations,
+    JsonPagination, NonEmpty, ResourceId,
 };
 use bencher_rbac::organization::Permission;
-use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
@@ -178,7 +177,7 @@ async fn post_inner(
         .first::<QueryOrganization>(conn)
         .map_err(ApiError::from)?;
 
-    let timestamp = Utc::now().timestamp();
+    let timestamp = DateTime::now();
     // Connect the user to the organization as a `Maintainer`
     let insert_org_role = InsertOrganizationRole {
         user_id: auth_user.id,

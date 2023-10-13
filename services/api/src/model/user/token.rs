@@ -1,5 +1,6 @@
 use bencher_json::{
-    user::token::JsonUpdateToken, JsonNewToken, JsonToken, Jwt, NonEmpty, ResourceId, TokenUuid,
+    user::token::JsonUpdateToken, DateTime, JsonNewToken, JsonToken, Jwt, NonEmpty, ResourceId,
+    TokenUuid,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 
@@ -7,10 +8,7 @@ use crate::{
     context::{DbConnection, Rbac, SecretKey},
     schema,
     schema::token as token_table,
-    util::{
-        query::{fn_get, fn_get_id, fn_get_uuid},
-        to_date_time,
-    },
+    util::query::{fn_get, fn_get_id, fn_get_uuid},
     ApiError,
 };
 
@@ -35,8 +33,8 @@ pub struct QueryToken {
     pub user_id: UserId,
     pub name: NonEmpty,
     pub jwt: Jwt,
-    pub creation: i64,
-    pub expiration: i64,
+    pub creation: DateTime,
+    pub expiration: DateTime,
 }
 
 impl QueryToken {
@@ -71,8 +69,8 @@ impl QueryToken {
             user: QueryUser::get_uuid(conn, user_id)?,
             name,
             token: jwt,
-            creation: to_date_time(creation)?,
-            expiration: to_date_time(expiration)?,
+            creation,
+            expiration,
         })
     }
 }
@@ -84,8 +82,8 @@ pub struct InsertToken {
     pub user_id: UserId,
     pub name: NonEmpty,
     pub jwt: Jwt,
-    pub creation: i64,
-    pub expiration: i64,
+    pub creation: DateTime,
+    pub expiration: DateTime,
 }
 
 impl InsertToken {
@@ -127,8 +125,8 @@ impl InsertToken {
             user_id: query_user.id,
             name,
             jwt,
-            creation: claims.iat as i64,
-            expiration: claims.exp as i64,
+            creation: claims.issued_at(),
+            expiration: claims.expiration(),
         })
     }
 }

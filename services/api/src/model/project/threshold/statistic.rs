@@ -1,8 +1,7 @@
 use bencher_json::{
     project::threshold::{JsonNewStatistic, JsonStatistic, StatisticKind},
-    Boundary, SampleSize, StatisticUuid, ThresholdUuid,
+    Boundary, DateTime, SampleSize, StatisticUuid, ThresholdUuid,
 };
-use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 
 use crate::{
@@ -12,7 +11,6 @@ use crate::{
     util::{
         map_u32,
         query::{fn_get, fn_get_id, fn_get_uuid},
-        to_date_time,
     },
     ApiError,
 };
@@ -33,7 +31,7 @@ pub struct QueryStatistic {
     pub window: Option<i64>,
     pub lower_boundary: Option<f64>,
     pub upper_boundary: Option<f64>,
-    pub created: i64,
+    pub created: DateTime,
 }
 
 impl QueryStatistic {
@@ -70,7 +68,7 @@ impl QueryStatistic {
             window: map_u32(window)?,
             lower_boundary: map_boundary(lower_boundary)?,
             upper_boundary: map_boundary(upper_boundary)?,
-            created: to_date_time(created).map_err(ApiError::from)?,
+            created,
         })
     }
 }
@@ -102,7 +100,7 @@ pub struct InsertStatistic {
     pub window: Option<i64>,
     pub lower_boundary: Option<f64>,
     pub upper_boundary: Option<f64>,
-    pub created: i64,
+    pub created: DateTime,
 }
 
 impl From<QueryStatistic> for InsertStatistic {
@@ -154,7 +152,7 @@ impl InsertStatistic {
             window: window.map(Into::into),
             lower_boundary: lower_boundary.map(Into::into),
             upper_boundary: upper_boundary.map(Into::into),
-            created: Utc::now().timestamp(),
+            created: DateTime::now(),
         })
     }
 }

@@ -250,7 +250,7 @@ impl PerfData {
                     .metrics
                     .iter()
                     .map(|metric| {
-                        let x_value = metric.start_time;
+                        let x_value = metric.start_time.into_inner();
                         min_x = min_x
                             .map(|min| std::cmp::min(min, x_value))
                             .or(Some(x_value));

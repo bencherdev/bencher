@@ -1,4 +1,5 @@
 use bencher_plus::BENCHER_DEV;
+use bencher_valid::DateTime;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -35,5 +36,21 @@ impl Claims {
 
     pub fn organization(&self) -> Uuid {
         self.sub
+    }
+
+    pub fn issued_at(&self) -> DateTime {
+        let timestamp = i64::try_from(self.iat);
+        debug_assert!(timestamp.is_ok(), "Issued at time is invalid");
+        let date_time = DateTime::try_from(timestamp.unwrap_or_default());
+        debug_assert!(date_time.is_ok(), "Issued at time is invalid");
+        date_time.unwrap_or_default()
+    }
+
+    pub fn expiration(&self) -> DateTime {
+        let timestamp = i64::try_from(self.exp);
+        debug_assert!(timestamp.is_ok(), "Expiration time is invalid");
+        let date_time = DateTime::try_from(timestamp.unwrap_or_default());
+        debug_assert!(date_time.is_ok(), "Expiration time is invalid");
+        date_time.unwrap_or_default()
     }
 }

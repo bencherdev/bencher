@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use bencher_json::{BranchName, GitHash, NonEmpty, ResourceId};
+use bencher_json::{BranchName, DateTime, GitHash, NonEmpty, ResourceId};
 use clap::{ArgGroup, Args, Parser, ValueEnum};
 
 use crate::parser::CliBackend;
@@ -42,7 +42,7 @@ pub struct CliRun {
     /// Backdate the report (seconds since epoch)
     /// NOTE: This will *not* effect the ordering of past reports
     #[clap(long)]
-    pub backdate: Option<i64>,
+    pub backdate: Option<DateTime>,
 
     /// Allow test failure
     #[clap(long)]

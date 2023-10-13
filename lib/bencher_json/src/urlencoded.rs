@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use chrono::{DateTime, TimeZone, Utc};
 use percent_encoding::{percent_decode, utf8_percent_encode, AsciiSet, CONTROLS};
 use thiserror::Error;
 
@@ -52,19 +51,6 @@ where
     decoded
         .parse()
         .map_err(|_| UrlEncodedError::Urlencoded(input.into()))
-}
-
-pub fn from_millis(millis: i64) -> Result<DateTime<Utc>, UrlEncodedError> {
-    const MILLIS_PER_SECOND: i64 = 1_000;
-    const MILLIS_PER_NANO: i64 = 1_000_000;
-
-    #[allow(clippy::integer_division, clippy::modulo_arithmetic)]
-    Utc.timestamp_opt(
-        millis / MILLIS_PER_SECOND,
-        u32::try_from((millis % MILLIS_PER_SECOND) * MILLIS_PER_NANO)?,
-    )
-    .single()
-    .ok_or_else(|| UrlEncodedError::Timestamp(millis))
 }
 
 pub fn to_urlencoded_list<T>(values: &[T]) -> String

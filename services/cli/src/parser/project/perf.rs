@@ -1,4 +1,4 @@
-use bencher_json::{BenchmarkUuid, BranchUuid, ResourceId, TestbedUuid};
+use bencher_json::{BenchmarkUuid, BranchUuid, DateTime, ResourceId, TestbedUuid};
 use clap::{Parser, ValueEnum};
 
 use crate::parser::CliBackend;
@@ -28,11 +28,11 @@ pub struct CliPerf {
 
     /// Start time (seconds since epoch)
     #[clap(long)]
-    pub start_time: Option<i64>,
+    pub start_time: Option<DateTime>,
 
     /// End time (seconds since epoch)
     #[clap(long)]
-    pub end_time: Option<i64>,
+    pub end_time: Option<DateTime>,
 
     /// Output results in a table
     #[clap(long)]

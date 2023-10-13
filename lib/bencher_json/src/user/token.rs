@@ -1,5 +1,4 @@
-use bencher_valid::{Jwt, NonEmpty};
-use chrono::{DateTime, Utc};
+use bencher_valid::{DateTime, Jwt, NonEmpty};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -29,8 +28,8 @@ pub struct JsonToken {
     pub user: UserUuid,
     pub name: NonEmpty,
     pub token: Jwt,
-    pub creation: DateTime<Utc>,
-    pub expiration: DateTime<Utc>,
+    pub creation: DateTime,
+    pub expiration: DateTime,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

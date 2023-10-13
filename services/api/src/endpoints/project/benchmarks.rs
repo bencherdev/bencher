@@ -18,6 +18,7 @@ use crate::{
         },
         Endpoint,
     },
+    error::{resource_insert_err, resource_not_found_err},
     model::{
         project::{
             benchmark::{InsertBenchmark, QueryBenchmark, UpdateBenchmark},
@@ -192,13 +193,14 @@ async fn post_inner(
     diesel::insert_into(schema::benchmark::table)
         .values(&insert_benchmark)
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_insert_err!(Benchmark, insert_benchmark))?;
 
     schema::benchmark::table
         .filter(schema::benchmark::uuid.eq(&insert_benchmark.uuid))
         .first::<QueryBenchmark>(conn)
-        .map_err(ApiError::from)?
+        .map_err(resource_not_found_err!(Benchmark, insert_benchmark.uuid))?
         .into_json(conn)
+        .map_err(Into::into)
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -274,6 +276,7 @@ async fn get_one_inner(
         .first::<QueryBenchmark>(conn)
         .map_err(ApiError::from)?
         .into_json(conn)
+        .map_err(Into::into)
 }
 
 #[endpoint {
@@ -333,7 +336,9 @@ async fn patch_inner(
         .execute(conn)
         .map_err(ApiError::from)?;
 
-    QueryBenchmark::get(conn, query_benchmark.id)?.into_json(conn)
+    QueryBenchmark::get(conn, query_benchmark.id)?
+        .into_json(conn)
+        .map_err(Into::into)
 }
 
 #[endpoint {

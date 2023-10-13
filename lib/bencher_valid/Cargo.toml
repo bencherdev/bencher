@@ -22,13 +22,13 @@ wasm = [
 
 [dependencies]
 # Workspace
-chrono = { workspace = true, optional = true }
+chrono = { workspace = true, features = ["serde"] }
 derive_more.workspace = true
 diesel = { workspace = true, optional = true }
 once_cell.workspace = true
 ordered-float = { workspace = true, features = ["serde"] }
 rand = { workspace = true, optional = true }
-schemars = { workspace = true, optional = true }
+schemars = { workspace = true, optional = true, features = ["chrono"] }
 serde.workspace = true
 slug.workspace = true
 thiserror.workspace = true

@@ -3,9 +3,8 @@ use bencher_json::{
         perf::Iteration,
         report::{Adapter, JsonReportAlerts, JsonReportResult, JsonReportResults},
     },
-    JsonNewReport, JsonReport, ReportUuid,
+    DateTime, JsonNewReport, JsonReport, ReportUuid,
 };
-use chrono::Utc;
 use diesel::{
     ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
 };
@@ -29,10 +28,7 @@ use crate::{
     },
     schema,
     schema::report as report_table,
-    util::{
-        query::{fn_get_id, fn_get_uuid},
-        to_date_time,
-    },
+    util::query::{fn_get_id, fn_get_uuid},
     ApiError,
 };
 
@@ -54,9 +50,9 @@ pub struct QueryReport {
     pub version_id: VersionId,
     pub testbed_id: TestbedId,
     pub adapter: Adapter,
-    pub start_time: i64,
-    pub end_time: i64,
-    pub created: i64,
+    pub start_time: DateTime,
+    pub end_time: DateTime,
+    pub created: DateTime,
 }
 
 impl QueryReport {
@@ -89,11 +85,11 @@ impl QueryReport {
             branch: QueryBranch::get_branch_version_json(conn, branch_id, version_id)?,
             testbed: QueryTestbed::get(conn, testbed_id)?.into_json(conn)?,
             adapter,
-            start_time: to_date_time(start_time)?,
-            end_time: to_date_time(end_time)?,
+            start_time,
+            end_time,
             results,
             alerts,
-            created: to_date_time(created).map_err(ApiError::from)?,
+            created,
         })
     }
 }
@@ -320,9 +316,9 @@ pub struct InsertReport {
     pub version_id: VersionId,
     pub testbed_id: TestbedId,
     pub adapter: Adapter,
-    pub start_time: i64,
-    pub end_time: i64,
-    pub created: i64,
+    pub start_time: DateTime,
+    pub end_time: DateTime,
+    pub created: DateTime,
 }
 
 impl InsertReport {
@@ -343,9 +339,9 @@ impl InsertReport {
             version_id,
             testbed_id,
             adapter,
-            start_time: report.start_time.timestamp(),
-            end_time: report.end_time.timestamp(),
-            created: Utc::now().timestamp(),
+            start_time: report.start_time,
+            end_time: report.end_time,
+            created: DateTime::now(),
         }
     }
 }

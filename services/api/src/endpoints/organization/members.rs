@@ -20,9 +20,7 @@ use crate::{
         organization::{member::QueryMember, OrganizationId, QueryOrganization},
         user::UserId,
     },
-    schema,
-    util::error::into_json,
-    ApiError,
+    schema, ApiError,
 };
 
 // TODO Custom max TTL
@@ -82,7 +80,6 @@ pub async fn org_members_get(
         path_params.into_inner(),
         pagination_params.into_inner(),
         query_params.into_inner(),
-        endpoint,
     )
     .await
     .map_err(|e| {
@@ -102,7 +99,6 @@ async fn get_ls_inner(
     path_params: OrgMembersParams,
     pagination_params: OrgMembersPagination,
     query_params: OrgMembersQuery,
-    endpoint: Endpoint,
 ) -> Result<JsonMembers, ApiError> {
     let conn = &mut *context.conn().await;
 
@@ -149,7 +145,7 @@ async fn get_ls_inner(
         .load::<QueryMember>(conn)
         .map_err(ApiError::from)?
         .into_iter()
-        .filter_map(into_json!(endpoint))
+        .map(QueryMember::into_json)
         .collect())
 }
 
@@ -464,7 +460,7 @@ fn json_member(
     user_id: UserId,
     organization_id: OrganizationId,
 ) -> Result<JsonMember, ApiError> {
-    schema::user::table
+    Ok(schema::user::table
         .inner_join(schema::organization_role::table)
         .filter(schema::organization_role::user_id.eq(user_id))
         .filter(schema::organization_role::organization_id.eq(organization_id))
@@ -479,5 +475,5 @@ fn json_member(
         ))
         .first::<QueryMember>(conn)
         .map_err(ApiError::from)?
-        .into_json()
+        .into_json())
 }

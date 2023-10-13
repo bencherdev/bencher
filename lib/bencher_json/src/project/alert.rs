@@ -1,9 +1,8 @@
-use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{BigInt, JsonThreshold};
+use crate::{BigInt, DateTime, JsonThreshold};
 
 use super::{
     benchmark::JsonBenchmarkMetric, boundary::BoundaryLimit, perf::Iteration, report::ReportUuid,
@@ -28,7 +27,7 @@ pub struct JsonAlert {
     pub benchmark: JsonBenchmarkMetric,
     pub limit: BoundaryLimit,
     pub status: AlertStatus,
-    pub modified: DateTime<Utc>,
+    pub modified: DateTime,
 }
 
 const ACTIVE_INT: i32 = 0;
@@ -109,5 +108,5 @@ pub struct JsonPerfAlert {
     pub uuid: AlertUuid,
     pub limit: BoundaryLimit,
     pub status: AlertStatus,
-    pub modified: DateTime<Utc>,
+    pub modified: DateTime,
 }

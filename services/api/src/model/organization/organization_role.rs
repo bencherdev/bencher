@@ -6,9 +6,8 @@ use crate::{
 };
 use bencher_json::{
     organization::{member::OrganizationRole, OrganizationPermission},
-    Jwt,
+    DateTime, Jwt,
 };
-use chrono::Utc;
 
 use super::{OrganizationId, QueryOrganization};
 
@@ -20,8 +19,8 @@ pub struct QueryOrganizationRole {
     pub user_id: UserId,
     pub organization_id: OrganizationId,
     pub role: OrganizationRole,
-    pub created: i64,
-    pub updated: i64,
+    pub created: DateTime,
+    pub updated: DateTime,
 }
 
 #[derive(diesel::Insertable)]
@@ -30,8 +29,8 @@ pub struct InsertOrganizationRole {
     pub user_id: UserId,
     pub organization_id: OrganizationId,
     pub role: OrganizationRole,
-    pub created: i64,
-    pub modified: i64,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 impl InsertOrganizationRole {
@@ -55,7 +54,7 @@ impl InsertOrganizationRole {
             });
         }
 
-        let timestamp = Utc::now().timestamp();
+        let timestamp = DateTime::now();
         Ok(InsertOrganizationRole {
             user_id,
             organization_id: QueryOrganization::get_id(conn, claims.org.uuid)?,

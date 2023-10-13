@@ -10,6 +10,8 @@ export type NonEmpty = string;
 
 export type Slug = string;
 
+export type DateTime = string;
+
 export interface JsonMetricKind {
 	uuid: Uuid;
 	project: Uuid;
@@ -147,6 +149,8 @@ export type ExpirationMonth = number;
 export type CardNumber = string;
 
 export type ExpirationYear = number;
+
+export type DateTimeMillis = number;
 
 export type Email = string;
 

@@ -1,9 +1,8 @@
 use bencher_json::{
-    project::ProjectRole, JsonDirection, JsonNewProject, JsonPagination, JsonProject, JsonProjects,
-    NonEmpty, ResourceId,
+    project::ProjectRole, DateTime, JsonDirection, JsonNewProject, JsonPagination, JsonProject,
+    JsonProjects, NonEmpty, ResourceId,
 };
 use bencher_rbac::organization::Permission;
-use chrono::Utc;
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
@@ -212,7 +211,7 @@ async fn post_inner(
         .first::<QueryProject>(conn)
         .map_err(ApiError::from)?;
 
-    let timestamp = Utc::now().timestamp();
+    let timestamp = DateTime::now();
     // Connect the user to the project as a `Maintainer`
     let insert_proj_role = InsertProjectRole {
         user_id: auth_user.id,

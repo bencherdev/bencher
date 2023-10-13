@@ -2,8 +2,7 @@
 
 use std::fmt;
 
-use bencher_valid::{NonEmpty, Slug};
-use chrono::{DateTime, Utc};
+use bencher_valid::{DateTime, NonEmpty, Slug};
 use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -199,8 +198,8 @@ pub struct JsonMetricKind {
     pub name: NonEmpty,
     pub slug: Slug,
     pub units: NonEmpty,
-    pub created: DateTime<Utc>,
-    pub modified: DateTime<Utc>,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 impl fmt::Display for JsonMetricKind {

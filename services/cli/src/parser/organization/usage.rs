@@ -1,6 +1,6 @@
 #![cfg(feature = "plus")]
 
-use bencher_json::ResourceId;
+use bencher_json::{DateTime, ResourceId};
 use clap::Parser;
 
 use crate::parser::CliBackend;
@@ -12,11 +12,11 @@ pub struct CliOrganizationUsage {
 
     /// Start time (seconds since epoch)
     #[clap(long)]
-    pub start: i64,
+    pub start: DateTime,
 
     /// End time (seconds since epoch)
     #[clap(long)]
-    pub end: i64,
+    pub end: DateTime,
 
     #[clap(flatten)]
     pub backend: CliBackend,

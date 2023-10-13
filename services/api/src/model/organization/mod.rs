@@ -2,11 +2,10 @@ use std::str::FromStr;
 use std::string::ToString;
 
 use bencher_json::{
-    organization::JsonUpdateOrganization, JsonNewOrganization, JsonOrganization, NonEmpty,
-    OrganizationUuid, ResourceId, Slug,
+    organization::JsonUpdateOrganization, DateTime, JsonNewOrganization, JsonOrganization,
+    NonEmpty, OrganizationUuid, ResourceId, Slug,
 };
 use bencher_rbac::Organization;
-use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, Queryable, RunQueryDsl};
 use dropshot::HttpError;
 
@@ -19,9 +18,7 @@ use crate::{
         query::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
         slug::unwrap_slug,
-        to_date_time,
     },
-    ApiError,
 };
 
 pub mod member;
@@ -38,8 +35,8 @@ pub struct QueryOrganization {
     pub slug: Slug,
     pub subscription: Option<String>,
     pub license: Option<String>,
-    pub created: i64,
-    pub modified: i64,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 #[cfg(feature = "plus")]
@@ -106,28 +103,8 @@ impl QueryOrganization {
             .validate_organization(license, self.uuid.into())
             .map_err(crate::error::payment_required_error)?;
 
-        let start_time = i64::try_from(token_data.claims.iat).map_err(|e| {
-            crate::error::issue_error(
-                http::StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to parse license start time",
-                &format!(
-                    "Failed to parse license start time ({start}).",
-                    start = token_data.claims.iat,
-                ),
-                e,
-            )
-        })?;
-        let end_time = i64::try_from(token_data.claims.exp).map_err(|e| {
-            crate::error::issue_error(
-                http::StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to parse license end time",
-                &format!(
-                    "Failed to parse license end time ({end}).",
-                    end = token_data.claims.exp
-                ),
-                e,
-            )
-        })?;
+        let start_time = token_data.claims.issued_at();
+        let end_time = token_data.claims.expiration();
 
         let usage =
             super::project::metric::QueryMetric::usage(conn, self.id, start_time, end_time)?;
@@ -180,8 +157,8 @@ impl QueryOrganization {
             uuid,
             name,
             slug,
-            created: to_date_time(created).map_err(ApiError::from)?,
-            modified: to_date_time(modified).map_err(ApiError::from)?,
+            created,
+            modified,
         })
     }
 }
@@ -200,15 +177,15 @@ pub struct InsertOrganization {
     pub uuid: OrganizationUuid,
     pub name: NonEmpty,
     pub slug: Slug,
-    pub created: i64,
-    pub modified: i64,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 impl InsertOrganization {
     pub fn from_json(conn: &mut DbConnection, organization: JsonNewOrganization) -> Self {
         let JsonNewOrganization { name, slug } = organization;
         let slug = unwrap_slug!(conn, name.as_ref(), slug, organization, QueryOrganization);
-        let timestamp = Utc::now().timestamp();
+        let timestamp = DateTime::now();
         Self {
             uuid: OrganizationUuid::new(),
             name,
@@ -219,7 +196,7 @@ impl InsertOrganization {
     }
 
     pub fn from_user(insert_user: &InsertUser) -> Self {
-        let timestamp = Utc::now().timestamp();
+        let timestamp = DateTime::now();
         Self {
             uuid: OrganizationUuid::new(),
             name: insert_user.name.clone().into(),
@@ -237,7 +214,7 @@ fn_resource_id!(organization);
 pub struct UpdateOrganization {
     pub name: Option<NonEmpty>,
     pub slug: Option<Slug>,
-    pub modified: i64,
+    pub modified: DateTime,
 }
 
 impl From<JsonUpdateOrganization> for UpdateOrganization {
@@ -246,7 +223,7 @@ impl From<JsonUpdateOrganization> for UpdateOrganization {
         Self {
             name,
             slug,
-            modified: Utc::now().timestamp(),
+            modified: DateTime::now(),
         }
     }
 }

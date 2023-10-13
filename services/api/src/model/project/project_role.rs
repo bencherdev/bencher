@@ -1,4 +1,7 @@
-use bencher_json::project::{ProjectPermission, ProjectRole};
+use bencher_json::{
+    project::{ProjectPermission, ProjectRole},
+    DateTime,
+};
 
 use crate::{model::user::UserId, schema::project_role as project_role_table};
 
@@ -12,8 +15,8 @@ pub struct QueryProjectRole {
     pub user_id: UserId,
     pub project_id: ProjectId,
     pub role: ProjectRole,
-    pub created: i64,
-    pub modified: i64,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 #[derive(diesel::Insertable)]
@@ -22,8 +25,8 @@ pub struct InsertProjectRole {
     pub user_id: UserId,
     pub project_id: ProjectId,
     pub role: ProjectRole,
-    pub created: i64,
-    pub modified: i64,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 pub enum Permission {

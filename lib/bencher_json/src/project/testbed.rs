@@ -1,7 +1,6 @@
 use std::fmt;
 
-use bencher_valid::{NonEmpty, Slug};
-use chrono::{DateTime, Utc};
+use bencher_valid::{DateTime, NonEmpty, Slug};
 use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -57,8 +56,8 @@ pub struct JsonTestbed {
     pub project: ProjectUuid,
     pub name: NonEmpty,
     pub slug: Slug,
-    pub created: DateTime<Utc>,
-    pub modified: DateTime<Utc>,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 impl fmt::Display for JsonTestbed {

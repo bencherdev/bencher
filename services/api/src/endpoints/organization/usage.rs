@@ -1,6 +1,6 @@
 #![cfg(feature = "plus")]
 
-use bencher_json::{organization::usage::JsonUsage, ResourceId};
+use bencher_json::{organization::usage::JsonUsage, DateTimeMillis, ResourceId};
 use bencher_rbac::organization::Permission;
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
@@ -13,7 +13,6 @@ use crate::{
         Endpoint,
     },
     model::{organization::QueryOrganization, project::metric::QueryMetric, user::auth::AuthUser},
-    util::to_date_time,
     ApiError,
 };
 
@@ -24,8 +23,8 @@ pub struct OrgUsageParams {
 
 #[derive(Clone, Deserialize, JsonSchema)]
 pub struct OrgUsageQuery {
-    pub start: i64,
-    pub end: i64,
+    pub start: DateTimeMillis,
+    pub end: DateTimeMillis,
 }
 
 #[allow(clippy::unused_async)]
@@ -89,9 +88,7 @@ async fn get_inner(
         .is_allowed_organization(auth_user, Permission::Manage, &query_org)?;
 
     let OrgUsageQuery { start, end } = query_params;
-    let start_time = to_date_time(start)?.timestamp();
-    let end_time = to_date_time(end)?.timestamp();
-    let metrics_used = QueryMetric::usage(conn, query_org.id, start_time, end_time)?.into();
+    let metrics_used = QueryMetric::usage(conn, query_org.id, start.into(), end.into())?.into();
 
     Ok(JsonUsage { metrics_used })
 }

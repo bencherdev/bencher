@@ -1,7 +1,6 @@
 use std::fmt;
 
-use bencher_valid::{BranchName, GitHash, ResourceId, Slug};
-use chrono::{DateTime, Utc};
+use bencher_valid::{BranchName, DateTime, GitHash, ResourceId, Slug};
 use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -69,8 +68,8 @@ pub struct JsonBranch {
     pub project: ProjectUuid,
     pub name: BranchName,
     pub slug: Slug,
-    pub created: DateTime<Utc>,
-    pub modified: DateTime<Utc>,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 impl fmt::Display for JsonBranch {
@@ -88,8 +87,8 @@ pub struct JsonBranchVersion {
     pub name: BranchName,
     pub slug: Slug,
     pub version: JsonVersion,
-    pub created: DateTime<Utc>,
-    pub modified: DateTime<Utc>,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 #[typeshare::typeshare]

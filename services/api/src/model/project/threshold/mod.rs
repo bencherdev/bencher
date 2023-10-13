@@ -1,8 +1,7 @@
 use bencher_json::{
     project::threshold::{JsonNewStatistic, JsonThreshold, JsonThresholdStatistic},
-    StatisticUuid, ThresholdUuid,
+    DateTime, StatisticUuid, ThresholdUuid,
 };
-use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 
 use self::statistic::{InsertStatistic, QueryStatistic, StatisticId};
@@ -16,10 +15,7 @@ use crate::{
     context::DbConnection,
     schema::threshold as threshold_table,
     schema::{self},
-    util::{
-        query::{fn_get, fn_get_id, fn_get_uuid},
-        to_date_time,
-    },
+    util::query::{fn_get, fn_get_id, fn_get_uuid},
     ApiError,
 };
 
@@ -40,8 +36,8 @@ pub struct QueryThreshold {
     pub branch_id: BranchId,
     pub testbed_id: TestbedId,
     pub statistic_id: Option<StatisticId>,
-    pub created: i64,
-    pub modified: i64,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 impl QueryThreshold {
@@ -100,8 +96,8 @@ impl QueryThreshold {
             } else {
                 return Err(ApiError::NoThresholdStatistic(uuid));
             },
-            created: to_date_time(created).map_err(ApiError::from)?,
-            modified: to_date_time(modified).map_err(ApiError::from)?,
+            created,
+            modified,
         })
     }
 
@@ -128,7 +124,7 @@ impl QueryThreshold {
             uuid,
             project: project_uuid,
             statistic: statistic.into_json_for_threshold(uuid)?,
-            created: to_date_time(created).map_err(ApiError::from)?,
+            created,
         })
     }
 }
@@ -142,8 +138,8 @@ pub struct InsertThreshold {
     pub branch_id: BranchId,
     pub testbed_id: TestbedId,
     pub statistic_id: Option<StatisticId>,
-    pub created: i64,
-    pub modified: i64,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 impl InsertThreshold {
@@ -153,7 +149,7 @@ impl InsertThreshold {
         branch_id: BranchId,
         testbed_id: TestbedId,
     ) -> Self {
-        let timestamp = Utc::now().timestamp();
+        let timestamp = DateTime::now();
         Self {
             uuid: ThresholdUuid::new(),
             project_id,
@@ -243,7 +239,7 @@ impl InsertThreshold {
 #[diesel(table_name = threshold_table)]
 pub struct UpdateThreshold {
     pub statistic_id: StatisticId,
-    pub modified: i64,
+    pub modified: DateTime,
 }
 
 impl UpdateThreshold {
@@ -253,7 +249,7 @@ impl UpdateThreshold {
     ) -> Result<Self, ApiError> {
         Ok(Self {
             statistic_id: QueryStatistic::get_id(conn, statistic_uuid)?,
-            modified: Utc::now().timestamp(),
+            modified: DateTime::now(),
         })
     }
 }

@@ -1,5 +1,4 @@
-use bencher_valid::{Boundary, SampleSize};
-use chrono::{DateTime, Utc};
+use bencher_valid::{Boundary, DateTime, SampleSize};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -70,8 +69,8 @@ pub struct JsonThreshold {
     pub branch: JsonBranch,
     pub testbed: JsonTestbed,
     pub statistic: JsonStatistic,
-    pub created: DateTime<Utc>,
-    pub modified: DateTime<Utc>,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 #[typeshare::typeshare]
@@ -86,7 +85,7 @@ pub struct JsonStatistic {
     pub window: Option<u32>,
     pub lower_boundary: Option<Boundary>,
     pub upper_boundary: Option<Boundary>,
-    pub created: DateTime<Utc>,
+    pub created: DateTime,
 }
 
 const Z_INT: i32 = 0;
@@ -152,7 +151,7 @@ pub struct JsonThresholdStatistic {
     pub uuid: ThresholdUuid,
     pub project: ProjectUuid,
     pub statistic: JsonStatistic,
-    pub created: DateTime<Utc>,
+    pub created: DateTime,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]

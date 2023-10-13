@@ -196,6 +196,7 @@ async fn post_inner(
         .first::<QueryTestbed>(conn)
         .map_err(ApiError::from)?
         .into_json(conn)
+        .map_err(Into::into)
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -271,6 +272,7 @@ async fn get_one_inner(
         .first::<QueryTestbed>(conn)
         .map_err(ApiError::from)?
         .into_json(conn)
+        .map_err(Into::into)
 }
 
 #[endpoint {
@@ -332,7 +334,9 @@ async fn patch_inner(
         .execute(conn)
         .map_err(ApiError::from)?;
 
-    QueryTestbed::get(conn, query_testbed.id)?.into_json(conn)
+    QueryTestbed::get(conn, query_testbed.id)?
+        .into_json(conn)
+        .map_err(Into::into)
 }
 
 #[endpoint {

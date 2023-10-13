@@ -1,4 +1,4 @@
-use bencher_json::{JsonMetric, MetricUuid};
+use bencher_json::{DateTime, JsonMetric, MetricUuid};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
@@ -43,8 +43,8 @@ impl QueryMetric {
     pub fn usage(
         conn: &mut DbConnection,
         organization_id: crate::model::organization::OrganizationId,
-        start_time: i64,
-        end_time: i64,
+        start_time: DateTime,
+        end_time: DateTime,
     ) -> Result<u64, HttpError> {
         schema::metric::table
             .inner_join(

@@ -3,14 +3,14 @@ use std::convert::TryFrom;
 use async_trait::async_trait;
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings};
 use bencher_json::{
-    project::testbed::TESTBED_LOCALHOST_STR, GitHash, JsonEndpoint, JsonReport, ResourceId,
+    project::testbed::TESTBED_LOCALHOST_STR, DateTime, GitHash, JsonEndpoint, JsonReport,
+    ResourceId,
 };
-use chrono::{DateTime, Utc};
 use clap::ValueEnum;
 use url::Url;
 
 use crate::{
-    bencher::{backend::Backend, map_timestamp, sub::project::run::urls::ReportUrls},
+    bencher::{backend::Backend, sub::project::run::urls::ReportUrls},
     cli_eprintln, cli_println,
     parser::project::run::{CliRun, CliRunAdapter},
     CliError,
@@ -51,7 +51,7 @@ pub struct Run {
     average: Option<JsonAverage>,
     iter: usize,
     fold: Option<JsonFold>,
-    backdate: Option<DateTime<Utc>>,
+    backdate: Option<DateTime>,
     allow_failure: bool,
     err: bool,
     html: bool,
@@ -92,7 +92,7 @@ impl TryFrom<CliRun> for Run {
             average: average.map(Into::into),
             iter: iter.unwrap_or(1),
             fold: fold.map(Into::into),
-            backdate: map_timestamp(backdate)?,
+            backdate,
             allow_failure,
             err,
             html,
@@ -203,7 +203,7 @@ impl Run {
             return Ok(None);
         };
 
-        let start_time = Utc::now();
+        let start_time = DateTime::now();
         let mut results = Vec::with_capacity(self.iter);
         for _ in 0..self.iter {
             let output = self.runner.run().await?;
@@ -222,11 +222,11 @@ impl Run {
             cli_println!("{result}");
         }
 
-        let end_time = Utc::now();
+        let end_time = DateTime::now();
         // If a backdate is set then use it as the start time and calculate the end time from there
         let (start_time, end_time) = if let Some(backdate) = self.backdate {
-            let elapsed = end_time - start_time;
-            (backdate, backdate + elapsed)
+            let elapsed = end_time.into_inner() - start_time.into_inner();
+            (backdate, DateTime::from(backdate.into_inner() + elapsed))
         } else {
             (start_time, end_time)
         };
@@ -235,8 +235,8 @@ impl Run {
             branch: branch.into(),
             hash: self.hash.clone().map(Into::into),
             testbed: self.testbed.clone().into(),
-            start_time,
-            end_time,
+            start_time: start_time.into(),
+            end_time: end_time.into(),
             results,
             settings: Some(JsonReportSettings {
                 adapter: self.adapter,

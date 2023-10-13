@@ -1,8 +1,7 @@
 use bencher_json::{
     project::testbed::{JsonUpdateTestbed, TESTBED_LOCALHOST_STR},
-    JsonNewTestbed, JsonTestbed, NonEmpty, ResourceId, Slug, TestbedUuid,
+    DateTime, JsonNewTestbed, JsonTestbed, NonEmpty, ResourceId, Slug, TestbedUuid,
 };
-use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
@@ -16,9 +15,7 @@ use crate::{
         query::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
         slug::unwrap_child_slug,
-        to_date_time,
     },
-    ApiError,
 };
 
 crate::util::typed_id::typed_id!(TestbedId);
@@ -34,8 +31,8 @@ pub struct QueryTestbed {
     pub project_id: ProjectId,
     pub name: NonEmpty,
     pub slug: Slug,
-    pub created: i64,
-    pub modified: i64,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 impl QueryTestbed {
@@ -67,7 +64,7 @@ impl QueryTestbed {
             .map_err(resource_not_found_err!(Testbed, testbed.clone()))
     }
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonTestbed, ApiError> {
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonTestbed, HttpError> {
         let Self {
             uuid,
             project_id,
@@ -82,8 +79,8 @@ impl QueryTestbed {
             project: QueryProject::get_uuid(conn, project_id)?,
             name,
             slug,
-            created: to_date_time(created).map_err(ApiError::from)?,
-            modified: to_date_time(modified).map_err(ApiError::from)?,
+            created,
+            modified,
         })
     }
 
@@ -100,8 +97,8 @@ pub struct InsertTestbed {
     pub project_id: ProjectId,
     pub name: NonEmpty,
     pub slug: Slug,
-    pub created: i64,
-    pub modified: i64,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 impl InsertTestbed {
@@ -112,7 +109,7 @@ impl InsertTestbed {
     ) -> Self {
         let JsonNewTestbed { name, slug } = testbed;
         let slug = unwrap_child_slug!(conn, project_id, &name, slug, testbed, QueryTestbed);
-        let timestamp = Utc::now().timestamp();
+        let timestamp = DateTime::now();
         Self {
             uuid: TestbedUuid::new(),
             project_id,
@@ -133,7 +130,7 @@ impl InsertTestbed {
 pub struct UpdateTestbed {
     pub name: Option<NonEmpty>,
     pub slug: Option<Slug>,
-    pub modified: i64,
+    pub modified: DateTime,
 }
 
 impl From<JsonUpdateTestbed> for UpdateTestbed {
@@ -142,7 +139,7 @@ impl From<JsonUpdateTestbed> for UpdateTestbed {
         Self {
             name,
             slug,
-            modified: Utc::now().timestamp(),
+            modified: DateTime::now(),
         }
     }
 }

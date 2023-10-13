@@ -1,11 +1,10 @@
-use bencher_valid::GitHash;
-use chrono::{DateTime, Utc};
+use bencher_valid::{DateTime, DateTimeMillis, GitHash};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    urlencoded::{from_millis, from_urlencoded, to_urlencoded, UrlEncodedError},
+    urlencoded::{from_urlencoded, to_urlencoded, UrlEncodedError},
     JsonAlert, JsonMetricKind, JsonProject, JsonTestbed, JsonUser, ResourceId,
 };
 
@@ -21,8 +20,8 @@ pub struct JsonNewReport {
     pub branch: ResourceId,
     pub hash: Option<GitHash>,
     pub testbed: ResourceId,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    pub start_time: DateTime,
+    pub end_time: DateTime,
     pub results: Vec<String>,
     pub settings: Option<JsonReportSettings>,
 }
@@ -215,12 +214,12 @@ pub struct JsonReport {
     pub project: JsonProject,
     pub branch: JsonBranchVersion,
     pub testbed: JsonTestbed,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    pub start_time: DateTime,
+    pub end_time: DateTime,
     pub adapter: Adapter,
     pub results: JsonReportResults,
     pub alerts: JsonReportAlerts,
-    pub created: DateTime<Utc>,
+    pub created: DateTime,
 }
 
 #[typeshare::typeshare]
@@ -247,16 +246,16 @@ pub type JsonReportAlerts = Vec<JsonAlert>;
 pub struct JsonReportQueryParams {
     pub branch: Option<String>,
     pub testbed: Option<String>,
-    pub start_time: Option<i64>,
-    pub end_time: Option<i64>,
+    pub start_time: Option<DateTimeMillis>,
+    pub end_time: Option<DateTimeMillis>,
 }
 
 #[derive(Debug, Clone)]
 pub struct JsonReportQuery {
     pub branch: Option<ResourceId>,
     pub testbed: Option<ResourceId>,
-    pub start_time: Option<DateTime<Utc>>,
-    pub end_time: Option<DateTime<Utc>>,
+    pub start_time: Option<DateTime>,
+    pub end_time: Option<DateTime>,
 }
 
 impl TryFrom<JsonReportQueryParams> for JsonReportQuery {
@@ -281,22 +280,11 @@ impl TryFrom<JsonReportQueryParams> for JsonReportQuery {
             None
         };
 
-        let start_time = if let Some(start_time) = start_time {
-            Some(from_millis(start_time)?)
-        } else {
-            None
-        };
-        let end_time = if let Some(end_time) = end_time {
-            Some(from_millis(end_time)?)
-        } else {
-            None
-        };
-
         Ok(Self {
             branch,
             testbed,
-            start_time,
-            end_time,
+            start_time: start_time.map(Into::into),
+            end_time: end_time.map(Into::into),
         })
     }
 }
@@ -310,11 +298,11 @@ impl JsonReportQuery {
         self.testbed.as_ref().map(to_urlencoded)
     }
 
-    pub fn start_time(&self) -> Option<i64> {
-        self.start_time.as_ref().map(DateTime::timestamp_millis)
+    pub fn start_time(&self) -> Option<DateTimeMillis> {
+        self.start_time.map(Into::into)
     }
 
-    pub fn end_time(&self) -> Option<i64> {
-        self.end_time.as_ref().map(DateTime::timestamp_millis)
+    pub fn end_time(&self) -> Option<DateTimeMillis> {
+        self.end_time.map(Into::into)
     }
 }

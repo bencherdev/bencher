@@ -1,13 +1,14 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{BenchmarkUuid, BranchUuid, JsonPerf, JsonPerfQuery, ResourceId, TestbedUuid};
-use chrono::{DateTime, Utc};
+use bencher_json::{
+    BenchmarkUuid, BranchUuid, DateTime, JsonPerf, JsonPerfQuery, ResourceId, TestbedUuid,
+};
 use tabled::Table;
 
 use crate::{bencher::backend::Backend, cli_println, parser::project::perf::CliPerf, CliError};
 
-use crate::bencher::{map_timestamp, SubCmd};
+use crate::bencher::SubCmd;
 
 mod table_style;
 
@@ -21,8 +22,8 @@ pub struct Perf {
     branches: Vec<BranchUuid>,
     testbeds: Vec<TestbedUuid>,
     benchmarks: Vec<BenchmarkUuid>,
-    start_time: Option<DateTime<Utc>>,
-    end_time: Option<DateTime<Utc>>,
+    start_time: Option<DateTime>,
+    end_time: Option<DateTime>,
     table: Option<Option<TableStyle>>,
     backend: Backend,
 }
@@ -48,8 +49,8 @@ impl TryFrom<CliPerf> for Perf {
             branches,
             testbeds,
             benchmarks,
-            start_time: map_timestamp(start_time)?,
-            end_time: map_timestamp(end_time)?,
+            start_time,
+            end_time,
             table: table.map(|t| t.map(Into::into)),
             backend: backend.try_into()?,
         })

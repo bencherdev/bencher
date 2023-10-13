@@ -1,6 +1,5 @@
 use bencher_json::organization::member::OrganizationRole;
-use bencher_json::{JsonEmpty, JsonSignup};
-use chrono::Utc;
+use bencher_json::{DateTime, JsonEmpty, JsonSignup};
 use diesel::dsl::count;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
@@ -103,7 +102,7 @@ async fn post_inner(
             .map_err(ApiError::from)?;
         let organization_id = QueryOrganization::get_id(conn, insert_org.uuid)?;
 
-        let timestamp = Utc::now().timestamp();
+        let timestamp = DateTime::now();
         // Connect the user to the organization as a `Leader`
         InsertOrganizationRole {
             user_id,

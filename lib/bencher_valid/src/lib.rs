@@ -6,6 +6,7 @@ mod boundary;
 mod branch_name;
 #[cfg(feature = "plus")]
 mod card;
+mod date_time;
 mod email;
 mod error;
 mod git_hash;
@@ -30,6 +31,7 @@ pub use boundary::Boundary;
 pub use branch_name::BranchName;
 #[cfg(feature = "plus")]
 pub use card::{CardBrand, CardCvc, CardNumber, ExpirationMonth, ExpirationYear, LastFour};
+pub use date_time::{DateTime, DateTimeMillis};
 pub use email::Email;
 pub use error::ValidError;
 use error::REGEX_ERROR;
@@ -97,7 +99,10 @@ macro_rules! typed_string {
             String: diesel::deserialize::FromSql<diesel::sql_types::Text, DB>,
         {
             fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
-                Ok(Self(String::from_sql(bytes)?.as_str().parse()?))
+                String::from_sql(bytes)?
+                    .as_str()
+                    .parse()
+                    .map_err(Into::into)
             }
         }
     };

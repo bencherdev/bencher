@@ -2,10 +2,9 @@ use std::string::ToString;
 
 use bencher_json::{
     project::{JsonProjectPatch, JsonProjectPatchNull, JsonUpdateProject, Visibility},
-    JsonNewProject, JsonProject, NonEmpty, ProjectUuid, ResourceId, Slug, Url,
+    DateTime, JsonNewProject, JsonProject, NonEmpty, ProjectUuid, ResourceId, Slug, Url,
 };
 use bencher_rbac::{Organization, Project};
-use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, Queryable, RunQueryDsl};
 use dropshot::HttpError;
 
@@ -18,7 +17,6 @@ use crate::{
         query::{fn_get, fn_get_uuid},
         resource_id::fn_resource_id,
         slug::unwrap_slug,
-        to_date_time,
     },
     ApiError,
 };
@@ -53,8 +51,8 @@ pub struct QueryProject {
     pub slug: Slug,
     pub url: Option<Url>,
     pub visibility: Visibility,
-    pub created: i64,
-    pub modified: i64,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 impl QueryProject {
@@ -141,8 +139,8 @@ impl QueryProject {
             slug,
             url,
             visibility,
-            created: to_date_time(created).map_err(ApiError::from)?,
-            modified: to_date_time(modified).map_err(ApiError::from)?,
+            created,
+            modified,
         })
     }
 }
@@ -181,8 +179,8 @@ pub struct InsertProject {
     pub slug: Slug,
     pub url: Option<Url>,
     pub visibility: Visibility,
-    pub created: i64,
-    pub modified: i64,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 impl InsertProject {
@@ -190,7 +188,7 @@ impl InsertProject {
         conn: &mut DbConnection,
         organization: &ResourceId,
         project: JsonNewProject,
-    ) -> Result<Self, ApiError> {
+    ) -> Result<Self, HttpError> {
         let JsonNewProject {
             name,
             slug,
@@ -198,7 +196,7 @@ impl InsertProject {
             visibility,
         } = project;
         let slug = unwrap_slug!(conn, name.as_ref(), slug, project, QueryProject);
-        let timestamp = Utc::now().timestamp();
+        let timestamp = DateTime::now();
         Ok(Self {
             uuid: ProjectUuid::new(),
             organization_id: QueryOrganization::from_resource_id(conn, organization)?.id,
@@ -219,7 +217,7 @@ pub struct UpdateProject {
     pub slug: Option<Slug>,
     pub url: Option<Option<Url>>,
     pub visibility: Option<Visibility>,
-    pub modified: i64,
+    pub modified: DateTime,
 }
 
 impl From<JsonUpdateProject> for UpdateProject {
@@ -249,7 +247,7 @@ impl From<JsonUpdateProject> for UpdateProject {
             slug,
             url,
             visibility,
-            modified: Utc::now().timestamp(),
+            modified: DateTime::now(),
         }
     }
 }

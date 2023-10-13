@@ -2,11 +2,10 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::{JsonDirection, ProjReportsSort};
-use bencher_json::{project::report::JsonReportQuery, JsonReports, ResourceId};
-use chrono::{DateTime, Utc};
+use bencher_json::{project::report::JsonReportQuery, DateTime, JsonReports, ResourceId};
 
 use crate::{
-    bencher::{backend::Backend, map_timestamp, sub::SubCmd},
+    bencher::{backend::Backend, sub::SubCmd},
     parser::{
         project::report::{CliReportList, CliReportsSort},
         CliPagination,
@@ -19,8 +18,8 @@ pub struct List {
     pub project: ResourceId,
     pub branch: Option<ResourceId>,
     pub testbed: Option<ResourceId>,
-    pub start_time: Option<DateTime<Utc>>,
-    pub end_time: Option<DateTime<Utc>>,
+    pub start_time: Option<DateTime>,
+    pub end_time: Option<DateTime>,
     pub pagination: Pagination,
     pub backend: Backend,
 }
@@ -50,8 +49,8 @@ impl TryFrom<CliReportList> for List {
             project,
             branch,
             testbed,
-            start_time: map_timestamp(start_time)?,
-            end_time: map_timestamp(end_time)?,
+            start_time,
+            end_time,
             pagination: pagination.into(),
             backend: backend.try_into()?,
         })

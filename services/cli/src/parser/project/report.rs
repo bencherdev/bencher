@@ -1,4 +1,4 @@
-use bencher_json::{ReportUuid, ResourceId};
+use bencher_json::{DateTime, ReportUuid, ResourceId};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use super::run::CliRun;
@@ -36,11 +36,11 @@ pub struct CliReportList {
 
     /// Start time (seconds since epoch)
     #[clap(long)]
-    pub start_time: Option<i64>,
+    pub start_time: Option<DateTime>,
 
     /// End time (seconds since epoch)
     #[clap(long)]
-    pub end_time: Option<i64>,
+    pub end_time: Option<DateTime>,
 
     #[clap(flatten)]
     pub pagination: CliPagination<CliReportsSort>,

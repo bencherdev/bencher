@@ -5,9 +5,8 @@ use bencher_json::{
         L2_ACCESSES_NAME_STR, L2_ACCESSES_SLUG_STR, LATENCY_NAME_STR, LATENCY_SLUG_STR,
         RAM_ACCESSES_NAME_STR, RAM_ACCESSES_SLUG_STR, THROUGHPUT_NAME_STR, THROUGHPUT_SLUG_STR,
     },
-    JsonMetricKind, JsonNewMetricKind, NonEmpty, ResourceId, Slug,
+    DateTime, JsonMetricKind, JsonNewMetricKind, NonEmpty, ResourceId, Slug,
 };
-use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
@@ -21,7 +20,6 @@ use crate::{
         query::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
         slug::unwrap_child_slug,
-        to_date_time,
     },
     ApiError,
 };
@@ -42,8 +40,8 @@ pub struct QueryMetricKind {
     pub name: NonEmpty,
     pub slug: Slug,
     pub units: NonEmpty,
-    pub created: i64,
-    pub modified: i64,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 impl QueryMetricKind {
@@ -87,8 +85,8 @@ impl QueryMetricKind {
             name,
             slug,
             units,
-            created: to_date_time(created).map_err(ApiError::from)?,
-            modified: to_date_time(modified).map_err(ApiError::from)?,
+            created,
+            modified,
         })
     }
 
@@ -139,8 +137,8 @@ pub struct InsertMetricKind {
     pub name: NonEmpty,
     pub slug: Slug,
     pub units: NonEmpty,
-    pub created: i64,
-    pub modified: i64,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 impl InsertMetricKind {
@@ -151,7 +149,7 @@ impl InsertMetricKind {
     ) -> Self {
         let JsonNewMetricKind { name, slug, units } = metric_kind;
         let slug = unwrap_child_slug!(conn, project_id, &name, slug, metric_kind, QueryMetricKind);
-        let timestamp = Utc::now().timestamp();
+        let timestamp = DateTime::now();
         Self {
             uuid: MetricKindUuid::new(),
             project_id,
@@ -224,7 +222,7 @@ pub struct UpdateMetricKind {
     pub name: Option<NonEmpty>,
     pub slug: Option<Slug>,
     pub units: Option<NonEmpty>,
-    pub modified: i64,
+    pub modified: DateTime,
 }
 
 impl From<JsonUpdateMetricKind> for UpdateMetricKind {
@@ -234,7 +232,7 @@ impl From<JsonUpdateMetricKind> for UpdateMetricKind {
             name,
             slug,
             units,
-            modified: Utc::now().timestamp(),
+            modified: DateTime::now(),
         }
     }
 }

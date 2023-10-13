@@ -6,8 +6,8 @@ use bencher_json::{
         branch::{JsonVersion, VersionNumber},
         perf::{Iteration, JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
     },
-    GitHash, JsonBenchmark, JsonBranch, JsonPerf, JsonPerfQuery, JsonTestbed, ProjectUuid,
-    ReportUuid, ResourceId,
+    DateTime, GitHash, JsonBenchmark, JsonBranch, JsonPerf, JsonPerfQuery, JsonTestbed,
+    ProjectUuid, ReportUuid, ResourceId,
 };
 use diesel::{
     ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
@@ -34,9 +34,7 @@ use crate::{
         QueryProject,
     },
     model::user::auth::AuthUser,
-    schema,
-    util::to_date_time,
-    ApiError,
+    schema, ApiError,
 };
 
 pub mod img;
@@ -124,8 +122,8 @@ async fn get_inner(
     let metric_kind = QueryMetricKind::from_resource_id(conn, project.id, &metric_kind)?;
 
     let times = Times {
-        start_time: start_time.as_ref().map(chrono::DateTime::timestamp),
-        end_time: end_time.as_ref().map(chrono::DateTime::timestamp),
+        start_time,
+        end_time,
     };
 
     let mut results = Vec::new();
@@ -268,15 +266,15 @@ struct QueryDimensions {
 
 #[derive(Clone, Copy)]
 struct Times {
-    start_time: Option<i64>,
-    end_time: Option<i64>,
+    start_time: Option<DateTime>,
+    end_time: Option<DateTime>,
 }
 
 type PerfQuery = (
     ReportUuid,
     Iteration,
-    i64,
-    i64,
+    DateTime,
+    DateTime,
     VersionNumber,
     Option<String>,
     Option<(
@@ -467,8 +465,8 @@ fn perf_metric(
     Some(JsonPerfMetric {
         report: report_uuid,
         iteration,
-        start_time: to_date_time(start_time).ok()?,
-        end_time: to_date_time(end_time).ok()?,
+        start_time,
+        end_time,
         version,
         threshold,
         metric: query_metric.into_json(),
