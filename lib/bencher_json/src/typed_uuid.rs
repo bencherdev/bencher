@@ -46,6 +46,7 @@ macro_rules! typed_uuid {
             }
         }
 
+        #[allow(unused_qualifications)]
         impl std::str::FromStr for $name {
             type Err = uuid::Error;
 

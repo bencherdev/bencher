@@ -583,7 +583,7 @@
             "name": "permission",
             "required": true,
             "schema": {
-              "$ref": "#/components/schemas/JsonOrganizationPermission"
+              "$ref": "#/components/schemas/OrganizationPermission"
             }
           }
         ],
@@ -2044,7 +2044,7 @@
             "name": "permission",
             "required": true,
             "schema": {
-              "$ref": "#/components/schemas/JsonProjectPermission"
+              "$ref": "#/components/schemas/ProjectPermission"
             }
           },
           {
@@ -6529,7 +6529,7 @@
             "$ref": "#/components/schemas/UserName"
           },
           "role": {
-            "$ref": "#/components/schemas/JsonOrganizationRole"
+            "$ref": "#/components/schemas/OrganizationRole"
           },
           "slug": {
             "$ref": "#/components/schemas/Slug"
@@ -6684,7 +6684,7 @@
             ]
           },
           "role": {
-            "$ref": "#/components/schemas/JsonOrganizationRole"
+            "$ref": "#/components/schemas/OrganizationRole"
           }
         },
         "required": [
@@ -6956,12 +6956,6 @@
           "name",
           "slug",
           "uuid"
-        ]
-      },
-      "JsonOrganizationRole": {
-        "type": "string",
-        "enum": [
-          "leader"
         ]
       },
       "JsonOrganizations": {
@@ -7948,7 +7942,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonOrganizationRole"
+                "$ref": "#/components/schemas/OrganizationRole"
               }
             ]
           }
@@ -8182,6 +8176,12 @@
       "NonEmpty": {
         "type": "string"
       },
+      "OrganizationRole": {
+        "type": "string",
+        "enum": [
+          "leader"
+        ]
+      },
       "OrganizationUuid": {
         "type": "string",
         "format": "uuid"
@@ -8339,7 +8339,7 @@
           "name"
         ]
       },
-      "JsonOrganizationPermission": {
+      "OrganizationPermission": {
         "type": "string",
         "enum": [
           "view",
@@ -8378,7 +8378,7 @@
           "modified"
         ]
       },
-      "JsonProjectPermission": {
+      "ProjectPermission": {
         "type": "string",
         "enum": [
           "view",

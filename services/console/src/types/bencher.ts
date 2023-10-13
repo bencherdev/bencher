@@ -389,7 +389,7 @@ export interface JsonToken {
 	expiration: string;
 }
 
-export enum JsonOrganizationPermission {
+export enum OrganizationPermission {
 	View = "view",
 	Create = "create",
 	Edit = "edit",
@@ -401,7 +401,7 @@ export enum JsonOrganizationPermission {
 	DeleteRole = "delete_role",
 }
 
-export enum JsonProjectPermission {
+export enum ProjectPermission {
 	View = "view",
 	Create = "create",
 	Edit = "edit",

@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_client::types::{JsonNewMember, JsonOrganizationRole};
+use bencher_client::types::{JsonNewMember, OrganizationRole};
 use bencher_json::{Email, JsonEmpty, ResourceId, UserName};
 
 use crate::{
@@ -17,7 +17,7 @@ pub struct Invite {
     org: ResourceId,
     name: Option<UserName>,
     email: Email,
-    role: JsonOrganizationRole,
+    role: OrganizationRole,
     backend: Backend,
 }
 
@@ -42,7 +42,7 @@ impl TryFrom<CliMemberInvite> for Invite {
     }
 }
 
-impl From<CliMemberRole> for JsonOrganizationRole {
+impl From<CliMemberRole> for OrganizationRole {
     fn from(role: CliMemberRole) -> Self {
         match role {
             // TODO Team Management

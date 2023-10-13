@@ -2,7 +2,7 @@ import type { Params } from "astro";
 import { validEmail, validSlug, validUserName } from "../../util/valid";
 import { Button, Card, Display, Operation, Row } from "../types";
 import { invitePath, parentPath, viewSlugPath } from "../util";
-import { JsonOrganizationPermission } from "../../types/bencher";
+import { OrganizationPermission } from "../../types/bencher";
 import { isAllowedOrganization } from "../../util/auth";
 import FieldKind from "../../components/field/kind";
 
@@ -62,7 +62,7 @@ const MembersConfig = {
 						isAllowedOrganization(
 							apiUrl,
 							params,
-							JsonOrganizationPermission.CreateRole,
+							OrganizationPermission.CreateRole,
 						),
 				},
 				{ kind: Button.REFRESH },
@@ -195,7 +195,7 @@ const MembersConfig = {
 					key: "role",
 					display: Display.SELECT,
 					is_allowed: (params: Params) =>
-						isAllowedOrganization(params, JsonOrganizationPermission.EditRole),
+						isAllowedOrganization(params, OrganizationPermission.EditRole),
 					field: {
 						kind: FieldKind.SELECT,
 						key: "role",

@@ -1,7 +1,8 @@
 use bencher_json::{
-    JsonDirection, JsonNewProject, JsonPagination, JsonProject, JsonProjects, NonEmpty, ResourceId,
+    project::ProjectRole, JsonDirection, JsonNewProject, JsonPagination, JsonProject, JsonProjects,
+    NonEmpty, ResourceId,
 };
-use bencher_rbac::{organization::Permission, project::Role};
+use bencher_rbac::organization::Permission;
 use chrono::Utc;
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
@@ -216,7 +217,7 @@ async fn post_inner(
     let insert_proj_role = InsertProjectRole {
         user_id: auth_user.id,
         project_id: query_project.id,
-        role: Role::Maintainer.to_string(),
+        role: ProjectRole::Maintainer,
         created: timestamp,
         modified: timestamp,
     };

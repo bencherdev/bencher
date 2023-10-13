@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_client::types::JsonOrganizationPermission;
+use bencher_client::types::OrganizationPermission;
 use bencher_json::{JsonAllowed, ResourceId};
 
 use crate::{
@@ -13,7 +13,7 @@ use crate::{
 #[derive(Debug)]
 pub struct Allowed {
     pub organization: ResourceId,
-    pub perm: JsonOrganizationPermission,
+    pub perm: OrganizationPermission,
     pub backend: Backend,
 }
 
@@ -34,7 +34,7 @@ impl TryFrom<CliOrganizationAllowed> for Allowed {
     }
 }
 
-impl From<CliOrganizationPermission> for JsonOrganizationPermission {
+impl From<CliOrganizationPermission> for OrganizationPermission {
     fn from(permission: CliOrganizationPermission) -> Self {
         match permission {
             CliOrganizationPermission::View => Self::View,

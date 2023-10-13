@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, str::FromStr};
 
 use bencher_valid::{NonEmpty, Slug, Url};
 use chrono::{DateTime, Utc};
@@ -271,7 +271,7 @@ mod visibility {
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Display)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]
-pub enum JsonProjectPermission {
+pub enum ProjectPermission {
     #[display(fmt = "view")]
     View,
     #[display(fmt = "create")]
@@ -290,4 +290,89 @@ pub enum JsonProjectPermission {
     EditRole,
     #[display(fmt = "delete_role")]
     DeleteRole,
+}
+
+pub const VIEWER_ROLE: &str = "viewer";
+pub const DEVELOPER_ROLE: &str = "developer";
+pub const MAINTAINER_ROLE: &str = "maintainer";
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
+#[serde(rename_all = "snake_case")]
+pub enum ProjectRole {
+    // TODO Team Management
+    // Viewer,
+    // Developer,
+    Maintainer,
+}
+
+impl FromStr for ProjectRole {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            // TODO Team Management
+            // MEMBER_ROLE => Ok(Self::Member),
+            MAINTAINER_ROLE => Ok(Self::Maintainer),
+            _ => Err(s.into()),
+        }
+    }
+}
+
+impl fmt::Display for ProjectRole {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                // TODO Team Management
+                // Self::Member => MEMBER_ROLE,
+                Self::Maintainer => MAINTAINER_ROLE,
+            }
+        )
+    }
+}
+
+#[cfg(feature = "db")]
+mod organization_role {
+    use super::{ProjectRole, MAINTAINER_ROLE};
+
+    #[derive(Debug, thiserror::Error)]
+    pub enum ProjectRoleError {
+        #[error("Invalid project role value: {0}")]
+        Invalid(String),
+    }
+
+    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Text, DB> for ProjectRole
+    where
+        DB: diesel::backend::Backend,
+        for<'a> String: diesel::serialize::ToSql<diesel::sql_types::Text, DB>
+            + Into<<DB::BindCollector<'a> as diesel::query_builder::BindCollector<'a, DB>>::Buffer>,
+    {
+        fn to_sql<'b>(
+            &'b self,
+            out: &mut diesel::serialize::Output<'b, '_, DB>,
+        ) -> diesel::serialize::Result {
+            match self {
+                Self::Maintainer => out.set_value(MAINTAINER_ROLE.to_owned()),
+            }
+            Ok(diesel::serialize::IsNull::No)
+        }
+    }
+
+    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Text, DB> for ProjectRole
+    where
+        DB: diesel::backend::Backend,
+        String: diesel::deserialize::FromSql<diesel::sql_types::Text, DB>,
+    {
+        fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+            let role = String::from_sql(bytes)?;
+            match role.as_str() {
+                MAINTAINER_ROLE => Ok(Self::Maintainer),
+                _ => Err(Box::new(ProjectRoleError::Invalid(role))),
+            }
+        }
+    }
 }

@@ -1,4 +1,6 @@
-use bencher_json::{Email, JsonMember, Slug, UserName, UserUuid};
+use bencher_json::{
+    organization::member::OrganizationRole, Email, JsonMember, Slug, UserName, UserUuid,
+};
 
 use crate::{util::to_date_time, ApiError};
 
@@ -8,7 +10,7 @@ pub struct QueryMember {
     pub name: UserName,
     pub slug: Slug,
     pub email: Email,
-    pub role: String,
+    pub role: OrganizationRole,
     pub created: i64,
     pub modified: i64,
 }
@@ -29,7 +31,7 @@ impl QueryMember {
             name,
             slug,
             email,
-            role: role.parse().map_err(ApiError::OrganizationRole)?,
+            role,
             created: to_date_time(created).map_err(ApiError::from)?,
             modified: to_date_time(modified).map_err(ApiError::from)?,
         })

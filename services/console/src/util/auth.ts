@@ -1,8 +1,8 @@
 import { createSignal } from "solid-js";
 import {
-	JsonProjectPermission,
+	ProjectPermission,
 	type JsonAuthUser,
-	JsonOrganizationPermission,
+	OrganizationPermission,
 } from "../types/bencher";
 import { validUser } from "./valid";
 import { httpGet } from "./http";
@@ -68,7 +68,7 @@ export const authUser = authUsr;
 export const isAllowedOrganization = async (
 	apiUrl: string,
 	params: undefined | Params,
-	permission: JsonOrganizationPermission,
+	permission: OrganizationPermission,
 ): Promise<boolean> => {
 	if (!params?.organization) {
 		return false;
@@ -82,7 +82,7 @@ export const isAllowedOrganization = async (
 export const isAllowedProject = async (
 	apiUrl: string,
 	params: undefined | Params,
-	permission: JsonProjectPermission,
+	permission: ProjectPermission,
 ): Promise<boolean> => {
 	if (!params?.project) {
 		return false;
@@ -110,10 +110,10 @@ export const isAllowed = async (
 };
 
 export const isAllowedOrganizationEdit = (apiUrl: string, params: Params) =>
-	isAllowedOrganization(apiUrl, params, JsonOrganizationPermission.Edit);
+	isAllowedOrganization(apiUrl, params, OrganizationPermission.Edit);
 
 export const isAllowedProjectEdit = (apiUrl: string, params: Params) =>
-	isAllowedProject(apiUrl, params, JsonProjectPermission.Edit);
+	isAllowedProject(apiUrl, params, ProjectPermission.Edit);
 
 export const isAllowedProjectDelete = (apiUrl: string, params: Params) =>
-	isAllowedProject(apiUrl, params, JsonProjectPermission.Delete);
+	isAllowedProject(apiUrl, params, ProjectPermission.Delete);

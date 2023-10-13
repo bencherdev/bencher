@@ -1,8 +1,9 @@
 use bencher_json::{
-    organization::JsonUpdateOrganization, JsonDirection, JsonNewOrganization, JsonOrganization,
-    JsonOrganizations, JsonPagination, NonEmpty, ResourceId,
+    organization::{member::OrganizationRole, JsonUpdateOrganization},
+    JsonDirection, JsonNewOrganization, JsonOrganization, JsonOrganizations, JsonPagination,
+    NonEmpty, ResourceId,
 };
-use bencher_rbac::organization::{Permission, Role};
+use bencher_rbac::organization::Permission;
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
@@ -182,7 +183,7 @@ async fn post_inner(
     let insert_org_role = InsertOrganizationRole {
         user_id: auth_user.id,
         organization_id: query_organization.id,
-        role: Role::Leader.to_string(),
+        role: OrganizationRole::Leader,
         created: timestamp,
         modified: timestamp,
     };

@@ -1,4 +1,4 @@
-use bencher_json::{organization::member::JsonOrganizationRole, Email, OrganizationUuid};
+use bencher_json::{organization::member::OrganizationRole, Email, OrganizationUuid};
 use serde::{Deserialize, Serialize};
 
 use super::{audience::Audience, now, JwtError};
@@ -16,7 +16,7 @@ pub struct Claims {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrgClaims {
     pub uuid: OrganizationUuid,
-    pub role: JsonOrganizationRole,
+    pub role: OrganizationRole,
 }
 
 impl Claims {

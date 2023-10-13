@@ -48,7 +48,7 @@ pub struct JsonUpdateOrganization {
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Display)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]
-pub enum JsonOrganizationPermission {
+pub enum OrganizationPermission {
     #[display(fmt = "view")]
     View,
     #[display(fmt = "create")]

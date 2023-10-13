@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{organization::member::JsonOrganizationRole, Email, Jwt};
+use bencher_json::{organization::member::OrganizationRole, Email, Jwt};
 use bencher_json::{OrganizationUuid, Secret};
 use chrono::Utc;
 use jsonwebtoken::{decode, encode, Algorithm, Header, TokenData, Validation};
@@ -80,7 +80,7 @@ impl SecretKey {
         email: Email,
         ttl: u32,
         org_uuid: OrganizationUuid,
-        role: JsonOrganizationRole,
+        role: OrganizationRole,
     ) -> Result<Jwt, ApiError> {
         let org_claims = OrgClaims {
             uuid: org_uuid,
@@ -143,7 +143,7 @@ pub fn now() -> u64 {
 mod test {
     use std::{thread, time};
 
-    use bencher_json::{organization::member::JsonOrganizationRole, Email};
+    use bencher_json::{organization::member::OrganizationRole, Email};
     use once_cell::sync::Lazy;
     use uuid::Uuid;
 
@@ -241,7 +241,7 @@ mod test {
         let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), &DEFAULT_SECRET_KEY);
 
         let org_uuid = Uuid::new_v4().into();
-        let role = JsonOrganizationRole::Leader;
+        let role = OrganizationRole::Leader;
 
         let token = secret_key
             .new_invite(EMAIL.clone(), TTL, org_uuid, role)
@@ -263,7 +263,7 @@ mod test {
         let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), &DEFAULT_SECRET_KEY);
 
         let org_uuid = Uuid::new_v4().into();
-        let role = JsonOrganizationRole::Leader;
+        let role = OrganizationRole::Leader;
 
         let token = secret_key
             .new_invite(EMAIL.clone(), 0, org_uuid, role)

@@ -1,5 +1,5 @@
+use bencher_json::organization::member::OrganizationRole;
 use bencher_json::{JsonEmpty, JsonSignup};
-use bencher_rbac::organization::Role;
 use chrono::Utc;
 use diesel::dsl::count;
 use diesel::QueryDsl;
@@ -108,7 +108,7 @@ async fn post_inner(
         InsertOrganizationRole {
             user_id,
             organization_id,
-            role: Role::Leader.to_string(),
+            role: OrganizationRole::Leader,
             created: timestamp,
             modified: timestamp,
         }

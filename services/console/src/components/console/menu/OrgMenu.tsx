@@ -1,6 +1,6 @@
 import { Show, createMemo, createResource } from "solid-js";
 import { isAllowedOrganization } from "../../../util/auth";
-import { JsonOrganizationPermission } from "../../../types/bencher";
+import { OrganizationPermission } from "../../../types/bencher";
 import bencher_valid_init from "bencher_valid";
 import type { Params } from "astro";
 
@@ -28,7 +28,7 @@ const OrgMenu = (props: Props) => {
 		return await isAllowedOrganization(
 			props.apiUrl,
 			params(),
-			JsonOrganizationPermission.Manage,
+			OrganizationPermission.Manage,
 		);
 	});
 

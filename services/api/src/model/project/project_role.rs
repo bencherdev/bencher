@@ -1,4 +1,4 @@
-use bencher_json::project::JsonProjectPermission;
+use bencher_json::project::{ProjectPermission, ProjectRole};
 
 use crate::{model::user::UserId, schema::project_role as project_role_table};
 
@@ -6,22 +6,22 @@ use super::ProjectId;
 
 crate::util::typed_id::typed_id!(ProjectRoleId);
 
-#[derive(diesel::Insertable)]
-#[diesel(table_name = project_role_table)]
-pub struct InsertProjectRole {
-    pub user_id: UserId,
-    pub project_id: ProjectId,
-    pub role: String,
-    pub created: i64,
-    pub modified: i64,
-}
-
 #[derive(diesel::Queryable)]
 pub struct QueryProjectRole {
     pub id: ProjectRoleId,
     pub user_id: UserId,
     pub project_id: ProjectId,
-    pub role: String,
+    pub role: ProjectRole,
+    pub created: i64,
+    pub modified: i64,
+}
+
+#[derive(diesel::Insertable)]
+#[diesel(table_name = project_role_table)]
+pub struct InsertProjectRole {
+    pub user_id: UserId,
+    pub project_id: ProjectId,
+    pub role: ProjectRole,
     pub created: i64,
     pub modified: i64,
 }
@@ -38,18 +38,18 @@ pub enum Permission {
     DeleteRole,
 }
 
-impl From<JsonProjectPermission> for Permission {
-    fn from(permission: JsonProjectPermission) -> Self {
+impl From<ProjectPermission> for Permission {
+    fn from(permission: ProjectPermission) -> Self {
         match permission {
-            JsonProjectPermission::View => Self::View,
-            JsonProjectPermission::Create => Self::Create,
-            JsonProjectPermission::Edit => Self::Edit,
-            JsonProjectPermission::Delete => Self::Delete,
-            JsonProjectPermission::Manage => Self::Manage,
-            JsonProjectPermission::ViewRole => Self::ViewRole,
-            JsonProjectPermission::CreateRole => Self::CreateRole,
-            JsonProjectPermission::EditRole => Self::EditRole,
-            JsonProjectPermission::DeleteRole => Self::DeleteRole,
+            ProjectPermission::View => Self::View,
+            ProjectPermission::Create => Self::Create,
+            ProjectPermission::Edit => Self::Edit,
+            ProjectPermission::Delete => Self::Delete,
+            ProjectPermission::Manage => Self::Manage,
+            ProjectPermission::ViewRole => Self::ViewRole,
+            ProjectPermission::CreateRole => Self::CreateRole,
+            ProjectPermission::EditRole => Self::EditRole,
+            ProjectPermission::DeleteRole => Self::DeleteRole,
         }
     }
 }

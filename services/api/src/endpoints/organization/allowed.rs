@@ -1,4 +1,4 @@
-use bencher_json::{organization::JsonOrganizationPermission, JsonAllowed, ResourceId};
+use bencher_json::{organization::OrganizationPermission, JsonAllowed, ResourceId};
 use dropshot::{endpoint, HttpError, Path, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -16,7 +16,7 @@ use crate::{
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgAllowedParams {
     pub organization: ResourceId,
-    pub permission: JsonOrganizationPermission,
+    pub permission: OrganizationPermission,
 }
 
 #[allow(clippy::unused_async)]

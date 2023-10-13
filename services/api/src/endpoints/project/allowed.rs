@@ -1,4 +1,4 @@
-use bencher_json::{project::JsonProjectPermission, JsonAllowed, ResourceId};
+use bencher_json::{project::ProjectPermission, JsonAllowed, ResourceId};
 use dropshot::{endpoint, HttpError, Path, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -16,7 +16,7 @@ use crate::{
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjAllowedParams {
     pub project: ResourceId,
-    pub permission: JsonProjectPermission,
+    pub permission: ProjectPermission,
 }
 
 #[allow(clippy::unused_async)]

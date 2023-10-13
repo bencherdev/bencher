@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_client::types::{JsonOrganizationRole, JsonUpdateMember};
+use bencher_client::types::{JsonUpdateMember, OrganizationRole};
 use bencher_json::{JsonMember, ResourceId};
 
 use crate::{
@@ -14,7 +14,7 @@ use crate::{
 pub struct Update {
     pub org: ResourceId,
     pub user: ResourceId,
-    pub role: Option<JsonOrganizationRole>,
+    pub role: Option<OrganizationRole>,
     pub backend: Backend,
 }
 
