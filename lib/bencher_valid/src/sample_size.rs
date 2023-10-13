@@ -15,6 +15,8 @@ use crate::ValidError;
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Copy, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::BigInt))]
 pub struct SampleSize(u32);
 
 impl TryFrom<u32> for SampleSize {
@@ -27,9 +29,21 @@ impl TryFrom<u32> for SampleSize {
     }
 }
 
+impl From<SampleSize> for i64 {
+    fn from(sample_size: SampleSize) -> Self {
+        i64::from(sample_size.0)
+    }
+}
+
 impl From<SampleSize> for u32 {
     fn from(sample_size: SampleSize) -> Self {
         sample_size.0
+    }
+}
+
+impl From<SampleSize> for usize {
+    fn from(sample_size: SampleSize) -> Self {
+        sample_size.0 as usize
     }
 }
 
@@ -72,6 +86,38 @@ impl Visitor<'_> for SampleSizeVisitor {
         E: de::Error,
     {
         value.try_into().map_err(E::custom)
+    }
+}
+
+#[cfg(feature = "db")]
+mod db {
+    use super::SampleSize;
+
+    impl<DB> diesel::serialize::ToSql<diesel::sql_types::BigInt, DB> for SampleSize
+    where
+        DB: diesel::backend::Backend,
+        for<'a> i64: diesel::serialize::ToSql<diesel::sql_types::BigInt, DB>
+            + Into<<DB::BindCollector<'a> as diesel::query_builder::BindCollector<'a, DB>>::Buffer>,
+    {
+        fn to_sql<'b>(
+            &'b self,
+            out: &mut diesel::serialize::Output<'b, '_, DB>,
+        ) -> diesel::serialize::Result {
+            out.set_value(i64::from(*self));
+            Ok(diesel::serialize::IsNull::No)
+        }
+    }
+
+    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::BigInt, DB> for SampleSize
+    where
+        DB: diesel::backend::Backend,
+        i64: diesel::deserialize::FromSql<diesel::sql_types::BigInt, DB>,
+    {
+        fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+            u32::try_from(i64::from_sql(bytes)?)?
+                .try_into()
+                .map_err(Into::into)
+        }
     }
 }
 

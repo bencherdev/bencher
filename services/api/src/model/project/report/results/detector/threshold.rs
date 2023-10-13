@@ -1,4 +1,4 @@
-use bencher_json::{project::threshold::StatisticKind, Boundary};
+use bencher_json::{project::threshold::StatisticKind, Boundary, SampleSize};
 use diesel::{
     ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
     SelectableHelper,
@@ -11,7 +11,7 @@ use crate::{
         metric_kind::MetricKindId,
         testbed::TestbedId,
         threshold::{
-            statistic::{map_boundary, QueryStatistic, StatisticId},
+            statistic::{QueryStatistic, StatisticId},
             ThresholdId,
         },
     },
@@ -29,8 +29,8 @@ pub struct MetricsThreshold {
 pub struct MetricsStatistic {
     pub id: StatisticId,
     pub test: StatisticKind,
-    pub min_sample_size: Option<u32>,
-    pub max_sample_size: Option<u32>,
+    pub min_sample_size: Option<SampleSize>,
+    pub max_sample_size: Option<SampleSize>,
     pub window: Option<u32>,
     pub lower_boundary: Option<Boundary>,
     pub upper_boundary: Option<Boundary>,
@@ -68,11 +68,11 @@ impl MetricsThreshold {
                 let statistic = MetricsStatistic {
                     id,
                     test,
-                    min_sample_size: map_u32(min_sample_size).ok()?,
-                    max_sample_size: map_u32(max_sample_size).ok()?,
+                    min_sample_size,
+                    max_sample_size,
                     window: map_u32(window).ok()?,
-                    lower_boundary: map_boundary(lower_boundary).ok()?,
-                    upper_boundary: map_boundary(upper_boundary).ok()?,
+                    lower_boundary,
+                    upper_boundary,
                 };
                 Some(Self {
                     id: threshold_id,

@@ -26,11 +26,11 @@ pub struct QueryStatistic {
     pub uuid: StatisticUuid,
     pub threshold_id: ThresholdId,
     pub test: StatisticKind,
-    pub min_sample_size: Option<i64>,
-    pub max_sample_size: Option<i64>,
+    pub min_sample_size: Option<SampleSize>,
+    pub max_sample_size: Option<SampleSize>,
     pub window: Option<i64>,
-    pub lower_boundary: Option<f64>,
-    pub upper_boundary: Option<f64>,
+    pub lower_boundary: Option<Boundary>,
+    pub upper_boundary: Option<Boundary>,
     pub created: DateTime,
 }
 
@@ -63,30 +63,14 @@ impl QueryStatistic {
             uuid,
             threshold,
             test,
-            min_sample_size: map_sample_size(min_sample_size)?,
-            max_sample_size: map_sample_size(max_sample_size)?,
+            min_sample_size,
+            max_sample_size,
             window: map_u32(window)?,
-            lower_boundary: map_boundary(lower_boundary)?,
-            upper_boundary: map_boundary(upper_boundary)?,
+            lower_boundary,
+            upper_boundary,
             created,
         })
     }
-}
-
-pub fn map_sample_size(sample_size: Option<i64>) -> Result<Option<SampleSize>, ApiError> {
-    Ok(if let Some(sample_size) = sample_size {
-        Some(u32::try_from(sample_size)?.try_into()?)
-    } else {
-        None
-    })
-}
-
-pub fn map_boundary(boundary: Option<f64>) -> Result<Option<Boundary>, ApiError> {
-    Ok(if let Some(boundary) = boundary {
-        Some(boundary.try_into()?)
-    } else {
-        None
-    })
 }
 
 #[derive(diesel::Insertable)]
@@ -95,11 +79,11 @@ pub struct InsertStatistic {
     pub uuid: StatisticUuid,
     pub threshold_id: ThresholdId,
     pub test: StatisticKind,
-    pub min_sample_size: Option<i64>,
-    pub max_sample_size: Option<i64>,
+    pub min_sample_size: Option<SampleSize>,
+    pub max_sample_size: Option<SampleSize>,
     pub window: Option<i64>,
-    pub lower_boundary: Option<f64>,
-    pub upper_boundary: Option<f64>,
+    pub lower_boundary: Option<Boundary>,
+    pub upper_boundary: Option<Boundary>,
     pub created: DateTime,
 }
 
@@ -147,11 +131,11 @@ impl InsertStatistic {
             uuid: StatisticUuid::new(),
             threshold_id,
             test,
-            min_sample_size: min_sample_size.map(|ss| u32::from(ss).into()),
-            max_sample_size: max_sample_size.map(|ss| u32::from(ss).into()),
+            min_sample_size,
+            max_sample_size,
             window: window.map(Into::into),
-            lower_boundary: lower_boundary.map(Into::into),
-            upper_boundary: upper_boundary.map(Into::into),
+            lower_boundary,
+            upper_boundary,
             created: DateTime::now(),
         })
     }

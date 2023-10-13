@@ -1,6 +1,6 @@
 use bencher_json::project::boundary::BoundaryLimit;
 use bencher_json::project::threshold::StatisticKind;
-use bencher_json::Boundary;
+use bencher_json::{Boundary, SampleSize};
 use slog::Logger;
 
 use crate::limits::{MetricsLimits, TestKind};
@@ -18,7 +18,7 @@ impl MetricsBoundary {
         datum: f64,
         metrics_data: &MetricsData,
         test: StatisticKind,
-        min_sample_size: Option<u32>,
+        min_sample_size: Option<SampleSize>,
         lower_boundary: Option<Boundary>,
         upper_boundary: Option<Boundary>,
     ) -> Result<Self, BoundaryError> {
@@ -39,7 +39,7 @@ impl MetricsBoundary {
         datum: f64,
         metrics_data: &MetricsData,
         test: StatisticKind,
-        min_sample_size: Option<u32>,
+        min_sample_size: Option<SampleSize>,
         lower_boundary: Option<Boundary>,
         upper_boundary: Option<Boundary>,
     ) -> Result<Option<Self>, BoundaryError> {
@@ -48,7 +48,7 @@ impl MetricsBoundary {
         // If there is a min sample size, then check to see if it is met.
         // Otherwise, simply return.
         if let Some(min_sample_size) = min_sample_size {
-            if data.len() < min_sample_size as usize {
+            if data.len() < min_sample_size.into() {
                 return Ok(None);
             }
         }
