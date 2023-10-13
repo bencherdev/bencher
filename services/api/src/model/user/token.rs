@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use bencher_json::{
     user::token::JsonUpdateToken, JsonNewToken, JsonToken, Jwt, NonEmpty, ResourceId, TokenUuid,
 };
@@ -36,7 +34,7 @@ pub struct QueryToken {
     pub uuid: TokenUuid,
     pub user_id: UserId,
     pub name: NonEmpty,
-    pub jwt: String,
+    pub jwt: Jwt,
     pub creation: i64,
     pub expiration: i64,
 }
@@ -72,7 +70,7 @@ impl QueryToken {
             uuid,
             user: QueryUser::get_uuid(conn, user_id)?,
             name,
-            token: Jwt::from_str(&jwt).map_err(ApiError::from)?,
+            token: jwt,
             creation: to_date_time(creation)?,
             expiration: to_date_time(expiration)?,
         })
@@ -85,7 +83,7 @@ pub struct InsertToken {
     pub uuid: TokenUuid,
     pub user_id: UserId,
     pub name: NonEmpty,
-    pub jwt: String,
+    pub jwt: Jwt,
     pub creation: i64,
     pub expiration: i64,
 }
@@ -128,7 +126,7 @@ impl InsertToken {
             uuid: TokenUuid::new(),
             user_id: query_user.id,
             name,
-            jwt: jwt.to_string(),
+            jwt,
             creation: claims.iat as i64,
             expiration: claims.exp as i64,
         })

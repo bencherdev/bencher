@@ -71,6 +71,41 @@ where
     }
 }
 
+#[cfg(feature = "db")]
+macro_rules! typed_string {
+    ($name:ident) => {
+        impl<DB> diesel::serialize::ToSql<diesel::sql_types::Text, DB> for $name
+        where
+            DB: diesel::backend::Backend,
+            for<'a> String: diesel::serialize::ToSql<diesel::sql_types::Text, DB>
+                + Into<
+                    <DB::BindCollector<'a> as diesel::query_builder::BindCollector<'a, DB>>::Buffer,
+                >,
+        {
+            fn to_sql<'b>(
+                &'b self,
+                out: &mut diesel::serialize::Output<'b, '_, DB>,
+            ) -> diesel::serialize::Result {
+                out.set_value(self.to_string());
+                Ok(diesel::serialize::IsNull::No)
+            }
+        }
+
+        impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Text, DB> for $name
+        where
+            DB: diesel::backend::Backend,
+            String: diesel::deserialize::FromSql<diesel::sql_types::Text, DB>,
+        {
+            fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+                Ok(Self(String::from_sql(bytes)?.as_str().parse()?))
+            }
+        }
+    };
+}
+
+#[cfg(feature = "db")]
+pub(crate) use typed_string;
+
 #[cfg(test)]
 mod test {
 

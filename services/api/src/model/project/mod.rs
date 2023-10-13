@@ -1,4 +1,4 @@
-use std::{str::FromStr, string::ToString};
+use std::string::ToString;
 
 use bencher_json::{
     project::{JsonProjectPatch, JsonProjectPatchNull, JsonUpdateProject, Visibility},
@@ -51,7 +51,7 @@ pub struct QueryProject {
     pub organization_id: OrganizationId,
     pub name: NonEmpty,
     pub slug: Slug,
-    pub url: Option<String>,
+    pub url: Option<Url>,
     pub visibility: Visibility,
     pub created: i64,
     pub modified: i64,
@@ -60,30 +60,6 @@ pub struct QueryProject {
 impl QueryProject {
     fn_get!(project, ProjectId);
     fn_get_uuid!(project, ProjectId, ProjectUuid);
-
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonProject, ApiError> {
-        let Self {
-            uuid,
-            organization_id,
-            name,
-            slug,
-            url,
-            visibility,
-            created,
-            modified,
-            ..
-        } = self;
-        Ok(JsonProject {
-            uuid,
-            organization: QueryOrganization::get_uuid(conn, organization_id)?,
-            name,
-            slug,
-            url: ok_url(url.as_deref())?,
-            visibility,
-            created: to_date_time(created).map_err(ApiError::from)?,
-            modified: to_date_time(modified).map_err(ApiError::from)?,
-        })
-    }
 
     pub fn from_resource_id(
         conn: &mut DbConnection,
@@ -145,14 +121,30 @@ impl QueryProject {
             )))
         }
     }
-}
 
-fn ok_url(url: Option<&str>) -> Result<Option<Url>, ApiError> {
-    Ok(if let Some(url) = url {
-        Some(Url::from_str(url).map_err(ApiError::from)?)
-    } else {
-        None
-    })
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonProject, ApiError> {
+        let Self {
+            uuid,
+            organization_id,
+            name,
+            slug,
+            url,
+            visibility,
+            created,
+            modified,
+            ..
+        } = self;
+        Ok(JsonProject {
+            uuid,
+            organization: QueryOrganization::get_uuid(conn, organization_id)?,
+            name,
+            slug,
+            url,
+            visibility,
+            created: to_date_time(created).map_err(ApiError::from)?,
+            modified: to_date_time(modified).map_err(ApiError::from)?,
+        })
+    }
 }
 
 impl From<&InsertProject> for Organization {
@@ -187,7 +179,7 @@ pub struct InsertProject {
     pub organization_id: OrganizationId,
     pub name: NonEmpty,
     pub slug: Slug,
-    pub url: Option<String>,
+    pub url: Option<Url>,
     pub visibility: Visibility,
     pub created: i64,
     pub modified: i64,
@@ -212,7 +204,7 @@ impl InsertProject {
             organization_id: QueryOrganization::from_resource_id(conn, organization)?.id,
             name,
             slug,
-            url: url.map(|u| u.to_string()),
+            url,
             visibility: visibility.unwrap_or_default(),
             created: timestamp,
             modified: timestamp,
@@ -225,7 +217,7 @@ impl InsertProject {
 pub struct UpdateProject {
     pub name: Option<NonEmpty>,
     pub slug: Option<Slug>,
-    pub url: Option<Option<String>>,
+    pub url: Option<Option<Url>>,
     pub visibility: Option<Visibility>,
     pub modified: i64,
 }
@@ -255,7 +247,7 @@ impl From<JsonUpdateProject> for UpdateProject {
         Self {
             name,
             slug,
-            url: url.map(|url| url.map(Into::into)),
+            url,
             visibility,
             modified: Utc::now().timestamp(),
         }

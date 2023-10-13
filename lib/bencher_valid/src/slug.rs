@@ -19,6 +19,9 @@ use crate::{benchmark_name::MAX_BENCHMARK_NAME_LEN, ValidError};
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
 pub struct Slug(String);
 
+#[cfg(feature = "db")]
+crate::typed_string!(Slug);
+
 impl FromStr for Slug {
     type Err = ValidError;
 
@@ -66,33 +69,6 @@ impl Visitor<'_> for SlugVisitor {
         E: de::Error,
     {
         value.parse().map_err(E::custom)
-    }
-}
-
-#[cfg(feature = "db")]
-impl<DB> diesel::serialize::ToSql<diesel::sql_types::Text, DB> for Slug
-where
-    DB: diesel::backend::Backend,
-    for<'a> String: diesel::serialize::ToSql<diesel::sql_types::Text, DB>
-        + Into<<DB::BindCollector<'a> as diesel::query_builder::BindCollector<'a, DB>>::Buffer>,
-{
-    fn to_sql<'b>(
-        &'b self,
-        out: &mut diesel::serialize::Output<'b, '_, DB>,
-    ) -> diesel::serialize::Result {
-        out.set_value(self.to_string());
-        Ok(diesel::serialize::IsNull::No)
-    }
-}
-
-#[cfg(feature = "db")]
-impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Text, DB> for Slug
-where
-    DB: diesel::backend::Backend,
-    String: diesel::deserialize::FromSql<diesel::sql_types::Text, DB>,
-{
-    fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
-        Ok(Self(String::from_sql(bytes)?.as_str().parse()?))
     }
 }
 
