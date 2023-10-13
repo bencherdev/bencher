@@ -300,10 +300,10 @@ pub mod table {
                         start_time: metric.start_time,
                         end_time: metric.end_time,
                         version_number: metric.version.number,
-                        version_hash: VersionHash(metric.version.hash),
+                        version_hash: DisplayOption(metric.version.hash),
                         metric: metric.metric,
-                        lower_limit: BoundaryLimit(metric.boundary.lower_limit),
-                        upper_limit: BoundaryLimit(metric.boundary.upper_limit),
+                        lower_limit: DisplayOption(metric.boundary.lower_limit),
+                        upper_limit: DisplayOption(metric.boundary.upper_limit),
                     });
                 }
             }
@@ -332,44 +332,27 @@ pub mod table {
         #[tabled(rename = "Version Number")]
         pub version_number: VersionNumber,
         #[tabled(rename = "Version Hash")]
-        pub version_hash: VersionHash,
+        pub version_hash: DisplayOption<GitHash>,
         #[tabled(rename = "Metric Value")]
         pub metric: JsonMetric,
         #[tabled(rename = "Lower Boundary Limit")]
-        pub lower_limit: BoundaryLimit,
+        pub lower_limit: DisplayOption<OrderedFloat<f64>>,
         #[tabled(rename = "Upper Boundary Limit")]
-        pub upper_limit: BoundaryLimit,
+        pub upper_limit: DisplayOption<OrderedFloat<f64>>,
     }
 
-    pub struct VersionHash(Option<GitHash>);
+    pub struct DisplayOption<T>(Option<T>);
 
-    impl fmt::Display for VersionHash {
+    impl<T> fmt::Display for DisplayOption<T>
+    where
+        T: fmt::Display,
+    {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(
-                f,
-                "{}",
-                if let Some(git_hash) = &self.0 {
-                    git_hash.as_ref()
-                } else {
-                    ""
-                }
-            )
-        }
-    }
-
-    pub struct BoundaryLimit(Option<OrderedFloat<f64>>);
-
-    impl fmt::Display for BoundaryLimit {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(
-                f,
-                "{}",
-                if let Some(limit) = &self.0 {
-                    limit.to_string()
-                } else {
-                    String::new()
-                }
-            )
+            if let Some(t) = &self.0 {
+                write!(f, "{t}")
+            } else {
+                write!(f, "")
+            }
         }
     }
 }

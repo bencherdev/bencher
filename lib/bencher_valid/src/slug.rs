@@ -105,7 +105,11 @@ impl Slug {
     pub const MAX: usize = MAX_BENCHMARK_NAME_LEN;
 
     #[cfg(feature = "full")]
-    pub fn new(slug: &str) -> Self {
+    pub fn new<S>(slug: S) -> Self
+    where
+        S: AsRef<str>,
+    {
+        let slug = slug.as_ref();
         let rand_suffix = rand::random::<u32>().to_string();
         let slug = slug::slugify(if slug.len() + 1 + rand_suffix.len() > Self::MAX {
             let mid = Self::MAX - (1 + rand_suffix.len());

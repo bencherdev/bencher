@@ -111,7 +111,7 @@ impl InsertTestbed {
         testbed: JsonNewTestbed,
     ) -> Self {
         let JsonNewTestbed { name, slug } = testbed;
-        let slug = unwrap_child_slug!(conn, project_id, name.as_ref(), slug, testbed, QueryTestbed);
+        let slug = unwrap_child_slug!(conn, project_id, &name, slug, testbed, QueryTestbed);
         let timestamp = Utc::now().timestamp();
         Self {
             uuid: TestbedUuid::new(),

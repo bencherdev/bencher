@@ -1,4 +1,7 @@
-use bencher_json::{project::branch::VersionNumber, GitHash, VersionUuid};
+use bencher_json::{
+    project::branch::{JsonVersion, VersionNumber},
+    GitHash, VersionUuid,
+};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
@@ -22,7 +25,7 @@ pub struct QueryVersion {
     pub uuid: VersionUuid,
     pub project_id: ProjectId,
     pub number: VersionNumber,
-    pub hash: Option<String>,
+    pub hash: Option<GitHash>,
 }
 
 impl QueryVersion {
@@ -53,6 +56,11 @@ impl QueryVersion {
             InsertVersion::increment(conn, project_id, branch_id, None)
         }
     }
+
+    pub fn into_json(self) -> JsonVersion {
+        let Self { number, hash, .. } = self;
+        JsonVersion { number, hash }
+    }
 }
 
 #[derive(Debug, diesel::Insertable)]
@@ -61,7 +69,7 @@ pub struct InsertVersion {
     pub uuid: VersionUuid,
     pub project_id: ProjectId,
     pub number: VersionNumber,
-    pub hash: Option<String>,
+    pub hash: Option<GitHash>,
 }
 
 impl InsertVersion {

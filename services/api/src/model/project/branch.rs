@@ -1,10 +1,6 @@
-use std::str::FromStr;
-
 use bencher_json::{
-    project::branch::{
-        JsonBranchVersion, JsonStartPoint, JsonUpdateBranch, JsonVersion, BRANCH_MAIN_STR,
-    },
-    BranchName, BranchUuid, GitHash, JsonBranch, JsonNewBranch, ResourceId, Slug,
+    project::branch::{JsonBranchVersion, JsonStartPoint, JsonUpdateBranch, BRANCH_MAIN_STR},
+    BranchName, BranchUuid, JsonBranch, JsonNewBranch, ResourceId, Slug,
 };
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -42,7 +38,7 @@ pub struct QueryBranch {
     pub id: BranchId,
     pub uuid: BranchUuid,
     pub project_id: ProjectId,
-    pub name: String,
+    pub name: BranchName,
     pub slug: Slug,
     pub created: i64,
     pub modified: i64,
@@ -90,20 +86,12 @@ impl QueryBranch {
             created,
             modified,
         } = Self::get(conn, branch_id)?.into_json(conn)?;
-        let QueryVersion { number, hash, .. } = QueryVersion::get(conn, version_id)?;
         Ok(JsonBranchVersion {
             uuid,
             project,
             name,
             slug,
-            version: JsonVersion {
-                number,
-                hash: if let Some(version_hash) = hash.as_deref() {
-                    Some(GitHash::from_str(version_hash)?)
-                } else {
-                    None
-                },
-            },
+            version: QueryVersion::get(conn, version_id)?.into_json(),
             created,
             modified,
         })
@@ -122,7 +110,7 @@ impl QueryBranch {
         Ok(JsonBranch {
             uuid,
             project: QueryProject::get_uuid(conn, project_id)?,
-            name: BranchName::from_str(&name).map_err(ApiError::from)?,
+            name,
             slug,
             created: to_date_time(created).map_err(ApiError::from)?,
             modified: to_date_time(modified).map_err(ApiError::from)?,
@@ -140,7 +128,7 @@ impl QueryBranch {
 pub struct InsertBranch {
     pub uuid: BranchUuid,
     pub project_id: ProjectId,
-    pub name: String,
+    pub name: BranchName,
     pub slug: Slug,
     pub created: i64,
     pub modified: i64,
@@ -158,7 +146,7 @@ impl InsertBranch {
         Self {
             uuid: BranchUuid::new(),
             project_id,
-            name: name.into(),
+            name,
             slug,
             created: timestamp,
             modified: timestamp,
@@ -263,7 +251,7 @@ impl InsertBranch {
 #[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = branch_table)]
 pub struct UpdateBranch {
-    pub name: Option<String>,
+    pub name: Option<BranchName>,
     pub slug: Option<Slug>,
     pub modified: i64,
 }
@@ -272,7 +260,7 @@ impl From<JsonUpdateBranch> for UpdateBranch {
     fn from(update: JsonUpdateBranch) -> Self {
         let JsonUpdateBranch { name, slug } = update;
         Self {
-            name: name.map(Into::into),
+            name,
             slug,
             modified: Utc::now().timestamp(),
         }

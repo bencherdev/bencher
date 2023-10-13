@@ -16,6 +16,8 @@ use crate::ValidError;
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
 pub struct Email(String);
 
 impl FromStr for Email {
@@ -65,6 +67,33 @@ impl Visitor<'_> for EmailVisitor {
         E: de::Error,
     {
         value.parse().map_err(E::custom)
+    }
+}
+
+#[cfg(feature = "db")]
+impl<DB> diesel::serialize::ToSql<diesel::sql_types::Text, DB> for Email
+where
+    DB: diesel::backend::Backend,
+    for<'a> String: diesel::serialize::ToSql<diesel::sql_types::Text, DB>
+        + Into<<DB::BindCollector<'a> as diesel::query_builder::BindCollector<'a, DB>>::Buffer>,
+{
+    fn to_sql<'b>(
+        &'b self,
+        out: &mut diesel::serialize::Output<'b, '_, DB>,
+    ) -> diesel::serialize::Result {
+        out.set_value(self.to_string());
+        Ok(diesel::serialize::IsNull::No)
+    }
+}
+
+#[cfg(feature = "db")]
+impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Text, DB> for Email
+where
+    DB: diesel::backend::Backend,
+    String: diesel::deserialize::FromSql<diesel::sql_types::Text, DB>,
+{
+    fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+        Ok(Self(String::from_sql(bytes)?.as_str().parse()?))
     }
 }
 

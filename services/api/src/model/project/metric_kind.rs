@@ -150,14 +150,7 @@ impl InsertMetricKind {
         metric_kind: JsonNewMetricKind,
     ) -> Self {
         let JsonNewMetricKind { name, slug, units } = metric_kind;
-        let slug = unwrap_child_slug!(
-            conn,
-            project_id,
-            name.as_ref(),
-            slug,
-            metric_kind,
-            QueryMetricKind
-        );
+        let slug = unwrap_child_slug!(conn, project_id, &name, slug, metric_kind, QueryMetricKind);
         let timestamp = Utc::now().timestamp();
         Self {
             uuid: MetricKindUuid::new(),

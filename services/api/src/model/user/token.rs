@@ -120,7 +120,7 @@ impl InsertToken {
             max_ttl
         };
 
-        let jwt = secret_key.new_api_key(query_user.email.as_str().parse()?, ttl)?;
+        let jwt = secret_key.new_api_key(query_user.email, ttl)?;
 
         let claims = secret_key.validate_api_key(&jwt.as_ref().parse()?)?;
 

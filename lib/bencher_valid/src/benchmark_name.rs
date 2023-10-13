@@ -21,6 +21,8 @@ const BENCHER_IGNORE_KEBAB_CASE: &str = "-bencher-ignore";
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
 pub struct BenchmarkName(String);
 
 impl BenchmarkName {
@@ -45,13 +47,13 @@ impl BenchmarkName {
 
     /// Strip special ignore suffix from benchmark name
     /// Returns the stripped name and whether it is ignored
-    pub fn strip_ignore(&self) -> (&str, bool) {
+    pub fn to_strip_ignore(&self) -> (Self, bool) {
         let name = self
             .0
             .strip_suffix(BENCHER_IGNORE_SNAKE_CASE)
             .or_else(|| self.0.strip_suffix(BENCHER_IGNORE_PASCAL_CASE))
             .or_else(|| self.0.strip_suffix(BENCHER_IGNORE_KEBAB_CASE));
-        (name.unwrap_or(&self.0), name.is_some())
+        (Self(name.unwrap_or(&self.0).to_owned()), name.is_some())
     }
 }
 
@@ -102,6 +104,33 @@ impl Visitor<'_> for BenchmarkNameVisitor {
         E: de::Error,
     {
         value.parse().map_err(E::custom)
+    }
+}
+
+#[cfg(feature = "db")]
+impl<DB> diesel::serialize::ToSql<diesel::sql_types::Text, DB> for BenchmarkName
+where
+    DB: diesel::backend::Backend,
+    for<'a> String: diesel::serialize::ToSql<diesel::sql_types::Text, DB>
+        + Into<<DB::BindCollector<'a> as diesel::query_builder::BindCollector<'a, DB>>::Buffer>,
+{
+    fn to_sql<'b>(
+        &'b self,
+        out: &mut diesel::serialize::Output<'b, '_, DB>,
+    ) -> diesel::serialize::Result {
+        out.set_value(self.to_string());
+        Ok(diesel::serialize::IsNull::No)
+    }
+}
+
+#[cfg(feature = "db")]
+impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Text, DB> for BenchmarkName
+where
+    DB: diesel::backend::Backend,
+    String: diesel::deserialize::FromSql<diesel::sql_types::Text, DB>,
+{
+    fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+        Ok(Self(String::from_sql(bytes)?.as_str().parse()?))
     }
 }
 
@@ -187,47 +216,63 @@ mod test {
         let name = "a";
         let benchmark_name = BenchmarkName::from_str(name).unwrap();
         assert_eq!(benchmark_name.as_ref(), name);
-        assert_eq!(benchmark_name.strip_ignore(), (name, false));
+        assert_eq!(benchmark_name.to_strip_ignore(), (benchmark_name, false));
 
         let name = "ab";
         let benchmark_name = BenchmarkName::from_str(name).unwrap();
         assert_eq!(benchmark_name.as_ref(), name);
-        assert_eq!(benchmark_name.strip_ignore(), (name, false));
+        assert_eq!(benchmark_name.to_strip_ignore(), (benchmark_name, false));
 
         let name = "abc";
         let benchmark_name = BenchmarkName::from_str(name).unwrap();
         assert_eq!(benchmark_name.as_ref(), name);
-        assert_eq!(benchmark_name.strip_ignore(), (name, false));
+        assert_eq!(benchmark_name.to_strip_ignore(), (benchmark_name, false));
 
         let name = "ABC";
         let benchmark_name = BenchmarkName::from_str(name).unwrap();
         assert_eq!(benchmark_name.as_ref(), name);
-        assert_eq!(benchmark_name.strip_ignore(), (name, false));
+        assert_eq!(benchmark_name.to_strip_ignore(), (benchmark_name, false));
 
         let name = "Abc";
         let benchmark_name = BenchmarkName::from_str(name).unwrap();
         assert_eq!(benchmark_name.as_ref(), name);
-        assert_eq!(benchmark_name.strip_ignore(), (name, false));
+        assert_eq!(benchmark_name.to_strip_ignore(), (benchmark_name, false));
 
         let name = "0123456789";
         let benchmark_name = BenchmarkName::from_str(name).unwrap();
         assert_eq!(benchmark_name.as_ref(), name);
-        assert_eq!(benchmark_name.strip_ignore(), (name, false));
+        assert_eq!(benchmark_name.to_strip_ignore(), (benchmark_name, false));
 
         let benchmark_name = BenchmarkName::from_str("snake_bencher_ignore").unwrap();
+        let stripped_benchmark_name = BenchmarkName::from_str("snake").unwrap();
         assert_eq!(benchmark_name.as_ref(), "snake_bencher_ignore");
-        assert_eq!(benchmark_name.strip_ignore(), ("snake", true));
+        assert_eq!(
+            benchmark_name.to_strip_ignore(),
+            (stripped_benchmark_name, true)
+        );
 
         let benchmark_name = BenchmarkName::from_str("camelBencherIgnore").unwrap();
+        let stripped_benchmark_name = BenchmarkName::from_str("camel").unwrap();
         assert_eq!(benchmark_name.as_ref(), "camelBencherIgnore");
-        assert_eq!(benchmark_name.strip_ignore(), ("camel", true));
+        assert_eq!(
+            benchmark_name.to_strip_ignore(),
+            (stripped_benchmark_name, true)
+        );
 
         let benchmark_name = BenchmarkName::from_str("PascalBencherIgnore").unwrap();
+        let stripped_benchmark_name = BenchmarkName::from_str("Pascal").unwrap();
         assert_eq!(benchmark_name.as_ref(), "PascalBencherIgnore");
-        assert_eq!(benchmark_name.strip_ignore(), ("Pascal", true));
+        assert_eq!(
+            benchmark_name.to_strip_ignore(),
+            (stripped_benchmark_name, true)
+        );
 
         let benchmark_name = BenchmarkName::from_str("kebab-bencher-ignore").unwrap();
+        let stripped_benchmark_name = BenchmarkName::from_str("kebab").unwrap();
         assert_eq!(benchmark_name.as_ref(), "kebab-bencher-ignore");
-        assert_eq!(benchmark_name.strip_ignore(), ("kebab", true));
+        assert_eq!(
+            benchmark_name.to_strip_ignore(),
+            (stripped_benchmark_name, true)
+        );
     }
 }

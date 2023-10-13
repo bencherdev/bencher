@@ -139,7 +139,7 @@ impl ReportResults {
         #[cfg(feature = "plus")] usage: &mut u64,
     ) -> Result<(), HttpError> {
         // If benchmark name is ignored then strip the special suffix before querying
-        let (benchmark_name, ignore_benchmark) = benchmark_name.strip_ignore();
+        let (benchmark_name, ignore_benchmark) = benchmark_name.to_strip_ignore();
         let benchmark_id = self.benchmark_id(conn, benchmark_name)?;
 
         let insert_perf = InsertPerf::from_json(self.report_id, iteration, benchmark_id);
@@ -186,7 +186,7 @@ impl ReportResults {
     fn benchmark_id(
         &mut self,
         conn: &mut DbConnection,
-        benchmark_name: &str,
+        benchmark_name: BenchmarkName,
     ) -> Result<BenchmarkId, HttpError> {
         QueryBenchmark::get_or_create(conn, self.project_id, benchmark_name).map_err(Into::into)
     }

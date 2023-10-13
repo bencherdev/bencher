@@ -155,7 +155,7 @@ async fn post_inner(
     }));
     let message = Message {
         to_name: Some(insert_user.name.clone().into()),
-        to_email: insert_user.email.clone(),
+        to_email: insert_user.email.clone().into(),
         subject: Some("Confirm Bencher Signup".into()),
         body: Some(body),
     };
@@ -166,13 +166,13 @@ async fn post_inner(
         for admin in admins {
             let message = Message {
                 to_name: Some(admin.name.clone().into()),
-                to_email: admin.email.clone(),
+                to_email: admin.email.into(),
                 subject: Some("🐰 New Bencher User".into()),
                 body: Some(Body::NewUser(NewUserBody {
                     admin: admin.name.clone().into(),
                     endpoint: context.endpoint.clone(),
                     name: insert_user.name.clone().into(),
-                    email: insert_user.email.clone(),
+                    email: insert_user.email.clone().into(),
                     invited: invite.is_some(),
                 })),
             };

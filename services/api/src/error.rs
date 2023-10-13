@@ -1,5 +1,5 @@
-use bencher_json::ResourceId;
 use bencher_json::{urlencoded::UrlEncodedError, ThresholdUuid};
+use bencher_json::{Email, ResourceId};
 use bencher_plot::PlotError;
 use dropshot::HttpError;
 use http::StatusCode;
@@ -87,7 +87,7 @@ pub enum ApiError {
     #[error("User is not admin and the authenticated user ({0}) does not match the requested user ({1})",)]
     SameUser(UserId, UserId),
     #[error("User account locked: ID {0} email {1}")]
-    Locked(UserId, String),
+    Locked(UserId, Email),
     #[error("Invitation email ({email}) is connected to user {email_user_id} which doesn't match {user_id}")]
     InviteEmail {
         user_id: UserId,

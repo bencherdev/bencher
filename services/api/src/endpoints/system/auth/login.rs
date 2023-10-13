@@ -125,7 +125,7 @@ async fn post_inner(
     }));
     let message = Message {
         to_name: Some(query_user.name.into()),
-        to_email: query_user.email,
+        to_email: query_user.email.into(),
         subject: Some("Confirm Bencher Login".into()),
         body: Some(body),
     };

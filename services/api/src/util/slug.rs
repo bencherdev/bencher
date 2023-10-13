@@ -33,13 +33,16 @@ pub(crate) use unwrap_child_slug;
 pub type SlugExistsFn = dyn FnOnce(&mut DbConnection, Option<ProjectId>, &str) -> bool;
 
 #[allow(clippy::expect_used)]
-pub fn validate_slug(
+pub fn validate_slug<S>(
     conn: &mut DbConnection,
     parent: Option<ProjectId>,
-    name: &str,
+    name: S,
     slug: Option<Slug>,
     exists: Box<SlugExistsFn>,
-) -> Slug {
+) -> Slug
+where
+    S: AsRef<str>,
+{
     let mut slug = if let Some(slug) = slug {
         slug.into()
     } else {

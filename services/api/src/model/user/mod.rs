@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use bencher_json::{Email, JsonSignup, JsonUser, ResourceId, Slug, UserName, UserUuid};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 
@@ -27,7 +25,7 @@ pub struct QueryUser {
     pub uuid: UserUuid,
     pub name: UserName,
     pub slug: Slug,
-    pub email: String,
+    pub email: Email,
     pub admin: bool,
     pub locked: bool,
 }
@@ -81,7 +79,7 @@ impl QueryUser {
             uuid,
             name,
             slug,
-            email: Email::from_str(&email).map_err(ApiError::from)?,
+            email,
             admin,
             locked,
         })
@@ -94,7 +92,7 @@ pub struct InsertUser {
     pub uuid: UserUuid,
     pub name: UserName,
     pub slug: Slug,
-    pub email: String,
+    pub email: Email,
     pub admin: bool,
     pub locked: bool,
 }
@@ -109,7 +107,7 @@ impl InsertUser {
             uuid: UserUuid::new(),
             name,
             slug,
-            email: email.into(),
+            email,
             admin: false,
             locked: false,
         })
