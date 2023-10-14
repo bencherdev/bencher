@@ -247,6 +247,8 @@ pub enum BencherResource {
     Metric,
     Boundary,
     Alert,
+    #[cfg(feature = "plus")]
+    Plan,
 }
 
 impl BencherResource {
@@ -267,6 +269,8 @@ impl BencherResource {
             Self::Metric => "Metric",
             Self::Boundary => "Boundary",
             Self::Alert => "Alert",
+            #[cfg(feature = "plus")]
+            Self::Plan => "Plan",
         }
     }
 }
@@ -352,6 +356,13 @@ where
     E: std::fmt::Display,
 {
     HttpError::for_client_error(None, StatusCode::CONFLICT, error.to_string())
+}
+
+pub fn locked_error<E>(error: E) -> HttpError
+where
+    E: std::fmt::Display,
+{
+    HttpError::for_client_error(None, StatusCode::LOCKED, error.to_string())
 }
 
 pub fn resource_not_found_error<Id, E>(resource: &BencherResource, id: Id, error: E) -> HttpError

@@ -13,12 +13,16 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{response_accepted, response_ok, CorsResponse, ResponseAccepted, ResponseOk},
+        endpoint::{CorsResponse, ResponseAccepted, ResponseOk},
         Endpoint,
+    },
+    error::{
+        conflict_error, locked_error, not_found_error, resource_conflict_err,
+        resource_not_found_err,
     },
     model::organization::QueryOrganization,
     model::user::{auth::AuthUser, QueryUser},
-    schema, ApiError,
+    schema,
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -50,24 +54,14 @@ pub async fn org_plan_post(
     body: TypedBody<JsonNewPlan>,
 ) -> Result<ResponseAccepted<JsonPlan>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Post;
-
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
         &auth_user,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    response_accepted!(endpoint, json)
+    .await?;
+    Ok(Endpoint::Post.response_accepted(json))
 }
 
 async fn post_inner(
@@ -75,14 +69,11 @@ async fn post_inner(
     path_params: OrgPlanParams,
     json_plan: JsonNewPlan,
     auth_user: &AuthUser,
-) -> Result<JsonPlan, ApiError> {
+) -> Result<JsonPlan, HttpError> {
     // Check to see if there is a Biller
     // The Biller is only available on Bencher Cloud
     let Some(biller) = &context.biller else {
-        return Err(ApiError::BencherCloudOnly(format!(
-            "POST /v0/organizations/{}/plan",
-            path_params.organization
-        )));
+        return Err(locked_error(format!("Tried to use a Bencher Cloud route when Self-Hosted: POST /v0/organizations/{org}/plan", org =path_params.organization)));
     };
     let conn = &mut *context.conn().await;
 
@@ -95,26 +86,32 @@ async fn post_inner(
 
     // Check to make sure the organization does not already have a metered or licensed plan
     if let Some(subscription) = query_org.subscription {
-        return Err(ApiError::PlanMetered(query_org.id, subscription));
+        return Err(conflict_error(format!(
+            "Organization already has a metered plan: {subscription}"
+        )));
     } else if let Some(license) = query_org.license {
-        return Err(ApiError::PlanLicensed(query_org.id, license));
+        return Err(conflict_error(format!(
+            "Organization already has a licensed plan: {license}"
+        )));
     }
 
     let json_user = schema::user::table
         .filter(schema::user::id.eq(auth_user.id))
         .first::<QueryUser>(conn)
-        .map_err(ApiError::from)?
+        .map_err(resource_not_found_err!(User, auth_user))?
         .into_json();
 
     // Create a customer for the user
     let customer = biller
         .get_or_create_customer(&json_user.name, &json_user.email, json_user.uuid.into())
-        .await?;
+        .await
+        .map_err(resource_not_found_err!(Plan, json_user))?;
 
     // Create a payment method for the user
     let payment_method = biller
         .create_payment_method(&customer, json_plan.card)
-        .await?;
+        .await
+        .map_err(resource_not_found_err!(Plan, &customer))?;
 
     // Create a metered subscription for the organization
     let subscription = biller
@@ -125,15 +122,19 @@ async fn post_inner(
             json_plan.level,
             DEFAULT_PRICE_NAME.into(),
         )
-        .await?;
+        .await
+        .map_err(resource_not_found_err!(Plan, payment_method))?;
 
     // Add the metered subscription to the organization
     diesel::update(schema::organization::table.filter(schema::organization::id.eq(query_org.id)))
         .set(schema::organization::subscription.eq(subscription.id.as_ref()))
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(Plan, subscription))?;
 
-    biller.get_plan(&subscription.id).await.map_err(Into::into)
+    biller
+        .get_plan(&subscription.id)
+        .await
+        .map_err(resource_not_found_err!(Plan, subscription))
 }
 
 #[endpoint {
@@ -146,32 +147,21 @@ pub async fn org_plan_get(
     path_params: Path<OrgPlanParams>,
 ) -> Result<ResponseOk<JsonPlan>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::GetOne;
-
-    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
-        .await
-        .map_err(|e| {
-            if let ApiError::HttpError(e) = e {
-                e
-            } else {
-                endpoint.err(e).into()
-            }
-        })?;
-
-    response_ok!(endpoint, json)
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Endpoint::GetOne.response_ok(json))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: OrgPlanParams,
     auth_user: &AuthUser,
-) -> Result<JsonPlan, ApiError> {
+) -> Result<JsonPlan, HttpError> {
     // Check to see if there is a Biller
     // The Biller is only available on Bencher Cloud
     let Some(biller) = &context.biller else {
-        return Err(ApiError::BencherCloudOnly(format!(
-            "GET /v0/organizations/{}/plan",
-            path_params.organization
+        return Err(locked_error(format!(
+            "Tried to use a Bencher Cloud route when Self-Hosted: GET /v0/organizations/{org}/plan",
+            org = path_params.organization
         )));
     };
     let conn = &mut *context.conn().await;
@@ -184,9 +174,17 @@ async fn get_one_inner(
         .is_allowed_organization(auth_user, Permission::Manage, &query_org)?;
 
     if let Some(subscription) = &query_org.subscription {
-        let subscription_id = subscription.parse()?;
-        biller.get_plan(&subscription_id).await.map_err(Into::into)
+        let subscription_id = subscription
+            .parse()
+            .map_err(resource_not_found_err!(Plan, subscription))?;
+        biller
+            .get_plan(&subscription_id)
+            .await
+            .map_err(resource_not_found_err!(Plan, subscription))
     } else {
-        Err(ApiError::NoMeteredPlan(query_org.id))
+        Err(not_found_error(format!(
+            "Failed to find plan for organization: {org}",
+            org = path_params.organization
+        )))
     }
 }
