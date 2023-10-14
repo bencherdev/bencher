@@ -19,7 +19,7 @@ crate::util::typed_id::typed_id!(TokenId);
 macro_rules! same_user {
     ($auth_user:ident, $rbac:expr, $user_id:expr) => {
         if !($auth_user.is_admin(&$rbac) || $auth_user.id == $user_id) {
-            return Err(crate::error::ApiError::SameUser($auth_user.id, $user_id));
+            return Err(crate::error::forbidden_error(format!("User is not admin and the authenticated user ({auth_user}) does not match the requested user ({requested_user})", auth_user = $auth_user.id, requested_user = $user_id))).map_err(Into::into);
         }
     };
 }

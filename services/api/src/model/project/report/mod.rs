@@ -80,7 +80,7 @@ impl QueryReport {
 
         Ok(JsonReport {
             uuid,
-            user: QueryUser::get(conn, user_id)?.into_json()?,
+            user: QueryUser::get(conn, user_id)?.into_json(),
             project: query_project.into_json(conn)?,
             branch: QueryBranch::get_branch_version_json(conn, branch_id, version_id)?,
             testbed: QueryTestbed::get(conn, testbed_id)?.into_json(conn)?,

@@ -2,7 +2,7 @@
 
 use bencher_json::{
     organization::plan::{JsonNewPlan, JsonPlan, DEFAULT_PRICE_NAME},
-    JsonUser, ResourceId,
+    ResourceId,
 };
 use bencher_rbac::organization::Permission;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -100,11 +100,11 @@ async fn post_inner(
         return Err(ApiError::PlanLicensed(query_org.id, license));
     }
 
-    let json_user: JsonUser = schema::user::table
+    let json_user = schema::user::table
         .filter(schema::user::id.eq(auth_user.id))
         .first::<QueryUser>(conn)
         .map_err(ApiError::from)?
-        .into_json()?;
+        .into_json();
 
     // Create a customer for the user
     let customer = biller

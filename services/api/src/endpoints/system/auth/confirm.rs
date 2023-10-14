@@ -66,7 +66,7 @@ async fn post_inner(
         .filter(schema::user::email.eq(email))
         .first::<QueryUser>(conn)
         .map_err(ApiError::from)?
-        .into_json()?;
+        .into_json();
 
     let token = context
         .secret_key

@@ -1,15 +1,16 @@
 use bencher_json::{Email, JsonSignup, JsonUser, ResourceId, Slug, UserName, UserUuid};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use dropshot::HttpError;
 
 use crate::{
     context::DbConnection,
+    error::resource_not_found_err,
     schema::{self, user as user_table},
     util::{
         query::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
         slug::unwrap_slug,
     },
-    ApiError,
 };
 
 pub mod auth;
@@ -35,37 +36,37 @@ impl QueryUser {
     fn_get_id!(user, UserId, UserUuid);
     fn_get_uuid!(user, UserId, UserUuid);
 
-    pub fn get_id_from_email(conn: &mut DbConnection, email: &str) -> Result<UserId, ApiError> {
+    pub fn get_id_from_email(conn: &mut DbConnection, email: &str) -> Result<UserId, HttpError> {
         schema::user::table
             .filter(schema::user::email.eq(email))
             .select(schema::user::id)
             .first(conn)
-            .map_err(ApiError::from)
+            .map_err(resource_not_found_err!(User, email))
     }
 
-    pub fn get_email_from_id(conn: &mut DbConnection, id: UserId) -> Result<String, ApiError> {
+    pub fn get_email_from_id(conn: &mut DbConnection, id: UserId) -> Result<String, HttpError> {
         schema::user::table
             .filter(schema::user::id.eq(id))
             .select(schema::user::email)
             .first(conn)
-            .map_err(ApiError::from)
+            .map_err(resource_not_found_err!(User, id))
     }
 
-    pub fn from_resource_id(conn: &mut DbConnection, user: &ResourceId) -> Result<Self, ApiError> {
+    pub fn from_resource_id(conn: &mut DbConnection, user: &ResourceId) -> Result<Self, HttpError> {
         schema::user::table
             .filter(resource_id(user)?)
             .first(conn)
-            .map_err(ApiError::from)
+            .map_err(resource_not_found_err!(User, user.clone()))
     }
 
-    pub fn get_admins(conn: &mut DbConnection) -> Result<Vec<QueryUser>, ApiError> {
+    pub fn get_admins(conn: &mut DbConnection) -> Result<Vec<QueryUser>, HttpError> {
         schema::user::table
             .filter(schema::user::admin.eq(true))
             .load::<QueryUser>(conn)
-            .map_err(ApiError::from)
+            .map_err(resource_not_found_err!(User, true))
     }
 
-    pub fn into_json(self) -> Result<JsonUser, ApiError> {
+    pub fn into_json(self) -> JsonUser {
         let Self {
             uuid,
             name,
@@ -75,14 +76,14 @@ impl QueryUser {
             locked,
             ..
         } = self;
-        Ok(JsonUser {
+        JsonUser {
             uuid,
             name,
             slug,
             email,
             admin,
             locked,
-        })
+        }
     }
 }
 
@@ -98,18 +99,18 @@ pub struct InsertUser {
 }
 
 impl InsertUser {
-    pub fn from_json(conn: &mut DbConnection, signup: JsonSignup) -> Result<Self, ApiError> {
+    pub fn from_json(conn: &mut DbConnection, signup: JsonSignup) -> Self {
         let JsonSignup {
             name, slug, email, ..
         } = signup;
         let slug = unwrap_slug!(conn, name.as_ref(), slug, user, QueryUser);
-        Ok(Self {
+        Self {
             uuid: UserUuid::new(),
             name,
             slug,
             email,
             admin: false,
             locked: false,
-        })
+        }
     }
 }

@@ -6,14 +6,13 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{response_ok, CorsResponse, ResponseOk},
+        endpoint::{CorsResponse, ResponseOk},
         Endpoint,
     },
     model::{
         user::QueryUser,
         user::{auth::AuthUser, token::same_user},
     },
-    ApiError,
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -44,32 +43,19 @@ pub async fn user_get(
     path_params: Path<UserParams>,
 ) -> Result<ResponseOk<JsonUser>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::GetOne;
-
-    let context = rqctx.context();
-    let path_params = path_params.into_inner();
-    let json = get_one_inner(context, path_params, &auth_user)
-        .await
-        .map_err(|e| {
-            if let ApiError::HttpError(e) = e {
-                e
-            } else {
-                endpoint.err(e).into()
-            }
-        })?;
-
-    response_ok!(endpoint, json)
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Endpoint::GetOne.response_ok(json))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: UserParams,
     auth_user: &AuthUser,
-) -> Result<JsonUser, ApiError> {
+) -> Result<JsonUser, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
     same_user!(auth_user, context.rbac, query_user.id);
 
-    query_user.into_json().map_err(ApiError::from)
+    Ok(query_user.into_json())
 }

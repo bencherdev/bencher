@@ -12,9 +12,10 @@ use slog::Logger;
 use crate::{
     context::{ApiContext, Body, ButtonBody, DbConnection, Message},
     endpoints::{
-        endpoint::{response_accepted, response_ok, CorsResponse, ResponseAccepted, ResponseOk},
+        endpoint::{response_accepted, CorsResponse, ResponseAccepted, ResponseOk},
         Endpoint,
     },
+    error::resource_not_found_err,
     model::user::{auth::AuthUser, QueryUser},
     model::{
         organization::{member::QueryMember, OrganizationId, QueryOrganization},
@@ -72,8 +73,6 @@ pub async fn org_members_get(
     query_params: Query<OrgMembersQuery>,
 ) -> Result<ResponseOk<JsonMembers>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::GetLs;
-
     let json = get_ls_inner(
         rqctx.context(),
         &auth_user,
@@ -81,16 +80,8 @@ pub async fn org_members_get(
         pagination_params.into_inner(),
         query_params.into_inner(),
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    response_ok!(endpoint, json)
+    .await?;
+    Ok(Endpoint::GetOne.response_ok(json))
 }
 
 async fn get_ls_inner(
@@ -99,7 +90,7 @@ async fn get_ls_inner(
     path_params: OrgMembersParams,
     pagination_params: OrgMembersPagination,
     query_params: OrgMembersQuery,
-) -> Result<JsonMembers, ApiError> {
+) -> Result<JsonMembers, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_organization = QueryOrganization::is_allowed_resource_id(
@@ -160,8 +151,6 @@ pub async fn org_member_post(
     body: TypedBody<JsonNewMember>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Post;
-
     let json = post_inner(
         &rqctx.log,
         rqctx.context(),
@@ -169,16 +158,8 @@ pub async fn org_member_post(
         body.into_inner(),
         &auth_user,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    response_accepted!(endpoint, json)
+    .await?;
+    Ok(Endpoint::Post.response_accepted(json))
 }
 
 async fn post_inner(
@@ -187,7 +168,7 @@ async fn post_inner(
     path_params: OrgMembersParams,
     mut json_new_member: JsonNewMember,
     auth_user: &AuthUser,
-) -> Result<JsonEmpty, ApiError> {
+) -> Result<JsonEmpty, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Get the organization
@@ -216,7 +197,7 @@ async fn post_inner(
         .filter(schema::user::id.eq(auth_user.id))
         .select((schema::user::name, schema::user::email))
         .first::<(String, String)>(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_not_found_err!(User, auth_user.id))?;
 
     // Create an invite token
     let token = context.secret_key.new_invite(
@@ -303,26 +284,15 @@ pub async fn org_member_get(
     path_params: Path<OrgMemberParams>,
 ) -> Result<ResponseOk<JsonMember>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::GetOne;
-
-    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
-        .await
-        .map_err(|e| {
-            if let ApiError::HttpError(e) = e {
-                e
-            } else {
-                endpoint.err(e).into()
-            }
-        })?;
-
-    response_ok!(endpoint, json)
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Endpoint::GetOne.response_ok(json))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: OrgMemberParams,
     auth_user: &AuthUser,
-) -> Result<JsonMember, ApiError> {
+) -> Result<JsonMember, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_organization = QueryOrganization::is_allowed_resource_id(
@@ -365,7 +335,7 @@ pub async fn org_member_patch(
         }
     })?;
 
-    response_accepted!(endpoint, json)
+    Ok(Endpoint::Patch.response_accepted(json))
 }
 
 async fn patch_inner(
@@ -398,7 +368,7 @@ async fn patch_inner(
         .map_err(ApiError::from)?;
     }
 
-    json_member(conn, query_user.id, query_organization.id)
+    json_member(conn, query_user.id, query_organization.id).map_err(Into::into)
 }
 
 #[endpoint {
@@ -459,7 +429,7 @@ fn json_member(
     conn: &mut DbConnection,
     user_id: UserId,
     organization_id: OrganizationId,
-) -> Result<JsonMember, ApiError> {
+) -> Result<JsonMember, HttpError> {
     Ok(schema::user::table
         .inner_join(schema::organization_role::table)
         .filter(schema::organization_role::user_id.eq(user_id))
@@ -474,6 +444,6 @@ fn json_member(
             schema::organization_role::modified,
         ))
         .first::<QueryMember>(conn)
-        .map_err(ApiError::from)?
+        .map_err(resource_not_found_err!(User, user_id))?
         .into_json())
 }

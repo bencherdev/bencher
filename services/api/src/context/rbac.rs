@@ -1,7 +1,8 @@
 use bencher_rbac::{Organization, Project};
+use dropshot::HttpError;
 use oso::{Oso, ToPolar};
 
-use crate::model::user::auth::AuthUser;
+use crate::{error::forbidden_error, model::user::auth::AuthUser};
 
 pub struct Rbac(pub Oso);
 
@@ -27,6 +28,12 @@ pub enum RbacError {
         permission: bencher_rbac::project::Permission,
         project: Project,
     },
+}
+
+impl From<RbacError> for HttpError {
+    fn from(error: RbacError) -> Self {
+        forbidden_error(error)
+    }
 }
 
 impl Rbac {

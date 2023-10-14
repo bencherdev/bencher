@@ -40,6 +40,23 @@ impl Endpoint {
         )
     }
 
+    pub fn response_ok<T>(self, body: T) -> HttpResponseHeaders<HttpResponseOk<T>, CorsHeaders>
+    where
+        T: JsonSchema + Serialize + Send + Sync,
+    {
+        HttpResponseHeaders::new(HttpResponseOk(body), self.header())
+    }
+
+    pub fn response_accepted<T>(
+        self,
+        body: T,
+    ) -> HttpResponseHeaders<HttpResponseAccepted<T>, CorsHeaders>
+    where
+        T: JsonSchema + Serialize + Send + Sync,
+    {
+        HttpResponseHeaders::new(HttpResponseAccepted(body), self.header())
+    }
+
     #[allow(clippy::needless_pass_by_value)]
     pub fn err(self, _e: ApiError) -> ApiError {
         // tracing::info!("{api_error}: {e}");

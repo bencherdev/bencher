@@ -6,11 +6,10 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{response_ok, CorsResponse, ResponseOk},
+        endpoint::{CorsResponse, ResponseOk},
         Endpoint,
     },
     model::{organization::QueryOrganization, user::auth::AuthUser},
-    ApiError,
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -42,26 +41,15 @@ pub async fn org_allowed_get(
     path_params: Path<OrgAllowedParams>,
 ) -> Result<ResponseOk<JsonAllowed>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::GetOne;
-
-    let json = get_inner(rqctx.context(), path_params.into_inner(), &auth_user)
-        .await
-        .map_err(|e| {
-            if let ApiError::HttpError(e) = e {
-                e
-            } else {
-                endpoint.err(e).into()
-            }
-        })?;
-
-    response_ok!(endpoint, json)
+    let json = get_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Endpoint::GetOne.response_ok(json))
 }
 
 async fn get_inner(
     context: &ApiContext,
     path_params: OrgAllowedParams,
     auth_user: &AuthUser,
-) -> Result<JsonAllowed, ApiError> {
+) -> Result<JsonAllowed, HttpError> {
     let conn = &mut *context.conn().await;
 
     Ok(JsonAllowed {
