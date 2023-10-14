@@ -66,7 +66,7 @@ impl QueryProject {
         schema::project::table
             .filter(resource_id(project)?)
             .first::<Self>(conn)
-            .map_err(resource_not_found_err!(Project, project.clone()))
+            .map_err(resource_not_found_err!(Project, project))
     }
 
     #[cfg(feature = "plus")]

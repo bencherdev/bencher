@@ -23,7 +23,7 @@ pub struct QueryOrganizationRole {
     pub updated: DateTime,
 }
 
-#[derive(diesel::Insertable)]
+#[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = organization_role_table)]
 pub struct InsertOrganizationRole {
     pub user_id: UserId,

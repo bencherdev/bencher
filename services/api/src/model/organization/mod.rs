@@ -57,7 +57,7 @@ impl QueryOrganization {
         schema::organization::table
             .filter(resource_id(organization)?)
             .first::<Self>(conn)
-            .map_err(resource_not_found_err!(Organization, organization.clone()))
+            .map_err(resource_not_found_err!(Organization, organization))
     }
 
     #[cfg(feature = "plus")]
@@ -171,7 +171,7 @@ impl From<&QueryOrganization> for Organization {
     }
 }
 
-#[derive(diesel::Insertable)]
+#[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = organization_table)]
 pub struct InsertOrganization {
     pub uuid: OrganizationUuid,

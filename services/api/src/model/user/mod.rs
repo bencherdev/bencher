@@ -56,7 +56,7 @@ impl QueryUser {
         schema::user::table
             .filter(resource_id(user)?)
             .first(conn)
-            .map_err(resource_not_found_err!(User, user.clone()))
+            .map_err(resource_not_found_err!(User, user))
     }
 
     pub fn get_admins(conn: &mut DbConnection) -> Result<Vec<QueryUser>, HttpError> {

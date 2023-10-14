@@ -136,7 +136,7 @@ async fn get_ls_inner(
         .load::<QueryMember>(conn)
         .map_err(resource_not_found_err!(
             OrganizationRole,
-            query_organization.id
+            query_organization
         ))?
         .into_iter()
         .map(QueryMember::into_json)
@@ -200,7 +200,7 @@ async fn post_inner(
         .filter(schema::user::id.eq(auth_user.id))
         .select((schema::user::name, schema::user::email))
         .first::<(String, String)>(conn)
-        .map_err(resource_not_found_err!(User, auth_user.id))?;
+        .map_err(resource_not_found_err!(User, auth_user))?;
 
     // Create an invite token
     let token = context.secret_key.new_invite(
@@ -408,7 +408,7 @@ async fn delete_inner(
     .execute(conn)
     .map_err(resource_not_found_err!(
         OrganizationRole,
-        (query_user.id, query_organization.id)
+        (query_user.id, query_organization)
     ))?;
 
     Ok(json_member)

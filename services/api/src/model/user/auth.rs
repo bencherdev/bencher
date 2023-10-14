@@ -18,7 +18,7 @@ use crate::{
 
 use super::UserId;
 
-pub const BEARER_TOKEN_FORMAT: &str = "Expected format is `Authorization: Bearer <bencher.api.token>`.\nWhere `<bencher.api.token>` is your Bencher API token.";
+pub const BEARER_TOKEN_FORMAT: &str = "Expected format is `Authorization: Bearer <bencher.api.token>`. Where `<bencher.api.token>` is your Bencher API token.";
 
 #[derive(Debug, Clone)]
 pub struct AuthUser {
@@ -60,18 +60,18 @@ impl AuthUser {
             .get("Authorization")
             .ok_or_else(|| {
                 bad_request_error(format!(
-                    "Request is missing \"Authorization\" header.\n{BEARER_TOKEN_FORMAT}"
+                    "Request is missing \"Authorization\" header. {BEARER_TOKEN_FORMAT}"
                 ))
             })?
             .to_str()
             .map_err(|e| {
                 bad_request_error(format!(
-                    "Request has an invalid \"Authorization\" header: {e}\n{BEARER_TOKEN_FORMAT}"
+                    "Request has an invalid \"Authorization\" header: {e}. {BEARER_TOKEN_FORMAT}"
                 ))
             })?;
         let (_, token) = headers.split_once("Bearer ").ok_or_else(|| {
             bad_request_error(format!(
-                "Request is missing \"Authorization\" Bearer.\n{BEARER_TOKEN_FORMAT}"
+                "Request is missing \"Authorization\" Bearer. {BEARER_TOKEN_FORMAT}"
             ))
         })?;
         let token = token.trim();

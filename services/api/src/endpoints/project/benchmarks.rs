@@ -198,7 +198,7 @@ async fn post_inner(
     schema::benchmark::table
         .filter(schema::benchmark::uuid.eq(&insert_benchmark.uuid))
         .first::<QueryBenchmark>(conn)
-        .map_err(resource_not_found_err!(Benchmark, insert_benchmark.uuid))?
+        .map_err(resource_not_found_err!(Benchmark, insert_benchmark))?
         .into_json(conn)
         .map_err(Into::into)
 }

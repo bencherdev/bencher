@@ -12,10 +12,10 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{response_accepted, response_ok, CorsResponse, ResponseAccepted, ResponseOk},
+        endpoint::{CorsResponse, ResponseAccepted, ResponseOk},
         Endpoint,
     },
-    error::resource_not_found_err,
+    error::{forbidden_error, resource_conflict_err, resource_not_found_err},
     model::{
         organization::{
             organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
@@ -23,7 +23,7 @@ use crate::{
         },
         user::auth::AuthUser,
     },
-    schema, ApiError,
+    schema,
 };
 
 pub type OrganizationsPagination = JsonPagination<OrganizationsSort>;
@@ -127,30 +127,21 @@ pub async fn organization_post(
     body: TypedBody<JsonNewOrganization>,
 ) -> Result<ResponseAccepted<JsonOrganization>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Post;
-
-    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user)
-        .await
-        .map_err(|e| {
-            if let ApiError::HttpError(e) = e {
-                e
-            } else {
-                endpoint.err(e).into()
-            }
-        })?;
-
-    response_accepted!(endpoint, json)
+    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user).await?;
+    Ok(Endpoint::Post.response_accepted(json))
 }
 
 async fn post_inner(
     context: &ApiContext,
     json_organization: JsonNewOrganization,
     auth_user: &AuthUser,
-) -> Result<JsonOrganization, ApiError> {
+) -> Result<JsonOrganization, HttpError> {
     let conn = &mut *context.conn().await;
 
     if !auth_user.is_admin(&context.rbac) {
-        return Err(ApiError::CreateOrganization(auth_user.id));
+        return Err(forbidden_error(format!(
+            "User ({auth_user:?}) cannot create a new organization"
+        )));
     }
 
     // Create the organization
@@ -158,11 +149,11 @@ async fn post_inner(
     diesel::insert_into(schema::organization::table)
         .values(&insert_organization)
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(Organization, insert_organization))?;
     let query_organization = schema::organization::table
         .filter(schema::organization::uuid.eq(&insert_organization.uuid))
         .first::<QueryOrganization>(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_not_found_err!(Organization, insert_organization))?;
 
     let timestamp = DateTime::now();
     // Connect the user to the organization as a `Maintainer`
@@ -176,7 +167,7 @@ async fn post_inner(
     diesel::insert_into(schema::organization_role::table)
         .values(&insert_org_role)
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(OrganizationRole, insert_org_role))?;
 
     Ok(query_organization.into_json())
 }
@@ -209,26 +200,15 @@ pub async fn organization_get(
     path_params: Path<OrganizationParams>,
 ) -> Result<ResponseOk<JsonOrganization>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::GetOne;
-
-    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
-        .await
-        .map_err(|e| {
-            if let ApiError::HttpError(e) = e {
-                e
-            } else {
-                endpoint.err(e).into()
-            }
-        })?;
-
-    response_ok!(endpoint, json)
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Endpoint::GetOne.response_ok(json))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: OrganizationParams,
     auth_user: &AuthUser,
-) -> Result<JsonOrganization, ApiError> {
+) -> Result<JsonOrganization, HttpError> {
     let conn = &mut *context.conn().await;
 
     Ok(QueryOrganization::is_allowed_resource_id(
@@ -252,25 +232,14 @@ pub async fn organization_patch(
     body: TypedBody<JsonUpdateOrganization>,
 ) -> Result<ResponseAccepted<JsonOrganization>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Patch;
-
-    let context = rqctx.context();
     let json = patch_inner(
-        context,
+        rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
         &auth_user,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    response_accepted!(endpoint, json)
+    .await?;
+    Ok(Endpoint::Patch.response_accepted(json))
 }
 
 async fn patch_inner(
@@ -278,7 +247,7 @@ async fn patch_inner(
     path_params: OrganizationParams,
     json_organization: JsonUpdateOrganization,
     auth_user: &AuthUser,
-) -> Result<JsonOrganization, ApiError> {
+) -> Result<JsonOrganization, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_organization = QueryOrganization::is_allowed_resource_id(
@@ -295,7 +264,7 @@ async fn patch_inner(
     diesel::update(organization_query)
         .set(&update_organization)
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(Organization, update_organization))?;
 
     Ok(QueryOrganization::get(conn, query_organization.id)?.into_json())
 }

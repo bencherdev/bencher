@@ -57,7 +57,7 @@ impl QueryBenchmark {
             .filter(schema::benchmark::name.eq(name))
             .select(schema::benchmark::id)
             .first(conn)
-            .map_err(resource_not_found_err!(Benchmark, name))
+            .map_err(resource_not_found_err!(Benchmark, (project_id, name)))
     }
 
     pub fn from_uuid(
@@ -69,7 +69,7 @@ impl QueryBenchmark {
             .filter(schema::benchmark::project_id.eq(project_id))
             .filter(schema::benchmark::uuid.eq(uuid.to_string()))
             .first::<Self>(conn)
-            .map_err(resource_not_found_err!(Benchmark, uuid))
+            .map_err(resource_not_found_err!(Benchmark, (project_id, uuid)))
     }
 
     pub fn from_resource_id(
@@ -81,7 +81,7 @@ impl QueryBenchmark {
             .filter(schema::benchmark::project_id.eq(project_id))
             .filter(resource_id(benchmark)?)
             .first::<Self>(conn)
-            .map_err(resource_not_found_err!(Benchmark, benchmark.clone()))
+            .map_err(resource_not_found_err!(Benchmark, (project_id, benchmark)))
     }
 
     pub fn get_or_create(

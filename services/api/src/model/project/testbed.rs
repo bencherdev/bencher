@@ -49,7 +49,7 @@ impl QueryTestbed {
             .filter(schema::testbed::project_id.eq(project_id))
             .filter(schema::testbed::uuid.eq(uuid.to_string()))
             .first::<Self>(conn)
-            .map_err(resource_not_found_err!(Testbed, uuid))
+            .map_err(resource_not_found_err!(Testbed, (project_id, uuid)))
     }
 
     pub fn from_resource_id(
@@ -61,7 +61,7 @@ impl QueryTestbed {
             .filter(schema::testbed::project_id.eq(project_id))
             .filter(resource_id(testbed)?)
             .first::<Self>(conn)
-            .map_err(resource_not_found_err!(Testbed, testbed.clone()))
+            .map_err(resource_not_found_err!(Testbed, (project_id, testbed)))
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonTestbed, HttpError> {

@@ -58,7 +58,10 @@ impl QueryMetricKind {
             .filter(schema::metric_kind::project_id.eq(project_id))
             .filter(resource_id(metric_kind)?)
             .first::<Self>(conn)
-            .map_err(resource_not_found_err!(MetricKind, metric_kind.clone()))
+            .map_err(resource_not_found_err!(
+                MetricKind,
+                (project_id, metric_kind)
+            ))
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonMetricKind, ApiError> {

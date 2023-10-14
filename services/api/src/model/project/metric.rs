@@ -57,7 +57,7 @@ impl QueryMetric {
             .filter(schema::report::end_time.le(end_time))
             .select(diesel::dsl::count(schema::metric::value))
             .first::<i64>(conn)
-            .map_err(resource_not_found_err!(Organization, organization_id))?
+            .map_err(resource_not_found_err!(Metric, (organization_id, start_time, end_time)))?
             .try_into()
             .map_err(|e| {
                 crate::error::issue_error(

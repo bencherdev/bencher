@@ -56,7 +56,7 @@ impl QueryBranch {
             .filter(schema::branch::project_id.eq(project_id))
             .filter(schema::branch::uuid.eq(uuid.to_string()))
             .first::<Self>(conn)
-            .map_err(resource_not_found_err!(Branch, uuid))
+            .map_err(resource_not_found_err!(Branch, (project_id, uuid)))
     }
 
     pub fn from_resource_id(
@@ -68,7 +68,7 @@ impl QueryBranch {
             .filter(schema::branch::project_id.eq(project_id))
             .filter(resource_id(branch)?)
             .first::<Self>(conn)
-            .map_err(resource_not_found_err!(Branch, branch.clone()))
+            .map_err(resource_not_found_err!(Branch, (project_id, branch)))
     }
 
     pub fn get_branch_version_json(

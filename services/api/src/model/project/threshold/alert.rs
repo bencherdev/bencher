@@ -59,7 +59,7 @@ impl QueryAlert {
             .filter(schema::benchmark::project_id.eq(project_id))
             .select(QueryAlert::as_select())
             .first(conn)
-            .map_err(resource_not_found_err!(Alert, uuid))
+            .map_err(resource_not_found_err!(Alert, (project_id, uuid)))
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonAlert, ApiError> {
