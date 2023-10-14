@@ -12,7 +12,7 @@ use dropshot::HttpError;
 
 use crate::{
     context::DbConnection,
-    error::{resource_insert_err, resource_not_found_err},
+    error::{resource_conflict_err, resource_not_found_err},
     model::project::QueryProject,
     schema,
     schema::metric_kind as metric_kind_table,
@@ -119,7 +119,7 @@ impl QueryMetricKind {
         diesel::insert_into(schema::metric_kind::table)
             .values(&insert_metric_kind)
             .execute(conn)
-            .map_err(resource_insert_err!(MetricKind, insert_metric_kind))?;
+            .map_err(resource_conflict_err!(MetricKind, insert_metric_kind))?;
 
         Self::get_id(conn, insert_metric_kind.uuid)
     }

@@ -7,7 +7,7 @@ use dropshot::HttpError;
 
 use crate::{
     context::DbConnection,
-    error::resource_insert_err,
+    error::resource_conflict_err,
     schema,
     schema::version as version_table,
     util::query::{fn_get, fn_get_id, fn_get_uuid},
@@ -104,7 +104,7 @@ impl InsertVersion {
         diesel::insert_into(schema::version::table)
             .values(&insert_version)
             .execute(conn)
-            .map_err(resource_insert_err!(Version, insert_version))?;
+            .map_err(resource_conflict_err!(Version, insert_version))?;
 
         let version_id = QueryVersion::get_id(conn, version_uuid)?;
 
@@ -116,7 +116,7 @@ impl InsertVersion {
         diesel::insert_into(schema::branch_version::table)
             .values(&insert_branch_version)
             .execute(conn)
-            .map_err(resource_insert_err!(BranchVersion, insert_branch_version))?;
+            .map_err(resource_conflict_err!(BranchVersion, insert_branch_version))?;
 
         Ok(version_id)
     }

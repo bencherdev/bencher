@@ -15,7 +15,7 @@ use super::{
 };
 use crate::{
     context::DbConnection,
-    error::{resource_insert_err, resource_not_found_err},
+    error::{resource_conflict_err, resource_not_found_err},
     model::project::{
         benchmark::QueryBenchmark, metric::QueryMetric, ProjectId, ProjectUuid, QueryProject,
     },
@@ -183,7 +183,7 @@ impl InsertAlert {
         diesel::insert_into(schema::alert::table)
             .values(&insert_alert)
             .execute(conn)
-            .map_err(resource_insert_err!(Alert, insert_alert))?;
+            .map_err(resource_conflict_err!(Alert, insert_alert))?;
 
         Ok(())
     }

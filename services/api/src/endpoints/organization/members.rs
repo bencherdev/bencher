@@ -12,10 +12,10 @@ use slog::Logger;
 use crate::{
     context::{ApiContext, Body, ButtonBody, DbConnection, Message},
     endpoints::{
-        endpoint::{response_accepted, CorsResponse, ResponseAccepted, ResponseOk},
+        endpoint::{CorsResponse, ResponseAccepted, ResponseOk},
         Endpoint,
     },
-    error::resource_not_found_err,
+    error::{resource_conflict_err, resource_not_found_err},
     model::user::{auth::AuthUser, QueryUser},
     model::{
         organization::{member::QueryMember, OrganizationId, QueryOrganization},
@@ -318,23 +318,13 @@ pub async fn org_member_patch(
     body: TypedBody<JsonUpdateMember>,
 ) -> Result<ResponseAccepted<JsonMember>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Patch;
-
     let json = patch_inner(
         rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
         &auth_user,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
+    .await?;
     Ok(Endpoint::Patch.response_accepted(json))
 }
 
@@ -343,7 +333,7 @@ async fn patch_inner(
     path_params: OrgMemberParams,
     json_update: JsonUpdateMember,
     auth_user: &AuthUser,
-) -> Result<JsonMember, ApiError> {
+) -> Result<JsonMember, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_organization = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
@@ -365,10 +355,14 @@ async fn patch_inner(
         )
         .set(schema::organization_role::role.eq(role.to_string()))
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(
+            OrganizationRole,
+            (query_user.id, query_organization.id),
+            role
+        ))?;
     }
 
-    json_member(conn, query_user.id, query_organization.id).map_err(Into::into)
+    json_member(conn, query_user.id, query_organization.id)
 }
 
 #[endpoint {
@@ -381,26 +375,15 @@ pub async fn org_member_delete(
     path_params: Path<OrgMemberParams>,
 ) -> Result<ResponseAccepted<JsonMember>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Delete;
-
-    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
-        .await
-        .map_err(|e| {
-            if let ApiError::HttpError(e) = e {
-                e
-            } else {
-                endpoint.err(e).into()
-            }
-        })?;
-
-    response_accepted!(endpoint, json)
+    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Endpoint::Delete.response_accepted(json))
 }
 
 async fn delete_inner(
     context: &ApiContext,
     path_params: OrgMemberParams,
     auth_user: &AuthUser,
-) -> Result<JsonMember, ApiError> {
+) -> Result<JsonMember, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_organization = QueryOrganization::is_allowed_resource_id(
@@ -420,7 +403,10 @@ async fn delete_inner(
             .filter(schema::organization_role::organization_id.eq(query_organization.id)),
     )
     .execute(conn)
-    .map_err(ApiError::from)?;
+    .map_err(resource_not_found_err!(
+        OrganizationRole,
+        (query_user.id, query_organization.id)
+    ))?;
 
     Ok(json_member)
 }
@@ -444,6 +430,9 @@ fn json_member(
             schema::organization_role::modified,
         ))
         .first::<QueryMember>(conn)
-        .map_err(resource_not_found_err!(User, user_id))?
+        .map_err(resource_not_found_err!(
+            OrganizationRole,
+            (user_id, organization_id)
+        ))?
         .into_json())
 }

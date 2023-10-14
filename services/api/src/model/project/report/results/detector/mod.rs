@@ -6,7 +6,7 @@ use slog::Logger;
 
 use crate::{
     context::DbConnection,
-    error::{bad_request_error, resource_insert_err},
+    error::{bad_request_error, resource_conflict_err},
     model::project::{
         benchmark::BenchmarkId,
         branch::BranchId,
@@ -92,7 +92,7 @@ impl Detector {
         diesel::insert_into(schema::boundary::table)
             .values(&insert_boundary)
             .execute(conn)
-            .map_err(resource_insert_err!(Boundary, insert_boundary))?;
+            .map_err(resource_conflict_err!(Boundary, insert_boundary))?;
 
         // If the boundary check detects an outlier then create an alert for it on the given side.
         if let Some(boundary_limit) = boundary.outlier {

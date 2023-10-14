@@ -18,7 +18,7 @@ use crate::{
         },
         Endpoint,
     },
-    error::{resource_insert_err, resource_not_found_err},
+    error::{resource_conflict_err, resource_not_found_err},
     model::{
         project::{
             benchmark::{InsertBenchmark, QueryBenchmark, UpdateBenchmark},
@@ -193,7 +193,7 @@ async fn post_inner(
     diesel::insert_into(schema::benchmark::table)
         .values(&insert_benchmark)
         .execute(conn)
-        .map_err(resource_insert_err!(Benchmark, insert_benchmark))?;
+        .map_err(resource_conflict_err!(Benchmark, insert_benchmark))?;
 
     schema::benchmark::table
         .filter(schema::benchmark::uuid.eq(&insert_benchmark.uuid))

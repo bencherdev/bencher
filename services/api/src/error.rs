@@ -231,59 +231,42 @@ pub trait WordStr {
 }
 
 #[derive(Debug)]
-pub enum BencherResource<Id> {
-    User(Id),
-    Organization(Id),
-    Project(Id),
-    Report(Id),
-    MetricKind(Id),
-    Branch(Id),
-    Version(Id),
-    BranchVersion(Id),
-    Testbed(Id),
-    Benchmark(Id),
-    Perf(Id),
-    Metric(Id),
-    Boundary(Id),
-    Alert(Id),
+pub enum BencherResource {
+    User,
+    OrganizationRole,
+    Organization,
+    Project,
+    Report,
+    MetricKind,
+    Branch,
+    Version,
+    BranchVersion,
+    Testbed,
+    Benchmark,
+    Perf,
+    Metric,
+    Boundary,
+    Alert,
 }
 
-impl<Id> BencherResource<Id> {
+impl BencherResource {
     pub fn name(&self) -> &str {
         match self {
-            Self::User(_) => "User",
-            Self::Organization(_) => "Organization",
-            Self::Project(_) => "Project",
-            Self::Report(_) => "Report",
-            Self::MetricKind(_) => "Metric Kind",
-            Self::Branch(_) => "Branch",
-            Self::Version(_) => "Version",
-            Self::BranchVersion(_) => "Branch Version",
-            Self::Testbed(_) => "Testbed",
-            Self::Benchmark(_) => "Benchmark",
-            Self::Perf(_) => "Perf",
-            Self::Metric(_) => "Metric",
-            Self::Boundary(_) => "Boundary",
-            Self::Alert(_) => "Alert",
-        }
-    }
-
-    pub fn id(&self) -> &Id {
-        match self {
-            Self::User(id)
-            | Self::Organization(id)
-            | Self::Project(id)
-            | Self::Report(id)
-            | Self::MetricKind(id)
-            | Self::Branch(id)
-            | Self::Version(id)
-            | Self::BranchVersion(id)
-            | Self::Testbed(id)
-            | Self::Benchmark(id)
-            | Self::Perf(id)
-            | Self::Metric(id)
-            | Self::Boundary(id)
-            | Self::Alert(id) => id,
+            Self::User => "User",
+            Self::OrganizationRole => "Organization Role",
+            Self::Organization => "Organization",
+            Self::Project => "Project",
+            Self::Report => "Report",
+            Self::MetricKind => "Metric Kind",
+            Self::Branch => "Branch",
+            Self::Version => "Version",
+            Self::BranchVersion => "Branch Version",
+            Self::Testbed => "Testbed",
+            Self::Benchmark => "Benchmark",
+            Self::Perf => "Perf",
+            Self::Metric => "Metric",
+            Self::Boundary => "Boundary",
+            Self::Alert => "Alert",
         }
     }
 }
@@ -292,7 +275,8 @@ macro_rules! resource_not_found_err {
     ($resource:ident, $id:expr) => {
         |e| {
             crate::error::resource_not_found_error(
-                &crate::error::BencherResource::$resource($id),
+                &crate::error::BencherResource::$resource,
+                $id,
                 e,
             )
         }
@@ -301,11 +285,15 @@ macro_rules! resource_not_found_err {
 
 pub(crate) use resource_not_found_err;
 
-macro_rules! resource_insert_err {
+macro_rules! resource_conflict_err {
     ($resource:ident, $value:expr) => {
+        resource_conflict_err!($resource, (), $value)
+    };
+    ($resource:ident, $id:expr, $value:expr) => {
         |e| {
-            crate::error::resource_insert_error(
-                &crate::error::BencherResource::$resource(()),
+            crate::error::resource_conflict_error(
+                &crate::error::BencherResource::$resource,
+                $id,
                 &$value,
                 e,
             )
@@ -313,7 +301,7 @@ macro_rules! resource_insert_err {
     };
 }
 
-pub(crate) use resource_insert_err;
+pub(crate) use resource_conflict_err;
 
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
 
@@ -352,30 +340,39 @@ where
     HttpError::for_client_error(None, StatusCode::NOT_FOUND, error.to_string())
 }
 
-pub fn resource_not_found_error<Id, E>(resource: &BencherResource<Id>, error: E) -> HttpError
+pub fn conflict_error<E>(error: E) -> HttpError
 where
-    Id: std::fmt::Display,
+    E: std::fmt::Display,
+{
+    HttpError::for_client_error(None, StatusCode::CONFLICT, error.to_string())
+}
+
+pub fn resource_not_found_error<Id, E>(resource: &BencherResource, id: Id, error: E) -> HttpError
+where
+    Id: std::fmt::Debug,
     E: std::fmt::Display,
 {
     not_found_error(format!(
-        "{resource} ({id}) not found: {error}",
+        "{resource} ({id:?}) not found: {error}",
         resource = resource.name(),
-        id = resource.id(),
     ))
 }
 
-pub fn resource_insert_error<V, E>(resource: &BencherResource<()>, value: V, error: E) -> HttpError
+pub fn resource_conflict_error<Id, V, E>(
+    resource: &BencherResource,
+    id: Id,
+    value: V,
+    error: E,
+) -> HttpError
 where
+    Id: std::fmt::Debug,
     V: std::fmt::Debug,
     E: std::fmt::Display,
 {
-    let name = resource.name();
-    issue_error(
-        http::StatusCode::CONFLICT,
-        &format!("Failed to create new {name}"),
-        &format!("My new {name} ({value:?}) failed to create."),
-        error,
-    )
+    conflict_error(format!(
+        "{resource} ({id:?}: {value:?}) has conflict: {error}",
+        resource = resource.name(),
+    ))
 }
 
 pub fn issue_error<E>(status_code: StatusCode, title: &str, body: &str, error: E) -> HttpError

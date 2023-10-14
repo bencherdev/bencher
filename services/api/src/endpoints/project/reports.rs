@@ -27,7 +27,7 @@ use crate::{
         },
         Endpoint,
     },
-    error::{issue_error, resource_insert_err},
+    error::{issue_error, resource_conflict_err},
     model::project::{
         branch::{BranchId, QueryBranch},
         report::{results::ReportResults, InsertReport, QueryReport, ReportId},
@@ -270,7 +270,7 @@ async fn post_inner(
     diesel::insert_into(schema::report::table)
         .values(&insert_report)
         .execute(conn)
-        .map_err(resource_insert_err!(Report, insert_report))?;
+        .map_err(resource_conflict_err!(Report, insert_report))?;
 
     let query_report = schema::report::table
         .filter(schema::report::uuid.eq(&insert_report.uuid))
