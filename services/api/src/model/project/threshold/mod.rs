@@ -3,6 +3,7 @@ use bencher_json::{
     DateTime, StatisticUuid, ThresholdUuid,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use dropshot::HttpError;
 
 use self::statistic::{InsertStatistic, QueryStatistic, StatisticId};
 use super::{
@@ -13,6 +14,7 @@ use super::{
 };
 use crate::{
     context::DbConnection,
+    error::resource_conflict_err,
     schema::threshold as threshold_table,
     schema::{self},
     util::query::{fn_get, fn_get_id, fn_get_uuid},
@@ -129,7 +131,7 @@ impl QueryThreshold {
     }
 }
 
-#[derive(diesel::Insertable)]
+#[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = threshold_table)]
 pub struct InsertThreshold {
     pub uuid: ThresholdUuid,
@@ -169,14 +171,14 @@ impl InsertThreshold {
         branch_id: BranchId,
         testbed_id: TestbedId,
         json_statistic: JsonNewStatistic,
-    ) -> Result<ThresholdId, ApiError> {
+    ) -> Result<ThresholdId, HttpError> {
         // Create the new threshold
         let insert_threshold =
             InsertThreshold::new(project_id, metric_kind_id, branch_id, testbed_id);
         diesel::insert_into(schema::threshold::table)
             .values(&insert_threshold)
             .execute(conn)
-            .map_err(ApiError::from)?;
+            .map_err(resource_conflict_err!(Threshold, insert_threshold))?;
 
         // Get the new threshold ID
         let threshold_id = QueryThreshold::get_id(conn, insert_threshold.uuid)?;
@@ -186,7 +188,7 @@ impl InsertThreshold {
         diesel::insert_into(schema::statistic::table)
             .values(&insert_statistic)
             .execute(conn)
-            .map_err(ApiError::from)?;
+            .map_err(resource_conflict_err!(Statistic, insert_statistic))?;
 
         // Get the new statistic ID
         let statistic_id = QueryStatistic::get_id(conn, insert_statistic.uuid)?;
@@ -195,7 +197,11 @@ impl InsertThreshold {
         diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(threshold_id)))
             .set(schema::threshold::statistic_id.eq(statistic_id))
             .execute(conn)
-            .map_err(ApiError::from)?;
+            .map_err(resource_conflict_err!(
+                Threshold,
+                threshold_id,
+                insert_statistic
+            ))?;
 
         Ok(threshold_id)
     }
@@ -206,7 +212,7 @@ impl InsertThreshold {
         metric_kind_id: MetricKindId,
         branch_id: BranchId,
         testbed_id: TestbedId,
-    ) -> Result<ThresholdId, ApiError> {
+    ) -> Result<ThresholdId, HttpError> {
         Self::from_json(
             conn,
             project_id,
@@ -223,7 +229,7 @@ impl InsertThreshold {
         metric_kind_id: MetricKindId,
         branch_id: BranchId,
         testbed_id: TestbedId,
-    ) -> Result<ThresholdId, ApiError> {
+    ) -> Result<ThresholdId, HttpError> {
         Self::from_json(
             conn,
             project_id,

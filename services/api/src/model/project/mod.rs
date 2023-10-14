@@ -18,7 +18,6 @@ use crate::{
         resource_id::fn_resource_id,
         slug::unwrap_slug,
     },
-    ApiError,
 };
 
 use super::{organization::OrganizationId, user::auth::BEARER_TOKEN_FORMAT};
@@ -120,7 +119,7 @@ impl QueryProject {
         }
     }
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonProject, ApiError> {
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonProject, HttpError> {
         let query_organization = QueryOrganization::get(conn, self.organization_id)?;
         Ok(self.into_json_for_organization(&query_organization))
     }
@@ -179,7 +178,7 @@ impl From<&QueryProject> for Project {
     }
 }
 
-#[derive(diesel::Insertable)]
+#[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = project_table)]
 pub struct InsertProject {
     pub uuid: ProjectUuid,

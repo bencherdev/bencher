@@ -1,6 +1,6 @@
 use bencher_json::{
-    organization, project::ProjectRole, DateTime, JsonDirection, JsonNewProject, JsonPagination,
-    JsonProject, JsonProjects, NonEmpty, ResourceId,
+    project::ProjectRole, DateTime, JsonDirection, JsonNewProject, JsonPagination, JsonProject,
+    JsonProjects, NonEmpty, ResourceId,
 };
 use bencher_rbac::organization::Permission;
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -11,10 +11,10 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{response_accepted, response_ok, CorsResponse, ResponseAccepted, ResponseOk},
+        endpoint::{CorsResponse, ResponseAccepted, ResponseOk},
         Endpoint,
     },
-    error::resource_not_found_err,
+    error::{resource_conflict_err, resource_not_found_err},
     model::{
         organization::QueryOrganization,
         project::{
@@ -28,8 +28,6 @@ use crate::{
         user::auth::AuthUser,
     },
     schema,
-    util::error::into_json,
-    ApiError,
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -141,24 +139,14 @@ pub async fn org_project_post(
     body: TypedBody<JsonNewProject>,
 ) -> Result<ResponseAccepted<JsonProject>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Post;
-
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
         &auth_user,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    response_accepted!(endpoint, json)
+    .await?;
+    Ok(Endpoint::Post.response_accepted(json))
 }
 
 async fn post_inner(
@@ -166,7 +154,7 @@ async fn post_inner(
     path_params: OrgProjectsParams,
     json_project: JsonNewProject,
     auth_user: &AuthUser,
-) -> Result<JsonProject, ApiError> {
+) -> Result<JsonProject, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Check project visibility
@@ -195,11 +183,11 @@ async fn post_inner(
     diesel::insert_into(schema::project::table)
         .values(&insert_project)
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(Project, insert_project))?;
     let query_project = schema::project::table
         .filter(schema::project::uuid.eq(&insert_project.uuid))
         .first::<QueryProject>(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_not_found_err!(Project, insert_project))?;
 
     let timestamp = DateTime::now();
     // Connect the user to the project as a `Maintainer`
@@ -213,14 +201,14 @@ async fn post_inner(
     diesel::insert_into(schema::project_role::table)
         .values(&insert_proj_role)
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(ProjectRole, insert_proj_role))?;
 
     // Add a `main` branch to the project
     let insert_branch = InsertBranch::main(conn, query_project.id);
     diesel::insert_into(schema::branch::table)
         .values(&insert_branch)
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(Branch, insert_branch))?;
     let branch_id = QueryBranch::get_id(conn, insert_branch.uuid)?;
 
     // Add a `localhost` testbed to the project
@@ -228,7 +216,7 @@ async fn post_inner(
     diesel::insert_into(schema::testbed::table)
         .values(&insert_testbed)
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(Testbed, insert_testbed))?;
     let testbed_id = QueryTestbed::get_id(conn, insert_testbed.uuid)?;
 
     // Add a `latency` metric kind to the project
@@ -236,7 +224,7 @@ async fn post_inner(
     diesel::insert_into(schema::metric_kind::table)
         .values(&insert_metric_kind)
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(MetricKind, insert_metric_kind))?;
     let metric_kind_id = QueryMetricKind::get_id(conn, insert_metric_kind.uuid)?;
     // Add a `latency` threshold to the project
     InsertThreshold::upper_boundary(
@@ -252,7 +240,7 @@ async fn post_inner(
     diesel::insert_into(schema::metric_kind::table)
         .values(&insert_metric_kind)
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(MetricKind, insert_metric_kind))?;
     let metric_kind_id = QueryMetricKind::get_id(conn, insert_metric_kind.uuid)?;
     // Add a `throughput` threshold to the project
     InsertThreshold::lower_boundary(

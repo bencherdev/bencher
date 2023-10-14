@@ -121,7 +121,7 @@ impl QueryBranch {
     }
 }
 
-#[derive(diesel::Insertable)]
+#[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = branch_table)]
 pub struct InsertBranch {
     pub uuid: BranchUuid,

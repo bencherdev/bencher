@@ -90,7 +90,7 @@ impl QueryTestbed {
     }
 }
 
-#[derive(diesel::Insertable)]
+#[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = testbed_table)]
 pub struct InsertTestbed {
     pub uuid: TestbedUuid,

@@ -19,7 +19,7 @@ pub struct QueryProjectRole {
     pub modified: DateTime,
 }
 
-#[derive(diesel::Insertable)]
+#[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = project_role_table)]
 pub struct InsertProjectRole {
     pub user_id: UserId,

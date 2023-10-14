@@ -67,7 +67,7 @@ impl QueryStatistic {
     }
 }
 
-#[derive(diesel::Insertable)]
+#[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = statistic_table)]
 pub struct InsertStatistic {
     pub uuid: StatisticUuid,

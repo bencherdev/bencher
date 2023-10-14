@@ -202,6 +202,7 @@ async fn get_one_inner(
 
     QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?
         .into_json(conn)
+        .map_err(Into::into)
 }
 
 #[endpoint {
@@ -278,7 +279,9 @@ async fn patch_inner(
         .execute(conn)
         .map_err(ApiError::from)?;
 
-    QueryProject::get(conn, query_project.id)?.into_json(conn)
+    QueryProject::get(conn, query_project.id)?
+        .into_json(conn)
+        .map_err(Into::into)
 }
 
 #[endpoint {
