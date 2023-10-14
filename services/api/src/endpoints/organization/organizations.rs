@@ -15,6 +15,7 @@ use crate::{
         endpoint::{response_accepted, response_ok, CorsResponse, ResponseAccepted, ResponseOk},
         Endpoint,
     },
+    error::resource_not_found_err,
     model::{
         organization::{
             organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
@@ -22,9 +23,7 @@ use crate::{
         },
         user::auth::AuthUser,
     },
-    schema,
-    util::error::into_json,
-    ApiError,
+    schema, ApiError,
 };
 
 pub type OrganizationsPagination = JsonPagination<OrganizationsSort>;
@@ -66,25 +65,14 @@ pub async fn organizations_get(
     query_params: Query<OrganizationsQuery>,
 ) -> Result<ResponseOk<JsonOrganizations>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::GetLs;
-
     let json = get_ls_inner(
         rqctx.context(),
         &auth_user,
         pagination_params.into_inner(),
         query_params.into_inner(),
-        endpoint,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    response_ok!(endpoint, json)
+    .await?;
+    Ok(Endpoint::GetLs.response_ok(json))
 }
 
 async fn get_ls_inner(
@@ -92,8 +80,7 @@ async fn get_ls_inner(
     auth_user: &AuthUser,
     pagination_params: OrganizationsPagination,
     query_params: OrganizationsQuery,
-    endpoint: Endpoint,
-) -> Result<JsonOrganizations, ApiError> {
+) -> Result<JsonOrganizations, HttpError> {
     let conn = &mut *context.conn().await;
 
     let mut query = schema::organization::table.into_boxed();
@@ -124,9 +111,9 @@ async fn get_ls_inner(
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryOrganization>(conn)
-        .map_err(ApiError::from)?
+        .map_err(resource_not_found_err!(Organization))?
         .into_iter()
-        .filter_map(into_json!(endpoint))
+        .map(QueryOrganization::into_json)
         .collect())
 }
 
@@ -191,7 +178,7 @@ async fn post_inner(
         .execute(conn)
         .map_err(ApiError::from)?;
 
-    query_organization.into_json().map_err(Into::into)
+    Ok(query_organization.into_json())
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -244,15 +231,14 @@ async fn get_one_inner(
 ) -> Result<JsonOrganization, ApiError> {
     let conn = &mut *context.conn().await;
 
-    QueryOrganization::is_allowed_resource_id(
+    Ok(QueryOrganization::is_allowed_resource_id(
         conn,
         &context.rbac,
         &path_params.organization,
         auth_user,
         Permission::View,
     )?
-    .into_json()
-    .map_err(Into::into)
+    .into_json())
 }
 
 #[endpoint {
@@ -311,7 +297,5 @@ async fn patch_inner(
         .execute(conn)
         .map_err(ApiError::from)?;
 
-    QueryOrganization::get(conn, query_organization.id)?
-        .into_json()
-        .map_err(Into::into)
+    Ok(QueryOrganization::get(conn, query_organization.id)?.into_json())
 }

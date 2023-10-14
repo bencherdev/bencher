@@ -272,6 +272,9 @@ impl BencherResource {
 }
 
 macro_rules! resource_not_found_err {
+    ($resource:ident) => {
+        resource_not_found_err!($resource, ())
+    };
     ($resource:ident, $id:expr) => {
         |e| {
             crate::error::resource_not_found_error(

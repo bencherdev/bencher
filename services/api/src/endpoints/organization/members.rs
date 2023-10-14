@@ -21,7 +21,7 @@ use crate::{
         organization::{member::QueryMember, OrganizationId, QueryOrganization},
         user::UserId,
     },
-    schema, ApiError,
+    schema,
 };
 
 // TODO Custom max TTL
@@ -134,7 +134,10 @@ async fn get_ls_inner(
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryMember>(conn)
-        .map_err(ApiError::from)?
+        .map_err(resource_not_found_err!(
+            OrganizationRole,
+            query_organization.id
+        ))?
         .into_iter()
         .map(QueryMember::into_json)
         .collect())

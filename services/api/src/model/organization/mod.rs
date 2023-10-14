@@ -144,7 +144,7 @@ impl QueryOrganization {
         Ok(query_organization)
     }
 
-    pub fn into_json(self) -> Result<JsonOrganization, HttpError> {
+    pub fn into_json(self) -> JsonOrganization {
         let Self {
             uuid,
             name,
@@ -153,13 +153,13 @@ impl QueryOrganization {
             modified,
             ..
         } = self;
-        Ok(JsonOrganization {
+        JsonOrganization {
             uuid,
             name,
             slug,
             created,
             modified,
-        })
+        }
     }
 }
 
