@@ -5,6 +5,7 @@ use bencher_json::{
 use bencher_rbac::organization::Permission;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use http::StatusCode;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use slog::Logger;
@@ -15,7 +16,7 @@ use crate::{
         endpoint::{CorsResponse, ResponseAccepted, ResponseOk},
         Endpoint,
     },
-    error::{resource_conflict_err, resource_not_found_err},
+    error::{issue_error, resource_conflict_err, resource_not_found_err},
     model::user::{auth::AuthUser, QueryUser},
     model::{
         organization::{member::QueryMember, OrganizationId, QueryOrganization},
@@ -203,12 +204,22 @@ async fn post_inner(
         .map_err(resource_not_found_err!(User, auth_user))?;
 
     // Create an invite token
-    let token = context.secret_key.new_invite(
-        json_new_member.email,
-        INVITE_TOKEN_TTL,
-        query_org.uuid,
-        json_new_member.role,
-    )?;
+    let token = context
+        .secret_key
+        .new_invite(
+            json_new_member.email,
+            INVITE_TOKEN_TTL,
+            query_org.uuid,
+            json_new_member.role,
+        )
+        .map_err(|e| {
+            issue_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to create new invite token",
+                "Failed to create new invite token.",
+                e,
+            )
+        })?;
     let token_string = token.to_string();
 
     let org_name = &query_org.name;

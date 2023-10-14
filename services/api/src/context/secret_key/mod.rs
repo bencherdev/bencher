@@ -7,8 +7,6 @@ use jsonwebtoken::{decode, encode, Algorithm, Header, TokenData, Validation};
 use jsonwebtoken::{DecodingKey, EncodingKey};
 use once_cell::sync::Lazy;
 
-use crate::ApiError;
-
 mod audience;
 mod claims;
 
@@ -28,11 +26,18 @@ pub struct SecretKey {
 
 #[derive(Debug, thiserror::Error)]
 pub enum JwtError {
+    #[error("Failed to encode JSON Web Token: {error}")]
+    Encode {
+        claims: Claims,
+        error: jsonwebtoken::errors::Error,
+    },
     #[error("Failed to decode JSON Web Token: {error}")]
     Decode {
         token: Jwt,
         error: jsonwebtoken::errors::Error,
     },
+    #[error("Failed to parse JSON Web Token: {0}")]
+    Parse(bencher_json::ValidError),
     #[error("Expired JSON Web Token ({exp} < {now}): {error}")]
     Expired {
         exp: u64,
@@ -58,20 +63,24 @@ impl SecretKey {
         email: Email,
         ttl: u32,
         org: Option<OrgClaims>,
-    ) -> Result<Jwt, ApiError> {
+    ) -> Result<Jwt, JwtError> {
         let claims = Claims::new(audience, self.issuer.clone(), email, ttl, org);
-        Ok(Jwt::from_str(&encode(&HEADER, &claims, &self.encoding)?)?)
+        Jwt::from_str(
+            &encode(&HEADER, &claims, &self.encoding)
+                .map_err(|e| JwtError::Encode { claims, error: e })?,
+        )
+        .map_err(JwtError::Parse)
     }
 
-    pub fn new_auth(&self, email: Email, ttl: u32) -> Result<Jwt, ApiError> {
+    pub fn new_auth(&self, email: Email, ttl: u32) -> Result<Jwt, JwtError> {
         self.new_jwt(Audience::Auth, email, ttl, None)
     }
 
-    pub fn new_client(&self, email: Email, ttl: u32) -> Result<Jwt, ApiError> {
+    pub fn new_client(&self, email: Email, ttl: u32) -> Result<Jwt, JwtError> {
         self.new_jwt(Audience::Client, email, ttl, None)
     }
 
-    pub fn new_api_key(&self, email: Email, ttl: u32) -> Result<Jwt, ApiError> {
+    pub fn new_api_key(&self, email: Email, ttl: u32) -> Result<Jwt, JwtError> {
         self.new_jwt(Audience::ApiKey, email, ttl, None)
     }
 
@@ -81,7 +90,7 @@ impl SecretKey {
         ttl: u32,
         org_uuid: OrganizationUuid,
         role: OrganizationRole,
-    ) -> Result<Jwt, ApiError> {
+    ) -> Result<Jwt, JwtError> {
         let org_claims = OrgClaims {
             uuid: org_uuid,
             role,

@@ -11,7 +11,7 @@ use crate::{
     },
     model::{
         user::QueryUser,
-        user::{auth::AuthUser, token::same_user},
+        user::{auth::AuthUser, same_user},
     },
 };
 

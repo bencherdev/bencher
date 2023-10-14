@@ -11,19 +11,19 @@ use uuid::Uuid;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{response_accepted, response_ok, CorsResponse, ResponseAccepted, ResponseOk},
+        endpoint::{CorsResponse, ResponseAccepted, ResponseOk},
         Endpoint,
     },
+    error::{resource_conflict_err, resource_not_found_err},
     model::{
         user::QueryUser,
         user::{
             auth::AuthUser,
-            token::{same_user, InsertToken, QueryToken, UpdateToken},
+            same_user,
+            token::{InsertToken, QueryToken, UpdateToken},
         },
     },
     schema,
-    util::error::into_json,
-    ApiError,
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -72,27 +72,15 @@ pub async fn user_tokens_get(
     query_params: Query<UserTokensQuery>,
 ) -> Result<ResponseOk<JsonTokens>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::GetLs;
-
-    let context = rqctx.context();
     let json = get_ls_inner(
-        context,
+        rqctx.context(),
         path_params.into_inner(),
         pagination_params.into_inner(),
         query_params.into_inner(),
         &auth_user,
-        endpoint,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    response_ok!(endpoint, json)
+    .await?;
+    Ok(Endpoint::GetLs.response_ok(json))
 }
 
 async fn get_ls_inner(
@@ -101,8 +89,7 @@ async fn get_ls_inner(
     pagination_params: UserTokensPagination,
     query_params: UserTokensQuery,
     auth_user: &AuthUser,
-    endpoint: Endpoint,
-) -> Result<JsonTokens, ApiError> {
+) -> Result<JsonTokens, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
@@ -127,13 +114,14 @@ async fn get_ls_inner(
         },
     };
 
+    let user = &query_user;
     Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryToken>(conn)
-        .map_err(ApiError::from)?
+        .map_err(resource_not_found_err!(Token, user))?
         .into_iter()
-        .filter_map(into_json!(endpoint, conn))
+        .map(|query_token| query_token.into_json_for_user(user))
         .collect())
 }
 
@@ -148,21 +136,14 @@ pub async fn user_token_post(
     body: TypedBody<JsonNewToken>,
 ) -> Result<ResponseAccepted<JsonToken>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Post;
-
-    let context = rqctx.context();
-    let json_token = body.into_inner();
-    let json = post_inner(context, path_params.into_inner(), json_token, &auth_user)
-        .await
-        .map_err(|e| {
-            if let ApiError::HttpError(e) = e {
-                e
-            } else {
-                endpoint.err(e).into()
-            }
-        })?;
-
-    response_accepted!(endpoint, json)
+    let json = post_inner(
+        rqctx.context(),
+        path_params.into_inner(),
+        body.into_inner(),
+        &auth_user,
+    )
+    .await?;
+    Ok(Endpoint::Post.response_accepted(json))
 }
 
 async fn post_inner(
@@ -170,7 +151,7 @@ async fn post_inner(
     path_params: UserTokensParams,
     json_token: JsonNewToken,
     auth_user: &AuthUser,
-) -> Result<JsonToken, ApiError> {
+) -> Result<JsonToken, HttpError> {
     let conn = &mut *context.conn().await;
 
     let insert_token = InsertToken::from_json(
@@ -185,14 +166,13 @@ async fn post_inner(
     diesel::insert_into(schema::token::table)
         .values(&insert_token)
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(Token, insert_token))?;
 
     schema::token::table
         .filter(schema::token::uuid.eq(&insert_token.uuid))
         .first::<QueryToken>(conn)
-        .map_err(ApiError::from)?
+        .map_err(resource_not_found_err!(Token, &insert_token))?
         .into_json(conn)
-        .map_err(ApiError::from)
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -224,28 +204,15 @@ pub async fn user_token_get(
     path_params: Path<UserTokenParams>,
 ) -> Result<ResponseOk<JsonToken>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::GetOne;
-
-    let context = rqctx.context();
-    let path_params = path_params.into_inner();
-    let json = get_one_inner(context, path_params, &auth_user)
-        .await
-        .map_err(|e| {
-            if let ApiError::HttpError(e) = e {
-                e
-            } else {
-                endpoint.err(e).into()
-            }
-        })?;
-
-    response_ok!(endpoint, json)
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Endpoint::GetOne.response_ok(json))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: UserTokenParams,
     auth_user: &AuthUser,
-) -> Result<JsonToken, ApiError> {
+) -> Result<JsonToken, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
@@ -253,7 +220,10 @@ async fn get_one_inner(
 
     QueryToken::get_user_token(conn, query_user.id, &path_params.token.to_string())?
         .into_json(conn)
-        .map_err(ApiError::from)
+        .map_err(resource_not_found_err!(
+            Token,
+            (query_user, path_params.token)
+        ))
 }
 
 #[endpoint {
@@ -267,25 +237,14 @@ pub async fn user_token_patch(
     body: TypedBody<JsonUpdateToken>,
 ) -> Result<ResponseAccepted<JsonToken>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Patch;
-
-    let context = rqctx.context();
     let json = patch_inner(
-        context,
+        rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
         &auth_user,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    response_accepted!(endpoint, json)
+    .await?;
+    Ok(Endpoint::Patch.response_accepted(json))
 }
 
 async fn patch_inner(
@@ -293,7 +252,7 @@ async fn patch_inner(
     path_params: UserTokenParams,
     json_token: JsonUpdateToken,
     auth_user: &AuthUser,
-) -> Result<JsonToken, ApiError> {
+) -> Result<JsonToken, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
@@ -305,7 +264,7 @@ async fn patch_inner(
     diesel::update(schema::token::table.filter(schema::token::id.eq(query_token.id)))
         .set(&UpdateToken::from(json_token))
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(Token, query_token.id, query_token))?;
 
     QueryToken::get(conn, query_token.id)?.into_json(conn)
 }

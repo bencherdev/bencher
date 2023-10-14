@@ -232,7 +232,6 @@ pub trait WordStr {
 
 #[derive(Debug)]
 pub enum BencherResource {
-    User,
     Organization,
     OrganizationRole,
     Project,
@@ -250,6 +249,8 @@ pub enum BencherResource {
     Statistic,
     Boundary,
     Alert,
+    User,
+    Token,
     #[cfg(feature = "plus")]
     Plan,
 }
@@ -257,7 +258,6 @@ pub enum BencherResource {
 impl BencherResource {
     pub fn name(&self) -> &str {
         match self {
-            Self::User => "User",
             Self::Organization => "Organization",
             Self::OrganizationRole => "Organization Role",
             Self::Project => "Project",
@@ -275,6 +275,8 @@ impl BencherResource {
             Self::Statistic => "Statistic",
             Self::Boundary => "Boundary",
             Self::Alert => "Alert",
+            Self::User => "User",
+            Self::Token => "Token",
             #[cfg(feature = "plus")]
             Self::Plan => "Plan",
         }

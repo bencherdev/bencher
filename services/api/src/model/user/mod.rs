@@ -18,9 +18,19 @@ pub mod token;
 
 crate::util::typed_id::typed_id!(UserId);
 
+macro_rules! same_user {
+    ($auth_user:ident, $rbac:expr, $user_id:expr) => {
+        if !($auth_user.is_admin(&$rbac) || $auth_user.id == $user_id) {
+            return Err(crate::error::forbidden_error(format!("User is not admin and the authenticated user ({auth_user}) does not match the requested user ({requested_user})", auth_user = $auth_user.id, requested_user = $user_id)));
+        }
+    };
+}
+
+pub(crate) use same_user;
+
 fn_resource_id!(user);
 
-#[derive(diesel::Queryable)]
+#[derive(Debug, diesel::Queryable)]
 pub struct QueryUser {
     pub id: UserId,
     pub uuid: UserUuid,
