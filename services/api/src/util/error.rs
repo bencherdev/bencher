@@ -4,7 +4,6 @@ macro_rules! into_json {
             crate::util::error::database_map($context, query.into_json($($field)*))
         }
     };
-    ($context:expr) => {$crate::util::error::into_json!($context,)};
 }
 
 pub(crate) use into_json;

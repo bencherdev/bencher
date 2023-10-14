@@ -12,7 +12,9 @@ pub type ResponseAccepted<T> = HttpResponseHeaders<HttpResponseAccepted<T>, Cors
 
 #[derive(Copy, Clone)]
 pub enum Endpoint {
+    GetOnePub,
     GetOne,
+    GetLsPub,
     GetLs,
     Post,
     Put,
@@ -23,7 +25,9 @@ pub enum Endpoint {
 impl From<Endpoint> for http::Method {
     fn from(endpoint: Endpoint) -> Self {
         match endpoint {
-            Endpoint::GetOne | Endpoint::GetLs => http::Method::GET,
+            Endpoint::GetOnePub | Endpoint::GetOne | Endpoint::GetLsPub | Endpoint::GetLs => {
+                http::Method::GET
+            },
             Endpoint::Post => http::Method::POST,
             Endpoint::Put => http::Method::PUT,
             Endpoint::Patch => http::Method::PATCH,
@@ -40,11 +44,28 @@ impl Endpoint {
         )
     }
 
+    pub fn pub_response_ok<T>(self, body: T) -> HttpResponseHeaders<HttpResponseOk<T>, CorsHeaders>
+    where
+        T: JsonSchema + Serialize + Send + Sync,
+    {
+        HttpResponseHeaders::new(HttpResponseOk(body), self.pub_header())
+    }
+
     pub fn response_ok<T>(self, body: T) -> HttpResponseHeaders<HttpResponseOk<T>, CorsHeaders>
     where
         T: JsonSchema + Serialize + Send + Sync,
     {
         HttpResponseHeaders::new(HttpResponseOk(body), self.header())
+    }
+
+    pub fn pub_response_accepted<T>(
+        self,
+        body: T,
+    ) -> HttpResponseHeaders<HttpResponseAccepted<T>, CorsHeaders>
+    where
+        T: JsonSchema + Serialize + Send + Sync,
+    {
+        HttpResponseHeaders::new(HttpResponseAccepted(body), self.pub_header())
     }
 
     pub fn response_accepted<T>(
