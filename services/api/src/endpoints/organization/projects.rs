@@ -1,6 +1,6 @@
 use bencher_json::{
-    project::ProjectRole, DateTime, JsonDirection, JsonNewProject, JsonPagination, JsonProject,
-    JsonProjects, NonEmpty, ResourceId,
+    organization, project::ProjectRole, DateTime, JsonDirection, JsonNewProject, JsonPagination,
+    JsonProject, JsonProjects, NonEmpty, ResourceId,
 };
 use bencher_rbac::organization::Permission;
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -14,6 +14,7 @@ use crate::{
         endpoint::{response_accepted, response_ok, CorsResponse, ResponseAccepted, ResponseOk},
         Endpoint,
     },
+    error::resource_not_found_err,
     model::{
         organization::QueryOrganization,
         project::{
@@ -77,26 +78,15 @@ pub async fn org_projects_get(
     query_params: Query<OrgProjectsQuery>,
 ) -> Result<ResponseOk<JsonProjects>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::GetLs;
-
     let json = get_ls_inner(
         rqctx.context(),
         path_params.into_inner(),
         pagination_params.into_inner(),
         query_params.into_inner(),
         &auth_user,
-        endpoint,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    response_ok!(endpoint, json)
+    .await?;
+    Ok(Endpoint::GetLs.response_ok(json))
 }
 
 async fn get_ls_inner(
@@ -105,8 +95,7 @@ async fn get_ls_inner(
     pagination_params: OrgProjectsPagination,
     query_params: OrgProjectsQuery,
     auth_user: &AuthUser,
-    endpoint: Endpoint,
-) -> Result<JsonProjects, ApiError> {
+) -> Result<JsonProjects, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_organization = QueryOrganization::is_allowed_resource_id(
@@ -130,13 +119,14 @@ async fn get_ls_inner(
         },
     };
 
+    let organization = &query_organization;
     Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryProject>(conn)
-        .map_err(ApiError::from)?
+        .map_err(resource_not_found_err!(Project, organization))?
         .into_iter()
-        .filter_map(into_json!(endpoint, conn))
+        .map(|query_project| query_project.into_json_for_organization(organization))
         .collect())
 }
 

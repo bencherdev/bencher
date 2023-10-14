@@ -121,6 +121,11 @@ impl QueryProject {
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonProject, ApiError> {
+        let query_organization = QueryOrganization::get(conn, self.organization_id)?;
+        Ok(self.into_json_for_organization(&query_organization))
+    }
+
+    pub fn into_json_for_organization(self, organization: &QueryOrganization) -> JsonProject {
         let Self {
             uuid,
             organization_id,
@@ -132,16 +137,20 @@ impl QueryProject {
             modified,
             ..
         } = self;
-        Ok(JsonProject {
+        debug_assert!(
+            organization.id == organization_id,
+            "Organization ID mismatch for project"
+        );
+        JsonProject {
             uuid,
-            organization: QueryOrganization::get_uuid(conn, organization_id)?,
+            organization: organization.uuid,
             name,
             slug,
             url,
             visibility,
             created,
             modified,
-        })
+        }
     }
 }
 
