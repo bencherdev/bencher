@@ -1,27 +1,19 @@
-use std::convert::TryFrom;
+use bencher_client::types::{Boundary, SampleSize, StatisticKind, Window};
 
-use bencher_client::types::StatisticKind;
-use bencher_json::{Boundary, SampleSize};
+use crate::parser::project::threshold::{CliStatisticCreate, CliStatisticKind};
 
-use crate::{
-    parser::project::threshold::{CliStatisticCreate, CliStatisticKind},
-    CliError,
-};
-
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Statistic {
     pub test: StatisticKind,
     pub min_sample_size: Option<SampleSize>,
     pub max_sample_size: Option<SampleSize>,
-    pub window: Option<u32>,
+    pub window: Option<Window>,
     pub lower_boundary: Option<Boundary>,
     pub upper_boundary: Option<Boundary>,
 }
 
-impl TryFrom<CliStatisticCreate> for Statistic {
-    type Error = CliError;
-
-    fn try_from(create: CliStatisticCreate) -> Result<Self, Self::Error> {
+impl From<CliStatisticCreate> for Statistic {
+    fn from(create: CliStatisticCreate) -> Self {
         let CliStatisticCreate {
             test,
             min_sample_size,
@@ -30,31 +22,15 @@ impl TryFrom<CliStatisticCreate> for Statistic {
             lower_boundary,
             upper_boundary,
         } = create;
-        Ok(Self {
+        Self {
             test: test.into(),
-            min_sample_size: map_sample_size(min_sample_size)?,
-            max_sample_size: map_sample_size(max_sample_size)?,
-            window,
-            lower_boundary: map_boundary(lower_boundary)?,
-            upper_boundary: map_boundary(upper_boundary)?,
-        })
+            min_sample_size: min_sample_size.map(Into::into),
+            max_sample_size: max_sample_size.map(Into::into),
+            window: window.map(Into::into),
+            lower_boundary: lower_boundary.map(Into::into),
+            upper_boundary: upper_boundary.map(Into::into),
+        }
     }
-}
-
-fn map_sample_size(sample_size: Option<u32>) -> Result<Option<SampleSize>, CliError> {
-    Ok(if let Some(sample_size) = sample_size {
-        Some(sample_size.try_into().map_err(CliError::SampleSize)?)
-    } else {
-        None
-    })
-}
-
-fn map_boundary(boundary: Option<f64>) -> Result<Option<Boundary>, CliError> {
-    Ok(if let Some(boundary) = boundary {
-        Some(boundary.try_into().map_err(CliError::Boundary)?)
-    } else {
-        None
-    })
 }
 
 impl From<CliStatisticKind> for StatisticKind {

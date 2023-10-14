@@ -1,4 +1,4 @@
-use bencher_json::{project::threshold::StatisticKind, Boundary, SampleSize};
+use bencher_json::{project::threshold::StatisticKind, Boundary, SampleSize, Window};
 use diesel::{
     ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
     SelectableHelper,
@@ -16,7 +16,6 @@ use crate::{
         },
     },
     schema,
-    util::map_u32,
 };
 
 #[derive(Debug, Clone)]
@@ -31,7 +30,7 @@ pub struct MetricsStatistic {
     pub test: StatisticKind,
     pub min_sample_size: Option<SampleSize>,
     pub max_sample_size: Option<SampleSize>,
-    pub window: Option<u32>,
+    pub window: Option<Window>,
     pub lower_boundary: Option<Boundary>,
     pub upper_boundary: Option<Boundary>,
 }
@@ -70,16 +69,15 @@ impl MetricsThreshold {
                     test,
                     min_sample_size,
                     max_sample_size,
-                    window: map_u32(window).ok()?,
+                    window,
                     lower_boundary,
                     upper_boundary,
                 };
-                Some(Self {
+                Self {
                     id: threshold_id,
                     statistic,
-                })
+                }
             })
             .ok()
-            .flatten()
     }
 }

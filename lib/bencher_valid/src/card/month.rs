@@ -21,7 +21,7 @@ impl TryFrom<i64> for ExpirationMonth {
     type Error = ValidError;
 
     fn try_from(expiration_month: i64) -> Result<Self, Self::Error> {
-        Self::try_from(i32::try_from(expiration_month)?)
+        Self::try_from(i32::try_from(expiration_month).map_err(ValidError::ExpirationMonth64)?)
     }
 }
 

@@ -36,7 +36,8 @@ from_client!(
     SampleSize,
     Slug,
     Url,
-    UserName
+    UserName,
+    Window
 );
 
 from_client!(

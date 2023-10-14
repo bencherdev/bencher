@@ -1,4 +1,4 @@
-use bencher_json::{ResourceId, ThresholdUuid};
+use bencher_json::{Boundary, ResourceId, SampleSize, ThresholdUuid, Window};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliBackend, CliPagination};
@@ -77,23 +77,23 @@ pub struct CliStatisticCreate {
 
     /// Min sample size
     #[clap(long)]
-    pub min_sample_size: Option<u32>,
+    pub min_sample_size: Option<SampleSize>,
 
     /// Max sample size
     #[clap(long)]
-    pub max_sample_size: Option<u32>,
+    pub max_sample_size: Option<SampleSize>,
 
     /// Window size (seconds)
     #[clap(long)]
-    pub window: Option<u32>,
+    pub window: Option<Window>,
 
     /// Lower statistical boundary
     #[clap(long)]
-    pub lower_boundary: Option<f64>,
+    pub lower_boundary: Option<Boundary>,
 
     /// Upper statistical boundary
     #[clap(long)]
-    pub upper_boundary: Option<f64>,
+    pub upper_boundary: Option<Boundary>,
 }
 
 /// Supported kinds of statistic

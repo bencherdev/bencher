@@ -123,7 +123,7 @@ impl QueryThreshold {
         Ok(JsonThresholdStatistic {
             uuid,
             project: project_uuid,
-            statistic: statistic.into_json_for_threshold(uuid)?,
+            statistic: statistic.into_json_for_threshold(uuid),
             created,
         })
     }
@@ -182,7 +182,7 @@ impl InsertThreshold {
         let threshold_id = QueryThreshold::get_id(conn, insert_threshold.uuid)?;
 
         // Create the new statistic
-        let insert_statistic = InsertStatistic::from_json(threshold_id, json_statistic)?;
+        let insert_statistic = InsertStatistic::from_json(threshold_id, json_statistic);
         diesel::insert_into(schema::statistic::table)
             .values(&insert_statistic)
             .execute(conn)

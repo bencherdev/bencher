@@ -6875,9 +6875,11 @@
           },
           "window": {
             "nullable": true,
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Window"
+              }
+            ]
           }
         },
         "required": [
@@ -7614,9 +7616,11 @@
           },
           "window": {
             "nullable": true,
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Window"
+              }
+            ]
           }
         },
         "required": [
@@ -8032,9 +8036,11 @@
           },
           "window": {
             "nullable": true,
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Window"
+              }
+            ]
           }
         },
         "required": [
@@ -8288,6 +8294,11 @@
           "public",
           "private"
         ]
+      },
+      "Window": {
+        "type": "integer",
+        "format": "uint32",
+        "minimum": 0
       },
       "JsonDirection": {
         "type": "string",

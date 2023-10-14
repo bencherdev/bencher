@@ -335,8 +335,7 @@ async fn put_inner(
         .map_err(ApiError::from)?;
 
     // Insert the new statistic
-    let insert_statistic =
-        InsertStatistic::from_json(query_threshold.id, json_threshold.statistic)?;
+    let insert_statistic = InsertStatistic::from_json(query_threshold.id, json_threshold.statistic);
     diesel::insert_into(schema::statistic::table)
         .values(&insert_statistic)
         .execute(conn)

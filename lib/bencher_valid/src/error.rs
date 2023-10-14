@@ -34,30 +34,53 @@ pub enum ValidError {
     GitHash(String),
     #[error("Failed to validate secret: {0}")]
     Secret(String),
-    #[error("Failed to validate plan level: {0}")]
-    PlanLevel(String),
-    #[error("Failed to validate plan status: {0}")]
-    PlanStatus(String),
-    #[error("Failed to validate payment card brand: {0}")]
-    CardBrand(String),
-    #[error("Failed to validate payment card number: {0}")]
-    CardNumber(String),
-    #[error("Failed to validate payment card last four numbers: {0}")]
-    LastFour(String),
-    #[error("Failed to validate payment card expiration year: {0}")]
-    ExpirationYear(i32),
-    #[error("Failed to validate payment card expiration year: {0}")]
-    ExpirationYearStr(String),
-    #[error("Failed to validate payment card expiration month: {0}")]
-    ExpirationMonth(i32),
-    #[error("Failed to validate payment card expiration month: {0}")]
-    ExpirationMonthStr(String),
-    #[error("Failed to cast in: {0}")]
-    IntError(#[from] std::num::TryFromIntError),
-    #[error("Failed to validate payment card CVC: {0}")]
-    CardCvc(String),
     #[error("Invalid statistical boundary: {0}")]
     Boundary(f64),
+    #[error("Failed to parse boundary: {0}")]
+    BoundaryStr(std::num::ParseFloatError),
     #[error("Invalid statistical sample size: {0}")]
     SampleSize(u32),
+    #[error("Failed to parse sample size: {0}")]
+    SampleSizeStr(std::num::ParseIntError),
+    #[error("Invalid statistical window: {0}")]
+    Window(u32),
+    #[error("Failed to parse window: {0}")]
+    WindowStr(std::num::ParseIntError),
+
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate plan level: {0}")]
+    PlanLevel(String),
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate plan status: {0}")]
+    PlanStatus(String),
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate payment card brand: {0}")]
+    CardBrand(String),
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate payment card number: {0}")]
+    CardNumber(String),
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate payment card last four numbers: {0}")]
+    LastFour(String),
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate payment card expiration year: {0}")]
+    ExpirationYear(i32),
+    #[cfg(feature = "plus")]
+    #[error("Failed to convert payment card expiration year: {0}")]
+    ExpirationYear64(std::num::TryFromIntError),
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate payment card expiration year: {0}")]
+    ExpirationYearStr(String),
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate payment card expiration month: {0}")]
+    ExpirationMonth(i32),
+    #[cfg(feature = "plus")]
+    #[error("Failed to convert payment card expiration month: {0}")]
+    ExpirationMonth64(std::num::TryFromIntError),
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate payment card expiration month: {0}")]
+    ExpirationMonthStr(String),
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate payment card CVC: {0}")]
+    CardCvc(String),
 }

@@ -17,63 +17,61 @@ use crate::ValidError;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::BigInt))]
-pub struct SampleSize(u32);
+pub struct Window(u32);
 
-impl TryFrom<u32> for SampleSize {
+impl TryFrom<u32> for Window {
     type Error = ValidError;
 
-    fn try_from(sample_size: u32) -> Result<Self, Self::Error> {
-        is_valid_sample_size(sample_size)
-            .then_some(Self(sample_size))
-            .ok_or(ValidError::SampleSize(sample_size))
+    fn try_from(window: u32) -> Result<Self, Self::Error> {
+        is_valid_window(window)
+            .then_some(Self(window))
+            .ok_or(ValidError::Window(window))
     }
 }
 
-impl From<SampleSize> for i64 {
-    fn from(sample_size: SampleSize) -> Self {
-        i64::from(sample_size.0)
+impl From<Window> for i64 {
+    fn from(window: Window) -> Self {
+        i64::from(window.0)
     }
 }
 
-impl From<SampleSize> for u32 {
-    fn from(sample_size: SampleSize) -> Self {
-        sample_size.0
+impl From<Window> for u32 {
+    fn from(window: Window) -> Self {
+        window.0
     }
 }
 
-impl From<SampleSize> for usize {
-    fn from(sample_size: SampleSize) -> Self {
-        sample_size.0 as usize
-    }
-}
-
-impl SampleSize {
-    pub const MIN: Self = Self(2);
-    pub const THIRTY: Self = Self(30);
+impl Window {
+    pub const MIN: Self = Self(0);
+    pub const DAY: Self = Self(60 * 60 * 24);
+    pub const THIRTY: Self = Self(30 * Self::DAY.0);
+    pub const SIXTY: Self = Self(60 * Self::DAY.0);
+    pub const NINETY: Self = Self(90 * Self::DAY.0);
+    pub const YEAR: Self = Self(365 * Self::DAY.0);
     pub const MAX: Self = Self(u32::MAX);
 }
 
-impl FromStr for SampleSize {
+impl FromStr for Window {
     type Err = ValidError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::try_from(u32::from_str(s).map_err(ValidError::SampleSizeStr)?)
+        Self::try_from(u32::from_str(s).map_err(ValidError::WindowStr)?)
     }
 }
 
-impl<'de> Deserialize<'de> for SampleSize {
+impl<'de> Deserialize<'de> for Window {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_u32(SampleSizeVisitor)
+        deserializer.deserialize_u32(WindowVisitor)
     }
 }
 
-struct SampleSizeVisitor;
+struct WindowVisitor;
 
-impl Visitor<'_> for SampleSizeVisitor {
-    type Value = SampleSize;
+impl Visitor<'_> for WindowVisitor {
+    type Value = Window;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("a statistical sample size greater than or equal to 2")
@@ -96,9 +94,9 @@ impl Visitor<'_> for SampleSizeVisitor {
 
 #[cfg(feature = "db")]
 mod db {
-    use super::SampleSize;
+    use super::Window;
 
-    impl<DB> diesel::serialize::ToSql<diesel::sql_types::BigInt, DB> for SampleSize
+    impl<DB> diesel::serialize::ToSql<diesel::sql_types::BigInt, DB> for Window
     where
         DB: diesel::backend::Backend,
         for<'a> i64: diesel::serialize::ToSql<diesel::sql_types::BigInt, DB>
@@ -113,7 +111,7 @@ mod db {
         }
     }
 
-    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::BigInt, DB> for SampleSize
+    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::BigInt, DB> for Window
     where
         DB: diesel::backend::Backend,
         i64: diesel::deserialize::FromSql<diesel::sql_types::BigInt, DB>,
@@ -127,28 +125,24 @@ mod db {
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
-pub fn is_valid_sample_size(sample_size: u32) -> bool {
-    sample_size >= 2
+pub fn is_valid_window(_window: u32) -> bool {
+    true
 }
 
 #[cfg(test)]
 mod test {
     use pretty_assertions::assert_eq;
 
-    use super::{is_valid_sample_size, SampleSize};
+    use super::{is_valid_window, Window};
 
     #[test]
     #[allow(clippy::excessive_precision)]
     fn test_boundary() {
-        assert_eq!(true, is_valid_sample_size(SampleSize::MIN.into()));
-        assert_eq!(true, is_valid_sample_size(2));
-        assert_eq!(true, is_valid_sample_size(3));
-        assert_eq!(true, is_valid_sample_size(4));
-        assert_eq!(true, is_valid_sample_size(5));
-        assert_eq!(true, is_valid_sample_size(SampleSize::THIRTY.into()));
-        assert_eq!(true, is_valid_sample_size(SampleSize::MAX.into()));
-
-        assert_eq!(false, is_valid_sample_size(0));
-        assert_eq!(false, is_valid_sample_size(1));
+        assert_eq!(true, is_valid_window(Window::MIN.into()));
+        assert_eq!(true, is_valid_window(Window::THIRTY.into()));
+        assert_eq!(true, is_valid_window(Window::SIXTY.into()));
+        assert_eq!(true, is_valid_window(Window::NINETY.into()));
+        assert_eq!(true, is_valid_window(Window::YEAR.into()));
+        assert_eq!(true, is_valid_window(Window::MAX.into()));
     }
 }

@@ -29,6 +29,8 @@ export enum StatisticKind {
 
 export type SampleSize = number;
 
+export type Window = number;
+
 export type Boundary = number;
 
 export interface JsonStatistic {
@@ -37,7 +39,7 @@ export interface JsonStatistic {
 	test: StatisticKind;
 	min_sample_size?: SampleSize;
 	max_sample_size?: SampleSize;
-	window?: number;
+	window?: Window;
 	lower_boundary?: Boundary;
 	upper_boundary?: Boundary;
 	created: string;

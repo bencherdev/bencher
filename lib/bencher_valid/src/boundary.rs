@@ -2,7 +2,7 @@ use derive_more::Display;
 use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use std::fmt;
+use std::{fmt, str::FromStr};
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 
@@ -56,6 +56,14 @@ impl Boundary {
     #[allow(clippy::unreadable_literal)]
     pub const SIXTEEN_NINES: Self = Self(OrderedFloat(0.9999999999999999));
     pub const MAX: Self = Self::SIXTEEN_NINES;
+}
+
+impl FromStr for Boundary {
+    type Err = ValidError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::try_from(f64::from_str(s).map_err(ValidError::BoundaryStr)?)
+    }
 }
 
 impl<'de> Deserialize<'de> for Boundary {

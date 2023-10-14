@@ -1,4 +1,4 @@
-use bencher_valid::{Boundary, DateTime, SampleSize};
+use bencher_valid::{Boundary, DateTime, SampleSize, Window};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -24,7 +24,7 @@ pub struct JsonNewStatistic {
     pub test: StatisticKind,
     pub min_sample_size: Option<SampleSize>,
     pub max_sample_size: Option<SampleSize>,
-    pub window: Option<u32>,
+    pub window: Option<Window>,
     pub lower_boundary: Option<Boundary>,
     pub upper_boundary: Option<Boundary>,
 }
@@ -82,7 +82,7 @@ pub struct JsonStatistic {
     pub test: StatisticKind,
     pub min_sample_size: Option<SampleSize>,
     pub max_sample_size: Option<SampleSize>,
-    pub window: Option<u32>,
+    pub window: Option<Window>,
     pub lower_boundary: Option<Boundary>,
     pub upper_boundary: Option<Boundary>,
     pub created: DateTime,

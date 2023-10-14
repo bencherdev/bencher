@@ -1,6 +1,6 @@
 use bencher_json::{
     project::threshold::{JsonNewStatistic, JsonStatistic, StatisticKind},
-    Boundary, DateTime, SampleSize, StatisticUuid, ThresholdUuid,
+    Boundary, DateTime, SampleSize, StatisticUuid, ThresholdUuid, Window,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 
@@ -8,10 +8,7 @@ use crate::{
     context::DbConnection,
     schema,
     schema::statistic as statistic_table,
-    util::{
-        map_u32,
-        query::{fn_get, fn_get_id, fn_get_uuid},
-    },
+    util::query::{fn_get, fn_get_id, fn_get_uuid},
     ApiError,
 };
 
@@ -28,7 +25,7 @@ pub struct QueryStatistic {
     pub test: StatisticKind,
     pub min_sample_size: Option<SampleSize>,
     pub max_sample_size: Option<SampleSize>,
-    pub window: Option<i64>,
+    pub window: Option<Window>,
     pub lower_boundary: Option<Boundary>,
     pub upper_boundary: Option<Boundary>,
     pub created: DateTime,
@@ -41,13 +38,10 @@ impl QueryStatistic {
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonStatistic, ApiError> {
         let threshold = QueryThreshold::get_uuid(conn, self.threshold_id)?;
-        self.into_json_for_threshold(threshold)
+        Ok(self.into_json_for_threshold(threshold))
     }
 
-    pub fn into_json_for_threshold(
-        self,
-        threshold: ThresholdUuid,
-    ) -> Result<JsonStatistic, ApiError> {
+    pub fn into_json_for_threshold(self, threshold: ThresholdUuid) -> JsonStatistic {
         let Self {
             uuid,
             test,
@@ -59,17 +53,17 @@ impl QueryStatistic {
             created,
             ..
         } = self;
-        Ok(JsonStatistic {
+        JsonStatistic {
             uuid,
             threshold,
             test,
             min_sample_size,
             max_sample_size,
-            window: map_u32(window)?,
+            window,
             lower_boundary,
             upper_boundary,
             created,
-        })
+        }
     }
 }
 
@@ -81,7 +75,7 @@ pub struct InsertStatistic {
     pub test: StatisticKind,
     pub min_sample_size: Option<SampleSize>,
     pub max_sample_size: Option<SampleSize>,
-    pub window: Option<i64>,
+    pub window: Option<Window>,
     pub lower_boundary: Option<Boundary>,
     pub upper_boundary: Option<Boundary>,
     pub created: DateTime,
@@ -115,10 +109,7 @@ impl From<QueryStatistic> for InsertStatistic {
 }
 
 impl InsertStatistic {
-    pub fn from_json(
-        threshold_id: ThresholdId,
-        json_statistic: JsonNewStatistic,
-    ) -> Result<Self, ApiError> {
+    pub fn from_json(threshold_id: ThresholdId, json_statistic: JsonNewStatistic) -> Self {
         let JsonNewStatistic {
             test,
             min_sample_size,
@@ -127,16 +118,16 @@ impl InsertStatistic {
             lower_boundary,
             upper_boundary,
         } = json_statistic;
-        Ok(Self {
+        Self {
             uuid: StatisticUuid::new(),
             threshold_id,
             test,
             min_sample_size,
             max_sample_size,
-            window: window.map(Into::into),
+            window,
             lower_boundary,
             upper_boundary,
             created: DateTime::now(),
-        })
+        }
     }
 }

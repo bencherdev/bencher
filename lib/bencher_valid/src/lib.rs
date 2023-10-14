@@ -22,6 +22,7 @@ mod secret;
 mod slug;
 mod url;
 mod user_name;
+mod window;
 
 pub use crate::git_hash::GitHash;
 pub use crate::slug::Slug;
@@ -45,6 +46,7 @@ pub use resource_id::ResourceId;
 pub use sample_size::SampleSize;
 pub use secret::Secret;
 pub use user_name::UserName;
+pub use window::Window;
 
 const MAX_LEN: usize = 50;
 

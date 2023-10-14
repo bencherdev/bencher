@@ -38,7 +38,7 @@ impl TryFrom<CliThresholdCreate> for Create {
             metric_kind,
             branch,
             testbed,
-            statistic: statistic.try_into()?,
+            statistic: statistic.into(),
             backend: backend.try_into()?,
         })
     }
@@ -66,11 +66,11 @@ impl From<Create> for JsonNewThreshold {
             branch: branch.into(),
             testbed: testbed.into(),
             test,
-            min_sample_size: min_sample_size.map(Into::into),
-            max_sample_size: max_sample_size.map(Into::into),
+            min_sample_size,
+            max_sample_size,
             window,
-            lower_boundary: lower_boundary.map(Into::into),
-            upper_boundary: upper_boundary.map(Into::into),
+            lower_boundary,
+            upper_boundary,
         }
     }
 }
