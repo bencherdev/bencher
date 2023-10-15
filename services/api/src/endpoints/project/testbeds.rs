@@ -228,7 +228,7 @@ async fn get_one_inner(
         .map(|testbed| testbed.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(
             Testbed,
-            (query_project.clone(), path_params.testbed)
+            (query_project, path_params.testbed)
         ))
 }
 
@@ -323,7 +323,7 @@ async fn delete_inner(
 
     diesel::delete(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))
         .execute(conn)
-        .map_err(resource_not_found_err!(Testbed, query_testbed))?;
+        .map_err(resource_conflict_err!(Testbed, query_testbed))?;
 
     Ok(JsonEmpty {})
 }

@@ -231,7 +231,7 @@ async fn get_one_inner(
         .map(|benchmark| benchmark.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(
             Benchmark,
-            (query_project.clone(), path_params.benchmark)
+            (query_project, path_params.benchmark)
         ))
 }
 
@@ -323,7 +323,7 @@ async fn delete_inner(
         QueryBenchmark::from_resource_id(conn, query_project.id, &path_params.benchmark)?;
     diesel::delete(schema::benchmark::table.filter(schema::benchmark::id.eq(query_benchmark.id)))
         .execute(conn)
-        .map_err(resource_not_found_err!(Benchmark, query_benchmark))?;
+        .map_err(resource_conflict_err!(Benchmark, query_benchmark))?;
 
     Ok(JsonEmpty {})
 }

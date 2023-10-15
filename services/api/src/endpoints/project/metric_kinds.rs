@@ -228,7 +228,7 @@ async fn get_one_inner(
         .map(|metric_kind| metric_kind.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(
             MetricKind,
-            (query_project.clone(), path_params.metric_kind)
+            (query_project, path_params.metric_kind)
         ))
 }
 
@@ -326,7 +326,7 @@ async fn delete_inner(
         schema::metric_kind::table.filter(schema::metric_kind::id.eq(query_metric_kind.id)),
     )
     .execute(conn)
-    .map_err(resource_not_found_err!(MetricKind, query_metric_kind))?;
+    .map_err(resource_conflict_err!(MetricKind, query_metric_kind))?;
 
     Ok(JsonEmpty {})
 }

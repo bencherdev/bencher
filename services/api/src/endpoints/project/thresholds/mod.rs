@@ -11,12 +11,10 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{
-            pub_response_ok, response_accepted, response_ok, CorsResponse, ResponseAccepted,
-            ResponseOk,
-        },
+        endpoint::{CorsResponse, Delete, Get, Post, Put, ResponseAccepted, ResponseOk},
         Endpoint,
     },
+    error::{resource_conflict_err, resource_not_found_err},
     model::project::{
         branch::QueryBranch,
         metric_kind::QueryMetricKind,
@@ -26,8 +24,6 @@ use crate::{
     },
     model::user::auth::AuthUser,
     schema,
-    util::error::into_json,
-    ApiError,
 };
 
 pub mod alerts;
@@ -73,29 +69,14 @@ pub async fn proj_thresholds_get(
     pagination_params: Query<ProjThresholdsPagination>,
 ) -> Result<ResponseOk<JsonThresholds>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::GetLs;
-
     let json = get_ls_inner(
         rqctx.context(),
         auth_user.as_ref(),
         path_params.into_inner(),
         pagination_params.into_inner(),
-        endpoint,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    if auth_user.is_some() {
-        response_ok!(endpoint, json)
-    } else {
-        pub_response_ok!(endpoint, json)
-    }
+    .await?;
+    Ok(Get::response_ok(json, auth_user.is_some()))
 }
 
 async fn get_ls_inner(
@@ -103,8 +84,7 @@ async fn get_ls_inner(
     auth_user: Option<&AuthUser>,
     path_params: ProjThresholdsParams,
     pagination_params: ProjThresholdsPagination,
-    endpoint: Endpoint,
-) -> Result<JsonThresholds, ApiError> {
+) -> Result<JsonThresholds, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_project =
@@ -123,13 +103,22 @@ async fn get_ls_inner(
         },
     };
 
+    let project = &query_project;
     Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryThreshold>(conn)
-        .map_err(ApiError::from)?
+        .map_err(resource_not_found_err!(Threshold, project))?
         .into_iter()
-        .filter_map(into_json!(endpoint, conn))
+        .filter_map(|threshold| match threshold.into_json(conn) {
+            Ok(threshold) => Some(threshold),
+            Err(err) => {
+                debug_assert!(false, "{err}");
+                #[cfg(feature = "sentry")]
+                sentry::capture_error(&err);
+                None
+            },
+        })
         .collect())
 }
 
@@ -144,24 +133,14 @@ pub async fn proj_threshold_post(
     body: TypedBody<JsonNewThreshold>,
 ) -> Result<ResponseAccepted<JsonThreshold>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Post;
-
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),
         &body.into_inner(),
         &auth_user,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    response_accepted!(endpoint, json)
+    .await?;
+    Ok(Post::auth_response_accepted(json))
 }
 
 async fn post_inner(
@@ -169,19 +148,19 @@ async fn post_inner(
     path_params: ProjThresholdsParams,
     json_threshold: &JsonNewThreshold,
     auth_user: &AuthUser,
-) -> Result<JsonThreshold, ApiError> {
+) -> Result<JsonThreshold, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
-    let project_id = QueryProject::is_allowed(
+    let query_project = QueryProject::is_allowed(
         conn,
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Create,
-    )?
-    .id;
+    )?;
 
+    let project_id = query_project.id;
     // Verify that the branch, testbed, and metric kind are part of the same project
     let branch_id = QueryBranch::from_resource_id(conn, project_id, &json_threshold.branch)?.id;
     let testbed_id = QueryTestbed::from_resource_id(conn, project_id, &json_threshold.testbed)?.id;
@@ -189,7 +168,7 @@ async fn post_inner(
         QueryMetricKind::from_resource_id(conn, project_id, &json_threshold.metric_kind)?.id;
 
     // Create the new threshold
-    let threshold_id = InsertThreshold::from_json(
+    let threshold_id = InsertThreshold::insert_from_json(
         conn,
         project_id,
         metric_kind_id,
@@ -202,7 +181,7 @@ async fn post_inner(
     schema::threshold::table
         .filter(schema::threshold::id.eq(threshold_id))
         .first::<QueryThreshold>(conn)
-        .map_err(ApiError::from)?
+        .map_err(resource_not_found_err!(Threshold, threshold_id))?
         .into_json(conn)
 }
 
@@ -239,34 +218,20 @@ pub async fn proj_threshold_get(
     path_params: Path<ProjThresholdParams>,
 ) -> Result<ResponseOk<JsonThreshold>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::GetOne;
-
     let json = get_one_inner(
         rqctx.context(),
         path_params.into_inner(),
         auth_user.as_ref(),
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    if auth_user.is_some() {
-        response_ok!(endpoint, json)
-    } else {
-        pub_response_ok!(endpoint, json)
-    }
+    .await?;
+    Ok(Get::response_ok(json, auth_user.is_some()))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjThresholdParams,
     auth_user: Option<&AuthUser>,
-) -> Result<JsonThreshold, ApiError> {
+) -> Result<JsonThreshold, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_project =
@@ -275,7 +240,10 @@ async fn get_one_inner(
     QueryThreshold::belonging_to(&query_project)
         .filter(schema::threshold::uuid.eq(path_params.threshold))
         .first::<QueryThreshold>(conn)
-        .map_err(ApiError::from)?
+        .map_err(resource_not_found_err!(
+            Threshold,
+            (query_project, path_params.threshold)
+        ))?
         .into_json(conn)
 }
 
@@ -290,25 +258,14 @@ pub async fn proj_threshold_put(
     body: TypedBody<JsonUpdateThreshold>,
 ) -> Result<ResponseAccepted<JsonThreshold>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Put;
-
-    let context = rqctx.context();
     let json = put_inner(
-        context,
+        rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
         &auth_user,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    response_accepted!(endpoint, json)
+    .await?;
+    Ok(Put::auth_response_accepted(json))
 }
 
 async fn put_inner(
@@ -316,7 +273,7 @@ async fn put_inner(
     path_params: ProjThresholdParams,
     json_threshold: JsonUpdateThreshold,
     auth_user: &AuthUser,
-) -> Result<JsonThreshold, ApiError> {
+) -> Result<JsonThreshold, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
@@ -332,14 +289,21 @@ async fn put_inner(
     let query_threshold = QueryThreshold::belonging_to(&query_project)
         .filter(schema::threshold::uuid.eq(path_params.threshold.to_string()))
         .first::<QueryThreshold>(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_not_found_err!(
+            Threshold,
+            (query_project, path_params.threshold)
+        ))?;
 
     // Insert the new statistic
     let insert_statistic = InsertStatistic::from_json(query_threshold.id, json_threshold.statistic);
     diesel::insert_into(schema::statistic::table)
         .values(&insert_statistic)
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(
+            Statistic,
+            query_threshold.clone(),
+            insert_statistic
+        ))?;
 
     // Update the current threshold to use the new statistic
     diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(query_threshold.id)))
@@ -348,7 +312,11 @@ async fn put_inner(
             insert_statistic.uuid,
         )?)
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(
+            Threshold,
+            query_threshold.clone(),
+            insert_statistic
+        ))?;
 
     QueryThreshold::get(conn, query_threshold.id)?.into_json(conn)
 }
@@ -363,26 +331,15 @@ pub async fn proj_threshold_delete(
     path_params: Path<ProjThresholdParams>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Delete;
-
-    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
-        .await
-        .map_err(|e| {
-            if let ApiError::HttpError(e) = e {
-                e
-            } else {
-                endpoint.err(e).into()
-            }
-        })?;
-
-    response_accepted!(endpoint, json)
+    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Delete::auth_response_accepted(json))
 }
 
 async fn delete_inner(
     context: &ApiContext,
     path_params: ProjThresholdParams,
     auth_user: &AuthUser,
-) -> Result<JsonEmpty, ApiError> {
+) -> Result<JsonEmpty, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
@@ -397,10 +354,13 @@ async fn delete_inner(
     let query_threshold = QueryThreshold::belonging_to(&query_project)
         .filter(schema::threshold::uuid.eq(path_params.threshold.to_string()))
         .first::<QueryThreshold>(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_not_found_err!(
+            Threshold,
+            (query_project, path_params.threshold)
+        ))?;
     diesel::delete(schema::threshold::table.filter(schema::threshold::id.eq(query_threshold.id)))
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(Threshold, query_threshold))?;
 
     Ok(JsonEmpty {})
 }

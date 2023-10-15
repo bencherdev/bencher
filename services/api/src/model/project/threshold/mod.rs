@@ -4,6 +4,7 @@ use bencher_json::{
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
+use http::StatusCode;
 
 use self::statistic::{InsertStatistic, QueryStatistic, StatisticId};
 use super::{
@@ -14,11 +15,10 @@ use super::{
 };
 use crate::{
     context::DbConnection,
-    error::{assert_parentage, resource_conflict_err, BencherResource},
+    error::{assert_parentage, issue_error, resource_conflict_err, BencherResource},
     schema::threshold as threshold_table,
     schema::{self},
     util::query::{fn_get, fn_get_id, fn_get_uuid},
-    ApiError,
 };
 
 pub mod alert;
@@ -53,7 +53,7 @@ impl QueryThreshold {
         conn: &mut DbConnection,
         threshold_id: ThresholdId,
         statistic_id: StatisticId,
-    ) -> Result<Self, ApiError> {
+    ) -> Result<Self, HttpError> {
         let mut threshold = Self::get(conn, threshold_id)?;
         // IMPORTANT: Set the statistic ID to the one specified and not the current value!
         threshold.statistic_id = Some(statistic_id);
@@ -64,7 +64,7 @@ impl QueryThreshold {
         conn: &mut DbConnection,
         threshold_id: ThresholdId,
         statistic_id: StatisticId,
-    ) -> Result<JsonThreshold, ApiError> {
+    ) -> Result<JsonThreshold, HttpError> {
         Self::get_with_statistic(conn, threshold_id, statistic_id)?.into_json(conn)
     }
 
@@ -72,12 +72,12 @@ impl QueryThreshold {
         conn: &mut DbConnection,
         threshold_id: ThresholdId,
         statistic_id: StatisticId,
-    ) -> Result<JsonThresholdStatistic, ApiError> {
+    ) -> Result<JsonThresholdStatistic, HttpError> {
         Self::get_with_statistic(conn, threshold_id, statistic_id)?
             .into_threshold_statistic_json(conn)
     }
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonThreshold, ApiError> {
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonThreshold, HttpError> {
         let Self {
             uuid,
             project_id,
@@ -89,17 +89,27 @@ impl QueryThreshold {
             modified,
             ..
         } = self;
+        let statistic = if let Some(statistic_id) = statistic_id {
+            QueryStatistic::get(conn, statistic_id)?.into_json(conn)?
+        } else {
+            let err = issue_error(
+                StatusCode::NOT_FOUND,
+                "Failed to find statistic for threshold",
+                &format!("No statistic for threshold: {project_id}/{uuid}"),
+                "statistic is null",
+            );
+            debug_assert!(false, "{err}");
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(&err);
+            return Err(err);
+        };
         Ok(JsonThreshold {
             uuid,
             project: QueryProject::get_uuid(conn, project_id)?,
             metric_kind: QueryMetricKind::get(conn, metric_kind_id)?.into_json(conn)?,
             branch: QueryBranch::get(conn, branch_id)?.into_json(conn)?,
             testbed: QueryTestbed::get(conn, testbed_id)?.into_json(conn)?,
-            statistic: if let Some(statistic_id) = statistic_id {
-                QueryStatistic::get(conn, statistic_id)?.into_json(conn)?
-            } else {
-                return Err(ApiError::NoThresholdStatistic(uuid));
-            },
+            statistic,
             created,
             modified,
         })
@@ -108,12 +118,21 @@ impl QueryThreshold {
     pub fn into_threshold_statistic_json(
         self,
         conn: &mut DbConnection,
-    ) -> Result<JsonThresholdStatistic, ApiError> {
+    ) -> Result<JsonThresholdStatistic, HttpError> {
         let project = QueryProject::get(conn, self.project_id)?;
         let statistic = if let Some(statistic_id) = self.statistic_id {
             QueryStatistic::get(conn, statistic_id)?
         } else {
-            return Err(ApiError::NoThresholdStatistic(self.uuid));
+            let err = issue_error(
+                StatusCode::NOT_FOUND,
+                "Failed to find threshold statistic ",
+                &format!("No threshold statistic: {self:?}"),
+                "statistic is null",
+            );
+            debug_assert!(false, "{err}");
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(&err);
+            return Err(err);
         };
         self.into_threshold_statistic_json_for_project(&project, statistic)
     }
@@ -122,7 +141,7 @@ impl QueryThreshold {
         self,
         project: &QueryProject,
         statistic: QueryStatistic,
-    ) -> Result<JsonThresholdStatistic, ApiError> {
+    ) -> Result<JsonThresholdStatistic, HttpError> {
         let statistic = statistic.into_json_for_threshold(&self);
         let Self {
             uuid,
@@ -178,7 +197,7 @@ impl InsertThreshold {
         }
     }
 
-    pub fn from_json(
+    pub fn insert_from_json(
         conn: &mut DbConnection,
         project_id: ProjectId,
         metric_kind_id: MetricKindId,
@@ -227,7 +246,7 @@ impl InsertThreshold {
         branch_id: BranchId,
         testbed_id: TestbedId,
     ) -> Result<ThresholdId, HttpError> {
-        Self::from_json(
+        Self::insert_from_json(
             conn,
             project_id,
             metric_kind_id,
@@ -244,7 +263,7 @@ impl InsertThreshold {
         branch_id: BranchId,
         testbed_id: TestbedId,
     ) -> Result<ThresholdId, HttpError> {
-        Self::from_json(
+        Self::insert_from_json(
             conn,
             project_id,
             metric_kind_id,
@@ -266,7 +285,7 @@ impl UpdateThreshold {
     pub fn new_statistic(
         conn: &mut DbConnection,
         statistic_uuid: StatisticUuid,
-    ) -> Result<Self, ApiError> {
+    ) -> Result<Self, HttpError> {
         Ok(Self {
             statistic_id: QueryStatistic::get_id(conn, statistic_uuid)?,
             modified: DateTime::now(),

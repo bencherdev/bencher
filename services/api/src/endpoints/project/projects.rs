@@ -285,7 +285,7 @@ async fn delete_inner(
 
     diesel::delete(schema::project::table.filter(schema::project::id.eq(query_project.id)))
         .execute(conn)
-        .map_err(resource_not_found_err!(Project, query_project))?;
+        .map_err(resource_conflict_err!(Project, query_project))?;
 
     Ok(JsonEmpty {})
 }

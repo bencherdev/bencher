@@ -417,7 +417,7 @@ async fn delete_inner(
             .filter(schema::organization_role::organization_id.eq(query_organization.id)),
     )
     .execute(conn)
-    .map_err(resource_not_found_err!(
+    .map_err(resource_conflict_err!(
         OrganizationRole,
         (query_user.id, query_organization)
     ))?;

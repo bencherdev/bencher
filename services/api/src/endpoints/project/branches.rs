@@ -246,7 +246,7 @@ async fn get_one_inner(
         .map(|branch| branch.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(
             Branch,
-            (query_project.clone(), path_params.branch)
+            (query_project, path_params.branch)
         ))
 }
 
@@ -338,7 +338,7 @@ async fn delete_inner(
 
     diesel::delete(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
         .execute(conn)
-        .map_err(resource_not_found_err!(Branch, query_branch))?;
+        .map_err(resource_conflict_err!(Branch, query_branch))?;
 
     Ok(JsonEmpty {})
 }
