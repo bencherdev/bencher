@@ -10,7 +10,7 @@ use super::{
     branch::{BranchId, QueryBranch},
     metric_kind::{MetricKindId, QueryMetricKind},
     testbed::{QueryTestbed, TestbedId},
-    ProjectId, ProjectUuid, QueryProject,
+    ProjectId, QueryProject,
 };
 use crate::{
     context::DbConnection,
@@ -107,25 +107,35 @@ impl QueryThreshold {
         self,
         conn: &mut DbConnection,
     ) -> Result<JsonThresholdStatistic, ApiError> {
-        let project_uuid = QueryProject::get_uuid(conn, self.project_id)?;
+        let project = QueryProject::get(conn, self.project_id)?;
         let statistic = if let Some(statistic_id) = self.statistic_id {
             QueryStatistic::get(conn, statistic_id)?
         } else {
             return Err(ApiError::NoThresholdStatistic(self.uuid));
         };
-        self.into_threshold_statistic_json_for_project(project_uuid, statistic)
+        self.into_threshold_statistic_json_for_project(&project, statistic)
     }
 
     pub fn into_threshold_statistic_json_for_project(
         self,
-        project_uuid: ProjectUuid,
+        project: &QueryProject,
         statistic: QueryStatistic,
     ) -> Result<JsonThresholdStatistic, ApiError> {
-        let Self { uuid, created, .. } = self;
+        let statistic = statistic.into_json_for_threshold(&self);
+        let Self {
+            uuid,
+            project_id,
+            created,
+            ..
+        } = self;
+        debug_assert!(
+            project.id == project_id,
+            "Project ID mismatch for threshold"
+        );
         Ok(JsonThresholdStatistic {
             uuid,
-            project: project_uuid,
-            statistic: statistic.into_json_for_threshold(uuid),
+            project: project.uuid,
+            statistic,
             created,
         })
     }

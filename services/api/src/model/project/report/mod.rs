@@ -34,8 +34,6 @@ use crate::{
 
 pub mod results;
 
-use super::ProjectUuid;
-
 crate::util::typed_id::typed_id!(ReportId);
 
 #[derive(diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable)]
@@ -75,8 +73,8 @@ impl QueryReport {
         } = self;
 
         let query_project = QueryProject::get(conn, project_id)?;
-        let results = get_report_results(log, conn, query_project.uuid, id)?;
-        let alerts = get_report_alerts(conn, query_project.uuid, id)?;
+        let results = get_report_results(log, conn, &query_project, id)?;
+        let alerts = get_report_alerts(conn, &query_project, id)?;
 
         Ok(JsonReport {
             uuid,
@@ -106,7 +104,7 @@ type ResultsQuery = (
 fn get_report_results(
     log: &Logger,
     conn: &mut DbConnection,
-    project_uuid: ProjectUuid,
+    project: &QueryProject,
     report_id: ReportId,
 ) -> Result<JsonReportResults, ApiError> {
     let results = schema::perf::table
@@ -166,12 +164,12 @@ fn get_report_results(
     .load::<ResultsQuery>(conn)
     .map_err(ApiError::from)?;
 
-    into_report_results_json(log, project_uuid, results)
+    into_report_results_json(log, project, results)
 }
 
 fn into_report_results_json(
     log: &Logger,
-    project_uuid: ProjectUuid,
+    project: &QueryProject,
     results: Vec<ResultsQuery>,
 ) -> Result<JsonReportResults, ApiError> {
     let mut report_results = Vec::new();
@@ -218,7 +216,7 @@ fn into_report_results_json(
 
         // Create a benchmark metric out of the benchmark, metric, and boundary
         let benchmark_metric = query_benchmark.into_benchmark_metric_json_for_project(
-            project_uuid,
+            project,
             query_metric,
             query_boundary,
         )?;
@@ -228,9 +226,9 @@ fn into_report_results_json(
         if let Some(result) = report_result.as_mut() {
             result.benchmarks.push(benchmark_metric);
         } else {
-            let metric_kind = query_metric_kind.into_json_for_project(project_uuid)?;
+            let metric_kind = query_metric_kind.into_json_for_project(project)?;
             let threshold = if let Some((threshold, statistic)) = threshold_statistic {
-                Some(threshold.into_threshold_statistic_json_for_project(project_uuid, statistic)?)
+                Some(threshold.into_threshold_statistic_json_for_project(project, statistic)?)
             } else {
                 None
             };
@@ -254,7 +252,7 @@ fn into_report_results_json(
 
 fn get_report_alerts(
     conn: &mut DbConnection,
-    project_uuid: ProjectUuid,
+    project: &QueryProject,
     report_id: ReportId,
 ) -> Result<JsonReportAlerts, ApiError> {
     let alerts = schema::alert::table
@@ -293,7 +291,7 @@ fn get_report_alerts(
     {
         let json_alert = query_alert.into_json_for_report(
             conn,
-            project_uuid,
+            project,
             report_uuid,
             iteration,
             query_benchmark,

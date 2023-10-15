@@ -12,18 +12,19 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{
-            pub_response_ok, response_accepted, response_ok, CorsResponse, ResponseAccepted,
+            pub_response_ok, response_accepted, response_ok, CorsResponse, Get, ResponseAccepted,
             ResponseOk,
         },
         Endpoint,
     },
+    error::resource_not_found_err,
     model::project::{
         testbed::{InsertTestbed, QueryTestbed, UpdateTestbed},
         QueryProject,
     },
     model::user::auth::AuthUser,
     schema,
-    util::{error::into_json, resource_id::fn_resource_id},
+    util::resource_id::fn_resource_id,
     ApiError,
 };
 
@@ -73,30 +74,15 @@ pub async fn proj_testbeds_get(
     query_params: Query<ProjTestbedsQuery>,
 ) -> Result<ResponseOk<JsonTestbeds>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::GetLs;
-
     let json = get_ls_inner(
         rqctx.context(),
         auth_user.as_ref(),
         path_params.into_inner(),
         pagination_params.into_inner(),
         query_params.into_inner(),
-        endpoint,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    if auth_user.is_some() {
-        response_ok!(endpoint, json)
-    } else {
-        pub_response_ok!(endpoint, json)
-    }
+    .await?;
+    Ok(Get::response_ok(json, auth_user.is_some()))
 }
 
 async fn get_ls_inner(
@@ -105,7 +91,6 @@ async fn get_ls_inner(
     path_params: ProjTestbedsParams,
     pagination_params: ProjTestbedsPagination,
     query_params: ProjTestbedsQuery,
-    endpoint: Endpoint,
 ) -> Result<JsonTestbeds, ApiError> {
     let conn = &mut *context.conn().await;
 
@@ -125,13 +110,14 @@ async fn get_ls_inner(
         },
     };
 
+    let project = &query_project;
     Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryTestbed>(conn)
-        .map_err(ApiError::from)?
+        .map_err(resource_not_found_err!(Testbed, project))?
         .into_iter()
-        .filter_map(into_json!(endpoint, conn))
+        .map(|testbed| testbed.into_json_for_project(project))
         .collect())
 }
 

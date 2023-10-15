@@ -24,7 +24,7 @@ use crate::{
     ApiError,
 };
 
-use super::{ProjectId, ProjectUuid};
+use super::ProjectId;
 
 crate::util::typed_id::typed_id!(MetricKindId);
 
@@ -65,16 +65,14 @@ impl QueryMetricKind {
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonMetricKind, ApiError> {
-        let project_uuid = QueryProject::get_uuid(conn, self.project_id)?;
-        self.into_json_for_project(project_uuid)
+        let project = QueryProject::get(conn, self.project_id)?;
+        self.into_json_for_project(&project)
     }
 
-    pub fn into_json_for_project(
-        self,
-        project_uuid: ProjectUuid,
-    ) -> Result<JsonMetricKind, ApiError> {
+    pub fn into_json_for_project(self, project: &QueryProject) -> Result<JsonMetricKind, ApiError> {
         let Self {
             uuid,
+            project_id,
             name,
             slug,
             units,
@@ -82,9 +80,13 @@ impl QueryMetricKind {
             modified,
             ..
         } = self;
+        debug_assert!(
+            project.id == project_id,
+            "Project ID mismatch for metric kind"
+        );
         Ok(JsonMetricKind {
             uuid,
-            project: project_uuid,
+            project: project.uuid,
             name,
             slug,
             units,

@@ -18,6 +18,7 @@ swagger = ["dep:literally"]
 
 [dependencies]
 # Workspace
+anyhow.workspace = true
 bencher_adapter.workspace = true
 bencher_billing = { workspace = true, optional = true }
 bencher_boundary.workspace = true

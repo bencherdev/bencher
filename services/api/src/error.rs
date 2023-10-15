@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bencher_json::{urlencoded::UrlEncodedError, ThresholdUuid};
 use bencher_json::{Email, ResourceId};
 use bencher_plot::PlotError;
@@ -255,31 +257,35 @@ pub enum BencherResource {
     Plan,
 }
 
-impl BencherResource {
-    pub fn name(&self) -> &str {
-        match self {
-            Self::Organization => "Organization",
-            Self::OrganizationRole => "Organization Role",
-            Self::Project => "Project",
-            Self::ProjectRole => "Project Role",
-            Self::Report => "Report",
-            Self::MetricKind => "Metric Kind",
-            Self::Branch => "Branch",
-            Self::Version => "Version",
-            Self::BranchVersion => "Branch Version",
-            Self::Testbed => "Testbed",
-            Self::Benchmark => "Benchmark",
-            Self::Perf => "Perf",
-            Self::Metric => "Metric",
-            Self::Threshold => "Threshold",
-            Self::Statistic => "Statistic",
-            Self::Boundary => "Boundary",
-            Self::Alert => "Alert",
-            Self::User => "User",
-            Self::Token => "Token",
-            #[cfg(feature = "plus")]
-            Self::Plan => "Plan",
-        }
+impl fmt::Display for BencherResource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Organization => "Organization",
+                Self::OrganizationRole => "Organization Role",
+                Self::Project => "Project",
+                Self::ProjectRole => "Project Role",
+                Self::Report => "Report",
+                Self::MetricKind => "Metric Kind",
+                Self::Branch => "Branch",
+                Self::Version => "Version",
+                Self::BranchVersion => "Branch Version",
+                Self::Testbed => "Testbed",
+                Self::Benchmark => "Benchmark",
+                Self::Perf => "Perf",
+                Self::Metric => "Metric",
+                Self::Threshold => "Threshold",
+                Self::Statistic => "Statistic",
+                Self::Boundary => "Boundary",
+                Self::Alert => "Alert",
+                Self::User => "User",
+                Self::Token => "Token",
+                #[cfg(feature = "plus")]
+                Self::Plan => "Plan",
+            }
+        )
     }
 }
 
@@ -378,10 +384,7 @@ where
     Id: std::fmt::Debug,
     E: std::fmt::Display,
 {
-    not_found_error(format!(
-        "{resource} ({id:?}) not found: {error}",
-        resource = resource.name(),
-    ))
+    not_found_error(format!("{resource} ({id:?}) not found: {error}",))
 }
 
 pub fn resource_conflict_error<Id, V, E>(
@@ -397,7 +400,6 @@ where
 {
     conflict_error(format!(
         "{resource} ({id:?}: {value:?}) has conflict: {error}",
-        resource = resource.name(),
     ))
 }
 
@@ -433,4 +435,38 @@ pub fn github_issue_url(title: &str, body: &str) -> url::Url {
         serde_urlencoded::to_string([("title", title), ("body", body), ("labels", "bug")]).ok();
     url.set_query(query.as_deref());
     url
+}
+
+#[derive(Debug, Error)]
+pub enum ResourceError<Id>
+where
+    Id: std::fmt::Debug + std::fmt::Display,
+{
+    #[error("{given_resource} ({given_id}) ID mismatch for {expected_resource} ({expected_id})")]
+    Mismatch {
+        given_resource: BencherResource,
+        given_id: Id,
+        expected_resource: BencherResource,
+        expected_id: Id,
+    },
+}
+pub fn assert_resource<Id>(
+    given_resource: BencherResource,
+    given_id: Id,
+    expected_resource: BencherResource,
+    expected_id: Id,
+) where
+    Id: PartialEq + std::fmt::Debug + std::fmt::Display,
+{
+    if given_id != expected_id {
+        let err = ResourceError::Mismatch {
+            given_resource,
+            given_id,
+            expected_resource,
+            expected_id,
+        };
+        debug_assert!(false, "{err}");
+        #[cfg(feature = "sentry")]
+        sentry::capture_error(&err);
+    }
 }

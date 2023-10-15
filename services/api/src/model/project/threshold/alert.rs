@@ -16,9 +16,7 @@ use super::{
 use crate::{
     context::DbConnection,
     error::{resource_conflict_err, resource_not_found_err},
-    model::project::{
-        benchmark::QueryBenchmark, metric::QueryMetric, ProjectId, ProjectUuid, QueryProject,
-    },
+    model::project::{benchmark::QueryBenchmark, metric::QueryMetric, ProjectId, QueryProject},
     schema::alert as alert_table,
     schema::{self},
     util::query::{fn_get, fn_get_id, fn_get_uuid},
@@ -90,10 +88,10 @@ impl QueryAlert {
                     QueryBoundary,
                 )>(conn)
                 .map_err(ApiError::from)?;
-        let project_uuid = QueryProject::get_uuid(conn, query_benchmark.project_id)?;
+        let project = QueryProject::get(conn, query_benchmark.project_id)?;
         self.into_json_for_report(
             conn,
-            project_uuid,
+            &project,
             report_uuid,
             iteration,
             query_benchmark,
@@ -106,7 +104,7 @@ impl QueryAlert {
     pub fn into_json_for_report(
         self,
         conn: &mut DbConnection,
-        project_uuid: ProjectUuid,
+        project: &QueryProject,
         report_uuid: ReportUuid,
         iteration: Iteration,
         query_benchmark: QueryBenchmark,
@@ -123,7 +121,7 @@ impl QueryAlert {
         let threshold_id = query_boundary.threshold_id;
         let statistic_id = query_boundary.statistic_id;
         let benchmark = query_benchmark.into_benchmark_metric_json_for_project(
-            project_uuid,
+            project,
             query_metric,
             Some(query_boundary),
         )?;

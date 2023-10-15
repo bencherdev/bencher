@@ -6,8 +6,8 @@ use bencher_json::{
         branch::{JsonVersion, VersionNumber},
         perf::{Iteration, JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
     },
-    DateTime, GitHash, JsonBenchmark, JsonBranch, JsonPerf, JsonPerfQuery, JsonTestbed,
-    ProjectUuid, ReportUuid, ResourceId,
+    DateTime, GitHash, JsonBenchmark, JsonBranch, JsonPerf, JsonPerfQuery, JsonTestbed, ReportUuid,
+    ResourceId,
 };
 use diesel::{
     ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
@@ -155,14 +155,7 @@ async fn get_inner(
                 let (two_d, query_dimensions) = dimensions.into_query()?;
                 dimensions = two_d;
 
-                perf_query(
-                    conn,
-                    project.uuid,
-                    ids,
-                    query_dimensions,
-                    times,
-                    &mut results,
-                )?;
+                perf_query(conn, &project, ids, query_dimensions, times, &mut results)?;
             }
         }
     }
@@ -289,7 +282,7 @@ type PerfQuery = (
 #[allow(clippy::too_many_lines)]
 fn perf_query(
     conn: &mut DbConnection,
-    project_uuid: ProjectUuid,
+    project: &QueryProject,
     ids: Ids,
     dimensions: QueryDimensions,
     times: Times,
@@ -407,7 +400,7 @@ fn perf_query(
         .load::<PerfQuery>(conn)
         .map_err(ApiError::from)?
         .into_iter()
-        .filter_map(|query| perf_metric(project_uuid, query))
+        .filter_map(|query| perf_metric(project, query))
         .collect();
 
     results.push(JsonPerfMetrics {
@@ -421,7 +414,7 @@ fn perf_query(
 }
 
 fn perf_metric(
-    project_uuid: ProjectUuid,
+    project: &QueryProject,
     (
         report_uuid,
         iteration,
@@ -449,7 +442,7 @@ fn perf_metric(
             let boundary = query_boundary.into_json();
             let threshold = Some(
                 query_threshold
-                    .into_threshold_statistic_json_for_project(project_uuid, query_statistic)
+                    .into_threshold_statistic_json_for_project(project, query_statistic)
                     .ok()?,
             );
             let alert = if let Some(query_alert) = query_alert {

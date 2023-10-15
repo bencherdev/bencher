@@ -124,7 +124,7 @@ async fn get_ls_inner(
         .load::<QueryProject>(conn)
         .map_err(resource_not_found_err!(Project, organization))?
         .into_iter()
-        .map(|query_project| query_project.into_json_for_organization(organization))
+        .map(|project| project.into_json_for_organization(organization))
         .collect())
 }
 

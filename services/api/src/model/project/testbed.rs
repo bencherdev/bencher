@@ -84,6 +84,27 @@ impl QueryTestbed {
         })
     }
 
+    pub fn into_json_for_project(self, project: &QueryProject) -> JsonTestbed {
+        let Self {
+            uuid,
+            project_id,
+            name,
+            slug,
+            created,
+            modified,
+            ..
+        } = self;
+        debug_assert!(project.id == project_id, "Project ID mismatch for testbed");
+        JsonTestbed {
+            uuid,
+            project: project.uuid,
+            name,
+            slug,
+            created,
+            modified,
+        }
+    }
+
     pub fn is_system(&self) -> bool {
         matches!(self.name.as_ref(), TESTBED_LOCALHOST_STR)
             || matches!(self.slug.as_ref(), TESTBED_LOCALHOST_STR)

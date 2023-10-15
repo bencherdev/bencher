@@ -1,6 +1,6 @@
 use bencher_json::{
     project::threshold::{JsonNewStatistic, JsonStatistic, StatisticKind},
-    Boundary, DateTime, SampleSize, StatisticUuid, ThresholdUuid, Window,
+    Boundary, DateTime, SampleSize, StatisticUuid, Window,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 
@@ -37,13 +37,14 @@ impl QueryStatistic {
     fn_get_uuid!(statistic, StatisticId, StatisticUuid);
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonStatistic, ApiError> {
-        let threshold = QueryThreshold::get_uuid(conn, self.threshold_id)?;
-        Ok(self.into_json_for_threshold(threshold))
+        let threshold = QueryThreshold::get(conn, self.threshold_id)?;
+        Ok(self.into_json_for_threshold(&threshold))
     }
 
-    pub fn into_json_for_threshold(self, threshold: ThresholdUuid) -> JsonStatistic {
+    pub fn into_json_for_threshold(self, threshold: &QueryThreshold) -> JsonStatistic {
         let Self {
             uuid,
+            threshold_id,
             test,
             min_sample_size,
             max_sample_size,
@@ -53,9 +54,13 @@ impl QueryStatistic {
             created,
             ..
         } = self;
+        debug_assert!(
+            threshold.id == threshold_id,
+            "Threshold ID mismatch for statistic"
+        );
         JsonStatistic {
             uuid,
-            threshold,
+            threshold: threshold.uuid,
             test,
             min_sample_size,
             max_sample_size,
