@@ -12,6 +12,7 @@ use crate::{
         endpoint::{CorsResponse, Get, ResponseOk},
         Endpoint,
     },
+    error::forbidden_error,
     model::{organization::QueryOrganization, project::metric::QueryMetric, user::auth::AuthUser},
 };
 
@@ -74,7 +75,8 @@ async fn get_inner(
     // Check to see if user has permission to manage a project within the organization
     context
         .rbac
-        .is_allowed_organization(auth_user, Permission::Manage, &query_org)?;
+        .is_allowed_organization(auth_user, Permission::Manage, &query_org)
+        .map_err(forbidden_error)?;
 
     let OrgUsageQuery { start, end } = query_params;
     let metrics_used = QueryMetric::usage(conn, query_org.id, start.into(), end.into())?.into();

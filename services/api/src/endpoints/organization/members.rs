@@ -16,7 +16,7 @@ use crate::{
         endpoint::{CorsResponse, Delete, Get, Patch, Post, ResponseAccepted, ResponseOk},
         Endpoint,
     },
-    error::{issue_error, resource_conflict_err, resource_not_found_err},
+    error::{forbidden_error, issue_error, resource_conflict_err, resource_not_found_err},
     model::user::{auth::AuthUser, QueryUser},
     model::{
         organization::{member::QueryMember, OrganizationId, QueryOrganization},
@@ -181,7 +181,8 @@ async fn post_inner(
     // Check to see if user has permission to create a project within the organization
     context
         .rbac
-        .is_allowed_organization(auth_user, Permission::CreateRole, &query_org)?;
+        .is_allowed_organization(auth_user, Permission::CreateRole, &query_org)
+        .map_err(forbidden_error)?;
 
     let email = json_new_member.email.clone();
     // If a user already exists for the email then direct them to login.

@@ -12,12 +12,6 @@ pub enum Messenger {
     Email(Email),
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum MessengerError {
-    #[error("Failed to inline CSS: {0}")]
-    CssInline(#[from] css_inline::InlineError),
-}
-
 impl Messenger {
     pub fn send(&self, log: &Logger, message: Message) {
         match self {

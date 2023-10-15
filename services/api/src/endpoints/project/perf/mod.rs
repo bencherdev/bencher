@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use bencher_json::{
     project::{
         boundary::JsonBoundary,
@@ -277,7 +275,7 @@ type PerfQuery = (
     DateTime,
     DateTime,
     VersionNumber,
-    Option<String>,
+    Option<GitHash>,
     Option<(
         QueryBoundary,
         QueryThreshold,
@@ -408,7 +406,7 @@ fn perf_query(
         .load::<PerfQuery>(conn)
         .map_err(resource_not_found_err!(Metric, (project.clone(), metric_kind_id, branch_id, testbed_id, benchmark_id)))?
         .into_iter()
-        .filter_map(|query| perf_metric(project, query))
+        .map(|query| perf_metric(project, query))
         .collect();
 
     results.push(JsonPerfMetrics {
@@ -433,14 +431,10 @@ fn perf_metric(
         boundary_limit,
         query_metric,
     ): PerfQuery,
-) -> Option<JsonPerfMetric> {
+) -> JsonPerfMetric {
     let version = JsonVersion {
         number: version_number,
-        hash: if let Some(version_hash) = version_hash.as_deref() {
-            Some(GitHash::from_str(version_hash).ok()?)
-        } else {
-            None
-        },
+        hash: version_hash,
     };
 
     let (boundary, threshold, alert) =
@@ -457,7 +451,7 @@ fn perf_metric(
             (JsonBoundary::default(), None, None)
         };
 
-    Some(JsonPerfMetric {
+    JsonPerfMetric {
         report: report_uuid,
         iteration,
         start_time,
@@ -467,5 +461,5 @@ fn perf_metric(
         metric: query_metric.into_json(),
         boundary,
         alert,
-    })
+    }
 }

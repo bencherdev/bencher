@@ -14,7 +14,7 @@ use crate::{
         endpoint::{CorsResponse, Get, Post, ResponseAccepted, ResponseOk},
         Endpoint,
     },
-    error::{resource_conflict_err, resource_not_found_err},
+    error::{forbidden_error, resource_conflict_err, resource_not_found_err},
     model::{
         organization::QueryOrganization,
         project::{
@@ -178,7 +178,8 @@ async fn post_inner(
     // Check to see if user has permission to create a project within the organization
     context
         .rbac
-        .is_allowed_organization(auth_user, Permission::Create, &insert_project)?;
+        .is_allowed_organization(auth_user, Permission::Create, &insert_project)
+        .map_err(forbidden_error)?;
 
     diesel::insert_into(schema::project::table)
         .values(&insert_project)

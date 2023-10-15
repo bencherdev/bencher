@@ -17,7 +17,7 @@ use crate::{
         Endpoint,
     },
     error::{
-        conflict_error, locked_error, not_found_error, resource_conflict_err,
+        conflict_error, forbidden_error, locked_error, not_found_error, resource_conflict_err,
         resource_not_found_err,
     },
     model::organization::QueryOrganization,
@@ -77,7 +77,8 @@ async fn get_one_inner(
     // Check to see if user has permission to manage the organization
     context
         .rbac
-        .is_allowed_organization(auth_user, Permission::Manage, &query_org)?;
+        .is_allowed_organization(auth_user, Permission::Manage, &query_org)
+        .map_err(forbidden_error)?;
 
     if let Some(subscription) = &query_org.subscription {
         let subscription_id = subscription
@@ -134,7 +135,8 @@ async fn post_inner(
     // Check to see if user has permission to manage the organization
     context
         .rbac
-        .is_allowed_organization(auth_user, Permission::Manage, &query_org)?;
+        .is_allowed_organization(auth_user, Permission::Manage, &query_org)
+        .map_err(forbidden_error)?;
 
     // Check to make sure the organization does not already have a metered or licensed plan
     if let Some(subscription) = query_org.subscription {
