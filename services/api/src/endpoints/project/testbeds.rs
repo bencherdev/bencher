@@ -11,21 +11,18 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{
-            pub_response_ok, response_accepted, response_ok, CorsResponse, Get, ResponseAccepted,
-            ResponseOk,
-        },
+        endpoint::{CorsResponse, Delete, Get, Patch, Post, ResponseAccepted, ResponseOk},
         Endpoint,
     },
-    error::resource_not_found_err,
+    error::{
+        resource_conflict_err, resource_conflict_error, resource_not_found_err, BencherResource,
+    },
     model::project::{
         testbed::{InsertTestbed, QueryTestbed, UpdateTestbed},
         QueryProject,
     },
     model::user::auth::AuthUser,
     schema,
-    util::resource_id::fn_resource_id,
-    ApiError,
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -91,7 +88,7 @@ async fn get_ls_inner(
     path_params: ProjTestbedsParams,
     pagination_params: ProjTestbedsPagination,
     query_params: ProjTestbedsQuery,
-) -> Result<JsonTestbeds, ApiError> {
+) -> Result<JsonTestbeds, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_project =
@@ -132,24 +129,14 @@ pub async fn proj_testbed_post(
     body: TypedBody<JsonNewTestbed>,
 ) -> Result<ResponseAccepted<JsonTestbed>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Post;
-
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
         &auth_user,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    response_accepted!(endpoint, json)
+    .await?;
+    Ok(Post::auth_response_accepted(json))
 }
 
 async fn post_inner(
@@ -157,32 +144,30 @@ async fn post_inner(
     path_params: ProjTestbedsParams,
     json_testbed: JsonNewTestbed,
     auth_user: &AuthUser,
-) -> Result<JsonTestbed, ApiError> {
+) -> Result<JsonTestbed, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
-    let project_id = QueryProject::is_allowed(
+    let query_project = QueryProject::is_allowed(
         conn,
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Create,
-    )?
-    .id;
+    )?;
 
-    let insert_testbed = InsertTestbed::from_json(conn, project_id, json_testbed);
+    let insert_testbed = InsertTestbed::from_json(conn, query_project.id, json_testbed);
 
     diesel::insert_into(schema::testbed::table)
         .values(&insert_testbed)
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(Testbed, insert_testbed))?;
 
     schema::testbed::table
         .filter(schema::testbed::uuid.eq(&insert_testbed.uuid))
         .first::<QueryTestbed>(conn)
-        .map_err(ApiError::from)?
-        .into_json(conn)
-        .map_err(Into::into)
+        .map(|testbed| testbed.into_json_for_project(&query_project))
+        .map_err(resource_not_found_err!(Testbed, insert_testbed))
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -218,47 +203,35 @@ pub async fn proj_testbed_get(
     path_params: Path<ProjTestbedParams>,
 ) -> Result<ResponseOk<JsonTestbed>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::GetOne;
-
     let json = get_one_inner(
         rqctx.context(),
         path_params.into_inner(),
         auth_user.as_ref(),
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    if auth_user.is_some() {
-        response_ok!(endpoint, json)
-    } else {
-        pub_response_ok!(endpoint, json)
-    }
+    .await?;
+    Ok(Get::response_ok(json, auth_user.is_some()))
 }
-
-fn_resource_id!(testbed);
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjTestbedParams,
     auth_user: Option<&AuthUser>,
-) -> Result<JsonTestbed, ApiError> {
+) -> Result<JsonTestbed, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_project =
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     QueryTestbed::belonging_to(&query_project)
-        .filter(resource_id(&path_params.testbed)?)
+        .filter(crate::model::project::testbed::resource_id(
+            &path_params.testbed,
+        )?)
         .first::<QueryTestbed>(conn)
-        .map_err(ApiError::from)?
-        .into_json(conn)
-        .map_err(Into::into)
+        .map(|testbed| testbed.into_json_for_project(&query_project))
+        .map_err(resource_not_found_err!(
+            Testbed,
+            (query_project.clone(), path_params.testbed)
+        ))
 }
 
 #[endpoint {
@@ -272,8 +245,6 @@ pub async fn proj_testbed_patch(
     body: TypedBody<JsonUpdateTestbed>,
 ) -> Result<ResponseAccepted<JsonTestbed>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Patch;
-
     let context = rqctx.context();
     let json = patch_inner(
         context,
@@ -281,16 +252,8 @@ pub async fn proj_testbed_patch(
         body.into_inner(),
         &auth_user,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    response_accepted!(endpoint, json)
+    .await?;
+    Ok(Patch::auth_response_accepted(json))
 }
 
 async fn patch_inner(
@@ -298,31 +261,40 @@ async fn patch_inner(
     path_params: ProjTestbedParams,
     json_testbed: JsonUpdateTestbed,
     auth_user: &AuthUser,
-) -> Result<JsonTestbed, ApiError> {
+) -> Result<JsonTestbed, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
-    let project_id = QueryProject::is_allowed(
+    let query_project = QueryProject::is_allowed(
         conn,
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Edit,
-    )?
-    .id;
+    )?;
 
-    let query_testbed = QueryTestbed::from_resource_id(conn, project_id, &path_params.testbed)?;
+    let query_testbed =
+        QueryTestbed::from_resource_id(conn, query_project.id, &path_params.testbed)?;
     if query_testbed.is_system() {
-        return Err(ApiError::SystemTestbed);
+        return Err(resource_conflict_error(
+            BencherResource::Testbed,
+            path_params.testbed,
+            (query_project, query_testbed),
+            "Cannot update a system Testbed",
+        ));
     }
     diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))
-        .set(&UpdateTestbed::from(json_testbed))
+        .set(&UpdateTestbed::from(json_testbed.clone()))
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(
+            Testbed,
+            query_testbed.id,
+            json_testbed
+        ))?;
 
-    QueryTestbed::get(conn, query_testbed.id)?
-        .into_json(conn)
-        .map_err(Into::into)
+    QueryTestbed::get(conn, query_testbed.id)
+        .map(|testbed| testbed.into_json_for_project(&query_project))
+        .map_err(resource_not_found_err!(Testbed, query_testbed))
 }
 
 #[endpoint {
@@ -335,45 +307,40 @@ pub async fn proj_testbed_delete(
     path_params: Path<ProjTestbedParams>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Delete;
-
-    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
-        .await
-        .map_err(|e| {
-            if let ApiError::HttpError(e) = e {
-                e
-            } else {
-                endpoint.err(e).into()
-            }
-        })?;
-
-    response_accepted!(endpoint, json)
+    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Delete::auth_response_accepted(json))
 }
 
 async fn delete_inner(
     context: &ApiContext,
     path_params: ProjTestbedParams,
     auth_user: &AuthUser,
-) -> Result<JsonEmpty, ApiError> {
+) -> Result<JsonEmpty, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
-    let project_id = QueryProject::is_allowed(
+    let query_project = QueryProject::is_allowed(
         conn,
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Delete,
-    )?
-    .id;
+    )?;
 
-    let query_testbed = QueryTestbed::from_resource_id(conn, project_id, &path_params.testbed)?;
+    let query_testbed =
+        QueryTestbed::from_resource_id(conn, query_project.id, &path_params.testbed)?;
     if query_testbed.is_system() {
-        return Err(ApiError::SystemTestbed);
+        return Err(resource_conflict_error(
+            BencherResource::Testbed,
+            path_params.testbed,
+            (query_project, query_testbed),
+            "Cannot delete a system Testbed",
+        ));
     }
+
     diesel::delete(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_not_found_err!(Testbed, query_testbed))?;
 
     Ok(JsonEmpty {})
 }

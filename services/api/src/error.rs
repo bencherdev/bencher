@@ -232,7 +232,7 @@ pub trait WordStr {
     fn plural(&self) -> &str;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum BencherResource {
     Organization,
     OrganizationRole,
@@ -296,13 +296,7 @@ macro_rules! resource_not_found_err {
     };
     // Get one
     ($resource:ident, $id:expr) => {
-        |e| {
-            crate::error::resource_not_found_error(
-                &crate::error::BencherResource::$resource,
-                $id,
-                e,
-            )
-        }
+        |e| crate::error::resource_not_found_error(crate::error::BencherResource::$resource, $id, e)
     };
 }
 
@@ -316,8 +310,9 @@ macro_rules! resource_conflict_err {
     // Update
     ($resource:ident, $id:expr, $value:expr) => {
         |e| {
+            #[allow(unused_qualifications)]
             crate::error::resource_conflict_error(
-                &crate::error::BencherResource::$resource,
+                crate::error::BencherResource::$resource,
                 $id,
                 &$value,
                 e,
@@ -379,7 +374,7 @@ where
     HttpError::for_client_error(None, StatusCode::LOCKED, error.to_string())
 }
 
-pub fn resource_not_found_error<Id, E>(resource: &BencherResource, id: Id, error: E) -> HttpError
+pub fn resource_not_found_error<Id, E>(resource: BencherResource, id: Id, error: E) -> HttpError
 where
     Id: std::fmt::Debug,
     E: std::fmt::Display,
@@ -388,7 +383,7 @@ where
 }
 
 pub fn resource_conflict_error<Id, V, E>(
-    resource: &BencherResource,
+    resource: BencherResource,
     id: Id,
     value: V,
     error: E,
