@@ -145,7 +145,7 @@ async fn post_inner(
     }
 
     // Create the organization
-    let insert_organization = InsertOrganization::from_json(conn, json_organization);
+    let insert_organization = InsertOrganization::from_json(conn, json_organization)?;
     diesel::insert_into(schema::organization::table)
         .values(&insert_organization)
         .execute(conn)

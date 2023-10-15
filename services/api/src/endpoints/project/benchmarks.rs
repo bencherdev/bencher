@@ -157,7 +157,7 @@ async fn post_inner(
         Permission::Create,
     )?;
 
-    let insert_benchmark = InsertBenchmark::from_json(conn, query_project.id, json_benchmark);
+    let insert_benchmark = InsertBenchmark::from_json(conn, query_project.id, json_benchmark)?;
 
     diesel::insert_into(schema::benchmark::table)
         .values(&insert_benchmark)

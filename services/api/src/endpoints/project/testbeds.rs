@@ -154,7 +154,7 @@ async fn post_inner(
         Permission::Create,
     )?;
 
-    let insert_testbed = InsertTestbed::from_json(conn, query_project.id, json_testbed);
+    let insert_testbed = InsertTestbed::from_json(conn, query_project.id, json_testbed)?;
 
     diesel::insert_into(schema::testbed::table)
         .values(&insert_testbed)

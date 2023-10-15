@@ -19,7 +19,7 @@ use crate::{
     util::{
         query::{fn_get, fn_get_uuid},
         resource_id::fn_resource_id,
-        slug::unwrap_slug,
+        slug::ok_slug,
     },
 };
 
@@ -208,7 +208,7 @@ impl InsertProject {
             url,
             visibility,
         } = project;
-        let slug = unwrap_slug!(conn, name.as_ref(), slug, project, QueryProject);
+        let slug = ok_slug!(conn, &name, slug, project, QueryProject)?;
         let timestamp = DateTime::now();
         Ok(Self {
             uuid: ProjectUuid::new(),

@@ -198,7 +198,7 @@ pub fn github_issue_url(title: &str, body: &str) -> url::Url {
 }
 
 #[derive(Debug, Error)]
-pub enum ResourceError<Id>
+pub enum ParentageError<Id>
 where
     Id: std::fmt::Debug + std::fmt::Display,
 {
@@ -221,7 +221,7 @@ pub fn assert_parentage<Id>(
     Id: PartialEq + std::fmt::Debug + std::fmt::Display,
 {
     if parent_id != expected_parent_id {
-        let err = ResourceError::Mismatch {
+        let err = ParentageError::Mismatch {
             parent_resource,
             parent_id,
             resource,

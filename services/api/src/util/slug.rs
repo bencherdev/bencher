@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use bencher_json::Slug;
 
-macro_rules! unwrap_slug {
+macro_rules! ok_slug {
     ($conn:expr, $name:expr, $slug:expr, $table:ident, $query:ident) => {
         crate::util::slug::validate_slug(
             $conn,
@@ -14,9 +14,11 @@ macro_rules! unwrap_slug {
     };
 }
 
-pub(crate) use unwrap_slug;
+use dropshot::HttpError;
+use http::StatusCode;
+pub(crate) use ok_slug;
 
-macro_rules! unwrap_child_slug {
+macro_rules! ok_child_slug {
     ($conn:expr, $parent:ident, $name:expr, $slug:expr, $table:ident, $query:ident) => {
         crate::util::slug::validate_slug(
             $conn,
@@ -28,25 +30,24 @@ macro_rules! unwrap_child_slug {
     };
 }
 
-pub(crate) use unwrap_child_slug;
+pub(crate) use ok_child_slug;
 
 pub type SlugExistsFn = dyn FnOnce(&mut DbConnection, Option<ProjectId>, &str) -> bool;
 
-#[allow(clippy::expect_used)]
 pub fn validate_slug<S>(
     conn: &mut DbConnection,
     parent: Option<ProjectId>,
     name: S,
     slug: Option<Slug>,
     exists: Box<SlugExistsFn>,
-) -> Slug
+) -> Result<Slug, HttpError>
 where
-    S: AsRef<str>,
+    S: AsRef<str> + std::fmt::Display,
 {
     let mut slug = if let Some(slug) = slug {
         slug.into()
     } else {
-        slug::slugify(name)
+        slug::slugify(&name)
     };
 
     if slug.len() > Slug::MAX {
@@ -54,9 +55,16 @@ where
     }
 
     if exists(conn, parent, &slug) {
-        Slug::new(&slug)
+        Ok(Slug::new(&slug))
     } else {
-        Slug::from_str(&slug).expect("Invalid slug")
+        Slug::from_str(&slug).map_err(|e| {
+            issue_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Invalid slug",
+                &format!("An invalid slug was generated ({slug}) from the name: {name}"),
+                e,
+            )
+        })
     }
 }
 
@@ -87,4 +95,4 @@ macro_rules! child_slug_exists {
 
 pub(crate) use child_slug_exists;
 
-use crate::{context::DbConnection, model::project::ProjectId};
+use crate::{context::DbConnection, error::issue_error, model::project::ProjectId};

@@ -205,7 +205,7 @@ async fn post_inner(
         .map_err(resource_conflict_err!(ProjectRole, insert_proj_role))?;
 
     // Add a `main` branch to the project
-    let insert_branch = InsertBranch::main(conn, query_project.id);
+    let insert_branch = InsertBranch::main(conn, query_project.id)?;
     diesel::insert_into(schema::branch::table)
         .values(&insert_branch)
         .execute(conn)
@@ -213,7 +213,7 @@ async fn post_inner(
     let branch_id = QueryBranch::get_id(conn, insert_branch.uuid)?;
 
     // Add a `localhost` testbed to the project
-    let insert_testbed = InsertTestbed::localhost(conn, query_project.id);
+    let insert_testbed = InsertTestbed::localhost(conn, query_project.id)?;
     diesel::insert_into(schema::testbed::table)
         .values(&insert_testbed)
         .execute(conn)
@@ -221,7 +221,7 @@ async fn post_inner(
     let testbed_id = QueryTestbed::get_id(conn, insert_testbed.uuid)?;
 
     // Add a `latency` metric kind to the project
-    let insert_metric_kind = InsertMetricKind::latency(conn, query_project.id);
+    let insert_metric_kind = InsertMetricKind::latency(conn, query_project.id)?;
     diesel::insert_into(schema::metric_kind::table)
         .values(&insert_metric_kind)
         .execute(conn)
@@ -237,7 +237,7 @@ async fn post_inner(
     )?;
 
     // Add a `throughput` metric kind to the project
-    let insert_metric_kind = InsertMetricKind::throughput(conn, query_project.id);
+    let insert_metric_kind = InsertMetricKind::throughput(conn, query_project.id)?;
     diesel::insert_into(schema::metric_kind::table)
         .values(&insert_metric_kind)
         .execute(conn)

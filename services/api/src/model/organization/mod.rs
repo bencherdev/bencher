@@ -17,7 +17,7 @@ use crate::{
     util::{
         query::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
-        slug::unwrap_slug,
+        slug::ok_slug,
     },
 };
 
@@ -182,17 +182,20 @@ pub struct InsertOrganization {
 }
 
 impl InsertOrganization {
-    pub fn from_json(conn: &mut DbConnection, organization: JsonNewOrganization) -> Self {
+    pub fn from_json(
+        conn: &mut DbConnection,
+        organization: JsonNewOrganization,
+    ) -> Result<Self, HttpError> {
         let JsonNewOrganization { name, slug } = organization;
-        let slug = unwrap_slug!(conn, name.as_ref(), slug, organization, QueryOrganization);
+        let slug = ok_slug!(conn, &name, slug, organization, QueryOrganization)?;
         let timestamp = DateTime::now();
-        Self {
+        Ok(Self {
             uuid: OrganizationUuid::new(),
             name,
             slug,
             created: timestamp,
             modified: timestamp,
-        }
+        })
     }
 
     pub fn from_user(insert_user: &InsertUser) -> Self {

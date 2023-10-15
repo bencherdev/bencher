@@ -14,7 +14,7 @@ use crate::{
     util::{
         query::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
-        slug::unwrap_child_slug,
+        slug::ok_child_slug,
     },
 };
 
@@ -175,10 +175,10 @@ impl InsertBenchmark {
         conn: &mut DbConnection,
         project_id: ProjectId,
         benchmark: JsonNewBenchmark,
-    ) -> Self {
+    ) -> Result<Self, HttpError> {
         let JsonNewBenchmark { name, slug } = benchmark;
-        let slug = unwrap_child_slug!(conn, project_id, &name, slug, benchmark, QueryBenchmark);
-        Self::new(project_id, name, slug)
+        let slug = ok_child_slug!(conn, project_id, &name, slug, benchmark, QueryBenchmark)?;
+        Ok(Self::new(project_id, name, slug))
     }
 
     fn from_name(project_id: ProjectId, name: BenchmarkName) -> Self {

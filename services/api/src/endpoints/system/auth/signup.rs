@@ -63,7 +63,7 @@ async fn post_inner(
 
     let invite = json_signup.invite.take();
     let email = json_signup.email.clone();
-    let mut insert_user = InsertUser::from_json(conn, json_signup.clone());
+    let mut insert_user = InsertUser::from_json(conn, json_signup.clone())?;
 
     let count = schema::user::table
         .select(count(schema::user::id))

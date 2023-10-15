@@ -167,7 +167,7 @@ async fn post_inner(
         }
     }
     let start_point = json_branch.start_point.take();
-    let insert_branch = InsertBranch::from_json(conn, query_project.id, json_branch);
+    let insert_branch = InsertBranch::from_json(conn, query_project.id, json_branch)?;
 
     diesel::insert_into(schema::branch::table)
         .values(&insert_branch)

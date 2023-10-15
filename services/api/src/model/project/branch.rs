@@ -20,7 +20,7 @@ use crate::{
     util::{
         query::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
-        slug::unwrap_child_slug,
+        slug::ok_child_slug,
     },
 };
 
@@ -147,21 +147,21 @@ impl InsertBranch {
         conn: &mut DbConnection,
         project_id: ProjectId,
         branch: JsonNewBranch,
-    ) -> Self {
+    ) -> Result<Self, HttpError> {
         let JsonNewBranch { name, slug, .. } = branch;
-        let slug = unwrap_child_slug!(conn, project_id, name.as_ref(), slug, branch, QueryBranch);
+        let slug = ok_child_slug!(conn, project_id, &name, slug, branch, QueryBranch)?;
         let timestamp = DateTime::now();
-        Self {
+        Ok(Self {
             uuid: BranchUuid::new(),
             project_id,
             name,
             slug,
             created: timestamp,
             modified: timestamp,
-        }
+        })
     }
 
-    pub fn main(conn: &mut DbConnection, project_id: ProjectId) -> Self {
+    pub fn main(conn: &mut DbConnection, project_id: ProjectId) -> Result<Self, HttpError> {
         Self::from_json(conn, project_id, JsonNewBranch::main())
     }
 

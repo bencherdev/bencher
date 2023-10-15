@@ -14,7 +14,7 @@ use crate::{
     util::{
         query::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
-        slug::unwrap_child_slug,
+        slug::ok_child_slug,
     },
 };
 
@@ -117,21 +117,21 @@ impl InsertTestbed {
         conn: &mut DbConnection,
         project_id: ProjectId,
         testbed: JsonNewTestbed,
-    ) -> Self {
+    ) -> Result<Self, HttpError> {
         let JsonNewTestbed { name, slug } = testbed;
-        let slug = unwrap_child_slug!(conn, project_id, &name, slug, testbed, QueryTestbed);
+        let slug = ok_child_slug!(conn, project_id, &name, slug, testbed, QueryTestbed)?;
         let timestamp = DateTime::now();
-        Self {
+        Ok(Self {
             uuid: TestbedUuid::new(),
             project_id,
             name,
             slug,
             created: timestamp,
             modified: timestamp,
-        }
+        })
     }
 
-    pub fn localhost(conn: &mut DbConnection, project_id: ProjectId) -> Self {
+    pub fn localhost(conn: &mut DbConnection, project_id: ProjectId) -> Result<Self, HttpError> {
         Self::from_json(conn, project_id, JsonNewTestbed::localhost())
     }
 }

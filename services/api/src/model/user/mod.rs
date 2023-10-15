@@ -9,7 +9,7 @@ use crate::{
     util::{
         query::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
-        slug::unwrap_slug,
+        slug::ok_slug,
     },
 };
 
@@ -109,18 +109,18 @@ pub struct InsertUser {
 }
 
 impl InsertUser {
-    pub fn from_json(conn: &mut DbConnection, signup: JsonSignup) -> Self {
+    pub fn from_json(conn: &mut DbConnection, signup: JsonSignup) -> Result<Self, HttpError> {
         let JsonSignup {
             name, slug, email, ..
         } = signup;
-        let slug = unwrap_slug!(conn, name.as_ref(), slug, user, QueryUser);
-        Self {
+        let slug = ok_slug!(conn, &name, slug, user, QueryUser)?;
+        Ok(Self {
             uuid: UserUuid::new(),
             name,
             slug,
             email,
             admin: false,
             locked: false,
-        }
+        })
     }
 }

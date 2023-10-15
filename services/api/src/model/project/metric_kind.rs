@@ -19,7 +19,7 @@ use crate::{
     util::{
         query::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
-        slug::unwrap_child_slug,
+        slug::ok_child_slug,
     },
 };
 
@@ -90,7 +90,7 @@ impl QueryMetricKind {
             RAM_ACCESSES_SLUG_STR => InsertMetricKind::ram_accesses(conn, project_id),
             ESTIMATED_CYCLES_SLUG_STR => InsertMetricKind::estimated_cycles(conn, project_id),
             _ => return Err(http_error),
-        };
+        }?;
         diesel::insert_into(schema::metric_kind::table)
             .values(&insert_metric_kind)
             .execute(conn)
@@ -154,11 +154,11 @@ impl InsertMetricKind {
         conn: &mut DbConnection,
         project_id: ProjectId,
         metric_kind: JsonNewMetricKind,
-    ) -> Self {
+    ) -> Result<Self, HttpError> {
         let JsonNewMetricKind { name, slug, units } = metric_kind;
-        let slug = unwrap_child_slug!(conn, project_id, &name, slug, metric_kind, QueryMetricKind);
+        let slug = ok_child_slug!(conn, project_id, &name, slug, metric_kind, QueryMetricKind)?;
         let timestamp = DateTime::now();
-        Self {
+        Ok(Self {
             uuid: MetricKindUuid::new(),
             project_id,
             name,
@@ -166,34 +166,37 @@ impl InsertMetricKind {
             units,
             created: timestamp,
             modified: timestamp,
-        }
+        })
     }
 
-    pub fn latency(conn: &mut DbConnection, project_id: ProjectId) -> Self {
+    pub fn latency(conn: &mut DbConnection, project_id: ProjectId) -> Result<Self, HttpError> {
         Self::from_json(conn, project_id, JsonNewMetricKind::latency())
     }
 
-    pub fn throughput(conn: &mut DbConnection, project_id: ProjectId) -> Self {
+    pub fn throughput(conn: &mut DbConnection, project_id: ProjectId) -> Result<Self, HttpError> {
         Self::from_json(conn, project_id, JsonNewMetricKind::throughput())
     }
 
-    pub fn instructions(conn: &mut DbConnection, project_id: ProjectId) -> Self {
+    pub fn instructions(conn: &mut DbConnection, project_id: ProjectId) -> Result<Self, HttpError> {
         Self::from_json(conn, project_id, JsonNewMetricKind::instructions())
     }
 
-    pub fn l1_accesses(conn: &mut DbConnection, project_id: ProjectId) -> Self {
+    pub fn l1_accesses(conn: &mut DbConnection, project_id: ProjectId) -> Result<Self, HttpError> {
         Self::from_json(conn, project_id, JsonNewMetricKind::l1_accesses())
     }
 
-    pub fn l2_accesses(conn: &mut DbConnection, project_id: ProjectId) -> Self {
+    pub fn l2_accesses(conn: &mut DbConnection, project_id: ProjectId) -> Result<Self, HttpError> {
         Self::from_json(conn, project_id, JsonNewMetricKind::l2_accesses())
     }
 
-    pub fn ram_accesses(conn: &mut DbConnection, project_id: ProjectId) -> Self {
+    pub fn ram_accesses(conn: &mut DbConnection, project_id: ProjectId) -> Result<Self, HttpError> {
         Self::from_json(conn, project_id, JsonNewMetricKind::ram_accesses())
     }
 
-    pub fn estimated_cycles(conn: &mut DbConnection, project_id: ProjectId) -> Self {
+    pub fn estimated_cycles(
+        conn: &mut DbConnection,
+        project_id: ProjectId,
+    ) -> Result<Self, HttpError> {
         Self::from_json(conn, project_id, JsonNewMetricKind::estimated_cycles())
     }
 

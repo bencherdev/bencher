@@ -154,7 +154,7 @@ async fn post_inner(
         Permission::Create,
     )?;
 
-    let insert_metric_kind = InsertMetricKind::from_json(conn, query_project.id, json_metric_kind);
+    let insert_metric_kind = InsertMetricKind::from_json(conn, query_project.id, json_metric_kind)?;
 
     diesel::insert_into(schema::metric_kind::table)
         .values(&insert_metric_kind)
