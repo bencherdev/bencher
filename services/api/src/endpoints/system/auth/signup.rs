@@ -4,17 +4,18 @@ use diesel::dsl::count;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+use http::StatusCode;
 use slog::Logger;
 
 use crate::context::NewUserBody;
-use crate::endpoints::endpoint::pub_response_accepted;
 use crate::endpoints::endpoint::CorsResponse;
+use crate::endpoints::endpoint::Post;
 use crate::endpoints::endpoint::{Endpoint, ResponseAccepted};
+use crate::error::{issue_error, resource_conflict_err, resource_not_found_err};
 use crate::model::organization::{
     organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
 };
 use crate::model::user::QueryUser;
-use crate::ApiError;
 use crate::{
     context::{ApiContext, Body, ButtonBody, Message},
     model::user::InsertUser,
@@ -45,19 +46,8 @@ pub async fn auth_signup_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonSignup>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
-    let endpoint = Endpoint::Post;
-
-    let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner())
-        .await
-        .map_err(|e| {
-            if let ApiError::HttpError(e) = e {
-                e
-            } else {
-                endpoint.err(e).into()
-            }
-        })?;
-
-    pub_response_accepted!(endpoint, json)
+    let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner()).await?;
+    Ok(Post::pub_response_accepted(json))
 }
 
 #[allow(clippy::too_many_lines)]
@@ -65,7 +55,7 @@ async fn post_inner(
     log: &Logger,
     context: &ApiContext,
     mut json_signup: JsonSignup,
-) -> Result<JsonEmpty, ApiError> {
+) -> Result<JsonEmpty, HttpError> {
     let conn = &mut *context.conn().await;
 
     #[cfg(feature = "plus")]
@@ -73,12 +63,12 @@ async fn post_inner(
 
     let invite = json_signup.invite.take();
     let email = json_signup.email.clone();
-    let mut insert_user = InsertUser::from_json(conn, json_signup);
+    let mut insert_user = InsertUser::from_json(conn, json_signup.clone());
 
     let count = schema::user::table
         .select(count(schema::user::id))
         .first::<i64>(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_not_found_err!(User, json_signup.clone()))?;
     // The first user to signup is admin
     if count == 0 {
         insert_user.admin = true;
@@ -88,7 +78,7 @@ async fn post_inner(
     diesel::insert_into(schema::user::table)
         .values(&insert_user)
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(User, insert_user))?;
     let user_id = QueryUser::get_id(conn, insert_user.uuid)?;
 
     let insert_org_role = if let Some(invite) = &invite {
@@ -99,7 +89,7 @@ async fn post_inner(
         diesel::insert_into(schema::organization::table)
             .values(&insert_org)
             .execute(conn)
-            .map_err(ApiError::from)?;
+            .map_err(resource_conflict_err!(Organization, insert_org))?;
         let organization_id = QueryOrganization::get_id(conn, insert_org.uuid)?;
 
         let timestamp = DateTime::now();
@@ -116,9 +106,19 @@ async fn post_inner(
     diesel::insert_into(schema::organization_role::table)
         .values(&insert_org_role)
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(OrganizationRole, insert_org_role))?;
 
-    let token = context.secret_key.new_auth(email, AUTH_TOKEN_TTL)?;
+    let token = context
+        .secret_key
+        .new_auth(email, AUTH_TOKEN_TTL)
+        .map_err(|e| {
+            issue_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to create auth JWT at signup",
+                &format!("Failed failed to create auth JWT ({json_signup:?} | {AUTH_TOKEN_TTL}) at signup"),
+                e,
+            )
+        })?;
 
     let token_string = token.to_string();
     let body = Body::Button(Box::new(ButtonBody {

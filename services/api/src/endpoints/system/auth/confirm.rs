@@ -65,8 +65,8 @@ async fn post_inner(
         .map_err(|e| {
             issue_error(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed create JWT",
-                &format!("Failed create JWT ({email} | {CLIENT_TOKEN_TTL})"),
+                "Failed to create client JWT",
+                &format!("Failed to create client JWT ({email} | {CLIENT_TOKEN_TTL})"),
                 e,
             )
         })?;

@@ -97,7 +97,7 @@ impl QueryUser {
     }
 }
 
-#[derive(diesel::Insertable)]
+#[derive(Debug, Clone, diesel::Insertable)]
 #[diesel(table_name = user_table)]
 pub struct InsertUser {
     pub uuid: UserUuid,

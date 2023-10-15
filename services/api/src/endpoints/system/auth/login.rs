@@ -2,18 +2,23 @@ use bencher_json::{JsonEmpty, JsonLogin};
 
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+use http::StatusCode;
 use slog::Logger;
 
-use crate::endpoints::endpoint::pub_response_accepted;
 use crate::endpoints::endpoint::CorsResponse;
+use crate::endpoints::endpoint::Post;
 use crate::endpoints::endpoint::ResponseAccepted;
 use crate::endpoints::Endpoint;
 
+use crate::error::forbidden_error;
+use crate::error::issue_error;
+use crate::error::resource_conflict_err;
+use crate::error::resource_not_found_err;
 use crate::{
     context::{ApiContext, Body, ButtonBody, Message},
     model::organization::organization_role::InsertOrganizationRole,
     model::user::QueryUser,
-    schema, ApiError,
+    schema,
 };
 
 use super::AUTH_TOKEN_TTL;
@@ -40,36 +45,27 @@ pub async fn auth_login_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonLogin>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
-    let endpoint = Endpoint::Post;
-
-    let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner())
-        .await
-        .map_err(|e| {
-            if let ApiError::HttpError(e) = e {
-                e
-            } else {
-                endpoint.err(e).into()
-            }
-        })?;
-
-    pub_response_accepted!(endpoint, json)
+    let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner()).await?;
+    Ok(Post::pub_response_accepted(json))
 }
 
 async fn post_inner(
     log: &Logger,
     context: &ApiContext,
     json_login: JsonLogin,
-) -> Result<JsonEmpty, ApiError> {
+) -> Result<JsonEmpty, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_user = schema::user::table
         .filter(schema::user::email.eq(json_login.email.as_ref()))
         .first::<QueryUser>(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_not_found_err!(User, json_login.clone()))?;
 
     // Check to see if the user account has been locked
     if query_user.locked {
-        return Err(ApiError::Locked(query_user.id, query_user.email));
+        return Err(forbidden_error(format!(
+            "Your account ({json_login:?}) has been locked. Please contact support.",
+        )));
     }
 
     #[cfg(feature = "plus")]
@@ -82,12 +78,22 @@ async fn post_inner(
         diesel::insert_into(schema::organization_role::table)
             .values(&insert_org_role)
             .execute(conn)
-            .map_err(ApiError::from)?;
+            .map_err(resource_conflict_err!(OrganizationRole, insert_org_role))?;
     }
 
     let token = context
         .secret_key
-        .new_auth(json_login.email.clone(), AUTH_TOKEN_TTL)?;
+        .new_auth(json_login.email.clone(), AUTH_TOKEN_TTL)
+        .map_err(|e| {
+            issue_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to create auth JWT at login",
+                &format!(
+                    "Failed failed to create auth JWT ({json_login:?} | {AUTH_TOKEN_TTL}) at login"
+                ),
+                e,
+            )
+        })?;
 
     let token_string = token.to_string();
     let body = Body::Button(Box::new(ButtonBody {
