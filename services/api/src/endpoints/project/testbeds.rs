@@ -279,8 +279,7 @@ async fn patch_inner(
         .execute(conn)
         .map_err(resource_conflict_err!(
             Testbed,
-            query_testbed.clone(),
-            json_testbed
+            (query_testbed.clone(), json_testbed)
         ))?;
 
     QueryTestbed::get(conn, query_testbed.id)

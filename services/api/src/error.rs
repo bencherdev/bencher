@@ -295,25 +295,25 @@ macro_rules! resource_not_found_err {
         resource_not_found_err!($resource, ())
     };
     // Get one
-    ($resource:ident, $id:expr) => {
-        |e| crate::error::resource_not_found_error(crate::error::BencherResource::$resource, $id, e)
+    ($resource:ident, $value:expr) => {
+        |e| {
+            crate::error::resource_not_found_error(
+                crate::error::BencherResource::$resource,
+                &$value,
+                e,
+            )
+        }
     };
 }
 
 pub(crate) use resource_not_found_err;
 
 macro_rules! resource_conflict_err {
-    // Insert
     ($resource:ident, $value:expr) => {
-        resource_conflict_err!($resource, (), $value)
-    };
-    // Update
-    ($resource:ident, $id:expr, $value:expr) => {
         |e| {
             #[allow(unused_qualifications)]
             crate::error::resource_conflict_error(
                 crate::error::BencherResource::$resource,
-                $id,
                 &$value,
                 e,
             )
@@ -374,28 +374,20 @@ where
     HttpError::for_client_error(None, StatusCode::LOCKED, error.to_string())
 }
 
-pub fn resource_not_found_error<Id, E>(resource: BencherResource, id: Id, error: E) -> HttpError
+pub fn resource_not_found_error<V, E>(resource: BencherResource, value: V, error: E) -> HttpError
 where
-    Id: std::fmt::Debug,
-    E: std::fmt::Display,
-{
-    not_found_error(format!("{resource} ({id:?}) not found: {error}",))
-}
-
-pub fn resource_conflict_error<Id, V, E>(
-    resource: BencherResource,
-    id: Id,
-    value: V,
-    error: E,
-) -> HttpError
-where
-    Id: std::fmt::Debug,
     V: std::fmt::Debug,
     E: std::fmt::Display,
 {
-    conflict_error(format!(
-        "{resource} ({id:?}: {value:?}) has conflict: {error}",
-    ))
+    not_found_error(format!("{resource} ({value:?}) not found: {error}",))
+}
+
+pub fn resource_conflict_error<V, E>(resource: BencherResource, value: V, error: E) -> HttpError
+where
+    V: std::fmt::Debug,
+    E: std::fmt::Display,
+{
+    conflict_error(format!("{resource} ({value:?}) has conflict: {error}",))
 }
 
 pub fn issue_error<E>(status_code: StatusCode, title: &str, body: &str, error: E) -> HttpError

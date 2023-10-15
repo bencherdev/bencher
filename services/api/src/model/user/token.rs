@@ -21,7 +21,7 @@ use super::{auth::AuthUser, QueryUser, UserId};
 
 crate::util::typed_id::typed_id!(TokenId);
 
-#[derive(Debug, diesel::Queryable)]
+#[derive(Debug, Clone, diesel::Queryable)]
 pub struct QueryToken {
     pub id: TokenId,
     pub uuid: TokenUuid,

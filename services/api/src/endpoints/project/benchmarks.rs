@@ -280,8 +280,7 @@ async fn patch_inner(
         .execute(conn)
         .map_err(resource_conflict_err!(
             Benchmark,
-            query_benchmark.clone(),
-            json_benchmark
+            (query_benchmark.clone(), json_benchmark)
         ))?;
 
     QueryBenchmark::get(conn, query_benchmark.id)

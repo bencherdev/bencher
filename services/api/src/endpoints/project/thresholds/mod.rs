@@ -301,8 +301,7 @@ async fn put_inner(
         .execute(conn)
         .map_err(resource_conflict_err!(
             Statistic,
-            query_threshold.clone(),
-            insert_statistic
+            (query_threshold.clone(), insert_statistic.clone())
         ))?;
 
     // Update the current threshold to use the new statistic
@@ -314,8 +313,7 @@ async fn put_inner(
         .execute(conn)
         .map_err(resource_conflict_err!(
             Threshold,
-            query_threshold.clone(),
-            insert_statistic
+            (query_threshold.clone(), insert_statistic.clone())
         ))?;
 
     QueryThreshold::get(conn, query_threshold.id)?.into_json(conn)

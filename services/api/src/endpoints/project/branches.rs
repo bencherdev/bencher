@@ -295,8 +295,7 @@ async fn patch_inner(
         .execute(conn)
         .map_err(resource_conflict_err!(
             Branch,
-            query_branch.clone(),
-            json_branch
+            (query_branch.clone(), json_branch)
         ))?;
 
     QueryBranch::get(conn, query_branch.id)

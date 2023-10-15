@@ -264,7 +264,10 @@ async fn patch_inner(
     diesel::update(schema::token::table.filter(schema::token::id.eq(query_token.id)))
         .set(&UpdateToken::from(json_token))
         .execute(conn)
-        .map_err(resource_conflict_err!(Token, query_token.id, query_token))?;
+        .map_err(resource_conflict_err!(
+            Token,
+            (query_user, query_token.clone())
+        ))?;
 
     QueryToken::get(conn, query_token.id)?.into_json(conn)
 }

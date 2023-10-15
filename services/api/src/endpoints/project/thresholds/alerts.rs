@@ -243,8 +243,7 @@ async fn patch_inner(
         .execute(conn)
         .map_err(resource_conflict_err!(
             Alert,
-            query_alert.clone(),
-            json_alert
+            (query_alert.clone(), json_alert)
         ))?;
 
     QueryAlert::get(conn, query_alert.id)?.into_json(conn)

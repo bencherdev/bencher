@@ -280,8 +280,7 @@ async fn patch_inner(
     .execute(conn)
     .map_err(resource_conflict_err!(
         MetricKind,
-        query_metric_kind.clone(),
-        json_metric_kind
+        (query_metric_kind.clone(), json_metric_kind)
     ))?;
 
     QueryMetricKind::get(conn, query_metric_kind.id)
