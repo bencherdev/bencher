@@ -8,10 +8,12 @@ use bencher_json::{
 use diesel::{
     ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
 };
+use dropshot::HttpError;
 use slog::Logger;
 
 use crate::{
     context::DbConnection,
+    error::resource_not_found_err,
     model::{
         project::{
             benchmark::QueryBenchmark,
@@ -29,7 +31,6 @@ use crate::{
     schema,
     schema::report as report_table,
     util::query::{fn_get_id, fn_get_uuid},
-    ApiError,
 };
 
 pub mod results;
@@ -57,7 +58,7 @@ impl QueryReport {
     fn_get_id!(report, ReportId, ReportUuid);
     fn_get_uuid!(report, ReportId, ReportUuid);
 
-    pub fn into_json(self, log: &Logger, conn: &mut DbConnection) -> Result<JsonReport, ApiError> {
+    pub fn into_json(self, log: &Logger, conn: &mut DbConnection) -> Result<JsonReport, HttpError> {
         let Self {
             id,
             uuid,
@@ -106,7 +107,7 @@ fn get_report_results(
     conn: &mut DbConnection,
     project: &QueryProject,
     report_id: ReportId,
-) -> Result<JsonReportResults, ApiError> {
+) -> Result<JsonReportResults, HttpError> {
     let results = schema::perf::table
     .filter(schema::perf::report_id.eq(report_id))
     .inner_join(schema::benchmark::table)
@@ -162,7 +163,7 @@ fn get_report_results(
         ).nullable(),
     ))
     .load::<ResultsQuery>(conn)
-    .map_err(ApiError::from)?;
+    .map_err(resource_not_found_err!(Perf, project))?;
 
     into_report_results_json(log, project, results)
 }
@@ -171,7 +172,7 @@ fn into_report_results_json(
     log: &Logger,
     project: &QueryProject,
     results: Vec<ResultsQuery>,
-) -> Result<JsonReportResults, ApiError> {
+) -> Result<JsonReportResults, HttpError> {
     let mut report_results = Vec::new();
     let mut report_iteration = Vec::new();
     let mut prev_iteration = None;
@@ -251,7 +252,7 @@ fn get_report_alerts(
     conn: &mut DbConnection,
     project: &QueryProject,
     report_id: ReportId,
-) -> Result<JsonReportAlerts, ApiError> {
+) -> Result<JsonReportAlerts, HttpError> {
     let alerts = schema::alert::table
         .inner_join(
             schema::boundary::table.inner_join(
@@ -280,7 +281,7 @@ fn get_report_alerts(
             QueryMetric,
             QueryBoundary,
         )>(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_not_found_err!(Alert, report_id))?;
 
     let mut report_alerts = Vec::new();
     for (report_uuid, iteration, query_alert, query_benchmark, query_metric, query_boundary) in

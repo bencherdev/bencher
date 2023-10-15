@@ -17,7 +17,7 @@ use super::{branch::BranchId, branch_version::InsertBranchVersion, ProjectId, Qu
 
 crate::util::typed_id::typed_id!(VersionId);
 
-#[derive(diesel::Queryable, diesel::Identifiable, diesel::Associations)]
+#[derive(Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations)]
 #[diesel(table_name = version_table)]
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryVersion {

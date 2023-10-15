@@ -21,13 +21,10 @@ use slog::Logger;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{
-            pub_response_ok, response_accepted, response_ok, CorsResponse, ResponseAccepted,
-            ResponseOk,
-        },
+        endpoint::{CorsResponse, Delete, Get, Post, ResponseAccepted, ResponseOk},
         Endpoint,
     },
-    error::{issue_error, resource_conflict_err},
+    error::{bad_request_error, issue_error, resource_conflict_err, resource_not_found_err},
     model::project::{
         branch::{BranchId, QueryBranch},
         report::{results::ReportResults, InsertReport, QueryReport, ReportId},
@@ -37,8 +34,6 @@ use crate::{
     },
     model::user::auth::AuthUser,
     schema,
-    util::error::database_map,
-    ApiError,
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -85,11 +80,9 @@ pub async fn proj_reports_get(
     let json_report_query = query_params
         .into_inner()
         .try_into()
-        .map_err(ApiError::from)?;
+        .map_err(bad_request_error)?;
 
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::GetLs;
-
     let json = get_ls_inner(
         &rqctx.log,
         rqctx.context(),
@@ -97,22 +90,9 @@ pub async fn proj_reports_get(
         path_params.into_inner(),
         pagination_params.into_inner(),
         json_report_query,
-        endpoint,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    if auth_user.is_some() {
-        response_ok!(endpoint, json)
-    } else {
-        pub_response_ok!(endpoint, json)
-    }
+    .await?;
+    Ok(Get::response_ok(json, auth_user.is_some()))
 }
 
 async fn get_ls_inner(
@@ -122,8 +102,7 @@ async fn get_ls_inner(
     path_params: ProjReportsParams,
     pagination_params: ProjReportsPagination,
     json_report_query: JsonReportQuery,
-    endpoint: Endpoint,
-) -> Result<JsonReports, ApiError> {
+) -> Result<JsonReports, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_project =
@@ -177,14 +156,23 @@ async fn get_ls_inner(
         },
     };
 
+    let project = &query_project;
     Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .select(QueryReport::as_select())
         .load(conn)
-        .map_err(ApiError::from)?
+        .map_err(resource_not_found_err!(Report, project))?
         .into_iter()
-        .filter_map(|query| database_map(endpoint, query.into_json(log, conn)))
+        .filter_map(|report| match report.into_json(log, conn) {
+            Ok(report) => Some(report),
+            Err(err) => {
+                debug_assert!(false, "{err}");
+                #[cfg(feature = "sentry")]
+                sentry::capture_error(&err);
+                None
+            },
+        })
         .collect())
 }
 
@@ -203,8 +191,6 @@ pub async fn proj_report_post(
     body: TypedBody<JsonNewReport>,
 ) -> Result<ResponseAccepted<JsonReport>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Post;
-
     let json = post_inner(
         &rqctx.log,
         rqctx.context(),
@@ -213,8 +199,7 @@ pub async fn proj_report_post(
         &auth_user,
     )
     .await?;
-
-    response_accepted!(endpoint, json)
+    Ok(Post::auth_response_accepted(json))
 }
 
 async fn post_inner(
@@ -312,7 +297,7 @@ async fn post_inner(
     // Don't return the error from processing the report until after the metrics usage has been checked
     processed_report.and_then(|_| {
         // If the report was processed successfully, then return the report with the results
-        query_report.into_json(log, conn).map_err(Into::into)
+        query_report.into_json(log, conn)
     })
 }
 
@@ -484,28 +469,14 @@ pub async fn proj_report_get(
     path_params: Path<ProjReportParams>,
 ) -> Result<ResponseOk<JsonReport>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::GetOne;
-
     let json = get_one_inner(
         &rqctx.log,
         rqctx.context(),
         path_params.into_inner(),
         auth_user.as_ref(),
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    if auth_user.is_some() {
-        response_ok!(endpoint, json)
-    } else {
-        pub_response_ok!(endpoint, json)
-    }
+    .await?;
+    Ok(Get::response_ok(json, auth_user.is_some()))
 }
 
 async fn get_one_inner(
@@ -513,7 +484,7 @@ async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjReportParams,
     auth_user: Option<&AuthUser>,
-) -> Result<JsonReport, ApiError> {
+) -> Result<JsonReport, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_project =
@@ -522,7 +493,10 @@ async fn get_one_inner(
     QueryReport::belonging_to(&query_project)
         .filter(schema::report::uuid.eq(path_params.report.to_string()))
         .first::<QueryReport>(conn)
-        .map_err(ApiError::from)?
+        .map_err(resource_not_found_err!(
+            Report,
+            (query_project, path_params.report)
+        ))?
         .into_json(log, conn)
 }
 
@@ -536,26 +510,15 @@ pub async fn proj_report_delete(
     path_params: Path<ProjReportParams>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Delete;
-
-    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
-        .await
-        .map_err(|e| {
-            if let ApiError::HttpError(e) = e {
-                e
-            } else {
-                endpoint.err(e).into()
-            }
-        })?;
-
-    response_accepted!(endpoint, json)
+    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Delete::auth_response_accepted(json))
 }
 
 async fn delete_inner(
     context: &ApiContext,
     path_params: ProjReportParams,
     auth_user: &AuthUser,
-) -> Result<JsonEmpty, ApiError> {
+) -> Result<JsonEmpty, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
@@ -571,10 +534,13 @@ async fn delete_inner(
         .filter(schema::report::uuid.eq(path_params.report.to_string()))
         .select((schema::report::id, schema::report::version_id))
         .first::<(ReportId, VersionId)>(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_not_found_err!(
+            Report,
+            (query_project.clone(), path_params.report)
+        ))?;
     diesel::delete(schema::report::table.filter(schema::report::id.eq(report_id)))
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(Report, report_id))?;
 
     // If there are no more reports for this version, delete the version
     // This is necessary because multiple reports can use the same version via a git hash
@@ -584,7 +550,10 @@ async fn delete_inner(
         .filter(schema::report::version_id.eq(version_id))
         .select(count(schema::report::id))
         .first::<i64>(conn)
-        .map_err(ApiError::from)?
+        .map_err(resource_not_found_err!(
+            Version,
+            (query_project.clone(), report_id, version_id)
+        ))?
         == 0
     {
         let query_version = QueryVersion::get(conn, version_id)?;
@@ -594,7 +563,10 @@ async fn delete_inner(
             .filter(schema::branch_version::version_id.eq(version_id))
             .select(schema::branch::id)
             .load::<BranchId>(conn)
-            .map_err(ApiError::from)?;
+            .map_err(resource_not_found_err!(
+                Branch,
+                (query_project.clone(), report_id, version_id)
+            ))?;
 
         let mut version_map = HashMap::new();
         // Get all versions greater than this one for each of the branches
@@ -605,7 +577,15 @@ async fn delete_inner(
                 .filter(schema::branch_version::branch_id.eq(branch_id))
                 .select((schema::version::id, schema::version::number))
                 .load::<(VersionId, VersionNumber)>(conn)
-                .map_err(ApiError::from)?
+                .map_err(resource_not_found_err!(
+                    Version,
+                    (
+                        query_project.clone(),
+                        report_id,
+                        branch_id,
+                        query_version.clone()
+                    )
+                ))?
                 .into_iter()
                 .for_each(|(version_id, version_number)| {
                     version_map.insert(version_id, version_number);
@@ -631,7 +611,10 @@ async fn delete_inner(
         // Finally delete the dangling version
         diesel::delete(schema::version::table.filter(schema::version::id.eq(version_id)))
             .execute(conn)
-            .map_err(ApiError::from)?;
+            .map_err(resource_conflict_err!(
+                Version,
+                (query_project.clone(), report_id, query_version.clone())
+            ))?;
     }
 
     Ok(JsonEmpty {})

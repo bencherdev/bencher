@@ -1,4 +1,3 @@
-pub mod error;
 pub mod headers;
 pub mod query;
 pub mod resource_id;
