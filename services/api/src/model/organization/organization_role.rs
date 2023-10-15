@@ -1,13 +1,14 @@
 use crate::{
     context::{DbConnection, SecretKey},
+    error::unauthorized_error,
     model::user::{QueryUser, UserId},
     schema::organization_role as organization_role_table,
-    ApiError,
 };
 use bencher_json::{
     organization::{member::OrganizationRole, OrganizationPermission},
     DateTime, Jwt,
 };
+use dropshot::HttpError;
 
 use super::{OrganizationId, QueryOrganization};
 
@@ -39,19 +40,19 @@ impl InsertOrganizationRole {
         secret_key: &SecretKey,
         invite: &Jwt,
         user_id: UserId,
-    ) -> Result<Self, ApiError> {
+    ) -> Result<Self, HttpError> {
         // Validate the invite JWT
-        let claims = secret_key.validate_invite(invite)?;
+        let claims = secret_key
+            .validate_invite(invite)
+            .map_err(unauthorized_error)?;
 
         let email = claims.email();
         // Make sure the email in the invite is the same as the email associated with the user
         let email_user_id = QueryUser::get_id_from_email(conn, email)?;
         if user_id != email_user_id {
-            return Err(ApiError::InviteEmail {
-                user_id,
-                email: email.clone(),
-                email_user_id,
-            });
+            return Err(unauthorized_error(
+               format!("Invitation email ({email}) is connected to user {email_user_id} which doesn't match {user_id}")
+            ));
         }
 
         let timestamp = DateTime::now();

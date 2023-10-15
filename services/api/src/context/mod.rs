@@ -10,7 +10,7 @@ mod messenger;
 mod rbac;
 mod secret_key;
 
-pub use database::{Database, DatabaseError, DbConnection};
+pub use database::{DataStoreError, Database, DbConnection};
 pub use messenger::{Body, ButtonBody, Email, Message, Messenger, NewUserBody};
 pub use rbac::{Rbac, RbacError};
 pub use secret_key::{JwtError, SecretKey};

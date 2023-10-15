@@ -22,7 +22,6 @@ use tokio::sync::mpsc::Sender;
 use crate::{
     context::{ApiContext, Database, DbConnection, Email, Messenger, SecretKey},
     endpoints::Api,
-    ApiError,
 };
 
 #[cfg(feature = "plus")]
@@ -37,8 +36,34 @@ pub struct ConfigTx {
     pub restart_tx: Sender<()>,
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum ConfigTxError {
+    #[error("Failed to create server logger: {0}")]
+    CreateLogger(std::io::Error),
+    #[error("Failed to run database migrations: {0}")]
+    Migrations(Box<dyn std::error::Error + Send + Sync>),
+    #[error("Failed to run database pragma: {0}")]
+    Pragma(diesel::result::Error),
+    #[error("Failed to parse role based access control (RBAC) rules: {0}")]
+    Polar(oso::OsoError),
+    #[error("Invalid endpoint URL: {0}")]
+    Endpoint(bencher_json::ValidError),
+    #[error("Failed to connect to database ({0}): {1}")]
+    DatabaseConnection(String, diesel::ConnectionError),
+    #[error("Failed to parse data store: {0}")]
+    DataStore(crate::context::DataStoreError),
+    #[error("Failed to register endpoint: {0}")]
+    Register(String),
+    #[error("Failed to create server: {0}")]
+    CreateServer(Box<dyn std::error::Error + Send + Sync>),
+
+    #[cfg(feature = "plus")]
+    #[error("{0}")]
+    Plus(super::plus::PlusError),
+}
+
 impl TryFrom<ConfigTx> for HttpServer<ApiContext> {
-    type Error = ApiError;
+    type Error = ConfigTxError;
 
     fn try_from(config_tx: ConfigTx) -> Result<Self, Self::Error> {
         let log = into_log(config_tx.config.0.logging.clone())?;
@@ -49,7 +74,7 @@ impl TryFrom<ConfigTx> for HttpServer<ApiContext> {
     }
 }
 
-fn into_inner(log: &Logger, config_tx: ConfigTx) -> Result<HttpServer<ApiContext>, ApiError> {
+fn into_inner(log: &Logger, config_tx: ConfigTx) -> Result<HttpServer<ApiContext>, ConfigTxError> {
     let ConfigTx { config, restart_tx } = config_tx;
 
     let Config(JsonConfig {
@@ -90,11 +115,11 @@ fn into_inner(log: &Logger, config_tx: ConfigTx) -> Result<HttpServer<ApiContext
 
     let mut api = ApiDescription::new();
     debug!(log, "Registering server APIs");
-    Api::register(&mut api, true)?;
+    Api::register(&mut api, true).map_err(ConfigTxError::Register);
 
     Ok(
         dropshot::HttpServerStarter::new_with_tls(&config_dropshot, api, private, log, tls)
-            .map_err(ApiError::CreateServer)?
+            .map_err(ConfigTxError::CreateServer)?
             .start(),
     )
 }
@@ -107,33 +132,38 @@ fn into_private(
     json_database: JsonDatabase,
     restart_tx: Sender<()>,
     #[cfg(feature = "plus")] plus: Option<JsonPlus>,
-) -> Result<ApiContext, ApiError> {
-    let endpoint = console.url.try_into()?;
+) -> Result<ApiContext, ConfigTxError> {
+    let endpoint = console.url.try_into().map_err(ConfigTxError::Endpoint)?;
     let database_path = json_database.file.to_string_lossy();
     diesel_database_url(log, &database_path);
+
     info!(&log, "Connecting to database: {database_path}");
-    let mut database_connection = DbConnection::establish(&database_path)?;
+    let mut database_connection = DbConnection::establish(&database_path)
+        .map_err(|e| ConfigTxError::DatabaseConnection(database_path.to_string(), e))?;
+
     info!(&log, "Running database migrations");
     run_migrations(&mut database_connection)?;
     let data_store = if let Some(data_store) = json_database.data_store {
-        Some(data_store.try_into()?)
+        Some(data_store.try_into().map_err(ConfigTxError::DataStore)?)
     } else {
         None
     };
+
     info!(&log, "Loading secret key");
     let secret_key = SecretKey::new(
         security.issuer.unwrap_or_else(|| BENCHER_DOT_DEV.into()),
         &security.secret_key,
     );
+
     info!(&log, "Configuring Bencher Plus");
     #[cfg(feature = "plus")]
-    let Plus { biller, licensor } = Plus::new(&endpoint, plus)?;
+    let Plus { biller, licensor } = Plus::new(&endpoint, plus).map_err(ConfigTxError::Plus)?;
 
     debug!(&log, "Creating API context");
     Ok(ApiContext {
         endpoint,
         secret_key,
-        rbac: init_rbac().map_err(ApiError::Polar)?.into(),
+        rbac: init_rbac().map_err(ConfigTxError::Polar)?.into(),
         messenger: into_messenger(smtp),
         database: Database {
             path: json_database.file,
@@ -165,15 +195,15 @@ fn diesel_database_url(log: &Logger, database_path: &str) {
     std::env::set_var(DATABASE_URL, database_path);
 }
 
-fn run_migrations(database: &mut DbConnection) -> Result<(), ApiError> {
+fn run_migrations(database: &mut DbConnection) -> Result<(), ConfigTxError> {
     database
         .run_pending_migrations(MIGRATIONS)
         .map(|_| ())
-        .map_err(ApiError::Migrations)?;
+        .map_err(ConfigTxError::Migrations)?;
     // https://www.sqlite.org/foreignkeys.html#fk_enable
     database
         .batch_execute("PRAGMA foreign_keys = ON")
-        .map_err(ApiError::from)?;
+        .map_err(ConfigTxError::Pragma)?;
     Ok(())
 }
 
@@ -216,7 +246,7 @@ fn into_config_dropshot(server: JsonServer) -> ConfigDropshot {
     }
 }
 
-fn into_log(logging: JsonLogging) -> Result<Logger, ApiError> {
+fn into_log(logging: JsonLogging) -> Result<Logger, ConfigTxError> {
     let JsonLogging { name, log } = logging;
     match log {
         ServerLog::StderrTerminal { level } => ConfigLogging::StderrTerminal {
@@ -233,7 +263,7 @@ fn into_log(logging: JsonLogging) -> Result<Logger, ApiError> {
         },
     }
     .to_logger(name)
-    .map_err(ApiError::CreateLogger)
+    .map_err(ConfigTxError::CreateLogger)
 }
 
 fn into_level(log_level: &LogLevel) -> ConfigLoggingLevel {

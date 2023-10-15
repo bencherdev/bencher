@@ -1,5 +1,4 @@
 use super::FmtBody;
-use crate::ApiError;
 
 pub struct ButtonBody {
     pub title: String,
@@ -127,8 +126,7 @@ impl FmtBody for ButtonBody {
 "
         );
 
-        css_inline::inline(&html)
-            .map_err(ApiError::from)
-            .unwrap_or(html)
+        // TODO log this error
+        css_inline::inline(&html).unwrap_or(html)
     }
 }

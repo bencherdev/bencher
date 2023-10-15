@@ -10,20 +10,13 @@ pub mod user;
 
 pub use endpoint::Endpoint;
 
-use crate::{context::ApiContext, ApiError};
+use crate::context::ApiContext;
 
 pub struct Api;
 
 impl Api {
-    pub fn register(
-        api: &mut ApiDescription<ApiContext>,
-        http_options: bool,
-    ) -> Result<(), ApiError> {
-        Self::register_inner(api, http_options).map_err(ApiError::Register)
-    }
-
     #[allow(clippy::too_many_lines)]
-    fn register_inner(
+    pub fn register(
         api: &mut ApiDescription<ApiContext>,
         http_options: bool,
     ) -> Result<(), String> {

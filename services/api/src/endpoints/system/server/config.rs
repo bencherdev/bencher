@@ -1,5 +1,6 @@
 use bencher_json::{system::config::JsonUpdateConfig, JsonConfig};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+use http::StatusCode;
 use slog::Logger;
 
 use crate::{
@@ -9,7 +10,7 @@ use crate::{
         endpoint::{CorsResponse, Get, Put, ResponseAccepted, ResponseOk},
         Endpoint,
     },
-    error::{bad_request_error, forbidden_error},
+    error::{bad_request_error, forbidden_error, issue_error},
     model::user::auth::AuthUser,
 };
 
@@ -51,7 +52,18 @@ async fn get_one_inner(
         )));
     }
 
-    Ok(Config::load_file(log).await?.unwrap_or_default().into())
+    Ok(Config::load_file(log)
+        .await
+        .map_err(|e| {
+            issue_error(
+                StatusCode::NOT_FOUND,
+                "Failed to load config file",
+                "Failed to load configuration file",
+                e,
+            )
+        })?
+        .unwrap_or_default()
+        .into())
 }
 
 #[endpoint {
@@ -85,7 +97,16 @@ async fn put_inner(
     // todo() -> add validation here
     let config_str = serde_json::to_string(&config).map_err(bad_request_error)?;
     std::env::set_var(BENCHER_CONFIG, &config_str);
-    Config::write(log, config_str.as_bytes()).await?;
+    Config::write(log, config_str.as_bytes())
+        .await
+        .map_err(|e| {
+            issue_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to write config file",
+                "Failed to write configuration file",
+                e,
+            )
+        })?;
     let json_config = serde_json::from_str(&config_str).map_err(bad_request_error)?;
 
     countdown(

@@ -82,7 +82,7 @@ pub enum BackupError {
     #[error("Failed to remove compressed file: {0}")]
     RmZipFile(std::io::Error),
     #[error("{0}")]
-    Database(crate::context::DatabaseError),
+    DataStore(crate::context::DataStoreError),
     #[error("No data store")]
     NoDataStore,
     #[error("Failed to remove file: {0}")]
@@ -106,7 +106,7 @@ async fn backup(context: &ApiContext, json_backup: JsonBackup) -> Result<(), Bac
             data_store
                 .backup(&source_path, &file_name)
                 .await
-                .map_err(BackupError::Database)?;
+                .map_err(BackupError::DataStore)?;
         } else {
             return Err(BackupError::NoDataStore);
         };

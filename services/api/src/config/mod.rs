@@ -11,8 +11,6 @@ use once_cell::sync::Lazy;
 use slog::{error, info, Logger};
 use url::Url;
 
-use crate::ApiError;
-
 pub mod config_tx;
 #[cfg(feature = "plus")]
 mod plus;
@@ -61,6 +59,20 @@ pub static DEFAULT_SECRET_KEY: Lazy<Secret> = Lazy::new(|| uuid::Uuid::new_v4().
 #[derive(Debug, Clone)]
 pub struct Config(JsonConfig);
 
+#[derive(Debug, thiserror::Error)]
+pub enum ConfigError {
+    #[error("Failed to parse config string: {0}")]
+    ParseStr(String),
+    #[error("Failed to open config file ({0}): {1}")]
+    OpenFile(String, std::io::Error),
+    #[error("Failed to parse config file ({0}): {1}")]
+    ParseFile(String, serde_json::Error),
+    #[error("Failed to write config file ({0}): {1}")]
+    WriteFile(String, std::io::Error),
+    #[error("Failed to parse default config ({0:?}): {1}")]
+    ParseDefault(Box<JsonConfig>, serde_json::Error),
+}
+
 impl AsRef<JsonConfig> for Config {
     fn as_ref(&self) -> &JsonConfig {
         &self.0
@@ -68,7 +80,7 @@ impl AsRef<JsonConfig> for Config {
 }
 
 impl Config {
-    pub async fn load_or_default(log: &Logger) -> Result<Self, ApiError> {
+    pub async fn load_or_default(log: &Logger) -> Result<Self, ConfigError> {
         if let Some(config) = Self::load_env(log).await? {
             return Ok(config);
         }
@@ -83,13 +95,19 @@ impl Config {
             serde_json::to_string_pretty(&config.0)
         } else {
             serde_json::to_string(&config.0)
-        }?;
+        }
+        .map_err(|e| {
+            let err = ConfigError::ParseDefault(Box::new(config.0.clone()), e);
+            error!(log, "{err}");
+            debug_assert!(false, "{err}");
+            err
+        })?;
         Self::write(log, config_str.as_bytes()).await?;
 
         Ok(config)
     }
 
-    pub async fn load_env(log: &Logger) -> Result<Option<Self>, ApiError> {
+    pub async fn load_env(log: &Logger) -> Result<Option<Self>, ConfigError> {
         // If the env var is set then failing to read or parse the config is an error
         // However, if it isn't set then just return None
         let config_str = match std::env::var(BENCHER_CONFIG) {
@@ -108,7 +126,7 @@ impl Config {
                 log,
                 "Failed to parse config string from \"{BENCHER_CONFIG}\": {e}"
             );
-            ApiError::ParseConfigString(config_str.clone())
+            ConfigError::ParseStr(config_str.clone())
         })?;
         info!(
             log,
@@ -122,7 +140,7 @@ impl Config {
         Ok(Some(Self(json_config)))
     }
 
-    pub async fn load_file(log: &Logger) -> Result<Option<Self>, ApiError> {
+    pub async fn load_file(log: &Logger) -> Result<Option<Self>, ConfigError> {
         // If the env var is set then failing to read or parse the config is an error
         // However, if it isn't set then just try the default path
         // If there is a file to read at the default path, then that config is expected to parse
@@ -131,7 +149,7 @@ impl Config {
             Ok(path) => {
                 let config_file = tokio::fs::read(&path).await.map_err(|e| {
                     error!(log, "Failed to open config file at {path}: {e}");
-                    ApiError::OpenConfigFile(path.clone())
+                    ConfigError::OpenFile(path.clone(), e)
                 })?;
                 (path, config_file)
             },
@@ -150,7 +168,7 @@ impl Config {
 
         let json_config = serde_json::from_slice(&config_file).map_err(|e| {
             error!(log, "Failed to parse config file at {path}: {e}");
-            ApiError::ParseConfigFile(path.clone())
+            ConfigError::ParseFile(path.clone(), e)
         })?;
         info!(
             log,
@@ -161,7 +179,7 @@ impl Config {
         Ok(Some(Self(json_config)))
     }
 
-    pub async fn write(log: &Logger, config: impl AsRef<[u8]>) -> Result<(), ApiError> {
+    pub async fn write(log: &Logger, config: impl AsRef<[u8]>) -> Result<(), ConfigError> {
         let path = std::env::var(BENCHER_CONFIG_PATH).unwrap_or_else(|e| {
             info!(log, "Failed to find \"{BENCHER_CONFIG_PATH}\" environment variable defaulting to \"{DEFAULT_CONFIG_PATH}\": {e}");
             DEFAULT_CONFIG_PATH.into()
@@ -169,7 +187,7 @@ impl Config {
 
         tokio::fs::write(&path, config).await.map_err(|e| {
             error!(log, "Failed to write config file at {path}: {e}");
-            ApiError::WriteConfigFile(path)
+            ConfigError::WriteFile(path, e)
         })
     }
 

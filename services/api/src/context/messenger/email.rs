@@ -2,8 +2,6 @@ use bencher_json::Secret;
 use mail_send::{mail_builder::MessageBuilder, SmtpClientBuilder};
 use slog::{error, trace, Logger};
 
-use crate::ApiError;
-
 use super::body::FmtBody;
 use super::Message;
 
@@ -56,14 +54,8 @@ impl Email {
             async fn send(
                 client_builder: SmtpClientBuilder<String>,
                 message_builder: MessageBuilder<'_>,
-            ) -> Result<(), ApiError> {
-                client_builder
-                    .connect()
-                    .await
-                    .map_err(ApiError::MailTls)?
-                    .send(message_builder)
-                    .await
-                    .map_err(ApiError::MailSend)
+            ) -> Result<(), mail_send::Error> {
+                client_builder.connect().await?.send(message_builder).await
             }
 
             match send(client_builder, message_builder).await {
