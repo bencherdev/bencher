@@ -93,7 +93,7 @@ pub enum ApiError {
     #[error("Invitation email ({email}) is connected to user {email_user_id} which doesn't match {user_id}")]
     InviteEmail {
         user_id: UserId,
-        email: String,
+        email: Email,
         email_user_id: UserId,
     },
 

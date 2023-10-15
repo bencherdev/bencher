@@ -46,7 +46,7 @@ impl QueryUser {
     fn_get_id!(user, UserId, UserUuid);
     fn_get_uuid!(user, UserId, UserUuid);
 
-    pub fn get_id_from_email(conn: &mut DbConnection, email: &str) -> Result<UserId, HttpError> {
+    pub fn get_id_from_email(conn: &mut DbConnection, email: &Email) -> Result<UserId, HttpError> {
         schema::user::table
             .filter(schema::user::email.eq(email))
             .select(schema::user::id)

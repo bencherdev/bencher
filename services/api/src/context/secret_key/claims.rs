@@ -9,7 +9,7 @@ pub struct Claims {
     pub exp: u64,               // Expiration time (as UTC timestamp)
     pub iat: u64,               // Issued at (as UTC timestamp)
     pub iss: String,            // Issuer
-    pub sub: String,            // Subject (whom token refers to)
+    pub sub: Email,             // Subject (whom token refers to)
     pub org: Option<OrgClaims>, // Organization (for invitation)
 }
 
@@ -33,12 +33,12 @@ impl Claims {
             exp: now.checked_add(u64::from(ttl)).unwrap_or(now),
             iat: now,
             iss: issuer,
-            sub: email.into(),
+            sub: email,
             org,
         }
     }
 
-    pub fn email(&self) -> &str {
+    pub fn email(&self) -> &Email {
         &self.sub
     }
 
@@ -64,7 +64,7 @@ pub struct InviteClaims {
     pub exp: u64,
     pub iat: u64,
     pub iss: String,
-    pub sub: String,
+    pub sub: Email,
     pub org: OrgClaims,
 }
 
@@ -89,7 +89,7 @@ impl TryFrom<Claims> for InviteClaims {
 }
 
 impl InviteClaims {
-    pub fn email(&self) -> &str {
+    pub fn email(&self) -> &Email {
         &self.sub
     }
 }

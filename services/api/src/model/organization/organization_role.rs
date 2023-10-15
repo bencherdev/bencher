@@ -49,7 +49,7 @@ impl InsertOrganizationRole {
         if user_id != email_user_id {
             return Err(ApiError::InviteEmail {
                 user_id,
-                email: email.into(),
+                email: email.clone(),
                 email_user_id,
             });
         }

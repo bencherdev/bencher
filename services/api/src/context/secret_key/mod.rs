@@ -181,7 +181,7 @@ mod test {
         assert_eq!(claims.aud, Audience::Auth.to_string());
         assert_eq!(claims.iss, BENCHER_DEV_URL.to_string());
         assert_eq!(claims.iat, claims.exp - u64::from(TTL));
-        assert_eq!(claims.sub, EMAIL.to_string());
+        assert_eq!(claims.sub, *EMAIL);
     }
 
     #[test]
@@ -206,7 +206,7 @@ mod test {
         assert_eq!(claims.aud, Audience::Client.to_string());
         assert_eq!(claims.iss, BENCHER_DEV_URL.to_string());
         assert_eq!(claims.iat, claims.exp - u64::from(TTL));
-        assert_eq!(claims.sub, EMAIL.to_string());
+        assert_eq!(claims.sub, *EMAIL);
     }
 
     #[test]
@@ -231,7 +231,7 @@ mod test {
         assert_eq!(claims.aud, Audience::ApiKey.to_string());
         assert_eq!(claims.iss, BENCHER_DEV_URL.to_string());
         assert_eq!(claims.iat, claims.exp - u64::from(TTL));
-        assert_eq!(claims.sub, EMAIL.to_string());
+        assert_eq!(claims.sub, *EMAIL);
     }
 
     #[test]
@@ -261,7 +261,7 @@ mod test {
         assert_eq!(claims.aud, Audience::Invite.to_string());
         assert_eq!(claims.iss, BENCHER_DEV_URL.to_string());
         assert_eq!(claims.iat, claims.exp - u64::from(TTL));
-        assert_eq!(claims.sub, EMAIL.to_string());
+        assert_eq!(claims.sub, *EMAIL);
 
         assert_eq!(claims.org.uuid, org_uuid);
         assert_eq!(claims.org.role, role);

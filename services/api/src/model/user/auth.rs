@@ -3,7 +3,7 @@ use bencher_rbac::{
     Organization, Project, Server, User as RbacUser,
 };
 
-use bencher_json::Jwt;
+use bencher_json::{Email, Jwt};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{HttpError, RequestContext};
 use http::StatusCode;
@@ -117,7 +117,7 @@ impl AuthUser {
     fn organization_roles(
         conn: &mut DbConnection,
         user_id: UserId,
-        email: &str,
+        email: &Email,
     ) -> Result<(Vec<OrganizationId>, OrganizationRoles), HttpError> {
         let roles = schema::organization_role::table
             .filter(schema::organization_role::user_id.eq(user_id))
@@ -159,7 +159,7 @@ impl AuthUser {
     fn project_roles(
         conn: &mut DbConnection,
         user_id: UserId,
-        email: &str,
+        email: &Email,
     ) -> Result<(Vec<OrgProjectId>, ProjectRoles), HttpError> {
         let roles = schema::project_role::table
             .filter(schema::project_role::user_id.eq(user_id))
