@@ -10,15 +10,12 @@ use tokio::fs::remove_file;
 use tokio::io::{AsyncReadExt, BufWriter};
 use tokio::io::{AsyncWriteExt, BufReader};
 
-use crate::endpoints::endpoint::CorsResponse;
+use crate::endpoints::endpoint::{CorsResponse, Post};
+use crate::error::{bad_request_error, forbidden_error};
 use crate::{
     context::ApiContext,
-    endpoints::{
-        endpoint::{response_accepted, ResponseAccepted},
-        Endpoint,
-    },
+    endpoints::{endpoint::ResponseAccepted, Endpoint},
     model::user::auth::AuthUser,
-    ApiError,
 };
 
 const BUFFER_SIZE: usize = 1024;
@@ -46,32 +43,53 @@ pub async fn server_backup_post(
     body: TypedBody<JsonBackup>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Post;
-
-    let context = rqctx.context();
-    let json_restart = body.into_inner();
-    let json = post_inner(context, json_restart, &auth_user)
-        .await
-        .map_err(|e| {
-            if let ApiError::HttpError(e) = e {
-                e
-            } else {
-                endpoint.err(e).into()
-            }
-        })?;
-
-    response_accepted!(endpoint, json)
+    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user).await?;
+    Ok(Post::auth_response_accepted(json))
 }
 
 async fn post_inner(
     context: &ApiContext,
     json_backup: JsonBackup,
     auth_user: &AuthUser,
-) -> Result<JsonEmpty, ApiError> {
+) -> Result<JsonEmpty, HttpError> {
     if !auth_user.is_admin(&context.rbac) {
-        return Err(ApiError::Admin(auth_user.id));
+        return Err(forbidden_error(format!(
+            "User is not an admin ({auth_user:?}). Only admins can backup the server."
+        )));
     }
 
+    backup(context, json_backup)
+        .await
+        .map_err(bad_request_error)?;
+
+    Ok(JsonEmpty {})
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum BackupError {
+    #[error("Failed to batch execute: {0}")]
+    BatchExecute(diesel::result::Error),
+    #[error("Failed to create backup file: {0}")]
+    CreateBackupFile(std::io::Error),
+    #[error("Failed to create compressed file: {0}")]
+    CreateZipFile(std::io::Error),
+    #[error("Failed to write to compressed file: {0}")]
+    WriteZipFile(std::io::Error),
+    #[error("Failed to close compressed file: {0}")]
+    CloseZipFile(std::io::Error),
+    #[error("Failed to remove backup file: {0}")]
+    RmBackupFile(std::io::Error),
+    #[error("Failed to remove compressed file: {0}")]
+    RmZipFile(std::io::Error),
+    #[error("{0}")]
+    Database(crate::context::DatabaseError),
+    #[error("No data store")]
+    NoDataStore,
+    #[error("Failed to remove file: {0}")]
+    RmFile(std::io::Error),
+}
+
+async fn backup(context: &ApiContext, json_backup: JsonBackup) -> Result<(), BackupError> {
     // Create a database backup
     let (backup_file_path, backup_file_name) = backup_database(context).await?;
 
@@ -85,9 +103,12 @@ async fn post_inner(
     // Store the database backup in AWS S3
     if let Some(JsonDataStore::AwsS3) = json_backup.data_store {
         if let Some(data_store) = &context.database.data_store {
-            data_store.backup(&source_path, &file_name).await?;
+            data_store
+                .backup(&source_path, &file_name)
+                .await
+                .map_err(BackupError::Database)?;
         } else {
-            return Err(ApiError::AwsS3("No data store".into()));
+            return Err(BackupError::NoDataStore);
         };
     }
 
@@ -95,13 +116,13 @@ async fn post_inner(
     if json_backup.rm.unwrap_or_default() {
         remove_file(source_path)
             .await
-            .map_err(ApiError::BackupFile)?;
+            .map_err(BackupError::RmZipFile)?;
     }
 
-    Ok(JsonEmpty {})
+    Ok(())
 }
 
-async fn backup_database(context: &ApiContext) -> Result<(PathBuf, String), ApiError> {
+async fn backup_database(context: &ApiContext) -> Result<(PathBuf, String), BackupError> {
     let conn = &mut *context.conn().await;
     let mut file_path = context.database.path.clone();
 
@@ -122,7 +143,8 @@ async fn backup_database(context: &ApiContext) -> Result<(PathBuf, String), ApiE
     let file_path_str = file_path.to_string_lossy();
     let query = format!("VACUUM INTO '{file_path_str}'");
 
-    conn.batch_execute(&query).map_err(ApiError::from)?;
+    conn.batch_execute(&query)
+        .map_err(BackupError::BatchExecute)?;
 
     Ok((file_path, file_name))
 }
@@ -130,10 +152,10 @@ async fn backup_database(context: &ApiContext) -> Result<(PathBuf, String), ApiE
 async fn compress_database(
     backup_file_path: PathBuf,
     backup_file_name: &str,
-) -> Result<(PathBuf, String), ApiError> {
+) -> Result<(PathBuf, String), BackupError> {
     let backup_file = tokio::fs::File::open(&backup_file_path)
         .await
-        .map_err(ApiError::BackupFile)?;
+        .map_err(BackupError::CreateBackupFile)?;
     let mut backup_data = BufReader::with_capacity(BUFFER_SIZE, backup_file);
 
     let compress_file_name = format!("{backup_file_name}.gz");
@@ -141,7 +163,7 @@ async fn compress_database(
     compress_file_path.set_file_name(&compress_file_name);
     let compress_file = tokio::fs::File::create(&compress_file_path)
         .await
-        .map_err(ApiError::BackupFile)?;
+        .map_err(BackupError::CreateZipFile)?;
     let compress_data = BufWriter::with_capacity(BUFFER_SIZE, compress_file);
 
     let mut encoder = GzipEncoder::new(compress_data);
@@ -154,13 +176,16 @@ async fn compress_database(
         encoder
             .write_all(&data_buffer)
             .await
-            .map_err(ApiError::BackupFile)?;
+            .map_err(BackupError::WriteZipFile)?;
     }
-    encoder.shutdown().await.map_err(ApiError::BackupFile)?;
+    encoder
+        .shutdown()
+        .await
+        .map_err(BackupError::CloseZipFile)?;
 
     remove_file(backup_file_path)
         .await
-        .map_err(ApiError::BackupFile)?;
+        .map_err(BackupError::RmBackupFile)?;
 
     Ok((compress_file_path, compress_file_name))
 }

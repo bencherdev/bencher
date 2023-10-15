@@ -6,11 +6,11 @@ use tokio::sync::mpsc::Sender;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{response_accepted, CorsResponse, ResponseAccepted},
+        endpoint::{CorsResponse, Post, ResponseAccepted},
         Endpoint,
     },
+    error::forbidden_error,
     model::user::{auth::AuthUser, UserId},
-    ApiError,
 };
 
 pub const DEFAULT_DELAY: u64 = 3;
@@ -38,21 +38,8 @@ pub async fn server_restart_post(
     body: TypedBody<JsonRestart>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Post;
-
-    let context = rqctx.context();
-    let json_restart = body.into_inner();
-    let json = post_inner(&rqctx.log, context, json_restart, &auth_user)
-        .await
-        .map_err(|e| {
-            if let ApiError::HttpError(e) = e {
-                e
-            } else {
-                endpoint.err(e).into()
-            }
-        })?;
-
-    response_accepted!(endpoint, json)
+    let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner(), &auth_user).await?;
+    Ok(Post::auth_response_accepted(json))
 }
 
 #[allow(clippy::unused_async)]
@@ -61,9 +48,11 @@ async fn post_inner(
     context: &ApiContext,
     json_restart: JsonRestart,
     auth_user: &AuthUser,
-) -> Result<JsonEmpty, ApiError> {
+) -> Result<JsonEmpty, HttpError> {
     if !auth_user.is_admin(&context.rbac) {
-        return Err(ApiError::Admin(auth_user.id));
+        return Err(forbidden_error(format!(
+            "User is not an admin ({auth_user:?}). Only admins can restart the server."
+        )));
     }
 
     countdown(

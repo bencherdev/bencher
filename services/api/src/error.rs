@@ -23,6 +23,9 @@ pub enum ApiError {
     #[error("{0}")]
     HttpError(#[from] HttpError),
 
+    #[error("{0}")]
+    Database(#[from] crate::context::DatabaseError),
+
     #[error("Failed to join handle: {0}")]
     JoinHandle(tokio::task::JoinError),
     #[error("Failed to parse role based access control (RBAC) rules: {0}")]
