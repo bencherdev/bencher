@@ -34,7 +34,7 @@ use super::TOKEN_ARG;
 pub async fn auth_signup_options(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::Post]))
+    Ok(Endpoint::cors(&[Post.into()]))
 }
 
 #[endpoint {

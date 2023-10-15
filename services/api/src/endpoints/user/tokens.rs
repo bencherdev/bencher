@@ -57,7 +57,7 @@ pub async fn user_tokens_options(
     _pagination_params: Query<UserTokensPagination>,
     _query_params: Query<UserTokensQuery>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetLs, Endpoint::Post]))
+    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
 #[endpoint {
@@ -191,7 +191,7 @@ pub async fn user_token_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<UserTokenParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetOne, Endpoint::Patch]))
+    Ok(Endpoint::cors(&[Get.into(), Patch.into()]))
 }
 
 #[endpoint {

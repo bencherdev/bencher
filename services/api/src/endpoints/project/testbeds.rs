@@ -54,7 +54,7 @@ pub async fn proj_testbeds_options(
     _pagination_params: Query<ProjTestbedsPagination>,
     _query_params: Query<ProjTestbedsQuery>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetLs, Endpoint::Post]))
+    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
 #[endpoint {
@@ -184,11 +184,7 @@ pub async fn proj_testbed_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjTestbedParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[
-        Endpoint::GetOne,
-        Endpoint::Patch,
-        Endpoint::Delete,
-    ]))
+    Ok(Endpoint::cors(&[Get.into(), Patch.into(), Delete.into()]))
 }
 
 #[endpoint {

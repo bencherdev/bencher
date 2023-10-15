@@ -10,12 +10,9 @@ use thiserror::Error;
 
 #[cfg(feature = "plus")]
 use crate::model::organization::OrganizationId;
-use crate::{
-    endpoints::Endpoint,
-    model::{
-        project::{branch::BranchId, testbed::TestbedId, ProjectId},
-        user::UserId,
-    },
+use crate::model::{
+    project::{branch::BranchId, testbed::TestbedId, ProjectId},
+    user::UserId,
 };
 
 #[derive(Debug, Error)]
@@ -77,8 +74,6 @@ pub enum ApiError {
     #[error("Failed to use AWS S3: {0}")]
     AwsS3(String),
 
-    #[error("Failed to {0}")]
-    Endpoint(Endpoint),
     #[error("Failed to parse resource ID")]
     ResourceId,
     #[error("Failed to query database: {0}")]

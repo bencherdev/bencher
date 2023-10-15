@@ -57,7 +57,7 @@ pub async fn proj_benchmarks_options(
     _pagination_params: Query<ProjBenchmarksPagination>,
     _query_params: Query<ProjBenchmarksQuery>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetLs, Endpoint::Post]))
+    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
 #[endpoint {
@@ -187,11 +187,7 @@ pub async fn proj_benchmark_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjBenchmarkParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[
-        Endpoint::GetOne,
-        Endpoint::Patch,
-        Endpoint::Delete,
-    ]))
+    Ok(Endpoint::cors(&[Get.into(), Patch.into(), Delete.into()]))
 }
 
 #[endpoint {

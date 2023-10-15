@@ -54,7 +54,7 @@ pub async fn proj_branches_options(
     _pagination_params: Query<ProjBranchesPagination>,
     _query_params: Query<ProjBranchesQuery>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetLs, Endpoint::Post]))
+    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
 #[endpoint {
@@ -202,11 +202,7 @@ pub async fn proj_branch_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjBranchParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[
-        Endpoint::GetOne,
-        Endpoint::Patch,
-        Endpoint::Delete,
-    ]))
+    Ok(Endpoint::cors(&[Get.into(), Patch.into(), Delete.into()]))
 }
 
 #[endpoint {

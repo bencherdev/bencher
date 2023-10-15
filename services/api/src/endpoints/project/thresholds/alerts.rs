@@ -49,7 +49,7 @@ pub async fn proj_alerts_options(
     _path_params: Path<ProjAlertsParams>,
     _pagination_params: Query<ProjAlertsPagination>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetLs]))
+    Ok(Endpoint::cors(&[Get.into()]))
 }
 
 #[endpoint {
@@ -164,7 +164,7 @@ pub async fn proj_alert_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjAlertParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetOne, Endpoint::Patch]))
+    Ok(Endpoint::cors(&[Get.into(), Patch.into()]))
 }
 
 #[endpoint {
@@ -260,7 +260,7 @@ pub async fn proj_alert_stats_options(
     _path_params: Path<ProjAlertsParams>,
     _pagination_params: Query<ProjAlertsPagination>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetLs]))
+    Ok(Endpoint::cors(&[Get.into()]))
 }
 
 #[endpoint {

@@ -40,7 +40,59 @@ pub async fn org_plan_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OrgPlanParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::Post, Endpoint::GetOne]))
+    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
+}
+
+#[endpoint {
+    method = GET,
+    path =  "/v0/organizations/{organization}/plan",
+    tags = ["organizations", "plan"]
+}]
+pub async fn org_plan_get(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<OrgPlanParams>,
+) -> Result<ResponseOk<JsonPlan>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Get::auth_response_ok(json))
+}
+
+async fn get_one_inner(
+    context: &ApiContext,
+    path_params: OrgPlanParams,
+    auth_user: &AuthUser,
+) -> Result<JsonPlan, HttpError> {
+    // Check to see if there is a Biller
+    // The Biller is only available on Bencher Cloud
+    let Some(biller) = &context.biller else {
+        return Err(locked_error(format!(
+            "Tried to use a Bencher Cloud route when Self-Hosted: GET /v0/organizations/{org}/plan",
+            org = path_params.organization
+        )));
+    };
+    let conn = &mut *context.conn().await;
+
+    // Get the organization
+    let query_org = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
+    // Check to see if user has permission to manage the organization
+    context
+        .rbac
+        .is_allowed_organization(auth_user, Permission::Manage, &query_org)?;
+
+    if let Some(subscription) = &query_org.subscription {
+        let subscription_id = subscription
+            .parse()
+            .map_err(resource_not_found_err!(Plan, subscription))?;
+        biller
+            .get_plan(&subscription_id)
+            .await
+            .map_err(resource_not_found_err!(Plan, subscription))
+    } else {
+        Err(not_found_error(format!(
+            "Failed to find plan for organization: {org}",
+            org = path_params.organization
+        )))
+    }
 }
 
 #[endpoint {
@@ -135,56 +187,4 @@ async fn post_inner(
         .get_plan(&subscription.id)
         .await
         .map_err(resource_not_found_err!(Plan, subscription))
-}
-
-#[endpoint {
-    method = GET,
-    path =  "/v0/organizations/{organization}/plan",
-    tags = ["organizations", "plan"]
-}]
-pub async fn org_plan_get(
-    rqctx: RequestContext<ApiContext>,
-    path_params: Path<OrgPlanParams>,
-) -> Result<ResponseOk<JsonPlan>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
-    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
-    Ok(Get::auth_response_ok(json))
-}
-
-async fn get_one_inner(
-    context: &ApiContext,
-    path_params: OrgPlanParams,
-    auth_user: &AuthUser,
-) -> Result<JsonPlan, HttpError> {
-    // Check to see if there is a Biller
-    // The Biller is only available on Bencher Cloud
-    let Some(biller) = &context.biller else {
-        return Err(locked_error(format!(
-            "Tried to use a Bencher Cloud route when Self-Hosted: GET /v0/organizations/{org}/plan",
-            org = path_params.organization
-        )));
-    };
-    let conn = &mut *context.conn().await;
-
-    // Get the organization
-    let query_org = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
-    // Check to see if user has permission to manage the organization
-    context
-        .rbac
-        .is_allowed_organization(auth_user, Permission::Manage, &query_org)?;
-
-    if let Some(subscription) = &query_org.subscription {
-        let subscription_id = subscription
-            .parse()
-            .map_err(resource_not_found_err!(Plan, subscription))?;
-        biller
-            .get_plan(&subscription_id)
-            .await
-            .map_err(resource_not_found_err!(Plan, subscription))
-    } else {
-        Err(not_found_error(format!(
-            "Failed to find plan for organization: {org}",
-            org = path_params.organization
-        )))
-    }
 }

@@ -25,7 +25,7 @@ use super::CLIENT_TOKEN_TTL;
 pub async fn auth_confirm_options(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::Post]))
+    Ok(Endpoint::cors(&[Post.into()]))
 }
 
 #[endpoint {

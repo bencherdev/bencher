@@ -20,7 +20,7 @@ const API_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub async fn server_version_options(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetOne]))
+    Ok(Endpoint::cors(&[Get.into()]))
 }
 
 #[allow(clippy::unused_async)]

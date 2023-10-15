@@ -24,7 +24,7 @@ impl CorsHeaders {
         }
     }
 
-    pub fn new_cors<T>(methods: &[T]) -> Self
+    pub fn new<T>(methods: &[T]) -> Self
     where
         T: ToString,
     {

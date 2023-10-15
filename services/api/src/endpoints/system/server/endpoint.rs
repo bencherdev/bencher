@@ -19,7 +19,7 @@ use crate::{
 pub async fn server_endpoint_options(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetOne]))
+    Ok(Endpoint::cors(&[Get.into()]))
 }
 
 #[endpoint {

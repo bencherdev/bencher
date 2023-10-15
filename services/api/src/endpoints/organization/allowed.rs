@@ -28,7 +28,7 @@ pub async fn org_allowed_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OrgAllowedParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetOne]))
+    Ok(Endpoint::cors(&[Get.into()]))
 }
 
 #[endpoint {

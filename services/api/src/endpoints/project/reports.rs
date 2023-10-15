@@ -62,7 +62,7 @@ pub async fn proj_reports_options(
     _pagination_params: Query<ProjReportsPagination>,
     _query_params: Query<JsonReportQueryParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetLs, Endpoint::Post]))
+    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
 #[endpoint {
@@ -456,7 +456,7 @@ pub async fn proj_report_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjReportParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetOne, Endpoint::Delete]))
+    Ok(Endpoint::cors(&[Get.into(), Delete.into()]))
 }
 
 #[endpoint {

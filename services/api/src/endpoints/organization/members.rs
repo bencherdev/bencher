@@ -59,7 +59,7 @@ pub async fn org_members_options(
     _pagination_params: Query<OrgMembersPagination>,
     _query_params: Query<OrgMembersQuery>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetLs, Endpoint::Post]))
+    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
 #[endpoint {
@@ -281,11 +281,7 @@ pub async fn org_member_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OrgMemberParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[
-        Endpoint::GetOne,
-        Endpoint::Patch,
-        Endpoint::Delete,
-    ]))
+    Ok(Endpoint::cors(&[Get.into(), Patch.into(), Delete.into()]))
 }
 
 #[endpoint {

@@ -51,7 +51,7 @@ pub async fn organizations_options(
     _pagination_params: Query<OrganizationsPagination>,
     _query_params: Query<OrganizationsQuery>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetLs, Endpoint::Post]))
+    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
 #[endpoint {
@@ -187,7 +187,7 @@ pub async fn organization_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OrganizationParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetOne, Endpoint::Patch]))
+    Ok(Endpoint::cors(&[Get.into(), Patch.into()]))
 }
 
 #[endpoint {

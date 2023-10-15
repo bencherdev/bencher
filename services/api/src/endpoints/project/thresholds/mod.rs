@@ -55,7 +55,7 @@ pub async fn proj_thresholds_options(
     _path_params: Path<ProjThresholdsParams>,
     _pagination_params: Query<ProjThresholdsPagination>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetLs, Endpoint::Post]))
+    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
 #[endpoint {
@@ -201,11 +201,7 @@ pub async fn proj_threshold_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjThresholdParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[
-        Endpoint::GetOne,
-        Endpoint::Put,
-        Endpoint::Delete,
-    ]))
+    Ok(Endpoint::cors(&[Get.into(), Put.into(), Delete.into()]))
 }
 
 #[endpoint {

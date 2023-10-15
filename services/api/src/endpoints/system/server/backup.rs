@@ -30,7 +30,7 @@ pub async fn server_backup_options(
     _rqctx: RequestContext<ApiContext>,
     _body: TypedBody<JsonRestart>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::Post]))
+    Ok(Endpoint::cors(&[Post.into()]))
 }
 
 #[endpoint {

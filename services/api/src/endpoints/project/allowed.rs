@@ -28,7 +28,7 @@ pub async fn proj_allowed_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjAllowedParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetOne]))
+    Ok(Endpoint::cors(&[Get.into()]))
 }
 
 #[endpoint {

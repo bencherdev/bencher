@@ -37,7 +37,7 @@ pub async fn org_usage_options(
     _path_params: Path<OrgUsageParams>,
     _query_params: Query<OrgUsageQuery>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetOne]))
+    Ok(Endpoint::cors(&[Get.into()]))
 }
 
 #[endpoint {

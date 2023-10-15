@@ -61,7 +61,7 @@ pub async fn org_projects_options(
     _pagination_params: Query<OrgProjectsPagination>,
     _query_params: Query<OrgProjectsQuery>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetLs, Endpoint::Post]))
+    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
 #[endpoint {

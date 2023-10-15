@@ -6,7 +6,10 @@ use hyper::Body;
 
 use crate::{
     context::ApiContext,
-    endpoints::{endpoint::CorsResponse, Endpoint},
+    endpoints::{
+        endpoint::{CorsResponse, Get},
+        Endpoint,
+    },
     error::{bad_request_error, issue_error},
     model::user::auth::AuthUser,
 };
@@ -24,7 +27,7 @@ pub async fn proj_perf_img_options(
     _path_params: Path<ProjPerfParams>,
     _query_params: Query<JsonPerfQueryParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetLs]))
+    Ok(Endpoint::cors(&[Get.into()]))
 }
 
 #[endpoint {

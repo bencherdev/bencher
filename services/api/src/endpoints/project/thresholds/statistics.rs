@@ -32,7 +32,7 @@ pub async fn proj_statistic_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjStatisticParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetOne]))
+    Ok(Endpoint::cors(&[Get.into()]))
 }
 
 #[endpoint {

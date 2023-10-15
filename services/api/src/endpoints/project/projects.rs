@@ -50,7 +50,7 @@ pub async fn projects_options(
     _pagination_params: Query<ProjectsPagination>,
     _query_params: Query<ProjectsQuery>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetLs]))
+    Ok(Endpoint::cors(&[Get.into()]))
 }
 
 #[endpoint {
@@ -143,11 +143,7 @@ pub async fn project_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjectParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[
-        Endpoint::GetOne,
-        Endpoint::Patch,
-        Endpoint::Delete,
-    ]))
+    Ok(Endpoint::cors(&[Get.into(), Patch.into(), Delete.into()]))
 }
 
 #[endpoint {

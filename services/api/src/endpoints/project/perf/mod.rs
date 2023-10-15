@@ -57,7 +57,7 @@ pub async fn proj_perf_options(
     _path_params: Path<ProjPerfParams>,
     _query_params: Query<JsonPerfQueryParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetLs]))
+    Ok(Endpoint::cors(&[Get.into()]))
 }
 
 #[endpoint {

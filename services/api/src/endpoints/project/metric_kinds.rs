@@ -54,7 +54,7 @@ pub async fn proj_metric_kinds_options(
     _pagination_params: Query<ProjMetricKindsPagination>,
     _query_params: Query<ProjMetricKindsQuery>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Endpoint::GetLs, Endpoint::Post]))
+    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
 #[endpoint {
@@ -184,11 +184,7 @@ pub async fn proj_metric_kind_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjMetricKindParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[
-        Endpoint::GetOne,
-        Endpoint::Patch,
-        Endpoint::Delete,
-    ]))
+    Ok(Endpoint::cors(&[Get.into(), Patch.into(), Delete.into()]))
 }
 
 #[endpoint {
