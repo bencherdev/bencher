@@ -13,7 +13,7 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{CorsResponse, Get, ResponseAccepted, ResponseOk},
+        endpoint::{CorsResponse, Get, Post, ResponseAccepted, ResponseOk},
         Endpoint,
     },
     error::{
@@ -61,7 +61,7 @@ pub async fn org_plan_post(
         &auth_user,
     )
     .await?;
-    Ok(Endpoint::Post.response_accepted(json))
+    Ok(Post::auth_response_accepted(json))
 }
 
 async fn post_inner(

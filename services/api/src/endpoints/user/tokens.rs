@@ -11,7 +11,7 @@ use uuid::Uuid;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{CorsResponse, Get, ResponseAccepted, ResponseOk},
+        endpoint::{CorsResponse, Get, Patch, Post, ResponseAccepted, ResponseOk},
         Endpoint,
     },
     error::{resource_conflict_err, resource_not_found_err},
@@ -143,7 +143,7 @@ pub async fn user_token_post(
         &auth_user,
     )
     .await?;
-    Ok(Endpoint::Post.response_accepted(json))
+    Ok(Post::auth_response_accepted(json))
 }
 
 async fn post_inner(
@@ -244,7 +244,7 @@ pub async fn user_token_patch(
         &auth_user,
     )
     .await?;
-    Ok(Endpoint::Patch.response_accepted(json))
+    Ok(Patch::auth_response_accepted(json))
 }
 
 async fn patch_inner(

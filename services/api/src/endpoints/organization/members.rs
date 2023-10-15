@@ -13,7 +13,7 @@ use slog::Logger;
 use crate::{
     context::{ApiContext, Body, ButtonBody, DbConnection, Message},
     endpoints::{
-        endpoint::{CorsResponse, Get, ResponseAccepted, ResponseOk},
+        endpoint::{CorsResponse, Delete, Get, Patch, Post, ResponseAccepted, ResponseOk},
         Endpoint,
     },
     error::{issue_error, resource_conflict_err, resource_not_found_err},
@@ -163,7 +163,7 @@ pub async fn org_member_post(
         &auth_user,
     )
     .await?;
-    Ok(Endpoint::Post.response_accepted(json))
+    Ok(Post::auth_response_accepted(json))
 }
 
 async fn post_inner(
@@ -339,7 +339,7 @@ pub async fn org_member_patch(
         &auth_user,
     )
     .await?;
-    Ok(Endpoint::Patch.response_accepted(json))
+    Ok(Patch::auth_response_accepted(json))
 }
 
 async fn patch_inner(
@@ -390,7 +390,7 @@ pub async fn org_member_delete(
 ) -> Result<ResponseAccepted<JsonMember>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
-    Ok(Endpoint::Delete.response_accepted(json))
+    Ok(Delete::auth_response_accepted(json))
 }
 
 async fn delete_inner(

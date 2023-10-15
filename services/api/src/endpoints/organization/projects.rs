@@ -11,7 +11,7 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{CorsResponse, ResponseAccepted, ResponseOk},
+        endpoint::{CorsResponse, Post, ResponseAccepted, ResponseOk},
         Endpoint,
     },
     error::{resource_conflict_err, resource_not_found_err},
@@ -146,7 +146,7 @@ pub async fn org_project_post(
         &auth_user,
     )
     .await?;
-    Ok(Endpoint::Post.response_accepted(json))
+    Ok(Post::auth_response_accepted(json))
 }
 
 async fn post_inner(
