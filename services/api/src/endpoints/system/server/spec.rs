@@ -4,7 +4,7 @@ use dropshot::{endpoint, HttpError, RequestContext};
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{pub_response_ok, CorsResponse, ResponseOk},
+        endpoint::{CorsResponse, Get, ResponseOk},
         Endpoint,
     },
     SWAGGER_SPEC,
@@ -31,6 +31,5 @@ pub async fn server_spec_options(
 pub async fn server_spec_get(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<ResponseOk<JsonSpec>, HttpError> {
-    let endpoint = Endpoint::GetOne;
-    pub_response_ok!(endpoint, SWAGGER_SPEC.clone())
+    Ok(Get::pub_response_ok(SWAGGER_SPEC.clone()))
 }

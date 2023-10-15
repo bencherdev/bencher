@@ -4,7 +4,7 @@ use dropshot::{endpoint, HttpError, RequestContext};
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{pub_response_ok, CorsResponse, ResponseOk},
+        endpoint::{CorsResponse, Get, ResponseOk},
         Endpoint,
     },
 };
@@ -30,6 +30,5 @@ pub async fn server_root_options(
 pub async fn server_root_get(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<ResponseOk<JsonEmpty>, HttpError> {
-    let endpoint = Endpoint::GetOne;
-    pub_response_ok!(endpoint, JsonEmpty {})
+    Ok(Get::pub_response_ok(JsonEmpty {}))
 }

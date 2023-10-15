@@ -4,7 +4,7 @@ use dropshot::{endpoint, HttpError, RequestContext};
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{pub_response_ok, CorsResponse, ResponseOk},
+        endpoint::{CorsResponse, Get, ResponseOk},
         Endpoint,
     },
 };
@@ -32,9 +32,7 @@ pub async fn server_version_options(
 pub async fn server_version_get(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<ResponseOk<JsonApiVersion>, HttpError> {
-    let endpoint = Endpoint::GetOne;
-    let json = JsonApiVersion {
+    Ok(Get::pub_response_ok(JsonApiVersion {
         version: API_VERSION.into(),
-    };
-    pub_response_ok!(endpoint, json)
+    }))
 }
