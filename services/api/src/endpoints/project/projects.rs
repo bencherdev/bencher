@@ -11,12 +11,10 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{
-            pub_response_ok, response_accepted, response_ok, CorsResponse, ResponseAccepted,
-            ResponseOk,
-        },
+        endpoint::{CorsResponse, Delete, Get, Patch, ResponseAccepted, ResponseOk},
         Endpoint,
     },
+    error::{resource_conflict_err, resource_not_found_err, unauthorized_error},
     model::{
         project::{
             visibility::project_visibility::project_visibility, QueryProject, UpdateProject,
@@ -24,8 +22,6 @@ use crate::{
         user::auth::AuthUser,
     },
     schema,
-    util::error::into_json,
-    ApiError,
 };
 
 pub type ProjectsPagination = JsonPagination<ProjectsSort>;
@@ -68,29 +64,14 @@ pub async fn projects_get(
     query_params: Query<ProjectsQuery>,
 ) -> Result<ResponseOk<JsonProjects>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::GetLs;
-
     let json = get_ls_inner(
         rqctx.context(),
         auth_user.as_ref(),
         pagination_params.into_inner(),
         query_params.into_inner(),
-        endpoint,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    if auth_user.is_some() {
-        response_ok!(endpoint, json)
-    } else {
-        pub_response_ok!(endpoint, json)
-    }
+    .await?;
+    Ok(Get::response_ok(json, auth_user.is_some()))
 }
 
 async fn get_ls_inner(
@@ -98,8 +79,7 @@ async fn get_ls_inner(
     auth_user: Option<&AuthUser>,
     pagination_params: ProjectsPagination,
     query_params: ProjectsQuery,
-    endpoint: Endpoint,
-) -> Result<JsonProjects, ApiError> {
+) -> Result<JsonProjects, HttpError> {
     let conn = &mut *context.conn().await;
 
     let mut query = schema::project::table.into_boxed();
@@ -114,7 +94,9 @@ async fn get_ls_inner(
             query = query.filter(schema::project::id.eq_any(projects));
         }
     } else {
-        return Err(ApiError::PrivateProjects);
+        return Err(unauthorized_error(
+            "Anonymous user tried to query private projects",
+        ));
     }
 
     if let Some(name) = query_params.name.as_ref() {
@@ -132,9 +114,17 @@ async fn get_ls_inner(
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryProject>(conn)
-        .map_err(ApiError::from)?
+        .map_err(resource_not_found_err!(Project))?
         .into_iter()
-        .filter_map(into_json!(endpoint, conn))
+        .filter_map(|project| match project.into_json(conn) {
+            Ok(project) => Some(project),
+            Err(err) => {
+                debug_assert!(false, "{err}");
+                #[cfg(feature = "sentry")]
+                sentry::capture_error(&err);
+                None
+            },
+        })
         .collect())
 }
 
@@ -170,39 +160,24 @@ pub async fn project_get(
     path_params: Path<ProjectParams>,
 ) -> Result<ResponseOk<JsonProject>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::GetOne;
-
     let json = get_one_inner(
         rqctx.context(),
         path_params.into_inner(),
         auth_user.as_ref(),
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    if auth_user.is_some() {
-        response_ok!(endpoint, json)
-    } else {
-        pub_response_ok!(endpoint, json)
-    }
+    .await?;
+    Ok(Get::response_ok(json, auth_user.is_some()))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjectParams,
     auth_user: Option<&AuthUser>,
-) -> Result<JsonProject, ApiError> {
+) -> Result<JsonProject, HttpError> {
     let conn = &mut *context.conn().await;
 
     QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?
         .into_json(conn)
-        .map_err(Into::into)
 }
 
 #[endpoint {
@@ -216,8 +191,6 @@ pub async fn project_patch(
     body: TypedBody<JsonUpdateProject>,
 ) -> Result<ResponseAccepted<JsonProject>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Patch;
-
     let context = rqctx.context();
     let json = patch_inner(
         context,
@@ -225,16 +198,8 @@ pub async fn project_patch(
         body.into_inner(),
         &auth_user,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    response_accepted!(endpoint, json)
+    .await?;
+    Ok(Patch::auth_response_accepted(json))
 }
 
 async fn patch_inner(
@@ -242,7 +207,7 @@ async fn patch_inner(
     path_params: ProjectParams,
     json_project: JsonUpdateProject,
     auth_user: &AuthUser,
-) -> Result<JsonProject, ApiError> {
+) -> Result<JsonProject, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
@@ -275,13 +240,17 @@ async fn patch_inner(
     }
 
     diesel::update(schema::project::table.filter(schema::project::id.eq(query_project.id)))
-        .set(&UpdateProject::from(json_project))
+        .set(&UpdateProject::from(json_project.clone()))
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(
+            Project,
+            query_project.clone(),
+            json_project
+        ))?;
 
-    QueryProject::get(conn, query_project.id)?
+    QueryProject::get(conn, query_project.id)
+        .map_err(resource_not_found_err!(Project, query_project))?
         .into_json(conn)
-        .map_err(Into::into)
 }
 
 #[endpoint {
@@ -294,41 +263,29 @@ pub async fn project_delete(
     path_params: Path<ProjectParams>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Delete;
-
-    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
-        .await
-        .map_err(|e| {
-            if let ApiError::HttpError(e) = e {
-                e
-            } else {
-                endpoint.err(e).into()
-            }
-        })?;
-
-    response_accepted!(endpoint, json)
+    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Delete::auth_response_accepted(json))
 }
 
 async fn delete_inner(
     context: &ApiContext,
     path_params: ProjectParams,
     auth_user: &AuthUser,
-) -> Result<JsonEmpty, ApiError> {
+) -> Result<JsonEmpty, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
-    let project_id = QueryProject::is_allowed(
+    let query_project = QueryProject::is_allowed(
         conn,
         &context.rbac,
         &path_params.project,
         auth_user,
         bencher_rbac::project::Permission::Delete,
-    )?
-    .id;
+    )?;
 
-    diesel::delete(schema::project::table.filter(schema::project::id.eq(project_id)))
+    diesel::delete(schema::project::table.filter(schema::project::id.eq(query_project.id)))
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_not_found_err!(Project, query_project))?;
 
     Ok(JsonEmpty {})
 }
