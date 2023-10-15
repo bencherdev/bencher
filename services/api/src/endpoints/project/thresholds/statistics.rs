@@ -7,12 +7,13 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{pub_response_ok, response_ok, CorsResponse, ResponseOk},
+        endpoint::{CorsResponse, Get, ResponseOk},
         Endpoint,
     },
+    error::resource_not_found_err,
     model::project::{threshold::statistic::QueryStatistic, QueryProject},
     model::user::auth::AuthUser,
-    schema, ApiError,
+    schema,
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -44,34 +45,20 @@ pub async fn proj_statistic_get(
     path_params: Path<ProjStatisticParams>,
 ) -> Result<ResponseOk<JsonStatistic>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::GetOne;
-
     let json = get_one_inner(
         rqctx.context(),
         path_params.into_inner(),
         auth_user.as_ref(),
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    if auth_user.is_some() {
-        response_ok!(endpoint, json)
-    } else {
-        pub_response_ok!(endpoint, json)
-    }
+    .await?;
+    Ok(Get::response_ok(json, auth_user.is_some()))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjStatisticParams,
     auth_user: Option<&AuthUser>,
-) -> Result<JsonStatistic, ApiError> {
+) -> Result<JsonStatistic, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_project =
@@ -85,6 +72,9 @@ async fn get_one_inner(
         .filter(schema::statistic::uuid.eq(path_params.statistic))
         .select(QueryStatistic::as_select())
         .first(conn)
-        .map_err(ApiError::from)?
+        .map_err(resource_not_found_err!(
+            Statistic,
+            (query_project, path_params.statistic)
+        ))?
         .into_json(conn)
 }

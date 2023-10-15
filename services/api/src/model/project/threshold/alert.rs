@@ -25,7 +25,7 @@ use crate::{
 
 crate::util::typed_id::typed_id!(AlertId);
 
-#[derive(diesel::Queryable, diesel::Selectable)]
+#[derive(Debug, Clone, diesel::Queryable, diesel::Selectable)]
 #[diesel(table_name = alert_table)]
 pub struct QueryAlert {
     pub id: AlertId,
@@ -60,7 +60,7 @@ impl QueryAlert {
             .map_err(resource_not_found_err!(Alert, (project_id, uuid)))
     }
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonAlert, ApiError> {
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonAlert, HttpError> {
         let (report_uuid, iteration, query_benchmark, query_metric, query_boundary) =
             schema::alert::table
                 .filter(schema::alert::id.eq(self.id))
@@ -87,7 +87,7 @@ impl QueryAlert {
                     QueryMetric,
                     QueryBoundary,
                 )>(conn)
-                .map_err(ApiError::from)?;
+                .map_err(resource_not_found_err!(Alert, self.clone()))?;
         let project = QueryProject::get(conn, query_benchmark.project_id)?;
         self.into_json_for_report(
             conn,
@@ -100,7 +100,7 @@ impl QueryAlert {
         )
     }
 
-    #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
+    #[allow(clippy::too_many_arguments)]
     pub fn into_json_for_report(
         self,
         conn: &mut DbConnection,
@@ -110,7 +110,7 @@ impl QueryAlert {
         query_benchmark: QueryBenchmark,
         query_metric: QueryMetric,
         query_boundary: QueryBoundary,
-    ) -> Result<JsonAlert, ApiError> {
+    ) -> Result<JsonAlert, HttpError> {
         let Self {
             uuid,
             boundary_limit,
@@ -120,11 +120,8 @@ impl QueryAlert {
         } = self;
         let threshold_id = query_boundary.threshold_id;
         let statistic_id = query_boundary.statistic_id;
-        let benchmark = query_benchmark.into_benchmark_metric_json_for_project(
-            project,
-            query_metric,
-            Some(query_boundary),
-        )?;
+        let benchmark =
+            query_benchmark.into_benchmark_metric_json(project, query_metric, Some(query_boundary));
         Ok(JsonAlert {
             uuid,
             report: report_uuid,

@@ -2,16 +2,10 @@ use bencher_json::{
     project::benchmark::{JsonBenchmarkMetric, JsonNewBenchmark, JsonUpdateBenchmark},
     BenchmarkName, BenchmarkUuid, DateTime, JsonBenchmark, ResourceId, Slug,
 };
-use diesel::{
-    ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
-};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
-use super::{
-    metric::{MetricId, QueryMetric},
-    threshold::boundary::QueryBoundary,
-    ProjectId, QueryProject,
-};
+use super::{metric::QueryMetric, threshold::boundary::QueryBoundary, ProjectId, QueryProject};
 use crate::{
     context::DbConnection,
     error::{assert_parentage, resource_conflict_err, resource_not_found_err, BencherResource},
@@ -22,7 +16,6 @@ use crate::{
         resource_id::fn_resource_id,
         slug::unwrap_child_slug,
     },
-    ApiError,
 };
 
 crate::util::typed_id::typed_id!(BenchmarkId);
@@ -136,44 +129,11 @@ impl QueryBenchmark {
     }
 
     pub fn into_benchmark_metric_json(
-        conn: &mut DbConnection,
-        metric_id: MetricId,
-    ) -> Result<JsonBenchmarkMetric, ApiError> {
-        let (query_benchmark, query_metric, query_boundary) = schema::metric::table
-            .filter(schema::metric::id.eq(metric_id))
-            .inner_join(schema::perf::table.inner_join(schema::benchmark::table))
-            // There may or may not be a boundary for any given metric
-            .left_join(schema::boundary::table)
-            .select((
-                QueryBenchmark::as_select(),
-                QueryMetric::as_select(),
-                (
-                    schema::boundary::id,
-                    schema::boundary::uuid,
-                    schema::boundary::threshold_id,
-                    schema::boundary::statistic_id,
-                    schema::boundary::metric_id,
-                    schema::boundary::lower_limit,
-                    schema::boundary::upper_limit,
-                )
-                    .nullable(),
-            ))
-            .first::<(QueryBenchmark, QueryMetric, Option<QueryBoundary>)>(conn)
-            .map_err(ApiError::from)?;
-        let project = QueryProject::get(conn, query_benchmark.project_id)?;
-        query_benchmark.into_benchmark_metric_json_for_project(
-            &project,
-            query_metric,
-            query_boundary,
-        )
-    }
-
-    pub fn into_benchmark_metric_json_for_project(
         self,
         project: &QueryProject,
         query_metric: QueryMetric,
         query_boundary: Option<QueryBoundary>,
-    ) -> Result<JsonBenchmarkMetric, ApiError> {
+    ) -> JsonBenchmarkMetric {
         let JsonBenchmark {
             uuid,
             project,
@@ -186,7 +146,7 @@ impl QueryBenchmark {
         let boundary = query_boundary
             .map(QueryBoundary::into_json)
             .unwrap_or_default();
-        Ok(JsonBenchmarkMetric {
+        JsonBenchmarkMetric {
             uuid,
             project,
             name,
@@ -195,7 +155,7 @@ impl QueryBenchmark {
             boundary,
             created,
             modified,
-        })
+        }
     }
 }
 

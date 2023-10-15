@@ -215,11 +215,8 @@ fn into_report_results_json(
         }
 
         // Create a benchmark metric out of the benchmark, metric, and boundary
-        let benchmark_metric = query_benchmark.into_benchmark_metric_json_for_project(
-            project,
-            query_metric,
-            query_boundary,
-        )?;
+        let benchmark_metric =
+            query_benchmark.into_benchmark_metric_json(project, query_metric, query_boundary);
 
         // If there is a current report result, add the benchmark metric to it.
         // Otherwise, create a new report result and add the benchmark to it.

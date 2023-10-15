@@ -11,20 +11,16 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{
-            pub_response_ok, response_accepted, response_ok, CorsResponse, ResponseAccepted,
-            ResponseOk,
-        },
+        endpoint::{CorsResponse, Get, Patch, ResponseAccepted, ResponseOk},
         Endpoint,
     },
+    error::{resource_conflict_err, resource_not_found_err},
     model::project::{
         threshold::alert::{QueryAlert, UpdateAlert},
         QueryProject,
     },
     model::user::auth::AuthUser,
-    schema,
-    util::error::into_json,
-    ApiError,
+    schema, ApiError,
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -67,29 +63,14 @@ pub async fn proj_alerts_get(
     pagination_params: Query<ProjAlertsPagination>,
 ) -> Result<ResponseOk<JsonAlerts>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::GetLs;
-
     let json = get_ls_inner(
         rqctx.context(),
         auth_user.as_ref(),
         path_params.into_inner(),
         pagination_params.into_inner(),
-        endpoint,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    if auth_user.is_some() {
-        response_ok!(endpoint, json)
-    } else {
-        pub_response_ok!(endpoint, json)
-    }
+    .await?;
+    Ok(Get::response_ok(json, auth_user.is_some()))
 }
 
 async fn get_ls_inner(
@@ -97,8 +78,7 @@ async fn get_ls_inner(
     auth_user: Option<&AuthUser>,
     path_params: ProjAlertsParams,
     pagination_params: ProjAlertsPagination,
-    endpoint: Endpoint,
-) -> Result<JsonAlerts, ApiError> {
+) -> Result<JsonAlerts, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_project =
@@ -149,13 +129,22 @@ async fn get_ls_inner(
         },
     };
 
+    let project = &query_project;
     Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load(conn)
-        .map_err(ApiError::from)?
+        .map_err(resource_not_found_err!(Alert, project))?
         .into_iter()
-        .filter_map(into_json!(endpoint, conn))
+        .filter_map(|alert| match alert.into_json(conn) {
+            Ok(alert) => Some(alert),
+            Err(err) => {
+                debug_assert!(false, "{err}");
+                #[cfg(feature = "sentry")]
+                sentry::capture_error(&err);
+                None
+            },
+        })
         .collect())
 }
 
@@ -188,34 +177,20 @@ pub async fn proj_alert_get(
     path_params: Path<ProjAlertParams>,
 ) -> Result<ResponseOk<JsonAlert>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::GetOne;
-
     let json = get_one_inner(
         rqctx.context(),
         path_params.into_inner(),
         auth_user.as_ref(),
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    if auth_user.is_some() {
-        response_ok!(endpoint, json)
-    } else {
-        pub_response_ok!(endpoint, json)
-    }
+    .await?;
+    Ok(Get::response_ok(json, auth_user.is_some()))
 }
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjAlertParams,
     auth_user: Option<&AuthUser>,
-) -> Result<JsonAlert, ApiError> {
+) -> Result<JsonAlert, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_project =
@@ -235,25 +210,14 @@ pub async fn proj_alert_patch(
     body: TypedBody<JsonUpdateAlert>,
 ) -> Result<ResponseAccepted<JsonAlert>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Patch;
-
-    let context = rqctx.context();
     let json = patch_inner(
-        context,
+        rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
         &auth_user,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    response_accepted!(endpoint, json)
+    .await?;
+    Ok(Patch::auth_response_accepted(json))
 }
 
 async fn patch_inner(
@@ -261,24 +225,27 @@ async fn patch_inner(
     path_params: ProjAlertParams,
     json_alert: JsonUpdateAlert,
     auth_user: &AuthUser,
-) -> Result<JsonAlert, ApiError> {
+) -> Result<JsonAlert, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
-    let project_id = QueryProject::is_allowed(
+    let query_project = QueryProject::is_allowed(
         conn,
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Edit,
-    )?
-    .id;
+    )?;
 
-    let query_alert = QueryAlert::from_uuid(conn, project_id, path_params.alert)?;
+    let query_alert = QueryAlert::from_uuid(conn, query_project.id, path_params.alert)?;
     diesel::update(schema::alert::table.filter(schema::alert::id.eq(query_alert.id)))
-        .set(&UpdateAlert::from(json_alert))
+        .set(&UpdateAlert::from(json_alert.clone()))
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(
+            Alert,
+            query_alert.clone(),
+            json_alert
+        ))?;
 
     QueryAlert::get(conn, query_alert.id)?.into_json(conn)
 }
@@ -307,27 +274,13 @@ pub async fn proj_alert_stats_get(
     path_params: Path<ProjAlertsParams>,
 ) -> Result<ResponseOk<JsonAlertStats>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::GetLs;
-
     let json = get_stats_inner(
         rqctx.context(),
         auth_user.as_ref(),
         path_params.into_inner(),
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    if auth_user.is_some() {
-        response_ok!(endpoint, json)
-    } else {
-        pub_response_ok!(endpoint, json)
-    }
+    .await?;
+    Ok(Get::response_ok(json, auth_user.is_some()))
 }
 
 async fn get_stats_inner(
@@ -351,7 +304,7 @@ async fn get_stats_inner(
         .filter(schema::benchmark::project_id.eq(query_project.id))
         .select(count(schema::alert::id))
         .first::<i64>(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_not_found_err!(Alert, query_project))?;
 
     Ok(JsonAlertStats {
         active: u64::try_from(active).unwrap_or_default().into(),

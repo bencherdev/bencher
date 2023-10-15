@@ -3,6 +3,7 @@ use bencher_json::{
     Boundary, DateTime, SampleSize, StatisticUuid, Window,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use dropshot::HttpError;
 
 use crate::{
     context::DbConnection,
@@ -10,7 +11,6 @@ use crate::{
     schema,
     schema::statistic as statistic_table,
     util::query::{fn_get, fn_get_id, fn_get_uuid},
-    ApiError,
 };
 
 use super::{QueryThreshold, ThresholdId};
@@ -37,7 +37,7 @@ impl QueryStatistic {
     fn_get_id!(statistic, StatisticId, StatisticUuid);
     fn_get_uuid!(statistic, StatisticId, StatisticUuid);
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonStatistic, ApiError> {
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonStatistic, HttpError> {
         let threshold = QueryThreshold::get(conn, self.threshold_id)?;
         Ok(self.into_json_for_threshold(&threshold))
     }
