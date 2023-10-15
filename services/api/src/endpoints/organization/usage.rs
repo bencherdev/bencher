@@ -9,7 +9,7 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{CorsResponse, ResponseOk},
+        endpoint::{CorsResponse, Get, ResponseOk},
         Endpoint,
     },
     model::{organization::QueryOrganization, project::metric::QueryMetric, user::auth::AuthUser},
@@ -58,7 +58,7 @@ pub async fn org_usage_get(
         &auth_user,
     )
     .await?;
-    Ok(Endpoint::GetOne.response_ok(json))
+    Ok(Get::auth_response_ok(json))
 }
 
 async fn get_inner(

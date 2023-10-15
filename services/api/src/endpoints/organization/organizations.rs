@@ -12,7 +12,7 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{CorsResponse, ResponseAccepted, ResponseOk},
+        endpoint::{CorsResponse, Get, ResponseAccepted, ResponseOk},
         Endpoint,
     },
     error::{forbidden_error, resource_conflict_err, resource_not_found_err},
@@ -201,7 +201,7 @@ pub async fn organization_get(
 ) -> Result<ResponseOk<JsonOrganization>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
-    Ok(Endpoint::GetOne.response_ok(json))
+    Ok(Get::auth_response_ok(json))
 }
 
 async fn get_one_inner(

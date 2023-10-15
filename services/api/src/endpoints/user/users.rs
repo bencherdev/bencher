@@ -6,7 +6,7 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{CorsResponse, ResponseOk},
+        endpoint::{CorsResponse, Get, ResponseOk},
         Endpoint,
     },
     model::{
@@ -44,7 +44,7 @@ pub async fn user_get(
 ) -> Result<ResponseOk<JsonUser>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
-    Ok(Endpoint::GetOne.response_ok(json))
+    Ok(Get::auth_response_ok(json))
 }
 
 async fn get_one_inner(

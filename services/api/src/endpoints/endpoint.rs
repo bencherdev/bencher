@@ -22,6 +22,90 @@ pub enum Endpoint {
     Delete,
 }
 
+#[derive(Copy, Clone)]
+pub struct Get;
+
+impl From<Get> for http::Method {
+    fn from(_: Get) -> Self {
+        http::Method::GET
+    }
+}
+
+impl Get {
+    pub fn response_ok<T>(
+        body: T,
+        auth: bool,
+    ) -> HttpResponseHeaders<HttpResponseOk<T>, CorsHeaders>
+    where
+        T: JsonSchema + Serialize + Send + Sync,
+    {
+        if auth {
+            Self::auth_response_ok(body)
+        } else {
+            Self::pub_response_ok(body)
+        }
+    }
+
+    pub fn pub_response_ok<T>(body: T) -> HttpResponseHeaders<HttpResponseOk<T>, CorsHeaders>
+    where
+        T: JsonSchema + Serialize + Send + Sync,
+    {
+        let headers = CorsHeaders::new_pub(&http::Method::from(Self));
+        pub_response_ok_inner(body, headers)
+    }
+
+    pub fn auth_response_ok<T>(body: T) -> HttpResponseHeaders<HttpResponseOk<T>, CorsHeaders>
+    where
+        T: JsonSchema + Serialize + Send + Sync,
+    {
+        let headers = CorsHeaders::new_auth(&http::Method::from(Self));
+        response_ok_inner(body, headers)
+    }
+}
+
+fn pub_response_ok_inner<T, H>(
+    body: T,
+    headers: H,
+) -> HttpResponseHeaders<HttpResponseOk<T>, CorsHeaders>
+where
+    T: JsonSchema + Serialize + Send + Sync,
+    H: Into<CorsHeaders>,
+{
+    HttpResponseHeaders::new(HttpResponseOk(body), headers.into())
+}
+
+fn response_ok_inner<T, H>(
+    body: T,
+    headers: H,
+) -> HttpResponseHeaders<HttpResponseOk<T>, CorsHeaders>
+where
+    T: JsonSchema + Serialize + Send + Sync,
+    H: Into<CorsHeaders>,
+{
+    HttpResponseHeaders::new(HttpResponseOk(body), headers.into())
+}
+
+pub fn pub_response_accepted_inner<T, H>(
+    body: T,
+    headers: H,
+) -> HttpResponseHeaders<HttpResponseAccepted<T>, CorsHeaders>
+where
+    T: JsonSchema + Serialize + Send + Sync,
+    H: Into<CorsHeaders>,
+{
+    HttpResponseHeaders::new(HttpResponseAccepted(body), headers.into())
+}
+
+pub fn response_accepted_inner<T, H>(
+    body: T,
+    headers: H,
+) -> HttpResponseHeaders<HttpResponseAccepted<T>, CorsHeaders>
+where
+    T: JsonSchema + Serialize + Send + Sync,
+    H: Into<CorsHeaders>,
+{
+    HttpResponseHeaders::new(HttpResponseAccepted(body), headers.into())
+}
 impl From<Endpoint> for http::Method {
     fn from(endpoint: Endpoint) -> Self {
         match endpoint {

@@ -13,7 +13,7 @@ use slog::Logger;
 use crate::{
     context::{ApiContext, Body, ButtonBody, DbConnection, Message},
     endpoints::{
-        endpoint::{CorsResponse, ResponseAccepted, ResponseOk},
+        endpoint::{CorsResponse, Get, ResponseAccepted, ResponseOk},
         Endpoint,
     },
     error::{issue_error, resource_conflict_err, resource_not_found_err},
@@ -82,7 +82,7 @@ pub async fn org_members_get(
         query_params.into_inner(),
     )
     .await?;
-    Ok(Endpoint::GetOne.response_ok(json))
+    Ok(Get::auth_response_ok(json))
 }
 
 async fn get_ls_inner(
@@ -299,7 +299,7 @@ pub async fn org_member_get(
 ) -> Result<ResponseOk<JsonMember>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
-    Ok(Endpoint::GetOne.response_ok(json))
+    Ok(Get::auth_response_ok(json))
 }
 
 async fn get_one_inner(
