@@ -7,8 +7,8 @@ use hyper::Body;
 use crate::{
     context::ApiContext,
     endpoints::{endpoint::CorsResponse, Endpoint},
+    error::{bad_request_error, issue_error},
     model::user::auth::AuthUser,
-    ApiError,
 };
 
 use super::ProjPerfParams;
@@ -40,11 +40,11 @@ pub async fn proj_perf_img_get(
     let mut json_perf_query_params = query_params.into_inner();
     let title = json_perf_query_params.title.take();
     // Second round of marshaling
-    let json_perf_query = json_perf_query_params.try_into().map_err(ApiError::from)?;
+    let json_perf_query = json_perf_query_params
+        .try_into()
+        .map_err(bad_request_error)?;
 
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::GetLs;
-
     let jpeg = get_inner(
         rqctx.context(),
         path_params.into_inner(),
@@ -52,14 +52,7 @@ pub async fn proj_perf_img_get(
         json_perf_query,
         auth_user.as_ref(),
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
+    .await?;
 
     Response::builder()
         .status(StatusCode::OK)
@@ -75,7 +68,14 @@ async fn get_inner(
     title: Option<&str>,
     json_perf_query: JsonPerfQuery,
     auth_user: Option<&AuthUser>,
-) -> Result<Vec<u8>, ApiError> {
+) -> Result<Vec<u8>, HttpError> {
     let json_perf = super::get_inner(context, path_params, json_perf_query, auth_user).await?;
-    LinePlot::new().draw(title, &json_perf).map_err(Into::into)
+    LinePlot::new().draw(title, &json_perf).map_err(|e| {
+        issue_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to draw perf plot",
+            &format!("Failed draw perf plot: {json_perf:?}"),
+            e,
+        )
+    })
 }

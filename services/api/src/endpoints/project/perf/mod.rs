@@ -13,15 +13,17 @@ use diesel::{
     ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
 };
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
+use http::StatusCode;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
     context::{ApiContext, DbConnection},
     endpoints::{
-        endpoint::{pub_response_ok, response_ok, CorsResponse, ResponseOk},
+        endpoint::{CorsResponse, Get, ResponseOk},
         Endpoint,
     },
+    error::{bad_request_error, issue_error, resource_not_found_err},
     model::project::{
         benchmark::{BenchmarkId, QueryBenchmark},
         branch::{BranchId, QueryBranch},
@@ -34,7 +36,7 @@ use crate::{
         QueryProject,
     },
     model::user::auth::AuthUser,
-    schema, ApiError,
+    schema,
 };
 
 pub mod img;
@@ -72,31 +74,17 @@ pub async fn proj_perf_get(
     let json_perf_query = query_params
         .into_inner()
         .try_into()
-        .map_err(ApiError::from)?;
+        .map_err(bad_request_error)?;
 
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::GetLs;
-
     let json = get_inner(
         rqctx.context(),
         path_params.into_inner(),
         json_perf_query,
         auth_user.as_ref(),
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    if auth_user.is_some() {
-        response_ok!(endpoint, json)
-    } else {
-        pub_response_ok!(endpoint, json)
-    }
+    .await?;
+    Ok(Get::response_ok(json, auth_user.is_some()))
 }
 
 async fn get_inner(
@@ -104,7 +92,7 @@ async fn get_inner(
     path_params: ProjPerfParams,
     json_perf_query: JsonPerfQuery,
     auth_user: Option<&AuthUser>,
-) -> Result<JsonPerf, ApiError> {
+) -> Result<JsonPerf, HttpError> {
     let conn = &mut *context.conn().await;
 
     let project =
@@ -138,20 +126,20 @@ async fn get_inner(
             continue;
         };
         ids.branch_id = branch.id;
-        dimensions = dimensions.branch(conn, branch)?;
+        dimensions = dimensions.branch(&project, branch);
         for testbed in &testbeds {
             let Ok(testbed) = QueryTestbed::from_uuid(conn, project.id, *testbed) else {
                 continue;
             };
             ids.testbed_id = testbed.id;
-            dimensions = dimensions.testbed(conn, testbed)?;
+            dimensions = dimensions.testbed(&project, testbed)?;
 
             for benchmark in &benchmarks {
                 let Ok(benchmark) = QueryBenchmark::from_uuid(conn, project.id, *benchmark) else {
                     continue;
                 };
                 ids.benchmark_id = benchmark.id;
-                dimensions = dimensions.benchmark(conn, benchmark)?;
+                dimensions = dimensions.benchmark(&project, benchmark)?;
                 let (two_d, query_dimensions) = dimensions.into_query()?;
                 dimensions = two_d;
 
@@ -177,6 +165,7 @@ struct Ids {
     benchmark_id: BenchmarkId,
 }
 
+#[derive(Debug)]
 enum Dimensions {
     Zero,
     One {
@@ -194,45 +183,59 @@ enum Dimensions {
 }
 
 impl Dimensions {
-    fn branch(self, conn: &mut DbConnection, branch: QueryBranch) -> Result<Self, ApiError> {
-        Ok(match self {
+    fn branch(self, project: &QueryProject, branch: QueryBranch) -> Self {
+        match self {
             Self::Zero | Self::One { .. } | Self::Two { .. } | Self::Three { .. } => Self::One {
-                branch: branch.into_json(conn)?,
+                branch: branch.into_json_for_project(project),
             },
-        })
+        }
     }
 
-    fn testbed(self, conn: &mut DbConnection, testbed: QueryTestbed) -> Result<Self, ApiError> {
-        Ok(match self {
-            Self::Zero => return Err(ApiError::DimensionTestbed),
+    fn testbed(self, project: &QueryProject, testbed: QueryTestbed) -> Result<Self, HttpError> {
+        match self {
+            Self::Zero => Err(issue_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Unexpected testbed dimension",
+                &format!(
+                    "Failed to find existing branch dimension ({self:?}) for testbed dimension ({testbed:?})"
+                ),
+                "dimension zero",
+            )),
             Self::One { branch } | Self::Two { branch, .. } | Self::Three { branch, .. } => {
-                Self::Two {
+                Ok(Self::Two {
                     branch,
-                    testbed: testbed.into_json(conn)?,
-                }
+                    testbed: testbed.into_json_for_project(project),
+                })
             },
-        })
+        }
     }
 
     fn benchmark(
         self,
-        conn: &mut DbConnection,
+        project: &QueryProject,
         benchmark: QueryBenchmark,
-    ) -> Result<Self, ApiError> {
-        Ok(match self {
-            Self::Zero | Self::One { .. } => return Err(ApiError::DimensionBenchmark),
+    ) -> Result<Self, HttpError> {
+        match self {
+            Self::Zero | Self::One { .. } => Err(issue_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Unexpected benchmark dimension",
+                &format!(
+                    "Failed to find existing branch and testbed dimensions ({self:?}) for benchmark dimension ({benchmark:?})"
+                ),
+                "dimension zero or one",
+            )),
             Self::Two { branch, testbed }
             | Self::Three {
                 branch, testbed, ..
-            } => Self::Three {
+            } => Ok(Self::Three {
                 branch,
                 testbed,
-                benchmark: benchmark.into_json(conn)?,
-            },
-        })
+                benchmark: benchmark.into_json_for_project(project),
+            }),
+        }
     }
 
-    fn into_query(self) -> Result<(Self, QueryDimensions), ApiError> {
+    fn into_query(self) -> Result<(Self, QueryDimensions), HttpError> {
         if let Dimensions::Three {
             branch,
             testbed,
@@ -246,7 +249,12 @@ impl Dimensions {
             };
             Ok((Self::Two { branch, testbed }, query_dimensions))
         } else {
-            Err(ApiError::DimensionMissing)
+            Err(issue_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Missing dimension",
+                &format!("Failed to find all three dimensions ({self:?})"),
+                "dimension zero, one, or two",
+            ))
         }
     }
 }
@@ -287,7 +295,7 @@ fn perf_query(
     dimensions: QueryDimensions,
     times: Times,
     results: &mut Vec<JsonPerfMetrics>,
-) -> Result<(), ApiError> {
+) -> Result<(), HttpError> {
     let Ids {
         metric_kind_id,
         branch_id,
@@ -398,7 +406,7 @@ fn perf_query(
             QueryMetric::as_select(),
         ))
         .load::<PerfQuery>(conn)
-        .map_err(ApiError::from)?
+        .map_err(resource_not_found_err!(Metric, (project.clone(), metric_kind_id, branch_id, testbed_id, benchmark_id)))?
         .into_iter()
         .filter_map(|query| perf_metric(project, query))
         .collect();
