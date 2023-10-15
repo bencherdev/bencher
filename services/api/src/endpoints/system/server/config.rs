@@ -6,11 +6,11 @@ use crate::{
     config::{Config, BENCHER_CONFIG},
     context::ApiContext,
     endpoints::{
-        endpoint::{response_accepted, response_ok, CorsResponse, ResponseAccepted, ResponseOk},
+        endpoint::{CorsResponse, Get, Put, ResponseAccepted, ResponseOk},
         Endpoint,
     },
+    error::{bad_request_error, forbidden_error},
     model::user::auth::AuthUser,
-    ApiError,
 };
 
 use super::restart::{countdown, DEFAULT_DELAY};
@@ -36,29 +36,19 @@ pub async fn server_config_get(
     rqctx: RequestContext<ApiContext>,
 ) -> Result<ResponseOk<JsonConfig>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::GetOne;
-
-    let context = rqctx.context();
-    let json = get_one_inner(&rqctx.log, context, &auth_user)
-        .await
-        .map_err(|e| {
-            if let ApiError::HttpError(e) = e {
-                e
-            } else {
-                endpoint.err(e).into()
-            }
-        })?;
-
-    response_ok!(endpoint, json)
+    let json = get_one_inner(&rqctx.log, rqctx.context(), &auth_user).await?;
+    Ok(Get::auth_response_ok(json))
 }
 
 async fn get_one_inner(
     log: &Logger,
     context: &ApiContext,
     auth_user: &AuthUser,
-) -> Result<JsonConfig, ApiError> {
+) -> Result<JsonConfig, HttpError> {
     if !auth_user.is_admin(&context.rbac) {
-        return Err(ApiError::Admin(auth_user.id));
+        return Err(forbidden_error(format!(
+            "User is not an admin ({auth_user:?}). Only admins can get the server configuration."
+        )));
     }
 
     Ok(Config::load_file(log).await?.unwrap_or_default().into())
@@ -74,21 +64,8 @@ pub async fn server_config_put(
     body: TypedBody<JsonUpdateConfig>,
 ) -> Result<ResponseAccepted<JsonConfig>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Put;
-
-    let context = rqctx.context();
-    let json_config = body.into_inner();
-    let json = put_inner(&rqctx.log, context, json_config, &auth_user)
-        .await
-        .map_err(|e| {
-            if let ApiError::HttpError(e) = e {
-                e
-            } else {
-                endpoint.err(e).into()
-            }
-        })?;
-
-    response_accepted!(endpoint, json)
+    let json = put_inner(&rqctx.log, rqctx.context(), body.into_inner(), &auth_user).await?;
+    Ok(Put::auth_response_accepted(json))
 }
 
 async fn put_inner(
@@ -96,18 +73,20 @@ async fn put_inner(
     context: &ApiContext,
     json_config: JsonUpdateConfig,
     auth_user: &AuthUser,
-) -> Result<JsonConfig, ApiError> {
+) -> Result<JsonConfig, HttpError> {
     if !auth_user.is_admin(&context.rbac) {
-        return Err(ApiError::Admin(auth_user.id));
+        return Err(forbidden_error(format!(
+            "User is not an admin ({auth_user:?}). Only admins can update the server configuration."
+        )));
     }
 
     let JsonUpdateConfig { config, delay } = json_config;
 
     // todo() -> add validation here
-    let config_str = serde_json::to_string(&config).map_err(ApiError::Serialize)?;
+    let config_str = serde_json::to_string(&config).map_err(bad_request_error)?;
     std::env::set_var(BENCHER_CONFIG, &config_str);
     Config::write(log, config_str.as_bytes()).await?;
-    let json_config = serde_json::from_str(&config_str).map_err(ApiError::Deserialize)?;
+    let json_config = serde_json::from_str(&config_str).map_err(bad_request_error)?;
 
     countdown(
         log,
