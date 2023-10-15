@@ -28,7 +28,7 @@ pub mod statistic;
 crate::util::typed_id::typed_id!(ThresholdId);
 
 #[derive(
-    Debug, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
+    Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
 )]
 #[diesel(table_name = threshold_table)]
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]
@@ -145,7 +145,7 @@ impl QueryThreshold {
     }
 }
 
-#[derive(Debug, diesel::Insertable)]
+#[derive(Debug, Clone, diesel::Insertable)]
 #[diesel(table_name = threshold_table)]
 pub struct InsertThreshold {
     pub uuid: ThresholdUuid,

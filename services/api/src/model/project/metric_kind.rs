@@ -30,7 +30,7 @@ crate::util::typed_id::typed_id!(MetricKindId);
 fn_resource_id!(metric_kind);
 
 #[derive(
-    Debug, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
+    Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
 )]
 #[diesel(table_name = metric_kind_table)]
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]

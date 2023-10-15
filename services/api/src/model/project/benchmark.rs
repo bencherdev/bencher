@@ -30,7 +30,7 @@ crate::util::typed_id::typed_id!(BenchmarkId);
 fn_resource_id!(benchmark);
 
 #[derive(
-    Debug, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
+    Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
 )]
 #[diesel(table_name = benchmark_table)]
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]

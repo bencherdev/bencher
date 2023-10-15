@@ -28,7 +28,7 @@ crate::util::typed_id::typed_id!(BranchId);
 
 fn_resource_id!(branch);
 
-#[derive(Debug, diesel::Queryable, diesel::Identifiable, diesel::Associations)]
+#[derive(Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations)]
 #[diesel(table_name = branch_table)]
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryBranch {
@@ -220,7 +220,7 @@ impl InsertBranch {
                 diesel::insert_into(schema::threshold::table)
                     .values(&insert_threshold)
                     .execute(conn)
-                    .map_err(resource_conflict_err!(Threshold, insert_threshold))?;
+                    .map_err(resource_conflict_err!(Threshold, insert_threshold.clone()))?;
 
                 // If there is a statistic, clone that too
                 let Some(statistic_id) = query_threshold.statistic_id else {
@@ -234,16 +234,16 @@ impl InsertBranch {
                 let query_statistic = schema::statistic::table
                     .filter(schema::statistic::id.eq(statistic_id))
                     .first::<QueryStatistic>(conn)
-                    .map_err(resource_not_found_err!(Statistic, query_threshold))?;
+                    .map_err(resource_not_found_err!(Statistic, query_threshold.clone()))?;
 
                 // Clone the current threshold statistic
-                let mut insert_statistic = InsertStatistic::from(query_statistic);
+                let mut insert_statistic = InsertStatistic::from(query_statistic.clone());
                 // For the new threshold
                 insert_statistic.threshold_id = threshold_id;
                 diesel::insert_into(schema::statistic::table)
                     .values(&insert_statistic)
                     .execute(conn)
-                    .map_err(resource_conflict_err!(Statistic, insert_statistic))?;
+                    .map_err(resource_conflict_err!(Statistic, insert_statistic.clone()))?;
 
                 // Get the new threshold statistic
                 let statistic_id = QueryStatistic::get_id(conn, insert_statistic.uuid)?;

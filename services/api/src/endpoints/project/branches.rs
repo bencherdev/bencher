@@ -293,7 +293,11 @@ async fn patch_inner(
     diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
         .set(&UpdateBranch::from(json_branch.clone()))
         .execute(conn)
-        .map_err(resource_conflict_err!(Branch, query_branch.id, json_branch))?;
+        .map_err(resource_conflict_err!(
+            Branch,
+            query_branch.clone(),
+            json_branch
+        ))?;
 
     QueryBranch::get(conn, query_branch.id)
         .map(|branch| branch.into_json_for_project(&query_project))

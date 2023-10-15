@@ -279,7 +279,7 @@ async fn patch_inner(
         .execute(conn)
         .map_err(resource_conflict_err!(
             Testbed,
-            query_testbed.id,
+            query_testbed.clone(),
             json_testbed
         ))?;
 

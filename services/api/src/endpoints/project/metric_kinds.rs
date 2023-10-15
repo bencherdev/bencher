@@ -280,7 +280,7 @@ async fn patch_inner(
     .execute(conn)
     .map_err(resource_conflict_err!(
         MetricKind,
-        query_metric_kind.id,
+        query_metric_kind.clone(),
         json_metric_kind
     ))?;
 

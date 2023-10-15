@@ -22,7 +22,7 @@ crate::util::typed_id::typed_id!(TestbedId);
 
 fn_resource_id!(testbed);
 
-#[derive(Debug, diesel::Queryable, diesel::Identifiable, diesel::Associations)]
+#[derive(Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations)]
 #[diesel(table_name = testbed_table)]
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryTestbed {
