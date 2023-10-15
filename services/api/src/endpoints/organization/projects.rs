@@ -11,7 +11,7 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{CorsResponse, Post, ResponseAccepted, ResponseOk},
+        endpoint::{CorsResponse, Get, Post, ResponseAccepted, ResponseOk},
         Endpoint,
     },
     error::{resource_conflict_err, resource_not_found_err},
@@ -84,7 +84,7 @@ pub async fn org_projects_get(
         &auth_user,
     )
     .await?;
-    Ok(Endpoint::GetLs.response_ok(json))
+    Ok(Get::auth_response_ok(json))
 }
 
 async fn get_ls_inner(

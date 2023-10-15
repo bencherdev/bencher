@@ -72,7 +72,7 @@ pub async fn organizations_get(
         query_params.into_inner(),
     )
     .await?;
-    Ok(Endpoint::GetLs.response_ok(json))
+    Ok(Get::auth_response_ok(json))
 }
 
 async fn get_ls_inner(
