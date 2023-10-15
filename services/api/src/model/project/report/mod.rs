@@ -226,7 +226,7 @@ fn into_report_results_json(
         if let Some(result) = report_result.as_mut() {
             result.benchmarks.push(benchmark_metric);
         } else {
-            let metric_kind = query_metric_kind.into_json_for_project(project)?;
+            let metric_kind = query_metric_kind.into_json_for_project(project);
             let threshold = if let Some((threshold, statistic)) = threshold_statistic {
                 Some(threshold.into_threshold_statistic_json_for_project(project, statistic)?)
             } else {

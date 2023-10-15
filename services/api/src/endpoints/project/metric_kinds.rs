@@ -11,20 +11,16 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{
-            pub_response_ok, response_accepted, response_ok, CorsResponse, ResponseAccepted,
-            ResponseOk,
-        },
+        endpoint::{CorsResponse, Delete, Get, Patch, Post, ResponseAccepted, ResponseOk},
         Endpoint,
     },
+    error::{resource_conflict_err, resource_not_found_err},
     model::project::{
         metric_kind::{InsertMetricKind, QueryMetricKind, UpdateMetricKind},
         QueryProject,
     },
     model::user::auth::AuthUser,
     schema,
-    util::{error::into_json, resource_id::fn_resource_id},
-    ApiError,
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -73,30 +69,15 @@ pub async fn proj_metric_kinds_get(
     query_params: Query<ProjMetricKindsQuery>,
 ) -> Result<ResponseOk<JsonMetricKinds>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::GetLs;
-
     let json = get_ls_inner(
         rqctx.context(),
         auth_user.as_ref(),
         path_params.into_inner(),
         pagination_params.into_inner(),
         query_params.into_inner(),
-        endpoint,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    if auth_user.is_some() {
-        response_ok!(endpoint, json)
-    } else {
-        pub_response_ok!(endpoint, json)
-    }
+    .await?;
+    Ok(Get::response_ok(json, auth_user.is_some()))
 }
 
 async fn get_ls_inner(
@@ -105,8 +86,7 @@ async fn get_ls_inner(
     path_params: ProjMetricKindsParams,
     pagination_params: ProjMetricKindsPagination,
     query_params: ProjMetricKindsQuery,
-    endpoint: Endpoint,
-) -> Result<JsonMetricKinds, ApiError> {
+) -> Result<JsonMetricKinds, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_project =
@@ -125,13 +105,14 @@ async fn get_ls_inner(
         },
     };
 
+    let project = &query_project;
     Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryMetricKind>(conn)
-        .map_err(ApiError::from)?
+        .map_err(resource_not_found_err!(MetricKind, project))?
         .into_iter()
-        .filter_map(into_json!(endpoint, conn))
+        .map(|metric_kind| metric_kind.into_json_for_project(project))
         .collect())
 }
 
@@ -146,24 +127,14 @@ pub async fn proj_metric_kind_post(
     body: TypedBody<JsonNewMetricKind>,
 ) -> Result<ResponseAccepted<JsonMetricKind>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Post;
-
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
         &auth_user,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    response_accepted!(endpoint, json)
+    .await?;
+    Ok(Post::auth_response_accepted(json))
 }
 
 async fn post_inner(
@@ -171,36 +142,30 @@ async fn post_inner(
     path_params: ProjMetricKindsParams,
     json_metric_kind: JsonNewMetricKind,
     auth_user: &AuthUser,
-) -> Result<JsonMetricKind, ApiError> {
+) -> Result<JsonMetricKind, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
-    let project_id = QueryProject::is_allowed(
+    let query_project = QueryProject::is_allowed(
         conn,
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Create,
-    )?
-    .id;
+    )?;
 
-    let insert_metric_kind = InsertMetricKind::from_json(conn, project_id, json_metric_kind);
+    let insert_metric_kind = InsertMetricKind::from_json(conn, query_project.id, json_metric_kind);
 
-    // This check is required because not all system metric kinds are created at project init
-    // And default metric kinds may be deleted
-    if insert_metric_kind.is_system() {
-        return Err(ApiError::SystemMetricKind);
-    }
     diesel::insert_into(schema::metric_kind::table)
         .values(&insert_metric_kind)
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(MetricKind, insert_metric_kind))?;
 
     schema::metric_kind::table
         .filter(schema::metric_kind::uuid.eq(&insert_metric_kind.uuid))
         .first::<QueryMetricKind>(conn)
-        .map_err(ApiError::from)?
-        .into_json(conn)
+        .map(|metric_kind| metric_kind.into_json_for_project(&query_project))
+        .map_err(resource_not_found_err!(MetricKind, insert_metric_kind))
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -236,46 +201,35 @@ pub async fn proj_metric_kind_get(
     path_params: Path<ProjMetricKindParams>,
 ) -> Result<ResponseOk<JsonMetricKind>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::GetOne;
-
     let json = get_one_inner(
         rqctx.context(),
         path_params.into_inner(),
         auth_user.as_ref(),
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    if auth_user.is_some() {
-        response_ok!(endpoint, json)
-    } else {
-        pub_response_ok!(endpoint, json)
-    }
+    .await?;
+    Ok(Get::response_ok(json, auth_user.is_some()))
 }
-
-fn_resource_id!(metric_kind);
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjMetricKindParams,
     auth_user: Option<&AuthUser>,
-) -> Result<JsonMetricKind, ApiError> {
+) -> Result<JsonMetricKind, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_project =
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     QueryMetricKind::belonging_to(&query_project)
-        .filter(resource_id(&path_params.metric_kind)?)
+        .filter(crate::model::project::metric_kind::resource_id(
+            &path_params.metric_kind,
+        )?)
         .first::<QueryMetricKind>(conn)
-        .map_err(ApiError::from)?
-        .into_json(conn)
+        .map(|metric_kind| metric_kind.into_json_for_project(&query_project))
+        .map_err(resource_not_found_err!(
+            MetricKind,
+            (query_project.clone(), path_params.metric_kind)
+        ))
 }
 
 #[endpoint {
@@ -289,25 +243,14 @@ pub async fn proj_metric_kind_patch(
     body: TypedBody<JsonUpdateMetricKind>,
 ) -> Result<ResponseAccepted<JsonMetricKind>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Patch;
-
-    let context = rqctx.context();
     let json = patch_inner(
-        context,
+        rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
         &auth_user,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    response_accepted!(endpoint, json)
+    .await?;
+    Ok(Patch::auth_response_accepted(json))
 }
 
 async fn patch_inner(
@@ -315,32 +258,35 @@ async fn patch_inner(
     path_params: ProjMetricKindParams,
     json_metric_kind: JsonUpdateMetricKind,
     auth_user: &AuthUser,
-) -> Result<JsonMetricKind, ApiError> {
+) -> Result<JsonMetricKind, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
-    let project_id = QueryProject::is_allowed(
+    let query_project = QueryProject::is_allowed(
         conn,
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Edit,
-    )?
-    .id;
+    )?;
 
     let query_metric_kind =
-        QueryMetricKind::from_resource_id(conn, project_id, &path_params.metric_kind)?;
-    if query_metric_kind.is_system() {
-        return Err(ApiError::SystemMetricKind);
-    }
+        QueryMetricKind::from_resource_id(conn, query_project.id, &path_params.metric_kind)?;
+
     diesel::update(
         schema::metric_kind::table.filter(schema::metric_kind::id.eq(query_metric_kind.id)),
     )
-    .set(&UpdateMetricKind::from(json_metric_kind))
+    .set(&UpdateMetricKind::from(json_metric_kind.clone()))
     .execute(conn)
-    .map_err(ApiError::from)?;
+    .map_err(resource_conflict_err!(
+        MetricKind,
+        query_metric_kind.id,
+        json_metric_kind
+    ))?;
 
-    QueryMetricKind::get(conn, query_metric_kind.id)?.into_json(conn)
+    QueryMetricKind::get(conn, query_metric_kind.id)
+        .map(|metric_kind| metric_kind.into_json_for_project(&query_project))
+        .map_err(resource_not_found_err!(MetricKind, query_metric_kind))
 }
 
 #[endpoint {
@@ -353,46 +299,34 @@ pub async fn proj_metric_kind_delete(
     path_params: Path<ProjMetricKindParams>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Delete;
-
-    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
-        .await
-        .map_err(|e| {
-            if let ApiError::HttpError(e) = e {
-                e
-            } else {
-                endpoint.err(e).into()
-            }
-        })?;
-
-    response_accepted!(endpoint, json)
+    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Delete::auth_response_accepted(json))
 }
 
 async fn delete_inner(
     context: &ApiContext,
     path_params: ProjMetricKindParams,
     auth_user: &AuthUser,
-) -> Result<JsonEmpty, ApiError> {
+) -> Result<JsonEmpty, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
-    let project_id = QueryProject::is_allowed(
+    let query_project = QueryProject::is_allowed(
         conn,
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Delete,
-    )?
-    .id;
+    )?;
 
     let query_metric_kind =
-        QueryMetricKind::from_resource_id(conn, project_id, &path_params.metric_kind)?;
+        QueryMetricKind::from_resource_id(conn, query_project.id, &path_params.metric_kind)?;
 
     diesel::delete(
         schema::metric_kind::table.filter(schema::metric_kind::id.eq(query_metric_kind.id)),
     )
     .execute(conn)
-    .map_err(ApiError::from)?;
+    .map_err(resource_not_found_err!(MetricKind, query_metric_kind))?;
 
     Ok(JsonEmpty {})
 }

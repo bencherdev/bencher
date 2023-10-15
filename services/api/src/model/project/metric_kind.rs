@@ -30,7 +30,9 @@ crate::util::typed_id::typed_id!(MetricKindId);
 
 fn_resource_id!(metric_kind);
 
-#[derive(diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable)]
+#[derive(
+    Debug, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
+)]
 #[diesel(table_name = metric_kind_table)]
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryMetricKind {
@@ -62,39 +64,6 @@ impl QueryMetricKind {
                 MetricKind,
                 (project_id, metric_kind)
             ))
-    }
-
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonMetricKind, ApiError> {
-        let project = QueryProject::get(conn, self.project_id)?;
-        self.into_json_for_project(&project)
-    }
-
-    pub fn into_json_for_project(self, project: &QueryProject) -> Result<JsonMetricKind, ApiError> {
-        let Self {
-            uuid,
-            project_id,
-            name,
-            slug,
-            units,
-            created,
-            modified,
-            ..
-        } = self;
-        assert_parentage(
-            BencherResource::Project,
-            project.id,
-            BencherResource::MetricKind,
-            project_id,
-        );
-        Ok(JsonMetricKind {
-            uuid,
-            project: project.uuid,
-            name,
-            slug,
-            units,
-            created,
-            modified,
-        })
     }
 
     pub fn get_or_create(
@@ -133,6 +102,39 @@ impl QueryMetricKind {
 
     pub fn is_system(&self) -> bool {
         is_system(self.name.as_ref(), self.slug.as_ref())
+    }
+
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonMetricKind, ApiError> {
+        let project = QueryProject::get(conn, self.project_id)?;
+        Ok(self.into_json_for_project(&project))
+    }
+
+    pub fn into_json_for_project(self, project: &QueryProject) -> JsonMetricKind {
+        let Self {
+            uuid,
+            project_id,
+            name,
+            slug,
+            units,
+            created,
+            modified,
+            ..
+        } = self;
+        assert_parentage(
+            BencherResource::Project,
+            project.id,
+            BencherResource::MetricKind,
+            project_id,
+        );
+        JsonMetricKind {
+            uuid,
+            project: project.uuid,
+            name,
+            slug,
+            units,
+            created,
+            modified,
+        }
     }
 }
 

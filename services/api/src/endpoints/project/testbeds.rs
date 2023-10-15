@@ -14,9 +14,7 @@ use crate::{
         endpoint::{CorsResponse, Delete, Get, Patch, Post, ResponseAccepted, ResponseOk},
         Endpoint,
     },
-    error::{
-        resource_conflict_err, resource_conflict_error, resource_not_found_err, BencherResource,
-    },
+    error::{resource_conflict_err, resource_not_found_err},
     model::project::{
         testbed::{InsertTestbed, QueryTestbed, UpdateTestbed},
         QueryProject,
@@ -275,14 +273,7 @@ async fn patch_inner(
 
     let query_testbed =
         QueryTestbed::from_resource_id(conn, query_project.id, &path_params.testbed)?;
-    if query_testbed.is_system() {
-        return Err(resource_conflict_error(
-            BencherResource::Testbed,
-            path_params.testbed,
-            (query_project, query_testbed),
-            "Cannot update a system Testbed",
-        ));
-    }
+
     diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))
         .set(&UpdateTestbed::from(json_testbed.clone()))
         .execute(conn)
@@ -329,14 +320,6 @@ async fn delete_inner(
 
     let query_testbed =
         QueryTestbed::from_resource_id(conn, query_project.id, &path_params.testbed)?;
-    if query_testbed.is_system() {
-        return Err(resource_conflict_error(
-            BencherResource::Testbed,
-            path_params.testbed,
-            (query_project, query_testbed),
-            "Cannot delete a system Testbed",
-        ));
-    }
 
     diesel::delete(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))
         .execute(conn)
