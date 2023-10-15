@@ -11,20 +11,16 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{
-            pub_response_ok, response_accepted, response_ok, CorsResponse, ResponseAccepted,
-            ResponseOk,
-        },
+        endpoint::{CorsResponse, Delete, Get, Patch, Post, ResponseAccepted, ResponseOk},
         Endpoint,
     },
+    error::{resource_conflict_err, resource_not_found_err},
     model::project::{
         branch::{InsertBranch, QueryBranch, UpdateBranch},
         QueryProject,
     },
     model::user::auth::AuthUser,
     schema,
-    util::{error::into_json, resource_id::fn_resource_id},
-    ApiError,
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -73,30 +69,15 @@ pub async fn proj_branches_get(
     query_params: Query<ProjBranchesQuery>,
 ) -> Result<ResponseOk<JsonBranches>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::GetLs;
-
     let json = get_ls_inner(
         rqctx.context(),
         auth_user.as_ref(),
         path_params.into_inner(),
         pagination_params.into_inner(),
         query_params.into_inner(),
-        endpoint,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    if auth_user.is_some() {
-        response_ok!(endpoint, json)
-    } else {
-        pub_response_ok!(endpoint, json)
-    }
+    .await?;
+    Ok(Get::response_ok(json, auth_user.is_some()))
 }
 
 async fn get_ls_inner(
@@ -105,8 +86,7 @@ async fn get_ls_inner(
     path_params: ProjBranchesParams,
     pagination_params: ProjBranchesPagination,
     query_params: ProjBranchesQuery,
-    endpoint: Endpoint,
-) -> Result<JsonBranches, ApiError> {
+) -> Result<JsonBranches, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_project =
@@ -125,13 +105,14 @@ async fn get_ls_inner(
         },
     };
 
+    let project = &query_project;
     Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryBranch>(conn)
-        .map_err(ApiError::from)?
+        .map_err(resource_not_found_err!(Branch, project))?
         .into_iter()
-        .filter_map(into_json!(endpoint, conn))
+        .map(|branch| branch.into_json_for_project(project))
         .collect())
 }
 
@@ -146,24 +127,14 @@ pub async fn proj_branch_post(
     body: TypedBody<JsonNewBranch>,
 ) -> Result<ResponseAccepted<JsonBranch>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Post;
-
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
         &auth_user,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    response_accepted!(endpoint, json)
+    .await?;
+    Ok(Post::auth_response_accepted(json))
 }
 
 async fn post_inner(
@@ -171,7 +142,7 @@ async fn post_inner(
     path_params: ProjBranchesParams,
     mut json_branch: JsonNewBranch,
     auth_user: &AuthUser,
-) -> Result<JsonBranch, ApiError> {
+) -> Result<JsonBranch, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
@@ -192,7 +163,7 @@ async fn post_inner(
             .filter(schema::branch::name.eq(json_branch.name.as_ref()))
             .first::<QueryBranch>(conn)
         {
-            return branch.into_json(conn);
+            return Ok(branch.into_json_for_project(&query_project));
         }
     }
     let start_point = json_branch.start_point.take();
@@ -201,7 +172,7 @@ async fn post_inner(
     diesel::insert_into(schema::branch::table)
         .values(&insert_branch)
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(Branch, insert_branch))?;
 
     // Clone data and optionally thresholds from the start point
     if let Some(start_point) = &start_point {
@@ -211,8 +182,8 @@ async fn post_inner(
     schema::branch::table
         .filter(schema::branch::uuid.eq(&insert_branch.uuid))
         .first::<QueryBranch>(conn)
-        .map_err(ApiError::from)?
-        .into_json(conn)
+        .map(|branch| branch.into_json_for_project(&query_project))
+        .map_err(resource_not_found_err!(Branch, insert_branch))
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -248,46 +219,35 @@ pub async fn proj_branch_get(
     path_params: Path<ProjBranchParams>,
 ) -> Result<ResponseOk<JsonBranch>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::GetOne;
-
     let json = get_one_inner(
         rqctx.context(),
         path_params.into_inner(),
         auth_user.as_ref(),
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    if auth_user.is_some() {
-        response_ok!(endpoint, json)
-    } else {
-        pub_response_ok!(endpoint, json)
-    }
+    .await?;
+    Ok(Get::response_ok(json, auth_user.is_some()))
 }
-
-fn_resource_id!(branch);
 
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjBranchParams,
     auth_user: Option<&AuthUser>,
-) -> Result<JsonBranch, ApiError> {
+) -> Result<JsonBranch, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_project =
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     QueryBranch::belonging_to(&query_project)
-        .filter(resource_id(&path_params.branch)?)
+        .filter(crate::model::project::branch::resource_id(
+            &path_params.branch,
+        )?)
         .first::<QueryBranch>(conn)
-        .map_err(ApiError::from)?
-        .into_json(conn)
+        .map(|branch| branch.into_json_for_project(&query_project))
+        .map_err(resource_not_found_err!(
+            Branch,
+            (query_project.clone(), path_params.branch)
+        ))
 }
 
 #[endpoint {
@@ -301,25 +261,14 @@ pub async fn proj_branch_patch(
     body: TypedBody<JsonUpdateBranch>,
 ) -> Result<ResponseAccepted<JsonBranch>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Patch;
-
-    let context = rqctx.context();
     let json = patch_inner(
-        context,
+        rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
         &auth_user,
     )
-    .await
-    .map_err(|e| {
-        if let ApiError::HttpError(e) = e {
-            e
-        } else {
-            endpoint.err(e).into()
-        }
-    })?;
-
-    response_accepted!(endpoint, json)
+    .await?;
+    Ok(Patch::auth_response_accepted(json))
 }
 
 async fn patch_inner(
@@ -327,29 +276,28 @@ async fn patch_inner(
     path_params: ProjBranchParams,
     json_branch: JsonUpdateBranch,
     auth_user: &AuthUser,
-) -> Result<JsonBranch, ApiError> {
+) -> Result<JsonBranch, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
-    let project_id = QueryProject::is_allowed(
+    let query_project = QueryProject::is_allowed(
         conn,
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Edit,
-    )?
-    .id;
+    )?;
 
-    let query_branch = QueryBranch::from_resource_id(conn, project_id, &path_params.branch)?;
-    if query_branch.is_system() {
-        return Err(ApiError::SystemBranch);
-    }
+    let query_branch = QueryBranch::from_resource_id(conn, query_project.id, &path_params.branch)?;
+
     diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
-        .set(&UpdateBranch::from(json_branch))
+        .set(&UpdateBranch::from(json_branch.clone()))
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_conflict_err!(Branch, query_branch.id, json_branch))?;
 
-    QueryBranch::get(conn, query_branch.id)?.into_json(conn)
+    QueryBranch::get(conn, query_branch.id)
+        .map(|branch| branch.into_json_for_project(&query_project))
+        .map_err(resource_not_found_err!(Branch, query_branch))
 }
 
 #[endpoint {
@@ -362,45 +310,31 @@ pub async fn proj_branch_delete(
     path_params: Path<ProjBranchParams>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::Delete;
-
-    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
-        .await
-        .map_err(|e| {
-            if let ApiError::HttpError(e) = e {
-                e
-            } else {
-                endpoint.err(e).into()
-            }
-        })?;
-
-    response_accepted!(endpoint, json)
+    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Delete::auth_response_accepted(json))
 }
 
 async fn delete_inner(
     context: &ApiContext,
     path_params: ProjBranchParams,
     auth_user: &AuthUser,
-) -> Result<JsonEmpty, ApiError> {
+) -> Result<JsonEmpty, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
-    let project_id = QueryProject::is_allowed(
+    let query_project = QueryProject::is_allowed(
         conn,
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Delete,
-    )?
-    .id;
+    )?;
 
-    let query_branch = QueryBranch::from_resource_id(conn, project_id, &path_params.branch)?;
-    if query_branch.is_system() {
-        return Err(ApiError::SystemBranch);
-    }
+    let query_branch = QueryBranch::from_resource_id(conn, query_project.id, &path_params.branch)?;
+
     diesel::delete(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
         .execute(conn)
-        .map_err(ApiError::from)?;
+        .map_err(resource_not_found_err!(Branch, query_branch))?;
 
     Ok(JsonEmpty {})
 }

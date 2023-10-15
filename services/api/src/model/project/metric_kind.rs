@@ -21,7 +21,6 @@ use crate::{
         resource_id::fn_resource_id,
         slug::unwrap_child_slug,
     },
-    ApiError,
 };
 
 use super::ProjectId;
@@ -104,7 +103,7 @@ impl QueryMetricKind {
         is_system(self.name.as_ref(), self.slug.as_ref())
     }
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonMetricKind, ApiError> {
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonMetricKind, HttpError> {
         let project = QueryProject::get(conn, self.project_id)?;
         Ok(self.into_json_for_project(&project))
     }
