@@ -12,7 +12,7 @@ use dropshot::HttpError;
 
 use crate::{
     context::DbConnection,
-    error::{resource_conflict_err, resource_not_found_err},
+    error::{assert_parentage, resource_conflict_err, resource_not_found_err, BencherResource},
     model::project::QueryProject,
     schema,
     schema::metric_kind as metric_kind_table,
@@ -80,9 +80,11 @@ impl QueryMetricKind {
             modified,
             ..
         } = self;
-        debug_assert!(
-            project.id == project_id,
-            "Project ID mismatch for metric kind"
+        assert_parentage(
+            BencherResource::Project,
+            project.id,
+            BencherResource::MetricKind,
+            project_id,
         );
         Ok(JsonMetricKind {
             uuid,

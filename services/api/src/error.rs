@@ -442,28 +442,30 @@ pub enum ResourceError<Id>
 where
     Id: std::fmt::Debug + std::fmt::Display,
 {
-    #[error("{given_resource} ({given_id}) ID mismatch for {expected_resource} ({expected_id})")]
+    #[error(
+        "{parent_resource} ID ({parent_id}) mismatch for {resource} parent ID ({expected_parent_id})"
+    )]
     Mismatch {
-        given_resource: BencherResource,
-        given_id: Id,
-        expected_resource: BencherResource,
-        expected_id: Id,
+        parent_resource: BencherResource,
+        parent_id: Id,
+        resource: BencherResource,
+        expected_parent_id: Id,
     },
 }
-pub fn assert_resource<Id>(
-    given_resource: BencherResource,
-    given_id: Id,
-    expected_resource: BencherResource,
-    expected_id: Id,
+pub fn assert_parentage<Id>(
+    parent_resource: BencherResource,
+    parent_id: Id,
+    resource: BencherResource,
+    expected_parent_id: Id,
 ) where
     Id: PartialEq + std::fmt::Debug + std::fmt::Display,
 {
-    if given_id != expected_id {
+    if parent_id != expected_parent_id {
         let err = ResourceError::Mismatch {
-            given_resource,
-            given_id,
-            expected_resource,
-            expected_id,
+            parent_resource,
+            parent_id,
+            resource,
+            expected_parent_id,
         };
         debug_assert!(false, "{err}");
         #[cfg(feature = "sentry")]

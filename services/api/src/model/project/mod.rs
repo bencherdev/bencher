@@ -10,7 +10,10 @@ use dropshot::HttpError;
 
 use crate::{
     context::{DbConnection, Rbac},
-    error::{forbidden_error, resource_not_found_err, unauthorized_error},
+    error::{
+        assert_parentage, forbidden_error, resource_not_found_err, unauthorized_error,
+        BencherResource,
+    },
     model::{organization::QueryOrganization, user::auth::AuthUser},
     schema::{self, project as project_table},
     util::{
@@ -136,9 +139,11 @@ impl QueryProject {
             modified,
             ..
         } = self;
-        debug_assert!(
-            organization.id == organization_id,
-            "Organization ID mismatch for project"
+        assert_parentage(
+            BencherResource::Organization,
+            organization.id,
+            BencherResource::Project,
+            organization_id,
         );
         JsonProject {
             uuid,

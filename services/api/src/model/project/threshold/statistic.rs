@@ -6,6 +6,7 @@ use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 
 use crate::{
     context::DbConnection,
+    error::{assert_parentage, BencherResource},
     schema,
     schema::statistic as statistic_table,
     util::query::{fn_get, fn_get_id, fn_get_uuid},
@@ -54,9 +55,11 @@ impl QueryStatistic {
             created,
             ..
         } = self;
-        debug_assert!(
-            threshold.id == threshold_id,
-            "Threshold ID mismatch for statistic"
+        assert_parentage(
+            BencherResource::Threshold,
+            threshold.id,
+            BencherResource::Statistic,
+            threshold_id,
         );
         JsonStatistic {
             uuid,

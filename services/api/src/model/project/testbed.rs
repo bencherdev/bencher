@@ -8,7 +8,7 @@ use dropshot::HttpError;
 use super::{ProjectId, QueryProject};
 use crate::{
     context::DbConnection,
-    error::resource_not_found_err,
+    error::{assert_parentage, resource_not_found_err, BencherResource},
     schema,
     schema::testbed as testbed_table,
     util::{
@@ -94,7 +94,12 @@ impl QueryTestbed {
             modified,
             ..
         } = self;
-        debug_assert!(project.id == project_id, "Project ID mismatch for testbed");
+        assert_parentage(
+            BencherResource::Project,
+            project.id,
+            BencherResource::Testbed,
+            project_id,
+        );
         JsonTestbed {
             uuid,
             project: project.uuid,

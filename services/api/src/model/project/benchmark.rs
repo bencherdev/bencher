@@ -14,7 +14,7 @@ use super::{
 };
 use crate::{
     context::DbConnection,
-    error::{assert_resource, resource_conflict_err, resource_not_found_err, BencherResource},
+    error::{assert_parentage, resource_conflict_err, resource_not_found_err, BencherResource},
     schema,
     schema::benchmark as benchmark_table,
     util::{
@@ -119,7 +119,7 @@ impl QueryBenchmark {
             modified,
             ..
         } = self;
-        assert_resource(
+        assert_parentage(
             BencherResource::Project,
             project.id,
             BencherResource::Benchmark,

@@ -8,7 +8,9 @@ use http::StatusCode;
 
 use crate::{
     context::{DbConnection, Rbac, SecretKey},
-    error::{bad_request_error, issue_error, resource_not_found_err},
+    error::{
+        assert_parentage, bad_request_error, issue_error, resource_not_found_err, BencherResource,
+    },
     model::user::same_user,
     schema,
     schema::token as token_table,
@@ -62,7 +64,12 @@ impl QueryToken {
             expiration,
             ..
         } = self;
-        debug_assert!(query_user.id == user_id, "User ID mismatch");
+        assert_parentage(
+            BencherResource::User,
+            query_user.id,
+            BencherResource::Token,
+            user_id,
+        );
         JsonToken {
             uuid,
             user: query_user.uuid,

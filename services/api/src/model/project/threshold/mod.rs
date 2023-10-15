@@ -14,7 +14,7 @@ use super::{
 };
 use crate::{
     context::DbConnection,
-    error::resource_conflict_err,
+    error::{assert_parentage, resource_conflict_err, BencherResource},
     schema::threshold as threshold_table,
     schema::{self},
     util::query::{fn_get, fn_get_id, fn_get_uuid},
@@ -128,9 +128,11 @@ impl QueryThreshold {
             created,
             ..
         } = self;
-        debug_assert!(
-            project.id == project_id,
-            "Project ID mismatch for threshold"
+        assert_parentage(
+            BencherResource::Project,
+            project.id,
+            BencherResource::Threshold,
+            project_id,
         );
         Ok(JsonThresholdStatistic {
             uuid,
