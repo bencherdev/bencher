@@ -6,10 +6,10 @@ use slog::info;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SwaggerError {
+    #[error("Failed to register API: {0}")]
+    RegisterApi(String),
     #[error("Failed to create swagger file: {0}")]
     CreateFile(std::io::Error),
-    #[error("Failed to register API: {0}")]
-    RegisterApi(#[from] bencher_api::ApiError),
     #[error("Failed to create swagger file: {0}")]
     WriteFile(serde_json::Error),
 }
@@ -21,7 +21,7 @@ fn main() -> Result<(), SwaggerError> {
 
     info!(&log, "Generating OpenAPI JSON file at: {SWAGGER_PATH}");
     let mut api_description = ApiDescription::new();
-    Api::register(&mut api_description, false)?;
+    Api::register(&mut api_description, false).map_err(SwaggerError::RegisterApi)?;
     let mut swagger_file = File::create(SWAGGER_PATH).map_err(SwaggerError::CreateFile)?;
 
     api_description.tag_config(TagConfig {

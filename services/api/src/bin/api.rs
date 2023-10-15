@@ -1,12 +1,24 @@
 use bencher_api::{
     config::{config_tx::ConfigTx, Config},
-    ApiError, API_VERSION,
+    API_VERSION,
 };
 use bencher_json::system::config::JsonApm;
 use dropshot::HttpServer;
 #[cfg(feature = "sentry")]
 use sentry::ClientInitGuard;
 use slog::{error, info, Logger};
+
+#[derive(Debug, thiserror::Error)]
+pub enum ApiError {
+    #[error("{0}")]
+    Config(bencher_api::config::ConfigError),
+    #[error("{0}")]
+    ConfigTxError(bencher_api::config::config_tx::ConfigTxError),
+    #[error("Shutting down server: {0}")]
+    RunServer(String),
+    #[error("Failed to join handle: {0}")]
+    JoinHandle(tokio::task::JoinError),
+}
 
 #[tokio::main]
 async fn main() -> Result<(), ApiError> {
@@ -35,7 +47,9 @@ async fn run(
     #[cfg(feature = "sentry")] mut _guard: ClientInitGuard,
 ) -> Result<(), ApiError> {
     loop {
-        let config = Config::load_or_default(log).await?;
+        let config = Config::load_or_default(log)
+            .await
+            .map_err(ApiError::Config)?;
         if let Some(apm) = config.as_ref().apm.as_ref() {
             #[allow(unused_variables)]
             match &apm {
@@ -57,7 +71,8 @@ async fn run(
         let config_tx = ConfigTx { config, restart_tx };
 
         let handle = tokio::spawn(async move {
-            HttpServer::try_from(config_tx)?
+            HttpServer::try_from(config_tx)
+                .map_err(ApiError::ConfigTxError)?
                 .await
                 .map_err(ApiError::RunServer)
         });

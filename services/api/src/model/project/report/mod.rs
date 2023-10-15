@@ -108,7 +108,7 @@ fn get_report_results(
     project: &QueryProject,
     report_id: ReportId,
 ) -> Result<JsonReportResults, HttpError> {
-    let results = schema::perf::table
+    schema::perf::table
     .filter(schema::perf::report_id.eq(report_id))
     .inner_join(schema::benchmark::table)
     .inner_join(schema::metric::table
@@ -163,16 +163,15 @@ fn get_report_results(
         ).nullable(),
     ))
     .load::<ResultsQuery>(conn)
-    .map_err(resource_not_found_err!(Perf, project))?;
-
-    into_report_results_json(log, project, results)
+    .map(|results| into_report_results_json(log, project, results))
+    .map_err(resource_not_found_err!(Perf, project))
 }
 
 fn into_report_results_json(
     log: &Logger,
     project: &QueryProject,
     results: Vec<ResultsQuery>,
-) -> Result<JsonReportResults, HttpError> {
+) -> JsonReportResults {
     let mut report_results = Vec::new();
     let mut report_iteration = Vec::new();
     let mut prev_iteration = None;
@@ -226,7 +225,7 @@ fn into_report_results_json(
         } else {
             let metric_kind = query_metric_kind.into_json_for_project(project);
             let threshold = if let Some((threshold, statistic)) = threshold_statistic {
-                Some(threshold.into_threshold_statistic_json_for_project(project, statistic)?)
+                Some(threshold.into_threshold_statistic_json_for_project(project, statistic))
             } else {
                 None
             };
@@ -245,7 +244,7 @@ fn into_report_results_json(
     report_results.push(report_iteration);
     slog::trace!(log, "Report results: {report_results:#?}");
 
-    Ok(report_results)
+    report_results
 }
 
 fn get_report_alerts(

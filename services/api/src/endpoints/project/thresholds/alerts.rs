@@ -20,7 +20,7 @@ use crate::{
         QueryProject,
     },
     model::user::auth::AuthUser,
-    schema, ApiError,
+    schema,
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -286,7 +286,7 @@ async fn get_stats_inner(
     context: &ApiContext,
     auth_user: Option<&AuthUser>,
     path_params: ProjAlertsParams,
-) -> Result<JsonAlertStats, ApiError> {
+) -> Result<JsonAlertStats, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_project =

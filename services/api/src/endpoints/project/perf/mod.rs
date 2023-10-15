@@ -449,15 +449,9 @@ fn perf_metric(
         {
             let boundary = query_boundary.into_json();
             let threshold = Some(
-                query_threshold
-                    .into_threshold_statistic_json_for_project(project, query_statistic)
-                    .ok()?,
+                query_threshold.into_threshold_statistic_json_for_project(project, query_statistic),
             );
-            let alert = if let Some(query_alert) = query_alert {
-                Some(query_alert.into_perf_json().ok()?)
-            } else {
-                None
-            };
+            let alert = query_alert.map(QueryAlert::into_perf_json);
             (boundary, threshold, alert)
         } else {
             (JsonBoundary::default(), None, None)

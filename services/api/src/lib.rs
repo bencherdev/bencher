@@ -12,8 +12,6 @@ pub mod model;
 pub mod schema;
 pub mod util;
 
-pub use error::{ApiError, WordStr};
-
 pub const API_VERSION: &str = env!("CARGO_PKG_VERSION");
 // This is run via a `pre-push` git hook
 // So if the `SWAGGER_PATH` below is ever updated

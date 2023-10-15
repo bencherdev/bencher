@@ -115,7 +115,7 @@ fn into_inner(log: &Logger, config_tx: ConfigTx) -> Result<HttpServer<ApiContext
 
     let mut api = ApiDescription::new();
     debug!(log, "Registering server APIs");
-    Api::register(&mut api, true).map_err(ConfigTxError::Register);
+    Api::register(&mut api, true).map_err(ConfigTxError::Register)?;
 
     Ok(
         dropshot::HttpServerStarter::new_with_tls(&config_dropshot, api, private, log, tls)

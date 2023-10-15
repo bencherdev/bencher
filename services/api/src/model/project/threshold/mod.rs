@@ -134,14 +134,14 @@ impl QueryThreshold {
             sentry::capture_error(&err);
             return Err(err);
         };
-        self.into_threshold_statistic_json_for_project(&project, statistic)
+        Ok(self.into_threshold_statistic_json_for_project(&project, statistic))
     }
 
     pub fn into_threshold_statistic_json_for_project(
         self,
         project: &QueryProject,
         statistic: QueryStatistic,
-    ) -> Result<JsonThresholdStatistic, HttpError> {
+    ) -> JsonThresholdStatistic {
         let statistic = statistic.into_json_for_threshold(&self);
         let Self {
             uuid,
@@ -155,12 +155,12 @@ impl QueryThreshold {
             BencherResource::Threshold,
             project_id,
         );
-        Ok(JsonThresholdStatistic {
+        JsonThresholdStatistic {
             uuid,
             project: project.uuid,
             statistic,
             created,
-        })
+        }
     }
 }
 

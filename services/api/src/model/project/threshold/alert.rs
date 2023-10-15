@@ -20,7 +20,6 @@ use crate::{
     schema::alert as alert_table,
     schema::{self},
     util::query::{fn_get, fn_get_id, fn_get_uuid},
-    ApiError,
 };
 
 crate::util::typed_id::typed_id!(AlertId);
@@ -134,7 +133,7 @@ impl QueryAlert {
         })
     }
 
-    pub fn into_perf_json(self) -> Result<JsonPerfAlert, ApiError> {
+    pub fn into_perf_json(self) -> JsonPerfAlert {
         let QueryAlert {
             uuid,
             boundary_limit,
@@ -142,12 +141,12 @@ impl QueryAlert {
             modified,
             ..
         } = self;
-        Ok(JsonPerfAlert {
+        JsonPerfAlert {
             uuid,
             limit: boundary_limit,
             status,
             modified,
-        })
+        }
     }
 }
 

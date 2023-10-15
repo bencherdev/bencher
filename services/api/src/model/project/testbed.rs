@@ -65,23 +65,8 @@ impl QueryTestbed {
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonTestbed, HttpError> {
-        let Self {
-            uuid,
-            project_id,
-            name,
-            slug,
-            created,
-            modified,
-            ..
-        } = self;
-        Ok(JsonTestbed {
-            uuid,
-            project: QueryProject::get_uuid(conn, project_id)?,
-            name,
-            slug,
-            created,
-            modified,
-        })
+        let project = QueryProject::get(conn, self.project_id)?;
+        Ok(self.into_json_for_project(&project))
     }
 
     pub fn into_json_for_project(self, project: &QueryProject) -> JsonTestbed {
