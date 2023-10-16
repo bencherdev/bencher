@@ -12,7 +12,7 @@ use bencher_rbac::project::Permission;
 use diesel::{
     dsl::count, BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
 };
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, SharedExtractor, TypedBody};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use http::StatusCode;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -85,9 +85,7 @@ pub async fn proj_reports_get(
         .try_into()
         .map_err(bad_request_error)?;
 
-    let auth_user =
-        AuthUser::from_pub_token(rqctx.context(), PubBearerToken::from_request(&rqctx).await?)
-            .await?;
+    let auth_user = AuthUser::new_pub(&rqctx).await?;
     let json = get_ls_inner(
         &rqctx.log,
         rqctx.context(),

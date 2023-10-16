@@ -158,31 +158,6 @@ impl QueryProject {
     }
 }
 
-impl From<&InsertProject> for Organization {
-    fn from(project: &InsertProject) -> Self {
-        Organization {
-            id: project.organization_id.to_string(),
-        }
-    }
-}
-
-impl From<&QueryProject> for Organization {
-    fn from(project: &QueryProject) -> Self {
-        Organization {
-            id: project.organization_id.to_string(),
-        }
-    }
-}
-
-impl From<&QueryProject> for Project {
-    fn from(project: &QueryProject) -> Self {
-        Project {
-            id: project.id.to_string(),
-            organization_id: project.organization_id.to_string(),
-        }
-    }
-}
-
 #[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = project_table)]
 pub struct InsertProject {
@@ -261,6 +236,31 @@ impl From<JsonUpdateProject> for UpdateProject {
             url,
             visibility,
             modified: DateTime::now(),
+        }
+    }
+}
+
+impl From<&InsertProject> for Organization {
+    fn from(project: &InsertProject) -> Self {
+        Organization {
+            id: project.organization_id.to_string(),
+        }
+    }
+}
+
+impl From<&QueryProject> for Organization {
+    fn from(project: &QueryProject) -> Self {
+        Organization {
+            id: project.organization_id.to_string(),
+        }
+    }
+}
+
+impl From<&QueryProject> for Project {
+    fn from(project: &QueryProject) -> Self {
+        Project {
+            id: project.id.to_string(),
+            organization_id: project.organization_id.to_string(),
         }
     }
 }

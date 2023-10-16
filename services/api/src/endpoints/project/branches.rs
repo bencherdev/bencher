@@ -4,7 +4,7 @@ use bencher_json::{
 };
 use bencher_rbac::project::Permission;
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, SharedExtractor, TypedBody};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -71,9 +71,7 @@ pub async fn proj_branches_get(
     pagination_params: Query<ProjBranchesPagination>,
     query_params: Query<ProjBranchesQuery>,
 ) -> Result<ResponseOk<JsonBranches>, HttpError> {
-    let auth_user =
-        AuthUser::from_pub_token(rqctx.context(), PubBearerToken::from_request(&rqctx).await?)
-            .await?;
+    let auth_user = AuthUser::new_pub(&rqctx).await?;
     let json = get_ls_inner(
         rqctx.context(),
         auth_user.as_ref(),

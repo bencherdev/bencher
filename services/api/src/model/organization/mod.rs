@@ -45,6 +45,8 @@ pub struct LicenseUsage {
     pub usage: u64,
 }
 
+fn_resource_id!(organization);
+
 impl QueryOrganization {
     fn_get!(organization, OrganizationId);
     fn_get_id!(organization, OrganizationId, OrganizationUuid);
@@ -163,14 +165,6 @@ impl QueryOrganization {
     }
 }
 
-impl From<&QueryOrganization> for Organization {
-    fn from(organization: &QueryOrganization) -> Self {
-        Organization {
-            id: organization.id.to_string(),
-        }
-    }
-}
-
 #[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = organization_table)]
 pub struct InsertOrganization {
@@ -210,8 +204,6 @@ impl InsertOrganization {
     }
 }
 
-fn_resource_id!(organization);
-
 #[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = organization_table)]
 pub struct UpdateOrganization {
@@ -227,6 +219,22 @@ impl From<JsonUpdateOrganization> for UpdateOrganization {
             name,
             slug,
             modified: DateTime::now(),
+        }
+    }
+}
+
+impl From<OrganizationId> for Organization {
+    fn from(org_id: OrganizationId) -> Self {
+        Self {
+            id: org_id.to_string(),
+        }
+    }
+}
+
+impl From<&QueryOrganization> for Organization {
+    fn from(organization: &QueryOrganization) -> Self {
+        Organization {
+            id: organization.id.to_string(),
         }
     }
 }

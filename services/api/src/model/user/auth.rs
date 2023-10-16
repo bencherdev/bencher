@@ -31,14 +31,6 @@ pub struct AuthUser {
     pub rbac: RbacUser,
 }
 
-impl From<OrganizationId> for Organization {
-    fn from(org_id: OrganizationId) -> Self {
-        Self {
-            id: org_id.to_string(),
-        }
-    }
-}
-
 #[derive(Debug, Clone, Copy)]
 pub struct OrgProjectId {
     pub org_id: OrganizationId,
@@ -55,65 +47,19 @@ impl From<OrgProjectId> for Project {
 }
 
 impl AuthUser {
-    pub async fn new(rqctx: &RequestContext<ApiContext>) -> Result<Self, HttpError> {
-        let request = &rqctx.request;
+    // This is required due to a limitation in `dropshot` where only four extractors are allowed.
+    pub async fn new_pub(rqctx: &RequestContext<ApiContext>) -> Result<Option<Self>, HttpError> {
+        Self::from_pub_token(rqctx.context(), PubBearerToken::from_request(rqctx).await?).await
+    }
 
-        let headers = request
-            .headers()
-            .get("Authorization")
-            .ok_or_else(|| {
-                bad_request_error(format!(
-                    "Request is missing \"Authorization\" header. {BEARER_TOKEN_FORMAT}"
-                ))
-            })?
-            .to_str()
-            .map_err(|e| {
-                bad_request_error(format!(
-                    "Request has an invalid \"Authorization\" header: {e}. {BEARER_TOKEN_FORMAT}"
-                ))
-            })?;
-        let (_, token) = headers.split_once("Bearer ").ok_or_else(|| {
-            bad_request_error(format!(
-                "Request is missing \"Authorization\" Bearer. {BEARER_TOKEN_FORMAT}"
-            ))
-        })?;
-        let token = token.trim();
-        let jwt: Jwt = token
-            .parse()
-            .map_err(|e| bad_request_error(format!("Malformed JSON Web Token: {e}")))?;
-
-        let context = rqctx.context();
-        let conn = &mut *context.conn().await;
-        let claims = context
-            .secret_key
-            .validate_client(&jwt)
-            .map_err(|e| bad_request_error(format!("Failed to validate JSON Web Token: {e}")))?;
-
-        let email = claims.email();
-        let (user_id, admin, locked) = schema::user::table
-            .filter(schema::user::email.eq(email))
-            .select((schema::user::id, schema::user::admin, schema::user::locked))
-            .first::<(UserId, bool, bool)>(conn)
-            .map_err(|e| not_found_error(format!("Failed to find user ({email}): {e}")))?;
-
-        if locked {
-            return Err(forbidden_error(format!("User account is locked ({email})")));
-        }
-
-        let (org_ids, org_roles) = Self::organization_roles(conn, user_id, email)?;
-        let (proj_ids, proj_roles) = Self::project_roles(conn, user_id, email)?;
-        let rbac = RbacUser {
-            admin,
-            locked,
-            organizations: org_roles,
-            projects: proj_roles,
-        };
-
-        Ok(Self {
-            id: user_id,
-            organizations: org_ids,
-            projects: proj_ids,
-            rbac,
+    pub async fn from_pub_token(
+        context: &ApiContext,
+        bearer_token: PubBearerToken,
+    ) -> Result<Option<Self>, HttpError> {
+        Ok(if let Some(bearer_token) = bearer_token.0 {
+            Some(Self::from_token(context, bearer_token).await?)
+        } else {
+            None
         })
     }
 
@@ -152,17 +98,6 @@ impl AuthUser {
             organizations: org_ids,
             projects: proj_ids,
             rbac,
-        })
-    }
-
-    pub async fn from_pub_token(
-        context: &ApiContext,
-        bearer_token: PubBearerToken,
-    ) -> Result<Option<Self>, HttpError> {
-        Ok(if let Some(bearer_token) = bearer_token.0 {
-            Some(Self::from_token(context, bearer_token).await?)
-        } else {
-            None
         })
     }
 
