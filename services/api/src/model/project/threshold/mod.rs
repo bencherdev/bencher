@@ -232,7 +232,7 @@ impl InsertThreshold {
             .execute(conn)
             .map_err(resource_conflict_err!(
                 Threshold,
-                (threshold_id, insert_statistic)
+                (threshold_id, &insert_statistic)
             ))?;
 
         Ok(threshold_id)

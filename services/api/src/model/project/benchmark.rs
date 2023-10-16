@@ -13,14 +13,12 @@ use crate::{
     schema::benchmark as benchmark_table,
     util::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
-        resource_id::fn_resource_id,
-        slug::ok_child_slug,
+        resource_id::{fn_from_resource_id, fn_resource_id},
+        slug::ok_slug,
     },
 };
 
 crate::util::typed_id::typed_id!(BenchmarkId);
-
-fn_resource_id!(benchmark);
 
 #[derive(
     Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
@@ -38,6 +36,9 @@ pub struct QueryBenchmark {
 }
 
 impl QueryBenchmark {
+    fn_resource_id!(benchmark);
+    fn_from_resource_id!(benchmark, Benchmark);
+
     fn_get!(benchmark, BenchmarkId);
     fn_get_id!(benchmark, BenchmarkId, BenchmarkUuid);
     fn_get_uuid!(benchmark, BenchmarkId, BenchmarkUuid);
@@ -54,18 +55,6 @@ impl QueryBenchmark {
             .select(schema::benchmark::id)
             .first(conn)
             .map_err(resource_not_found_err!(Benchmark, (project_id, name)))
-    }
-
-    pub fn from_resource_id(
-        conn: &mut DbConnection,
-        project_id: ProjectId,
-        benchmark: &ResourceId,
-    ) -> Result<Self, HttpError> {
-        schema::benchmark::table
-            .filter(schema::benchmark::project_id.eq(project_id))
-            .filter(resource_id(benchmark)?)
-            .first::<Self>(conn)
-            .map_err(resource_not_found_err!(Benchmark, (project_id, benchmark)))
     }
 
     pub fn get_or_create(
@@ -166,7 +155,7 @@ impl InsertBenchmark {
         benchmark: JsonNewBenchmark,
     ) -> Result<Self, HttpError> {
         let JsonNewBenchmark { name, slug } = benchmark;
-        let slug = ok_child_slug!(conn, project_id, &name, slug, benchmark, QueryBenchmark)?;
+        let slug = ok_slug!(conn, project_id, &name, slug, benchmark, QueryBenchmark)?;
         Ok(Self::new(project_id, name, slug))
     }
 

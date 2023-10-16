@@ -18,7 +18,7 @@ use crate::{
     schema::{self, project as project_table},
     util::{
         fn_get::{fn_get, fn_get_uuid},
-        resource_id::fn_resource_id,
+        resource_id::{fn_from_resource_id, fn_resource_id},
         slug::ok_slug,
     },
 };
@@ -40,8 +40,6 @@ pub mod visibility;
 
 crate::util::typed_id::typed_id!(ProjectId);
 
-fn_resource_id!(project);
-
 #[derive(Debug, Clone, Queryable, diesel::Identifiable, diesel::Associations)]
 #[diesel(table_name = project_table)]
 #[diesel(belongs_to(QueryOrganization, foreign_key = organization_id))]
@@ -58,18 +56,11 @@ pub struct QueryProject {
 }
 
 impl QueryProject {
+    fn_resource_id!(project);
+    fn_from_resource_id!(project, Project, true);
+
     fn_get!(project, ProjectId);
     fn_get_uuid!(project, ProjectId, ProjectUuid);
-
-    pub fn from_resource_id(
-        conn: &mut DbConnection,
-        project: &ResourceId,
-    ) -> Result<Self, HttpError> {
-        schema::project::table
-            .filter(resource_id(project)?)
-            .first::<Self>(conn)
-            .map_err(resource_not_found_err!(Project, project))
-    }
 
     #[cfg(feature = "plus")]
     pub fn is_public(conn: &mut DbConnection, id: ProjectId) -> Result<bool, HttpError> {

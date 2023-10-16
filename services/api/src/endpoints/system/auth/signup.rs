@@ -68,7 +68,7 @@ async fn post_inner(
     let count = schema::user::table
         .select(count(schema::user::id))
         .first::<i64>(conn)
-        .map_err(resource_not_found_err!(User, json_signup.clone()))?;
+        .map_err(resource_not_found_err!(User, json_signup))?;
     // The first user to signup is admin
     if count == 0 {
         insert_user.admin = true;

@@ -247,10 +247,7 @@ async fn patch_inner(
     diesel::update(schema::alert::table.filter(schema::alert::id.eq(query_alert.id)))
         .set(&UpdateAlert::from(json_alert.clone()))
         .execute(conn)
-        .map_err(resource_conflict_err!(
-            Alert,
-            (query_alert.clone(), json_alert)
-        ))?;
+        .map_err(resource_conflict_err!(Alert, (&query_alert, &json_alert)))?;
 
     QueryAlert::get(conn, query_alert.id)?.into_json(conn)
 }

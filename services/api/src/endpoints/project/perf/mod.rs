@@ -409,7 +409,7 @@ fn perf_query(
             QueryMetric::as_select(),
         ))
         .load::<PerfQuery>(conn)
-        .map_err(resource_not_found_err!(Metric, (project.clone(), metric_kind_id, branch_id, testbed_id, benchmark_id)))?
+        .map_err(resource_not_found_err!(Metric, (&project, metric_kind_id, branch_id, testbed_id, benchmark_id)))?
         .into_iter()
         .map(|query| perf_metric(project, query))
         .collect();

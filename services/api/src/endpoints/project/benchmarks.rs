@@ -222,14 +222,12 @@ async fn get_one_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     QueryBenchmark::belonging_to(&query_project)
-        .filter(crate::model::project::benchmark::resource_id(
-            &path_params.benchmark,
-        )?)
+        .filter(QueryBenchmark::resource_id(&path_params.benchmark)?)
         .first::<QueryBenchmark>(conn)
         .map(|benchmark| benchmark.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(
             Benchmark,
-            (query_project, path_params.benchmark)
+            (&query_project, path_params.benchmark)
         ))
 }
 
@@ -279,7 +277,7 @@ async fn patch_inner(
         .execute(conn)
         .map_err(resource_conflict_err!(
             Benchmark,
-            (query_benchmark.clone(), json_benchmark)
+            (&query_benchmark, &json_benchmark)
         ))?;
 
     QueryBenchmark::get(conn, query_benchmark.id)

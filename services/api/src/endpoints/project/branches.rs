@@ -240,14 +240,12 @@ async fn get_one_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     QueryBranch::belonging_to(&query_project)
-        .filter(crate::model::project::branch::resource_id(
-            &path_params.branch,
-        )?)
+        .filter(QueryBranch::resource_id(&path_params.branch)?)
         .first::<QueryBranch>(conn)
         .map(|branch| branch.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(
             Branch,
-            (query_project, path_params.branch)
+            (&query_project, path_params.branch)
         ))
 }
 
@@ -297,7 +295,7 @@ async fn patch_inner(
         .execute(conn)
         .map_err(resource_conflict_err!(
             Branch,
-            (query_branch.clone(), json_branch)
+            (&query_branch, &json_branch)
         ))?;
 
     QueryBranch::get(conn, query_branch.id)

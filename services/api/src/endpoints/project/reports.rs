@@ -500,7 +500,7 @@ async fn get_one_inner(
         .first::<QueryReport>(conn)
         .map_err(resource_not_found_err!(
             Report,
-            (query_project, path_params.report)
+            (&query_project, path_params.report)
         ))?
         .into_json(log, conn)
 }
@@ -542,7 +542,7 @@ async fn delete_inner(
         .first::<(ReportId, VersionId)>(conn)
         .map_err(resource_not_found_err!(
             Report,
-            (query_project.clone(), path_params.report)
+            (&query_project, path_params.report)
         ))?;
     diesel::delete(schema::report::table.filter(schema::report::id.eq(report_id)))
         .execute(conn)
@@ -558,7 +558,7 @@ async fn delete_inner(
         .first::<i64>(conn)
         .map_err(resource_not_found_err!(
             Version,
-            (query_project.clone(), report_id, version_id)
+            (&query_project, report_id, version_id)
         ))?
         == 0
     {
@@ -571,7 +571,7 @@ async fn delete_inner(
             .load::<BranchId>(conn)
             .map_err(resource_not_found_err!(
                 Branch,
-                (query_project.clone(), report_id, version_id)
+                (&query_project, report_id, version_id)
             ))?;
 
         let mut version_map = HashMap::new();
@@ -585,12 +585,7 @@ async fn delete_inner(
                 .load::<(VersionId, VersionNumber)>(conn)
                 .map_err(resource_not_found_err!(
                     Version,
-                    (
-                        query_project.clone(),
-                        report_id,
-                        branch_id,
-                        query_version.clone()
-                    )
+                    (&query_project, report_id, branch_id, &query_version)
                 ))?
                 .into_iter()
                 .for_each(|(version_id, version_number)| {
@@ -619,7 +614,7 @@ async fn delete_inner(
             .execute(conn)
             .map_err(resource_conflict_err!(
                 Version,
-                (query_project.clone(), report_id, query_version.clone())
+                (&query_project, report_id, &query_version)
             ))?;
     }
 

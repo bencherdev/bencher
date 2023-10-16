@@ -8,19 +8,17 @@ use dropshot::HttpError;
 use super::{ProjectId, QueryProject};
 use crate::{
     context::DbConnection,
-    error::{assert_parentage, resource_not_found_err, BencherResource},
+    error::{assert_parentage, BencherResource},
     schema,
     schema::testbed as testbed_table,
     util::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
-        resource_id::fn_resource_id,
-        slug::ok_child_slug,
+        resource_id::{fn_from_resource_id, fn_resource_id},
+        slug::ok_slug,
     },
 };
 
 crate::util::typed_id::typed_id!(TestbedId);
-
-fn_resource_id!(testbed);
 
 #[derive(Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations)]
 #[diesel(table_name = testbed_table)]
@@ -36,22 +34,13 @@ pub struct QueryTestbed {
 }
 
 impl QueryTestbed {
+    fn_resource_id!(testbed);
+    fn_from_resource_id!(testbed, Testbed);
+
     fn_get!(testbed, TestbedId);
     fn_get_id!(testbed, TestbedId, TestbedUuid);
     fn_get_uuid!(testbed, TestbedId, TestbedUuid);
     fn_from_uuid!(testbed, TestbedUuid, Testbed);
-
-    pub fn from_resource_id(
-        conn: &mut DbConnection,
-        project_id: ProjectId,
-        testbed: &ResourceId,
-    ) -> Result<Self, HttpError> {
-        schema::testbed::table
-            .filter(schema::testbed::project_id.eq(project_id))
-            .filter(resource_id(testbed)?)
-            .first::<Self>(conn)
-            .map_err(resource_not_found_err!(Testbed, (project_id, testbed)))
-    }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonTestbed, HttpError> {
         let project = QueryProject::get(conn, self.project_id)?;
@@ -108,7 +97,7 @@ impl InsertTestbed {
         testbed: JsonNewTestbed,
     ) -> Result<Self, HttpError> {
         let JsonNewTestbed { name, slug } = testbed;
-        let slug = ok_child_slug!(conn, project_id, &name, slug, testbed, QueryTestbed)?;
+        let slug = ok_slug!(conn, project_id, &name, slug, testbed, QueryTestbed)?;
         let timestamp = DateTime::now();
         Ok(Self {
             uuid: TestbedUuid::new(),

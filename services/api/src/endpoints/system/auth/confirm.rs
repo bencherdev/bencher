@@ -56,7 +56,7 @@ async fn post_inner(
     let user = schema::user::table
         .filter(schema::user::email.eq(email))
         .first::<QueryUser>(conn)
-        .map_err(resource_not_found_err!(User, email.clone()))?
+        .map_err(resource_not_found_err!(User, email))?
         .into_json();
 
     let token = context

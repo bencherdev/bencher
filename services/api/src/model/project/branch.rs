@@ -19,14 +19,12 @@ use crate::{
     schema::branch as branch_table,
     util::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
-        resource_id::fn_resource_id,
-        slug::ok_child_slug,
+        resource_id::{fn_from_resource_id, fn_resource_id},
+        slug::ok_slug,
     },
 };
 
 crate::util::typed_id::typed_id!(BranchId);
-
-fn_resource_id!(branch);
 
 #[derive(Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations)]
 #[diesel(table_name = branch_table)]
@@ -42,22 +40,13 @@ pub struct QueryBranch {
 }
 
 impl QueryBranch {
+    fn_resource_id!(branch);
+    fn_from_resource_id!(branch, Branch);
+
     fn_get!(branch, BranchId);
     fn_get_id!(branch, BranchId, BranchUuid);
     fn_get_uuid!(branch, BranchId, BranchUuid);
     fn_from_uuid!(branch, BranchUuid, Branch);
-
-    pub fn from_resource_id(
-        conn: &mut DbConnection,
-        project_id: ProjectId,
-        branch: &ResourceId,
-    ) -> Result<Self, HttpError> {
-        schema::branch::table
-            .filter(schema::branch::project_id.eq(project_id))
-            .filter(resource_id(branch)?)
-            .first::<Self>(conn)
-            .map_err(resource_not_found_err!(Branch, (project_id, branch)))
-    }
 
     pub fn get_branch_version_json(
         conn: &mut DbConnection,
@@ -138,7 +127,7 @@ impl InsertBranch {
         branch: JsonNewBranch,
     ) -> Result<Self, HttpError> {
         let JsonNewBranch { name, slug, .. } = branch;
-        let slug = ok_child_slug!(conn, project_id, &name, slug, branch, QueryBranch)?;
+        let slug = ok_slug!(conn, project_id, &name, slug, branch, QueryBranch)?;
         let timestamp = DateTime::now();
         Ok(Self {
             uuid: BranchUuid::new(),
@@ -209,7 +198,7 @@ impl InsertBranch {
                 diesel::insert_into(schema::threshold::table)
                     .values(&insert_threshold)
                     .execute(conn)
-                    .map_err(resource_conflict_err!(Threshold, insert_threshold.clone()))?;
+                    .map_err(resource_conflict_err!(Threshold, insert_threshold))?;
 
                 // If there is a statistic, clone that too
                 let Some(statistic_id) = query_threshold.statistic_id else {
@@ -223,7 +212,7 @@ impl InsertBranch {
                 let query_statistic = schema::statistic::table
                     .filter(schema::statistic::id.eq(statistic_id))
                     .first::<QueryStatistic>(conn)
-                    .map_err(resource_not_found_err!(Statistic, query_threshold.clone()))?;
+                    .map_err(resource_not_found_err!(Statistic, query_threshold))?;
 
                 // Clone the current threshold statistic
                 let mut insert_statistic = InsertStatistic::from(query_statistic.clone());
@@ -232,7 +221,7 @@ impl InsertBranch {
                 diesel::insert_into(schema::statistic::table)
                     .values(&insert_statistic)
                     .execute(conn)
-                    .map_err(resource_conflict_err!(Statistic, insert_statistic.clone()))?;
+                    .map_err(resource_conflict_err!(Statistic, insert_statistic))?;
 
                 // Get the new threshold statistic
                 let statistic_id = QueryStatistic::get_id(conn, insert_statistic.uuid)?;
@@ -245,7 +234,7 @@ impl InsertBranch {
                 .execute(conn)
                 .map_err(resource_conflict_err!(
                     Threshold,
-                    (query_threshold, query_statistic)
+                    (&query_threshold, &query_statistic)
                 ))?;
             }
         }

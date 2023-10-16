@@ -246,7 +246,7 @@ async fn get_one_inner(
         .first::<QueryThreshold>(conn)
         .map_err(resource_not_found_err!(
             Threshold,
-            (query_project, path_params.threshold)
+            (&query_project, path_params.threshold)
         ))?
         .into_json(conn)
 }
@@ -296,7 +296,7 @@ async fn put_inner(
         .first::<QueryThreshold>(conn)
         .map_err(resource_not_found_err!(
             Threshold,
-            (query_project, path_params.threshold)
+            (&query_project, path_params.threshold)
         ))?;
 
     // Insert the new statistic
@@ -306,7 +306,7 @@ async fn put_inner(
         .execute(conn)
         .map_err(resource_conflict_err!(
             Statistic,
-            (query_threshold.clone(), insert_statistic.clone())
+            (&query_threshold, &insert_statistic)
         ))?;
 
     // Update the current threshold to use the new statistic
@@ -318,7 +318,7 @@ async fn put_inner(
         .execute(conn)
         .map_err(resource_conflict_err!(
             Threshold,
-            (query_threshold.clone(), insert_statistic.clone())
+            (&query_threshold, &insert_statistic)
         ))?;
 
     QueryThreshold::get(conn, query_threshold.id)?.into_json(conn)
@@ -360,7 +360,7 @@ async fn delete_inner(
         .first::<QueryThreshold>(conn)
         .map_err(resource_not_found_err!(
             Threshold,
-            (query_project, path_params.threshold)
+            (&query_project, path_params.threshold)
         ))?;
     diesel::delete(schema::threshold::table.filter(schema::threshold::id.eq(query_threshold.id)))
         .execute(conn)

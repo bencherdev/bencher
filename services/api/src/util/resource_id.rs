@@ -55,3 +55,41 @@ macro_rules! fn_resource_id {
 }
 
 pub(crate) use fn_resource_id;
+
+macro_rules! fn_from_resource_id {
+    // The `root` parameter is just a kludge to distinguish between top level and project level resources
+    ($table:ident, $resource:ident, $root:expr) => {
+        #[allow(unused_qualifications)]
+        pub fn from_resource_id(
+            conn: &mut DbConnection,
+            resource_id: &ResourceId,
+        ) -> Result<Self, HttpError> {
+            schema::$table::table
+                .filter(Self::resource_id(resource_id)?)
+                .first::<Self>(conn)
+                .map_err(crate::error::resource_not_found_err!(
+                    $resource,
+                    resource_id
+                ))
+        }
+    };
+    ($table:ident, $resource:ident) => {
+        #[allow(unused_qualifications)]
+        pub fn from_resource_id(
+            conn: &mut DbConnection,
+            project_id: ProjectId,
+            resource_id: &ResourceId,
+        ) -> Result<Self, HttpError> {
+            schema::$table::table
+                .filter(schema::$table::project_id.eq(project_id))
+                .filter(Self::resource_id(resource_id)?)
+                .first::<Self>(conn)
+                .map_err(crate::error::resource_not_found_err!(
+                    $resource,
+                    (project_id, resource_id)
+                ))
+        }
+    };
+}
+
+pub(crate) use fn_from_resource_id;

@@ -8,7 +8,7 @@ use crate::{
     schema::{self, user as user_table},
     util::{
         fn_get::{fn_get, fn_get_id, fn_get_uuid},
-        resource_id::fn_resource_id,
+        resource_id::{fn_from_resource_id, fn_resource_id},
         slug::ok_slug,
     },
 };
@@ -28,8 +28,6 @@ macro_rules! same_user {
 
 pub(crate) use same_user;
 
-fn_resource_id!(user);
-
 #[derive(Debug, diesel::Queryable)]
 pub struct QueryUser {
     pub id: UserId,
@@ -42,6 +40,9 @@ pub struct QueryUser {
 }
 
 impl QueryUser {
+    fn_resource_id!(user);
+    fn_from_resource_id!(user, User, true);
+
     fn_get!(user, UserId);
     fn_get_id!(user, UserId, UserUuid);
     fn_get_uuid!(user, UserId, UserUuid);
@@ -60,13 +61,6 @@ impl QueryUser {
             .select(schema::user::email)
             .first(conn)
             .map_err(resource_not_found_err!(User, id))
-    }
-
-    pub fn from_resource_id(conn: &mut DbConnection, user: &ResourceId) -> Result<Self, HttpError> {
-        schema::user::table
-            .filter(resource_id(user)?)
-            .first(conn)
-            .map_err(resource_not_found_err!(User, user))
     }
 
     pub fn get_admins(conn: &mut DbConnection) -> Result<Vec<QueryUser>, HttpError> {

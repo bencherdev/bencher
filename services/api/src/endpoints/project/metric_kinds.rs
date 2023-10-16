@@ -222,14 +222,12 @@ async fn get_one_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     QueryMetricKind::belonging_to(&query_project)
-        .filter(crate::model::project::metric_kind::resource_id(
-            &path_params.metric_kind,
-        )?)
+        .filter(QueryMetricKind::resource_id(&path_params.metric_kind)?)
         .first::<QueryMetricKind>(conn)
         .map(|metric_kind| metric_kind.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(
             MetricKind,
-            (query_project, path_params.metric_kind)
+            (&query_project, path_params.metric_kind)
         ))
 }
 
@@ -282,7 +280,7 @@ async fn patch_inner(
     .execute(conn)
     .map_err(resource_conflict_err!(
         MetricKind,
-        (query_metric_kind.clone(), json_metric_kind)
+        (&query_metric_kind, &json_metric_kind)
     ))?;
 
     QueryMetricKind::get(conn, query_metric_kind.id)

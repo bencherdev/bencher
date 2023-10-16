@@ -243,7 +243,7 @@ async fn patch_inner(
         .execute(conn)
         .map_err(resource_conflict_err!(
             Project,
-            (query_project.clone(), json_project)
+            (&query_project, &json_project)
         ))?;
 
     QueryProject::get(conn, query_project.id)

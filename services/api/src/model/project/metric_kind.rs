@@ -12,22 +12,20 @@ use dropshot::HttpError;
 
 use crate::{
     context::DbConnection,
-    error::{assert_parentage, resource_conflict_err, resource_not_found_err, BencherResource},
+    error::{assert_parentage, resource_conflict_err, BencherResource},
     model::project::QueryProject,
     schema,
     schema::metric_kind as metric_kind_table,
     util::{
         fn_get::{fn_get, fn_get_id, fn_get_uuid},
-        resource_id::fn_resource_id,
-        slug::ok_child_slug,
+        resource_id::{fn_from_resource_id, fn_resource_id},
+        slug::ok_slug,
     },
 };
 
 use super::ProjectId;
 
 crate::util::typed_id::typed_id!(MetricKindId);
-
-fn_resource_id!(metric_kind);
 
 #[derive(
     Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
@@ -46,24 +44,12 @@ pub struct QueryMetricKind {
 }
 
 impl QueryMetricKind {
+    fn_resource_id!(metric_kind);
+    fn_from_resource_id!(metric_kind, MetricKind);
+
     fn_get!(metric_kind, MetricKindId);
     fn_get_id!(metric_kind, MetricKindId, MetricKindUuid);
     fn_get_uuid!(metric_kind, MetricKindId, MetricKindUuid);
-
-    pub fn from_resource_id(
-        conn: &mut DbConnection,
-        project_id: ProjectId,
-        metric_kind: &ResourceId,
-    ) -> Result<Self, HttpError> {
-        schema::metric_kind::table
-            .filter(schema::metric_kind::project_id.eq(project_id))
-            .filter(resource_id(metric_kind)?)
-            .first::<Self>(conn)
-            .map_err(resource_not_found_err!(
-                MetricKind,
-                (project_id, metric_kind)
-            ))
-    }
 
     pub fn get_or_create(
         conn: &mut DbConnection,
@@ -156,7 +142,7 @@ impl InsertMetricKind {
         metric_kind: JsonNewMetricKind,
     ) -> Result<Self, HttpError> {
         let JsonNewMetricKind { name, slug, units } = metric_kind;
-        let slug = ok_child_slug!(conn, project_id, &name, slug, metric_kind, QueryMetricKind)?;
+        let slug = ok_slug!(conn, project_id, &name, slug, metric_kind, QueryMetricKind)?;
         let timestamp = DateTime::now();
         Ok(Self {
             uuid: MetricKindUuid::new(),

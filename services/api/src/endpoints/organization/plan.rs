@@ -167,7 +167,7 @@ async fn post_inner(
     let payment_method = biller
         .create_payment_method(&customer, json_plan.card)
         .await
-        .map_err(resource_not_found_err!(Plan, &customer))?;
+        .map_err(resource_not_found_err!(Plan, customer))?;
 
     // Create a metered subscription for the organization
     let subscription = biller

@@ -6,45 +6,6 @@ use http::StatusCode;
 
 use crate::{context::DbConnection, error::issue_error, model::project::ProjectId};
 
-macro_rules! ok_slug {
-    ($conn:expr, $name:expr, $slug:expr, $table:ident, $query:ident) => {
-        crate::util::slug::validate_slug(
-            $conn,
-            None,
-            $name,
-            $slug,
-            Box::new(|conn, _project_id, slug| {
-                schema::$table::table
-                    .filter(schema::$table::slug.eq(slug))
-                    .first::<$query>(conn)
-                    .is_ok()
-            }),
-        )
-    };
-}
-
-pub(crate) use ok_slug;
-
-macro_rules! ok_child_slug {
-    ($conn:expr, $project_id:ident, $name:expr, $slug:expr, $table:ident, $query:ident) => {
-        crate::util::slug::validate_slug(
-            $conn,
-            Some($project_id),
-            $name,
-            $slug,
-            Box::new(|conn, project_id, slug| {
-                schema::$table::table
-                    .filter(schema::$table::project_id.eq(project_id.expect("Missing Project ID")))
-                    .filter(schema::$table::slug.eq(slug))
-                    .first::<$query>(conn)
-                    .is_ok()
-            }),
-        )
-    };
-}
-
-pub(crate) use ok_child_slug;
-
 pub type SlugExistsFn = dyn FnOnce(&mut DbConnection, Option<ProjectId>, &str) -> bool;
 
 pub fn validate_slug<S>(
@@ -80,3 +41,37 @@ where
         })
     }
 }
+
+macro_rules! ok_slug {
+    ($conn:expr, $name:expr, $slug:expr, $table:ident, $query:ident) => {
+        crate::util::slug::validate_slug(
+            $conn,
+            None,
+            $name,
+            $slug,
+            Box::new(|conn, _project_id, slug| {
+                schema::$table::table
+                    .filter(schema::$table::slug.eq(slug))
+                    .first::<$query>(conn)
+                    .is_ok()
+            }),
+        )
+    };
+    ($conn:expr, $project_id:ident, $name:expr, $slug:expr, $table:ident, $query:ident) => {
+        crate::util::slug::validate_slug(
+            $conn,
+            Some($project_id),
+            $name,
+            $slug,
+            Box::new(|conn, project_id, slug| {
+                schema::$table::table
+                    .filter(schema::$table::project_id.eq(project_id.expect("Missing Project ID")))
+                    .filter(schema::$table::slug.eq(slug))
+                    .first::<$query>(conn)
+                    .is_ok()
+            }),
+        )
+    };
+}
+
+pub(crate) use ok_slug;

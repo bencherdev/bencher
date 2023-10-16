@@ -62,40 +62,6 @@ impl fmt::Display for BencherResource {
     }
 }
 
-macro_rules! resource_not_found_err {
-    // Get all
-    ($resource:ident) => {
-        resource_not_found_err!($resource, ())
-    };
-    // Get one
-    ($resource:ident, $value:expr) => {
-        |e| {
-            crate::error::resource_not_found_error(
-                crate::error::BencherResource::$resource,
-                &$value,
-                e,
-            )
-        }
-    };
-}
-
-pub(crate) use resource_not_found_err;
-
-macro_rules! resource_conflict_err {
-    ($resource:ident, $value:expr) => {
-        |e| {
-            #[allow(unused_qualifications)]
-            crate::error::resource_conflict_error(
-                crate::error::BencherResource::$resource,
-                &$value,
-                e,
-            )
-        }
-    };
-}
-
-pub(crate) use resource_conflict_err;
-
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
 
 pub fn bad_request_error<E>(error: E) -> HttpError
@@ -162,6 +128,40 @@ where
 {
     conflict_error(format!("{resource} ({value:?}) has conflict: {error}",))
 }
+
+macro_rules! resource_not_found_err {
+    // Get all
+    ($resource:ident) => {
+        resource_not_found_err!($resource, ())
+    };
+    // Get one
+    ($resource:ident, $value:expr) => {
+        |e| {
+            crate::error::resource_not_found_error(
+                crate::error::BencherResource::$resource,
+                &$value,
+                e,
+            )
+        }
+    };
+}
+
+pub(crate) use resource_not_found_err;
+
+macro_rules! resource_conflict_err {
+    ($resource:ident, $value:expr) => {
+        |e| {
+            #[allow(unused_qualifications)]
+            crate::error::resource_conflict_error(
+                crate::error::BencherResource::$resource,
+                &$value,
+                e,
+            )
+        }
+    };
+}
+
+pub(crate) use resource_conflict_err;
 
 pub fn issue_error<E>(status_code: StatusCode, title: &str, body: &str, error: E) -> HttpError
 where

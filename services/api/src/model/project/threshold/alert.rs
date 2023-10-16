@@ -86,7 +86,7 @@ impl QueryAlert {
                     QueryMetric,
                     QueryBoundary,
                 )>(conn)
-                .map_err(resource_not_found_err!(Alert, self.clone()))?;
+                .map_err(resource_not_found_err!(Alert, self))?;
         let project = QueryProject::get(conn, query_benchmark.project_id)?;
         self.into_json_for_report(
             conn,

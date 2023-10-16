@@ -11,12 +11,12 @@ use dropshot::HttpError;
 
 use crate::{
     context::{DbConnection, Rbac},
-    error::{forbidden_error, resource_not_found_err},
+    error::forbidden_error,
     model::user::{auth::AuthUser, InsertUser},
     schema::{self, organization as organization_table},
     util::{
         fn_get::{fn_get, fn_get_id, fn_get_uuid},
-        resource_id::fn_resource_id,
+        resource_id::{fn_from_resource_id, fn_resource_id},
         slug::ok_slug,
     },
 };
@@ -45,22 +45,13 @@ pub struct LicenseUsage {
     pub usage: u64,
 }
 
-fn_resource_id!(organization);
-
 impl QueryOrganization {
+    fn_resource_id!(organization);
+    fn_from_resource_id!(organization, Organization, true);
+
     fn_get!(organization, OrganizationId);
     fn_get_id!(organization, OrganizationId, OrganizationUuid);
     fn_get_uuid!(organization, OrganizationId, OrganizationUuid);
-
-    pub fn from_resource_id(
-        conn: &mut DbConnection,
-        organization: &ResourceId,
-    ) -> Result<Self, HttpError> {
-        schema::organization::table
-            .filter(resource_id(organization)?)
-            .first::<Self>(conn)
-            .map_err(resource_not_found_err!(Organization, organization))
-    }
 
     #[cfg(feature = "plus")]
     pub fn get_subscription(&self) -> Result<Option<bencher_billing::SubscriptionId>, HttpError> {

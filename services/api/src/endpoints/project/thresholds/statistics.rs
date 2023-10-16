@@ -78,7 +78,7 @@ async fn get_one_inner(
         .first(conn)
         .map_err(resource_not_found_err!(
             Statistic,
-            (query_project, path_params.statistic)
+            (&query_project, path_params.statistic)
         ))?
         .into_json(conn)
 }

@@ -374,7 +374,7 @@ async fn patch_inner(
         .execute(conn)
         .map_err(resource_conflict_err!(
             OrganizationRole,
-            (query_user.id, query_organization.id, role)
+            (&query_user, &query_organization, role)
         ))?;
     }
 
@@ -422,7 +422,7 @@ async fn delete_inner(
     .execute(conn)
     .map_err(resource_conflict_err!(
         OrganizationRole,
-        (query_user.id, query_organization)
+        (&query_user, query_organization)
     ))?;
 
     Ok(json_member)

@@ -172,7 +172,7 @@ async fn post_inner(
     schema::token::table
         .filter(schema::token::uuid.eq(&insert_token.uuid))
         .first::<QueryToken>(conn)
-        .map_err(resource_not_found_err!(Token, &insert_token))?
+        .map_err(resource_not_found_err!(Token, insert_token))?
         .into_json(conn)
 }
 
@@ -224,7 +224,7 @@ async fn get_one_inner(
         .into_json(conn)
         .map_err(resource_not_found_err!(
             Token,
-            (query_user, path_params.token)
+            (&query_user, path_params.token)
         ))
 }
 
@@ -267,10 +267,7 @@ async fn patch_inner(
     diesel::update(schema::token::table.filter(schema::token::id.eq(query_token.id)))
         .set(&UpdateToken::from(json_token))
         .execute(conn)
-        .map_err(resource_conflict_err!(
-            Token,
-            (query_user, query_token.clone())
-        ))?;
+        .map_err(resource_conflict_err!(Token, (&query_user, &query_token)))?;
 
     QueryToken::get(conn, query_token.id)?.into_json(conn)
 }

@@ -222,14 +222,12 @@ async fn get_one_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     QueryTestbed::belonging_to(&query_project)
-        .filter(crate::model::project::testbed::resource_id(
-            &path_params.testbed,
-        )?)
+        .filter(QueryTestbed::resource_id(&path_params.testbed)?)
         .first::<QueryTestbed>(conn)
         .map(|testbed| testbed.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(
             Testbed,
-            (query_project, path_params.testbed)
+            (&query_project, path_params.testbed)
         ))
 }
 
@@ -281,7 +279,7 @@ async fn patch_inner(
         .execute(conn)
         .map_err(resource_conflict_err!(
             Testbed,
-            (query_testbed.clone(), json_testbed)
+            (&query_testbed, &json_testbed)
         ))?;
 
     QueryTestbed::get(conn, query_testbed.id)
