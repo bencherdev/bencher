@@ -1,5 +1,12 @@
 ---
 import { getCollection } from "astro:content";
+import type DocsTab from "./docs_tab";
+
+interface Props {
+  tab: DocsTab;
+}
+
+const { tab } = Astro.props;
 
 const tutorial = await getCollection("tutorial");
 tutorial.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
@@ -15,6 +22,13 @@ reference.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 ---
 
 <aside class="menu is-sticky">
+  <div id={tab} class="tabs is-centered">
+    <ul>
+      <li id="docs"><a>Docs</a></li>
+      <li id="learn"><a>Learn</a></li>
+    </ul>
+  </div>
+  <div id="docs-menu">
   <p class="menu-label">Tutorial</p>
   <ul class="menu-list">
     {
@@ -61,4 +75,46 @@ reference.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
       ))
     }
   </ul>
+  </div>
+  <div id="learn-menu">
+    <p class="menu-label">Coming soon...</p>
+  </div>
 </aside>
+<script >
+  import DocsTab from "./docs_tab";
+
+  // Find all buttons with the `alert` class on the page.
+  const docs = document.getElementById("docs");
+  const learn = document.getElementById("learn");
+  const docsMenu = document.getElementById("docs-menu");
+  const learnMenu = document.getElementById("learn-menu");
+
+  function setDocs() {
+    docs?.classList.add("is-active");
+    learn?.classList.remove("is-active");
+
+    docsMenu.style.display = "block";
+    learnMenu.style.display = "none";
+  }
+
+  function setLearn() {
+    docs?.classList.remove("is-active");
+    learn?.classList.add("is-active");
+
+    docsMenu.style.display = "none";
+    learnMenu.style.display = "block";
+  }
+
+  if (document.getElementById(DocsTab.Docs)) {
+    setDocs();
+  } else if (document.getElementById(DocsTab.Learn)) {
+    setLearn();
+  }
+
+  docs?.addEventListener("click", () => {
+    setDocs();
+  });
+  learn?.addEventListener("click", () => {
+    setLearn();
+  });
+</script>

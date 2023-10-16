@@ -2,6 +2,7 @@
 import BaseLayout from "../BaseLayout.astro";
 import AuthNavbar from "../../components/site/navbar/AuthNavbar";
 import DocsMenu from "../../components/docs/DocsMenu.astro";
+import DocsTab from "../../components/docs/docs_tab";
 
 interface Props {
   title: string;
@@ -23,7 +24,7 @@ const { title, description, heading } = Astro.props;
     <div class="columns is-reverse-mobile">
       <div class="columns">
         <div class="column is-narrow">
-          <DocsMenu />
+          <DocsMenu tab={DocsTab.Docs}/>
         </div>
       </div>
       <div class="column is-two-thirds">

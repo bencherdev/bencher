@@ -236,7 +236,7 @@ impl SharedExtractor for Headers {
     fn metadata(_body_content_type: ApiEndpointBodyContentType) -> ExtractorMetadata {
         ExtractorMetadata {
             extension_mode: ExtensionMode::None,
-            parameters: vec![],
+            parameters: Vec::new(),
         }
     }
 }
@@ -292,7 +292,7 @@ impl SharedExtractor for BearerToken {
     fn metadata(_body_content_type: ApiEndpointBodyContentType) -> ExtractorMetadata {
         ExtractorMetadata {
             extension_mode: ExtensionMode::None,
-            parameters: vec![],
+            parameters: Vec::new(),
         }
     }
 }
@@ -310,7 +310,7 @@ impl SharedExtractor for PubBearerToken {
     fn metadata(_body_content_type: ApiEndpointBodyContentType) -> ExtractorMetadata {
         ExtractorMetadata {
             extension_mode: ExtensionMode::None,
-            parameters: vec![],
+            parameters: Vec::new(),
         }
     }
 }
