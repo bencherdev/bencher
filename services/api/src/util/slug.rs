@@ -1,6 +1,8 @@
 use std::str::FromStr;
 
 use bencher_json::Slug;
+use dropshot::HttpError;
+use http::StatusCode;
 
 use crate::{context::DbConnection, error::issue_error, model::project::ProjectId};
 
@@ -11,23 +13,32 @@ macro_rules! ok_slug {
             None,
             $name,
             $slug,
-            crate::util::slug::slug_exists!($table, $query),
+            Box::new(|conn, _project_id, slug| {
+                schema::$table::table
+                    .filter(schema::$table::slug.eq(slug))
+                    .first::<$query>(conn)
+                    .is_ok()
+            }),
         )
     };
 }
 
-use dropshot::HttpError;
-use http::StatusCode;
 pub(crate) use ok_slug;
 
 macro_rules! ok_child_slug {
-    ($conn:expr, $parent:ident, $name:expr, $slug:expr, $table:ident, $query:ident) => {
+    ($conn:expr, $project_id:ident, $name:expr, $slug:expr, $table:ident, $query:ident) => {
         crate::util::slug::validate_slug(
             $conn,
-            Some($parent),
+            Some($project_id),
             $name,
             $slug,
-            crate::util::slug::child_slug_exists!($table, $query),
+            Box::new(|conn, project_id, slug| {
+                schema::$table::table
+                    .filter(schema::$table::project_id.eq(project_id.expect("Missing Project ID")))
+                    .filter(schema::$table::slug.eq(slug))
+                    .first::<$query>(conn)
+                    .is_ok()
+            }),
         )
     };
 }
@@ -38,7 +49,7 @@ pub type SlugExistsFn = dyn FnOnce(&mut DbConnection, Option<ProjectId>, &str) -
 
 pub fn validate_slug<S>(
     conn: &mut DbConnection,
-    parent: Option<ProjectId>,
+    project_id: Option<ProjectId>,
     name: S,
     slug: Option<Slug>,
     exists: Box<SlugExistsFn>,
@@ -56,7 +67,7 @@ where
         slug = slug::slugify(slug.split_at(Slug::MAX).0);
     }
 
-    if exists(conn, parent, &slug) {
+    if exists(conn, project_id, &slug) {
         Ok(Slug::new(&slug))
     } else {
         Slug::from_str(&slug).map_err(|e| {
@@ -69,30 +80,3 @@ where
         })
     }
 }
-
-macro_rules! slug_exists {
-    ($table:ident, $query:ident) => {
-        Box::new(|conn, _parent, slug| {
-            schema::$table::table
-                .filter(schema::$table::slug.eq(slug))
-                .first::<$query>(conn)
-                .is_ok()
-        })
-    };
-}
-
-pub(crate) use slug_exists;
-
-macro_rules! child_slug_exists {
-    ($table:ident, $query:ident) => {
-        Box::new(|conn, parent, slug| {
-            schema::$table::table
-                .filter(schema::$table::project_id.eq(parent.expect("Missing Project ID")))
-                .filter(schema::$table::slug.eq(slug))
-                .first::<$query>(conn)
-                .is_ok()
-        })
-    };
-}
-
-pub(crate) use child_slug_exists;
