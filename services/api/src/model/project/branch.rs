@@ -18,7 +18,7 @@ use crate::{
     schema,
     schema::branch as branch_table,
     util::{
-        fn_get::{fn_get, fn_get_id, fn_get_uuid},
+        fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
         slug::ok_child_slug,
     },
@@ -45,18 +45,7 @@ impl QueryBranch {
     fn_get!(branch, BranchId);
     fn_get_id!(branch, BranchId, BranchUuid);
     fn_get_uuid!(branch, BranchId, BranchUuid);
-
-    pub fn from_uuid(
-        conn: &mut DbConnection,
-        project_id: ProjectId,
-        uuid: BranchUuid,
-    ) -> Result<Self, HttpError> {
-        schema::branch::table
-            .filter(schema::branch::project_id.eq(project_id))
-            .filter(schema::branch::uuid.eq(uuid.to_string()))
-            .first::<Self>(conn)
-            .map_err(resource_not_found_err!(Branch, (project_id, uuid)))
-    }
+    fn_from_uuid!(branch, BranchUuid, Branch);
 
     pub fn from_resource_id(
         conn: &mut DbConnection,

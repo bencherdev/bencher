@@ -12,7 +12,7 @@ use crate::{
     schema,
     schema::testbed as testbed_table,
     util::{
-        fn_get::{fn_get, fn_get_id, fn_get_uuid},
+        fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
         slug::ok_child_slug,
     },
@@ -39,18 +39,7 @@ impl QueryTestbed {
     fn_get!(testbed, TestbedId);
     fn_get_id!(testbed, TestbedId, TestbedUuid);
     fn_get_uuid!(testbed, TestbedId, TestbedUuid);
-
-    pub fn from_uuid(
-        conn: &mut DbConnection,
-        project_id: ProjectId,
-        uuid: TestbedUuid,
-    ) -> Result<Self, HttpError> {
-        schema::testbed::table
-            .filter(schema::testbed::project_id.eq(project_id))
-            .filter(schema::testbed::uuid.eq(uuid.to_string()))
-            .first::<Self>(conn)
-            .map_err(resource_not_found_err!(Testbed, (project_id, uuid)))
-    }
+    fn_from_uuid!(testbed, TestbedUuid, Testbed);
 
     pub fn from_resource_id(
         conn: &mut DbConnection,

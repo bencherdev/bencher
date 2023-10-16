@@ -12,7 +12,7 @@ use crate::{
     schema,
     schema::benchmark as benchmark_table,
     util::{
-        fn_get::{fn_get, fn_get_id, fn_get_uuid},
+        fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
         slug::ok_child_slug,
     },
@@ -41,6 +41,7 @@ impl QueryBenchmark {
     fn_get!(benchmark, BenchmarkId);
     fn_get_id!(benchmark, BenchmarkId, BenchmarkUuid);
     fn_get_uuid!(benchmark, BenchmarkId, BenchmarkUuid);
+    fn_from_uuid!(benchmark, BenchmarkUuid, Benchmark);
 
     pub fn get_id_from_name(
         conn: &mut DbConnection,
@@ -53,18 +54,6 @@ impl QueryBenchmark {
             .select(schema::benchmark::id)
             .first(conn)
             .map_err(resource_not_found_err!(Benchmark, (project_id, name)))
-    }
-
-    pub fn from_uuid(
-        conn: &mut DbConnection,
-        project_id: ProjectId,
-        uuid: BenchmarkUuid,
-    ) -> Result<Self, HttpError> {
-        schema::benchmark::table
-            .filter(schema::benchmark::project_id.eq(project_id))
-            .filter(schema::benchmark::uuid.eq(uuid.to_string()))
-            .first::<Self>(conn)
-            .map_err(resource_not_found_err!(Benchmark, (project_id, uuid)))
     }
 
     pub fn from_resource_id(

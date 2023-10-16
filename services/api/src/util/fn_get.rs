@@ -68,3 +68,25 @@ macro_rules! fn_get_uuid {
 }
 
 pub(crate) use fn_get_uuid;
+
+macro_rules! fn_from_uuid {
+    ($table:ident, $uuid:ident, $resource:ident) => {
+        #[allow(unused_qualifications)]
+        pub fn from_uuid(
+            conn: &mut DbConnection,
+            project_id: ProjectId,
+            uuid: $uuid,
+        ) -> Result<Self, HttpError> {
+            schema::$table::table
+                .filter(schema::$table::project_id.eq(project_id))
+                .filter(schema::$table::uuid.eq(uuid))
+                .first::<Self>(conn)
+                .map_err(crate::error::resource_not_found_err!(
+                    $resource,
+                    (project_id, uuid)
+                ))
+        }
+    };
+}
+
+pub(crate) use fn_from_uuid;
