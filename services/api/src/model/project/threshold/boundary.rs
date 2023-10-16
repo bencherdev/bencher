@@ -8,7 +8,7 @@ use crate::{
     model::project::metric::MetricId,
     schema,
     schema::boundary as boundary_table,
-    util::query::{fn_get, fn_get_id, fn_get_uuid},
+    util::fn_get::{fn_get, fn_get_id, fn_get_uuid},
 };
 
 use super::{statistic::StatisticId, ThresholdId};

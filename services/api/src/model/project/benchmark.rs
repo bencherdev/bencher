@@ -12,7 +12,7 @@ use crate::{
     schema,
     schema::benchmark as benchmark_table,
     util::{
-        query::{fn_get, fn_get_id, fn_get_uuid},
+        fn_get::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
         slug::ok_child_slug,
     },

@@ -17,7 +17,7 @@ use crate::{
     model::{organization::QueryOrganization, user::auth::AuthUser},
     schema::{self, project as project_table},
     util::{
-        query::{fn_get, fn_get_uuid},
+        fn_get::{fn_get, fn_get_uuid},
         resource_id::fn_resource_id,
         slug::ok_slug,
     },

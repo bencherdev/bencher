@@ -18,7 +18,7 @@ use crate::{
     error::{assert_parentage, issue_error, resource_conflict_err, BencherResource},
     schema::threshold as threshold_table,
     schema::{self},
-    util::query::{fn_get, fn_get_id, fn_get_uuid},
+    util::fn_get::{fn_get, fn_get_id, fn_get_uuid},
 };
 
 pub mod alert;

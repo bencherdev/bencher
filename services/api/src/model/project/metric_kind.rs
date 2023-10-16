@@ -17,7 +17,7 @@ use crate::{
     schema,
     schema::metric_kind as metric_kind_table,
     util::{
-        query::{fn_get, fn_get_id, fn_get_uuid},
+        fn_get::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
         slug::ok_child_slug,
     },

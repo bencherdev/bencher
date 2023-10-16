@@ -7,7 +7,7 @@ use crate::{
     error::resource_not_found_err,
     schema::{self, user as user_table},
     util::{
-        query::{fn_get, fn_get_id, fn_get_uuid},
+        fn_get::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
         slug::ok_slug,
     },

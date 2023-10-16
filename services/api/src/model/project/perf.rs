@@ -4,7 +4,7 @@ use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use crate::{
     schema,
     schema::perf as perf_table,
-    util::query::{fn_get, fn_get_id, fn_get_uuid},
+    util::fn_get::{fn_get, fn_get_id, fn_get_uuid},
 };
 
 use super::{

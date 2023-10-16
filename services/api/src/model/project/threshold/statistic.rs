@@ -10,7 +10,7 @@ use crate::{
     error::{assert_parentage, BencherResource},
     schema,
     schema::statistic as statistic_table,
-    util::query::{fn_get, fn_get_id, fn_get_uuid},
+    util::fn_get::{fn_get, fn_get_id, fn_get_uuid},
 };
 
 use super::{QueryThreshold, ThresholdId};

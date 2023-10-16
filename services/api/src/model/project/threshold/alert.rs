@@ -19,7 +19,7 @@ use crate::{
     model::project::{benchmark::QueryBenchmark, metric::QueryMetric, ProjectId, QueryProject},
     schema::alert as alert_table,
     schema::{self},
-    util::query::{fn_get, fn_get_id, fn_get_uuid},
+    util::fn_get::{fn_get, fn_get_id, fn_get_uuid},
 };
 
 crate::util::typed_id::typed_id!(AlertId);

@@ -14,7 +14,7 @@ use crate::{
     model::user::same_user,
     schema,
     schema::token as token_table,
-    util::query::{fn_get, fn_get_id, fn_get_uuid},
+    util::fn_get::{fn_get, fn_get_id, fn_get_uuid},
 };
 
 use super::{auth::AuthUser, QueryUser, UserId};

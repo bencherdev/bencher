@@ -30,7 +30,7 @@ use crate::{
     },
     schema,
     schema::report as report_table,
-    util::query::{fn_get_id, fn_get_uuid},
+    util::fn_get::{fn_get_id, fn_get_uuid},
 };
 
 pub mod results;

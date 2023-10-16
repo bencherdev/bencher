@@ -15,7 +15,7 @@ use crate::{
     model::user::{auth::AuthUser, InsertUser},
     schema::{self, organization as organization_table},
     util::{
-        query::{fn_get, fn_get_id, fn_get_uuid},
+        fn_get::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::fn_resource_id,
         slug::ok_slug,
     },

@@ -10,7 +10,7 @@ use crate::{
     error::resource_conflict_err,
     schema,
     schema::version as version_table,
-    util::query::{fn_get, fn_get_id, fn_get_uuid},
+    util::fn_get::{fn_get, fn_get_id, fn_get_uuid},
 };
 
 use super::{branch::BranchId, branch_version::InsertBranchVersion, ProjectId, QueryProject};
