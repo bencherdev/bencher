@@ -15,11 +15,14 @@ use crate::{
         Endpoint,
     },
     error::{resource_conflict_err, resource_not_found_err},
-    model::project::{
-        branch::{InsertBranch, QueryBranch, UpdateBranch},
-        QueryProject,
-    },
     model::user::auth::AuthUser,
+    model::{
+        project::{
+            branch::{InsertBranch, QueryBranch, UpdateBranch},
+            QueryProject,
+        },
+        user::auth::BearerToken,
+    },
     schema,
 };
 
@@ -123,10 +126,11 @@ async fn get_ls_inner(
 }]
 pub async fn proj_branch_post(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<ProjBranchesParams>,
     body: TypedBody<JsonNewBranch>,
 ) -> Result<ResponseAccepted<JsonBranch>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),
@@ -253,10 +257,11 @@ async fn get_one_inner(
 }]
 pub async fn proj_branch_patch(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<ProjBranchParams>,
     body: TypedBody<JsonUpdateBranch>,
 ) -> Result<ResponseAccepted<JsonBranch>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = patch_inner(
         rqctx.context(),
         path_params.into_inner(),
@@ -306,9 +311,10 @@ async fn patch_inner(
 }]
 pub async fn proj_branch_delete(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<ProjBranchParams>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
     Ok(Delete::auth_response_accepted(json))
 }

@@ -19,7 +19,7 @@ use crate::{
         project::{
             visibility::project_visibility::project_visibility, QueryProject, UpdateProject,
         },
-        user::auth::AuthUser,
+        user::auth::{AuthUser, BearerToken},
     },
     schema,
 };
@@ -183,10 +183,11 @@ async fn get_one_inner(
 }]
 pub async fn project_patch(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<ProjectParams>,
     body: TypedBody<JsonUpdateProject>,
 ) -> Result<ResponseAccepted<JsonProject>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let context = rqctx.context();
     let json = patch_inner(
         context,
@@ -255,9 +256,10 @@ async fn patch_inner(
 }]
 pub async fn project_delete(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<ProjectParams>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
     Ok(Delete::auth_response_accepted(json))
 }

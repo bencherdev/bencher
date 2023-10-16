@@ -21,7 +21,7 @@ use crate::{
             organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
             UpdateOrganization,
         },
-        user::auth::AuthUser,
+        user::auth::{AuthUser, BearerToken},
     },
     schema,
 };
@@ -61,10 +61,11 @@ pub async fn organizations_options(
 }]
 pub async fn organizations_get(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     pagination_params: Query<OrganizationsPagination>,
     query_params: Query<OrganizationsQuery>,
 ) -> Result<ResponseOk<JsonOrganizations>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = get_ls_inner(
         rqctx.context(),
         &auth_user,
@@ -124,9 +125,10 @@ async fn get_ls_inner(
 }]
 pub async fn organization_post(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     body: TypedBody<JsonNewOrganization>,
 ) -> Result<ResponseAccepted<JsonOrganization>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(rqctx.context(), body.into_inner(), &auth_user).await?;
     Ok(Post::auth_response_accepted(json))
 }
@@ -197,9 +199,10 @@ pub async fn organization_options(
 }]
 pub async fn organization_get(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<OrganizationParams>,
 ) -> Result<ResponseOk<JsonOrganization>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
     Ok(Get::auth_response_ok(json))
 }
@@ -228,10 +231,11 @@ async fn get_one_inner(
 }]
 pub async fn organization_patch(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<OrganizationParams>,
     body: TypedBody<JsonUpdateOrganization>,
 ) -> Result<ResponseAccepted<JsonOrganization>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = patch_inner(
         rqctx.context(),
         path_params.into_inner(),

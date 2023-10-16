@@ -21,7 +21,7 @@ use crate::{
             benchmark::{InsertBenchmark, QueryBenchmark, UpdateBenchmark},
             QueryProject,
         },
-        user::auth::AuthUser,
+        user::auth::{AuthUser, BearerToken},
     },
     schema,
 };
@@ -126,10 +126,11 @@ async fn get_ls_inner(
 }]
 pub async fn proj_benchmark_post(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<ProjBenchmarksParams>,
     body: TypedBody<JsonNewBenchmark>,
 ) -> Result<ResponseAccepted<JsonBenchmark>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),
@@ -238,10 +239,11 @@ async fn get_one_inner(
 }]
 pub async fn proj_benchmark_patch(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<ProjBenchmarkParams>,
     body: TypedBody<JsonUpdateBenchmark>,
 ) -> Result<ResponseAccepted<JsonBenchmark>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = patch_inner(
         rqctx.context(),
         path_params.into_inner(),
@@ -291,9 +293,10 @@ async fn patch_inner(
 }]
 pub async fn proj_benchmark_delete(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<ProjBenchmarkParams>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
     Ok(Delete::auth_response_accepted(json))
 }

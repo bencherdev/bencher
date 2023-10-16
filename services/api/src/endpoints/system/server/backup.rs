@@ -12,6 +12,7 @@ use tokio::io::{AsyncWriteExt, BufReader};
 
 use crate::endpoints::endpoint::{CorsResponse, Post};
 use crate::error::{bad_request_error, forbidden_error};
+use crate::model::user::auth::BearerToken;
 use crate::{
     context::ApiContext,
     endpoints::{endpoint::ResponseAccepted, Endpoint},
@@ -40,9 +41,10 @@ pub async fn server_backup_options(
 }]
 pub async fn server_backup_post(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     body: TypedBody<JsonBackup>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(rqctx.context(), body.into_inner(), &auth_user).await?;
     Ok(Post::auth_response_accepted(json))
 }

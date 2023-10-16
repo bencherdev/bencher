@@ -1,11 +1,14 @@
+use async_trait::async_trait;
+use bencher_json::{Email, Jwt};
 use bencher_rbac::{
     user::{OrganizationRoles, ProjectRoles},
     Organization, Project, Server, User as RbacUser,
 };
-
-use bencher_json::{Email, Jwt};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{HttpError, RequestContext};
+use dropshot::{
+    ApiEndpointBodyContentType, ExtensionMode, ExtractorMetadata, HttpError, RequestContext,
+    ServerContext, SharedExtractor,
+};
 use http::StatusCode;
 use oso::{PolarValue, ToPolar};
 
@@ -84,6 +87,44 @@ impl AuthUser {
         let claims = context
             .secret_key
             .validate_client(&jwt)
+            .map_err(|e| bad_request_error(format!("Failed to validate JSON Web Token: {e}")))?;
+
+        let email = claims.email();
+        let (user_id, admin, locked) = schema::user::table
+            .filter(schema::user::email.eq(email))
+            .select((schema::user::id, schema::user::admin, schema::user::locked))
+            .first::<(UserId, bool, bool)>(conn)
+            .map_err(|e| not_found_error(format!("Failed to find user ({email}): {e}")))?;
+
+        if locked {
+            return Err(forbidden_error(format!("User account is locked ({email})")));
+        }
+
+        let (org_ids, org_roles) = Self::organization_roles(conn, user_id, email)?;
+        let (proj_ids, proj_roles) = Self::project_roles(conn, user_id, email)?;
+        let rbac = RbacUser {
+            admin,
+            locked,
+            organizations: org_roles,
+            projects: proj_roles,
+        };
+
+        Ok(Self {
+            id: user_id,
+            organizations: org_ids,
+            projects: proj_ids,
+            rbac,
+        })
+    }
+
+    pub async fn from_token(
+        context: &ApiContext,
+        bearer_token: BearerToken,
+    ) -> Result<Self, HttpError> {
+        let conn = &mut *context.conn().await;
+        let claims = context
+            .secret_key
+            .validate_client(bearer_token.as_ref())
             .map_err(|e| bad_request_error(format!("Failed to validate JSON Web Token: {e}")))?;
 
         let email = claims.email();
@@ -242,6 +283,80 @@ impl AuthUser {
                     .then_some(org_project_id.project_id)
             })
             .collect()
+    }
+}
+
+pub struct Headers(pub http::HeaderMap);
+
+#[async_trait]
+impl SharedExtractor for Headers {
+    async fn from_request<Context: ServerContext>(
+        rqctx: &RequestContext<Context>,
+    ) -> Result<Headers, HttpError> {
+        Ok(Headers(rqctx.request.headers().clone()))
+    }
+
+    fn metadata(_body_content_type: ApiEndpointBodyContentType) -> ExtractorMetadata {
+        ExtractorMetadata {
+            extension_mode: ExtensionMode::None,
+            parameters: vec![],
+        }
+    }
+}
+
+// https://github.com/oxidecomputer/cio/blob/master/dropshot-verify-request/src/bearer.rs
+pub struct BearerToken(Jwt);
+
+impl AsRef<Jwt> for BearerToken {
+    fn as_ref(&self) -> &Jwt {
+        &self.0
+    }
+}
+
+#[async_trait]
+impl SharedExtractor for BearerToken {
+    async fn from_request<Context: ServerContext>(
+        rqctx: &RequestContext<Context>,
+    ) -> Result<Self, HttpError> {
+        let headers = Headers::from_request(rqctx).await?;
+
+        let Some(authorization) = headers.0.get("Authorization") else {
+            return Err(bad_request_error(format!(
+                "Request is missing \"Authorization\" header. {BEARER_TOKEN_FORMAT}"
+            )));
+        };
+        let authorization_str = match authorization.to_str() {
+            Ok(authorization_str) => authorization_str,
+            Err(e) => {
+                return Err(bad_request_error(format!(
+                    "Request has an invalid \"Authorization\" header: {e}. {BEARER_TOKEN_FORMAT}"
+                )))
+            },
+        };
+
+        let token = match authorization_str.split_once(' ') {
+            Some(("Bearer", token)) => token.to_owned(),
+            _ => {
+                return Err(bad_request_error(format!(
+                    "Request is missing \"Authorization\" Bearer. {BEARER_TOKEN_FORMAT}"
+                )))
+            },
+        };
+
+        let token = token.trim();
+        let jwt: Jwt = token
+            .trim()
+            .parse()
+            .map_err(|e| bad_request_error(format!("Malformed JSON Web Token: {e}")))?;
+
+        Ok(Self(jwt))
+    }
+
+    fn metadata(_body_content_type: ApiEndpointBodyContentType) -> ExtractorMetadata {
+        ExtractorMetadata {
+            extension_mode: ExtensionMode::None,
+            parameters: vec![],
+        }
     }
 }
 

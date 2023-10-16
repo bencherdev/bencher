@@ -13,7 +13,11 @@ use crate::{
         Endpoint,
     },
     error::forbidden_error,
-    model::{organization::QueryOrganization, project::metric::QueryMetric, user::auth::AuthUser},
+    model::{
+        organization::QueryOrganization,
+        project::metric::QueryMetric,
+        user::auth::{AuthUser, BearerToken},
+    },
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -48,10 +52,11 @@ pub async fn org_usage_options(
 }]
 pub async fn org_usage_get(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<OrgUsageParams>,
     query_params: Query<OrgUsageQuery>,
 ) -> Result<ResponseOk<JsonUsage>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = get_inner(
         rqctx.context(),
         path_params.into_inner(),

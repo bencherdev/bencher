@@ -9,7 +9,10 @@ use crate::{
         endpoint::{CorsResponse, Get, ResponseOk},
         Endpoint,
     },
-    model::{organization::QueryOrganization, user::auth::AuthUser},
+    model::{
+        organization::QueryOrganization,
+        user::auth::{AuthUser, BearerToken},
+    },
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -38,9 +41,10 @@ pub async fn org_allowed_options(
 }]
 pub async fn org_allowed_get(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<OrgAllowedParams>,
 ) -> Result<ResponseOk<JsonAllowed>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = get_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
     Ok(Get::auth_response_ok(json))
 }

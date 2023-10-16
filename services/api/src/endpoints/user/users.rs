@@ -11,7 +11,10 @@ use crate::{
     },
     model::{
         user::QueryUser,
-        user::{auth::AuthUser, same_user},
+        user::{
+            auth::{AuthUser, BearerToken},
+            same_user,
+        },
     },
 };
 
@@ -40,9 +43,10 @@ pub async fn user_options(
 }]
 pub async fn user_get(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<UserParams>,
 ) -> Result<ResponseOk<JsonUser>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
     Ok(Get::auth_response_ok(json))
 }

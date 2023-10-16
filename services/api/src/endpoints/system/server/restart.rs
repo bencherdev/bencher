@@ -10,7 +10,10 @@ use crate::{
         Endpoint,
     },
     error::forbidden_error,
-    model::user::{auth::AuthUser, UserId},
+    model::user::{
+        auth::{AuthUser, BearerToken},
+        UserId,
+    },
 };
 
 pub const DEFAULT_DELAY: u64 = 3;
@@ -35,9 +38,10 @@ pub async fn server_restart_options(
 }]
 pub async fn server_restart_post(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     body: TypedBody<JsonRestart>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner(), &auth_user).await?;
     Ok(Post::auth_response_accepted(json))
 }

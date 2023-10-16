@@ -3,7 +3,7 @@ use bencher_json::{
     JsonTokens, NonEmpty, ResourceId,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, SharedExtractor, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
@@ -18,7 +18,7 @@ use crate::{
     model::{
         user::QueryUser,
         user::{
-            auth::AuthUser,
+            auth::{AuthUser, BearerToken},
             same_user,
             token::{InsertToken, QueryToken, UpdateToken},
         },
@@ -71,7 +71,8 @@ pub async fn user_tokens_get(
     pagination_params: Query<UserTokensPagination>,
     query_params: Query<UserTokensQuery>,
 ) -> Result<ResponseOk<JsonTokens>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user =
+        AuthUser::from_token(rqctx.context(), BearerToken::from_request(&rqctx).await?).await?;
     let json = get_ls_inner(
         rqctx.context(),
         path_params.into_inner(),
@@ -132,10 +133,11 @@ async fn get_ls_inner(
 }]
 pub async fn user_token_post(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<UserTokensParams>,
     body: TypedBody<JsonNewToken>,
 ) -> Result<ResponseAccepted<JsonToken>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),
@@ -201,9 +203,10 @@ pub async fn user_token_options(
 }]
 pub async fn user_token_get(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<UserTokenParams>,
 ) -> Result<ResponseOk<JsonToken>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
     Ok(Get::auth_response_ok(json))
 }
@@ -233,10 +236,11 @@ async fn get_one_inner(
 }]
 pub async fn user_token_patch(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<UserTokenParams>,
     body: TypedBody<JsonUpdateToken>,
 ) -> Result<ResponseAccepted<JsonToken>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = patch_inner(
         rqctx.context(),
         path_params.into_inner(),

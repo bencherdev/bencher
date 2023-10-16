@@ -15,11 +15,14 @@ use crate::{
         Endpoint,
     },
     error::{resource_conflict_err, resource_not_found_err},
-    model::project::{
-        threshold::alert::{QueryAlert, UpdateAlert},
-        QueryProject,
-    },
     model::user::auth::AuthUser,
+    model::{
+        project::{
+            threshold::alert::{QueryAlert, UpdateAlert},
+            QueryProject,
+        },
+        user::auth::BearerToken,
+    },
     schema,
 };
 
@@ -206,10 +209,11 @@ async fn get_one_inner(
 }]
 pub async fn proj_alert_patch(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<ProjAlertParams>,
     body: TypedBody<JsonUpdateAlert>,
 ) -> Result<ResponseAccepted<JsonAlert>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = patch_inner(
         rqctx.context(),
         path_params.into_inner(),

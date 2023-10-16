@@ -41,11 +41,7 @@ impl CorsHeaders {
     where
         T: ToString,
     {
-        Self::new_origin_all(
-            methods.to_string(),
-            "Content-Type, x-request-id".to_owned(),
-            None,
-        )
+        Self::new_origin_all(methods.to_string(), "Content-Type".to_owned(), None)
     }
 
     pub fn new_auth<T>(methods: &T) -> Self
@@ -54,7 +50,7 @@ impl CorsHeaders {
     {
         Self::new_origin_all(
             methods.to_string(),
-            "Content-Type, Authorization, x-request-id".to_owned(),
+            "Content-Type, Authorization".to_owned(),
             None,
         )
     }

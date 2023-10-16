@@ -20,8 +20,8 @@ use crate::{
         conflict_error, forbidden_error, locked_error, not_found_error, resource_conflict_err,
         resource_not_found_err,
     },
-    model::organization::QueryOrganization,
     model::user::{auth::AuthUser, QueryUser},
+    model::{organization::QueryOrganization, user::auth::BearerToken},
     schema,
 };
 
@@ -50,9 +50,10 @@ pub async fn org_plan_options(
 }]
 pub async fn org_plan_get(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<OrgPlanParams>,
 ) -> Result<ResponseOk<JsonPlan>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
     Ok(Get::auth_response_ok(json))
 }
@@ -103,10 +104,11 @@ async fn get_one_inner(
 }]
 pub async fn org_plan_post(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<OrgPlanParams>,
     body: TypedBody<JsonNewPlan>,
 ) -> Result<ResponseAccepted<JsonPlan>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),

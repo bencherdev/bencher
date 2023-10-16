@@ -11,7 +11,7 @@ use crate::{
         Endpoint,
     },
     error::{bad_request_error, forbidden_error, issue_error},
-    model::user::auth::AuthUser,
+    model::user::auth::{AuthUser, BearerToken},
 };
 
 use super::restart::{countdown, DEFAULT_DELAY};
@@ -35,8 +35,9 @@ pub async fn server_config_options(
 }]
 pub async fn server_config_get(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
 ) -> Result<ResponseOk<JsonConfig>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = get_one_inner(&rqctx.log, rqctx.context(), &auth_user).await?;
     Ok(Get::auth_response_ok(json))
 }
@@ -73,9 +74,10 @@ async fn get_one_inner(
 }]
 pub async fn server_config_put(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     body: TypedBody<JsonUpdateConfig>,
 ) -> Result<ResponseAccepted<JsonConfig>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = put_inner(&rqctx.log, rqctx.context(), body.into_inner(), &auth_user).await?;
     Ok(Put::auth_response_accepted(json))
 }

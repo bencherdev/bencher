@@ -25,14 +25,17 @@ use crate::{
         Endpoint,
     },
     error::{bad_request_error, issue_error, resource_conflict_err, resource_not_found_err},
-    model::project::{
-        branch::{BranchId, QueryBranch},
-        report::{results::ReportResults, InsertReport, QueryReport, ReportId},
-        testbed::QueryTestbed,
-        version::{QueryVersion, VersionId},
-        QueryProject,
-    },
     model::user::auth::AuthUser,
+    model::{
+        project::{
+            branch::{BranchId, QueryBranch},
+            report::{results::ReportResults, InsertReport, QueryReport, ReportId},
+            testbed::QueryTestbed,
+            version::{QueryVersion, VersionId},
+            QueryProject,
+        },
+        user::auth::BearerToken,
+    },
     schema,
 };
 
@@ -187,10 +190,11 @@ async fn get_ls_inner(
 // bisect more complex logic will be required.
 pub async fn proj_report_post(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<ProjReportsParams>,
     body: TypedBody<JsonNewReport>,
 ) -> Result<ResponseAccepted<JsonReport>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(
         &rqctx.log,
         rqctx.context(),
@@ -507,9 +511,10 @@ async fn get_one_inner(
 }]
 pub async fn proj_report_delete(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<ProjReportParams>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
     Ok(Delete::auth_response_accepted(json))
 }

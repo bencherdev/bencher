@@ -4,7 +4,7 @@ use bencher_json::{
 };
 use bencher_rbac::organization::Permission;
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, SharedExtractor, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -25,7 +25,7 @@ use crate::{
             threshold::InsertThreshold,
             InsertProject, QueryProject,
         },
-        user::auth::AuthUser,
+        user::auth::{AuthUser, BearerToken},
     },
     schema,
 };
@@ -75,7 +75,8 @@ pub async fn org_projects_get(
     pagination_params: Query<OrgProjectsPagination>,
     query_params: Query<OrgProjectsQuery>,
 ) -> Result<ResponseOk<JsonProjects>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user =
+        AuthUser::from_token(rqctx.context(), BearerToken::from_request(&rqctx).await?).await?;
     let json = get_ls_inner(
         rqctx.context(),
         path_params.into_inner(),
@@ -135,10 +136,11 @@ async fn get_ls_inner(
 }]
 pub async fn org_project_post(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<OrgProjectsParams>,
     body: TypedBody<JsonNewProject>,
 ) -> Result<ResponseAccepted<JsonProject>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),

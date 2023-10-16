@@ -2,6 +2,8 @@ use std::str::FromStr;
 
 use bencher_json::Slug;
 
+use crate::{context::DbConnection, error::issue_error, model::project::ProjectId};
+
 macro_rules! ok_slug {
     ($conn:expr, $name:expr, $slug:expr, $table:ident, $query:ident) => {
         crate::util::slug::validate_slug(
@@ -94,5 +96,3 @@ macro_rules! child_slug_exists {
 }
 
 pub(crate) use child_slug_exists;
-
-use crate::{context::DbConnection, error::issue_error, model::project::ProjectId};

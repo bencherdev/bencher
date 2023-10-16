@@ -4,7 +4,7 @@ use bencher_json::{
 };
 use bencher_rbac::organization::Permission;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, SharedExtractor, TypedBody};
 use http::StatusCode;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -17,7 +17,10 @@ use crate::{
         Endpoint,
     },
     error::{forbidden_error, issue_error, resource_conflict_err, resource_not_found_err},
-    model::user::{auth::AuthUser, QueryUser},
+    model::user::{
+        auth::{AuthUser, BearerToken},
+        QueryUser,
+    },
     model::{
         organization::{member::QueryMember, OrganizationId, QueryOrganization},
         user::UserId,
@@ -73,7 +76,8 @@ pub async fn org_members_get(
     pagination_params: Query<OrgMembersPagination>,
     query_params: Query<OrgMembersQuery>,
 ) -> Result<ResponseOk<JsonMembers>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user =
+        AuthUser::from_token(rqctx.context(), BearerToken::from_request(&rqctx).await?).await?;
     let json = get_ls_inner(
         rqctx.context(),
         &auth_user,
@@ -151,10 +155,11 @@ async fn get_ls_inner(
 }]
 pub async fn org_member_post(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<OrgMembersParams>,
     body: TypedBody<JsonNewMember>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(
         &rqctx.log,
         rqctx.context(),
@@ -292,9 +297,10 @@ pub async fn org_member_options(
 }]
 pub async fn org_member_get(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<OrgMemberParams>,
 ) -> Result<ResponseOk<JsonMember>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
     Ok(Get::auth_response_ok(json))
 }
@@ -325,10 +331,11 @@ async fn get_one_inner(
 }]
 pub async fn org_member_patch(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<OrgMemberParams>,
     body: TypedBody<JsonUpdateMember>,
 ) -> Result<ResponseAccepted<JsonMember>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = patch_inner(
         rqctx.context(),
         path_params.into_inner(),
@@ -382,9 +389,10 @@ async fn patch_inner(
 }]
 pub async fn org_member_delete(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     path_params: Path<OrgMemberParams>,
 ) -> Result<ResponseAccepted<JsonMember>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
     Ok(Delete::auth_response_accepted(json))
 }
