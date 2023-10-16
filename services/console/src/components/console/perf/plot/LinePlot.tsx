@@ -92,17 +92,14 @@ const LinePlot = (props: Props) => {
 
 	createEffect(() => {
 		if (is_plotted()) {
-			let y_axis = document.querySelectorAll(
-				"svg [aria-label='y-axis'] g.tick text",
+			let y_axis = document.querySelector(
+				"svg [aria-label='y-axis tick label']",
 			);
-
-			let max_width = 0;
-			y_axis.forEach((y_tick) => {
-				const width = y_tick.getBoundingClientRect().width;
-				max_width = Math.max(max_width, width);
-			});
-
-			set_y_label_area_size(max_width * 1.12);
+			if (!y_axis) {
+				return;
+			}
+			const width = y_axis.getBoundingClientRect().width;
+			set_y_label_area_size(width * 1.12);
 		}
 	});
 
