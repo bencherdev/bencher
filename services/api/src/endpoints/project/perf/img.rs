@@ -11,7 +11,7 @@ use crate::{
         Endpoint,
     },
     error::{bad_request_error, issue_error},
-    model::user::auth::AuthUser,
+    model::user::auth::{AuthUser, PubBearerToken},
 };
 
 use super::ProjPerfParams;
@@ -37,6 +37,7 @@ pub async fn proj_perf_img_options(
 }]
 pub async fn proj_perf_img_get(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: PubBearerToken,
     path_params: Path<ProjPerfParams>,
     query_params: Query<JsonPerfQueryParams>,
 ) -> Result<Response<Body>, HttpError> {
@@ -47,7 +48,7 @@ pub async fn proj_perf_img_get(
         .try_into()
         .map_err(bad_request_error)?;
 
-    let auth_user = AuthUser::new(&rqctx).await.ok();
+    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
     let jpeg = get_inner(
         rqctx.context(),
         path_params.into_inner(),

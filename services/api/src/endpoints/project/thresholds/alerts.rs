@@ -15,7 +15,7 @@ use crate::{
         Endpoint,
     },
     error::{resource_conflict_err, resource_not_found_err},
-    model::user::auth::AuthUser,
+    model::user::auth::{AuthUser, PubBearerToken},
     model::{
         project::{
             threshold::alert::{QueryAlert, UpdateAlert},
@@ -62,10 +62,11 @@ pub async fn proj_alerts_options(
 }]
 pub async fn proj_alerts_get(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: PubBearerToken,
     path_params: Path<ProjAlertsParams>,
     pagination_params: Query<ProjAlertsPagination>,
 ) -> Result<ResponseOk<JsonAlerts>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await.ok();
+    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
     let json = get_ls_inner(
         rqctx.context(),
         auth_user.as_ref(),
@@ -177,9 +178,10 @@ pub async fn proj_alert_options(
 }]
 pub async fn proj_alert_get(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: PubBearerToken,
     path_params: Path<ProjAlertParams>,
 ) -> Result<ResponseOk<JsonAlert>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await.ok();
+    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
     let json = get_one_inner(
         rqctx.context(),
         path_params.into_inner(),
@@ -274,9 +276,10 @@ pub async fn proj_alert_stats_options(
 }]
 pub async fn proj_alert_stats_get(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: PubBearerToken,
     path_params: Path<ProjAlertsParams>,
 ) -> Result<ResponseOk<JsonAlertStats>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await.ok();
+    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
     let json = get_stats_inner(
         rqctx.context(),
         auth_user.as_ref(),

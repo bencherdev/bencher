@@ -12,7 +12,7 @@ use bencher_rbac::project::Permission;
 use diesel::{
     dsl::count, BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
 };
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, SharedExtractor, TypedBody};
 use http::StatusCode;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -25,7 +25,7 @@ use crate::{
         Endpoint,
     },
     error::{bad_request_error, issue_error, resource_conflict_err, resource_not_found_err},
-    model::user::auth::AuthUser,
+    model::user::auth::{AuthUser, PubBearerToken},
     model::{
         project::{
             branch::{BranchId, QueryBranch},
@@ -85,7 +85,9 @@ pub async fn proj_reports_get(
         .try_into()
         .map_err(bad_request_error)?;
 
-    let auth_user = AuthUser::new(&rqctx).await.ok();
+    let auth_user =
+        AuthUser::from_pub_token(rqctx.context(), PubBearerToken::from_request(&rqctx).await?)
+            .await?;
     let json = get_ls_inner(
         &rqctx.log,
         rqctx.context(),
@@ -470,9 +472,10 @@ pub async fn proj_report_options(
 }]
 pub async fn proj_report_get(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: PubBearerToken,
     path_params: Path<ProjReportParams>,
 ) -> Result<ResponseOk<JsonReport>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await.ok();
+    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
     let json = get_one_inner(
         &rqctx.log,
         rqctx.context(),

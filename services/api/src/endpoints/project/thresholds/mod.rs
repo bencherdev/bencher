@@ -15,7 +15,7 @@ use crate::{
         Endpoint,
     },
     error::{resource_conflict_err, resource_not_found_err},
-    model::user::auth::AuthUser,
+    model::user::auth::{AuthUser, PubBearerToken},
     model::{
         project::{
             branch::QueryBranch,
@@ -70,10 +70,11 @@ pub async fn proj_thresholds_options(
 }]
 pub async fn proj_thresholds_get(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: PubBearerToken,
     path_params: Path<ProjThresholdsParams>,
     pagination_params: Query<ProjThresholdsPagination>,
 ) -> Result<ResponseOk<JsonThresholds>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await.ok();
+    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
     let json = get_ls_inner(
         rqctx.context(),
         auth_user.as_ref(),
@@ -217,9 +218,10 @@ pub async fn proj_threshold_options(
 }]
 pub async fn proj_threshold_get(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: PubBearerToken,
     path_params: Path<ProjThresholdParams>,
 ) -> Result<ResponseOk<JsonThreshold>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await.ok();
+    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
     let json = get_one_inner(
         rqctx.context(),
         path_params.into_inner(),

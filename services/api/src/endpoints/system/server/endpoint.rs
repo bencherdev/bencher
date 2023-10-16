@@ -7,7 +7,7 @@ use crate::{
         endpoint::{CorsResponse, Get, ResponseOk},
         Endpoint,
     },
-    model::user::auth::AuthUser,
+    model::user::auth::{AuthUser, PubBearerToken},
 };
 
 #[allow(clippy::unused_async)]
@@ -29,8 +29,9 @@ pub async fn server_endpoint_options(
     }]
 pub async fn server_endpoint_get(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: PubBearerToken,
 ) -> Result<ResponseOk<JsonEndpoint>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await.ok();
+    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
     Ok(Get::response_ok(
         JsonEndpoint {
             endpoint: rqctx.context().endpoint.clone().into(),

@@ -11,8 +11,11 @@ use crate::{
         Endpoint,
     },
     error::resource_not_found_err,
-    model::project::{threshold::statistic::QueryStatistic, QueryProject},
     model::user::auth::AuthUser,
+    model::{
+        project::{threshold::statistic::QueryStatistic, QueryProject},
+        user::auth::PubBearerToken,
+    },
     schema,
 };
 
@@ -42,9 +45,10 @@ pub async fn proj_statistic_options(
 }]
 pub async fn proj_statistic_get(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: PubBearerToken,
     path_params: Path<ProjStatisticParams>,
 ) -> Result<ResponseOk<JsonStatistic>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await.ok();
+    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
     let json = get_one_inner(
         rqctx.context(),
         path_params.into_inner(),
