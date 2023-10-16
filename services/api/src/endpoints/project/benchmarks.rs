@@ -5,7 +5,7 @@ use bencher_json::{
 };
 use bencher_rbac::project::Permission;
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, SharedExtractor, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -21,7 +21,7 @@ use crate::{
             benchmark::{InsertBenchmark, QueryBenchmark, UpdateBenchmark},
             QueryProject,
         },
-        user::auth::{AuthUser, BearerToken},
+        user::auth::{AuthUser, BearerToken, PubBearerToken},
     },
     schema,
 };
@@ -71,7 +71,9 @@ pub async fn proj_benchmarks_get(
     pagination_params: Query<ProjBenchmarksPagination>,
     query_params: Query<ProjBenchmarksQuery>,
 ) -> Result<ResponseOk<JsonBenchmarks>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await.ok();
+    let auth_user =
+        AuthUser::from_pub_token(rqctx.context(), PubBearerToken::from_request(&rqctx).await?)
+            .await?;
     let json = get_ls_inner(
         rqctx.context(),
         auth_user.as_ref(),
@@ -198,9 +200,10 @@ pub async fn proj_benchmark_options(
 }]
 pub async fn proj_benchmark_get(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: PubBearerToken,
     path_params: Path<ProjBenchmarkParams>,
 ) -> Result<ResponseOk<JsonBenchmark>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await.ok();
+    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
     let json = get_one_inner(
         rqctx.context(),
         path_params.into_inner(),

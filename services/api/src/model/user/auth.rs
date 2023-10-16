@@ -155,6 +155,17 @@ impl AuthUser {
         })
     }
 
+    pub async fn from_pub_token(
+        context: &ApiContext,
+        bearer_token: PubBearerToken,
+    ) -> Result<Option<Self>, HttpError> {
+        Ok(if let Some(bearer_token) = bearer_token.0 {
+            Some(Self::from_token(context, bearer_token).await?)
+        } else {
+            None
+        })
+    }
+
     fn organization_roles(
         conn: &mut DbConnection,
         user_id: UserId,
@@ -350,6 +361,24 @@ impl SharedExtractor for BearerToken {
             .map_err(|e| bad_request_error(format!("Malformed JSON Web Token: {e}")))?;
 
         Ok(Self(jwt))
+    }
+
+    fn metadata(_body_content_type: ApiEndpointBodyContentType) -> ExtractorMetadata {
+        ExtractorMetadata {
+            extension_mode: ExtensionMode::None,
+            parameters: vec![],
+        }
+    }
+}
+
+pub struct PubBearerToken(Option<BearerToken>);
+
+#[async_trait]
+impl SharedExtractor for PubBearerToken {
+    async fn from_request<Context: ServerContext>(
+        rqctx: &RequestContext<Context>,
+    ) -> Result<Self, HttpError> {
+        Ok(Self(BearerToken::from_request(rqctx).await.ok()))
     }
 
     fn metadata(_body_content_type: ApiEndpointBodyContentType) -> ExtractorMetadata {
