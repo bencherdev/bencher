@@ -4,7 +4,7 @@ use bencher_json::{
 };
 use bencher_rbac::organization::Permission;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, SharedExtractor, TypedBody};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use http::StatusCode;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -76,8 +76,7 @@ pub async fn org_members_get(
     pagination_params: Query<OrgMembersPagination>,
     query_params: Query<OrgMembersQuery>,
 ) -> Result<ResponseOk<JsonMembers>, HttpError> {
-    let auth_user =
-        AuthUser::from_token(rqctx.context(), BearerToken::from_request(&rqctx).await?).await?;
+    let auth_user = AuthUser::new(&rqctx).await?;
     let json = get_ls_inner(
         rqctx.context(),
         &auth_user,

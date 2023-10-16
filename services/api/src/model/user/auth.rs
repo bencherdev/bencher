@@ -31,25 +31,15 @@ pub struct AuthUser {
     pub rbac: RbacUser,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct OrgProjectId {
-    pub org_id: OrganizationId,
-    pub project_id: ProjectId,
-}
-
-impl From<OrgProjectId> for Project {
-    fn from(org_project_id: OrgProjectId) -> Self {
-        Self {
-            organization_id: org_project_id.org_id.to_string(),
-            id: org_project_id.project_id.to_string(),
-        }
-    }
-}
-
 impl AuthUser {
     // This is required due to a limitation in `dropshot` where only four extractors are allowed.
     pub async fn new_pub(rqctx: &RequestContext<ApiContext>) -> Result<Option<Self>, HttpError> {
         Self::from_pub_token(rqctx.context(), PubBearerToken::from_request(rqctx).await?).await
+    }
+
+    // This is required due to a limitation in `dropshot` where only four extractors are allowed.
+    pub async fn new(rqctx: &RequestContext<ApiContext>) -> Result<Self, HttpError> {
+        Self::from_token(rqctx.context(), BearerToken::from_request(rqctx).await?).await
     }
 
     pub async fn from_pub_token(
@@ -232,6 +222,7 @@ impl AuthUser {
     }
 }
 
+// https://github.com/oxidecomputer/cio/blob/master/dropshot-verify-request/src/http.rs
 pub struct Headers(pub http::HeaderMap);
 
 #[async_trait]
@@ -252,6 +243,12 @@ impl SharedExtractor for Headers {
 
 // https://github.com/oxidecomputer/cio/blob/master/dropshot-verify-request/src/bearer.rs
 pub struct BearerToken(Jwt);
+
+impl From<Jwt> for BearerToken {
+    fn from(jwt: Jwt) -> Self {
+        Self(jwt)
+    }
+}
 
 impl AsRef<Jwt> for BearerToken {
     fn as_ref(&self) -> &Jwt {
@@ -279,23 +276,17 @@ impl SharedExtractor for BearerToken {
                 )))
             },
         };
-
-        let token = match authorization_str.split_once(' ') {
-            Some(("Bearer", token)) => token.to_owned(),
-            _ => {
-                return Err(bad_request_error(format!(
-                    "Request is missing \"Authorization\" Bearer. {BEARER_TOKEN_FORMAT}"
-                )))
-            },
+        let Some(("Bearer", token)) = authorization_str.split_once(' ') else {
+            return Err(bad_request_error(format!(
+                "Request is missing \"Authorization\" Bearer. {BEARER_TOKEN_FORMAT}"
+            )));
         };
 
-        let token = token.trim();
-        let jwt: Jwt = token
+        token
             .trim()
-            .parse()
-            .map_err(|e| bad_request_error(format!("Malformed JSON Web Token: {e}")))?;
-
-        Ok(Self(jwt))
+            .parse::<Jwt>()
+            .map(Into::into)
+            .map_err(|e| bad_request_error(format!("Malformed JSON Web Token: {e}")))
     }
 
     fn metadata(_body_content_type: ApiEndpointBodyContentType) -> ExtractorMetadata {
@@ -320,6 +311,21 @@ impl SharedExtractor for PubBearerToken {
         ExtractorMetadata {
             extension_mode: ExtensionMode::None,
             parameters: vec![],
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct OrgProjectId {
+    pub org_id: OrganizationId,
+    pub project_id: ProjectId,
+}
+
+impl From<OrgProjectId> for Project {
+    fn from(org_project_id: OrgProjectId) -> Self {
+        Self {
+            organization_id: org_project_id.org_id.to_string(),
+            id: org_project_id.project_id.to_string(),
         }
     }
 }

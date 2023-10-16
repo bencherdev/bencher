@@ -3,7 +3,7 @@ use bencher_json::{
     JsonTokens, NonEmpty, ResourceId,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, SharedExtractor, TypedBody};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
@@ -71,8 +71,7 @@ pub async fn user_tokens_get(
     pagination_params: Query<UserTokensPagination>,
     query_params: Query<UserTokensQuery>,
 ) -> Result<ResponseOk<JsonTokens>, HttpError> {
-    let auth_user =
-        AuthUser::from_token(rqctx.context(), BearerToken::from_request(&rqctx).await?).await?;
+    let auth_user = AuthUser::new(&rqctx).await?;
     let json = get_ls_inner(
         rqctx.context(),
         path_params.into_inner(),
