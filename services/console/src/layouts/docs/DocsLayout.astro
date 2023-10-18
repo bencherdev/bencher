@@ -6,16 +6,18 @@ import DocsTab from "../../components/docs/docs_tab";
 
 interface Props {
   title: string;
+  titleFmt?: undefined | ((title: string) => string);
   description: string;
-  heading?: string;
+  heading?: undefined | string;
+  tab?: DocsTab;
 }
 
-const { title, description, heading } = Astro.props;
+const { title, titleFmt, description, heading, tab } = Astro.props;
 ---
 
 <BaseLayout
   title={title}
-  titleFmt={(title) => `📖 ${title}`}
+  titleFmt={titleFmt ?? ((title) => `📖 ${title}`)}
   description={description}
 >
   <!-- Note that the AuthNavbar does *not* fill the slot `navbar`. It is a client-side override.  -->
@@ -24,7 +26,7 @@ const { title, description, heading } = Astro.props;
     <div class="columns is-reverse-mobile">
       <div class="columns">
         <div class="column is-narrow">
-          <DocsMenu tab={DocsTab.Docs}/>
+          <DocsMenu tab={tab ?? DocsTab.Docs}/>
         </div>
       </div>
       <div class="column is-two-thirds">

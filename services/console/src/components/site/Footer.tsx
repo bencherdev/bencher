@@ -26,6 +26,11 @@ const Footer = () => (
 								</div>
 								<div class="level-item has-text-centered">
 									<p>
+										<a href="/learn">Learn</a>
+									</p>
+								</div>
+								<div class="level-item has-text-centered">
+									<p>
 										<a href="/legal">Legal</a>
 									</p>
 								</div>

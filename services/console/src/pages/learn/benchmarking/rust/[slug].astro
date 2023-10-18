@@ -1,0 +1,23 @@
+---
+import { getCollection } from "astro:content";
+import LearnLayout from "../../../../layouts/docs/LearnLayout.astro";
+// 1. Generate a new path for every collection entry
+export async function getStaticPaths() {
+  const pages = await getCollection("rust");
+  return pages.map((page) => ({
+    params: { slug: page.slug },
+    props: { page },
+  }));
+}
+// 2. When it's time to render, you can get the entry directly from the prop
+const { page } = Astro.props;
+const { Content } = await page.render();
+---
+
+<LearnLayout
+  title={page.data.title}
+  description={page.data.description}
+  heading={page.data.heading}
+>
+  <Content />
+</LearnLayout>

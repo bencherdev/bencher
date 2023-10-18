@@ -1,0 +1,22 @@
+---
+import DocsLayout from "./DocsLayout.astro";
+import DocsTab from "../../components/docs/docs_tab";
+
+interface Props {
+  title: string;
+  description: string;
+  heading?: string;
+}
+
+const { title, description, heading } = Astro.props;
+---
+
+<DocsLayout
+  title={title}
+  titleFmt={(title) => `🧠 ${title}`}
+  description={description}
+  heading={heading}
+  tab={DocsTab.Learn}
+>
+  <slot />
+</DocsLayout>

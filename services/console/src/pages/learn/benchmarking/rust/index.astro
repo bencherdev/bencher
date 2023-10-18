@@ -1,0 +1,22 @@
+---
+import { getCollection } from "astro:content";
+import LearnLayout from "../../../../layouts/docs/LearnLayout.astro";
+
+const rust = await getCollection("rust");
+rust.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
+
+const title = "How to Benchmark Rust Code";
+const description = "Learn how to benchmark Rust code with libtest bench, Criterion, Iai, and more";
+---
+
+<LearnLayout title={title} description={description} heading={title}>
+  <ul>
+    {
+      rust.map((page) => (
+        <li>
+          <a href={`/learn/benchmarking/rust/${page.slug}`}>{page.data.title}</a>
+        </li>
+      ))
+    }
+  </ul>
+</LearnLayout>
