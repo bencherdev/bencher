@@ -4,7 +4,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import Toolbox from "../components/landing/Toolbox";
 import { BENCHER_CALENDLY_URL } from "../util/ext";
 import AuthRedirect from "../components/auth/AuthRedirect";
+import SelfHostedRedirect from "../components/site/SelfHostedRedirct";
 import { BENCHER_DESCRIPTION, BENCHER_TITLE } from "../util/resource";
+
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 ---
 
 <BaseLayout
@@ -12,6 +15,7 @@ import { BENCHER_DESCRIPTION, BENCHER_TITLE } from "../util/resource";
   description={BENCHER_DESCRIPTION}
 >
   <AuthRedirect client:only="solid-js" path="/console" />
+  <SelfHostedRedirect client:only="solid-js" apiUrl={BENCHER_API_URL} path="/console" />
   <section class="section is-medium">
     <div class="container">
       <div class="columns is-centered is-vcentered">
@@ -56,7 +60,7 @@ import { BENCHER_DESCRIPTION, BENCHER_TITLE } from "../util/resource";
             autoplay={true}
             loop={true}
             muted={true}
-            style="pointer-events: none;border: 0.2em solid #ed6704;"
+            style="pointer-events: none; cursor: default; border: 0.2em solid #ed6704;"
             poster="https://s3.amazonaws.com/public.bencher.dev/demo/bencher_demo_cover.png"
           >
             <source

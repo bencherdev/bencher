@@ -8,6 +8,9 @@ enum HttpMethod {
 	DELETE = "DELETE",
 }
 
+// Due to how Astro works, this hostname, that is the `apiUrl`
+// must be explicitly passed down from each page.
+// You can't get `import.meta.env.BENCHER_API_URL` anywhere other than the page frontmatter.
 export const apiHost = (hostname: string): string => {
 	if (hostname) {
 		return hostname;

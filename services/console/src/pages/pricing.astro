@@ -3,7 +3,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import PricingTable from "../components/pricing/PricingTable";
 import { BENCHER_CALENDLY_URL } from "../util/ext";
 import AuthRedirect from "../components/auth/AuthRedirect";
+import SelfHostedRedirect from "../components/site/SelfHostedRedirct";
 
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const title = "Pricing";
 const description =
   "Free for all public projects. Use Bencher to setup continuous benchmarking and catch performance regressions in CI.";
@@ -11,6 +13,7 @@ const description =
 
 <BaseLayout title={title} description={description}>
   <AuthRedirect client:only="solid-js" path="/console?plan=team" />
+  <SelfHostedRedirect client:only="solid-js" apiUrl={BENCHER_API_URL} path="/console?plan=team" />
   <div>
     <section class="hero">
       <div class="hero-body">

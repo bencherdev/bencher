@@ -11,6 +11,8 @@ const legal = defineCollection({
 		sortOrder: z.number(),
 	}),
 });
+
+// docs
 const tutorial = defineCollection({
 	type: "content", // v2.5.0 and later
 	schema: z.object({
@@ -48,11 +50,25 @@ const reference = defineCollection({
 	}),
 });
 
+// learn
+const rust = defineCollection({
+	type: "content", // v2.5.0 and later
+	schema: z.object({
+		title: z.string(),
+		description: z.string(),
+		heading: z.string(),
+		sortOrder: z.number(),
+	}),
+});
+
 // 3. Export a single `collections` object to register your collection(s)
 export const collections = {
 	legal: legal,
+	// docs
 	tutorial: tutorial,
 	how_to: how_to,
 	explanation: explanation,
 	reference: reference,
+	// learn
+	rust: rust,
 };

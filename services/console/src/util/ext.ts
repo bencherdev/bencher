@@ -4,6 +4,8 @@ import { apiHost } from "./http";
 export const BENCHER_SITE_URL = "https://bencher.dev";
 
 export const BENCHER_CLOUD_API_URL: string = "https://api.bencher.dev";
+export const BENCHER_CLOUD_DEV_API_URL: string =
+	"https://bencher-api-dev.fly.dev";
 
 export const BENCHER_GITHUB_URL: string =
 	"https://github.com/bencherdev/bencher";
@@ -41,16 +43,18 @@ export const swaggerSpec = (apiUrl: string) => {
 	return [url, swagger];
 };
 
-// Change this value to test billing in development mode
-const TEST_BENCHER_BILLING: boolean = true;
+// Change this value to toggle as Bencher Cloud for testing
+const TEST_IS_BENCHER_CLOUD: boolean = false;
 
 export const isBencherCloud = (apiUrl: string) => {
 	const mode = import.meta.env.MODE;
 	switch (mode) {
 		case "development":
-			return TEST_BENCHER_BILLING;
+			return TEST_IS_BENCHER_CLOUD;
 		case "production":
-			return apiUrl === BENCHER_CLOUD_API_URL;
+			return (
+				apiUrl === BENCHER_CLOUD_API_URL || apiUrl === BENCHER_CLOUD_DEV_API_URL
+			);
 		default:
 			console.error("Invalid mode: ", mode);
 			return false;

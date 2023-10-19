@@ -1,5 +1,10 @@
 import { Show, createSignal } from "solid-js";
-import { BENCHER_LOGO_URL, BENCHER_VERSION } from "../../../util/ext";
+import {
+	BENCHER_LOGO_URL,
+	BENCHER_SITE_URL,
+	BENCHER_VERSION,
+	isBencherCloud,
+} from "../../../util/ext";
 import ProjectSelect from "./ProjectSelect";
 import { authUser } from "../../../util/auth";
 import type { Params } from "astro";
@@ -48,9 +53,22 @@ const ConsoleNavbar = (props: Props) => {
 
 			<div class={`navbar-menu ${burger() && "is-active"}`}>
 				<div class="navbar-start">
-					<a class="navbar-item" href="/docs">
-						Docs
-					</a>
+					<Show
+						when={isBencherCloud(props.apiUrl)}
+						fallback={
+							<a
+								class="navbar-item"
+								href={`${BENCHER_SITE_URL}/docs`}
+								target="_blank"
+							>
+								Docs
+							</a>
+						}
+					>
+						<a class="navbar-item" href="/docs">
+							Docs
+						</a>
+					</Show>
 					<a class="navbar-item" href="/perf">
 						Public Projects
 					</a>

@@ -170,7 +170,9 @@ const PlotTab = (props: Props) => {
 								{toCapitalized(tab)}
 							</a>
 							{index() === 0 && (
-								<a style="pointer-events:none;color:#fdb07e;">||</a>
+								<a style="pointer-events: none; cursor: default; color: #fdb07e;">
+									||
+								</a>
 							)}
 						</>
 					)}
