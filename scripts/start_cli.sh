@@ -5,11 +5,9 @@ while ! nc -z localhost 61016; do
   sleep 1
 done
 
-RUST_BACKTRACE=1 cargo test --features seed --test seed -- --nocapture
+source ../../scripts/seed.sh
 
 cargo install --path . --locked
-
-source ../../scripts/mock.sh
 
 echo "Bencher development environment is ready!"
 echo "Bencher UI Server: http://localhost:3000"

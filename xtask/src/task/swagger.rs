@@ -32,10 +32,13 @@ impl Swagger {
         })?;
 
         println!("Saved to: {SWAGGER_PATH}");
-
-        let swagger_spec_str = std::fs::read_to_string(SWAGGER_PATH)?;
-        let _swagger_spec: bencher_json::JsonSpec = serde_json::from_str(&swagger_spec_str)?;
+        swagger_spec()?;
 
         Ok(())
     }
+}
+
+pub fn swagger_spec() -> anyhow::Result<bencher_json::JsonSpec> {
+    let swagger_spec_str = std::fs::read_to_string(SWAGGER_PATH)?;
+    serde_json::from_str(&swagger_spec_str).map_err(Into::into)
 }

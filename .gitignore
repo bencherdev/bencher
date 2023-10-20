@@ -21,6 +21,7 @@ deb/
 
 out*.txt
 out*.json
+netlify.txt
 
 # Default docker volume
 data/

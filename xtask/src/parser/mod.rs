@@ -15,6 +15,7 @@ pub enum CliSub {
     ReleaseNotes(CliReleaseNotes),
     Swagger(CliSwagger),
     Typeshare(CliTypeshare),
+    NetlifyTest(CliNetlifyTest),
 }
 
 #[derive(Parser, Debug)]
@@ -33,3 +34,6 @@ pub struct CliSwagger {}
 
 #[derive(Parser, Debug)]
 pub struct CliTypeshare {}
+
+#[derive(Parser, Debug)]
+pub struct CliNetlifyTest {}

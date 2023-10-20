@@ -2,10 +2,12 @@ use clap::Parser;
 
 use crate::parser::{CliSub, CliTask};
 
+mod netlify_test;
 mod release_notes;
 mod swagger;
 mod typeshare;
 
+use netlify_test::NetlifyTest;
 use release_notes::ReleaseNotes;
 use swagger::Swagger;
 use typeshare::Typeshare;
@@ -21,6 +23,7 @@ pub enum Sub {
     ReleaseNotes(ReleaseNotes),
     Swagger(Swagger),
     Typeshare(Typeshare),
+    NetlifyTest(NetlifyTest),
 }
 
 impl TryFrom<CliTask> for Task {
@@ -42,6 +45,7 @@ impl TryFrom<CliSub> for Sub {
             CliSub::ReleaseNotes(release_notes) => Self::ReleaseNotes(release_notes.try_into()?),
             CliSub::Swagger(swagger) => Self::Swagger(swagger.try_into()?),
             CliSub::Typeshare(typeshare) => Self::Typeshare(typeshare.try_into()?),
+            CliSub::NetlifyTest(netlify_url) => Self::NetlifyTest(netlify_url.try_into()?),
         })
     }
 }
@@ -64,6 +68,7 @@ impl Sub {
             Self::ReleaseNotes(release_notes) => release_notes.exec(),
             Self::Swagger(swagger) => swagger.exec(),
             Self::Typeshare(typeshare) => typeshare.exec(),
+            Self::NetlifyTest(netlify_url) => netlify_url.exec().await,
         }
     }
 }

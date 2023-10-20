@@ -752,6 +752,7 @@ dependencies = [
  "clap_mangen",
  "literally",
  "octocrab",
+ "once_cell",
  "pretty_assertions",
  "progenitor-client",
  "rand 0.8.5",
@@ -5982,6 +5983,7 @@ dependencies = [
  "bencher_json",
  "camino",
  "clap",
+ "reqwest",
  "serde_json",
  "tokio",
 ]
