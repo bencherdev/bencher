@@ -16,6 +16,7 @@ const { Content } = await page.render();
 
 <LearnLayout
   title={page.data.title}
+  titleFmt={(_title) => `🦀 ${page.data.heading}`}
   description={page.data.description}
   heading={page.data.heading}
 >

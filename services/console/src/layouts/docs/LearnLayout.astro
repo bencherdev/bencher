@@ -4,16 +4,17 @@ import DocsTab from "../../components/docs/docs_tab";
 
 interface Props {
   title: string;
+  titleFmt?: undefined | ((title: string) => string);
   description: string;
   heading?: string;
 }
 
-const { title, description, heading } = Astro.props;
+const { title, titleFmt, description, heading } = Astro.props;
 ---
 
 <DocsLayout
   title={title}
-  titleFmt={(title) => `🧠 ${title}`}
+  titleFmt={titleFmt ?? ((title) => `🧑‍💻 ${heading ?? title}`)}
   description={description}
   heading={heading}
   tab={DocsTab.Learn}

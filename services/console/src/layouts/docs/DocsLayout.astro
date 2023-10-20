@@ -18,7 +18,7 @@ const { title, titleFmt, description, heading, tab } = Astro.props;
 
 <BaseLayout
   title={title}
-  titleFmt={titleFmt ?? ((title) => `📖 ${title}`)}
+  titleFmt={titleFmt ?? ((title) => `📖 ${heading ?? title}`)}
   description={description}
 >
   <SelfHostedRedirect client:only="solid-js" path="/console" />
