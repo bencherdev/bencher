@@ -6,16 +6,14 @@ import { BENCHER_CALENDLY_URL } from "../util/ext";
 import AuthRedirect from "../components/auth/AuthRedirect";
 import SelfHostedRedirect from "../components/site/SelfHostedRedirct";
 import { BENCHER_DESCRIPTION, BENCHER_TITLE } from "../util/resource";
-
-const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 ---
 
 <BaseLayout
   title={BENCHER_TITLE}
   description={BENCHER_DESCRIPTION}
 >
+  <SelfHostedRedirect client:only="solid-js" path="/console" />
   <AuthRedirect client:only="solid-js" path="/console" />
-  <SelfHostedRedirect client:only="solid-js" apiUrl={BENCHER_API_URL} path="/console" />
   <section class="section is-medium">
     <div class="container">
       <div class="columns is-centered is-vcentered">

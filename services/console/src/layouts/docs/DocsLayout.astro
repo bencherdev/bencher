@@ -13,7 +13,6 @@ interface Props {
   tab?: DocsTab;
 }
 
-const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const { title, titleFmt, description, heading, tab } = Astro.props;
 ---
 
@@ -22,7 +21,7 @@ const { title, titleFmt, description, heading, tab } = Astro.props;
   titleFmt={titleFmt ?? ((title) => `📖 ${title}`)}
   description={description}
 >
-  <SelfHostedRedirect client:only="solid-js" apiUrl={BENCHER_API_URL} path="/console" />
+  <SelfHostedRedirect client:only="solid-js" path="/console" />
   <!-- Note that the AuthNavbar does *not* fill the slot `navbar`. It is a client-side override.  -->
   <AuthNavbar client:only="solid-js" />
   <div class="is-widescreen">

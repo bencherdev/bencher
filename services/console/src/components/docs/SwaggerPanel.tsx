@@ -32,8 +32,8 @@ const SwaggerPanel = (props: Props) => {
 					<div class="level-left">
 						<div class="level-item">
 							<p>
-								🐰 {isBencherCloud(url()) ? BENCHER_CLOUD : BENCHER_SELF_HOSTED}{" "}
-								API Endpoint:{" "}
+								🐰 {isBencherCloud() ? BENCHER_CLOUD : BENCHER_SELF_HOSTED} API
+								Endpoint:{" "}
 								<code>
 									<a
 										href={`${url()}/v0/server/version`}

@@ -29,7 +29,7 @@ export const swaggerSpec = (apiUrl: string) => {
 	const swagger = SWAGGER;
 	// https://swagger.io/docs/specification/api-host-and-base-path/
 	swagger.servers = [];
-	if (!isBencherCloud(url)) {
+	if (!isBencherCloud()) {
 		swagger.servers.push({
 			url: url,
 			description: BENCHER_SELF_HOSTED,
@@ -43,20 +43,5 @@ export const swaggerSpec = (apiUrl: string) => {
 	return [url, swagger];
 };
 
-// Change this value to toggle as Bencher Cloud for testing
-const TEST_IS_BENCHER_CLOUD: boolean = false;
-
-export const isBencherCloud = (apiUrl: string) => {
-	const mode = import.meta.env.MODE;
-	switch (mode) {
-		case "development":
-			return TEST_IS_BENCHER_CLOUD;
-		case "production":
-			return (
-				apiUrl === BENCHER_CLOUD_API_URL || apiUrl === BENCHER_CLOUD_DEV_API_URL
-			);
-		default:
-			console.error("Invalid mode: ", mode);
-			return false;
-	}
-};
+export const isBencherCloud = (): boolean =>
+	import.meta.env.PUBLIC_IS_BENCHER_CLOUD === "true";

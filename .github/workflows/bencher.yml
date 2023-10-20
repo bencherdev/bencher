@@ -31,8 +31,6 @@ env:
   UI_BUILDER_DOCKER_IMAGE: bencher-ui-builder
   UI_DOCKER_IMAGE: bencher-ui
   UI_BUILD_DIST: bencher-ui-dist
-  # Analytics
-  GOOGLE_ANALYTICS_ID: G-9Q5Q2QS45K
 
 jobs:
   first_time_interaction:
@@ -505,9 +503,7 @@ jobs:
           path: ./lib/bencher_valid/pkg
       - name: Build Console UI
         working-directory: ./services/console
-        run: |
-          echo "PUBLIC_GOOGLE_ANALYTICS_ID=${{ env.GOOGLE_ANALYTICS_ID }}" >> .env.production
-          npm run netlify
+        run: npm run netlify
 
   # API Fly.io
   deploy_local_api_fly:
@@ -605,9 +601,7 @@ jobs:
           path: ./lib/bencher_valid/pkg
       - name: Build Console UI
         working-directory: ./services/console
-        run: |
-          echo "PUBLIC_GOOGLE_ANALYTICS_ID=${{ env.GOOGLE_ANALYTICS_ID }}" >> .env.production
-          npm run netlify
+        run: npm run netlify
       - uses: netlify/actions/cli@master
         with:
           args: |
@@ -631,9 +625,7 @@ jobs:
           path: ./lib/bencher_valid/pkg
       - name: Build Console UI
         working-directory: ./services/console
-        run: |
-          echo "PUBLIC_GOOGLE_ANALYTICS_ID=${{ env.GOOGLE_ANALYTICS_ID }}" >> .env.production
-          npm run netlify
+        run: npm run netlify
       - uses: netlify/actions/cli@master
         with:
           args: |

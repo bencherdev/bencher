@@ -54,7 +54,7 @@ const ConsoleNavbar = (props: Props) => {
 			<div class={`navbar-menu ${burger() && "is-active"}`}>
 				<div class="navbar-start">
 					<Show
-						when={isBencherCloud(props.apiUrl)}
+						when={isBencherCloud()}
 						fallback={
 							<a
 								class="navbar-item"

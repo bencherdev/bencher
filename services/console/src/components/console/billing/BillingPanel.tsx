@@ -31,7 +31,7 @@ const BillingPanel = (props: Props) => {
 	);
 	const user = authUser();
 	const host = createMemo(() =>
-		isBencherCloud(props.apiUrl) ? Host.BENCHER_CLOUD : Host.SELF_HOSTED,
+		isBencherCloud() ? Host.BENCHER_CLOUD : Host.SELF_HOSTED,
 	);
 	const config = createMemo<BillingPanelConfig>(
 		() => consoleConfig[Resource.BILLING]?.[host()],
