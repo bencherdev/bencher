@@ -13,6 +13,8 @@ mod git_hash;
 mod jwt;
 mod non_empty;
 #[cfg(feature = "plus")]
+mod plan_id;
+#[cfg(feature = "plus")]
 mod plan_level;
 #[cfg(feature = "plus")]
 mod plan_status;
@@ -38,6 +40,8 @@ pub use error::ValidError;
 use error::REGEX_ERROR;
 pub use jwt::Jwt;
 pub use non_empty::NonEmpty;
+#[cfg(feature = "plus")]
+pub use plan_id::{LicensePlanId, MeteredPlanId};
 #[cfg(feature = "plus")]
 pub use plan_level::PlanLevel;
 #[cfg(feature = "plus")]

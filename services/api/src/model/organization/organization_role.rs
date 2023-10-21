@@ -21,7 +21,7 @@ pub struct QueryOrganizationRole {
     pub organization_id: OrganizationId,
     pub role: OrganizationRole,
     pub created: DateTime,
-    pub updated: DateTime,
+    pub modified: DateTime,
 }
 
 #[derive(Debug, diesel::Insertable)]

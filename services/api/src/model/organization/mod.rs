@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::string::ToString;
 
 use bencher_json::{
-    organization::JsonUpdateOrganization, DateTime, JsonNewOrganization, JsonOrganization,
+    organization::JsonUpdateOrganization, DateTime, JsonNewOrganization, JsonOrganization, Jwt,
     NonEmpty, OrganizationUuid, ResourceId, Slug,
 };
 use bencher_rbac::Organization;
@@ -23,6 +23,7 @@ use crate::{
 
 pub mod member;
 pub mod organization_role;
+pub mod plan;
 
 crate::util::typed_id::typed_id!(OrganizationId);
 
@@ -33,8 +34,7 @@ pub struct QueryOrganization {
     pub uuid: OrganizationUuid,
     pub name: NonEmpty,
     pub slug: Slug,
-    pub subscription: Option<String>,
-    pub license: Option<String>,
+    pub license: Option<Jwt>,
     pub created: DateTime,
     pub modified: DateTime,
 }

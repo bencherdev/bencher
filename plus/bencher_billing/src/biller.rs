@@ -1,7 +1,7 @@
 use bencher_json::{
     organization::plan::{JsonCard, JsonCardDetails, JsonCustomer, JsonPlan},
     system::config::JsonBilling,
-    Email, PlanLevel, PlanStatus, UserName,
+    Email, OrganizationUuid, PlanLevel, PlanStatus, UserName, UserUuid,
 };
 use chrono::{TimeZone, Utc};
 use stripe::{
@@ -10,7 +10,6 @@ use stripe::{
     CreateUsageRecord, Customer, Expandable, ListCustomers, PaymentMethod, PaymentMethodTypeFilter,
     Subscription, SubscriptionId, SubscriptionItem, SubscriptionStatus, UsageRecord,
 };
-use uuid::Uuid;
 
 use crate::{products::Products, BillingError};
 
@@ -72,7 +71,7 @@ impl Biller {
         &self,
         name: &UserName,
         email: &Email,
-        uuid: Uuid,
+        uuid: UserUuid,
     ) -> Result<Customer, BillingError> {
         if let Some(customer) = self.get_customer(email).await? {
             Ok(customer)
@@ -105,7 +104,7 @@ impl Biller {
         &self,
         name: &UserName,
         email: &Email,
-        uuid: Uuid,
+        uuid: UserUuid,
     ) -> Result<Customer, BillingError> {
         let create_customer = CreateCustomer {
             name: Some(name.as_ref()),
@@ -150,7 +149,7 @@ impl Biller {
 
     pub async fn create_metered_subscription(
         &self,
-        organization: Uuid,
+        organization: OrganizationUuid,
         customer: &Customer,
         payment_method: &PaymentMethod,
         plan_level: PlanLevel,
@@ -167,7 +166,7 @@ impl Biller {
 
     pub async fn create_licensed_subscription(
         &self,
-        organization: Uuid,
+        organization: OrganizationUuid,
         customer: &Customer,
         payment_method: &PaymentMethod,
         plan_level: PlanLevel,
@@ -186,7 +185,7 @@ impl Biller {
     // WARNING: Use caution when calling this directly as multiple subscriptions can be created
     async fn create_subscription(
         &self,
-        organization: Uuid,
+        organization: OrganizationUuid,
         customer: &Customer,
         payment_method: &PaymentMethod,
         product_plan: ProductPlan,
@@ -485,13 +484,12 @@ mod test {
     use bencher_json::{
         organization::plan::{JsonCard, DEFAULT_PRICE_NAME},
         system::config::{JsonBilling, JsonProduct, JsonProducts},
-        PlanLevel,
+        OrganizationUuid, PlanLevel, UserUuid,
     };
     use chrono::{Datelike, Utc};
     use literally::hmap;
     use pretty_assertions::assert_eq;
     use stripe::{Customer, PaymentMethod, SubscriptionId};
-    use uuid::Uuid;
 
     use crate::Biller;
 
@@ -526,7 +524,7 @@ mod test {
 
     async fn test_metered_subscription(
         biller: &Biller,
-        organization: Uuid,
+        organization: OrganizationUuid,
         customer: &Customer,
         payment_method: &PaymentMethod,
         plan_level: PlanLevel,
@@ -557,7 +555,7 @@ mod test {
 
     async fn test_licensed_subscription(
         biller: &Biller,
-        organization: Uuid,
+        organization: OrganizationUuid,
         customer: &Customer,
         payment_method: &PaymentMethod,
         plan_level: PlanLevel,
@@ -614,7 +612,7 @@ mod test {
         let email = format!("muriel.bagge.{}@nowhere.com", rand::random::<u64>())
             .parse()
             .unwrap();
-        let user_uuid = Uuid::new_v4();
+        let user_uuid = UserUuid::new();
         assert!(biller.get_customer(&email).await.unwrap().is_none());
         let create_customer = biller
             .create_customer(&name, &email, user_uuid)
@@ -655,7 +653,7 @@ mod test {
         // assert_eq!(payment_method.id, get_or_create_payment_method.id);
 
         // Team Metered Plan
-        let organization = Uuid::new_v4();
+        let organization = OrganizationUuid::new();
         test_metered_subscription(
             &biller,
             organization,
@@ -668,7 +666,7 @@ mod test {
         .await;
 
         // Team Licensed Plan
-        let organization = Uuid::new_v4();
+        let organization = OrganizationUuid::new();
         test_licensed_subscription(
             &biller,
             organization,
@@ -681,7 +679,7 @@ mod test {
         .await;
 
         // Enterprise Metered Plan
-        let organization = Uuid::new_v4();
+        let organization = OrganizationUuid::new();
         test_metered_subscription(
             &biller,
             organization,
@@ -694,7 +692,7 @@ mod test {
         .await;
 
         // Enterprise Licensed Plan
-        let organization = Uuid::new_v4();
+        let organization = OrganizationUuid::new();
         test_licensed_subscription(
             &biller,
             organization,
