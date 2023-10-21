@@ -91,7 +91,7 @@ impl QueryOrganization {
         &self,
         conn: &mut DbConnection,
         licensor: &bencher_license::Licensor,
-        license: &bencher_json::Jwt,
+        license: &Jwt,
     ) -> Result<LicenseUsage, HttpError> {
         let token_data = licensor
             .validate_organization(license, self.uuid.into())

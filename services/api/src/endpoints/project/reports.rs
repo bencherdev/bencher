@@ -324,22 +324,33 @@ mod plan_kind {
     };
 
     pub enum PlanKind {
-        Metered(SubscriptionId),
-        Licensed { entitlements: u64, prior_usage: u64 },
+        Metered(MeteredPlanId),
+        Licensed(LicenseUsage),
         None,
     }
 
     #[derive(Debug, thiserror::Error)]
     pub enum PlanKindError {
+        #[error(
+            "Organization ({organization:?}) has an inactive metered plan ({metered_plan_id})"
+        )]
+        InactiveMeteredPlan {
+            organization: QueryOrganization,
+            metered_plan_id: MeteredPlanId,
+        },
+        #[error("No plan (subscription or license) found for organization ({organization:?}) with private project ({project:?})")]
+        NoPlan {
+            organization: QueryOrganization,
+            project: QueryProject,
+        },
+        #[error("No Biller has been configured for the server.")]
+        NoBiller,
+
         #[error("Project ({project:?}) has an inactive plan ({subscription_id})")]
         InactivePlan {
             project: QueryProject,
             subscription_id: SubscriptionId,
         },
-        #[error("No Biller has been configured for the server.")]
-        NoBiller,
-        #[error("No plan (subscription or license) found for private project ({0:?})")]
-        NoPlan(QueryProject),
         #[error("License usage exceeded for project ({project:?}). {prior_usage} + {usage} > {entitlements}")]
         Overage {
             project: QueryProject,
@@ -357,54 +368,33 @@ mod plan_kind {
             project: &QueryProject,
         ) -> Result<Self, HttpError> {
             let query_organization = QueryOrganization::get(conn, project.organization_id)?;
-            if let Some(subscription_id) = query_organization.get_subscription()? {
-                if let Some(biller) = biller {
-                    let plan_status = biller
-                        .get_plan_status(&subscription_id)
-                        .await
-                        .map_err(not_found_error)?;
-                    if plan_status.is_active() {
-                        Ok(PlanKind::Metered(subscription_id))
-                    } else {
-                        Err(payment_required_error(PlanKindError::InactivePlan {
-                            project: project.clone(),
-                            subscription_id,
-                        }))
-                    }
-                } else {
-                    Err(issue_error(
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "No Biller when checking plan kind",
-                        "Failed to find Biller in Bencher Cloud when checking plan kind for project.",
-                        PlanKindError::NoBiller,
-                    ))
-                }
-            } else if let Some(license) = query_organization.get_license()? {
-                let LicenseUsage {
-                    entitlements,
-                    usage,
-                } = query_organization.check_license_usage(conn, licensor, &license)?;
-                Ok(PlanKind::Licensed {
-                    entitlements,
-                    prior_usage: usage,
-                })
+
+            if let Some(metered_plan_id) =
+                get_metered_plan(conn, biller, &query_organization).await?
+            {
+                Ok(Self::Metered(metered_plan_id))
+            } else if let Some(license_usage) =
+                get_license_usage(conn, licensor, &query_organization)?
+            {
+                Ok(Self::Licensed(license_usage))
             } else if project.visibility.is_public() {
                 Ok(Self::None)
             } else {
-                Err(payment_required_error(PlanKindError::NoPlan(
-                    project.clone(),
-                )))
+                Err(payment_required_error(PlanKindError::NoPlan {
+                    organization: query_organization.clone(),
+                    project: project.clone(),
+                }))
             }
         }
 
         pub async fn check_usage(
-            &self,
+            self,
             biller: Option<&Biller>,
             project: &QueryProject,
             usage: u64,
         ) -> Result<(), HttpError> {
             match self {
-                Self::Metered(subscription) => {
+                Self::Metered(metered_plan_id) => {
                     let Some(biller) = biller else {
                         return Err(issue_error(
                             StatusCode::INTERNAL_SERVER_ERROR,
@@ -414,7 +404,7 @@ mod plan_kind {
                         ));
                     };
                     biller
-                        .record_usage(subscription, usage)
+                        .record_usage(metered_plan_id, usage)
                         .await
                         .map_err(|e| {
                             issue_error(
@@ -425,15 +415,15 @@ mod plan_kind {
                             )
                         })?;
                 },
-                Self::Licensed {
+                Self::Licensed(LicenseUsage {
                     entitlements,
-                    prior_usage,
-                } => {
-                    if *prior_usage + usage > *entitlements {
+                    usage: prior_usage,
+                }) => {
+                    if prior_usage + usage > entitlements {
                         return Err(payment_required_error(PlanKindError::Overage {
                             project: project.clone(),
-                            entitlements: *entitlements,
-                            prior_usage: *prior_usage,
+                            entitlements,
+                            prior_usage,
                             usage,
                         }));
                     }
@@ -445,10 +435,9 @@ mod plan_kind {
         }
     }
 
-    pub async fn metered_plan(
+    async fn get_metered_plan(
         conn: &mut DbConnection,
         biller: Option<&Biller>,
-        licensor: &Licensor,
         query_organization: &QueryOrganization,
     ) -> Result<Option<MeteredPlanId>, HttpError> {
         let Some(biller) = biller else {
@@ -460,61 +449,37 @@ mod plan_kind {
             return Ok(None);
         };
 
-        let Some(metered_plan_id) = query_plan.metered_plan else {
+        let Some(metered_plan_id) = query_plan.metered_plan.clone() else {
             return Ok(None);
         };
 
         let plan_status = biller
-            .get_plan_status(&subscription_id)
+            .get_plan_status(metered_plan_id.clone())
             .await
             .map_err(not_found_error)?;
+
         if plan_status.is_active() {
-            Ok(PlanKind::Metered(subscription_id))
+            Ok(Some(metered_plan_id))
         } else {
-            Err(payment_required_error(PlanKindError::InactivePlan {
-                project: project.clone(),
-                subscription_id,
+            Err(payment_required_error(PlanKindError::InactiveMeteredPlan {
+                organization: query_organization.clone(),
+                metered_plan_id,
             }))
         }
+    }
 
-        if let Some(subscription_id) = query_organization.get_subscription()? {
-            if let Some(biller) = biller {
-                let plan_status = biller
-                    .get_plan_status(&subscription_id)
-                    .await
-                    .map_err(not_found_error)?;
-                if plan_status.is_active() {
-                    Ok(PlanKind::Metered(subscription_id))
-                } else {
-                    Err(payment_required_error(PlanKindError::InactivePlan {
-                        project: project.clone(),
-                        subscription_id,
-                    }))
-                }
-            } else {
-                Err(issue_error(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "No Biller when checking plan kind",
-                    "Failed to find Biller in Bencher Cloud when checking plan kind for project.",
-                    PlanKindError::NoBiller,
-                ))
-            }
-        } else if let Some(license) = query_organization.get_license()? {
-            let LicenseUsage {
-                entitlements,
-                usage,
-            } = query_organization.check_license_usage(conn, licensor, &license)?;
-            Ok(PlanKind::Licensed {
-                entitlements,
-                prior_usage: usage,
-            })
-        } else if project.visibility.is_public() {
-            Ok(Self::None)
-        } else {
-            Err(payment_required_error(PlanKindError::NoPlan(
-                project.clone(),
-            )))
-        }
+    fn get_license_usage(
+        conn: &mut DbConnection,
+        licensor: &Licensor,
+        query_organization: &QueryOrganization,
+    ) -> Result<Option<LicenseUsage>, HttpError> {
+        let Some(license) = &query_organization.license else {
+            return Ok(None);
+        };
+
+        query_organization
+            .check_license_usage(conn, licensor, license)
+            .map(Some)
     }
 }
 
