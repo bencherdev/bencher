@@ -612,12 +612,17 @@ jobs:
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
       # https://docs.github.com/en/actions/learn-github-actions/contexts#steps-context
       # https://github.com/netlify/actions/blob/375963b92b795c7b979927c580dd6f2a65ebcf28/cli/entrypoint.sh#L18C42-L18C42
       - name: Run Netlify Test
         run: |
+          echo "${{ steps.netlify.outputs }}"
+          echo "${{ steps.netlify.outputs.NETLIFY_OUTPUT }}"
           echo "${{ steps.netlify.outputs.NETLIFY_OUTPUT }}" > ./netlify.txt
-          cargo xtask netlify-test
+          cargo xtask netlify-test --dev
 
   deploy_ui_netlify_prod:
     name: Deploy UI to Netlify Prod

@@ -21,10 +21,11 @@ impl Swagger {
             .args(["run", "--bin", "swagger", "--features", "swagger"])
             .current_dir("./services/api")
             .output()?;
-        println!("{}", String::from_utf8_lossy(&output.stdout));
-        eprintln!("{}", String::from_utf8_lossy(&output.stderr));
 
         output.status.success().then_some(()).ok_or_else(|| {
+            eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+            println!("{}", String::from_utf8_lossy(&output.stdout));
+
             anyhow::anyhow!(
                 "Failed to generate swagger.json. Exit code: {:?}",
                 output.status.code()

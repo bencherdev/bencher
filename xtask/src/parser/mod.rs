@@ -9,6 +9,7 @@ pub struct CliTask {
     pub sub: CliSub,
 }
 
+#[allow(variant_size_differences)]
 #[derive(Subcommand, Debug)]
 pub enum CliSub {
     Fmt,
@@ -36,4 +37,8 @@ pub struct CliSwagger {}
 pub struct CliTypeshare {}
 
 #[derive(Parser, Debug)]
-pub struct CliNetlifyTest {}
+pub struct CliNetlifyTest {
+    /// Run devel tests
+    #[clap(long)]
+    pub dev: bool,
+}
