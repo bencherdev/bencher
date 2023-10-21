@@ -86,7 +86,6 @@ diesel::table! {
         uuid -> Text,
         name -> Text,
         slug -> Text,
-        subscription -> Nullable<Text>,
         license -> Nullable<Text>,
         created -> BigInt,
         modified -> BigInt,
@@ -111,6 +110,18 @@ diesel::table! {
         report_id -> Integer,
         iteration -> Integer,
         benchmark_id -> Integer,
+    }
+}
+
+diesel::table! {
+    plan (id) {
+        id -> Integer,
+        organization_id -> Integer,
+        metered_plan -> Nullable<Text>,
+        license_plan -> Nullable<Text>,
+        license -> Nullable<Text>,
+        created -> BigInt,
+        modified -> BigInt,
     }
 }
 
@@ -272,6 +283,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     organization,
     organization_role,
     perf,
+    plan,
     project,
     project_role,
     report,
