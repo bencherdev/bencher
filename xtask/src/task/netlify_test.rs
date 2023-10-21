@@ -30,13 +30,25 @@ impl NetlifyTest {
         let Some(version) = swagger_spec.version() else {
             return Err(anyhow::anyhow!("No version found in swagger.json"));
         };
-        if !self.dev {
-            test_ui_version(CONSOLE_URL, version).await?;
-        }
 
         let deploy_id = netlify_deploy_id("netlify.txt")?;
         let console_url = format!("https://{deploy_id}--bencher.netlify.app");
+        if !self.dev {
+            test_ui_version(CONSOLE_URL, version).await?;
+        }
         test_ui_version(&console_url, version).await?;
+
+        // TODO replace this with some actual e2e tests
+        let project_slug = if self.dev { "the-computer" } else { "bencher" };
+        let find_str = if self.dev {
+            "<title>The Computer | Bencher - Continuous Benchmarking</title>"
+        } else {
+            "<title>Bencher | Bencher - Continuous Benchmarking</title>"
+        };
+        if !self.dev {
+            test_ui_project(CONSOLE_URL, project_slug, find_str).await?;
+        }
+        test_ui_project(&console_url, project_slug, find_str).await?;
 
         Ok(())
     }
@@ -88,6 +100,24 @@ async fn test_ui_version(console_url: &str, version: &str) -> anyhow::Result<()>
                 "Console version {console_version} does not match swagger.json version {version}"
             ));
         }
+    }
+
+    Ok(())
+}
+
+async fn test_ui_project(
+    console_url: &str,
+    project_slug: &str,
+    find_str: &str,
+) -> anyhow::Result<()> {
+    let url = format!("{console_url}/perf/{project_slug}");
+    println!("Testing UI project {project_slug} at {url}");
+    let html = reqwest::get(url).await?.text().await?;
+
+    if !html.contains(find_str) {
+        return Err(anyhow::anyhow!(
+            "Console project ({project_slug}) page does not contain `{find_str}`: {html}"
+        ));
     }
 
     Ok(())
