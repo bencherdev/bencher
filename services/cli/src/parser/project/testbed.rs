@@ -12,7 +12,7 @@ pub enum CliTestbed {
     #[clap(alias = "add")]
     Create(CliTestbedCreate),
     /// View a testbed
-    #[clap(alias = "cat")]
+    #[clap(alias = "get")]
     View(CliTestbedView),
     // Update a testbed
     #[clap(alias = "edit")]

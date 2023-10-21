@@ -8,7 +8,7 @@ pub mod token;
 #[derive(Subcommand, Debug)]
 pub enum CliUser {
     /// View a user
-    #[clap(alias = "cat")]
+    #[clap(alias = "get")]
     View(CliUserView),
 }
 

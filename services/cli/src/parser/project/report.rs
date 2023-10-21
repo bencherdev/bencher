@@ -13,7 +13,7 @@ pub enum CliReport {
     #[clap(alias = "add")]
     Create(Box<CliRun>),
     /// View a report
-    #[clap(alias = "cat")]
+    #[clap(alias = "get")]
     View(CliReportView),
     /// Delete a report
     #[clap(alias = "rm")]

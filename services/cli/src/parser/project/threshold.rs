@@ -12,7 +12,7 @@ pub enum CliThreshold {
     #[clap(alias = "add")]
     Create(CliThresholdCreate),
     /// View a threshold
-    #[clap(alias = "cat")]
+    #[clap(alias = "get")]
     View(CliThresholdView),
     // Update a threshold
     #[clap(alias = "edit")]

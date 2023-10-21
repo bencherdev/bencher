@@ -50,16 +50,16 @@ const THRESHOLD_FIELDS = {
 	},
 	lower_boundary: {
 		type: "input",
-		placeholder: "0.8",
+		placeholder: "0.95",
 		icon: "fas fa-arrow-down",
-		help: "Must be between 0.5000 and 1.0000",
+		help: "Must be between 0.5000 and 1.0000 (lower is stricter; higher is looser)",
 		validate: validBoundary,
 	},
 	upper_boundary: {
 		type: "input",
-		placeholder: "0.80",
+		placeholder: "0.95",
 		icon: "fas fa-arrow-up",
-		help: "Must be between 0.5000 and 1.0000",
+		help: "Must be between 0.5000 and 1.0000 (lower is stricter; higher is looser)",
 		validate: validBoundary,
 	},
 	min_sample_size: {

@@ -11,7 +11,7 @@ pub enum CliMember {
     /// Invite an organization member
     Invite(CliMemberInvite),
     /// View an organization member
-    #[clap(alias = "cat")]
+    #[clap(alias = "get")]
     View(CliMemberView),
     /// Update an organization member
     #[clap(alias = "edit")]

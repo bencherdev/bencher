@@ -12,7 +12,7 @@ pub enum CliToken {
     #[clap(alias = "add")]
     Create(CliTokenCreate),
     /// View a token
-    #[clap(alias = "cat")]
+    #[clap(alias = "get")]
     View(CliTokenView),
     // Update a token
     #[clap(alias = "edit")]

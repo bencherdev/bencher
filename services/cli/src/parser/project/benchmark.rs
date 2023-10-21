@@ -12,7 +12,7 @@ pub enum CliBenchmark {
     #[clap(alias = "add")]
     Create(CliBenchmarkCreate),
     /// View a benchmark
-    #[clap(alias = "cat")]
+    #[clap(alias = "get")]
     View(CliBenchmarkView),
     // Update a benchmark
     #[clap(alias = "edit")]

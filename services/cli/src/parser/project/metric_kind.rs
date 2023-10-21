@@ -15,7 +15,7 @@ pub enum CliMetricKind {
     #[clap(alias = "edit")]
     Update(CliMetricKindUpdate),
     /// View a metric kind
-    #[clap(alias = "cat")]
+    #[clap(alias = "get")]
     View(CliMetricKindView),
     /// Delete a metric kind
     #[clap(alias = "rm")]

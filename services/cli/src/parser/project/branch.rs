@@ -12,7 +12,7 @@ pub enum CliBranch {
     #[clap(alias = "add")]
     Create(CliBranchCreate),
     /// View a branch
-    #[clap(alias = "cat")]
+    #[clap(alias = "get")]
     View(CliBranchView),
     // Update a branch
     #[clap(alias = "edit")]
