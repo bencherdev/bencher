@@ -44,12 +44,12 @@ impl From<MeteredPlanId> for String {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
-pub struct LicensePlanId(String);
+pub struct LicensedPlanId(String);
 
 #[cfg(feature = "db")]
-crate::typed_string!(LicensePlanId);
+crate::typed_string!(LicensedPlanId);
 
-impl FromStr for LicensePlanId {
+impl FromStr for LicensedPlanId {
     type Err = ValidError;
 
     fn from_str(plan_id: &str) -> Result<Self, Self::Err> {
@@ -57,14 +57,14 @@ impl FromStr for LicensePlanId {
     }
 }
 
-impl AsRef<str> for LicensePlanId {
+impl AsRef<str> for LicensedPlanId {
     fn as_ref(&self) -> &str {
         &self.0
     }
 }
 
-impl From<LicensePlanId> for String {
-    fn from(non_empty: LicensePlanId) -> Self {
+impl From<LicensedPlanId> for String {
+    fn from(non_empty: LicensedPlanId) -> Self {
         non_empty.0
     }
 }

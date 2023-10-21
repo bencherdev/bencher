@@ -118,7 +118,7 @@ diesel::table! {
         id -> Integer,
         organization_id -> Integer,
         metered_plan -> Nullable<Text>,
-        license_plan -> Nullable<Text>,
+        licensed_plan -> Nullable<Text>,
         license -> Nullable<Text>,
         created -> BigInt,
         modified -> BigInt,

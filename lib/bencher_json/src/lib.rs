@@ -4,7 +4,7 @@ pub use bencher_valid::{
 };
 #[cfg(feature = "plus")]
 pub use bencher_valid::{
-    CardBrand, CardCvc, CardNumber, ExpirationMonth, ExpirationYear, LastFour, LicensePlanId,
+    CardBrand, CardCvc, CardNumber, ExpirationMonth, ExpirationYear, LastFour, LicensedPlanId,
     MeteredPlanId, PlanLevel, PlanStatus,
 };
 #[cfg(feature = "schema")]

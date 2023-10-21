@@ -41,7 +41,7 @@ use error::REGEX_ERROR;
 pub use jwt::Jwt;
 pub use non_empty::NonEmpty;
 #[cfg(feature = "plus")]
-pub use plan_id::{LicensePlanId, MeteredPlanId};
+pub use plan_id::{LicensedPlanId, MeteredPlanId};
 #[cfg(feature = "plus")]
 pub use plan_level::PlanLevel;
 #[cfg(feature = "plus")]

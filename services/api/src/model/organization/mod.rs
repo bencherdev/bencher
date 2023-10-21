@@ -25,6 +25,8 @@ pub mod member;
 pub mod organization_role;
 pub mod plan;
 
+use plan::QueryPlan;
+
 crate::util::typed_id::typed_id!(OrganizationId);
 
 #[derive(Debug, Clone, Queryable, diesel::Identifiable)]

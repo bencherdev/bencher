@@ -12,16 +12,16 @@ CREATE TABLE plan (
     id INTEGER PRIMARY KEY NOT NULL,
     organization_id INTEGER NOT NULL UNIQUE,
     metered_plan TEXT UNIQUE,
-    license_plan TEXT UNIQUE,
+    licensed_plan TEXT UNIQUE,
     license TEXT UNIQUE,
     created BIGINT NOT NULL,
     modified BIGINT NOT NULL,
     constraint only_one_plan check (
         metered_plan is not null
-        or license_plan is not null
+        or licensed_plan is not null
         and not (
             metered_plan is not null
-            and license_plan is not null
+            and licensed_plan is not null
         )
     ),
     constraint metered_plan_no_license check (
@@ -30,9 +30,9 @@ CREATE TABLE plan (
             and license is not null
         )
     ),
-    constraint license_plan_has_license check (
+    constraint licensed_plan_has_license check (
         not (
-            license_plan is not null
+            licensed_plan is not null
             and license is null
         )
     )
@@ -40,7 +40,7 @@ CREATE TABLE plan (
 INSERT INTO plan(
         organization_id,
         metered_plan,
-        license_plan,
+        licensed_plan,
         license,
         created,
         modified
