@@ -16,6 +16,7 @@ pub enum CliSub {
     ReleaseNotes(CliReleaseNotes),
     Swagger(CliSwagger),
     Typeshare(CliTypeshare),
+    FlyTest(CliFlyTest),
     NetlifyTest(CliNetlifyTest),
 }
 
@@ -35,6 +36,13 @@ pub struct CliSwagger {}
 
 #[derive(Parser, Debug)]
 pub struct CliTypeshare {}
+
+#[derive(Parser, Debug)]
+pub struct CliFlyTest {
+    /// Run devel tests
+    #[clap(long)]
+    pub dev: bool,
+}
 
 #[derive(Parser, Debug)]
 pub struct CliNetlifyTest {

@@ -1,19 +1,14 @@
 use std::{
     fs::File,
     io::{BufRead, BufReader},
-    process::Command,
 };
 
-use bencher_json::JsonApiVersion;
 use camino::Utf8PathBuf;
 
 use crate::{parser::CliNetlifyTest, task::swagger::swagger_spec};
 
 const CONSOLE_URL: &str = "https://bencher.dev";
 const NETLIFY_URL: &str = "https://app.netlify.com/sites/bencher/deploys/";
-const BENCHER_API_URL_KEY: &str = "BENCHER_API_URL";
-const DEV_BENCHER_API_URL: &str = "https://bencher-api-dev.fly.dev/";
-const BENCHER_API_URL: &str = "https://api.bencher.dev/";
 
 #[derive(Debug)]
 pub struct NetlifyTest {
@@ -42,17 +37,6 @@ impl NetlifyTest {
         let deploy_id = netlify_deploy_id("netlify.txt")?;
         let console_url = format!("https://{deploy_id}--bencher.netlify.app");
         test_ui_version(&console_url, version).await?;
-
-        let api_url = if self.dev {
-            DEV_BENCHER_API_URL
-        } else {
-            BENCHER_API_URL
-        };
-        test_api_version(api_url, version)?;
-
-        if self.dev {
-            seed(api_url)?;
-        }
 
         Ok(())
     }
@@ -107,50 +91,4 @@ async fn test_ui_version(console_url: &str, version: &str) -> anyhow::Result<()>
     }
 
     Ok(())
-}
-
-fn test_api_version(api_url: &str, version: &str) -> anyhow::Result<()> {
-    println!("Testing API deploy is version {version} at {api_url}");
-
-    let output = Command::new("cargo")
-        .args(["run", "--", "server", "version", "--host", api_url])
-        .current_dir("./services/cli")
-        .output()?;
-
-    output.status.success().then_some(()).ok_or_else(|| {
-        eprintln!("{}", String::from_utf8_lossy(&output.stderr));
-        println!("{}", String::from_utf8_lossy(&output.stdout));
-
-        anyhow::anyhow!(
-            "Failed to generate swagger.json. Exit code: {:?}",
-            output.status.code()
-        )
-    })?;
-
-    let api_version =
-        serde_json::from_str::<JsonApiVersion>(std::str::from_utf8(&output.stdout)?)?.version;
-    if api_version != version {
-        return Err(anyhow::anyhow!(
-            "API version {api_version} does not match swagger.json version {version}"
-        ));
-    }
-
-    Ok(())
-}
-
-fn seed(api_url: &str) -> anyhow::Result<()> {
-    println!("Seeding API deploy at {api_url}");
-
-    let output = Command::new("cargo")
-        .args(["test", "--features", "seed", "--test", "seed"])
-        .current_dir("./services/cli")
-        .env(BENCHER_API_URL_KEY, api_url)
-        .output()?;
-
-    output.status.success().then_some(()).ok_or_else(|| {
-        eprintln!("{}", String::from_utf8_lossy(&output.stderr));
-        println!("{}", String::from_utf8_lossy(&output.stdout));
-
-        anyhow::anyhow!("Failed to seed. Exit code: {:?}", output.status.code())
-    })
 }

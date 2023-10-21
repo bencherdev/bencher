@@ -2,11 +2,13 @@ use clap::Parser;
 
 use crate::parser::{CliSub, CliTask};
 
+mod fly_test;
 mod netlify_test;
 mod release_notes;
 mod swagger;
 mod typeshare;
 
+use fly_test::FlyTest;
 use netlify_test::NetlifyTest;
 use release_notes::ReleaseNotes;
 use swagger::Swagger;
@@ -17,12 +19,14 @@ pub struct Task {
     sub: Sub,
 }
 
+#[allow(variant_size_differences)]
 #[derive(Debug)]
 pub enum Sub {
     Fmt,
     ReleaseNotes(ReleaseNotes),
     Swagger(Swagger),
     Typeshare(Typeshare),
+    FlyTest(FlyTest),
     NetlifyTest(NetlifyTest),
 }
 
@@ -45,7 +49,8 @@ impl TryFrom<CliSub> for Sub {
             CliSub::ReleaseNotes(release_notes) => Self::ReleaseNotes(release_notes.try_into()?),
             CliSub::Swagger(swagger) => Self::Swagger(swagger.try_into()?),
             CliSub::Typeshare(typeshare) => Self::Typeshare(typeshare.try_into()?),
-            CliSub::NetlifyTest(netlify_url) => Self::NetlifyTest(netlify_url.try_into()?),
+            CliSub::FlyTest(fly_test) => Self::FlyTest(fly_test.try_into()?),
+            CliSub::NetlifyTest(netlify_test) => Self::NetlifyTest(netlify_test.try_into()?),
         })
     }
 }
@@ -68,7 +73,8 @@ impl Sub {
             Self::ReleaseNotes(release_notes) => release_notes.exec(),
             Self::Swagger(swagger) => swagger.exec(),
             Self::Typeshare(typeshare) => typeshare.exec(),
-            Self::NetlifyTest(netlify_url) => netlify_url.exec().await,
+            Self::FlyTest(fly_test) => fly_test.exec(),
+            Self::NetlifyTest(netlify_test) => netlify_test.exec().await,
         }
     }
 }
