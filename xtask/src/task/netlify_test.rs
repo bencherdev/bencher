@@ -1,13 +1,11 @@
-use std::{
-    fs::File,
-    io::{BufRead, BufReader},
-};
+use std::fs::File;
 
 use camino::Utf8PathBuf;
 
 use crate::{parser::CliNetlifyTest, task::swagger::swagger_spec};
 
 const CONSOLE_URL: &str = "https://bencher.dev";
+const NETLIFY_LOGS_URL_KEY: &str = "NETLIFY_LOGS_URL";
 const NETLIFY_URL: &str = "https://app.netlify.com/sites/bencher/deploys/";
 
 #[derive(Debug)]
@@ -31,7 +29,7 @@ impl NetlifyTest {
             return Err(anyhow::anyhow!("No version found in swagger.json"));
         };
 
-        let deploy_id = netlify_deploy_id("netlify.txt")?;
+        let deploy_id = netlify_deploy_id("netlify.json")?;
         let console_url = format!("https://{deploy_id}--bencher.netlify.app");
         if !self.dev {
             test_ui_version(CONSOLE_URL, version).await?;
@@ -57,27 +55,24 @@ impl NetlifyTest {
 fn netlify_deploy_id(path: &str) -> anyhow::Result<String> {
     let netlify_path = Utf8PathBuf::from(path);
     let netlify_file = File::open(netlify_path)?;
+    let netlify_output_json: serde_json::Value = serde_json::from_reader(netlify_file)?;
 
-    let mut deploy_id = None;
-    let buffered_reader = BufReader::new(netlify_file);
-    // Looking for a line like:
-    // Build logs:        https://app.netlify.com/sites/bencher/deploys/65324dc5185e4f0b9e4a6e25
-    for line in buffered_reader.lines() {
-        let line = line?;
-        let Some((_, url)) = line.split_once("Build logs:") else {
-            continue;
-        };
-        let Some((_, id)) = url.trim().split_once(NETLIFY_URL) else {
-            return Err(anyhow::anyhow!(
-                "Netlify URL {url} does not match {NETLIFY_URL}"
-            ));
-        };
-        println!("Netlify Deploy ID: {id}");
-        deploy_id = Some(id.to_owned());
-        break;
-    }
+    let Some(logs_url) = netlify_output_json.get(NETLIFY_LOGS_URL_KEY) else {
+        return Err(anyhow::anyhow!(
+            "Netlify output did not contain {NETLIFY_LOGS_URL_KEY} key: {netlify_output_json}"
+        ));
+    };
+    let Some(logs_url_str) = logs_url.as_str() else {
+        return Err(anyhow::anyhow!("Netlify output {logs_url} is not a string"));
+    };
+    let Some((_, id)) = logs_url_str.split_once(NETLIFY_URL) else {
+        return Err(anyhow::anyhow!(
+            "Netlify logs URL {logs_url_str} does not match {NETLIFY_URL}"
+        ));
+    };
 
-    deploy_id.ok_or(anyhow::anyhow!("No Netlify Deploy ID found"))
+    println!("Netlify Deploy ID: {id}");
+    Ok(id.to_owned())
 }
 
 async fn test_ui_version(console_url: &str, version: &str) -> anyhow::Result<()> {
