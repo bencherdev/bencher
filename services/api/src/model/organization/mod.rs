@@ -1,4 +1,3 @@
-use std::str::FromStr;
 use std::string::ToString;
 
 use bencher_json::{
@@ -40,12 +39,6 @@ pub struct QueryOrganization {
     pub modified: DateTime,
 }
 
-#[cfg(feature = "plus")]
-pub struct LicenseUsage {
-    pub entitlements: u64,
-    pub usage: u64,
-}
-
 impl QueryOrganization {
     fn_resource_id!(organization);
     fn_from_resource_id!(organization, Organization, true);
@@ -53,64 +46,6 @@ impl QueryOrganization {
     fn_get!(organization, OrganizationId);
     fn_get_id!(organization, OrganizationId, OrganizationUuid);
     fn_get_uuid!(organization, OrganizationId, OrganizationUuid);
-
-    #[cfg(feature = "plus")]
-    pub fn get_subscription(&self) -> Result<Option<bencher_billing::SubscriptionId>, HttpError> {
-        Ok(if let Some(subscription) = &self.subscription {
-            Some(bencher_billing::SubscriptionId::from_str(subscription).map_err(|e| {
-                crate::error::issue_error(
-                    http::StatusCode::INTERNAL_SERVER_ERROR,
-                    "Failed to parse subscription ID",
-                    &format!("Failed to parse subscription ID ({subscription}) for organization ({self:?})"),
-                    e,
-                )
-            })?)
-        } else {
-            None
-        })
-    }
-
-    #[cfg(feature = "plus")]
-    pub fn get_license(&self) -> Result<Option<bencher_json::Jwt>, HttpError> {
-        Ok(if let Some(license) = &self.license {
-            Some(bencher_json::Jwt::from_str(license).map_err(|e| {
-                crate::error::issue_error(
-                    http::StatusCode::INTERNAL_SERVER_ERROR,
-                    "Failed to parse subscription license",
-                    &format!("Failed to parse subscription license ({license}) for organization ({self:?})"),
-                    e,
-                )
-            })?)
-        } else {
-            None
-        })
-    }
-
-    #[cfg(feature = "plus")]
-    pub fn check_license_usage(
-        &self,
-        conn: &mut DbConnection,
-        licensor: &bencher_license::Licensor,
-        license: &Jwt,
-    ) -> Result<LicenseUsage, HttpError> {
-        let token_data = licensor
-            .validate_organization(license, self.uuid.into())
-            .map_err(crate::error::payment_required_error)?;
-
-        let start_time = token_data.claims.issued_at();
-        let end_time = token_data.claims.expiration();
-
-        let usage =
-            super::project::metric::QueryMetric::usage(conn, self.id, start_time, end_time)?;
-        let entitlements = licensor
-            .validate_usage(&token_data.claims, usage)
-            .map_err(crate::error::payment_required_error)?;
-
-        Ok(LicenseUsage {
-            entitlements,
-            usage,
-        })
-    }
 
     pub fn is_allowed_resource_id(
         conn: &mut DbConnection,
