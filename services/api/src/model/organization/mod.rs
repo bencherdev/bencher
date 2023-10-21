@@ -23,9 +23,8 @@ use crate::{
 
 pub mod member;
 pub mod organization_role;
+#[cfg(feature = "plus")]
 pub mod plan;
-
-use plan::QueryPlan;
 
 crate::util::typed_id::typed_id!(OrganizationId);
 

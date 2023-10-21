@@ -308,7 +308,9 @@ async fn post_inner(
 #[cfg(feature = "plus")]
 mod plan_kind {
     use bencher_billing::{Biller, SubscriptionId};
+    use bencher_json::MeteredPlanId;
     use bencher_license::Licensor;
+    use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
     use dropshot::HttpError;
     use http::StatusCode;
 
@@ -316,7 +318,7 @@ mod plan_kind {
         context::DbConnection,
         error::{issue_error, not_found_error, payment_required_error},
         model::{
-            organization::{LicenseUsage, QueryOrganization},
+            organization::{plan::QueryPlan, LicenseUsage, QueryOrganization},
             project::QueryProject,
         },
     };
@@ -440,6 +442,78 @@ mod plan_kind {
             }
 
             Ok(())
+        }
+    }
+
+    pub async fn metered_plan(
+        conn: &mut DbConnection,
+        biller: Option<&Biller>,
+        licensor: &Licensor,
+        query_organization: &QueryOrganization,
+    ) -> Result<Option<MeteredPlanId>, HttpError> {
+        let Some(biller) = biller else {
+            return Ok(None);
+        };
+
+        let Ok(query_plan) = QueryPlan::belonging_to(&query_organization).first::<QueryPlan>(conn)
+        else {
+            return Ok(None);
+        };
+
+        let Some(metered_plan_id) = query_plan.metered_plan else {
+            return Ok(None);
+        };
+
+        let plan_status = biller
+            .get_plan_status(&subscription_id)
+            .await
+            .map_err(not_found_error)?;
+        if plan_status.is_active() {
+            Ok(PlanKind::Metered(subscription_id))
+        } else {
+            Err(payment_required_error(PlanKindError::InactivePlan {
+                project: project.clone(),
+                subscription_id,
+            }))
+        }
+
+        if let Some(subscription_id) = query_organization.get_subscription()? {
+            if let Some(biller) = biller {
+                let plan_status = biller
+                    .get_plan_status(&subscription_id)
+                    .await
+                    .map_err(not_found_error)?;
+                if plan_status.is_active() {
+                    Ok(PlanKind::Metered(subscription_id))
+                } else {
+                    Err(payment_required_error(PlanKindError::InactivePlan {
+                        project: project.clone(),
+                        subscription_id,
+                    }))
+                }
+            } else {
+                Err(issue_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "No Biller when checking plan kind",
+                    "Failed to find Biller in Bencher Cloud when checking plan kind for project.",
+                    PlanKindError::NoBiller,
+                ))
+            }
+        } else if let Some(license) = query_organization.get_license()? {
+            let LicenseUsage {
+                entitlements,
+                usage,
+            } = query_organization.check_license_usage(conn, licensor, &license)?;
+            Ok(PlanKind::Licensed {
+                entitlements,
+                prior_usage: usage,
+            })
+        } else if project.visibility.is_public() {
+            Ok(Self::None)
+        } else {
+            Err(payment_required_error(PlanKindError::NoPlan(
+                project.clone(),
+            )))
         }
     }
 }

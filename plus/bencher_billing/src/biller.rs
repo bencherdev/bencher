@@ -1,7 +1,10 @@
+use std::{fmt, str::FromStr};
+
 use bencher_json::{
     organization::plan::{JsonCard, JsonCardDetails, JsonCustomer, JsonPlan},
     system::config::JsonBilling,
-    Email, OrganizationUuid, PlanLevel, PlanStatus, UserName, UserUuid,
+    Email, LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus, UserName,
+    UserUuid,
 };
 use chrono::{TimeZone, Utc};
 use stripe::{
@@ -51,6 +54,50 @@ impl ProductPlan {
             PlanLevel::Free => Self::Free,
             PlanLevel::Team => Self::Team(ProductUsage::Licensed(price_name, quantity)),
             PlanLevel::Enterprise => Self::Enterprise(ProductUsage::Licensed(price_name, quantity)),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum PlanId {
+    Metered(MeteredPlanId),
+    Licensed(LicensedPlanId),
+}
+
+impl From<MeteredPlanId> for PlanId {
+    fn from(metered_plan_id: MeteredPlanId) -> Self {
+        Self::Metered(metered_plan_id)
+    }
+}
+
+impl From<LicensedPlanId> for PlanId {
+    fn from(licensed_plan_id: LicensedPlanId) -> Self {
+        Self::Licensed(licensed_plan_id)
+    }
+}
+
+impl TryFrom<PlanId> for SubscriptionId {
+    type Error = BillingError;
+
+    fn try_from(plan_id: PlanId) -> Result<Self, Self::Error> {
+        match plan_id {
+            PlanId::Metered(metered_plan_id) => metered_plan_id
+                .as_ref()
+                .parse()
+                .map_err(BillingError::MeteredPlanId),
+            PlanId::Licensed(licensed_plan_id) => licensed_plan_id
+                .as_ref()
+                .parse()
+                .map_err(BillingError::MeteredPlanId),
+        }
+    }
+}
+
+impl fmt::Display for PlanId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Metered(metered_plan_id) => write!(f, "{metered_plan_id}"),
+            Self::Licensed(licensed_plan_id) => write!(f, "{licensed_plan_id}"),
         }
     }
 }
@@ -257,30 +304,35 @@ impl Biller {
             .map_err(Into::into)
     }
 
-    pub async fn get_subscription(
-        &self,
-        subscription_id: &SubscriptionId,
-    ) -> Result<Subscription, BillingError> {
-        self.get_subscription_expand(subscription_id, &[]).await
+    pub async fn get_subscription<P>(&self, plan_id: P) -> Result<Subscription, BillingError>
+    where
+        PlanId: From<P>,
+    {
+        self.get_subscription_expand(plan_id, &[]).await
     }
 
-    pub async fn get_subscription_expand(
+    pub async fn get_subscription_expand<P>(
         &self,
-        subscription_id: &SubscriptionId,
+        plan_id: P,
         expand: &[&str],
-    ) -> Result<Subscription, BillingError> {
-        Subscription::retrieve(&self.client, subscription_id, expand)
+    ) -> Result<Subscription, BillingError>
+    where
+        PlanId: From<P>,
+    {
+        let id = PlanId::from(plan_id).try_into()?;
+        Subscription::retrieve(&self.client, &id, expand)
             .await
             .map_err(Into::into)
     }
 
-    pub async fn get_plan(
-        &self,
-        subscription_id: &SubscriptionId,
-    ) -> Result<JsonPlan, BillingError> {
+    pub async fn get_plan<P>(&self, plan_id: P) -> Result<JsonPlan, BillingError>
+    where
+        PlanId: From<P>,
+        P: Clone,
+    {
         let subscription = self
             .get_subscription_expand(
-                subscription_id,
+                plan_id.clone(),
                 &[
                     "customer",
                     "default_payment_method",
@@ -291,26 +343,28 @@ impl Biller {
             .await?;
 
         let Some(organization) = subscription.metadata.get(METADATA_ORGANIZATION) else {
-            return Err(BillingError::NoOrganization(subscription_id.clone()));
+            return Err(BillingError::NoOrganization(plan_id.into()));
         };
-        let organization = organization.parse()?;
+        let organization = organization
+            .parse()
+            .map_err(|e| BillingError::BadOrganizationUuid(organization.clone(), e))?;
 
         let current_period_start = Utc
             .timestamp_opt(subscription.current_period_start, 0)
             .single()
             .ok_or_else(|| {
-                BillingError::DateTime(subscription_id.clone(), subscription.current_period_start)
+                BillingError::DateTime(plan_id.clone().into(), subscription.current_period_start)
             })?;
         let current_period_end = Utc
             .timestamp_opt(subscription.current_period_end, 0)
             .single()
             .ok_or_else(|| {
-                BillingError::DateTime(subscription_id.clone(), subscription.current_period_end)
+                BillingError::DateTime(plan_id.clone().into(), subscription.current_period_end)
             })?;
 
         let customer = Self::get_plan_customer(&subscription.customer)?;
-        let card = Self::get_plan_card(subscription_id, &subscription.default_payment_method)?;
-        let (level, unit_amount) = Self::get_plan_price(subscription_id, subscription.items.data)?;
+        let card = Self::get_plan_card(plan_id.clone(), &subscription.default_payment_method)?;
+        let (level, unit_amount) = Self::get_plan_price(plan_id, subscription.items.data)?;
 
         let status = Self::map_status(subscription.status);
 
@@ -344,20 +398,23 @@ impl Biller {
             return Err(BillingError::NoEmail(customer.id.clone()));
         };
         Ok(JsonCustomer {
-            uuid: uuid.parse()?,
+            uuid: uuid
+                .parse()
+                .map_err(|e| BillingError::BadUserUuid(uuid.clone(), e))?,
             name: name.parse()?,
             email: email.parse()?,
         })
     }
 
-    fn get_plan_card(
-        subscription_id: &SubscriptionId,
+    fn get_plan_card<P>(
+        plan_id: P,
         default_payment_method: &Option<Expandable<PaymentMethod>>,
-    ) -> Result<JsonCardDetails, BillingError> {
+    ) -> Result<JsonCardDetails, BillingError>
+    where
+        PlanId: From<P>,
+    {
         let Some(default_payment_method) = default_payment_method else {
-            return Err(BillingError::NoDefaultPaymentMethod(
-                subscription_id.clone(),
-            ));
+            return Err(BillingError::NoDefaultPaymentMethod(plan_id.into()));
         };
         let Some(default_payment_method_info) = default_payment_method.as_object() else {
             return Err(BillingError::NoDefaultPaymentMethodInfo(
@@ -375,11 +432,14 @@ impl Biller {
         })
     }
 
-    fn get_plan_price(
-        subscription_id: &SubscriptionId,
+    fn get_plan_price<P>(
+        plan_id: P,
         subscription_items: Vec<SubscriptionItem>,
-    ) -> Result<(PlanLevel, u64), BillingError> {
-        let subscription_item = Self::get_subscription_item(subscription_id, subscription_items)?;
+    ) -> Result<(PlanLevel, u64), BillingError>
+    where
+        PlanId: From<P>,
+    {
+        let subscription_item = Self::get_subscription_item(plan_id, subscription_items)?;
         let Some(price) = subscription_item.price else {
             return Err(BillingError::NoPrice(subscription_item.id));
         };
@@ -404,30 +464,33 @@ impl Biller {
         Ok((plan_level, unit_amount))
     }
 
-    fn get_subscription_item(
-        subscription_id: &SubscriptionId,
+    fn get_subscription_item<P>(
+        plan_id: P,
         mut subscription_items: Vec<SubscriptionItem>,
-    ) -> Result<SubscriptionItem, BillingError> {
+    ) -> Result<SubscriptionItem, BillingError>
+    where
+        PlanId: From<P>,
+    {
         if let Some(subscription_item) = subscription_items.pop() {
             if subscription_items.is_empty() {
                 Ok(subscription_item)
             } else {
                 Err(BillingError::MultipleSubscriptionItems(
-                    subscription_id.clone(),
+                    plan_id.into(),
                     subscription_item,
                     subscription_items,
                 ))
             }
         } else {
-            Err(BillingError::NoSubscriptionItem(subscription_id.clone()))
+            Err(BillingError::NoSubscriptionItem(plan_id.into()))
         }
     }
 
-    pub async fn get_plan_status(
-        &self,
-        subscription_id: &SubscriptionId,
-    ) -> Result<PlanStatus, BillingError> {
-        let subscription = self.get_subscription(subscription_id).await?;
+    pub async fn get_plan_status<P>(&self, plan_id: P) -> Result<PlanStatus, BillingError>
+    where
+        PlanId: From<P>,
+    {
+        let subscription = self.get_subscription(plan_id).await?;
         Ok(Self::map_status(subscription.status))
     }
 
@@ -446,12 +509,13 @@ impl Biller {
 
     pub async fn record_usage(
         &self,
-        subscription_id: &SubscriptionId,
+        metered_plan_id: MeteredPlanId,
         quantity: u64,
     ) -> Result<UsageRecord, BillingError> {
-        let subscription = self.get_subscription(subscription_id).await?;
+        let subscription = self.get_subscription(metered_plan_id).await?;
+        let metered_plan_id = MeteredPlanId::from_str(subscription.id.as_ref())?;
         let subscription_item =
-            Self::get_subscription_item(&subscription.id, subscription.items.data)?;
+            Self::get_subscription_item(metered_plan_id, subscription.items.data)?;
 
         let create_usage_record = CreateUsageRecord {
             quantity,
@@ -481,15 +545,17 @@ fn into_payment_card(card: JsonCard) -> PaymentCard {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod test {
+    use std::str::FromStr;
+
     use bencher_json::{
         organization::plan::{JsonCard, DEFAULT_PRICE_NAME},
         system::config::{JsonBilling, JsonProduct, JsonProducts},
-        OrganizationUuid, PlanLevel, UserUuid,
+        LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel, UserUuid,
     };
     use chrono::{Datelike, Utc};
     use literally::hmap;
     use pretty_assertions::assert_eq;
-    use stripe::{Customer, PaymentMethod, SubscriptionId};
+    use stripe::{Customer, PaymentMethod};
 
     use crate::Biller;
 
@@ -542,15 +608,16 @@ mod test {
             .await
             .unwrap();
 
+        let metered_plan_id = MeteredPlanId::from_str(create_subscription.id.as_ref()).unwrap();
         let get_subscription = biller
-            .get_subscription(&create_subscription.id)
+            .get_subscription(metered_plan_id.clone())
             .await
             .unwrap();
         assert_eq!(create_subscription.id, get_subscription.id);
 
-        test_record_usage(biller, &create_subscription.id, usage_count).await;
+        test_record_usage(biller, metered_plan_id.clone(), usage_count).await;
 
-        biller.get_plan(&create_subscription.id).await.unwrap();
+        biller.get_plan(metered_plan_id).await.unwrap();
     }
 
     async fn test_licensed_subscription(
@@ -573,22 +640,26 @@ mod test {
             )
             .await
             .unwrap();
+
+        let licensed_plan_id = LicensedPlanId::from_str(create_subscription.id.as_ref()).unwrap();
         let get_subscription = biller
-            .get_subscription(&create_subscription.id)
+            .get_subscription(licensed_plan_id.clone())
             .await
             .unwrap();
         assert_eq!(create_subscription.id, get_subscription.id);
+
+        biller.get_plan(licensed_plan_id).await.unwrap();
     }
 
     async fn test_record_usage(
         biller: &Biller,
-        subscription_id: &SubscriptionId,
+        metered_plan_id: MeteredPlanId,
         usage_count: usize,
     ) {
         for _ in 0..usage_count {
-            let quantity = rand::random::<u8>();
+            let quantity = u64::from(rand::random::<u8>());
             biller
-                .record_usage(subscription_id, u64::from(quantity))
+                .record_usage(metered_plan_id.clone(), quantity)
                 .await
                 .unwrap();
         }

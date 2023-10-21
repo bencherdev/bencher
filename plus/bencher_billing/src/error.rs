@@ -1,6 +1,6 @@
 use stripe::{
     Customer, CustomerId, PaymentMethod, PaymentMethodId, PriceId, ProductId, Subscription,
-    SubscriptionId, SubscriptionItem, SubscriptionItemId,
+    SubscriptionItem, SubscriptionItemId,
 };
 use thiserror::Error;
 
@@ -8,8 +8,15 @@ use thiserror::Error;
 pub enum BillingError {
     #[error("Failed to validate: {0}")]
     Valid(#[from] bencher_json::ValidError),
-    #[error("Failed to parse UUID: {0}")]
-    Uuid(#[from] uuid::Error),
+    #[error("Failed to parse metered plan ID: {0}")]
+    MeteredPlanId(stripe::ParseIdError),
+    #[error("Failed to parse licensed plan ID: {0}")]
+    LicensedPlanId(stripe::ParseIdError),
+    #[error("Failed to parse user UUID ({0}): {1}")]
+    BadUserUuid(String, uuid::Error),
+    #[error("Failed to parse organization UUID ({0}): {1}")]
+    BadOrganizationUuid(String, uuid::Error),
+
     #[error("Failed to cast integer: {0}")]
     IntError(#[from] std::num::TryFromIntError),
     #[error("Failed to send billing request: {0}")]
@@ -29,13 +36,17 @@ pub enum BillingError {
     #[error("Multiple subscriptions: {0:#?} {1:#?}")]
     MultipleSubscriptions(Subscription, Vec<Subscription>),
     #[error("Multiple subscription items for {0}: {1:#?} {2:#?}")]
-    MultipleSubscriptionItems(SubscriptionId, SubscriptionItem, Vec<SubscriptionItem>),
+    MultipleSubscriptionItems(
+        crate::biller::PlanId,
+        SubscriptionItem,
+        Vec<SubscriptionItem>,
+    ),
     #[error("No subscription item for {0}")]
-    NoSubscriptionItem(SubscriptionId),
+    NoSubscriptionItem(crate::biller::PlanId),
     #[error("No organization for {0}")]
-    NoOrganization(SubscriptionId),
+    NoOrganization(crate::biller::PlanId),
     #[error("Failed to parse date/time for {0}: {1}")]
-    DateTime(SubscriptionId, i64),
+    DateTime(crate::biller::PlanId, i64),
     #[error("No customer info for {0}")]
     NoCustomerInfo(CustomerId),
     #[error("No UUID for {0}")]
@@ -45,7 +56,7 @@ pub enum BillingError {
     #[error("No email for {0}")]
     NoEmail(CustomerId),
     #[error("No default payment method for {0}")]
-    NoDefaultPaymentMethod(SubscriptionId),
+    NoDefaultPaymentMethod(crate::biller::PlanId),
     #[error("No default payment method info for {0}")]
     NoDefaultPaymentMethodInfo(PaymentMethodId),
     #[error("No card details for {0}")]

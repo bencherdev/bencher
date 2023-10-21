@@ -33,8 +33,8 @@ impl AsRef<str> for MeteredPlanId {
 }
 
 impl From<MeteredPlanId> for String {
-    fn from(non_empty: MeteredPlanId) -> Self {
-        non_empty.0
+    fn from(plan_id: MeteredPlanId) -> Self {
+        plan_id.0
     }
 }
 
@@ -64,7 +64,7 @@ impl AsRef<str> for LicensedPlanId {
 }
 
 impl From<LicensedPlanId> for String {
-    fn from(non_empty: LicensedPlanId) -> Self {
-        non_empty.0
+    fn from(plan_id: LicensedPlanId) -> Self {
+        plan_id.0
     }
 }

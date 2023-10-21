@@ -6,7 +6,7 @@ edition.workspace = true
 
 [dependencies]
 # Workspace
-bencher_json = { workspace = true, features = ["plus"] }
+bencher_json = { workspace = true, features = ["full", "plus"] }
 chrono.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["rt", "macros"] }
@@ -18,4 +18,3 @@ async-stripe = { version = "0.25", features = ["runtime-tokio-hyper"] }
 literally.workspace = true
 pretty_assertions.workspace = true
 rand.workspace = true
-uuid = { workspace = true, features = ["v4"] }

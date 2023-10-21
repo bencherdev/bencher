@@ -25,7 +25,7 @@ pub mod project_visibility {
     use crate::{
         context::DbConnection,
         error::{issue_error, not_found_error, payment_required_error},
-        model::organization::{plan::QueryPlan, QueryOrganization},
+        model::organization::QueryOrganization,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -62,7 +62,6 @@ pub mod project_visibility {
         organization: &ResourceId,
     ) -> Result<(), HttpError> {
         let query_organization = QueryOrganization::from_resource_id(conn, organization)?;
-        let query_plan = QueryPlan::belonging_to(&query_organization).first::<QueryPlan>(conn)?;
         if let Some(subscription_id) = query_organization.get_subscription()? {
             if let Some(biller) = biller {
                 let plan_status = biller

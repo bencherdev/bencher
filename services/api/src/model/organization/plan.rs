@@ -1,5 +1,7 @@
+#![cfg(feature = "plus")]
+
 use crate::schema::plan as plan_table;
-use bencher_json::{DateTime, LicensedPlanId, MeteredPlanId};
+use bencher_json::{DateTime, Jwt, LicensedPlanId, MeteredPlanId};
 
 use super::{OrganizationId, QueryOrganization};
 
@@ -13,8 +15,9 @@ crate::util::typed_id::typed_id!(PlanId);
 pub struct QueryPlan {
     pub id: PlanId,
     pub organization_id: OrganizationId,
-    pub metered_plan: MeteredPlanId,
-    pub licensed_plan: LicensedPlanId,
+    pub metered_plan: Option<MeteredPlanId>,
+    pub licensed_plan: Option<LicensedPlanId>,
+    pub license: Option<Jwt>,
     pub created: DateTime,
     pub modified: DateTime,
 }
@@ -23,8 +26,9 @@ pub struct QueryPlan {
 #[diesel(table_name = plan_table)]
 pub struct InsertPlan {
     pub organization_id: OrganizationId,
-    pub metered_plan: MeteredPlanId,
-    pub licensed_plan: LicensedPlanId,
+    pub metered_plan: Option<MeteredPlanId>,
+    pub licensed_plan: Option<LicensedPlanId>,
+    pub license: Option<Jwt>,
     pub created: DateTime,
     pub modified: DateTime,
 }
