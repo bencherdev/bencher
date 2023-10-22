@@ -27,6 +27,10 @@ pub struct CliPlanCreate {
     #[clap(value_enum, long)]
     pub level: CliPlanLevel,
 
+    /// Plan entitlements (in thousands)
+    #[clap(value_enum, long)]
+    pub entitlements: Option<u64>,
+
     #[clap(flatten)]
     pub backend: CliBackend,
 }
