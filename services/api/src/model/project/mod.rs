@@ -10,10 +10,7 @@ use dropshot::HttpError;
 
 use crate::{
     context::{DbConnection, Rbac},
-    error::{
-        assert_parentage, forbidden_error, resource_not_found_err, unauthorized_error,
-        BencherResource,
-    },
+    error::{assert_parentage, forbidden_error, unauthorized_error, BencherResource},
     model::{organization::QueryOrganization, user::auth::AuthUser},
     schema::{self, project as project_table},
     util::{
@@ -36,7 +33,6 @@ pub mod report;
 pub mod testbed;
 pub mod threshold;
 pub mod version;
-pub mod visibility;
 
 crate::util::typed_id::typed_id!(ProjectId);
 
@@ -62,14 +58,25 @@ impl QueryProject {
     fn_get!(project, ProjectId);
     fn_get_uuid!(project, ProjectId, ProjectUuid);
 
-    #[cfg(feature = "plus")]
-    pub fn is_public(conn: &mut DbConnection, id: ProjectId) -> Result<bool, HttpError> {
-        schema::project::table
-            .filter(schema::project::id.eq(id))
-            .select(schema::project::visibility)
-            .first::<Visibility>(conn)
-            .map(Visibility::is_public)
-            .map_err(resource_not_found_err!(Project, id))
+    // #[cfg(feature = "plus")]
+    // pub fn is_public(conn: &mut DbConnection, id: ProjectId) -> Result<bool, HttpError> {
+    //     schema::project::table
+    //         .filter(schema::project::id.eq(id))
+    //         .select(schema::project::visibility)
+    //         .first::<Visibility>(conn)
+    //         .map(Visibility::is_public)
+    //         .map_err(resource_not_found_err!(Project, id))
+    // }
+
+    #[cfg(not(feature = "plus"))]
+    pub fn is_public(visibility: Option<Visibility>) -> Result<(), HttpError> {
+        visibility
+            .unwrap_or_default()
+            .is_public()
+            .then_some(())
+            .ok_or(crate::error::payment_required_error(format!(
+                "Private projects are only available with the an active Bencher Plus plan. Please upgrade your plan at: https://bencher.dev/pricing"
+            )))
     }
 
     pub fn is_allowed(
@@ -165,7 +172,7 @@ pub struct InsertProject {
 impl InsertProject {
     pub fn from_json(
         conn: &mut DbConnection,
-        organization: &ResourceId,
+        organization: &QueryOrganization,
         project: JsonNewProject,
     ) -> Result<Self, HttpError> {
         let JsonNewProject {
@@ -178,7 +185,7 @@ impl InsertProject {
         let timestamp = DateTime::now();
         Ok(Self {
             uuid: ProjectUuid::new(),
-            organization_id: QueryOrganization::from_resource_id(conn, organization)?.id,
+            organization_id: organization.id,
             name,
             slug,
             url,

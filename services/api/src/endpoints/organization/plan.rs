@@ -73,28 +73,30 @@ async fn get_one_inner(
     };
     let conn = &mut *context.conn().await;
 
-    // Get the organization
-    let query_org = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
-    // Check to see if user has permission to manage the organization
-    context
-        .rbac
-        .is_allowed_organization(auth_user, Permission::Manage, &query_org)
-        .map_err(forbidden_error)?;
+    // // Get the organization
+    // let query_org = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
+    // // Check to see if user has permission to manage the organization
+    // context
+    //     .rbac
+    //     .is_allowed_organization(auth_user, Permission::Manage, &query_org)
+    //     .map_err(forbidden_error)?;
 
-    if let Some(subscription) = &query_org.subscription {
-        let subscription_id = subscription
-            .parse()
-            .map_err(resource_not_found_err!(Plan, subscription))?;
-        biller
-            .get_plan(&subscription_id)
-            .await
-            .map_err(resource_not_found_err!(Plan, subscription))
-    } else {
-        Err(not_found_error(format!(
-            "Failed to find plan for organization: {org}",
-            org = path_params.organization
-        )))
-    }
+    // if let Some(subscription) = &query_org.subscription {
+    //     let subscription_id = subscription
+    //         .parse()
+    //         .map_err(resource_not_found_err!(Plan, subscription))?;
+    //     biller
+    //         .get_plan(&subscription_id)
+    //         .await
+    //         .map_err(resource_not_found_err!(Plan, subscription))
+    // } else {
+    //     Err(not_found_error(format!(
+    //         "Failed to find plan for organization: {org}",
+    //         org = path_params.organization
+    //     )))
+    // }
+
+    todo!();
 }
 
 #[endpoint {
@@ -140,55 +142,57 @@ async fn post_inner(
         .is_allowed_organization(auth_user, Permission::Manage, &query_org)
         .map_err(forbidden_error)?;
 
-    // Check to make sure the organization does not already have a metered or licensed plan
-    if let Some(subscription) = query_org.subscription {
-        return Err(conflict_error(format!(
-            "Organization already has a metered plan: {subscription}"
-        )));
-    } else if let Some(license) = query_org.license {
-        return Err(conflict_error(format!(
-            "Organization already has a licensed plan: {license}"
-        )));
-    }
+    // // Check to make sure the organization does not already have a metered or licensed plan
+    // if let Some(subscription) = query_org.subscription {
+    //     return Err(conflict_error(format!(
+    //         "Organization already has a metered plan: {subscription}"
+    //     )));
+    // } else if let Some(license) = query_org.license {
+    //     return Err(conflict_error(format!(
+    //         "Organization already has a licensed plan: {license}"
+    //     )));
+    // }
 
-    let json_user = schema::user::table
-        .filter(schema::user::id.eq(auth_user.id))
-        .first::<QueryUser>(conn)
-        .map_err(resource_not_found_err!(User, auth_user))?
-        .into_json();
+    // let json_user = schema::user::table
+    //     .filter(schema::user::id.eq(auth_user.id))
+    //     .first::<QueryUser>(conn)
+    //     .map_err(resource_not_found_err!(User, auth_user))?
+    //     .into_json();
 
-    // Create a customer for the user
-    let customer = biller
-        .get_or_create_customer(&json_user.name, &json_user.email, json_user.uuid.into())
-        .await
-        .map_err(resource_not_found_err!(Plan, json_user))?;
+    // // Create a customer for the user
+    // let customer = biller
+    //     .get_or_create_customer(&json_user.name, &json_user.email, json_user.uuid.into())
+    //     .await
+    //     .map_err(resource_not_found_err!(Plan, json_user))?;
 
-    // Create a payment method for the user
-    let payment_method = biller
-        .create_payment_method(&customer, json_plan.card)
-        .await
-        .map_err(resource_not_found_err!(Plan, customer))?;
+    // // Create a payment method for the user
+    // let payment_method = biller
+    //     .create_payment_method(&customer, json_plan.card)
+    //     .await
+    //     .map_err(resource_not_found_err!(Plan, customer))?;
 
-    // Create a metered subscription for the organization
-    let subscription = biller
-        .create_metered_subscription(
-            query_org.uuid.into(),
-            &customer,
-            &payment_method,
-            json_plan.level,
-            DEFAULT_PRICE_NAME.into(),
-        )
-        .await
-        .map_err(resource_not_found_err!(Plan, payment_method))?;
+    // // Create a metered subscription for the organization
+    // let subscription = biller
+    //     .create_metered_subscription(
+    //         query_org.uuid.into(),
+    //         &customer,
+    //         &payment_method,
+    //         json_plan.level,
+    //         DEFAULT_PRICE_NAME.into(),
+    //     )
+    //     .await
+    //     .map_err(resource_not_found_err!(Plan, payment_method))?;
 
-    // Add the metered subscription to the organization
-    diesel::update(schema::organization::table.filter(schema::organization::id.eq(query_org.id)))
-        .set(schema::organization::subscription.eq(subscription.id.as_ref()))
-        .execute(conn)
-        .map_err(resource_conflict_err!(Plan, subscription))?;
+    // // Add the metered subscription to the organization
+    // diesel::update(schema::organization::table.filter(schema::organization::id.eq(query_org.id)))
+    //     .set(schema::organization::subscription.eq(subscription.id.as_ref()))
+    //     .execute(conn)
+    //     .map_err(resource_conflict_err!(Plan, subscription))?;
 
-    biller
-        .get_plan(&subscription.id)
-        .await
-        .map_err(resource_not_found_err!(Plan, subscription))
+    // biller
+    //     .get_plan(&subscription.id)
+    //     .await
+    //     .map_err(resource_not_found_err!(Plan, subscription))
+
+    todo!()
 }

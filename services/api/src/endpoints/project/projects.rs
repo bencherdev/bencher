@@ -16,9 +16,7 @@ use crate::{
     },
     error::{resource_conflict_err, resource_not_found_err, unauthorized_error},
     model::{
-        project::{
-            visibility::project_visibility::project_visibility, QueryProject, UpdateProject,
-        },
+        project::{QueryProject, UpdateProject},
         user::auth::{AuthUser, BearerToken, PubBearerToken},
     },
     schema,
@@ -220,23 +218,15 @@ async fn patch_inner(
 
     // Check project visibility
     #[cfg(not(feature = "plus"))]
-    project_visibility(json_project.visibility())?;
+    QueryProject::is_public(json_project.visibility())?;
     #[cfg(feature = "plus")]
-    {
-        let organization = crate::model::organization::QueryOrganization::get_uuid(
-            conn,
-            query_project.organization_id,
-        )?
-        .into();
-        project_visibility(
-            conn,
-            context.biller.as_ref(),
-            &context.licensor,
-            &organization,
-            json_project.visibility(),
-        )
-        .await?;
-    }
+    crate::model::organization::plan::PlanKind::new_for_project(
+        conn,
+        context.biller.as_ref(),
+        &context.licensor,
+        &query_project,
+    )
+    .await?;
 
     diesel::update(schema::project::table.filter(schema::project::id.eq(query_project.id)))
         .set(&UpdateProject::from(json_project.clone()))

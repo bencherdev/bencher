@@ -158,23 +158,23 @@ async fn post_inner(
 ) -> Result<JsonProject, HttpError> {
     let conn = &mut *context.conn().await;
 
+    let query_organization = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
+
     // Check project visibility
     #[cfg(not(feature = "plus"))]
-    crate::model::project::visibility::project_visibility::project_visibility(
-        json_project.visibility,
-    )?;
+    QueryProject::is_public(json_project.visibility)?;
     #[cfg(feature = "plus")]
-    crate::model::project::visibility::project_visibility::project_visibility(
+    crate::model::organization::plan::PlanKind::new(
         conn,
         context.biller.as_ref(),
         &context.licensor,
-        &path_params.organization,
-        json_project.visibility,
+        &query_organization,
+        json_project.visibility.unwrap_or_default(),
     )
     .await?;
 
     // Create the project
-    let insert_project = InsertProject::from_json(conn, &path_params.organization, json_project)?;
+    let insert_project = InsertProject::from_json(conn, &query_organization, json_project)?;
 
     // Check to see if user has permission to create a project within the organization
     context

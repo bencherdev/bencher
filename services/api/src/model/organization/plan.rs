@@ -1,9 +1,9 @@
 #![cfg(feature = "plus")]
 
-use bencher_billing::{Biller, SubscriptionId};
-use bencher_json::{DateTime, Jwt, LicensedPlanId, MeteredPlanId};
+use bencher_billing::Biller;
+use bencher_json::{project::Visibility, DateTime, Jwt, LicensedPlanId, MeteredPlanId};
 use bencher_license::Licensor;
-use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
+use diesel::{BelongingToDsl, RunQueryDsl};
 use dropshot::HttpError;
 use http::StatusCode;
 
@@ -63,10 +63,10 @@ pub enum PlanKindError {
         organization: QueryOrganization,
         metered_plan_id: MeteredPlanId,
     },
-    #[error("No plan (subscription or license) found for organization ({organization:?}) with private project ({project:?})")]
+    #[error("No plan (subscription or license) found for organization ({organization:?}) with private project ({visibility:?})")]
     NoPlan {
         organization: QueryOrganization,
-        project: QueryProject,
+        visibility: Visibility,
     },
     #[error("No Biller has been configured for the server")]
     NoBiller,
@@ -84,23 +84,38 @@ impl PlanKind {
         conn: &mut DbConnection,
         biller: Option<&Biller>,
         licensor: &Licensor,
-        project: &QueryProject,
+        query_organization: &QueryOrganization,
+        visibility: Visibility,
     ) -> Result<Self, HttpError> {
-        let query_organization = QueryOrganization::get(conn, project.organization_id)?;
-
-        if let Some(metered_plan_id) = get_metered_plan(conn, biller, &query_organization).await? {
+        if let Some(metered_plan_id) = get_metered_plan(conn, biller, query_organization).await? {
             Ok(Self::Metered(metered_plan_id))
-        } else if let Some(license_usage) = get_license_usage(conn, licensor, &query_organization)?
-        {
+        } else if let Some(license_usage) = get_license_usage(conn, licensor, query_organization)? {
             Ok(Self::Licensed(license_usage))
-        } else if project.visibility.is_public() {
+        } else if visibility.is_public() {
             Ok(Self::None)
         } else {
             Err(payment_required_error(PlanKindError::NoPlan {
                 organization: query_organization.clone(),
-                project: project.clone(),
+                visibility,
             }))
         }
+    }
+
+    pub async fn new_for_project(
+        conn: &mut DbConnection,
+        biller: Option<&Biller>,
+        licensor: &Licensor,
+        project: &QueryProject,
+    ) -> Result<Self, HttpError> {
+        let query_organization = QueryOrganization::get(conn, project.organization_id)?;
+        Self::new(
+            conn,
+            biller,
+            licensor,
+            &query_organization,
+            project.visibility,
+        )
+        .await
     }
 
     pub async fn check_usage(
