@@ -20,6 +20,7 @@ pub struct JsonNewPlan {
     pub card: JsonCard,
     pub level: PlanLevel,
     pub entitlements: Option<BigInt>,
+    pub organization: Option<OrganizationUuid>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
