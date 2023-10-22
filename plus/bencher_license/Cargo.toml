@@ -6,7 +6,7 @@ edition.workspace = true
 
 [dependencies]
 # Workspace
-bencher_valid.workspace = true
+bencher_json.workspace = true
 bencher_plus.workspace = true
 chrono.workspace = true
 jsonwebtoken = { workspace = true, features = ["use_pem"] }
@@ -14,7 +14,6 @@ once_cell.workspace = true
 thiserror.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-uuid = { workspace = true, features = ["v4"] }
 
 [dev-dependencies]
 pretty_assertions.workspace = true

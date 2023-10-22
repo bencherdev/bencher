@@ -809,8 +809,8 @@ dependencies = [
 name = "bencher_license"
 version = "0.3.13"
 dependencies = [
+ "bencher_json",
  "bencher_plus",
- "bencher_valid",
  "chrono",
  "jsonwebtoken",
  "once_cell",
@@ -818,7 +818,6 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
- "uuid 1.4.1",
 ]
 
 [[package]]

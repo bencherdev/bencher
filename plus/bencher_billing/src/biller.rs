@@ -16,9 +16,6 @@ use stripe::{
 
 use crate::{products::Products, BillingError};
 
-// Metrics are bundled by the thousand
-const METRIC_QUANTITY: u64 = 1_000;
-
 const METADATA_UUID: &str = "uuid";
 const METADATA_ORGANIZATION: &str = "organization";
 
@@ -282,7 +279,7 @@ impl Biller {
             if quantity == 0 {
                 return Err(BillingError::QuantityZero(quantity));
             }
-            Some(quantity * METRIC_QUANTITY)
+            Some(quantity)
         } else {
             None
         };

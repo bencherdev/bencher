@@ -14,6 +14,12 @@ impl From<u64> for BigInt {
     }
 }
 
+impl From<BigInt> for u64 {
+    fn from(value: BigInt) -> Self {
+        value.0
+    }
+}
+
 impl From<usize> for BigInt {
     fn from(value: usize) -> Self {
         Self(u64::try_from(value).unwrap_or_default())

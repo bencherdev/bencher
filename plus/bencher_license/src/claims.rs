@@ -1,26 +1,25 @@
+use bencher_json::{DateTime, OrganizationUuid};
 use bencher_plus::BENCHER_DEV;
-use bencher_valid::DateTime;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use crate::{audience::Audience, billing_cycle::BillingCycle, licensor::now, LicenseError};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Claims {
-    pub aud: String, // Audience
-    pub exp: u64,    // Expiration time (as UTC timestamp)
-    pub iat: u64,    // Issued at (as UTC timestamp)
-    pub iss: String, // Issuer
-    pub sub: Uuid,   // Subject (whom token refers to)
-    pub ent: u64,    // Entitlements (max number of metrics allowed)
+    pub aud: String,           // Audience
+    pub exp: u64,              // Expiration time (as UTC timestamp)
+    pub iat: u64,              // Issued at (as UTC timestamp)
+    pub iss: String,           // Issuer
+    pub sub: OrganizationUuid, // Subject (whom token refers to)
+    pub ent: u64,              // Entitlements (max number of metrics allowed)
 }
 
 impl Claims {
     pub fn new(
         audience: Audience,
         billing_cycle: BillingCycle,
-        organization: Uuid,
+        organization: OrganizationUuid,
         entitlements: u64,
     ) -> Result<Self, LicenseError> {
         let now = now()?;
@@ -34,7 +33,7 @@ impl Claims {
         })
     }
 
-    pub fn organization(&self) -> Uuid {
+    pub fn organization(&self) -> OrganizationUuid {
         self.sub
     }
 

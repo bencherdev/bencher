@@ -209,7 +209,7 @@ fn get_license_usage(
     };
 
     let token_data = licensor
-        .validate_organization(license, query_organization.uuid.into())
+        .validate_organization(license, query_organization.uuid)
         .map_err(payment_required_error)?;
 
     let start_time = token_data.claims.issued_at();

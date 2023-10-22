@@ -1,4 +1,6 @@
-pub use stripe::{CardDetailsParams as PaymentCard, Customer, ParseIdError, SubscriptionId};
+pub use stripe::{
+    CardDetailsParams as PaymentCard, Customer, ParseIdError, PaymentMethod, SubscriptionId,
+};
 
 mod biller;
 mod error;

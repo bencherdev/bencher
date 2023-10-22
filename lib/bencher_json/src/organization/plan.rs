@@ -13,11 +13,13 @@ use crate::{BigInt, OrganizationUuid, UserUuid};
 
 pub const DEFAULT_PRICE_NAME: &str = "default";
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewPlan {
     pub card: JsonCard,
     pub level: PlanLevel,
+    pub entitlements: Option<BigInt>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
