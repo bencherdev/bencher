@@ -45,8 +45,8 @@ pub enum BillingError {
     NoSubscriptionItem(crate::biller::PlanId),
     #[error("No organization for {0}")]
     NoOrganization(crate::biller::PlanId),
-    #[error("Failed to parse date/time for {0}: {1}")]
-    DateTime(crate::biller::PlanId, i64),
+    #[error("Failed to parse date/time for {0} {1}: {2}")]
+    DateTime(crate::biller::PlanId, i64, bencher_json::ValidError),
     #[error("No customer info for {0}")]
     NoCustomerInfo(CustomerId),
     #[error("No UUID for {0}")]

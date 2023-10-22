@@ -1,10 +1,9 @@
 #![cfg(feature = "plus")]
 
 use bencher_valid::{
-    CardBrand, CardCvc, CardNumber, Email, ExpirationMonth, ExpirationYear, LastFour, PlanLevel,
-    PlanStatus, UserName,
+    CardBrand, CardCvc, CardNumber, DateTime, Email, ExpirationMonth, ExpirationYear, Jwt,
+    LastFour, PlanLevel, PlanStatus, UserName,
 };
-use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -41,9 +40,10 @@ pub struct JsonPlan {
     pub card: JsonCardDetails,
     pub level: PlanLevel,
     pub unit_amount: BigInt,
-    pub current_period_start: DateTime<Utc>,
-    pub current_period_end: DateTime<Utc>,
+    pub current_period_start: DateTime,
+    pub current_period_end: DateTime,
     pub status: PlanStatus,
+    pub license: Option<JsonLicense>,
 }
 
 #[typeshare::typeshare]
@@ -63,6 +63,17 @@ pub struct JsonCardDetails {
     pub last_four: LastFour,
     pub exp_month: ExpirationMonth,
     pub exp_year: ExpirationYear,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonLicense {
+    pub key: Jwt,
+    pub organization: OrganizationUuid,
+    pub entitlements: BigInt,
+    pub issued_at: DateTime,
+    pub expiration: DateTime,
 }
 
 #[cfg(test)]

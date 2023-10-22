@@ -6,7 +6,6 @@ use bencher_json::{
     Email, LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus, UserName,
     UserUuid,
 };
-use chrono::{TimeZone, Utc};
 use stripe::{
     AttachPaymentMethod, CardDetailsParams as PaymentCard, Client as StripeClient, CreateCustomer,
     CreatePaymentMethod, CreatePaymentMethodCardUnion, CreateSubscription, CreateSubscriptionItems,
@@ -346,18 +345,12 @@ impl Biller {
             .parse()
             .map_err(|e| BillingError::BadOrganizationUuid(organization.clone(), e))?;
 
-        let current_period_start = Utc
-            .timestamp_opt(subscription.current_period_start, 0)
-            .single()
-            .ok_or_else(|| {
-                BillingError::DateTime(plan_id.clone().into(), subscription.current_period_start)
-            })?;
-        let current_period_end = Utc
-            .timestamp_opt(subscription.current_period_end, 0)
-            .single()
-            .ok_or_else(|| {
-                BillingError::DateTime(plan_id.clone().into(), subscription.current_period_end)
-            })?;
+        let current_period_start = subscription.current_period_start.try_into().map_err(|e| {
+            BillingError::DateTime(plan_id.clone().into(), subscription.current_period_start, e)
+        })?;
+        let current_period_end = subscription.current_period_end.try_into().map_err(|e| {
+            BillingError::DateTime(plan_id.clone().into(), subscription.current_period_end, e)
+        })?;
 
         let customer = Self::get_plan_customer(&subscription.customer)?;
         let card = Self::get_plan_card(plan_id.clone(), &subscription.default_payment_method)?;
@@ -374,6 +367,7 @@ impl Biller {
             current_period_start,
             current_period_end,
             status,
+            license: None,
         })
     }
 

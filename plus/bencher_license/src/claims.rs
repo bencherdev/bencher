@@ -1,4 +1,4 @@
-use bencher_json::{DateTime, OrganizationUuid};
+use bencher_json::{BigInt, DateTime, OrganizationUuid};
 use bencher_plus::BENCHER_DEV;
 use serde::{Deserialize, Serialize};
 
@@ -51,5 +51,9 @@ impl Claims {
         let date_time = DateTime::try_from(timestamp.unwrap_or_default());
         debug_assert!(date_time.is_ok(), "Expiration time is invalid");
         date_time.unwrap_or_default()
+    }
+
+    pub fn entitlements(&self) -> BigInt {
+        self.ent.into()
     }
 }
