@@ -160,6 +160,10 @@ export type GitHash = string;
 
 export type Jwt = string;
 
+export type MeteredPlanId = string;
+
+export type LicensedPlanId = string;
+
 export type ResourceId = string;
 
 export type Secret = string;
@@ -174,6 +178,18 @@ export interface JsonOrganization {
 	slug: Slug;
 	created: string;
 	modified: string;
+}
+
+export enum PlanLevel {
+	Free = "free",
+	Team = "team",
+	Enterprise = "enterprise",
+}
+
+export interface JsonNewPlan {
+	card: JsonCard;
+	level: PlanLevel;
+	entitlements?: number;
 }
 
 export interface JsonCustomer {
@@ -198,12 +214,6 @@ export interface JsonCardDetails {
 	last_four: LastFour;
 	exp_month: ExpirationMonth;
 	exp_year: ExpirationYear;
-}
-
-export enum PlanLevel {
-	Free = "free",
-	Team = "team",
-	Enterprise = "enterprise",
 }
 
 export enum PlanStatus {

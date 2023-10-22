@@ -6717,6 +6717,14 @@
           "card": {
             "$ref": "#/components/schemas/JsonCard"
           },
+          "entitlements": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BigInt"
+              }
+            ]
+          },
           "level": {
             "$ref": "#/components/schemas/PlanLevel"
           }
