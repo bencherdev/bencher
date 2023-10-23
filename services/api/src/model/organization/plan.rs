@@ -172,7 +172,9 @@ impl InsertPlan {
         license_entitlements: u64,
         license_organization: Option<OrganizationUuid>,
     ) -> Result<Self, HttpError> {
-        if license_entitlements == 0 || license_entitlements % ENTITLEMENTS_QUANTITY != 0 {
+        // TODO make an entitlements type
+        // TODO need to move stripe over to single unit costs for licenses
+        if license_entitlements == 0 {
             return Err(bad_request_error(format!(
                 "Entitlements ({license_entitlements}) must be a multiple of 1000",
             )));

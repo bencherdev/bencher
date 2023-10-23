@@ -29,12 +29,12 @@ pub struct CliPlanCreate {
     #[clap(value_enum, long)]
     pub level: CliPlanLevel,
 
-    /// Plan entitlements (in thousands)
+    /// License plan entitlements
     #[clap(long)]
     pub entitlements: Option<u64>,
 
     /// Self-Hosted Organization UUID for license
-    #[clap(long)]
+    #[clap(long, requires = "entitlements")]
     pub organization: Option<OrganizationUuid>,
 
     #[clap(flatten)]
