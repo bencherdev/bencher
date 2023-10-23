@@ -14,6 +14,7 @@ import {
 	is_valid_benchmark_name,
 	is_valid_boundary,
 	is_valid_sample_size,
+	is_valid_uuid,
 } from "bencher_valid";
 import type { JsonAuthUser } from "../types/bencher";
 
@@ -33,7 +34,7 @@ export const validOptionString = (
 };
 
 export const validUuid = (uuid: string): boolean =>
-	validString(uuid, (_uuid) => true);
+	validString(uuid, is_valid_uuid);
 
 export const validUserName = (user_name: string): boolean =>
 	validString(user_name, is_valid_user_name);

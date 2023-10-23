@@ -8,6 +8,8 @@ use serde::{
     Deserialize, Serialize,
 };
 use uuid::Uuid;
+#[cfg(feature = "wasm")]
+use wasm_bindgen::prelude::*;
 
 use crate::{Slug, ValidError};
 
@@ -78,4 +80,10 @@ impl Visitor<'_> for ResourceIdVisitor {
     {
         ResourceId::from_str(value).map_err(|_e| E::invalid_value(Unexpected::Str(value), &self))
     }
+}
+
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+#[cfg_attr(not(feature = "wasm"), allow(dead_code))]
+pub fn is_valid_uuid(uuid: &str) -> bool {
+    Uuid::from_str(uuid).is_ok()
 }

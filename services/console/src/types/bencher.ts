@@ -180,6 +180,13 @@ export interface JsonOrganization {
 	modified: string;
 }
 
+export interface JsonCard {
+	number: CardNumber;
+	exp_month: ExpirationMonth;
+	exp_year: ExpirationYear;
+	cvc: CardCvc;
+}
+
 export enum PlanLevel {
 	Free = "free",
 	Team = "team",
@@ -190,6 +197,7 @@ export interface JsonNewPlan {
 	card: JsonCard;
 	level: PlanLevel;
 	entitlements?: number;
+	organization?: Uuid;
 }
 
 export interface JsonCustomer {
@@ -227,6 +235,14 @@ export enum PlanStatus {
 	Unpaid = "unpaid",
 }
 
+export interface JsonLicense {
+	key: Jwt;
+	organization: Uuid;
+	entitlements: number;
+	issued_at: string;
+	expiration: string;
+}
+
 export interface JsonPlan {
 	organization: Uuid;
 	customer: JsonCustomer;
@@ -236,6 +252,7 @@ export interface JsonPlan {
 	current_period_start: string;
 	current_period_end: string;
 	status: PlanStatus;
+	license?: JsonLicense;
 }
 
 export interface JsonUsage {

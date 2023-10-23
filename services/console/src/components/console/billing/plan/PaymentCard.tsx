@@ -22,6 +22,9 @@ interface Props {
 	user: JsonAuthUser;
 	path: string;
 	plan: Accessor<PlanLevel>;
+	entitlements: Accessor<null | number>;
+	organizationUuid: Accessor<string>;
+	organizationUuidValid: Accessor<null | boolean>;
 	handleRefresh: () => void;
 }
 
@@ -31,7 +34,7 @@ const PaymentCard = (props: Props) => {
 	const [valid, setValid] = createSignal(false);
 
 	const isSendable = (): boolean => {
-		return !submitting() && valid();
+		return !submitting() && valid() && props.organizationUuidValid() === true;
 	};
 
 	const handleField = (key: string, value: FieldValue, valid: boolean) => {
@@ -71,6 +74,7 @@ const PaymentCard = (props: Props) => {
 		const data = {
 			card: card,
 			level: props.plan(),
+			entitlements: props.entitlements(),
 		};
 
 		setSubmitting(true);

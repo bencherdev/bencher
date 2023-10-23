@@ -109,7 +109,7 @@ pub struct CliProjectView {
 }
 
 #[derive(Parser, Debug)]
-#[allow(clippy::option_option)]
+
 pub struct CliProjectUpdate {
     /// Project slug or UUID
     pub project: ResourceId,
@@ -122,6 +122,7 @@ pub struct CliProjectUpdate {
     #[clap(long)]
     pub slug: Option<Slug>,
 
+    #[allow(clippy::option_option)]
     /// Project URL (null to remove)
     #[clap(long)]
     pub url: Option<Option<Url>>,

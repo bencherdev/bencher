@@ -1,6 +1,8 @@
 #![cfg(feature = "plus")]
 
-use bencher_json::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear, ResourceId};
+use bencher_json::{
+    CardCvc, CardNumber, ExpirationMonth, ExpirationYear, OrganizationUuid, ResourceId,
+};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use crate::parser::CliBackend;
@@ -28,8 +30,12 @@ pub struct CliPlanCreate {
     pub level: CliPlanLevel,
 
     /// Plan entitlements (in thousands)
-    #[clap(value_enum, long)]
+    #[clap(long)]
     pub entitlements: Option<u64>,
+
+    /// Self-Hosted Organization UUID for license
+    #[clap(long)]
+    pub organization: Option<OrganizationUuid>,
 
     #[clap(flatten)]
     pub backend: CliBackend,

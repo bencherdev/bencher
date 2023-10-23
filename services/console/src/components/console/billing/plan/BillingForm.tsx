@@ -11,11 +11,13 @@ import {
 } from "solid-js";
 import { JsonAuthUser, PlanLevel } from "../../../../types/bencher";
 import { useSearchParams } from "../../../../util/url";
-import { validPlanLevel } from "../../../../util/valid";
+import { validPlanLevel, validUuid } from "../../../../util/valid";
 import { PLAN_PARAM } from "../../../auth/auth";
 import Pricing from "./Pricing";
 import PaymentCard from "./PaymentCard";
 import type { Params } from "astro";
+import Field from "../../../field/Field";
+import FieldKind from "../../../field/kind";
 
 interface Props {
 	apiUrl: string;
@@ -40,6 +42,43 @@ const BillingForm = (props: Props) => {
 	const plan = createMemo(() => searchParams[PLAN_PARAM] as PlanLevel);
 
 	const [planKind, setPlanKind] = createSignal(PlanKind.Metered);
+	const [entitlements, setEntitlements] = createSignal<number>(5);
+	const entitlementsMonthly = createMemo(() => entitlements() * 1_000);
+	const entitlementsMonthlyCost = createMemo(() => {
+		switch (plan()) {
+			case PlanLevel.Team:
+				return entitlementsMonthly() * 0.1;
+			case PlanLevel.Enterprise:
+				return entitlementsMonthly() * 0.5;
+			default:
+				return 0.0;
+		}
+	});
+	const entitlementsAnnually = createMemo(() => {
+		switch (plan()) {
+			case PlanLevel.Team:
+			case PlanLevel.Enterprise:
+				return entitlementsMonthly() * 12;
+			default:
+				return null;
+		}
+	});
+	const entitlementsAnnualCost = createMemo(
+		() => entitlementsMonthlyCost() * 12,
+	);
+	const [organizationUuid, setOrganizationUuid] = createSignal("");
+	const organizationUuidValid = createMemo(() => {
+		switch (planKind()) {
+			case PlanKind.SelfHosted:
+				if (organizationUuid()) {
+					return validUuid(organizationUuid());
+				} else {
+					return null;
+				}
+			default:
+				return true;
+		}
+	});
 
 	createEffect(() => {
 		if (!props.bencher_valid()) {
@@ -62,9 +101,21 @@ const BillingForm = (props: Props) => {
 					enterpriseText="Go with Enterprise"
 					handleEnterprise={() => setPlanLevel(PlanLevel.Enterprise)}
 				/>
-				<br />
 				<Show when={plan() !== PlanLevel.Free}>
-					<PlanLocality planKind={planKind} handlePlanKind={setPlanKind} />
+					<br />
+					<br />
+					<PlanLocality
+						plan={plan}
+						planKind={planKind}
+						handlePlanKind={setPlanKind}
+						entitlements={entitlements}
+						handleEntitlements={setEntitlements}
+						entitlementsMonthly={entitlementsMonthly}
+						entitlementsAnnualCost={entitlementsAnnualCost}
+						organizationUuid={organizationUuid}
+						handleOrganizationUuid={setOrganizationUuid}
+						organizationUuidValid={organizationUuidValid}
+					/>
 					<PaymentCard
 						apiUrl={props.apiUrl}
 						params={props.params}
@@ -72,6 +123,9 @@ const BillingForm = (props: Props) => {
 						user={props.user}
 						path={`/v0/organizations/${props.params.organization}/plan`}
 						plan={plan}
+						entitlements={entitlementsAnnually}
+						organizationUuid={organizationUuid}
+						organizationUuidValid={organizationUuidValid}
 						handleRefresh={props.handleRefresh}
 					/>
 				</Show>
@@ -81,8 +135,16 @@ const BillingForm = (props: Props) => {
 };
 
 const PlanLocality = (props: {
+	plan: Accessor<PlanLevel>;
 	planKind: Accessor<PlanKind>;
 	handlePlanKind: Setter<PlanKind>;
+	entitlements: Accessor<number>;
+	handleEntitlements: Setter<number>;
+	entitlementsMonthly: Accessor<number>;
+	entitlementsAnnualCost: Accessor<number>;
+	organizationUuid: Accessor<string>;
+	handleOrganizationUuid: Setter<string>;
+	organizationUuidValid: Accessor<null | boolean>;
 }) => {
 	return (
 		<div class="columns is-centered">
@@ -107,6 +169,52 @@ const PlanLocality = (props: {
 						)}
 					</For>
 				</div>
+				<Show when={props.planKind() !== PlanKind.Metered}>
+					<div class="content has-text-centered">
+						<p>
+							Monthly Metrics: {props.entitlementsMonthly().toLocaleString()}
+						</p>
+						<p>
+							License Cost: ${props.entitlementsAnnualCost().toLocaleString()}
+							/year
+						</p>
+						<input
+							class="slider"
+							type="range"
+							min="1"
+							max="25"
+							value={props.entitlements()}
+							style="width: 25em"
+							onChange={(_e) => {
+								props.handleEntitlements(Number(_e.currentTarget.value));
+							}}
+						></input>
+					</div>
+				</Show>
+				<Show when={props.planKind() === PlanKind.SelfHosted}>
+					<div class="columns is-centered">
+						<div class="column is-half">
+							<Field
+								kind={FieldKind.INPUT}
+								fieldKey="organization-uuid"
+								label="Self-Hosted Organization UUID"
+								value={props.organizationUuid()}
+								valid={props.organizationUuidValid()}
+								config={{
+									label: "UUID",
+									type: "text",
+									placeholder: "00000000-0000-0000-0000-000000000000",
+									icon: "fas fa-laptop-house",
+									help: "Must be a valid UUID",
+									validate: validUuid,
+								}}
+								handleField={(_key, value, _valid) => {
+									props.handleOrganizationUuid(value as string);
+								}}
+							/>
+						</div>
+					</div>
+				</Show>
 			</div>
 		</div>
 	);

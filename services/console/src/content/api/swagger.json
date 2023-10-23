@@ -6450,6 +6450,33 @@
           "median"
         ]
       },
+      "JsonLicense": {
+        "type": "object",
+        "properties": {
+          "entitlements": {
+            "$ref": "#/components/schemas/BigInt"
+          },
+          "expiration": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "issued_at": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "key": {
+            "$ref": "#/components/schemas/Jwt"
+          },
+          "organization": {
+            "$ref": "#/components/schemas/OrganizationUuid"
+          }
+        },
+        "required": [
+          "entitlements",
+          "expiration",
+          "issued_at",
+          "key",
+          "organization"
+        ]
+      },
       "JsonLogging": {
         "type": "object",
         "properties": {
@@ -6727,6 +6754,14 @@
           },
           "level": {
             "$ref": "#/components/schemas/PlanLevel"
+          },
+          "organization": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrganizationUuid"
+              }
+            ]
           }
         },
         "required": [
@@ -6941,6 +6976,65 @@
           "uuid"
         ]
       },
+      "JsonOrganizationPatch": {
+        "type": "object",
+        "properties": {
+          "license": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Jwt"
+              }
+            ]
+          },
+          "name": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NonEmpty"
+              }
+            ]
+          },
+          "slug": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Slug"
+              }
+            ]
+          }
+        }
+      },
+      "JsonOrganizationPatchNull": {
+        "type": "object",
+        "properties": {
+          "license": {
+            "type": "string",
+            "enum": [
+              null
+            ]
+          },
+          "name": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NonEmpty"
+              }
+            ]
+          },
+          "slug": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Slug"
+              }
+            ]
+          }
+        },
+        "required": [
+          "license"
+        ]
+      },
       "JsonOrganizations": {
         "type": "array",
         "items": {
@@ -7098,18 +7192,24 @@
             "$ref": "#/components/schemas/JsonCardDetails"
           },
           "current_period_end": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "current_period_start": {
-            "type": "string",
-            "format": "date-time"
+            "$ref": "#/components/schemas/DateTime"
           },
           "customer": {
             "$ref": "#/components/schemas/JsonCustomer"
           },
           "level": {
             "$ref": "#/components/schemas/PlanLevel"
+          },
+          "license": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonLicense"
+              }
+            ]
           },
           "organization": {
             "$ref": "#/components/schemas/OrganizationUuid"
@@ -7953,25 +8053,14 @@
         }
       },
       "JsonUpdateOrganization": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/NonEmpty"
-              }
-            ]
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/JsonOrganizationPatch"
           },
-          "slug": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Slug"
-              }
-            ]
+          {
+            "$ref": "#/components/schemas/JsonOrganizationPatchNull"
           }
-        }
+        ]
       },
       "JsonUpdateProject": {
         "anyOf": [

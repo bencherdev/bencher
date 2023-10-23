@@ -1,7 +1,9 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_client::types::JsonUpdateOrganization;
+use bencher_client::types::{
+    JsonOrganizationPatch, JsonOrganizationPatchNull, JsonUpdateOrganization,
+};
 use bencher_json::{JsonOrganization, NonEmpty, ResourceId, Slug};
 
 use crate::{
@@ -15,6 +17,9 @@ pub struct Update {
     pub organization: ResourceId,
     pub name: Option<NonEmpty>,
     pub slug: Option<Slug>,
+    #[cfg(feature = "plus")]
+    #[cfg_attr(feature = "plus", allow(clippy::option_option))]
+    pub license: Option<Option<bencher_json::Jwt>>,
     pub backend: Backend,
 }
 
@@ -26,12 +31,16 @@ impl TryFrom<CliOrganizationUpdate> for Update {
             organization,
             name,
             slug,
+            #[cfg(feature = "plus")]
+            license,
             backend,
         } = create;
         Ok(Self {
             organization,
             name,
             slug,
+            #[cfg(feature = "plus")]
+            license,
             backend: backend.try_into()?,
         })
     }
@@ -39,11 +48,49 @@ impl TryFrom<CliOrganizationUpdate> for Update {
 
 impl From<Update> for JsonUpdateOrganization {
     fn from(update: Update) -> Self {
-        let Update { name, slug, .. } = update;
-        Self {
-            name: name.map(Into::into),
-            slug: slug.map(Into::into),
-        }
+        let Update {
+            name,
+            slug,
+            #[cfg(feature = "plus")]
+            license,
+            ..
+        } = update;
+        #[cfg(not(feature = "plus"))]
+        return Self {
+            subtype_0: Some(JsonOrganizationPatch {
+                name: name.map(Into::into),
+                slug: slug.map(Into::into),
+                license: None,
+            }),
+            subtype_1: None,
+        };
+        #[cfg(feature = "plus")]
+        return match license {
+            Some(Some(license)) => Self {
+                subtype_0: Some(JsonOrganizationPatch {
+                    name: name.map(Into::into),
+                    slug: slug.map(Into::into),
+                    license: Some(license.into()),
+                }),
+                subtype_1: None,
+            },
+            Some(None) => Self {
+                subtype_0: None,
+                subtype_1: Some(JsonOrganizationPatchNull {
+                    name: name.map(Into::into),
+                    slug: slug.map(Into::into),
+                    license: (),
+                }),
+            },
+            None => Self {
+                subtype_0: Some(JsonOrganizationPatch {
+                    name: name.map(Into::into),
+                    slug: slug.map(Into::into),
+                    license: None,
+                }),
+                subtype_1: None,
+            },
+        };
     }
 }
 

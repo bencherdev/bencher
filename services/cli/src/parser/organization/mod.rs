@@ -96,6 +96,12 @@ pub struct CliOrganizationUpdate {
     #[clap(long)]
     pub slug: Option<Slug>,
 
+    #[cfg(feature = "plus")]
+    #[cfg_attr(feature = "plus", allow(clippy::option_option))]
+    /// New organization license
+    #[clap(long)]
+    pub license: Option<Option<bencher_json::Jwt>>,
+
     #[clap(flatten)]
     pub backend: CliBackend,
 }
