@@ -1,7 +1,10 @@
 #![cfg(feature = "plus")]
 
 use bencher_billing::Biller;
-use bencher_json::{project::Visibility, DateTime, Jwt, LicensedPlanId, MeteredPlanId};
+use bencher_json::{
+    organization::plan::JsonLicense, project::Visibility, DateTime, JsonPlan, Jwt, LicensedPlanId,
+    MeteredPlanId, OrganizationUuid,
+};
 use bencher_license::Licensor;
 use diesel::{BelongingToDsl, RunQueryDsl};
 use dropshot::HttpError;
@@ -9,7 +12,7 @@ use http::StatusCode;
 
 use crate::{
     context::DbConnection,
-    error::{issue_error, not_found_error, payment_required_error},
+    error::{issue_error, not_found_error, payment_required_error, resource_not_found_err},
     model::{
         organization::{OrganizationId, QueryOrganization},
         project::{metric::QueryMetric, QueryProject},
@@ -32,6 +35,62 @@ pub struct QueryPlan {
     pub license: Option<Jwt>,
     pub created: DateTime,
     pub modified: DateTime,
+}
+
+impl QueryPlan {
+    pub async fn metered_plan(&self, biller: &Biller) -> Result<Option<JsonPlan>, HttpError> {
+        let Some(metered_plan_id) = self.metered_plan.clone() else {
+            return Ok(None);
+        };
+
+        biller
+            .get_plan(metered_plan_id)
+            .await
+            .map(Some)
+            .map_err(resource_not_found_err!(Plan, self))
+    }
+
+    pub async fn licensed_plan(
+        &self,
+        biller: &Biller,
+        licensor: &Licensor,
+        organization_uuid: OrganizationUuid,
+    ) -> Result<Option<JsonPlan>, HttpError> {
+        let Some(licensed_plan_id) = self.licensed_plan.clone() else {
+            return Ok(None);
+        };
+
+        let mut json_plan = biller
+            .get_plan(licensed_plan_id)
+            .await
+            .map_err(resource_not_found_err!(Plan, self))?;
+
+        let Some(license) = self.license.as_ref() else {
+            return Err(issue_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to find license for licensed plan",
+                &format!(
+                    "Failed to find license for plan ({self:?}) even though licensed plan exists ({json_plan:?}).",
+                ),
+                "Failed to find license for licensed plan",
+            ));
+        };
+
+        let token_data = licensor
+            .validate_organization(license, organization_uuid)
+            .map_err(payment_required_error)?;
+
+        let json_license = JsonLicense {
+            key: license.clone(),
+            organization: organization_uuid,
+            entitlements: token_data.claims.entitlements(),
+            issued_at: token_data.claims.issued_at(),
+            expiration: token_data.claims.expiration(),
+        };
+        json_plan.license = Some(json_license);
+
+        Ok(Some(json_plan))
+    }
 }
 
 #[derive(Debug, diesel::Insertable)]

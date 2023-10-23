@@ -32,4 +32,11 @@ impl ApiContext {
     pub async fn conn(&self) -> tokio::sync::MutexGuard<DbConnection> {
         self.database.connection.lock().await
     }
+
+    #[cfg(feature = "plus")]
+    pub fn biller(&self) -> Result<&Biller, dropshot::HttpError> {
+        self.biller.as_ref().ok_or_else(|| {
+            crate::error::locked_error("Tried to use a Bencher Cloud route when Self-Hosted")
+        })
+    }
 }

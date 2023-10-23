@@ -2,7 +2,7 @@
 
 use bencher_billing::{Biller, Customer, PaymentMethod};
 use bencher_json::{
-    organization::plan::{JsonLicense, JsonNewPlan, JsonPlan, DEFAULT_PRICE_NAME},
+    organization::plan::{JsonNewPlan, JsonPlan, DEFAULT_PRICE_NAME},
     DateTime, LicensedPlanId, MeteredPlanId, ResourceId,
 };
 use bencher_license::Licensor;
@@ -20,8 +20,8 @@ use crate::{
         Endpoint,
     },
     error::{
-        bad_request_error, forbidden_error, issue_error, locked_error, payment_required_error,
-        resource_conflict_err, resource_conflict_error, resource_not_found_err, BencherResource,
+        bad_request_error, forbidden_error, issue_error, resource_conflict_err,
+        resource_conflict_error, resource_not_found_err, BencherResource,
     },
     model::{
         organization::plan::{InsertPlan, QueryPlan},
@@ -72,14 +72,7 @@ async fn get_one_inner(
     path_params: OrgPlanParams,
     auth_user: &AuthUser,
 ) -> Result<JsonPlan, HttpError> {
-    // Check to see if there is a Biller
-    // The Biller is only available on Bencher Cloud
-    let Some(biller) = &context.biller else {
-        return Err(locked_error(format!(
-            "Tried to use a Bencher Cloud route when Self-Hosted: GET /v0/organizations/{org}/plan",
-            org = path_params.organization
-        )));
-    };
+    let biller = context.biller()?;
     let conn = &mut *context.conn().await;
 
     // Get the organization
@@ -94,42 +87,12 @@ async fn get_one_inner(
         .first::<QueryPlan>(conn)
         .map_err(resource_not_found_err!(Plan, query_organization))?;
 
-    if let Some(metered_plan_id) = query_plan.metered_plan.clone() {
-        biller
-            .get_plan(metered_plan_id.clone())
-            .await
-            .map_err(resource_not_found_err!(Plan, query_plan))
-    } else if let Some(licensed_plan_id) = query_plan.licensed_plan.clone() {
-        let mut json_plan = biller
-            .get_plan(licensed_plan_id.clone())
-            .await
-            .map_err(resource_not_found_err!(Plan, query_plan))?;
-
-        let Some(license) = &query_plan.license else {
-            return Err(issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to find license for licensed plan",
-                &format!(
-                    "Failed to find license for plan ({query_plan:?}) even though licensed plan exists ({licensed_plan_id:?}).",
-                ),
-                "Failed to find license for licensed plan",
-            ));
-        };
-
-        let token_data = context
-            .licensor
-            .validate_organization(license, query_organization.uuid)
-            .map_err(payment_required_error)?;
-
-        let json_license = JsonLicense {
-            key: license.clone(),
-            organization: query_organization.uuid,
-            entitlements: token_data.claims.entitlements(),
-            issued_at: token_data.claims.issued_at(),
-            expiration: token_data.claims.expiration(),
-        };
-        json_plan.license = Some(json_license);
-
+    if let Some(json_plan) = query_plan.metered_plan(biller).await? {
+        Ok(json_plan)
+    } else if let Some(json_plan) = query_plan
+        .licensed_plan(biller, &context.licensor, query_organization.uuid)
+        .await?
+    {
         Ok(json_plan)
     } else {
         Err(issue_error(
@@ -171,11 +134,7 @@ async fn post_inner(
     json_plan: JsonNewPlan,
     auth_user: &AuthUser,
 ) -> Result<JsonPlan, HttpError> {
-    // Check to see if there is a Biller
-    // The Biller is only available on Bencher Cloud
-    let Some(biller) = &context.biller else {
-        return Err(locked_error(format!("Tried to use a Bencher Cloud route when Self-Hosted: POST /v0/organizations/{org}/plan", org =path_params.organization)));
-    };
+    let biller = context.biller()?;
     let conn = &mut *context.conn().await;
 
     // Get the organization
