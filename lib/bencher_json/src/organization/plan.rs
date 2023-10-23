@@ -22,6 +22,7 @@ pub struct JsonNewPlan {
     pub organization: Option<OrganizationUuid>,
 }
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonCard {

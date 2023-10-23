@@ -58,16 +58,6 @@ impl QueryProject {
     fn_get!(project, ProjectId);
     fn_get_uuid!(project, ProjectId, ProjectUuid);
 
-    // #[cfg(feature = "plus")]
-    // pub fn is_public(conn: &mut DbConnection, id: ProjectId) -> Result<bool, HttpError> {
-    //     schema::project::table
-    //         .filter(schema::project::id.eq(id))
-    //         .select(schema::project::visibility)
-    //         .first::<Visibility>(conn)
-    //         .map(Visibility::is_public)
-    //         .map_err(resource_not_found_err!(Project, id))
-    // }
-
     #[cfg(not(feature = "plus"))]
     pub fn is_public(visibility: Option<Visibility>) -> Result<(), HttpError> {
         visibility
@@ -208,7 +198,7 @@ pub struct UpdateProject {
 
 impl From<JsonUpdateProject> for UpdateProject {
     fn from(update: JsonUpdateProject) -> Self {
-        let (name, slug, url, visibility) = match update {
+        match update {
             JsonUpdateProject::Patch(patch) => {
                 let JsonProjectPatch {
                     name,
@@ -216,7 +206,13 @@ impl From<JsonUpdateProject> for UpdateProject {
                     url,
                     visibility,
                 } = patch;
-                (name, slug, url.map(Some), visibility)
+                Self {
+                    name,
+                    slug,
+                    url: url.map(Some),
+                    visibility,
+                    modified: DateTime::now(),
+                }
             },
             JsonUpdateProject::Null(patch_url) => {
                 let JsonProjectPatchNull {
@@ -225,15 +221,14 @@ impl From<JsonUpdateProject> for UpdateProject {
                     url: _,
                     visibility,
                 } = patch_url;
-                (name, slug, Some(None), visibility)
+                Self {
+                    name,
+                    slug,
+                    url: Some(None),
+                    visibility,
+                    modified: DateTime::now(),
+                }
             },
-        };
-        Self {
-            name,
-            slug,
-            url,
-            visibility,
-            modified: DateTime::now(),
         }
     }
 }

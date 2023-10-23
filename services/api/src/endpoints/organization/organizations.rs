@@ -254,12 +254,18 @@ async fn patch_inner(
 ) -> Result<JsonOrganization, HttpError> {
     let conn = &mut *context.conn().await;
 
+    // Manage permission is required to update the license
+    let permission = if json_organization.is_update_license() {
+        Permission::Manage
+    } else {
+        Permission::Edit
+    };
     let query_organization = QueryOrganization::is_allowed_resource_id(
         conn,
         &context.rbac,
         &path_params.organization,
         auth_user,
-        Permission::Edit,
+        permission,
     )?;
 
     let organization_query =

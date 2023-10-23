@@ -11,7 +11,7 @@ import LicensedBilling from "./plan/LicensedBilling";
 import type { JsonPlan } from "../../../types/bencher";
 import { httpGet } from "../../../util/http";
 import { validJwt } from "../../../util/valid";
-import MeteredBilling from "./plan/MeteredBilling";
+import BillingForm from "./plan/BillingForm";
 import Plan from "./plan/Plan";
 
 interface Props {
@@ -86,7 +86,7 @@ const BillingPanel = (props: Props) => {
 					<LicensedBilling />
 				</Match>
 				<Match when={config()?.host === Host.BENCHER_CLOUD && plan() === null}>
-					<MeteredBilling
+					<BillingForm
 						apiUrl={props.apiUrl}
 						params={props.params}
 						bencher_valid={bencher_valid}

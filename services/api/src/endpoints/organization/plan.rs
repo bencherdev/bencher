@@ -1,11 +1,9 @@
 #![cfg(feature = "plus")]
 
-use bencher_billing::{Biller, Customer, PaymentMethod};
 use bencher_json::{
     organization::plan::{JsonNewPlan, JsonPlan, DEFAULT_PRICE_NAME},
-    DateTime, LicensedPlanId, MeteredPlanId, ResourceId,
+    ResourceId,
 };
-use bencher_license::Licensor;
 use bencher_rbac::organization::Permission;
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
@@ -20,8 +18,8 @@ use crate::{
         Endpoint,
     },
     error::{
-        bad_request_error, forbidden_error, issue_error, resource_conflict_err,
-        resource_conflict_error, resource_not_found_err, BencherResource,
+        forbidden_error, issue_error, resource_conflict_error, resource_not_found_err,
+        BencherResource,
     },
     model::{
         organization::plan::{InsertPlan, QueryPlan},
@@ -171,127 +169,63 @@ async fn post_inner(
         .await
         .map_err(resource_not_found_err!(Plan, customer))?;
 
-    let (plan, insert_plan) = create_plan(
-        biller,
-        &context.licensor,
-        json_plan,
-        &query_organization,
-        &customer,
-        &payment_method,
-    )
-    .await?;
-
-    diesel::insert_into(schema::plan::table)
-        .values(&insert_plan)
-        .execute(conn)
-        .map_err(resource_conflict_err!(Plan, insert_plan))?;
-
-    Ok(plan)
-}
-
-async fn create_plan(
-    biller: &Biller,
-    licensor: &Licensor,
-    json_plan: JsonNewPlan,
-    query_organization: &QueryOrganization,
-    customer: &Customer,
-    payment_method: &PaymentMethod,
-) -> Result<(JsonPlan, InsertPlan), HttpError> {
-    Ok(if let Some(entitlements) = json_plan.entitlements {
-        let entitlements = u64::from(entitlements);
-        if entitlements == 0 || entitlements % ENTITLEMENTS_QUANTITY != 0 {
-            return Err(bad_request_error(format!(
-                "Entitlements ({entitlements}) must be a multiple of 1000",
-            )));
+    if let Some(entitlements) = json_plan.entitlements {
+        InsertPlan::licensed_plan(
+            conn,
+            biller,
+            &context.licensor,
+            &query_organization,
+            &customer,
+            &payment_method,
+            json_plan.level,
+            DEFAULT_PRICE_NAME.into(),
+            entitlements.into(),
+            json_plan.organization,
+        )
+        .await?;
+        let query_plan = QueryPlan::belonging_to(&query_organization)
+            .first::<QueryPlan>(conn)
+            .map_err(resource_not_found_err!(Plan, query_organization))?;
+        if let Some(query_plan) = query_plan
+            .licensed_plan(biller, &context.licensor, query_organization.uuid)
+            .await?
+        {
+            Ok(query_plan)
+        } else {
+            Err(issue_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Failed to find licensed plan after creating it",
+                &format!(
+                    "Failed to find licensed plan for organization ({query_organization:?}) after creating it even though plan exists ({query_plan:?})."
+                     ),
+                "Failed to find licensed plan after creating it"
+                ))
         }
-
-        // Create a licensed subscription for the organization
-        let subscription = biller
-            .create_licensed_subscription(
-                query_organization.uuid,
-                customer,
-                payment_method,
-                json_plan.level,
-                DEFAULT_PRICE_NAME.into(),
-                entitlements,
-            )
-            .await
-            .map_err(resource_conflict_err!(
-                Plan,
-                (&query_organization, customer, json_plan.level, entitlements)
-            ))?;
-
-        let licensed_plan_id: LicensedPlanId = subscription
-            .id
-            .as_ref()
-            .parse()
-            .map_err(resource_not_found_err!(Plan, subscription))?;
-        // TODO if the org uuid isn't given then add it to the the given org as its license
-        let organization_uuid = json_plan.organization.unwrap_or(query_organization.uuid);
-        let license = licensor
-            .new_annual_license(organization_uuid, entitlements)
-            .map_err(|e| issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to create license",
-                &format!("Failed to create license for organization ({query_organization:?}) with entitlements ({entitlements})."),
-                e,
-            ))?;
-        let timestamp = DateTime::now();
-
-        let plan = biller
-            .get_plan(licensed_plan_id.clone())
-            .await
-            .map_err(resource_not_found_err!(Plan, subscription))?;
-
-        (
-            plan,
-            InsertPlan {
-                organization_id: query_organization.id,
-                metered_plan: None,
-                licensed_plan: Some(licensed_plan_id),
-                license: Some(license),
-                created: timestamp,
-                modified: timestamp,
-            },
-        )
     } else {
-        // Create a metered subscription for the organization
-        let subscription = biller
-            .create_metered_subscription(
-                query_organization.uuid,
-                customer,
-                payment_method,
-                json_plan.level,
-                DEFAULT_PRICE_NAME.into(),
-            )
-            .await
-            .map_err(resource_conflict_err!(
-                Plan,
-                (&query_organization, customer, json_plan.level)
-            ))?;
-
-        let metered_plan_id: MeteredPlanId = subscription
-            .id
-            .as_ref()
-            .parse()
-            .map_err(resource_not_found_err!(Plan, subscription))?;
-        let timestamp = DateTime::now();
-
-        let plan = biller
-            .get_plan(metered_plan_id.clone())
-            .await
-            .map_err(resource_not_found_err!(Plan, subscription))?;
-
-        (
-            plan,
-            InsertPlan {
-                organization_id: query_organization.id,
-                metered_plan: Some(metered_plan_id),
-                licensed_plan: None,
-                license: None,
-                created: timestamp,
-                modified: timestamp,
-            },
+        InsertPlan::metered_plan(
+            conn,
+            biller,
+            &query_organization,
+            &customer,
+            &payment_method,
+            json_plan.level,
+            DEFAULT_PRICE_NAME.into(),
         )
-    })
+        .await?;
+        let query_plan = QueryPlan::belonging_to(&query_organization)
+            .first::<QueryPlan>(conn)
+            .map_err(resource_not_found_err!(Plan, query_organization))?;
+        if let Some(query_plan) = query_plan.metered_plan(biller).await? {
+            Ok(query_plan)
+        } else {
+            Err(issue_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Failed to find metered plan after creating it",
+                &format!(
+                    "Failed to find metered plan for organization ({query_organization:?}) after creating it even though plan exists ({query_plan:?})."
+                     ),
+                "Failed to find metered plan after creating it"
+                ))
+        }
+    }
 }

@@ -1,26 +1,32 @@
 #![cfg(feature = "plus")]
 
-use bencher_billing::Biller;
+use bencher_billing::{Biller, Customer, PaymentMethod};
 use bencher_json::{
     organization::plan::JsonLicense, project::Visibility, DateTime, JsonPlan, Jwt, LicensedPlanId,
-    MeteredPlanId, OrganizationUuid,
+    MeteredPlanId, OrganizationUuid, PlanLevel,
 };
 use bencher_license::Licensor;
-use diesel::{BelongingToDsl, RunQueryDsl};
+use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 use http::StatusCode;
 
 use crate::{
     context::DbConnection,
-    error::{issue_error, not_found_error, payment_required_error, resource_not_found_err},
+    error::{
+        bad_request_error, issue_error, not_found_error, payment_required_error,
+        resource_conflict_err, resource_not_found_err,
+    },
     model::{
-        organization::{OrganizationId, QueryOrganization},
+        organization::{OrganizationId, QueryOrganization, UpdateOrganization},
         project::{metric::QueryMetric, QueryProject},
     },
-    schema::plan as plan_table,
+    schema::{self, plan as plan_table},
 };
 
 crate::util::typed_id::typed_id!(PlanId);
+
+// Metrics are bundled by the thousand for licensed plans
+pub const ENTITLEMENTS_QUANTITY: u64 = 1_000;
 
 #[derive(
     Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
@@ -102,6 +108,148 @@ pub struct InsertPlan {
     pub license: Option<Jwt>,
     pub created: DateTime,
     pub modified: DateTime,
+}
+
+impl InsertPlan {
+    pub async fn metered_plan(
+        conn: &mut DbConnection,
+        biller: &Biller,
+        query_organization: &QueryOrganization,
+        customer: &Customer,
+        payment_method: &PaymentMethod,
+        plan_level: PlanLevel,
+        price_name: String,
+    ) -> Result<Self, HttpError> {
+        // Create a metered subscription for the organization
+        let subscription = biller
+            .create_metered_subscription(
+                query_organization.uuid,
+                customer,
+                payment_method,
+                plan_level,
+                price_name.clone(),
+            )
+            .await
+            .map_err(resource_conflict_err!(
+                Plan,
+                (&query_organization, customer, plan_level, price_name)
+            ))?;
+
+        let metered_plan_id: MeteredPlanId = subscription
+            .id
+            .as_ref()
+            .parse()
+            .map_err(resource_not_found_err!(Plan, subscription))?;
+        let timestamp = DateTime::now();
+
+        let insert_plan = InsertPlan {
+            organization_id: query_organization.id,
+            metered_plan: Some(metered_plan_id),
+            licensed_plan: None,
+            license: None,
+            created: timestamp,
+            modified: timestamp,
+        };
+
+        diesel::insert_into(schema::plan::table)
+            .values(&insert_plan)
+            .execute(conn)
+            .map_err(resource_conflict_err!(Plan, insert_plan))?;
+
+        Ok(insert_plan)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn licensed_plan(
+        conn: &mut DbConnection,
+        biller: &Biller,
+        licensor: &Licensor,
+        query_organization: &QueryOrganization,
+        customer: &Customer,
+        payment_method: &PaymentMethod,
+        plan_level: PlanLevel,
+        price_name: String,
+        license_entitlements: u64,
+        license_organization: Option<OrganizationUuid>,
+    ) -> Result<Self, HttpError> {
+        if license_entitlements == 0 || license_entitlements % ENTITLEMENTS_QUANTITY != 0 {
+            return Err(bad_request_error(format!(
+                "Entitlements ({license_entitlements}) must be a multiple of 1000",
+            )));
+        }
+
+        // Create a licensed subscription for the organization
+        let subscription = biller
+            .create_licensed_subscription(
+                query_organization.uuid,
+                customer,
+                payment_method,
+                plan_level,
+                price_name.clone(),
+                license_entitlements,
+            )
+            .await
+            .map_err(resource_conflict_err!(
+                Plan,
+                (
+                    &query_organization,
+                    customer,
+                    plan_level,
+                    price_name,
+                    license_entitlements
+                )
+            ))?;
+
+        let licensed_plan_id: LicensedPlanId = subscription
+            .id
+            .as_ref()
+            .parse()
+            .map_err(resource_not_found_err!(Plan, subscription))?;
+
+        // If license organization is not given, then use the current organization (Bencher Cloud license)
+        let organization_uuid = license_organization.unwrap_or(query_organization.uuid);
+        let license = licensor
+            .new_annual_license(organization_uuid, license_entitlements)
+            .map_err(|e| issue_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to create license",
+                &format!("Failed to create license for organization ({query_organization:?}) with entitlements ({license_entitlements})."),
+                e,
+            ))?;
+        let timestamp = DateTime::now();
+
+        let insert_plan = InsertPlan {
+            organization_id: query_organization.id,
+            metered_plan: None,
+            licensed_plan: Some(licensed_plan_id),
+            license: Some(license.clone()),
+            created: timestamp,
+            modified: timestamp,
+        };
+
+        diesel::insert_into(schema::plan::table)
+            .values(&insert_plan)
+            .execute(conn)
+            .map_err(resource_conflict_err!(Plan, insert_plan))?;
+
+        // If the license is for this organization is not given, then update the current organization (Bencher Cloud license)
+        if license_organization.is_none() {
+            let organization_query = schema::organization::table
+                .filter(schema::organization::id.eq(query_organization.id));
+            let update_organization = UpdateOrganization {
+                name: None,
+                slug: None,
+                license: Some(Some(license)),
+                modified: timestamp,
+            };
+            diesel::update(organization_query)
+                .set(&update_organization)
+                .execute(conn)
+                .map_err(resource_conflict_err!(Organization, update_organization))?;
+        }
+
+        Ok(insert_plan)
+    }
 }
 
 pub enum PlanKind {

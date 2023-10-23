@@ -31,8 +31,8 @@ pub enum BillingError {
     PriceNotFound(String),
     #[error("Cannot create a subscription for the free tier")]
     ProductLevelFree,
-    #[error("Subscription quantity set to zero: {0}")]
-    QuantityZero(u64),
+    #[error("Subscription entitlements set to zero: {0}")]
+    EntitlementsZero(u64),
     #[error("Multiple subscriptions: {0:#?} {1:#?}")]
     MultipleSubscriptions(Subscription, Vec<Subscription>),
     #[error("Multiple subscription items for {0}: {1:#?} {2:#?}")]

@@ -1,8 +1,9 @@
 use std::string::ToString;
 
 use bencher_json::{
-    organization::JsonUpdateOrganization, DateTime, JsonNewOrganization, JsonOrganization, Jwt,
-    NonEmpty, OrganizationUuid, ResourceId, Slug,
+    organization::{JsonOrganizationPatch, JsonOrganizationPatchNull, JsonUpdateOrganization},
+    DateTime, JsonNewOrganization, JsonOrganization, Jwt, NonEmpty, OrganizationUuid, ResourceId,
+    Slug,
 };
 use bencher_rbac::Organization;
 use diesel::{ExpressionMethods, QueryDsl, Queryable, RunQueryDsl};
@@ -136,16 +137,44 @@ impl InsertOrganization {
 pub struct UpdateOrganization {
     pub name: Option<NonEmpty>,
     pub slug: Option<Slug>,
+    #[cfg(feature = "plus")]
+    pub license: Option<Option<Jwt>>,
     pub modified: DateTime,
 }
 
 impl From<JsonUpdateOrganization> for UpdateOrganization {
     fn from(update: JsonUpdateOrganization) -> Self {
-        let JsonUpdateOrganization { name, slug } = update;
-        Self {
-            name,
-            slug,
-            modified: DateTime::now(),
+        match update {
+            JsonUpdateOrganization::Patch(patch) => {
+                let JsonOrganizationPatch {
+                    name,
+                    slug,
+                    #[cfg(feature = "plus")]
+                    license,
+                } = patch;
+                Self {
+                    name,
+                    slug,
+                    #[cfg(feature = "plus")]
+                    license: license.map(Some),
+                    modified: DateTime::now(),
+                }
+            },
+            JsonUpdateOrganization::Null(patch_url) => {
+                let JsonOrganizationPatchNull {
+                    name,
+                    slug,
+                    #[cfg(feature = "plus")]
+                        license: _,
+                } = patch_url;
+                Self {
+                    name,
+                    slug,
+                    #[cfg(feature = "plus")]
+                    license: Some(None),
+                    modified: DateTime::now(),
+                }
+            },
         }
     }
 }

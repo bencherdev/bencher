@@ -45,11 +45,13 @@ impl ProductPlan {
         }
     }
 
-    fn licensed(plan_level: PlanLevel, price_name: String, quantity: u64) -> Self {
+    fn licensed(plan_level: PlanLevel, price_name: String, entitlements: u64) -> Self {
         match plan_level {
             PlanLevel::Free => Self::Free,
-            PlanLevel::Team => Self::Team(ProductUsage::Licensed(price_name, quantity)),
-            PlanLevel::Enterprise => Self::Enterprise(ProductUsage::Licensed(price_name, quantity)),
+            PlanLevel::Team => Self::Team(ProductUsage::Licensed(price_name, entitlements)),
+            PlanLevel::Enterprise => {
+                Self::Enterprise(ProductUsage::Licensed(price_name, entitlements))
+            },
         }
     }
 }
@@ -214,13 +216,13 @@ impl Biller {
         payment_method: &PaymentMethod,
         plan_level: PlanLevel,
         price_name: String,
-        quantity: u64,
+        entitlements: u64,
     ) -> Result<Subscription, BillingError> {
         self.create_subscription(
             organization,
             customer,
             payment_method,
-            ProductPlan::licensed(plan_level, price_name, quantity),
+            ProductPlan::licensed(plan_level, price_name, entitlements),
         )
         .await
     }
@@ -234,7 +236,7 @@ impl Biller {
         product_plan: ProductPlan,
     ) -> Result<Subscription, BillingError> {
         let mut create_subscription = CreateSubscription::new(customer.id.clone());
-        let (price, quantity) = match product_plan {
+        let (price, entitlements) = match product_plan {
             ProductPlan::Free => return Err(BillingError::ProductLevelFree),
             ProductPlan::Team(product_usage) => match product_usage {
                 ProductUsage::Metered(price_name) => (
@@ -245,13 +247,13 @@ impl Biller {
                         .ok_or(BillingError::PriceNotFound(price_name))?,
                     None,
                 ),
-                ProductUsage::Licensed(price_name, quantity) => (
+                ProductUsage::Licensed(price_name, entitlements) => (
                     self.products
                         .team
                         .licensed
                         .get(&price_name)
                         .ok_or(BillingError::PriceNotFound(price_name))?,
-                    Some(quantity),
+                    Some(entitlements),
                 ),
             },
             ProductPlan::Enterprise(product_usage) => match product_usage {
@@ -263,22 +265,22 @@ impl Biller {
                         .ok_or(BillingError::PriceNotFound(price_name))?,
                     None,
                 ),
-                ProductUsage::Licensed(price_name, quantity) => (
+                ProductUsage::Licensed(price_name, entitlements) => (
                     self.products
                         .enterprise
                         .licensed
                         .get(&price_name)
                         .ok_or(BillingError::PriceNotFound(price_name))?,
-                    Some(quantity),
+                    Some(entitlements),
                 ),
             },
         };
 
-        let quantity = if let Some(quantity) = quantity {
-            if quantity == 0 {
-                return Err(BillingError::QuantityZero(quantity));
+        let quantity = if let Some(entitlements) = entitlements {
+            if entitlements == 0 {
+                return Err(BillingError::EntitlementsZero(entitlements));
             }
-            Some(quantity)
+            Some(entitlements)
         } else {
             None
         };
@@ -618,7 +620,7 @@ mod test {
         payment_method: &PaymentMethod,
         plan_level: PlanLevel,
         price_name: String,
-        quantity: u64,
+        entitlements: u64,
     ) {
         let create_subscription = biller
             .create_licensed_subscription(
@@ -627,7 +629,7 @@ mod test {
                 payment_method,
                 plan_level,
                 price_name,
-                quantity,
+                entitlements,
             )
             .await
             .unwrap();
