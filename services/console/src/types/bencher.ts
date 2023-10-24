@@ -178,6 +178,7 @@ export interface JsonOrganization {
 	uuid: Uuid;
 	name: NonEmpty;
 	slug: Slug;
+	license?: Jwt;
 	created: string;
 	modified: string;
 }

@@ -3,9 +3,12 @@ import { Button, Card, Display, Row } from "../types";
 import { parentPath, viewSlugPath } from "../util";
 import { Operation } from "../types";
 import type { Params } from "../../util/url";
-import { isAllowedOrganizationEdit } from "../../util/auth";
+import {
+	isAllowedOrganizationEdit,
+	isAllowedOrganizationManage,
+} from "../../util/auth";
 import FieldKind from "../../components/field/kind";
-import { validNonEmpty, validSlug } from "../../util/valid";
+import { validNonEmpty, validOptionJwt, validSlug } from "../../util/valid";
 
 const ORGANIZATION_FIELDS = {
 	name: {
@@ -23,6 +26,14 @@ const ORGANIZATION_FIELDS = {
 		icon: "fas fa-exclamation-triangle",
 		help: "Must be a valid slug",
 		validate: validSlug,
+	},
+	license: {
+		label: "License Key",
+		type: "text",
+		placeholder: "jwt_header.jwt_payload.jwt_verify_signature",
+		icon: "fas fa-key",
+		help: "Must be a valid JWT (JSON Web Token)",
+		validate: validOptionJwt,
 	},
 };
 
@@ -104,6 +115,23 @@ const organizationsConfig = {
 					label: "Organization UUID",
 					key: "uuid",
 					display: Display.RAW,
+				},
+				{
+					kind: Card.FIELD,
+					label: "License Key",
+					key: "license",
+					display: Display.RAW,
+					is_allowed: isAllowedOrganizationManage,
+					field: {
+						kind: FieldKind.INPUT,
+						label: "License Key",
+						key: "license",
+						value: "",
+						valid: null,
+						validate: true,
+						nullable: true,
+						config: ORGANIZATION_FIELDS.license,
+					},
 				},
 			],
 		},

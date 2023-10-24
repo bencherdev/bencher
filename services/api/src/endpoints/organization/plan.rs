@@ -2,7 +2,7 @@
 
 use bencher_json::{
     organization::plan::{JsonNewPlan, JsonPlan, DEFAULT_PRICE_NAME},
-    JsonEmpty, ResourceId,
+    DateTime, JsonEmpty, ResourceId,
 };
 use bencher_rbac::organization::Permission;
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -21,11 +21,14 @@ use crate::{
         forbidden_error, issue_error, resource_conflict_err, resource_conflict_error,
         resource_not_found_err, BencherResource,
     },
+    model::{organization::QueryOrganization, user::auth::BearerToken},
     model::{
-        organization::plan::{InsertPlan, QueryPlan},
+        organization::{
+            plan::{InsertPlan, QueryPlan},
+            UpdateOrganization,
+        },
         user::{auth::AuthUser, QueryUser},
     },
-    model::{organization::QueryOrganization, user::auth::BearerToken},
     schema,
 };
 
@@ -272,6 +275,21 @@ async fn delete_inner(
             .cancel_licensed_subscription(licensed_plan_id.clone())
             .await
             .map_err(resource_not_found_err!(Plan, query_plan))?;
+
+        if query_organization.license.is_some() {
+            let organization_query = schema::organization::table
+                .filter(schema::organization::id.eq(query_organization.id));
+            let update_organization = UpdateOrganization {
+                name: None,
+                slug: None,
+                license: Some(None),
+                modified: DateTime::now(),
+            };
+            diesel::update(organization_query)
+                .set(&update_organization)
+                .execute(conn)
+                .map_err(resource_conflict_err!(Organization, update_organization))?;
+        }
     } else {
         return Err(issue_error(
                 StatusCode::INTERNAL_SERVER_ERROR,

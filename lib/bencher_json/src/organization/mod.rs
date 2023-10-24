@@ -34,6 +34,8 @@ pub struct JsonOrganization {
     pub uuid: OrganizationUuid,
     pub name: NonEmpty,
     pub slug: Slug,
+    #[cfg(feature = "plus")]
+    pub license: Option<bencher_valid::Jwt>,
     pub created: DateTime,
     pub modified: DateTime,
 }

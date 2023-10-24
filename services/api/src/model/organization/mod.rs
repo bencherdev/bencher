@@ -79,6 +79,8 @@ impl QueryOrganization {
             uuid,
             name,
             slug,
+            #[cfg(feature = "plus")]
+            license,
             created,
             modified,
             ..
@@ -87,6 +89,8 @@ impl QueryOrganization {
             uuid,
             name,
             slug,
+            #[cfg(feature = "plus")]
+            license,
             created,
             modified,
         }

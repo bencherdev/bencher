@@ -57,6 +57,9 @@ export const validEmail = (email: undefined | null | string): boolean =>
 export const validJwt = (token: undefined | null | string): boolean =>
 	validOptionString(token, is_valid_jwt);
 
+export const validOptionJwt = (token: undefined | null | string): boolean =>
+	validOptionString(token, (i) => i.length === 0 || is_valid_jwt(i));
+
 export const validOptionUrl = (url: undefined | null | string): boolean =>
 	validOptionString(url, (i) => i.length === 0 || is_valid_url(i));
 

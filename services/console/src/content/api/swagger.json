@@ -7013,6 +7013,14 @@
           "created": {
             "$ref": "#/components/schemas/DateTime"
           },
+          "license": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Jwt"
+              }
+            ]
+          },
           "modified": {
             "$ref": "#/components/schemas/DateTime"
           },
