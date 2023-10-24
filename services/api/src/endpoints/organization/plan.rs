@@ -29,9 +29,6 @@ use crate::{
     schema,
 };
 
-// Metrics are bundled by the thousand for licensed plans
-pub const ENTITLEMENTS_QUANTITY: u64 = 1_000;
-
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgPlanParams {
     pub organization: ResourceId,

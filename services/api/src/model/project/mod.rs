@@ -218,7 +218,7 @@ impl From<JsonUpdateProject> for UpdateProject {
                 let JsonProjectPatchNull {
                     name,
                     slug,
-                    url: _,
+                    url: (),
                     visibility,
                 } = patch_url;
                 Self {

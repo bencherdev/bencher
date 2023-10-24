@@ -1,15 +1,16 @@
 use bencher_json::{DateTime, Entitlements, OrganizationUuid};
 use bencher_plus::BENCHER_DEV;
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
-use crate::{audience::Audience, billing_cycle::BillingCycle, licensor::now, LicenseError};
+use crate::{audience::Audience, billing_cycle::BillingCycle, LicenseError};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Claims {
     pub aud: String,           // Audience
-    pub exp: u64,              // Expiration time (as UTC timestamp)
-    pub iat: u64,              // Issued at (as UTC timestamp)
+    pub exp: i64,              // Expiration time (as UTC timestamp)
+    pub iat: i64,              // Issued at (as UTC timestamp)
     pub iss: String,           // Issuer
     pub sub: OrganizationUuid, // Subject (whom token refers to)
     pub ent: Entitlements,     // Entitlements (max number of metrics allowed)
@@ -22,10 +23,10 @@ impl Claims {
         organization: OrganizationUuid,
         entitlements: Entitlements,
     ) -> Result<Self, LicenseError> {
-        let now = now()?;
+        let now = Utc::now().timestamp();
         Ok(Self {
             aud: audience.into(),
-            exp: now.checked_add(u64::from(billing_cycle)).unwrap_or(now),
+            exp: now.checked_add(i64::from(billing_cycle)).unwrap_or(now),
             iat: now,
             iss: BENCHER_DEV.into(),
             sub: organization,
@@ -38,17 +39,13 @@ impl Claims {
     }
 
     pub fn issued_at(&self) -> DateTime {
-        let timestamp = i64::try_from(self.iat);
-        debug_assert!(timestamp.is_ok(), "Issued at time is invalid");
-        let date_time = DateTime::try_from(timestamp.unwrap_or_default());
+        let date_time = DateTime::try_from(self.iat);
         debug_assert!(date_time.is_ok(), "Issued at time is invalid");
         date_time.unwrap_or_default()
     }
 
     pub fn expiration(&self) -> DateTime {
-        let timestamp = i64::try_from(self.exp);
-        debug_assert!(timestamp.is_ok(), "Expiration time is invalid");
-        let date_time = DateTime::try_from(timestamp.unwrap_or_default());
+        let date_time = DateTime::try_from(self.exp);
         debug_assert!(date_time.is_ok(), "Expiration time is invalid");
         date_time.unwrap_or_default()
     }

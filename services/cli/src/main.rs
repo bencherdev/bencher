@@ -14,7 +14,7 @@ pub use error::CliError;
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> ExitCode {
     match exec().await {
-        Ok(_) => ExitCode::SUCCESS,
+        Ok(()) => ExitCode::SUCCESS,
         // https://github.com/rust-lang/rust/issues/46016#issuecomment-1242039016
         Err(CliError::Run(RunError::RunCommand(err)))
             if err.kind() == io::ErrorKind::BrokenPipe =>

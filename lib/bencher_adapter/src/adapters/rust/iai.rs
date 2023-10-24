@@ -130,7 +130,7 @@ fn parse_iai_metric<'a>(input: &'a str, metric_kind: &'static str) -> IResult<&'
                 ),
             )),
         )),
-        |(_, _, _, _, metric, _)| JsonMetric {
+        |(_, _, _, _, metric, ())| JsonMetric {
             value: (metric as f64).into(),
             lower_value: None,
             upper_value: None,

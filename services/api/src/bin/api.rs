@@ -86,7 +86,7 @@ async fn run(
                     break;
                 }
             },
-            _ = async {}, if handle.is_finished() => {
+            () = async {}, if handle.is_finished() => {
                 return match handle.await {
                     Ok(result) => result,
                     Err(e) => Err(ApiError::JoinHandle(e))

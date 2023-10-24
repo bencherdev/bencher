@@ -165,7 +165,7 @@ impl From<JsonUpdateOrganization> for UpdateOrganization {
                     name,
                     slug,
                     #[cfg(feature = "plus")]
-                        license: _,
+                        license: (),
                 } = patch_url;
                 Self {
                     name,

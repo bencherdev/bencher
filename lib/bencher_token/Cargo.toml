@@ -11,3 +11,4 @@ jsonwebtoken.workspace = true
 once_cell.workspace = true
 serde.workspace = true
 thiserror.workspace = true
+uuid = { workspace = true, features = ["v4"] }

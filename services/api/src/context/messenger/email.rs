@@ -59,7 +59,7 @@ impl Email {
             }
 
             match send(client_builder, message_builder).await {
-                Ok(_) => trace!(send_log, "Email sent email from {from_email} to {to_email}"),
+                Ok(()) => trace!(send_log, "Email sent email from {from_email} to {to_email}"),
                 Err(e) => {
                     error!(
                         send_log,

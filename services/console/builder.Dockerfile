@@ -1,5 +1,5 @@
 # https://hub.docker.com/_/rust
-FROM rust:1.72.0-bookworm as wasm-builder
+FROM rust:1.73.0-bookworm as wasm-builder
 
 RUN apt-get update && \
     apt-get install -y clang

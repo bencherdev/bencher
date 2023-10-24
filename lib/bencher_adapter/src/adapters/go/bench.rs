@@ -56,7 +56,7 @@ fn parse_go(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
                 ),
             )),
         )),
-        |(name, _, _iter, _, json_metric, _)| -> Result<(BenchmarkName, JsonMetric), NomError> {
+        |(name, _, _iter, _, json_metric, ())| -> Result<(BenchmarkName, JsonMetric), NomError> {
             let benchmark_name = parse_benchmark_name(name)?;
             Ok((benchmark_name, json_metric))
         },

@@ -62,7 +62,6 @@ rustflags = [
     "-Wclippy::mixed_read_write_in_expression",  # Checks for a read and a write to the same variable where whether the read occurs before or after the write depends on the evaluation order of sub-expressions.
     "-Wclippy::modulo_arithmetic",               # Checks for modulo arithmetic.
     "-Wclippy::multiple_inherent_impl",          # Checks for multiple inherent implementations of a struct
-    "-Wclippy::multiple_unsafe_ops_per_block",   # Checks for unsafe blocks that contain more than one unsafe operation.
     "-Wclippy::mutex_atomic",                    # Checks for usage of Mutex<X> where an atomic will do.
     "-Wclippy::needless_raw_strings",            # Checks for raw string literals where a string literal can be used instead.
     "-Wclippy::panic",                           # Checks for usage of panic!.

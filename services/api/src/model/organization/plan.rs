@@ -25,9 +25,6 @@ use crate::{
 
 crate::util::typed_id::typed_id!(PlanId);
 
-// Metrics are bundled by the thousand for licensed plans
-pub const ENTITLEMENTS_QUANTITY: u64 = 1_000;
-
 #[derive(
     Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
 )]
@@ -343,7 +340,7 @@ impl PlanKind {
                         issue_error(
                             StatusCode::BAD_REQUEST,
                             "Failed to record usage",
-                            &format!("Failed to record usage ({usage}) in project ({project_id}) on Bencher.", project_id= project.id),
+                            &format!("Failed to record usage ({usage}) for project ({project:?})."),
                             e,
                         )
                     })?;

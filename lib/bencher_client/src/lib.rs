@@ -59,9 +59,9 @@ from_client!(
 from_client!(
     CardCvc,
     CardNumber,
+    Entitlements,
     ExpirationMonth,
-    ExpirationYear,
-    Entitlements
+    ExpirationYear
 );
 
 // This is a bit of a kludge, but it should always work!

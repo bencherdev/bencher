@@ -143,8 +143,8 @@ fn decoding_key() -> Result<DecodingKey, LicenseError> {
     DecodingKey::from_ec_pem(PUBLIC_PEM.as_bytes()).map_err(LicenseError::PublicPem)
 }
 
-fn check_expiration(time: u64) -> Result<(), LicenseError> {
-    let now = now()?;
+fn check_expiration(time: i64) -> Result<(), LicenseError> {
+    let now = Utc::now().timestamp();
     if time < now {
         Err(
             jsonwebtoken::errors::Error::from(jsonwebtoken::errors::ErrorKind::ExpiredSignature)
@@ -153,10 +153,6 @@ fn check_expiration(time: u64) -> Result<(), LicenseError> {
     } else {
         Ok(())
     }
-}
-
-pub fn now() -> Result<u64, LicenseError> {
-    u64::try_from(Utc::now().timestamp()).map_err(Into::into)
 }
 
 #[cfg(test)]
@@ -202,7 +198,7 @@ mod test {
         assert_eq!(token_data.claims.iss, BENCHER_DEV);
         assert_eq!(
             token_data.claims.iat,
-            token_data.claims.exp - u64::from(BillingCycle::Monthly)
+            token_data.claims.exp - i64::from(BillingCycle::Monthly)
         );
         assert_eq!(token_data.claims.sub, organization);
         assert_eq!(token_data.claims.ent, entitlements);
@@ -224,7 +220,7 @@ mod test {
         assert_eq!(token_data.claims.iss, BENCHER_DEV);
         assert_eq!(
             token_data.claims.iat,
-            token_data.claims.exp - u64::from(BillingCycle::Annual)
+            token_data.claims.exp - i64::from(BillingCycle::Annual)
         );
         assert_eq!(token_data.claims.sub, organization);
         assert_eq!(token_data.claims.ent, entitlements);

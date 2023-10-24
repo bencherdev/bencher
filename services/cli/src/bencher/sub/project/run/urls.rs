@@ -360,7 +360,7 @@ impl BenchmarkUrl {
                 .to_query_string(
                     &boundary
                         .map(BoundaryParam::to_query_string)
-                        .unwrap_or(vec![]),
+                        .unwrap_or_default(),
                 )
                 .unwrap_or_default(),
         ));

@@ -303,7 +303,7 @@ async fn post_inner(
         .await?;
 
     // Don't return the error from processing the report until after the metrics usage has been checked
-    processed_report.and_then(|_| {
+    processed_report.and_then(|()| {
         // If the report was processed successfully, then return the report with the results
         query_report.into_json(log, conn)
     })

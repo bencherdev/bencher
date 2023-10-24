@@ -863,6 +863,7 @@ dependencies = [
  "once_cell",
  "serde",
  "thiserror",
+ "uuid 1.5.0",
 ]
 
 [[package]]
