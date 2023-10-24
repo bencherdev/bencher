@@ -57,7 +57,7 @@ fn test_api_version(api_url: &str, version: &str) -> anyhow::Result<()> {
         println!("{}", String::from_utf8_lossy(&output.stdout));
 
         anyhow::anyhow!(
-            "Failed to generate swagger.json. Exit code: {:?}",
+            "Failed to get server version. Exit code: {:?}",
             output.status.code()
         )
     })?;
