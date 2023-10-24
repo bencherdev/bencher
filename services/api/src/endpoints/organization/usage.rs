@@ -76,15 +76,22 @@ async fn get_inner(
     let conn = &mut *context.conn().await;
 
     // Get the organization
-    let query_org = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
+    let query_organization = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
     // Check to see if user has permission to manage a project within the organization
     context
         .rbac
-        .is_allowed_organization(auth_user, Permission::Manage, &query_org)
+        .is_allowed_organization(auth_user, Permission::Manage, &query_organization)
         .map_err(forbidden_error)?;
 
     let OrgUsageQuery { start, end } = query_params;
-    let metrics_used = QueryMetric::usage(conn, query_org.id, start.into(), end.into())?;
+    let start_time = start.into();
+    let end_time = end.into();
+    let usage = QueryMetric::usage(conn, query_organization.id, start_time, end_time)?;
 
-    Ok(JsonUsage { metrics_used })
+    Ok(JsonUsage {
+        organization: query_organization.into_json(),
+        start_time,
+        end_time,
+        usage,
+    })
 }

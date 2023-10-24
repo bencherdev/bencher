@@ -8226,14 +8226,26 @@
       "JsonUsage": {
         "type": "object",
         "properties": {
-          "metrics_used": {
+          "end_time": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "organization": {
+            "$ref": "#/components/schemas/JsonOrganization"
+          },
+          "start_time": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "usage": {
             "type": "integer",
             "format": "uint32",
             "minimum": 0
           }
         },
         "required": [
-          "metrics_used"
+          "end_time",
+          "organization",
+          "start_time",
+          "usage"
         ]
       },
       "JsonUser": {

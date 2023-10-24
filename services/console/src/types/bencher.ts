@@ -259,7 +259,10 @@ export interface JsonPlan {
 }
 
 export interface JsonUsage {
-	metrics_used: number;
+	organization: JsonOrganization;
+	start_time: string;
+	end_time: string;
+	usage: number;
 }
 
 export interface JsonAlertStats {

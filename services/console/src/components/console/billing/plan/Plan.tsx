@@ -104,7 +104,7 @@ const Plan = (props: Props) => {
 		}
 	});
 	const estCost = createMemo(() => {
-		const metricsUsed = usage()?.metrics_used;
+		const metricsUsed = usage()?.usage;
 		if (metricsUsed === undefined) {
 			return 0;
 		}
@@ -132,8 +132,8 @@ const Plan = (props: Props) => {
 						<p>Per Metric Rate: {fmtUsd(perMetricRate())}</p>
 						<p>
 							Estimated Usage:{" "}
-							{Number.isInteger(usage()?.metrics_used)
-								? usage()?.metrics_used.toLocaleString()
+							{Number.isInteger(usage()?.usage)
+								? usage()?.usage.toLocaleString()
 								: "---"}
 						</p>
 						<Show
