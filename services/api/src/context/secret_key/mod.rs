@@ -40,8 +40,8 @@ pub enum JwtError {
     Parse(bencher_json::ValidError),
     #[error("Expired JSON Web Token ({exp} < {now}): {error}")]
     Expired {
-        exp: u64,
-        now: u64,
+        exp: i64,
+        now: i64,
         error: jsonwebtoken::errors::Error,
     },
     #[error("Invalid organizational invite: {error}")]
@@ -110,8 +110,7 @@ impl SecretKey {
                 error,
             })?;
         let exp = token_data.claims.exp;
-        #[allow(clippy::expect_used)]
-        let now = u64::try_from(Utc::now().timestamp()).expect("Is it 584942419325 yet?");
+        let now = Utc::now().timestamp();
         if exp < now {
             Err(JwtError::Expired {
                 exp,
@@ -140,11 +139,6 @@ impl SecretKey {
     pub fn validate_invite(&self, token: &Jwt) -> Result<InviteClaims, JwtError> {
         self.validate(token, &[Audience::Invite])?.claims.try_into()
     }
-}
-
-pub fn now() -> u64 {
-    #[allow(clippy::expect_used)]
-    u64::try_from(Utc::now().timestamp()).expect("Today is past 1 Jan 1970.")
 }
 
 #[cfg(test)]
@@ -180,7 +174,7 @@ mod test {
 
         assert_eq!(claims.aud, Audience::Auth.to_string());
         assert_eq!(claims.iss, BENCHER_DEV_URL.to_string());
-        assert_eq!(claims.iat, claims.exp - u64::from(TTL));
+        assert_eq!(claims.iat, claims.exp - i64::from(TTL));
         assert_eq!(claims.sub, *EMAIL);
     }
 
@@ -205,7 +199,7 @@ mod test {
 
         assert_eq!(claims.aud, Audience::Client.to_string());
         assert_eq!(claims.iss, BENCHER_DEV_URL.to_string());
-        assert_eq!(claims.iat, claims.exp - u64::from(TTL));
+        assert_eq!(claims.iat, claims.exp - i64::from(TTL));
         assert_eq!(claims.sub, *EMAIL);
     }
 
@@ -230,7 +224,7 @@ mod test {
 
         assert_eq!(claims.aud, Audience::ApiKey.to_string());
         assert_eq!(claims.iss, BENCHER_DEV_URL.to_string());
-        assert_eq!(claims.iat, claims.exp - u64::from(TTL));
+        assert_eq!(claims.iat, claims.exp - i64::from(TTL));
         assert_eq!(claims.sub, *EMAIL);
     }
 
@@ -260,7 +254,7 @@ mod test {
 
         assert_eq!(claims.aud, Audience::Invite.to_string());
         assert_eq!(claims.iss, BENCHER_DEV_URL.to_string());
-        assert_eq!(claims.iat, claims.exp - u64::from(TTL));
+        assert_eq!(claims.iat, claims.exp - i64::from(TTL));
         assert_eq!(claims.sub, *EMAIL);
 
         assert_eq!(claims.org.uuid, org_uuid);

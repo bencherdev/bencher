@@ -1,13 +1,14 @@
 use bencher_json::{organization::member::OrganizationRole, DateTime, Email, OrganizationUuid};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
-use super::{audience::Audience, now, JwtError};
+use super::{audience::Audience, JwtError};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
     pub aud: String,            // Audience
-    pub exp: u64,               // Expiration time (as UTC timestamp)
-    pub iat: u64,               // Issued at (as UTC timestamp)
+    pub exp: i64,               // Expiration time (as UTC timestamp)
+    pub iat: i64,               // Issued at (as UTC timestamp)
     pub iss: String,            // Issuer
     pub sub: Email,             // Subject (whom token refers to)
     pub org: Option<OrgClaims>, // Organization (for invitation)
@@ -27,10 +28,10 @@ impl Claims {
         ttl: u32,
         org: Option<OrgClaims>,
     ) -> Self {
-        let now = now();
+        let now = Utc::now().timestamp();
         Self {
             aud: audience.into(),
-            exp: now.checked_add(u64::from(ttl)).unwrap_or(now),
+            exp: now.checked_add(i64::from(ttl)).unwrap_or(now),
             iat: now,
             iss: issuer,
             sub: email,
@@ -43,17 +44,13 @@ impl Claims {
     }
 
     pub fn issued_at(&self) -> DateTime {
-        let timestamp = i64::try_from(self.iat);
-        debug_assert!(timestamp.is_ok(), "Issued at time is invalid");
-        let date_time = DateTime::try_from(timestamp.unwrap_or_default());
+        let date_time = DateTime::try_from(self.iat);
         debug_assert!(date_time.is_ok(), "Issued at time is invalid");
         date_time.unwrap_or_default()
     }
 
     pub fn expiration(&self) -> DateTime {
-        let timestamp = i64::try_from(self.exp);
-        debug_assert!(timestamp.is_ok(), "Expiration time is invalid");
-        let date_time = DateTime::try_from(timestamp.unwrap_or_default());
+        let date_time = DateTime::try_from(self.exp);
         debug_assert!(date_time.is_ok(), "Expiration time is invalid");
         date_time.unwrap_or_default()
     }
@@ -61,8 +58,8 @@ impl Claims {
 
 pub struct InviteClaims {
     pub aud: String,
-    pub exp: u64,
-    pub iat: u64,
+    pub exp: i64,
+    pub iat: i64,
     pub iss: String,
     pub sub: Email,
     pub org: OrgClaims,
