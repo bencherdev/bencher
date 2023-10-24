@@ -179,7 +179,7 @@ async fn post_inner(
             &payment_method,
             json_plan.level,
             DEFAULT_PRICE_NAME.into(),
-            entitlements.into(),
+            entitlements,
             json_plan.organization,
         )
         .await?;

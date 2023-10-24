@@ -56,7 +56,13 @@ from_client!(
 );
 
 #[cfg(feature = "plus")]
-from_client!(CardCvc, CardNumber, ExpirationMonth, ExpirationYear);
+from_client!(
+    CardCvc,
+    CardNumber,
+    ExpirationMonth,
+    ExpirationYear,
+    Entitlements
+);
 
 // This is a bit of a kludge, but it should always work!
 macro_rules! try_from_client {

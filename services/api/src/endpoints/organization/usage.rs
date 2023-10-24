@@ -84,7 +84,7 @@ async fn get_inner(
         .map_err(forbidden_error)?;
 
     let OrgUsageQuery { start, end } = query_params;
-    let metrics_used = QueryMetric::usage(conn, query_org.id, start.into(), end.into())?.into();
+    let metrics_used = QueryMetric::usage(conn, query_org.id, start.into(), end.into())?;
 
     Ok(JsonUsage { metrics_used })
 }

@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_client::types::{BigInt, JsonCard, JsonNewPlan, OrganizationUuid, PlanLevel};
+use bencher_client::types::{Entitlements, JsonCard, JsonNewPlan, OrganizationUuid, PlanLevel};
 use bencher_json::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear, JsonPlan, ResourceId};
 
 use crate::{
@@ -15,7 +15,7 @@ pub struct Create {
     pub org: ResourceId,
     pub card: Card,
     pub level: PlanLevel,
-    pub entitlements: Option<BigInt>,
+    pub entitlements: Option<Entitlements>,
     pub organization: Option<OrganizationUuid>,
     pub backend: Backend,
 }
@@ -44,7 +44,7 @@ impl TryFrom<CliPlanCreate> for Create {
             org,
             card: card.into(),
             level: level.into(),
-            entitlements: entitlements.map(|e| (e * 1_000).into()),
+            entitlements: entitlements.map(Into::into),
             organization: organization.map(Into::into),
             backend: backend.try_into()?,
         })

@@ -5898,6 +5898,11 @@
       "Email": {
         "type": "string"
       },
+      "Entitlements": {
+        "type": "integer",
+        "format": "uint32",
+        "minimum": 0
+      },
       "Error": {
         "description": "Error information from a response.",
         "type": "object",
@@ -6454,7 +6459,7 @@
         "type": "object",
         "properties": {
           "entitlements": {
-            "$ref": "#/components/schemas/BigInt"
+            "$ref": "#/components/schemas/Entitlements"
           },
           "expiration": {
             "$ref": "#/components/schemas/DateTime"
@@ -6748,7 +6753,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/BigInt"
+                "$ref": "#/components/schemas/Entitlements"
               }
             ]
           },
@@ -8161,7 +8166,9 @@
         "type": "object",
         "properties": {
           "metrics_used": {
-            "$ref": "#/components/schemas/BigInt"
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
           }
         },
         "required": [

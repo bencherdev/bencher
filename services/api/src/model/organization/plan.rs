@@ -2,8 +2,8 @@
 
 use bencher_billing::{Biller, Customer, PaymentMethod};
 use bencher_json::{
-    organization::plan::JsonLicense, project::Visibility, DateTime, JsonPlan, Jwt, LicensedPlanId,
-    MeteredPlanId, OrganizationUuid, PlanLevel,
+    organization::plan::JsonLicense, project::Visibility, DateTime, Entitlements, JsonPlan, Jwt,
+    LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel,
 };
 use bencher_license::Licensor;
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -13,8 +13,8 @@ use http::StatusCode;
 use crate::{
     context::DbConnection,
     error::{
-        bad_request_error, issue_error, not_found_error, payment_required_error,
-        resource_conflict_err, resource_not_found_err,
+        issue_error, not_found_error, payment_required_error, resource_conflict_err,
+        resource_not_found_err,
     },
     model::{
         organization::{OrganizationId, QueryOrganization, UpdateOrganization},
@@ -169,17 +169,9 @@ impl InsertPlan {
         payment_method: &PaymentMethod,
         plan_level: PlanLevel,
         price_name: String,
-        license_entitlements: u64,
+        license_entitlements: Entitlements,
         license_organization: Option<OrganizationUuid>,
     ) -> Result<Self, HttpError> {
-        // TODO make an entitlements type
-        // TODO need to move stripe over to single unit costs for licenses
-        if license_entitlements == 0 {
-            return Err(bad_request_error(format!(
-                "Entitlements ({license_entitlements}) must be a multiple of 1000",
-            )));
-        }
-
         // Create a licensed subscription for the organization
         let subscription = biller
             .create_licensed_subscription(
@@ -254,6 +246,7 @@ impl InsertPlan {
     }
 }
 
+#[allow(variant_size_differences)]
 pub enum PlanKind {
     Metered(MeteredPlanId),
     Licensed(LicenseUsage),
@@ -261,8 +254,8 @@ pub enum PlanKind {
 }
 
 pub struct LicenseUsage {
-    pub entitlements: u64,
-    pub usage: u64,
+    pub entitlements: Entitlements,
+    pub usage: u32,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -282,9 +275,9 @@ pub enum PlanKindError {
     #[error("License usage exceeded for project ({project:?}). {prior_usage} + {usage} > {entitlements}")]
     Overage {
         project: QueryProject,
-        entitlements: u64,
-        prior_usage: u64,
-        usage: u64,
+        entitlements: Entitlements,
+        prior_usage: u32,
+        usage: u32,
     },
 }
 
@@ -331,7 +324,7 @@ impl PlanKind {
         self,
         biller: Option<&Biller>,
         project: &QueryProject,
-        usage: u64,
+        usage: u32,
     ) -> Result<(), HttpError> {
         match self {
             Self::Metered(metered_plan_id) => {
@@ -359,7 +352,7 @@ impl PlanKind {
                 entitlements,
                 usage: prior_usage,
             }) => {
-                if prior_usage + usage > entitlements {
+                if prior_usage + usage > entitlements.into() {
                     return Err(payment_required_error(PlanKindError::Overage {
                         project: project.clone(),
                         entitlements,

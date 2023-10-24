@@ -1,4 +1,4 @@
-use bencher_json::{BigInt, DateTime, OrganizationUuid};
+use bencher_json::{DateTime, Entitlements, OrganizationUuid};
 use bencher_plus::BENCHER_DEV;
 use serde::{Deserialize, Serialize};
 
@@ -12,7 +12,7 @@ pub struct Claims {
     pub iat: u64,              // Issued at (as UTC timestamp)
     pub iss: String,           // Issuer
     pub sub: OrganizationUuid, // Subject (whom token refers to)
-    pub ent: u64,              // Entitlements (max number of metrics allowed)
+    pub ent: Entitlements,     // Entitlements (max number of metrics allowed)
 }
 
 impl Claims {
@@ -20,7 +20,7 @@ impl Claims {
         audience: Audience,
         billing_cycle: BillingCycle,
         organization: OrganizationUuid,
-        entitlements: u64,
+        entitlements: Entitlements,
     ) -> Result<Self, LicenseError> {
         let now = now()?;
         Ok(Self {
@@ -53,7 +53,7 @@ impl Claims {
         date_time.unwrap_or_default()
     }
 
-    pub fn entitlements(&self) -> BigInt {
-        self.ent.into()
+    pub fn entitlements(&self) -> Entitlements {
+        self.ent
     }
 }

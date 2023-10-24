@@ -6,7 +6,7 @@ edition.workspace = true
 
 [dependencies]
 # Workspace
-bencher_json.workspace = true
+bencher_json = { workspace = true, features = ["full", "plus"] }
 bencher_plus.workspace = true
 chrono.workspace = true
 jsonwebtoken = { workspace = true, features = ["use_pem"] }

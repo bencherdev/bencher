@@ -1,7 +1,8 @@
 #![cfg(feature = "plus")]
 
 use bencher_json::{
-    CardCvc, CardNumber, ExpirationMonth, ExpirationYear, OrganizationUuid, ResourceId,
+    CardCvc, CardNumber, Entitlements, ExpirationMonth, ExpirationYear, OrganizationUuid,
+    ResourceId,
 };
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
@@ -31,7 +32,7 @@ pub struct CliPlanCreate {
 
     /// License plan entitlements
     #[clap(long)]
-    pub entitlements: Option<u64>,
+    pub entitlements: Option<Entitlements>,
 
     /// Self-Hosted Organization UUID for license
     #[clap(long, requires = "entitlements")]

@@ -1,5 +1,3 @@
-#![cfg(feature = "plus")]
-
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;

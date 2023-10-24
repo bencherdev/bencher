@@ -142,16 +142,6 @@ export type JsonReportAlerts = JsonAlert[];
 
 export type Uuid = string;
 
-export type CardCvc = string;
-
-export type LastFour = string;
-
-export type ExpirationMonth = number;
-
-export type CardNumber = string;
-
-export type ExpirationYear = number;
-
 export type DateTimeMillis = number;
 
 export type Email = string;
@@ -160,9 +150,21 @@ export type GitHash = string;
 
 export type Jwt = string;
 
+export type CardCvc = string;
+
+export type Entitlements = number;
+
+export type LastFour = string;
+
+export type ExpirationMonth = number;
+
+export type CardNumber = string;
+
 export type MeteredPlanId = string;
 
 export type LicensedPlanId = string;
+
+export type ExpirationYear = number;
 
 export type ResourceId = string;
 
@@ -196,7 +198,7 @@ export enum PlanLevel {
 export interface JsonNewPlan {
 	card: JsonCard;
 	level: PlanLevel;
-	entitlements?: number;
+	entitlements?: Entitlements;
 	organization?: Uuid;
 }
 
@@ -238,7 +240,7 @@ export enum PlanStatus {
 export interface JsonLicense {
 	key: Jwt;
 	organization: Uuid;
-	entitlements: number;
+	entitlements: Entitlements;
 	issued_at: string;
 	expiration: string;
 }

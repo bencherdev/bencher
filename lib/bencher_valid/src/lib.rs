@@ -4,8 +4,6 @@ use wasm_bindgen::prelude::*;
 mod benchmark_name;
 mod boundary;
 mod branch_name;
-#[cfg(feature = "plus")]
-mod card;
 mod date_time;
 mod email;
 mod error;
@@ -13,11 +11,7 @@ mod git_hash;
 mod jwt;
 mod non_empty;
 #[cfg(feature = "plus")]
-mod plan_id;
-#[cfg(feature = "plus")]
-mod plan_level;
-#[cfg(feature = "plus")]
-mod plan_status;
+mod plus;
 mod resource_id;
 mod sample_size;
 mod secret;
@@ -32,8 +26,6 @@ pub use crate::url::Url;
 pub use benchmark_name::BenchmarkName;
 pub use boundary::Boundary;
 pub use branch_name::BranchName;
-#[cfg(feature = "plus")]
-pub use card::{CardBrand, CardCvc, CardNumber, ExpirationMonth, ExpirationYear, LastFour};
 pub use date_time::{DateTime, DateTimeMillis};
 pub use email::Email;
 pub use error::ValidError;
@@ -41,11 +33,10 @@ use error::REGEX_ERROR;
 pub use jwt::Jwt;
 pub use non_empty::NonEmpty;
 #[cfg(feature = "plus")]
-pub use plan_id::{LicensedPlanId, MeteredPlanId};
-#[cfg(feature = "plus")]
-pub use plan_level::PlanLevel;
-#[cfg(feature = "plus")]
-pub use plan_status::PlanStatus;
+pub use plus::{
+    CardBrand, CardCvc, CardNumber, Entitlements, ExpirationMonth, ExpirationYear, LastFour,
+    LicensedPlanId, MeteredPlanId, PlanLevel, PlanStatus,
+};
 pub use resource_id::ResourceId;
 pub use sample_size::SampleSize;
 pub use secret::Secret;

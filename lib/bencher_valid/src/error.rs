@@ -83,4 +83,10 @@ pub enum ValidError {
     #[cfg(feature = "plus")]
     #[error("Failed to validate payment card CVC: {0}")]
     CardCvc(String),
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate entitlements: {0}")]
+    Entitlements(u32),
+    #[cfg(feature = "plus")]
+    #[error("Failed to parse entitlements: {0}")]
+    EntitlementsStr(std::num::ParseIntError),
 }

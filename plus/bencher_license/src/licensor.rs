@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{Jwt, OrganizationUuid, Secret};
+use bencher_json::{Entitlements, Jwt, OrganizationUuid, Secret};
 use bencher_plus::BENCHER_DEV;
 use chrono::Utc;
 use jsonwebtoken::{decode, encode, Algorithm, Header, TokenData, Validation};
@@ -57,7 +57,7 @@ impl Licensor {
         audience: Audience,
         billing_cycle: BillingCycle,
         organization: OrganizationUuid,
-        entitlements: u64,
+        entitlements: Entitlements,
     ) -> Result<Jwt, LicenseError> {
         let claims = Claims::new(audience, billing_cycle, organization, entitlements)?;
         let encoding = self.encoding()?;
@@ -67,7 +67,7 @@ impl Licensor {
     pub fn new_monthly_license(
         &self,
         organization: OrganizationUuid,
-        entitlements: u64,
+        entitlements: Entitlements,
     ) -> Result<Jwt, LicenseError> {
         self.new_license(
             Audience::Bencher,
@@ -80,7 +80,7 @@ impl Licensor {
     pub fn new_annual_license(
         &self,
         organization: OrganizationUuid,
-        entitlements: u64,
+        entitlements: Entitlements,
     ) -> Result<Jwt, LicenseError> {
         self.new_license(
             Audience::Bencher,
@@ -118,9 +118,13 @@ impl Licensor {
         }
     }
 
-    pub fn validate_usage(&self, claims: &Claims, usage: u64) -> Result<u64, LicenseError> {
+    pub fn validate_usage(
+        &self,
+        claims: &Claims,
+        usage: u32,
+    ) -> Result<Entitlements, LicenseError> {
         let entitlements = claims.ent;
-        if usage > entitlements {
+        if usage > entitlements.into() {
             Err(LicenseError::Entitlements {
                 usage,
                 entitlements,
@@ -172,7 +176,7 @@ mod test {
     fn test_self_hosted() {
         let licensor = Licensor::self_hosted().unwrap();
         let organization = OrganizationUuid::new();
-        let entitlements = 1_000;
+        let entitlements = 1_000.try_into().unwrap();
 
         assert!(licensor
             .new_monthly_license(organization, entitlements)
@@ -186,7 +190,7 @@ mod test {
     fn test_bencher_cloud_monthly() {
         let licensor = Licensor::bencher_cloud(&PRIVATE_PEM_SECRET).unwrap();
         let organization = OrganizationUuid::new();
-        let entitlements = 1_000;
+        let entitlements = 1_000.try_into().unwrap();
 
         let license = licensor
             .new_monthly_license(organization, entitlements)
@@ -208,7 +212,7 @@ mod test {
     fn test_bencher_cloud_annual() {
         let licensor = Licensor::bencher_cloud(&PRIVATE_PEM_SECRET).unwrap();
         let organization = OrganizationUuid::new();
-        let entitlements = 1_000;
+        let entitlements = 1_000.try_into().unwrap();
 
         let license = licensor
             .new_annual_license(organization, entitlements)

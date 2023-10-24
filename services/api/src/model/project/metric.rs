@@ -45,7 +45,7 @@ impl QueryMetric {
         organization_id: crate::model::organization::OrganizationId,
         start_time: DateTime,
         end_time: DateTime,
-    ) -> Result<u64, HttpError> {
+    ) -> Result<u32, HttpError> {
         schema::metric::table
             .inner_join(
                 schema::perf::table

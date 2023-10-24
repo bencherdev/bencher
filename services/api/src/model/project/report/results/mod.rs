@@ -71,7 +71,7 @@ impl ReportResults {
         results_array: &[&str],
         adapter: Adapter,
         settings: JsonReportSettings,
-        #[cfg(feature = "plus")] usage: &mut u64,
+        #[cfg(feature = "plus")] usage: &mut u32,
     ) -> Result<(), HttpError> {
         let adapter_settings = AdapterSettings::new(settings.average);
         let results_array = AdapterResultsArray::new(results_array, adapter, adapter_settings)
@@ -113,7 +113,7 @@ impl ReportResults {
         conn: &mut DbConnection,
         iteration: Iteration,
         results: AdapterResults,
-        #[cfg(feature = "plus")] usage: &mut u64,
+        #[cfg(feature = "plus")] usage: &mut u32,
     ) -> Result<(), HttpError> {
         for (benchmark_name, metrics) in results.inner {
             self.metrics(
@@ -136,7 +136,7 @@ impl ReportResults {
         iteration: Iteration,
         benchmark_name: &BenchmarkName,
         metrics: AdapterMetrics,
-        #[cfg(feature = "plus")] usage: &mut u64,
+        #[cfg(feature = "plus")] usage: &mut u32,
     ) -> Result<(), HttpError> {
         // If benchmark name is ignored then strip the special suffix before querying
         let (benchmark_name, ignore_benchmark) = benchmark_name.to_strip_ignore();

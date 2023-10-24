@@ -22,5 +22,8 @@ pub enum LicenseError {
         license: bencher_json::OrganizationUuid,
     },
     #[error("The usage ({usage}) exceeds the license entitlements ({entitlements})")]
-    Entitlements { usage: u64, entitlements: u64 },
+    Entitlements {
+        usage: u32,
+        entitlements: bencher_json::Entitlements,
+    },
 }

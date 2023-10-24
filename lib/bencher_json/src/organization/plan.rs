@@ -1,8 +1,8 @@
 #![cfg(feature = "plus")]
 
 use bencher_valid::{
-    CardBrand, CardCvc, CardNumber, DateTime, Email, ExpirationMonth, ExpirationYear, Jwt,
-    LastFour, PlanLevel, PlanStatus, UserName,
+    CardBrand, CardCvc, CardNumber, DateTime, Email, Entitlements, ExpirationMonth, ExpirationYear,
+    Jwt, LastFour, PlanLevel, PlanStatus, UserName,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -18,7 +18,7 @@ pub const DEFAULT_PRICE_NAME: &str = "default";
 pub struct JsonNewPlan {
     pub card: JsonCard,
     pub level: PlanLevel,
-    pub entitlements: Option<BigInt>,
+    pub entitlements: Option<Entitlements>,
     pub organization: Option<OrganizationUuid>,
 }
 
@@ -72,7 +72,7 @@ pub struct JsonCardDetails {
 pub struct JsonLicense {
     pub key: Jwt,
     pub organization: OrganizationUuid,
-    pub entitlements: BigInt,
+    pub entitlements: Entitlements,
     pub issued_at: DateTime,
     pub expiration: DateTime,
 }

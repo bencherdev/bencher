@@ -3,8 +3,8 @@ use std::{fmt, str::FromStr};
 use bencher_json::{
     organization::plan::{JsonCard, JsonCardDetails, JsonCustomer, JsonPlan},
     system::config::JsonBilling,
-    Email, LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus, UserName,
-    UserUuid,
+    Email, Entitlements, LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus,
+    UserName, UserUuid,
 };
 use stripe::{
     AttachPaymentMethod, CardDetailsParams as PaymentCard, Client as StripeClient, CreateCustomer,
@@ -33,7 +33,7 @@ enum ProductPlan {
 #[derive(Debug, Clone)]
 enum ProductUsage {
     Metered(String),
-    Licensed(String, u64),
+    Licensed(String, Entitlements),
 }
 
 impl ProductPlan {
@@ -45,7 +45,7 @@ impl ProductPlan {
         }
     }
 
-    fn licensed(plan_level: PlanLevel, price_name: String, entitlements: u64) -> Self {
+    fn licensed(plan_level: PlanLevel, price_name: String, entitlements: Entitlements) -> Self {
         match plan_level {
             PlanLevel::Free => Self::Free,
             PlanLevel::Team => Self::Team(ProductUsage::Licensed(price_name, entitlements)),
@@ -216,7 +216,7 @@ impl Biller {
         payment_method: &PaymentMethod,
         plan_level: PlanLevel,
         price_name: String,
-        entitlements: u64,
+        entitlements: Entitlements,
     ) -> Result<Subscription, BillingError> {
         self.create_subscription(
             organization,
@@ -276,18 +276,9 @@ impl Biller {
             },
         };
 
-        let quantity = if let Some(entitlements) = entitlements {
-            if entitlements == 0 {
-                return Err(BillingError::EntitlementsZero(entitlements));
-            }
-            Some(entitlements)
-        } else {
-            None
-        };
-
         create_subscription.items = Some(vec![CreateSubscriptionItems {
             price: Some(price.id.to_string()),
-            quantity,
+            quantity: entitlements.map(Into::into),
             ..Default::default()
         }]);
         create_subscription.default_payment_method = Some(&payment_method.id);
@@ -503,7 +494,7 @@ impl Biller {
     pub async fn record_usage(
         &self,
         metered_plan_id: MeteredPlanId,
-        quantity: u64,
+        quantity: u32,
     ) -> Result<UsageRecord, BillingError> {
         let subscription = self.get_subscription(metered_plan_id).await?;
         let metered_plan_id = MeteredPlanId::from_str(subscription.id.as_ref())?;
@@ -511,7 +502,7 @@ impl Biller {
             Self::get_subscription_item(metered_plan_id, subscription.items.data)?;
 
         let create_usage_record = CreateUsageRecord {
-            quantity,
+            quantity: quantity.into(),
             ..Default::default()
         };
         UsageRecord::create(&self.client, &subscription_item.id, create_usage_record)
@@ -543,7 +534,7 @@ mod test {
     use bencher_json::{
         organization::plan::{JsonCard, DEFAULT_PRICE_NAME},
         system::config::{JsonBilling, JsonProduct, JsonProducts},
-        LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel, UserUuid,
+        Entitlements, LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel, UserUuid,
     };
     use chrono::{Datelike, Utc};
     use literally::hmap;
@@ -620,7 +611,7 @@ mod test {
         payment_method: &PaymentMethod,
         plan_level: PlanLevel,
         price_name: String,
-        entitlements: u64,
+        entitlements: Entitlements,
     ) {
         let create_subscription = biller
             .create_licensed_subscription(
@@ -650,7 +641,7 @@ mod test {
         usage_count: usize,
     ) {
         for _ in 0..usage_count {
-            let quantity = u64::from(rand::random::<u8>());
+            let quantity = u32::from(rand::random::<u8>());
             biller
                 .record_usage(metered_plan_id.clone(), quantity)
                 .await
@@ -738,7 +729,7 @@ mod test {
             &payment_method,
             PlanLevel::Team,
             DEFAULT_PRICE_NAME.into(),
-            10,
+            1_000.try_into().unwrap(),
         )
         .await;
 
@@ -764,7 +755,7 @@ mod test {
             &payment_method,
             PlanLevel::Team,
             DEFAULT_PRICE_NAME.into(),
-            25,
+            1_000.try_into().unwrap(),
         )
         .await;
     }
