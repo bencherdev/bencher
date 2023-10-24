@@ -1,4 +1,4 @@
-use bencher_json::{DateTime, Entitlements, OrganizationUuid};
+use bencher_json::{DateTime, Entitlements, OrganizationUuid, PlanLevel};
 use bencher_plus::BENCHER_DEV;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -8,11 +8,12 @@ use crate::{audience::Audience, billing_cycle::BillingCycle, LicenseError};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Claims {
-    pub aud: String,           // Audience
+    pub aud: Audience,         // Audience
     pub exp: i64,              // Expiration time (as UTC timestamp)
     pub iat: i64,              // Issued at (as UTC timestamp)
     pub iss: String,           // Issuer
     pub sub: OrganizationUuid, // Subject (whom token refers to)
+    pub lvl: PlanLevel,        // Plan level
     pub ent: Entitlements,     // Entitlements (max number of metrics allowed)
 }
 
@@ -21,15 +22,17 @@ impl Claims {
         audience: Audience,
         billing_cycle: BillingCycle,
         organization: OrganizationUuid,
+        plan_level: PlanLevel,
         entitlements: Entitlements,
     ) -> Result<Self, LicenseError> {
         let now = Utc::now().timestamp();
         Ok(Self {
-            aud: audience.into(),
+            aud: audience,
             exp: now.checked_add(i64::from(billing_cycle)).unwrap_or(now),
             iat: now,
             iss: BENCHER_DEV.into(),
             sub: organization,
+            lvl: plan_level,
             ent: entitlements,
         })
     }

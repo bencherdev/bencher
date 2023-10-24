@@ -1,6 +1,7 @@
-use bencher_plus::BENCHER_DEV;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Audience {
     Bencher,
 }
@@ -8,13 +9,7 @@ pub enum Audience {
 impl ToString for Audience {
     fn to_string(&self) -> String {
         match self {
-            Self::Bencher => BENCHER_DEV.into(),
+            Self::Bencher => "bencher".into(),
         }
-    }
-}
-
-impl From<Audience> for String {
-    fn from(audience: Audience) -> Self {
-        audience.to_string()
     }
 }

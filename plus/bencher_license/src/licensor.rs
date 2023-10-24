@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{Entitlements, Jwt, OrganizationUuid, Secret};
+use bencher_json::{Entitlements, Jwt, OrganizationUuid, PlanLevel, Secret};
 use bencher_plus::BENCHER_DEV;
 use chrono::Utc;
 use jsonwebtoken::{decode, encode, Algorithm, Header, TokenData, Validation};
@@ -57,9 +57,16 @@ impl Licensor {
         audience: Audience,
         billing_cycle: BillingCycle,
         organization: OrganizationUuid,
+        plan_level: PlanLevel,
         entitlements: Entitlements,
     ) -> Result<Jwt, LicenseError> {
-        let claims = Claims::new(audience, billing_cycle, organization, entitlements)?;
+        let claims = Claims::new(
+            audience,
+            billing_cycle,
+            organization,
+            plan_level,
+            entitlements,
+        )?;
         let encoding = self.encoding()?;
         Ok(Jwt::from_str(&encode(&HEADER, &claims, encoding)?)?)
     }
@@ -67,12 +74,14 @@ impl Licensor {
     pub fn new_monthly_license(
         &self,
         organization: OrganizationUuid,
+        plan_level: PlanLevel,
         entitlements: Entitlements,
     ) -> Result<Jwt, LicenseError> {
         self.new_license(
             Audience::Bencher,
             BillingCycle::Monthly,
             organization,
+            plan_level,
             entitlements,
         )
     }
@@ -80,12 +89,14 @@ impl Licensor {
     pub fn new_annual_license(
         &self,
         organization: OrganizationUuid,
+        plan_level: PlanLevel,
         entitlements: Entitlements,
     ) -> Result<Jwt, LicenseError> {
         self.new_license(
             Audience::Bencher,
             BillingCycle::Annual,
             organization,
+            plan_level,
             entitlements,
         )
     }
@@ -158,12 +169,12 @@ fn check_expiration(time: i64) -> Result<(), LicenseError> {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod test {
-    use bencher_json::{OrganizationUuid, Secret};
+    use bencher_json::{OrganizationUuid, PlanLevel, Secret};
     use bencher_plus::BENCHER_DEV;
     use once_cell::sync::Lazy;
     use pretty_assertions::assert_eq;
 
-    use crate::{licensor::BillingCycle, Licensor};
+    use crate::{audience::Audience, licensor::BillingCycle, Licensor};
 
     pub const PRIVATE_PEM: &str = include_str!("./test/private.pem");
     static PRIVATE_PEM_SECRET: Lazy<Secret> = Lazy::new(|| PRIVATE_PEM.parse().unwrap());
@@ -174,12 +185,14 @@ mod test {
         let organization = OrganizationUuid::new();
         let entitlements = 1_000.try_into().unwrap();
 
-        assert!(licensor
-            .new_monthly_license(organization, entitlements)
-            .is_err());
-        assert!(licensor
-            .new_annual_license(organization, entitlements)
-            .is_err());
+        for plan_level in [PlanLevel::Free, PlanLevel::Team, PlanLevel::Enterprise] {
+            assert!(licensor
+                .new_monthly_license(organization, plan_level, entitlements)
+                .is_err());
+            assert!(licensor
+                .new_annual_license(organization, plan_level, entitlements)
+                .is_err());
+        }
     }
 
     #[test]
@@ -188,20 +201,22 @@ mod test {
         let organization = OrganizationUuid::new();
         let entitlements = 1_000.try_into().unwrap();
 
-        let license = licensor
-            .new_monthly_license(organization, entitlements)
-            .unwrap();
+        for plan_level in [PlanLevel::Free, PlanLevel::Team, PlanLevel::Enterprise] {
+            let license = licensor
+                .new_monthly_license(organization, plan_level, entitlements)
+                .unwrap();
 
-        let token_data = licensor.validate(&license).unwrap();
+            let token_data = licensor.validate(&license).unwrap();
 
-        assert_eq!(token_data.claims.aud, BENCHER_DEV);
-        assert_eq!(token_data.claims.iss, BENCHER_DEV);
-        assert_eq!(
-            token_data.claims.iat,
-            token_data.claims.exp - i64::from(BillingCycle::Monthly)
-        );
-        assert_eq!(token_data.claims.sub, organization);
-        assert_eq!(token_data.claims.ent, entitlements);
+            assert_eq!(token_data.claims.aud, Audience::Bencher);
+            assert_eq!(token_data.claims.iss, BENCHER_DEV);
+            assert_eq!(
+                token_data.claims.iat,
+                token_data.claims.exp - i64::from(BillingCycle::Monthly)
+            );
+            assert_eq!(token_data.claims.sub, organization);
+            assert_eq!(token_data.claims.ent, entitlements);
+        }
     }
 
     #[test]
@@ -210,19 +225,21 @@ mod test {
         let organization = OrganizationUuid::new();
         let entitlements = 1_000.try_into().unwrap();
 
-        let license = licensor
-            .new_annual_license(organization, entitlements)
-            .unwrap();
+        for plan_level in [PlanLevel::Free, PlanLevel::Team, PlanLevel::Enterprise] {
+            let license = licensor
+                .new_annual_license(organization, plan_level, entitlements)
+                .unwrap();
 
-        let token_data = licensor.validate(&license).unwrap();
+            let token_data = licensor.validate(&license).unwrap();
 
-        assert_eq!(token_data.claims.aud, BENCHER_DEV);
-        assert_eq!(token_data.claims.iss, BENCHER_DEV);
-        assert_eq!(
-            token_data.claims.iat,
-            token_data.claims.exp - i64::from(BillingCycle::Annual)
-        );
-        assert_eq!(token_data.claims.sub, organization);
-        assert_eq!(token_data.claims.ent, entitlements);
+            assert_eq!(token_data.claims.aud, Audience::Bencher);
+            assert_eq!(token_data.claims.iss, BENCHER_DEV);
+            assert_eq!(
+                token_data.claims.iat,
+                token_data.claims.exp - i64::from(BillingCycle::Annual)
+            );
+            assert_eq!(token_data.claims.sub, organization);
+            assert_eq!(token_data.claims.ent, entitlements);
+        }
     }
 }

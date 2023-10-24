@@ -10,8 +10,12 @@ RUN mkdir -p /data
 
 RUN apt-get update \
     && apt-get install -y \
+    # Database
     sqlite3 \
-    pkg-config libfreetype6-dev libfontconfig1-dev
+    # Plot
+    pkg-config libfreetype6-dev libfontconfig1-dev \
+    # Stipe
+    ca-certificates
 
 ENV PORT 61016
 

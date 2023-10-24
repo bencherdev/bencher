@@ -200,7 +200,7 @@ impl InsertPlan {
         // If license organization is not given, then use the current organization (Bencher Cloud license)
         let organization_uuid = license_organization.unwrap_or(query_organization.uuid);
         let license = licensor
-            .new_annual_license(organization_uuid, license_entitlements)
+            .new_annual_license(organization_uuid, plan_level, license_entitlements)
             .map_err(|e| issue_error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to create license",

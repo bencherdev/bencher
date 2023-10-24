@@ -14,9 +14,7 @@ use crate::ValidError;
 
 const FREE: &str = "free";
 const TEAM: &str = "team";
-const BENCHER_TEAM: &str = "Bencher Team";
 const ENTERPRISE: &str = "enterprise";
-const BENCHER_ENTERPRISE: &str = "Bencher Enterprise";
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Copy, Default, Eq, PartialEq, Hash, Serialize)]
@@ -36,8 +34,8 @@ impl FromStr for PlanLevel {
         if is_valid_plan_level(plan_level) {
             return Ok(match plan_level {
                 FREE => Self::Free,
-                TEAM | BENCHER_TEAM => Self::Team,
-                ENTERPRISE | BENCHER_ENTERPRISE => Self::Enterprise,
+                TEAM => Self::Team,
+                ENTERPRISE => Self::Enterprise,
                 _ => return Err(ValidError::PlanLevel(plan_level.into())),
             });
         }
@@ -90,10 +88,7 @@ impl Visitor<'_> for PlanLevelVisitor {
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_plan_level(plan_level: &str) -> bool {
-    matches!(
-        plan_level,
-        FREE | TEAM | BENCHER_TEAM | ENTERPRISE | BENCHER_ENTERPRISE
-    )
+    matches!(plan_level, FREE | TEAM | ENTERPRISE)
 }
 
 #[cfg(test)]
@@ -106,9 +101,7 @@ mod test {
     fn test_plan_level() {
         assert_eq!(true, is_valid_plan_level("free"));
         assert_eq!(true, is_valid_plan_level("team"));
-        assert_eq!(true, is_valid_plan_level("Bencher Team"));
         assert_eq!(true, is_valid_plan_level("enterprise"));
-        assert_eq!(true, is_valid_plan_level("Bencher Enterprise"));
 
         assert_eq!(false, is_valid_plan_level(""));
         assert_eq!(false, is_valid_plan_level("one"));
@@ -116,5 +109,7 @@ mod test {
         assert_eq!(false, is_valid_plan_level(" free"));
         assert_eq!(false, is_valid_plan_level("free "));
         assert_eq!(false, is_valid_plan_level(" free "));
+        assert_eq!(false, is_valid_plan_level("Bencher Team"));
+        assert_eq!(false, is_valid_plan_level("Bencher Enterprise"));
     }
 }

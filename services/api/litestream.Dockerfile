@@ -10,8 +10,13 @@ RUN mkdir -p /data
 
 RUN apt-get update \
     && apt-get install -y \
+    # Database
     sqlite3 \
+    # Plot
     pkg-config libfreetype6-dev libfontconfig1-dev \
+    # Stipe
+    ca-certificates \
+    # Litestream
     wget sudo systemctl
 
 RUN wget https://github.com/benbjohnson/litestream/releases/download/v0.3.9/litestream-v0.3.9-linux-amd64.deb
