@@ -1,5 +1,13 @@
 import type { InitOutput } from "bencher_valid";
-import { createMemo, createResource, For, type Resource } from "solid-js";
+import {
+	createMemo,
+	createResource,
+	For,
+	Switch,
+	type Resource,
+	Match,
+	Show,
+} from "solid-js";
 import {
 	CardBrand,
 	type JsonAuthUser,
@@ -125,13 +133,39 @@ const Plan = (props: Props) => {
 						<p>
 							Estimated Usage:{" "}
 							{Number.isInteger(usage()?.metrics_used)
-								? usage()?.metrics_used
+								? usage()?.metrics_used.toLocaleString()
 								: "---"}
 						</p>
-						<p>
-							Current Estimated Cost:{" "}
-							{estCost() === null ? "---" : fmtUsd(estCost())}
-						</p>
+						<Show
+							when={props.plan()?.license}
+							fallback={
+								<p>
+									Current Estimated Cost:{" "}
+									{estCost() === null ? "---" : fmtUsd(estCost())}
+								</p>
+							}
+						>
+							<br />
+							<h4 class="title">License</h4>
+							<p>
+								License Key:{" "}
+								<code style="overflow-wrap:anywhere;">
+									{props.plan()?.license?.key}
+								</code>
+							</p>
+							<p>Organization UUID: {props.plan()?.license?.organization}</p>
+							<p>
+								Entitlements:{" "}
+								{Number.isInteger(props.plan()?.license?.entitlements)
+									? props.plan()?.license?.entitlements.toLocaleString()
+									: "---"}
+							</p>
+							<p>Issued At: {fmtDateTime(props.plan()?.license?.issued_at)}</p>
+							<p>
+								Expiration: {fmtDateTime(props.plan()?.license?.expiration)}
+							</p>
+						</Show>
+
 						{/* TODO if planLevel === PlanLevel.Team then Upgrade Plan button */}
 						<br />
 
