@@ -5,12 +5,14 @@ use async_trait::async_trait;
 use crate::{bencher::sub::SubCmd, parser::organization::plan::CliOrganizationPlan, CliError};
 
 mod create;
+mod delete;
 mod view;
 
 #[derive(Debug)]
 pub enum Plan {
     Create(create::Create),
     View(view::View),
+    Delete(delete::Delete),
 }
 
 impl TryFrom<CliOrganizationPlan> for Plan {
@@ -20,6 +22,7 @@ impl TryFrom<CliOrganizationPlan> for Plan {
         Ok(match plan {
             CliOrganizationPlan::Create(create) => Self::Create(create.try_into()?),
             CliOrganizationPlan::View(view) => Self::View(view.try_into()?),
+            CliOrganizationPlan::Delete(delete) => Self::Delete(delete.try_into()?),
         })
     }
 }
@@ -30,6 +33,7 @@ impl SubCmd for Plan {
         match self {
             Self::Create(create) => create.exec().await,
             Self::View(view) => view.exec().await,
+            Self::Delete(delete) => delete.exec().await,
         }
     }
 }

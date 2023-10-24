@@ -5,8 +5,6 @@ use crate::{bencher::sub::SubCmd, parser::organization::CliOrganization, CliErro
 mod allowed;
 mod create;
 mod list;
-#[cfg(feature = "plus")]
-pub mod plan;
 mod update;
 #[cfg(feature = "plus")]
 mod usage;
@@ -19,8 +17,6 @@ pub enum Organization {
     View(view::View),
     Update(update::Update),
     Allowed(allowed::Allowed),
-    #[cfg(feature = "plus")]
-    Plan(plan::Plan),
     #[cfg(feature = "plus")]
     Usage(usage::Usage),
 }
@@ -36,8 +32,6 @@ impl TryFrom<CliOrganization> for Organization {
             CliOrganization::Update(update) => Self::Update(update.try_into()?),
             CliOrganization::Allowed(allowed) => Self::Allowed(allowed.try_into()?),
             #[cfg(feature = "plus")]
-            CliOrganization::Plan(plan) => Self::Plan(plan.try_into()?),
-            #[cfg(feature = "plus")]
             CliOrganization::Usage(usage) => Self::Usage(usage.try_into()?),
         })
     }
@@ -52,8 +46,6 @@ impl SubCmd for Organization {
             Self::View(view) => view.exec().await,
             Self::Update(update) => update.exec().await,
             Self::Allowed(allowed) => allowed.exec().await,
-            #[cfg(feature = "plus")]
-            Self::Plan(plan) => plan.exec().await,
             #[cfg(feature = "plus")]
             Self::Usage(usage) => usage.exec().await,
         }

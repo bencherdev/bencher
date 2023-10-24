@@ -43,6 +43,10 @@ pub enum CliSub {
     /// Manage organization members
     #[clap(subcommand)]
     Member(CliMember),
+    #[cfg(feature = "plus")]
+    /// Organization metered subscription plan
+    #[clap(subcommand)]
+    Plan(organization::plan::CliOrganizationPlan),
 
     /// Manage projects
     #[clap(subcommand)]

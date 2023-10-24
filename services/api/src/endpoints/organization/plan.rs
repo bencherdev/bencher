@@ -2,7 +2,7 @@
 
 use bencher_json::{
     organization::plan::{JsonNewPlan, JsonPlan, DEFAULT_PRICE_NAME},
-    ResourceId,
+    JsonEmpty, ResourceId,
 };
 use bencher_rbac::organization::Permission;
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -14,12 +14,12 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{CorsResponse, Get, Post, ResponseAccepted, ResponseOk},
+        endpoint::{CorsResponse, Delete, Get, Post, ResponseAccepted, ResponseOk},
         Endpoint,
     },
     error::{
-        forbidden_error, issue_error, resource_conflict_error, resource_not_found_err,
-        BencherResource,
+        forbidden_error, issue_error, resource_conflict_err, resource_conflict_error,
+        resource_not_found_err, BencherResource,
     },
     model::{
         organization::plan::{InsertPlan, QueryPlan},
@@ -44,7 +44,7 @@ pub async fn org_plan_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OrgPlanParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
+    Ok(Endpoint::cors(&[Get.into(), Post.into(), Delete.into()]))
 }
 
 #[endpoint {
@@ -225,4 +225,67 @@ async fn post_inner(
                 ))
         }
     }
+}
+
+#[endpoint {
+    method = DELETE,
+    path =  "/v0/organizations/{organization}/plan",
+    tags = ["organizations", "plan"]
+}]
+pub async fn org_plan_delete(
+    rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
+    path_params: Path<OrgPlanParams>,
+) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Delete::auth_response_accepted(json))
+}
+
+async fn delete_inner(
+    context: &ApiContext,
+    path_params: OrgPlanParams,
+    auth_user: &AuthUser,
+) -> Result<JsonEmpty, HttpError> {
+    let biller = context.biller()?;
+    let conn = &mut *context.conn().await;
+
+    // Get the organization
+    let query_organization = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
+    // Check to see if user has permission to manage the organization
+    context
+        .rbac
+        .is_allowed_organization(auth_user, Permission::Manage, &query_organization)
+        .map_err(forbidden_error)?;
+    // Get the plan for the organization
+    let query_plan = QueryPlan::belonging_to(&query_organization)
+        .first::<QueryPlan>(conn)
+        .map_err(resource_not_found_err!(Plan, query_organization))?;
+
+    if let Some(metered_plan_id) = query_plan.metered_plan.as_ref() {
+        biller
+            .cancel_metered_subscription(metered_plan_id.clone())
+            .await
+            .map_err(resource_not_found_err!(Plan, query_plan))?;
+    } else if let Some(licensed_plan_id) = query_plan.licensed_plan.as_ref() {
+        biller
+            .cancel_licensed_subscription(licensed_plan_id.clone())
+            .await
+            .map_err(resource_not_found_err!(Plan, query_plan))?;
+    } else {
+        return Err(issue_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to find subscription for plan deletion",
+            &format!(
+                "Failed to find plan (metered or licensed) for organization ({query_organization:?}) even though plan exists ({query_plan:?})."
+                 ),
+            "Failed to find subscription for plan deletion"
+            ));
+    }
+
+    diesel::delete(schema::plan::table.filter(schema::plan::id.eq(query_plan.id)))
+        .execute(conn)
+        .map_err(resource_conflict_err!(Plan, query_plan))?;
+
+    Ok(JsonEmpty {})
 }

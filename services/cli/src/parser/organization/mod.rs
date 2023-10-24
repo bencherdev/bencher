@@ -10,7 +10,7 @@ pub mod plan;
 pub mod usage;
 
 #[cfg(feature = "plus")]
-use self::{plan::CliOrganizationPlan, usage::CliOrganizationUsage};
+use self::usage::CliOrganizationUsage;
 
 use super::CliPagination;
 
@@ -30,11 +30,6 @@ pub enum CliOrganization {
     Update(CliOrganizationUpdate),
     /// Check organization permission
     Allowed(CliOrganizationAllowed),
-
-    #[cfg(feature = "plus")]
-    /// Organization metered subscription plan
-    #[clap(subcommand)]
-    Plan(CliOrganizationPlan),
 
     #[cfg(feature = "plus")]
     /// Check organization metrics usage

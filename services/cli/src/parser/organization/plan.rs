@@ -10,12 +10,15 @@ use crate::parser::CliBackend;
 
 #[derive(Subcommand, Debug)]
 pub enum CliOrganizationPlan {
-    /// Create a metered subscription plan
+    /// Create a subscription plan
     #[clap(alias = "add")]
     Create(CliPlanCreate),
-    /// View a metered subscription plan
+    /// View a subscription plan
     #[clap(alias = "get")]
     View(CliPlanView),
+    /// Delete a subscription plan
+    #[clap(alias = "rm")]
+    Delete(CliPlanDelete),
 }
 
 #[derive(Parser, Debug)]
@@ -44,6 +47,15 @@ pub struct CliPlanCreate {
 
 #[derive(Parser, Debug)]
 pub struct CliPlanView {
+    /// Organization slug or UUID
+    pub organization: ResourceId,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliPlanDelete {
     /// Organization slug or UUID
     pub organization: ResourceId,
 

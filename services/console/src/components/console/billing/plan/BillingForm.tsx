@@ -43,29 +43,25 @@ const BillingForm = (props: Props) => {
 
 	const [planKind, setPlanKind] = createSignal(PlanKind.Metered);
 	const [entitlements, setEntitlements] = createSignal<number>(5);
-	const entitlementsMonthly = createMemo(() => entitlements() * 1_000);
-	const entitlementsMonthlyCost = createMemo(() => {
-		switch (plan()) {
-			case PlanLevel.Team:
-				return entitlementsMonthly() * 0.1;
-			case PlanLevel.Enterprise:
-				return entitlementsMonthly() * 0.5;
-			default:
-				return 0.0;
-		}
-	});
-	const entitlementsAnnually = createMemo(() => {
+	const entitlementsAnnual = createMemo(() => {
 		switch (plan()) {
 			case PlanLevel.Team:
 			case PlanLevel.Enterprise:
-				return entitlementsMonthly() * 12;
+				return entitlements() * 100 * 12;
 			default:
 				return null;
 		}
 	});
-	const entitlementsAnnualCost = createMemo(
-		() => entitlementsMonthlyCost() * 12,
-	);
+	const entitlementsAnnualCost = createMemo(() => {
+		switch (plan()) {
+			case PlanLevel.Team:
+				return (entitlementsAnnual() ?? 0.0) * 0.1;
+			case PlanLevel.Enterprise:
+				return (entitlementsAnnual() ?? 0.0) * 0.5;
+			default:
+				return 0.0;
+		}
+	});
 	const [organizationUuid, setOrganizationUuid] = createSignal("");
 	const organizationUuidValid = createMemo(() => {
 		switch (planKind()) {
@@ -110,7 +106,7 @@ const BillingForm = (props: Props) => {
 						handlePlanKind={setPlanKind}
 						entitlements={entitlements}
 						handleEntitlements={setEntitlements}
-						entitlementsMonthly={entitlementsMonthly}
+						entitlementsAnnual={entitlementsAnnual}
 						entitlementsAnnualCost={entitlementsAnnualCost}
 						organizationUuid={organizationUuid}
 						handleOrganizationUuid={setOrganizationUuid}
@@ -123,7 +119,7 @@ const BillingForm = (props: Props) => {
 						user={props.user}
 						path={`/v0/organizations/${props.params.organization}/plan`}
 						plan={plan}
-						entitlements={entitlementsAnnually}
+						entitlements={entitlementsAnnual}
 						organizationUuid={organizationUuid}
 						organizationUuidValid={organizationUuidValid}
 						handleRefresh={props.handleRefresh}
@@ -140,7 +136,7 @@ const PlanLocality = (props: {
 	handlePlanKind: Setter<PlanKind>;
 	entitlements: Accessor<number>;
 	handleEntitlements: Setter<number>;
-	entitlementsMonthly: Accessor<number>;
+	entitlementsAnnual: Accessor<null | number>;
 	entitlementsAnnualCost: Accessor<number>;
 	organizationUuid: Accessor<string>;
 	handleOrganizationUuid: Setter<string>;
@@ -172,11 +168,11 @@ const PlanLocality = (props: {
 				<Show when={props.planKind() !== PlanKind.Metered}>
 					<div class="content has-text-centered">
 						<p>
-							Monthly Metrics: {props.entitlementsMonthly().toLocaleString()}
+							Annual Metrics:{" "}
+							{props.entitlementsAnnual()?.toLocaleString() ?? 0}
 						</p>
 						<p>
-							License Cost: ${props.entitlementsAnnualCost().toLocaleString()}
-							/year
+							Annual Cost: ${props.entitlementsAnnualCost().toLocaleString()}
 						</p>
 						<input
 							class="slider"

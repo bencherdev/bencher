@@ -34,6 +34,8 @@ pub enum Sub {
     Auth(Auth),
     Organization(Organization),
     Member(Member),
+    #[cfg(feature = "plus")]
+    Plan(organization::plan::Plan),
     Project(Project),
     Run(Box<Run>),
     Perf(Perf),
@@ -61,6 +63,8 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Auth(auth) => Self::Auth(auth.try_into()?),
             CliSub::Organization(organization) => Self::Organization(organization.try_into()?),
             CliSub::Member(member) => Self::Member(member.try_into()?),
+            #[cfg(feature = "plus")]
+            CliSub::Plan(plan) => Self::Plan(plan.try_into()?),
             CliSub::Project(project) => Self::Project(project.try_into()?),
             CliSub::Run(run) => Self::Run(Box::new((*run).try_into()?)),
             CliSub::Perf(perf) => Self::Perf(perf.try_into()?),
@@ -89,6 +93,8 @@ impl SubCmd for Sub {
             Self::Auth(auth) => auth.exec().await,
             Self::Organization(organization) => organization.exec().await,
             Self::Member(member) => member.exec().await,
+            #[cfg(feature = "plus")]
+            Self::Plan(plan) => plan.exec().await,
             Self::Project(project) => project.exec().await,
             Self::Run(run) => run.exec().await,
             Self::Perf(perf) => perf.exec().await,

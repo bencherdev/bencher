@@ -76,8 +76,9 @@ impl Api {
             if http_options {
                 api.register(organization::plan::org_plan_options)?;
             }
-            api.register(organization::plan::org_plan_post)?;
             api.register(organization::plan::org_plan_get)?;
+            api.register(organization::plan::org_plan_post)?;
+            api.register(organization::plan::org_plan_delete)?;
 
             // Organization Usage
             if http_options {

@@ -7,10 +7,11 @@ use bencher_json::{
     UserName, UserUuid,
 };
 use stripe::{
-    AttachPaymentMethod, CardDetailsParams as PaymentCard, Client as StripeClient, CreateCustomer,
-    CreatePaymentMethod, CreatePaymentMethodCardUnion, CreateSubscription, CreateSubscriptionItems,
-    CreateUsageRecord, Customer, Expandable, ListCustomers, PaymentMethod, PaymentMethodTypeFilter,
-    Subscription, SubscriptionId, SubscriptionItem, SubscriptionStatus, UsageRecord,
+    AttachPaymentMethod, CancelSubscription, CardDetailsParams as PaymentCard,
+    Client as StripeClient, CreateCustomer, CreatePaymentMethod, CreatePaymentMethodCardUnion,
+    CreateSubscription, CreateSubscriptionItems, CreateUsageRecord, Customer, Expandable,
+    ListCustomers, PaymentMethod, PaymentMethodTypeFilter, Subscription, SubscriptionId,
+    SubscriptionItem, SubscriptionStatus, UsageRecord,
 };
 
 use crate::{products::Products, BillingError};
@@ -509,6 +510,30 @@ impl Biller {
             .await
             .map_err(Into::into)
     }
+
+    pub async fn cancel_metered_subscription(
+        &self,
+        metered_plan_id: MeteredPlanId,
+    ) -> Result<Subscription, BillingError> {
+        self.cancel_subscription(metered_plan_id).await
+    }
+
+    pub async fn cancel_licensed_subscription(
+        &self,
+        licensed_plan_id: LicensedPlanId,
+    ) -> Result<Subscription, BillingError> {
+        self.cancel_subscription(licensed_plan_id).await
+    }
+
+    async fn cancel_subscription<P>(&self, plan_id: P) -> Result<Subscription, BillingError>
+    where
+        PlanId: From<P>,
+    {
+        let subscription = PlanId::from(plan_id).try_into()?;
+        Subscription::cancel(&self.client, &subscription, CancelSubscription::default())
+            .await
+            .map_err(Into::into)
+    }
 }
 
 fn into_payment_card(card: JsonCard) -> PaymentCard {
@@ -534,7 +559,8 @@ mod test {
     use bencher_json::{
         organization::plan::{JsonCard, DEFAULT_PRICE_NAME},
         system::config::{JsonBilling, JsonProduct, JsonProducts},
-        Entitlements, LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel, UserUuid,
+        Entitlements, LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus,
+        UserUuid,
     };
     use chrono::{Datelike, Utc};
     use literally::hmap;
@@ -557,7 +583,7 @@ mod test {
                     "default".to_owned() => "price_1McW12Kal5vzTlmhoPltpBAW".to_owned(),
                 },
                 licensed: hmap! {
-                    "default".to_owned() => "price_1MaJ7kKal5vzTlmh1pbQ5JYR".to_owned(),
+                    "default".to_owned() => "price_1O4XlwKal5vzTlmh0n0wtplQ".to_owned(),
                 },
             },
             enterprise: JsonProduct {
@@ -566,7 +592,7 @@ mod test {
                     "default".to_owned() => "price_1McW2eKal5vzTlmhECLIyVQz".to_owned(),
                 },
                 licensed: hmap! {
-                    "default".to_owned() => "price_1MaViyKal5vzTlmho1MdXIpe".to_owned(),
+                    "default".to_owned() => "price_1O4Xo1Kal5vzTlmh1KrcEbq0".to_owned(),
                 },
             },
         }
@@ -598,10 +624,25 @@ mod test {
             .await
             .unwrap();
         assert_eq!(create_subscription.id, get_subscription.id);
+        biller.get_plan(metered_plan_id.clone()).await.unwrap();
+
+        let plan_status = biller
+            .get_plan_status(metered_plan_id.clone())
+            .await
+            .unwrap();
+        assert_eq!(plan_status, PlanStatus::Active);
 
         test_record_usage(biller, metered_plan_id.clone(), usage_count).await;
 
-        biller.get_plan(metered_plan_id).await.unwrap();
+        biller
+            .cancel_metered_subscription(metered_plan_id.clone())
+            .await
+            .unwrap();
+        let plan_status = biller
+            .get_plan_status(metered_plan_id.clone())
+            .await
+            .unwrap();
+        assert_eq!(plan_status, PlanStatus::Canceled);
     }
 
     async fn test_licensed_subscription(
@@ -631,8 +672,24 @@ mod test {
             .await
             .unwrap();
         assert_eq!(create_subscription.id, get_subscription.id);
+        biller.get_plan(licensed_plan_id.clone()).await.unwrap();
 
-        biller.get_plan(licensed_plan_id).await.unwrap();
+        let plan_status = biller
+            .get_plan_status(licensed_plan_id.clone())
+            .await
+            .unwrap();
+        assert_eq!(plan_status, PlanStatus::Active);
+
+        biller
+            .cancel_licensed_subscription(licensed_plan_id.clone())
+            .await
+            .unwrap();
+
+        let plan_status = biller
+            .get_plan_status(licensed_plan_id.clone())
+            .await
+            .unwrap();
+        assert_eq!(plan_status, PlanStatus::Canceled);
     }
 
     async fn test_record_usage(
@@ -689,23 +746,11 @@ mod test {
             exp_month: 1.try_into().unwrap(),
             cvc: "123".parse().unwrap(),
         };
-        // assert!(biller
-        //     .get_payment_method(&customer)
-        //     .await
-        //     .unwrap()
-        //     .is_none());
         let create_payment_method = biller
             .create_payment_method(&customer, json_card.clone())
             .await
             .unwrap();
-        // let get_payment_method = biller.get_payment_method(&customer).await.unwrap().unwrap();
-        // assert_eq!(create_payment_method.id, get_payment_method.id);
         let payment_method = create_payment_method;
-        // let get_or_create_payment_method = biller
-        //     .get_or_create_payment_method(&customer, payment_card)
-        //     .await
-        //     .unwrap();
-        // assert_eq!(payment_method.id, get_or_create_payment_method.id);
 
         // Team Metered Plan
         let organization = OrganizationUuid::new();
