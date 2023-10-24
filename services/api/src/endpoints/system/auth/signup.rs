@@ -82,7 +82,7 @@ async fn post_inner(
     let user_id = QueryUser::get_id(conn, insert_user.uuid)?;
 
     let insert_org_role = if let Some(invite) = &invite {
-        InsertOrganizationRole::from_jwt(conn, &context.secret_key, invite, user_id)?
+        InsertOrganizationRole::from_jwt(conn, &context.token_key, invite, user_id)?
     } else {
         // Create an organization for the user
         let insert_org = InsertOrganization::from_user(&insert_user);
@@ -109,7 +109,7 @@ async fn post_inner(
         .map_err(resource_conflict_err!(OrganizationRole, insert_org_role))?;
 
     let token = context
-        .secret_key
+        .token_key
         .new_auth(email, AUTH_TOKEN_TTL)
         .map_err(|e| {
             issue_error(

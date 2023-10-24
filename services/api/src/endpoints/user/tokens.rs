@@ -158,7 +158,7 @@ async fn post_inner(
     let insert_token = InsertToken::from_json(
         conn,
         &context.rbac,
-        &context.secret_key,
+        &context.token_key,
         &path_params.user,
         json_token,
         auth_user,

@@ -5,8 +5,9 @@ use bencher_json::{
     system::config::{
         JsonConsole, JsonDatabase, JsonLogging, JsonSecurity, JsonServer, LogLevel, ServerLog,
     },
-    JsonConfig, Secret,
+    JsonConfig,
 };
+use bencher_token::DEFAULT_SECRET_KEY;
 use once_cell::sync::Lazy;
 use slog::{error, info, Logger};
 use url::Url;
@@ -21,7 +22,6 @@ pub const BENCHER_CONFIG: &str = "BENCHER_CONFIG";
 pub const BENCHER_CONFIG_PATH: &str = "BENCHER_CONFIG_PATH";
 
 const DEFAULT_CONFIG_PATH: &str = "bencher.json";
-const DEFAULT_CONSOLE_URL_STR: &str = "http://localhost:3000";
 // Dynamic and/or Private Ports (49152-65535)
 // https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=61016
 const DEFAULT_PORT: u16 = 61016;
@@ -29,13 +29,13 @@ const DEFAULT_PORT: u16 = 61016;
 const DEFAULT_MAX_BODY_SIZE: usize = 2 << 19;
 const DEFAULT_DB_PATH: &str = "data/bencher.db";
 const DEFAULT_SMTP_PORT: u16 = 587;
-const BENCHER_DOT_DEV: &str = "bencher.dev";
 
 #[cfg(debug_assertions)]
 const DEFAULT_LOG_LEVEL: LogLevel = LogLevel::Debug;
 #[cfg(not(debug_assertions))]
 const DEFAULT_LOG_LEVEL: LogLevel = LogLevel::Info;
 
+const DEFAULT_CONSOLE_URL_STR: &str = "http://localhost:3000";
 #[allow(clippy::panic)]
 static DEFAULT_CONSOLE_URL: Lazy<Url> = Lazy::new(|| {
     DEFAULT_CONSOLE_URL_STR.parse().unwrap_or_else(|e| {
@@ -45,16 +45,6 @@ static DEFAULT_CONSOLE_URL: Lazy<Url> = Lazy::new(|| {
 
 static DEFAULT_BIND_ADDRESS: Lazy<SocketAddr> =
     Lazy::new(|| SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), DEFAULT_PORT));
-
-#[cfg(debug_assertions)]
-#[allow(clippy::expect_used)]
-pub static DEFAULT_SECRET_KEY: Lazy<Secret> = Lazy::new(|| {
-    "DO_NOT_USE_THIS_IN_PRODUCTION"
-        .parse()
-        .expect("Invalid secret key")
-});
-#[cfg(not(debug_assertions))]
-pub static DEFAULT_SECRET_KEY: Lazy<Secret> = Lazy::new(|| uuid::Uuid::new_v4().into());
 
 #[derive(Debug, Clone)]
 pub struct Config(JsonConfig);
@@ -203,7 +193,7 @@ impl Default for Config {
                 url: DEFAULT_CONSOLE_URL.clone().into(),
             },
             security: JsonSecurity {
-                issuer: Some(BENCHER_DOT_DEV.into()),
+                issuer: Some(DEFAULT_CONSOLE_URL.to_string()),
                 secret_key: DEFAULT_SECRET_KEY.clone(),
             },
             server: JsonServer {

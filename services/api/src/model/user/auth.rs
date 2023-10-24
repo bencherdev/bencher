@@ -59,7 +59,7 @@ impl AuthUser {
     ) -> Result<Self, HttpError> {
         let conn = &mut *context.conn().await;
         let claims = context
-            .secret_key
+            .token_key
             .validate_client(bearer_token.as_ref())
             .map_err(|e| bad_request_error(format!("Failed to validate JSON Web Token: {e}")))?;
 

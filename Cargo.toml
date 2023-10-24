@@ -16,6 +16,7 @@ bencher_json = { path = "lib/bencher_json" }
 bencher_logger = { path = "lib/bencher_logger" }
 bencher_plot = { path = "lib/bencher_plot" }
 bencher_rbac = { path = "lib/bencher_rbac" }
+bencher_token = { path = "lib/bencher_token" }
 bencher_valid = { path = "lib/bencher_valid" }
 # plus
 bencher_billing = { path = "plus/bencher_billing" }

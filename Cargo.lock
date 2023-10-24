@@ -682,6 +682,7 @@ dependencies = [
  "bencher_plot",
  "bencher_plus",
  "bencher_rbac",
+ "bencher_token",
  "chrono",
  "css-inline",
  "derive_more",
@@ -859,6 +860,19 @@ dependencies = [
  "literally",
  "once_cell",
  "oso",
+ "uuid 1.4.1",
+]
+
+[[package]]
+name = "bencher_token"
+version = "0.3.13"
+dependencies = [
+ "bencher_json",
+ "chrono",
+ "jsonwebtoken",
+ "once_cell",
+ "serde",
+ "thiserror",
  "uuid 1.4.1",
 ]
 

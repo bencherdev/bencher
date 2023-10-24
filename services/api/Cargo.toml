@@ -28,6 +28,7 @@ bencher_logger.workspace = true
 bencher_plot.workspace = true
 bencher_plus = { workspace = true, optional = true }
 bencher_rbac.workspace = true
+bencher_token.workspace = true
 chrono.workspace = true
 derive_more.workspace = true
 diesel = { workspace = true, features = ["chrono", "sqlite"] }
