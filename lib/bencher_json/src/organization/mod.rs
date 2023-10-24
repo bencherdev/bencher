@@ -174,10 +174,10 @@ impl<'de> Deserialize<'de> for JsonUpdateOrganization {
 
 #[cfg(feature = "plus")]
 impl JsonUpdateOrganization {
-    pub fn is_update_license(&self) -> bool {
+    pub fn license(&self) -> Option<&bencher_valid::Jwt> {
         match self {
-            Self::Patch(patch) => patch.license.is_some(),
-            Self::Null(_) => true,
+            Self::Patch(patch) => patch.license.as_ref(),
+            Self::Null(_) => None,
         }
     }
 }

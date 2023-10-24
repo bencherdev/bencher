@@ -7,12 +7,17 @@ import {
 	createMemo,
 	Show,
 	type Resource,
+	createSignal,
 } from "solid-js";
 import type { BillingPanelConfig } from "../BillingPanel";
 import { authUser } from "../../../../util/auth";
 import { validJwt } from "../../../../util/valid";
-import { httpGet } from "../../../../util/http";
-import { UsageKind, type JsonUsage } from "../../../../types/bencher";
+import { httpGet, httpPatch } from "../../../../util/http";
+import { UsageKind, type JsonUsage, type Jwt } from "../../../../types/bencher";
+import { NotifyKind, pageNotify } from "../../../../util/notify";
+import Field from "../../../field/Field";
+import FieldKind from "../../../field/kind";
+import { fmtDate, planLevel, suggestedMetrics } from "../../../../util/convert";
 
 interface Props {
 	apiUrl: string;
@@ -49,7 +54,8 @@ const SelfHostedPanel = (props: Props) => {
 			.then((resp) => {
 				return resp?.data;
 			})
-			.catch((_error) => {
+			.catch((error) => {
+				console.log(error);
 				return null;
 			});
 	};
@@ -66,10 +72,18 @@ const SelfHostedPanel = (props: Props) => {
 					<div class="columns">
 						<div class="column">
 							<Show
-								when={usage?.kind === UsageKind.SelfHostedLicensed}
-								fallback={<FreePanel usage={usage} />}
+								when={usage()?.kind === UsageKind.SelfHostedLicensed}
+								fallback={
+									<FreePanel
+										apiUrl={props.apiUrl}
+										params={props.params}
+										bencher_valid={bencher_valid}
+										usage={usage}
+										refetch={refetch}
+									/>
+								}
 							>
-								<p>TODO licensed</p>
+								<LicensedPanel />
 							</Show>
 						</div>
 					</div>
@@ -79,12 +93,63 @@ const SelfHostedPanel = (props: Props) => {
 	);
 };
 
-const FreePanel = (props: { usage: Resource<null | JsonUsage> }) => {
+const FreePanel = (props: {
+	apiUrl: string;
+	params: Params;
+	bencher_valid: Resource<InitOutput>;
+	usage: Resource<null | JsonUsage>;
+	refetch: () => void;
+}) => {
+	const [submitting, setSubmitting] = createSignal(false);
+	const [license, setLicense] = createSignal<null | Jwt>(null);
+	const [valid, setValid] = createSignal<null | boolean>(null);
+
+	const isSendable = (): boolean => {
+		return !submitting() && valid() === true;
+	};
+
+	const sendForm = () => {
+		if (!props.bencher_valid()) {
+			return;
+		}
+		const token = authUser()?.token;
+		if (!validJwt(token)) {
+			return;
+		}
+		if (!isSendable()) {
+			return;
+		}
+		setSubmitting(true);
+		const data = {
+			license: license()?.trim(),
+		};
+		const path = `/v0/organizations/${props.params.organization}`;
+		httpPatch(props.apiUrl, path, token, data)
+			.then((_resp) => {
+				setSubmitting(false);
+				props.refetch();
+			})
+			.catch((error) => {
+				setSubmitting(false);
+				console.error(error);
+				pageNotify(
+					NotifyKind.ERROR,
+					`Lettuce romaine calm! Failed to post license. Please, try again.`,
+				);
+			});
+	};
+
 	return (
-		<>
-			<h4 class="title">How to get a Bencher Plus License</h4>
+		<div class="content">
+			<h2 class="title">Free Tier Usage</h2>
+			<h3 class="subtitle">
+				{fmtDate(props.usage()?.start_time)} -{" "}
+				{fmtDate(props.usage()?.end_time)}
+			</h3>
+			<h4>Metrics Used: {props.usage()?.usage?.toLocaleString() ?? 0}</h4>
 			<br />
-			<h4 class="subtitle" style="margin-bottom: 3rem;">
+			<h2 class="title">How to get a Bencher Plus License</h2>
+			<h4>
 				<ol>
 					<li>
 						Create an account on{" "}
@@ -100,7 +165,8 @@ const FreePanel = (props: { usage: Resource<null | JsonUsage> }) => {
 					<li>Select either the "Team" or "Enterprise" plan</li>
 					<li>Select "Self-Hosted License"</li>
 					<li>
-						Enter your desired number of metrics for the <i>year</i>
+						Enter your desired number of metrics for the <i>year</i> (Suggested:{" "}
+						{suggestedMetrics(props.usage()?.usage).toLocaleString()})
 					</li>
 					<li>
 						Enter your "Self-Hosted Organization UUID":{" "}
@@ -109,28 +175,58 @@ const FreePanel = (props: { usage: Resource<null | JsonUsage> }) => {
 						</code>
 					</li>
 					<li>Enter your billing information</li>
-					<li>Copy the license key that is generated</li>
+					<li>Copy the Self-Hosted license key that is generated</li>
 					<li>
-						Back on <i>this</i> server,{" "}
-						<a
-							href={`/console/organizations/${
-								props.usage()?.organization
-							}/settings`}
-						>
-							navigate to your Organization Settings
-						</a>
-					</li>
-					<li>
-						Find the field named "License Key", click "Update", paste your
-						license key, and hit "Save"
+						Back on <i>this</i> server, enter your license key below ⬇️
 					</li>
 					<li>
 						🎉 Lettuce turnip the beet! You now have a Bencher Plus License!
 					</li>
 				</ol>
 			</h4>
-		</>
+			<div class="columns">
+				<div class="column is-two-thirds">
+					<Field
+						kind={FieldKind.INPUT}
+						fieldKey="license"
+						label="Self-Hosted License"
+						value={license()}
+						valid={valid()}
+						config={{
+							label: "Self-Hosted License",
+							type: "text",
+							placeholder: "jwt_header.jwt_payload.jwt_verify_signature",
+							icon: "fas fa-key",
+							help: "Must be a valid JWT (JSON Web Token)",
+							validate: validJwt,
+						}}
+						handleField={(_key, value, valid) => {
+							setLicense(value as Jwt);
+							setValid(valid);
+						}}
+					/>
+					<div class="field">
+						<p class="control">
+							<button
+								class="button is-primary is-fullwidth"
+								disabled={!isSendable()}
+								onClick={(e) => {
+									e.preventDefault();
+									sendForm();
+								}}
+							>
+								Save
+							</button>
+						</p>
+					</div>
+				</div>
+			</div>
+		</div>
 	);
+};
+
+const LicensedPanel = (props: {}) => {
+	return <p>TODO licensed</p>;
 };
 
 export default SelfHostedPanel;

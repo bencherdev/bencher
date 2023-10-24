@@ -254,11 +254,13 @@ async fn patch_inner(
 ) -> Result<JsonOrganization, HttpError> {
     let conn = &mut *context.conn().await;
 
-    // Manage permission is required to update the license
     #[cfg(not(feature = "plus"))]
     let permission = Permission::Edit;
     #[cfg(feature = "plus")]
-    let permission = if json_organization.is_update_license() {
+    let license = json_organization.license();
+    // Manage permission is required to update the license
+    #[cfg(feature = "plus")]
+    let permission = if license.is_some() {
         Permission::Manage
     } else {
         Permission::Edit
@@ -270,6 +272,17 @@ async fn patch_inner(
         auth_user,
         permission,
     )?;
+    // If updating the license make sure that it is actually valid for this particular organization
+    #[cfg(feature = "plus")]
+    if let Some(license) = license {
+        context
+            .licensor
+            .validate_organization(license, query_organization.uuid)
+            .map_err(resource_not_found_err!(
+                Organization,
+                (license, &query_organization)
+            ))?;
+    }
 
     let organization_query =
         schema::organization::table.filter(schema::organization::id.eq(query_organization.id));
