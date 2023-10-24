@@ -48,7 +48,7 @@ async fn post_inner(
     let conn = &mut *context.conn().await;
 
     let claims = context
-        .secret_key
+        .token_key
         .validate_auth(&json_token.token)
         .map_err(unauthorized_error)?;
     let email = claims.email();
@@ -60,7 +60,7 @@ async fn post_inner(
         .into_json();
 
     let token = context
-        .secret_key
+        .token_key
         .new_client(email.clone(), CLIENT_TOKEN_TTL)
         .map_err(|e| {
             issue_error(

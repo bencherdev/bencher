@@ -1,16 +1,17 @@
-use crate::{
-    context::{DbConnection, SecretKey},
-    error::unauthorized_error,
-    model::user::{QueryUser, UserId},
-    schema::organization_role as organization_role_table,
-};
 use bencher_json::{
     organization::{member::OrganizationRole, OrganizationPermission},
     DateTime, Jwt,
 };
+use bencher_token::TokenKey;
 use dropshot::HttpError;
 
 use super::{OrganizationId, QueryOrganization};
+use crate::{
+    context::DbConnection,
+    error::unauthorized_error,
+    model::user::{QueryUser, UserId},
+    schema::organization_role as organization_role_table,
+};
 
 crate::util::typed_id::typed_id!(OrganizationRoleId);
 
@@ -37,12 +38,12 @@ pub struct InsertOrganizationRole {
 impl InsertOrganizationRole {
     pub fn from_jwt(
         conn: &mut DbConnection,
-        secret_key: &SecretKey,
+        token_key: &TokenKey,
         invite: &Jwt,
         user_id: UserId,
     ) -> Result<Self, HttpError> {
         // Validate the invite JWT
-        let claims = secret_key
+        let claims = token_key
             .validate_invite(invite)
             .map_err(unauthorized_error)?;
 

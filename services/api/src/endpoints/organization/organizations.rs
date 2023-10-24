@@ -255,6 +255,9 @@ async fn patch_inner(
     let conn = &mut *context.conn().await;
 
     // Manage permission is required to update the license
+    #[cfg(not(feature = "plus"))]
+    let permission = Permission::Edit;
+    #[cfg(feature = "plus")]
     let permission = if json_organization.is_update_license() {
         Permission::Manage
     } else {

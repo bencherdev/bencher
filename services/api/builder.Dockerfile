@@ -21,6 +21,7 @@ COPY lib/bencher_json bencher_json
 COPY lib/bencher_logger bencher_logger
 COPY lib/bencher_plot bencher_plot
 COPY lib/bencher_rbac bencher_rbac
+COPY lib/bencher_token bencher_token
 COPY lib/bencher_valid bencher_valid
 
 WORKDIR /usr/src/plus

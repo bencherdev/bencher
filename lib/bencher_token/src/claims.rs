@@ -2,7 +2,7 @@ use bencher_json::{organization::member::OrganizationRole, DateTime, Email, Orga
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
-use super::{audience::Audience, JwtError};
+use super::{audience::Audience, TokenError};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
@@ -66,7 +66,7 @@ pub struct InviteClaims {
 }
 
 impl TryFrom<Claims> for InviteClaims {
-    type Error = JwtError;
+    type Error = TokenError;
 
     fn try_from(claims: Claims) -> Result<Self, Self::Error> {
         match claims.org {
@@ -78,7 +78,7 @@ impl TryFrom<Claims> for InviteClaims {
                 sub: claims.sub,
                 org,
             }),
-            None => Err(JwtError::Invite {
+            None => Err(TokenError::Invite {
                 error: jsonwebtoken::errors::ErrorKind::MissingRequiredClaim("org".into()).into(),
             }),
         }

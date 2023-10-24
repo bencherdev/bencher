@@ -2,12 +2,13 @@ use bencher_json::{
     user::token::JsonUpdateToken, DateTime, JsonNewToken, JsonToken, Jwt, NonEmpty, ResourceId,
     TokenUuid,
 };
+use bencher_token::TokenKey;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 use http::StatusCode;
 
 use crate::{
-    context::{DbConnection, Rbac, SecretKey},
+    context::{DbConnection, Rbac},
     error::{
         assert_parentage, bad_request_error, issue_error, resource_not_found_err, BencherResource,
     },
@@ -96,7 +97,7 @@ impl InsertToken {
     pub fn from_json(
         conn: &mut DbConnection,
         rbac: &Rbac,
-        secret_key: &SecretKey,
+        token_key: &TokenKey,
         user: &ResourceId,
         token: JsonNewToken,
         auth_user: &AuthUser,
@@ -119,7 +120,7 @@ impl InsertToken {
             max_ttl
         };
 
-        let jwt = secret_key.new_api_key(query_user.email, ttl).map_err(|e| {
+        let jwt = token_key.new_api_key(query_user.email, ttl).map_err(|e| {
             issue_error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to create new API key",
@@ -128,7 +129,7 @@ impl InsertToken {
             )
         })?;
 
-        let claims = secret_key.validate_api_key(&jwt).map_err(|e| {
+        let claims = token_key.validate_api_key(&jwt).map_err(|e| {
             issue_error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to validate new API key",

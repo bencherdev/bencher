@@ -210,7 +210,7 @@ async fn post_inner(
 
     // Create an invite token
     let token = context
-        .secret_key
+        .token_key
         .new_invite(
             json_new_member.email,
             INVITE_TOKEN_TTL,

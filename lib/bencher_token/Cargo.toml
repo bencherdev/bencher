@@ -1,0 +1,13 @@
+[package]
+name = "bencher_token"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+bencher_json.workspace = true
+chrono.workspace = true
+jsonwebtoken.workspace = true
+once_cell.workspace = true
+serde.workspace = true
+thiserror.workspace = true

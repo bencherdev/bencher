@@ -10,6 +10,7 @@ use bencher_json::{
     JsonConfig,
 };
 use bencher_rbac::init_rbac;
+use bencher_token::TokenKey;
 use diesel::{connection::SimpleConnection, Connection};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use dropshot::{
@@ -20,13 +21,13 @@ use slog::{debug, error, info, Logger};
 use tokio::sync::mpsc::Sender;
 
 use crate::{
-    context::{ApiContext, Database, DbConnection, Email, Messenger, SecretKey},
+    context::{ApiContext, Database, DbConnection, Email, Messenger},
     endpoints::Api,
 };
 
 #[cfg(feature = "plus")]
 use super::plus::Plus;
-use super::{Config, BENCHER_DOT_DEV, DEFAULT_SMTP_PORT};
+use super::{Config, DEFAULT_SMTP_PORT};
 
 const DATABASE_URL: &str = "DATABASE_URL";
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
@@ -133,7 +134,7 @@ fn into_private(
     restart_tx: Sender<()>,
     #[cfg(feature = "plus")] plus: Option<JsonPlus>,
 ) -> Result<ApiContext, ConfigTxError> {
-    let endpoint = console.url.try_into().map_err(ConfigTxError::Endpoint)?;
+    let endpoint: url::Url = console.url.try_into().map_err(ConfigTxError::Endpoint)?;
     let database_path = json_database.file.to_string_lossy();
     diesel_database_url(log, &database_path);
 
@@ -150,8 +151,8 @@ fn into_private(
     };
 
     info!(&log, "Loading secret key");
-    let secret_key = SecretKey::new(
-        security.issuer.unwrap_or_else(|| BENCHER_DOT_DEV.into()),
+    let token_key = TokenKey::new(
+        security.issuer.unwrap_or_else(|| endpoint.to_string()),
         &security.secret_key,
     );
 
@@ -162,7 +163,7 @@ fn into_private(
     debug!(&log, "Creating API context");
     Ok(ApiContext {
         endpoint,
-        secret_key,
+        token_key,
         rbac: init_rbac().map_err(ConfigTxError::Polar)?.into(),
         messenger: into_messenger(smtp),
         database: Database {

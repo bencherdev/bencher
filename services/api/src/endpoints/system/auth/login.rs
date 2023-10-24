@@ -73,7 +73,7 @@ async fn post_inner(
 
     if let Some(invite) = &json_login.invite {
         let insert_org_role =
-            InsertOrganizationRole::from_jwt(conn, &context.secret_key, invite, query_user.id)?;
+            InsertOrganizationRole::from_jwt(conn, &context.token_key, invite, query_user.id)?;
 
         diesel::insert_into(schema::organization_role::table)
             .values(&insert_org_role)
@@ -82,7 +82,7 @@ async fn post_inner(
     }
 
     let token = context
-        .secret_key
+        .token_key
         .new_auth(json_login.email.clone(), AUTH_TOKEN_TTL)
         .map_err(|e| {
             issue_error(
