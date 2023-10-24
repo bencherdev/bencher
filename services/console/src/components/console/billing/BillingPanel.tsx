@@ -1,110 +1,44 @@
-import bencher_valid_init, { InitOutput } from "bencher_valid";
-import { Match, Switch, createMemo, createResource } from "solid-js";
-import consoleConfig from "../../../config/console";
-import { Operation, Resource } from "../../../config/types";
+import { Show, createMemo } from "solid-js";
+import CloudPanel from "./plan/CloudPanel";
+import SelfHostedPanel from "./plan/SelfHostedPanel";
 import type { Params } from "astro";
-import { Host } from "../../../config/organization/billing";
-import { authUser } from "../../../util/auth";
 import { isBencherCloud } from "../../../util/ext";
-import BillingHeader, { BillingHeaderConfig } from "./BillingHeader";
-import LicensedBilling from "./plan/LicensedBilling";
-import type { JsonPlan } from "../../../types/bencher";
-import { httpGet } from "../../../util/http";
-import { validJwt } from "../../../util/valid";
-import BillingForm from "./plan/BillingForm";
-import Plan from "./plan/Plan";
+import { Host } from "../../../config/organization/billing";
+import { Resource } from "../../../config/types";
+import type { BillingHeaderConfig } from "./BillingHeader";
+import consoleConfig from "../../../config/console";
 
 interface Props {
 	apiUrl: string;
 	params: Params;
 }
 
-interface BillingPanelConfig {
-	operation: Operation;
+export interface BillingPanelConfig {
 	header: BillingHeaderConfig;
 	host: Host;
 }
 
 const BillingPanel = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
-	const user = authUser();
-	const host = createMemo(() =>
-		isBencherCloud() ? Host.BENCHER_CLOUD : Host.SELF_HOSTED,
-	);
 	const config = createMemo<BillingPanelConfig>(
-		() => consoleConfig[Resource.BILLING]?.[host()],
-	);
-
-	const fetcher = createMemo(() => {
-		return {
-			params: props.params,
-			bencher_valid: bencher_valid(),
-			token: user?.token,
-		};
-	});
-	const fetchPlan = async (fetcher: {
-		params: Params;
-		bencher_valid: InitOutput;
-		token: string;
-	}) => {
-		if (!fetcher.bencher_valid) {
-			return null;
-		}
-		if (!validJwt(fetcher.token)) {
-			return null;
-		}
-		const path = `/v0/organizations/${fetcher.params.organization}/plan`;
-		return await httpGet(props.apiUrl, path, fetcher.token)
-			.then((resp) => {
-				return resp?.data;
-			})
-			.catch((_error) => {
-				return null;
-			});
-	};
-	const [plan, { refetch }] = createResource<null | JsonPlan>(
-		fetcher,
-		fetchPlan,
+		() =>
+			consoleConfig[Resource.BILLING]?.[
+				isBencherCloud() ? Host.BENCHER_CLOUD : Host.SELF_HOSTED
+			],
 	);
 
 	return (
-		<>
-			<BillingHeader config={config()?.header} />
-
-			<Switch
-				fallback={
-					<section class="section">
-						<div class="container">
-							<h4 class="title">Loading...</h4>
-						</div>
-					</section>
-				}
-			>
-				<Match when={config()?.host === Host.SELF_HOSTED}>
-					<LicensedBilling />
-				</Match>
-				<Match when={config()?.host === Host.BENCHER_CLOUD && plan() === null}>
-					<BillingForm
-						apiUrl={props.apiUrl}
-						params={props.params}
-						bencher_valid={bencher_valid}
-						user={user}
-						handleRefresh={refetch}
-					/>
-				</Match>
-				<Match when={config()?.host === Host.BENCHER_CLOUD && plan()}>
-					<Plan
-						apiUrl={props.apiUrl}
-						params={props.params}
-						bencher_valid={bencher_valid}
-						user={user}
-						plan={plan}
-					/>
-				</Match>
-			</Switch>
-		</>
+		<Show
+			when={isBencherCloud()}
+			fallback={
+				<SelfHostedPanel
+					apiUrl={props.apiUrl}
+					params={props.params}
+					config={config}
+				/>
+			}
+		>
+			<CloudPanel apiUrl={props.apiUrl} params={props.params} />
+		</Show>
 	);
 };
 

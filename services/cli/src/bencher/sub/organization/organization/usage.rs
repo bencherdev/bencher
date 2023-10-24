@@ -4,7 +4,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_json::organization::usage::JsonUsage;
-use bencher_json::{DateTime, DateTimeMillis, ResourceId};
+use bencher_json::ResourceId;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -15,8 +15,6 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Usage {
     pub organization: ResourceId,
-    pub start: DateTime,
-    pub end: DateTime,
     pub backend: Backend,
 }
 
@@ -26,15 +24,11 @@ impl TryFrom<CliOrganizationUsage> for Usage {
     fn try_from(usage: CliOrganizationUsage) -> Result<Self, Self::Error> {
         let CliOrganizationUsage {
             organization,
-            start,
-            end,
             backend,
         } = usage;
 
         Ok(Self {
             organization,
-            start,
-            end,
             backend: backend.try_into()?,
         })
     }
@@ -50,8 +44,6 @@ impl SubCmd for Usage {
                     client
                         .org_usage_get()
                         .organization(self.organization.clone())
-                        .start(DateTimeMillis::from(self.start))
-                        .end(DateTimeMillis::from(self.end))
                         .send()
                         .await
                 },

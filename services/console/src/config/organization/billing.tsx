@@ -8,7 +8,7 @@ export enum Host {
 const billingConfig = {
 	[Host.SELF_HOSTED]: {
 		header: {
-			title: "License Billing",
+			title: "Self-Hosted Billing",
 			path: (pathname: string) => `${parentPath(pathname)}/projects`,
 		},
 		host: Host.SELF_HOSTED,

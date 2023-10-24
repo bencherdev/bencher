@@ -1456,22 +1456,6 @@
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
             }
-          },
-          {
-            "in": "query",
-            "name": "end",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/DateTimeMillis"
-            }
-          },
-          {
-            "in": "query",
-            "name": "start",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/DateTimeMillis"
-            }
           }
         ],
         "responses": {
@@ -6525,6 +6509,9 @@
           },
           "organization": {
             "$ref": "#/components/schemas/OrganizationUuid"
+          },
+          "self_hosted": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -6532,7 +6519,8 @@
           "expiration",
           "issued_at",
           "key",
-          "organization"
+          "organization",
+          "self_hosted"
         ]
       },
       "JsonLogging": {
@@ -8229,13 +8217,33 @@
           "end_time": {
             "$ref": "#/components/schemas/DateTime"
           },
+          "kind": {
+            "$ref": "#/components/schemas/UsageKind"
+          },
+          "license": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonLicense"
+              }
+            ]
+          },
           "organization": {
-            "$ref": "#/components/schemas/JsonOrganization"
+            "$ref": "#/components/schemas/OrganizationUuid"
+          },
+          "plan": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonPlan"
+              }
+            ]
           },
           "start_time": {
             "$ref": "#/components/schemas/DateTime"
           },
           "usage": {
+            "nullable": true,
             "type": "integer",
             "format": "uint32",
             "minimum": 0
@@ -8243,9 +8251,9 @@
         },
         "required": [
           "end_time",
+          "kind",
           "organization",
-          "start_time",
-          "usage"
+          "start_time"
         ]
       },
       "JsonUser": {
@@ -8453,6 +8461,17 @@
       "Url": {
         "type": "string"
       },
+      "UsageKind": {
+        "type": "string",
+        "enum": [
+          "cloud_free",
+          "self_hosted_free",
+          "cloud_metered",
+          "cloud_licensed",
+          "self_hosted_licensed_cloud",
+          "self_hosted_licensed"
+        ]
+      },
       "UserName": {
         "type": "string"
       },
@@ -8516,13 +8535,6 @@
           "name"
         ]
       },
-      "DateTimeMillis": {
-        "$ref": "#/components/schemas/TimestampMillis"
-      },
-      "TimestampMillis": {
-        "type": "integer",
-        "format": "int64"
-      },
       "ProjectsSort": {
         "type": "string",
         "enum": [
@@ -8567,6 +8579,13 @@
         "enum": [
           "name"
         ]
+      },
+      "DateTimeMillis": {
+        "$ref": "#/components/schemas/TimestampMillis"
+      },
+      "TimestampMillis": {
+        "type": "integer",
+        "format": "int64"
       },
       "ProjReportsSort": {
         "type": "string",

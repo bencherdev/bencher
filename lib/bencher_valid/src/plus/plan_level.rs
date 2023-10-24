@@ -15,6 +15,7 @@ use crate::ValidError;
 const FREE: &str = "free";
 const TEAM: &str = "team";
 const ENTERPRISE: &str = "enterprise";
+// These are the Stripe product names
 const BENCHER_TEAM: &str = "Bencher Team";
 const BENCHER_ENTERPRISE: &str = "Bencher Enterprise";
 

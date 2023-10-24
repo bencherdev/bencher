@@ -2,8 +2,8 @@
 
 use bencher_billing::{Biller, Customer, PaymentMethod};
 use bencher_json::{
-    organization::plan::JsonLicense, project::Visibility, DateTime, Entitlements, JsonPlan, Jwt,
-    LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel,
+    project::Visibility, DateTime, Entitlements, JsonPlan, Jwt, LicensedPlanId, MeteredPlanId,
+    OrganizationUuid, PlanLevel,
 };
 use bencher_license::Licensor;
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -68,7 +68,7 @@ impl QueryPlan {
             .await
             .map_err(resource_not_found_err!(Plan, self))?;
 
-        let Some(license) = self.license.as_ref() else {
+        let Some(license) = self.license.clone() else {
             return Err(issue_error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to find license for licensed plan",
@@ -79,17 +79,9 @@ impl QueryPlan {
             ));
         };
 
-        let token_data = licensor
-            .validate_organization(license, organization_uuid)
+        let json_license = licensor
+            .into_json(license, Some(organization_uuid))
             .map_err(payment_required_error)?;
-
-        let json_license = JsonLicense {
-            key: license.clone(),
-            organization: organization_uuid,
-            entitlements: token_data.claims.entitlements(),
-            issued_at: token_data.claims.issued_at(),
-            expiration: token_data.claims.expiration(),
-        };
         json_plan.license = Some(json_license);
 
         Ok(Some(json_plan))

@@ -244,6 +244,7 @@ export interface JsonLicense {
 	entitlements: Entitlements;
 	issued_at: string;
 	expiration: string;
+	self_hosted: boolean;
 }
 
 export interface JsonPlan {
@@ -258,11 +259,23 @@ export interface JsonPlan {
 	license?: JsonLicense;
 }
 
+export enum UsageKind {
+	CloudFree = "cloud_free",
+	SelfHostedFree = "self_hosted_free",
+	CloudMetered = "cloud_metered",
+	CloudLicensed = "cloud_licensed",
+	SelfHostedLicensedCloud = "self_hosted_licensed_cloud",
+	SelfHostedLicensed = "self_hosted_licensed",
+}
+
 export interface JsonUsage {
-	organization: JsonOrganization;
+	organization: Uuid;
+	kind: UsageKind;
+	plan?: JsonPlan;
+	license?: JsonLicense;
 	start_time: string;
 	end_time: string;
-	usage: number;
+	usage?: number;
 }
 
 export interface JsonAlertStats {

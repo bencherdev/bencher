@@ -75,6 +75,7 @@ pub struct JsonLicense {
     pub entitlements: Entitlements,
     pub issued_at: DateTime,
     pub expiration: DateTime,
+    pub self_hosted: bool,
 }
 
 #[cfg(test)]
