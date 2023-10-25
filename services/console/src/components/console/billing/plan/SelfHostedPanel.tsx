@@ -52,7 +52,6 @@ const SelfHostedPanel = (props: Props) => {
 		const path = `/v0/organizations/${fetcher.params.organization}/usage`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
-				console.log(resp.data);
 				return resp?.data;
 			})
 			.catch((error) => {
@@ -68,6 +67,7 @@ const SelfHostedPanel = (props: Props) => {
 	return (
 		<>
 			<BillingHeader config={props.config()?.header} />
+
 			<section class="section">
 				<div class="container">
 					<div class="columns">

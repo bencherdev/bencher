@@ -7,6 +7,7 @@ import { Host } from "../../../config/organization/billing";
 import { Resource } from "../../../config/types";
 import type { BillingHeaderConfig } from "./BillingHeader";
 import consoleConfig from "../../../config/console";
+import NewCloudPanel from "./plan/NewCloudPanel";
 
 interface Props {
 	apiUrl: string;
@@ -37,7 +38,11 @@ const BillingPanel = (props: Props) => {
 				/>
 			}
 		>
-			<CloudPanel apiUrl={props.apiUrl} params={props.params} />
+			<NewCloudPanel
+				apiUrl={props.apiUrl}
+				params={props.params}
+				config={config}
+			/>
 		</Show>
 	);
 };

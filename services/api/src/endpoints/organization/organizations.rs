@@ -258,9 +258,9 @@ async fn patch_inner(
     let permission = Permission::Edit;
     #[cfg(feature = "plus")]
     let license = json_organization.license();
-    // Manage permission is required to update the license
     #[cfg(feature = "plus")]
     let permission = if license.is_some() {
+        // Manage permission is required to update the license
         Permission::Manage
     } else {
         Permission::Edit
@@ -272,9 +272,17 @@ async fn patch_inner(
         auth_user,
         permission,
     )?;
-    // If updating the license make sure that it is actually valid for this particular organization
     #[cfg(feature = "plus")]
     if let Some(license) = license {
+        // If updating the license make sure that the server is not Bencher Cloud
+        // All Bencher Cloud license updates should be handled via plans directly
+        // Only Self-Hosted should be able to update the license
+        if context.biller.is_some() {
+            return Err(crate::error::locked_error(
+                "Direct license updates are not allowed on Bencher Cloud. Please update your plan instead.",
+            ));
+        }
+        // If updating a Self-Hosted license make sure that it is actually valid for this particular organization
         context
             .licensor
             .validate_organization(license, query_organization.uuid)

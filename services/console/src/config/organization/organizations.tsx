@@ -9,6 +9,7 @@ import {
 } from "../../util/auth";
 import FieldKind from "../../components/field/kind";
 import { validNonEmpty, validOptionJwt, validSlug } from "../../util/valid";
+import { isBencherCloud } from "../../util/ext";
 
 const ORGANIZATION_FIELDS = {
 	name: {
@@ -121,7 +122,8 @@ const organizationsConfig = {
 					label: "License Key",
 					key: "license",
 					display: Display.RAW,
-					is_allowed: isAllowedOrganizationManage,
+					is_allowed: (apiUrl: string, params: Params) =>
+						!isBencherCloud() && isAllowedOrganizationManage(apiUrl, params),
 					field: {
 						kind: FieldKind.INPUT,
 						label: "License Key",

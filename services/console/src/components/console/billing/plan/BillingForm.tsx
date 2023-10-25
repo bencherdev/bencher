@@ -1,7 +1,7 @@
 import type { InitOutput } from "bencher_valid";
 import {
 	For,
-	Resource,
+	type Resource,
 	Show,
 	createEffect,
 	createMemo,
@@ -9,7 +9,11 @@ import {
 	type Accessor,
 	type Setter,
 } from "solid-js";
-import { JsonAuthUser, PlanLevel } from "../../../../types/bencher";
+import {
+	type JsonAuthUser,
+	PlanLevel,
+	type JsonUsage,
+} from "../../../../types/bencher";
 import { useSearchParams } from "../../../../util/url";
 import { validPlanLevel, validUuid } from "../../../../util/valid";
 import { PLAN_PARAM } from "../../../auth/auth";
@@ -18,12 +22,14 @@ import PaymentCard from "./PaymentCard";
 import type { Params } from "astro";
 import Field from "../../../field/Field";
 import FieldKind from "../../../field/kind";
+import { fmtDate } from "../../../../util/convert";
 
 interface Props {
 	apiUrl: string;
 	params: Params;
 	bencher_valid: Resource<InitOutput>;
 	user: JsonAuthUser;
+	usage: Resource<null | JsonUsage>;
 	handleRefresh: () => void;
 }
 
@@ -62,12 +68,15 @@ const BillingForm = (props: Props) => {
 				return 0.0;
 		}
 	});
-	const [organizationUuid, setOrganizationUuid] = createSignal("");
+	const [organizationUuid, setOrganizationUuid] = createSignal<null | string>(
+		null,
+	);
 	const organizationUuidValid = createMemo(() => {
 		switch (planKind()) {
 			case PlanKind.SelfHosted:
-				if (organizationUuid()) {
-					return validUuid(organizationUuid());
+				const uuid = organizationUuid();
+				if (uuid) {
+					return validUuid(uuid);
 				} else {
 					return null;
 				}
@@ -86,45 +95,61 @@ const BillingForm = (props: Props) => {
 	});
 
 	return (
-		<div class="columns is-centered">
-			<div class="column">
-				<Pricing
-					plan={plan()}
-					freeText="Stick with Free"
-					handleFree={() => setPlanLevel(PlanLevel.Free)}
-					teamText="Go with Team"
-					handleTeam={() => setPlanLevel(PlanLevel.Team)}
-					enterpriseText="Go with Enterprise"
-					handleEnterprise={() => setPlanLevel(PlanLevel.Enterprise)}
+		<>
+			<Pricing
+				plan={plan()}
+				freeText="Stick with Free"
+				handleFree={() => setPlanLevel(PlanLevel.Free)}
+				teamText="Go with Team"
+				handleTeam={() => setPlanLevel(PlanLevel.Team)}
+				enterpriseText="Go with Enterprise"
+				handleEnterprise={() => setPlanLevel(PlanLevel.Enterprise)}
+			/>
+			<Show
+				when={plan() !== PlanLevel.Free}
+				fallback={<FreeUsage usage={props.usage} />}
+			>
+				<PlanLocality
+					plan={plan}
+					planKind={planKind}
+					handlePlanKind={setPlanKind}
+					entitlements={entitlements}
+					handleEntitlements={setEntitlements}
+					entitlementsAnnual={entitlementsAnnual}
+					entitlementsAnnualCost={entitlementsAnnualCost}
+					organizationUuid={organizationUuid}
+					handleOrganizationUuid={setOrganizationUuid}
+					organizationUuidValid={organizationUuidValid}
 				/>
-				<Show when={plan() !== PlanLevel.Free}>
-					<br />
-					<br />
-					<PlanLocality
-						plan={plan}
-						planKind={planKind}
-						handlePlanKind={setPlanKind}
-						entitlements={entitlements}
-						handleEntitlements={setEntitlements}
-						entitlementsAnnual={entitlementsAnnual}
-						entitlementsAnnualCost={entitlementsAnnualCost}
-						organizationUuid={organizationUuid}
-						handleOrganizationUuid={setOrganizationUuid}
-						organizationUuidValid={organizationUuidValid}
-					/>
-					<PaymentCard
-						apiUrl={props.apiUrl}
-						params={props.params}
-						bencher_valid={props.bencher_valid}
-						user={props.user}
-						path={`/v0/organizations/${props.params.organization}/plan`}
-						plan={plan}
-						entitlements={entitlementsAnnual}
-						organizationUuid={organizationUuid}
-						organizationUuidValid={organizationUuidValid}
-						handleRefresh={props.handleRefresh}
-					/>
-				</Show>
+				<PaymentCard
+					apiUrl={props.apiUrl}
+					params={props.params}
+					bencher_valid={props.bencher_valid}
+					user={props.user}
+					path={`/v0/organizations/${props.params.organization}/plan`}
+					plan={plan}
+					entitlements={entitlementsAnnual}
+					organizationUuid={organizationUuid}
+					organizationUuidValid={organizationUuidValid}
+					handleRefresh={props.handleRefresh}
+				/>
+			</Show>
+		</>
+	);
+};
+
+const FreeUsage = (props: { usage: Resource<null | JsonUsage> }) => {
+	return (
+		<div class="columns">
+			<div class="column">
+				<div class="content" style="margin-top: 4rem">
+					<h2 class="title">Free Tier Usage</h2>
+					<h3 class="subtitle">
+						{fmtDate(props.usage()?.start_time)} -{" "}
+						{fmtDate(props.usage()?.end_time)}
+					</h3>
+					<h4>Metrics Used: {props.usage()?.usage?.toLocaleString() ?? 0}</h4>
+				</div>
 			</div>
 		</div>
 	);
@@ -138,14 +163,14 @@ const PlanLocality = (props: {
 	handleEntitlements: Setter<number>;
 	entitlementsAnnual: Accessor<null | number>;
 	entitlementsAnnualCost: Accessor<number>;
-	organizationUuid: Accessor<string>;
-	handleOrganizationUuid: Setter<string>;
+	organizationUuid: Accessor<null | string>;
+	handleOrganizationUuid: Setter<null | string>;
 	organizationUuidValid: Accessor<null | boolean>;
 }) => {
 	return (
 		<div class="columns is-centered">
 			<div class="column">
-				<div class="buttons has-addons is-centered">
+				<div class="buttons has-addons is-centered" style="margin-top: 4rem">
 					<For
 						each={[
 							["Monthly Metered", PlanKind.Metered],

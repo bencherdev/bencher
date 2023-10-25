@@ -1,6 +1,15 @@
 import type { InitOutput } from "bencher_valid";
-import { createSignal, type Accessor, Resource, createEffect } from "solid-js";
-import type { JsonAuthUser, PlanLevel } from "../../../../types/bencher";
+import {
+	createSignal,
+	type Accessor,
+	type Resource,
+	createEffect,
+} from "solid-js";
+import type {
+	JsonAuthUser,
+	JsonNewPlan,
+	PlanLevel,
+} from "../../../../types/bencher";
 import {
 	cleanCardNumber,
 	cleanExpiration,
@@ -9,7 +18,7 @@ import {
 	validExpiration,
 	validJwt,
 } from "../../../../util/valid";
-import Field, { FieldValue } from "../../../field/Field";
+import Field, { type FieldValue } from "../../../field/Field";
 import FieldKind from "../../../field/kind";
 import { httpPost } from "../../../../util/http";
 import type { Params } from "astro";
@@ -23,7 +32,7 @@ interface Props {
 	path: string;
 	plan: Accessor<PlanLevel>;
 	entitlements: Accessor<null | number>;
-	organizationUuid: Accessor<string>;
+	organizationUuid: Accessor<null | string>;
 	organizationUuidValid: Accessor<null | boolean>;
 	handleRefresh: () => void;
 }
@@ -71,10 +80,11 @@ const PaymentCard = (props: Props) => {
 			exp_year: exp[1],
 			cvc: cvc,
 		};
-		const data = {
+		const data: JsonNewPlan = {
 			card: card,
 			level: props.plan(),
 			entitlements: props.entitlements(),
+			organization: props.organizationUuid(),
 		};
 
 		setSubmitting(true);
