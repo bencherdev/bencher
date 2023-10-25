@@ -41,6 +41,10 @@ impl Claims {
         self.sub
     }
 
+    pub fn level(&self) -> PlanLevel {
+        self.lvl
+    }
+
     pub fn issued_at(&self) -> DateTime {
         let date_time = DateTime::try_from(self.iat);
         debug_assert!(date_time.is_ok(), "Issued at time is invalid");

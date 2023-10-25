@@ -52,6 +52,7 @@ const SelfHostedPanel = (props: Props) => {
 		const path = `/v0/organizations/${fetcher.params.organization}/usage`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
+				console.log(resp.data);
 				return resp?.data;
 			})
 			.catch((error) => {
@@ -83,7 +84,7 @@ const SelfHostedPanel = (props: Props) => {
 									/>
 								}
 							>
-								<LicensedPanel />
+								<LicensedPanel usage={usage} />
 							</Show>
 						</div>
 					</div>
@@ -225,8 +226,42 @@ const FreePanel = (props: {
 	);
 };
 
-const LicensedPanel = (props: {}) => {
-	return <p>TODO licensed</p>;
+const LicensedPanel = (props: {
+	usage: Resource<null | JsonUsage>;
+}) => {
+	return (
+		<div class="content">
+			<h2 class="title">
+				{planLevel(props.usage()?.license?.level)} Tier Usage
+			</h2>
+			<h3 class="subtitle">
+				{fmtDate(props.usage()?.start_time)} -{" "}
+				{fmtDate(props.usage()?.end_time)}
+			</h3>
+			<h4>
+				Entitlements:{" "}
+				{props.usage()?.license?.entitlements?.toLocaleString() ?? 0}
+			</h4>
+			<h4>Metrics Used: {props.usage()?.usage?.toLocaleString() ?? 0}</h4>
+			<h4>
+				Metrics Remaining:{" "}
+				{(
+					(props.usage()?.license?.entitlements ?? 0) -
+					(props.usage()?.usage ?? 0)
+				).toLocaleString()}
+			</h4>
+			<br />
+			<h4>
+				<a
+					href={`/console/organizations/${
+						props.usage()?.license?.organization
+					}/settings#License%20Key`}
+				>
+					View/Update License Key in Organization Settings
+				</a>
+			</h4>
+		</div>
+	);
 };
 
 export default SelfHostedPanel;

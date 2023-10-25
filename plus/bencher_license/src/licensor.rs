@@ -164,6 +164,7 @@ impl Licensor {
         Ok(JsonLicense {
             key: license,
             organization: token_data.claims.organization(),
+            level: token_data.claims.level(),
             entitlements: token_data.claims.entitlements(),
             issued_at: token_data.claims.issued_at(),
             expiration: token_data.claims.expiration(),

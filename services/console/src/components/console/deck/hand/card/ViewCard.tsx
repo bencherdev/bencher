@@ -17,7 +17,7 @@ const ViewCard = (props: Props) => {
 	);
 
 	return (
-		<div class="card">
+		<div id={props.card?.label} class="card">
 			<div class="card-header">
 				<div class="card-header-title">{props.card?.label}</div>
 			</div>

@@ -72,6 +72,7 @@ pub struct JsonCardDetails {
 pub struct JsonLicense {
     pub key: Jwt,
     pub organization: OrganizationUuid,
+    pub level: PlanLevel,
     pub entitlements: Entitlements,
     pub issued_at: DateTime,
     pub expiration: DateTime,

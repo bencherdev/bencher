@@ -241,6 +241,7 @@ export enum PlanStatus {
 export interface JsonLicense {
 	key: Jwt;
 	organization: Uuid;
+	level: PlanLevel;
 	entitlements: Entitlements;
 	issued_at: string;
 	expiration: string;

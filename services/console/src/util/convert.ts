@@ -37,7 +37,7 @@ export const planLevel = (level: undefined | PlanLevel) => {
 			return "Enterprise";
 		}
 		default:
-			return "---";
+			return "Bencher Plus";
 	}
 };
 

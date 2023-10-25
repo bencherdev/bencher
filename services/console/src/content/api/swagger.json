@@ -6507,6 +6507,9 @@
           "key": {
             "$ref": "#/components/schemas/Jwt"
           },
+          "level": {
+            "$ref": "#/components/schemas/PlanLevel"
+          },
           "organization": {
             "$ref": "#/components/schemas/OrganizationUuid"
           },
@@ -6519,6 +6522,7 @@
           "expiration",
           "issued_at",
           "key",
+          "level",
           "organization",
           "self_hosted"
         ]
