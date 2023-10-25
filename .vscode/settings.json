@@ -21,16 +21,24 @@
   },
   "[javascript]": {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "rome.rome"
+    "editor.defaultFormatter": "biomejs.biome",
+    "editor.codeActionsOnSave": {
+      "source.organizeImports.biome": true
+    }
   },
   "[typescript]": {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "rome.rome"
+    "editor.defaultFormatter": "biomejs.biome",
+    "editor.codeActionsOnSave": {
+      "source.organizeImports.biome": true
+    }
   },
-  // Extension 'Rome' is configured as formatter but it cannot format 'TypeScript JSX'-files
   "[typescriptreact]": {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "vscode.typescript-language-features"
+    "editor.defaultFormatter": "biomejs.biome",
+    "editor.codeActionsOnSave": {
+      "source.organizeImports.biome": true
+    }
   },
   "sqltools.connections": [
     {

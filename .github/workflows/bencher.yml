@@ -84,6 +84,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -103,6 +112,15 @@ jobs:
       TEST_BILLING_KEY: ${{ secrets.TEST_BILLING_KEY }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -122,6 +140,15 @@ jobs:
       - cargo_clippy
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -139,6 +166,15 @@ jobs:
       - cargo_clippy
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -158,6 +194,15 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -174,6 +219,15 @@ jobs:
       - cargo_clippy
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -189,6 +243,15 @@ jobs:
       - cargo_clippy
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -210,6 +273,15 @@ jobs:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -231,6 +303,15 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -244,6 +325,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -259,39 +349,39 @@ jobs:
         run: cargo +nightly udeps --all-targets --features seed
 
   # Pretty JS
-  npx_rome_format:
-    name: Rome Format
+  npx_biome_format:
+    name: Biome Format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Rome format Action
+      - name: Biome format Action
         working-directory: ./services/action
         run: |
           npm install --include=dev
-          npx rome ci --linter-enabled false .
-      - name: Rome format Console UI
+          npx biome ci --linter-enabled false --organize-imports-enabled false .
+      - name: Biome format Console UI
         working-directory: ./services/console
         run: |
           npm install --include=dev
-          npx rome ci --linter-enabled false .
+          npx biome ci --linter-enabled false --organize-imports-enabled false .
 
-  npx_rome_lint:
-    name: Rome Lint
+  npx_biome_lint:
+    name: Biome Lint
     runs-on: ubuntu-latest
     # TODO fix all lints
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-      - name: Rome check Action
+      - name: Biome check Action
         working-directory: ./services/action
         run: |
           npm install --include=dev
-          npx rome ci --formatter-enabled false .
-      - name: Rome check Console UI
+          npx biome ci --formatter-enabled false --organize-imports-enabled false .
+      - name: Biome check Console UI
         working-directory: ./services/console
         run: |
           npm install --include=dev
-          npx rome ci --formatter-enabled false .
+          npx biome ci --formatter-enabled false --organize-imports-enabled false .
 
   # UI WASM
   build_bencher_valid_wasm:
@@ -301,6 +391,15 @@ jobs:
       WASM_PACK_BUILD: "wasm-pack build --target web --no-default-features --features plus,wasm"
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: jetli/wasm-pack-action@v0.4.0
       - name: WASM pack `bencher_valid`
         working-directory: ./lib/bencher_valid
@@ -322,6 +421,15 @@ jobs:
       - cargo_clippy
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -336,8 +444,8 @@ jobs:
     needs:
       - cargo_fmt
       - cargo_clippy
-      - npx_rome_format
-      - npx_rome_lint
+      - npx_biome_format
+      - npx_biome_lint
       - build_bencher_valid_wasm
     steps:
       - uses: actions/checkout@v4
@@ -421,6 +529,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: goto-bus-stop/setup-zig@v2
       - name: Install zigbuild
         run: cargo install --version 0.16.11  --locked cargo-zigbuild
@@ -491,8 +608,8 @@ jobs:
     needs:
       - cargo_fmt
       - cargo_clippy
-      - npx_rome_format
-      - npx_rome_lint
+      - npx_biome_format
+      - npx_biome_lint
       - build_bencher_valid_wasm
     steps:
       - uses: actions/checkout@v4

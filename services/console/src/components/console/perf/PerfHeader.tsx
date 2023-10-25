@@ -223,7 +223,7 @@ const ShareModal = (props: ShareProps) => {
 					<h4 class="title is-4">
 						Click to Copy <code>img</code> Tag
 					</h4>
-					{/* rome-ignore lint/a11y/useValidAnchor: Copy tag */}
+					{/* biome-ignore lint/a11y/useValidAnchor: Copy tag */}
 					<a
 						href=""
 						onClick={(e) => {
@@ -240,7 +240,7 @@ const ShareModal = (props: ShareProps) => {
 					<div class="is-divider" data-content="OR" />
 
 					<h4 class="title is-4">Click to Copy URL</h4>
-					{/* rome-ignore lint/a11y/useValidAnchor: Copy link */}
+					{/* biome-ignore lint/a11y/useValidAnchor: Copy link */}
 					<a
 						href=""
 						onClick={(e) => {

@@ -25,7 +25,7 @@ const Switch = (props: Props) => {
 				checked={props.value as boolean}
 				disabled={props.config?.disabled as boolean}
 			/>
-			{/* rome-ignore lint/a11y/useKeyWithClickEvents: TODO */}
+			{/* biome-ignore lint/a11y/useKeyWithClickEvents: TODO */}
 			<label
 				for={props.config?.label}
 				onClick={(_event) => {

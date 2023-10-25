@@ -11,7 +11,7 @@
     "mtxr.sqltools-driver-sqlite",
     "osohq.oso",
     "redhat.vscode-yaml",
-    "rome.rome",
+    "biomejs.biome",
     "rust-lang.rust-analyzer",
     "serayuzgur.crates",
     "shardulm94.trailing-spaces",
