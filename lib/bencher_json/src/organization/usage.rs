@@ -28,9 +28,9 @@ pub struct JsonUsage {
 #[serde(rename_all = "snake_case")]
 pub enum UsageKind {
     CloudFree,
-    SelfHostedFree,
     CloudMetered,
     CloudLicensed,
-    SelfHostedLicensedCloud,
+    CloudSelfHostedLicensed,
+    SelfHostedFree,
     SelfHostedLicensed,
 }

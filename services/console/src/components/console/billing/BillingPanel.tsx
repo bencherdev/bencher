@@ -116,9 +116,9 @@ const BillingPanel = (props: Props) => {
 									<CloudLicensedPanel usage={usage} />
 								</Match>
 								<Match
-									when={usage()?.kind === UsageKind.SelfHostedLicensedCloud}
+									when={usage()?.kind === UsageKind.CloudSelfHostedLicensed}
 								>
-									<SelfHostedLicensedCloudPanel usage={usage} />
+									<CloudSelfHostedLicensedPanel usage={usage} />
 								</Match>
 								{/* Self-Hosted */}
 								<Match when={usage()?.kind === UsageKind.SelfHostedFree}>
@@ -214,7 +214,7 @@ const CloudLicensedPanel = (props: {
 	);
 };
 
-const SelfHostedLicensedCloudPanel = (props: {
+const CloudSelfHostedLicensedPanel = (props: {
 	usage: Resource<null | JsonUsage>;
 }) => {
 	return (

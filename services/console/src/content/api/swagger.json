@@ -8469,10 +8469,10 @@
         "type": "string",
         "enum": [
           "cloud_free",
-          "self_hosted_free",
           "cloud_metered",
           "cloud_licensed",
-          "self_hosted_licensed_cloud",
+          "cloud_self_hosted_licensed",
+          "self_hosted_free",
           "self_hosted_licensed"
         ]
       },

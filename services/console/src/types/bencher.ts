@@ -262,10 +262,10 @@ export interface JsonPlan {
 
 export enum UsageKind {
 	CloudFree = "cloud_free",
-	SelfHostedFree = "self_hosted_free",
 	CloudMetered = "cloud_metered",
 	CloudLicensed = "cloud_licensed",
-	SelfHostedLicensedCloud = "self_hosted_licensed_cloud",
+	CloudSelfHostedLicensed = "cloud_self_hosted_licensed",
+	SelfHostedFree = "self_hosted_free",
 	SelfHostedLicensed = "self_hosted_licensed",
 }
 

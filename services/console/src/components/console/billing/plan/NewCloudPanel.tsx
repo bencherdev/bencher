@@ -104,7 +104,7 @@ const CloudPanel = (props: Props) => {
 									<CloudLicensedPanel usage={usage} />
 								</Match>
 								<Match
-									when={usage()?.kind === UsageKind.SelfHostedLicensedCloud}
+									when={usage()?.kind === UsageKind.CloudSelfHostedLicensed}
 								>
 									<SelfHostedLicensedPanel usage={usage} />
 								</Match>

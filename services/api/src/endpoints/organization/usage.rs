@@ -122,7 +122,7 @@ async fn get_inner(
             let end_time = json_license.expiration;
             // If on Bencher Cloud it doesn't make sense to calculate usage for a Self-Hosted license
             let (kind, usage) = if json_license.self_hosted {
-                (UsageKind::SelfHostedLicensedCloud, None)
+                (UsageKind::CloudSelfHostedLicensed, None)
             } else {
                 let usage = QueryMetric::usage(conn, query_organization.id, start_time, end_time)?;
                 (UsageKind::CloudLicensed, Some(usage))
