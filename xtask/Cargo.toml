@@ -13,4 +13,6 @@ camino.workspace = true
 clap.workspace = true
 reqwest = { workspace = true, features = ["default"] }
 serde_json.workspace = true
+serde_urlencoded.workspace = true
 tokio = { workspace = true, features = ["macros", "rt"] }
+url.workspace = true

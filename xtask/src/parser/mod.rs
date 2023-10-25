@@ -42,7 +42,7 @@ pub struct CliTranslate {
     pub output_path: Option<Utf8PathBuf>,
 }
 
-#[derive(ValueEnum, Debug, Clone)]
+#[derive(ValueEnum, Debug, Clone, Copy)]
 #[clap(rename_all = "snake_case")]
 pub enum CliLanguage {
     Arabic,
