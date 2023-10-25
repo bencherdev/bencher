@@ -1,24 +1,18 @@
 import type { Params } from "astro";
-import { isBencherCloud } from "../../../util/ext";
-import { Host } from "../../../config/organization/billing";
-import type { BillingHeaderConfig } from "./BillingHeader";
-import consoleConfig from "../../../config/console";
 import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import {
-	createResource,
-	createMemo,
-	createSignal,
-	Switch,
 	Match,
 	type Resource,
+	Switch,
+	createMemo,
+	createResource,
+	createSignal,
 } from "solid-js";
+import consoleConfig from "../../../config/console";
+import { Host } from "../../../config/organization/billing";
+import { BencherResource } from "../../../config/types";
+import { type JsonUsage, type Jwt, UsageKind } from "../../../types/bencher";
 import { authUser } from "../../../util/auth";
-import { validJwt } from "../../../util/valid";
-import { httpGet, httpPatch } from "../../../util/http";
-import { UsageKind, type JsonUsage, type Jwt } from "../../../types/bencher";
-import { NotifyKind, pageNotify } from "../../../util/notify";
-import Field from "../../field/Field";
-import FieldKind from "../../field/kind";
 import {
 	fmtDate,
 	fmtUsd,
@@ -26,7 +20,13 @@ import {
 	planLevelPrice,
 	suggestedMetrics,
 } from "../../../util/convert";
-import { BencherResource } from "../../../config/types";
+import { isBencherCloud } from "../../../util/ext";
+import { httpGet, httpPatch } from "../../../util/http";
+import { NotifyKind, pageNotify } from "../../../util/notify";
+import { validJwt } from "../../../util/valid";
+import Field from "../../field/Field";
+import FieldKind from "../../field/kind";
+import type { BillingHeaderConfig } from "./BillingHeader";
 import BillingHeader from "./BillingHeader";
 import BillingForm from "./plan/BillingForm";
 
@@ -154,10 +154,10 @@ const CloudMeteredPanel = (props: {
 				{fmtDate(props.usage()?.start_time)} -{" "}
 				{fmtDate(props.usage()?.end_time)}
 			</h3>
+			<h4>Cost per Metric: {fmtUsd(price())}</h4>
 			<h4>
 				Estimated Metrics Used: {props.usage()?.usage?.toLocaleString() ?? 0}
 			</h4>
-			<h4>Cost per Metric: {fmtUsd(price())}</h4>
 			<h4>Current Estimated Cost: {fmtUsd(estCost())}</h4>
 			<br />
 			<p>

@@ -61,8 +61,8 @@ const description =
               On Bencher Cloud,{" "}
               <a href="/perf" target="_blank" rel="noreferrer">
                 all Public Projects are available here
-              </a>
-               . If you are using Bencher Self-Hosted, then anyone with access
+              </a>.
+              If you are using Bencher Self-Hosted, then anyone with access
               to your network will likewise be able to see all Public Projects.
             </p>
           </div>
@@ -95,23 +95,23 @@ const description =
           <div class="content">
             <h3 class="subtitle">How are Metrics billed?</h3>
             <p>
-              Bencher Cloud Metrics are billed monthly based on metered usage.
+              On Bencher Cloud Metrics are billed either:
+              <ul>
+                <li>Monthly based on metered usage</li>
+                <li>Annually based on a licensed quantity</li>
+              </ul>
             </p>
             <p>
               For example, if you create 5,280 Metrics in a particular calendar
-              month then you would be billed for 5,280 Metrics that month.
+              month with metered usage then you would be billed for 5,280 Metrics that month.
             </p>
-            {
-              /* <p>
-							Bencher Self-Hosted Metrics are billed annually, grouped by the
-							thousand.
+            <p>
+							Bencher Self-Hosted Metrics are always billed annually based on a licensed quantity.
 						</p>
 						<p>
-							For example, if you create at most 5,280 Metrics within any
-							given 30 day period (rolling window) then you would need to have
-							a Self-Hosted limit of at least 6,000 Metrics/month.
-						</p> */
-            }
+							For example, if you create 5,280 Metrics within a given year,
+              then you would need to have a licensed quantity of say 6,000 Metrics.
+						</p>
           </div>
         </div>
         <div class="box">
@@ -123,37 +123,21 @@ const description =
             </p>
           </div>
         </div>
-        {
-          /* <div class="box">
+        <div class="box">
 					<div class="content">
 						<h3 class="subtitle">
-							What happens if I reach my Bencher Self-Hosted limit for a 30
-							day period?
+							What happens if I reach my licensed quantity limit?
 						</h3>
 						<p>
-							Once you reach your Self-Hosted limit, no new Metrics will be
+							Once you reach your licensed quantity limit, no new Metrics will be
 							accepted.
 						</p>
 						<p>
-							No need to panic though, you can always increase you limit. It
-							is best to give yourself an extra margin when setting your
-							limit.
+							No need to panic, you can always increase your licensed quantity.
+              It is best to give yourself an extra margin when setting your licensed quantity though.
 						</p>
 					</div>
 				</div>
-				<div class="box">
-					<div class="content">
-						<h3 class="subtitle">
-							Do excess Bencher Self-Hosted Metrics rollover to the next 30
-							day period?
-						</h3>
-						<p>
-							Bencher Self-Hosted Metrics are calculated based on a 30 day
-							rolling window. Therefore, there's no rollover.
-						</p>
-					</div>
-				</div> */
-        }
       </div>
     </section>
 
@@ -208,8 +192,7 @@ const description =
             </li>
             <li>
               The open source codebase will not contain any artificial limits
-              (projects, users, metrics, performance, requiring a trademarked
-              header, etc.).
+              (projects, users, metrics, etc.).
             </li>
             <li>
               We will always allow you to benchmark the performance of Bencher.
@@ -221,9 +204,7 @@ const description =
             codebase, not to services such as Bencher Cloud. For Bencher Cloud,
             we may add limits around usage (e.g., storage, compute, traffic) or
             proxies for usage (e.g., number of users in a project) as we seek to
-            optimize costs and revenues. Our stewardship promise allows other
-            companies and organizations to provide a SaaS offering based on the
-            Bencher open source codebase.
+            optimize costs and revenues.
           </p>
         </div>
       </div>
