@@ -1,4 +1,4 @@
-import { Resource } from "./types";
+import { BencherResource } from "./types";
 import membersConfig from "./organization/members";
 import organizationsConfig from "./organization/organizations";
 import projectsConfig from "./project/projects";
@@ -15,21 +15,21 @@ import alertsConfig from "./project/alerts";
 
 const consoleConfig = {
 	// Organization
-	[Resource.ORGANIZATIONS]: organizationsConfig,
-	[Resource.MEMBERS]: membersConfig,
-	[Resource.BILLING]: billingConfig,
+	[BencherResource.ORGANIZATIONS]: organizationsConfig,
+	[BencherResource.MEMBERS]: membersConfig,
+	[BencherResource.BILLING]: billingConfig,
 	// Project
-	[Resource.PROJECTS]: projectsConfig,
-	[Resource.REPORTS]: reportsConfig,
-	[Resource.METRIC_KINDS]: metricKindsConfig,
-	[Resource.BRANCHES]: branchesConfig,
-	[Resource.TESTBEDS]: testbedsConfig,
-	[Resource.BENCHMARKS]: benchmarksConfig,
-	[Resource.THRESHOLDS]: thresholdsConfig,
-	[Resource.ALERTS]: alertsConfig,
+	[BencherResource.PROJECTS]: projectsConfig,
+	[BencherResource.REPORTS]: reportsConfig,
+	[BencherResource.METRIC_KINDS]: metricKindsConfig,
+	[BencherResource.BRANCHES]: branchesConfig,
+	[BencherResource.TESTBEDS]: testbedsConfig,
+	[BencherResource.BENCHMARKS]: benchmarksConfig,
+	[BencherResource.THRESHOLDS]: thresholdsConfig,
+	[BencherResource.ALERTS]: alertsConfig,
 	// User
-	[Resource.USERS]: usersConfig,
-	[Resource.TOKENS]: tokensConfig,
+	[BencherResource.USERS]: usersConfig,
+	[BencherResource.TOKENS]: tokensConfig,
 };
 
 export default consoleConfig;

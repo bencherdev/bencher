@@ -3,7 +3,7 @@ export const prerender = false;
 
 import ProjectLayout from "../../../../../../layouts/console/ProjectLayout.astro";
 import PosterPanel from "../../../../../../components/console/poster/PosterPanel";
-import { Operation, Resource } from "../../../../../../config/types";
+import { Operation, BencherResource } from "../../../../../../config/types";
 
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
@@ -15,7 +15,7 @@ const title = "Edit Threshold";
     client:only="solid-js"
     apiUrl={BENCHER_API_URL}
     params={params}
-    resource={Resource.THRESHOLDS}
+    resource={BencherResource.THRESHOLDS}
     operation={Operation.EDIT}
   />
 </ProjectLayout>

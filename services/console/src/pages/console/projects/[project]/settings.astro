@@ -3,7 +3,7 @@ export const prerender = false;
 
 import ProjectLayout from "../../../../layouts/console/ProjectLayout.astro";
 import DeckPanel from "../../../../components/console/deck/DeckPanel";
-import { Resource } from "../../../../config/types";
+import { BencherResource } from "../../../../config/types";
 
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
@@ -15,6 +15,6 @@ const title = "Project Settings";
     client:only="solid-js"
     apiUrl={BENCHER_API_URL}
     params={params}
-    resource={Resource.PROJECTS}
+    resource={BencherResource.PROJECTS}
   />
 </ProjectLayout>

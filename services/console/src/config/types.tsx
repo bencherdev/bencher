@@ -1,4 +1,4 @@
-export enum Resource {
+export enum BencherResource {
 	ORGANIZATIONS,
 	MEMBERS,
 	BILLING,
@@ -15,68 +15,68 @@ export enum Resource {
 	HELP,
 }
 
-export const resourceSingular = (resource: Resource) => {
+export const resourceSingular = (resource: BencherResource) => {
 	switch (resource) {
-		case Resource.ORGANIZATIONS:
+		case BencherResource.ORGANIZATIONS:
 			return "organization";
-		case Resource.MEMBERS:
+		case BencherResource.MEMBERS:
 			return "member";
-		case Resource.BILLING:
+		case BencherResource.BILLING:
 			return "billing";
-		case Resource.PROJECTS:
+		case BencherResource.PROJECTS:
 			return "project";
-		case Resource.REPORTS:
+		case BencherResource.REPORTS:
 			return "report";
-		case Resource.METRIC_KINDS:
+		case BencherResource.METRIC_KINDS:
 			return "metric kind";
-		case Resource.BRANCHES:
+		case BencherResource.BRANCHES:
 			return "branch";
-		case Resource.TESTBEDS:
+		case BencherResource.TESTBEDS:
 			return "testbed";
-		case Resource.BENCHMARKS:
+		case BencherResource.BENCHMARKS:
 			return "benchmark";
-		case Resource.THRESHOLDS:
+		case BencherResource.THRESHOLDS:
 			return "threshold";
-		case Resource.ALERTS:
+		case BencherResource.ALERTS:
 			return "alert";
-		case Resource.USERS:
+		case BencherResource.USERS:
 			return "user";
-		case Resource.TOKENS:
+		case BencherResource.TOKENS:
 			return "token";
-		case Resource.HELP:
+		case BencherResource.HELP:
 			return "help";
 	}
 };
 
-export const resourcePlural = (resource: Resource) => {
+export const resourcePlural = (resource: BencherResource) => {
 	switch (resource) {
-		case Resource.ORGANIZATIONS:
+		case BencherResource.ORGANIZATIONS:
 			return "organizations";
-		case Resource.MEMBERS:
+		case BencherResource.MEMBERS:
 			return "members";
-		case Resource.BILLING:
+		case BencherResource.BILLING:
 			return "billing";
-		case Resource.PROJECTS:
+		case BencherResource.PROJECTS:
 			return "projects";
-		case Resource.REPORTS:
+		case BencherResource.REPORTS:
 			return "reports";
-		case Resource.METRIC_KINDS:
+		case BencherResource.METRIC_KINDS:
 			return "metric kinds";
-		case Resource.BRANCHES:
+		case BencherResource.BRANCHES:
 			return "branches";
-		case Resource.TESTBEDS:
+		case BencherResource.TESTBEDS:
 			return "testbeds";
-		case Resource.BENCHMARKS:
+		case BencherResource.BENCHMARKS:
 			return "benchmarks";
-		case Resource.THRESHOLDS:
+		case BencherResource.THRESHOLDS:
 			return "thresholds";
-		case Resource.ALERTS:
+		case BencherResource.ALERTS:
 			return "alerts";
-		case Resource.USERS:
+		case BencherResource.USERS:
 			return "users";
-		case Resource.TOKENS:
+		case BencherResource.TOKENS:
 			return "tokens";
-		case Resource.HELP:
+		case BencherResource.HELP:
 			return "help";
 	}
 };

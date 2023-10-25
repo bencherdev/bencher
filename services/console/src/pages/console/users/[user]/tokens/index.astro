@@ -3,7 +3,7 @@ export const prerender = false;
 
 import UserLayout from "../../../../../layouts/console/UserLayout.astro";
 import TablePanel from "../../../../../components/console/table/TablePanel";
-import { Resource } from "../../../../../config/types";
+import { BencherResource } from "../../../../../config/types";
 
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
@@ -15,6 +15,6 @@ const title = "Tokens";
     client:only="solid-js"
     apiUrl={BENCHER_API_URL}
     params={params}
-    resource={Resource.TOKENS}
+    resource={BencherResource.TOKENS}
   />
 </UserLayout>

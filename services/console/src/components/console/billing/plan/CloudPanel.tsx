@@ -1,7 +1,7 @@
 import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import { Match, Switch, createMemo, createResource } from "solid-js";
 import consoleConfig from "../../../../config/console";
-import { Operation, Resource } from "../../../../config/types";
+import { Operation, BencherResource } from "../../../../config/types";
 import type { Params } from "astro";
 import { Host } from "../../../../config/organization/billing";
 import { authUser } from "../../../../util/auth";
@@ -34,7 +34,7 @@ const CloudPanel = (props: Props) => {
 		isBencherCloud() ? Host.BENCHER_CLOUD : Host.SELF_HOSTED,
 	);
 	const config = createMemo<CloudPanelConfig>(
-		() => consoleConfig[Resource.BILLING]?.[host()],
+		() => consoleConfig[BencherResource.BILLING]?.[host()],
 	);
 
 	const fetcher = createMemo(() => {
