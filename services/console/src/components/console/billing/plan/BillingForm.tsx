@@ -68,9 +68,24 @@ const BillingForm = (props: Props) => {
 				return 0.0;
 		}
 	});
-	const [organizationUuid, setOrganizationUuid] = createSignal<null | string>(
-		null,
-	);
+	const entitlementsAnnualJson = createMemo(() => {
+		switch (planKind()) {
+			case PlanKind.Licensed:
+			case PlanKind.SelfHosted:
+				return entitlementsAnnual();
+			default:
+				return null;
+		}
+	});
+	const [organizationUuid, setOrganizationUuid] = createSignal("");
+	const organizationUuidJson = createMemo(() => {
+		switch (planKind()) {
+			case PlanKind.SelfHosted:
+				return organizationUuid();
+			default:
+				return null;
+		}
+	});
 	const organizationUuidValid = createMemo(() => {
 		switch (planKind()) {
 			case PlanKind.SelfHosted:
@@ -128,8 +143,8 @@ const BillingForm = (props: Props) => {
 					user={props.user}
 					path={`/v0/organizations/${props.params.organization}/plan`}
 					plan={plan}
-					entitlements={entitlementsAnnual}
-					organizationUuid={organizationUuid}
+					entitlements={entitlementsAnnualJson}
+					organizationUuid={organizationUuidJson}
 					organizationUuidValid={organizationUuidValid}
 					handleRefresh={props.handleRefresh}
 				/>
@@ -163,8 +178,8 @@ const PlanLocality = (props: {
 	handleEntitlements: Setter<number>;
 	entitlementsAnnual: Accessor<null | number>;
 	entitlementsAnnualCost: Accessor<number>;
-	organizationUuid: Accessor<null | string>;
-	handleOrganizationUuid: Setter<null | string>;
+	organizationUuid: Accessor<string>;
+	handleOrganizationUuid: Setter<string>;
 	organizationUuidValid: Accessor<null | boolean>;
 }) => {
 	return (
@@ -203,9 +218,9 @@ const PlanLocality = (props: {
 							class="slider"
 							type="range"
 							min="1"
-							max="25"
+							max="100"
 							value={props.entitlements()}
-							style="width: 25em"
+							style="width: 50%"
 							onChange={(_e) => {
 								props.handleEntitlements(Number(_e.currentTarget.value));
 							}}

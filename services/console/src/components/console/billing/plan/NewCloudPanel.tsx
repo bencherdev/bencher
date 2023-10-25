@@ -15,11 +15,21 @@ import type { BillingPanelConfig } from "../BillingPanel";
 import { authUser } from "../../../../util/auth";
 import { validJwt } from "../../../../util/valid";
 import { httpGet, httpPatch } from "../../../../util/http";
-import { UsageKind, type JsonUsage, type Jwt } from "../../../../types/bencher";
+import {
+	UsageKind,
+	type JsonUsage,
+	type Jwt,
+	PlanLevel,
+} from "../../../../types/bencher";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
 import Field from "../../../field/Field";
 import FieldKind from "../../../field/kind";
-import { fmtDate, planLevel, suggestedMetrics } from "../../../../util/convert";
+import {
+	fmtDate,
+	fmtUsd,
+	planLevel,
+	suggestedMetrics,
+} from "../../../../util/convert";
 import BillingForm from "./BillingForm";
 
 interface Props {
@@ -71,6 +81,7 @@ const CloudPanel = (props: Props) => {
 	return (
 		<>
 			<BillingHeader config={props.config()?.header} />
+
 			<section class="section">
 				<div class="container">
 					<div class="columns">
@@ -86,6 +97,12 @@ const CloudPanel = (props: Props) => {
 										handleRefresh={refetch}
 									/>
 								</Match>
+								<Match when={usage()?.kind === UsageKind.CloudMetered}>
+									<CloudMeteredPanel usage={usage} />
+								</Match>
+								<Match when={usage()?.kind === UsageKind.CloudLicensed}>
+									<CloudLicensedPanel usage={usage} />
+								</Match>
 								<Match
 									when={usage()?.kind === UsageKind.SelfHostedLicensedCloud}
 								>
@@ -100,13 +117,85 @@ const CloudPanel = (props: Props) => {
 	);
 };
 
+const CloudMeteredPanel = (props: {
+	usage: Resource<null | JsonUsage>;
+}) => {
+	const estCost = createMemo(() => {
+		const usage = props.usage()?.usage ?? 0;
+		switch (props.usage()?.plan?.level) {
+			case PlanLevel.Team: {
+				return usage * 0.01;
+			}
+			case PlanLevel.Enterprise: {
+				return usage * 0.05;
+			}
+			default:
+				return 0;
+		}
+	});
+
+	return (
+		<div class="content">
+			<h2 class="title">
+				{planLevel(props.usage()?.plan?.level)} Tier (Bencher Cloud Metered)
+			</h2>
+			<h3 class="subtitle">
+				{fmtDate(props.usage()?.start_time)} -{" "}
+				{fmtDate(props.usage()?.end_time)}
+			</h3>
+			<h4>
+				Estimated Metrics Used: {props.usage()?.usage?.toLocaleString() ?? 0}
+			</h4>
+			<h4>Current Estimated Cost: {fmtUsd(estCost())}</h4>
+			<br />
+			<p>
+				To update or cancel your subscription please email{" "}
+				<a href="mailto:everett@bencher.dev">everett@bencher.dev</a>
+			</p>
+		</div>
+	);
+};
+
+const CloudLicensedPanel = (props: {
+	usage: Resource<null | JsonUsage>;
+}) => {
+	return (
+		<div class="content">
+			<h2 class="title">
+				{planLevel(props.usage()?.license?.level)} Tier (Bencher Cloud Licensed)
+			</h2>
+			<h3 class="subtitle">
+				{fmtDate(props.usage()?.start_time)} -{" "}
+				{fmtDate(props.usage()?.end_time)}
+			</h3>
+			<h4>
+				Entitlements:{" "}
+				{props.usage()?.license?.entitlements?.toLocaleString() ?? 0}
+			</h4>
+			<h4>Metrics Used: {props.usage()?.usage?.toLocaleString() ?? 0}</h4>
+			<h4>
+				Metrics Remaining:{" "}
+				{(
+					(props.usage()?.license?.entitlements ?? 0) -
+					(props.usage()?.usage ?? 0)
+				).toLocaleString()}
+			</h4>
+			<br />
+			<p>
+				To update or cancel your subscription please email{" "}
+				<a href="mailto:everett@bencher.dev">everett@bencher.dev</a>
+			</p>
+		</div>
+	);
+};
+
 const SelfHostedLicensedPanel = (props: {
 	usage: Resource<null | JsonUsage>;
 }) => {
 	return (
 		<div class="content">
 			<h2 class="title">
-				{planLevel(props.usage()?.license?.level)} Tier (Self-Hosted License)
+				{planLevel(props.usage()?.license?.level)} Tier (Self-Hosted Licensed)
 			</h2>
 			<h3 class="subtitle">
 				{fmtDate(props.usage()?.start_time)} -{" "}
@@ -134,7 +223,7 @@ const SelfHostedLicensedPanel = (props: {
 				</a>
 			</code>
 			<h2 class="title">
-				What to do with your Bencher Plus Self-Hosted License
+				What to do with your Bencher Plus Self-Hosted License Key
 			</h2>
 			<h4>
 				<ol>
@@ -159,6 +248,11 @@ const SelfHostedLicensedPanel = (props: {
 					</li>
 				</ol>
 			</h4>
+			<br />
+			<p>
+				To update or cancel your subscription please email{" "}
+				<a href="mailto:everett@bencher.dev">everett@bencher.dev</a>
+			</p>
 		</div>
 	);
 };

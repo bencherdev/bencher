@@ -43,3 +43,11 @@ export const planLevel = (level: undefined | PlanLevel) => {
 
 export const suggestedMetrics = (usage: undefined | number) =>
 	(Math.round((usage ?? 1) / 1_000) + 1) * 12_000;
+
+export const fmtUsd = (usd: undefined | number) => {
+	const numberFmd = new Intl.NumberFormat("en-US", {
+		style: "currency",
+		currency: "USD",
+	});
+	return numberFmd.format(usd ?? 0);
+};

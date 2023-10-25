@@ -5,9 +5,10 @@ import {
 	createResource,
 	type Accessor,
 	createMemo,
-	Show,
 	type Resource,
 	createSignal,
+	Switch,
+	Match,
 } from "solid-js";
 import type { BillingPanelConfig } from "../BillingPanel";
 import { authUser } from "../../../../util/auth";
@@ -72,9 +73,8 @@ const SelfHostedPanel = (props: Props) => {
 				<div class="container">
 					<div class="columns">
 						<div class="column">
-							<Show
-								when={usage()?.kind === UsageKind.SelfHostedLicensed}
-								fallback={
+							<Switch>
+								<Match when={usage()?.kind === UsageKind.SelfHostedFree}>
 									<FreePanel
 										apiUrl={props.apiUrl}
 										params={props.params}
@@ -82,10 +82,11 @@ const SelfHostedPanel = (props: Props) => {
 										usage={usage}
 										refetch={refetch}
 									/>
-								}
-							>
-								<LicensedPanel usage={usage} />
-							</Show>
+								</Match>
+								<Match when={usage()?.kind === UsageKind.SelfHostedLicensed}>
+									<LicensedPanel usage={usage} />
+								</Match>
+							</Switch>
 						</div>
 					</div>
 				</div>
@@ -142,7 +143,7 @@ const FreePanel = (props: {
 
 	return (
 		<div class="content">
-			<h2 class="title">Free Tier Usage</h2>
+			<h2 class="title">Free Tier (Self-Hosted Unlicensed)</h2>
 			<h3 class="subtitle">
 				{fmtDate(props.usage()?.start_time)} -{" "}
 				{fmtDate(props.usage()?.end_time)}
@@ -172,7 +173,16 @@ const FreePanel = (props: {
 					<li>
 						Enter your "Self-Hosted Organization UUID":{" "}
 						<code style="overflow-wrap:anywhere;">
-							{props.usage()?.organization}
+							<a
+								title="Copy to clipboard"
+								onClick={(_) =>
+									navigator.clipboard.writeText(
+										props.usage()?.organization ?? "",
+									)
+								}
+							>
+								{props.usage()?.organization}
+							</a>
 						</code>
 					</li>
 					<li>Enter your billing information</li>
@@ -232,7 +242,7 @@ const LicensedPanel = (props: {
 	return (
 		<div class="content">
 			<h2 class="title">
-				{planLevel(props.usage()?.license?.level)} Tier Usage
+				{planLevel(props.usage()?.license?.level)} Tier (Self-Hosted Licensed)
 			</h2>
 			<h3 class="subtitle">
 				{fmtDate(props.usage()?.start_time)} -{" "}

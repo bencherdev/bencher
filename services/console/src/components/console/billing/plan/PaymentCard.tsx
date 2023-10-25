@@ -17,6 +17,7 @@ import {
 	validCardNumber,
 	validExpiration,
 	validJwt,
+	validUuid,
 } from "../../../../util/valid";
 import Field, { type FieldValue } from "../../../field/Field";
 import FieldKind from "../../../field/kind";
