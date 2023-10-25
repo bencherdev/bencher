@@ -15,12 +15,7 @@ import {
 import { authUser } from "../../../util/auth";
 import { validJwt } from "../../../util/valid";
 import { httpGet, httpPatch } from "../../../util/http";
-import {
-	UsageKind,
-	type JsonUsage,
-	type Jwt,
-	PlanLevel,
-} from "../../../types/bencher";
+import { UsageKind, type JsonUsage, type Jwt } from "../../../types/bencher";
 import { NotifyKind, pageNotify } from "../../../util/notify";
 import Field from "../../field/Field";
 import FieldKind from "../../field/kind";
@@ -28,6 +23,7 @@ import {
 	fmtDate,
 	fmtUsd,
 	planLevel,
+	planLevelPrice,
 	suggestedMetrics,
 } from "../../../util/convert";
 import { BencherResource } from "../../../config/types";
@@ -77,6 +73,7 @@ const BillingPanel = (props: Props) => {
 		const path = `/v0/organizations/${fetcher.params.organization}/usage`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
+				// console.log(resp.data);
 				return resp?.data;
 			})
 			.catch((error) => {
@@ -145,19 +142,8 @@ const BillingPanel = (props: Props) => {
 const CloudMeteredPanel = (props: {
 	usage: Resource<null | JsonUsage>;
 }) => {
-	const estCost = createMemo(() => {
-		const usage = props.usage()?.usage ?? 0;
-		switch (props.usage()?.plan?.level) {
-			case PlanLevel.Team: {
-				return usage * 0.01;
-			}
-			case PlanLevel.Enterprise: {
-				return usage * 0.05;
-			}
-			default:
-				return 0;
-		}
-	});
+	const price = createMemo(() => planLevelPrice(props.usage()?.plan?.level));
+	const estCost = createMemo(() => (props.usage()?.usage ?? 0) * price());
 
 	return (
 		<div class="content">
@@ -171,6 +157,7 @@ const CloudMeteredPanel = (props: {
 			<h4>
 				Estimated Metrics Used: {props.usage()?.usage?.toLocaleString() ?? 0}
 			</h4>
+			<h4>Cost per Metric: {fmtUsd(price())}</h4>
 			<h4>Current Estimated Cost: {fmtUsd(estCost())}</h4>
 			<br />
 			<p>
@@ -248,7 +235,7 @@ const CloudSelfHostedLicensedPanel = (props: {
 				</a>
 			</code>
 			<h2 class="title">
-				What to do with your Bencher Plus Self-Hosted License Key
+				What to do with your Bencher Self-Hosted License Key
 			</h2>
 			<h4>
 				<ol>
@@ -266,7 +253,7 @@ const CloudSelfHostedLicensedPanel = (props: {
 						Navigate to this same page on your Bencher Self-Hosted account,
 						Organization Billing
 					</li>
-					<li>Enter your license key in the "Self-Hosted License" box</li>
+					<li>Enter your license key in the "Self-Hosted License Key" box</li>
 					<li>
 						🎉 Lettuce turnip the beet! You now have a Bencher Plus Self-Hosted
 						License!
@@ -337,7 +324,7 @@ const SelfHostedFreePanel = (props: {
 			</h3>
 			<h4>Metrics Used: {props.usage()?.usage?.toLocaleString() ?? 0}</h4>
 			<br />
-			<h2 class="title">How to get a Bencher Plus License</h2>
+			<h2 class="title">How to get a Bencher Self-Hosted License Key</h2>
 			<h4>
 				<ol>
 					<li>
@@ -345,7 +332,7 @@ const SelfHostedFreePanel = (props: {
 						<a href="https://bencher.dev" target="_blank">
 							Bencher Cloud
 						</a>{" "}
-						if you don't have one already
+						if you don't already have one
 					</li>
 					<li>
 						Navigate to this same page on your Bencher Cloud account,
@@ -387,11 +374,11 @@ const SelfHostedFreePanel = (props: {
 					<Field
 						kind={FieldKind.INPUT}
 						fieldKey="license"
-						label="Self-Hosted License"
+						label="Self-Hosted License Key"
 						value={license()}
 						valid={valid()}
 						config={{
-							label: "Self-Hosted License",
+							label: "Self-Hosted License Key",
 							type: "text",
 							placeholder: "jwt_header.jwt_payload.jwt_verify_signature",
 							icon: "fas fa-key",
@@ -457,6 +444,11 @@ const SelfHostedLicensedPanel = (props: {
 					View/Update License Key in Organization Settings
 				</a>
 			</h4>
+			<br />
+			<p>
+				To update or cancel your subscription please email{" "}
+				<a href="mailto:everett@bencher.dev">everett@bencher.dev</a>
+			</p>
 		</div>
 	);
 };

@@ -51,54 +51,59 @@ const BillingForm = (props: Props) => {
 	const [entitlements, setEntitlements] = createSignal<number>(5);
 	const entitlementsAnnual = createMemo(() => {
 		switch (plan()) {
+			case PlanLevel.Free:
+				return null;
 			case PlanLevel.Team:
 			case PlanLevel.Enterprise:
 				return entitlements() * 100 * 12;
-			default:
-				return null;
 		}
 	});
 	const entitlementsAnnualCost = createMemo(() => {
 		switch (plan()) {
+			case PlanLevel.Free:
+				return 0.0;
 			case PlanLevel.Team:
 				return (entitlementsAnnual() ?? 0.0) * 0.1;
 			case PlanLevel.Enterprise:
 				return (entitlementsAnnual() ?? 0.0) * 0.5;
-			default:
-				return 0.0;
 		}
 	});
 	const entitlementsAnnualJson = createMemo(() => {
 		switch (planKind()) {
+			case PlanKind.Metered:
+				return null;
 			case PlanKind.Licensed:
 			case PlanKind.SelfHosted:
 				return entitlementsAnnual();
-			default:
-				return null;
 		}
 	});
 	const [organizationUuid, setOrganizationUuid] = createSignal("");
 	const organizationUuidJson = createMemo(() => {
 		switch (planKind()) {
+			case PlanKind.Metered:
+			case PlanKind.Licensed:
+				return null;
 			case PlanKind.SelfHosted:
 				return organizationUuid();
-			default:
-				return null;
 		}
 	});
 	const organizationUuidValid = createMemo(() => {
 		switch (planKind()) {
+			case PlanKind.Metered:
+			case PlanKind.Licensed:
+				return true;
 			case PlanKind.SelfHosted:
 				const uuid = organizationUuid();
 				if (uuid) {
-					return validUuid(uuid);
+					return validUuid(uuid) && uuid !== props.usage()?.organization;
 				} else {
 					return null;
 				}
-			default:
-				return true;
 		}
 	});
+	const organizationUuidValidJson = createMemo(
+		() => organizationUuidValid() === true,
+	);
 
 	createEffect(() => {
 		if (!props.bencher_valid()) {
@@ -145,7 +150,7 @@ const BillingForm = (props: Props) => {
 					plan={plan}
 					entitlements={entitlementsAnnualJson}
 					organizationUuid={organizationUuidJson}
-					organizationUuidValid={organizationUuidValid}
+					organizationUuidValid={organizationUuidValidJson}
 					handleRefresh={props.handleRefresh}
 				/>
 			</Show>
@@ -241,7 +246,7 @@ const PlanLocality = (props: {
 									type: "text",
 									placeholder: "00000000-0000-0000-0000-000000000000",
 									icon: "fas fa-laptop-house",
-									help: "Must be a valid UUID",
+									help: "Must be a valid UUID for a Self-Hosted Organization",
 									validate: validUuid,
 								}}
 								handleField={(_key, value, _valid) => {

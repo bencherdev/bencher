@@ -34,7 +34,7 @@ interface Props {
 	plan: Accessor<PlanLevel>;
 	entitlements: Accessor<null | number>;
 	organizationUuid: Accessor<null | string>;
-	organizationUuidValid: Accessor<null | boolean>;
+	organizationUuidValid: Accessor<boolean>;
 	handleRefresh: () => void;
 }
 
@@ -44,7 +44,7 @@ const PaymentCard = (props: Props) => {
 	const [valid, setValid] = createSignal(false);
 
 	const isSendable = (): boolean => {
-		return !submitting() && valid() && props.organizationUuidValid() === true;
+		return !submitting() && valid() && props.organizationUuidValid();
 	};
 
 	const handleField = (key: string, value: FieldValue, valid: boolean) => {
