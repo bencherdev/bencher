@@ -12,30 +12,22 @@ pub struct CliTask {
 #[allow(variant_size_differences)]
 #[derive(Subcommand, Debug)]
 pub enum CliSub {
-    Fmt,
-    ReleaseNotes(CliReleaseNotes),
-    Swagger(CliSwagger),
     Typeshare(CliTypeshare),
+    Swagger(CliSwagger),
+    Translate(CliTranslate),
     FlyTest(CliFlyTest),
     NetlifyTest(CliNetlifyTest),
+    ReleaseNotes(CliReleaseNotes),
 }
 
 #[derive(Parser, Debug)]
-pub struct CliReleaseNotes {
-    /// Changelog path
-    #[clap(long)]
-    pub changelog: Option<String>,
-
-    /// File output path
-    #[clap(long)]
-    pub path: Option<String>,
-}
+pub struct CliTypeshare {}
 
 #[derive(Parser, Debug)]
 pub struct CliSwagger {}
 
 #[derive(Parser, Debug)]
-pub struct CliTypeshare {}
+pub struct CliTranslate {}
 
 #[derive(Parser, Debug)]
 pub struct CliFlyTest {
@@ -49,4 +41,15 @@ pub struct CliNetlifyTest {
     /// Run devel tests
     #[clap(long)]
     pub dev: bool,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliReleaseNotes {
+    /// Changelog path
+    #[clap(long)]
+    pub changelog: Option<String>,
+
+    /// File output path
+    #[clap(long)]
+    pub path: Option<String>,
 }

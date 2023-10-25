@@ -6,12 +6,14 @@ mod fly_test;
 mod netlify_test;
 mod release_notes;
 mod swagger;
+mod translate;
 mod typeshare;
 
 use fly_test::FlyTest;
 use netlify_test::NetlifyTest;
 use release_notes::ReleaseNotes;
 use swagger::Swagger;
+use translate::Translate;
 use typeshare::Typeshare;
 
 #[derive(Debug)]
@@ -22,12 +24,12 @@ pub struct Task {
 #[allow(variant_size_differences)]
 #[derive(Debug)]
 pub enum Sub {
-    Fmt,
-    ReleaseNotes(ReleaseNotes),
-    Swagger(Swagger),
     Typeshare(Typeshare),
+    Swagger(Swagger),
+    Translate(Translate),
     FlyTest(FlyTest),
     NetlifyTest(NetlifyTest),
+    ReleaseNotes(ReleaseNotes),
 }
 
 impl TryFrom<CliTask> for Task {
@@ -45,12 +47,12 @@ impl TryFrom<CliSub> for Sub {
 
     fn try_from(sub: CliSub) -> Result<Self, Self::Error> {
         Ok(match sub {
-            CliSub::Fmt => Self::Fmt,
-            CliSub::ReleaseNotes(release_notes) => Self::ReleaseNotes(release_notes.try_into()?),
-            CliSub::Swagger(swagger) => Self::Swagger(swagger.try_into()?),
             CliSub::Typeshare(typeshare) => Self::Typeshare(typeshare.try_into()?),
+            CliSub::Swagger(swagger) => Self::Swagger(swagger.try_into()?),
+            CliSub::Translate(translate) => Self::Translate(translate.try_into()?),
             CliSub::FlyTest(fly_test) => Self::FlyTest(fly_test.try_into()?),
             CliSub::NetlifyTest(netlify_test) => Self::NetlifyTest(netlify_test.try_into()?),
+            CliSub::ReleaseNotes(release_notes) => Self::ReleaseNotes(release_notes.try_into()?),
         })
     }
 }
@@ -66,15 +68,14 @@ impl Task {
 }
 
 impl Sub {
-    #[allow(clippy::unused_async)]
     pub async fn exec(&self) -> anyhow::Result<()> {
         match self {
-            Self::Fmt => Ok(()),
-            Self::ReleaseNotes(release_notes) => release_notes.exec(),
-            Self::Swagger(swagger) => swagger.exec(),
             Self::Typeshare(typeshare) => typeshare.exec(),
+            Self::Swagger(swagger) => swagger.exec(),
+            Self::Translate(translate) => translate.exec().await,
             Self::FlyTest(fly_test) => fly_test.exec(),
             Self::NetlifyTest(netlify_test) => netlify_test.exec().await,
+            Self::ReleaseNotes(release_notes) => release_notes.exec(),
         }
     }
 }

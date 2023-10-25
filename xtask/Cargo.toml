@@ -7,6 +7,7 @@ edition.workspace = true
 [dependencies]
 # Workspace
 anyhow.workspace = true
+async-openai = "0.14.3"
 bencher_json = { workspace = true, features = ["lite"] }
 camino.workspace = true
 clap.workspace = true
