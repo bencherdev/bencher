@@ -18,10 +18,7 @@ impl TryFrom<CliReleaseNotes> for ReleaseNotes {
 
     fn try_from(release_notes: CliReleaseNotes) -> Result<Self, Self::Error> {
         let CliReleaseNotes { changelog, path } = release_notes;
-        Ok(Self {
-            changelog: changelog.map(Utf8PathBuf::from),
-            path: path.map(Utf8PathBuf::from),
-        })
+        Ok(Self { changelog, path })
     }
 }
 
