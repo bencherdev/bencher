@@ -1,32 +1,12 @@
 ---
 import { getCollection } from "astro:content";
 import type DocsTab from "./docs_tab";
-import {defaultLang, showDefaultLang} from "../../i18n/ui.ts";
+import {defaultLang, showDefaultLang } from "../../i18n/ui.ts";
+import {getLangCollection} from "../../i18n/utils.ts"
 
 interface Props {
   tab: DocsTab;
   lang?: undefined | string;
-}
-
-async function getLangCollection(collection: string) {
-  const pages = await getCollection(collection);
-  const langPagesMap = pages.map(page => {
-    const [lang, ...slug] = page.id.substring(0, page.id.lastIndexOf('.'))?.split('/');
-    page.slug = slug.join('/') || undefined;
-    return { lang, page }
-  }).reduce((lpMap, langPage) => {
-    if (lpMap[langPage.lang]) {
-      lpMap[langPage.lang].push(langPage.page);
-    } else {
-      lpMap[langPage.lang] = [langPage.page];
-    }
-    return lpMap;
-  }, {});
-  const langPagesMapSorted = {};
-  for (const [key, value] of Object.entries(langPagesMap)) {
-    langPagesMapSorted[key] = value.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
-  }
-  return langPagesMapSorted;
 }
 
 // Docs

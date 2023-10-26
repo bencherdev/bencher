@@ -1,15 +1,17 @@
 ---
 import { getCollection } from "astro:content";
-import DocsLayout from "../../layouts/docs/DocsLayout.astro";
-import {defaultLang} from "../../i18n/ui.js";
+import DocsLayout from "../../../layouts/docs/DocsLayout.astro";
+import {getLangCollection} from "../../../i18n/utils.ts"
+import { defaultLang, showDefaultLang } from "../../../i18n/ui";
 
-async function getLangCollection(collection: string) {
-  const pages = await getCollection(collection);
-  return pages.filter(page => page.id.startsWith(defaultLang)).sort((a, b) => a.data.sortOrder - b.data.sortOrder);
+export async function getStaticPaths() {
+    return ["fr"].map((lang) => {return { params: { lang } }});
 }
 
+const lang = Astro.params.lang ?? defaultLang;
+const langPath = !showDefaultLang && lang === defaultLang ?  "" : `${lang}/`;
+
 const tutorial = await getLangCollection("tutorial");
-tutorial.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 
 const how_to = await getCollection("how_to");
 how_to.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
@@ -20,19 +22,40 @@ explanation.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 const reference = await getCollection("reference");
 reference.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 
-const title = "Bencher Docs";
-const description =
-  "Table of contents for the Bencher documentation. Learn how to setup continuous benchmarking for your project.";
+const title = () => {
+    switch(lang) {
+        case "fr":
+            "Documents de Bencher";
+        default:
+            return "Bencher Docs";
+    }
+};
+const description = () => {
+    switch (lang) {
+        case "fr":
+            return "Table des matières de la documentation Bencher. Découvrez comment configurer une analyse comparative continue pour votre projet.";
+        default:
+            return "Table of contents for the Bencher documentation. Learn how to setup continuous benchmarking for your project.";
+    }
+}
+const alsoIn = () => {
+    switch (lang) {
+        case "fr":
+            return "Également disponible en:";
+        default:
+            return "Also available in:";
+    }
+}
 ---
 
-<DocsLayout title={title} description={description} heading={title}>
+<DocsLayout title={title()} description={description()} heading={title()}>
   <div class="menu">
     <p class="menu-label">Tutorial</p>
     <ul class="menu-list">
       {
-        tutorial.map((page) => (
+        tutorial[lang]?.map((page) => (
           <li>
-            <a href={`/docs/tutorial/${page.slug}`}>{page.data.heading}</a>
+            <a href={`/docs/${langPath}tutorial/${page.slug}`}>{page.data.title}</a>
           </li>
         ))
       }
@@ -74,10 +97,10 @@ const description =
       }
     </ul>
   </div>
-  <h3 class="title">Also available in:</h3>
+  <h3 class="title">{alsoIn()}</h3>
   <ul>
     <li>
-      <a href="/docs/fr">Français</a>
+      <a href="/docs">English</a>
     </li>
   </ul>
 </DocsLayout>
