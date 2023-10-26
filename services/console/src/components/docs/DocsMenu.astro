@@ -11,7 +11,7 @@ interface Props {
 async function getLangCollection(collection: string) {
   const pages = await getCollection(collection);
   const langPagesMap = pages.map(page => {
-    const [lang, ...slug] = page.slug.split('/');
+    const [lang, ...slug] = page.id.substring(0, page.id.lastIndexOf('.'))?.split('/');
     page.slug = slug.join('/') || undefined;
     return { lang, page }
   }).reduce((lpMap, langPage) => {
@@ -47,6 +47,7 @@ rust.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 
 const { tab } = Astro.props;
 const lang = Astro.props.lang ?? defaultLang;
+const langPath = !showDefaultLang && lang === defaultLang ?  "" : `${lang}/`;
 ---
 
 <aside class="menu is-sticky">
@@ -62,7 +63,7 @@ const lang = Astro.props.lang ?? defaultLang;
       {
         tutorial[lang]?.map((page) => (
           <li>
-            <a href={`/docs/${!showDefaultLang && lang === defaultLang ?  "" : `${lang}/` }tutorial/${page.slug}`}>{page.data.title}</a>
+            <a href={`/docs/${langPath}tutorial/${page.slug}`}>{page.data.title}</a>
           </li>
         ))
       }

@@ -5,7 +5,7 @@ import DocsLayout from "../../../../layouts/docs/DocsLayout.astro";
 export async function getStaticPaths() {
   const pages = await getCollection("tutorial");
   return pages.map(page => {
-    const [lang, ...slug] = page.slug.split('/');
+    const [lang, ...slug] = page.id.substring(0, page.id.lastIndexOf('.'))?.split('/');
     return { params: { lang, slug: slug.join('/') || undefined }, props: page }
   });
 }
