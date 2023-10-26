@@ -1,6 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import type DocsTab from "./docs_tab";
+import {defaultLang} from "../../i18n/ui.ts";
 
 interface Props {
   tab: DocsTab;
@@ -8,9 +9,22 @@ interface Props {
 
 const { tab } = Astro.props;
 
+async function getLangCollection(collection: string, lang: string) {
+  const pages = await getCollection(collection);
+  return pages.map(page => {
+    const [lang, ...slug] = page.slug.split('/');
+    const slugSlash = slug.join('/') || undefined;
+    if (lang === defaultLang) {
+      page.slug = slugSlash;
+    }
+    return { params: { lang, slug: slugSlash }, props: page }
+  }).filter(path => path.params.lang === lang).map(
+    path => path.props
+  ).sort((a, b) => a.data.sortOrder - b.data.sortOrder);
+}
+
 // Docs
-const tutorial = await getCollection("tutorial");
-tutorial.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
+const tutorial = await getLangCollection("tutorial", "en");
 
 const how_to = await getCollection("how_to");
 how_to.sort((a, b) => a.data.sortOrder - b.data.sortOrder);

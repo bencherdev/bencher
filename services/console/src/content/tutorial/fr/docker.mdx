@@ -1,0 +1,163 @@
+---
+title: "Docker Self-Hosted"
+description: "Learn how to setup self-hosted continuous benchmarking with Bencher"
+heading: "Docker Self-Hosted"
+sortOrder: 2
+---
+
+import { BENCHER_VERSION } from "../../../util/ext";
+
+## What is Bencher?
+
+Bencher is a suite of [continuous benchmarking](/docs/explanation/continuous-benchmarking) tools.
+Have you ever had a performance regression impact your users?
+Bencher could have prevented that from happening.
+Bencher allows you to detect and prevent performance regressions _before_ they make it to production.
+
+- **Run**: Run your benchmarks locally or in CI using your favorite benchmarking tools. The `bencher` CLI simply wraps your existing benchmark harness and stores its results.
+- **Track**: Track the results of your benchmarks over time. Monitor, query, and graph the results using the Bencher web console based on the source branch, testbed, and metric kind.
+- **Catch**: Catch performance regressions in CI. Bencher uses state of the art, customizable analytics to detect performance regressions before they make it to production.
+
+For the same reasons that unit tests are run in CI to prevent feature regressions, benchmarks should also be run in CI with Bencher to prevent performance regressions. Performance bugs are bugs!
+
+Bencher is open source and self-hostable.
+If you are interested in using Bencher Cloud, check out the [Bencher Cloud Quick Start tutorial](/docs/tutorial/quick-start).
+For this tutorial though, we are going to use Bencher Self-Hosted with Docker.
+
+<br />
+
+## Clone the Repo
+
+In order to work through this tutorial you will need to have `git` installed.
+Check to see if you have `git` installed.
+
+Run: `git --version`
+
+You should see something like:
+
+```
+$ git --version
+git version 2.37.3
+```
+
+It is okay if your version number is different.
+It's just important that this command works.
+If not follow the [instructions for installing `git`](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
+
+<br />
+
+With `git` installed, we can now clone the Bencher repository.
+
+Run: <code>{`git clone --branch v${BENCHER_VERSION} https://github.com/bencherdev/bencher.git`}</code>
+
+You should see something like:
+
+```
+$ git clone https://github.com/bencherdev/bencher.git
+Cloning into 'bencher'...
+remote: Enumerating objects: 24752, done.
+remote: Counting objects: 100% (7363/7363), done.
+remote: Compressing objects: 100% (2396/2396), done.
+remote: Total 24752 (delta 4862), reused 7274 (delta 4785), pack-reused 17389
+Receiving objects: 100% (24752/24752), 4.92 MiB | 12.43 MiB/s, done.
+Resolving deltas: 100% (16108/16108), done.
+```
+
+<br />
+
+## Run Bencher UI & API Servers
+
+In order to run the UI and API servers in this tutorial you will need to have `docker` installed.
+Check to see if you have `docker` installed.
+
+Run: `docker --version`
+
+You should see something like:
+
+```
+$ docker --version
+Docker version 20.10.17, build 100c701
+```
+
+It is okay if your version number is different. It's just important that this command works.
+If not follow the [instructions for installing `docker`](https://docs.docker.com/get-docker/).
+
+<br />
+
+With `docker` installed, we can now run the UI and API servers.
+
+Run: `docker compose up -d`
+
+You should see something like:
+
+```
+$ docker compose up -d
+[+] Running 16/16
+ ⠿ bencher_ui Pulled                                           5.9s
+ ...
+ ⠿ bencher_api Pulled                                          6.3s
+ ...
+[+] Running 3/3
+ ⠿ Network bencher_default      Started                        0.1s
+ ⠿ Container bencher_ui         Started                        0.8s
+ ⠿ Container bencher_api_local  Started                        0.4s
+```
+
+Again, it is okay if your output is different. It's just important that this command works.
+
+<br />
+
+Next, check to see both docker containers are running.
+
+Run: `docker ps`
+
+You should see something like:
+
+```
+$ docker ps
+CONTAINER ID   IMAGE                                 COMMAND                  CREATED              STATUS              PORTS                                           NAMES
+1d2ed7c7481e   bencherdev/bencher-ui:latest          "/docker-entrypoint.…"   About a minute ago   Up About a minute   0.0.0.0:3000->80/tcp, :::3000->80/tcp           bencher_ui
+7a8590d7021a   bencherdev/bencher-api-local:latest   "/api"                   About a minute ago   Up About a minute   0.0.0.0:61016->61016/tcp, :::61016->61016/tcp   bencher_api_local
+```
+
+As before, it is okay if your output is different. It's just important that this command works.
+
+
+<br />
+
+## Bencher API Server Logs
+
+Lets take a look at the Bencher API server logs.
+
+Run: `docker compose logs bencher_api`
+
+Because we won't have set up email/SMTP on the API server yet,
+the confirmation codes you will receive later in the tutorial are going to be in the server logs.
+
+<br />
+
+## Set Bencher Host
+
+The `bencher` CLI default host is Bencher Cloud (ie [https://api.bencher.dev](https://api.bencher.dev)).
+So you need to set your hostname. The easiest way to do this is the with `BENCHER_HOST` environment variable.
+
+Run: `export BENCHER_HOST=http://localhost:61016`
+
+If you then run: `echo $BENCHER_HOST`
+
+You should see:
+
+```
+$ echo $BENCHER_HOST
+http://localhost:61016
+```
+
+<br />
+<br />
+
+> 🐰 Congrats! You have set up Bencher Self-Hosted! 🎉
+> You can now proceed with the Quick Start tutorial using Bencher Self-Hosted.
+
+<br />
+
+<h2><a href="/docs/tutorial/quick-start">Keep Going: Quick Start ➡</a></h2>
