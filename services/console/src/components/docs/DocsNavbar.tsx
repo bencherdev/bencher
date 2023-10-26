@@ -1,9 +1,9 @@
-import { authUser } from "../../../util/auth";
-import { BENCHER_LOGO_URL } from "../../../util/ext";
-import AuthOverride from "../../auth/AuthOverride";
-import BENCHER_NAVBAR_ID from "./id";
+import { authUser } from "../../util/auth";
+import { BENCHER_LOGO_URL } from "../../util/ext";
+import AuthOverride from "../auth/AuthOverride";
+import BENCHER_NAVBAR_ID from "../site/navbar/id";
 
-const AuthNavbar = () => {
+const DocsNavbar = () => {
 	const user = authUser();
 
 	return (
@@ -37,6 +37,14 @@ const AuthNavbar = () => {
 
 					<div class="navbar-end">
 						<div class="navbar-item">
+							<div class="select">
+								<select>
+									<option>🇬🇧</option>
+									<option>🇫🇷</option>
+								</select>
+							</div>
+						</div>
+						<div class="navbar-item">
 							<a
 								class="button is-outlined"
 								href={`/console/users/${user?.user?.slug}/help`}
@@ -63,4 +71,4 @@ const AuthNavbar = () => {
 	);
 };
 
-export default AuthNavbar;
+export default DocsNavbar;

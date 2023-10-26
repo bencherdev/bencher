@@ -1,11 +1,11 @@
 import { authUser } from "../../../util/auth";
 
-const AddAnApiToken = () => (
+const AddAnApiToken = (props: { text: string }) => (
 	<a
 		href={`/console/users/${authUser()?.user?.slug}/tokens/add`}
 		target="_blank"
 	>
-		Add an API Token
+		{props.text}
 	</a>
 );
 

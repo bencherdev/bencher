@@ -96,6 +96,7 @@ impl From<Create> for JsonNewPlan {
             organization,
             ..
         } = create;
+        #[allow(clippy::inconsistent_struct_constructor)]
         Self {
             customer,
             card,

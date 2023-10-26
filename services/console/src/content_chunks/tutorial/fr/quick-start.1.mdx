@@ -1,0 +1,173 @@
+import { BENCHER_VERSION } from "../../../util/ext";
+
+## Qu'est-ce que Bencher ?
+
+Bencher est une suite d'outils de [benchmarking continu](/docs/explanation/continuous-benchmarking).
+Avez-vous déjà subi un impact de régression de performance sur vos utilisateurs ?
+Bencher aurait pu empêcher cela.
+Bencher vous permet de détecter et de prévenir les régressions de performance _avant_ qu'elles n'arrivent en production.
+
+- **Exécutez** : Exécutez vos benchmarks localement ou dans le CI en utilisant vos outils de benchmarking préférés. Le CLI `bencher` enveloppe simplement votre harnais de benchmarking existant et stocke ses résultats.
+- **Suivez** : Suivez les résultats de vos benchmarks dans le temps. Surveillez, interrogez et graphiquez les résultats en utilisant la console web Bencher basée sur la branche source, la plate-forme de test et le type de métrique.
+- **Attrapez** : Attrapez les régressions de performance dans le CI. Bencher utilise des analyses personnalisables de pointe pour détecter les régressions de performance avant qu'elles n'arrivant en production.
+
+Pour les mêmes raisons que les tests unitaires sont exécutés dans le CI pour prévenir les régressions de fonctionnalités, les benchmarks devraient également être exécutés dans le CI avec Bencher pour prévenir les régressions de performance. Les bugs de performance sont des bugs !
+
+<br />
+
+## Installez le CLI `bencher`
+
+Pour installer le CLI `bencher`, vous devrez avoir `cargo` installé. Vérifiez si vous avez `cargo` installé.
+
+Exécutez : `cargo --version`
+
+Vous devriez voir quelque chose comme :
+
+```
+$ cargo --version
+cargo 1.65.0 (4bc8f24d3 2022-10-20)
+```
+
+Il est acceptable que votre numéro de version soit différent. C'est simplement important que cette commande fonctionne. Sinon, suivez les [instructions pour installer `cargo` via `rustup`](https://rustup.rs/).
+
+Sur Linux ou macOS, executez :
+
+```
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+<br />
+
+Avec `cargo` installé, nous pouvons installer le CLI `bencher`.
+
+Exécutez :
+<pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto; --darkreader-inline-bgcolor: #1d2125;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">{`cargo install --git https://github.com/bencherdev/bencher --tag v${BENCHER_VERSION} --locked bencher_cli`}</span></span></code></pre>
+
+Vous devriez voir quelque chose comme :
+
+<pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto; --darkreader-inline-bgcolor: #1d2125;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">{`$ cargo install --git https://github.com/bencherdev/bencher --tag ${BENCHER_VERSION} --locked bencher_cli`}</span></span>
+<span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">{`  Installing bencher_cli v${BENCHER_VERSION} (/workspace/bencher/services/cli)`}</span></span>
+<span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">    Updating crates.io index</span></span>
+<span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">    ...</span></span>
+<span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">    Finished release [optimized] target(s) in 0.27s</span></span>
+<span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">  Installing /workspace/.cargo/bin/bencher</span></span>
+<span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">{`   Installed package \`bencher_cli v${BENCHER_VERSION} (/workspace/bencher/services/cli)\` (executable \`bencher\`)`}</span></span></code></pre>
+
+Encore une fois, il est acceptable que votre sortie soit différente. Il est simplement important que cette commande fonctionne.
+
+<br />
+
+Enfin, vérifions que nous avons le CLI `bencher` installé.
+
+Exécutez : `bencher --version`
+
+Vous devriez voir :
+
+<pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto; --darkreader-inline-bgcolor: #1d2125;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">$ bencher --version</span></span>
+<span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">{`bencher ${BENCHER_VERSION}`}</span></span></code></pre>
+
+<br />
+
+## Créez un compte Bencher Cloud
+
+Bencher est open source et auto-hébergeable.
+Si vous êtes intéressé par l'auto-hébergement, consultez le [tutoriel Docker Bencher](/docs/tutorial/docker).
+Pour ce tutoriel cependant, nous allons utiliser Bencher Cloud.
+
+
+### <a href="/auth/signup" target="_blank">Inscrivez-vous à Bencher Cloud</a>
+<br />
+
+Une fois que vous avez créé un compte, vous devrez confirmer votre adresse e-mail.
+Vérifiez votre email pour un lien de confirmation.
+Après cela, vous devriez être connecté à Bencher Cloud.
+Si vous actualisez cette page, vous devriez maintenant voir un bouton `Déconnexion` dans le coin supérieur droit.
+
+<br />
+
+## Créez un token API
+
+Pour utiliser l'API Bencher, vous devrez créer un token API.
+Allez dans `Utilisateur` > `Tokens API` et cliquez sur le bouton `➕ Ajouter`.
+
+### <a href="/auth/signup" target="_blank">Ajouter un token API</a>
+<br />
+
+Une fois que vous avez créé votre nouveau token API, vous devrez le copier dans votre presse-papiers.
+Dans le terminal que vous prévoyez d'utiliser, exportez le token API en tant que variable d'environnement.
+
+Exécutez: `export BENCHER_API_TOKEN=VOTRE_TOKEN`
+
+Si vous exécutez ensuite: `echo $BENCHER_API_TOKEN`
+
+Vous devriez voir :
+
+```
+$ echo $BENCHER_API_TOKEN
+VOTRE_TOKEN
+```
+
+<br />
+
+> 🐰 Note: Si vous passez à un autre terminal, vous devrez exporter à nouveau le token API.
+
+<br />
+
+## Créez un projet
+
+Maintenant que nous avons un compte utilisateur et un token API, nous pouvons créer un projet.
+D'abord, nous devons savoir à quelle organisation appartient notre nouveau projet.
+
+Exécutez : `bencher org ls`
+
+Vous devriez voir quelque chose comme :
+
+```
+$ bencher org ls
+[
+  {
+    "name": "Saul Goodman",
+    "slug": "saul-goodman",
+    "uuid": "4581feb0-6cac-40a9-bd8a-d7865183b01e"
+    "created": "2022-07-06T11:24:36Z",
+    "modified": "2022-07-06T11:24:36Z"
+  }
+]
+```
+
+Votre sortie devrait être légèrement différente de celle ci-dessus :
+- Le `uuid` est pseudo-aléatoire
+- Le `name` et le `slug` seront basés sur votre nom d'utilisateur
+- Les horodatages `created` et `modified` seront à partir de votre inscription
+
+<br />
+
+Nous pouvons maintenant créer un nouveau projet à l'intérieur de votre organisation.
+Substituez votre `slug` d'organisation à l'argument `--org` (ie `VOTRE_SLUG_ORG`) dans la commande ci-dessous.
+
+Exécutez : `bencher project create --org YOUR_ORG_SLUG --url http://www.savewalterwhite.com "Save Walter White"`
+
+Vous devriez voir quelque chose comme :
+
+```
+$ bencher project create --org saul-goodman --url http://www.savewalterwhite.com "Save Walter White"
+{
+  "organization": "4581feb0-6cac-40a9-bd8a-d7865183b01e",
+  "name": "Save Walter White",
+  "slug": "save-walter-white-12345",
+  "uuid": "c6c2a8e8-685e-4413-9a19-5b79053a71b1"
+  "url": "http://www.savewalterwhite.com",
+  "public": true,
+  "created": "2022-07-06T11:36:24Z",
+  "modified": "2022-07-06T11:36:24Z"
+}
+```
+
+Encore une fois, votre sortie devrait être légèrement différente que ci-dessus.
+Il est simplement important que cette commande fonctionne.
+Notez le champ `slug` du projet (ie `save-walter-white-12345`).
+
+<br />
+
+
+<div class="box" style="margin-top: 4rem;">Ce document a été automatiquement généré par OpenAI GPT-4. Il peut ne pas être précis et peut contenir des erreurs. Si vous trouvez des erreurs, veuillez <a href="https://github.com/bencherdev/bencher/issues/new?title=Issue+with+translation+to+French&body=Issue+with+translation+to+French+for+tutorial%2Fen%2Fquick-start-a.mdx.&labels=documentation" target="_blank">ouvrir une issue sur GitHub</a>.</div>

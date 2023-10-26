@@ -29,13 +29,12 @@ pub struct CliSwagger {}
 
 #[derive(Parser, Debug)]
 pub struct CliTranslate {
+    /// File input path
+    pub input_path: Utf8PathBuf,
+
     // Target language
     #[clap(value_enum, long)]
     pub lang: CliLanguage,
-
-    /// File input path
-    #[clap(long)]
-    pub input_path: Utf8PathBuf,
 
     /// File output path
     #[clap(long)]
@@ -45,14 +44,19 @@ pub struct CliTranslate {
 #[derive(ValueEnum, Debug, Clone, Copy)]
 #[clap(rename_all = "snake_case")]
 pub enum CliLanguage {
-    Arabic,
+    #[clap(alias = "zh")]
     Chinese,
+    #[clap(alias = "es")]
     Spanish,
+    #[clap(alias = "fr")]
     French,
+    #[clap(alias = "de")]
     German,
+    #[clap(alias = "ja")]
     Japanese,
-    Kannada,
+    #[clap(alias = "pt")]
     Portuguese,
+    #[clap(alias = "ru")]
     Russian,
 }
 

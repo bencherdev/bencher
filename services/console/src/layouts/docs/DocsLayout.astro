@@ -1,6 +1,6 @@
 ---
 import BaseLayout from "../BaseLayout.astro";
-import AuthNavbar from "../../components/site/navbar/AuthNavbar";
+import DocsNavbar from "../../components/docs/DocsNavbar";
 import DocsMenu from "../../components/docs/DocsMenu.astro";
 import DocsTab from "../../components/docs/docs_tab";
 import SelfHostedRedirect from "../../components/site/SelfHostedRedirct";
@@ -25,7 +25,7 @@ const { title, titleFmt, description, heading, tab, lang } = Astro.props;
 >
   <SelfHostedRedirect client:only="solid-js" path="/console" />
   <!-- Note that the AuthNavbar does *not* fill the slot `navbar`. It is a client-side override.  -->
-  <AuthNavbar client:only="solid-js" />
+  <DocsNavbar client:only="solid-js" />
   <div class="is-widescreen">
     <div class="columns is-reverse-mobile">
       <div class="columns">

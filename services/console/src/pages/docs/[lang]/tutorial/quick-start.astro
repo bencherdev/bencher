@@ -1,33 +1,72 @@
 ---
 import DocsLayout from "../../../../layouts/docs/DocsLayout.astro";
+import { getCollection } from "astro:content";
 import { Content } from "../../../../content/tutorial/fr/quick-start.mdx";
 import * as quickStart from "../../../../content/tutorial/fr/quick-start.mdx";
 import AuthOverride from "../../../../components/auth/AuthOverride";
 import AddAnApiToken from "../../../../components/docs/override/AddAnApiToken";
+
 // 1. Generate a new path for every collection entry
 export async function getStaticPaths() {
-  return [];
+  const pages = await getCollection("tutorial");
+  return pages.map(page => {
+    const [lang, ...slug] = page.id.substring(0, page.id.lastIndexOf('.'))?.split('/');
+    return { params: { lang, slug: slug.join('/') || undefined }, props: page }
+  }).filter(page => page.params.slug === "quick-start");
 }
 // 2. When it's time to render, you can get the entry directly from the prop
+const { lang } = Astro.params;
+
+const signupId = () => {
+  switch (lang) {
+    case "fr":
+      return "inscrivez-vous-à-bencher-cloud";
+    default:
+      return "";
+  }
+}
+const signupText = () => {
+  switch (lang) {
+    case "fr":
+      return "Vous êtes inscrit à Bencher Cloud";
+    default:
+      return "You are signed up for Bencher Cloud";
+  }
+}
+const tokenId = () => {
+  switch (lang) {
+    case "fr":
+      return "ajouter-un-token-api";
+    default:
+      return "";
+  }
+}
+const tokenText = () => {
+  switch (lang) {
+    case "fr":
+      return "Ajouter un jeton API";
+    default:
+      return "Add an API Token";
+  }
+}
+
 const page = Astro.props;
 const { Content } = await page.render();
-
-const signupId = "signup-for-bencher-cloud";
-const tokenId = "add-an-api-token";
 ---
 
 <DocsLayout
   title={quickStart.frontmatter.title}
   description={quickStart.frontmatter.description}
   heading={quickStart.frontmatter.heading}
+  lang={lang}
 >
   <Content />
-  <AuthOverride client:only="solid-js" elementId={signupId}>
-    <h4 id={signupId}>✅ You are signed up for Bencher Cloud</h4>
+  <AuthOverride client:only="solid-js" elementId={signupId()}>
+    <h4 id={signupId()}>✅ {signupText}</h4>
   </AuthOverride>
-  <AuthOverride client:only="solid-js" elementId={tokenId}>
-    <h4 id={tokenId}>
-      <AddAnApiToken client:only="solid-js" />
+  <AuthOverride client:only="solid-js" elementId={tokenId()}>
+    <h4 id={tokenId()}>
+      <AddAnApiToken client:only="solid-js" text={tokenText()} />
     </h4>
   </AuthOverride>
 </DocsLayout>
