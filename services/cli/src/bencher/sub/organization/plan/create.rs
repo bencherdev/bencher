@@ -1,31 +1,26 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_client::types::{Entitlements, JsonCard, JsonNewPlan, OrganizationUuid, PlanLevel};
-use bencher_json::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear, JsonPlan, ResourceId};
+use bencher_client::types::{
+    Entitlements, JsonCard, JsonCustomer, JsonNewPlan, OrganizationUuid, PlanLevel,
+};
+use bencher_json::{JsonPlan, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    parser::organization::plan::{CliPlanCard, CliPlanCreate, CliPlanLevel},
+    parser::organization::plan::{CliPlanCard, CliPlanCreate, CliPlanCustomer, CliPlanLevel},
     CliError,
 };
 
 #[derive(Debug, Clone)]
 pub struct Create {
     pub org: ResourceId,
-    pub card: Card,
+    pub customer: JsonCustomer,
+    pub card: JsonCard,
     pub level: PlanLevel,
     pub entitlements: Option<Entitlements>,
     pub organization: Option<OrganizationUuid>,
     pub backend: Backend,
-}
-
-#[derive(Debug, Clone)]
-pub struct Card {
-    pub number: CardNumber,
-    pub exp_month: ExpirationMonth,
-    pub exp_year: ExpirationYear,
-    pub cvc: CardCvc,
 }
 
 impl TryFrom<CliPlanCreate> for Create {
@@ -34,6 +29,7 @@ impl TryFrom<CliPlanCreate> for Create {
     fn try_from(create: CliPlanCreate) -> Result<Self, Self::Error> {
         let CliPlanCreate {
             org,
+            customer,
             card,
             level,
             entitlements,
@@ -42,12 +38,41 @@ impl TryFrom<CliPlanCreate> for Create {
         } = create;
         Ok(Self {
             org,
+            customer: customer.into(),
             card: card.into(),
             level: level.into(),
             entitlements: entitlements.map(Into::into),
             organization: organization.map(Into::into),
             backend: backend.try_into()?,
         })
+    }
+}
+
+impl From<CliPlanCustomer> for JsonCustomer {
+    fn from(customer: CliPlanCustomer) -> Self {
+        let CliPlanCustomer { uuid, name, email } = customer;
+        Self {
+            uuid: uuid.into(),
+            name: name.into(),
+            email: email.into(),
+        }
+    }
+}
+
+impl From<CliPlanCard> for JsonCard {
+    fn from(card: CliPlanCard) -> Self {
+        let CliPlanCard {
+            number,
+            exp_month,
+            exp_year,
+            cvc,
+        } = card;
+        Self {
+            number: number.into(),
+            exp_month: exp_month.into(),
+            exp_year: exp_year.into(),
+            cvc: cvc.into(),
+        }
     }
 }
 
@@ -61,26 +86,10 @@ impl From<CliPlanLevel> for PlanLevel {
     }
 }
 
-impl From<CliPlanCard> for Card {
-    fn from(card: CliPlanCard) -> Self {
-        let CliPlanCard {
-            number,
-            exp_month,
-            exp_year,
-            cvc,
-        } = card;
-        Self {
-            number,
-            exp_month,
-            exp_year,
-            cvc,
-        }
-    }
-}
-
 impl From<Create> for JsonNewPlan {
     fn from(create: Create) -> Self {
         let Create {
+            customer,
             card,
             level,
             entitlements,
@@ -88,27 +97,11 @@ impl From<Create> for JsonNewPlan {
             ..
         } = create;
         Self {
-            card: card.into(),
+            customer,
+            card,
             level,
             entitlements,
             organization,
-        }
-    }
-}
-
-impl From<Card> for JsonCard {
-    fn from(card: Card) -> Self {
-        let Card {
-            number,
-            exp_month,
-            exp_year,
-            cvc,
-        } = card;
-        Self {
-            number: number.into(),
-            exp_month: exp_month.into(),
-            exp_year: exp_year.into(),
-            cvc: cvc.into(),
         }
     }
 }

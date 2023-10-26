@@ -183,6 +183,12 @@ export interface JsonOrganization {
 	modified: string;
 }
 
+export interface JsonCustomer {
+	uuid: Uuid;
+	name: NonEmpty;
+	email: Email;
+}
+
 export interface JsonCard {
 	number: CardNumber;
 	exp_month: ExpirationMonth;
@@ -197,16 +203,11 @@ export enum PlanLevel {
 }
 
 export interface JsonNewPlan {
+	customer: JsonCustomer;
 	card: JsonCard;
 	level: PlanLevel;
 	entitlements?: Entitlements;
 	organization?: Uuid;
-}
-
-export interface JsonCustomer {
-	uuid: Uuid;
-	name: UserName;
-	email: Email;
 }
 
 export enum CardBrand {

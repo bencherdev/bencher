@@ -6432,7 +6432,7 @@
             "$ref": "#/components/schemas/Email"
           },
           "name": {
-            "$ref": "#/components/schemas/UserName"
+            "$ref": "#/components/schemas/NonEmpty"
           },
           "uuid": {
             "$ref": "#/components/schemas/UserUuid"
@@ -6794,6 +6794,9 @@
           "card": {
             "$ref": "#/components/schemas/JsonCard"
           },
+          "customer": {
+            "$ref": "#/components/schemas/JsonCustomer"
+          },
           "entitlements": {
             "nullable": true,
             "allOf": [
@@ -6816,6 +6819,7 @@
         },
         "required": [
           "card",
+          "customer",
           "level"
         ]
       },

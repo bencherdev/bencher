@@ -1,8 +1,8 @@
 #![cfg(feature = "plus")]
 
 use bencher_json::{
-    CardCvc, CardNumber, Entitlements, ExpirationMonth, ExpirationYear, OrganizationUuid,
-    ResourceId,
+    CardCvc, CardNumber, Email, Entitlements, ExpirationMonth, ExpirationYear, NonEmpty,
+    OrganizationUuid, ResourceId, UserUuid,
 };
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
@@ -25,6 +25,9 @@ pub enum CliOrganizationPlan {
 pub struct CliPlanCreate {
     /// Organization slug or UUID
     pub org: ResourceId,
+
+    #[clap(flatten)]
+    pub customer: CliPlanCustomer,
 
     #[clap(flatten)]
     pub card: CliPlanCard,
@@ -61,6 +64,21 @@ pub struct CliPlanDelete {
 
     #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+#[derive(Args, Debug)]
+pub struct CliPlanCustomer {
+    /// User UUID
+    #[clap(long)]
+    pub uuid: UserUuid,
+
+    /// Name on card
+    #[clap(long)]
+    pub name: NonEmpty,
+
+    /// User email
+    #[clap(long)]
+    pub email: Email,
 }
 
 #[derive(Args, Debug)]

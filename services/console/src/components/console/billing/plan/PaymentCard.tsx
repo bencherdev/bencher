@@ -1,15 +1,19 @@
+import type { Params } from "astro";
 import type { InitOutput } from "bencher_valid";
 import {
-	createSignal,
 	type Accessor,
 	type Resource,
 	createEffect,
+	createSignal,
 } from "solid-js";
 import type {
 	JsonAuthUser,
+	JsonCustomer,
 	JsonNewPlan,
 	PlanLevel,
 } from "../../../../types/bencher";
+import { httpPost } from "../../../../util/http";
+import { NotifyKind, pageNotify } from "../../../../util/notify";
 import {
 	cleanCardNumber,
 	cleanExpiration,
@@ -17,13 +21,10 @@ import {
 	validCardNumber,
 	validExpiration,
 	validJwt,
-	validUuid,
+	validNonEmpty,
 } from "../../../../util/valid";
 import Field, { type FieldValue } from "../../../field/Field";
 import FieldKind from "../../../field/kind";
-import { httpPost } from "../../../../util/http";
-import type { Params } from "astro";
-import { NotifyKind, pageNotify } from "../../../../util/notify";
 
 interface Props {
 	apiUrl: string;
@@ -69,6 +70,11 @@ const PaymentCard = (props: Props) => {
 			return;
 		}
 
+		const customer: JsonCustomer = {
+			uuid: props.user?.user?.uuid,
+			name: form()?.name?.value,
+			email: props.user?.user?.email,
+		};
 		const number = cleanCardNumber(form()?.number?.value);
 		const exp = cleanExpiration(form()?.expiration?.value);
 		if (exp === null) {
@@ -82,6 +88,7 @@ const PaymentCard = (props: Props) => {
 			cvc: cvc,
 		};
 		const data: JsonNewPlan = {
+			customer: customer,
 			card: card,
 			level: props.plan(),
 			entitlements: props.entitlements(),
@@ -117,6 +124,16 @@ const PaymentCard = (props: Props) => {
 
 	return (
 		<form class="box">
+			<Field
+				params={props.params}
+				kind={FieldKind.INPUT}
+				fieldKey="name"
+				label={CARD_FIELDS.name?.label}
+				value={form()?.name?.value}
+				valid={form()?.name?.valid}
+				config={CARD_FIELDS.name}
+				handleField={handleField}
+			/>
 			<Field
 				params={props.params}
 				kind={FieldKind.INPUT}
@@ -163,6 +180,10 @@ const PaymentCard = (props: Props) => {
 };
 
 export interface CardForm {
+	name: {
+		value: string;
+		valid: null | boolean;
+	};
 	number: {
 		value: string;
 		valid: null | boolean;
@@ -179,6 +200,10 @@ export interface CardForm {
 
 export const initCardFrom = () => {
 	return {
+		name: {
+			value: "",
+			valid: null,
+		},
 		number: {
 			value: "",
 			valid: null,
@@ -195,6 +220,14 @@ export const initCardFrom = () => {
 };
 
 const CARD_FIELDS = {
+	name: {
+		label: "Name on Card",
+		type: "text",
+		placeholder: "Full Name",
+		icon: "fas fa-signature",
+		help: "Must be a non-empty string",
+		validate: validNonEmpty,
+	},
 	number: {
 		label: "Card Number",
 		type: "text",

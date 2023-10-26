@@ -27,7 +27,7 @@ use crate::{
             plan::{InsertPlan, QueryPlan},
             UpdateOrganization,
         },
-        user::{auth::AuthUser, QueryUser},
+        user::auth::AuthUser,
     },
     schema,
 };
@@ -151,17 +151,11 @@ async fn post_inner(
         ));
     }
 
-    let json_user = schema::user::table
-        .filter(schema::user::id.eq(auth_user.id))
-        .first::<QueryUser>(conn)
-        .map_err(resource_not_found_err!(User, auth_user))?
-        .into_json();
-
     // Create a customer for the user
     let customer = biller
-        .get_or_create_customer(&json_user.name, &json_user.email, json_user.uuid)
+        .get_or_create_customer(&json_plan.customer)
         .await
-        .map_err(resource_not_found_err!(Plan, json_user))?;
+        .map_err(resource_not_found_err!(Plan, &json_plan.customer))?;
 
     // Create a payment method for the user
     let payment_method = biller

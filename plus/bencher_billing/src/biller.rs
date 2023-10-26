@@ -4,7 +4,6 @@ use bencher_json::{
     organization::plan::{JsonCard, JsonCardDetails, JsonCustomer, JsonPlan},
     system::config::JsonBilling,
     Email, Entitlements, LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus,
-    UserName, UserUuid,
 };
 use stripe::{
     AttachPaymentMethod, CancelSubscription, CardDetailsParams as PaymentCard,
@@ -115,14 +114,12 @@ impl Biller {
 
     pub async fn get_or_create_customer(
         &self,
-        name: &UserName,
-        email: &Email,
-        uuid: UserUuid,
+        customer: &JsonCustomer,
     ) -> Result<Customer, BillingError> {
-        if let Some(customer) = self.get_customer(email).await? {
+        if let Some(customer) = self.get_customer(&customer.email).await? {
             Ok(customer)
         } else {
-            self.create_customer(name, email, uuid).await
+            self.create_customer(customer).await
         }
     }
 
@@ -146,17 +143,12 @@ impl Biller {
 
     // WARNING: Use caution when calling this directly as multiple users with the same email can be created
     // Use `get_or_create_customer` instead!
-    async fn create_customer(
-        &self,
-        name: &UserName,
-        email: &Email,
-        uuid: UserUuid,
-    ) -> Result<Customer, BillingError> {
+    async fn create_customer(&self, customer: &JsonCustomer) -> Result<Customer, BillingError> {
         let create_customer = CreateCustomer {
-            name: Some(name.as_ref()),
-            email: Some(email.as_ref()),
+            name: Some(customer.name.as_ref()),
+            email: Some(customer.email.as_ref()),
             metadata: Some(
-                [(METADATA_UUID.into(), uuid.to_string())]
+                [(METADATA_UUID.into(), customer.uuid.to_string())]
                     .into_iter()
                     .collect(),
             ),
@@ -557,7 +549,7 @@ mod test {
     use std::str::FromStr;
 
     use bencher_json::{
-        organization::plan::{JsonCard, DEFAULT_PRICE_NAME},
+        organization::plan::{JsonCard, JsonCustomer, DEFAULT_PRICE_NAME},
         system::config::{JsonBilling, JsonProduct, JsonProducts},
         Entitlements, LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus,
         UserUuid,
@@ -724,19 +716,25 @@ mod test {
         let email = format!("muriel.bagge.{}@nowhere.com", rand::random::<u64>())
             .parse()
             .unwrap();
-        let user_uuid = UserUuid::new();
-        assert!(biller.get_customer(&email).await.unwrap().is_none());
-        let create_customer = biller
-            .create_customer(&name, &email, user_uuid)
+        let json_customer = JsonCustomer {
+            uuid: UserUuid::new(),
+            name,
+            email,
+        };
+        assert!(biller
+            .get_customer(&json_customer.email)
             .await
+            .unwrap()
+            .is_none());
+        let create_customer = biller.create_customer(&json_customer).await.unwrap();
+        let get_customer = biller
+            .get_customer(&json_customer.email)
+            .await
+            .unwrap()
             .unwrap();
-        let get_customer = biller.get_customer(&email).await.unwrap().unwrap();
         assert_eq!(create_customer.id, get_customer.id);
         let customer = create_customer;
-        let get_or_create_customer = biller
-            .get_or_create_customer(&name, &email, user_uuid)
-            .await
-            .unwrap();
+        let get_or_create_customer = biller.get_or_create_customer(&json_customer).await.unwrap();
         assert_eq!(customer.id, get_or_create_customer.id);
 
         // Payment Method

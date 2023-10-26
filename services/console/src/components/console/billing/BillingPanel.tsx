@@ -29,6 +29,7 @@ import FieldKind from "../../field/kind";
 import type { BillingHeaderConfig } from "./BillingHeader";
 import BillingHeader from "./BillingHeader";
 import BillingForm from "./plan/BillingForm";
+import PaymentMethod from "./plan/PaymentMethod";
 
 interface Props {
 	apiUrl: string;
@@ -160,6 +161,8 @@ const CloudMeteredPanel = (props: {
 			</h4>
 			<h4>Current Estimated Cost: {fmtUsd(estCost())}</h4>
 			<br />
+			<PaymentMethod usage={props.usage} />
+			<br />
 			<p>
 				To update or cancel your subscription please email{" "}
 				<a href="mailto:everett@bencher.dev">everett@bencher.dev</a>
@@ -192,6 +195,8 @@ const CloudLicensedPanel = (props: {
 					(props.usage()?.usage ?? 0)
 				).toLocaleString()}
 			</h4>
+			<br />
+			<PaymentMethod usage={props.usage} />
 			<br />
 			<p>
 				To update or cancel your subscription please email{" "}
@@ -260,6 +265,8 @@ const CloudSelfHostedLicensedPanel = (props: {
 					</li>
 				</ol>
 			</h4>
+			<br />
+			<PaymentMethod usage={props.usage} />
 			<br />
 			<p>
 				To update or cancel your subscription please email{" "}

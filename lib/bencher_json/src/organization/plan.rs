@@ -2,7 +2,7 @@
 
 use bencher_valid::{
     CardBrand, CardCvc, CardNumber, DateTime, Email, Entitlements, ExpirationMonth, ExpirationYear,
-    Jwt, LastFour, PlanLevel, PlanStatus, UserName,
+    Jwt, LastFour, NonEmpty, PlanLevel, PlanStatus,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -16,10 +16,20 @@ pub const DEFAULT_PRICE_NAME: &str = "default";
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewPlan {
+    pub customer: JsonCustomer,
     pub card: JsonCard,
     pub level: PlanLevel,
     pub entitlements: Option<Entitlements>,
     pub organization: Option<OrganizationUuid>,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonCustomer {
+    pub uuid: UserUuid,
+    pub name: NonEmpty,
+    pub email: Email,
 }
 
 #[typeshare::typeshare]
@@ -45,15 +55,6 @@ pub struct JsonPlan {
     pub current_period_end: DateTime,
     pub status: PlanStatus,
     pub license: Option<JsonLicense>,
-}
-
-#[typeshare::typeshare]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonCustomer {
-    pub uuid: UserUuid,
-    pub name: UserName,
-    pub email: Email,
 }
 
 #[typeshare::typeshare]
