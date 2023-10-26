@@ -5,21 +5,23 @@ import Navbar from "../components/site/navbar/Navbar";
 import Footer from "../components/site/Footer";
 import { BENCHER_TITLE, BENCHER_DESCRIPTION } from "../util/resource";
 import { BENCHER_LOGO_URL } from "../util/ext";
+import { defaultLang } from "../i18n/ui.ts";
 // import { ViewTransitions } from "astro:transitions";
 
 interface Props {
   title: string;
   titleFmt?: undefined | ((title: string) => string);
   description: string;
+  lang?: undefined | string;
 }
 
 // https://docs.astro.build/en/reference/directives-reference/#definevars
 const PUBLIC_GOOGLE_ANALYTICS_ID = import.meta.env.PUBLIC_GOOGLE_ANALYTICS_ID;
-const { title, titleFmt, description } = Astro.props;
+const { title, titleFmt, description, lang } = Astro.props;
 ---
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang={lang ?? defaultLang}>
   <head>
     <meta charset="UTF-8" />
     <meta

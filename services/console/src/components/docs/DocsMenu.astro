@@ -8,16 +8,11 @@ interface Props {
   lang?: undefined | string;
 }
 
-const { tab } = Astro.props;
-
 async function getLangCollection(collection: string) {
   const pages = await getCollection(collection);
   const langPagesMap = pages.map(page => {
     const [lang, ...slug] = page.slug.split('/');
-    const slugSlash = slug.join('/') || undefined;
-    if (!showDefaultLang && lang === defaultLang) {
-      page.slug = slugSlash;
-    }
+    page.slug = slug.join('/') || undefined;
     return { lang, page }
   }).reduce((lpMap, langPage) => {
     if (lpMap[langPage.lang]) {
@@ -50,6 +45,7 @@ reference.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 const rust = await getCollection("rust");
 rust.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 
+const { tab } = Astro.props;
 const lang = Astro.props.lang ?? defaultLang;
 ---
 
@@ -66,7 +62,7 @@ const lang = Astro.props.lang ?? defaultLang;
       {
         tutorial[lang]?.map((page) => (
           <li>
-            <a href={`/docs/tutorial/${page.slug}`}>{page.data.title}</a>
+            <a href={`/docs/${!showDefaultLang && lang === defaultLang ?  "" : `${lang}/` }tutorial/${page.slug}`}>{page.data.title}</a>
           </li>
         ))
       }

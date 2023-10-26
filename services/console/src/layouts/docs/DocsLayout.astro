@@ -21,6 +21,7 @@ const { title, titleFmt, description, heading, tab, lang } = Astro.props;
   title={title}
   titleFmt={titleFmt ?? ((title) => `📖 ${heading ?? title}`)}
   description={description}
+  lang={lang}
 >
   <SelfHostedRedirect client:only="solid-js" path="/console" />
   <!-- Note that the AuthNavbar does *not* fill the slot `navbar`. It is a client-side override.  -->
