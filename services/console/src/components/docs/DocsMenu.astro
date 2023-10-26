@@ -5,7 +5,7 @@ import {defaultLang, showDefaultLang} from "../../i18n/ui.ts";
 
 interface Props {
   tab: DocsTab;
-  lang?: string;
+  lang?: undefined | string;
 }
 
 const { tab } = Astro.props;

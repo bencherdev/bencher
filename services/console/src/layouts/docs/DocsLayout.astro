@@ -11,9 +11,10 @@ interface Props {
   description: string;
   heading?: undefined | string;
   tab?: DocsTab;
+  lang?: string;
 }
 
-const { title, titleFmt, description, heading, tab } = Astro.props;
+const { title, titleFmt, description, heading, tab, lang } = Astro.props;
 ---
 
 <BaseLayout
@@ -28,7 +29,7 @@ const { title, titleFmt, description, heading, tab } = Astro.props;
     <div class="columns is-reverse-mobile">
       <div class="columns">
         <div class="column is-narrow">
-          <DocsMenu tab={tab ?? DocsTab.Docs}/>
+          <DocsMenu tab={tab ?? DocsTab.Docs} lang={lang}/>
         </div>
       </div>
       <div class="column is-two-thirds">
