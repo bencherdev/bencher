@@ -1,30 +1,41 @@
 ---
 import { getCollection } from "astro:content";
 import type DocsTab from "./docs_tab";
-import {defaultLang} from "../../i18n/ui.ts";
+import {defaultLang, showDefaultLang} from "../../i18n/ui.ts";
 
 interface Props {
   tab: DocsTab;
+  lang?: string;
 }
 
 const { tab } = Astro.props;
 
-async function getLangCollection(collection: string, lang: string) {
+async function getLangCollection(collection: string) {
   const pages = await getCollection(collection);
-  return pages.map(page => {
+  const langPagesMap = pages.map(page => {
     const [lang, ...slug] = page.slug.split('/');
     const slugSlash = slug.join('/') || undefined;
-    if (lang === defaultLang) {
+    if (!showDefaultLang && lang === defaultLang) {
       page.slug = slugSlash;
     }
-    return { params: { lang, slug: slugSlash }, props: page }
-  }).filter(path => path.params.lang === lang).map(
-    path => path.props
-  ).sort((a, b) => a.data.sortOrder - b.data.sortOrder);
+    return { lang, page }
+  }).reduce((lpMap, langPage) => {
+    if (lpMap[langPage.lang]) {
+      lpMap[langPage.lang].push(langPage.page);
+    } else {
+      lpMap[langPage.lang] = [langPage.page];
+    }
+    return lpMap;
+  }, {});
+  const langPagesMapSorted = {};
+  for (const [key, value] of Object.entries(langPagesMap)) {
+    langPagesMapSorted[key] = value.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
+  }
+  return langPagesMapSorted;
 }
 
 // Docs
-const tutorial = await getLangCollection("tutorial", "en");
+const tutorial = await getLangCollection("tutorial");
 
 const how_to = await getCollection("how_to");
 how_to.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
@@ -38,6 +49,8 @@ reference.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 // Learn
 const rust = await getCollection("rust");
 rust.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
+
+const lang = Astro.props.lang ?? defaultLang;
 ---
 
 <aside class="menu is-sticky">
@@ -51,7 +64,7 @@ rust.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
     <p class="menu-label">Tutorial</p>
     <ul class="menu-list">
       {
-        tutorial.map((page) => (
+        tutorial[lang]?.map((page) => (
           <li>
             <a href={`/docs/tutorial/${page.slug}`}>{page.data.title}</a>
           </li>
