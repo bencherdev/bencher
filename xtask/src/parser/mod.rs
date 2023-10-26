@@ -39,6 +39,10 @@ pub struct CliTranslate {
     /// File output path
     #[clap(long)]
     pub output_path: Option<Utf8PathBuf>,
+
+    /// Append disclosure
+    #[clap(long)]
+    pub disclosure: bool,
 }
 
 #[derive(ValueEnum, Debug, Clone, Copy)]
