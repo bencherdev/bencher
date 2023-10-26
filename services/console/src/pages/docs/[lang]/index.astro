@@ -2,16 +2,16 @@
 import { getCollection } from "astro:content";
 import DocsLayout from "../../../layouts/docs/DocsLayout.astro";
 import {getLangCollection} from "../../../i18n/utils.ts"
-import { defaultLang, showDefaultLang } from "../../../i18n/ui";
+import { Language, defaultLang, showDefaultLang, tutorial } from "../../../i18n/ui";
 
 export async function getStaticPaths() {
     return ["fr"].map((lang) => {return { params: { lang } }});
 }
 
-const lang = Astro.params.lang ?? defaultLang;
+const lang: Language = Astro.params.lang ?? defaultLang;
 const langPath = !showDefaultLang && lang === defaultLang ?  "" : `${lang}/`;
 
-const tutorial = await getLangCollection("tutorial");
+const tutorialCollection = await getLangCollection("tutorial");
 
 const how_to = await getCollection("how_to");
 how_to.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
@@ -25,11 +25,12 @@ reference.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 const title = () => {
     switch(lang) {
         case "fr":
-            "Documents de Bencher";
+            return "Documents de Bencher";
         default:
             return "Bencher Docs";
     }
 };
+
 const description = () => {
     switch (lang) {
         case "fr":
@@ -38,6 +39,7 @@ const description = () => {
             return "Table of contents for the Bencher documentation. Learn how to setup continuous benchmarking for your project.";
     }
 }
+
 const alsoIn = () => {
     switch (lang) {
         case "fr":
@@ -48,12 +50,12 @@ const alsoIn = () => {
 }
 ---
 
-<DocsLayout title={title()} description={description()} heading={title()}>
+<DocsLayout title={title()} description={description()} heading={title()} lang={lang}>
   <div class="menu">
-    <p class="menu-label">Tutorial</p>
+    <p class="menu-label">{tutorial(lang)}</p>
     <ul class="menu-list">
       {
-        tutorial[lang]?.map((page) => (
+        tutorialCollection[lang]?.map((page) => (
           <li>
             <a href={`/docs/${langPath}tutorial/${page.slug}`}>{page.data.title}</a>
           </li>

@@ -6,6 +6,11 @@ export const languages = {
 	fr: "Français",
 };
 
+export enum Language {
+	en = "en",
+	fr = "fr",
+}
+
 export const ui = {
 	en: {
 		"nav.home": "Home",
@@ -17,3 +22,13 @@ export const ui = {
 		"nav.about": "À propos",
 	},
 } as const;
+
+export const tutorial = (lang: Language) => {
+	switch (lang) {
+		case Language.fr:
+			return "Didacticiel";
+		case Language.en:
+		default:
+			return "Tutorial";
+	}
+};

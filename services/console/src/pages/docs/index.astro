@@ -5,11 +5,13 @@ import {defaultLang} from "../../i18n/ui.js";
 
 async function getLangCollection(collection: string) {
   const pages = await getCollection(collection);
-  return pages.filter(page => page.id.startsWith(defaultLang)).sort((a, b) => a.data.sortOrder - b.data.sortOrder);
+  return pages.map(page => {
+    const [lang, ...slug] = page.id.substring(0, page.id.lastIndexOf('.'))?.split('/');
+    return { params: { lang, slug: slug.join('/') || undefined }, props: page }
+  }).filter(page => page.params.lang === defaultLang).sort((a, b) => a.props.data.sortOrder - b.props.data.sortOrder);
 }
 
 const tutorial = await getLangCollection("tutorial");
-tutorial.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 
 const how_to = await getCollection("how_to");
 how_to.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
@@ -32,7 +34,7 @@ const description =
       {
         tutorial.map((page) => (
           <li>
-            <a href={`/docs/tutorial/${page.slug}`}>{page.data.heading}</a>
+            <a href={`/docs/tutorial/${page.params.slug}`}>{page.props.data.heading}</a>
           </li>
         ))
       }
