@@ -1,8 +1,6 @@
 ---
 import DocsLayout from "../../../../layouts/docs/DocsLayout.astro";
 import { getCollection } from "astro:content";
-import { Content } from "../../../../content/tutorial/fr/quick-start.mdx";
-import * as quickStart from "../../../../content/tutorial/fr/quick-start.mdx";
 import AuthOverride from "../../../../components/auth/AuthOverride";
 import AddAnApiToken from "../../../../components/docs/override/AddAnApiToken";
 import { Language } from "../../../../i18n/ui";
@@ -24,6 +22,8 @@ const signupId = () => {
       return "regístrate-en-bencher-cloud";
     case Language.fr:
       return "inscrivez-vous-à-bencher-cloud";
+    case Language.pt:
+      return "inscreva-se-para-o-bencher-cloud";
     default:
       return "";
   }
@@ -34,6 +34,8 @@ const signupText = () => {
       return "Estás registrado en Bencher Cloud";
     case Language.fr:
       return "Vous êtes inscrit à Bencher Cloud";
+    case Language.pt:
+      return "Você está inscrito no Bencher Cloud";
     default:
       return "You are signed up for Bencher Cloud";
   }
@@ -44,6 +46,8 @@ const tokenId = () => {
       return "añadir-un-token-de-api";
     case Language.fr:
       return "ajouter-un-token-api";
+    case Language.pt:
+      return "adicione-um-token-de-api";
     default:
       return "";
   }
@@ -54,6 +58,8 @@ const tokenText = () => {
       return "Añadir un token de API";
     case Language.fr:
       return "Ajouter un jeton API";
+    case Language.pt:
+      return "Adicionar um token de API";
     default:
       return "Add an API Token";
   }
@@ -64,9 +70,9 @@ const { Content } = await page.render();
 ---
 
 <DocsLayout
-  title={quickStart.frontmatter.title}
-  description={quickStart.frontmatter.description}
-  heading={quickStart.frontmatter.heading}
+  title={page?.data?.title}
+  description={page?.data?.description}
+  heading={page?.data?.heading}
   lang={lang}
 >
   <Content />
