@@ -4,6 +4,7 @@ import { getCollection } from "astro:content";
 import AuthOverride from "../../../../components/auth/AuthOverride";
 import AddAnApiToken from "../../../../components/docs/override/AddAnApiToken";
 import { Language } from "../../../../i18n/ui";
+import { Disclosure } from "../../../../chunks/Disclosure";
 
 // 1. Generate a new path for every collection entry
 export async function getStaticPaths() {
@@ -14,7 +15,7 @@ export async function getStaticPaths() {
   }).filter(page => page.params.slug === "quick-start");
 }
 // 2. When it's time to render, you can get the entry directly from the prop
-const { lang } = Astro.params;
+const { lang, slug } = Astro.params;
 
 const signupId = () => {
   switch (lang) {
@@ -28,8 +29,10 @@ const signupId = () => {
       return "ベンチャー-クラウド-にサインアップ";
     case Language.pt:
       return "inscreva-se-para-o-bencher-cloud";
+    case Language.ru:
+      return "зарегистрируйтесь-в-облаке-bencher";
     case Language.zh:
-      return "注册-bencher-cloud";
+      return "注册bencher-cloud";
     default:
       return "";
   }
@@ -49,6 +52,8 @@ const signupText = () => {
       return "ベンチャー クラウド にサインアップしています";
     case Language.pt:
       return "Você está inscrito no Bencher Cloud";
+    case Language.ru:
+      return "Вы зарегистрированы в Bencher Cloud";
     case Language.zh:
       return "您已注册 Bencher Cloud";
     default:
@@ -67,8 +72,10 @@ const tokenId = () => {
       return "api-トークンを追加";
     case Language.pt:
       return "adicione-um-token-de-api";
+    case Language.ru:
+      return "добавьте-api-токен";
     case Language.zh:
-      return "添加-api-令牌";
+      return "添加一个api令牌";
     default:
       return "";
   }
@@ -85,6 +92,8 @@ const tokenText = () => {
       return "API トークンを追加する";
     case Language.pt:
       return "Adicionar um token de API";
+    case Language.ru:
+      return "Добавить токен API";
     case Language.zh:
       return "添加 API 令牌";
     default:
@@ -111,4 +120,6 @@ const { Content } = await page.render();
       <AddAnApiToken client:only="solid-js" text={tokenText()} />
     </h4>
   </AuthOverride>
+
+  <Disclosure page={slug} lang={lang} />
 </DocsLayout>
