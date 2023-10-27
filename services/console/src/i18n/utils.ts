@@ -1,3 +1,4 @@
+import { Language, defaultLang, showDefaultLang } from "./ui";
 import { getCollection } from "astro:content";
 
 // export const languages = {
@@ -51,3 +52,6 @@ export async function getLangCollection(collection: string) {
 	}
 	return langPagesMapSorted;
 }
+
+export const langPath = (lang: Language) =>
+	!showDefaultLang && lang === defaultLang ? "" : `/${lang}`;

@@ -26,7 +26,7 @@ export const DisclosureDe = (props: { page: string }) => {
 	return (
 		<Disclosure
 			bodyText="Dieses Dokument wurde automatisch von OpenAI GPT-4 generiert. Es ist möglicherweise nicht korrekt und kann Fehler enthalten. Wenn Sie Fehler finden, "
-			linkText="<>öffnen Sie bitte ein Problem auf GitHub"
+			linkText="öffnen Sie bitte ein Problem auf GitHub"
 			page={props.page}
 			lang={Language.de}
 		/>

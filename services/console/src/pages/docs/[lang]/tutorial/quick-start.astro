@@ -18,6 +18,8 @@ const { lang } = Astro.params;
 
 const signupId = () => {
   switch (lang) {
+    case Language.de:
+      return "melden-sie-sich-für-bencher-cloud-an";
     case Language.es:
       return "regístrate-en-bencher-cloud";
     case Language.fr:
@@ -30,6 +32,8 @@ const signupId = () => {
 }
 const signupText = () => {
   switch (lang) {
+    case Language.de:
+      return "Sie sind für Bencher Cloud angemeldet";
     case Language.es:
       return "Estás registrado en Bencher Cloud";
     case Language.fr:
@@ -42,6 +46,8 @@ const signupText = () => {
 }
 const tokenId = () => {
   switch (lang) {
+    case Language.de:
+      return "fügen-sie-einen-api-token-hinzu";
     case Language.es:
       return "añadir-un-token-de-api";
     case Language.fr:
@@ -54,6 +60,8 @@ const tokenId = () => {
 }
 const tokenText = () => {
   switch (lang) {
+    case Language.de:
+      return "Fügen Sie ein API-Token hinzu";
     case Language.es:
       return "Añadir un token de API";
     case Language.fr:

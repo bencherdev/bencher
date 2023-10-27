@@ -1,4 +1,3 @@
-export const defaultLang = "en";
 export const showDefaultLang = false;
 
 export enum Language {
@@ -8,6 +7,7 @@ export enum Language {
 	fr = "fr",
 	pt = "pt",
 }
+export const defaultLang = Language.en;
 
 export const otherLanguages = [
 	Language.de,
@@ -15,6 +15,8 @@ export const otherLanguages = [
 	Language.fr,
 	Language.pt,
 ];
+
+export const allLanguages = [Language.en, ...otherLanguages];
 
 export const languageName = (lang: Language) => {
 	switch (lang) {
