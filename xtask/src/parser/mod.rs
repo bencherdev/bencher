@@ -48,20 +48,20 @@ pub struct CliTranslate {
 #[derive(ValueEnum, Debug, Clone, Copy)]
 #[clap(rename_all = "snake_case")]
 pub enum CliLanguage {
-    #[clap(alias = "zh")]
-    Chinese,
+    #[clap(alias = "de")]
+    German,
     #[clap(alias = "es")]
     Spanish,
     #[clap(alias = "fr")]
     French,
-    #[clap(alias = "de")]
-    German,
     #[clap(alias = "ja")]
     Japanese,
     #[clap(alias = "pt")]
     Portuguese,
     #[clap(alias = "ru")]
     Russian,
+    #[clap(alias = "zh")]
+    Chinese,
 }
 
 #[derive(Parser, Debug)]

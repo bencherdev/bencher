@@ -48,13 +48,13 @@ impl fmt::Display for CliLanguage {
             f,
             "{}",
             match self {
-                CliLanguage::Chinese => "Simplified Chinese",
+                CliLanguage::German => "German",
                 CliLanguage::Spanish => "Spanish",
                 CliLanguage::French => "French",
-                CliLanguage::German => "German",
                 CliLanguage::Japanese => "Japanese",
                 CliLanguage::Portuguese => "Portuguese",
                 CliLanguage::Russian => "Russian",
+                CliLanguage::Chinese => "Simplified Chinese",
             }
         )
     }
@@ -64,13 +64,13 @@ impl CliLanguage {
     // Returns the ISO 639-1 language code for the language
     fn iso_code(self) -> &'static str {
         match self {
-            CliLanguage::Chinese => "zh",
+            CliLanguage::German => "de",
             CliLanguage::Spanish => "es",
             CliLanguage::French => "fr",
-            CliLanguage::German => "de",
             CliLanguage::Japanese => "ja",
             CliLanguage::Portuguese => "pt",
             CliLanguage::Russian => "ru",
+            CliLanguage::Chinese => "zh",
         }
     }
 }
