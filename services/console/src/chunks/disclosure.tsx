@@ -76,3 +76,14 @@ export const DisclosurePt = (props: { page: string }) => {
 		/>
 	);
 };
+
+export const DisclosureZh = (props: { page: string }) => {
+	return (
+		<Disclosure
+			bodyText="该文档由 OpenAI GPT-4 自动生成。 它可能不准确并且可能包含错误。 如果您发现任何错误，请"
+			linkText="在 GitHub 上提出问题"
+			page={props.page}
+			lang={Language.zh}
+		/>
+	);
+};

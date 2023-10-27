@@ -1,0 +1,162 @@
+---
+title: "Docker 自托管"
+description: "学习如何使用Bencher进行自托管的持续性能测试设置"
+heading: "Docker 自托管"
+sortOrder: 2
+---
+
+import { BENCHER_VERSION } from "../../../util/ext";
+
+## 什么是 Bencher?
+
+Bencher 是一套[持续性能测试](/docs/zh/explanation/continuous-benchmarking)工具套件。
+你有没有遇到过性能退化影响到你的用户？
+Bencher 能够防止这种情况发生。
+Bencher 允许你在性能退化进入生产环境之前检测并防止它。
+
+- **运行**：使用你最喜欢的性能测试工具，在本地或者 CI 中运行你的性能测试。 `bencher` 命令行就简单包装你现有的性能测试工具并存储其结果。
+- **追踪**：追踪你的性能测试结果随时间的变化。根据源代码分支、测试环境和度量类型，使用基于 Bencher 的 web 控制台来监控、查询、绘制结果图形。
+- **捕捉**：在 CI 中捕捉性能退化。Bencher 使用的是最新的，可定制的分析技术来在性能退化进入生产环境之前就检测它。
+
+为了防止功能退化，单元测试通常会在 CI 中运行，基于同样的原因，为了防止性能退化，我们也应该在 CI 中运行 Bencher 的性能测试。性能问题就是 bug！
+
+Bencher 是开源的并且自托管的。
+如果你有意使用 Bencher Cloud，可以查看 [Bencher Cloud 快速上手教程](/docs/zh/tutorial/quick-start)。
+不过在这个教程中，我们将使用 Docker 来进行 Bencher 自托管。
+
+<br />
+
+## 克隆仓库
+
+为了完成这个教程，你需要安装 `git`。
+检查你是否安装了 `git`。
+
+运行： `git --version`
+
+你应该看到类似的输出：
+
+```
+$ git --version
+git version 2.37.3
+```
+
+没关系如果你的版本号不同。
+只要是这个命令可以运行就行。
+如果不行就按照这个[安装 `git` 的指导说明](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)来安装。
+
+<br />
+
+安装好 `git` 后，我们就可以克隆 Bencher 仓库了。
+
+运行: <code>{`git clone --branch v${BENCHER_VERSION} https://github.com/bencherdev/bencher.git`}</code>
+
+你应该能看到类似的输出：
+
+```
+$ git clone https://github.com/bencherdev/bencher.git
+Cloning into 'bencher'...
+remote: Enumerating objects: 24752, done.
+remote: Counting objects: 100% (7363/7363), done.
+remote: Compressing objects: 100% (2396/2396), done.
+remote: Total 24752 (delta 4862), reused 7274 (delta 4785), pack-reused 17389
+Receiving objects: 100% (24752/24752), 4.92 MiB | 12.43 MiB/s, done.
+Resolving deltas: 100% (16108/16108), done.
+```
+
+<br />
+
+## 运行 Bencher UI & API 服务器
+
+为了在本教程中运行 UI 和 API 服务器，你需要安装 `docker`。
+检查你是否安装了 `docker`。
+
+运行： `docker --version`
+
+你应该看到类似的输出：
+
+```
+$ docker --version
+Docker version 20.10.17, build 100c701
+```
+
+没关系你的版本号不同。只要是这个命令能执行就行。
+如果不行，按照这个[安装 `docker` 的指导说明](https://docs.docker.com/get-docker/)来安装。
+
+<br />
+
+安装好 `docker` 后，我们可以开始运行 UI 和 API 服务器了。
+
+运行： `docker compose up -d`
+
+你应该能看到类似的输出：
+
+```
+$ docker compose up -d
+[+] Running 16/16
+ ⠿ bencher_ui Pulled                                           5.9s
+ ...
+ ⠿ bencher_api Pulled                                          6.3s
+ ...
+[+] Running 3/3
+ ⠿ Network bencher_default      Started                        0.1s
+ ⠿ Container bencher_ui         Started                        0.8s
+ ⠿ Container bencher_api_local  Started                        0.4s
+```
+
+同样的，只要是这个命令能执行就行，输出可以不同。
+
+<br />
+
+接下来，检查看看两个 docker 容器是否都在运行。
+
+运行： `docker ps`
+
+你应该能看到类似的输出：
+
+```
+$ docker ps
+CONTAINER ID   IMAGE                                 COMMAND                  CREATED              STATUS              PORTS                                           NAMES
+1d2ed7c7481e   bencherdev/bencher-ui:latest          "/docker-entrypoint.…"   About a minute ago   Up About a minute   0.0.0.0:3000->80/tcp, :::3000->80/tcp           bencher_ui
+7a8590d7021a   bencherdev/bencher-api-local:latest   "/api"                   About a minute ago   Up About a minute   0.0.0.0:61016->61016/tcp, :::61016->61016/tcp   bencher_api_local
+```
+
+与之前一样，只要这个命令能执行就行，输出可以不同。
+
+<br />
+
+## Bencher API 服务器日志
+
+让我们查看一下 Bencher API 服务器的日志。
+
+运行： `docker compose logs bencher_api`
+
+因为我们还没有在 API 服务器上设置电子邮件/SMTP，
+所以在本教程后面的部分你会在服务器日志中看到确认码。
+
+<br />
+
+## 设置 Bencher 主机
+
+`bencher` 命令行默认的主机是 Bencher Cloud (即 [https://api.bencher.dev](https://api.bencher.dev))。
+所以你需要设置你的主机名。最简单的就是用 `BENCHER_HOST` 环境变量来设置了。
+
+运行： `export BENCHER_HOST=http://localhost:61016`
+
+如果你然后运行： `echo $BENCHER_HOST`
+
+你应该能看到：
+
+```
+$ echo $BENCHER_HOST
+http://localhost:61016
+```
+
+<br />
+<br />
+
+> 🐰 恭喜！你已经设置好了 Bencher 自托管！🎉
+> 现在你可以开始使用 Bencher 自托管进行 快速上手 教程了。
+
+<br />
+
+<h2><a href="/docs/zh/tutorial/quick-start">继续学习: 快速上手 ➡</a></h2>

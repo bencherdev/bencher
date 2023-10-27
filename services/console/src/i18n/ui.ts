@@ -7,6 +7,7 @@ export enum Language {
 	fr = "fr",
 	ja = "ja",
 	pt = "pt",
+	zh = "zh",
 }
 export const defaultLang = Language.en;
 
@@ -16,6 +17,7 @@ export const otherLanguages = [
 	Language.fr,
 	Language.ja,
 	Language.pt,
+	Language.zh,
 ];
 
 export const allLanguages = [Language.en, ...otherLanguages];
@@ -34,6 +36,8 @@ export const languageName = (lang: Language) => {
 			return "日本語";
 		case Language.pt:
 			return "Português";
+		case Language.zh:
+			return "中文";
 	}
 };
 
@@ -49,6 +53,8 @@ export const tutorial = (lang: Language) => {
 			return "チュートリアル";
 		case Language.pt:
 			return "Tutorial";
+		case Language.zh:
+			return "教程";
 		case Language.en:
 		default:
 			return "Tutorial";

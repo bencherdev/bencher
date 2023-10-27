@@ -1,0 +1,237 @@
+## 运行报告
+
+终于我们可以开始收集一些基准指标了！
+为了简单起见，我们在这个教程里将会使用模拟数据。
+
+运行：`bencher mock`
+
+你应该能看到类似以下的内容：
+
+```
+$ bencher mock
+{
+  "bencher::mock_0": {
+    "latency": {
+      "value": 3.7865423396154463,
+      "lower_value": 3.4078881056539014,
+      "upper_value": 4.165196573576991
+    }
+  },
+  "bencher::mock_1": {
+    "latency": {
+      "value": 16.398332128878437,
+      "lower_value": 14.758498915990593,
+      "upper_value": 18.03816534176628
+    }
+  },
+  "bencher::mock_2": {
+    "latency": {
+      "value": 20.88091359871672,
+      "lower_value": 18.792822238845048,
+      "upper_value": 22.969004958588393
+    }
+  },
+  "bencher::mock_3": {
+    "latency": {
+      "value": 33.88103801203782,
+      "lower_value": 30.492934210834036,
+      "upper_value": 37.2691418132416
+    }
+  },
+  "bencher::mock_4": {
+    "latency": {
+      "value": 40.90515638867921,
+      "lower_value": 36.81464074981129,
+      "upper_value": 44.99567202754713
+    }
+  }
+}
+```
+
+你的输出应该会与上述内容稍有不同，因为数据是伪随机的。
+重要的是这个命令能够正常工作。
+
+<br />
+
+现在，我们使用模拟基准测试数据来运行一份报告。
+在下面的命令中，将你的项目的 `slug` 替换 `--project` 参数（即 `YOUR_PROJECT_SLUG`）。
+
+运行：`bencher run --project YOUR_PROJECT_SLUG "bencher mock"`
+
+你应该会看到类似以下的内容：
+
+```
+$ bencher run --project save-walter-white-12345 "bencher mock"
+{
+  "bencher::mock_0": {
+    "latency": {
+      "value": 0.15496641529475275,
+      "lower_value": 0.13946977376527747,
+      "upper_value": 0.17046305682422802
+    }
+  },
+  "bencher::mock_1": {
+    "latency": {
+      "value": 18.648298578180437,
+      "lower_value": 16.783468720362393,
+      "upper_value": 20.513128435998482
+    }
+  },
+  "bencher::mock_2": {
+    "latency": {
+      "value": 28.20328182167366,
+      "lower_value": 25.382953639506294,
+      "upper_value": 31.023610003841025
+    }
+  },
+  "bencher::mock_3": {
+    "latency": {
+      "value": 34.45732560787596,
+      "lower_value": 31.01159304708836,
+      "upper_value": 37.903058168663556
+    }
+  },
+  "bencher::mock_4": {
+    "latency": {
+      "value": 44.9237520767597,
+      "lower_value": 40.43137686908373,
+      "upper_value": 49.41612728443567
+    }
+  }
+}
+
+{
+  "branch": "master",
+  "end_time": "2023-07-18T14:21:27.796871Z",
+  "results": [
+    "{\n  \"bencher::mock_0\": {\n    \"latency\": {\n      \"value\": 0.15496641529475275,\n      \"lower_value\": 0.13946977376527747,\n      \"upper_value\": 0.17046305682422802\n    }\n  },\n  \"bencher::mock_1\": {\n    \"latency\": {\n      \"value\": 18.648298578180437,\n      \"lower_value\": 16.783468720362393,\n      \"upper_value\": 20.513128435998482\n    }\n  },\n  \"bencher::mock_2\": {\n    \"latency\": {\n      \"value\": 28.20328182167366,\n      \"lower_value\": 25.382953639506294,\n      \"upper_value\": 31.023610003841025\n    }\n  },\n  \"bencher::mock_3\": {\n    \"latency\": {\n      \"value\": 34.45732560787596,\n      \"lower_value\": 31.01159304708836,\n      \"upper_value\": 37.903058168663556\n    }\n  },\n  \"bencher::mock_4\": {\n    \"latency\": {\n      \"value\": 44.9237520767597,\n      \"lower_value\": 40.43137686908373,\n      \"upper_value\": 49.41612728443567\n    }\n  }\n}\n"
+  ],
+  "settings": {},
+  "start_time": "2023-07-18T14:21:27.773930Z",
+  "testbed": "base"
+}
+{
+  "uuid": "5554a92c-6f5c-481d-bd47-990f0a9bac6d",
+  "user": { ... },
+  "project": { ... },
+  "branch": { ... },
+  "testbed": { ...},
+  "start_time": "2023-07-18T14:21:27Z",
+  "end_time": "2023-07-18T14:21:27Z",
+  "adapter": "magic",
+  "results": [
+    [
+      {
+        "metric_kind": { ... },
+        "threshold": null,
+        "benchmarks": [ ... ]
+      }
+    ]
+  ],
+  "alerts": [],
+  "created": "2023-07-18T14:21:27Z"
+}
+
+View results:
+- bencher::mock_0: https://bencher.dev/console/projects/save-walter-white-12345/perf?metric_kind=latency&branches=95521eff-09fa-4c02-abe1-dd824108869d&testbeds=5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e&benchmarks=88375e7c-f1e0-4cbb-bde1-bdb7773022ae
+- bencher::mock_1: https://bencher.dev/console/projects/save-walter-white-12345/perf?metric_kind=latency&branches=95521eff-09fa-4c02-abe1-dd824108869d&testbeds=5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e&benchmarks=e81c7863-cc4b-4e22-b507-c1e238871137
+- bencher::mock_2: https://bencher.dev/console/projects/save-walter-white-12345/perf?metric_kind=latency&branches=95521eff-09fa-4c02-abe1-dd824108869d&testbeds=5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e&benchmarks=31dede44-d23a-4baf-b639-63f2ac742e42
+- bencher::mock_3: https://bencher.dev/console/projects/save-walter-white-12345/perf?metric_kind=latency&branches=95521eff-09fa-4c02-abe1-dd824108869d&testbeds=5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e&benchmarks=c7e32369-f3dd-473d-99a3-6289ae32b38e
+- bencher::mock_4: https://bencher.dev/console/projects/save-walter-white-12345/perf?metric_kind=latency&branches=95521eff-09fa-4c02-abe1-dd824108869d&testbeds=5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e&benchmarks=779bc477-4964-4bae-aa8c-4da3e388822c
+```
+
+<br />
+
+你现在可以在浏览器中查看每一个基准的结果。
+点击或复制粘贴 `View results` 下的链接。
+现在每个基准只应有一个数据点，让我们再添加更多的数据！
+
+<br />
+
+首先，让我们将项目的 slug 设置为环境变量，这样我们就不需要在每一次运行时都提供 `--project` 了。
+
+运行：`export BENCHER_PROJECT=save-walter-white-12345`
+
+如果你再次运行：`echo $BENCHER_PROJECT`
+
+你应该会看到：
+
+```
+$ echo $BENCHER_PROJECT
+save-walter-white-12345
+```
+
+<br />
+
+现在，让我们再次运行上述命令，但这次省略 `--project`，以生成更多数据。
+
+运行：`bencher run "bencher mock"`
+
+<br />
+
+接下来，我们要生成更多的数据，但这次我们会将结果输入到 `bencher run` 中。
+
+运行：`bencher mock | bencher run`
+
+<br />
+
+有时候你可能希望将你的结果保存到一个文件中，并让 `bencher run` 来读取它们。
+
+运行：`bencher run "bencher mock > results.json" --file results.json`
+
+<br />
+
+同样，你也可以让一个单独的进程来运行你的基准，并将结果保存到一个文件中。然后 `bencher run` 就可以来读取这些结果了。
+
+运行：`bencher mock > results.json && bencher run --file results.json`
+
+<br />
+
+最后，让我们使用 `bencher run` 的 `--iter` 参数来生成大量的数据。
+
+运行：`bencher run --iter 16 "bencher mock"`
+
+<br />
+
+> 🐰 提示：浏览 [`bencher run` CLI 子命令文档](/docs/zh/explanation/bencher-run)以获取 `bencher run` 所有能做的完整概述！
+
+<br />
+
+## 生成一个警报
+
+现在我们已经为基准测试收集了一些历史数据，让我们生成一个警报！
+当一个基准测试的结果被认定为性能退步时，就会产生警报。
+所以让我们模拟一个性能退步现象！
+
+运行：`bencher run "bencher mock --pow 8"`
+
+<br />
+
+在输出末尾应该有一个新的 `View alerts` 部分：
+
+```
+View alerts：
+- bencher::mock_0: https://bencher.dev/console/projects/save-walter-white-12345/alerts/b2329d5a-4471-48ab-bfbd-959d46ba1aa6
+- bencher::mock_1: https://bencher.dev/console/projects/save-walter-white-12345/alerts/181b1cf5-d984-402a-b0f1-68f6f119fa66
+- bencher::mock_2: https://bencher.dev/console/projects/save-walter-white-12345/alerts/b9b6c904-c657-4908-97db-dbeca40f8782
+- bencher::mock_3: https://bencher.dev/console/projects/save-walter-white-12345/alerts/5567ff32-2829-4b6a-969a-af33ce3828db
+- bencher::mock_4: https://bencher.dev/console/projects/save-walter-white-12345/alerts/49f2768f-ccda-4933-8e1d-08948f57a74d
+```
+
+<br />
+
+你现在可以在浏览器中查看每一个基准的警报。
+点击或复制粘贴 `View alerts` 下的链接。
+
+<br />
+
+> 🐰 提示：浏览 [阈值和警报文档](/docs/zh/explanation/thresholds)以了解对于如何检测性能退步的完整概述！
+
+<br />
+<br />
+
+> 🐰 恭喜！你发现了你的第一个性能退步！🎉
+
+<br />
+
+<h2><a href="/docs/zh/explanation/benchmarking">继续学习：基准测试概述 ➡</a></h2>

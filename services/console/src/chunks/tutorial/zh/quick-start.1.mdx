@@ -1,0 +1,167 @@
+import { BENCHER_VERSION } from "../../../util/ext";
+
+## Bencher 是什么？
+
+Bencher是一套[连续性基准测试](/docs/zh/explanation/continuous-benchmarking)工具。你是否曾经因为性能退化而影响到你的用户？Bencher可以防止这种情况的发生。Bencher让你在性能退化进入生产环境之前检测并防止它们。
+
+- **运行**：使用你最喜爱的基准测试工具，在本地或CI中运行基准测试。`bencher` CLI 仅仅是包装你已存在的基准测试装置，并存储它的结果。
+- **追踪**：随时间追踪你基准测试的结果。基于源代码分支、测试平台和度量类型，使用 Bencher Cloud 控制台来监视、查询和绘制结果图表。
+- **捕获**：在CI中捕获性能退化。Bencher 使用最先进的、可定制的分析技术在它们进入生产环境之前检测性能退化。
+
+出于同样的原因，单元测试在CI中被运行以防止功能退化，基准测试也应该用Bencher在CI中运行以防止性能退化。性能问题就是bug！
+
+<br />
+
+## 安装 `bencher` CLI
+
+为了安装 `bencher` CLI，你需要先安装`cargo`。请检查是否已安装`cargo`。
+
+运行: `cargo --version`
+
+你应该看见类似如下的信息：
+
+```
+$ cargo --version
+cargo 1.65.0 (4bc8f24d3 2022-10-20)
+```
+
+如果你的版本号不同是完全没有问题的。重要的是这个指令可以正常运行。
+如果不行，请按照[通过`rustup`安装`cargo`的说明](https://rustup.rs/)进行操作。
+
+在Linux或macOS上，运行：
+
+```
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+<br />
+
+安装好`cargo`之后，我们可以安装`bencher` CLI了。
+
+运行：
+
+<pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto; --darkreader-inline-bgcolor: #1d2125;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">{`cargo install --git https://github.com/bencherdev/bencher --tag v${BENCHER_VERSION} --locked bencher_cli`}</span></span></code></pre>
+
+你应该会看到类似这样的信息：
+
+<pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto; --darkreader-inline-bgcolor: #1d2125;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">{`$ cargo install --git https://github.com/bencherdev/bencher --tag ${BENCHER_VERSION} --locked bencher_cli`}</span></span>
+<span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">{`  Installing bencher_cli v${BENCHER_VERSION} (/workspace/bencher/services/cli)`}</span></span>
+<span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">    Updating crates.io index</span></span>
+<span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">    ...</span></span>
+<span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">    Finished release [optimized] target(s) in 0.27s</span></span>
+<span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">  Installing /workspace/.cargo/bin/bencher</span></span>
+<span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">{`   Installed package \`bencher_cli v${BENCHER_VERSION} (/workspace/bencher/services/cli)\` (executable \`bencher\`)`}</span></span></code></pre>
+
+同样，即使你的输出信息与上述不同也是完全没问题的。重要的是该指令可以正常运行。
+
+<br />
+
+最后，让我们测试一下是否已经安装好 `bencher` CLI。
+
+运行：`bencher --version`
+
+你应该会看到：
+
+<pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto; --darkreader-inline-bgcolor: #1d2125;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">$ bencher --version</span></span>
+<span class="line"><span style="color: rgb(225, 228, 232); --darkreader-inline-color: #d7d4cf;" data-darkreader-inline-color="">{`bencher ${BENCHER_VERSION}`}</span></span></code></pre>
+
+<br />
+
+## 创建一个 Bencher Cloud 账户 创建一个
+
+Bencher是开源的，并支持自我托管。
+如果你对自我托管感兴趣，可以查看[Bencher Docker教程](/docs/zh/tutorial/docker)。
+但对于本教程来说，我们将使用Bencher Cloud。
+
+### <a href="/auth/signup" target="_blank">注册Bencher Cloud</a>
+<br />
+
+一旦你创建了一个账户，你需要验证你的电子邮件地址。
+检查你的邮件中有无确认链接的邮件。
+之后，你就应该能够登录到 Bencher Cloud 了。
+如果你刷新此页面，你现在应该可以在右上角看到一个`注销`按钮。
+
+<br />
+
+## 创建一个 API 令牌
+
+为了使用Bencher API，你需要创建一个API令牌。
+导航至`用户` > `API 令牌`并点击`➕ 添加`按钮。
+
+### <a href="/auth/signup" target="_blank">添加一个API令牌</a>
+<br />
+
+一旦你创建了你的新API令牌，你需要把它复制到你的剪贴板上。
+在你打算工作的终端中，将API令牌作为环境变量导出。
+
+运行：`export BENCHER_API_TOKEN=YOUR_TOKEN`
+
+如果你接下来运行：`echo $BENCHER_API_TOKEN`
+
+你应该会看到：
+
+```
+$ echo $BENCHER_API_TOKEN
+YOUR_TOKEN
+```
+
+<br />
+
+> 🐰 注意：如果你切换到其他的终端，你将需要再次导出API令牌。
+
+<br />
+
+## 创建一个项目
+
+现在我们已经有了一个用户账户和API令牌，我们可以创建一个项目了。
+首先，我们需要知道我们的新项目将属于哪个组织。
+
+运行：`bencher org ls`
+
+你应该会看到类似下面的信息：
+
+```
+$ bencher org ls
+[
+  {
+    "name": "Saul Goodman",
+    "slug": "saul-goodman",
+    "uuid": "4581feb0-6cac-40a9-bd8a-d7865183b01e"
+    "created": "2022-07-06T11:24:36Z",
+    "modified": "2022-07-06T11:24:36Z"
+  }
+]
+```
+
+你的输出应该会和上述略有不同：
+- `uuid` 是伪随机的
+- `name` 和 `slug` 将基于你的用户名
+- `created` 和 `modified` 的时间戳将显示你注册的时间
+
+<br />
+
+我们现在可以在你的组织里创建一个新的项目。
+在下方的指令中，将你的组织`slug`替换为`--org`参数（例如`YOUR_ORG_SLUG`）。
+
+运行：`bencher project create --org YOUR_ORG_SLUG --url http://www.savewalterwhite.com "Save Walter White"`
+
+你应该会看到类似下面的信息：
+
+```
+$ bencher project create --org saul-goodman --url http://www.savewalterwhite.com "Save Walter White"
+{
+  "organization": "4581feb0-6cac-40a9-bd8a-d7865183b01e",
+  "name": "Save Walter White",
+  "slug": "save-walter-white-12345",
+  "uuid": "c6c2a8e8-685e-4413-9a19-5b79053a71b1"
+  "url": "http://www.savewalterwhite.com",
+  "public": true,
+  "created": "2022-07-06T11:36:24Z",
+  "modified": "2022-07-06T11:36:24Z"
+}
+```
+
+同样，你的输出应该和上述稍有不同。重要的是该指令可以正常运行。
+记住项目`slug`字段（例如`save-walter-white-12345`）。
+
+<br />
