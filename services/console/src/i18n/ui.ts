@@ -1,35 +1,40 @@
 export const defaultLang = "en";
 export const showDefaultLang = false;
 
-export const languages = {
-	en: "English",
-	es: "Español",
-	fr: "Français",
-};
-
 export enum Language {
+	de = "de",
 	en = "en",
 	es = "es",
 	fr = "fr",
 	pt = "pt",
 }
 
-export const otherLanguages = [Language.es, Language.fr, Language.pt];
+export const otherLanguages = [
+	Language.de,
+	Language.es,
+	Language.fr,
+	Language.pt,
+];
 
-export const ui = {
-	en: {
-		"nav.home": "Home",
-		"nav.about": "About",
-		"nav.twitter": "Twitter",
-	},
-	fr: {
-		"nav.home": "Accueil",
-		"nav.about": "À propos",
-	},
-} as const;
+export const languageName = (lang: Language) => {
+	switch (lang) {
+		case Language.en:
+			return "English";
+		case Language.de:
+			return "Deutsch";
+		case Language.es:
+			return "Español";
+		case Language.fr:
+			return "Français";
+		case Language.pt:
+			return "Português";
+	}
+};
 
 export const tutorial = (lang: Language) => {
 	switch (lang) {
+		case Language.de:
+			return "Lernprogramm";
 		case Language.es:
 			return "Tutorial";
 		case Language.fr:

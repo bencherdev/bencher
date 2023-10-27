@@ -1,0 +1,166 @@
+---
+title: "Docker Selbst Gehostet"
+description: "Lernen Sie, wie Sie das kontinuierliche Benchmarking mit Bencher selbst hosten können"
+heading: "Docker Selbst Gehostet"
+sortOrder: 2
+---
+
+import { BENCHER_VERSION } from "../../../util/ext";
+import { DisclosureDe } from "../../../chunks/disclosure.tsx"
+
+## Was ist Bencher?
+
+Bencher ist eine Suite von [kontinuierlichen Benchmarking](/docs/de/explanation/continuous-benchmarking) Werkzeugen.
+Haben Sie jemals erlebt, dass eine Performance-Regression Ihre Nutzer beeinträchtigt hat?
+Bencher hätte das verhindern können.
+Bencher ermöglicht es Ihnen, Performance-Regresionen _vor_ ihrem Erscheinen in der Produktion zu erkennen und zu verhindern.
+
+- **Laufen lassen**: Führen Sie Ihre Benchmarks lokal oder in CI aus, mit Ihren bevorzugten Benchmarking-Tools. Die `bencher` CLI umschließt nur Ihre bestehende Benchmark-Harness und speichert deren Ergebnisse.
+- **Verfolgen**: Verfolgen Sie die Ergebnisse Ihrer Benchmarks im Laufe der Zeit. Überwachen, abfragen und erstellen Sie Grafiken der Ergebnisse mit der Bencher Web-Konsole, basierend auf dem Quellzweig, der Testumgebung und der Art der Metrik.
+- **Fangen**: Fangen Sie Performance-Regressionen in CI. Bencher verwendet hochmoderne, anpassbare Analysen, um Performance-Regressionen zu erkennen, bevor sie in die Produktion gelangen.
+
+Aus den gleichen Gründen, warum Unit-Tests in CI laufen, um Feature-Regressionen zu verhindern, sollten auch Benchmarks in CI mit Bencher laufen, um Performance-Regressionen zu verhindern. Performance-Fehler sind Fehler!
+
+Bencher ist Open-Source und kann selbst gehostet werden.
+Wenn Sie an der Nutzung von Bencher Cloud interessiert sind, schauen Sie sich das [Bencher Cloud Quick Start Tutorial](/docs/de/tutorial/quick-start) an.
+Für dieses Tutorial werden wir aber Bencher Selbst Gehostet mit Docker verwenden.
+
+<br />
+
+## Klonen Sie das Repo
+
+Um diesem Tutorial folgen zu können, müssen Sie `git` installiert haben.
+Überprüfen Sie, ob Sie `git` installiert haben.
+
+Führen Sie aus: `git --version`
+
+Sie sollten so etwas sehen:
+
+```
+$ git --version
+git version 2.37.3
+```
+
+Es ist in Ordnung, wenn Ihre Versionsnummer anders ist.
+Wichtig ist nur, dass dieser Befehl funktioniert.
+Falls nicht, folgen Sie den [Anweisungen zur Installation von `git`](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
+
+<br />
+
+Mit `git` installiert, können wir nun das Bencher-Repository klonen.
+
+Führen Sie aus: <code>{`git clone --branch v${BENCHER_VERSION} https://github.com/bencherdev/bencher.git`}</code>
+
+Sie sollten so etwas sehen:
+
+```
+$ git clone https://github.com/bencherdev/bencher.git
+Cloning into 'bencher'...
+remote: Enumerating objects: 24752, done.
+remote: Counting objects: 100% (7363/7363), done.
+remote: Compressing objects: 100% (2396/2396), done.
+remote: Total 24752 (delta 4862), reused 7274 (delta 4785), pack-reused 17389
+Receiving objects: 100% (24752/24752), 4.92 MiB | 12.43 MiB/s, done.
+Resolving deltas: 100% (16108/16108), done.
+```
+
+<br />
+
+## Bencher UI & API Server laufen lassen
+
+Um die UI- und API-Server in diesem Tutorial ausführen zu können, müssen Sie `docker` installiert haben.
+Überprüfen Sie, ob Sie `docker` installiert haben.
+
+Führen Sie aus: `docker --version`
+
+Sie sollten so etwas sehen:
+
+```
+$ docker --version
+Docker version 20.10.17, build 100c701
+```
+
+Es ist in Ordnung, wenn Ihre Versionsnummer anders ist.
+Wichtig ist nur, dass dieser Befehl funktioniert.
+Falls nicht, folgen Sie den [Anweisungen zur Installation von `docker`](https://docs.docker.com/get-docker/).
+
+<br />
+
+Mit `docker` installiert, können wir nun die UI- und API-Server ausführen.
+
+Führen Sie aus: `docker compose up -d`
+
+Sie sollten so etwas sehen:
+
+```
+$ docker compose up -d
+[+] Running 16/16
+ ⠿ bencher_ui Pulled                                           5.9s
+ ...
+ ⠿ bencher_api Pulled                                          6.3s
+ ...
+[+] Running 3/3
+ ⠿ Network bencher_default      Started                        0.1s
+ ⠿ Container bencher_ui         Started                        0.8s
+ ⠿ Container bencher_api_local  Started                        0.4s
+```
+
+Auch hier ist es okay, wenn Ihre Ausgabe anders ist. Es ist nur wichtig, dass dieser Befehl funktioniert.
+
+<br />
+
+Überprüfen Sie als nächstes, ob beide Docker-Container laufen.
+
+Führen Sie aus: `docker ps`
+
+Sie sollten so etwas sehen:
+
+```
+$ docker ps
+CONTAINER ID   IMAGE                                 COMMAND                  CREATED              STATUS              PORTS                                           NAMES
+1d2ed7c7481e   bencherdev/bencher-ui:latest          "/docker-entrypoint.…"   About a minute ago   Up About a minute   0.0.0.0:3000->80/tcp, :::3000->80/tcp           bencher_ui
+7a8590d7021a   bencherdev/bencher-api-local:latest   "/api"                   About a minute ago   Up About a minute   0.0.0.0:61016->61016/tcp, :::61016->61016/tcp   bencher_api_local
+```
+
+Wie zuvor ist es okay, wenn Ihre Ausgabe anders ist. Es ist nur wichtig, dass dieser Befehl funktioniert.
+
+<br />
+
+## Bencher API Server Logs
+
+Lassen Sie uns einen Blick auf die Bencher API Server Logs werfen.
+
+Führen Sie aus: `docker compose logs bencher_api`
+
+Da wir die Email/SMTP noch nicht auf dem API-Server eingerichtet haben,
+werden die Bestätigungscodes, die Sie später im Tutorial erhalten, in den Serverlogs stehen.
+
+<br />
+
+## Bencher Host festlegen
+
+Der Standardhost des `bencher` CLI ist Bencher Cloud (d.h. [https://api.bencher.dev](https://api.bencher.dev)).
+Sie müssen daher Ihren Hostnamen festlegen. Der einfachste Weg, dies zu tun, ist die `BENCHER_HOST` Umgebungsvariable.
+
+Führen Sie aus: `export BENCHER_HOST=http://localhost:61016`
+
+Wenn Sie dann ausführen: `echo $BENCHER_HOST`
+
+Sollten Sie sehen:
+
+```
+$ echo $BENCHER_HOST
+http://localhost:61016
+```
+
+<br />
+<br />
+
+> 🐰 Glückwunsch! Sie haben Bencher Selbst Gehostet eingerichtet! 🎉
+> Sie können nun mit dem Quick Start Tutorial fortfahren und Bencher Selbst Gehostet verwenden.
+
+<br />
+
+<h2><a href="/docs/de/tutorial/quick-start">Weitermachen: Quick Start ➡</a></h2>
+
+<DisclosureEs page="Docker+tutorial" />

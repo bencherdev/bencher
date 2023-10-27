@@ -1,0 +1,142 @@
+## Einen Bericht ausführen
+
+Endlich sind wir bereit, einige Benchmark-Metriken zu sammeln!
+Um die Dinge einfach zu halten, werden wir in diesem Tutorial Mock-Daten verwenden.
+
+Führen Sie aus: `bencher mock`
+
+Sie sollten etwas in dieser Art sehen:
+
+```
+$ bencher mock
+{
+  "bencher::mock_0": {
+    "latency": {
+      "value": 3.7865423396154463,
+      "lower_value": 3.4078881056539014,
+      "upper_value": 4.165196573576991
+    }
+  },
+  ...
+}
+```
+
+Ihre Ausgabe sollte etwas anders als bis dahin sein, da die Daten pseudorandom sind.
+Es ist nur wichtig, dass dieser Befehl funktioniert.
+
+<br />
+
+Lassen Sie uns nun einen Bericht mit Mock-Benchmark-Metriken-Daten ausführen.
+Ersetzen Sie Ihren Projektslug durch das `--project`-Argument (dh `YOUR_PROJECT_SLUG`) im untenstehenden Befehl.
+
+Führen Sie aus: `bencher run --project YOUR_PROJECT_SLUG "bencher mock"`
+
+Sie sollten etwas in dieser Art sehen:
+
+```
+$ bencher run --project save-walter-white-12345 "bencher mock"
+{
+  "bencher::mock_0": {
+    "latency": {
+      "value": 0.15496641529475275,
+      "lower_value": 0.13946977376527747,
+      "upper_value": 0.17046305682422802
+    }
+  },
+  ...
+}
+```
+
+<br />
+
+Du kannst nun die Ergebnisse jedes Benchmarks im Browser ansehen.
+Klicken Sie oder kopieren und fügen Sie die Links aus `View results` ein.
+Es sollte nur einen einzigen Datenpunkt für jeden Benchmark geben, also fügen wir mehr Daten hinzu!
+
+<br />
+
+Zunächst setzen wir unseren Projekt-Slug als Umgebungsvariable, damit wir ihn nicht mit dem `--project` bei jedem einzelnen Lauf angeben müssen.
+
+Führen Sie aus: `export BENCHER_PROJECT=save-walter-white-12345`
+
+Wenn Sie dann ausführen: `echo $BENCHER_PROJECT`
+
+Sie sollten sehen:
+
+```
+$ echo $BENCHER_PROJECT
+save-walter-white-12345
+```
+
+<br />
+
+Lassen Sie uns den gleichen Befehl erneut ohne `--project` ausführen, um mehr Daten zu generieren.
+
+Führen Sie aus: `bencher run "bencher mock"`
+
+<br />
+
+Jetzt generieren wir mehr Daten, aber dieses Mal leiten wir unsere Ergebnisse in `bencher run` um.
+
+Führen Sie aus: `bencher mock | bencher run`
+
+<br />
+
+Manchmal möchten Sie Ihre Ergebnisse vielleicht in eine Datei speichern und `bencher run` sie aufheben lassen.
+
+Führen Sie aus: `bencher run "bencher mock > results.json" --file results.json`
+
+<br />
+
+Ebenso kann `bencher run` diese nur aufheben, wenn Sie einen separaten Prozess haben, der Ihre Benchmarks ausführt und Ihre Ergebnisse in eine Datei speichert.
+
+Führen Sie aus: `bencher mock > results.json && bencher run --file results.json`
+
+<br />
+
+Zum Schluss generieren wir viel Daten mithilfe des `--iter` Arguments von `bencher run`.
+
+Führen Sie aus: `bencher run --iter 16 "bencher mock"`
+
+<br />
+
+> 🐰 Tipp: Schauen Sie sich die [`bencher run` CLI-Unterbefehl-Dokumentation](/docs/de/explanation/bencher-run) für einen vollständigen Überblick darüber an, was `bencher run` kann!
+
+<br />
+
+## Einen Alarm generieren
+
+Jetzt, da wir einige historische Daten für unsere Benchmarks haben, lassen Sie uns einen Alert generieren!
+Alarme werden generiert, wenn ein Benchmark-Ergebnis als Performance-Rückgang festgestellt wird.
+Also simulieren wir einen Performancerückgang!
+
+Führen Sie aus: `bencher run "bencher mock --pow 8"`
+
+<br />
+
+Am Ende der Ausgabe sollte ein neuer Abschnitt namens `View alerts` stehen:
+
+```
+View alerts:
+- bencher::mock_0: https://bencher.dev/console/projects/save-walter-white-12345/alerts/b2329d5a-4471-48ab-bfbd-959d46ba1aa6
+- bencher::mock_1: https://bencher.dev/console/projects/save-walter-white-12345/alerts/181b1cf5-d984-402a-b0f1-68f6f119fa66
+...
+```
+
+<br />
+
+Sie können nun die Alerts für jeden Benchmark im Browser ansehen.
+Klicken Sie oder kopieren und fügen Sie die Links aus `View alerts` ein.
+
+<br />
+
+> 🐰 Tipp: Schauen Sie sich die [Dokumentation zu Schwellenwerten & Alerts](/docs/de/explanation/thresholds) für einen vollständigen Überblick darüber an, wie Performancerückgänge erkannt werden!
+
+<br />
+<br />
+
+> 🐰 Herzlichen Glückwunsch! Sie haben Ihren ersten Performancerückgang erkannt! 🎉
+
+<br />
+
+<h2><a href="/docs/de/explanation/benchmarking">Weiter geht's: Überblick über das Benchmarking ➡</a></h2>
