@@ -3,11 +3,13 @@ export const showDefaultLang = false;
 
 export const languages = {
 	en: "English",
+	es: "Español",
 	fr: "Français",
 };
 
 export enum Language {
 	en = "en",
+	es = "es",
 	fr = "fr",
 }
 
@@ -25,6 +27,8 @@ export const ui = {
 
 export const tutorial = (lang: Language) => {
 	switch (lang) {
+		case Language.es:
+			return "Tutorial";
 		case Language.fr:
 			return "Didacticiel";
 		case Language.en:

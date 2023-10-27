@@ -5,7 +5,7 @@ import {getLangCollection} from "../../../i18n/utils.ts"
 import { Language, defaultLang, showDefaultLang, tutorial } from "../../../i18n/ui";
 
 export async function getStaticPaths() {
-    return ["fr"].map((lang) => {return { params: { lang } }});
+    return ["es", "fr"].map((lang) => {return { params: { lang } }});
 }
 
 const lang: Language = Astro.params.lang ?? defaultLang;
@@ -24,7 +24,9 @@ reference.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 
 const title = () => {
     switch(lang) {
-        case "fr":
+        case Language.es:
+            return "Documentos de Bencher";
+        case Language.fr:
             return "Documents de Bencher";
         default:
             return "Bencher Docs";
@@ -33,7 +35,9 @@ const title = () => {
 
 const description = () => {
     switch (lang) {
-        case "fr":
+        case Language.es:
+            return "Índice de contenidos de la documentación de Bencher. Aprenda a configurar evaluaciones comparativas continuas para su proyecto.";
+        case Language.fr:
             return "Table des matières de la documentation Bencher. Découvrez comment configurer une analyse comparative continue pour votre projet.";
         default:
             return "Table of contents for the Bencher documentation. Learn how to setup continuous benchmarking for your project.";
@@ -42,7 +46,9 @@ const description = () => {
 
 const alsoIn = () => {
     switch (lang) {
-        case "fr":
+        case Language.es:
+          return "También disponible en:";
+        case Language.fr:
             return "Également disponible en:";
         default:
             return "Also available in:";
@@ -103,6 +109,9 @@ const alsoIn = () => {
   <ul>
     <li>
       <a href="/docs">English</a>
+    </li>
+    <li>
+      <a href="/docs/es">Español</a>
     </li>
   </ul>
 </DocsLayout>

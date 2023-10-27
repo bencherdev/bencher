@@ -5,6 +5,7 @@ import { Content } from "../../../../content/tutorial/fr/quick-start.mdx";
 import * as quickStart from "../../../../content/tutorial/fr/quick-start.mdx";
 import AuthOverride from "../../../../components/auth/AuthOverride";
 import AddAnApiToken from "../../../../components/docs/override/AddAnApiToken";
+import { Language } from "../../../../i18n/ui";
 
 // 1. Generate a new path for every collection entry
 export async function getStaticPaths() {
@@ -19,7 +20,9 @@ const { lang } = Astro.params;
 
 const signupId = () => {
   switch (lang) {
-    case "fr":
+    case Language.es:
+      return "regístrate-en-bencher-cloud";
+    case Language.fr:
       return "inscrivez-vous-à-bencher-cloud";
     default:
       return "";
@@ -27,7 +30,9 @@ const signupId = () => {
 }
 const signupText = () => {
   switch (lang) {
-    case "fr":
+    case Language.es:
+      return "Estás registrado en Bencher Cloud";
+    case Language.fr:
       return "Vous êtes inscrit à Bencher Cloud";
     default:
       return "You are signed up for Bencher Cloud";
@@ -35,7 +40,9 @@ const signupText = () => {
 }
 const tokenId = () => {
   switch (lang) {
-    case "fr":
+    case Language.es:
+      return "añadir-un-token-de-api";
+    case Language.fr:
       return "ajouter-un-token-api";
     default:
       return "";
@@ -43,7 +50,9 @@ const tokenId = () => {
 }
 const tokenText = () => {
   switch (lang) {
-    case "fr":
+    case Language.es:
+      return "Añadir un token de API";
+    case Language.fr:
       return "Ajouter un jeton API";
     default:
       return "Add an API Token";
