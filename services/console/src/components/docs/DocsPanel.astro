@@ -25,14 +25,16 @@ const title = () => {
     case Language.de:
       return "Bencher Dokumentation";
     case Language.es:
-        return "Documentos de Bencher";
+      return "Documentos de Bencher";
     case Language.fr:
-        return "Documents de Bencher";
+      return "Documents de Bencher";
+    case Language.ja:
+      return "ベンチャーのドキュメント";
     case Language.pt:
-        return "Documentação da Bencher";
+      return "Documentação da Bencher";
     case Language.en:
     default:
-        return "Bencher Docs";
+      return "Bencher Docs";
   }
 };
 
@@ -41,11 +43,13 @@ const description = () => {
     case Language.de:
       return "Inhaltsverzeichnis der Bencher Dokumentation. Erfahren Sie, wie Sie ein kontinuierliches Benchmarking für Ihr Projekt einrichten.";
     case Language.es:
-        return "Índice de contenidos de la documentación de Bencher. Aprenda a configurar evaluaciones comparativas continuas para su proyecto.";
+      return "Índice de contenidos de la documentación de Bencher. Aprenda a configurar evaluaciones comparativas continuas para su proyecto.";
     case Language.fr:
-        return "Table des matières de la documentation Bencher. Découvrez comment configurer une analyse comparative continue pour votre projet.";
+      return "Table des matières de la documentation Bencher. Découvrez comment configurer une analyse comparative continue pour votre projet.";
+    case Language.ja:
+      return "ベンチャー ドキュメントの目次。 プロジェクトの継続的なベンチマークを設定する方法を学びます。"
     case Language.pt:
-        return "Índice da documentação do Bencher. Aprenda como configurar benchmarking contínuo para seu projeto.";
+      return "Índice da documentação do Bencher. Aprenda como configurar benchmarking contínuo para seu projeto.";
     case Language.en:
     default:
         return "Table of contents for the Bencher documentation. Learn how to setup continuous benchmarking for your project.";
@@ -59,12 +63,14 @@ const alsoIn = () => {
     case Language.es:
       return "También disponible en:";
     case Language.fr:
-        return "Également disponible en:";
+      return "Également disponible en:";
+    case Language.ja:
+      return "以下でも利用可能です:";
     case Language.pt:
-        return "Também disponível em:";
+      return "Também disponível em:";
     case Language.en:
     default:
-        return "Also available in:";
+      return "Also available in:";
   }
 }
 ---

@@ -34,7 +34,7 @@ const { title, titleFmt, description, lang } = Astro.props;
     <meta name="generator" content={Astro.generator} />
     <SEO
       title={title}
-      titleTemplate={`%s | ${BENCHER_TITLE}`}
+      titleTemplate={title === BENCHER_TITLE ? "%s" : `%s | ${BENCHER_TITLE}`}
       titleDefault={BENCHER_TITLE}
       description={description ?? BENCHER_DESCRIPTION}
       openGraph={{

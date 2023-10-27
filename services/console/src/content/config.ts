@@ -1,5 +1,5 @@
 // 1. Import utilities from `astro:content`
-import { z, defineCollection } from "astro:content";
+import { defineCollection, z } from "astro:content";
 
 // 2. Define a `type` and `schema` for each collection
 const legal = defineCollection({
@@ -72,3 +72,5 @@ export const collections = {
 	// learn
 	rust: rust,
 };
+
+export const keywords = ["Continuous Benchmarking"];

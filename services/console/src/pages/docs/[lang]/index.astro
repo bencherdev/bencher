@@ -1,6 +1,6 @@
 ---
 import DocsPanel from "../../../components/docs/DocsPanel.astro";
-import { Language, defaultLang, otherLanguages } from "../../../i18n/ui";
+import { Language, otherLanguages } from "../../../i18n/ui";
 
 export async function getStaticPaths() {
     return otherLanguages.map((lang) => {return { params: { lang } }});

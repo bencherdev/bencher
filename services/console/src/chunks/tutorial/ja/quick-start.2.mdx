@@ -1,0 +1,175 @@
+## レポートを実行する
+
+ついにベンチマークのメトリクスを集める準備ができました！
+簡単のため、このチュートリアルではモックデータを使用します。
+
+実行： `bencher mock`
+
+次のような結果が表示されるはずです：
+
+```
+$ bencher mock
+{
+  "bencher::mock_0": {
+    "latency": {
+      "value": 3.7865423396154463,
+      "lower_value": 3.4078881056539014,
+      "upper_value": 4.165196573576991
+    }
+  },
+...
+  "bencher::mock_4": {
+    "latency": {
+      "value": 40.90515638867921,
+      "lower_value": 36.81464074981129,
+      "upper_value": 44.99567202754713
+    }
+  }
+}
+```
+
+あなたの出力結果は上記とは少し異なるはずで、データは疑似乱数です。
+重要なのはこのコマンドが動作していることだけです。
+
+<br />
+
+さて、モックのベンチマークメトリックデータを使用してレポートを実行してみましょう。
+下記のコマンドでProject `slug`を `--project` 引数に代入します(つまり `YOUR_PROJECT_SLUG`)。
+
+実行： `bencher run --project YOUR_PROJECT_SLUG "bencher mock"`
+
+次のような結果が表示されるはずです：
+
+```
+$ bencher run --project save-walter-white-12345 "bencher mock"
+{
+  "bencher::mock_0": {
+    "latency": {
+      "value": 0.15496641529475275,
+      "lower_value": 0.13946977376527747,
+      "upper_value": 0.17046305682422802
+    }
+  },
+...
+  "bencher::mock_4": {
+    "latency": {
+      "value": 44.9237520767597,
+      "lower_value": 40.43137686908373,
+      "upper_value": 49.41612728443567
+    }
+  }
+}
+
+...
+{
+  "branch": "master",
+  "end_time": "2023-07-18T14:21:27.796871Z",
+...
+  "adapter": "magic",
+...
+  "created": "2023-07-18T14:21:27Z"
+}
+
+View results:
+- bencher::mock_0: https://bencher.dev/console/projects/save-walter-white-12345/perf?metric_kind=latency&branches=95521eff-09fa-4c02-abe1-dd824108869d&testbeds=5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e&benchmarks=88375e7c-f1e0-4cbb-bde1-bdb7773022ae
+- bencher::mock_1: https://bencher.dev/console/projects/save-walter-white-12345/perf?metric_kind=latency&branches=95521eff-09fa-4c02-abe1-dd824108869d&testbeds=5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e&benchmarks=e81c7863-cc4b-4e22-b507-c1e238871137
+- bencher::mock_2: https://bencher.dev/console/projects/save-walter-white-12345/perf?metric_kind=latency&branches=95521eff-09fa-4c02-abe1-dd824108869d&testbeds=5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e&benchmarks=31dede44-d23a-4baf-b639-63f2ac742e42
+- bencher::mock_3: https://bencher.dev/console/projects/save-walter-white-12345/perf?metric_kind=latency&branches=95521eff-09fa-4c02-abe1-dd824108869d&testbeds=5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e&benchmarks=c7e32369-f3dd-473d-99a3-6289ae32b38e
+- bencher::mock_4: https://bencher.dev/console/projects/save-walter-white-12345/perf?metric_kind=latency&branches=95521eff-09fa-4c02-abe1-dd824108869d&testbeds=5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e&benchmarks=779bc477-4964-4bae-aa8c-4da3e388822c
+```
+
+<br />
+
+ブラウザで各ベンチマークの結果を表示できるようになりました。
+`View results`からリンクをクリックするか、コピー＆ペーストします。
+各ベンチマークにはデータポイントが1つだけなので、さらなるデータを追加しましょう！
+
+<br />
+
+まず、プロジェクトのスラッグを環境変数に設定し、毎回 `--project` を提供せずに済むようにします。
+
+実行： `export BENCHER_PROJECT=save-walter-white-12345`
+
+次に実行： `echo $BENCHER_PROJECT`
+
+表示されるはず：
+
+```
+$ echo $BENCHER_PROJECT
+save-walter-white-12345
+```
+
+<br />
+
+`--project` を省いて同じコマンドを再度実行して、さらなるデータを生成しましょう。
+
+実行： `bencher run "bencher mock"`
+
+<br />
+
+次に、さらなるデータを生成しますが、今回は結果を `bencher run` にパイプしてみましょう。
+
+実行： `bencher mock | bencher run`
+
+<br />
+
+結果をファイルに保存し、 `bencher run` でそれらを読み取らせたい場合もあります。
+
+実行： `bencher run "bencher mock > results.json" --file results.json`
+
+<br />
+
+同様に、別のプロセスでベンチマークを実行し、結果をファイルに保存する場合もあります。その後、 `bencher run` がそれらを読み取るだけです。
+
+実行： `bencher mock > results.json && bencher run --file results.json`
+
+<br />
+
+最後に、 `bencher run` の `--iter` 引数を使って大量のデータを生成しましょう。
+
+実行： `bencher run --iter 16 "bencher mock"`
+
+<br />
+
+> 🐰 ヒント：[`bencher run` CLIサブコマンドのドキュメント](/docs/explanation/bencher-run) には `bencher run` でできる全てのことが詳しく説明されています！
+
+<br />
+
+## アラートを生成する
+
+ベンチマークの歴史データができたところで、アラートを生成しましょう！
+アラートは、ベンチマークの結果がパフォーマンス劣化と判断された場合に生成されます。
+パフォーマンス劣化をシミュレートしましょう！
+
+実行： `bencher run "bencher mock --pow 8"`
+
+<br />
+
+出力の最後に `アラートの表示` という新しいセクションが追加されているはずです：
+
+```
+View alerts:
+- bencher::mock_0: https://bencher.dev/console/projects/save-walter-white-12345/alerts/b2329d5a-4471-48ab-bfbd-959d46ba1aa6
+- bencher::mock_1: https://bencher.dev/console/projects/save-walter-white-12345/alerts/181b1cf5-d984-402a-b0f1-68f6f119fa66
+- bencher::mock_2: https://bencher.dev/console/projects/save-walter-white-12345/alerts/b9b6c904-c657-4908-97db-dbeca40f8782
+- bencher::mock_3: https://bencher.dev/console/projects/save-walter-white-12345/alerts/5567ff32-2829-4b6a-969a-af33ce3828db
+- bencher::mock_4: https://bencher.dev/console/projects/save-walter-white-12345/alerts/49f2768f-ccda-4933-8e1d-08948f57a74d
+```
+
+<br />
+
+各ベンチマークのアラートをブラウザで表示できるようになりました。
+`View alerts`からリンクをクリックするか、コピー＆ペーストしてください。
+
+<br />
+
+> 🐰 ヒント：どのようにパフォーマンス劣化が検出されているかの全体像を観るために、 [しきい値とアラートのドキュメント](/docs/ja/explanation/thresholds) を確認してください！
+
+<br />
+<br />
+
+> 🐰 おめでとうございます！あなたは最初のパフォーマンス劣化を見つけました！🎉
+
+<br />
+
+<h2><a href="/docs/ja/explanation/benchmarking">次に進む：ベンチマーキングの概要 ➡</a></h2>

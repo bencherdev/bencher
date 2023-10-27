@@ -24,12 +24,17 @@ const signupId = () => {
       return "regístrate-en-bencher-cloud";
     case Language.fr:
       return "inscrivez-vous-à-bencher-cloud";
+    case Language.ja:
+      return "ベンチャー-クラウド-にサインアップ";
     case Language.pt:
       return "inscreva-se-para-o-bencher-cloud";
     default:
       return "";
   }
 }
+
+// ベンチャー クラウド
+// ベンチャー
 const signupText = () => {
   switch (lang) {
     case Language.de:
@@ -38,6 +43,8 @@ const signupText = () => {
       return "Estás registrado en Bencher Cloud";
     case Language.fr:
       return "Vous êtes inscrit à Bencher Cloud";
+    case Language.ja:
+      return "ベンチャー クラウド にサインアップしています";
     case Language.pt:
       return "Você está inscrito no Bencher Cloud";
     default:
@@ -52,6 +59,8 @@ const tokenId = () => {
       return "añadir-un-token-de-api";
     case Language.fr:
       return "ajouter-un-token-api";
+    case Language.ja:
+      return "api-トークンを追加";
     case Language.pt:
       return "adicione-um-token-de-api";
     default:
@@ -66,6 +75,8 @@ const tokenText = () => {
       return "Añadir un token de API";
     case Language.fr:
       return "Ajouter un jeton API";
+    case Language.ja:
+      return "API トークンを追加する";
     case Language.pt:
       return "Adicionar um token de API";
     default:

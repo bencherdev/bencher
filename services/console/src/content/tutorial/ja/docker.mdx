@@ -1,0 +1,160 @@
+---
+title: "ドッカー を利用した自己ホスト環境"
+description: "ベンチャー を利用した自己ホスト環境における継続的ベンチマーキングの設定方法を学びましょう"
+heading: "ドッカー を利用した自己ホスト環境"
+sortOrder: 2
+---
+
+import { BENCHER_VERSION } from "../../../util/ext";
+
+## Bencherとは何ですか？
+
+Bencherは[継続的ベンチマーキング](/docs/explanation/continuous-benchmarking)のツールセットです。
+パフォーマンスの後退がユーザーに影響を与えたことはありますか？
+それなら、Bencherがそれを防ぐことができました。
+Bencherはパフォーマンスの後退を、それが本番環境に到達する前に検出し防止します。
+
+- **実行**：お気に入りのベンチマーキングツールを使用してローカルまたはCIでベンチマークを実行します。`bencher` CLIはあなたの既存のベンチマークハーネスを単純にラップし、その結果を保存します。
+- **追跡**：時間をかけてベンチマークの結果を追跡します。ソースブランチ、テストベッド、メトリックの種類に基づいてBencherウェブコンソールを使用して結果を監視、クエリ、グラフ化します。
+- **検出**：CIでパフォーマンスの後退を捕捉します。Bencherは最先端のカスタマイズ可能な分析を使用して、パフォーマンスが本番環境に到達する前にパフォーマンスの後退を検出します。
+
+機能の後退を防ぐためにユニットテストがCIで実行されるのと同じ理由で、パフォーマンスの後退を防ぐためにベンチマークもBencherと共にCIで実行するべきです。パフォーマンスのバグもバグです！
+
+Bencherはオープンソースで自己ホスト可能です。
+もしBencher Cloudに興味がある場合は、[ベンチャー クラウド クイックスタートチュートリアル](/docs/tutorial/quick-start)をご覧ください。
+しかし、このチュートリアルでは、Dockerと共にBencher Self-Hostedを使用します。
+
+<br />
+
+## リポジトリのクローン
+
+このチュートリアルを進めるためには、`git`がインストールされている必要があります。
+あなたが`git`をインストールしているかどうか確認してみてください。
+
+実行：`git --version`
+
+これと同じような結果が表示されるはずです：
+
+```
+$ git --version
+git version 2.37.3
+```
+
+あなたのバージョン番号が違っても構いません。
+重要なのは、このコマンドが機能することです。
+そうでない場合は、[`git`のインストール手順](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)を参照してください。
+
+<br />
+
+`git`をインストールしたら、次にBencherリポジトリをクローンできます。
+
+実行：<code>{`git clone --branch v${BENCHER_VERSION} https://github.com/bencherdev/bencher.git`}</code>
+
+これと同じような結果が表示されるはずです：
+
+```
+$ git clone https://github.com/bencherdev/bencher.git
+Cloning into 'bencher'...
+remote: Enumerating objects: 24752, done.
+remote: Counting objects: 100% (7363/7363), done.
+remote: Compressing objects: 100% (2396/2396), done.
+remote: Total 24752 (delta 4862), reused 7274 (delta 4785), pack-reused 17389
+Receiving objects: 100% (24752/24752), 4.92 MiB | 12.43 MiB/s, done.
+Resolving deltas: 100% (16108/16108), done.
+```
+
+<br />
+
+## ベンチャー UI と API サーバーの実行
+
+このチュートリアルでUIとAPIサーバーを実行するためには、`docker`がインストールされている必要があります。
+あなたが`docker`をインストールしているかどうか確認してみてください。
+
+実行：`docker --version`
+
+これと同じような結果が表示されるはずです：
+
+```
+$ docker --version
+Docker version 20.10.17, build 100c701
+```
+
+あなたのバージョン番号が違っても構いません。重要なのは、このコマンドが機能することです。
+そうでない場合は、[`docker`のインストール手順](https://docs.docker.com/get-docker/)を参照してください。
+
+<br />
+
+`docker`をインストールしたら、次にUIとAPIサーバーを実行できます。
+
+実行：`docker compose up -d`
+
+これと同じような結果が表示されるはずです：
+
+```
+$ docker compose up -d
+[+] Running 16/16
+ ⠿ bencher_ui Pulled                                           5.9s
+ ...
+ ⠿ bencher_api Pulled                                          6.3s
+ ...
+[+] Running 3/3
+ ⠿ Network bencher_default      Started                        0.1s
+ ⠿ Container bencher_ui         Started                        0.8s
+ ⠿ Container bencher_api_local  Started                        0.4s
+```
+
+また、この出力が異なっても問題ありません。重要なのは、このコマンドが機能することです。
+
+<br />
+
+次に、両方のdockerコンテナーが実行中であることを確認します。
+
+実行：`docker ps`
+
+これと同じような結果が表示されるはずです：
+
+```
+$ docker ps
+CONTAINER ID   IMAGE                                 COMMAND                  CREATED              STATUS              PORTS                                           NAMES
+1d2ed7c7481e   bencherdev/bencher-ui:latest          "/docker-entrypoint.…"   About a minute ago   Up About a minute   0.0.0.0:3000->80/tcp, :::3000->80/tcp           bencher_ui
+7a8590d7021a   bencherdev/bencher-api-local:latest   "/api"                   About a minute ago   Up About a minute   0.0.0.0:61016->61016/tcp, :::61016->61016/tcp   bencher_api_local
+```
+
+以前と同様、この出力が異なっても問題ありません。重要なのは、このコマンドが機能することです。
+
+<br />
+
+## ベンチャー API サーバーログの確認
+
+ベンチャー API サーバーのログを確認してみましょう。
+
+実行：`docker compose logs bencher_api`
+
+これからのチュートリアルで後で確認する確認コードは、まだAPIサーバー上で電子メール/SMTPが設定されていないため、サーバーログにあります。
+
+<br />
+
+## ベンチャー ホストの設定
+
+`bencher` CLIのデフォルトのホストはBencher Cloud（すなわち [https://api.bencher.dev](https://api.bencher.dev)）なので、ホスト名を設定する必要があります。これを行う最も簡単な方法は、`BENCHER_HOST`環境変数を使用することです。
+
+実行：`export BENCHER_HOST=http://localhost:61016`
+
+次に実行：`echo $BENCHER_HOST`
+
+結果は次のように表示されます：
+
+```
+$ echo $BENCHER_HOST
+http://localhost:61016
+```
+
+<br />
+<br />
+
+> 🐰 おめでとうございます！ ベンチャー 自己ホスト型 の設定が完了しました！🎉
+> ベンチャー 自己ホスト型 を使用したクイックスタートチュートリアルを始めることができます。
+
+<br />
+
+<h2><a href="/docs/tutorial/quick-start">続けてください：クイックスタート ➡</a></h2>

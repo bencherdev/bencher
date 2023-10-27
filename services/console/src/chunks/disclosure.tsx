@@ -55,6 +55,17 @@ export const DisclosureFr = (props: { page: string }) => {
 	);
 };
 
+export const DisclosureJa = (props: { page: string }) => {
+	return (
+		<Disclosure
+			bodyText="このドキュメントは OpenAI GPT-4 によって自動的に生成されました。 正確ではない可能性があり、間違いが含まれている可能性があります。 エラーを見つけた場合は、"
+			linkText="GitHub で問題を開いてください。"
+			page={props.page}
+			lang={Language.ja}
+		/>
+	);
+};
+
 export const DisclosurePt = (props: { page: string }) => {
 	return (
 		<Disclosure
