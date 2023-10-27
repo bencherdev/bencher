@@ -1,0 +1,238 @@
+## Executar um Relatório
+
+Finalmente estamos prontos para coletar algumas métricas de referência!
+Para simplificar, usaremos dados fictícios neste tutorial.
+
+Execute: `bencher mock`
+
+Você deve ver algo como:
+
+```
+$ bencher mock
+{
+  "bencher::mock_0": {
+    "latency": {
+      "value": 3.7865423396154463,
+      "lower_value": 3.4078881056539014,
+      "upper_value": 4.165196573576991
+    }
+  },
+  "bencher::mock_1": {
+    "latency": {
+      "value": 16.398332128878437,
+      "lower_value": 14.758498915990593,
+      "upper_value": 18.03816534176628
+    }
+  },
+  "bencher::mock_2": {
+    "latency": {
+      "value": 20.88091359871672,
+      "lower_value": 18.792822238845048,
+      "upper_value": 22.969004958588393
+    }
+  },
+  "bencher::mock_3": {
+    "latency": {
+      "value": 33.88103801203782,
+      "lower_value": 30.492934210834036,
+      "upper_value": 37.2691418132416
+    }
+  },
+  "bencher::mock_4": {
+    "latency": {
+      "value": 40.90515638867921,
+      "lower_value": 36.81464074981129,
+      "upper_value": 44.99567202754713
+    }
+  }
+}
+```
+
+Sua saída deve ser um pouco diferente da acima, pois os dados são pseudorandom.
+O importante é que este comando funcione.
+
+<br />
+
+Agora, vamos executar um relatório usando dados de métrica de referência fictícios.
+Substitua o `slug` do seu projeto pelo argumento `--project` (por exemplo `YOUR_PROJECT_SLUG`) no comando abaixo.
+
+Execute: `bencher run --project YOUR_PROJECT_SLUG "bencher mock"`
+
+Você deve ver algo como:
+
+```
+$ bencher run --project save-walter-white-12345 "bencher mock"
+{
+  "bencher::mock_0": {
+    "latency": {
+      "value": 0.15496641529475275,
+      "lower_value": 0.13946977376527747,
+      "upper_value": 0.17046305682422802
+    }
+  },
+  "bencher::mock_1": {
+    "latency": {
+      "value": 18.648298578180437,
+      "lower_value": 16.783468720362393,
+      "upper_value": 20.513128435998482
+    }
+  },
+  "bencher::mock_2": {
+    "latency": {
+      "value": 28.20328182167366,
+      "lower_value": 25.382953639506294,
+      "upper_value": 31.023610003841025
+    }
+  },
+  "bencher::mock_3": {
+    "latency": {
+      "value": 34.45732560787596,
+      "lower_value": 31.01159304708836,
+      "upper_value": 37.903058168663556
+    }
+  },
+  "bencher::mock_4": {
+    "latency": {
+      "value": 44.9237520767597,
+      "lower_value": 40.43137686908373,
+      "upper_value": 49.41612728443567
+    }
+  }
+}
+
+{
+  "branch": "master",
+  "end_time": "2023-07-18T14:21:27.796871Z",
+  "results": [
+    "{\n  \"bencher::mock_0\": {\n    \"latency\": {\n      \"value\": 0.15496641529475275,\n      \"lower_value\": 0.13946977376527747,\n      \"upper_value\": 0.17046305682422802\n    }\n  },\n  \"bencher::mock_1\": {\n    \"latency\": {\n      \"value\": 18.648298578180437,\n      \"lower_value\": 16.783468720362393,\n      \"upper_value\": 20.513128435998482\n    }\n  },\n  \"bencher::mock_2\": {\n    \"latency\": {\n      \"value\": 28.20328182167366,\n      \"lower_value\": 25.382953639506294,\n      \"upper_value\": 31.023610003841025\n    }\n  },\n  \"bencher::mock_3\": {\n    \"latency\": {\n      \"value\": 34.45732560787596,\n      \"lower_value\": 31.01159304708836,\n      \"upper_value\": 37.903058168663556\n    }\n  },\n  \"bencher::mock_4\": {\n    \"latency\": {\n      \"value\": 44.9237520767597,\n      \"lower_value\": 40.43137686908373,\n      \"upper_value\": 49.41612728443567\n    }\n  }\n}\n"
+  ],
+  "settings": {},
+  "start_time": "2023-07-18T14:21:27.773930Z",
+  "testbed": "base"
+}
+{
+  "uuid": "5554a92c-6f5c-481d-bd47-990f0a9bac6d",
+  "user": { ... },
+  "project": { ... },
+  "branch": { ... },
+  "testbed": { ...},
+  "start_time": "2023-07-18T14:21:27Z",
+  "end_time": "2023-07-18T14:21:27Z",
+  "adapter": "magic",
+  "results": [
+    [
+      {
+        "metric_kind": { ... },
+        "threshold": null,
+        "benchmarks": [ ... ]
+      }
+    ]
+  ],
+  "alerts": [],
+  "created": "2023-07-18T14:21:27Z"
+}
+
+View results:
+- bencher::mock_0: https://bencher.dev/console/projects/save-walter-white-12345/perf?metric_kind=latency&branches=95521eff-09fa-4c02-abe1-dd824108869d&testbeds=5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e&benchmarks=88375e7c-f1e0-4cbb-bde1-bdb7773022ae
+- bencher::mock_1: https://bencher.dev/console/projects/save-walter-white-12345/perf?metric_kind=latency&branches=95521eff-09fa-4c02-abe1-dd824108869d&testbeds=5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e&benchmarks=e81c7863-cc4b-4e22-b507-c1e238871137
+- bencher::mock_2: https://bencher.dev/console/projects/save-walter-white-12345/perf?metric_kind=latency&branches=95521eff-09fa-4c02-abe1-dd824108869d&testbeds=5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e&benchmarks=31dede44-d23a-4baf-b639-63f2ac742e42
+- bencher::mock_3: https://bencher.dev/console/projects/save-walter-white-12345/perf?metric_kind=latency&branches=95521eff-09fa-4c02-abe1-dd824108869d&testbeds=5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e&benchmarks=c7e32369-f3dd-473d-99a3-6289ae32b38e
+- bencher::mock_4: https://bencher.dev/console/projects/save-walter-white-12345/perf?metric_kind=latency&branches=95521eff-09fa-4c02-abe1-dd824108869d&testbeds=5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e&benchmarks=779bc477-4964-4bae-aa8c-4da3e388822c
+```
+
+<br />
+
+Agora você pode visualizar os resultados de cada uma das referências no navegador.
+Clique ou copie e cole os links de `View results`.
+Deve haver apenas um ponto de dados para cada referência, então vamos adicionar mais dados!
+
+<br />
+
+Primeiro, vamos definir o slug do nosso projeto como uma variável de ambiente, para não ter que fornecer isso com o `--project` em cada execução.
+
+Execute: `export BENCHER_PROJECT=save-walter-white-12345`
+
+Se você executar: `echo $BENCHER_PROJECT`
+
+Você deve ver:
+
+```
+$ echo $BENCHER_PROJECT
+save-walter-white-12345
+```
+
+<br />
+
+Vamos executar o mesmo comando novamente sem `--project` para gerar mais dados.
+
+Execute: `bencher run "bencher mock"`
+
+<br />
+
+Agora, vamos gerar mais dados, mas desta vez vamos canalizar nossos resultados para `bencher run`.
+
+Execute: `bencher mock | bencher run`
+
+<br />
+
+Às vezes, você pode querer salvar seus resultados em um arquivo e fazer com que o `bencher run` os leia.
+
+Execute: `bencher run "bencher mock > results.json" --file results.json`
+
+<br />
+
+Da mesma forma, você pode ter um processo separado para executar suas referências e salvar seus resultados em um arquivo. Então o `bencher run` simplesmente os lerá.
+
+Execute: `bencher mock > results.json && bencher run --file results.json`
+
+<br />
+
+Finalmente, vamos semear muitos dados usando o argumento `--iter` do `bencher run`.
+
+Execute: `bencher run --iter 16 "bencher mock"`
+
+<br />
+
+> 🐰 Dica: Consulte a [documentação Subcomando `bencher run` CLI](/docs/pt/explanation/bencher-run) para uma visão completa do que o `bencher run` pode fazer!
+
+<br />
+
+## Gerar um Alerta
+
+Agora que temos alguns dados históricos para nossas referências, vamos gerar um Alerta!
+Os alertas são gerados quando se determina que um resultado da referência é uma regressão de desempenho.
+Então vamos simular uma regressão de desempenho!
+
+Execute: `bencher run "bencher mock --pow 8"`
+
+<br />
+
+Deve haver uma nova seção no final da saída chamada `View alerts`:
+
+```
+View alerts:
+- bencher::mock_0: https://bencher.dev/console/projects/save-walter-white-12345/alerts/b2329d5a-4471-48ab-bfbd-959d46ba1aa6
+- bencher::mock_1: https://bencher.dev/console/projects/save-walter-white-12345/alerts/181b1cf5-d984-402a-b0f1-68f6f119fa66
+- bencher::mock_2: https://bencher.dev/console/projects/save-walter-white-12345/alerts/b9b6c904-c657-4908-97db-dbeca40f8782
+- bencher::mock_3: https://bencher.dev/console/projects/save-walter-white-12345/alerts/5567ff32-2829-4b6a-969a-af33ce3828db
+- bencher::mock_4: https://bencher.dev/console/projects/save-walter-white-12345/alerts/49f2768f-ccda-4933-8e1d-08948f57a74d
+```
+
+<br />
+
+Agora você pode visualizar os Alertas para cada referência no navegador.
+Clique ou copie e cole os links de `View alerts`.
+
+<br />
+
+> 🐰 Dica: Consulte a [documentação sobre Threshold e Alertas](/docs/pt/explanation/thresholds) para uma visão completa de como as regressões de desempenho são detectadas!
+
+<br />
+
+<br />
+
+> 🐰 Parabéns! Você capturou sua primeira regressão de desempenho! 🎉
+
+<br />
+
+<h2><a href="/docs/pt/explanation/benchmarking">Continue: Visão Geral de Benchmarking ➡</a></h2>

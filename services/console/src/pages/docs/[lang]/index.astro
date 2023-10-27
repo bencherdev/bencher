@@ -2,10 +2,10 @@
 import { getCollection } from "astro:content";
 import DocsLayout from "../../../layouts/docs/DocsLayout.astro";
 import {getLangCollection} from "../../../i18n/utils.ts"
-import { Language, defaultLang, showDefaultLang, tutorial } from "../../../i18n/ui";
+import { Language, defaultLang, otherLanguages, showDefaultLang, tutorial } from "../../../i18n/ui";
 
 export async function getStaticPaths() {
-    return ["es", "fr"].map((lang) => {return { params: { lang } }});
+    return otherLanguages.map((lang) => {return { params: { lang } }});
 }
 
 const lang: Language = Astro.params.lang ?? defaultLang;
@@ -28,6 +28,8 @@ const title = () => {
             return "Documentos de Bencher";
         case Language.fr:
             return "Documents de Bencher";
+        case Language.pt:
+            return "Documentação da Microsoft";
         default:
             return "Bencher Docs";
     }
@@ -39,6 +41,8 @@ const description = () => {
             return "Índice de contenidos de la documentación de Bencher. Aprenda a configurar evaluaciones comparativas continuas para su proyecto.";
         case Language.fr:
             return "Table des matières de la documentation Bencher. Découvrez comment configurer une analyse comparative continue pour votre projet.";
+        case Language.pt:
+            return "Índice da documentação do Bencher. Aprenda como configurar benchmarking contínuo para seu projeto.";
         default:
             return "Table of contents for the Bencher documentation. Learn how to setup continuous benchmarking for your project.";
     }
@@ -50,6 +54,8 @@ const alsoIn = () => {
           return "También disponible en:";
         case Language.fr:
             return "Également disponible en:";
+        case Language.pt:
+            return "Também disponível em:";
         default:
             return "Also available in:";
     }
@@ -112,6 +118,9 @@ const alsoIn = () => {
     </li>
     <li>
       <a href="/docs/es">Español</a>
+    </li>
+    <li>
+      <a href="/docs/pt">Português</a>
     </li>
   </ul>
 </DocsLayout>
