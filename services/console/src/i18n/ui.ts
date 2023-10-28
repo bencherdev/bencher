@@ -51,6 +51,8 @@ export const languageName = (lang: Language) => {
 
 export const tutorial = (lang: Language) => {
 	switch (lang) {
+		case Language.en:
+			return "Tutorial";
 		case Language.de:
 			return "Lernprogramm";
 		case Language.es:
@@ -67,14 +69,13 @@ export const tutorial = (lang: Language) => {
 			return "教程";
 		case Language.ru:
 			return "Обучение";
-		case Language.en:
-		default:
-			return "Tutorial";
 	}
 };
 
 export const howTo = (lang: Language) => {
 	switch (lang) {
+		case Language.en:
+			return "How To";
 		case Language.de:
 			return "Wie man";
 		case Language.es:
@@ -91,8 +92,5 @@ export const howTo = (lang: Language) => {
 			return "如何";
 		case Language.ru:
 			return "Как";
-		case Language.en:
-		default:
-			return "How To";
 	}
 };

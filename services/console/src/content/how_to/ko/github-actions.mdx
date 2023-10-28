@@ -1,0 +1,244 @@
+---
+title: "GitHub Actions"
+description: "풀 리퀘스트에 대한 지속적인 벤치마킹을 위해 GitHub Actions에서 Bencher 사용하기"
+heading: "GitHub Actions 에서 Bencher 사용 방법"
+sortOrder: 3
+---
+
+```
+on:
+  push:
+    branches: main
+
+jobs:
+  benchmark_with_bencher:
+    name: Track benchmarks with Bencher
+    runs-on: ubuntu-latest
+    env:
+      BENCHER_PROJECT: save-walter-white
+      BENCHER_API_TOKEN: \${{ secrets.BENCHER_API_TOKEN }}
+      BENCHER_ADAPTER: json
+      BENCHER_TESTBED: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: bencherdev/bencher@main
+      - name: Benchmark with Bencher
+        run: |
+          bencher run \\
+          --if-branch "$GITHUB_REF_NAME" \\
+          --else-if-branch "$GITHUB_BASE_REF" \\
+          --else-if-branch main \\
+          --err \\
+          --github-actions \${{ secrets.GITHUB_TOKEN }} \\
+          "bencher mock"
+```
+
+1. GitHub Actions `workflow`(예: `.github/workflows/benchmark.yml`)를 생성합니다.
+2. Workflow가 실행되어야 하는 이벤트를 `on`에 명시합니다. 전체 개요는 [GitHub Actions `on` 문서](https://docs.github.com/ko/actions/using-workflows/workflow-syntax-for-github-actions#on)에서 확인하세요. 이 Workflow는 `push` 이벤트로 `main` 브랜치에 **만** 실행됩니다. 풀 리퀘스트에서 실행하는 방법은 [아래 섹션](#pull-requests)을 참조하세요.
+3. GitHub Actions `job`(예: `benchmark_with_bencher`)을 생성합니다.
+4. 프로젝트는 이미 존재해야 합니다. `--project` 플래그나 `BENCHER_PROJECT` 환경 변수를 Project slug나 UUID로 설정하세요.(예: `BENCHER_PROJECT: save-walter-white`)
+5. `BENCHER_API_TOKEN`을 **Repository** secrets에 추가하세요 (예: `https://github.com/USERNAME/REPO/settings/secrets/actions`)
+6. API 토큰은 반드시 미리 존재해야 합니다. `--token` 플래그나 `BENCHER_API_TOKEN` 환경 변수를 API 토큰으로 설정하세요. (예: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
+7. 선택 사항: 원하는 adapter 이름으로 `--adapter` 플래그나 `BENCHER_ADAPTER` 환경 변수를 설정하세요. 설정하지 않으면 `magic` Adapter가 사용됩니다. 전체 개요는 [벤치마크 하네스 어댑터](/docs/explanation/adapters)를 참고하세요 (예: `BENCHER_ADAPTER: json`)
+8. 선택 사항: Testbed slug나 UUID로 `--testbed` 플래그나 `BENCHER_TESTBED` 환경 변수를 설정하세요. Testbed는 **반드시** 미리 존재해야 합니다. 설정하지 않으면 `localhost` Testbed가 사용됩니다. (예: `BENCHER_TESTBED: ubuntu-latest`)
+9. 소스 코드를 체크아웃하세요. (예: `uses: actions/checkout@v3`)
+10. [GitHub Action](https://github.com/marketplace/actions/bencher-cli)을 사용하여 Bencher CLI를 설치하세요. (예: `uses: bencherdev/bencher@main`)
+11. <a href="/docs/explanation/bencher-run">bencher run</a> CLI 서브커맨드를 이용해서 [벤치마크를 추적해](/docs/how-to/track-benchmarks) 보세요:
+    1. 프로젝트 브랜치를 설정하는 데에는 여러 옵션이 있습니다. 전체 개요는 [branch 선택](/docs/how-to/branch-selection)를 참조하세요. 제공된 명령어는 [GitHub Action 기본 환경 변수](https://docs.github.com/ko/actions/learn-github-actions/variables#default-environment-variables)를 사용하며 이것은 다음을 시도합니다:
+        1. 이미 존재한다면 현재 브랜치 데이터를 사용합니다. (ex: `--if-branch "$GITHUB_REF_NAME"`)
+        2. 이미 존재한다면 PR 타겟 브랜치 데이터와 임계값의 복제본을 생성합니다. (ex: `--else-if-branch "$GITHUB_BASE_REF"`)
+        3. 그렇지 않으면 `main` 브랜치 데이터와 임계값의 복제본을 생성합니다. (ex: `--else-if-branch main`)
+    2. 경고가 생성될 경우 명령어가 실패하도록 설정합니다. 경고가 생성되려면, [Threshold](/docs/explanation/thresholds)가 미리 존재해야 합니다. (ex: `--err`)
+    3. GitHub API인증 토큰을 설정합니다 (ex: `--github-actions ${{ secrets.GITHUB_TOKEN }}`). 이 옵션은 풀 리퀘스트의 일부로 설정되면, 결과가 풀 리퀘스트에 댓글로 추가됩니다. 제공된 명령어는 [GitHub Actions `GITHUB_TOKEN` 환경 변수](https://docs.github.com/ko/actions/security-guides/automatic-token-authentication)를 사용합니다.
+    4. 벤치마킹을 실행하고 결과로부터 보고서를 생성합니다. (ex: `"bencher mock"`)
+
+<br/>
+
+## Pull Requests
+
+풀 리퀘스트에서 성능 회귀를 잡아내기 위해선, PR에서 벤치마크를 실행해야 합니다.
+동일 리포지토리 내의 브랜치로부터만 PR이 등장할 것으로 예상한다면, 위의 예제를 수정해서 `pull_request` 이벤트에도 실행되도록 하면 됩니다.
+
+```
+on:
+  push:
+    branches: main
+  pull_request:
+```
+
+`push`에서 실행되는 것을 선택한 브랜치 (예: `main`)에만 **제한하는** 것이 중요합니다.
+이렇게 해야 PR 브랜치로의 push가 두 번 실행되지 않습니다!
+이 솔루션은 모든 PR이 **동일** 리포지토리에서 왔을 때만 작동합니다.
+
+포크에서 왔을 수 있는 풀 리퀘스트를 수락하려 계획한다면, 일반적으로 공개 오픈 소스 프로젝트에서 그렇게 되곤 합니다.
+그러면 다소 다르게 처리해야 합니다.
+보안 상의 이유로, 여러분의 `BENCHER_API_TOKEN`과 `GITHUB_TOKEN`과 같은 시크릿들은 포크 PR의 GitHub Actions에서 사용할 수 없습니다.
+즉, 외부 기여자가 포크에서 PR을 오픈하면 위의 예제는 작동하지 않습니다.
+포크 PR에 대해서는 두 가지 옵션이 있습니다:
+
+<ul>
+  <li>[대상 브랜치에서 PR 브랜치를 벤치마크](#benchmark-pr-branch-from-target-branch)</li>
+  <li>[PR 브랜치 벤치마크 결과를 캐시하고 기본 브랜치에서 업로드](#cache-pr-benchmark-results)</li>
+</ul>
+
+### 대상 브랜치에서 PR 브랜치를 벤치마크
+
+1. [on the `pull_request_target` event](https://docs.github.com/ko/actions/using-workflows/events-that-trigger-workflows#pull_request_target)에서 트리거를 발생시킵니다.
+2. PR 브랜치를 체크아웃합니다.
+3. `bencher run`을 직접 사용하여 PR 벤치마크를 실행하고 추적합니다.
+
+이것이 작동하는 이유는 `pull_request_target`이 풀 리퀘스트의 대상 브랜치의 컨텍스트에서 실행되기 때문이며,
+여기서 여러분의 `BENCHER_API_TOKEN`과 `GITHUB_TOKEN`과 같은 시크릿들이 사용 가능합니다.
+그러므로, 이 워크플로우는 대상 브랜치에 존재해 있을 경우에만 실행됩니다.
+`BENCHER_API_TOKEN`과 같은 시크릿을 환경 변수로 설정하는 것은 피하세요.
+대신 API 토큰을 `bencher run`에 명시적으로 전달하세요 (ex: `--token ${{ secrets.BENCHER_API_TOKEN }}`).
+전체 개요에 대해서는 이 [GitHub Security Lab 기술 문서](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
+와 [이 블로그 글](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
+에서 방어적인 리퀘스트를 막는 방법에 대해 알아보세요.
+
+```
+on: pull_request_target
+
+jobs:
+  benchmark_with_bencher:
+    name: Track benchmarks with Bencher
+    runs-on: ubuntu-latest
+    env:
+      BENCHER_PROJECT: save-walter-white
+      BENCHER_ADAPTER: json
+      BENCHER_TESTBED: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: bencherdev/bencher@main
+      - name: Benchmark with Bencher
+        run: |
+          bencher run \\
+          --if-branch "${{ github.event.pull_request.head.ref }}" \\
+          --else-if-branch "${{ github.event.pull_request.base.ref }}" \\
+          --else-if-branch main \\
+          --err \\
+          --github-actions \${{ secrets.GITHUB_TOKEN }} \\
+          --token ${{ secrets.BENCHER_API_TOKEN }} \\
+          "bencher mock"
+```
+
+### PR Benchmark 결과 저장하기
+
+1. `pull_request` 이벤트에서 PR 벤치마크를 실행하세요.
+1. PR 벤치마크 결과를 파일에 저장하고 아티팩트로 업로드하세요.
+1. PR 이벤트를 아티팩트로 업로드하세요.
+1. 해당 워크플로우를 [the `workflow_run` event](https://docs.github.com/ko/actions/using-workflows/events-that-trigger-workflows#workflow_run)로 체인하세요.
+1. 캐시된 PR 이벤트에서 necessary data를 추출하세요.
+1. 캐시된 PR의 벤치마크 결과를 `bencher run`으로 추적하세요.
+
+이것이 작동하는 이유는 `workflow_run`이 리포지토리의 기본 브랜치의 컨텍스트에서 실행되며,
+여기서 여러분의 `BENCHER_API_TOKEN`과 `GITHUB_TOKEN`과 같은 시크릿들이 사용 가능하기 때문입니다.
+그러므로, 이 워크플로우는 기본 브랜치에 존재해 있을 경우에만 실행할 수 있습니다.
+전체 개요에 대한 내용은 [트리거하는 워크플로우로부터 데이터를 사용하기](https://docs.github.com/ko/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow)를 참조하세요.
+초기 워크플로우에서 사용한 풀 리퀘스트 번호, head 브랜치, 그리고 base 브랜치는 `workflow_run` 내에서는 사용할 수 없으므로 명시적으로 전달해야 합니다.
+
+```
+name: Run and Cache Benchmarks
+
+on: pull_request
+
+jobs:
+  benchmark:
+    name: Run Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Mock Benchmark
+        run: echo '{"bencher::mock_0": { "latency": { "value": 1.0 }}}' &> benchmark_results.txt
+      - uses: actions/upload-artifact@v3
+        with:
+          name: benchmark_results.txt
+          path: ./benchmark_results.txt
+      - uses: actions/upload-artifact@v3
+        with:
+          name: pr_event.json
+          path: ${{ env.GITHUB_EVENT_PATH }}
+```
+
+```
+on:
+  workflow_run:
+    workflows: [Run and Cache Benchmarks]
+    types:
+      - completed
+
+jobs:
+  track_with_bencher:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      BENCHER_PROJECT: save-walter-white
+      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+      BENCHER_ADAPTER: json
+      BENCHER_TESTBED: ubuntu-latest
+      BENCHMARK_RESULTS: benchmark_results.txt
+      PR_EVENT: pr_event.json
+    steps:
+      - name: Download Benchmark Results
+        uses: actions/github-script@v6
+        with:
+          script: |
+            function downloadArtifact(artifactName) {
+              let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.payload.workflow_run.id,
+              });
+              let matchArtifact = allArtifacts.data.artifacts.filter((artifact) => {
+                return artifact.name == artifactName
+              })[0];
+              if (!matchArtifact) {
+                core.setFailed(`Failed to find artifact: ${artifactName}`);
+              }
+              let download = await github.rest.actions.downloadArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: matchArtifact.id,
+                archive_format: 'zip',
+              });
+              let fs = require('fs');
+              fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/${artifactName}.zip`, Buffer.from(download.data));
+            }
+            downloadArtifact(process.env.BENCHMARK_RESULTS);
+            downloadArtifact(process.env.PR_EVENT);
+      - name: Unzip Benchmark Results
+        run: |
+          unzip $BENCHMARK_RESULTS.zip
+          unzip $PR_EVENT.zip
+      - name: Export PR Context
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let fs = require('fs');
+            let prEvent = JSON.parse(fs.readFileSync(process.env.PR_EVENT, {encoding: 'utf8'}));
+            fs.appendFileSync(process.env.GITHUB_ENV, `PR_NUMBER=${prEvent.number}`);
+            fs.appendFileSync(process.env.GITHUB_ENV, `PR_HEAD=${prEvent.pull_request.head.ref}`);
+            fs.appendFileSync(process.env.GITHUB_ENV, `PR_BASE=${prEvent.pull_request.base.ref}`);
+      - uses: bencherdev/bencher@main
+          - name: Track Benchmarks with Bencher
+            run: |
+              bencher run \\
+              --if-branch "${{ env.PR_HEAD }}" \\
+              --else-if-branch "${{ env.PR_BASE }}" \\
+              --else-if-branch main \\
+              --err \\
+              --github-actions \${{ secrets.GITHUB_TOKEN }} \\
+              --ci-number ${{ env.PR_NUMBER }} \\
+              --file $BENCHMARK_RESULTS
+```
+
+<br/>
+<br/>
+
+> 🐰 축하합니다! GitHub Actions 에서 Bencher 를 사용하는 방법을 배웠습니다! 🎉
+
+<br/>
+
+<h2><a href="/docs/explanation/benchmarking">계속해보세요: 벤치마킹 개요 ➡</a></h2>

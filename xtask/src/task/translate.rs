@@ -113,7 +113,7 @@ impl Translate {
             let mut lang_output_path = output_path.clone();
             // content/section/[lang]/
             lang_output_path.push(lang.iso_code());
-            std::fs::create_dir_all(&output_path).unwrap();
+            std::fs::create_dir_all(&lang_output_path).unwrap();
             // content/section/[lang]/example.md
             lang_output_path.push(input_file);
             println!("From: {input_path}");

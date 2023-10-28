@@ -11,6 +11,8 @@ const Disclosure = (props: {
 		?.split("/")
 		?.join("+")}`;
 	switch (props.lang) {
+		case Language.en:
+			return <></>;
 		case Language.de:
 			return <DisclosureDe page={page} />;
 		case Language.es:
@@ -19,14 +21,14 @@ const Disclosure = (props: {
 			return <DisclosureFr page={page} />;
 		case Language.ja:
 			return <DisclosureJa page={page} />;
+		case Language.ko:
+			return <DisclosureKo page={page} />;
 		case Language.pt:
 			return <DisclosurePt page={page} />;
 		case Language.ru:
 			return <DisclosureRu page={page} />;
 		case Language.zh:
 			return <DisclosureZh page={page} />;
-		default:
-			return <></>;
 	}
 };
 
@@ -90,6 +92,17 @@ const DisclosureJa = (props: { page: string }) => {
 			linkText="GitHub で問題を開いてください。"
 			page={props.page}
 			lang={Language.ja}
+		/>
+	);
+};
+
+const DisclosureKo = (props: { page: string }) => {
+	return (
+		<DisclosureInner
+			bodyText="이 문서는 OpenAI GPT-4에 의해 자동으로 생성되었습니다. 정확하지 않을 수도 있고 오류가 있을 수도 있습니다. 오류를 발견하면 "
+			linkText="GitHub에서 문제를 열어주세요"
+			page={props.page}
+			lang={Language.ko}
 		/>
 	);
 };
