@@ -1,0 +1,94 @@
+O Servidor da API Bencher requer uma configuração em JSON na inicialização.
+A configuração pode ser fornecida de três maneiras:
+- Variável de ambiente `BENCHER_CONFIG`: O valor deve ser definido para a configuração em JSON
+- Variável de ambiente `BENCHER_CONFIG_PATH`: O valor deve ser definido para o caminho de um arquivo que contenha a configuração em JSON
+- Um arquivo contendo a configuração em JSON localizado em `./bencher.json`, relativo ao executável do servidor
+
+Se nenhuma configuração for encontrada, então uma configuração padrão é carregada.
+
+Para atualizar a configuração enquanto o servidor está em execução,
+um administrador pode usar o comando CLI `bencher server config update`
+que aciona a rota [PUT `/v0/server/config`](/docs/reference/api).
+Todas as configurações atualizadas são salvas na variável de ambiente `BENCHER_CONFIG`
+e no disco em `BENCHER_CONFIG_PATH`.
+
+Exemplo de configuração em JSON:
+
+```
+{
+  "console": {
+    "url": "https://bencher.example.com"
+  },
+  "security": {
+    "issuer": "https://api.bencher.example.com",
+    "secret_key": "UJu7Cpxb-zFaJYqXD-3mDDSDyj-ZvfxZFZs-X58xjxPy"
+  },
+  "server": {
+    "bind_address": "0.0.0.0:61016",
+    "request_body_max_bytes": 1048576,
+    "tls": {
+      "type": "as_file",
+      "cert_file": "/path/to/cert.pem",
+      "key_file": "/path/to/key.pem"
+    }
+  },
+  "logging": {
+    "name": "Bencher API",
+    "log": {
+      "stderr_terminal": {
+        "level": "info"
+      }
+    },
+  },
+  "database": {
+    "file": "data/bencher.db",
+    "data_store": {
+      "service": "aws_s3"
+      "access_key_id": "ABC123DoRemMiABC123",
+      "secret_access_key": "AA3Chr-JSF5sUQqKwayx-FvCfZKsMev-5BqPpcFC3m7",
+      "access_point": "arn:aws:s3:some-region-1:123456789:accesspoint/my-bucket/path/to/backup/dir"
+    }
+  },
+  "smtp": {
+    "hostname": "mailbonobo.com",
+    "port": 587,
+    "starttls": true,
+    "username": "bencher"
+    "secret": "WM3F2u9cqSNdBPLfy9sJ5kk9",
+    "from_name": "Bencher",
+    "from_email": "info@bencher.example.com"
+  },
+  "apm": {
+    "sentry": {
+      "dsn": "https://0123abc1023abc@987efg987efg.ingest.sentry.io/0123456789"
+    }
+  }
+}
+```
+
+## `console`
+
+| Nome  |            Exemplo            |         Padrão         | Obrigatório |                            Descrição                             |
+| :---: | :---------------------------: | :---------------------: | :------: | :------------------------------------------------: |
+|  url  | "https://bencher.example.com" | "http://localhost:3000" |   Sim    | Indica a URL para o console do host do Bencher UI. |
+
+## `security`
+
+|    Nome    |                    Exemplo                     |    Padrão     | Obrigatório |                                                                                                                                     Descrição                                                                                                                                     |
+| :--------: | :--------------------------------------------: | :------------: | :------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+|   issuer   |       "https://api.bencher.example.com"        | "bencher.dev"  |    Não    |                                                                     Indica o emissor do JSON Web Token (JWT). **ATENÇÃO** Alterar este valor fará com que todos os JWTs gerados anteriormente não validem.                                                                      |
+| secret_key | "UJu7Cpxb-zFaJYqXD-3mDDSDyj-ZvfxZFZs-X58xjxPy" | UUID v4 aleatório |   Sim    | Indica a chave usada para gerar todos os tokens. **DEVE SER MUITO SEGURA!** O valor padrão é um UUID v4 gerado aleatoriamente. Sempre que exibido, aparecerá ofuscado como `************`. |
+
+# `server`
+
+Esta seção é baseada na [configuração do servidor Dropshot](https://github.com/oxidecomputer/dropshot/tree/v0.9.0#dropshot-servers).
+
+|          Nome          |       Exemplo       |     Padrão     |          Obrigatório           |                                                                                                                                               Descrição                                                                                                                                                |
+| :--------------------: | :-----------------: | :-------------: | :-------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+|      bind_address      |   "0.0.0.0:61016"   | "0.0.0.0:61016" |             Sim             |                                               Especifica que o servidor deve se ligar ao dado IP e porta TCP. Em geral, servidores podem se ligar a mais de um IP e porta, mas isso não é (ainda?) suportado. Padrão em "127.0.0.1:0".                                                |
+| request_body_max_bytes |       1048576       |     1048576     |             Sim             |                                                                                       Especifica o número máximo de bytes permitidos em um corpo de requisição. Requisições maiores vão receber um erro 400. Padrão em 1024.                                                                                       |
+|        tls.type        |      "as_file"      |       ---       |             Não              |                                                                                           Especifica se e como a informação do certificado e chave TLS são fornecidos. Valores válidos incluem "as_file" e "as_bytes".                                                                                           |
+|     tls.cert_file      | "/path/to/cert.pem" |       ---       | Se tls.type = as_file  | Indica o caminho para um arquivo PEM contendo uma cadeia de certificados para o servidor se identificar. O primeiro certificado é o certificado de entidade final, e os restantes são intermediários até um CA confiável. Se especificado, o servidor só aceitará conexões TLS. |
+|      tls.key_file      | "/path/to/key.pem"  |       ---       | Se tls.type = as_file  |                                                                     Indica o caminho para um arquivo PKCS #8 codificado em PEM contendo a chave privada que o servidor usará. Se especificado, o servidor só aceitará conexões TLS.                                                                      |
+|       tls.certs        |         ---         |       ---       | Se tls.type = as_bytes |                                                                                                            Idêntico a tls.cert_file, mas fornecido como um array de bytes dos dados de certificado.                                                                                                            |
+|        tls.key         |         ---         |       ---       | Se tls.type = as_bytes |                                                                                                               Idêntico a tls.key_file, mas fornecido como um array de bytes dos dados da chave.                                                                                                                 |

@@ -1,0 +1,94 @@
+Der Bencher API-Server benötigt eine JSON-Konfiguration beim Start.
+Die Konfiguration kann auf drei Arten bereitgestellt werden:
+- `BENCHER_CONFIG` Umgebungsvariable: Der Wert sollte auf die JSON-Konfiguration gesetzt werden
+- `BENCHER_CONFIG_PATH` Umgebungsvariable: Der Wert sollte auf den Pfad einer Datei gesetzt werden, die die JSON-Konfiguration enthält
+- Eine Datei, die die JSON-Konfiguration enthält und sich unter `./bencher.json` befindet, relativ zur Serverausführungsdatei
+
+Wenn keine Konfiguration gefunden wird, wird eine Standardkonfiguration geladen.
+
+Um die Konfiguration während des Serverbetriebs zu aktualisieren,
+kann ein Admin den Befehl `bencher server config update` der CLI verwenden,
+der die [PUT `/v0/server/config`](/docs/reference/api) Route trifft.
+Alle aktualisierten Konfigurationen werden in der `BENCHER_CONFIG` Umgebungsvariable gespeichert
+und auf der Festplatte unter `BENCHER_CONFIG_PATH`.
+
+Beispiel für eine JSON-Konfiguration:
+
+```
+{
+  "console": {
+    "url": "https://bencher.example.com"
+  },
+  "security": {
+    "issuer": "https://api.bencher.example.com",
+    "secret_key": "UJu7Cpxb-zFaJYqXD-3mDDSDyj-ZvfxZFZs-X58xjxPy"
+  },
+  "server": {
+    "bind_address": "0.0.0.0:61016",
+    "request_body_max_bytes": 1048576,
+    "tls": {
+      "type": "as_file",
+      "cert_file": "/path/to/cert.pem",
+      "key_file": "/path/to/key.pem"
+    }
+  },
+  "logging": {
+    "name": "Bencher API",
+    "log": {
+      "stderr_terminal": {
+        "level": "info"
+      }
+    },
+  },
+  "database": {
+    "file": "data/bencher.db",
+    "data_store": {
+      "service": "aws_s3"
+      "access_key_id": "ABC123DoRemMiABC123",
+      "secret_access_key": "AA3Chr-JSF5sUQqKwayx-FvCfZKsMev-5BqPpcFC3m7",
+      "access_point": "arn:aws:s3:some-region-1:123456789:accesspoint/my-bucket/path/to/backup/dir"
+    }
+  },
+  "smtp": {
+    "hostname": "mailbonobo.com",
+    "port": 587,
+    "starttls": true,
+    "username": "bencher"
+    "secret": "WM3F2u9cqSNdBPLfy9sJ5kk9",
+    "from_name": "Bencher",
+    "from_email": "info@bencher.example.com"
+  },
+  "apm": {
+    "sentry": {
+      "dsn": "https://0123abc1023abc@987efg987efg.ingest.sentry.io/0123456789"
+    }
+  }
+}
+```
+
+## `console`
+
+| Name  |           Beispiel            |        Standard         | Erforderlich |                    Beschreibung                    |
+| :---: | :---------------------------: | :---------------------: | :----------: | :------------------------------------------------: |
+|  url  | "https://bencher.example.com" | "http://localhost:3000" |      Ja      | Legt die URL für den Bencher UI-Konsolenhost fest. |
+
+## `security`
+
+|    Name    |                    Beispiel                    |     Standard      | Erforderlich |                                                                                                                                                                 Beschreibung                                                                                                                                                                 |
+| :--------: | :--------------------------------------------: | :---------------: | :----------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+|   issuer   |       "https://api.bencher.example.com"        |   "bencher.dev"   |     Nein     |                                                                                         Gibt den JWT (JSON Web Token) Aussteller an. **WARNUNG** Änderungen dieses Wertes führen dazu, dass alle zuvor generierten JWTs nicht mehr validiert werden.                                                                                         |
+| secret_key | "UJu7Cpxb-zFaJYqXD-3mDDSDyj-ZvfxZFZs-X58xjxPy" | Zufällige UUID v4 |      Ja      | Gibt den Schlüssel an, der zur Generierung aller Tokens verwendet wird. **ES SOLLTE SEHR SICHER SEIN!** Der Standardwert ist eine zufällig generierte [UUID v4](https://de.wikipedia.org/wiki/Universally_Unique_Identifier#Version_4_(random)). Jedes Mal, wenn es protokolliert wird, wird es als `************` verschleiert dargestellt. |
+
+## `server`
+
+Dieser Abschnitt basiert auf der [Dropshot-Serverkonfiguration](https://github.com/oxidecomputer/dropshot/tree/v0.9.0#dropshot-servers).
+
+|          Name          |      Beispiel       |    Standard     |         Erforderlich         |                                                                                                                                                      Beschreibung                                                                                                                                                      |
+| :--------------------: | :-----------------: | :-------------: | :--------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+|      bind_address      |   "0.0.0.0:61016"   | "0.0.0.0:61016" |              Ja              |                            Legt fest, dass der Server an die angegebene IP-Adresse und den TCP-Port gebunden sein sollte. Im Allgemeinen können Server an mehr als eine IP-Adresse und Port gebunden sein, dies wird jedoch (noch?) nicht unterstützt. Standardmäßig ist es "127.0.0.1:0".                             |
+| request_body_max_bytes |       1048576       |     1048576     |              Ja              |                                                                          Gibt die maximale Anzahl von Bytes an, die in einem Anforderungskörper zulässig sind. Größere Anfragen erhalten einen 400 Fehler. Standardmäßig auf 1024 festgelegt.                                                                          |
+|        tls.type        |     "als_datei"     |       ---       |             Nein             |                                                                                         Gibt an, ob und wie TLS-Zertifikat- und Schlüsselinformationen bereitgestellt werden. Gültige Werte sind "als_datei" und "als_bytes".                                                                                          |
+|     tls.cert_file      | "/path/to/cert.pem" |       ---       | Nur wenn tls.type = as_file  | Gibt den Pfad zu einer PEM-Datei an, die eine Zertifikatskette enthält, mit der sich der Server identifiziert. Das erste Zertifikat ist das End-Entity-Zertifikat und die verbleibenden sind Zwischenzertifikate auf dem Weg zu einer vertrauenswürdigen CA. Wenn angegeben, hört der Server nur auf TLS-Verbindungen. |
+|      tls.key_file      | "/path/to/key.pem"  |       ---       | Nur wenn tls.type = as_file  |                                                                  Gibt den Pfad zu einer PEM-kodierten PKCS #8-Datei an, die den privaten Schlüssel enthält, den der Server verwenden wird. Wenn angegeben, hört der Server nur auf TLS-Verbindungen.                                                                   |
+|       tls.certs        |         ---         |       ---       | Nur wenn tls.type = as_bytes |                                                                                                              Identisch mit tls.cert_file, jedoch als Array von Bytes von Zertifikatsdaten bereitgestellt.                                                                                                              |
+|        tls.key         |         ---         |       ---       | Nur wenn tls.type = as_bytes |                                                                                                               Identisch mit tls.key_file, jedoch als Array von Bytes von Schlüsseldaten bereitgestellt.                                                                                                                |
