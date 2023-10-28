@@ -11,7 +11,7 @@ const Toolbox = (_props: {}) => {
 	return (
 		<div
 			class="content has-text-centered"
-			style="margin-top: 3rem; margin-bottom: 3rem;"
+			style="margin-top: 4rem; margin-bottom: 6rem;"
 		>
 			<h2 class="title is-2">Use Your Favorite Benchmark Harness</h2>
 			<br />
