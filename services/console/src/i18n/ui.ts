@@ -6,6 +6,7 @@ export enum Language {
 	es = "es",
 	fr = "fr",
 	ja = "ja",
+	ko = "ko",
 	pt = "pt",
 	ru = "ru",
 	zh = "zh",
@@ -17,6 +18,7 @@ export const otherLanguages = [
 	Language.es,
 	Language.fr,
 	Language.ja,
+	Language.ko,
 	Language.pt,
 	Language.ru,
 	Language.zh,
@@ -36,12 +38,14 @@ export const languageName = (lang: Language) => {
 			return "Français";
 		case Language.ja:
 			return "日本語";
+		case Language.ko:
+			return "한국어";
 		case Language.pt:
-			return "Português";
+			return "Português do Brasil";
 		case Language.ru:
 			return "Русский";
 		case Language.zh:
-			return "中文";
+			return "简体中文";
 	}
 };
 
@@ -55,6 +59,8 @@ export const tutorial = (lang: Language) => {
 			return "Didacticiel";
 		case Language.ja:
 			return "チュートリアル";
+		case Language.ko:
+			return "지도 시간";
 		case Language.pt:
 			return "Tutorial";
 		case Language.zh:
@@ -79,6 +85,8 @@ export const howTo = (lang: Language) => {
 			return "方法";
 		case Language.pt:
 			return "Como";
+		case Language.ko:
+			return "어떻게";
 		case Language.zh:
 			return "如何";
 		case Language.ru:

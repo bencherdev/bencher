@@ -1,3 +1,4 @@
+#![cfg(feature = "plus")]
 #![allow(clippy::unwrap_used)]
 
 use std::{fmt, io::Write};
@@ -50,7 +51,8 @@ impl fmt::Display for CliLanguage {
                 CliLanguage::Spanish => "Spanish",
                 CliLanguage::French => "French",
                 CliLanguage::Japanese => "Japanese",
-                CliLanguage::Portuguese => "Portuguese",
+                CliLanguage::Korean => "Korean",
+                CliLanguage::Portuguese => "Brazilian Portuguese",
                 CliLanguage::Russian => "Russian",
                 CliLanguage::Chinese => "Simplified Chinese",
             }
@@ -66,6 +68,7 @@ impl CliLanguage {
             CliLanguage::Spanish => "es",
             CliLanguage::French => "fr",
             CliLanguage::Japanese => "ja",
+            CliLanguage::Korean => "ko",
             CliLanguage::Portuguese => "pt",
             CliLanguage::Russian => "ru",
             CliLanguage::Chinese => "zh",
@@ -78,6 +81,7 @@ impl CliLanguage {
             CliLanguage::Spanish,
             CliLanguage::French,
             CliLanguage::Japanese,
+            CliLanguage::Korean,
             CliLanguage::Portuguese,
             CliLanguage::Russian,
             CliLanguage::Chinese,

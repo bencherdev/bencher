@@ -4,10 +4,13 @@ version.workspace = true
 authors.workspace = true
 edition.workspace = true
 
+[features]
+default = ["plus"]
+plus = ["dep:async-openai"]
+
 [dependencies]
 # Workspace
 anyhow.workspace = true
-async-openai = "0.14.3"
 bencher_json = { workspace = true, features = ["lite"] }
 camino.workspace = true
 clap.workspace = true
@@ -16,3 +19,5 @@ serde_json.workspace = true
 serde_urlencoded.workspace = true
 tokio = { workspace = true, features = ["macros", "rt"] }
 url.workspace = true
+# Crate
+async-openai = { version = "0.14.3", optional = true }

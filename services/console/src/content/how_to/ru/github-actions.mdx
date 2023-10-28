@@ -1,0 +1,244 @@
+---
+title: "GitHub Actions"
+description: "Используйте Bencher в GitHub Actions для непрерывного бенчмаркинга при создании pull requests"
+heading: "Как использовать Bencher в GitHub Actions"
+sortOrder: 3
+---
+
+```
+on:
+  push:
+    branches: main
+
+jobs:
+  benchmark_with_bencher:
+    name: Отслеживать бенчмарки с помощью Bencher
+    runs-on: ubuntu-latest
+    env:
+      BENCHER_PROJECT: save-walter-white
+      BENCHER_API_TOKEN: \${{ secrets.BENCHER_API_TOKEN }}
+      BENCHER_ADAPTER: json
+      BENCHER_TESTBED: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: bencherdev/bencher@main
+      - name: Бенчмарк с Bencher
+        run: |
+          bencher run \\
+          --if-branch "$GITHUB_REF_NAME" \\
+          --else-if-branch "$GITHUB_BASE_REF" \\
+          --else-if-branch main \\
+          --err \\
+          --github-actions \${{ secrets.GITHUB_TOKEN }} \\
+          "bencher mock"
+```
+
+1. Создайте `workflow` GitHub Actions (пример: `.github/workflows/benchmark.yml`).
+2. Укажите события, при которых должен запускаться `workflow`. См. [документацию GitHub Actions `on`](https://docs.github.com/ru/actions/using-workflows/workflow-syntax-for-github-actions#on) для полного обзора. Этот `workflow` запускается **только** при событиях `push` в ветку `main`. Для запуска [при Pull Requests см. раздел ниже](#pull-requests).
+3. Создайте `job` GitHub Actions (пример: `benchmark_with_bencher`).
+4. Проект должен уже существовать. Установите флаг `--project` или переменную окружения `BENCHER_PROJECT` на slug или UUID проекта. (пример: `BENCHER_PROJECT: save-walter-white`).
+5. Добавьте `BENCHER_API_TOKEN` в секреты Вашего **репозитория** (пример: `https://github.com/USERNAME/REPO/settings/secrets/actions`).
+6. Токен API должен уже существовать. Установите флаг `--token` или переменную окружения `BENCHER_API_TOKEN` на токен API. (пример: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`).
+7. Опционально: установите флаг `--adapter` или переменную окружения `BENCHER_ADAPTER` на желаемое имя адаптера. Если это не установлено, то будет использован адаптер `magic`. См. [адаптеры бенчмарк-тула](/docs/ru/explanation/adapters) для полного обзора. (пример: `BENCHER_ADAPTER: json`).
+8. Опционально: установите флаг `--testbed` или переменную окружения `BENCHER_TESTBED` на slug или UUID тестового стенда. Тестовый стенд **должен** уже существовать. Если это не установлено, то будет использован тестовый стенд `localhost`. (пример: `BENCHER_TESTBED: ubuntu-latest`).
+9. Осуществите checkout исходного кода. (пример: `uses: actions/checkout@v3`).
+10. Установите CLI Bencher с использованием [GitHub Action](https://github.com/marketplace/actions/bencher-cli). (пример: `uses: bencherdev/bencher@main`).
+11. [Отследите свои бенчмарки](/docs/ru/how-to/track-benchmarks) с помощью подкоманды CLI <code><a href="/docs/ru/explanation/bencher-run">bencher run</a></code>:
+    1. Для установки ветки проекта есть несколько опций. См. [выбор ветки](/docs/ru/how-to/branch-selection) для полного обзора. Представленная команда использует [стандартные переменные окружения GitHub Action](https://docs.github.com/ru/actions/learn-github-actions/variables#default-environment-variables) и пытается:
+        1. Использовать данные текущей ветки, если они уже существуют. (пример: `--if-branch "$GITHUB_REF_NAME"`)
+        2. Создать клон данных и порогов целевой ветки PR, если они уже существуют. (пример: `--else-if-branch "$GITHUB_BASE_REF"`)
+        3. В противном случае создать клон данных и порогов ветки `main`. (пример: `--else-if-branch main`)
+    2. Установите команду на сбой, если создано предупреждение (Alert). Для генерации предупреждения должен уже существовать [Threshold (порог)](/docs/ru/explanation/thresholds). (пример: `--err`)
+    3. Установите токен аутентификации GitHub API (пример: `--github-actions ${{ secrets.GITHUB_TOKEN }}`). Когда этот параметр установлен в рамках pull request, то результаты будут добавлены в pull request в виде комментария. Представленная команда использует [переменную окружения `GITHUB_TOKEN` GitHub Actions](https://docs.github.com/ru/actions/security-guides/automatic-token-authentication).
+    4. Запустите свои бенчмарки и создайте отчет из результатов. (пример: `"bencher mock"`)
+
+<br/>
+
+## Pull Requests
+
+Чтобы отслеживать регрессию производительности в pull requests, вам нужно запускать свои бенчмарки на PR.
+Если вы ожидаете только PR от веток внутри одного и того же репозитория, то вы можете просто изменить пример выше, чтобы также запускать `on` `pull_request` события.
+
+```
+on:
+  push:
+    branches: main
+  pull_request:
+```
+
+Важно ограничить запуск при `push` **только** для выбранных веток (например: `main`),
+чтобы предотвратить двойной запуск при пуше в ветки PR!
+Опять, это решение работает только если все PR создаются в рамках одного и того же **репозитория**.
+
+Если вы планируете принимать pull requests из форков, как это часто бывает в открытых проектах с открытым исходным кодом,
+вам придется обрабатывать вещи немного иначе.
+По соображениям безопасности секреты, такие как `BENCHER_API_TOKEN` и `GITHUB_TOKEN`, недоступны в GitHub Actions для PR из форков.
+То есть, если внешний участник открывает PR из форка, приведенный выше пример не сработает.
+Есть два варианта для PR из форков:
+
+<ul>
+  <li>[Бенчмаркинг PR ветки от целевой ветки](#benchmark-pr-branch-from-target-branch)</li>
+  <li>[Кэширование результатов бенчмарка PR и загрузка из основного бранча](#cache-pr-benchmark-results)</li>
+</ul>
+
+### Бенчмаркинг PR Ветки от Целевой Ветки
+
+1. Срабатывание [на событие `pull_request_target`](https://docs.github.com/ru/actions/using-workflows/events-that-trigger-workflows#pull_request_target).
+2. Checkout ветки PR.
+3. Запустите и отследите бенчмарки PR с помощью `bencher run` напрямую.
+
+Это работает потому, что `pull_request_target` работает в контексте целевой ветки запроса на pull, 
+где секреты, такие как `BENCHER_API_TOKEN` и `GITHUB_TOKEN`, доступны.
+Поэтому этот `workflow` будет запускаться только если он существует на целевом бранче.
+Избегайте установки секретов в качестве переменных окружения, таких как `BENCHER_API_TOKEN`.
+Вместо этого явно передавайте токен API в `bencher run` (например: `--token ${{ secrets.BENCHER_API_TOKEN }}`).
+См. эту [работу GitHub Security Lab](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
+и [этот блоговый пост](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
+о предотвращении вредоносных pull requests для полного обзора.
+
+```
+on: pull_request_target
+
+jobs:
+  benchmark_with_bencher:
+    name: Отследить бенчмарки с помощью Bencher
+    runs-on: ubuntu-latest
+    env:
+      BENCHER_PROJECT: save-walter-white
+      BENCHER_ADAPTER: json
+      BENCHER_TESTBED: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: bencherdev/bencher@main
+      - name: Бенчмарк с Bencher
+        run: |
+          bencher run \\
+          --if-branch "${{ github.event.pull_request.head.ref }}" \\
+          --else-if-branch "${{ github.event.pull_request.base.ref }}" \\
+          --else-if-branch main \\
+          --err \\
+          --github-actions \${{ secrets.GITHUB_TOKEN }} \\
+          --token ${{ secrets.BENCHER_API_TOKEN }} \\
+          "bencher mock"
+```
+
+### Кэширование Результатов Бенчмарка PR
+
+1. Запустите бенчмарки PR на событиях `pull_request`.
+1. Сохраните результаты бенчмарка PR в файл и загрузите их как элемент.
+1. Загрузите событие PR в качестве элемента.
+1. Сопоставьте этот `workflow` с событием [`workflow_run`](https://docs.github.com/ru/actions/using-workflows/events-that-trigger-workflows#workflow_run).
+1. Извлеките необходимые данные из кэшированного события PR.
+1. Отслеживайте результаты кэшированного бенчмарка PR с помощью `bencher run`.
+
+Это работает, потому что `workflow_run` работает в контексте основного бранча репозитория,
+где секреты, такие как `BENCHER_API_TOKEN` и `GITHUB_TOKEN`, доступны.
+Поэтому эти `workflow` будут запускаться только если они существуют на основном бранче.
+См. [использование данных из вызывающего `workflow`](https://docs.github.com/ru/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow) для полного обзора.
+Номер pull request, head branch и base branch, используемые в начальном workflow, должны быть явно переданы, так как они недоступны внутри `workflow_run`.
+
+```
+name: Запуск и Кэширование Бенчмарков
+
+on: pull_request
+
+jobs:
+  benchmark:
+    name: Запуск Бенчмарков
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Тестовый Бенчмарк
+        run: echo '{"bencher::mock_0": { "latency": { "value": 1.0 }}}' &> benchmark_results.txt
+      - uses: actions/upload-artifact@v3
+        with:
+          name: benchmark_results.txt
+          path: ./benchmark_results.txt
+      - uses: actions/upload-artifact@v3
+        with:
+          name: pr_event.json
+          path: ${{ env.GITHUB_EVENT_PATH }}
+```
+
+```
+on:
+  workflow_run:
+    workflows: [Запуск и Кэширование Бенчмарков]
+    types:
+      - completed
+
+jobs:
+  track_with_bencher:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      BENCHER_PROJECT: save-walter-white
+      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+      BENCHER_ADAPTER: json
+      BENCHER_TESTBED: ubuntu-latest
+      BENCHMARK_RESULTS: benchmark_results.txt
+      PR_EVENT: pr_event.json
+    steps:
+      - name: Загрузить Результаты Бенчмарка
+        uses: actions/github-script@v6
+        with:
+          script: |
+            function downloadArtifact(artifactName) {
+              let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.payload.workflow_run.id,
+              });
+              let matchArtifact = allArtifacts.data.artifacts.filter((artifact) => {
+                return artifact.name == artifactName
+              })[0];
+              if (!matchArtifact) {
+                core.setFailed(`Не удалось найти элемент: ${artifactName}`);
+              }
+              let download = await github.rest.actions.downloadArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: matchArtifact.id,
+                archive_format: 'zip',
+              });
+              let fs = require('fs');
+              fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/${artifactName}.zip`, Buffer.from(download.data));
+            }
+            downloadArtifact(process.env.BENCHMARK_RESULTS);
+            downloadArtifact(process.env.PR_EVENT);
+      - name: Распаковать Результаты Бенчмарка
+        run: |
+          unzip $BENCHMARK_RESULTS.zip
+          unzip $PR_EVENT.zip
+      - name: Экспорт Контекста PR
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let fs = require('fs');
+            let prEvent = JSON.parse(fs.readFileSync(process.env.PR_EVENT, {encoding: 'utf8'}));
+            fs.appendFileSync(process.env.GITHUB_ENV, `PR_NUMBER=${prEvent.number}`);
+            fs.appendFileSync(process.env.GITHUB_ENV, `PR_HEAD=${prEvent.pull_request.head.ref}`);
+            fs.appendFileSync(process.env.GITHUB_ENV, `PR_BASE=${prEvent.pull_request.base.ref}`);
+      - uses: bencherdev/bencher@main
+          - name: Отследить Бенчмарки с Bencher
+            run: |
+              bencher run \\
+              --if-branch "${{ env.PR_HEAD }}" \\
+              --else-if-branch "${{ env.PR_BASE }}" \\
+              --else-if-branch main \\
+              --err \\
+              --github-actions \${{ secrets.GITHUB_TOKEN }} \\
+              --ci-number ${{ env.PR_NUMBER }} \\
+              --file $BENCHMARK_RESULTS
+```
+
+<br/>
+<br/>
+
+> 🐰 Поздравляем! Вы научились использовать Bencher в GitHub Actions! 🎉
+
+<br/>
+
+<h2><a href="/docs/ru/explanation/benchmarking">Продолжайте изучать: Обзор Бенчмаркинга ➡</a></h2>

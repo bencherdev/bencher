@@ -35,7 +35,7 @@ import { BENCHER_VERSION } from "../../../util/ext";
 1. Erstellen Sie eine GitLab CI/CD `job` (z.B.: `benchmark_with_bencher`)
 1. Wählen Sie ein Docker-Image zum Ausführen Ihres Jobs (z.B.: `image: rust:bullseye`)
 1. Das Projekt muss bereits existieren. Setzen Sie das `--project` flag oder die `BENCHER_PROJECT` Umgebungsvariable auf den Project-Slug oder die UUID. (z.B.: `BENCHER_PROJECT: save-walter-white`)
-1. Fügen Sie `BENCHER_API_TOKEN` zu den CI/CD-Geheimnissen Ihres Projekts hinzu, unter `Settings -> CI / CD -> Variables -> Add Variable`
+1. Fügen Sie `BENCHER_API_TOKEN` zu den CI/CD-Geheimnissen Ihres Projekts hinzu, unter `Einstellungen -> CI / CD -> Variablen -> Variable hinzufügen`
 1. Das API-Token muss bereits existieren. Setzen Sie das `--token` flag oder die `BENCHER_API_TOKEN` Umgebungsvariable auf das API-Token. (z.B.: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
 1. Optional: Setzen Sie das `--adapter` flag oder die `BENCHER_ADAPTER` Umgebungsvariable auf den gewünschten Adapternamen. Wenn dies nicht gesetzt ist, wird der `magic` Adapter verwendet. Siehe [Benchmark Harness Adapter](/docs/de/explanation/adapters) für einen vollständigen Überblick. (z.B.: `BENCHER_ADAPTER: json`)
 1. Optional: Setzen Sie das `--testbed` flag oder die `BENCHER_TESTBED` Umgebungsvariable auf den Testbed-Slug oder die UUID. Das Testbed muss bereits vorhanden sein. Wenn dies nicht eingestellt ist, wird das `localhost` Testbed verwendet. (z.B.: `BENCHER_TESTBED: bullseye`)

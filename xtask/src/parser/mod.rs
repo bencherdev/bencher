@@ -15,6 +15,7 @@ pub struct CliTask {
 pub enum CliSub {
     Typeshare(CliTypeshare),
     Swagger(CliSwagger),
+    #[cfg(feature = "plus")]
     Translate(CliTranslate),
     FlyTest(CliFlyTest),
     NetlifyTest(CliNetlifyTest),
@@ -27,6 +28,7 @@ pub struct CliTypeshare {}
 #[derive(Parser, Debug)]
 pub struct CliSwagger {}
 
+#[cfg(feature = "plus")]
 #[derive(Parser, Debug)]
 pub struct CliTranslate {
     /// File input path
@@ -45,6 +47,7 @@ pub struct CliTranslate {
     pub disclosure: bool,
 }
 
+#[cfg(feature = "plus")]
 #[derive(ValueEnum, Debug, Clone, Copy)]
 #[clap(rename_all = "snake_case")]
 pub enum CliLanguage {
@@ -56,6 +59,8 @@ pub enum CliLanguage {
     French,
     #[clap(alias = "ja")]
     Japanese,
+    #[clap(alias = "ko")]
+    Korean,
     #[clap(alias = "pt")]
     Portuguese,
     #[clap(alias = "ru")]
