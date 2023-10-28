@@ -1,0 +1,101 @@
+---
+title: "Seguimiento de Puntos de Referencia"
+description: "Descubre regresiones de rendimiento en el código utilizando puntos de referencia históricos o puntos de referencia relativos de manera continua"
+heading: "Cómo usar Bencher para realizar seguimiento a los Puntos de Referencia"
+sortOrder: 2
+---
+
+La forma más sencilla de rastrear tus puntos de referencia es el subcomando CLI <code><a href="/docs/es/explanation/bencher-run">bencher run</a></code>.
+Consulta el [resumen del establecimiento de puntos de referencia](/docs/es/explanation/benchmarking) para una explicación más detallada.
+Este es un ejemplo de un subcomando CLI <code><a href="/docs/es/explanation/bencher-run">bencher run</a></code> para rastrear puntos de referencia en una rama de funciones llamada de manera apropiada `feature-branch`:
+
+```
+bencher run \
+--project save-walter-white \
+--token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjbGllbnQiLCJleHAiOjE2NzQwNjA3NTAsImlhdCI6MTY3MTQ2ODc1MCwiaXNzIjoiYmVuY2hlci5kZXYiLCJzdWIiOiJzYXVsQGJldHRlcmNhbGxzYXVsLmNvbSIsIm9yZyI6bnVsbH0.CABcvWlPobAHs7wsdR6wX5p0R2jaCd7RmpsnMp5pwEc \
+--adapter json \
+--if-branch feature-branch \
+--else-if-branch main \
+--else-branch \
+--testbed phoenix \
+--err \
+"bencher mock"`
+```
+
+1. El Proyecto ya debe existir. Establezca la bandera `--project` o la variable de entorno `BENCHER_PROJECT` al slug o UUID del Proyecto. (ex: `--project save-walter-white`)
+1. La ficha de API ya debe existir. Establezca la bandera `--token` o la variable de entorno `BENCHER_API_TOKEN` a la ficha de API. (ex: `--token ...`)
+1. Opcional: Establezca la bandera `--adapter` o la variable de entorno `BENCHER_ADAPTER` al nombre del adaptador deseado. Si no se establece esto, entonces el Adaptador `magic` será utilizado. Consulte[los adaptadores del arnés de referencia](/docs/es/explanation/adapters) para una visión general completa. (ex: `--adapter json`)
+1. Existen varias opciones para establecer la rama del proyecto. Consulte [la selección de la rama](/docs/es/explanation/branch-selection) para una visión general completa.
+    1. Utilice la rama actual si ya existe. (ex: `--if-branch feature-branch`)
+    1. Cree una copia de los datos de la rama objetivo si ya existe. (ex: `--else-if-branch main`)
+    1. De lo contrario, cree una nueva rama con el nombre proporcionado a `--if-branch`, que sería `feature-branch`. (ex: `--else-branch`)
+1. Opcional: Establezca la bandera `--testbed` o la variable de entorno `BENCHER_TESTBED` al slug o UUID del Testbed. El Testbed ya debe existir. Si no se establece esto, entonces el Testbed `localhost` predeterminado será utilizado. (ex: `--testbed phoenix`)
+1. Establezca el comando para fallar si se genera una Alerta. Para que se genere una Alerta, ya debe existir un [Umbral](/docs/es/explanation/thresholds). (ex: `--err`)
+1. Ejecute sus puntos de referencia y genere un Informe a partir de los resultados. (ex: `"bencher mock"`)
+
+## Benchmarking Relativo
+
+El benchmarking relativo realiza una comparación lado a lado de dos commits.
+Esto puede ser útil cuando se trata con entornos ruidosos de CI/CD,
+donde el recurso disponible puede variar mucho entre las ejecuciones.
+Este es un ejemplo de un subcomando CLI <code><a href="/docs/es/explanation/bencher-run">bencher run</a></code> para realizar benchmarking relativo en una rama de features apropiadamente llamada `feature-branch`:
+
+```
+git checkout feature-branch
+
+export FEATURE_BRANCH=feature-branch-$(git rev-parse --short HEAD)
+
+git checkout main
+
+bencher run \
+--if-branch "$FEATURE_BRANCH" \
+--else-branch \
+--iter 3 \
+"bencher mock"
+
+git checkout feature-branch
+
+bencher threshold create \
+--metric-kind latency \
+--branch "$FEATURE_BRANCH" \
+--testbed localhost \
+--test t \
+--right-side 0.95
+
+bencher run \
+--if-branch "$FEATURE_BRANCH" \
+--iter 3 \
+--fold min \
+--err \
+"bencher mock"
+```
+
+1. Haga checkout de la rama de features. (ex: `feature-branch`)
+1. Crea una variable de entorno que es el nombre de la rama de features concatenado con el ID corto del commit de git. ¡Esto es importante! Garantiza que por cada ejecución se crea una nueva rama.
+1. Checkout de la rama objetivo. (ex: `main`)
+1. Ejecute `bencher run` para la rama objetivo:
+    1. La rama dada todavía no existirá. (ex: `--if-branch "$FEATURE_BRANCH"`)
+    1. Por lo tanto, se creará. (ex: `--else-branch`)
+    1. Ejecute los benchmarks tres veces. (ex: `--iter 3`)
+1. Haga checkout de la rama de features. (ex: `feature-branch`)
+1. Cree un [Umbral](/docs/es/explanation/thresholds) para la rama de features:
+    1. El Típo de Métrica para los benchmarks es Latencia. (ex: `--metric-kind latency`)
+    1. La Rama es la rama de features con el ID de commit de git adjunto. (ex: `--branch "$FEATURE_BRANCH"`)
+    1. El Testbed se está ejecutando localmente. (ex: `--testbed localhost`)
+    1. Hay menos de 30 métricas, use una Prueba de la t de Student. (ex: `--test t`)
+    1. Establezca un límite en el lado derecho del 95.0%, debido a que una Latencia mayor indica una regresión de rendimiento. (ex: `--right-side 0.95`)
+1. Ejecute `bencher run` para la rama de features:
+    1. La Rama existirá ya que fue recién creada. (ex: `--if-branch "$FEATURE_BRANCH"`)
+    1. Ejecute las pruebas tres veces. (ex: `--iter 3`)
+    1. Dobla todas las tres Métricas en el valor mínimo. (ex: `--fold min`)
+    1. Establezca el comando para fallar si se genera una Alerta por el [Umbral](/docs/es/explanation/thresholds). (ex: `--err`)
+
+<br/>
+<br/>
+
+> 🐰 ¡Felicidades! ¡Has aprendido cómo usar Bencher para realizar seguimiento a los puntos de referencia! 🎉
+
+<br/>
+
+<h2><a href="/docs/es/how-to/github-actions">Añadir Bencher a las Acciones de GitHub ➡</a></h2>
+<h2><a href="/docs/es/how-to/gitlab-ci-cd">Añadir Bencher a GitLab CI/CD ➡</a></h2>

@@ -8,6 +8,8 @@ use async_openai::{
     Client,
 };
 use camino::Utf8PathBuf;
+use chrono::Utc;
+use notify_rust::Notification;
 
 use crate::parser::{CliLanguage, CliTranslate};
 
@@ -109,7 +111,8 @@ impl Translate {
         .unwrap()
         .to_path_buf());
 
-        for lang in languages {
+        let start_time = Utc::now();
+        for lang in languages.clone() {
             let mut lang_output_path = output_path.clone();
             // content/section/[lang]/
             lang_output_path.push(lang.iso_code());
@@ -152,6 +155,19 @@ impl Translate {
             let mut f = std::fs::File::create(&lang_output_path)?;
             f.write_all(translation.as_bytes()).unwrap();
         }
+        let end_time = Utc::now();
+
+        let duration = end_time - start_time;
+        let languages_str = languages
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join(", ");
+        let body = format!("Translated in {duration}: {languages_str}",);
+        Notification::new()
+            .summary("🤖 Translation complete!")
+            .body(&body)
+            .show()?;
 
         Ok(())
     }
