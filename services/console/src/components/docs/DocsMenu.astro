@@ -1,7 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import type DocsTab from "./docs_tab";
-import {Language, defaultLang, explanation, howTo, tutorial } from "../../i18n/ui.ts";
+import {Language, architecture, defaultLang, explanation, howTo, tutorial } from "../../i18n/ui.ts";
 import {getLangCollection, langPath} from "../../i18n/utils.ts"
 import { Collection } from "../../content/config";
 
@@ -68,7 +68,7 @@ const lang: Language = Astro.props.lang ?? defaultLang;
         <a href={`/docs/${langPath(lang)}reference/api`}>REST API</a>
       </li>
       <li>
-        <a href={`/docs/${langPath(lang)}reference/architecture`}>Architecture</a>
+        <a href={`/docs/${langPath(lang)}reference/architecture`}>{architecture(lang)}</a>
       </li>
       {
         referenceCollection[lang]?.map((page) => (

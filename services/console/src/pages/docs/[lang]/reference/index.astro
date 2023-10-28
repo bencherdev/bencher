@@ -1,0 +1,11 @@
+---
+import { Collection } from "../../../../content/config";
+import { getLangPaths } from "../../../../i18n/utils";
+
+export async function getStaticPaths() {
+  return await getLangPaths(Collection.reference);
+}
+
+const { lang } = Astro.params;
+---
+<meta http-equiv="refresh" content={`0;url=/docs/${lang}`} />

@@ -67,10 +67,10 @@ export const tutorial = (lang: Language) => {
 			return "자습서 작";
 		case Language.pt:
 			return "Tutorial";
-		case Language.zh:
-			return "教程";
 		case Language.ru:
 			return "учебника";
+		case Language.zh:
+			return "教程";
 	}
 };
 
@@ -86,14 +86,14 @@ export const howTo = (lang: Language) => {
 			return "Comment";
 		case Language.ja:
 			return "方法";
-		case Language.pt:
-			return "Como";
 		case Language.ko:
 			return "어떻게";
-		case Language.zh:
-			return "如何";
+		case Language.pt:
+			return "Como";
 		case Language.ru:
 			return "Как";
+		case Language.zh:
+			return "如何";
 	}
 };
 
@@ -109,14 +109,14 @@ export const explanation = (lang: Language) => {
 			return "Explication";
 		case Language.ja:
 			return "説明";
-		case Language.pt:
-			return "Explicação";
 		case Language.ko:
 			return "설명";
-		case Language.zh:
-			return "解释";
+		case Language.pt:
+			return "Explicação";
 		case Language.ru:
 			return "Объяснение";
+		case Language.zh:
+			return "解释";
 	}
 };
 
@@ -132,13 +132,36 @@ export const reference = (lang: Language) => {
 			return "Référence";
 		case Language.ja:
 			return "関連項目";
-		case Language.pt:
-			return "Referência";
 		case Language.ko:
 			return "참조";
-		case Language.zh:
-			return "参考";
+		case Language.pt:
+			return "Referência";
 		case Language.ru:
 			return "Ссылка";
+		case Language.zh:
+			return "参考";
+	}
+};
+
+export const architecture = (lang: Language) => {
+	switch (lang) {
+		case Language.en:
+			return "Architecture";
+		case Language.de:
+			return "Architektur";
+		case Language.es:
+			return "Arquitectura";
+		case Language.fr:
+			return "Architecture";
+		case Language.ja:
+			return "アーキテクチャ";
+		case Language.ko:
+			return "아키텍처";
+		case Language.pt:
+			return "Arquitetura";
+		case Language.ru:
+			return "Архитектура";
+		case Language.zh:
+			return "架构";
 	}
 };

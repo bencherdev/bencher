@@ -1,7 +1,7 @@
 ---
 import DocsLayout from "../../layouts/docs/DocsLayout.astro";
 import {getLangCollection, langPath} from "../../i18n/utils.ts"
-import { Language, allLanguages, defaultLang, explanation, howTo, languageName, tutorial } from "../../i18n/ui";
+import { Language, allLanguages, architecture, defaultLang, explanation, howTo, languageName, tutorial } from "../../i18n/ui";
 import { Collection } from "../../content/config";
 
 interface Props {
@@ -122,7 +122,7 @@ const alsoIn = () => {
         <a href={`/docs/${langPath(lang)}reference/api`}>REST API</a>
       </li>
       <li>
-        <a href={`/docs/${langPath(lang)}reference/architecture`}>Architecture</a>
+        <a href={`/docs/${langPath(lang)}reference/architecture`}>{architecture(lang)}</a>
       </li>
       {
         referenceCollection[lang]?.map((page) => (
