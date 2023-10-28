@@ -39,8 +39,6 @@ const signupId = () => {
   }
 }
 
-// ベンチャー クラウド
-// ベンチャー
 const signupText = () => {
   switch (lang) {
     case Language.de:
@@ -122,5 +120,5 @@ const { Content } = await page.render();
     </h4>
   </AuthOverride>
 
-  <Disclosure page={slug} lang={lang} />
+  <Disclosure slug={slug} lang={lang} />
 </DocsLayout>
