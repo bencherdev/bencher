@@ -1,7 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import type DocsTab from "./docs_tab";
-import {Language, defaultLang, how_to, showDefaultLang, tutorial } from "../../i18n/ui.ts";
+import {Language, defaultLang, howTo, tutorial } from "../../i18n/ui.ts";
 import {getLangCollection, langPath} from "../../i18n/utils.ts"
 import { Collection } from "../../content/config";
 
@@ -46,7 +46,7 @@ const lang: Language = Astro.props.lang ?? defaultLang;
         ))
       }
     </ul>
-    <p class="menu-label">{how_to(lang)}</p>
+    <p class="menu-label">{howTo(lang)}</p>
     <ul class="menu-list">
       {
         howToCollection[lang]?.map((page) => (

@@ -67,7 +67,7 @@ export const tutorial = (lang: Language) => {
 	}
 };
 
-export const how_to = (lang: Language) => {
+export const howTo = (lang: Language) => {
 	switch (lang) {
 		case Language.de:
 			return "Wie man";
