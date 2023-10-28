@@ -3,6 +3,7 @@ import { getCollection } from "astro:content";
 import type DocsTab from "./docs_tab";
 import {Language, defaultLang, showDefaultLang, tutorial } from "../../i18n/ui.ts";
 import {getLangCollection} from "../../i18n/utils.ts"
+import { Collection } from "../../content/config";
 
 interface Props {
   tab: DocsTab;
@@ -10,19 +11,19 @@ interface Props {
 }
 
 // Docs
-const tutorialCollection = await getLangCollection("tutorial");
+const tutorialCollection = await getLangCollection(Collection.tutorial);
 
-const how_to = await getCollection("how_to");
+const how_to = await getCollection(Collection.how_to);
 how_to.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 
-const explanation = await getCollection("explanation");
+const explanation = await getCollection(Collection.explanation);
 explanation.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 
-const reference = await getCollection("reference");
+const reference = await getCollection(Collection.reference);
 reference.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 
 // Learn
-const rust = await getCollection("rust");
+const rust = await getCollection(Collection.rust);
 rust.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 
 const { tab } = Astro.props;

@@ -1,3 +1,4 @@
+import type { Collection } from "../content/config";
 import { Language, defaultLang, showDefaultLang } from "./ui";
 import { getCollection } from "astro:content";
 
@@ -26,7 +27,7 @@ import { getCollection } from "astro:content";
 // }
 
 //
-export async function getLangCollection(collection: string) {
+export async function getLangCollection(collection: Collection) {
 	const pages = await getCollection(collection);
 	const langPagesMap = pages
 		.map((page) => {

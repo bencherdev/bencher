@@ -1,9 +1,10 @@
 ---
 import { getCollection } from "astro:content";
 import DocsLayout from "../../../layouts/docs/DocsLayout.astro";
+import { Collection } from "../../../content/config";
 // 1. Generate a new path for every collection entry
 export async function getStaticPaths() {
-  const pages = await getCollection("reference");
+  const pages = await getCollection(Collection.reference);
   return pages.map((page) => ({
     params: { slug: page.slug },
     props: { page },

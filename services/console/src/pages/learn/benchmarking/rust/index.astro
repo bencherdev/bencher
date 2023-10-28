@@ -1,8 +1,9 @@
 ---
 import { getCollection } from "astro:content";
 import LearnLayout from "../../../../layouts/docs/LearnLayout.astro";
+import { Collection } from "../../../../content/config";
 
-const rust = await getCollection("rust");
+const rust = await getCollection(Collection.rust);
 rust.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 
 const title = "How to Benchmark Rust Code";

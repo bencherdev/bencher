@@ -3,21 +3,22 @@ import { getCollection } from "astro:content";
 import DocsLayout from "../../layouts/docs/DocsLayout.astro";
 import {getLangCollection, langPath} from "../../i18n/utils.ts"
 import { Language, allLanguages, defaultLang, languageName, tutorial } from "../../i18n/ui";
+import { Collection } from "../../content/config";
 
 interface Props {
   lang: undefined | string;
 }
 const lang: Language = Astro.props.lang ?? defaultLang;
 
-const tutorialCollection = await getLangCollection("tutorial");
+const tutorialCollection = await getLangCollection(Collection.tutorial);
 
-const how_to = await getCollection("how_to");
+const how_to = await getCollection(Collection.how_to);
 how_to.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 
-const explanation = await getCollection("explanation");
+const explanation = await getCollection(Collection.explanation);
 explanation.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 
-const reference = await getCollection("reference");
+const reference = await getCollection(Collection.reference);
 reference.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 
 const title = () => {

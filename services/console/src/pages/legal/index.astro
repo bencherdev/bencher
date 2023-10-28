@@ -1,8 +1,9 @@
 ---
 import { getCollection } from "astro:content";
 import LegalLayout from "../../layouts/legal/LegalLayout.astro";
+import { Collection } from "../../content/config";
 
-const pages = await getCollection("legal");
+const pages = await getCollection(Collection.legal);
 pages.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 ---
 

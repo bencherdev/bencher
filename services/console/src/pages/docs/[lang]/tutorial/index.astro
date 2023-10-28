@@ -1,9 +1,10 @@
 ---
 import { getCollection } from "astro:content";
 import { defaultLang } from "../../../../i18n/ui";
+import { Collection } from "../../../../content/config";
 
 export async function getStaticPaths() {
-  const pages = await getCollection("tutorial");
+  const pages = await getCollection(Collection.tutorial);
   return pages.map(page => {
     const [lang, ...slug] = page.id.substring(0, page.id.lastIndexOf('.'))?.split('/');
     return { params: { lang, slug: slug.join('/') || undefined }, props: page }
