@@ -102,7 +102,7 @@ Les `lower_value` et `upper_value` sont un écart-type en dessous et au-dessus d
 
 ## ➕ C++ Google
 
-L'adaptateur C++ Google (`cpp_google`) attend la sortie de [Google Benchmark](https://github.com/google/benchmark) au [format JSON (c'est-à-dire `--benchmark_format=json`)](https://github.com/google/benchmark/blob/main/docs/fr/user_guide.md#output-formats).
+L'adaptateur C++ Google (`cpp_google`) attend la sortie de [Google Benchmark](https://github.com/google/benchmark) au [format JSON (c'est-à-dire `--benchmark_format=json`)](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats).
 Le type de mesure `latence` (c'est-à-dire `nanosecondes (ns)`) est recueilli.
 Seule la moyenne (c'est-à-dire `value`) est disponible. Il n'y a pas de `lower_value` et `upper_value`.
 
@@ -138,7 +138,7 @@ Les `lower_value` et `upper_value` sont la marge d'erreur relative en dessous et
 
 ## 🕸 JavaScript Time
 
-L'adaptateur JavaScript Time (`js_time`) attend la sortie de [console.time](https://developer.mozilla.org/en-US/docs/fr/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/fr/Web/API/console/timeEnd).
+L'adaptateur JavaScript Time (`js_time`) attend la sortie de [console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd).
 Le type de mesure `latence` (c'est-à-dire `nanosecondes (ns)`) est recueilli.
 Seul le temps d'opération (c'est-à-dire `value`) est disponible. Il n'y a pas de `lower_value` et `upper_value`.
 

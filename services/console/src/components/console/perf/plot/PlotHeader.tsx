@@ -1,14 +1,19 @@
 import {
 	type Accessor,
+	For,
+	type Resource,
+	Show,
 	createEffect,
 	createMemo,
 	createResource,
 	createSignal,
-	For,
-	Show,
 } from "solid-js";
-import type { JsonAuthUser, JsonMetricKind } from "../../../../types/bencher";
 import { PerfRange } from "../../../../config/types";
+import type {
+	JsonAuthUser,
+	JsonMetricKind,
+	JsonProject,
+} from "../../../../types/bencher";
 import { httpGet } from "../../../../util/http";
 
 const BENCHER_METRIC_KIND = "--bencher--metric--kind--";
@@ -16,8 +21,10 @@ const BENCHER_METRIC_KIND = "--bencher--metric--kind--";
 export interface Props {
 	apiUrl: string;
 	user: JsonAuthUser;
+	project: Resource<JsonProject>;
 	project_slug: Accessor<undefined | string>;
 	isConsole: boolean;
+	isEmbed: boolean;
 	isPlotInit: Accessor<boolean>;
 	metric_kind: Accessor<undefined | string>;
 	start_date: Accessor<undefined | string>;
@@ -128,27 +135,32 @@ const PlotHeader = (props: Props) => {
 				<div class="level-item">
 					<div class="columns">
 						<div class="column">
-							<p>Metric Kind</p>
-							<div class="columns">
-								<div class="column">
-									<select
-										class="card-header-title level-item"
-										title="Select Metric Kind"
-										onInput={(e) => handleInput(e.currentTarget.value)}
-									>
-										<For each={metric_kinds() ?? []}>
-											{(metric_kind: { name: string; slug: string }) => (
-												<option
-													value={metric_kind.slug}
-													selected={metric_kind.slug === selected()}
-												>
-													{metric_kind.name}
-												</option>
-											)}
-										</For>
-									</select>
+							<Show
+								when={!props.isEmbed}
+								fallback={<h1 class="title is-3">{props.project?.name}</h1>}
+							>
+								<p>Metric Kind</p>
+								<div class="columns">
+									<div class="column">
+										<select
+											class="card-header-title level-item"
+											title="Select Metric Kind"
+											onInput={(e) => handleInput(e.currentTarget.value)}
+										>
+											<For each={metric_kinds() ?? []}>
+												{(metric_kind: { name: string; slug: string }) => (
+													<option
+														value={metric_kind.slug}
+														selected={metric_kind.slug === selected()}
+													>
+														{metric_kind.name}
+													</option>
+												)}
+											</For>
+										</select>
+									</div>
 								</div>
-							</div>
+							</Show>
 						</div>
 					</div>
 				</div>
@@ -160,7 +172,9 @@ const PlotHeader = (props: Props) => {
 							<div class="columns">
 								<div class="column">
 									<div
-										class="icon-text"
+										class={`icon-text ${
+											props.isEmbed ? "has-tooltip-bottom" : ""
+										}`}
 										data-tooltip="Display lower/upper Metric values"
 									>
 										<span style="padding-left: 1em">Value</span>
@@ -196,7 +210,9 @@ const PlotHeader = (props: Props) => {
 							<div class="columns">
 								<div class="column">
 									<div
-										class="icon-text"
+										class={`icon-text ${
+											props.isEmbed ? "has-tooltip-bottom" : ""
+										}`}
 										data-tooltip="Display lower/upper Threshold Boundary Limits"
 									>
 										<span>Boundary</span>
@@ -232,7 +248,9 @@ const PlotHeader = (props: Props) => {
 								<div class="columns">
 									<div class="column">
 										<div
-											class="icon-text"
+											class={`icon-text ${
+												props.isEmbed ? "has-tooltip-bottom" : ""
+											}`}
 											data-tooltip="Toggle X-Axis between Date and Branch Version"
 										>
 											<span style="padding-left: 0.5em">X-Axis</span>
@@ -314,7 +332,7 @@ const PlotHeader = (props: Props) => {
 						</div>
 					</nav>
 				</div>
-				<Show when={!props.isPlotInit()} fallback={<></>}>
+				<Show when={!props.isPlotInit() && !props.isEmbed} fallback={<></>}>
 					<div class="level-item">
 						<div class="columns">
 							<div class="column">

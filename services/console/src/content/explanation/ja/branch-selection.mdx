@@ -1,0 +1,108 @@
+---
+title: "ブランチの選択"
+description: "bencher run CLIサブコマンドを使用してgitブランチを選択する方法の概要"
+heading: "bencher runを用いたブランチの選択"
+sortOrder: 3
+---
+
+いくつかの方法がありますでプロジェクトのブランチを<code><a href="/docs/ja/explanation/bencher-run">bencher run</a></code> CLIサブコマンドで設定するための。
+これらのオプションやフラグが使用されない場合、`main`がデフォルトのブランチとして使用されます。
+
+<br />
+
+### `--branch`
+
+<br />
+
+最も簡単な方法は、 `--branch`オプションまたは `BENCHER_BRANCH` 環境変数を既存のブランチのスラッグまたはUUIDに設定することです。
+両方が定義されている場合、`--branch`オプションは`BENCHER_BRANCH`環境変数より優先します。
+
+しかし、これら両方が欠けている場合、または提供されている値が無効な場合、`bencher run`コマンドはエラーになります。
+これは、新しいブランチが絶えず出現しているCI/CD環境では最も便利ではありません。
+その代わりに、`--branch`または`BENCHER_BRANCH` 環境変数を使用する代わりに、`--if-branch`オプションがあります。
+
+<br />
+
+### `--if-branch`
+
+<br />
+
+`--if-branch`オプションはブランチの _名前_ 引数を期待し、その名前の単一のブランチが存在するかどうかを問い合わせます。
+もし正確に一つのブランチが見つかった場合、`bencher run`はそのブランチを使用して処理を続けます。
+それ以外の場合、`bencher run`はただログを出力して正常に終了します。
+
+例えば、 `main`が存在していれば、 `--if-branch main`を使用するとそれを見つけます。そして`bencher run`は `main`を使用して処理を進めます。
+
+`--branch`オプションは `--if-branch`オプションと競合しますが、`BENCHER_BRANCH`環境変数は `--if-branch`オプションよりも優先します。
+
+<br />
+
+> 🐰 メモ: 環境変数を使用するときは必ずダブルクォート（つまり `--if-branch "$MY_ENV_VAR"`）で囲むべきです。
+
+<br />
+
+### `--else-if-branch`
+
+<br />
+
+フィーチャーブランチを作業中に、親/ベースブランチからの履歴データがあると便利です。
+これが `--else-if-branch`オプションの出番です。
+`--else-if-branch`オプションは別のブランチの _名前_ 引数を期待します。
+もし `--if-branch`が失敗すると、`--else-if-branch`はその名前の単一のブランチが存在するかどうかを問い合わせます。
+もし正確に一つのブランチが見つかれば、`--if-branch`に与えられた名前で新しく作成されたブランチに、このスタートポイントのブランチからのすべてのデータと閾値がコピーされます。
+
+例えば、`feature_branch`がまだ存在せず、`main`は存在して履歴データがあったとしてみましょう。
+そこで `--if-branch feature_branch --else-if-branch main`を使用すると、`feature_branch`と名付けられた新しいブランチが作成され、
+そこには `main`からのすべてのデータと閾値のコピーがあります。
+そして `bencher run`は `feature_branch`を使用して処理を進めます。
+
+複数の `--else-if-branch`オプションを使用することも可能です。
+例えば、 `mia_branch`が存在しない場合、 `--if-branch feature_branch --else-if-branch mia_branch --else-if-branch main`
+は、前述の例と同じように機能し、`main`からのすべてのデータと閾値をコピーして処理を進めます。
+
+`--if-branch`の問い合わせが成功すれば、`--else-if-branch`は実行されず、`--if-branch`と `--else-if-branch`が両方とも失敗すれば、 `bencher run`はただログを出力して正常に終了します。
+
+<br />
+
+> 🐰 メモ: 環境変数を使用するときは必ずダブルクォート（つまり`--else-if-branch "$MY_ENV_VAR"`）で囲むべきです。
+
+<br />
+
+### `--else-branch`
+
+<br />
+
+すべてのケースで実行からのメトリクスが保存されることを保証するために、 `--else-branch`フラグがあります。
+`--else-branch`フラグには引数はありません。
+もし `--if-branch`が失敗したら、`--else-branch`は単に `--if-branch`に与えられた名前の新しいブランチを作成します。
+
+例えば、 `feature_branch`がまだ存在していない場合。
+そこで `--if-branch feature_branch --else-branch`を使用すると、`feature_branch`と名付けられた新しいブランチが作成され、
+それには初期のデータも閾値もありません。
+そして `bencher run`は `feature_branch`を使用して処理を進めます。
+
+全三つのフラグを連鎖させることも可能です: `--if-branch`, `--else-if-branch`, `--else-branch`.
+例えば、`--if-branch feature_branch --else-if-branch main --else-branch`とします。
+
+`--if-branch`の問い合わせが成功すれば、`--else-branch`は実行されず、同様に、`--if-else-branch`の問い合わせが成功すれば、`--else-branch`は実行されません。
+そして `--else-branch`は必ず成功し、正常に終了することが期待されます。
+
+<br />
+
+### `--endif-branch`
+
+<br />
+
+`--endif-branch`フラグは、`--if-branch`ステートメントの終わりを表すためのオプショナルなnoopフラグとして機能します。
+
+全四つのフラグを連鎖させることが可能です: `--if-branch`, `--else-if-branch`, `--else-branch`, `--endif-branch`.
+例えば、`--if-branch feature_branch --else-if-branch "$MY_ENV_VAR" --else-branch --endif-branch`とします。
+
+<br />
+<br />
+
+> 🐰 おめでとうございます! すべてのブランチ選択について学びました! 🎉
+
+<br/>
+
+<h2><a href="/docs/ja/explanation/adapters">続けて学ぶ: ベンチマークハーネスアダプター ➡</a></h2>

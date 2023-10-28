@@ -97,7 +97,7 @@ C++ Catch2アダプター(`cpp_catch2`)は、[Catch2](https://github.com/catchor
 
 ## ➕ C++ Google
 
-C++ Googleアダプター(`cpp_google`)は、[Google Benchmark](https://github.com/google/benchmark)の[JSONフォーマットの出力（つまり `--benchmark_format=json`）](https://github.com/google/benchmark/blob/main/docs/ja/user_guide.md#output-formats)を期待します。
+C++ Googleアダプター(`cpp_google`)は、[Google Benchmark](https://github.com/google/benchmark)の[JSONフォーマットの出力（つまり `--benchmark_format=json`）](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats)を期待します。
 `latency` Metric Kind（つまり `nanoseconds (ns)`）が収集されます。
 利用可能なのは平均値（つまり `value`）のみです。`lower_value`と`upper_value`はありません。
 
@@ -133,7 +133,7 @@ JavaScript Benchmarkアダプター(`js_benchmark`)は、[Benchmark.js](https://
 
 ## 🕸 JavaScript Time
 
-JavaScript Timeアダプター(`js_time`)は、[console.time](https://developer.mozilla.org/en-US/docs/ja/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/ja/Web/API/console/timeEnd)の出力を期待します。
+JavaScript Timeアダプター(`js_time`)は、[console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd)の出力を期待します。
 `latency` Metric Kind（つまり `nanoseconds (ns)`）が収集されます。
 利用可能なのは操作時間（つまり `value`）のみです。`lower_value`と`upper_value`はありません。
 

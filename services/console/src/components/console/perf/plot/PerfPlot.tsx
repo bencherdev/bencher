@@ -1,21 +1,23 @@
-import { Accessor, Show } from "solid-js";
-import type { PerfRange, PerfTab } from "../../../../config/types";
+import { type Accessor, type Resource, Show } from "solid-js";
+import { type PerfRange, type PerfTab } from "../../../../config/types";
 import type {
 	JsonAuthUser,
 	JsonBenchmark,
 	JsonBranch,
 	JsonPerf,
+	JsonProject,
 	JsonReport,
 	JsonTestbed,
 } from "../../../../types/bencher";
 import Plot from "./Plot";
 import PlotHeader from "./PlotHeader";
 import PlotInit from "./PlotInit";
-import PlotTab, { TabList } from "./PlotTab";
+import PlotTab, { type TabList } from "./PlotTab";
 
 export interface Props {
 	apiUrl: string;
 	user: JsonAuthUser;
+	project: Resource<JsonProject>;
 	project_slug: Accessor<undefined | string>;
 	isConsole: boolean;
 	isEmbed: boolean;
@@ -81,8 +83,10 @@ const PerfPlot = (props: Props) => {
 					<PlotHeader
 						apiUrl={props.apiUrl}
 						user={props.user}
+						project={props.project}
 						project_slug={props.project_slug}
 						isConsole={props.isConsole}
+						isEmbed={props.isEmbed}
 						isPlotInit={props.isPlotInit}
 						metric_kind={props.metric_kind}
 						start_date={props.start_date}

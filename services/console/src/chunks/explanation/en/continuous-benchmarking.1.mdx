@@ -1,0 +1,106 @@
+Continuous Benchmarking is a software development practice where members of a team benchmark their work frequently,
+usually each person benchmarks at least daily - leading to multiple benchmarks per day.
+Each benchmark is verified by an automated build to detect performance regressions as quickly as possible.
+Many teams find that this approach leads to significantly reduced performance regressions
+and allows a team to develop performant software more rapidly.
+
+By now, everyone in the software industry is aware of continuous integration (CI).
+At a fundamental level, CI is about detecting and preventing software feature regressions before they make it to production.
+Similarly, continuous benchmarking (CB) is about detecting and preventing software _performance_ regressions before they make it to production.
+For the same reasons that unit tests are run in CI for each code change,
+performance tests should be run in CB for each code change.
+This analogy is so apt in fact, that the first paragraph of this section is just a Mad Libs version of [Martin Fowler's 2006 intro to Continuous Integration](https://martinfowler.com/articles/continuousIntegration.html).
+
+> 🐰 Performance bugs are bugs!
+
+## Benchmarking in CI
+
+Myth: You can't run benchmarks in CI
+
+Most benchmarking harnesses use the [system wall clock](https://en.wikipedia.org/wiki/Elapsed_real_time) to measure latency or throughput.
+This is very helpful, as these are the exact metrics that we as developers care the most about.
+However, general purpose CI environments are often noisy and inconsistent when measuring wall clock time.
+When performing continuous benchmarking, this volatility adds unwanted noise into the results.
+
+There are a few options for handling this:
+- [Relative benchmarking](/docs/how-to/track-benchmarks)
+- Dedicated CI runners, like [BuildJet](https://buildjet.com)
+- Switching benchmark harnesses to one that counts instructions as opposed to wall time
+
+Or simply embrace the chaos! Continuous benchmarking doesn't have to be perfect.
+Yes, reducing the volatility and thus the noise in your continuous benchmarking environment will allow you to detect ever finer performance regressions.
+However, don't let perfect be the enemy of good here!
+
+<a href="https://bencher.dev/perf/bencher?key=true&metric_kind=latency&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5"><img src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kind=latency&title=Embrace+the+Chaos%21" title="Embrace the Chaos!" alt="Embrace the Chaos! for Bencher - Bencher" /></a>
+
+You might look at this graph and think, "Wow, that's crazy!" But ask yourself, can your current development process detect a factor of two or even a factor of ten performance regression before it affects your users? Probably not! Now _that_ is crazy!
+
+Even with all of the noise from a CI environment, tracking wall clock benchmarks can still pay great dividends in catching performance regressions before they reach your customers in production.
+Over time, as your software performance management matures you can build from there.
+In the meantime, just use your regular CI.
+
+## Performance Matters
+
+Myth: You can't notice 100ms of latency
+
+It's common to hear people claim that humans can't perceive 100ms of latency.
+A [Nielsen Group article on response times](https://www.nngroup.com/articles/response-times-3-important-limits/) is often cited for this claim.
+
+> **0.1 second** is about the limit for having the user feel that the system is **reacting instantaneously**, meaning that no special feedback is necessary except to display the result.
+>
+> - Jakob Nielsen, 1 Jan __*1993*__
+
+But that simply is not true.
+On some tasks, people can perceive [as little as 2ms of latency](https://pdfs.semanticscholar.org/386a/15fd85c162b8e4ebb6023acdce9df2bd43ee.pdf).
+An easy way to prove this is an [experiment from Dan Luu](https://danluu.com/input-lag/#appendix-why-measure-latency): open your terminal and run `sleep 0; echo "ping"` and then run `sleep 0.1; echo "pong"`. You noticed the difference right‽
+
+Another common point of confusion is the distinction between the perception of latency and human reaction times. Even though it takes [around 200ms to respond to a visual stimulus](https://humanbenchmark.com/tests/reactiontime), that is independent from the perception of the event itself. By analogy, you can notice that your train is two minutes late (perceived latency) even though the train ride takes two hours (reaction time).
+
+Performance matters! [Performance is a feature](https://blog.codinghorror.com/performance-is-a-feature)!
+
+- Every 100ms faster → 1% more conversions ([Mobify](https://web.dev/why-speed-matters/), earning +$380,000/yr)
+- 50% faster → 12% more sales ([AutoAnything](https://www.digitalcommerce360.com/2010/08/19/web-accelerator-revs-conversion-and-sales-autoanything/))
+- 20% faster → 10% more conversions ([Furniture Village](https://www.thinkwithgoogle.com/intl/en-gb/marketing-strategies/app-and-mobile/furniture-village-and-greenlight-slash-page-load-times-boosting-user-experience/))
+- 40% faster → 15% more sign-ups ([Pinterest](https://medium.com/pinterest-engineering/driving-user-growth-with-performance-improvements-cfc50dafadd7))
+- 850ms faster → 7% more conversions ([COOK](https://web.dev/why-speed-matters/))
+- Every 1 second slower → 10% fewer users ([BBC](https://www.creativebloq.com/features/how-the-bbc-builds-websites-that-scale))
+
+With the death of Moore's Law, workloads that can run in parallel will need to parallelized.
+However, most workloads need to run in series,
+and simply throwing more compute at the problem is quickly becoming an intractable and expensive solution.
+
+Continuous Benchmarking is a key component to developing and maintaining
+performant modern software in the face of this change.
+
+<div class="content has-text-centered">
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/moores_law.jpg"
+    width="2124"
+    height="1128"
+    alt="Moore's Law from https://davidwells.io/blog/rise-of-embarrassingly-parallel-serverless-compute"
+/>
+</div>
+
+## Continuous Benchmarking Tools
+
+Before creating Bencher, we set out to find a tool that could:
+
+- Track benchmarks across multiple languages
+- Seamlessly ingest language standard benchmark harness output
+- Extensible for custom benchmark harness output
+- Open source and able to self-host
+- Work with multiple CI hosts
+- User authentication and authorization
+
+Unfortunately, nothing that met all of these criteria existed.
+See [prior art](/docs/reference/prior-art) from a comprehensive list of the existing benchmarking tools that we took inspiration from.
+
+## Continuous Benchmarking in Big Tech
+
+Tools like Bencher have been developed internally at
+Microsoft, Facebook (now Meta), Apple, Amazon, Netflix, and Google among countless others.
+As the titans of the industry, they understand the importance of monitoring performance during development
+and integrating these insights into the development process through CB.
+We built Bencher to bring continuous benchmarking from behind the walls of Big Tech to the open source community.
+For links to posts related to continuous benchmarking from Big Tech see [prior art](/docs/reference/prior-art).
+

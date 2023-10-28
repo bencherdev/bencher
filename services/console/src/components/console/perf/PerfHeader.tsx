@@ -7,6 +7,7 @@ import {
 	createMemo,
 	createSignal,
 } from "solid-js";
+import { embedHeight } from "../../../config/types";
 import type { JsonAuthUser, JsonProject } from "../../../types/bencher";
 import { apiUrl } from "../../../util/http";
 import { setPageTitle } from "../../../util/resource";
@@ -195,7 +196,7 @@ const ShareModal = (props: ShareProps) => {
 		() =>
 			`<iframe src="${perf_embed_url()}" title="${
 				title() ? title() : props.project()?.name
-			}" width="100%" height="1024px" frameBorder="0"></iframe>`,
+			}" width="100%" height="${embedHeight}px" frameBorder="0"></iframe>`,
 	);
 
 	return (

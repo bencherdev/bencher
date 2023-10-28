@@ -1,0 +1,108 @@
+---
+title: "Seleção de Branches"
+description: "Visão geral das formas de selecionar uma branch git usando o subcomando CLI bencher run"
+heading: "Seleção de Branches com bencher run"
+sortOrder: 3
+---
+
+Existem algumas maneiras de configurar a branch do projeto no subcomando CLI <code><a href="/docs/pt/explanation/bencher-run">bencher run</a></code>.
+Se nenhuma dessas opções ou flags for usada, então `main` é usado como a branch padrão.
+
+<br />
+
+### `--branch`
+
+<br />
+
+A maneira mais simples é definir a opção `--branch` ou a variável de ambiente `BENCHER_BRANCH` para o slug ou UUID de uma branch já existente.
+Se ambos estiverem definidos, a opção `--branch` tem precedência sobre a variável de ambiente `BENCHER_BRANCH`.
+
+No entanto, se ambos estiverem faltando ou o valor fornecido for inválido, então o comando `bencher run` retornará um erro.
+Isso não é o mais conveniente em ambientes CI/CD, onde novas branches surgem o tempo todo.
+Em vez de usar `--branch` ou a variável de ambiente `BENCHER_BRANCH`, existe a opção `--if-branch`.
+
+<br />
+
+### `--if-branch`
+
+<br />
+
+A opção `--if-branch` espera um argumento com o _nome_ de uma branch e pesquisa para verificar se uma única branch com esse nome existe.
+Se for encontrada exatamente uma branch, então `bencher run` prossegue usando aquela branch.
+Caso contrário, `bencher run` simplesmente registra e sai com sucesso.
+
+Por exemplo, se `main` existir, então `--if-branch main` a encontraria. Então `bencher run` iria prosseguir usando `main`.
+
+A opção `--branch` entra em conflito com a opção `--if-branch`, mas a variável de ambiente `BENCHER_BRANCH` tem precedência sobre a opção `--if-branch`.
+
+<br />
+
+> 🐰 Nota: Sempre que estiver usando variáveis de ambiente, elas devem ser envoltas em aspas duplas (ou seja, `--if-branch "$MY_ENV_VAR"`).
+
+<br />
+
+### `--else-if-branch`
+
+<br />
+
+Muitas vezes, ao trabalhar em branches de recursos, seria útil ter dados históricos da branch pai/base.
+Aí entra a opção `--else-if-branch`.
+A opção `--else-if-branch` espera outro argumento com o _nome_ de uma branch.
+Se `--if-branch` falhar, então `--else-if-branch` pesquisa para verificar se uma única branch com esse nome existe.
+Se for encontrada exatamente uma branch, então todos os dados e limites dessa branch de partida serão copiados para uma nova branch criada com o nome dado a `--if-branch`.
+
+Por exemplo, se `feature_branch` ainda não existe, mas `main` existe e tem dados históricos.
+Então usando `--if-branch feature_branch --else-if-branch main`, seria criada uma nova branch chamada `feature_branch`,
+e ela teria uma cópia de todos os dados e limites de `main`.
+Então `bencher run` iria prosseguir usando `feature_branch`.
+
+Também é possível usar múltiplas opções `--else-if-branch`.
+Por exemplo, se `mia_branch` não existe, `--if-branch feature_branch --else-if-branch mia_branch --else-if-branch main`
+funcionaria efetivamente da mesma forma que o exemplo anterior, copiando todos os dados e limites de `main` e prosseguindo.
+
+Se a consulta `--if-branch` for bem-sucedida, então `--else-if-branch` nunca é executado, e se ambas `--if-branch` e `--else-if-branch` falharem, `bencher run` simplesmente registra e sai com sucesso.
+
+<br />
+
+> 🐰 Nota: Sempre que estiver usando variáveis de ambiente, elas devem ser envoltas em aspas duplas (ou seja, `--else-if-branch "$MY_ENV_VAR"`).
+
+<br />
+
+### `--else-branch`
+
+<br />
+
+Para garantir em todos os casos que as métricas de uma execução sejam armazenadas, há uma flag `--else-branch`.
+A flag `--else-branch` não requer argumentos.
+Se `--if-branch` falhar, então `--else-branch` simplesmente cria uma nova branch com o nome dado a `--if-branch`.
+
+Por exemplo, se `feature_branch` ainda não existe.
+Então usando `--if-branch feature_branch --else-branch`, seria criada uma nova branch chamada `feature_branch`,
+e ela não teria dados iniciais nem limites.
+Então `bencher run` iria prosseguir usando `feature_branch`.
+
+É possível encadear todas as três flags: `--if-branch`, `--else-if-branch` e `--else-branch`.
+Por exemplo, `--if-branch feature_branch --else-if-branch main --else-branch`.
+
+Se a consulta `--if-branch` for bem-sucedida, então `--else-branch` nunca é executado, e da mesma forma, se `--if-else-branch` for bem-sucedida, então `--else-branch` nunca é executado.
+E espera-se que `--else-branch` sempre tenha sucesso e saia com sucesso.
+
+<br />
+
+### `--endif-branch`
+
+<br />
+
+A flag `--endif-branch` funciona como uma flag opcional noop para indicar o fim da declaração `--if-branch`.
+
+É possível encadear todas as quatro flags: `--if-branch`, `--else-if-branch`, `--else-branch` e `--endif-branch`.
+Por exemplo, `--if-branch feature_branch --else-if-branch "$MY_ENV_VAR" --else-branch --endif-branch`.
+
+<br />
+<br />
+
+> 🐰 Parabéns! Você aprendeu tudo sobre a seleção de branches! 🎉
+
+<br/>
+
+<h2><a href="/docs/pt/explanation/adapters">Continue: Adaptadores de Teste de Desempenho ➡</a></h2>

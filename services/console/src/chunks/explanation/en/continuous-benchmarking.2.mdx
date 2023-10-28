@@ -1,0 +1,58 @@
+## Continuous Benchmarking vs Local Benchmark Comparison
+
+There are several benchmark harnesses that allow you to compare results locally.
+Local comparison is great for iterating quickly when performance tuning.
+However, it should not be relied on to catch performance regressions on an ongoing basis.
+Just as being able to run unit tests locally doesn't obviate the need for CI,
+being able to run and compare benchmarks locally doesn't obviate the need for CB.
+
+There are several features Bencher offers that local benchmark comparison tools cannot:
+- Comparison of the same benchmark between different testbeds
+- Comparison of benchmarks across languages and harnesses
+- Collaboration and sharing of benchmark results
+- Running benchmarks on dedicated testbeds to minimize noise
+- No more copypasta
+
+## Continuous Benchmarking vs Application Performance Management (APM)
+
+Application Performance Management (APM) is a vital tool for modern software services.
+However, APM is designed to be used in production.
+By the time a performance regression is detected, it is already impacting your customers.
+
+> Most defects end up costing more than it would have cost to prevent them.
+> Defects are expensive when they occur, both the direct costs of fixing the defects
+> and the indirect costs because of damaged relationships, lost business, and lost development time.
+>
+> — Kent Beck, Extreme Programming Explained
+
+There are several features Bencher offers that APM tools cannot:
+- Detect and prevent performance regressions _before_ they make it to production
+- Performance changes and impacts included in code review
+- No overhead in production environments
+- Effective for on-prem deployments
+- No changes to production source code
+
+## Continuous Benchmarking vs Observability
+
+A rose by any other name would smell as sweet.
+See Continuous Benchmarking vs Application Performance Management above.
+
+## Continuous Benchmarking vs Continuous Integration (CI)
+
+Continuous Benchmarking (CB) is complimentary to Continuous Integration (CI).
+For the same reasons that unit tests are run in CI for each code change,
+performance tests should be run in CB for each code change.
+
+> While unit and acceptance testing are widely embraced as standard development practices,
+> this trend has not continued into the realm of performance testing.
+> Currently, the common tooling drives testers towards creating throw away code and a click-and-script mentality.
+> Treating performance testing as a first-class citizen enables the creation of better tests that cover more functionality,
+> leading to better tooling to create and run performance tests,
+> resulting in a test suite that is maintainable and can itself be tested.
+>
+> — [Thoughworks Technology Radar, 22 May 2013](https://www.thoughtworks.com/en-us/radar/techniques/performance-testing-as-a-first-class-citizen)
+
+<br/>
+<br/>
+
+<h2><a href="/docs/tutorial/quick-start">Keep Going: Quick Start ➡</a></h2>

@@ -69,219 +69,210 @@ import { BENCHER_DESCRIPTION, BENCHER_TITLE } from "../util/resource";
         </div>
       </div>
     </div>
+  </section>
 
-    <br />
-    <br />
-    <br />
-    <hr />
-
-
-    <section class="section is-medium">
-      <div class="container">
-        <div class="columns is-centered is-vcentered">
-          <div class="column is-8">
-            <iframe src="http://localhost:3000/perf/the-computer/embed?reports_per_page=4&reports_page=1&branches_per_page=8&branches_page=1&testbeds_per_page=8&testbeds_page=1&benchmarks_per_page=8&benchmarks_page=1&clear=true&start_time=1695648991000&end_time=1698240991000&report=aa7837c1-0148-4f6f-8b3e-4b3468744ea3&metric_kind=latency&branches=95521eff-09fa-4c02-abe1-dd824108869d&testbeds=5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e&benchmarks=88375e7c-f1e0-4cbb-bde1-bdb7773022ae%2Ce81c7863-cc4b-4e22-b507-c1e238871137%2C31dede44-d23a-4baf-b639-63f2ac742e42%2Cc7e32369-f3dd-473d-99a3-6289ae32b38e%2C779bc477-4964-4bae-aa8c-4da3e388822c&key=true" title="The Computer" width="100%" height="1024px" frameBorder="0"></iframe>
-          </div>
-          <div class="column">
-            right
-          </div>
+  <section class="section is-medium" style="background-color: #ed6704;">
+    <div class="container">
+      <div class="columns is-centered is-vcentered">
+        <div class="column is-8">
+          <iframe src="http://localhost:3000/perf/the-computer/embed?reports_per_page=4&reports_page=1&branches_per_page=8&branches_page=1&testbeds_per_page=8&testbeds_page=1&benchmarks_per_page=8&benchmarks_page=1&clear=true&start_time=1695648991000&end_time=1698240991000&report=aa7837c1-0148-4f6f-8b3e-4b3468744ea3&metric_kind=latency&branches=95521eff-09fa-4c02-abe1-dd824108869d&testbeds=5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e&benchmarks=88375e7c-f1e0-4cbb-bde1-bdb7773022ae%2Ce81c7863-cc4b-4e22-b507-c1e238871137%2C31dede44-d23a-4baf-b639-63f2ac742e42%2Cc7e32369-f3dd-473d-99a3-6289ae32b38e%2C779bc477-4964-4bae-aa8c-4da3e388822c&key=true" title="The Computer" width="100%" height="680px" frameBorder="0"></iframe>
+        </div>
+        <div class="column" style="background-color: #ffff;">
+          right
         </div>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <hr />
-    <br />
-
-    <section class="section">
-      <div class="container">
-        <div class="columns is-centered">
-          <div class="column">
-            <h2 class="title is-2">How It Works</h2>
-          </div>
+  <section class="section">
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column">
+          <h2 class="title is-2">How It Works</h2>
         </div>
-        <br />
-        <br />
-        <div class="columns is-centered">
-          <div class="column">
-            <div class="columns">
-              <div class="column">
-                <div class="content has-text-centered">
-                  <span class="icon has-text-primary">
-                    <i class="fas fa-tachometer-alt fa-5x" aria-hidden="true"
-                    ></i>
-                  </span>
-                  <h5 class="title is-5">Run your benchmarks</h5>
-                </div>
-                <div class="content">
-                  <p>
-                    Run your benchmarks locally or in CI using your favorite
-                    benchmarking tools. The <code>bencher</code> CLI simply
-                    wraps your existing benchmark harness and stores its
-                    results.
-                  </p>
-                  <br />
-                </div>
+      </div>
+      <br />
+      <br />
+      <div class="columns is-centered">
+        <div class="column">
+          <div class="columns">
+            <div class="column">
+              <div class="content has-text-centered">
+                <span class="icon has-text-primary">
+                  <i class="fas fa-tachometer-alt fa-5x" aria-hidden="true"
+                  ></i>
+                </span>
+                <h5 class="title is-5">Run your benchmarks</h5>
               </div>
-            </div>
-          </div>
-          <br />
-          <div class="column">
-            <div class="columns">
-              <div class="column">
-                <div class="content has-text-centered">
-                  <span class="icon has-text-primary">
-                    <i class="fas fa-chart-line fa-5x" aria-hidden="true"></i>
-                  </span>
-                  <h5 class="title is-5">Track your benchmarks</h5>
-                </div>
-                <div class="content">
-                  <p>
-                    Track the results of your benchmarks over time. Monitor,
-                    query, and graph the results using the Bencher web console
-                    based on the source branch and testbed.
-                  </p>
-                </div>
+              <div class="content">
+                <p>
+                  Run your benchmarks locally or in CI using your favorite
+                  benchmarking tools. The <code>bencher</code> CLI simply
+                  wraps your existing benchmark harness and stores its
+                  results.
+                </p>
                 <br />
               </div>
             </div>
           </div>
-          <br />
-          <div class="column">
-            <div class="columns">
-              <div class="column">
-                <div class="content has-text-centered">
-                  <span class="icon has-text-primary">
-                    <i class="fas fa-bell fa-5x" aria-hidden="true"></i>
-                  </span>
-                  <h5 class="title is-5">Catch performance regressions</h5>
-                </div>
-                <div class="content">
-                  <p>
-                    Catch performance regressions in CI. Bencher uses state of
-                    the art, customizable analytics to detect performance
-                    regressions before they make it to production.
-                  </p>
-                </div>
+        </div>
+        <br />
+        <div class="column">
+          <div class="columns">
+            <div class="column">
+              <div class="content has-text-centered">
+                <span class="icon has-text-primary">
+                  <i class="fas fa-chart-line fa-5x" aria-hidden="true"></i>
+                </span>
+                <h5 class="title is-5">Track your benchmarks</h5>
+              </div>
+              <div class="content">
+                <p>
+                  Track the results of your benchmarks over time. Monitor,
+                  query, and graph the results using the Bencher web console
+                  based on the source branch and testbed.
+                </p>
+              </div>
+              <br />
+            </div>
+          </div>
+        </div>
+        <br />
+        <div class="column">
+          <div class="columns">
+            <div class="column">
+              <div class="content has-text-centered">
+                <span class="icon has-text-primary">
+                  <i class="fas fa-bell fa-5x" aria-hidden="true"></i>
+                </span>
+                <h5 class="title is-5">Catch performance regressions</h5>
+              </div>
+              <div class="content">
+                <p>
+                  Catch performance regressions in CI. Bencher uses state of
+                  the art, customizable analytics to detect performance
+                  regressions before they make it to production.
+                </p>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <hr />
-    <br />
-    <Toolbox />
-    <br />
-    <hr />
+  <hr />
+  <br />
+  <Toolbox />
+  <br />
+  <hr />
 
-    <section class="section">
-      <div class="container">
-        <div class="columns is-centered">
-          <div class="column">
-            <h2 class="title is-2">Hosting</h2>
-          </div>
-        </div>
-        <br />
-        <br />
-        <div class="columns is-centered">
-          <div class="column">
-            <div class="columns">
-              <div class="column">
-                <div class="content has-text-centered">
-                  <h3 class="subtitle is-2">Self-Hosted</h3>
-                  <br />
-                  <br />
-                  <br />
-                  <span class="icon has-text-primary">
-                    <i class="fas fa-server fa-10x" aria-hidden="true"></i>
-                  </span>
-                </div>
-                <div class="content">
-                  <p>
-                    Run Bencher on-prem or in your own cloud. Bencher can be
-                    deployed on a standalone server, in a Docker container, or
-                    as part of a Kubernetes cluster.
-                  </p>
-                  <br />
-                </div>
-                <a class="button is-fullwidth" href="/docs/tutorial/docker">
-                  Learn More
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <div class="is-divider-vertical" data-content="OR"></div>
-
-          <div class="column">
-            <div class="columns">
-              <div class="column">
-                <div class="content has-text-centered">
-                  <h3 class="subtitle is-2">Bencher Cloud</h3>
-                  <br />
-                  <br />
-                  <br />
-                  <span class="icon has-text-primary">
-                    <i class="fas fa-cloud fa-10x" aria-hidden="true"></i>
-                  </span>
-                </div>
-                <div class="content">
-                  <p>
-                    It's {new Date().getFullYear()}, who wants to manage yet
-                    another service‽ Let us take care of that for you. All of
-                    the same great features with none of the hassle.
-                  </p>
-                  <br />
-                </div>
-                <a class="button is-fullwidth" href="/pricing"> Get Started</a>
-              </div>
-            </div>
-          </div>
+  <section class="section">
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column">
+          <h2 class="title is-2">Hosting</h2>
         </div>
       </div>
-    </section>
-    <br />
-    <hr />
-
-    <section class="section">
-      <div class="container">
-        <div class="columns is-centered">
-          <div class="column">
-            <h2 class="title is-2">Share Your Benchmarks</h2>
-          </div>
-        </div>
-        <div class="columns is-centered">
-          <div class="column">
-            <div class="content">
-              <p>
-                All public projects have their own{" "}
-                <a href="/perf">perf page</a>. These results can easily be
-                shared with an auto-updating perf image. Perfect for your
-                README!
-              </p>
-            </div>
-          </div>
-        </div>
-        <div class="columns is-centered">
-          <div class="column">
-            <div class="content has-text-centered">
-              <a
-                href="/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674950400000"
-              >
-                <Image
-                  style="border: 0.2em solid #ed6704;"
-                  src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kind=latency&start_time=1674950400000&title=Benchmark+Adapter+Comparison"
-                  title="Benchmark Adapter Comparison"
-                  alt="Benchmark Adapter Comparison for Bencher - Bencher"
-                  width="1024"
-                  height="768"
-                />
+      <br />
+      <br />
+      <div class="columns is-centered">
+        <div class="column">
+          <div class="columns">
+            <div class="column">
+              <div class="content has-text-centered">
+                <h3 class="subtitle is-2">Self-Hosted</h3>
+                <br />
+                <br />
+                <br />
+                <span class="icon has-text-primary">
+                  <i class="fas fa-server fa-10x" aria-hidden="true"></i>
+                </span>
+              </div>
+              <div class="content">
+                <p>
+                  Run Bencher on-prem or in your own cloud. Bencher can be
+                  deployed on a standalone server, in a Docker container, or
+                  as part of a Kubernetes cluster.
+                </p>
+                <br />
+              </div>
+              <a class="button is-fullwidth" href="/docs/tutorial/docker">
+                Learn More
               </a>
             </div>
           </div>
         </div>
+
+        <div class="is-divider-vertical" data-content="OR"></div>
+
+        <div class="column">
+          <div class="columns">
+            <div class="column">
+              <div class="content has-text-centered">
+                <h3 class="subtitle is-2">Bencher Cloud</h3>
+                <br />
+                <br />
+                <br />
+                <span class="icon has-text-primary">
+                  <i class="fas fa-cloud fa-10x" aria-hidden="true"></i>
+                </span>
+              </div>
+              <div class="content">
+                <p>
+                  It's {new Date().getFullYear()}, who wants to manage yet
+                  another service‽ Let us take care of that for you. All of
+                  the same great features with none of the hassle.
+                </p>
+                <br />
+              </div>
+              <a class="button is-fullwidth" href="/pricing"> Get Started</a>
+            </div>
+          </div>
+        </div>
       </div>
-    </section>
+    </div>
+  </section>
+  <br />
+  <hr />
+
+  <section class="section">
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column">
+          <h2 class="title is-2">Share Your Benchmarks</h2>
+        </div>
+      </div>
+      <div class="columns is-centered">
+        <div class="column">
+          <div class="content">
+            <p>
+              All public projects have their own{" "}
+              <a href="/perf">perf page</a>. These results can easily be
+              shared with an auto-updating perf image. Perfect for your
+              README!
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="columns is-centered">
+        <div class="column">
+          <div class="content has-text-centered">
+            <a
+              href="/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674950400000"
+            >
+              <Image
+                style="border: 0.2em solid #ed6704;"
+                src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kind=latency&start_time=1674950400000&title=Benchmark+Adapter+Comparison"
+                title="Benchmark Adapter Comparison"
+                alt="Benchmark Adapter Comparison for Bencher - Bencher"
+                width="1024"
+                height="768"
+              />
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 </BaseLayout>

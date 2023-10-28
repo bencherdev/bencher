@@ -1,0 +1,108 @@
+---
+title: "Zweigauswahl"
+description: "Überblick über die Möglichkeiten, einen Git-Zweig mit dem bencher run CLI-Unterbefehl auszuwählen"
+heading: "Zweigauswahl mit bencher run"
+sortOrder: 3
+---
+
+Es gibt mehrere Möglichkeiten, den Projektzweig im <code><a href="/docs/de/explanation/bencher-run">bencher run</a></code> CLI-Unterbefehl festzulegen.
+Wenn keine dieser Optionen oder Flags verwendet werden, dann wird `main` als Standardzweig verwendet.
+
+<br />
+
+### `--branch`
+
+<br />
+
+Die einfachste Methode besteht darin, die Option `--branch` oder die Umgebungsvariable `BENCHER_BRANCH` auf die eindeutige Bezeichnung oder UUID eines bereits existierenden Zweigs einzustellen.
+Wenn beide definiert sind, hat die Option `--branch` Vorrang vor der Umgebungsvariable `BENCHER_BRANCH`.
+
+Fehlen jedoch beide oder ist der bereitgestellte Wert ungültig, dann erzeugt der Befehl `bencher run` einen Fehler.
+Das ist nicht besonders praktisch in CI/CD-Umgebungen, wo ständig neue Zweige entstehen.
+Anstelle von `--branch` oder der Umgebungsvariable `BENCHER_BRANCH` gibt es die Option `--if-branch`.
+
+<br />
+
+### `--if-branch`
+
+<br />
+
+Die Option `--if-branch` erwartet ein Argument für den Zweignamen und prüft, ob genau ein Zweig mit diesem Namen existiert.
+Wenn genau ein Zweig gefunden wird, dann wird `bencher run` mit diesem Zweig fortgesetzt.
+Ansonsten protokolliert `bencher run` einfach und beendet erfolgreich.
+
+Zum Beispiel, wenn `main` existiert, dann würde `--if-branch main` es finden. Dann würde `bencher run` mit `main` fortgesetzt.
+
+Die Option `--branch` steht in Konflikt mit der Option `--if-branch`, aber die Umgebungsvariable `BENCHER_BRANCH` hat Vorrang vor der Option `--if-branch`.
+
+<br />
+
+> 🐰 Hinweis: Bei Verwendung von Umgebungsvariablen sollten diese in Anführungszeichen gesetzt werden (z.B. `--if-branch "$MY_ENV_VAR"`).
+
+<br />
+
+### `--else-if-branch`
+
+<br />
+
+Oftmals, bei der Arbeit an Feature-Zweigen, wäre es hilfreich, historische Daten vom Eltern-/Basiszweig zu haben.
+Hier kommt die Option `--else-if-branch` ins Spiel.
+Die Option `--else-if-branch` erwartet ein weiteres Argument für den Zweignamen.
+Wenn `--if-branch` fehlschlägt, dann fragt `--else-if-branch` ab, ob genau ein Zweig mit diesem Namen existiert.
+Wenn genau ein Zweig gefunden wird, dann werden alle Daten und Schwellenwerte von diesem Ausgangspunktzweig auf einen neu erstellten Zweig mit dem Namen, der `--if-branch` gegeben wurde, kopiert.
+
+Zum Beispiel, wenn `feature_branch` noch nicht existiert, aber `main` existiert und hat historische Daten.
+Dann würde `--if-branch feature_branch --else-if-branch main`, einen neuen Zweig namens `feature_branch` erstellen,
+und es hätte eine Kopie aller Daten und Schwellenwerte von `main`.
+Dann würde `bencher run` mit `feature_branch` fortgesetzt.
+
+Es ist auch möglich, mehrere `--else-if-branch` Optionen zu verwenden.
+Zum Beispiel, wenn `mia_branch` nicht existiert, dann würde `--if-branch feature_branch --else-if-branch mia_branch --else-if-branch main`
+effektiv genauso funktionieren wie das vorherige Beispiel, indem es alle Daten und Schwellenwerte von `main` kopiert und fortsetzt.
+
+Wenn die `--if-branch`-Abfrage erfolgreich ist, wird `--else-if-branch` nie ausgeführt, und wenn sowohl `--if-branch` als auch `--else-if-branch` fehlschlagen, protokolliert `bencher run` einfach und beendet erfolgreich.
+
+<br />
+
+> 🐰 Hinweis: Bei Verwendung von Umgebungsvariablen sollten diese in Anführungszeichen gesetzt werden (z.B. `--else-if-branch "$MY_ENV_VAR"`).
+
+<br />
+
+### `--else-branch`
+
+<br />
+
+Um in allen Fällen zu garantieren, dass die Metriken von einem Lauf gespeichert werden, gibt es das Flag `--else-branch`.
+Das Flag `--else-branch` nimmt keine Argumente.
+Wenn `--if-branch` fehlschlägt, dann erstellt `--else-branch` einfach einen neuen Zweig mit dem Namen, der `--if-branch` gegeben wurde.
+
+Zum Beispiel, wenn `feature_branch` noch nicht existiert.
+Dann würde `--if-branch feature_branch --else-branch`, einen neuen Zweig namens `feature_branch` erstellen,
+und es hätte keine Anfangsdaten oder Schwellenwerte.
+Dann würde `bencher run` mit `feature_branch` fortgesetzt.
+
+Es ist auch möglich, alle drei Flags zusammen zu koppeln: `--if-branch`, `--else-if-branch` und `--else-branch`.
+Zum Beispiel, `--if-branch feature_branch --else-if-branch main --else-branch`.
+
+Wenn die `--if-branch`-Abfrage erfolgreich ist, dann wird `--else-branch` nie ausgeführt, und ebenso, wenn die `--if-else-branch`-Abfrage erfolgreich ist, dann wird `--else-branch` nie ausgeführt.
+Und `--else-branch` wird erwartet, immer erfolgreich zu sein und erfolgreich zu beenden.
+
+<br />
+
+### `--endif-branch`
+
+<br />
+
+Das Flag `--endif-branch` fungiert als optionaler noop-Flag, um das Ende der `--if-branch`-Anweisung anzuzeigen.
+
+Es ist möglich, alle vier Flags zusammen zu koppeln: `--if-branch`, `--else-if-branch`, `--else-branch` und `--endif-branch`.
+Zum Beispiel, `--if-branch feature_branch --else-if-branch "$MY_ENV_VAR" --else-branch --endif-branch`.
+
+<br />
+<br />
+
+> 🐰 Herzlichen Glückwunsch! Sie haben alles über die Zweigauswahl gelernt! 🎉
+
+<br/>
+
+<h2><a href="/docs/de/explanation/adapters">Weiter geht's: Benchmark Harness Adapters ➡</a></h2>

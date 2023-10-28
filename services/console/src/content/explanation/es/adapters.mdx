@@ -100,7 +100,7 @@ Se recoge la Latency Metric Kind (`nanosecond (ns)`).
 
 ## ➕ C++ Google
 
-El adaptador C++ Google (`cpp_google`) espera la salida de [Google Benchmark](https://github.com/google/benchmark) en [formato JSON (es decir `--benchmark_format=json`)](https://github.com/google/benchmark/blob/main/docs/es/user_guide.md#output-formats).
+El adaptador C++ Google (`cpp_google`) espera la salida de [Google Benchmark](https://github.com/google/benchmark) en [formato JSON (es decir `--benchmark_format=json`)](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats).
 Se recoge la Latency Metric Kind (`nanosecond (ns)`).
 Solo está disponible la media (es decir `value`). No hay `lower_value` y `upper_value`.
 
@@ -136,7 +136,7 @@ Se recoge la Throughput Metric Kind (`operations / second (ops/sec)`).
 
 ## 🕸 JavaScript Time
 
-El adaptador JavaScript Time (`js_time`) espera la salida de [console.time](https://developer.mozilla.org/en-US/docs/es/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/es/Web/API/console/timeEnd).
+El adaptador JavaScript Time (`js_time`) espera la salida de [console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd).
 La Latency Metric Kind (`nanoseconds (ns)`) se recoge.
 Solo está disponible el tiempo de operación (es decir `value`). No hay `lower_value` y `upper_value`.
 

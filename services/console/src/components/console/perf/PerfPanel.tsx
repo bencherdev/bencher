@@ -787,6 +787,7 @@ const PerfPanel = (props: Props) => {
 			<PerfPlot
 				apiUrl={props.apiUrl}
 				user={user}
+				project={project}
 				project_slug={project_slug}
 				isConsole={props.isConsole === true}
 				isEmbed={props.isEmbed === true}

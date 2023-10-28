@@ -1,0 +1,145 @@
+---
+title: "Limites & Alertas"
+description: "Visão geral do uso de limites para identificar regressões de performance em benchmarks de código com alertas"
+heading: "Limites & Alertas"
+sortOrder: 4
+---
+
+Limites podem ser criados para a combinação única de um tipo de métrica, ramo e plataforma de teste.
+Eles são testes de significância estatística que usam um
+[Z-score](https://en.wikipedia.org/wiki/Standard_score)
+ou [teste t de Student](https://en.wikipedia.org/wiki/Student%27s_t-test)
+para detectar regressões de performance e gerar Alertas.
+Quando uma métrica está abaixo do Limite Inferior de um Limite ou acima do Limite Superior de um Limite,
+um Alerta é gerado para essa métrica.
+
+Os limites funcionam melhor quando:
+- Não há diferenças extremas entre as execuções de benchmark
+- As execuções de benchmark são totalmente independentes uma da outra
+- O número de iterações para uma única execução de benchmark é inferior a 10% das métricas históricas
+
+Se houver menos de 30 métricas históricas para a combinação de tipo de Métrica, Ramo e Plataforma de Teste, então um Limite de teste t de Student deve ser usado e __*não*__ um Limite de Z-score.
+
+<div class="content has-text-centered">
+    <figure>
+<img
+    src="https://upload.wikimedia.org/wikipedia/commons/2/25/The_Normal_Distribution.svg"
+    width="800"
+    height="600"
+    alt="The Normal Distribution https://commons.wikimedia.org/wiki/File:The_Normal_Distribution.svg"
+/>
+<br/>
+<small>🐰 Não entre em pânico! Isso fará sentido em um minuto.</small>
+</figure>
+</div>
+
+## Teste de Significância Estatística
+
+### Z-score
+
+O Z-score mede o número de [desvios padrão](https://en.wikipedia.org/wiki/Standard_deviation) (σ) acima ou abaixo da média das métricas históricas. O desvio padrão (σ) também pode ser expresso como um _limite_ inferior ou _limite_ superior como uma porcentagem cumulativa.
+
+Por exemplo, dois desvios padrão (2σ) é o mesmo que uma porcentagem cumulativa de limite superior de 97,7%, como ilustrado acima. Ao criar os Limites de Z-score, usa-se a notação decimal da porcentagem cumulativa.
+Neste exemplo, a porcentagem cumulativa do limite superior de 97,7% seria um Limite Superior de `0.977`.
+Na prática, um Limite como esse seria útil para o tipo de Métrica de Latência. Ou seja, um valor maior indicaria uma regressão de desempenho.
+
+Quando um valor menor indicaria uma regressão de desempenho, como com o tipo de Métrica de Throughput, deve-se usar uma porcentagem cumulativa inferior. Uma porcentagem cumulativa de limite inferior de 97,7% corresponderia a dois desvios padrão abaixo da média (-2σ).
+Isso seria dado em notação decimal como um Limite Inferior de `0.977`.
+
+<br>
+
+> 🐰 Dica: Ao usar um Limite de Z-score, defina o Tamanho Mínimo da Amostra para pelo menos 30.
+
+### Teste t de Student
+
+O teste t de Student mede a probabilidade de uma métrica dada estar acima ou abaixo da média das métricas históricas. Essa probabilidade é chamada de intervalo de confiança (IC). O intervalo de confiança (IC) é expresso como um percentual de confiança de limite inferior ou limite superior.
+
+Por exemplo, um percentual de confiança de limite superior de 95,0% indica que 95,0% das métricas devem ser _menores_ do que um máximo esperado. Ao criar Limites de teste t, usa-se a notação decimal do percentual de confiança.
+Neste exemplo, o percentual de confiança do limite superior de 95,0% seria um Limite Superior de `0.95`.
+Na prática, um Limite como esse seria útil para o tipo de métrica de Latência. Ou seja, um valor maior indicaria uma regressão de desempenho.
+
+Quando um valor menor indicaria uma regressão de desempenho, como com o tipo de Métrica de Throughput, deve-se usar um percentual de confiança do limite inferior.
+Um percentual de confiança do limite inferior de 95,0% indicaria que as métricas devem ser _maiores_ do que um mínimo esperado.
+Isso seria dado em notação decimal como um Limite Inferior de `0.95`.
+
+<br>
+
+> 🐰 Dica: Use um teste t de Student como Limite se você tiver menos de 30 métricas históricas.
+
+## Limite de Significância Estatística
+
+O significado do limite de significância estatística depende do teste de significância estatística:
+- Z-score: Desvio padrão (σ) expresso como uma porcentagem cumulativa decimal
+- Teste t de Student: Intervalo de confiança (IC) expresso como um percentual de confiança decimal
+
+Cada métrica é verificada contra o limite de significância estatística do Limite, se existir.
+Isso pode incluir um Limite Inferior, Limite Superior ou ambos.
+Um Limite é calculado para cada Limite.
+Esse Limite é então comparado com a métrica atual.
+Se essa métrica ficar fora do Limite, um Alerta será gerado.
+
+> 🐰 Dica: Para falhar uma construção CI quando um limite é violado, use a flag `--err` para o comando CLI <code><a href="/docs/pt/explanation/bencher-run">bencher run</a></code>.
+
+### Limite Inferior
+Um limite inferior pode ser definido para um Limite.
+Ele é usado quando um valor menor indicaria uma regressão de desempenho,
+como com o tipo de Métrica de Throughput.
+O valor deve ser um decimal entre `0.5` e `1.0`.
+
+Por exemplo, se você usou um Z-score e suas métricas históricas tinham uma média de `100` e um desvio padrão de `10`,
+então um Limite Inferior de `0.977` criaria um Limite no valor de `80.05`.
+Qualquer valor inferior a `80.05` geraria um Alerta.
+
+### Limite Superior
+Um limite superior pode ser definido para um Limite.
+Ele é usado quando um valor maior indicaria uma regressão de performance,
+como com o tipo de Métrica de Latência.
+O valor deve ser um decimal entre `0.5` e `1.0`.
+
+Por exemplo, se você usou um Z-score e suas métricas históricas tinham uma média de `100` e um desvio padrão de `10`,
+então um Limite Superior de `0.977` criaria um Limite no valor de `119.95`.
+Qualquer valor maior que `119.95` geraria um Alerta.
+
+## Tamanho da Amostra
+
+### Tamanho mínimo da amostra
+Um tamanho mínimo de amostra pode ser definido para um Limite.
+O Limite só executará seu teste de significância estatística se o número de métricas históricas for maior ou igual ao tamanho mínimo da amostra.
+
+### Tamanho máximo da amostra
+Um tamanho máximo de amostra pode ser definido para um Limite.
+O Limite limitará a si mesmo apenas às métricas históricas mais recentes,
+limitadas ao tamanho máximo da amostra para o seu teste de significância estatística.
+
+## Tamanho da Janela
+Um tamanho de janela em segundos pode ser definido para um Limite.
+O Limite limitará a si mesmo apenas às métricas históricas mais recentes,
+limitadas pela janela de tempo dada para o seu teste de significância estatística.
+
+## Alertas
+Os alertas são gerados quando uma métrica está abaixo do Limite Inferior de um Limite ou acima do Limite Superior de um Limite. Para falhar uma construção CI no caso de um Alerta, defina a flag `--err` ao usar o comando CLI <code><a href="/docs/pt/explanation/bencher-run">bencher run</a></code>.
+
+### Suprimindo Alertas
+Às vezes, pode ser útil suprimir Alertas para um Benchmark específico.
+A melhor maneira de fazer isso é adicionando um desses sufixos especiais ao nome desse Benchmark:
+
+- `_bencher_ignore`
+- `BencherIgnore`
+- `-bencher-ignore`
+
+Por exemplo, se seu Benchmark se chamava `my_flaky_benchmark`, então renomeá-lo para `my_flaky_benchmark_bencher_ignore`
+ignoraria apenas esse Benchmark específico daí em diante.
+Benchmarks ignorados não são verificados contra o Limite, mesmo que um exista.
+No entanto, as métricas para Benchmarks ignorados ainda são armazenadas.
+Continuando com nosso exemplo, os resultados de `my_flaky_benchmark_bencher_ignore` ainda seriam armazenados no banco de dados sob `my_flaky_benchmark`.
+Se você remover o sufixo e retornar ao nome original do Benchmark,
+então as coisas continuarão exatamente de onde você parou.
+
+<br>
+<br>
+
+> 🐰 Parabéns! Você aprendeu tudo sobre Limites & Alertas! 🎉
+
+<br/>
+
+<h2><a href="/docs/pt/explanation/continuous-benchmarking">Continue: Benchmarking Contínuo ➡</a></h2>
