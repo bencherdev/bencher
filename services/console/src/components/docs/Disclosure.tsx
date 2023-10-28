@@ -7,7 +7,9 @@ const Disclosure = (props: {
 	slug: string;
 	lang: Language;
 }) => {
-	const page = `${props.collection ? `${props.collection}+` : ""}${props.slug.split('/').join('+')}`;
+	const page = `${props.collection ? `${props.collection}+` : ""}${props.slug
+		?.split("/")
+		?.join("+")}`;
 	switch (props.lang) {
 		case Language.de:
 			return <DisclosureDe page={page} />;

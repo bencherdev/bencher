@@ -16,7 +16,7 @@ export async function getStaticPaths() {
   }).filter(page => page.params.slug === "quick-start");
 }
 // 2. When it's time to render, you can get the entry directly from the prop
-const { lang, slug } = Astro.params;
+const { lang } = Astro.params;
 
 const signupId = () => {
   switch (lang) {
@@ -120,5 +120,5 @@ const { Content } = await page.render();
     </h4>
   </AuthOverride>
 
-  <Disclosure slug={slug} lang={lang} />
+  <Disclosure slug="quick-start" lang={lang} />
 </DocsLayout>
