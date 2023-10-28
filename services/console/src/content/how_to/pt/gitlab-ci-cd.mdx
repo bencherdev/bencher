@@ -1,0 +1,59 @@
+---
+title: "GitLab CI/CD"
+description: "Use o Bencher no GitLab CI/CD para benchmarking contínuo em solicitações de merge"
+heading: "Como usar o Bencher no GitLab CI/CD"
+sortOrder: 4
+---
+
+import { BENCHER_VERSION } from "../../../util/ext";
+
+<pre>
+  <code>
+    {`benchmark_with_bencher:
+    image: rust:bullseye
+    variables:
+      BENCHER_PROJECT: save-walter-white
+      BENCHER_API_TOKEN: \${{ secrets.BENCHER_API_TOKEN }}
+      BENCHER_ADAPTER: json
+      BENCHER_TESTBED: bullseye
+      BENCHER_VERSION: ${BENCHER_VERSION}
+    before_script:
+      - wget https://github.com/bencherdev/bencher/releases/download/v\${BENCHER_VERSION}/bencher_\${BENCHER_VERSION}_amd64.deb
+      - dpkg -i bencher_\${BENCHER_VERSION}_amd64.deb
+    script:
+      - |
+        bencher run \\
+        --if-branch "$CI_COMMIT_REF_NAME" \\
+        --else-if-branch "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" \\
+        --else-if-branch main \\
+        --err \\
+        "bencher mock"`}
+  </code>
+</pre>
+
+1. Crie um arquivo GitLab CI/CD (ex: `.gitlab-ci.yml`)
+1. Crie um `job` GitLab CI/CD (ex: `benchmark_with_bencher`)
+1. Selecione uma imagem Docker para executar seu job (ex: `image: rust:bullseye`)
+1. O Projeto já deve existir. Defina o flag `--project` ou a variável de ambiente `BENCHER_PROJECT` para o slug ou UUID do Projeto. (ex: `BENCHER_PROJECT: save-walter-white`)
+1. Adicione `BENCHER_API_TOKEN` aos segredos de CI/CD do seu projeto, em `Configurações -> CI / CD -> Variáveis -> Adicionar Variável`
+1. O token da API já deve existir. Defina o flag `--token` ou a variável de ambiente `BENCHER_API_TOKEN` para o token da API. (ex: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
+1. Opcional: Defina o flag `--adapter` ou a variável de ambiente `BENCHER_ADAPTER` para o nome do adaptador desejado. Se isso não for definido, então o Adaptador `magic` será usado. Consulte [adaptadores de harness de benchmark](/docs/pt/explanation/adapters) para uma visão geral completa. (ex: `BENCHER_ADAPTER: json`)
+1. Opcional: Defina o flag `--testbed` ou a variável de ambiente `BENCHER_TESTBED` para o slug ou UUID do Testbed. O Testbed **deve** já existir. Se isso não for definido, então o Testbed `localhost` será usado. (ex: `BENCHER_TESTBED: bullseye`)
+1. Opcional: Crie uma variável de ambiente para facilitar o rastreio da versão da CLI em uso. (ex: <code>{`BENCHER_VERSION: ${BENCHER_VERSION}`}</code>)
+1. Baixe e instale a CLI do Bencher de um `.deb`.
+1. [Monitore seus benchmarks](/docs/pt/how-to/track-benchmarks) com o subcomando CLI <code><a href="/docs/pt/explanation/bencher-run">bencher run</a></code>:
+    1. Existem várias opções para definir o branch do projeto. Consulte [seleção de branch](/docs/pt/how-to/branch-selection) para uma visão geral completa. O comando fornecido usa [variáveis predefinidas do GitLab CI/CD](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) e tenta:
+        1. Usar o branch atual se já existir. (ex: `--if-branch "$CI_COMMIT_REF_NAME"`)
+        1. Crie um clone dos dados e thresholds do branch alvo do MR se já existir. (ex: `--else-if-branch  "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
+        1. Caso contrário, crie um clone dos dados e thresholds do branch `main`. (ex: `--else-if-branch main`)
+    1. Defina o comando para falhar se um Alerta for gerado. Para que um Alerta seja gerado, um [Limite](/docs/pt/explanation/thresholds) deve já existir. (ex: `--err`)
+    1. Execute seus benchmarks e gere um relatório a partir dos resultados. (ex: `"bencher mock"`)
+
+<br />
+<br />
+
+> 🐰 Parabéns! Você aprendeu a usar o Bencher no GitLab CI/CD! 🎉
+
+<br />
+
+<h2><a href="/docs/pt/explanation/benchmarking">Continue: Visão Geral do Benchmarking ➡</a></h2>

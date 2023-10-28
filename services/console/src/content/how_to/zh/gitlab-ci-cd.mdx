@@ -1,0 +1,59 @@
+---
+title: "GitLab CI/CD"
+description: "在GitLab CI/CD中使用Bencher以在合并请求中进行持续的基准测试"
+heading: "如何在GitLab CI/CD中使用Bencher"
+sortOrder: 4
+---
+
+import { BENCHER_VERSION } from "../../../util/ext";
+
+<pre>
+  <code>
+    {`benchmark_with_bencher:
+    image: rust:bullseye
+    variables:
+      BENCHER_PROJECT: save-walter-white
+      BENCHER_API_TOKEN: \${{ secrets.BENCHER_API_TOKEN }}
+      BENCHER_ADAPTER: json
+      BENCHER_TESTBED: bullseye
+      BENCHER_VERSION: ${BENCHER_VERSION}
+    before_script:
+      - wget https://github.com/bencherdev/bencher/releases/download/v\${BENCHER_VERSION}/bencher_\${BENCHER_VERSION}_amd64.deb
+      - dpkg -i bencher_\${BENCHER_VERSION}_amd64.deb
+    script:
+      - |
+        bencher run \\
+        --if-branch "$CI_COMMIT_REF_NAME" \\
+        --else-if-branch "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" \\
+        --else-if-branch main \\
+        --err \\
+        "bencher mock"`}
+  </code>
+</pre>
+
+1. 创建一个GitLab CI/CD文件 (例如：`.gitlab-ci.yml`)
+1. 创建一个GitLab CI/CD `job` (例如：`benchmark_with_bencher`)
+1. 选择一个Docker镜像来运行你的job (例如：`image: rust:bullseye`)
+1. 项目必须已经存在。将`--project`标志或`BENCHER_PROJECT`环境变量设置为项目的标识符或UUID。 (例如：`BENCHER_PROJECT: save-walter-white`)
+1. 在您的项目的CI/CD秘密文件中添加`BENCHER_API_TOKEN`，在`设置 -> CI / CD -> 变量 -> 添加变量`下
+1. API令牌必须已经存在。将`--token`标志或`BENCHER_API_TOKEN`环境变量设置为API令牌。 (例如：`BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
+1. 可选：将`--adapter`标志或`BENCHER_ADAPTER`环境变量设置为所需的适配器名称。如果未设置，将使用`magic`适配器。请见[基准测试适配器](/docs/zh/explanation/adapters)以获取完整概览。 (例如：`BENCHER_ADAPTER: json`)
+1. 可选：将`--testbed`标志或`BENCHER_TESTBED`环境变量设置为Testbed的标识符或UUID。Testbed**必须**已经存在。 如果未设置，将使用`localhost` Testbed。 (例如：`BENCHER_TESTBED: bullseye`)
+1. 可选：创建一个环境变量以方便跟踪使用的CLI版本。 (例如：<code>{`BENCHER_VERSION: ${BENCHER_VERSION}`}</code>)
+1. 从`.deb`文件中下载并安装Bencher CLI。
+1. 使用<code><a href="/docs/zh/explanation/bencher-run">bencher run</a></code> CLI子命令[跟踪您的基准测试](/docs/zh/how-to/track-benchmarks)：
+    1. 有多种设置项目分支的选项。请见[分支选择](/docs/zh/how-to/branch-selection)获取完整概览。提供的命令使用[GitLab CI/CD预定义变量](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html)，并尝试：
+        1. 如果已经存在，使用当前分支。 (例如：`--if-branch "$CI_COMMIT_REF_NAME"`)
+        1. 如果已经存在，则创建MR目标分支数据和阈值的克隆。 (例如：`--else-if-branch  "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
+        1. 否则，创建`main`分支数据和阈值的克隆。 (例如：`--else-if-branch main`)
+    1. 如果生成了警报，设置命令失败。为了生成警报，必须已经存在一个[阈值](/docs/zh/explanation/thresholds)。 (例如：`--err`)
+    1. 运行你的基准测试并从结果生成报告。 (例如：`"bencher mock"`)
+
+<br/>
+<br/>
+
+> 🐰 恭喜！你已经学会了如何在GitLab CI/CD中使用Bencher！🎉
+
+<br/>
+
+<h2><a href="/docs/zh/explanation/benchmarking">继续前进：基准测试概述 ➡</a></h2>

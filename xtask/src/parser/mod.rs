@@ -34,7 +34,7 @@ pub struct CliTranslate {
 
     // Target language
     #[clap(value_enum, long)]
-    pub lang: CliLanguage,
+    pub lang: Option<Vec<CliLanguage>>,
 
     /// File output path
     #[clap(long)]

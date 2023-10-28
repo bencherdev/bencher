@@ -1,0 +1,59 @@
+---
+title: "GitLab CI/CDでの使用"
+description: "マージリクエストの連続的なベンチマーキングのためにGitLab CI/CDでBencherを使用する"
+heading: "GitLab CI/CDでBencherをどのように使用するか"
+sortOrder: 4
+---
+
+import { BENCHER_VERSION } from "../../../util/ext";
+
+<pre>
+  <code>
+    {`benchmark_with_bencher:
+    image: rust:bullseye
+    variables:
+      BENCHER_PROJECT: save-walter-white
+      BENCHER_API_TOKEN: \${{ secrets.BENCHER_API_TOKEN }}
+      BENCHER_ADAPTER: json
+      BENCHER_TESTBED: bullseye
+      BENCHER_VERSION: ${BENCHER_VERSION}
+    before_script:
+      - wget https://github.com/bencherdev/bencher/releases/download/v\${BENCHER_VERSION}/bencher_\${BENCHER_VERSION}_amd64.deb
+      - dpkg -i bencher_\${BENCHER_VERSION}_amd64.deb
+    script:
+      - |
+        bencher run \\
+        --if-branch "$CI_COMMIT_REF_NAME" \\
+        --else-if-branch "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" \\
+        --else-if-branch main \\
+        --err \\
+        "bencher mock"`}
+  </code>
+</pre>
+
+1. GitLab CI/CDファイル（例：`.gitlab-ci.yml`）を作成します。
+1. GitLab CI/CDの `job`（例： `benchmark_with_bencher`）を作成します。
+1. ジョブを実行するためのDockerイメージ（例： `image: rust:bullseye`）を選択します。
+1. プロジェクトはすでに存在していなければなりません。 `--project` フラグまたは `BENCHER_PROJECT` 環境変数をプロジェクトのスラグまたはUUIDに設定します。（例： `BENCHER_PROJECT: save-walter-white`）
+1. `BENCHER_API_TOKEN` をプロジェクトのCI/CDシークレットに追加してください。これは `設定 -> CI / CD -> 変数 -> 変数を追加` の下にあります。
+1. APIトークンはすでに存在していなければなりません。 `--token` フラグまたは `BENCHER_API_TOKEN` 環境変数をAPIトークンに設定します。（例： `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`）
+1. オプション： `--adapter` フラグまたは `BENCHER_ADAPTER` 環境変数を目的のアダプタ名に設定します。これが設定されていない場合、 `magic` アダプタが使用されます。完全な概観については、 [benchmark harness adapters](/docs/ja/explanation/adapters) を参照してください。（例： `BENCHER_ADAPTER: json`）
+1. オプション： `--testbed` フラグまたは `BENCHER_TESTBED` 環境変数をTestbedのスラグまたはUUIDに設定します。Testbedはすでに存在している**必要があります**。これが設定されていない場合、 `localhost` Testbedが使用されます。（例： `BENCHER_TESTBED: bullseye`）
+1. オプション：使用中のCLIバージョンを追跡しやすくするための環境変数を作成します。（例：<code>{`BENCHER_VERSION: ${BENCHER_VERSION}`}</code>）
+1. `.deb`からBencher CLIをダウンロードし、インストールします。
+1. <code><a href="/docs/ja/explanation/bencher-run">bencher run</a></code> CLIサブコマンドを使って、あなたのベンチマークを[追跡します](/docs/ja/how-to/track-benchmarks):
+    1. プロジェクトブランチの設定に関してはいくつかの選択肢があります。完全な概観については、[branch selection](/docs/ja/how-to/branch-selection)を参照してください。提供されたコマンドは[GitLab CI/CD predefined variables](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html)を使用し、
+        1. すでに存在している場合、現在のブランチを使用します。（例： `--if-branch "$CI_COMMIT_REF_NAME"`）
+        1. すでに存在している場合、MRターゲットブランチのデータと閾値のクローンを作成します。（例： `--else-if-branch  "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`）
+        1. それ以外の場合は、 `main` ブランチのデータと閾値のクローンを作成します。（例： `--else-if-branch main`）
+    1. アラートが生成された場合、コマンドが失敗するように設定します。アラートが生成されるためには、[Threshold](/docs/ja/explanation/thresholds)がすでに存在している必要があります。（例： `--err`）
+    1. ベンチマークを実行し、結果からレポートを生成します。（例： `"bencher mock"`）
+
+<br/>
+<br/>
+
+> 🐰 おめでとうございます! GitLab CI/CDでBencherの使用方法を学習しました! 🎉
+
+<br/>
+
+<h2><a href="/docs/ja/explanation/benchmarking">続けて学ぼう: ベンチマーキングの概要 ➡</a></h2>
