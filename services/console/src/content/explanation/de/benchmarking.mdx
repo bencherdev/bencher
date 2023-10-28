@@ -1,0 +1,76 @@
+---
+title: "Übersicht über das Benchmarking"
+description: "Das konzeptionelle Modell und der Wortschatz, den Bencher verwendet, um die Ergebnisse von Code-Benchmarks nachzuverfolgen"
+heading: "Übersicht über das Benchmarking"
+sortOrder: 1
+---
+
+Die meisten Benchmark-Ergebnisse sind flüchtig.
+Sie verschwinden, sobald Ihr Terminal seine Scrollback-Grenze erreicht hat.
+Einige Benchmark-Schleifen ermöglichen es Ihnen, Ergebnisse zu speichern, aber die meisten tun dies nur lokal.
+Bencher ermöglicht es Ihnen, Ihre Benchmarks sowohl von lokalen als auch von CI-Läufen zu verfolgen und mit historischen Ergebnissen zu vergleichen.
+
+Der einfachste Weg, Ihre Benchmarks zu verfolgen, ist das <code><a href="/docs/de/explanation/bencher-run">bencher run</a></code> CLI-Unterkommando.
+Es umfasst Ihre bestehende Benchmark-Schleifen-Ausgabe und erzeugt einen Bericht.
+Dieser Bericht wird dann an den Bencher-API-Server gesendet,
+wo die Benchmark-Schleifen-Ausgabe mit einem [Benchmark-Schleifen-Adapter](/docs/de/explanation/adapters) geparst wird.
+Der Benchmark-Schleifen-Adapter erkennt alle vorhandenen Benchmarks und ihre entsprechenden Metriken.
+Diese Benchmarks und Metriken werden dann zusammen mit dem Bericht gespeichert.
+Wenn ein [Schwellenwert](/docs/de/explanation/thresholds) gesetzt ist, dann werden die neuen Metriken mit den historischen Metriken für jeden Benchmark, der im Bericht vorhanden ist, verglichen.
+Wenn eine Regression erkannt wird, wird ein Alert generiert.
+
+Von nun an werden wir Ihre "Benchmarks" als "Performance-Regressionstests" bezeichnen, um Verwirrungen zu vermeiden.
+
+## Benchmarks
+Ein Benchmark ist ein benannter Performance-Regressionstest.
+Wenn der Performance-Regressionstest neu für Bencher ist, dann wird automatisch ein Benchmark erstellt.
+Andernfalls wird der Name des Performance-Regressionstests als eindeutiger Bezeichner für den Benchmark verwendet.
+
+Seien Sie vorsichtig, wenn Sie den Namen Ihrer Performance-Regressionstests ändern.
+Sie müssen den Benchmark in Bencher manuell umbenennen, um diesen neuen Namen zu matchen.
+Andernfalls wird der umbenannte Performance-Regressionstest als neuer Benchmark angesehen.
+Diese gleiche Warnung gilt auch für das _Verschieben_ einiger Performance-Regressionstests.
+Abhängig von der Benchmark-Schleife kann der Pfad zum Performance-Regressionstest ein Teil seines Namens sein.
+
+Die einzige Ausnahme von der oben genannten Einschränkung ist das Ignorieren eines Benchmarks. Siehe [Unterdrückung von Alerts](/docs/de/explanation/thresholds) für eine vollständige Übersicht.
+
+### Metriken
+Eine Metrik ist ein einzelnes, zeitspezifisches Ergebnis eines Performance-Regressionstests.
+Für eine einzelne Metrik können bis zu drei Messungen erfasst werden: `value`, `lower_value`, und `upper_value`.
+Der `value` ist für alle Metriken erforderlich, während der `lower_value` und `upper_value` unabhängig optional sind.
+Welche Messungen erfasst werden, wird durch den [Benchmark-Schleifen-Adapter](/docs/de/explanation/adapters) bestimmt.
+
+### Art der Metrik
+Die Art der Metrik ist die Maßeinheit für eine Metrik.
+Standardmäßig starten alle Projekte mit einer `Latenz` und `Durchsatz` Metrik-Art
+mit den Einheiten `Nanosekunden (ns)` und `Operationen / Sekunde (ops/s)` jeweils.
+Die Art der Metrik wird durch den [Benchmark-Schleifen-Adapter](/docs/de/explanation/adapters) bestimmt.
+
+<br />
+
+## Bericht
+Ein Bericht ist eine Sammlung von Benchmarks und ihren Metriken für einen bestimmten Zweig und Testbeet.
+Berichte werden am häufigsten mit dem <code><a href="/docs/de/explanation/bencher-run">bencher run</a></code> CLI-Unterkommando erzeugt.
+Siehe [wie man Performance-Regressionstests verfolgt](/docs/de/how-to/track-benchmarks) für eine vollständige Übersicht.
+
+### Zweig
+Ein Zweig ist die `git`-Referenz, die beim Erstellen eines Berichts verwendet wird (d. h. Branch-Name oder Tag).
+Standardmäßig starten alle Projekte mit einem `main`-Zweig.
+Wenn das <code><a href="/docs/de/explanation/bencher-run">bencher run</a></code> CLI-Unterkommando verwendet wird,
+ist `main` der Standardzweig, wenn kein anderer angegeben ist.
+Siehe [Zweigauswahl](/docs/de/explanation/branch-selection) für eine vollständige Übersicht.
+
+### Testbett
+Ein Testbett ist der Name der Testumgebung, die beim Erstellen eines Berichts verwendet wird.
+Standardmäßig starten alle Projekte mit einem `localhost`-Testbett.
+Wenn das <code><a href="/docs/de/explanation/bencher-run">bencher run</a></code> CLI-Unterkommando verwendet wird,
+ist `localhost` das Standardtestbett, wenn keines angegeben ist.
+
+<br />
+<br />
+
+> 🐰 Glückwunsch! Sie haben alles über das Verfolgen von ~~Benchmarks~~ Performance-Regressionstests gelernt! 🎉
+
+<br/>
+
+<h2><a href="/docs/de/explanation/bencher-run">Weitermachen: <code>bencher run</code> CLI-Unterkommando ➡</a></h2>

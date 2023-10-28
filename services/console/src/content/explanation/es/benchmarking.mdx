@@ -1,0 +1,76 @@
+---
+title: "Resumen de Benchmarking"
+description: "El modelo conceptual y el vocabulario utilizado por Bencher para rastrear los resultados de los benchmarks de código"
+heading: "Resumen de Benchmarking"
+sortOrder: 1
+---
+
+La mayoría de los resultados de benchmark son efímeros.
+Desaparecen tan pronto como tu terminal alcanza su límite de desplazamiento.
+Algunos arneses de benchmark te permiten almacenar resultados, pero la mayoría solo lo hacen localmente.
+Bencher te permite rastrear tus benchmarks tanto de tus ejecuciones locales como de las de integración continua (CI) y comparar contra resultados históricos.
+
+La forma más fácil de rastrear tus benchmarks es la suborden de la línea de comandos <code><a href="/docs/es/explanation/bencher-run">bencher run</a></code>.
+Envuelve la salida de tu arnés de benchmark existente y genera un Informe.
+Este Informe es entonces enviado al servidor de API de Bencher,
+donde la salida del arnés de benchmark se analiza utilizando un [adaptador de arnés de benchmark](/docs/es/explanation/adapters).
+El adaptador de benchmark detecta todos los Benchmarks que están presentes y sus correspondientes Métricas.
+Estos Benchmarks y Métricas son entonces guardados junto con el Informe.
+Si hay un [Umbral](/docs/es/explanation/thresholds) establecido, entonces las nuevas Métricas se comparan contra las Métricas históricas para cada Benchmark presente en el Informe.
+Si se detecta una regresión, se generará una Alerta.
+
+A partir de ahora nos referiremos a tus "benchmarks" como "pruebas de regresión de rendimiento" para evitar cualquier confusión.
+
+## Benchmarks
+Un Benchmark es una prueba de regresión de rendimiento con nombre.
+Si la prueba de regresión de rendimiento es nueva para Bencher, entonces se crea automáticamente un Benchmark.
+De lo contrario, el nombre de la prueba de regresión de rendimiento se utiliza como el identificador único para el Benchmark.
+
+Ten cuidado al cambiar el nombre de tus pruebas de regresión de rendimiento.
+Necesitarás renombrar manualmente el Benchmark en Bencher para que coincida con este nuevo nombre.
+De lo contrario, la prueba de regresión de rendimiento renombrada se considerará un nuevo Benchmark.
+Esta misma advertencia también se aplica a _mover_ algunas pruebas de regresión de rendimiento.
+Dependiendo del arnés de benchmark, la ruta a la prueba de regresión de rendimiento puede ser parte de su nombre.
+
+La única excepción a la precaución mencionada es ignorar un Benchmark. Consulta [suprimiendo alertas](/docs/es/explanation/thresholds) para una visión completa.
+
+### Métricas
+Una Métrica es un único resultado de pruebas de regresión de rendimiento en un determinado momento.
+Se pueden recopilar hasta tres Medidas para una sola Métrica: `value`, `lower_value`, and `upper_value`.
+El `value` es requerido para todas las Métricas mientras que `lower_value` y `upper_value` son opcionalmente independientes.
+Cuáles Medidas se recopilan está determinado por el [adaptador del arnés de benchmark](/docs/es/explanation/adapters).
+
+### Tipo de Métrica
+Un Tipo de Métrica es la unidad de medida para una Métrica.
+Por defecto todos los Proyectos comienzan con un Tipo de Métrica `Latency` y `Throughput`
+con unidades de `nanosegundos (ns)` y `operaciones / segundo (ops/s)` respectivamente.
+El Tipo de Métrica es determinado por el [adaptador del arnés de benchmark](/docs/es/explanation/adapters).
+
+<br />
+
+## Informe
+Un Informe es una colección de Benchmarks y sus Métricas para una rama (Branch) y ambiente de pruebas (Testbed) particulares.
+Los Informes son más a menudo generados utilizando la suborden de la línea de comandos <code><a href="/docs/es/explanation/bencher-run">bencher run</a></code>.
+Consulta [cómo rastrear pruebas de regresión de rendimiento](/docs/es/how-to/track-benchmarks) para una visión completa.
+
+### Rama (Branch)
+Una Rama es la ref `git` utilizada al ejecutar un Informe (es decir, el nombre de la rama o la etiqueta).
+Por defecto todos los Proyectos comienzan con una Rama `main`.
+Cuando se utiliza la suborden de la línea de comandos <code><a href="/docs/es/explanation/bencher-run">bencher run</a></code>,
+`main` es la Rama por defecto si no se proporciona una.
+Consulta [selección de rama](/docs/es/explanation/branch-selection) para una visión completa.
+
+### Ambiente de Pruebas (Testbed)
+Un Ambiente de Pruebas es el nombre del entorno de pruebas utilizado al ejecutar un Informe.
+Por defecto todos los Proyectos comienzan con un Ambiente de Pruebas `localhost`.
+Cuando se utiliza la suborden de la línea de comandos <code><a href="/docs/es/explanation/bencher-run">bencher run</a></code>,
+`localhost` es el Ambiente de Pruebas por defecto si no se proporciona uno.
+
+<br />
+<br />
+
+> 🐰 ¡Felicidades! ¡Has aprendido todo sobre rastrear ~~benchmarks~~ pruebas de regresión de rendimiento! 🎉
+
+<br/>
+
+<h2><a href="/docs/es/explanation/bencher-run">Sigue Adelante: Suborden CLI <code>bencher run</code> ➡</a></h2>

@@ -1,7 +1,7 @@
-import { BENCHER_GITHUB_URL, BENCHER_CHAT_URL } from "../../util/ext";
+import { BENCHER_CHAT_URL, BENCHER_GITHUB_URL } from "../../util/ext";
 
 const Footer = () => (
-	<footer class="footer" style="margin-top:1rem;">
+	<footer class="footer" style="margin-top: 1rem;">
 		<div class="container">
 			<div class="columns is-vcentered is-mobile">
 				<div class="column">

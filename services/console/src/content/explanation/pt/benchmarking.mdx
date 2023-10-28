@@ -1,0 +1,76 @@
+---
+title: "Visão Geral da Análise de Desempenho"
+description: "O modelo conceitual e vocabulário usados pelo Bencher para rastrear os resultados de análise de desempenho de códigos"
+heading: "Visão Geral da Análise de Desempenho"
+sortOrder: 1
+---
+
+A maioria dos resultados de análise de desempenho são efêmeros.
+Eles desaparecem assim que o seu terminal atinge o limite de rolagem.
+Algumas ferramentas de análise de desempenho permitem que você armazene os resultados, mas a maioria só faz isso localmente.
+Bencher permite que você rastreie suas análises de desempenho tanto em execuções locais quanto em CI e compare com os resultados históricos.
+
+A forma mais fácil de rastrear suas análises de desempenho é o subcomando CLI <code><a href="/docs/pt/explanation/bencher-run">bencher run</a></code>.
+Ele envolve a saída da sua ferramenta de análise de desempenho existente e gera um Relatório.
+Este Relatório é então enviado para o servidor API do Bencher,
+onde a saída da ferramenta de análise de desempenho é analisada usando um [adaptador de ferramenta de análise de desempenho](/docs/pt/explanation/adapters).
+O adaptador para ferramentas de análise de desempenho detecta todas as Análises de Desempenho presentes e suas Métricas correspondentes.
+Essas Análises de Desempenho e Métricas são então salvas junto com o Relatório.
+Se um [Limiar](/docs/pt/explanation/thresholds) estiver definido, então as novas Métricas são comparadas com as Métricas históricas para cada Análise de Desempenho presente no Relatório.
+Se for detectada uma regressão, então um Alerta será gerado.
+
+A partir de agora nos referiremos ao suas "análises de desempenho" como "testes de regressão de desempenho" para evitar qualquer confusão.
+
+## Análises de Desempenho
+Uma Análise de Desempenho é um teste de regressão de desempenho nomeado.
+Se o teste de regressão de desempenho é novo para o Bencher, então uma Análise de Desempenho é automaticamente criada.
+Caso contrário, o nome do teste de regressão de desempenho é usado como o identificador único para a Análise de Desempenho.
+
+Tenha cuidado ao mudar o nome dos seus testes de regressão de desempenho.
+Você precisará renomear manualmente a Análise de Desempenho no Bencher para corresponder a este novo nome.
+Caso contrário, o teste de regressão de desempenho renomeado será considerado uma nova Análise de Desempenho.
+Este mesmo alerta também se aplica ao _mover_ alguns testes de regressão de desempenho.
+Dependendo da ferramenta de análise de desempenho, o caminho para o teste de regressão de desempenho pode fazer parte do seu nome.
+
+A única exceção à ressalva acima é ignorar uma Análise de Desempenho. Veja [como suprimir alertas](/docs/pt/explanation/thresholds) para uma visão geral completa.
+
+### Métricas
+Uma Métrica é um único resultado de teste de regressão de desempenho em um dado momento.
+Até três Medidas podem ser coletadas para uma única Métrica: `value`, `lower_value` e `upper_value`.
+O `value` é necessário para todas as Métricas enquanto o `lower_value` e `upper_value` são opcionalmente independentes.
+Quais Medidas são coletadas é determinado pelo [adaptador de ferramenta de análise de desempenho](/docs/pt/explanation/adapters).
+
+### Tipo de Métrica
+Um Tipo de Métrica é a unidade de medida para uma Métrica.
+Por padrão todos os Projetos começam com um Tipo de Métrica `Latency` e `Throughput`
+com unidades de `nanoseconds (ns)` e `operations / second (ops/s)` respectivamente.
+O Tipo de Métrica é determinado pelo [adaptador de ferramenta de analise de desempenho](/docs/pt/explanation/adapters).
+
+<br />
+
+## Relatório
+Um Relatório é uma coleção de Análises de Desempenho e suas Métricas para um Branch e Testbed específicos.
+Os Relatórios são mais frequentemente gerados usando o subcomando CLI <code><a href="/docs/pt/explanation/bencher-run">bencher run</a></code>.
+Veja [como rastrear testes de regressão de desempenho](/docs/pt/how-to/track-benchmarks) para uma visão geral completa.
+
+### Branch
+Um Branch é a referência `git` usada ao executar um Relatório (ou seja, nome do branch ou tag).
+Por padrão, todos os Projetos começam com um Branch `main`.
+Ao usar o subcomando CLI <code><a href="/docs/pt/explanation/bencher-run">bencher run</a></code>,
+`main` é o Branch padrão se um não for fornecido.
+Veja [a seleção de branch](/docs/pt/explanation/branch-selection) para uma visão geral completa.
+
+### Testbed
+Um Testbed é o nome do ambiente de teste usado ao executar um Relatório.
+Por padrão, todos os Projetos começam com um Testbed `localhost`.
+Ao usar o subcomando CLI <code><a href="/docs/pt/explanation/bencher-run">bencher run</a></code>,
+`localhost` é o Testbed padrão se um não for fornecido.
+
+<br />
+<br />
+
+> 🐰 Parabéns! Você aprendeu tudo sobre o rastreamento de ~~análises de desempenho~~ testes de regressão de desempenho! 🎉
+
+<br/>
+
+<h2><a href="/docs/pt/explanation/bencher-run">Continue: Subcomando CLI <code>bencher run</code> ➡</a></h2>
