@@ -1,14 +1,9 @@
 ---
-import { getCollection } from "astro:content";
-import { defaultLang } from "../../../../i18n/ui";
 import { Collection } from "../../../../content/config";
+import { getLangPaths } from "../../../../i18n/utils";
 
 export async function getStaticPaths() {
-  const pages = await getCollection(Collection.tutorial);
-  return pages.map(page => {
-    const [lang, ...slug] = page.id.substring(0, page.id.lastIndexOf('.'))?.split('/');
-    return { params: { lang, slug: slug.join('/') || undefined }, props: page }
-  }).filter(page => page.params.lang !== defaultLang);
+  return await getLangPaths(Collection.how_to);
 }
 
 const { lang } = Astro.params;

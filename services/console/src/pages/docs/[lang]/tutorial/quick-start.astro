@@ -1,19 +1,16 @@
 ---
 import DocsLayout from "../../../../layouts/docs/DocsLayout.astro";
-import { getCollection } from "astro:content";
 import AuthOverride from "../../../../components/auth/AuthOverride";
 import AddAnApiToken from "../../../../components/docs/override/AddAnApiToken";
 import { Language } from "../../../../i18n/ui";
 import Disclosure from "../../../../components/docs/Disclosure";
 import { Collection } from "../../../../content/config";
+import { getLangPaths } from "../../../../i18n/utils";
 
 // 1. Generate a new path for every collection entry
 export async function getStaticPaths() {
-  const pages = await getCollection(Collection.tutorial);
-  return pages.map(page => {
-    const [lang, ...slug] = page.id.substring(0, page.id.lastIndexOf('.'))?.split('/');
-    return { params: { lang, slug: slug.join('/') || undefined }, props: page }
-  }).filter(page => page.params.slug === "quick-start");
+  const pages = await getLangPaths(Collection.tutorial);
+  return pages.filter(page => page.params.slug === "quick-start");
 }
 // 2. When it's time to render, you can get the entry directly from the prop
 const { lang } = Astro.params;
