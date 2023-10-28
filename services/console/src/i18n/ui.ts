@@ -66,3 +66,25 @@ export const tutorial = (lang: Language) => {
 			return "Tutorial";
 	}
 };
+
+export const how_to = (lang: Language) => {
+	switch (lang) {
+		case Language.de:
+			return "Wie man";
+		case Language.es:
+			return "Cómo";
+		case Language.fr:
+			return "Comment";
+		case Language.ja:
+			return "方法";
+		case Language.pt:
+			return "Como";
+		case Language.zh:
+			return "如何";
+		case Language.ru:
+			return "Как";
+		case Language.en:
+		default:
+			return "How To";
+	}
+};

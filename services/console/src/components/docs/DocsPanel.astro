@@ -11,9 +11,7 @@ interface Props {
 const lang: Language = Astro.props.lang ?? defaultLang;
 
 const tutorialCollection = await getLangCollection(Collection.tutorial);
-
-const how_to = await getCollection(Collection.how_to);
-how_to.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
+const howToCollection = await getLangCollection(Collection.how_to);
 
 const explanation = await getCollection(Collection.explanation);
 explanation.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
@@ -83,7 +81,7 @@ const alsoIn = () => {
       {
         tutorialCollection[lang]?.map((page) => (
           <li>
-            <a href={`/docs${langPath(lang)}/tutorial/${page.slug}`}>{page.data.title}</a>
+            <a href={`/docs/${langPath(lang)}tutorial/${page.slug}`}>{page.data.title}</a>
           </li>
         ))
       }
@@ -91,9 +89,9 @@ const alsoIn = () => {
     <p class="menu-label">How To</p>
     <ul class="menu-list">
       {
-        how_to.map((page) => (
+        howToCollection[lang].map((page) => (
           <li>
-            <a href={`/docs/how-to/${page.slug}`}>{page.data.heading}</a>
+            <a href={`/docs/${langPath(lang)}how-to/${page.slug}`}>{page.data.heading}</a>
           </li>
         ))
       }
