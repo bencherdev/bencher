@@ -1,0 +1,208 @@
+---
+title: "벤치마크 어댑터"
+description: "Bencher의 기본 어댑터를 사용하여 좋아하는 코드 벤치마크 하네스를 사용하거나, JSON을 출력하는 사용자 정의 코드 벤치마크 하네스를 사용하세요."
+heading: "벤치마크 하네스 어댑터"
+sortOrder: 3
+---
+
+어댑터는 벤치마크 하네스 출력을 표준화된 JSON, Bencher Metric Format (BMF)로 변환합니다.
+어댑터는 새 보고서가 수신되었을 때 API 서버에서 실행됩니다.
+더 깊은 설명을 위해 [벤치마크 개요](/docs/ko/explanation/benchmarking)를 참조하세요.
+이들은 선택적 `--adapter` 플래그를 사용하여 <code><a href="/docs/ko/explanation/bencher-run">bencher run</a></code> CLI 서브커맨드에서 지정할 수 있습니다.
+어댑터가 지정되지 않으면, 기본적으로 [the `magic` 어댑터](#-magic-default)가 사용됩니다.
+
+가장 특정한 어댑터를 사용하는 것이 최선입니다.
+이것은 가장 정확하고 빠른 파싱을 제공합니다.
+예를 들어, Rust
+[libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)
+출력을 파싱하는 경우, `magic` 또는 `rust` 어댑터가 아닌 `rust_bench` 어댑터를 사용해야 합니다.
+좋은 비교를 위해 저희
+[Bencher perf 페이지](https://bencher.dev/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C5655ed2a-3e45-4622-bdbd-39cdd9837af8%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674777600000)
+를 참조하세요.
+
+<div class="content has-text-centered">
+<a href="https://bencher.dev/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674950400000"><img style="border: 0.2em solid #ed6704;" src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kind=latency&start_time=1674950400000&title=Benchmark+Adapter+Comparison" title="Benchmark Adapter Comparison" alt="Benchmark Adapter Comparison for Bencher - Bencher" /></a>
+</div>
+
+## 🪄 Magic <small>(default)</small>
+
+Magic 어댑터(`magic`)는 모든 다른 어댑터의 슈퍼셋입니다.
+그 이유로, `magic`은 `bencher run`이 실행될 때의 기본 어댑터입니다,
+하지만 이는 탐색을 위한 것으로만 사용되어야 합니다.
+CI에서는, 사용 사례에 가장 특정한 어댑터를 사용해야 합니다.
+
+## \{...\} JSON
+
+JSON 어댑터(`json`)는 BMF JSON을 기대합니다.
+사용자 정의 벤치마크 하네스와 Bencher를 통합하는 데 이상적입니다.
+
+BMF 예시:
+
+```
+{
+    "benchmark_name": {
+        "latency": {
+            value: 88.0,
+            lower_value: 87.42,
+            upper_value: 88.88
+        }
+    }
+}
+```
+
+이 예시에서, 키 `benchmark_name`은 벤치마크의 이름이 될 것입니다.
+벤치마크 이름은 1024자까지의 비어있지 않은 문자열이 될 수 있습니다.
+`benchmark_name` 객체는 Metric Kind의 축약명 또는 UUIDs를 키로 포함합니다.
+이 예시에서, `latency`는 Latency Metric Kind의 축약명입니다.
+각 프로젝트는 기본적으로 Latency(즉, `latency`)와 Throughput(즉, `throughput`) Metric Kind를 가지고 있으며,
+이 두 개는 각각 `나노초 (ns)`와 `초당 작업 수 (ops/s)`로 측정됩니다.
+Metric Kind 객체는 최대 세 가지 측정치를 포함하는 Metric을 포함합니다: `value`, `lower_value`, `upper_value`.
+`lower_value`와 `upper_value` 측정치는 선택적이며,
+그 계산은 벤치마크 하네스에 특정합니다.
+
+이 예시에서, `latency` Metric Kind 객체는 다음 측정치를 포함합니다:
+
+- `value`는 `88.0`
+- `lower_value`는 `87.42`
+- `upper_value`는 `88.88`
+
+만약 BMF JSON이 파일에 저장되어 있다면,
+그 파일 경로를 지정하기 위해 선택적 `--file` 인수를 사용하여 <code><a href="/docs/ko/explanation/bencher-run">bencher run</a></code> CLI 서브커맨드를 사용할 수 있습니다.
+이것은 벤치마크 커맨드(ex: `bencher run "bencher mock > results.json" --file results.json`)와 벤치마크 커맨드 없이도 동작합니다(ex: `bencher mock > results.json && bencher run --file results.json`).
+
+<br/>
+
+> 🐰 참고: `bencher mock` CLI 서브커맨드는 모의 BMF 메트릭을 생성합니다.
+
+## #️⃣ C#
+
+C# 어댑터(`c_sharp`)는 `c_sharp_dot_net`의 슈퍼셋입니다.
+
+## #️⃣ C# DotNet
+
+C# DotNet 어댑터(`c_sharp_dot_net`)는 [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) 출력을 [JSON 포맷(즉, `--exporters json`)](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson)으로 기대합니다.
+`latency` Metric Kind(즉, `나노초 (ns)`)이 수집됩니다.
+
+메트릭에는 두 가지 옵션이 있습니다:
+- `mean`(기본값): `lower_value`와 `upper_value`는 표준 편차 아래와 평균(즉, `value`) 위로 각각 있습니다.
+- `중앙값`: `lower_value`와 `upper_value`는 중앙값(즉, `value`) 아래와 위의 사분위범위로 각각 있습니다.
+
+이것은 선택적 `--average` flag를 사용하여 <code><a href="/docs/ko/explanation/bencher-run">bencher run</a></code> CLI 서브커맨드에서 지정할 수 있습니다.
+
+## ➕ C++
+
+C++ 어댑터(`cpp`)는 `cpp_catch2`와 `cpp_google`의 슈퍼셋입니다.
+
+## ➕ C++ Catch2
+
+C++ Catch2 어댑터(`cpp_catch2`)는 [Catch2](https://github.com/catchorg/Catch2) 출력을 기대합니다.
+`latency` Metric Kind(즉, `나노초 (ns)`)이 수집됩니다.
+`lower_value`와 `upper_value`는 평균(즉, `value`) 아래와 위의 표준 편차로 각각 있습니다.
+
+## ➕ C++ Google
+
+C++ Google 어댑터(`cpp_google`)는 [Google Benchmark](https://github.com/google/benchmark) 출력을 [JSON 포맷(즉, `--benchmark_format=json`)](https://github.com/google/benchmark/blob/main/docs/ko/user_guide.md#output-formats)으로 기대합니다.
+`latency` Metric Kind(즉, `나노초 (ns)`)이 수집됩니다.
+평균(즉, `value`)만 가능합니다. `lower_value`와 `upper_value`가 없습니다.
+
+## 🕳 Go
+
+Go 어댑터(`go`)는 `go_bench`의 슈퍼셋입니다.
+
+## 🕳 Go Bench
+
+Go Bench 어댑터(`go_bench`)는 [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks) 출력을 기대합니다.
+`latency` Metric Kind(즉, `나노초 (ns)`)이 수집됩니다.
+평균(즉, `value`)만 가능합니다. `lower_value`와 `upper_value`가 없습니다.
+
+## ☕️ Java
+
+Java 어댑터(`java`)는 `java_jmh`의 슈퍼셋입니다.
+
+## ☕️ Java JMH
+
+Java JMH 어댑터(`java_jmh`)는 [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh) 출력을 [JSON 포맷(즉, `-rf json`)](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java)으로 기대합니다.
+`latency` 그리고 `throughput` Metric Kinds(즉, `나노초 (ns)` 그리고 `초당 작업 / (ops/sec)`)이 수집될 수 있습니다.
+`lower_value`와 `upper_value`는 평균(즉, `value`)에 대한 하한과 상한 신뢰 구간을 각각입니다.
+
+## 🕸 JavaScript
+
+JavaScript 어댑터(`js`)는 `js_benchmark`와 `js_time`의 슈퍼셋입니다.
+
+## 🕸 JavaScript Benchmark
+
+JavaScript Benchmark 어댑터(`js_benchmark`)는 [Benchmark.js](https://github.com/bestiejs/benchmark.js) 출력을 기대합니다.
+`throughput` Metric Kind(즉, `초당 작업 (ops/sec)`)이 수집됩니다.
+`lower_value`와 `upper_value`는 중앙값(즉, `value`) 아래와 위의 상대적 오차 범위로 각각 있습니다.
+
+## 🕸 JavaScript Time
+
+JavaScript Time 어댑터(`js_time`)는 [console.time](https://developer.mozilla.org/en-US/docs/ko/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/ko/Web/API/console/timeEnd) 출력을 기대합니다.
+`latency` Metric Kind(즉, `나노초 (ns)`)이 수집됩니다.
+작업 시간(즉, `value`)만 가능합니다. `lower_value`와 `upper_value`가 없습니다.
+
+## 🐍 Python
+
+Python 어댑터(`python`)는 `python_asv`와 `python_pytest`의 슈퍼셋입니다.
+
+## 🐍 Python ASV
+
+Python ASV 어댑터(`python_asv`)는 [airspeed velocity](https://github.com/airspeed-velocity/asv) CLI [asv run](https://asv.readthedocs.io/en/stable/commands.html#asv-run) 출력을 기대합니다.
+`latency` Metric Kind(즉, `나노초 (ns)`)이 수집됩니다.
+`lower_value`와 `upper_value`는 중앙값(즉, `value`) 아래와 위의 사분위범위로 각각 있습니다.
+
+## 🐍 Python Pytest
+
+Python Pytest 어댑터(`python_pytest`)는 [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) 출력을 [JSON 포맷(즉, `--benchmark-json results.json`)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options)으로 기대합니다.
+이 JSON 출력은 파일에 저장되므로, 파일 경로를 명시하기 위해 `bencher run` CLI `--file` 인자를 사용해야 합니다(즉, `bencher run --file results.json "pipenv run pytest --benchmark-json results.json benchmarks.py"`).
+`latency` Metric Kind(즉, `나노초 (ns)`)이 수집됩니다.
+
+메트릭에는 두 가지 옵션이 있습니다:
+- `mean`(기본값): `lower_value`와 `upper_value`는 표준 편차 아래와 평균(즉, `value`) 위로 각각 있습니다.
+- `중앙값`: `lower_value`와 `upper_value`는 중앙값(즉, `value`) 아래와 위의 사분위범위로 각각 있습니다.
+
+이것은 선택적 `--average` 인자를 사용하여 <code><a href="/docs/ko/explanation/bencher-run">bencher run</a></code> CLI 서브커맨드에서 지정할 수 있습니다.
+
+## ♦️ Ruby
+
+Ruby 어댑터(`ruby`)는 `ruby_benchmark`의 슈퍼셋입니다.
+
+## ♦️ Ruby Benchmark
+
+Ruby Benchmark 어댑터(`ruby_benchmark`)는 [Benchmark 모듈](https://github.com/ruby/benchmark) 출력을 기대합니다. 이것은 `#bm`, `#bmbm`, 그리고 `#benchmark` 메소드에 대한 것입니다.
+각 벤치마크에는 레이블이 필요합니다.
+`latency` Metric Kind(즉, `나노초 (ns)`)이 수집됩니다.
+보고된 값(즉, `value`)만 가능합니다. `lower_value`와 `upper_value`가 없습니다.
+
+## 🦀 Rust
+
+Rust 어댑터(`rust`)는 `rust_bench`와 `rust_criterion`의 슈퍼셋입니다.
+
+## 🦀 Rust Bench
+
+Rust Bench 어댑터(`rust_bench`)는 [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks) 출력을 기대합니다.
+`latency` Metric Kind(즉, `나노초 (ns)`)이 수집됩니다.
+`lower_value`와 `upper_value`는 중앙값(즉, `value`) 아래와 위의 편차로 각각 있습니다.
+
+## 🦀 Rust Criterion
+
+Rust Criterion 어댑터(`rust_criterion`)는 [Criterion](https://github.com/bheisler/criterion.rs) 출력을 기대합니다.
+`latency` Metric Kind(즉, `나노초 (ns)`)이 수집됩니다.
+`lower_value`와 `upper_value`는 slope(가능한 경우) 또는 mean(그렇지 않으면)의 하한과 상한으로 각각 있습니다(즉, `value`).
+
+## 🦀 Rust Iai
+
+Rust Iai 어댑터(`rust_iai`)는 [Iai](https://github.com/bheisler/iai) 출력을 기대합니다.
+`instructions`, `l1_access`, `l2_access`, `ram_access`, 그리고 `estimated_cycles` Metric Kinds가 수집됩니다.
+이_measure_(즉, `value`)만 가능합니다. `lower_value`와 `upper_value`가 없습니다.
+이 어댑터에 대한 Metric Kinds는 모든 프로젝트에 대해 기본적으로 생성되지 않습니다.
+그러나, 이 어댑터를 사용하면, 이 Metric Kinds는 프로젝트에 대해 자동으로 생성됩니다.
+
+<br />
+<br />
+
+> 🐰 축하합니다! 벤치마크 하네스 어댑터에 대해 모두 배웠습니다! 🎉
+
+<br/>
+
+<h2><a href="/docs/ko/explanation/thresholds">계속 진행하세요: 임계값 & 알림 ➡</a></h2>

@@ -1,28 +1,28 @@
+import type { Params } from "astro";
 import type { InitOutput } from "bencher_valid";
 import {
+	type Accessor,
 	For,
 	type Resource,
+	type Setter,
 	Show,
 	createEffect,
 	createMemo,
 	createSignal,
-	type Accessor,
-	type Setter,
 } from "solid-js";
 import {
 	type JsonAuthUser,
-	PlanLevel,
 	type JsonUsage,
+	PlanLevel,
 } from "../../../../types/bencher";
+import { fmtDate } from "../../../../util/convert";
 import { useSearchParams } from "../../../../util/url";
 import { validPlanLevel, validUuid } from "../../../../util/valid";
 import { PLAN_PARAM } from "../../../auth/auth";
-import Pricing from "./Pricing";
-import PaymentCard from "./PaymentCard";
-import type { Params } from "astro";
 import Field from "../../../field/Field";
 import FieldKind from "../../../field/kind";
-import { fmtDate } from "../../../../util/convert";
+import PaymentCard from "./PaymentCard";
+import Pricing from "./Pricing";
 
 interface Props {
 	apiUrl: string;
@@ -163,8 +163,8 @@ const FreeUsage = (props: { usage: Resource<null | JsonUsage> }) => {
 		<div class="columns">
 			<div class="column">
 				<div class="content" style="margin-top: 4rem">
-					<h2 class="title">Free Tier Usage</h2>
-					<h3 class="subtitle">
+					<h2 class="title is-2">Free Tier Usage</h2>
+					<h3 class="subtitle is-3">
 						{fmtDate(props.usage()?.start_time)} -{" "}
 						{fmtDate(props.usage()?.end_time)}
 					</h3>

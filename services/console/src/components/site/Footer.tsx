@@ -6,7 +6,7 @@ const Footer = () => (
 			<div class="columns is-vcentered is-mobile">
 				<div class="column">
 					<div class="content">
-						<h4 class="title">🐰 Bencher - Continuous Benchmarking</h4>
+						<h4 class="title is-4">🐰 Bencher - Continuous Benchmarking</h4>
 						<nav class="level">
 							<div class="level-left">
 								<div class="level-item has-text-centered">

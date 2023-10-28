@@ -1,17 +1,17 @@
 import { debounce } from "@solid-primitives/scheduled";
 import {
 	type Accessor,
+	type Resource,
+	Show,
 	createEffect,
 	createMemo,
 	createSignal,
-	type Resource,
-	Show,
 } from "solid-js";
 import type { JsonAuthUser, JsonProject } from "../../../types/bencher";
-import { setPageTitle } from "../../../util/resource";
 import { apiUrl } from "../../../util/http";
-import FieldKind from "../../field/kind";
+import { setPageTitle } from "../../../util/resource";
 import Field from "../../field/Field";
+import FieldKind from "../../field/kind";
 
 export interface Props {
 	apiUrl: string;
@@ -44,9 +44,9 @@ const PerfHeader = (props: Props) => {
 	return (
 		<div class="columns is-centered">
 			<div class="column">
-				<h3 class="title is-3" style="overflow-wrap:anywhere;">
+				<h1 class="title is-3" style="overflow-wrap:anywhere;">
 					{props.project()?.name}
-				</h3>
+				</h1>
 			</div>
 			<ShareModal
 				apiUrl={props.apiUrl}
@@ -175,6 +175,13 @@ const ShareModal = (props: ShareProps) => {
 		return url;
 	});
 
+	const perf_embed_url = createMemo(
+		() =>
+			`${location.protocol}//${location.hostname}${
+				location.port ? `:${location.port}` : ""
+			}/perf/${props.project()?.slug}/embed${location.search}`,
+	);
+
 	const img_tag = createMemo(
 		() =>
 			`<a href="${perf_page_url()}"><img src="${perf_img_url()}" title="${
@@ -182,6 +189,13 @@ const ShareModal = (props: ShareProps) => {
 			}" alt="${title() ? `${title()} for ` : ""}${
 				props.project()?.name
 			} - Bencher" /></a>`,
+	);
+
+	const embed_tag = createMemo(
+		() =>
+			`<iframe src="${perf_embed_url()}" title="${
+				title() ? title() : props.project()?.name
+			}" width="100%" height="1024px" frameBorder="0"></iframe>`,
 	);
 
 	return (
@@ -250,7 +264,26 @@ const ShareModal = (props: ShareProps) => {
 					>
 						{perf_page_url()}
 					</a>
+
+					<br />
+					<br />
+					<hr />
+					<br />
+
+					<h4 class="title is-4">Embed Perf Plot</h4>
+					<h4 class="subtitle is-4">Click to Copy Embed Tag</h4>
+					{/* biome-ignore lint/a11y/useValidAnchor: Copy link */}
+					<a
+						href=""
+						onClick={(e) => {
+							e.preventDefault();
+							navigator.clipboard.writeText(embed_tag());
+						}}
+					>
+						{embed_tag()}
+					</a>
 				</section>
+
 				<footer class="modal-card-foot">
 					<button
 						class="button is-primary is-outlined is-fullwidth"

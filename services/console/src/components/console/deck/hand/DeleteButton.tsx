@@ -1,19 +1,19 @@
 import {
-	createSignal,
 	type Accessor,
+	Match,
 	type Resource,
 	Switch,
-	Match,
+	createSignal,
 } from "solid-js";
 import type { JsonAuthUser } from "../../../../types/bencher";
-import { pathname } from "../../../../util/url";
-import { validJwt } from "../../../../util/valid";
 import { httpDelete } from "../../../../util/http";
 import {
 	NotifyKind,
 	navigateNotify,
 	pageNotify,
 } from "../../../../util/notify";
+import { pathname } from "../../../../util/url";
+import { validJwt } from "../../../../util/valid";
 
 export interface Props {
 	apiUrl: string;
@@ -77,8 +77,8 @@ const DeleteButton = (props: Props) => {
 			</Match>
 			<Match when={deleteClicked() === true}>
 				<div class="content has-text-centered">
-					<h3 class="title">Are you sure? This is permanent.</h3>
-					{props.subtitle && <h4 class="subtitle">{props.subtitle}</h4>}
+					<h3 class="title is-3">Are you sure? This is permanent.</h3>
+					{props.subtitle && <h4 class="subtitle is-4">{props.subtitle}</h4>}
 				</div>
 				<div class="columns">
 					<div class="column">

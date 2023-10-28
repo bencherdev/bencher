@@ -1,0 +1,209 @@
+---
+title: "基准测试适配器"
+description: "使用Bencher的内置适配器和你最喜欢的代码基准测试程序，或者使用输出JSON的自定义代码基准测试程序"
+heading: "基准测试程序适配器"
+sortOrder: 3
+---
+
+适配器将基准测试程序的输出转换为标准化的JSON，Bencher度量格式（BMF）。
+当接收到新报告时，适配器会在API服务器上运行。
+查看[基准测试概述](/docs/explanation/benchmarking)以便更深入地理解。
+它们可以在<code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI子命令中通过可选的`--adapter`标志进行指定。
+如果没有指定适配器，将默认使用[“magic”适配器](#-magic-default)。
+
+最好为您的用例使用最特定的适配器。
+这将提供最准确且性能最佳的解析。
+例如，如果你正在解析Rust
+[libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)
+的输出，你应该使用`rust_bench`适配器，而不是`magic`或`rust`适配器。
+查看我们的
+[Bencher perf页面](https://bencher.dev/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C5655ed2a-3e45-4622-bdbd-39cdd9837af8%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674777600000)
+以便进行良好比较。
+
+<div class="content has-text-centered">
+<a href="https://bencher.dev/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674950400000"><img style="border: 0.2em solid #ed6704;" src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kind=latency&start_time=1674950400000&title=Benchmark+Adapter+Comparison" title="基准测试适配器对比" alt="基准测试适配器对比 for Bencher - Bencher" /></a>
+</div>
+
+## 🪄 Magic <small>(默认)</small>
+
+Magic适配器(`magic`)是所有其他适配器的超集。
+因此，它是`bencher run`的默认适配器，
+但是最好只用于探索。
+在CI中，你应该为你的用例使用最特定的适配器。
+
+## \{...\} JSON
+
+JSON适配器(`json`)期待BMF JSON。
+它非常适合与Bencher集成自定义基准测试的程序。
+
+BMF的例子：
+
+```
+{
+    "benchmark_name": {
+        "latency": {
+            value: 88.0,
+            lower_value: 87.42,
+            upper_value: 88.88
+        }
+    }
+}
+```
+
+在这个例子中，键`benchmark_name`将是一个基准测试的名称。
+基准测试的名字可以是任何长度不超过1024个字符的非空字符串。
+`benchmark_name`对象包含Metric Kind别名或UUID作为键。
+在这个例子中，`latency`是延迟度量种类的别名。
+每个项目默认具有一个延迟（即`latency`）和吞吐量（即`throughput`）度量种类，
+它们分别在`纳秒（ns）`和`操作数/秒（ops/s）`中测量。
+度量种类对象包含最多三个测量值：`value`、`lower_value`和`upper_value`。
+`lower_value`和`upper_value`测量值是可选的，
+它们的计算是基准测试程序特定的。
+
+在这个例子中，`latency`度量种类对象包含以下测量值：
+
+- `value`为`88.0`
+- `lower_value`为`87.42`
+- `upper_value`为`88.88`
+
+如果BMF JSON存储在文件中，
+那么你可以使用<code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI子命令并使用可选的`--file`参数来指定那个文件路径。
+这对于具有基准测试命令（例如：`bencher run "bencher mock > results.json" --file results.json`）
+和没有基准测试命令的情况都适用（例如：`bencher mock > results.json && bencher run --file results.json`）。
+
+<br/>
+
+> 🐰 注意：`bencher mock` CLI子命令会生成模拟BMF度量值。
+
+## #️⃣ C#
+
+C#适配器(`c_sharp`)是`c_sharp_dot_net`的超集。
+
+## #️⃣ C# DotNet
+
+C# DotNet适配器(`c_sharp_dot_net`)期待使用[BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet)的输出，输出为[JSON格式（即 `--exporters json`）](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson)。
+收集`latency`度量种类数据 (即 `nanoseconds (ns)`).
+
+度量值有两个选项：
+- `mean` (default): `lower_value`和`upper_value`分别位于均值 (即 `value`) 的一个标准差之下和之上。
+- `median`: `lower_value`和`upper_value`分别是中位数 (即 `value`) 的一个四分位距之下和之上。
+
+这可以在<code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI子命令中通过可选的`--average`标志进行指定。
+
+## ➕ C++
+
+C++适配器 (`cpp`)是`cpp_catch2`和`cpp_google`的超集。
+
+## ➕ C++ Catch2
+
+C++ Catch2适配器 (`cpp_catch2`) 期待 [Catch2](https://github.com/catchorg/Catch2) 的输出。
+收集`latency`度量种类数据 (即 `nanoseconds (ns)`).
+`lower_value`和`upper_value`分别位于均值 (即 `value`) 的一个标准差之下和之上。
+
+## ➕ C++ Google
+
+C++ Google适配器 (`cpp_google`) 期待 [Google 基准测试](https://github.com/google/benchmark)的输出，输出为[JSON格式 (即 `--benchmark_format=json`)](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats)。
+收集`latency`度量种类数据 (即 `nanoseconds (ns)`).
+只有均值 (即 `value`) 可用。没有 `lower_value` 和 `upper_value`。
+
+## 🕳 Go
+
+Go适配器 (`go`)是`go_bench`的超集。
+
+## 🕳 Go Bench
+
+Go Bench适配器 (`go_bench`)期待[go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks)的输出。
+收集`latency`度量种类数据 (即 `nanoseconds (ns)`).
+只有均值 (即 `value`) 可用。没有 `lower_value` 和 `upper_value`。
+
+## ☕️ Java
+
+Java适配器 (`java`)是`java_jmh`的超集。
+
+## ☕️ Java JMH
+
+Java JMH适配器 (`java_jmh`)期待[Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh)的输出，输出为[JSON格式 (即 `-rf json`)](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java)。
+可同时收集`latency`和`throughput`度量种类数据 (即 `nanoseconds (ns)` 和 `operations / second (ops/sec)`).
+`lower_value`和`upper_value`是均值 (即 `value`) 的下限和上限间隔。
+
+## 🕸 JavaScript
+
+JavaScript适配器 (`js`)是`js_benchmark`和`js_time`的超集。
+
+## 🕸 JavaScript Benchmark
+
+JavaScript Benchmark适配器 (`js_benchmark`)期待[Benchmark.js](https://github.com/bestiejs/benchmark.js)的输出。
+收集`throughput`度量种类数据 (即 `operations / second (ops/sec)`).
+`lower_value`和`upper_value`为中位数 (即 `value`) 的下方和上方的相对误差范围。
+
+## 🕸 JavaScript Time
+
+JavaScript Time适配器 (`js_time`)期待[console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd)的输出。
+收集`latency`度量种类数据 (即 `nanoseconds (ns)`).
+只有操作时间(即 `value`)可用。没有 `lower_value`和`upper_value`.
+
+## 🐍 Python
+
+Python适配器 (`python`)是`python_asv`和`python_pytest`的超集。
+
+## 🐍 Python ASV
+
+Python ASV适配器 (`python_asv`)期待使用[airspeed velocity](https://github.com/airspeed-velocity/asv) CLI 的[asv run](https://asv.readthedocs.io/en/stable/commands.html#asv-run)的输出。
+收集`latency`度量种类数据 (即 `nanoseconds (ns)`).
+`lower_value`和`upper_value`分别是中位数 (即 `value`) 下方和上方的四分位距。
+
+## 🐍 Python Pytest
+
+Python Pytest适配器 (`python_pytest`)期待[pytest-benchmark](https://github.com/ionelmc/pytest-benchmark)的输出，输出为[JSON格式 (即 `--benchmark-json results.json`)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options)。
+这个JSON输出保存到一个文件，所以你必须使用`bencher run` CLI 的 `--file`参数来指定那个文件路径 (即 `bencher run --file results.json "pipenv run pytest --benchmark-json results.json benchmarks.py"`).
+收集`latency`度量种类数据 (即 `nanoseconds (ns)`).
+
+度量值有两个选项：
+- `mean` (default): `lower_value`和`upper_value`分别位于均值 (即 `value`) 的一个标准差之下和之上。
+- `median`: `lower_value`和`upper_value`分别是中位数 (即 `value`) 的一个四分位距之下和之上。
+
+这可以在<code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI子命令中通过可选的`--average`参数进行指定。
+
+## ♦️ Ruby
+
+Ruby适配器 (`ruby`)是`ruby_benchmark`的超集。
+
+## ♦️ Ruby Benchmark
+
+Ruby Benchmark适配器 (`ruby_benchmark`)期待[Benchmark模块](https://github.com/ruby/benchmark)的`#bm`、`#bmbm`和`#benchmark`方法的输出。
+每个基准测试必须有一个标签。
+收集`latency`度量种类数据 (即 `nanoseconds (ns)`).
+只有报告的值(即 `value`)可用。没有 `lower_value`和`upper_value`。
+
+## 🦀 Rust
+
+Rust适配器 (`rust`)是`rust_bench`和`rust_criterion`的超集。
+
+## 🦀 Rust Bench
+
+Rust Bench适配器 (`rust_bench`)期待[libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)的输出。
+收集`latency`度量种类数据 (即 `nanoseconds (ns)`).
+`lower_value`和`upper_value`分别是中位数 (即 `value`) 的偏差下限和上限。
+
+## 🦀 Rust Criterion
+
+Rust Criterion适配器 (`rust_criterion`)期待[Criterion](https://github.com/bheisler/criterion.rs)的输出。
+收集`latency`度量种类数据 (即 `nanoseconds (ns)`).
+`lower_value`和`upper_value`是斜率(如果可用)或均值(如果不可用) (即 `value`) 的下限和上限。
+
+## 🦀 Rust Iai
+
+Rust Iai适配器 (`rust_iai`)期待[Iai](https://github.com/bheisler/iai)的输出。
+收集的`instructions`、`l1_access`、`l2_access`、`ram_access`和`estimated_cycles`度量种类的数据。
+只有这些测量值(即 `value`) 可用。没有 `lower_value`和`upper_value`测量值。
+这个适配器的度量种类不会默认为所有项目创建。
+但是，当你使用这个适配器时，这些度量种类会自动为你的项目创建。
+
+<br />
+<br />
+
+> 🐰 恭喜！你已经学习了所有关于基准测试程序适配器的知识！🎉
+
+<br/>
+
+<h2><a href="/docs/explanation/thresholds">继续前进：阈值和警告 ➡</a></h2>

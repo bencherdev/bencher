@@ -1,0 +1,209 @@
+---
+title: "Benchmark-Adapter"
+description: "Verwenden Sie Ihren bevorzugten Code-Benchmark-Harness mit den eingebauten Adaptern von Bencher oder verwenden Sie einen benutzerdefinierten Code-Benchmark-Harness, der JSON ausgibt"
+heading: "Benchmark-Harness-Adapter"
+sortOrder: 3
+---
+
+Adapter konvertieren die Ausgabe von Benchmark-Harnesses in standardisiertes JSON, das Bencher-Messformat (BMF).
+Die Adapter laufen auf dem API-Server, wenn ein neuer Bericht empfangen wird.
+Eine ausführlichere Erklärung finden Sie in der [Benchmarking-Übersicht](/docs/de/explanation/benchmarking).
+Sie können im <code><a href="/docs/de/explanation/bencher-run">bencher run</a></code> CLI-Unterbefehl mit der optionalen `--adapter`-Flag festgelegt werden.
+Wenn kein Adapter angegeben ist, wird standardmäßig [der `magic`-Adapter](#-magic-default) verwendet.
+
+Es ist am besten, den für Ihren Anwendungsfall spezifischsten Adapter zu verwenden.
+Dies wird das genaueste und leistungsfähigste Parsen bieten.
+Wenn Sie beispielsweise die Ausgabe von Rust
+[libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)
+parsen, sollten Sie den `rust_bench`-Adapter verwenden, und nicht den `magic`- oder `rust`-Adapter.
+Siehe unsere
+[Bencher Perfektionsseite](https://bencher.dev/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C5655ed2a-3e45-4622-bdbd-39cdd9837af8%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674777600000)
+für einen guten Vergleich.
+
+<div class="content has-text-centered">
+<a href="https://bencher.dev/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674950400000"><img style="border: 0.2em solid #ed6704;" src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kind=latency&start_time=1674950400000&title=Benchmark+Adapter+Comparison" title="Vergleich der Benchmark-Adapter" alt="Vergleich der Benchmark-Adapter für Bencher - Bencher" /></a>
+</div>
+
+## 🪄 Magic <small>(Standard)</small>
+
+Der Magic-Adapter (`magic`) ist ein Superset aller anderen Adapter.
+Aus diesem Grund ist er der Standardadapter für `bencher run`,
+aber er sollte nur für die Erkundung verwendet werden.
+In CI sollten Sie den spezifischsten Adapter für Ihren Anwendungsfall verwenden.
+
+## \{...\} JSON
+
+Der JSON-Adapter (`json`) erwartet BMF JSON.
+Er ist perfekt für die Integration von benutzerdefinierten Benchmark-Harnesses mit Bencher.
+
+Beispiel für BMF:
+
+```
+{
+    "benchmark_name": {
+        "latency": {
+            value: 88.0,
+            lower_value: 87.42,
+            upper_value: 88.88
+        }
+    }
+}
+```
+
+In diesem Beispiel wäre der Schlüssel `benchmark_name` der Name eines Benchmarks.
+Benchmark-Namen können jeder nicht-leere String bis zu 1024 Zeichen sein.
+Das `benchmark_name`-Objekt enthält Metrikarten-Slugs oder UUIDs als Schlüssel.
+In diesem Beispiel ist `latency` der Slug für die Latenz-Metrikart.
+Jedes Projekt hat standardmäßig eine Latenz (d.h. `latency`) und Durchsatz (d.h. `throughput`) Metrikart,
+die in `Nanosekunden (ns)` und `Operationen/Sekunde (ops/s)` gemessen werden.
+Das Metrikarart-Objekt enthält eine Metrik mit bis zu drei Maßnahmen: `value`, `lower_value` und `upper_value`.
+Die `lower_value` und `upper_value`-Maßnahmen sind optional,
+und ihre Berechnung ist spezifisch für den Benchmark-Harness.
+
+In diesem Beispiel enthält das `latency`-Metrikart-Objekt die folgenden Maßnahmen:
+
+- Ein `value` von `88.0`
+- Ein `lower_value` von `87.42`
+- Ein `upper_value` von `88.88`
+
+Wenn das BMF JSON in einer Datei gespeichert ist,
+dann können Sie den <code><a href="/docs/de/explanation/bencher-run">bencher run</a></code> CLI-Unterbefehl mit dem optionalen `--file`-Argument verwenden, um diesen Dateipfad anzugeben.
+Dies funktioniert sowohl mit einem Benchmark-Befehl (z.B.: `bencher run "bencher mock > results.json" --file results.json`)
+als auch ohne einen Benchmark-Befehl (z.B.: `bencher mock > results.json && bencher run --file results.json`).
+
+<br/>
+
+> 🐰 Hinweis: Der `bencher mock` CLI-Unterbefehl erzeugt Mock-BMF-Metriken.
+
+## #️⃣ C #
+
+Der C#-Adapter (`c_sharp`) ist ein Superset von `c_sharp_dot_net`.
+
+## #️⃣ C# DotNet
+
+Der C# DotNet-Adapter (`c_sharp_dot_net`) erwartet [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) Ausgabe im [JSON-Format (d.h. `--exporters json`)](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson).
+Die `latency` Metrikart (d.h. `Nanosekunden (ns)`) wird ermittelt.
+
+Es gibt zwei Optionen für die Metrik:
+- `mean` (Standard):  Die `lower_value` und `upper_value` sind eine Standardabweichung unter bzw. über dem Durchschnitt (d.h. `value`).
+- `median`: Die `lower_value` und `upper_value` sind ein Interquartilabstand unter bzw. über dem Median (d.h. `value`).
+
+Dies kann im <code><a href="/docs/de/explanation/bencher-run">bencher run</a></code> CLI-Unterbefehl mit der optionalen `--average`-Flag festgelegt werden.
+
+## ➕ C++
+
+Der C++-Adapter (`cpp`) ist ein Superset von `cpp_catch2` und `cpp_google`.
+
+## ➕ C++ Catch2
+
+Der C++ Catch2-Adapter (`cpp_catch2`) erwartet [Catch2](https://github.com/catchorg/Catch2) Ausgabe.
+Die `latency` Metrikart (d.h. `Nanosekunden (ns)`) wird ermittelt.
+Die `lower_value` und `upper_value` sind eine Standardabweichung unter bzw. über dem Durchschnitt (d.h. `value`).
+
+## ➕ C++ Google
+
+Der C++ Google-Adapter (`cpp_google`) erwartet [Google Benchmark](https://github.com/google/benchmark) Ausgabe im [JSON-Format (d.h. `--benchmark_format=json`)](https://github.com/google/benchmark/blob/main/docs/de/user_guide.md#output-formats).
+Die `latency` Metrikart (d.h. `Nanosekunden (ns)`) wird ermittelt.
+Nur der Durchschnitt (d. h. `value`) ist verfügbar. Es gibt keine `lower_value` und `upper_value`.
+
+## 🕳 Go
+
+Der Go-Adapter (`go`) ist ein Superset von `go_bench`.
+
+## 🕳 Go Bench
+
+Der Go Bench-Adapter (`go_bench`) erwartet [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks) Ausgabe.
+Die `latency` Metrikart (d.h. `Nanosekunden (ns)`) wird ermittelt.
+Nur der Durchschnitt (d. h. `value`) ist verfügbar. Es gibt keine `lower_value` und `upper_value`.
+
+## ☕️ Java
+
+Der Java-Adapter (`java`) ist ein Superset von `java_jmh`.
+
+## ☕️ Java JMH
+
+Der Java JMH-Adapter (`java_jmh`) erwartet [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh) Ausgabe im [JSON-Format (d.h. `-rf json`)](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java).
+Sowohl `latency` und `throughput` Metrikarten (d.h. `Nanosekunden (ns)` und `Operationen/Sekunde (ops/sec)`) können ermittelt werden.
+Die `lower_value` und `upper_value` sind die unteren und oberen Konfidenzintervalle für den Durchschnitt (d.h. `value`).
+
+## 🕸 JavaScript
+
+Der JavaScript-Adapter (`js`) ist ein Superset von `js_benchmark` und `js_time`.
+
+## 🕸 JavaScript Benchmark
+
+Der JavaScript Benchmark-Adapter (`js_benchmark`) erwartet [Benchmark.js](https://github.com/bestiejs/benchmark.js) Ausgabe.
+Die `throughput` Metrikart (d.h. `Operationen/Sekunde (ops/sec)`) wird ermittelt.
+Die `lower_value` und `upper_value` sind der relative Fehlerbereich unter bzw. über dem Median (d.h. `value`).
+
+## 🕸 JavaScript Time
+
+Der JavaScript Time-Adapter (`js_time`) erwartet [console.time](https://developer.mozilla.org/en-US/docs/de/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/de/Web/API/console/timeEnd) Ausgabe.
+Die `latency` Metrikart (d.h. `Nanosekunden (ns)`) wird ermittelt.
+Nur die Betriebszeit (d. h. `value`) ist verfügbar. Es gibt keine `lower_value` und `upper_value`.
+
+## 🐍 Python
+
+Der Python-Adapter (`python`) ist ein Superset von `python_asv` und `python_pytest`.
+
+## 🐍 Python ASV
+
+Der Python ASV-Adapter (`python_asv`) erwartet [airspeed velocity](https://github.com/airspeed-velocity/asv) CLI [asv run](https://asv.readthedocs.io/en/stable/commands.html#asv-run) Ausgabe.
+Die `latency` Metrikart (d.h. `Nanosekunden (ns)`) wird ermittelt.
+Die `lower_value` und `upper_value` sind der Interquartilbereich unter bzw. über dem Median (d. h. `value`).
+
+## 🐍 Python Pytest
+
+Der Python Pytest-Adapter (`python_pytest`) erwartet [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) Ausgabe im [JSON-Format (d.h. `--benchmark-json results.json`)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options).
+Diese JSON-Ausgabe wird in einer Datei gespeichert, sodass Sie das `bencher run` CLI `--file`-Argument verwenden müssen, um diesen Dateipfad anzugeben (d.h. `bencher run --file results.json "pipenv run pytest --benchmark-json results.json benchmarks.py"`).
+Die `latency` Metrikart (d.h. `Nanosekunden (ns)`) wird ermittelt.
+
+Es gibt zwei Optionen für die Metrik:
+- `mean` (Standard):  Die `lower_value` und `upper_value` sind eine Standardabweichung unter bzw. über dem Durchschnitt (d.h. `value`).
+- `median`: Die `lower_value` und `upper_value` sind ein Interquartilbereich unter bzw. über dem Median (d.h. `value`).
+
+Dies kann im <code><a href="/docs/de/explanation/bencher-run">bencher run</a></code> CLI-Unterbefehl mit dem optionalen `--average`-Argument festgelegt werden.
+
+## ♦️ Ruby
+
+Der Ruby-Adapter (`ruby`) ist ein Superset von `ruby_benchmark`.
+
+## ♦️ Ruby Benchmark
+
+Der Ruby Benchmark-Adapter (`ruby_benchmark`) erwartet die [Benchmark-Modul](https://github.com/ruby/benchmark) Ausgabe für die `#bm`, `#bmbm`, und `#benchmark`-Methoden.
+Ein Label ist für jeden Benchmark erforderlich.
+Die `latency` Metrikart (d.h. `Nanosekunden (ns)`) wird ermittelt.
+Nur der gemeldete Wert (d. h. `value`) ist verfügbar. Es gibt keine `lower_value` und `upper_value`.
+
+## 🦀 Rust
+
+Der Rust-Adapter (`rust`) ist ein Superset von `rust_bench` und `rust_criterion`.
+
+## 🦀 Rust Bench
+
+Der Rust Bench-Adapter (`rust_bench`) erwartet [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks) Ausgabe.
+Die `latency` Metrikart (d.h. `Nanosekunden (ns)`) wird ermittelt.
+Die `lower_value` und `upper_value` sind die Abweichung unter bzw. über dem Median (d.h. `value`).
+
+## 🦀 Rust Criterion
+
+Der Rust Criterion-Adapter (`rust_criterion`) erwartet [Criterion](https://github.com/bheisler/criterion.rs) Ausgabe.
+Die `latency` Metrikart (d.h. `Nanosekunden (ns)`) wird ermittelt.
+Die `lower_value` und `upper_value` sind die unteren und oberen Grenzen der Steigung (falls verfügbar) oder des Durchschnitts (falls nicht) (d.h. `value`).
+
+## 🦀 Rust Iai
+
+Der Rust Iai-Adapter (`rust_iai`) erwartet [Iai](https://github.com/bheisler/iai) Ausgabe.
+Die Metrikarten `instructions`, `l1_access`, `l2_access`, `ram_access`, und `estimated_cycles` werden ermittelt.
+Nur diese Maßnahmen (d. h. `value`) sind verfügbar. Es gibt keine `lower_value` und `upper_value` Maßnahmen.
+Die Metrikarten für diesen Adapter werden nicht standardmäßig für alle Projekte erstellt.
+Wenn Sie diesen Adapter jedoch verwenden, werden diese Metrikarten automatisch für Ihr Projekt erstellt.
+
+<br />
+<br />
+
+> 🐰 Herzlichen Glückwunsch! Sie haben alles über Benchmark-Harness-Adapter gelernt! 🎉
+
+<br/>
+
+<h2><a href="/docs/de/explanation/thresholds">Weiter geht's: Schwellenwerte & Warnungen ➡</a></h2>

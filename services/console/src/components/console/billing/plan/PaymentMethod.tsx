@@ -4,7 +4,7 @@ import { CardBrand, type JsonUsage } from "../../../../types/bencher";
 const PaymentMethod = (props: { usage: Resource<null | JsonUsage> }) => {
 	return (
 		<>
-			<h4 class="title">Payment Method</h4>
+			<h4 class="title is-4">Payment Method</h4>
 			<CreditCard brand={props.usage()?.plan?.card?.brand} />
 			<p>Name: {props.usage()?.plan?.customer?.name}</p>
 			<p>Last Four: {props.usage()?.plan?.card?.last_four}</p>
@@ -71,7 +71,7 @@ const CreditCardBrand = (props: {
 	name?: string;
 }) => {
 	return (
-		<h4 class="subtitle">
+		<h4 class="subtitle is-4">
 			<span class="icon-text">
 				<span class="icon">
 					<i class={props.brand} aria-hidden="true" />

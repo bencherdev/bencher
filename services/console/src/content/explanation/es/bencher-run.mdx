@@ -200,7 +200,7 @@ Requiere: `--github-actions`
 Opcional: Establecer el token de autenticación de API de GitHub (es decir, `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
 Cuando esta opción está establecida y `bencher run` se usa en GitHub Actions como parte de una solicitud de extracción,
 entonces los resultados se agregarán a la solicitud de extracción como un comentario.
-La forma más conveniente de hacer esto es utilizando la [variable de entorno `GITHUB_TOKEN`de GitHub Actions](https://docs.github.com/en/actions/security-guides/automatic-token-authentication).
+La forma más conveniente de hacer esto es utilizando la [variable de entorno `GITHUB_TOKEN`de GitHub Actions](https://docs.github.com/es/actions/security-guides/automatic-token-authentication).
 
 > 🐰 Si estás ejecutando en un contenedor Docker dentro de GitHub Action, necesitarás pasar las siguientes variables de entorno y montar la ruta especificada por `GITHUB_EVENT_PATH`:
 > - `GITHUB_ACTIONS`

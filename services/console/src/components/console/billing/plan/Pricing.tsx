@@ -29,7 +29,7 @@ const Pricing = (props: Props) => {
 				class={`pricing-plan ${props.plan === PlanLevel.Free && "is-active"}`}
 			>
 				<div class="plan-header">
-					<h2 class="title">Free</h2>
+					<h2 class="title is-2">Free</h2>
 				</div>
 				<div class="plan-price">
 					<span class="plan-price-amount">$0</span>
@@ -56,7 +56,7 @@ const Pricing = (props: Props) => {
 				class={`pricing-plan ${props.plan === PlanLevel.Team && "is-active"}`}
 			>
 				<div class="plan-header">
-					<h2 class="title">Team</h2>
+					<h2 class="title is-2">Team</h2>
 				</div>
 				<div class="plan-price">
 					<span class="plan-price-amount">$0.01</span>
@@ -83,7 +83,7 @@ const Pricing = (props: Props) => {
 				}`}
 			>
 				<div class="plan-header">
-					<h2 class="title">Enterprise</h2>
+					<h2 class="title is-2">Enterprise</h2>
 				</div>
 				<div class="plan-price">
 					<span class="plan-price-amount">$0.05</span>

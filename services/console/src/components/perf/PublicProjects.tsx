@@ -1,16 +1,16 @@
 import {
 	type Accessor,
+	For,
 	createEffect,
 	createMemo,
 	createResource,
-	For,
 } from "solid-js";
-import Pagination, { PaginationSize } from "../site/Pagination";
+import type { JsonProject } from "../../types/bencher";
+import { authUser } from "../../util/auth";
+import { httpGet } from "../../util/http";
 import { useSearchParams } from "../../util/url";
 import { validU32 } from "../../util/valid";
-import { authUser } from "../../util/auth";
-import type { JsonProject } from "../../types/bencher";
-import { httpGet } from "../../util/http";
+import Pagination, { PaginationSize } from "../site/Pagination";
 
 // const SORT_PARAM = "sort";
 // const DIRECTION_PARAM = "direction";
@@ -105,7 +105,7 @@ const PublicProjects = (props: Props) => {
 				<div class="columns is-mobile">
 					<div class="column">
 						<div class="content">
-							<h2 class="title">Projects</h2>
+							<h1 class="title is-1">Projects</h1>
 							<hr />
 							<br />
 							<For each={projects()}>

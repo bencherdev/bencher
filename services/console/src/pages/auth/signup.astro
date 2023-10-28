@@ -13,7 +13,7 @@ const description = "Sign up for Bencher and start catching performance regressi
 <AuthLayout title={title} description={description}>
   <AuthRedirect client:only="solid-js" path="/console" />
 
-  <h2 class="title">{title}</h2>
+  <h1 class="title is-1">{title}</h1>
 
   <AuthForm client:only="solid-js" apiUrl={BENCHER_API_URL} newUser={true} />
 

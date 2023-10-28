@@ -1,0 +1,204 @@
+---
+title: "ベンチマークアダプター"
+description: "お気に入りのコードベンチマークハーネスをBencherの内蔵アダプターと組み合わせるか、JSONを出力するカスタムコードベンチマークハーネスを使用してください"
+heading: "ベンチマークハーネスアダプター"
+sortOrder: 3
+---
+
+アダプターは、ベンチマークハーネスの出力を標準化されたJSON、Bencherメトリックフォーマット（BMF）に変換します。
+アダプターは、新しいレポートが受け取られたときにAPIサーバー上で実行されます。
+より深い説明のために、[ベンチマークの概観](/docs/ja/explanation/benchmarking)を参照してください。
+それらは、オプションの`--adapter`フラグを使用した<code><a href="/docs/ja/explanation/bencher-run">bencher run</a></code> CLIサブコマンドで指定できます。
+アダプターが指定されていない場合、デフォルトで[the `magic` アダプター](#-magic-default)が使用されます。
+
+最も具体的なアダプターを使用することが最良です。
+これにより、最も正確でパフォーマンスの高いパースが提供されます。
+たとえば、Rustの
+[libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)
+出力を解析している場合、`magic` アダプターまたは `rust` アダプターではなく、`rust_bench` アダプターを使用するべきです。
+良い比較のために、私たちの
+[Bencher perf ページ](https://bencher.dev/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C5655ed2a-3e45-4622-bdbd-39cdd9837af8%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674777600000)
+を参照してください。
+
+<div class="content has-text-centered">
+<a href="https://bencher.dev/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674950400000"><img style="border: 0.2em solid #ed6704;" src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kind=latency&start_time=1674950400000&title=Benchmark+Adapter+Comparison" title="Benchmark Adapter Comparison" alt="Benchmark Adapter Comparison for Bencher - Bencher" /></a>
+</div>
+
+## 🪄 マジック <small>(デフォルト)</small>
+
+マジックアダプター（`magic`）は、すべての他のアダプターのスーパーセットです。
+そのため、`bencher run`のデフォルトのアダプターですが、探索専用に最適です。
+CIでは、ユースケースに最も具体的なアダプターを使用するべきです。
+
+## \{...\} JSON
+
+JSONアダプター(`json`)は、BMF JSONを期待します。
+Bencherとカスタムベンチマークハーネスを統合するのに最適です。
+
+BMFの例です：
+
+```
+{
+    "benchmark_name": {
+        "latency": {
+            value: 88.0,
+            lower_value: 87.42,
+            upper_value: 88.88
+        }
+    }
+}
+```
+
+この例では、キー`benchmark_name`はベンチマークの名前になります。
+ベンチマークの名前は、1024文字までの非空の文字列が使えます。
+`benchmark_name`オブジェクトは、Metric KindのスラッグまたはUUIDをキーとして含んでいます。
+この例では、`latency`はLatency Metric Kind のスラッグです。
+各プロジェクトにはデフォルトでLatency (つまり `latency`)およびThroughput (つまり `throughput`) Metric Kindがあり、それぞれ`nanosecond (ns)`と`operations / second (ops/s)`で測定されます。
+Metric Kind オブジェクトには、最大3つの測定値が含まれています：`value`、`lower_value`、そして`upper_value`です。
+`lower_value`と`upper_value`の測定はオプションであり、計算はベンチマークハーネスごとに特異です。
+
+この例では、`latency` Metric Kind オブジェクトは以下の測定を含んでいます：
+
+- `value`が`88.0`
+- `lower_value`が`87.42`
+- `upper_value`が`88.88`
+
+もしBMF JSONがファイルに保存されているなら、そのファイルのパスを指定するためにオプションの`--file`引数を付けた<code><a href="/docs/ja/explanation/bencher-run">bencher run</a></code> CLIサブコマンドを使用できます。
+ベンチマークコマンドにも（例：`bencher run "bencher mock > results.json" --file results.json`）、ベンチマークコマンドなしにも（例：`bencher mock > results.json && bencher run --file results.json`）対応します。
+
+<br/>
+
+> 🐰 メモ: `bencher mock` CLIサブコマンドはモックBMFメトリクスを生成します。
+
+## #️⃣ C#
+
+C#アダプター(`c_sharp`)は、`c_sharp_dot_net`のスーパーセットです。
+
+## #️⃣ C# DotNet
+
+C# DotNetアダプター(`c_sharp_dot_net`)は、[BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet)の出力と[JSONフォーマット（つまり `--exporters json`）](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson)を期待します。
+`latency` Metric Kind（つまり `nanoseconds (ns)`）が収集されます。
+
+Metricには2つのオプションがあります：
+- `mean`（デフォルト）:  `lower_value`と`upper_value`は、平均值（つまり `value`）の下と上の1標準偏差です。
+- `median`: `lower_value`と`upper_value`は、中央値（つまり `value`）の下と上のインターコーティルレンジです。
+
+これは、オプションの`--average`フラグを使用した<code><a href="/docs/ja/explanation/bencher-run">bencher run</a></code> CLIサブコマンドで指定できます。
+
+## ➕ C++
+
+C++アダプター(`cpp`)は、`cpp_catch2`と`cpp_google`のスーパーセットです。
+
+## ➕ C++ Catch2
+
+C++ Catch2アダプター(`cpp_catch2`)は、[Catch2](https://github.com/catchorg/Catch2)の出力を期待します。
+`latency` Metric Kind（つまり `nanoseconds (ns)`）が収集されます。
+`lower_value`と`upper_value`は、平均値（つまり `value`）の下と上の1標準偏差です。
+
+## ➕ C++ Google
+
+C++ Googleアダプター(`cpp_google`)は、[Google Benchmark](https://github.com/google/benchmark)の[JSONフォーマットの出力（つまり `--benchmark_format=json`）](https://github.com/google/benchmark/blob/main/docs/ja/user_guide.md#output-formats)を期待します。
+`latency` Metric Kind（つまり `nanoseconds (ns)`）が収集されます。
+利用可能なのは平均値（つまり `value`）のみです。`lower_value`と`upper_value`はありません。
+
+## 🕳 Go
+
+Goアダプター(`go`)は、`go_bench`のスーパーセットです。
+
+## 🕳 Go Bench
+
+Go Benchアダプター(`go_bench`)は、[go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks)の出力を期待します。
+`latency` Metric Kind（つまり `nanoseconds (ns)`）が収集されます。
+利用可能なのは平均値（つまり `value`）のみです。`lower_value`と`upper_value`はありません。
+
+## ☕️ Java
+
+Javaアダプター(`java`)は、`java_jmh`のスーパーセットです。
+
+## ☕️ Java JMH
+
+Java JMHアダプター(`java_jmh`)は、[Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh)の[JSONフォーマットの出力（つまり `-rf json`）](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java)を期待します。
+`latency`と`throughput`のMetric Kinds（つまり `nanoseconds (ns)`と`operations / second (ops/sec)`）が収集されるかもしれません。
+`lower_value`と`upper_value`は、平均値（つまり `value`）の信頼区間の下と上です。
+
+## 🕸 JavaScript
+
+JavaScriptアダプター(`js`)は、`js_benchmark`と`js_time`のスーパーセットです。
+
+## 🕸 JavaScript Benchmark
+
+JavaScript Benchmarkアダプター(`js_benchmark`)は、[Benchmark.js](https://github.com/bestiejs/benchmark.js)の出力を期待します。
+`throughput` Metric Kind（つまり `operations / second (ops/sec)`）が収集されます。
+`lower_value`と`upper_value`は、中央値（つまり `value`）の下と上の相対的な誤差です。
+
+## 🕸 JavaScript Time
+
+JavaScript Timeアダプター(`js_time`)は、[console.time](https://developer.mozilla.org/en-US/docs/ja/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/ja/Web/API/console/timeEnd)の出力を期待します。
+`latency` Metric Kind（つまり `nanoseconds (ns)`）が収集されます。
+利用可能なのは操作時間（つまり `value`）のみです。`lower_value`と`upper_value`はありません。
+
+## 🐍 Python
+
+Pythonアダプター(`python`)は、`python_asv`と`python_pytest`のスーパーセットです。
+
+## 🐍 Python ASV
+
+Python ASVアダプター(`python_asv`)は、[airspeed velocity](https://github.com/airspeed-velocity/asv) CLI [asv run](https://asv.readthedocs.io/en/stable/commands.html#asv-run)の出力を期待します。
+`latency` Metric Kind（つまり `nanoseconds (ns)`）が収集されます。
+`lower_value`と`upper_value`は、中央値（つまり `value`）の下と上のインターコーティルレンジです。
+
+## 🐍 Python Pytest
+
+Python Pytestアダプター(`python_pytest`)は、[pytest-benchmark](https://github.com/ionelmc/pytest-benchmark)の[JSONフォーマットの出力（つまり `--benchmark-json results.json`）](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options)を期待します。
+このJSON出力はファイルに保存されるため、そのファイルパスを指定するために`bencher run` CLIの`--file`引数を使用する必要があります（つまり`bencher run --file results.json "pipenv run pytest --benchmark-json results.json benchmarks.py"`）。
+`latency` Metric Kind（つまり `nanoseconds (ns)`）が収集されます。
+
+Metricには2つのオプションがあります：
+- `mean`（デフォルト）:  `lower_value`と`upper_value`は、平均値（つまり `value`）の下と上の1標準偏差です。
+- `median`: `lower_value`と`upper_value`は、中央値（つまり `value`）の下と上のインターコーティルレンジです。
+
+これは、オプションの`--average`引数を持つ<code><a href="/docs/ja/explanation/bencher-run">bencher run</a></code> CLIサブコマンドで指定できます。
+
+## ♦️ Ruby
+
+Rubyアダプター(`ruby`)は、`ruby_benchmark`のスーパーセットです。
+
+## ♦️ Ruby Benchmark
+
+Ruby Benchmarkアダプター(`ruby_benchmark`)は、[Benchmark モジュール](https://github.com/ruby/benchmark)の`#bm`、`#bmbm`および`#benchmark`メソッドの出力を期待します。
+各ベンチマークにはラベルが必要です。
+`latency` Metric Kind（つまり `nanoseconds (ns)`）が収集されます。
+利用可能なのは報告値（つまり `value`）のみです。`lower_value`と`upper_value`はありません。
+
+## 🦀 Rust
+
+Rustアダプター(`rust`)は、`rust_bench`と`rust_criterion`のスーパーセットです。
+
+## 🦀 Rust Bench
+
+Rust Benchアダプター(`rust_bench`)は、[libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)の出力を期待します。
+`latency` Metric Kind（つまり `nanoseconds (ns)`）が収集されます。
+`lower_value`と`upper_value`は、中央値（つまり `value`）の下と上の逸脱です。
+
+## 🦀 Rust Criterion
+
+Rust Criterionアダプター(`rust_criterion`)は、[Criterion](https://github.com/bheisler/criterion.rs)の出力を期待します。
+`latency` Metric Kind（つまり `nanoseconds (ns)`）が収集されます。
+`lower_value`と`upper_value`は、スロープ（もし利用可能なら）または平均値（もし不可能なら）の下限と上限です(つまり `value`）。
+
+## 🦀 Rust Iai
+
+Rust Iaiアダプター(`rust_iai`)は、[Iai](https://github.com/bheisler/iai)の出力を期待します。
+`instructions`、`l1_access`、`l2_access`、`ram_access`および`estimated_cycles`のMetric Kindsが収集されます。
+これらの測定値（つまり `value`）しか利用できません。`lower_value`と`upper_value`の測定はありません。
+このアダプターのMetric Kindsはデフォルトですべてのプロジェクトに作られません。
+しかし、このアダプターを使用すると、これらのMetric Kindsはプロジェクトに自動的に作られます。
+
+<br />
+<br />
+
+> 🐰 おめでとう！ ベンチマークハーネスアダプターについてすべて学びました！ 🎉
+
+<br/>
+
+<h2><a href="/docs/ja/explanation/thresholds">次へ進む: 閾値 & アラート ➡</a></h2>

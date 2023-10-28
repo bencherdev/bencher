@@ -148,10 +148,10 @@ const CloudMeteredPanel = (props: {
 
 	return (
 		<div class="content">
-			<h2 class="title">
+			<h2 class="title is-2">
 				{planLevel(props.usage()?.plan?.level)} Tier (Bencher Cloud Metered)
 			</h2>
-			<h3 class="subtitle">
+			<h3 class="subtitle is-3">
 				{fmtDate(props.usage()?.start_time)} -{" "}
 				{fmtDate(props.usage()?.end_time)}
 			</h3>
@@ -176,10 +176,10 @@ const CloudLicensedPanel = (props: {
 }) => {
 	return (
 		<div class="content">
-			<h2 class="title">
+			<h2 class="title is-2">
 				{planLevel(props.usage()?.license?.level)} Tier (Bencher Cloud Licensed)
 			</h2>
-			<h3 class="subtitle">
+			<h3 class="subtitle is-3">
 				{fmtDate(props.usage()?.start_time)} -{" "}
 				{fmtDate(props.usage()?.end_time)}
 			</h3>
@@ -211,10 +211,10 @@ const CloudSelfHostedLicensedPanel = (props: {
 }) => {
 	return (
 		<div class="content">
-			<h2 class="title">
+			<h2 class="title is-2">
 				{planLevel(props.usage()?.license?.level)} Tier (Self-Hosted Licensed)
 			</h2>
-			<h3 class="subtitle">
+			<h3 class="subtitle is-3">
 				{fmtDate(props.usage()?.start_time)} -{" "}
 				{fmtDate(props.usage()?.end_time)}
 			</h3>
@@ -239,7 +239,7 @@ const CloudSelfHostedLicensedPanel = (props: {
 					{props.usage()?.license?.key}
 				</a>
 			</code>
-			<h2 class="title">
+			<h2 class="title is-2">
 				What to do with your Bencher Self-Hosted License Key
 			</h2>
 			<h4>
@@ -324,14 +324,14 @@ const SelfHostedFreePanel = (props: {
 
 	return (
 		<div class="content">
-			<h2 class="title">Free Tier (Self-Hosted Unlicensed)</h2>
-			<h3 class="subtitle">
+			<h2 class="title is-2">Free Tier (Self-Hosted Unlicensed)</h2>
+			<h3 class="subtitle is-3">
 				{fmtDate(props.usage()?.start_time)} -{" "}
 				{fmtDate(props.usage()?.end_time)}
 			</h3>
 			<h4>Metrics Used: {props.usage()?.usage?.toLocaleString() ?? 0}</h4>
 			<br />
-			<h2 class="title">How to get a Bencher Self-Hosted License Key</h2>
+			<h2 class="title is-2">How to get a Bencher Self-Hosted License Key</h2>
 			<h4>
 				<ol>
 					<li>
@@ -422,10 +422,10 @@ const SelfHostedLicensedPanel = (props: {
 }) => {
 	return (
 		<div class="content">
-			<h2 class="title">
+			<h2 class="title is-2">
 				{planLevel(props.usage()?.license?.level)} Tier (Self-Hosted Licensed)
 			</h2>
-			<h3 class="subtitle">
+			<h3 class="subtitle is-3">
 				{fmtDate(props.usage()?.start_time)} -{" "}
 				{fmtDate(props.usage()?.end_time)}
 			</h3>
