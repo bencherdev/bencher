@@ -1,0 +1,273 @@
+---
+title: "bencher run"
+description: "bencher run CLI 하위 명령어 및 모든 플래그, 인수, 기능에 대한 개요"
+heading: "bencher run CLI 하위 명령어"
+sortOrder: 2
+---
+
+`bencher run`은 가장 인기 있는 CLI 하위 명령어입니다.
+이는 벤치마크를 실행하고 결과를 보고하는 데 사용됩니다.
+따라서 가장 복잡한 하위 명령어 중 하나입니다.
+이 페이지에서는 `bencher run`에 전달할 수 있는 옵션, 플래그, 인수에 대해 설명합니다.
+
+## 벤치마크 명령어
+
+첫 번째이면서 유일한 인수인 `bencher run`은 선택적인 벤치마크 명령어입니다.
+이는 당신의 벤치마크 하네스를 호출하는 명령어입니다.
+`BENCHER_CMD` 환경 변수를 사용해 설정할 수도 있습니다.
+명령어는 쉘에서 실행되며, 이는 `--shell` 및 `--flag` 옵션을 사용해 설정할 수 있습니다.
+출력은 벤치마크 하네스 어댑터가 파싱하며, `--adapter` 옵션을 사용해 설정할 수 있습니다.
+그러나, 벤치마크 하네스가 파일에 출력하는 경우, 출력 파일 경로를 지정하기 위해 `--file` 옵션도 사용해야 합니다.
+
+<br />
+
+> 🐰 벤치마크 명령어가 여러 단어인 경우, 따옴표로 감싸야 합니다 (예: `bencher run "bencher mock"`).
+
+<br />
+
+벤치마크 명령어는 `--iter` 옵션을 사용해 여러 번 실행할 수 있으며,
+그 결과들은 `--fold` 옵션을 사용해 단일 결과로 병합할 수 있습니다.
+반복 실행 중 어떠한 것이든 실패하면, 전체 명령어가 실패로 간주되며 `--allow-failure` 플래그가 설정된 경우에만 예외입니다.
+
+벤치마크 명령어가 지정되지 않지만 `--file` 옵션이 있는 경우, `bencher run`은 출력 파일 경로에서 대신 읽습니다.
+벤치마크 명령어와 `--file` 옵션이 모두 지정되지 않은 경우, `bencher run`은 대신 `stdin`에서 읽습니다.
+이를 통해 다른 명령어의 출력을 파일에 저장하거나 `bencher run`으로 파이프할 수 있습니다.
+
+## 옵션
+
+### `--project <PROJECT>`
+
+<br />
+
+`--project` 옵션이나 `BENCHER_PROJECT` 환경 변수가 이미 존재하는 프로젝트의 슬러그 또는 UUID로 설정되어야 합니다.
+둘 다 정의된 경우, `--project` 옵션이 `BENCHER_PROJECT` 환경 변수보다 우선순위를 가집니다.
+
+<br />
+
+### `--token <TOKEN>`
+
+<br />
+
+`--token` 옵션 또는 `BENCHER_API_TOKEN` 환경 변수는 유효한 API 토큰으로 설정되어야 합니다.
+둘 다 정의된 경우, `--token` 옵션이 `BENCHER_API_TOKEN` 환경 변수보다 우선순위를 가집니다.
+
+<br />
+
+### `--branch <BRANCH>`
+### `--if-branch <IF_BRANCH>`
+### `--else-if-branch <ELSE_IF_BRANCH>`
+### `--else-branch`
+### `--endif-branch`
+
+<br />
+
+전체 개요는 [branch selection](/docs/ko/explanation/branch-selection)를 참조하세요.
+
+<br />
+
+### `--hash <HASH>`
+
+<br />
+
+선택사항: 40자리 SHA-1 커밋 해시입니다.
+두 보고서가 동일한 branch와 hash를 가지면 동일한 커밋에서 비롯된 것으로 간주됩니다.
+따라서 동일한 branch 버전 번호를 가집니다.
+
+<br />
+
+### `--testbed <TESTBED>`
+
+<br />
+
+선택사항: `--testbed` 옵션 또는 `BENCHER_TESTBED` 환경 변수를 이미 존재하는 테스트베드의 슬러그 또는 UUID로 설정할 수 있습니다.
+둘 다 정의된 경우, `--testbed` 옵션이 `BENCHER_TESTBED` 환경 변수보다 우선순위를 가집니다.
+둘 다 정의되지 않은 경우, 기본 테스트베드로 `localhost`가 사용됩니다.
+
+<br />
+
+### `--adapter <ADAPTER>`
+### `--average <AVERAGE>`
+### `--file <FILE>`
+
+<br />
+
+전체 개요는 [benchmark harness adapter](/docs/ko/explanation/adapters)를 참조하세요.
+
+<br />
+
+### `--iter <ITER>`
+
+<br />
+
+선택사항: 실행 반복 횟수입니다. 기본값은 `1`입니다.
+
+### `--fold <FOLD>`
+
+<br />
+
+선택사항: 여러 결과들을 하나의 결과로 병합합니다. \
+필요사항: `--iter`가 설정되어야 합니다. \
+가능한 값들:
+    - `min`:    최소값
+    - `max`:    최대값
+    - `mean`:   평균값
+    - `median`: 중위값
+
+<br />
+
+### `--backdate <DATETIME_SECONDS>`
+
+<br />
+
+선택사항: 보고서의 날짜를 과거로 변경합니다 (epoch 이후 초).
+주의: 이는 과거 보고서의 순서에 *영향을 줄 수 없습니다*!
+이는 프로젝트에 _연대순서대로_ 역사적 데이터를 초기 씨딩할 때 유용합니다.
+
+<br />
+
+### `--allow-failure`
+
+<br />
+
+선택사항: 벤치마크 테스트 실패를 허용합니다.
+
+<br />
+
+### `--err`
+
+<br />
+
+선택사항: 경고가 생성될 때 오류가 발생합니다. 전체 개요는 [thresholds and alerts](/docs/ko/explanation/thresholds)를 참조하세요.
+
+<br />
+
+### `--html`
+
+<br />
+
+선택사항: 결과를 HTML 형식으로 출력합니다.
+
+<br />
+
+### `--ci-only-thresholds`
+
+<br />
+
+선택사항: Metric Kind, Branch, 그리고 Testbed에 대해 [Threshold](/docs/ko/explanation/thresholds)가 존재하는 경우에만 CI에 결과를 게시합니다.
+Threshold가 존재하지 않으면, 아무 것도 게시되지 않습니다.
+필요사항: `--github-actions`
+
+<br />
+
+### `--ci-only-on-alert`
+
+<br />
+
+선택사항: [an Alert](/docs/ko/explanation/thresholds)가 생성되어야만 CI에 결과를 게시 시작합니다.
+경고가 생성된 경우, 그 후의 결과들도 경고가 없어도 게시될 것입니다.
+필요사항: `--github-actions`
+
+<br />
+
+### `--ci-id`
+
+<br />
+
+선택사항: CI에 결과를 게시하기 위한 사용자 지정 ID입니다.
+기본적으로, Bencher는 자동으로 Project, Branch, Testbed, 그리고 [Adapter](/docs/ko/explanation/adapters)의 조합에 따라 결과를 분리합니다.
+Bencher가 동일한 Project, Branch, Testbed, 그리고 Adapter 조합으로 동일한 CI 워크플로에서 여러 번 실행될 때 사용자 지정 ID를 설정하는 것이 유용합니다.
+필요사항: `--github-actions`
+
+<br/>
+
+### `--ci-number`
+
+<br />
+
+선택사항: CI에 결과를 게시하기 위한 이슈 번호입니다.
+Bencher는 결과를 게시하는 데 필요한 CI 이슈 번호를 감지하기 위해 최선을 다합니다.
+그러나 이는, GitHub Actions에서 `workflow_run`을 사용하는 등 복잡한 설정에서 항상 가능한 것은 아닙니다.
+필요사항: `--github-actions`
+
+<br/>
+
+### `--github-actions`
+
+<br />
+
+선택사항: GitHub API 인증 토큰을 설정합니다 (예: `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
+이 옵션이 설정되고 `bencher run`이 풀 리퀘스트의 일부로 GitHub Actions에서 사용되면,
+결과는 풀 리퀘스트에 댓글로 추가될 것입니다.
+이를 하는 가장 편리한 방법은 [GitHub Actions `GITHUB_TOKEN` 환경 변수](https://docs.github.com/en/actions/security-guides/automatic-token-authentication)입니다.
+
+> 🐰 Docker 컨테이너 내부에서 실행되는 GitHub Action인 경우, 다음 환경 변수를 전달하고 `GITHUB_EVENT_PATH`에 지정된 경로를 마운트해야 합니다:
+> - `GITHUB_ACTIONS`
+> - `GITHUB_EVENT_NAME`
+> - `GITHUB_EVENT_PATH`
+
+<br />
+
+### `--shell <SHELL>`
+
+<br />
+
+선택사항: 쉘 명령어 경로입니다. 유닉스와 같은 환경에서는 기본값이 `/bin/sh`이고, 윈도우에서는 `cmd`입니다.
+
+<br />
+
+### `--flag <FLAG>`
+
+<br />
+
+선택사항: 쉘 명령어 플래그입니다. 유닉스와 같은 환경에서는 기본값이 `-c`이고, 윈도우에서는 `/C`입니다.
+
+<br />
+
+### `--host <HOST>`
+
+<br />
+
+선택사항: 백엔드 호스트 URL입니다. 기본값은 [https://api.bencher.dev](https://api.bencher.dev)입니다.
+
+<br />
+
+### `--attempts <ATTEMPTS>`
+
+<br />
+
+선택사항: 최대 요청 재시도 시도 횟수입니다. 기본값은 `10`입니다.
+
+<br />
+
+### `--retry-after <RETRY_AFTER>`
+
+<br />
+
+선택사항: 주어진 초 수 후에 요청을 재시도합니다. 기본값은 `3`입니다.
+
+<br />
+
+### `--dry-run`
+
+<br />
+
+선택사항: 드라이 런을 수행합니다. 이는 백엔드에 어떠한 데이터도 저장하지 않습니다.
+[branch selection](/docs/ko/explanation/branch-selection)에서 상세하게 설명된 Report나 Branch가 생성되지 않습니다.
+
+<br />
+
+### `-h`
+### `--help`
+
+<br />
+
+선택사항: 도움말을 출력합니다.
+
+<br />
+<br />
+
+> 🐰 축하합니다! <code>bencher run</code>의 기본사항을 배웠습니다! 🎉
+
+<br/>
+
+<h2><a href="/docs/ko/explanation/branch-selection"><code>bencher run</code>으로 Branch 선택하기 ➡ 계속 진행하세요.</a></h2>

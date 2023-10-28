@@ -1,0 +1,275 @@
+---
+title: "bencher run"
+description: "对 bencher run CLI 子命令及其所有标志、参数和特性的概述"
+heading: "bencher run CLI 子命令"
+sortOrder: 2
+---
+
+`bencher run` 是最受欢迎的 CLI 子命令。
+它被用来运行基准测试并报告结果。
+因此，它是最复杂的子命令之一。
+本页面将解释可以传递给 `bencher run` 的选项，标志和参数。
+
+## 基准测试命令
+
+传递给 `bencher run` 的第一个也是唯一的参数是可选的基准测试命令。
+这是将要执行的命令，调用你的基准测试工具。
+也可以使用 `BENCHER_CMD` 环境变量来设置。
+该命令在shell中执行，可通过 `--shell` 和 `--flag` 选项进行配置。
+其输出由一个基准测试工具适配器进行解析，可以使用 `--adapter` 选项进行设置。
+但是，如果基准测试工具输出到文件，则还必须使用 `--file` 选项来指定输出文件路径。
+
+<br />
+
+> 🐰 如果你的基准测试命令有多个词，则必须用引号包裹起来 (例如 `bencher run "bencher mock"`)。
+
+<br />
+
+可以使用 `--iter` 选项多次执行基准测试命令，
+并可以使用 `--fold` 选项将这些结果合并为一个结果。
+如果任何迭代失败，那么整个命令都会被认为失败，除非设置了 `--allow-failure` 标志。
+
+如果没有指定基准测试命令，但是指定了 `--file` 选项，则 `bencher run` 将从输出文件路径中读取。
+如果基准测试命令和 `--file` 选项都未指定，则 `bencher run` 将从 `stdin` 读取。
+这允许你将另一个命令的输出保存到文件中，或者将它管道传输到 `bencher run`。
+
+## 选项
+
+### `--project <项目>`
+
+<br />
+
+必须设置 `--project` 选项或 `BENCHER_PROJECT` 环境变量
+为已经存在的项目的 slug 或 UUID。
+如果两者都被定义，`--project` 选项优先于 `BENCHER_PROJECT` 环境变量。
+
+<br />
+
+### `--token <令牌>`
+
+<br />
+
+必须设置 `--token` 选项或 `BENCHER_API_TOKEN` 环境变量为有效的 API 令牌。
+如果两者都被定义，`--token` 选项优先于 `BENCHER_API_TOKEN` 环境变量。
+
+<br />
+
+### `--branch <分支>`
+### `--if-branch <若分支>`
+### `--else-if-branch <否则若分支>`
+### `--else-branch`
+### `--endif-branch`
+
+<br />
+
+请参阅 [分支选择](/docs/zh/explanation/branch-selection) 以获取完整的概述。
+
+<br />
+
+### `--hash <哈希值>`
+
+<br />
+
+可选：40个字符的 SHA-1 提交哈希值。
+如果两个报告具有相同的分支和哈希，他们将被认为是来自同一次提交。
+因此，他们将有相同的分支版本号。
+
+<br />
+
+### `--testbed <测试环境>`
+
+<br />
+
+可选：可以设置 `--testbed` 选项或 `BENCHER_TESTBED` 环境变量
+为已经存在的测试环境的 slug 或 UUID。
+如果两者都被定义，`--testbed` 选项优先于 `BENCHER_TESTBED` 环境变量。
+如果两者都未定义，则使用 `localhost` 作为默认测试环境。
+
+<br />
+
+### `--adapter <适配器>`
+### `--average <平均值>`
+### `--file <文件>`
+
+<br />
+
+请参阅 [基准测试工具适配器](/docs/zh/explanation/adapters) 以获取完整的概述。
+
+<br />
+
+### `--iter <迭代次数>`
+
+<br />
+
+可选：运行迭代的次数。默认为 `1`。
+
+### `--fold <合并>`
+
+<br />
+
+可选：把多个结果合并为一个结果，需要设置 `--iter` 选项。\
+可能的值为：
+    - `min`:  最小值
+    - `max`:  最大值
+    - `mean`:  值的平均数
+    - `median`:  值的中位数
+
+<br />
+
+### `--backdate <返回日期时间_秒>`
+
+<br />
+
+可选：将报告的日期时间回溯(自纪元以来的秒数)。
+注：这将*不会*影响过去报告的顺序！
+在_按时间顺序_将历史数据初始化到项目中时，这非常有用。
+
+<br />
+
+### `--allow-failure`
+
+<br />
+
+可选：允许基准测试失败。
+
+<br />
+
+### `--err`
+
+<br />
+
+可选：当生成警报时报错。请参阅 [阈值和警报](/docs/zh/explanation/thresholds) 以获取完整的概述。
+
+<br />
+
+### `--html`
+
+<br />
+
+可选：以 HTML 格式输出结果。
+
+<br />
+
+### `--ci-only-thresholds`
+
+<br />
+
+可选：只有在 [一个阈值](/docs/zh/explanation/thresholds) 存在于度量标准种类，分支和测试环境时，才将结果提交到 CI。
+如果没有阈值存在，那么什么也不会被提交。
+需要：`--github-actions`
+
+<br />
+
+### `--ci-only-on-alert`
+
+<br />
+
+可选：只有在 [一个警报](/docs/zh/explanation/thresholds) 生成时，才开始将结果提交到 CI。
+如果生成了一个警报，那么后续的结果，即使它们不包含任何警报，也会被提交。
+需要：`--github-actions`
+
+<br />
+
+### `--ci-id`
+
+<br />
+
+可选：自定义 ID 用于将结果提交到 CI。
+默认情况下，Bencher 将自动按组合：项目，分支，测试环境，和 [适配器](/docs/zh/explanation/adapters) 段出结果。
+在 Bencher 被多次在同一个 CI 工作流中针对同一个项目，分支，测试环境，和适配器组合运行时，设置自定义 ID 很有用。
+需要：`--github-actions`
+
+<br/>
+
+### `--ci-number`
+
+<br />
+
+可选：将结果提交到 CI 的问题编号。
+Bencher 将尽最大努力检测出需要提交结果的 CI 问题编号。
+然而，这并不总是可用的，在复杂的设置中，像在 GitHub 执行 `workflow_run`。
+需要：`--github-actions`
+
+<br/>
+
+### `--github-actions`
+
+<br />
+
+可选：设置 GitHub API 验证令牌 (即 `--github-actions ${{ secrets.GITHUB_TOKEN }}`)。
+当此选项被设置并且 `bencher run` 在一个的拉请求中作为 GitHub 操作的一部分被使用时，
+那么结果将以评论的形式添加到拉请求中。
+这样做最方便的方式是 [GitHub 操作的 `GITHUB_TOKEN` 环境变量](https://docs.github.com/cn/actions/security-guides/automatic-token-authentication)。
+
+> 🐰 如果你在 GitHub 操作中的 Docker 容器内运行，你将需要传入以下环境变量，并挂载由 `GITHUB_EVENT_PATH` 指定的路径：
+> - `GITHUB_ACTIONS`
+> - `GITHUB_EVENT_NAME`
+> - `GITHUB_EVENT_PATH`
+
+<br />
+
+### `--shell <SHELL>`
+
+<br />
+
+可选：Shell 命令路径。在类 Unix 环境中默认为 `/bin/sh`，在 Windows 上默认为 `cmd`。
+
+<br />
+
+### `--flag <标志>`
+
+<br />
+
+可选：Shell 命令标志。在类 Unix 环境中默认为 `-c`，在 Windows 上默认为 `/C`。
+
+<br />
+
+### `--host <主机>`
+
+<br />
+
+可选：后端主机 URL。默认为 [https://api.bencher.dev](https://api.bencher.dev)。
+
+<br />
+
+### `--attempts <尝试次数>`
+
+<br />
+
+可选：最大请求重试次数。默认为 `10`。
+
+<br />
+
+
+### `--retry-after <重试延迟>`
+
+<br />
+
+可选：在给定的秒数后重试请求。默认为 `3`。
+
+<br />
+
+### `--dry-run`
+
+<br />
+
+可选：执行一次干运行。这不会将任何数据存储到后端。
+在 [分支选择](/docs/zh/explanation/branch-selection) 中详述的报告或分支都不会被创建。
+
+<br />
+
+### `-h`
+### `--help`
+
+<br />
+
+可选：打印帮助。
+
+<br />
+<br />
+
+> 🐰 恭喜！你已经学会了 <code>bencher run</code> 的基础知识！🎉
+
+<br/>
+
+<h2><a href="/docs/zh/explanation/branch-selection">继续学习：<code>bencher run</code> 分支选择 ➡</a></h2>

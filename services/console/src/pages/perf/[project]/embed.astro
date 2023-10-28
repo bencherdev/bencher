@@ -1,9 +1,9 @@
 ---
 export const prerender = false;
 
-import PerfLayout from "../../layouts/perf/PerfLayout.astro";
-import PublicProject from "../../components/perf/PublicProject";
-import type { JsonProject } from "../../types/bencher";
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import PublicProject from "../../../components/perf/PublicProject";
+import type { JsonProject } from "../../../types/bencher";
 
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
@@ -16,10 +16,12 @@ const title = `${jsonProject.name}`;
 const description = `View ${jsonProject.name} continuous benchmarking results and performance regressions on Bencher`;
 ---
 
-<PerfLayout
+<BaseLayout
   title={title}
   titleFmt={(title) => `📈 ${title}`}
   description={description}
 >
-  <PublicProject client:only="solid-js" apiUrl={BENCHER_API_URL} params={params} project={jsonProject} />
+    <div slot="navbar"></div>
+    <PublicProject client:only="solid-js" apiUrl={BENCHER_API_URL} params={params} project={jsonProject} />
+    <div slot="footer"></div>
 </PerfLayout>

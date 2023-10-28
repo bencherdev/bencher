@@ -1,0 +1,276 @@
+---
+title: "bencher run"
+description: "Aperçu de la sous-commande CLI bencher run et de tous ses flags, arguments, et fonctionnalités"
+heading: "Sous-commande CLI bencher run"
+sortOrder: 2
+---
+
+`bencher run` est la sous-commande CLI la plus utilisée.
+Elle est utilisée pour exécuter des benchmarks et en rapporter les résultats.
+De ce fait, c'est l'une des sous-commandes les plus compliquées.
+Cette page expliquera les options, flags, et arguments qui peuvent être passés à `bencher run`.
+
+## Commande Benchmark
+
+Le premier et seul argument de `bencher run` est la commande benchmark optionnelle.
+C'est la commande qui sera exécutée, invoquant votre harnais benchmark.
+Elle peut aussi être définie en utilisant la variable d'environnement `BENCHER_CMD`.
+La commande est exécutée dans un shell, qui peut être configuré avec les options `--shell` et `--flag`.
+Sa sortie est analysée par un adaptateur de harnais benchmark, qui peut être défini en utilisant l'option `--adapter`.
+Cependant, si le harnais benchmark sort vers un fichier, alors l'option `--file` doit également être utilisée pour spécifier le chemin du fichier de sortie.
+
+<br />
+
+> 🐰 Si votre commande de benchmark contient plusieurs mots, alors vous devez l'entourer de guillemets (par exemple `bencher run "bencher mock"`).
+
+<br />
+
+La commande de benchmark peut être exécutée plusieurs fois en utilisant l'option `--iter`,
+et ces résultats peuvent être regroupés en un seul résultat en utilisant l'option `--fold`.
+Si une des itérations échoue, alors la commande entière est considérée comme ayant échoué à moins que le flag `--allow-failure` ne soit défini.
+
+Si la commande de benchmark n'est pas spécifiée mais que l'option `--file` l'est, alors `bencher run` lira le chemin du fichier de sortie à la place.
+Si la commande de benchmark et l'option `--file` ne sont spécifiées, alors `bencher run` lira depuis `stdin` à la place.
+Cela vous permet de sauvegarder la sortie d'une autre commande dans un fichier ou de la conduire dans `bencher run`, respectivement.
+
+## Options
+
+### `--project <PROJECT>`
+
+<br />
+
+Soit l'option `--project` soit la variable d'environnement `BENCHER_PROJECT`
+doit être définie sur le slug ou UUID d'un projet déjà existant.
+Si les deux sont définis, l'option `--project` a la priorité sur la variable d'environnement `BENCHER_PROJECT`.
+
+<br />
+
+### `--token <TOKEN>`
+
+<br />
+
+Soit l'option `--token` soit la variable d'environnement `BENCHER_API_TOKEN` doit être définie sur un token API valide.
+Si les deux sont définis, l'option `--token` a la priorité sur la variable d'environnement `BENCHER_API_TOKEN`.
+
+<br />
+
+### `--branch <BRANCH>`
+### `--if-branch <IF_BRANCH>`
+### `--else-if-branch <ELSE_IF_BRANCH>`
+### `--else-branch`
+### `--endif-branch`
+
+<br />
+
+Voir [sélection de branche](/docs/fr/explanation/branch-selection) pour un aperçu complet.
+
+<br />
+
+### `--hash <HASH>`
+
+<br />
+
+Optionnel : Un hash de commit SHA-1 de 40 caractères.
+Si deux rapports ont la même branche et hash, ils seront considérés comme provenant du même commit.
+Donc, ils auront le même numéro de version de branche.
+
+<br />
+
+### `--testbed <TESTBED>`
+
+<br />
+
+Optionnel : Soit l'option `--testbed` soit la variable d'environnement `BENCHER_TESTBED`
+peut être définie sur le slug ou UUID d'un banc d'essai déjà existant.
+Si les deux sont définis, l'option `--testbed` a la priorité sur la variable d'environnement `BENCHER_TESTBED`.
+Si aucun n'est défini, alors `localhost` est utilisé comme banc d'essai par défaut.
+
+<br />
+
+### `--adapter <ADAPTER>`
+### `--average <AVERAGE>`
+### `--file <FILE>`
+
+<br />
+
+Voir [adaptateur de harnais benchmark](/docs/fr/explanation/adapters) pour un aperçu complet.
+
+<br />
+
+### `--iter <ITER>`
+
+<br />
+
+Optionnel : Nombre d'itérations d'exécution. La valeur par défaut est `1`.
+
+### `--fold <FOLD>`
+
+<br />
+
+Optionnel : Replier plusieurs résultats en un seul résultat. \
+Nécessite : `--iter` doit être défini. \
+Valeurs possibles :
+    - `min` : Valeur minimale
+    - `max` : Valeur maximale
+    - `mean` : Moyenne des valeurs
+    - `median` : Médiane des valeurs
+
+<br />
+
+### `--backdate <DATETIME_SECONDS>`
+
+<br />
+
+Optionnel : Antidater le rapport (secondes depuis l'époque).
+NOTE : Cela *n'affectera pas* l'ordre des rapports passés !
+C'est utile lors de l'initialisation des données historiques dans un projet lors de l'importation en ordre _chronologique_.
+
+<br />
+
+### `--allow-failure`
+
+<br />
+
+Optionnel : Autorise l'échec du test de benchmark.
+
+<br />
+
+### `--err`
+
+<br />
+
+Optionnel : Erreur lorsqu'une alerte est générée. Voir [seuils et alertes](/docs/fr/explanation/thresholds) pour un aperçu complet.
+
+<br />
+
+### `--html`
+
+<br />
+
+Optionnel : Affiche les résultats en format HTML.
+
+<br />
+
+### `--ci-only-thresholds`
+
+<br />
+
+Optionnel : Publie les résultats seulement sur CI si [un Seuil](/docs/fr/explanation/thresholds) existe pour le types de mesures, Branche et Banc d'essai.
+Si aucun Seuils n'existent, alors rien ne sera posté.
+Nécessite : `--github-actions`
+
+<br />
+
+### `--ci-only-on-alert`
+
+<br />
+
+Optionnel : Commence à poster les résultats sur CI seulement si [une Alerte](/docs/fr/explanation/thresholds) est générée.
+Si une Alerte est générée, alors les résultats suivants, même s'ils ne contiennent pas d'Alertes, seront également postés.
+Nécessite : `--github-actions`
+
+<br />
+
+### `--ci-id`
+
+<br />
+
+Optionnel : ID personnalisé pour poster les résultats sur CI.
+Par défaut, Bencher segmentera automatiquement les résultats par la combinaison de : Projet, Branche, Banc d'essai, et [Adaptateur](/docs/fr/explanation/adapters).
+Définir un ID personnalisé est utile lorsque Bencher est exécuté plusieurs fois dans la même workflow CI pour la même combinaison de Projet, Branche, Banc d'essai, et Adaptateur.
+Nécessite : `--github-actions`
+
+<br/>
+
+### `--ci-number`
+
+<br />
+
+Optionnel : Numéro de problème pour poster les résultats sur CI.
+Bencher fera de son mieux pour détecter le numéro de problème CI nécessaire pour poster les résultats.
+Cependant, cela n'est pas toujours disponible dans des configurations complexes, comme utiliser `workflow_run` dans GitHub Actions.
+Nécessite : `--github-actions`
+
+<br/>
+
+### `--github-actions`
+
+<br />
+
+Optionnel : Définir le token d'authentification de l'API GitHub (c'est-à-dire `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
+Lorsque cette option est définie et que `bencher run` est utilisé dans GitHub Actions dans le cadre d'une pull request,
+alors les résultats seront ajoutés à la pull request en tant que commentaire.
+La manière la plus commode de faire ceci est la [variable d'environnement `GITHUB_TOKEN` de GitHub Actions](https://docs.github.com/en/actions/security-guides/automatic-token-authentication).
+
+> 🐰 Si vous exécutez à l'intérieur d'un conteneur Docker dans GitHub Action, vous aurez besoin de passer les variables d'environnement suivantes et de monter le chemin spécifié par `GITHUB_EVENT_PATH` :
+> - `GITHUB_ACTIONS`
+> - `GITHUB_EVENT_NAME`
+> - `GITHUB_EVENT_PATH`
+
+<br />
+
+### `--shell <SHELL>`
+
+<br />
+
+Optionnel : Chemin de la commande Shell. Par défaut à `/bin/sh` dans les environnements Unix et `cmd` sur Windows.
+
+<br />
+
+### `--flag <FLAG>`
+
+<br />
+
+Optionnel : Flag de la commande Shell. Par défaut à `-c` dans les environnements Unix et `/C` sur Windows.
+
+<br />
+
+### `--host <HOST>`
+
+<br />
+
+Optionnel : URL du serveur Backend. Par défaut à [https://api.bencher.dev](https://api.bencher.dev).
+
+<br />
+
+### `--attempts <ATTEMPTS>`
+
+<br />
+
+Optionnel : Nombre maximal de tentatives de requête. Par défaut à `10`.
+
+<br />
+
+
+### `--retry-after <RETRY_AFTER>`
+
+<br />
+
+Optionnel : Réessayer la requête après le nombre de secondes donné. Par défaut à `3`.
+
+<br />
+
+### `--dry-run`
+
+<br />
+
+Optionnel : Effectuer une exécution à blanc. Cela ne stockera aucune donnée sur le backend.
+Ni un Rapport ni une Branche en détail dans [sélection de branche](/docs/fr/explanation/branch-selection) ne seront créés.
+
+<br />
+
+### `-h`
+### `--help`
+
+<br />
+
+Optionnel : Afficher l'aide.
+
+<br />
+<br />
+
+> 🐰 Bravo! Vous avez appris les bases de <code>bencher run</code> ! 🎉
+
+<br/>
+
+<h2><a href="/docs/fr/explanation/branch-selection">Continuer: Sélection de Branche avec <code>bencher run</code> ➡</a></h2>

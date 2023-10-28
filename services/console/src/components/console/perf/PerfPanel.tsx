@@ -1,12 +1,12 @@
+import type { Params } from "astro";
 import bencher_valid_init from "bencher_valid";
 import {
+	Show,
 	createEffect,
 	createMemo,
 	createResource,
 	createSignal,
 } from "solid-js";
-import PerfHeader, { type PerfQuery } from "./PerfHeader";
-import PerfPlot from "./plot/PerfPlot";
 import { createStore } from "solid-js/store";
 import {
 	PerfRange,
@@ -14,11 +14,6 @@ import {
 	isPerfRange,
 	isPerfTab,
 } from "../../../config/types";
-import { useSearchParams } from "../../../util/url";
-import { validSlug, validU32 } from "../../../util/valid";
-import type { Params } from "astro";
-import { authUser } from "../../../util/auth";
-import { httpGet } from "../../../util/http";
 import type {
 	JsonBenchmark,
 	JsonBranch,
@@ -27,9 +22,15 @@ import type {
 	JsonReport,
 	JsonTestbed,
 } from "../../../types/bencher";
-import type { TabList } from "./plot/PlotTab";
-import { NotifyKind, pageNotify } from "../../../util/notify";
+import { authUser } from "../../../util/auth";
 import { dateTimeMillis } from "../../../util/convert";
+import { httpGet } from "../../../util/http";
+import { NotifyKind, pageNotify } from "../../../util/notify";
+import { useSearchParams } from "../../../util/url";
+import { validSlug, validU32 } from "../../../util/valid";
+import PerfHeader, { type PerfQuery } from "./PerfHeader";
+import PerfPlot from "./plot/PerfPlot";
+import type { TabList } from "./plot/PlotTab";
 
 const REPORT_PARAM = "report";
 const METRIC_KIND_PARAM = "metric_kind";
@@ -71,6 +72,14 @@ export const DEFAULT_PAGE = 1;
 
 // 30 days
 const DEFAULT_REPORT_HISTORY = 30 * 24 * 60 * 60 * 1000;
+
+export interface Props {
+	apiUrl: string;
+	params: Params;
+	isConsole?: boolean;
+	isEmbed?: boolean;
+	project?: JsonProject;
+}
 
 const addToArray = (array: any[], add: any): string[] => {
 	if (!array.includes(add)) {
@@ -151,13 +160,6 @@ function resourcesToCheckable<T>(
 const isBoolParam = (param: undefined | string): boolean => {
 	return param === "false" || param === "true";
 };
-
-export interface Props {
-	apiUrl: string;
-	params: Params;
-	isConsole: boolean;
-	project?: JsonProject;
-}
 
 const PerfPanel = (props: Props) => {
 	const [bencher_valid] = createResource(
@@ -771,20 +773,23 @@ const PerfPanel = (props: Props) => {
 
 	return (
 		<>
-			<PerfHeader
-				apiUrl={props.apiUrl}
-				isConsole={props.isConsole}
-				user={user}
-				project={project}
-				isPlotInit={isPlotInit}
-				perfQuery={perfQuery}
-				handleRefresh={handleRefresh}
-			/>
+			<Show when={props.isEmbed !== true}>
+				<PerfHeader
+					apiUrl={props.apiUrl}
+					isConsole={props.isConsole === true}
+					user={user}
+					project={project}
+					isPlotInit={isPlotInit}
+					perfQuery={perfQuery}
+					handleRefresh={handleRefresh}
+				/>
+			</Show>
 			<PerfPlot
 				apiUrl={props.apiUrl}
 				user={user}
 				project_slug={project_slug}
-				isConsole={props.isConsole}
+				isConsole={props.isConsole === true}
+				isEmbed={props.isEmbed === true}
 				isPlotInit={isPlotInit}
 				metric_kind={metric_kind}
 				report={report}

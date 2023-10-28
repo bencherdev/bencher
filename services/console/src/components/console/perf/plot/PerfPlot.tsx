@@ -1,8 +1,4 @@
 import { Accessor, Show } from "solid-js";
-import Plot from "./Plot";
-import PlotHeader from "./PlotHeader";
-import PlotInit from "./PlotInit";
-import PlotTab, { TabList } from "./PlotTab";
 import type { PerfRange, PerfTab } from "../../../../config/types";
 import type {
 	JsonAuthUser,
@@ -12,12 +8,17 @@ import type {
 	JsonReport,
 	JsonTestbed,
 } from "../../../../types/bencher";
+import Plot from "./Plot";
+import PlotHeader from "./PlotHeader";
+import PlotInit from "./PlotInit";
+import PlotTab, { TabList } from "./PlotTab";
 
 export interface Props {
 	apiUrl: string;
 	user: JsonAuthUser;
 	project_slug: Accessor<undefined | string>;
 	isConsole: boolean;
+	isEmbed: boolean;
 	isPlotInit: Accessor<boolean>;
 	metric_kind: Accessor<undefined | string>;
 	report: Accessor<undefined | string>;
@@ -128,33 +129,35 @@ const PerfPlot = (props: Props) => {
 							/>
 						</Show>
 					</div>
-					<PlotTab
-						project_slug={props.project_slug}
-						isConsole={props.isConsole}
-						metric_kind={props.metric_kind}
-						tab={props.tab}
-						reports_tab={props.reports_tab}
-						branches_tab={props.branches_tab}
-						testbeds_tab={props.testbeds_tab}
-						benchmarks_tab={props.benchmarks_tab}
-						reports_per_page={props.reports_per_page}
-						branches_per_page={props.branches_per_page}
-						testbeds_per_page={props.testbeds_per_page}
-						benchmarks_per_page={props.benchmarks_per_page}
-						reports_page={props.reports_page}
-						branches_page={props.branches_page}
-						testbeds_page={props.testbeds_page}
-						benchmarks_page={props.benchmarks_page}
-						handleTab={props.handleTab}
-						handleReportChecked={props.handleReportChecked}
-						handleBranchChecked={props.handleBranchChecked}
-						handleTestbedChecked={props.handleTestbedChecked}
-						handleBenchmarkChecked={props.handleBenchmarkChecked}
-						handleReportsPage={props.handleReportsPage}
-						handleBranchesPage={props.handleBranchesPage}
-						handleTestbedsPage={props.handleTestbedsPage}
-						handleBenchmarksPage={props.handleBenchmarksPage}
-					/>
+					<Show when={props.isEmbed !== true}>
+						<PlotTab
+							project_slug={props.project_slug}
+							isConsole={props.isConsole}
+							metric_kind={props.metric_kind}
+							tab={props.tab}
+							reports_tab={props.reports_tab}
+							branches_tab={props.branches_tab}
+							testbeds_tab={props.testbeds_tab}
+							benchmarks_tab={props.benchmarks_tab}
+							reports_per_page={props.reports_per_page}
+							branches_per_page={props.branches_per_page}
+							testbeds_per_page={props.testbeds_per_page}
+							benchmarks_per_page={props.benchmarks_per_page}
+							reports_page={props.reports_page}
+							branches_page={props.branches_page}
+							testbeds_page={props.testbeds_page}
+							benchmarks_page={props.benchmarks_page}
+							handleTab={props.handleTab}
+							handleReportChecked={props.handleReportChecked}
+							handleBranchChecked={props.handleBranchChecked}
+							handleTestbedChecked={props.handleTestbedChecked}
+							handleBenchmarkChecked={props.handleBenchmarkChecked}
+							handleReportsPage={props.handleReportsPage}
+							handleBranchesPage={props.handleBranchesPage}
+							handleTestbedsPage={props.handleTestbedsPage}
+							handleBenchmarksPage={props.handleBenchmarksPage}
+						/>
+					</Show>
 				</nav>
 			</div>
 		</div>
