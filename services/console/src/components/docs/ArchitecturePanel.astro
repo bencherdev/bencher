@@ -1,0 +1,41 @@
+<pre
+class="mermaid">
+graph TD
+
+Ui(Bencher UI Server)
+Cli[/Bencher CLI/]
+Api(Bencher API Server)
+Db[(SQLite Database)]
+Litestream[/Litestream/]
+Storage[[Object Storage]]
+Smtp[[SMTP Server]]
+CiCd[[CI/CD]]
+BenchmarkHarness[/Benchmark Harness/]
+
+Ui ---> Api
+subgraph UI Container
+    Ui
+end
+
+CiCd --> BenchmarkingServer
+BenchmarkingServer ---> Api
+subgraph BenchmarkingServer[Benchmarking Server]
+    direction LR
+    Cli --> BenchmarkHarness
+    BenchmarkHarness --> Results{'{{Results}}'}
+end
+
+Api --> Db
+Db --> Litestream
+Litestream ---> Storage
+Api -----> Smtp
+subgraph API Container
+    Api
+    Db
+    Litestream
+end
+</pre>
+<script>
+import mermaid from "mermaid";
+mermaid.initialize({ startOnLoad: true });
+</script>

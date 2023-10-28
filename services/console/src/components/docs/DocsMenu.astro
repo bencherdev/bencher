@@ -14,9 +14,7 @@ interface Props {
 const tutorialCollection = await getLangCollection(Collection.tutorial);
 const howToCollection = await getLangCollection(Collection.how_to);
 const explanationCollection = await getLangCollection(Collection.explanation);
-
-const reference = await getCollection(Collection.reference);
-reference.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
+const referenceCollection = await getLangCollection(Collection.reference);
 
 // Learn
 const rust = await getCollection(Collection.rust);
@@ -67,15 +65,15 @@ const lang: Language = Astro.props.lang ?? defaultLang;
     <p class="menu-label">Reference</p>
     <ul class="menu-list">
       <li>
-        <a href="/docs/reference/api">REST API</a>
+        <a href={`/docs/${langPath(lang)}reference/api`}>REST API</a>
       </li>
       <li>
-        <a href="/docs/reference/architecture">Architecture</a>
+        <a href={`/docs/${langPath(lang)}reference/architecture`}>Architecture</a>
       </li>
       {
-        reference.map((page) => (
+        referenceCollection[lang]?.map((page) => (
           <li>
-            <a href={`/docs/reference/${page.slug}`}>{page.data.title}</a>
+            <a href={`/docs/${langPath(lang)}reference/${page.slug}`}>{page.data.title}</a>
           </li>
         ))
       }

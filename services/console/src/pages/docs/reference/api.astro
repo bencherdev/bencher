@@ -3,6 +3,7 @@ export const prerender = false;
 
 import DocsLayout from "../../../layouts/docs/DocsLayout.astro";
 import SwaggerPanel from "../../../components/docs/SwaggerPanel";
+import { Language } from "../../../i18n/ui";
 
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const title = "REST API";
@@ -10,5 +11,5 @@ const description = "The REST API for continuous benchmarking with Bencher";
 ---
 
 <DocsLayout title={title} description={description}>
-  <SwaggerPanel client:only="solid-js" apiUrl={BENCHER_API_URL} />
+  <SwaggerPanel client:only="solid-js" apiUrl={BENCHER_API_URL} lang={Language.en} />
 </DocsLayout>
