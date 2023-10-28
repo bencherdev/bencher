@@ -27,6 +27,22 @@ import { getCollection } from "astro:content";
 // }
 
 //
+
+export async function getEnPaths(collection: Collection) {
+	const pages = await getCollection(collection);
+	return pages
+		.map((page) => {
+			const [lang, ...slug] = page.id
+				.substring(0, page.id.lastIndexOf("."))
+				?.split("/");
+			return {
+				params: { lang, slug: slug.join("/") || undefined },
+				props: page,
+			};
+		})
+		.filter((page) => page.params.lang === defaultLang);
+}
+
 export async function getLangCollection(collection: Collection) {
 	const pages = await getCollection(collection);
 	const langPagesMap = pages

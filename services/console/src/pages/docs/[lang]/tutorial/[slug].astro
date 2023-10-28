@@ -13,8 +13,10 @@ export async function getStaticPaths() {
     return { params: { lang, slug: slug.join('/') || undefined }, props: page }
   }).filter(page => page.params.lang !== defaultLang);
 }
+
 // 2. When it's time to render, you can get the entry directly from the prop
 const { lang, slug } = Astro.params;
+const urlSafe = `${Collection.tutorial}+${slug.split('/').join('+')}`;
 const page = Astro.props;
 const { Content } = await page.render();
 ---
@@ -26,5 +28,5 @@ const { Content } = await page.render();
   lang={lang}
 >
   <Content />
-  <Disclosure page={slug} lang={lang} />
+  <Disclosure page={urlSafe} lang={lang} />
 </DocsLayout>
