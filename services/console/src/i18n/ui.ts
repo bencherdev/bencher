@@ -13,15 +13,17 @@ export enum Language {
 }
 export const defaultLang = Language.en;
 
+// As of right now these are the i18n languages for the GitHub Docs
+// https://github.blog/2020-07-02-how-we-launched-docs-github-com/#internationalized-docs
 export const otherLanguages = [
-	Language.de,
+	Language.zh,
 	Language.es,
-	Language.fr,
-	Language.ja,
-	Language.ko,
 	Language.pt,
 	Language.ru,
-	Language.zh,
+	Language.ja,
+	Language.fr,
+	Language.de,
+	Language.ko,
 ];
 
 export const allLanguages = [Language.en, ...otherLanguages];
@@ -62,13 +64,13 @@ export const tutorial = (lang: Language) => {
 		case Language.ja:
 			return "チュートリアル";
 		case Language.ko:
-			return "지도 시간";
+			return "자습서 작";
 		case Language.pt:
 			return "Tutorial";
 		case Language.zh:
 			return "教程";
 		case Language.ru:
-			return "Обучение";
+			return "учебника";
 	}
 };
 
@@ -92,5 +94,51 @@ export const howTo = (lang: Language) => {
 			return "如何";
 		case Language.ru:
 			return "Как";
+	}
+};
+
+export const explanation = (lang: Language) => {
+	switch (lang) {
+		case Language.en:
+			return "Explanation";
+		case Language.de:
+			return "Erklärung";
+		case Language.es:
+			return "Explicación";
+		case Language.fr:
+			return "Explication";
+		case Language.ja:
+			return "説明";
+		case Language.pt:
+			return "Explicação";
+		case Language.ko:
+			return "설명";
+		case Language.zh:
+			return "解释";
+		case Language.ru:
+			return "Объяснение";
+	}
+};
+
+export const reference = (lang: Language) => {
+	switch (lang) {
+		case Language.en:
+			return "Reference";
+		case Language.de:
+			return "Verweis";
+		case Language.es:
+			return "Referencia";
+		case Language.fr:
+			return "Référence";
+		case Language.ja:
+			return "関連項目";
+		case Language.pt:
+			return "Referência";
+		case Language.ko:
+			return "참조";
+		case Language.zh:
+			return "参考";
+		case Language.ru:
+			return "Ссылка";
 	}
 };

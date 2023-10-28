@@ -2,7 +2,7 @@
 import { getCollection } from "astro:content";
 import DocsLayout from "../../layouts/docs/DocsLayout.astro";
 import {getLangCollection, langPath} from "../../i18n/utils.ts"
-import { Language, allLanguages, defaultLang, howTo, languageName, tutorial } from "../../i18n/ui";
+import { Language, allLanguages, defaultLang, explanation, howTo, languageName, tutorial } from "../../i18n/ui";
 import { Collection } from "../../content/config";
 
 interface Props {
@@ -12,9 +12,7 @@ const lang: Language = Astro.props.lang ?? defaultLang;
 
 const tutorialCollection = await getLangCollection(Collection.tutorial);
 const howToCollection = await getLangCollection(Collection.how_to);
-
-const explanation = await getCollection(Collection.explanation);
-explanation.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
+const explanationCollection = await getLangCollection(Collection.explanation);
 
 const reference = await getCollection(Collection.reference);
 reference.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
@@ -111,12 +109,12 @@ const alsoIn = () => {
         ))
       }
     </ul>
-    <p class="menu-label">Explanation</p>
+    <p class="menu-label">{explanation(lang)}</p>
     <ul class="menu-list">
       {
-        explanation.map((page) => (
+        explanationCollection[lang]?.map((page) => (
           <li>
-            <a href={`/docs/explanation/${page.slug}`}>{page.data.heading}</a>
+            <a href={`/docs/${langPath(lang)}explanation/${page.slug}`}>{page.data.heading}</a>
           </li>
         ))
       }

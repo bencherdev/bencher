@@ -1,0 +1,26 @@
+---
+import DocsLayout from "../../../../layouts/docs/DocsLayout.astro";
+import Disclosure from "../../../../components/docs/Disclosure";
+import { Collection } from "../../../../content/config";
+import { getLangPaths } from "../../../../i18n/utils";
+
+// 1. Generate a new path for every collection entry
+export async function getStaticPaths() {
+  return await getLangPaths(Collection.explanation);
+}
+
+// 2. When it's time to render, you can get the entry directly from the prop
+const { lang, slug } = Astro.params;
+const page = Astro.props;
+const { Content } = await page.render();
+---
+
+<DocsLayout
+  title={page.data.title}
+  description={page.data.description}
+  heading={page.data.heading}
+  lang={lang}
+>
+  <Content />
+  <Disclosure collection={Collection.explanation} slug={slug} lang={lang} />
+</DocsLayout>

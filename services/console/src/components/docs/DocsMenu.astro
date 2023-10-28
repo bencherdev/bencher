@@ -1,7 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import type DocsTab from "./docs_tab";
-import {Language, defaultLang, howTo, tutorial } from "../../i18n/ui.ts";
+import {Language, defaultLang, explanation, howTo, tutorial } from "../../i18n/ui.ts";
 import {getLangCollection, langPath} from "../../i18n/utils.ts"
 import { Collection } from "../../content/config";
 
@@ -13,9 +13,7 @@ interface Props {
 // Docs
 const tutorialCollection = await getLangCollection(Collection.tutorial);
 const howToCollection = await getLangCollection(Collection.how_to);
-
-const explanation = await getCollection(Collection.explanation);
-explanation.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
+const explanationCollection = await getLangCollection(Collection.explanation);
 
 const reference = await getCollection(Collection.reference);
 reference.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
@@ -56,12 +54,12 @@ const lang: Language = Astro.props.lang ?? defaultLang;
         ))
       }
     </ul>
-    <p class="menu-label">Explanation</p>
+    <p class="menu-label">{explanation(lang)}</p>
     <ul class="menu-list">
       {
-        explanation.map((page) => (
+        explanationCollection[lang]?.map((page) => (
           <li>
-            <a href={`/docs/explanation/${page.slug}`}>{page.data.title}</a>
+            <a href={`/docs/${langPath(lang)}explanation/${page.slug}`}>{page.data.title}</a>
           </li>
         ))
       }
