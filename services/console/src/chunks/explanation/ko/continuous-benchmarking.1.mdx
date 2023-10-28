@@ -1,0 +1,102 @@
+연속 벤치마킹(Continuous Benchmarking)은 팀 멤버가 자주 작업을 벤치마킹하는 소프트웨어 개발 방식입니다.
+보통 각 개인이 일일이 벤치마킹하게 되어 하루에 여러 번의 벤치마킹이 이루어집니다.
+각 벤치마킹은 자동화 빌드에 의해 검증되며 성능 저하를 가능한 빨리 감지합니다.
+많은 팀들이 이런 접근 방식이 성능 저하를 크게 줄이고 팀이 더 빠르게 성능이 좋은 소프트웨어를 개발할 수 있게 한다는 것을 알게 되었습니다.
+
+이제 소프트웨어 업계의 모든 사람들은 지속적인 통합(Continuous Integration, CI)에 대해 알고 있습니다.
+기본적으로 CI는 제품에 도달하기 전에 소프트웨어 기능 회귀를 감지하고 방지하기 위한 것입니다.
+마찬가지로, 연속 벤치마킹(Continuous Benchmarking, CB)은 제품에 도달하기 전에 소프트웨어 _성능_ 회귀를 감지하고 방지하기 위한 것입니다.
+코드 변경마다 CI에서 단위 테스트를 실행하는 이유와 같은 이유로,
+코드 변경마다 CB에서 성능 테스트를 실행해야 합니다.
+사실, 이 유사성은 이 섹션의 첫 번째 문단이 [Martin Fowler가 2006년에 Continuous Integration에 대해 서론을 작성한 것](https://martinfowler.com/articles/continuousIntegration.html)의 Mad Libs 버전인 만큼 적절합니다.
+
+> 🐰 성능 버그는 버그입니다!
+
+## CI에서의 벤치마킹
+
+신화: CI에서 벤치마킹을 실행할 수 없습니다
+
+대부분의 벤치마킹 하네스는 대기 시간이나 처리량을 측정하기 위해 [시스템 벽 시계](https://en.wikipedia.org/wiki/Elapsed_real_time)를 사용합니다.
+이는 개발자들이 가장 신경쓰는 정확한 지표이기 때문에 매우 유용합니다.
+그러나 일반적인 용도의 CI 환경은 벽 시계 시간을 측정할 때 종종 시끄럽고 불규칙합니다.
+연속 벤치마킹을 진행할 때, 이 변동성은 결과에 원치 않는 잡음을 추가합니다.
+
+이를 처리하는 몇 가지 방법이 있습니다:
+- [상대적 벤치마킹](/docs/ko/how-to/track-benchmarks)
+- 전용 CI 실행기, 예를 들면 [BuildJet](https://buildjet.com)
+- 벽 시간 대신 명령을 세는 벤치마킹 하네스로 전환
+
+또는 그냥 혼돈을 받아들이세요! 연속 벤치마킹은 완벽할 필요가 없습니다.
+네, 연속 벤치마킹 환경에서 변동성을 줄이고 따라서 잡음을 줄이는 것은 더 세밀한 성능 저하를 감지할 수 있게 해줄 것입니다.
+그러나 여기서 완벽함이 선에 의해 적이 되지 않게 조심하세요!
+
+[![Chaos는 받아들여라!](https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kind=latency&title=Embrace+the+Chaos%21)](https://bencher.dev/perf/bencher?key=true&metric_kind=latency&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5)
+
+이 그래프를 보고, "와, 정말 미친 것 같다!"라고 생각하실 수 있습니다. 하지만 자기 자신에게 물어보세요, 현재 개발 과정이 사용자에게 영향을 주기 전에 두 배 또는 심지어 열 배 성능 저하를 감지할 수 있을까요? 아마도 아니죠! 이것이야 말로 _진짜로_ 미친 것입니다!
+
+모든 CI 환경에서 나오는 소음에도 불구하고, 벽 시계 벤치마킹을 추적하는 것은 여전히 제품이 고객에게 도달하기 전에 성능 저하를 포착하는데 큰 이익을 가져다줄 수 있습니다.
+시간이 지남에 따라, 소프트웨어 성능 관리가 성숙해짐에 따라 거기에서 발전시킬 수 있습니다.
+그 사이에는 그냥 일반적인 CI를 사용하십시오.
+
+## 성능의 중요성
+
+신화: 당신은 100ms의 대기시간을 느낄 수 없습니다
+
+사람들이 100ms의 대기시간을 인지할 수 없다고 주장하는 것은 흔한 일입니다.
+이 주장을 위해 종종 [Nielsen Group의 응답 시간에 관한 글](https://www.nngroup.com/articles/response-times-3-important-limits/)이 인용됩니다.
+
+> **0.1초**는 사용자가 시스템이 **즉시 반응하는 것**처럼 느껴지는 한계이며, 결괏값을 표시하는 것 이외에는 특별한 피드백이 필요하지 않습니다.
+>
+> - Jakob Nielsen, 1 Jan __*1993*__
+
+그러나 그것은 사실이 아닙니다.
+어떤 작업에서는 사람들이 [대기시간이 2ms 밖에 안 되는 것을 인지할 수 있습니다](https://pdfs.semanticscholar.org/386a/15fd85c162b8e4ebb6023acdce9df2bd43ee.pdf).
+이를 증명하는 간단한 방법은 [Dan Luu의 실험](https://danluu.com/input-lag/#appendix-why-measure-latency)에서 볼 수 있습니다: 터미널을 열고 `sleep 0; echo "ping"`과 `sleep 0.1; echo "pong"`을 실행해 보세요. 차이를 인지했죠?
+
+다른 주요 혼돈의 원인은 대기시간의 인지와 인간의 반응 시간 사이의 구분입니다. 비록 시각적 자극에 대한 반응이 [약 200ms 정도 걸리지만](https://humanbenchmark.com/tests/reactiontime), 그것은 이벤트 인식 자체와는 독립적입니다. 유사하게, 기차가 2분 늦게 도착한 것을 인지할 수 있습니다(인지된 대기시간) 비록 기차 여행이 2시간 걸린다 하더라도(반응 시간).
+
+성능이 중요합니다! [성능은 특성입니다](https://blog.codinghorror.com/performance-is-a-feature)!
+
+- 100ms 더 빠름 → 전환률 1% 상승 ([Mobify](https://web.dev/why-speed-matters/), 연간 +$380,000 증가)
+- 50% 더 빠름 → 판매량 12% 상승 ([AutoAnything](https://www.digitalcommerce360.com/2010/08/19/web-accelerator-revs-conversion-and-sales-autoanything/))
+- 20% 더 빠름 → 전환률 10% 상승 ([Furniture Village](https://www.thinkwithgoogle.com/intl/en-gb/marketing-strategies/app-and-mobile/furniture-village-and-greenlight-slash-page-load-times-boosting-user-experience/))
+- 40% 더 빠름 → 가입자 15% 상승 ([Pinterest](https://medium.com/pinterest-engineering/driving-user-growth-with-performance-improvements-cfc50dafadd7))
+- 850ms 더 빠름 → 전환률 7% 상승 ([COOK](https://web.dev/why-speed-matters/))
+- 1초 더 느림 → 사용자 10% 감소 ([BBC](https://www.creativebloq.com/features/how-the-bbc-builds-websites-that-scale))
+
+무어의 법칙의 종말로, 병렬로 실행되는 작업들은 병렬화 될 필요가 있을 것입니다.
+그러나 대부분의 작업들은 연속으로 실행되어야 하며,
+문제에 단순히 더 많은 연산을 던지는 것은 금방 해결할 수 없고 비용이 많이 드는 해결책이 되고 있습니다.
+
+이 변경으로 인해 성능이 우수한 현대 소프트웨어를 개발하고 유지하는 데 연속 벤치마킹은 핵심 요소입니다.
+
+<div class="content has-text-centered">
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/moores_law.jpg"
+    width="2124"
+    height="1128"
+    alt="Moore's Law from https://davidwells.io/blog/rise-of-embarrassingly-parallel-serverless-compute"
+/>
+</div>
+
+## 연속 벤치마킹 도구
+
+Bencher를 만들기 전에, 우리는 다음과 같은 도구를 찾아보았습니다:
+
+- 여러 언어 간의 벤치마킹을 추적할 수 있음
+- 언어 표준 벤치마킹 하네스 출력을 원활하게 수집할 수 있음
+- 사용자 정의 벤치마킹 하네스 출력에 대한 확장성
+- 오픈 소스이며 자체 호스팅 가능
+- 여러 CI 호스트와 작동 가능
+- 사용자 인증 및 권한 부여 가능
+
+불행히도 모든 이런 요구사항을 충족하는 것은 존재하지 않았습니다.
+우리가 영감을 받은 기존 벤치마킹 도구의 종합적인 목록은 [prior art](/docs/ko/reference/prior-art)에서 확인할 수 있습니다.
+
+## 대기업에서의 연속 벤치마킹
+
+Microsoft, Facebook (현재는 Meta), Apple, Amazon, Netflix, Google 등의 중소기업에서
+Bencher 같은 도구들이 내부적으로 개발되었습니다.
+이 업계의 거인들은 개발 중인 성능 모니터링의 중요성과 이러한 통찰력을 CB를 통해 개발 과정에 통합하는 것을 이해하고 있습니다.
+우리는 Bencher를 만들어 대기업의 벽 뒤에서 연속 벤치마킹을 오픈 소스 커뮤니티에 가져왔습니다.
+대기업에서의 연속 벤치마킹과 관련한 게시물 링크를 보려면 [prior art](/docs/ko/reference/prior-art)를 참조하십시오.

@@ -1,0 +1,93 @@
+Das kontinuierliche Benchmarking ist eine Praxis in der Softwareentwicklung, bei der Mitglieder eines Teams ihre Arbeit regelmäßig bewerten.
+In der Regel führt jede Person mindestens täglich ein Benchmark durch - was zu mehreren Benchmarks pro Tag führt.
+Jedes Benchmark wird von einem automatisierten Build überprüft, um Leistungsregressionen so schnell wie möglich zu erkennen.
+Viele Teams finden, dass dieser Ansatz zu deutlich reduzierten Leistungseinbrüchen führt
+und es einem Team ermöglicht, performante Software schneller zu entwickeln.
+
+Inzwischen ist jeder in der Softwarebranche mit Continuous Integration (CI) vertraut.
+Auf einer grundsätzlichen Ebene geht es bei CI darum, Software-Feature-Regressions zu erkennen und zu verhindern, bevor sie in die Produktion gelangen.
+Ähnlich verhält es sich mit dem kontinuierlichen Benchmarking (CB): Es geht darum, Software-_Leistungsregressionen_ zu erkennen und zu verhindern, bevor sie in die Produktion gelangen.
+Aus denselben Gründen, aus denen Unit-Tests in CI für jede Codeänderung durchgeführt werden,
+sollten Leistungstests in CB für jede Codeänderung durchgeführt werden.
+Diese Analogie ist so treffend, dass der erste Absatz dieses Abschnitts einfach eine Mad Libs-Version von [Martin Fowler's 2006 Einleitung zu Continuous Integration](https://martinfowler.com/articles/continuousIntegration.html) ist.
+
+> 🐰 Performance-Bugs sind Fehler!
+
+## Benchmarking in CI
+
+Mythos: Benchmarking kann nicht in CI durchgeführt werden
+
+Die meisten Benchmarking-Halterungen verwenden die [Systemwanduhr](https://de.wikipedia.org/wiki/Elapsed_real_time) zur Messung von Latenz oder Durchsatz.
+Das ist sehr hilfreich, denn das sind genau die Metriken, um die wir uns als Entwickler am meisten kümmern.
+Allerdings sind allgemeine CI-Umgebungen oft laut und inkonsistent, wenn es darum geht, die Wanduhrzeit zu messen.
+Bei kontinuierlichem Benchmarking fügt diese Volatilität unerwünschtes Rauschen in die Ergebnisse ein.
+
+Es gibt einige Optionen, um damit umzugehen:
+- [Relatives Benchmarking](/docs/de/how-to/track-benchmarks)
+- Dedizierte CI-Runner, wie [BuildJet](https://buildjet.com)
+- Wechsel von Benchmark-Halterungen zu einer, die Anweisungen zählt anstatt der Wandzeit
+
+Oder einfach das Chaos annehmen! Kontinuierliches Benchmarking muss nicht perfekt sein.
+Ja, die Reduzierung der Volatilität und damit des Rauschens in Ihrer kontinuierlichen Benchmarking-Umgebung ermöglicht es Ihnen, immer feinere Leistungsregressionen zu erkennen.
+Lassen Sie sich hier jedoch nicht von dem Gedanken leiten, dass Perfektion der Feind des Guten ist!
+
+Sie sehen diese Grafik und denken vielleicht: "Wow, das ist verrückt!" Aber fragen Sie sich: Kann Ihr aktueller Entwicklungsprozess eine Leistungsverschlechterung um das Zwei- oder sogar Zehnfache erkennen, bevor sie Ihre Nutzer beeinflusst? Wahrscheinlich nicht! _Das_ ist verrückt!
+
+Selbst bei all dem Rauschen aus einer CI-Umgebung kann das Nachverfolgen von Wanduhr-Benchmarks immer noch große Vorteile bringen, indem es Leistungsregressionen erkennt, bevor sie Ihre Kunden in der Produktion erreichen.
+Mit der Zeit können Sie von dort aus weiter aufbauen, wenn Ihr Softwareleistungsmanagement reift.
+In der Zwischenzeit verwenden Sie einfach Ihre reguläre CI.
+
+## Leistung zählt!
+
+Mythos: Man kann 100 ms Latenz nicht bemerken
+
+Es ist üblich zu hören, dass Menschen behaupten, 100 ms Latenzzeit nicht wahrnehmen zu können.
+Ein [Artikel der Nielsen Group über Antwortzeiten](https://www.nngroup.com/articles/response-times-3-important-limits/) wird oft für diese Behauptung zitiert.
+
+> **0,1 Sekunde** ist ungefähr die Grenze, bei der der Nutzer das Gefühl hat, dass das System **sofort reagiert**, d. h. dass keine besondere Rückmeldung erforderlich ist, außer das Ergebnis anzuzeigen.
+>
+> - Jakob Nielsen, 1. Januar __*1993*__
+
+Aber das stimmt einfach nicht.
+Bei einigen Aufgaben können Menschen [gerade einmal 2 ms Latenzzeit wahrnehmen](https://pdfs.semanticscholar.org/386a/15fd85c162b8e4ebb6023acdce9df2bd43ee.pdf). Eine einfache Möglichkeit, dies zu beweisen, ist ein [Experiment von Dan Luu](https://danluu.com/input-lag/#appendix-why-measure-latency): Öffnen Sie Ihre Konsole und führen Sie `sleep 0; echo "ping"` aus und dann `sleep 0,1; echo "pong"`. Sie haben den Unterschied bemerkt, oder‽
+
+Ein weitere häufige Verwechslung ist der Unterschied zwischen der Wahrnehmung von Latenz und menschlichen Reaktionszeiten. Obwohl es [etwa 200 ms dauert, auf einen visuellen Reiz zu reagieren](https://humanbenchmark.com/tests/reactiontime), ist das unabhängig von der Wahrnehmung des Ereignisses selbst. Analog dazu können Sie bemerken, dass Ihr Zug zwei Minuten zu spät ist (wahrgenommene Latenz), obwohl die Zugfahrt zwei Stunden dauert (Reaktionszeit).
+
+Die Leistung zählt! [Leistung ist ein Feature](https://blog.codinghorror.com/performance-is-a-feature)!
+
+- Jede 100 ms schneller → 1% mehr Konvertierungen ([Mobify](https://web.dev/why-speed-matters/), Einnahmen +380.000$/Jahr)
+- 50% schneller → 12% mehr Verkäufe ([AutoAnything](https://www.digitalcommerce360.com/2010/08/19/web-accelerator-revs-conversion-and-sales-autoanything/))
+- 20% schneller → 10% mehr Konvertierungen ([Furniture Village](https://www.thinkwithgoogle.com/intl/en-gb/marketing-strategies/app-and-mobile/furniture-village-and-greenlight-slash-page-load-times-boosting-user-experience/))
+- 40% schneller → 15% mehr Anmeldungen ([Pinterest](https://medium.com/pinterest-engineering/driving-user-growth-with-performance-improvements-cfc50dafadd7))
+- 850 ms schneller → 7% mehr Konvertierungen ([COOK](https://web.dev/why-speed-matters/))
+- Jede 1 sekunde langsamer → 10% weniger Nutzer ([BBC](https://www.creativebloq.com/features/how-the-bbc-builds-websites-that-scale))
+
+Mit dem Ende des Moore'schen Gesetzes müssen Arbeitslasten, die parallel laufen können, parallelisiert werden.
+Allerdings müssen die meisten Arbeitslasten in Serie ausgeführt werden,
+und einfach mehr Rechnerleistung auf das Problem zu werfen, wird schnell eine unlösbare und teure Lösung.
+
+Kontinuierliches Benchmarking ist ein Schlüsselelement zur Entwicklung und Pflege
+leistungsfähiger moderner Software angesichts dieser Veränderung.
+
+## Kontinuierliche Benchmarking-Tools
+
+Bevor wir Bencher erstellt haben, haben wir nach einem Tool gesucht, das:
+
+- Benchmarks in mehreren Sprachen verfolgen kann
+- Sprachstandard-Benchmark-Ausgaben nahtlos integrieren kann
+- Erweiterbar für benutzerdefinierten Benchmark-Ausgaben
+- Open Source und fähig zur Selbst-Hosting
+- Zusammenarbeit mit mehreren CI-Hosts
+- Benutzerauthentifizierung und -autorisierung
+
+Leider existierte nichts, das alle diese Kriterien erfüllte.
+Siehe [bestehende Lösungen](/docs/de/reference/prior-art) für eine umfassende Liste der bestehenden Benchmarking-Tools, von denen wir uns inspirieren ließen.
+
+## Kontinuierliches Benchmarking in Big Tech
+
+Tools wie Bencher wurden intern bei
+Microsoft, Facebook (jetzt Meta), Apple, Amazon, Netflix und Google unter unzähligen anderen entwickelt.
+Als Giganten der Branche verstehen sie die Bedeutung der Leistungsmessung während der Entwicklung
+und integrieren diese Erkenntnisse in den Entwicklungsprozess durch CB.
+Wir haben Bencher entwickelt, um kontinuierliches Benchmarking aus dem Hinterzimmer der Big Tech in die Open-Source-Community zu bringen.
+Für Links zu Posts, die sich auf kontinuierliches Benchmarking in Big Tech beziehen, siehe [bestehende Lösungen](/docs/de/reference/prior-art).

@@ -1,0 +1,105 @@
+Le Benchmarking Continu est une pratique de développement logiciel où les membres d'une équipe évaluent leur travail fréquemment,
+en général, chaque personne fait cela au moins une fois par jour - ce qui conduit à plusieurs benchmarks par jour.
+Chaque benchmark est vérifié par une construction automatisée pour détecter les régressions de performances le plus rapidement possible.
+De nombreuses équipes trouvent que cette approche conduit à des régressions de performances nettement réduites
+et permet à une équipe de développer des logiciels performants plus rapidement.
+
+À présent, tout le monde dans l'industrie du logiciel est au courant de l'intégration continue (CI).
+Au niveau fondamental, la CI consiste à détecter et à prévenir les régressions de fonctionnalités logicielles avant qu'elles n'arrivent en production.
+De la même manière, le benchmarking continu (CB) consiste à détecter et à prévenir les régressions de _performance_ logicielle avant qu'elles n'arrivent en production.
+Pour les mêmes raisons que les tests unitaires sont exécutés en CI pour chaque changement de code,
+des tests de performance devraient être exécutés en CB pour chaque changement de code.
+Cette analogie est si pertinente en fait, que le premier paragraphe de cette section n'est qu'une version Mad Libs [de l'introduction de Martin Fowler à l'intégration continue en 2006](https://martinfowler.com/articles/continuousIntegration.html).
+
+> 🐰 Les bugs de performance sont des bugs !
+
+## Benchmarking en CI
+
+Mythe : Vous ne pouvez pas exécuter de benchmarks en CI
+
+La plupart des harnais de benchmarking utilisent [l'horloge murale du système](https://en.wikipedia.org/wiki/Elapsed_real_time) pour mesurer la latence ou le débit.
+Ceci est très utile, car ce sont précisément ces paramètres qui nous concernent le plus en tant que développeurs.
+Cependant, les environnements de CI à usage général sont souvent bruyants et inconsistants lors de la mesure du temps d'horloge murale.
+Lors du benchmarking continu, cette volatilité ajoute un bruit indésirable dans les résultats.
+
+Il existe plusieurs options pour gérer cela :
+- [Benchmarking relatif](/docs/fr/how-to/track-benchmarks)
+- Des exécutants de CI dédiés, comme [BuildJet](https://buildjet.com)
+- Changer de harnais de benchmarking pour l'un qui compte les instructions par opposition au temps d'horloge murale
+
+Ou simplement embrasser le chaos ! Le benchmarking continu n'a pas besoin d'être parfait.
+Oui, réduire la volatilité et donc le bruit dans votre environnement de benchmarking continu vous permettra de détecter des régressions de performance de plus en plus fines.
+Cependant, ne laissez pas la perfection être l'ennemie du bien ici !
+
+<a href="https://bencher.dev/perf/bencher?key=true&metric_kind=latency&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5"><img src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kind=latency&title=Embrace+the+Chaos%21" title="Embrace the Chaos!" alt="Embrace the Chaos! for Bencher - Bencher" /></a>
+
+Vous pourriez regarder ce graphique et penser, "Waouh, c'est fou !" Mais demandez-vous, votre processus de développement actuel peut-il détecter une régression de performance de deux ou même dix fois avant qu'elle n'affecte vos utilisateurs ? Probablement pas ! Maintenant, _ça_, c'est fou !
+
+Même avec tout le bruit d'un environnement de CI, le suivi des benchmarks d'horloge murale peut encore rapporter de grands bénéfices en détectant les régressions de performance avant qu'elles n'atteignent vos clients en production.
+Avec le temps, à mesure que la gestion des performances de votre logiciel mûrit, vous pourrez vous améliorer à partir de là.
+En attendant, utilisez simplement votre CI habituelle.
+
+## La Performance Compte
+
+Mythe : Vous ne pouvez pas remarquer 100ms de latence
+
+Il est courant d'entendre des gens affirmer que les humains ne peuvent percevoir 100ms de latence.
+Un [article du groupe Nielsen sur les temps de réponse](https://www.nngroup.com/articles/response-times-3-important-limits/) est souvent cité pour cette affirmation.
+
+> **0,1 seconde** est à peu près la limite pour faire en sorte que l'utilisateur ait l'impression que le système réagit **instantanément**, ce qui signifie qu'aucun retour spécial n'est nécessaire excepté pour afficher le résultat.
+>
+> - Jakob Nielsen, 1 Jan __*1993*__
+
+Mais ce n'est tout simplement pas vrai.
+Sur certaines tâches, les gens peuvent percevoir [aussi peu que 2ms de latence](https://pdfs.semanticscholar.org/386a/15fd85c162b8e4ebb6023acdce9df2bd43ee.pdf).
+Un moyen facile de le prouver est une [expérience de Dan Luu](https://danluu.com/input-lag/#appendix-why-measure-latency): ouvrez votre terminal et exécutez `sleep 0; echo "ping"` puis exécutez `sleep 0.1; echo "pong"`. Vous avez remarqué la différence, n'est-ce pas‽
+
+Un autre point commun de confusion est la distinction entre la perception de la latence et les temps de réaction humains. Même s'il faut [environ 200ms pour répondre à un stimulus visuel](https://humanbenchmark.com/tests/reactiontime), cela est indépendant de la perception de l'événement lui-même. Par analogie, vous pouvez remarquer que votre train a deux minutes de retard (latence perçue) même si le trajet en train dure deux heures (temps de réaction).
+
+La performance compte ! [La performance est une caractéristique](https://blog.codinghorror.com/performance-is-a-feature) !
+
+- Chaque 100ms plus rapide → 1% de conversions en plus ([Mobify](https://web.dev/why-speed-matters/), gagnant +380 000$/an)
+- 50% plus rapide → 12% de ventes en plus ([AutoAnything](https://www.digitalcommerce360.com/2010/08/19/web-accelerator-revs-conversion-and-sales-autoanything/))
+- 20% plus rapide → 10% de conversions en plus ([Furniture Village](https://www.thinkwithgoogle.com/intl/en-gb/marketing-strategies/app-and-mobile/furniture-village-and-greenlight-slash-page-load-times-boosting-user-experience/))
+- 40% plus rapide → 15% de plus d'inscriptions ([Pinterest](https://medium.com/pinterest-engineering/driving-user-growth-with-performance-improvements-cfc50dafadd7))
+- 850ms plus rapide → 7% de conversions en plus ([COOK](https://web.dev/why-speed-matters/))
+- Chaque seconde plus lent → 10% d'utilisateurs en moins ([BBC](https://www.creativebloq.com/features/how-the-bbc-builds-websites-that-scale))
+
+Avec la fin de la loi de Moore, les charges de travail qui peuvent s'exécuter en parallèle devront être parallélisées.
+Cependant, la plupart des charges de travail doivent s'exécuter en série,
+et le fait de simplement jeter plus de calcul sur le problème devient rapidement une solution intractable et coûteuse.
+
+Le Benchmarking Continu est un élément clé pour développer et maintenir
+des logiciels modernes performants face à ce changement.
+
+<div class="content has-text-centered">
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/moores_law.jpg"
+    width="2124"
+    height="1128"
+    alt="Loi de Moore de https://davidwells.io/blog/rise-of-embarrassingly-parallel-serverless-compute"
+/>
+</div>
+
+## Outils de Benchmarking Continu
+
+Avant de créer Bencher, nous avons cherché un outil qui pourrait :
+
+- Suivre les benchmarks à travers plusieurs langages
+- Intégrer sans problème la sortie des harnais de benchmarking standard des langages
+- Extensible pour une sortie de harnais de benchmarking personnalisé
+- Open source et capable d'auto-hébergement
+- Fonctionner avec plusieurs hôtes de CI
+- Authentification et autorisation des utilisateurs
+
+Malheureusement, rien qui remplissait tous ces critères n'existait.
+Voir [art antérieur](/docs/fr/reference/prior-art) pour une liste complète des outils de benchmarking existants dont nous nous sommes inspirés.
+
+## Benchmarking Continu dans les Grandes Technologies
+
+Des outils comme Bencher ont été développés en interne chez
+Microsoft, Facebook (maintenant Meta), Apple, Amazon, Netflix, et Google parmi d'innombrables autres.
+En tant que titans de l'industrie, ils comprennent l'importance de surveiller la performance pendant le développement
+et d'intégrer ces informations dans le processus de développement grâce au CB.
+Nous avons construit Bencher pour apporter le benchmarking continu du secret des grandes technologies à la communauté open source.
+Pour des liens vers des articles liés au benchmarking continu en provenance de grandes technologies, voir [art antérieur](/docs/fr/reference/prior-art).

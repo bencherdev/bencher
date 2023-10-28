@@ -196,7 +196,7 @@ const ShareModal = (props: ShareProps) => {
 		() =>
 			`<iframe src="${perf_embed_url()}" title="${
 				title() ? title() : props.project()?.name
-			}" width="100%" height="${embedHeight}px" frameBorder="0"></iframe>`,
+			}" width="100%" height="${embedHeight}px" frameBorder="0" allow="fullscreen"></iframe>`,
 	);
 
 	return (

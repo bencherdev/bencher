@@ -144,4 +144,4 @@ export enum PerfRange {
 export const isPerfRange = (range: undefined | string) =>
 	range === PerfRange.DATE_TIME || range === PerfRange.VERSION;
 
-export const embedHeight = 720;
+export const embedHeight = 680;

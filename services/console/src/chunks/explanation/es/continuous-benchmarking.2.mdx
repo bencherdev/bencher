@@ -1,0 +1,58 @@
+## Comparación de Benchmarking Continuo vs Benchmark Local
+
+Existen varios arneses de benchmark que permiten comparar resultados localmente.
+La comparación local es excelente para iterar rápidamente cuando se está afinando el rendimiento.
+Sin embargo, no se debe confiar en ella para detectar las regresiones de rendimiento de forma continua.
+Así como tener la capacidad de ejecutar pruebas unitarias localmente no elimina la necesidad de CI,
+poder ejecutar y comparar benchmarks localmente no elimina la necesidad de CB.
+
+Hay varias características que Bencher ofrece que las herramientas de comparación de benchmarking local no pueden:
+- Comparación del mismo benchmark entre diferentes entornos de prueba
+- Comparación de benchmarks en diferentes lenguajes y arneses
+- Colaboración y compartición de los resultados del benchmark
+- Ejecución de benchmarks en entornos de prueba dedicados para minimizar el ruido
+- No más copypasta
+
+## Benchmarking Continuo vs Gestión de Rendimiento de Aplicaciones (APM)
+
+La Gestión de Rendimiento de Aplicaciones (APM) es una herramienta vital para los servicios de software modernos.
+Sin embargo, APM está diseñada para ser utilizada en producción.
+Cuando se detecta una regresión de rendimiento, ya está afectando a tus clientes.
+
+> La mayoría de los defectos terminan costando más de lo que hubiera costado prevenirlos.
+> Los defectos son costosos cuando ocurren, tanto los costos directos de arreglar los defectos
+> como los costos indirectos debido a las relaciones dañadas, la pérdida de negocios y la pérdida de tiempo de desarrollo.
+>
+> — Kent Beck, Extreme Programming Explained
+
+Hay varias características que Bencher ofrece que las herramientas de APM no pueden:
+- Detectar y prevenir regresiones de rendimiento _antes_ de que lleguen a producción
+- Cambios de rendimiento e impactos incluidos en la revisión del código
+- Sin sobrecarga en ambientes de producción
+- Efectivo para despliegues en las instalaciones
+- Sin cambios en el código fuente de producción
+
+## Benchmarking Continuo vs Observabilidad
+
+Una rosa con cualquier otro nombre olería igual de dulce.
+Ver Benchmarking Continuo vs Gestión de Rendimiento de Aplicaciones arriba.
+
+## Benchmarking Continuo vs Integración Continua (CI)
+
+El Benchmarking Continuo (CB) es complementario a la Integración Continua (CI).
+Por las mismas razones que se ejecutan pruebas unitarias en CI para cada cambio de código,
+las pruebas de rendimiento deben ejecutarse en CB para cada cambio de código.
+
+> Mientras las pruebas unitarias y de aceptación son ampliamente aceptadas como prácticas estándar de desarrollo,
+> esta tendencia no ha continuado en el ámbito de las pruebas de rendimiento.
+> Actualmente, las herramientas comunes llevan a los testers a crear código desechable y una mentalidad de click-and-script.
+> Tratar las pruebas de rendimiento como un ciudadano de primera clase permite la creación de mejores pruebas que cubren más funcionalidades,
+> lo que lleva a una mejor herramienta para crear y ejecutar pruebas de rendimiento,
+> resultando en un conjunto de pruebas que es mantenible y puede ser probado en sí mismo.
+>
+> — [Thoughworks Technology Radar, 22 Mayo 2013](https://www.thoughtworks.com/en-us/radar/techniques/performance-testing-as-a-first-class-citizen)
+
+<br/>
+<br/>
+
+<h2><a href="/docs/es/tutorial/quick-start">Continúa: Inicio Rápido ➡</a></h2>

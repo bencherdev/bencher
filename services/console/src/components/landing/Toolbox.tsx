@@ -9,24 +9,25 @@ const Toolbox = (_props: {}) => {
 	];
 
 	return (
-		<div class="box">
-			<div class="content has-text-centered">
-				<h2 class="title is-2">Use Your Favorite Benchmark Harness</h2>
-				<br />
-				<br />
-				<div class="columns is-centered is-vcentered">
-					<For each={LANGUAGES}>
-						{([left_icon, right_icon]) => (
-							<div class="column is-one-quarter">
-								<div class="columns is-mobile">
-									<LanguageIcon icon={left_icon} />
-									<br />
-									<LanguageIcon icon={right_icon} />
-								</div>
+		<div
+			class="content has-text-centered"
+			style="margin-top: 3rem; margin-bottom: 3rem;"
+		>
+			<h2 class="title is-2">Use Your Favorite Benchmark Harness</h2>
+			<br />
+			<br />
+			<div class="columns is-centered is-vcentered">
+				<For each={LANGUAGES}>
+					{([left_icon, right_icon]) => (
+						<div class="column is-one-quarter">
+							<div class="columns is-mobile">
+								<LanguageIcon icon={left_icon} />
+								<br />
+								<LanguageIcon icon={right_icon} />
 							</div>
-						)}
-					</For>
-				</div>
+						</div>
+					)}
+				</For>
 			</div>
 		</div>
 	);

@@ -1,0 +1,77 @@
+持续基准测试是一种软件开发实践，团队成员频繁地对他们的工作进行基准测试，通常每个人至少每天进行一次测试 - 导致每天有多次基准测试。每个基准测试都由自动构建验证以尽快检测性能退化。许多团队发现这种方法可以显著减少性能退化，并使团队能更快地开发出高性能的软件。
+
+到现在为止，软件行业的每个人都知道持续集成(CI)。在基础层面上，CI是在软件特性退化进入生产环节之前检测和防止它们的手段。同样，持续基准测试(CB)是在软件性能退化进入生产环节前检测和防止这些退化的手段。出于与每次代码更改都在CI中运行单元测试的同样原因，每次代码更改都应在CB中进行性能测试。事实上，这个类比如此恰当，以至于本节的第一段就是[马丁·福勒 2006年关于持续集成的引言](https://martinfowler.com/articles/continuousIntegration.html)的填空版。
+
+> 🐰 性能问题也是bug！
+
+## 在CI中进行基准测试
+
+误区：你不能在CI中运行基准测试
+
+大多数基准测试工具使用[系统挂钟时间](https://en.wikipedia.org/wiki/Elapsed_real_time)来测量延迟或吞吐量。这是非常有帮助的，因为这些是我们作为开发者最关心的确切指标。然而，通用目的的CI环境在测量挂钟时间时通常嘈杂不一致。在进行持续基准测试时，这种波动性会对结果添加不必要的噪音。
+
+处理这个问题有几个选项：
+- [相对基准测试](/docs/zh/how-to/track-benchmarks)
+- 专用的CI运行器，如 [BuildJet](https://buildjet.com)
+- 切换到一个使用指令次数作为标准而不是挂钟时间的基准测试工具
+
+或者简单地接受混沌！持续基准测试不需要完美。没错，减少你的持续基准测试环境的波动性，从而减少噪声会让你检测到更精细的性能退化。然而，不要让完美成为这里的敌人！
+
+<a href="https://bencher.dev/perf/bencher?key=true&metric_kind=latency&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5"><img src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kind=latency&title=Embrace+the+Chaos%21" title="Embrace the Chaos!" alt="Embrace the Chaos! for Bencher - Bencher" /></a>
+
+你可能会看这个图并想，"哇，这太疯狂了！"但问问自己，你当前的开发流程能在影响到你的用户之前检测到两倍甚至十倍的性能退化吗？可能不能！现在_这个_才疯狂！
+
+即使是从CI环境的所有噪音中，追踪挂钟基准测试仍然可以在性能退化达到你的生产环节的客户之前带来捕获性能退化的巨大回报。随着时间的推移，随着你的软件性能管理逐渐成熟，你可以从那里构建出更多。在此期间，只需使用你常规的CI就行了。
+
+## 性能问题
+
+误区：你无法察觉到100ms的延迟
+
+通常听到人们声称人类无法感知100ms的延迟。一个[Nielsen Group关于响应时间的文章](https://www.nngroup.com/articles/response-times-3-important-limits/)经常被引用为这种观点的依据。
+
+> **0.1秒**大约是让用户感觉到系统**在瞬间反应**的极限，意味着除了显示结果之外，不需要其他特殊反馈。
+>
+> - Jakob Nielsen，1993年1月__*1日*__
+
+但这完全不对。在某些任务中，人们可以察觉到[仅仅2ms的延迟](https://pdfs.semanticscholar.org/386a/15fd85c162b8e4ebb6023acdce9df2bd43ee.pdf)。证明这一点的一个简单方法是[Dan Luu的实验](https://danluu.com/input-lag/#appendix-why-measure-latency)：打开你的终端并运行`sleep 0; echo "ping"`然后运行`sleep 0.1; echo "pong"`。你注意到了差别对吧‽
+
+另一个常见的混淆点是区分延迟的感知和人类反应时间。尽管对视觉刺激的反应时间[大约需要200ms](https://humanbenchmark.com/tests/reactiontime)，但这与事件本身的感知无关。举一个比喻，你可以注意到你的列车迟到了两分钟（感知延迟）即使列车的行驶时间是两小时（反应时间）。
+
+性能很重要！性能是一个特性！
+
+- 每快100ms → 转化率增加1%([Mobify](https://web.dev/why-speed-matters/)，每年收入增加+$380,000)
+- 快50% → 销售增加12% ([AutoAnything](https://www.digitalcommerce360.com/2010/08/19/web-accelerator-revs-conversion-and-sales-autoanything/))
+- 快20% → 转化率增加10% ([Furniture Village](https://www.thinkwithgoogle.com/intl/en-gb/marketing-strategies/app-and-mobile/furniture-village-and-greenlight-slash-page-load-times-boosting-user-experience/))
+- 快40% → 用户注册增加15% ([Pinterest](https://medium.com/pinterest-engineering/driving-user-growth-with-performance-improvements-cfc50dafadd7))
+- 快850ms → 转化率增加7% ([COOK](https://web.dev/why-speed-matters/))
+- 每慢1秒 → 用户减少10% ([BBC](https://www.creativebloq.com/features/how-the-bbc-builds-websites-that-scale))
+
+随着摩尔定律的失效，能并行运行的工作负载需要并行化。然而，大多数工作负载需要串行运行，简单地抛出更多的计算问题正在迅速变成一个棘手且昂贵的解决方案。
+
+持续基准测试是开发和维护性能强大的现代软件来应对这种变化的关键组成部分。
+
+<div class="content has-text-centered">
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/moores_law.jpg"
+    width="2124"
+    height="1128"
+    alt="Moore's Law from https://davidwells.io/blog/rise-of-embarrassingly-parallel-serverless-compute"
+/>
+</div>
+
+## 持续基准测试工具
+
+在创建Bencher之前，我们设定了寻找一个工具，它可以：
+
+- 跟踪多种语言的基准测试
+- 无缝地吸收语言标准基准测试工具的输出
+- 用于自定义基准测试工具的输出
+- 开源并且能自我托管
+- 与多个CI主机配合工作
+- 用户身份认证和授权
+
+不幸的是，没有满足所有这些标准的东西存在。参见我们从中得到灵感的现有基准测试工具的完整列表[先前的艺术](/docs/zh/reference/prior-art)。
+
+## 大型科技公司的持续基准测试
+
+类似Bencher的工具在微软，Facebook (现在的Meta)，苹果，亚马逊，Netflix，和谷歌等无数其他公司已经内部开发。作为行业的巨头，他们理解在开发过程中监控性能的重要性，并通过CB将这些洞察集成到开发过程中。我们建立Bencher是为了将持续基准测试从大型科技公司的墙后带到开源社区。对于与来自Big Tech的持续基准测试相关的帖子的链接，参见[先前的艺术](/docs/zh/reference/prior-art)。

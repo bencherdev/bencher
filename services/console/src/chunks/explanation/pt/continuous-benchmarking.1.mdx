@@ -1,0 +1,105 @@
+O Benchmarking Contínuo é uma prática de desenvolvimento de software onde os membros de uma equipe avaliam seu trabalho com frequência,
+geralmente cada pessoa faz benchmarks pelo menos diariamente - resultando em múltiplos benchmarks por dia.
+Cada benchmark é verificado por uma compilação automatizada para detectar regressões de desempenho o mais rápido possível.
+Muitas equipes descobrem que esta abordagem leva a uma redução significativa nas regressões de desempenho
+e permite que uma equipe desenvolva um software de alta performance de forma mais rápida.
+
+Hoje, todos na indústria de software estão cientes da integração contínua (CI).
+Em um nível fundamental, CI é sobre detectar e prevenir regressões de recursos de software antes que eles cheguem à produção.
+Da mesma forma, o benchmarking contínuo (CB) é sobre detectar e prevenir regressões de desempenho de software antes que elas cheguem à produção.
+Pelas mesmas razões que os testes de unidade são executados em CI para cada alteração de código,
+testes de desempenho devem ser executados em CB para cada alteração de código.
+Esta analogia é de fato tão apta, que o primeiro parágrafo desta seção é apenas uma versão do Mad Libs de [introdução de Martin Fowler à Integração Contínua em 2006](https://martinfowler.com/articles/continuousIntegration.html).
+
+> 🐰 Bugs de desempenho são bugs!
+
+## Benchmarking em CI
+
+Mito: Você não pode executar benchmarks em CI
+
+A maioria dos arneses de benchmarking usa o [relógio do sistema](https://en.wikipedia.org/wiki/Elapsed_real_time) para medir latência ou taxa de transferência.
+Isso é muito útil, pois são exatamente essas as métricas que, como desenvolvedores, mais nos importamos.
+No entanto, ambientes de CI de propósito geral costumam ser barulhentos e inconsistentes ao medir o tempo do relógio.
+Ao realizar benchmarking contínuo, essa volatilidade adiciona ruído indesejado aos resultados.
+
+Existem algumas opções para lidar com isso:
+- [Benchmarking Relativo](/docs/pt/how-to/track-benchmarks)
+- Runners de CI dedicados, como o [BuildJet](https://buildjet.com)
+- Mudança de arneses de benchmarking para um que conta instruções ao invés do tempo do relógio
+
+Ou simplesmente aceite o caos! O benchmarking contínuo não precisa ser perfeito.
+Sim, a redução da volatilidade e, assim, do ruído no seu ambiente de benchmarking contínuo permitirá que você detecte regresões de desempenho cada vez mais finas.
+No entanto, não deixe que o perfeito seja inimigo do bom aqui!
+
+<a href="https://bencher.dev/perf/bencher?key=true&metric_kind=latency&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5"><img src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kind=latency&title=Embrace+the+Chaos%21" title="Aceite o Caos!" alt="Aceite o Caos! para Bencher - Bencher" /></a>
+
+Você pode olhar para este gráfico e pensar, "Uau, isso é loucura!" Mas pergunte a si mesmo, seu atual processo de desenvolvimento pode detectar uma regressão de desempenho de dois ou mesmo dez vezes antes que afete seus usuários? Provavelmente não! E isso sim é loucura!
+
+Mesmo com todo o ruído de um ambiente CI, rastrear benchmarks de tempo de relógio ainda pode render grandes dividendos ao detectar regressões de desempenho antes que elas atinjam seus clientes em produção.
+Com o tempo, à medida que o gerenciamento de desempenho de seu software amadurece, você pode construir a partir daí.
+Enquanto isso, apenas use seu CI regular.
+
+## Desempenho Importa
+
+Mito: Você não consegue perceber 100ms de latência
+
+É comum ouvir pessoas afirmarem que os humanos não conseguem perceber 100ms de latência.
+Um [artigo do Nielsen Group sobre tempos de resposta](https://www.nngroup.com/articles/response-times-3-important-limits/) é frequentemente citado para essa alegação.
+
+> **0,1 segundo** é aproximadamente o limite para que o usuário sinta que o sistema está **reagindo instantaneamente**, o que significa que nenhuma feedback especial é necessário, exceto para exibir o resultado.
+>
+> - Jakob Nielsen, 1 Jan __*1993*__
+
+Mas isso simplesmente não é verdade.
+Em algumas tarefas, as pessoas podem perceber [apenas 2ms de latência](https://pdfs.semanticscholar.org/386a/15fd85c162b8e4ebb6023acdce9df2bd43ee.pdf).
+Uma maneira fácil de provar isso é um [experimento de Dan Luu](https://danluu.com/input-lag/#appendix-why-measure-latency): abra seu terminal e execute `sleep 0; echo "ping"` e depois execute `sleep 0.1; echo "pong"`. Você notou a diferença, certo‽
+
+Outro ponto comum de confusão é a distinção entre a percepção de latência e os tempos de reação humana. Mesmo que leve [cerca de 200ms para responder a um estímulo visual](https://humanbenchmark.com/tests/reactiontime), isso é independente da percepção do evento em si. Por analogia, você pode notar que seu trem está dois minutos atrasado (latência percebida) mesmo que a viagem de trem leve duas horas (tempo de reação).
+
+Desempenho importa! [Desempenho é uma característica](https://blog.codinghorror.com/performance-is-a-feature)!
+
+- Cada 100ms mais rápido → 1% mais conversões ([Mobify](https://web.dev/why-speed-matters/), ganhando +$380,000/ano)
+- 50% mais rápido → 12% mais vendas ([AutoAnything](https://www.digitalcommerce360.com/2010/08/19/web-accelerator-revs-conversion-and-sales-autoanything/))
+- 20% mais rápido → 10% mais conversões ([Furniture Village](https://www.thinkwithgoogle.com/intl/en-gb/marketing-strategies/app-and-mobile/furniture-village-and-greenlight-slash-page-load-times-boosting-user-experience/))
+- 40% mais rápido → 15% mais cadastros ([Pinterest](https://medium.com/pinterest-engineering/driving-user-growth-with-performance-improvements-cfc50dafadd7))
+- 850ms mais rápido → 7% mais conversões ([COOK](https://web.dev/why-speed-matters/))
+- Cada 1 segundo mais lento → 10% menos usuários ([BBC](https://www.creativebloq.com/features/how-the-bbc-builds-websites-that-scale))
+
+Com o fim da Lei de Moore, as cargas de trabalho que podem funcionar em paralelo precisarão ser paralelizadas.
+No entanto, a maioria das cargas de trabalho precisa ser executada em série,
+e simplesmente jogar mais computação no problema está rapidamente se tornando uma solução incontrolável e cara.
+
+O Benchmarking Contínuo é um componente chave para desenvolver e manter
+um software moderno performante diante desta mudança.
+
+<div class="content has-text-centered">
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/moores_law.jpg"
+    width="2124"
+    height="1128"
+    alt="Lei de Moore de https://davidwells.io/blog/rise-of-embarrassingly-parallel-serverless-compute"
+/>
+</div>
+
+## Ferramentas de Benchmarking Contínuo
+
+Antes de criar o Bencher, procuramos uma ferramenta que pudesse:
+
+- Rastrear benchmarks em várias linguagens
+- Ingere sem problemas a saída padrão do arnês de benchmark de linguagem
+- Extensível para uma saída personalizada do arnês de benchmark
+- Código aberto e capaz de hospedar por conta própria
+- Funciona com vários hosts de CI
+- Autenticação e autorização do usuário
+
+Infelizmente, nada que atendesse a todos esses critérios existia.
+Veja a [arte anterior](/docs/pt/reference/prior-art) para uma lista abrangente das ferramentas de benchmarking existentes que nos inspiraram.
+
+## Benchmarking Contínuo em Grandes Empresas de Tecnologia
+
+Ferramentas como o Bencher foram desenvolvidas internamente na
+Microsoft, Facebook (agora Meta), Apple, Amazon, Netflix, e Google entre inúmeras outras.
+Como titãs da indústria, eles entendem a importância de monitorar o desempenho durante o desenvolvimento
+e integrar essas percepções ao processo de desenvolvimento através de CB.
+Nós construímos o Bencher para trazer o benchmarking contínuo de trás das paredes das grandes empresas de tecnologia para a comunidade de código aberto.
+Para links para posts relacionados ao benchmarking contínuo de Grandes Empresas de Tecnologia, veja a [arte anterior](/docs/pt/reference/prior-art).

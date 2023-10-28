@@ -1,0 +1,58 @@
+## Benchmarking Contínuo vs Comparação Local de Benchmark
+
+Existem vários cabos de ensaio de benchmark que permitem que você compare os resultados localmente.
+A comparação local é ótima para iterações rápidas durante o ajuste de desempenho.
+No entanto, não deve ser confiável para capturar regressões de desempenho de forma contínua.
+Assim como ser capaz de executar testes unitários localmente não elimina a necessidade de CI,
+ser capaz de executar e comparar benchmarks localmente não elimina a necessidade do BC.
+
+Existem vários recursos que o Bencher oferece que as ferramentas de comparação local de benchmark não podem:
+- Comparação do mesmo benchmark entre diferentes bancadas de teste
+- Comparação de benchmarks entre idiomas e cabos de ensaio
+- Colaboração e compartilhamento de resultados de benchmark
+- Execução de benchmarks em bancadas de teste dedicadas para minimizar o ruído
+- Sem mais copypasta
+
+## Benchmarking Contínuo vs Gerenciamento de Desempenho de Aplicativos (APM)
+
+O Gerenciamento de Desempenho de Aplicativos (APM) é uma ferramenta vital para serviços de software modernos.
+No entanto, APM é projetado para ser usado em produção.
+Quando uma regressão de desempenho é detectada, ela já está impactando seus clientes.
+
+> A maioria dos defeitos acaba custando mais do que custaria para preveni-los.
+> Os defeitos são caros quando ocorrem, tanto os custos diretos de corrigir os defeitos
+> quanto os custos indiretos por causa de relacionamentos danificados, negócios perdidos e tempo de desenvolvimento perdido.
+>
+> — Kent Beck, Extreme Programming Explained
+
+Existem vários recursos que o Bencher oferece que as ferramentas do APM não podem:
+- Detectar e prevenir regressões de desempenho _antes_ de chegarem à produção
+- Mudanças de desempenho e impactos incluídos na revisão de código
+- Sem sobrecarga em ambientes de produção
+- Eficaz para implantações locais (on-prem)
+- Sem alterações ao código fonte de produção
+
+## Benchmarking Contínuo vs Observabilidade
+
+Uma rosa com qualquer outro nome cheiraria tão bem.
+Veja o Benchmarking Contínuo vs o Gerenciamento de Desempenho do Aplicativo acima.
+
+## Benchmarking Contínuo vs Integração Contínua (CI)
+
+O Benchmarking Contínuo (BC) é complementar à Integração Contínua (CI).
+Pelos mesmos motivos que os testes unitários são executados no CI para cada mudança de código,
+os testes de desempenho devem ser executados no BC para cada mudança de código.
+
+> Embora os testes unitários e de aceitação sejam amplamente aceitos como práticas de desenvolvimento padrão,
+> esta tendência não continuou no campo dos testes de desempenho.
+> Atualmente, a ferramenta comum leva os testadores a criar código descartável e uma mentalidade de clicar e roteirizar.
+> Tratar o teste de desempenho como um cidadão de primeira classe permite a criação de testes melhores que cobrem mais funcionalidades,
+> levando a uma melhor ferramenta para criar e executar testes de desempenho,
+> resultando em um conjunto de testes que é mantido e que pode ser testado em si mesmo.
+>
+> — [Thoughworks Technology Radar, 22 de maio de 2013](https://www.thoughtworks.com/en-us/radar/techniques/performance-testing-as-a-first-class-citizen)
+
+<br/>
+<br/>
+
+<h2><a href="/docs/pt/tutorial/quick-start">Continue: Início Rápido ➡</a></h2>

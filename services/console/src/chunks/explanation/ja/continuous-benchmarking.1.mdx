@@ -1,0 +1,77 @@
+継続的なベンチマーキングは、チームの一員が頻繁に彼らの仕事をベンチマーキングするソフトウェア開発の実践です。通常、各人が少なくとも日に一回ベンチマーキングを行います。これにより一日に複数回のベンチマーキングが行われます。各ベンチマークは自動化されたビルドによって検証され、できるだけ早くパフォーマンスの低下を検出します。多くのチームは、このアプローチによってパフォーマンスの低下が大幅に減少し、チームがパフォーマンスの高いソフトウェアをより迅速に開発できるようになると感じています。
+
+今や、ソフトウェア業界のすべての人が継続的インテグレーション（CI）について理解しています。基本的なレベルで、CIはソフトウェアの機能回帰が生産に入る前にこれを検出し、防止することについてです。同様に、継続的ベンチマーキング（CB）は、ソフトウェアの_パフォーマンス_回帰が生産に入る前にこれを検出し、防止することについてです。コード変更ごとにCIでユニットテストが実行される理由と同じように、コード変更ごとにCBでパフォーマンステストを実行するべきです。事実、このアナロジーはとても適切で、このセクションの最初の段落はただ[Martin Fowlerの2006年の継続的インテグレーションへの紹介](https://martinfowler.com/articles/continuousIntegration.html)のMad Libs版に過ぎません。
+
+> 🐰 パフォーマンスのバグはバグです！
+
+## CIでのベンチマーク
+
+神話：CIでベンチマーキングを実行できない
+
+ほとんどのベンチマークハーネスは遅延やスループットを測定するために[システム壁面時計](https://en.wikipedia.org/wiki/Elapsed_real_time)を使用します。これは非常に役立ちます。なぜなら、これらは私たちが開発者として最も気にかけている具体的なメトリクスだからです。しかし、一般的な目的のCI環境は、壁面時計を測定するときにしばしばノイズが多く、不一致になります。継続的ベンチマーキングを行うとき、この変動性は結果に望ましくないノイズを加えます。
+
+これを処理するためのいくつかの選択肢があります。
+- [相対ベンチマーキング](/docs/ja/how-to/track-benchmarks)
+- 専用のCIランナー、たとえば[BuildJet](https://buildjet.com)
+- 壁面時計と opposed to な指示を数えるハーネスに切り替える
+
+あるいは、単純にカオスを愛してください！継続的ベンチマーキングは完璧である必要はありません。 はい、継続的ベンチマーキング環境での変動性を減らすことにより、ノイズを減らせば、より細かくパフォーマンスの低下を検出することができます。しかし、ここでは完璧さが良さの敵になることはないでしょう！
+
+<a href="https://bencher.dev/perf/bencher?key=true&metric_kind=latency&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5"><img src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kind=latency&title=Embrace+the+Chaos%21" title="Embrace the Chaos!" alt="Embrace the Chaos! for Bencher - Bencher" /></a>
+
+このグラフを見て、「ワオ、それは狂っている！」と思うかもしれません。しかし自問してみてください、現在の開発プロセスは、ユーザーに影響を与える前に、2倍、あるいは10倍のパフォーマンス低下を検出できますか？多分できないでしょう！それこそ_が_狂っていることです！
+
+CI環境からの全てのノイズでも、壁面時計のベンチマークを追跡することは依然として、パフォーマンスの低下をそれらが生産でお客様に達する前に捉えることに大いに利益をもたらす可能性があります。時間と共に、ソフトウェアのパフォーマンス管理が成熟するにつれて、そこから構築することができます。その間は、ただ通常のCIを使用してください。
+
+## パフォーマンスは重要です
+
+神話：100msの遅延は気づかない
+
+人間は100msの遅延を知覚できないという主張を聞くことがよくあります。この主張のためにしばしば引用されるのは[Nielsen Groupの応答時間に関する記事](https://www.nngroup.com/articles/response-times-3-important-limits/)です。
+
+> 秒の0.1はユーザーがシステムが反応するために即座にユーザーの感覚を活用して反応していると感じる限度で、結果を表示するための特別なフィードバックは必要ないということです。
+>
+> - Jakob Nielsen, 1 Jan __*1993*__
+
+しかし、これは単純には真実ではありません。一部のタスクでは、人々は[2msの遅延だけでも知覚できます](https://pdfs.semanticscholar.org/386a/15fd85c162b8e4ebb6023acdce9df2bd43ee.pdf)。これを証明する簡単な方法は、[Dan Luuからの実験](https://danluu.com/input-lag/#appendix-why-measure-latency)で、ターミナルを開き、`sleep 0; echo "ping"`を実行し、次に`sleep 0.1; echo "pong"`を実行します。違いに気付きましたか？
+
+また、遅延の知覚と人間の反応時間との間の混乱がよくあります。視覚的な刺激に対して反応するのに[およそ200msかかる](https://humanbenchmark.com/tests/reactiontime)としても、それはイベント自体の知覚とは独立しています。比喩によると、電車が2分遅れていることに気づくことができます(知覚される遅延)が、電車の旅行には2時間かかります(反応時間)。
+
+パフォーマンスは重要です！[パフォーマンスは機能です](https://blog.codinghorror.com/performance-is-a-feature)！
+
+- 毎回100ms速く→1%のコンバージョン増([Mobify](https://web.dev/why-speed-matters/)、年間＋$380,000/収益化）
+- 50%速く→販売12%増([AutoAnything](https://www.digitalcommerce360.com/2010/08/19/web-accelerator-revs-conversion-and-sales-autoanything/))
+- 20%速く→コンバージョン10%増([Furniture Village](https://www.thinkwithgoogle.com/intl/en-gb/marketing-strategies/app-and-mobile/furniture-village-and-greenlight-slash-page-load-times-boosting-user-experience))
+- 40%速く→サインアップ15%増([Pinterest](https://medium.com/pinterest-engineering/driving-user-growth-with-performance-improvements-cfc50dafadd7))
+- 850ms速く→コンバージョン7%増([COOK](https://web.dev/why-speed-matters/))
+- 毎回1秒遅く→ユーザー10%減少([BBC](https://www.creativebloq.com/features/how-the-bbc-builds-websites-that-scale))
+
+ムーアの法則の終焉とともに、並行して実行できるワークロードは並行化される必要があります。しかし、ほとんどのワークロードは連続して実行する必要があり、問題に対して単純にもっと計算を投げることは、急速に取り扱いができなくて高価な解決策になっています。
+
+コンピューティングの変化に直面しているパフォーマンスの高い現代のソフトウェアを開発し、保守するための重要な要素が、継続的なベンチマーキングであることは明らかです。
+
+<div class="content has-text-centered">
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/moores_law.jpg"
+    width="2124"
+    height="1128"
+    alt="Moore's Law from https://davidwells.io/blog/rise-of-embarrassingly-parallel-serverless-compute"
+/>
+</div>
+
+## 継続的なベンチマーキングツール
+
+Bencherを作成する前に、以下のことができるツールを見つけることを試みました:
+
+- 複数の言語をまたがってベンチマークを追跡する
+- 言語標準のベンチマークハーネス出力をシームレスに摂取する
+- カスタムベンチマークハーネス出力に対応可能
+- オープンソースで、自己ホスト可能
+- 複数のCIホストとの連携
+- ユーザー認証と認可
+
+残念ながら、これら全ての基準を満たすものは存在しませんでした。我々がインスピレーションを得た既存のベンチマーキングツールの包括的なリストについては、[既往の芸術](/docs/ja/reference/prior-art)をご覧ください。
+
+## ビッグテックでの継続的なベンチマーキング
+
+Microsoft、Facebook(現Meta)、Apple、Amazon、Netflix、Googleを始めとした数え切れない他の企業で、Bencherのようなツールが内部開発されています。これらビッグテックの業界大手は、開発中のパフォーマンスを監視する重要性と、これらの洞察をCBを通じて開発プロセスに統合することを理解しています。私たちは、継続的なベンチマーキングをビッグテックの壁の内側からオープンソースコミュニティに提供するために、Bencherを構築しました。ビッグテックからの継続的なベンチマーキングに関連した投稿のリンクについては、[既往の芸術](/docs/ja/reference/prior-art)をご覧ください。

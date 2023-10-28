@@ -1,0 +1,105 @@
+La Evaluación Continua es una práctica de desarrollo de software en la cual los miembros de un equipo evalúan su trabajo frecuentemente,
+generalmente cada persona realiza al menos una evaluación diariamente, lo que resulta en múltiples evaluaciones por día.
+Cada evaluación es verificada por una construcción automatizada para detectar regresiones del desempeño tan rápidamente como sea posible.
+Muchos equipos descubren que este enfoque conduce a una reducción significativa de las regresiones de desempeño
+y permite a un equipo desarrollar software de alto rendimiento más rápidamente.
+
+Hasta ahora, todo el mundo en la industria de software conoce la integración continua (CI).
+A nivel fundamental, CI tiene que ver con la detección y prevención de regresiones de funciones de software antes de que lleguen a la producción.
+De manera similar, el benchmarking continuo (CB) tiene como objetivo detectar y prevenir las regresiones en el _desempeño_ del software antes de que lleguen a la producción.
+Por las mismas razones que las pruebas unitarias se ejecutan en CI para cada cambio de código,
+las pruebas de rendimiento deben ejecutarse en CB para cada cambio de código.
+Esta analogía es tan precisa en realidad, que el primer párrafo de esta sección es solo una versión Mad Libs de la [introducción de Martin Fowler a la Integración Continua en 2006](https://martinfowler.com/articles/continuousIntegration.html).
+
+> 🐰 ¡Los errores de rendimiento son errores!
+
+## Evaluación en CI
+
+Mito: No puedes ejecutar evaluaciones en CI
+
+La mayoría de los arneses de evaluación utilizan el [reloj del sistema](https://en.wikipedia.org/wiki/Elapsed_real_time) para medir la latencia o el rendimiento.
+Esto es muy útil, ya que estas son las métricas exactas que a nosotros, como desarrolladores, más nos importan.
+Sin embargo, los entornos de CI de propósito general son a menudo ruidosos e inconsistentes al medir el tiempo de reloj.
+Al realizar evaluaciones continuas, esta volatilidad agrega ruido no deseado a los resultados.
+
+Existen algunas opciones para manejar esto:
+- [Evaluación relativa](/docs/es/how-to/track-benchmarks)
+- Corredores de CI dedicados, como [BuildJet](https://buildjet.com)
+- Cambiar de arneses de evaluación a uno que cuente las instrucciones en lugar del tiempo de reloj
+
+¡O simplemente abraza el caos! La evaluación continua no tiene que ser perfecta.
+Sí, reducir la volatilidad y, por lo tanto, el ruido en tu entorno de evaluación continua te permitirá detectar regresiones de rendimiento cada vez más finas.
+Sin embargo, ¡no dejes que lo perfecto sea enemigo de lo bueno aquí!
+
+<a href="https://bencher.dev/perf/bencher?key=true&metric_kind=latency&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5"><img src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kind=latency&title=Embrace+the+Chaos%21" title="¡Abraza el Caos!" alt="¡Abraza el Caos! para Bencher - Bencher" /></a>
+
+Puedes mirar este gráfico y pensar, "¡Vaya, eso es una locura!" Pero pregúntate a ti mismo, ¿puede tu proceso de desarrollo actual detectar un factor de dos o incluso un factor de diez de regresión de rendimiento antes de que afecte a tus usuarios? ¡Probablemente no! ¡Ahora _eso_ es una locura!
+
+Incluso con todo el ruido de un entorno de CI, seguir las evaluaciones de tiempo de reloj puede seguir ofreciendo grandes dividendos en la detección de regresiones de rendimiento antes de que lleguen a tus clientes en producción.
+Con el tiempo, a medida que tu gestión de rendimiento de software madure, puedes partir de ahí.
+Mientras tanto, simplemente usa tu CI regular.
+
+## El Rendimiento Importa
+
+Mito: No puedes notar 100ms de latencia
+
+Es común escuchar a las personas afirmar que los humanos no pueden percibir 100ms de latencia.
+Un [artículo del Grupo Nielsen sobre tiempos de respuesta](https://www.nngroup.com/articles/response-times-3-important-limits/) es a menudo citado para esta afirmación.
+
+> **0.1 segundo** es aproximadamente el límite para que el usuario sienta que el sistema está **respondiendo instantáneamente**, lo que significa que no es necesario ningún feedback especial excepto para mostrar el resultado.
+>
+> - Jakob Nielsen, 1 Ene __*1993*__
+
+Pero eso simplemente no es verdad.
+En algunas tareas, las personas pueden percibir [hasta 2ms de latencia](https://pdfs.semanticscholar.org/386a/15fd85c162b8e4ebb6023acdce9df2bd43ee.pdf).
+Una manera fácil de probar esto es un [experimento de Dan Luu](https://danluu.com/input-lag/#appendix-why-measure-latency): abre tu termial y ejecuta `sleep 0; echo "ping"` y luego ejecuta `sleep 0.1; echo "pong"`. ¿Notaste la diferencia verdad‽
+
+Otro punto común de confusión es la distinción entre la percepción de la latencia y los tiempos de reacción humanos. A pesar de que toma [alrededor de 200ms responder a un estímulo visual](https://humanbenchmark.com/tests/reactiontime), eso es independiente de la percepción del evento en sí. Por analogía, puedes darte cuenta de que tu tren llega dos minutos tarde (latencia percibida) aunque el viaje en tren tarde dos horas (tiempo de reacción).
+
+¡El rendimiento importa! ¡[El rendimiento es una característica](https://blog.codinghorror.com/performance-is-a-feature/)!
+
+- Cada 100ms más rápido → 1% más de conversiones ([Mobify](https://web.dev/why-speed-matters/), ganando +$380,000/yr)
+- 50% más rápido → 12% más de ventas ([AutoAnything](https://www.digitalcommerce360.com/2010/08/19/web-accelerator-revs-conversion-and-sales-autoanything/))
+- 20% más rápido → 10% más de conversiones ([Furniture Village](https://www.thinkwithgoogle.com/intl/en-gb/marketing-strategies/app-and-mobile/furniture-village-and-greenlight-slash-page-load-times-boosting-user-experience/))
+- 40% más rápido → 15% más de inscripciones ([Pinterest](https://medium.com/pinterest-engineering/driving-user-growth-with-performance-improvements-cfc50dafadd7))
+- 850ms más rápido → 7% más de conversiones ([COOK](https://web.dev/why-speed-matters/))
+- Cada 1 segundo más lento → 10% menos usuarios ([BBC](https://www.creativebloq.com/features/how-the-bbc-builds-websites-that-scale))
+
+Con la muerte de la Ley de Moore, las cargas de trabajo que pueden ejecutarse en paralelo necesitarán ser paralelizadas.
+Sin embargo, la mayoría de las cargas de trabajo necesitan ejecutarse en serie,
+y simplemente lanzar más cálculo al problema se está convirtiendo rápidamente en una solución intratable y costosa.
+
+La Evaluación Continua es un componente clave para desarrollar y mantener
+software de alto rendimiento moderno ante este cambio.
+
+<div class="content has-text-centered">
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/moores_law.jpg"
+    width="2124"
+    height="1128"
+    alt="La Ley de Moore desde https://davidwells.io/blog/rise-of-embarrassingly-parallel-serverless-compute"
+/>
+</div>
+
+## Herramientas de Evaluación Continua
+
+Antes de crear Bencher, nos propusimos encontrar una herramienta que pudiera:
+
+- Seguir evaluaciones a través de múltiples lenguajes
+- Ingerir sin problemas la salida estándar de los arneses de evaluación de los lenguajes
+- Extensible para salida personalizada de los arneses de evaluación
+- De código abierto y capaz de auto-alojarse
+- Trabajar con múltiples hosts de CI
+- Autenticación y autorización de usuarios
+
+Desafortunadamente, no existía nada que cumpliera todos estos criterios.
+Ver [arte previo](/docs/es/reference/prior-art) para una lista completa de las herramientas de evaluación existentes de las que nos inspiramos.
+
+## Evaluación Continua en las Grandes Empresas de Tecnología
+
+Herramientas como Bencher han sido desarrolladas internamente en
+Microsoft, Facebook (ahora Meta), Apple, Amazon, Netflix, y Google entre innumerables otras.
+Como los titanes de la industria, comprenden la importancia de monitorear el rendimiento durante el desarrollo
+e integrar estos conocimientos en el proceso de desarrollo a través de la evaluación continua.
+Construimos Bencher para llevar la evaluación continua desde detrás de las paredes de las grandes empresas de tecnología a la comunidad de código abierto.
+Para enlaces a publicaciones relacionadas con la evaluación continua de las grandes empresas de tecnología, consulte [arte previo](/docs/es/reference/prior-art).
