@@ -1,7 +1,7 @@
 ---
-title: "Install CLI"
-description: "Install the bencher CLI for use both locally and in continuous benchmarking"
-heading: "How to Install bencher CLI"
+title: "安装CLI"
+description: "安装bencher CLI以便在本地和持续性基准测试中使用"
+heading: "如何安装bencher CLI"
 sortOrder: 1
 ---
 
@@ -9,49 +9,47 @@ import { BENCHER_VERSION } from "../../../util/ext";
 
 ## Debian
 
-Bencher provides a convenient `deb` file for installing on Debian
-and Debian based distributions like Ubuntu.
+Bencher为Debian和Debian为基础的分发版本如Ubuntu提供了一个方便的`deb`文件来安装。
 
 <pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">{`wget https://github.com/bencherdev/bencher/releases/download/v${BENCHER_VERSION}/bencher_${BENCHER_VERSION}_amd64.deb`}</span></span>
 <span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">{`sudo dpkg -i bencher_${BENCHER_VERSION}_amd64.deb`}</span></span></code></pre>
 
 ## GitHub Actions
 
-Install the Bencher CLI using the [GitHub Action](https://github.com/marketplace/actions/bencher-cli).
-See [how to use GitHub Actions](/docs/how-to/github-actions) for more details.
+使用[GitHub Action](https://github.com/marketplace/actions/bencher-cli) 安装Bencher CLI。
+查看[如何使用GitHub Actions](/docs/zh/how-to/github-actions)了解更多详情。
 
 ```
 - uses: bencherdev/bencher@main
 ```
 
-There is an optional `version` argument to specify an exact version of the Bencher CLI to use.
-Otherwise, it will default to using the latest CLI version.
+有一个可选的`version`参数来指定一个确切的Bencher CLI的版本来使用。
+否则，它将默认使用最新的CLI版本。
 
 <pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">- uses: bencherdev/bencher@main</span></span>
 <span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">  with:</span></span>
 <span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">    {`${BENCHER_VERSION}`}</span></span></code></pre>
 
-Specify an exact version if using Bencher *Self-Hosted*.
-Do __not__ specify an exact version if using Bencher *Cloud* as there are still occasional breaking changes.
+如果使用Bencher *Self-Hosted*，请指定一个确切的版本。
+如果使用Bencher *Cloud*，请__不要__指定一个确切的版本，因为仍然会有偶尔的破坏性的更改。
 
-## From Source
+## 从源安装
 
-For all other environments, the suggested install method is from source.
+对于所有其它环境，建议从源安装。
 
 <pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">{`cargo install --git https://github.com/bencherdev/bencher --tag v${BENCHER_VERSION} --locked bencher_cli`}</span></span></code></pre>
 
-## Other Linux Distributions
+## 其它Linux发行版
 
-A standalone Linux CLI binary is also available for download
-if you know what you are doing.
+如果你知道你在做什么，也有独立的Linux CLI二进制文件供下载。
 
 <pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">{`wget https://github.com/bencherdev/bencher/releases/download/v${BENCHER_VERSION}/bencher`}</span></span></code></pre>
 
 <br/>
 <br/>
 
-> 🐰 Congrats! You have installed <code>bencher</code> CLI! 🎉
+> 🐰 恭喜！您已安装了<code>bencher</code> CLI! 🎉
 
 <br/>
 
-<h2><a href="/docs/tutorial/quick-start">Keep Going: Bencher Quick Start ➡</a></h2>
+<h2><a href="/docs/tutorial/quick-start">继续：Bencher快速入门 ➡</a></h2>

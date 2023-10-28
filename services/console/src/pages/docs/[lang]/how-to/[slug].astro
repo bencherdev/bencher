@@ -1,0 +1,32 @@
+---
+import { getCollection } from "astro:content";
+import DocsLayout from "../../../../layouts/docs/DocsLayout.astro";
+import { defaultLang } from "../../../../i18n/ui";
+import Disclosure from "../../../../components/docs/Disclosure";
+import { Collection } from "../../../../content/config";
+
+// 1. Generate a new path for every collection entry
+export async function getStaticPaths() {
+  const pages = await getCollection(Collection.how_to);
+  return pages.map(page => {
+    const [lang, ...slug] = page.id.substring(0, page.id.lastIndexOf('.'))?.split('/');
+    return { params: { lang, slug: slug.join('/') || undefined }, props: page }
+  }).filter(page => page.params.lang !== defaultLang);
+}
+
+// 2. When it's time to render, you can get the entry directly from the prop
+const { lang, slug } = Astro.params;
+const urlSafe = `${Collection.how_to}+${slug.split('/').join('+')}`;
+const page = Astro.props;
+const { Content } = await page.render();
+---
+
+<DocsLayout
+  title={page.data.title}
+  description={page.data.description}
+  heading={page.data.heading}
+  lang={lang}
+>
+  <Content />
+  <Disclosure page={urlSafe} lang={lang} />
+</DocsLayout>

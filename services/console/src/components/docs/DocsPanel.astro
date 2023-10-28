@@ -128,7 +128,7 @@ const alsoIn = () => {
     {allLanguages.map((language) =>
        lang !== language &&
         <li>
-          <a href={`/docs${langPath(language)}`}>{languageName(language)}</a>
+          <a href={`/docs/${langPath(language)}`}>{languageName(language)}</a>
         </li>
     )}
   </ul>

@@ -1,7 +1,7 @@
 ---
-title: "Install CLI"
-description: "Install the bencher CLI for use both locally and in continuous benchmarking"
-heading: "How to Install bencher CLI"
+title: "Installer CLI"
+description: "Installez le CLI bencher pour une utilisation à la fois en local et en benchmarking continu"
+heading: "Comment Installer le CLI bencher"
 sortOrder: 1
 ---
 
@@ -9,49 +9,49 @@ import { BENCHER_VERSION } from "../../../util/ext";
 
 ## Debian
 
-Bencher provides a convenient `deb` file for installing on Debian
-and Debian based distributions like Ubuntu.
+Bencher fournit un fichier `deb` pratique pour l'installation sur Debian
+et les distributions basées sur Debian comme Ubuntu.
 
 <pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">{`wget https://github.com/bencherdev/bencher/releases/download/v${BENCHER_VERSION}/bencher_${BENCHER_VERSION}_amd64.deb`}</span></span>
 <span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">{`sudo dpkg -i bencher_${BENCHER_VERSION}_amd64.deb`}</span></span></code></pre>
 
 ## GitHub Actions
 
-Install the Bencher CLI using the [GitHub Action](https://github.com/marketplace/actions/bencher-cli).
-See [how to use GitHub Actions](/docs/how-to/github-actions) for more details.
+Installez le CLI Bencher en utilisant le [GitHub Action](https://github.com/marketplace/actions/bencher-cli).
+Voir [comment utiliser GitHub Actions](/docs/fr/how-to/github-actions) pour plus de détails.
 
 ```
 - uses: bencherdev/bencher@main
 ```
 
-There is an optional `version` argument to specify an exact version of the Bencher CLI to use.
-Otherwise, it will default to using the latest CLI version.
+Il existe un argument `version` facultatif pour spécifier une version exacte du CLI Bencher à utiliser.
+Sinon, il utilisera par défaut la dernière version du CLI.
 
 <pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">- uses: bencherdev/bencher@main</span></span>
 <span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">  with:</span></span>
 <span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">    {`${BENCHER_VERSION}`}</span></span></code></pre>
 
-Specify an exact version if using Bencher *Self-Hosted*.
-Do __not__ specify an exact version if using Bencher *Cloud* as there are still occasional breaking changes.
+Spécifiez une version exacte si vous utilisez Bencher *Self-Hosted*.
+Ne spécifiez __pas__ une version exacte si vous utilisez Bencher *Cloud* car il y a encore des changements occasionnels qui cassent.
 
-## From Source
+## Depuis la Source
 
-For all other environments, the suggested install method is from source.
+Pour tous les autres environnements, la méthode d'installation suggérée est à partir de la source.
 
 <pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">{`cargo install --git https://github.com/bencherdev/bencher --tag v${BENCHER_VERSION} --locked bencher_cli`}</span></span></code></pre>
 
-## Other Linux Distributions
+## Autres Distributions Linux
 
-A standalone Linux CLI binary is also available for download
-if you know what you are doing.
+Un binaire CLI Linux autonome est également disponible en téléchargement
+si vous savez ce que vous faites.
 
 <pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">{`wget https://github.com/bencherdev/bencher/releases/download/v${BENCHER_VERSION}/bencher`}</span></span></code></pre>
 
 <br/>
 <br/>
 
-> 🐰 Congrats! You have installed <code>bencher</code> CLI! 🎉
+> 🐰 Félicitations ! Vous avez installé le CLI <code>bencher</code> ! 🎉
 
 <br/>
 
-<h2><a href="/docs/tutorial/quick-start">Keep Going: Bencher Quick Start ➡</a></h2>
+<h2><a href="/docs/fr/tutorial/quick-start">Continuer: Démarrage Rapide de Bencher ➡</a></h2>

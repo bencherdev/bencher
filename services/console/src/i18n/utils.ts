@@ -71,4 +71,4 @@ export async function getLangCollection(collection: Collection) {
 }
 
 export const langPath = (lang: Language) =>
-	!showDefaultLang && lang === defaultLang ? "" : `/${lang}`;
+	!showDefaultLang && lang === defaultLang ? "" : `${lang}/`;
