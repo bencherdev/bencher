@@ -91,7 +91,7 @@ const alsoIn = () => {
       {
         tutorialCollection[lang]?.map((page) => (
           <li>
-            <a href={`/docs/${langPath(lang)}tutorial/${page.slug}`}>{page.data.title}</a>
+            <a href={`/docs/${langPath(lang)}tutorial/${page.slug}`}>{page.data.heading}</a>
           </li>
         ))
       }
