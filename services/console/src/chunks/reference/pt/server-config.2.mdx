@@ -1,0 +1,46 @@
+## `logging`
+
+Esta seção é baseada na [configuração de logging do Dropshot](https://github.com/oxidecomputer/dropshot/tree/v0.9.0#logging).
+
+|     Nome      |      Exemplo      |      Padrão      |         Obrigatório          |                                                                                                                                                                                                         Descrição                                                                                                                                                                                                          |
+| :-----------: | :---------------: | :---------------: | :---------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+|     name      |   "Bencher API"   |   "Bencher API"   |            Sim            |                                                                                                                                                                                             Especifica o nome do registrador.                                                                                                                                                                                              |
+|   log.mode    | "stderr_terminal" | "stderr_terminal" |            Sim            | Controla para onde vai o registro do servidor. Os modos válidos são "stderr-terminal" e "file". Se o modo for "stderr-terminal", uma saída legível para humanos, com cores e outras formatações de terminal se possível, será enviada para stderr. Se o modo for "file", a saída no formato Bunyan será enviada para o caminho do sistema de arquivos fornecido por log.path. Veja também log.if_exists, que controla o comportamento se o caminho de destino já existir. |
+|   log.level   |      "info"       |      "info"       |            Sim            |                                                                    Especifica qual a gravidade das mensagens de log que devem ser incluídas no log. Os valores válidos incluem "trace", "debug", "info", "warn", "error", e "critical", que estão em ordem crescente de gravidade. As mensagens de log no nível especificado e níveis mais graves serão incluídas no log.                                                                   |
+|   log.path    |        ---        |        ---        | Apenas se log.mode = "file" |                                                                                                                                                              Se log.mode é "file", esta propriedade determina o caminho para o arquivo de log. Veja também log.if_exists.                                                                                                                                                               |
+| log.if_exists |        ---        |        ---        | Apenas se log.mode = "file" |                                    Se log.mode é "file", esta propriedade especifica o que fazer se o arquivo de log de destino já existir. Os valores válidos incluem "append" (que anexa ao arquivo existente), "truncate" (que trunca o arquivo existente e então o utiliza como se ele acabasse de ser criado), e "fail" (que faz o servidor sair imediatamente com um erro).                                    |
+
+
+## `database`
+
+|             Nome             |                                    Exemplo                                    |      Padrão      |               Obrigatório                |                                                                                           Descrição                                                                                            |
+| :--------------------------: | :---------------------------------------------------------------------------: | :---------------: | :-------------------------------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+|             file             |                             "path/to/database.db"                             | "data/bencher.db" |                  Sim                  |                                                                             Controla para onde vai a base de dados do servidor.                                                                              |
+|      data_store.service      |                                   "aws_s3"                                    |        ---        |                  Não                   |                                                               Especifica o serviço de armazenamento de dados remoto. Valores validos são "aws_s3".                                                               |
+|   data_store.access_key_id   |                             "ABC123DoRemMiABC123"                             |        ---        | Apenas se data_store.service = "aws_s3" |                                          Se data_store.service = "aws_s3", esta propriedade especifica o ID da chave de acesso do AWS. Veja também data_store.service.                                           |
+| data_store.secret_access_key |                 "AA3Chr-JSF5sUQqKwayx-FvCfZKsMev-5BqPpcFC3m7"                 |        ---        | Apenas se data_store.service = "aws_s3" |         Se data_store.service = "aws_s3", esta propriedade especifica a chave de acesso secreta do AWS. Veja também data_store.service. Quando registrada, ela aparecerá obfuscada como `************`.          |
+|   data_store.access_point    | "arn:aws:s3:some-region-1:123456789:accesspoint/my-bucket/path/to/backup/dir" |        ---        | Apenas se data_store.service = "aws_s3" | Se data_store.service = "aws_s3", esta propriedade especifica o [ponto de acesso do AWS S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-access-points.html). Veja também data_store.service. |
+
+## `smtp`
+
+Esta seção especifica uma configuração de serviço [SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol).
+A seção inteira é opcional.
+Se não especificada, todas as mensagens serão enviadas para `logging` em vez disso.
+
+|    Nome    |          Exemplo           | Padrão | Obrigatório |                                                      Descrição                                                      |
+| :--------: | :------------------------: | :----: | :--------: | :-----------------------------------------------------------------------------------------------------------------: |
+|  hostname  |      "mailbonobo.com"      |   ---   |   Sim    |                                             Especifica o hostname do SMTP.                                             |
+|    port    |            587             |   587   |    Não    |                                               Especifica a porta do SMTP.                                               |
+|  starttls  |            true            |  true   |    Não    |                           Controla se a conexão do SMTP usa o protocolo STARTTLS.                           |
+|  username  |         "bencher"          |   ---   |   Sim    |                                       Especifica o nome de usuário no host do SMTP.                                       |
+|   secret   | "WM3F2u9cqSNdBPLfy9sJ5kk9" |   ---   |   Sim    | Especifica o segredo para o nome de usuário no host do SMTP. Sempre que for registrado, ele aparecerá obfuscado como `************`. |
+| from_name  |         "Bencher"          |   ---   |   Sim    |                        Especifica o nome que aparecerá na seção de remetente de todos os e-mails.                        |
+| from_email | "info@bencher.example.com" |   ---   |   Sim    |                       Especifica o e-mail que aparecerá na seção de remetente de todos os e-mails.                       |
+
+## `apm`
+
+O Monitoramento de Desempenho de Aplicações (APM) é um recurso que permite ao Servidor de API do Bencher enviar telemetria para um serviço de terceiros.
+
+|    Nome    |                              Exemplo                              | Padrão | Obrigatório |                                                                     Descrição                                                                     |
+| :--------: | :---------------------------------------------------------------: | :----: | :--------: | :------------------------------------------------------------------------------------------------------------------------------------------------: |
+| sentry.dsn | "https://0123abc1023abc@987efg987efg.ingest.sentry.io/0123456789" |   ---   |    Não    | Sentry [Nome da Fonte de Dados](https://docs.sentry.io/product/sentry-basics/dsn-explainer/). Também pode ser configurado com a variável de ambiente `SENTRY_DSN`. |
