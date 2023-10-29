@@ -137,7 +137,7 @@ const PlotHeader = (props: Props) => {
 						<div class="column">
 							<Show
 								when={!props.isEmbed}
-								fallback={<h1 class="title is-3">{props.project?.name}</h1>}
+								fallback={<h1 class="title is-3">{props.project()?.name}</h1>}
 							>
 								<p>Metric Kind</p>
 								<div class="columns">
