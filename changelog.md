@@ -1,1 +1,1 @@
-services/console/src/content/reference/changelog.mdx
+services/console/src/chunks/reference/en/changelog.mdx
