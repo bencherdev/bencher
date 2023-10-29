@@ -14,7 +14,57 @@ y en el disco en `BENCHER_CONFIG_PATH`.
 
 Ejemplo de configuración JSON:
 
-...
+```
+{
+  "console": {
+    "url": "https://bencher.example.com"
+  },
+  "security": {
+    "issuer": "https://api.bencher.example.com",
+    "secret_key": "UJu7Cpxb-zFaJYqXD-3mDDSDyj-ZvfxZFZs-X58xjxPy"
+  },
+  "server": {
+    "bind_address": "0.0.0.0:61016",
+    "request_body_max_bytes": 1048576,
+    "tls": {
+      "type": "as_file",
+      "cert_file": "/path/to/cert.pem",
+      "key_file": "/path/to/key.pem"
+    }
+  },
+  "logging": {
+    "name": "Bencher API",
+    "log": {
+      "stderr_terminal": {
+        "level": "info"
+      }
+    },
+  },
+  "database": {
+    "file": "data/bencher.db",
+    "data_store": {
+      "service": "aws_s3"
+      "access_key_id": "ABC123DoRemMiABC123",
+      "secret_access_key": "AA3Chr-JSF5sUQqKwayx-FvCfZKsMev-5BqPpcFC3m7",
+      "access_point": "arn:aws:s3:some-region-1:123456789:accesspoint/my-bucket/path/to/backup/dir"
+    }
+  },
+  "smtp": {
+    "hostname": "mailbonobo.com",
+    "port": 587,
+    "starttls": true,
+    "username": "bencher"
+    "secret": "WM3F2u9cqSNdBPLfy9sJ5kk9",
+    "from_name": "Bencher",
+    "from_email": "info@bencher.example.com"
+  },
+  "apm": {
+    "sentry": {
+      "dsn": "https://0123abc1023abc@987efg987efg.ingest.sentry.io/0123456789"
+    }
+  }
+}
+```
 
 ## `console`
 
