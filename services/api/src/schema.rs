@@ -228,6 +228,8 @@ diesel::table! {
         email -> Text,
         admin -> Bool,
         locked -> Bool,
+        created -> BigInt,
+        modified -> BigInt,
     }
 }
 

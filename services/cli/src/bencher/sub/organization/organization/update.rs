@@ -1,9 +1,9 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_client::types::{
-    JsonOrganizationPatch, JsonOrganizationPatchNull, JsonUpdateOrganization,
-};
+#[cfg(feature = "plus")]
+use bencher_client::types::JsonOrganizationPatchNull;
+use bencher_client::types::{JsonOrganizationPatch, JsonUpdateOrganization};
 use bencher_json::{JsonOrganization, NonEmpty, ResourceId, Slug};
 
 use crate::{

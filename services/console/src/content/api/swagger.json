@@ -6419,6 +6419,53 @@
           "license_pem"
         ]
       },
+      "JsonCohort": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
+          "total": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
+          "week": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "month",
+          "total",
+          "week"
+        ]
+      },
+      "JsonCohortAvg": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "number",
+            "format": "double"
+          },
+          "total": {
+            "type": "number",
+            "format": "double"
+          },
+          "week": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": [
+          "month",
+          "total",
+          "week"
+        ]
+      },
       "JsonConfig": {
         "type": "object",
         "properties": {
@@ -7694,11 +7741,19 @@
       "JsonServerStats": {
         "type": "object",
         "properties": {
+          "reports": {
+            "$ref": "#/components/schemas/JsonCohortAvg"
+          },
+          "timestamp": {
+            "$ref": "#/components/schemas/DateTime"
+          },
           "users": {
-            "$ref": "#/components/schemas/BigInt"
+            "$ref": "#/components/schemas/JsonCohort"
           }
         },
         "required": [
+          "reports",
+          "timestamp",
           "users"
         ]
       },

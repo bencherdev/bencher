@@ -1,4 +1,4 @@
-use bencher_json::{Email, JsonSignup, JsonUser, ResourceId, Slug, UserName, UserUuid};
+use bencher_json::{DateTime, Email, JsonSignup, JsonUser, ResourceId, Slug, UserName, UserUuid};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
@@ -38,6 +38,8 @@ pub struct QueryUser {
     pub email: Email,
     pub admin: bool,
     pub locked: bool,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 impl QueryUser {
@@ -101,6 +103,8 @@ pub struct InsertUser {
     pub email: Email,
     pub admin: bool,
     pub locked: bool,
+    pub created: DateTime,
+    pub modified: DateTime,
 }
 
 impl InsertUser {
@@ -109,6 +113,7 @@ impl InsertUser {
             name, slug, email, ..
         } = signup;
         let slug = ok_slug!(conn, &name, slug, user, QueryUser)?;
+        let timestamp = DateTime::now();
         Ok(Self {
             uuid: UserUuid::new(),
             name,
@@ -116,6 +121,8 @@ impl InsertUser {
             email,
             admin: false,
             locked: false,
+            created: timestamp,
+            modified: timestamp,
         })
     }
 }

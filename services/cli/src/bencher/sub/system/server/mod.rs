@@ -8,6 +8,7 @@ mod endpoint;
 mod ping;
 mod restart;
 mod spec;
+#[cfg(feature = "plus")]
 mod stats;
 mod version;
 
@@ -20,6 +21,7 @@ pub enum Server {
     Restart(restart::Restart),
     Config(config::Config),
     Backup(backup::Backup),
+    #[cfg(feature = "plus")]
     Stats(stats::ServerStats),
 }
 
@@ -35,6 +37,7 @@ impl TryFrom<CliServer> for Server {
             CliServer::Restart(restart) => Self::Restart(restart.try_into()?),
             CliServer::Config(config) => Self::Config(config.try_into()?),
             CliServer::Backup(backup) => Self::Backup(backup.try_into()?),
+            #[cfg(feature = "plus")]
             CliServer::Stats(stats) => Self::Stats(stats.try_into()?),
         })
     }
@@ -51,6 +54,7 @@ impl SubCmd for Server {
             Self::Restart(restart) => restart.exec().await,
             Self::Config(config) => config.exec().await,
             Self::Backup(backup) => backup.exec().await,
+            #[cfg(feature = "plus")]
             Self::Stats(stats) => stats.exec().await,
         }
     }

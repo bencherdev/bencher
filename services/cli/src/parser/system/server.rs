@@ -112,6 +112,7 @@ pub enum CliBackupDataStore {
     AwsS3,
 }
 
+#[cfg(feature = "plus")]
 #[derive(Parser, Debug)]
 pub struct CliServerStats {
     #[clap(flatten)]
