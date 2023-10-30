@@ -22,11 +22,14 @@ const METRIC_KIND_ARG: &str = "--metric-kind";
 const METRIC_KIND_SLUG: &str = "screams";
 
 // Valid until 2159-12-06T18:53:44Z
-const TEST_BENCHER_API_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjM2MDI0LCJpYXQiOjE2OTg2Njg3MjksImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC8iLCJzdWIiOiJtdXJpZWwuYmFnZ2VAbm93aGVyZS5jb20iLCJvcmciOm51bGx9.t3t23mlgKYZmUt7-PbRWLqXlCTt6Ydh8TRE8KiSGQi4";
+const LOCALHOST_API_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjM2MDI0LCJpYXQiOjE2OTg2Njg3MjksImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC8iLCJzdWIiOiJtdXJpZWwuYmFnZ2VAbm93aGVyZS5jb20iLCJvcmciOm51bGx9.t3t23mlgKYZmUt7-PbRWLqXlCTt6Ydh8TRE8KiSGQi4";
 
 pub const BENCHER_API_URL: &str = "BENCHER_API_URL";
 pub static HOST_URL: Lazy<String> =
     Lazy::new(|| std::env::var(BENCHER_API_URL).unwrap_or_else(|_| LOCALHOST.to_owned()));
+pub const BENCHER_API_TOKEN: &str = "BENCHER_API_TOKEN";
+pub static TEST_API_TOKEN: Lazy<String> =
+    Lazy::new(|| std::env::var(BENCHER_API_URL).unwrap_or_else(|_| LOCALHOST_API_TOKEN.to_owned()));
 
 // cargo test --features seed --test seed
 #[test]
@@ -78,14 +81,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
 
     // cargo run -- org ls --host http://localhost:61016
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    cmd.args([
-        "org",
-        "ls",
-        HOST_ARG,
-        &HOST_URL,
-        TOKEN_ARG,
-        TEST_BENCHER_API_TOKEN,
-    ]);
+    cmd.args(["org", "ls", HOST_ARG, &HOST_URL, TOKEN_ARG, &TEST_API_TOKEN]);
     let assert = cmd.assert().success();
     let organizations: bencher_json::JsonOrganizations =
         serde_json::from_slice(&assert.get_output().stdout).unwrap();
@@ -99,7 +95,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         HOST_ARG,
         &HOST_URL,
         TOKEN_ARG,
-        TEST_BENCHER_API_TOKEN,
+        &TEST_API_TOKEN,
         "muriel-bagge",
     ]);
     let assert = cmd.assert().success();
@@ -114,7 +110,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         HOST_ARG,
         &HOST_URL,
         TOKEN_ARG,
-        TEST_BENCHER_API_TOKEN,
+        &TEST_API_TOKEN,
         "--email",
         "courage@nowhere.com",
         "--org",
@@ -142,7 +138,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         HOST_ARG,
         &HOST_URL,
         TOKEN_ARG,
-        TEST_BENCHER_API_TOKEN,
+        &TEST_API_TOKEN,
     ]);
     let assert = cmd.assert().success();
     let projects: bencher_json::JsonProjects =
@@ -157,7 +153,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         HOST_ARG,
         &HOST_URL,
         TOKEN_ARG,
-        TEST_BENCHER_API_TOKEN,
+        &TEST_API_TOKEN,
         "--org",
         "muriel-bagge",
     ]);
@@ -175,7 +171,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         HOST_ARG,
         &HOST_URL,
         TOKEN_ARG,
-        TEST_BENCHER_API_TOKEN,
+        &TEST_API_TOKEN,
         "--org",
         "muriel-bagge",
         "--slug",
@@ -194,7 +190,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         HOST_ARG,
         &HOST_URL,
         TOKEN_ARG,
-        TEST_BENCHER_API_TOKEN,
+        &TEST_API_TOKEN,
     ]);
     let assert = cmd.assert().success();
     let projects: bencher_json::JsonProjects =
@@ -217,7 +213,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         HOST_ARG,
         &HOST_URL,
         TOKEN_ARG,
-        TEST_BENCHER_API_TOKEN,
+        &TEST_API_TOKEN,
         PROJECT_SLUG,
     ]);
     let assert = cmd.assert().success();
@@ -247,7 +243,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         HOST_ARG,
         &HOST_URL,
         TOKEN_ARG,
-        TEST_BENCHER_API_TOKEN,
+        &TEST_API_TOKEN,
         PROJECT_ARG,
         PROJECT_SLUG,
         "--slug",
@@ -313,7 +309,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         HOST_ARG,
         &HOST_URL,
         TOKEN_ARG,
-        TEST_BENCHER_API_TOKEN,
+        &TEST_API_TOKEN,
         PROJECT_ARG,
         PROJECT_SLUG,
         "--slug",
@@ -377,7 +373,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         HOST_ARG,
         &HOST_URL,
         TOKEN_ARG,
-        TEST_BENCHER_API_TOKEN,
+        &TEST_API_TOKEN,
         PROJECT_ARG,
         PROJECT_SLUG,
         "--slug",
@@ -441,7 +437,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         HOST_ARG,
         &HOST_URL,
         TOKEN_ARG,
-        TEST_BENCHER_API_TOKEN,
+        &TEST_API_TOKEN,
         PROJECT_ARG,
         PROJECT_SLUG,
         METRIC_KIND_ARG,
@@ -531,7 +527,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
             HOST_ARG,
             &HOST_URL,
             TOKEN_ARG,
-            TEST_BENCHER_API_TOKEN,
+            &TEST_API_TOKEN,
             PROJECT_ARG,
             PROJECT_SLUG,
             BRANCH_ARG,
@@ -558,10 +554,10 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         serde_json::from_slice(&assert.get_output().stdout).unwrap();
     assert_eq!(alert_stats.active.0, 0);
 
-    // bencher run --iter 3 "bencher mock --pow 8"
+    // bencher run --iter 3 "bencher mock --pow 9"
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     let bencher_mock = format!(
-        r#"{bencher} mock --pow 8"#,
+        r#"{bencher} mock --pow 9"#,
         bencher = cmd.get_program().to_string_lossy()
     );
     cmd.args([
@@ -569,7 +565,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         HOST_ARG,
         &HOST_URL,
         TOKEN_ARG,
-        TEST_BENCHER_API_TOKEN,
+        &TEST_API_TOKEN,
         PROJECT_ARG,
         PROJECT_SLUG,
         BRANCH_ARG,
