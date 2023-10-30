@@ -18,7 +18,10 @@ pub use console::JsonConsole;
 pub use database::{DataStore, JsonDatabase};
 pub use logging::{IfExists, JsonLogging, LogLevel, ServerLog};
 #[cfg(feature = "plus")]
-pub use plus::{JsonBilling, JsonPlus, JsonProduct, JsonProducts};
+pub use plus::{
+    cloud::{JsonBilling, JsonCloud, JsonProduct, JsonProducts},
+    JsonPlus,
+};
 pub use security::JsonSecurity;
 pub use server::{JsonServer, JsonTls};
 pub use smtp::JsonSmtp;
