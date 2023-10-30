@@ -6061,30 +6061,6 @@
           "version"
         ]
       },
-      "JsonApm": {
-        "oneOf": [
-          {
-            "type": "object",
-            "properties": {
-              "sentry": {
-                "type": "object",
-                "properties": {
-                  "dsn": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "dsn"
-                ]
-              }
-            },
-            "required": [
-              "sentry"
-            ],
-            "additionalProperties": false
-          }
-        ]
-      },
       "JsonAuthToken": {
         "type": "object",
         "properties": {
@@ -6371,6 +6347,14 @@
           },
           "license_pem": {
             "$ref": "#/components/schemas/Secret"
+          },
+          "sentry": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Secret"
+              }
+            ]
           }
         },
         "required": [
@@ -6381,14 +6365,6 @@
       "JsonConfig": {
         "type": "object",
         "properties": {
-          "apm": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonApm"
-              }
-            ]
-          },
           "console": {
             "$ref": "#/components/schemas/JsonConsole"
           },

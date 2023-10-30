@@ -85,7 +85,6 @@ fn into_inner(log: &Logger, config_tx: ConfigTx) -> Result<HttpServer<ApiContext
         database,
         smtp,
         logging: _,
-        apm: _,
         #[cfg(feature = "plus")]
         plus,
     }) = config;

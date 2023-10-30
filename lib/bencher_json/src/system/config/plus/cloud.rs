@@ -10,12 +10,14 @@ use serde::{Deserialize, Serialize};
 pub struct JsonCloud {
     pub billing: JsonBilling,
     pub license_pem: Secret,
+    pub sentry: Option<Secret>,
 }
 
 impl Sanitize for JsonCloud {
     fn sanitize(&mut self) {
         self.billing.sanitize();
         self.license_pem.sanitize();
+        self.sentry.sanitize();
     }
 }
 

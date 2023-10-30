@@ -36,11 +36,3 @@ Se não especificada, todas as mensagens serão enviadas para `logging` em vez d
 |   secret   | "WM3F2u9cqSNdBPLfy9sJ5kk9" |  ---   |     Sim     | Especifica o segredo para o nome de usuário no host do SMTP. Sempre que for registrado, ele aparecerá obfuscado como `************`. |
 | from_name  |         "Bencher"          |  ---   |     Sim     |                              Especifica o nome que aparecerá na seção de remetente de todos os e-mails.                              |
 | from_email | "info@bencher.example.com" |  ---   |     Sim     |                             Especifica o e-mail que aparecerá na seção de remetente de todos os e-mails.                             |
-
-## `apm`
-
-O Monitoramento de Desempenho de Aplicações (APM) é um recurso que permite ao Servidor de API do Bencher enviar telemetria para um serviço de terceiros.
-
-|    Nome    |                              Exemplo                              | Padrão | Obrigatório |                                                                             Descrição                                                                              |
-| :--------: | :---------------------------------------------------------------: | :----: | :---------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------: |
-| sentry.dsn | "https://0123abc1023abc@987efg987efg.ingest.sentry.io/0123456789" |  ---   |     Não     | Sentry [Nome da Fonte de Dados](https://docs.sentry.io/product/sentry-basics/dsn-explainer/). Também pode ser configurado com a variável de ambiente `SENTRY_DSN`. |

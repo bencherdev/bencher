@@ -2,7 +2,6 @@ use bencher_api::{
     config::{config_tx::ConfigTx, Config},
     API_VERSION,
 };
-use bencher_json::system::config::JsonApm;
 use dropshot::HttpServer;
 #[cfg(feature = "sentry")]
 use sentry::ClientInitGuard;
@@ -50,23 +49,24 @@ async fn run(
         let config = Config::load_or_default(log)
             .await
             .map_err(ApiError::Config)?;
-        if let Some(apm) = config.as_ref().apm.as_ref() {
-            #[allow(unused_variables)]
-            match &apm {
-                JsonApm::Sentry { dsn } => {
-                    #[cfg(feature = "sentry")]
-                    {
-                        _guard = sentry::init((
-                            dsn.as_str(),
-                            sentry::ClientOptions {
-                                release: sentry::release_name!(),
-                                ..Default::default()
-                            },
-                        ));
-                    }
-                },
-            }
-        };
+
+        #[cfg(all(feature = "plus", feature = "sentry"))]
+        let _guard = config
+            .as_ref()
+            .plus
+            .as_ref()
+            .and_then(|plus| plus.cloud.as_ref())
+            .and_then(|cloud| cloud.sentry.as_ref())
+            .map(|sentry_dsn| {
+                sentry::init((
+                    sentry_dsn.as_ref(),
+                    sentry::ClientOptions {
+                        release: sentry::release_name!(),
+                        ..Default::default()
+                    },
+                ))
+            });
+
         let (restart_tx, mut restart_rx) = tokio::sync::mpsc::channel(1);
         let config_tx = ConfigTx { config, restart_tx };
 

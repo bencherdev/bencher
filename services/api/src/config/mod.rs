@@ -212,7 +212,6 @@ impl Default for Config {
                     level: DEFAULT_LOG_LEVEL,
                 },
             },
-            apm: None,
             #[cfg(feature = "plus")]
             plus: None,
         })
