@@ -27,9 +27,10 @@ const LOCALHOST_API_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQi
 pub const BENCHER_API_URL: &str = "BENCHER_API_URL";
 pub static HOST_URL: Lazy<String> =
     Lazy::new(|| std::env::var(BENCHER_API_URL).unwrap_or_else(|_| LOCALHOST.to_owned()));
-pub const BENCHER_API_TOKEN: &str = "BENCHER_API_TOKEN";
-pub static TEST_API_TOKEN: Lazy<String> =
-    Lazy::new(|| std::env::var(BENCHER_API_URL).unwrap_or_else(|_| LOCALHOST_API_TOKEN.to_owned()));
+pub const TEST_BENCHER_API_TOKEN: &str = "TEST_BENCHER_API_TOKEN";
+pub static TEST_API_TOKEN: Lazy<String> = Lazy::new(|| {
+    std::env::var(TEST_BENCHER_API_TOKEN).unwrap_or_else(|_| LOCALHOST_API_TOKEN.to_owned())
+});
 
 // cargo test --features seed --test seed
 #[test]

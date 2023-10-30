@@ -7,6 +7,8 @@ use crate::{parser::CliFlyTest, task::swagger::swagger_spec};
 const BENCHER_API_URL_KEY: &str = "BENCHER_API_URL";
 const DEV_BENCHER_API_URL: &str = "https://bencher-api-dev.fly.dev/";
 const BENCHER_API_URL: &str = "https://api.bencher.dev/";
+const TEST_BENCHER_API_TOKEN: &str = "TEST_BENCHER_API_TOKEN";
+const DEV_BENCHER_API_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjQyMTU2LCJpYXQiOjE2OTg2NzQ4NjEsImlzcyI6Imh0dHBzOi8vZGV2ZWwtLWJlbmNoZXIubmV0bGlmeS5hcHAvIiwic3ViIjoibXVyaWVsLmJhZ2dlQG5vd2hlcmUuY29tIiwib3JnIjpudWxsfQ.9z7jmM53TcVzc1inDxTeX9_OR0PQPpZAsKsCE7lWHfo";
 
 #[derive(Debug)]
 pub struct FlyTest {
@@ -80,6 +82,7 @@ fn seed(api_url: &str) -> anyhow::Result<()> {
         .args(["test", "--features", "seed", "--test", "seed"])
         .current_dir("./services/cli")
         .env(BENCHER_API_URL_KEY, api_url)
+        .env(TEST_BENCHER_API_TOKEN, DEV_BENCHER_API_TOKEN)
         .output()?;
 
     output.status.success().then_some(()).ok_or_else(|| {
