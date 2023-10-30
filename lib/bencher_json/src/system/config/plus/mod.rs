@@ -12,6 +12,7 @@ pub use cloud::JsonCloud;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPlus {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cloud: Option<JsonCloud>,
 }
 
