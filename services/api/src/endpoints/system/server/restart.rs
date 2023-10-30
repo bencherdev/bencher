@@ -9,11 +9,7 @@ use crate::{
         endpoint::{CorsResponse, Post, ResponseAccepted},
         Endpoint,
     },
-    error::forbidden_error,
-    model::user::{
-        auth::{AuthUser, BearerToken},
-        UserId,
-    },
+    model::user::{admin::AdminUser, auth::BearerToken, UserId},
 };
 
 pub const DEFAULT_DELAY: u64 = 3;
@@ -41,8 +37,8 @@ pub async fn server_restart_post(
     bearer_token: BearerToken,
     body: TypedBody<JsonRestart>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner(), &auth_user).await?;
+    let admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
+    let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner(), &admin_user).await?;
     Ok(Post::auth_response_accepted(json))
 }
 
@@ -51,19 +47,13 @@ async fn post_inner(
     log: &Logger,
     context: &ApiContext,
     json_restart: JsonRestart,
-    auth_user: &AuthUser,
+    admin_user: &AdminUser,
 ) -> Result<JsonEmpty, HttpError> {
-    if !auth_user.is_admin(&context.rbac) {
-        return Err(forbidden_error(format!(
-            "User is not an admin ({auth_user:?}). Only admins can restart the server."
-        )));
-    }
-
     countdown(
         log,
         context.restart_tx.clone(),
         json_restart.delay.unwrap_or(DEFAULT_DELAY),
-        auth_user.id,
+        admin_user.user().id,
     );
 
     Ok(JsonEmpty {})

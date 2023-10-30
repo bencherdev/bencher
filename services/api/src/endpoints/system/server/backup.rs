@@ -11,12 +11,12 @@ use tokio::io::{AsyncReadExt, BufWriter};
 use tokio::io::{AsyncWriteExt, BufReader};
 
 use crate::endpoints::endpoint::{CorsResponse, Post};
-use crate::error::{bad_request_error, forbidden_error};
+use crate::error::bad_request_error;
+use crate::model::user::admin::AdminUser;
 use crate::model::user::auth::BearerToken;
 use crate::{
     context::ApiContext,
     endpoints::{endpoint::ResponseAccepted, Endpoint},
-    model::user::auth::AuthUser,
 };
 
 const BUFFER_SIZE: usize = 1024;
@@ -44,22 +44,12 @@ pub async fn server_backup_post(
     bearer_token: BearerToken,
     body: TypedBody<JsonBackup>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user).await?;
+    let _admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
+    let json = post_inner(rqctx.context(), body.into_inner()).await?;
     Ok(Post::auth_response_accepted(json))
 }
 
-async fn post_inner(
-    context: &ApiContext,
-    json_backup: JsonBackup,
-    auth_user: &AuthUser,
-) -> Result<JsonEmpty, HttpError> {
-    if !auth_user.is_admin(&context.rbac) {
-        return Err(forbidden_error(format!(
-            "User is not an admin ({auth_user:?}). Only admins can backup the server."
-        )));
-    }
-
+async fn post_inner(context: &ApiContext, json_backup: JsonBackup) -> Result<JsonEmpty, HttpError> {
     backup(context, json_backup)
         .await
         .map_err(bad_request_error)?;

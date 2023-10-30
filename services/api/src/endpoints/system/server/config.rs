@@ -10,8 +10,8 @@ use crate::{
         endpoint::{CorsResponse, Get, Put, ResponseAccepted, ResponseOk},
         Endpoint,
     },
-    error::{bad_request_error, forbidden_error, issue_error},
-    model::user::auth::{AuthUser, BearerToken},
+    error::{bad_request_error, issue_error},
+    model::user::{admin::AdminUser, auth::BearerToken},
 };
 
 use super::restart::{countdown, DEFAULT_DELAY};
@@ -37,22 +37,12 @@ pub async fn server_config_get(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
 ) -> Result<ResponseOk<JsonConfig>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = get_one_inner(&rqctx.log, rqctx.context(), &auth_user).await?;
+    let _admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
+    let json = get_one_inner(&rqctx.log).await?;
     Ok(Get::auth_response_ok(json))
 }
 
-async fn get_one_inner(
-    log: &Logger,
-    context: &ApiContext,
-    auth_user: &AuthUser,
-) -> Result<JsonConfig, HttpError> {
-    if !auth_user.is_admin(&context.rbac) {
-        return Err(forbidden_error(format!(
-            "User is not an admin ({auth_user:?}). Only admins can get the server configuration."
-        )));
-    }
-
+async fn get_one_inner(log: &Logger) -> Result<JsonConfig, HttpError> {
     Ok(Config::load_file(log)
         .await
         .map_err(|e| {
@@ -77,8 +67,8 @@ pub async fn server_config_put(
     bearer_token: BearerToken,
     body: TypedBody<JsonUpdateConfig>,
 ) -> Result<ResponseAccepted<JsonConfig>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = put_inner(&rqctx.log, rqctx.context(), body.into_inner(), &auth_user).await?;
+    let admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
+    let json = put_inner(&rqctx.log, rqctx.context(), body.into_inner(), &admin_user).await?;
     Ok(Put::auth_response_accepted(json))
 }
 
@@ -86,14 +76,8 @@ async fn put_inner(
     log: &Logger,
     context: &ApiContext,
     json_config: JsonUpdateConfig,
-    auth_user: &AuthUser,
+    admin_user: &AdminUser,
 ) -> Result<JsonConfig, HttpError> {
-    if !auth_user.is_admin(&context.rbac) {
-        return Err(forbidden_error(format!(
-            "User is not an admin ({auth_user:?}). Only admins can update the server configuration."
-        )));
-    }
-
     let JsonUpdateConfig { config, delay } = json_config;
 
     // todo() -> add validation here
@@ -115,7 +99,7 @@ async fn put_inner(
         log,
         context.restart_tx.clone(),
         delay.unwrap_or(DEFAULT_DELAY),
-        auth_user.id,
+        admin_user.user().id,
     );
 
     Ok(json_config)

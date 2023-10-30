@@ -15,13 +15,16 @@ use crate::{
         endpoint::{CorsResponse, Get, Patch, Post, ResponseAccepted, ResponseOk},
         Endpoint,
     },
-    error::{forbidden_error, resource_conflict_err, resource_not_found_err},
+    error::{resource_conflict_err, resource_not_found_err},
     model::{
         organization::{
             organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
             UpdateOrganization,
         },
-        user::auth::{AuthUser, BearerToken},
+        user::{
+            admin::AdminUser,
+            auth::{AuthUser, BearerToken},
+        },
     },
     schema,
 };
@@ -128,23 +131,17 @@ pub async fn organization_post(
     bearer_token: BearerToken,
     body: TypedBody<JsonNewOrganization>,
 ) -> Result<ResponseAccepted<JsonOrganization>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user).await?;
+    let admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
+    let json = post_inner(rqctx.context(), body.into_inner(), &admin_user).await?;
     Ok(Post::auth_response_accepted(json))
 }
 
 async fn post_inner(
     context: &ApiContext,
     json_organization: JsonNewOrganization,
-    auth_user: &AuthUser,
+    admin_user: &AdminUser,
 ) -> Result<JsonOrganization, HttpError> {
     let conn = &mut *context.conn().await;
-
-    if !auth_user.is_admin(&context.rbac) {
-        return Err(forbidden_error(format!(
-            "User ({auth_user:?}) cannot create a new organization"
-        )));
-    }
 
     // Create the organization
     let insert_organization = InsertOrganization::from_json(conn, json_organization)?;
@@ -160,7 +157,7 @@ async fn post_inner(
     let timestamp = DateTime::now();
     // Connect the user to the organization as a `Maintainer`
     let insert_org_role = InsertOrganizationRole {
-        user_id: auth_user.id,
+        user_id: admin_user.user().id,
         organization_id: query_organization.id,
         role: OrganizationRole::Leader,
         created: timestamp,
