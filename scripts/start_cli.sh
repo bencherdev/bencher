@@ -5,7 +5,7 @@ while ! nc -z localhost 61016; do
   sleep 1
 done
 
-source ../../scripts/seed.sh
+RUST_BACKTRACE=full cargo test --features seed --test seed -- --nocapture
 
 cargo install --path . --locked
 
