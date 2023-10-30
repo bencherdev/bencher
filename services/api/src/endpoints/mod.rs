@@ -72,7 +72,7 @@ impl Api {
 
         #[cfg(feature = "plus")]
         {
-            // Organization Metered Subscription Plan
+            // Organization Plan
             if http_options {
                 api.register(organization::plan::org_plan_options)?;
             }
@@ -232,6 +232,15 @@ impl Api {
         api.register(system::server::config::server_config_get)?;
         api.register(system::server::config::server_config_put)?;
         api.register(system::server::backup::server_backup_post)?;
+
+        #[cfg(feature = "plus")]
+        {
+            // Server usage statistics
+            if http_options {
+                api.register(system::server::stats::server_stats_options)?;
+            }
+            api.register(system::server::stats::server_stats_get)?;
+        }
 
         Ok(())
     }

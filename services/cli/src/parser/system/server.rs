@@ -19,6 +19,9 @@ pub enum CliServer {
     Config(CliConfig),
     /// Backup database
     Backup(CliBackup),
+    #[cfg(feature = "plus")]
+    /// Server usage statistics
+    Stats(CliServerStats),
 }
 
 #[derive(Parser, Debug)]
@@ -107,4 +110,10 @@ pub struct CliBackup {
 pub enum CliBackupDataStore {
     /// AWS S3
     AwsS3,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliServerStats {
+    #[clap(flatten)]
+    pub backend: CliBackend,
 }

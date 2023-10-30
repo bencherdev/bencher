@@ -119,7 +119,7 @@ try_from_client!(
 );
 
 #[cfg(feature = "plus")]
-try_from_client!(JsonPlan, JsonUsage);
+try_from_client!(JsonPlan, JsonUsage, JsonServerStats);
 
 impl From<bencher_json::DateTime> for types::DateTime {
     fn from(date_time: bencher_json::DateTime) -> Self {

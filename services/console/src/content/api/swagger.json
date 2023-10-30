@@ -5341,6 +5341,63 @@
         }
       }
     },
+    "/v0/server/stats": {
+      "get": {
+        "tags": [
+          "server",
+          "stats"
+        ],
+        "operationId": "server_stats_get",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonServerStats"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/server/version": {
       "get": {
         "tags": [
@@ -7634,6 +7691,17 @@
           "request_body_max_bytes"
         ]
       },
+      "JsonServerStats": {
+        "type": "object",
+        "properties": {
+          "users": {
+            "$ref": "#/components/schemas/BigInt"
+          }
+        },
+        "required": [
+          "users"
+        ]
+      },
       "JsonSignup": {
         "type": "object",
         "properties": {
@@ -8689,6 +8757,9 @@
     {
       "name": "statistics",
       "description": "Statistics"
+    },
+    {
+      "name": "stats"
     },
     {
       "name": "testbeds",
