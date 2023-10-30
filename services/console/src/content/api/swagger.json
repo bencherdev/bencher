@@ -6363,6 +6363,21 @@
           "last_four"
         ]
       },
+      "JsonCloud": {
+        "type": "object",
+        "properties": {
+          "billing": {
+            "$ref": "#/components/schemas/JsonBilling"
+          },
+          "license_pem": {
+            "$ref": "#/components/schemas/Secret"
+          }
+        },
+        "required": [
+          "billing",
+          "license_pem"
+        ]
+      },
       "JsonConfig": {
         "type": "object",
         "properties": {
@@ -7297,17 +7312,15 @@
       "JsonPlus": {
         "type": "object",
         "properties": {
-          "billing": {
-            "$ref": "#/components/schemas/JsonBilling"
-          },
-          "license_pem": {
-            "$ref": "#/components/schemas/Secret"
+          "cloud": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCloud"
+              }
+            ]
           }
-        },
-        "required": [
-          "billing",
-          "license_pem"
-        ]
+        }
       },
       "JsonProduct": {
         "type": "object",
