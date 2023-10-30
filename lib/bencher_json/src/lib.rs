@@ -45,6 +45,8 @@ pub use project::{
     },
     JsonNewProject, JsonProject, JsonProjects, ProjectUuid,
 };
+#[cfg(feature = "plus")]
+pub use system::stats::JsonServerStats;
 pub use system::{
     auth::{JsonAuthToken, JsonAuthUser, JsonLogin, JsonSignup},
     backup::JsonBackup,

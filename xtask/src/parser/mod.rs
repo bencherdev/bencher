@@ -15,6 +15,7 @@ pub struct CliTask {
 pub enum CliSub {
     Typeshare(CliTypeshare),
     Swagger(CliSwagger),
+    Types(CliTypes),
     #[cfg(feature = "plus")]
     Translate(CliTranslate),
     FlyTest(CliFlyTest),
@@ -27,6 +28,9 @@ pub struct CliTypeshare {}
 
 #[derive(Parser, Debug)]
 pub struct CliSwagger {}
+
+#[derive(Parser, Debug)]
+pub struct CliTypes {}
 
 #[cfg(feature = "plus")]
 #[derive(Parser, Debug)]

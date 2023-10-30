@@ -8,6 +8,7 @@ mod release_notes;
 mod swagger;
 #[cfg(feature = "plus")]
 mod translate;
+mod types;
 mod typeshare;
 
 use fly_test::FlyTest;
@@ -16,6 +17,7 @@ use release_notes::ReleaseNotes;
 use swagger::Swagger;
 #[cfg(feature = "plus")]
 use translate::Translate;
+use types::Types;
 use typeshare::Typeshare;
 
 #[derive(Debug)]
@@ -28,6 +30,7 @@ pub struct Task {
 pub enum Sub {
     Typeshare(Typeshare),
     Swagger(Swagger),
+    Types(Types),
     #[cfg(feature = "plus")]
     Translate(Translate),
     FlyTest(FlyTest),
@@ -52,6 +55,7 @@ impl TryFrom<CliSub> for Sub {
         Ok(match sub {
             CliSub::Typeshare(typeshare) => Self::Typeshare(typeshare.try_into()?),
             CliSub::Swagger(swagger) => Self::Swagger(swagger.try_into()?),
+            CliSub::Types(types) => Self::Types(types.try_into()?),
             #[cfg(feature = "plus")]
             CliSub::Translate(translate) => Self::Translate(translate.try_into()?),
             CliSub::FlyTest(fly_test) => Self::FlyTest(fly_test.try_into()?),
@@ -76,6 +80,7 @@ impl Sub {
         match self {
             Self::Typeshare(typeshare) => typeshare.exec(),
             Self::Swagger(swagger) => swagger.exec(),
+            Self::Types(types) => types.exec(),
             #[cfg(feature = "plus")]
             Self::Translate(translate) => translate.exec().await,
             Self::FlyTest(fly_test) => fly_test.exec(),

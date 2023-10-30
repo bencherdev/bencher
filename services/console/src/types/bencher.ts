@@ -434,6 +434,10 @@ export interface JsonAuthUser {
 	token: Jwt;
 }
 
+export interface JsonServerStats {
+	users: number;
+}
+
 export interface JsonToken {
 	uuid: Uuid;
 	user: Uuid;
