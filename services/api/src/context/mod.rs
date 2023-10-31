@@ -14,6 +14,9 @@ pub use database::{DataStoreError, Database, DbConnection};
 pub use messenger::{Body, ButtonBody, Email, Message, Messenger, NewUserBody};
 pub use rbac::{Rbac, RbacError};
 
+#[cfg(feature = "plus")]
+use crate::config::plus::StatsSettings;
+
 pub struct ApiContext {
     pub endpoint: Url,
     pub token_key: TokenKey,
@@ -21,6 +24,8 @@ pub struct ApiContext {
     pub messenger: Messenger,
     pub database: Database,
     pub restart_tx: Sender<()>,
+    #[cfg(feature = "plus")]
+    pub stats: StatsSettings,
     #[cfg(feature = "plus")]
     pub biller: Option<Biller>,
     #[cfg(feature = "plus")]

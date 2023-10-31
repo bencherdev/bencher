@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use bencher_json::{system::config::DataStore as DataStoreConfig, Secret};
 
@@ -6,7 +9,7 @@ pub type DbConnection = diesel::SqliteConnection;
 
 pub struct Database {
     pub path: PathBuf,
-    pub connection: tokio::sync::Mutex<DbConnection>,
+    pub connection: Arc<tokio::sync::Mutex<DbConnection>>,
     pub data_store: Option<DataStore>,
 }
 

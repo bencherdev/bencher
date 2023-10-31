@@ -2,7 +2,6 @@ use bencher_api::{
     config::{config_tx::ConfigTx, Config},
     API_VERSION,
 };
-use dropshot::HttpServer;
 #[cfg(feature = "sentry")]
 use sentry::ClientInitGuard;
 use slog::{error, info, Logger};

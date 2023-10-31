@@ -14,7 +14,7 @@ use url::Url;
 
 pub mod config_tx;
 #[cfg(feature = "plus")]
-mod plus;
+pub mod plus;
 
 pub const API_NAME: &str = "Bencher API";
 

@@ -1,13 +1,23 @@
 #![cfg(feature = "plus")]
 
 use bencher_billing::Biller;
-use bencher_json::system::config::JsonPlus;
+use bencher_json::system::config::{JsonPlus, JsonStats};
 use bencher_license::Licensor;
 use bencher_plus::BENCHER_DEV;
+use chrono::NaiveTime;
+use once_cell::sync::Lazy;
 use tokio::runtime::Handle;
 use url::Url;
 
+// Run at 03:07:22 UTC by default (offset 11,242 seconds)
+#[allow(clippy::expect_used)]
+static DEFAULT_STATS_OFFSET: Lazy<NaiveTime> =
+    Lazy::new(|| NaiveTime::from_hms_opt(3, 7, 22).expect("Invalid default stats offset"));
+// Default stats to enabled
+const DEFAULT_STATS_ENABLED: bool = true;
+
 pub struct Plus {
+    pub stats: StatsSettings,
     pub biller: Option<Biller>,
     pub licensor: Licensor,
 }
@@ -29,22 +39,22 @@ pub enum PlusError {
 
 impl Plus {
     pub fn new(endpoint: &Url, plus: Option<JsonPlus>) -> Result<Self, PlusError> {
-        match Self::new_inner(endpoint, plus)? {
-            Some(plus) => Ok(plus),
-            None => Ok(Self {
+        let Some(plus) = plus else {
+            return Ok(Self {
+                stats: StatsSettings::default(),
                 biller: None,
                 licensor: Licensor::self_hosted().map_err(PlusError::LicenseSelfHosted)?,
-            }),
-        }
-    }
-
-    pub fn new_inner(endpoint: &Url, plus: Option<JsonPlus>) -> Result<Option<Self>, PlusError> {
-        let Some(plus) = plus else {
-            return Ok(None);
+            });
         };
 
+        let stats = plus.stats.map(Into::into).unwrap_or_default();
+
         let Some(cloud) = plus.cloud else {
-            return Ok(None);
+            return Ok(Self {
+                stats,
+                biller: None,
+                licensor: Licensor::self_hosted().map_err(PlusError::LicenseSelfHosted)?,
+            });
         };
 
         // The only endpoint that should be using the `cloud` section is https://bencher.dev
@@ -61,6 +71,36 @@ impl Plus {
         let licensor =
             Licensor::bencher_cloud(&cloud.license_pem).map_err(PlusError::LicenseCloud)?;
 
-        Ok(Some(Self { biller, licensor }))
+        Ok(Self {
+            stats,
+            biller,
+            licensor,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct StatsSettings {
+    pub offset: NaiveTime,
+    pub enabled: bool,
+}
+
+impl Default for StatsSettings {
+    fn default() -> Self {
+        Self {
+            offset: *DEFAULT_STATS_OFFSET,
+            enabled: DEFAULT_STATS_ENABLED,
+        }
+    }
+}
+
+impl From<JsonStats> for StatsSettings {
+    fn from(json: JsonStats) -> Self {
+        let JsonStats { offset, enabled } = json;
+        let offset = offset
+            .and_then(|offset| NaiveTime::from_num_seconds_from_midnight_opt(offset, 0))
+            .unwrap_or(*DEFAULT_STATS_OFFSET);
+        let enabled = enabled.unwrap_or(DEFAULT_STATS_ENABLED);
+        Self { offset, enabled }
     }
 }

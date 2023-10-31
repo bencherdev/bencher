@@ -1,12 +1,16 @@
 #![cfg(feature = "plus")]
 
+use std::sync::Arc;
+
 use bencher_json::{DateTime, JsonServer, ServerUuid};
+use chrono::{Duration, NaiveTime, Utc};
 use diesel::RunQueryDsl;
 use dropshot::HttpError;
+use once_cell::sync::Lazy;
 
 use crate::{
-    context::DbConnection, error::resource_conflict_err, schema, schema::server as server_table,
-    util::fn_get::fn_get,
+    config::plus::StatsSettings, context::DbConnection, error::resource_conflict_err, schema,
+    schema::server as server_table, util::fn_get::fn_get,
 };
 
 crate::util::typed_id::typed_id!(ServerId);
@@ -38,6 +42,30 @@ impl QueryServer {
                 .map_err(resource_conflict_err!(Server, SERVER_ID))?;
             Self::get_server(conn)
         }
+    }
+
+    pub async fn spawn_stats(
+        self,
+        conn: Arc<tokio::sync::Mutex<DbConnection>>,
+        stats_settings: StatsSettings,
+    ) {
+        tokio::spawn(async move {
+            loop {
+                let now = Utc::now().naive_utc().time();
+                let sleep_time = match now.cmp(&stats_settings.offset) {
+                    std::cmp::Ordering::Less => stats_settings.offset - now,
+                    std::cmp::Ordering::Equal => Duration::days(1),
+                    std::cmp::Ordering::Greater => {
+                        Duration::days(1) - (now - stats_settings.offset)
+                    },
+                }
+                .to_std()
+                .unwrap_or(std::time::Duration::from_secs(24 * 60 * 60));
+                tokio::time::sleep(sleep_time).await;
+
+                println!("Hello, world!");
+            }
+        });
     }
 
     pub fn into_json(self) -> JsonServer {

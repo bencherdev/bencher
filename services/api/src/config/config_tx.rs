@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 #[cfg(feature = "plus")]
 use bencher_json::system::config::JsonPlus;
 use bencher_json::{
@@ -21,7 +23,6 @@ use tokio::sync::mpsc::Sender;
 use crate::{
     context::{ApiContext, Database, DbConnection, Email, Messenger},
     endpoints::Api,
-    model::server::QueryServer,
 };
 
 #[cfg(feature = "plus")]
@@ -52,8 +53,6 @@ pub enum ConfigTxError {
     DatabaseConnection(String, diesel::ConnectionError),
     #[error("Failed to parse data store: {0}")]
     DataStore(crate::context::DataStoreError),
-    #[error("Failed to get server ID: {0}")]
-    ServerId(dropshot::HttpError),
     #[error("Failed to register endpoint: {0}")]
     Register(String),
     #[error("Failed to create server: {0}")]
@@ -62,6 +61,9 @@ pub enum ConfigTxError {
     #[cfg(feature = "plus")]
     #[error("{0}")]
     Plus(super::plus::PlusError),
+    #[cfg(feature = "plus")]
+    #[error("Failed to get server ID: {0}")]
+    ServerId(dropshot::HttpError),
 }
 
 impl ConfigTx {
@@ -111,9 +113,16 @@ impl ConfigTx {
         });
         let config_dropshot = into_config_dropshot(server);
 
-        let query_server = QueryServer::get_or_create(&mut *context.conn().await)
-            .map_err(ConfigTxError::ServerId)?;
-        info!(log, "Server ID: {}", query_server.uuid);
+        #[cfg(feature = "plus")]
+        // Only collect stats on non-Bencher Cloud servers
+        if context.biller.is_none() {
+            let conn = context.database.connection.clone();
+            let query_server =
+                crate::model::server::QueryServer::get_or_create(&mut *conn.lock().await)
+                    .map_err(ConfigTxError::ServerId)?;
+            info!(log, "Server ID: {}", query_server.uuid);
+            query_server.spawn_stats(conn, context.stats).await;
+        }
 
         let mut api = ApiDescription::new();
         debug!(log, "Registering server APIs");
@@ -160,7 +169,11 @@ fn into_context(
 
     info!(&log, "Configuring Bencher Plus");
     #[cfg(feature = "plus")]
-    let Plus { biller, licensor } = Plus::new(&endpoint, plus).map_err(ConfigTxError::Plus)?;
+    let Plus {
+        stats,
+        biller,
+        licensor,
+    } = Plus::new(&endpoint, plus).map_err(ConfigTxError::Plus)?;
 
     debug!(&log, "Creating API context");
     Ok(ApiContext {
@@ -170,10 +183,12 @@ fn into_context(
         messenger: into_messenger(smtp),
         database: Database {
             path: json_database.file,
-            connection: tokio::sync::Mutex::new(database_connection),
+            connection: Arc::new(tokio::sync::Mutex::new(database_connection)),
             data_store,
         },
         restart_tx,
+        #[cfg(feature = "plus")]
+        stats,
         #[cfg(feature = "plus")]
         biller,
         #[cfg(feature = "plus")]

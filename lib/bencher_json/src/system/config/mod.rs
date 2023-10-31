@@ -18,6 +18,7 @@ pub use logging::{IfExists, JsonLogging, LogLevel, ServerLog};
 #[cfg(feature = "plus")]
 pub use plus::{
     cloud::{JsonBilling, JsonCloud, JsonProduct, JsonProducts},
+    stats::JsonStats,
     JsonPlus,
 };
 pub use security::JsonSecurity;
