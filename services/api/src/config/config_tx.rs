@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 #[cfg(feature = "plus")]
 use bencher_json::system::config::JsonPlus;
 use bencher_json::{
@@ -23,6 +21,7 @@ use tokio::sync::mpsc::Sender;
 use crate::{
     context::{ApiContext, Database, DbConnection, Email, Messenger},
     endpoints::Api,
+    model::server::QueryServer,
 };
 
 #[cfg(feature = "plus")]
@@ -53,6 +52,8 @@ pub enum ConfigTxError {
     DatabaseConnection(String, diesel::ConnectionError),
     #[error("Failed to parse data store: {0}")]
     DataStore(crate::context::DataStoreError),
+    #[error("Failed to get server ID: {0}")]
+    ServerId(dropshot::HttpError),
     #[error("Failed to register endpoint: {0}")]
     Register(String),
     #[error("Failed to create server: {0}")]
@@ -63,68 +64,70 @@ pub enum ConfigTxError {
     Plus(super::plus::PlusError),
 }
 
-impl TryFrom<ConfigTx> for HttpServer<ApiContext> {
-    type Error = ConfigTxError;
-
-    fn try_from(config_tx: ConfigTx) -> Result<Self, Self::Error> {
-        let log = into_log(config_tx.config.0.logging.clone())?;
-        into_inner(&log, config_tx).map_err(|e| {
+impl ConfigTx {
+    pub async fn into_server(self) -> Result<HttpServer<ApiContext>, ConfigTxError> {
+        let log = into_log(self.config.0.logging.clone())?;
+        self.into_inner(&log).await.map_err(|e| {
             error!(&log, "{e}");
             e
         })
     }
+
+    async fn into_inner(self, log: &Logger) -> Result<HttpServer<ApiContext>, ConfigTxError> {
+        let ConfigTx { config, restart_tx } = self;
+
+        let Config(JsonConfig {
+            console,
+            security,
+            mut server,
+            database,
+            smtp,
+            logging: _,
+            #[cfg(feature = "plus")]
+            plus,
+        }) = config;
+
+        debug!(log, "Creating internal configuration");
+        let context = into_context(
+            log,
+            console,
+            security,
+            smtp,
+            database,
+            restart_tx,
+            #[cfg(feature = "plus")]
+            plus,
+        )?;
+        debug!(log, "Configuring TLS");
+        let tls = server.tls.take().map(|json_tls| match json_tls {
+            JsonTls::AsFile {
+                cert_file,
+                key_file,
+            } => ConfigTls::AsFile {
+                cert_file,
+                key_file,
+            },
+            JsonTls::AsBytes { certs, key } => ConfigTls::AsBytes { certs, key },
+        });
+        let config_dropshot = into_config_dropshot(server);
+
+        let query_server = QueryServer::get_or_create(&mut *context.conn().await)
+            .map_err(ConfigTxError::ServerId)?;
+        info!(log, "Server ID: {}", query_server.uuid);
+
+        let mut api = ApiDescription::new();
+        debug!(log, "Registering server APIs");
+        Api::register(&mut api, true).map_err(ConfigTxError::Register)?;
+
+        Ok(
+            dropshot::HttpServerStarter::new_with_tls(&config_dropshot, api, context, log, tls)
+                .map_err(ConfigTxError::CreateServer)?
+                .start(),
+        )
+    }
 }
 
-fn into_inner(log: &Logger, config_tx: ConfigTx) -> Result<HttpServer<ApiContext>, ConfigTxError> {
-    let ConfigTx { config, restart_tx } = config_tx;
-
-    let Config(JsonConfig {
-        console,
-        security,
-        mut server,
-        database,
-        smtp,
-        logging: _,
-        #[cfg(feature = "plus")]
-        plus,
-    }) = config;
-
-    debug!(log, "Creating internal configuration");
-    let private = into_private(
-        log,
-        console,
-        security,
-        smtp,
-        database,
-        restart_tx,
-        #[cfg(feature = "plus")]
-        plus,
-    )?;
-    debug!(log, "Configuring TLS");
-    let tls = server.tls.take().map(|json_tls| match json_tls {
-        JsonTls::AsFile {
-            cert_file,
-            key_file,
-        } => ConfigTls::AsFile {
-            cert_file,
-            key_file,
-        },
-        JsonTls::AsBytes { certs, key } => ConfigTls::AsBytes { certs, key },
-    });
-    let config_dropshot = into_config_dropshot(server);
-
-    let mut api = ApiDescription::new();
-    debug!(log, "Registering server APIs");
-    Api::register(&mut api, true).map_err(ConfigTxError::Register)?;
-
-    Ok(
-        dropshot::HttpServerStarter::new_with_tls(&config_dropshot, api, private, log, tls)
-            .map_err(ConfigTxError::CreateServer)?
-            .start(),
-    )
-}
-
-fn into_private(
+fn into_context(
     log: &Logger,
     console: JsonConsole,
     security: JsonSecurity,

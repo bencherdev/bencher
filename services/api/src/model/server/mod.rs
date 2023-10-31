@@ -11,7 +11,7 @@ use crate::{
 
 crate::util::typed_id::typed_id!(ServerId);
 
-const SERVER_ID: ServerId = ServerId(0);
+const SERVER_ID: ServerId = ServerId(1);
 
 #[derive(Debug, Clone, diesel::Queryable)]
 pub struct QueryServer {

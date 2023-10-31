@@ -41,8 +41,9 @@ ALTER TABLE up_user
     RENAME TO user;
 -- server
 CREATE TABLE server (
-    id INTEGER PRIMARY KEY NOT NULL CHECK (id = 0),
+    id INTEGER PRIMARY KEY NOT NULL DEFAULT 1,
     uuid TEXT NOT NULL UNIQUE,
-    created BIGINT NOT NULL
+    created BIGINT NOT NULL,
+    constraint only_one_server check (id = 1)
 );
 PRAGMA foreign_keys = on;

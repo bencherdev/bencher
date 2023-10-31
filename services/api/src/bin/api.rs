@@ -71,7 +71,9 @@ async fn run(
         let config_tx = ConfigTx { config, restart_tx };
 
         let handle = tokio::spawn(async move {
-            HttpServer::try_from(config_tx)
+            config_tx
+                .into_server()
+                .await
                 .map_err(ApiError::ConfigTxError)?
                 .await
                 .map_err(ApiError::RunServer)
