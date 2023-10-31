@@ -7741,6 +7741,9 @@
       "JsonServerStats": {
         "type": "object",
         "properties": {
+          "projects": {
+            "$ref": "#/components/schemas/JsonCohort"
+          },
           "reports": {
             "$ref": "#/components/schemas/JsonCohortAvg"
           },
@@ -7752,6 +7755,7 @@
           }
         },
         "required": [
+          "projects",
           "reports",
           "timestamp",
           "users"

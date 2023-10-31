@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 pub struct JsonServerStats {
     pub timestamp: DateTime,
     pub users: JsonCohort,
+    pub projects: JsonCohort,
     pub reports: JsonCohortAvg,
 }
 
