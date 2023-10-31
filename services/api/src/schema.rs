@@ -167,6 +167,14 @@ diesel::table! {
 }
 
 diesel::table! {
+    server (id) {
+        id -> Nullable<Integer>,
+        uuid -> Text,
+        created -> BigInt,
+    }
+}
+
+diesel::table! {
     statistic (id) {
         id -> Integer,
         uuid -> Text,
@@ -289,6 +297,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     project,
     project_role,
     report,
+    server,
     statistic,
     testbed,
     threshold,

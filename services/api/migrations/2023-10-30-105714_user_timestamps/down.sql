@@ -1,4 +1,5 @@
 PRAGMA foreign_keys = off;
+-- user
 CREATE TABLE down_user (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
@@ -28,4 +29,6 @@ FROM user;
 DROP TABLE user;
 ALTER TABLE down_user
     RENAME TO user;
+-- server
+DROP TABLE server;
 PRAGMA foreign_keys = on;

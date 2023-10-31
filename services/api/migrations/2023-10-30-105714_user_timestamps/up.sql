@@ -1,4 +1,5 @@
 PRAGMA foreign_keys = off;
+-- user
 CREATE TABLE up_user (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
@@ -38,4 +39,10 @@ FROM user;
 DROP TABLE user;
 ALTER TABLE up_user
     RENAME TO user;
+-- server
+CREATE TABLE server (
+    id INTEGER PRIMARY KEY CHECK (id = 0),
+    uuid TEXT NOT NULL UNIQUE,
+    created BIGINT NOT NULL
+);
 PRAGMA foreign_keys = on;
