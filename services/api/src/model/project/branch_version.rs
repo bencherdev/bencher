@@ -1,6 +1,4 @@
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-
-use crate::{schema, schema::branch_version as branch_version_table, util::fn_get::fn_get};
+use crate::{schema::branch_version as branch_version_table, util::fn_get::fn_get};
 
 use super::{branch::BranchId, version::VersionId};
 

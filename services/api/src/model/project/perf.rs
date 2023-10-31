@@ -1,8 +1,6 @@
 use bencher_json::{project::perf::Iteration, PerfUuid};
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 
 use crate::{
-    schema,
     schema::perf as perf_table,
     util::fn_get::{fn_get, fn_get_id, fn_get_uuid},
 };

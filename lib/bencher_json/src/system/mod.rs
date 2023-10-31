@@ -4,7 +4,7 @@ pub mod config;
 pub mod endpoint;
 pub mod ping;
 pub mod restart;
-pub mod spec;
 #[cfg(feature = "plus")]
-pub mod stats;
+pub mod server;
+pub mod spec;
 pub mod version;

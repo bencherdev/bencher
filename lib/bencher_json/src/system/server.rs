@@ -5,9 +5,19 @@ use bencher_valid::DateTime;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+crate::typed_uuid::typed_uuid!(ServerUuid);
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonServer {
+    pub uuid: ServerUuid,
+    pub created: DateTime,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonServerStats {
+    // pub server: JsonServer,
     pub timestamp: DateTime,
     // Number of users (created)
     pub users: JsonCohort,

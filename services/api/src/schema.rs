@@ -168,7 +168,7 @@ diesel::table! {
 
 diesel::table! {
     server (id) {
-        id -> Nullable<Integer>,
+        id -> Integer,
         uuid -> Text,
         created -> BigInt,
     }

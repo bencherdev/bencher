@@ -1,7 +1,7 @@
 #![cfg(feature = "plus")]
 
 use bencher_json::{
-    system::stats::{JsonCohort, JsonCohortAvg},
+    system::server::{JsonCohort, JsonCohortAvg},
     DateTime, JsonServerStats,
 };
 use diesel::{

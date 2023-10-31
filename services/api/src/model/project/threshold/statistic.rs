@@ -2,13 +2,11 @@ use bencher_json::{
     project::threshold::{JsonNewStatistic, JsonStatistic, StatisticKind},
     Boundary, DateTime, SampleSize, StatisticUuid, Window,
 };
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
 use crate::{
     context::DbConnection,
     error::{assert_parentage, BencherResource},
-    schema,
     schema::statistic as statistic_table,
     util::fn_get::{fn_get, fn_get_id, fn_get_uuid},
 };

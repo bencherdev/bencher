@@ -41,7 +41,7 @@ ALTER TABLE up_user
     RENAME TO user;
 -- server
 CREATE TABLE server (
-    id INTEGER PRIMARY KEY CHECK (id = 0),
+    id INTEGER PRIMARY KEY NOT NULL CHECK (id = 0),
     uuid TEXT NOT NULL UNIQUE,
     created BIGINT NOT NULL
 );
