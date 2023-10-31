@@ -2,7 +2,9 @@ mod body;
 mod email;
 mod message;
 
-pub use body::{Body, ButtonBody, NewUserBody, ServerStatsBody};
+#[cfg(feature = "plus")]
+pub use body::ServerStatsBody;
+pub use body::{Body, ButtonBody, NewUserBody};
 pub use email::Email;
 pub use message::Message;
 use slog::{info, Logger};

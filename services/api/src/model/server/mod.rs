@@ -66,6 +66,7 @@ impl QueryServer {
                 let Ok(json_stats_str) = serde_json::to_string(&json_stats) else {
                     continue;
                 };
+                // println!("{json_stats_str}");
 
                 let client = reqwest::Client::new();
                 let _resp = client
@@ -73,6 +74,7 @@ impl QueryServer {
                     .body(json_stats_str)
                     .send()
                     .await;
+                // println!("{resp:?}");
             }
         });
     }

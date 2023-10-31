@@ -1,3 +1,5 @@
+#![cfg(feature = "plus")]
+
 use bencher_json::JsonServerStats;
 
 use super::FmtBody;

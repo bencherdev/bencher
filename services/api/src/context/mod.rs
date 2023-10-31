@@ -11,7 +11,9 @@ mod messenger;
 mod rbac;
 
 pub use database::{DataStoreError, Database, DbConnection};
-pub use messenger::{Body, ButtonBody, Email, Message, Messenger, NewUserBody, ServerStatsBody};
+#[cfg(feature = "plus")]
+pub use messenger::ServerStatsBody;
+pub use messenger::{Body, ButtonBody, Email, Message, Messenger, NewUserBody};
 pub use rbac::{Rbac, RbacError};
 
 #[cfg(feature = "plus")]

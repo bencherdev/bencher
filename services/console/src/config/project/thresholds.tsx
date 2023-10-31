@@ -1,9 +1,9 @@
 import type { Params } from "astro";
-import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
-import { parentPath, addPath, viewUuidPath } from "../util";
-import { validBoundary, validSampleSize, validU32 } from "../../util/valid";
 import FieldKind from "../../components/field/kind";
 import { isAllowedProjectDelete } from "../../util/auth";
+import { validBoundary, validSampleSize, validU32 } from "../../util/valid";
+import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
+import { addPath, parentPath, viewUuidPath } from "../util";
 
 const paginationUrl = (
 	params: undefined | Params,
@@ -50,14 +50,14 @@ const THRESHOLD_FIELDS = {
 	},
 	lower_boundary: {
 		type: "input",
-		placeholder: "0.95",
+		placeholder: "0.98",
 		icon: "fas fa-arrow-down",
 		help: "Must be between 0.5000 and 1.0000 (lower is stricter; higher is looser)",
 		validate: validBoundary,
 	},
 	upper_boundary: {
 		type: "input",
-		placeholder: "0.95",
+		placeholder: "0.98",
 		icon: "fas fa-arrow-up",
 		help: "Must be between 0.5000 and 1.0000 (lower is stricter; higher is looser)",
 		validate: validBoundary,
