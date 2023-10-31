@@ -1,0 +1,16 @@
+## `plus`
+
+Dieser Abschnitt betrifft Funktionen, die von der [Bencher Plus-Lizenz](/legal/plus) abgedeckt sind.
+
+### `plus.stats`
+
+Dieser Abschnitt gibt an, ob und wann Serverstatistiken gesammelt werden.
+Der gesamte Abschnitt ist optional.
+Wenn nicht angegeben, werden die aufgeführten Standardwerte verwendet.
+Das heißt, Serverstatistiken sind opt-out.
+Setzen Sie `enabled` auf `false`, um die Sammlung von Serverstatistiken zu deaktivieren.
+
+|  Name   | Beispiel | Standard | Erforderlich |                                                      Beschreibung                                                       |
+| :-----: | :------: | :------: | :----------: | :---------------------------------------------------------------------------------------------------------------------: |
+| offset  |  11242   |  11242   |     Nein     | Gibt den Offset von Mitternacht in Sekunden für die Serverstatistiksammlung an. Standardmäßig läuft es um 03:07:22 UTC. |
+| enabled |   true   |   true   |     Nein     |               Steuert, ob Serverstatistiken gesammelt werden. Setzen Sie auf `false`, um sich abzumelden.               |

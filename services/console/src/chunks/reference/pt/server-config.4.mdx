@@ -1,0 +1,16 @@
+## `plus`
+
+Esta seção é para recursos que são cobertos pela [Licença Bencher Plus](/legal/plus).
+
+### `plus.stats`
+
+Esta seção especifica se e quando as estatísticas do servidor são coletadas.
+A seção inteira é opcional.
+Se não especificado, os valores padrão listados serão usados.
+Ou seja, as estatísticas do servidor são opt-out.
+Defina `enabled` como `false` para desabilitar as estatísticas do servidor.
+
+|  Nome   | Exemplo | Padrão | Obrigatório |                                                     Descrição                                                      |
+| :-----: | :-----: | :-----: | :---------: | :----------------------------------------------------------------------------------------------------------------: |
+| offset  |  11242  |  11242  |     Não    | Especifica o desvio da meia-noite em segundos para a coleta de estatísticas do servidor. Por padrão, roda às 03:07:22 UTC. |
+| enabled |  true   |  true   |     Não    |                  Controla se as estatísticas do servidor são coletadas. Defina como `false` para optar por não participar.   |
