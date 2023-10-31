@@ -1,8 +1,10 @@
 mod button;
 mod new_user;
+mod server_stats;
 
 pub use button::ButtonBody;
 pub use new_user::NewUserBody;
+pub use server_stats::ServerStatsBody;
 
 pub trait FmtBody {
     fn text(&self) -> String;
@@ -12,6 +14,7 @@ pub trait FmtBody {
 pub enum Body {
     Button(Box<ButtonBody>),
     NewUser(NewUserBody),
+    ServerStats(ServerStatsBody),
 }
 
 impl FmtBody for Body {
@@ -19,6 +22,7 @@ impl FmtBody for Body {
         match self {
             Self::Button(body) => body.text(),
             Self::NewUser(body) => body.text(),
+            Self::ServerStats(body) => body.text(),
         }
     }
 
@@ -26,6 +30,7 @@ impl FmtBody for Body {
         match self {
             Self::Button(body) => body.html(),
             Self::NewUser(body) => body.html(),
+            Self::ServerStats(body) => body.html(),
         }
     }
 }

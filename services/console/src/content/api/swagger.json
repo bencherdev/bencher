@@ -5396,6 +5396,71 @@
             "$ref": "#/components/responses/Error"
           }
         }
+      },
+      "post": {
+        "tags": [
+          "server",
+          "stats"
+        ],
+        "operationId": "server_stats_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonServerStats"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonEmpty"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
       }
     },
     "/v0/server/version": {
@@ -7399,6 +7464,14 @@
                 "$ref": "#/components/schemas/JsonCloud"
               }
             ]
+          },
+          "stats": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonStats"
+              }
+            ]
           }
         }
       },
@@ -7738,6 +7811,21 @@
           "request_body_max_bytes"
         ]
       },
+      "JsonServer2": {
+        "type": "object",
+        "properties": {
+          "created": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/ServerUuid"
+          }
+        },
+        "required": [
+          "created",
+          "uuid"
+        ]
+      },
       "JsonServerStats": {
         "type": "object",
         "properties": {
@@ -7750,6 +7838,9 @@
           "metrics_per_report": {
             "$ref": "#/components/schemas/JsonCohortAvg"
           },
+          "organizations": {
+            "$ref": "#/components/schemas/JsonOrganizations"
+          },
           "projects": {
             "$ref": "#/components/schemas/JsonCohort"
           },
@@ -7758,6 +7849,9 @@
           },
           "reports_per_project": {
             "$ref": "#/components/schemas/JsonCohortAvg"
+          },
+          "server": {
+            "$ref": "#/components/schemas/JsonServer2"
           },
           "timestamp": {
             "$ref": "#/components/schemas/DateTime"
@@ -7770,9 +7864,11 @@
           "active_projects",
           "metrics",
           "metrics_per_report",
+          "organizations",
           "projects",
           "reports",
           "reports_per_project",
+          "server",
           "timestamp",
           "users"
         ]
@@ -7931,6 +8027,21 @@
           "threshold",
           "uuid"
         ]
+      },
+      "JsonStats": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "offset": {
+            "nullable": true,
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          }
+        }
       },
       "JsonTestbed": {
         "type": "object",
@@ -8571,6 +8682,10 @@
             "additionalProperties": false
           }
         ]
+      },
+      "ServerUuid": {
+        "type": "string",
+        "format": "uuid"
       },
       "Slug": {
         "type": "string"

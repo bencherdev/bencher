@@ -12,6 +12,7 @@ plus = [
     "dep:bencher_billing",
     "dep:bencher_license",
     "dep:bencher_plus",
+    "dep:reqwest",
 ]
 sentry = ["dep:sentry"]
 swagger = ["dep:literally"]
@@ -43,6 +44,7 @@ serde_urlencoded.workspace = true
 ordered-float.workspace = true
 oso.workspace = true
 rand.workspace = true
+reqwest = { workspace = true, optional = true }
 slog.workspace = true
 slug.workspace = true
 thiserror.workspace = true

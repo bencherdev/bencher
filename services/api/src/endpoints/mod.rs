@@ -240,6 +240,7 @@ impl Api {
                 api.register(system::server::stats::server_stats_options)?;
             }
             api.register(system::server::stats::server_stats_get)?;
+            api.register(system::server::stats::server_stats_post)?;
         }
 
         Ok(())

@@ -2,22 +2,24 @@
 
 use std::sync::Arc;
 
-use bencher_json::{DateTime, JsonServer, ServerUuid};
+use bencher_json::{DateTime, JsonServer, JsonServerStats, ServerUuid};
+use bencher_plus::API_BENCHER_DEV_URL;
 use chrono::{Duration, NaiveTime, Utc};
 use diesel::RunQueryDsl;
 use dropshot::HttpError;
-use once_cell::sync::Lazy;
 
 use crate::{
-    config::plus::StatsSettings, context::DbConnection, error::resource_conflict_err, schema,
-    schema::server as server_table, util::fn_get::fn_get,
+    context::DbConnection, error::resource_conflict_err, schema, schema::server as server_table,
+    util::fn_get::fn_get,
 };
+
+mod stats;
 
 crate::util::typed_id::typed_id!(ServerId);
 
 const SERVER_ID: ServerId = ServerId(1);
 
-#[derive(Debug, Clone, diesel::Queryable)]
+#[derive(Debug, Clone, Copy, diesel::Queryable)]
 pub struct QueryServer {
     pub id: ServerId,
     pub uuid: ServerUuid,
@@ -44,28 +46,39 @@ impl QueryServer {
         }
     }
 
-    pub async fn spawn_stats(
-        self,
-        conn: Arc<tokio::sync::Mutex<DbConnection>>,
-        stats_settings: StatsSettings,
-    ) {
+    pub fn spawn_stats(self, conn: Arc<tokio::sync::Mutex<DbConnection>>, offset: NaiveTime) {
         tokio::spawn(async move {
             loop {
                 let now = Utc::now().naive_utc().time();
-                let sleep_time = match now.cmp(&stats_settings.offset) {
-                    std::cmp::Ordering::Less => stats_settings.offset - now,
+                let sleep_time = match now.cmp(&offset) {
+                    std::cmp::Ordering::Less => offset - now,
                     std::cmp::Ordering::Equal => Duration::days(1),
-                    std::cmp::Ordering::Greater => {
-                        Duration::days(1) - (now - stats_settings.offset)
-                    },
+                    std::cmp::Ordering::Greater => Duration::days(1) - (now - offset),
                 }
                 .to_std()
                 .unwrap_or(std::time::Duration::from_secs(24 * 60 * 60));
                 tokio::time::sleep(sleep_time).await;
 
-                println!("Hello, world!");
+                let conn = &mut *conn.lock().await;
+                let Ok(json_stats) = self.get_stats(conn) else {
+                    continue;
+                };
+                let Ok(json_stats_str) = serde_json::to_string(&json_stats) else {
+                    continue;
+                };
+
+                let client = reqwest::Client::new();
+                let _resp = client
+                    .post(API_BENCHER_DEV_URL.clone())
+                    .body(json_stats_str)
+                    .send()
+                    .await;
             }
         });
+    }
+
+    pub fn get_stats(self, conn: &mut DbConnection) -> Result<JsonServerStats, HttpError> {
+        stats::get_stats(conn, self)
     }
 
     pub fn into_json(self) -> JsonServer {

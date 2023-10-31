@@ -2,7 +2,7 @@ mod body;
 mod email;
 mod message;
 
-pub use body::{Body, ButtonBody, NewUserBody};
+pub use body::{Body, ButtonBody, NewUserBody, ServerStatsBody};
 pub use email::Email;
 pub use message::Message;
 use slog::{info, Logger};
