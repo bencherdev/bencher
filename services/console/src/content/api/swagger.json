@@ -7741,6 +7741,15 @@
       "JsonServerStats": {
         "type": "object",
         "properties": {
+          "active_projects": {
+            "$ref": "#/components/schemas/JsonCohort"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/JsonCohort"
+          },
+          "metrics_per_report": {
+            "$ref": "#/components/schemas/JsonCohortAvg"
+          },
           "projects": {
             "$ref": "#/components/schemas/JsonCohort"
           },
@@ -7758,6 +7767,9 @@
           }
         },
         "required": [
+          "active_projects",
+          "metrics",
+          "metrics_per_report",
           "projects",
           "reports",
           "reports_per_project",

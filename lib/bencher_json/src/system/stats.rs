@@ -9,10 +9,20 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonServerStats {
     pub timestamp: DateTime,
+    // Number of users (created)
     pub users: JsonCohort,
+    // Number of projects (created)
     pub projects: JsonCohort,
+    // Number of projects (with at least one report)
+    pub active_projects: JsonCohort,
+    // Number of reports (created)
     pub reports: JsonCohort,
+    // Number of reports per active project (created)
     pub reports_per_project: JsonCohortAvg,
+    // Number of metrics (created)
+    pub metrics: JsonCohort,
+    // Number of metrics per report (created)
+    pub metrics_per_report: JsonCohortAvg,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

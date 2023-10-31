@@ -54,7 +54,11 @@ pub async fn server_stats_get(
     Ok(Get::auth_response_ok(json))
 }
 
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::too_many_lines
+)]
 async fn get_one_inner(context: &ApiContext) -> Result<JsonServerStats, HttpError> {
     let conn = &mut *context.conn().await;
 
@@ -111,15 +115,16 @@ async fn get_one_inner(context: &ApiContext) -> Result<JsonServerStats, HttpErro
         total: total_projects as u64,
     };
 
-    // median reports per project
+    // reports and median reports per project
     let mut weekly_reports = schema::report::table
         .filter(schema::report::created.ge(this_week))
         .group_by(schema::report::project_id)
         .select(count(schema::report::id))
         .load::<i64>(conn)
         .map_err(resource_not_found_err!(Report))?;
-    let weekly_reports_total: i64 = weekly_reports.clone().iter().sum();
-    let weekly_reports_per_project = padded_median(total_projects as usize, &mut weekly_reports);
+    let weekly_active_projects = weekly_reports.len();
+    let weekly_reports_total: i64 = weekly_reports.iter().sum();
+    let weekly_reports_per_project = median(&mut weekly_reports);
 
     let mut monthly_reports = schema::report::table
         .filter(schema::report::created.ge(this_month))
@@ -127,16 +132,24 @@ async fn get_one_inner(context: &ApiContext) -> Result<JsonServerStats, HttpErro
         .select(count(schema::report::id))
         .load::<i64>(conn)
         .map_err(resource_not_found_err!(Report))?;
-    let monthly_reports_total: i64 = monthly_reports.clone().iter().sum();
-    let monthly_reports_per_project = padded_median(total_projects as usize, &mut monthly_reports);
+    let monthly_active_projects = monthly_reports.len();
+    let monthly_reports_total: i64 = monthly_reports.iter().sum();
+    let monthly_reports_per_project = median(&mut monthly_reports);
 
     let mut total_reports = schema::report::table
         .group_by(schema::report::project_id)
         .select(count(schema::report::id))
         .load::<i64>(conn)
         .map_err(resource_not_found_err!(Report))?;
-    let total_reports_total: i64 = total_reports.clone().iter().sum();
-    let total_reports_per_project = padded_median(total_projects as usize, &mut total_reports);
+    let total_active_projects = total_reports.len();
+    let total_reports_total: i64 = total_reports.iter().sum();
+    let total_reports_per_project = median(&mut total_reports);
+
+    let active_projects_cohort = JsonCohort {
+        week: weekly_active_projects as u64,
+        month: monthly_active_projects as u64,
+        total: total_active_projects as u64,
+    };
 
     let reports_cohort = JsonCohort {
         week: weekly_reports_total as u64,
@@ -150,13 +163,92 @@ async fn get_one_inner(context: &ApiContext) -> Result<JsonServerStats, HttpErro
         total: total_reports_per_project,
     };
 
+    // metrics and median metrics per report
+    let mut weekly_metrics = schema::metric::table
+        .inner_join(
+            schema::perf::table
+                .inner_join(schema::benchmark::table.inner_join(schema::project::table))
+                .inner_join(schema::report::table),
+        )
+        .filter(schema::report::created.ge(this_week))
+        .group_by(schema::report::id)
+        .select(count(schema::metric::id))
+        .load::<i64>(conn)
+        .map_err(resource_not_found_err!(Metric))?;
+    let weekly_metrics_total: i64 = weekly_metrics.iter().sum();
+    let weekly_metrics_per_project = median(&mut weekly_metrics);
+
+    let mut monthly_metrics = schema::metric::table
+        .inner_join(
+            schema::perf::table
+                .inner_join(schema::benchmark::table.inner_join(schema::project::table))
+                .inner_join(schema::report::table),
+        )
+        .filter(schema::report::created.ge(this_month))
+        .group_by(schema::report::id)
+        .select(count(schema::metric::id))
+        .load::<i64>(conn)
+        .map_err(resource_not_found_err!(Metric))?;
+    let monthly_metrics_total: i64 = monthly_metrics.iter().sum();
+    let monthly_metrics_per_project = median(&mut monthly_metrics);
+
+    let mut total_metrics = schema::metric::table
+        .inner_join(
+            schema::perf::table
+                .inner_join(schema::benchmark::table.inner_join(schema::project::table))
+                .inner_join(schema::report::table),
+        )
+        .group_by(schema::report::id)
+        .select(count(schema::metric::id))
+        .load::<i64>(conn)
+        .map_err(resource_not_found_err!(Metric))?;
+    let total_metrics_total: i64 = total_metrics.iter().sum();
+    let total_metrics_per_project = median(&mut total_metrics);
+
+    let metrics_cohort = JsonCohort {
+        week: weekly_metrics_total as u64,
+        month: monthly_metrics_total as u64,
+        total: total_metrics_total as u64,
+    };
+
+    let metrics_per_report_cohort = JsonCohortAvg {
+        week: weekly_metrics_per_project,
+        month: monthly_metrics_per_project,
+        total: total_metrics_per_project,
+    };
+
     Ok(JsonServerStats {
         timestamp: now,
         users: users_cohort,
         projects: projects_cohort,
+        active_projects: active_projects_cohort,
         reports: reports_cohort,
         reports_per_project: reports_per_project_cohort,
+        metrics: metrics_cohort,
+        metrics_per_report: metrics_per_report_cohort,
     })
+}
+
+#[allow(
+    clippy::integer_division,
+    clippy::cast_precision_loss,
+    clippy::indexing_slicing
+)]
+fn median(array: &mut Vec<i64>) -> f64 {
+    if array.is_empty() {
+        return 0.0;
+    }
+
+    array.sort_unstable();
+
+    let size = array.len();
+    if (size % 2) == 0 {
+        let left = size / 2 - 1;
+        let right = size / 2;
+        (array[left] as f64 + array[right] as f64) / 2.0
+    } else {
+        array[size / 2] as f64
+    }
 }
 
 #[allow(
