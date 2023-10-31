@@ -7745,6 +7745,9 @@
             "$ref": "#/components/schemas/JsonCohort"
           },
           "reports": {
+            "$ref": "#/components/schemas/JsonCohort"
+          },
+          "reports_per_project": {
             "$ref": "#/components/schemas/JsonCohortAvg"
           },
           "timestamp": {
@@ -7757,6 +7760,7 @@
         "required": [
           "projects",
           "reports",
+          "reports_per_project",
           "timestamp",
           "users"
         ]

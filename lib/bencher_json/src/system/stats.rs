@@ -11,7 +11,8 @@ pub struct JsonServerStats {
     pub timestamp: DateTime,
     pub users: JsonCohort,
     pub projects: JsonCohort,
-    pub reports: JsonCohortAvg,
+    pub reports: JsonCohort,
+    pub reports_per_project: JsonCohortAvg,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

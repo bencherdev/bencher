@@ -118,7 +118,8 @@ async fn get_one_inner(context: &ApiContext) -> Result<JsonServerStats, HttpErro
         .select(count(schema::report::id))
         .load::<i64>(conn)
         .map_err(resource_not_found_err!(Report))?;
-    let weekly_reports = padded_median(total_projects as usize, &mut weekly_reports);
+    let weekly_reports_total: i64 = weekly_reports.clone().iter().sum();
+    let weekly_reports_per_project = padded_median(total_projects as usize, &mut weekly_reports);
 
     let mut monthly_reports = schema::report::table
         .filter(schema::report::created.ge(this_month))
@@ -126,19 +127,27 @@ async fn get_one_inner(context: &ApiContext) -> Result<JsonServerStats, HttpErro
         .select(count(schema::report::id))
         .load::<i64>(conn)
         .map_err(resource_not_found_err!(Report))?;
-    let monthly_reports = padded_median(total_projects as usize, &mut monthly_reports);
+    let monthly_reports_total: i64 = monthly_reports.clone().iter().sum();
+    let monthly_reports_per_project = padded_median(total_projects as usize, &mut monthly_reports);
 
     let mut total_reports = schema::report::table
         .group_by(schema::report::project_id)
         .select(count(schema::report::id))
         .load::<i64>(conn)
         .map_err(resource_not_found_err!(Report))?;
-    let total_reports = padded_median(total_projects as usize, &mut total_reports);
+    let total_reports_total: i64 = total_reports.clone().iter().sum();
+    let total_reports_per_project = padded_median(total_projects as usize, &mut total_reports);
 
-    let reports_cohort = JsonCohortAvg {
-        week: weekly_reports,
-        month: monthly_reports,
-        total: total_reports,
+    let reports_cohort = JsonCohort {
+        week: weekly_reports_total as u64,
+        month: monthly_reports_total as u64,
+        total: total_reports_total as u64,
+    };
+
+    let reports_per_project_cohort = JsonCohortAvg {
+        week: weekly_reports_per_project,
+        month: monthly_reports_per_project,
+        total: total_reports_per_project,
     };
 
     Ok(JsonServerStats {
@@ -146,6 +155,7 @@ async fn get_one_inner(context: &ApiContext) -> Result<JsonServerStats, HttpErro
         users: users_cohort,
         projects: projects_cohort,
         reports: reports_cohort,
+        reports_per_project: reports_per_project_cohort,
     })
 }
 
