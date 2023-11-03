@@ -9,7 +9,9 @@ mod codegen {
     )]
     include!(concat!(env!("OUT_DIR"), "/codegen.rs"));
 }
+mod client;
 
+pub use client::{BencherClient, ClientError};
 pub use codegen::*;
 
 macro_rules! from_client {

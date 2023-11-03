@@ -875,7 +875,7 @@ dependencies = [
  "dropshot",
  "http",
  "hyper",
- "jsonwebtoken 9.1.0",
+ "jsonwebtoken",
  "literally",
  "mail-send",
  "once_cell",
@@ -964,6 +964,8 @@ dependencies = [
  "serde",
  "serde_json",
  "syn 2.0.38",
+ "thiserror",
+ "tokio",
  "url",
  "uuid 1.5.0",
 ]
@@ -998,7 +1000,7 @@ dependencies = [
  "bencher_json",
  "bencher_plus",
  "chrono",
- "jsonwebtoken 9.1.0",
+ "jsonwebtoken",
  "once_cell",
  "pretty_assertions",
  "serde",
@@ -1054,7 +1056,7 @@ version = "0.3.15"
 dependencies = [
  "bencher_json",
  "chrono",
- "jsonwebtoken 9.1.0",
+ "jsonwebtoken",
  "once_cell",
  "serde",
  "thiserror",
@@ -3064,26 +3066,12 @@ dependencies = [
 
 [[package]]
 name = "jsonwebtoken"
-version = "8.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6971da4d9c3aa03c3d8f3ff0f4155b534aad021292003895a469716b2a230378"
-dependencies = [
- "base64 0.21.5",
- "pem 1.1.1",
- "ring 0.16.20",
- "serde",
- "serde_json",
- "simple_asn1",
-]
-
-[[package]]
-name = "jsonwebtoken"
 version = "9.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "155c4d7e39ad04c172c5e3a99c434ea3b4a7ba7960b38ecd562b270b097cce09"
 dependencies = [
  "base64 0.21.5",
- "pem 3.0.2",
+ "pem",
  "ring 0.17.5",
  "serde",
  "serde_json",
@@ -3665,9 +3653,9 @@ dependencies = [
 
 [[package]]
 name = "octocrab"
-version = "0.31.2"
+version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7968954c85c6aead36c45d265898de6feccf7cd23ff7ced9df41ef8fbe414e2"
+checksum = "abfeeafb5fa0da7046229ec3c7b3bd2981aae05c549871192c408d59fc0fffd5"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -3683,7 +3671,7 @@ dependencies = [
  "hyper",
  "hyper-rustls",
  "hyper-timeout",
- "jsonwebtoken 8.3.0",
+ "jsonwebtoken",
  "once_cell",
  "percent-encoding",
  "pin-project",
@@ -3917,15 +3905,6 @@ dependencies = [
  "hmac",
  "password-hash",
  "sha2",
-]
-
-[[package]]
-name = "pem"
-version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8835c273a76a90455d7344889b0964598e3316e2a79ede8e36f16bdcf2228b8"
-dependencies = [
- "base64 0.13.1",
 ]
 
 [[package]]

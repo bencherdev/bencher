@@ -21,7 +21,14 @@ fn main() -> Result<(), SwaggerError> {
 
     info!(&log, "Generating OpenAPI JSON file at: {SWAGGER_PATH}");
     let mut api_description = ApiDescription::new();
-    Api::register(&mut api_description, false).map_err(SwaggerError::RegisterApi)?;
+    // TODO add an argument to toggle whether to include the plus endpoints
+    Api::register(
+        &mut api_description,
+        false,
+        #[cfg(feature = "plus")]
+        true,
+    )
+    .map_err(SwaggerError::RegisterApi)?;
     let mut swagger_file = File::create(SWAGGER_PATH).map_err(SwaggerError::CreateFile)?;
 
     api_description.tag_config(TagConfig {

@@ -114,8 +114,10 @@ impl ConfigTx {
         let config_dropshot = into_config_dropshot(server);
 
         #[cfg(feature = "plus")]
+        let is_bencher_cloud = context.biller.is_some();
+        #[cfg(feature = "plus")]
         // Only collect stats if stats are enabled on non-Bencher Cloud servers
-        if context.stats.enabled && context.biller.is_none() {
+        if context.stats.enabled && !is_bencher_cloud {
             let conn = context.database.connection.clone();
             let query_server =
                 crate::model::server::QueryServer::get_or_create(&mut *conn.lock().await)
@@ -126,7 +128,13 @@ impl ConfigTx {
 
         let mut api = ApiDescription::new();
         debug!(log, "Registering server APIs");
-        Api::register(&mut api, true).map_err(ConfigTxError::Register)?;
+        Api::register(
+            &mut api,
+            true,
+            #[cfg(feature = "plus")]
+            is_bencher_cloud,
+        )
+        .map_err(ConfigTxError::Register)?;
 
         Ok(
             dropshot::HttpServerStarter::new_with_tls(&config_dropshot, api, context, log, tls)

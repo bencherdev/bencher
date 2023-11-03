@@ -19,6 +19,7 @@ impl Api {
     pub fn register(
         api: &mut ApiDescription<ApiContext>,
         http_options: bool,
+        #[cfg(feature = "plus")] is_bencher_cloud: bool,
     ) -> Result<(), String> {
         // Root
         if http_options {
@@ -73,12 +74,15 @@ impl Api {
         #[cfg(feature = "plus")]
         {
             // Organization Plan
-            if http_options {
-                api.register(organization::plan::org_plan_options)?;
+            // Bencher Cloud only
+            if is_bencher_cloud {
+                if http_options {
+                    api.register(organization::plan::org_plan_options)?;
+                }
+                api.register(organization::plan::org_plan_get)?;
+                api.register(organization::plan::org_plan_post)?;
+                api.register(organization::plan::org_plan_delete)?;
             }
-            api.register(organization::plan::org_plan_get)?;
-            api.register(organization::plan::org_plan_post)?;
-            api.register(organization::plan::org_plan_delete)?;
 
             // Organization Usage
             if http_options {
@@ -240,7 +244,10 @@ impl Api {
                 api.register(system::server::stats::server_stats_options)?;
             }
             api.register(system::server::stats::server_stats_get)?;
-            api.register(system::server::stats::server_stats_post)?;
+            // Bencher Cloud only
+            if is_bencher_cloud {
+                api.register(system::server::stats::server_stats_post)?;
+            }
         }
 
         Ok(())

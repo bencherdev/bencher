@@ -14,6 +14,8 @@ progenitor-client.workspace = true
 reqwest = { workspace = true, features = ["json", "rustls-tls"] }
 serde.workspace = true
 serde_json.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["time"] }
 url.workspace = true
 uuid = { workspace = true, features = ["serde", "v4"] }
 
