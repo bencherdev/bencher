@@ -864,7 +864,6 @@ dependencies = [
  "bencher_license",
  "bencher_logger",
  "bencher_plot",
- "bencher_plus",
  "bencher_rbac",
  "bencher_token",
  "chrono",
@@ -998,7 +997,6 @@ name = "bencher_license"
 version = "0.3.15"
 dependencies = [
  "bencher_json",
- "bencher_plus",
  "chrono",
  "jsonwebtoken",
  "once_cell",
@@ -1029,14 +1027,6 @@ dependencies = [
  "plotters-bitmap",
  "serde_json",
  "thiserror",
-]
-
-[[package]]
-name = "bencher_plus"
-version = "0.3.15"
-dependencies = [
- "once_cell",
- "url",
 ]
 
 [[package]]

@@ -2,8 +2,7 @@
 
 use std::sync::Arc;
 
-use bencher_json::{DateTime, JsonServer, JsonServerStats, ServerUuid};
-use bencher_plus::API_BENCHER_DEV_URL;
+use bencher_json::{DateTime, JsonServer, JsonServerStats, ServerUuid, BENCHER_API_URL};
 use chrono::{Duration, NaiveTime, Utc};
 use diesel::RunQueryDsl;
 use dropshot::HttpError;
@@ -70,7 +69,7 @@ impl QueryServer {
 
                 let client = reqwest::Client::new();
                 let _resp = client
-                    .post(API_BENCHER_DEV_URL.clone())
+                    .post(BENCHER_API_URL.clone())
                     .body(json_stats_str)
                     .send()
                     .await;

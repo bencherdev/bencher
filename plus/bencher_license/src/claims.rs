@@ -1,5 +1,4 @@
-use bencher_json::{DateTime, Entitlements, OrganizationUuid, PlanLevel};
-use bencher_plus::BENCHER_DEV;
+use bencher_json::{DateTime, Entitlements, OrganizationUuid, PlanLevel, BENCHER_URL_STR};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
@@ -30,7 +29,7 @@ impl Claims {
             aud: audience,
             exp: now.checked_add(i64::from(billing_cycle)).unwrap_or(now),
             iat: now,
-            iss: BENCHER_DEV.into(),
+            iss: BENCHER_URL_STR.into(),
             sub: organization,
             lvl: plan_level,
             ent: entitlements,

@@ -2,10 +2,7 @@ import swagger from "../content/api/swagger.json";
 import { apiHost } from "./http";
 
 export const BENCHER_SITE_URL = "https://bencher.dev";
-
 export const BENCHER_CLOUD_API_URL: string = "https://api.bencher.dev";
-export const BENCHER_CLOUD_DEV_API_URL: string =
-	"https://bencher-api-dev.fly.dev";
 
 export const BENCHER_GITHUB_URL: string =
 	"https://github.com/bencherdev/bencher";

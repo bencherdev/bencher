@@ -1,9 +1,0 @@
-[package]
-name = "bencher_plus"
-version.workspace = true
-authors.workspace = true
-edition.workspace = true
-
-[dependencies]
-once_cell.workspace = true
-url.workspace = true

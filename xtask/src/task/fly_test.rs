@@ -1,12 +1,10 @@
 use std::process::Command;
 
-use bencher_json::JsonApiVersion;
+use bencher_json::{JsonApiVersion, DEVEL_BENCHER_API_URL_STR, PROD_BENCHER_API_URL_STR};
 
 use crate::{parser::CliFlyTest, task::swagger::swagger_spec};
 
 const BENCHER_API_URL_KEY: &str = "BENCHER_API_URL";
-const DEV_BENCHER_API_URL: &str = "https://bencher-api-dev.fly.dev/";
-const BENCHER_API_URL: &str = "https://api.bencher.dev/";
 const TEST_BENCHER_API_TOKEN: &str = "TEST_BENCHER_API_TOKEN";
 const DEV_BENCHER_API_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjQyMTU2LCJpYXQiOjE2OTg2NzQ4NjEsImlzcyI6Imh0dHBzOi8vZGV2ZWwtLWJlbmNoZXIubmV0bGlmeS5hcHAvIiwic3ViIjoibXVyaWVsLmJhZ2dlQG5vd2hlcmUuY29tIiwib3JnIjpudWxsfQ.9z7jmM53TcVzc1inDxTeX9_OR0PQPpZAsKsCE7lWHfo";
 
@@ -32,9 +30,9 @@ impl FlyTest {
         };
 
         let api_url = if self.dev {
-            DEV_BENCHER_API_URL
+            DEVEL_BENCHER_API_URL_STR
         } else {
-            BENCHER_API_URL
+            PROD_BENCHER_API_URL_STR
         };
         test_api_version(api_url, version)?;
 

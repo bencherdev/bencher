@@ -1,9 +1,11 @@
 #![cfg(feature = "plus")]
 
 use bencher_billing::Biller;
-use bencher_json::system::config::{JsonPlus, JsonStats};
+use bencher_json::{
+    system::config::{JsonPlus, JsonStats},
+    BENCHER_URL, DEVEL_BENCHER_URL,
+};
 use bencher_license::Licensor;
-use bencher_plus::BENCHER_DEV;
 use chrono::NaiveTime;
 use once_cell::sync::Lazy;
 use tokio::runtime::Handle;
@@ -29,8 +31,8 @@ pub enum PlusError {
     #[error("Failed to handle Bencher Cloud licensing: {0}")]
     LicenseCloud(bencher_license::LicenseError),
     #[error(
-        "Tried to init Bencher Cloud for endpoint ({0}) other than {url}",
-        url = BENCHER_DEV
+        "Tried to init Bencher Cloud for endpoint other than {url}: {0}",
+        url = *BENCHER_URL
     )]
     BencherCloud(Url),
     #[error("Failed to setup billing: {0}")]
@@ -58,7 +60,7 @@ impl Plus {
         };
 
         // The only endpoint that should be using the `cloud` section is https://bencher.dev
-        if !bencher_plus::is_bencher_dev(endpoint) {
+        if !is_bencher_cloud(endpoint) {
             return Err(PlusError::BencherCloud(endpoint.clone()));
         }
 
@@ -77,6 +79,10 @@ impl Plus {
             licensor,
         })
     }
+}
+
+fn is_bencher_cloud(url: &Url) -> bool {
+    *url == *BENCHER_URL || *url == *DEVEL_BENCHER_URL
 }
 
 #[derive(Debug, Clone, Copy)]

@@ -7,6 +7,7 @@ pub use bencher_valid::{
     CardBrand, CardCvc, CardNumber, Entitlements, ExpirationMonth, ExpirationYear, LastFour,
     LicensedPlanId, MeteredPlanId, PlanLevel, PlanStatus,
 };
+use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -61,6 +62,48 @@ pub use user::{
     token::{JsonNewToken, JsonToken, JsonTokens, TokenUuid},
     JsonUser, UserUuid,
 };
+
+#[cfg(debug_assertions)]
+pub const BENCHER_URL_STR: &str = "http://localhost:3000";
+#[cfg(not(debug_assertions))]
+pub const BENCHER_URL_STR: &str = PROD_BENCHER_URL_STR;
+
+pub const PROD_BENCHER_URL_STR: &str = "https://bencher.dev";
+pub const DEVEL_BENCHER_URL_STR: &str = "https://devel--bencher.netlify.app";
+
+#[allow(clippy::panic)]
+pub static BENCHER_URL: Lazy<url::Url> = Lazy::new(|| {
+    BENCHER_URL_STR
+        .parse()
+        .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{BENCHER_URL_STR}\": {e}"))
+});
+#[allow(clippy::panic)]
+pub static DEVEL_BENCHER_URL: Lazy<url::Url> = Lazy::new(|| {
+    DEVEL_BENCHER_URL_STR
+        .parse()
+        .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{DEVEL_BENCHER_URL_STR}\": {e}"))
+});
+
+#[cfg(debug_assertions)]
+pub const BENCHER_API_URL_STR: &str = "http://localhost:61016";
+#[cfg(not(debug_assertions))]
+pub const BENCHER_API_URL_STR: &str = PROD_BENCHER_API_URL_STR;
+
+pub const PROD_BENCHER_API_URL_STR: &str = "https://api.bencher.dev";
+pub const DEVEL_BENCHER_API_URL_STR: &str = "https://bencher-api-dev.fly.dev";
+
+#[allow(clippy::panic)]
+pub static BENCHER_API_URL: Lazy<url::Url> = Lazy::new(|| {
+    BENCHER_API_URL_STR
+        .parse()
+        .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{BENCHER_API_URL_STR}\": {e}"))
+});
+#[allow(clippy::panic)]
+pub static DEVEL_BENCHER_API_URL: Lazy<url::Url> = Lazy::new(|| {
+    DEVEL_BENCHER_API_URL_STR
+        .parse()
+        .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{DEVEL_BENCHER_API_URL_STR}\": {e}"))
+});
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

@@ -1,10 +1,10 @@
 use std::fs::File;
 
+use bencher_json::PROD_BENCHER_URL_STR;
 use camino::Utf8PathBuf;
 
 use crate::{parser::CliNetlifyTest, task::swagger::swagger_spec};
 
-const CONSOLE_URL: &str = "https://bencher.dev";
 const NETLIFY_LOGS_URL_KEY: &str = "NETLIFY_LOGS_URL";
 const NETLIFY_URL: &str = "https://app.netlify.com/sites/bencher/deploys/";
 
@@ -30,10 +30,11 @@ impl NetlifyTest {
         };
 
         let deploy_id = netlify_deploy_id("netlify.json")?;
-        let console_url = format!("https://{deploy_id}--bencher.netlify.app");
-        if !self.dev {
-            test_ui_version(CONSOLE_URL, version).await?;
-        }
+        let console_url = if self.dev {
+            format!("https://{deploy_id}--bencher.netlify.app")
+        } else {
+            PROD_BENCHER_URL_STR.to_owned()
+        };
         test_ui_version(&console_url, version).await?;
 
         // TODO replace this with some actual e2e tests
@@ -43,9 +44,6 @@ impl NetlifyTest {
         } else {
             "<title>Bencher | Bencher - Continuous Benchmarking</title>"
         };
-        if !self.dev {
-            test_ui_project(CONSOLE_URL, project_slug, find_str).await?;
-        }
         test_ui_project(&console_url, project_slug, find_str).await?;
 
         Ok(())

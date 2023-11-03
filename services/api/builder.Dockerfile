@@ -27,7 +27,6 @@ COPY lib/bencher_valid bencher_valid
 WORKDIR /usr/src/plus
 COPY plus/bencher_billing bencher_billing
 COPY plus/bencher_license bencher_license
-COPY plus/bencher_plus bencher_plus
 
 WORKDIR /usr/src
 RUN cargo init xtask

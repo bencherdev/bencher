@@ -156,24 +156,6 @@
             "args": [],
             "cwd": "${workspaceFolder}"
         },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests for `bencher_plus`",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--package=bencher_plus",
-                ],
-                "filter": {
-                    "name": "bencher_plus",
-                    "kind": "lib"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
         // api
         {
             "type": "lldb",

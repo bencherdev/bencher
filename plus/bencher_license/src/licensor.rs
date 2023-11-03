@@ -1,8 +1,7 @@
 use std::str::FromStr;
 
 use bencher_json::organization::plan::JsonLicense;
-use bencher_json::{Entitlements, Jwt, OrganizationUuid, PlanLevel, Secret};
-use bencher_plus::BENCHER_DEV;
+use bencher_json::{Entitlements, Jwt, OrganizationUuid, PlanLevel, Secret, BENCHER_URL_STR};
 use chrono::Utc;
 use jsonwebtoken::{decode, encode, Algorithm, Header, TokenData, Validation};
 use jsonwebtoken::{DecodingKey, EncodingKey};
@@ -105,7 +104,7 @@ impl Licensor {
     pub fn validate(&self, license: &Jwt) -> Result<TokenData<Claims>, LicenseError> {
         let mut validation = Validation::new(*ALGORITHM);
         validation.set_audience(&[Audience::Bencher]);
-        validation.set_issuer(&[BENCHER_DEV]);
+        validation.set_issuer(&[BENCHER_URL_STR]);
         validation.set_required_spec_claims(&["aud", "exp", "iss", "sub"]);
 
         let token_data: TokenData<Claims> = decode(license.as_ref(), self.decoding(), &validation)?;
@@ -196,8 +195,7 @@ fn check_expiration(time: i64) -> Result<(), LicenseError> {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod test {
-    use bencher_json::{OrganizationUuid, PlanLevel, Secret};
-    use bencher_plus::BENCHER_DEV;
+    use bencher_json::{OrganizationUuid, PlanLevel, Secret, BENCHER_URL_STR};
     use once_cell::sync::Lazy;
     use pretty_assertions::assert_eq;
 
@@ -236,7 +234,7 @@ mod test {
             let token_data = licensor.validate(&license).unwrap();
 
             assert_eq!(token_data.claims.aud, Audience::Bencher);
-            assert_eq!(token_data.claims.iss, BENCHER_DEV);
+            assert_eq!(token_data.claims.iss, BENCHER_URL_STR);
             assert_eq!(
                 token_data.claims.iat,
                 token_data.claims.exp - i64::from(BillingCycle::Monthly)
@@ -260,7 +258,7 @@ mod test {
             let token_data = licensor.validate(&license).unwrap();
 
             assert_eq!(token_data.claims.aud, Audience::Bencher);
-            assert_eq!(token_data.claims.iss, BENCHER_DEV);
+            assert_eq!(token_data.claims.iss, BENCHER_URL_STR);
             assert_eq!(
                 token_data.claims.iat,
                 token_data.claims.exp - i64::from(BillingCycle::Annual)

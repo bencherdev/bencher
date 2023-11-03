@@ -5,12 +5,8 @@ use serde::Serialize;
 
 use crate::parser::CliBackend;
 
-pub const BENCHER_API_TOKEN: &str = "BENCHER_API_TOKEN";
 pub const BENCHER_HOST: &str = "BENCHER_HOST";
-#[cfg(debug_assertions)]
-pub const DEFAULT_HOST: &str = "http://localhost:61016";
-#[cfg(not(debug_assertions))]
-pub const DEFAULT_HOST: &str = "https://api.bencher.dev";
+pub const BENCHER_API_TOKEN: &str = "BENCHER_API_TOKEN";
 
 #[derive(Debug, Clone)]
 pub struct Backend(bencher_client::BencherClient);
@@ -29,25 +25,34 @@ impl TryFrom<CliBackend> for Backend {
     type Error = BackendError;
 
     fn try_from(backend: CliBackend) -> Result<Self, Self::Error> {
-        let client = bencher_client::BencherClient {
-            host: unwrap_host(backend.host)?,
-            token: map_token(backend.token)?,
-            attempts: backend.attempts,
-            retry_after: backend.retry_after,
-        };
-        Ok(Self(client))
+        let CliBackend {
+            host,
+            token,
+            attempts,
+            retry_after,
+        } = backend;
+        let host = map_host(host)?;
+        let token = map_token(token)?;
+        Ok(Self(bencher_client::BencherClient::new(
+            host,
+            token,
+            attempts,
+            retry_after,
+        )))
     }
 }
 
-fn unwrap_host(host: Option<Url>) -> Result<url::Url, BackendError> {
+fn map_host(host: Option<Url>) -> Result<Option<url::Url>, BackendError> {
     if let Some(url) = host {
-        url.into()
+        Some(url.into())
     } else if let Ok(env_url) = std::env::var(BENCHER_HOST) {
-        env_url
+        Some(env_url)
     } else {
-        DEFAULT_HOST.into()
+        None
     }
-    .parse()
+    .as_deref()
+    .map(std::str::FromStr::from_str)
+    .transpose()
     .map_err(BackendError::ParseHost)
 }
 

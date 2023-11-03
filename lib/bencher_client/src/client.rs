@@ -1,4 +1,4 @@
-use bencher_json::Jwt;
+use bencher_json::{Jwt, BENCHER_API_URL};
 use serde::Serialize;
 use tokio::time::{sleep, Duration};
 
@@ -9,8 +9,8 @@ const DEFAULT_RETRY_AFTER: u64 = 3;
 pub struct BencherClient {
     pub host: url::Url,
     pub token: Option<Jwt>,
-    pub attempts: Option<usize>,
-    pub retry_after: Option<u64>,
+    pub attempts: usize,
+    pub retry_after: u64,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -41,6 +41,20 @@ pub enum ClientError {
 }
 
 impl BencherClient {
+    pub fn new(
+        host: Option<url::Url>,
+        token: Option<Jwt>,
+        attempts: Option<usize>,
+        retry_after: Option<u64>,
+    ) -> Self {
+        Self {
+            host: host.unwrap_or_else(|| BENCHER_API_URL.clone()),
+            token,
+            attempts: attempts.unwrap_or(DEFAULT_ATTEMPTS),
+            retry_after: retry_after.unwrap_or(DEFAULT_RETRY_AFTER),
+        }
+    }
+
     pub async fn send_with<F, Fut, T, Json>(
         &self,
         sender: F,
@@ -73,9 +87,9 @@ impl BencherClient {
         let reqwest_client = client_builder.build().map_err(ClientError::BuildClient)?;
         let client = crate::codegen::Client::new_with_client(self.host.as_ref(), reqwest_client);
 
-        let attempts = self.attempts.unwrap_or(DEFAULT_ATTEMPTS);
+        let attempts = self.attempts;
         let max_attempts = attempts.checked_sub(1).unwrap_or_default();
-        let retry_after = self.retry_after.unwrap_or(DEFAULT_RETRY_AFTER);
+        let retry_after = self.retry_after;
 
         for attempt in 0..attempts {
             match sender(client.clone()).await {

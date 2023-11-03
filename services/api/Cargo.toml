@@ -11,7 +11,6 @@ plus = [
     "bencher_json/plus",
     "dep:bencher_billing",
     "dep:bencher_license",
-    "dep:bencher_plus",
     "dep:reqwest",
 ]
 sentry = ["dep:sentry"]
@@ -27,7 +26,6 @@ bencher_json = { workspace = true, features = ["full", "db", "schema"] }
 bencher_license = { workspace = true, optional = true }
 bencher_logger.workspace = true
 bencher_plot.workspace = true
-bencher_plus = { workspace = true, optional = true }
 bencher_rbac.workspace = true
 bencher_token.workspace = true
 chrono.workspace = true
