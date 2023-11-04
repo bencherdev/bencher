@@ -117,7 +117,7 @@ pub struct CliBackend {
     #[clap(long)]
     pub attempts: Option<usize>,
 
-    /// Retry after second(s) (default 3)
+    /// Initial seconds to wait between attempts (exponential backoff) (default 1)
     #[clap(long)]
     pub retry_after: Option<u64>,
 }

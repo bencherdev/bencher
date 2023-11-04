@@ -3,8 +3,9 @@ use serde::Serialize;
 use tokio::time::{sleep, Duration};
 
 const DEFAULT_ATTEMPTS: usize = 10;
-const DEFAULT_RETRY_AFTER: u64 = 3;
+const DEFAULT_RETRY_AFTER: u64 = 1;
 
+/// A client for the Bencher API
 #[derive(Debug, Clone)]
 pub struct BencherClient {
     pub host: url::Url,
@@ -44,6 +45,13 @@ pub enum ClientError {
 }
 
 impl BencherClient {
+    /// Create a new `BencherClient` with the given parameters
+    ///
+    /// # Parameters
+    /// - `host`: The host URL
+    /// - `token`: The JWT token
+    /// - `attempts`: The number of attempts to make before giving up
+    /// - `retry_after`: The number of initial seconds to wait between attempts (exponential backoff)
     pub fn new(
         host: Option<url::Url>,
         token: Option<Jwt>,
@@ -59,10 +67,22 @@ impl BencherClient {
         .build()
     }
 
+    /// Create a new `BencherClientBuilder`
     pub fn builder() -> BencherClientBuilder {
         BencherClientBuilder::default()
     }
 
+    /// Send a request to the Bencher API
+    ///
+    /// # Parameters
+    ///
+    /// - `sender`: A function that takes a `codegen::Client` and returns a `Future` that resolves
+    ///  to a `Result` containing a `ResponseValue` or an `Error`
+    /// - `log`: Whether to log the response JSON to stdout
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the response JSON or an `Error`
     pub async fn send_with<F, Fut, T, Json>(
         &self,
         sender: F,
@@ -97,7 +117,7 @@ impl BencherClient {
 
         let attempts = self.attempts;
         let max_attempts = attempts.checked_sub(1).unwrap_or_default();
-        let retry_after = self.retry_after;
+        let mut retry_after = self.retry_after;
 
         for attempt in 0..attempts {
             match sender(client.clone()).await {
@@ -121,6 +141,7 @@ impl BencherClient {
                     if attempt != max_attempts {
                         eprintln!("Will retry after {retry_after} second(s).");
                         sleep(Duration::from_secs(retry_after)).await;
+                        retry_after *= 2;
                     }
                 },
                 Err(crate::codegen::Error::InvalidRequest(e)) => {
@@ -178,39 +199,50 @@ impl std::fmt::Display for ErrorResponse {
     }
 }
 
+/// A builder for `BencherClient`
 #[derive(Debug, Clone, Default)]
 pub struct BencherClientBuilder {
-    pub host: Option<url::Url>,
-    pub token: Option<Jwt>,
-    pub attempts: Option<usize>,
-    pub retry_after: Option<u64>,
+    host: Option<url::Url>,
+    token: Option<Jwt>,
+    attempts: Option<usize>,
+    retry_after: Option<u64>,
 }
 
 impl BencherClientBuilder {
     #[must_use]
+    /// Set the host URL
     pub fn host(mut self, host: url::Url) -> Self {
         self.host = Some(host);
         self
     }
 
     #[must_use]
+    /// Set the JWT token
     pub fn token(mut self, token: Jwt) -> Self {
         self.token = Some(token);
         self
     }
 
     #[must_use]
+    /// Set the number of attempts to make before giving up
     pub fn attempts(mut self, attempts: usize) -> Self {
         self.attempts = Some(attempts);
         self
     }
 
     #[must_use]
+    /// Set the number of initial seconds to wait between attempts (exponential backoff)
     pub fn retry_after(mut self, retry_after: u64) -> Self {
         self.retry_after = Some(retry_after);
         self
     }
 
+    /// Build the `BencherClient`
+    ///
+    /// Default values:
+    /// - `host`: `https://api.bencher.dev`
+    /// - `attempts`: `10`
+    /// - `retry_after`: `1`
     pub fn build(self) -> BencherClient {
         let Self {
             host,

@@ -5,6 +5,9 @@ authors.workspace = true
 edition.workspace = true
 
 [features]
+default = ["lite", "plus"]
+full = ["bencher_json/full"]
+lite = ["bencher_json/lite"]
 plus = ["bencher_json/plus"]
 
 [dependencies]
