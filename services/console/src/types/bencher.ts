@@ -4,6 +4,22 @@
 
 export type VersionNumber = number;
 
+export type BenchmarkName = string;
+
+export type ResourceId = string;
+
+export type MetricKind = ResourceId;
+
+export interface JsonMetric {
+	value: number;
+	lower_value?: number;
+	upper_value?: number;
+}
+
+export type JsonMetricsMap = Record<MetricKind, JsonMetric>;
+
+export type JsonResultsMap = Record<BenchmarkName, JsonMetricsMap>;
+
 export type Iteration = number;
 
 export type NonEmpty = string;
@@ -50,14 +66,6 @@ export interface JsonThresholdStatistic {
 	project: Uuid;
 	statistic: JsonStatistic;
 	created: string;
-}
-
-export type BenchmarkName = string;
-
-export interface JsonMetric {
-	value: number;
-	lower_value?: number;
-	upper_value?: number;
 }
 
 export interface JsonBoundary {
@@ -165,8 +173,6 @@ export type MeteredPlanId = string;
 export type LicensedPlanId = string;
 
 export type ExpirationYear = number;
-
-export type ResourceId = string;
 
 export type Secret = string;
 

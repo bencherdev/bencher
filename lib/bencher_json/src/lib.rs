@@ -35,7 +35,7 @@ pub use project::{
     benchmark::{BenchmarkUuid, JsonBenchmark, JsonBenchmarks},
     boundary::{BoundaryUuid, JsonBoundaries, JsonBoundary},
     branch::{BranchUuid, JsonBranch, JsonBranches, JsonNewBranch, VersionUuid},
-    metric::{JsonMetric, MetricUuid},
+    metric::{JsonMetric, JsonMetricsMap, JsonResultsMap, MetricKind, MetricUuid},
     metric_kind::{JsonMetricKind, JsonMetricKinds, JsonNewMetricKind, MetricKindUuid},
     perf::{JsonPerf, JsonPerfQuery, PerfUuid},
     report::{JsonNewReport, JsonReport, JsonReports, ReportUuid},

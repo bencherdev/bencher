@@ -1,5 +1,6 @@
-use std::{cmp::Ordering, fmt, iter::Sum, ops::Add};
+use std::{cmp::Ordering, collections::HashMap, fmt, iter::Sum, ops::Add};
 
+use bencher_valid::{BenchmarkName, ResourceId};
 use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -12,6 +13,15 @@ pub use mean::Mean;
 pub use median::Median;
 
 crate::typed_uuid::typed_uuid!(MetricUuid);
+
+#[typeshare::typeshare]
+pub type JsonResultsMap = HashMap<BenchmarkName, JsonMetricsMap>;
+
+#[typeshare::typeshare]
+pub type JsonMetricsMap = HashMap<MetricKind, JsonMetric>;
+
+#[typeshare::typeshare]
+pub type MetricKind = ResourceId;
 
 #[typeshare::typeshare]
 #[derive(Debug, Copy, Clone, Default, Eq, Serialize, Deserialize)]
