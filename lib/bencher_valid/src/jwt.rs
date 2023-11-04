@@ -1,5 +1,6 @@
 use base64::Engine;
 use derive_more::Display;
+use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use std::{fmt, str::FromStr};
@@ -12,6 +13,16 @@ use serde::{
 };
 
 use crate::ValidError;
+
+// Valid until 2159-12-06T18:53:44Z
+pub const TEST_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjM2MDI0LCJpYXQiOjE2OTg2Njg3MjksImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC8iLCJzdWIiOiJtdXJpZWwuYmFnZ2VAbm93aGVyZS5jb20iLCJvcmciOm51bGx9.t3t23mlgKYZmUt7-PbRWLqXlCTt6Ydh8TRE8KiSGQi4";
+
+#[allow(clippy::expect_used)]
+pub static TEST_BENCHER_API_TOKEN: Lazy<Jwt> = Lazy::new(|| {
+    TEST_BENCHER_API_TOKEN_STR
+        .parse()
+        .expect("Invalid test JWT")
+});
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
@@ -44,6 +55,13 @@ impl AsRef<str> for Jwt {
 impl From<Jwt> for String {
     fn from(jwt: Jwt) -> Self {
         jwt.0
+    }
+}
+
+impl Jwt {
+    /// Create a valid test token
+    pub fn test_token() -> Self {
+        TEST_BENCHER_API_TOKEN.clone()
     }
 }
 
@@ -109,6 +127,8 @@ pub fn is_valid_jwt(jwt: &str) -> bool {
 
 #[cfg(test)]
 mod test {
+    use crate::Jwt;
+
     use super::is_valid_jwt;
     use pretty_assertions::assert_eq;
 
@@ -152,5 +172,10 @@ mod test {
                 "{HEADER}.!Jmb_nCVJYLD5InaIxsQfS7x87fUsnCYpQK9SrWrKTc.{SIGNATURE}"
             ))
         );
+    }
+
+    #[test]
+    fn test_jwt_test_token() {
+        assert_eq!(true, is_valid_jwt(Jwt::test_token().as_ref()));
     }
 }

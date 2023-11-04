@@ -20,15 +20,13 @@ const TESTBED_SLUG: &str = "base";
 const METRIC_KIND_ARG: &str = "--metric-kind";
 const METRIC_KIND_SLUG: &str = "screams";
 
-// Valid until 2159-12-06T18:53:44Z
-const LOCALHOST_API_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjM2MDI0LCJpYXQiOjE2OTg2Njg3MjksImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC8iLCJzdWIiOiJtdXJpZWwuYmFnZ2VAbm93aGVyZS5jb20iLCJvcmciOm51bGx9.t3t23mlgKYZmUt7-PbRWLqXlCTt6Ydh8TRE8KiSGQi4";
-
 pub const BENCHER_API_URL: &str = "BENCHER_API_URL";
 pub static HOST_URL: Lazy<String> =
     Lazy::new(|| std::env::var(BENCHER_API_URL).unwrap_or_else(|_| BENCHER_API_URL_STR.to_owned()));
 pub const TEST_BENCHER_API_TOKEN: &str = "TEST_BENCHER_API_TOKEN";
 pub static TEST_API_TOKEN: Lazy<String> = Lazy::new(|| {
-    std::env::var(TEST_BENCHER_API_TOKEN).unwrap_or_else(|_| LOCALHOST_API_TOKEN.to_owned())
+    std::env::var(TEST_BENCHER_API_TOKEN)
+        .unwrap_or_else(|_| bencher_json::Jwt::test_token().to_string())
 });
 
 // cargo test --features seed --test seed
