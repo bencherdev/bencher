@@ -31,6 +31,8 @@ env:
   UI_BUILDER_DOCKER_IMAGE: bencher-ui-builder
   UI_DOCKER_IMAGE: bencher-ui
   UI_BUILD_DIST: bencher-ui-dist
+  # Dev Container
+  DEV_CONTAINER_DOCKER_IMAGE: bencher-dev-container
 
 jobs:
   first_time_interaction:
@@ -461,26 +463,52 @@ jobs:
           npx vitest run
 
   # API Docker
+  # https://docs.docker.com/build/ci/github-actions/named-contexts/#using-with-a-container-builder
+  # https://www.kenmuse.com/blog/implementing-docker-layer-caching-in-github-actions/
   build_local_api_docker:
     name: Build Local API
     runs-on: ubuntu-latest
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
     steps:
       - uses: actions/checkout@v4
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: network=host
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GITHUB_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build Builder Stage
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./services/api/builder.Dockerfile
-          tags: ${{ env.API_BUILDER_DOCKER_IMAGE }}
+          tags: localhost:5000/${{ env.API_BUILDER_DOCKER_IMAGE }}
           build-args: |
             MOLD_VERSION=${{ env.MOLD_VERSION }}
-          push: false
+          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_BUILDER_DOCKER_IMAGE }}:cache-${{ github.ref_name }}
+          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_BUILDER_DOCKER_IMAGE }}:cache-${{ github.ref_name }},mode=max
+          push: true
+      - name: Tag Cached Builder
+        run: docker image ls -a
       - name: Build Local API
         uses: docker/build-push-action@v5
         with:
           context: ./services/api
           file: ./services/api/local.Dockerfile
           tags: ${{ env.API_LOCAL_DOCKER_IMAGE }}
+          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_LOCAL_DOCKER_IMAGE }}:cache-${{ github.ref_name }}
+          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_LOCAL_DOCKER_IMAGE }}:cache-${{ github.ref_name }},mode=max
+          build-contexts: |
+            ${{ env.API_BUILDER_DOCKER_IMAGE }}=docker-image://localhost:5000/${{ env.API_BUILDER_DOCKER_IMAGE }}:latest
+          load: true
           push: false
       - name: Save Local API
         run: |
@@ -495,23 +523,45 @@ jobs:
   build_litestream_api_docker:
     name: Build Litestream API
     runs-on: ubuntu-latest
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
     steps:
       - uses: actions/checkout@v4
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: network=host
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GITHUB_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build Builder Stage
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./services/api/builder.Dockerfile
-          tags: ${{ env.API_BUILDER_DOCKER_IMAGE }}
+          tags: localhost:5000/${{ env.API_BUILDER_DOCKER_IMAGE }}
           build-args: |
             MOLD_VERSION=${{ env.MOLD_VERSION }}
-          push: false
+          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_BUILDER_DOCKER_IMAGE }}:cache-${{ github.ref_name }}
+          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_BUILDER_DOCKER_IMAGE }}:cache-${{ github.ref_name }},mode=max
+          push: true
       - name: Build Litestream API
         uses: docker/build-push-action@v5
         with:
           context: ./services/api
           file: ./services/api/litestream.Dockerfile
           tags: ${{ env.API_LITESTREAM_DOCKER_IMAGE }}
+          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_LITESTREAM_DOCKER_IMAGE }}:cache-${{ github.ref_name }}
+          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_LITESTREAM_DOCKER_IMAGE }}:cache-${{ github.ref_name }},mode=max
+          build-contexts: |
+            ${{ env.API_BUILDER_DOCKER_IMAGE }}=docker-image://localhost:5000/${{ env.API_BUILDER_DOCKER_IMAGE }}:latest
+          load: true
           push: false
       - name: Save Litestream API
         run: |
@@ -574,22 +624,44 @@ jobs:
   build_ui_docker:
     name: Build Console UI Docker
     runs-on: ubuntu-latest
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
     steps:
       - uses: actions/checkout@v4
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: network=host
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GITHUB_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build Builder Stage
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./services/console/builder.Dockerfile
-          tags: ${{ env.UI_BUILDER_DOCKER_IMAGE }}
+          tags: localhost:5000/${{ env.UI_BUILDER_DOCKER_IMAGE }}
           build-args: |
             MOLD_VERSION=${{ env.MOLD_VERSION }}
-          push: false
+          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_BUILDER_DOCKER_IMAGE }}:cache-${{ github.ref_name }}
+          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_BUILDER_DOCKER_IMAGE }}:cache-${{ github.ref_name }},mode=max
+          push: true
       - name: Build Console UI
         uses: docker/build-push-action@v5
         with:
           context: ./services/console
           tags: ${{ env.UI_DOCKER_IMAGE }}
+          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_DOCKER_IMAGE }}:cache-${{ github.ref_name }}
+          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_DOCKER_IMAGE }}:cache-${{ github.ref_name }},mode=max
+          build-contexts: |
+            ${{ env.UI_BUILDER_DOCKER_IMAGE }}=docker-image://localhost:5000/${{ env.UI_BUILDER_DOCKER_IMAGE }}:latest
+          load: true
           push: false
       - name: Save Console UI
         run: |
@@ -937,3 +1009,23 @@ jobs:
             ${{ env.CLI_BIN_NAME }}
             ${{ env.DEB_FILE }}
             ${{ env.UI_DOCKER_IMAGE }}.tar.gz
+
+  # Dev Container
+  build_dev_container:
+    if: github.ref == 'refs/heads/devel'
+    name: Build dev container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GITHUB_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Pre-build dev container image
+        uses: devcontainers/ci@v0.3
+        with:
+          imageName: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.DEV_CONTAINER_DOCKER_IMAGE }}
+          cacheFrom: ${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.DEV_CONTAINER_DOCKER_IMAGE }}
+          push: always
