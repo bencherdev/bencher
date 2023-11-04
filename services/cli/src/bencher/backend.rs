@@ -43,17 +43,12 @@ impl TryFrom<CliBackend> for Backend {
 }
 
 fn map_host(host: Option<Url>) -> Result<Option<url::Url>, BackendError> {
-    if let Some(url) = host {
-        Some(url.into())
-    } else if let Ok(env_url) = std::env::var(BENCHER_HOST) {
-        Some(env_url)
-    } else {
-        None
-    }
-    .as_deref()
-    .map(std::str::FromStr::from_str)
-    .transpose()
-    .map_err(BackendError::ParseHost)
+    host.map(Into::into)
+        .or_else(|| std::env::var(BENCHER_HOST).ok())
+        .as_deref()
+        .map(std::str::FromStr::from_str)
+        .transpose()
+        .map_err(BackendError::ParseHost)
 }
 
 fn map_token(token: Option<Jwt>) -> Result<Option<Jwt>, BackendError> {

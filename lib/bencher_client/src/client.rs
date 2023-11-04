@@ -15,6 +15,9 @@ pub struct BencherClient {
 
 #[derive(thiserror::Error, Debug)]
 pub enum ClientError {
+    #[error("Failed to build. Missing `host` field.")]
+    NoHost,
+
     #[error("Failed to parse Authorization header: {0}")]
     HeaderValue(reqwest::header::InvalidHeaderValue),
     #[error("Failed to build API client: {0}")]
@@ -47,12 +50,17 @@ impl BencherClient {
         attempts: Option<usize>,
         retry_after: Option<u64>,
     ) -> Self {
-        Self {
-            host: host.unwrap_or_else(|| BENCHER_API_URL.clone()),
+        BencherClientBuilder {
+            host,
             token,
-            attempts: attempts.unwrap_or(DEFAULT_ATTEMPTS),
-            retry_after: retry_after.unwrap_or(DEFAULT_RETRY_AFTER),
+            attempts,
+            retry_after,
         }
+        .build()
+    }
+
+    pub fn builder() -> BencherClientBuilder {
+        BencherClientBuilder::default()
     }
 
     pub async fn send_with<F, Fut, T, Json>(
@@ -167,5 +175,54 @@ impl std::fmt::Display for ErrorResponse {
         }
         writeln!(f, "Message: {}", self.message)?;
         Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct BencherClientBuilder {
+    pub host: Option<url::Url>,
+    pub token: Option<Jwt>,
+    pub attempts: Option<usize>,
+    pub retry_after: Option<u64>,
+}
+
+impl BencherClientBuilder {
+    #[must_use]
+    pub fn host(mut self, host: url::Url) -> Self {
+        self.host = Some(host);
+        self
+    }
+
+    #[must_use]
+    pub fn token(mut self, token: Jwt) -> Self {
+        self.token = Some(token);
+        self
+    }
+
+    #[must_use]
+    pub fn attempts(mut self, attempts: usize) -> Self {
+        self.attempts = Some(attempts);
+        self
+    }
+
+    #[must_use]
+    pub fn retry_after(mut self, retry_after: u64) -> Self {
+        self.retry_after = Some(retry_after);
+        self
+    }
+
+    pub fn build(self) -> BencherClient {
+        let Self {
+            host,
+            token,
+            attempts,
+            retry_after,
+        } = self;
+        BencherClient {
+            host: host.unwrap_or_else(|| BENCHER_API_URL.clone()),
+            token,
+            attempts: attempts.unwrap_or(DEFAULT_ATTEMPTS),
+            retry_after: retry_after.unwrap_or(DEFAULT_RETRY_AFTER),
+        }
     }
 }
