@@ -11,8 +11,7 @@ export const BENCHER_CALENDLY_URL: string = "https://calendly.com/bencher/demo";
 
 export const BENCHER_CHAT_URL: string = "https://discord.gg/yGEsdUh7R4";
 
-export const BENCHER_LOGO_URL: string =
-	"https://s3.amazonaws.com/public.bencher.dev/bencher_navbar.png";
+export const BENCHER_LOGO_URL: string = "/wordmark.svg";
 
 export const BENCHER_VERSION = `${swagger?.info?.version}`;
 
