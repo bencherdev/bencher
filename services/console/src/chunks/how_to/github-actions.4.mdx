@@ -1,0 +1,94 @@
+```
+name: Run and Cache Benchmarks
+
+on: pull_request
+
+jobs:
+  benchmark:
+    name: Run Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Mock Benchmark
+        run: echo '{"bencher::mock_0": { "latency": { "value": 1.0 }}}' &> benchmark_results.txt
+      - uses: actions/upload-artifact@v3
+        with:
+          name: benchmark_results.txt
+          path: ./benchmark_results.txt
+      - uses: actions/upload-artifact@v3
+        with:
+          name: pr_event.json
+          path: ${{ env.GITHUB_EVENT_PATH }}
+```
+
+```
+on:
+  workflow_run:
+    workflows: [Run and Cache Benchmarks]
+    types:
+      - completed
+
+jobs:
+  track_with_bencher:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      BENCHER_PROJECT: save-walter-white
+      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+      BENCHER_ADAPTER: json
+      BENCHER_TESTBED: ubuntu-latest
+      BENCHMARK_RESULTS: benchmark_results.txt
+      PR_EVENT: pr_event.json
+    steps:
+      - name: Download Benchmark Results
+        uses: actions/github-script@v6
+        with:
+          script: |
+            function downloadArtifact(artifactName) {
+              let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.payload.workflow_run.id,
+              });
+              let matchArtifact = allArtifacts.data.artifacts.filter((artifact) => {
+                return artifact.name == artifactName
+              })[0];
+              if (!matchArtifact) {
+                core.setFailed(`Failed to find artifact: ${artifactName}`);
+              }
+              let download = await github.rest.actions.downloadArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: matchArtifact.id,
+                archive_format: 'zip',
+              });
+              let fs = require('fs');
+              fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/${artifactName}.zip`, Buffer.from(download.data));
+            }
+            downloadArtifact(process.env.BENCHMARK_RESULTS);
+            downloadArtifact(process.env.PR_EVENT);
+      - name: Unzip Benchmark Results
+        run: |
+          unzip $BENCHMARK_RESULTS.zip
+          unzip $PR_EVENT.zip
+      - name: Export PR Context
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let fs = require('fs');
+            let prEvent = JSON.parse(fs.readFileSync(process.env.PR_EVENT, {encoding: 'utf8'}));
+            fs.appendFileSync(process.env.GITHUB_ENV, `PR_NUMBER=${prEvent.number}`);
+            fs.appendFileSync(process.env.GITHUB_ENV, `PR_HEAD=${prEvent.pull_request.head.ref}`);
+            fs.appendFileSync(process.env.GITHUB_ENV, `PR_BASE=${prEvent.pull_request.base.ref}`);
+      - uses: bencherdev/bencher@main
+          - name: Track Benchmarks with Bencher
+            run: |
+              bencher run \\
+              --if-branch "${{ env.PR_HEAD }}" \\
+              --else-if-branch "${{ env.PR_BASE }}" \\
+              --else-if-branch main \\
+              --err \\
+              --github-actions \${{ secrets.GITHUB_TOKEN }} \\
+              --ci-number ${{ env.PR_NUMBER }} \\
+              --file $BENCHMARK_RESULTS
+```

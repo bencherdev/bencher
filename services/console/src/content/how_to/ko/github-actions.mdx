@@ -5,33 +5,12 @@ heading: "GitHub Actions 에서 Bencher 사용 방법"
 sortOrder: 3
 ---
 
-```
-on:
-  push:
-    branches: main
+import GitHubActions1 from "../../../chunks/how_to/github-actions.1.mdx";
+import GitHubActions2 from "../../../chunks/how_to/github-actions.2.mdx";
+import GitHubActions3 from "../../../chunks/how_to/github-actions.3.mdx";
+import GitHubActions4 from "../../../chunks/how_to/github-actions.4.mdx";
 
-jobs:
-  benchmark_with_bencher:
-    name: Track benchmarks with Bencher
-    runs-on: ubuntu-latest
-    env:
-      BENCHER_PROJECT: save-walter-white
-      BENCHER_API_TOKEN: \${{ secrets.BENCHER_API_TOKEN }}
-      BENCHER_ADAPTER: json
-      BENCHER_TESTBED: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: bencherdev/bencher@main
-      - name: Benchmark with Bencher
-        run: |
-          bencher run \\
-          --if-branch "$GITHUB_REF_NAME" \\
-          --else-if-branch "$GITHUB_BASE_REF" \\
-          --else-if-branch main \\
-          --err \\
-          --github-actions \${{ secrets.GITHUB_TOKEN }} \\
-          "bencher mock"
-```
+<GitHubActions1 />
 
 1. GitHub Actions `workflow`(예: `.github/workflows/benchmark.yml`)를 생성합니다.
 2. Workflow가 실행되어야 하는 이벤트를 `on`에 명시합니다. 전체 개요는 [GitHub Actions `on` 문서](https://docs.github.com/ko/actions/using-workflows/workflow-syntax-for-github-actions#on)에서 확인하세요. 이 Workflow는 `push` 이벤트로 `main` 브랜치에 **만** 실행됩니다. 풀 리퀘스트에서 실행하는 방법은 [아래 섹션](#pull-requests)을 참조하세요.
@@ -59,12 +38,7 @@ jobs:
 풀 리퀘스트에서 성능 회귀를 잡아내기 위해선, PR에서 벤치마크를 실행해야 합니다.
 동일 리포지토리 내의 브랜치로부터만 PR이 등장할 것으로 예상한다면, 위의 예제를 수정해서 `pull_request` 이벤트에도 실행되도록 하면 됩니다.
 
-```
-on:
-  push:
-    branches: main
-  pull_request:
-```
+<GitHubActions2 />
 
 `push`에서 실행되는 것을 선택한 브랜치 (예: `main`)에만 **제한하는** 것이 중요합니다.
 이렇게 해야 PR 브랜치로의 push가 두 번 실행되지 않습니다!
@@ -96,33 +70,7 @@ on:
 와 [이 블로그 글](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
 에서 방어적인 리퀘스트를 막는 방법에 대해 알아보세요.
 
-```
-on: pull_request_target
-
-jobs:
-  benchmark_with_bencher:
-    name: Track benchmarks with Bencher
-    runs-on: ubuntu-latest
-    env:
-      BENCHER_PROJECT: save-walter-white
-      BENCHER_ADAPTER: json
-      BENCHER_TESTBED: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-      - uses: bencherdev/bencher@main
-      - name: Benchmark with Bencher
-        run: |
-          bencher run \\
-          --if-branch "${{ github.event.pull_request.head.ref }}" \\
-          --else-if-branch "${{ github.event.pull_request.base.ref }}" \\
-          --else-if-branch main \\
-          --err \\
-          --github-actions \${{ secrets.GITHUB_TOKEN }} \\
-          --token ${{ secrets.BENCHER_API_TOKEN }} \\
-          "bencher mock"
-```
+<GitHubActions3 />
 
 ### PR Benchmark 결과 저장하기
 
@@ -139,100 +87,7 @@ jobs:
 전체 개요에 대한 내용은 [트리거하는 워크플로우로부터 데이터를 사용하기](https://docs.github.com/ko/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow)를 참조하세요.
 초기 워크플로우에서 사용한 풀 리퀘스트 번호, head 브랜치, 그리고 base 브랜치는 `workflow_run` 내에서는 사용할 수 없으므로 명시적으로 전달해야 합니다.
 
-```
-name: Run and Cache Benchmarks
-
-on: pull_request
-
-jobs:
-  benchmark:
-    name: Run Benchmarks
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Mock Benchmark
-        run: echo '{"bencher::mock_0": { "latency": { "value": 1.0 }}}' &> benchmark_results.txt
-      - uses: actions/upload-artifact@v3
-        with:
-          name: benchmark_results.txt
-          path: ./benchmark_results.txt
-      - uses: actions/upload-artifact@v3
-        with:
-          name: pr_event.json
-          path: ${{ env.GITHUB_EVENT_PATH }}
-```
-
-```
-on:
-  workflow_run:
-    workflows: [Run and Cache Benchmarks]
-    types:
-      - completed
-
-jobs:
-  track_with_bencher:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
-    env:
-      BENCHER_PROJECT: save-walter-white
-      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
-      BENCHER_ADAPTER: json
-      BENCHER_TESTBED: ubuntu-latest
-      BENCHMARK_RESULTS: benchmark_results.txt
-      PR_EVENT: pr_event.json
-    steps:
-      - name: Download Benchmark Results
-        uses: actions/github-script@v6
-        with:
-          script: |
-            function downloadArtifact(artifactName) {
-              let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                run_id: context.payload.workflow_run.id,
-              });
-              let matchArtifact = allArtifacts.data.artifacts.filter((artifact) => {
-                return artifact.name == artifactName
-              })[0];
-              if (!matchArtifact) {
-                core.setFailed(`Failed to find artifact: ${artifactName}`);
-              }
-              let download = await github.rest.actions.downloadArtifact({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                artifact_id: matchArtifact.id,
-                archive_format: 'zip',
-              });
-              let fs = require('fs');
-              fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/${artifactName}.zip`, Buffer.from(download.data));
-            }
-            downloadArtifact(process.env.BENCHMARK_RESULTS);
-            downloadArtifact(process.env.PR_EVENT);
-      - name: Unzip Benchmark Results
-        run: |
-          unzip $BENCHMARK_RESULTS.zip
-          unzip $PR_EVENT.zip
-      - name: Export PR Context
-        uses: actions/github-script@v6
-        with:
-          script: |
-            let fs = require('fs');
-            let prEvent = JSON.parse(fs.readFileSync(process.env.PR_EVENT, {encoding: 'utf8'}));
-            fs.appendFileSync(process.env.GITHUB_ENV, `PR_NUMBER=${prEvent.number}`);
-            fs.appendFileSync(process.env.GITHUB_ENV, `PR_HEAD=${prEvent.pull_request.head.ref}`);
-            fs.appendFileSync(process.env.GITHUB_ENV, `PR_BASE=${prEvent.pull_request.base.ref}`);
-      - uses: bencherdev/bencher@main
-          - name: Track Benchmarks with Bencher
-            run: |
-              bencher run \\
-              --if-branch "${{ env.PR_HEAD }}" \\
-              --else-if-branch "${{ env.PR_BASE }}" \\
-              --else-if-branch main \\
-              --err \\
-              --github-actions \${{ secrets.GITHUB_TOKEN }} \\
-              --ci-number ${{ env.PR_NUMBER }} \\
-              --file $BENCHMARK_RESULTS
-```
+<GitHubActions4 />
 
 <br/>
 <br/>

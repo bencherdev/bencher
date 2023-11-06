@@ -5,33 +5,12 @@ heading: "Как использовать Bencher в GitHub Actions"
 sortOrder: 3
 ---
 
-```
-on:
-  push:
-    branches: main
+import GitHubActions1 from "../../../chunks/how_to/github-actions.1.mdx";
+import GitHubActions2 from "../../../chunks/how_to/github-actions.2.mdx";
+import GitHubActions3 from "../../../chunks/how_to/github-actions.3.mdx";
+import GitHubActions4 from "../../../chunks/how_to/github-actions.4.mdx";
 
-jobs:
-  benchmark_with_bencher:
-    name: Отслеживать бенчмарки с помощью Bencher
-    runs-on: ubuntu-latest
-    env:
-      BENCHER_PROJECT: save-walter-white
-      BENCHER_API_TOKEN: \${{ secrets.BENCHER_API_TOKEN }}
-      BENCHER_ADAPTER: json
-      BENCHER_TESTBED: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: bencherdev/bencher@main
-      - name: Бенчмарк с Bencher
-        run: |
-          bencher run \\
-          --if-branch "$GITHUB_REF_NAME" \\
-          --else-if-branch "$GITHUB_BASE_REF" \\
-          --else-if-branch main \\
-          --err \\
-          --github-actions \${{ secrets.GITHUB_TOKEN }} \\
-          "bencher mock"
-```
+<GitHubActions1 />
 
 1. Создайте `workflow` GitHub Actions (пример: `.github/workflows/benchmark.yml`).
 2. Укажите события, при которых должен запускаться `workflow`. См. [документацию GitHub Actions `on`](https://docs.github.com/ru/actions/using-workflows/workflow-syntax-for-github-actions#on) для полного обзора. Этот `workflow` запускается **только** при событиях `push` в ветку `main`. Для запуска [при Pull Requests см. раздел ниже](#pull-requests).
@@ -59,12 +38,7 @@ jobs:
 Чтобы отслеживать регрессию производительности в pull requests, вам нужно запускать свои бенчмарки на PR.
 Если вы ожидаете только PR от веток внутри одного и того же репозитория, то вы можете просто изменить пример выше, чтобы также запускать `on` `pull_request` события.
 
-```
-on:
-  push:
-    branches: main
-  pull_request:
-```
+<GitHubActions2 />
 
 Важно ограничить запуск при `push` **только** для выбранных веток (например: `main`),
 чтобы предотвратить двойной запуск при пуше в ветки PR!
@@ -96,33 +70,7 @@ on:
 и [этот блоговый пост](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
 о предотвращении вредоносных pull requests для полного обзора.
 
-```
-on: pull_request_target
-
-jobs:
-  benchmark_with_bencher:
-    name: Отследить бенчмарки с помощью Bencher
-    runs-on: ubuntu-latest
-    env:
-      BENCHER_PROJECT: save-walter-white
-      BENCHER_ADAPTER: json
-      BENCHER_TESTBED: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-      - uses: bencherdev/bencher@main
-      - name: Бенчмарк с Bencher
-        run: |
-          bencher run \\
-          --if-branch "${{ github.event.pull_request.head.ref }}" \\
-          --else-if-branch "${{ github.event.pull_request.base.ref }}" \\
-          --else-if-branch main \\
-          --err \\
-          --github-actions \${{ secrets.GITHUB_TOKEN }} \\
-          --token ${{ secrets.BENCHER_API_TOKEN }} \\
-          "bencher mock"
-```
+<GitHubActions3 />
 
 ### Кэширование Результатов Бенчмарка PR
 
@@ -139,100 +87,7 @@ jobs:
 См. [использование данных из вызывающего `workflow`](https://docs.github.com/ru/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow) для полного обзора.
 Номер pull request, head branch и base branch, используемые в начальном workflow, должны быть явно переданы, так как они недоступны внутри `workflow_run`.
 
-```
-name: Запуск и Кэширование Бенчмарков
-
-on: pull_request
-
-jobs:
-  benchmark:
-    name: Запуск Бенчмарков
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Тестовый Бенчмарк
-        run: echo '{"bencher::mock_0": { "latency": { "value": 1.0 }}}' &> benchmark_results.txt
-      - uses: actions/upload-artifact@v3
-        with:
-          name: benchmark_results.txt
-          path: ./benchmark_results.txt
-      - uses: actions/upload-artifact@v3
-        with:
-          name: pr_event.json
-          path: ${{ env.GITHUB_EVENT_PATH }}
-```
-
-```
-on:
-  workflow_run:
-    workflows: [Запуск и Кэширование Бенчмарков]
-    types:
-      - completed
-
-jobs:
-  track_with_bencher:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
-    env:
-      BENCHER_PROJECT: save-walter-white
-      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
-      BENCHER_ADAPTER: json
-      BENCHER_TESTBED: ubuntu-latest
-      BENCHMARK_RESULTS: benchmark_results.txt
-      PR_EVENT: pr_event.json
-    steps:
-      - name: Загрузить Результаты Бенчмарка
-        uses: actions/github-script@v6
-        with:
-          script: |
-            function downloadArtifact(artifactName) {
-              let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                run_id: context.payload.workflow_run.id,
-              });
-              let matchArtifact = allArtifacts.data.artifacts.filter((artifact) => {
-                return artifact.name == artifactName
-              })[0];
-              if (!matchArtifact) {
-                core.setFailed(`Не удалось найти элемент: ${artifactName}`);
-              }
-              let download = await github.rest.actions.downloadArtifact({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                artifact_id: matchArtifact.id,
-                archive_format: 'zip',
-              });
-              let fs = require('fs');
-              fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/${artifactName}.zip`, Buffer.from(download.data));
-            }
-            downloadArtifact(process.env.BENCHMARK_RESULTS);
-            downloadArtifact(process.env.PR_EVENT);
-      - name: Распаковать Результаты Бенчмарка
-        run: |
-          unzip $BENCHMARK_RESULTS.zip
-          unzip $PR_EVENT.zip
-      - name: Экспорт Контекста PR
-        uses: actions/github-script@v6
-        with:
-          script: |
-            let fs = require('fs');
-            let prEvent = JSON.parse(fs.readFileSync(process.env.PR_EVENT, {encoding: 'utf8'}));
-            fs.appendFileSync(process.env.GITHUB_ENV, `PR_NUMBER=${prEvent.number}`);
-            fs.appendFileSync(process.env.GITHUB_ENV, `PR_HEAD=${prEvent.pull_request.head.ref}`);
-            fs.appendFileSync(process.env.GITHUB_ENV, `PR_BASE=${prEvent.pull_request.base.ref}`);
-      - uses: bencherdev/bencher@main
-          - name: Отследить Бенчмарки с Bencher
-            run: |
-              bencher run \\
-              --if-branch "${{ env.PR_HEAD }}" \\
-              --else-if-branch "${{ env.PR_BASE }}" \\
-              --else-if-branch main \\
-              --err \\
-              --github-actions \${{ secrets.GITHUB_TOKEN }} \\
-              --ci-number ${{ env.PR_NUMBER }} \\
-              --file $BENCHMARK_RESULTS
-```
+<GitHubActions4 />
 
 <br/>
 <br/>

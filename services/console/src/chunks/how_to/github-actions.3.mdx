@@ -1,0 +1,27 @@
+```
+on: pull_request_target
+
+jobs:
+  benchmark_with_bencher:
+    name: Track benchmarks with Bencher
+    runs-on: ubuntu-latest
+    env:
+      BENCHER_PROJECT: save-walter-white
+      BENCHER_ADAPTER: json
+      BENCHER_TESTBED: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: bencherdev/bencher@main
+      - name: Benchmark with Bencher
+        run: |
+          bencher run \\
+          --if-branch "${{ github.event.pull_request.head.ref }}" \\
+          --else-if-branch "${{ github.event.pull_request.base.ref }}" \\
+          --else-if-branch main \\
+          --err \\
+          --github-actions \${{ secrets.GITHUB_TOKEN }} \\
+          --token ${{ secrets.BENCHER_API_TOKEN }} \\
+          "bencher mock"
+```

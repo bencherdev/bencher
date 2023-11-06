@@ -5,33 +5,12 @@ heading: "如何在 GitHub 操作中使用 Bencher"
 sortOrder: 3
 ---
 
-```
-on:
-  push:
-    branches: main
+import GitHubActions1 from "../../../chunks/how_to/github-actions.1.mdx";
+import GitHubActions2 from "../../../chunks/how_to/github-actions.2.mdx";
+import GitHubActions3 from "../../../chunks/how_to/github-actions.3.mdx";
+import GitHubActions4 from "../../../chunks/how_to/github-actions.4.mdx";
 
-jobs:
-  benchmark_with_bencher:
-    name: 使用 Bencher 跟踪基准
-    runs-on: ubuntu-latest
-    env:
-      BENCHER_PROJECT: save-walter-white
-      BENCHER_API_TOKEN: \${{ secrets.BENCHER_API_TOKEN }}
-      BENCHER_ADAPTER: json
-      BENCHER_TESTBED: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: bencherdev/bencher@main
-      - name: 使用 Bencher 进行基准测试
-        run: |
-          bencher run \\
-          --if-branch "$GITHUB_REF_NAME" \\
-          --else-if-branch "$GITHUB_BASE_REF" \\
-          --else-if-branch main \\
-          --err \\
-          --github-actions \${{ secrets.GITHUB_TOKEN }} \\
-          "bencher mock"
-```
+<GitHubActions1 />
 
 1. 创建 GitHub 操作`workflow` （例如：`.github/workflows/benchmark.yml`）。
 2. 指定 workflow 应运行`on`的事件。查看完整概述，可以查阅 [GitHub 操作 `on` 文档](https://docs.github.com/zh/actions/using-workflows/workflow-syntax-for-github-actions#on)。此工作流**仅**在 `push` 事件发生到 `main` 分支时运行。有关在 [Pull Requests 下方查看相关部分](#pull-requests)的运行方式。
@@ -59,12 +38,7 @@ jobs:
 为了在 Pull Requests 中捕获性能回归，你需要在 PRs 中运行你的基准测试。
 如果你只是期望在同一仓库内有 PRs，然后你可以简单地修改上面的例子以在 `pull_request` 事件上运行。
 
-```
-on:
-  push:
-    branches: main
-  pull_request:
-```
+<GitHubActions2 />
 
 限制在 `push` 上运行**仅限**于选择的分支（例如：`main`）是重要的，防止推送到 PR 分支的操作运行两次！
 再说一次，这个方法只有在所有 PRs 都来自**同一个**仓库时才可行。
@@ -94,33 +68,7 @@ on:
 查看完整概述，可以查阅 [GitHub Security Lab 文章](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/) 和 [博客文章] (https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
 关于阻止 pwn 指令请求的文档。
 
-```
-on: pull_request_target
-
-jobs:
-  benchmark_with_bencher:
-    name: 使用 Bencher 跟踪基准
-    runs-on: ubuntu-latest
-    env:
-      BENCHER_PROJECT: save-walter-white
-      BENCHER_ADAPTER: json
-      BENCHER_TESTBED: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-      - uses: bencherdev/bencher@main
-      - name: 使用 Bencher 进行基准测试
-        run: |
-          bencher run \\
-          --if-branch "${{ github.event.pull_request.head.ref }}" \\
-          --else-if-branch "${{ github.event.pull_request.base.ref }}" \\
-          --else-if-branch main \\
-          --err \\
-          --github-actions \${{ secrets.GITHUB_TOKEN }} \\
-          --token ${{ secrets.BENCHER_API_TOKEN }} \\
-          "bencher mock"
-```
+<GitHubActions3 />
 
 ### 缓存 PR 基准测试结果
 
@@ -137,100 +85,7 @@ jobs:
 查看完整概述，可以查阅 [使用触发工作流的数据](https://docs.github.com/zh/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow) 文档。
 在 `workflow_run` 中无法调用 pull 请求的编号，head 分支，和基底分支，因此必须自行调用。
 
-```
-name: 运行和缓存基准
-
-on: pull_request
-
-jobs:
-  benchmark:
-    name: 运行基准
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: 模拟基准
-        run: echo '{"bencher::mock_0": { "latency": { "value": 1.0 }}}' &> benchmark_results.txt
-      - uses: actions/upload-artifact@v3
-        with:
-          name: benchmark_results.txt
-          path: ./benchmark_results.txt
-      - uses: actions/upload-artifact@v3
-        with:
-          name: pr_event.json
-          path: ${{ env.GITHUB_EVENT_PATH }}
-```
-
-```
-on:
-  workflow_run:
-    workflows: [运行和缓存基准]
-    types:
-      - completed
-
-jobs:
-  track_with_bencher:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
-    env:
-      BENCHER_PROJECT: save-walter-white
-      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
-      BENCHER_ADAPTER: json
-      BENCHER_TESTBED: ubuntu-latest
-      BENCHMARK_RESULTS: benchmark_results.txt
-      PR_EVENT: pr_event.json
-    steps:
-      - name: 下载基准结果
-        uses: actions/github-script@v6
-        with:
-          script: |
-            function downloadArtifact(artifactName) {
-              let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                run_id: context.payload.workflow_run.id,
-              });
-              let matchArtifact = allArtifacts.data.artifacts.filter((artifact) => {
-                return artifact.name == artifactName
-              })[0];
-              if (!matchArtifact) {
-                core.setFailed(`Failed to find artifact: ${artifactName}`);
-              }
-              let download = await github.rest.actions.downloadArtifact({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                artifact_id: matchArtifact.id,
-                archive_format: 'zip',
-              });
-              let fs = require('fs');
-              fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/${artifactName}.zip`, Buffer.from(download.data));
-            }
-            downloadArtifact(process.env.BENCHMARK_RESULTS);
-            downloadArtifact(process.env.PR_EVENT);
-      - name: 解压基准结果
-        run: |
-          unzip $BENCHMARK_RESULTS.zip
-          unzip $PR_EVENT.zip
-      - name: 导出 PR 上下文
-        uses: actions/github-script@v6
-        with:
-          script: |
-            let fs = require('fs');
-            let prEvent = JSON.parse(fs.readFileSync(process.env.PR_EVENT, {encoding: 'utf8'}));
-            fs.appendFileSync(process.env.GITHUB_ENV, `PR_NUMBER=${prEvent.number}`);
-            fs.appendFileSync(process.env.GITHUB_ENV, `PR_HEAD=${prEvent.pull_request.head.ref}`);
-            fs.appendFileSync(process.env.GITHUB_ENV, `PR_BASE=${prEvent.pull_request.base.ref}`);
-      - uses: bencherdev/bencher@main
-          - name: 使用 Bencher 追踪基准
-            run: |
-              bencher run \\
-              --if-branch "${{ env.PR_HEAD }}" \\
-              --else-if-branch "${{ env.PR_BASE }}" \\
-              --else-if-branch main \\
-              --err \\
-              --github-actions \${{ secrets.GITHUB_TOKEN }} \\
-              --ci-number ${{ env.PR_NUMBER }} \\
-              --file $BENCHMARK_RESULTS
-```
+<GitHubActions4 />
 
 <br/>
 <br/>
