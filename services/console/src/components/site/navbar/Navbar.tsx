@@ -22,12 +22,7 @@ const Navbar = () => {
 					title="Bencher - Continuous Benchmarking"
 					href="/"
 				>
-					<img
-						src={BENCHER_LOGO_URL}
-						width="152"
-						height="28"
-						alt="🐰 Bencher"
-					/>
+					<img src={BENCHER_LOGO_URL} width="150" alt="🐰 Bencher" />
 				</a>
 
 				<button

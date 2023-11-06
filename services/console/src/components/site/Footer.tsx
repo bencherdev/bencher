@@ -1,4 +1,8 @@
-import { BENCHER_CHAT_URL, BENCHER_GITHUB_URL } from "../../util/ext";
+import {
+	BENCHER_CHAT_URL,
+	BENCHER_GITHUB_URL,
+	BENCHER_LOGO_URL,
+} from "../../util/ext";
 
 const Footer = () => (
 	<footer class="footer" style="margin-top: 1rem;">
@@ -6,7 +10,12 @@ const Footer = () => (
 			<div class="columns is-vcentered is-mobile">
 				<div class="column">
 					<div class="content">
-						<h4 class="title is-4">🐰 Bencher - Continuous Benchmarking</h4>
+						<h4 class="title is-4">
+							<a class="navbar-item" title="🐰 Bencher" href="/">
+								<img src={BENCHER_LOGO_URL} width="150" alt="🐰 Bencher" />
+							</a>
+						</h4>
+						<h5 class="subtitle is-5">Continuous Benchmarking</h5>
 						<nav class="level">
 							<div class="level-left">
 								<div class="level-item has-text-centered">

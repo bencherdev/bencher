@@ -1,4 +1,7 @@
+import type { Params } from "astro";
 import { Show, createSignal } from "solid-js";
+import type { JsonAuthUser } from "../../../types/bencher";
+import { authUser } from "../../../util/auth";
 import {
 	BENCHER_LOGO_URL,
 	BENCHER_SITE_URL,
@@ -6,9 +9,6 @@ import {
 	isBencherCloud,
 } from "../../../util/ext";
 import ProjectSelect from "./ProjectSelect";
-import { authUser } from "../../../util/auth";
-import type { Params } from "astro";
-import type { JsonAuthUser } from "../../../types/bencher";
 import BENCHER_NAVBAR_ID from "./id";
 
 export interface Props {
@@ -31,12 +31,7 @@ const ConsoleNavbar = (props: Props) => {
 		>
 			<div class="navbar-brand">
 				<a class="navbar-item" title="Console Home" href="/console">
-					<img
-						src={BENCHER_LOGO_URL}
-						width="152"
-						height="28"
-						alt="🐰 Bencher"
-					/>
+					<img src={BENCHER_LOGO_URL} width="150" alt="🐰 Bencher" />
 				</a>
 
 				<button

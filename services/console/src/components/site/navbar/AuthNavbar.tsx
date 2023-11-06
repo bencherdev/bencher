@@ -16,12 +16,7 @@ const AuthNavbar = () => {
 			>
 				<div class="navbar-brand">
 					<a class="navbar-item" title="Console Home" href="/console">
-						<img
-							src={BENCHER_LOGO_URL}
-							width="152"
-							height="28"
-							alt="🐰 Bencher"
-						/>
+						<img src={BENCHER_LOGO_URL} width="150" alt="🐰 Bencher" />
 					</a>
 				</div>
 
