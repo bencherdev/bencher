@@ -1,6 +1,7 @@
 import {
 	BENCHER_CHAT_URL,
 	BENCHER_GITHUB_URL,
+	BENCHER_LINKEDIN_URL,
 	BENCHER_LOGO_URL,
 } from "../../util/ext";
 
@@ -96,6 +97,19 @@ const Footer = () => (
 							>
 								<span class="icon has-text-primary">
 									<i class="fab fa-discord fa-2x" aria-hidden="true" />
+								</span>
+							</a>
+						</div>
+						<div class="level-item has-text-centered">
+							<a
+								class="navbar-item"
+								href={BENCHER_LINKEDIN_URL}
+								target="_blank"
+								aria-label="LinkedIn"
+								rel="noreferrer"
+							>
+								<span class="icon has-text-primary">
+									<i class="fab fa-linkedin fa-2x" aria-hidden="true" />
 								</span>
 							</a>
 						</div>
