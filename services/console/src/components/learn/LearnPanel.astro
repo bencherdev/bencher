@@ -1,0 +1,102 @@
+---
+import LearnLayout from "../../layouts/docs/LearnLayout.astro";
+import {getLangCollection, langPath} from "../../i18n/utils.ts"
+import { Language, allLanguages, alsoIn, architecture, defaultLang, explanation, howTo, languageName, tutorial } from "../../i18n/ui";
+import { Collection } from "../../content/config";
+import { getCollection } from "astro:content";
+
+interface Props {
+  lang: undefined | string;
+}
+const lang: Language = Astro.props.lang ?? defaultLang;
+
+// Learn
+const rust = await getCollection(Collection.rust);
+rust.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
+
+
+const title = () => {
+  switch(lang) {
+    case Language.en:
+      return "How to Benchmark Code";
+    case Language.de:
+      return "Lernen";
+    case Language.es:
+      return "Aprender";
+    case Language.fr:
+      return "Apprendre";
+    case Language.ja:
+      return "学ぶ";
+    case Language.ko:
+      return "배우다";
+    case Language.pt:
+      return "Aprender";
+    case Language.ru:
+      return "Учиться";
+    case Language.zh:
+      return "学习";
+  }
+};
+
+const description = () => {
+  switch (lang) {
+    case Language.en:
+      return "Learn how to benchmark and profile code in C#, C++, Go, Java, Python, Ruby, Rust, and more!";
+    case Language.de:
+      return "Erfahren Sie, wie Sie Code in C#, C++, Go, Java, Python, Ruby, Rust und mehr vergleichen und profilieren!";
+    case Language.es:
+      return "¡Aprenda a comparar y perfilar código en C#, C++, Go, Java, Python, Ruby, Rust y más!";
+    case Language.fr:
+      return "Apprenez à évaluer et profiler du code en C#, C++, Go, Java, Python, Ruby, Rust et bien plus encore !";
+    case Language.ja:
+      return "C#、C++、Go、Java、Python、Ruby、Rust などでコードのベンチマークとプロファイリングを行う方法を学びましょう。。"
+    case Language.ko:
+      return "C#, C++, Go, Java, Python, Ruby, Rust 등에서 코드를 벤치마킹하고 프로파일링하는 방법을 알아보세요!";
+    case Language.pt:
+      return "Aprenda como fazer benchmark e criar perfil de código em C#, C++, Go, Java, Python, Ruby, Rust e muito mais!";
+    case Language.ru:
+      return "Узнайте, как тестировать и профилировать код на C#, C++, Go, Java, Python, Ruby, Rust и других языках!";
+    case Language.zh:
+      return "了解如何对 C#、C++、Go、Java、Python、Ruby、Rust 等语言的代码进行基准测试和分析！";
+  }
+}
+
+const howToBenchmark = () => {
+  switch(lang) {
+    case Language.en:
+      return "How to Benchmark Code";
+    case Language.de:
+      return "So Vergleichen Sie Code";
+    case Language.es:
+      return "Cómo Comparar el Código";
+    case Language.fr:
+      return "Comment Comparer le Code";
+    case Language.ja:
+      return "コードをベンチマークする方法";
+    case Language.ko:
+      return "코드를 벤치마킹하는 방법";
+    case Language.pt:
+      return "Como Comparar o Código";
+    case Language.ru:
+      return "Как протестировать код";
+    case Language.zh:
+      return "如何对代码进行基准测试";
+  }
+};
+---
+
+<LearnLayout title={title()} description={description()} heading={title()} lang={lang}>
+  <div class="menu">
+    <p class="menu-label">{howToBenchmark()}</p>
+    <p>Rust</p>
+    <ul class="menu-list">
+      {
+        rust.map((page) => (
+          <li>
+            <a href={`/learn/benchmarking/rust/${page.slug}`}>{page.data.title}</a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</LearnLayout>

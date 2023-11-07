@@ -1,5 +1,5 @@
 ---
-import DocsPanel from "../../../components/docs/DocsPanel.astro";
+import LearnPanel from "../../../components/learn/LearnPanel.astro";
 import { otherLanguages } from "../../../i18n/ui";
 
 export async function getStaticPaths() {
@@ -9,4 +9,4 @@ export async function getStaticPaths() {
 const { lang } = Astro.params;
 ---
 
-<DocsPanel lang={lang}/>
+<LearnPanel lang={lang}/>

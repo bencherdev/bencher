@@ -28,6 +28,29 @@ export const otherLanguages = [
 
 export const allLanguages = [Language.en, ...otherLanguages];
 
+export const alsoIn = (lang: Language) => {
+	switch (lang) {
+		case Language.en:
+			return "Also available in:";
+		case Language.de:
+			return "Auch erhältlich in:";
+		case Language.es:
+			return "También disponible en:";
+		case Language.fr:
+			return "Également disponible en:";
+		case Language.ja:
+			return "以下でも利用可能です:";
+		case Language.ko:
+			return "다음에서도 사용 가능:";
+		case Language.pt:
+			return "Também disponível em:";
+		case Language.ru:
+			return "Также доступно в:";
+		case Language.zh:
+			return "也可用于:";
+	}
+};
+
 export const languageName = (lang: Language) => {
 	switch (lang) {
 		case Language.en:

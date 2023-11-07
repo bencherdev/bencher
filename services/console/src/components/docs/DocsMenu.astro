@@ -25,6 +25,7 @@ const lang: Language = Astro.props.lang ?? defaultLang;
 ---
 
 <aside class="menu is-sticky">
+  <!-- Docs -->
   <div id={tab} class="tabs is-centered">
     <ul>
       <li id="docs"><a>Docs</a></li>
@@ -79,21 +80,18 @@ const lang: Language = Astro.props.lang ?? defaultLang;
       }
     </ul>
   </div>
+  <!-- Learn -->
   <div id="learn-menu">
-    <a class="menu-label" href="/learn/benchmarking">Benchmarking</a>
+    <p class="menu-label">Benchmarking</p>
+    <p>Rust</p>
     <ul class="menu-list">
-      <li>
-        <a href="/learn/benchmarking/rust">Rust</a>
-        <ul>
-        {
-          rust.map((page) => (
-            <li>
-              <a href={`/learn/benchmarking/rust/${page.slug}`}>{page.data.title}</a>
-            </li>
-          ))
-        }
-        </ul>
-      </li>
+      {
+        rust.map((page) => (
+          <li>
+            <a href={`/learn/benchmarking/rust/${page.slug}`}>{page.data.title}</a>
+          </li>
+        ))
+      }
     </ul>
   </div>
 </aside>

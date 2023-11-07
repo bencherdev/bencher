@@ -1,7 +1,7 @@
 ---
 import DocsLayout from "../../layouts/docs/DocsLayout.astro";
 import {getLangCollection, langPath} from "../../i18n/utils.ts"
-import { Language, allLanguages, architecture, defaultLang, explanation, howTo, languageName, tutorial } from "../../i18n/ui";
+import { Language, allLanguages, alsoIn, architecture, defaultLang, explanation, howTo, languageName, tutorial } from "../../i18n/ui";
 import { Collection } from "../../content/config";
 
 interface Props {
@@ -59,29 +59,6 @@ const description = () => {
       return "Bencher 文档的目录。 了解如何为您的项目设置持续的基准测试。";
   }
 }
-
-const alsoIn = () => {
-  switch (lang) {
-    case Language.en:
-      return "Also available in:";
-    case Language.de:
-      return "Auch erhältlich in:";
-    case Language.es:
-      return "También disponible en:";
-    case Language.fr:
-      return "Également disponible en:";
-    case Language.ja:
-      return "以下でも利用可能です:";
-    case Language.ko:
-      return "다음에서도 사용 가능:";
-    case Language.pt:
-      return "Também disponível em:";
-    case Language.ru:
-      return "Также доступно в:";
-    case Language.zh:
-      return "也可用于:";
-  }
-}
 ---
 
 <DocsLayout title={title()} description={description()} heading={title()} lang={lang}>
@@ -133,7 +110,7 @@ const alsoIn = () => {
       }
     </ul>
   </div>
-  <h3 class="title is-3">{alsoIn()}</h3>
+  <h3 class="title is-3">{alsoIn(lang)}</h3>
   <ul>
     {allLanguages.map((language) =>
        lang !== language &&

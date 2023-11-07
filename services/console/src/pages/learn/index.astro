@@ -1,14 +1,5 @@
 ---
-import LearnLayout from "../../layouts/docs/LearnLayout.astro";
-
-const title = "How to Benchmark and Profile Code";
-const description = "Learn how to benchmark and profile code in C#, C++, Go, Java, Python, Ruby, Rust, and more!";
+import LearnPanel from "../../components/learn/LearnPanel.astro";
+import { defaultLang } from "../../i18n/ui";
 ---
-
-<LearnLayout title={title} description={description} heading={title}>
-  <ul>
-    <li><a href="/learn/benchmarking">How to Benchmark Code</a></li>
-    <li><a style="pointer-events: none; cursor: default; color: #fdb07e;">How to Profile Code (coming soon)</a></li>
-    <li><a style="pointer-events: none; cursor: default; color: #fdb07e;">Foreign Function Interface (FFI) (coming soon)</a></li>
-  </ul>
-</LearnLayout>
+<LearnPanel lang={defaultLang}/>
