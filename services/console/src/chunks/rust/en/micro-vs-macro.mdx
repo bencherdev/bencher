@@ -1,0 +1,18 @@
+## Micro-Benchmarking vs Macro-Benchmarking
+
+There are two major categories of software benchmarks: micro-benchmarks and macro-benchmarks.
+Micro-benchmarks operate at a level similar to unit tests.
+For example, a benchmark for a function that determines `Fizz`, `Buzz`, or `FizzBuzz` for a single number would be a micro-benchmark.
+Macro-benchmarks operate at a level similar to integration tests.
+For example, a benchmark for a function that plays the entire game of FizzBuzz, from `1` to `100`, would be a macro-benchmark.
+
+Generally, it is best to test at the lowest level of abstraction possible.
+In the case benchmarks, this makes them both easier to maintain,
+and it helps reduce noise the amount of noise in the measurements.
+However, just as having some end-to-end tests can be very useful for sanity checking
+the entire system comes together as expected,
+having macro-benchmarks can be very useful for making sure that
+the critical paths through your software remain performant.
+
+Going forward, we will mainly be focusing on micro-benchmarks.
+Toward the end though, we will add one macro-benchmark in for good measure.

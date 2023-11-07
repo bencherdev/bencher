@@ -16,12 +16,12 @@ use crate::parser::{CliLanguage, CliTranslate};
 // https://platform.openai.com/docs/models/gpt-4
 const GPT4_MODEL: &str = "gpt-4-0613";
 
+// export OPENAI_API_KEY=sk-xxx
 #[derive(Debug)]
 pub struct Translate {
     pub input_path: Utf8PathBuf,
     pub lang: Option<Vec<CliLanguage>>,
     pub output_path: Option<Utf8PathBuf>,
-    pub disclosure: bool,
 }
 
 impl TryFrom<CliTranslate> for Translate {
@@ -32,13 +32,11 @@ impl TryFrom<CliTranslate> for Translate {
             input_path,
             lang,
             output_path,
-            disclosure,
         } = translate;
         Ok(Self {
             input_path,
             lang,
             output_path,
-            disclosure,
         })
     }
 }

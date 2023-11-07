@@ -4,6 +4,8 @@ use crate::parser::{CliSub, CliTask};
 
 mod fly_test;
 mod netlify_test;
+#[cfg(feature = "plus")]
+mod prompt;
 mod release_notes;
 mod swagger;
 #[cfg(feature = "plus")]
@@ -13,6 +15,8 @@ mod typeshare;
 
 use fly_test::FlyTest;
 use netlify_test::NetlifyTest;
+#[cfg(feature = "plus")]
+use prompt::Prompt;
 use release_notes::ReleaseNotes;
 use swagger::Swagger;
 #[cfg(feature = "plus")]
@@ -31,6 +35,8 @@ pub enum Sub {
     Typeshare(Typeshare),
     Swagger(Swagger),
     Types(Types),
+    #[cfg(feature = "plus")]
+    Prompt(Prompt),
     #[cfg(feature = "plus")]
     Translate(Translate),
     FlyTest(FlyTest),
@@ -57,6 +63,8 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Swagger(swagger) => Self::Swagger(swagger.try_into()?),
             CliSub::Types(types) => Self::Types(types.try_into()?),
             #[cfg(feature = "plus")]
+            CliSub::Prompt(prompt) => Self::Prompt(prompt.try_into()?),
+            #[cfg(feature = "plus")]
             CliSub::Translate(translate) => Self::Translate(translate.try_into()?),
             CliSub::FlyTest(fly_test) => Self::FlyTest(fly_test.try_into()?),
             CliSub::NetlifyTest(netlify_test) => Self::NetlifyTest(netlify_test.try_into()?),
@@ -81,6 +89,8 @@ impl Sub {
             Self::Typeshare(typeshare) => typeshare.exec(),
             Self::Swagger(swagger) => swagger.exec(),
             Self::Types(types) => types.exec(),
+            #[cfg(feature = "plus")]
+            Self::Prompt(prompt) => prompt.exec().await,
             #[cfg(feature = "plus")]
             Self::Translate(translate) => translate.exec().await,
             Self::FlyTest(fly_test) => fly_test.exec(),

@@ -17,6 +17,8 @@ pub enum CliSub {
     Swagger(CliSwagger),
     Types(CliTypes),
     #[cfg(feature = "plus")]
+    Prompt(CliPrompt),
+    #[cfg(feature = "plus")]
     Translate(CliTranslate),
     FlyTest(CliFlyTest),
     NetlifyTest(CliNetlifyTest),
@@ -34,6 +36,13 @@ pub struct CliTypes {}
 
 #[cfg(feature = "plus")]
 #[derive(Parser, Debug)]
+pub struct CliPrompt {
+    /// Text prompt
+    pub prompt: String,
+}
+
+#[cfg(feature = "plus")]
+#[derive(Parser, Debug)]
 pub struct CliTranslate {
     /// File input path
     pub input_path: Utf8PathBuf,
@@ -45,10 +54,6 @@ pub struct CliTranslate {
     /// File output path
     #[clap(long)]
     pub output_path: Option<Utf8PathBuf>,
-
-    /// Append disclosure
-    #[clap(long)]
-    pub disclosure: bool,
 }
 
 #[cfg(feature = "plus")]

@@ -1,10 +1,179 @@
 ---
 title: "libtest bench"
-description: "Learn how to benchmark Rust code with libtest bench"
+description: "A step-by-step guide on how to benchmark Rust code with libtest bench"
 heading: "How to benchmark Rust code with libtest bench"
 sortOrder: 1
 ---
 
-## What is Rust
+import Benchmarking from "../../../chunks/rust/en/benchmarking.mdx";
+import FizzBuzzRules from "../../../chunks/rust/en/fizz-buzz-rules.mdx";
+import MicroVsMacro from "../../../chunks/rust/en/micro-vs-macro.mdx";
 
-Rust is a programming language.
+<Benchmarking />
+
+## What is Rust?
+
+Rust is an open source programming language that emphasizes speed, memory safety, and productivity.
+It was specifically designed to handle the demands of large-scale, concurrent systems.
+Rust achieves memory safety without the need for a garbage collector,
+which makes it a perfect fit for systems programming.
+
+The language has gained popularity for applications that require complex concurrency
+or a high level of security such as operating systems, file systems, game engines, and browser components.
+Rust’s unique combination of performance and safety features makes it an excellent choice
+when considering a language for system-level programming and projects where memory-level detail control is required.
+Developer productivity is also enhanced by Rust's strong emphasis on error messages and toolchains.
+
+Cargo is the official package manager for the Rust programming language.
+It proves developers with a direct method for managing project dependencies and compilation processes.
+By automating many tasks, such as building the code, downloading the libraries your project relies on,
+and compiling those libraries, Cargo significantly simplifies the processes and enhances the productivity for Rust developers.
+Cargo also supports useful features like linting, formatting, building unit tests and benchmarks, using crates from the crates.io registry, and managing multiple native dependencies.
+
+
+## Write FizzBuzz in Rust
+
+<FizzBuzzRules />
+
+```rust
+fn main() {
+    for i in 1..=100 {
+        match (i % 3, i % 5) {
+            (0, 0) => println!("FizzBuzz"),
+            (0, _) => println!("Fizz"),
+            (_, 0) => println!("Buzz"),
+            (_, _) => println!("{i}"),
+        }
+    }
+}
+```
+
+### Follow Step-by-Step
+
+In order to follow along with this set-by-step tutorial, you will need to [install Rust](https://rustup.rs/).
+
+With Rust installed, you can then open a terminal window and enter: `cargo init fizz_buzz`
+
+Then navigate into the newly created `fizz_buzz` directory.
+You should see a directory called `src` with file named `main.rs`:
+
+```rust
+fn main() {
+    println!("Hello, world!");
+}
+```
+
+Replace its contents with the above FizzBuzz implementation. Then run `cargo run`.
+The output should look like:
+
+```
+   Compiling playground v0.0.1 (/playground)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.44s
+     Running `target/debug/playground`
+
+1
+2
+Fizz
+4
+Buzz
+Fizz
+7
+8
+Fizz
+Buzz
+11
+Fizz
+13
+14
+FizzBuzz
+...
+97
+98
+Fizz
+Buzz
+```
+
+> 🐰 Boom! You're cracking the coding interview!
+
+Before going any further, it is important to discuss the differences between micro-benchmarking and macro-benchmarking.
+
+<MicroVsMacro />
+
+## Benchmarking in Rust
+
+The three popular options for benchmarking in Rust are:
+[libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks),
+[Criterion](https://github.com/bheisler/criterion.rs), and
+[Iai](https://github.com/bheisler/iai).
+
+libtest is Rust's built-in unit testing and benchmarking framework.
+Though part of the Rust standard library, libtest bench is still considered unstable,
+so it is only available on nightly compiler releases.
+To work on the stable Rust compiler,
+[a separate benchmarking harness](https://github.com/bluss/bencher)
+needs to be used.
+Neither is being actively developed, though.
+
+The most actively maintained benchmarking harness within the Rust ecosystem is Criterion.
+It works on both stable and nightly Rust compiler releases,
+and it has become the de facto standard within the Rust community.
+Criterion is also much more feature-rich compared to libtest bench.
+
+An experimental alternative to Criterion is Iai, from the same creator as Criterion.
+However, it uses instruction counts instead of wall clock time:
+CPU instructions, L1 accesses, L2 access and RAM accesses.
+This allows for single-shot benchmarking since these metrics should stay nearly identical between runs.
+
+All three are [support by Bencher](/docs/explanation/adapters). So why choose libtest bench?
+It may be a good idea if you are trying to limit the external dependencies of your project
+and your project is already using the nightly toolchain.
+Outside of that, I would suggest using either Criterion or Iai depending on your use case.
+
+### Install Rust nightly
+
+With all that said, we're going to use libtest bench, so let's set our Rust toolchain to nightly.
+Create a `rust-toolchain.toml` file in the root of your `fizz_buzz` project, next to `Cargo.toml`.
+
+```toml
+[toolchain]
+channel = "nightly"
+```
+
+Once that is complete, rerun `cargo run`.
+It should take minute for the new, nightly toolchain to install
+before rerunning and giving you the same output as before.
+
+### Refactor FizzBuzz
+
+In order to test our FizzBuzz application, we need to decouple our logic from program's `main` function.
+Most benchmark harnesses, including libtest bench don't let you benchmark the `main` function.
+
+
+## Library for Testing
+
+The libtest benchmarking harness is built into Rust, and it's what we'll use to benchmark our FizzBuzz solution. Firstly, we need to specify the benchmark using the `#[bench]` attribute. Then, we need to add a function with a special signature, taking a mutable reference to a `test::Bencher` object. This `Bencher` object has an `iter` method which accepts a closure, the code that we want to benchmark:
+
+```rust
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use test::Bencher;
+
+  #[bench]
+  fn bench_fizzbuzz(b: &mut Bencher) {
+    b.iter(|| fizzbuzz(15));
+  }
+}
+```
+
+## Running the Benchmark
+
+To run the benchmark, use the command `cargo bench` in the terminal. This will compile the code with optimizations turned on, and then run the benchmarks. Note that because of the optimizations, the compilation time may be increased so be patient. Once complete, your terminal will display the benchmark results, such as the execution time and iterations per second.
+
+## Interpreting the Results
+
+The libtest prints out the benchmark results to your terminal. The important parts to look at are: the total time the benchmark took, and the time per iteration. These can provide you with valuable insights about the performance of your FizzBuzz function, and specifically where you might need to make improvements to optimize its speed.
+
+Keep in mind, always perform benchmarks on a quiet system for more accurate results as unrelated processes can impact your benchmark's performance.
+
+Remember that improving your code and benchmarking is an iterative process. Using Rust's libtest allows you to identify and focus on areas to improve your code's efficiency.
