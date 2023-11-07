@@ -4,6 +4,7 @@ import AuthNavbar from "../../components/site/navbar/AuthNavbar";
 import DocsMenu from "../../components/docs/DocsMenu.astro";
 import DocsTab from "../../components/docs/docs_tab";
 import SelfHostedRedirect from "../../components/site/SelfHostedRedirct";
+import { Author } from "../../components/docs/author";
 
 interface Props {
   title: string;
@@ -12,9 +13,10 @@ interface Props {
   heading?: undefined | string;
   tab?: DocsTab;
   lang?: undefined | string;
+  author?: undefined | Author;
 }
 
-const { title, titleFmt, description, heading, tab, lang } = Astro.props;
+const { title, titleFmt, description, heading, tab, lang, author } = Astro.props;
 ---
 
 <BaseLayout
@@ -22,6 +24,7 @@ const { title, titleFmt, description, heading, tab, lang } = Astro.props;
   titleFmt={titleFmt ?? ((title) => `📖 ${heading ?? title}`)}
   description={description}
   lang={lang}
+  author={author}
 >
   <SelfHostedRedirect client:only="solid-js" path="/console" />
   <!-- Note that the AuthNavbar does *not* fill the slot `navbar`. It is a client-side override.  -->
@@ -40,6 +43,18 @@ const { title, titleFmt, description, heading, tab, lang } = Astro.props;
               heading ? (
                 <div class="content">
                   <h1 class="title is-1">{heading}</h1>
+                  { author === Author.everett &&
+                    <nav class="level subtitle is-mobile">
+                      <div class="level-left">
+                        <div class="level-item">
+                            <img src="https://s3.amazonaws.com/public.bencher.dev/author/everett-pompeii-500.jpg" style="border-radius: 50%;" width="32" alt="Everett Pompeii" />
+                        </div>
+                        <div class="level-item">
+                          <a class="subtitle is-5" href="/author/everett-pompeii">Everett Pompeii</a>
+                        </div>
+                      </div>
+                    </nav>
+                  }
                   <hr />
                   <slot />
                 </div>

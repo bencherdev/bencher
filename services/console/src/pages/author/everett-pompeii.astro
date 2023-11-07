@@ -1,0 +1,88 @@
+---
+import LearnLayout from "../../layouts/docs/LearnLayout.astro";
+import { BENCHER_GITHUB_URL } from "../../util/ext";
+---
+
+<LearnLayout
+  title="Everett Pompeii"
+  titleFmt={(_title) => "📝 Everett Pompeii"}
+  description="Everett Pompeii is a senior Rust software engineer and the founder and maintiner of Bencher."
+>
+<div class="content">
+
+<nav class="level subtitle is-mobile">
+    <div class="level-left">
+    <div class="level-item">
+        <img src="https://s3.amazonaws.com/public.bencher.dev/author/everett-pompeii-500.jpg" style="border-radius: 50%;" width="64" alt="Everett Pompeii">
+    </div>
+    <div class="level-item">
+    <h1 class="subtitle is-1">Everett Pompeii</h1>
+    </div>
+</div>
+</nav>
+<hr />
+
+<p>
+    Everett Pompeii is a senior software engineer with a focus on real-time network security.
+    As a recovering C++ developer, he now enjoys working primarily in Rust.
+    He is a contributor and maintainer for several open source projects, the most recent of which is
+    <a href={BENCHER_GITHUB_URL}>Bencher</a>,
+    a suite of continuous benchmarking tools designed to catch performance regressions in CI.
+</p>
+
+<p>
+    Everett has written for
+    <a href="https://thenewstack.io/author/everett-pompeii/">The New Stack</a> and
+    <a href="https://openreferral.org/author/everett-pompeii/">Open Referral</a>.
+    He has spoken at several conferences including
+    <a href="https://www.youtube.com/watch?v=iKRT7JQgZyI">LinuxCon</a>
+    and has been honored as a
+    <a href="https://www.linuxfoundation.org/webinars/run-fast-catch-performance-regressions-in-ebpf-with-rust"> Linux Foundation Mentor</a>
+    for detecting and preventing software performance regressions.
+</p>
+
+<p>
+    Professionally, Everett has worked in a variety of programming languages:
+    Rust, C, C++, Python, JavaScript, Typescript, Go, Java, Ruby, Bash, SQL, and more.
+    Currently, he is building Runtime Application Self-Protection libraries using
+    <a href="http://langsec.org/">LangSec</a> principles with eBPF and other Linux Kernel primatives.
+    He has lead ground braking reasearch on
+    <a href="https://www.darpa.mil/program/intent-defined-adaptive-software">DARPA IDAS</a>.
+    While working on Cross Domain Solutions, Everett co-lead the design and development of a new product
+    <a href="https://www.nsa.gov/Cybersecurity/Partnership/National-Cross-Domain-Strategy-Management-Office/">secure enough to meet NSA standards</a>.
+</p>
+</div>
+
+<div class="columns is-centered">
+    <div class="column is-narrow">
+        <nav class="level is-mobile">
+            <div class="level-item has-text-centered">
+                <a
+                    class="navbar-item"
+                    href="https://github.com/epompeii"
+                    target="_blank"
+                    aria-label="GitHub"
+                    rel="noreferrer"
+                >
+                    <span class="icon has-text-primary">
+                        <i class="fab fa-github fa-2x" aria-hidden="true" />
+                    </span>
+                </a>
+            </div>
+            <div class="level-item has-text-centered">
+                <a
+                    class="navbar-item"
+                    href="https://www.linkedin.com/in/epompeii/"
+                    target="_blank"
+                    aria-label="LinkedIn"
+                    rel="noreferrer"
+                >
+                    <span class="icon has-text-primary">
+                        <i class="fab fa-linkedin fa-2x" aria-hidden="true" />
+                    </span>
+                </a>
+            </div>
+        </nav>
+    </div>
+</div>
+</LearnLayout>

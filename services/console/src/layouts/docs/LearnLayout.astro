@@ -1,6 +1,7 @@
 ---
 import DocsLayout from "./DocsLayout.astro";
 import DocsTab from "../../components/docs/docs_tab";
+import type { Author } from "../../components/docs/author";
 
 interface Props {
   title: string;
@@ -8,9 +9,10 @@ interface Props {
   description: string;
   heading?: string;
   lang?: string;
+  author?: Author;
 }
 
-const { title, titleFmt, description, heading, lang } = Astro.props;
+const { title, titleFmt, description, heading, lang, author } = Astro.props;
 ---
 
 <DocsLayout
@@ -20,6 +22,7 @@ const { title, titleFmt, description, heading, lang } = Astro.props;
   heading={heading}
   tab={DocsTab.Learn}
   lang={lang}
+  author={author}
 >
   <slot />
 </DocsLayout>
