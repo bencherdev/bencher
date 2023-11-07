@@ -1,11 +1,8 @@
 ---
-import { Collection } from "../../../../content/config";
-import { getLangPaths } from "../../../../i18n/utils";
-
+import { otherLanguages } from "../../../../i18n/ui";
 export async function getStaticPaths() {
-  return await getLangPaths(Collection.how_to);
+    return otherLanguages.map((lang) => {return { params: { lang } }});
 }
-
 const { lang } = Astro.params;
 ---
 <meta http-equiv="refresh" content={`0;url=/docs/${lang}`} />

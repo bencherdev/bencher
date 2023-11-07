@@ -1,10 +1,8 @@
 ---
-import DocsPanel from "../../../components/docs/DocsPanel.astro";
-import { otherLanguages } from "../../../i18n/ui";
+import { otherLanguages } from "../../../../i18n/ui";
 export async function getStaticPaths() {
     return otherLanguages.map((lang) => {return { params: { lang } }});
 }
 const { lang } = Astro.params;
 ---
-
-<DocsPanel lang={lang}/>
+<meta http-equiv="refresh" content={`0;url=/learn/${lang}`} />

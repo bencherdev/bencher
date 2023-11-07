@@ -17,8 +17,7 @@ const explanationCollection = await getLangCollection(Collection.explanation);
 const referenceCollection = await getLangCollection(Collection.reference);
 
 // Learn
-const rust = await getCollection(Collection.rust);
-rust.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
+const rustCollection = await getLangCollection(Collection.rust);
 
 const { tab } = Astro.props;
 const lang: Language = Astro.props.lang ?? defaultLang;
@@ -86,9 +85,9 @@ const lang: Language = Astro.props.lang ?? defaultLang;
     <p>Rust</p>
     <ul class="menu-list">
       {
-        rust.map((page) => (
+        rustCollection[lang]?.map((page) => (
           <li>
-            <a href={`/learn/benchmarking/rust/${page.slug}`}>{page.data.title}</a>
+            <a href={`/learn/${langPath(lang)}benchmarking/rust/${page.slug}`}>{page.data.title}</a>
           </li>
         ))
       }

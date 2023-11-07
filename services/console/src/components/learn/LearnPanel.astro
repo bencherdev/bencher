@@ -1,9 +1,8 @@
 ---
 import LearnLayout from "../../layouts/docs/LearnLayout.astro";
 import {getLangCollection, langPath} from "../../i18n/utils.ts"
-import { Language, allLanguages, alsoIn, architecture, defaultLang, explanation, howTo, languageName, tutorial } from "../../i18n/ui";
+import { Language, allLanguages, alsoIn,  defaultLang, languageName } from "../../i18n/ui";
 import { Collection } from "../../content/config";
-import { getCollection } from "astro:content";
 
 interface Props {
   lang: undefined | string;
@@ -11,14 +10,12 @@ interface Props {
 const lang: Language = Astro.props.lang ?? defaultLang;
 
 // Learn
-const rust = await getCollection(Collection.rust);
-rust.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
-
+const rustCollection = await getLangCollection(Collection.rust);
 
 const title = () => {
   switch(lang) {
     case Language.en:
-      return "How to Benchmark Code";
+      return "Learn";
     case Language.de:
       return "Lernen";
     case Language.es:
@@ -91,12 +88,21 @@ const howToBenchmark = () => {
     <p>Rust</p>
     <ul class="menu-list">
       {
-        rust.map((page) => (
+        rustCollection[lang]?.map((page) => (
           <li>
-            <a href={`/learn/benchmarking/rust/${page.slug}`}>{page.data.title}</a>
+            <a href={`/learn/${langPath(lang)}benchmarking/rust/${page.slug}`}>{page.data.heading}</a>
           </li>
         ))
       }
     </ul>
   </div>
+  <h3 class="title is-3">{alsoIn(lang)}</h3>
+  <ul>
+    {allLanguages.map((language) =>
+       lang !== language &&
+        <li>
+          <a href={`/learn/${langPath(language)}`}>{languageName(language)}</a>
+        </li>
+    )}
+  </ul>
 </LearnLayout>
