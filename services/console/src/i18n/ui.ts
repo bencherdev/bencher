@@ -188,3 +188,26 @@ export const architecture = (lang: Language) => {
 			return "架构";
 	}
 };
+
+export const benchmarking = (lang: Language) => {
+	switch (lang) {
+		case Language.en:
+			return "Benchmarking";
+		case Language.de:
+			return "Benchmarking";
+		case Language.es:
+			return "Evaluación Comparativa";
+		case Language.fr:
+			return "Analyse Comparative";
+		case Language.ja:
+			return "ベンチマーク";
+		case Language.ko:
+			return "벤치마킹";
+		case Language.pt:
+			return "Avaliação Comparativa";
+		case Language.ru:
+			return "Бенчмаркинг";
+		case Language.zh:
+			return "标杆管理";
+	}
+};

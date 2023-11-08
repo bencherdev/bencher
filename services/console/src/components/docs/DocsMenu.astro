@@ -1,7 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import type DocsTab from "./docs_tab";
-import {Language, architecture, defaultLang, explanation, howTo, tutorial } from "../../i18n/ui.ts";
+import {Language, architecture, benchmarking, defaultLang, explanation, howTo, tutorial } from "../../i18n/ui.ts";
 import {getLangCollection, langPath} from "../../i18n/utils.ts"
 import { Collection } from "../../content/config";
 
@@ -81,7 +81,7 @@ const lang: Language = Astro.props.lang ?? defaultLang;
   </div>
   <!-- Learn -->
   <div id="learn-menu">
-    <p class="menu-label">Benchmarking</p>
+    <p class="menu-label">{benchmarking(lang)}</p>
     <p>Rust</p>
     <ul class="menu-list">
       {

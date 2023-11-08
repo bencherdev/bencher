@@ -55,6 +55,14 @@ In order to follow along with this set-by-step tutorial, you will need to [insta
 With Rust installed, you can then open a terminal window and enter: `cargo init fizz_buzz`
 
 Then navigate into the newly created `fizz_buzz` directory.
+
+```
+fizz_buzz
+├── Cargo.toml
+└── src
+    └── main.rs
+```
+
 You should see a directory called `src` with file named `main.rs`:
 
 ```rust
@@ -67,6 +75,7 @@ Replace its contents with the above FizzBuzz implementation. Then run `cargo run
 The output should look like:
 
 ```
+$ cargo run
    Compiling playground v0.0.1 (/playground)
     Finished dev [unoptimized + debuginfo] target(s) in 0.44s
      Running `target/debug/playground`
@@ -94,6 +103,16 @@ Buzz
 ```
 
 > 🐰 Boom! You're cracking the coding interview!
+
+A new `Cargo.lock` file should have been generated:
+
+```
+fizz_buzz
+├── Cargo.lock
+├── Cargo.toml
+└── src
+    └── main.rs
+```
 
 Before going any further, it is important to discuss the differences between micro-benchmarking and macro-benchmarking.
 
@@ -139,6 +158,17 @@ Create a `rust-toolchain.toml` file in the root of your `fizz_buzz` project, nex
 channel = "nightly"
 ```
 
+Your directory structure should now look like this:
+
+```
+fizz_buzz
+├── Cargo.lock
+├── Cargo.toml
+├── rust-toolchain.toml
+└── src
+    └── main.rs
+```
+
 Once that is complete, rerun `cargo run`.
 It should take minute for the new, nightly toolchain to install
 before rerunning and giving you the same output as before.
@@ -146,34 +176,83 @@ before rerunning and giving you the same output as before.
 ### Refactor FizzBuzz
 
 In order to test our FizzBuzz application, we need to decouple our logic from program's `main` function.
-Most benchmark harnesses, including libtest bench don't let you benchmark the `main` function.
+Benchmark harnesses can't benchmark the `main` function.
 
-
-## Library for Testing
-
-The libtest benchmarking harness is built into Rust, and it's what we'll use to benchmark our FizzBuzz solution. Firstly, we need to specify the benchmark using the `#[bench]` attribute. Then, we need to add a function with a special signature, taking a mutable reference to a `test::Bencher` object. This `Bencher` object has an `iter` method which accepts a closure, the code that we want to benchmark:
+Update your code to look like this:
 
 ```rust
-#[cfg(test)]
-mod tests {
-  use super::*;
-  use test::Bencher;
+fn main() {
+    play_fizz_buzz();
+}
 
-  #[bench]
-  fn bench_fizzbuzz(b: &mut Bencher) {
-    b.iter(|| fizzbuzz(15));
-  }
+pub fn play_fizz_buzz() {
+    for i in 1..=100 {
+        println!("{}", fizz_buzz(i));
+    }
+}
+
+pub fn fizz_buzz(i: i32) -> String {
+    match (i % 3, i % 5) {
+        (0, 0) => "FizzBuzz".to_string(),
+        (0, _) => "Fizz".to_string(),
+        (_, 0) => "Buzz".to_string(),
+        (_, _) => i.to_string(),
+    }
 }
 ```
 
-## Running the Benchmark
+We have now separated our code out into three different functions:
 
-To run the benchmark, use the command `cargo bench` in the terminal. This will compile the code with optimizations turned on, and then run the benchmarks. Note that because of the optimizations, the compilation time may be increased so be patient. Once complete, your terminal will display the benchmark results, such as the execution time and iterations per second.
+- `main`: Then main entrypoint into our program that calls `play_fizz_buzz`
+- `play_fizz_buzz`: Iterates through the numbers `1` to `100` inclusive calling `fizz_buzz` for each and printing the result
+- `fizz_buzz`: Performs the actual `Fizz`, `Buzz`, `FizzBuzz`, or number logic
 
-## Interpreting the Results
+## Benchmarking FizzBuzz
 
-The libtest prints out the benchmark results to your terminal. The important parts to look at are: the total time the benchmark took, and the time per iteration. These can provide you with valuable insights about the performance of your FizzBuzz function, and specifically where you might need to make improvements to optimize its speed.
+In order to use the unstable libtest crate we need to enable the `test` feature for our code and import the `test` crate. Add the following to the _very top_ of `main.rs`:
 
-Keep in mind, always perform benchmarks on a quiet system for more accurate results as unrelated processes can impact your benchmark's performance.
+```rust
+#![feature(test)]
+extern crate test;
+```
 
-Remember that improving your code and benchmarking is an iterative process. Using Rust's libtest allows you to identify and focus on areas to improve your code's efficiency.
+Now we're ready to add our first benchmark!
+Add the following to the _very bottom_ of `main.rs`:
+
+```rust
+#[cfg(test)]
+mod benchmarks {
+    use test::Bencher;
+
+    use super::play_fizz_buzz;
+
+    #[bench]
+    fn bench_play_fizz_buzz(b: &mut Bencher) {
+        b.iter(|| play_fizz_buzz());
+    }
+}
+```
+
+- Create a module named `benchmarks` and has the
+  [compiler configuration](https://doc.rust-lang.org/reference/conditional-compilation.html#the-cfg-attribute)
+  set to [`test` mode](https://doc.rust-lang.org/book/ch11-03-test-organization.html#the-tests-module-and-cfgtest).
+- Import the `Bencher` benchmark runner. (🐰 Hey, cool name!)
+- Import our `play_fizz_buzz` function.
+- Create a benchmark named `bench_play_fizz_buzz` that takes in a mutable reference to `Bencher`.
+- Set the `#[bench]` attribute to indicate that `bench_play_fizz_buzz` is a benchmark.
+- Use the `Bencher` instance to benchmark `play_fizz_buzz` by running it several times.
+
+Now we're ready to benchmark our code, run `cargo bench`:
+
+```
+$ cargo bench
+    Finished bench [optimized] target(s) in 0.02s
+     Running unittests src/main.rs (target/release/deps/fizz_buzz-68f58c96f4025bd4)
+
+running 1 test
+test benchmarks::bench_play_fizz_buzz ... bench:       4,879 ns/iter (+/- 170)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in 0.68s
+```
+
+> 🐰 Lettuce turnip the beet! We've got our first benchmark metrics!
