@@ -1,6 +1,9 @@
-enum DocsTab {
+export enum DocsTab {
 	Docs = "docs-tab",
 	Learn = "learn-tab",
 }
 
-export default DocsTab;
+export enum DocsMenuId {
+	Docs = "docs-menu",
+	Learn = "learn-menu",
+}

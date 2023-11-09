@@ -1,6 +1,5 @@
 ---
-import { getCollection } from "astro:content";
-import type DocsTab from "./docs_tab";
+import {DocsTab, DocsMenuId} from "./docs_tab";
 import {Language, architecture, benchmarking, defaultLang, explanation, howTo, tutorial } from "../../i18n/ui.ts";
 import {getLangCollection, langPath} from "../../i18n/utils.ts"
 import { Collection } from "../../content/config";
@@ -21,17 +20,40 @@ const rustCollection = await getLangCollection(Collection.rust);
 
 const { tab } = Astro.props;
 const lang: Language = Astro.props.lang ?? defaultLang;
+
+const tabClass = (tab: DocsTab, current: DocsTab) => {
+  const isCurrent = (tab: DocsTab, current: DocsTab) => {
+    switch (tab) {
+      case DocsTab.Docs:
+        return current === DocsTab.Docs;
+      case DocsTab.Learn:
+        return current === DocsTab.Learn;
+    }
+  }
+  return isCurrent(tab, current) ? "is-active" : "";
+}
+const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
+  const isVisible = (menu: DocsMenuId, tab: DocsTab) => {
+    switch (menu) {
+      case DocsMenuId.Docs:
+        return tab === DocsTab.Docs;
+      case DocsMenuId.Learn:
+        return tab === DocsTab.Learn;
+    }
+  }
+  return `display: ${isVisible(menu, tab) ? "block" : "none"};`;
+}
 ---
 
 <aside class="menu is-sticky">
   <!-- Docs -->
-  <div id={tab} class="tabs is-centered">
+  <div class="tabs is-centered">
     <ul>
-      <li id="docs"><a>Docs</a></li>
-      <li id="learn"><a>Learn</a></li>
+      <li id={DocsTab.Docs} class={tabClass(DocsTab.Docs, tab)}><a>Docs</a></li>
+      <li id={DocsTab.Learn} class={tabClass(DocsTab.Learn, tab)}><a>Learn</a></li>
     </ul>
   </div>
-  <div id="docs-menu">
+  <div id={DocsMenuId.Docs} style={displayStyle(DocsMenuId.Docs, tab)}>
     <p class="menu-label">{tutorial(lang)}</p>
     <ul class="menu-list">
       {
@@ -80,7 +102,7 @@ const lang: Language = Astro.props.lang ?? defaultLang;
     </ul>
   </div>
   <!-- Learn -->
-  <div id="learn-menu">
+  <div id={DocsMenuId.Learn} style={displayStyle(DocsMenuId.Learn, tab)}>
     <p class="menu-label">{benchmarking(lang)}</p>
     <p>Rust</p>
     <ul class="menu-list">
@@ -95,40 +117,34 @@ const lang: Language = Astro.props.lang ?? defaultLang;
   </div>
 </aside>
 <script >
-  import DocsTab from "./docs_tab";
+  import {DocsTab, DocsMenuId} from "./docs_tab";
 
   // Find all buttons with the `alert` class on the page.
-  const docs = document.getElementById("docs");
-  const learn = document.getElementById("learn");
-  const docsMenu = document.getElementById("docs-menu");
-  const learnMenu = document.getElementById("learn-menu");
+  const docsTab = document.getElementById(DocsTab.Docs);
+  const learnTab = document.getElementById(DocsTab.Learn);
+  const docsMenu = document.getElementById(DocsMenuId.Docs);
+  const learnMenu = document.getElementById(DocsMenuId.Learn);
 
   function setDocs() {
-    docs?.classList.add("is-active");
-    learn?.classList.remove("is-active");
+    docsTab?.classList.add("is-active");
+    learnTab?.classList.remove("is-active");
 
-    docsMenu.style.display = "block";
-    learnMenu.style.display = "none";
+    docsMenu ? docsMenu.style.display = "block" : null;
+    learnMenu ? learnMenu.style.display = "none" : null;
   }
 
   function setLearn() {
-    docs?.classList.remove("is-active");
-    learn?.classList.add("is-active");
+    docsTab?.classList.remove("is-active");
+    learnTab?.classList.add("is-active");
 
-    docsMenu.style.display = "none";
-    learnMenu.style.display = "block";
+    docsMenu ? docsMenu.style.display = "none" : null;
+    learnMenu ? learnMenu.style.display = "block" : null;
   }
 
-  if (document.getElementById(DocsTab.Docs)) {
-    setDocs();
-  } else if (document.getElementById(DocsTab.Learn)) {
-    setLearn();
-  }
-
-  docs?.addEventListener("click", () => {
+  docsTab?.addEventListener("click", () => {
     setDocs();
   });
-  learn?.addEventListener("click", () => {
+  learnTab?.addEventListener("click", () => {
     setLearn();
   });
 </script>
