@@ -8,6 +8,8 @@ sortOrder: 1
 import Benchmarking from "../../../chunks/rust/en/benchmarking.mdx";
 import FizzBuzzRules from "../../../chunks/rust/en/fizz-buzz-rules.mdx";
 import MicroVsMacro from "../../../chunks/rust/en/micro-vs-macro.mdx";
+import FizzBuzzFibonacciRules from "../../../chunks/rust/en/fizz-buzz-fibonacci-rules.mdx";
+import FizzBuzzFibonacciOpenRules from "../../../chunks/rust/en/fizz-buzz-fibonacci-open-rules.mdx";
 
 <Benchmarking />
 
@@ -48,16 +50,26 @@ fn main() {
 }
 ```
 
+- Create a `main` function
+- Iterate from `1` to `100` inclusively.
+- For each number, calculate the modulus (remainder after division) for both `3` and `5`.
+- Pattern match on the two remainders.
+    If the remainder is `0`, then the number is a multiple of the given factor.
+- If the remainder is `0` for both `3` and `5` then print `FizzBuzz`.
+- If the remainder is `0` for only `3` then print `Fizz`.
+- If the remainder is `0` for only `5` then print `Buzz`.
+- Otherwise, just print the number.
+
 ### Follow Step-by-Step
 
 In order to follow along with this set-by-step tutorial, you will need to [install Rust](https://rustup.rs/).
 
-With Rust installed, you can then open a terminal window and enter: `cargo init fizz_buzz`
+With Rust installed, you can then open a terminal window and enter: `cargo init game`
 
-Then navigate into the newly created `fizz_buzz` directory.
+Then navigate into the newly created `game` directory.
 
 ```
-fizz_buzz
+game
 ├── Cargo.toml
 └── src
     └── main.rs
@@ -76,9 +88,9 @@ The output should look like:
 
 ```
 $ cargo run
-   Compiling playground v0.0.1 (/playground)
+   Compiling playground v0.0.1 (/home/bencher)
     Finished dev [unoptimized + debuginfo] target(s) in 0.44s
-     Running `target/debug/playground`
+     Running `target/debug/game`
 
 1
 2
@@ -107,7 +119,7 @@ Buzz
 A new `Cargo.lock` file should have been generated:
 
 ```
-fizz_buzz
+game
 ├── Cargo.lock
 ├── Cargo.toml
 └── src
@@ -151,7 +163,7 @@ Outside of that, I would suggest using either Criterion or Iai depending on your
 ### Install Rust nightly
 
 With all that said, we're going to use libtest bench, so let's set our Rust toolchain to nightly.
-Create a `rust-toolchain.toml` file in the root of your `fizz_buzz` project, next to `Cargo.toml`.
+Create a `rust-toolchain.toml` file in the root of your `game` project, next to `Cargo.toml`.
 
 ```toml
 [toolchain]
@@ -161,7 +173,7 @@ channel = "nightly"
 Your directory structure should now look like this:
 
 ```
-fizz_buzz
+game
 ├── Cargo.lock
 ├── Cargo.toml
 ├── rust-toolchain.toml
@@ -182,16 +194,16 @@ Update your code to look like this:
 
 ```rust
 fn main() {
-    play_fizz_buzz();
+    play_game();
 }
 
-pub fn play_fizz_buzz() {
+pub fn play_game() {
     for i in 1..=100 {
         println!("{}", fizz_buzz(i));
     }
 }
 
-pub fn fizz_buzz(i: i32) -> String {
+pub fn fizz_buzz(i: u32) -> String {
     match (i % 3, i % 5) {
         (0, 0) => "FizzBuzz".to_string(),
         (0, _) => "Fizz".to_string(),
@@ -203,9 +215,9 @@ pub fn fizz_buzz(i: i32) -> String {
 
 We have now separated our code out into three different functions:
 
-- `main`: Then main entrypoint into our program that calls `play_fizz_buzz`
-- `play_fizz_buzz`: Iterates through the numbers `1` to `100` inclusive calling `fizz_buzz` for each and printing the result
-- `fizz_buzz`: Performs the actual `Fizz`, `Buzz`, `FizzBuzz`, or number logic
+- `main`: Then main entrypoint into our program that calls `play_game`.
+- `play_game`: Iterates through the numbers `1` to `100` inclusive calling `fizz_buzz` for each and printing the result.
+- `fizz_buzz`: Take an unsigned integer as input and perform the actual `Fizz`, `Buzz`, `FizzBuzz`, or number logic returning the result as a string.
 
 ## Benchmarking FizzBuzz
 
@@ -224,11 +236,11 @@ Add the following to the _very bottom_ of `main.rs`:
 mod benchmarks {
     use test::Bencher;
 
-    use super::play_fizz_buzz;
+    use super::play_game;
 
     #[bench]
-    fn bench_play_fizz_buzz(b: &mut Bencher) {
-        b.iter(|| play_fizz_buzz());
+    fn bench_play_game(b: &mut Bencher) {
+        b.iter(|| play_game());
     }
 }
 ```
@@ -237,22 +249,122 @@ mod benchmarks {
   [compiler configuration](https://doc.rust-lang.org/reference/conditional-compilation.html#the-cfg-attribute)
   set to [`test` mode](https://doc.rust-lang.org/book/ch11-03-test-organization.html#the-tests-module-and-cfgtest).
 - Import the `Bencher` benchmark runner. (🐰 Hey, cool name!)
-- Import our `play_fizz_buzz` function.
-- Create a benchmark named `bench_play_fizz_buzz` that takes in a mutable reference to `Bencher`.
-- Set the `#[bench]` attribute to indicate that `bench_play_fizz_buzz` is a benchmark.
-- Use the `Bencher` instance to benchmark `play_fizz_buzz` by running it several times.
+- Import our `play_game` function.
+- Create a benchmark named `bench_play_game` that takes in a mutable reference to `Bencher`.
+- Set the `#[bench]` attribute to indicate that `bench_play_game` is a benchmark.
+- Use the `Bencher` instance to benchmark `play_game` by running it several times.
 
 Now we're ready to benchmark our code, run `cargo bench`:
 
 ```
 $ cargo bench
+   Compiling playground v0.0.1 (/home/bencher)
     Finished bench [optimized] target(s) in 0.02s
-     Running unittests src/main.rs (target/release/deps/fizz_buzz-68f58c96f4025bd4)
+     Running unittests src/main.rs (target/release/deps/game-68f58c96f4025bd4)
 
 running 1 test
-test benchmarks::bench_play_fizz_buzz ... bench:       4,879 ns/iter (+/- 170)
+test benchmarks::bench_play_game ... bench:       4,879 ns/iter (+/- 170)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in 0.68s
 ```
 
 > 🐰 Lettuce turnip the beet! We've got our first benchmark metrics!
+
+Finally, we can rest our weary developer heads...
+Just kidding, our users want a new feature!
+
+## Write FizzBuzzFibonacci in Rust
+
+Our Key Performance Indicators (KPIs) are down, so our Product Manager (PM) wants us to add a new feature.
+After much brainstorming and many user interviews, it is decided that good ole FizzBuzz isn't enough.
+Kids these days want a new game, FizzBuzzFibonacci.
+
+<FizzBuzzFibonacciRules />
+
+```rust
+fn is_fibonacci_number(i: u32) -> bool {
+    let (mut previous, mut current) = (0, 1);
+    while current < i {
+        let next = previous + current;
+        previous = current;
+        current = next;
+    }
+    current == i
+}
+```
+
+- Create a function named `is_fibonacci_number` that takes in an unsigned integer and returns a boolean.
+- Initialize our Fibonacci sequence starting with `0` and `1` as the `previous` and `current` numbers respectively.
+- Iterate while the `current` number is less than the given number `i`.
+- Add the `previous` and `current` number to get the `next` number.
+- Update the `previous` number to the `current` number.
+- Update the `current` number to the `next` number.
+- Once `current` is greater than or equal to the given number `i`, we will exit the loop.
+- Check to see is the `current` number is equal to the given number `i` and return that result.
+
+Now we will need to update our `fizz_buzz` function:
+
+```rust
+pub fn fizz_buzz_fibonacci(i: u32) -> String {
+    if is_fibonacci_number(i) {
+        "Fibonacci".to_string()
+    } else {
+        match (i % 3, i % 5) {
+            (0, 0) => "FizzBuzz".to_string(),
+            (0, _) => "Fizz".to_string(),
+            (_, 0) => "Buzz".to_string(),
+            (_, _) => i.to_string(),
+        }
+    }
+}
+```
+
+- Rename the `fizz_buzz` function to `fizz_buzz_fibonacci` to make it more descriptive.
+- Call our `is_fibonacci_number` helper function.
+- If the result from `is_fibonacci_number` is `true` then return `Fibonacci`.
+- If the result from `is_fibonacci_number` is `false` then perform the same `Fizz`, `Buzz`, `FizzBuzz`, or number logic returning the result.
+
+Because we rename `fizz_buzz` to `fizz_buzz_fibonacci` we also need to update our `play_game` function:
+
+```rust
+pub fn play_game() {
+    for i in 1..=100 {
+        println!("{}", fizz_buzz_fibonacci(i));
+    }
+}
+```
+
+Both our `main` and `bench_play_game` functions can stay exactly the same.
+
+## Benchmarking FizzBuzzFibonacci
+
+Now we can rerun our benchmark:
+
+```
+$ cargo bench
+   Compiling playground v0.0.1 (/home/bencher)
+    Finished bench [optimized] target(s) in 0.00s
+     Running unittests src/main.rs (target/release/deps/game-68f58c96f4025bd4)
+
+running 1 test
+test benchmarks::bench_play_game ... bench:       5,391 ns/iter (+/- 116)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in 0.62s
+```
+
+Scrolling back through our terminal history,
+we can make an eyeball comparison between the performance of our FizzBuzz and FizzBuzzFibonacci games: `4,879 ns` vs `5,391 ns`.
+Your numbers will be a little different than mine.
+However, the difference between the two games is likely in the 10% range.
+That seems good to me! Especially for adding a feature as fancy sounding as _Fibonacci_ to our game.
+The kids will love it!
+
+## Expand FizzBuzzFibonacci in Rust
+
+Our game is a hit! The kids do indeed love playing FizzBuzzFibonacci.
+So much so that word has come down from the execs that they want a sequel.
+But this is the modern world, we need Annual Recurring Revenue (ARR) not one time purchases.
+The new vision for our game is that it is open ended, no more living between the bound of `1` and `100` (even if it is inclusive).
+No, we're on to new frontiers!
+
+<FizzBuzzFibonacciOpenRules />
