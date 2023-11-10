@@ -1,7 +1,7 @@
 ---
 import { SEO } from "astro-seo";
 import "../styles/styles.scss";
-import Navbar from "../components/site/navbar/Navbar";
+import Navbar from "../components/navbar/Navbar.astro";
 import Footer from "../components/site/Footer";
 import { BENCHER_TITLE, BENCHER_DESCRIPTION } from "../util/resource";
 import { BENCHER_LOGO_URL } from "../util/ext";
@@ -94,7 +94,7 @@ const { title, titleFmt, description, lang, author } = Astro.props;
   </head>
   <body>
     <slot name="navbar">
-      <Navbar client:load />
+      <Navbar />
     </slot>
     <main>
       <slot />

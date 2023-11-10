@@ -1,5 +1,5 @@
+import type { Params } from "astro";
 import bencher_valid_init, { type InitOutput } from "bencher_valid";
-import { validJwt } from "../../../util/valid";
 import {
 	For,
 	createEffect,
@@ -7,14 +7,14 @@ import {
 	createResource,
 	createSignal,
 } from "solid-js";
-import { useNavigate } from "../../../util/url";
-import { httpGet } from "../../../util/http";
 import {
-	Visibility,
-	type JsonProject,
 	type JsonAuthUser,
-} from "../../../types/bencher";
-import type { Params } from "astro";
+	type JsonProject,
+	Visibility,
+} from "../../types/bencher";
+import { httpGet } from "../../util/http";
+import { useNavigate } from "../../util/url";
+import { validJwt } from "../../util/valid";
 
 const BENCHER_ALL_PROJECTS = "--bencher--all--projects--";
 

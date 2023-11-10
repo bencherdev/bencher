@@ -1,13 +1,13 @@
 import type { Params } from "astro";
 import { Show, createSignal } from "solid-js";
-import type { JsonAuthUser } from "../../../types/bencher";
-import { authUser } from "../../../util/auth";
+import type { JsonAuthUser } from "../../types/bencher";
+import { authUser } from "../../util/auth";
 import {
 	BENCHER_LOGO_URL,
 	BENCHER_SITE_URL,
 	BENCHER_VERSION,
 	isBencherCloud,
-} from "../../../util/ext";
+} from "../../util/ext";
 import ProjectSelect from "./ProjectSelect";
 import BENCHER_NAVBAR_ID from "./id";
 

@@ -1,6 +1,6 @@
-import { authUser } from "../../../util/auth";
-import { BENCHER_LOGO_URL } from "../../../util/ext";
-import AuthOverride from "../../auth/AuthOverride";
+import { authUser } from "../../util/auth";
+import { BENCHER_LOGO_URL } from "../../util/ext";
+import AuthOverride from "../auth/AuthOverride";
 import BENCHER_NAVBAR_ID from "./id";
 
 const AuthNavbar = () => {

@@ -1,5 +1,5 @@
-import { authUser } from "../../util/auth";
 import type { DOMElement, JSX } from "solid-js/jsx-runtime";
+import { authUser } from "../../util/auth";
 
 export interface Props {
 	elementId: string;

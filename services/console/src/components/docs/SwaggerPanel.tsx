@@ -11,7 +11,7 @@ import {
 
 export interface Props {
 	apiUrl: string;
-	lang: Language;
+	lang: undefined | string | Language;
 }
 
 const apiEndpoint = (lang: Language) => {
@@ -107,6 +107,7 @@ const rustClientText = (lang: Language) => {
 };
 
 const SwaggerPanel = (props: Props) => {
+	const lang = (props.lang as Language) ?? Language.en;
 	const [url, setUrl] = createSignal("");
 
 	createEffect(() => {
@@ -127,7 +128,7 @@ const SwaggerPanel = (props: Props) => {
 						<div class="level-item">
 							<p>
 								🐰 {isBencherCloud() ? BENCHER_CLOUD : BENCHER_SELF_HOSTED}{" "}
-								{apiEndpoint(props.lang)}:{" "}
+								{apiEndpoint(lang)}:{" "}
 								<code>
 									<a
 										href={`${url()}/v0/server/version`}
@@ -148,13 +149,13 @@ const SwaggerPanel = (props: Props) => {
 							target="_blank"
 							rel="noreferrer"
 						>
-							{viewApiSpec(props.lang)}
+							{viewApiSpec(lang)}
 						</a>
 					</div>
 				</nav>
 			</blockquote>
-			<h2>🦀 {rustClient(props.lang)}</h2>
-			<p>{rustClientText(props.lang)}</p>
+			<h2>🦀 {rustClient(lang)}</h2>
+			<p>{rustClientText(lang)}</p>
 			<code>
 				bencher_client = {"{"} git = "https://github.com/bencherdev/bencher",
 				tag = "v{BENCHER_VERSION}" {"}"}

@@ -10,7 +10,7 @@ const { lang } = Astro.params;
 
 const title = "REST API";
 const description = () => {
-  switch (lang) {
+  switch (lang as Language) {
     case Language.en:
       return "The REST API for continuous benchmarking with Bencher";
     case Language.de:

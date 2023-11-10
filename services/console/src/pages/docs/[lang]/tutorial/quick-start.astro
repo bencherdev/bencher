@@ -13,7 +13,7 @@ export async function getStaticPaths() {
   return pages.filter(page => page.params.slug === "quick-start");
 }
 // 2. When it's time to render, you can get the entry directly from the prop
-const { lang } = Astro.params;
+const lang = Astro.params.lang as Language;
 
 const signupId = () => {
   switch (lang) {
