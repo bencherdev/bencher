@@ -83,51 +83,53 @@ const ConsoleNavbar = (props: Props) => {
 
 				<div class="navbar-end">
 					<div class="navbar-item">
-						<a
-							class="button is-outlined"
-							href={`/console/users/${user?.user?.slug}/help`}
-						>
-							<span class="icon has-text-primary">
-								<i class="fas fa-life-ring" aria-hidden="true" />
-							</span>
-							<span>Help</span>
-						</a>
-					</div>
-					<div
-						class={`navbar-item has-dropdown is-hoverable ${
-							dropdown() && "is-active"
-						}`}
-					>
-						<a class="navbar-link" onClick={(_e) => setDropdown(!dropdown())}>
-							{(user?.user?.name ? user?.user?.name : "Account").padStart(
-								12,
-								"\xa0",
-							)}
-						</a>
-						<div class="navbar-dropdown">
+						<div class="navbar-item">
 							<a
-								class="navbar-item"
-								href={`/console/users/${user?.user?.slug}/tokens`}
+								class="button is-outlined"
+								href={`/console/users/${user?.user?.slug}/help`}
 							>
-								Tokens
+								<span class="icon has-text-primary">
+									<i class="fas fa-life-ring" aria-hidden="true" />
+								</span>
+								<span>Help</span>
 							</a>
-							<a
-								class="navbar-item"
-								href={`/console/users/${user?.user?.slug}/settings`}
-							>
-								Settings
-							</a>
-							<hr class="navbar-divider" />
-							<div class="navbar-item">
-								<a class="button is-light is-fullwidth" href="/auth/logout">
-									Log out
-								</a>
-							</div>
-							<hr class="navbar-divider" />
-							<div class="navbar-item">BETA v{BENCHER_VERSION}</div>
 						</div>
+						<div
+							class={`navbar-item has-dropdown is-hoverable ${
+								dropdown() && "is-active"
+							}`}
+						>
+							<a class="navbar-link" onClick={(_e) => setDropdown(!dropdown())}>
+								{(user?.user?.name ? user?.user?.name : "Account").padStart(
+									12,
+									"\xa0",
+								)}
+							</a>
+							<div class="navbar-dropdown">
+								<a
+									class="navbar-item"
+									href={`/console/users/${user?.user?.slug}/tokens`}
+								>
+									Tokens
+								</a>
+								<a
+									class="navbar-item"
+									href={`/console/users/${user?.user?.slug}/settings`}
+								>
+									Settings
+								</a>
+								<hr class="navbar-divider" />
+								<div class="navbar-item">
+									<a class="button is-light is-fullwidth" href="/auth/logout">
+										Log out
+									</a>
+								</div>
+								<hr class="navbar-divider" />
+								<div class="navbar-item">BETA v{BENCHER_VERSION}</div>
+							</div>
+						</div>
+						<div class="navbar-item"></div>
 					</div>
-					<div class="navbar-item"></div>
 				</div>
 			</div>
 		</nav>

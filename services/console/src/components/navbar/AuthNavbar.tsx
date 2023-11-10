@@ -1,11 +1,8 @@
-import { authUser } from "../../util/auth";
-import { BENCHER_LOGO_URL } from "../../util/ext";
+import { BENCHER_LOGO_URL, BENCHER_VERSION } from "../../util/ext";
 import AuthOverride from "../auth/AuthOverride";
 import BENCHER_NAVBAR_ID from "./id";
 
 const AuthNavbar = () => {
-	const user = authUser();
-
 	return (
 		<AuthOverride elementId={BENCHER_NAVBAR_ID}>
 			<nav
@@ -32,25 +29,25 @@ const AuthNavbar = () => {
 
 					<div class="navbar-end">
 						<div class="navbar-item">
-							<a
-								class="button is-outlined"
-								href={`/console/users/${user?.user?.slug}/help`}
-							>
-								<span class="icon has-text-primary">
-									<i class="fas fa-life-ring" aria-hidden="true" />
-								</span>
-								<span>Help</span>
-							</a>
-						</div>
-						<div class="navbar-item">
+							<div class="navbar-item">BETA v{BENCHER_VERSION}</div>
+							<div class="navbar-item" />
+							<div class="navbar-item">
+								<a class="button is-outlined" href="/help">
+									<span class="icon has-text-primary">
+										<i class="fas fa-life-ring" aria-hidden="true" />
+									</span>
+									<span>Help</span>
+								</a>
+							</div>
+							<div class="navbar-item" />
 							<a class="button is-outlined" href="/console">
 								<span class="icon has-text-primary">
 									<i class="fas fa-angle-left" aria-hidden="true" />
 								</span>
 								<span>Back to Console</span>
 							</a>
+							<div class="navbar-item"></div>
 						</div>
-						<div class="navbar-item"></div>
 					</div>
 				</div>
 			</nav>
