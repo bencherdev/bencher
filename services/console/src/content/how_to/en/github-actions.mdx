@@ -16,7 +16,7 @@ import GitHubActions4 from "../../../chunks/how_to/github-actions.4.mdx";
 2. Specify events the workflow should run `on`. See the [GitHub Actions `on` documentation](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on) for a full overview. This workflow runs **only** on `push` events to the `main` branch. For running [on Pull Requests see the section below](#pull-requests).
 3. Create a GitHub Actions `job` (ex: `benchmark_with_bencher`)
 4. The Project must already exist. Set the `--project` flag or the `BENCHER_PROJECT` environment variable to the Project slug or UUID. (ex: `BENCHER_PROJECT: save-walter-white`)
-5. Add `BENCHER_API_TOKEN` to your **Repository** secrets (ex: `https://github.com/USERNAME/REPO/settings/secrets/actions`)
+5. Add `BENCHER_API_TOKEN` as a **Repository** secret (ex: `Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`)
 6. The API token must already exist. Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable to the API token. (ex: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
 7. Optional: Set the `--adapter` flag or the `BENCHER_ADAPTER` environment variable to the desired adapter name. If this is not set, then the `magic` Adapter will be used. See [benchmark harness adapters](/docs/explanation/adapters) for a full overview. (ex: `BENCHER_ADAPTER: json`)
 8. Optional: Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the Testbed slug or UUID. The Testbed **must** already exist. If this is not set, then the `localhost` Testbed will be used. (ex: `BENCHER_TESTBED: ubuntu-latest`)

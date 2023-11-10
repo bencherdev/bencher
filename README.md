@@ -137,7 +137,7 @@ jobs:
 
 ### Repository Secrets
 
-Add `BENCHER_API_TOKEN` to you **Repository** secrets (ex: `https://github.com/my-user-slug/my-repo/settings/secrets/actions`). You can find your API tokens by running `bencher token ls --user my-user-slug` or by going to the Bencher Console (ex: `https://bencher.dev/console/users/my-user-slug/tokens`).
+Add `BENCHER_API_TOKEN` to you **Repository** secrets (ex: `Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`). You can find your API tokens by running `bencher token ls --user my-user-slug` or by going to the Bencher Console (ex: `https://bencher.dev/console/users/my-user-slug/tokens`).
 
 ### Error on Alert
 
