@@ -299,7 +299,7 @@ fn perf_query(
             QueryMetric::as_select(),
         ))
         .load::<PerfQuery>(conn)
-        .map_err(resource_not_found_err!(Metric, (project, metric_kind_id)))
+        .map_err(resource_not_found_err!(Metric, (project, metric_kind_id, branch_uuid, testbed_uuid, benchmark_uuid)))
 }
 
 type PerfQuery = (
