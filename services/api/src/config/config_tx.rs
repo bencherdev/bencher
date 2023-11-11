@@ -11,10 +11,7 @@ use bencher_json::{
 };
 use bencher_rbac::init_rbac;
 use bencher_token::TokenKey;
-use diesel::{
-    connection::{self, SimpleConnection},
-    Connection,
-};
+use diesel::{connection::SimpleConnection, Connection};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use dropshot::{
     ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingIfExists, ConfigLoggingLevel,

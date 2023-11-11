@@ -4,15 +4,13 @@ use bencher_json::{
         branch::{JsonVersion, VersionNumber},
         perf::{Iteration, JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
     },
-    BenchmarkUuid, BranchUuid, DateTime, GitHash, JsonBenchmark, JsonBranch, JsonPerf,
-    JsonPerfQuery, JsonTestbed, ReportUuid, ResourceId, TestbedUuid,
+    BenchmarkUuid, BranchUuid, DateTime, GitHash, JsonPerf, JsonPerfQuery, ReportUuid, ResourceId,
+    TestbedUuid,
 };
 use diesel::{
-    sql_types::Json, CombineDsl, ExpressionMethods, NullableExpressionMethods, QueryDsl,
-    RunQueryDsl, SelectableHelper,
+    ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
 };
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
-use http::StatusCode;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -22,15 +20,15 @@ use crate::{
         endpoint::{CorsResponse, Get, ResponseOk},
         Endpoint,
     },
-    error::{bad_request_error, issue_error, resource_not_found_err},
+    error::{bad_request_error, resource_not_found_err},
     model::user::auth::AuthUser,
     model::{
         project::{
-            benchmark::{BenchmarkId, QueryBenchmark},
-            branch::{BranchId, QueryBranch},
+            benchmark::QueryBenchmark,
+            branch::QueryBranch,
             metric::QueryMetric,
             metric_kind::{MetricKindId, QueryMetricKind},
-            testbed::{QueryTestbed, TestbedId},
+            testbed::QueryTestbed,
             threshold::{
                 alert::QueryAlert, boundary::QueryBoundary, statistic::QueryStatistic,
                 QueryThreshold,
@@ -43,9 +41,6 @@ use crate::{
 };
 
 pub mod img;
-mod macros;
-
-use macros::{MetricsQuery, MAX_PERMUTATIONS};
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjPerfParams {
@@ -114,23 +109,21 @@ async fn get_inner(
         end_time,
     } = json_perf_query;
 
-    let metric_kind = QueryMetricKind::from_resource_id(conn, project.id, &metric_kind)?;
-
     let times = Times {
         start_time,
         end_time,
     };
 
-    let mut permutations = Vec::with_capacity(branches.len() * testbeds.len() * benchmarks.len());
-    for branch in branches {
-        for testbed in &testbeds {
-            for benchmark in &benchmarks {
-                permutations.push((branch, *testbed, *benchmark));
-            }
-        }
-    }
-
-    let results = perf_query(conn, &project, metric_kind.id, &permutations, times);
+    let metric_kind = QueryMetricKind::from_resource_id(conn, project.id, &metric_kind)?;
+    let results = perf_results(
+        conn,
+        &project,
+        metric_kind.id,
+        &branches,
+        &testbeds,
+        &benchmarks,
+        times,
+    )?;
     let metric_kind = metric_kind.into_json_for_project(&project);
 
     Ok(JsonPerf {
@@ -146,6 +139,167 @@ async fn get_inner(
 struct Times {
     start_time: Option<DateTime>,
     end_time: Option<DateTime>,
+}
+
+fn perf_results(
+    conn: &mut DbConnection,
+    project: &QueryProject,
+    metric_kind_id: MetricKindId,
+    branches: &[BranchUuid],
+    testbeds: &[TestbedUuid],
+    benchmarks: &[BenchmarkUuid],
+    times: Times,
+) -> Result<Vec<JsonPerfMetrics>, HttpError> {
+    let mut results = Vec::with_capacity(branches.len() * testbeds.len() * benchmarks.len());
+    for branch in branches {
+        for testbed in testbeds {
+            for benchmark in benchmarks {
+                if let Some(perf_metrics) = perf_query(
+                    conn,
+                    project,
+                    metric_kind_id,
+                    *branch,
+                    *testbed,
+                    *benchmark,
+                    times,
+                )?
+                .into_iter()
+                .fold(
+                    None,
+                    |perf_metrics: Option<JsonPerfMetrics>, perf_query| {
+                        let (query_dimensions, query) = split_perf_query(perf_query);
+                        let perf_metric = new_perf_metric(project, query);
+                        if let Some(mut perf_metrics) = perf_metrics {
+                            perf_metrics.metrics.push(perf_metric);
+                            Some(perf_metrics)
+                        } else {
+                            Some(new_perf_metrics(project, query_dimensions, perf_metric))
+                        }
+                    },
+                ) {
+                    results.push(perf_metrics);
+                }
+            }
+        }
+    }
+    Ok(results)
+}
+
+fn perf_query(
+    conn: &mut DbConnection,
+    project: &QueryProject,
+    metric_kind_id: MetricKindId,
+    branch_uuid: BranchUuid,
+    testbed_uuid: TestbedUuid,
+    benchmark_uuid: BenchmarkUuid,
+    times: Times,
+) -> Result<Vec<PerfQuery>, HttpError> {
+    let mut query = schema::metric::table
+        .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
+        .inner_join(
+            schema::perf::table.inner_join(
+                schema::report::table
+                    .inner_join(schema::version::table
+                        .inner_join(schema::branch_version::table
+                            .inner_join(schema::branch::table)
+                        ),
+                    )
+                    .inner_join(schema::testbed::table)
+            )
+            .inner_join(schema::benchmark::table)
+        )
+        // It is important to filter for the branch on the `branch_version` table and not on the branch in the `report` table.
+        // This is because the `branch_version` table is the one that is updated when a branch is cloned/used as a start point.
+        // In contrast, the `report` table is only set to a single branch when the report is created.
+        .filter(schema::branch::uuid.eq(branch_uuid))
+        .filter(schema::testbed::uuid.eq(testbed_uuid))
+        .filter(schema::benchmark::uuid.eq(benchmark_uuid))
+        // There may or may not be a boundary for any given metric
+        .left_join(
+            schema::boundary::table
+                .inner_join(schema::threshold::table)
+                .inner_join(schema::statistic::table)
+                // There may or may not be an alert for any given boundary
+                .left_join(schema::alert::table),
+        )
+        .into_boxed();
+
+    let Times {
+        start_time,
+        end_time,
+    } = times;
+    if let Some(start_time) = start_time {
+        query = query.filter(schema::report::start_time.ge(start_time));
+    }
+    if let Some(end_time) = end_time {
+        query = query.filter(schema::report::end_time.le(end_time));
+    }
+
+    query
+        // Order by the version number so that the oldest version is first.
+        // Because multiple reports can use the same version (via git hash), order by the start time next.
+        // Then within a report order by the iteration number.
+        .order((
+            schema::version::number,
+            schema::report::start_time,
+            schema::perf::iteration,
+        ))
+        .select((
+            QueryBranch::as_select(),
+            QueryTestbed::as_select(),
+            QueryBenchmark::as_select(),
+            schema::report::uuid,
+            schema::perf::iteration,
+            schema::report::start_time,
+            schema::report::end_time,
+            schema::version::number,
+            schema::version::hash,
+            (
+                (
+                    schema::boundary::id,
+                    schema::boundary::uuid,
+                    schema::boundary::threshold_id,
+                    schema::boundary::statistic_id,
+                    schema::boundary::metric_id,
+                    schema::boundary::lower_limit,
+                    schema::boundary::upper_limit,
+                ),
+                (
+                    schema::threshold::id,
+                    schema::threshold::uuid,
+                    schema::threshold::project_id,
+                    schema::threshold::metric_kind_id,
+                    schema::threshold::branch_id,
+                    schema::threshold::testbed_id,
+                    schema::threshold::statistic_id,
+                    schema::threshold::created,
+                    schema::threshold::modified,
+                ),
+                (
+                    schema::statistic::id,
+                    schema::statistic::uuid,
+                    schema::statistic::threshold_id,
+                    schema::statistic::test,
+                    schema::statistic::min_sample_size,
+                    schema::statistic::max_sample_size,
+                    schema::statistic::window,
+                    schema::statistic::lower_boundary,
+                    schema::statistic::upper_boundary,
+                    schema::statistic::created,
+                ),
+                (
+                    schema::alert::id,
+                    schema::alert::uuid,
+                    schema::alert::boundary_id,
+                    schema::alert::boundary_limit,
+                    schema::alert::status,
+                    schema::alert::modified,
+                ).nullable(),
+            ).nullable(),
+            QueryMetric::as_select(),
+        ))
+        .load::<PerfQuery>(conn)
+        .map_err(resource_not_found_err!(Metric, (project, metric_kind_id)))
 }
 
 type PerfQuery = (
@@ -189,7 +343,7 @@ type PerfMetricQuery = (
     QueryMetric,
 );
 
-fn from_perf_query(
+fn split_perf_query(
     (
         branch,
         testbed,
@@ -222,172 +376,6 @@ fn from_perf_query(
     (query_dimensions, metric_query)
 }
 
-#[allow(clippy::too_many_lines)]
-fn perf_query(
-    conn: &mut DbConnection,
-    project: &QueryProject,
-    metric_kind_id: MetricKindId,
-    permutations: &[(BranchUuid, TestbedUuid, BenchmarkUuid)],
-    times: Times,
-) -> Vec<JsonPerfMetrics> {
-    permutations
-        .into_iter()
-        .filter_map(|(branch_uuid, testbed_uuid, benchmark_uuid)| {
-            let mut query = schema::metric::table
-                .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
-                .inner_join(
-                    schema::perf::table.inner_join(
-                        schema::report::table
-                            .inner_join(schema::version::table
-                                .inner_join(schema::branch_version::table
-                                    .inner_join(schema::branch::table)
-                                ),
-                            )
-                            .inner_join(schema::testbed::table)
-                    )
-                    .inner_join(schema::benchmark::table)
-                )
-                // It is important to filter for the branch on the `branch_version` table and not on the branch in the `report` table.
-                // This is because the `branch_version` table is the one that is updated when a branch is cloned/used as a start point.
-                // In contrast, the `report` table is only set to a single branch when the report is created.
-                .filter(schema::branch::uuid.eq(branch_uuid))
-                .filter(schema::testbed::uuid.eq(testbed_uuid))
-                .filter(schema::benchmark::uuid.eq(benchmark_uuid))
-                // There may or may not be a boundary for any given metric
-                .left_join(
-                    schema::boundary::table
-                        .inner_join(schema::threshold::table)
-                        .inner_join(schema::statistic::table)
-                        // There may or may not be an alert for any given boundary
-                        .left_join(schema::alert::table),
-                )
-                .into_boxed();
-
-            let Times {
-                start_time,
-                end_time,
-            } = times;
-
-            if let Some(start_time) = start_time {
-                query = query.filter(schema::report::start_time.ge(start_time));
-            }
-            if let Some(end_time) = end_time {
-                query = query.filter(schema::report::end_time.le(end_time));
-            }
-
-            query
-                // Order by the version number so that the oldest version is first.
-                // Because multiple reports can use the same version (via git hash), order by the start time next.
-                // Then within a report order by the iteration number.
-                .order((
-                    schema::version::number,
-                    schema::report::start_time,
-                    schema::perf::iteration,
-                ))
-                .select((
-                QueryBranch::as_select(),
-                QueryTestbed::as_select(),
-                QueryBenchmark::as_select(),
-                schema::report::uuid,
-                schema::perf::iteration,
-                schema::report::start_time,
-                schema::report::end_time,
-                schema::version::number,
-                schema::version::hash,
-                (
-                    (
-                        schema::boundary::id,
-                        schema::boundary::uuid,
-                        schema::boundary::threshold_id,
-                        schema::boundary::statistic_id,
-                        schema::boundary::metric_id,
-                        schema::boundary::lower_limit,
-                        schema::boundary::upper_limit,
-                    ),
-                    (
-                        schema::threshold::id,
-                        schema::threshold::uuid,
-                        schema::threshold::project_id,
-                        schema::threshold::metric_kind_id,
-                        schema::threshold::branch_id,
-                        schema::threshold::testbed_id,
-                        schema::threshold::statistic_id,
-                        schema::threshold::created,
-                        schema::threshold::modified,
-                    ),
-                    (
-                        schema::statistic::id,
-                        schema::statistic::uuid,
-                        schema::statistic::threshold_id,
-                        schema::statistic::test,
-                        schema::statistic::min_sample_size,
-                        schema::statistic::max_sample_size,
-                        schema::statistic::window,
-                        schema::statistic::lower_boundary,
-                        schema::statistic::upper_boundary,
-                        schema::statistic::created,
-                    ),
-                    (
-                        schema::alert::id,
-                        schema::alert::uuid,
-                        schema::alert::boundary_id,
-                        schema::alert::boundary_limit,
-                        schema::alert::status,
-                        schema::alert::modified,
-                    )
-                        .nullable(),
-                )
-                    .nullable(),
-                    QueryMetric::as_select(),
-                ))
-                .load::<PerfQuery>(conn)
-                .ok()?
-                .into_iter()
-                .fold(None, |  perf_metrics: Option<JsonPerfMetrics>, perf_query| {
-                    let (query_dimensions, query) = from_perf_query(perf_query);
-                    let perf_metric = into_perf_metric(project, query);
-                    if let Some(mut perf_metrics) = perf_metrics {
-                        perf_metrics.metrics.push(perf_metric);
-                        Some(perf_metrics)
-                    } else {
-                        Some(new_perf_metrics(project, query_dimensions, perf_metric))
-                    }
-                })
-        })
-        .fold(
-            Vec::new(),
-            |mut results: Vec<JsonPerfMetrics>, perf_metrics| {
-                results.push(perf_metrics);
-                results
-            },
-        )
-}
-
-// fn into_perf_metrics(
-//     project: &QueryProject,
-//     mut results: Vec<JsonPerfMetrics>,
-//     perf_metrics: Option<JsonPerfMetrics>,
-//     query: Vec<PerfQuery>,
-// ) -> (Vec<JsonPerfMetrics>, Option<JsonPerfMetrics>) {
-//     let (query_dimensions, query) = from_perf_query(query);
-//     let metric = into_perf_metric(project, query);
-//     let perf_metrics = if let Some(mut perf_metrics) = perf_metrics {
-//         if query_dimensions.branch.uuid == perf_metrics.branch.uuid
-//             && query_dimensions.testbed.uuid == perf_metrics.testbed.uuid
-//             && query_dimensions.benchmark.uuid == perf_metrics.benchmark.uuid
-//         {
-//             perf_metrics.metrics.push(metric);
-//             perf_metrics
-//         } else {
-//             results.push(perf_metrics);
-//             new_perf_metrics(project, query_dimensions, metric)
-//         }
-//     } else {
-//         new_perf_metrics(project, query_dimensions, metric)
-//     };
-//     (results, Some(perf_metrics))
-// }
-
 fn new_perf_metrics(
     project: &QueryProject,
     query_dimensions: QueryDimensions,
@@ -406,7 +394,7 @@ fn new_perf_metrics(
     }
 }
 
-fn into_perf_metric(
+fn new_perf_metric(
     project: &QueryProject,
     (
         report_uuid,
