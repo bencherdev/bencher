@@ -8,7 +8,8 @@ use bencher_json::{
     ResourceId,
 };
 use diesel::{
-    ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
+    CombineDsl, ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl,
+    SelectableHelper,
 };
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use http::StatusCode;
@@ -275,6 +276,9 @@ struct Times {
 }
 
 type PerfQuery = (
+    QueryBranch,
+    QueryTestbed,
+    QueryBenchmark,
     ReportUuid,
     Iteration,
     DateTime,
@@ -289,6 +293,52 @@ type PerfQuery = (
     )>,
     QueryMetric,
 );
+
+// enum MetricsQuery<SingleSelect, SingleUnionSelect, MultiUnionSelect> {
+//     None,
+//     Single(SingleSelect),
+//     SingleUnion(SingleUnionSelect),
+//     MultiUnion(MultiUnionSelect),
+// }
+
+macro_rules! metrics_query {
+    ($($name:ident),*) => {
+        enum MetricsQuery<$($name),*> {
+            Zero,
+            $($name($name)),*
+        }
+    }
+}
+
+metrics_query! {
+    One, Two, Three //, Four, Five, Six, Seven, Eight, Nine, Ten
+}
+
+// macro_rules! meta_generate_match {
+//     ($(($name:ident, $next:ident)),*) => {
+//         macro_rules! generate_match {
+//             ($query:expr) => {
+//                 match $query {
+//                     MetricsQuery::Zero => MetricsQuery::One($query),
+//                     $(MetricsQuery::$name(query) => MetricsQuery::$next(query.union_all($query))),*
+//                     // ... continue this list up to OneThousandTwentyFour
+//                 }
+//             }
+//         }
+//     }
+// }
+
+// meta_generate_match! {
+//     (One, Two),
+//     (Two, Three),
+//     (Three, Four),
+//     (Four, Five),
+//     (Five, Six),
+//     (Six, Seven),
+//     (Seven, Eight),
+//     (Eight, Nine),
+//     (Nine, Ten)
+// }
 
 #[allow(clippy::too_many_lines)]
 fn perf_query(
@@ -312,20 +362,34 @@ fn perf_query(
         benchmark,
     } = dimensions;
 
-    let mut query = schema::metric::table
+    let mut metrics_query = MetricsQuery::Zero;
+    let permutations = [(branch_id, testbed_id, benchmark_id)];
+    for i in 0..3 {
+        if i >= permutations.len() {
+            break;
+        }
+        let (branch_id, testbed_id, benchmark_id) = permutations[i];
+
+        let mut query = schema::metric::table
         .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
         .inner_join(
             schema::perf::table.inner_join(
                 schema::report::table
-                    .inner_join(schema::version::table.inner_join(schema::branch_version::table)),
-            ),
+                    .inner_join(schema::version::table
+                        .inner_join(schema::branch_version::table
+                            .inner_join(schema::branch::table)
+                        ),
+                    )
+                    .inner_join(schema::testbed::table)
+            )
+            .inner_join(schema::benchmark::table)
         )
         // It is important to filter for the branch on the `branch_version` table and not on the branch in the `report` table.
         // This is because the `branch_version` table is the one that is updated when a branch is cloned/used as a start point.
         // In contrast, the `report` table is only set to a single branch when the report is created.
-        .filter(schema::branch_version::branch_id.eq(branch_id))
-        .filter(schema::report::testbed_id.eq(testbed_id))
-        .filter(schema::perf::benchmark_id.eq(benchmark_id))
+        .filter(schema::branch::id.eq(branch_id))
+        .filter(schema::testbed::id.eq(testbed_id))
+        .filter(schema::benchmark::id.eq(benchmark_id))
         // There may or may not be a boundary for any given metric
         .left_join(
             schema::boundary::table
@@ -336,28 +400,22 @@ fn perf_query(
         )
         .into_boxed();
 
-    let Times {
-        start_time,
-        end_time,
-    } = times;
+        let Times {
+            start_time,
+            end_time,
+        } = times;
 
-    if let Some(start_time) = start_time {
-        query = query.filter(schema::report::start_time.ge(start_time));
-    }
-    if let Some(end_time) = end_time {
-        query = query.filter(schema::report::end_time.le(end_time));
-    }
+        if let Some(start_time) = start_time {
+            query = query.filter(schema::report::start_time.ge(start_time));
+        }
+        if let Some(end_time) = end_time {
+            query = query.filter(schema::report::end_time.le(end_time));
+        }
 
-    let metrics = query
-        // Order by the version number so that the oldest version is first.
-        // Because multiple reports can use the same version (via git hash), order by the start time next.
-        // Then within a report order by the iteration number.
-        .order((
-            schema::version::number,
-            schema::report::start_time,
-            schema::perf::iteration,
-        ))
-        .select((
+        let select_query = query.select((
+            QueryBranch::as_select(),
+            QueryTestbed::as_select(),
+            QueryBenchmark::as_select(),
             schema::report::uuid,
             schema::perf::iteration,
             schema::report::start_time,
@@ -404,15 +462,92 @@ fn perf_query(
                     schema::alert::boundary_limit,
                     schema::alert::status,
                     schema::alert::modified,
-                ).nullable()
-            ).nullable(),
+                )
+                    .nullable(),
+            )
+                .nullable(),
             QueryMetric::as_select(),
-        ))
-        .load::<PerfQuery>(conn)
-        .map_err(resource_not_found_err!(Metric, (&project, metric_kind_id, branch_id, testbed_id, benchmark_id)))?
-        .into_iter()
-        .map(|query| perf_metric(project, query))
-        .collect();
+        ));
+
+        match metrics_query {
+            MetricsQuery::Zero => {
+                let select_query = select_query
+                // The ORDER BY clause is applied to the combined result set, not within the individual result set.
+                // So we need to order by branch, testbed, and benchmark first to keep the results grouped.
+                // Order by the version number so that the oldest version is first.
+                // Because multiple reports can use the same version (via git hash), order by the start time next.
+                // Then within a report order by the iteration number.
+                .order((
+                    schema::branch::name,
+                    schema::testbed::name,
+                    schema::benchmark::name,
+                    schema::version::number,
+                    schema::report::start_time,
+                    schema::perf::iteration,
+                ));
+                metrics_query = MetricsQuery::One(select_query);
+            },
+            MetricsQuery::One(query_one) => {
+                metrics_query = MetricsQuery::Two(query_one.union_all(select_query));
+            },
+            MetricsQuery::Two(query_more) => {
+                metrics_query = MetricsQuery::Three(query_more.union_all(select_query));
+            },
+            _ => {
+                panic!()
+            },
+        }
+    }
+
+    let metrics = match metrics_query {
+        MetricsQuery::Zero => return Ok(()),
+        MetricsQuery::One(query) => query
+            .load::<PerfQuery>(conn)
+            .map_err(resource_not_found_err!(
+                Metric,
+                (
+                    &project,
+                    metric_kind_id,
+                    branch_id,
+                    testbed_id,
+                    benchmark_id
+                )
+            ))?
+            .into_iter()
+            .map(|query| perf_metric(project, query))
+            .collect(),
+        MetricsQuery::Two(query) => query
+            .load::<PerfQuery>(conn)
+            .map_err(resource_not_found_err!(
+                Metric,
+                (
+                    &project,
+                    metric_kind_id,
+                    branch_id,
+                    testbed_id,
+                    benchmark_id
+                )
+            ))?
+            .into_iter()
+            .map(|query| perf_metric(project, query))
+            .collect(),
+        MetricsQuery::Three(query) => query
+            .load::<PerfQuery>(conn)
+            .map_err(resource_not_found_err!(
+                Metric,
+                (
+                    &project,
+                    metric_kind_id,
+                    branch_id,
+                    testbed_id,
+                    benchmark_id
+                )
+            ))?
+            .into_iter()
+            .map(|query| perf_metric(project, query))
+            .collect(),
+        // _ => return Ok(()),
+    };
 
     results.push(JsonPerfMetrics {
         branch,
@@ -427,6 +562,9 @@ fn perf_query(
 fn perf_metric(
     project: &QueryProject,
     (
+        branch,
+        testbed,
+        benchmark,
         report_uuid,
         iteration,
         start_time,
