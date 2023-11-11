@@ -1,6 +1,5 @@
 use bencher_json::{
     project::{
-        self,
         boundary::JsonBoundary,
         branch::{JsonVersion, VersionNumber},
         perf::{Iteration, JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
@@ -24,7 +23,7 @@ use crate::{
         Endpoint,
     },
     error::{bad_request_error, issue_error, resource_not_found_err},
-    model::{project::metric, user::auth::AuthUser},
+    model::user::auth::AuthUser,
     model::{
         project::{
             benchmark::{BenchmarkId, QueryBenchmark},
@@ -132,20 +131,7 @@ async fn get_inner(
         }
     }
 
-    let results = perf_query(
-        conn,
-        &project,
-        metric_kind.id,
-        &permutations,
-        // Ids {
-        //     metric_kind_id: metric_kind.id,
-        //     branch_id: branch.id,
-        //     testbed_id: testbed.id,
-        //     benchmark_id: benchmark.id,
-        // },
-        // dimensions,
-        times,
-    )?;
+    let results = perf_query(conn, &project, metric_kind.id, &permutations, times)?;
     let metric_kind = metric_kind.into_json_for_project(&project);
 
     Ok(JsonPerf {
@@ -155,114 +141,6 @@ async fn get_inner(
         end_time,
         results,
     })
-}
-
-#[derive(Clone, Copy, Default)]
-struct Ids {
-    metric_kind_id: MetricKindId,
-    branch_id: BranchId,
-    testbed_id: TestbedId,
-    benchmark_id: BenchmarkId,
-}
-
-#[derive(Debug)]
-enum Dimensions {
-    Zero,
-    One {
-        branch: JsonBranch,
-    },
-    Two {
-        branch: JsonBranch,
-        testbed: JsonTestbed,
-    },
-    Three {
-        branch: JsonBranch,
-        testbed: JsonTestbed,
-        benchmark: JsonBenchmark,
-    },
-}
-
-impl Dimensions {
-    fn branch(self, project: &QueryProject, branch: QueryBranch) -> Self {
-        match self {
-            Self::Zero | Self::One { .. } | Self::Two { .. } | Self::Three { .. } => Self::One {
-                branch: branch.into_json_for_project(project),
-            },
-        }
-    }
-
-    fn testbed(self, project: &QueryProject, testbed: QueryTestbed) -> Result<Self, HttpError> {
-        match self {
-            Self::Zero => Err(issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Unexpected testbed dimension",
-                &format!(
-                    "Failed to find existing branch dimension ({self:?}) for testbed dimension ({testbed:?})"
-                ),
-                "dimension zero",
-            )),
-            Self::One { branch } | Self::Two { branch, .. } | Self::Three { branch, .. } => {
-                Ok(Self::Two {
-                    branch,
-                    testbed: testbed.into_json_for_project(project),
-                })
-            },
-        }
-    }
-
-    fn benchmark(
-        self,
-        project: &QueryProject,
-        benchmark: QueryBenchmark,
-    ) -> Result<Self, HttpError> {
-        match self {
-            Self::Zero | Self::One { .. } => Err(issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Unexpected benchmark dimension",
-                &format!(
-                    "Failed to find existing branch and testbed dimensions ({self:?}) for benchmark dimension ({benchmark:?})"
-                ),
-                "dimension zero or one",
-            )),
-            Self::Two { branch, testbed }
-            | Self::Three {
-                branch, testbed, ..
-            } => Ok(Self::Three {
-                branch,
-                testbed,
-                benchmark: benchmark.into_json_for_project(project),
-            }),
-        }
-    }
-
-    fn into_query(self) -> Result<(Self, QueryDimensions), HttpError> {
-        if let Dimensions::Three {
-            branch,
-            testbed,
-            benchmark,
-        } = self
-        {
-            let query_dimensions = QueryDimensions {
-                branch: branch.clone(),
-                testbed: testbed.clone(),
-                benchmark,
-            };
-            Ok((Self::Two { branch, testbed }, query_dimensions))
-        } else {
-            Err(issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Missing dimension",
-                &format!("Failed to find all three dimensions ({self:?})"),
-                "dimension zero, one, or two",
-            ))
-        }
-    }
-}
-
-struct QueryDimensions {
-    branch: JsonBranch,
-    testbed: JsonTestbed,
-    benchmark: JsonBenchmark,
 }
 
 #[derive(Clone, Copy)]
@@ -289,6 +167,12 @@ type PerfQuery = (
     )>,
     QueryMetric,
 );
+
+struct QueryDimensions {
+    branch: QueryBranch,
+    testbed: QueryTestbed,
+    benchmark: QueryBenchmark,
+}
 
 type PerfMetricQuery = (
     ReportUuid,
@@ -320,7 +204,12 @@ fn from_perf_query(
         boundary_limit,
         query_metric,
     ): PerfQuery,
-) -> ((QueryBranch, QueryTestbed, QueryBenchmark), PerfMetricQuery) {
+) -> (QueryDimensions, PerfMetricQuery) {
+    let query_dimensions = QueryDimensions {
+        branch,
+        testbed,
+        benchmark,
+    };
     let metric_query = (
         report_uuid,
         iteration,
@@ -331,71 +220,8 @@ fn from_perf_query(
         boundary_limit,
         query_metric,
     );
-    ((branch, testbed, benchmark), metric_query)
+    (query_dimensions, metric_query)
 }
-
-// enum MetricsQuery<SingleSelect, SingleUnionSelect, MultiUnionSelect> {
-//     None,
-//     Single(SingleSelect),
-//     SingleUnion(SingleUnionSelect),
-//     MultiUnion(MultiUnionSelect),
-// }
-
-// macro_rules! metrics_query {
-//     ($($number:literal),*) => {
-//         paste::paste! {
-//             enum MetricsQuery<$([<N $number>]),*> {
-//                 N0,
-//                 $([<N $number>]([<N $number>])),*
-//             }
-//         }
-//     }
-// }
-
-// metrics_query! {
-//     1, 2, 3 //, Four, Five, Six, Seven, Eight, Nine, Ten
-// }
-
-// macro_rules! generate_match_metrics_query {
-//     ($(($number:literal, $next:literal)),*) => {
-//         paste::paste! {
-//         macro_rules! match_metrics_query {
-//             ($metrics_query:ident, $select_query:ident) => {
-//                 match $metrics_query {
-//                     MetricsQuery::N0 => {
-//                         $metrics_query = MetricsQuery::N1($select_query
-//                         // The ORDER BY clause is applied to the combined result set, not within the individual result set.
-//                         // So we need to order by branch, testbed, and benchmark first to keep the results grouped.
-//                         // Order by the version number so that the oldest version is first.
-//                         // Because multiple reports can use the same version (via git hash), order by the start time next.
-//                         // Then within a report order by the iteration number.
-//                         .order((
-//                             schema::branch::name,
-//                             schema::testbed::name,
-//                             schema::benchmark::name,
-//                             schema::version::number,
-//                             schema::report::start_time,
-//                             schema::perf::iteration,
-//                         )));
-//                     },
-//                     $(MetricsQuery::[<N $number>](query) => {
-//                         $metrics_query = MetricsQuery::[<N $next>](query.union_all($select_query));
-//                     }),*
-//                     MetricsQuery::N3(_) => {
-//                         debug_assert!(false, "Ended up at the maximum metrics query count 3 for max {MAX_PERMUTATIONS} permutations");
-//                     },
-//                 }
-//             }
-//         }
-//         }
-//     }
-// }
-
-// generate_match_metrics_query! {
-//     (1, 2),
-//     (2, 3)
-// }
-// const MAX_PERMUTATIONS: usize = 3;
 
 #[allow(clippy::too_many_lines)]
 fn perf_query(
@@ -403,23 +229,8 @@ fn perf_query(
     project: &QueryProject,
     metric_kind_id: MetricKindId,
     permutations: &[(BranchUuid, TestbedUuid, BenchmarkUuid)],
-    // ids: Ids,
-    // dimensions: QueryDimensions,
     times: Times,
 ) -> Result<Vec<JsonPerfMetrics>, HttpError> {
-    // let Ids {
-    //     metric_kind_id,
-    //     branch_id,
-    //     testbed_id,
-    //     benchmark_id,
-    // } = ids;
-
-    // let QueryDimensions {
-    //     branch,
-    //     testbed,
-    //     benchmark,
-    // } = dimensions;
-
     let mut metrics_query = MetricsQuery::N0;
     for (branch_uuid, testbed_uuid, benchmark_uuid) in permutations.iter().take(MAX_PERMUTATIONS) {
         let mut query = schema::metric::table
@@ -540,32 +351,35 @@ fn into_perf_metrics(
     perf_metrics: Option<JsonPerfMetrics>,
     query: PerfQuery,
 ) -> (Vec<JsonPerfMetrics>, Option<JsonPerfMetrics>) {
-    let ((branch, testbed, benchmark), query) = from_perf_query(query);
+    let (query_dimensions, query) = from_perf_query(query);
     let metric = into_perf_metric(project, query);
     let perf_metrics = if let Some(mut perf_metrics) = perf_metrics {
-        if branch.uuid == perf_metrics.branch.uuid
-            && testbed.uuid == perf_metrics.testbed.uuid
-            && benchmark.uuid == perf_metrics.benchmark.uuid
+        if query_dimensions.branch.uuid == perf_metrics.branch.uuid
+            && query_dimensions.testbed.uuid == perf_metrics.testbed.uuid
+            && query_dimensions.benchmark.uuid == perf_metrics.benchmark.uuid
         {
             perf_metrics.metrics.push(metric);
             perf_metrics
         } else {
             results.push(perf_metrics);
-            new_perf_metrics(project, branch, testbed, benchmark, metric)
+            new_perf_metrics(project, query_dimensions, metric)
         }
     } else {
-        new_perf_metrics(project, branch, testbed, benchmark, metric)
+        new_perf_metrics(project, query_dimensions, metric)
     };
     (results, Some(perf_metrics))
 }
 
 fn new_perf_metrics(
     project: &QueryProject,
-    branch: QueryBranch,
-    testbed: QueryTestbed,
-    benchmark: QueryBenchmark,
+    query_dimensions: QueryDimensions,
     metric: JsonPerfMetric,
 ) -> JsonPerfMetrics {
+    let QueryDimensions {
+        branch,
+        testbed,
+        benchmark,
+    } = query_dimensions;
     JsonPerfMetrics {
         branch: branch.into_json_for_project(project),
         testbed: testbed.into_json_for_project(project),
