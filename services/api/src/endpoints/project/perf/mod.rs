@@ -1,11 +1,12 @@
 use bencher_json::{
     project::{
+        self,
         boundary::JsonBoundary,
         branch::{JsonVersion, VersionNumber},
         perf::{Iteration, JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
     },
-    DateTime, GitHash, JsonBenchmark, JsonBranch, JsonPerf, JsonPerfQuery, JsonTestbed, ReportUuid,
-    ResourceId,
+    BenchmarkUuid, BranchUuid, DateTime, GitHash, JsonBenchmark, JsonBranch, JsonPerf,
+    JsonPerfQuery, JsonTestbed, ReportUuid, ResourceId, TestbedUuid,
 };
 use diesel::{
     CombineDsl, ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl,
@@ -23,7 +24,7 @@ use crate::{
         Endpoint,
     },
     error::{bad_request_error, issue_error, resource_not_found_err},
-    model::user::auth::AuthUser,
+    model::{project::metric, user::auth::AuthUser},
     model::{
         project::{
             benchmark::{BenchmarkId, QueryBenchmark},
@@ -118,43 +119,35 @@ async fn get_inner(
         end_time,
     };
 
-    let mut results = Vec::new();
-    let mut ids = Ids {
-        metric_kind_id: metric_kind.id,
-        ..Default::default()
-    };
-    let mut dimensions = Dimensions::Zero;
+    let mut permutations = Vec::with_capacity(branches.len() * testbeds.len() * benchmarks.len());
 
-    for branch in &branches {
-        let Ok(branch) = QueryBranch::from_uuid(conn, project.id, *branch) else {
-            continue;
-        };
-        ids.branch_id = branch.id;
-        dimensions = dimensions.branch(&project, branch);
+    for branch in branches {
         for testbed in &testbeds {
-            let Ok(testbed) = QueryTestbed::from_uuid(conn, project.id, *testbed) else {
-                continue;
-            };
-            ids.testbed_id = testbed.id;
-            dimensions = dimensions.testbed(&project, testbed)?;
-
             for benchmark in &benchmarks {
-                let Ok(benchmark) = QueryBenchmark::from_uuid(conn, project.id, *benchmark) else {
-                    continue;
-                };
-                ids.benchmark_id = benchmark.id;
-                dimensions = dimensions.benchmark(&project, benchmark)?;
-                let (two_d, query_dimensions) = dimensions.into_query()?;
-                dimensions = two_d;
-
-                perf_query(conn, &project, ids, query_dimensions, times, &mut results)?;
+                permutations.push((branch, *testbed, *benchmark));
             }
         }
     }
 
+    let results = perf_query(
+        conn,
+        &project,
+        metric_kind.id,
+        &permutations,
+        // Ids {
+        //     metric_kind_id: metric_kind.id,
+        //     branch_id: branch.id,
+        //     testbed_id: testbed.id,
+        //     benchmark_id: benchmark.id,
+        // },
+        // dimensions,
+        times,
+    )?;
+    let metric_kind = metric_kind.into_json_for_project(&project);
+
     Ok(JsonPerf {
         project: project.into_json(conn)?,
-        metric_kind: metric_kind.into_json(conn)?,
+        metric_kind,
         start_time,
         end_time,
         results,
@@ -294,6 +287,50 @@ type PerfQuery = (
     QueryMetric,
 );
 
+type PerfMetricQuery = (
+    ReportUuid,
+    Iteration,
+    DateTime,
+    DateTime,
+    VersionNumber,
+    Option<GitHash>,
+    Option<(
+        QueryBoundary,
+        QueryThreshold,
+        QueryStatistic,
+        Option<QueryAlert>,
+    )>,
+    QueryMetric,
+);
+
+fn from_perf_query(
+    (
+        branch,
+        testbed,
+        benchmark,
+        report_uuid,
+        iteration,
+        start_time,
+        end_time,
+        version_number,
+        version_hash,
+        boundary_limit,
+        query_metric,
+    ): PerfQuery,
+) -> ((QueryBranch, QueryTestbed, QueryBenchmark), PerfMetricQuery) {
+    let metric_query = (
+        report_uuid,
+        iteration,
+        start_time,
+        end_time,
+        version_number,
+        version_hash,
+        boundary_limit,
+        query_metric,
+    );
+    ((branch, testbed, benchmark), metric_query)
+}
+
 // enum MetricsQuery<SingleSelect, SingleUnionSelect, MultiUnionSelect> {
 //     None,
 //     Single(SingleSelect),
@@ -339,37 +376,35 @@ metrics_query! {
 //     (Eight, Nine),
 //     (Nine, Ten)
 // }
+const MAX_PERMUTATIONS: usize = 3;
 
 #[allow(clippy::too_many_lines)]
 fn perf_query(
     conn: &mut DbConnection,
     project: &QueryProject,
-    ids: Ids,
-    dimensions: QueryDimensions,
+    metric_kind_id: MetricKindId,
+    permutations: &[(BranchUuid, TestbedUuid, BenchmarkUuid)],
+    // ids: Ids,
+    // dimensions: QueryDimensions,
     times: Times,
-    results: &mut Vec<JsonPerfMetrics>,
-) -> Result<(), HttpError> {
-    let Ids {
-        metric_kind_id,
-        branch_id,
-        testbed_id,
-        benchmark_id,
-    } = ids;
+) -> Result<Vec<JsonPerfMetrics>, HttpError> {
+    // let Ids {
+    //     metric_kind_id,
+    //     branch_id,
+    //     testbed_id,
+    //     benchmark_id,
+    // } = ids;
 
-    let QueryDimensions {
-        branch,
-        testbed,
-        benchmark,
-    } = dimensions;
+    // let QueryDimensions {
+    //     branch,
+    //     testbed,
+    //     benchmark,
+    // } = dimensions;
 
     let mut metrics_query = MetricsQuery::Zero;
-    let permutations = [(branch_id, testbed_id, benchmark_id)];
-    for i in 0..3 {
-        if i >= permutations.len() {
-            break;
-        }
-        let (branch_id, testbed_id, benchmark_id) = permutations[i];
-
+    for (i, (branch_uuid, testbed_uuid, benchmark_uuid)) in
+        permutations.iter().enumerate().take(MAX_PERMUTATIONS)
+    {
         let mut query = schema::metric::table
         .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
         .inner_join(
@@ -387,9 +422,9 @@ fn perf_query(
         // It is important to filter for the branch on the `branch_version` table and not on the branch in the `report` table.
         // This is because the `branch_version` table is the one that is updated when a branch is cloned/used as a start point.
         // In contrast, the `report` table is only set to a single branch when the report is created.
-        .filter(schema::branch::id.eq(branch_id))
-        .filter(schema::testbed::id.eq(testbed_id))
-        .filter(schema::benchmark::id.eq(benchmark_id))
+        .filter(schema::branch::uuid.eq(branch_uuid))
+        .filter(schema::testbed::uuid.eq(testbed_uuid))
+        .filter(schema::benchmark::uuid.eq(benchmark_uuid))
         // There may or may not be a boundary for any given metric
         .left_join(
             schema::boundary::table
@@ -493,78 +528,87 @@ fn perf_query(
             MetricsQuery::Two(query_more) => {
                 metrics_query = MetricsQuery::Three(query_more.union_all(select_query));
             },
-            _ => {
-                panic!()
+            MetricsQuery::Three(_) => {
+                debug_assert!(false, "Ended up at the maximum metrics query count (iteration {i}) for {permutations_len} / {MAX_PERMUTATIONS} permutations", permutations_len = permutations.len());
             },
         }
     }
 
-    let metrics = match metrics_query {
-        MetricsQuery::Zero => return Ok(()),
+    let (mut results, perf_metrics) = match metrics_query {
+        MetricsQuery::Zero => (Vec::new(), None),
         MetricsQuery::One(query) => query
             .load::<PerfQuery>(conn)
-            .map_err(resource_not_found_err!(
-                Metric,
-                (
-                    &project,
-                    metric_kind_id,
-                    branch_id,
-                    testbed_id,
-                    benchmark_id
-                )
-            ))?
+            .map_err(resource_not_found_err!(Metric, (project, metric_kind_id)))?
             .into_iter()
-            .map(|query| perf_metric(project, query))
-            .collect(),
+            .fold((Vec::new(), None), |(results, perf_metrics), query| {
+                into_perf_metrics(project, results, perf_metrics, query)
+            }),
         MetricsQuery::Two(query) => query
             .load::<PerfQuery>(conn)
-            .map_err(resource_not_found_err!(
-                Metric,
-                (
-                    &project,
-                    metric_kind_id,
-                    branch_id,
-                    testbed_id,
-                    benchmark_id
-                )
-            ))?
+            .map_err(resource_not_found_err!(Metric, (project, metric_kind_id)))?
             .into_iter()
-            .map(|query| perf_metric(project, query))
-            .collect(),
+            .fold((Vec::new(), None), |(results, perf_metrics), query| {
+                into_perf_metrics(project, results, perf_metrics, query)
+            }),
         MetricsQuery::Three(query) => query
             .load::<PerfQuery>(conn)
-            .map_err(resource_not_found_err!(
-                Metric,
-                (
-                    &project,
-                    metric_kind_id,
-                    branch_id,
-                    testbed_id,
-                    benchmark_id
-                )
-            ))?
+            .map_err(resource_not_found_err!(Metric, (&project, metric_kind_id)))?
             .into_iter()
-            .map(|query| perf_metric(project, query))
-            .collect(),
-        // _ => return Ok(()),
+            .fold((Vec::new(), None), |(results, perf_metrics), query| {
+                into_perf_metrics(project, results, perf_metrics, query)
+            }),
     };
 
-    results.push(JsonPerfMetrics {
-        branch,
-        testbed,
-        benchmark,
-        metrics,
-    });
+    if let Some(perf_metrics) = perf_metrics {
+        results.push(perf_metrics);
+    }
 
-    Ok(())
+    Ok(results)
 }
 
-fn perf_metric(
+fn into_perf_metrics(
+    project: &QueryProject,
+    mut results: Vec<JsonPerfMetrics>,
+    perf_metrics: Option<JsonPerfMetrics>,
+    query: PerfQuery,
+) -> (Vec<JsonPerfMetrics>, Option<JsonPerfMetrics>) {
+    let ((branch, testbed, benchmark), query) = from_perf_query(query);
+    let metric = into_perf_metric(project, query);
+    let perf_metrics = if let Some(mut perf_metrics) = perf_metrics {
+        if branch.uuid == perf_metrics.branch.uuid
+            && testbed.uuid == perf_metrics.testbed.uuid
+            && benchmark.uuid == perf_metrics.benchmark.uuid
+        {
+            perf_metrics.metrics.push(metric);
+            perf_metrics
+        } else {
+            results.push(perf_metrics);
+            new_perf_metrics(project, branch, testbed, benchmark, metric)
+        }
+    } else {
+        new_perf_metrics(project, branch, testbed, benchmark, metric)
+    };
+    (results, Some(perf_metrics))
+}
+
+fn new_perf_metrics(
+    project: &QueryProject,
+    branch: QueryBranch,
+    testbed: QueryTestbed,
+    benchmark: QueryBenchmark,
+    metric: JsonPerfMetric,
+) -> JsonPerfMetrics {
+    JsonPerfMetrics {
+        branch: branch.into_json_for_project(project),
+        testbed: testbed.into_json_for_project(project),
+        benchmark: benchmark.into_json_for_project(project),
+        metrics: vec![metric],
+    }
+}
+
+fn into_perf_metric(
     project: &QueryProject,
     (
-        branch,
-        testbed,
-        benchmark,
         report_uuid,
         iteration,
         start_time,
@@ -573,7 +617,7 @@ fn perf_metric(
         version_hash,
         boundary_limit,
         query_metric,
-    ): PerfQuery,
+    ): PerfMetricQuery,
 ) -> JsonPerfMetric {
     let version = JsonVersion {
         number: version_number,
