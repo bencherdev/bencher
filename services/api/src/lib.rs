@@ -1,5 +1,4 @@
 #![allow(clippy::result_large_err)]
-#![recursion_limit = "512"]
 
 use bencher_json::JsonSpec;
 use once_cell::sync::Lazy;

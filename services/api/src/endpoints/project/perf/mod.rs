@@ -122,7 +122,6 @@ async fn get_inner(
     };
 
     let mut permutations = Vec::with_capacity(branches.len() * testbeds.len() * benchmarks.len());
-
     for branch in branches {
         for testbed in &testbeds {
             for benchmark in &benchmarks {

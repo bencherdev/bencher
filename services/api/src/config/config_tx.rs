@@ -224,46 +224,7 @@ fn diesel_database_url(log: &Logger, database_path: &str) {
     std::env::set_var(DATABASE_URL, database_path);
 }
 
-pub struct BencherSqliteConnection {
-    // statement_cache needs to be before raw_connection
-    // otherwise we will get errors about open statements before closing the
-    // connection itself
-    statement_cache:
-        diesel::connection::statement_cache::StatementCache<diesel::sqlite::Sqlite, Statement>,
-    raw_connection: RawConnection,
-    transaction_state: diesel::connection::AnsiTransactionManager,
-}
-
-pub(super) struct Statement {
-    inner_statement: std::ptr::NonNull<libsqlite3_sys::sqlite3_stmt>,
-}
-
-pub(super) struct RawConnection {
-    pub(super) internal_connection: std::ptr::NonNull<libsqlite3_sys::sqlite3>,
-}
-
-fn run_migrations(mut database: &mut DbConnection) -> Result<(), ConfigTxError> {
-    // https://www.sqlite.org/limits.html#max_expr_depth
-    // https://www.sqlite.org/c3ref/c_limit_attached.html#sqlitelimitexprdepth
-    unsafe {
-        let connection: &mut BencherSqliteConnection = std::mem::transmute(database);
-        libsqlite3_sys::sqlite3_limit(
-            connection.raw_connection.internal_connection.as_ptr(),
-            libsqlite3_sys::SQLITE_LIMIT_EXPR_DEPTH,
-            2048,
-        );
-        libsqlite3_sys::sqlite3_limit(
-            connection.raw_connection.internal_connection.as_ptr(),
-            libsqlite3_sys::SQLITE_LIMIT_SQL_LENGTH,
-            4096,
-        );
-        libsqlite3_sys::sqlite3_limit(
-            connection.raw_connection.internal_connection.as_ptr(),
-            libsqlite3_sys::SQLITE_LIMIT_COMPOUND_SELECT,
-            4096,
-        );
-        database = std::mem::transmute(connection);
-    }
+fn run_migrations(database: &mut DbConnection) -> Result<(), ConfigTxError> {
     database
         .run_pending_migrations(MIGRATIONS)
         .map(|_| ())
@@ -272,7 +233,6 @@ fn run_migrations(mut database: &mut DbConnection) -> Result<(), ConfigTxError> 
     database
         .batch_execute("PRAGMA foreign_keys = ON")
         .map_err(ConfigTxError::Pragma)?;
-
     Ok(())
 }
 

@@ -1,12 +1,12 @@
 // The number of max permutations with dictate the type system recursion limit (ie `#![recursion_limit = "256"]`)
-pub const MAX_PERMUTATIONS: usize = 16;
+pub const MAX_PERMUTATIONS: usize = 15;
 
 macro_rules! metrics_query {
     ($($number:ident),*) => {
-        pub enum MetricsQuery<$($number),*, N16> {
+        pub enum MetricsQuery<$($number),*, N15> {
             N0,
             $($number($number)),*,
-            N16(N16)
+            N15(N15)
         }
     }
 }
@@ -36,8 +36,8 @@ macro_rules! generate_increment_metrics_query {
                     $(MetricsQuery::$number(query) => {
                         $metrics_query = MetricsQuery::$next(query.union_all($select_query));
                     }),*
-                    MetricsQuery::N16(_) => {
-                        debug_assert!(false, "Ended up at the maximum metrics query count N16 for max {MAX_PERMUTATIONS} permutations");
+                    MetricsQuery::N15(_) => {
+                        debug_assert!(false, "Ended up at the maximum metrics query count N15 for max {MAX_PERMUTATIONS} permutations");
                     },
                 }
             }
@@ -59,9 +59,9 @@ macro_rules! generate_match_metrics_query {
                         .fold((Vec::new(), None), |(results, perf_metrics), query| {
                             into_perf_metrics($project, results, perf_metrics, query)
                         })),*,
-                    MetricsQuery::N16(query) => query
+                    MetricsQuery::N15(query) => query
                         .load::<PerfQuery>($conn)
-                        .map_err(resource_not_found_err!(Metric, ($project, $metric_kind_id, 16)))?
+                        .map_err(resource_not_found_err!(Metric, ($project, $metric_kind_id, 15)))?
                         .into_iter()
                         .fold((Vec::new(), None), |(results, perf_metrics), query| {
                             into_perf_metrics($project, results, perf_metrics, query)
@@ -111,8 +111,8 @@ meta_generate! {
     (11,12),
     (12,13),
     (13,14),
-    (14,15),
-    (15,16) //,
+    (14,15) // ,
+    // (15,16) //,
     // (16,17),
     // (17,18),
     // (18,19),

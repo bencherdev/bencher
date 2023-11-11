@@ -30,11 +30,7 @@ bencher_rbac.workspace = true
 bencher_token.workspace = true
 chrono.workspace = true
 derive_more.workspace = true
-diesel = { workspace = true, features = [
-    "chrono",
-    "i-implement-a-third-party-backend-and-opt-into-breaking-changes",
-    "sqlite",
-] }
+diesel = { workspace = true, features = ["chrono", "sqlite"] }
 dropshot.workspace = true
 jsonwebtoken.workspace = true
 literally = { workspace = true, optional = true }
@@ -55,13 +51,12 @@ url.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }
 # Crate
 async-compression = { version = "0.4", features = ["tokio", "gzip"] }
-aws-credential-types = "0.56"
-aws-sdk-s3 = "0.34"
+aws-credential-types = "0.57"
+aws-sdk-s3 = "0.35"
 css-inline = "0.11"
 diesel_migrations = "2.1"
 hyper = "0.14"
 http = "0.2"
-libsqlite3-sys = "0.26"
 mail-send = "0.4"
 paste = "1.0"
 sentry = { version = "0.31", optional = true }
