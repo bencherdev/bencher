@@ -44,6 +44,9 @@ use crate::{
 };
 
 pub mod img;
+mod macros;
+
+use macros::{MetricsQuery, MAX_PERMUTATIONS};
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjPerfParams {
@@ -338,45 +341,61 @@ fn from_perf_query(
 //     MultiUnion(MultiUnionSelect),
 // }
 
-macro_rules! metrics_query {
-    ($($name:ident),*) => {
-        enum MetricsQuery<$($name),*> {
-            Zero,
-            $($name($name)),*
-        }
-    }
-}
-
-metrics_query! {
-    One, Two, Three //, Four, Five, Six, Seven, Eight, Nine, Ten
-}
-
-// macro_rules! meta_generate_match {
-//     ($(($name:ident, $next:ident)),*) => {
-//         macro_rules! generate_match {
-//             ($query:expr) => {
-//                 match $query {
-//                     MetricsQuery::Zero => MetricsQuery::One($query),
-//                     $(MetricsQuery::$name(query) => MetricsQuery::$next(query.union_all($query))),*
-//                     // ... continue this list up to OneThousandTwentyFour
-//                 }
+// macro_rules! metrics_query {
+//     ($($number:literal),*) => {
+//         paste::paste! {
+//             enum MetricsQuery<$([<N $number>]),*> {
+//                 N0,
+//                 $([<N $number>]([<N $number>])),*
 //             }
 //         }
 //     }
 // }
 
-// meta_generate_match! {
-//     (One, Two),
-//     (Two, Three),
-//     (Three, Four),
-//     (Four, Five),
-//     (Five, Six),
-//     (Six, Seven),
-//     (Seven, Eight),
-//     (Eight, Nine),
-//     (Nine, Ten)
+// metrics_query! {
+//     1, 2, 3 //, Four, Five, Six, Seven, Eight, Nine, Ten
 // }
-const MAX_PERMUTATIONS: usize = 3;
+
+// macro_rules! generate_match_metrics_query {
+//     ($(($number:literal, $next:literal)),*) => {
+//         paste::paste! {
+//         macro_rules! match_metrics_query {
+//             ($metrics_query:ident, $select_query:ident) => {
+//                 match $metrics_query {
+//                     MetricsQuery::N0 => {
+//                         $metrics_query = MetricsQuery::N1($select_query
+//                         // The ORDER BY clause is applied to the combined result set, not within the individual result set.
+//                         // So we need to order by branch, testbed, and benchmark first to keep the results grouped.
+//                         // Order by the version number so that the oldest version is first.
+//                         // Because multiple reports can use the same version (via git hash), order by the start time next.
+//                         // Then within a report order by the iteration number.
+//                         .order((
+//                             schema::branch::name,
+//                             schema::testbed::name,
+//                             schema::benchmark::name,
+//                             schema::version::number,
+//                             schema::report::start_time,
+//                             schema::perf::iteration,
+//                         )));
+//                     },
+//                     $(MetricsQuery::[<N $number>](query) => {
+//                         $metrics_query = MetricsQuery::[<N $next>](query.union_all($select_query));
+//                     }),*
+//                     MetricsQuery::N3(_) => {
+//                         debug_assert!(false, "Ended up at the maximum metrics query count 3 for max {MAX_PERMUTATIONS} permutations");
+//                     },
+//                 }
+//             }
+//         }
+//         }
+//     }
+// }
+
+// generate_match_metrics_query! {
+//     (1, 2),
+//     (2, 3)
+// }
+// const MAX_PERMUTATIONS: usize = 3;
 
 #[allow(clippy::too_many_lines)]
 fn perf_query(
@@ -401,10 +420,8 @@ fn perf_query(
     //     benchmark,
     // } = dimensions;
 
-    let mut metrics_query = MetricsQuery::Zero;
-    for (i, (branch_uuid, testbed_uuid, benchmark_uuid)) in
-        permutations.iter().enumerate().take(MAX_PERMUTATIONS)
-    {
+    let mut metrics_query = MetricsQuery::N0;
+    for (branch_uuid, testbed_uuid, benchmark_uuid) in permutations.iter().take(MAX_PERMUTATIONS) {
         let mut query = schema::metric::table
         .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
         .inner_join(
@@ -504,60 +521,11 @@ fn perf_query(
             QueryMetric::as_select(),
         ));
 
-        match metrics_query {
-            MetricsQuery::Zero => {
-                let select_query = select_query
-                // The ORDER BY clause is applied to the combined result set, not within the individual result set.
-                // So we need to order by branch, testbed, and benchmark first to keep the results grouped.
-                // Order by the version number so that the oldest version is first.
-                // Because multiple reports can use the same version (via git hash), order by the start time next.
-                // Then within a report order by the iteration number.
-                .order((
-                    schema::branch::name,
-                    schema::testbed::name,
-                    schema::benchmark::name,
-                    schema::version::number,
-                    schema::report::start_time,
-                    schema::perf::iteration,
-                ));
-                metrics_query = MetricsQuery::One(select_query);
-            },
-            MetricsQuery::One(query_one) => {
-                metrics_query = MetricsQuery::Two(query_one.union_all(select_query));
-            },
-            MetricsQuery::Two(query_more) => {
-                metrics_query = MetricsQuery::Three(query_more.union_all(select_query));
-            },
-            MetricsQuery::Three(_) => {
-                debug_assert!(false, "Ended up at the maximum metrics query count (iteration {i}) for {permutations_len} / {MAX_PERMUTATIONS} permutations", permutations_len = permutations.len());
-            },
-        }
+        macros::increment_metrics_query!(metrics_query, select_query);
     }
 
-    let (mut results, perf_metrics) = match metrics_query {
-        MetricsQuery::Zero => (Vec::new(), None),
-        MetricsQuery::One(query) => query
-            .load::<PerfQuery>(conn)
-            .map_err(resource_not_found_err!(Metric, (project, metric_kind_id)))?
-            .into_iter()
-            .fold((Vec::new(), None), |(results, perf_metrics), query| {
-                into_perf_metrics(project, results, perf_metrics, query)
-            }),
-        MetricsQuery::Two(query) => query
-            .load::<PerfQuery>(conn)
-            .map_err(resource_not_found_err!(Metric, (project, metric_kind_id)))?
-            .into_iter()
-            .fold((Vec::new(), None), |(results, perf_metrics), query| {
-                into_perf_metrics(project, results, perf_metrics, query)
-            }),
-        MetricsQuery::Three(query) => query
-            .load::<PerfQuery>(conn)
-            .map_err(resource_not_found_err!(Metric, (&project, metric_kind_id)))?
-            .into_iter()
-            .fold((Vec::new(), None), |(results, perf_metrics), query| {
-                into_perf_metrics(project, results, perf_metrics, query)
-            }),
-    };
+    let (mut results, perf_metrics) =
+        macros::match_metrics_query!(conn, project, metric_kind_id, metrics_query);
 
     if let Some(perf_metrics) = perf_metrics {
         results.push(perf_metrics);
