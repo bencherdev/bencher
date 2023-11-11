@@ -1,12 +1,12 @@
 // The number of max permutations with dictate the type system recursion limit (ie `#![recursion_limit = "256"]`)
-pub const MAX_PERMUTATIONS: usize = 64;
+pub const MAX_PERMUTATIONS: usize = 16;
 
 macro_rules! metrics_query {
     ($($number:ident),*) => {
-        pub enum MetricsQuery<$($number),*, N64> {
+        pub enum MetricsQuery<$($number),*, N16> {
             N0,
             $($number($number)),*,
-            N64(N64)
+            N16(N16)
         }
     }
 }
@@ -36,8 +36,8 @@ macro_rules! generate_increment_metrics_query {
                     $(MetricsQuery::$number(query) => {
                         $metrics_query = MetricsQuery::$next(query.union_all($select_query));
                     }),*
-                    MetricsQuery::N64(_) => {
-                        debug_assert!(false, "Ended up at the maximum metrics query count N64 for max {MAX_PERMUTATIONS} permutations");
+                    MetricsQuery::N16(_) => {
+                        debug_assert!(false, "Ended up at the maximum metrics query count N16 for max {MAX_PERMUTATIONS} permutations");
                     },
                 }
             }
@@ -46,7 +46,7 @@ macro_rules! generate_increment_metrics_query {
 }
 
 macro_rules! generate_match_metrics_query {
-    ($($number:ident),*) => {
+    ($($number:ident, $n:literal),*) => {
         #[macro_export]
         macro_rules! match_metrics_query {
             ($conn:ident, $project:ident, $metric_kind_id:ident, $metrics_query:ident) => {
@@ -54,14 +54,14 @@ macro_rules! generate_match_metrics_query {
                     MetricsQuery::N0 => (Vec::new(), None),
                     $(MetricsQuery::$number(query) => query
                         .load::<PerfQuery>($conn)
-                        .map_err(resource_not_found_err!(Metric, ($project, $metric_kind_id)))?
+                        .map_err(resource_not_found_err!(Metric, ($project, $metric_kind_id, $n)))?
                         .into_iter()
                         .fold((Vec::new(), None), |(results, perf_metrics), query| {
                             into_perf_metrics($project, results, perf_metrics, query)
                         })),*,
-                    MetricsQuery::N64(query) => query
+                    MetricsQuery::N16(query) => query
                         .load::<PerfQuery>($conn)
-                        .map_err(resource_not_found_err!(Metric, ($project, $metric_kind_id)))?
+                        .map_err(resource_not_found_err!(Metric, ($project, $metric_kind_id, 16)))?
                         .into_iter()
                         .fold((Vec::new(), None), |(results, perf_metrics), query| {
                             into_perf_metrics($project, results, perf_metrics, query)
@@ -91,7 +91,7 @@ macro_rules! meta_generate {
             metrics_query! { $([<N $number>]),* }
             generate_increment_metrics_query! { $(([<N $number>], [<N $next>])),* }
             pub(crate) use increment_metrics_query;
-            generate_match_metrics_query! { $([<N $number>]),* }
+            generate_match_metrics_query! { $([<N $number>], $number),* }
             pub(crate) use match_metrics_query;
         }
     }
@@ -112,55 +112,55 @@ meta_generate! {
     (12,13),
     (13,14),
     (14,15),
-    (15,16),
-    (16,17),
-    (17,18),
-    (18,19),
-    (19,20),
-    (20,21),
-    (21,22),
-    (22,23),
-    (23,24),
-    (24,25),
-    (25,26),
-    (26,27),
-    (27,28),
-    (28,29),
-    (29,30),
-    (30,31),
-    (31,32),
-    (32,33),
-    (33,34),
-    (34,35),
-    (35,36),
-    (36,37),
-    (37,38),
-    (38,39),
-    (39,40),
-    (40,41),
-    (41,42),
-    (42,43),
-    (43,44),
-    (44,45),
-    (45,46),
-    (46,47),
-    (47,48),
-    (48,49),
-    (49,50),
-    (50,51),
-    (51,52),
-    (52,53),
-    (53,54),
-    (54,55),
-    (55,56),
-    (56,57),
-    (57,58),
-    (58,59),
-    (59,60),
-    (60,61),
-    (61,62),
-    (62,63),
-    (63,64) //,
+    (15,16) //,
+    // (16,17),
+    // (17,18),
+    // (18,19),
+    // (19,20),
+    // (20,21),
+    // (21,22),
+    // (22,23),
+    // (23,24),
+    // (24,25),
+    // (25,26),
+    // (26,27),
+    // (27,28),
+    // (28,29),
+    // (29,30),
+    // (30,31),
+    // (31,32),
+    // (32,33),
+    // (33,34),
+    // (34,35),
+    // (35,36),
+    // (36,37),
+    // (37,38),
+    // (38,39),
+    // (39,40),
+    // (40,41),
+    // (41,42),
+    // (42,43),
+    // (43,44),
+    // (44,45),
+    // (45,46),
+    // (46,47),
+    // (47,48),
+    // (48,49),
+    // (49,50),
+    // (50,51),
+    // (51,52),
+    // (52,53),
+    // (53,54),
+    // (54,55),
+    // (55,56),
+    // (56,57),
+    // (57,58),
+    // (58,59),
+    // (59,60),
+    // (60,61),
+    // (61,62),
+    // (62,63),
+    // (63,64) //,
     // (64,65),
     // (65,66),
     // (66,67),

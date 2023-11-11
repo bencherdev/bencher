@@ -875,6 +875,7 @@ dependencies = [
  "http",
  "hyper",
  "jsonwebtoken",
+ "libsqlite3-sys",
  "literally",
  "mail-send",
  "once_cell",
