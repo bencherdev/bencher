@@ -28,7 +28,7 @@
     "@solid-primitives/scheduled": "^1.4.1",
     "astro": "^3.0.12",
     "astro-seo": "^0.8.0",
-    "axios": "^1.5.0",
+    "axios": "^1.6.0",
     "bulma": "^0.9.4",
     "bulma-divider": "^0.2.0",
     "bulma-pricingtable": "^0.2.0",
