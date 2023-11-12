@@ -1,7 +1,7 @@
-import { Switch, Match, createResource } from "solid-js";
+import type { Params } from "astro";
+import { Match, Switch, createResource } from "solid-js";
 import { Display } from "../../../../../config/types";
 import type CardConfig from "./CardConfig";
-import type { Params } from "astro";
 
 export interface Props {
 	apiUrl: string;
@@ -25,7 +25,7 @@ const ViewCard = (props: Props) => {
 				<div class="content">
 					<Switch fallback={<></>}>
 						<Match when={props.card?.display === Display.RAW}>
-							<p style="overflow-wrap:anywhere;">{props.value}</p>
+							<p style="word-break: break-word;">{props.value}</p>
 						</Match>
 						<Match when={props.card?.display === Display.SWITCH}>
 							<div class="field">

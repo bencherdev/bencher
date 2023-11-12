@@ -1,9 +1,9 @@
+import type { Params } from "astro";
 import { Accessor, For, Resource, createEffect, createMemo } from "solid-js";
 import type { JsonAuthUser } from "../../../../types/bencher";
-import { pathname, useNavigate } from "../../../../util/url";
 import { fmtValues, setPageTitle } from "../../../../util/resource";
+import { pathname, useNavigate } from "../../../../util/url";
 import DeckHeaderButton, { DeckHeaderButtonConfig } from "./DeckHeaderButton";
-import type { Params } from "astro";
 
 export interface Props {
 	apiUrl: string;
@@ -53,7 +53,7 @@ const DeckHeader = (props: Props) => {
 			</div>
 			<div class="column">
 				<div class="content has-text-centered">
-					<h3 class="title is-3" style="overflow-wrap:anywhere;">
+					<h3 class="title is-3" style="word-break: break-word;">
 						{title()}
 					</h3>
 				</div>

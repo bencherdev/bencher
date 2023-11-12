@@ -224,12 +224,12 @@ const CloudSelfHostedLicensedPanel = (props: {
 			</h4>
 			<h4>
 				Self-Hosted Organization UUID:{" "}
-				<code style="overflow-wrap:anywhere;">
+				<code style="word-break: break-word;">
 					{props.usage()?.license?.organization}
 				</code>
 			</h4>
 			<h4>Self-Hosted License Key:</h4>
-			<code style="overflow-wrap:anywhere;">
+			<code style="word-break: break-word;">
 				<a
 					title="Copy to clipboard"
 					onClick={(_) =>
@@ -353,7 +353,7 @@ const SelfHostedFreePanel = (props: {
 					</li>
 					<li>
 						Enter your "Self-Hosted Organization UUID":{" "}
-						<code style="overflow-wrap:anywhere;">
+						<code style="word-break: break-word;">
 							<a
 								title="Copy to clipboard"
 								onClick={(_) =>

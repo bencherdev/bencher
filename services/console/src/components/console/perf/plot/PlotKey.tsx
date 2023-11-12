@@ -1,5 +1,5 @@
-import { Accessor, For, Show } from "solid-js";
 import * as d3 from "d3";
+import { Accessor, For, Show } from "solid-js";
 import type { JsonPerf } from "../../../../types/bencher";
 
 export interface Props {
@@ -132,7 +132,7 @@ const KeyResource = (props: { icon: string; name: string }) => {
 			<span class="icon">
 				<i class={props.icon} aria-hidden="true" />
 			</span>
-			<small style="overflow-wrap:anywhere;">
+			<small style="word-break: break-all;">
 				<Show when={props.name} fallback={"Loading..."}>
 					{props.name}
 				</Show>

@@ -96,7 +96,7 @@ impl FmtBody for ButtonBody {
           <br/>
           <div class=\"content has-text-centered\">
             <small>
-              <code style=\"overflow-wrap:anywhere;\">
+              <code style=\"word-break: break-word;\">
                   {clipboard_target}
               </code>
             </small>

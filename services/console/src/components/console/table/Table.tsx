@@ -1,10 +1,10 @@
-import { For, Switch, Match, Resource, Accessor } from "solid-js";
-import { pathname, useNavigate } from "../../../util/url";
-import { fmtNestedValue, fmtValues } from "../../../util/resource";
-import { Row } from "../../../config/types";
-import type { Slug } from "../../../types/bencher";
-import { fmtDateTime } from "../../../config/util";
 import type { Params } from "astro";
+import { Accessor, For, Match, Resource, Switch } from "solid-js";
+import { Row } from "../../../config/types";
+import { fmtDateTime } from "../../../config/util";
+import type { Slug } from "../../../types/bencher";
+import { fmtNestedValue, fmtValues } from "../../../util/resource";
+import { pathname, useNavigate } from "../../../util/url";
 
 export enum TableState {
 	LOADING = 0,
@@ -59,7 +59,7 @@ const Table = (props: Props) => {
 									<For each={props.config?.row?.items}>
 										{(item: ItemConfig, _i) => (
 											<div class="plan-item">
-												<p style="overflow-wrap:anywhere;">
+												<p style="word-break: break-word;">
 													<Switch fallback="-">
 														<Match when={item.kind === Row.TEXT}>
 															{item.key && datum[item.key]}
@@ -172,7 +172,7 @@ const RowHeader = (props: {
 		props.config?.keys,
 		" | ",
 	);
-	return <p style="overflow-wrap:anywhere;">{header}</p>;
+	return <p style="word-break: break-word;">{header}</p>;
 };
 
 const RowButton = (props: {

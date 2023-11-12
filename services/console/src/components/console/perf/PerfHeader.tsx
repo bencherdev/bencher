@@ -40,7 +40,7 @@ const PerfHeader = (props: Props) => {
 	return (
 		<div class="columns is-centered">
 			<div class="column">
-				<h1 class="title is-3" style="overflow-wrap:anywhere;">
+				<h1 class="title is-3" style="word-break: break-word;">
 					{props.project()?.name}
 				</h1>
 			</div>

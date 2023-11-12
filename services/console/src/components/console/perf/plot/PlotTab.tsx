@@ -287,7 +287,7 @@ const Tab = (props: {
 											/>
 										</div>
 										<div class="column">
-											<small style="overflow-wrap:anywhere;">
+											<small style="word-break: break-word;">
 												{fmtDateTime(
 													(report.resource as JsonReport)?.start_time,
 												)}
@@ -330,7 +330,7 @@ const Tab = (props: {
 									<input type="checkbox" checked={dimension.checked} />
 								</div>
 								<div class="column">
-									<small style="overflow-wrap:anywhere;">
+									<small style="word-break: break-word;">
 										{
 											(
 												dimension.resource as
@@ -417,7 +417,7 @@ const ReportDimension = (props: { icon: string; name: string }) => {
 			<span class="icon">
 				<i class={props.icon} aria-hidden="true" />
 			</span>
-			<small style="overflow-wrap:anywhere;">{props.name}</small>
+			<small style="word-break: break-all;">{props.name}</small>
 		</div>
 	);
 };
