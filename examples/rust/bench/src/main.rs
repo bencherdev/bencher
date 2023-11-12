@@ -2,21 +2,19 @@
 extern crate test;
 
 fn main() {
-    play_game();
+    for i in 1..=100 {
+        play_game(i);
+    }
 }
 
 // FizzBuzz Game
 // pub fn play_game() {
-//     for i in 1..=100 {
-//         println!("{}", fizz_buzz(i));
-//     }
+//     println!("{}", fizz_buzz(i));
 // }
 
-// FizzBuzz Fibonacci Game
-pub fn play_game() {
-    for i in 1..=100 {
-        println!("{}", fizz_buzz_fibonacci(i));
-    }
+// FizzBuzzFibonacci Game
+pub fn play_game(i: u32) {
+    println!("{}", fizz_buzz_fibonacci(i));
 }
 
 pub fn fizz_buzz(i: u32) -> String {
@@ -59,6 +57,10 @@ mod benchmarks {
 
     #[bench]
     fn bench_play_game(b: &mut Bencher) {
-        b.iter(|| play_game());
+        b.iter(|| {
+            for i in 1..=100 {
+                play_game(i)
+            }
+        });
     }
 }

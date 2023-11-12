@@ -42,6 +42,8 @@ use crate::{
 
 pub mod img;
 
+const MAX_PERMUTATIONS: usize = u8::MAX as usize;
+
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjPerfParams {
     pub project: ResourceId,
@@ -147,11 +149,23 @@ fn perf_results(
     benchmarks: &[BenchmarkUuid],
     times: Times,
 ) -> Result<Vec<JsonPerfMetrics>, HttpError> {
-    let mut results = Vec::with_capacity(branches.len() * testbeds.len() * benchmarks.len());
-    for metric_kind_uuid in metric_kinds {
-        for branch_uuid in branches {
-            for testbed_uuid in testbeds {
-                for benchmark_uuid in benchmarks {
+    let permutations = metric_kinds.len() * branches.len() * testbeds.len() * benchmarks.len();
+    let gt_max_permutations = permutations > MAX_PERMUTATIONS;
+    let mut results = Vec::with_capacity(permutations.min(MAX_PERMUTATIONS));
+    for (metric_kind_index, metric_kind_uuid) in metric_kinds.iter().enumerate() {
+        for (branch_index, branch_uuid) in branches.iter().enumerate() {
+            for (testbed_index, testbed_uuid) in testbeds.iter().enumerate() {
+                for (benchmark_index, benchmark_uuid) in benchmarks.iter().enumerate() {
+                    if gt_max_permutations
+                        && (metric_kind_index + 1)
+                            * (branch_index + 1)
+                            * (testbed_index + 1)
+                            * (benchmark_index + 1)
+                            > MAX_PERMUTATIONS
+                    {
+                        return Ok(results);
+                    }
+
                     if let Some(perf_metrics) = perf_query(
                         conn,
                         project,
