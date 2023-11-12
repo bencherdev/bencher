@@ -4,12 +4,10 @@ use serde::ser::{self, SerializeStruct};
 use serde::{Deserialize, Serialize, Serializer};
 use url::Url;
 
-use crate::urlencoded::{
-    from_urlencoded, from_urlencoded_list, to_urlencoded, to_urlencoded_list, UrlEncodedError,
-};
+use crate::urlencoded::{from_urlencoded_list, to_urlencoded, to_urlencoded_list, UrlEncodedError};
 use crate::{
     BenchmarkUuid, BranchUuid, DateTime, DateTimeMillis, JsonBenchmark, JsonBranch, JsonMetricKind,
-    JsonProject, JsonTestbed, ReportUuid, ResourceId, TestbedUuid,
+    JsonProject, JsonTestbed, MetricKindUuid, ReportUuid, TestbedUuid,
 };
 
 use super::alert::JsonPerfAlert;
@@ -19,7 +17,7 @@ use super::metric::JsonMetric;
 use super::threshold::JsonThresholdStatistic;
 
 const QUERY_KEYS: [&str; 6] = [
-    "metric_kind",
+    "metric_kinds",
     "branches",
     "testbeds",
     "benchmarks",
@@ -38,7 +36,8 @@ crate::typed_uuid::typed_uuid!(PerfUuid);
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfQueryParams {
     pub title: Option<String>,
-    pub metric_kind: String,
+    #[serde(alias = "metric_kind")]
+    pub metric_kinds: String,
     pub branches: String,
     pub testbeds: String,
     pub benchmarks: String,
@@ -50,7 +49,7 @@ pub struct JsonPerfQueryParams {
 /// It should always be used to validate `JsonPerfQueryParams`.
 #[derive(Debug, Clone)]
 pub struct JsonPerfQuery {
-    pub metric_kind: ResourceId,
+    pub metric_kinds: Vec<MetricKindUuid>,
     pub branches: Vec<BranchUuid>,
     pub testbeds: Vec<TestbedUuid>,
     pub benchmarks: Vec<BenchmarkUuid>,
@@ -64,7 +63,7 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
     fn try_from(query_params: JsonPerfQueryParams) -> Result<Self, Self::Error> {
         let JsonPerfQueryParams {
             title: _,
-            metric_kind,
+            metric_kinds,
             branches,
             testbeds,
             benchmarks,
@@ -72,14 +71,13 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
             end_time,
         } = query_params;
 
-        let metric_kind = from_urlencoded(&metric_kind)?;
-
+        let metric_kinds = from_urlencoded_list(&metric_kinds)?;
         let branches = from_urlencoded_list(&branches)?;
         let testbeds = from_urlencoded_list(&testbeds)?;
         let benchmarks = from_urlencoded_list(&benchmarks)?;
 
         Ok(Self {
-            metric_kind,
+            metric_kinds,
             branches,
             testbeds,
             benchmarks,
@@ -129,7 +127,7 @@ impl JsonPerfQuery {
         QUERY_KEYS
             .into_iter()
             .zip([
-                Some(self.metric_kind()),
+                Some(self.metric_kinds()),
                 Some(self.branches()),
                 Some(self.testbeds()),
                 Some(self.benchmarks()),
@@ -141,8 +139,8 @@ impl JsonPerfQuery {
             .map_err(UrlEncodedError::Vec)
     }
 
-    pub fn metric_kind(&self) -> String {
-        to_urlencoded(&self.metric_kind)
+    pub fn metric_kinds(&self) -> String {
+        to_urlencoded_list(&self.metric_kinds)
     }
 
     pub fn branches(&self) -> String {
@@ -179,7 +177,6 @@ impl JsonPerfQuery {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerf {
     pub project: JsonProject,
-    pub metric_kind: JsonMetricKind,
     pub start_time: Option<DateTime>,
     pub end_time: Option<DateTime>,
     pub results: Vec<JsonPerfMetrics>,
@@ -189,6 +186,7 @@ pub struct JsonPerf {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfMetrics {
+    pub metric_kind: JsonMetricKind,
     pub branch: JsonBranch,
     pub testbed: JsonTestbed,
     pub benchmark: JsonBenchmark,
@@ -278,7 +276,7 @@ pub mod table {
                 for metric in result.metrics {
                     perf_table.push(PerfTable {
                         project: json_perf.project.clone(),
-                        metric_kind: json_perf.metric_kind.clone(),
+                        metric_kind: result.metric_kind.clone(),
                         branch: result.branch.clone(),
                         testbed: result.testbed.clone(),
                         benchmark: result.benchmark.clone(),

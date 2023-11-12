@@ -354,6 +354,7 @@ export interface JsonPerfMetric {
 }
 
 export interface JsonPerfMetrics {
+	metric_kind: JsonMetricKind;
 	branch: JsonBranch;
 	testbed: JsonTestbed;
 	benchmark: JsonBenchmark;
@@ -362,7 +363,6 @@ export interface JsonPerfMetrics {
 
 export interface JsonPerf {
 	project: JsonProject;
-	metric_kind: JsonMetricKind;
 	start_time?: string;
 	end_time?: string;
 	results: JsonPerfMetrics[];

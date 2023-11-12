@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, time::Duration};
 
 use bencher_json::{
     project::threshold::JsonThresholdStatistic, AlertUuid, BenchmarkName, BenchmarkUuid,
-    BranchUuid, DateTime, JsonPerfQuery, JsonReport, NonEmpty, Slug, TestbedUuid,
+    BranchUuid, DateTime, JsonPerfQuery, JsonReport, MetricKindUuid, NonEmpty, Slug, TestbedUuid,
 };
 use url::Url;
 
@@ -278,7 +278,7 @@ impl BenchmarkUrls {
                         metric_kind.clone(),
                         (
                             benchmark_url.to_url(
-                                result.metric_kind.slug.clone(),
+                                result.metric_kind.uuid,
                                 benchmark_metric.uuid,
                                 boundary,
                             ),
@@ -340,12 +340,12 @@ impl BenchmarkUrl {
 
     fn to_url(
         &self,
-        metric_kind: Slug,
+        metric_kind: MetricKindUuid,
         benchmark: BenchmarkUuid,
         boundary: Option<BoundaryParam>,
     ) -> Url {
         let json_perf_query = JsonPerfQuery {
-            metric_kind: metric_kind.into(),
+            metric_kinds: vec![metric_kind],
             branches: vec![self.branch],
             testbeds: vec![self.testbed],
             benchmarks: vec![benchmark],

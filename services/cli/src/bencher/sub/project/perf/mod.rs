@@ -2,7 +2,8 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_json::{
-    BenchmarkUuid, BranchUuid, DateTime, JsonPerf, JsonPerfQuery, ResourceId, TestbedUuid,
+    BenchmarkUuid, BranchUuid, DateTime, JsonPerf, JsonPerfQuery, MetricKindUuid, ResourceId,
+    TestbedUuid,
 };
 use tabled::Table;
 
@@ -18,7 +19,7 @@ use table_style::TableStyle;
 #[allow(clippy::option_option)]
 pub struct Perf {
     project: ResourceId,
-    metric_kind: ResourceId,
+    metric_kinds: Vec<MetricKindUuid>,
     branches: Vec<BranchUuid>,
     testbeds: Vec<TestbedUuid>,
     benchmarks: Vec<BenchmarkUuid>,
@@ -34,7 +35,7 @@ impl TryFrom<CliPerf> for Perf {
     fn try_from(perf: CliPerf) -> Result<Self, Self::Error> {
         let CliPerf {
             project,
-            metric_kind,
+            metric_kinds,
             branches,
             testbeds,
             benchmarks,
@@ -45,7 +46,7 @@ impl TryFrom<CliPerf> for Perf {
         } = perf;
         Ok(Self {
             project,
-            metric_kind,
+            metric_kinds,
             branches,
             testbeds,
             benchmarks,
@@ -60,7 +61,7 @@ impl TryFrom<CliPerf> for Perf {
 impl From<Perf> for JsonPerfQuery {
     fn from(perf: Perf) -> Self {
         let Perf {
-            metric_kind,
+            metric_kinds,
             branches,
             testbeds,
             benchmarks,
@@ -69,7 +70,7 @@ impl From<Perf> for JsonPerfQuery {
             ..
         } = perf;
         Self {
-            metric_kind,
+            metric_kinds,
             branches,
             testbeds,
             benchmarks,
@@ -90,7 +91,7 @@ impl SubCmd for Perf {
                     let mut client = client
                         .proj_perf_get()
                         .project(self.project.clone())
-                        .metric_kind(json_perf_query.metric_kind())
+                        .metric_kinds(json_perf_query.metric_kinds())
                         .branches(json_perf_query.branches())
                         .testbeds(json_perf_query.testbeds())
                         .benchmarks(json_perf_query.benchmarks());

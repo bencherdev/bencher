@@ -4,8 +4,8 @@ use bencher_json::{
         branch::{JsonVersion, VersionNumber},
         perf::{Iteration, JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
     },
-    BenchmarkUuid, BranchUuid, DateTime, GitHash, JsonPerf, JsonPerfQuery, ReportUuid, ResourceId,
-    TestbedUuid,
+    BenchmarkUuid, BranchUuid, DateTime, GitHash, JsonPerf, JsonPerfQuery, MetricKindUuid,
+    ReportUuid, ResourceId, TestbedUuid,
 };
 use diesel::{
     ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
@@ -27,7 +27,7 @@ use crate::{
             benchmark::QueryBenchmark,
             branch::QueryBranch,
             metric::QueryMetric,
-            metric_kind::{MetricKindId, QueryMetricKind},
+            metric_kind::QueryMetricKind,
             testbed::QueryTestbed,
             threshold::{
                 alert::QueryAlert, boundary::QueryBoundary, statistic::QueryStatistic,
@@ -101,10 +101,10 @@ async fn get_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     let JsonPerfQuery {
+        metric_kinds,
         branches,
         testbeds,
         benchmarks,
-        metric_kind,
         start_time,
         end_time,
     } = json_perf_query;
@@ -114,21 +114,18 @@ async fn get_inner(
         end_time,
     };
 
-    let metric_kind = QueryMetricKind::from_resource_id(conn, project.id, &metric_kind)?;
     let results = perf_results(
         conn,
         &project,
-        metric_kind.id,
+        &metric_kinds,
         &branches,
         &testbeds,
         &benchmarks,
         times,
     )?;
-    let metric_kind = metric_kind.into_json_for_project(&project);
 
     Ok(JsonPerf {
         project: project.into_json(conn)?,
-        metric_kind,
         start_time,
         end_time,
         results,
@@ -144,40 +141,42 @@ struct Times {
 fn perf_results(
     conn: &mut DbConnection,
     project: &QueryProject,
-    metric_kind_id: MetricKindId,
+    metric_kinds: &[MetricKindUuid],
     branches: &[BranchUuid],
     testbeds: &[TestbedUuid],
     benchmarks: &[BenchmarkUuid],
     times: Times,
 ) -> Result<Vec<JsonPerfMetrics>, HttpError> {
     let mut results = Vec::with_capacity(branches.len() * testbeds.len() * benchmarks.len());
-    for branch in branches {
-        for testbed in testbeds {
-            for benchmark in benchmarks {
-                if let Some(perf_metrics) = perf_query(
-                    conn,
-                    project,
-                    metric_kind_id,
-                    *branch,
-                    *testbed,
-                    *benchmark,
-                    times,
-                )?
-                .into_iter()
-                .fold(
-                    None,
-                    |perf_metrics: Option<JsonPerfMetrics>, perf_query| {
-                        let (query_dimensions, query) = split_perf_query(perf_query);
-                        let perf_metric = new_perf_metric(project, query);
-                        if let Some(mut perf_metrics) = perf_metrics {
-                            perf_metrics.metrics.push(perf_metric);
-                            Some(perf_metrics)
-                        } else {
-                            Some(new_perf_metrics(project, query_dimensions, perf_metric))
-                        }
-                    },
-                ) {
-                    results.push(perf_metrics);
+    for metric_kind_uuid in metric_kinds {
+        for branch_uuid in branches {
+            for testbed_uuid in testbeds {
+                for benchmark_uuid in benchmarks {
+                    if let Some(perf_metrics) = perf_query(
+                        conn,
+                        project,
+                        *metric_kind_uuid,
+                        *branch_uuid,
+                        *testbed_uuid,
+                        *benchmark_uuid,
+                        times,
+                    )?
+                    .into_iter()
+                    .fold(
+                        None,
+                        |perf_metrics: Option<JsonPerfMetrics>, perf_query| {
+                            let (query_dimensions, query) = split_perf_query(perf_query);
+                            let perf_metric = new_perf_metric(project, query);
+                            if let Some(mut perf_metrics) = perf_metrics {
+                                perf_metrics.metrics.push(perf_metric);
+                                Some(perf_metrics)
+                            } else {
+                                Some(new_perf_metrics(project, query_dimensions, perf_metric))
+                            }
+                        },
+                    ) {
+                        results.push(perf_metrics);
+                    }
                 }
             }
         }
@@ -188,14 +187,14 @@ fn perf_results(
 fn perf_query(
     conn: &mut DbConnection,
     project: &QueryProject,
-    metric_kind_id: MetricKindId,
+    metric_kind_uuid: MetricKindUuid,
     branch_uuid: BranchUuid,
     testbed_uuid: TestbedUuid,
     benchmark_uuid: BenchmarkUuid,
     times: Times,
 ) -> Result<Vec<PerfQuery>, HttpError> {
     let mut query = schema::metric::table
-        .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
+        .inner_join(schema::metric_kind::table)
         .inner_join(
             schema::perf::table.inner_join(
                 schema::report::table
@@ -211,6 +210,7 @@ fn perf_query(
         // It is important to filter for the branch on the `branch_version` table and not on the branch in the `report` table.
         // This is because the `branch_version` table is the one that is updated when a branch is cloned/used as a start point.
         // In contrast, the `report` table is only set to a single branch when the report is created.
+        .filter(schema::metric_kind::uuid.eq(metric_kind_uuid))
         .filter(schema::branch::uuid.eq(branch_uuid))
         .filter(schema::testbed::uuid.eq(testbed_uuid))
         .filter(schema::benchmark::uuid.eq(benchmark_uuid))
@@ -245,6 +245,7 @@ fn perf_query(
             schema::perf::iteration,
         ))
         .select((
+            QueryMetricKind::as_select(),
             QueryBranch::as_select(),
             QueryTestbed::as_select(),
             QueryBenchmark::as_select(),
@@ -299,10 +300,11 @@ fn perf_query(
             QueryMetric::as_select(),
         ))
         .load::<PerfQuery>(conn)
-        .map_err(resource_not_found_err!(Metric, (project, metric_kind_id, branch_uuid, testbed_uuid, benchmark_uuid)))
+        .map_err(resource_not_found_err!(Metric, (project, metric_kind_uuid, branch_uuid, testbed_uuid, benchmark_uuid)))
 }
 
 type PerfQuery = (
+    QueryMetricKind,
     QueryBranch,
     QueryTestbed,
     QueryBenchmark,
@@ -322,6 +324,7 @@ type PerfQuery = (
 );
 
 struct QueryDimensions {
+    metric_kind: QueryMetricKind,
     branch: QueryBranch,
     testbed: QueryTestbed,
     benchmark: QueryBenchmark,
@@ -345,6 +348,7 @@ type PerfMetricQuery = (
 
 fn split_perf_query(
     (
+        metric_kind,
         branch,
         testbed,
         benchmark,
@@ -359,6 +363,7 @@ fn split_perf_query(
     ): PerfQuery,
 ) -> (QueryDimensions, PerfMetricQuery) {
     let query_dimensions = QueryDimensions {
+        metric_kind,
         branch,
         testbed,
         benchmark,
@@ -382,11 +387,13 @@ fn new_perf_metrics(
     metric: JsonPerfMetric,
 ) -> JsonPerfMetrics {
     let QueryDimensions {
+        metric_kind,
         branch,
         testbed,
         benchmark,
     } = query_dimensions;
     JsonPerfMetrics {
+        metric_kind: metric_kind.into_json_for_project(project),
         branch: branch.into_json_for_project(project),
         testbed: testbed.into_json_for_project(project),
         benchmark: benchmark.into_json_for_project(project),

@@ -3436,7 +3436,7 @@
           },
           {
             "in": "query",
-            "name": "metric_kind",
+            "name": "metric_kinds",
             "required": true,
             "schema": {
               "type": "string"
@@ -3557,7 +3557,7 @@
           },
           {
             "in": "query",
-            "name": "metric_kind",
+            "name": "metric_kinds",
             "required": true,
             "schema": {
               "type": "string"
@@ -7274,9 +7274,6 @@
               }
             ]
           },
-          "metric_kind": {
-            "$ref": "#/components/schemas/JsonMetricKind"
-          },
           "project": {
             "$ref": "#/components/schemas/JsonProject"
           },
@@ -7296,7 +7293,6 @@
           }
         },
         "required": [
-          "metric_kind",
           "project",
           "results"
         ]
@@ -7384,6 +7380,9 @@
           "branch": {
             "$ref": "#/components/schemas/JsonBranch"
           },
+          "metric_kind": {
+            "$ref": "#/components/schemas/JsonMetricKind"
+          },
           "metrics": {
             "type": "array",
             "items": {
@@ -7397,6 +7396,7 @@
         "required": [
           "benchmark",
           "branch",
+          "metric_kind",
           "metrics",
           "testbed"
         ]
