@@ -249,23 +249,6 @@ const ShareModal = (props: ShareProps) => {
 
 					<div class="is-divider" data-content="OR" />
 
-					<h4 class="title is-4">Click to Copy URL</h4>
-					{/* biome-ignore lint/a11y/useValidAnchor: Copy link */}
-					<a
-						href=""
-						onClick={(e) => {
-							e.preventDefault();
-							navigator.clipboard.writeText(perf_page_url());
-						}}
-					>
-						{perf_page_url()}
-					</a>
-
-					<br />
-					<br />
-					<hr />
-					<br />
-
 					<h4 class="title is-4">Embed Perf Plot</h4>
 					<h4 class="subtitle is-4">Click to Copy Embed Tag</h4>
 					{/* biome-ignore lint/a11y/useValidAnchor: Copy link */}
@@ -277,6 +260,20 @@ const ShareModal = (props: ShareProps) => {
 						}}
 					>
 						{embed_tag()}
+					</a>
+
+					<div class="is-divider" data-content="OR" />
+
+					<h4 class="title is-4">Click to Copy URL</h4>
+					{/* biome-ignore lint/a11y/useValidAnchor: Copy link */}
+					<a
+						href=""
+						onClick={(e) => {
+							e.preventDefault();
+							navigator.clipboard.writeText(perf_page_url());
+						}}
+					>
+						{perf_page_url()}
 					</a>
 				</section>
 
