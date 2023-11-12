@@ -36,7 +36,6 @@ crate::typed_uuid::typed_uuid!(PerfUuid);
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfQueryParams {
     pub title: Option<String>,
-    #[serde(alias = "metric_kind")]
     pub metric_kinds: String,
     pub branches: String,
     pub testbeds: String,

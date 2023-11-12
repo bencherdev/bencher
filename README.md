@@ -105,9 +105,9 @@ For more details see the [explanation of benchmark harness adapters](https://ben
 All public projects have their own [perf page](https://bencher.dev/perf). These results can easily be shared with an auto-updating perf image. Perfect for your README!
 
 <p align="center">
-  <a href="https://bencher.dev/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674950400000">
+  <a href="https://bencher.dev/perf/bencher?key=true&metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674950400000">
     <img
-      src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kind=latency&start_time=1674950400000&title=Benchmark+Adapter+Comparison"
+      src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1674950400000&title=Benchmark+Adapter+Comparison"
       title="Benchmark Adapter Comparison"
       alt="Benchmark Adapter Comparison for Bencher - Bencher"
     />
@@ -203,23 +203,23 @@ bencher run --project my-project-slug --github-actions ${{ secrets.GITHUB_TOKEN 
     </tr>
     <tr>
         <td><a href="https://bencher.dev/console/projects/bencher/benchmarks/e93b3d71-8499-4fae-bb7c-4e540b775714">JsonAdapter::Json</a></td>
-        <td>🚨 (<a href="https://bencher.dev/console/projects/bencher/perf?metric_kind=latency&branches=a90d5b4f-047e-4dbe-8bce-1516a30df049&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=e93b3d71-8499-4fae-bb7c-4e540b775714&upper_boundary=true">view plot</a> | <a href="https://bencher.dev/console/projects/bencher/alerts/90f565dd-202c-4a82-b852-aaa8f3e98da4">view alert</a>)</td>
+        <td>🚨 (<a href="https://bencher.dev/console/projects/bencher/perf?metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&branches=a90d5b4f-047e-4dbe-8bce-1516a30df049&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=e93b3d71-8499-4fae-bb7c-4e540b775714&upper_boundary=true">view plot</a> | <a href="https://bencher.dev/console/projects/bencher/alerts/90f565dd-202c-4a82-b852-aaa8f3e98da4">view alert</a>)</td>
     </tr>
     <tr>
         <td><a href="https://bencher.dev/console/projects/bencher/benchmarks/3bfd5887-83ec-4e62-8690-02855a38fbc9">JsonAdapter::Magic (JSON)</a></td>
-        <td>✅ (<a href="https://bencher.dev/console/projects/bencher/perf?metric_kind=latency&branches=a90d5b4f-047e-4dbe-8bce-1516a30df049&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3bfd5887-83ec-4e62-8690-02855a38fbc9&upper_boundary=true">view plot</a>)</td>
+        <td>✅ (<a href="https://bencher.dev/console/projects/bencher/perf?metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&branches=a90d5b4f-047e-4dbe-8bce-1516a30df049&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3bfd5887-83ec-4e62-8690-02855a38fbc9&upper_boundary=true">view plot</a>)</td>
     </tr>
     <tr>
         <td><a href="https://bencher.dev/console/projects/bencher/benchmarks/3525f177-fc8f-4a92-bd2f-dda7c4e15699">JsonAdapter::Magic (Rust)</a></td>
-        <td>✅ (<a href="https://bencher.dev/console/projects/bencher/perf?metric_kind=latency&branches=a90d5b4f-047e-4dbe-8bce-1516a30df049&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699&upper_boundary=true">view plot</a>)</td>
+        <td>✅ (<a href="https://bencher.dev/console/projects/bencher/perf?metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&branches=a90d5b4f-047e-4dbe-8bce-1516a30df049&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699&upper_boundary=true">view plot</a>)</td>
     </tr>
     <tr>
         <td><a href="https://bencher.dev/console/projects/bencher/benchmarks/5655ed2a-3e45-4622-bdbd-39cdd9837af8">JsonAdapter::Rust</a></td>
-        <td>✅ (<a href="https://bencher.dev/console/projects/bencher/perf?metric_kind=latency&branches=a90d5b4f-047e-4dbe-8bce-1516a30df049&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=5655ed2a-3e45-4622-bdbd-39cdd9837af8&upper_boundary=true">view plot</a>)</td>
+        <td>✅ (<a href="https://bencher.dev/console/projects/bencher/perf?metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&branches=a90d5b4f-047e-4dbe-8bce-1516a30df049&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=5655ed2a-3e45-4622-bdbd-39cdd9837af8&upper_boundary=true">view plot</a>)</td>
     </tr>
     <tr>
         <td><a href="https://bencher.dev/console/projects/bencher/benchmarks/1db23e93-f909-40aa-bf42-838cc7ae05f5">JsonAdapter::RustBench</a></td>
-        <td>🚨 (<a href="https://bencher.dev/console/projects/bencher/perf?metric_kind=latency&branches=a90d5b4f-047e-4dbe-8bce-1516a30df049&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5&upper_boundary=true">view plot</a> | <a href="https://bencher.dev/console/projects/bencher/alerts/f84550f3-972d-4f84-b204-3a9c292d46a2">view alert</a>)</td>
+        <td>🚨 (<a href="https://bencher.dev/console/projects/bencher/perf?metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&branches=a90d5b4f-047e-4dbe-8bce-1516a30df049&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5&upper_boundary=true">view plot</a> | <a href="https://bencher.dev/console/projects/bencher/alerts/f84550f3-972d-4f84-b204-3a9c292d46a2">view alert</a>)</td>
     </tr>
 </table>
 <br />

@@ -1,5 +1,4 @@
 import type { Params } from "astro";
-import bencher_valid_init from "bencher_valid";
 import {
 	Show,
 	createEffect,
