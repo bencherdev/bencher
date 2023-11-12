@@ -172,7 +172,7 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Install `bencher` CLI
-        run: cargo install --path services/cli --locked
+        run: cargo install --path services/cli --locked --force
       - name: Run API Smoke Test
         run: ./scripts/smoke_test.sh
 
@@ -270,7 +270,7 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Install `bencher` CLI
-        run: cargo install --path services/cli --locked
+        run: cargo install --path services/cli --locked --force
       - name: Dogfooding Benchmarks with Bencher
         run: |
           bencher run \
@@ -324,7 +324,7 @@ jobs:
       - name: Install nightly toolchain
         run: rustup toolchain install nightly
       - name: Install udeps
-        run: cargo install --version 0.1.42  --locked cargo-udeps
+        run: cargo install --version 0.1.42 --locked --force cargo-udeps
       - name: Run API udeps
         working-directory: ./services/api
         run: cargo +nightly udeps --all-targets
@@ -565,7 +565,7 @@ jobs:
           key: ${{ runner.os }}-cargo-cli-zig-${{ hashFiles('**/Cargo.lock') }}
       - uses: goto-bus-stop/setup-zig@v2
       - name: Install zigbuild
-        run: cargo install --version 0.16.11  --locked cargo-zigbuild
+        run: cargo install --version 0.16.11 --locked --force cargo-zigbuild
       - name: cargo build CLI
         working-directory: ./services/cli
         run: cargo zigbuild --release --target x86_64-unknown-linux-gnu.${{ env.GLIBC_VERSION }}
@@ -745,7 +745,7 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Install `bencher` CLI
-        run: cargo install --path services/cli --locked
+        run: cargo install --path services/cli --locked --force
       - name: Backup API Server Database
         run: bencher server backup --compress --data-store aws_s3 --rm
 
