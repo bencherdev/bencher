@@ -4,6 +4,10 @@ version.workspace = true
 authors.workspace = true
 edition.workspace = true
 
+[features]
+full = ["bencher_json/full"]
+lite = ["bencher_json/lite"]
+
 [dependencies]
 bencher_json.workspace = true
 chrono.workspace = true

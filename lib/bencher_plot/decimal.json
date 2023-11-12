@@ -9,19 +9,19 @@
         "created": "2023-07-02T12:53:33Z",
         "modified": "2023-07-02T12:53:33Z"
     },
-    "metric_kind": {
-        "uuid": "61a385d0-f19d-4f20-895a-e3c684ec6cbc",
-        "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
-        "name": "Latency",
-        "slug": "latency",
-        "units": "nanoseconds (ns)",
-        "created": "2023-07-02T12:53:33Z",
-        "modified": "2023-07-02T12:53:33Z"
-    },
     "start_time": null,
     "end_time": null,
     "results": [
         {
+            "metric_kind": {
+                "uuid": "61a385d0-f19d-4f20-895a-e3c684ec6cbc",
+                "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
+                "name": "Latency",
+                "slug": "latency",
+                "units": "nanoseconds (ns)",
+                "created": "2023-07-02T12:53:33Z",
+                "modified": "2023-07-02T12:53:33Z"
+            },
             "branch": {
                 "uuid": "ff685107-8b8b-4034-9133-c41f644a0538",
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
@@ -150,6 +150,15 @@
             ]
         },
         {
+            "metric_kind": {
+                "uuid": "61a385d0-f19d-4f20-895a-e3c684ec6cbc",
+                "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
+                "name": "Latency",
+                "slug": "latency",
+                "units": "nanoseconds (ns)",
+                "created": "2023-07-02T12:53:33Z",
+                "modified": "2023-07-02T12:53:33Z"
+            },
             "branch": {
                 "uuid": "ff685107-8b8b-4034-9133-c41f644a0538",
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
@@ -278,6 +287,15 @@
             ]
         },
         {
+            "metric_kind": {
+                "uuid": "61a385d0-f19d-4f20-895a-e3c684ec6cbc",
+                "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
+                "name": "Latency",
+                "slug": "latency",
+                "units": "nanoseconds (ns)",
+                "created": "2023-07-02T12:53:33Z",
+                "modified": "2023-07-02T12:53:33Z"
+            },
             "branch": {
                 "uuid": "ff685107-8b8b-4034-9133-c41f644a0538",
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
