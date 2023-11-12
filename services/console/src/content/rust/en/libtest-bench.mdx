@@ -10,28 +10,28 @@ import FizzBuzzRules from "../../../chunks/rust/en/fizz-buzz-rules.mdx";
 import MicroVsMacro from "../../../chunks/rust/en/micro-vs-macro.mdx";
 import FizzBuzzFibonacciRules from "../../../chunks/rust/en/fizz-buzz-fibonacci-rules.mdx";
 import FizzBuzzFibonacciOpenRules from "../../../chunks/rust/en/fizz-buzz-fibonacci-open-rules.mdx";
+import { BENCHER_LOGO_URL } from "../../../util/ext";
 
 <Benchmarking />
 
 ## What is Rust?
 
-Rust is an open source programming language that emphasizes speed, memory safety, and productivity.
-It was specifically designed to handle the demands of large-scale, concurrent systems.
-Rust achieves memory safety without the need for a garbage collector,
-which makes it a perfect fit for systems programming.
+Rust is an open source programming language that emphasizes speed, reliability, and productivity.
+It manages to achieve memory safety without the need for a garbage collector.
 
-The language has gained popularity for applications that require complex concurrency
-or a high level of security such as operating systems, file systems, game engines, and browser components.
-Rust’s unique combination of performance and safety features makes it an excellent choice
-when considering a language for system-level programming and projects where memory-level detail control is required.
-Developer productivity is also enhanced by Rust's strong emphasis on error messages and toolchains.
+You should consider using Rust if you are writing a:
+- Low-level program where performance is important
+- Shared library that will be used by several different languages
+- Complex Command Line Interface (CLI)
+- Long-lived software project with many contributors
 
-Cargo is the official package manager for the Rust programming language.
-It proves developers with a direct method for managing project dependencies and compilation processes.
-By automating many tasks, such as building the code, downloading the libraries your project relies on,
-and compiling those libraries, Cargo significantly simplifies the processes and enhances the productivity for Rust developers.
-Cargo also supports useful features like linting, formatting, building unit tests and benchmarks, using crates from the crates.io registry, and managing multiple native dependencies.
-
+Rust has a strong emphasis on developer productivity.
+Cargo is the official package manager,
+and it handles many tasks such as:
+- Managing project dependencies
+- Compiling binaries, tests, and benchmarks
+- Linting
+- Formatting
 
 ## Write FizzBuzz in Rust
 
@@ -139,14 +139,14 @@ The three popular options for benchmarking in Rust are:
 
 libtest is Rust's built-in unit testing and benchmarking framework.
 Though part of the Rust standard library, libtest bench is still considered unstable,
-so it is only available on nightly compiler releases.
+so it is only available on `nightly` compiler releases.
 To work on the stable Rust compiler,
 [a separate benchmarking harness](https://github.com/bluss/bencher)
 needs to be used.
 Neither is being actively developed, though.
 
 The most actively maintained benchmarking harness within the Rust ecosystem is Criterion.
-It works on both stable and nightly Rust compiler releases,
+It works on both stable and `nightly` Rust compiler releases,
 and it has become the de facto standard within the Rust community.
 Criterion is also much more feature-rich compared to libtest bench.
 
@@ -157,12 +157,12 @@ This allows for single-shot benchmarking since these metrics should stay nearly 
 
 All three are [support by Bencher](/docs/explanation/adapters). So why choose libtest bench?
 It may be a good idea if you are trying to limit the external dependencies of your project
-and your project is already using the nightly toolchain.
+and your project is already using the `nightly` toolchain.
 Outside of that, I would suggest using either Criterion or Iai depending on your use case.
 
-### Install Rust nightly
+### Install Rust `nightly`
 
-With all that said, we're going to use libtest bench, so let's set our Rust toolchain to nightly.
+With all that said, we're going to use libtest bench, so let's set our Rust toolchain to `nightly`.
 Create a `rust-toolchain.toml` file in the root of your `game` project, next to `Cargo.toml`.
 
 ```toml
@@ -199,16 +199,16 @@ fn main() {
     }
 }
 
-pub fn play_game(i: u32) {
-    println!("{}", fizz_buzz(i));
+pub fn play_game(n: u32) {
+    println!("{}", fizz_buzz(n));
 }
 
-pub fn fizz_buzz(i: u32) -> String {
-    match (i % 3, i % 5) {
+pub fn fizz_buzz(n: u32) -> String {
+    match (n % 3, n % 5) {
         (0, 0) => "FizzBuzz".to_string(),
         (0, _) => "Fizz".to_string(),
         (_, 0) => "Buzz".to_string(),
-        (_, _) => i.to_string(),
+        (_, _) => n.to_string(),
     }
 }
 ```
@@ -216,8 +216,8 @@ pub fn fizz_buzz(i: u32) -> String {
 We have now separated our code out into three different functions:
 
 - `main`: Then main entrypoint into our program that iterates through the numbers `1` to `100` inclusive and calls `play_game` for each number.
-- `play_game`: Takes in an unsigned integer `i`, calls `fizz_buzz` with that number, and prints the result.
-- `fizz_buzz`: Takes an unsigned integer `i` and performs the actual `Fizz`, `Buzz`, `FizzBuzz`, or number logic returning the result as a string.
+- `play_game`: Takes in an unsigned integer `n`, calls `fizz_buzz` with that number, and prints the result.
+- `fizz_buzz`: Takes in an unsigned integer `n` and performs the actual `Fizz`, `Buzz`, `FizzBuzz`, or number logic returning the result as a string.
 
 ## Benchmarking FizzBuzz
 
@@ -241,9 +241,9 @@ mod benchmarks {
     #[bench]
     fn bench_play_game(b: &mut Bencher) {
         b.iter(|| {
-            for i in 1..=100 {
+            std::hint::black_box(for i in 1..=100 {
                 play_game(i)
-            }
+            });
         });
     }
 }
@@ -256,7 +256,10 @@ mod benchmarks {
 - Import our `play_game` function.
 - Create a benchmark named `bench_play_game` that takes in a mutable reference to `Bencher`.
 - Set the `#[bench]` attribute to indicate that `bench_play_game` is a benchmark.
-- Use the `Bencher` instance to benchmark `play_game` for the numbers `1` to `100` inclusive by running it several times.
+- Use the `Bencher` instance (`b`) to run our benchmark several times.
+- Run our benchmarks inside of a "black box" so the compiler doesn't optimize our code.
+- Iterate from `1` to `100` inclusively.
+- For each number, call `play_game`.
 
 Now we're ready to benchmark our code, run `cargo bench`:
 
@@ -286,38 +289,45 @@ Kids these days want a new game, FizzBuzzFibonacci.
 <FizzBuzzFibonacciRules />
 
 ```rust
-fn is_fibonacci_number(i: u32) -> bool {
-    let (mut previous, mut current) = (0, 1);
-    while current < i {
-        let next = previous + current;
-        previous = current;
-        current = next;
+fn is_fibonacci_number(n: u32) -> bool {
+    for i in 0..=n {
+        let (mut previous, mut current) = (0, 1);
+        while current < i {
+            let next = previous + current;
+            previous = current;
+            current = next;
+        }
+        if current == n {
+            return true;
+        }
     }
-    current == i
+    false
 }
 ```
 
 - Create a function named `is_fibonacci_number` that takes in an unsigned integer and returns a boolean.
+- Iterate for all number from `0` to our given number `n` inclusive.
 - Initialize our Fibonacci sequence starting with `0` and `1` as the `previous` and `current` numbers respectively.
-- Iterate while the `current` number is less than the given number `i`.
+- Iterate while the `current` number is less than the current iteration `i`.
 - Add the `previous` and `current` number to get the `next` number.
 - Update the `previous` number to the `current` number.
 - Update the `current` number to the `next` number.
-- Once `current` is greater than or equal to the given number `i`, we will exit the loop.
-- Check to see is the `current` number is equal to the given number `i` and return that result.
+- Once `current` is greater than or equal to the given number `n`, we will exit the loop.
+- Check to see is the `current` number is equal to the given number `n` and if so return `true`.
+- Otherwise, return `false`.
 
 Now we will need to update our `fizz_buzz` function:
 
 ```rust
-pub fn fizz_buzz_fibonacci(i: u32) -> String {
-    if is_fibonacci_number(i) {
+pub fn fizz_buzz_fibonacci(n: u32) -> String {
+    if is_fibonacci_number(n) {
         "Fibonacci".to_string()
     } else {
-        match (i % 3, i % 5) {
+        match (n % 3, n % 5) {
             (0, 0) => "FizzBuzz".to_string(),
             (0, _) => "Fizz".to_string(),
             (_, 0) => "Buzz".to_string(),
-            (_, _) => i.to_string(),
+            (_, _) => n.to_string(),
         }
     }
 }
@@ -331,8 +341,8 @@ pub fn fizz_buzz_fibonacci(i: u32) -> String {
 Because we rename `fizz_buzz` to `fizz_buzz_fibonacci` we also need to update our `play_game` function:
 
 ```rust
-pub fn play_game(i: u32) {
-    println!("{}", fizz_buzz_fibonacci(i));
+pub fn play_game(n: u32) {
+    println!("{}", fizz_buzz_fibonacci(n));
 }
 ```
 
@@ -349,15 +359,15 @@ $ cargo bench
      Running unittests src/main.rs (target/release/deps/game-68f58c96f4025bd4)
 
 running 1 test
-test benchmarks::bench_play_game ... bench:       5,391 ns/iter (+/- 116)
+test benchmarks::bench_play_game ... bench:      22,167 ns/iter (+/- 502)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in 0.62s
 ```
 
 Scrolling back through our terminal history,
-we can make an eyeball comparison between the performance of our FizzBuzz and FizzBuzzFibonacci games: `4,879 ns` vs `5,391 ns`.
+we can make an eyeball comparison between the performance of our FizzBuzz and FizzBuzzFibonacci games: `4,879 ns` vs `22,167 ns`.
 Your numbers will be a little different than mine.
-However, the difference between the two games is likely in the 10% range.
+However, the difference between the two games is likely in the 5x range.
 That seems good to me! Especially for adding a feature as fancy sounding as _Fibonacci_ to our game.
 The kids will love it!
 
@@ -435,3 +445,216 @@ FizzBuzz
 Wow, that was some thorough testing! CI passes. Our bosses are thrilled.
 Let's ship it! 🚀
 
+## The End
+
+<br />
+
+<div class="content has-text-centered">
+<img src="https://s3.amazonaws.com/public.bencher.dev/learn/three-weeks-later.jpeg" width="1280" title="Three Weeks Later" alt="SpongeBob SquarePants Three Weeks Later" />
+</div>
+
+<div class="content has-text-centered">
+<img src="https://s3.amazonaws.com/public.bencher.dev/learn/this-is-fine.jpg" width="1280" title="This is Fine" alt="This is Fine meme" />
+</div>
+
+> 🐰 ... the end of your career maybe?
+
+<br />
+
+## Just kidding! Everything is on fire! 🔥
+
+Well, at first everything seemed to be going fine.
+And then at 02:07 AM on Saturday my pager went off:
+
+> 📟 Your game is on fire! 🔥
+
+After scrambling out of bed, I tried to figure out what was going on.
+I tried to search through the logs, but that was hard because everything kept crashing.
+Finally, I found the issue. The kids! They loved our game so much, they were playing it all the way up to a million!
+In a flash of brilliance, I added two new benchmarks:
+
+```rust
+#[bench]
+fn bench_play_game_100(b: &mut Bencher) {
+    b.iter(|| std::hint::black_box(play_game(100)));
+}
+
+#[bench]
+fn bench_play_game_1_000_000(b: &mut Bencher) {
+    b.iter(|| std::hint::black_box(play_game(1_000_000)));
+}
+```
+
+- A benchmark `bench_play_game_100` for playing the game with the number one hundred (`100`)
+- A benchmark `bench_play_game_1_000_000` for playing the game with the number one million (`1_000_000`)
+
+When I ran it, I got this:
+
+```
+$ cargo bench
+   Compiling game v0.1.0 (/home/bencher)
+    Finished bench [optimized] target(s) in 0.75s
+     Running unittests src/main.rs (target/release/deps/game-6e1cb3355509b761)
+
+running 3 tests
+test benchmarks::bench_play_game           ... bench:      22,458 ns/iter (+/- 1,508)
+test benchmarks::bench_play_game_100       ... bench:         439 ns/iter (+/- 21)
+
+```
+
+Wait for it... wait for it...
+
+```
+$ cargo bench
+   Compiling game v0.1.0 (/home/bencher)
+    Finished bench [optimized] target(s) in 0.75s
+     Running unittests src/main.rs (target/release/deps/game-6e1cb3355509b761)
+
+running 3 tests
+test benchmarks::bench_play_game           ... bench:      22,458 ns/iter (+/- 1,508)
+test benchmarks::bench_play_game_100       ... bench:         439 ns/iter (+/- 21)
+test benchmarks::bench_play_game_1_000_000 ... bench:   9,586,977 ns/iter (+/- 158,821)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 3 measured; 0 filtered out; finished in 9.82s
+```
+
+What! `439 ns` x `1,000` should be `439,000 ns` not `9,586,977 ns` 🤯
+Even though I got my Fibonacci sequence code functionally correct, I must have a performance bug in there somewhere.
+
+## Fix FizzBuzzFibonacci in Rust
+
+Let's take another look at that `is_fibonacci_number` function:
+
+```rust
+fn is_fibonacci_number(n: u32) -> bool {
+    for i in 0..=n {
+        let (mut previous, mut current) = (0, 1);
+        while current < i {
+            let next = previous + current;
+            previous = current;
+            current = next;
+        }
+        if current == n {
+            return true;
+        }
+    }
+    false
+}
+```
+
+Now that I'm thinking about performance, I do realize that I have an unnecessary, extra loop.
+We can completely get rid of the `for i in 0..=n {}` loop and
+just compare the `current` value to the given number (`n`) 🤦
+
+```rust
+fn is_fibonacci_number(n: u32) -> bool {
+    let (mut previous, mut current) = (0, 1);
+    while current < n {
+        let next = previous + current;
+        previous = current;
+        current = next;
+    }
+    current == n
+}
+```
+
+- Update your `is_fibonacci_number` function.
+- Initialize our Fibonacci sequence starting with `0` and `1` as the `previous` and `current` numbers respectively.
+- Iterate while the `current` number is less than the _given number_ `n`.
+- Add the `previous` and `current` number to get the `next` number.
+- Update the `previous` number to the `current` number.
+- Update the `current` number to the `next` number.
+- Once `current` is greater than or equal to the given number `n`, we will exit the loop.
+- Check to see if the `current` number is equal to the given number `n` and return that result.
+
+Now lets rerun those benchmarks and see how we did:
+
+```
+$ cargo bench
+   Compiling game v0.1.0 (/home/bencher)
+    Finished bench [optimized] target(s) in 0.75s
+     Running unittests src/main.rs (target/release/deps/game-6e1cb3355509b761)
+
+running 3 tests
+test benchmarks::bench_play_game           ... bench:       5,570 ns/iter (+/- 390)
+test benchmarks::bench_play_game_100       ... bench:          46 ns/iter (+/- 3)
+test benchmarks::bench_play_game_1_000_000 ... bench:          53 ns/iter (+/- 4)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 3 measured; 0 filtered out; finished in 9.24s
+```
+
+Oh, wow! Our `bench_play_game` benchmark is back down to around where it was for the original FizzBuzz.
+I wish I could remember exactly what that score was. It's been three weeks though.
+My terminal history doesn't go back that far.
+But I think it's close!
+
+The `bench_play_game_100` benchmark is down nearly 10x, `439 ns` to `46 ns`.
+And the `bench_play_game_1_000_000` benchmark is down more than 10,000x! `9,586,977 ns` to `53 ns`!
+
+> 🐰 Hey, at least we caught this performance bug before it made it to production... oh, right. Nevermind...
+
+
+## Catch Performance Regressions in CI
+
+The execs weren't happy about the deluge of negative reviews our game received due to my little performance bug.
+They told me not to let it happen again, and when I asked how, they just told me not to do it again.
+How am I supposed to manage that‽
+
+Luckily, I've found this awesome open source tool called Bencher.
+There's a super generous free tier, so I can just use [Bencher Cloud](/) for my personal projects.
+And at work where everything needs to be in our private cloud, I've started using [Bencher Self-Hosted](/docs/tutorial/docker).
+
+Bencher has a [built in adapter for libtest bench](/docs/explanation/adapters#-rust-bench),
+so it's easy to integrate into CI. After [following the Quick Start guide](/docs/tutorial/quick-start),
+I'm able to run my benchmarks and track them with Bencher.
+
+```
+$ export BENCHER_API_TOKEN=MY_API_TOKEN
+
+$ bencher run --project game "cargo bench"
+    Finished bench [optimized] target(s) in 0.03s
+     Running unittests src/main.rs (target/release/deps/game-6e1cb3355509b761)
+
+running 3 tests
+test benchmarks::bench_play_game           ... bench:       5,690 ns/iter (+/- 1,091)
+test benchmarks::bench_play_game_100       ... bench:          48 ns/iter (+/- 7)
+test benchmarks::bench_play_game_1_000_000 ... bench:          51 ns/iter (+/- 3)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 3 measured; 0 filtered out; finished in 2.81s
+
+Bencher New Report:
+...
+View results:
+- benchmarks::bench_play_game (Latency): https://bencher.dev/console/projects/game/perf?metric_kinds=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=077449e5-5b45-4c00-bdfb-3a277413180d&start_time=1697224006000&end_time=1699816009000&upper_boundary=true
+- benchmarks::bench_play_game_100 (Latency): https://bencher.dev/console/projects/game/perf?metric_kinds=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=96508869-4fa2-44ac-8e60-b635b83a17b7&start_time=1697224006000&end_time=1699816009000&upper_boundary=true
+- benchmarks::bench_play_game_1_000_000 (Latency): https://bencher.dev/console/projects/game/perf?metric_kinds=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=ff014217-4570-42ea-8813-6ed0284500a4&start_time=1697224006000&end_time=1699816009000&upper_boundary=true
+```
+
+Using this nifty time travel device that a nice rabbit gave me,
+I was able to go back in time and replay what would have happened if we were using Bencher the whole time.
+Unlucky version #13 is where we first pushed the buggy FizzBuzzFibonacci implementation.
+I immediately got failures in CI as a comment on my pull request.
+That same day, I fixed the performance bug, getting rid of that needless, extra loop.
+No fires. Just happy users.
+
+<iframe src="https://bencher.dev/perf/game/embed?reports_per_page=4&reports_page=1&branches_per_page=8&branches_page=1&testbeds_per_page=8&testbeds_page=1&benchmarks_per_page=8&benchmarks_page=1&clear=true&start_time=1695243600000&end_time=1697835601000&metric_kinds=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=077449e5-5b45-4c00-bdfb-3a277413180d&range=version&upper_boundary=true&tab=benchmarks&key=true" title="Game" width="100%" height="735px" frameBorder="0" allow="fullscreen" style="border: 0.2em solid #ed6704;"></iframe>
+
+## [Bencher](/pricing): Continuous Benchmarking
+<div class="content has-text-centered">
+    <a href="/pricing">
+        <img src={BENCHER_LOGO_URL} width="90%" alt="🐰 Bencher" />
+    </a>
+</div>
+
+[Bencher](/pricing) is a suite of continuous benchmarking tools.
+Have you ever had a performance regression impact your users?
+Bencher could have prevented that from happening.
+Bencher allows you to detect and prevent performance regressions _before_ they make it to production.
+
+- **Run**: Run your benchmarks locally or in CI using your favorite benchmarking tools. The `bencher` CLI simply wraps your existing benchmark harness and stores its results.
+- **Track**: Track the results of your benchmarks over time. Monitor, query, and graph the results using the Bencher web console based on the source branch, testbed, and metric kind.
+- **Catch**: Catch performance regressions in CI. Bencher uses state of the art, customizable analytics to detect performance regressions before they make it to production.
+
+For the same reasons that unit tests are run in CI to prevent feature regressions, benchmarks should be run in CI with Bencher to prevent performance regressions. Performance bugs are bugs!
+
+Start catching performance regressions in CI — [try Bencher Cloud for free](/pricing).
