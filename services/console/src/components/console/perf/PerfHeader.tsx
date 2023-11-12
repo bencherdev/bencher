@@ -8,7 +8,11 @@ import {
 	createSignal,
 } from "solid-js";
 import { embedHeight } from "../../../config/types";
-import type { JsonAuthUser, JsonProject } from "../../../types/bencher";
+import type {
+	JsonAuthUser,
+	JsonPerfQuery,
+	JsonProject,
+} from "../../../types/bencher";
 import { apiUrl } from "../../../util/http";
 import { setPageTitle } from "../../../util/resource";
 import Field from "../../field/Field";
@@ -20,18 +24,18 @@ export interface Props {
 	user: JsonAuthUser;
 	project: Resource<JsonProject>;
 	isPlotInit: Accessor<boolean>;
-	perfQuery: Accessor<PerfQuery>;
+	perfQuery: Accessor<JsonPerfQuery>;
 	handleRefresh: () => void;
 }
 
-export interface PerfQuery {
-	metric_kind: undefined | string;
-	branches: string[];
-	testbeds: string[];
-	benchmarks: string[];
-	start_time: undefined | string;
-	end_time: undefined | string;
-}
+// export interface PerfQuery {
+// 	metric_kinds: string[];
+// 	branches: string[];
+// 	testbeds: string[];
+// 	benchmarks: string[];
+// 	start_time: undefined | string;
+// 	end_time: undefined | string;
+// }
 
 const PerfHeader = (props: Props) => {
 	const [share, setShare] = createSignal(false);
@@ -129,7 +133,7 @@ export default PerfHeader;
 export interface ShareProps {
 	apiUrl: string;
 	user: JsonAuthUser;
-	perfQuery: Accessor<PerfQuery>;
+	perfQuery: Accessor<JsonPerfQuery>;
 	isPlotInit: Accessor<boolean>;
 	project: Accessor<undefined | JsonProject>;
 	share: Accessor<boolean>;

@@ -26,7 +26,7 @@ export interface Props {
 	isConsole: boolean;
 	isEmbed: boolean;
 	isPlotInit: Accessor<boolean>;
-	metric_kind: Accessor<undefined | string>;
+	metric_kinds: Accessor<string[]>;
 	start_date: Accessor<undefined | string>;
 	end_date: Accessor<undefined | string>;
 	refresh: () => void;
@@ -62,7 +62,7 @@ const PlotHeader = (props: Props) => {
 	}) => {
 		const SELECT_METRIC_KIND = {
 			name: "Select Metric Kind",
-			slug: BENCHER_METRIC_KIND,
+			uuid: BENCHER_METRIC_KIND,
 		};
 		if (!fetcher.project) {
 			return [SELECT_METRIC_KIND];
@@ -94,9 +94,9 @@ const PlotHeader = (props: Props) => {
 	);
 
 	const getSelected = () => {
-		const slug = props.metric_kind();
-		if (slug) {
-			return slug;
+		const uuid = props.metric_kinds()?.[0];
+		if (uuid) {
+			return uuid;
 		} else {
 			return BENCHER_METRIC_KIND;
 		}
@@ -104,19 +104,19 @@ const PlotHeader = (props: Props) => {
 	const [selected, setSelected] = createSignal(getSelected());
 
 	createEffect(() => {
-		const slug = props.metric_kind();
-		if (slug) {
-			setSelected(slug);
+		const uuid = props.metric_kinds()?.[0];
+		if (uuid) {
+			setSelected(uuid);
 		} else {
 			setSelected(BENCHER_METRIC_KIND);
 		}
 	});
 
-	const handleInput = (slug: string) => {
-		if (slug === BENCHER_METRIC_KIND) {
+	const handleInput = (uuid: string) => {
+		if (uuid === BENCHER_METRIC_KIND) {
 			props.handleMetricKind(null);
 		} else {
-			props.handleMetricKind(slug);
+			props.handleMetricKind(uuid);
 		}
 	};
 
@@ -148,10 +148,10 @@ const PlotHeader = (props: Props) => {
 											onInput={(e) => handleInput(e.currentTarget.value)}
 										>
 											<For each={metric_kinds() ?? []}>
-												{(metric_kind: { name: string; slug: string }) => (
+												{(metric_kind: { name: string; uuid: string }) => (
 													<option
-														value={metric_kind.slug}
-														selected={metric_kind.slug === selected()}
+														value={metric_kind.uuid}
+														selected={metric_kind.uuid === selected()}
 													>
 														{metric_kind.name}
 													</option>

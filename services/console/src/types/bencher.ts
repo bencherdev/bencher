@@ -341,6 +341,19 @@ export interface JsonProject {
 	modified: string;
 }
 
+/**
+ * `JsonPerfQuery` is the full, strongly typed version of `JsonPerfQueryParams`.
+ * It should always be used to validate `JsonPerfQueryParams`.
+ */
+export interface JsonPerfQuery {
+	metric_kinds: Uuid[];
+	branches: Uuid[];
+	testbeds: Uuid[];
+	benchmarks: Uuid[];
+	start_time?: string;
+	end_time?: string;
+}
+
 export interface JsonPerfMetric {
 	report: Uuid;
 	iteration: Iteration;

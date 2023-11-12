@@ -22,8 +22,8 @@ export interface Props {
 	isConsole: boolean;
 	isEmbed: boolean;
 	isPlotInit: Accessor<boolean>;
-	metric_kind: Accessor<undefined | string>;
 	report: Accessor<undefined | string>;
+	metric_kinds: Accessor<string[]>;
 	branches: Accessor<string[]>;
 	testbeds: Accessor<string[]>;
 	benchmarks: Accessor<string[]>;
@@ -64,7 +64,7 @@ export interface Props {
 	handleUpperBoundary: (upper_boundary: boolean) => void;
 	handleReportChecked: (
 		index: number,
-		metric_kind_slug: undefined | string,
+		metric_kind_uuid: undefined | string,
 	) => void;
 	handleBranchChecked: (index: number) => void;
 	handleTestbedChecked: (index: number) => void;
@@ -88,7 +88,7 @@ const PerfPlot = (props: Props) => {
 						isConsole={props.isConsole}
 						isEmbed={props.isEmbed}
 						isPlotInit={props.isPlotInit}
-						metric_kind={props.metric_kind}
+						metric_kinds={props.metric_kinds}
 						start_date={props.start_date}
 						end_date={props.end_date}
 						refresh={props.refresh}
@@ -125,7 +125,7 @@ const PerfPlot = (props: Props) => {
 							}
 						>
 							<PlotInit
-								metric_kind={props.metric_kind}
+								metric_kinds={props.metric_kinds}
 								branches={props.branches}
 								testbeds={props.testbeds}
 								benchmarks={props.benchmarks}
@@ -137,7 +137,7 @@ const PerfPlot = (props: Props) => {
 						<PlotTab
 							project_slug={props.project_slug}
 							isConsole={props.isConsole}
-							metric_kind={props.metric_kind}
+							metric_kinds={props.metric_kinds}
 							tab={props.tab}
 							reports_tab={props.reports_tab}
 							branches_tab={props.branches_tab}

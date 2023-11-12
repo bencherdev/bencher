@@ -1,14 +1,14 @@
-import { For, type Accessor, Switch, Match, createMemo } from "solid-js";
+import { type Accessor, For, Match, Switch, createMemo } from "solid-js";
 import { PerfTab } from "../../../../config/types";
+import { fmtDateTime, toCapitalized } from "../../../../config/util";
 import type {
 	JsonBenchmark,
 	JsonBranch,
 	JsonReport,
 	JsonTestbed,
 } from "../../../../types/bencher";
-import { fmtDateTime, toCapitalized } from "../../../../config/util";
-import { DEFAULT_PAGE } from "../PerfPanel";
 import Pagination, { PaginationSize } from "../../../site/Pagination";
+import { DEFAULT_PAGE } from "../PerfPanel";
 
 export type TabList<T> = TabElement<T>[];
 
@@ -27,7 +27,7 @@ const perf_tabs = [
 export interface Props {
 	project_slug: Accessor<undefined | string>;
 	isConsole: boolean;
-	metric_kind: Accessor<undefined | string>;
+	metric_kinds: Accessor<string[]>;
 	tab: Accessor<PerfTab>;
 	handleTab: (tab: PerfTab) => void;
 	// Tabs
@@ -48,7 +48,7 @@ export interface Props {
 	// Handle checked
 	handleReportChecked: (
 		index: number,
-		metric_kind_slug: undefined | string,
+		metric_kind_uuid: undefined | string,
 	) => void;
 	handleBranchChecked: (index: number) => void;
 	handleTestbedChecked: (index: number) => void;
@@ -141,10 +141,10 @@ const PlotTab = (props: Props) => {
 		}
 	};
 
-	const handleChecked = (index: number, slug?: string) => {
+	const handleChecked = (index: number, uuid?: string) => {
 		switch (props.tab()) {
 			case PerfTab.REPORTS:
-				return props.handleReportChecked(index, slug);
+				return props.handleReportChecked(index, uuid);
 			case PerfTab.BRANCHES:
 				return props.handleBranchChecked(index);
 			case PerfTab.TESTBEDS:
@@ -181,7 +181,7 @@ const PlotTab = (props: Props) => {
 			<Tab
 				project_slug={props.project_slug}
 				isConsole={props.isConsole}
-				metric_kind={props.metric_kind}
+				metric_kinds={props.metric_kinds}
 				tab={props.tab}
 				getTab={getTab}
 				getPage={getPage}
@@ -212,7 +212,7 @@ const PlotTab = (props: Props) => {
 const Tab = (props: {
 	project_slug: Accessor<undefined | string>;
 	isConsole: boolean;
-	metric_kind: Accessor<undefined | string>;
+	metric_kinds: Accessor<string[]>;
 	tab: Accessor<PerfTab>;
 	getTab: () => TabList<JsonReport | JsonBranch | JsonTestbed | JsonBenchmark>;
 	getPage: () => Accessor<number>;
@@ -272,8 +272,8 @@ const Tab = (props: {
 										(report.resource as JsonReport)?.start_time,
 									)}`}
 									onClick={(_e) =>
-										// Send the Metric Kind slug instead of the Report UUID
-										props.handleChecked(index(), result.metric_kind?.slug)
+										// Send the Metric Kind UUID instead of the Report UUID
+										props.handleChecked(index(), result.metric_kind?.uuid)
 									}
 								>
 									<div class="columns is-vcentered is-mobile">
@@ -282,7 +282,7 @@ const Tab = (props: {
 												type="radio"
 												checked={
 													report.checked &&
-													result.metric_kind?.slug === props.metric_kind()
+													result.metric_kind?.uuid === props.metric_kinds()?.[0]
 												}
 											/>
 										</div>

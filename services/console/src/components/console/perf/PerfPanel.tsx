@@ -18,6 +18,7 @@ import type {
 	JsonBenchmark,
 	JsonBranch,
 	JsonPerf,
+	JsonPerfQuery,
 	JsonProject,
 	JsonReport,
 	JsonTestbed,
@@ -27,13 +28,13 @@ import { dateTimeMillis } from "../../../util/convert";
 import { httpGet } from "../../../util/http";
 import { NotifyKind, pageNotify } from "../../../util/notify";
 import { useSearchParams } from "../../../util/url";
-import { validSlug, validU32 } from "../../../util/valid";
-import PerfHeader, { type PerfQuery } from "./PerfHeader";
+import { validU32 } from "../../../util/valid";
+import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
 import type { TabList } from "./plot/PlotTab";
 
 const REPORT_PARAM = "report";
-const METRIC_KIND_PARAM = "metric_kind";
+const METRIC_KINDS_PARAM = "metric_kinds";
 const BRANCHES_PARAM = "branches";
 const TESTBEDS_PARAM = "testbeds";
 const BENCHMARKS_PARAM = "benchmarks";
@@ -162,17 +163,14 @@ const isBoolParam = (param: undefined | string): boolean => {
 };
 
 const PerfPanel = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
 	const params = createMemo(() => props.params);
 	const [searchParams, setSearchParams] = useSearchParams();
 	const user = authUser();
 
 	// Sanitize all query params at init
 	const initParams: Record<string, null | number | boolean> = {};
-	if (typeof searchParams[METRIC_KIND_PARAM] !== "string") {
-		initParams[METRIC_KIND_PARAM] = null;
+	if (!Array.isArray(arrayFromString(searchParams[METRIC_KINDS_PARAM]))) {
+		initParams[METRIC_KINDS_PARAM] = null;
 	}
 	if (!Array.isArray(arrayFromString(searchParams[BRANCHES_PARAM]))) {
 		initParams[BRANCHES_PARAM] = null;
@@ -247,8 +245,10 @@ const PerfPanel = (props: Props) => {
 	}
 
 	// Create marshalized memos of all query params
-	const metric_kind = createMemo(() => searchParams[METRIC_KIND_PARAM]);
 	const report = createMemo(() => searchParams[REPORT_PARAM]);
+	const metric_kinds = createMemo(() =>
+		arrayFromString(searchParams[METRIC_KINDS_PARAM]),
+	);
 	const branches = createMemo(() =>
 		arrayFromString(searchParams[BRANCHES_PARAM]),
 	);
@@ -351,18 +351,18 @@ const PerfPanel = (props: Props) => {
 	// The perf query sent to the server
 	const perfQuery = createMemo(() => {
 		return {
-			metric_kind: metric_kind(),
+			metric_kinds: metric_kinds(),
 			branches: branches(),
 			testbeds: testbeds(),
 			benchmarks: benchmarks(),
 			start_time: start_time(),
 			end_time: end_time(),
-		};
+		} as JsonPerfQuery;
 	});
 
 	const isPlotInit = createMemo(
 		() =>
-			!metric_kind() ||
+			metric_kinds().length === 0 ||
 			branches().length === 0 ||
 			testbeds().length === 0 ||
 			benchmarks().length === 0,
@@ -419,7 +419,7 @@ const PerfPanel = (props: Props) => {
 	});
 	const getPerf = async (fetcher: {
 		project_slug: string;
-		perfQuery: PerfQuery;
+		perfQuery: JsonPerfQuery;
 		refresh: number;
 		token: string;
 	}) => {
@@ -554,14 +554,14 @@ const PerfPanel = (props: Props) => {
 		if (
 			!clear() &&
 			first_report &&
-			!metric_kind() &&
+			metric_kinds().length === 0 &&
 			branches().length === 0 &&
 			testbeds().length === 0 &&
 			benchmarks().length === 0 &&
 			tab() === DEFAULT_PERF_TAB
 		) {
 			const first_metric_kind =
-				first_report?.results?.[first]?.[first]?.metric_kind?.slug;
+				first_report?.results?.[first]?.[first]?.metric_kind?.uuid;
 			handleReportChecked(first, first_metric_kind);
 		}
 	});
@@ -628,21 +628,20 @@ const PerfPanel = (props: Props) => {
 		setSearchParams({
 			[CLEAR_PARAM]: true,
 			[REPORT_PARAM]: null,
-			[METRIC_KIND_PARAM]:
-				bencher_valid() && validSlug(metric_kind) ? metric_kind : null,
+			[METRIC_KINDS_PARAM]: metric_kind,
 		});
 	};
 
 	const handleReportChecked = (
 		index: number,
-		metric_kind_slug: undefined | string,
+		metric_kind_uuid: undefined | string,
 	) => {
-		if (!metric_kind_slug) {
+		if (!metric_kind_uuid) {
 			return;
 		}
 		const report = reports_tab?.[index]?.resource;
 		const benchmarks = report?.results?.[0]
-			?.find((result) => result.metric_kind?.slug === metric_kind_slug)
+			?.find((result) => result.metric_kind?.uuid === metric_kind_uuid)
 			?.benchmarks?.map((benchmark) => benchmark.uuid);
 		const start_time = dateTimeMillis(report?.start_time);
 		setSearchParams({
@@ -656,7 +655,7 @@ const PerfPanel = (props: Props) => {
 				: null,
 			[END_TIME_PARAM]: dateTimeMillis(report?.end_time),
 			[REPORT_PARAM]: report?.uuid,
-			[METRIC_KIND_PARAM]: metric_kind_slug,
+			[METRIC_KINDS_PARAM]: metric_kind_uuid,
 			[BRANCHES_PARAM]: report?.branch?.uuid,
 			[TESTBEDS_PARAM]: report?.testbed?.uuid,
 			[BENCHMARKS_PARAM]: arrayToString(benchmarks ?? []),
@@ -737,7 +736,7 @@ const PerfPanel = (props: Props) => {
 					[START_TIME_PARAM]: null,
 					[END_TIME_PARAM]: null,
 					[REPORT_PARAM]: null,
-					[METRIC_KIND_PARAM]: null,
+					[METRIC_KINDS_PARAM]: null,
 					[BRANCHES_PARAM]: null,
 					[TESTBEDS_PARAM]: null,
 					[BENCHMARKS_PARAM]: null,
@@ -792,8 +791,8 @@ const PerfPanel = (props: Props) => {
 				isConsole={props.isConsole === true}
 				isEmbed={props.isEmbed === true}
 				isPlotInit={isPlotInit}
-				metric_kind={metric_kind}
 				report={report}
+				metric_kinds={metric_kinds}
 				branches={branches}
 				testbeds={testbeds}
 				benchmarks={benchmarks}

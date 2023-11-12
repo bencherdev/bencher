@@ -47,6 +47,7 @@ pub struct JsonPerfQueryParams {
 
 /// `JsonPerfQuery` is the full, strongly typed version of `JsonPerfQueryParams`.
 /// It should always be used to validate `JsonPerfQueryParams`.
+#[typeshare::typeshare]
 #[derive(Debug, Clone)]
 pub struct JsonPerfQuery {
     pub metric_kinds: Vec<MetricKindUuid>,

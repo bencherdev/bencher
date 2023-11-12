@@ -2,7 +2,7 @@ import type { Accessor } from "solid-js";
 import { PerfTab } from "../../../../config/types";
 
 export interface Props {
-	metric_kind: Accessor<undefined | string>;
+	metric_kinds: Accessor<string[]>;
 	branches: Accessor<string[]>;
 	testbeds: Accessor<string[]>;
 	benchmarks: Accessor<string[]>;
@@ -16,7 +16,7 @@ const PlotInit = (props: Props) => {
 				<li class="checkbox">
 					<input
 						type="checkbox"
-						checked={props.metric_kind() ? true : false}
+						checked={props.metric_kinds().length > 0}
 						disabled={true}
 					/>
 					Select a Metric Kind
