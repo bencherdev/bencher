@@ -194,13 +194,13 @@ Update your code to look like this:
 
 ```rust
 fn main() {
-    play_game();
+    for i in 1..=100 {
+        play_game(i);
+    }
 }
 
-pub fn play_game() {
-    for i in 1..=100 {
-        println!("{}", fizz_buzz(i));
-    }
+pub fn play_game(i: u32) {
+    println!("{}", fizz_buzz(i));
 }
 
 pub fn fizz_buzz(i: u32) -> String {
@@ -215,9 +215,9 @@ pub fn fizz_buzz(i: u32) -> String {
 
 We have now separated our code out into three different functions:
 
-- `main`: Then main entrypoint into our program that calls `play_game`.
-- `play_game`: Iterates through the numbers `1` to `100` inclusive calling `fizz_buzz` for each and printing the result.
-- `fizz_buzz`: Take an unsigned integer as input and perform the actual `Fizz`, `Buzz`, `FizzBuzz`, or number logic returning the result as a string.
+- `main`: Then main entrypoint into our program that iterates through the numbers `1` to `100` inclusive and calls `play_game` for each number.
+- `play_game`: Takes in an unsigned integer `i`, calls `fizz_buzz` with that number, and prints the result.
+- `fizz_buzz`: Takes an unsigned integer `i` and performs the actual `Fizz`, `Buzz`, `FizzBuzz`, or number logic returning the result as a string.
 
 ## Benchmarking FizzBuzz
 
@@ -240,7 +240,11 @@ mod benchmarks {
 
     #[bench]
     fn bench_play_game(b: &mut Bencher) {
-        b.iter(|| play_game());
+        b.iter(|| {
+            for i in 1..=100 {
+                play_game(i)
+            }
+        });
     }
 }
 ```
@@ -252,7 +256,7 @@ mod benchmarks {
 - Import our `play_game` function.
 - Create a benchmark named `bench_play_game` that takes in a mutable reference to `Bencher`.
 - Set the `#[bench]` attribute to indicate that `bench_play_game` is a benchmark.
-- Use the `Bencher` instance to benchmark `play_game` by running it several times.
+- Use the `Bencher` instance to benchmark `play_game` for the numbers `1` to `100` inclusive by running it several times.
 
 Now we're ready to benchmark our code, run `cargo bench`:
 
@@ -327,10 +331,8 @@ pub fn fizz_buzz_fibonacci(i: u32) -> String {
 Because we rename `fizz_buzz` to `fizz_buzz_fibonacci` we also need to update our `play_game` function:
 
 ```rust
-pub fn play_game() {
-    for i in 1..=100 {
-        println!("{}", fizz_buzz_fibonacci(i));
-    }
+pub fn play_game(i: u32) {
+    println!("{}", fizz_buzz_fibonacci(i));
 }
 ```
 
@@ -368,3 +370,68 @@ The new vision for our game is that it is open ended, no more living between the
 No, we're on to new frontiers!
 
 <FizzBuzzFibonacciOpenRules />
+
+In order to have our game work for any number, we will need to accept a command line argument.
+Update the `main` function to look like this:
+
+```rust
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    let i = args
+        .get(1)
+        .map(|s| s.parse::<u32>())
+        .unwrap_or(Ok(15))
+        .unwrap_or(15);
+    play_game(i);
+}
+```
+
+- Collect all of the arguments (`args`) passed to our game from the command line.
+- Get the first argument passed to our game and parse it as an unsigned integer `i`.
+- If parsing fails or no argument is passed in, default to playing our game with `15` as the input.
+- Finally, play our game with the newly parsed unsigned integer `i`.
+
+Now we can play our game with any number!
+Use `cargo run` followed by `--` to pass arguments to our game:
+
+```
+$ cargo run -- 9
+   Compiling playground v0.0.1 (/home/bencher)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.44s
+     Running `target/debug/game 9`
+Fizz
+```
+
+```
+$ cargo run -- 10
+    Finished dev [unoptimized + debuginfo] target(s) in 0.03s
+     Running `target/debug/game 10`
+Buzz
+```
+
+```
+$ cargo run -- 13
+    Finished dev [unoptimized + debuginfo] target(s) in 0.04s
+     Running `target/debug/game 13`
+Fibonacci
+```
+
+And if we omit or provide an invalid number:
+
+```
+$ cargo run
+    Finished dev [unoptimized + debuginfo] target(s) in 0.03s
+     Running `target/debug/game`
+FizzBuzz
+```
+
+```
+$ cargo run -- bad
+    Finished dev [unoptimized + debuginfo] target(s) in 0.05s
+     Running `target/debug/game bad`
+FizzBuzz
+```
+
+Wow, that was some thorough testing! CI passes. Our bosses are thrilled.
+Let's ship it! 🚀
+

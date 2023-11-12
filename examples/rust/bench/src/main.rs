@@ -1,14 +1,26 @@
 #![feature(test)]
 extern crate test;
 
+// FizzBuzz & FizzBuzzFibonacci Game
+// fn main() {
+//     for i in 1..=100 {
+//         play_game(i);
+//     }
+// }
+
+// Open World FizzBuzzFibonacci Game
 fn main() {
-    for i in 1..=100 {
-        play_game(i);
-    }
+    let args: Vec<String> = std::env::args().collect();
+    let i = args
+        .get(1)
+        .map(|s| s.parse::<u32>())
+        .unwrap_or(Ok(15))
+        .unwrap_or(15);
+    play_game(i);
 }
 
 // FizzBuzz Game
-// pub fn play_game() {
+// pub fn play_game(i: u32) {
 //     println!("{}", fizz_buzz(i));
 // }
 
