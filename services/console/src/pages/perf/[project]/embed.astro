@@ -14,6 +14,9 @@ const jsonProject: JsonProject = await projectResponse.json();
 
 const title = `${jsonProject.name}`;
 const description = `View ${jsonProject.name} continuous benchmarking results and performance regressions on Bencher`;
+
+// GitHub query for use of embeds:
+// /https:\/\/bencher.dev\/perf\/.*\/embed/
 ---
 
 <BaseLayout

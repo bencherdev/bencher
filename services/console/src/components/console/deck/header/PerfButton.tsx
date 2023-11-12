@@ -1,12 +1,16 @@
-import type { Resource } from "solid-js";
-import { useNavigate } from "../../../../util/url";
-import { BoundaryLimit, type JsonAlert } from "../../../../types/bencher";
 import type { Params } from "astro";
+import type { Resource } from "solid-js";
+import { BoundaryLimit, type JsonAlert } from "../../../../types/bencher";
+import { dateTimeMillis } from "../../../../util/convert";
+import { useNavigate } from "../../../../util/url";
 
 export interface Props {
 	params: Params;
 	data: Resource<Record<string, any>>;
 }
+
+// 30 days
+const DEFAULT_ALERT_HISTORY = 30 * 24 * 60 * 60 * 1000;
 
 const PerfButton = (props: Props) => {
 	const navigate = useNavigate();
@@ -19,13 +23,16 @@ const PerfButton = (props: Props) => {
 				e.preventDefault();
 
 				const json_alert = props.data() as JsonAlert;
+				const start_time = dateTimeMillis(json_alert?.created);
 				const perfQuery = {
-					metric_kind: json_alert.threshold?.metric_kind?.slug,
+					metric_kinds: json_alert.threshold?.metric_kind?.uuid,
 					branches: json_alert.threshold?.branch?.uuid,
 					testbeds: json_alert.threshold?.testbed?.uuid,
 					benchmarks: json_alert.benchmark?.uuid,
 					lower_boundary: json_alert.limit === BoundaryLimit.Lower,
 					upper_boundary: json_alert.limit === BoundaryLimit.Upper,
+					start_time: start_time ? start_time - DEFAULT_ALERT_HISTORY : null,
+					end_time: dateTimeMillis(json_alert?.modified),
 				};
 
 				const searchParams = new URLSearchParams();

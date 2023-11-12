@@ -28,15 +28,6 @@ export interface Props {
 	handleRefresh: () => void;
 }
 
-// export interface PerfQuery {
-// 	metric_kinds: string[];
-// 	branches: string[];
-// 	testbeds: string[];
-// 	benchmarks: string[];
-// 	start_time: undefined | string;
-// 	end_time: undefined | string;
-// }
-
 const PerfHeader = (props: Props) => {
 	const [share, setShare] = createSignal(false);
 

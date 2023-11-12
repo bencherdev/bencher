@@ -60,7 +60,7 @@ impl QueryAlert {
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonAlert, HttpError> {
-        let (report_uuid, iteration, query_benchmark, query_metric, query_boundary) =
+        let (report_uuid, created, iteration, query_benchmark, query_metric, query_boundary) =
             schema::alert::table
                 .filter(schema::alert::id.eq(self.id))
                 .inner_join(
@@ -74,6 +74,7 @@ impl QueryAlert {
                 )
                 .select((
                     schema::report::uuid,
+                    schema::report::created,
                     schema::perf::iteration,
                     QueryBenchmark::as_select(),
                     QueryMetric::as_select(),
@@ -81,6 +82,7 @@ impl QueryAlert {
                 ))
                 .first::<(
                     ReportUuid,
+                    DateTime,
                     Iteration,
                     QueryBenchmark,
                     QueryMetric,
@@ -92,6 +94,7 @@ impl QueryAlert {
             conn,
             &project,
             report_uuid,
+            created,
             iteration,
             query_benchmark,
             query_metric,
@@ -105,6 +108,7 @@ impl QueryAlert {
         conn: &mut DbConnection,
         project: &QueryProject,
         report_uuid: ReportUuid,
+        created: DateTime,
         iteration: Iteration,
         query_benchmark: QueryBenchmark,
         query_metric: QueryMetric,
@@ -129,6 +133,7 @@ impl QueryAlert {
             benchmark,
             limit: boundary_limit,
             status,
+            created,
             modified,
         })
     }

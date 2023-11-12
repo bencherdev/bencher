@@ -266,6 +266,7 @@ fn get_report_alerts(
         .order((schema::perf::iteration, schema::benchmark::name))
         .select((
             schema::report::uuid,
+            schema::report::created,
             schema::perf::iteration,
             QueryAlert::as_select(),
             QueryBenchmark::as_select(),
@@ -274,6 +275,7 @@ fn get_report_alerts(
         ))
         .load::<(
             ReportUuid,
+            DateTime,
             Iteration,
             QueryAlert,
             QueryBenchmark,
@@ -283,13 +285,21 @@ fn get_report_alerts(
         .map_err(resource_not_found_err!(Alert, report_id))?;
 
     let mut report_alerts = Vec::new();
-    for (report_uuid, iteration, query_alert, query_benchmark, query_metric, query_boundary) in
-        alerts
+    for (
+        report_uuid,
+        created,
+        iteration,
+        query_alert,
+        query_benchmark,
+        query_metric,
+        query_boundary,
+    ) in alerts
     {
         let json_alert = query_alert.into_json_for_report(
             conn,
             project,
             report_uuid,
+            created,
             iteration,
             query_benchmark,
             query_metric,

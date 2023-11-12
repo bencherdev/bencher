@@ -27,6 +27,7 @@ pub struct JsonAlert {
     pub benchmark: JsonBenchmarkMetric,
     pub limit: BoundaryLimit,
     pub status: AlertStatus,
+    pub created: DateTime,
     pub modified: DateTime,
 }
 

@@ -143,6 +143,7 @@ export interface JsonAlert {
 	benchmark: JsonBenchmarkMetric;
 	limit: BoundaryLimit;
 	status: AlertStatus;
+	created: string;
 	modified: string;
 }
 

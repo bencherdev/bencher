@@ -168,6 +168,9 @@ const PerfPanel = (props: Props) => {
 
 	// Sanitize all query params at init
 	const initParams: Record<string, null | number | boolean> = {};
+	if (typeof searchParams[REPORT_PARAM] !== "string") {
+		initParams[REPORT_PARAM] = null;
+	}
 	if (!Array.isArray(arrayFromString(searchParams[METRIC_KINDS_PARAM]))) {
 		initParams[METRIC_KINDS_PARAM] = null;
 	}
@@ -553,10 +556,7 @@ const PerfPanel = (props: Props) => {
 		if (
 			!clear() &&
 			first_report &&
-			metric_kinds().length === 0 &&
-			branches().length === 0 &&
-			testbeds().length === 0 &&
-			benchmarks().length === 0 &&
+			isPlotInit() &&
 			tab() === DEFAULT_PERF_TAB
 		) {
 			const first_metric_kind =

@@ -22,7 +22,7 @@ const paginationUrl = (
 
 const THRESHOLD_FIELDS = {
 	metric_kind: {
-		name: "metric kinds",
+		name: "metric-kinds",
 		icon: "fas fa-shapes",
 		option_key: "name",
 		value_key: "uuid",

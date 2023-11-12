@@ -1,14 +1,14 @@
 import * as Plot from "@observablehq/plot";
 import * as d3 from "d3";
 import { type Accessor, createEffect, createSignal } from "solid-js";
-import { addTooltips } from "./tooltip";
+import { PerfRange } from "../../../../config/types";
 import {
 	AlertStatus,
 	type Boundary,
 	type JsonPerf,
 	type JsonPerfAlert,
 } from "../../../../types/bencher";
-import { PerfRange } from "../../../../config/types";
+import { addTooltips } from "./tooltip";
 
 // Source: https://twemoji.twitter.com
 // License: https://creativecommons.org/licenses/by/4.0
@@ -59,7 +59,7 @@ const position_label = (position: Position) => {
 };
 
 const get_units = (json_perf: JsonPerf) => {
-	const units = json_perf?.metric_kind?.units;
+	const units = json_perf?.results?.[0]?.metric_kind?.units;
 	if (units) {
 		return units;
 	} else {

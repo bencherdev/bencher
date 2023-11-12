@@ -6111,6 +6111,9 @@
           "benchmark": {
             "$ref": "#/components/schemas/JsonBenchmarkMetric"
           },
+          "created": {
+            "$ref": "#/components/schemas/DateTime"
+          },
           "iteration": {
             "$ref": "#/components/schemas/Iteration"
           },
@@ -6135,6 +6138,7 @@
         },
         "required": [
           "benchmark",
+          "created",
           "iteration",
           "limit",
           "modified",
