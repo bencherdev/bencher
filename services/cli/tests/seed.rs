@@ -447,7 +447,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         "--test",
         "t",
         "--upper-boundary",
-        "0.99",
+        "0.995",
     ]);
     let assert = cmd.assert().success();
     let threshold: bencher_json::JsonThreshold =
@@ -555,7 +555,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     // bencher run --iter 3 "bencher mock --pow 9"
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     let bencher_mock = format!(
-        r#"{bencher} mock --pow 9"#,
+        r#"{bencher} mock --pow 10"#,
         bencher = cmd.get_program().to_string_lossy()
     );
     cmd.args([

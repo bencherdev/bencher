@@ -116,14 +116,17 @@ impl ConfigTx {
         #[cfg(feature = "plus")]
         let is_bencher_cloud = context.biller.is_some();
         #[cfg(feature = "plus")]
-        // Only collect stats if stats are enabled on non-Bencher Cloud servers
-        if context.stats.enabled && !is_bencher_cloud {
+        // Only setup stats if they are enabled
+        if context.stats.enabled {
             let conn = context.database.connection.clone();
             let query_server =
                 crate::model::server::QueryServer::get_or_create(&mut *conn.lock().await)
                     .map_err(ConfigTxError::ServerId)?;
             info!(log, "Server ID: {}", query_server.uuid);
-            query_server.spawn_stats(conn, context.stats.offset);
+            //  Only send stats on non-Bencher Cloud servers
+            if !is_bencher_cloud {
+                query_server.spawn_stats(conn, context.stats.offset);
+            }
         }
 
         let mut api = ApiDescription::new();
