@@ -59,7 +59,7 @@ impl QueryServer {
                 tokio::time::sleep(sleep_time).await;
 
                 let conn = &mut *conn.lock().await;
-                let Ok(json_stats) = self.get_stats(conn) else {
+                let Ok(json_stats) = self.get_stats(conn, true) else {
                     continue;
                 };
                 let Ok(json_stats_str) = serde_json::to_string(&json_stats) else {
@@ -78,8 +78,12 @@ impl QueryServer {
         });
     }
 
-    pub fn get_stats(self, conn: &mut DbConnection) -> Result<JsonServerStats, HttpError> {
-        stats::get_stats(conn, self)
+    pub fn get_stats(
+        self,
+        conn: &mut DbConnection,
+        include_organizations: bool,
+    ) -> Result<JsonServerStats, HttpError> {
+        stats::get_stats(conn, self, include_organizations)
     }
 
     pub fn into_json(self) -> JsonServer {

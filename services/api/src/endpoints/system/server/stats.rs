@@ -45,7 +45,9 @@ pub async fn server_stats_get(
 async fn get_one_inner(context: &ApiContext) -> Result<JsonServerStats, HttpError> {
     let conn = &mut *context.conn().await;
     let query_server = QueryServer::get_server(conn)?;
-    query_server.get_stats(conn)
+    // Don't include organizations for Bencher Cloud
+    let include_organizations = !context.biller.is_some();
+    query_server.get_stats(conn, include_organizations)
 }
 
 #[endpoint {
