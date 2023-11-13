@@ -123,10 +123,12 @@ impl ConfigTx {
                 crate::model::server::QueryServer::get_or_create(&mut *conn.lock().await)
                     .map_err(ConfigTxError::ServerId)?;
             info!(log, "Server ID: {}", query_server.uuid);
-            //  Only send stats on non-Bencher Cloud servers
-            if !is_bencher_cloud {
-                query_server.spawn_stats(conn, context.stats.offset);
-            }
+            query_server.spawn_stats(
+                log.clone(),
+                conn,
+                context.stats.offset,
+                is_bencher_cloud.then(|| context.messenger.clone()),
+            );
         }
 
         let mut api = ApiDescription::new();

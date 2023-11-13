@@ -9,6 +9,7 @@ pub use email::Email;
 pub use message::Message;
 use slog::{info, Logger};
 
+#[derive(Debug, Clone)]
 pub enum Messenger {
     StdOut,
     Email(Email),

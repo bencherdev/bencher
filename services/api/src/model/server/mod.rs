@@ -6,9 +6,13 @@ use bencher_json::{DateTime, JsonServer, JsonServerStats, ServerUuid, BENCHER_AP
 use chrono::{Duration, NaiveTime, Utc};
 use diesel::RunQueryDsl;
 use dropshot::HttpError;
+use slog::Logger;
 
 use crate::{
-    context::DbConnection, error::resource_conflict_err, schema, schema::server as server_table,
+    context::{Body, DbConnection, Message, Messenger, ServerStatsBody},
+    error::resource_conflict_err,
+    model::user::QueryUser,
+    schema::{self, server as server_table},
     util::fn_get::fn_get,
 };
 
@@ -45,7 +49,13 @@ impl QueryServer {
         }
     }
 
-    pub fn spawn_stats(self, conn: Arc<tokio::sync::Mutex<DbConnection>>, offset: NaiveTime) {
+    pub fn spawn_stats(
+        self,
+        log: Logger,
+        conn: Arc<tokio::sync::Mutex<DbConnection>>,
+        offset: NaiveTime,
+        messenger: Option<Messenger>,
+    ) {
         tokio::spawn(async move {
             loop {
                 let now = Utc::now().naive_utc().time();
@@ -59,21 +69,39 @@ impl QueryServer {
                 tokio::time::sleep(sleep_time).await;
 
                 let conn = &mut *conn.lock().await;
-                let Ok(json_stats) = self.get_stats(conn, true) else {
-                    continue;
+                let json_stats = match self.get_stats(conn, messenger.is_some()) {
+                    Ok(json_stats) => json_stats,
+                    Err(e) => {
+                        slog::error!(log, "Failed to get stats: {e}");
+                        continue;
+                    },
                 };
-                let Ok(json_stats_str) = serde_json::to_string(&json_stats) else {
-                    continue;
+                let json_stats_str = match serde_json::to_string(&json_stats) {
+                    Ok(json_stats_str) => json_stats_str,
+                    Err(e) => {
+                        slog::error!(log, "Failed to serialize stats: {e}");
+                        continue;
+                    },
                 };
-                // println!("{json_stats_str}");
 
-                let client = reqwest::Client::new();
-                let _resp = client
-                    .post(BENCHER_API_URL.clone())
-                    .body(json_stats_str)
-                    .send()
-                    .await;
-                // println!("{resp:?}");
+                if let Some(messenger) = messenger.as_ref() {
+                    slog::info!(log, "Bencher Cloud Stats: {json_stats_str:?}");
+                    if let Err(e) =
+                        Self::send_stats_to_backend(&log, conn, messenger, &json_stats_str)
+                    {
+                        slog::error!(log, "Failed to send stats: {e}");
+                    }
+                } else {
+                    let client = reqwest::Client::new();
+                    if let Err(e) = client
+                        .post(BENCHER_API_URL.clone())
+                        .body(json_stats_str)
+                        .send()
+                        .await
+                    {
+                        slog::error!(log, "Failed to send stats: {e}");
+                    }
+                }
             }
         });
     }
@@ -81,9 +109,31 @@ impl QueryServer {
     pub fn get_stats(
         self,
         conn: &mut DbConnection,
-        include_organizations: bool,
+        is_bencher_cloud: bool,
     ) -> Result<JsonServerStats, HttpError> {
-        stats::get_stats(conn, self, include_organizations)
+        stats::get_stats(conn, self, is_bencher_cloud)
+    }
+
+    pub fn send_stats_to_backend(
+        log: &Logger,
+        conn: &mut DbConnection,
+        messenger: &Messenger,
+        server_stats: &str,
+    ) -> Result<(), HttpError> {
+        // TODO find a better home for these than my inbox
+        let admins = QueryUser::get_admins(conn)?;
+        for admin in admins {
+            let message = Message {
+                to_name: Some(admin.name.clone().into()),
+                to_email: admin.email.into(),
+                subject: Some("🐰 Self-Hosted Server Stats".into()),
+                body: Some(Body::ServerStats(ServerStatsBody {
+                    server_stats: server_stats.to_owned(),
+                })),
+            };
+            messenger.send(log, message);
+        }
+        Ok(())
     }
 
     pub fn into_json(self) -> JsonServer {

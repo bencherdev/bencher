@@ -23,7 +23,7 @@ const THIS_MONTH: i64 = THIS_WEEK * 4;
 pub fn get_stats(
     conn: &mut DbConnection,
     query_server: QueryServer,
-    include_organizations: bool,
+    is_bencher_cloud: bool,
 ) -> Result<JsonServerStats, HttpError> {
     let now = DateTime::now();
     let timestamp = now.timestamp();
@@ -31,15 +31,15 @@ pub fn get_stats(
     let this_month = timestamp - THIS_MONTH;
 
     // organizations
-    let organizations = if include_organizations {
+    let organizations = if is_bencher_cloud {
+        Vec::new().into()
+    } else {
         schema::organization::table
             .load::<QueryOrganization>(conn)
             .map_err(resource_not_found_err!(Organization))?
             .into_iter()
             .map(QueryOrganization::into_json)
             .collect()
-    } else {
-        Vec::new().into()
     };
 
     // users

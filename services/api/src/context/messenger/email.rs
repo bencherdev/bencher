@@ -5,6 +5,7 @@ use slog::{error, trace, Logger};
 use super::body::FmtBody;
 use super::Message;
 
+#[derive(Debug, Clone)]
 pub struct Email {
     pub hostname: String,
     pub port: u16,

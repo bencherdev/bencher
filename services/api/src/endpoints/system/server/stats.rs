@@ -2,17 +2,19 @@
 
 use bencher_json::{JsonEmpty, JsonServerStats};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
-use slog::{info, Logger};
+use http::StatusCode;
+use slog::Logger;
 
 use crate::{
-    context::{ApiContext, Body, Message, ServerStatsBody},
+    context::ApiContext,
     endpoints::{
         endpoint::{CorsResponse, Get, Post, ResponseAccepted, ResponseOk},
         Endpoint,
     },
+    error::issue_error,
     model::{
         server::QueryServer,
-        user::{admin::AdminUser, auth::BearerToken, QueryUser},
+        user::{admin::AdminUser, auth::BearerToken},
     },
 };
 
@@ -45,9 +47,8 @@ pub async fn server_stats_get(
 async fn get_one_inner(context: &ApiContext) -> Result<JsonServerStats, HttpError> {
     let conn = &mut *context.conn().await;
     let query_server = QueryServer::get_server(conn)?;
-    // Don't include organizations for Bencher Cloud
-    let include_organizations = !context.biller.is_some();
-    query_server.get_stats(conn, include_organizations)
+    let is_bencher_cloud = context.biller.is_some();
+    query_server.get_stats(conn, is_bencher_cloud)
 }
 
 #[endpoint {
@@ -71,20 +72,17 @@ async fn post_inner(
     let _biller = context.biller()?;
     let conn = &mut *context.conn().await;
 
-    // TODO find a better home for these than my inbox
-    info!(log, "Self-Hosted Stats: {json_server_stats:?}");
-    let admins = QueryUser::get_admins(conn)?;
-    for admin in admins {
-        let message = Message {
-            to_name: Some(admin.name.clone().into()),
-            to_email: admin.email.into(),
-            subject: Some("🐰 Self-Hosted Server Stats".into()),
-            body: Some(Body::ServerStats(ServerStatsBody {
-                server_stats: json_server_stats.clone(),
-            })),
-        };
-        context.messenger.send(log, message);
-    }
+    let server_stats = serde_json::to_string(&json_server_stats).map_err(|e| {
+        slog::error!(log, "Failed to serialize stats: {e}");
+        issue_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to serialize stats",
+            &format!("Failed to serialize stats: {json_server_stats:?}"),
+            e,
+        )
+    })?;
+    slog::info!(log, "Self-Hosted Stats: {server_stats:?}");
+    QueryServer::send_stats_to_backend(log, conn, &context.messenger, &server_stats)?;
 
     Ok(JsonEmpty {})
 }
