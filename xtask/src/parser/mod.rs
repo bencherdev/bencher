@@ -13,15 +13,26 @@ pub struct CliTask {
 #[allow(variant_size_differences)]
 #[derive(Subcommand, Debug)]
 pub enum CliSub {
+    /// Generate typeshare
     Typeshare(CliTypeshare),
+    /// Generate OpenAPI spec
     Swagger(CliSwagger),
+    /// Generate typeshare and OpenAPI spec
     Types(CliTypes),
     #[cfg(feature = "plus")]
+    /// Send stats to bencher.dev
+    Stats(CliStats),
+    #[cfg(feature = "plus")]
+    /// Prompt LLM
     Prompt(CliPrompt),
     #[cfg(feature = "plus")]
+    /// Prompt LLM to translate
     Translate(CliTranslate),
+    /// Run tests against Fly.io deployment
     FlyTest(CliFlyTest),
+    /// Run tests against Netlify deployment
     NetlifyTest(CliNetlifyTest),
+    /// Generate release notes
     ReleaseNotes(CliReleaseNotes),
 }
 
@@ -33,6 +44,13 @@ pub struct CliSwagger {}
 
 #[derive(Parser, Debug)]
 pub struct CliTypes {}
+
+#[cfg(feature = "plus")]
+#[derive(Parser, Debug)]
+pub struct CliStats {
+    /// Stats JSON
+    pub stats: String,
+}
 
 #[cfg(feature = "plus")]
 #[derive(Parser, Debug)]

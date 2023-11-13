@@ -7,6 +7,8 @@ mod netlify_test;
 #[cfg(feature = "plus")]
 mod prompt;
 mod release_notes;
+#[cfg(feature = "plus")]
+mod stats;
 mod swagger;
 #[cfg(feature = "plus")]
 mod translate;
@@ -18,6 +20,8 @@ use netlify_test::NetlifyTest;
 #[cfg(feature = "plus")]
 use prompt::Prompt;
 use release_notes::ReleaseNotes;
+#[cfg(feature = "plus")]
+use stats::Stats;
 use swagger::Swagger;
 #[cfg(feature = "plus")]
 use translate::Translate;
@@ -35,6 +39,8 @@ pub enum Sub {
     Typeshare(Typeshare),
     Swagger(Swagger),
     Types(Types),
+    #[cfg(feature = "plus")]
+    Stats(Stats),
     #[cfg(feature = "plus")]
     Prompt(Prompt),
     #[cfg(feature = "plus")]
@@ -63,6 +69,8 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Swagger(swagger) => Self::Swagger(swagger.try_into()?),
             CliSub::Types(types) => Self::Types(types.try_into()?),
             #[cfg(feature = "plus")]
+            CliSub::Stats(stats) => Self::Stats(stats.try_into()?),
+            #[cfg(feature = "plus")]
             CliSub::Prompt(prompt) => Self::Prompt(prompt.try_into()?),
             #[cfg(feature = "plus")]
             CliSub::Translate(translate) => Self::Translate(translate.try_into()?),
@@ -89,6 +97,8 @@ impl Sub {
             Self::Typeshare(typeshare) => typeshare.exec(),
             Self::Swagger(swagger) => swagger.exec(),
             Self::Types(types) => types.exec(),
+            #[cfg(feature = "plus")]
+            Self::Stats(stats) => stats.exec().await,
             #[cfg(feature = "plus")]
             Self::Prompt(prompt) => prompt.exec().await,
             #[cfg(feature = "plus")]
