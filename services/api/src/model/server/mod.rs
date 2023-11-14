@@ -87,7 +87,7 @@ impl QueryServer {
                 if let Some(messenger) = messenger.as_ref() {
                     slog::info!(log, "Bencher Cloud Stats: {json_stats_str:?}");
                     if let Err(e) =
-                        Self::send_stats_to_backend(&log, conn, messenger, &json_stats_str)
+                        Self::send_stats_to_backend(&log, conn, messenger, &json_stats_str, true)
                     {
                         slog::error!(log, "Failed to send stats: {e}");
                     }
@@ -119,6 +119,7 @@ impl QueryServer {
         conn: &mut DbConnection,
         messenger: &Messenger,
         server_stats: &str,
+        is_bencher_cloud: bool,
     ) -> Result<(), HttpError> {
         // TODO find a better home for these than my inbox
         let admins = QueryUser::get_admins(conn)?;
@@ -126,7 +127,14 @@ impl QueryServer {
             let message = Message {
                 to_name: Some(admin.name.clone().into()),
                 to_email: admin.email.into(),
-                subject: Some("🐰 Self-Hosted Server Stats".into()),
+                subject: Some(format!(
+                    "🐰 {host} Server Stats",
+                    host = if is_bencher_cloud {
+                        "Bencher Cloud"
+                    } else {
+                        "Self-Hosted"
+                    }
+                )),
                 body: Some(Body::ServerStats(ServerStatsBody {
                     server_stats: server_stats.to_owned(),
                 })),

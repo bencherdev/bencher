@@ -82,7 +82,7 @@ async fn post_inner(
         )
     })?;
     slog::info!(log, "Self-Hosted Stats: {server_stats:?}");
-    QueryServer::send_stats_to_backend(log, conn, &context.messenger, &server_stats)?;
+    QueryServer::send_stats_to_backend(log, conn, &context.messenger, &server_stats, false)?;
 
     Ok(JsonEmpty {})
 }
