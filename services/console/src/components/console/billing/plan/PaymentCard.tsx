@@ -44,10 +44,26 @@ interface Props {
 const PaymentCard = (props: Props) => {
 	const [form, setForm] = createStore(initCardFrom());
 	const [submitting, setSubmitting] = createSignal(false);
-	const [valid, setValid] = createSignal(false);
 
 	const isSendable = (): boolean => {
-		return !submitting() && valid() && props.organizationUuidValid();
+		return (
+			!submitting() &&
+			formValid() &&
+			(form?.consent?.valid ?? false) &&
+			props.organizationUuidValid()
+		);
+	};
+	const formValid = (): boolean => {
+		if (
+			form?.name?.valid &&
+			form?.number?.valid &&
+			form?.expiration?.valid &&
+			form?.cvc?.valid
+		) {
+			return true;
+		} else {
+			return false;
+		}
 	};
 
 	const handleField = (key: string, value: FieldValue, valid: boolean) => {
@@ -117,19 +133,6 @@ const PaymentCard = (props: Props) => {
 			});
 	};
 
-	createEffect(() => {
-		const f = form;
-		if (
-			!valid() &&
-			f?.number?.valid &&
-			f?.expiration?.valid &&
-			f?.cvc?.valid &&
-			f?.consent?.valid
-		) {
-			setValid(true);
-		}
-	});
-
 	return (
 		<form class="box">
 			<Field
@@ -172,14 +175,7 @@ const PaymentCard = (props: Props) => {
 				config={CARD_FIELDS.cvc}
 				handleField={handleField}
 			/>
-			<Show
-				when={
-					form?.name?.valid &&
-					form?.number?.valid &&
-					form?.expiration?.valid &&
-					form?.cvc?.valid
-				}
-			>
+			<Show when={formValid()}>
 				<Field
 					kind={FieldKind.CHECKBOX}
 					fieldKey="consent"
