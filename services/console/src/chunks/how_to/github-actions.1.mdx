@@ -22,6 +22,6 @@ jobs:
           --else-if-branch "$GITHUB_BASE_REF" \\
           --else-if-branch main \\
           --err \\
-          --github-actions \${{ secrets.GITHUB_TOKEN }} \\
+          --github-actions ${{ secrets.GITHUB_TOKEN }} \\
           "bencher mock"
 ```

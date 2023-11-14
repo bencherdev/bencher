@@ -88,7 +88,7 @@ jobs:
               --else-if-branch "${{ env.PR_BASE }}" \\
               --else-if-branch main \\
               --err \\
-              --github-actions \${{ secrets.GITHUB_TOKEN }} \\
+              --github-actions ${{ secrets.GITHUB_TOKEN }} \\
               --ci-number ${{ env.PR_NUMBER }} \\
               --file $BENCHMARK_RESULTS
 ```

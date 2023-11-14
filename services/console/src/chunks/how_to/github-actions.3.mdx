@@ -21,7 +21,7 @@ jobs:
           --else-if-branch "${{ github.event.pull_request.base.ref }}" \\
           --else-if-branch main \\
           --err \\
-          --github-actions \${{ secrets.GITHUB_TOKEN }} \\
+          --github-actions ${{ secrets.GITHUB_TOKEN }} \\
           --token ${{ secrets.BENCHER_API_TOKEN }} \\
           "bencher mock"
 ```
