@@ -3,9 +3,11 @@ import type { InitOutput } from "bencher_valid";
 import {
 	type Accessor,
 	type Resource,
+	Show,
 	createEffect,
 	createSignal,
 } from "solid-js";
+import { createStore } from "solid-js/store";
 import type {
 	JsonAuthUser,
 	JsonCustomer,
@@ -40,7 +42,7 @@ interface Props {
 }
 
 const PaymentCard = (props: Props) => {
-	const [form, setForm] = createSignal(initCardFrom());
+	const [form, setForm] = createStore(initCardFrom());
 	const [submitting, setSubmitting] = createSignal(false);
 	const [valid, setValid] = createSignal(false);
 
@@ -50,7 +52,7 @@ const PaymentCard = (props: Props) => {
 
 	const handleField = (key: string, value: FieldValue, valid: boolean) => {
 		setForm({
-			...form(),
+			...form,
 			[key]: {
 				value: value,
 				valid: valid,
@@ -72,15 +74,15 @@ const PaymentCard = (props: Props) => {
 
 		const customer: JsonCustomer = {
 			uuid: props.user?.user?.uuid,
-			name: form()?.name?.value,
+			name: form?.name?.value,
 			email: props.user?.user?.email,
 		};
-		const number = cleanCardNumber(form()?.number?.value);
-		const exp = cleanExpiration(form()?.expiration?.value);
+		const number = cleanCardNumber(form?.number?.value);
+		const exp = cleanExpiration(form?.expiration?.value);
 		if (exp === null) {
 			return;
 		}
-		const cvc = form()?.cvc?.value?.trim();
+		const cvc = form?.cvc?.value?.trim();
 		const card = {
 			number: number,
 			exp_month: exp[0],
@@ -116,8 +118,14 @@ const PaymentCard = (props: Props) => {
 	};
 
 	createEffect(() => {
-		const f = form();
-		if (!valid() && f.number.valid && f.expiration.valid && f.cvc.valid) {
+		const f = form;
+		if (
+			!valid() &&
+			f?.number?.valid &&
+			f?.expiration?.valid &&
+			f?.cvc?.valid &&
+			f?.consent?.valid
+		) {
 			setValid(true);
 		}
 	});
@@ -129,8 +137,8 @@ const PaymentCard = (props: Props) => {
 				kind={FieldKind.INPUT}
 				fieldKey="name"
 				label={CARD_FIELDS.name?.label}
-				value={form()?.name?.value}
-				valid={form()?.name?.valid}
+				value={form?.name?.value}
+				valid={form?.name?.valid}
 				config={CARD_FIELDS.name}
 				handleField={handleField}
 			/>
@@ -139,8 +147,8 @@ const PaymentCard = (props: Props) => {
 				kind={FieldKind.INPUT}
 				fieldKey="number"
 				label={CARD_FIELDS.number?.label}
-				value={form()?.number?.value}
-				valid={form()?.number?.valid}
+				value={form?.number?.value}
+				valid={form?.number?.valid}
 				config={CARD_FIELDS.number}
 				handleField={handleField}
 			/>
@@ -149,8 +157,8 @@ const PaymentCard = (props: Props) => {
 				kind={FieldKind.INPUT}
 				fieldKey="expiration"
 				label={CARD_FIELDS.expiration?.label}
-				value={form()?.expiration?.value}
-				valid={form()?.expiration?.valid}
+				value={form?.expiration?.value}
+				valid={form?.expiration?.valid}
 				config={CARD_FIELDS.expiration}
 				handleField={handleField}
 			/>
@@ -159,12 +167,28 @@ const PaymentCard = (props: Props) => {
 				kind={FieldKind.INPUT}
 				fieldKey="cvc"
 				label={CARD_FIELDS.cvc?.label}
-				value={form()?.cvc?.value}
-				valid={form()?.cvc?.valid}
+				value={form?.cvc?.value}
+				valid={form?.cvc?.valid}
 				config={CARD_FIELDS.cvc}
 				handleField={handleField}
 			/>
-			<br />
+			<Show
+				when={
+					form?.name?.valid &&
+					form?.number?.valid &&
+					form?.expiration?.valid &&
+					form?.cvc?.valid
+				}
+			>
+				<Field
+					kind={FieldKind.CHECKBOX}
+					fieldKey="consent"
+					value={form?.consent?.value}
+					valid={form?.consent?.valid}
+					config={CARD_FIELDS.consent}
+					handleField={handleField}
+				/>
+			</Show>
 			<button
 				class="button is-primary is-fullwidth"
 				disabled={!isSendable()}
@@ -196,6 +220,10 @@ export interface CardForm {
 		value: string;
 		valid: null | boolean;
 	};
+	consent: {
+		value: boolean;
+		valid: null | boolean;
+	};
 }
 
 export const initCardFrom = () => {
@@ -214,6 +242,10 @@ export const initCardFrom = () => {
 		},
 		cvc: {
 			value: "",
+			valid: null,
+		},
+		consent: {
+			value: false,
 			valid: null,
 		},
 	} as CardForm;
@@ -251,6 +283,22 @@ const CARD_FIELDS = {
 		icon: "fas fa-undo",
 		help: "May only use three or four numbers",
 		validate: validCardCvc,
+	},
+	consent: {
+		label: "I Agree",
+		type: "checkbox",
+		placeholder: (
+			<small>
+				{" "}
+				I agree to the{" "}
+				{
+					<a href="/legal/subscription" target="_blank">
+						subscription agreement
+					</a>
+				}
+				.
+			</small>
+		),
 	},
 };
 

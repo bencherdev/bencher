@@ -1,20 +1,21 @@
+import bencher_valid_init from "bencher_valid";
 import {
+	Show,
 	createEffect,
+	createMemo,
 	createResource,
 	createSignal,
-	createMemo,
 } from "solid-js";
-import bencher_valid_init from "bencher_valid";
 
-import { JsonLogin, JsonSignup, PlanLevel, Jwt } from "../../types/bencher";
+import { createStore } from "solid-js/store";
+import { JsonLogin, JsonSignup, Jwt, PlanLevel } from "../../types/bencher";
+import { httpPost } from "../../util/http";
+import { NotifyKind, navigateNotify, pageNotify } from "../../util/notify";
+import { useSearchParams } from "../../util/url";
+import { validJwt, validPlanLevel } from "../../util/valid";
 import Field, { FieldHandler } from "../field/Field";
 import FieldKind from "../field/kind";
-import { useSearchParams } from "../../util/url";
-import { httpPost } from "../../util/http";
 import { AUTH_FIELDS, EMAIL_PARAM, INVITE_PARAM, PLAN_PARAM } from "./auth";
-import { createStore } from "solid-js/store";
-import { validJwt, validPlanLevel } from "../../util/valid";
-import { NotifyKind, navigateNotify, pageNotify } from "../../util/notify";
 
 export interface Props {
 	apiUrl: string;
@@ -166,7 +167,7 @@ const AuthForm = (props: Props) => {
 
 			<br />
 
-			{props.newUser && form?.username?.valid && form?.email?.valid && (
+			<Show when={props.newUser && form?.username?.valid && form?.email?.valid}>
 				<Field
 					kind={FieldKind.CHECKBOX}
 					fieldKey="consent"
@@ -175,7 +176,7 @@ const AuthForm = (props: Props) => {
 					config={AUTH_FIELDS.consent}
 					handleField={handleField}
 				/>
-			)}
+			</Show>
 
 			<div class="field">
 				<p class="control">
