@@ -70,7 +70,7 @@ This works because `pull_request_target` runs in the context of the pull request
 where secrets such as your `BENCHER_API_TOKEN` and the `GITHUB_TOKEN` are available.
 Therefore, this workflow will only run if it exists on the target branch.
 Avoid setting any secrets as environment variables, such as `BENCHER_API_TOKEN`.
-Instead explicitly pass in the API token to `bencher run` (ex: `--token ${{ secrets.BENCHER_API_TOKEN }}`).
+Instead explicitly pass in the API token to `bencher run` using [the GitHub context token](https://docs.github.com/en/actions/learn-github-actions/contexts#github-context) (ex: `--token ${{ secrets.GITHUB_TOKEN }}`).
 See this [GitHub Security Lab write up](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
 and [this blog post](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
 on preventing pwn requests for a full overview.
