@@ -7,6 +7,7 @@ sortOrder: 3
 
 import GitHubActions1 from "../../../chunks/how_to/github-actions.1.mdx";
 import GitHubActions2 from "../../../chunks/how_to/github-actions.2.mdx";
+import GitHubActions2Label from "../../../chunks/how_to/github-actions.2.xlabel.mdx";
 import GitHubActions3 from "../../../chunks/how_to/github-actions.3.mdx";
 import GitHubActions4 from "../../../chunks/how_to/github-actions.4.mdx";
 
@@ -43,6 +44,10 @@ If you only expect to have PRs from branches within the same repository then you
 It is important to limit the run on `push` **only** to the select branches (ex: `main`)
 to prevents pushes to PR branches from running twice!
 Again, this solution only works if all PRs are from the **same** repository.
+
+It can also be nice to limit runs only after a certain label has been added (ex: `benchmark`):
+
+<GitHubActions2Label />
 
 If you plan to accept Pull Requests from forks, as is often the case in public open source projects,
 then you will need to handle things a little differently.

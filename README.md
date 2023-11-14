@@ -153,25 +153,25 @@ bencher run --project my-project-slug --err "bencher mock"
 You can set the [`bencher run` CLI subcommand](https://bencher.dev/docs/explanation/bencher-run) to comment on a PR with the `--github-actions` argument.
 
 ```yaml
-bencher run --project my-project-slug --github-actions ${{ secrets.GITHUB_TOKEN }} "bencher mock"
+bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN }}" "bencher mock"
 ```
 
 If you want to only show results when [a Threshold is set](https://bencher.dev/docs/explanation/thresholds) use the `--ci-only-thresholds` flag.
 
 ```yaml
-bencher run --project my-project-slug --github-actions ${{ secrets.GITHUB_TOKEN }} --ci-only-thresholds "bencher mock"
+bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN }}" --ci-only-thresholds "bencher mock"
 ```
 
 Or if you only want it to start commenting once there is [an Alert is generated](https://bencher.dev/docs/explanation/thresholds) use the `--ci-only-on-alert` flag.
 
 ```yaml
-bencher run --project my-project-slug --github-actions ${{ secrets.GITHUB_TOKEN }} --ci-only-on-alert "bencher mock"
+bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN }}" --ci-only-on-alert "bencher mock"
 ```
 
 You can also use all three together!
 
 ```yaml
-bencher run --project my-project-slug --github-actions ${{ secrets.GITHUB_TOKEN }} --ci-only-thresholds --ci-only-on-alert "bencher mock"
+bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN }}" --ci-only-thresholds --ci-only-on-alert "bencher mock"
 ```
 
 ### Example PR Comment
