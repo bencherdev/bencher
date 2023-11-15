@@ -1,5 +1,6 @@
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand, ValueEnum};
+use url::Url;
 
 /// Bencher CLI
 #[derive(Parser, Debug)]
@@ -10,7 +11,7 @@ pub struct CliTask {
     pub sub: CliSub,
 }
 
-#[allow(variant_size_differences)]
+#[allow(variant_size_differences, clippy::large_enum_variant)]
 #[derive(Subcommand, Debug)]
 pub enum CliSub {
     /// Generate typeshare
@@ -34,6 +35,8 @@ pub enum CliSub {
     NetlifyTest(CliNetlifyTest),
     /// Generate release notes
     ReleaseNotes(CliReleaseNotes),
+    /// Notify
+    Notify(CliNotify),
 }
 
 #[derive(Parser, Debug)]
@@ -119,4 +122,22 @@ pub struct CliReleaseNotes {
     /// File output path
     #[clap(long)]
     pub path: Option<Utf8PathBuf>,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliNotify {
+    pub message: String,
+
+    #[clap(long)]
+    pub topic: Option<String>,
+    #[clap(long)]
+    pub title: Option<String>,
+    #[clap(long)]
+    pub tag: Option<String>,
+    #[clap(long)]
+    pub priority: Option<u8>,
+    #[clap(long)]
+    pub click: Option<Url>,
+    #[clap(long)]
+    pub attach: Option<Url>,
 }

@@ -14,7 +14,7 @@ import type {
 	JsonMetricKind,
 	JsonProject,
 } from "../../../../types/bencher";
-import { BENCHER_LOGO } from "../../../../util/ext";
+import { BENCHER_WORDMARK } from "../../../../util/ext";
 import { httpGet } from "../../../../util/http";
 
 const BENCHER_METRIC_KIND = "--bencher--metric--kind--";
@@ -49,6 +49,14 @@ export interface Props {
 }
 
 const PlotHeader = (props: Props) => {
+	return (
+		<Show when={props.isEmbed} fallback={<FullPlotHeader {...props} />}>
+			<EmbedPlotHeader {...props} />
+		</Show>
+	);
+};
+
+const FullPlotHeader = (props: Props) => {
 	const metric_kinds_fetcher = createMemo(() => {
 		return {
 			project: props.project_slug(),
@@ -121,15 +129,33 @@ const PlotHeader = (props: Props) => {
 		}
 	};
 
-	const range_icon = createMemo(() => {
-		switch (props.range()) {
-			case PerfRange.DATE_TIME:
-				return <i class="far fa-calendar" aria-hidden="true" />;
-			case PerfRange.VERSION:
-				return <i class="fas fa-code-branch" aria-hidden="true" />;
-		}
-	});
+	return (
+		<nav class="panel-heading columns is-vcentered">
+			<div class="column">
+				<p>Metric Kind</p>
+				<select
+					class="card-header-title level-item"
+					title="Select Metric Kind"
+					onInput={(e) => handleInput(e.currentTarget.value)}
+				>
+					<For each={metric_kinds() ?? []}>
+						{(metric_kind: { name: string; uuid: string }) => (
+							<option
+								value={metric_kind.uuid}
+								selected={metric_kind.uuid === selected()}
+							>
+								{metric_kind.name}
+							</option>
+						)}
+					</For>
+				</select>
+			</div>
+			<SharedPlot {...props} />
+		</nav>
+	);
+};
 
+const EmbedPlotHeader = (props: Props) => {
 	const perfUrl = createMemo(() => {
 		const location = window.location;
 		return `${
@@ -142,52 +168,36 @@ const PlotHeader = (props: Props) => {
 	});
 
 	return (
-		<nav class="panel-heading columns is-vcentered">
-			<div class="column">
-				<Show
-					when={!props.isEmbed}
-					fallback={
-						<div class="columns is-gapless is-vcentered">
-							<div class="column is-narrow has-text-centered">
-								<a href={perfUrl()} target="_blank">
-									<img src={BENCHER_LOGO} width="32" alt="🐰" />
-								</a>
-							</div>
-							<div class="column">
-								<h1 class="title is-3" style="word-break: break-word;">
-									{props.project()?.name}
-								</h1>
-							</div>
-						</div>
-					}
-				>
-					<div class="columns">
-						<div class="column">
-							<p>Metric Kind</p>
-							<div class="columns">
-								<div class="column">
-									<select
-										class="card-header-title level-item"
-										title="Select Metric Kind"
-										onInput={(e) => handleInput(e.currentTarget.value)}
-									>
-										<For each={metric_kinds() ?? []}>
-											{(metric_kind: { name: string; uuid: string }) => (
-												<option
-													value={metric_kind.uuid}
-													selected={metric_kind.uuid === selected()}
-												>
-													{metric_kind.name}
-												</option>
-											)}
-										</For>
-									</select>
-								</div>
-							</div>
-						</div>
-					</div>
-				</Show>
+		<nav class="panel-heading">
+			<div class="columns is-mobile is-centered is-vcentered is-gapless">
+				<div class="column has-text-centered">
+					<a href={perfUrl()} target="_blank">
+						<img src={BENCHER_WORDMARK} width="128em" alt="🐰 Bencher" />
+					</a>
+					<h1 class="title is-3" style="word-break: break-word;">
+						{props.project()?.name}
+					</h1>
+				</div>
 			</div>
+			<div class="columns is-centered is-vcentered">
+				<SharedPlot {...props} />
+			</div>
+		</nav>
+	);
+};
+
+const SharedPlot = (props: Props) => {
+	const range_icon = createMemo(() => {
+		switch (props.range()) {
+			case PerfRange.DATE_TIME:
+				return <i class="far fa-calendar" aria-hidden="true" />;
+			case PerfRange.VERSION:
+				return <i class="fas fa-code-branch" aria-hidden="true" />;
+		}
+	});
+
+	return (
+		<>
 			<Show when={!props.isPlotInit()} fallback={<></>}>
 				<div class="column is-narrow">
 					<div class="level is-mobile" style="margin-bottom: 0;">
@@ -342,7 +352,7 @@ const PlotHeader = (props: Props) => {
 					</button>
 				</div>
 			</Show>
-		</nav>
+		</>
 	);
 };
 

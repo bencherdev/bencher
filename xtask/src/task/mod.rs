@@ -4,6 +4,7 @@ use crate::parser::{CliSub, CliTask};
 
 mod fly_test;
 mod netlify_test;
+mod notify;
 #[cfg(feature = "plus")]
 mod prompt;
 mod release_notes;
@@ -17,6 +18,7 @@ mod typeshare;
 
 use fly_test::FlyTest;
 use netlify_test::NetlifyTest;
+use notify::Notify;
 #[cfg(feature = "plus")]
 use prompt::Prompt;
 use release_notes::ReleaseNotes;
@@ -48,6 +50,7 @@ pub enum Sub {
     FlyTest(FlyTest),
     NetlifyTest(NetlifyTest),
     ReleaseNotes(ReleaseNotes),
+    Notify(Notify),
 }
 
 impl TryFrom<CliTask> for Task {
@@ -77,6 +80,7 @@ impl TryFrom<CliSub> for Sub {
             CliSub::FlyTest(fly_test) => Self::FlyTest(fly_test.try_into()?),
             CliSub::NetlifyTest(netlify_test) => Self::NetlifyTest(netlify_test.try_into()?),
             CliSub::ReleaseNotes(release_notes) => Self::ReleaseNotes(release_notes.try_into()?),
+            CliSub::Notify(notify) => Self::Notify(notify.try_into()?),
         })
     }
 }
@@ -106,6 +110,7 @@ impl Sub {
             Self::FlyTest(fly_test) => fly_test.exec(),
             Self::NetlifyTest(netlify_test) => netlify_test.exec().await,
             Self::ReleaseNotes(release_notes) => release_notes.exec(),
+            Self::Notify(notify) => notify.exec().await,
         }
     }
 }
