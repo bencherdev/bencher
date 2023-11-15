@@ -1,6 +1,11 @@
 import * as Plot from "@observablehq/plot";
 import * as d3 from "d3";
-import { type Accessor, createEffect, createSignal } from "solid-js";
+import {
+	type Accessor,
+	type Resource,
+	createEffect,
+	createSignal,
+} from "solid-js";
 import { PerfRange } from "../../../../config/types";
 import {
 	AlertStatus,
@@ -16,7 +21,7 @@ const WARNING_URL = "https://s3.amazonaws.com/public.bencher.dev/warning.png";
 const SIREN_URL = "https://s3.amazonaws.com/public.bencher.dev/siren.png";
 
 export interface Props {
-	perfData: Accessor<JsonPerf>;
+	perfData: Resource<JsonPerf>;
 	range: Accessor<PerfRange>;
 	lower_value: Accessor<boolean>;
 	upper_value: Accessor<boolean>;
@@ -104,11 +109,12 @@ const LinePlot = (props: Props) => {
 	});
 
 	const plotted = () => {
-		const json_perf: JsonPerf = props.perfData();
+		const json_perf = props.perfData();
 		// console.log(json_perf);
 
 		if (
 			typeof json_perf !== "object" ||
+			json_perf === undefined ||
 			json_perf === null ||
 			!Array.isArray(json_perf.results)
 		) {

@@ -1,4 +1,4 @@
-import { type Accessor, type Resource, Show } from "solid-js";
+import { type Accessor, Match, type Resource, Show, Switch } from "solid-js";
 import { type PerfRange, type PerfTab } from "../../../../config/types";
 import type {
 	JsonAuthUser,
@@ -30,7 +30,7 @@ export interface Props {
 	start_date: Accessor<undefined | string>;
 	end_date: Accessor<undefined | string>;
 	refresh: () => void;
-	perfData: Accessor<JsonPerf>;
+	perfData: Resource<JsonPerf>;
 	tab: Accessor<PerfTab>;
 	key: Accessor<boolean>;
 	range: Accessor<PerfRange>;
@@ -109,8 +109,7 @@ const PerfPlot = (props: Props) => {
 						handleUpperBoundary={props.handleUpperBoundary}
 					/>
 					<div class="panel-block">
-						<Show
-							when={props.isPlotInit()}
+						<Switch
 							fallback={
 								<Plot
 									range={props.range}
@@ -124,14 +123,23 @@ const PerfPlot = (props: Props) => {
 								/>
 							}
 						>
-							<PlotInit
-								metric_kinds={props.metric_kinds}
-								branches={props.branches}
-								testbeds={props.testbeds}
-								benchmarks={props.benchmarks}
-								handleTab={props.handleTab}
-							/>
-						</Show>
+							<Match when={props.isPlotInit()}>
+								<PlotInit
+									metric_kinds={props.metric_kinds}
+									branches={props.branches}
+									testbeds={props.testbeds}
+									benchmarks={props.benchmarks}
+									handleTab={props.handleTab}
+								/>
+							</Match>
+							<Match when={props.perfData.loading}>
+								<progress
+									class="progress is-primary"
+									style="margin-top: 8rem; margin-bottom: 12rem;"
+									max="100"
+								></progress>
+							</Match>
+						</Switch>
 					</div>
 					<Show when={!props.isEmbed}>
 						<PlotTab

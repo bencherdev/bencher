@@ -1,11 +1,11 @@
 import * as d3 from "d3";
-import { Accessor, For, Show } from "solid-js";
+import { type Accessor, For, type Resource, Show } from "solid-js";
 import type { JsonPerf } from "../../../../types/bencher";
 
 export interface Props {
 	key: Accessor<boolean>;
 	handleKey: (key: boolean) => void;
-	perfData: Accessor<JsonPerf>;
+	perfData: Resource<JsonPerf>;
 	perfActive: boolean[];
 	handlePerfActive: (index: number) => void;
 }
@@ -34,7 +34,7 @@ const PlotKey = (props: Props) => {
 };
 
 const ExpandedKey = (props: {
-	perfData: Accessor<JsonPerf>;
+	perfData: Resource<JsonPerf>;
 	handleKey: (key: boolean) => void;
 	perfActive: boolean[];
 	handlePerfActive: (index: number) => void;
@@ -73,7 +73,7 @@ const ExpandedKey = (props: {
 };
 
 const MinimizedKey = (props: {
-	perfData: Accessor<JsonPerf>;
+	perfData: Resource<JsonPerf>;
 	handleKey: (key: boolean) => void;
 	perfActive: boolean[];
 	handlePerfActive: (index: number) => void;

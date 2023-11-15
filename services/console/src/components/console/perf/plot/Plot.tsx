@@ -1,10 +1,15 @@
 import { createElementSize } from "@solid-primitives/resize-observer";
-import { type Accessor, createMemo, createResource } from "solid-js";
+import {
+	type Accessor,
+	type Resource,
+	createMemo,
+	createResource,
+} from "solid-js";
 import { createStore } from "solid-js/store";
+import type { PerfRange } from "../../../../config/types";
+import type { JsonPerf } from "../../../../types/bencher";
 import LinePlot from "./LinePlot";
 import PlotKey from "./PlotKey";
-import type { JsonPerf } from "../../../../types/bencher";
-import type { PerfRange } from "../../../../config/types";
 
 export interface Props {
 	range: Accessor<PerfRange>;
@@ -12,7 +17,7 @@ export interface Props {
 	upper_value: Accessor<boolean>;
 	lower_boundary: Accessor<boolean>;
 	upper_boundary: Accessor<boolean>;
-	perfData: Accessor<JsonPerf>;
+	perfData: Resource<JsonPerf>;
 	key: Accessor<boolean>;
 	handleKey: (key: boolean) => void;
 }
