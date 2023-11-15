@@ -121,7 +121,7 @@ impl Translate {
             println!("  To: {lang_output_path}");
             println!("Lang: {lang} ({iso})", iso = lang.iso_code());
 
-            let system_input = format!("You are a professional translator for software documentation. Translate the Markdown (MDX with frontmatter metadata) text provided by the user from American English to {lang}. Do NOT translate any of the text inside of Markdown or HTML code blocks nor any URL strings. Keep in mind that the audience for the translation is software developers.");
+            let system_input = format!("You are a professional translator for software documentation. Translate the Markdown (MDX with frontmatter metadata) text provided by the user from American English to {lang}. Do NOT translate any of the text inside of Markdown or HTML code blocks nor any URL strings* (* Only modify internal URL strings that fit the pattern `/docs/*`. Modify these URLs to point to the correct {lang} language version of the page. For example, `/docs/explanation` should be changed to `/docs/{iso}/explanation` for {lang}). Keep in mind that the audience for the translation is software developers.", iso = lang.iso_code());
             let client = Client::new();
             // https://platform.openai.com/docs/models/model-endpoint-compatibility
             let request = CreateChatCompletionRequestArgs::default()
