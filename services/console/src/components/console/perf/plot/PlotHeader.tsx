@@ -221,8 +221,6 @@ const PlotHeader = (props: Props) => {
 						</div>
 					</div>
 				</div>
-			</Show>
-			<Show when={!props.isPlotInit()} fallback={<></>}>
 				<div class="column is-narrow">
 					<div class="level is-mobile" style="margin-bottom: 0;">
 						<div class="level-item">
@@ -254,8 +252,6 @@ const PlotHeader = (props: Props) => {
 						</div>
 					</div>
 				</div>
-			</Show>
-			<Show when={!props.isPlotInit()} fallback={<></>}>
 				<div class="column is-narrow">
 					<div class="level is-mobile" style="margin-bottom: 0;">
 						<div class="level-item">
