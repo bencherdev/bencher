@@ -7,9 +7,10 @@ sortOrder: 3
 
 import GitHubActions1 from "../../../chunks/how_to/github-actions.1.mdx";
 import GitHubActions2 from "../../../chunks/how_to/github-actions.2.mdx";
-import GitHubActions2Label from "../../../chunks/how_to/github-actions.2.xlabel.mdx";
 import GitHubActions3 from "../../../chunks/how_to/github-actions.3.mdx";
 import GitHubActions4 from "../../../chunks/how_to/github-actions.4.mdx";
+import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
+import GitHubActions6 from "../../../chunks/how_to/github-actions.6.mdx";
 
 <GitHubActions1 />
 
@@ -47,37 +48,65 @@ Again, this solution only works if all PRs are from the **same** repository.
 
 It can also be nice to limit runs only after a certain label has been added (ex: `benchmark`):
 
-<GitHubActions2Label />
+<GitHubActions3 />
 
 If you plan to accept Pull Requests from forks, as is often the case in public open source projects,
 then you will need to handle things a little differently.
 For security reasons, secrets such as your `BENCHER_API_TOKEN` and the `GITHUB_TOKEN` are not available in GitHub Actions for fork PRs.
 That is if an external contributor opens up a PR from a fork the above example will not work.
-There are two options for fork PRs:
+There are three options for fork PRs:
 
 <ul>
   <li>[Benchmark PR branch from the target branch](#benchmark-pr-branch-from-target-branch)</li>
+  <li>[Benchmark PR branch from the target branch with required reviewers](#benchmark-pr-branch-from-target-branch-with-required-reviewers)</li>
   <li>[Cache PR branch benchmark results and upload from default branch](#cache-pr-benchmark-results)</li>
 </ul>
 
 ### Benchmark PR Branch from Target Branch
 
+<GitHubActions4 />
+
 1. Trigger [on the `pull_request_target` event](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target).
-2. Checkout the PR branch.
-3. Run and track your PR benchmarks using `bencher run` directly.
+1. Checkout the PR branch.
+1. Run and track your PR benchmarks using `bencher run` directly.
 
 This works because `pull_request_target` runs in the context of the pull request's target branch,
 where secrets such as your `BENCHER_API_TOKEN` and the `GITHUB_TOKEN` are available.
 Therefore, this workflow will only run if it exists on the target branch.
 Avoid setting any secrets as environment variables, such as `BENCHER_API_TOKEN`.
-Instead explicitly pass in the API token to `bencher run` using [the GitHub context token](https://docs.github.com/en/actions/learn-github-actions/contexts#github-context) (ex: `--token ${{ secrets.GITHUB_TOKEN }}`).
+Instead explicitly pass in the API token to `bencher run` (ex: `--token ${{ secrets.BENCHER_API_TOKEN }}`).
 See this [GitHub Security Lab write up](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
 and [this blog post](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
 on preventing pwn requests for a full overview.
 
-<GitHubActions3 />
+### Benchmark PR Branch from Target Branch with Required Reviewers
+
+<GitHubActions5 />
+
+1. Trigger [on the `pull_request_target` event](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target).
+1. If the PR is `internal` then continue on; if the PR is `external` wait for a required review.
+1. Checkout the PR branch.
+1. Run and track your PR benchmarks using `bencher run` directly.
+
+This option is exactly the same as [the previous option](#benchmark-pr-branch-from-target-branch)
+except it `needs` approval from a Required Reviewer before each run.
+In order to set this up, you need to [create two GitHub Action Environments](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment#using-an-environment)
+(ex: `Repo -> Settings -> Environments -> New environment`).
+The `internal` environment requires no `Deployment protection rules`.
+However, the `external` environment should have `Required reviewers` set to those trusted to review a PR before benchmarking.
+
+Note that this is different than the tag option listed above for internal PRs.
+The tag based solution will run _any_ future job after being tagged.
+This can be useful if you only want to benchmark certain PRs.
+However, tags should not be seen as a security measure as is.
+
+The tag based approval can be limited to a single run by restricting the `on: pull_request_target` to `types: [labeled]`.
+You would then have to remove and retag the PR for each subsequent approval.
+At that point you're just recreating the `Deployment protection rules` above and cluttering up your PR history.
 
 ### Cache PR Benchmark Results
+
+<GitHubActions6 />
 
 1. Run your PR benchmarks on `pull_request` events.
 1. Save the PR benchmarks results to a file and upload them as an artifact.
@@ -91,8 +120,6 @@ where secrets such as your `BENCHER_API_TOKEN` and the `GITHUB_TOKEN` are availa
 Therefore, these workflows will only run if they exist on the default branch.
 See [using data from the triggering workflow](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow) for a full overview.
 The pull request number, head branch, and base branch used in the initial workflow must be explicitly passed in since they are not available within `workflow_run`.
-
-<GitHubActions4 />
 
 <br/>
 <br/>

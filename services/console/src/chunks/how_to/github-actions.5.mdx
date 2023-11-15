@@ -2,7 +2,17 @@
 on: pull_request_target
 
 jobs:
+  requires_review:
+    environment:
+      ${{ (github.event_name == 'pull_request_target' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      'internal') || 'external' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: true
+
   benchmark_with_bencher:
+    needs: requires_review
     name: Track benchmarks with Bencher
     runs-on: ubuntu-latest
     env:

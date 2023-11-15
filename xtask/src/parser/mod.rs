@@ -62,7 +62,7 @@ pub struct CliPrompt {
 #[cfg(feature = "plus")]
 #[derive(Parser, Debug)]
 pub struct CliTranslate {
-    /// File input path
+    /// File input path (relative to `services/console/src/`)
     pub input_path: Utf8PathBuf,
 
     // Target language

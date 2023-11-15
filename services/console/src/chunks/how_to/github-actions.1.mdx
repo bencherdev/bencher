@@ -1,4 +1,4 @@
-```
+```yaml
 on:
   push:
     branches: main
@@ -17,11 +17,11 @@ jobs:
       - uses: bencherdev/bencher@main
       - name: Benchmark with Bencher
         run: |
-          bencher run \\
-          --if-branch "$GITHUB_REF_NAME" \\
-          --else-if-branch "$GITHUB_BASE_REF" \\
-          --else-if-branch main \\
-          --err \\
-          --github-actions "${{ secrets.GITHUB_TOKEN }}" \\
+          bencher run \
+          --if-branch "$GITHUB_REF_NAME" \
+          --else-if-branch "$GITHUB_BASE_REF" \
+          --else-if-branch main \
+          --err \
+          --github-actions ${{ secrets.GITHUB_TOKEN }}" \
           "bencher mock"
 ```
