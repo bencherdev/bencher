@@ -2,7 +2,7 @@ import {
 	BENCHER_CHAT_URL,
 	BENCHER_GITHUB_URL,
 	BENCHER_LINKEDIN_URL,
-	BENCHER_LOGO_URL,
+	BENCHER_WORDMARK,
 } from "../../util/ext";
 
 const Footer = () => (
@@ -13,7 +13,7 @@ const Footer = () => (
 					<div class="content">
 						<h4 class="title is-4">
 							<a class="navbar-item" title="🐰 Bencher" href="/">
-								<img src={BENCHER_LOGO_URL} width="150" alt="🐰 Bencher" />
+								<img src={BENCHER_WORDMARK} width="150" alt="🐰 Bencher" />
 							</a>
 						</h4>
 						<h5 class="subtitle is-5">Continuous Benchmarking</h5>

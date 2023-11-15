@@ -1,4 +1,4 @@
-import { BENCHER_LOGO_URL, BENCHER_VERSION } from "../../util/ext";
+import { BENCHER_VERSION, BENCHER_WORDMARK } from "../../util/ext";
 import AuthOverride from "../auth/AuthOverride";
 import BENCHER_NAVBAR_ID from "./id";
 
@@ -13,7 +13,7 @@ const AuthNavbar = () => {
 			>
 				<div class="navbar-brand">
 					<a class="navbar-item" title="Console Home" href="/console">
-						<img src={BENCHER_LOGO_URL} width="150" alt="🐰 Bencher" />
+						<img src={BENCHER_WORDMARK} width="150" alt="🐰 Bencher" />
 					</a>
 				</div>
 

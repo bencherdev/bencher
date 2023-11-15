@@ -14,7 +14,8 @@ export const BENCHER_CHAT_URL: string = "https://discord.gg/yGEsdUh7R4";
 export const BENCHER_LINKEDIN_URL: string =
 	"https://www.linkedin.com/company/bencher";
 
-export const BENCHER_LOGO_URL: string = "/wordmark.svg";
+export const BENCHER_LOGO: string = "/favicon.svg";
+export const BENCHER_WORDMARK: string = "/wordmark.svg";
 
 export const BENCHER_VERSION = `${swagger?.info?.version}`;
 

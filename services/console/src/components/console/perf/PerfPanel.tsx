@@ -482,6 +482,9 @@ const PerfPanel = (props: Props) => {
 		if (props.isConsole && typeof fetcher.token !== "string") {
 			return EMPTY_ARRAY;
 		}
+		if (props.isEmbed === true) {
+			return EMPTY_ARRAY;
+		}
 		if (!validU32(fetcher.per_page.toString())) {
 			return EMPTY_ARRAY;
 		}
@@ -771,7 +774,7 @@ const PerfPanel = (props: Props) => {
 
 	return (
 		<>
-			<Show when={props.isEmbed !== true}>
+			<Show when={!props.isEmbed}>
 				<PerfHeader
 					apiUrl={props.apiUrl}
 					isConsole={props.isConsole === true}

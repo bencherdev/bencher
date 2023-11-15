@@ -133,7 +133,7 @@ const PerfPlot = (props: Props) => {
 							/>
 						</Show>
 					</div>
-					<Show when={props.isEmbed !== true}>
+					<Show when={!props.isEmbed}>
 						<PlotTab
 							project_slug={props.project_slug}
 							isConsole={props.isConsole}

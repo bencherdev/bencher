@@ -14,6 +14,7 @@ import type {
 	JsonMetricKind,
 	JsonProject,
 } from "../../../../types/bencher";
+import { BENCHER_LOGO } from "../../../../util/ext";
 import { httpGet } from "../../../../util/http";
 
 const BENCHER_METRIC_KIND = "--bencher--metric--kind--";
@@ -129,16 +130,40 @@ const PlotHeader = (props: Props) => {
 		}
 	});
 
+	const perfUrl = createMemo(() => {
+		const location = window.location;
+		return `${
+			location.protocol
+		}//${
+			location.hostname
+		}${
+			location.port ? `:${location.port}` : ""
+		}/perf/${props.project()?.slug}/${location.search}`;
+	});
+
 	return (
 		<nav class="panel-heading level">
 			<div class="level-left">
 				<div class="level-item">
-					<div class="columns">
-						<div class="column">
-							<Show
-								when={!props.isEmbed}
-								fallback={<h1 class="title is-3">{props.project()?.name}</h1>}
-							>
+					<Show
+						when={!props.isEmbed}
+						fallback={
+							<div class="columns is-vcentered">
+								<div class="column is-narrow has-text-centered">
+									<a href={perfUrl()} target="_blank">
+										<img src={BENCHER_LOGO} width="32" alt="🐰" />
+									</a>
+								</div>
+								<div class="column is-11">
+									<h1 class="title is-3" style="word-break: break-word;">
+										{props.project()?.name}
+									</h1>
+								</div>
+							</div>
+						}
+					>
+						<div class="columns">
+							<div class="column">
 								<p>Metric Kind</p>
 								<div class="columns">
 									<div class="column">
@@ -160,9 +185,9 @@ const PlotHeader = (props: Props) => {
 										</select>
 									</div>
 								</div>
-							</Show>
+							</div>
 						</div>
-					</div>
+					</Show>
 				</div>
 			</div>
 			<div class="level-right">
