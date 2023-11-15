@@ -148,7 +148,7 @@ const PlotHeader = (props: Props) => {
 					<Show
 						when={!props.isEmbed}
 						fallback={
-							<div class="columns is-vcentered">
+							<div class="columns is-gapless is-vcentered">
 								<div class="column is-narrow has-text-centered">
 									<a href={perfUrl()} target="_blank">
 										<img src={BENCHER_LOGO} width="32" alt="🐰" />
