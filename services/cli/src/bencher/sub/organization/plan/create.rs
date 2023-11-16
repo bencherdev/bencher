@@ -20,6 +20,7 @@ pub struct Create {
     pub level: PlanLevel,
     pub entitlements: Option<Entitlements>,
     pub organization: Option<OrganizationUuid>,
+    pub i_agree: bool,
     pub backend: Backend,
 }
 
@@ -34,6 +35,7 @@ impl TryFrom<CliPlanCreate> for Create {
             level,
             entitlements,
             organization,
+            i_agree,
             backend,
         } = create;
         Ok(Self {
@@ -43,6 +45,7 @@ impl TryFrom<CliPlanCreate> for Create {
             level: level.into(),
             entitlements: entitlements.map(Into::into),
             organization: organization.map(Into::into),
+            i_agree,
             backend: backend.try_into()?,
         })
     }
@@ -94,6 +97,7 @@ impl From<Create> for JsonNewPlan {
             level,
             entitlements,
             organization,
+            i_agree,
             ..
         } = create;
         #[allow(clippy::inconsistent_struct_constructor)]
@@ -103,6 +107,7 @@ impl From<Create> for JsonNewPlan {
             level,
             entitlements,
             organization,
+            i_agree,
         }
     }
 }

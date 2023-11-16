@@ -6969,6 +6969,10 @@
               }
             ]
           },
+          "i_agree": {
+            "description": "I agree to the Bencher Subscription Agreement (https://bencher.dev/legal/subscription)",
+            "type": "boolean"
+          },
           "level": {
             "$ref": "#/components/schemas/PlanLevel"
           },
@@ -6984,6 +6988,7 @@
         "required": [
           "card",
           "customer",
+          "i_agree",
           "level"
         ]
       },

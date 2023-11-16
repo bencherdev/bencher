@@ -1,12 +1,6 @@
 import type { Params } from "astro";
 import type { InitOutput } from "bencher_valid";
-import {
-	type Accessor,
-	type Resource,
-	Show,
-	createEffect,
-	createSignal,
-} from "solid-js";
+import { type Accessor, type Resource, Show, createSignal } from "solid-js";
 import { createStore } from "solid-js/store";
 import type {
 	JsonAuthUser,
@@ -111,6 +105,7 @@ const PaymentCard = (props: Props) => {
 			level: props.plan(),
 			entitlements: props.entitlements(),
 			organization: props.organizationUuid(),
+			i_agree: form?.consent?.value,
 		};
 
 		setSubmitting(true);

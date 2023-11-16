@@ -215,6 +215,8 @@ export interface JsonNewPlan {
 	level: PlanLevel;
 	entitlements?: Entitlements;
 	organization?: Uuid;
+	/** I agree to the Bencher Subscription Agreement (https://bencher.dev/legal/subscription) */
+	i_agree: boolean;
 }
 
 export enum CardBrand {

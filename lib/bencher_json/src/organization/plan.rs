@@ -21,6 +21,8 @@ pub struct JsonNewPlan {
     pub level: PlanLevel,
     pub entitlements: Option<Entitlements>,
     pub organization: Option<OrganizationUuid>,
+    /// I agree to the Bencher Subscription Agreement (https://bencher.dev/legal/subscription)
+    pub i_agree: bool,
 }
 
 #[typeshare::typeshare]

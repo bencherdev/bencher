@@ -44,6 +44,10 @@ pub struct CliPlanCreate {
     #[clap(long, requires = "entitlements")]
     pub organization: Option<OrganizationUuid>,
 
+    /// I agree to the Bencher Subscription Agreement (https://bencher.dev/legal/subscription)
+    #[clap(long, required = true)]
+    pub i_agree: bool,
+
     #[clap(flatten)]
     pub backend: CliBackend,
 }

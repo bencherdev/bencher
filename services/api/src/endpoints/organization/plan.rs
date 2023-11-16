@@ -133,6 +133,11 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonPlan, HttpError> {
     let biller = context.biller()?;
+    if !json_plan.i_agree {
+        return Err(forbidden_error(
+            "You must agree to the Bencher Subscription Agreement (https://bencher.dev/legal/subscription)",
+        ));
+    }
     let conn = &mut *context.conn().await;
 
     // Get the organization
