@@ -284,6 +284,7 @@ const LinePlot = (props: Props) => {
 								x: {
 									grid: true,
 									label: `${x_axis_label} ➡`,
+									labelOffset: 36,
 								},
 								y: {
 									grid: true,

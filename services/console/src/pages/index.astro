@@ -65,9 +65,8 @@ import { BENCHER_DESCRIPTION, BENCHER_TITLE } from "../util/resource";
               <iframe
                 title="Bencher Continuous Benchmarking Example"
                 width="100%"
-                height="680px"
-                frameBorder="0"
-                src="https://bencher.dev/perf/bencher/embed?reports_per_page=4&reports_page=2&branches_per_page=8&branches_page=5&testbeds_per_page=8&testbeds_page=1&benchmarks_per_page=8&benchmarks_page=1&clear=true&metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=branches&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=5655ed2a-3e45-4622-bdbd-39cdd9837af8&start_time=1696118400000&end_time=1697587200000&upper_boundary=true&upper_value=false&range=date_time&key=true&branches=e3c7c569-0c01-4d06-b96c-8166a0b02b07%2C619d15ed-0fbd-4ccb-86cb-fddf3124da29">
+                height="780px"
+                src="https://bencher.dev/perf/game/embed?reports_per_page=4&reports_page=1&branches_per_page=8&branches_page=1&testbeds_per_page=8&testbeds_page=1&benchmarks_per_page=8&benchmarks_page=1&clear=true&tab=benchmarks&metric_kinds=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=077449e5-5b45-4c00-bdfb-3a277413180d&upper_boundary=true&start_time=1697414400000">
               </iframe>
             </div>
           </div>
@@ -128,6 +127,91 @@ import { BENCHER_DESCRIPTION, BENCHER_TITLE } from "../util/resource";
   </div>
 
   <Toolbox />
+
+  <section class="section" style="margin-top: 8rem;">
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column">
+          <h2 class="title is-2">Catch Performance Regressions in CI</h2>
+        </div>
+      </div>
+      <div class="columns is-centered">
+        <div class="column">
+          <div class="content">
+            <p>
+              Catch performance regressions in CI and leave results as a comment on the pull requests.
+              Fail the build! Keep your codebase fast and your users happy.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="columns is-centered">
+        <div class="column">
+          <div class="box" style="border: 1rem solid #ed6704;">
+            <h1 class="title"><a href="https://bencher.dev/"><img src="https://s3.amazonaws.com/public.bencher.dev/bencher_rabbit.svg" width="32" height="32" alt="🐰" /></a>Bencher</h1>
+            <table>
+                <tr>
+                    <td>Report</td>
+                    <td><a href="https://bencher.dev/console/projects/bencher/reports/738fbe06-8b2c-4c94-b8f3-1f0b88472fca">Wed, August 2, 2023 at 16:07:31 UTC</a></td>
+                </tr>
+                <tr>
+                    <td>Project</td>
+                    <td><a href="https://bencher.dev/console/projects/bencher">Bencher</a></td>
+                </tr>
+                <tr>
+                    <td>Branch</td>
+                    <td><a href="https://bencher.dev/console/projects/bencher/branches/162-merge">162/merge</a></td>
+                </tr>
+                <tr>
+                    <td>Testbed</td>
+                    <td><a href="https://bencher.dev/console/projects/bencher/testbeds/ubuntu-latest">ubuntu-latest</a></td>
+                </tr>
+            </table>
+            <br />
+            <table>
+                <tr>
+                    <th>Benchmark</th>
+                    <th><a href="https://bencher.dev/console/projects/bencher/metric-kinds/latency">Latency</a></th>
+                </tr>
+                <tr>
+                    <td><a href="https://bencher.dev/console/projects/bencher/benchmarks/e93b3d71-8499-4fae-bb7c-4e540b775714">JsonAdapter::Json</a></td>
+                    <td>🚨 (<a href="https://bencher.dev/console/projects/bencher/perf?metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&branches=a90d5b4f-047e-4dbe-8bce-1516a30df049&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=e93b3d71-8499-4fae-bb7c-4e540b775714&upper_boundary=true">view plot</a> | <a href="https://bencher.dev/console/projects/bencher/alerts/90f565dd-202c-4a82-b852-aaa8f3e98da4">view alert</a>)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://bencher.dev/console/projects/bencher/benchmarks/3bfd5887-83ec-4e62-8690-02855a38fbc9">JsonAdapter::Magic (JSON)</a></td>
+                    <td>✅ (<a href="https://bencher.dev/console/projects/bencher/perf?metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&branches=a90d5b4f-047e-4dbe-8bce-1516a30df049&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3bfd5887-83ec-4e62-8690-02855a38fbc9&upper_boundary=true">view plot</a>)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://bencher.dev/console/projects/bencher/benchmarks/3525f177-fc8f-4a92-bd2f-dda7c4e15699">JsonAdapter::Magic (Rust)</a></td>
+                    <td>✅ (<a href="https://bencher.dev/console/projects/bencher/perf?metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&branches=a90d5b4f-047e-4dbe-8bce-1516a30df049&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699&upper_boundary=true">view plot</a>)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://bencher.dev/console/projects/bencher/benchmarks/5655ed2a-3e45-4622-bdbd-39cdd9837af8">JsonAdapter::Rust</a></td>
+                    <td>✅ (<a href="https://bencher.dev/console/projects/bencher/perf?metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&branches=a90d5b4f-047e-4dbe-8bce-1516a30df049&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=5655ed2a-3e45-4622-bdbd-39cdd9837af8&upper_boundary=true">view plot</a>)</td>
+                </tr>
+                <tr>
+                    <td><a href="https://bencher.dev/console/projects/bencher/benchmarks/1db23e93-f909-40aa-bf42-838cc7ae05f5">JsonAdapter::RustBench</a></td>
+                    <td>🚨 (<a href="https://bencher.dev/console/projects/bencher/perf?metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&branches=a90d5b4f-047e-4dbe-8bce-1516a30df049&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5&upper_boundary=true">view plot</a> | <a href="https://bencher.dev/console/projects/bencher/alerts/f84550f3-972d-4f84-b204-3a9c292d46a2">view alert</a>)</td>
+                </tr>
+            </table>
+            <br />
+            <small>
+              <a href="https://bencher.dev">Bencher - Continuous Benchmarking</a>
+            </small>
+            <br />
+            <small>
+              <a href="https://bencher.dev/perf/bencher">View Public Perf Page</a>
+            </small>
+            <br />
+            <small>
+              <a href="https://bencher.dev/docs">Docs</a> | <a href="https://bencher.dev/repo">Repo</a> | <a href="https://bencher.dev/chat">Chat</a> | <a href="https://bencher.dev/help">Help</a>
+            </small>
+            <div id="bencher.dev/projects/6bd4b7f2-d850-4028-8d1b-edd18a9cae1d/testbeds/0d991aac-b241-493a-8b0f-8d41419455d2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <section class="section" style="margin-top: 8rem">
     <div class="container">
@@ -222,7 +306,7 @@ import { BENCHER_DESCRIPTION, BENCHER_TITLE } from "../util/resource";
               href="/perf/bencher?key=true&metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674950400000"
             >
               <Image
-                style="border: 0.2em solid #ed6704;"
+                style="border: 1rem solid #ed6704;"
                 src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1674950400000&title=Benchmark+Adapter+Comparison"
                 title="Benchmark Adapter Comparison"
                 alt="Benchmark Adapter Comparison for Bencher - Bencher"
