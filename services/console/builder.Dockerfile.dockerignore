@@ -1,0 +1,16 @@
+# Ignore all
+*
+
+# Except
+!.cargo/
+!lib/bencher_valid/
+!Cargo.toml
+!Cargo.lock
+!services/console/package-lock.json
+!services/console/package.json
+!services/console/public
+!services/console/src
+!services/console/astro.config.mjs
+!services/console/site.js
+!services/console/tsconfig.json
+!services/console/.env.runtime

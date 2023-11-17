@@ -1,4 +1,4 @@
-import swagger from "../content/api/swagger.json";
+import swagger from "../../../../lib/bencher_valid/swagger.json";
 import { apiHost } from "./http";
 
 export const BENCHER_SITE_URL = "https://bencher.dev";

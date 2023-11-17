@@ -2,7 +2,7 @@ use std::process::Command;
 
 use crate::parser::CliSwagger;
 
-const SWAGGER_PATH: &str = "./services/console/src/content/api/swagger.json";
+const SWAGGER_PATH: &str = "./lib/bencher_valid/swagger.json";
 
 #[derive(Debug)]
 pub struct Swagger {}

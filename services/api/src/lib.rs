@@ -17,8 +17,8 @@ pub const API_VERSION: &str = env!("CARGO_PKG_VERSION");
 // So if the `SWAGGER_PATH` below is ever updated
 // also update `./git/hooks/pre-push` accordingly.
 #[cfg(feature = "swagger")]
-pub const SWAGGER_PATH: &str = "../console/src/content/api/swagger.json";
-pub const SWAGGER_SPEC_STR: &str = include_str!("../../console/src/content/api/swagger.json");
+pub const SWAGGER_PATH: &str = "../../lib/bencher_valid/swagger.json";
+pub const SWAGGER_SPEC_STR: &str = include_str!("../../../lib/bencher_valid/swagger.json");
 #[allow(clippy::expect_used)]
 pub static SWAGGER_SPEC: Lazy<JsonSpec> = Lazy::new(|| {
     JsonSpec(

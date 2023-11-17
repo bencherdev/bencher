@@ -8,9 +8,6 @@ ARG MOLD_VERSION
 RUN curl -L --retry 10 --silent --show-error https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-$(uname -m)-linux.tar.gz | tar -C /usr/local --strip-components=1 -xzf -
 RUN "$(realpath /usr/bin/ld)" != /usr/local/bin/mold && sudo ln -sf /usr/local/bin/mold "$(realpath /usr/bin/ld)"; true
 
-WORKDIR /usr/src
-COPY Cargo.toml Cargo.toml
-
 WORKDIR /usr/src/.cargo
 COPY .cargo/config.toml config.toml
 
@@ -29,18 +26,17 @@ COPY plus/bencher_billing bencher_billing
 COPY plus/bencher_license bencher_license
 
 WORKDIR /usr/src
+COPY Cargo.toml Cargo.toml
+COPY Cargo.lock Cargo.lock
 RUN cargo init xtask
 
 WORKDIR /usr/src/services
 RUN cargo init cli
 
-WORKDIR /usr/src/services/console/src/content/api
-COPY services/console/src/content/api/swagger.json swagger.json
-
 WORKDIR /usr/src/services/api
+COPY services/api/migrations migrations
 COPY services/api/src src
 COPY services/api/Cargo.toml Cargo.toml
-COPY services/api/migrations migrations
 COPY services/api/diesel.toml diesel.toml
 
 RUN cargo build --release

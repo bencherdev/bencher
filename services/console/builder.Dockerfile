@@ -10,22 +10,31 @@ RUN "$(realpath /usr/bin/ld)" != /usr/local/bin/mold && sudo ln -sf /usr/local/b
 
 RUN curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
-WORKDIR /usr/src
-COPY Cargo.toml Cargo.toml
-RUN cargo init xtask
-
 WORKDIR /usr/src/.cargo
 COPY .cargo/config.toml config.toml
+
+WORKDIR /usr/src/lib
+RUN cargo init --lib bencher_adapter
+RUN cargo init --lib bencher_boundary
+RUN cargo init --lib bencher_json
+RUN cargo init --lib bencher_logger
+RUN cargo init --lib bencher_plot
+RUN cargo init --lib bencher_rbac
+RUN cargo init --lib bencher_token
+COPY lib/bencher_valid bencher_valid
+
+WORKDIR /usr/src/plus
+RUN cargo init --lib bencher_billing
+RUN cargo init --lib bencher_license
 
 WORKDIR /usr/src/services
 RUN cargo init api
 RUN cargo init cli
 
-WORKDIR /usr/src/plus
-RUN cargo init bencher_plus --lib
-
-WORKDIR /usr/src/lib
-COPY lib/bencher_valid bencher_valid
+WORKDIR /usr/src
+COPY Cargo.toml Cargo.toml
+COPY Cargo.lock Cargo.lock
+RUN cargo init xtask
 
 WORKDIR /usr/src/lib/bencher_valid
 RUN wasm-pack build --target web --no-default-features --features plus,wasm

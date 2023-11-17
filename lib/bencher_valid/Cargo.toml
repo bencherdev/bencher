@@ -56,6 +56,10 @@ wasm-bindgen-test = "0.3"
 # https://github.com/rust-lang/cargo/issues/4897
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = true
+# On Apple Silicon, wasm-opt is not available
+# Error: no prebuilt wasm-opt binaries are available for this platform: Unrecognized target!
+# To disable `wasm-opt`, add `wasm-opt = false` to your package metadata in your `Cargo.toml`.
+# wasm-opt = false
 
 [lints]
 workspace = true

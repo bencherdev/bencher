@@ -21,10 +21,10 @@ cd -
 
 git add Cargo.toml
 git add Cargo.lock
+git add ./lib/bencher_valid/swagger.json
 git add ./services/action/dist/index.js
 git add ./services/console/package.json
 git add ./services/console/package-lock.json
-git add ./services/console/src/content/api/swagger.json
 git add ./services/console/src/content/reference/changelog.mdx
 git add ./services/console/src/types/bencher.ts
 

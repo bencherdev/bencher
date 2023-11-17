@@ -2,7 +2,5 @@
 
 KIND=${1:-local}
 
-cd docker
-docker compose -f builder.docker-compose.yml build
-docker compose -f $KIND.docker-compose.yml up --build
-cd -
+docker compose -f docker/builder.docker-compose.yml build
+docker compose -f docker/$KIND.docker-compose.yml up --build
