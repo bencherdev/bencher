@@ -22,7 +22,7 @@ serde_urlencoded.workspace = true
 tokio = { workspace = true, features = ["macros", "rt"] }
 url.workspace = true
 # Crate
-async-openai = { version = "0.15", optional = true }
+async-openai = { version = "0.16", optional = true }
 notify-rust = { version = "4.9", optional = true }
 
 [lints]

@@ -4,7 +4,10 @@
 use std::{fmt, io::Write};
 
 use async_openai::{
-    types::{ChatCompletionRequestMessageArgs, CreateChatCompletionRequestArgs, Role},
+    types::{
+        ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
+        CreateChatCompletionRequestArgs,
+    },
     Client,
 };
 use camino::Utf8PathBuf;
@@ -127,14 +130,14 @@ impl Translate {
             let request = CreateChatCompletionRequestArgs::default()
                 .model(GPT4_MODEL)
                 .messages([
-                    ChatCompletionRequestMessageArgs::default()
-                        .role(Role::System)
-                        .content(&system_input)
-                        .build()?,
-                    ChatCompletionRequestMessageArgs::default()
-                        .role(Role::User)
-                        .content(&input)
-                        .build()?,
+                    ChatCompletionRequestSystemMessageArgs::default()
+                        .content(system_input.as_str())
+                        .build()?
+                        .into(),
+                    ChatCompletionRequestUserMessageArgs::default()
+                        .content(input.as_str())
+                        .build()?
+                        .into(),
                 ])
                 .build()?;
             let response = client.chat().create(request).await?;

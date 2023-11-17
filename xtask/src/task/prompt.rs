@@ -3,7 +3,10 @@
 use std::io::Write;
 
 use async_openai::{
-    types::{ChatCompletionRequestMessageArgs, CreateChatCompletionRequestArgs, Role},
+    types::{
+        ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
+        CreateChatCompletionRequestArgs,
+    },
     Client,
 };
 use chrono::Utc;
@@ -39,14 +42,14 @@ impl Prompt {
         let request = CreateChatCompletionRequestArgs::default()
             .model(GPT4_MODEL)
             .messages([
-                ChatCompletionRequestMessageArgs::default()
-                    .role(Role::System)
+                ChatCompletionRequestSystemMessageArgs::default()
                     .content(system_input)
-                    .build()?,
-                ChatCompletionRequestMessageArgs::default()
-                    .role(Role::User)
-                    .content(&self.prompt)
-                    .build()?,
+                    .build()?
+                    .into(),
+                ChatCompletionRequestUserMessageArgs::default()
+                    .content(self.prompt.as_str())
+                    .build()?
+                    .into(),
             ])
             .build()?;
         let response = client.chat().create(request).await?;
