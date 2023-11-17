@@ -21,3 +21,6 @@ plotters-bitmap = "0.3"
 
 [dev-dependencies]
 serde_json.workspace = true
+
+[lints]
+workspace = true

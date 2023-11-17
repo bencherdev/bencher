@@ -61,6 +61,9 @@ mail-send = "0.4"
 paste = "1.0"
 sentry = { version = "0.31", optional = true }
 
+[lints]
+workspace = true
+
 [[bin]]
 name = "api"
 

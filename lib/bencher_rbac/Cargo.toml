@@ -13,3 +13,6 @@ oso.workspace = true
 literally.workspace = true
 once_cell.workspace = true
 uuid = { workspace = true, features = ["v4"] }
+
+[lints]
+workspace = true

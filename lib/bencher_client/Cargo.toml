@@ -31,3 +31,6 @@ serde_json.workspace = true
 # Crate
 prettyplease = "0.2"
 syn = "2.0"
+
+[lints]
+workspace = true

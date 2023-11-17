@@ -24,3 +24,6 @@ url.workspace = true
 # Crate
 async-openai = { version = "0.15", optional = true }
 notify-rust = { version = "4.9", optional = true }
+
+[lints]
+workspace = true

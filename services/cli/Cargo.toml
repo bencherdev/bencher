@@ -39,6 +39,9 @@ pretty_assertions.workspace = true
 # Crate
 assert_cmd = "2.0"
 
+[lints]
+workspace = true
+
 [[bin]]
 name = "bencher"
 path = "src/main.rs"

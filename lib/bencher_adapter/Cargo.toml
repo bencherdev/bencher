@@ -23,6 +23,9 @@ pretty_assertions.workspace = true
 # Crate
 criterion = "0.5"
 
+[lints]
+workspace = true
+
 [[bench]]
 name = "adapter"
 harness = false

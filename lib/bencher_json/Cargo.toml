@@ -32,3 +32,6 @@ url = { workspace = true, features = ["serde"] }
 uuid = { workspace = true, features = ["v4", "serde"] }
 # Create
 percent-encoding = "2.3"
+
+[lints]
+workspace = true

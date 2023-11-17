@@ -8,3 +8,6 @@ edition.workspace = true
 slog.workspace = true
 # Crate
 slog-term = "2.9"
+
+[lints]
+workspace = true
