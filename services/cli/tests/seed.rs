@@ -43,6 +43,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         &HOST_URL,
         "--name",
         "Eustace Bagge",
+        "--i-agree",
         "eustace.bagge@nowhere.com",
     ]);
     let assert = cmd.assert().success();
@@ -58,6 +59,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         &HOST_URL,
         "--name",
         "Muriel Bagge",
+        "--i-agree",
         "muriel.bagge@nowhere.com",
     ]);
     let assert = cmd.assert().success();
