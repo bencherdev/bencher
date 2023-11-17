@@ -11,7 +11,7 @@ use crate::context::NewUserBody;
 use crate::endpoints::endpoint::CorsResponse;
 use crate::endpoints::endpoint::Post;
 use crate::endpoints::endpoint::{Endpoint, ResponseAccepted};
-use crate::error::{issue_error, resource_conflict_err, resource_not_found_err};
+use crate::error::{forbidden_error, issue_error, resource_conflict_err, resource_not_found_err};
 use crate::model::organization::{
     organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
 };
@@ -56,6 +56,11 @@ async fn post_inner(
     context: &ApiContext,
     mut json_signup: JsonSignup,
 ) -> Result<JsonEmpty, HttpError> {
+    if !json_signup.i_agree {
+        return Err(forbidden_error(
+            "You must agree to the Bencher Terms of Use (https://bencher.dev/legal/terms-of-use), Privacy Policy (https://bencher.dev/legal/privacy), and License Agreement (https://bencher.dev/legal/license)",
+        ));
+    }
     let conn = &mut *context.conn().await;
 
     #[cfg(feature = "plus")]

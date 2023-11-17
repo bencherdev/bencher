@@ -8,12 +8,17 @@ import {
 } from "solid-js";
 
 import { createStore } from "solid-js/store";
-import { JsonLogin, JsonSignup, Jwt, PlanLevel } from "../../types/bencher";
+import {
+	type JsonLogin,
+	type JsonSignup,
+	type Jwt,
+	PlanLevel,
+} from "../../types/bencher";
 import { httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify, pageNotify } from "../../util/notify";
 import { useSearchParams } from "../../util/url";
 import { validJwt, validPlanLevel } from "../../util/valid";
-import Field, { FieldHandler } from "../field/Field";
+import Field, { type FieldHandler } from "../field/Field";
 import FieldKind from "../field/kind";
 import { AUTH_FIELDS, EMAIL_PARAM, INVITE_PARAM, PLAN_PARAM } from "./auth";
 
@@ -73,10 +78,10 @@ const AuthForm = (props: Props) => {
 
 		let authForm: JsonAuthForm;
 		if (props.newUser) {
-			const signup_form = form;
 			const signup: JsonSignup = {
-				name: signup_form.username.value?.trim(),
-				email: signup_form.email.value?.trim(),
+				name: form?.username?.value?.trim(),
+				email: form?.email?.value?.trim(),
+				i_agree: form?.consent?.value,
 			};
 			authForm = signup;
 			if (!plan_level) {

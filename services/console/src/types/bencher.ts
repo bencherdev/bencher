@@ -439,6 +439,8 @@ export interface JsonSignup {
 	email: Email;
 	plan?: PlanLevel;
 	invite?: Jwt;
+	/** I agree to the Bencher Terms of Use (https://bencher.dev/legal/terms-of-use), Privacy Policy (https://bencher.dev/legal/privacy), and License Agreement (https://bencher.dev/legal/license) */
+	i_agree: boolean;
 }
 
 export interface JsonLogin {

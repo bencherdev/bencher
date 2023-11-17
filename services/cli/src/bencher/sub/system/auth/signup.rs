@@ -20,6 +20,7 @@ pub struct Signup {
     #[cfg(feature = "plus")]
     pub plan: Option<PlanLevel>,
     pub invite: Option<Jwt>,
+    pub i_agree: bool,
     pub backend: Backend,
 }
 
@@ -34,6 +35,7 @@ impl TryFrom<CliAuthSignup> for Signup {
             #[cfg(feature = "plus")]
             plan,
             invite,
+            i_agree,
             backend,
         } = signup;
         Ok(Self {
@@ -43,6 +45,7 @@ impl TryFrom<CliAuthSignup> for Signup {
             #[cfg(feature = "plus")]
             plan: plan.map(Into::into),
             invite,
+            i_agree,
             backend: backend.try_into()?,
         })
     }
@@ -57,6 +60,7 @@ impl From<Signup> for JsonSignup {
             #[cfg(feature = "plus")]
             plan,
             invite,
+            i_agree,
             ..
         } = signup;
         Self {
@@ -68,6 +72,7 @@ impl From<Signup> for JsonSignup {
             #[cfg(not(feature = "plus"))]
             plan: None,
             invite: invite.map(Into::into),
+            i_agree,
         }
     }
 }
