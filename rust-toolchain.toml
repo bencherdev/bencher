@@ -1,4 +1,4 @@
 # https://rust-lang.github.io/rustup/overrides.html#the-toolchain-file
 [toolchain]
-channel = "1.73.0"
+channel = "1.74.0"
 profile = "default"
