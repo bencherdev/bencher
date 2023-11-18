@@ -833,7 +833,7 @@ checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 
 [[package]]
 name = "bencher_adapter"
-version = "0.3.16"
+version = "0.3.17"
 dependencies = [
  "bencher_json",
  "criterion",
@@ -850,7 +850,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_api"
-version = "0.3.16"
+version = "0.3.17"
 dependencies = [
  "async-compression",
  "async-trait",
@@ -897,7 +897,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_billing"
-version = "0.3.16"
+version = "0.3.17"
 dependencies = [
  "async-stripe",
  "bencher_json",
@@ -912,7 +912,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_boundary"
-version = "0.3.16"
+version = "0.3.17"
 dependencies = [
  "bencher_json",
  "bencher_logger",
@@ -925,7 +925,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_cli"
-version = "0.3.16"
+version = "0.3.17"
 dependencies = [
  "assert_cmd",
  "async-trait",
@@ -952,7 +952,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_client"
-version = "0.3.16"
+version = "0.3.17"
 dependencies = [
  "bencher_json",
  "chrono",
@@ -971,7 +971,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_json"
-version = "0.3.16"
+version = "0.3.17"
 dependencies = [
  "bencher_valid",
  "chrono",
@@ -994,7 +994,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_license"
-version = "0.3.16"
+version = "0.3.17"
 dependencies = [
  "bencher_json",
  "chrono",
@@ -1008,7 +1008,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_logger"
-version = "0.3.16"
+version = "0.3.17"
 dependencies = [
  "slog",
  "slog-term",
@@ -1016,7 +1016,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_plot"
-version = "0.3.16"
+version = "0.3.17"
 dependencies = [
  "bencher_json",
  "chrono",
@@ -1031,7 +1031,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_rbac"
-version = "0.3.16"
+version = "0.3.17"
 dependencies = [
  "bencher_json",
  "literally",
@@ -1042,7 +1042,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_token"
-version = "0.3.16"
+version = "0.3.17"
 dependencies = [
  "bencher_json",
  "chrono",
@@ -1055,7 +1055,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_valid"
-version = "0.3.16"
+version = "0.3.17"
 dependencies = [
  "base64 0.21.5",
  "chrono",
@@ -6835,7 +6835,7 @@ checksum = "66fee0b777b0f5ac1c69bb06d361268faafa61cd4682ae064a171c16c433e9e4"
 
 [[package]]
 name = "xtask"
-version = "0.3.16"
+version = "0.3.17"
 dependencies = [
  "anyhow",
  "async-openai",
