@@ -51,7 +51,7 @@ url.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }
 # Crate
 async-compression = { version = "0.4", features = ["tokio", "gzip"] }
-aws-credential-types = "0.57"
+aws-credential-types = "1.0"
 aws-sdk-s3 = "0.35"
 css-inline = "0.11"
 diesel_migrations = "2.1"
