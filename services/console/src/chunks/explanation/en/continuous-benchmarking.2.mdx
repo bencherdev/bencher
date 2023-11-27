@@ -52,6 +52,29 @@ performance tests should be run in CB for each code change.
 >
 > — [Thoughworks Technology Radar, 22 May 2013](https://www.thoughtworks.com/en-us/radar/techniques/performance-testing-as-a-first-class-citizen)
 
+
+## Continuous Benchmarking vs Continuous Load Testing
+
+In order to understand the difference between Continuous Benchmarking and Continuous Load Testing,
+you need to understand the difference between
+[benchmarking](https://en.wikipedia.org/wiki/Benchmark_(computing)) and
+[load testing](https://en.wikipedia.org/wiki/Software_load_testing).
+
+|  Test Kind   |     Test Scope     | Test Users |
+| :----------: | :----------------: | :--------: |
+| Benchmarking | Function - Service | One - Many |
+| Load Testing |      Service       |    Many    |
+
+Benchmarking can test the performance of software from the function level (micro-benchmarks) all the way up to the service level (macro-benchmarks).
+Benchmarks are great for testing the performance of a particular part of your code in an isolated manner.
+Load testing only tests the performance of software at the service level and mocks multiple concurrent users.
+Load tests are great for testing the performance of the entire service under a specific load.
+
+🍦 Imagine we wanted to track the performance of an ice-cream truck.
+Benchmarking could be used to measure how long it takes to scoop an ice-cream cone (micro-benchmark), and
+benchmarking could also be used to measure how long it takes a single customer to order, get their ice-cream, and pay (macro-benchmark).
+Load testing could be used to see how well the ice-cream truck serves 100 customer on a hot summer day.
+
 <br/>
 <br/>
 

@@ -1,58 +1,80 @@
 ## Kontinuierliches Benchmarking vs. Lokaler Benchmark-Vergleich
 
-Es gibt mehrere Benchmark-Geschirre, die es Ihnen erlauben, Ergebnisse lokal zu vergleichen.
-Ein lokaler Vergleich ist hervorragend für schnelles Iterieren bei der Leistungsoptimierung.
-Allerdings sollte man sich nicht darauf verlassen, um Leistungseinbußen kontinuierlich aufzudecken.
-Genau wie die Möglichkeit, Unit-Tests lokal ausführen zu können, den Bedarf an CI nicht überflüssig macht,
-macht die Möglichkeit, Benchmarks lokal ausführen und vergleichen zu können, den Bedarf an CB nicht überflüssig.
+Es gibt mehrere Benchmark-Harnische, mit denen Sie Ergebnisse lokal vergleichen können.
+Lokaler Vergleich ist ideal für schnelle Iterationen bei der Leistungsoptimierung.
+Er sollte jedoch nicht als ständige Kontrolle zur Erkennung von Leistungsregressionen verlassen werden.
+Genau so wie die Möglichkeit, Unit-Tests lokal zu laufen, die Notwendigkeit für CI nicht überflüssig macht,
+macht die Möglichkeit, Benchmarks lokal zu laufen und zu vergleichen, die Notwendigkeit für CB nicht überflüssig.
 
-Es gibt einige Funktionen, die Bencher bietet, die lokale Benchmark-Vergleichswerkzeuge nicht bieten können:
+Es gibt mehrere Funktionen, die Bencher bietet, die lokale Benchmark-Vergleichstools nicht können:
 - Vergleich desselben Benchmarks zwischen verschiedenen Testumgebungen
-- Vergleich von Benchmarks über Sprachen und Geschirre hinweg
+- Vergleich von Benchmarks über Sprachen und Harnische hinweg
 - Zusammenarbeit und Teilen von Benchmark-Ergebnissen
-- Durchführung von Benchmarks auf speziellen Testumgebungen zur Minimierung von Störgeräuschen
+- Ausführen von Benchmarks auf dedizierten Testbetten zur Minimierung von Störungen
 - Kein weiteres Kopieren und Einfügen
 
 ## Kontinuierliches Benchmarking vs. Anwendungsleistungsmanagement (APM)
 
-Anwendungsleistungsmanagement (APM) ist ein unverzichtbares Tool für moderne Software-Dienste.
+Das Anwendungsleistungsmanagement (APM) ist ein wichtiges Werkzeug für moderne Software-Dienstleistungen.
 Allerdings ist APM dafür ausgelegt, in der Produktion eingesetzt zu werden.
-Bis eine Leistungsregression festgestellt wird, hat sie bereits Auswirkungen auf Ihre Kunden.
+Bis eine Leistungsregression erkannt ist, hat sie bereits Auswirkungen auf Ihre Kunden.
 
-> Die meisten Fehler kosten letztendlich mehr, als es gekostet hätte, sie zu verhindern.
-> Fehler sind teuer, wenn sie auftreten, sowohl die direkten Kosten für die Behebung der Fehler
-> als auch die indirekten Kosten aufgrund von beschädigten Beziehungen, verlorenem Geschäft und verlorener Entwicklungszeit.
+> Die meisten Fehler enden damit, dass sie mehr kosten als ihre Verhinderung gekostet hätte.
+> Fehler sind teuer, wenn sie auftreten, sowohl die direkten Kosten der Fehlerbehebung
+> als auch die indirekten Kosten durch beschädigte Beziehungen, verlorenes Geschäft und verlorene Entwicklungszeit.
 >
 > — Kent Beck, Extreme Programming Explained
 
-Es gibt einige Funktionen, die Bencher bietet, die APM-Tools nicht bieten können:
-- Erkennen und Verhindern von Leistungsregressionen _bevor_ sie in die Produktion gelangen
-- Leistungsänderungen und -auswirkungen inklusive Code-Überprüfung
-- Keine Overhead-Kosten in Produktionsumgebungen
-- Effektiv für On-Prem-Implementierungen
-- Keine Änderungen am Produktions-Quellcode
+Es gibt mehrere Funktionen, die Bencher bietet, die APM-Tools nicht können:
+- Erkennen und Verhindern von Leistungsregressionen _vor_ ihrem Auftreten in der Produktion
+- Leistungsänderungen und -auswirkungen im Code-Review inbegriffen
+- Keine Overheadkosten in Produktionsumgebungen
+- Effektiv für On-Prem-Bereitstellungen
+- Keine Änderungen am Produktionsquellcode
 
-## Kontinuierliches Benchmarking vs. Observability
+## Kontinuierliches Benchmarking vs. Beobachtbarkeit
 
 Eine Rose mit einem anderen Namen würde genauso süß riechen.
 Siehe Kontinuierliches Benchmarking vs. Anwendungsleistungsmanagement oben.
 
 ## Kontinuierliches Benchmarking vs. Kontinuierliche Integration (CI)
 
-Kontinuierliches Benchmarking (CB) ist eine Ergänzung zur Kontinuierlichen Integration (CI).
-Aus denselben Gründen, warum Unit-Tests in CI für jede Code-Änderung ausgeführt werden,
-sollten Leistungstests in CB für jede Code-Änderung ausgeführt werden.
+Kontinuierliches Benchmarking (CB) ergänzt die Kontinuierliche Integration (CI).
+Aus den gleichen Gründen, aus denen Unit-Tests in CI für jede Code-Änderung durchgeführt werden,
+sollten Leistungstests in CB für jede Code-Änderung durchgeführt werden.
 
-> Während Unit- und Abnahmetests weitgehend als Standardentwicklungspraktiken angenommen werden,
-> hat sich dieser Trend nicht in den Bereich des Leistungstests fortgesetzt.
-> Derzeit treiben die gängigen Tools die Tester dazu an, Einweg-Code zu erstellen und eine Klick-und-Skript-Mentalität zu entwickeln.
-> Die Behandlung von Leistungstests als gleichwertige Bürger ermöglicht die Erstellung besserer Tests, die mehr Funktionalitäten abdecken,
+> Während Unit- und Akzeptanztests weitgehend als Standardentwicklungspraktiken anerkannt sind,
+> hat sich dieser Trend nicht in den Bereich der Leistungstests fortgesetzt.
+> Derzeit führt die gängige Tooling-Lösung Tester dazu, Wegwerfcode zu erstellen und eine Klick-und-Skript-Mentalität zu entwickeln.
+> Die Behandlung von Leistungstests als wichtige Komponente ermöglicht die Erstellung besserer Tests, die mehr Funktionalitäten abdecken,
 > was zu besseren Tools zur Erstellung und Durchführung von Leistungstests führt,
-> und damit zu einem Testsuite, der wartbar ist und selbst getestet werden kann.
+> was wiederum zu einem Test-Suite führt, die wartbar ist und selbst getestet werden kann.
 >
-> — [Thoughtworks Technology Radar, 22. Mai 2013](https://www.thoughtworks.com/en-us/radar/techniques/performance-testing-as-a-first-class-citizen)
+> — [Thoughworks Technology Radar, 22. Mai 2013](https://www.thoughtworks.com/en-us/radar/techniques/performance-testing-as-a-first-class-citizen)
+
+## Kontinuierliches Benchmarking vs. Kontinuierliches Lasttesting
+
+Um den Unterschied zwischen Kontinuierlichem Benchmarking und Kontinuierlichem Lasttesting zu verstehen,
+müssen Sie den Unterschied zwischen
+[Benchmarking](https://de.wikipedia.org/wiki/Benchmark_(Computer)) und
+[Lasttesting](https://de.wikipedia.org/wiki/Lasttest_(Computer)) verstehen.
+
+|   Testart    |    Testumfang     | Testbenutzer |
+| :----------: | :---------------: | :----------: |
+| Benchmarking | Funktion - Dienst | Ein - Viele  |
+| Lasttesting  |      Dienst       |    Viele     |
+
+Benchmarking kann die Leistung von Software von der Funktionsebene (Mikro-Benchmarks) bis hin zur Dienstebene (Makro-Benchmarks) testen.
+Benchmarks sind ideal, um die Leistung eines bestimmten Teils Ihres Codes auf isolierte Weise zu testen.
+Lasttests testen nur die Leistung von Software auf der Dienstebene und simulieren mehrere gleichzeitige Benutzer.
+Lasttests sind ideal, um die Leistung des gesamten Dienstes unter einer bestimmten Last zu testen.
+
+🍦 Stellen Sie sich vor, wir wollten die Leistung eines Eiswagen verfolgen.
+Benchmarking könnte verwendet werden, um zu messen, wie lange es dauert, eine Eistüte zu portionieren (Mikro-Benchmark), und
+Benchmarking könnte auch verwendet werden, um zu messen, wie lange es dauert, bis ein einzelner Kunde bestellt, sein Eis erhält und bezahlt (Makro-Benchmark).
+Lasttests könnten verwendet werden, um zu sehen, wie gut der Eiswagen 100 Kunden an einem heißen Sommertag bedient.
 
 <br/>
 <br/>
 
-<h2><a href="/docs/de/tutorial/quick-start">Weitermachen: Schneller Start ➡</a></h2>
+<h2><a href="/docs/de/tutorial/quick-start">Weitermachen: Schnellstart ➡</a></h2>

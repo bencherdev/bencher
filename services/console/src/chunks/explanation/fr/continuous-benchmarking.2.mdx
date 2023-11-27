@@ -1,58 +1,81 @@
-## Benchmarking Continu vs Comparaison de Benchmark Local
+## Le Benchmarking Continu vs Comparaison de Benchmark Locale
 
-Il existe plusieurs harnais de benchmark qui vous permettent de comparer les résultats localement.
-La comparaison locale est idéale pour itérer rapidement lors de l'ajustement des performances.
-Cependant, elle ne devrait pas être utilisée pour détecter les régressions de performance de manière continue.
-Tout comme le fait de pouvoir exécuter des tests unitaires localement ne rend pas inutile le besoin d'une CI,
-pouvoir exécuter et comparer des benchmarks localement ne rend pas inutile le besoin d'un BC.
+Il existe plusieurs bancs d'essai qui vous permettent de comparer les résultats localement.
+La comparaison locale est excellente pour itérer rapidement lors de l'optimisation des performances.
+Cependant, elle ne doit pas être utilisée pour détecter les régressions de performances de manière continue.
+Tout comme le fait de pouvoir exécuter des tests unitaires localement n'élimine pas le besoin d'intégration continue (CI),
+le fait de pouvoir exécuter et comparer des benchmarks localement n'élimine pas le besoin de benchmarking continu (CB).
 
-Il existe plusieurs fonctionnalités que Bencher offre et que les outils de comparaison de benchmark locales ne peuvent pas :
+Bencher offre plusieurs caractéristiques que les outils de comparaison de benchmarking locaux ne peuvent pas offrir :
 - Comparaison du même benchmark entre différents bancs d'essai
-- Comparaison de benchmarks à travers différents langages et harnais
-- Collaboration et partage de résultats de benchmark
-- Exécution de benchmarks sur des bancs d'essai dédiés pour minimiser le bruit
-- Plus de copypasta
+- Comparaison de benchmarks à travers différents langages et bancs d'essai
+- Collaboration et partage des résultats de benchmark
+- Exécution des benchmarks sur des bancs d'essai dédiés pour minimiser le bruit
+- Fini les copier-coller
 
-## Benchmarking Continu vs Gestion de Performance d'Application (APM)
+## Le Benchmarking Continu vs Gestion de Performance des Applications (APM)
 
-La Gestion de Performance d'Application (APM) est un outil vital pour les services logiciels modernes.
-Cependant, l'APM est conçue pour être utilisée en production.
-Lorsqu'une régression de performance est détectée, elle impacte déjà vos clients.
+La Gestion de la Performance des Applications (APM) est un outil essentiel pour les services logiciels modernes.
+Cependant, l'APM est conçu pour être utilisé en production.
+Lorsqu'une régression de performance est détectée, elle a déjà un impact sur vos clients.
 
-> La plupart des défauts finissent par coûter plus cher que ce qu'il en aurait coûté pour les prévenir.
-> Les défauts sont coûteux lorsqu'ils se produisent, à la fois les coûts directs de la correction des défauts
-> et les coûts indirects en raison de relations endommagées, de business perdu et de temps de développement perdu.
+> La plupart des défauts finissent par coûter plus cher que ce qu'il aurait coûté pour les prévenir.
+> Les défauts sont coûteux lorsqu'ils se produisent, à la fois les coûts directs de correction des défauts
+> et les coûts indirects en raison des relations endommagées, des pertes d'affaires et du temps de développement perdu.
 >
 > — Kent Beck, Extreme Programming Explained
 
-Il existe plusieurs fonctionnalités que Bencher offre que les outils APM ne peuvent pas :
-- Détecter et prévenir les régressions de performance _avant_ qu'elles n'atteignent la production
-- Les changements de performance et les impacts inclus dans la revue de code
+Bencher offre plusieurs caractéristiques que les outils APM ne peuvent pas offrir :
+- Détection et prévention des régressions de performance _avant_ qu'elles n'atteignent la production
+- Changements de performances et impacts inclus dans la révision du code
 - Pas de surcharge dans les environnements de production
 - Efficace pour les déploiements sur site
-- Aucune modification du code source de production
+- Pas de modifications du code source de production
 
-## Benchmarking Continu vs Observabilité
+## Le Benchmarking Continu vs Observabilité
 
-Une rose sous un autre nom sentirait aussi doux.
-Voir Benchmarking Continu vs Gestion de Performance d'Application ci-dessus.
+Une rose, quel que soit son nom, sentirait aussi bon.
+Voir Le Benchmarking Continu vs Gestion de Performance des Applications ci-dessus.
 
-## Benchmarking Continu vs Intégration Continue (CI)
+## Le Benchmarking Continu vs Intégration Continue (CI)
 
-Le Benchmarking Continu (BC) est complémentaire à l'Intégration Continue (CI).
-Pour les mêmes raisons que les tests unitaires sont exécutés dans la CI pour chaque changement de code,
-les tests de performance devraient être exécutés dans le BC pour chaque changement de code.
+Le Benchmarking Continu (CB) est complémentaire à l'Intégration Continue (CI).
+Pour les mêmes raisons que les tests unitaires sont exécutés dans CI pour chaque modification de code,
+les tests de performance doivent être exécutés dans CB pour chaque modification de code.
 
-> Alors que les tests unitaires et d'acceptation sont largement acceptés comme des pratiques de développement standard,
+> Alors que les tests unitaires et d'acceptation sont largement acceptés comme pratiques de développement standard,
 > cette tendance ne s'est pas poursuivie dans le domaine des tests de performance.
-> Actuellement, l'outil commun pousse les testeurs à créer du code à jeter et une mentalité de click-and-script.
-> Traiter le test de performance comme un citoyen de première classe permet de créer de meilleurs tests qui couvrent plus de fonctionnalités,
-> conduisant à de meilleurs outils pour créer et exécuter des tests de performance,
-> ce qui donne une suite de tests qui est maintenable et peut elle-même être testée.
+> Actuellement, les outils communs poussent les testeurs à créer du code à jeter et une mentalité de clic-et-script.
+> Traiter les tests de performance en tant que citoyen de première classe permet la création de meilleurs tests qui couvrent plus de fonctionnalités,
+> conduisant à un meilleur outillage pour créer et exécuter des tests de performance,
+> résultant en une suite de tests qui est maintenable et qui peut être testée elle-même.
 >
-> — [Thoughworks Technology Radar, 22 Mai 2013](https://www.thoughtworks.com/en-us/radar/techniques/performance-testing-as-a-first-class-citizen)
+> — [Thoughworks Technology Radar, 22 May 2013](https://www.thoughtworks.com/en-us/radar/techniques/performance-testing-as-a-first-class-citizen)
+
+
+## Le Benchmarking Continu vs Test Continu de Charge
+
+Pour comprendre la différence entre le Benchmarking Continu et le Test Continu de Charge,
+vous devez comprendre la différence entre
+[le benchmarking](https://fr.wikipedia.org/wiki/Test_de_performance) et
+[le test de charge](https://fr.wikipedia.org/wiki/Test_de_performance).
+
+|  Type de Test  |   Portée du Test   | Utilisateurs de Test |
+| :------------: | :----------------: | :------------------: |
+|  Benchmarking  | Fonction - Service |    Un - Plusieurs    |
+| Test de Charge |      Service       |      Plusieurs       |
+
+Le benchmarking peut tester la performance d'un logiciel à partir du niveau fonction (micro-benchmarks) jusqu'au niveau service (macro-benchmarks).
+Les benchmarks sont excellents pour tester la performance d'une partie spécifique de votre code de manière isolée.
+Le test de charge ne teste la performance des logiciels qu'au niveau du service et simule plusieurs utilisateurs concurrents.
+Les tests de charge sont excellents pour tester la performance de l'ensemble du service sous une charge spécifique.
+
+🍦 Imaginez que nous voulions suivre la performance d'un camion de crème glacée.
+Le benchmarking pourrait être utilisé pour mesurer combien de temps il faut pour servir une boule de glace (micro-benchmark), et
+le benchmarking pourrait également être utilisé pour mesurer combien de temps il faut à un seul client pour commander, obtenir sa glace, et payer (macro-benchmark).
+Le test de charge pourrait être utilisé pour voir comment le camion de glace sert 100 clients par une chaude journée d'été.
 
 <br/>
 <br/>
 
-<h2><a href="/docs/fr/tutorial/quick-start">Continuer: Démarrage Rapide ➡</a></h2>
+<h2><a href="/docs/fr/tutorial/quick-start">Continuez: Démarrage Rapide ➡</a></h2>

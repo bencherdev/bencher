@@ -1,56 +1,79 @@
 ## Benchmarking Contínuo vs Comparação Local de Benchmark
 
-Existem vários cabos de ensaio de benchmark que permitem que você compare os resultados localmente.
-A comparação local é ótima para iterações rápidas durante o ajuste de desempenho.
-No entanto, não deve ser confiável para capturar regressões de desempenho de forma contínua.
+Existem vários suportes de benchmark que permitem comparar resultados localmente.
+A comparação local é ótima para iterações rápidas ao ajustar o desempenho.
+No entanto, não se deve confiar nela para detectar regressões de desempenho de forma contínua.
 Assim como ser capaz de executar testes unitários localmente não elimina a necessidade de CI,
-ser capaz de executar e comparar benchmarks localmente não elimina a necessidade do BC.
+ser capaz de executar e comparar benchmarks localmente não elimina a necessidade de CB.
 
 Existem vários recursos que o Bencher oferece que as ferramentas de comparação local de benchmark não podem:
-- Comparação do mesmo benchmark entre diferentes bancadas de teste
-- Comparação de benchmarks entre idiomas e cabos de ensaio
+- Comparação do mesmo benchmark entre diferentes bancos de teste
+- Comparação de benchmarks em diferentes idiomas e suportes
 - Colaboração e compartilhamento de resultados de benchmark
-- Execução de benchmarks em bancadas de teste dedicadas para minimizar o ruído
-- Sem mais copypasta
+- Execução de benchmarks em bancos de teste dedicados para minimizar o ruído
+- Acabou o copypasta
 
-## Benchmarking Contínuo vs Gerenciamento de Desempenho de Aplicativos (APM)
+## Benchmarking Contínuo vs Gestão de Desempenho de Aplicação (APM)
 
-O Gerenciamento de Desempenho de Aplicativos (APM) é uma ferramenta vital para serviços de software modernos.
+A Gestão de Desempenho de Aplicação (APM) é uma ferramenta vital para os serviços de software modernos.
 No entanto, APM é projetado para ser usado em produção.
-Quando uma regressão de desempenho é detectada, ela já está impactando seus clientes.
+Quando uma regressão de desempenho é detectada, ela já está afetando seus clientes.
 
-> A maioria dos defeitos acaba custando mais do que custaria para preveni-los.
-> Os defeitos são caros quando ocorrem, tanto os custos diretos de corrigir os defeitos
-> quanto os custos indiretos por causa de relacionamentos danificados, negócios perdidos e tempo de desenvolvimento perdido.
+> A maioria dos defeitos acaba custando mais do que teria custado para preveni-los.
+> Defeitos são caros quando ocorrem, tanto os custos diretos de corrigir os defeitos
+> quanto os custos indiretos devido a relacionamentos danificados, negócios perdidos e tempo de desenvolvimento perdido.
 >
 > — Kent Beck, Extreme Programming Explained
 
-Existem vários recursos que o Bencher oferece que as ferramentas do APM não podem:
+Existem vários recursos que o Bencher oferece que as ferramentas APM não oferecem:
 - Detectar e prevenir regressões de desempenho _antes_ de chegarem à produção
-- Mudanças de desempenho e impactos incluídos na revisão de código
+- Mudanças de desempenho e impactos incluídos na revisão do código
 - Sem sobrecarga em ambientes de produção
-- Eficaz para implantações locais (on-prem)
-- Sem alterações ao código fonte de produção
+- Eficaz para implementações no local
+- Sem alterações no código-fonte de produção
 
 ## Benchmarking Contínuo vs Observabilidade
 
-Uma rosa com qualquer outro nome cheiraria tão bem.
-Veja o Benchmarking Contínuo vs o Gerenciamento de Desempenho do Aplicativo acima.
+Uma rosa com qualquer outro nome teria o mesmo cheiro doce.
+Veja Benchmarking Contínuo vs Gestão de Desempenho de Aplicação acima.
 
 ## Benchmarking Contínuo vs Integração Contínua (CI)
 
-O Benchmarking Contínuo (BC) é complementar à Integração Contínua (CI).
-Pelos mesmos motivos que os testes unitários são executados no CI para cada mudança de código,
-os testes de desempenho devem ser executados no BC para cada mudança de código.
+Benchmarking Contínuo (CB) é complementar à Integração Contínua (CI).
+Pelos mesmos motivos que os testes unitários são executados no CI para cada modificação no código,
+testes de desempenho deveriam ser executados no CB para cada modificação de código.
 
-> Embora os testes unitários e de aceitação sejam amplamente aceitos como práticas de desenvolvimento padrão,
-> esta tendência não continuou no campo dos testes de desempenho.
-> Atualmente, a ferramenta comum leva os testadores a criar código descartável e uma mentalidade de clicar e roteirizar.
-> Tratar o teste de desempenho como um cidadão de primeira classe permite a criação de testes melhores que cobrem mais funcionalidades,
-> levando a uma melhor ferramenta para criar e executar testes de desempenho,
-> resultando em um conjunto de testes que é mantido e que pode ser testado em si mesmo.
+> Enquanto os testes unitários e de aceitação são amplamente adotados como práticas padrão de desenvolvimento,
+> esta tendência não continuou no domínio dos testes de desempenho.
+> Atualmente, a ferramenta comum leva os testadores a criar códigos descartáveis e uma mentalidade de clique e script.
+> Tratar os testes de desempenho como um cidadão de primeira classe permite a criação de testes melhores que cobrem mais funcionalidades,
+> resultando em melhor ferramental para criar e executar testes de desempenho,
+> resultando em um conjunto de testes que é sustentável e pode ser testado.
 >
 > — [Thoughworks Technology Radar, 22 de maio de 2013](https://www.thoughtworks.com/en-us/radar/techniques/performance-testing-as-a-first-class-citizen)
+
+
+## Benchmarking Contínuo vs Testes de Carga Contínuos
+
+Para entender a diferença entre Benchmarking Contínuo e Testes de Carga Contínuos,
+você precisa entender a diferença entre
+[benchmarking](https://pt.wikipedia.org/wiki/Benchmark_(computa%C3%A7%C3%A3o)) e
+[testes de carga](https://pt.wikipedia.org/wiki/Teste_de_carga).
+
+| Tipo de Teste  | Escopo do Teste  | Usuários do Teste |
+| :------------: | :--------------: | :---------------: |
+|  Benchmarking  | Função - Serviço |    Um - Muitos    |
+| Teste de Carga |     Serviço      |      Muitos       |
+
+Benchmarking pode testar o desempenho do software desde o nível de função (micro-benchmarks) até o nível de serviço (macro-benchmarks).
+Os benchmarks são ótimos para testar o desempenho de uma parte específica do seu código de forma isolada.
+Os testes de carga apenas testam o desempenho do software ao nível de serviço e simulam múltiplos usuários concorrentes.
+Os testes de carga são ótimos para testar o desempenho do serviço inteiro sob uma carga específica.
+
+🍦 Imagine que queremos acompanhar o desempenho de um carrinho de sorvete.
+O benchmarking pode ser usado para medir quanto tempo leva para servir uma casquinha de sorvete (micro-benchmark), e
+o benchmarking também pode ser usado para medir quanto tempo leva para um único cliente pedir, receber seu sorvete e pagar (macro-benchmark).
+Os testes de carga poderiam ser usados para ver como o carrinho de sorvete atende 100 clientes num dia quente de verão.
 
 <br/>
 <br/>
