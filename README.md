@@ -72,6 +72,17 @@ Though Bencher is open source, there is also a hosted version available [Bencher
   - [Roadmap](https://bencher.dev/docs/reference/roadmap)
   - [Changelog](https://bencher.dev/docs/reference/changelog)
 
+🌐 Also available in:
+
+- [简体中文](https://bencher.dev/docs/zh/)
+- [Español](https://bencher.dev/docs/es/)
+- [Português do Brasil](https://bencher.dev/docs/pt/)
+- [Русский](https://bencher.dev/docs/ru/)
+- [日本語](https://bencher.dev/docs/ja/)
+- [Français](https://bencher.dev/docs/fr/)
+- [Deutsch](https://bencher.dev/docs/de/)
+- [한국어](https://bencher.dev/docs/ko/)
+
 ## Supported Benchmark Harnesses
 
 - {...} JSON
