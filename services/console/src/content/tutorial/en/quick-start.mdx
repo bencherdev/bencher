@@ -5,8 +5,262 @@ heading: "Quick Start"
 sortOrder: 1
 ---
 
-import QuickStart1 from "../../../chunks/tutorial/en/quick-start.1.mdx";
-import QuickStart2 from "../../../chunks/tutorial/en/quick-start.2.mdx";
+import QuickStart1 from "../../../chunks/tutorial/quick-start.1.mdx";
+import QuickStart2 from "../../../chunks/tutorial/quick-start.2.mdx";
+import QuickStart3 from "../../../chunks/tutorial/quick-start.3.mdx";
+import QuickStart4 from "../../../chunks/tutorial/quick-start.4.mdx";
+import QuickStart5 from "../../../chunks/tutorial/quick-start.5.mdx";
+import QuickStart6 from "../../../chunks/tutorial/quick-start.6.mdx";
+import QuickStart7 from "../../../chunks/tutorial/quick-start.7.mdx";
+import QuickStart8 from "../../../chunks/tutorial/quick-start.8.mdx";
+import QuickStart9 from "../../../chunks/tutorial/quick-start.9.mdx";
+import QuickStart10 from "../../../chunks/tutorial/quick-start.10.mdx";
+import QuickStart11 from "../../../chunks/tutorial/quick-start.11.mdx";
+
+## What is Bencher?
+
+Bencher is a suite of [continuous benchmarking](/docs/explanation/continuous-benchmarking) tools.
+Have you ever had a performance regression impact your users?
+Bencher could have prevented that from happening.
+Bencher allows you to detect and prevent performance regressions _before_ they make it to production.
+
+- **Run**: Run your benchmarks locally or in CI using your favorite benchmarking tools. The `bencher` CLI simply wraps your existing benchmark harness and stores its results.
+- **Track**: Track the results of your benchmarks over time. Monitor, query, and graph the results using the Bencher web console based on the source branch, testbed, and metric kind.
+- **Catch**: Catch performance regressions in CI. Bencher uses state of the art, customizable analytics to detect performance regressions before they make it to production.
+
+For the same reasons that unit tests are run in CI to prevent feature regressions, benchmarks should be run in CI with Bencher to prevent performance regressions. Performance bugs are bugs!
+
+<br />
+
+## Install `bencher` CLI
+
+In order to install the `bencher` CLI you will need to have `cargo` installed. Check to see if you have `cargo` installed.
+
+Run: `cargo --version`
+
+You should see something like:
 
 <QuickStart1 />
+
+It is okay if your version number is different. It's just important that this command works.
+If not follow the [instructions for installing `cargo` via `rustup`](https://rustup.rs/).
+
+On Linux or macOS, run:
+
 <QuickStart2 />
+
+<br />
+
+With `cargo` installed, we can install the `bencher` CLI.
+
+Run:
+<QuickStart3 />
+
+You should see something like:
+
+<QuickStart4 />
+
+Again, it is okay if your output is different. It's just important that this command works.
+
+<br />
+
+Finally, lets test that we have the `bencher` CLI installed.
+
+Run: `bencher --version`
+
+You should see:
+
+<QuickStart5 />
+
+<br />
+
+## Create a Bencher Cloud Account
+
+Bencher is open source and self-hostable.
+If you are interested in self-hosting, check out the [Bencher Docker tutorial](/docs/tutorial/docker).
+For this tutorial though, we are going to use Bencher Cloud.
+
+
+### <a id="signup-for-bencher-cloud" href="/auth/signup" target="_blank">Signup for Bencher Cloud</a>
+<br />
+
+Once you have created an account, you will need to confirm your email address.
+Check your email for a confirmation link.
+After that, you should be logged in to Bencher Cloud.
+
+<br />
+
+## Create an API Token
+
+In order to use the Bencher API, you will need to create an API token.
+<a href="/console" target="_blank">Navigate to the Bencher Console</a>.
+Hover over your name in top right corner.
+A dropdown menu should appear. Select `Tokens`.
+Once on the API Tokens page, click the `➕ Add` button.
+
+### <a id="add-an-api-token" href="/auth/signup" target="_blank">Add an API Token</a>
+<br />
+
+Once you have created your new API token, you will need to copy it to your clipboard.
+In the terminal you plan to work in, export the API token as an environment variable.
+
+Run: `export BENCHER_API_TOKEN=YOUR_TOKEN`
+
+If you then run: `echo $BENCHER_API_TOKEN`
+
+You should see:
+
+```
+$ echo $BENCHER_API_TOKEN
+YOUR_TOKEN
+```
+
+<br />
+
+> 🐰 Note: If you move to a different terminal, you will need to export the API token again.
+
+<br />
+
+## Create a Project
+
+Now that we have a user account and API token, we can create a Project.
+First, we need to know which organization our new project will belong to.
+
+Run: `bencher org ls`
+
+You should see something like:
+
+<QuickStart6 />
+
+Your output should be slightly different than the above:
+- The `uuid` is pseudorandom
+- The `name` and `slug` will be based on your username
+- The `created` and `modified` timestamps will be from when you just signed up
+
+<br />
+
+We can now create a new Project inside of your Organization.
+Substitute your Organization `slug` for the `--org` argument (ie `YOUR_ORG_SLUG`) in the command below.
+
+Run: `bencher project create --org YOUR_ORG_SLUG --url http://www.savewalterwhite.com "Save Walter White"`
+
+You should see something like:
+
+<QuickStart7 />
+
+Again, your output should be slightly different than the above.
+It's just important that this command works.
+Take note of the Project `slug` field (ie `save-walter-white-12345`).
+
+<br />
+
+## Run a Report
+
+We are finally ready to collect some benchmark metrics!
+For simplicity's sake, we will be using mock data in this tutorial.
+
+Run: `bencher mock`
+
+You should see something like:
+
+<QuickStart8 />
+
+Your output should be slightly different than the above, as the data are pseudorandom.
+It's just important that this command works.
+
+<br />
+
+Now lets run a report using mock benchmark metric data.
+Substitute your Project `slug` for the `--project` argument (ie `YOUR_PROJECT_SLUG`) in the command below.
+
+Run: `bencher run --project YOUR_PROJECT_SLUG "bencher mock"`
+
+You should see something like:
+
+<QuickStart9 />
+
+<br />
+
+You can now view the results from each of the benchmarks in the browser.
+Click or copy and paste the links from `View results`.
+There should only be a single data point for each benchmark, so lets add some more data!
+
+<br />
+
+First, lets set our Project slug as an environment variable, so we don't have to provide it with the `--project` on every single run.
+
+Run: `export BENCHER_PROJECT=save-walter-white-12345`
+
+If you then run: `echo $BENCHER_PROJECT`
+
+You should see:
+
+<QuickStart10 />
+
+<br />
+
+Lets rerun the same command again without `--project` to generate more data.
+
+Run: `bencher run "bencher mock"`
+
+<br />
+
+Now, lets generate more data, but this time we will pipe our results into `bencher run`.
+
+Run: `bencher mock | bencher run`
+
+<br />
+
+Sometimes you may want to save your results to a file and have `bencher run` pick them up.
+
+Run: `bencher run "bencher mock > results.json" --file results.json`
+
+<br />
+
+Likewise, you may have a separate process run your benchmarks and save your results to a file. Then `bencher run` will just pick them up.
+
+Run: `bencher mock > results.json && bencher run --file results.json`
+
+<br />
+
+Finally, lets seed a lot of data using the `bencher run` `--iter` argument.
+
+Run: `bencher run --iter 16 "bencher mock"`
+
+<br />
+
+> 🐰 Tip: Checkout the [`bencher run` CLI Subcommand docs](/docs/explanation/bencher-run) for a full overview of all that `bencher run` can do!
+
+<br />
+
+## Generate an Alert
+
+Now that we have some historical data for our benchmarks, lets generate an Alert!
+Alerts are generated when a benchmark result is determined to be a performance regression.
+So lets simulate a performance regression!
+
+Run: `bencher run "bencher mock --pow 8"`
+
+<br />
+
+There should be a new section at the end of the output called `View alerts`:
+
+<QuickStart11 />
+
+<br />
+
+You can now view the Alerts for each benchmark in the browser.
+Click or copy and paste the links from `View alerts`.
+
+<br />
+
+> 🐰 Tip: Checkout the [Threshold & Alerts docs](/docs/explanation/thresholds) for a full overview of how performance regressions are detected!
+
+<br />
+<br />
+
+> 🐰 Congrats! You caught your first perform regression! 🎉
+
+<br />
+
+<h2><a href="/docs/explanation/benchmarking">Keep Going: Benchmarking Overview ➡</a></h2>

@@ -2,7 +2,7 @@
 import DocsLayout from "../../../../layouts/docs/DocsLayout.astro";
 import AuthOverride from "../../../../components/auth/AuthOverride";
 import AddAnApiToken from "../../../../components/docs/override/AddAnApiToken";
-import { Language } from "../../../../i18n/ui";
+import { Language, signupId, tokenId } from "../../../../i18n/ui";
 import Disclosure from "../../../../components/docs/Disclosure";
 import { Collection } from "../../../../content/config";
 import { getLangPaths } from "../../../../i18n/utils";
@@ -14,27 +14,6 @@ export async function getStaticPaths() {
 }
 // 2. When it's time to render, you can get the entry directly from the prop
 const lang = Astro.params.lang as Language;
-
-const signupId = () => {
-  switch (lang) {
-    case Language.de:
-      return "melden-sie-sich-für-bencher-cloud-an";
-    case Language.es:
-      return "regístrate-en-bencher-cloud";
-    case Language.fr:
-      return "inscrivez-vous-à-bencher-cloud";
-    case Language.ja:
-      return "ベンチャー-クラウド-にサインアップ";
-    case Language.pt:
-      return "inscreva-se-para-o-bencher-cloud";
-    case Language.ru:
-      return "зарегистрируйтесь-в-облаке-bencher";
-    case Language.zh:
-      return "注册bencher-cloud";
-    default:
-      return "";
-  }
-}
 
 const signupText = () => {
   switch (lang) {
@@ -56,26 +35,7 @@ const signupText = () => {
       return "You are signed up for Bencher Cloud";
   }
 }
-const tokenId = () => {
-  switch (lang) {
-    case Language.de:
-      return "fügen-sie-einen-api-token-hinzu";
-    case Language.es:
-      return "añadir-un-token-de-api";
-    case Language.fr:
-      return "ajouter-un-token-api";
-    case Language.ja:
-      return "api-トークンを追加";
-    case Language.pt:
-      return "adicione-um-token-de-api";
-    case Language.ru:
-      return "добавьте-api-токен";
-    case Language.zh:
-      return "添加一个api令牌";
-    default:
-      return "";
-  }
-}
+
 const tokenText = () => {
   switch (lang) {
     case Language.de:
@@ -108,11 +68,11 @@ const { Content } = await page.render();
   lang={lang}
 >
   <Content />
-  <AuthOverride client:only="solid-js" elementId={signupId()}>
-    <h4 id={signupId()}>✅ {signupText}</h4>
+  <AuthOverride client:only="solid-js" elementId={signupId}>
+    <h4 id={signupId}>✅ {signupText}</h4>
   </AuthOverride>
-  <AuthOverride client:only="solid-js" elementId={tokenId()}>
-    <h4 id={tokenId()}>
+  <AuthOverride client:only="solid-js" elementId={tokenId}>
+    <h4 id={tokenId}>
       <AddAnApiToken client:only="solid-js" text={tokenText()} />
     </h4>
   </AuthOverride>

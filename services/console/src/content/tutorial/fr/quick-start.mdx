@@ -1,12 +1,266 @@
 ---
-title: "Démarrage rapide"
-description: "Apprenez à configurer le benchmarking continu avec Bencher Cloud"
-heading: "Démarrage rapide"
+title: "Démarrage Rapide"
+description: "Apprenez comment configurer le benchmarking continu avec Bencher Cloud"
+heading: "Démarrage Rapide"
 sortOrder: 1
 ---
 
-import QuickStart1 from "../../../chunks/tutorial/fr/quick-start.1.mdx";
-import QuickStart2 from "../../../chunks/tutorial/fr/quick-start.2.mdx";
+import QuickStart1 from "../../../chunks/tutorial/quick-start.1.mdx";
+import QuickStart2 from "../../../chunks/tutorial/quick-start.2.mdx";
+import QuickStart3 from "../../../chunks/tutorial/quick-start.3.mdx";
+import QuickStart4 from "../../../chunks/tutorial/quick-start.4.mdx";
+import QuickStart5 from "../../../chunks/tutorial/quick-start.5.mdx";
+import QuickStart6 from "../../../chunks/tutorial/quick-start.6.mdx";
+import QuickStart7 from "../../../chunks/tutorial/quick-start.7.mdx";
+import QuickStart8 from "../../../chunks/tutorial/quick-start.8.mdx";
+import QuickStart9 from "../../../chunks/tutorial/quick-start.9.mdx";
+import QuickStart10 from "../../../chunks/tutorial/quick-start.10.mdx";
+import QuickStart11 from "../../../chunks/tutorial/quick-start.11.mdx";
+
+## Qu'est-ce que Bencher?
+
+Bencher est un ensemble d'outils de [benchmarking continu](/docs/fr/explanation/continuous-benchmarking).
+Avez-vous déjà subi un impact de la régression de performance sur vos utilisateurs?
+Bencher aurait pu empêcher cela.
+Bencher vous permet de détecter et d'éviter les régressions de performance _avant_ qu'elles n'arrivent en production.
+
+- **Exécuter**: Exécutez vos benchmarks localement ou dans CI en utilisant vos outils de benchmarking préférés. Le CLI `bencher` enveloppe simplement votre harnais de benchmarking existant et enregistre ses résultats.
+- **Suivre**: Suivez les résultats de vos benchmarks dans le temps. Surveillez, interrogez et tracez les résultats à l'aide de la console web Bencher selon la branche source, la plate-forme de test, et le type de métrique.
+- **Attraper**: Attrapez les régressions de performance dans CI. Bencher utilise des analyses personnalisables de pointe pour détecter les régressions de performance avant qu'elles n'arrivent en production.
+
+Pour les mêmes raisons que les tests unitaires sont exécutés en CI pour prévenir les régressions de fonctionnalités, les benchmarks devraient être exécutés en CI avec Bencher pour prévenir les régressions de performance. Les bugs de performance sont des bugs!
+
+<br />
+
+## Installez le CLI `bencher`
+
+Pour installer le CLI `bencher`, vous devrez avoir `cargo` installé. Vérifiez si vous avez `cargo` installé.
+
+Exécutez: `cargo --version`
+
+Vous devriez voir quelque chose comme:
 
 <QuickStart1 />
+
+Il est acceptable si votre numéro de version est différent. Il est juste important que cette commande fonctionne.
+Sinon suivez les [instructions pour installer `cargo` via `rustup`](https://rustup.rs/).
+
+Sur Linux ou macOS, exécutez:
+
 <QuickStart2 />
+
+<br />
+
+Avec `cargo` installé, nous pouvons installer le CLI `bencher`.
+
+Exécutez:
+<QuickStart3 />
+
+Vous devriez voir quelque chose comme:
+
+<QuickStart4 />
+
+Encore une fois, il est acceptable si votre sortie est différente. Il est juste important que cette commande fonctionne.
+
+<br />
+
+Enfin, testons que nous avons le CLI `bencher` installé.
+
+Exécutez: `bencher --version`
+
+Vous devriez voir:
+
+<QuickStart5 />
+
+<br />
+
+## Créez un Compte Bencher Cloud
+
+Bencher est open source et auto-hébergé.
+Si vous êtes intéressé par l'auto-hébergement, consultez le [tutoriel Docker Bencher](/docs/fr/tutorial/docker).
+Pour ce tutoriel cependant, nous allons utiliser Bencher Cloud.
+
+
+### <a id="signup-for-bencher-cloud" href="/auth/signup" target="_blank">Inscrivez-vous à Bencher Cloud</a>
+<br />
+
+Une fois que vous avez créé un compte, vous devrez confirmer votre adresse électronique.
+Vérifiez dans vos emails pour un lien de confirmation.
+Après cela, vous devriez être connecté à Bencher Cloud.
+
+<br />
+
+## Créez un Jeton API
+
+Pour utiliser l'API Bencher, vous aurez besoin de créer un jeton API.
+<a href="/console" target="_blank">Rendez-vous sur la Console Bencher</a>.
+Passez votre souris sur votre nom dans le coin supérieur droit.
+Un menu déroulant devrait apparaître. Sélectionnez `Tokens`.
+Une fois sur la page des jetons API, cliquez sur le bouton `➕ Ajouter`.
+
+### <a id="add-an-api-token" href="/auth/signup" target="_blank">Ajoutez un Jeton API</a>
+<br />
+
+Une fois que vous avez créé votre nouveau jeton API, vous devrez le copier dans votre presse-papiers.
+Dans le terminal dans lequel vous prévoyez de travailler, exportez le jeton API en tant que variable d'environnement.
+
+Exécutez: `export BENCHER_API_TOKEN=VOTRE_TOKEN`
+
+Si vous exécutez ensuite: `echo $BENCHER_API_TOKEN`
+
+Vous devriez voir:
+
+```
+$ echo $BENCHER_API_TOKEN
+VOTRE_TOKEN
+```
+
+<br />
+
+> 🐰 Note: Si vous passez à un autre terminal, vous devrez exporter à nouveau le jeton API.
+
+<br />
+
+## Créez un Projet
+
+Maintenant que nous avons un compte d'utilisateur et un jeton API, nous pouvons créer un Projet.
+D'abord, nous devons savoir à quelle organisation notre nouveau projet appartiendra.
+
+Exécutez: `bencher org ls`
+
+Vous devriez voir quelque chose comme:
+
+<QuickStart6 />
+
+Votre sortie devrait être légèrement différente de celle-ci:
+- Le `uuid` est pseudorandom
+- Le `name` et `slug` seront basés sur votre nom d'utilisateur
+- Les horodatages `created` et `modified` seront ceux de votre inscription récente
+
+<br />
+
+Nous pouvons maintenant créer un nouveau Projet à l'intérieur de votre Organisation.
+Substituez le `slug` de votre Organisation à l'argument `--org` (ie `VOTRE_SLUG_ORG`) dans la commande ci-dessous.
+
+Exécuter: `bencher project create --org VOTRE_SLUG_ORG --url http://www.savewalterwhite.com "Save Walter White"`
+
+Vous devriez voir quelque chose comme:
+
+<QuickStart7 />
+
+Encore une fois, votre sortie devrait être légèrement différente que celle-ci.
+Il est juste important que cette commande fonctionne.
+Prenez note du champ `slug` du Projet (ie `save-walter-white-12345`).
+
+<br />
+
+## Exécutez un Rapport
+
+Nous sommes enfin prêts à collecter quelques mesures de benchmark!
+Pour des raisons de simplicité, nous utiliserons des données fictives dans ce tutoriel.
+
+Exécutez: `bencher mock`
+
+Vous devriez voir quelque chose comme:
+
+<QuickStart8 />
+
+Votre sortie devrait être légèrement différente de celle-ci, car les données sont pseudorandom.
+Il est juste important que cette commande fonctionne.
+
+<br />
+
+Maintenant, exécutons un rapport en utilisant des données fictives de mesures de benchmark.
+Substituez votre `slug` de Projet à l'argument `--project` (ie `VOTRE_SLUG_PROJET`) dans la commande ci-dessous.
+
+Exécutez: `bencher run --project VOTRE_SLUG_PROJET "bencher mock"`
+
+Vous devriez voir quelque chose comme:
+
+<QuickStart9 />
+
+<br />
+
+Vous pouvez maintenant consulter les résultats de chacun des benchmarks dans le navigateur.
+Cliquez ou copiez et collez les liens de `View results`.
+Il ne devrait y avoir qu'un seul point de données pour chaque benchmark, alors ajoutons d'autres données!
+
+<br />
+
+D'abord, mettons notre slug de Projet en tant que variable d'environnement, de sorte que nous n'avons pas à le fournir avec le `--project` à chaque exécution.
+
+Exécutez: `export BENCHER_PROJECT=save-walter-white-12345`
+
+Si vous exécutez ensuite: `echo $BENCHER_PROJECT`
+
+Vous devriez voir:
+
+<QuickStart10 />
+
+<br />
+
+Ré-exécutons la même commande encore sans `--project` pour générer plus de données.
+
+Exécutez: `bencher run "bencher mock"`
+
+<br />
+
+Maintenant, générions plus de données, mais cette fois nous transmettrons nos résultats dans `bencher run`.
+
+Exécutez: `bencher mock | bencher run`
+
+<br />
+
+Parfois, vous pouvez vouloir sauvegarder vos résultats dans un fichier et que `bencher run` les récupère.
+
+Exécutez: `bencher run "bencher mock > results.json" --file results.json`
+
+<br />
+
+De même, vous pouvez avoir un processus séparé qui exécute vos benchmarks et sauvegardez vos résultats dans un fichier. Ensuite `bencher run` viendra simplement les récupérer.
+
+Exécutez: `bencher mock > results.json && bencher run --file results.json`
+
+<br />
+
+Enfin, mettons en place beaucoup de données en utilisant l'argument `--iter` de `bencher run`.
+
+Exécutez: `bencher run --iter 16 "bencher mock"`
+
+<br />
+
+> 🐰 Astuce: Consultez les [doc CLI sous-commande `bencher run`](/docs/fr/explanation/bencher-run) pour un aperçu complet de tout ce que `bencher run` peut faire!
+
+<br />
+
+## Générer une Alerte
+
+Maintenant que nous avons des données historiques pour nos benchmarks, générons une Alerte!
+Les alertes sont générées lorsqu'un résultat de benchmark est déterminé comme une régression de performance.
+Alors simulons une régression de performance!
+
+Exécutez: `bencher run "bencher mock --pow 8"`
+
+<br />
+
+Il devrait y avoir une nouvelle section à la fin de la sortie appelée `View alerts`:
+
+<QuickStart11 />
+
+<br />
+
+Vous pouvez maintenant voir les Alertes pour chaque benchmark dans le navigateur.
+Cliquez ou copiez et collez les liens de `View alerts`.
+
+<br />
+
+> 🐰 Astuce: Consultez les [doc Seuil & Alertes](/docs/fr/explanation/thresholds) pour un aperçu complet de comment sont détectées les régressions de performances!
+
+<br />
+<br />
+
+> 🐰 Félicitations! Vous avez attrapé votre première régression de performance! 🎉
+
+<br />
+
+<h2><a href="/docs/fr/explanation/benchmarking">Continuez: Aperçu du Benchmarking ➡</a></h2>

@@ -1,12 +1,264 @@
 ---
 title: "クイックスタート"
-description: "Bencher Cloud を使用して継続的なベンチマークをセットアップする方法を学ぶ"
+description: "Bencher Cloudを使用した継続的なベンチマーキングの設定方法を学ぶ"
 heading: "クイックスタート"
 sortOrder: 1
 ---
 
-import QuickStart1 from "../../../chunks/tutorial/ja/quick-start.1.mdx";
-import QuickStart2 from "../../../chunks/tutorial/ja/quick-start.2.mdx";
+import QuickStart1 from "../../../chunks/tutorial/quick-start.1.mdx";
+import QuickStart2 from "../../../chunks/tutorial/quick-start.2.mdx";
+import QuickStart3 from "../../../chunks/tutorial/quick-start.3.mdx";
+import QuickStart4 from "../../../chunks/tutorial/quick-start.4.mdx";
+import QuickStart5 from "../../../chunks/tutorial/quick-start.5.mdx";
+import QuickStart6 from "../../../chunks/tutorial/quick-start.6.mdx";
+import QuickStart7 from "../../../chunks/tutorial/quick-start.7.mdx";
+import QuickStart8 from "../../../chunks/tutorial/quick-start.8.mdx";
+import QuickStart9 from "../../../chunks/tutorial/quick-start.9.mdx";
+import QuickStart10 from "../../../chunks/tutorial/quick-start.10.mdx";
+import QuickStart11 from "../../../chunks/tutorial/quick-start.11.mdx";
+
+## Bencherとは何ですか？
+
+Bencherは[継続的なベンチマーキング](/docs/ja/explanation/continuous-benchmarking)ツールの組です。
+パフォーマンスリグレッションがユーザーに影響を与えたことはありますか？
+そのようなことが起こるのを防ぐことができたのがBencherです。
+Bencherは、パフォーマンスリグレッションを検出し、それが本番環境に達する前に防止することができます。
+
+- **実行**: ローカルまたはCIでベンチマークを実行します。お使いのお気に入りのベンチマーキングツールを使用します。`bencher` CLIは既存のベンチマークハーネスをラップし、その結果を保存します。
+- **追跡**: ベンチマークの結果を時間経過で追跡します。BencherのWebコンソールを使用して、ソースブランチ、テストベッド、メトリックの種類に基づいて結果を監視、クエリ、グラフィック表示します。
+- **キャッチ**: CIでパフォーマンスリグレッションをキャッチします。Bencherは、最先端のカスタマイズ可能な分析を使用して、パフォーマンスリグレッションを本番環境前に検出します。
+
+機能リグレッションを防ぐためにユニットテストがCIで実行されるのと同様に、パフォーマンスリグレッションを防ぐためにベンチマークもBencherでCIで実行されるべきです。パフォーマンスバグはバグです！
+
+<br />
+
+## `bencher` CLIのインストール
+
+`bencher` CLIをインストールするには、`cargo`がインストールされている必要があります。`cargo`がインストールされていることを確認します。
+
+実行: `cargo --version`
+
+以下のような結果が表示されます：
 
 <QuickStart1 />
+
+バージョン番号が異なっていても問題ありません。大切なのは、このコマンドが動作することです。
+もし動作しない場合は、[`rustup`を経由して`cargo`をインストールする](https://rustup.rs/)指示に従ってください。
+
+LinuxまたはmacOSでは、以下を実行します：
+
 <QuickStart2 />
+
+<br />
+
+`cargo`がインストールされたので、`bencher` CLIをインストールできます。
+
+実行：
+<QuickStart3 />
+
+以下のような結果を見るはずです。
+
+<QuickStart4 />
+
+やはり、出力が異なる場合でも問題ありません。大切なのは、このコマンドが動作することです。
+
+<br />
+
+最後に、`bencher` CLIがインストールされていることを確認しましょう。
+
+実行： `bencher --version`
+
+結果として、次のように表示されます。
+
+<QuickStart5 />
+
+<br />
+
+## Bencher Cloudのアカウントを作成する
+
+Bencherはオープンソースで自己ホスティングが可能です。
+自己ホスティングに興味がある場合は、[Bencher Dockerチュートリアル](/docs/ja/tutorial/docker)をチェックしてください。
+しかし、このチュートリアルでは、Bencher Cloudを使用します。
+
+### <a id="signup-for-bencher-cloud" href="/auth/signup" target="_blank">Bencher Cloudへ登録する</a>
+<br />
+
+アカウントを作成したら、メールアドレスを確認する必要があります。
+確認リンク付きのメールを確認してください。
+その後、Bencher Cloudにログインすることができます。
+
+<br />
+
+## APIトークンを作成する
+
+Bencher APIを使用するには、APIトークンを作成する必要があります。
+<a href="/console" target="_blank">Bencherコンソールに移動します</a>。
+右上のあなたの名前をhoverします。ドロップダウンメニューが表示されます。`Tokens`を選びます。
+APIトークンページに移動したら、`➕追加`ボタンをクリックします。
+
+### <a id="add-an-api-token" href="/auth/signup" target="_blank">APIトークンを追加します</a>
+<br />
+
+新しいAPIトークンを作成したら、それをクリップボードにコピーします。
+作業する予定のターミナルで、APIトークンを環境変数としてエクスポートします。
+
+実行：`export BENCHER_API_TOKEN=YOUR_TOKEN`
+
+その後、次のように実行してください：`echo $BENCHER_API_TOKEN`
+
+以下のように表示されます：
+
+```
+$ echo $BENCHER_API_TOKEN
+YOUR_TOKEN
+```
+
+<br />
+
+> 🐰 注意: 別のターミナルに移動する場合、APIトークンを再度エクスポートする必要があります。
+
+<br />
+
+## プロジェクトを作成する
+
+ユーザーアカウントとAPIトークンを取得したので、プロジェクトを作成することができます。
+まず、新しいプロジェクトが所属する組織を知る必要があります。
+
+実行：`bencher org ls`
+
+以下のような結果が表示されます：
+
+<QuickStart6 />
+
+あなたの出力は上記と少し異なるはずです：
+- `uuid`は疑似ランダムです
+- `name`と`slug`はあなたのユーザー名に基づいています
+- `created`と`modified`のタイムスタンプは、あなたが登録した時刻になります
+
+<br />
+
+では、その組織内に新しいプロジェクトを作成できます。
+以下のコマンドの`--org`引数に、組織の`slug`（つまり、`YOUR_ORG_SLUG`）を代入します。
+
+実行：`bencher project create --org YOUR_ORG_SLUG --url http://www.savewalterwhite.com "Save Walter White"`
+
+以下のような結果を見るはずです：
+
+<QuickStart7 />
+
+再度、あなたの出力は上記の結果と少し異なるはずです。
+大切なのは、このコマンドが動作することです。
+プロジェクトの`slug`フィールド（つまり、`save-walter-white-12345`）を記録しておいてください。
+
+<br />
+
+## レポートを実行する
+
+ついにベンチマークのメトリックを収集する準備が整いました！
+このチュートリアルでは簡単のため、モックデータを使用します。
+
+実行：`bencher mock`
+
+以下のような結果が表示されます：
+
+<QuickStart8 />
+
+あなたの出力は上記の結果と少し異なるはずです、なぜならデータは疑似ランダムだからです。
+大切なのは、このコマンドが動作することです。
+
+<br />
+
+では、モックのベンチマークメトリックデータを使用してレポートを実行してみましょう。
+下記のコマンドの`--project`引数に、プロジェクト`slug`（つまり、`YOUR_PROJECT_SLUG`）を代入します。
+
+実行：`bencher run --project YOUR_PROJECT_SLUG "bencher mock"`
+
+以下のような結果が表示されます：
+
+<QuickStart9 />
+
+<br />
+
+ここでもブラウザで各ベンチマークの結果を見ることができます。
+`View results`からリンクをクリックするか、コピーしてペーストします。
+各ベンチマークには一つだけのデータポイントがあるはずなので、データをもっと追加しましょう！
+
+<br />
+
+まず、プロジェクトのスラッグを環境変数として設定して、それぞれの実行で`--project`を指定しなくても済むようにしましょう。
+
+実行: `export BENCHER_PROJECT=save-walter-white-12345`
+
+その後、次のように実行してください： `echo $BENCHER_PROJECT`
+
+以下のように表示されます：
+
+<QuickStart10 />
+
+<br />
+
+同じコマンドをもう一度`--project`なしで実行し、さらにデータを生成します。
+
+実行： `bencher run "bencher mock"`
+
+<br />
+
+さらにデータを生成しますが、今度は結果を`bencher run`にパイプします。
+
+実行: `bencher mock | bencher run`
+
+<br />
+
+時々、結果をファイルに保存し、`bencher run`でそれらを取得したいことがあります。
+
+実行： `bencher run "bencher mock > results.json" --file results.json`
+
+<br />
+
+また、別のプロセスでベンチマークを実行し、結果をファイルに保存すると、`bencher run`がそれらを取得します。
+
+実行: `bencher mock > results.json && bencher run --file results.json`
+
+<br />
+
+最後に、`bencher run`の`--iter`引数を使用して多くのデータを生成します。
+
+実行： `bencher run --iter 16 "bencher mock"`
+
+<br />
+
+> 🐰 ヒント: [`bencher run` CLIサブコマンドのドキュメント](/docs/ja/explanation/bencher-run)をチェックして、`bencher run`ができるすべてのことを完全に把握してください！
+
+<br />
+
+## アラートを生成する
+
+ベンチマークの履歴データが手元にあるので、アラートを生成しましょう！
+アラートは、ベンチマーク結果がパフォーマンスリグレッションと判断されたときに生成されます。
+それでは、パフォーマンスリグレッションを模擬しましょう！
+
+実行：`bencher run "bencher mock --pow 8"`
+
+<br />
+
+出力の最後に新しいセクションが追加され、`View alerts`と表示されます：
+
+<QuickStart11 />
+
+<br />
+
+ブラウザで各ベンチマークのアラートを見ることができます。
+`View alerts`からリンクをクリックするか、コピーしてペーストします。
+
+<br />
+
+> 🐰 ヒント: パフォーマンスリグレッションがどのように検出されるかの全体像を把握するため、[閾値＆アラートドキュメント](/docs/ja/explanation/thresholds)をチェックしてください！
+
+<br />
+<br />
+
+> 🐰 おめでとうございます！初めてのパフォーマンスリグレッションを捕まえました！🎉
+
+<br />
+
+<h2><a href="/docs/ja/explanation/benchmarking">続けていく：ベンチマーキングの概要 ➡</a></h2>

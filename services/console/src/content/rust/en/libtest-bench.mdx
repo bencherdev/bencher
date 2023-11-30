@@ -249,15 +249,15 @@ mod benchmarks {
 }
 ```
 
-- Create a module named `benchmarks` and has the
+- Create a module named `benchmarks` and set the
   [compiler configuration](https://doc.rust-lang.org/reference/conditional-compilation.html#the-cfg-attribute)
-  set to [`test` mode](https://doc.rust-lang.org/book/ch11-03-test-organization.html#the-tests-module-and-cfgtest).
+  to [`test` mode](https://doc.rust-lang.org/book/ch11-03-test-organization.html#the-tests-module-and-cfgtest).
 - Import the `Bencher` benchmark runner. (🐰 Hey, cool name!)
 - Import our `play_game` function.
 - Create a benchmark named `bench_play_game` that takes in a mutable reference to `Bencher`.
 - Set the `#[bench]` attribute to indicate that `bench_play_game` is a benchmark.
-- Use the `Bencher` instance (`b`) to run our benchmark several times.
-- Run our benchmarks inside of a "black box" so the compiler doesn't optimize our code.
+- Use the `Bencher` instance (`b`) to run our macro-benchmark several times.
+- Run our macro-benchmark inside of a "black box" so the compiler doesn't optimize our code.
 - Iterate from `1` to `100` inclusively.
 - For each number, call `play_game`.
 
@@ -375,7 +375,7 @@ The kids will love it!
 
 Our game is a hit! The kids do indeed love playing FizzBuzzFibonacci.
 So much so that word has come down from the execs that they want a sequel.
-But this is the modern world, we need Annual Recurring Revenue (ARR) not one time purchases.
+But this is the modern world, we need Annual Recurring Revenue (ARR) not one time purchases!
 The new vision for our game is that it is open ended, no more living between the bound of `1` and `100` (even if it is inclusive).
 No, we're on to new frontiers!
 
@@ -485,8 +485,8 @@ fn bench_play_game_1_000_000(b: &mut Bencher) {
 }
 ```
 
-- A benchmark `bench_play_game_100` for playing the game with the number one hundred (`100`)
-- A benchmark `bench_play_game_1_000_000` for playing the game with the number one million (`1_000_000`)
+- A micro-benchmark `bench_play_game_100` for playing the game with the number one hundred (`100`)
+- A micro-benchmark `bench_play_game_1_000_000` for playing the game with the number one million (`1_000_000`)
 
 When I ran it, I got this:
 
@@ -631,7 +631,7 @@ View results:
 ```
 
 Using this nifty time travel device that a nice rabbit gave me,
-I was able to go back in time and replay what would have happened if we were using Bencher the whole time.
+I was able to go back in time and replay what would have happened if we were using Bencher all along.
 Unlucky version #13 is where we first pushed the buggy FizzBuzzFibonacci implementation.
 I immediately got failures in CI as a comment on my pull request.
 That same day, I fixed the performance bug, getting rid of that needless, extra loop.
