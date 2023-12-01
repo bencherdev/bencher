@@ -1,9 +1,17 @@
 import type { Params } from "astro";
-import { Accessor, For, Resource, createEffect, createMemo } from "solid-js";
+import {
+	type Accessor,
+	For,
+	type Resource,
+	createEffect,
+	createMemo,
+} from "solid-js";
 import type { JsonAuthUser } from "../../../../types/bencher";
 import { fmtValues, setPageTitle } from "../../../../util/resource";
 import { pathname, useNavigate } from "../../../../util/url";
-import DeckHeaderButton, { DeckHeaderButtonConfig } from "./DeckHeaderButton";
+import DeckHeaderButton, {
+	type DeckHeaderButtonConfig,
+} from "./DeckHeaderButton";
 
 export interface Props {
 	apiUrl: string;
@@ -66,6 +74,7 @@ const DeckHeader = (props: Props) => {
 							{(button) => (
 								<div class="level-item">
 									<DeckHeaderButton
+										isConsole={true}
 										apiUrl={props.apiUrl}
 										params={props.params}
 										user={props.user}

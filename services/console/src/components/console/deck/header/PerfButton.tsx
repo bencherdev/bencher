@@ -5,6 +5,7 @@ import { dateTimeMillis } from "../../../../util/convert";
 import { useNavigate } from "../../../../util/url";
 
 export interface Props {
+	isConsole: boolean;
 	params: Params;
 	data: Resource<Record<string, any>>;
 }
@@ -41,9 +42,11 @@ const PerfButton = (props: Props) => {
 						searchParams.set(key, value.toString());
 					}
 				}
-				const url = `/console/projects/${
-					props.params.project
-				}/perf?${searchParams.toString()}`;
+				const url = props.isConsole
+					? `/console/projects/${
+							props.params.project
+					  }/perf?${searchParams.toString()}`
+					: `/perf/${props.params.project}?${searchParams.toString()}`;
 				navigate(url);
 			}}
 		>

@@ -21,6 +21,7 @@ const WARNING_URL = "https://s3.amazonaws.com/public.bencher.dev/warning.png";
 const SIREN_URL = "https://s3.amazonaws.com/public.bencher.dev/siren.png";
 
 export interface Props {
+	isConsole: boolean;
 	perfData: Resource<JsonPerf>;
 	range: Accessor<PerfRange>;
 	lower_value: Accessor<boolean>;
@@ -251,7 +252,7 @@ const LinePlot = (props: Props) => {
 			alert_arrays.push(
 				Plot.image(
 					alert_data,
-					alert_image(x_axis, Position.Lower, project_slug),
+					alert_image(x_axis, Position.Lower, project_slug, props.isConsole),
 				),
 			);
 
@@ -268,7 +269,7 @@ const LinePlot = (props: Props) => {
 			alert_arrays.push(
 				Plot.image(
 					alert_data,
-					alert_image(x_axis, Position.Upper, project_slug),
+					alert_image(x_axis, Position.Upper, project_slug, props.isConsole),
 				),
 			);
 		});
@@ -418,6 +419,7 @@ const alert_image = (
 	x_axis: string,
 	position: Position,
 	project_slug: string,
+	isConsole: boolean,
 ) => {
 	return {
 		x: x_axis,
@@ -426,7 +428,9 @@ const alert_image = (
 		width: 18,
 		title: (datum) => limit_title(position, datum, "\nClick to view Alert"),
 		href: (datum) =>
-			`/console/projects/${project_slug}/alerts/${datum.alert?.uuid}`,
+			isConsole
+				? `/console/projects/${project_slug}/alerts/${datum.alert?.uuid}`
+				: `/perf/${project_slug}/alerts/${datum.alert?.uuid}`,
 		target: "_blank",
 	};
 };

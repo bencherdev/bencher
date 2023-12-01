@@ -12,6 +12,7 @@ import LinePlot from "./LinePlot";
 import PlotKey from "./PlotKey";
 
 export interface Props {
+	isConsole: boolean;
 	range: Accessor<PerfRange>;
 	lower_value: Accessor<boolean>;
 	upper_value: Accessor<boolean>;
@@ -48,6 +49,7 @@ const Plot = (props: Props) => {
 		<div class="container">
 			<div ref={(e) => (plot_ref = e)}>
 				<LinePlot
+					isConsole={props.isConsole}
 					perfData={props.perfData}
 					range={props.range}
 					lower_value={props.lower_value}

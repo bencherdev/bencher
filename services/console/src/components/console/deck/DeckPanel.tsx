@@ -1,5 +1,5 @@
 import type { Params } from "astro";
-import bencher_valid_init, { InitOutput } from "bencher_valid";
+import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import {
 	createEffect,
 	createMemo,
@@ -7,14 +7,18 @@ import {
 	createSignal,
 } from "solid-js";
 import consoleConfig from "../../../config/console";
-import { Operation, Resource, resourceSingular } from "../../../config/types";
+import {
+	Operation,
+	type Resource,
+	resourceSingular,
+} from "../../../config/types";
 import { authUser } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
 import { NotifyKind, pageNotify } from "../../../util/notify";
 import { pathname } from "../../../util/url";
 import { validJwt } from "../../../util/valid";
-import Deck, { DeckConfig } from "./hand/Deck";
-import DeckHeader, { DeckHeaderConfig } from "./header/DeckHeader";
+import Deck, { type DeckConfig } from "./hand/Deck";
+import DeckHeader, { type DeckHeaderConfig } from "./header/DeckHeader";
 
 interface Props {
 	apiUrl: string;

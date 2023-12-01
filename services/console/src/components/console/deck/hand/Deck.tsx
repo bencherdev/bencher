@@ -1,9 +1,9 @@
-import { Accessor, For, Resource, Show } from "solid-js";
-import type { JsonAuthUser } from "../../../../types/bencher";
-import DeckButton, { DeckButtonConfig } from "./DeckButton";
-import DeckCard from "./card/DeckCard";
-import type CardConfig from "./card/CardConfig";
 import type { Params } from "astro";
+import { type Accessor, For, type Resource, Show } from "solid-js";
+import type { JsonAuthUser } from "../../../../types/bencher";
+import DeckButton, { type DeckButtonConfig } from "./DeckButton";
+import type CardConfig from "./card/CardConfig";
+import DeckCard from "./card/DeckCard";
 
 export interface Props {
 	apiUrl: string;
@@ -19,7 +19,7 @@ export interface Props {
 export interface DeckConfig {
 	url: (params: Params) => string;
 	cards: CardConfig[];
-	buttons: DeckButtonConfig[];
+	buttons?: DeckButtonConfig[];
 }
 
 const Deck = (props: Props) => {

@@ -94,6 +94,7 @@ export enum Button {
 	INVITE,
 	EDIT,
 	STATUS,
+	CONSOLE,
 	PERF,
 	REFRESH,
 	BACK,

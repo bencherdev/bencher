@@ -1,19 +1,19 @@
 import {
-	is_valid_jwt,
-	is_valid_user_name,
-	is_valid_slug,
-	is_valid_email,
-	is_valid_plan_level,
-	is_valid_non_empty,
-	is_valid_url,
-	is_valid_card_number,
-	is_valid_expiration_month,
-	is_valid_expiration_year,
-	is_valid_card_cvc,
-	is_valid_branch_name,
 	is_valid_benchmark_name,
 	is_valid_boundary,
+	is_valid_branch_name,
+	is_valid_card_cvc,
+	is_valid_card_number,
+	is_valid_email,
+	is_valid_expiration_month,
+	is_valid_expiration_year,
+	is_valid_jwt,
+	is_valid_non_empty,
+	is_valid_plan_level,
 	is_valid_sample_size,
+	is_valid_slug,
+	is_valid_url,
+	is_valid_user_name,
 	is_valid_uuid,
 } from "bencher_valid";
 import type { JsonAuthUser } from "../types/bencher";
@@ -27,7 +27,7 @@ export const validOptionString = (
 	input: undefined | null | string,
 	validator: (input: string) => boolean,
 ): boolean => {
-	if (typeof input !== "string") {
+	if (typeof input !== "string" || input.length === 0) {
 		return false;
 	}
 	return validString(input, validator);

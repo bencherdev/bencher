@@ -1,12 +1,14 @@
-import { Accessor, Match, Resource, Switch } from "solid-js";
+import type { Params } from "astro";
+import { type Accessor, Match, type Resource, Switch } from "solid-js";
+import { Button } from "../../../../config/types";
 import type { JsonAuthUser } from "../../../../types/bencher";
 import { pathname, useNavigate } from "../../../../util/url";
-import { Button } from "../../../../config/types";
-import StatusButton from "./StatusButton";
+import ConsoleButton from "./ConsoleButton";
 import PerfButton from "./PerfButton";
-import type { Params } from "astro";
+import StatusButton from "./StatusButton";
 
 export interface Props {
+	isConsole: boolean;
 	apiUrl: string;
 	params: Params;
 	user: JsonAuthUser;
@@ -54,8 +56,15 @@ const DeckHeaderButton = (props: Props) => {
 					handleRefresh={props.handleRefresh}
 				/>
 			</Match>
+			<Match when={props.button.kind === Button.CONSOLE}>
+				<ConsoleButton params={props.params} />
+			</Match>
 			<Match when={props.button.kind === Button.PERF}>
-				<PerfButton params={props.params} data={props.data} />
+				<PerfButton
+					isConsole={props.isConsole}
+					params={props.params}
+					data={props.data}
+				/>
 			</Match>
 			<Match when={props.button.kind === Button.REFRESH}>
 				<button

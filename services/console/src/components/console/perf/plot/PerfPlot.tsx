@@ -112,6 +112,7 @@ const PerfPlot = (props: Props) => {
 						<Switch
 							fallback={
 								<Plot
+									isConsole={props.isConsole}
 									range={props.range}
 									lower_value={props.lower_value}
 									upper_value={props.upper_value}

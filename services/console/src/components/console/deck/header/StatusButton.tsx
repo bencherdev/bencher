@@ -1,8 +1,14 @@
-import { Switch, type Accessor, Match, Resource, createSignal } from "solid-js";
+import {
+	type Accessor,
+	Match,
+	type Resource,
+	Switch,
+	createSignal,
+} from "solid-js";
 import { AlertStatus, type JsonAuthUser } from "../../../../types/bencher";
-import { validJwt } from "../../../../util/valid";
 import { httpPatch } from "../../../../util/http";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
+import { validJwt } from "../../../../util/valid";
 
 export interface Props {
 	apiUrl: string;

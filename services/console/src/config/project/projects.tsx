@@ -1,10 +1,10 @@
 import type { Params } from "astro";
 import FieldKind from "../../components/field/kind";
+import { type JsonProject, Visibility } from "../../types/bencher";
 import { isAllowedProjectEdit } from "../../util/auth";
-import { validNonEmpty, validSlug, validOptionUrl } from "../../util/valid";
+import { validNonEmpty, validOptionUrl, validSlug } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { addPath, parentPath } from "../util";
-import type { JsonProject } from "../../types/bencher";
 
 const PROJECT_FIELDS = {
 	name: {
@@ -34,14 +34,14 @@ const PROJECT_FIELDS = {
 };
 
 const VISIBILITY_VALUE = {
-	selected: "public",
+	selected: Visibility.Public,
 	options: [
 		{
-			value: "public",
+			value: Visibility.Public,
 			option: "Public",
 		},
 		{
-			value: "private",
+			value: Visibility.Private,
 			option: "Private",
 		},
 	],

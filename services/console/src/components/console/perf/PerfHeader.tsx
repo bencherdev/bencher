@@ -8,10 +8,11 @@ import {
 	createSignal,
 } from "solid-js";
 import { embedHeight } from "../../../config/types";
-import type {
-	JsonAuthUser,
-	JsonPerfQuery,
-	JsonProject,
+import {
+	type JsonAuthUser,
+	type JsonPerfQuery,
+	type JsonProject,
+	Visibility,
 } from "../../../types/bencher";
 import { apiUrl } from "../../../util/http";
 import { setPageTitle } from "../../../util/resource";
@@ -75,7 +76,7 @@ const PerfHeader = (props: Props) => {
 						<Show when={!props.isPlotInit()} fallback={<></>}>
 							<nav class="level is-mobile">
 								<Show
-									when={props.project()?.visibility === "public"}
+									when={props.project()?.visibility === Visibility.Public}
 									fallback={<></>}
 								>
 									<div class="level-item">

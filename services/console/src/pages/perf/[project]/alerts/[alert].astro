@@ -1,0 +1,28 @@
+---
+export const prerender = false;
+
+import PerfLayout from "../../../../layouts/perf/PerfLayout.astro";
+import { AlertStatus, type JsonAlert } from "../../../../types/bencher";
+import PublicAlert from "../../../../components/perf/PublicAlert";
+import alertsConfig from "../../../../config/project/alerts";
+import { Operation } from "../../../../config/types";
+
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
+const params = Astro.params;
+const getAlertUrl =  `${BENCHER_API_URL}/v0/projects/${params.project}/alerts/${params.alert}`;
+
+const alertResponse = await fetch(getAlertUrl);
+const jsonAlert: JsonAlert = await alertResponse.json();
+
+const title = `${jsonAlert?.benchmark?.name} Alert (${jsonAlert?.status === AlertStatus.Active ? "🔔" : "🔕"})`;
+const description = `View a continuous benchmarking alert for the ${jsonAlert?.benchmark?.name} benchmark on Bencher`;
+const deck = alertsConfig[Operation.VIEW]?.deck;
+---
+
+<PerfLayout
+  title={title}
+  titleFmt={(title) => `🚨 ${title}`}
+  description={description}
+>
+  <PublicAlert client:only="solid-js" apiUrl={BENCHER_API_URL} params={params} deck={deck} data={jsonAlert} />
+</PerfLayout>
