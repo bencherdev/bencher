@@ -1,128 +1,122 @@
 ---
 title: "GitHub Actions"
-description: "GitHub Actions에서 Bencher를 이용한 풀 리퀘스트에 대한 지속적인 벤치마킹 활용법"
-heading: "GitHub Actions에서 Bencher 사용 방법"
+description: "Pull Request에서 지속적인 벤치마킹을 위해 GitHub Actions에서 Bencher 사용하기"
+heading: "GitHub Actions에서 Bencher 사용하는 방법"
 sortOrder: 3
 ---
 
 import GitHubActions1 from "../../../chunks/how_to/github-actions.1.mdx";
 import GitHubActions2 from "../../../chunks/how_to/github-actions.2.mdx";
-import GitHubActions3 from "../../../chunks/how_to/github-actions.3.mdx";
 import GitHubActions4 from "../../../chunks/how_to/github-actions.4.mdx";
 import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 import GitHubActions6 from "../../../chunks/how_to/github-actions.6.mdx";
 
 <GitHubActions1 />
 
-1. GitHub Actions의 `workflow`를 생성합니다 (예: `.github/workflows/benchmark.yml`).
-2. workflow가 실행될 이벤트를 지정합니다. 자세한 내용은 [GitHub Actions `on` 문서](https://docs.github.com/ko/actions/using-workflows/workflow-syntax-for-github-actions#on)를 참조하세요. 이 workflow는 `main` 브랜치에 대한 `push` 이벤트에만 실행됩니다. [Pull Requests에서 실행하는 방법은 아래 섹션을 참조](#pull-requests)하세요.
-3. GitHub Actions의 `job`을 생성합니다 (예: `benchmark_with_bencher`)
-4. 프로젝트는 반드시 먼저 있어야 합니다. `--project` 플래그 또는 `BENCHER_PROJECT` 환경 변수를 사용해 프로젝트 슬러그나 UUID를 설정합니다. (예: `BENCHER_PROJECT: save-walter-white`)
-5. **저장소**의 비밀 정보로서 `BENCHER_API_TOKEN`을 추가합니다 (예: `Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`)
-6. API 토큰은 반드시 먼저 있어야 합니다. `--token` 플래그 또는 `BENCHER_API_TOKEN` 환경 변수를 사용해 API 토큰을 설정합니다. (예: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
-7. Optional: 원하는 adapter 이름을 설정하는 `--adapter` 플래그 또는 `BENCHER_ADAPTER` 환경 변수를 설정합니다. 이것이 설정되지 않으면, `magic` Adapter가 사용됩니다. [벤치마크 하네스 adapter](/docs/ko/explanation/adapters)에 대한 자세한 정보를 확인하세요 (예: `BENCHER_ADAPTER: json`)
-8. Optional: Testbed의 슬러그나 UUID를 설정하는 `--testbed` 플래그 또는 `BENCHER_TESTBED` 환경 변수를 설정합니다. Testbed가 이미 존재해야 합니다. 이것이 설정되지 않으면, `localhost` Testbed가 사용됩니다. (예: `BENCHER_TESTBED: ubuntu-latest`)
-9. 소스 코드를 체크아웃합니다. (예: `uses: actions/checkout@v3`)
-10. [GitHub Action](https://github.com/marketplace/actions/bencher-cli)을 통해 Bencher CLI를 설치합니다. (예: `uses: bencherdev/bencher@main`)
-11. <code><a href="/docs/ko/explanation/bencher-run">bencher run</a></code> CLI 부커맨드를 통해 [벤치마크를 추적](/docs/ko/how-to/track-benchmarks)합니다:
-    1. 프로젝트 브랜치를 설정하는 여러 가지 옵션이 있습니다. 자세한 정보는 [브랜치 선택](/docs/ko/how-to/branch-selection)을 참조하세요. 제공된 명령어는 [GitHub Action 기본 환경 변수](https://docs.github.com/ko/actions/learn-github-actions/variables#default-environment-variables)를 사용하고, 이렇게 시도합니다:
-        1. 현재 브랜치 데이터를 이미 존재하는 경우 사용합니다. (예: `--if-branch "$GITHUB_REF_NAME"`)
-        2. PR 타겟 브랜치의 데이터와 문턱값이 이미 존재하는 경우, 그것의 복제본을 생성합니다. (예: `--else-if-branch "$GITHUB_BASE_REF"`)
-        3. 그렇지 않으면, `main` 브랜치의 데이터와 문턱값의 복제본을 생성합니다. (예: `--else-if-branch main`)
-    2. 경고가 생성되면 명령어를 실패로 설정합니다. 경고가 생성되려면, [Threshold](/docs/ko/explanation/thresholds)가 이미 존재해야 합니다. (예: `--err`)
-    3. GitHub API 인증 토큰을 설정합니다 (예: `--github-actions ${{ secrets.GITHUB_TOKEN }}`). 이 옵션이 풀 리퀘스트의 일부로 설정되면, 결과가 풀 리퀘스트에 댓글로 추가됩니다. 제공된 명령어는 [GitHub Actions `GITHUB_TOKEN` 환경 변수](https://docs.github.com/ko/actions/security-guides/automatic-token-authentication)를 사용합니다.
-    4. 벤치마크를 실행하고 결과로부터 보고서를 생성합니다. (예: `"bencher mock"`)
+1. GitHub Actions `workflow` 파일을 생성합니다. (예: `.github/workflows/benchmark.yml`)
+2. `push` 이벤트를 `main` 브랜치로 실행합니다. 전체 개요는 [GitHub Actions `on` 문서](https://docs.github.com/ko/actions/using-workflows/workflow-syntax-for-github-actions#on)를 참조하세요. 또한 아래의 [Pull Requests](#pull-requests)도 참조하세요.
+3. GitHub Actions `job`를 생성합니다. (예: `benchmark_with_bencher`)
+4. 프로젝트는 이미 존재해야 합니다. `--project` 플래그를 설정하거나 `BENCHER_PROJECT` 환경 변수를 프로젝트 슬러그나 UUID로 설정합니다. (예: `BENCHER_PROJECT: save-walter-white`).
+5. API 토큰은 이미 존재해야 합니다. `BENCHER_API_TOKEN`을 **레포지토리** 시크릿으로 추가합니다. (예: `저장소 -> 설정 -> 시크릿 및 변수 -> 작업 -> 새 레포지토리 시크릿`) `--token` 플래그를 설정하거나 `BENCHER_API_TOKEN` 환경 변수를 API 토큰으로 설정합니다. (예: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
+6. 선택 사항: `--testbed` 플래그를 설정하거나 `BENCHER_TESTBED` 환경 변수를 테스트 베드 슬러그나 UUID로 설정합니다.  (예: `BENCHER_TESTBED: ubuntu-latest`) 테스트 베드는 **반드시** 이미 존재해야 합니다. 만약 이것을 설정하지 않으면, `localhost` 테스트 베드가 사용되게 됩니다.
+7. 선택 사항: `--adapter` 플래그를 설정하거나 `BENCHER_ADAPTER` 환경 변수를 원하는 어댑터 이름으로 설정합니다.  (예: `BENCHER_ADAPTER: json`) 만약 이것을 설정하지 않으면, `magic` 어댑터가 사용되게 됩니다. 전체 개요는 [벤치마크 하네스 어댑터](/docs/ko/explanation/adapters)를 참조하세요.
+8. 소스 코드를 체크아웃합니다. (예: `uses: actions/checkout@v3`)
+9. [GitHub Action](https://github.com/marketplace/actions/bencher-cli)을 사용하여 Bencher CLI를 설치합니다. (예: `uses: bencherdev/bencher@main`)
+10. <code><a href="/docs/ko/explanation/bencher-run">bencher run</a></code> CLI 하위 명령을 사용하여 [벤치마크를 추적](/docs/ko/how-to/track-benchmarks)합니다:
+    1. 선택 사항: `--branch` 플래그를 설정하거나 `BENCHER_BRANCH` 환경 변수를 브랜치 슬러그나 UUID로 설정합니다. (예: `--branch main`) 브랜치는 **반드시** 이미 존재해야 합니다. 만약 이것을 설정하지 않으면, `main` 브랜치가 사용되게 됩니다.
+    2. 경고가 생성되면 명령이 실패하도록 설정합니다. (예: `--err`) 경고가 생성되기 위해서는, [임계값](/docs/ko/explanation/thresholds)이 이미 존재해야 합니다.
+    3. 벤치마크를 실행하고 결과에서 보고서를 생성합니다. (예: `"bencher mock"`)
 
 <br/>
 
 ## Pull Requests
 
-풀 리퀘스트에서 성능 회귀를 잡아내기 위해, 풀 리퀘스트에서 벤치마크를 실행해야 합니다.
-만일 동일한 저장소 내의 브랜치에서만 풀 리퀘스트를 받게 될 것이라고 예상한다면, 위의 예제를 수정하여 `pull_request` 이벤트에서도 실행하도록 할 수 있습니다.
+Pull Request에서 성능 회귀를 잡아내기 위해 PR에서 벤치마크를 실행해야 합니다.
+당신이 **같은** 저장소 내의 브랜치로부터 PR만 받을 것이라고 예상한다면, 위의 예제를 수정해서 `on` `pull_request` 이벤트에서도 실행하게 하십시오.
+
+> ⚠️ 이 해결책은 모든 PR들이 **같은** 저장소에서 오는 경우에만 작동합니다!
+> 아래의 [Fork들로부터의 Pull Requests](#pull-requests-from-forks)를 참조하세요.
 
 <GitHubActions2 />
 
-`push` 이벤트가 특정 브랜치로 제한되도록 설정하는 것이 중요합니다 (예: `main`). 
-이렇게 하면 PR 브랜치에 대한 푸시가 두 번 실행되는 것을 방지할 수 있습니다!
-다시 말해, 모든 PR이 **같은** 저장소에서 온 경우에만 이 해결책이 작동합니다.
+1. `push` 이벤트를 `main` 브랜치로 실행하고 `pull_request` 이벤트에서도 실행합니다. PR 브랜치에 대한 push가 두 번 실행되는 것을 막기 위해, `push`를 선택된 브랜치(예: `main`)로 **만** 실행하는 것이 중요합니다!
+2. 항상 `main` 브랜치를 사용하는 대신에, [GitHub Action 기본 환경 변수](https://docs.github.com/ko/actions/learn-github-actions/variables#default-environment-variables)를 사용하여:
+        1. 현재 브랜치 데이터가 이미 존재하면 이를 사용합니다. (예: `--if-branch "$GITHUB_REF_NAME"`)
+        2. PR 대상 브랜치 데이터와 임계값이 이미 존재하면 이를 복제해서 만듭니다. (예: `--else-if-branch "$GITHUB_BASE_REF"`)
+        3. 그 외의 경우, `main` 브랜치 데이터와 임계값을 복제해서 만듭니다. (예: `--else-if-branch main`)
+        4. 프로젝트 브랜치를 설정하는 데는 여러 가지 옵션이 있습니다. 전체 개요는 [브랜치 선택](/docs/ko/how-to/branch-selection)을 참조하세요.
+3. GitHub API 인증 토큰을 설정합니다. (예: `--github-actions ${{ secrets.GITHUB_TOKEN }}`) 이 옵션이 pull request의 일부로 설정되면, 결과가 pull request에 댓글로 추가됩니다. 이는 [GitHub Actions `GITHUB_TOKEN` 환경 변수](https://docs.github.com/ko/actions/security-guides/automatic-token-authentication)를 사용합니다.
+4. `--ci-*` 플래그로 pull request 댓글을 설정하는 모든 방법에 대한 전체 개요는 [bencher run](/docs/ko/explanation/bencher-run) 문서를 참조하세요.
 
-어떤 레이블이 추가된 후에만 실행을 제한하는 것도 좋은 방법일 수 있습니다 (예: `benchmark`):
+## Fork들로부터의 Pull Requests
 
-<GitHubActions3 />
-
-공개 오픈소스 프로젝트에서처럼 포크로부터 풀 리퀘스트를 받을 계획이라면, 약간 다른 방법을 사용해야 합니다.
-보안 상의 이유로, 포크 PR에 대한 GitHub Actions에서는 `BENCHER_API_TOKEN`이나 `GITHUB_TOKEN` 같은 비밀 정보는 사용할 수 없습니다.
-즉, 외부 기여자가 포크에서 PR을 열 경우, 위의 예제는 작동하지 않습니다.
-포크 PR에 대해서는 세 가지 옵션이 있습니다:
+당신이 공개 오픈 소스 프로젝트에서 종종 하는 경우처럼 fork들로부터 pull request를 받을 계획이라면, 소소하게 다른 방식으로 처리해야 합니다.
+보안 문제로 인해, `BENCHER_API_TOKEN` 및 `GITHUB_TOKEN`과 같은 비밀 정보는 fork PRs에서의 GitHub Actions을 사용할 수 없습니다.
+즉, 외부 기여자가 fork에서 PR을 열면 위의 예시는 작동하지 않게 됩니다.
+fork PRs에는 세 가지 옵션이 있습니다:
 
 <ul>
-  <li>[타겟 브랜치로부터 PR 브랜치 벤치마크하기](#benchmark-pr-branch-from-target-branch)</li>
-  <li>[타겟 브랜치로부터 PR 브랜치 벤치마크하기 (리뷰어의 승인 필요)](#benchmark-pr-branch-from-target-branch-with-required-reviewers)</li>
-  <li>[PR 브랜치의 벤치마크 결과 캐시하고 기본 브랜치에서 업로드하기](#cache-pr-benchmark-results)</li>
+  <li>[Target Branch로부터 Fork PR를 벤치마크](#benchmark-fork-pr-from-target-branch)</li>
+  <li>[필수 리뷰어가 있는 Target Branch로부터 Fork PR를 벤치마크](#benchmark-fork-pr-from-target-branch-with-required-reviewers)</li>
+  <li>[기본 Branch로부터 Fork PR를 벤치마크하고 업로드](#benchmark-fork-pr-and-upload-from-default-branch)</li>
 </ul>
 
-### 타겟 브랜치로부터 PR 브랜치 벤치마크하기
+### Target Branch로부터 Fork PR를 벤치마크
 
 <GitHubActions4 />
 
-1. [`pull_request_target` 이벤트에 대한 트리거](https://docs.github.com/ko/actions/using-workflows/events-that-trigger-workflows#pull_request_target)를 설정합니다.
-1. PR 브랜치를 체크아웃합니다.
-1. `bencher run`을 직접 사용해 PR의 벤치마크를 실행하고 추적합니다.
+1. `push` 이벤트를 `main` 브랜치로 실행하고 [on `pull_request_target` events](https://docs.github.com/ko/actions/using-workflows/events-that-trigger-workflows#pull_request_target)를 실행합니다.
+2. `push` 이벤트를 `main` 브랜치로만 실행하는 `job`을 생성합니다. `if` 조건을 제외하고, 이 job은 원래의 예제와 거의 동일합니다.
+3. `pull_request_target` 이벤트를 실행하는 `job`을 생성합니다.
+   1. pull request 브랜치를 체크아웃합니다.
+   2. 모든 비밀 정보를 직접 전달합니다. `BENCHER_API_TOKEN` 환경 변수 대신 `--token ${{ secrets.BENCHER_API_TOKEN }}`을 사용합니다.
+   3. `bencher run`을 사용하여 pull request의 벤치마크를 실행하고 추적합니다.
 
-이렇게 할 수 있는 이유는 `pull_request_target`이 풀 리퀘스트의 타겟 브랜치 문맥에서 실행되고,
-그 곳에서는 `BENCHER_API_TOKEN`과 `GITHUB_TOKEN`과 같은 비밀 정보들이 사용 가능하기 때문입니다.
-따라서, 이 작업흐름은 타겟 브랜치에 존재할 때만 실행될 것입니다.
-`BENCHER_API_TOKEN`와 같은 비밀 정보를 환경 변수로 설정하는 것은 피하십시오.
-대신 `bencher run`에 API 토큰을 명시적으로 전달하세요 (예: `--token ${{ secrets.BENCHER_API_TOKEN }}`).
-[GitHub Security Lab의 글](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
-그리고 [이 블로그 포스트](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
-에서 pwn 요청을 방지하는 방법에 대한 전체적인 개요를 확인하세요.
+이 설정이 작동하는 이유는 `pull_request_target`이 pull request의 대상 브랜치로 실행되는 컨텍스트 내에서 실행되기 때문이며, 이곳에서는 `BENCHER_API_TOKEN` 및 `GITHUB_TOKEN`과 같은 비밀 정보가 사용 가능합니다.
+따라서, 이 워크플로우는 _target_ 브랜치에 존재하는 경우에만 실행됩니다.
+`BENCHER_API_TOKEN`과 같은 비밀 정보를 환경 변수로 설정하지 마십시오.
+대신 명시적으로 API 토큰을 `bencher run`에 전달하십시오. (예: `--token ${{ secrets.BENCHER_API_TOKEN }}`)
+전체 개요는 [GitHub Security Lab 글](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
+및 [이 블로그 게시물](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
+에서 pwn 요청을 방지하는 방법을 확인할 수 있습니다.
 
-### 타겟 브랜치로부터 PR 브랜치 벤치마크하기 (리뷰어의 승인 필요)
+### 필수 리뷰어가 있는 Target Branch로부터 Fork PR를 벤치마크
 
 <GitHubActions5 />
 
-1. [`pull_request_target` 이벤트에 대한 트리거](https://docs.github.com/ko/actions/using-workflows/events-that-trigger-workflows#pull_request_target)를 설정합니다.
-1. PR이 `내부`이면 계속하고, PR이 `외부`이면 필요한 리뷰가 있을 때까지 대기합니다.
-1. PR 브랜치를 체크아웃합니다.
-1. `bencher run`을 직접 사용해 PR의 벤치마크를 실행하고 추적합니다.
+이 설정은 [Target Branch로부터 Fork PR를 벤치마크](#benchmark-fork-pr-from-target-branch)
+와 완전히 동일하지만, 각 fork pull request 실행 전에 필수 리뷰어의 승인이 필요로 하는 추가 요건이 있습니다.
+같은 저장소에서 온 pull request는 승인이 필요하지 않습니다.
+이를 설정하려면, 두 개의 [GitHub Action 환경을 생성](https://docs.github.com/ko/actions/deployment/targeting-different-environments/using-environments-for-deployment#using-an-environment)
+해야 합니다 (예: `저장소 -> 설정 -> 환경 -> 새로운 환경`).
+`internal` 환경에는 `Deploy protection rules`가 없어야 합니다.
+그러나 `external` 환경에는 벤치마킹 전에 fork PRs를 검토할 수 있는 사람들이 `필수 리뷰어`로 설정되어야 합니다.
 
-이 옵션은 [이전 옵션](#benchmark-pr-branch-from-target-branch)과 완전히 같지만, 각 실행 전에 필요한 리뷰어로부터의 승인이 `필요합니다`.
-이를 설정하려면, [두 개의 GitHub Actions 환경을 생성](https://docs.github.com/ko/actions/deployment/targeting-different-environments/using-environments-for-deployment#using-an-environment)해야 합니다. (예: `Repo -> Settings -> Environments -> New environment`).
-`내부` 환경에는 `배포 보호 규칙`이 필요하지 않습니다.
-하지만, `외부` 환경은 벤치마킹 전에 PR을 리뷰해야 할 사람들을 `필요한 리뷰어`로 설정해야 합니다.
-
-이것은 위에서 언급한 내부 PR에 대한 태그 옵션과는 다릅니다.
-태그 기반 솔루션은 태그가 붙은 후에 _아무_ 향후 작업도 실행합니다.
-특정 PR만 벤치마크하고 싶을 때 유용할 수 있습니다.
-하지만, 태그는 보안 수단으로서 볼 수 없습니다.
-
-단일 실행에만 제한하기 위해 태그 기반 승인은 `on: pull_request_target`을 `types: [labeled]`로 제한하여 제한할 수 있습니다.
-그럼 각각의 후속 승인에 대해 PR을 제거하고 재태그해야 합니다.
-그렇게 되면, 위의 `배포 보호 규칙`을 불필요하게 재생성하게 되고, PR의 기록을 복잡하게 만들 것입니다.
-
-### PR 벤치마크 결과 캐시하기
+### 기본 Branch로부터 Fork PR를 벤치마크하고 업로드
 
 <GitHubActions6 />
 
-1. `pull_request` 이벤트에서 PR 벤치마크를 실행합니다.
-1. PR 벤치마크 결과를 파일에 저장하고, 그것을 아티팩트로 업로드합니다.
-1. PR 이벤트를 아티팩트로 업로드합니다.
-1. 그 workflow와 [the `workflow_run` 이벤트](https://docs.github.com/ko/actions/using-workflows/events-that-trigger-workflows#workflow_run)을 연결합니다.
-1. 캐싱된 PR 이벤트에서 필요한 데이터를 추출합니다.
-1. 캐싱된 PR 벤치마크 결과를 `bencher run`으로 추적합니다.
+1. `Run and Cache Benchmarks` 워크플로우 파일을 생성합니다.
+2. 벤치마크를 `pull_request` 이벤트에서 실행합니다.
+3. 벤치마크 결과를 파일에 저장하고 이를 아티팩트로 업로드합니다.
+4. `pull_request` 이벤트를 아티팩트로 업로드합니다.
+5. 두 번째 워크플로우 파일인 `Track Benchmarks`를 생성합니다.
+6. `workflow_run` 이벤트를 사용하여 `Track Benchmarks`를 `Run and Cache Benchmarks`에 연결합니다.
+7. 캐시된 `pull_request` 이벤트에서 필요한 데이터를 추출합니다.
+8. 캐시된 벤치마크 결과를 `bencher run`으로 추적합니다.
+9. `push` 이벤트를 `main` 브랜치로 실행하는 초기 예를 사용하여 세 번째 워크플로우 파일을 생성합니다.
 
-이렇게 할 수 있는 이유는 `workflow_run`이 저장소의 기본 브랜치 문맥에서 실행되고,
-그곳에서는 `BENCHER_API_TOKEN`과 `GITHUB_TOKEN`과 같은 비밀 정보들이 사용 가능하기 때문입니다.
-따라서, 이 작업 흐름은 기본 브랜치에 존재할 때만 실행될 것입니다.
-트리거 작업 흐름에서 데이터를 사용하는 방법에 대한 자세한 내용은 [여기](https://docs.github.com/ko/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow)에서 확인하세요.
-초기 workflow에 사용된 풀 리퀘스트 번호, 헤드 브랜치, 베이스 브랜치는 `workflow_run`에서 사용 가능하지 않으므로 명시적으로 전달해야 합니다.
-
-<br/>
-<br/>
-
-> 🐰 축하드립니다! GitHub Actions에서 Bencher를 사용하는 방법을 배웠습니다! 🎉
+이 설정은 `workflow_run`이 레포지토리의 기본 브랜치 컨텍스트 내에서 실행되므로 작동합니다.
+따라서, `BENCHER_API_TOKEN` 및 `GITHUB_TOKEN`과 같은 비밀 정보가 사용 가능합니다.
+따라서, 이 워크플로우는 _default_ 브랜치에 존재하는 경우에만 실행됩니다.
+전체 개요는 [트리거 워크플로우에서 데이터 사용하기](https://docs.github.com/ko/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow)를 참조할 수 있습니다.
+초기 워크플로우에서 사용된 pull request 번호, 헤드 브랜치, 및 기본 브랜치는 `workflow_run`내에서는 사용할 수 없으므로 명시적으로 전달해야 합니다.
 
 <br/>
- 
-<h2><a href="/docs/ko/explanation/benchmarking">계속 진행하기: 벤치마킹 개요 ➡</a></h2>
+<br/>
+
+> 🐰 축하합니다! GitHub Actions에서 Bencher를 어떻게 사용하는지 배웠습니다! 🎉
+
+<br/>
+
+<h2><a href="/docs/ko/explanation/benchmarking">계속 진행하세요: 벤치마킹 개요 ➡</a></h2>

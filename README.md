@@ -133,17 +133,20 @@ See [how to use GitHub Actions](https://bencher.dev/docs/how-to/github-actions) 
 
 ```yaml
 name: Continuous Benchmarking with Bencher
-on: [push]
+on:
+  push:
+    branches: main
 jobs:
   benchmark_with_bencher:
     name: Benchmark with Bencher
     runs-on: ubuntu-latest
     env:
+      - BENCHER_PROJECT: my-project-slug
       - BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
     steps:
       - uses: actions/checkout@v3
       - uses: bencherdev/bencher@main
-      - run: bencher run --project my-project-slug "bencher mock"
+      - run: bencher run "bencher mock"
 ```
 
 ### Repository Secrets

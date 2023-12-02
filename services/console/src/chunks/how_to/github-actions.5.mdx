@@ -1,19 +1,40 @@
 ```yaml
-on: pull_request_target
+on:
+  push:
+    branches: main
+  pull_request_target:
 
 jobs:
-  requires_review:
+  benchmark_main_with_bencher:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    name: Benchmark main with Bencher
+    runs-on: ubuntu-latest
+    env:
+      BENCHER_PROJECT: save-walter-white
+      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+      BENCHER_TESTBED: ubuntu-latest
+      BENCHER_ADAPTER: json
+    steps:
+      - uses: actions/checkout@v3
+      - uses: bencherdev/bencher@main
+      - name: Track Benchmarks with Bencher
+        run: |
+          bencher run \
+          --branch main \
+          --err \
+          "bencher mock"
+
+  benchmark_pr_requires_review:
+    if: github.event_name == 'pull_request_target'
     environment:
-      ${{ (github.event_name == 'pull_request_target' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      'internal') || 'external' }}
+      ${{ (github.event.pull_request.head.repo.full_name == github.repository && 'internal') || 'external' }}
     runs-on: ubuntu-latest
     steps:
       - run: true
 
-  benchmark_with_bencher:
-    needs: requires_review
-    name: Track benchmarks with Bencher
+  benchmark_pr_with_bencher:
+    needs: benchmark_pr_requires_review
+    name: Benchmark PR with Bencher
     runs-on: ubuntu-latest
     env:
       BENCHER_PROJECT: save-walter-white
@@ -26,14 +47,14 @@ jobs:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           persist-credentials: false
       - uses: bencherdev/bencher@main
-      - name: Benchmark with Bencher
+      - name: Track Benchmarks with Bencher
         run: |
           bencher run \
           --if-branch "${{ github.event.pull_request.head.ref }}" \
           --else-if-branch "${{ github.event.pull_request.base.ref }}" \
           --else-if-branch main \
-          --err \
           --github-actions "${{ secrets.GITHUB_TOKEN }}" \
           --token "${{ secrets.BENCHER_API_TOKEN }}" \
+          --err \
           "bencher mock"
 ```

@@ -22,6 +22,8 @@ jobs:
 ```
 
 ```yaml
+name: Track Benchmarks
+
 on:
   workflow_run:
     workflows: [Run and Cache Benchmarks]
@@ -87,8 +89,8 @@ jobs:
               --if-branch "${{ env.PR_HEAD }}" \
               --else-if-branch "${{ env.PR_BASE }}" \
               --else-if-branch main \
-              --err \
               --github-actions "${{ secrets.GITHUB_TOKEN }}" \
               --ci-number "${{ env.PR_NUMBER }}" \
+              --err \
               --file $BENCHMARK_RESULTS
 ```

@@ -3,4 +3,26 @@ on:
   push:
     branches: main
   pull_request:
+
+jobs:
+  benchmark_with_bencher:
+    name: Continuous Benchmarking with Bencher
+    runs-on: ubuntu-latest
+    env:
+      BENCHER_PROJECT: save-walter-white
+      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+      BENCHER_TESTBED: ubuntu-latest
+      BENCHER_ADAPTER: json
+    steps:
+      - uses: actions/checkout@v3
+      - uses: bencherdev/bencher@main
+      - name: Track Benchmarks with Bencher
+        run: |
+          bencher run \
+          --if-branch "$GITHUB_REF_NAME" \
+          --else-if-branch "$GITHUB_BASE_REF" \
+          --else-if-branch main \
+          --github-actions ${{ secrets.GITHUB_TOKEN }} \
+          --err \
+          "bencher mock"
 ```
