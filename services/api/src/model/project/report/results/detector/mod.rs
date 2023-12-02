@@ -85,6 +85,7 @@ impl Detector {
             threshold_id: self.threshold.id,
             statistic_id: self.threshold.statistic.id,
             metric_id: query_metric.id,
+            average: boundary.limits.average,
             lower_limit: boundary.limits.lower.map(Into::into),
             upper_limit: boundary.limits.upper.map(Into::into),
         };

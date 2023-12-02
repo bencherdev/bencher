@@ -142,7 +142,9 @@ impl ReportUrls {
 
             if with_metrics {
                 let units = &metric_kind.units;
-                html.push_str(&format!("<th>{metric_kind_name} Results<br/>{units}</th>",));
+                html.push_str(&format!(
+                    "<th>{metric_kind_name} Results<br/>{units} | (Δ%)</th>",
+                ));
                 if boundary.lower_boundary.is_some() {
                     html.push_str(&format!(
                         "<th>{metric_kind_name} Lower Boundary<br/>{units} | (%)</th>"
@@ -220,7 +222,16 @@ impl ReportUrls {
 
                 if with_metrics {
                     let value = *value;
-                    html.push_str(&format!("<td>{value:.3}</td>"));
+                    let value_percent = if value.is_normal() && boundary.average.is_normal() {
+                        ((value - boundary.average) / boundary.average) * 100.0
+                    } else {
+                        0.0
+                    };
+                    let value_plus = if value_percent > 0.0 { "+" } else { "" };
+
+                    html.push_str(&format!(
+                        "<td>{value:.3} ({value_plus}{value_percent:.2}%)</td>"
+                    ));
                     if let Some(lower_boundary) = boundary.lower_boundary {
                         let limit_percent = if value.is_normal() && lower_boundary.is_normal() {
                             (lower_boundary / value) * 100.0
@@ -500,6 +511,7 @@ impl BenchmarkUrl {
 
 #[derive(Clone, Copy)]
 pub struct BoundaryParam {
+    average: f64,
     lower_boundary: Option<f64>,
     upper_boundary: Option<f64>,
 }
@@ -507,6 +519,7 @@ pub struct BoundaryParam {
 impl From<JsonBoundary> for BoundaryParam {
     fn from(json_boundary: JsonBoundary) -> Self {
         Self {
+            average: json_boundary.average.into(),
             lower_boundary: json_boundary.lower_limit.map(Into::into),
             upper_boundary: json_boundary.upper_limit.map(Into::into),
         }

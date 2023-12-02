@@ -917,6 +917,7 @@ dependencies = [
  "bencher_json",
  "bencher_logger",
  "once_cell",
+ "ordered-float",
  "pretty_assertions",
  "slog",
  "statrs",

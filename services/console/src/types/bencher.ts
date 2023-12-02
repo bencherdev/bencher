@@ -69,6 +69,7 @@ export interface JsonThresholdStatistic {
 }
 
 export interface JsonBoundary {
+	average: number;
 	lower_limit?: number;
 	upper_limit?: number;
 }

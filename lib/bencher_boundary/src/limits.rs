@@ -6,6 +6,7 @@ use crate::BoundaryError;
 
 #[derive(Debug, Default)]
 pub struct MetricsLimits {
+    pub average: f64,
     pub lower: Option<MetricsLimit>,
     pub upper: Option<MetricsLimit>,
 }
@@ -51,7 +52,11 @@ impl MetricsLimits {
                     let abs_limit = normal.inverse_cdf(limit.into());
                     MetricsLimit::upper(abs_limit)
                 });
-                Self { lower, upper }
+                Self {
+                    average: mean,
+                    lower,
+                    upper,
+                }
             },
             // Create a Student's t distribution and calculate the boundary limits for the threshold based on the boundary percentiles.
             TestKind::T { freedom } => {
@@ -75,7 +80,11 @@ impl MetricsLimits {
                     let abs_limit = students_t.inverse_cdf(limit.into());
                     MetricsLimit::upper(abs_limit)
                 });
-                Self { lower, upper }
+                Self {
+                    average: mean,
+                    lower,
+                    upper,
+                }
             },
         })
     }
@@ -124,6 +133,7 @@ mod test {
     use bencher_json::{project::boundary::BoundaryLimit, Boundary};
     use bencher_logger::bootstrap_logger;
     use once_cell::sync::Lazy;
+    use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
     use super::{MetricsLimit, MetricsLimits, TestKind};
@@ -146,6 +156,7 @@ mod test {
     fn test_limits_z_none() {
         let log = bootstrap_logger();
         let limits = MetricsLimits::new(&log, MEAN, STD_DEV, TestKind::Z, None, None).unwrap();
+        assert_eq!(OrderedFloat::from(limits.average), OrderedFloat::from(MEAN));
         assert_eq!(limits.lower, None);
         assert_eq!(limits.upper, None);
 
@@ -170,6 +181,7 @@ mod test {
         let log = bootstrap_logger();
         let limits =
             MetricsLimits::new(&log, MEAN, STD_DEV, TestKind::Z, Some(*PERCENTILE), None).unwrap();
+        assert_eq!(OrderedFloat::from(limits.average), OrderedFloat::from(MEAN));
         assert_eq!(limits.lower, Some(MetricsLimit { value: -Z_LIMIT }));
         assert_eq!(limits.upper, None);
 
@@ -194,6 +206,7 @@ mod test {
         let log = bootstrap_logger();
         let limits =
             MetricsLimits::new(&log, MEAN, STD_DEV, TestKind::Z, None, Some(*PERCENTILE)).unwrap();
+        assert_eq!(OrderedFloat::from(limits.average), OrderedFloat::from(MEAN));
         assert_eq!(limits.lower, None);
         assert_eq!(limits.upper, Some(MetricsLimit { value: Z_LIMIT }));
 
@@ -225,6 +238,7 @@ mod test {
             Some(*PERCENTILE),
         )
         .unwrap();
+        assert_eq!(OrderedFloat::from(limits.average), OrderedFloat::from(MEAN));
         assert_eq!(limits.lower, Some(MetricsLimit { value: -Z_LIMIT }));
         assert_eq!(limits.upper, Some(MetricsLimit { value: Z_LIMIT }));
 
@@ -246,17 +260,22 @@ mod test {
 
     #[test]
     fn test_limits_z_docs() {
+        const MEAN_100: f64 = 100.0;
         let log = bootstrap_logger();
         let boundary = 0.977.try_into().expect("Failed to create boundary.");
         let limits = MetricsLimits::new(
             &log,
-            100.0,
+            MEAN_100,
             10.0,
             TestKind::Z,
             Some(boundary),
             Some(boundary),
         )
         .unwrap();
+        assert_eq!(
+            OrderedFloat::from(limits.average),
+            OrderedFloat::from(MEAN_100)
+        );
         assert_eq!(
             limits.lower,
             Some(MetricsLimit {
@@ -298,6 +317,7 @@ mod test {
             None,
         )
         .unwrap();
+        assert_eq!(OrderedFloat::from(limits.average), OrderedFloat::from(MEAN));
         assert_eq!(limits.lower, None);
         assert_eq!(limits.upper, None);
 
@@ -329,6 +349,7 @@ mod test {
             None,
         )
         .unwrap();
+        assert_eq!(OrderedFloat::from(limits.average), OrderedFloat::from(MEAN));
         assert_eq!(limits.lower, Some(MetricsLimit { value: -T_LIMIT }));
         assert_eq!(limits.upper, None);
 
@@ -360,6 +381,7 @@ mod test {
             Some(*PERCENTILE),
         )
         .unwrap();
+        assert_eq!(OrderedFloat::from(limits.average), OrderedFloat::from(MEAN));
         assert_eq!(limits.lower, None);
         assert_eq!(limits.upper, Some(MetricsLimit { value: T_LIMIT }));
 
@@ -391,6 +413,7 @@ mod test {
             Some(*PERCENTILE),
         )
         .unwrap();
+        assert_eq!(OrderedFloat::from(limits.average), OrderedFloat::from(MEAN));
         assert_eq!(limits.lower, Some(MetricsLimit { value: -T_LIMIT }));
         assert_eq!(limits.upper, Some(MetricsLimit { value: T_LIMIT }));
 

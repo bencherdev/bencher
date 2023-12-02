@@ -30,6 +30,7 @@ diesel::table! {
         threshold_id -> Integer,
         statistic_id -> Integer,
         metric_id -> Integer,
+        average -> Double,
         lower_limit -> Nullable<Double>,
         upper_limit -> Nullable<Double>,
     }

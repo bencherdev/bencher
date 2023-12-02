@@ -276,6 +276,7 @@ fn perf_query(
                     schema::boundary::threshold_id,
                     schema::boundary::statistic_id,
                     schema::boundary::metric_id,
+                    schema::boundary::average,
                     schema::boundary::lower_limit,
                     schema::boundary::upper_limit,
                 ),

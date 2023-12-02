@@ -6335,6 +6335,10 @@
       "JsonBoundary": {
         "type": "object",
         "properties": {
+          "average": {
+            "type": "number",
+            "format": "double"
+          },
           "lower_limit": {
             "nullable": true,
             "type": "number",
@@ -6345,7 +6349,10 @@
             "type": "number",
             "format": "double"
           }
-        }
+        },
+        "required": [
+          "average"
+        ]
       },
       "JsonBranch": {
         "type": "object",
