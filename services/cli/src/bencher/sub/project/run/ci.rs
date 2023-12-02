@@ -78,20 +78,20 @@ impl TryFrom<CliRunCi> for Option<Ci> {
 
     fn try_from(ci: CliRunCi) -> Result<Self, Self::Error> {
         let CliRunCi {
+            ci_with_metrics,
             ci_only_thresholds,
             ci_only_on_alert,
             ci_public_links,
-            ci_show_results,
             ci_id,
             ci_number,
             github_actions,
         } = ci;
         Ok(github_actions.map(|token| {
             Ci::GitHubActions(GitHubActions {
+                ci_with_metrics,
                 ci_only_thresholds,
                 ci_only_on_alert,
                 ci_public_links,
-                ci_show_results,
                 ci_id,
                 ci_number,
                 token,
@@ -113,10 +113,10 @@ impl Ci {
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug)]
 pub struct GitHubActions {
+    pub ci_with_metrics: bool,
     pub ci_only_thresholds: bool,
     pub ci_only_on_alert: bool,
     pub ci_public_links: bool,
-    pub ci_show_results: bool,
     pub ci_id: Option<NonEmpty>,
     pub ci_number: Option<u64>,
     pub token: String,
@@ -224,10 +224,10 @@ impl GitHubActions {
         // Update or create the comment
         let issue_handler = github_client.issues(owner, repo);
         let body = report_urls.html(
+            self.ci_with_metrics,
             self.ci_only_thresholds,
-            self.ci_id.as_ref(),
             self.ci_public_links,
-            self.ci_show_results,
+            self.ci_id.as_ref(),
         );
         let _comment = if let Some(comment_id) = comment_id {
             issue_handler

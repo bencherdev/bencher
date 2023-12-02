@@ -203,6 +203,9 @@ pub enum CliRunFold {
         .args(&["github_actions"]),
 ))]
 pub struct CliRunCi {
+    /// Display the Benchmark Metrics and Boundary Limits (requires: `--github-actions`)
+    #[clap(long, requires = "ci_cd")]
+    pub ci_with_metrics: bool,
     /// Only post results to CI if a Threshold exists for the Metric Kind, Branch, and Testbed (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_only_thresholds: bool,
@@ -212,9 +215,6 @@ pub struct CliRunCi {
     /// All links should be to public URLs that do not require a login (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_public_links: bool,
-    /// Display the benchmark results: metrics, boundaries, and percentage of boundaries (requires: `--github-actions`)
-    #[clap(long, requires = "ci_cd")]
-    pub ci_show_results: bool,
     /// Custom ID for posting results to CI (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_id: Option<NonEmpty>,

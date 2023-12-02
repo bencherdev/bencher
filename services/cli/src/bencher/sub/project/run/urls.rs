@@ -27,16 +27,16 @@ impl ReportUrls {
 
     pub fn html(
         &self,
+        with_metrics: bool,
         require_threshold: bool,
-        id: Option<&NonEmpty>,
         public_links: bool,
-        show_results: bool,
+        id: Option<&NonEmpty>,
     ) -> String {
         let mut html = String::new();
         let html_mut = &mut html;
         self.html_header(html_mut);
         self.html_report_table(html_mut, public_links);
-        self.html_benchmarks_table(html_mut, require_threshold, public_links, show_results);
+        self.html_benchmarks_table(html_mut, with_metrics, require_threshold, public_links);
         self.html_footer(html_mut);
         // DO NOT MOVE: The Bencher tag must be the last thing in the HTML for updates to work
         self.html_bencher_tag(html_mut, id);
@@ -108,9 +108,9 @@ impl ReportUrls {
     fn html_benchmarks_table(
         &self,
         html: &mut String,
+        with_metrics: bool,
         require_threshold: bool,
         public_links: bool,
-        show_results: bool,
     ) {
         let Some((_benchmark, metric_kinds)) = self.benchmark_urls.0.first_key_value() else {
             html.push_str("<b>No benchmarks found!</b>");
@@ -140,7 +140,7 @@ impl ReportUrls {
                 ));
             }
 
-            if show_results {
+            if with_metrics {
                 let units = &metric_kind.units;
                 html.push_str(&format!("<th>{metric_kind_name} Results<br/>{units}</th>",));
                 if boundary.lower_boundary.is_some() {
@@ -218,7 +218,7 @@ impl ReportUrls {
                 };
                 html.push_str(&format!(r#"<td>{row}</td>"#));
 
-                if show_results {
+                if with_metrics {
                     let value = *value;
                     html.push_str(&format!("<td>{value:.3}</td>"));
                     if let Some(lower_boundary) = boundary.lower_boundary {

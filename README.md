@@ -155,7 +155,7 @@ Add `BENCHER_API_TOKEN` to you **Repository** secrets (ex: `Repo -> Settings -> 
 You can set the [`bencher run` CLI subcommand](https://bencher.dev/docs/explanation/bencher-run) to error
 if [an Alert is generated](https://bencher.dev/docs/explanation/thresholds) with the `--err` flag.
 
-```yaml
+```bash
 bencher run --project my-project-slug --err "bencher mock"
 ```
 
@@ -163,26 +163,32 @@ bencher run --project my-project-slug --err "bencher mock"
 
 You can set the [`bencher run` CLI subcommand](https://bencher.dev/docs/explanation/bencher-run) to comment on a PR with the `--github-actions` argument.
 
-```yaml
+```bash
 bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN }}" "bencher mock"
+```
+
+To display the benchmark metrics and boundary limits, use the `--ci-with-metrics` flag.
+
+```bash
+bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN }}" --ci-with-metrics "bencher mock"
 ```
 
 If you want to only show results when [a Threshold is set](https://bencher.dev/docs/explanation/thresholds) use the `--ci-only-thresholds` flag.
 
-```yaml
+```bash
 bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN }}" --ci-only-thresholds "bencher mock"
 ```
 
 Or if you only want it to start commenting once there is [an Alert is generated](https://bencher.dev/docs/explanation/thresholds) use the `--ci-only-on-alert` flag.
 
-```yaml
+```bash
 bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN }}" --ci-only-on-alert "bencher mock"
 ```
 
-You can also use all three together!
+You can also use all of them together!
 
-```yaml
-bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN }}" --ci-only-thresholds --ci-only-on-alert "bencher mock"
+```bash
+bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN }}" --ci-with-metrics --ci-only-thresholds --ci-only-on-alert "bencher mock"
 ```
 
 For more options see the [`bencher run`](https://bencher.dev/docs/explanation/bencher-run) documentation.
