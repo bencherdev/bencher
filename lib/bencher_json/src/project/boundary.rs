@@ -12,7 +12,7 @@ pub struct JsonBoundaries(pub Vec<JsonBoundary>);
 crate::from_vec!(JsonBoundaries[JsonBoundary]);
 
 #[typeshare::typeshare]
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBoundary {
     pub lower_limit: Option<OrderedFloat<f64>>,

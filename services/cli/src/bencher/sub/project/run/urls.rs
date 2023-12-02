@@ -1,8 +1,8 @@
 use std::{collections::BTreeMap, time::Duration};
 
 use bencher_json::{
-    project::threshold::JsonThresholdStatistic, AlertUuid, BenchmarkName, BenchmarkUuid,
-    BranchUuid, DateTime, JsonPerfQuery, JsonReport, MetricKindUuid, NonEmpty, Slug, TestbedUuid,
+    AlertUuid, BenchmarkName, BenchmarkUuid, BranchUuid, DateTime, JsonBoundary, JsonPerfQuery,
+    JsonReport, MetricKindUuid, NonEmpty, Slug, TestbedUuid,
 };
 use url::Url;
 
@@ -30,12 +30,13 @@ impl ReportUrls {
         require_threshold: bool,
         id: Option<&NonEmpty>,
         public_links: bool,
+        show_results: bool,
     ) -> String {
         let mut html = String::new();
         let html_mut = &mut html;
         self.html_header(html_mut);
         self.html_report_table(html_mut, public_links);
-        self.html_benchmarks_table(html_mut, require_threshold, public_links);
+        self.html_benchmarks_table(html_mut, require_threshold, public_links, show_results);
         self.html_footer(html_mut);
         // DO NOT MOVE: The Bencher tag must be the last thing in the HTML for updates to work
         self.html_bencher_tag(html_mut, id);
@@ -103,11 +104,13 @@ impl ReportUrls {
         html.push_str("</table>");
     }
 
+    #[allow(clippy::too_many_lines)]
     fn html_benchmarks_table(
         &self,
         html: &mut String,
         require_threshold: bool,
         public_links: bool,
+        show_results: bool,
     ) {
         let Some((_benchmark, metric_kinds)) = self.benchmark_urls.0.first_key_value() else {
             html.push_str("<b>No benchmarks found!</b>");
@@ -122,8 +125,9 @@ impl ReportUrls {
             if require_threshold && !BenchmarkUrls::boundary_has_threshold(*boundary) {
                 continue;
             }
+            let metric_kind_name = &metric_kind.name;
             if public_links {
-                html.push_str(&format!("<th>{name}</th>", name = metric_kind.name,));
+                html.push_str(&format!("<th>{metric_kind_name}</th>"));
             } else {
                 let metric_kind_path = format!(
                     "/console/projects/{}/metric-kinds/{}",
@@ -132,9 +136,23 @@ impl ReportUrls {
                 let url = self.endpoint_url.clone();
                 let url = url.join(&metric_kind_path).unwrap_or(url);
                 html.push_str(&format!(
-                    r#"<th><a href="{url}">{name}</a></th>"#,
-                    name = metric_kind.name,
+                    r#"<th><a href="{url}">{metric_kind_name}</a></th>"#
                 ));
+            }
+
+            if show_results {
+                let units = &metric_kind.units;
+                html.push_str(&format!("<th>{metric_kind_name} Results<br/>{units}</th>",));
+                if boundary.lower_boundary.is_some() {
+                    html.push_str(&format!(
+                        "<th>{metric_kind_name} Lower Boundary<br/>{units} | (%)</th>"
+                    ));
+                }
+                if boundary.upper_boundary.is_some() {
+                    html.push_str(&format!(
+                        "<th>{metric_kind_name} Upper Boundary<br/>{units} | (%)</th>"
+                    ));
+                }
             }
         }
         html.push_str("</tr>");
@@ -160,6 +178,7 @@ impl ReportUrls {
                 MetricKindData {
                     public_url,
                     console_url,
+                    value,
                     boundary,
                 },
             ) in metric_kinds
@@ -192,13 +211,39 @@ impl ReportUrls {
                     format!(
                         r#"🚨 (<a href="{plot_url}">view plot</a> | <a href="{alert_url}">view alert</a>)"#,
                     )
-                } else if boundary.map(BoundaryParam::is_empty).unwrap_or(true) {
+                } else if boundary.is_empty() {
                     format!(r#"➖ (<a href="{plot_url}">view plot</a>)"#)
                 } else {
                     format!(r#"✅ (<a href="{plot_url}">view plot</a>)"#)
                 };
                 html.push_str(&format!(r#"<td>{row}</td>"#));
+
+                if show_results {
+                    let value = *value;
+                    html.push_str(&format!("<td>{value:.3}</td>"));
+                    if let Some(lower_boundary) = boundary.lower_boundary {
+                        let limit_percent = if value.is_normal() && lower_boundary.is_normal() {
+                            (lower_boundary / value) * 100.0
+                        } else {
+                            0.0
+                        };
+                        html.push_str(&format!(
+                            "<td>{lower_boundary:.3} ({limit_percent:.2}%)</td>"
+                        ));
+                    }
+                    if let Some(upper_boundary) = boundary.upper_boundary {
+                        let limit_percent = if value.is_normal() && upper_boundary.is_normal() {
+                            (value / upper_boundary) * 100.0
+                        } else {
+                            0.0
+                        };
+                        html.push_str(&format!(
+                            "<td>{upper_boundary:.3} ({limit_percent:.2}%)</td>"
+                        ));
+                    }
+                }
             }
+
             html.push_str("</tr>");
         }
 
@@ -296,13 +341,15 @@ struct Benchmark {
 pub struct MetricKind {
     name: NonEmpty,
     slug: Slug,
+    units: NonEmpty,
 }
 
 #[derive(Clone)]
 pub struct MetricKindData {
     pub public_url: Url,
     pub console_url: Url,
-    pub boundary: Option<BoundaryParam>,
+    pub value: f64,
+    pub boundary: BoundaryParam,
 }
 
 impl BenchmarkUrls {
@@ -322,26 +369,28 @@ impl BenchmarkUrls {
                 let metric_kind = MetricKind {
                     name: result.metric_kind.name.clone(),
                     slug: result.metric_kind.slug.clone(),
+                    units: result.metric_kind.units.clone(),
                 };
-                let boundary = result.threshold.as_ref().map(Into::into);
                 for benchmark_metric in &result.benchmarks {
                     let benchmark = Benchmark {
                         name: benchmark_metric.name.clone(),
                         slug: benchmark_metric.slug.clone(),
                     };
                     let benchmark_urls = urls.entry(benchmark).or_insert_with(BTreeMap::new);
+                    let boundary = benchmark_metric.boundary.into();
 
                     let data = MetricKindData {
                         public_url: benchmark_url.to_public_url(
                             result.metric_kind.uuid,
                             benchmark_metric.uuid,
-                            None,
+                            boundary,
                         ),
                         console_url: benchmark_url.to_console_url(
                             result.metric_kind.uuid,
                             benchmark_metric.uuid,
                             boundary,
                         ),
+                        value: benchmark_metric.metric.value.into(),
                         boundary,
                     };
                     benchmark_urls.insert(metric_kind.clone(), data);
@@ -362,8 +411,8 @@ impl BenchmarkUrls {
             .any(|MetricKindData { boundary, .. }| Self::boundary_has_threshold(*boundary))
     }
 
-    fn boundary_has_threshold(boundary: Option<BoundaryParam>) -> bool {
-        boundary.is_some_and(|b| !b.is_empty())
+    fn boundary_has_threshold(boundary: BoundaryParam) -> bool {
+        !boundary.is_empty()
     }
 }
 
@@ -402,7 +451,7 @@ impl BenchmarkUrl {
         &self,
         metric_kind: MetricKindUuid,
         benchmark: BenchmarkUuid,
-        boundary: Option<BoundaryParam>,
+        boundary: BoundaryParam,
     ) -> Url {
         self.to_url(metric_kind, benchmark, boundary, true)
     }
@@ -411,7 +460,7 @@ impl BenchmarkUrl {
         &self,
         metric_kind: MetricKindUuid,
         benchmark: BenchmarkUuid,
-        boundary: Option<BoundaryParam>,
+        boundary: BoundaryParam,
     ) -> Url {
         self.to_url(metric_kind, benchmark, boundary, false)
     }
@@ -420,7 +469,7 @@ impl BenchmarkUrl {
         &self,
         metric_kind: MetricKindUuid,
         benchmark: BenchmarkUuid,
-        boundary: Option<BoundaryParam>,
+        boundary: BoundaryParam,
         public_links: bool,
     ) -> Url {
         let json_perf_query = JsonPerfQuery {
@@ -441,11 +490,7 @@ impl BenchmarkUrl {
         url.set_path(&path);
         url.set_query(Some(
             &json_perf_query
-                .to_query_string(
-                    &boundary
-                        .map(BoundaryParam::to_query_string)
-                        .unwrap_or_default(),
-                )
+                .to_query_string(&boundary.to_query_string())
                 .unwrap_or_default(),
         ));
 
@@ -455,15 +500,15 @@ impl BenchmarkUrl {
 
 #[derive(Clone, Copy)]
 pub struct BoundaryParam {
-    lower_boundary: bool,
-    upper_boundary: bool,
+    lower_boundary: Option<f64>,
+    upper_boundary: Option<f64>,
 }
 
-impl From<&JsonThresholdStatistic> for BoundaryParam {
-    fn from(json_threshold_statistic: &JsonThresholdStatistic) -> Self {
+impl From<JsonBoundary> for BoundaryParam {
+    fn from(json_boundary: JsonBoundary) -> Self {
         Self {
-            lower_boundary: json_threshold_statistic.statistic.lower_boundary.is_some(),
-            upper_boundary: json_threshold_statistic.statistic.upper_boundary.is_some(),
+            lower_boundary: json_boundary.lower_limit.map(Into::into),
+            upper_boundary: json_boundary.upper_limit.map(Into::into),
         }
     }
 }
@@ -471,17 +516,17 @@ impl From<&JsonThresholdStatistic> for BoundaryParam {
 impl BoundaryParam {
     fn to_query_string(self) -> Vec<(&'static str, Option<String>)> {
         let mut query_string = Vec::new();
-        if self.lower_boundary {
+        if self.lower_boundary.is_some() {
             query_string.push(("lower_boundary", Some(true.to_string())));
         }
-        if self.upper_boundary {
+        if self.upper_boundary.is_some() {
             query_string.push(("upper_boundary", Some(true.to_string())));
         }
         query_string
     }
 
     pub fn is_empty(self) -> bool {
-        !self.lower_boundary && !self.upper_boundary
+        self.lower_boundary.is_none() && self.upper_boundary.is_none()
     }
 }
 
@@ -505,6 +550,7 @@ impl AlertUrls {
             let metric_kind = MetricKind {
                 name: alert.threshold.metric_kind.name.clone(),
                 slug: alert.threshold.metric_kind.slug.clone(),
+                units: alert.threshold.metric_kind.units.clone(),
             };
             let public_url =
                 Self::to_public_url(endpoint_url.clone(), &json_report.project.slug, alert.uuid);

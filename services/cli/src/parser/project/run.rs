@@ -195,6 +195,7 @@ pub enum CliRunFold {
     Median,
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Args, Debug)]
 #[clap(group(
     ArgGroup::new("ci_cd")
@@ -211,7 +212,9 @@ pub struct CliRunCi {
     /// All links should be to public URLs that do not require a login (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_public_links: bool,
-
+    /// Display the benchmark results: metrics, boundaries, and percentage of boundaries (requires: `--github-actions`)
+    #[clap(long, requires = "ci_cd")]
+    pub ci_show_results: bool,
     /// Custom ID for posting results to CI (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_id: Option<NonEmpty>,

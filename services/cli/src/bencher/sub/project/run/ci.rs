@@ -81,6 +81,7 @@ impl TryFrom<CliRunCi> for Option<Ci> {
             ci_only_thresholds,
             ci_only_on_alert,
             ci_public_links,
+            ci_show_results,
             ci_id,
             ci_number,
             github_actions,
@@ -90,6 +91,7 @@ impl TryFrom<CliRunCi> for Option<Ci> {
                 ci_only_thresholds,
                 ci_only_on_alert,
                 ci_public_links,
+                ci_show_results,
                 ci_id,
                 ci_number,
                 token,
@@ -108,11 +110,13 @@ impl Ci {
     }
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug)]
 pub struct GitHubActions {
     pub ci_only_thresholds: bool,
     pub ci_only_on_alert: bool,
     pub ci_public_links: bool,
+    pub ci_show_results: bool,
     pub ci_id: Option<NonEmpty>,
     pub ci_number: Option<u64>,
     pub token: String,
@@ -223,6 +227,7 @@ impl GitHubActions {
             self.ci_only_thresholds,
             self.ci_id.as_ref(),
             self.ci_public_links,
+            self.ci_show_results,
         );
         let _comment = if let Some(comment_id) = comment_id {
             issue_handler
