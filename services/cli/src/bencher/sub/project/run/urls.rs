@@ -25,12 +25,17 @@ impl ReportUrls {
         }
     }
 
-    pub fn html(&self, require_threshold: bool, id: Option<&NonEmpty>) -> String {
+    pub fn html(
+        &self,
+        require_threshold: bool,
+        id: Option<&NonEmpty>,
+        public_links: bool,
+    ) -> String {
         let mut html = String::new();
         let html_mut = &mut html;
         self.html_header(html_mut);
-        self.html_report_table(html_mut);
-        self.html_benchmarks_table(html_mut, require_threshold);
+        self.html_report_table(html_mut, public_links);
+        self.html_benchmarks_table(html_mut, require_threshold, public_links);
         self.html_footer(html_mut);
         // DO NOT MOVE: The Bencher tag must be the last thing in the HTML for updates to work
         self.html_bencher_tag(html_mut, id);
@@ -44,7 +49,7 @@ impl ReportUrls {
         ));
     }
 
-    fn html_report_table(&self, html: &mut String) {
+    fn html_report_table(&self, html: &mut String, public_links: bool) {
         html.push_str("<table>");
         for (row, name, path) in [
             (
@@ -54,43 +59,56 @@ impl ReportUrls {
                     .into_inner()
                     .format("%a, %B %e, %Y at %X %Z")
                     .to_string(),
-                format!(
+                (!public_links).then_some(format!(
                     "/console/projects/{}/reports/{}",
                     self.project_slug, self.json_report.uuid
-                ),
+                )),
             ),
             (
                 "Project",
                 self.json_report.project.name.to_string(),
-                format!("/console/projects/{}", self.project_slug),
+                if public_links {
+                    Some(format!("/perf/{}", self.project_slug))
+                } else {
+                    Some(format!("/console/projects/{}", self.project_slug))
+                },
             ),
             (
                 "Branch",
                 self.json_report.branch.name.to_string(),
-                format!(
+                (!public_links).then_some(format!(
                     "/console/projects/{}/branches/{}",
                     self.project_slug, self.json_report.branch.slug
-                ),
+                )),
             ),
             (
                 "Testbed",
                 self.json_report.testbed.name.to_string(),
-                format!(
+                (!public_links).then_some(format!(
                     "/console/projects/{}/testbeds/{}",
                     self.project_slug, self.json_report.testbed.slug
-                ),
+                )),
             ),
         ] {
-            let url = self.endpoint_url.clone();
-            let url = url.join(&path).unwrap_or(url);
-            html.push_str(&format!(
-                r#"<tr><td>{row}</td><td><a href="{url}">{name}</a></td></tr>"#
-            ));
+            if let Some(path) = path {
+                let url = self.endpoint_url.clone();
+                let url = url.join(&path).unwrap_or(url);
+                html.push_str(&format!(
+                    r#"<tr><td>{row}</td><td><a href="{url}">{name}</a></td></tr>"#
+                ));
+            } else {
+                html.push_str(&format!(r#"<tr><td>{row}</td><td>{name}</td></tr>"#));
+            }
         }
         html.push_str("</table>");
     }
 
-    fn html_benchmarks_table(&self, html: &mut String, require_threshold: bool) {
+    fn html_benchmarks_table(
+        &self,
+        html: &mut String,
+        require_threshold: bool,
+        public_links: bool,
+    ) {
         let Some((_benchmark, metric_kinds)) = self.benchmark_urls.0.first_key_value() else {
             html.push_str("<b>No benchmarks found!</b>");
             return;
@@ -100,52 +118,84 @@ impl ReportUrls {
 
         html.push_str("<tr>");
         html.push_str("<th>Benchmark</th>");
-        for (metric_kind, (_url, boundary)) in metric_kinds {
+        for (metric_kind, MetricKindData { boundary, .. }) in metric_kinds {
             if require_threshold && !BenchmarkUrls::boundary_has_threshold(*boundary) {
                 continue;
             }
-            let metric_kind_path = format!(
-                "/console/projects/{}/metric-kinds/{}",
-                self.project_slug, metric_kind.slug
-            );
-            let url = self.endpoint_url.clone();
-            let url = url.join(&metric_kind_path).unwrap_or(url);
-            html.push_str(&format!(
-                r#"<th><a href="{url}">{name}</a></th>"#,
-                name = metric_kind.name,
-            ));
+            if public_links {
+                html.push_str(&format!("<th>{name}</th>", name = metric_kind.name,));
+            } else {
+                let metric_kind_path = format!(
+                    "/console/projects/{}/metric-kinds/{}",
+                    self.project_slug, metric_kind.slug
+                );
+                let url = self.endpoint_url.clone();
+                let url = url.join(&metric_kind_path).unwrap_or(url);
+                html.push_str(&format!(
+                    r#"<th><a href="{url}">{name}</a></th>"#,
+                    name = metric_kind.name,
+                ));
+            }
         }
         html.push_str("</tr>");
 
         for (benchmark, metric_kinds) in &self.benchmark_urls.0 {
             html.push_str("<tr>");
-            let benchmark_path = format!(
-                "/console/projects/{}/benchmarks/{}",
-                self.project_slug, benchmark.slug
-            );
-            let url = self.endpoint_url.clone();
-            let url = url.join(&benchmark_path).unwrap_or(url);
-            html.push_str(&format!(
-                r#"<td><a href="{url}">{name}</a></td>"#,
-                name = benchmark.name,
-            ));
-            for (metric_kind, (url, boundary)) in metric_kinds {
+            if public_links {
+                html.push_str(&format!("<td>{name}</td>", name = benchmark.name,));
+            } else {
+                let benchmark_path = format!(
+                    "/console/projects/{}/benchmarks/{}",
+                    self.project_slug, benchmark.slug
+                );
+                let url = self.endpoint_url.clone();
+                let url = url.join(&benchmark_path).unwrap_or(url);
+                html.push_str(&format!(
+                    r#"<td><a href="{url}">{name}</a></td>"#,
+                    name = benchmark.name,
+                ));
+            }
+            for (
+                metric_kind,
+                MetricKindData {
+                    public_url,
+                    console_url,
+                    boundary,
+                },
+            ) in metric_kinds
+            {
                 if require_threshold && !BenchmarkUrls::boundary_has_threshold(*boundary) {
                     continue;
                 }
+                let plot_url = if public_links {
+                    public_url
+                } else {
+                    console_url
+                };
                 let alert_url = self
                     .alert_urls
                     .0
-                    .get(&(benchmark.clone(), metric_kind.clone()));
-
+                    .get(&(benchmark.clone(), metric_kind.clone()))
+                    .map(
+                        |AlertData {
+                             public_url,
+                             console_url,
+                         }| {
+                            if public_links {
+                                public_url
+                            } else {
+                                console_url
+                            }
+                        },
+                    );
                 let row = if let Some(alert_url) = alert_url {
                     format!(
-                        r#"🚨 (<a href="{url}">view plot</a> | <a href="{alert_url}">view alert</a>)"#,
+                        r#"🚨 (<a href="{plot_url}">view plot</a> | <a href="{alert_url}">view alert</a>)"#,
                     )
                 } else if boundary.map(BoundaryParam::is_empty).unwrap_or(true) {
-                    format!(r#"➖ (<a href="{url}">view plot</a>)"#)
+                    format!(r#"➖ (<a href="{plot_url}">view plot</a>)"#)
                 } else {
-                    format!(r#"✅ (<a href="{url}">view plot</a>)"#)
+                    format!(r#"✅ (<a href="{plot_url}">view plot</a>)"#)
                 };
                 html.push_str(&format!(r#"<td>{row}</td>"#));
             }
@@ -204,10 +254,10 @@ impl std::fmt::Display for ReportUrls {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "\nView results:")?;
         for (benchmark, metric_kinds) in &self.benchmark_urls.0 {
-            for (metric_kind, (url, _boundary)) in metric_kinds {
+            for (metric_kind, MetricKindData { console_url, .. }) in metric_kinds {
                 writeln!(
                     f,
-                    "- {benchmark_name} ({metric_kind_name}): {url}",
+                    "- {benchmark_name} ({metric_kind_name}): {console_url}",
                     benchmark_name = benchmark.name,
                     metric_kind_name = metric_kind.name
                 )?;
@@ -219,10 +269,10 @@ impl std::fmt::Display for ReportUrls {
         }
 
         writeln!(f, "\nView alerts:")?;
-        for ((benchmark, metric_kind), url) in &self.alert_urls.0 {
+        for ((benchmark, metric_kind), AlertData { console_url, .. }) in &self.alert_urls.0 {
             writeln!(
                 f,
-                "- {benchmark_name} ({metric_kind_name}): {url}",
+                "- {benchmark_name} ({metric_kind_name}): {console_url}",
                 benchmark_name = benchmark.name,
                 metric_kind_name = metric_kind.name,
             )?;
@@ -234,7 +284,7 @@ impl std::fmt::Display for ReportUrls {
 }
 
 pub struct BenchmarkUrls(BTreeMap<Benchmark, MetricKindsMap>);
-pub type MetricKindsMap = BTreeMap<MetricKind, (Url, Option<BoundaryParam>)>;
+pub type MetricKindsMap = BTreeMap<MetricKind, MetricKindData>;
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 struct Benchmark {
@@ -246,6 +296,13 @@ struct Benchmark {
 pub struct MetricKind {
     name: NonEmpty,
     slug: Slug,
+}
+
+#[derive(Clone)]
+pub struct MetricKindData {
+    pub public_url: Url,
+    pub console_url: Url,
+    pub boundary: Option<BoundaryParam>,
 }
 
 impl BenchmarkUrls {
@@ -274,17 +331,20 @@ impl BenchmarkUrls {
                     };
                     let benchmark_urls = urls.entry(benchmark).or_insert_with(BTreeMap::new);
 
-                    benchmark_urls.insert(
-                        metric_kind.clone(),
-                        (
-                            benchmark_url.to_url(
-                                result.metric_kind.uuid,
-                                benchmark_metric.uuid,
-                                boundary,
-                            ),
+                    let data = MetricKindData {
+                        public_url: benchmark_url.to_public_url(
+                            result.metric_kind.uuid,
+                            benchmark_metric.uuid,
+                            None,
+                        ),
+                        console_url: benchmark_url.to_console_url(
+                            result.metric_kind.uuid,
+                            benchmark_metric.uuid,
                             boundary,
                         ),
-                    );
+                        boundary,
+                    };
+                    benchmark_urls.insert(metric_kind.clone(), data);
                 }
             }
         }
@@ -299,7 +359,7 @@ impl BenchmarkUrls {
     fn benchmark_has_threshold(metric_kinds: &MetricKindsMap) -> bool {
         metric_kinds
             .values()
-            .any(|(_, boundary)| Self::boundary_has_threshold(*boundary))
+            .any(|MetricKindData { boundary, .. }| Self::boundary_has_threshold(*boundary))
     }
 
     fn boundary_has_threshold(boundary: Option<BoundaryParam>) -> bool {
@@ -338,11 +398,30 @@ impl BenchmarkUrl {
         }
     }
 
+    fn to_public_url(
+        &self,
+        metric_kind: MetricKindUuid,
+        benchmark: BenchmarkUuid,
+        boundary: Option<BoundaryParam>,
+    ) -> Url {
+        self.to_url(metric_kind, benchmark, boundary, true)
+    }
+
+    fn to_console_url(
+        &self,
+        metric_kind: MetricKindUuid,
+        benchmark: BenchmarkUuid,
+        boundary: Option<BoundaryParam>,
+    ) -> Url {
+        self.to_url(metric_kind, benchmark, boundary, false)
+    }
+
     fn to_url(
         &self,
         metric_kind: MetricKindUuid,
         benchmark: BenchmarkUuid,
         boundary: Option<BoundaryParam>,
+        public_links: bool,
     ) -> Url {
         let json_perf_query = JsonPerfQuery {
             metric_kinds: vec![metric_kind],
@@ -354,7 +433,12 @@ impl BenchmarkUrl {
         };
 
         let mut url = self.endpoint.clone();
-        url.set_path(&format!("/console/projects/{}/perf", self.project_slug));
+        let path = if public_links {
+            format!("/perf/{}", self.project_slug)
+        } else {
+            format!("/console/projects/{}/perf", self.project_slug)
+        };
+        url.set_path(&path);
         url.set_query(Some(
             &json_perf_query
                 .to_query_string(
@@ -401,7 +485,13 @@ impl BoundaryParam {
     }
 }
 
-pub struct AlertUrls(BTreeMap<(Benchmark, MetricKind), Url>);
+pub struct AlertUrls(BTreeMap<(Benchmark, MetricKind), AlertData>);
+
+#[derive(Clone)]
+pub struct AlertData {
+    pub public_url: Url,
+    pub console_url: Url,
+}
 
 impl AlertUrls {
     pub fn new(endpoint_url: &Url, json_report: &JsonReport) -> Self {
@@ -416,15 +506,26 @@ impl AlertUrls {
                 name: alert.threshold.metric_kind.name.clone(),
                 slug: alert.threshold.metric_kind.slug.clone(),
             };
-            let alert_url =
-                Self::to_url(endpoint_url.clone(), &json_report.project.slug, alert.uuid);
-            urls.insert((benchmark, metric_kind), alert_url);
+            let public_url =
+                Self::to_public_url(endpoint_url.clone(), &json_report.project.slug, alert.uuid);
+            let console_url =
+                Self::to_console_url(endpoint_url.clone(), &json_report.project.slug, alert.uuid);
+            let data = AlertData {
+                public_url,
+                console_url,
+            };
+            urls.insert((benchmark, metric_kind), data);
         }
 
         Self(urls)
     }
 
-    fn to_url(mut endpoint: Url, project_slug: &Slug, alert: AlertUuid) -> Url {
+    fn to_public_url(mut endpoint: Url, project_slug: &Slug, alert: AlertUuid) -> Url {
+        endpoint.set_path(&format!("/perf/{project_slug}/alerts/{alert}"));
+        endpoint
+    }
+
+    fn to_console_url(mut endpoint: Url, project_slug: &Slug, alert: AlertUuid) -> Url {
         endpoint.set_path(&format!("/console/projects/{project_slug}/alerts/{alert}"));
         endpoint
     }

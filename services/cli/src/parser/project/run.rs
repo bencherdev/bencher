@@ -208,6 +208,10 @@ pub struct CliRunCi {
     /// Only start posting results to CI if an Alert is generated (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_only_on_alert: bool,
+    /// All links should be to public URLs that do not require a login (requires: `--github-actions`)
+    #[clap(long, requires = "ci_cd")]
+    pub ci_public_links: bool,
+
     /// Custom ID for posting results to CI (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_id: Option<NonEmpty>,

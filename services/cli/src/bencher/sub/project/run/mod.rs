@@ -263,7 +263,9 @@ impl Run {
 
         // TODO disable when quiet
         if self.html {
-            cli_println!("{}", report_urls.html(false, None));
+            // TODO only for testing
+            cli_println!("{}", report_urls.html(false, None, true));
+            // cli_println!("{}", report_urls.html(false, None, false));
         } else {
             cli_println!("{report_urls}");
         }

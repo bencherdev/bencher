@@ -17,13 +17,23 @@ pub enum CiError {
     GitHub(#[from] GitHubError),
 }
 
+const GITHUB_ACTIONS: &str = "GITHUB_ACTIONS";
+const GITHUB_EVENT_PATH: &str = "GITHUB_EVENT_PATH";
+const GITHUB_EVENT_NAME: &str = "GITHUB_EVENT_NAME";
+
 #[derive(thiserror::Error, Debug)]
 pub enum GitHubError {
-    #[error("Failed to get GitHub Action event path")]
+    #[error(
+        "Failed to get GitHub Action event path\n{}",
+        docker_env(GITHUB_EVENT_PATH)
+    )]
     NoEventPath,
-    #[error("Failed to read GitHub Action event path ({0}): {1}")]
+    #[error(
+        "Failed to read GitHub Action event path ({0}): {1}\n{}",
+        docker_mount(GITHUB_EVENT_PATH)
+    )]
     BadEventPath(String, std::io::Error),
-    #[error("Failed to parse GitHub Action event ({0}): {1}")]
+    #[error("Failed to parse GitHub Action event ({0}): {1}\n")]
     BadEvent(String, serde_json::Error),
     #[error("GitHub Action event ({1}) PR number is missing: {0}")]
     NoPRNumber(String, String),
@@ -51,6 +61,18 @@ pub enum GitHubError {
     UpdateComment(octocrab::Error),
 }
 
+fn docker_env(env_var: &str) -> String {
+    format!(
+        "If you are running in a Docker container, then you need to pass in the `{env_var}` environment variable. See https://bencher.dev/docs/explanation/bencher-run/#--github-actions",
+    )
+}
+
+fn docker_mount(env_var: &str) -> String {
+    format!(
+        "If you are running in a Docker container, then you need mount the path specified by `{env_var}`. See https://bencher.dev/docs/explanation/bencher-run/#--github-actions",
+    )
+}
+
 impl TryFrom<CliRunCi> for Option<Ci> {
     type Error = CiError;
 
@@ -58,18 +80,20 @@ impl TryFrom<CliRunCi> for Option<Ci> {
         let CliRunCi {
             ci_only_thresholds,
             ci_only_on_alert,
+            ci_public_links,
             ci_id,
             ci_number,
             github_actions,
         } = ci;
-        Ok(github_actions.map(|github_actions| {
-            Ci::GitHubActions(GitHubActions::new(
+        Ok(github_actions.map(|token| {
+            Ci::GitHubActions(GitHubActions {
                 ci_only_thresholds,
                 ci_only_on_alert,
+                ci_public_links,
                 ci_id,
                 ci_number,
-                github_actions,
-            ))
+                token,
+            })
         }))
     }
 }
@@ -86,30 +110,15 @@ impl Ci {
 
 #[derive(Debug)]
 pub struct GitHubActions {
-    ci_only_thresholds: bool,
-    ci_only_on_alert: bool,
-    ci_id: Option<NonEmpty>,
-    ci_number: Option<u64>,
-    token: String,
+    pub ci_only_thresholds: bool,
+    pub ci_only_on_alert: bool,
+    pub ci_public_links: bool,
+    pub ci_id: Option<NonEmpty>,
+    pub ci_number: Option<u64>,
+    pub token: String,
 }
 
 impl GitHubActions {
-    fn new(
-        ci_only_thresholds: bool,
-        ci_only_on_alert: bool,
-        ci_id: Option<NonEmpty>,
-        ci_number: Option<u64>,
-        token: String,
-    ) -> Self {
-        Self {
-            ci_only_thresholds,
-            ci_only_on_alert,
-            ci_id,
-            ci_number,
-            token,
-        }
-    }
-
     pub async fn run(&self, report_urls: &ReportUrls) -> Result<(), GitHubError> {
         // Only post to CI if there are thresholds set
         if self.ci_only_thresholds && !report_urls.has_threshold() {
@@ -119,16 +128,19 @@ impl GitHubActions {
 
         // https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
         // Always set to `true` when GitHub Actions is running the workflow. You can use this variable to differentiate when tests are being run locally or by GitHub Actions.
-        match std::env::var("GITHUB_ACTIONS").ok() {
+        match std::env::var(GITHUB_ACTIONS).ok() {
             Some(github_actions) if github_actions == "true" => {},
             _ => {
-                cli_println!("Not running as a GitHub Action. Skipping CI integration.");
+                cli_println!(
+                    "Not running as a GitHub Action. Skipping CI integration.\n{}",
+                    docker_env(GITHUB_ACTIONS)
+                );
                 return Ok(());
             },
         }
 
         // The path to the file on the runner that contains the full event webhook payload. For example, /github/workflow/event.json.
-        let Some(github_event_path) = std::env::var("GITHUB_EVENT_PATH").ok() else {
+        let Some(github_event_path) = std::env::var(GITHUB_EVENT_PATH).ok() else {
             return Err(GitHubError::NoEventPath);
         };
 
@@ -140,7 +152,7 @@ impl GitHubActions {
             .map_err(|e| GitHubError::BadEvent(event_str.clone(), e))?;
 
         // The name of the event that triggered the workflow. For example, `workflow_dispatch`.
-        let issue_number = match std::env::var("GITHUB_EVENT_NAME").ok().as_deref() {
+        let issue_number = match std::env::var(GITHUB_EVENT_NAME).ok().as_deref() {
             // https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request
             // https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target
             Some(event_name @ ("pull_request" | "pull_request_target")) => {
@@ -166,7 +178,8 @@ impl GitHubActions {
             },
             _ => {
                 cli_println!(
-                    "Not running as an expected GitHub Action event (`pull_request`, `pull_request_target`, or `workflow_run`). Skipping CI integration."
+                    "Not running as an expected GitHub Action event (`pull_request`, `pull_request_target`, or `workflow_run`). Skipping CI integration.\n{}",
+                    docker_env(GITHUB_EVENT_NAME)
                 );
                 return Ok(());
             },
@@ -206,7 +219,11 @@ impl GitHubActions {
 
         // Update or create the comment
         let issue_handler = github_client.issues(owner, repo);
-        let body = report_urls.html(self.ci_only_thresholds, self.ci_id.as_ref());
+        let body = report_urls.html(
+            self.ci_only_thresholds,
+            self.ci_id.as_ref(),
+            self.ci_public_links,
+        );
         let _comment = if let Some(comment_id) = comment_id {
             issue_handler
                 .update_comment(comment_id, body)

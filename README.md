@@ -185,6 +185,8 @@ You can also use all three together!
 bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN }}" --ci-only-thresholds --ci-only-on-alert "bencher mock"
 ```
 
+For more options see the [`bencher run`](https://bencher.dev/docs/explanation/bencher-run) documentation.
+
 ### Example PR Comment
 
 <br />
