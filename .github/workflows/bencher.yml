@@ -670,6 +670,18 @@ jobs:
       - name: Build Console UI
         working-directory: ./services/console
         run: npm run netlify
+      - name: Test Links
+        uses: lycheeverse/lychee-action@v1.8.0
+        with:
+          fail: true
+          # TODO remove exclude paths once `--cookie-jar` is stable
+          # https://github.com/lycheeverse/lychee/commit/14e748793e8a08d7c2130f63896074f4980204cb
+          args: ./services/console/dist --exclude "http://localhost:3000/" --exclude "https://discord.gg/yGEsdUh7R4" --exclude "https://github.com/bencherdev/bencher/issues/new*" --exclude-path "./services/console/dist/docs/reference/prior-art/index.html" --exclude-path "./services/console/dist/docs/de/reference/prior-art/index.html" --exclude-path "./services/console/dist/docs/es/reference/prior-art/index.html" --exclude-path "./services/console/dist/docs/fr/reference/prior-art/index.html" --exclude-path "./services/console/dist/docs/ja/reference/prior-art/index.html" --exclude-path "./services/console/dist/docs/ko/reference/prior-art/index.html" --exclude-path "./services/console/dist/docs/pt/reference/prior-art/index.html" --exclude-path "./services/console/dist/docs/ru/reference/prior-art/index.html" --exclude-path "./services/console/dist/docs/zh/reference/prior-art/index.html"
+      - name: Upload Lychee Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: lychee.md
+          path: lychee/out.md
 
   # API Fly.io
   deploy_local_api_fly:

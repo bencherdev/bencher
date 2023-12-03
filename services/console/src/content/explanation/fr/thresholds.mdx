@@ -7,14 +7,14 @@ sortOrder: 4
 
 Les seuils peuvent être créés pour la combinaison unique d'un type de métrique, d'une branche et d'une plate-forme de test.
 Ce sont des tests de signification statistique qui utilisent soit un
-[score Z](https://fr.wikipedia.org/wiki/Score_z)
+[score Z](https://fr.wikipedia.org/wiki/Cote_Z_(statistiques))
 ou un [test de Student](https://fr.wikipedia.org/wiki/Test_de_Student)
 afin de détecter les régressions de performance et de générer des alertes.
 Lorsqu'une métrique est en dessous de la limite inférieure d'un seuil ou au-dessus de la limite supérieure d'un seuil,
 une alerte est générée pour cette métrique.
 
 Les seuils fonctionnent mieux lorsque :
-- Il n'y a pas de différences extrêmes entre les exécutions de benchmark 
+- Il n'y a pas de différences extrêmes entre les exécutions de benchmark
 - Les exécutions de benchmark sont totalement indépendantes les unes des autres
 - Le nombre d'itérations pour une seule exécution de benchmark est inférieur à 10% des métriques historiques
 
