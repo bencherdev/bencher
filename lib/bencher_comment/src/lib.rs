@@ -277,8 +277,8 @@ impl ReportComment {
 
                 if with_metrics {
                     let value = *value;
-                    let value_percent = if value.is_normal() && boundary.average.is_normal() {
-                        ((value - boundary.average) / boundary.average) * 100.0
+                    let value_percent = if value.is_normal() && boundary.baseline.is_normal() {
+                        ((value - boundary.baseline) / boundary.baseline) * 100.0
                     } else {
                         0.0
                     };
@@ -526,7 +526,7 @@ impl BenchmarkUrl {
 
 #[derive(Clone, Copy)]
 pub struct Boundary {
-    average: f64,
+    baseline: f64,
     lower_limit: Option<f64>,
     upper_limit: Option<f64>,
 }
@@ -534,7 +534,7 @@ pub struct Boundary {
 impl From<JsonBoundary> for Boundary {
     fn from(json_boundary: JsonBoundary) -> Self {
         Self {
-            average: json_boundary.average.into(),
+            baseline: json_boundary.baseline.into(),
             lower_limit: json_boundary.lower_limit.map(Into::into),
             upper_limit: json_boundary.upper_limit.map(Into::into),
         }

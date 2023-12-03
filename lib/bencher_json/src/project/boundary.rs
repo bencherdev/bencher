@@ -15,7 +15,9 @@ crate::from_vec!(JsonBoundaries[JsonBoundary]);
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBoundary {
-    pub average: OrderedFloat<f64>,
+    // TODO remove in due time
+    #[serde(alias = "average")]
+    pub baseline: OrderedFloat<f64>,
     pub lower_limit: Option<OrderedFloat<f64>>,
     pub upper_limit: Option<OrderedFloat<f64>>,
 }

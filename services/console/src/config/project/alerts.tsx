@@ -115,8 +115,8 @@ const alertsConfig = {
 				},
 				{
 					kind: Card.NESTED_FIELD,
-					label: "Boundary Average",
-					keys: ["benchmark", "boundary", "average"],
+					label: "Boundary Baseline",
+					keys: ["benchmark", "boundary", "baseline"],
 					display: Display.RAW,
 				},
 				{
