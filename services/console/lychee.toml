@@ -1,9 +1,14 @@
 # Use this for testing production
 # base = "https://bencher.dev"
+timeout = 5
+max_retries = 5
+retry_wait_time = 1
 exclude = [
+    "localhost:3000",
     "http://localhost:3000/",
     "https://discord.gg/yGEsdUh7R4",
     "https://github.com/bencherdev/bencher/issues/new*",
+    "https://www.linkedin.com/in/epompeii/",
     # TODO figure out why this page 404s
     # "https://bencher.dev/docs/[a-z]{2}/reference/api",
 ]

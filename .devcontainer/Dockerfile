@@ -26,7 +26,7 @@ RUN sudo npm install -g --save-exact @biomejs/biome
 RUN test $(uname -m) = "aarch64" && sudo npm install -g @esbuild/linux-arm64 @rometools/cli-linux-arm64; true
 
 # Install `lychee` dependencies: https://github.com/lycheeverse/lychee
-RUN sudo apt-get install gcc pkg-config libc6-dev libssl-dev
+RUN sudo apt-get install -y gcc pkg-config libc6-dev libssl-dev
 
 # Install `sqlite3`: https://www.sqlite.org/index.html
 RUN sudo apt-get install -y sqlite3

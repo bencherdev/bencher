@@ -22,6 +22,7 @@ deb/
 out*.txt
 out*.json
 netlify.json
+lychee.md
 
 # Default docker volume
 data/
