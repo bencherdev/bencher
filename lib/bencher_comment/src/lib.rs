@@ -6,7 +6,7 @@ use bencher_json::{
 };
 use url::Url;
 
-pub struct ReportUrls {
+pub struct ReportComment {
     endpoint_url: Url,
     project_slug: Slug,
     json_report: JsonReport,
@@ -14,7 +14,7 @@ pub struct ReportUrls {
     alert_urls: AlertUrls,
 }
 
-impl ReportUrls {
+impl ReportComment {
     pub fn new(endpoint_url: Url, json_report: JsonReport) -> Self {
         Self {
             alert_urls: AlertUrls::new(&endpoint_url, &json_report),
@@ -25,15 +25,45 @@ impl ReportUrls {
         }
     }
 
+    pub fn text(&self) -> String {
+        let mut comment = String::new();
+
+        comment.push_str("View results:");
+        for (benchmark, metric_kinds) in &self.benchmark_urls.0 {
+            for (metric_kind, MetricKindData { console_url, .. }) in metric_kinds {
+                comment.push_str(&format!(
+                    "\n- {benchmark_name} ({metric_kind_name}): {console_url}",
+                    benchmark_name = benchmark.name,
+                    metric_kind_name = metric_kind.name
+                ));
+            }
+        }
+
+        if self.json_report.alerts.is_empty() {
+            return comment;
+        }
+
+        comment.push_str("\nView alerts:");
+        for ((benchmark, metric_kind), AlertData { console_url, .. }) in &self.alert_urls.0 {
+            comment.push_str(&format!(
+                "\n- {benchmark_name} ({metric_kind_name}): {console_url}",
+                benchmark_name = benchmark.name,
+                metric_kind_name = metric_kind.name,
+            ));
+        }
+
+        comment
+    }
+
     pub fn html(
         &self,
         with_metrics: bool,
         require_threshold: bool,
-        public_links: bool,
         id: Option<&NonEmpty>,
     ) -> String {
         let mut html = String::new();
         let html_mut = &mut html;
+        let public_links = self.json_report.project.visibility.is_public();
         self.html_header(html_mut);
         self.html_report_table(html_mut, public_links);
         self.html_benchmarks_table(html_mut, with_metrics, require_threshold, public_links);
@@ -104,7 +134,6 @@ impl ReportUrls {
         html.push_str("</table>");
     }
 
-    #[allow(clippy::too_many_lines)]
     fn html_benchmarks_table(
         &self,
         html: &mut String,
@@ -116,9 +145,26 @@ impl ReportUrls {
             html.push_str("<b>No benchmarks found!</b>");
             return;
         };
-
         html.push_str("<table>");
+        self.html_benchmarks_table_header(
+            html,
+            metric_kinds,
+            with_metrics,
+            require_threshold,
+            public_links,
+        );
+        self.html_benchmarks_table_body(html, with_metrics, require_threshold, public_links);
+        html.push_str("</table>");
+    }
 
+    fn html_benchmarks_table_header(
+        &self,
+        html: &mut String,
+        metric_kinds: &MetricKindsMap,
+        with_metrics: bool,
+        require_threshold: bool,
+        public_links: bool,
+    ) {
         html.push_str("<tr>");
         html.push_str("<th>Benchmark</th>");
         for (metric_kind, MetricKindData { boundary, .. }) in metric_kinds {
@@ -158,7 +204,15 @@ impl ReportUrls {
             }
         }
         html.push_str("</tr>");
+    }
 
+    fn html_benchmarks_table_body(
+        &self,
+        html: &mut String,
+        with_metrics: bool,
+        require_threshold: bool,
+        public_links: bool,
+    ) {
         for (benchmark, metric_kinds) in &self.benchmark_urls.0 {
             html.push_str("<tr>");
             if public_links {
@@ -254,11 +308,8 @@ impl ReportUrls {
                     }
                 }
             }
-
             html.push_str("</tr>");
         }
-
-        html.push_str("</table>");
     }
 
     fn html_footer(&self, html: &mut String) {
@@ -306,39 +357,6 @@ impl ReportUrls {
     }
 }
 
-impl std::fmt::Display for ReportUrls {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "\nView results:")?;
-        for (benchmark, metric_kinds) in &self.benchmark_urls.0 {
-            for (metric_kind, MetricKindData { console_url, .. }) in metric_kinds {
-                writeln!(
-                    f,
-                    "- {benchmark_name} ({metric_kind_name}): {console_url}",
-                    benchmark_name = benchmark.name,
-                    metric_kind_name = metric_kind.name
-                )?;
-            }
-        }
-
-        if self.json_report.alerts.is_empty() {
-            return Ok(());
-        }
-
-        writeln!(f, "\nView alerts:")?;
-        for ((benchmark, metric_kind), AlertData { console_url, .. }) in &self.alert_urls.0 {
-            writeln!(
-                f,
-                "- {benchmark_name} ({metric_kind_name}): {console_url}",
-                benchmark_name = benchmark.name,
-                metric_kind_name = metric_kind.name,
-            )?;
-        }
-        writeln!(f, "\n")?;
-
-        Ok(())
-    }
-}
-
 pub struct BenchmarkUrls(BTreeMap<Benchmark, MetricKindsMap>);
 pub type MetricKindsMap = BTreeMap<MetricKind, MetricKindData>;
 
@@ -360,7 +378,7 @@ pub struct MetricKindData {
     pub public_url: Url,
     pub console_url: Url,
     pub value: f64,
-    pub boundary: BoundaryParam,
+    pub boundary: BoundaryLimits,
 }
 
 impl BenchmarkUrls {
@@ -422,7 +440,7 @@ impl BenchmarkUrls {
             .any(|MetricKindData { boundary, .. }| Self::boundary_has_threshold(*boundary))
     }
 
-    fn boundary_has_threshold(boundary: BoundaryParam) -> bool {
+    fn boundary_has_threshold(boundary: BoundaryLimits) -> bool {
         !boundary.is_empty()
     }
 }
@@ -462,7 +480,7 @@ impl BenchmarkUrl {
         &self,
         metric_kind: MetricKindUuid,
         benchmark: BenchmarkUuid,
-        boundary: BoundaryParam,
+        boundary: BoundaryLimits,
     ) -> Url {
         self.to_url(metric_kind, benchmark, boundary, true)
     }
@@ -471,7 +489,7 @@ impl BenchmarkUrl {
         &self,
         metric_kind: MetricKindUuid,
         benchmark: BenchmarkUuid,
-        boundary: BoundaryParam,
+        boundary: BoundaryLimits,
     ) -> Url {
         self.to_url(metric_kind, benchmark, boundary, false)
     }
@@ -480,7 +498,7 @@ impl BenchmarkUrl {
         &self,
         metric_kind: MetricKindUuid,
         benchmark: BenchmarkUuid,
-        boundary: BoundaryParam,
+        boundary: BoundaryLimits,
         public_links: bool,
     ) -> Url {
         let json_perf_query = JsonPerfQuery {
@@ -510,13 +528,13 @@ impl BenchmarkUrl {
 }
 
 #[derive(Clone, Copy)]
-pub struct BoundaryParam {
+pub struct BoundaryLimits {
     average: f64,
     lower_boundary: Option<f64>,
     upper_boundary: Option<f64>,
 }
 
-impl From<JsonBoundary> for BoundaryParam {
+impl From<JsonBoundary> for BoundaryLimits {
     fn from(json_boundary: JsonBoundary) -> Self {
         Self {
             average: json_boundary.average.into(),
@@ -526,7 +544,7 @@ impl From<JsonBoundary> for BoundaryParam {
     }
 }
 
-impl BoundaryParam {
+impl BoundaryLimits {
     fn to_query_string(self) -> Vec<(&'static str, Option<String>)> {
         let mut query_string = Vec::new();
         if self.lower_boundary.is_some() {

@@ -170,10 +170,10 @@ You can set the [`bencher run` CLI subcommand](https://bencher.dev/docs/explanat
 bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN }}" "bencher mock"
 ```
 
-To display the benchmark metrics and boundary limits, use the `--ci-with-metrics` flag.
+To omit the benchmark metrics and boundary limits from the results, use the `--ci-no-metrics` flag.
 
 ```bash
-bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN }}" --ci-with-metrics "bencher mock"
+bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN }}" --ci-no-metrics "bencher mock"
 ```
 
 If you want to only show results when [a Threshold is set](https://bencher.dev/docs/explanation/thresholds) use the `--ci-only-thresholds` flag.
@@ -191,7 +191,7 @@ bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN
 You can also use all of them together!
 
 ```bash
-bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN }}" --ci-with-metrics --ci-only-thresholds --ci-only-on-alert "bencher mock"
+bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN }}" --ci-no-metrics --ci-only-thresholds --ci-only-on-alert "bencher mock"
 ```
 
 For more options see the [`bencher run`](https://bencher.dev/docs/explanation/bencher-run) documentation.

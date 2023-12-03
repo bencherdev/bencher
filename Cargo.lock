@@ -932,6 +932,7 @@ dependencies = [
  "async-trait",
  "bencher_adapter",
  "bencher_client",
+ "bencher_comment",
  "bencher_json",
  "chrono",
  "clap",
@@ -968,6 +969,14 @@ dependencies = [
  "tokio",
  "url",
  "uuid 1.5.0",
+]
+
+[[package]]
+name = "bencher_comment"
+version = "0.3.18"
+dependencies = [
+ "bencher_json",
+ "url",
 ]
 
 [[package]]

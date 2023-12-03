@@ -151,11 +151,11 @@ Optional: Output results in HTML format.
 
 <br />
 
-### `--ci-with-metrics`
+### `--ci-no-metrics`
 
 <br />
 
-Optional: Display the Benchmark Metrics and Boundary Limits.
+Optional: Omit Benchmark Metrics and Boundary Limits from results.
 Requires: `--github-actions`
 
 <br />
@@ -176,15 +176,6 @@ Requires: `--github-actions`
 
 Optional: Only start posting results to CI if [an Alert](/docs/explanation/thresholds) is generated.
 If an Alert is generated, then follow up results, even if they don't contain any Alerts, will also be posted.
-Requires: `--github-actions`
-
-<br />
-
-### `--ci-public-links`
-
-<br />
-
-Optional: All links should be to public URLs that do not require a login.
 Requires: `--github-actions`
 
 <br />

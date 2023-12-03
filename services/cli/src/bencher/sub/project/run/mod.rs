@@ -2,6 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings};
+use bencher_comment::ReportComment;
 use bencher_json::{
     project::testbed::TESTBED_LOCALHOST_STR, DateTime, GitHash, JsonEndpoint, JsonReport,
     ResourceId,
@@ -10,7 +11,7 @@ use clap::ValueEnum;
 use url::Url;
 
 use crate::{
-    bencher::{backend::Backend, sub::project::run::urls::ReportUrls},
+    bencher::backend::Backend,
     cli_eprintln, cli_println,
     parser::project::run::{CliRun, CliRunAdapter},
     CliError,
@@ -23,7 +24,6 @@ mod ci;
 mod error;
 mod fold;
 pub mod runner;
-mod urls;
 
 use branch::Branch;
 use ci::Ci;
@@ -259,18 +259,22 @@ impl Run {
             .endpoint
             .try_into()
             .map_err(RunError::BadEndpoint)?;
-        let report_urls = ReportUrls::new(endpoint_url.clone(), json_report);
+        let report_comment = ReportComment::new(endpoint_url.clone(), json_report);
 
         // TODO disable when quiet
         if self.html {
-            cli_println!("{}", report_urls.html(true, false, false, None));
-            // cli_println!("{}", report_urls.html(false, false, false, None));
+            let with_metrics = true;
+            let require_threshold = false;
+            cli_println!(
+                "{}",
+                report_comment.html(with_metrics, require_threshold, None)
+            );
         } else {
-            cli_println!("{report_urls}");
+            cli_println!("{}", report_comment.text());
         }
 
         if let Some(ci) = &self.ci {
-            ci.run(&report_urls).await?;
+            ci.run(&report_comment).await?;
         }
 
         Ok(())

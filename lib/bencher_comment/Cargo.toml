@@ -1,0 +1,12 @@
+[package]
+name = "bencher_comment"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+bencher_json.workspace = true
+url.workspace = true
+
+[lints]
+workspace = true

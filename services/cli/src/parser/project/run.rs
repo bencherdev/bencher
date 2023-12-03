@@ -203,9 +203,9 @@ pub enum CliRunFold {
         .args(&["github_actions"]),
 ))]
 pub struct CliRunCi {
-    /// Display the Benchmark Metrics and Boundary Limits (requires: `--github-actions`)
+    /// Omit Benchmark Metrics and Boundary Limits (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
-    pub ci_with_metrics: bool,
+    pub ci_no_metrics: bool,
     /// Only post results to CI if a Threshold exists for the Metric Kind, Branch, and Testbed (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_only_thresholds: bool,

@@ -1,10 +1,9 @@
+use bencher_comment::ReportComment;
 use bencher_json::NonEmpty;
 use octocrab::{models::CommentId, Octocrab};
 
-use crate::parser::project::run::CliRunCi;
-
-use super::urls::ReportUrls;
 use crate::cli_println;
+use crate::parser::project::run::CliRunCi;
 
 #[derive(Debug)]
 pub enum Ci {
@@ -78,7 +77,7 @@ impl TryFrom<CliRunCi> for Option<Ci> {
 
     fn try_from(ci: CliRunCi) -> Result<Self, Self::Error> {
         let CliRunCi {
-            ci_with_metrics,
+            ci_no_metrics,
             ci_only_thresholds,
             ci_only_on_alert,
             ci_public_links,
@@ -88,7 +87,7 @@ impl TryFrom<CliRunCi> for Option<Ci> {
         } = ci;
         Ok(github_actions.map(|token| {
             Ci::GitHubActions(GitHubActions {
-                ci_with_metrics,
+                ci_no_metrics,
                 ci_only_thresholds,
                 ci_only_on_alert,
                 ci_public_links,
@@ -101,10 +100,10 @@ impl TryFrom<CliRunCi> for Option<Ci> {
 }
 
 impl Ci {
-    pub async fn run(&self, report_urls: &ReportUrls) -> Result<(), CiError> {
+    pub async fn run(&self, report_comment: &ReportComment) -> Result<(), CiError> {
         match self {
             Self::GitHubActions(github_actions) => {
-                github_actions.run(report_urls).await.map_err(Into::into)
+                github_actions.run(report_comment).await.map_err(Into::into)
             },
         }
     }
@@ -113,7 +112,7 @@ impl Ci {
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug)]
 pub struct GitHubActions {
-    pub ci_with_metrics: bool,
+    pub ci_no_metrics: bool,
     pub ci_only_thresholds: bool,
     pub ci_only_on_alert: bool,
     pub ci_public_links: bool,
@@ -123,9 +122,9 @@ pub struct GitHubActions {
 }
 
 impl GitHubActions {
-    pub async fn run(&self, report_urls: &ReportUrls) -> Result<(), GitHubError> {
+    pub async fn run(&self, report_comment: &ReportComment) -> Result<(), GitHubError> {
         // Only post to CI if there are thresholds set
-        if self.ci_only_thresholds && !report_urls.has_threshold() {
+        if self.ci_only_thresholds && !report_comment.has_threshold() {
             cli_println!("No thresholds set. Skipping CI integration.");
             return Ok(());
         }
@@ -217,16 +216,15 @@ impl GitHubActions {
             &owner,
             &repo,
             issue_number,
-            &report_urls.bencher_tag(self.ci_id.as_ref()),
+            &report_comment.bencher_tag(self.ci_id.as_ref()),
         )
         .await?;
 
         // Update or create the comment
         let issue_handler = github_client.issues(owner, repo);
-        let body = report_urls.html(
-            self.ci_with_metrics,
+        let body = report_comment.html(
+            !self.ci_no_metrics,
             self.ci_only_thresholds,
-            self.ci_public_links,
             self.ci_id.as_ref(),
         );
         let _comment = if let Some(comment_id) = comment_id {
@@ -235,7 +233,7 @@ impl GitHubActions {
                 .await
                 .map_err(GitHubError::UpdateComment)?
         } else {
-            if self.ci_only_on_alert && !report_urls.has_alert() {
+            if self.ci_only_on_alert && !report_comment.has_alert() {
                 cli_println!("No alerts found. Skipping CI integration.");
                 return Ok(());
             }

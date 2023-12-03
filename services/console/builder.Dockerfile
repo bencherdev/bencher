@@ -16,6 +16,7 @@ COPY .cargo/config.toml config.toml
 WORKDIR /usr/src/lib
 RUN cargo init --lib bencher_adapter
 RUN cargo init --lib bencher_boundary
+RUN cargo init --lib bencher_comment
 RUN cargo init --lib bencher_json
 RUN cargo init --lib bencher_logger
 RUN cargo init --lib bencher_plot
