@@ -673,9 +673,16 @@ jobs:
       - name: Test Links
         uses: lycheeverse/lychee-action@v1.8.0
         with:
-          debug: true
-          fail: true
           args: --config ./services/console/lychee.toml ./services/console/dist
+      - name: Upload Lychee Report
+        if: env.lychee_exit_code != 0
+        uses: actions/upload-artifact@v3
+        with:
+          name: lychee.md
+          path: lychee/out.md
+      - name: Failed Lychee
+        if: env.lychee_exit_code != 0
+        run: exit ${{ env.lychee_exit_code }}
 
   # API Fly.io
   deploy_local_api_fly:

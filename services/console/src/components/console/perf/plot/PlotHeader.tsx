@@ -158,11 +158,7 @@ const FullPlotHeader = (props: Props) => {
 const EmbedPlotHeader = (props: Props) => {
 	const perfUrl = createMemo(() => {
 		const location = window.location;
-		return `${
-			location.protocol
-		}//${
-			location.hostname
-		}${
+		return `${location.protocol}//${location.hostname}${
 			location.port ? `:${location.port}` : ""
 		}/perf/${props.project()?.slug}/${location.search}`;
 	});

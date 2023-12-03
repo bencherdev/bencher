@@ -92,8 +92,8 @@ export const addTooltips = (chart, styles) => {
 	chart.appendChild(html`<style>
     .${id} .has-title { cursor: pointer;  pointer-events: all; }
     .${id} .has-title:hover { ${Object.entries(styles)
-		.map(([key, value]) => `${key}: ${value};`)
-		.join(" ")} }`);
+			.map(([key, value]) => `${key}: ${value};`)
+			.join(" ")} }`);
 
 	return chart;
 };

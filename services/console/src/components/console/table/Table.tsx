@@ -70,16 +70,19 @@ const Table = (props: Props) => {
 														</Match>
 														<Match when={item.kind === Row.SELECT}>
 															{item.key &&
-																item.value?.options.reduce((field, option) => {
-																	if (
-																		item.key &&
-																		datum[item.key] === option.value
-																	) {
-																		return option.option;
-																	} else {
-																		return field;
-																	}
-																}, datum[item.key])}
+																item.value?.options.reduce(
+																	(field, option) => {
+																		if (
+																			item.key &&
+																			datum[item.key] === option.value
+																		) {
+																			return option.option;
+																		} else {
+																			return field;
+																		}
+																	},
+																	datum[item.key],
+																)}
 														</Match>
 														<Match when={item.kind === Row.NESTED_TEXT}>
 															{item.keys && fmtNestedValue(datum, item.keys)}
