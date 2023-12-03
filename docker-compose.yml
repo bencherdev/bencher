@@ -8,7 +8,7 @@ services:
     volumes:
       - "./data:/data"
       # environment:
-      # Set configuration string or filepath
+      # Set configuration string or file path
       # - BENCHER_CONFIG=
       # - BENCHER_CONFIG_PATH=
 

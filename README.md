@@ -109,27 +109,12 @@ Though Bencher is open source, there is also a hosted version available [Bencher
   - [Criterion](https://bencher.dev/docs/explanation/adapters#-rust-criterion)
   - [Iai](https://bencher.dev/docs/explanation/adapters#-rust-iai)
 
-For more details see the [explanation of benchmark harness adapters](https://bencher.dev/docs/explanation/adapters).
-
-## Share Your Benchmarks
-
-All public projects have their own [perf page](https://bencher.dev/perf). These results can easily be shared with an auto-updating perf image. Perfect for your README!
-
-<p align="center">
-  <a href="https://bencher.dev/perf/bencher?key=true&metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674950400000">
-    <img
-      src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1674950400000&title=Benchmark+Adapter+Comparison"
-      title="Benchmark Adapter Comparison"
-      alt="Benchmark Adapter Comparison for Bencher - Bencher"
-    />
-  </a>
-</p>
+👉 For more details see the [explanation of benchmark harness adapters](https://bencher.dev/docs/explanation/adapters).
 
 ## GitHub Actions
 
 Install the Bencher CLI using the [GitHub Action](https://github.com/marketplace/actions/bencher-cli),
 and use it for [continuous benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking) in your project.
-See [how to use GitHub Actions](https://bencher.dev/docs/how-to/github-actions) for more details.
 
 ```yaml
 name: Continuous Benchmarking with Bencher
@@ -149,52 +134,32 @@ jobs:
       - run: bencher run "bencher mock"
 ```
 
+👉 For more details see the [explanation of how to use GitHub Actions](https://bencher.dev/docs/how-to/github-actions).
+
 ### Repository Secrets
 
 Add `BENCHER_API_TOKEN` to you **Repository** secrets (ex: `Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`). You can find your API tokens by running `bencher token ls --user my-user-slug` or by going to the Bencher Console (ex: `https://bencher.dev/console/users/my-user-slug/tokens`).
 
 ### Error on Alert
 
-You can set the [`bencher run` CLI subcommand](https://bencher.dev/docs/explanation/bencher-run) to error
+You can set the `bencher run` CLI subcommand to error
 if [an Alert is generated](https://bencher.dev/docs/explanation/thresholds) with the `--err` flag.
 
 ```bash
 bencher run --project my-project-slug --err "bencher mock"
 ```
 
+👉 For more details see the [explanation of `bencher run`](https://bencher.dev/docs/explanation/bencher-run/#--err).
+
 ### Comment on PRs
 
-You can set the [`bencher run` CLI subcommand](https://bencher.dev/docs/explanation/bencher-run) to comment on a PR with the `--github-actions` argument.
+You can set the `bencher run` CLI subcommand to comment on a PR with the `--github-actions` argument.
 
 ```bash
 bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN }}" "bencher mock"
 ```
 
-To omit the benchmark metrics and boundary limits from the results, use the `--ci-no-metrics` flag.
-
-```bash
-bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN }}" --ci-no-metrics "bencher mock"
-```
-
-If you want to only show results when [a Threshold is set](https://bencher.dev/docs/explanation/thresholds) use the `--ci-only-thresholds` flag.
-
-```bash
-bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN }}" --ci-only-thresholds "bencher mock"
-```
-
-Or if you only want it to start commenting once there is [an Alert is generated](https://bencher.dev/docs/explanation/thresholds) use the `--ci-only-on-alert` flag.
-
-```bash
-bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN }}" --ci-only-on-alert "bencher mock"
-```
-
-You can also use all of them together!
-
-```bash
-bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN }}" --ci-no-metrics --ci-only-thresholds --ci-only-on-alert "bencher mock"
-```
-
-For more options see the [`bencher run`](https://bencher.dev/docs/explanation/bencher-run) documentation.
+👉 For more details see the [explanation of `bencher run`](https://bencher.dev/docs/explanation/bencher-run/#--github-actions).
 
 ### Example PR Comment
 
@@ -272,6 +237,20 @@ Otherwise, it will default to using the latest CLI version.
 
 Specify an exact version if using Bencher _Self-Hosted_.
 Do **not** specify an exact version if using Bencher _Cloud_ as there are still occasional breaking changes.
+
+## Share Your Benchmarks
+
+All public projects have their own [perf page](https://bencher.dev/perf). These results can easily be shared with an auto-updating perf image. Perfect for your README!
+
+<p align="center">
+  <a href="https://bencher.dev/perf/bencher?key=true&metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674950400000">
+    <img
+      src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1674950400000&title=Benchmark+Adapter+Comparison"
+      title="Benchmark Adapter Comparison"
+      alt="Benchmark Adapter Comparison for Bencher - Bencher"
+    />
+  </a>
+</p>
 
 ## Contributing
 
