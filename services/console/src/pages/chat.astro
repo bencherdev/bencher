@@ -1,7 +1,4 @@
 ---
-export const prerender = false;
-
 import { BENCHER_CHAT_URL } from "../util/ext";
-
-return Astro.redirect(BENCHER_CHAT_URL);
 ---
+<meta http-equiv="refresh" content={`0;url=${BENCHER_CHAT_URL}`} />

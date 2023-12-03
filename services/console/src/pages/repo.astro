@@ -1,7 +1,4 @@
 ---
-export const prerender = false;
-
 import { BENCHER_GITHUB_URL } from "../util/ext";
-
-return Astro.redirect(BENCHER_GITHUB_URL);
 ---
+<meta http-equiv="refresh" content={`0;url=${BENCHER_GITHUB_URL}`} />

@@ -1,0 +1,19 @@
+base = "https://bencher.dev"
+exclude = [
+    "http://localhost:3000/",
+    "https://discord.gg/yGEsdUh7R4",
+    "https://github.com/bencherdev/bencher/issues/new*",
+]
+# TODO remove exclude paths once `--cookie-jar` is stable
+# https://github.com/lycheeverse/lychee/commit/14e748793e8a08d7c2130f63896074f4980204cb
+exclude_path = [
+    "./services/console/dist/docs/reference/prior-art/index.html",
+    "./services/console/dist/docs/de/reference/prior-art/index.html",
+    "./services/console/dist/docs/es/reference/prior-art/index.html",
+    "./services/console/dist/docs/fr/reference/prior-art/index.html",
+    "./services/console/dist/docs/ja/reference/prior-art/index.html",
+    "./services/console/dist/docs/ko/reference/prior-art/index.html",
+    "./services/console/dist/docs/pt/reference/prior-art/index.html",
+    "./services/console/dist/docs/ru/reference/prior-art/index.html",
+    "./services/console/dist/docs/zh/reference/prior-art/index.html",
+]
