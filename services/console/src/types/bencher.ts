@@ -492,3 +492,14 @@ export enum ProjectPermission {
 	DeleteRole = "delete_role",
 }
 
+export enum PerfQueryKey {
+	MetricKinds = "metric_kinds",
+	Branches = "branches",
+	Testbeds = "testbeds",
+	Benchmarks = "benchmarks",
+	StartTime = "start_time",
+	EndTime = "end_time",
+	LowerBoundary = "lower_boundary",
+	UpperBoundary = "upper_boundary",
+}
+

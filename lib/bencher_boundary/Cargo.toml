@@ -10,7 +10,6 @@ plus = ["bencher_json/plus"]
 [dependencies]
 bencher_json = { workspace = true, features = ["full"] }
 bencher_logger.workspace = true
-ordered-float.workspace = true
 slog.workspace = true
 thiserror.workspace = true
 # Crate
@@ -18,6 +17,7 @@ statrs = "0.16"
 
 [dev-dependencies]
 once_cell.workspace = true
+ordered-float.workspace = true
 pretty_assertions.workspace = true
 
 [lints]

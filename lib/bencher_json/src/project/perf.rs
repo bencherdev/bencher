@@ -16,15 +16,6 @@ use super::branch::JsonVersion;
 use super::metric::JsonMetric;
 use super::threshold::JsonThresholdStatistic;
 
-const QUERY_KEYS: [&str; 6] = [
-    "metric_kinds",
-    "branches",
-    "testbeds",
-    "benchmarks",
-    "start_time",
-    "end_time",
-];
-
 crate::typed_uuid::typed_uuid!(PerfUuid);
 
 /// `JsonPerfQueryParams` is the actual query parameters accepted by the server.
@@ -171,6 +162,40 @@ impl JsonPerfQuery {
         self.end_time().as_ref().map(to_urlencoded)
     }
 }
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum PerfQueryKey {
+    MetricKinds,
+    Branches,
+    Testbeds,
+    Benchmarks,
+    StartTime,
+    EndTime,
+    // Console Keys
+    LowerBoundary,
+    UpperBoundary,
+}
+
+pub const METRIC_KINDS: &str = "metric_kinds";
+pub const BRANCHES: &str = "branches";
+pub const TESTBEDS: &str = "testbeds";
+pub const BENCHMARKS: &str = "benchmarks";
+pub const START_TIME: &str = "start_time";
+pub const END_TIME: &str = "end_time";
+const QUERY_KEYS: [&str; 6] = [
+    METRIC_KINDS,
+    BRANCHES,
+    TESTBEDS,
+    BENCHMARKS,
+    START_TIME,
+    END_TIME,
+];
+// Console Keys
+pub const LOWER_BOUNDARY: &str = "lower_boundary";
+pub const UPPER_BOUNDARY: &str = "upper_boundary";
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]

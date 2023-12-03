@@ -1,6 +1,7 @@
 use std::{collections::BTreeMap, time::Duration};
 
 use bencher_json::{
+    project::perf::{LOWER_BOUNDARY, UPPER_BOUNDARY},
     AlertUuid, BenchmarkName, BenchmarkUuid, BranchUuid, DateTime, JsonBoundary, JsonPerfQuery,
     JsonReport, MetricKindUuid, NonEmpty, Slug, TestbedUuid,
 };
@@ -191,12 +192,12 @@ impl ReportComment {
                 html.push_str(&format!(
                     "<th>{metric_kind_name} Results<br/>{units} | (Δ%)</th>",
                 ));
-                if boundary.lower_boundary.is_some() {
+                if boundary.lower_limit.is_some() {
                     html.push_str(&format!(
                         "<th>{metric_kind_name} Lower Boundary<br/>{units} | (%)</th>"
                     ));
                 }
-                if boundary.upper_boundary.is_some() {
+                if boundary.upper_limit.is_some() {
                     html.push_str(&format!(
                         "<th>{metric_kind_name} Upper Boundary<br/>{units} | (%)</th>"
                     ));
@@ -286,25 +287,21 @@ impl ReportComment {
                     html.push_str(&format!(
                         "<td>{value:.3} ({value_plus}{value_percent:.2}%)</td>"
                     ));
-                    if let Some(lower_boundary) = boundary.lower_boundary {
-                        let limit_percent = if value.is_normal() && lower_boundary.is_normal() {
-                            (lower_boundary / value) * 100.0
+                    if let Some(lower_limit) = boundary.lower_limit {
+                        let limit_percent = if value.is_normal() && lower_limit.is_normal() {
+                            (lower_limit / value) * 100.0
                         } else {
                             0.0
                         };
-                        html.push_str(&format!(
-                            "<td>{lower_boundary:.3} ({limit_percent:.2}%)</td>"
-                        ));
+                        html.push_str(&format!("<td>{lower_limit:.3} ({limit_percent:.2}%)</td>"));
                     }
-                    if let Some(upper_boundary) = boundary.upper_boundary {
-                        let limit_percent = if value.is_normal() && upper_boundary.is_normal() {
-                            (value / upper_boundary) * 100.0
+                    if let Some(upper_limit) = boundary.upper_limit {
+                        let limit_percent = if value.is_normal() && upper_limit.is_normal() {
+                            (value / upper_limit) * 100.0
                         } else {
                             0.0
                         };
-                        html.push_str(&format!(
-                            "<td>{upper_boundary:.3} ({limit_percent:.2}%)</td>"
-                        ));
+                        html.push_str(&format!("<td>{upper_limit:.3} ({limit_percent:.2}%)</td>"));
                     }
                 }
             }
@@ -378,7 +375,7 @@ pub struct MetricKindData {
     pub public_url: Url,
     pub console_url: Url,
     pub value: f64,
-    pub boundary: BoundaryLimits,
+    pub boundary: Boundary,
 }
 
 impl BenchmarkUrls {
@@ -440,7 +437,7 @@ impl BenchmarkUrls {
             .any(|MetricKindData { boundary, .. }| Self::boundary_has_threshold(*boundary))
     }
 
-    fn boundary_has_threshold(boundary: BoundaryLimits) -> bool {
+    fn boundary_has_threshold(boundary: Boundary) -> bool {
         !boundary.is_empty()
     }
 }
@@ -480,7 +477,7 @@ impl BenchmarkUrl {
         &self,
         metric_kind: MetricKindUuid,
         benchmark: BenchmarkUuid,
-        boundary: BoundaryLimits,
+        boundary: Boundary,
     ) -> Url {
         self.to_url(metric_kind, benchmark, boundary, true)
     }
@@ -489,7 +486,7 @@ impl BenchmarkUrl {
         &self,
         metric_kind: MetricKindUuid,
         benchmark: BenchmarkUuid,
-        boundary: BoundaryLimits,
+        boundary: Boundary,
     ) -> Url {
         self.to_url(metric_kind, benchmark, boundary, false)
     }
@@ -498,7 +495,7 @@ impl BenchmarkUrl {
         &self,
         metric_kind: MetricKindUuid,
         benchmark: BenchmarkUuid,
-        boundary: BoundaryLimits,
+        boundary: Boundary,
         public_links: bool,
     ) -> Url {
         let json_perf_query = JsonPerfQuery {
@@ -528,36 +525,36 @@ impl BenchmarkUrl {
 }
 
 #[derive(Clone, Copy)]
-pub struct BoundaryLimits {
+pub struct Boundary {
     average: f64,
-    lower_boundary: Option<f64>,
-    upper_boundary: Option<f64>,
+    lower_limit: Option<f64>,
+    upper_limit: Option<f64>,
 }
 
-impl From<JsonBoundary> for BoundaryLimits {
+impl From<JsonBoundary> for Boundary {
     fn from(json_boundary: JsonBoundary) -> Self {
         Self {
             average: json_boundary.average.into(),
-            lower_boundary: json_boundary.lower_limit.map(Into::into),
-            upper_boundary: json_boundary.upper_limit.map(Into::into),
+            lower_limit: json_boundary.lower_limit.map(Into::into),
+            upper_limit: json_boundary.upper_limit.map(Into::into),
         }
     }
 }
 
-impl BoundaryLimits {
+impl Boundary {
     fn to_query_string(self) -> Vec<(&'static str, Option<String>)> {
         let mut query_string = Vec::new();
-        if self.lower_boundary.is_some() {
-            query_string.push(("lower_boundary", Some(true.to_string())));
+        if self.lower_limit.is_some() {
+            query_string.push((LOWER_BOUNDARY, Some(true.to_string())));
         }
-        if self.upper_boundary.is_some() {
-            query_string.push(("upper_boundary", Some(true.to_string())));
+        if self.upper_limit.is_some() {
+            query_string.push((UPPER_BOUNDARY, Some(true.to_string())));
         }
         query_string
     }
 
     pub fn is_empty(self) -> bool {
-        self.lower_boundary.is_none() && self.upper_boundary.is_none()
+        self.lower_limit.is_none() && self.upper_limit.is_none()
     }
 }
 

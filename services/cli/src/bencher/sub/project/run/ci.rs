@@ -227,6 +227,7 @@ impl GitHubActions {
             self.ci_only_thresholds,
             self.ci_id.as_ref(),
         );
+        // Always update the comment if it exists
         let _comment = if let Some(comment_id) = comment_id {
             issue_handler
                 .update_comment(comment_id, body)

@@ -13,14 +13,15 @@ import {
 	isPerfRange,
 	isPerfTab,
 } from "../../../config/types";
-import type {
-	JsonBenchmark,
-	JsonBranch,
-	JsonPerf,
-	JsonPerfQuery,
-	JsonProject,
-	JsonReport,
-	JsonTestbed,
+import {
+	type JsonBenchmark,
+	type JsonBranch,
+	type JsonPerf,
+	type JsonPerfQuery,
+	type JsonProject,
+	type JsonReport,
+	type JsonTestbed,
+	PerfQueryKey,
 } from "../../../types/bencher";
 import { authUser } from "../../../util/auth";
 import { dateTimeMillis } from "../../../util/convert";
@@ -32,13 +33,16 @@ import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
 import type { TabList } from "./plot/PlotTab";
 
+// Perf query params
+const METRIC_KINDS_PARAM = PerfQueryKey.MetricKinds;
+const BRANCHES_PARAM = PerfQueryKey.Branches;
+const TESTBEDS_PARAM = PerfQueryKey.Testbeds;
+const BENCHMARKS_PARAM = PerfQueryKey.Benchmarks;
+const START_TIME_PARAM = PerfQueryKey.StartTime;
+const END_TIME_PARAM = PerfQueryKey.EndTime;
+
+// Console UI state query params
 const REPORT_PARAM = "report";
-const METRIC_KINDS_PARAM = "metric_kinds";
-const BRANCHES_PARAM = "branches";
-const TESTBEDS_PARAM = "testbeds";
-const BENCHMARKS_PARAM = "benchmarks";
-const START_TIME_PARAM = "start_time";
-const END_TIME_PARAM = "end_time";
 
 const REPORTS_PER_PAGE_PARAM = "reports_per_page";
 const BRANCHES_PER_PAGE_PARAM = "branches_per_page";
@@ -56,8 +60,8 @@ const RANGE_PARAM = "range";
 const CLEAR_PARAM = "clear";
 const LOWER_VALUE_PARAM = "lower_value";
 const UPPER_VALUE_PARAM = "upper_value";
-const LOWER_BOUNDARY_PARAM = "lower_boundary";
-const UPPER_BOUNDARY_PARAM = "upper_boundary";
+const LOWER_BOUNDARY_PARAM = PerfQueryKey.LowerBoundary;
+const UPPER_BOUNDARY_PARAM = PerfQueryKey.UpperBoundary;
 
 const DEFAULT_PERF_TAB = PerfTab.REPORTS;
 const DEFAULT_PERF_KEY = true;
