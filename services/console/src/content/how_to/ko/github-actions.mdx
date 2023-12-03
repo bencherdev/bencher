@@ -44,7 +44,7 @@ Pull Request에서 성능 회귀를 잡아내기 위해 PR에서 벤치마크를
         1. 현재 브랜치 데이터가 이미 존재하면 이를 사용합니다. (예: `--if-branch "$GITHUB_REF_NAME"`)
         2. PR 대상 브랜치 데이터와 임계값이 이미 존재하면 이를 복제해서 만듭니다. (예: `--else-if-branch "$GITHUB_BASE_REF"`)
         3. 그 외의 경우, `main` 브랜치 데이터와 임계값을 복제해서 만듭니다. (예: `--else-if-branch main`)
-        4. 프로젝트 브랜치를 설정하는 데는 여러 가지 옵션이 있습니다. 전체 개요는 [브랜치 선택](/docs/ko/how-to/branch-selection)을 참조하세요.
+        4. 프로젝트 브랜치를 설정하는 데는 여러 가지 옵션이 있습니다. 전체 개요는 [브랜치 선택](/docs/ko/explanation/branch-selection)을 참조하세요.
 3. GitHub API 인증 토큰을 설정합니다. (예: `--github-actions ${{ secrets.GITHUB_TOKEN }}`) 이 옵션이 pull request의 일부로 설정되면, 결과가 pull request에 댓글로 추가됩니다. 이는 [GitHub Actions `GITHUB_TOKEN` 환경 변수](https://docs.github.com/ko/actions/security-guides/automatic-token-authentication)를 사용합니다.
 4. `--ci-*` 플래그로 pull request 댓글을 설정하는 모든 방법에 대한 전체 개요는 [bencher run](/docs/ko/explanation/bencher-run) 문서를 참조하세요.
 

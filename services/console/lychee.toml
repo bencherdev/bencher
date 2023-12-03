@@ -1,11 +1,15 @@
-base = "https://bencher.dev"
+# Use this for testing production
+# base = "https://bencher.dev"
 exclude = [
     "http://localhost:3000/",
     "https://discord.gg/yGEsdUh7R4",
     "https://github.com/bencherdev/bencher/issues/new*",
+    # TODO figure out why this page 404s
+    # "https://bencher.dev/docs/[a-z]{2}/reference/api",
 ]
 # TODO remove exclude paths once `--cookie-jar` is stable
 # https://github.com/lycheeverse/lychee/commit/14e748793e8a08d7c2130f63896074f4980204cb
+# Netlify paths
 exclude_path = [
     "./services/console/dist/docs/reference/prior-art/index.html",
     "./services/console/dist/docs/de/reference/prior-art/index.html",

@@ -44,7 +44,7 @@ Se você espera ter PRs apenas de branches dentro do **mesmo** repositório, ent
         1. Use os dados da branch atual se já existirem. (ex: `--if-branch "$GITHUB_REF_NAME"`)
         2. Crie um clone dos dados e limites da branch de destino do PR se já existirem. (ex: `--else-if-branch "$GITHUB_BASE_REF"`)
         3. Caso contrário, crie um clone dos dados e limites da branch `main`. (ex: `--else-if-branch main`)
-        4. Existem várias opções para definir a branch do projeto. Veja [seleção de branch](/docs/pt/how-to/branch-selection) para uma visão geral completa.
+        4. Existem várias opções para definir a branch do projeto. Veja [seleção de branch](/docs/pt/explanation/branch-selection) para uma visão geral completa.
 3. Defina o token de autenticação da API do GitHub. (ex: `--github-actions ${{ secrets.GITHUB_TOKEN }}`) Quando essa opção é definida como parte de um pull request, então os resultados serão adicionados ao pull request como um comentário. Isso usa [a variável de ambiente `GITHUB_TOKEN` das Ações do GitHub](https://docs.github.com/pt/actions/security-guides/automatic-token-authentication).
 4. Veja a documentação do [bencher run](/docs/pt/explanation/bencher-run) para uma visão geral completa de todas as maneiras de configurar o comentário do pull request com as flags `--ci-*`.
 

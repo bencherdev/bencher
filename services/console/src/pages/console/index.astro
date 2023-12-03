@@ -4,6 +4,7 @@ export const prerender = false;
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import ConsoleRedirect from "../../components/console/redirects/ConsoleRedirect";
 
+// Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const title = "Bencher Console";
 ---

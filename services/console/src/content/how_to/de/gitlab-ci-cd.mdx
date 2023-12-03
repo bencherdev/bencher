@@ -42,7 +42,7 @@ import { BENCHER_VERSION } from "../../../util/ext";
 1. Optional: Erstellen Sie eine Umgebungsvariable, um die übersichtliche Kontrolle der verwendeten CLI-Version zu erleichtern. (z.B.: <code>{`BENCHER_VERSION: ${BENCHER_VERSION}`}</code>)
 1. Laden Sie die Bencher CLI herunter und installieren Sie sie von einer `.deb` Datei.
 1. Verfolgen Sie Ihre Benchmarks mit dem Befehl <code><a href="/docs/de/explanation/bencher-run">bencher run</a></code> CLI-Unterbefehl:
-    1. Es gibt mehrere Optionen zum Einstellen des Projektablaufs. Weitere Einzelheiten finden Sie unter [Zweigauswahl](/docs/de/how-to/branch-selection). Der bereitgestellte Befehl verwendet [GitLab CI/CD vorausdefinierte Variablen](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) und versucht:
+    1. Es gibt mehrere Optionen zum Einstellen des Projektablaufs. Weitere Einzelheiten finden Sie unter [Zweigauswahl](/docs/de/explanation/branch-selection). Der bereitgestellte Befehl verwendet [GitLab CI/CD vorausdefinierte Variablen](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) und versucht:
         1. Verwenden Sie den aktuellen Zweig, wenn er bereits existiert. (z.B.: `--if-branch "$CI_COMMIT_REF_NAME"`)
         1. Erstellen Sie einen Klon der MR-Zielbranchdaten und -schwellenwerte, wenn sie bereits existieren. (z.B.: `--else-if-branch "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
         1. Andernfalls erstellen Sie einen Klon der `main` Branch-Daten und -Schwellenwerte. (z.B.: `--else-if-branch main`)

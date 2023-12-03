@@ -44,7 +44,7 @@ import GitHubActions6 from "../../../chunks/how_to/github-actions.6.mdx";
         1. すでに存在する場合は、現在のbranchのデータを使用します。(例: `--if-branch "$GITHUB_REF_NAME"`)
         2. すでに存在する場合は、PRターゲットbranchのデータとしきい値をクローンします。(例: `--else-if-branch "$GITHUB_BASE_REF"`)
         3. それ以外の場合は、`main` branchのデータとしきい値をクローンします。(例: `--else-if-branch main`)
-        4. プロジェクトbranchを設定するためのいくつかのオプションがあります。全体の概要については、[branch selection](/docs/ja/how-to/branch-selection) をご覧ください。
+        4. プロジェクトbranchを設定するためのいくつかのオプションがあります。全体の概要については、[branch selection](/docs/ja/explanation/branch-selection) をご覧ください。
 3. GitHub APIの認証トークンを設定します。(例: `--github-actions ${{ secrets.GITHUB_TOKEN }}`) このオプションがプルリクエストの一部として設定されると、結果はプルリクエストにコメントとして追加されます。これは[GitHub Actionsの `GITHUB_TOKEN` 環境変数](https://docs.github.com/ja/actions/security-guides/automatic-token-authentication)を使用します。
 4. `--ci-*` フラグを使用したプルリクエストコメントの設定方法については、[bencher run](/docs/ja/explanation/bencher-run) のドキュメンテーションを全面的にご覧ください。
 

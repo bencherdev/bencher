@@ -42,7 +42,7 @@ import { BENCHER_VERSION } from "../../../util/ext";
 1. Opcional: Crie uma variável de ambiente para facilitar o rastreio da versão da CLI em uso. (ex: <code>{`BENCHER_VERSION: ${BENCHER_VERSION}`}</code>)
 1. Baixe e instale a CLI do Bencher de um `.deb`.
 1. [Monitore seus benchmarks](/docs/pt/how-to/track-benchmarks) com o subcomando CLI <code><a href="/docs/pt/explanation/bencher-run">bencher run</a></code>:
-    1. Existem várias opções para definir o branch do projeto. Consulte [seleção de branch](/docs/pt/how-to/branch-selection) para uma visão geral completa. O comando fornecido usa [variáveis predefinidas do GitLab CI/CD](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) e tenta:
+    1. Existem várias opções para definir o branch do projeto. Consulte [seleção de branch](/docs/pt/explanation/branch-selection) para uma visão geral completa. O comando fornecido usa [variáveis predefinidas do GitLab CI/CD](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) e tenta:
         1. Usar o branch atual se já existir. (ex: `--if-branch "$CI_COMMIT_REF_NAME"`)
         1. Crie um clone dos dados e thresholds do branch alvo do MR se já existir. (ex: `--else-if-branch  "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
         1. Caso contrário, crie um clone dos dados e thresholds do branch `main`. (ex: `--else-if-branch main`)

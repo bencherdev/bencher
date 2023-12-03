@@ -673,13 +673,9 @@ jobs:
       - name: Test Links
         uses: lycheeverse/lychee-action@v1.8.0
         with:
+          debug: true
           fail: true
           args: --config ./services/console/lychee.toml ./services/console/dist
-      - name: Upload Lychee Report
-        uses: actions/upload-artifact@v3
-        with:
-          name: lychee.md
-          path: lychee/out.md
 
   # API Fly.io
   deploy_local_api_fly:

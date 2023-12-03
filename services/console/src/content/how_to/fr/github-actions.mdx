@@ -44,7 +44,7 @@ Si vous prévoyez uniquement d'avoir des PRs provenant de branches au sein du **
         1. Utiliser des données de branche actuelles si elles existent déjà. (ex: `--if-branch "$GITHUB_REF_NAME"`)
         2. Créer un clone des données et des seuils de la branche cible de la PR si cela existe déjà. (ex: `--else-if-branch "$GITHUB_BASE_REF"`)
         3. Sinon, créez un clone des données et des seuils de la branche `main`. (ex: `--else-if-branch main`)
-        4. Il existe plusieurs options pour définir la branche du projet. Voir la [sélection de branche](/docs/fr/how-to/branch-selection) pour une vue d'ensemble complète.
+        4. Il existe plusieurs options pour définir la branche du projet. Voir la [sélection de branche](/docs/fr/explanation/branch-selection) pour une vue d'ensemble complète.
 3. Paramétrez le jeton d'authentification de l'API GitHub. (ex: `--github-actions ${{ secrets.GITHUB_TOKEN }}`). Lorsque cette option est définie dans le cadre d'une pull request, alors les résultats seront ajoutés à la pull request sous forme de commentaire. Ceci utilise [la variable d'environnement `GITHUB_TOKEN` des GitHub Actions](https://docs.github.com/fr/actions/security-guides/automatic-token-authentication).
 4. Consultez la documentation [bencher run](/docs/fr/explanation/bencher-run) pour une vue d'ensemble complète de toutes les façons de configurer le commentaire de pull request avec les drapeaux `--ci-*`.
 

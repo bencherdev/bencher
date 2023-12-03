@@ -44,7 +44,7 @@ import GitHubActions6 from "../../../chunks/how_to/github-actions.6.mdx";
         1. Использование текущих данных ветки, если они уже существуют. (пример: `--if-branch "$GITHUB_REF_NAME"`)
         2. Создания клонов данных целевой ветки PR и порогов, если они уже существуют. (пример: `--else-if-branch "$GITHUB_BASE_REF"`)
         3. В других случаях создания клонов данных ветки `main` и порогов. (пример: `--else-if-branch main`)
-        4. Есть несколько вариантов установки ветки проекта. Подробнее см. [выбор ветви](/docs/ru/how-to/branch-selection).
+        4. Есть несколько вариантов установки ветки проекта. Подробнее см. [выбор ветви](/docs/ru/explanation/branch-selection).
 3. Установите токен аутентификации на GitHub API. (пример: `--github-actions ${{ secrets.GITHUB_TOKEN }}`) При установке этой опции как часть pull request, результаты будут добавлены в pull request как комментарий. Используется [переменная среды `GITHUB_TOKEN` в GitHub Actions](https://docs.github.com/ru/actions/security-guides/automatic-token-authentication).
 4. См. документацию [bencher run](/docs/ru/explanation/bencher-run) для подробного обзора всех способов настройки комментария к pull request с помощью флагов `--ci-*`.
 

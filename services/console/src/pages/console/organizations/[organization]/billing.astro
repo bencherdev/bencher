@@ -4,6 +4,7 @@ export const prerender = false;
 import OrgLayout from "../../../../layouts/console/OrgLayout.astro";
 import BillingPanel from "../../../../components/console/billing/BillingPanel";
 
+// Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
 const title = "Billing";

@@ -42,7 +42,7 @@ import { BENCHER_VERSION } from "../../../util/ext";
 1. 선택 사항: 사용 중인 CLI 버전을 쉽게 추적할 수 있도록 환경 변수를 생성합니다 (예: <code>{`BENCHER_VERSION: ${BENCHER_VERSION}`}</code>)
 1. `.deb`에서 Bencher CLI 를 다운로드하고 설치합니다.
 1. <code><a href="/docs/ko/explanation/bencher-run">bencher run</a></code> CLI 하위 명령어를 이용하여 벤치마크를 추적합니다([벤치마크 추적](/docs/ko/how-to/track-benchmarks) 참조):
-    1. 프로젝트의 브랜치를 설정하는 여러 옵션이 있습니다. 전체 개요는 [브랜치 선택](/docs/ko/how-to/branch-selection)을 참조하십시오. 제공된 명령어는 [GitLab CI/CD 사전 정의 변수](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html)를 사용하며:
+    1. 프로젝트의 브랜치를 설정하는 여러 옵션이 있습니다. 전체 개요는 [브랜치 선택](/docs/ko/explanation/branch-selection)을 참조하십시오. 제공된 명령어는 [GitLab CI/CD 사전 정의 변수](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html)를 사용하며:
         1. 해당 브랜치가 이미 존재하면 해당 브랜치를 사용합니다 (예: `--if-branch "$CI_COMMIT_REF_NAME"`)
         1. MR 타겟 브랜치 데이터와 임계값의 복제본을 생성합니다 (예: `--else-if-branch  "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
         1. 그렇지 않으면, `main` 브랜치 데이터와 임계값의 복제본을 생성합니다 (예: `--else-if-branch main`)

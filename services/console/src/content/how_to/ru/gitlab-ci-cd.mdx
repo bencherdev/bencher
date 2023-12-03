@@ -42,7 +42,7 @@ import { BENCHER_VERSION } from "../../../util/ext";
 1. Необязательно: создайте переменную окружения, чтобы легче отслеживать используемую версию CLI (например, <code>{`BENCHER_VERSION: ${BENCHER_VERSION}`}</code>)
 1. Скачайте и установите CLI Bencher из файла `.deb`.
 1. [Отслеживайте свои бенчмарки](/docs/ru/how-to/track-benchmarks) с помощью подкоманды CLI <code><a href="/docs/ru/explanation/bencher-run">bencher run</a></code>:
-    1. Существует несколько способов установить ветку проекта. См. [выбор ветки](/docs/ru/how-to/branch-selection) для полного обзора. Предоставленная команда использует [предопределенные переменные GitLab CI/CD](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) и пытается:
+    1. Существует несколько способов установить ветку проекта. См. [выбор ветки](/docs/ru/explanation/branch-selection) для полного обзора. Предоставленная команда использует [предопределенные переменные GitLab CI/CD](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) и пытается:
         1. Использовать текущую ветку, если она уже существует. (например, `--if-branch "$CI_COMMIT_REF_NAME"`)
         1. Создать копию данных и пороговой ветки для MR, если она уже существует. (например, `--else-if-branch  "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
         1. В противном случае создать копию данных и порогов главной ветки. (например, `--else-if-branch main`)

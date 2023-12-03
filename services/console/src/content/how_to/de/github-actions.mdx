@@ -44,7 +44,7 @@ Wenn Sie nur erwarten, dass Sie PRs von Zweigen innerhalb des **gleichen** Repos
         1. Die aktuellen Branch-Daten zu verwenden, wenn sie bereits existieren. (z.B.: `--if-branch "$GITHUB_REF_NAME"`)
         2. Erstellen Sie einen Klon der PR-Zielbranch-Daten und Schwellenwert, wenn sie bereits existieren. (z.B.: `--else-if-branch "$GITHUB_BASE_REF"`)
         3. Ansonsten erstellen Sie einen Klon der `main` Branch-Daten und Schwellenwerte. (z.B.: `--else-if-branch main`)
-        4. Es gibt mehrere Optionen für die Einstellung des Projektbranches. Siehe [Branch Auswahl](/docs/de/how-to/branch-selection) für einen vollständigen Überblick.
+        4. Es gibt mehrere Optionen für die Einstellung des Projektbranches. Siehe [Branch Auswahl](/docs/de/explanation/branch-selection) für einen vollständigen Überblick.
 3. Setzen Sie das GitHub API Authentifizierungstoken. (z.B.: `--github-actions ${{ secrets.GITHUB_TOKEN }}`) Wenn diese Option als Teil einer Pull-Anfrage gesetzt ist, werden die Ergebnisse als Kommentar zur Pull-Anfrage hinzugefügt. Dies verwendet [die GitHub Actions `GITHUB_TOKEN` Umgebungsvariable](https://docs.github.com/de/actions/security-guides/automatic-token-authentication).
 4. Siehe die [bencher run](/docs/de/explanation/bencher-run) Dokumentation für einen vollständigen Überblick über alle Möglichkeiten zur Konfiguration des Pull-Anfragen-Kommentars mit den `--ci-*` Flags.
 

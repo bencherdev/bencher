@@ -7,6 +7,7 @@ import PublicAlert from "../../../../components/perf/PublicAlert";
 import alertsConfig from "../../../../config/project/alerts";
 import { Operation } from "../../../../config/types";
 
+// Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
 const getAlertUrl =  `${BENCHER_API_URL}/v0/projects/${params.project}/alerts/${params.alert}`;
