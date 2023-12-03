@@ -543,7 +543,7 @@ dependencies = [
  "http",
  "percent-encoding",
  "tracing",
- "uuid 1.5.0",
+ "uuid 1.6.1",
 ]
 
 [[package]]
@@ -892,7 +892,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "url",
- "uuid 1.5.0",
+ "uuid 1.6.1",
 ]
 
 [[package]]
@@ -907,7 +907,7 @@ dependencies = [
  "rand 0.8.5",
  "thiserror",
  "tokio",
- "uuid 1.5.0",
+ "uuid 1.6.1",
 ]
 
 [[package]]
@@ -968,7 +968,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "url",
- "uuid 1.5.0",
+ "uuid 1.6.1",
 ]
 
 [[package]]
@@ -999,7 +999,7 @@ dependencies = [
  "thiserror",
  "typeshare",
  "url",
- "uuid 1.5.0",
+ "uuid 1.6.1",
 ]
 
 [[package]]
@@ -1047,7 +1047,7 @@ dependencies = [
  "literally",
  "once_cell",
  "oso",
- "uuid 1.5.0",
+ "uuid 1.6.1",
 ]
 
 [[package]]
@@ -1060,7 +1060,7 @@ dependencies = [
  "once_cell",
  "serde",
  "thiserror",
- "uuid 1.5.0",
+ "uuid 1.6.1",
 ]
 
 [[package]]
@@ -1088,7 +1088,7 @@ dependencies = [
  "thiserror",
  "typeshare",
  "url",
- "uuid 1.5.0",
+ "uuid 1.6.1",
  "wasm-bindgen",
  "wasm-bindgen-test",
 ]
@@ -1775,7 +1775,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bef552e6f588e446098f6ba40d89ac146c8c7b64aade83c051ee00bb5d2bc18d"
 dependencies = [
  "serde",
- "uuid 1.5.0",
+ "uuid 1.6.1",
 ]
 
 [[package]]
@@ -2001,7 +2001,7 @@ dependencies = [
  "tokio",
  "tokio-rustls",
  "toml 0.8.8",
- "uuid 1.5.0",
+ "uuid 1.6.1",
  "version_check",
  "waitgroup",
 ]
@@ -4867,7 +4867,7 @@ dependencies = [
  "rkyv_derive",
  "seahash",
  "tinyvec",
- "uuid 1.5.0",
+ "uuid 1.6.1",
 ]
 
 [[package]]
@@ -5045,7 +5045,7 @@ dependencies = [
  "serde",
  "serde_json",
  "url",
- "uuid 1.5.0",
+ "uuid 1.6.1",
 ]
 
 [[package]]
@@ -5264,7 +5264,7 @@ dependencies = [
  "thiserror",
  "time",
  "url",
- "uuid 1.5.0",
+ "uuid 1.6.1",
 ]
 
 [[package]]
@@ -6445,9 +6445,9 @@ dependencies = [
 
 [[package]]
 name = "uuid"
-version = "1.5.0"
+version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88ad59a7560b41a70d191093a945f0b87bc1deeda46fb237479708a1d6b6cdfc"
+checksum = "5e395fcf16a7a3d8127ec99782007af141946b4795001f876d54fb0d55978560"
 dependencies = [
  "getrandom 0.2.11",
  "serde",
