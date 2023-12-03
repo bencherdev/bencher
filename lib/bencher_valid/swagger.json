@@ -5957,7 +5957,9 @@
           "python_asv",
           "python_pytest",
           "ruby",
-          "ruby_benchmark"
+          "ruby_benchmark",
+          "shell",
+          "shell_hyperfine"
         ]
       },
       "AlertStatus": {

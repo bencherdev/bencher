@@ -57,6 +57,8 @@ const PYTHON_ASV_INT: i32 = 81;
 const PYTHON_PYTEST_INT: i32 = 82;
 const RUBY_INT: i32 = 90;
 const RUBY_BENCHMARK_INT: i32 = 91;
+const SHELL_INT: i32 = 100;
+const SHELL_HYPERFINE_INT: i32 = 101;
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Default, derive_more::Display, Serialize, Deserialize)]
@@ -90,6 +92,8 @@ pub enum Adapter {
     PythonPytest = PYTHON_PYTEST_INT,
     Ruby = RUBY_INT,
     RubyBenchmark = RUBY_BENCHMARK_INT,
+    Shell = SHELL_INT,
+    ShellHyperfine = SHELL_HYPERFINE_INT,
 }
 
 #[cfg(feature = "db")]
@@ -98,7 +102,8 @@ mod adapter {
         Adapter, CPP_CATCH2_INT, CPP_GOOGLE_INT, CPP_INT, C_SHARP_DOT_NET_INT, C_SHARP_INT,
         GO_BENCH_INT, GO_INT, JAVA_INT, JAVA_JMH_INT, JSON_INT, JS_BENCHMARK_INT, JS_INT,
         JS_TIME_INT, MAGIC_INT, PYTHON_ASV_INT, PYTHON_INT, PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT,
-        RUBY_INT, RUST_BENCH_INT, RUST_CRITERION_INT, RUST_IAI_INT, RUST_INT,
+        RUBY_INT, RUST_BENCH_INT, RUST_CRITERION_INT, RUST_IAI_INT, RUST_INT, SHELL_HYPERFINE_INT,
+        SHELL_INT,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -140,6 +145,8 @@ mod adapter {
                 Self::PythonPytest => PYTHON_PYTEST_INT.to_sql(out),
                 Self::Ruby => RUBY_INT.to_sql(out),
                 Self::RubyBenchmark => RUBY_BENCHMARK_INT.to_sql(out),
+                Self::Shell => SHELL_INT.to_sql(out),
+                Self::ShellHyperfine => SHELL_HYPERFINE_INT.to_sql(out),
             }
         }
     }
@@ -174,6 +181,8 @@ mod adapter {
                 PYTHON_PYTEST_INT => Ok(Self::PythonPytest),
                 RUBY_INT => Ok(Self::Ruby),
                 RUBY_BENCHMARK_INT => Ok(Self::RubyBenchmark),
+                SHELL_INT => Ok(Self::Shell),
+                SHELL_HYPERFINE_INT => Ok(Self::ShellHyperfine),
                 value => Err(Box::new(AdapterError::Invalid(value))),
             }
         }

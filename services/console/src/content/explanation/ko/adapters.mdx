@@ -198,6 +198,22 @@ Rust Iai 어댑터(`rust_iai`)는 [Iai](https://github.com/bheisler/iai) 출력�
 이 어댑터에 대한 Metric Kinds는 모든 프로젝트에 대해 기본적으로 생성되지 않습니다.
 그러나, 이 어댑터를 사용하면, 이 Metric Kinds는 프로젝트에 대해 자동으로 생성됩니다.
 
+## ❯_ Shell
+
+셸 어댑터(`shell`)는 `shell_hyperfine`의 슈퍼셋입니다.
+
+## ❯_️ Shell Hyperfine
+
+셸 하이퍼파인 어댑터(`shell_hyperfine`)는 [Hyperfine](https://github.com/sharkdp/hyperfine) 출력을 [JSON 형식 (즉 `--export-json results.json`)](https://github.com/sharkdp/hyperfine/tree/master/scripts#example)으로 예상합니다.
+이 JSON 출력은 파일로 저장되므로, 해당 파일 경로를 지정하기 위해 `bencher run` CLI의 `--file` 인수를 사용해야 합니다(즉 `bencher run --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`).
+`latency` 측정 항목 종류(즉 `나노 초(ns)`)가 수집됩니다.
+
+지표에 대한 두 가지 옵션이 있습니다 :
+- `mean`(기본값): `lower_value`와 `upper_value`는 각각 평균(즉 `value`) 이하와 이상의 표준 편차입니다.
+- `median`: `lower_value`와 `upper_value`는 각각 `min`과 `max` 값입니다.
+
+이것은 선택적인 `--average` 플래그를 사용하여 <code><a href="/docs/ko/explanation/bencher-run">bencher run</a></code> CLI 하위 명령어에 지정할 수 있습니다.
+
 <br />
 <br />
 

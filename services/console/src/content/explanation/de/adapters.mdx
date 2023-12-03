@@ -199,6 +199,22 @@ Nur diese Maßnahmen (d. h. `value`) sind verfügbar. Es gibt keine `lower_value
 Die Metrikarten für diesen Adapter werden nicht standardmäßig für alle Projekte erstellt.
 Wenn Sie diesen Adapter jedoch verwenden, werden diese Metrikarten automatisch für Ihr Projekt erstellt.
 
+## ❯_ Shell
+
+Der Shell Adapter (`shell`) ist eine Obermenge von `shell_hyperfine`.
+
+## ❯_️ Shell Hyperfine
+
+Der Shell Hyperfine Adapter (`shell_hyperfine`) erwartet [Hyperfine](https://github.com/sharkdp/hyperfine) Ausgabe im [JSON Format (also `--export-json results.json`)](https://github.com/sharkdp/hyperfine/tree/master/scripts#example).
+Diese JSON Ausgabe wird in einer Datei gespeichert, daher müssen Sie das `bencher run` CLI `--file` Argument verwenden, um diesen Dateipfad anzugeben (also `bencher run --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`).
+Die `latency` Messart (also `nanoseconds (ns)`) wird erfasst.
+
+Es gibt zwei Optionen für die Metrik:
+- `mean` (Standard): Die `lower_value` und `upper_value` sind jeweils eine Standardabweichung unter und über dem Durchschnitt (also `value`).
+- `median`: Die `lower_value` und `upper_value` sind die `min` und `max` Werte jeweils.
+
+Dies kann in der <code><a href="/docs/de/explanation/bencher-run">bencher run</a></code> CLI Unterbefehl mit der optionalen `--average` Flag angegeben werden.
+
 <br />
 <br />
 

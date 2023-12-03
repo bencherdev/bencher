@@ -194,6 +194,22 @@ Rust Iaiアダプター(`rust_iai`)は、[Iai](https://github.com/bheisler/iai)�
 このアダプターのMetric Kindsはデフォルトですべてのプロジェクトに作られません。
 しかし、このアダプターを使用すると、これらのMetric Kindsはプロジェクトに自動的に作られます。
 
+## ❯_ Shell
+
+シェル・アダプター（`shell`）は `shell_hyperfine` のスーパーセットです。
+
+## ❯_️ Shell Hyperfine
+
+シェルHyperfineアダプター（`shell_hyperfine`）は、[Hyperfine](https://github.com/sharkdp/hyperfine) の出力を [JSON形式 (つまり `--export-json results.json`)](https://github.com/sharkdp/hyperfine/tree/master/scripts#example)で受け取ることを想定しています。
+このJSON出力はファイルに保存されるため、そのファイルパスを指定するために `bencher run` CLI の `--file` 引数を使用する必要があります（つまり `bencher run --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`）。
+`latency` メトリックタイプ（つまり `nanoseconds (ns)`）が収集されます。
+
+メトリックには2つのオプションがあります：
+- `mean` （デフォルト）： `lower_value` と `upper_value` は平均（つまり `value`）の1標準偏差以下と以上です。
+- `median`： `lower_value` と `upper_value` はそれぞれ `min` と `max` の値です。
+
+これは <code><a href="/docs/ja/explanation/bencher-run">bencher run</a></code> CLI サブコマンドでオプショナルな `--average` フラグで指定できます。
+
 <br />
 <br />
 

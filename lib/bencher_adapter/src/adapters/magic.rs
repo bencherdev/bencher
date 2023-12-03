@@ -1,6 +1,7 @@
 use crate::{
     results::adapter_results::AdapterResults, Adaptable, AdapterCSharp, AdapterCpp, AdapterGo,
-    AdapterJava, AdapterJs, AdapterJson, AdapterPython, AdapterRuby, AdapterRust, Settings,
+    AdapterJava, AdapterJs, AdapterJson, AdapterPython, AdapterRuby, AdapterRust, AdapterShell,
+    Settings,
 };
 
 pub struct AdapterMagic;
@@ -16,6 +17,7 @@ impl Adaptable for AdapterMagic {
             .or_else(|| AdapterPython::parse(input, settings))
             .or_else(|| AdapterRuby::parse(input, settings))
             .or_else(|| AdapterRust::parse(input, settings))
+            .or_else(|| AdapterShell::parse(input, settings))
     }
 }
 
@@ -32,6 +34,7 @@ mod test_magic {
         python::{asv::test_python_asv, pytest::test_python_pytest},
         ruby::benchmark::test_ruby_benchmark,
         rust::{bench::test_rust_bench, criterion::test_rust_criterion, iai::test_rust_iai},
+        shell::hyperfine::test_shell_hyperfine,
         test_util::convert_file_path,
     };
 
@@ -117,5 +120,11 @@ mod test_magic {
     fn test_adapter_magic_rust_iai() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/rust/iai/two.txt");
         test_rust_iai::validate_adapter_rust_iai(&results);
+    }
+
+    #[test]
+    fn test_adapter_magic_shell_hyperfine() {
+        let results = convert_file_path::<AdapterMagic>("./tool_output/shell/hyperfine/two.json");
+        test_shell_hyperfine::validate_adapter_shell_hyperfine(&results);
     }
 }

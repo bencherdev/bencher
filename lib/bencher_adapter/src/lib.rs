@@ -15,6 +15,7 @@ use adapters::{
     rust::{
         bench::AdapterRustBench, criterion::AdapterRustCriterion, iai::AdapterRustIai, AdapterRust,
     },
+    shell::{hyperfine::AdapterShellHyperfine, AdapterShell},
 };
 use bencher_json::project::report::{Adapter, JsonAverage};
 pub use bencher_json::{BenchmarkName, JsonMetric};
@@ -55,6 +56,8 @@ impl Adaptable for Adapter {
             Adapter::RustBench => AdapterRustBench::parse(input, settings),
             Adapter::RustCriterion => AdapterRustCriterion::parse(input, settings),
             Adapter::RustIai => AdapterRustIai::parse(input, settings),
+            Adapter::Shell => AdapterShell::parse(input, settings),
+            Adapter::ShellHyperfine => AdapterShellHyperfine::parse(input, settings),
         }
     }
 

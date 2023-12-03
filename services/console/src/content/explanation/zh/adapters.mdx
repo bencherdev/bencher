@@ -199,6 +199,22 @@ Rust Iai适配器 (`rust_iai`)期待[Iai](https://github.com/bheisler/iai)的输
 这个适配器的度量种类不会默认为所有项目创建。
 但是，当你使用这个适配器时，这些度量种类会自动为你的项目创建。
 
+## ❯_ Shell
+
+Shell 适配器（`shell`）是 `shell_hyperfine`的超集。
+
+## ❯_️ Shell Hyperfine
+
+Shell Hyperfine 适配器（`shell_hyperfine`）期待 [Hyperfine](https://github.com/sharkdp/hyperfine)的输出为 [JSON 格式(例如 `"--export-json results.json")](https://github.com/sharkdp/hyperfine/tree/master/scripts#example)。
+这个 JSON 输出被保存到一个文件，所以你必须使用 `bencher run` CLI `--file` 参数来指定该文件路径 (例如 `bencher run --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`)。
+会收集`latency`度量类型（即 `nanoseconds (ns)`）。
+
+度量有两种选项：
+-  `mean`（默认）： `lower_value` 和 `upper_value` 分别为平均值（即 `value`）低于和高于一个标准差。
+-  `median`： `lower_value`和`upper_value`分别为`min`和`max`值。
+
+这可以在<code><a href="/docs/zh/explanation/bencher-run">bencher run</a></code> CLI 子命令中通过可选的 `--average` 标志来指定。
+
 <br />
 <br />
 

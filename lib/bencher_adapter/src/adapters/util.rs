@@ -60,6 +60,12 @@ impl From<f64> for Time {
     }
 }
 
+impl From<OrderedFloat<f64>> for Time {
+    fn from(float: OrderedFloat<f64>) -> Self {
+        Self::Float64(float.into_inner())
+    }
+}
+
 impl From<Decimal> for Time {
     fn from(decimal: Decimal) -> Self {
         Self::Decimal(decimal)

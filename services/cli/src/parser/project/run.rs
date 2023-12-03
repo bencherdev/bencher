@@ -169,6 +169,10 @@ pub enum CliRunAdapter {
     RustCriterion,
     /// 🦀 Rust Iai
     RustIai,
+    /// ❯_ Shell
+    Shell,
+    /// ❯_ Shell Hyperfine
+    ShellHyperfine,
 }
 
 /// Suggested Central Tendency (Average)

@@ -199,6 +199,22 @@ Seules ces mesures (c'est-à-dire `value`) sont disponibles. Il n'y a pas de mes
 Les types de mesure pour cet adaptateur ne sont pas créés par défaut pour tous les projets.
 Cependant, lorsque vous utilisez cet adaptateur, ces types de mesure seront automatiquement créés pour votre projet.
 
+## ❯_ Shell
+
+L'adaptateur de coquille (`shell`) est un sur-ensemble de `shell_hyperfine`.
+
+## ❯_️ Shell Hyperfine
+
+L'adaptateur de coquille Hyperfine (`shell_hyperfine`) attend la sortie [Hyperfine](https://github.com/sharkdp/hyperfine) en [format JSON (c'est-à-dire `--export-json results.json`)](https://github.com/sharkdp/hyperfine/tree/master/scripts#exemple).
+Cette sortie JSON est sauvegardée dans un fichier, vous devez donc utiliser l'argument CLI `bencher run` `--file` pour spécifier ce chemin de fichier (c'est-à-dire `bencher run --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`).
+Le type de mesure `latency` (c'est-à-dire `nanoseconds (ns)`) est recueilli.
+
+Il existe deux options pour la métrique :
+- `mean` (par défaut) : Les valeurs `lower_value` et `upper_value` sont une déviation standard en dessous et au-dessus de la moyenne (c'est-à-dire `value`), respectivement.
+- `median` : Les valeurs `lower_value` et `upper_value` sont les valeurs `min` et `max`, respectivement.
+
+Ceci peut être spécifié dans la sous-commande CLI <code><a href="/docs/fr/explanation/bencher-run">bencher run</a></code> avec le drapeau optionnel `--average`.
+
 <br />
 <br />
 

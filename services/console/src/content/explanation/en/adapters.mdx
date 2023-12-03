@@ -199,6 +199,23 @@ Only these measures (ie `value`) are available. There are no `lower_value` and `
 The Metric Kinds for this adapter are not created by default for all projects.
 However, when you use this adapter, these Metric Kinds will be automatically created for your Project.
 
+## ❯_ Shell
+
+The Shell Adapter (`shell`) is a superset of `shell_hyperfine`.
+
+## ❯_️ Shell Hyperfine
+
+The Shell Hyperfine Adapter (`shell_hyperfine`) expects [Hyperfine](https://github.com/sharkdp/hyperfine) output in [JSON format (ie `--export-json results.json`)](https://github.com/sharkdp/hyperfine/tree/master/scripts#example).
+This JSON output is saved to a file, so you must use the `bencher run` CLI `--file` argument to specify that file path (ie `bencher run --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`).
+The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
+
+There are two options for the Metric:
+- `mean` (default):  The `lower_value` and `upper_value` are one standard deviation below and above the mean (ie `value`) respectively.
+- `median`: The `lower_value` and `upper_value` are `min` and `max` values respectively.
+
+This can be specified in the <code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI subcommand with the optional `--average` flag.
+
+
 <br />
 <br />
 

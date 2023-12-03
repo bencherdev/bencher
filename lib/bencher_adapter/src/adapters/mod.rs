@@ -10,6 +10,7 @@ pub mod magic;
 pub mod python;
 pub mod ruby;
 pub mod rust;
+pub mod shell;
 mod util;
 
 #[allow(dead_code, clippy::print_stdout, clippy::unnecessary_wraps)]

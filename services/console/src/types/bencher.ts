@@ -418,6 +418,8 @@ export enum Adapter {
 	PythonPytest = "python_pytest",
 	Ruby = "ruby",
 	RubyBenchmark = "ruby_benchmark",
+	Shell = "shell",
+	ShellHyperfine = "shell_hyperfine",
 }
 
 export interface JsonReport {

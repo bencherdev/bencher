@@ -198,6 +198,22 @@ Apenas essas medidas (ou seja, `value`) estão disponíveis. Não existem medida
 Os Tipos de Métrica para este adaptador não são criados por padrão para todos os projetos.
 Entretanto, quando você usa este adaptador, esses Tipos de Métrica serão automaticamente criados para o seu Projeto.
 
+## ❯_ Shell
+
+O Adaptador Shell (`shell`) é um superconjunto de `shell_hyperfine`.
+
+## ❯_️ Shell Hyperfine
+
+O Adaptador Shell Hyperfine (`shell_hyperfine`) espera a saída do [Hyperfine](https://github.com/sharkdp/hyperfine) no [formato JSON (ou seja, `--export-json results.json`)](https://github.com/sharkdp/hyperfine/tree/master/scripts#example).
+Essa saída JSON é salva em um arquivo, portanto, você deve usar o argumento CLI do `bencher run` `--file` para especificar esse caminho de arquivo (ou seja, `bencher run --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`).
+A métrica `latency` Kind (ou seja, `nanoseconds (ns)`) é coletada.
+
+Existem duas opções para a métrica:
+- `mean` (padrão): O `lower_value` e `upper_value` são um desvio padrão abaixo e acima da média (ou seja, `value`) respectivamente.
+- `median`: O `lower_value` e `upper_value` são os valores `min` e `max` respectivamente.
+
+Isso pode ser especificado no subcomando CLI do <code><a href="/docs/pt/explanation/bencher-run">bencher run</a></code> com o sinalizador opcional `--average`.
+
 <br />
 <br />
 
