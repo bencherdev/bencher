@@ -115,6 +115,12 @@ const alertsConfig = {
 				},
 				{
 					kind: Card.NESTED_FIELD,
+					label: "Boundary Average",
+					keys: ["benchmark", "boundary", "average"],
+					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
 					label: "Lower Boundary Limit",
 					keys: ["benchmark", "boundary", "lower_limit"],
 					display: Display.RAW,
