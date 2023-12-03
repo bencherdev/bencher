@@ -175,6 +175,8 @@ jobs:
         run: cargo install --path services/cli --locked --force
       - name: Run API Smoke Test
         run: ./scripts/smoke_test.sh
+      - name: Run Examples
+        run: ./scripts/examples.sh
 
   api_smoke_test_compat:
     name: API Smoke Test Compat
@@ -197,8 +199,13 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - uses: bencherdev/bencher@main
+      # Note that this really is using the latest version of the CLI
+      # and not the `@main` version of the CLI from the GitHub Action
+      # But this helps set up things for the Examples step
       - name: Run API Smoke Test
         run: ./scripts/smoke_test.sh
+      - name: Run Examples
+        run: ./scripts/examples.sh
 
   # Cargo Check (Minus)
   cargo_check_api_minus:

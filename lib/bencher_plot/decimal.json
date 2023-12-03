@@ -63,6 +63,7 @@
                         "upper_value": 0.0000021863651953225523
                     },
                     "boundary": {
+                        "average": 0.0,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -83,6 +84,7 @@
                         "upper_value": 0.000004124188962040768
                     },
                     "boundary": {
+                        "average": 0.0,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -103,6 +105,7 @@
                         "upper_value": 0.0000035618365115095084
                     },
                     "boundary": {
+                        "average": 0.0,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -123,6 +126,7 @@
                         "upper_value": 0.000008447478504790066
                     },
                     "boundary": {
+                        "average": 0.0,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -143,6 +147,7 @@
                         "upper_value": 0.0000023280234069152165
                     },
                     "boundary": {
+                        "average": 0.0,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -200,6 +205,7 @@
                         "upper_value": 0.0000219779016688185
                     },
                     "boundary": {
+                        "average": 0.0,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -220,6 +226,7 @@
                         "upper_value": 0.000019002152584547023
                     },
                     "boundary": {
+                        "average": 0.0,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -240,6 +247,7 @@
                         "upper_value": 0.000020445669032365805
                     },
                     "boundary": {
+                        "average": 0.0,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -260,6 +268,7 @@
                         "upper_value": 0.000013449995970619926
                     },
                     "boundary": {
+                        "average": 0.0,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -280,6 +289,7 @@
                         "upper_value": 0.00001180860973802758
                     },
                     "boundary": {
+                        "average": 0.0,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -337,6 +347,7 @@
                         "upper_value": 0.000023873490357497584
                     },
                     "boundary": {
+                        "average": 0.0,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -357,6 +368,7 @@
                         "upper_value": 0.000031828448670215165
                     },
                     "boundary": {
+                        "average": 0.0,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -377,6 +389,7 @@
                         "upper_value": 0.0000319116368820667
                     },
                     "boundary": {
+                        "average": 0.0,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -397,6 +410,7 @@
                         "upper_value": 0.00003232275122975994
                     },
                     "boundary": {
+                        "average": 0.0,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -417,6 +431,7 @@
                         "upper_value": 0.00003266720891469727
                     },
                     "boundary": {
+                        "average": 0.0,
                         "lower_limit": null,
                         "upper_limit": null
                     }
