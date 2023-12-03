@@ -1,7 +1,7 @@
 # Use this for testing production
 # base = "https://bencher.dev"
 timeout = 5
-max_retries = 5
+max_retries = 10
 retry_wait_time = 1
 exclude = [
     "localhost:3000",
