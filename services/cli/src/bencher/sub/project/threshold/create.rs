@@ -14,9 +14,9 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Create {
     pub project: ResourceId,
-    pub metric_kind: ResourceId,
     pub branch: ResourceId,
     pub testbed: ResourceId,
+    pub measure: ResourceId,
     pub statistic: Statistic,
     pub backend: Backend,
 }
@@ -27,17 +27,17 @@ impl TryFrom<CliThresholdCreate> for Create {
     fn try_from(create: CliThresholdCreate) -> Result<Self, Self::Error> {
         let CliThresholdCreate {
             project,
-            metric_kind,
             branch,
             testbed,
+            measure,
             statistic,
             backend,
         } = create;
         Ok(Self {
             project,
-            metric_kind,
             branch,
             testbed,
+            measure,
             statistic: statistic.into(),
             backend: backend.try_into()?,
         })
@@ -47,10 +47,10 @@ impl TryFrom<CliThresholdCreate> for Create {
 impl From<Create> for JsonNewThreshold {
     fn from(create: Create) -> Self {
         let Create {
-            metric_kind,
             branch,
             testbed,
             statistic,
+            measure,
             ..
         } = create;
         let Statistic {
@@ -62,9 +62,9 @@ impl From<Create> for JsonNewThreshold {
             upper_boundary,
         } = statistic;
         Self {
-            metric_kind: metric_kind.into(),
             branch: branch.into(),
             testbed: testbed.into(),
+            measure: measure.into(),
             test,
             min_sample_size,
             max_sample_size,

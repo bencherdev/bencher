@@ -17,11 +17,11 @@ sortOrder: 3
 [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)
 的输出，你应该使用`rust_bench`适配器，而不是`magic`或`rust`适配器。
 查看我们的
-[Bencher perf页面](https://bencher.dev/perf/bencher?key=true&metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C5655ed2a-3e45-4622-bdbd-39cdd9837af8%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674777600000)
+[Bencher perf页面](https://bencher.dev/perf/bencher?key=true&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C5655ed2a-3e45-4622-bdbd-39cdd9837af8%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674777600000)
 以便进行良好比较。
 
 <div class="content has-text-centered">
-<a href="https://bencher.dev/perf/bencher?key=true&metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674950400000"><img style="border: 0.2em solid #ed6704;" src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1674950400000&title=Benchmark+Adapter+Comparison" title="基准测试适配器对比" alt="基准测试适配器对比 for Bencher - Bencher" /></a>
+<a href="https://bencher.dev/perf/bencher?key=true&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674950400000"><img style="border: 0.2em solid #ed6704;" src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1674950400000&title=Benchmark+Adapter+Comparison" title="基准测试适配器对比" alt="基准测试适配器对比 for Bencher - Bencher" /></a>
 </div>
 
 ## 🪄 Magic <small>(默认)</small>
@@ -52,7 +52,7 @@ BMF的例子：
 
 在这个例子中，键`benchmark_name`将是一个基准测试的名称。
 基准测试的名字可以是任何长度不超过1024个字符的非空字符串。
-`benchmark_name`对象包含Metric Kind别名或UUID作为键。
+`benchmark_name`对象包含Measure别名或UUID作为键。
 在这个例子中，`latency`是延迟度量种类的别名。
 每个项目默认具有一个延迟（即`latency`）和吞吐量（即`throughput`）度量种类，
 它们分别在`纳秒（ns）`和`操作数/秒（ops/s）`中测量。

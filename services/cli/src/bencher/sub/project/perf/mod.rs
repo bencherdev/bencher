@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_json::{
-    BenchmarkUuid, BranchUuid, DateTime, JsonPerf, JsonPerfQuery, MetricKindUuid, ResourceId,
+    BenchmarkUuid, BranchUuid, DateTime, JsonPerf, JsonPerfQuery, MeasureUuid, ResourceId,
     TestbedUuid,
 };
 use tabled::Table;
@@ -19,10 +19,10 @@ use table_style::TableStyle;
 #[allow(clippy::option_option)]
 pub struct Perf {
     project: ResourceId,
-    metric_kinds: Vec<MetricKindUuid>,
     branches: Vec<BranchUuid>,
     testbeds: Vec<TestbedUuid>,
     benchmarks: Vec<BenchmarkUuid>,
+    measures: Vec<MeasureUuid>,
     start_time: Option<DateTime>,
     end_time: Option<DateTime>,
     table: Option<Option<TableStyle>>,
@@ -35,10 +35,10 @@ impl TryFrom<CliPerf> for Perf {
     fn try_from(perf: CliPerf) -> Result<Self, Self::Error> {
         let CliPerf {
             project,
-            metric_kinds,
             branches,
             testbeds,
             benchmarks,
+            measures,
             start_time,
             end_time,
             table,
@@ -46,10 +46,10 @@ impl TryFrom<CliPerf> for Perf {
         } = perf;
         Ok(Self {
             project,
-            metric_kinds,
             branches,
             testbeds,
             benchmarks,
+            measures,
             start_time,
             end_time,
             table: table.map(|t| t.map(Into::into)),
@@ -61,19 +61,19 @@ impl TryFrom<CliPerf> for Perf {
 impl From<Perf> for JsonPerfQuery {
     fn from(perf: Perf) -> Self {
         let Perf {
-            metric_kinds,
             branches,
             testbeds,
             benchmarks,
+            measures,
             start_time,
             end_time,
             ..
         } = perf;
         Self {
-            metric_kinds,
             branches,
             testbeds,
             benchmarks,
+            measures,
             start_time,
             end_time,
         }
@@ -91,10 +91,10 @@ impl SubCmd for Perf {
                     let mut client = client
                         .proj_perf_get()
                         .project(self.project.clone())
-                        .metric_kinds(json_perf_query.metric_kinds())
                         .branches(json_perf_query.branches())
                         .testbeds(json_perf_query.testbeds())
-                        .benchmarks(json_perf_query.benchmarks());
+                        .benchmarks(json_perf_query.benchmarks())
+                        .measures(json_perf_query.measures());
 
                     if let Some(start_time) = json_perf_query.start_time() {
                         client = client.start_time(start_time);

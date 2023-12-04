@@ -9,7 +9,7 @@ use http::StatusCode;
 use self::statistic::{InsertStatistic, QueryStatistic, StatisticId};
 use super::{
     branch::{BranchId, QueryBranch},
-    metric_kind::{MetricKindId, QueryMetricKind},
+    measure::{MeasureId, QueryMeasure},
     testbed::{QueryTestbed, TestbedId},
     ProjectId, QueryProject,
 };
@@ -36,9 +36,9 @@ pub struct QueryThreshold {
     pub id: ThresholdId,
     pub uuid: ThresholdUuid,
     pub project_id: ProjectId,
-    pub metric_kind_id: MetricKindId,
     pub branch_id: BranchId,
     pub testbed_id: TestbedId,
+    pub measure_id: MeasureId,
     pub statistic_id: Option<StatisticId>,
     pub created: DateTime,
     pub modified: DateTime,
@@ -81,9 +81,9 @@ impl QueryThreshold {
         let Self {
             uuid,
             project_id,
-            metric_kind_id,
             branch_id,
             testbed_id,
+            measure_id,
             statistic_id,
             created,
             modified,
@@ -103,12 +103,15 @@ impl QueryThreshold {
             sentry::capture_error(&err);
             return Err(err);
         };
+        let measure = QueryMeasure::get(conn, measure_id)?.into_json(conn)?;
         Ok(JsonThreshold {
             uuid,
             project: QueryProject::get_uuid(conn, project_id)?,
-            metric_kind: QueryMetricKind::get(conn, metric_kind_id)?.into_json(conn)?,
             branch: QueryBranch::get(conn, branch_id)?.into_json(conn)?,
             testbed: QueryTestbed::get(conn, testbed_id)?.into_json(conn)?,
+            // TODO remove in due time
+            metric_kind: Some(measure.clone()),
+            measure,
             statistic,
             created,
             modified,
@@ -169,9 +172,9 @@ impl QueryThreshold {
 pub struct InsertThreshold {
     pub uuid: ThresholdUuid,
     pub project_id: ProjectId,
-    pub metric_kind_id: MetricKindId,
     pub branch_id: BranchId,
     pub testbed_id: TestbedId,
+    pub measure_id: MeasureId,
     pub statistic_id: Option<StatisticId>,
     pub created: DateTime,
     pub modified: DateTime,
@@ -180,17 +183,17 @@ pub struct InsertThreshold {
 impl InsertThreshold {
     pub fn new(
         project_id: ProjectId,
-        metric_kind_id: MetricKindId,
         branch_id: BranchId,
         testbed_id: TestbedId,
+        measure_id: MeasureId,
     ) -> Self {
         let timestamp = DateTime::now();
         Self {
             uuid: ThresholdUuid::new(),
             project_id,
-            metric_kind_id,
             branch_id,
             testbed_id,
+            measure_id,
             statistic_id: None,
             created: timestamp,
             modified: timestamp,
@@ -200,14 +203,13 @@ impl InsertThreshold {
     pub fn insert_from_json(
         conn: &mut DbConnection,
         project_id: ProjectId,
-        metric_kind_id: MetricKindId,
         branch_id: BranchId,
         testbed_id: TestbedId,
+        measure_id: MeasureId,
         json_statistic: JsonNewStatistic,
     ) -> Result<ThresholdId, HttpError> {
         // Create the new threshold
-        let insert_threshold =
-            InsertThreshold::new(project_id, metric_kind_id, branch_id, testbed_id);
+        let insert_threshold = InsertThreshold::new(project_id, branch_id, testbed_id, measure_id);
         diesel::insert_into(schema::threshold::table)
             .values(&insert_threshold)
             .execute(conn)
@@ -241,16 +243,16 @@ impl InsertThreshold {
     pub fn lower_boundary(
         conn: &mut DbConnection,
         project_id: ProjectId,
-        metric_kind_id: MetricKindId,
         branch_id: BranchId,
         testbed_id: TestbedId,
+        measure_id: MeasureId,
     ) -> Result<ThresholdId, HttpError> {
         Self::insert_from_json(
             conn,
             project_id,
-            metric_kind_id,
             branch_id,
             testbed_id,
+            measure_id,
             JsonNewStatistic::lower_boundary(),
         )
     }
@@ -258,16 +260,16 @@ impl InsertThreshold {
     pub fn upper_boundary(
         conn: &mut DbConnection,
         project_id: ProjectId,
-        metric_kind_id: MetricKindId,
         branch_id: BranchId,
         testbed_id: TestbedId,
+        measure_id: MeasureId,
     ) -> Result<ThresholdId, HttpError> {
         Self::insert_from_json(
             conn,
             project_id,
-            metric_kind_id,
             branch_id,
             testbed_id,
+            measure_id,
             JsonNewStatistic::upper_boundary(),
         )
     }

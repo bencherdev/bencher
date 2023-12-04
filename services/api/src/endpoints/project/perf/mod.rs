@@ -4,8 +4,8 @@ use bencher_json::{
         branch::{JsonVersion, VersionNumber},
         perf::{Iteration, JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
     },
-    BenchmarkUuid, BranchUuid, DateTime, GitHash, JsonPerf, JsonPerfQuery, MetricKindUuid,
-    ReportUuid, ResourceId, TestbedUuid,
+    BenchmarkUuid, BranchUuid, DateTime, GitHash, JsonPerf, JsonPerfQuery, MeasureUuid, ReportUuid,
+    ResourceId, TestbedUuid,
 };
 use diesel::{
     ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
@@ -26,8 +26,8 @@ use crate::{
         project::{
             benchmark::QueryBenchmark,
             branch::QueryBranch,
+            measure::QueryMeasure,
             metric::QueryMetric,
-            metric_kind::QueryMetricKind,
             testbed::QueryTestbed,
             threshold::{
                 alert::QueryAlert, boundary::QueryBoundary, statistic::QueryStatistic,
@@ -103,10 +103,10 @@ async fn get_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     let JsonPerfQuery {
-        metric_kinds,
         branches,
         testbeds,
         benchmarks,
+        measures,
         start_time,
         end_time,
     } = json_perf_query;
@@ -119,10 +119,10 @@ async fn get_inner(
     let results = perf_results(
         conn,
         &project,
-        &metric_kinds,
         &branches,
         &testbeds,
         &benchmarks,
+        &measures,
         times,
     )?;
 
@@ -143,24 +143,24 @@ struct Times {
 fn perf_results(
     conn: &mut DbConnection,
     project: &QueryProject,
-    metric_kinds: &[MetricKindUuid],
     branches: &[BranchUuid],
     testbeds: &[TestbedUuid],
     benchmarks: &[BenchmarkUuid],
+    measures: &[MeasureUuid],
     times: Times,
 ) -> Result<Vec<JsonPerfMetrics>, HttpError> {
-    let permutations = metric_kinds.len() * branches.len() * testbeds.len() * benchmarks.len();
+    let permutations = branches.len() * testbeds.len() * benchmarks.len() * measures.len();
     let gt_max_permutations = permutations > MAX_PERMUTATIONS;
     let mut results = Vec::with_capacity(permutations.min(MAX_PERMUTATIONS));
-    for (metric_kind_index, metric_kind_uuid) in metric_kinds.iter().enumerate() {
-        for (branch_index, branch_uuid) in branches.iter().enumerate() {
-            for (testbed_index, testbed_uuid) in testbeds.iter().enumerate() {
-                for (benchmark_index, benchmark_uuid) in benchmarks.iter().enumerate() {
+    for (branch_index, branch_uuid) in branches.iter().enumerate() {
+        for (testbed_index, testbed_uuid) in testbeds.iter().enumerate() {
+            for (benchmark_index, benchmark_uuid) in benchmarks.iter().enumerate() {
+                for (measure_index, measure_uuid) in measures.iter().enumerate() {
                     if gt_max_permutations
-                        && (metric_kind_index + 1)
-                            * (branch_index + 1)
+                        && (branch_index + 1)
                             * (testbed_index + 1)
                             * (benchmark_index + 1)
+                            * (measure_index + 1)
                             > MAX_PERMUTATIONS
                     {
                         return Ok(results);
@@ -169,10 +169,10 @@ fn perf_results(
                     if let Some(perf_metrics) = perf_query(
                         conn,
                         project,
-                        *metric_kind_uuid,
                         *branch_uuid,
                         *testbed_uuid,
                         *benchmark_uuid,
+                        *measure_uuid,
                         times,
                     )?
                     .into_iter()
@@ -201,14 +201,13 @@ fn perf_results(
 fn perf_query(
     conn: &mut DbConnection,
     project: &QueryProject,
-    metric_kind_uuid: MetricKindUuid,
     branch_uuid: BranchUuid,
     testbed_uuid: TestbedUuid,
     benchmark_uuid: BenchmarkUuid,
+    measure_uuid: MeasureUuid,
     times: Times,
 ) -> Result<Vec<PerfQuery>, HttpError> {
     let mut query = schema::metric::table
-        .inner_join(schema::metric_kind::table)
         .inner_join(
             schema::perf::table.inner_join(
                 schema::report::table
@@ -221,13 +220,14 @@ fn perf_query(
             )
             .inner_join(schema::benchmark::table)
         )
+        .inner_join(schema::measure::table)
         // It is important to filter for the branch on the `branch_version` table and not on the branch in the `report` table.
         // This is because the `branch_version` table is the one that is updated when a branch is cloned/used as a start point.
         // In contrast, the `report` table is only set to a single branch when the report is created.
-        .filter(schema::metric_kind::uuid.eq(metric_kind_uuid))
         .filter(schema::branch::uuid.eq(branch_uuid))
         .filter(schema::testbed::uuid.eq(testbed_uuid))
         .filter(schema::benchmark::uuid.eq(benchmark_uuid))
+        .filter(schema::measure::uuid.eq(measure_uuid))
         // There may or may not be a boundary for any given metric
         .left_join(
             schema::boundary::table
@@ -259,10 +259,10 @@ fn perf_query(
             schema::perf::iteration,
         ))
         .select((
-            QueryMetricKind::as_select(),
             QueryBranch::as_select(),
             QueryTestbed::as_select(),
             QueryBenchmark::as_select(),
+            QueryMeasure::as_select(),
             schema::report::uuid,
             schema::perf::iteration,
             schema::report::start_time,
@@ -284,7 +284,7 @@ fn perf_query(
                     schema::threshold::id,
                     schema::threshold::uuid,
                     schema::threshold::project_id,
-                    schema::threshold::metric_kind_id,
+                    schema::threshold::measure_id,
                     schema::threshold::branch_id,
                     schema::threshold::testbed_id,
                     schema::threshold::statistic_id,
@@ -315,14 +315,14 @@ fn perf_query(
             QueryMetric::as_select(),
         ))
         .load::<PerfQuery>(conn)
-        .map_err(resource_not_found_err!(Metric, (project, metric_kind_uuid, branch_uuid, testbed_uuid, benchmark_uuid)))
+        .map_err(resource_not_found_err!(Metric, (project,  branch_uuid, testbed_uuid, benchmark_uuid, measure_uuid)))
 }
 
 type PerfQuery = (
-    QueryMetricKind,
     QueryBranch,
     QueryTestbed,
     QueryBenchmark,
+    QueryMeasure,
     ReportUuid,
     Iteration,
     DateTime,
@@ -339,10 +339,10 @@ type PerfQuery = (
 );
 
 struct QueryDimensions {
-    metric_kind: QueryMetricKind,
     branch: QueryBranch,
     testbed: QueryTestbed,
     benchmark: QueryBenchmark,
+    measure: QueryMeasure,
 }
 
 type PerfMetricQuery = (
@@ -363,10 +363,10 @@ type PerfMetricQuery = (
 
 fn split_perf_query(
     (
-        metric_kind,
         branch,
         testbed,
         benchmark,
+        measure,
         report_uuid,
         iteration,
         start_time,
@@ -378,10 +378,10 @@ fn split_perf_query(
     ): PerfQuery,
 ) -> (QueryDimensions, PerfMetricQuery) {
     let query_dimensions = QueryDimensions {
-        metric_kind,
         branch,
         testbed,
         benchmark,
+        measure,
     };
     let metric_query = (
         report_uuid,
@@ -402,16 +402,16 @@ fn new_perf_metrics(
     metric: JsonPerfMetric,
 ) -> JsonPerfMetrics {
     let QueryDimensions {
-        metric_kind,
         branch,
         testbed,
         benchmark,
+        measure,
     } = query_dimensions;
     JsonPerfMetrics {
-        metric_kind: metric_kind.into_json_for_project(project),
         branch: branch.into_json_for_project(project),
         testbed: testbed.into_json_for_project(project),
         benchmark: benchmark.into_json_for_project(project),
+        measure: measure.into_json_for_project(project),
         metrics: vec![metric],
     }
 }

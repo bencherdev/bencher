@@ -5,7 +5,7 @@ use serde::Deserialize;
 
 use crate::{
     adapters::util::{latency_as_nanos, throughput_as_secs},
-    results::adapter_results::{AdapterMetricKind, AdapterResults},
+    results::adapter_results::{AdapterMeasure, AdapterResults},
     Adaptable, AdapterError, Settings,
 };
 
@@ -66,7 +66,7 @@ impl TryFrom<Jmh> for Option<AdapterResults> {
                 score_unit,
             } = primary_metric;
 
-            let metric_kind = if let Some((unit, slash_op)) = score_unit.split_once("/op") {
+            let measure = if let Some((unit, slash_op)) = score_unit.split_once("/op") {
                 if !slash_op.is_empty() {
                     return Err(AdapterError::BenchmarkUnits(slash_op.into()));
                 }
@@ -80,7 +80,7 @@ impl TryFrom<Jmh> for Option<AdapterResults> {
                     lower_value: Some(lower_value),
                     upper_value: Some(upper_value),
                 };
-                AdapterMetricKind::Latency(json_metric)
+                AdapterMeasure::Latency(json_metric)
             } else if let Some((ops_slash, unit)) = score_unit.split_once("ops/") {
                 if !ops_slash.is_empty() {
                     return Err(AdapterError::BenchmarkUnits(ops_slash.into()));
@@ -95,12 +95,12 @@ impl TryFrom<Jmh> for Option<AdapterResults> {
                     lower_value: Some(lower_value),
                     upper_value: Some(upper_value),
                 };
-                AdapterMetricKind::Throughput(json_metric)
+                AdapterMeasure::Throughput(json_metric)
             } else {
                 return Err(AdapterError::BenchmarkUnits(score_unit));
             };
 
-            benchmark_metrics.push((benchmark_name, metric_kind));
+            benchmark_metrics.push((benchmark_name, measure));
         }
 
         Ok(AdapterResults::new(benchmark_metrics))

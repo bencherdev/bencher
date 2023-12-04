@@ -23,7 +23,7 @@ export interface Props {
 	isEmbed: boolean;
 	isPlotInit: Accessor<boolean>;
 	report: Accessor<undefined | string>;
-	metric_kinds: Accessor<string[]>;
+	measures: Accessor<string[]>;
 	branches: Accessor<string[]>;
 	testbeds: Accessor<string[]>;
 	benchmarks: Accessor<string[]>;
@@ -51,7 +51,7 @@ export interface Props {
 	branches_page: Accessor<number>;
 	testbeds_page: Accessor<number>;
 	benchmarks_page: Accessor<number>;
-	handleMetricKind: (metric_kind: null | string) => void;
+	handleMeasure: (measure: null | string) => void;
 	handleStartTime: (start_time: string) => void;
 	handleEndTime: (end_time: string) => void;
 	handleTab: (tab: PerfTab) => void;
@@ -64,7 +64,7 @@ export interface Props {
 	handleUpperBoundary: (upper_boundary: boolean) => void;
 	handleReportChecked: (
 		index: number,
-		metric_kind_uuid: undefined | string,
+		measure_uuid: undefined | string,
 	) => void;
 	handleBranchChecked: (index: number) => void;
 	handleTestbedChecked: (index: number) => void;
@@ -88,7 +88,7 @@ const PerfPlot = (props: Props) => {
 						isConsole={props.isConsole}
 						isEmbed={props.isEmbed}
 						isPlotInit={props.isPlotInit}
-						metric_kinds={props.metric_kinds}
+						measures={props.measures}
 						start_date={props.start_date}
 						end_date={props.end_date}
 						refresh={props.refresh}
@@ -98,7 +98,7 @@ const PerfPlot = (props: Props) => {
 						upper_value={props.upper_value}
 						lower_boundary={props.lower_boundary}
 						upper_boundary={props.upper_boundary}
-						handleMetricKind={props.handleMetricKind}
+						handleMeasure={props.handleMeasure}
 						handleStartTime={props.handleStartTime}
 						handleEndTime={props.handleEndTime}
 						handleRange={props.handleRange}
@@ -126,7 +126,7 @@ const PerfPlot = (props: Props) => {
 						>
 							<Match when={props.isPlotInit()}>
 								<PlotInit
-									metric_kinds={props.metric_kinds}
+									measures={props.measures}
 									branches={props.branches}
 									testbeds={props.testbeds}
 									benchmarks={props.benchmarks}
@@ -146,7 +146,7 @@ const PerfPlot = (props: Props) => {
 						<PlotTab
 							project_slug={props.project_slug}
 							isConsole={props.isConsole}
-							metric_kinds={props.metric_kinds}
+							measures={props.measures}
 							tab={props.tab}
 							reports_tab={props.reports_tab}
 							branches_tab={props.branches_tab}

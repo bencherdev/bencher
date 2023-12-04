@@ -1,4 +1,4 @@
-use bencher_json::{BenchmarkUuid, BranchUuid, DateTime, MetricKindUuid, ResourceId, TestbedUuid};
+use bencher_json::{BenchmarkUuid, BranchUuid, DateTime, MeasureUuid, ResourceId, TestbedUuid};
 use clap::{Parser, ValueEnum};
 
 use crate::parser::CliBackend;
@@ -9,10 +9,6 @@ pub struct CliPerf {
     /// Project slug or UUID
     #[clap(long)]
     pub project: ResourceId,
-
-    /// Metric Kind UUIDs
-    #[clap(long)]
-    pub metric_kinds: Vec<MetricKindUuid>,
 
     /// Branch UUIDs
     #[clap(long)]
@@ -25,6 +21,10 @@ pub struct CliPerf {
     /// Benchmark UUIDs
     #[clap(long)]
     pub benchmarks: Vec<BenchmarkUuid>,
+
+    /// Measure UUIDs
+    #[clap(long)]
+    pub measures: Vec<MeasureUuid>,
 
     /// Start time (seconds since epoch)
     #[clap(long)]

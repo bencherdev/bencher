@@ -18,10 +18,10 @@ crate::typed_uuid::typed_uuid!(MetricUuid);
 pub type JsonResultsMap = HashMap<BenchmarkName, JsonMetricsMap>;
 
 #[typeshare::typeshare]
-pub type JsonMetricsMap = HashMap<MetricKind, JsonMetric>;
+pub type JsonMetricsMap = HashMap<Measure, JsonMetric>;
 
 #[typeshare::typeshare]
-pub type MetricKind = ResourceId;
+pub type Measure = ResourceId;
 
 #[typeshare::typeshare]
 #[derive(Debug, Copy, Clone, Default, Eq, Serialize, Deserialize)]

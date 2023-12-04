@@ -55,9 +55,9 @@ bencher run \
 git checkout feature-branch
 
 bencher threshold create \
---metric-kind latency \
 --branch "$FEATURE_BRANCH" \
 --testbed localhost \
+--measure latency \
 --test t \
 --right-side 0.95
 

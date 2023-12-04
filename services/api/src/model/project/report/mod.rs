@@ -18,8 +18,8 @@ use crate::{
         project::{
             benchmark::QueryBenchmark,
             branch::{BranchId, QueryBranch},
+            measure::QueryMeasure,
             metric::QueryMetric,
-            metric_kind::QueryMetricKind,
             testbed::{QueryTestbed, TestbedId},
             threshold::statistic::QueryStatistic,
             threshold::{alert::QueryAlert, boundary::QueryBoundary, QueryThreshold},
@@ -95,11 +95,11 @@ impl QueryReport {
 
 type ResultsQuery = (
     Iteration,
-    QueryMetricKind,
-    Option<(QueryThreshold, QueryStatistic)>,
     QueryBenchmark,
+    QueryMeasure,
     QueryMetric,
     Option<QueryBoundary>,
+    Option<(QueryThreshold, QueryStatistic)>,
 );
 
 fn get_report_results(
@@ -112,7 +112,7 @@ fn get_report_results(
     .filter(schema::perf::report_id.eq(report_id))
     .inner_join(schema::benchmark::table)
     .inner_join(schema::metric::table
-        .inner_join(schema::metric_kind::table)
+        .inner_join(schema::measure::table)
         // There may or may not be a boundary for any given metric
         .left_join(schema::boundary::table
             .inner_join(schema::threshold::table)
@@ -120,17 +120,29 @@ fn get_report_results(
         )
     )
     // It is important to order by the iteration first in order to make sure they are grouped together below
-    // Then ordering by metric kind and finally benchmark name makes sure that the benchmarks are in the same order for each iteration
-    .order((schema::perf::iteration, schema::metric_kind::name, schema::benchmark::name))
+    // Then ordering by measure and finally benchmark name makes sure that the benchmarks are in the same order for each iteration
+    .order((schema::perf::iteration, schema::measure::name, schema::benchmark::name))
     .select((
         schema::perf::iteration,
-        QueryMetricKind::as_select(),
+        QueryBenchmark::as_select(),
+        QueryMeasure::as_select(),
+        QueryMetric::as_select(),
+        (
+            schema::boundary::id,
+            schema::boundary::uuid,
+            schema::boundary::threshold_id,
+            schema::boundary::statistic_id,
+            schema::boundary::metric_id,
+            schema::boundary::baseline,
+            schema::boundary::lower_limit,
+            schema::boundary::upper_limit,
+        ).nullable(),
         (
             (
                 schema::threshold::id,
                 schema::threshold::uuid,
                 schema::threshold::project_id,
-                schema::threshold::metric_kind_id,
+                schema::threshold::measure_id,
                 schema::threshold::branch_id,
                 schema::threshold::testbed_id,
                 schema::threshold::statistic_id,
@@ -150,18 +162,6 @@ fn get_report_results(
                 schema::statistic::created,
             )
         ).nullable(),
-        QueryBenchmark::as_select(),
-        QueryMetric::as_select(),
-        (
-            schema::boundary::id,
-            schema::boundary::uuid,
-            schema::boundary::threshold_id,
-            schema::boundary::statistic_id,
-            schema::boundary::metric_id,
-            schema::boundary::baseline,
-            schema::boundary::lower_limit,
-            schema::boundary::upper_limit,
-        ).nullable(),
     ))
     .load::<ResultsQuery>(conn)
     .map(|results| into_report_results_json(log, project, results))
@@ -179,11 +179,11 @@ fn into_report_results_json(
     let mut report_result: Option<JsonReportResult> = None;
     for (
         iteration,
-        query_metric_kind,
-        threshold_statistic,
         query_benchmark,
+        query_measure,
         query_metric,
         query_boundary,
+        threshold_statistic,
     ) in results
     {
         // If onto a new iteration, then add the result to the report iteration list.
@@ -199,17 +199,17 @@ fn into_report_results_json(
         }
         prev_iteration = Some(iteration);
 
-        // If there is a current report result, make sure that the metric kind is the same.
+        // If there is a current report result, make sure that the measure is the same.
         // Otherwise, add it to the report iteration list.
         if let Some(result) = report_result.take() {
-            if query_metric_kind.uuid == result.metric_kind.uuid {
+            if query_measure.uuid == result.measure.uuid {
                 report_result = Some(result);
             } else {
                 slog::trace!(
                     log,
-                    "Metric Kind {} => {}",
-                    result.metric_kind.uuid,
-                    query_metric_kind.uuid,
+                    "Measure {} => {}",
+                    result.measure.uuid,
+                    query_measure.uuid,
                 );
                 report_iteration.push(result);
             }
@@ -224,14 +224,16 @@ fn into_report_results_json(
         if let Some(result) = report_result.as_mut() {
             result.benchmarks.push(benchmark_metric);
         } else {
-            let metric_kind = query_metric_kind.into_json_for_project(project);
+            let measure = query_measure.into_json_for_project(project);
             let threshold = if let Some((threshold, statistic)) = threshold_statistic {
                 Some(threshold.into_threshold_statistic_json_for_project(project, statistic))
             } else {
                 None
             };
             report_result = Some(JsonReportResult {
-                metric_kind,
+                // TODO remove in due time
+                metric_kind: Some(measure.clone()),
+                measure,
                 threshold,
                 benchmarks: vec![benchmark_metric],
             });

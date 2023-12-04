@@ -282,8 +282,8 @@ impl PerfData {
             let y_desc = json_perf
                 .results
                 .first()
-                .map_or("Units: unitless".to_owned(), |result| {
-                    result.metric_kind.to_string()
+                .map_or("Measure: unitless".to_owned(), |result| {
+                    result.measure.to_string()
                 });
             Some(PerfData {
                 lines,

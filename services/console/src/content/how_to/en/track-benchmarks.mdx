@@ -56,9 +56,9 @@ bencher run \
 git checkout feature-branch
 
 bencher threshold create \
---metric-kind latency \
 --branch "$FEATURE_BRANCH" \
 --testbed localhost \
+--measure latency \
 --test t \
 --right-side 0.95
 
@@ -79,9 +79,9 @@ bencher run \
     1. Run the benchmarks three times. (ex: `--iter 3`)
 1. Checkout the feature branch. (ex: `feature-branch`)
 1. Create a [Threshold](/docs/explanation/thresholds) for the feature branch:
-    1. The Metric Kind for the benchmarks is Latency. (ex: `--metric-kind latency`)
     1. The Branch is the feature branch with the appended git commit ID. (ex: `--branch "$FEATURE_BRANCH"`)
     1. The Testbed is running locally. (ex: `--testbed localhost`)
+    1. The Measure for the benchmarks is Latency. (ex: `--measure latency`)
     1. There are less than 30 metrics, use a Student's t-test. (ex: `--test t`)
     1. Set a right side boundary of 95.0% because a larger Latency indicates a performance regression. (ex: `--right-side 0.95`)
 1. Run `bencher run` for the feature branch:

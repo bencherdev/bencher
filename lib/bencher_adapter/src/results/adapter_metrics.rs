@@ -3,7 +3,7 @@ use std::{collections::HashMap, str::FromStr};
 use bencher_json::JsonMetric;
 use serde::{Deserialize, Serialize};
 
-use super::{CombinedKind, MetricKind, OrdKind};
+use super::{CombinedKind, Measure, OrdKind};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AdapterMetrics {
@@ -11,7 +11,7 @@ pub struct AdapterMetrics {
     pub inner: MetricsMap,
 }
 
-pub type MetricsMap = HashMap<MetricKind, JsonMetric>;
+pub type MetricsMap = HashMap<Measure, JsonMetric>;
 
 impl From<MetricsMap> for AdapterMetrics {
     fn from(inner: MetricsMap) -> Self {
@@ -22,8 +22,8 @@ impl From<MetricsMap> for AdapterMetrics {
 impl AdapterMetrics {
     pub(crate) fn combined(self, mut other: Self, kind: CombinedKind) -> Self {
         let mut metric_map = HashMap::new();
-        for (metric_kind, metric) in self.inner {
-            let other_metric = other.inner.remove(&metric_kind);
+        for (measure, metric) in self.inner {
+            let other_metric = other.inner.remove(&measure);
             let combined_metric = if let Some(other_metric) = other_metric {
                 match kind {
                     CombinedKind::Ord(ord_kind) => match ord_kind {
@@ -35,14 +35,14 @@ impl AdapterMetrics {
             } else {
                 metric
             };
-            metric_map.insert(metric_kind, combined_metric);
+            metric_map.insert(measure, combined_metric);
         }
         metric_map.extend(other.inner);
         metric_map.into()
     }
 
     pub fn get(&self, key: &str) -> Option<&JsonMetric> {
-        self.inner.get(&MetricKind::from_str(key).ok()?)
+        self.inner.get(&Measure::from_str(key).ok()?)
     }
 }
 
@@ -51,8 +51,8 @@ impl std::ops::Div<usize> for AdapterMetrics {
 
     fn div(self, rhs: usize) -> Self::Output {
         let mut metric_map = HashMap::new();
-        for (metric_kind, metric) in self.inner {
-            metric_map.insert(metric_kind, metric / rhs);
+        for (measure, metric) in self.inner {
+            metric_map.insert(measure, metric / rhs);
         }
         metric_map.into()
     }

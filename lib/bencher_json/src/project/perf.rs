@@ -6,8 +6,8 @@ use url::Url;
 
 use crate::urlencoded::{from_urlencoded_list, to_urlencoded, to_urlencoded_list, UrlEncodedError};
 use crate::{
-    BenchmarkUuid, BranchUuid, DateTime, DateTimeMillis, JsonBenchmark, JsonBranch, JsonMetricKind,
-    JsonProject, JsonTestbed, MetricKindUuid, ReportUuid, TestbedUuid,
+    BenchmarkUuid, BranchUuid, DateTime, DateTimeMillis, JsonBenchmark, JsonBranch, JsonMeasure,
+    JsonProject, JsonTestbed, MeasureUuid, ReportUuid, TestbedUuid,
 };
 
 use super::alert::JsonPerfAlert;
@@ -27,10 +27,12 @@ crate::typed_uuid::typed_uuid!(PerfUuid);
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfQueryParams {
     pub title: Option<String>,
-    pub metric_kinds: String,
     pub branches: String,
     pub testbeds: String,
     pub benchmarks: String,
+    // TODO remove in due time
+    #[serde(alias = "metric_kinds")]
+    pub measures: String,
     pub start_time: Option<DateTimeMillis>,
     pub end_time: Option<DateTimeMillis>,
 }
@@ -40,10 +42,10 @@ pub struct JsonPerfQueryParams {
 #[typeshare::typeshare]
 #[derive(Debug, Clone)]
 pub struct JsonPerfQuery {
-    pub metric_kinds: Vec<MetricKindUuid>,
     pub branches: Vec<BranchUuid>,
     pub testbeds: Vec<TestbedUuid>,
     pub benchmarks: Vec<BenchmarkUuid>,
+    pub measures: Vec<MeasureUuid>,
     pub start_time: Option<DateTime>,
     pub end_time: Option<DateTime>,
 }
@@ -54,24 +56,24 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
     fn try_from(query_params: JsonPerfQueryParams) -> Result<Self, Self::Error> {
         let JsonPerfQueryParams {
             title: _,
-            metric_kinds,
             branches,
             testbeds,
             benchmarks,
+            measures,
             start_time,
             end_time,
         } = query_params;
 
-        let metric_kinds = from_urlencoded_list(&metric_kinds)?;
         let branches = from_urlencoded_list(&branches)?;
         let testbeds = from_urlencoded_list(&testbeds)?;
         let benchmarks = from_urlencoded_list(&benchmarks)?;
+        let measures = from_urlencoded_list(&measures)?;
 
         Ok(Self {
-            metric_kinds,
             branches,
             testbeds,
             benchmarks,
+            measures,
             start_time: start_time.map(Into::into),
             end_time: end_time.map(Into::into),
         })
@@ -118,20 +120,16 @@ impl JsonPerfQuery {
         QUERY_KEYS
             .into_iter()
             .zip([
-                Some(self.metric_kinds()),
                 Some(self.branches()),
                 Some(self.testbeds()),
                 Some(self.benchmarks()),
+                Some(self.measures()),
                 self.start_time_str(),
                 self.end_time_str(),
             ])
             .collect::<Vec<_>>()
             .try_into()
             .map_err(UrlEncodedError::Vec)
-    }
-
-    pub fn metric_kinds(&self) -> String {
-        to_urlencoded_list(&self.metric_kinds)
     }
 
     pub fn branches(&self) -> String {
@@ -144,6 +142,10 @@ impl JsonPerfQuery {
 
     pub fn benchmarks(&self) -> String {
         to_urlencoded_list(&self.benchmarks)
+    }
+
+    pub fn measures(&self) -> String {
+        to_urlencoded_list(&self.measures)
     }
 
     pub fn start_time(&self) -> Option<DateTimeMillis> {
@@ -168,30 +170,27 @@ impl JsonPerfQuery {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum PerfQueryKey {
-    MetricKinds,
     Branches,
     Testbeds,
     Benchmarks,
+    Measures,
     StartTime,
     EndTime,
     // Console Keys
     LowerBoundary,
     UpperBoundary,
+    /// TODO remove in due time
+    MetricKinds,
 }
 
-pub const METRIC_KINDS: &str = "metric_kinds";
 pub const BRANCHES: &str = "branches";
 pub const TESTBEDS: &str = "testbeds";
 pub const BENCHMARKS: &str = "benchmarks";
+pub const MEASURES: &str = "measures";
 pub const START_TIME: &str = "start_time";
 pub const END_TIME: &str = "end_time";
 const QUERY_KEYS: [&str; 6] = [
-    METRIC_KINDS,
-    BRANCHES,
-    TESTBEDS,
-    BENCHMARKS,
-    START_TIME,
-    END_TIME,
+    BRANCHES, TESTBEDS, BENCHMARKS, MEASURES, START_TIME, END_TIME,
 ];
 // Console Keys
 pub const LOWER_BOUNDARY: &str = "lower_boundary";
@@ -211,10 +210,10 @@ pub struct JsonPerf {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfMetrics {
-    pub metric_kind: JsonMetricKind,
     pub branch: JsonBranch,
     pub testbed: JsonTestbed,
     pub benchmark: JsonBenchmark,
+    pub measure: JsonMeasure,
     pub metrics: Vec<JsonPerfMetric>,
 }
 
@@ -288,8 +287,8 @@ pub mod table {
     use tabled::{Table, Tabled};
 
     use crate::{
-        project::branch::VersionNumber, DateTime, JsonBenchmark, JsonBranch, JsonMetric,
-        JsonMetricKind, JsonPerf, JsonProject, JsonTestbed,
+        project::branch::VersionNumber, DateTime, JsonBenchmark, JsonBranch, JsonMeasure,
+        JsonMetric, JsonPerf, JsonProject, JsonTestbed,
     };
 
     use super::Iteration;
@@ -301,10 +300,10 @@ pub mod table {
                 for metric in result.metrics {
                     perf_table.push(PerfTable {
                         project: json_perf.project.clone(),
-                        metric_kind: result.metric_kind.clone(),
                         branch: result.branch.clone(),
                         testbed: result.testbed.clone(),
                         benchmark: result.benchmark.clone(),
+                        measure: result.measure.clone(),
                         iteration: metric.iteration,
                         start_time: metric.start_time,
                         end_time: metric.end_time,
@@ -324,14 +323,14 @@ pub mod table {
     pub struct PerfTable {
         #[tabled(rename = "Project")]
         pub project: JsonProject,
-        #[tabled(rename = "Metric Kind")]
-        pub metric_kind: JsonMetricKind,
         #[tabled(rename = "Branch")]
         pub branch: JsonBranch,
         #[tabled(rename = "Testbed")]
         pub testbed: JsonTestbed,
         #[tabled(rename = "Benchmark")]
         pub benchmark: JsonBenchmark,
+        #[tabled(rename = "Measure")]
+        pub measure: JsonMeasure,
         #[tabled(rename = "Iteration")]
         pub iteration: Iteration,
         #[tabled(rename = "Start Time")]

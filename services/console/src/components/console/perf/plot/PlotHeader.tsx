@@ -11,13 +11,13 @@ import {
 import { PerfRange } from "../../../../config/types";
 import type {
 	JsonAuthUser,
-	JsonMetricKind,
+	JsonMeasure,
 	JsonProject,
 } from "../../../../types/bencher";
 import { BENCHER_WORDMARK } from "../../../../util/ext";
 import { httpGet } from "../../../../util/http";
 
-const BENCHER_METRIC_KIND = "--bencher--metric--kind--";
+const BENCHER_MEASURE = "--bencher-measure--";
 
 export interface Props {
 	apiUrl: string;
@@ -27,7 +27,7 @@ export interface Props {
 	isConsole: boolean;
 	isEmbed: boolean;
 	isPlotInit: Accessor<boolean>;
-	metric_kinds: Accessor<string[]>;
+	measures: Accessor<string[]>;
 	start_date: Accessor<undefined | string>;
 	end_date: Accessor<undefined | string>;
 	refresh: () => void;
@@ -37,7 +37,7 @@ export interface Props {
 	upper_value: Accessor<boolean>;
 	lower_boundary: Accessor<boolean>;
 	upper_boundary: Accessor<boolean>;
-	handleMetricKind: (metric_kind: null | string) => void;
+	handleMeasure: (measure: null | string) => void;
 	handleStartTime: (start_time: string) => void;
 	handleEndTime: (end_time: string) => void;
 	handleRange: (range: PerfRange) => void;
@@ -57,27 +57,27 @@ const PlotHeader = (props: Props) => {
 };
 
 const FullPlotHeader = (props: Props) => {
-	const metric_kinds_fetcher = createMemo(() => {
+	const measures_fetcher = createMemo(() => {
 		return {
 			project: props.project_slug(),
 			refresh: props.refresh(),
 			token: props.user?.token,
 		};
 	});
-	const getMetricKinds = async (fetcher: {
+	const getMeasures = async (fetcher: {
 		project: undefined | string;
 		refresh: () => void;
 		token: undefined | string;
 	}) => {
-		const SELECT_METRIC_KIND = {
-			name: "Select Metric Kind",
-			uuid: BENCHER_METRIC_KIND,
+		const SELECT_MEASURE = {
+			name: "Select Measure",
+			uuid: BENCHER_MEASURE,
 		};
 		if (!fetcher.project) {
-			return [SELECT_METRIC_KIND];
+			return [SELECT_MEASURE];
 		}
 		if (props.isConsole && typeof fetcher.token !== "string") {
-			return [SELECT_METRIC_KIND];
+			return [SELECT_MEASURE];
 		}
 		// Always use the first page and the max number of results per page
 		const searchParams = new URLSearchParams();
@@ -85,66 +85,66 @@ const FullPlotHeader = (props: Props) => {
 		searchParams.set("page", "1");
 		const path = `/v0/projects/${
 			fetcher.project
-		}/metric-kinds?${searchParams.toString()}`;
+		}/measures?${searchParams.toString()}`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
 				let data = resp?.data;
-				data.push(SELECT_METRIC_KIND);
+				data.push(SELECT_MEASURE);
 				return data;
 			})
 			.catch((error) => {
 				console.error(error);
-				return [SELECT_METRIC_KIND];
+				return [SELECT_MEASURE];
 			});
 	};
-	const [metric_kinds] = createResource<JsonMetricKind[]>(
-		metric_kinds_fetcher,
-		getMetricKinds,
+	const [measures] = createResource<JsonMeasure[]>(
+		measures_fetcher,
+		getMeasures,
 	);
 
 	const getSelected = () => {
-		const uuid = props.metric_kinds()?.[0];
+		const uuid = props.measures()?.[0];
 		if (uuid) {
 			return uuid;
 		} else {
-			return BENCHER_METRIC_KIND;
+			return BENCHER_MEASURE;
 		}
 	};
 	const [selected, setSelected] = createSignal(getSelected());
 
 	createEffect(() => {
-		const uuid = props.metric_kinds()?.[0];
+		const uuid = props.measures()?.[0];
 		if (uuid) {
 			setSelected(uuid);
 		} else {
-			setSelected(BENCHER_METRIC_KIND);
+			setSelected(BENCHER_MEASURE);
 		}
 	});
 
 	const handleInput = (uuid: string) => {
-		if (uuid === BENCHER_METRIC_KIND) {
-			props.handleMetricKind(null);
+		if (uuid === BENCHER_MEASURE) {
+			props.handleMeasure(null);
 		} else {
-			props.handleMetricKind(uuid);
+			props.handleMeasure(uuid);
 		}
 	};
 
 	return (
 		<nav class="panel-heading columns is-vcentered">
 			<div class="column">
-				<p>Metric Kind</p>
+				<p>Measure</p>
 				<select
 					class="card-header-title level-item"
-					title="Select Metric Kind"
+					title="Select Measure"
 					onInput={(e) => handleInput(e.currentTarget.value)}
 				>
-					<For each={metric_kinds() ?? []}>
-						{(metric_kind: { name: string; uuid: string }) => (
+					<For each={measures() ?? []}>
+						{(measure: { name: string; uuid: string }) => (
 							<option
-								value={metric_kind.uuid}
-								selected={metric_kind.uuid === selected()}
+								value={measure.uuid}
+								selected={measure.uuid === selected()}
 							>
-								{metric_kind.name}
+								{measure.name}
 							</option>
 						)}
 					</For>

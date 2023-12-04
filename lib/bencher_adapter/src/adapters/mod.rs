@@ -25,7 +25,7 @@ fn print_ln(input: &str) -> IResult<&str, ()> {
 #[allow(clippy::panic, clippy::unwrap_used)]
 pub(crate) mod test_util {
     use bencher_json::project::{
-        metric_kind::{LATENCY_SLUG_STR, THROUGHPUT_SLUG_STR},
+        measure::{LATENCY_SLUG_STR, THROUGHPUT_SLUG_STR},
         report::JsonAverage,
     };
     use ordered_float::OrderedFloat;

@@ -65,7 +65,7 @@ const position_label = (position: Position) => {
 };
 
 const get_units = (json_perf: JsonPerf) => {
-	const units = json_perf?.results?.[0]?.metric_kind?.units;
+	const units = json_perf?.results?.[0]?.measure?.units;
 	if (units) {
 		return units;
 	} else {

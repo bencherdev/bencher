@@ -57,19 +57,7 @@ diesel::table! {
 }
 
 diesel::table! {
-    metric (id) {
-        id -> Integer,
-        uuid -> Text,
-        perf_id -> Integer,
-        metric_kind_id -> Integer,
-        value -> Double,
-        lower_value -> Nullable<Double>,
-        upper_value -> Nullable<Double>,
-    }
-}
-
-diesel::table! {
-    metric_kind (id) {
+    measure (id) {
         id -> Integer,
         uuid -> Text,
         project_id -> Integer,
@@ -78,6 +66,18 @@ diesel::table! {
         units -> Text,
         created -> BigInt,
         modified -> BigInt,
+    }
+}
+
+diesel::table! {
+    metric (id) {
+        id -> Integer,
+        uuid -> Text,
+        perf_id -> Integer,
+        measure_id -> Integer,
+        value -> Double,
+        lower_value -> Nullable<Double>,
+        upper_value -> Nullable<Double>,
     }
 }
 
@@ -207,9 +207,9 @@ diesel::table! {
         id -> Integer,
         uuid -> Text,
         project_id -> Integer,
-        metric_kind_id -> Integer,
         branch_id -> Integer,
         testbed_id -> Integer,
+        measure_id -> Integer,
         statistic_id -> Nullable<Integer>,
         created -> BigInt,
         modified -> BigInt,
@@ -260,9 +260,9 @@ diesel::joinable!(boundary -> threshold (threshold_id));
 diesel::joinable!(branch -> project (project_id));
 diesel::joinable!(branch_version -> branch (branch_id));
 diesel::joinable!(branch_version -> version (version_id));
-diesel::joinable!(metric -> metric_kind (metric_kind_id));
+diesel::joinable!(measure -> project (project_id));
+diesel::joinable!(metric -> measure (measure_id));
 diesel::joinable!(metric -> perf (perf_id));
-diesel::joinable!(metric_kind -> project (project_id));
 diesel::joinable!(organization_role -> organization (organization_id));
 diesel::joinable!(organization_role -> user (user_id));
 diesel::joinable!(perf -> benchmark (benchmark_id));
@@ -277,7 +277,7 @@ diesel::joinable!(report -> user (user_id));
 diesel::joinable!(report -> version (version_id));
 diesel::joinable!(testbed -> project (project_id));
 diesel::joinable!(threshold -> branch (branch_id));
-diesel::joinable!(threshold -> metric_kind (metric_kind_id));
+diesel::joinable!(threshold -> measure (measure_id));
 diesel::joinable!(threshold -> project (project_id));
 diesel::joinable!(threshold -> testbed (testbed_id));
 diesel::joinable!(token -> user (user_id));
@@ -289,8 +289,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     boundary,
     branch,
     branch_version,
+    measure,
     metric,
-    metric_kind,
     organization,
     organization_role,
     perf,

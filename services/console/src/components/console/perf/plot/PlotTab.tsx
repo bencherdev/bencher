@@ -27,7 +27,7 @@ const perf_tabs = [
 export interface Props {
 	project_slug: Accessor<undefined | string>;
 	isConsole: boolean;
-	metric_kinds: Accessor<string[]>;
+	measures: Accessor<string[]>;
 	tab: Accessor<PerfTab>;
 	handleTab: (tab: PerfTab) => void;
 	// Tabs
@@ -48,7 +48,7 @@ export interface Props {
 	// Handle checked
 	handleReportChecked: (
 		index: number,
-		metric_kind_uuid: undefined | string,
+		measure_uuid: undefined | string,
 	) => void;
 	handleBranchChecked: (index: number) => void;
 	handleTestbedChecked: (index: number) => void;
@@ -181,7 +181,7 @@ const PlotTab = (props: Props) => {
 			<Tab
 				project_slug={props.project_slug}
 				isConsole={props.isConsole}
-				metric_kinds={props.metric_kinds}
+				measures={props.measures}
 				tab={props.tab}
 				getTab={getTab}
 				getPage={getPage}
@@ -212,7 +212,7 @@ const PlotTab = (props: Props) => {
 const Tab = (props: {
 	project_slug: Accessor<undefined | string>;
 	isConsole: boolean;
-	metric_kinds: Accessor<string[]>;
+	measures: Accessor<string[]>;
 	tab: Accessor<PerfTab>;
 	getTab: () => TabList<JsonReport | JsonBranch | JsonTestbed | JsonBenchmark>;
 	getPage: () => Accessor<number>;
@@ -272,8 +272,8 @@ const Tab = (props: {
 										(report.resource as JsonReport)?.start_time,
 									)}`}
 									onClick={(_e) =>
-										// Send the Metric Kind UUID instead of the Report UUID
-										props.handleChecked(index(), result.metric_kind?.uuid)
+										// Send the Measure UUID instead of the Report UUID
+										props.handleChecked(index(), result.measure?.uuid)
 									}
 								>
 									<div class="columns is-vcentered is-mobile">
@@ -282,7 +282,7 @@ const Tab = (props: {
 												type="radio"
 												checked={
 													report.checked &&
-													result.metric_kind?.uuid === props.metric_kinds()?.[0]
+													result.measure?.uuid === props.measures()?.[0]
 												}
 											/>
 										</div>
@@ -293,16 +293,16 @@ const Tab = (props: {
 												)}
 											</small>
 											<ReportDimension
-												icon="fas fa-shapes"
-												name={result.metric_kind?.name}
-											/>
-											<ReportDimension
 												icon="fas fa-code-branch"
 												name={(report.resource as JsonReport)?.branch?.name}
 											/>
 											<ReportDimension
 												icon="fas fa-server"
 												name={(report.resource as JsonReport)?.testbed?.name}
+											/>
+											<ReportDimension
+												icon="fas fa-shapes"
+												name={result.measure?.name}
 											/>
 										</div>
 									</div>

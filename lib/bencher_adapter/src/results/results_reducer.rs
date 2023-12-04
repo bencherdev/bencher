@@ -3,13 +3,12 @@ use std::collections::HashMap;
 use bencher_json::{project::metric::Median, BenchmarkName, JsonMetric};
 
 use super::{
-    adapter_metrics::AdapterMetrics, adapter_results::AdapterResults, AdapterResultsArray,
-    MetricKind,
+    adapter_metrics::AdapterMetrics, adapter_results::AdapterResults, AdapterResultsArray, Measure,
 };
 
 #[derive(Debug, Clone, Default)]
 pub struct ResultsReducer {
-    pub inner: HashMap<BenchmarkName, MetricKindMap>,
+    pub inner: HashMap<BenchmarkName, MeasuresMap>,
 }
 
 impl From<AdapterResultsArray> for ResultsReducer {
@@ -25,23 +24,23 @@ impl From<AdapterResultsArray> for ResultsReducer {
 impl ResultsReducer {
     fn reduce(&mut self, results: AdapterResults) {
         for (benchmark_name, metrics) in results.inner {
-            if let Some(metric_kind_map) = self.inner.get_mut(&benchmark_name) {
-                for (metric_kind, metric) in metrics.inner {
-                    if let Some(list) = metric_kind_map.inner.get_mut(&metric_kind) {
+            if let Some(measures_map) = self.inner.get_mut(&benchmark_name) {
+                for (measure, metric) in metrics.inner {
+                    if let Some(list) = measures_map.inner.get_mut(&measure) {
                         list.push(metric);
                     } else {
-                        metric_kind_map.inner.insert(metric_kind, vec![metric]);
+                        measures_map.inner.insert(measure, vec![metric]);
                     }
                 }
             } else {
-                let mut metric_kind_map = HashMap::new();
-                for (metric_kind, metric) in metrics.inner {
-                    metric_kind_map.insert(metric_kind, vec![metric]);
+                let mut measures_map = HashMap::new();
+                for (measure, metric) in metrics.inner {
+                    measures_map.insert(measure, vec![metric]);
                 }
                 self.inner.insert(
                     benchmark_name,
-                    MetricKindMap {
-                        inner: metric_kind_map,
+                    MeasuresMap {
+                        inner: measures_map,
                     },
                 );
             }
@@ -50,16 +49,16 @@ impl ResultsReducer {
 }
 
 #[derive(Debug, Clone)]
-pub struct MetricKindMap {
-    pub inner: HashMap<MetricKind, Vec<JsonMetric>>,
+pub struct MeasuresMap {
+    pub inner: HashMap<Measure, Vec<JsonMetric>>,
 }
 
-impl MetricKindMap {
+impl MeasuresMap {
     pub(crate) fn median(self) -> AdapterMetrics {
         let mut metric_map = HashMap::new();
-        for (metric_kind, metric) in self.inner {
+        for (measure, metric) in self.inner {
             if let Some(median) = JsonMetric::median(metric) {
-                metric_map.insert(metric_kind, median);
+                metric_map.insert(measure, median);
             }
         }
         metric_map.into()

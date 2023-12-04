@@ -8,7 +8,7 @@ use crate::{
     context::DbConnection,
     error::not_found_error,
     model::project::{
-        benchmark::BenchmarkId, branch::BranchId, metric_kind::MetricKindId, testbed::TestbedId,
+        benchmark::BenchmarkId, branch::BranchId, measure::MeasureId, testbed::TestbedId,
     },
     schema,
 };
@@ -18,14 +18,13 @@ use super::threshold::MetricsStatistic;
 pub fn metrics_data(
     log: &Logger,
     conn: &mut DbConnection,
-    metric_kind_id: MetricKindId,
     branch_id: BranchId,
     testbed_id: TestbedId,
     benchmark_id: BenchmarkId,
+    measure_id: MeasureId,
     statistic: &MetricsStatistic,
 ) -> Result<MetricsData, HttpError> {
     let mut query = schema::metric::table
-        .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
         .inner_join(
             schema::perf::table
                 .inner_join(
@@ -40,6 +39,7 @@ pub fn metrics_data(
         .filter(schema::branch::id.eq(branch_id))
         .filter(schema::testbed::id.eq(testbed_id))
         .filter(schema::benchmark::id.eq(benchmark_id))
+        .filter(schema::metric::measure_id.eq(measure_id))
         .into_boxed();
 
     if let Some(window) = statistic.window {

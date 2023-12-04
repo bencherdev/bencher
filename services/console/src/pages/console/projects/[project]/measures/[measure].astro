@@ -2,20 +2,20 @@
 export const prerender = false;
 
 import ProjectLayout from "../../../../../layouts/console/ProjectLayout.astro";
-import PosterPanel from "../../../../../components/console/poster/PosterPanel";
+import DeckPanel from "../../../../../components/console/deck/DeckPanel";
 import { BencherResource } from "../../../../../config/types";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
-const title = "Add Metric Kind";
+const title = "View Measure";
 ---
 
 <ProjectLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
-  <PosterPanel
+  <DeckPanel
     client:only="solid-js"
     apiUrl={BENCHER_API_URL}
     params={params}
-    resource={BencherResource.METRIC_KINDS}
+    resource={BencherResource.MEASURES}
   />
 </ProjectLayout>

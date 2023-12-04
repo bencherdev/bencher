@@ -10,8 +10,8 @@ use crate::{
     model::project::{
         benchmark::BenchmarkId,
         branch::BranchId,
+        measure::MeasureId,
         metric::QueryMetric,
-        metric_kind::MetricKindId,
         testbed::TestbedId,
         threshold::{alert::InsertAlert, boundary::InsertBoundary},
     },
@@ -26,25 +26,25 @@ use threshold::MetricsThreshold;
 
 #[derive(Debug, Clone)]
 pub struct Detector {
-    pub metric_kind_id: MetricKindId,
     pub branch_id: BranchId,
     pub testbed_id: TestbedId,
+    pub measure_id: MeasureId,
     pub threshold: MetricsThreshold,
 }
 
 impl Detector {
     pub fn new(
         conn: &mut DbConnection,
-        metric_kind_id: MetricKindId,
         branch_id: BranchId,
         testbed_id: TestbedId,
+        measure_id: MeasureId,
     ) -> Option<Self> {
-        // Check to see if there is a threshold for the branch/testbed/metric kind grouping.
+        // Check to see if there is a threshold for the branch/testbed/measure grouping.
         // If not, then there will be nothing to detect.
-        MetricsThreshold::new(conn, metric_kind_id, branch_id, testbed_id).map(|threshold| Self {
-            metric_kind_id,
+        MetricsThreshold::new(conn, branch_id, testbed_id, measure_id).map(|threshold| Self {
             branch_id,
             testbed_id,
+            measure_id,
             threshold,
         })
     }
@@ -60,10 +60,10 @@ impl Detector {
         let metrics_data = metrics_data(
             log,
             conn,
-            self.metric_kind_id,
             self.branch_id,
             self.testbed_id,
             benchmark_id,
+            self.measure_id,
             &self.threshold.statistic,
         )?;
 

@@ -1,22 +1,22 @@
 import type { Params } from "astro";
-import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
-import { parentPath, addPath, viewSlugPath } from "../util";
-import type { JsonMetricKind } from "../../types/bencher";
 import FieldKind from "../../components/field/kind";
-import { validNonEmpty, validSlug } from "../../util/valid";
+import type { JsonMeasure } from "../../types/bencher";
 import { isAllowedProjectDelete, isAllowedProjectEdit } from "../../util/auth";
+import { validNonEmpty, validSlug } from "../../util/valid";
+import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
+import { addPath, parentPath, viewSlugPath } from "../util";
 
-const METRIC_KIND_FIELDS = {
+const MEASURE_FIELDS = {
 	name: {
 		type: "text",
-		placeholder: "Metric Kind Name",
+		placeholder: "Measure Name",
 		icon: "fas fa-shapes",
 		help: "Must be non-empty string",
 		validate: validNonEmpty,
 	},
 	slug: {
 		type: "text",
-		placeholder: "Metric Kind Slug",
+		placeholder: "Measure Slug",
 		icon: "fas fa-exclamation-triangle",
 		help: "Must be a valid slug",
 		validate: validSlug,
@@ -30,35 +30,35 @@ const METRIC_KIND_FIELDS = {
 	},
 };
 
-const metricKindsConfig = {
+const measuresConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
 		header: {
-			title: "Metric Kinds",
+			title: "Measures",
 			buttons: [
 				{
 					kind: Button.ADD,
-					title: "Metric Kind",
+					title: "Measure",
 					path: addPath,
 				},
 				{ kind: Button.REFRESH },
 			],
 		},
 		table: {
-			url: (params: Params) => `/v0/projects/${params?.project}/metric-kinds`,
+			url: (params: Params) => `/v0/projects/${params?.project}/measures`,
 			add: {
 				prefix: (
 					<div>
 						<h4>🐰 Who needs units anyway!</h4>
 						<p>
-							It's easy to create a new metric kind.
+							It's easy to create a new measure.
 							<br />
 							Tap below to get started.
 						</p>
 					</div>
 				),
 				path: addPath,
-				text: "Add a Metric Kind",
+				text: "Add a Measure",
 			},
 			row: {
 				key: "name",
@@ -79,18 +79,18 @@ const metricKindsConfig = {
 					path: viewSlugPath,
 				},
 			},
-			name: "metric kinds",
+			name: "measures",
 		},
 	},
 	[Operation.ADD]: {
 		operation: Operation.ADD,
 		header: {
-			title: "Add Metric Kind",
+			title: "Add Measure",
 			path: parentPath,
-			path_to: "Metric Kinds",
+			path_to: "Measures",
 		},
 		form: {
-			url: (params: Params) => `/v0/projects/${params?.project}/metric-kinds`,
+			url: (params: Params) => `/v0/projects/${params?.project}/measures`,
 			fields: [
 				{
 					kind: FieldKind.INPUT,
@@ -99,7 +99,7 @@ const metricKindsConfig = {
 					value: "",
 					valid: null,
 					validate: true,
-					config: METRIC_KIND_FIELDS.name,
+					config: MEASURE_FIELDS.name,
 				},
 				{
 					kind: FieldKind.INPUT,
@@ -108,7 +108,7 @@ const metricKindsConfig = {
 					value: "",
 					valid: null,
 					validate: true,
-					config: METRIC_KIND_FIELDS.units,
+					config: MEASURE_FIELDS.units,
 				},
 			],
 			path: parentPath,
@@ -119,16 +119,16 @@ const metricKindsConfig = {
 		header: {
 			key: "name",
 			path: parentPath,
-			path_to: "Metric Kinds",
+			path_to: "Measures",
 			buttons: [{ kind: Button.REFRESH }],
 		},
 		deck: {
 			url: (params: Params) =>
-				`/v0/projects/${params?.project}/metric-kinds/${params?.metric_kind}`,
+				`/v0/projects/${params?.project}/measures/${params?.measure}`,
 			cards: [
 				{
 					kind: Card.FIELD,
-					label: "Metric Kind Name",
+					label: "Measure Name",
 					key: "name",
 					display: Display.RAW,
 					is_allowed: isAllowedProjectEdit,
@@ -139,12 +139,12 @@ const metricKindsConfig = {
 						value: "",
 						valid: null,
 						validate: true,
-						config: METRIC_KIND_FIELDS.name,
+						config: MEASURE_FIELDS.name,
 					},
 				},
 				{
 					kind: Card.FIELD,
-					label: "Metric Kind Slug",
+					label: "Measure Slug",
 					key: "slug",
 					display: Display.RAW,
 					is_allowed: isAllowedProjectEdit,
@@ -155,20 +155,20 @@ const metricKindsConfig = {
 						value: "",
 						valid: null,
 						validate: true,
-						config: METRIC_KIND_FIELDS.slug,
+						config: MEASURE_FIELDS.slug,
 					},
-					path: (params: Params, data: JsonMetricKind) =>
-						`/console/projects/${params.project}/metric-kinds/${data.slug}`,
+					path: (params: Params, data: JsonMeasure) =>
+						`/console/projects/${params.project}/measures/${data.slug}`,
 				},
 				{
 					kind: Card.FIELD,
-					label: "Metric Kind UUID",
+					label: "Measure UUID",
 					key: "uuid",
 					display: Display.RAW,
 				},
 				{
 					kind: Card.FIELD,
-					label: "Metric Kind Units",
+					label: "Measure Units",
 					key: "units",
 					display: Display.RAW,
 					is_allowed: isAllowedProjectEdit,
@@ -179,7 +179,7 @@ const metricKindsConfig = {
 						value: "",
 						valid: null,
 						validate: true,
-						config: METRIC_KIND_FIELDS.units,
+						config: MEASURE_FIELDS.units,
 					},
 				},
 			],
@@ -187,7 +187,7 @@ const metricKindsConfig = {
 				{
 					kind: ActionButton.DELETE,
 					subtitle:
-						"⚠️ All Reports and Thresholds that use this Metric Kind must be deleted first! ⚠️",
+						"⚠️ All Reports and Thresholds that use this Measure must be deleted first! ⚠️",
 					path: parentPath,
 					is_allowed: isAllowedProjectDelete,
 				},
@@ -196,4 +196,4 @@ const metricKindsConfig = {
 	},
 };
 
-export default metricKindsConfig;
+export default measuresConfig;

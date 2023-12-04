@@ -8,7 +8,7 @@ export type BenchmarkName = string;
 
 export type ResourceId = string;
 
-export type MetricKind = ResourceId;
+export type Measure = ResourceId;
 
 export interface JsonMetric {
 	value: number;
@@ -16,7 +16,7 @@ export interface JsonMetric {
 	upper_value?: number;
 }
 
-export type JsonMetricsMap = Record<MetricKind, JsonMetric>;
+export type JsonMetricsMap = Record<Measure, JsonMetric>;
 
 export type JsonResultsMap = Record<BenchmarkName, JsonMetricsMap>;
 
@@ -28,7 +28,7 @@ export type Slug = string;
 
 export type DateTime = string;
 
-export interface JsonMetricKind {
+export interface JsonMeasure {
 	uuid: Uuid;
 	project: Uuid;
 	name: NonEmpty;
@@ -86,7 +86,9 @@ export interface JsonBenchmarkMetric {
 }
 
 export interface JsonReportResult {
-	metric_kind: JsonMetricKind;
+	/** TODO remove in due time */
+	metric_kind?: JsonMeasure;
+	measure: JsonMeasure;
 	threshold?: JsonThresholdStatistic;
 	benchmarks: JsonBenchmarkMetric[];
 }
@@ -118,9 +120,11 @@ export interface JsonTestbed {
 export interface JsonThreshold {
 	uuid: Uuid;
 	project: Uuid;
-	metric_kind: JsonMetricKind;
 	branch: JsonBranch;
 	testbed: JsonTestbed;
+	/** TODO remove in due time */
+	metric_kind?: JsonMeasure;
+	measure: JsonMeasure;
 	statistic: JsonStatistic;
 	created: string;
 	modified: string;
@@ -350,10 +354,10 @@ export interface JsonProject {
  * It should always be used to validate `JsonPerfQueryParams`.
  */
 export interface JsonPerfQuery {
-	metric_kinds: Uuid[];
 	branches: Uuid[];
 	testbeds: Uuid[];
 	benchmarks: Uuid[];
+	measures: Uuid[];
 	start_time?: string;
 	end_time?: string;
 }
@@ -371,10 +375,10 @@ export interface JsonPerfMetric {
 }
 
 export interface JsonPerfMetrics {
-	metric_kind: JsonMetricKind;
 	branch: JsonBranch;
 	testbed: JsonTestbed;
 	benchmark: JsonBenchmark;
+	measure: JsonMeasure;
 	metrics: JsonPerfMetric[];
 }
 
@@ -495,13 +499,15 @@ export enum ProjectPermission {
 }
 
 export enum PerfQueryKey {
-	MetricKinds = "metric_kinds",
 	Branches = "branches",
 	Testbeds = "testbeds",
 	Benchmarks = "benchmarks",
+	Measures = "measures",
 	StartTime = "start_time",
 	EndTime = "end_time",
 	LowerBoundary = "lower_boundary",
 	UpperBoundary = "upper_boundary",
+	/** TODO remove in due time */
+	MetricKinds = "metric_kinds",
 }
 

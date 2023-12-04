@@ -1,6 +1,6 @@
 use bencher_json::{
-    project::metric_kind::JsonUpdateMetricKind, JsonDirection, JsonEmpty, JsonMetricKind,
-    JsonMetricKinds, JsonNewMetricKind, JsonPagination, NonEmpty, ResourceId,
+    project::measure::JsonUpdateMeasure, JsonDirection, JsonEmpty, JsonMeasure, JsonMeasures,
+    JsonNewMeasure, JsonPagination, NonEmpty, ResourceId,
 };
 use bencher_rbac::project::Permission;
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -18,7 +18,7 @@ use crate::{
     model::user::auth::{AuthUser, PubBearerToken},
     model::{
         project::{
-            metric_kind::{InsertMetricKind, QueryMetricKind, UpdateMetricKind},
+            measure::{InsertMeasure, QueryMeasure, UpdateMeasure},
             QueryProject,
         },
         user::auth::BearerToken,
@@ -27,50 +27,50 @@ use crate::{
 };
 
 #[derive(Deserialize, JsonSchema)]
-pub struct ProjMetricKindsParams {
+pub struct ProjMeasuresParams {
     pub project: ResourceId,
 }
 
-pub type ProjMetricKindsPagination = JsonPagination<ProjMetricKindsSort>;
+pub type ProjMeasuresPagination = JsonPagination<ProjMeasuresSort>;
 
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum ProjMetricKindsSort {
+pub enum ProjMeasuresSort {
     #[default]
     Name,
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct ProjMetricKindsQuery {
+pub struct ProjMeasuresQuery {
     pub name: Option<NonEmpty>,
 }
 
 #[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/projects/{project}/metric-kinds",
-    tags = ["projects", "metric kinds"]
+    path =  "/v0/projects/{project}/measures",
+    tags = ["projects", "measures"]
 }]
-pub async fn proj_metric_kinds_options(
+pub async fn proj_measures_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<ProjMetricKindsParams>,
-    _pagination_params: Query<ProjMetricKindsPagination>,
-    _query_params: Query<ProjMetricKindsQuery>,
+    _path_params: Path<ProjMeasuresParams>,
+    _pagination_params: Query<ProjMeasuresPagination>,
+    _query_params: Query<ProjMeasuresQuery>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
 #[endpoint {
     method = GET,
-    path =  "/v0/projects/{project}/metric-kinds",
-    tags = ["projects", "metric kinds"]
+    path =  "/v0/projects/{project}/measures",
+    tags = ["projects", "measures"]
 }]
-pub async fn proj_metric_kinds_get(
+pub async fn proj_measures_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<ProjMetricKindsParams>,
-    pagination_params: Query<ProjMetricKindsPagination>,
-    query_params: Query<ProjMetricKindsQuery>,
-) -> Result<ResponseOk<JsonMetricKinds>, HttpError> {
+    path_params: Path<ProjMeasuresParams>,
+    pagination_params: Query<ProjMeasuresPagination>,
+    query_params: Query<ProjMeasuresQuery>,
+) -> Result<ResponseOk<JsonMeasures>, HttpError> {
     let auth_user = AuthUser::new_pub(&rqctx).await?;
     let json = get_ls_inner(
         rqctx.context(),
@@ -86,25 +86,25 @@ pub async fn proj_metric_kinds_get(
 async fn get_ls_inner(
     context: &ApiContext,
     auth_user: Option<&AuthUser>,
-    path_params: ProjMetricKindsParams,
-    pagination_params: ProjMetricKindsPagination,
-    query_params: ProjMetricKindsQuery,
-) -> Result<JsonMetricKinds, HttpError> {
+    path_params: ProjMeasuresParams,
+    pagination_params: ProjMeasuresPagination,
+    query_params: ProjMeasuresQuery,
+) -> Result<JsonMeasures, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_project =
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
-    let mut query = QueryMetricKind::belonging_to(&query_project).into_boxed();
+    let mut query = QueryMeasure::belonging_to(&query_project).into_boxed();
 
     if let Some(name) = query_params.name.as_ref() {
-        query = query.filter(schema::metric_kind::name.eq(name.as_ref()));
+        query = query.filter(schema::measure::name.eq(name.as_ref()));
     }
 
     query = match pagination_params.order() {
-        ProjMetricKindsSort::Name => match pagination_params.direction {
-            Some(JsonDirection::Asc) | None => query.order(schema::metric_kind::name.asc()),
-            Some(JsonDirection::Desc) => query.order(schema::metric_kind::name.desc()),
+        ProjMeasuresSort::Name => match pagination_params.direction {
+            Some(JsonDirection::Asc) | None => query.order(schema::measure::name.asc()),
+            Some(JsonDirection::Desc) => query.order(schema::measure::name.desc()),
         },
     };
 
@@ -112,24 +112,24 @@ async fn get_ls_inner(
     Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryMetricKind>(conn)
-        .map_err(resource_not_found_err!(MetricKind, project))?
+        .load::<QueryMeasure>(conn)
+        .map_err(resource_not_found_err!(Measure, project))?
         .into_iter()
-        .map(|metric_kind| metric_kind.into_json_for_project(project))
+        .map(|measure| measure.into_json_for_project(project))
         .collect())
 }
 
 #[endpoint {
     method = POST,
-    path =  "/v0/projects/{project}/metric-kinds",
-    tags = ["projects", "metric kinds"]
+    path =  "/v0/projects/{project}/measures",
+    tags = ["projects", "measures"]
 }]
-pub async fn proj_metric_kind_post(
+pub async fn proj_measure_post(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
-    path_params: Path<ProjMetricKindsParams>,
-    body: TypedBody<JsonNewMetricKind>,
-) -> Result<ResponseAccepted<JsonMetricKind>, HttpError> {
+    path_params: Path<ProjMeasuresParams>,
+    body: TypedBody<JsonNewMeasure>,
+) -> Result<ResponseAccepted<JsonMeasure>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(
         rqctx.context(),
@@ -143,10 +143,10 @@ pub async fn proj_metric_kind_post(
 
 async fn post_inner(
     context: &ApiContext,
-    path_params: ProjMetricKindsParams,
-    json_metric_kind: JsonNewMetricKind,
+    path_params: ProjMeasuresParams,
+    json_measure: JsonNewMeasure,
     auth_user: &AuthUser,
-) -> Result<JsonMetricKind, HttpError> {
+) -> Result<JsonMeasure, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
@@ -158,49 +158,49 @@ async fn post_inner(
         Permission::Create,
     )?;
 
-    let insert_metric_kind = InsertMetricKind::from_json(conn, query_project.id, json_metric_kind)?;
+    let insert_measure = InsertMeasure::from_json(conn, query_project.id, json_measure)?;
 
-    diesel::insert_into(schema::metric_kind::table)
-        .values(&insert_metric_kind)
+    diesel::insert_into(schema::measure::table)
+        .values(&insert_measure)
         .execute(conn)
-        .map_err(resource_conflict_err!(MetricKind, insert_metric_kind))?;
+        .map_err(resource_conflict_err!(Measure, insert_measure))?;
 
-    schema::metric_kind::table
-        .filter(schema::metric_kind::uuid.eq(&insert_metric_kind.uuid))
-        .first::<QueryMetricKind>(conn)
-        .map(|metric_kind| metric_kind.into_json_for_project(&query_project))
-        .map_err(resource_not_found_err!(MetricKind, insert_metric_kind))
+    schema::measure::table
+        .filter(schema::measure::uuid.eq(&insert_measure.uuid))
+        .first::<QueryMeasure>(conn)
+        .map(|measure| measure.into_json_for_project(&query_project))
+        .map_err(resource_not_found_err!(Measure, insert_measure))
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct ProjMetricKindParams {
+pub struct ProjMeasureParams {
     pub project: ResourceId,
-    pub metric_kind: ResourceId,
+    pub measure: ResourceId,
 }
 
 #[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/projects/{project}/metric-kinds/{metric_kind}",
-    tags = ["projects", "metric kinds"]
+    path =  "/v0/projects/{project}/measures/{measure}",
+    tags = ["projects", "measures"]
 }]
-pub async fn proj_metric_kind_options(
+pub async fn proj_measure_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<ProjMetricKindParams>,
+    _path_params: Path<ProjMeasureParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(Endpoint::cors(&[Get.into(), Patch.into(), Delete.into()]))
 }
 
 #[endpoint {
     method = GET,
-    path =  "/v0/projects/{project}/metric-kinds/{metric_kind}",
-    tags = ["projects", "metric kinds"]
+    path =  "/v0/projects/{project}/measures/{measure}",
+    tags = ["projects", "measures"]
 }]
-pub async fn proj_metric_kind_get(
+pub async fn proj_measure_get(
     rqctx: RequestContext<ApiContext>,
     bearer_token: PubBearerToken,
-    path_params: Path<ProjMetricKindParams>,
-) -> Result<ResponseOk<JsonMetricKind>, HttpError> {
+    path_params: Path<ProjMeasureParams>,
+) -> Result<ResponseOk<JsonMeasure>, HttpError> {
     let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
     let json = get_one_inner(
         rqctx.context(),
@@ -213,35 +213,35 @@ pub async fn proj_metric_kind_get(
 
 async fn get_one_inner(
     context: &ApiContext,
-    path_params: ProjMetricKindParams,
+    path_params: ProjMeasureParams,
     auth_user: Option<&AuthUser>,
-) -> Result<JsonMetricKind, HttpError> {
+) -> Result<JsonMeasure, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_project =
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
-    QueryMetricKind::belonging_to(&query_project)
-        .filter(QueryMetricKind::resource_id(&path_params.metric_kind)?)
-        .first::<QueryMetricKind>(conn)
-        .map(|metric_kind| metric_kind.into_json_for_project(&query_project))
+    QueryMeasure::belonging_to(&query_project)
+        .filter(QueryMeasure::resource_id(&path_params.measure)?)
+        .first::<QueryMeasure>(conn)
+        .map(|measure| measure.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(
-            MetricKind,
-            (&query_project, path_params.metric_kind)
+            Measure,
+            (&query_project, path_params.measure)
         ))
 }
 
 #[endpoint {
     method = PATCH,
-    path =  "/v0/projects/{project}/metric-kinds/{metric_kind}",
-    tags = ["projects", "metric kinds"]
+    path =  "/v0/projects/{project}/measures/{measure}",
+    tags = ["projects", "measures"]
 }]
-pub async fn proj_metric_kind_patch(
+pub async fn proj_measure_patch(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
-    path_params: Path<ProjMetricKindParams>,
-    body: TypedBody<JsonUpdateMetricKind>,
-) -> Result<ResponseAccepted<JsonMetricKind>, HttpError> {
+    path_params: Path<ProjMeasureParams>,
+    body: TypedBody<JsonUpdateMeasure>,
+) -> Result<ResponseAccepted<JsonMeasure>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = patch_inner(
         rqctx.context(),
@@ -255,10 +255,10 @@ pub async fn proj_metric_kind_patch(
 
 async fn patch_inner(
     context: &ApiContext,
-    path_params: ProjMetricKindParams,
-    json_metric_kind: JsonUpdateMetricKind,
+    path_params: ProjMeasureParams,
+    json_measure: JsonUpdateMeasure,
     auth_user: &AuthUser,
-) -> Result<JsonMetricKind, HttpError> {
+) -> Result<JsonMeasure, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
@@ -270,33 +270,31 @@ async fn patch_inner(
         Permission::Edit,
     )?;
 
-    let query_metric_kind =
-        QueryMetricKind::from_resource_id(conn, query_project.id, &path_params.metric_kind)?;
+    let query_measure =
+        QueryMeasure::from_resource_id(conn, query_project.id, &path_params.measure)?;
 
-    diesel::update(
-        schema::metric_kind::table.filter(schema::metric_kind::id.eq(query_metric_kind.id)),
-    )
-    .set(&UpdateMetricKind::from(json_metric_kind.clone()))
-    .execute(conn)
-    .map_err(resource_conflict_err!(
-        MetricKind,
-        (&query_metric_kind, &json_metric_kind)
-    ))?;
+    diesel::update(schema::measure::table.filter(schema::measure::id.eq(query_measure.id)))
+        .set(&UpdateMeasure::from(json_measure.clone()))
+        .execute(conn)
+        .map_err(resource_conflict_err!(
+            Measure,
+            (&query_measure, &json_measure)
+        ))?;
 
-    QueryMetricKind::get(conn, query_metric_kind.id)
-        .map(|metric_kind| metric_kind.into_json_for_project(&query_project))
-        .map_err(resource_not_found_err!(MetricKind, query_metric_kind))
+    QueryMeasure::get(conn, query_measure.id)
+        .map(|measure| measure.into_json_for_project(&query_project))
+        .map_err(resource_not_found_err!(Measure, query_measure))
 }
 
 #[endpoint {
     method = DELETE,
-    path =  "/v0/projects/{project}/metric-kinds/{metric_kind}",
-    tags = ["projects", "metric kinds"]
+    path =  "/v0/projects/{project}/measures/{measure}",
+    tags = ["projects", "measures"]
 }]
-pub async fn proj_metric_kind_delete(
+pub async fn proj_measure_delete(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
-    path_params: Path<ProjMetricKindParams>,
+    path_params: Path<ProjMeasureParams>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
@@ -305,7 +303,7 @@ pub async fn proj_metric_kind_delete(
 
 async fn delete_inner(
     context: &ApiContext,
-    path_params: ProjMetricKindParams,
+    path_params: ProjMeasureParams,
     auth_user: &AuthUser,
 ) -> Result<JsonEmpty, HttpError> {
     let conn = &mut *context.conn().await;
@@ -319,14 +317,12 @@ async fn delete_inner(
         Permission::Delete,
     )?;
 
-    let query_metric_kind =
-        QueryMetricKind::from_resource_id(conn, query_project.id, &path_params.metric_kind)?;
+    let query_measure =
+        QueryMeasure::from_resource_id(conn, query_project.id, &path_params.measure)?;
 
-    diesel::delete(
-        schema::metric_kind::table.filter(schema::metric_kind::id.eq(query_metric_kind.id)),
-    )
-    .execute(conn)
-    .map_err(resource_conflict_err!(MetricKind, query_metric_kind))?;
+    diesel::delete(schema::measure::table.filter(schema::measure::id.eq(query_measure.id)))
+        .execute(conn)
+        .map_err(resource_conflict_err!(Measure, query_measure))?;
 
     Ok(JsonEmpty {})
 }

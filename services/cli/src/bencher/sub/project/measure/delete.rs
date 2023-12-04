@@ -5,29 +5,29 @@ use bencher_json::{JsonEmpty, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    parser::project::metric_kind::CliMetricKindDelete,
+    parser::project::measure::CliMeasureDelete,
     CliError,
 };
 
 #[derive(Debug)]
 pub struct Delete {
     pub project: ResourceId,
-    pub metric_kind: ResourceId,
+    pub measure: ResourceId,
     pub backend: Backend,
 }
 
-impl TryFrom<CliMetricKindDelete> for Delete {
+impl TryFrom<CliMeasureDelete> for Delete {
     type Error = CliError;
 
-    fn try_from(delete: CliMetricKindDelete) -> Result<Self, Self::Error> {
-        let CliMetricKindDelete {
+    fn try_from(delete: CliMeasureDelete) -> Result<Self, Self::Error> {
+        let CliMeasureDelete {
             project,
-            metric_kind,
+            measure,
             backend,
         } = delete;
         Ok(Self {
             project,
-            metric_kind,
+            measure,
             backend: backend.try_into()?,
         })
     }
@@ -41,9 +41,9 @@ impl SubCmd for Delete {
             .send_with(
                 |client| async move {
                     client
-                        .proj_metric_kind_delete()
+                        .proj_measure_delete()
                         .project(self.project.clone())
-                        .metric_kind(self.metric_kind.clone())
+                        .measure(self.measure.clone())
                         .send()
                         .await
                 },

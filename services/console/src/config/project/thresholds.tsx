@@ -21,14 +21,6 @@ const paginationUrl = (
 };
 
 const THRESHOLD_FIELDS = {
-	metric_kind: {
-		name: "metric-kinds",
-		icon: "fas fa-shapes",
-		option_key: "name",
-		value_key: "uuid",
-		url: (params: undefined | Params, per_page: number, page: number) =>
-			paginationUrl(params, "metric-kinds", per_page, page),
-	},
 	branch: {
 		name: "branches",
 		icon: "fas fa-code-branch",
@@ -44,6 +36,14 @@ const THRESHOLD_FIELDS = {
 		value_key: "uuid",
 		url: (params: undefined | Params, per_page: number, page: number) =>
 			paginationUrl(params, "testbeds", per_page, page),
+	},
+	measure: {
+		name: "measures",
+		icon: "fas fa-shapes",
+		option_key: "name",
+		value_key: "uuid",
+		url: (params: undefined | Params, per_page: number, page: number) =>
+			paginationUrl(params, "measures", per_page, page),
 	},
 	test: {
 		icon: "fas fa-vial",
@@ -132,23 +132,23 @@ const thresholdsConfig = {
 			},
 			row: {
 				keys: [
-					["metric_kind", "name"],
 					["branch", "name"],
 					["testbed", "name"],
+					["measure", "name"],
 				],
 				items: [
 					{
 						kind: Row.NESTED_TEXT,
-						keys: ["metric_kind", "name"],
+						keys: ["branch", "name"],
 					},
 					{},
 					{
 						kind: Row.NESTED_TEXT,
-						keys: ["branch", "name"],
+						keys: ["testbed", "name"],
 					},
 					{
 						kind: Row.NESTED_TEXT,
-						keys: ["testbed", "name"],
+						keys: ["measure", "name"],
 					},
 				],
 				button: {
@@ -171,15 +171,6 @@ const thresholdsConfig = {
 			fields: [
 				{
 					kind: FieldKind.RADIO,
-					label: "Metric Kind",
-					key: "metric_kind",
-					value: "",
-					valid: null,
-					validate: true,
-					config: THRESHOLD_FIELDS.metric_kind,
-				},
-				{
-					kind: FieldKind.RADIO,
 					label: "Branch",
 					key: "branch",
 					value: "",
@@ -195,6 +186,15 @@ const thresholdsConfig = {
 					valid: null,
 					validate: true,
 					config: THRESHOLD_FIELDS.testbed,
+				},
+				{
+					kind: FieldKind.RADIO,
+					label: "Measure",
+					key: "measure",
+					value: "",
+					valid: null,
+					validate: true,
+					config: THRESHOLD_FIELDS.measure,
 				},
 				{
 					kind: FieldKind.SELECT,
@@ -262,9 +262,9 @@ const thresholdsConfig = {
 		operation: Operation.VIEW,
 		header: {
 			keys: [
-				["metric_kind", "name"],
 				["branch", "name"],
 				["testbed", "name"],
+				["measure", "name"],
 			],
 			path: parentPath,
 			path_to: "Thresholds",
@@ -285,12 +285,6 @@ const thresholdsConfig = {
 				},
 				{
 					kind: Card.NESTED_FIELD,
-					label: "Metric Kind",
-					keys: ["metric_kind", "name"],
-					display: Display.RAW,
-				},
-				{
-					kind: Card.NESTED_FIELD,
 					label: "Branch",
 					keys: ["branch", "name"],
 					display: Display.RAW,
@@ -299,6 +293,12 @@ const thresholdsConfig = {
 					kind: Card.NESTED_FIELD,
 					label: "Testbed",
 					keys: ["testbed", "name"],
+					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
+					label: "Measure",
+					keys: ["measure", "name"],
 					display: Display.RAW,
 				},
 				{

@@ -19,7 +19,7 @@ use crate::{
     model::{
         project::{
             branch::QueryBranch,
-            metric_kind::QueryMetricKind,
+            measure::QueryMeasure,
             testbed::QueryTestbed,
             threshold::{
                 statistic::InsertStatistic, InsertThreshold, QueryThreshold, UpdateThreshold,
@@ -168,19 +168,18 @@ async fn post_inner(
     )?;
 
     let project_id = query_project.id;
-    // Verify that the branch, testbed, and metric kind are part of the same project
+    // Verify that the branch, testbed, and measure are part of the same project
     let branch_id = QueryBranch::from_resource_id(conn, project_id, &json_threshold.branch)?.id;
     let testbed_id = QueryTestbed::from_resource_id(conn, project_id, &json_threshold.testbed)?.id;
-    let metric_kind_id =
-        QueryMetricKind::from_resource_id(conn, project_id, &json_threshold.metric_kind)?.id;
+    let measure_id = QueryMeasure::from_resource_id(conn, project_id, &json_threshold.measure)?.id;
 
     // Create the new threshold
     let threshold_id = InsertThreshold::insert_from_json(
         conn,
         project_id,
-        metric_kind_id,
         branch_id,
         testbed_id,
+        measure_id,
         json_threshold.statistic,
     )?;
 

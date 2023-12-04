@@ -56,9 +56,9 @@ bencher run \
 git checkout feature-branch
 
 bencher threshold create \
---metric-kind latency \
 --branch "$FEATURE_BRANCH" \
 --testbed localhost \
+--measure latency \
 --test t \
 --right-side 0.95
 
@@ -79,9 +79,9 @@ bencher run \
     1. 运行基准三次。（例如： `--iter 3`）
 1. 检出功能分支。（例如： `feature-branch`）
 1. 为功能分支创建一个 [阈值](/docs/zh/explanation/thresholds):
-    1. 基准的度量为延迟。（例如： `--metric-kind latency`）
     1. 分支是功能分支和添加的 git 提交 ID。（例如： `--branch "$FEATURE_BRANCH"`）
     1. Testbed 在本地运行。（例如： `--testbed localhost`）
+    1. 基准的度量为延迟。（例如： `--measure latency`）
     1. 指标少于30，使用一个 Student's t-检验。（例如： `--test t`）
     1. 设置一个 95.0% 的右边界，因为更大的延迟表示表现出回退。（例如： `--right-side 0.95`）
 1. 对功能分支运行 `bencher run`:

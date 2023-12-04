@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     urlencoded::{from_urlencoded, to_urlencoded, UrlEncodedError},
-    JsonAlert, JsonMetricKind, JsonProject, JsonTestbed, JsonUser, ResourceId,
+    JsonAlert, JsonMeasure, JsonProject, JsonTestbed, JsonUser, ResourceId,
 };
 
 use super::{
@@ -241,7 +241,10 @@ pub type JsonReportIteration = Vec<JsonReportResult>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportResult {
-    pub metric_kind: JsonMetricKind,
+    /// TODO remove in due time
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metric_kind: Option<JsonMeasure>,
+    pub measure: JsonMeasure,
     // The threshold should be the same for all the benchmark results
     pub threshold: Option<JsonThresholdStatistic>,
     pub benchmarks: Vec<JsonBenchmarkMetric>,

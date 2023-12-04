@@ -1,7 +1,7 @@
 pub mod allowed;
 pub mod benchmarks;
 pub mod branches;
-pub mod metric_kinds;
+pub mod measures;
 pub mod perf;
 pub mod projects;
 pub mod reports;

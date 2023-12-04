@@ -1,11 +1,11 @@
 use bencher_json::{
-    project::metric_kind::{
-        JsonUpdateMetricKind, MetricKindUuid, ESTIMATED_CYCLES_NAME_STR, ESTIMATED_CYCLES_SLUG_STR,
+    project::measure::{
+        JsonUpdateMeasure, MeasureUuid, ESTIMATED_CYCLES_NAME_STR, ESTIMATED_CYCLES_SLUG_STR,
         INSTRUCTIONS_NAME_STR, INSTRUCTIONS_SLUG_STR, L1_ACCESSES_NAME_STR, L1_ACCESSES_SLUG_STR,
         L2_ACCESSES_NAME_STR, L2_ACCESSES_SLUG_STR, LATENCY_NAME_STR, LATENCY_SLUG_STR,
         RAM_ACCESSES_NAME_STR, RAM_ACCESSES_SLUG_STR, THROUGHPUT_NAME_STR, THROUGHPUT_SLUG_STR,
     },
-    DateTime, JsonMetricKind, JsonNewMetricKind, NonEmpty, ResourceId, Slug,
+    DateTime, JsonMeasure, JsonNewMeasure, NonEmpty, ResourceId, Slug,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
@@ -15,7 +15,7 @@ use crate::{
     error::{assert_parentage, resource_conflict_err, BencherResource},
     model::project::QueryProject,
     schema,
-    schema::metric_kind as metric_kind_table,
+    schema::measure as measure_table,
     util::{
         fn_get::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::{fn_from_resource_id, fn_resource_id},
@@ -25,16 +25,16 @@ use crate::{
 
 use super::ProjectId;
 
-crate::util::typed_id::typed_id!(MetricKindId);
+crate::util::typed_id::typed_id!(MeasureId);
 
 #[derive(
     Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
 )]
-#[diesel(table_name = metric_kind_table)]
+#[diesel(table_name = measure_table)]
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]
-pub struct QueryMetricKind {
-    pub id: MetricKindId,
-    pub uuid: MetricKindUuid,
+pub struct QueryMeasure {
+    pub id: MeasureId,
+    pub uuid: MeasureUuid,
     pub project_id: ProjectId,
     pub name: NonEmpty,
     pub slug: Slug,
@@ -43,58 +43,58 @@ pub struct QueryMetricKind {
     pub modified: DateTime,
 }
 
-impl QueryMetricKind {
-    fn_resource_id!(metric_kind);
-    fn_from_resource_id!(metric_kind, MetricKind);
+impl QueryMeasure {
+    fn_resource_id!(measure);
+    fn_from_resource_id!(measure, Measure);
 
-    fn_get!(metric_kind, MetricKindId);
-    fn_get_id!(metric_kind, MetricKindId, MetricKindUuid);
-    fn_get_uuid!(metric_kind, MetricKindId, MetricKindUuid);
+    fn_get!(measure, MeasureId);
+    fn_get_id!(measure, MeasureId, MeasureUuid);
+    fn_get_uuid!(measure, MeasureId, MeasureUuid);
 
     pub fn get_or_create(
         conn: &mut DbConnection,
         project_id: ProjectId,
-        metric_kind: &ResourceId,
-    ) -> Result<MetricKindId, HttpError> {
-        let query_metric_kind = Self::from_resource_id(conn, project_id, metric_kind);
+        measure: &ResourceId,
+    ) -> Result<MeasureId, HttpError> {
+        let query_measure = Self::from_resource_id(conn, project_id, measure);
 
-        let http_error = match query_metric_kind {
-            Ok(metric_kind) => return Ok(metric_kind.id),
+        let http_error = match query_measure {
+            Ok(measure) => return Ok(measure.id),
             Err(e) => e,
         };
 
-        // Dynamically create adapter specific metric kinds
-        // Or recreate default metric kinds if they were previously deleted
-        let insert_metric_kind = match metric_kind.as_ref() {
+        // Dynamically create adapter specific measures
+        // Or recreate default measures if they were previously deleted
+        let insert_measure = match measure.as_ref() {
             // Recreate
-            LATENCY_SLUG_STR => InsertMetricKind::latency(conn, project_id),
-            THROUGHPUT_SLUG_STR => InsertMetricKind::throughput(conn, project_id),
+            LATENCY_SLUG_STR => InsertMeasure::latency(conn, project_id),
+            THROUGHPUT_SLUG_STR => InsertMeasure::throughput(conn, project_id),
             // Adapter specific
-            INSTRUCTIONS_SLUG_STR => InsertMetricKind::instructions(conn, project_id),
-            L1_ACCESSES_SLUG_STR => InsertMetricKind::l1_accesses(conn, project_id),
-            L2_ACCESSES_SLUG_STR => InsertMetricKind::l2_accesses(conn, project_id),
-            RAM_ACCESSES_SLUG_STR => InsertMetricKind::ram_accesses(conn, project_id),
-            ESTIMATED_CYCLES_SLUG_STR => InsertMetricKind::estimated_cycles(conn, project_id),
+            INSTRUCTIONS_SLUG_STR => InsertMeasure::instructions(conn, project_id),
+            L1_ACCESSES_SLUG_STR => InsertMeasure::l1_accesses(conn, project_id),
+            L2_ACCESSES_SLUG_STR => InsertMeasure::l2_accesses(conn, project_id),
+            RAM_ACCESSES_SLUG_STR => InsertMeasure::ram_accesses(conn, project_id),
+            ESTIMATED_CYCLES_SLUG_STR => InsertMeasure::estimated_cycles(conn, project_id),
             _ => return Err(http_error),
         }?;
-        diesel::insert_into(schema::metric_kind::table)
-            .values(&insert_metric_kind)
+        diesel::insert_into(schema::measure::table)
+            .values(&insert_measure)
             .execute(conn)
-            .map_err(resource_conflict_err!(MetricKind, insert_metric_kind))?;
+            .map_err(resource_conflict_err!(Measure, insert_measure))?;
 
-        Self::get_id(conn, insert_metric_kind.uuid)
+        Self::get_id(conn, insert_measure.uuid)
     }
 
     pub fn is_system(&self) -> bool {
         is_system(self.name.as_ref(), self.slug.as_ref())
     }
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonMetricKind, HttpError> {
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonMeasure, HttpError> {
         let project = QueryProject::get(conn, self.project_id)?;
         Ok(self.into_json_for_project(&project))
     }
 
-    pub fn into_json_for_project(self, project: &QueryProject) -> JsonMetricKind {
+    pub fn into_json_for_project(self, project: &QueryProject) -> JsonMeasure {
         let Self {
             uuid,
             project_id,
@@ -108,10 +108,10 @@ impl QueryMetricKind {
         assert_parentage(
             BencherResource::Project,
             project.id,
-            BencherResource::MetricKind,
+            BencherResource::Measure,
             project_id,
         );
-        JsonMetricKind {
+        JsonMeasure {
             uuid,
             project: project.uuid,
             name,
@@ -124,9 +124,9 @@ impl QueryMetricKind {
 }
 
 #[derive(Debug, diesel::Insertable)]
-#[diesel(table_name = metric_kind_table)]
-pub struct InsertMetricKind {
-    pub uuid: MetricKindUuid,
+#[diesel(table_name = measure_table)]
+pub struct InsertMeasure {
+    pub uuid: MeasureUuid,
     pub project_id: ProjectId,
     pub name: NonEmpty,
     pub slug: Slug,
@@ -135,17 +135,17 @@ pub struct InsertMetricKind {
     pub modified: DateTime,
 }
 
-impl InsertMetricKind {
+impl InsertMeasure {
     pub fn from_json(
         conn: &mut DbConnection,
         project_id: ProjectId,
-        metric_kind: JsonNewMetricKind,
+        measure: JsonNewMeasure,
     ) -> Result<Self, HttpError> {
-        let JsonNewMetricKind { name, slug, units } = metric_kind;
-        let slug = ok_slug!(conn, project_id, &name, slug, metric_kind, QueryMetricKind)?;
+        let JsonNewMeasure { name, slug, units } = measure;
+        let slug = ok_slug!(conn, project_id, &name, slug, measure, QueryMeasure)?;
         let timestamp = DateTime::now();
         Ok(Self {
-            uuid: MetricKindUuid::new(),
+            uuid: MeasureUuid::new(),
             project_id,
             name,
             slug,
@@ -156,34 +156,34 @@ impl InsertMetricKind {
     }
 
     pub fn latency(conn: &mut DbConnection, project_id: ProjectId) -> Result<Self, HttpError> {
-        Self::from_json(conn, project_id, JsonNewMetricKind::latency())
+        Self::from_json(conn, project_id, JsonNewMeasure::latency())
     }
 
     pub fn throughput(conn: &mut DbConnection, project_id: ProjectId) -> Result<Self, HttpError> {
-        Self::from_json(conn, project_id, JsonNewMetricKind::throughput())
+        Self::from_json(conn, project_id, JsonNewMeasure::throughput())
     }
 
     pub fn instructions(conn: &mut DbConnection, project_id: ProjectId) -> Result<Self, HttpError> {
-        Self::from_json(conn, project_id, JsonNewMetricKind::instructions())
+        Self::from_json(conn, project_id, JsonNewMeasure::instructions())
     }
 
     pub fn l1_accesses(conn: &mut DbConnection, project_id: ProjectId) -> Result<Self, HttpError> {
-        Self::from_json(conn, project_id, JsonNewMetricKind::l1_accesses())
+        Self::from_json(conn, project_id, JsonNewMeasure::l1_accesses())
     }
 
     pub fn l2_accesses(conn: &mut DbConnection, project_id: ProjectId) -> Result<Self, HttpError> {
-        Self::from_json(conn, project_id, JsonNewMetricKind::l2_accesses())
+        Self::from_json(conn, project_id, JsonNewMeasure::l2_accesses())
     }
 
     pub fn ram_accesses(conn: &mut DbConnection, project_id: ProjectId) -> Result<Self, HttpError> {
-        Self::from_json(conn, project_id, JsonNewMetricKind::ram_accesses())
+        Self::from_json(conn, project_id, JsonNewMeasure::ram_accesses())
     }
 
     pub fn estimated_cycles(
         conn: &mut DbConnection,
         project_id: ProjectId,
     ) -> Result<Self, HttpError> {
-        Self::from_json(conn, project_id, JsonNewMetricKind::estimated_cycles())
+        Self::from_json(conn, project_id, JsonNewMeasure::estimated_cycles())
     }
 
     pub fn is_system(&self) -> bool {
@@ -214,17 +214,17 @@ fn is_system(name: &str, slug: &str) -> bool {
 }
 
 #[derive(Debug, Clone, diesel::AsChangeset)]
-#[diesel(table_name = metric_kind_table)]
-pub struct UpdateMetricKind {
+#[diesel(table_name = measure_table)]
+pub struct UpdateMeasure {
     pub name: Option<NonEmpty>,
     pub slug: Option<Slug>,
     pub units: Option<NonEmpty>,
     pub modified: DateTime,
 }
 
-impl From<JsonUpdateMetricKind> for UpdateMetricKind {
-    fn from(update: JsonUpdateMetricKind) -> Self {
-        let JsonUpdateMetricKind { name, slug, units } = update;
+impl From<JsonUpdateMeasure> for UpdateMeasure {
+    fn from(update: JsonUpdateMeasure) -> Self {
+        let JsonUpdateMeasure { name, slug, units } = update;
         Self {
             name,
             slug,

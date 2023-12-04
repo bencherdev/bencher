@@ -6,6 +6,7 @@ retry_wait_time = 1
 exclude = [
     "localhost:3000",
     "http://localhost:3000/",
+    "https://api.bencher.dev*",
     "https://discord.gg/yGEsdUh7R4",
     "https://github.com/bencherdev/bencher/issues/new*",
     "https://www.linkedin.com/in/epompeii/",

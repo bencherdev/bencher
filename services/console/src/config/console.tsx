@@ -1,17 +1,17 @@
-import { BencherResource } from "./types";
+import billingConfig from "./organization/billing";
 import membersConfig from "./organization/members";
 import organizationsConfig from "./organization/organizations";
+import alertsConfig from "./project/alerts";
+import benchmarksConfig from "./project/benchmarks";
+import branchesConfig from "./project/branches";
+import measuresConfig from "./project/measures";
 import projectsConfig from "./project/projects";
+import reportsConfig from "./project/reports";
+import testbedsConfig from "./project/testbeds";
+import thresholdsConfig from "./project/thresholds";
+import { BencherResource } from "./types";
 import tokensConfig from "./user/tokens";
 import usersConfig from "./user/users";
-import billingConfig from "./organization/billing";
-import reportsConfig from "./project/reports";
-import metricKindsConfig from "./project/metric_kinds";
-import branchesConfig from "./project/branches";
-import testbedsConfig from "./project/testbeds";
-import benchmarksConfig from "./project/benchmarks";
-import thresholdsConfig from "./project/thresholds";
-import alertsConfig from "./project/alerts";
 
 const consoleConfig = {
 	// Organization
@@ -21,10 +21,10 @@ const consoleConfig = {
 	// Project
 	[BencherResource.PROJECTS]: projectsConfig,
 	[BencherResource.REPORTS]: reportsConfig,
-	[BencherResource.METRIC_KINDS]: metricKindsConfig,
 	[BencherResource.BRANCHES]: branchesConfig,
 	[BencherResource.TESTBEDS]: testbedsConfig,
 	[BencherResource.BENCHMARKS]: benchmarksConfig,
+	[BencherResource.MEASURES]: measuresConfig,
 	[BencherResource.THRESHOLDS]: thresholdsConfig,
 	[BencherResource.ALERTS]: alertsConfig,
 	// User

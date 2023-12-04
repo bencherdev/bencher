@@ -17,7 +17,7 @@ pub mod results_reducer;
 use adapter_results::{AdapterResults, ResultsMap};
 use results_reducer::ResultsReducer;
 
-pub type MetricKind = ResourceId;
+pub type Measure = ResourceId;
 
 #[derive(Debug, Clone)]
 pub struct AdapterResultsArray {

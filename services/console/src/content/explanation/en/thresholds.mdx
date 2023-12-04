@@ -5,7 +5,7 @@ heading: "Thresholds & Alerts"
 sortOrder: 4
 ---
 
-Thresholds can be created for the unique combination of a Metric Kind, Branch, and Testbed.
+Thresholds can be created for the unique combination of a Branch, Testbed, and Measure.
 They are statistical significance tests that use either a
 [Z-score](https://en.wikipedia.org/wiki/Standard_score)
 or [Student's t-test](https://en.wikipedia.org/wiki/Student%27s_t-test)
@@ -18,7 +18,7 @@ Thresholds work best when:
 - Benchmark runs are totally independent of one another
 - The number of iterations for a single benchmark run is less than 10% of the historical Metrics
 
-If there are less than 30 historical Metrics for the combination of Metric Kind, Branch, and Testbed
+If there are less than 30 historical Metrics for the combination of Branch, Testbed, and Measure
 then a Student's t-test Threshold should be used and __*not*__ a Z-score Threshold.
 
 <div class="content has-text-centered">
@@ -44,10 +44,10 @@ The standard deviation (σ) can also be expressed as a _lower_ boundary or _uppe
 For example, two standard deviations (2σ) is the same as an _upper_ boundary cumulative percentage of 97.7%, as pictured above.
 When creating Z-score Thresholds, the decimal notation of the cumulative percentage is used.
 In this example, the _upper_ bound cumulative percentage of 97.7% would be an Upper Boundary of `0.977`.
-In practice, a Threshold like this would be useful for the Latency Metric Kind.
+In practice, a Threshold like this would be useful for the Latency Measure.
 That is, a larger value would indicate a performance regression.
 
-When a smaller value would indicate a performance regression such as with the Throughput Metric Kind,
+When a smaller value would indicate a performance regression such as with the Throughput Measure,
 a _lower_ boundary cumulative percentage should be used.
 A _lower_ boundary cumulative percentage of 97.7% would correspond to two standard deviations below the mean (-2σ).
 This would be given in decimal notation as a Lower Boundary of `0.977`.
@@ -65,10 +65,10 @@ The confidence interval (CI) is expressed as a _lower_ boundary or _upper_ bound
 For example, an _upper_ boundary confidence percentage of 95.0% indicates that 95.0% of Metrics should be _less_ than an expected _maximum_.
 When creating t-test Thresholds, the decimal notation of the confidence percentage is used.
 In this example, the _upper_ boundar confidence percentage of 95.0% would be an Upper Boundary of `0.95`.
-In practice, a Threshold like this would be useful for the Latency Metric Kind.
+In practice, a Threshold like this would be useful for the Latency Measure.
 That is, a larger value would indicate a performance regression.
 
-When a smaller value would indicate a performance regression such as with the Throughput Metric Kind,
+When a smaller value would indicate a performance regression such as with the Throughput Measure,
 a _lower_ boundary confidence percentage should be used.
 A _lower_ boundary confidence percentage of 95.0% would indicate that Metrics should be _greater_ than an expected _minimum_.
 This would be given in decimal notation as a Lower Boundary of `0.95`.
@@ -94,7 +94,7 @@ If that Metric falls outside of the Boundary Limit an Alert will be generate.
 ### Lower Boundary
 A lower boundary can be set for a Threshold.
 It is used when a smaller value would indicate a performance regression,
-such as with the Throughput Metric Kind.
+such as with the Throughput Measure.
 The value must be a decimal between `0.5` and `1.0`.
 
 For example, if you used a Z-score and your historical Metrics had a mean of `100` and a standard deviation of `10`,
@@ -104,7 +104,7 @@ Any value less than `80.05` would generate an Alert.
 ### Upper Boundary
 An upper boundary can be set for a Threshold.
 It is used when a larger value would indicate a performance regression,
-such as with the Latency Metric Kind.
+such as with the Latency Measure.
 The value must be a decimal between `0.5` and `1.0`.
 
 For example, if you used a Z-score and your historical Metrics had a mean of `100` and a standard deviation of `10`,

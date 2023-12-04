@@ -31,10 +31,6 @@ const alertsConfig = {
 				keys: [["benchmark", "name"]],
 				items: [
 					{
-						kind: Row.NESTED_TEXT,
-						keys: ["threshold", "metric_kind", "name"],
-					},
-					{
 						kind: Row.TEXT,
 						key: "status",
 					},
@@ -45,6 +41,10 @@ const alertsConfig = {
 					{
 						kind: Row.NESTED_TEXT,
 						keys: ["threshold", "testbed", "name"],
+					},
+					{
+						kind: Row.NESTED_TEXT,
+						keys: ["threshold", "measure", "name"],
 					},
 				],
 				button: {
@@ -79,12 +79,6 @@ const alertsConfig = {
 				},
 				{
 					kind: Card.NESTED_FIELD,
-					label: "Metric Kind",
-					keys: ["threshold", "metric_kind", "name"],
-					display: Display.RAW,
-				},
-				{
-					kind: Card.NESTED_FIELD,
 					label: "Branch",
 					keys: ["threshold", "branch", "name"],
 					display: Display.RAW,
@@ -99,6 +93,12 @@ const alertsConfig = {
 					kind: Card.NESTED_FIELD,
 					label: "Benchmark",
 					keys: ["benchmark", "name"],
+					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
+					label: "Measure",
+					keys: ["threshold", "measure", "name"],
 					display: Display.RAW,
 				},
 				{

@@ -56,9 +56,9 @@ bencher run \
 git checkout feature-branch
 
 bencher threshold create \
---metric-kind latency \
 --branch "$FEATURE_BRANCH" \
 --testbed localhost \
+--measure latency \
 --test t \
 --right-side 0.95
 
@@ -79,9 +79,9 @@ bencher run \
     1. Ejecute los benchmarks tres veces. (ex: `--iter 3`)
 1. Haga checkout de la rama de features. (ex: `feature-branch`)
 1. Cree un [Umbral](/docs/es/explanation/thresholds) para la rama de features:
-    1. El Típo de Métrica para los benchmarks es Latencia. (ex: `--metric-kind latency`)
     1. La Rama es la rama de features con el ID de commit de git adjunto. (ex: `--branch "$FEATURE_BRANCH"`)
     1. El Testbed se está ejecutando localmente. (ex: `--testbed localhost`)
+    1. El Típo de Métrica para los benchmarks es Latencia. (ex: `--measure latency`)
     1. Hay menos de 30 métricas, use una Prueba de la t de Student. (ex: `--test t`)
     1. Establezca un límite en el lado derecho del 95.0%, debido a que una Latencia mayor indica una regresión de rendimiento. (ex: `--right-side 0.95`)
 1. Ejecute `bencher run` para la rama de features:

@@ -1,10 +1,10 @@
+import type { Params } from "astro";
 import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import { Show, createMemo, createResource } from "solid-js";
-import { useNavigate } from "../../../util/url";
+import type { JsonAlertStats } from "../../../types/bencher";
 import { authUser } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
-import type { JsonAlertStats } from "../../../types/bencher";
-import type { Params } from "astro";
+import { useNavigate } from "../../../util/url";
 import { validJwt } from "../../../util/valid";
 
 interface Props {
@@ -15,10 +15,10 @@ interface Props {
 enum Section {
 	PERF = "perf",
 	REPORTS = "reports",
-	METRIC_KINDS = "metric-kinds",
 	BRANCHES = "branches",
 	TESTBEDS = "testbeds",
 	BENCHMARKS = "benchmarks",
+	MEASURES = "measures",
 	THRESHOLDS = "thresholds",
 	ALERTS = "alerts",
 	SETTINGS = "settings",
@@ -92,9 +92,6 @@ const ConsoleMenu = (props: Props) => {
 					<a href={path(Section.REPORTS)}>Reports</a>
 				</li>
 				<li>
-					<a href={path(Section.METRIC_KINDS)}>Metric Kinds</a>
-				</li>
-				<li>
 					<a href={path(Section.BRANCHES)}>Branches</a>
 				</li>
 				<li>
@@ -102,6 +99,9 @@ const ConsoleMenu = (props: Props) => {
 				</li>
 				<li>
 					<a href={path(Section.BENCHMARKS)}>Benchmarks</a>
+				</li>
+				<li>
+					<a href={path(Section.MEASURES)}>Measures</a>
 				</li>
 				<li>
 					<a href={path(Section.THRESHOLDS)}>Thresholds</a>

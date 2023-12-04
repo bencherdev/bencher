@@ -4,10 +4,10 @@ export enum BencherResource {
 	BILLING,
 	PROJECTS,
 	REPORTS,
-	METRIC_KINDS,
 	BRANCHES,
 	TESTBEDS,
 	BENCHMARKS,
+	MEASURES,
 	THRESHOLDS,
 	ALERTS,
 	USERS,
@@ -27,14 +27,14 @@ export const resourceSingular = (resource: BencherResource) => {
 			return "project";
 		case BencherResource.REPORTS:
 			return "report";
-		case BencherResource.METRIC_KINDS:
-			return "metric kind";
 		case BencherResource.BRANCHES:
 			return "branch";
 		case BencherResource.TESTBEDS:
 			return "testbed";
 		case BencherResource.BENCHMARKS:
 			return "benchmark";
+		case BencherResource.MEASURES:
+			return "measure";
 		case BencherResource.THRESHOLDS:
 			return "threshold";
 		case BencherResource.ALERTS:
@@ -60,14 +60,14 @@ export const resourcePlural = (resource: BencherResource) => {
 			return "projects";
 		case BencherResource.REPORTS:
 			return "reports";
-		case BencherResource.METRIC_KINDS:
-			return "metric kinds";
 		case BencherResource.BRANCHES:
 			return "branches";
 		case BencherResource.TESTBEDS:
 			return "testbeds";
 		case BencherResource.BENCHMARKS:
 			return "benchmarks";
+		case BencherResource.MEASURES:
+			return "measures";
 		case BencherResource.THRESHOLDS:
 			return "thresholds";
 		case BencherResource.ALERTS:

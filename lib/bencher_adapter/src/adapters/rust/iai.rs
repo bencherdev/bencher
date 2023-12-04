@@ -1,6 +1,6 @@
 use bencher_json::{
     project::{
-        metric_kind::{
+        measure::{
             ESTIMATED_CYCLES_NAME_STR, INSTRUCTIONS_NAME_STR, L1_ACCESSES_NAME_STR,
             L2_ACCESSES_NAME_STR, RAM_ACCESSES_NAME_STR,
         },
@@ -19,7 +19,7 @@ use nom::{
 
 use crate::{
     adapters::util::{parse_f64, parse_u64},
-    results::adapter_results::{AdapterResults, IaiMetricKind},
+    results::adapter_results::{AdapterResults, IaiMeasure},
     Adaptable, Settings,
 };
 
@@ -55,7 +55,7 @@ impl Adaptable for AdapterRustIai {
 
 fn parse_iai_lines(
     lines: [&str; IAI_METRICS_LINE_COUNT],
-) -> Option<(BenchmarkName, Vec<IaiMetricKind>)> {
+) -> Option<(BenchmarkName, Vec<IaiMeasure>)> {
     let [benchmark_name_line, instructions_line, l1_accesses_line, l2_accesses_line, ram_accesses_line, estimated_cycles_line] =
         lines;
 
@@ -65,33 +65,32 @@ fn parse_iai_lines(
         (
             INSTRUCTIONS_NAME_STR,
             instructions_line,
-            IaiMetricKind::Instructions as fn(JsonMetric) -> IaiMetricKind,
+            IaiMeasure::Instructions as fn(JsonMetric) -> IaiMeasure,
         ),
         (
             L1_ACCESSES_NAME_STR,
             l1_accesses_line,
-            IaiMetricKind::L1Accesses,
+            IaiMeasure::L1Accesses,
         ),
         (
             L2_ACCESSES_NAME_STR,
             l2_accesses_line,
-            IaiMetricKind::L2Accesses,
+            IaiMeasure::L2Accesses,
         ),
         (
             RAM_ACCESSES_NAME_STR,
             ram_accesses_line,
-            IaiMetricKind::RamAccesses,
+            IaiMeasure::RamAccesses,
         ),
         (
             ESTIMATED_CYCLES_NAME_STR,
             estimated_cycles_line,
-            IaiMetricKind::EstimatedCycles,
+            IaiMeasure::EstimatedCycles,
         ),
     ]
     .into_iter()
-    .map(|(metric_kind, input, into_variant)| {
-        parse_iai_metric(input, metric_kind)
-            .map(|(_remainder, json_metric)| into_variant(json_metric))
+    .map(|(measure, input, into_variant)| {
+        parse_iai_metric(input, measure).map(|(_remainder, json_metric)| into_variant(json_metric))
     })
     .collect::<Result<Vec<_>, _>>()
     .ok()?;
@@ -100,11 +99,11 @@ fn parse_iai_lines(
 }
 
 #[allow(clippy::cast_precision_loss)]
-fn parse_iai_metric<'a>(input: &'a str, metric_kind: &'static str) -> IResult<&'a str, JsonMetric> {
+fn parse_iai_metric<'a>(input: &'a str, measure: &'static str) -> IResult<&'a str, JsonMetric> {
     map(
         tuple((
             space0,
-            tag(metric_kind),
+            tag(measure),
             tag(":"),
             space1,
             parse_u64,
@@ -147,7 +146,7 @@ pub(crate) mod test_rust_iai {
         Adaptable, AdapterResults,
     };
     use bencher_json::{
-        project::metric_kind::{
+        project::measure::{
             ESTIMATED_CYCLES_SLUG_STR, INSTRUCTIONS_NAME_STR, INSTRUCTIONS_SLUG_STR,
             L1_ACCESSES_SLUG_STR, L2_ACCESSES_SLUG_STR, RAM_ACCESSES_SLUG_STR,
         },

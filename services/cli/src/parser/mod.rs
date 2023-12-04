@@ -13,7 +13,7 @@ use docs::CliDocs;
 use mock::CliMock;
 use organization::{member::CliMember, CliOrganization};
 use project::{
-    alert::CliAlert, benchmark::CliBenchmark, branch::CliBranch, metric_kind::CliMetricKind,
+    alert::CliAlert, benchmark::CliBenchmark, branch::CliBranch, measure::CliMeasure,
     perf::CliPerf, report::CliReport, run::CliRun, testbed::CliTestbed, threshold::CliThreshold,
     CliProject,
 };
@@ -54,16 +54,12 @@ pub enum CliSub {
 
     /// Run benchmarks
     Run(Box<CliRun>),
-    /// Query benchmark data
-    Perf(CliPerf),
-
     /// Manage reports
     #[clap(subcommand)]
     Report(CliReport),
+    /// Query benchmark data
+    Perf(CliPerf),
 
-    /// Manage metric kinds
-    #[clap(subcommand)]
-    MetricKind(CliMetricKind),
     /// Manage branches
     #[clap(subcommand)]
     Branch(CliBranch),
@@ -73,6 +69,9 @@ pub enum CliSub {
     /// View benchmarks
     #[clap(subcommand)]
     Benchmark(CliBenchmark),
+    /// Manage measures
+    #[clap(subcommand)]
+    Measure(CliMeasure),
 
     /// Manage thresholds
     #[clap(subcommand)]

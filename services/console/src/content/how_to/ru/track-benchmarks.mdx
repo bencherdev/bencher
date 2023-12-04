@@ -56,9 +56,9 @@ bencher run \
 git checkout feature-branch
 
 bencher threshold create \
---metric-kind latency \
 --branch "$FEATURE_BRANCH" \
 --testbed localhost \
+--measure latency \
 --test t \
 --right-side 0.95
 
@@ -79,9 +79,9 @@ bencher run \
     1. Запустите бенчмарки три раза. (например, `--iter 3`)
 1. Переключитесь на ветку с функциями. (например, `feature-branch`)
 1. Создайте [Порог](/docs/ru/explanation/thresholds) для ветки с функциями:
-    1. Вид метрики для бенчмарков - Задержка. (например, `--metric-kind latency`)
     1. Ветка - это ветка с функциями с прикрепленным идентификатором коммита git. (например, `--branch "$FEATURE_BRANCH"`)
     1. Тестовый стенд работает локально. (например, `--testbed localhost`)
+    1. Вид метрики для бенчмарков - Задержка. (например, `--measure latency`)
     1. Существует менее 30 метрик, используйте t-тест Стьюдента. (например, `--test t`)
     1. Установите правую границу 95.0%, потому что большая задержка указывает на регрессию производительности. (например, `--right-side 0.95`)
 1. Запустите `bencher run` для ветки с функциями:

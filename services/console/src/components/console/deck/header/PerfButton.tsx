@@ -26,10 +26,10 @@ const PerfButton = (props: Props) => {
 				const json_alert = props.data() as JsonAlert;
 				const start_time = dateTimeMillis(json_alert?.created);
 				const perfQuery = {
-					metric_kinds: json_alert.threshold?.metric_kind?.uuid,
 					branches: json_alert.threshold?.branch?.uuid,
 					testbeds: json_alert.threshold?.testbed?.uuid,
 					benchmarks: json_alert.benchmark?.uuid,
+					measures: json_alert.threshold?.measure?.uuid,
 					lower_boundary: json_alert.limit === BoundaryLimit.Lower,
 					upper_boundary: json_alert.limit === BoundaryLimit.Upper,
 					start_time: start_time ? start_time - DEFAULT_ALERT_HISTORY : null,

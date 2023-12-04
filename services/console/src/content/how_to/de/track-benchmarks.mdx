@@ -56,9 +56,9 @@ bencher run \
 git checkout feature-branch
 
 bencher threshold create \
---metric-kind latency \
 --branch "$FEATURE_BRANCH" \
 --testbed localhost \
+--measure latency \
 --test t \
 --right-side 0.95
 
@@ -79,9 +79,9 @@ bencher run \
     1. Führen Sie die Benchmarks dreimal aus. (z. B.: `--iter 3`)
 1. Wechseln Sie zum Feature-Zweig. (z. B.: `feature-branch`)
 1. Erstellen Sie eine [Schwelle](/docs/de/explanation/thresholds) für den Feature-Zweig:
-    1. Die Metrikart für die Benchmarks ist die Latenz. (z. B.: `--metric-kind latency`)
     1. Der Zweig ist der Feature-Zweig mit der angehängten Git-Commit-ID. (z. B.: `--branch "$FEATURE_BRANCH"`)
     1. Das Testbed läuft lokal. (z. B.: `--testbed localhost`)
+    1. Die Metrikart für die Benchmarks ist die Latenz. (z. B.: `--measure latency`)
     1. Es gibt weniger als 30 Metriken, verwenden Sie einen Student's t-Test. (z. B.: `--test t`)
     1. Setzen Sie eine rechte Seite Grenze von 95,0 %, da eine größere Latenz auf eine Leistungsregression hinweist. (z. B.: `--right-side 0.95`)
 1. Führen Sie `bencher run` für den Feature-Zweig aus:

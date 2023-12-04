@@ -15,11 +15,11 @@ Es mejor usar el adaptador más específico para su caso de uso.
 Esto proporcionará el análisis más preciso y eficiente.
 Por ejemplo, si estás analizando la salida de la prueba de bancos [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks) de Rust, deberías usar el adaptador `rust_bench`, y no el adaptador `magic` o `rust`.
 Vea nuestro
-[página de rendimiento de Bencher](https://bencher.dev/perf/bencher?key=true&metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C5655ed2a-3e45-4622-bdbd-39cdd9837af8%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674777600000)
+[página de rendimiento de Bencher](https://bencher.dev/perf/bencher?key=true&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C5655ed2a-3e45-4622-bdbd-39cdd9837af8%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674777600000)
 para una buena comparación.
 
 <div class="content has-text-centered">
-<a href="https://bencher.dev/perf/bencher?key=true&metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674950400000"><img style="border: 0.2em solid #ed6704;" src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1674950400000&title=Benchmark+Adapter+Comparison" title="Comparativa de Adaptadores de Referencia" alt="Comparativa de Adaptadores de Referencia para Bencher - Bencher" /></a>
+<a href="https://bencher.dev/perf/bencher?key=true&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674950400000"><img style="border: 0.2em solid #ed6704;" src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1674950400000&title=Benchmark+Adapter+Comparison" title="Comparativa de Adaptadores de Referencia" alt="Comparativa de Adaptadores de Referencia para Bencher - Bencher" /></a>
 </div>
 
 ## 🪄 Magic <small>(default)</small>
@@ -48,17 +48,17 @@ Ejemplo de BMF:
 }
 ```
 
-En este ejemplo, la clave `benchmark_name` sería el nombre de una referencia. 
+En este ejemplo, la clave `benchmark_name` sería el nombre de una referencia.
 Los nombres de las referencias pueden ser cualquier cadena no vacía de hasta 1024 caracteres.
-El objeto `benchmark_name` contiene los alias de Metric Kind o UUIDs como claves.
-En este ejemplo, `latency` es el slug para Latency Metric Kind.
-Cada proyecto por defecto tiene una Latencia (es decir `latency`) y Throughput (es decir `throughput`) Metric Kind,
+El objeto `benchmark_name` contiene los alias de Measure o UUIDs como claves.
+En este ejemplo, `latency` es el slug para Latency Measure.
+Cada proyecto por defecto tiene una Latencia (es decir `latency`) y Throughput (es decir `throughput`) Measure,
 que se miden en `nanosegundos (ns)` y `operaciones / segundo (ops/s)` respectivamente.
-El objeto Metric Kind contiene una Métrica con hasta tres medidas: `value`, `lower_value` y `upper_value`.
+El objeto Measure contiene una Métrica con hasta tres medidas: `value`, `lower_value` y `upper_value`.
 Las medidas `lower_value` y `upper_value` son opcionales,
 y su cálculo es específico del arnés de referencia.
 
-En este ejemplo, el objeto Latency Metric Kind contiene las siguientes medidas:
+En este ejemplo, el objeto Latency Measure contiene las siguientes medidas:
 
 - Un `value` de `88.0`
 - Un `lower_value` de `87.42`
@@ -80,9 +80,9 @@ El adaptador C# (`c_sharp`) es un superset de `c_sharp_dot_net`.
 ## #️⃣ C# DotNet
 
 El adaptador C# DotNet (`c_sharp_dot_net`) espera la salida de [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) en [formato JSON (es decir `--exporters json`)](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-intro-export-json).
-Se recoge la Latency Metric Kind (es decir `nanosecond (ns)`).
+Se recoge la Latency Measure (es decir `nanosecond (ns)`).
 
-Hay dos opciones para la Metric Kind:
+Hay dos opciones para la Measure:
 - `mean` (por defecto):  `lower_value` y `upper_value` son una desviación estándar por debajo y por encima de la media (es decir `value`), respectivamente.
 - `median`: `lower_value` y `upper_value` son un rango intercuartílico por debajo y por encima de la mediana (es decir `value`), respectivamente.
 
@@ -95,13 +95,13 @@ El adaptador C++ (`cpp`) es un superset de `cpp_catch2` y `cpp_google`.
 ## ➕ C++ Catch2
 
 El adaptador C++ Catch2 (`cpp_catch2`) espera la salida de [Catch2](https://github.com/catchorg/Catch2).
-Se recoge la Latency Metric Kind (`nanosecond (ns)`).
+Se recoge la Latency Measure (`nanosecond (ns)`).
 `lower_value` y `upper_value` son una desviación estándar por debajo y por encima de la media (es decir `value`), respectivamente.
 
 ## ➕ C++ Google
 
 El adaptador C++ Google (`cpp_google`) espera la salida de [Google Benchmark](https://github.com/google/benchmark) en [formato JSON (es decir `--benchmark_format=json`)](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats).
-Se recoge la Latency Metric Kind (`nanosecond (ns)`).
+Se recoge la Latency Measure (`nanosecond (ns)`).
 Solo está disponible la media (es decir `value`). No hay `lower_value` y `upper_value`.
 
 ## 🕳 Go
@@ -111,7 +111,7 @@ El adaptador Go (`go`) es un superset de `go_bench`.
 ## 🕳 Go Bench
 
 El adaptador Go Bench (`go_bench`) espera la salida de [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks).
-Se recoge la Latency Metric Kind (`nanosecond (ns)`).
+Se recoge la Latency Measure (`nanosecond (ns)`).
 Solo está disponible la media (es decir `value`). No hay `lower_value` y `upper_value`.
 
 ## ☕️ Java
@@ -131,13 +131,13 @@ El adaptador JavaScript (`js`) es un superset de `js_benchmark` y `js_time`.
 ## 🕸 JavaScript Benchmark
 
 El adaptador JavaScript Benchmark (`js_benchmark`) espera la salida de [Benchmark.js](https://github.com/bestiejs/benchmark.js).
-Se recoge la Throughput Metric Kind (`operations / second (ops/sec)`).
+Se recoge la Throughput Measure (`operations / second (ops/sec)`).
 `lower_value` y `upper_value` son el margen de error relativo por debajo y por encima de la mediana (es decir `value`), respectivamente.
 
 ## 🕸 JavaScript Time
 
 El adaptador JavaScript Time (`js_time`) espera la salida de [console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd).
-La Latency Metric Kind (`nanoseconds (ns)`) se recoge.
+La Latency Measure (`nanoseconds (ns)`) se recoge.
 Solo está disponible el tiempo de operación (es decir `value`). No hay `lower_value` y `upper_value`.
 
 ## 🐍 Python
@@ -147,14 +147,14 @@ El adaptador Python (`python`) es un superset de `python_asv` y `python_pytest`.
 ## 🐍 Python ASV
 
 El adaptador Python ASV (`python_asv`) espera la salida de la CLI [airspeed velocity](https://github.com/airspeed-velocity/asv) [asv run](https://asv.readthedocs.io/en/stable/commands.html#asv-run).
-La Latency Metric Kind (`nanosecond (ns)`) se recoge.
+La Latency Measure (`nanosecond (ns)`) se recoge.
 `lower_value` y `upper_value` son el rango interquartil por debajo y por encima de la mediana (es decir `value`), respectivamente.
 
 ## 🐍 Python Pytest
 
 El adaptador Python Pytest (`python_pytest`) espera la salida de [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) en [formato JSON (es decir `--benchmark-json results.json`)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options).
 Esta salida JSON se guarda en un archivo, por lo que debes usar el argumento `--file` del CLI de `bencher run` para especificar esa ruta de archivo (es decir `bencher run --file results.json "pipenv run pytest --benchmark-json results.json benchmarks.py"`).
-La Metric Kind `latency` (`nanoseconds (ns)`) se recoge.
+La Measure `latency` (`nanoseconds (ns)`) se recoge.
 
 Hay dos opciones para la Metric:
 - `mean` (por defecto):  `lower_value` y `upper_value` son una desviación estándar por debajo y por encima de la media (es decir `value`), respectivamente.
@@ -170,7 +170,7 @@ El adaptador Ruby (`ruby`) es un superset de `ruby_benchmark`.
 
 El adaptador Ruby Benchmark (`ruby_benchmark`) espera la salida del [módulo Benchmark](https://github.com/ruby/benchmark) para los métodos `#bm`, `#bmbm` y `#benchmark`.
 Se requiere una etiqueta para cada benchmark.
-La Latency Metric Kind (`nanosecond (ns)`) se recoge.
+La Latency Measure (`nanosecond (ns)`) se recoge.
 Solo está disponible el valor reportado (es decir `value`). No hay `lower_value` y `upper_value`.
 
 ## 🦀 Rust
@@ -180,22 +180,22 @@ El adaptador Rust (`rust`) es un superset de `rust_bench` y `rust_criterion`.
 ## 🦀 Rust Bench
 
 El adaptador Rust Bench (`rust_bench`) espera la salida de [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks).
-La Latency Metric Kind (`nanoseconds (ns)`) se recoge.
+La Latency Measure (`nanoseconds (ns)`) se recoge.
 `lower_value` y `upper_value` son la desviación por debajo y por encima de la mediana (es decir `value`), respectivamente.
 
 ## 🦀 Rust Criterion
 
 El adaptador Rust Criterion (`rust_criterion`) espera la salida de [Criterion](https://github.com/bheisler/criterion.rs).
-La Latency Metric Kind (`nanosecond (ns)`) se recoge.
+La Latency Measure (`nanosecond (ns)`) se recoge.
 `lower_value` y `upper_value` son los límites inferior y superior ya sea de la pendiente (si está disponible) o de la media (si no) (es decir `value`), respectivamente.
 
 ## 🦀 Rust Iai
 
 El adaptador Rust Iai (`rust_iai`) espera la salida de [Iai](https://github.com/bheisler/iai).
-Se recogen las Latency Metric Kinds `instructions`, `l1_access`, `l2_access`, `ram_access`, y `estimated_cycles`.
+Se recogen las Latency Measures `instructions`, `l1_access`, `l2_access`, `ram_access`, y `estimated_cycles`.
 Solo estas medidas (es decir `value`) están disponibles. No hay medidas `lower_value` y `upper_value`.
-Las Metric Kinds para este adaptador no se crean por defecto para todos los proyectos.
-Sin embargo, cuando utilices este adaptador, estas Metric Kinds se crearán automáticamente para tu Proyecto.
+Las Measures para este adaptador no se crean por defecto para todos los proyectos.
+Sin embargo, cuando utilices este adaptador, estas Measures se crearán automáticamente para tu Proyecto.
 
 ## ❯_ Shell
 

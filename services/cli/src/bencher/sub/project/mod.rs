@@ -1,7 +1,7 @@
 pub mod alert;
 pub mod benchmark;
 pub mod branch;
-pub mod metric_kind;
+pub mod measure;
 pub mod perf;
 #[allow(clippy::module_inception)]
 pub mod project;

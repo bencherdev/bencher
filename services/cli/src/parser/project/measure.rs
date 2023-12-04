@@ -4,36 +4,36 @@ use clap::{Parser, Subcommand, ValueEnum};
 use crate::parser::{CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
-pub enum CliMetricKind {
-    /// List metric kinds
+pub enum CliMeasure {
+    /// List measures
     #[clap(alias = "ls")]
-    List(CliMetricKindList),
-    /// Create a metric kind
+    List(CliMeasureList),
+    /// Create a measure
     #[clap(alias = "add")]
-    Create(CliMetricKindCreate),
-    // Update a metric kind
+    Create(CliMeasureCreate),
+    // Update a measure
     #[clap(alias = "edit")]
-    Update(CliMetricKindUpdate),
-    /// View a metric kind
+    Update(CliMeasureUpdate),
+    /// View a measure
     #[clap(alias = "get")]
-    View(CliMetricKindView),
-    /// Delete a metric kind
+    View(CliMeasureView),
+    /// Delete a measure
     #[clap(alias = "rm")]
-    Delete(CliMetricKindDelete),
+    Delete(CliMeasureDelete),
 }
 
 #[derive(Parser, Debug)]
-pub struct CliMetricKindList {
+pub struct CliMeasureList {
     /// Project slug or UUID
     #[clap(long)]
     pub project: ResourceId,
 
-    /// Metric kind name
+    /// Measure name
     #[clap(long)]
     pub name: Option<NonEmpty>,
 
     #[clap(flatten)]
-    pub pagination: CliPagination<CliMetricKindsSort>,
+    pub pagination: CliPagination<CliMeasuresSort>,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -41,25 +41,25 @@ pub struct CliMetricKindList {
 
 #[derive(ValueEnum, Debug, Clone)]
 #[clap(rename_all = "snake_case")]
-pub enum CliMetricKindsSort {
-    /// Name of the metric kind
+pub enum CliMeasuresSort {
+    /// Name of the measure
     Name,
 }
 
 #[derive(Parser, Debug)]
-pub struct CliMetricKindCreate {
+pub struct CliMeasureCreate {
     /// Project slug or UUID
     #[clap(long)]
     pub project: ResourceId,
 
-    /// Metric kind name
+    /// Measure name
     pub name: NonEmpty,
 
-    /// Metric kind slug
+    /// Measure slug
     #[clap(long)]
     pub slug: Option<Slug>,
 
-    /// Metric kind unit of measure
+    /// Units of measure
     #[clap(long)]
     pub units: NonEmpty,
 
@@ -68,36 +68,36 @@ pub struct CliMetricKindCreate {
 }
 
 #[derive(Parser, Debug)]
-pub struct CliMetricKindView {
+pub struct CliMeasureView {
     /// Project slug or UUID
     #[clap(long)]
     pub project: ResourceId,
 
-    /// Metric kind slug or UUID
-    pub metric_kind: ResourceId,
+    /// Measure slug or UUID
+    pub measure: ResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]
-pub struct CliMetricKindUpdate {
+pub struct CliMeasureUpdate {
     /// Project slug or UUID
     #[clap(long)]
     pub project: ResourceId,
 
-    /// Metric kind slug or UUID
-    pub metric_kind: ResourceId,
+    /// Measure slug or UUID
+    pub measure: ResourceId,
 
-    /// Metric kind name
+    /// Measure name
     #[clap(long)]
     pub name: Option<NonEmpty>,
 
-    /// Metric kind slug
+    /// Measure slug
     #[clap(long)]
     pub slug: Option<Slug>,
 
-    /// Metric kind unit of measure
+    /// Units of measure
     #[clap(long)]
     pub units: Option<NonEmpty>,
 
@@ -106,13 +106,13 @@ pub struct CliMetricKindUpdate {
 }
 
 #[derive(Parser, Debug)]
-pub struct CliMetricKindDelete {
+pub struct CliMeasureDelete {
     /// Project slug or UUID
     #[clap(long)]
     pub project: ResourceId,
 
-    /// Metric kind slug or UUID
-    pub metric_kind: ResourceId,
+    /// Measure slug or UUID
+    pub measure: ResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,

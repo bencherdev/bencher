@@ -8,7 +8,7 @@ use crate::{
     context::DbConnection,
     model::project::{
         branch::BranchId,
-        metric_kind::MetricKindId,
+        measure::MeasureId,
         testbed::TestbedId,
         threshold::{
             statistic::{QueryStatistic, StatisticId},
@@ -38,9 +38,9 @@ pub struct MetricsStatistic {
 impl MetricsThreshold {
     pub fn new(
         conn: &mut DbConnection,
-        metric_kind_id: MetricKindId,
         branch_id: BranchId,
         testbed_id: TestbedId,
+        measure_id: MeasureId,
     ) -> Option<Self> {
         schema::statistic::table
             .inner_join(
@@ -48,9 +48,9 @@ impl MetricsThreshold {
                     .nullable()
                     .eq(schema::threshold::statistic_id)),
             )
-            .filter(schema::threshold::metric_kind_id.eq(metric_kind_id))
             .filter(schema::threshold::branch_id.eq(branch_id))
             .filter(schema::threshold::testbed_id.eq(testbed_id))
+            .filter(schema::threshold::measure_id.eq(measure_id))
             .select((schema::threshold::id, QueryStatistic::as_select()))
             .first::<(ThresholdId, QueryStatistic)>(conn)
             .map(|(threshold_id, query_statistic)| {

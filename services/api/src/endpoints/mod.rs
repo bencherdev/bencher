@@ -108,6 +108,16 @@ impl Api {
         }
         api.register(project::allowed::proj_allowed_get)?;
 
+        // Reports
+        if http_options {
+            api.register(project::reports::proj_reports_options)?;
+            api.register(project::reports::proj_report_options)?;
+        }
+        api.register(project::reports::proj_report_post)?;
+        api.register(project::reports::proj_reports_get)?;
+        api.register(project::reports::proj_report_get)?;
+        api.register(project::reports::proj_report_delete)?;
+
         // Perf
         if http_options {
             api.register(project::perf::proj_perf_options)?;
@@ -119,27 +129,6 @@ impl Api {
             api.register(project::perf::img::proj_perf_img_options)?;
         }
         api.register(project::perf::img::proj_perf_img_get)?;
-
-        // Reports
-        if http_options {
-            api.register(project::reports::proj_reports_options)?;
-            api.register(project::reports::proj_report_options)?;
-        }
-        api.register(project::reports::proj_report_post)?;
-        api.register(project::reports::proj_reports_get)?;
-        api.register(project::reports::proj_report_get)?;
-        api.register(project::reports::proj_report_delete)?;
-
-        // Metric Kinds
-        if http_options {
-            api.register(project::metric_kinds::proj_metric_kinds_options)?;
-            api.register(project::metric_kinds::proj_metric_kind_options)?;
-        }
-        api.register(project::metric_kinds::proj_metric_kinds_get)?;
-        api.register(project::metric_kinds::proj_metric_kind_post)?;
-        api.register(project::metric_kinds::proj_metric_kind_get)?;
-        api.register(project::metric_kinds::proj_metric_kind_patch)?;
-        api.register(project::metric_kinds::proj_metric_kind_delete)?;
 
         // Branches
         if http_options {
@@ -173,6 +162,17 @@ impl Api {
         api.register(project::benchmarks::proj_benchmark_get)?;
         api.register(project::benchmarks::proj_benchmark_patch)?;
         api.register(project::benchmarks::proj_benchmark_delete)?;
+
+        // Measures
+        if http_options {
+            api.register(project::measures::proj_measures_options)?;
+            api.register(project::measures::proj_measure_options)?;
+        }
+        api.register(project::measures::proj_measures_get)?;
+        api.register(project::measures::proj_measure_post)?;
+        api.register(project::measures::proj_measure_get)?;
+        api.register(project::measures::proj_measure_patch)?;
+        api.register(project::measures::proj_measure_delete)?;
 
         // Thresholds
         if http_options {

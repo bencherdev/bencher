@@ -17,8 +17,8 @@ const BRANCH_ARG: &str = "--branch";
 const BRANCH_SLUG: &str = "master";
 const TESTBED_ARG: &str = "--testbed";
 const TESTBED_SLUG: &str = "base";
-const METRIC_KIND_ARG: &str = "--metric-kind";
-const METRIC_KIND_SLUG: &str = "screams";
+const MEASURE_ARG: &str = "--measure";
+const MEASURE_SLUG: &str = "screams";
 
 pub const BENCHER_API_URL: &str = "BENCHER_API_URL";
 pub static HOST_URL: Lazy<String> =
@@ -220,10 +220,10 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     let _json: bencher_json::JsonProject =
         serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-    // cargo run -- metric-kind ls --host http://localhost:61016 --project the-computer
+    // cargo run -- measure ls --host http://localhost:61016 --project the-computer
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
-        "metric-kind",
+        "measure",
         "ls",
         HOST_ARG,
         &HOST_URL,
@@ -231,14 +231,14 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         PROJECT_SLUG,
     ]);
     let assert = cmd.assert().success();
-    let metric_kinds: bencher_json::JsonMetricKinds =
+    let measures: bencher_json::JsonMeasures =
         serde_json::from_slice(&assert.get_output().stdout).unwrap();
-    assert_eq!(metric_kinds.0.len(), 2);
+    assert_eq!(measures.0.len(), 2);
 
-    // cargo run -- metric-kind create --host http://localhost:61016 --project the-computer --slug decibels-666 --units "decibels" screams-888
+    // cargo run -- measure create --host http://localhost:61016 --project the-computer --slug decibels-666 --units "decibels" screams-888
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
-        "metric-kind",
+        "measure",
         "create",
         HOST_ARG,
         &HOST_URL,
@@ -247,19 +247,19 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         PROJECT_ARG,
         PROJECT_SLUG,
         "--slug",
-        METRIC_KIND_SLUG,
+        MEASURE_SLUG,
         "--units",
         "decibels",
-        METRIC_KIND_SLUG,
+        MEASURE_SLUG,
     ]);
     let assert = cmd.assert().success();
-    let _json: bencher_json::JsonMetricKind =
+    let _json: bencher_json::JsonMeasure =
         serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-    // cargo run -- metric-kind ls --host http://localhost:61016 --project the-computer
+    // cargo run -- measure ls --host http://localhost:61016 --project the-computer
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
-        "metric-kind",
+        "measure",
         "ls",
         HOST_ARG,
         &HOST_URL,
@@ -267,23 +267,23 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         PROJECT_SLUG,
     ]);
     let assert = cmd.assert().success();
-    let metric_kinds: bencher_json::JsonMetricKinds =
+    let measures: bencher_json::JsonMeasures =
         serde_json::from_slice(&assert.get_output().stdout).unwrap();
-    assert_eq!(metric_kinds.0.len(), 3);
+    assert_eq!(measures.0.len(), 3);
 
-    // cargo run -- metric-kind view --host http://localhost:61016 --project the-computer screams-888
+    // cargo run -- measure view --host http://localhost:61016 --project the-computer screams-888
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
-        "metric-kind",
+        "measure",
         "view",
         HOST_ARG,
         &HOST_URL,
         PROJECT_ARG,
         PROJECT_SLUG,
-        METRIC_KIND_SLUG,
+        MEASURE_SLUG,
     ]);
     let assert = cmd.assert().success();
-    let _json: bencher_json::JsonMetricKind =
+    let _json: bencher_json::JsonMeasure =
         serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- branch ls --host http://localhost:61016 --project the-computer
@@ -429,7 +429,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         serde_json::from_slice(&assert.get_output().stdout).unwrap();
     assert_eq!(thresholds.0.len(), 2);
 
-    // cargo run -- threshold create --host http://localhost:61016 --metric-kind latency --branch $BENCHER_BRANCH --testbed $BENCHER_TESTBED --test z
+    // cargo run -- threshold create --host http://localhost:61016 --measure latency --branch $BENCHER_BRANCH --testbed $BENCHER_TESTBED --test z
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
         "threshold",
@@ -440,7 +440,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         &TEST_API_TOKEN,
         PROJECT_ARG,
         PROJECT_SLUG,
-        METRIC_KIND_ARG,
+        MEASURE_ARG,
         "latency",
         BRANCH_ARG,
         BRANCH_SLUG,

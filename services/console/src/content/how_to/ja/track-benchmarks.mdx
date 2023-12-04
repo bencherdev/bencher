@@ -55,9 +55,9 @@ bencher run \
 git checkout feature-branch
 
 bencher threshold create \
---metric-kind latency \
 --branch "$FEATURE_BRANCH" \
 --testbed localhost \
+--measure latency \
 --test t \
 --right-side 0.95
 
@@ -78,9 +78,9 @@ bencher run \
     1. ベンチマークを3回実行します。(例：`--iter 3`)
 1. フィーチャーブランチをチェックアウトします。(例：`feature-branch`)
 1. フィーチャーブランチのための[しきい値](/docs/ja/explanation/thresholds)を作成します：
-    1. ベンチマークのMetric KindはLatencyです。(例：`--metric-kind latency`)
     1. Branchは、付け足されたgitコミットIDを持つフィーチャーブランチです。(例：`--branch "$FEATURE_BRANCH"`)
     1. Testbedはローカルで実行されます。(例：`--testbed localhost`)
+    1. ベンチマークのMeasureはLatencyです。(例：`--measure latency`)
     1. 30以下のメトリクスがある場合は、Studentのtテストを使用します。(例：`--test t`)
     1. パフォーマンスが後退することを示すため、Latencyが大きいほど右側の境界を95.0%に設定します。(例：`--right-side 0.95`)
 1. フィーチャーブランチに対して `bencher run` を実行します：

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bencher_adapter::{
-    results::{adapter_metrics::AdapterMetrics, MetricKind},
+    results::{adapter_metrics::AdapterMetrics, Measure},
     AdapterResults, AdapterResultsArray, Settings as AdapterSettings,
 };
 use bencher_json::{
@@ -22,8 +22,8 @@ use crate::{
     model::project::{
         benchmark::{BenchmarkId, QueryBenchmark},
         branch::BranchId,
+        measure::{MeasureId, QueryMeasure},
         metric::{InsertMetric, QueryMetric},
-        metric_kind::{MetricKindId, QueryMetricKind},
         perf::{InsertPerf, QueryPerf},
         testbed::TestbedId,
         ProjectId,
@@ -37,14 +37,14 @@ use detector::Detector;
 
 use super::ReportId;
 
-/// `ReportResults` is used to add benchmarks, perf, metric kinds, metrics, and alerts.
+/// `ReportResults` is used to process the report results.
 pub struct ReportResults {
     pub project_id: ProjectId,
     pub branch_id: BranchId,
     pub testbed_id: TestbedId,
     pub report_id: ReportId,
-    pub metric_kind_cache: HashMap<MetricKind, MetricKindId>,
-    pub detector_cache: HashMap<MetricKindId, Option<Detector>>,
+    pub measure_cache: HashMap<Measure, MeasureId>,
+    pub detector_cache: HashMap<MeasureId, Option<Detector>>,
 }
 
 impl ReportResults {
@@ -59,7 +59,7 @@ impl ReportResults {
             branch_id,
             testbed_id,
             report_id,
-            metric_kind_cache: HashMap::new(),
+            measure_cache: HashMap::new(),
             detector_cache: HashMap::new(),
         }
     }
@@ -149,10 +149,10 @@ impl ReportResults {
             .map_err(resource_conflict_err!(Perf, insert_perf))?;
         let perf_id = QueryPerf::get_id(conn, insert_perf.uuid)?;
 
-        for (metric_kind_key, metric) in metrics.inner {
-            let metric_kind_id = self.metric_kind_id(conn, metric_kind_key)?;
+        for (measure_key, metric) in metrics.inner {
+            let measure_id = self.measure_id(conn, measure_key)?;
 
-            let insert_metric = InsertMetric::from_json(perf_id, metric_kind_id, metric);
+            let insert_metric = InsertMetric::from_json(perf_id, measure_id, metric);
             diesel::insert_into(schema::metric::table)
                 .values(&insert_metric)
                 .execute(conn)
@@ -166,7 +166,7 @@ impl ReportResults {
 
             // Ignored benchmarks do not get checked against the threshold even if one exists
             if !ignore_benchmark {
-                if let Some(detector) = self.detector(conn, metric_kind_id) {
+                if let Some(detector) = self.detector(conn, measure_id) {
                     let query_metric = QueryMetric::from_uuid(conn, insert_metric.uuid).map_err(|e| {
                         issue_error(
                             StatusCode::NOT_FOUND,
@@ -191,36 +191,26 @@ impl ReportResults {
         QueryBenchmark::get_or_create(conn, self.project_id, benchmark_name).map_err(Into::into)
     }
 
-    fn metric_kind_id(
+    fn measure_id(
         &mut self,
         conn: &mut DbConnection,
-        metric_kind_key: MetricKind,
-    ) -> Result<MetricKindId, HttpError> {
-        Ok(
-            if let Some(id) = self.metric_kind_cache.get(&metric_kind_key) {
-                *id
-            } else {
-                let metric_kind_id =
-                    QueryMetricKind::get_or_create(conn, self.project_id, &metric_kind_key)?;
-
-                self.metric_kind_cache
-                    .insert(metric_kind_key, metric_kind_id);
-
-                metric_kind_id
-            },
-        )
+        measure_key: Measure,
+    ) -> Result<MeasureId, HttpError> {
+        Ok(if let Some(id) = self.measure_cache.get(&measure_key) {
+            *id
+        } else {
+            let measure_id = QueryMeasure::get_or_create(conn, self.project_id, &measure_key)?;
+            self.measure_cache.insert(measure_key, measure_id);
+            measure_id
+        })
     }
 
-    fn detector(
-        &mut self,
-        conn: &mut DbConnection,
-        metric_kind_id: MetricKindId,
-    ) -> Option<Detector> {
-        if let Some(detector) = self.detector_cache.get(&metric_kind_id) {
+    fn detector(&mut self, conn: &mut DbConnection, measure_id: MeasureId) -> Option<Detector> {
+        if let Some(detector) = self.detector_cache.get(&measure_id) {
             detector.clone()
         } else {
-            let detector = Detector::new(conn, metric_kind_id, self.branch_id, self.testbed_id);
-            self.detector_cache.insert(metric_kind_id, detector.clone());
+            let detector = Detector::new(conn, self.branch_id, self.testbed_id, measure_id);
+            self.detector_cache.insert(measure_id, detector.clone());
             detector
         }
     }

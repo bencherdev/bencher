@@ -34,10 +34,12 @@ import PerfPlot from "./plot/PerfPlot";
 import type { TabList } from "./plot/PlotTab";
 
 // Perf query params
-const METRIC_KINDS_PARAM = PerfQueryKey.MetricKinds;
 const BRANCHES_PARAM = PerfQueryKey.Branches;
 const TESTBEDS_PARAM = PerfQueryKey.Testbeds;
 const BENCHMARKS_PARAM = PerfQueryKey.Benchmarks;
+// TODO remove in due time
+const METRIC_KINDS_PARAM = PerfQueryKey.MetricKinds;
+const MEASURES_PARAM = PerfQueryKey.Measures;
 const START_TIME_PARAM = PerfQueryKey.StartTime;
 const END_TIME_PARAM = PerfQueryKey.EndTime;
 
@@ -171,12 +173,9 @@ const PerfPanel = (props: Props) => {
 	const user = authUser();
 
 	// Sanitize all query params at init
-	const initParams: Record<string, null | number | boolean> = {};
+	const initParams: Record<string, null | boolean | number | string> = {};
 	if (typeof searchParams[REPORT_PARAM] !== "string") {
 		initParams[REPORT_PARAM] = null;
-	}
-	if (!Array.isArray(arrayFromString(searchParams[METRIC_KINDS_PARAM]))) {
-		initParams[METRIC_KINDS_PARAM] = null;
 	}
 	if (!Array.isArray(arrayFromString(searchParams[BRANCHES_PARAM]))) {
 		initParams[BRANCHES_PARAM] = null;
@@ -186,6 +185,13 @@ const PerfPanel = (props: Props) => {
 	}
 	if (!Array.isArray(arrayFromString(searchParams[BENCHMARKS_PARAM]))) {
 		initParams[BENCHMARKS_PARAM] = null;
+	}
+	// TODO remove in due time
+	if (!Array.isArray(arrayFromString(searchParams[METRIC_KINDS_PARAM]))) {
+		initParams[METRIC_KINDS_PARAM] = null;
+	}
+	if (!Array.isArray(arrayFromString(searchParams[MEASURES_PARAM]))) {
+		initParams[MEASURES_PARAM] = null;
 	}
 	if (!timeToDate(searchParams[START_TIME_PARAM])) {
 		initParams[START_TIME_PARAM] = null;
@@ -247,13 +253,18 @@ const PerfPanel = (props: Props) => {
 		initParams[BENCHMARKS_PAGE_PARAM] = DEFAULT_PAGE;
 	}
 	if (Object.keys(initParams).length !== 0) {
+		// TODO remove in due time
+		if (searchParams[METRIC_KINDS_PARAM]) {
+			initParams[MEASURES_PARAM] = searchParams[METRIC_KINDS_PARAM];
+			initParams[METRIC_KINDS_PARAM] = null;
+		}
 		setSearchParams(initParams);
 	}
 
 	// Create marshalized memos of all query params
 	const report = createMemo(() => searchParams[REPORT_PARAM]);
-	const metric_kinds = createMemo(() =>
-		arrayFromString(searchParams[METRIC_KINDS_PARAM]),
+	const measures = createMemo(() =>
+		arrayFromString(searchParams[MEASURES_PARAM]),
 	);
 	const branches = createMemo(() =>
 		arrayFromString(searchParams[BRANCHES_PARAM]),
@@ -357,10 +368,10 @@ const PerfPanel = (props: Props) => {
 	// The perf query sent to the server
 	const perfQuery = createMemo(() => {
 		return {
-			metric_kinds: metric_kinds(),
 			branches: branches(),
 			testbeds: testbeds(),
 			benchmarks: benchmarks(),
+			measures: measures(),
 			start_time: start_time(),
 			end_time: end_time(),
 		} as JsonPerfQuery;
@@ -368,10 +379,10 @@ const PerfPanel = (props: Props) => {
 
 	const isPlotInit = createMemo(
 		() =>
-			metric_kinds().length === 0 ||
 			branches().length === 0 ||
 			testbeds().length === 0 ||
-			benchmarks().length === 0,
+			benchmarks().length === 0 ||
+			measures().length === 0,
 	);
 
 	// Refresh pref query
@@ -566,9 +577,9 @@ const PerfPanel = (props: Props) => {
 			isPlotInit() &&
 			tab() === DEFAULT_PERF_TAB
 		) {
-			const first_metric_kind =
-				first_report?.results?.[first]?.[first]?.metric_kind?.uuid;
-			handleReportChecked(first, first_metric_kind);
+			const first_measure =
+				first_report?.results?.[first]?.[first]?.measure?.uuid;
+			handleReportChecked(first, first_measure);
 		}
 	});
 
@@ -630,41 +641,33 @@ const PerfPanel = (props: Props) => {
 		}
 	});
 
-	const handleMetricKind = (metric_kind: null | string) => {
-		setSearchParams({
-			[CLEAR_PARAM]: true,
-			[REPORT_PARAM]: null,
-			[METRIC_KINDS_PARAM]: metric_kind,
-		});
-	};
-
 	const handleReportChecked = (
 		index: number,
-		metric_kind_uuid: undefined | string,
+		measure_uuid: undefined | string,
 	) => {
-		if (!metric_kind_uuid) {
+		if (!measure_uuid) {
 			return;
 		}
 		const report = reports_tab?.[index]?.resource;
 		const benchmarks = report?.results?.[0]
-			?.find((result) => result.metric_kind?.uuid === metric_kind_uuid)
+			?.find((result) => result.measure?.uuid === measure_uuid)
 			?.benchmarks?.map((benchmark) => benchmark.uuid);
 		const start_time = dateTimeMillis(report?.start_time);
 		setSearchParams({
-			[CLEAR_PARAM]: true,
-			[LOWER_VALUE_PARAM]: null,
-			[UPPER_VALUE_PARAM]: null,
-			[LOWER_BOUNDARY_PARAM]: null,
-			[UPPER_BOUNDARY_PARAM]: null,
+			[REPORT_PARAM]: report?.uuid,
+			[BRANCHES_PARAM]: report?.branch?.uuid,
+			[TESTBEDS_PARAM]: report?.testbed?.uuid,
+			[BENCHMARKS_PARAM]: arrayToString(benchmarks ?? []),
+			[MEASURES_PARAM]: measure_uuid,
 			[START_TIME_PARAM]: start_time
 				? start_time - DEFAULT_REPORT_HISTORY
 				: null,
 			[END_TIME_PARAM]: dateTimeMillis(report?.end_time),
-			[REPORT_PARAM]: report?.uuid,
-			[METRIC_KINDS_PARAM]: metric_kind_uuid,
-			[BRANCHES_PARAM]: report?.branch?.uuid,
-			[TESTBEDS_PARAM]: report?.testbed?.uuid,
-			[BENCHMARKS_PARAM]: arrayToString(benchmarks ?? []),
+			[LOWER_VALUE_PARAM]: null,
+			[UPPER_VALUE_PARAM]: null,
+			[LOWER_BOUNDARY_PARAM]: null,
+			[UPPER_BOUNDARY_PARAM]: null,
+			[CLEAR_PARAM]: true,
 		});
 	};
 	const handleChecked = (
@@ -702,6 +705,13 @@ const PerfPanel = (props: Props) => {
 	const handleBenchmarkChecked = (index: number) => {
 		handleChecked(benchmarks_tab, index, BENCHMARKS_PARAM, benchmarks());
 	};
+	const handleMeasure = (measure: null | string) => {
+		setSearchParams({
+			[REPORT_PARAM]: null,
+			[MEASURES_PARAM]: measure,
+			[CLEAR_PARAM]: true,
+		});
+	};
 
 	const handleStartTime = (date: string) =>
 		setSearchParams({ [START_TIME_PARAM]: dateToTime(date) });
@@ -734,18 +744,18 @@ const PerfPanel = (props: Props) => {
 		if (typeof clear === "boolean") {
 			if (clear) {
 				setSearchParams({
-					[CLEAR_PARAM]: true,
+					[REPORT_PARAM]: null,
+					[BRANCHES_PARAM]: null,
+					[TESTBEDS_PARAM]: null,
+					[BENCHMARKS_PARAM]: null,
+					[MEASURES_PARAM]: null,
+					[START_TIME_PARAM]: null,
+					[END_TIME_PARAM]: null,
 					[LOWER_VALUE_PARAM]: null,
 					[UPPER_VALUE_PARAM]: null,
 					[LOWER_BOUNDARY_PARAM]: null,
 					[UPPER_BOUNDARY_PARAM]: null,
-					[START_TIME_PARAM]: null,
-					[END_TIME_PARAM]: null,
-					[REPORT_PARAM]: null,
-					[METRIC_KINDS_PARAM]: null,
-					[BRANCHES_PARAM]: null,
-					[TESTBEDS_PARAM]: null,
-					[BENCHMARKS_PARAM]: null,
+					[CLEAR_PARAM]: true,
 				});
 			} else {
 				setSearchParams({ [CLEAR_PARAM]: clear });
@@ -798,7 +808,7 @@ const PerfPanel = (props: Props) => {
 				isEmbed={props.isEmbed === true}
 				isPlotInit={isPlotInit}
 				report={report}
-				metric_kinds={metric_kinds}
+				measures={measures}
 				branches={branches}
 				testbeds={testbeds}
 				benchmarks={benchmarks}
@@ -826,7 +836,7 @@ const PerfPanel = (props: Props) => {
 				branches_page={branches_page}
 				testbeds_page={testbeds_page}
 				benchmarks_page={benchmarks_page}
-				handleMetricKind={handleMetricKind}
+				handleMeasure={handleMeasure}
 				handleStartTime={handleStartTime}
 				handleEndTime={handleEndTime}
 				handleTab={handleTab}

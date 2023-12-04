@@ -210,7 +210,7 @@ pub struct CliRunCi {
     /// Omit Benchmark Metrics and Boundary Limits (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_no_metrics: bool,
-    /// Only post results to CI if a Threshold exists for the Metric Kind, Branch, and Testbed (requires: `--github-actions`)
+    /// Only post results to CI if a Threshold exists for the Branch, Testbed, and Measure (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_only_thresholds: bool,
     /// Only start posting results to CI if an Alert is generated (requires: `--github-actions`)

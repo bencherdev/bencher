@@ -191,9 +191,9 @@ impl InsertBranch {
                 // Clone the threshold for the new branch
                 let insert_threshold = InsertThreshold::new(
                     self.project_id,
-                    query_threshold.metric_kind_id,
                     new_branch_id,
                     query_threshold.testbed_id,
+                    query_threshold.measure_id,
                 );
 
                 // Create the new threshold

@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::{
-    metric_kind::{MetricKindId, QueryMetricKind},
+    measure::{MeasureId, QueryMeasure},
     perf::{PerfId, QueryPerf},
 };
 
@@ -20,12 +20,12 @@ crate::util::typed_id::typed_id!(MetricId);
 )]
 #[diesel(table_name = metric_table)]
 #[diesel(belongs_to(QueryPerf, foreign_key = perf_id))]
-#[diesel(belongs_to(QueryMetricKind, foreign_key = metric_kind_id))]
+#[diesel(belongs_to(QueryMeasure, foreign_key = measure_id))]
 pub struct QueryMetric {
     pub id: MetricId,
     pub uuid: MetricUuid,
     pub perf_id: PerfId,
-    pub metric_kind_id: MetricKindId,
+    pub measure_id: MeasureId,
     pub value: f64,
     pub lower_value: Option<f64>,
     pub upper_value: Option<f64>,
@@ -97,14 +97,14 @@ impl QueryMetric {
 pub struct InsertMetric {
     pub uuid: MetricUuid,
     pub perf_id: PerfId,
-    pub metric_kind_id: MetricKindId,
+    pub measure_id: MeasureId,
     pub value: f64,
     pub lower_value: Option<f64>,
     pub upper_value: Option<f64>,
 }
 
 impl InsertMetric {
-    pub fn from_json(perf_id: PerfId, metric_kind_id: MetricKindId, metric: JsonMetric) -> Self {
+    pub fn from_json(perf_id: PerfId, measure_id: MeasureId, metric: JsonMetric) -> Self {
         let JsonMetric {
             value,
             lower_value,
@@ -113,7 +113,7 @@ impl InsertMetric {
         Self {
             uuid: MetricUuid::new(),
             perf_id,
-            metric_kind_id,
+            measure_id,
             value: value.into(),
             lower_value: lower_value.map(Into::into),
             upper_value: upper_value.map(Into::into),

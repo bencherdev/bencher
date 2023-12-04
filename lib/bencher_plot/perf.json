@@ -13,15 +13,6 @@
     "end_time": null,
     "results": [
         {
-            "metric_kind": {
-                "uuid": "61a385d0-f19d-4f20-895a-e3c684ec6cbc",
-                "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
-                "name": "Latency",
-                "slug": "latency",
-                "units": "nanoseconds (ns)",
-                "created": "2023-07-02T12:53:33Z",
-                "modified": "2023-07-02T12:53:33Z"
-            },
             "branch": {
                 "uuid": "7d7e73de-78c2-43f7-bc2a-da31a5b9a819",
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
@@ -43,6 +34,15 @@
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
                 "name": "bencher::mock_0",
                 "slug": "dbb90f5c-e7e2-438c-9533-ce86792174ee",
+                "created": "2023-07-02T12:53:33Z",
+                "modified": "2023-07-02T12:53:33Z"
+            },
+            "measure": {
+                "uuid": "61a385d0-f19d-4f20-895a-e3c684ec6cbc",
+                "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
+                "name": "Latency",
+                "slug": "latency",
+                "units": "nanoseconds (ns)",
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z"
             },
@@ -218,15 +218,6 @@
             ]
         },
         {
-            "metric_kind": {
-                "uuid": "61a385d0-f19d-4f20-895a-e3c684ec6cbc",
-                "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
-                "name": "Latency",
-                "slug": "latency",
-                "units": "nanoseconds (ns)",
-                "created": "2023-07-02T12:53:33Z",
-                "modified": "2023-07-02T12:53:33Z"
-            },
             "branch": {
                 "uuid": "7d7e73de-78c2-43f7-bc2a-da31a5b9a819",
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
@@ -248,6 +239,15 @@
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
                 "name": "bencher::mock_1",
                 "slug": "0d680df6-432b-4335-bb37-afd2453c0db1",
+                "created": "2023-07-02T12:53:33Z",
+                "modified": "2023-07-02T12:53:33Z"
+            },
+            "measure": {
+                "uuid": "61a385d0-f19d-4f20-895a-e3c684ec6cbc",
+                "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
+                "name": "Latency",
+                "slug": "latency",
+                "units": "nanoseconds (ns)",
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z"
             },
@@ -423,15 +423,6 @@
             ]
         },
         {
-            "metric_kind": {
-                "uuid": "61a385d0-f19d-4f20-895a-e3c684ec6cbc",
-                "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
-                "name": "Latency",
-                "slug": "latency",
-                "units": "nanoseconds (ns)",
-                "created": "2023-07-02T12:53:33Z",
-                "modified": "2023-07-02T12:53:33Z"
-            },
             "branch": {
                 "uuid": "7d7e73de-78c2-43f7-bc2a-da31a5b9a819",
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
@@ -453,6 +444,15 @@
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
                 "name": "bencher::mock_2",
                 "slug": "4bf1a480-b8fc-497b-9d42-a2d3c3ec99d5",
+                "created": "2023-07-02T12:53:33Z",
+                "modified": "2023-07-02T12:53:33Z"
+            },
+            "measure": {
+                "uuid": "61a385d0-f19d-4f20-895a-e3c684ec6cbc",
+                "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
+                "name": "Latency",
+                "slug": "latency",
+                "units": "nanoseconds (ns)",
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z"
             },

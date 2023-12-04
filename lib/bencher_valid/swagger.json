@@ -2981,13 +2981,13 @@
         }
       }
     },
-    "/v0/projects/{project}/metric-kinds": {
+    "/v0/projects/{project}/measures": {
       "get": {
         "tags": [
           "projects",
-          "metric kinds"
+          "measures"
         ],
-        "operationId": "proj_metric_kinds_get",
+        "operationId": "proj_measures_get",
         "parameters": [
           {
             "in": "path",
@@ -3028,7 +3028,7 @@
             "in": "query",
             "name": "sort",
             "schema": {
-              "$ref": "#/components/schemas/ProjMetricKindsSort"
+              "$ref": "#/components/schemas/ProjMeasuresSort"
             }
           },
           {
@@ -3075,7 +3075,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonMetricKinds"
+                  "$ref": "#/components/schemas/JsonMeasures"
                 }
               }
             }
@@ -3091,9 +3091,9 @@
       "post": {
         "tags": [
           "projects",
-          "metric kinds"
+          "measures"
         ],
-        "operationId": "proj_metric_kind_post",
+        "operationId": "proj_measure_post",
         "parameters": [
           {
             "in": "path",
@@ -3108,7 +3108,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/JsonNewMetricKind"
+                "$ref": "#/components/schemas/JsonNewMeasure"
               }
             }
           },
@@ -3150,7 +3150,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonMetricKind"
+                  "$ref": "#/components/schemas/JsonMeasure"
                 }
               }
             }
@@ -3164,17 +3164,17 @@
         }
       }
     },
-    "/v0/projects/{project}/metric-kinds/{metric_kind}": {
+    "/v0/projects/{project}/measures/{measure}": {
       "get": {
         "tags": [
           "projects",
-          "metric kinds"
+          "measures"
         ],
-        "operationId": "proj_metric_kind_get",
+        "operationId": "proj_measure_get",
         "parameters": [
           {
             "in": "path",
-            "name": "metric_kind",
+            "name": "measure",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -3225,7 +3225,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonMetricKind"
+                  "$ref": "#/components/schemas/JsonMeasure"
                 }
               }
             }
@@ -3241,13 +3241,13 @@
       "delete": {
         "tags": [
           "projects",
-          "metric kinds"
+          "measures"
         ],
-        "operationId": "proj_metric_kind_delete",
+        "operationId": "proj_measure_delete",
         "parameters": [
           {
             "in": "path",
-            "name": "metric_kind",
+            "name": "measure",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -3314,13 +3314,13 @@
       "patch": {
         "tags": [
           "projects",
-          "metric kinds"
+          "measures"
         ],
-        "operationId": "proj_metric_kind_patch",
+        "operationId": "proj_measure_patch",
         "parameters": [
           {
             "in": "path",
-            "name": "metric_kind",
+            "name": "measure",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -3339,7 +3339,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/JsonUpdateMetricKind"
+                "$ref": "#/components/schemas/JsonUpdateMeasure"
               }
             }
           },
@@ -3381,7 +3381,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonMetricKind"
+                  "$ref": "#/components/schemas/JsonMeasure"
                 }
               }
             }
@@ -3436,7 +3436,7 @@
           },
           {
             "in": "query",
-            "name": "metric_kinds",
+            "name": "measures",
             "required": true,
             "schema": {
               "type": "string"
@@ -3557,7 +3557,7 @@
           },
           {
             "in": "query",
-            "name": "metric_kinds",
+            "name": "measures",
             "required": true,
             "schema": {
               "type": "string"
@@ -6742,6 +6742,47 @@
           "email"
         ]
       },
+      "JsonMeasure": {
+        "type": "object",
+        "properties": {
+          "created": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "modified": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "name": {
+            "$ref": "#/components/schemas/NonEmpty"
+          },
+          "project": {
+            "$ref": "#/components/schemas/ProjectUuid"
+          },
+          "slug": {
+            "$ref": "#/components/schemas/Slug"
+          },
+          "units": {
+            "$ref": "#/components/schemas/NonEmpty"
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/MeasureUuid"
+          }
+        },
+        "required": [
+          "created",
+          "modified",
+          "name",
+          "project",
+          "slug",
+          "units",
+          "uuid"
+        ]
+      },
+      "JsonMeasures": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonMeasure"
+        }
+      },
       "JsonMember": {
         "type": "object",
         "properties": {
@@ -6805,47 +6846,6 @@
           "value"
         ]
       },
-      "JsonMetricKind": {
-        "type": "object",
-        "properties": {
-          "created": {
-            "$ref": "#/components/schemas/DateTime"
-          },
-          "modified": {
-            "$ref": "#/components/schemas/DateTime"
-          },
-          "name": {
-            "$ref": "#/components/schemas/NonEmpty"
-          },
-          "project": {
-            "$ref": "#/components/schemas/ProjectUuid"
-          },
-          "slug": {
-            "$ref": "#/components/schemas/Slug"
-          },
-          "units": {
-            "$ref": "#/components/schemas/NonEmpty"
-          },
-          "uuid": {
-            "$ref": "#/components/schemas/MetricKindUuid"
-          }
-        },
-        "required": [
-          "created",
-          "modified",
-          "name",
-          "project",
-          "slug",
-          "units",
-          "uuid"
-        ]
-      },
-      "JsonMetricKinds": {
-        "type": "array",
-        "items": {
-          "$ref": "#/components/schemas/JsonMetricKind"
-        }
-      },
       "JsonNewBenchmark": {
         "type": "object",
         "properties": {
@@ -6896,6 +6896,29 @@
           "name"
         ]
       },
+      "JsonNewMeasure": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/NonEmpty"
+          },
+          "slug": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Slug"
+              }
+            ]
+          },
+          "units": {
+            "$ref": "#/components/schemas/NonEmpty"
+          }
+        },
+        "required": [
+          "name",
+          "units"
+        ]
+      },
       "JsonNewMember": {
         "type": "object",
         "properties": {
@@ -6917,29 +6940,6 @@
         "required": [
           "email",
           "role"
-        ]
-      },
-      "JsonNewMetricKind": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "$ref": "#/components/schemas/NonEmpty"
-          },
-          "slug": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Slug"
-              }
-            ]
-          },
-          "units": {
-            "$ref": "#/components/schemas/NonEmpty"
-          }
-        },
-        "required": [
-          "name",
-          "units"
         ]
       },
       "JsonNewOrganization": {
@@ -7123,7 +7123,7 @@
               }
             ]
           },
-          "metric_kind": {
+          "measure": {
             "$ref": "#/components/schemas/ResourceId"
           },
           "min_sample_size": {
@@ -7159,7 +7159,7 @@
         },
         "required": [
           "branch",
-          "metric_kind",
+          "measure",
           "test",
           "testbed"
         ]
@@ -7398,8 +7398,8 @@
           "branch": {
             "$ref": "#/components/schemas/JsonBranch"
           },
-          "metric_kind": {
-            "$ref": "#/components/schemas/JsonMetricKind"
+          "measure": {
+            "$ref": "#/components/schemas/JsonMeasure"
           },
           "metrics": {
             "type": "array",
@@ -7414,7 +7414,7 @@
         "required": [
           "benchmark",
           "branch",
-          "metric_kind",
+          "measure",
           "metrics",
           "testbed"
         ]
@@ -7726,8 +7726,17 @@
               "$ref": "#/components/schemas/JsonBenchmarkMetric"
             }
           },
+          "measure": {
+            "$ref": "#/components/schemas/JsonMeasure"
+          },
           "metric_kind": {
-            "$ref": "#/components/schemas/JsonMetricKind"
+            "nullable": true,
+            "description": "TODO remove in due time",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonMeasure"
+              }
+            ]
           },
           "threshold": {
             "nullable": true,
@@ -7740,7 +7749,7 @@
         },
         "required": [
           "benchmarks",
-          "metric_kind"
+          "measure"
         ]
       },
       "JsonReportSettings": {
@@ -8112,8 +8121,17 @@
           "created": {
             "$ref": "#/components/schemas/DateTime"
           },
+          "measure": {
+            "$ref": "#/components/schemas/JsonMeasure"
+          },
           "metric_kind": {
-            "$ref": "#/components/schemas/JsonMetricKind"
+            "nullable": true,
+            "description": "TODO remove in due time",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonMeasure"
+              }
+            ]
           },
           "modified": {
             "$ref": "#/components/schemas/DateTime"
@@ -8134,7 +8152,7 @@
         "required": [
           "branch",
           "created",
-          "metric_kind",
+          "measure",
           "modified",
           "project",
           "statistic",
@@ -8338,20 +8356,7 @@
           "config"
         ]
       },
-      "JsonUpdateMember": {
-        "type": "object",
-        "properties": {
-          "role": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/OrganizationRole"
-              }
-            ]
-          }
-        }
-      },
-      "JsonUpdateMetricKind": {
+      "JsonUpdateMeasure": {
         "type": "object",
         "properties": {
           "name": {
@@ -8375,6 +8380,19 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/NonEmpty"
+              }
+            ]
+          }
+        }
+      },
+      "JsonUpdateMember": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrganizationRole"
               }
             ]
           }
@@ -8597,7 +8615,7 @@
           "critical"
         ]
       },
-      "MetricKindUuid": {
+      "MeasureUuid": {
         "type": "string",
         "format": "uuid"
       },
@@ -8852,7 +8870,7 @@
           "name"
         ]
       },
-      "ProjMetricKindsSort": {
+      "ProjMeasuresSort": {
         "type": "string",
         "enum": [
           "name"
@@ -8931,11 +8949,11 @@
       "name": "endpoint"
     },
     {
-      "name": "members"
+      "name": "measures",
+      "description": "Measures"
     },
     {
-      "name": "metric kinds",
-      "description": "Metric Kinds"
+      "name": "members"
     },
     {
       "name": "organizations",

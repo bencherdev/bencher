@@ -1,30 +1,32 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_client::types::JsonNewMetricKind;
-use bencher_json::{JsonMetricKind, NonEmpty, ResourceId, Slug};
+use bencher_client::types::JsonUpdateMeasure;
+use bencher_json::{JsonMeasure, NonEmpty, ResourceId, Slug};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    parser::project::metric_kind::CliMetricKindCreate,
+    parser::project::measure::CliMeasureUpdate,
     CliError,
 };
 
 #[derive(Debug, Clone)]
-pub struct Create {
+pub struct Update {
     pub project: ResourceId,
-    pub name: NonEmpty,
+    pub measure: ResourceId,
+    pub name: Option<NonEmpty>,
     pub slug: Option<Slug>,
-    pub units: NonEmpty,
+    pub units: Option<NonEmpty>,
     pub backend: Backend,
 }
 
-impl TryFrom<CliMetricKindCreate> for Create {
+impl TryFrom<CliMeasureUpdate> for Update {
     type Error = CliError;
 
-    fn try_from(create: CliMetricKindCreate) -> Result<Self, Self::Error> {
-        let CliMetricKindCreate {
+    fn try_from(create: CliMeasureUpdate) -> Result<Self, Self::Error> {
+        let CliMeasureUpdate {
             project,
+            measure,
             name,
             slug,
             units,
@@ -32,6 +34,7 @@ impl TryFrom<CliMetricKindCreate> for Create {
         } = create;
         Ok(Self {
             project,
+            measure,
             name,
             slug,
             units,
@@ -40,29 +43,30 @@ impl TryFrom<CliMetricKindCreate> for Create {
     }
 }
 
-impl From<Create> for JsonNewMetricKind {
-    fn from(create: Create) -> Self {
-        let Create {
+impl From<Update> for JsonUpdateMeasure {
+    fn from(update: Update) -> Self {
+        let Update {
             name, slug, units, ..
-        } = create;
+        } = update;
         Self {
-            name: name.into(),
+            name: name.map(Into::into),
             slug: slug.map(Into::into),
-            units: units.into(),
+            units: units.map(Into::into),
         }
     }
 }
 
 #[async_trait]
-impl SubCmd for Create {
+impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonMetricKind = self
+        let _json: JsonMeasure = self
             .backend
             .send_with(
                 |client| async move {
                     client
-                        .proj_metric_kind_post()
+                        .proj_measure_patch()
                         .project(self.project.clone())
+                        .measure(self.measure.clone())
                         .body(self.clone())
                         .send()
                         .await

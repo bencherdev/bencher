@@ -625,9 +625,9 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 3 measured; 0 filtered out; fini
 Bencher New Report:
 ...
 View results:
-- benchmarks::bench_play_game (Latency): https://bencher.dev/console/projects/game/perf?metric_kinds=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=077449e5-5b45-4c00-bdfb-3a277413180d&start_time=1697224006000&end_time=1699816009000&upper_boundary=true
-- benchmarks::bench_play_game_100 (Latency): https://bencher.dev/console/projects/game/perf?metric_kinds=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=96508869-4fa2-44ac-8e60-b635b83a17b7&start_time=1697224006000&end_time=1699816009000&upper_boundary=true
-- benchmarks::bench_play_game_1_000_000 (Latency): https://bencher.dev/console/projects/game/perf?metric_kinds=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=ff014217-4570-42ea-8813-6ed0284500a4&start_time=1697224006000&end_time=1699816009000&upper_boundary=true
+- benchmarks::bench_play_game (Latency): https://bencher.dev/console/projects/game/perf?measures=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=077449e5-5b45-4c00-bdfb-3a277413180d&start_time=1697224006000&end_time=1699816009000&upper_boundary=true
+- benchmarks::bench_play_game_100 (Latency): https://bencher.dev/console/projects/game/perf?measures=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=96508869-4fa2-44ac-8e60-b635b83a17b7&start_time=1697224006000&end_time=1699816009000&upper_boundary=true
+- benchmarks::bench_play_game_1_000_000 (Latency): https://bencher.dev/console/projects/game/perf?measures=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=ff014217-4570-42ea-8813-6ed0284500a4&start_time=1697224006000&end_time=1699816009000&upper_boundary=true
 ```
 
 Using this nifty time travel device that a nice rabbit gave me,
@@ -642,7 +642,7 @@ No fires. Just happy users.
     width="100%"
     height="800px"
     style="border: 1rem solid #ed6704;"
-    src="https://bencher.dev/perf/game/embed?reports_per_page=4&reports_page=1&branches_per_page=8&branches_page=1&testbeds_per_page=8&testbeds_page=1&benchmarks_per_page=8&benchmarks_page=1&clear=true&tab=benchmarks&metric_kinds=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=077449e5-5b45-4c00-bdfb-3a277413180d&upper_boundary=true&start_time=1697414400000">
+    src="https://bencher.dev/perf/game/embed?reports_per_page=4&reports_page=1&branches_per_page=8&branches_page=1&testbeds_per_page=8&testbeds_page=1&benchmarks_per_page=8&benchmarks_page=1&clear=true&tab=benchmarks&measures=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=077449e5-5b45-4c00-bdfb-3a277413180d&upper_boundary=true&start_time=1697414400000">
 </iframe>
 
 ## [Bencher](/pricing): Continuous Benchmarking
@@ -658,7 +658,7 @@ Bencher could have prevented that from happening.
 Bencher allows you to detect and prevent performance regressions _before_ they make it to production.
 
 - **Run**: Run your benchmarks locally or in CI using your favorite benchmarking tools. The `bencher` CLI simply wraps your existing benchmark harness and stores its results.
-- **Track**: Track the results of your benchmarks over time. Monitor, query, and graph the results using the Bencher web console based on the source branch, testbed, and metric kind.
+- **Track**: Track the results of your benchmarks over time. Monitor, query, and graph the results using the Bencher web console based on the source branch, testbed, and measure.
 - **Catch**: Catch performance regressions in CI. Bencher uses state of the art, customizable analytics to detect performance regressions before they make it to production.
 
 For the same reasons that unit tests are run in CI to prevent feature regressions, benchmarks should be run in CI with Bencher to prevent performance regressions. Performance bugs are bugs!

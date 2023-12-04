@@ -1,13 +1,13 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_client::types::{JsonDirection, ProjMetricKindsSort};
-use bencher_json::{JsonMetricKinds, NonEmpty, ResourceId};
+use bencher_client::types::{JsonDirection, ProjMeasuresSort};
+use bencher_json::{JsonMeasures, NonEmpty, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
     parser::{
-        project::metric_kind::{CliMetricKindList, CliMetricKindsSort},
+        project::measure::{CliMeasureList, CliMeasuresSort},
         CliPagination,
     },
     CliError,
@@ -23,17 +23,17 @@ pub struct List {
 
 #[derive(Debug)]
 pub struct Pagination {
-    pub sort: Option<ProjMetricKindsSort>,
+    pub sort: Option<ProjMeasuresSort>,
     pub direction: Option<JsonDirection>,
     pub per_page: Option<u8>,
     pub page: Option<u32>,
 }
 
-impl TryFrom<CliMetricKindList> for List {
+impl TryFrom<CliMeasureList> for List {
     type Error = CliError;
 
-    fn try_from(list: CliMetricKindList) -> Result<Self, Self::Error> {
-        let CliMetricKindList {
+    fn try_from(list: CliMeasureList) -> Result<Self, Self::Error> {
+        let CliMeasureList {
             project,
             name,
             pagination,
@@ -48,8 +48,8 @@ impl TryFrom<CliMetricKindList> for List {
     }
 }
 
-impl From<CliPagination<CliMetricKindsSort>> for Pagination {
-    fn from(pagination: CliPagination<CliMetricKindsSort>) -> Self {
+impl From<CliPagination<CliMeasuresSort>> for Pagination {
+    fn from(pagination: CliPagination<CliMeasuresSort>) -> Self {
         let CliPagination {
             sort,
             direction,
@@ -58,7 +58,7 @@ impl From<CliPagination<CliMetricKindsSort>> for Pagination {
         } = pagination;
         Self {
             sort: sort.map(|sort| match sort {
-                CliMetricKindsSort::Name => ProjMetricKindsSort::Name,
+                CliMeasuresSort::Name => ProjMeasuresSort::Name,
             }),
             direction: direction.map(Into::into),
             page,
@@ -70,11 +70,11 @@ impl From<CliPagination<CliMetricKindsSort>> for Pagination {
 #[async_trait]
 impl SubCmd for List {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonMetricKinds = self
+        let _json: JsonMeasures = self
             .backend
             .send_with(
                 |client| async move {
-                    let mut client = client.proj_metric_kinds_get().project(self.project.clone());
+                    let mut client = client.proj_measures_get().project(self.project.clone());
                     if let Some(name) = self.name.clone() {
                         client = client.name(name);
                     }

@@ -17,11 +17,11 @@ sortOrder: 3
 [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks),
 вы должны использовать адаптер `rust_bench`, а не `magic` или `rust` адаптер.
 Посмотрите на нашей
-[странице Bencher perf](https://bencher.dev/perf/bencher?key=true&metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C5655ed2a-3e45-4622-bdbd-39cdd9837af8%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674777600000)
+[странице Bencher perf](https://bencher.dev/perf/bencher?key=true&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C5655ed2a-3e45-4622-bdbd-39cdd9837af8%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674777600000)
 хорошее сравнение.
 
 <div class="content has-text-centered">
-<a href="https://bencher.dev/perf/bencher?key=true&metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674950400000"><img style="border: 0.2em solid #ed6704;" src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kinds=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1674950400000&title=Benchmark+Adapter+Comparison" title="Сравнение адаптеров для тестирования производительности" alt="Сравнение адаптеров для Bencher - Bencher" /></a>
+<a href="https://bencher.dev/perf/bencher?key=true&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674950400000"><img style="border: 0.2em solid #ed6704;" src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1674950400000&title=Benchmark+Adapter+Comparison" title="Сравнение адаптеров для тестирования производительности" alt="Сравнение адаптеров для Bencher - Bencher" /></a>
 </div>
 
 ## 🪄 Magic <small>(по умолчанию)</small>
@@ -52,15 +52,15 @@ sortOrder: 3
 
 В этом примере, ключ `benchmark_name` будет названием теста производительности.
 Названия тестов могут быть любыми непустыми строками длиной до 1024 символов.
-Объект `benchmark_name` содержит подобные кодам (слагам) или UUIDы Metric Kind в виде ключей.
-В этом примере, `latency` это код для Metric Kind Latency.
-Каждый проект по умолчанию имеет Metric Kind Latency (т.е. `latency`) и Throughput (т.е. `throughput`),
+Объект `benchmark_name` содержит подобные кодам (слагам) или UUIDы Measure в виде ключей.
+В этом примере, `latency` это код для Measure Latency.
+Каждый проект по умолчанию имеет Measure Latency (т.е. `latency`) и Throughput (т.е. `throughput`),
 которые измеряются в `наносекундах (ns)` и `операций / секунда (ops/s)` соответственно.
-Объект Metric Kind содержит Metric с до трех мер: `value`, `lower_value`, и `upper_value`.
+Объект Measure содержит Metric с до трех мер: `value`, `lower_value`, и `upper_value`.
 Меры `lower_value` и `upper_value` являются опциональными,
 и их расчет специфичен для каждого профилировщика.
 
-В этом примере, объект Metric Kind `latency` содержит следующие Mетрики:
+В этом примере, объект Measure `latency` содержит следующие Mетрики:
 
 - `value` в размере `88.0`
 - `lower_value` в размере `87.42`
@@ -82,7 +82,7 @@ sortOrder: 3
 ## #️⃣ C# DotNet
 
 Адаптер для DotNet C# (`c_sharp_dot_net`) ожидает вывод [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) в [формате JSON (т.е. `--exporters json`)](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson).
-Metric Kind `latency` (т.е. `наносекунды (ns)`) собирается.
+Measure `latency` (т.е. `наносекунды (ns)`) собирается.
 
 Есть два варианта для metрик:
 - `mean` (по умолчанию):  `lower_value` и `upper_value` это значения на одно стандартное отклонение вниз и вверх от среднего значения (т.е. `value`) соответственно.
@@ -97,13 +97,13 @@ Metric Kind `latency` (т.е. `наносекунды (ns)`) собираетс�
 ## ➕ C++ Catch2
 
 Адаптер для C++ Catch2 (`cpp_catch2`) ожидает вывод [Catch2](https://github.com/catchorg/Catch2).
-Metric Kind `latency` (т.е. `наносекунды (ns)`) собирается.
+Measure `latency` (т.е. `наносекунды (ns)`) собирается.
 `lower_value` и `upper_value` это значения на одно стандартное отклонение вниз и вверх от среднего значения (т.е. `value`) соответственно.
 
 ## ➕ C++ Google
 
 Адаптер для C++ Google (`cpp_google`) ожидает вывод [Google Benchmark](https://github.com/google/benchmark) в [формате JSON (т.е. `--benchmark_format=json`)](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats).
-Metric Kind `latency` (т.е. `наносекунды (ns)`) собирается.
+Measure `latency` (т.е. `наносекунды (ns)`) собирается.
 Доступно только среднее значение (т.е. `value`). Нет `lower_value` и `upper_value`.
 
 ## 🕳 Go
@@ -113,7 +113,7 @@ Metric Kind `latency` (т.е. `наносекунды (ns)`) собираетс�
 ## 🕳 Go Bench
 
 Адаптер Go Bench (`go_bench`) ожидает вывод [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks).
-Metric Kind `latency` (т.е. `наносекунды (ns)`) собирается.
+Measure `latency` (т.е. `наносекунды (ns)`) собирается.
 Доступно только среднее значение (т.е. `value`). Нет `lower_value` и `upper_value`.
 
 ## ☕️ Java
@@ -123,7 +123,7 @@ Metric Kind `latency` (т.е. `наносекунды (ns)`) собираетс�
 ## ☕️ Java JMH
 
 Адаптер для Java JMH (`java_jmh`) ожидает вывод [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh) в [формате JSON (т.е. `-rf json`)](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java).
-Могут быть собраны Metric Kinds `latency` и `throughput` (т.е. `наносекунды (ns)` и `операции / секунда (ops/sec)`).
+Могут быть собраны Measures `latency` и `throughput` (т.е. `наносекунды (ns)` и `операции / секунда (ops/sec)`).
 `lower_value` и `upper_value` это нижний и верхний доверительный интервалы для среднего значения (т.е. `value`) соответственно.
 
 ## 🕸 JavaScript
@@ -133,13 +133,13 @@ Metric Kind `latency` (т.е. `наносекунды (ns)`) собираетс�
 ## 🕸 JavaScript Benchmark
 
 Адаптер JavaScript Benchmark (`js_benchmark`) ожидает вывод [Benchmark.js](https://github.com/bestiejs/benchmark.js).
-Metric Kind `throughput` (т.е. `операции / секунда (ops/sec)`) собирается.
+Measure `throughput` (т.е. `операции / секунда (ops/sec)`) собирается.
 `lower_value` и `upper_value` это относительная погрешность вниз и вверх от медианы (т.е. `value`) соответственно.
 
 ## 🕸 JavaScript Time
 
 Адаптер JavaScript Time (`js_time`) ожидает вывод [console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd).
-Metric Kind `latency` (т.е. `наносекунды (ns)`) собирается.
+Measure `latency` (т.е. `наносекунды (ns)`) собирается.
 Доступно только время выполнения операции (т.е. `value`). Нет `lower_value` и `upper_value`.
 
 ## 🐍 Python
@@ -149,14 +149,14 @@ Metric Kind `latency` (т.е. `наносекунды (ns)`) собираетс�
 ## 🐍 Python ASV
 
 Адаптер Python ASV (`python_asv’) ожидает вывод [airspeed velocity](https://github.com/airspeed-velocity/asv) CLI [asv run](https://asv.readthedocs.io/en/stable/commands.html#asv-run).
-Metric Kind `latency` (т.е. `наносекунды (ns)`) собираются.
+Measure `latency` (т.е. `наносекунды (ns)`) собираются.
 `lower_value` и `upper_value` это величины на один межквартильный размах вниз и вверх от медианы (т.е. `value`) соответственно.
 
 ## 🐍 Python Pytest
 
 Адаптер Python Pytest (`python_pytest`) ожидает вывод [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) в [формате JSON (т.е. `--benchmark-json results.json`)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options).
 Этот вывод JSON сохраняется в файл, поэтому вы должны использовать аргумент `-file` команды CLI `bencher run`, чтобы указать путь к этому файлу (т.е. `bencher run --file results.json "pipenv run pytest --benchmark-json results.json benchmarks.py"`).
-Metric Kind `latency`(т.е. `наносекунды (ns)`) собирается.
+Measure `latency`(т.е. `наносекунды (ns)`) собирается.
 
 Есть два варианта для Metriк:
 - `mean` (по умолчанию):  `lower_value` и `upper_value` это значения на одно стандартное отклонение вниз и вверх от среднего значения (т.е. `value`) соответственно.
@@ -172,7 +172,7 @@ Metric Kind `latency`(т.е. `наносекунды (ns)`) собирается
 
 Адаптер Ruby Benchmark (`ruby_benchmark`) ожидает вывод [Benchmark module](https://github.com/ruby/benchmark) для методов `#bm`, `#bmbm`, и `#benchmark`.
 Требуется метка для каждого теста производительности.
-Metric Kind `latency` (т.е. `наносекунды (ns)`) собирается.
+Measure `latency` (т.е. `наносекунды (ns)`) собирается.
 Доступно только сообщаемое значение (т.е. `value`). Нет `lower_value` и `upper_value`.
 
 ## 🦀 Rust
@@ -182,22 +182,22 @@ Metric Kind `latency` (т.е. `наносекунды (ns)`) собираетс�
 ## 🦀 Rust Bench
 
 Адаптер Rust Bench (`rust_bench`) ожидает вывод [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks).
-Metric Kind `latency` (т.е. `наносекунды (ns)`) собирается.
+Measure `latency` (т.е. `наносекунды (ns)`) собирается.
 `lower_value` и `upper_value` это отклонение вниз и вверх от медианы (т.е. `value`) соответственно.
 
 ## 🦀 Rust Criterion
 
 Адаптер Rust Criterion (`rust_criterion`) ожидает вывод [Criterion](https://github.com/bheisler/criterion.rs).
-Metric Kind `latency` (т.е. `наносекунды (ns)`) собирается.
+Measure `latency` (т.е. `наносекунды (ns)`) собирается.
 `lower_value` и `upper_value` это нижний и верхний доверительные интервалы для среднего значения (т.е. `value`) соответственно.
 
 ## 🦀 Rust Iai
 
 Адаптер Rust Iai (`rust_iai`) ожидает вывод [Iai](https://github.com/bheisler/iai).
-Собираются Metric Kinds `instructions`, `l1_access`, `l2_access`, `ram_access`, и `estimated_cycles`.
+Собираются Measures `instructions`, `l1_access`, `l2_access`, `ram_access`, и `estimated_cycles`.
 Доступны только эти меры (т.е. `value`). Нет `lower_value` и `upper_value`.
-Metric Kinds для этого адаптера не создаются по умолчанию для всех проектов.
-Однако, когда вы используете этот адаптер, эти Metric Kinds будут автоматически созданы для вашего проекта.
+Measures для этого адаптера не создаются по умолчанию для всех проектов.
+Однако, когда вы используете этот адаптер, эти Measures будут автоматически созданы для вашего проекта.
 
 ## ❯_ Shell
 
