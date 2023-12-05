@@ -41,11 +41,11 @@ Si vous prévoyez uniquement d'avoir des PRs provenant de branches au sein du **
 
 1. Exécutez sur les événements `push` à la branche `main` et sur les événements `pull_request`. Il est important de limiter l'exécution `on` `push` **uniquement** à certaines branches selectionnées (ex: `main`) pour empêcher les pushes vers les branches de PR de s'exécuter deux fois!
 2. Au lieu d'utiliser toujours la branche `main`, utilisez les [variables d'environnement par défaut de GitHub Action](https://docs.github.com/fr/actions/learn-github-actions/variables#default-environment-variables) pour :
-        1. Utiliser des données de branche actuelles si elles existent déjà. (ex: `--if-branch "$GITHUB_REF_NAME"`)
-        2. Créer un clone des données et des seuils de la branche cible de la PR si cela existe déjà. (ex: `--else-if-branch "$GITHUB_BASE_REF"`)
+        1. Utiliser des données de branche actuelles si elles existent déjà. (ex: `--if-branch '${{ github.head_ref }}'`)
+        2. Créer un clone des données et des seuils de la branche cible de la PR si cela existe déjà. (ex: `--else-if-branch '${{ github.base_ref }}'`)
         3. Sinon, créez un clone des données et des seuils de la branche `main`. (ex: `--else-if-branch main`)
         4. Il existe plusieurs options pour définir la branche du projet. Voir la [sélection de branche](/docs/fr/explanation/branch-selection) pour une vue d'ensemble complète.
-3. Paramétrez le jeton d'authentification de l'API GitHub. (ex: `--github-actions ${{ secrets.GITHUB_TOKEN }}`). Lorsque cette option est définie dans le cadre d'une pull request, alors les résultats seront ajoutés à la pull request sous forme de commentaire. Ceci utilise [la variable d'environnement `GITHUB_TOKEN` des GitHub Actions](https://docs.github.com/fr/actions/security-guides/automatic-token-authentication).
+3. Paramétrez le jeton d'authentification de l'API GitHub. (ex: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`). Lorsque cette option est définie dans le cadre d'une pull request, alors les résultats seront ajoutés à la pull request sous forme de commentaire. Ceci utilise [la variable d'environnement `GITHUB_TOKEN` des GitHub Actions](https://docs.github.com/fr/actions/security-guides/automatic-token-authentication).
 4. Consultez la documentation [bencher run](/docs/fr/explanation/bencher-run) pour une vue d'ensemble complète de toutes les façons de configurer le commentaire de pull request avec les drapeaux `--ci-*`.
 
 ## Pull Requests à partir de Forks
@@ -70,17 +70,19 @@ Il y a trois options pour les PRs de fork :
 2. Créez un `job` qui s'exécute uniquement pour les événements `push` à la branche `main`. À part la condition `if`, ce job est presque identique à l'exemple original ci-dessus.
 3. Créez un `job` qui s'exécute uniquement pour les événements `pull_request_target`.
    1. Extraites la branche de pull request.
-   2. Transmettez directement tous les secrets. Utilisez `--token ${{ secrets.BENCHER_API_TOKEN }}` au lieu de la variable d'environnement `BENCHER_API_TOKEN`.
+   2. Transmettez directement tous les secrets. Utilisez `--token '${{ secrets.BENCHER_API_TOKEN }}'` au lieu de la variable d'environnement `BENCHER_API_TOKEN`.
    3. Exécutez et suivez vos benchmarks de pull request avec `bencher run`.
 
 Cette configuration fonctionne parce que `pull_request_target` s'exécute dans le contexte de la branche cible de la pull request,
 où les secrets tels que votre `BENCHER_API_TOKEN` et le `GITHUB_TOKEN` sont disponibles.
 Par conséquent, ce workflow ne s'exécutera que s'il existe sur la branche _cible_.
 Évitez de définir des secrets comme des variables d'environnement, comme `BENCHER_API_TOKEN`.
-Au lieu de cela, passez explicitement le jeton API à `bencher run`. (ex: `--token ${{ secrets.BENCHER_API_TOKEN }}`)
+Au lieu de cela, passez explicitement le jeton API à `bencher run`. (ex: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
 Voir ce [document du GitHub Security Lab](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
 et [cet article de blog](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
 sur la prévention des requêtes pwn pour une vue d'ensemble complète.
+
+Il est également _très_ important d'entourer le nom de la branche PR (head ref) de **simples** apostrophes. (ex : `'${{ github.head_ref }}'`) Sans quoi, un attaquant pourrait créer une branche malicieusement nommée qui effectue une injection de commande. Consultez ce [compte-rendu du GitHub Security Lab](https://securitylab.github.com/research/github-actions-untrusted-input/) sur la prévention des requêtes pwn provenant d'entrées non fiables pour une vue d'ensemble complète.
 
 ### Tester la PR de Fork à partir de la Branche Cible avec Réviseurs Nécessaires
 

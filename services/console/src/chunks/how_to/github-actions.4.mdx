@@ -42,11 +42,11 @@ jobs:
       - name: Track Benchmarks with Bencher
         run: |
           bencher run \
-          --if-branch "${{ github.event.pull_request.head.ref }}" \
-          --else-if-branch "${{ github.event.pull_request.base.ref }}" \
+          --if-branch '${{ github.head_ref }}' \
+          --else-if-branch '${{ github.base_ref }}' \
           --else-if-branch main \
-          --github-actions "${{ secrets.GITHUB_TOKEN }}" \
-          --token "${{ secrets.BENCHER_API_TOKEN }}" \
+          --github-actions '${{ secrets.GITHUB_TOKEN }}' \
+          --token '${{ secrets.BENCHER_API_TOKEN }}' \
           --err \
           "bencher mock"
 ```

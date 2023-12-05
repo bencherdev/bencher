@@ -80,17 +80,18 @@ jobs:
             let fs = require('fs');
             let prEvent = JSON.parse(fs.readFileSync(process.env.PR_EVENT, {encoding: 'utf8'}));
             fs.appendFileSync(process.env.GITHUB_ENV, `PR_NUMBER=${prEvent.number}`);
-            fs.appendFileSync(process.env.GITHUB_ENV, `PR_HEAD=${prEvent.pull_request.head.ref}`);
-            fs.appendFileSync(process.env.GITHUB_ENV, `PR_BASE=${prEvent.pull_request.base.ref}`);
+            fs.appendFileSync(process.env.GITHUB_ENV, `PR_HEAD=${prEvent.head_ref}`);
+            fs.appendFileSync(process.env.GITHUB_ENV, `PR_BASE=${prEvent.base_ref}`);
+            fs.appendFileSync(process.env.GITHUB_ENV, `PR_DEFAULT=${prEvent.pull_request.base.repo.default_branch}`);
       - uses: bencherdev/bencher@main
           - name: Track Benchmarks with Bencher
             run: |
               bencher run \
-              --if-branch "${{ env.PR_HEAD }}" \
-              --else-if-branch "${{ env.PR_BASE }}" \
-              --else-if-branch main \
-              --github-actions "${{ secrets.GITHUB_TOKEN }}" \
-              --ci-number "${{ env.PR_NUMBER }}" \
+              --if-branch '${{ env.PR_HEAD }}' \
+              --else-if-branch '${{ env.PR_BASE }}' \
+              --else-if-branch '${{ env.PR_DEFAULT }}' \
+              --github-actions '${{ secrets.GITHUB_TOKEN }}' \
+              --ci-number '${{ env.PR_NUMBER }}' \
               --err \
               --file $BENCHMARK_RESULTS
 ```
