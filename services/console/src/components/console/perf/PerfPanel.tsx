@@ -172,94 +172,99 @@ const PerfPanel = (props: Props) => {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const user = authUser();
 
-	// Sanitize all query params at init
-	const initParams: Record<string, null | boolean | number | string> = {};
-	if (typeof searchParams[REPORT_PARAM] !== "string") {
-		initParams[REPORT_PARAM] = null;
-	}
-	if (!Array.isArray(arrayFromString(searchParams[BRANCHES_PARAM]))) {
-		initParams[BRANCHES_PARAM] = null;
-	}
-	if (!Array.isArray(arrayFromString(searchParams[TESTBEDS_PARAM]))) {
-		initParams[TESTBEDS_PARAM] = null;
-	}
-	if (!Array.isArray(arrayFromString(searchParams[BENCHMARKS_PARAM]))) {
-		initParams[BENCHMARKS_PARAM] = null;
-	}
-	// TODO remove in due time
-	if (!Array.isArray(arrayFromString(searchParams[METRIC_KINDS_PARAM]))) {
-		initParams[METRIC_KINDS_PARAM] = null;
-	}
-	if (!Array.isArray(arrayFromString(searchParams[MEASURES_PARAM]))) {
-		initParams[MEASURES_PARAM] = null;
-	}
-	if (!timeToDate(searchParams[START_TIME_PARAM])) {
-		initParams[START_TIME_PARAM] = null;
-	}
-	if (!timeToDate(searchParams[END_TIME_PARAM])) {
-		initParams[END_TIME_PARAM] = null;
-	}
+	// Sanitize all query params
+	createEffect(() => {
+		const initParams: Record<
+			string,
+			undefined | null | boolean | number | string
+		> = {};
 
-	// Sanitize all UI state query params
-	if (!isPerfTab(searchParams[TAB_PARAM])) {
-		initParams[TAB_PARAM] = null;
-	}
-	if (!isBoolParam(searchParams[KEY_PARAM])) {
-		initParams[KEY_PARAM] = DEFAULT_PERF_KEY;
-	}
-	if (!isPerfRange(searchParams[RANGE_PARAM])) {
-		initParams[RANGE_PARAM] = null;
-	}
-	if (!isBoolParam(searchParams[CLEAR_PARAM])) {
-		initParams[CLEAR_PARAM] = null;
-	}
-	if (!isBoolParam(searchParams[LOWER_VALUE_PARAM])) {
-		initParams[LOWER_VALUE_PARAM] = null;
-	}
-	if (!isBoolParam(searchParams[UPPER_VALUE_PARAM])) {
-		initParams[UPPER_VALUE_PARAM] = null;
-	}
-	if (!isBoolParam(searchParams[LOWER_BOUNDARY_PARAM])) {
-		initParams[LOWER_BOUNDARY_PARAM] = null;
-	}
-	if (!isBoolParam(searchParams[UPPER_BOUNDARY_PARAM])) {
-		initParams[UPPER_BOUNDARY_PARAM] = null;
-	}
-
-	// Sanitize all pagination query params
-	if (!validU32(searchParams[REPORTS_PER_PAGE_PARAM])) {
-		initParams[REPORTS_PER_PAGE_PARAM] = REPORTS_PER_PAGE;
-	}
-	if (!validU32(searchParams[BRANCHES_PER_PAGE_PARAM])) {
-		initParams[BRANCHES_PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
-	}
-	if (!validU32(searchParams[TESTBEDS_PER_PAGE_PARAM])) {
-		initParams[TESTBEDS_PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
-	}
-	if (!validU32(searchParams[BENCHMARKS_PER_PAGE_PARAM])) {
-		initParams[BENCHMARKS_PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
-	}
-
-	if (!validU32(searchParams[REPORTS_PAGE_PARAM])) {
-		initParams[REPORTS_PAGE_PARAM] = DEFAULT_PAGE;
-	}
-	if (!validU32(searchParams[BRANCHES_PAGE_PARAM])) {
-		initParams[BRANCHES_PAGE_PARAM] = DEFAULT_PAGE;
-	}
-	if (!validU32(searchParams[TESTBEDS_PAGE_PARAM])) {
-		initParams[TESTBEDS_PAGE_PARAM] = DEFAULT_PAGE;
-	}
-	if (!validU32(searchParams[BENCHMARKS_PAGE_PARAM])) {
-		initParams[BENCHMARKS_PAGE_PARAM] = DEFAULT_PAGE;
-	}
-	if (Object.keys(initParams).length !== 0) {
-		// TODO remove in due time
-		if (searchParams[METRIC_KINDS_PARAM]) {
-			initParams[MEASURES_PARAM] = searchParams[METRIC_KINDS_PARAM];
-			initParams[METRIC_KINDS_PARAM] = null;
+		if (typeof searchParams[REPORT_PARAM] !== "string") {
+			initParams[REPORT_PARAM] = null;
 		}
-		setSearchParams(initParams);
-	}
+		if (!Array.isArray(arrayFromString(searchParams[BRANCHES_PARAM]))) {
+			initParams[BRANCHES_PARAM] = null;
+		}
+		if (!Array.isArray(arrayFromString(searchParams[TESTBEDS_PARAM]))) {
+			initParams[TESTBEDS_PARAM] = null;
+		}
+		if (!Array.isArray(arrayFromString(searchParams[BENCHMARKS_PARAM]))) {
+			initParams[BENCHMARKS_PARAM] = null;
+		}
+		// TODO remove in due time
+		const metric_kinds = arrayFromString(searchParams[METRIC_KINDS_PARAM]);
+		if (Array.isArray(metric_kinds)) {
+			if (metric_kinds.length > 0) {
+				initParams[MEASURES_PARAM] = searchParams[METRIC_KINDS_PARAM];
+			}
+			initParams[METRIC_KINDS_PARAM] = null;
+		} else if (!Array.isArray(arrayFromString(searchParams[MEASURES_PARAM]))) {
+			initParams[MEASURES_PARAM] = null;
+		}
+		if (!timeToDate(searchParams[START_TIME_PARAM])) {
+			initParams[START_TIME_PARAM] = null;
+		}
+		if (!timeToDate(searchParams[END_TIME_PARAM])) {
+			initParams[END_TIME_PARAM] = null;
+		}
+
+		// Sanitize all UI state query params
+		if (!isPerfTab(searchParams[TAB_PARAM])) {
+			initParams[TAB_PARAM] = null;
+		}
+		if (!isBoolParam(searchParams[KEY_PARAM])) {
+			initParams[KEY_PARAM] = DEFAULT_PERF_KEY;
+		}
+		if (!isPerfRange(searchParams[RANGE_PARAM])) {
+			initParams[RANGE_PARAM] = null;
+		}
+		if (!isBoolParam(searchParams[CLEAR_PARAM])) {
+			initParams[CLEAR_PARAM] = null;
+		}
+		if (!isBoolParam(searchParams[LOWER_VALUE_PARAM])) {
+			initParams[LOWER_VALUE_PARAM] = null;
+		}
+		if (!isBoolParam(searchParams[UPPER_VALUE_PARAM])) {
+			initParams[UPPER_VALUE_PARAM] = null;
+		}
+		if (!isBoolParam(searchParams[LOWER_BOUNDARY_PARAM])) {
+			initParams[LOWER_BOUNDARY_PARAM] = null;
+		}
+		if (!isBoolParam(searchParams[UPPER_BOUNDARY_PARAM])) {
+			initParams[UPPER_BOUNDARY_PARAM] = null;
+		}
+
+		// Sanitize all pagination query params
+		if (!validU32(searchParams[REPORTS_PER_PAGE_PARAM])) {
+			initParams[REPORTS_PER_PAGE_PARAM] = REPORTS_PER_PAGE;
+		}
+		if (!validU32(searchParams[BRANCHES_PER_PAGE_PARAM])) {
+			initParams[BRANCHES_PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
+		}
+		if (!validU32(searchParams[TESTBEDS_PER_PAGE_PARAM])) {
+			initParams[TESTBEDS_PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
+		}
+		if (!validU32(searchParams[BENCHMARKS_PER_PAGE_PARAM])) {
+			initParams[BENCHMARKS_PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
+		}
+
+		if (!validU32(searchParams[REPORTS_PAGE_PARAM])) {
+			initParams[REPORTS_PAGE_PARAM] = DEFAULT_PAGE;
+		}
+		if (!validU32(searchParams[BRANCHES_PAGE_PARAM])) {
+			initParams[BRANCHES_PAGE_PARAM] = DEFAULT_PAGE;
+		}
+		if (!validU32(searchParams[TESTBEDS_PAGE_PARAM])) {
+			initParams[TESTBEDS_PAGE_PARAM] = DEFAULT_PAGE;
+		}
+		if (!validU32(searchParams[BENCHMARKS_PAGE_PARAM])) {
+			initParams[BENCHMARKS_PAGE_PARAM] = DEFAULT_PAGE;
+		}
+
+		if (Object.keys(initParams).length !== 0) {
+			setSearchParams(initParams);
+		}
+	});
 
 	// Create marshalized memos of all query params
 	const report = createMemo(() => searchParams[REPORT_PARAM]);
@@ -521,36 +526,6 @@ const PerfPanel = (props: Props) => {
 				return EMPTY_ARRAY;
 			});
 	}
-	createEffect(() => {
-		const newParams: Record<string, number> = {};
-		if (!validU32(searchParams[REPORTS_PER_PAGE_PARAM])) {
-			newParams[REPORTS_PER_PAGE_PARAM] = REPORTS_PER_PAGE;
-		}
-		if (!validU32(searchParams[REPORTS_PAGE_PARAM])) {
-			newParams[REPORTS_PAGE_PARAM] = DEFAULT_PAGE;
-		}
-		if (!validU32(searchParams[BRANCHES_PER_PAGE_PARAM])) {
-			newParams[BRANCHES_PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
-		}
-		if (!validU32(searchParams[BRANCHES_PAGE_PARAM])) {
-			newParams[BRANCHES_PAGE_PARAM] = DEFAULT_PAGE;
-		}
-		if (!validU32(searchParams[TESTBEDS_PER_PAGE_PARAM])) {
-			newParams[TESTBEDS_PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
-		}
-		if (!validU32(searchParams[TESTBEDS_PAGE_PARAM])) {
-			newParams[TESTBEDS_PAGE_PARAM] = DEFAULT_PAGE;
-		}
-		if (!validU32(searchParams[BENCHMARKS_PER_PAGE_PARAM])) {
-			newParams[BENCHMARKS_PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
-		}
-		if (!validU32(searchParams[BENCHMARKS_PAGE_PARAM])) {
-			newParams[BENCHMARKS_PAGE_PARAM] = DEFAULT_PAGE;
-		}
-		if (Object.keys(newParams).length !== 0) {
-			setSearchParams(newParams);
-		}
-	});
 
 	const reports_fetcher = createMemo(() => {
 		return {
