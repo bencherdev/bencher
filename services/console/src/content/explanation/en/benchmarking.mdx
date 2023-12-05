@@ -36,12 +36,12 @@ The only exception to the above caveat is ignoring a Benchmark. See [suppressing
 
 ### Metrics
 A Metric is a single, point-in-time performance regression test result.
-Up to three Measures may be collected for a single Metric: `value`, `lower_value`, and `upper_value`.
+Up to three Values may be collected for a single Metric: `value`, `lower_value`, and `upper_value`.
 The `value` is required for all Metrics while the `lower_value` and `upper_value` are independently optional.
-Which Measures are collected is determined by the [benchmark harness adapter](/docs/explanation/adapters).
+Which Values are collected is determined by the [benchmark harness adapter](/docs/explanation/adapters).
 
-### Measure
-A Measure is the unit of measure for a Metric.
+### Measures
+A Measure is the unit of measurement for a Metric.
 By default all Projects start with a `Latency` and `Throughput` Measure
 with units of `nanoseconds (ns)` and `operations / second (ops/s)` respectively.
 The Measure is determined by the [benchmark harness adapter](/docs/explanation/adapters).
