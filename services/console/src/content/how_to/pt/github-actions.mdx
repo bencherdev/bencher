@@ -41,7 +41,7 @@ Se você espera ter PRs apenas de branches dentro do **mesmo** repositório, ent
 
 1. Execute em eventos de `push` para a branch `main` e em eventos de `pull_request`. É importante limitar a execução em `push` **apenas** para as branches selecionadas (ex: `main`) para evitar que pushes para branches de PR sejam executados duas vezes!
 2. Em vez de sempre usar a branch `main`, use as [variáveis de ambiente padrão das Ações do GitHub](https://docs.github.com/pt/actions/learn-github-actions/variables#default-environment-variables) para:
-        1. Use os dados da branch atual se já existirem. (ex: `--if-branch --if-branch '${{ env.PR_HEAD }}'`)
+        1. Use os dados da branch atual se já existirem. (ex: `--if-branch '${{ github.head_ref }}'`)
         2. Crie um clone dos dados e limites da branch de destino do PR se já existirem. (ex: `--else-if-branch '${{ github.base_ref }}'`)
         3. Caso contrário, crie um clone dos dados e limites da branch `main`. (ex: `--else-if-branch main`)
         4. Existem várias opções para definir a branch do projeto. Veja [seleção de branch](/docs/pt/explanation/branch-selection) para uma visão geral completa.
@@ -81,6 +81,8 @@ Em vez disso, passe explicitamente o token da API para `bencher run`. (ex: `--to
 Veja este [artigo do GitHub Security Lab](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
 e [este post de blog](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
 sobre a prevenção de solicitações pwn para uma visão geral completa.
+
+Também é _muito_ importante envolver o nome do branch do PR (head ref) em **simples** aspas. (ex: `--if-branch '${{ github.head_ref }}'`) Caso contrário, um invasor poderia criar um branch com um nome malicioso que realiza uma injeção de comando. Veja este [artigo do GitHub Security Lab](https://securitylab.github.com/research/github-actions-untrusted-input/) sobre como prevenir solicitações pwn de entrada não confiável para uma visão geral completa.
 
 ### Benchmark PR Fork da Branch Alvo com Revisores Obrigatórios
 

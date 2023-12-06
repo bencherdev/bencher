@@ -41,7 +41,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 
 1. Запускайте при событиях `push` в `main` ветку и на `pull_request` событиях. Важно ограничить запуск при событии `push` **только** для выбранных ветвей (например, `main`), чтобы предотвратить двойной запуск при пушах в ветки PR!
 2. Вместо всегда использования ветки `main`, используйте [переменные среды по умолчанию GitHub Action](https://docs.github.com/ru/actions/learn-github-actions/variables#default-environment-variables) для:
-        1. Использование текущих данных ветки, если они уже существуют. (пример: `--if-branch --if-branch '${{ env.PR_HEAD }}'`)
+        1. Использование текущих данных ветки, если они уже существуют. (пример: `--if-branch '${{ github.head_ref }}'`)
         2. Создания клонов данных целевой ветки PR и порогов, если они уже существуют. (пример: `--else-if-branch '${{ github.base_ref }}'`)
         3. В других случаях создания клонов данных ветки `main` и порогов. (пример: `--else-if-branch main`)
         4. Есть несколько вариантов установки ветки проекта. Подробнее см. [выбор ветви](/docs/ru/explanation/branch-selection).
@@ -81,6 +81,9 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 Смотрите [GitHub Security Lab write up](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
 и [эту статью в блоге](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
 о предотвращении запросов вредоносного контента для подробного обзора.
+
+Также _очень_ важно заключить имя ветки PR (head ref) в **одинарные** кавычки. (например: `--if-branch '${{ github.head_ref }}'`). В противном случае злоумышленник может создать ветку с злонамеренным названием, которая производит внедрение команд. Подробное описание можно прочитать в этой [статье Лаборатории безопасности GitHub](https://securitylab.github.com/research/github-actions-untrusted-input/) о предотвращении pwn-запросов от ненадежного ввода.
+
 
 ### Benchmark Fork PR из целевой ветки с обязательными ревьюерами
 

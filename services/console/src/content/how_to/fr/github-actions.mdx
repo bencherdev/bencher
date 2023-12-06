@@ -41,7 +41,7 @@ Si vous prévoyez uniquement d'avoir des PRs provenant de branches au sein du **
 
 1. Exécutez sur les événements `push` à la branche `main` et sur les événements `pull_request`. Il est important de limiter l'exécution `on` `push` **uniquement** à certaines branches selectionnées (ex: `main`) pour empêcher les pushes vers les branches de PR de s'exécuter deux fois!
 2. Au lieu d'utiliser toujours la branche `main`, utilisez les [variables d'environnement par défaut de GitHub Action](https://docs.github.com/fr/actions/learn-github-actions/variables#default-environment-variables) pour :
-        1. Utiliser des données de branche actuelles si elles existent déjà. (ex: `--if-branch --if-branch '${{ env.PR_HEAD }}'`)
+        1. Utiliser des données de branche actuelles si elles existent déjà. (ex: `--if-branch '${{ github.head_ref }}'`)
         2. Créer un clone des données et des seuils de la branche cible de la PR si cela existe déjà. (ex: `--else-if-branch '${{ github.base_ref }}'`)
         3. Sinon, créez un clone des données et des seuils de la branche `main`. (ex: `--else-if-branch main`)
         4. Il existe plusieurs options pour définir la branche du projet. Voir la [sélection de branche](/docs/fr/explanation/branch-selection) pour une vue d'ensemble complète.
@@ -81,6 +81,8 @@ Au lieu de cela, passez explicitement le jeton API à `bencher run`. (ex: `--tok
 Voir ce [document du GitHub Security Lab](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
 et [cet article de blog](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
 sur la prévention des requêtes pwn pour une vue d'ensemble complète.
+
+Il est également _très_ important d'entourer le nom de la branche PR (head ref) de **simples** apostrophes. (ex : `--if-branch '${{ github.head_ref }}'`) Sans quoi, un attaquant pourrait créer une branche malicieusement nommée qui effectue une injection de commande. Consultez ce [compte-rendu du GitHub Security Lab](https://securitylab.github.com/research/github-actions-untrusted-input/) sur la prévention des requêtes pwn provenant d'entrées non fiables pour une vue d'ensemble complète.
 
 ### Tester la PR de Fork à partir de la Branche Cible avec Réviseurs Nécessaires
 

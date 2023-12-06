@@ -40,7 +40,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 
 1. 在`push`至`main`分支和`pull_request`事件上运行。限制只有在`push` **仅** 到指定的分支（例如：`main`）时运行是非常重要的，以防止PR分支的推送运行两次！
 2. 与其总是使用`main`分支，不如使用[GitHub Action默认环境变量](https://docs.github.com/zh/actions/learn-github-actions/variables#default-environment-variables)来：
-        1. 如果已经存在，使用当前分支的数据。（例如：`--if-branch --if-branch '${{ env.PR_HEAD }}'`）
+        1. 如果已经存在，使用当前分支的数据。（例如：`--if-branch '${{ github.head_ref }}'`）
         2. 如果存在，则克隆PR目标分支的数据和阀值。（例如：`--else-if-branch '${{ github.base_ref }}'`）
         3. 否则，克隆`main`分支的数据和阀值。（例如：`--else-if-branch main`）
         4. 设置项目分支有多种选择。请参阅[分支选择](/docs/zh/explanation/branch-selection)了解完整概览。
@@ -69,6 +69,8 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
    3. 用`bencher run`运行并追踪你的拉取请求的性能基准测试。
 
 这种设置有效是因为`pull_request_target`在拉取请求的目标分支的上下文中运行，密钥如`BENCHER_API_TOKEN`和`GITHUB_TOKEN`是有效的。因此，只有在_target_分支上存在此工作流时，此工作流才会运行。避免将任何密钥设置为环境变量，例如`BENCHER_API_TOKEN`。相反，应明确地将API令牌传递给`bencher run`（例如：`--token "${{ secrets.BENCHER_API_TOKEN }}"`）。详情请参见此篇[GitHub安全实验室拾写](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)和[此博客文章](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)对防止pwn请求的完整概览。
+
+同样**非常**重要的是，必须用**单**引号把 PR 分支名称（头引用）包裹起来。 (例如：`--if-branch '${{ github.head_ref }}'`)。否则，攻击者可以创建一个恶意命名的分支，进行命令注入。看一下这篇[GitHub安全实验室的文章](https://securitylab.github.com/research/github-actions-untrusted-input/)，其中对防止来自不受信任输入的 pwn 请求进行了全面的概述。
 
 ### 带有必要审查者从目标分支对Fork PR进行基准测试
 

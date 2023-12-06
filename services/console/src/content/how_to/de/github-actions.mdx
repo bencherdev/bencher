@@ -41,7 +41,7 @@ Wenn Sie nur erwarten, dass Sie PRs von Zweigen innerhalb des **gleichen** Repos
 
 1. Führen Sie `push` Events zum `main` Zweig und auf `pull_request` Events aus. Es ist wichtig, das Laufen bei `push` **nur** auf die ausgewählten Zweige zu beschränken (z.B.: `main`), um zu verhindern, dass Pushes zu PR-Zweigen doppelt ausgeführt werden!
 2. Verwenden Sie statt dem `main` Zweig immer [die standardmäßigen Umgebungsvariablen der GitHub-Aktion](https://docs.github.com/de/actions/learn-github-actions/variables#default-environment-variables) um:
-        1. Die aktuellen Branch-Daten zu verwenden, wenn sie bereits existieren. (z.B.: `--if-branch --if-branch '${{ env.PR_HEAD }}'`)
+        1. Die aktuellen Branch-Daten zu verwenden, wenn sie bereits existieren. (z.B.: `--if-branch '${{ github.head_ref }}'`)
         2. Erstellen Sie einen Klon der PR-Zielbranch-Daten und Schwellenwert, wenn sie bereits existieren. (z.B.: `--else-if-branch '${{ github.base_ref }}'`)
         3. Ansonsten erstellen Sie einen Klon der `main` Branch-Daten und Schwellenwerte. (z.B.: `--else-if-branch main`)
         4. Es gibt mehrere Optionen für die Einstellung des Projektbranches. Siehe [Branch Auswahl](/docs/de/explanation/branch-selection) für einen vollständigen Überblick.
@@ -81,6 +81,8 @@ Vermeiden Sie das Einstellen von Geheimnissen als Umgebungsvariablen, wie `BENCH
 Siehe diese [GitHub Security Lab Aufschreibung](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
 und [diesen Blogbeitrag](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
 zur Vermeidung von pwn-Anfragen für einen vollständigen Überblick.
+
+Es ist auch _sehr_ wichtig, den PR-Branch-Namen (Head Ref) in **einfachen** Anführungszeichen zu umschließen. (z.B. `--if-branch '${{ github.head_ref }}'`) Andernfalls könnte ein Angreifer einen bösartig benannten Zweig erstellen, der Befehlsinjektionen durchführt. Siehe diesen [GitHub Security Lab Bericht](https://securitylab.github.com/research/github-actions-untrusted-input/) über die Vermeidung von Pwn-Anfragen aus nicht vertrauenswürdigen Eingaben für einen vollständigen Überblick.
 
 ### Benchmark Fork-PR vom Zielbranch mit erforderlichen Prüfern
 

@@ -41,7 +41,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 
 1. `main`ブランチへの `push`イベントと`pull_request`イベントで実行します。`push`を **すべての**選択したブランチ（例: `main`）のみに制限することで、PRブランチへのプッシュが2回実行されるのを防ぎます！
 2. 常に`main`ブランチを使用する代わりに、[GitHub Actionのデフォルトの環境変数](https://docs.github.com/ja/actions/learn-github-actions/variables#default-environment-variables) を使用して:
-        1. すでに存在する場合は、現在のbranchのデータを使用します。(例: `--if-branch --if-branch '${{ env.PR_HEAD }}'`)
+        1. すでに存在する場合は、現在のbranchのデータを使用します。(例: `--if-branch '${{ github.head_ref }}'`)
         2. すでに存在する場合は、PRターゲットbranchのデータとしきい値をクローンします。(例: `--else-if-branch '${{ github.base_ref }}'`)
         3. それ以外の場合は、`main` branchのデータとしきい値をクローンします。(例: `--else-if-branch main`)
         4. プロジェクトbranchを設定するためのいくつかのオプションがあります。全体の概要については、[branch selection](/docs/ja/explanation/branch-selection) をご覧ください。
@@ -79,6 +79,8 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 代わりに APIトークンを `bencher run` へ明示的に渡してください (例: `--token "${{ secrets.BENCHER_API_TOKEN }}"`).
 完全な概観については、この [GitHubセキュリティラボの書き込み](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/) と
 [this blog post](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests) をご覧ください。
+
+また、PRブランチ名（ヘッド参照）を**単一の**引用符で囲むことも非常に重要です。（例：`--if-branch '${{ github.head_ref }}'`）そうしないと、攻撃者はコマンドインジェクションを行う悪意のある名前のブランチを作成することができます。この[GitHub Security Labの概要](https://securitylab.github.com/research/github-actions-untrusted-input/)を参照して、信頼できない入力からのpwnリクエストを防ぐ完全な概要をご覧ください。
 
 ### 必須レビュワー付きのターゲットブランチからのフォークPRのベンチマーク
 

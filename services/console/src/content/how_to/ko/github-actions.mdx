@@ -41,7 +41,7 @@ Pull Request에서 성능 회귀를 잡아내기 위해 PR에서 벤치마크를
 
 1. `push` 이벤트를 `main` 브랜치로 실행하고 `pull_request` 이벤트에서도 실행합니다. PR 브랜치에 대한 push가 두 번 실행되는 것을 막기 위해, `push`를 선택된 브랜치(예: `main`)로 **만** 실행하는 것이 중요합니다!
 2. 항상 `main` 브랜치를 사용하는 대신에, [GitHub Action 기본 환경 변수](https://docs.github.com/ko/actions/learn-github-actions/variables#default-environment-variables)를 사용하여:
-        1. 현재 브랜치 데이터가 이미 존재하면 이를 사용합니다. (예: `--if-branch --if-branch '${{ env.PR_HEAD }}'`)
+        1. 현재 브랜치 데이터가 이미 존재하면 이를 사용합니다. (예: `--if-branch '${{ github.head_ref }}'`)
         2. PR 대상 브랜치 데이터와 임계값이 이미 존재하면 이를 복제해서 만듭니다. (예: `--else-if-branch '${{ github.base_ref }}'`)
         3. 그 외의 경우, `main` 브랜치 데이터와 임계값을 복제해서 만듭니다. (예: `--else-if-branch main`)
         4. 프로젝트 브랜치를 설정하는 데는 여러 가지 옵션이 있습니다. 전체 개요는 [브랜치 선택](/docs/ko/explanation/branch-selection)을 참조하세요.
@@ -79,6 +79,8 @@ fork PRs에는 세 가지 옵션이 있습니다:
 전체 개요는 [GitHub Security Lab 글](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
 및 [이 블로그 게시물](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
 에서 pwn 요청을 방지하는 방법을 확인할 수 있습니다.
+
+PR 브랜치 이름 (head ref)을 **단일** 인용부호로 감싸는 것도 _매우_ 중요합니다. (예: `--if-branch '${{ github.head_ref }}'`) 그렇지 않으면 공격자가 명령 인젝션을 수행하는 악의적으로 이름 지은 브랜치를 만들 수 있습니다. 불신할 만한 입력에서 pwn 요청을 방지하기 위한 전체 개요는 이 [GitHub 보안 랩 소개](https://securitylab.github.com/research/github-actions-untrusted-input/)를 참조하십시오.
 
 ### 필수 리뷰어가 있는 Target Branch로부터 Fork PR를 벤치마크
 

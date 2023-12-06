@@ -41,7 +41,7 @@ Si solo esperas tener PRs desde las branch dentro del **mismo** repositorio ento
 
 1. Ejecuta `push` en eventos para la branch `main` y en `pull_request`. Es importante limitar la ejecución en `push` **solo** a seleccionar las branch (p.ej: `main`) para prevenir pushs a las branch PR de ejecutar dos veces!
 2. En lugar de siempre utilizar la branch `main`, usa las [variables de entorno por defecto de la Acción de GitHub](https://docs.github.com/es/actions/learn-github-actions/variables#default-environment-variables) para:
-        1. Usa los datos de la branch actual si ya existen. (p.ej: `--if-branch --if-branch '${{ env.PR_HEAD }}'`)
+        1. Usa los datos de la branch actual si ya existen. (p.ej: `--if-branch '${{ github.head_ref }}'`)
         2. Crea un clon de los datos y umbrales de la branch objetivo de PR si ya existen. (p.ej: `--else-if-branch '${{ github.base_ref }}'`)
         3. De lo contrario, crea un clon de los datos y umbrales de la branch `main`. (p.ej: `--else-if-branch main`)
         4. Hay varias opciones para ajustar la branch del proyecto. Consulta [selección de branch](/docs/es/explanation/branch-selection) para una visión general completa.
@@ -81,6 +81,8 @@ En su lugar, pasa explícitamente el token de API a `bencher run`. (p.ej: `--tok
 Consulta esta [reseña del laboratorio de seguridad de GitHub](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
 y [este post de blog](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
 sobre cómo prevenir peticiones pwn para una visión general completa.
+
+También es _muy_ importante rodear el nombre de la rama PR (head ref) con comillas **simples**. (ej: `--if-branch '${{ github.head_ref }}'`) De lo contrario, un atacante podría crear una rama malintencionadamente nombrada que realiza inyección de comandos. Consulte esta [redacción del Laboratorio de Seguridad de GitHub](https://securitylab.github.com/research/github-actions-untrusted-input/) sobre cómo prevenir solicitudes de pwn de entradas no confiables para obtener una visión general completa.
 
 ### Benchmark Fork PR desde Branch Objetivo con Revisores Requeridos
 
