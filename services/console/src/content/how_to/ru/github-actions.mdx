@@ -7,9 +7,9 @@ sortOrder: 3
 
 import GitHubActions1 from "../../../chunks/how_to/github-actions.1.mdx";
 import GitHubActions2 from "../../../chunks/how_to/github-actions.2.mdx";
+import GitHubActions3 from "../../../chunks/how_to/github-actions.3.mdx";
 import GitHubActions4 from "../../../chunks/how_to/github-actions.4.mdx";
 import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
-import GitHubActions6 from "../../../chunks/how_to/github-actions.6.mdx";
 
 <GitHubActions1 />
 
@@ -41,11 +41,11 @@ import GitHubActions6 from "../../../chunks/how_to/github-actions.6.mdx";
 
 1. Запускайте при событиях `push` в `main` ветку и на `pull_request` событиях. Важно ограничить запуск при событии `push` **только** для выбранных ветвей (например, `main`), чтобы предотвратить двойной запуск при пушах в ветки PR!
 2. Вместо всегда использования ветки `main`, используйте [переменные среды по умолчанию GitHub Action](https://docs.github.com/ru/actions/learn-github-actions/variables#default-environment-variables) для:
-        1. Использование текущих данных ветки, если они уже существуют. (пример: `--if-branch '${{ github.head_ref }}'`)
+        1. Использование текущих данных ветки, если они уже существуют. (пример: `--if-branch --if-branch '${{ env.PR_HEAD }}'`)
         2. Создания клонов данных целевой ветки PR и порогов, если они уже существуют. (пример: `--else-if-branch '${{ github.base_ref }}'`)
         3. В других случаях создания клонов данных ветки `main` и порогов. (пример: `--else-if-branch main`)
         4. Есть несколько вариантов установки ветки проекта. Подробнее см. [выбор ветви](/docs/ru/explanation/branch-selection).
-3. Установите токен аутентификации на GitHub API. (пример: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`) При установке этой опции как часть pull request, результаты будут добавлены в pull request как комментарий. Используется [переменная среды `GITHUB_TOKEN` в GitHub Actions](https://docs.github.com/ru/actions/security-guides/automatic-token-authentication).
+3. Установите токен аутентификации на GitHub API. (пример: `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) При установке этой опции как часть pull request, результаты будут добавлены в pull request как комментарий. Используется [переменная среды `GITHUB_TOKEN` в GitHub Actions](https://docs.github.com/ru/actions/security-guides/automatic-token-authentication).
 4. См. документацию [bencher run](/docs/ru/explanation/bencher-run) для подробного обзора всех способов настройки комментария к pull request с помощью флагов `--ci-*`.
 
 ## Pull Requests из форков
@@ -64,29 +64,27 @@ import GitHubActions6 from "../../../chunks/how_to/github-actions.6.mdx";
 
 ### Benchmark Fork PR из целевой ветки
 
-<GitHubActions4 />
+<GitHubActions3 />
 
 1. Запускайте на событиях `push` в `main` ветку и [на событиях `pull_request_target`](https://docs.github.com/ru/actions/using-workflows/events-that-trigger-workflows#pull_request_target).
 2. Создайте `job` который запускается только для событий `push` в `main` ветку. За исключением условия `if`, этот `job` почти идентичен оригинальному примеру выше.
 3. Создайте `job` который запускается только для событий `pull_request_target`.
    1. Произведите клонирование ветки pull request.
-   2. Передайте все секреты непосредственно. Используйте `--token '${{ secrets.BENCHER_API_TOKEN }}'` вместо переменной среды `BENCHER_API_TOKEN`.
+   2. Передайте все секреты непосредственно. Используйте `--token "${{ secrets.BENCHER_API_TOKEN }}"` вместо переменной среды `BENCHER_API_TOKEN`.
    3. Запустите бенчмарки вашего pull request и отслеживайте их с `bencher run`.
 
 Эта установка работает, потому что `pull_request_target` выполняется в контексте целевой ветки pull request,
 где доступны секреты, такие как ваш `BENCHER_API_TOKEN` и `GITHUB_TOKEN`.
 Поэтому, этот workflow будет запущен только если он существует на _целевой_ ветке.
 Избегайте установки любых секретов в переменных среды, таких как `BENCHER_API_TOKEN`.
-Вместо этого явно передавайте API токен в `bencher run`. (пример: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+Вместо этого явно передавайте API токен в `bencher run`. (пример: `--token "${{ secrets.BENCHER_API_TOKEN }}"`)
 Смотрите [GitHub Security Lab write up](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
 и [эту статью в блоге](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
 о предотвращении запросов вредоносного контента для подробного обзора.
 
-Также _очень_ важно заключить имя ветки PR (head ref) в **одинарные** кавычки. (например: `'${{ github.head_ref }}'`). В противном случае злоумышленник может создать ветку с злонамеренным названием, которая производит внедрение команд. Подробное описание можно прочитать в этой [статье Лаборатории безопасности GitHub](https://securitylab.github.com/research/github-actions-untrusted-input/) о предотвращении pwn-запросов от ненадежного ввода.
-
 ### Benchmark Fork PR из целевой ветки с обязательными ревьюерами
 
-<GitHubActions5 />
+<GitHubActions4 />
 
 Эта установка точно такая же, как и [Benchmark Fork PR из целевой ветки](#benchmark-fork-pr-from-target-branch)
 с дополнительным требованием одобрения от Обязательного Ревьюера перед каждым запуском бенчмарка для pull request из форка.
@@ -98,7 +96,7 @@ Pull requests из того же репозитория не требуют од
 
 ### Benchmark Fork PR и загрузка из ветки по умолчанию
 
-<GitHubActions6 />
+<GitHubActions5 />
 
 1. Создайте файл workflow `Run and Cache Benchmarks`.
 1. Запустите ваши бенчмарки на событиях `pull_request`.
@@ -115,6 +113,8 @@ Pull requests из того же репозитория не требуют од
 Поэтому, эти workflow будут запущены только если они существуют на ветке _по умолчанию_.
 Смотрите [использование данных от запускающего workflow](https://docs.github.com/ru/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow) для подробного обзора.
 Номер pull request, ветка шапки и основная ветка, использованные в исходном workflow, должны быть явно переданы, так как они недоступны внутри `workflow_run`.
+
+Также _очень_ важно заключить имя ветки PR (head ref) в **одинарные** кавычки. (например: `--if-branch '${{ env.PR_HEAD }}'`). В противном случае злоумышленник может создать ветку с злонамеренным названием, которая производит внедрение команд. Подробное описание можно прочитать в этой [статье Лаборатории безопасности GitHub](https://securitylab.github.com/research/github-actions-untrusted-input/) о предотвращении pwn-запросов от ненадежного ввода.
 
 <br/>
 <br/>

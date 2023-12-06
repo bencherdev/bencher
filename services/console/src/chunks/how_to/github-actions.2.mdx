@@ -19,10 +19,10 @@ jobs:
       - name: Track Benchmarks with Bencher
         run: |
           bencher run \
-          --if-branch '${{ github.head_ref }}' \
-          --else-if-branch '${{ github.base_ref }}' \
+          --if-branch "$GITHUB_REF_NAME" \
+          --else-if-branch "$GITHUB_BASE_REF" \
           --else-if-branch main \
-          --github-actions '${{ secrets.GITHUB_TOKEN }}' \
+          --github-actions "${{ secrets.GITHUB_TOKEN }}" \
           --err \
           "bencher mock"
 ```

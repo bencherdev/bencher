@@ -7,9 +7,9 @@ sortOrder: 3
 
 import GitHubActions1 from "../../../chunks/how_to/github-actions.1.mdx";
 import GitHubActions2 from "../../../chunks/how_to/github-actions.2.mdx";
+import GitHubActions3 from "../../../chunks/how_to/github-actions.3.mdx";
 import GitHubActions4 from "../../../chunks/how_to/github-actions.4.mdx";
 import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
-import GitHubActions6 from "../../../chunks/how_to/github-actions.6.mdx";
 
 <GitHubActions1 />
 
@@ -41,11 +41,11 @@ Se você espera ter PRs apenas de branches dentro do **mesmo** repositório, ent
 
 1. Execute em eventos de `push` para a branch `main` e em eventos de `pull_request`. É importante limitar a execução em `push` **apenas** para as branches selecionadas (ex: `main`) para evitar que pushes para branches de PR sejam executados duas vezes!
 2. Em vez de sempre usar a branch `main`, use as [variáveis de ambiente padrão das Ações do GitHub](https://docs.github.com/pt/actions/learn-github-actions/variables#default-environment-variables) para:
-        1. Use os dados da branch atual se já existirem. (ex: `--if-branch '${{ github.head_ref }}'`)
+        1. Use os dados da branch atual se já existirem. (ex: `--if-branch --if-branch '${{ env.PR_HEAD }}'`)
         2. Crie um clone dos dados e limites da branch de destino do PR se já existirem. (ex: `--else-if-branch '${{ github.base_ref }}'`)
         3. Caso contrário, crie um clone dos dados e limites da branch `main`. (ex: `--else-if-branch main`)
         4. Existem várias opções para definir a branch do projeto. Veja [seleção de branch](/docs/pt/explanation/branch-selection) para uma visão geral completa.
-3. Defina o token de autenticação da API do GitHub. (ex: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`) Quando essa opção é definida como parte de um pull request, então os resultados serão adicionados ao pull request como um comentário. Isso usa [a variável de ambiente `GITHUB_TOKEN` das Ações do GitHub](https://docs.github.com/pt/actions/security-guides/automatic-token-authentication).
+3. Defina o token de autenticação da API do GitHub. (ex: `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) Quando essa opção é definida como parte de um pull request, então os resultados serão adicionados ao pull request como um comentário. Isso usa [a variável de ambiente `GITHUB_TOKEN` das Ações do GitHub](https://docs.github.com/pt/actions/security-guides/automatic-token-authentication).
 4. Veja a documentação do [bencher run](/docs/pt/explanation/bencher-run) para uma visão geral completa de todas as maneiras de configurar o comentário do pull request com as flags `--ci-*`.
 
 ## Pull Requests de Forks
@@ -64,29 +64,27 @@ Existem três opções para PRs de forks:
 
 ### Benchmark PR Fork da Branch Alvo
 
-<GitHubActions4 />
+<GitHubActions3 />
 
 1. Execute em eventos de `push` para a branch `main` e [em eventos de `pull_request_target`](https://docs.github.com/pt/actions/using-workflows/events-that-trigger-workflows#pull_request_target).
 2. Crie uma `job` que só é executada para eventos de `push` para a branch `main`. Além da condição `if`, esse trabalho é quase idêntico ao exemplo original acima.
 3. Crie uma `job` que só é executada para eventos de `pull_request_target`.
    1. Faça o checkout da branch do pull request.
-   2. Passe todos os segredos diretamente. Use `--token '${{ secrets.BENCHER_API_TOKEN }}'` em vez da variável de ambiente `BENCHER_API_TOKEN`.
+   2. Passe todos os segredos diretamente. Use `--token "${{ secrets.BENCHER_API_TOKEN }}"` em vez da variável de ambiente `BENCHER_API_TOKEN`.
    3. Execute e monitore seus benchmarks de pull request com `bencher run`.
 
 Esta configuração funciona porque `pull_request_target` é executado no contexto da branch alvo do pull request,
 onde seus segredos como `BENCHER_API_TOKEN` e `GITHUB_TOKEN` estão disponíveis.
 Portanto, esse workflow só será executado se existir na branch _alvo_.
 Evite definir quaisquer segredos como variáveis de ambiente, como `BENCHER_API_TOKEN`.
-Em vez disso, passe explicitamente o token da API para `bencher run`. (ex: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+Em vez disso, passe explicitamente o token da API para `bencher run`. (ex: `--token "${{ secrets.BENCHER_API_TOKEN }}"`)
 Veja este [artigo do GitHub Security Lab](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
 e [este post de blog](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
 sobre a prevenção de solicitações pwn para uma visão geral completa.
 
-Também é _muito_ importante envolver o nome do branch do PR (head ref) em **simples** aspas. (ex: `'${{ github.head_ref }}'`) Caso contrário, um invasor poderia criar um branch com um nome malicioso que realiza uma injeção de comando. Veja este [artigo do GitHub Security Lab](https://securitylab.github.com/research/github-actions-untrusted-input/) sobre como prevenir solicitações pwn de entrada não confiável para uma visão geral completa.
-
 ### Benchmark PR Fork da Branch Alvo com Revisores Obrigatórios
 
-<GitHubActions5 />
+<GitHubActions4 />
 
 Esta configuração é exatamente a mesma que [Benchmark PR Fork da Branch Alvo](#benchmark-pr-fork-da-branch-alvo)
 com a exigência adicional de aprovação de um Revisor Necessário antes de cada execução do fork do pull request.
@@ -98,7 +96,7 @@ No entanto, o ambiente `externo` deve ter `Revisores necessários` definidos par
 
 ### Benchmark PR Fork e Upload da Branch Padrão
 
-<GitHubActions6 />
+<GitHubActions5 />
 
 1. Crie um arquivo de workflow `Run and Cache Benchmarks`.
 2. Execute seus benchmarks em eventos de `pull_request`.
@@ -115,6 +113,8 @@ onde seus segredos como `BENCHER_API_TOKEN` e `GITHUB_TOKEN` estão disponíveis
 Portanto, esses workflows só serão executados se existirem na branch _padrão_.
 Veja [usando dados do workflow que desencadeou](https://docs.github.com/pt/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow) para uma visão geral completa.
 O número do pull request, a branch de origem e a branch base usada no workflow inicial devem ser passados explicitamente, pois eles não estão disponíveis dentro do `workflow_run`.
+
+Também é _muito_ importante envolver o nome do branch do PR (head ref) em **simples** aspas. (ex: `--if-branch '${{ env.PR_HEAD }}'`) Caso contrário, um invasor poderia criar um branch com um nome malicioso que realiza uma injeção de comando. Veja este [artigo do GitHub Security Lab](https://securitylab.github.com/research/github-actions-untrusted-input/) sobre como prevenir solicitações pwn de entrada não confiável para uma visão geral completa.
 
 <br/>
 <br/>

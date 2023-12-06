@@ -2,11 +2,51 @@
 on:
   push:
     branches: main
-  pull_request:
+  pull_request_target:
 
 jobs:
-  benchmark_with_bencher:
-    name: Track benchmarks with Bencher
-    if: contains(github.event.pull_request.labels.*.name, 'benchmark')
+  benchmark_main_with_bencher:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    name: Benchmark main with Bencher
     runs-on: ubuntu-latest
+    env:
+      BENCHER_PROJECT: save-walter-white
+      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+      BENCHER_TESTBED: ubuntu-latest
+      BENCHER_ADAPTER: json
+    steps:
+      - uses: actions/checkout@v3
+      - uses: bencherdev/bencher@main
+      - name: Track Benchmarks with Bencher
+        run: |
+          bencher run \
+          --branch main \
+          --err \
+          "bencher mock"
+
+  benchmark_pr_with_bencher:
+    if: github.event_name == 'pull_request_target'
+    name: Benchmark PR with Bencher
+    runs-on: ubuntu-latest
+    env:
+      BENCHER_PROJECT: save-walter-white
+      BENCHER_ADAPTER: json
+      BENCHER_TESTBED: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          persist-credentials: false
+      - uses: bencherdev/bencher@main
+      - name: Track Benchmarks with Bencher
+        run: |
+          bencher run \
+          --if-branch "$GITHUB_REF_NAME" \
+          --else-if-branch "$GITHUB_BASE_REF" \
+          --else-if-branch main \
+          --github-actions "${{ secrets.GITHUB_TOKEN }}" \
+          --token "${{ secrets.BENCHER_API_TOKEN }}" \
+          --err \
+          "bencher mock"
 ```
