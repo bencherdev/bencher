@@ -1,6 +1,6 @@
 ---
 title: "GitHub Actions"
-description: "Usa Bencher en GitHub Actions para establecer un marcado continuo en los pull requests"
+description: "Usa Bencher en GitHub Actions para el benchmarking continuo en pull requests"
 heading: "Cómo usar Bencher en GitHub Actions"
 sortOrder: 3
 ---
@@ -13,116 +13,132 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 
 <GitHubActions1 />
 
-1. Crea un archivo de `workflow` de GitHub Actions. (p.ej: `.github/workflows/benchmark.yml`)
-2. Ejecuta `push` en eventos para la branch `main`. Consulta la [documentación de `on` de GitHub Actions](https://docs.github.com/es/actions/using-workflows/workflow-syntax-for-github-actions#on) para una visión general completa. También puedes ver [Pull Requests](#pull-requests) a continuación.
-3. Crea un `trabajo` de GitHub Actions. (p.ej: `benchmark_with_bencher`)
-4. El proyecto ya debe existir. Ajusta la opción `--project` o la variable de entorno `BENCHER_PROJECT` al slug del proyecto o al UUID (p.ej: `BENCHER_PROJECT: save-walter-white`).
-5. El token de API ya debe existir. Agrega `BENCHER_API_TOKEN` como un secreto del **Repositorio**. (p.ej: `Repo -> Configuración -> Secretos y variables -> Acciones -> Nuevo secreto del repositorio`) Ajusta la opción `--token` o variable de entorno `BENCHER_API_TOKEN` al token de API. (p.ej: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
-6. Opcional: Ajusta la opción `--testbed` o la variable de entorno `BENCHER_TESTBED` al slug de Testbed o al UUID.  (p.ej: `BENCHER_TESTBED: ubuntu-latest`) El Testbed **debe** ya existir. Si esto no está ajustado, entonces el Testbed `localhost` será usado.
-7. Opcional: Ajusta la opción `--adapter` o la variable de entorno `BENCHER_ADAPTER` al nombre del adaptador deseado.  (p.ej: `BENCHER_ADAPTER: json`) Si esto no está ajustado, entonces el Adapter `magic` será usado. Consulta los [adaptadores de harness de benchmark](/docs/es/explanation/adapters) para obtener una visión general completa.
-8. Verifica tu código fuente. (p.ej: `uses: actions/checkout@v3`)
-9. Instala la CLI de Bencher usando la [Acción de GitHub](https://github.com/marketplace/actions/bencher-cli). (p.ej: `uses: bencherdev/bencher@main`)
-10. [Monitorear tus benchmarks](/docs/es/how-to/track-benchmarks) con el subcomando CLI de <code><a href="/docs/es/explanation/bencher-run">bencher run</a></code>:
-    1.  Opcional: Ajusta la opción `--branch` o la variable de entorno `BENCHER_BRANCH` al slug de la Branch o al UUID. (p.ej: `--branch main`) La Branch **debe** ya existir. Si esto no está ajustado, entonces la Branch `main` será usada.
-    2. Ajusta el comando para fallar si una Alerta es generada. (p.ej: `--err`) Para que una Alerta sea generada, un [Umbral](/docs/es/explanation/thresholds) debe ya existir.
-    3. Ejecuta tus benchmarks y genera un Reporte desde los resultados. (p.ej: `"bencher mock"`)
+1. Crea un archivo `workflow` de GitHub Actions. (ej: `.github/workflows/benchmark.yml`)
+2. Ejecutar en eventos `push` a la rama `main`. Consulte la [documentación `on` de GitHub Actions](https://docs.github.com/es/actions/using-workflows/workflow-syntax-for-github-actions#on) para obtener una visión completa. También consulte [Pull Requests](#pull-requests) a continuación.
+3. Crea un `job` de GitHub Actions. (ej: `benchmark_with_bencher`)
+4. El proyecto debe existir previamente. Establece la bandera `--project` o la variable de entorno `BENCHER_PROJECT` a la representación única o UUID del proyecto (ej: `BENCHER_PROJECT: save-walter-white`).
+5. La ficha API ya debe existir. Añade `BENCHER_API_TOKEN` como un secreto del **repositorio**. (ej: `Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`) Establece la bandera `--token` o la variable de entorno `BENCHER_API_TOKEN` a la ficha API. (ej: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
+6. Opcional: Configura la bandera `--testbed` o la variable de entorno `BENCHER_TESTBED` a la representación única o UUID de Testbed. (ej: `BENCHER_TESTBED: ubuntu-latest`) El Testbed **debe** existir previamente. Si no se establece esto, entonces se utilizará el Testbed `localhost`.
+7. Opcional: Configura la bandera `--adapter` o la variable de entorno `BENCHER_ADAPTER` al nombre del adaptador deseado. (ej: `BENCHER_ADAPTER: json`) Si no se establece esto, entonces se utilizará el adaptador `magic`. Consulte [adaptadores de arnés de benchmark](/docs/es/explanation/adapters) para obtener una visión completa.
+8. Haz una copia de tu código fuente. (ej: `uses: actions/checkout@v3`)
+9. Instala la CLI de Bencher utilizando la [Acción de GitHub](https://github.com/marketplace/actions/bencher-cli). (ej: `uses: bencherdev/bencher@main`)
+10. [Rastrea tus benchmarks](/docs/es/how-to/track-benchmarks) con el subcomando CLI <code><a href="/docs/es/explanation/bencher-run">bencher run</a></code>:
+    1.  Opcional: Configura la bandera `--branch` o la variable de entorno `BENCHER_BRANCH` a la representación única o UUID de la rama. (ej: `--branch main`) La rama **debe** existir previamente. Si no se establece esto, entonces se utilizará la rama `main`.
+    2.  Establece el comando para fallar si se genera una Alerta. (ej: `--err`) Para que se genere una Alerta, un [Umbral](/docs/es/explanation/thresholds) debe existir previamente.
+    3.  Ejecuta tus benchmarks y genera un informe a partir de los resultados. (ej: `"bencher mock"`)
 
 <br/>
 
 ## Pull Requests
 
 Para detectar la regresión del rendimiento en los Pull Requests, necesitarás ejecutar tus benchmarks en PRs.
-Si solo esperas tener PRs desde las branch dentro del **mismo** repositorio entonces simplemente puedes modificar el ejemplo de arriba para también ejecutar `on` en `pull_request`.
+Si solo esperas tener PRs de ramas dentro del **mismo** repositorio, entonces puedes simplemente modificar el ejemplo anterior para también ejecutar `on` eventos `pull_request`.
 
 > ⚠️ ¡Esta solución solo funciona si todos los PRs son del **mismo** repositorio!
-> Consulta [Pull Requests desde Forks](#pull-requests-from-forks) a continuación.
+> Consulta [Pull Requests de Forks](#pull-requests-from-forks) a continuación.
 
 <GitHubActions2 />
 
-1. Ejecuta `push` en eventos para la branch `main` y en `pull_request`. Es importante limitar la ejecución en `push` **solo** a seleccionar las branch (p.ej: `main`) para prevenir pushs a las branch PR de ejecutar dos veces!
-2. En lugar de siempre utilizar la branch `main`, usa las [variables de entorno por defecto de la Acción de GitHub](https://docs.github.com/es/actions/learn-github-actions/variables#default-environment-variables) para:
-        1. Usa los datos de la branch actual si ya existen. (p.ej: `--if-branch '${{ github.head_ref }}'`)
-        2. Crea un clon de los datos y umbrales de la branch objetivo de PR si ya existen. (p.ej: `--else-if-branch '${{ github.base_ref }}'`)
-        3. De lo contrario, crea un clon de los datos y umbrales de la branch `main`. (p.ej: `--else-if-branch main`)
-        4. Hay varias opciones para ajustar la branch del proyecto. Consulta [selección de branch](/docs/es/explanation/branch-selection) para una visión general completa.
-3. Ajusta el token de autenticación de GitHub API. (p.ej: `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) Cuando esta opción se ajusta como parte de un pull request, entonces los resultados serán adicionados al pull request como un comentario. Esto usa [la variable de entorno `GITHUB_TOKEN` de GitHub Actions](https://docs.github.com/es/actions/security-guides/automatic-token-authentication).
-4. Consulta la [documentación de bencher run](/docs/es/explanation/bencher-run) para una visión general completa de todas las maneras de configurar el comentario de pull request con las opciones `--ci-*`.
+1. Crea un archivo `workflow` de GitHub Actions. (ej: `.github/workflows/benchmark.yml`)
+1. Ejecuta en eventos `push` a la rama `main` y en eventos `pull_request`. Es importante limitar la ejecución en `push` **solo** a las ramas seleccionadas (ej: `main`) para evitar que las push a las ramas de PR se ejecuten dos veces!
+2. En lugar de usar siempre la rama `main`, usa las [variables de entorno predeterminadas de GitHub Action](https://docs.github.com/es/actions/learn-github-actions/variables#default-environment-variables) para:
+        1. Usa los datos de la rama actual si ya existen. (ej: `--if-branch '${{ github.head_ref }}'`)
+        2. Crea un clon de los datos de la rama objetivo de PR y umbrales si ya existen. (ej: `--else-if-branch '${{ github.base_ref }}'`)
+        3. De lo contrario, crea un clon de los datos de la rama `main` y umbrales. (ej: `--else-if-branch main`)
+        4. Hay varias opciones para configurar la rama del proyecto. Consulta la [selección de rama](/docs/es/explanation/branch-selection) para una visión completa.
+3. Establece el token de autenticación de la API de GitHub. (ej: `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) Cuando esta opción se configura como parte de un pull request, entonces los resultados se añadirán al pull request como un comentario. Esto usa [la variable de entorno `GITHUB_TOKEN` de GitHub Actions](https://docs.github.com/es/actions/security-guides/automatic-token-authentication).
+4. Consulta la documentación de [bencher run](/docs/es/explanation/bencher-run) para una visión completa de todas las formas de configurar el comentario de la pull request con las banderas `--ci-*`.
 
-## Pull Requests from Forks
+## Pull Requests desde Forks
 
-Si planeas aceptar pull requests desde forks, como es a menudo el caso en proyectos de código abierto públicos,
-entonces necesitarás manejar las cosas un poco diferente.
-Por razones de seguridad, secretos como tu `BENCHER_API_TOKEN` y el `GITHUB_TOKEN` no están disponibles en GitHub Actions para los PRs de fork.
-Es decir si un contribuyente externo abre un PR desde un fork el ejemplo de arriba no funcionará.
-Hay tres opciones para los PRs de fork:
+Si planeas aceptar pull requests desde forks, como suele ser el caso en proyectos de código abierto públicos,
+entonces tendrás que manejar las cosas un poco diferente.
+Por razones de seguridad, secretos como tu `BENCHER_API_TOKEN` y el `GITHUB_TOKEN` no están disponibles en GitHub Actions para PRs de forks.
+Es decir, si un colaborador externo abre un PR desde un fork, el ejemplo anterior no funcionará.
+Hay dos opciones para PRs de forks:
 
 <ul>
-  <li>[Benchmark Fork PR desde Branch Objetivo](#benchmark-fork-pr-from-target-branch)</li>
-  <li>[Benchmark Fork PR desde Branch Objetivo con Revisores Requeridos](#benchmark-fork-pr-from-target-branch-with-required-reviewers)</li>
-  <li>[Benchmark Fork PR y Subir desde Branch por Defecto](#benchmark-fork-pr-and-upload-from-default-branch)</li>
+  <li>[Benchmark Fork PR desde la Rama Objetivo con Revisores Requeridos](#benchmark-fork-pr-from-target-branch-with-required-reviewers)</li>
+  <li>[Benchmark Fork PR y Subida desde la Rama Default](#benchmark-fork-pr-and-upload-from-default-branch)</li>
 </ul>
 
-### Benchmark Fork PR desde Branch Objetivo
+### Benchmark Fork PR desde la Rama Objetivo con Revisores Requeridos
+
+> ⚠️ Es **muy**, **muy** importante revisar a fondo cualquier PR de bifurcación antes de aprobarlo!
+> No hacerlo podría resultar en una petición pwn!
+>
+> Si prefieres no tener eso sobre tu cabeza, consulta [Benchmark Fork PR y Carga desde la Rama Default](#benchmark-fork-pr-y-carga-desde-la-rama-default) a continuación.
 
 <GitHubActions3 />
 
-1. Ejecuta `push` en eventos para la branch `main` y [on `pull_request_target` eventos](https://docs.github.com/es/actions/using-workflows/events-that-trigger-workflows#pull_request_target).
-2. Crea un `trabajo` que solo se ejecuta para `push` en eventos para la branch `main`. Aparte de la condición `if`, este trabajo es casi idéntico al ejemplo original de arriba.
-3. Crea un `trabajo` que solo se ejecuta para `pull_request_target` eventos.
-   1. Verifica la branch del PR.
-   2. Pasa todos los secretos directamente. Usa `--token "${{ secrets.BENCHER_API_TOKEN }}"` en lugar de la variable de entorno `BENCHER_API_TOKEN`.
-   3. Ejecuta y rastrea tus benchmarks de PR con `bencher run`.
+1. Crea un archivo `workflow` de GitHub Actions. (ej: `.github/workflows/pr_benchmark.yml`)
+1. Ejecuta [en los eventos `pull_request_target`](https://docs.github.com/es/actions/using-workflows/events-that-trigger-workflows#pull_request_target).
+1. Crea un `job` llamado `fork_pr_requires_review` que requiere la aprobación de un Revisor Requerido antes de cada ejecución de pull request de fork (`external`).
+1. Crea un tercer `job` que depende de `fork_pr_requires_review`.
+   1. Haz checkout de la rama del pull request pero no persistas las credenciales de git. (ej: `persist-credentials: false`)
+   2. Usa comillas simples alrededor de todas las entradas no confiables. (ej: `--if-branch '${{ github.head_ref }}'`)
+   3. Pasa todos los secretos directamente. (ej: `--token "${{ secrets.BENCHER_API_TOKEN }}"`)
+   4. Ejecuta y rastrea tus benchmarks de pull request con `bencher run`.
+1. (No se muestra) Crea un segundo archivo `workflow` de GitHub Actions y usa el ejemplo inicial de arriba para ejecutar en eventos `push` a la rama `main`. (ej: `.github/workflows/benchmark.yml`)
 
-Esta configuración funciona porque `pull_request_target` se ejecuta en el contexto de la branch objetivo del PR,
+Esta configuración funciona porque `pull_request_target` se ejecuta en el contexto de la rama objetivo del pull request,
 donde los secretos como tu `BENCHER_API_TOKEN` y el `GITHUB_TOKEN` están disponibles.
-Por lo tanto, este flujo de trabajo solo funcionará si existe en la branch _objetivo_.
-Evita configurar cualquier secreto como variable de entorno, como `BENCHER_API_TOKEN`.
-En su lugar, pasa explícitamente el token de API a `bencher run`. (p.ej: `--token "${{ secrets.BENCHER_API_TOKEN }}"`)
-Consulta esta [reseña del laboratorio de seguridad de GitHub](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
+Por lo tanto, este flujo de trabajo solo se ejecutará si existe en la rama _objetivo_.
+
+Para configurar esto, necesitas [crear dos Entornos de Acción de GitHub](https://docs.github.com/es/actions/deployment/targeting-different-environments/using-environments-for-deployment#using-an-environment)
+(ej: `Repo -> Settings -> Environments -> New environment`).
+El entorno `internal` no debe tener ninguna `Regla de protección de despliegue`.
+Sin embargo, el entorno `external` debe tener `Revisores requeridos` establecido para aquellos que pueda confiar para revisar los PRs de fork antes de benchmarking.
+
+Es muy importante envolver el nombre de la rama de PR (referencia de cabeza) en comillas **simples**. (ej: `--if-branch '${{ github.head_ref }}'`) De lo contrario, un atacante podría crear una rama con nombre malicioso que realice inyección de comando. Consulta este [informe del Laboratorio de Seguridad de GitHub](https://securitylab.github.com/research/github-actions-untrusted-input/) sobre cómo evitar solicitudes pwn de entrada no confiable para una visión completa.
+
+Evita configurar cualquier secreto como variables de entorno, como `GITHUB_TOKEN` y `BENCHER_API_TOKEN`.
+En lugar de eso, pásalos explícitamente a `bencher run`. (ej: `--token "${{ secrets.BENCHER_API_TOKEN }}"`)
+Consulta este [informe del Laboratorio de Seguridad de GitHub](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
 y [este post de blog](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
-sobre cómo prevenir peticiones pwn para una visión general completa.
+sobre cómo evitar solicitudes pwn para una visión completa.
 
-También es _muy_ importante rodear el nombre de la rama PR (head ref) con comillas **simples**. (ej: `--if-branch '${{ github.head_ref }}'`) De lo contrario, un atacante podría crear una rama malintencionadamente nombrada que realiza inyección de comandos. Consulte esta [redacción del Laboratorio de Seguridad de GitHub](https://securitylab.github.com/research/github-actions-untrusted-input/) sobre cómo prevenir solicitudes de pwn de entradas no confiables para obtener una visión general completa.
-
-### Benchmark Fork PR desde Branch Objetivo con Revisores Requeridos
+### Benchmark Fork PR y Subida desde la Rama Default
 
 <GitHubActions4 />
 
-Esta configuración es exactamente la misma que [Benchmark Fork PR desde Branch Objetivo](#benchmark-fork-pr-from-target-branch)
-con el requisito adicional de aprobación de un revisor obligatorio antes de cada ejecución de PR de fork.
-Los pull requests del mismo repositorio no requieren aprobación.
-Para configurar esto, necesitas [crear dos Ambientes de Acción de GitHub](https://docs.github.com/es/actions/deployment/targeting-different-environments/using-environments-for-deployment#using-an-environment)
-(p.ej: `Repo -> Configuración -> Ambientes -> Nuevo ambiente`).
-El ambiente `internal` no debe tener ninguna `Regla de protección de despliegue`.
-Sin embargo, el ambiente `external` debe tener `Revisores requeridos` ajustado a aquellos de confianza para revisar PR de fork antes del benchmarking.
-
-### Benchmark Fork PR y Subir desde Branch por Defecto
+1. Crea un archivo de flujo de trabajo `Run and Cache Benchmarks`.
+2. Ejecuta todos los trabajos en el flujo de trabajo en eventos de `pull_request`.
+3. Ejecuta los benchmarks y guarda los resultados en un archivo. (ej: `benchmark_results.json`)
+4. Sube el archivo de resultados de benchmark como un artefacto.
+5. Sube el objeto de evento `pull_request` como un artefacto.
 
 <GitHubActions5 />
 
-1. Crea un archivo de flujo de trabajo `Run and Cache Benchmarks`.
-1. Ejecuta tus benchmarks en `pull_request` eventos.
-1. Guarda los resultados de benchmark en un archivo y sube como archivo de artefacto.
-1. Sube el evento `pull_request` como un archivo de artefacto.
 1. Crea un segundo archivo de flujo de trabajo, `Track Benchmarks`.
-1. Encadena `Track Benchmarks` a `Run and Cache Benchmarks` con [el evento `workflow_run`](https://docs.github.com/es/actions/using-workflows/events-that-trigger-workflows#workflow_run).
-1. Extrae los datos necesarios del evento `pull_request` almacenado en la caché.
-1. Rastrea los resultados de benchmark almacenados en la caché con `bencher run`.
-1. Crea un tercer archivo de flujo de trabajo y usa el ejemplo inicial de arriba para ejecutar en `push` eventos a la branch `main`.
+2. Añade al flujo de trabajo `Track Benchmarks` a `Run and Cache Benchmarks` con [el evento `workflow_run`](https://docs.github.com/es/actions/using-workflows/events-that-trigger-workflows#workflow_run).
+3. Descarga los resultados de benchmark almacenados en caché y el evento `pull_request`.
+4. Extrae los resultados del benchmark almacenados en caché y el evento `pull_request`.
+5. Exporta los datos necesarios del evento `pull_request` como variables de entorno.
+6. Rastrea los resultados del benchmark almacenados en caché con `bencher run`:
+   1. Usar comillas simples alrededor de toda la entrada no confiable. (ej: `--if-branch '${{ env.PR_HEAD }}'`)
+   2. Pasar explícitamente el número de pull request. (ej: `--ci-number '${{ env.PR_NUMBER }}'`)
+   3. Pasar el camino al archivo de resultados de benchmark. (ej: `--file "$BENCHMARK_RESULTS"`)
+1. (No se muestra) Crea un tercer archivo de flujo de trabajo de GitHub Actions y usa el ejemplo inicial de arriba para ejecutar en eventos de `push` a la rama `main`. (ej: `.github/workflows/benchmark.yml`)
 
-Esta configuración funciona porque `workflow_run` se ejecuta en el contexto de la branch por defecto del repositorio,
+Esta configuración funciona porque `workflow_run` se ejecuta en el contexto de la rama default del repositorio,
 donde los secretos como tu `BENCHER_API_TOKEN` y el `GITHUB_TOKEN` están disponibles.
-Por lo tanto, estos flujos de trabajo solo se ejecutarán si existen en la branch _por defecto_.
-Consulta [usando datos desde el flujo de trabajo que dispara](https://docs.github.com/es/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow) para una visión general completa.
-El número de pull request, la branch principal, y la branch base usadas en el flujo de trabajo inicial deben ser pasados explícitamente ya que no están disponibles dentro de `workflow_run`.
+Por lo tanto, estos flujos de trabajo solo se ejecutarán si existen en la rama _default_.
+Consulte [usando datos del flujo de trabajo de disparo](https://docs.github.com/es/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow) para obtener una visión completa.
+El número de pull request, la rama de cabeza y la rama base utilizados en el flujo de trabajo inicial deben pasarse explícitamente ya que no están disponibles dentro de `workflow_run`.
 
-También es _muy_ importante rodear el nombre de la rama PR (head ref) con comillas **simples**. (ej: `--if-branch '${{ env.PR_HEAD }}'`) De lo contrario, un atacante podría crear una rama malintencionadamente nombrada que realiza inyección de comandos. Consulte esta [redacción del Laboratorio de Seguridad de GitHub](https://securitylab.github.com/research/github-actions-untrusted-input/) sobre cómo prevenir solicitudes de pwn de entradas no confiables para obtener una visión general completa.
+Es muy importante envolver el nombre de la rama de PR (referencia de cabeza) en comillas **simples**. (ej: `--if-branch '${{ env.PR_HEAD }}'`) De lo contrario, un atacante podría crear una rama con nombre malicioso que realice inyección de comando. Consulta este [informe del Laboratorio de Seguridad de GitHub](https://securitylab.github.com/research/github-actions-untrusted-input/) sobre cómo evitar solicitudes pwn de entrada no confiable para una visión completa.
+
+Evita configurar cualquier secreto como variables de entorno en el archivo de flujo de trabajo `Run and Cache Benchmarks`.
+Consulta este [escribo del Laboratorio de Seguridad de GitHub](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
+y [este post de blog](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
+sobre cómo evitar solicitudes pwn para una visión completa.
 
 <br/>
 <br/>
 
-> 🐰 ¡Felicidades! ¡Has aprendido cómo usar Bencher en GitHub Actions! 🎉
+> 🐰 ¡Felicidades! ¡Has aprendido a usar Bencher en GitHub Actions! 🎉
 
 <br/>
 
-<h2><a href="/docs/es/explanation/benchmarking">Continúa: Visión General de los Benchmarks ➡</a></h2>
+<h2><a href="/docs/es/explanation/benchmarking">Continúa: Visión General del Benchmarking ➡</a></h2>

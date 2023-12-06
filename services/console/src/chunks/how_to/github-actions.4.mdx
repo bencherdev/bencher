@@ -1,60 +1,25 @@
 ```yaml
-on:
-  push:
-    branches: main
-  pull_request_target:
+name: Run and Cache Benchmarks
+
+on: pull_request
 
 jobs:
-  benchmark_main_with_bencher:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    name: Benchmark main with Bencher
+  benchmark:
+    name: Run Benchmarks
     runs-on: ubuntu-latest
-    env:
-      BENCHER_PROJECT: save-walter-white
-      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
-      BENCHER_TESTBED: ubuntu-latest
-      BENCHER_ADAPTER: json
     steps:
       - uses: actions/checkout@v3
-      - uses: bencherdev/bencher@main
-      - name: Track Benchmarks with Bencher
+      - name: Mock Benchmarking
         run: |
-          bencher run \
-          --branch main \
-          --err \
-          "bencher mock"
-
-  benchmark_pr_requires_review:
-    if: github.event_name == 'pull_request_target'
-    environment:
-      ${{ (github.event.pull_request.head.repo.full_name == github.repository && 'internal') || 'external' }}
-    runs-on: ubuntu-latest
-    steps:
-      - run: true
-
-  benchmark_pr_with_bencher:
-    needs: benchmark_pr_requires_review
-    name: Benchmark PR with Bencher
-    runs-on: ubuntu-latest
-    env:
-      BENCHER_PROJECT: save-walter-white
-      BENCHER_ADAPTER: json
-      BENCHER_TESTBED: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
+          /bin/echo '{ "bencher::mock_0": { "latency": { "value": 1.0 } } }' &> benchmark_results.json
+      - name: Upload Benchmark Results
+        uses: actions/upload-artifact@v3
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          persist-credentials: false
-      - uses: bencherdev/bencher@main
-      - name: Track Benchmarks with Bencher
-        run: |
-          bencher run \
-          --if-branch '${{ github.head_ref }}' \
-          --else-if-branch '${{ github.base_ref }}' \
-          --else-if-branch main \
-          --github-actions "${{ secrets.GITHUB_TOKEN }}" \
-          --token "${{ secrets.BENCHER_API_TOKEN }}" \
-          --err \
-          "bencher mock"
+          name: benchmark_results.json
+          path: ./benchmark_results.json
+      - name: Upload GitHub Pull Request Event
+        uses: actions/upload-artifact@v3
+        with:
+          name: pr_event.json
+          path: ${{ env.GITHUB_EVENT_PATH }}
 ```

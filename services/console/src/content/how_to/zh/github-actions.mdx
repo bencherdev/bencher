@@ -1,6 +1,6 @@
 ---
 title: "GitHub Actions"
-description: "在拉取请求中使用GitHub Actions对Bencher进行持续性能基准测试"
+description: "在GitHub Actions中使用Bencher进行持续基准测试的pull请求"
 heading: "如何在GitHub Actions中使用Bencher"
 sortOrder: 3
 ---
@@ -13,94 +13,131 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 
 <GitHubActions1 />
 
-1. 创建一个GitHub Actions的`workflow`文件（例如：`.github/workflows/benchmark.yml`）。
-2. 在`push`至`main`分支的事件上运行。请查看[GitHub Actions的`on`文档](https://docs.github.com/zh/actions/using-workflows/workflow-syntax-for-github-actions#on)了解完整概览。请参阅下面的[拉取请求](#拉取请求)。
-3. 创建一个GitHub Actions的`job`（例如：`benchmark_with_bencher`）。
-4. 必须已经存在项目。设置`--project`标志或`BENCHER_PROJECT`环境变量为项目的缩写或UUID（例如：`BENCHER_PROJECT: save-walter-white`）。
-5. 必须已经存在API令牌。将`BENCHER_API_TOKEN`添加为**存储库**密钥。（例如：`Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`）设置`--token`标志或`BENCHER_API_TOKEN`环境变量为API令牌。（例如：`BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`）
-6. 可选：设定`--testbed`标志或`BENCHER_TESTBED`环境变量为测试平台的缩写或UUID。（例如：`BENCHER_TESTBED: ubuntu-latest`）测试平台**必须**已经存在。如果未设置此项，则将使用`localhost`测试平台。
-7. 可选：设定`--adapter`标志或`BENCHER_ADAPTER`环境变量为所需的适配器名称。（例如：`BENCHER_ADAPTER: json`）如果未设置此项，则将使用`magic`适配器。参见[性能基准测试马甲适配器](/docs/zh/explanation/adapters)了解完整概览。
-8. Checkout你的源码。（例如：`uses: actions/checkout@v3`）
-9. 使用[GitHub Action](https://github.com/marketplace/actions/bencher-cli)安装Bencher CLI。（例如：`uses: bencherdev/bencher@main`）
-10. 用<code><a href="/docs/zh/explanation/bencher-run">bencher run</a></code> CLI子命令[跟踪你的性能基准测试](/docs/zh/how-to/track-benchmarks)。
-    1. 可选：设定`--branch`标志或`BENCHER_BRANCH`环境变量为分支的缩写或UUID（例如：`--branch main`）。分支**必须**已经存在。如果未设置此项，则将使用`main`分支。
-    2. 如果生成了一个[阈值](/docs/zh/explanation/thresholds)，则设定命令失败。（例如：`--err`）
-    3. 运行你的性能基准测试并从结果中生成报告（例如："bencher mock"）
+1. 创建一个GitHub Actions `workflow` 文件。 (例如：`.github/workflows/benchmark.yml`)
+2. 在对`main`分支的 `push`事件上运行。查看[GitHub Actions `on` Documentation](https://docs.github.com/zh/actions/using-workflows/workflow-syntax-for-github-actions#on)以获得完整概览。也可以查看下面的[Pull Requests](#pull-requests)。
+3. 创建一个GitHub Actions `job`。 (例如: `benchmark_with_bencher`)
+4. 项目必须已经存在。设置`--project`标志或`BENCHER_PROJECT`环境变量为项目的slug或UUID (例如：`BENCHER_PROJECT: save-walter-white`)。
+5. API令牌必须已经存在。将`BENCHER_API_TOKEN`添加为**仓库**秘密。 (例如： `Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`) 设置`--token`标志或`BENCHER_API_TOKEN`环境变量为API令牌。(例如：`BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
+6. 可选：设置 `--testbed` 参数或 `BENCHER_TESTBED`环境变量为Testbed的slug或UUID. (例如：`BENCHER_TESTBED: ubuntu-latest`)Testbed 必须事先存在。如果没有设置,那么`localhost` Testbed 会被默认使用。
+7. 可选：设置 `--adapter` 参数或`BENCHER_ADAPTER` 环境变量为想要的adapter名字。 (例如：`BENCHER_ADAPTER: json`) 如果没有设置，则会使用`magic`适配器。查看 [基准测试适配器](/docs/zh/explanation/adapters)以获取完全概览。
+8. 检出你的源代码 （例如： `uses: actions/checkout@v3`）
+9. 使用 [GitHub Action](https://github.com/marketplace/actions/bencher-cli) 安装Bencher CLI。（例如：`uses: bencherdev/bencher@main`）
+10. 通过 <code><a href="/docs/zh/explanation/bencher-run">bencher run</a></code> CLI子命令 [跟踪你的基准测试](/docs/zh/how-to/track-benchmarks)：
+    1.  可选：设置 `--branch` 标志或`BENCHER_BRANCH`环境变量为Branch的slug或UUID。（例如：`--branch main`）Branch必须事先存在。如果没有设置，那么`main` Branch会被默认使用。
+    2.  如果生成Alert，设置命令为失败。（例如：`--err`）Alert的生成需要事先存在一个[阈值](/docs/zh/explanation/thresholds)。
+    3.  运行你的基准测试并从结果中生成报告。 (例如：`"bencher mock"`)
 
 <br/>
 
-## 拉取请求
+## Pull请求
 
-为了在拉取请求中捕获性能回归，你需要在PRs上运行你的性能基准测试。如果你只期望**同一**存储库的分支有PRs，那么你可以简单地修改上面的例子，也在`pull_request`事件上运行。
+为了在Pull请求中抓取性能回归，你需要在PRs中运行你的基准测试。
+如果只期望从**同一个**仓库的分支中取得PRs，以下示例提供修改然后运行`on` `pull_request`事件的方案。
 
-> ⚠️ 这个方案只有在所有PRs都来自**同一**存储库时才能工作！
-> 请参阅下面的[来自Forks的拉取请求](#来自forks的拉取请求)。
+> ⚠️ 这个解决方案只有在所有PRs都来自**同一个**仓库时才能工作！
+> 查看下面的 [Forks的Pull请求](#pull-requests-from-forks)。
 
-<GitHubActions2/>
+<GitHubActions2 />
 
-1. 在`push`至`main`分支和`pull_request`事件上运行。限制只有在`push` **仅** 到指定的分支（例如：`main`）时运行是非常重要的，以防止PR分支的推送运行两次！
-2. 与其总是使用`main`分支，不如使用[GitHub Action默认环境变量](https://docs.github.com/zh/actions/learn-github-actions/variables#default-environment-variables)来：
+1. 创建一个GitHub Actions `workflow` 文件。(例如：`.github/workflows/benchmark.yml`)
+1. 在对`main`分支的`push`事件和`pull_request` 事件上运行。限制在`push`上**仅**对选定的分支（例如：`main`）运行非常重要，以防止对PR分支的push运行两次。
+2. 不要总是使用`main` 分支，使用[GitHub Actions 默认的环境变量](https://docs.github.com/zh/actions/learn-github-actions/variables#default-environment-variables)：
         1. 如果已经存在，使用当前分支的数据。（例如：`--if-branch '${{ github.head_ref }}'`）
-        2. 如果存在，则克隆PR目标分支的数据和阀值。（例如：`--else-if-branch '${{ github.base_ref }}'`）
-        3. 否则，克隆`main`分支的数据和阀值。（例如：`--else-if-branch main`）
-        4. 设置项目分支有多种选择。请参阅[分支选择](/docs/zh/explanation/branch-selection)了解完整概览。
-3. 设定GitHub API认证令牌。（例如：`--github-actions "${{ secrets.GITHUB_TOKEN }}"`）。当这个选项作为拉取请求的一部分被设定时，结果将以评论的形式添加到拉取请求中。这使用了[GitHub Actions的`GITHUB_TOKEN`环境变量](https://docs.github.com/zh/actions/security-guides/automatic-token-authentication)。
-4. 参阅[bencher run](/docs/zh/explanation/bencher-run)文档了解所有配置拉取请求评论的方式，使用`--ci-*`标志。
+        2. 如果PR目标分支的数据和阈值已经存在，创建一个克隆。（例如：`--else-if-branch '${{ github.base_ref }}'`）
+        3. 否则，创建`main`分支数据和阈值的克隆。（例如：`--else-if-branch main`）
+        4. 设置项目分支有几个选项，查看 [分支选择](/docs/zh/explanation/branch-selection) 以获取完全概览。
+3. 设置Github API认证令牌。（例如：`--github-actions "${{ secrets.GITHUB_TOKEN }}"`）当这个选项作为pull请求的一部分被设置时，结果将会作为一个评论添加到pull请求。这使用[GitHub Actions `GITHUB_TOKEN`环境变量](https://docs.github.com/zh/actions/security-guides/automatic-token-authentication).
+4. 查看下面的[bencher run](/docs/zh/explanation/bencher-run)以获取完全概览. 配置pull请求评论有很多种方式，可以通过`--ci-*`参数来进行配置。
 
-## 来自Forks的拉取请求
+## Forks的Pull请求
 
-如果你计划接受来自forks的拉取请求，这常常发生在公共开源项目中，那么你需要稍微处理得不同。出于安全原因，诸如`BENCHER_API_TOKEN`和`GITHUB_TOKEN`等密钥在fork PRs的GitHub Actions中是无效的。也就是说，如果一个外部贡献者从一个fork打开一个PR，以上的例子是无法工作的。针对fork PRs有三个选择：
+如果你计划接受来自forks的pull请求, 在公共开源项目中这经常是必要的，那么你需要使用一个稍微不同的处理方式。
+出于安全原因，你的`BENCHER_API_TOKEN`和`GITHUB_TOKEN`这样的秘密在forks PRs的GitHub Actions中是无法获取的。
+也就是说，如果一个外部贡献者从一个fork打开一个PR，上面的例子就不能工作了。
+对于fork PRs有两个选项:
 
 <ul>
-  <li>[从目标分支对Fork PR进行基准测试](#从目标分支对fork-pr进行基准测试)</li>
-  <li>[带有必要审查者从目标分支对Fork PR进行基准测试](#带有必要审查者从目标分支对fork-pr进行基准测试)</li>
-  <li>[对Fork PR进行基准测试并从默认分支上传](#对fork-pr进行基准测试并从默认分支上传)</li>
+  <li>[Benchmark Fork PR from Target Branch with Required Reviewers](#benchmark-fork-pr-from-target-branch-with-required-reviewers)</li>
+  <li>[Benchmark Fork PR and Upload from Default Branch](#benchmark-fork-pr-and-upload-from-default-branch)</li>
 </ul>
 
-### 从目标分支对Fork PR进行基准测试
+### 有需求评审者的目标分支之中的Fork PR预览
+
+> ⚠️ 审批任何 fork PR 之前，**非常**，**非常** 重要的是要彻底的进行审核！
+> 如果没有做到这一点，可能会导致一个 pwn 请求！
+>
+> 如果你不希望面对这种压力，可以查看下面的 [从默认分支对 Fork PR 进行基准测试并上传](#benchmark-fork-pr-and-upload-from-default-branch)。
 
 <GitHubActions3 />
 
-1. 在`push`至`main`分支和[`pull_request_target`事件](https://docs.github.com/zh/actions/using-workflows/events-that-trigger-workflows#pull_request_target)上运行。
-2. 创建一个仅在`push`至`main`分支的事件上运行的`job`。除去`if`条件，这个job与以上的原始示例几乎相同。
-3. 创建一个仅在`pull_request_target`事件上运行的`job`。
-   1. 统计拉取请求的分支。
-   2. 直接进入所有的密钥。使用`--token "${{ secrets.BENCHER_API_TOKEN }}"`代替`BENCHER_API_TOKEN`环境变量。
-   3. 用`bencher run`运行并追踪你的拉取请求的性能基准测试。
+1. 创建一个GitHub Actions `workflow` 文件。(例如：`.github/workflows/pr_benchmark.yml`)
+1. 在[`pull_request_target`事件](https://docs.github.com/zh/actions/using-workflows/events-that-trigger-workflows#pull_request_target)上运行。
+1. 创建一个名为`fork_pr_requires_review`的`job`， 等待审查者在每个fork的pull请求（`external`）运行前进行审查。
+1. 创建一个依赖于`fork_pr_requires_review`的第三个工作。
+   1. 检出请求分支，但不保留git凭据。(例如：`persist-credentials: false`)
+   2. 对所有不可信的输入使用单引号。(例如：`--if-branch '${{ github.head_ref }}'`)
+   3. 直接传递所有的秘密。(例如：`--token "${{ secrets.BENCHER_API_TOKEN }}"`)
+   4. 用`bencher run`运行并跟踪你的请求基准测试。
+1. （未选示）创建第二个GitHub Actions `workflow`文件并使用初始示例在`main`分支的`push`事件上运行。(例如：`.github/workflows/benchmark.yml`)
 
-这种设置有效是因为`pull_request_target`在拉取请求的目标分支的上下文中运行，密钥如`BENCHER_API_TOKEN`和`GITHUB_TOKEN`是有效的。因此，只有在_target_分支上存在此工作流时，此工作流才会运行。避免将任何密钥设置为环境变量，例如`BENCHER_API_TOKEN`。相反，应明确地将API令牌传递给`bencher run`（例如：`--token "${{ secrets.BENCHER_API_TOKEN }}"`）。详情请参见此篇[GitHub安全实验室拾写](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)和[此博客文章](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)对防止pwn请求的完整概览。
+这个设置方法的原因是`pull_request_target`在pull请求的目标分支的上下文中运行，
+在这里你的`BENCHER_API_TOKEN`和`GITHUB_TOKEN`是可用的。
+因此，这个工作流程只有在 _目标_ 分支上才能运行。
 
-同样**非常**重要的是，必须用**单**引号把 PR 分支名称（头引用）包裹起来。 (例如：`--if-branch '${{ github.head_ref }}'`)。否则，攻击者可以创建一个恶意命名的分支，进行命令注入。看一下这篇[GitHub安全实验室的文章](https://securitylab.github.com/research/github-actions-untrusted-input/)，其中对防止来自不受信任输入的 pwn 请求进行了全面的概述。
+为了配置这个，你需要[创建两个GitHub Action Environment](https://docs.github.com/zh/actions/deployment/targeting-different-environments/using-environments-for-deployment#using-an-environment)
+(例如：`Repo -> Settings -> Environments -> New environment`).
+`internal`环境应该没有`Deployment protection rules`.
+然而，`external`环境应该设置`Required reviewers`为那些被信任的可以在基准化测试前审查fork PRs。
 
-### 带有必要审查者从目标分支对Fork PR进行基准测试
+单独包装PR分支名称（head ref）是非常重要的。(例如：`--if-branch '${{ github.head_ref }}'`)否则一个攻击者创建一个恶意命名的分支可能进行命令注入。查看[GitHub 安全实验室阐述](https://securitylab.github.com/research/github-actions-untrusted-input/)关于如何预防恶意请求来自不可信输入的完全概览。
+
+避免设置任何秘密作为环境变量，例如`GITHUB_TOKEN`和`BENCHER_API_TOKEN`。
+而是直接向`bencher run`传入秘密.(例如：`--token "${{ secrets.BENCHER_API_TOKEN }}"`)
+查看[GitHub安全实验室阐述](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
+和[这篇博客文章](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
+关于如何预防恶意请求的完全概览。
+
+### Default分支的预览Fork PR和上传
 
 <GitHubActions4 />
 
-这个设置与[从目标分支对Fork PR进行基准测试](#从目标分支对fork-pr进行基准测试)完全相同，只不过在每次fork拉取请求运行之前需要必要审查者的批准。相同存储库的拉取请求不需要批准。为了设定，你需要[创建两个GitHub Action环境](https://docs.github.com/zh/actions/deployment/targeting-different-environments/using-environments-for-deployment#using-an-environment)（例如：`Repo -> Settings -> Environments -> New environment`）。`internal`环境应没有`Deployment protection rules`。然而，`external`环境应设定`Required reviewers`为对fork PRs进行基准测试前信任的审查者。
-
-### 对Fork PR进行基准测试并从默认分支上传
+1. 创建一个 `Run and Cache Benchmarks` 工作流程文件。
+2. 工作流中所有的工作在`pull_request`事件上运行。
+3. 运行基准测试并保存结果到一个文件。(例如：`benchmark_results.json`)
+4. 作为一个artifact上传基准测试结果文件。
+5. 作为一个artifact上传`pull_request`事件对象。
 
 <GitHubActions5 />
 
-1. 创建一个`Run and Cache Benchmarks`工作流程文件。
-1. 在`pull_request`事件上运行你的性能基准测试。
-1. 保存性能基准测试到文件并作为artifact上传。
-1. 上传`pull_request`事件作为artifact。
-1. 创建第二个工作流文件，`Track Benchmarks`。
-1. 使用[`workflow_run`事件](https://docs.github.com/zh/actions/using-workflows/events-that-trigger-workflows#workflow_run)将`Track Benchmarks`链到`Run and Cache Benchmarks`。
-1. 从缓存的`pull_request`事件中提取必要数据。
-1. 用`bencher run`追踪缓存的性能基准测试结果。
-1. 创建第三个工作流文件并使用上述的初始示例在`push`至`main`分支的事件上运行。
+1. 创建一个第二个工作流程文件，`Track Benchmarks`。
+2. 通过[the `workflow_run` 事件](https://docs.github.com/zh/actions/using-workflows/events-that-trigger-workflows#workflow_run)将`Track Benchmarks`链接到`Run and Cache Benchmarks`。
+3. 下载缓存的基准测试结果和`pull_request`事件。
+4. 提取缓存的基准测试结果和`pull_request`事件。
+5. 将`pull_request`事件中必要的数据导出为环境变量。
+6. 使用`bencher run`对缓存的基准测试结果进行跟踪：
+   1. 对所有不可信的输入使用单引号。（例如：`--if-branch '${{ env.PR_HEAD }}'`）
+   2. 明确的传入pull请求数字。（例如：`--ci-number '${{ env.PR_NUMBER }}'`）。
+   3. 传入基准测试结果文件的文件路径。（例如：`--file "$BENCHMARK_RESULTS"`）
+1. （未选示）创建第三个GitHub Actions `workflow`文件并使用初始示例在`main`分支的`push`事件上运行。(例如：`.github/workflows/benchmark.yml`)
 
-此设置方式有效是因为`workflow_run`在存储库的默认分支的上下文中运行，密钥如`BENCHER_API_TOKEN`和`GITHUB_TOKEN`是有效的。因此，这些工作流只有在默认分支上存在时才会运行。请参阅[使用触发工作流程的数据](https://docs.github.com/zh/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow)了解完整概览。在初次工作流中使用的拉取请求数、头部分支和基地分支必须明确地传入，因为他们在`workflow_run`里是不可用的。
+这个设置方法的原因是`workflow_run`在仓库的默认分支的上下文中运行，
+在这里你的`BENCHER_API_TOKEN`和`GITHUB_TOKEN`是可用的。
+因此，这些工作流程只有在默认分支上才能运行。
+查看[使用触发的工作流的数据](https://docs.github.com/zh/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow)以获取完全概览。
+在初次工作流中的pull请求数字，头分支和基分支需要明确的传递因为他们在`workflow_run`中不可用。
 
-同样**非常**重要的是，必须用**单**引号把 PR 分支名称（头引用）包裹起来。 (例如：`--if-branch '${{ env.PR_HEAD }}'`)。否则，攻击者可以创建一个恶意命名的分支，进行命令注入。看一下这篇[GitHub安全实验室的文章](https://securitylab.github.com/research/github-actions-untrusted-input/)，其中对防止来自不受信任输入的 pwn 请求进行了全面的概述。
+单独包装PR分支名称（head ref）是非常重要的。(例如：`--if-branch '${{ env.PR_HEAD }}'`)否则一个攻击者创建一个恶意命名的分支可能进行命令注入。查看[GitHub 安全实验室阐述](https://securitylab.github.com/research/github-actions-untrusted-input/)关于如何预防恶意请求来自不可信输入的完全概览。
+
+避免在`Run and Cache Benchmarks`工作流程文件中设置任何秘密为环境变量。
+查看[GitHub安全实验室阐述](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
+和[这篇博客文章](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
+关于如何预防恶意请求的完全概览。
 
 <br/>
 <br/>
 
-> 🐰 恭喜！你已经学会如何在GitHub Actions中使用Bencher！🎉
+> 🐰恭喜！你已经学习到了如何在GitHub Actions中使用Bencher!  🎉
 
 <br/>
 
-<h2><a href="/docs/zh/explanation/benchmarking">继续深入: 性能基准测试概览 ➡</a></h2>
+<h2><a href="/docs/zh/explanation/benchmarking">继续前进: 基准测试概述 ➡</a></h2>

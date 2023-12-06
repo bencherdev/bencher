@@ -13,9 +13,6 @@ pub use error::CliError;
 #[allow(clippy::print_stderr)]
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> ExitCode {
-    let pid = std::process::id();
-    cli_println!("CLI_PID: {}", pid);
-    std::env::set_var("CLI_PID", pid.to_string());
     match exec().await {
         Ok(()) => ExitCode::SUCCESS,
         // https://github.com/rust-lang/rust/issues/46016#issuecomment-1242039016

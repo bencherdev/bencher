@@ -98,7 +98,11 @@ impl Translate {
         let languages = self.lang.clone().unwrap_or_else(CliLanguage::all);
         let content_path = Utf8PathBuf::from("services/console/src/");
         // services/console/src/ + dir/content/section/en/example.md
-        let input_path = content_path.join(&self.input_path);
+        let input_path = if self.input_path == "scrap" {
+            content_path.join("chunks/scrap/en/scrap.mdx")
+        } else {
+            content_path.join(&self.input_path)
+        };
         let input_file = input_path.file_name().unwrap();
         let input = std::fs::read_to_string(&input_path)?;
         let output_path = self.output_path.clone().unwrap_or_else(||

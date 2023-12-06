@@ -39,6 +39,7 @@ If you only expect to have PRs from branches within the **same** repository then
 
 <GitHubActions2 />
 
+1. Create a GitHub Actions `workflow` file. (ex: `.github/workflows/benchmark.yml`)
 1. Run on `push` events to the `main` branch and on `pull_request` events. It is important to limit the run on `push` **only** to the select branches (ex: `main`) to prevents pushes to PR branches from running twice!
 2. Instead of always using the `main` branch, use the [GitHub Action default environment variables](https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables) to:
         1. Use the current branch data if it already exists. (ex: `--if-branch '${{ github.head_ref }}'`)
@@ -54,61 +55,71 @@ If you plan to accept pull requests from forks, as is often the case in public o
 then you will need to handle things a little differently.
 For security reasons, secrets such as your `BENCHER_API_TOKEN` and the `GITHUB_TOKEN` are not available in GitHub Actions for fork PRs.
 That is if an external contributor opens up a PR from a fork the above example will not work.
-There are three options for fork PRs:
+There are two options for fork PRs:
 
 <ul>
-  <li>[Benchmark Fork PR from Target Branch](#benchmark-fork-pr-from-target-branch)</li>
   <li>[Benchmark Fork PR from Target Branch with Required Reviewers](#benchmark-fork-pr-from-target-branch-with-required-reviewers)</li>
   <li>[Benchmark Fork PR and Upload from Default Branch](#benchmark-fork-pr-and-upload-from-default-branch)</li>
 </ul>
 
-### Benchmark Fork PR from Target Branch
+### Benchmark Fork PR from Target Branch with Required Reviewers
+
+> ⚠️ It is **very**, **very** important to thoroughly review any fork PR before approving!
+> Not doing so could result in a pwn request!
+>
+> If you would prefer to not have that hanging over your head, see [Benchmark Fork PR and Upload from Default Branch](#benchmark-fork-pr-and-upload-from-default-branch) below.
 
 <GitHubActions3 />
 
-1. Run on `push` events to the `main` branch and [on `pull_request_target` events](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target).
-2. Create a `job` that only runs for `push` events to the `main` branch. Other than the `if` condition, this job is nearly identical to the original example above.
-3. Create a `job` that only runs for `pull_request_target` events.
-   1. Checkout the pull request branch.
-   2. Pass in all secrets directly. Use `--token "${{ secrets.BENCHER_API_TOKEN }}"` instead of the `BENCHER_API_TOKEN` environment variable.
-   3. Run and track your pull request benchmarks with `bencher run`.
+1. Create a GitHub Actions `workflow` file. (ex: `.github/workflows/pr_benchmark.yml`)
+1. Run [on `pull_request_target` events](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target).
+1. Create a `job` named `fork_pr_requires_review` that requires approval from a Required Reviewer before each fork pull request (`external`) run.
+1. Create a third `job` that depends on `fork_pr_requires_review`.
+   1. Checkout the pull request branch but do not persist the git credentials. (ex: `persist-credentials: false`)
+   2. Use single quotes around all untrusted input. (ex: `--if-branch '${{ github.head_ref }}'`)
+   3. Pass in all secrets directly. (ex: `--token "${{ secrets.BENCHER_API_TOKEN }}"`)
+   4. Run and track your pull request benchmarks with `bencher run`.
+1. (Not Shown) Create a second GitHub Actions `workflow` file and use the initial example above to run on `push` events to the `main` branch. (ex: `.github/workflows/benchmark.yml`)
 
 This setup works because `pull_request_target` runs in the context of the pull request's target branch,
 where secrets such as your `BENCHER_API_TOKEN` and the `GITHUB_TOKEN` are available.
 Therefore, this workflow will only run if it exists on the _target_ branch.
-Avoid setting any secrets as environment variables, such as `BENCHER_API_TOKEN`.
-Instead explicitly pass in the API token to `bencher run`. (ex: `--token "${{ secrets.BENCHER_API_TOKEN }}"`)
-See this [GitHub Security Lab write up](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
-and [this blog post](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
-on preventing pwn requests for a full overview.
 
-It is also _very_ important to wrap the PR branch name (head ref) in **single** quotes. (ex: `--if-branch '${{ github.head_ref }}'`) Otherwise, an attacker could create a maliciously named branch that performs command injection. See this [GitHub Security Lab write up](https://securitylab.github.com/research/github-actions-untrusted-input/) on preventing pwn requests from untrusted input for a full overview.
-
-### Benchmark Fork PR from Target Branch with Required Reviewers
-
-<GitHubActions4 />
-
-This setup is exactly the same as [Benchmark Fork PR from Target Branch](#benchmark-fork-pr-from-target-branch)
-with the additional requirement of approval from a Required Reviewer before each fork pull request run.
-Pull requests from the same repository do not require approval.
-In order to set this up, you need to [create two GitHub Action Environments](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment#using-an-environment)
+In order to get this configured, you need to [create two GitHub Action Environments](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment#using-an-environment)
 (ex: `Repo -> Settings -> Environments -> New environment`).
 The `internal` environment should have no `Deployment protection rules`.
 However, the `external` environment should have `Required reviewers` set to those trusted to review fork PRs before benchmarking.
 
+It is very important to wrap the PR branch name (head ref) in **single** quotes. (ex: `--if-branch '${{ github.head_ref }}'`) Otherwise, an attacker could create a maliciously named branch that performs command injection. See this [GitHub Security Lab write up](https://securitylab.github.com/research/github-actions-untrusted-input/) on preventing pwn requests from untrusted input for a full overview.
+
+Avoid setting any secrets as environment variables, such as `GITHUB_TOKEN` and `BENCHER_API_TOKEN`.
+Instead explicitly pass in the secrets to `bencher run`. (ex: `--token "${{ secrets.BENCHER_API_TOKEN }}"`)
+See this [GitHub Security Lab write up](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
+and [this blog post](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
+on preventing pwn requests for a full overview.
+
 ### Benchmark Fork PR and Upload from Default Branch
+
+<GitHubActions4 />
+
+1. Create a `Run and Cache Benchmarks` workflow file.
+2. Run all jobs in the workflow on `pull_request` events.
+3. Run the benchmarks and save the results to a file. (ex: `benchmark_results.json`)
+4. Upload the benchmark results file as an artifact.
+5. Upload the `pull_request` event object as an artifact.
 
 <GitHubActions5 />
 
-1. Create a `Run and Cache Benchmarks` workflow file.
-1. Run your benchmarks on `pull_request` events.
-1. Save the benchmarks results to a file and upload them as an artifact.
-1. Upload the `pull_request` event as an artifact.
 1. Create a second workflow file, `Track Benchmarks`.
-1. Chain `Track Benchmarks` to `Run and Cache Benchmarks` with [the `workflow_run` event](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run).
-1. Extract necessary data from the cached `pull_request` event.
-1. Track the cached benchmark results with `bencher run`.
-1. Create a third workflow file and use the initial example above to run on `push` events to the `main` branch.
+2. Chain `Track Benchmarks` to `Run and Cache Benchmarks` with [the `workflow_run` event](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run).
+3. Download the cached benchmark results and `pull_request` event.
+4. Extract the cached benchmark results and `pull_request` event.
+5. Export the necessary data from the `pull_request` event as environment variables.
+6. Track the cached benchmark results with `bencher run`:
+   1. Use single quotes around all untrusted input. (ex: `--if-branch '${{ env.PR_HEAD }}'`)
+   2. Explicitly pass in the pull request number. (ex: `--ci-number '${{ env.PR_NUMBER }}'`)
+   3. Pass in the file path to the benchmark results file. (ex: `--file "$BENCHMARK_RESULTS"`)
+1. (Not Shown) Create a third GitHub Actions `workflow` file and use the initial example above to run on `push` events to the `main` branch. (ex: `.github/workflows/benchmark.yml`)
 
 This setup works because `workflow_run` runs in the context of the repository's default branch,
 where secrets such as your `BENCHER_API_TOKEN` and the `GITHUB_TOKEN` are available.
@@ -116,7 +127,12 @@ Therefore, these workflows will only run if they exist on the _default_ branch.
 See [using data from the triggering workflow](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow) for a full overview.
 The pull request number, head branch, and base branch used in the initial workflow must be explicitly passed in since they are not available within `workflow_run`.
 
-It is also _very_ important to wrap the PR branch name (head ref) in **single** quotes. (ex: `--if-branch '${{ env.PR_HEAD }}'`) Otherwise, an attacker could create a maliciously named branch that performs command injection. See this [GitHub Security Lab write up](https://securitylab.github.com/research/github-actions-untrusted-input/) on preventing pwn requests from untrusted input for a full overview.
+It is very important to wrap the PR branch name (head ref) in **single** quotes. (ex: `--if-branch '${{ env.PR_HEAD }}'`) Otherwise, an attacker could create a maliciously named branch that performs command injection. See this [GitHub Security Lab write up](https://securitylab.github.com/research/github-actions-untrusted-input/) on preventing pwn requests from untrusted input for a full overview.
+
+Avoid setting any secrets as environment variables in the `Run and Cache Benchmarks` workflow file.
+See this [GitHub Security Lab write up](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
+and [this blog post](https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests)
+on preventing pwn requests for a full overview.
 
 <br/>
 <br/>

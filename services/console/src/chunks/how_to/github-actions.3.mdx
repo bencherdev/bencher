@@ -1,31 +1,18 @@
 ```yaml
 on:
-  push:
-    branches: main
   pull_request_target:
 
 jobs:
-  benchmark_main_with_bencher:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    name: Benchmark main with Bencher
+  fork_pr_requires_review:
+    if: github.event_name == 'pull_request_target'
+    environment:
+      ${{ (github.event.pull_request.head.repo.full_name == github.repository && 'internal') || 'external' }}
     runs-on: ubuntu-latest
-    env:
-      BENCHER_PROJECT: save-walter-white
-      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
-      BENCHER_TESTBED: ubuntu-latest
-      BENCHER_ADAPTER: json
     steps:
-      - uses: actions/checkout@v3
-      - uses: bencherdev/bencher@main
-      - name: Track Benchmarks with Bencher
-        run: |
-          bencher run \
-          --branch main \
-          --err \
-          "bencher mock"
+      - run: true
 
   benchmark_pr_with_bencher:
-    if: github.event_name == 'pull_request_target'
+    needs: fork_pr_requires_review
     name: Benchmark PR with Bencher
     runs-on: ubuntu-latest
     env:

@@ -1,27 +1,4 @@
 ```yaml
-name: Run and Cache Benchmarks
-
-on: pull_request
-
-jobs:
-  benchmark:
-    name: Run Benchmarks
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Mock Benchmark
-        run: echo '{"bencher::mock_0": { "latency": { "value": 1.0 }}}' &> benchmark_results.txt
-      - uses: actions/upload-artifact@v3
-        with:
-          name: benchmark_results.txt
-          path: ./benchmark_results.txt
-      - uses: actions/upload-artifact@v3
-        with:
-          name: pr_event.json
-          path: ${{ env.GITHUB_EVENT_PATH }}
-```
-
-```yaml
 name: Track Benchmarks
 
 on:
@@ -39,7 +16,7 @@ jobs:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
       BENCHER_ADAPTER: json
       BENCHER_TESTBED: ubuntu-latest
-      BENCHMARK_RESULTS: benchmark_results.txt
+      BENCHMARK_RESULTS: benchmark_results.json
       PR_EVENT: pr_event.json
     steps:
       - name: Download Benchmark Results
@@ -73,7 +50,7 @@ jobs:
         run: |
           unzip $BENCHMARK_RESULTS.zip
           unzip $PR_EVENT.zip
-      - name: Export PR Context
+      - name: Export PR Event Data
         uses: actions/github-script@v6
         with:
           script: |
