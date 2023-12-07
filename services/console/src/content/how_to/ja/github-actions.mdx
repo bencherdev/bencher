@@ -13,7 +13,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 
 <GitHubActions1 />
 
-1. GitHub Actionsの`workflow`ファイルを作成します（例：`.github/workflows/benchmark.yml`）。
+1. GitHub Actionsの`workflow`ファイルを作成します（例：`.github/workflows/benchmarks.yml`）。
 2. `main`ブランチへの`push`イベントで実行します。詳細は、[GitHub Actions `on`のドキュメンテーション](https://docs.github.com/ja/actions/using-workflows/workflow-syntax-for-github-actions#on)をご覧ください。また、以下の[プルリクエスト](#pull-requests)もご覧ください。
 3. GitHub Actionsの`job`を作成します（例：`benchmark_with_bencher`）。
 4. プロジェクトはすでに存在している必要があります。`--project`フラグを設定するか、`BENCHER_PROJECT`環境変数をプロジェクトのスラッグまたはUUIDに設定します（例：`BENCHER_PROJECT: save-walter-white`）。
@@ -39,15 +39,15 @@ PRsが**同一**のリポジトリからのものだけであると想定して�
 
 <GitHubActions2 />
 
-1. GitHub Actionsの`workflow`ファイルを作成します（例：`.github/workflows/benchmark.yml`）。
-1. `main`ブランチへの`push`イベントと`pull_request`イベントで実行します。`push`を**選んだ**ブランチだけに限定して実行することが重要です（例：`main`）。これにより、PRブランチへのプッシュが2回実行されるのを防ぎます！
-2. 常に`main`ブランチを使用する代わりに、[GitHub Actionデフォルトの環境変数](https://docs.github.com/ja/actions/learn-github-actions/variables#default-environment-variables)を使用して：
-        1. 既存の場合は現在のブランチデータを使用します（例：`--if-branch '${{ github.head_ref }}'`）。
-        2. 既存の場合は、PRターゲットブランチのデータと閾値のクローンを作成します（例：`--else-if-branch '${{ github.base_ref }}'`）。
-        3. それ以外の場合は、`main`ブランチのデータと閾値のクローンを作成します（例：`--else-if-branch main`）。
-        4. プロジェクトブランチを設定するためのいくつかのオプションがあります。詳細は、[ブランチ選択](/docs/ja/explanation/branch-selection)をご覧ください。
-3. GitHub API認証トークンを設定します（例：`--github-actions "${{ secrets.GITHUB_TOKEN }}"`）。このオプションがプルリクエストの一部として設定されると、結果はプルリクエストにコメントとして追加されます。これは[GitHub Actionsの`GITHUB_TOKEN`環境変数](https://docs.github.com/ja/actions/security-guides/automatic-token-authentication)を使用します。
-4. プルリクエストコメントの設定方法の全体概要については、[bencher run](/docs/ja/explanation/bencher-run)ドキュメントをご覧ください。
+1. GitHub Actionsの `workflow` ファイルを作成します。(例： `.github/workflows/pr_benchmarks.yml`)
+2. プルリクエストが同一リポジトリからのものである限り、`pull_request` イベントで実行します。ForkされたPRの処理については、以下の[フォークからのプルリクエスト](#pull-requests-from-forks)を参照してください。
+3. [使用するブランチを選択](http://localhost:3000/docs/ja/explanation/branch-selection)します:
+        1. 既に存在する場合は、現在のブランチのデータを使用します。(例： `--if-branch '${{ github.head_ref }}'`)
+        2. 既に存在する場合は、PRターゲットブランチのデータと閾値のクローンを作成します。(例： `--else-if-branch '${{ github.base_ref }}'`)
+        3. それ以外の場合は、`main`ブランチのデータと閾値のクローンを作成します。(例： `--else-if-branch main`)
+4. GitHub API認証トークンを設定します。(例： `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) このオプションがプルリクエストの一部として設定されると、結果がプルリクエストにコメントとして追加されます。これは[GitHub Actionsの `GITHUB_TOKEN` 環境変数](https://docs.github.com/ja/actions/security-guides/automatic-token-authentication)を使用します。
+5. `--ci-*` フラグでプルリクエストのコメントを設定するすべての方法については、[bencher run](/docs/ja/explanation/bencher-run)ドキュメンテーションを全て覧下さい。
+6. (表示されていません) 2つ目のGitHub Actions `workflow` ファイルを作成し、上記の初期例を使用して`main`ブランチへの`push`イベントで実行します。(例： `.github/workflows/benchmarks.yml`)
 
 ## フォークからのプルリクエスト
 
@@ -70,7 +70,7 @@ PRsが**同一**のリポジトリからのものだけであると想定して�
 
 <GitHubActions3 />
 
-1. GitHub Actionsの`workflow`ファイルを作成します（例：`.github/workflows/pr_benchmark.yml`）。
+1. GitHub Actionsの`workflow`ファイルを作成します（例：`.github/workflows/pr_benchmarks.yml`）。
 1. [on `pull_request_target`イベント](https://docs.github.com/ja/actions/using-workflows/events-that-trigger-workflows#pull_request_target)で実行します。
 1. 各フォークのプルリクエスト（`external`）の実行前に、必須のレビュアーからの承認が必要な`fork_pr_requires_review`という名前の`job`を作成します。
 1. `fork_pr_requires_review`に依存する第三の`job`を作成します。
@@ -78,7 +78,7 @@ PRsが**同一**のリポジトリからのものだけであると想定して�
    2. 信頼できない入力全てを引用符で囲みます（例：`--if-branch '${{ github.head_ref }}'`）。
    3. すべてのシークレットを直接渡します（例：`--token "${{ secrets.BENCHER_API_TOKEN }}"`）。
    4. `bencher run`でプルリクエストのベンチマークを実行し、追跡します。
-1. (表示されていない) 二つ目のGitHub Actions `workflow`ファイルを作成し、上記の初期例を使用して`main`ブランチへの`push`イベントで実行します（例：`.github/workflows/benchmark.yml`）。
+1. (表示されていない) 二つ目のGitHub Actions `workflow`ファイルを作成し、上記の初期例を使用して`main`ブランチへの`push`イベントで実行します（例：`.github/workflows/benchmarks.yml`）。
 
 このセットアップは、`pull_request_target`がプルリクエストのターゲットブランチのコンテキストで実行されるため動作します。ここでは、`BENCHER_API_TOKEN`や`GITHUB_TOKEN`などのシークレットが利用可能です。したがって、このワークフローは、それがターゲットブランチ上に存在する場合にのみ実行されます。
 
@@ -96,7 +96,7 @@ pwnリクエストを防止する方法については、[GitHub Security Labの
 
 <GitHubActions4 />
 
-1. `Run and Cache Benchmarks`ワークフローファイルを作成します。
+1. `Run and Cache Benchmarks`ワークフローファイルを作成します（例：`.github/workflows/pr_benchmarks.yml`）。
 2. ワークフロー内のすべてのジョブを`pull_request`イベントで実行します。
 3. ベンチマークを実行し、結果をファイルに保存します（例：`benchmark_results.json`）。
 4. ベンチマーク結果のファイルをアーティファクトとしてアップロードします。
@@ -104,7 +104,7 @@ pwnリクエストを防止する方法については、[GitHub Security Labの
 
 <GitHubActions5 />
 
-1. 二つ目のワークフローファイル、`Track Benchmarks`を作成します。
+1. 二つ目のワークフローファイル、`Track Benchmarks`を作成します。（例: `.github/workflows/track_benchmarks.yml`）
 2. [the `workflow_run` event](https://docs.github.com/ja/actions/using-workflows/events-that-trigger-workflows#workflow_run)を使用して`Track Benchmarks`を`Run and Cache Benchmarks`に連鎖させます。
 3. キャッシュされたベンチマーク結果と`pull_request`イベントをダウンロードします。
 4. キャッシュされたベンチマーク結果と`pull_request`イベントを抽出します。
@@ -113,7 +113,7 @@ pwnリクエストを防止する方法については、[GitHub Security Labの
    1. すべての信頼できない入力を一重引用符で囲みます（例：`--if-branch '${{ env.PR_HEAD }}'`）。
    2. プルリクエスト番号を明示的に渡します（例：`--ci-number '${{ env.PR_NUMBER }}'`）。
    3. ベンチマーク結果のファイルへのファイルパスを渡します（例：`--file "$BENCHMARK_RESULTS"`）。
-1. (表示されていない) 三つ目のGitHub Actions `workflow`ファイルを作成し、上記の初期例を使用して`main`ブランチへの`push`イベントで実行します（例：`.github/workflows/benchmark.yml`）。
+1. (表示されていない) 三つ目のGitHub Actions `workflow`ファイルを作成し、上記の初期例を使用して`main`ブランチへの`push`イベントで実行します（例：`.github/workflows/benchmarks.yml`）。
 
 このセットアップは、`workflow_run`がリポジトリのデフォルトブランチのコンテキストで実行されるため動作します。ここでは、`BENCHER_API_TOKEN`や`GITHUB_TOKEN`などのシークレットが利用可能です。したがって、これらのワークフローは、_default_ブランチ上に存在する場合にのみ実行されます。[トリガリングワークフローからのデータの使用](https://docs.github.com/ja/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow)の全体概要を参照してください。初期のワークフローで使用されたプルリクエスト番号、ヘッドブランチ、ベースブランチは、`workflow_run`内では利用できないため、明示的に渡す必要があります。
 

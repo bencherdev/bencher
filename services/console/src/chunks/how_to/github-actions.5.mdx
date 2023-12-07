@@ -13,7 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BENCHER_PROJECT: save-walter-white
-      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
       BENCHER_ADAPTER: json
       BENCHER_TESTBED: ubuntu-latest
       BENCHMARK_RESULTS: benchmark_results.json
@@ -69,6 +68,7 @@ jobs:
               --else-if-branch '${{ env.PR_DEFAULT }}' \
               --ci-number '${{ env.PR_NUMBER }}' \
               --github-actions "${{ secrets.GITHUB_TOKEN }}" \
+              --token "${{ secrets.BENCHER_API_TOKEN }}" \
               --err \
               --file "$BENCHMARK_RESULTS"
 ```

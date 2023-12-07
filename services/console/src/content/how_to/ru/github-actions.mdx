@@ -13,7 +13,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 
 <GitHubActions1 />
 
-1. Создайте файл `workflow` для GitHub Actions. (например: `.github/workflows/benchmark.yml`)
+1. Создайте файл `workflow` для GitHub Actions. (например: `.github/workflows/benchmarks.yml`)
 2. Запустите на событиях `push` в ветке `main`. Полный обзор смотрите в [документации GitHub Actions `on`](https://docs.github.com/ru/actions/using-workflows/workflow-syntax-for-github-actions#on). Смотрите также раздел [Pull Requests](#pull-requests) ниже.
 3. Создайте `job` для GitHub Actions. (например: `benchmark_with_bencher`)
 4. Проект уже должен существовать. Установите флаг `--project` или переменную окружения `BENCHER_PROJECT` для slug или UUID проекта (например: `BENCHER_PROJECT: save-walter-white`).
@@ -39,15 +39,15 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 
 <GitHubActions2 />
 
-1. Создайте файл `workflow` для GitHub Actions. (например: `.github/workflows/benchmark.yml`)
-1. Запустите на событиях `push` в ветке `main` и на событиях `pull_request`. Важно ограничить запуск при `push` **только** в выбранных ветках (например: `main`), чтобы предотвратить двойной запуск при push в ветках пулл-реквестов!
-2. Вместо постоянного использования ветки `main`, используйте [стандартные переменные окружения GitHub Action](https://docs.github.com/ru/actions/learn-github-actions/variables#default-environment-variables) для:
-        1. Использования текущих данных ветки, если они уже существуют. (например: `--if-branch '${{ github.head_ref }}'`)
-        2. Создания клонов данных и границ ветки назначения запроса, если они существуют. (например: `--else-if-branch '${{ github.base_ref }}'`)
-        3. В противном случае, создание клонов данных и границ ветки `main`. (например: `--else-if-branch main`)
-        4. Существуют различные варианты установки ветки проекта. Смотрите [выбор ветки](/docs/ru/explanation/branch-selection) для полного обзора.
-3. Установите токен аутентификации GitHub API. (например: `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) При установке этой опции в рамках запроса на вытягивание, результаты будут добавлены к запросу на вытягивание в виде комментария. Используется [переменная окружения `GITHUB_TOKEN` GitHub Actions](https://docs.github.com/ru/actions/security-guides/automatic-token-authentication).
-4. Смотрите документацию [bencher run](/docs/ru/explanation/bencher-run) для полного обзора всех способов настройки комментария к запросу на вытягивание с помощью флагов `--ci-*`.
+1. Создайте файл `workflow` для GitHub Actions (например: `.github/workflows/pr_benchmarks.yml`)
+2. Запускайте при событиях `pull_request` только и только если запрос на вытягивание происходит из того же репозитория. Для обработки PR из форков см. [Запросы на вытягивание из форков](#pull-requests-from-forks) ниже.
+3. [Выберите ветку](http://localhost:3000/docs/ru/explanation/branch-selection) для использования:
+        1. Используйте текущие данные ветки, если они уже существуют. (например: `--if-branch '${{ github.head_ref }}'`)
+        2. Создайте клон данных целевой ветки PR и порогов, если они уже существуют. (например: `--else-if-branch '${{ github.base_ref }}'`)
+        3. В противном случае создайте клон данных основной ветки (`main`) и порогов. (например: `--else-if-branch main`)
+4. Установите токен аутентификации API GitHub. (например: `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) Когда этот параметр установлен в рамках запроса на вытягивание, то результаты будут добавлены к запросу на вытягивание в виде комментария. Использует [переменную среды `GITHUB_TOKEN` от GitHub Actions](https://docs.github.com/ja/actions/security-guides/automatic-token-authentication).
+5. Посмотрите в документации [bencher run](/docs/ru/explanation/bencher-run) полное описание всех способов настройки комментария запроса на вытягивание с `--ci-*` флагами.
+6. (Не показано) Создайте второй файл `workflow` для GitHub Actions и используйте приведенный выше пример для запуска по событиям `push` в основную ветку (`main`). (например: `.github/workflows/benchmarks.yml`)
 
 ## Pull Requests из Forks
 
@@ -71,7 +71,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 
 <GitHubActions3 />
 
-1. Создайте файл `workflow` для GitHub Actions. (например: `.github/workflows/pr_benchmark.yml`)
+1. Создайте файл `workflow` для GitHub Actions. (например: `.github/workflows/pr_benchmarks.yml`)
 1. Запустите [события `pull_request_target`](https://docs.github.com/ru/actions/using-workflows/events-that-trigger-workflows#pull_request_target).
 1. Создайте `job` с именем `fork_pr_requires_review`, которая требует утверждения от обязательного рецензента перед каждым запуском коммита во внешнем pull request (`external`).
 1. Создайте третий `job`, который зависит от `fork_pr_requires_review`.
@@ -79,7 +79,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
    2. Используйте одинарные кавычки для всех ненадежных входных данных. (например: `--if-branch '${{ github.head_ref }}'`)
    3. Передавайте все секреты напрямую. (например: `--token "${{ secrets.BENCHER_API_TOKEN }}"`)
    4. Запустите и отслеживайте ваши пулл-реквесты с помощью `bencher run`.
-1. (Не показано) Создайте второй файл `workflow` для GitHub Actions и используйте изначальный приведенный выше пример для запуска на событиях `push` к ветке `main`. (например: `.github/workflows/benchmark.yml`)
+1. (Не показано) Создайте второй файл `workflow` для GitHub Actions и используйте изначальный приведенный выше пример для запуска на событиях `push` к ветке `main`. (например: `.github/workflows/benchmarks.yml`)
 
 Этот сценарий работает, потому что `pull_request_target` выполняется в контексте целевой ветки запроса на вытягивание,
 где доступны секреты, такие как `BENCHER_API_TOKEN` и `GITHUB_TOKEN`.
@@ -102,7 +102,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 
 <GitHubActions4 />
 
-1. Создайте файл рабочего процесса `Run and Cache Benchmarks`.
+1. Создайте файл рабочего процесса `Run and Cache Benchmarks`. (например: `.github/workflows/pr_benchmarks.yml`)
 2. Запустите все задания в рабочем процессе при событиях `pull_request`.
 3. Запустите бенчмарки и сохраните результаты в файл. (например: `benchmark_results.json`)
 4. Загрузите файл с результатами теста как артефакт.
@@ -110,7 +110,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 
 <GitHubActions5 />
 
-1. Создайте второй файл рабочего процесса, `Track Benchmarks`.
+1. Создайте второй файл рабочего процесса, `Track Benchmarks`. (например: `.github/workflows/track_benchmarks.yml`)
 2. Соедините `Track Benchmarks` с `Run and Cache Benchmarks` с использованием [события `workflow_run`](https://docs.github.com/ru/actions/using-workflows/events-that-trigger-workflows#workflow_run).
 3. Скачайте кэшированные результаты бенчмарка и объект `pull_request`.
 4. Извлеките кэшированные результаты бенчмарка и объект `pull_request`.
@@ -119,7 +119,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
    1. Используйте одинарные кавычки для всех ненадежных входных данных. (например: `--if-branch '${{ env.PR_HEAD }}'`)
    2. Явно передайте номер запроса. (например: `--ci-number '${{ env.PR_NUMBER }}'`)
    3. Передайте путь к файлу с результатами бенчмарка. (например: `--file "$BENCHMARK_RESULTS"`)
-1. (Не показано) Создайте третий файл GitHub Actions `workflow` и используйте изначальный приведенный выше пример для запуска на событиях `push` к ветке `main`. (например: `.github/workflows/benchmark.yml`)
+1. (Не показано) Создайте третий файл GitHub Actions `workflow` и используйте изначальный приведенный выше пример для запуска на событиях `push` к ветке `main`. (например: `.github/workflows/benchmarks.yml`)
 
 Эта настройка работает, потому что `workflow_run` выполняется в контексте основной ветки репозитория,
 где доступны секреты, такие как `BENCHER_API_TOKEN` и `GITHUB_TOKEN`.

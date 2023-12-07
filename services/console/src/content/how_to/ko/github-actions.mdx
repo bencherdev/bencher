@@ -13,7 +13,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 
 <GitHubActions1 />
 
-1. GitHub Actions `workflow` 파일을 생성합니다. (예: `.github/workflows/benchmark.yml`)
+1. GitHub Actions `workflow` 파일을 생성합니다. (예: `.github/workflows/benchmarks.yml`)
 2. `main` 브랜치로 `push` 이벤트를 실행합니다. 전체 개요는 [GitHub Actions `on` 문서](https://docs.github.com/ko/actions/using-workflows/workflow-syntax-for-github-actions#on)를 참조하세요. 아래의 [Pull Requests](#pull-requests)도 참조하세요.
 3. GitHub Actions `job`을 생성합니다. (예: `benchmark_with_bencher`)
 4. 프로젝트는 이미 존재해야 합니다. `--project` 플래그를 설정하거나 `BENCHER_PROJECT` 환경 변수를 프로젝트 slug 또는 UUID로 설정합니다. (예: `BENCHER_PROJECT: save-walter-white`)
@@ -39,15 +39,15 @@ PR이 동일 **레파지토리** 내의 브랜치에서만 예상된다면 위�
 
 <GitHubActions2 />
 
-1. GitHub Actions `workflow` 파일을 생성합니다. (예: `.github/workflows/benchmark.yml`)
-1. `main` 브랜치로 `push` 이벤트와 `pull_request` 이벤트를 실행합니다. PR 브랜치로의 push가 두 번 실행되는 것을 방지하기 위해 `push`를 선택한 브랜치(예: `main`)에만 **제한**하는 것이 중요합니다!
-2. 항상 `main` 브랜치를 사용하는 대신, [GitHub Action 기본 환경 변수](https://docs.github.com/ko/actions/learn-github-actions/variables#default-environment-variables)를 사용하여 보다 세밀하게 컨텐츠를 가져옵니다:
-        1. 기존 브랜치 데이터가 있으면 사용합니다. (예: `--if-branch '${{ github.head_ref }}'`)
-        2. 이미 존재하는 PR 타겟 브랜치 데이터와 임계값의 클론을 생성합니다. (예: `--else-if-branch '${{ github.base_ref }}'`)
-        3. 그렇지 않으면, `main` 브랜치 데이터와 임계 값의 클론을 생성합니다. (예: `--else-if-branch main`)
-        4. 프로젝트 브랜치를 설정하는 데에는 여러 옵션이 있습니다. 전체 개요는 [브랜치 선택](/docs/ko/explanation/branch-selection)을 참조하세요.
-3. GitHub API 인증 토큰을 설정합니다. (예: `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) 이 옵션이 풀 요청의 일부로 설정되면 결과는 풀 요청에 댓글로 추가됩니다. 이는 [GitHub Actions `GITHUB_TOKEN` 환경 변수](https://docs.github.com/ko/actions/security-guides/automatic-token-authentication)를 사용합니다.
-4. pull request 코멘트를 `--ci-*` 플래그를 사용하여 모든 방법으로 구성하는 방법에 대한 전체 개요는 [bencher run](/docs/ko/explanation/bencher-run) 문서를 참조하세요.
+1. GitHub Actions `workflow` 파일을 생성합니다. (예: `.github/workflows/pr_benchmarks.yml`)
+2. pull request가 동일한 저장소에서 온 경우에만 `pull_request` 이벤트에서 실행하십시오. Fork PRs를 처리하는 방법은 아래의 [Fork에서의 Pull Requests](#pull-requests-from-forks)를 참조하십시오.
+3. 사용할 [브랜치를 선택](http://localhost:3000/docs/ko/explanation/branch-selection)하십시오:
+        1. 이미 존재하는 현재 브랜치 데이터를 사용합니다. (예: `--if-branch '${{ github.head_ref }}'`)
+        2. 이미 존재하는 PR 타겟 브랜치 데이터와 임계값의 복제본을 생성합니다. (예: `--else-if-branch '${{ github.base_ref }}'`)
+        3. 그렇지 않으면, `main` 브랜치 데이터와 임계값의 복제본을 생성합니다. (예: `--else-if-branch main`)
+4. GitHub API 인증 토큰을 설정합니다. (예: `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) 이 옵션이 pull request의 일부로 설정되면, 결과가 pull request에 댓글로 추가됩니다. 이는 [GitHub Actions의 `GITHUB_TOKEN` 환경 변수](https://docs.github.com/ja/actions/security-guides/automatic-token-authentication)를 사용합니다.
+5. 모든 방법을 통해 pull request 댓글을 `--ci-*` 플래그로 설정하는 방법에 대한 전체 개요는 [bencher run](/docs/ko/explanation/bencher-run) 문서를 참조하십시오.
+6. (표시되지 않음) 두 번째 GitHub Actions `workflow` 파일을 생성하고 위의 초기 예제를 사용하여 `main` 브랜치로 `push` 이벤트에서 실행하십시오. (예: `.github/workflows/benchmarks.yml`)
 
 ## Forks에서의 Pull Requests
 
@@ -71,7 +71,7 @@ Fork PR에 대한 두 가지 옵션이 있습니다:
 
 <GitHubActions3 />
 
-1. GitHub Actions `workflow` 파일을 생성합니다. (예: `.github/workflows/pr_benchmark.yml`)
+1. GitHub Actions `workflow` 파일을 생성합니다. (예: `.github/workflows/pr_benchmarks.yml`)
 1. [`pull_request_target` 이벤트](https://docs.github.com/ko/actions/using-workflows/events-that-trigger-workflows#pull_request_target)에 대하여 실행합니다.
 1. 각 Branch pull request (`external`) 실행 전에 승인가 필요한 Reviewer에서 필요로 하는 `fork_pr_requires_review`라는 `job`을 만듭니다.
 1. `fork_pr_requires_review`에 종속된 세 번째 `job`을 만듭니다.
@@ -79,7 +79,7 @@ Fork PR에 대한 두 가지 옵션이 있습니다:
    2. 믿을 수 없는 입력을 위해 모든 내용을 단일 인용문(`'`)으로 감쌉니다. (예: `--if-branch '${{ github.head_ref }}'`)
    3. 모든 시크릿을 직접 전달합니다. (예: `--token "${{ secrets.BENCHER_API_TOKEN }}"`)
    4. `bencher run`으로 PR 벤치마크를 실행하고 추적합니다.
-1. (보이지 않음) 두 번째 GitHub Actions `workflow` 파일을 만들고 위의 초기 예제를 사용하여 `main` 브랜치로 `push` 이벤트를 실행합니다. (예: `.github/workflows/benchmark.yml`)
+1. (보이지 않음) 두 번째 GitHub Actions `workflow` 파일을 만들고 위의 초기 예제를 사용하여 `main` 브랜치로 `push` 이벤트를 실행합니다. (예: `.github/workflows/benchmarks.yml`)
 
 이 설정이 동작는 이유는 `pull_request_target`이 pull request의 target branch 맥락에서 실행되며, `BENCHER_API_TOKEN`와 `GITHUB_TOKEN`과 같은 비밀이 사용 가능하기 때문입니다.
 따라서, 이 워크플로우는 _target_ 브랜치에 존재할 경우에만 실행됩니다.
@@ -101,7 +101,7 @@ PR 브랜치 이름(head ref)을 **한 개의** 따옴표로 감싸는 것이 �
 
 <GitHubActions4 />
 
-1. `Run and Cache Benchmarks` 워크플로우 파일을 만듭니다.
+1. `Run and Cache Benchmarks` 워크플로우 파일을 만듭니다. (예: `.github/workflows/pr_benchmarks.yml`)
 2. 워크플로우에서 모든 작업을 `pull_request` 이벤트에서 실행합니다.
 3. 벤치마크를 실행하고 결과를 파일로 저장합니다. (예: `benchmark_results.json`)
 4. 벤치마크 결과 파일을 아티팩트로 업로드합니다.
@@ -109,7 +109,7 @@ PR 브랜치 이름(head ref)을 **한 개의** 따옴표로 감싸는 것이 �
 
 <GitHubActions5 />
 
-1. 두 번째 워크플로우 파일, `Track Benchmarks`를 만듭니다.
+1. 두 번째 워크플로우 파일, `Track Benchmarks`를 만듭니다. (예: `.github/workflows/track_benchmarks.yml`)
 2. [the `workflow_run` event](https://docs.github.com/ko/actions/using-workflows/events-that-trigger-workflows#workflow_run)로 `Track Benchmarks`를 `Run and Cache Benchmarks`에 연결합니다.
 3. 캐쉬된 벤치마크 결과와 `pull_request` 이벤트를 다운로드합니다.
 4. 캐쉬된 벤치마크 결과와 `pull_request` 이벤트를 추출합니다.
@@ -118,7 +118,7 @@ PR 브랜치 이름(head ref)을 **한 개의** 따옴표로 감싸는 것이 �
    1. 모든 믿을 수 없는 입력을 위해 모든 건을 단일 인용문(`'`)으로 감쌉니다. (예: `--if-branch '${{ env.PR_HEAD }}'`)
    2. Pull Request 번호를 명시적으로 전달합니다. (예: `--ci-number '${{ env.PR_NUMBER }}'`)
    3. 벤치마크 결과 파일의 파일 경로를 전달합니다. (예: `--file "$BENCHMARK_RESULTS"`)
-1. (보이지 않음) 세 번째 GitHub Actions `workflow` 파일을 만들고 위의 초기 예를 사용하여 `main` 브랜치로 `push` 이벤트를 실행합니다. (예: `.github/workflows/benchmark.yml`)
+1. (보이지 않음) 세 번째 GitHub Actions `workflow` 파일을 만들고 위의 초기 예를 사용하여 `main` 브랜치로 `push` 이벤트를 실행합니다. (예: `.github/workflows/benchmarks.yml`)
 
 이 설정은 `workflow_run`이 레파지토리의 기본 브랜치 맥락에서 실행되며, `BENCHER_API_TOKEN`와 `GITHUB_TOKEN`과 같은 비밀이 사용가능하기 때문에 동작합니다.
 따라서, 이 워크플로우는 _기본_ 브랜치에 있을 경우에만 실행됩니다.

@@ -13,7 +13,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 
 <GitHubActions1 />
 
-1. Crie um arquivo `workflow` do GitHub Actions. (ex `.github/workflows/benchmark.yml`)
+1. Crie um arquivo `workflow` do GitHub Actions. (ex `.github/workflows/benchmarks.yml`)
 2. Execute em eventos `push` para a branch `main`. Veja a [documentação `on` do GitHub Actions](https://docs.github.com/pt/actions/using-workflows/workflow-syntax-for-github-actions#on) para uma visão geral completa. Consulte também [Pull Requests](#pull-requests) abaixo.
 3. Crie um `job` do GitHub Actions. (ex `benchmark_with_bencher`)
 4. O Projeto já deve existir. Defina a flag `--project` ou a variável de ambiente `BENCHER_PROJECT` para o slug do Projeto ou UUID (ex: `BENCHER_PROJECT: save-walter-white`).
@@ -39,15 +39,15 @@ Se você espera apenas ter PRs de branches dentro do mesmo repositório, você p
 
 <GitHubActions2 />
 
-1. Crie um arquivo `workflow` do GitHub Actions. (ex: `.github/workflows/benchmark.yml`)
-1. Execute em eventos `push` para a branch `main` e em eventos `pull_request`. É importante limitar a execução em `push` **apenas** para as branches selecionadas (ex: `main`) para prevenir que os `pushes` para as branches do PR sejam executados duas vezes!
-2. Em vez de sempre usar a branch `main`, use as [variáveis de ambiente padrão do GitHub Action](https://docs.github.com/pt/actions/learn-github-actions/variables#default-environment-variables) para:
-        1. Usar os dados da branch atual, se já existirem. (ex: `--if-branch '${{ github.head_ref }}'`)
-        2. Criar um clone dos dados da branch alvo do PR e limiares, se já existirem. (ex: `--else-if-branch '${{ github.base_ref }}'`)
-        3. Caso contrário, crie um clone dos dados da branch `main` e limiares. (ex: `--else-if-branch main`)
-        4. Existem várias opções para definir a branch do projeto. Consulte [seleção de branch](/docs/pt/explanation/branch-selection) para uma visão geral completa.
-3. Defina o token de autenticação da API do GitHub. (ex: `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) Quando esta opção é definida como parte de uma pull request, os resultados serão adicionados à solicitação de pull como um comentário. Isso usa [a variável de ambiente `GITHUB_TOKEN` do GitHub Actions](https://docs.github.com/pt/actions/security-guides/automatic-token-authentication).
-4. Consulte a documentação do [bencher run](/docs/pt/explanation/bencher-run) para uma visão geral completa de todas as maneiras de configurar o comentário da solicitação de extração com as flags `--ci-*`.
+1. Crie um arquivo `workflow` do GitHub Actions. (ex: `.github/workflows/pr_benchmarks.yml`)
+2. Execute em eventos `pull_request` apenas se o pull request for do mesmo repositório. Para lidar com Pull Requests de Forks, veja [Pull Requests de Forks](#pull-requests-from-forks) abaixo.
+3. [Selecione a branch](http://localhost:3000/docs/pt/explanation/branch-selection) para usar:
+        1. Use os dados da branch atual se já existirem. (ex: `--if-branch '${{ github.head_ref }}'`)
+        2. Crie um clone dos dados e limites da branch alvo do PR, se existirem. (ex: `--else-if-branch '${{ github.base_ref }}'`)
+        3. Caso contrário, crie uma cópia dos dados e limites da branch `main`. (ex: `--else-if-branch main`)
+4. Defina o token de autenticação da API do GitHub. (ex: `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) Quando esta opção é definida como parte de um pull request, os resultados serão adicionados ao pull request como um comentário. Isso usa [a variável de ambiente `GITHUB_TOKEN` das GitHub Actions](https://docs.github.com/pt/actions/security-guides/automatic-token-authentication).
+5. Veja a documentação de [execução do bencher](/docs/pt/explanation/bencher-run) para uma visão geral completa de todas as maneiras de configurar o comentário do pull request com as flags `--ci-*`.
+6. (Não mostrado) Crie um segundo arquivo `workflow` de GitHub Actions e use o exemplo inicial acima para executar em eventos `push` para a branch `main`. (ex: `.github/workflows/benchmarks.yml`)
 
 ## Pull Requests de Forks
 
@@ -71,7 +71,7 @@ Existem duas opções para PRs de forks:
 
 <GitHubActions3 />
 
-1. Crie um arquivo `workflow` do GitHub Actions. (ex: `.github/workflows/pr_benchmark.yml`)
+1. Crie um arquivo `workflow` do GitHub Actions. (ex: `.github/workflows/pr_benchmarks.yml`)
 1. Execute [em eventos `pull_request_target`](https://docs.github.com/pt/actions/using-workflows/events-that-trigger-workflows#pull_request_target).
 1. Crie um `job` chamado `fork_pr_requires_review` que requer aprovação de um Required Reviewer antes de cada execução de pull request do fork (`external`).
 1. Crie um terceiro `job` que depende de `fork_pr_requires_review`.
@@ -79,7 +79,7 @@ Existem duas opções para PRs de forks:
    2. Use aspas simples em torno de todas as entradas não confiáveis. (ex: `--if-branch '${{ github.head_ref }}'`)
    3. Passe todos os segredos diretamente. (ex: `--token "${{ secrets.BENCHER_API_TOKEN }}"`)
    4. Execute e rastreie seus benchmarks de pull request com `bencher run`.
-1. (Não demonstrado) Crie um segundo arquivo `workflow` das GitHub Actions e use o exemplo inicial acima para executar em eventos `push` para a branch `main`. (ex: `.github/workflows/benchmark.yml`)
+1. (Não demonstrado) Crie um segundo arquivo `workflow` das GitHub Actions e use o exemplo inicial acima para executar em eventos `push` para a branch `main`. (ex: `.github/workflows/benchmarks.yml`)
 
 Esta configuração funciona porque `pull_request_target` é executado no contexto da branch de destino da solicitação de pull,
 onde segredos como seu `BENCHER_API_TOKEN` e o `GITHUB_TOKEN` estão disponíveis.
@@ -102,7 +102,7 @@ sobre como prevenir solicitações pwn para uma visão geral completa.
 
 <GitHubActions4 />
 
-1. Crie um arquivo de workflow `Run and Cache Benchmarks`.
+1. Crie um arquivo de workflow `Run and Cache Benchmarks`. (ex: `.github/workflows/pr_benchmarks.yml`)
 2. Execute todos os jobs no workflow em eventos `pull_request`.
 3. Execute os benchmarks e salve os resultados em um arquivo. (ex: `benchmark_results.json`)
 4. Carregue o arquivo de resultados do benchmark como um artefato.
@@ -110,7 +110,7 @@ sobre como prevenir solicitações pwn para uma visão geral completa.
 
 <GitHubActions5 />
 
-1. Crie um segundo arquivo de workflow, `Track Benchmarks`.
+1. Crie um segundo arquivo de workflow, `Track Benchmarks`. (ex: `.github/workflows/track_benchmarks.yml`)
 2. Encadeie `Track Benchmarks` para `Run and Cache Benchmarks` com [o evento `workflow_run`](https://docs.github.com/pt/actions/using-workflows/events-that-trigger-workflows#workflow_run).
 3. Baixe os resultados de benchmark em cache e o evento `pull_request`.
 4. Extraia os resultados de benchmark em cache e o evento `pull_request`.
@@ -119,7 +119,7 @@ sobre como prevenir solicitações pwn para uma visão geral completa.
    1. Use aspas simples em torno de todas as entradas não confiáveis. (ex: `--if-branch '${{ env.PR_HEAD }}'`)
    2. Passe explicitamente o número da solicitação de pull. (ex: `--ci-number '${{ env.PR_NUMBER }}'`)
    3. Passe o caminho do arquivo para o arquivo de resultados de benchmark. (ex: `--file "$BENCHMARK_RESULTS"`)
-1. (Não demonstrado) Crie um terceiro arquivo `workflow` das GitHub Actions e use o exemplo inicial acima para executar em eventos `push` para a branch `main`. (ex: `.github/workflows/benchmark.yml`)
+1. (Não demonstrado) Crie um terceiro arquivo `workflow` das GitHub Actions e use o exemplo inicial acima para executar em eventos `push` para a branch `main`. (ex: `.github/workflows/benchmarks.yml`)
 
 Este setup funciona porque `workflow_run` é executado no contexto da branch padrão do repositório,
 onde segredos como seu `BENCHER_API_TOKEN` e o `GITHUB_TOKEN` estão disponíveis.

@@ -13,7 +13,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 
 <GitHubActions1 />
 
-1. Créez un fichier `workflow` GitHub Actions. (ex: `.github/workflows/benchmark.yml`)
+1. Créez un fichier `workflow` GitHub Actions. (ex: `.github/workflows/benchmarks.yml`)
 2. Exécutez lors d'événements `push` vers la branche `main`. Référez-vous à la [documentation GitHub Actions `on`](https://docs.github.com/fr/actions/using-workflows/workflow-syntax-for-github-actions#on) pour un aperçu complet. Voir aussi [Demandes de fusion](#demandes-de-fusion) ci-dessous.
 3. Créez une `job` GitHub Actions. (ex: `benchmark_with_bencher`)
 4. Le projet doit déjà exister. Définissez l'option `--project` ou la variable d'environnement `BENCHER_PROJECT` pour l'identifiant court ou l'UUID du projet (ex: `BENCHER_PROJECT: save-walter-white`).
@@ -39,15 +39,15 @@ Si vous ne vous attendez qu'à n'avoir des demandes de fusion que provenant de b
 
 <GitHubActions2 />
 
-1. Créez un fichier `workflow` GitHub Actions. (ex: `.github/workflows/benchmark.yml`)
-1. Exécutez lors d'événements `push` vers la branche `main` et lors d'événements `pull_request`. Il est important de limiter l'exécution lors d'événements `push` **uniquement** aux branches sélectionnées (ex: `main`) pour éviter que les poussées vers les branches de demande de fusion s'exécutent deux fois !
-2. Au lieu d'utiliser toujours la branche `main`, utilisez les [variables d'environnement par défaut de GitHub Action](https://docs.github.com/fr/actions/learn-github-actions/variables#default-environment-variables) pour :
-        1. Utiliser les données de la branche en cours si elles existent déjà. (ex: `--if-branch '${{ github.head_ref }}'`)
-        2. Créer un clone des données et des seuils de la branche cible de la demande de fusion si elles existent déjà. (ex: `--else-if-branch '${{ github.base_ref }}'`)
-        3. Sinon, créer un clone des données et des seuils de la branche `main`. (ex: `--else-if-branch main`)
-        4. Il existe plusieurs options pour définir la branche du projet. Voir [la sélection de branche](/docs/fr/explanation/branch-selection) pour un aperçu complet.
-3. Définissez le token d'authentification API GitHub. (ex: `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) Lorsque cette option est définie dans le cadre d'une demande de fusion, les résultats sont ajoutés à la demande de fusion sous forme de commentaire. Ceci utilise [la variable d'environnement `GITHUB_TOKEN` de GitHub Actions](https://docs.github.com/fr/actions/security-guides/automatic-token-authentication).
-4. Consultez la documentation [bencher run](/docs/fr/explanation/bencher-run) pour un aperçu complet de toutes les manières de configurer le commentaire de la demande de fusion avec les options `--ci-*`.
+1. Créez un fichier `workflow` pour GitHub Actions. (ex : `.github/workflows/pr_benchmarks.yml`)
+2. Exécutez lors des événements `pull_request` si et seulement si la pull request provient du même dépôt. Pour gérer les Pull Requests depuis des Forks, voir [Pull Requests de Forks](#pull-requests-de-forks) ci-dessous.
+3. [Sélectionnez la branche](http://localhost:3000/docs/fr/explanation/branch-selection) à utiliser :
+        1. Utilisez les données de branche actuelle si elles existent déjà. (ex : `--if-branch '${{ github.head_ref }}'`)
+        2. Créez un clone des données et des seuils de la branche cible de la PR s'ils existent déjà. (ex : `--else-if-branch '${{ github.base_ref }}'`)
+        3. Sinon, créez un clone des données et des seuils de la branche `main`. (ex : `--else-if-branch main`)
+4. Définissez le jeton d'authentification de l'API GitHub. (ex : `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) Lorsque cette option est définie dans le cadre d'une pull request, les résultats seront ajoutés à la pull request sous forme de commentaire. Cela utilise [la variable d'environnement `GITHUB_TOKEN` des GitHub Actions](https://docs.github.com/fr/actions/security-guides/automatic-token-authentication).
+5. Consultez la documentation [bencher run](/docs/fr/explanation/bencher-run) pour un aperçu complet de toutes les façons de configurer le commentaire de la pull request avec les drapeaux `--ci-*`.
+6. (Non montré) Créez un second fichier `workflow` pour les GitHub Actions et utilisez l'exemple initial ci-dessus pour exécuter lors des événements `push` vers la branche `main`. (ex : `.github/workflows/benchmarks.yml`)
 
 ## Demandes de Fusion à partir de Forks
 
@@ -71,7 +71,7 @@ Il existe deux options pour les demandes de fusion provenant de forks :
 
 <GitHubActions3 />
 
-1. Créez un fichier `workflow` GitHub Actions. (ex: `.github/workflows/pr_benchmark.yml`)
+1. Créez un fichier `workflow` GitHub Actions. (ex: `.github/workflows/pr_benchmarks.yml`)
 2. Exécutez [des événements `pull_request_target`](https://docs.github.com/fr/actions/using-workflows/events-that-trigger-workflows#pull_request_target).
 3. Créez une `job` nommée `fork_pr_requires_review` qui nécessite l'approbation d'un examinateur requis avant chaque exécution de demande de fusion de fork (`external`).
 4. Créez une troisième `job` qui dépend de `fork_pr_requires_review`.
@@ -79,7 +79,7 @@ Il existe deux options pour les demandes de fusion provenant de forks :
    2. Utilisez des guillemets simples autour de toutes les entrées non fiables. (ex: `--if-branch '${{ github.head_ref }}'`)
    3. Passez tous les secrets directement. (ex: `--token "${{ secrets.BENCHER_API_TOKEN }}"`)
    4. Exécutez et suivez vos benchmarks de demandes de fusion avec `bencher run`.
-5. (Non montré) Créez un deuxième fichier `workflow` GitHub Actions et utilisez l'exemple initial ci-dessus pour exécuter lors d'événements `push` vers la branche `main`. (ex: `.github/workflows/benchmark.yml`)
+5. (Non montré) Créez un deuxième fichier `workflow` GitHub Actions et utilisez l'exemple initial ci-dessus pour exécuter lors d'événements `push` vers la branche `main`. (ex: `.github/workflows/benchmarks.yml`)
 
 Cet arrangement fonctionne parce que `pull_request_target` s'exécute dans le contexte de la branche cible de la demande de fusion,
 où des secrets tels que votre `BENCHER_API_TOKEN` et le `GITHUB_TOKEN` sont disponibles.
@@ -102,7 +102,7 @@ sur la prévention des requêtes malveillantes pour un aperçu complet.
 
 <GitHubActions4 />
 
-1. Créez un fichier de workflow `Run and Cache Benchmarks`.
+1. Créez un fichier de workflow `Run and Cache Benchmarks`. (ex: `.github/workflows/pr_benchmarks.yml`)
 2. Exécutez tous les jobs du workflow lors d'événements `pull_request`.
 3. Exécutez les benchmarks et enregistrez les résultats dans un fichier. (ex: `benchmark_results.json`)
 4. Téléchargez le fichier de résultats de benchmarks en tant qu'artefact.
@@ -110,7 +110,7 @@ sur la prévention des requêtes malveillantes pour un aperçu complet.
 
 <GitHubActions5 />
 
-1. Créez un second fichier de workflow, `Track Benchmarks`.
+1. Créez un second fichier de workflow, `Track Benchmarks`. (ex: `.github/workflows/track_benchmarks.yml`)
 2. Chaîne `Track Benchmarks` à `Run and Cache Benchmarks` avec [l'événement `workflow_run`](https://docs.github.com/fr/actions/using-workflows/events-that-trigger-workflows#workflow_run).
 3. Téléchargez les résultats de benchmarks en cache et l'événement `pull_request`.
 4. Extrayez les résultats de benchmarks en cache et l'événement `pull_request`.
@@ -119,7 +119,7 @@ sur la prévention des requêtes malveillantes pour un aperçu complet.
     1. Utilisez des guillemets simples autour de toutes les entrées non fiables. (ex: `--if-branch '${{ env.PR_HEAD }}'`)
     2. Passez explicitement le numéro de la demande de fusion. (ex: `--ci-number '${{ env.PR_NUMBER }}'`)
     3. Passez le chemin de fichier vers le fichier de résultats de benchmarks. (ex: `--file "$BENCHMARK_RESULTS"`)
-7. (Non montré) Créez un troisième fichier de workflow GitHub Actions et utilisez l'exemple initial ci-dessus pour exécuter lors d'événements `push` vers la branche `main`. (ex: `.github/workflows/benchmark.yml`)
+7. (Non montré) Créez un troisième fichier de workflow GitHub Actions et utilisez l'exemple initial ci-dessus pour exécuter lors d'événements `push` vers la branche `main`. (ex: `.github/workflows/benchmarks.yml`)
 
 Cet arrangement fonctionne parce que `workflow_run` s'exécute dans le contexte de la branche par défaut du dépôt,
 où des secrets tels que votre `BENCHER_API_TOKEN` et le `GITHUB_TOKEN` sont disponibles.
