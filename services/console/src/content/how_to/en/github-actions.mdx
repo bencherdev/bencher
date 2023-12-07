@@ -88,7 +88,7 @@ Therefore, this workflow will only run if it exists on the _target_ branch.
 In order to get this configured, you need to [create two GitHub Action Environments](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment#using-an-environment)
 (ex: `Repo -> Settings -> Environments -> New environment`).
 The `internal` environment should have no `Deployment protection rules`.
-However, the `external` environment should have `Required reviewers` set to those trusted to review fork PRs before benchmarking.
+However, the `external` environment should have `Required reviewers` set to those trusted to review fork PRs before benchmarking. See [this blog post](https://iterative.ai/blog/testing-external-contributions-using-github-actions-secrets) for a full overview.
 
 It is very important to wrap the PR branch name (head ref) in **single** quotes. (ex: `--if-branch '${{ github.head_ref }}'`) Otherwise, an attacker could create a maliciously named branch that performs command injection. See this [GitHub Security Lab write up](https://securitylab.github.com/research/github-actions-untrusted-input/) on preventing pwn requests from untrusted input for a full overview.
 
