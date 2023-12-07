@@ -1,6 +1,6 @@
 use bencher_json::{
     project::{JsonUpdateProject, Visibility},
-    JsonDirection, JsonEmpty, JsonPagination, JsonProject, JsonProjects, NonEmpty, ResourceId,
+    JsonDirection, JsonPagination, JsonProject, JsonProjects, NonEmpty, ResourceId,
 };
 use bencher_rbac::project::Permission;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -11,7 +11,9 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{CorsResponse, Delete, Get, Patch, ResponseAccepted, ResponseOk},
+        endpoint::{
+            CorsResponse, Delete, Get, Patch, ResponseAccepted, ResponseDeleted, ResponseOk,
+        },
         Endpoint,
     },
     error::{resource_conflict_err, resource_not_found_err, unauthorized_error},
@@ -250,17 +252,17 @@ pub async fn project_delete(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
     path_params: Path<ProjectParams>,
-) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
+) -> Result<ResponseDeleted, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
-    Ok(Delete::auth_response_accepted(json))
+    delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Delete::auth_response_deleted())
 }
 
 async fn delete_inner(
     context: &ApiContext,
     path_params: ProjectParams,
     auth_user: &AuthUser,
-) -> Result<JsonEmpty, HttpError> {
+) -> Result<(), HttpError> {
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
@@ -276,5 +278,5 @@ async fn delete_inner(
         .execute(conn)
         .map_err(resource_conflict_err!(Project, query_project))?;
 
-    Ok(JsonEmpty {})
+    Ok(())
 }

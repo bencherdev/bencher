@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{JsonEmpty, ResourceId, ThresholdUuid};
+use bencher_json::{ResourceId, ThresholdUuid};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -36,7 +36,7 @@ impl TryFrom<CliThresholdDelete> for Delete {
 #[async_trait]
 impl SubCmd for Delete {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonEmpty = self
+        let _json: bencher_client::JsonUnit = self
             .backend
             .send_with(
                 |client| async move {

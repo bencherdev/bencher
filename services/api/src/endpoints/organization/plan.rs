@@ -2,7 +2,7 @@
 
 use bencher_json::{
     organization::plan::{JsonNewPlan, JsonPlan, DEFAULT_PRICE_NAME},
-    DateTime, JsonEmpty, ResourceId,
+    DateTime, ResourceId,
 };
 use bencher_rbac::organization::Permission;
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -14,7 +14,9 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{CorsResponse, Delete, Get, Post, ResponseAccepted, ResponseOk},
+        endpoint::{
+            CorsResponse, Delete, Get, Post, ResponseAccepted, ResponseDeleted, ResponseOk,
+        },
         Endpoint,
     },
     error::{
@@ -238,17 +240,17 @@ pub async fn org_plan_delete(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
     path_params: Path<OrgPlanParams>,
-) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
+) -> Result<ResponseDeleted, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
-    Ok(Delete::auth_response_accepted(json))
+    delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Delete::auth_response_deleted())
 }
 
 async fn delete_inner(
     context: &ApiContext,
     path_params: OrgPlanParams,
     auth_user: &AuthUser,
-) -> Result<JsonEmpty, HttpError> {
+) -> Result<(), HttpError> {
     let biller = context.biller()?;
     let conn = &mut *context.conn().await;
 
@@ -304,5 +306,5 @@ async fn delete_inner(
         .execute(conn)
         .map_err(resource_conflict_err!(Plan, query_plan))?;
 
-    Ok(JsonEmpty {})
+    Ok(())
 }

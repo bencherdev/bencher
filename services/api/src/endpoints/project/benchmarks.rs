@@ -1,7 +1,6 @@
 use bencher_json::{
     project::benchmark::{JsonNewBenchmark, JsonUpdateBenchmark},
-    BenchmarkName, JsonBenchmark, JsonBenchmarks, JsonDirection, JsonEmpty, JsonPagination,
-    ResourceId,
+    BenchmarkName, JsonBenchmark, JsonBenchmarks, JsonDirection, JsonPagination, ResourceId,
 };
 use bencher_rbac::project::Permission;
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -12,7 +11,9 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{CorsResponse, Delete, Get, Patch, Post, ResponseAccepted, ResponseOk},
+        endpoint::{
+            CorsResponse, Delete, Get, Patch, Post, ResponseAccepted, ResponseDeleted, ResponseOk,
+        },
         Endpoint,
     },
     error::{resource_conflict_err, resource_not_found_err},
@@ -294,17 +295,17 @@ pub async fn proj_benchmark_delete(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
     path_params: Path<ProjBenchmarkParams>,
-) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
+) -> Result<ResponseDeleted, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
-    Ok(Delete::auth_response_accepted(json))
+    delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Delete::auth_response_deleted())
 }
 
 async fn delete_inner(
     context: &ApiContext,
     path_params: ProjBenchmarkParams,
     auth_user: &AuthUser,
-) -> Result<JsonEmpty, HttpError> {
+) -> Result<(), HttpError> {
     let conn = &mut *context.conn().await;
 
     // Verify that the user is allowed
@@ -322,5 +323,5 @@ async fn delete_inner(
         .execute(conn)
         .map_err(resource_conflict_err!(Benchmark, query_benchmark))?;
 
-    Ok(JsonEmpty {})
+    Ok(())
 }

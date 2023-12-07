@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{JsonMember, ResourceId};
+use bencher_json::ResourceId;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -32,7 +32,7 @@ impl TryFrom<CliMemberRemove> for Remove {
 #[async_trait]
 impl SubCmd for Remove {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonMember = self
+        let _json: bencher_client::JsonUnit = self
             .backend
             .send_with(
                 |client| async move {

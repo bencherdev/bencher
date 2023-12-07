@@ -67,6 +67,20 @@ from_client!(
     ExpirationYear
 );
 
+// This is required because by default `()` deserializes with `Infallible` as its error type.
+// That makes it a lot more complicated to implement the client `send_with` method.
+// So this just shims in `serde_json::Error` as the error type to remove having to multiplex over the two.
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+pub struct JsonUnit;
+
+impl TryFrom<()> for JsonUnit {
+    type Error = serde_json::Error;
+
+    fn try_from(_json: ()) -> Result<Self, Self::Error> {
+        Ok(Self)
+    }
+}
+
 // This is a bit of a kludge, but it should always work!
 macro_rules! try_from_client {
     ($($name:ident),*) => {

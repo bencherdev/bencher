@@ -1,6 +1,6 @@
 use std::fmt;
 
-use dropshot::{HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk};
+use dropshot::{HttpResponseAccepted, HttpResponseDeleted, HttpResponseHeaders, HttpResponseOk};
 use schemars::JsonSchema;
 use serde::Serialize;
 
@@ -9,6 +9,7 @@ use crate::util::headers::CorsHeaders;
 pub type CorsResponse = HttpResponseHeaders<HttpResponseOk<String>, CorsHeaders>;
 pub type ResponseOk<T> = HttpResponseHeaders<HttpResponseOk<T>, CorsHeaders>;
 pub type ResponseAccepted<T> = HttpResponseHeaders<HttpResponseAccepted<T>, CorsHeaders>;
+pub type ResponseDeleted = HttpResponseHeaders<HttpResponseDeleted, CorsHeaders>;
 
 #[derive(Copy, Clone)]
 pub enum Endpoint {
@@ -83,10 +84,7 @@ impl fmt::Display for Get {
 }
 
 impl Get {
-    pub fn response_ok<T>(
-        body: T,
-        auth: bool,
-    ) -> HttpResponseHeaders<HttpResponseOk<T>, CorsHeaders>
+    pub fn response_ok<T>(body: T, auth: bool) -> ResponseOk<T>
     where
         T: JsonSchema + Serialize + Send + Sync,
     {
@@ -97,7 +95,7 @@ impl Get {
         }
     }
 
-    pub fn pub_response_ok<T>(body: T) -> HttpResponseHeaders<HttpResponseOk<T>, CorsHeaders>
+    pub fn pub_response_ok<T>(body: T) -> ResponseOk<T>
     where
         T: JsonSchema + Serialize + Send + Sync,
     {
@@ -105,7 +103,7 @@ impl Get {
         response_ok_inner(body, headers)
     }
 
-    pub fn auth_response_ok<T>(body: T) -> HttpResponseHeaders<HttpResponseOk<T>, CorsHeaders>
+    pub fn auth_response_ok<T>(body: T) -> ResponseOk<T>
     where
         T: JsonSchema + Serialize + Send + Sync,
     {
@@ -114,10 +112,7 @@ impl Get {
     }
 }
 
-fn response_ok_inner<T, H>(
-    body: T,
-    headers: H,
-) -> HttpResponseHeaders<HttpResponseOk<T>, CorsHeaders>
+fn response_ok_inner<T, H>(body: T, headers: H) -> ResponseOk<T>
 where
     T: JsonSchema + Serialize + Send + Sync,
     H: Into<CorsHeaders>,
@@ -140,10 +135,7 @@ macro_rules! impl_response_accepted {
         }
 
         impl $method {
-            pub fn response_accepted<T>(
-                body: T,
-                auth: bool,
-            ) -> HttpResponseHeaders<HttpResponseAccepted<T>, CorsHeaders>
+            pub fn response_accepted<T>(body: T, auth: bool) -> ResponseAccepted<T>
             where
                 T: JsonSchema + Serialize + Send + Sync,
             {
@@ -154,9 +146,7 @@ macro_rules! impl_response_accepted {
                 }
             }
 
-            pub fn pub_response_accepted<T>(
-                body: T,
-            ) -> HttpResponseHeaders<HttpResponseAccepted<T>, CorsHeaders>
+            pub fn pub_response_accepted<T>(body: T) -> ResponseAccepted<T>
             where
                 T: JsonSchema + Serialize + Send + Sync,
             {
@@ -164,9 +154,7 @@ macro_rules! impl_response_accepted {
                 response_accepted_inner(body, headers)
             }
 
-            pub fn auth_response_accepted<T>(
-                body: T,
-            ) -> HttpResponseHeaders<HttpResponseAccepted<T>, CorsHeaders>
+            pub fn auth_response_accepted<T>(body: T) -> ResponseAccepted<T>
             where
                 T: JsonSchema + Serialize + Send + Sync,
             {
@@ -189,17 +177,52 @@ impl_response_accepted!(Put, PUT);
 pub struct Patch;
 impl_response_accepted!(Patch, PATCH);
 
-#[derive(Copy, Clone)]
-pub struct Delete;
-impl_response_accepted!(Delete, DELETE);
-
-fn response_accepted_inner<T, H>(
-    body: T,
-    headers: H,
-) -> HttpResponseHeaders<HttpResponseAccepted<T>, CorsHeaders>
+fn response_accepted_inner<T, H>(body: T, headers: H) -> ResponseAccepted<T>
 where
     T: JsonSchema + Serialize + Send + Sync,
     H: Into<CorsHeaders>,
 {
     HttpResponseHeaders::new(HttpResponseAccepted(body), headers.into())
+}
+
+#[derive(Copy, Clone)]
+pub struct Delete;
+
+impl From<Delete> for http::Method {
+    fn from(_: Delete) -> Self {
+        http::Method::DELETE
+    }
+}
+
+impl fmt::Display for Delete {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{method}", method = http::Method::from(*self))
+    }
+}
+
+impl Delete {
+    pub fn response_deleted<T>(auth: bool) -> ResponseDeleted {
+        if auth {
+            Self::auth_response_deleted()
+        } else {
+            Self::pub_response_deleted()
+        }
+    }
+
+    pub fn pub_response_deleted() -> ResponseDeleted {
+        let headers = CorsHeaders::new_pub(&http::Method::from(Self));
+        response_deleted_inner(headers)
+    }
+
+    pub fn auth_response_deleted() -> ResponseDeleted {
+        let headers = CorsHeaders::new_auth(&http::Method::from(Self));
+        response_deleted_inner(headers)
+    }
+}
+
+fn response_deleted_inner<H>(headers: H) -> ResponseDeleted
+where
+    H: Into<CorsHeaders>,
+{
+    HttpResponseHeaders::new(HttpResponseDeleted(), headers.into())
 }

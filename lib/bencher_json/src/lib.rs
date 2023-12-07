@@ -116,12 +116,6 @@ pub struct JsonCreated {
     pub created: DateTime,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonDeleted {
-    pub deleted: DateTime,
-}
-
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonAllowed {

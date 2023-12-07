@@ -919,8 +919,8 @@
           }
         ],
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "204": {
+            "description": "successful deletion",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -948,13 +948,6 @@
                 "required": true,
                 "schema": {
                   "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonMember"
                 }
               }
             }
@@ -1209,8 +1202,8 @@
           }
         ],
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "204": {
+            "description": "successful deletion",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -1238,13 +1231,6 @@
                 "required": true,
                 "schema": {
                   "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonEmpty"
                 }
               }
             }
@@ -1696,8 +1682,8 @@
           }
         ],
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "204": {
+            "description": "successful deletion",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -1725,13 +1711,6 @@
                 "required": true,
                 "schema": {
                   "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonEmpty"
                 }
               }
             }
@@ -2435,8 +2414,8 @@
           }
         ],
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "204": {
+            "description": "successful deletion",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -2464,13 +2443,6 @@
                 "required": true,
                 "schema": {
                   "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonEmpty"
                 }
               }
             }
@@ -2849,8 +2821,8 @@
           }
         ],
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "204": {
+            "description": "successful deletion",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -2878,13 +2850,6 @@
                 "required": true,
                 "schema": {
                   "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonEmpty"
                 }
               }
             }
@@ -3263,8 +3228,8 @@
           }
         ],
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "204": {
+            "description": "successful deletion",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -3292,13 +3257,6 @@
                 "required": true,
                 "schema": {
                   "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonEmpty"
                 }
               }
             }
@@ -3904,8 +3862,8 @@
           }
         ],
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "204": {
+            "description": "successful deletion",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -3933,13 +3891,6 @@
                 "required": true,
                 "schema": {
                   "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonEmpty"
                 }
               }
             }
@@ -4377,8 +4328,8 @@
           }
         ],
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "204": {
+            "description": "successful deletion",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -4406,13 +4357,6 @@
                 "required": true,
                 "schema": {
                   "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonEmpty"
                 }
               }
             }
@@ -4867,8 +4811,8 @@
           }
         ],
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "204": {
+            "description": "successful deletion",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -4896,13 +4840,6 @@
                 "required": true,
                 "schema": {
                   "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonEmpty"
                 }
               }
             }
