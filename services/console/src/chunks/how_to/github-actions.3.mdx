@@ -1,10 +1,8 @@
 ```yaml
-on:
-  pull_request_target:
+on: pull_request_target
 
 jobs:
   fork_pr_requires_review:
-    if: github.event_name == 'pull_request_target'
     environment:
       ${{ (github.event.pull_request.head.repo.full_name == github.repository && 'internal') || 'external' }}
     runs-on: ubuntu-latest

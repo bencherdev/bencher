@@ -3,7 +3,7 @@ on: pull_request
 
 jobs:
   benchmark_pr_with_bencher:
-    if: (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     name: Continuous Benchmarking with Bencher
     runs-on: ubuntu-latest
     env:
