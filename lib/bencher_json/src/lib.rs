@@ -109,6 +109,19 @@ pub static DEVEL_BENCHER_API_URL: Lazy<url::Url> = Lazy::new(|| {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonEmpty {}
 
+/// A pre-`v1.0` future proof way to check the result of most create and update operations.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonCreated {
+    pub created: DateTime,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonDeleted {
+    pub deleted: DateTime,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonAllowed {

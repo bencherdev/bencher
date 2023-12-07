@@ -135,3 +135,32 @@ impl From<bencher_json::DateTimeMillis> for types::DateTimeMillis {
         Self(types::TimestampMillis(date_time.into()))
     }
 }
+
+macro_rules! into_created {
+    ($($name:ident),*) => {
+        $(
+            impl From<types::$name> for bencher_json::JsonCreated {
+                fn from(json: types::$name) -> Self {
+                    let types::$name { created, .. } = json;
+                    bencher_json::JsonCreated {
+                        created: created.0.into(),
+                    }
+                }
+            }
+        )*
+    };
+}
+
+into_created!(
+    JsonMember,
+    JsonOrganization,
+    JsonAlert,
+    JsonBenchmark,
+    JsonBranch,
+    JsonMeasure,
+    JsonProject,
+    JsonReport,
+    JsonStatistic,
+    JsonTestbed,
+    JsonThreshold
+);

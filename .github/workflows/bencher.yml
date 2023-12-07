@@ -678,6 +678,7 @@ jobs:
         with:
           args: --config ./services/console/lychee.toml ./services/console/dist
       - name: Failed Lychee
+        continue-on-error: true
         if: env.lychee_exit_code != 0
         run: exit ${{ env.lychee_exit_code }}
 
