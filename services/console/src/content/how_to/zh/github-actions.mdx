@@ -17,15 +17,15 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 2. 在对`main`分支的 `push`事件上运行。查看[GitHub Actions `on` Documentation](https://docs.github.com/zh/actions/using-workflows/workflow-syntax-for-github-actions#on)以获得完整概览。也可以查看下面的[Pull Requests](#pull-requests)。
 3. 创建一个GitHub Actions `job`。 (例如: `benchmark_with_bencher`)
 4. 项目必须已经存在。设置`--project`标志或`BENCHER_PROJECT`环境变量为项目的slug或UUID (例如：`BENCHER_PROJECT: save-walter-white`)。
-5. API令牌必须已经存在。将`BENCHER_API_TOKEN`添加为**仓库**秘密。 (例如： `Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`) 设置`--token`标志或`BENCHER_API_TOKEN`环境变量为API令牌。(例如：`BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
 6. 可选：设置 `--testbed` 参数或 `BENCHER_TESTBED`环境变量为Testbed的slug或UUID. (例如：`BENCHER_TESTBED: ubuntu-latest`)Testbed 必须事先存在。如果没有设置,那么`localhost` Testbed 会被默认使用。
 7. 可选：设置 `--adapter` 参数或`BENCHER_ADAPTER` 环境变量为想要的adapter名字。 (例如：`BENCHER_ADAPTER: json`) 如果没有设置，则会使用`magic`适配器。查看 [基准测试适配器](/docs/zh/explanation/adapters)以获取完全概览。
 8. 检出你的源代码 （例如： `uses: actions/checkout@v3`）
 9. 使用 [GitHub Action](https://github.com/marketplace/actions/bencher-cli) 安装Bencher CLI。（例如：`uses: bencherdev/bencher@main`）
 10. 通过 <code><a href="/docs/zh/explanation/bencher-run">bencher run</a></code> CLI子命令 [跟踪你的基准测试](/docs/zh/how-to/track-benchmarks)：
     1.  可选：设置 `--branch` 标志或`BENCHER_BRANCH`环境变量为Branch的slug或UUID。（例如：`--branch main`）Branch必须事先存在。如果没有设置，那么`main` Branch会被默认使用。
-    2.  如果生成Alert，设置命令为失败。（例如：`--err`）Alert的生成需要事先存在一个[阈值](/docs/zh/explanation/thresholds)。
-    3.  运行你的基准测试并从结果中生成报告。 (例如：`"bencher mock"`)
+    2. API令牌必须已经存在。将`BENCHER_API_TOKEN`添加为**仓库**秘密。 (例如： `Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`) 设置`--token`标志或`BENCHER_API_TOKEN`环境变量为API令牌。(例如：`--token ${{ secrets.BENCHER_API_TOKEN }}`)
+    3.  如果生成Alert，设置命令为失败。（例如：`--err`）Alert的生成需要事先存在一个[阈值](/docs/zh/explanation/thresholds)。
+    4.  运行你的基准测试并从结果中生成报告。 (例如：`"bencher mock"`)
 
 <br/>
 
@@ -42,8 +42,8 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 1. 创建一个GitHub Actions `workflow` 文件。（例如：`.github/workflows/pr_benchmarks.yml`）
 2. 仅当来自同一仓库的拉取请求(`pull_request`)事件发生时运行。对于处理Fork PRs，请看下面的[从Forks的Pull请求](#pull-requests-from-forks)。
 3. [选择分支](http://localhost:3000/docs/zh/explanation/branch-selection)来使用：
-        1. 如果当前分支数据已经存在，则使用当前分支数据。（例如：`--if-branch '${{ github.head_ref }}'`）
-        2. 如果PR目标分支的数据和阈值已经存在，则创建一个克隆。（例如：`--else-if-branch '${{ github.base_ref }}'`）
+        1. 如果当前分支数据已经存在，则使用当前分支数据。（例如：`--if-branch "$GITHUB_REF_NAME"`）
+        2. 如果PR目标分支的数据和阈值已经存在，则创建一个克隆。（例如：`--else-if-branch "$GITHUB_BASE_REF"`）
         3. 否则，请创建`main`分支数据和阈值的克隆。（例如：`--else-if-branch main`）
 4. 设置GitHub API身份验证令牌。（例如：`--github-actions "${{ secrets.GITHUB_TOKEN }}"`）当作为拉取请求的一部分设置此选项时，结果将以评论的形式添加到拉取请求中。这使用了[GitHub Actions `GITHUB_TOKEN` 环境变量](https://docs.github.com/ja/actions/security-guides/automatic-token-authentication)。
 5. 查看[bencher run](/docs/zh/explanation/bencher-run)文档，全面了解如何使用`--ci-*`标志配置拉取请求评论的所有方式。

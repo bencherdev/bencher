@@ -9,7 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BENCHER_PROJECT: save-walter-white
-      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
       BENCHER_TESTBED: ubuntu-latest
       BENCHER_ADAPTER: json
     steps:
@@ -18,7 +17,8 @@ jobs:
       - name: Track Benchmarks with Bencher
         run: |
           bencher run \
-          --branch main \
+          --branch "$GITHUB_REF_NAME" \
+          --token "${{ secrets.BENCHER_API_TOKEN }}" \
           --err \
           "bencher mock"
 ```

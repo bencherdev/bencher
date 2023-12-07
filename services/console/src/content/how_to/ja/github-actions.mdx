@@ -17,15 +17,15 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 2. `main`ブランチへの`push`イベントで実行します。詳細は、[GitHub Actions `on`のドキュメンテーション](https://docs.github.com/ja/actions/using-workflows/workflow-syntax-for-github-actions#on)をご覧ください。また、以下の[プルリクエスト](#pull-requests)もご覧ください。
 3. GitHub Actionsの`job`を作成します（例：`benchmark_with_bencher`）。
 4. プロジェクトはすでに存在している必要があります。`--project`フラグを設定するか、`BENCHER_PROJECT`環境変数をプロジェクトのスラッグまたはUUIDに設定します（例：`BENCHER_PROJECT: save-walter-white`）。
-5. APIトークンはすでに存在している必要があります。`BENCHER_API_TOKEN`を**リポジトリ**の秘密として追加します（例：`Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`）。 `--token`フラグを設定するか、`BENCHER_API_TOKEN`環境変数をAPIトークンに設定します（例：`BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`）。
 6. オプション：`--testbed`フラグを設定するか、`BENCHER_TESTBED`環境変数をTestbedのスラッグまたはUUIDに設定します（例：`BENCHER_TESTBED: ubuntu-latest`）。Testbedは**必ず**すでに存在している必要があります。これが設定されていない場合、`localhost`のTestbedが使用されます。
 7. オプション：`--adapter`フラグを設定するか、`BENCHER_ADAPTER`環境変数を希望のアダプター名に設定します（例：`BENCHER_ADAPTER: json`）。これが設定されていない場合、`magic`のアダプターが使用されます。詳細は、[ベンチマークハーネスアダプター](/docs/ja/explanation/adapters)をご覧ください。
 8. ソースコードをチェックアウトします（例：`uses: actions/checkout@v3`）。
 9. [GitHub Action](https://github.com/marketplace/actions/bencher-cli)を使用してBencher CLIをインストールします（例：`uses: bencherdev/bencher@main`）。
 10. <code><a href="/docs/ja/explanation/bencher-run">bencher run</a></code> CLIのサブコマンドを使用して[ベンチマークを追跡します](/docs/ja/how-to/track-benchmarks)：
     1.  オプション：`--branch`フラグを設定するか、`BENCHER_BRANCH`環境変数をBranchのスラッグまたはUUIDに設定します（例：`--branch main`）。Branchは**必ず**すでに存在している必要があります。これが設定されていない場合、`main`のBranchが使用されます。
-    2.  アラートが生成された場合にコマンドを失敗させるよう設定します（例：`--err`）。アラートが生成されるためには、[閾値](/docs/ja/explanation/thresholds)がすでに存在している必要があります。
-    3.  あなたのベンチマークを実行し、結果からレポートを生成します（例：`"bencher mock"`）。
+    2. APIトークンはすでに存在している必要があります。`BENCHER_API_TOKEN`を**リポジトリ**の秘密として追加します（例：`Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`）。 `--token`フラグを設定するか、`BENCHER_API_TOKEN`環境変数をAPIトークンに設定します（例：`--token ${{ secrets.BENCHER_API_TOKEN }}`）。
+    3.  アラートが生成された場合にコマンドを失敗させるよう設定します（例：`--err`）。アラートが生成されるためには、[閾値](/docs/ja/explanation/thresholds)がすでに存在している必要があります。
+    4.  あなたのベンチマークを実行し、結果からレポートを生成します（例：`"bencher mock"`）。
 
 <br/>
 
@@ -42,8 +42,8 @@ PRsが**同一**のリポジトリからのものだけであると想定して�
 1. GitHub Actionsの `workflow` ファイルを作成します。(例： `.github/workflows/pr_benchmarks.yml`)
 2. プルリクエストが同一リポジトリからのものである限り、`pull_request` イベントで実行します。ForkされたPRの処理については、以下の[フォークからのプルリクエスト](#pull-requests-from-forks)を参照してください。
 3. [使用するブランチを選択](http://localhost:3000/docs/ja/explanation/branch-selection)します:
-        1. 既に存在する場合は、現在のブランチのデータを使用します。(例： `--if-branch '${{ github.head_ref }}'`)
-        2. 既に存在する場合は、PRターゲットブランチのデータと閾値のクローンを作成します。(例： `--else-if-branch '${{ github.base_ref }}'`)
+        1. 既に存在する場合は、現在のブランチのデータを使用します。(例： `--if-branch "$GITHUB_REF_NAME"`)
+        2. 既に存在する場合は、PRターゲットブランチのデータと閾値のクローンを作成します。(例： `--else-if-branch "$GITHUB_BASE_REF"`)
         3. それ以外の場合は、`main`ブランチのデータと閾値のクローンを作成します。(例： `--else-if-branch main`)
 4. GitHub API認証トークンを設定します。(例： `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) このオプションがプルリクエストの一部として設定されると、結果がプルリクエストにコメントとして追加されます。これは[GitHub Actionsの `GITHUB_TOKEN` 環境変数](https://docs.github.com/ja/actions/security-guides/automatic-token-authentication)を使用します。
 5. `--ci-*` フラグでプルリクエストのコメントを設定するすべての方法については、[bencher run](/docs/ja/explanation/bencher-run)ドキュメンテーションを全て覧下さい。

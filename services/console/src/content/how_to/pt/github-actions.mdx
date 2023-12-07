@@ -17,15 +17,15 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 2. Execute em eventos `push` para a branch `main`. Veja a [documentação `on` do GitHub Actions](https://docs.github.com/pt/actions/using-workflows/workflow-syntax-for-github-actions#on) para uma visão geral completa. Consulte também [Pull Requests](#pull-requests) abaixo.
 3. Crie um `job` do GitHub Actions. (ex `benchmark_with_bencher`)
 4. O Projeto já deve existir. Defina a flag `--project` ou a variável de ambiente `BENCHER_PROJECT` para o slug do Projeto ou UUID (ex: `BENCHER_PROJECT: save-walter-white`).
-5. O token API já deve existir. Adicione `BENCHER_API_TOKEN` como um segredo do **Repositório**. (ex: `Repo -> Configurações -> Segredos e variáveis -> Ações -> Novo segredo de repositório`) Defina a flag `--token` ou a variável de ambiente `BENCHER_API_TOKEN` para o token API. (ex: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
 6. Opcional: Defina a flag `--testbed` ou a variável de ambiente `BENCHER_TESTBED` para o slug Testbed ou UUID. (ex `BENCHER_TESTBED: ubuntu-latest`) O Testbed **deve** já existir. Se não for definido, então o Testbed `localhost` será usado.
 7. Defina a flag `--adapter` ou a variável de ambiente `BENCHER_ADAPTER` para o nome do adaptador desejado. (ex `BENCHER_ADAPTER: json`) Se isso não for definido, então o adaptador `magic` será usado. Consulte [adaptadores de sistema de referência](/docs/pt/explanation/adapters) para uma visão geral completa.
 8. Faça checkout do seu código fonte. (ex `uses: actions/checkout@v3`)
 9. Instale o CLI do Bencher usando a [Ação do GitHub](https://github.com/marketplace/actions/bencher-cli). (ex `uses: bencherdev/bencher@main`)
 10. [Rastreie seus benchmarks](/docs/pt/how-to/track-benchmarks) com o subcomando `bencher run` do CLI:
     1.  Opcional: Configure a flag `--branch` ou a variável de ambiente `BENCHER_BRANCH` para o slug da Branch ou UUID. (ex: `--branch main`) A Branch **deve** já existir. Se isso não for definido, então a Branch `main` será usada.
-    2.  Configure o comando para falhar se um Alerta for gerado. (ex: `--err`) Para que um Alerta seja gerado, um [Limiar](/docs/pt/explanation/thresholds) já deve existir.
-    3.  Execute seus benchmarks e gere um Relatório a partir dos resultados. (ex: `"bencher mock"`)
+    2. O token API já deve existir. Adicione `BENCHER_API_TOKEN` como um segredo do **Repositório**. (ex: `Repo -> Configurações -> Segredos e variáveis -> Ações -> Novo segredo de repositório`) Defina a flag `--token` ou a variável de ambiente `BENCHER_API_TOKEN` para o token API. (ex: `--token ${{ secrets.BENCHER_API_TOKEN }}`)
+    3.  Configure o comando para falhar se um Alerta for gerado. (ex: `--err`) Para que um Alerta seja gerado, um [Limiar](/docs/pt/explanation/thresholds) já deve existir.
+    4.  Execute seus benchmarks e gere um Relatório a partir dos resultados. (ex: `"bencher mock"`)
 
 <br/>
 
@@ -42,8 +42,8 @@ Se você espera apenas ter PRs de branches dentro do mesmo repositório, você p
 1. Crie um arquivo `workflow` do GitHub Actions. (ex: `.github/workflows/pr_benchmarks.yml`)
 2. Execute em eventos `pull_request` apenas se o pull request for do mesmo repositório. Para lidar com Pull Requests de Forks, veja [Pull Requests de Forks](#pull-requests-from-forks) abaixo.
 3. [Selecione a branch](http://localhost:3000/docs/pt/explanation/branch-selection) para usar:
-        1. Use os dados da branch atual se já existirem. (ex: `--if-branch '${{ github.head_ref }}'`)
-        2. Crie um clone dos dados e limites da branch alvo do PR, se existirem. (ex: `--else-if-branch '${{ github.base_ref }}'`)
+        1. Use os dados da branch atual se já existirem. (ex: `--if-branch "$GITHUB_REF_NAME"`)
+        2. Crie um clone dos dados e limites da branch alvo do PR, se existirem. (ex: `--else-if-branch "$GITHUB_BASE_REF"`)
         3. Caso contrário, crie uma cópia dos dados e limites da branch `main`. (ex: `--else-if-branch main`)
 4. Defina o token de autenticação da API do GitHub. (ex: `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) Quando esta opção é definida como parte de um pull request, os resultados serão adicionados ao pull request como um comentário. Isso usa [a variável de ambiente `GITHUB_TOKEN` das GitHub Actions](https://docs.github.com/pt/actions/security-guides/automatic-token-authentication).
 5. Veja a documentação de [execução do bencher](/docs/pt/explanation/bencher-run) para uma visão geral completa de todas as maneiras de configurar o comentário do pull request com as flags `--ci-*`.
