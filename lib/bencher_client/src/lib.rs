@@ -154,12 +154,14 @@ impl From<bencher_json::DateTimeMillis> for types::DateTimeMillis {
 macro_rules! into_created {
     ($($name:ident),*) => {
         $(
-            impl From<types::$name> for bencher_json::JsonCreated {
-                fn from(json: types::$name) -> Self {
+            impl TryFrom<types::$name> for bencher_json::JsonCreated {
+                type Error = serde_json::Error;
+
+                fn try_from(json: types::$name) -> Result<Self, Self::Error> {
                     let types::$name { created, .. } = json;
-                    bencher_json::JsonCreated {
+                    Ok(bencher_json::JsonCreated {
                         created: created.0.into(),
-                    }
+                    })
                 }
             }
         )*

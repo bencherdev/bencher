@@ -148,7 +148,7 @@ You can set the `bencher run` CLI subcommand to error
 if [an Alert is generated](https://bencher.dev/docs/explanation/thresholds) with the `--err` flag.
 
 ```bash
-bencher run --project my-project-slug --err "bencher mock"
+bencher run --err "bencher mock"
 ```
 
 👉 For more details see the [explanation of `bencher run`](https://bencher.dev/docs/explanation/bencher-run/#--err).
@@ -158,7 +158,7 @@ bencher run --project my-project-slug --err "bencher mock"
 You can set the `bencher run` CLI subcommand to comment on a PR with the `--github-actions` argument.
 
 ```bash
-bencher run --project my-project-slug --github-actions "${{ secrets.GITHUB_TOKEN }}" "bencher mock"
+bencher run --github-actions "${{ secrets.GITHUB_TOKEN }}" "bencher mock"
 ```
 
 👉 For more details see the [explanation of `bencher run`](https://bencher.dev/docs/explanation/bencher-run/#--github-actions).
