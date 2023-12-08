@@ -456,6 +456,10 @@ export interface JsonLogin {
 	invite?: Jwt;
 }
 
+export interface JsonAuth {
+	email: Email;
+}
+
 export interface JsonAuthToken {
 	token: Jwt;
 }

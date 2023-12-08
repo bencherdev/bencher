@@ -1,4 +1,5 @@
-use bencher_json::{JsonEmpty, JsonLogin};
+use bencher_json::JsonAuth;
+use bencher_json::JsonLogin;
 
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
@@ -44,7 +45,7 @@ pub async fn auth_login_options(
 pub async fn auth_login_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonLogin>,
-) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
+) -> Result<ResponseAccepted<JsonAuth>, HttpError> {
     let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner()).await?;
     Ok(Post::pub_response_accepted(json))
 }
@@ -53,7 +54,7 @@ async fn post_inner(
     log: &Logger,
     context: &ApiContext,
     json_login: JsonLogin,
-) -> Result<JsonEmpty, HttpError> {
+) -> Result<JsonAuth, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_user = schema::user::table
@@ -137,5 +138,7 @@ async fn post_inner(
     };
     context.messenger.send(log, message);
 
-    Ok(JsonEmpty::default())
+    Ok(JsonAuth {
+        email: json_login.email,
+    })
 }

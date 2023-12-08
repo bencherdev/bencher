@@ -2,7 +2,7 @@ use std::{ffi::OsStr, path::PathBuf};
 
 use async_compression::tokio::write::GzipEncoder;
 use bencher_json::system::backup::JsonDataStore;
-use bencher_json::{JsonBackup, JsonEmpty, JsonRestart};
+use bencher_json::{DateTime, JsonBackup, JsonCreated, JsonRestart};
 use chrono::Utc;
 use diesel::connection::SimpleConnection;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
@@ -10,14 +10,11 @@ use tokio::fs::remove_file;
 use tokio::io::{AsyncReadExt, BufWriter};
 use tokio::io::{AsyncWriteExt, BufReader};
 
-use crate::endpoints::endpoint::{CorsResponse, Post};
+use crate::endpoints::endpoint::{CorsResponse, Post, ResponseCreated};
 use crate::error::bad_request_error;
 use crate::model::user::admin::AdminUser;
 use crate::model::user::auth::BearerToken;
-use crate::{
-    context::ApiContext,
-    endpoints::{endpoint::ResponseAccepted, Endpoint},
-};
+use crate::{context::ApiContext, endpoints::Endpoint};
 
 const BUFFER_SIZE: usize = 1024;
 
@@ -43,18 +40,19 @@ pub async fn server_backup_post(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
     body: TypedBody<JsonBackup>,
-) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
+) -> Result<ResponseCreated<JsonCreated>, HttpError> {
     let _admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(rqctx.context(), body.into_inner()).await?;
-    Ok(Post::auth_response_accepted(json))
+    Ok(Post::auth_response_created(json))
 }
 
-async fn post_inner(context: &ApiContext, json_backup: JsonBackup) -> Result<JsonEmpty, HttpError> {
+async fn post_inner(
+    context: &ApiContext,
+    json_backup: JsonBackup,
+) -> Result<JsonCreated, HttpError> {
     backup(context, json_backup)
         .await
-        .map_err(bad_request_error)?;
-
-    Ok(JsonEmpty {})
+        .map_err(bad_request_error)
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -81,9 +79,13 @@ pub enum BackupError {
     RmFile(std::io::Error),
 }
 
-async fn backup(context: &ApiContext, json_backup: JsonBackup) -> Result<(), BackupError> {
+async fn backup(context: &ApiContext, json_backup: JsonBackup) -> Result<JsonCreated, BackupError> {
     // Create a database backup
-    let (backup_file_path, backup_file_name) = backup_database(context).await?;
+    let Backup {
+        file_path: backup_file_path,
+        file_name: backup_file_name,
+        created,
+    } = backup_database(context).await?;
 
     // Compress the database backup
     let (source_path, file_name) = if json_backup.compress.unwrap_or_default() {
@@ -111,10 +113,16 @@ async fn backup(context: &ApiContext, json_backup: JsonBackup) -> Result<(), Bac
             .map_err(BackupError::RmZipFile)?;
     }
 
-    Ok(())
+    Ok(JsonCreated { created })
 }
 
-async fn backup_database(context: &ApiContext) -> Result<(PathBuf, String), BackupError> {
+struct Backup {
+    file_path: PathBuf,
+    file_name: String,
+    created: DateTime,
+}
+
+async fn backup_database(context: &ApiContext) -> Result<Backup, BackupError> {
     let conn = &mut *context.conn().await;
     let mut file_path = context.database.path.clone();
 
@@ -138,7 +146,11 @@ async fn backup_database(context: &ApiContext) -> Result<(PathBuf, String), Back
     conn.batch_execute(&query)
         .map_err(BackupError::BatchExecute)?;
 
-    Ok((file_path, file_name))
+    Ok(Backup {
+        file_path,
+        file_name,
+        created: date_time.into(),
+    })
 }
 
 async fn compress_database(

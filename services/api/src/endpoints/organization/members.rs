@@ -1,6 +1,6 @@
 use bencher_json::{
     organization::member::{JsonNewMember, JsonUpdateMember},
-    JsonDirection, JsonEmpty, JsonMember, JsonMembers, JsonPagination, ResourceId, UserName,
+    JsonAuth, JsonDirection, JsonMember, JsonMembers, JsonPagination, ResourceId, UserName,
 };
 use bencher_rbac::organization::Permission;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -159,7 +159,7 @@ pub async fn org_member_post(
     bearer_token: BearerToken,
     path_params: Path<OrgMembersParams>,
     body: TypedBody<JsonNewMember>,
-) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
+) -> Result<ResponseAccepted<JsonAuth>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(
         &rqctx.log,
@@ -178,7 +178,7 @@ async fn post_inner(
     path_params: OrgMembersParams,
     mut json_new_member: JsonNewMember,
     auth_user: &AuthUser,
-) -> Result<JsonEmpty, HttpError> {
+) -> Result<JsonAuth, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Get the organization
@@ -269,7 +269,7 @@ async fn post_inner(
     };
     context.messenger.send(log, message);
 
-    Ok(JsonEmpty::default())
+    Ok(JsonAuth { email })
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -335,7 +335,7 @@ pub async fn org_member_patch(
     bearer_token: BearerToken,
     path_params: Path<OrgMemberParams>,
     body: TypedBody<JsonUpdateMember>,
-) -> Result<ResponseAccepted<JsonMember>, HttpError> {
+) -> Result<ResponseOk<JsonMember>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = patch_inner(
         rqctx.context(),
@@ -344,7 +344,7 @@ pub async fn org_member_patch(
         &auth_user,
     )
     .await?;
-    Ok(Patch::auth_response_accepted(json))
+    Ok(Patch::auth_response_ok(json))
 }
 
 async fn patch_inner(

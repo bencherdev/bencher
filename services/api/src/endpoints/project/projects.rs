@@ -11,9 +11,7 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{
-            CorsResponse, Delete, Get, Patch, ResponseAccepted, ResponseDeleted, ResponseOk,
-        },
+        endpoint::{CorsResponse, Delete, Get, Patch, ResponseDeleted, ResponseOk},
         Endpoint,
     },
     error::{resource_conflict_err, resource_not_found_err, unauthorized_error},
@@ -188,7 +186,7 @@ pub async fn project_patch(
     bearer_token: BearerToken,
     path_params: Path<ProjectParams>,
     body: TypedBody<JsonUpdateProject>,
-) -> Result<ResponseAccepted<JsonProject>, HttpError> {
+) -> Result<ResponseOk<JsonProject>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let context = rqctx.context();
     let json = patch_inner(
@@ -198,7 +196,7 @@ pub async fn project_patch(
         &auth_user,
     )
     .await?;
-    Ok(Patch::auth_response_accepted(json))
+    Ok(Patch::auth_response_ok(json))
 }
 
 async fn patch_inner(

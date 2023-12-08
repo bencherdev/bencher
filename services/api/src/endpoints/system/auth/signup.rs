@@ -1,5 +1,6 @@
 use bencher_json::organization::member::OrganizationRole;
-use bencher_json::{DateTime, JsonEmpty, JsonSignup};
+use bencher_json::system::auth::JsonAuth;
+use bencher_json::{DateTime, JsonSignup};
 use diesel::dsl::count;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
@@ -8,9 +9,9 @@ use http::StatusCode;
 use slog::Logger;
 
 use crate::context::NewUserBody;
-use crate::endpoints::endpoint::Endpoint;
+use crate::endpoints::endpoint::CorsResponse;
 use crate::endpoints::endpoint::Post;
-use crate::endpoints::endpoint::{CorsResponse, ResponseCreated};
+use crate::endpoints::endpoint::{Endpoint, ResponseAccepted};
 use crate::error::{forbidden_error, issue_error, resource_conflict_err, resource_not_found_err};
 use crate::model::organization::{
     organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
@@ -45,9 +46,9 @@ pub async fn auth_signup_options(
 pub async fn auth_signup_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonSignup>,
-) -> Result<ResponseCreated<JsonEmpty>, HttpError> {
+) -> Result<ResponseAccepted<JsonAuth>, HttpError> {
     let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner()).await?;
-    Ok(Post::pub_response_created(json))
+    Ok(Post::pub_response_accepted(json))
 }
 
 #[allow(clippy::too_many_lines)]
@@ -55,7 +56,7 @@ async fn post_inner(
     log: &Logger,
     context: &ApiContext,
     mut json_signup: JsonSignup,
-) -> Result<JsonEmpty, HttpError> {
+) -> Result<JsonAuth, HttpError> {
     if !json_signup.i_agree {
         return Err(forbidden_error(
             "You must agree to the Bencher Terms of Use (https://bencher.dev/legal/terms-of-use), Privacy Policy (https://bencher.dev/legal/privacy), and License Agreement (https://bencher.dev/legal/license)",
@@ -184,5 +185,7 @@ async fn post_inner(
         }
     }
 
-    Ok(JsonEmpty::default())
+    Ok(JsonAuth {
+        email: insert_user.email,
+    })
 }

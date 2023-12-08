@@ -98,6 +98,7 @@ macro_rules! try_from_client {
 
 try_from_client!(
     JsonEmpty,
+    JsonCreated,
     JsonMember,
     JsonMembers,
     JsonAllowed,
@@ -122,6 +123,7 @@ try_from_client!(
     JsonTestbed,
     JsonThresholds,
     JsonThreshold,
+    JsonAuth,
     JsonAuthUser,
     JsonLogin,
     JsonSignup,

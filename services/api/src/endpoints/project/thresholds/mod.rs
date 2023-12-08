@@ -12,8 +12,7 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{
-            CorsResponse, Delete, Get, Post, Put, ResponseAccepted, ResponseCreated,
-            ResponseDeleted, ResponseOk,
+            CorsResponse, Delete, Get, Post, Put, ResponseCreated, ResponseDeleted, ResponseOk,
         },
         Endpoint,
     },
@@ -263,7 +262,7 @@ pub async fn proj_threshold_put(
     bearer_token: BearerToken,
     path_params: Path<ProjThresholdParams>,
     body: TypedBody<JsonUpdateThreshold>,
-) -> Result<ResponseAccepted<JsonThreshold>, HttpError> {
+) -> Result<ResponseOk<JsonThreshold>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = put_inner(
         rqctx.context(),
@@ -272,7 +271,7 @@ pub async fn proj_threshold_put(
         &auth_user,
     )
     .await?;
-    Ok(Put::auth_response_accepted(json))
+    Ok(Put::auth_response_ok(json))
 }
 
 async fn put_inner(

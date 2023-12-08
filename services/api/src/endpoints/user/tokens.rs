@@ -11,7 +11,7 @@ use uuid::Uuid;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{CorsResponse, Get, Patch, Post, ResponseAccepted, ResponseCreated, ResponseOk},
+        endpoint::{CorsResponse, Get, Patch, Post, ResponseCreated, ResponseOk},
         Endpoint,
     },
     error::{resource_conflict_err, resource_not_found_err},
@@ -238,7 +238,7 @@ pub async fn user_token_patch(
     bearer_token: BearerToken,
     path_params: Path<UserTokenParams>,
     body: TypedBody<JsonUpdateToken>,
-) -> Result<ResponseAccepted<JsonToken>, HttpError> {
+) -> Result<ResponseOk<JsonToken>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = patch_inner(
         rqctx.context(),
@@ -247,7 +247,7 @@ pub async fn user_token_patch(
         &auth_user,
     )
     .await?;
-    Ok(Patch::auth_response_accepted(json))
+    Ok(Patch::auth_response_ok(json))
 }
 
 async fn patch_inner(

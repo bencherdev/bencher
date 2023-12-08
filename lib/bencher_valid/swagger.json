@@ -78,8 +78,8 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "200": {
+            "description": "successful operation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -179,7 +179,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonEmpty"
+                  "$ref": "#/components/schemas/JsonAuth"
                 }
               }
             }
@@ -245,7 +245,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonEmpty"
+                  "$ref": "#/components/schemas/JsonAuth"
                 }
               }
             }
@@ -373,8 +373,8 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "201": {
+            "description": "successful creation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -513,8 +513,8 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "200": {
+            "description": "successful operation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -806,7 +806,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonEmpty"
+                  "$ref": "#/components/schemas/JsonAuth"
                 }
               }
             }
@@ -995,8 +995,8 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "200": {
+            "description": "successful operation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -1137,8 +1137,8 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "201": {
+            "description": "successful creation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -1378,8 +1378,8 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "201": {
+            "description": "successful creation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -1749,8 +1749,8 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "200": {
+            "description": "successful operation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -2008,8 +2008,8 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "200": {
+            "description": "successful operation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -2266,8 +2266,8 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "201": {
+            "description": "successful creation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -2490,8 +2490,8 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "200": {
+            "description": "successful operation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -2673,8 +2673,8 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "201": {
+            "description": "successful creation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -2897,8 +2897,8 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "200": {
+            "description": "successful operation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -3080,8 +3080,8 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "201": {
+            "description": "successful creation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -3304,8 +3304,8 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "200": {
+            "description": "successful operation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -3714,8 +3714,8 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "201": {
+            "description": "successful creation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -4180,8 +4180,8 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "201": {
+            "description": "successful creation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -4404,8 +4404,8 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "200": {
+            "description": "successful operation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -4580,8 +4580,8 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "201": {
+            "description": "successful creation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -4738,8 +4738,8 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "200": {
+            "description": "successful operation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -4870,8 +4870,8 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "201": {
+            "description": "successful creation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -4905,7 +4905,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonEmpty"
+                  "$ref": "#/components/schemas/JsonCreated"
                 }
               }
             }
@@ -5657,8 +5657,8 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "201": {
+            "description": "successful creation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -5817,8 +5817,8 @@
           "required": true
         },
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "200": {
+            "description": "successful operation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -6124,6 +6124,17 @@
         },
         "required": [
           "version"
+        ]
+      },
+      "JsonAuth": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "$ref": "#/components/schemas/Email"
+          }
+        },
+        "required": [
+          "email"
         ]
       },
       "JsonAuthToken": {
@@ -6533,6 +6544,18 @@
         },
         "required": [
           "url"
+        ]
+      },
+      "JsonCreated": {
+        "description": "A pre-`v1.0` future proof way to check the result of most create and update operations.",
+        "type": "object",
+        "properties": {
+          "created": {
+            "$ref": "#/components/schemas/DateTime"
+          }
+        },
+        "required": [
+          "created"
         ]
       },
       "JsonCustomer": {

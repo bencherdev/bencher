@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_client::types::JsonLogin;
 #[cfg(feature = "plus")]
 use bencher_client::types::PlanLevel;
-use bencher_json::{Email, JsonEmpty, Jwt};
+use bencher_json::{Email, JsonAuth, Jwt};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -65,7 +65,7 @@ impl From<Login> for JsonLogin {
 #[async_trait]
 impl SubCmd for Login {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonEmpty = self
+        let _json: JsonAuth = self
             .backend
             .send_with(
                 |client| async move { client.auth_login_post().body(self.clone()).send().await },

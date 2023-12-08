@@ -6,7 +6,7 @@ use http::StatusCode;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{CorsResponse, Post, ResponseAccepted},
+        endpoint::{CorsResponse, Post, ResponseOk},
         Endpoint,
     },
     error::{issue_error, resource_not_found_err, unauthorized_error},
@@ -36,9 +36,9 @@ pub async fn auth_confirm_options(
 pub async fn auth_confirm_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonAuthToken>,
-) -> Result<ResponseAccepted<JsonAuthUser>, HttpError> {
+) -> Result<ResponseOk<JsonAuthUser>, HttpError> {
     let json = post_inner(rqctx.context(), body.into_inner()).await?;
-    Ok(Post::pub_response_accepted(json))
+    Ok(Post::pub_response_ok(json))
 }
 
 async fn post_inner(

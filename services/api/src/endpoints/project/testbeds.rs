@@ -12,8 +12,7 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{
-            CorsResponse, Delete, Get, Patch, Post, ResponseAccepted, ResponseCreated,
-            ResponseDeleted, ResponseOk,
+            CorsResponse, Delete, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
         },
         Endpoint,
     },
@@ -244,7 +243,7 @@ pub async fn proj_testbed_patch(
     bearer_token: BearerToken,
     path_params: Path<ProjTestbedParams>,
     body: TypedBody<JsonUpdateTestbed>,
-) -> Result<ResponseAccepted<JsonTestbed>, HttpError> {
+) -> Result<ResponseOk<JsonTestbed>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let context = rqctx.context();
     let json = patch_inner(
@@ -254,7 +253,7 @@ pub async fn proj_testbed_patch(
         &auth_user,
     )
     .await?;
-    Ok(Patch::auth_response_accepted(json))
+    Ok(Patch::auth_response_ok(json))
 }
 
 async fn patch_inner(
