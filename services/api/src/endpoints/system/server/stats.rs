@@ -8,7 +8,7 @@ use slog::Logger;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{CorsResponse, Get, Post, ResponseAccepted, ResponseOk},
+        endpoint::{CorsResponse, Get, Post, ResponseCreated, ResponseOk},
         Endpoint,
     },
     error::issue_error,
@@ -59,9 +59,9 @@ async fn get_one_inner(context: &ApiContext) -> Result<JsonServerStats, HttpErro
 pub async fn server_stats_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonServerStats>,
-) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
+) -> Result<ResponseCreated<JsonEmpty>, HttpError> {
     let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner()).await?;
-    Ok(Post::auth_response_accepted(json))
+    Ok(Post::auth_response_created(json))
 }
 
 async fn post_inner(

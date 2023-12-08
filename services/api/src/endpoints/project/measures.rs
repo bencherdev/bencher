@@ -12,7 +12,8 @@ use crate::{
     context::ApiContext,
     endpoints::{
         endpoint::{
-            CorsResponse, Delete, Get, Patch, Post, ResponseAccepted, ResponseDeleted, ResponseOk,
+            CorsResponse, Delete, Get, Patch, Post, ResponseAccepted, ResponseCreated,
+            ResponseDeleted, ResponseOk,
         },
         Endpoint,
     },
@@ -131,7 +132,7 @@ pub async fn proj_measure_post(
     bearer_token: BearerToken,
     path_params: Path<ProjMeasuresParams>,
     body: TypedBody<JsonNewMeasure>,
-) -> Result<ResponseAccepted<JsonMeasure>, HttpError> {
+) -> Result<ResponseCreated<JsonMeasure>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(
         rqctx.context(),
@@ -140,7 +141,7 @@ pub async fn proj_measure_post(
         &auth_user,
     )
     .await?;
-    Ok(Post::auth_response_accepted(json))
+    Ok(Post::auth_response_created(json))
 }
 
 async fn post_inner(

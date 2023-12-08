@@ -20,9 +20,7 @@ use slog::Logger;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{
-            CorsResponse, Delete, Get, Post, ResponseAccepted, ResponseDeleted, ResponseOk,
-        },
+        endpoint::{CorsResponse, Delete, Get, Post, ResponseCreated, ResponseDeleted, ResponseOk},
         Endpoint,
     },
     error::{bad_request_error, issue_error, resource_conflict_err, resource_not_found_err},
@@ -194,7 +192,7 @@ pub async fn proj_report_post(
     bearer_token: BearerToken,
     path_params: Path<ProjReportsParams>,
     body: TypedBody<JsonNewReport>,
-) -> Result<ResponseAccepted<JsonReport>, HttpError> {
+) -> Result<ResponseCreated<JsonReport>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(
         &rqctx.log,
@@ -204,7 +202,7 @@ pub async fn proj_report_post(
         &auth_user,
     )
     .await?;
-    Ok(Post::auth_response_accepted(json))
+    Ok(Post::auth_response_created(json))
 }
 
 async fn post_inner(

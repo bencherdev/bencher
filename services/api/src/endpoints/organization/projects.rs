@@ -11,7 +11,7 @@ use serde::Deserialize;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{CorsResponse, Get, Post, ResponseAccepted, ResponseOk},
+        endpoint::{CorsResponse, Get, Post, ResponseCreated, ResponseOk},
         Endpoint,
     },
     error::{forbidden_error, resource_conflict_err, resource_not_found_err},
@@ -138,7 +138,7 @@ pub async fn org_project_post(
     bearer_token: BearerToken,
     path_params: Path<OrgProjectsParams>,
     body: TypedBody<JsonNewProject>,
-) -> Result<ResponseAccepted<JsonProject>, HttpError> {
+) -> Result<ResponseCreated<JsonProject>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(
         rqctx.context(),
@@ -147,7 +147,7 @@ pub async fn org_project_post(
         &auth_user,
     )
     .await?;
-    Ok(Post::auth_response_accepted(json))
+    Ok(Post::auth_response_created(json))
 }
 
 async fn post_inner(

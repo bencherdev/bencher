@@ -8,9 +8,9 @@ use http::StatusCode;
 use slog::Logger;
 
 use crate::context::NewUserBody;
-use crate::endpoints::endpoint::CorsResponse;
+use crate::endpoints::endpoint::Endpoint;
 use crate::endpoints::endpoint::Post;
-use crate::endpoints::endpoint::{Endpoint, ResponseAccepted};
+use crate::endpoints::endpoint::{CorsResponse, ResponseCreated};
 use crate::error::{forbidden_error, issue_error, resource_conflict_err, resource_not_found_err};
 use crate::model::organization::{
     organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
@@ -45,9 +45,9 @@ pub async fn auth_signup_options(
 pub async fn auth_signup_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonSignup>,
-) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
+) -> Result<ResponseCreated<JsonEmpty>, HttpError> {
     let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner()).await?;
-    Ok(Post::pub_response_accepted(json))
+    Ok(Post::pub_response_created(json))
 }
 
 #[allow(clippy::too_many_lines)]

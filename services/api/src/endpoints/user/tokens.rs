@@ -11,7 +11,7 @@ use uuid::Uuid;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{CorsResponse, Get, Patch, Post, ResponseAccepted, ResponseOk},
+        endpoint::{CorsResponse, Get, Patch, Post, ResponseAccepted, ResponseCreated, ResponseOk},
         Endpoint,
     },
     error::{resource_conflict_err, resource_not_found_err},
@@ -135,7 +135,7 @@ pub async fn user_token_post(
     bearer_token: BearerToken,
     path_params: Path<UserTokensParams>,
     body: TypedBody<JsonNewToken>,
-) -> Result<ResponseAccepted<JsonToken>, HttpError> {
+) -> Result<ResponseCreated<JsonToken>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(
         rqctx.context(),
@@ -144,7 +144,7 @@ pub async fn user_token_post(
         &auth_user,
     )
     .await?;
-    Ok(Post::auth_response_accepted(json))
+    Ok(Post::auth_response_created(json))
 }
 
 async fn post_inner(
