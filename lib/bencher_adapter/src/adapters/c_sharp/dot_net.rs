@@ -1,4 +1,4 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonEmpty, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonAny, JsonMetric};
 
 use rust_decimal::Decimal;
 use serde::Deserialize;
@@ -23,7 +23,7 @@ impl Adaptable for AdapterCSharpDotNet {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct DotNet {
-    pub host_environment_info: JsonEmpty,
+    pub host_environment_info: JsonAny,
     pub benchmarks: Benchmarks,
 }
 

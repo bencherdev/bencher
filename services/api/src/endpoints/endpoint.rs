@@ -9,7 +9,7 @@ use serde::Serialize;
 
 use crate::util::headers::CorsHeaders;
 
-pub type CorsResponse = HttpResponseHeaders<HttpResponseOk<String>, CorsHeaders>;
+pub type CorsResponse = HttpResponseHeaders<HttpResponseOk<()>, CorsHeaders>;
 pub type ResponseOk<T> = HttpResponseHeaders<HttpResponseOk<T>, CorsHeaders>;
 pub type ResponseCreated<T> = HttpResponseHeaders<HttpResponseCreated<T>, CorsHeaders>;
 pub type ResponseAccepted<T> = HttpResponseHeaders<HttpResponseAccepted<T>, CorsHeaders>;
@@ -26,7 +26,7 @@ pub enum Endpoint {
 
 impl Endpoint {
     pub fn cors(endpoints: &[Self]) -> CorsResponse {
-        HttpResponseHeaders::new(HttpResponseOk(String::new()), CorsHeaders::new(endpoints))
+        HttpResponseHeaders::new(HttpResponseOk(()), CorsHeaders::new(endpoints))
     }
 }
 

@@ -1,4 +1,4 @@
-use bencher_json::{JsonEmpty, JsonRestart};
+use bencher_json::JsonRestart;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use slog::{error, warn, Logger};
 use tokio::sync::mpsc::Sender;
@@ -36,10 +36,10 @@ pub async fn server_restart_post(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
     body: TypedBody<JsonRestart>,
-) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
+) -> Result<ResponseAccepted<()>, HttpError> {
     let admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner(), &admin_user).await?;
-    Ok(Post::auth_response_accepted(json))
+    post_inner(&rqctx.log, rqctx.context(), body.into_inner(), &admin_user).await?;
+    Ok(Post::auth_response_accepted(()))
 }
 
 #[allow(clippy::unused_async)]
@@ -48,7 +48,7 @@ async fn post_inner(
     context: &ApiContext,
     json_restart: JsonRestart,
     admin_user: &AdminUser,
-) -> Result<JsonEmpty, HttpError> {
+) -> Result<(), HttpError> {
     countdown(
         log,
         context.restart_tx.clone(),
@@ -56,7 +56,7 @@ async fn post_inner(
         admin_user.user().id,
     );
 
-    Ok(JsonEmpty {})
+    Ok(())
 }
 
 pub fn countdown(log: &Logger, restart_tx: Sender<()>, delay: u64, user_id: UserId) {

@@ -1,4 +1,4 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonEmpty, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonAny, JsonMetric};
 
 use rust_decimal::Decimal;
 use serde::Deserialize;
@@ -23,8 +23,8 @@ impl Adaptable for AdapterPythonPytest {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct Pytest {
-    pub machine_info: JsonEmpty,
-    pub commit_info: JsonEmpty,
+    pub machine_info: JsonAny,
+    pub commit_info: JsonAny,
     pub benchmarks: Benchmarks,
 }
 

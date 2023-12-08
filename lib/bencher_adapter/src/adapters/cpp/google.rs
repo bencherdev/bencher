@@ -1,4 +1,4 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonEmpty, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonAny, JsonMetric};
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
@@ -32,7 +32,7 @@ pub struct Google {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Context {
-    pub caches: Vec<JsonEmpty>,
+    pub caches: Vec<JsonAny>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

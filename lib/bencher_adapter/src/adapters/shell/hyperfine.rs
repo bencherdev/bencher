@@ -1,4 +1,4 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonEmpty, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonAny, JsonMetric};
 use ordered_float::OrderedFloat;
 use serde::Deserialize;
 
@@ -39,7 +39,7 @@ pub struct HyperfineResult {
     pub max: OrderedFloat<f64>,
     pub times: Option<Vec<f64>>,
     pub exit_codes: Vec<Option<i32>>,
-    pub parameters: Option<JsonEmpty>,
+    pub parameters: Option<JsonAny>,
 }
 
 impl Hyperfine {

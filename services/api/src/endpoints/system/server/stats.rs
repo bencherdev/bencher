@@ -1,6 +1,6 @@
 #![cfg(feature = "plus")]
 
-use bencher_json::{JsonEmpty, JsonServerStats};
+use bencher_json::JsonServerStats;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use http::StatusCode;
 use slog::Logger;
@@ -59,16 +59,16 @@ async fn get_one_inner(context: &ApiContext) -> Result<JsonServerStats, HttpErro
 pub async fn server_stats_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonServerStats>,
-) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
-    let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner()).await?;
-    Ok(Post::auth_response_accepted(json))
+) -> Result<ResponseAccepted<()>, HttpError> {
+    post_inner(&rqctx.log, rqctx.context(), body.into_inner()).await?;
+    Ok(Post::auth_response_accepted(()))
 }
 
 async fn post_inner(
     log: &Logger,
     context: &ApiContext,
     json_server_stats: JsonServerStats,
-) -> Result<JsonEmpty, HttpError> {
+) -> Result<(), HttpError> {
     let _biller = context.biller()?;
     let conn = &mut *context.conn().await;
 
@@ -84,5 +84,5 @@ async fn post_inner(
     slog::info!(log, "Self-Hosted Stats: {server_stats:?}");
     QueryServer::send_stats_to_backend(log, conn, &context.messenger, &server_stats, false)?;
 
-    Ok(JsonEmpty {})
+    Ok(())
 }

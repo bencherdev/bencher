@@ -97,7 +97,6 @@ macro_rules! try_from_client {
 }
 
 try_from_client!(
-    JsonEmpty,
     JsonCreated,
     JsonMember,
     JsonMembers,

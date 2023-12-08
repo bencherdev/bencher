@@ -1,4 +1,4 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonEmpty, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonAny, JsonMetric};
 
 use rust_decimal::Decimal;
 use serde::Deserialize;
@@ -30,7 +30,7 @@ pub struct Jmh(pub Vec<Benchmark>);
 pub struct Benchmark {
     pub benchmark: BenchmarkName,
     pub primary_metric: PrimaryMetric,
-    pub secondary_metrics: JsonEmpty,
+    pub secondary_metrics: JsonAny,
 }
 
 #[derive(Debug, Clone, Deserialize)]

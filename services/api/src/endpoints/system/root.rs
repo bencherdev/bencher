@@ -1,4 +1,3 @@
-use bencher_json::JsonEmpty;
 use dropshot::{endpoint, HttpError, RequestContext};
 
 use crate::{
@@ -29,6 +28,6 @@ pub async fn server_root_options(
 }]
 pub async fn server_root_get(
     _rqctx: RequestContext<ApiContext>,
-) -> Result<ResponseOk<JsonEmpty>, HttpError> {
-    Ok(Get::pub_response_ok(JsonEmpty {}))
+) -> Result<ResponseOk<()>, HttpError> {
+    Ok(Get::pub_response_ok(()))
 }

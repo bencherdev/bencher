@@ -107,7 +107,7 @@ pub static DEVEL_BENCHER_API_URL: Lazy<url::Url> = Lazy::new(|| {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonEmpty {}
+pub struct JsonAny {}
 
 /// A pre-`v1.0` future proof way to check the result of most create and update operations.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
