@@ -40,13 +40,6 @@ impl QueryBoundary {
             .map_err(resource_not_found_err!(Boundary, metric_id))
     }
 
-    // There may not be a boundary for every metric, so return the default if there isn't one.
-    pub fn get_json(conn: &mut DbConnection, metric_id: MetricId) -> JsonBoundary {
-        Self::from_metric_id(conn, metric_id)
-            .map(QueryBoundary::into_json)
-            .unwrap_or_default()
-    }
-
     pub fn into_json(self) -> JsonBoundary {
         JsonBoundary {
             baseline: self.baseline.into(),

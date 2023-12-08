@@ -229,7 +229,7 @@ pub struct JsonPerfMetric {
     // Threshold is necessary for each metric as the statistic may change over time
     pub threshold: Option<JsonThresholdStatistic>,
     pub metric: JsonMetric,
-    pub boundary: JsonBoundary,
+    pub boundary: Option<JsonBoundary>,
     pub alert: Option<JsonPerfAlert>,
 }
 
@@ -298,6 +298,20 @@ pub mod table {
             let mut perf_table = Vec::new();
             for result in json_perf.results {
                 for metric in result.metrics {
+                    let (baseline, lower_limit, upper_limit) =
+                        if let Some(boundary) = metric.boundary {
+                            (
+                                DisplayOption(Some(boundary.baseline)),
+                                DisplayOption(boundary.lower_limit),
+                                DisplayOption(boundary.upper_limit),
+                            )
+                        } else {
+                            (
+                                DisplayOption::default(),
+                                DisplayOption::default(),
+                                DisplayOption::default(),
+                            )
+                        };
                     perf_table.push(PerfTable {
                         project: json_perf.project.clone(),
                         branch: result.branch.clone(),
@@ -310,8 +324,9 @@ pub mod table {
                         version_number: metric.version.number,
                         version_hash: DisplayOption(metric.version.hash),
                         metric: metric.metric,
-                        lower_limit: DisplayOption(metric.boundary.lower_limit),
-                        upper_limit: DisplayOption(metric.boundary.upper_limit),
+                        baseline,
+                        lower_limit,
+                        upper_limit,
                     });
                 }
             }
@@ -343,12 +358,15 @@ pub mod table {
         pub version_hash: DisplayOption<GitHash>,
         #[tabled(rename = "Metric Value")]
         pub metric: JsonMetric,
+        #[tabled(rename = "Boundary Baseline")]
+        pub baseline: DisplayOption<OrderedFloat<f64>>,
         #[tabled(rename = "Lower Boundary Limit")]
         pub lower_limit: DisplayOption<OrderedFloat<f64>>,
         #[tabled(rename = "Upper Boundary Limit")]
         pub upper_limit: DisplayOption<OrderedFloat<f64>>,
     }
 
+    #[derive(Default)]
     pub struct DisplayOption<T>(Option<T>);
 
     impl<T> fmt::Display for DisplayOption<T>

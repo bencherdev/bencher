@@ -12,7 +12,7 @@ pub struct JsonBoundaries(pub Vec<JsonBoundary>);
 crate::from_vec!(JsonBoundaries[JsonBoundary]);
 
 #[typeshare::typeshare]
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBoundary {
     // TODO remove in due time

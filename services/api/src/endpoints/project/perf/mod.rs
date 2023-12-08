@@ -1,6 +1,5 @@
 use bencher_json::{
     project::{
-        boundary::JsonBoundary,
         branch::{JsonVersion, VersionNumber},
         perf::{Iteration, JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
     },
@@ -438,14 +437,14 @@ fn new_perf_metric(
         if let Some((query_boundary, query_threshold, query_statistic, query_alert)) =
             boundary_limit
         {
-            let boundary = query_boundary.into_json();
+            let boundary = Some(query_boundary.into_json());
             let threshold = Some(
                 query_threshold.into_threshold_statistic_json_for_project(project, query_statistic),
             );
             let alert = query_alert.map(QueryAlert::into_perf_json);
             (boundary, threshold, alert)
         } else {
-            (JsonBoundary::default(), None, None)
+            (None, None, None)
         };
 
     JsonPerfMetric {

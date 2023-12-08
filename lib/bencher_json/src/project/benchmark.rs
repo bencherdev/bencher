@@ -44,7 +44,7 @@ pub struct JsonBenchmarkMetric {
     pub name: BenchmarkName,
     pub slug: Slug,
     pub metric: JsonMetric,
-    pub boundary: JsonBoundary,
+    pub boundary: Option<JsonBoundary>,
     pub created: DateTime,
     pub modified: DateTime,
 }

@@ -121,9 +121,7 @@ impl QueryBenchmark {
             modified,
         } = self.into_json_for_project(project);
         let metric = query_metric.into_json();
-        let boundary = query_boundary
-            .map(QueryBoundary::into_json)
-            .unwrap_or_default();
+        let boundary = query_boundary.map(QueryBoundary::into_json);
         JsonBenchmarkMetric {
             uuid,
             project,

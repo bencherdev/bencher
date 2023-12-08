@@ -169,7 +169,7 @@ impl ReportComment {
         html.push_str("<tr>");
         html.push_str("<th>Benchmark</th>");
         for (measure, MeasureData { boundary, .. }) in measures {
-            if require_threshold && !BenchmarkUrls::boundary_has_threshold(*boundary) {
+            if require_threshold && boundary.is_none() {
                 continue;
             }
             let measure_name = &measure.name;
@@ -187,9 +187,18 @@ impl ReportComment {
 
             if with_metrics {
                 let units = &measure.units;
-                html.push_str(&format!(
-                    "<th>{measure_name} Results<br/>{units} | (Δ%)</th>",
-                ));
+                // If there is a boundary then we will show the percentage difference
+                if boundary.is_some() {
+                    html.push_str(&format!(
+                        "<th>{measure_name} Results<br/>{units} | (Δ%)</th>",
+                    ));
+                } else {
+                    html.push_str(&format!("<th>{measure_name} Results<br/>{units}</th>",));
+                }
+
+                let Some(boundary) = boundary else {
+                    continue;
+                };
                 if boundary.lower_limit.is_some() {
                     html.push_str(&format!(
                         "<th>{measure_name} Lower Boundary<br/>{units} | (%)</th>"
@@ -238,7 +247,7 @@ impl ReportComment {
                 },
             ) in measures
             {
-                if require_threshold && !BenchmarkUrls::boundary_has_threshold(*boundary) {
+                if require_threshold && boundary.is_none() {
                     continue;
                 }
                 let plot_url = if public_links {
@@ -266,25 +275,34 @@ impl ReportComment {
                     format!(
                         r#"🚨 (<a href="{plot_url}">view plot</a> | <a href="{alert_url}">view alert</a>)"#,
                     )
-                } else if boundary.is_empty() {
-                    format!(r#"➖ (<a href="{plot_url}">view plot</a>)"#)
-                } else {
+                } else if boundary.is_some() {
                     format!(r#"✅ (<a href="{plot_url}">view plot</a>)"#)
+                } else {
+                    format!(r#"➖ (<a href="{plot_url}">view plot</a>)"#)
                 };
                 html.push_str(&format!(r#"<td>{row}</td>"#));
 
                 if with_metrics {
                     let value = *value;
-                    let value_percent = if value.is_normal() && boundary.baseline.is_normal() {
-                        ((value - boundary.baseline) / boundary.baseline) * 100.0
-                    } else {
-                        0.0
-                    };
-                    let value_plus = if value_percent > 0.0 { "+" } else { "" };
+                    // If there is a boundary then show the percentage difference
+                    if let Some(boundary) = boundary {
+                        let value_percent = if value.is_normal() && boundary.baseline.is_normal() {
+                            ((value - boundary.baseline) / boundary.baseline) * 100.0
+                        } else {
+                            0.0
+                        };
+                        let value_plus = if value_percent > 0.0 { "+" } else { "" };
 
-                    html.push_str(&format!(
-                        "<td>{value:.3} ({value_plus}{value_percent:.2}%)</td>"
-                    ));
+                        html.push_str(&format!(
+                            "<td>{value:.3} ({value_plus}{value_percent:.2}%)</td>"
+                        ));
+                    } else {
+                        html.push_str(&format!("<td>{value:.3}</td>"));
+                    }
+
+                    let Some(boundary) = boundary else {
+                        continue;
+                    };
                     if let Some(lower_limit) = boundary.lower_limit {
                         let limit_percent = if value.is_normal() && lower_limit.is_normal() {
                             (lower_limit / value) * 100.0
@@ -373,7 +391,7 @@ pub struct MeasureData {
     pub public_url: Url,
     pub console_url: Url,
     pub value: f64,
-    pub boundary: Boundary,
+    pub boundary: Option<Boundary>,
 }
 
 impl BenchmarkUrls {
@@ -401,7 +419,7 @@ impl BenchmarkUrls {
                         slug: benchmark_metric.slug.clone(),
                     };
                     let benchmark_urls = urls.entry(benchmark).or_insert_with(BTreeMap::new);
-                    let boundary = benchmark_metric.boundary.into();
+                    let boundary = benchmark_metric.boundary.map(Into::into);
 
                     let data = MeasureData {
                         public_url: benchmark_url.to_public_url(
@@ -432,11 +450,7 @@ impl BenchmarkUrls {
     fn benchmark_has_threshold(measures: &MeasuresMap) -> bool {
         measures
             .values()
-            .any(|MeasureData { boundary, .. }| Self::boundary_has_threshold(*boundary))
-    }
-
-    fn boundary_has_threshold(boundary: Boundary) -> bool {
-        !boundary.is_empty()
+            .any(|MeasureData { boundary, .. }| boundary.is_some())
     }
 }
 
@@ -475,7 +489,7 @@ impl BenchmarkUrl {
         &self,
         benchmark: BenchmarkUuid,
         measure: MeasureUuid,
-        boundary: Boundary,
+        boundary: Option<Boundary>,
     ) -> Url {
         self.to_url(benchmark, measure, boundary, true)
     }
@@ -484,7 +498,7 @@ impl BenchmarkUrl {
         &self,
         benchmark: BenchmarkUuid,
         measure: MeasureUuid,
-        boundary: Boundary,
+        boundary: Option<Boundary>,
     ) -> Url {
         self.to_url(benchmark, measure, boundary, false)
     }
@@ -493,7 +507,7 @@ impl BenchmarkUrl {
         &self,
         benchmark: BenchmarkUuid,
         measure: MeasureUuid,
-        boundary: Boundary,
+        boundary: Option<Boundary>,
         public_links: bool,
     ) -> Url {
         let json_perf_query = JsonPerfQuery {
@@ -512,11 +526,13 @@ impl BenchmarkUrl {
             format!("/console/projects/{}/perf", self.project_slug)
         };
         url.set_path(&path);
-        url.set_query(Some(
-            &json_perf_query
-                .to_query_string(&boundary.to_query_string())
-                .unwrap_or_default(),
-        ));
+        if let Some(boundary) = boundary {
+            url.set_query(Some(
+                &json_perf_query
+                    .to_query_string(&boundary.to_query_string())
+                    .unwrap_or_default(),
+            ));
+        }
 
         url
     }

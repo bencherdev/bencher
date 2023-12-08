@@ -80,7 +80,7 @@ export interface JsonBenchmarkMetric {
 	name: BenchmarkName;
 	slug: Slug;
 	metric: JsonMetric;
-	boundary: JsonBoundary;
+	boundary?: JsonBoundary;
 	created: string;
 	modified: string;
 }
@@ -370,7 +370,7 @@ export interface JsonPerfMetric {
 	version: JsonVersion;
 	threshold?: JsonThresholdStatistic;
 	metric: JsonMetric;
-	boundary: JsonBoundary;
+	boundary?: JsonBoundary;
 	alert?: JsonPerfAlert;
 }
 

@@ -6238,7 +6238,12 @@
         "type": "object",
         "properties": {
           "boundary": {
-            "$ref": "#/components/schemas/JsonBoundary"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonBoundary"
+              }
+            ]
           },
           "created": {
             "$ref": "#/components/schemas/DateTime"
@@ -6263,7 +6268,6 @@
           }
         },
         "required": [
-          "boundary",
           "created",
           "metric",
           "modified",
@@ -7319,7 +7323,12 @@
             ]
           },
           "boundary": {
-            "$ref": "#/components/schemas/JsonBoundary"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonBoundary"
+              }
+            ]
           },
           "end_time": {
             "$ref": "#/components/schemas/DateTime"
@@ -7349,7 +7358,6 @@
           }
         },
         "required": [
-          "boundary",
           "end_time",
           "iteration",
           "metric",
