@@ -88,157 +88,64 @@ macro_rules! impl_method {
     };
 }
 
-macro_rules! impl_response_ok {
-    ($method:ident) => {
-        impl $method {
-            pub fn response_ok<T>(body: T, auth: bool) -> ResponseOk<T>
-            where
-                T: JsonSchema + Serialize + Send + Sync,
-            {
-                if auth {
-                    Self::auth_response_ok(body)
-                } else {
-                    Self::pub_response_ok(body)
+macro_rules! impl_response {
+    ($method:ident, $status:ident, $response:ident) => {
+        paste::paste! {
+            impl $method {
+                pub fn [<response_ $status>]<T>(body: T, auth: bool) -> $response<T>
+                where
+                    T: JsonSchema + Serialize + Send + Sync,
+                {
+                    if auth {
+                        Self::[<auth_response_ $status>](body)
+                    } else {
+                        Self::[<pub_response_ $status>](body)
+                    }
+                }
+
+                pub fn [<pub_response_ $status>]<T>(body: T) -> $response<T>
+                where
+                    T: JsonSchema + Serialize + Send + Sync,
+                {
+                    let headers = CorsHeaders::new_pub(&http::Method::from(Self));
+                    Self::[<response_ $status _inner>](body, headers)
+                }
+
+                pub fn [<auth_response_ $status>]<T>(body: T) -> $response<T>
+                where
+                    T: JsonSchema + Serialize + Send + Sync,
+                {
+                    let headers = CorsHeaders::new_auth(&http::Method::from(Self));
+                    Self::[<response_ $status _inner>](body, headers)
+                }
+
+                fn [<response_ $status _inner>]<T, H>(body: T, headers: H) -> $response<T>
+                where
+                    T: JsonSchema + Serialize + Send + Sync,
+                    H: Into<CorsHeaders>,
+                {
+                    HttpResponseHeaders::new([<Http $response>](body), headers.into())
                 }
             }
-
-            pub fn pub_response_ok<T>(body: T) -> ResponseOk<T>
-            where
-                T: JsonSchema + Serialize + Send + Sync,
-            {
-                let headers = CorsHeaders::new_pub(&http::Method::from(Self));
-                Self::response_ok_inner(body, headers)
-            }
-
-            pub fn auth_response_ok<T>(body: T) -> ResponseOk<T>
-            where
-                T: JsonSchema + Serialize + Send + Sync,
-            {
-                let headers = CorsHeaders::new_auth(&http::Method::from(Self));
-                Self::response_ok_inner(body, headers)
-            }
-
-            fn response_ok_inner<T, H>(body: T, headers: H) -> ResponseOk<T>
-            where
-                T: JsonSchema + Serialize + Send + Sync,
-                H: Into<CorsHeaders>,
-            {
-                HttpResponseHeaders::new(HttpResponseOk(body), headers.into())
-            }
         }
+    };
+}
+
+macro_rules! impl_response_ok {
+    ($method:ident) => {
+        impl_response!($method, ok, ResponseOk);
     };
 }
 
 macro_rules! impl_response_created {
     ($method:ident) => {
-        impl $method {
-            pub fn response_created<T>(body: T, auth: bool) -> ResponseCreated<T>
-            where
-                T: JsonSchema + Serialize + Send + Sync,
-            {
-                if auth {
-                    Self::auth_response_created(body)
-                } else {
-                    Self::pub_response_created(body)
-                }
-            }
-
-            pub fn pub_response_created<T>(body: T) -> ResponseCreated<T>
-            where
-                T: JsonSchema + Serialize + Send + Sync,
-            {
-                let headers = CorsHeaders::new_pub(&http::Method::from(Self));
-                Self::response_created_inner(body, headers)
-            }
-
-            pub fn auth_response_created<T>(body: T) -> ResponseCreated<T>
-            where
-                T: JsonSchema + Serialize + Send + Sync,
-            {
-                let headers = CorsHeaders::new_auth(&http::Method::from(Self));
-                Self::response_created_inner(body, headers)
-            }
-
-            fn response_created_inner<T, H>(body: T, headers: H) -> ResponseCreated<T>
-            where
-                T: JsonSchema + Serialize + Send + Sync,
-                H: Into<CorsHeaders>,
-            {
-                HttpResponseHeaders::new(HttpResponseCreated(body), headers.into())
-            }
-        }
+        impl_response!($method, created, ResponseCreated);
     };
 }
 
 macro_rules! impl_response_accepted {
     ($method:ident) => {
-        impl $method {
-            pub fn response_accepted<T>(body: T, auth: bool) -> ResponseAccepted<T>
-            where
-                T: JsonSchema + Serialize + Send + Sync,
-            {
-                if auth {
-                    Self::auth_response_accepted(body)
-                } else {
-                    Self::pub_response_accepted(body)
-                }
-            }
-
-            pub fn pub_response_accepted<T>(body: T) -> ResponseAccepted<T>
-            where
-                T: JsonSchema + Serialize + Send + Sync,
-            {
-                let headers = CorsHeaders::new_pub(&http::Method::from(Self));
-                Self::response_accepted_inner(body, headers)
-            }
-
-            pub fn auth_response_accepted<T>(body: T) -> ResponseAccepted<T>
-            where
-                T: JsonSchema + Serialize + Send + Sync,
-            {
-                let headers = CorsHeaders::new_auth(&http::Method::from(Self));
-                Self::response_accepted_inner(body, headers)
-            }
-
-            fn response_accepted_inner<T, H>(body: T, headers: H) -> ResponseAccepted<T>
-            where
-                T: JsonSchema + Serialize + Send + Sync,
-                H: Into<CorsHeaders>,
-            {
-                HttpResponseHeaders::new(HttpResponseAccepted(body), headers.into())
-            }
-        }
-    };
-}
-
-macro_rules! impl_response_deleted {
-    ($method:ident) => {
-        impl $method {
-            pub fn response_deleted<T>(auth: bool) -> ResponseDeleted {
-                if auth {
-                    Self::auth_response_deleted()
-                } else {
-                    Self::pub_response_deleted()
-                }
-            }
-
-            pub fn pub_response_deleted() -> ResponseDeleted {
-                let headers = CorsHeaders::new_pub(&http::Method::from(Self));
-                Self::response_deleted_inner(headers)
-            }
-
-            pub fn auth_response_deleted() -> ResponseDeleted {
-                let headers = CorsHeaders::new_auth(&http::Method::from(Self));
-                Self::response_deleted_inner(headers)
-            }
-
-            fn response_deleted_inner<H>(headers: H) -> ResponseDeleted
-            where
-                H: Into<CorsHeaders>,
-            {
-                HttpResponseHeaders::new(HttpResponseDeleted(), headers.into())
-            }
-        }
+        impl_response!($method, accepted, ResponseAccepted);
     };
 }
 
@@ -268,4 +175,30 @@ impl_response_ok!(Patch);
 #[derive(Copy, Clone)]
 pub struct Delete;
 impl_method!(Delete, DELETE);
-impl_response_deleted!(Delete);
+
+impl Delete {
+    pub fn response_deleted<T>(auth: bool) -> ResponseDeleted {
+        if auth {
+            Self::auth_response_deleted()
+        } else {
+            Self::pub_response_deleted()
+        }
+    }
+
+    pub fn pub_response_deleted() -> ResponseDeleted {
+        let headers = CorsHeaders::new_pub(&http::Method::from(Self));
+        Self::response_deleted_inner(headers)
+    }
+
+    pub fn auth_response_deleted() -> ResponseDeleted {
+        let headers = CorsHeaders::new_auth(&http::Method::from(Self));
+        Self::response_deleted_inner(headers)
+    }
+
+    fn response_deleted_inner<H>(headers: H) -> ResponseDeleted
+    where
+        H: Into<CorsHeaders>,
+    {
+        HttpResponseHeaders::new(HttpResponseDeleted(), headers.into())
+    }
+}
