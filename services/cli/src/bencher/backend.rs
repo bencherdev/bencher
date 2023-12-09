@@ -11,7 +11,6 @@ pub const BENCHER_API_TOKEN: &str = "BENCHER_API_TOKEN";
 #[derive(Debug, Clone)]
 pub struct Backend {
     client: bencher_client::BencherClient,
-    log: bool,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -33,12 +32,19 @@ impl TryFrom<CliBackend> for Backend {
             token,
             attempts,
             retry_after,
+            strict,
         } = backend;
         let host = map_host(host)?;
         let token = map_token(token)?;
-        let client =
-            bencher_client::BencherClient::new(host, token, attempts, retry_after, Some(true));
-        Ok(Self { client, log: true })
+        let client = bencher_client::BencherClient::new(
+            host,
+            token,
+            attempts,
+            retry_after,
+            Some(strict),
+            Some(true),
+        );
+        Ok(Self { client })
     }
 }
 
@@ -63,7 +69,7 @@ fn map_token(token: Option<Jwt>) -> Result<Option<Jwt>, BackendError> {
 
 impl Backend {
     pub fn log(mut self, log: bool) -> Self {
-        self.log = log;
+        self.client.log = log;
         self
     }
 

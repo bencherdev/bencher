@@ -119,6 +119,10 @@ pub struct CliBackend {
     /// Initial seconds to wait between attempts (exponential backoff) (default 1)
     #[clap(long)]
     pub retry_after: Option<u64>,
+
+    /// Strictly parse JSON responses (default false)
+    #[clap(long)]
+    pub strict: bool,
 }
 
 #[derive(Args, Debug)]

@@ -12,6 +12,7 @@ pub struct BencherClient {
     pub token: Option<Jwt>,
     pub attempts: usize,
     pub retry_after: u64,
+    pub strict: bool,
     pub log: bool,
 }
 
@@ -38,9 +39,13 @@ pub enum ClientError {
     InvalidUpgrade(reqwest::Error),
     #[error("Invalid response body bytes: {0}")]
     InvalidResponseBytes(reqwest::Error),
-    #[error("Invalid response payload: {1}")]
-    InvalidResponsePayload(progenitor_client::Bytes, serde_json::Error),
-    #[error("Request succeeded with an unexpected response: {0}")]
+    #[error("Invalid response payload ({len}): {1}", len = _0.len())]
+    InvalidResponsePayloadStrict(progenitor_client::Bytes, serde_json::Error),
+    #[error("Invalid response payload: {0}")]
+    InvalidResponsePayload(serde_json::Error),
+    #[error("Request succeeded with an unexpected response: {0:?}")]
+    UnexpectedResponseOkStrict(reqwest::Response),
+    #[error("Request succeeded with an unexpected response body: {0}")]
     UnexpectedResponseOk(reqwest::Error),
     #[error("Request failed with an unexpected response: {0:?}")]
     UnexpectedResponseErr(reqwest::Response),
@@ -57,12 +62,14 @@ impl BencherClient {
     /// - `token`: The JWT token
     /// - `attempts`: The number of attempts to make before giving up
     /// - `retry_after`: The number of initial seconds to wait between attempts (exponential backoff)
+    /// - `strict`: Do not retry parsing the response JSON if it fails to deserialize the original client type
     /// - `log`: Whether to log the response JSON to stdout
     pub fn new(
         host: Option<url::Url>,
         token: Option<Jwt>,
         attempts: Option<usize>,
         retry_after: Option<u64>,
+        strict: Option<bool>,
         log: Option<bool>,
     ) -> Self {
         BencherClientBuilder {
@@ -70,6 +77,7 @@ impl BencherClient {
             token,
             attempts,
             retry_after,
+            strict,
             log,
         }
         .build()
@@ -126,7 +134,6 @@ impl BencherClient {
 
         for attempt in 0..attempts {
             match sender(client.clone()).await {
-                #[allow(clippy::print_stdout)]
                 Ok(response_value) => {
                     let response = response_value.into_inner();
                     let json_response = Json::try_from(response)
@@ -137,9 +144,13 @@ impl BencherClient {
                 },
                 #[allow(clippy::print_stderr)]
                 Err(crate::codegen::Error::CommunicationError(e)) => {
-                    eprintln!("\nSend attempt #{}/{attempts}: {e}", attempt + 1);
+                    if self.log {
+                        eprintln!("\nSend attempt #{}/{attempts}: {e}", attempt + 1);
+                    }
                     if attempt != max_attempts {
-                        eprintln!("Will retry after {retry_after} second(s).");
+                        if self.log {
+                            eprintln!("Will retry after {retry_after} second(s).");
+                        }
                         sleep(Duration::from_secs(retry_after)).await;
                         retry_after *= 2;
                     }
@@ -166,21 +177,30 @@ impl BencherClient {
                     return Err(ClientError::InvalidResponseBytes(e))
                 },
                 Err(crate::codegen::Error::InvalidResponsePayload(bytes, e)) => {
-                    return if let Ok(json_response) = serde_json::from_slice(&bytes) {
-                        self.log(&json_response)?;
-                        Ok(json_response)
+                    return if self.strict {
+                        Err(ClientError::InvalidResponsePayloadStrict(bytes, e))
                     } else {
-                        Err(ClientError::InvalidResponsePayload(bytes, e))
-                    }
-                },
-                Err(crate::codegen::Error::UnexpectedResponse(response)) => {
-                    return if response.status().is_success() {
-                        match response.json().await {
+                        match serde_json::from_slice(&bytes) {
                             Ok(json_response) => {
                                 self.log(&json_response)?;
                                 Ok(json_response)
                             },
-                            Err(e) => Err(ClientError::UnexpectedResponseOk(e)),
+                            Err(e) => Err(ClientError::InvalidResponsePayload(e)),
+                        }
+                    }
+                },
+                Err(crate::codegen::Error::UnexpectedResponse(response)) => {
+                    return if response.status().is_success() {
+                        if self.strict {
+                            Err(ClientError::UnexpectedResponseOkStrict(response))
+                        } else {
+                            match response.json().await {
+                                Ok(json_response) => {
+                                    self.log(&json_response)?;
+                                    Ok(json_response)
+                                },
+                                Err(e) => Err(ClientError::UnexpectedResponseOk(e)),
+                            }
                         }
                     } else {
                         Err(ClientError::UnexpectedResponseErr(response))
@@ -237,6 +257,7 @@ pub struct BencherClientBuilder {
     token: Option<Jwt>,
     attempts: Option<usize>,
     retry_after: Option<u64>,
+    strict: Option<bool>,
     log: Option<bool>,
 }
 
@@ -270,7 +291,14 @@ impl BencherClientBuilder {
     }
 
     #[must_use]
-    /// Set the whether to log the response JSON to stdout
+    /// Do not retry parsing the response JSON if it fails to deserialize the original client type
+    pub fn strict(mut self, log: bool) -> Self {
+        self.log = Some(log);
+        self
+    }
+
+    #[must_use]
+    /// Set whether to log the response JSON to stdout
     pub fn log(mut self, log: bool) -> Self {
         self.log = Some(log);
         self
@@ -288,6 +316,7 @@ impl BencherClientBuilder {
             token,
             attempts,
             retry_after,
+            strict,
             log,
         } = self;
         BencherClient {
@@ -295,6 +324,7 @@ impl BencherClientBuilder {
             token,
             attempts: attempts.unwrap_or(DEFAULT_ATTEMPTS),
             retry_after: retry_after.unwrap_or(DEFAULT_RETRY_AFTER),
+            strict: strict.unwrap_or_default(),
             log: log.unwrap_or_default(),
         }
     }
