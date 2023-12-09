@@ -45,12 +45,12 @@ impl TryFrom<CliRunCommand> for Runner {
 }
 
 impl Runner {
-    pub async fn run(&self) -> Result<Output, RunError> {
+    pub async fn run(&self, log: bool) -> Result<Output, RunError> {
         Ok(match self {
             Self::Pipe(pipe) => pipe.output(),
-            Self::Command(command) => command.run().await?,
+            Self::Command(command) => command.run(log).await?,
             Self::CommandToFile(command, file_path) => {
-                let mut output = command.run().await?;
+                let mut output = command.run(log).await?;
                 let result =
                     std::fs::read_to_string(file_path).map_err(RunError::OutputFileRead)?;
                 output.result = Some(result);

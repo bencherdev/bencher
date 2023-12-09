@@ -1,4 +1,4 @@
-#![cfg(feature = "seed")]
+// #![cfg(feature = "seed")]
 
 use std::process::Command;
 
@@ -534,9 +534,12 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
             BRANCH_SLUG,
             TESTBED_ARG,
             TESTBED_SLUG,
+            "--quiet",
             &bencher_mock,
         ]);
-        let _assert = cmd.assert().success();
+        let assert = cmd.assert().success();
+        let _json: bencher_json::JsonReport =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
     }
 
     // cargo run -- alert stats --host http://localhost:61016 --project the-computer
@@ -572,9 +575,12 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         BRANCH_SLUG,
         TESTBED_ARG,
         TESTBED_SLUG,
+        "--quiet",
         &bencher_mock,
     ]);
-    let _assert = cmd.assert().success();
+    let assert = cmd.assert().success();
+    let _json: bencher_json::JsonReport =
+        serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- alert ls --host http://localhost:61016 --project the-computer
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;

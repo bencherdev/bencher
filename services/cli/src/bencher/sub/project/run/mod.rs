@@ -1,4 +1,4 @@
-use std::convert::TryFrom;
+use std::{convert::TryFrom, future::Future, pin::Pin};
 
 use async_trait::async_trait;
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings};
@@ -54,6 +54,7 @@ pub struct Run {
     allow_failure: bool,
     err: bool,
     html: bool,
+    log: bool,
     ci: Option<Ci>,
     dry_run: bool,
     backend: Backend,
@@ -77,7 +78,7 @@ impl TryFrom<CliRun> for Run {
             backdate,
             allow_failure,
             err,
-            html,
+            fmt,
             ci,
             dry_run,
         } = run;
@@ -94,7 +95,8 @@ impl TryFrom<CliRun> for Run {
             backdate,
             allow_failure,
             err,
-            html,
+            html: fmt.html,
+            log: !fmt.quiet,
             ci: ci.try_into().map_err(RunError::Ci)?,
             dry_run,
             backend: Backend::try_from(backend)?.log(false),
@@ -150,33 +152,41 @@ impl SubCmd for Run {
 
 impl Run {
     async fn exec_inner(&self) -> Result<(), RunError> {
-        let Some(json_new_report) = &self.generate_report().await? else {
+        let Some(json_new_report) = self.generate_report().await? else {
             return Ok(());
         };
 
-        // TODO disable when quiet
-        cli_println!("\nBencher New Report:");
-        cli_println!(
-            "{}",
-            serde_json::to_string_pretty(json_new_report).map_err(RunError::SerializeReport)?
-        );
+        if self.log {
+            cli_println!("\nBencher New Report:");
+            cli_println!(
+                "{}",
+                serde_json::to_string_pretty(&json_new_report)
+                    .map_err(RunError::SerializeReport)?
+            );
+        }
 
         // If performing a dry run, don't actually send the report
         if self.dry_run {
             return Ok(());
         }
 
+        let sender = report_sender(self.project.clone(), json_new_report);
+        // If we are not doing complex output logging then we don't need to a strict deserialization.
+        if !self.log {
+            let json_report = self
+                .backend
+                .send(sender)
+                .await
+                .map_err(RunError::SendReport)?;
+            return serde_json::to_string_pretty(&json_report)
+                .map(|json| cli_println!("{json}"))
+                .map_err(RunError::SerializeReport);
+        }
+
         cli_println!("\nBencher Report:");
         let json_report: JsonReport = self
             .backend
-            .send_with(|client| async move {
-                client
-                    .proj_report_post()
-                    .project(self.project.clone())
-                    .body(json_new_report.clone())
-                    .send()
-                    .await
-            })
+            .send_with(sender)
             .await
             .map_err(RunError::SendReport)?;
         if let Ok(json) = serde_json::to_string_pretty(&json_report) {
@@ -184,7 +194,6 @@ impl Run {
         }
 
         let alerts_count = json_report.alerts.len();
-        // TODO disable when quiet
         self.display_results(json_report).await?;
 
         if self.err && alerts_count > 0 {
@@ -206,20 +215,23 @@ impl Run {
         let start_time = DateTime::now();
         let mut results = Vec::with_capacity(self.iter);
         for _ in 0..self.iter {
-            let output = self.runner.run().await?;
+            let output = self.runner.run(self.log).await?;
             if output.is_success() {
                 results.push(output.result());
             } else if self.allow_failure {
-                cli_eprintln!("Skipping failure:\n{}", output);
+                if self.log {
+                    cli_eprintln!("Skipping failure:\n{}", output);
+                }
             } else {
                 return Err(RunError::ExitStatus(output));
             }
         }
 
-        // TODO disable when quiet
-        cli_println!("\nBenchmark Harness Results:");
-        for result in &results {
-            cli_println!("{result}");
+        if self.log {
+            cli_println!("\nBenchmark Harness Results:");
+            for result in &results {
+                cli_println!("{result}");
+            }
         }
 
         let end_time = DateTime::now();
@@ -258,7 +270,6 @@ impl Run {
             .map_err(RunError::BadEndpoint)?;
         let report_comment = ReportComment::new(endpoint_url.clone(), json_report);
 
-        // TODO disable when quiet
         if self.html {
             let with_metrics = true;
             let require_threshold = false;
@@ -276,4 +287,32 @@ impl Run {
 
         Ok(())
     }
+}
+
+type ReportResult = Pin<
+    Box<
+        dyn Future<
+                Output = Result<
+                    progenitor_client::ResponseValue<bencher_client::types::JsonReport>,
+                    bencher_client::Error<bencher_client::types::Error>,
+                >,
+            > + Send,
+    >,
+>;
+fn report_sender(
+    project: ResourceId,
+    json_new_report: JsonNewReport,
+) -> Box<dyn Fn(bencher_client::Client) -> ReportResult + Send> {
+    Box::new(move |client: bencher_client::Client| {
+        let project = project.clone();
+        let json_new_report = json_new_report.clone();
+        Box::pin(async move {
+            client
+                .proj_report_post()
+                .project(project.clone())
+                .body(json_new_report.clone())
+                .send()
+                .await
+        })
+    })
 }

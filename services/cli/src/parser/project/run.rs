@@ -52,9 +52,8 @@ pub struct CliRun {
     #[clap(long)]
     pub err: bool,
 
-    /// Output results as HTML
-    #[clap(long)]
-    pub html: bool,
+    #[clap(flatten)]
+    pub fmt: CliRunFmt,
 
     /// CI integrations
     #[clap(flatten)]
@@ -197,6 +196,21 @@ pub enum CliRunFold {
     Mean,
     /// Median of values
     Median,
+}
+
+#[derive(Args, Debug)]
+#[clap(group(
+    ArgGroup::new("run_fmt")
+        .multiple(false)
+        .args(&["html", "quiet"]),
+))]
+pub struct CliRunFmt {
+    /// Output results as HTML
+    #[clap(long)]
+    pub html: bool,
+    /// Quite mode, only output the final Report JSON
+    #[clap(short, long)]
+    pub quiet: bool,
 }
 
 #[allow(clippy::struct_excessive_bools)]

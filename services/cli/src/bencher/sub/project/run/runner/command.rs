@@ -30,7 +30,7 @@ impl TryFrom<(CliRunShell, String)> for Command {
 }
 
 impl Command {
-    pub async fn run(&self) -> Result<Output, RunError> {
+    pub async fn run(&self, log: bool) -> Result<Output, RunError> {
         let mut child = tokio::process::Command::new(self.shell.to_string())
             .arg(self.flag.to_string())
             .arg(&self.cmd)
@@ -46,7 +46,9 @@ impl Command {
 
             let mut stdout = String::new();
             while let Ok(Some(line)) = stdout_lines.next_line().await {
-                cli_println!("{line}");
+                if log {
+                    cli_println!("{line}");
+                }
                 if stdout.is_empty() {
                     stdout = line;
                 } else {
@@ -64,7 +66,9 @@ impl Command {
 
             let mut stderr = String::new();
             while let Ok(Some(line)) = stderr_lines.next_line().await {
-                cli_eprintln!("{line}");
+                if log {
+                    cli_eprintln!("{line}");
+                }
                 if stderr.is_empty() {
                     stderr = line;
                 } else {
