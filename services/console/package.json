@@ -1,7 +1,7 @@
 {
   "name": "bencher-ui",
   "type": "module",
-  "version": "0.3.22",
+  "version": "0.3.23",
   "scripts": {
     "fmt": "npx biome format --write .",
     "typeshare": "typeshare ../.. --lang=typescript --output-file=./src/types/bencher.ts",
