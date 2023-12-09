@@ -42,7 +42,6 @@ const BENCHER_CMD: &str = "BENCHER_CMD";
 #[allow(clippy::struct_excessive_bools)]
 pub struct Run {
     project: ResourceId,
-    backend: Backend,
     runner: Runner,
     branch: Branch,
     hash: Option<GitHash>,
@@ -57,6 +56,7 @@ pub struct Run {
     html: bool,
     ci: Option<Ci>,
     dry_run: bool,
+    backend: Backend,
 }
 
 impl TryFrom<CliRun> for Run {
@@ -83,7 +83,6 @@ impl TryFrom<CliRun> for Run {
         } = run;
         Ok(Self {
             project: unwrap_project(project)?,
-            backend: Backend::try_from(backend)?.log(false),
             runner: command.try_into()?,
             branch: run_branch.try_into().map_err(RunError::Branch)?,
             hash,
@@ -98,6 +97,7 @@ impl TryFrom<CliRun> for Run {
             html,
             ci: ci.try_into().map_err(RunError::Ci)?,
             dry_run,
+            backend: Backend::try_from(backend)?.log(false),
         })
     }
 }
