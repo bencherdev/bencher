@@ -105,10 +105,37 @@ jobs:
 
   # Cargo Test
   cargo_test:
+    if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     name: Cargo Test
     runs-on: ubuntu-latest
     env:
       TEST_BILLING_KEY: ${{ secrets.TEST_BILLING_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
+      - name: cargo test
+        run: RUST_BACKTRACE=1 cargo test -- --nocapture
+      - name: Upload Perf JPEG
+        uses: actions/upload-artifact@v3
+        with:
+          name: perf.jpeg
+          path: ./lib/bencher_plot/perf.jpeg
+
+  cargo_test_pr:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+    name: Cargo Test PR
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
@@ -252,7 +279,7 @@ jobs:
 
   # Cargo Benchmark
   cargo_bench:
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     name: Cargo Bench
     runs-on: ubuntu-latest
     # This will fail whenever Bencher Cloud is down
@@ -290,6 +317,7 @@ jobs:
 
   # Cargo Audit
   cargo_audit:
+    if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     name: Cargo Audit
     runs-on: ubuntu-latest
     continue-on-error: true
