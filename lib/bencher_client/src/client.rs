@@ -159,12 +159,34 @@ impl BencherClient {
                         message: http_error.message,
                     }));
                 },
-                Err(crate::codegen::Error::InvalidResponsePayload(e)) => {
-                    return Err(ClientError::InvalidResponsePayload(e))
+                Err(crate::codegen::Error::InvalidResponsePayload(r, e)) => {
+                    return if let Ok(json_response) = response.json().await {
+                        if log {
+                            println!(
+                                "{}",
+                                serde_json::to_string_pretty(&json_response)
+                                    .map_err(ClientError::SerializeResponse)?
+                            );
+                        }
+                        Ok(json_response)
+                    } else {
+                        Err(ClientError::InvalidResponsePayload(e))
+                    }
                 },
                 Err(crate::codegen::Error::UnexpectedResponse(response)) => {
                     return Err(if response.status().is_success() {
-                        ClientError::UnexpectedResponseOk(response)
+                        if let Ok(json_response) = response.json().await {
+                            if log {
+                                println!(
+                                    "{}",
+                                    serde_json::to_string_pretty(&json_response)
+                                        .map_err(ClientError::SerializeResponse)?
+                                );
+                            }
+                            Ok(json_response)
+                        } else {
+                            ClientError::UnexpectedResponseOk(response)
+                        }
                     } else {
                         ClientError::UnexpectedResponseErr(response)
                     })
