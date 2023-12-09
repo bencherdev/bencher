@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{JsonToken, ResourceId, TokenUuid};
+use bencher_json::{ResourceId, TokenUuid};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -36,9 +36,9 @@ impl TryFrom<CliTokenView> for View {
 #[async_trait]
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonToken = self
+        let _json = self
             .backend
-            .send_with(|client| async move {
+            .send(|client| async move {
                 client
                     .user_token_get()
                     .user(self.user.clone())

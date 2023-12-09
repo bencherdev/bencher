@@ -47,8 +47,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         "eustace.bagge@nowhere.com",
     ]);
     let assert = cmd.assert().success();
-    let _json: bencher_json::JsonAuth =
-        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    let _json = serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- auth signup --host http://localhost:61016 --name "Muriel Bagge" muriel.bagge@nowhere.com
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -63,8 +62,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         "muriel.bagge@nowhere.com",
     ]);
     let assert = cmd.assert().success();
-    let _json: bencher_json::JsonAuth =
-        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    let _json = serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- auth login --host http://localhost:61016 muriel.bagge@nowhere.com
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -76,8 +74,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         "muriel.bagge@nowhere.com",
     ]);
     let assert = cmd.assert().success();
-    let _json: bencher_json::JsonAuth =
-        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    let _json = serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- org ls --host http://localhost:61016
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -99,8 +96,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         "muriel-bagge",
     ]);
     let assert = cmd.assert().success();
-    let _json: bencher_json::JsonOrganization =
-        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    let _json = serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- member invite --host http://localhost:61016 --email courage@nowhere.com --org muriel-bagge
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -119,8 +115,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         "leader",
     ]);
     let assert = cmd.assert().success();
-    let _json: bencher_json::JsonAuth =
-        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    let _json = serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- project ls --host http://localhost:61016 --public
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -179,8 +174,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         "The Computer",
     ]);
     let assert = cmd.assert().success();
-    let _json: bencher_json::JsonProject =
-        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    let _json = serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- project ls --host http://localhost:61016
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -202,8 +196,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args(["project", "view", HOST_ARG, &HOST_URL, PROJECT_SLUG]);
     let assert = cmd.assert().success();
-    let _json: bencher_json::JsonProject =
-        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    let _json = serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // View project with token
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -217,8 +210,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         PROJECT_SLUG,
     ]);
     let assert = cmd.assert().success();
-    let _json: bencher_json::JsonProject =
-        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    let _json = serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- measure ls --host http://localhost:61016 --project the-computer
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -253,8 +245,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         MEASURE_SLUG,
     ]);
     let assert = cmd.assert().success();
-    let _json: bencher_json::JsonMeasure =
-        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    let _json = serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- measure ls --host http://localhost:61016 --project the-computer
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -283,8 +274,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         MEASURE_SLUG,
     ]);
     let assert = cmd.assert().success();
-    let _json: bencher_json::JsonMeasure =
-        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    let _json = serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- branch ls --host http://localhost:61016 --project the-computer
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -317,8 +307,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         "master",
     ]);
     let assert = cmd.assert().success();
-    let _json: bencher_json::JsonBranch =
-        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    let _json = serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- branch ls --host http://localhost:61016 --project the-computer
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -347,8 +336,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         BRANCH_SLUG,
     ]);
     let assert = cmd.assert().success();
-    let _json: bencher_json::JsonBranch =
-        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    let _json = serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- testbed ls --host http://localhost:61016 --project the-computer
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -381,8 +369,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         "base",
     ]);
     let assert = cmd.assert().success();
-    let _json: bencher_json::JsonTestbed =
-        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    let _json = serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- testbed ls --host http://localhost:61016 --project the-computer
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -411,8 +398,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         TESTBED_SLUG,
     ]);
     let assert = cmd.assert().success();
-    let _json: bencher_json::JsonTestbed =
-        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    let _json = serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- threshold ls --host http://localhost:61016 --project the-computer
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -482,8 +468,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         &threshold.uuid.to_string(),
     ]);
     let assert = cmd.assert().success();
-    let _json: bencher_json::JsonThreshold =
-        serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    let _json = serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- alert ls --host http://localhost:61016 --project the-computer
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;

@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::{JsonDirection, ProjReportsSort};
-use bencher_json::{project::report::JsonReportQuery, DateTime, JsonReports, ResourceId};
+use bencher_json::{project::report::JsonReportQuery, DateTime, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -98,9 +98,9 @@ impl From<List> for JsonReportQuery {
 impl SubCmd for List {
     async fn exec(&self) -> Result<(), CliError> {
         let json_report_query: &JsonReportQuery = &self.clone().into();
-        let _json: JsonReports = self
+        let _json = self
             .backend
-            .send_with(|client| async move {
+            .send(|client| async move {
                 let mut client = client.proj_reports_get().project(self.project.clone());
 
                 if let Some(branch) = json_report_query.branch() {

@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{JsonThreshold, ResourceId, ThresholdUuid};
+use bencher_json::{ResourceId, ThresholdUuid};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -36,9 +36,9 @@ impl TryFrom<CliThresholdView> for View {
 #[async_trait]
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonThreshold = self
+        let _json = self
             .backend
-            .send_with(|client| async move {
+            .send(|client| async move {
                 client
                     .proj_threshold_get()
                     .project(self.project.clone())

@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::{AlertStatus, JsonUpdateAlert};
-use bencher_json::{AlertUuid, JsonAlert, ResourceId};
+use bencher_json::{AlertUuid, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -56,9 +56,9 @@ impl From<Update> for JsonUpdateAlert {
 #[async_trait]
 impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonAlert = self
+        let _json = self
             .backend
-            .send_with(|client| async move {
+            .send(|client| async move {
                 client
                     .proj_alert_patch()
                     .project(self.project.clone())

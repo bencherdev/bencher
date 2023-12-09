@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{project::alert::JsonAlertStats, ResourceId};
+use bencher_json::ResourceId;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -30,9 +30,9 @@ impl TryFrom<CliAlertStats> for Stats {
 #[async_trait]
 impl SubCmd for Stats {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonAlertStats = self
+        let _json = self
             .backend
-            .send_with(|client| async move {
+            .send(|client| async move {
                 client
                     .proj_alert_stats_get()
                     .project(self.project.clone())

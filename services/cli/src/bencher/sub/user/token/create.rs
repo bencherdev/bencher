@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::JsonNewToken;
-use bencher_json::{JsonToken, NonEmpty, ResourceId};
+use bencher_json::{NonEmpty, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -50,9 +50,9 @@ impl From<Create> for JsonNewToken {
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonToken = self
+        let _json = self
             .backend
-            .send_with(|client| async move {
+            .send(|client| async move {
                 client
                     .user_token_post()
                     .user(self.user.clone())

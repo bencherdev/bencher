@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::{JsonNewBranch, JsonStartPoint};
-use bencher_json::{BranchName, JsonBranch, ResourceId, Slug};
+use bencher_json::{BranchName, ResourceId, Slug};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -72,9 +72,9 @@ impl From<Create> for JsonNewBranch {
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonBranch = self
+        let _json = self
             .backend
-            .send_with(|client| async move {
+            .send(|client| async move {
                 client
                     .proj_branch_post()
                     .project(self.project.clone())

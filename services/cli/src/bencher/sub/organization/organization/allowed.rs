@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::OrganizationPermission;
-use bencher_json::{JsonAllowed, ResourceId};
+use bencher_json::ResourceId;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -53,9 +53,9 @@ impl From<CliOrganizationPermission> for OrganizationPermission {
 #[async_trait]
 impl SubCmd for Allowed {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonAllowed = self
+        let _json = self
             .backend
-            .send_with(|client| async move {
+            .send(|client| async move {
                 client
                     .org_allowed_get()
                     .organization(self.organization.clone())

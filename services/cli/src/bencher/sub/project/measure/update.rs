@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::JsonUpdateMeasure;
-use bencher_json::{JsonMeasure, NonEmpty, ResourceId, Slug};
+use bencher_json::{NonEmpty, ResourceId, Slug};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -59,9 +59,9 @@ impl From<Update> for JsonUpdateMeasure {
 #[async_trait]
 impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonMeasure = self
+        let _json = self
             .backend
-            .send_with(|client| async move {
+            .send(|client| async move {
                 client
                     .proj_measure_patch()
                     .project(self.project.clone())

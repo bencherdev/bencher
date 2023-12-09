@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::JsonNewOrganization;
-use bencher_json::{JsonOrganization, NonEmpty, Slug};
+use bencher_json::{NonEmpty, Slug};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -47,11 +47,11 @@ impl From<Create> for JsonNewOrganization {
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonOrganization = self
+        let _json = self
             .backend
-            .send_with(|client| async move {
-                client.organization_post().body(self.clone()).send().await
-            })
+            .send(
+                |client| async move { client.organization_post().body(self.clone()).send().await },
+            )
             .await?;
         Ok(())
     }

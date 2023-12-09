@@ -3,7 +3,6 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::organization::usage::JsonUsage;
 use bencher_json::ResourceId;
 
 use crate::{
@@ -37,9 +36,9 @@ impl TryFrom<CliOrganizationUsage> for Usage {
 #[async_trait]
 impl SubCmd for Usage {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonUsage = self
+        let _json = self
             .backend
-            .send_with(|client| async move {
+            .send(|client| async move {
                 client
                     .org_usage_get()
                     .organization(self.organization.clone())

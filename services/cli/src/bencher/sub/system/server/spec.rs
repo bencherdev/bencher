@@ -1,7 +1,6 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::JsonSpec;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -28,9 +27,9 @@ impl TryFrom<CliSpec> for Spec {
 #[async_trait]
 impl SubCmd for Spec {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonSpec = self
+        let _json = self
             .backend
-            .send_with(|client| async move { client.server_spec_get().send().await })
+            .send(|client| async move { client.server_spec_get().send().await })
             .await?;
         Ok(())
     }

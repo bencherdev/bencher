@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::{JsonNewProject, Visibility};
-use bencher_json::{JsonProject, NonEmpty, ResourceId, Slug, Url};
+use bencher_json::{NonEmpty, ResourceId, Slug, Url};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -74,9 +74,9 @@ impl From<Create> for JsonNewProject {
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonProject = self
+        let _json = self
             .backend
-            .send_with(|client| async move {
+            .send(|client| async move {
                 client
                     .org_project_post()
                     .organization(self.org.clone())

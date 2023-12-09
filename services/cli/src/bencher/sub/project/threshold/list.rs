@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::{JsonDirection, ProjThresholdsSort};
-use bencher_json::{JsonThresholds, ResourceId};
+use bencher_json::ResourceId;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -68,9 +68,9 @@ impl From<CliPagination<CliThresholdsSort>> for Pagination {
 #[async_trait]
 impl SubCmd for List {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonThresholds = self
+        let _json = self
             .backend
-            .send_with(|client| async move {
+            .send(|client| async move {
                 let mut client = client.proj_thresholds_get().project(self.project.clone());
                 if let Some(sort) = self.pagination.sort {
                     client = client.sort(sort);

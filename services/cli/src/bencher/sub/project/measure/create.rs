@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::JsonNewMeasure;
-use bencher_json::{JsonMeasure, NonEmpty, ResourceId, Slug};
+use bencher_json::{NonEmpty, ResourceId, Slug};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -56,9 +56,9 @@ impl From<Create> for JsonNewMeasure {
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonMeasure = self
+        let _json = self
             .backend
-            .send_with(|client| async move {
+            .send(|client| async move {
                 client
                     .proj_measure_post()
                     .project(self.project.clone())

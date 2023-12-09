@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_client::types::{
     JsonProjectPatch, JsonProjectPatchNull, JsonUpdateProject, Visibility,
 };
-use bencher_json::{JsonProject, NonEmpty, ResourceId, Slug, Url};
+use bencher_json::{NonEmpty, ResourceId, Slug, Url};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -90,9 +90,9 @@ impl From<Update> for JsonUpdateProject {
 #[async_trait]
 impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonProject = self
+        let _json = self
             .backend
-            .send_with(|client| async move {
+            .send(|client| async move {
                 client
                     .project_patch()
                     .project(self.project.clone())

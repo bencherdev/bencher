@@ -36,9 +36,9 @@ impl TryFrom<CliMeasureDelete> for Delete {
 #[async_trait]
 impl SubCmd for Delete {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: () = self
+        let _json = self
             .backend
-            .send_with(|client| async move {
+            .send(|client| async move {
                 client
                     .proj_measure_delete()
                     .project(self.project.clone())

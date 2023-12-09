@@ -71,6 +71,14 @@ from_client!(
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct JsonValue(pub serde_json::Value);
 
+impl TryFrom<()> for JsonValue {
+    type Error = serde_json::Error;
+
+    fn try_from(json: ()) -> Result<Self, Self::Error> {
+        Ok(Self(serde_json::json!(json)))
+    }
+}
+
 // This is a bit of a kludge, but it should always work!
 macro_rules! try_from_client {
     ($($name:ident),*) => {

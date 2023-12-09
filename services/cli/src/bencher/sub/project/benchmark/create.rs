@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::JsonNewBenchmark;
-use bencher_json::{BenchmarkName, JsonBenchmark, ResourceId, Slug};
+use bencher_json::{BenchmarkName, ResourceId, Slug};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -50,9 +50,9 @@ impl From<Create> for JsonNewBenchmark {
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonBenchmark = self
+        let _json = self
             .backend
-            .send_with(|client| async move {
+            .send(|client| async move {
                 client
                     .proj_benchmark_post()
                     .project(self.project.clone())

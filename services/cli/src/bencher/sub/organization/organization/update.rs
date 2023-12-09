@@ -4,7 +4,7 @@ use async_trait::async_trait;
 #[cfg(feature = "plus")]
 use bencher_client::types::JsonOrganizationPatchNull;
 use bencher_client::types::{JsonOrganizationPatch, JsonUpdateOrganization};
-use bencher_json::{JsonOrganization, NonEmpty, ResourceId, Slug};
+use bencher_json::{NonEmpty, ResourceId, Slug};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -97,9 +97,9 @@ impl From<Update> for JsonUpdateOrganization {
 #[async_trait]
 impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonOrganization = self
+        let _json = self
             .backend
-            .send_with(|client| async move {
+            .send(|client| async move {
                 client
                     .organization_patch()
                     .organization(self.organization.clone())
