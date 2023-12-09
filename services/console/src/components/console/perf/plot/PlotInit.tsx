@@ -1,5 +1,6 @@
 import type { Accessor } from "solid-js";
 import { PerfTab } from "../../../../config/types";
+import { BENCHER_MEASURE_ID } from "./util";
 
 export interface Props {
 	measures: Accessor<string[]>;
@@ -19,7 +20,7 @@ const PlotInit = (props: Props) => {
 						checked={props.measures().length > 0}
 						disabled={true}
 					/>
-					Select a Measure
+					Select a <a href={`#${BENCHER_MEASURE_ID}`}>Measure</a>
 				</li>
 				<br />
 				<li class="checkbox">

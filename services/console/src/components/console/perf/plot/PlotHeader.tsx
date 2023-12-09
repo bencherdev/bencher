@@ -16,6 +16,7 @@ import type {
 } from "../../../../types/bencher";
 import { BENCHER_WORDMARK } from "../../../../util/ext";
 import { httpGet } from "../../../../util/http";
+import { BENCHER_MEASURE_ID } from "./util";
 
 const BENCHER_MEASURE = "--bencher-measure--";
 
@@ -132,7 +133,7 @@ const FullPlotHeader = (props: Props) => {
 	return (
 		<nav class="panel-heading columns is-vcentered">
 			<div class="column">
-				<p>Measure</p>
+				<p id={BENCHER_MEASURE_ID}>Measure</p>
 				<select
 					class="card-header-title level-item"
 					title="Select Measure"
