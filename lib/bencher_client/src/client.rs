@@ -1,5 +1,5 @@
 use bencher_json::{Jwt, BENCHER_API_URL};
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Serialize};
 use tokio::time::{sleep, Duration};
 
 const DEFAULT_ATTEMPTS: usize = 10;
@@ -33,10 +33,14 @@ pub enum ClientError {
     InvalidRequest(String),
     #[error("Error processing request:\n{0}")]
     ErrorResponse(ErrorResponse),
-    #[error("Invalid response payload: {0}")]
-    InvalidResponsePayload(reqwest::Error),
-    #[error("Request succeeded with an unexpected response: {0:?}")]
-    UnexpectedResponseOk(reqwest::Response),
+    #[error("Error upgrading request: {0}")]
+    InvalidUpgrade(reqwest::Error),
+    #[error("Invalid response body bytes: {0}")]
+    InvalidResponseBytes(reqwest::Error),
+    #[error("Invalid response payload: {1}")]
+    InvalidResponsePayload(progenitor_client::Bytes, serde_json::Error),
+    #[error("Request succeeded with an unexpected response: {0}")]
+    UnexpectedResponseOk(reqwest::Error),
     #[error("Request failed with an unexpected response: {0:?}")]
     UnexpectedResponseErr(reqwest::Response),
 
@@ -83,6 +87,7 @@ impl BencherClient {
     /// # Returns
     ///
     /// A `Result` containing the response JSON or an `Error`
+    #[allow(clippy::print_stdout)]
     pub async fn send_with<F, Fut, T, Json>(
         &self,
         sender: F,
@@ -97,7 +102,7 @@ impl BencherClient {
             >,
         >,
         T: Serialize,
-        Json: Serialize + TryFrom<T, Error = serde_json::Error>,
+        Json: DeserializeOwned + Serialize + TryFrom<T, Error = serde_json::Error>,
     {
         let timeout = std::time::Duration::from_secs(15);
         let mut client_builder = reqwest::ClientBuilder::new()
@@ -159,8 +164,14 @@ impl BencherClient {
                         message: http_error.message,
                     }));
                 },
-                Err(crate::codegen::Error::InvalidResponsePayload(r, e)) => {
-                    return if let Ok(json_response) = response.json().await {
+                Err(crate::codegen::Error::InvalidUpgrade(e)) => {
+                    return Err(ClientError::InvalidUpgrade(e))
+                },
+                Err(crate::codegen::Error::InvalidResponseBytes(e)) => {
+                    return Err(ClientError::InvalidResponseBytes(e))
+                },
+                Err(crate::codegen::Error::InvalidResponsePayload(bytes, e)) => {
+                    return if let Ok(json_response) = serde_json::from_slice(&bytes) {
                         if log {
                             println!(
                                 "{}",
@@ -170,26 +181,27 @@ impl BencherClient {
                         }
                         Ok(json_response)
                     } else {
-                        Err(ClientError::InvalidResponsePayload(e))
+                        Err(ClientError::InvalidResponsePayload(bytes, e))
                     }
                 },
                 Err(crate::codegen::Error::UnexpectedResponse(response)) => {
-                    return Err(if response.status().is_success() {
-                        if let Ok(json_response) = response.json().await {
-                            if log {
-                                println!(
-                                    "{}",
-                                    serde_json::to_string_pretty(&json_response)
-                                        .map_err(ClientError::SerializeResponse)?
-                                );
-                            }
-                            Ok(json_response)
-                        } else {
-                            ClientError::UnexpectedResponseOk(response)
+                    return if response.status().is_success() {
+                        match response.json().await {
+                            Ok(json_response) => {
+                                if log {
+                                    println!(
+                                        "{}",
+                                        serde_json::to_string_pretty(&json_response)
+                                            .map_err(ClientError::SerializeResponse)?
+                                    );
+                                }
+                                Ok(json_response)
+                            },
+                            Err(e) => Err(ClientError::UnexpectedResponseOk(e)),
                         }
                     } else {
-                        ClientError::UnexpectedResponseErr(response)
-                    })
+                        Err(ClientError::UnexpectedResponseErr(response))
+                    }
                 },
             }
         }

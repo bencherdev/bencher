@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use bencher_json::{Jwt, Url};
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Serialize};
 
 use crate::parser::CliBackend;
 
@@ -76,7 +76,7 @@ impl Backend {
             >,
         >,
         T: Serialize,
-        Json: Serialize + TryFrom<T, Error = serde_json::Error>,
+        Json: DeserializeOwned + Serialize + TryFrom<T, Error = serde_json::Error>,
     {
         self.0.send_with(sender, log).await.map_err(Into::into)
     }
