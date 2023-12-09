@@ -51,18 +51,15 @@ impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
         let _json: JsonToken = self
             .backend
-            .send_with(
-                |client| async move {
-                    client
-                        .user_token_patch()
-                        .user(self.user.clone())
-                        .token(self.token)
-                        .body(self.clone())
-                        .send()
-                        .await
-                },
-                true,
-            )
+            .send_with(|client| async move {
+                client
+                    .user_token_patch()
+                    .user(self.user.clone())
+                    .token(self.token)
+                    .body(self.clone())
+                    .send()
+                    .await
+            })
             .await?;
         Ok(())
     }

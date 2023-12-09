@@ -34,17 +34,14 @@ impl SubCmd for Remove {
     async fn exec(&self) -> Result<(), CliError> {
         let _json: bencher_client::JsonUnit = self
             .backend
-            .send_with(
-                |client| async move {
-                    client
-                        .org_member_delete()
-                        .organization(self.org.clone())
-                        .user(self.user.clone())
-                        .send()
-                        .await
-                },
-                true,
-            )
+            .send_with(|client| async move {
+                client
+                    .org_member_delete()
+                    .organization(self.org.clone())
+                    .user(self.user.clone())
+                    .send()
+                    .await
+            })
             .await?;
         Ok(())
     }

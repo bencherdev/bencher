@@ -38,17 +38,14 @@ impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
         let _json: JsonToken = self
             .backend
-            .send_with(
-                |client| async move {
-                    client
-                        .user_token_get()
-                        .user(self.user.clone())
-                        .token(self.token)
-                        .send()
-                        .await
-                },
-                true,
-            )
+            .send_with(|client| async move {
+                client
+                    .user_token_get()
+                    .user(self.user.clone())
+                    .token(self.token)
+                    .send()
+                    .await
+            })
             .await?;
         Ok(())
     }

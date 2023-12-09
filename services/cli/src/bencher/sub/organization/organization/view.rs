@@ -35,16 +35,13 @@ impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
         let _json: JsonOrganization = self
             .backend
-            .send_with(
-                |client| async move {
-                    client
-                        .organization_get()
-                        .organization(self.organization.clone())
-                        .send()
-                        .await
-                },
-                true,
-            )
+            .send_with(|client| async move {
+                client
+                    .organization_get()
+                    .organization(self.organization.clone())
+                    .send()
+                    .await
+            })
             .await?;
         Ok(())
     }

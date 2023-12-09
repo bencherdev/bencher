@@ -100,40 +100,37 @@ impl SubCmd for List {
         let json_report_query: &JsonReportQuery = &self.clone().into();
         let _json: JsonReports = self
             .backend
-            .send_with(
-                |client| async move {
-                    let mut client = client.proj_reports_get().project(self.project.clone());
+            .send_with(|client| async move {
+                let mut client = client.proj_reports_get().project(self.project.clone());
 
-                    if let Some(branch) = json_report_query.branch() {
-                        client = client.branch(branch);
-                    }
-                    if let Some(testbed) = json_report_query.testbed() {
-                        client = client.testbed(testbed);
-                    }
+                if let Some(branch) = json_report_query.branch() {
+                    client = client.branch(branch);
+                }
+                if let Some(testbed) = json_report_query.testbed() {
+                    client = client.testbed(testbed);
+                }
 
-                    if let Some(start_time) = json_report_query.start_time() {
-                        client = client.start_time(start_time);
-                    }
-                    if let Some(end_time) = json_report_query.end_time() {
-                        client = client.end_time(end_time);
-                    }
+                if let Some(start_time) = json_report_query.start_time() {
+                    client = client.start_time(start_time);
+                }
+                if let Some(end_time) = json_report_query.end_time() {
+                    client = client.end_time(end_time);
+                }
 
-                    if let Some(sort) = self.pagination.sort {
-                        client = client.sort(sort);
-                    }
-                    if let Some(direction) = self.pagination.direction {
-                        client = client.direction(direction);
-                    }
-                    if let Some(per_page) = self.pagination.per_page {
-                        client = client.per_page(per_page);
-                    }
-                    if let Some(page) = self.pagination.page {
-                        client = client.page(page);
-                    }
-                    client.send().await
-                },
-                true,
-            )
+                if let Some(sort) = self.pagination.sort {
+                    client = client.sort(sort);
+                }
+                if let Some(direction) = self.pagination.direction {
+                    client = client.direction(direction);
+                }
+                if let Some(per_page) = self.pagination.per_page {
+                    client = client.per_page(per_page);
+                }
+                if let Some(page) = self.pagination.page {
+                    client = client.page(page);
+                }
+                client.send().await
+            })
             .await?;
         Ok(())
     }

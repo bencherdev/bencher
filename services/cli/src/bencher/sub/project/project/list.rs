@@ -79,51 +79,48 @@ impl SubCmd for List {
     async fn exec(&self) -> Result<(), CliError> {
         let _json: JsonProjects = self
             .backend
-            .send_with(
-                |client| async move {
-                    if let Some(org) = self.org.clone() {
-                        let mut client = client.org_projects_get().organization(org);
-                        if let Some(name) = self.name.clone() {
-                            client = client.name(name);
-                        }
-                        if let Some(sort) = self.pagination.org_projects_sort {
-                            client = client.sort(sort);
-                        }
-                        if let Some(direction) = self.pagination.direction {
-                            client = client.direction(direction);
-                        }
-                        if let Some(per_page) = self.pagination.per_page {
-                            client = client.per_page(per_page);
-                        }
-                        if let Some(page) = self.pagination.page {
-                            client = client.page(page);
-                        }
-                        client.send().await
-                    } else {
-                        let mut client = client.projects_get();
-                        if let Some(public) = self.public {
-                            client = client.public(public);
-                        }
-                        if let Some(name) = self.name.clone() {
-                            client = client.name(name);
-                        }
-                        if let Some(sort) = self.pagination.projects_sort {
-                            client = client.sort(sort);
-                        }
-                        if let Some(direction) = self.pagination.direction {
-                            client = client.direction(direction);
-                        }
-                        if let Some(per_page) = self.pagination.per_page {
-                            client = client.per_page(per_page);
-                        }
-                        if let Some(page) = self.pagination.page {
-                            client = client.page(page);
-                        }
-                        client.send().await
+            .send_with(|client| async move {
+                if let Some(org) = self.org.clone() {
+                    let mut client = client.org_projects_get().organization(org);
+                    if let Some(name) = self.name.clone() {
+                        client = client.name(name);
                     }
-                },
-                true,
-            )
+                    if let Some(sort) = self.pagination.org_projects_sort {
+                        client = client.sort(sort);
+                    }
+                    if let Some(direction) = self.pagination.direction {
+                        client = client.direction(direction);
+                    }
+                    if let Some(per_page) = self.pagination.per_page {
+                        client = client.per_page(per_page);
+                    }
+                    if let Some(page) = self.pagination.page {
+                        client = client.page(page);
+                    }
+                    client.send().await
+                } else {
+                    let mut client = client.projects_get();
+                    if let Some(public) = self.public {
+                        client = client.public(public);
+                    }
+                    if let Some(name) = self.name.clone() {
+                        client = client.name(name);
+                    }
+                    if let Some(sort) = self.pagination.projects_sort {
+                        client = client.sort(sort);
+                    }
+                    if let Some(direction) = self.pagination.direction {
+                        client = client.direction(direction);
+                    }
+                    if let Some(per_page) = self.pagination.per_page {
+                        client = client.per_page(per_page);
+                    }
+                    if let Some(page) = self.pagination.page {
+                        client = client.page(page);
+                    }
+                    client.send().await
+                }
+            })
             .await?;
         Ok(())
     }

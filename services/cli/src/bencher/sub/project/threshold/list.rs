@@ -70,25 +70,22 @@ impl SubCmd for List {
     async fn exec(&self) -> Result<(), CliError> {
         let _json: JsonThresholds = self
             .backend
-            .send_with(
-                |client| async move {
-                    let mut client = client.proj_thresholds_get().project(self.project.clone());
-                    if let Some(sort) = self.pagination.sort {
-                        client = client.sort(sort);
-                    }
-                    if let Some(direction) = self.pagination.direction {
-                        client = client.direction(direction);
-                    }
-                    if let Some(per_page) = self.pagination.per_page {
-                        client = client.per_page(per_page);
-                    }
-                    if let Some(page) = self.pagination.page {
-                        client = client.page(page);
-                    }
-                    client.send().await
-                },
-                true,
-            )
+            .send_with(|client| async move {
+                let mut client = client.proj_thresholds_get().project(self.project.clone());
+                if let Some(sort) = self.pagination.sort {
+                    client = client.sort(sort);
+                }
+                if let Some(direction) = self.pagination.direction {
+                    client = client.direction(direction);
+                }
+                if let Some(per_page) = self.pagination.per_page {
+                    client = client.per_page(per_page);
+                }
+                if let Some(page) = self.pagination.page {
+                    client = client.page(page);
+                }
+                client.send().await
+            })
             .await?;
         Ok(())
     }

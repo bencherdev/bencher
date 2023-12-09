@@ -12,6 +12,7 @@ pub struct BencherClient {
     pub token: Option<Jwt>,
     pub attempts: usize,
     pub retry_after: u64,
+    pub log: bool,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -56,17 +57,20 @@ impl BencherClient {
     /// - `token`: The JWT token
     /// - `attempts`: The number of attempts to make before giving up
     /// - `retry_after`: The number of initial seconds to wait between attempts (exponential backoff)
+    /// - `log`: Whether to log the response JSON to stdout
     pub fn new(
         host: Option<url::Url>,
         token: Option<Jwt>,
         attempts: Option<usize>,
         retry_after: Option<u64>,
+        log: Option<bool>,
     ) -> Self {
         BencherClientBuilder {
             host,
             token,
             attempts,
             retry_after,
+            log,
         }
         .build()
     }
@@ -88,11 +92,7 @@ impl BencherClient {
     ///
     /// A `Result` containing the response JSON or an `Error`
     #[allow(clippy::print_stdout)]
-    pub async fn send_with<F, Fut, T, Json>(
-        &self,
-        sender: F,
-        log: bool,
-    ) -> Result<Json, ClientError>
+    pub async fn send_with<F, Fut, T, Json>(&self, sender: F) -> Result<Json, ClientError>
     where
         F: Fn(crate::codegen::Client) -> Fut,
         Fut: std::future::Future<
@@ -131,13 +131,7 @@ impl BencherClient {
                     let response = response_value.into_inner();
                     let json_response =
                         Json::try_from(response).map_err(ClientError::DeserializeResponse)?;
-                    if log {
-                        println!(
-                            "{}",
-                            serde_json::to_string_pretty(&json_response)
-                                .map_err(ClientError::SerializeResponse)?
-                        );
-                    }
+                    self.log(&json_response)?;
                     return Ok(json_response);
                 },
                 #[allow(clippy::print_stderr)]
@@ -172,13 +166,7 @@ impl BencherClient {
                 },
                 Err(crate::codegen::Error::InvalidResponsePayload(bytes, e)) => {
                     return if let Ok(json_response) = serde_json::from_slice(&bytes) {
-                        if log {
-                            println!(
-                                "{}",
-                                serde_json::to_string_pretty(&json_response)
-                                    .map_err(ClientError::SerializeResponse)?
-                            );
-                        }
+                        self.log(&json_response)?;
                         Ok(json_response)
                     } else {
                         Err(ClientError::InvalidResponsePayload(bytes, e))
@@ -188,13 +176,7 @@ impl BencherClient {
                     return if response.status().is_success() {
                         match response.json().await {
                             Ok(json_response) => {
-                                if log {
-                                    println!(
-                                        "{}",
-                                        serde_json::to_string_pretty(&json_response)
-                                            .map_err(ClientError::SerializeResponse)?
-                                    );
-                                }
+                                self.log(&json_response)?;
                                 Ok(json_response)
                             },
                             Err(e) => Err(ClientError::UnexpectedResponseOk(e)),
@@ -207,6 +189,20 @@ impl BencherClient {
         }
 
         Err(ClientError::SendTimeout(attempts))
+    }
+
+    fn log<T>(&self, response: &T) -> Result<(), ClientError>
+    where
+        T: Serialize,
+    {
+        #[allow(clippy::print_stdout)]
+        if self.log {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&response).map_err(ClientError::SerializeResponse)?
+            );
+        }
+        Ok(())
     }
 }
 
@@ -240,6 +236,7 @@ pub struct BencherClientBuilder {
     token: Option<Jwt>,
     attempts: Option<usize>,
     retry_after: Option<u64>,
+    log: Option<bool>,
 }
 
 impl BencherClientBuilder {
@@ -271,6 +268,13 @@ impl BencherClientBuilder {
         self
     }
 
+    #[must_use]
+    /// Set the whether to log the response JSON to stdout
+    pub fn log(mut self, log: bool) -> Self {
+        self.log = Some(log);
+        self
+    }
+
     /// Build the `BencherClient`
     ///
     /// Default values:
@@ -283,12 +287,14 @@ impl BencherClientBuilder {
             token,
             attempts,
             retry_after,
+            log,
         } = self;
         BencherClient {
             host: host.unwrap_or_else(|| BENCHER_API_URL.clone()),
             token,
             attempts: attempts.unwrap_or(DEFAULT_ATTEMPTS),
             retry_after: retry_after.unwrap_or(DEFAULT_RETRY_AFTER),
+            log: log.unwrap_or_default(),
         }
     }
 }

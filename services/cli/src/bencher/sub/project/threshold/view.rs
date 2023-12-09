@@ -38,17 +38,14 @@ impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
         let _json: JsonThreshold = self
             .backend
-            .send_with(
-                |client| async move {
-                    client
-                        .proj_threshold_get()
-                        .project(self.project.clone())
-                        .threshold(self.threshold)
-                        .send()
-                        .await
-                },
-                true,
-            )
+            .send_with(|client| async move {
+                client
+                    .proj_threshold_get()
+                    .project(self.project.clone())
+                    .threshold(self.threshold)
+                    .send()
+                    .await
+            })
             .await?;
         Ok(())
     }

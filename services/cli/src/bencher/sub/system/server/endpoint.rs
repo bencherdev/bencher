@@ -30,10 +30,7 @@ impl SubCmd for Endpoint {
     async fn exec(&self) -> Result<(), CliError> {
         let _json: JsonEndpoint = self
             .backend
-            .send_with(
-                |client| async move { client.server_endpoint_get().send().await },
-                true,
-            )
+            .send_with(|client| async move { client.server_endpoint_get().send().await })
             .await?;
         Ok(())
     }

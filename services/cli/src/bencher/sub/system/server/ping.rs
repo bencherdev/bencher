@@ -30,10 +30,7 @@ impl SubCmd for Ping {
     async fn exec(&self) -> Result<(), CliError> {
         let _json: JsonPing = self
             .backend
-            .send_with(
-                |client| async move { client.server_ping_get().send().await },
-                true,
-            )
+            .send_with(|client| async move { client.server_ping_get().send().await })
             .await?;
         Ok(())
     }

@@ -169,17 +169,14 @@ async fn get_branch(
     backend: &Backend,
 ) -> Result<Option<BranchUuid>, BranchError> {
     let json_branches: JsonBranches = backend
-        .send_with(
-            |client| async move {
-                client
-                    .proj_branches_get()
-                    .project(project.clone())
-                    .name(branch_name.clone())
-                    .send()
-                    .await
-            },
-            false,
-        )
+        .send_with(|client| async move {
+            client
+                .proj_branches_get()
+                .project(project.clone())
+                .name(branch_name.clone())
+                .send()
+                .await
+        })
         .await
         .map_err(BranchError::GetBranches)?;
 
@@ -219,17 +216,14 @@ async fn create_branch(
     };
 
     let json_branch: JsonBranch = backend
-        .send_with(
-            |client| async move {
-                client
-                    .proj_branch_post()
-                    .project(project.clone())
-                    .body(new_branch.clone())
-                    .send()
-                    .await
-            },
-            false,
-        )
+        .send_with(|client| async move {
+            client
+                .proj_branch_post()
+                .project(project.clone())
+                .body(new_branch.clone())
+                .send()
+                .await
+        })
         .await
         .map_err(BranchError::CreateBranch)?;
 

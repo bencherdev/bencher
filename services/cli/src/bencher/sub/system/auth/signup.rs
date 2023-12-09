@@ -84,7 +84,6 @@ impl SubCmd for Signup {
             .backend
             .send_with(
                 |client| async move { client.auth_signup_post().body(self.clone()).send().await },
-                true,
             )
             .await?;
         Ok(())

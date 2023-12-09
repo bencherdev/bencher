@@ -86,27 +86,24 @@ impl SubCmd for Perf {
         let json_perf_query: &JsonPerfQuery = &self.clone().into();
         let json_perf: JsonPerf = self
             .backend
-            .send_with(
-                |client| async move {
-                    let mut client = client
-                        .proj_perf_get()
-                        .project(self.project.clone())
-                        .branches(json_perf_query.branches())
-                        .testbeds(json_perf_query.testbeds())
-                        .benchmarks(json_perf_query.benchmarks())
-                        .measures(json_perf_query.measures());
+            .send_with(|client| async move {
+                let mut client = client
+                    .proj_perf_get()
+                    .project(self.project.clone())
+                    .branches(json_perf_query.branches())
+                    .testbeds(json_perf_query.testbeds())
+                    .benchmarks(json_perf_query.benchmarks())
+                    .measures(json_perf_query.measures());
 
-                    if let Some(start_time) = json_perf_query.start_time() {
-                        client = client.start_time(start_time);
-                    }
-                    if let Some(end_time) = json_perf_query.end_time() {
-                        client = client.end_time(end_time);
-                    }
+                if let Some(start_time) = json_perf_query.start_time() {
+                    client = client.start_time(start_time);
+                }
+                if let Some(end_time) = json_perf_query.end_time() {
+                    client = client.end_time(end_time);
+                }
 
-                    client.send().await
-                },
-                true,
-            )
+                client.send().await
+            })
             .await?;
 
         if let Some(table_style) = self.table {

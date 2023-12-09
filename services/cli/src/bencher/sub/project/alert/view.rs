@@ -38,17 +38,14 @@ impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
         let _json: JsonAlert = self
             .backend
-            .send_with(
-                |client| async move {
-                    client
-                        .proj_alert_get()
-                        .project(self.project.clone())
-                        .alert(self.alert)
-                        .send()
-                        .await
-                },
-                true,
-            )
+            .send_with(|client| async move {
+                client
+                    .proj_alert_get()
+                    .project(self.project.clone())
+                    .alert(self.alert)
+                    .send()
+                    .await
+            })
             .await?;
         Ok(())
     }

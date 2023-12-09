@@ -37,11 +37,11 @@ impl From<Restart> for JsonRestart {
 #[async_trait]
 impl SubCmd for Restart {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json: JsonUnit =  self.backend
-            .send_with(
-                |client| async move { client.server_restart_post().body(self.clone()).send().await },
-                true,
-            )
+        let _json: JsonUnit = self
+            .backend
+            .send_with(|client| async move {
+                client.server_restart_post().body(self.clone()).send().await
+            })
             .await?;
         Ok(())
     }

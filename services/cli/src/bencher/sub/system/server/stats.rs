@@ -32,10 +32,7 @@ impl SubCmd for ServerStats {
     async fn exec(&self) -> Result<(), CliError> {
         let _json: JsonServerStats = self
             .backend
-            .send_with(
-                |client| async move { client.server_stats_get().send().await },
-                true,
-            )
+            .send_with(|client| async move { client.server_stats_get().send().await })
             .await?;
         Ok(())
     }

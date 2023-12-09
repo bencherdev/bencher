@@ -34,7 +34,6 @@ impl SubCmd for View {
             .backend
             .send_with(
                 |client| async move { client.user_get().user(self.user.clone()).send().await },
-                true,
             )
             .await?;
         Ok(())

@@ -83,7 +83,7 @@ impl TryFrom<CliRun> for Run {
         } = run;
         Ok(Self {
             project: unwrap_project(project)?,
-            backend: backend.try_into()?,
+            backend: Backend::try_from(backend)?.log(false),
             runner: command.try_into()?,
             branch: run_branch.try_into().map_err(RunError::Branch)?,
             hash,
@@ -169,19 +169,19 @@ impl Run {
         cli_println!("\nBencher Report:");
         let json_report: JsonReport = self
             .backend
-            .send_with(
-                |client| async move {
-                    client
-                        .proj_report_post()
-                        .project(self.project.clone())
-                        .body(json_new_report.clone())
-                        .send()
-                        .await
-                },
-                true,
-            )
+            .send_with(|client| async move {
+                client
+                    .proj_report_post()
+                    .project(self.project.clone())
+                    .body(json_new_report.clone())
+                    .send()
+                    .await
+            })
             .await
             .map_err(RunError::SendReport)?;
+        if let Ok(json) = serde_json::to_string_pretty(&json_report) {
+            cli_println!("{json}");
+        }
 
         let alerts_count = json_report.alerts.len();
         // TODO disable when quiet
@@ -249,10 +249,7 @@ impl Run {
     async fn display_results(&self, json_report: JsonReport) -> Result<(), RunError> {
         let json_endpoint: JsonEndpoint = self
             .backend
-            .send_with(
-                |client| async move { client.server_endpoint_get().send().await },
-                false,
-            )
+            .send_with(|client| async move { client.server_endpoint_get().send().await })
             .await
             .map_err(RunError::GetEndpoint)?;
         let endpoint_url: Url = json_endpoint

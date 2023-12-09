@@ -66,18 +66,15 @@ impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
         let _json: JsonThreshold = self
             .backend
-            .send_with(
-                |client| async move {
-                    client
-                        .proj_threshold_put()
-                        .project(self.project.clone())
-                        .threshold(self.threshold)
-                        .body(self.clone())
-                        .send()
-                        .await
-                },
-                true,
-            )
+            .send_with(|client| async move {
+                client
+                    .proj_threshold_put()
+                    .project(self.project.clone())
+                    .threshold(self.threshold)
+                    .body(self.clone())
+                    .send()
+                    .await
+            })
             .await?;
         Ok(())
     }

@@ -30,10 +30,7 @@ impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
         let _json: JsonConfig = self
             .backend
-            .send_with(
-                |client| async move { client.server_config_get().send().await },
-                true,
-            )
+            .send_with(|client| async move { client.server_config_get().send().await })
             .await?;
         Ok(())
     }

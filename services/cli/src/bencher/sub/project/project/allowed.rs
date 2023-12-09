@@ -55,17 +55,14 @@ impl SubCmd for Allowed {
     async fn exec(&self) -> Result<(), CliError> {
         let _json: JsonAllowed = self
             .backend
-            .send_with(
-                |client| async move {
-                    client
-                        .proj_allowed_get()
-                        .project(self.project.clone())
-                        .permission(self.perm)
-                        .send()
-                        .await
-                },
-                true,
-            )
+            .send_with(|client| async move {
+                client
+                    .proj_allowed_get()
+                    .project(self.project.clone())
+                    .permission(self.perm)
+                    .send()
+                    .await
+            })
             .await?;
         Ok(())
     }

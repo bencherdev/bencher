@@ -69,7 +69,6 @@ impl SubCmd for Login {
             .backend
             .send_with(
                 |client| async move { client.auth_login_post().body(self.clone()).send().await },
-                true,
             )
             .await?;
         Ok(())

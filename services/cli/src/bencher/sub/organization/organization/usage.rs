@@ -39,16 +39,13 @@ impl SubCmd for Usage {
     async fn exec(&self) -> Result<(), CliError> {
         let _json: JsonUsage = self
             .backend
-            .send_with(
-                |client| async move {
-                    client
-                        .org_usage_get()
-                        .organization(self.organization.clone())
-                        .send()
-                        .await
-                },
-                true,
-            )
+            .send_with(|client| async move {
+                client
+                    .org_usage_get()
+                    .organization(self.organization.clone())
+                    .send()
+                    .await
+            })
             .await?;
         Ok(())
     }

@@ -92,17 +92,14 @@ impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
         let _json: JsonProject = self
             .backend
-            .send_with(
-                |client| async move {
-                    client
-                        .project_patch()
-                        .project(self.project.clone())
-                        .body(self.clone())
-                        .send()
-                        .await
-                },
-                true,
-            )
+            .send_with(|client| async move {
+                client
+                    .project_patch()
+                    .project(self.project.clone())
+                    .body(self.clone())
+                    .send()
+                    .await
+            })
             .await?;
         Ok(())
     }

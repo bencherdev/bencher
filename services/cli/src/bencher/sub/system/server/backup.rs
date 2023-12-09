@@ -66,10 +66,9 @@ impl SubCmd for Backup {
     async fn exec(&self) -> Result<(), CliError> {
         let _json: JsonCreated = self
             .backend
-            .send_with(
-                |client| async move { client.server_backup_post().body(self.clone()).send().await },
-                true,
-            )
+            .send_with(|client| async move {
+                client.server_backup_post().body(self.clone()).send().await
+            })
             .await?;
         Ok(())
     }

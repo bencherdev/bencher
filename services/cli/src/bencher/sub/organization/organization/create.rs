@@ -49,10 +49,9 @@ impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
         let _json: JsonOrganization = self
             .backend
-            .send_with(
-                |client| async move { client.organization_post().body(self.clone()).send().await },
-                true,
-            )
+            .send_with(|client| async move {
+                client.organization_post().body(self.clone()).send().await
+            })
             .await?;
         Ok(())
     }

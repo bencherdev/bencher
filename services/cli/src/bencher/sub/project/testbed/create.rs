@@ -52,17 +52,14 @@ impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
         let _json: JsonTestbed = self
             .backend
-            .send_with(
-                |client| async move {
-                    client
-                        .proj_testbed_post()
-                        .project(self.project.clone())
-                        .body(self.clone())
-                        .send()
-                        .await
-                },
-                true,
-            )
+            .send_with(|client| async move {
+                client
+                    .proj_testbed_post()
+                    .project(self.project.clone())
+                    .body(self.clone())
+                    .send()
+                    .await
+            })
             .await?;
         Ok(())
     }

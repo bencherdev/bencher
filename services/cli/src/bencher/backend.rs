@@ -9,7 +9,10 @@ pub const BENCHER_HOST: &str = "BENCHER_HOST";
 pub const BENCHER_API_TOKEN: &str = "BENCHER_API_TOKEN";
 
 #[derive(Debug, Clone)]
-pub struct Backend(bencher_client::BencherClient);
+pub struct Backend {
+    client: bencher_client::BencherClient,
+    log: bool,
+}
 
 #[derive(thiserror::Error, Debug)]
 pub enum BackendError {
@@ -33,12 +36,9 @@ impl TryFrom<CliBackend> for Backend {
         } = backend;
         let host = map_host(host)?;
         let token = map_token(token)?;
-        Ok(Self(bencher_client::BencherClient::new(
-            host,
-            token,
-            attempts,
-            retry_after,
-        )))
+        let client =
+            bencher_client::BencherClient::new(host, token, attempts, retry_after, Some(true));
+        Ok(Self { client, log: true })
     }
 }
 
@@ -62,11 +62,12 @@ fn map_token(token: Option<Jwt>) -> Result<Option<Jwt>, BackendError> {
 }
 
 impl Backend {
-    pub async fn send_with<F, Fut, T, Json>(
-        &self,
-        sender: F,
-        log: bool,
-    ) -> Result<Json, BackendError>
+    pub fn log(mut self, log: bool) -> Self {
+        self.log = log;
+        self
+    }
+
+    pub async fn send_with<F, Fut, T, Json>(&self, sender: F) -> Result<Json, BackendError>
     where
         F: Fn(bencher_client::Client) -> Fut,
         Fut: std::future::Future<
@@ -78,6 +79,6 @@ impl Backend {
         T: Serialize,
         Json: DeserializeOwned + Serialize + TryFrom<T, Error = serde_json::Error>,
     {
-        self.0.send_with(sender, log).await.map_err(Into::into)
+        self.client.send_with(sender).await.map_err(Into::into)
     }
 }

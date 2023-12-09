@@ -48,17 +48,14 @@ impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
         let _json: JsonMember = self
             .backend
-            .send_with(
-                |client| async move {
-                    client
-                        .org_member_patch()
-                        .organization(self.org.clone())
-                        .body(self.clone())
-                        .send()
-                        .await
-                },
-                true,
-            )
+            .send_with(|client| async move {
+                client
+                    .org_member_patch()
+                    .organization(self.org.clone())
+                    .body(self.clone())
+                    .send()
+                    .await
+            })
             .await?;
         Ok(())
     }
