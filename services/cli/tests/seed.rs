@@ -1,4 +1,4 @@
-// #![cfg(feature = "seed")]
+#![cfg(feature = "seed")]
 
 use std::process::Command;
 
