@@ -105,7 +105,7 @@ jobs:
 
   # Cargo Test
   cargo_test:
-    if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     name: Cargo Test
     runs-on: ubuntu-latest
     env:
@@ -279,7 +279,7 @@ jobs:
 
   # Cargo Benchmark
   cargo_bench:
-    if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     name: Cargo Bench
     runs-on: ubuntu-latest
     # This will fail whenever Bencher Cloud is down
@@ -317,7 +317,7 @@ jobs:
 
   # Cargo Audit
   cargo_audit:
-    if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     name: Cargo Audit
     runs-on: ubuntu-latest
     continue-on-error: true
