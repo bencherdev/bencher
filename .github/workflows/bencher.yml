@@ -248,7 +248,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-api-minus${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-api-minus-${{ hashFiles('**/Cargo.lock') }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -269,7 +269,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-cli-minus${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-cli-minus-${{ hashFiles('**/Cargo.lock') }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -753,7 +753,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     name: Backup Database
     runs-on: ubuntu-latest
-    # continue-on-error: true
+    continue-on-error: true
     needs:
       # Lint
       - cargo_fmt
