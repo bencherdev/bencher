@@ -67,15 +67,19 @@ from_client!(
     ExpirationYear
 );
 
-/// This type allows for forwards compatibility with the API.
+/// This type allows for forwards compatibility with the API response types.
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct JsonValue(pub serde_json::Value);
 
-impl TryFrom<()> for JsonValue {
-    type Error = serde_json::Error;
+impl From<JsonValue> for serde_json::Value {
+    fn from(json: JsonValue) -> Self {
+        json.0
+    }
+}
 
-    fn try_from(json: ()) -> Result<Self, Self::Error> {
-        Ok(Self(serde_json::json!(json)))
+impl From<()> for JsonValue {
+    fn from(json: ()) -> Self {
+        Self(serde_json::json!(json))
     }
 }
 
@@ -83,19 +87,17 @@ impl TryFrom<()> for JsonValue {
 macro_rules! try_from_client {
     ($($name:ident),*) => {
         $(
+            impl From<types::$name> for JsonValue  {
+                fn from(json: types::$name) -> Self {
+                    Self(serde_json::json!(json))
+                }
+            }
+
             impl TryFrom<types::$name> for bencher_json::$name  {
                 type Error = serde_json::Error;
 
                 fn try_from(json: types::$name) -> Result<Self, Self::Error> {
                     serde_json::from_value::<Self>(serde_json::json!(json))
-                }
-            }
-
-            impl TryFrom<types::$name> for JsonValue  {
-                type Error = serde_json::Error;
-
-                fn try_from(json: types::$name) -> Result<Self, Self::Error> {
-                    Ok(Self(serde_json::json!(json)))
                 }
             }
         )*

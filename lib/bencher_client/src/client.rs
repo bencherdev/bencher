@@ -90,6 +90,37 @@ impl BencherClient {
 
     /// Send a request to the Bencher API
     ///
+    /// Returns a generic JSON value as the response.
+    /// To get a typed response, use `send_with` instead.
+    ///
+    /// # Parameters
+    ///
+    /// - `sender`: A function that takes a `codegen::Client` and returns a `Future` that resolves
+    ///  to a `Result` containing a `serde_json::Value` or an `Error`
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the response JSON value or an `Error`
+    pub async fn send<F, R, T, E>(&self, sender: F) -> Result<serde_json::Value, ClientError>
+    where
+        F: Fn(crate::codegen::Client) -> R,
+        R: std::future::Future<
+            Output = Result<
+                progenitor_client::ResponseValue<T>,
+                crate::codegen::Error<crate::codegen::types::Error>,
+            >,
+        >,
+        T: Serialize,
+        E: std::error::Error + Send + Sync + 'static,
+        crate::JsonValue: TryFrom<T, Error = E>,
+    {
+        self.send_with(sender)
+            .await
+            .map(|json: crate::JsonValue| json.into())
+    }
+
+    /// Send a request to the Bencher API
+    ///
     /// # Parameters
     ///
     /// - `sender`: A function that takes a `codegen::Client` and returns a `Future` that resolves
@@ -98,7 +129,6 @@ impl BencherClient {
     /// # Returns
     ///
     /// A `Result` containing the response JSON or an `Error`
-    #[allow(clippy::print_stdout)]
     pub async fn send_with<F, R, T, Json, E>(&self, sender: F) -> Result<Json, ClientError>
     where
         F: Fn(crate::codegen::Client) -> R,

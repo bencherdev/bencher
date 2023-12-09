@@ -73,10 +73,7 @@ impl Backend {
         self
     }
 
-    pub async fn send<F, R, T, E>(
-        &self,
-        sender: F,
-    ) -> Result<bencher_client::JsonValue, BackendError>
+    pub async fn send<F, R, T, E>(&self, sender: F) -> Result<serde_json::Value, BackendError>
     where
         F: Fn(bencher_client::Client) -> R,
         R: std::future::Future<
@@ -89,8 +86,7 @@ impl Backend {
         E: std::error::Error + Send + Sync + 'static,
         bencher_client::JsonValue: TryFrom<T, Error = E>,
     {
-        let json: bencher_client::JsonValue = self.send_with(sender).await?;
-        Ok(json)
+        self.client.send(sender).await.map_err(Into::into)
     }
 
     pub async fn send_with<F, R, T, Json, E>(&self, sender: F) -> Result<Json, BackendError>
