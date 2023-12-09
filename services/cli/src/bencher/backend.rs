@@ -67,17 +67,18 @@ impl Backend {
         self
     }
 
-    pub async fn send_with<F, Fut, T, Json>(&self, sender: F) -> Result<Json, BackendError>
+    pub async fn send_with<F, R, T, Json, E>(&self, sender: F) -> Result<Json, BackendError>
     where
-        F: Fn(bencher_client::Client) -> Fut,
-        Fut: std::future::Future<
+        F: Fn(bencher_client::Client) -> R,
+        R: std::future::Future<
             Output = Result<
                 progenitor_client::ResponseValue<T>,
                 bencher_client::Error<bencher_client::types::Error>,
             >,
         >,
         T: Serialize,
-        Json: DeserializeOwned + Serialize + TryFrom<T, Error = serde_json::Error>,
+        Json: DeserializeOwned + Serialize + TryFrom<T, Error = E>,
+        E: std::error::Error + Send + Sync + 'static,
     {
         self.client.send_with(sender).await.map_err(Into::into)
     }
