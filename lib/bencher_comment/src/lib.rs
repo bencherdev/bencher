@@ -326,7 +326,7 @@ impl ReportComment {
     }
 
     fn html_footer(&self, html: &mut String) {
-        html.push_str(&format!(r#"<br/><small><a href="https://bencher.dev/">Bencher - Continuous Benchmarking</a></small>{}<br/><small><a href="https://bencher.dev/docs/">Docs</a> | <a href="https://bencher.dev/repo/">Repo</a> | <a href="https://bencher.dev/chat/">Chat</a> | <a href="https://bencher.dev/help/">Help</a></small>"#,
+        html.push_str(&format!(r#"<br/><small><a href="https://bencher.dev">Bencher - Continuous Benchmarking</a></small>{}<br/><small><a href="https://bencher.dev/docs/">Docs</a> | <a href="https://bencher.dev/repo/">Repo</a> | <a href="https://bencher.dev/chat/">Chat</a> | <a href="https://bencher.dev/help/">Help</a></small>"#,
         if self.json_report.project.visibility.is_public() {
             let path = format!("/perf/{}", self.project_slug);
             let url = self.endpoint_url.clone();
