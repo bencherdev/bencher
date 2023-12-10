@@ -1,10 +1,12 @@
-import { defineConfig } from "astro/config";
-import solidJs from "@astrojs/solid-js";
-import sitemap from "@astrojs/sitemap";
 import mdx from "@astrojs/mdx";
 import partytown from "@astrojs/partytown";
+import sitemap from "@astrojs/sitemap";
+import solidJs from "@astrojs/solid-js";
+import { defineConfig } from "astro/config";
+import { fromHtmlIsomorphic } from "hast-util-from-html-isomorphic";
+import rehypeAutolinkHeadings from "rehype-autolink-headings";
+import rehypeSlug from "rehype-slug";
 import wasmPack from "vite-plugin-wasm-pack";
-import remarkGfm from "remark-gfm";
 
 // https://astro.build/config
 export default defineConfig({
@@ -40,6 +42,19 @@ export default defineConfig({
 		plugins: [wasmPack("../../lib/bencher_valid")],
 	},
 	markdown: {
-		remarkPlugins: [remarkGfm],
+		rehypePlugins: [
+			rehypeSlug,
+			[
+				rehypeAutolinkHeadings,
+				{
+					behavior: "append",
+					properties: { style: "padding-left: 0.3em; color: #fdb07e;" },
+					content: fromHtmlIsomorphic(
+						'<small><i class="fas fa-link" aria-hidden="true" /></small>',
+						{ fragment: true },
+					),
+				},
+			],
+		],
 	},
 });
