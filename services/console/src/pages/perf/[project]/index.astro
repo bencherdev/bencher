@@ -24,7 +24,6 @@ const description = `View ${jsonProject.name} continuous benchmarking results an
   title={title}
   titleFmt={(title) => `📈 ${title}`}
   description={description}
-  canonical={`/perf/${params.project}`}
 >
   <PublicProject client:only="solid-js" apiUrl={BENCHER_API_URL} params={params} project={jsonProject} />
 </PerfLayout>

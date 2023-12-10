@@ -10,7 +10,7 @@ interface Props {
 const { title, description } = Astro.props;
 ---
 
-<BaseLayout title={title} description={description}>
+<BaseLayout title={title} description={description} canonical={Astro.url.pathname}>
   <Notification client:only="solid-js" />
   <section class="section" style="margin-bottom:32rem;">
     <div class="container">
