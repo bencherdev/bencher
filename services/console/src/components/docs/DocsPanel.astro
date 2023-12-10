@@ -3,6 +3,7 @@ import DocsLayout from "../../layouts/docs/DocsLayout.astro";
 import {getLangCollection, langPath} from "../../i18n/utils.ts"
 import { Language, allLanguages, alsoIn, architecture, defaultLang, explanation, howTo, languageName, tutorial } from "../../i18n/ui";
 import { Collection } from "../../content/config";
+import AlsoIn from "../../i18n/AlsoIn";
 
 interface Props {
   lang: undefined | string;
@@ -110,13 +111,5 @@ const description = () => {
       }
     </ul>
   </div>
-  <h3 class="title is-3">{alsoIn(lang)}</h3>
-  <ul>
-    {allLanguages.map((language) =>
-       lang !== language &&
-        <li>
-          <a href={`/docs/${langPath(language)}`}>{languageName(language)}</a>
-        </li>
-    )}
-  </ul>
+  <AlsoIn lang={lang} />
 </DocsLayout>
