@@ -6,12 +6,13 @@ interface Props {
   title: string;
   titleFmt?: (title: string) => string;
   description: string;
+  canonical?: undefined | string;
 }
 
-const { title, titleFmt, description } = Astro.props;
+const { title, titleFmt, description, canonical } = Astro.props;
 ---
 
-<BaseLayout title={title} titleFmt={titleFmt} description={description}>
+<BaseLayout title={title} titleFmt={titleFmt} description={description} canonical={canonical}>
   <!-- Note that the AuthNavbar does *not* fill the slot `navbar`. It is a client-side override.  -->
   <AuthNavbar client:only="solid-js" />
   <slot />

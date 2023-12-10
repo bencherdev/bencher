@@ -1,3 +1,4 @@
+// https://docs.astro.build/en/guides/content-collections/
 // 1. Import utilities from `astro:content`
 import { defineCollection, z } from "astro:content";
 
@@ -50,6 +51,7 @@ const explanation = defineCollection({
 		description: z.string(),
 		heading: z.string(),
 		sortOrder: z.number(),
+		canonical: z.string().optional(),
 	}),
 });
 const reference = defineCollection({
@@ -59,6 +61,7 @@ const reference = defineCollection({
 		description: z.string(),
 		heading: z.string(),
 		sortOrder: z.number(),
+		canonical: z.string().optional(),
 	}),
 });
 

@@ -3,6 +3,7 @@ import DocsLayout from "../../../../layouts/docs/DocsLayout.astro";
 import Disclosure from "../../../../components/docs/Disclosure";
 import { Collection } from "../../../../content/config";
 import { getLangPaths } from "../../../../i18n/utils";
+import { BENCHER_SITE_URL } from "../../../../util/ext";
 
 // 1. Generate a new path for every collection entry
 export async function getStaticPaths() {
@@ -20,6 +21,7 @@ const { Content } = await page.render();
   description={page.data.description}
   heading={page.data.heading}
   lang={lang}
+  canonical={page.data.canonical ? `${BENCHER_SITE_URL}/docs/explanation/${page.data.canonical}/` : undefined}
 >
   <Content />
   <Disclosure collection={Collection.explanation} slug={slug} lang={lang} />

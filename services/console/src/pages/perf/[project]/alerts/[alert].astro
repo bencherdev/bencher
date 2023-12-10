@@ -6,6 +6,7 @@ import { AlertStatus, type JsonAlert } from "../../../../types/bencher";
 import PublicAlert from "../../../../components/perf/PublicAlert";
 import alertsConfig from "../../../../config/project/alerts";
 import { Operation } from "../../../../config/types";
+import type { DeckConfig } from "../../../../components/console/deck/hand/Deck";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
@@ -17,7 +18,7 @@ const jsonAlert: JsonAlert = await alertResponse.json();
 
 const title = `${jsonAlert?.benchmark?.name} Alert (${jsonAlert?.status === AlertStatus.Active ? "🔔" : "🔕"})`;
 const description = `View a continuous benchmarking alert for the ${jsonAlert?.benchmark?.name} benchmark on Bencher`;
-const deck = alertsConfig[Operation.VIEW]?.deck;
+const deck = alertsConfig[Operation.VIEW]?.deck as DeckConfig;
 ---
 
 <PerfLayout

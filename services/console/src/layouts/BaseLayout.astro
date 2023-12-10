@@ -4,7 +4,7 @@ import "../styles/styles.scss";
 import Navbar from "../components/navbar/Navbar.astro";
 import Footer from "../components/site/Footer";
 import { BENCHER_TITLE, BENCHER_DESCRIPTION } from "../util/resource";
-import { BENCHER_WORDMARK } from "../util/ext";
+import { BENCHER_SITE_URL, BENCHER_WORDMARK } from "../util/ext";
 import { defaultLang } from "../i18n/ui.ts";
 import { Author } from "../components/docs/author";
 // import { ViewTransitions } from "astro:transitions";
@@ -15,11 +15,12 @@ interface Props {
   description: string;
   lang?: undefined | string;
   author?: undefined | Author;
+  canonical?: undefined | string;
 }
 
 // https://docs.astro.build/en/reference/directives-reference/#definevars
 const PUBLIC_GOOGLE_ANALYTICS_ID = import.meta.env.PUBLIC_GOOGLE_ANALYTICS_ID;
-const { title, titleFmt, description, lang, author } = Astro.props;
+const { title, titleFmt, description, lang, author, canonical} = Astro.props;
 ---
 
 <!DOCTYPE html>
@@ -42,6 +43,7 @@ const { title, titleFmt, description, lang, author } = Astro.props;
       titleTemplate={title === BENCHER_TITLE ? "%s" : `%s | ${BENCHER_TITLE}`}
       titleDefault={BENCHER_TITLE}
       description={description ?? BENCHER_DESCRIPTION}
+      canonical={canonical ?? `${BENCHER_SITE_URL}${Astro.url.pathname}`}
       openGraph={{
         basic: {
           title: titleFmt ? titleFmt(title) : title,

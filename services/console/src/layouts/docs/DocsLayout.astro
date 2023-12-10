@@ -14,9 +14,10 @@ interface Props {
   tab?: DocsTab;
   lang?: undefined | string;
   author?: undefined | Author;
+  canonical?: undefined | string;
 }
 
-const { title, titleFmt, description, heading, tab, lang, author } = Astro.props;
+const { title, titleFmt, description, heading, tab, lang, author, canonical } = Astro.props;
 ---
 
 <BaseLayout
@@ -25,6 +26,7 @@ const { title, titleFmt, description, heading, tab, lang, author } = Astro.props
   description={description}
   lang={lang}
   author={author}
+  canonical={canonical}
 >
   <SelfHostedRedirect client:only="solid-js" path="/console" />
   <!-- Note that the AuthNavbar does *not* fill the slot `navbar`. It is a client-side override.  -->
