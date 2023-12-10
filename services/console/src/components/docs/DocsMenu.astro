@@ -59,7 +59,7 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
       {
         tutorialCollection[lang]?.map((page) => (
           <li>
-            <a href={`/docs/${langPath(lang)}tutorial/${page.slug}`}>{page.data.title}</a>
+            <a href={`/docs/${langPath(lang)}tutorial/${page.slug}/`}>{page.data.title}</a>
           </li>
         ))
       }
@@ -69,7 +69,7 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
       {
         howToCollection[lang]?.map((page) => (
           <li>
-            <a href={`/docs/${langPath(lang)}how-to/${page.slug}`}>{page.data.title}</a>
+            <a href={`/docs/${langPath(lang)}how-to/${page.slug}/`}>{page.data.title}</a>
           </li>
         ))
       }
@@ -79,7 +79,7 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
       {
         explanationCollection[lang]?.map((page) => (
           <li>
-            <a href={`/docs/${langPath(lang)}explanation/${page.slug}`}>{page.data.title}</a>
+            <a href={`/docs/${langPath(lang)}explanation/${page.slug}/`}>{page.data.title}</a>
           </li>
         ))
       }
@@ -90,12 +90,12 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
         <a href={`/docs/${langPath(lang)}reference/api`}>REST API</a>
       </li>
       <li>
-        <a href={`/docs/${langPath(lang)}reference/architecture`}>{architecture(lang)}</a>
+        <a href={`/docs/${langPath(lang)}reference/architecture/`}>{architecture(lang)}</a>
       </li>
       {
         referenceCollection[lang]?.map((page) => (
           <li>
-            <a href={`/docs/${langPath(lang)}reference/${page.slug}`}>{page.data.title}</a>
+            <a href={`/docs/${langPath(lang)}reference/${page.slug}/`}>{page.data.title}</a>
           </li>
         ))
       }
@@ -109,7 +109,7 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
       {
         rustCollection[lang]?.map((page) => (
           <li>
-            <a href={`/learn/${langPath(lang)}benchmarking/rust/${page.slug}`}>{page.data.title}</a>
+            <a href={`/learn/${langPath(lang)}benchmarking/rust/${page.slug}/`}>{page.data.title}</a>
           </li>
         ))
       }

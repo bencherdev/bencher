@@ -19,7 +19,7 @@ const AuthNavbar = () => {
 
 				<div class="navbar-menu is-active">
 					<div class="navbar-start">
-						<a class="navbar-item" href="/docs">
+						<a class="navbar-item" href="/docs/">
 							Docs
 						</a>
 						<a class="navbar-item" href="/perf">
@@ -32,7 +32,7 @@ const AuthNavbar = () => {
 							<div class="navbar-item">BETA v{BENCHER_VERSION}</div>
 							<div class="navbar-item" />
 							<div class="navbar-item">
-								<a class="button is-outlined" href="/help">
+								<a class="button is-outlined" href="/help/">
 									<span class="icon has-text-primary">
 										<i class="fas fa-life-ring" aria-hidden="true" />
 									</span>

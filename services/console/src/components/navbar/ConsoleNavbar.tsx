@@ -53,14 +53,14 @@ const ConsoleNavbar = (props: Props) => {
 						fallback={
 							<a
 								class="navbar-item"
-								href={`${BENCHER_SITE_URL}/docs`}
+								href={`${BENCHER_SITE_URL}/docs/`}
 								target="_blank"
 							>
 								Docs
 							</a>
 						}
 					>
-						<a class="navbar-item" href="/docs">
+						<a class="navbar-item" href="/docs/">
 							Docs
 						</a>
 					</Show>
@@ -86,7 +86,7 @@ const ConsoleNavbar = (props: Props) => {
 						<div class="navbar-item">
 							<a
 								class="button is-outlined"
-								href={`/console/users/${user?.user?.slug}/help`}
+								href={`/console/users/${user?.user?.slug}/help/`}
 							>
 								<span class="icon has-text-primary">
 									<i class="fas fa-life-ring" aria-hidden="true" />
