@@ -473,9 +473,9 @@ dependencies = [
  "flate2",
  "http",
  "log",
- "rustls",
+ "rustls 0.21.9",
  "url",
- "webpki-roots",
+ "webpki-roots 0.25.2",
 ]
 
 [[package]]
@@ -695,7 +695,7 @@ dependencies = [
  "once_cell",
  "pin-project-lite",
  "pin-utils",
- "rustls",
+ "rustls 0.21.9",
  "tokio",
  "tracing",
 ]
@@ -802,12 +802,6 @@ name = "base64"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
-
-[[package]]
-name = "base64"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ea22880d78093b0cbe17c89f64a7d457941e65759157ec6cb31a31d652b05e5"
 
 [[package]]
 name = "base64"
@@ -1985,7 +1979,7 @@ dependencies = [
  "paste",
  "percent-encoding",
  "proc-macro2",
- "rustls",
+ "rustls 0.21.9",
  "rustls-pemfile",
  "schemars",
  "serde",
@@ -1999,7 +1993,7 @@ dependencies = [
  "slog-json",
  "slog-term",
  "tokio",
- "tokio-rustls",
+ "tokio-rustls 0.24.1",
  "toml 0.8.8",
  "uuid 1.5.0",
  "version_check",
@@ -2727,12 +2721,12 @@ dependencies = [
  "once_cell",
  "rand 0.8.5",
  "ring 0.16.20",
- "rustls",
+ "rustls 0.21.9",
  "rustls-pemfile",
  "thiserror",
  "tinyvec",
  "tokio",
- "tokio-rustls",
+ "tokio-rustls 0.24.1",
  "tracing",
  "url",
 ]
@@ -2752,11 +2746,11 @@ dependencies = [
  "parking_lot",
  "rand 0.8.5",
  "resolv-conf",
- "rustls",
+ "rustls 0.21.9",
  "smallvec",
  "thiserror",
  "tokio",
- "tokio-rustls",
+ "tokio-rustls 0.24.1",
  "tracing",
 ]
 
@@ -2889,10 +2883,10 @@ dependencies = [
  "http",
  "hyper",
  "log",
- "rustls",
+ "rustls 0.21.9",
  "rustls-native-certs",
  "tokio",
- "tokio-rustls",
+ "tokio-rustls 0.24.1",
 ]
 
 [[package]]
@@ -3347,21 +3341,22 @@ dependencies = [
 
 [[package]]
 name = "mail-send"
-version = "0.4.1"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cbc58a799366b3b2956a2c5ae7e2892ea34b3016343cbbdc5deb844aa6c0973"
+checksum = "e373c9ec9178397af6ea2964568e49e1d486b2d80d17b06aa19da75566416422"
 dependencies = [
- "base64 0.20.0",
+ "base64 0.21.5",
  "gethostname",
  "mail-auth",
  "mail-builder",
  "md5",
  "rand 0.8.5",
- "rustls",
+ "rustls 0.22.1",
+ "rustls-pki-types",
  "smtp-proto",
  "tokio",
- "tokio-rustls",
- "webpki-roots",
+ "tokio-rustls 0.25.0",
+ "webpki-roots 0.26.0",
 ]
 
 [[package]]
@@ -4766,7 +4761,7 @@ dependencies = [
  "once_cell",
  "percent-encoding",
  "pin-project-lite",
- "rustls",
+ "rustls 0.21.9",
  "rustls-native-certs",
  "rustls-pemfile",
  "serde",
@@ -4775,7 +4770,7 @@ dependencies = [
  "system-configuration",
  "tokio",
  "tokio-native-tls",
- "tokio-rustls",
+ "tokio-rustls 0.24.1",
  "tokio-util",
  "tower-service",
  "url",
@@ -4783,7 +4778,7 @@ dependencies = [
  "wasm-bindgen-futures",
  "wasm-streams",
  "web-sys",
- "webpki-roots",
+ "webpki-roots 0.25.2",
  "winreg",
 ]
 
@@ -4959,8 +4954,22 @@ checksum = "629648aced5775d558af50b2b4c7b02983a04b312126d45eeead26e7caa498b9"
 dependencies = [
  "log",
  "ring 0.17.5",
- "rustls-webpki",
+ "rustls-webpki 0.101.7",
  "sct",
+]
+
+[[package]]
+name = "rustls"
+version = "0.22.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe6b63262c9fcac8659abfaa96cac103d28166d3ff3eaf8f412e19f3ae9e5a48"
+dependencies = [
+ "log",
+ "ring 0.17.5",
+ "rustls-pki-types",
+ "rustls-webpki 0.102.0",
+ "subtle",
+ "zeroize",
 ]
 
 [[package]]
@@ -4985,12 +4994,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustls-pki-types"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e7673e0aa20ee4937c6aacfc12bb8341cfbf054cdd21df6bec5fd0629fe9339b"
+
+[[package]]
 name = "rustls-webpki"
 version = "0.101.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b6275d1ee7a1cd780b64aca7726599a1dbc893b1e64144529e55c3c2f745765"
 dependencies = [
  "ring 0.17.5",
+ "untrusted 0.9.0",
+]
+
+[[package]]
+name = "rustls-webpki"
+version = "0.102.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de2635c8bc2b88d367767c5de8ea1d8db9af3f6219eba28442242d9ab81d1b89"
+dependencies = [
+ "ring 0.17.5",
+ "rustls-pki-types",
  "untrusted 0.9.0",
 ]
 
@@ -6046,7 +6072,18 @@ version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c28327cf380ac148141087fbfb9de9d7bd4e84ab5d2c28fbc911d753de8a7081"
 dependencies = [
- "rustls",
+ "rustls 0.21.9",
+ "tokio",
+]
+
+[[package]]
+name = "tokio-rustls"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "775e0c0f0adb3a2f22a00c4745d728b479985fc15ee7ca6a2608388c5569860f"
+dependencies = [
+ "rustls 0.22.1",
+ "rustls-pki-types",
  "tokio",
 ]
 
@@ -6651,6 +6688,15 @@ name = "webpki-roots"
 version = "0.25.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "14247bb57be4f377dfb94c72830b8ce8fc6beac03cf4bf7b9732eadd414123fc"
+
+[[package]]
+name = "webpki-roots"
+version = "0.26.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0de2cfda980f21be5a7ed2eadb3e6fe074d56022bea2cdeb1a62eb220fc04188"
+dependencies = [
+ "rustls-pki-types",
+]
 
 [[package]]
 name = "weezl"
