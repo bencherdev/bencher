@@ -157,7 +157,7 @@ However, it uses instruction counts instead of wall clock time:
 CPU instructions, L1 accesses, L2 access and RAM accesses.
 This allows for single-shot benchmarking since these metrics should stay nearly identical between runs.
 
-All three are [support by Bencher](/docs/explanation/adapters). So why choose libtest bench?
+All three are [support by Bencher](/docs/explanation/adapters/). So why choose libtest bench?
 It may be a good idea if you are trying to limit the external dependencies of your project
 and your project is already using the `nightly` toolchain.
 Outside of that, I would suggest using either Criterion or Iai depending on your use case.
@@ -604,10 +604,10 @@ How am I supposed to manage that‽
 
 Luckily, I've found this awesome open source tool called Bencher.
 There's a super generous free tier, so I can just use [Bencher Cloud](/) for my personal projects.
-And at work where everything needs to be in our private cloud, I've started using [Bencher Self-Hosted](/docs/tutorial/docker).
+And at work where everything needs to be in our private cloud, I've started using [Bencher Self-Hosted](/docs/tutorial/docker/).
 
 Bencher has a [built in adapter for libtest bench](/docs/explanation/adapters#-rust-bench),
-so it's easy to integrate into CI. After [following the Quick Start guide](/docs/tutorial/quick-start),
+so it's easy to integrate into CI. After [following the Quick Start guide](/docs/tutorial/quick-start/),
 I'm able to run my benchmarks and track them with Bencher.
 
 ```

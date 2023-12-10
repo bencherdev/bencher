@@ -62,7 +62,7 @@ If both are defined, the `--token` option takes precedence over the `BENCHER_API
 
 <br />
 
-See [branch selection](/docs/explanation/branch-selection) for a full overview.
+See [branch selection](/docs/explanation/branch-selection/) for a full overview.
 
 <br />
 
@@ -93,7 +93,7 @@ If neither are defined then `localhost` is used as the default testbed.
 
 <br />
 
-See [benchmark harness adapter](/docs/explanation/adapters) for a full overview.
+See [benchmark harness adapter](/docs/explanation/adapters/) for a full overview.
 
 <br />
 
@@ -139,7 +139,7 @@ Optional: Allow benchmark test failure.
 
 <br />
 
-Optional: Error when an alert is generated. See [thresholds and alerts](/docs/explanation/thresholds) for a full overview.
+Optional: Error when an alert is generated. See [thresholds and alerts](/docs/explanation/thresholds/) for a full overview.
 
 <br />
 
@@ -172,7 +172,7 @@ Requires: `--github-actions`
 
 <br />
 
-Optional: Only post results to CI if [a Threshold](/docs/explanation/thresholds) exists for the Branch, Testbed, and Measure.
+Optional: Only post results to CI if [a Threshold](/docs/explanation/thresholds/) exists for the Branch, Testbed, and Measure.
 If no Thresholds exist, then nothing will be posted.
 Requires: `--github-actions`
 
@@ -182,7 +182,7 @@ Requires: `--github-actions`
 
 <br />
 
-Optional: Only start posting results to CI if [an Alert](/docs/explanation/thresholds) is generated.
+Optional: Only start posting results to CI if [an Alert](/docs/explanation/thresholds/) is generated.
 If an Alert is generated, then follow up results, even if they don't contain any Alerts, will also be posted.
 Requires: `--github-actions`
 
@@ -193,7 +193,7 @@ Requires: `--github-actions`
 <br />
 
 Optional: Custom ID for posting results to CI.
-By default, Bencher will automatically segment out results by the combination of: Project, Branch, Testbed, and [Adapter](/docs/explanation/adapters).
+By default, Bencher will automatically segment out results by the combination of: Project, Branch, Testbed, and [Adapter](/docs/explanation/adapters/).
 Setting a custom ID is useful when Bencher is being run multiple times in the same CI workflow for the same Project, Branch, Testbed, and Adapter combination.
 Requires: `--github-actions`
 
@@ -281,7 +281,7 @@ Enabling this feature will require more frequent client updates due to breaking 
 <br />
 
 Optional: Perform a dry run. This will not store any data to the backend.
-Neither a Report nor Branch as detailed in [branch selection](/docs/explanation/branch-selection) will be created.
+Neither a Report nor Branch as detailed in [branch selection](/docs/explanation/branch-selection/) will be created.
 
 <br />
 

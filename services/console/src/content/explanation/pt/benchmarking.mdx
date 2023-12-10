@@ -13,10 +13,10 @@ Bencher permite que você rastreie suas análises de desempenho tanto em execuç
 A forma mais fácil de rastrear suas análises de desempenho é o subcomando CLI <code><a href="/docs/pt/explanation/bencher-run">bencher run</a></code>.
 Ele envolve a saída da sua ferramenta de análise de desempenho existente e gera um Relatório.
 Este Relatório é então enviado para o servidor API do Bencher,
-onde a saída da ferramenta de análise de desempenho é analisada usando um [adaptador de ferramenta de análise de desempenho](/docs/pt/explanation/adapters).
+onde a saída da ferramenta de análise de desempenho é analisada usando um [adaptador de ferramenta de análise de desempenho](/docs/pt/explanation/adapters/).
 O adaptador para ferramentas de análise de desempenho detecta todas as Análises de Desempenho presentes e suas Métricas correspondentes.
 Essas Análises de Desempenho e Métricas são então salvas junto com o Relatório.
-Se um [Limiar](/docs/pt/explanation/thresholds) estiver definido, então as novas Métricas são comparadas com as Métricas históricas para cada Análise de Desempenho presente no Relatório.
+Se um [Limiar](/docs/pt/explanation/thresholds/) estiver definido, então as novas Métricas são comparadas com as Métricas históricas para cada Análise de Desempenho presente no Relatório.
 Se for detectada uma regressão, então um Alerta será gerado.
 
 A partir de agora nos referiremos ao suas "análises de desempenho" como "testes de regressão de desempenho" para evitar qualquer confusão.
@@ -32,33 +32,33 @@ Caso contrário, o teste de regressão de desempenho renomeado será considerado
 Este mesmo alerta também se aplica ao _mover_ alguns testes de regressão de desempenho.
 Dependendo da ferramenta de análise de desempenho, o caminho para o teste de regressão de desempenho pode fazer parte do seu nome.
 
-A única exceção à ressalva acima é ignorar uma Análise de Desempenho. Veja [como suprimir alertas](/docs/pt/explanation/thresholds) para uma visão geral completa.
+A única exceção à ressalva acima é ignorar uma Análise de Desempenho. Veja [como suprimir alertas](/docs/pt/explanation/thresholds/) para uma visão geral completa.
 
 ### Métricas
 Uma Métrica é um único resultado de teste de regressão de desempenho em um dado momento.
 Até três Medidas podem ser coletadas para uma única Métrica: `value`, `lower_value` e `upper_value`.
 O `value` é necessário para todas as Métricas enquanto o `lower_value` e `upper_value` são opcionalmente independentes.
-Quais Medidas são coletadas é determinado pelo [adaptador de ferramenta de análise de desempenho](/docs/pt/explanation/adapters).
+Quais Medidas são coletadas é determinado pelo [adaptador de ferramenta de análise de desempenho](/docs/pt/explanation/adapters/).
 
 ### Tipo de Métrica
 Um Tipo de Métrica é a unidade de medida para uma Métrica.
 Por padrão todos os Projetos começam com um Tipo de Métrica `Latency` e `Throughput`
 com unidades de `nanoseconds (ns)` e `operations / second (ops/s)` respectivamente.
-O Tipo de Métrica é determinado pelo [adaptador de ferramenta de analise de desempenho](/docs/pt/explanation/adapters).
+O Tipo de Métrica é determinado pelo [adaptador de ferramenta de analise de desempenho](/docs/pt/explanation/adapters/).
 
 <br />
 
 ## Relatório
 Um Relatório é uma coleção de Análises de Desempenho e suas Métricas para um Branch e Testbed específicos.
 Os Relatórios são mais frequentemente gerados usando o subcomando CLI <code><a href="/docs/pt/explanation/bencher-run">bencher run</a></code>.
-Veja [como rastrear testes de regressão de desempenho](/docs/pt/how-to/track-benchmarks) para uma visão geral completa.
+Veja [como rastrear testes de regressão de desempenho](/docs/pt/how-to/track-benchmarks/) para uma visão geral completa.
 
 ### Branch
 Um Branch é a referência `git` usada ao executar um Relatório (ou seja, nome do branch ou tag).
 Por padrão, todos os Projetos começam com um Branch `main`.
 Ao usar o subcomando CLI <code><a href="/docs/pt/explanation/bencher-run">bencher run</a></code>,
 `main` é o Branch padrão se um não for fornecido.
-Veja [a seleção de branch](/docs/pt/explanation/branch-selection) para uma visão geral completa.
+Veja [a seleção de branch](/docs/pt/explanation/branch-selection/) para uma visão geral completa.
 
 ### Testbed
 Um Testbed é o nome do ambiente de teste usado ao executar um Relatório.

@@ -13,10 +13,10 @@ Bencher vous permet de suivre vos benchmarks à la fois localement et depuis les
 La façon la plus simple de suivre vos benchmarks est la sous-commande CLI <code><a href="/docs/fr/explanation/bencher-run">bencher run</a></code>.
 Elle encapsule la sortie de votre harnais de benchmark existant et génère un Rapport.
 Ce Rapport est ensuite envoyé au serveur API de Bencher,
-où la sortie du harnais de benchmark est analysée à l'aide d'un [adaptateur de harnais de benchmark](/docs/fr/explanation/adapters).
+où la sortie du harnais de benchmark est analysée à l'aide d'un [adaptateur de harnais de benchmark](/docs/fr/explanation/adapters/).
 L'adaptateur de harnais de benchmark détecte tous les Benchmarks présents et leurs Metrics correspondants.
 Ces Benchmarks et Metrics sont ensuite sauvegardés avec le Rapport.
-S'il existe un [Seuil](/docs/fr/explanation/thresholds) défini, alors les nouvelles Metrics sont comparées aux Metrics historiques de chaque Benchmark présent dans le Rapport.
+S'il existe un [Seuil](/docs/fr/explanation/thresholds/) défini, alors les nouvelles Metrics sont comparées aux Metrics historiques de chaque Benchmark présent dans le Rapport.
 Si une régression est détectée, alors une Alerte sera générée.
 
 À partir de maintenant, nous ferons référence à vos "benchmarks" comme à des "tests de régression de performance" pour éviter toute confusion.
@@ -32,33 +32,33 @@ Sinon, le test de régression de la performance renommé sera considéré comme 
 Ce même mot de prudence s'applique également au _déplacement_ de certains tests de régression de performance.
 Selon le harnais de benchmark, le chemin vers le test de régression de la performance peut faire partie de son nom.
 
-La seule exception à la mise en garde ci-dessus est l'ignorance d'un Benchmark. Voir [supprimer les alertes](/docs/fr/explanation/thresholds) pour une vue d'ensemble complète.
+La seule exception à la mise en garde ci-dessus est l'ignorance d'un Benchmark. Voir [supprimer les alertes](/docs/fr/explanation/thresholds/) pour une vue d'ensemble complète.
 
 ### Metrics
 Une Metric est un résultat de test de régression de performance unique et ponctuel.
 Jusqu'à trois Mesures peuvent être collectées pour une seule Metric : `value`, `lower_value`, et `upper_value`.
 La `value` est requise pour toutes les Metrics tandis que `lower_value` et `upper_value` sont indépendamment facultatives.
-Les Mesures collectées sont déterminées par l'[adaptateur de harnais de benchmark](/docs/fr/explanation/adapters).
+Les Mesures collectées sont déterminées par l'[adaptateur de harnais de benchmark](/docs/fr/explanation/adapters/).
 
 ### Type de Metric
 Un Type de Metric est l'unité de mesure d'une Metric.
 Par défaut, tous les Projets commencent avec des Types de Metric `Latency` et `Throughput`
 avec des unités de `nanosecondes (ns)` et `opérations / seconde (ops/s)` respectivement.
-Le Type de Metric est déterminé par l'[adaptateur de harnais de benchmark](/docs/fr/explanation/adapters).
+Le Type de Metric est déterminé par l'[adaptateur de harnais de benchmark](/docs/fr/explanation/adapters/).
 
 <br />
 
 ## Rapport
 Un Rapport est une collection de Benchmarks et de leurs Metrics pour une Branche et une Plateforme de Test spécifiques.
 Les Rapports sont le plus souvent générés en utilisant la sous-commande CLI <code><a href="/docs/fr/explanation/bencher-run">bencher run</a></code>.
-Voir [comment suivre les tests de régression de performance](/docs/fr/how-to/track-benchmarks) pour un aperçu complet.
+Voir [comment suivre les tests de régression de performance](/docs/fr/how-to/track-benchmarks/) pour un aperçu complet.
 
 ### Branche
 Une Branche est la référence `git` utilisée lors de l'exécution d'un Rapport (c'est-à-dire le nom de la branche ou la balise).
 Par défaut, tous les Projets commencent avec une Branche `main`.
 Lors de l'utilisation de la sous-commande CLI <code><a href="/docs/fr/explanation/bencher-run">bencher run</a></code>,
 `main` est la Branche par défaut si aucune n'est fournie.
-Voir [sélection de branche](/docs/fr/explanation/branch-selection) pour une vue d'ensemble complète.
+Voir [sélection de branche](/docs/fr/explanation/branch-selection/) pour une vue d'ensemble complète.
 
 ### Plateforme de Test
 Une Plateforme de Test est le nom de l'environnement de test utilisé lors de l'exécution d'un Rapport.

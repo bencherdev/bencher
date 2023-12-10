@@ -13,10 +13,10 @@ Bencherでは、ローカルとCIの両方からベンチマークを追跡し�
 ベンチマークを追跡する最も簡単な方法は、<code><a href="/docs/ja/explanation/bencher-run">bencher run</a></code> CLIサブコマンドです。
 これは既存のベンチマークハーネスの出力を包み込んでレポートを生成します。
 このレポートはその後Bencher APIサーバーに送られ、
-ここでベンチマークハーネスの出力は[ベンチマークハーネスアダプター](/docs/ja/explanation/adapters)を用いて解析されます。
+ここでベンチマークハーネスの出力は[ベンチマークハーネスアダプター](/docs/ja/explanation/adapters/)を用いて解析されます。
 ベンチマークハーネスアダプターは存在するすべてのベンチマークとそれぞれのメトリックを検出します。
 これらのベンチマークとメトリックはレポートと一緒に保存されます。
-[閾値](/docs/ja/explanation/thresholds)が設定されている場合、新しいメトリックはレポート内の各ベンチマークに対する歴史的なメトリックと比較されます。
+[閾値](/docs/ja/explanation/thresholds/)が設定されている場合、新しいメトリックはレポート内の各ベンチマークに対する歴史的なメトリックと比較されます。
 リグレッションが検出された場合、アラートが生成されます。
 
 これ以降、混乱を避けるためにあなたの「ベンチマーク」を「パフォーマンスリグレッションテスト」と呼ぶことにします。
@@ -32,32 +32,32 @@ Bencher上のベンチマークの名前を手動で新しい名前に変更す�
 この注意は、パフォーマンスリグレッションテストを_移動_する場合も同様です。
 ベンチマークハーネスによっては、パフォーマンスリグレッションテストへのパスがその名前の一部になる可能性があります。
 
-上記の注意事項の唯一の例外は、ベンチマークを無視する場合です。完全な概要については[アラートの抑制](/docs/ja/explanation/thresholds)を参照してください。
+上記の注意事項の唯一の例外は、ベンチマークを無視する場合です。完全な概要については[アラートの抑制](/docs/ja/explanation/thresholds/)を参照してください。
 
 ### メトリクス
 メトリクスとは、単一の、ある時点でのパフォーマンスリグレッションテスト結果です。
 単一のメトリクスに対して最大で3つの測定値（`value`、`lower_value`、 `upper_value`）が収集されます。
 `value`は全てのメトリクスで必須で、 `lower_value`と`upper_value`は独立したオプションです。
-どの測定値が収集されるかは、[ベンチマークハーネスアダプター](/docs/ja/explanation/adapters)によって決まります。
+どの測定値が収集されるかは、[ベンチマークハーネスアダプター](/docs/ja/explanation/adapters/)によって決まります。
 
 ### メトリック種類
 メトリック種類とは、メトリックの測定単位です。
 デフォルトでは全てのプロジェクトは `Latency` と`Throughput`のメトリック種類を持っており、その単位は`nanoseconds (ns)`と`operations / second (ops/s)`となります。
-メトリック種類は[ベンチマークハーネスアダプター](/docs/ja/explanation/adapters)によって決定されます。
+メトリック種類は[ベンチマークハーネスアダプター](/docs/ja/explanation/adapters/)によって決定されます。
 
 <br />
 
 ## レポート
 レポートとは、特定のBranchとTestbedにおけるベンチマークとそのメトリクスの集合です。
 レポートは主に<code><a href="/docs/ja/explanation/bencher-run">bencher run</a></code> CLIサブコマンドを使用して生成されます。
-完全な概要については[パフォーマンスリグレッションテストの追跡方法](/docs/ja/how-to/track-benchmarks)を参照してください。
+完全な概要については[パフォーマンスリグレッションテストの追跡方法](/docs/ja/how-to/track-benchmarks/)を参照してください。
 
 ### Branch
 Branchとは、レポートを実行する際に使用される`git` ref（つまり、ブランチ名やタグ）です。
 デフォルトでは全てのプロジェクトは`main` Branchからスタートします。
 <code><a href="/docs/ja/explanation/bencher-run">bencher run</a></code> CLIサブコマンドを使用する際に、
 提供されていない場合は`main`がデフォルトのBranchとなります。
-完全な概要については[branch選択](/docs/ja/explanation/branch-selection)を参照してください。
+完全な概要については[branch選択](/docs/ja/explanation/branch-selection/)を参照してください。
 
 ### Testbed
 Testbedとは、レポートを実行する際に使用されるテスト環境の名前です。

@@ -44,7 +44,7 @@
 ## `v0.3.15`
 - Embedded Perf Plots
 - Move default Threshold Boundaries from `0.95` to `0.98`
-- Add [server statistics collection](/docs/reference/server-config#plusstats) to Bencher Self-Hosted instances
+- Add [server statistics collection](/docs/reference/server-config/#plusstats) to Bencher Self-Hosted instances
 
 ## `v0.3.14`
 - Move default Threshold Boundaries from `0.9` to `0.95`
@@ -228,14 +228,14 @@
 - Move run failure detection to the CLI, adapter parsing will no longer attempt error detection
 - New harness specific adapter targets (ie `rust_bench` and `rust_criterion`)
 - Add additional options to `bencher mock`, `--fail` and `--flaky` to easily test parsing failing and flaky benchmarks respectively
-- Wrote [continuous benchmarking](/docs/explanation/continuous-benchmarking) and [how to install the CLI](/docs/how-to/install-cli) pages
+- Wrote [continuous benchmarking](/docs/explanation/continuous-benchmarking/) and [how to install the CLI](/docs/how-to/install-cli) pages
 - Update server framework, dropshot, and Rust to `1.67.0`
 - Two new C++ adapters for Google Benchmark and Catch2
 - Add an adapter for `go test -bench`
 
 ## `v0.2.30`
 - Added `--if-else-branch`, `--else-branch`, and `--endif-branch` flags to to `bencher run` CLI
-- Wrote a [branch management](/explanation/branch-selection) explanation page for using `bencher run`
+- Wrote a [branch management](/explanation/branch-selection/) explanation page for using `bencher run`
 - Completely refactored docs UI configuration to make it easier to add new pages, one place instead of three
 - Made the [Diataxis](https://diataxis.fr/) convention explicit in the docs
 - Fixed bounds bug in `bencher mock`

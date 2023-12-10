@@ -6,7 +6,7 @@ sortOrder: 2
 ---
 
 Der einfachste Weg, Ihre Benchmarks zu verfolgen, ist der <code><a href="/docs/de/explanation/bencher-run">bencher run</a></code> CLI-Unterbefehl.
-Sehen Sie sich die [Übersicht zum Benchmarking](/docs/de/explanation/benchmarking) für eine ausführlichere Erklärung an.
+Sehen Sie sich die [Übersicht zum Benchmarking](/docs/de/explanation/benchmarking/) für eine ausführlichere Erklärung an.
 Dies ist ein Beispiel für einen <code><a href="/docs/de/explanation/bencher-run">bencher run</a></code> CLI-Unterbefehl zum Verfolgen von Benchmarks in einem passenderweise `feature-branch` genannten Feature-Zweig:
 
 ```
@@ -24,13 +24,13 @@ bencher run \
 
 1. Das Projekt muss bereits vorhanden sein. Setzen Sie das `--project` Flag oder die `BENCHER_PROJECT` Umgebungsvariable auf den Projekt-Slug oder UUID. (z. B.: `--project save-walter-white`)
 1. Das API-Token muss bereits vorhanden sein. Setzen Sie das `--token` Flag oder die `BENCHER_API_TOKEN` Umgebungsvariable auf das API-Token. (z. B.: `--token ...`)
-1. Optional: Setzen Sie das `--adapter` Flag oder die `BENCHER_ADAPTER` Umgebungsvariable auf den gewünschten Adapter-Namen. Wenn dies nicht gesetzt ist, wird der `magic` Adapter verwendet. Siehe [Benchmark Harness Adapters](/docs/de/explanation/adapters) für eine vollständige Übersicht. (z. B.: `--adapter json`)
-1. Es gibt mehrere Optionen zum Festlegen des Projektzweigs. Siehe [Zweigauswahl](/docs/de/explanation/branch-selection) für eine vollständige Übersicht.
+1. Optional: Setzen Sie das `--adapter` Flag oder die `BENCHER_ADAPTER` Umgebungsvariable auf den gewünschten Adapter-Namen. Wenn dies nicht gesetzt ist, wird der `magic` Adapter verwendet. Siehe [Benchmark Harness Adapters](/docs/de/explanation/adapters/) für eine vollständige Übersicht. (z. B.: `--adapter json`)
+1. Es gibt mehrere Optionen zum Festlegen des Projektzweigs. Siehe [Zweigauswahl](/docs/de/explanation/branch-selection/) für eine vollständige Übersicht.
     1. Verwenden Sie den aktuellen Zweig, wenn er bereits vorhanden ist. (z. B.: `--if-branch feature-branch`)
     1. Erstellen Sie eine Klon der Zielzweig-Daten, wenn sie bereits vorhanden sind. (z. B.: `--else-if-branch main`)
     1. Ansonsten erstellen Sie einen neuen Zweig mit dem Namen, der an `--if-branch` übergeben wurde, was in diesem Fall `feature-branch` wäre. (z. B.: `--else-branch`)
 1. Optional: Setzen Sie das `--testbed` Flag oder die `BENCHER_TESTBED` Umgebungsvariable auf den Testbed-Slug oder UUID. Das Testbed muss bereits vorhanden sein. Wenn dies nicht gesetzt ist, wird das Standard `localhost` Testbed verwendet. (z. B.: `--testbed phoenix`)
-1. Setzen Sie den Befehl so, dass er fehlschlägt, wenn ein Alert generiert wird. Damit ein Alert generiert wird, muss bereits eine [Schwelle](/docs/de/explanation/thresholds) existieren. (z. B.: `--err`)
+1. Setzen Sie den Befehl so, dass er fehlschlägt, wenn ein Alert generiert wird. Damit ein Alert generiert wird, muss bereits eine [Schwelle](/docs/de/explanation/thresholds/) existieren. (z. B.: `--err`)
 1. Führen Sie Ihre Benchmarks aus und erstellen Sie einen Bericht aus den Ergebnissen. (z. B.: `"bencher mock"`)
 
 ## Relatives Benchmarking
@@ -78,7 +78,7 @@ bencher run \
     1. Es wird also erstellt. (z. B.: `--else-branch`)
     1. Führen Sie die Benchmarks dreimal aus. (z. B.: `--iter 3`)
 1. Wechseln Sie zum Feature-Zweig. (z. B.: `feature-branch`)
-1. Erstellen Sie eine [Schwelle](/docs/de/explanation/thresholds) für den Feature-Zweig:
+1. Erstellen Sie eine [Schwelle](/docs/de/explanation/thresholds/) für den Feature-Zweig:
     1. Der Zweig ist der Feature-Zweig mit der angehängten Git-Commit-ID. (z. B.: `--branch "$FEATURE_BRANCH"`)
     1. Das Testbed läuft lokal. (z. B.: `--testbed localhost`)
     1. Die Metrikart für die Benchmarks ist die Latenz. (z. B.: `--measure latency`)
@@ -88,7 +88,7 @@ bencher run \
     1. Der Zweig wird existieren, da er gerade erstellt wurde. (z. B.: `--if-branch "$FEATURE_BRANCH"`)
     1. Führen Sie die Tests dreimal aus. (z. B.: `--iter 3`)
     1. Fassen Sie alle drei Metriken in den minimalen Wert zusammen. (z. B.: `--fold min`)
-    1. Setzen Sie den Befehl so, dass er fehlschlägt, wenn ein Alert durch die [Schwelle](/docs/de/explanation/thresholds) generiert wird. (z. B.: `--err`)
+    1. Setzen Sie den Befehl so, dass er fehlschlägt, wenn ein Alert durch die [Schwelle](/docs/de/explanation/thresholds/) generiert wird. (z. B.: `--err`)
 
 <br/>
 <br/>

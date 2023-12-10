@@ -18,13 +18,13 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 3. Создайте `job` для GitHub Actions. (например: `benchmark_with_bencher`)
 4. Проект уже должен существовать. Установите флаг `--project` или переменную окружения `BENCHER_PROJECT` для slug или UUID проекта (например: `BENCHER_PROJECT: save-walter-white`).
 6. Необязательно: Установите флаг `--testbed` или переменную окружения `BENCHER_TESTBED` для slug или UUID тестового окружения.  (например: `BENCHER_TESTBED: ubuntu-latest`) Тестовое окружение **должно** уже существовать. Если это не задано, то будет использовано тестовое окружение `localhost`.
-7. Необязательно: Установите флаг `--adapter` или переменную окружения `BENCHER_ADAPTER` для желаемого имени адаптера.  (например: `BENCHER_ADAPTER: json`) Если это не задано, то будет использован адаптер `magic`. Смотрите обзор адаптеров для бенчмаркования [здесь](/docs/ru/explanation/adapters).
+7. Необязательно: Установите флаг `--adapter` или переменную окружения `BENCHER_ADAPTER` для желаемого имени адаптера.  (например: `BENCHER_ADAPTER: json`) Если это не задано, то будет использован адаптер `magic`. Смотрите обзор адаптеров для бенчмаркования [здесь](/docs/ru/explanation/adapters/).
 8. Выполните checkout вашего исходного кода. (например: `uses: actions/checkout@v3`)
 9.  Установите CLI Bencher с помощью [GitHub Action](https://github.com/marketplace/actions/bencher-cli). (например: `uses: bencherdev/bencher@main`)
-10. [Отслеживайте ваш бенчмарк](/docs/ru/how-to/track-benchmarks) с помощью подкоманды CLI <code><a href="/docs/ru/explanation/bencher-run">bencher run</a></code>:
+10. [Отслеживайте ваш бенчмарк](/docs/ru/how-to/track-benchmarks/) с помощью подкоманды CLI <code><a href="/docs/ru/explanation/bencher-run">bencher run</a></code>:
     1.  Необязательно: Установите флаг `--branch` или переменную окружения `BENCHER_BRANCH` для slug или UUID ветки. (например: `--branch main`) Ветка **должна** уже существовать. Если это не задано, то будет использована ветка `main`.
     2. API-токен уже должен существовать. Добавьте `BENCHER_API_TOKEN` как секрет **Репозитория**. (например: `Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`) Установите флаг `--token` или переменную окружения `BENCHER_API_TOKEN` для API-токена. (например: `--token ${{ secrets.BENCHER_API_TOKEN }}`)
-    3.  Установите команду для генерации ошибки, если сгенерировано оповещение. (например: `--err`) Чтобы было сгенерировано оповещение, должен уже существовать [Threshold](/docs/ru/explanation/thresholds).
+    3.  Установите команду для генерации ошибки, если сгенерировано оповещение. (например: `--err`) Чтобы было сгенерировано оповещение, должен уже существовать [Threshold](/docs/ru/explanation/thresholds/).
     4.  Запустите свои бенчмарки и создайте отчет из результатов. (например: `"bencher mock"`)
 
 <br/>
@@ -41,12 +41,12 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 
 1. Создайте файл `workflow` для GitHub Actions (например: `.github/workflows/pr_benchmarks.yml`)
 2. Запускайте при событиях `pull_request` только и только если запрос на вытягивание происходит из того же репозитория. Для обработки PR из форков см. [Запросы на вытягивание из форков](#pull-requests-from-forks) ниже.
-3. [Выберите ветку](http://localhost:3000/docs/ru/explanation/branch-selection) для использования:
+3. [Выберите ветку](http://localhost:3000/docs/ru/explanation/branch-selection/) для использования:
         1. Используйте текущие данные ветки, если они уже существуют. (например: `--if-branch "$GITHUB_REF_NAME"`)
         2. Создайте клон данных целевой ветки PR и порогов, если они уже существуют. (например: `--else-if-branch "$GITHUB_BASE_REF"`)
         3. В противном случае создайте клон данных основной ветки (`main`) и порогов. (например: `--else-if-branch main`)
 4. Установите токен аутентификации API GitHub. (например: `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) Когда этот параметр установлен в рамках запроса на вытягивание, то результаты будут добавлены к запросу на вытягивание в виде комментария. Использует [переменную среды `GITHUB_TOKEN` от GitHub Actions](https://docs.github.com/ja/actions/security-guides/automatic-token-authentication).
-5. Посмотрите в документации [bencher run](/docs/ru/explanation/bencher-run) полное описание всех способов настройки комментария запроса на вытягивание с `--ci-*` флагами.
+5. Посмотрите в документации [bencher run](/docs/ru/explanation/bencher-run/) полное описание всех способов настройки комментария запроса на вытягивание с `--ci-*` флагами.
 6. (Не показано) Создайте второй файл `workflow` для GitHub Actions и используйте приведенный выше пример для запуска по событиям `push` в основную ветку (`main`). (например: `.github/workflows/benchmarks.yml`)
 
 ## Pull Requests из Forks

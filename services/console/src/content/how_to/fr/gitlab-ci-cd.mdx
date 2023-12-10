@@ -37,16 +37,16 @@ import { BENCHER_VERSION } from "../../../util/ext";
 1. Le projet doit déjà exister. Définissez le flag `--project` ou la variable d'environnement `BENCHER_PROJECT` à l'identifiant ou au slug du projet. (ex: `BENCHER_PROJECT: save-walter-white`)
 1. Ajoutez `BENCHER_API_TOKEN` aux secrets de CI/CD de votre projet, sous `Paramètres -> CI / CD -> Variables -> Ajouter une variable`
 1. Le token API doit déjà exister. Définissez le flag `--token` ou la variable d'environnement `BENCHER_API_TOKEN` au token API. (ex: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
-1. Optionnel : Définissez le flag `--adapter` ou la variable d'environnement `BENCHER_ADAPTER` au nom de l'adaptateur souhaité. Si cela n'est pas défini, alors l'Adaptateur `magic` sera utilisé. Consultez [les adaptateurs de benchmark](/docs/fr/explanation/adapters) pour un aperçu complet. (ex: `BENCHER_ADAPTER: json`)
+1. Optionnel : Définissez le flag `--adapter` ou la variable d'environnement `BENCHER_ADAPTER` au nom de l'adaptateur souhaité. Si cela n'est pas défini, alors l'Adaptateur `magic` sera utilisé. Consultez [les adaptateurs de benchmark](/docs/fr/explanation/adapters/) pour un aperçu complet. (ex: `BENCHER_ADAPTER: json`)
 1. Optionnel : Définissez le flag `--testbed` ou la variable d'environnement `BENCHER_TESTBED` à l'identifiant ou au slug du Testbed. Le Testbed **doit** déjà exister. Si cela n'est pas défini, alors le Testbed `localhost` sera utilisé. (ex: `BENCHER_TESTBED: bullseye`)
 1. Optionnel : Créez une variable d'environnement pour faciliter le suivi de la version de la CLI utilisée. (ex: <code>{`BENCHER_VERSION: ${BENCHER_VERSION}`}</code>)
 1. Téléchargez et installez la CLI Bencher à partir d'un `.deb`.
-1. [Suivez vos benchmarks](/docs/fr/how-to/track-benchmarks) avec la sous-commande CLI <code><a href="/docs/fr/explanation/bencher-run">bencher run</a></code> :
-    1. Il existe plusieurs options pour définir la branche du projet. Consultez [la sélection de branches](/docs/fr/explanation/branch-selection) pour un aperçu complet. La commande fournie utilise [les variables prédéfinies de GitLab CI/CD](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) et elle essaie de :
+1. [Suivez vos benchmarks](/docs/fr/how-to/track-benchmarks/) avec la sous-commande CLI <code><a href="/docs/fr/explanation/bencher-run">bencher run</a></code> :
+    1. Il existe plusieurs options pour définir la branche du projet. Consultez [la sélection de branches](/docs/fr/explanation/branch-selection/) pour un aperçu complet. La commande fournie utilise [les variables prédéfinies de GitLab CI/CD](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) et elle essaie de :
         1. Utiliser la branche actuelle si elle existe déjà. (ex: `--if-branch "$CI_COMMIT_REF_NAME"`)
         1. Créer un clône des données et des seuils de la branche cible de MR si elle existe déjà. (ex: `--else-if-branch  "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
         1. Sinon, créer un clône des données et des seuils de la branche `main`. (ex: `--else-if-branch main`)
-    1. Définir la commande pour échouer si une alerte est générée. Pour qu'une alerte soit générée, un [Seuil](/docs/fr/explanation/thresholds) doit déjà exister. (ex: `--err`)
+    1. Définir la commande pour échouer si une alerte est générée. Pour qu'une alerte soit générée, un [Seuil](/docs/fr/explanation/thresholds/) doit déjà exister. (ex: `--err`)
     1. Exécutez vos benchmarks et générez un rapport à partir des résultats. (ex: `"bencher mock"`)
 
 <br/>

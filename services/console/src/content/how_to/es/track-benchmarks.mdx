@@ -6,7 +6,7 @@ sortOrder: 2
 ---
 
 La forma más sencilla de rastrear tus puntos de referencia es el subcomando CLI <code><a href="/docs/es/explanation/bencher-run">bencher run</a></code>.
-Consulta el [resumen del establecimiento de puntos de referencia](/docs/es/explanation/benchmarking) para una explicación más detallada.
+Consulta el [resumen del establecimiento de puntos de referencia](/docs/es/explanation/benchmarking/) para una explicación más detallada.
 Este es un ejemplo de un subcomando CLI <code><a href="/docs/es/explanation/bencher-run">bencher run</a></code> para rastrear puntos de referencia en una rama de funciones llamada de manera apropiada `feature-branch`:
 
 ```
@@ -24,13 +24,13 @@ bencher run \
 
 1. El Proyecto ya debe existir. Establezca la bandera `--project` o la variable de entorno `BENCHER_PROJECT` al slug o UUID del Proyecto. (ex: `--project save-walter-white`)
 1. La ficha de API ya debe existir. Establezca la bandera `--token` o la variable de entorno `BENCHER_API_TOKEN` a la ficha de API. (ex: `--token ...`)
-1. Opcional: Establezca la bandera `--adapter` o la variable de entorno `BENCHER_ADAPTER` al nombre del adaptador deseado. Si no se establece esto, entonces el Adaptador `magic` será utilizado. Consulte[los adaptadores del arnés de referencia](/docs/es/explanation/adapters) para una visión general completa. (ex: `--adapter json`)
-1. Existen varias opciones para establecer la rama del proyecto. Consulte [la selección de la rama](/docs/es/explanation/branch-selection) para una visión general completa.
+1. Opcional: Establezca la bandera `--adapter` o la variable de entorno `BENCHER_ADAPTER` al nombre del adaptador deseado. Si no se establece esto, entonces el Adaptador `magic` será utilizado. Consulte[los adaptadores del arnés de referencia](/docs/es/explanation/adapters/) para una visión general completa. (ex: `--adapter json`)
+1. Existen varias opciones para establecer la rama del proyecto. Consulte [la selección de la rama](/docs/es/explanation/branch-selection/) para una visión general completa.
     1. Utilice la rama actual si ya existe. (ex: `--if-branch feature-branch`)
     1. Cree una copia de los datos de la rama objetivo si ya existe. (ex: `--else-if-branch main`)
     1. De lo contrario, cree una nueva rama con el nombre proporcionado a `--if-branch`, que sería `feature-branch`. (ex: `--else-branch`)
 1. Opcional: Establezca la bandera `--testbed` o la variable de entorno `BENCHER_TESTBED` al slug o UUID del Testbed. El Testbed ya debe existir. Si no se establece esto, entonces el Testbed `localhost` predeterminado será utilizado. (ex: `--testbed phoenix`)
-1. Establezca el comando para fallar si se genera una Alerta. Para que se genere una Alerta, ya debe existir un [Umbral](/docs/es/explanation/thresholds). (ex: `--err`)
+1. Establezca el comando para fallar si se genera una Alerta. Para que se genere una Alerta, ya debe existir un [Umbral](/docs/es/explanation/thresholds/). (ex: `--err`)
 1. Ejecute sus puntos de referencia y genere un Informe a partir de los resultados. (ex: `"bencher mock"`)
 
 ## Benchmarking Relativo
@@ -78,7 +78,7 @@ bencher run \
     1. Por lo tanto, se creará. (ex: `--else-branch`)
     1. Ejecute los benchmarks tres veces. (ex: `--iter 3`)
 1. Haga checkout de la rama de features. (ex: `feature-branch`)
-1. Cree un [Umbral](/docs/es/explanation/thresholds) para la rama de features:
+1. Cree un [Umbral](/docs/es/explanation/thresholds/) para la rama de features:
     1. La Rama es la rama de features con el ID de commit de git adjunto. (ex: `--branch "$FEATURE_BRANCH"`)
     1. El Testbed se está ejecutando localmente. (ex: `--testbed localhost`)
     1. El Típo de Métrica para los benchmarks es Latencia. (ex: `--measure latency`)
@@ -88,7 +88,7 @@ bencher run \
     1. La Rama existirá ya que fue recién creada. (ex: `--if-branch "$FEATURE_BRANCH"`)
     1. Ejecute las pruebas tres veces. (ex: `--iter 3`)
     1. Dobla todas las tres Métricas en el valor mínimo. (ex: `--fold min`)
-    1. Establezca el comando para fallar si se genera una Alerta por el [Umbral](/docs/es/explanation/thresholds). (ex: `--err`)
+    1. Establezca el comando para fallar si se genera una Alerta por el [Umbral](/docs/es/explanation/thresholds/). (ex: `--err`)
 
 <br/>
 <br/>
