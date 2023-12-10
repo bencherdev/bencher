@@ -41,7 +41,7 @@ import { BENCHER_VERSION } from "../../../util/ext";
 1. 可选：将`--testbed`标志或`BENCHER_TESTBED`环境变量设置为Testbed的标识符或UUID。Testbed**必须**已经存在。 如果未设置，将使用`localhost` Testbed。 (例如：`BENCHER_TESTBED: bullseye`)
 1. 可选：创建一个环境变量以方便跟踪使用的CLI版本。 (例如：<code>{`BENCHER_VERSION: ${BENCHER_VERSION}`}</code>)
 1. 从`.deb`文件中下载并安装Bencher CLI。
-1. 使用<code><a href="/docs/zh/explanation/bencher-run">bencher run</a></code> CLI子命令[跟踪您的基准测试](/docs/zh/how-to/track-benchmarks/)：
+1. 使用<code><a href="/docs/zh/explanation/bencher-run/">bencher run</a></code> CLI子命令[跟踪您的基准测试](/docs/zh/how-to/track-benchmarks/)：
     1. 有多种设置项目分支的选项。请见[分支选择](/docs/zh/explanation/branch-selection/)获取完整概览。提供的命令使用[GitLab CI/CD预定义变量](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html)，并尝试：
         1. 如果已经存在，使用当前分支。 (例如：`--if-branch "$CI_COMMIT_REF_NAME"`)
         1. 如果已经存在，则创建MR目标分支数据和阈值的克隆。 (例如：`--else-if-branch  "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
@@ -56,4 +56,4 @@ import { BENCHER_VERSION } from "../../../util/ext";
 
 <br/>
 
-<h2><a href="/docs/zh/explanation/benchmarking">继续前进：基准测试概述 ➡</a></h2>
+<h2><a href="/docs/zh/explanation/benchmarking/">继续前进：基准测试概述 ➡</a></h2>

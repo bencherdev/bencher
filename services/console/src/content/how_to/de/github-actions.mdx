@@ -21,7 +21,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 7. Optional: Setzen Sie die `--adapter` Option oder die `BENCHER_ADAPTER` Umgebungsvariable auf den gewünschten Adapternamen. (z.B.: `BENCHER_ADAPTER: json`). Wenn dies nicht gesetzt ist, wird der `magic` Adapter verwendet. Siehe [Benchmark Harness Adapter](/docs/de/explanation/adapters/) für einen vollständigen Überblick.
 8. Prüfen Sie Ihren Quellcode aus. (z.B.: `uses: actions/checkout@v3`)
 9. Installieren Sie die Bencher CLI mit der [GitHub Action](https://github.com/marketplace/actions/bencher-cli). (z.B.: `uses: bencherdev/bencher@main`)
-10. [Verfolgen Sie Ihre Benchmarks](/docs/de/how-to/track-benchmarks/) mit dem <code><a href="/docs/de/explanation/bencher-run">bencher run</a></code> CLI-Unterbefehl:
+10. [Verfolgen Sie Ihre Benchmarks](/docs/de/how-to/track-benchmarks/) mit dem <code><a href="/docs/de/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl:
     1.  Optional: Setzen Sie die `--branch` Option oder die `BENCHER_BRANCH` Umgebungsvariable auf den Slug oder die UUID des Branches. (z.B.: `--branch main`). Der Branch **muss** bereits existieren. Wenn dies nicht gesetzt ist, wird der `main` Branch verwendet.
     2. Der API-Token muss bereits existieren. Fügen Sie `BENCHER_API_TOKEN` als **Repository**-Secret hinzu. (z.B.: `Repo -> Einstellungen -> Geheimnisse und Variablen -> Aktionen -> Neues Repository-Geheimnis`). Setzen Sie die `--token` Option oder die `BENCHER_API_TOKEN` Umgebungsvariable auf den API-Token. (z.B.: `--token ${{ secrets.BENCHER_API_TOKEN }}`)
     3.  Lassen Sie den Befehl fehlschlagen, wenn ein Alert generiert wird. (z.B.: `--err`). Damit ein Alert generiert werden kann, muss bereits ein [Schwellenwert](/docs/de/explanation/thresholds/) existieren.
@@ -141,4 +141,4 @@ und [diesen Blog-Post](https://nathandavison.com/blog/github-actions-and-the-thr
 
 <br/>
 
-<h2><a href="/docs/de/explanation/benchmarking">Weitermachen: Übersicht über das Benchmarking ➡</a></h2>
+<h2><a href="/docs/de/explanation/benchmarking/">Weitermachen: Übersicht über das Benchmarking ➡</a></h2>

@@ -21,7 +21,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 7. Facultatif: Définissez l'option `--adapter` ou la variable d'environnement `BENCHER_ADAPTER` pour le nom de l'adaptateur désiré. (ex: `BENCHER_ADAPTER: json`) Si cela n'est pas défini, alors l'adaptateur `magic` sera utilisé. Voir [adaptateurs de banc de test](/docs/fr/explanation/adapters/) pour un aperçu complet.
 8. Enregistrez votre code source. (ex: `uses: actions/checkout@v3`)
 9. Installez le CLI Bencher à l'aide du [GitHub Action](https://github.com/marketplace/actions/bencher-cli). (ex: `uses: bencherdev/bencher@main`)
-10. [Suivez vos benchmarks](/docs/fr/how-to/track-benchmarks/) avec la sous-commande CLI <code><a href="/docs/fr/explanation/bencher-run">bencher run</a></code>:
+10. [Suivez vos benchmarks](/docs/fr/how-to/track-benchmarks/) avec la sous-commande CLI <code><a href="/docs/fr/explanation/bencher-run/">bencher run</a></code>:
     1. Facultatif: Définissez l'option `--branch` ou la variable d'environnement `BENCHER_BRANCH` pour l'identifiant court ou l'UUID de la branche. (ex: `--branch main`) La branche **doit** déjà exister. Si cela n'est pas défini, alors la branche `main` sera utilisée.
     2. Le token d'API doit déjà exister. Ajoutez `BENCHER_API_TOKEN` en tant que secret de **dépôt**. (ex: `Dépôt -> Settings -> Secrets and variables -> Actions -> New repository secret`) Définissez l'option `--token` ou la variable d'environnement `BENCHER_API_TOKEN` pour le token d'API. (ex: `--token ${{ secrets.BENCHER_API_TOKEN }}`)
     3. Configurez la commande pour échouer si une alerte est générée. (ex: `--err`) Pour qu'une alerte soit générée, un [Seuil](/docs/fr/explanation/thresholds/) doit déjà exister.
@@ -140,4 +140,4 @@ sur la prévention des requêtes malveillantes pour un aperçu complet.
 
 <br/>
 
-<h2><a href="/docs/fr/explanation/benchmarking">Continuer: Aperçu du Benchmarking ➡</a></h2>
+<h2><a href="/docs/fr/explanation/benchmarking/">Continuer: Aperçu du Benchmarking ➡</a></h2>

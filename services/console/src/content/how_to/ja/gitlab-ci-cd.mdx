@@ -41,7 +41,7 @@ import { BENCHER_VERSION } from "../../../util/ext";
 1. オプション： `--testbed` フラグまたは `BENCHER_TESTBED` 環境変数をTestbedのスラグまたはUUIDに設定します。Testbedはすでに存在している**必要があります**。これが設定されていない場合、 `localhost` Testbedが使用されます。（例： `BENCHER_TESTBED: bullseye`）
 1. オプション：使用中のCLIバージョンを追跡しやすくするための環境変数を作成します。（例：<code>{`BENCHER_VERSION: ${BENCHER_VERSION}`}</code>）
 1. `.deb`からBencher CLIをダウンロードし、インストールします。
-1. <code><a href="/docs/ja/explanation/bencher-run">bencher run</a></code> CLIサブコマンドを使って、あなたのベンチマークを[追跡します](/docs/ja/how-to/track-benchmarks/):
+1. <code><a href="/docs/ja/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使って、あなたのベンチマークを[追跡します](/docs/ja/how-to/track-benchmarks/):
     1. プロジェクトブランチの設定に関してはいくつかの選択肢があります。完全な概観については、[branch selection](/docs/ja/explanation/branch-selection/)を参照してください。提供されたコマンドは[GitLab CI/CD predefined variables](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html)を使用し、
         1. すでに存在している場合、現在のブランチを使用します。（例： `--if-branch "$CI_COMMIT_REF_NAME"`）
         1. すでに存在している場合、MRターゲットブランチのデータと閾値のクローンを作成します。（例： `--else-if-branch  "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`）
@@ -56,4 +56,4 @@ import { BENCHER_VERSION } from "../../../util/ext";
 
 <br/>
 
-<h2><a href="/docs/ja/explanation/benchmarking">続けて学ぼう: ベンチマーキングの概要 ➡</a></h2>
+<h2><a href="/docs/ja/explanation/benchmarking/">続けて学ぼう: ベンチマーキングの概要 ➡</a></h2>

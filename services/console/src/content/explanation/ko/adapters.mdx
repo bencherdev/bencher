@@ -8,7 +8,7 @@ sortOrder: 3
 어댑터는 벤치마크 하네스 출력을 표준화된 JSON, Bencher Metric Format (BMF)로 변환합니다.
 어댑터는 새 보고서가 수신되었을 때 API 서버에서 실행됩니다.
 더 깊은 설명을 위해 [벤치마크 개요](/docs/ko/explanation/benchmarking/)를 참조하세요.
-이들은 선택적 `--adapter` 플래그를 사용하여 <code><a href="/docs/ko/explanation/bencher-run">bencher run</a></code> CLI 서브커맨드에서 지정할 수 있습니다.
+이들은 선택적 `--adapter` 플래그를 사용하여 <code><a href="/docs/ko/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드에서 지정할 수 있습니다.
 어댑터가 지정되지 않으면, 기본적으로 [the `magic` 어댑터](#-magic-default)가 사용됩니다.
 
 가장 특정한 어댑터를 사용하는 것이 최선입니다.
@@ -67,7 +67,7 @@ Measure 객체는 최대 세 가지 측정치를 포함하는 Metric을 포함�
 - `upper_value`는 `88.88`
 
 만약 BMF JSON이 파일에 저장되어 있다면,
-그 파일 경로를 지정하기 위해 선택적 `--file` 인수를 사용하여 <code><a href="/docs/ko/explanation/bencher-run">bencher run</a></code> CLI 서브커맨드를 사용할 수 있습니다.
+그 파일 경로를 지정하기 위해 선택적 `--file` 인수를 사용하여 <code><a href="/docs/ko/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드를 사용할 수 있습니다.
 이것은 벤치마크 커맨드(ex: `bencher run "bencher mock > results.json" --file results.json`)와 벤치마크 커맨드 없이도 동작합니다(ex: `bencher mock > results.json && bencher run --file results.json`).
 
 <br/>
@@ -87,7 +87,7 @@ C# DotNet 어댑터(`c_sharp_dot_net`)는 [BenchmarkDotNet](https://github.com/d
 - `mean`(기본값): `lower_value`와 `upper_value`는 표준 편차 아래와 평균(즉, `value`) 위로 각각 있습니다.
 - `중앙값`: `lower_value`와 `upper_value`는 중앙값(즉, `value`) 아래와 위의 사분위범위로 각각 있습니다.
 
-이것은 선택적 `--average` flag를 사용하여 <code><a href="/docs/ko/explanation/bencher-run">bencher run</a></code> CLI 서브커맨드에서 지정할 수 있습니다.
+이것은 선택적 `--average` flag를 사용하여 <code><a href="/docs/ko/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드에서 지정할 수 있습니다.
 
 ## ➕ C++
 
@@ -161,7 +161,7 @@ Python Pytest 어댑터(`python_pytest`)는 [pytest-benchmark](https://github.co
 - `mean`(기본값): `lower_value`와 `upper_value`는 표준 편차 아래와 평균(즉, `value`) 위로 각각 있습니다.
 - `중앙값`: `lower_value`와 `upper_value`는 중앙값(즉, `value`) 아래와 위의 사분위범위로 각각 있습니다.
 
-이것은 선택적 `--average` 인자를 사용하여 <code><a href="/docs/ko/explanation/bencher-run">bencher run</a></code> CLI 서브커맨드에서 지정할 수 있습니다.
+이것은 선택적 `--average` 인자를 사용하여 <code><a href="/docs/ko/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드에서 지정할 수 있습니다.
 
 ## ♦️ Ruby
 
@@ -212,7 +212,7 @@ Rust Iai 어댑터(`rust_iai`)는 [Iai](https://github.com/bheisler/iai) 출력�
 - `mean`(기본값): `lower_value`와 `upper_value`는 각각 평균(즉 `value`) 이하와 이상의 표준 편차입니다.
 - `median`: `lower_value`와 `upper_value`는 각각 `min`과 `max` 값입니다.
 
-이것은 선택적인 `--average` 플래그를 사용하여 <code><a href="/docs/ko/explanation/bencher-run">bencher run</a></code> CLI 하위 명령어에 지정할 수 있습니다.
+이것은 선택적인 `--average` 플래그를 사용하여 <code><a href="/docs/ko/explanation/bencher-run/">bencher run</a></code> CLI 하위 명령어에 지정할 수 있습니다.
 
 <br />
 <br />
@@ -221,4 +221,4 @@ Rust Iai 어댑터(`rust_iai`)는 [Iai](https://github.com/bheisler/iai) 출력�
 
 <br/>
 
-<h2><a href="/docs/ko/explanation/thresholds">계속 진행하세요: 임계값 & 알림 ➡</a></h2>
+<h2><a href="/docs/ko/explanation/thresholds/">계속 진행하세요: 임계값 & 알림 ➡</a></h2>

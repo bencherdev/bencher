@@ -68,7 +68,7 @@ const description = () => {
       {
         tutorialCollection[lang]?.map((page) => (
           <li>
-            <a href={`/docs/${langPath(lang)}tutorial/${page.slug}`}>{page.data.heading}</a>
+            <a href={`/docs/${langPath(lang)}tutorial/${page.slug}/`}>{page.data.heading}</a>
           </li>
         ))
       }
@@ -78,7 +78,7 @@ const description = () => {
       {
         howToCollection[lang]?.map((page) => (
           <li>
-            <a href={`/docs/${langPath(lang)}how-to/${page.slug}`}>{page.data.heading}</a>
+            <a href={`/docs/${langPath(lang)}how-to/${page.slug}/`}>{page.data.heading}</a>
           </li>
         ))
       }
@@ -88,7 +88,7 @@ const description = () => {
       {
         explanationCollection[lang]?.map((page) => (
           <li>
-            <a href={`/docs/${langPath(lang)}explanation/${page.slug}`}>{page.data.heading}</a>
+            <a href={`/docs/${langPath(lang)}explanation/${page.slug}/`}>{page.data.heading}</a>
           </li>
         ))
       }
@@ -99,12 +99,12 @@ const description = () => {
         <a href={`/docs/${langPath(lang)}reference/api`}>REST API</a>
       </li>
       <li>
-        <a href={`/docs/${langPath(lang)}reference/architecture`}>{architecture(lang)}</a>
+        <a href={`/docs/${langPath(lang)}reference/architecture/`}>{architecture(lang)}</a>
       </li>
       {
         referenceCollection[lang]?.map((page) => (
           <li>
-            <a href={`/docs/${langPath(lang)}reference/${page.slug}`}>{page.data.heading}</a>
+            <a href={`/docs/${langPath(lang)}reference/${page.slug}/`}>{page.data.heading}</a>
           </li>
         ))
       }

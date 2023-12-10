@@ -8,7 +8,7 @@ sortOrder: 3
 Adapters convert benchmark harness output into standardized JSON, Bencher Metric Format (BMF).
 The adapters run on the API server when a new report is received.
 See the [benchmarking overview](/docs/explanation/benchmarking/) for a more in-depth explanation.
-They can be specified in the <code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI subcommand with the optional `--adapter` flag.
+They can be specified in the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand with the optional `--adapter` flag.
 If no adapter is specified, [the `magic` adapter](#-magic-default) is used by default.
 
 It is best to use the most specific adapter for your use case.
@@ -67,7 +67,7 @@ In this example, the `latency` Measure object contains the following values:
 - An `upper_value` of `88.88`
 
 If the BMF JSON is stored in a file,
-then you can use the <code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI subcommand with the optional `--file` argument to specify that file path.
+then you can use the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand with the optional `--file` argument to specify that file path.
 This works both with a benchmark command (ex: `bencher run "bencher mock > results.json" --file results.json`)
 and without a benchmark command (ex: `bencher mock > results.json && bencher run --file results.json`).
 
@@ -88,7 +88,7 @@ There are two options for the Metric:
 - `mean` (default):  The `lower_value` and `upper_value` are one standard deviation below and above the mean (ie `value`) respectively.
 - `median`: The `lower_value` and `upper_value` are one interquartile range below and above the median (ie `value`) respectively.
 
-This can be specified in the <code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI subcommand with the optional `--average` flag.
+This can be specified in the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand with the optional `--average` flag.
 
 ## ➕ C++
 
@@ -162,7 +162,7 @@ There are two options for the Metric:
 - `mean` (default):  The `lower_value` and `upper_value` are one standard deviation below and above the mean (ie `value`) respectively.
 - `median`: The `lower_value` and `upper_value` are one interquartile range below and above the median (ie `value`) respectively.
 
-This can be specified in the <code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI subcommand with the optional `--average` argument.
+This can be specified in the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand with the optional `--average` argument.
 
 ## ♦️ Ruby
 
@@ -213,7 +213,7 @@ There are two options for the Metric:
 - `mean` (default):  The `lower_value` and `upper_value` are one standard deviation below and above the mean (ie `value`) respectively.
 - `median`: The `lower_value` and `upper_value` are `min` and `max` values respectively.
 
-This can be specified in the <code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI subcommand with the optional `--average` flag.
+This can be specified in the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand with the optional `--average` flag.
 
 
 <br />
@@ -223,4 +223,4 @@ This can be specified in the <code><a href="/docs/explanation/bencher-run">bench
 
 <br/>
 
-<h2><a href="/docs/explanation/thresholds">Keep Going: Thresholds & Alerts ➡</a></h2>
+<h2><a href="/docs/explanation/thresholds/">Keep Going: Thresholds & Alerts ➡</a></h2>

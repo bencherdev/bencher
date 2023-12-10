@@ -10,7 +10,7 @@ sortOrder: 1
 一些基准测试工具让你缓存结果，但大多数只在本地进行。
 Bencher让你可以跟踪你在本地和CI运行中的基准测试，并与历史结果进行对比。
 
-跟踪你的基准测试最简单的方法是使用<code><a href="/docs/zh/explanation/bencher-run">bencher run</a></code> CLI子命令。
+跟踪你的基准测试最简单的方法是使用<code><a href="/docs/zh/explanation/bencher-run/">bencher run</a></code> CLI子命令。
 它包装了你现有的基准测试工具输出并生成一个报告。
 然后将此报告发送到Bencher API服务器，
 在那里通过[a benchmark harness adapter](/docs/zh/explanation/adapters/)解析基准测试工具的输出。
@@ -50,20 +50,20 @@ Bencher让你可以跟踪你在本地和CI运行中的基准测试，并与历�
 
 ## 报告
 报告是特定分支和测试床中的基准测试及其指标的集合。
-报告通常使用<code><a href="/docs/zh/explanation/bencher-run">bencher run</a></code> CLI子命令生成。
+报告通常使用<code><a href="/docs/zh/explanation/bencher-run/">bencher run</a></code> CLI子命令生成。
 请参见[如何跟踪性能回归测试](/docs/zh/how-to/track-benchmarks/)以获得完整的概述。
 
 ### 分支
 分支是运行报告时使用的`git`引用（即分支名或标签）。
 默认情况下，所有的项目都以一个`main`分支开始。
-使用<code><a href="/docs/zh/explanation/bencher-run">bencher run</a></code> CLI子命令时，
+使用<code><a href="/docs/zh/explanation/bencher-run/">bencher run</a></code> CLI子命令时，
 如果未提供一个分支，`main`将是默认的分支。
 请参见[分支选择](/docs/zh/explanation/branch-selection/)以获得完整的概述。
 
 ### 测试床
 测试床是运行报告时使用的测试环境的名称。
 默认情况下，所有的项目都以一个`localhost`测试床开始。
-使用<code><a href="/docs/zh/explanation/bencher-run">bencher run</a></code> CLI子命令时，
+使用<code><a href="/docs/zh/explanation/bencher-run/">bencher run</a></code> CLI子命令时，
 如果未提供一个测试床，`localhost`将是默认的测试床。
 
 <br />
@@ -73,4 +73,4 @@ Bencher让你可以跟踪你在本地和CI运行中的基准测试，并与历�
 
 <br/>
 
-<h2><a href="/docs/zh/explanation/bencher-run">继续学习: <code>bencher run</code> CLI子命令 ➡</a></h2>
+<h2><a href="/docs/zh/explanation/bencher-run/">继续学习: <code>bencher run</code> CLI子命令 ➡</a></h2>

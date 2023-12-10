@@ -21,7 +21,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 7. Optional: Set the `--adapter` flag or the `BENCHER_ADAPTER` environment variable to the desired adapter name.  (ex: `BENCHER_ADAPTER: json`) If this is not set, then the `magic` Adapter will be used. See [benchmark harness adapters](/docs/explanation/adapters/) for a full overview.
 8. Checkout your source code. (ex: `uses: actions/checkout@v3`)
 9.  Install the Bencher CLI using the [GitHub Action](https://github.com/marketplace/actions/bencher-cli). (ex: `uses: bencherdev/bencher@main`)
-10. [Track your benchmarks](/docs/how-to/track-benchmarks/) with the <code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI subcommand:
+10. [Track your benchmarks](/docs/how-to/track-benchmarks/) with the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand:
      1. Optional: Set the `--branch` flag or the `BENCHER_BRANCH` environment variable to the Branch slug or UUID. (ex: `--branch "$GITHUB_REF_NAME"`) This example uses the [GitHub Action default environment variable](https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables) `GITHUB_REF_NAME` to select the branch name. The Branch **must** already exist. If this is not set, then the `main` Branch will be used.
     2. The API token must already exist. Add `BENCHER_API_TOKEN` as a **Repository** secret. (ex: `Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`) Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable to the API token. (ex: `--token ${{ secrets.BENCHER_API_TOKEN }}`)
     3.  Set the command to fail if an Alert is generated. (ex: `--err`) In order for an Alert to be generated, a [Threshold](/docs/explanation/thresholds/) must already exist.
@@ -141,4 +141,4 @@ on preventing pwn requests for a full overview.
 
 <br/>
 
-<h2><a href="/docs/explanation/benchmarking">Keep Going: Benchmarking Overview ➡</a></h2>
+<h2><a href="/docs/explanation/benchmarking/">Keep Going: Benchmarking Overview ➡</a></h2>

@@ -21,27 +21,27 @@ const Footer = () => (
 							<div class="level-left">
 								<div class="level-item has-text-centered">
 									<p>
-										<a href="/docs">Docs</a>
+										<a href="/docs/">Docs</a>
 									</p>
 								</div>
 								<div class="level-item has-text-centered">
 									<p>
-										<a href="/pricing">Pricing</a>
+										<a href="/pricing/">Pricing</a>
 									</p>
 								</div>
 								<div class="level-item has-text-centered">
 									<p>
-										<a href="/help">Help</a>
+										<a href="/help/">Help</a>
 									</p>
 								</div>
 								<div class="level-item has-text-centered">
 									<p>
-										<a href="/learn">Learn</a>
+										<a href="/learn/">Learn</a>
 									</p>
 								</div>
 								<div class="level-item has-text-centered">
 									<p>
-										<a href="/legal">Legal</a>
+										<a href="/legal/">Legal</a>
 									</p>
 								</div>
 								<div class="level-item has-text-centered">
@@ -55,17 +55,17 @@ const Footer = () => (
 							<div class="level-left">
 								<div class="level-item has-text-centered">
 									<p>
-										<a href="/legal/terms-of-use">Terms of Use</a>
+										<a href="/legal/terms-of-use/">Terms of Use</a>
 									</p>
 								</div>
 								<div class="level-item has-text-centered">
 									<p>
-										<a href="/legal/privacy">Privacy Policy</a>
+										<a href="/legal/privacy/">Privacy Policy</a>
 									</p>
 								</div>
 								<div class="level-item has-text-centered">
 									<p>
-										<a href="/legal/license">License Agreement</a>
+										<a href="/legal/license/">License Agreement</a>
 									</p>
 								</div>
 							</div>

@@ -66,7 +66,7 @@ Z-分数测量一个度量值与历史度量值的平均值相差多少个[标�
 
 每个度量值（如果存在）都会根据阈值的统计显著性边界进行检查。这可能包括下界、上界或两者。每个边界都会计算一个边界限。然后将此边界限与当前度量值进行比较。如果该度量值落在边界限之外，将生成一个警报。
 
-> 🐰 提示：如果要在边界被违反时失败CI构建，使用`--err`标志配合<code><a href="/docs/zh/explanation/bencher-run">bencher run</a></code> CLI子命令。
+> 🐰 提示：如果要在边界被违反时失败CI构建，使用`--err`标志配合<code><a href="/docs/zh/explanation/bencher-run/">bencher run</a></code> CLI子命令。
 
 ### 下界
 可以为阈值设置下界。 它在较小的值代表性能退化时使用，比如在吞吐度量类型下。其值必须在 `0.5` 和 `1.0` 之间。
@@ -90,7 +90,7 @@ Z-分数测量一个度量值与历史度量值的平均值相差多少个[标�
 可以为阈值设置以秒为单位的窗口大小。 对于其统计显著性测试，阈值将仅限制最近的历史度量值，其时间不超过给定时间窗口范围。
 
 ## 警报
-当度量值低于阈值的下界限制或高于阈值的上界限制时，将生成警报。在警报事件中如果要中断CI构建，使用`--err`标志配合<code><a href="/docs/zh/explanation/bencher-run">bencher run</a></code> CLI子命令。
+当度量值低于阈值的下界限制或高于阈值的上界限制时，将生成警报。在警报事件中如果要中断CI构建，使用`--err`标志配合<code><a href="/docs/zh/explanation/bencher-run/">bencher run</a></code> CLI子命令。
 
 ### 禁止警报
 有时候你可能希望针对某个基准测试禁止警报。 最好的方法是在该基准测试的名称后面添加以下特殊后缀之一：
@@ -108,4 +108,4 @@ Z-分数测量一个度量值与历史度量值的平均值相差多少个[标�
 
 <br/>
 
-<h2><a href="/docs/zh/explanation/continuous-benchmarking">继续阅读：持续基准测试➡</a></h2>
+<h2><a href="/docs/zh/explanation/continuous-benchmarking/">继续阅读：持续基准测试➡</a></h2>

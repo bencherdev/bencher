@@ -8,7 +8,7 @@ sortOrder: 3
 アダプターは、ベンチマークハーネスの出力を標準化されたJSON、Bencherメトリックフォーマット（BMF）に変換します。
 アダプターは、新しいレポートが受け取られたときにAPIサーバー上で実行されます。
 より深い説明のために、[ベンチマークの概観](/docs/ja/explanation/benchmarking/)を参照してください。
-それらは、オプションの`--adapter`フラグを使用した<code><a href="/docs/ja/explanation/bencher-run">bencher run</a></code> CLIサブコマンドで指定できます。
+それらは、オプションの`--adapter`フラグを使用した<code><a href="/docs/ja/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドで指定できます。
 アダプターが指定されていない場合、デフォルトで[the `magic` アダプター](#-magic-default)が使用されます。
 
 最も具体的なアダプターを使用することが最良です。
@@ -63,7 +63,7 @@ Measure オブジェクトには、最大3つの測定値が含まれていま�
 - `lower_value`が`87.42`
 - `upper_value`が`88.88`
 
-もしBMF JSONがファイルに保存されているなら、そのファイルのパスを指定するためにオプションの`--file`引数を付けた<code><a href="/docs/ja/explanation/bencher-run">bencher run</a></code> CLIサブコマンドを使用できます。
+もしBMF JSONがファイルに保存されているなら、そのファイルのパスを指定するためにオプションの`--file`引数を付けた<code><a href="/docs/ja/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用できます。
 ベンチマークコマンドにも（例：`bencher run "bencher mock > results.json" --file results.json`）、ベンチマークコマンドなしにも（例：`bencher mock > results.json && bencher run --file results.json`）対応します。
 
 <br/>
@@ -83,7 +83,7 @@ Metricには2つのオプションがあります：
 - `mean`（デフォルト）:  `lower_value`と`upper_value`は、平均值（つまり `value`）の下と上の1標準偏差です。
 - `median`: `lower_value`と`upper_value`は、中央値（つまり `value`）の下と上のインターコーティルレンジです。
 
-これは、オプションの`--average`フラグを使用した<code><a href="/docs/ja/explanation/bencher-run">bencher run</a></code> CLIサブコマンドで指定できます。
+これは、オプションの`--average`フラグを使用した<code><a href="/docs/ja/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドで指定できます。
 
 ## ➕ C++
 
@@ -157,7 +157,7 @@ Metricには2つのオプションがあります：
 - `mean`（デフォルト）:  `lower_value`と`upper_value`は、平均値（つまり `value`）の下と上の1標準偏差です。
 - `median`: `lower_value`と`upper_value`は、中央値（つまり `value`）の下と上のインターコーティルレンジです。
 
-これは、オプションの`--average`引数を持つ<code><a href="/docs/ja/explanation/bencher-run">bencher run</a></code> CLIサブコマンドで指定できます。
+これは、オプションの`--average`引数を持つ<code><a href="/docs/ja/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドで指定できます。
 
 ## ♦️ Ruby
 
@@ -208,7 +208,7 @@ Rust Iaiアダプター(`rust_iai`)は、[Iai](https://github.com/bheisler/iai)�
 - `mean` （デフォルト）： `lower_value` と `upper_value` は平均（つまり `value`）の1標準偏差以下と以上です。
 - `median`： `lower_value` と `upper_value` はそれぞれ `min` と `max` の値です。
 
-これは <code><a href="/docs/ja/explanation/bencher-run">bencher run</a></code> CLI サブコマンドでオプショナルな `--average` フラグで指定できます。
+これは <code><a href="/docs/ja/explanation/bencher-run/">bencher run</a></code> CLI サブコマンドでオプショナルな `--average` フラグで指定できます。
 
 <br />
 <br />
@@ -217,4 +217,4 @@ Rust Iaiアダプター(`rust_iai`)は、[Iai](https://github.com/bheisler/iai)�
 
 <br/>
 
-<h2><a href="/docs/ja/explanation/thresholds">次へ進む: 閾値 & アラート ➡</a></h2>
+<h2><a href="/docs/ja/explanation/thresholds/">次へ進む: 閾値 & アラート ➡</a></h2>

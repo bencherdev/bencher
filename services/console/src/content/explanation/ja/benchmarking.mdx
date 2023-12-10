@@ -10,7 +10,7 @@ sortOrder: 1
 一部のベンチマークハーネスは結果をキャッシュすることを許可していますが、ほとんどはローカル内でしかそうしません。
 Bencherでは、ローカルとCIの両方からベンチマークを追跡し、歴史的な結果と比較することができます。
 
-ベンチマークを追跡する最も簡単な方法は、<code><a href="/docs/ja/explanation/bencher-run">bencher run</a></code> CLIサブコマンドです。
+ベンチマークを追跡する最も簡単な方法は、<code><a href="/docs/ja/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドです。
 これは既存のベンチマークハーネスの出力を包み込んでレポートを生成します。
 このレポートはその後Bencher APIサーバーに送られ、
 ここでベンチマークハーネスの出力は[ベンチマークハーネスアダプター](/docs/ja/explanation/adapters/)を用いて解析されます。
@@ -49,20 +49,20 @@ Bencher上のベンチマークの名前を手動で新しい名前に変更す�
 
 ## レポート
 レポートとは、特定のBranchとTestbedにおけるベンチマークとそのメトリクスの集合です。
-レポートは主に<code><a href="/docs/ja/explanation/bencher-run">bencher run</a></code> CLIサブコマンドを使用して生成されます。
+レポートは主に<code><a href="/docs/ja/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用して生成されます。
 完全な概要については[パフォーマンスリグレッションテストの追跡方法](/docs/ja/how-to/track-benchmarks/)を参照してください。
 
 ### Branch
 Branchとは、レポートを実行する際に使用される`git` ref（つまり、ブランチ名やタグ）です。
 デフォルトでは全てのプロジェクトは`main` Branchからスタートします。
-<code><a href="/docs/ja/explanation/bencher-run">bencher run</a></code> CLIサブコマンドを使用する際に、
+<code><a href="/docs/ja/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用する際に、
 提供されていない場合は`main`がデフォルトのBranchとなります。
 完全な概要については[branch選択](/docs/ja/explanation/branch-selection/)を参照してください。
 
 ### Testbed
 Testbedとは、レポートを実行する際に使用されるテスト環境の名前です。
 デフォルトでは全てのプロジェクトは`localhost` Testbedからスタートします。
-<code><a href="/docs/ja/explanation/bencher-run">bencher run</a></code> CLIサブコマンドを使用する際に、
+<code><a href="/docs/ja/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用する際に、
 提供されていない場合は`localhost`がデフォルトのTestbedとなります。
 
 <br />
@@ -72,4 +72,4 @@ Testbedとは、レポートを実行する際に使用されるテスト環境�
 
 <br/>
 
-<h2><a href="/docs/ja/explanation/bencher-run">続けて学ぶ: <code>bencher run</code> CLIサブコマンド ➡</a></h2>
+<h2><a href="/docs/ja/explanation/bencher-run/">続けて学ぶ: <code>bencher run</code> CLIサブコマンド ➡</a></h2>

@@ -10,7 +10,7 @@ sortOrder: 1
 일부 벤치마크 하네스는 결과를 캐시할 수 있게 해주지만, 대부분은 로컬에서만 가능합니다.
 Bencher는 로컬 및 CI 실행에서 벤치마크를 추적하고 이를 히스토리와 비교할 수 있게 해줍니다.
 
-벤치마크를 추적하는 가장 쉬운 방법은 <code><a href="/docs/ko/explanation/bencher-run">bencher run</a></code> CLI 서브커맨드입니다.
+벤치마크를 추적하는 가장 쉬운 방법은 <code><a href="/docs/ko/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드입니다.
 이는 기존 벤치마크 하네스 출력을 래핑하고 보고서를 생성합니다.
 이 보고서는 Bencher API 서버로 전송되어, [벤치마크 하네스 어댑터](/docs/ko/explanation/adapters/)를 사용해 벤치마크 하네스 출력을 파싱합니다.
 벤치마크 하네스 어댑터는 존재하는 모든 벤치마킹과 이에 대응하는 메트릭을 감지합니다.
@@ -49,20 +49,20 @@ Bencher는 로컬 및 CI 실행에서 벤치마크를 추적하고 이를 히스
 
 ## 보고서
 보고서는 특정 브랜치와 테스트베드에 대한 벤치마크와 그들의 메트릭 모음입니다.
-보고서는 대부분 <code><a href="/docs/ko/explanation/bencher-run">bencher run</a></code> CLI 서브커맨드를 사용해 생성됩니다.
+보고서는 대부분 <code><a href="/docs/ko/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드를 사용해 생성됩니다.
 전체 개요는 [성능 회귀 테스트 추적하는 방법](/docs/ko/how-to/track-benchmarks/)을 참조하세요.
 
 ### 브랜치
 브랜치는 보고서를 실행할 때 사용되는 `git` ref(즉, 브랜치 이름 또는 태그)입니다.
 기본적으로 모든 프로젝트는 `main` 브랜치로 시작합니다.
-<code><a href="/docs/ko/explanation/bencher-run">bencher run</a></code> CLI 서브커맨드를 사용하면,
+<code><a href="/docs/ko/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드를 사용하면,
 제공되지 않는 경우 `main`이 기본 브랜치입니다.
 전체 개요는 [브랜치 선택](/docs/ko/explanation/branch-selection/)을 참조하세요.
 
 ### 테스트베드
 테스트베드는 보고서를 실행할 때 사용되는 테스팅 환경의 이름입니다.
 기본적으로 모든 프로젝트는 `localhost` 테스트베드로 시작합니다.
-<code><a href="/docs/ko/explanation/bencher-run">bencher run</a></code> CLI 서브커맨드를 사용할 때,
+<code><a href="/docs/ko/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드를 사용할 때,
 제공되지 않는 경우 `localhost`가 기본 테스트베드입니다.
 
 <br />
@@ -72,4 +72,4 @@ Bencher는 로컬 및 CI 실행에서 벤치마크를 추적하고 이를 히스
 
 <br/>
 
-<h2><a href="/docs/ko/explanation/bencher-run">계속 진행: <code>bencher run</code> CLI 서브커맨드 ➡</a></h2>
+<h2><a href="/docs/ko/explanation/bencher-run/">계속 진행: <code>bencher run</code> CLI 서브커맨드 ➡</a></h2>

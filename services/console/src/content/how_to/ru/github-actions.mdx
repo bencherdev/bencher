@@ -21,7 +21,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 7. Необязательно: Установите флаг `--adapter` или переменную окружения `BENCHER_ADAPTER` для желаемого имени адаптера.  (например: `BENCHER_ADAPTER: json`) Если это не задано, то будет использован адаптер `magic`. Смотрите обзор адаптеров для бенчмаркования [здесь](/docs/ru/explanation/adapters/).
 8. Выполните checkout вашего исходного кода. (например: `uses: actions/checkout@v3`)
 9.  Установите CLI Bencher с помощью [GitHub Action](https://github.com/marketplace/actions/bencher-cli). (например: `uses: bencherdev/bencher@main`)
-10. [Отслеживайте ваш бенчмарк](/docs/ru/how-to/track-benchmarks/) с помощью подкоманды CLI <code><a href="/docs/ru/explanation/bencher-run">bencher run</a></code>:
+10. [Отслеживайте ваш бенчмарк](/docs/ru/how-to/track-benchmarks/) с помощью подкоманды CLI <code><a href="/docs/ru/explanation/bencher-run/">bencher run</a></code>:
     1.  Необязательно: Установите флаг `--branch` или переменную окружения `BENCHER_BRANCH` для slug или UUID ветки. (например: `--branch main`) Ветка **должна** уже существовать. Если это не задано, то будет использована ветка `main`.
     2. API-токен уже должен существовать. Добавьте `BENCHER_API_TOKEN` как секрет **Репозитория**. (например: `Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`) Установите флаг `--token` или переменную окружения `BENCHER_API_TOKEN` для API-токена. (например: `--token ${{ secrets.BENCHER_API_TOKEN }}`)
     3.  Установите команду для генерации ошибки, если сгенерировано оповещение. (например: `--err`) Чтобы было сгенерировано оповещение, должен уже существовать [Threshold](/docs/ru/explanation/thresholds/).
@@ -141,4 +141,4 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 
 <br/>
 
-<h2><a href="/docs/ru/explanation/benchmarking">Продолжить: Обзор Бенчмаркинга ➡</a></h2>
+<h2><a href="/docs/ru/explanation/benchmarking/">Продолжить: Обзор Бенчмаркинга ➡</a></h2>

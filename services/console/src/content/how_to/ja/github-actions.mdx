@@ -21,7 +21,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 7. オプション：`--adapter`フラグを設定するか、`BENCHER_ADAPTER`環境変数を希望のアダプター名に設定します（例：`BENCHER_ADAPTER: json`）。これが設定されていない場合、`magic`のアダプターが使用されます。詳細は、[ベンチマークハーネスアダプター](/docs/ja/explanation/adapters/)をご覧ください。
 8. ソースコードをチェックアウトします（例：`uses: actions/checkout@v3`）。
 9. [GitHub Action](https://github.com/marketplace/actions/bencher-cli)を使用してBencher CLIをインストールします（例：`uses: bencherdev/bencher@main`）。
-10. <code><a href="/docs/ja/explanation/bencher-run">bencher run</a></code> CLIのサブコマンドを使用して[ベンチマークを追跡します](/docs/ja/how-to/track-benchmarks/)：
+10. <code><a href="/docs/ja/explanation/bencher-run/">bencher run</a></code> CLIのサブコマンドを使用して[ベンチマークを追跡します](/docs/ja/how-to/track-benchmarks/)：
     1.  オプション：`--branch`フラグを設定するか、`BENCHER_BRANCH`環境変数をBranchのスラッグまたはUUIDに設定します（例：`--branch main`）。Branchは**必ず**すでに存在している必要があります。これが設定されていない場合、`main`のBranchが使用されます。
     2. APIトークンはすでに存在している必要があります。`BENCHER_API_TOKEN`を**リポジトリ**の秘密として追加します（例：`Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`）。 `--token`フラグを設定するか、`BENCHER_API_TOKEN`環境変数をAPIトークンに設定します（例：`--token ${{ secrets.BENCHER_API_TOKEN }}`）。
     3.  アラートが生成された場合にコマンドを失敗させるよう設定します（例：`--err`）。アラートが生成されるためには、[閾値](/docs/ja/explanation/thresholds/)がすでに存在している必要があります。
@@ -131,4 +131,4 @@ PRのブランチ名（head ref）を**シングル**引用符で囲むことが
 
 <br/>
 
-<h2><a href="/docs/ja/explanation/benchmarking">次に進む：ベンチマーキングの概要 ➡</a></h2>
+<h2><a href="/docs/ja/explanation/benchmarking/">次に進む：ベンチマーキングの概要 ➡</a></h2>

@@ -21,7 +21,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 7. 선택 사항: 원하는 어댑터 이름으로 `--adapter' 플래그를 설정하거나 `BENCHER_ADAPTER` 환경 변수를 설정합니다.  (예: `BENCHER_ADAPTER: json`) 이 값이 설정되지 않으면 `magic` 어댑터가 사용됩니다. 전체 개요는 [벤치마킹 하네스 어댑터](/docs/ko/explanation/adapters/)를 참조하세요.
 8. 소스 코드를 체크아웃합니다. (예: `uses: actions/checkout@v3`)
 9. [GitHub Action](https://github.com/marketplace/actions/bencher-cli)을 사용하여 Bencher CLI를 설치합니다. (예: `uses: bencherdev/bencher@main`)
-10. <code><a href="/docs/ko/explanation/bencher-run">bencher run</a></code> CLI 하위 명령을 사용하여 [벤치마크를 추적](/docs/ko/how-to/track-benchmarks/)합니다:
+10. <code><a href="/docs/ko/explanation/bencher-run/">bencher run</a></code> CLI 하위 명령을 사용하여 [벤치마크를 추적](/docs/ko/how-to/track-benchmarks/)합니다:
     1.  선택 사항: `--branch` 플래그를 설정하거나 `BENCHER_BRANCH` 환경 변수를 Branch slug 또는 UUID로 설정합니다. (예: `--branch main`) Branch는 반드시 존재해야 합니다. 이 값이 설정되지 않으면 `main` Branch가 사용됩니다.
     2. API 토큰은 반드시 존재해야 합니다.  `BENCHER_API_TOKEN`을 **Repository** 비밀로 추가합니다. (예: `Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`) `--token` 플래그를 설정하거나 `BENCHER_API_TOKEN` 환경 변수를 API 토큰으로 설정합니다. (예: `--token ${{ secrets.BENCHER_API_TOKEN }}`)
     3.  Alert이 생성될 경우 명령이 실패하도록 설정합니다. (예: `--err`) Alert이 생성되려면 [Threshold](/docs/ko/explanation/thresholds/)가 이미 존재해야 합니다.
@@ -138,4 +138,4 @@ and [이 블로그 글](https://nathandavison.com/blog/github-actions-and-the-th
 
 <br/>
 
-<h2><a href="/docs/ko/explanation/benchmarking">계속 진행하기: 벤치마킹 개요 ➡</a></h2>
+<h2><a href="/docs/ko/explanation/benchmarking/">계속 진행하기: 벤치마킹 개요 ➡</a></h2>

@@ -1,5 +1,5 @@
 <h1>
-  <a href="https://bencher.dev">
+  <a href="https://bencher.dev/">
     <img
       src="https://bencher.dev/favicon.svg"
       alt="🐰 Bencher"
@@ -9,7 +9,7 @@
   Bencher
 </h1>
 
-[Bencher](https://bencher.dev) is a suite of [continuous benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking) tools.
+[Bencher](https://bencher.dev/) is a suite of [continuous benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking/) tools.
 Have you ever had a performance regression impact your users?
 Bencher could have prevented that from happening.
 Bencher allows you to detect and prevent performance regressions _before_ they hit production.
@@ -30,9 +30,9 @@ Bencher consists of:
 
 <br />
 
-The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tutorial/quick-start) tutorial.
+The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tutorial/quick-start/) tutorial.
 
-Though Bencher is open source, there is also a hosted version available [Bencher Cloud](https://bencher.dev).
+Though Bencher is open source, there is also a hosted version available [Bencher Cloud](https://bencher.dev/).
 
 <br />
 <p align="center">
@@ -49,28 +49,28 @@ Though Bencher is open source, there is also a hosted version available [Bencher
 ## Documentation
 
 - Tutorial
-  - [Quick Start](https://bencher.dev/docs/tutorial/quick-start)
-  - [Docker](https://bencher.dev/docs/tutorial/docker)
+  - [Quick Start](https://bencher.dev/docs/tutorial/quick-start/)
+  - [Docker](https://bencher.dev/docs/tutorial/docker/)
 - How To
-  - [Install CLI](https://bencher.dev/docs/how-to/install-cli)
-  - [Track Benchmarks](https://bencher.dev/docs/how-to/track-benchmarks)
-  - [GitHub Actions](https://bencher.dev/docs/how-to/github-actions)
-  - [GitLab CI/CD](https://bencher.dev/docs/how-to/gitlab-ci-cd)
+  - [Install CLI](https://bencher.dev/docs/how-to/install-cli/)
+  - [Track Benchmarks](https://bencher.dev/docs/how-to/track-benchmarks/)
+  - [GitHub Actions](https://bencher.dev/docs/how-to/github-actions/)
+  - [GitLab CI/CD](https://bencher.dev/docs/how-to/gitlab-ci-cd/)
 - Explanation
-  - [Benchmarking Overview](https://bencher.dev/docs/explanation/benchmarking)
-  - [`bencher run`](https://bencher.dev/docs/explanation/bencher-run)
-  - [Benchmark Adapters](https://bencher.dev/docs/explanation/adapters)
-  - [Branch Selection](https://bencher.dev/docs/explanation/branch-selection)
-  - [Thresholds & Alerts](https://bencher.dev/docs/explanation/thresholds)
-  - [Continuous Benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking)
-  - [Talks](https://bencher.dev/docs/explanation/talks)
+  - [Benchmarking Overview](https://bencher.dev/docs/explanation/benchmarking/)
+  - [`bencher run`](https://bencher.dev/docs/explanation/bencher-run/)
+  - [Benchmark Adapters](https://bencher.dev/docs/explanation/adapters/)
+  - [Branch Selection](https://bencher.dev/docs/explanation/branch-selection/)
+  - [Thresholds & Alerts](https://bencher.dev/docs/explanation/thresholds/)
+  - [Continuous Benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking/)
+  - [Talks](https://bencher.dev/docs/explanation/talks/)
 - Reference
-  - [REST API](https://bencher.dev/docs/reference/api)
-  - [Architecture](https://bencher.dev/docs/reference/architecture)
-  - [Server Config](https://bencher.dev/docs/reference/server-config)
-  - [Prior Art](https://bencher.dev/docs/reference/prior-art)
-  - [Roadmap](https://bencher.dev/docs/reference/roadmap)
-  - [Changelog](https://bencher.dev/docs/reference/changelog)
+  - [REST API](https://bencher.dev/docs/reference/api/)
+  - [Architecture](https://bencher.dev/docs/reference/architecture/)
+  - [Server Config](https://bencher.dev/docs/reference/server-config/)
+  - [Prior Art](https://bencher.dev/docs/reference/prior-art/)
+  - [Roadmap](https://bencher.dev/docs/reference/roadmap/)
+  - [Changelog](https://bencher.dev/docs/reference/changelog/)
 
 🌐 Also available in:
 
@@ -86,37 +86,37 @@ Though Bencher is open source, there is also a hosted version available [Bencher
 ## Supported Benchmark Harnesses
 
 - {...} JSON
-  - [Custom benchmark harness support](https://bencher.dev/docs/explanation/adapters#-json)
+  - [Custom benchmark harness support](https://bencher.dev/docs/explanation/adapters/#-json)
 - #️⃣ C#
   - [BenchmarkDotNet](https://bencher.dev/docs/explanation/adapters/#%EF%B8%8F%E2%83%A3-c-dotnet)
 - ➕ C++
-  - [Catch2](https://bencher.dev/docs/explanation/adapters#-c-catch2)
-  - [Google Benchmark](https://bencher.dev/docs/explanation/adapters#-c-google)
+  - [Catch2](https://bencher.dev/docs/explanation/adapters/#-c-catch2)
+  - [Google Benchmark](https://bencher.dev/docs/explanation/adapters/#-c-google)
 - 🕳 Go
-  - [go test -bench](https://bencher.dev/docs/explanation/adapters#-go-bench)
+  - [go test -bench](https://bencher.dev/docs/explanation/adapters/#-go-bench)
 - ☕️ Java
   - [Java Microbenchmark Harness (JMH)](https://bencher.dev/docs/explanation/adapters/#%EF%B8%8F-java-jmh)
 - 🕸 JavaScript
-  - [Benchmark.js](https://bencher.dev/docs/explanation/adapters#-javascript-benchmark)
-  - [console.time/console.timeEnd](https://bencher.dev/docs/explanation/adapters#-javascript-time)
+  - [Benchmark.js](https://bencher.dev/docs/explanation/adapters/#-javascript-benchmark)
+  - [console.time/console.timeEnd](https://bencher.dev/docs/explanation/adapters/#-javascript-time)
 - 🐍 Python
-  - [airspeed velocity](https://bencher.dev/docs/explanation/adapters#-python-asv)
-  - [pytest-benchmark](https://bencher.dev/docs/explanation/adapters#-python-pytest)
+  - [airspeed velocity](https://bencher.dev/docs/explanation/adapters/#-python-asv)
+  - [pytest-benchmark](https://bencher.dev/docs/explanation/adapters/#-python-pytest)
 - ♦️ Ruby
   - [Benchmark](https://bencher.dev/docs/explanation/adapters/#%EF%B8%8F-ruby-benchmark)
 - 🦀 Rust
-  - [libtest bench](https://bencher.dev/docs/explanation/adapters#-rust-bench)
-  - [Criterion](https://bencher.dev/docs/explanation/adapters#-rust-criterion)
-  - [Iai](https://bencher.dev/docs/explanation/adapters#-rust-iai)
+  - [libtest bench](https://bencher.dev/docs/explanation/adapters/#-rust-bench)
+  - [Criterion](https://bencher.dev/docs/explanation/adapters/#-rust-criterion)
+  - [Iai](https://bencher.dev/docs/explanation/adapters/#-rust-iai)
 - ❯_ Shell
   - [Hyperfine](https://bencher.dev/docs/explanation/adapters/#_%EF%B8%8F-shell-hyperfine)
 
-👉 For more details see the [explanation of benchmark harness adapters](https://bencher.dev/docs/explanation/adapters).
+👉 For more details see the [explanation of benchmark harness adapters](https://bencher.dev/docs/explanation/adapters/).
 
 ## GitHub Actions
 
 Install the Bencher CLI using the [GitHub Action](https://github.com/marketplace/actions/bencher-cli),
-and use it for [continuous benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking) in your project.
+and use it for [continuous benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking/) in your project.
 
 ```yaml
 name: Continuous Benchmarking with Bencher
@@ -136,7 +136,7 @@ jobs:
       - run: bencher run "bencher mock"
 ```
 
-👉 For more details see the [explanation of how to use GitHub Actions](https://bencher.dev/docs/how-to/github-actions).
+👉 For more details see the [explanation of how to use GitHub Actions](https://bencher.dev/docs/how-to/github-actions/).
 
 ### Repository Secrets
 
@@ -145,7 +145,7 @@ Add `BENCHER_API_TOKEN` to you **Repository** secrets (ex: `Repo -> Settings -> 
 ### Error on Alert
 
 You can set the `bencher run` CLI subcommand to error
-if [an Alert is generated](https://bencher.dev/docs/explanation/thresholds) with the `--err` flag.
+if [an Alert is generated](https://bencher.dev/docs/explanation/thresholds/) with the `--err` flag.
 
 ```bash
 bencher run --err "bencher mock"
@@ -161,7 +161,7 @@ You can set the `bencher run` CLI subcommand to comment on a PR with the `--gith
 bencher run --github-actions "${{ secrets.GITHUB_TOKEN }}" "bencher mock"
 ```
 
-👉 For more details see the [explanation of `bencher run`](https://bencher.dev/docs/explanation/bencher-run/#--github-actions).
+👉 For more details see the [explanation of `bencher run`](https://bencher.dev/docs/explanation/bencher-run/#--github-actions/).
 
 ### Example PR Comment
 
