@@ -18,13 +18,13 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 3. GitHub Actions `job`을 생성합니다. (예: `benchmark_with_bencher`)
 4. 프로젝트는 이미 존재해야 합니다. `--project` 플래그를 설정하거나 `BENCHER_PROJECT` 환경 변수를 프로젝트 slug 또는 UUID로 설정합니다. (예: `BENCHER_PROJECT: save-walter-white`)
 6. 선택 사항: `--testbed` 플래그를 설정하거나 `BENCHER_TESTBED` 환경 변수를 Testbed slug 또는 UUID로 설정합니다.  (예: `BENCHER_TESTBED: ubuntu-latest`) Testbed는 반드시 존재해야 합니다. 이 값이 설정되지 않으면 `localhost` Testbed가 사용됩니다.
-7. 선택 사항: 원하는 어댑터 이름으로 `--adapter' 플래그를 설정하거나 `BENCHER_ADAPTER` 환경 변수를 설정합니다.  (예: `BENCHER_ADAPTER: json`) 이 값이 설정되지 않으면 `magic` 어댑터가 사용됩니다. 전체 개요는 [벤치마킹 하네스 어댑터](/docs/ko/explanation/adapters/)를 참조하세요.
+7. 선택 사항: 원하는 어댑터 이름으로 `--adapter' 플래그를 설정하거나 `BENCHER_ADAPTER` 환경 변수를 설정합니다.  (예: `BENCHER_ADAPTER: json`) 이 값이 설정되지 않으면 `magic` 어댑터가 사용됩니다. 전체 개요는 [벤치마킹 하네스 어댑터](/ko/docs/explanation/adapters/)를 참조하세요.
 8. 소스 코드를 체크아웃합니다. (예: `uses: actions/checkout@v3`)
 9. [GitHub Action](https://github.com/marketplace/actions/bencher-cli)을 사용하여 Bencher CLI를 설치합니다. (예: `uses: bencherdev/bencher@main`)
-10. <code><a href="/docs/ko/explanation/bencher-run/">bencher run</a></code> CLI 하위 명령을 사용하여 [벤치마크를 추적](/docs/ko/how-to/track-benchmarks/)합니다:
+10. <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 하위 명령을 사용하여 [벤치마크를 추적](/ko/docs/how-to/track-benchmarks/)합니다:
     1.  선택 사항: `--branch` 플래그를 설정하거나 `BENCHER_BRANCH` 환경 변수를 Branch slug 또는 UUID로 설정합니다. (예: `--branch main`) Branch는 반드시 존재해야 합니다. 이 값이 설정되지 않으면 `main` Branch가 사용됩니다.
     2. API 토큰은 반드시 존재해야 합니다.  `BENCHER_API_TOKEN`을 **Repository** 비밀로 추가합니다. (예: `Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`) `--token` 플래그를 설정하거나 `BENCHER_API_TOKEN` 환경 변수를 API 토큰으로 설정합니다. (예: `--token ${{ secrets.BENCHER_API_TOKEN }}`)
-    3.  Alert이 생성될 경우 명령이 실패하도록 설정합니다. (예: `--err`) Alert이 생성되려면 [Threshold](/docs/ko/explanation/thresholds/)가 이미 존재해야 합니다.
+    3.  Alert이 생성될 경우 명령이 실패하도록 설정합니다. (예: `--err`) Alert이 생성되려면 [Threshold](/ko/docs/explanation/thresholds/)가 이미 존재해야 합니다.
     4.  벤치마크를 실행하고 결과에서 보고서를 생성합니다. (예: `"bencher mock"`)
 
 <br/>
@@ -41,12 +41,12 @@ PR이 동일 **레파지토리** 내의 브랜치에서만 예상된다면 위�
 
 1. GitHub Actions `workflow` 파일을 생성합니다. (예: `.github/workflows/pr_benchmarks.yml`)
 2. pull request가 동일한 저장소에서 온 경우에만 `pull_request` 이벤트에서 실행하십시오. Fork PRs를 처리하는 방법은 아래의 [Fork에서의 Pull Requests](#pull-requests-from-forks)를 참조하십시오.
-3. 사용할 [브랜치를 선택](http://localhost:3000/docs/ko/explanation/branch-selection/)하십시오:
+3. 사용할 [브랜치를 선택](http://localhost:3000/ko/docs/explanation/branch-selection/)하십시오:
         1. 이미 존재하는 현재 브랜치 데이터를 사용합니다. (예: `--if-branch "$GITHUB_REF_NAME"`)
         2. 이미 존재하는 PR 타겟 브랜치 데이터와 임계값의 복제본을 생성합니다. (예: `--else-if-branch "$GITHUB_BASE_REF"`)
         3. 그렇지 않으면, `main` 브랜치 데이터와 임계값의 복제본을 생성합니다. (예: `--else-if-branch main`)
 4. GitHub API 인증 토큰을 설정합니다. (예: `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) 이 옵션이 pull request의 일부로 설정되면, 결과가 pull request에 댓글로 추가됩니다. 이는 [GitHub Actions의 `GITHUB_TOKEN` 환경 변수](https://docs.github.com/ja/actions/security-guides/automatic-token-authentication)를 사용합니다.
-5. 모든 방법을 통해 pull request 댓글을 `--ci-*` 플래그로 설정하는 방법에 대한 전체 개요는 [bencher run](/docs/ko/explanation/bencher-run/) 문서를 참조하십시오.
+5. 모든 방법을 통해 pull request 댓글을 `--ci-*` 플래그로 설정하는 방법에 대한 전체 개요는 [bencher run](/ko/docs/explanation/bencher-run/) 문서를 참조하십시오.
 6. (표시되지 않음) 두 번째 GitHub Actions `workflow` 파일을 생성하고 위의 초기 예제를 사용하여 `main` 브랜치로 `push` 이벤트에서 실행하십시오. (예: `.github/workflows/benchmarks.yml`)
 
 ## Forks에서의 Pull Requests
@@ -138,4 +138,4 @@ and [이 블로그 글](https://nathandavison.com/blog/github-actions-and-the-th
 
 <br/>
 
-<h2><a href="/docs/ko/explanation/benchmarking/">계속 진행하기: 벤치마킹 개요 ➡</a></h2>
+<h2><a href="/ko/docs/explanation/benchmarking/">계속 진행하기: 벤치마킹 개요 ➡</a></h2>

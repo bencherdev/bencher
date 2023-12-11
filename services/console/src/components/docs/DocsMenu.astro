@@ -53,13 +53,13 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
       <li id={DocsTab.Learn} class={tabClass(DocsTab.Learn, tab)}><a>Learn</a></li>
     </ul>
   </div>
-  <div id={DocsMenuId.Docs} style={displayStyle(DocsMenuId.Docs, tab)}>
+  <nav id={DocsMenuId.Docs} style={displayStyle(DocsMenuId.Docs, tab)}>
     <p class="menu-label">{tutorial(lang)}</p>
     <ul class="menu-list">
       {
         tutorialCollection[lang]?.map((page) => (
           <li>
-            <a href={`/docs/${langPath(lang)}tutorial/${page.slug}/`}>{page.data.title}</a>
+            <a href={`/${langPath(lang)}docs/tutorial/${page.slug}/`}>{page.data.title}</a>
           </li>
         ))
       }
@@ -69,7 +69,7 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
       {
         howToCollection[lang]?.map((page) => (
           <li>
-            <a href={`/docs/${langPath(lang)}how-to/${page.slug}/`}>{page.data.title}</a>
+            <a href={`/${langPath(lang)}docs/how-to/${page.slug}/`}>{page.data.title}</a>
           </li>
         ))
       }
@@ -79,7 +79,7 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
       {
         explanationCollection[lang]?.map((page) => (
           <li>
-            <a href={`/docs/${langPath(lang)}explanation/${page.slug}/`}>{page.data.title}</a>
+            <a href={`/${langPath(lang)}docs/explanation/${page.slug}/`}>{page.data.title}</a>
           </li>
         ))
       }
@@ -87,22 +87,22 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
     <p class="menu-label">Reference</p>
     <ul class="menu-list">
       <li>
-        <a href={`/docs/${langPath(lang)}reference/api`}>REST API</a>
+        <a href={`/${langPath(lang)}docs/reference/api`}>REST API</a>
       </li>
       <li>
-        <a href={`/docs/${langPath(lang)}reference/architecture/`}>{architecture(lang)}</a>
+        <a href={`/${langPath(lang)}docs/reference/architecture/`}>{architecture(lang)}</a>
       </li>
       {
         referenceCollection[lang]?.map((page) => (
           <li>
-            <a href={`/docs/${langPath(lang)}reference/${page.slug}/`}>{page.data.title}</a>
+            <a href={`/${langPath(lang)}docs/reference/${page.slug}/`}>{page.data.title}</a>
           </li>
         ))
       }
     </ul>
-  </div>
+  </nav>
   <!-- Learn -->
-  <div id={DocsMenuId.Learn} style={displayStyle(DocsMenuId.Learn, tab)}>
+  <nav id={DocsMenuId.Learn} style={displayStyle(DocsMenuId.Learn, tab)}>
     <p class="menu-label">{benchmarking(lang)}</p>
     <p>Rust</p>
     <ul class="menu-list">
@@ -114,7 +114,7 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
         ))
       }
     </ul>
-  </div>
+  </nav>
 </aside>
 <script >
   import {DocsTab, DocsMenuId} from "./docs_tab";

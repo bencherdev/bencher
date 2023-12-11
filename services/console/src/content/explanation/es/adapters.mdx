@@ -7,8 +7,8 @@ sortOrder: 3
 
 Los adaptadores convierten la salida del arnés de referencia en JSON estandarizado, Formato de Métrica Bencher (BMF).
 Los adaptadores se ejecutan en el servidor de la API cuando se recibe un nuevo informe.
-Vea la [descripción general de la evaluación comparativa](/docs/es/explanation/benchmarking/) para obtener una explicación más detallada.
-Se pueden especificar en el subcomando CLI de <code><a href="/docs/es/explanation/bencher-run/">bencher run</a></code> con la opción `--adapter`.
+Vea la [descripción general de la evaluación comparativa](/es/docs/explanation/benchmarking/) para obtener una explicación más detallada.
+Se pueden especificar en el subcomando CLI de <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code> con la opción `--adapter`.
 Si no se especifica un adaptador, se utiliza el [adaptador `magic`](#-magic-default) por defecto.
 
 Es mejor usar el adaptador más específico para su caso de uso.
@@ -65,7 +65,7 @@ En este ejemplo, el objeto Latency Measure contiene las siguientes medidas:
 - Un `upper_value` de `88.88`
 
 Si el JSON BMF se almacena en un archivo,
-entonces puedes usar el subcomando CLI de <code><a href="/docs/es/explanation/bencher-run/">bencher run</a></code> con el argumento opcional `--file` para especificar esa ruta de archivo.
+entonces puedes usar el subcomando CLI de <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code> con el argumento opcional `--file` para especificar esa ruta de archivo.
 Esto funciona tanto con un comando de referencia (ejemplo: `bencher run "bencher mock > results.json" --file results.json`)
 y sin un comando de referencia (ejemplo: `bencher mock > results.json && bencher run --file results.json`).
 
@@ -86,7 +86,7 @@ Hay dos opciones para la Measure:
 - `mean` (por defecto):  `lower_value` y `upper_value` son una desviación estándar por debajo y por encima de la media (es decir `value`), respectivamente.
 - `median`: `lower_value` y `upper_value` son un rango intercuartílico por debajo y por encima de la mediana (es decir `value`), respectivamente.
 
-Esto se puede especificar en el subcomando CLI de <code><a href="/docs/es/explanation/bencher-run/">bencher run</a></code> con la bandera opcional `--average`.
+Esto se puede especificar en el subcomando CLI de <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code> con la bandera opcional `--average`.
 
 ## ➕ C++
 
@@ -160,7 +160,7 @@ Hay dos opciones para la Metric:
 - `mean` (por defecto):  `lower_value` y `upper_value` son una desviación estándar por debajo y por encima de la media (es decir `value`), respectivamente.
 - `median`: `lower_value` y `upper_value` son un rango intercuartílico por debajo y por encima de la mediana (es decir `value`), respectivamente.
 
-Esto se puede especificar en el subcomando CLI de <code><a href="/docs/es/explanation/bencher-run/">bencher run</a></code> con el argumento opcional `--average`.
+Esto se puede especificar en el subcomando CLI de <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code> con el argumento opcional `--average`.
 
 ## ♦️ Ruby
 
@@ -211,7 +211,7 @@ Existen dos opciones para la Métrica:
 - `mean` (por defecto): El `lower_value` y el `upper_value` son una desviación estándar por debajo y por encima de la media (es decir, `value`) respectivamente.
 - `median`: El `lower_value` y el `upper_value` son los valores `min` y `max` respectivamente.
 
-Esto se puede especificar en el subcomando CLI <code><a href="/docs/es/explanation/bencher-run/">bencher run</a></code> con la flag opcional `--average`.
+Esto se puede especificar en el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code> con la flag opcional `--average`.
 
 <br />
 <br />
@@ -220,4 +220,4 @@ Esto se puede especificar en el subcomando CLI <code><a href="/docs/es/explanati
 
 <br/>
 
-<h2><a href="/docs/es/explanation/thresholds/">Continúa: Umbrales y Alertas ➡</a></h2>
+<h2><a href="/es/docs/explanation/thresholds/">Continúa: Umbrales y Alertas ➡</a></h2>

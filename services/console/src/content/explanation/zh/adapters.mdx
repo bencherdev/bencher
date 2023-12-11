@@ -7,8 +7,8 @@ sortOrder: 3
 
 适配器将基准测试程序的输出转换为标准化的JSON，Bencher度量格式（BMF）。
 当接收到新报告时，适配器会在API服务器上运行。
-查看[基准测试概述](/docs/zh/explanation/benchmarking/)以便更深入地理解。
-它们可以在<code><a href="/docs/zh/explanation/bencher-run/">bencher run</a></code> CLI子命令中通过可选的`--adapter`标志进行指定。
+查看[基准测试概述](/zh/docs/explanation/benchmarking/)以便更深入地理解。
+它们可以在<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI子命令中通过可选的`--adapter`标志进行指定。
 如果没有指定适配器，将默认使用[“magic”适配器](#-magic-default)。
 
 最好为您的用例使用最特定的适配器。
@@ -67,7 +67,7 @@ BMF的例子：
 - `upper_value`为`88.88`
 
 如果BMF JSON存储在文件中，
-那么你可以使用<code><a href="/docs/zh/explanation/bencher-run/">bencher run</a></code> CLI子命令并使用可选的`--file`参数来指定那个文件路径。
+那么你可以使用<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI子命令并使用可选的`--file`参数来指定那个文件路径。
 这对于具有基准测试命令（例如：`bencher run "bencher mock > results.json" --file results.json`）
 和没有基准测试命令的情况都适用（例如：`bencher mock > results.json && bencher run --file results.json`）。
 
@@ -88,7 +88,7 @@ C# DotNet适配器(`c_sharp_dot_net`)期待使用[BenchmarkDotNet](https://githu
 - `mean` (default): `lower_value`和`upper_value`分别位于均值 (即 `value`) 的一个标准差之下和之上。
 - `median`: `lower_value`和`upper_value`分别是中位数 (即 `value`) 的一个四分位距之下和之上。
 
-这可以在<code><a href="/docs/zh/explanation/bencher-run/">bencher run</a></code> CLI子命令中通过可选的`--average`标志进行指定。
+这可以在<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI子命令中通过可选的`--average`标志进行指定。
 
 ## ➕ C++
 
@@ -162,7 +162,7 @@ Python Pytest适配器 (`python_pytest`)期待[pytest-benchmark](https://github.
 - `mean` (default): `lower_value`和`upper_value`分别位于均值 (即 `value`) 的一个标准差之下和之上。
 - `median`: `lower_value`和`upper_value`分别是中位数 (即 `value`) 的一个四分位距之下和之上。
 
-这可以在<code><a href="/docs/zh/explanation/bencher-run/">bencher run</a></code> CLI子命令中通过可选的`--average`参数进行指定。
+这可以在<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI子命令中通过可选的`--average`参数进行指定。
 
 ## ♦️ Ruby
 
@@ -213,7 +213,7 @@ Shell Hyperfine 适配器（`shell_hyperfine`）期待 [Hyperfine](https://githu
 -  `mean`（默认）： `lower_value` 和 `upper_value` 分别为平均值（即 `value`）低于和高于一个标准差。
 -  `median`： `lower_value`和`upper_value`分别为`min`和`max`值。
 
-这可以在<code><a href="/docs/zh/explanation/bencher-run/">bencher run</a></code> CLI 子命令中通过可选的 `--average` 标志来指定。
+这可以在<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令中通过可选的 `--average` 标志来指定。
 
 <br />
 <br />
@@ -222,4 +222,4 @@ Shell Hyperfine 适配器（`shell_hyperfine`）期待 [Hyperfine](https://githu
 
 <br/>
 
-<h2><a href="/docs/zh/explanation/thresholds/">继续前进：阈值和警告 ➡</a></h2>
+<h2><a href="/zh/docs/explanation/thresholds/">继续前进：阈值和警告 ➡</a></h2>

@@ -10,13 +10,13 @@ Sie verschwinden, sobald Ihr Terminal seine Scrollback-Grenze erreicht hat.
 Einige Benchmark-Schleifen ermöglichen es Ihnen, Ergebnisse zu speichern, aber die meisten tun dies nur lokal.
 Bencher ermöglicht es Ihnen, Ihre Benchmarks sowohl von lokalen als auch von CI-Läufen zu verfolgen und mit historischen Ergebnissen zu vergleichen.
 
-Der einfachste Weg, Ihre Benchmarks zu verfolgen, ist das <code><a href="/docs/de/explanation/bencher-run/">bencher run</a></code> CLI-Unterkommando.
+Der einfachste Weg, Ihre Benchmarks zu verfolgen, ist das <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterkommando.
 Es umfasst Ihre bestehende Benchmark-Schleifen-Ausgabe und erzeugt einen Bericht.
 Dieser Bericht wird dann an den Bencher-API-Server gesendet,
-wo die Benchmark-Schleifen-Ausgabe mit einem [Benchmark-Schleifen-Adapter](/docs/de/explanation/adapters/) geparst wird.
+wo die Benchmark-Schleifen-Ausgabe mit einem [Benchmark-Schleifen-Adapter](/de/docs/explanation/adapters/) geparst wird.
 Der Benchmark-Schleifen-Adapter erkennt alle vorhandenen Benchmarks und ihre entsprechenden Metriken.
 Diese Benchmarks und Metriken werden dann zusammen mit dem Bericht gespeichert.
-Wenn ein [Schwellenwert](/docs/de/explanation/thresholds/) gesetzt ist, dann werden die neuen Metriken mit den historischen Metriken für jeden Benchmark, der im Bericht vorhanden ist, verglichen.
+Wenn ein [Schwellenwert](/de/docs/explanation/thresholds/) gesetzt ist, dann werden die neuen Metriken mit den historischen Metriken für jeden Benchmark, der im Bericht vorhanden ist, verglichen.
 Wenn eine Regression erkannt wird, wird ein Alert generiert.
 
 Von nun an werden wir Ihre "Benchmarks" als "Performance-Regressionstests" bezeichnen, um Verwirrungen zu vermeiden.
@@ -32,38 +32,38 @@ Andernfalls wird der umbenannte Performance-Regressionstest als neuer Benchmark 
 Diese gleiche Warnung gilt auch für das _Verschieben_ einiger Performance-Regressionstests.
 Abhängig von der Benchmark-Schleife kann der Pfad zum Performance-Regressionstest ein Teil seines Namens sein.
 
-Die einzige Ausnahme von der oben genannten Einschränkung ist das Ignorieren eines Benchmarks. Siehe [Unterdrückung von Alerts](/docs/de/explanation/thresholds/) für eine vollständige Übersicht.
+Die einzige Ausnahme von der oben genannten Einschränkung ist das Ignorieren eines Benchmarks. Siehe [Unterdrückung von Alerts](/de/docs/explanation/thresholds/) für eine vollständige Übersicht.
 
 ### Metriken
 Eine Metrik ist ein einzelnes, zeitspezifisches Ergebnis eines Performance-Regressionstests.
 Für eine einzelne Metrik können bis zu drei Messungen erfasst werden: `value`, `lower_value`, und `upper_value`.
 Der `value` ist für alle Metriken erforderlich, während der `lower_value` und `upper_value` unabhängig optional sind.
-Welche Messungen erfasst werden, wird durch den [Benchmark-Schleifen-Adapter](/docs/de/explanation/adapters/) bestimmt.
+Welche Messungen erfasst werden, wird durch den [Benchmark-Schleifen-Adapter](/de/docs/explanation/adapters/) bestimmt.
 
 ### Art der Metrik
 Die Art der Metrik ist die Maßeinheit für eine Metrik.
 Standardmäßig starten alle Projekte mit einer `Latenz` und `Durchsatz` Metrik-Art
 mit den Einheiten `Nanosekunden (ns)` und `Operationen / Sekunde (ops/s)` jeweils.
-Die Art der Metrik wird durch den [Benchmark-Schleifen-Adapter](/docs/de/explanation/adapters/) bestimmt.
+Die Art der Metrik wird durch den [Benchmark-Schleifen-Adapter](/de/docs/explanation/adapters/) bestimmt.
 
 <br />
 
 ## Bericht
 Ein Bericht ist eine Sammlung von Benchmarks und ihren Metriken für einen bestimmten Zweig und Testbeet.
-Berichte werden am häufigsten mit dem <code><a href="/docs/de/explanation/bencher-run/">bencher run</a></code> CLI-Unterkommando erzeugt.
-Siehe [wie man Performance-Regressionstests verfolgt](/docs/de/how-to/track-benchmarks/) für eine vollständige Übersicht.
+Berichte werden am häufigsten mit dem <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterkommando erzeugt.
+Siehe [wie man Performance-Regressionstests verfolgt](/de/docs/how-to/track-benchmarks/) für eine vollständige Übersicht.
 
 ### Zweig
 Ein Zweig ist die `git`-Referenz, die beim Erstellen eines Berichts verwendet wird (d. h. Branch-Name oder Tag).
 Standardmäßig starten alle Projekte mit einem `main`-Zweig.
-Wenn das <code><a href="/docs/de/explanation/bencher-run/">bencher run</a></code> CLI-Unterkommando verwendet wird,
+Wenn das <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterkommando verwendet wird,
 ist `main` der Standardzweig, wenn kein anderer angegeben ist.
-Siehe [Zweigauswahl](/docs/de/explanation/branch-selection/) für eine vollständige Übersicht.
+Siehe [Zweigauswahl](/de/docs/explanation/branch-selection/) für eine vollständige Übersicht.
 
 ### Testbett
 Ein Testbett ist der Name der Testumgebung, die beim Erstellen eines Berichts verwendet wird.
 Standardmäßig starten alle Projekte mit einem `localhost`-Testbett.
-Wenn das <code><a href="/docs/de/explanation/bencher-run/">bencher run</a></code> CLI-Unterkommando verwendet wird,
+Wenn das <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterkommando verwendet wird,
 ist `localhost` das Standardtestbett, wenn keines angegeben ist.
 
 <br />
@@ -73,4 +73,4 @@ ist `localhost` das Standardtestbett, wenn keines angegeben ist.
 
 <br/>
 
-<h2><a href="/docs/de/explanation/bencher-run/">Weitermachen: <code>bencher run</code> CLI-Unterkommando ➡</a></h2>
+<h2><a href="/de/docs/explanation/bencher-run/">Weitermachen: <code>bencher run</code> CLI-Unterkommando ➡</a></h2>

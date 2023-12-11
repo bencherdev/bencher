@@ -5,9 +5,9 @@ heading: "Comment utiliser Bencher pour suivre les Benchmarks"
 sortOrder: 2
 ---
 
-La façon la plus simple de suivre vos benchmarks est la sous-commande CLI <code><a href="/docs/fr/explanation/bencher-run/">bencher run</a></code>.
-Consultez l'[aperçu du benchmarking](/docs/fr/explanation/benchmarking/) pour une explication plus approfondie.
-Voici un exemple d'une sous-commande CLI <code><a href="/docs/fr/explanation/bencher-run/">bencher run</a></code> pour suivre les benchmarks sur une branche de fonctionnalité judicieusement nommée `branche-fonctionnalité` :
+La façon la plus simple de suivre vos benchmarks est la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>.
+Consultez l'[aperçu du benchmarking](/fr/docs/explanation/benchmarking/) pour une explication plus approfondie.
+Voici un exemple d'une sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code> pour suivre les benchmarks sur une branche de fonctionnalité judicieusement nommée `branche-fonctionnalité` :
 
 ```
 bencher run \
@@ -24,13 +24,13 @@ bencher run \
 
 1. Le projet doit déjà exister. Définissez le drapeau `--project` ou la variable d'environnement `BENCHER_PROJECT` sur le slug du projet ou l'UUID. (ex: `--project sauver-walter-white`)
 1. Le token API doit déjà exister. Définissez le drapeau `--token` ou la variable d'environnement `BENCHER_API_TOKEN` sur le token API. (ex: `--token ...`)
-1. Optionnel : Définissez le drapeau `--adapter` ou la variable d'environnement `BENCHER_ADAPTER` sur le nom de l'adaptateur désiré. Si cela n'est pas défini, alors l'adaptateur `magic` sera utilisé. Consultez les [adaptateurs de harnais de benchmark](/docs/fr/explanation/adapters/) pour un aperçu complet. (ex: `--adapter json`)
-1. Il y a plusieurs options pour définir la branche du projet. Consultez la [sélection de branche](/docs/fr/explanation/branch-selection/) pour un aperçu complet.
+1. Optionnel : Définissez le drapeau `--adapter` ou la variable d'environnement `BENCHER_ADAPTER` sur le nom de l'adaptateur désiré. Si cela n'est pas défini, alors l'adaptateur `magic` sera utilisé. Consultez les [adaptateurs de harnais de benchmark](/fr/docs/explanation/adapters/) pour un aperçu complet. (ex: `--adapter json`)
+1. Il y a plusieurs options pour définir la branche du projet. Consultez la [sélection de branche](/fr/docs/explanation/branch-selection/) pour un aperçu complet.
     1. Utilisez la branche actuelle si elle existe déjà. (ex: `--if-branch branche-fonctionnalité`)
     1. Créez un clone des données de la branche cible si elle existe déjà. (ex: `--else-if-branch main`)
     1. Sinon, créez une nouvelle branche avec le nom fourni à `--if-branch`, qui serait `branche-fonctionnalité`. (ex: `--else-branch`)
 1. Optionnel : Définissez le drapeau `--testbed` ou la variable d'environnement `BENCHER_TESTBED` sur le slug du Testbed ou l'UUID. Le Testbed doit déjà exister. Si cela n'est pas défini, alors le Testbed par défaut `localhost` sera utilisé. (ex: `--testbed phoenix`)
-1. Définissez la commande pour échouer si une alerte est générée. Pour qu'une alerte soit générée, un [Seuil](/docs/fr/explanation/thresholds/) doit déjà exister. (ex: `--err`)
+1. Définissez la commande pour échouer si une alerte est générée. Pour qu'une alerte soit générée, un [Seuil](/fr/docs/explanation/thresholds/) doit déjà exister. (ex: `--err`)
 1. Exécutez vos benchmarks et générez un Rapport à partir des résultats. (ex: `"bencher mock"`)
 
 ## Benchmarking Relatif
@@ -38,7 +38,7 @@ bencher run \
 Le benchmarking relatif effectue une comparaison côte à côte de deux commits.
 Cela peut être utile lorsqu'on traite des environnements CI/CD bruyants,
 où la ressource disponible peut être très variable entre les exécutions.
-Voici un exemple d'une sous-commande CLI <code><a href="/docs/fr/explanation/bencher-run/">bencher run</a></code> pour effectuer un benchmarking relatif sur une branche de fonctionnalité judicieusement nommée `branche-fonctionnalité` :
+Voici un exemple d'une sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code> pour effectuer un benchmarking relatif sur une branche de fonctionnalité judicieusement nommée `branche-fonctionnalité` :
 
 ```
 git checkout branche-fonctionnalité
@@ -78,7 +78,7 @@ bencher run \
     1. Alors elle sera créée. (ex: `--else-branch`)
     1. Exécutez les benchmarks trois fois. (ex: `--iter 3`)
 1. Passez à la branche de fonctionnalité. (ex: `branche-fonctionnalité`)
-1. Créez un [Seuil](/docs/fr/explanation/thresholds/) pour la branche de fonctionnalité :
+1. Créez un [Seuil](/fr/docs/explanation/thresholds/) pour la branche de fonctionnalité :
     1. La branche est la branche de fonctionnalité avec l'ID de commit git ajouté. (ex: `--branch "$BRANCHE_FONCTIONNALITÉ"`)
     1. Le Testbed est en cours d'exécution localement. (ex: `--testbed localhost`)
     1. Le type de métrique pour les benchmarks est la Latence. (ex: `--measure latency`)
@@ -88,7 +88,7 @@ bencher run \
     1. La branche existera puisqu'elle vient d'être créée. (ex: `--if-branch "$BRANCHE_FONCTIONNALITÉ"`)
     1. Exécutez les tests trois fois. (ex: `--iter 3`)
     1. Pliez les trois Métriques en la valeur minimale. (ex: `--fold min`)
-    1. Définissez la commande pour échouer si une alerte est générée par le [Seuil](/docs/fr/explanation/thresholds/). (ex: `--err`)
+    1. Définissez la commande pour échouer si une alerte est générée par le [Seuil](/fr/docs/explanation/thresholds/). (ex: `--err`)
 
 <br/>
 <br/>
@@ -97,5 +97,5 @@ bencher run \
 
 <br/>
 
-<h2><a href="/docs/fr/how-to/github-actions/">Ajouter Bencher à GitHub Actions ➡</a></h2>
-<h2><a href="/docs/fr/how-to/gitlab-ci-cd/">Ajouter Bencher à GitLab CI/CD ➡</a></h2>
+<h2><a href="/fr/docs/how-to/github-actions/">Ajouter Bencher à GitHub Actions ➡</a></h2>
+<h2><a href="/fr/docs/how-to/gitlab-ci-cd/">Ajouter Bencher à GitLab CI/CD ➡</a></h2>

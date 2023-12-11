@@ -12,21 +12,21 @@ export const AlsoInEn = (props: { path: string }) => {
 
 const AlsoIn = (props: Props) => {
 	return (
-		<>
+		<nav>
 			<h3 class="title is-3">{alsoIn(props.lang)}</h3>
 			<ul>
 				{allLanguages.map(
 					(language) =>
 						props.lang !== language && (
 							<li>
-								<a href={`/docs/${langPath(language)}${props.path ?? ""}`}>
+								<a href={`/${langPath(language)}docs/${props.path ?? ""}`}>
 									{languageName(language)}
 								</a>
 							</li>
 						),
 				)}
 			</ul>
-		</>
+		</nav>
 	);
 };
 

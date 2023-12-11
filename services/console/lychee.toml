@@ -18,12 +18,12 @@ exclude = [
 # Netlify paths
 exclude_path = [
     "./services/console/dist/docs/reference/prior-art/index.html",
-    "./services/console/dist/docs/de/reference/prior-art/index.html",
-    "./services/console/dist/docs/es/reference/prior-art/index.html",
-    "./services/console/dist/docs/fr/reference/prior-art/index.html",
-    "./services/console/dist/docs/ja/reference/prior-art/index.html",
-    "./services/console/dist/docs/ko/reference/prior-art/index.html",
-    "./services/console/dist/docs/pt/reference/prior-art/index.html",
-    "./services/console/dist/docs/ru/reference/prior-art/index.html",
-    "./services/console/dist/docs/zh/reference/prior-art/index.html",
+    "./services/console/dist/de/docs/reference/prior-art/index.html",
+    "./services/console/dist/es/docs/reference/prior-art/index.html",
+    "./services/console/dist/fr/docs/reference/prior-art/index.html",
+    "./services/console/dist/ja/docs/reference/prior-art/index.html",
+    "./services/console/dist/ko/docs/reference/prior-art/index.html",
+    "./services/console/dist/pt/docs/reference/prior-art/index.html",
+    "./services/console/dist/ru/docs/reference/prior-art/index.html",
+    "./services/console/dist/zh/docs/reference/prior-art/index.html",
 ]

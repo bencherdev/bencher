@@ -74,14 +74,14 @@ Though Bencher is open source, there is also a hosted version available [Bencher
 
 🌐 Also available in:
 
-- [简体中文](https://bencher.dev/docs/zh/)
-- [Español](https://bencher.dev/docs/es/)
-- [Português do Brasil](https://bencher.dev/docs/pt/)
-- [Русский](https://bencher.dev/docs/ru/)
-- [日本語](https://bencher.dev/docs/ja/)
-- [Français](https://bencher.dev/docs/fr/)
-- [Deutsch](https://bencher.dev/docs/de/)
-- [한국어](https://bencher.dev/docs/ko/)
+- [简体中文](https://bencher.dev/zh/docs/)
+- [Español](https://bencher.dev/es/docs/)
+- [Português do Brasil](https://bencher.dev/pt/docs/)
+- [Русский](https://bencher.dev/ru/docs/)
+- [日本語](https://bencher.dev/ja/docs/)
+- [Français](https://bencher.dev/fr/docs/)
+- [Deutsch](https://bencher.dev/de/docs/)
+- [한국어](https://bencher.dev/ko/docs/)
 
 ## Supported Benchmark Harnesses
 

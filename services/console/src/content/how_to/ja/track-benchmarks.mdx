@@ -5,9 +5,9 @@ heading: "Bencherを使用してベンチマークを追跡する方法"
 sortOrder: 2
 ---
 
-ベンチマークを追跡する最も簡単な方法は、<code><a href="/docs/ja/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドです。
-より詳しい説明については、[ベンチマーキング概要](/docs/ja/explanation/benchmarking/)をご覧ください。
-以下は、`feature-branch`という適切な名前のフィーチャーブランチでベンチマークを追跡するための<code><a href="/docs/ja/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドの例です：
+ベンチマークを追跡する最も簡単な方法は、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドです。
+より詳しい説明については、[ベンチマーキング概要](/ja/docs/explanation/benchmarking/)をご覧ください。
+以下は、`feature-branch`という適切な名前のフィーチャーブランチでベンチマークを追跡するための<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドの例です：
 
 ```
 bencher run \
@@ -24,20 +24,20 @@ bencher run \
 
 1. プロジェクトは既に存在している必要があります。`--project`フラグまたは`BENCHER_PROJECT`環境変数をプロジェクトのスラッグまたはUUIDに設定します。(例：`--project save-walter-white`)
 1. APIトークンは既に存在している必要があります。`--token`フラグまたは`BENCHER_API_TOKEN`環境変数をAPIトークンに設定します。(例：`--token ...`)
-1. オプション：`--adapter`フラグまたは`BENCHER_ADAPTER`環境変数を希望のアダプタ名に設定します。これが設定されていない場合、`magic`アダプタが使用されます。全体の概要については[ベンチマークハーネスアダプタ](/docs/ja/explanation/adapters/)を参照してください。(例：`--adapter json`)
-1. プロジェクトブランチの設定にはいくつかのオプションがあります。完全な概要については[ブランチの選択](/docs/ja/explanation/branch-selection/)を参照してください。
+1. オプション：`--adapter`フラグまたは`BENCHER_ADAPTER`環境変数を希望のアダプタ名に設定します。これが設定されていない場合、`magic`アダプタが使用されます。全体の概要については[ベンチマークハーネスアダプタ](/ja/docs/explanation/adapters/)を参照してください。(例：`--adapter json`)
+1. プロジェクトブランチの設定にはいくつかのオプションがあります。完全な概要については[ブランチの選択](/ja/docs/explanation/branch-selection/)を参照してください。
     1. 既に存在する現在のブランチを使用します。(例：`--if-branch feature-branch`)
     1. 既に存在するターゲットブランチのデータのクローンを作成します。(例：`--else-if-branch main`)
     1. それ以外の場合、`--if-branch`に提供した名前で新しいブランチを作成します。これは`feature-branch`となるでしょう。(例：`--else-branch`)
 1. オプション：`--testbed`フラグまたは`BENCHER_TESTBED`環境変数をTestbedのスラッグまたはUUIDに設定します。Testbedは既に存在している必要があります。これが設定されていない場合、デフォルトの`localhost` Testbedが使用されます。(例：`--testbed phoenix`)
-1. アラートが生成された場合にコマンドを失敗させるように設定します。アラートを生成するためには、[しきい値](/docs/ja/explanation/thresholds/)が既に存在している必要があります。(例：`--err`)
+1. アラートが生成された場合にコマンドを失敗させるように設定します。アラートを生成するためには、[しきい値](/ja/docs/explanation/thresholds/)が既に存在している必要があります。(例：`--err`)
 1. ベンチマークを実行し、結果からレポートを生成します。(例：`"bencher mock"`)
 
 ## 相対的ベンチマーキング
 
 相対的ベンチマーキングは、2つのコミットの並列比較を実行します。
 これは、利用可能なリソースが実行間で大幅に変動する可能性のあるノイズの多いCI/CD環境に対処する際に便利です。
-以下は、`feature-branch`という適切な名前のフィーチャーブランチで相対ベンチマーキングを実行するための<code><a href="/docs/ja/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドの例です：
+以下は、`feature-branch`という適切な名前のフィーチャーブランチで相対ベンチマーキングを実行するための<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドの例です：
 
 ```
 git checkout feature-branch
@@ -77,7 +77,7 @@ bencher run \
     1. そしてそれが作成されます。(例：`--else-branch`)
     1. ベンチマークを3回実行します。(例：`--iter 3`)
 1. フィーチャーブランチをチェックアウトします。(例：`feature-branch`)
-1. フィーチャーブランチのための[しきい値](/docs/ja/explanation/thresholds/)を作成します：
+1. フィーチャーブランチのための[しきい値](/ja/docs/explanation/thresholds/)を作成します：
     1. Branchは、付け足されたgitコミットIDを持つフィーチャーブランチです。(例：`--branch "$FEATURE_BRANCH"`)
     1. Testbedはローカルで実行されます。(例：`--testbed localhost`)
     1. ベンチマークのMeasureはLatencyです。(例：`--measure latency`)
@@ -87,7 +87,7 @@ bencher run \
     1. ブランチは、先ほど作成したため存在するはずです。(例：`--if-branch "$FEATURE_BRANCH"`)
     1. テストを3回実行します。(例：`--iter 3`)
     1. 3つのメトリクスすべてを最小値に折り畳みます。(例：`--fold min`)
-    1. [しきい値](/docs/ja/explanation/thresholds/)によりアラートが生成された場合にコマンドが失敗するように設定します。(例：`--err`)
+    1. [しきい値](/ja/docs/explanation/thresholds/)によりアラートが生成された場合にコマンドが失敗するように設定します。(例：`--err`)
 
 <br/>
 <br/>
@@ -96,5 +96,5 @@ bencher run \
 
 <br/>
 
-<h2><a href="/docs/ja/how-to/github-actions/">BencherをGitHub Actionsに追加 ➡</a></h2>
-<h2><a href="/docs/ja/how-to/gitlab-ci-cd/">BencherをGitLab CI/CDに追加 ➡</a></h2>
+<h2><a href="/ja/docs/how-to/github-actions/">BencherをGitHub Actionsに追加 ➡</a></h2>
+<h2><a href="/ja/docs/how-to/gitlab-ci-cd/">BencherをGitLab CI/CDに追加 ➡</a></h2>

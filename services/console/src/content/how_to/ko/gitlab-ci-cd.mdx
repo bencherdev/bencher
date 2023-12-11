@@ -37,16 +37,16 @@ import { BENCHER_VERSION } from "../../../util/ext";
 1. 프로젝트는 이미 존재해야 합니다. `--project` 플래그를 설정하거나 `BENCHER_PROJECT` 환경 변수를 프로젝트 슬러그 또는 UUID로 설정합니다 (예: `BENCHER_PROJECT: save-walter-white`)
 1. `BENCHER_API_TOKEN`을 프로젝트의 CI/CD 시크릿에 추가합니다. `설정 -> CI / CD -> 변수 -> 변수 추가` 경로를 따라 이동합니다
 1. API 토큰은 이미 존재해야 합니다. `--token` 플래그를 설정하거나 `BENCHER_API_TOKEN` 환경 변수를 API 토큰으로 설정합니다 (예: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
-1. 선택 사항: `--adapter` 플래그를 설정하거나 `BENCHER_ADAPTER` 환경 변수를 원하는 어댑터 이름으로 설정합니다. 이 값이 설정되지 않으면 `magic` 어댑터가 사용됩니다. 전체 개요는 [벤치마크 하네스 어댑터](/docs/ko/explanation/adapters/)를 참조하십시오. (예: `BENCHER_ADAPTER: json`)
+1. 선택 사항: `--adapter` 플래그를 설정하거나 `BENCHER_ADAPTER` 환경 변수를 원하는 어댑터 이름으로 설정합니다. 이 값이 설정되지 않으면 `magic` 어댑터가 사용됩니다. 전체 개요는 [벤치마크 하네스 어댑터](/ko/docs/explanation/adapters/)를 참조하십시오. (예: `BENCHER_ADAPTER: json`)
 1. 선택 사항: `--testbed` 플래그를 설정하거나 `BENCHER_TESTBED` 환경 변수를 Testbed의 슬러그 또는 UUID로 설정합니다. Testbed는 **반드시** 이미 존재해야 합니다. 이 값이 설정되지 않으면 `localhost` Testbed가 사용됩니다. (예: `BENCHER_TESTBED: bullseye`)
 1. 선택 사항: 사용 중인 CLI 버전을 쉽게 추적할 수 있도록 환경 변수를 생성합니다 (예: <code>{`BENCHER_VERSION: ${BENCHER_VERSION}`}</code>)
 1. `.deb`에서 Bencher CLI 를 다운로드하고 설치합니다.
-1. <code><a href="/docs/ko/explanation/bencher-run/">bencher run</a></code> CLI 하위 명령어를 이용하여 벤치마크를 추적합니다([벤치마크 추적](/docs/ko/how-to/track-benchmarks/) 참조):
-    1. 프로젝트의 브랜치를 설정하는 여러 옵션이 있습니다. 전체 개요는 [브랜치 선택](/docs/ko/explanation/branch-selection/)을 참조하십시오. 제공된 명령어는 [GitLab CI/CD 사전 정의 변수](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html)를 사용하며:
+1. <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 하위 명령어를 이용하여 벤치마크를 추적합니다([벤치마크 추적](/ko/docs/how-to/track-benchmarks/) 참조):
+    1. 프로젝트의 브랜치를 설정하는 여러 옵션이 있습니다. 전체 개요는 [브랜치 선택](/ko/docs/explanation/branch-selection/)을 참조하십시오. 제공된 명령어는 [GitLab CI/CD 사전 정의 변수](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html)를 사용하며:
         1. 해당 브랜치가 이미 존재하면 해당 브랜치를 사용합니다 (예: `--if-branch "$CI_COMMIT_REF_NAME"`)
         1. MR 타겟 브랜치 데이터와 임계값의 복제본을 생성합니다 (예: `--else-if-branch  "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
         1. 그렇지 않으면, `main` 브랜치 데이터와 임계값의 복제본을 생성합니다 (예: `--else-if-branch main`)
-    1. 경고가 생성되면 명령어가 실패하도록 설정합니다. 경고가 생성되려면, [임계값](/docs/ko/explanation/thresholds/)이 이미 존재해야 합니다. (예: `--err`)
+    1. 경고가 생성되면 명령어가 실패하도록 설정합니다. 경고가 생성되려면, [임계값](/ko/docs/explanation/thresholds/)이 이미 존재해야 합니다. (예: `--err`)
     1. 벤치마크를 실행하고 결과보고서를 생성합니다 (예: `"bencher mock"`)
 
 <br/>
@@ -56,4 +56,4 @@ import { BENCHER_VERSION } from "../../../util/ext";
 
 <br/>
 
-<h2><a href="/docs/ko/explanation/benchmarking/">계속하기: 벤치마킹 개요 ➡</a></h2>
+<h2><a href="/ko/docs/explanation/benchmarking/">계속하기: 벤치마킹 개요 ➡</a></h2>

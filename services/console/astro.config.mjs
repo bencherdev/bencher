@@ -13,9 +13,49 @@ export default defineConfig({
 	// https://docs.astro.build/en/reference/configuration-reference/#site
 	site: "https://bencher.dev",
 	output: "hybrid",
+	// Do not use any trailing slashes in the paths below
+	redirects: {
+		// Docs
+		"/docs/[lang]": "/[lang]/docs",
+		// Tutorial
+		"/docs/[lang]/tutorial": "/[lang]/docs/tutorial",
+		"/docs/[lang]/tutorial/quick-start": "/[lang]/docs/tutorial/quick-start",
+		"/docs/[lang]/tutorial/[slug]": "/[lang]/docs/tutorial/[slug]",
+		// How To
+		"/docs/[lang]/how-to": "/[lang]/docs/how-to",
+		"/docs/[lang]/how-to/[slug]": "/[lang]/docs/how-to/[slug]",
+		// Explanation
+		"/docs/[lang]/explanation": "/[lang]/docs/explanation",
+		"/docs/[lang]/explanation/[slug]": "/[lang]/docs/explanation/[slug]",
+		// Reference
+		"/docs/[lang]/reference": "/[lang]/docs/reference",
+		"/docs/[lang]/reference/api": "/[lang]/docs/reference/api",
+		"/docs/[lang]/reference/architecture":
+			"/[lang]/docs/reference/architecture",
+		"/docs/[lang]/reference/[slug]": "/[lang]/docs/reference/[slug]",
+		// Learn
+		"/learn/[lang]": "/[lang]/learn",
+		"/learn/[lang]/benchmarking": "/[lang]/learn/benchmarking",
+		"/learn/[lang]/benchmarking/rust": "/[lang]/learn/benchmarking/rust",
+	},
 	integrations: [
 		// https://docs.astro.build/en/guides/integrations-guide/sitemap
 		sitemap({
+			// https://docs.astro.build/en/guides/integrations-guide/sitemap/#i18n
+			i18n: {
+				defaultLocale: "en",
+				locales: {
+					de: "de-DE",
+					en: "en-US", // The `defaultLocale` value must present in `locales` keys
+					es: "es-ES",
+					fr: "fr-FR",
+					ja: "ja-JP",
+					ko: "ko-KR",
+					pt: "pt-BR",
+					ru: "ru-RU",
+					zh: "zh-CN",
+				},
+			},
 			// https://docs.astro.build/en/guides/integrations-guide/sitemap/#filter
 			filter: (page) =>
 				!(

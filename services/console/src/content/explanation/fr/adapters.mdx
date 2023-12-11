@@ -7,8 +7,8 @@ sortOrder: 3
 
 Les adaptateurs transforment la sortie du harnais de benchmark en JSON standardisé, Format de Métrique Bencher (BMF).
 Les adaptateurs s'exécutent sur le serveur API lorsqu'un nouveau rapport est reçu.
-Voir l'[aperçu du benchmarking](/docs/fr/explanation/benchmarking/) pour une explication plus approfondie.
-Ils peuvent être spécifiés dans la sous-commande CLI <code><a href="/docs/fr/explanation/bencher-run/">bencher run</a></code> avec le drapeau optionnel `--adapter`.
+Voir l'[aperçu du benchmarking](/fr/docs/explanation/benchmarking/) pour une explication plus approfondie.
+Ils peuvent être spécifiés dans la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code> avec le drapeau optionnel `--adapter`.
 Si aucun adaptateur n'est spécifié, [l'adaptateur `magic`](#-magic-default) est utilisé par défaut.
 
 Il est préférable d'utiliser l'adaptateur le plus spécifique pour votre cas d'usage.
@@ -67,7 +67,7 @@ Dans cet exemple, l'objet du type de mesure `latence` contient les mesures suiva
 - Une `upper_value` de `88.88`
 
 Si le BMF JSON est stocké dans un fichier,
-alors vous pouvez utiliser la sous-commande CLI <code><a href="/docs/fr/explanation/bencher-run/">bencher run</a></code> avec l'argument optionnel `--file` pour spécifier ce chemin de fichier.
+alors vous pouvez utiliser la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code> avec l'argument optionnel `--file` pour spécifier ce chemin de fichier.
 Cela fonctionne à la fois avec une commande de benchmark (ex : `bencher run "bencher mock > results.json" --file results.json`)
 et sans une commande de benchmark (ex : `bencher mock > results.json && bencher run --file results.json`).
 
@@ -88,7 +88,7 @@ Il y a deux options pour la mesure :
 - `mean` (par défaut): Les `lower_value` et `upper_value` sont un écart-type en dessous et au-dessus de la moyenne (c'est-à-dire `value`) respectivement.
 - `median`: Les `lower_value` et `upper_value` sont un écart interquartile en dessous et au-dessus de la médiane (c'est-à-dire `value`) respectivement.
 
-Cela peut être spécifié dans la sous-commande CLI <code><a href="/docs/fr/explanation/bencher-run/">bencher run</a></code> avec le drapeau optionnel `--average`.
+Cela peut être spécifié dans la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code> avec le drapeau optionnel `--average`.
 
 ## ➕ C++
 
@@ -162,7 +162,7 @@ Il y a deux options pour la mesure :
 - `mean` (par défaut): Les `lower_value` et `upper_value` sont un écart-type en dessous et au-dessus de la moyenne (c'est-à-dire `value`) respectivement.
 - `median`: Les `lower_value` et `upper_value` sont un écart interquartile en dessous et au-dessus de la médiane (c'est-à-dire `value`) respectivement.
 
-Cela peut être spécifié dans la sous-commande CLI <code><a href="/docs/fr/explanation/bencher-run/">bencher run</a></code> avec l'argument optionnel `--average`.
+Cela peut être spécifié dans la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code> avec l'argument optionnel `--average`.
 
 ## ♦️ Ruby
 
@@ -213,7 +213,7 @@ Il existe deux options pour la métrique :
 - `mean` (par défaut) : Les valeurs `lower_value` et `upper_value` sont une déviation standard en dessous et au-dessus de la moyenne (c'est-à-dire `value`), respectivement.
 - `median` : Les valeurs `lower_value` et `upper_value` sont les valeurs `min` et `max`, respectivement.
 
-Ceci peut être spécifié dans la sous-commande CLI <code><a href="/docs/fr/explanation/bencher-run/">bencher run</a></code> avec le drapeau optionnel `--average`.
+Ceci peut être spécifié dans la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code> avec le drapeau optionnel `--average`.
 
 <br />
 <br />
@@ -222,4 +222,4 @@ Ceci peut être spécifié dans la sous-commande CLI <code><a href="/docs/fr/exp
 
 <br/>
 
-<h2><a href="/docs/fr/explanation/thresholds/">Continuez: Seuils & Alertes ➡</a></h2>
+<h2><a href="/fr/docs/explanation/thresholds/">Continuez: Seuils & Alertes ➡</a></h2>

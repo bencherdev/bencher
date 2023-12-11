@@ -37,16 +37,16 @@ import { BENCHER_VERSION } from "../../../util/ext";
 1. Проект должен уже существовать. Установите флаг `--project` или переменную окружения `BENCHER_PROJECT` на слаг или UUID проекта (например, `BENCHER_PROJECT: save-walter-white`)
 1. Добавьте `BENCHER_API_TOKEN` в секреты CI/CD вашего проекта, в разделе `Настройки -> CI / CD -> Переменные -> Добавить переменную`
 1. API-токен должен уже существовать. Установите флаг `--token` или переменную окружения `BENCHER_API_TOKEN` на API-токен (например, `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
-1. Необязательно: установите флаг `--adapter` или переменную окружения `BENCHER_ADAPTER` на желаемое имя адаптера. Если вы его не установите, будет использован адаптер `magic`. См. [адаптеры для бенчмаркинга](/docs/ru/explanation/adapters/) для полного обзора. (например, `BENCHER_ADAPTER: json`)
+1. Необязательно: установите флаг `--adapter` или переменную окружения `BENCHER_ADAPTER` на желаемое имя адаптера. Если вы его не установите, будет использован адаптер `magic`. См. [адаптеры для бенчмаркинга](/ru/docs/explanation/adapters/) для полного обзора. (например, `BENCHER_ADAPTER: json`)
 1. Необязательно: установите флаг `--testbed` или переменную окружения `BENCHER_TESTBED` на слаг или UUID testbed. Testbed **должен** уже существовать. Если это не установлено, будет использоваться `localhost` Testbed (например, `BENCHER_TESTBED: bullseye`)
 1. Необязательно: создайте переменную окружения, чтобы легче отслеживать используемую версию CLI (например, <code>{`BENCHER_VERSION: ${BENCHER_VERSION}`}</code>)
 1. Скачайте и установите CLI Bencher из файла `.deb`.
-1. [Отслеживайте свои бенчмарки](/docs/ru/how-to/track-benchmarks/) с помощью подкоманды CLI <code><a href="/docs/ru/explanation/bencher-run/">bencher run</a></code>:
-    1. Существует несколько способов установить ветку проекта. См. [выбор ветки](/docs/ru/explanation/branch-selection/) для полного обзора. Предоставленная команда использует [предопределенные переменные GitLab CI/CD](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) и пытается:
+1. [Отслеживайте свои бенчмарки](/ru/docs/how-to/track-benchmarks/) с помощью подкоманды CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>:
+    1. Существует несколько способов установить ветку проекта. См. [выбор ветки](/ru/docs/explanation/branch-selection/) для полного обзора. Предоставленная команда использует [предопределенные переменные GitLab CI/CD](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) и пытается:
         1. Использовать текущую ветку, если она уже существует. (например, `--if-branch "$CI_COMMIT_REF_NAME"`)
         1. Создать копию данных и пороговой ветки для MR, если она уже существует. (например, `--else-if-branch  "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
         1. В противном случае создать копию данных и порогов главной ветки. (например, `--else-if-branch main`)
-    1. Установите команду в состояние ошибки, если сгенерировано предупреждение. Для генерации предупреждения должен уже существовать [Порог](/docs/ru/explanation/thresholds/). (например, `--err`)
+    1. Установите команду в состояние ошибки, если сгенерировано предупреждение. Для генерации предупреждения должен уже существовать [Порог](/ru/docs/explanation/thresholds/). (например, `--err`)
     1. Запустите свои бенчмарки и сгенерируйте отчет из результатов. (например, `"bencher mock"`)
 
 <br/>
@@ -56,4 +56,4 @@ import { BENCHER_VERSION } from "../../../util/ext";
 
 <br/>
 
-<h2><a href="/docs/ru/explanation/benchmarking/">Продолжайте: Обзор бенчмаркинга ➡</a></h2>
+<h2><a href="/ru/docs/explanation/benchmarking/">Продолжайте: Обзор бенчмаркинга ➡</a></h2>
