@@ -12,6 +12,7 @@ export async function getStaticPaths() {
 // 2. When it's time to render, you can get the entry directly from the prop
 const { lang, slug } = Astro.params;
 const page = Astro.props;
+const collection = page?.collection;
 const { Content } = await page.render();
 ---
 
@@ -20,6 +21,8 @@ const { Content } = await page.render();
   description={page.data.description}
   heading={page.data.heading}
   lang={lang}
+  collection={collection}
+  slug={slug}
 >
   <Content />
   <Disclosure collection={Collection.how_to} slug={slug} lang={lang} />

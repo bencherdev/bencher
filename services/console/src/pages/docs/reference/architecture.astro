@@ -1,6 +1,5 @@
 ---
 import ArchitecturePanel from "../../../components/docs/ArchitecturePanel.astro";
-import { AlsoInEn } from "../../../i18n/AlsoIn";
 import DocsLayout from "../../../layouts/docs/DocsLayout.astro";
 
 const title = "Architecture";
@@ -8,7 +7,9 @@ const description = "Diagram of the Bencher Architecture";
 const heading = "Bencher Architecture";
 ---
 
-<DocsLayout title={title} description={description} heading={heading}>
+<DocsLayout title={title} description={description} heading={heading}
+collection="reference"
+slug="architecture"
+>
   <ArchitecturePanel />
-  <AlsoInEn path="reference/architecture/"/>
 </DocsLayout>

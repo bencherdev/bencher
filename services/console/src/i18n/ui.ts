@@ -1,5 +1,8 @@
 export const showDefaultLang = false;
 
+export const langButtonId = "lang-button";
+export const langBoxId = "lang-box";
+
 export enum Language {
 	de = "de",
 	en = "en",

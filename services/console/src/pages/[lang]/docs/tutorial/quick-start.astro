@@ -66,6 +66,8 @@ const { Content } = await page.render();
   description={page?.data?.description}
   heading={page?.data?.heading}
   lang={lang}
+  collection="tutorial"
+  slug="quick-start"
 >
   <Content />
   <AuthOverride client:only="solid-js" elementId={signupId}>

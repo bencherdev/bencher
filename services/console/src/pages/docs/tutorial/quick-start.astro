@@ -5,13 +5,14 @@ import * as quickStart from "../../../content/tutorial/en/quick-start.mdx";
 import AuthOverride from "../../../components/auth/AuthOverride";
 import AddAnApiToken from "../../../components/docs/override/AddAnApiToken";
 import { signupId, tokenId } from "../../../i18n/ui";
-import { AlsoInEn } from "../../../i18n/AlsoIn";
 ---
 
 <DocsLayout
   title={quickStart.frontmatter.title}
   description={quickStart.frontmatter.description}
   heading={quickStart.frontmatter.heading}
+  collection="tutorial"
+  slug="quick-start"
 >
   <Content />
   <AuthOverride client:only="solid-js" elementId={signupId}>
@@ -22,5 +23,4 @@ import { AlsoInEn } from "../../../i18n/AlsoIn";
       <AddAnApiToken client:only="solid-js" text="Add an API Token"/>
     </h4>
   </AuthOverride>
-  <AlsoInEn path="tutorial/quick-start/"/>
 </DocsLayout>

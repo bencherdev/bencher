@@ -13,11 +13,13 @@ interface Props {
   heading?: undefined | string;
   tab?: DocsTab;
   lang?: undefined | string;
+  collection?: undefined | string;
+  slug?: undefined | string;
   author?: undefined | Author;
   canonical?: undefined | string;
 }
 
-const { title, titleFmt, description, heading, tab, lang, author, canonical } = Astro.props;
+const { title, titleFmt, description, heading, tab, lang, collection, slug, author, canonical } = Astro.props;
 ---
 
 <BaseLayout
@@ -35,7 +37,7 @@ const { title, titleFmt, description, heading, tab, lang, author, canonical } = 
     <div class="columns is-reverse-mobile">
       <div class="columns">
         <div class="column is-narrow">
-          <DocsMenu tab={tab ?? DocsTab.Docs} lang={lang}/>
+          <DocsMenu tab={tab ?? DocsTab.Docs} lang={lang} collection={collection} slug={slug}/>
         </div>
       </div>
       <div class="column is-two-thirds">

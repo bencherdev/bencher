@@ -9,7 +9,9 @@ export async function getStaticPaths() {
   return await getEnPaths(Collection.rust);
 }
 // 2. When it's time to render, you can get the entry directly from the prop
+const { slug } = Astro.params;
 const page = Astro.props;
+const collection = page?.collection;
 const { Content } = await page.render();
 ---
 
@@ -19,6 +21,8 @@ const { Content } = await page.render();
   description={page.data.description}
   heading={page.data.heading}
   author={Author.everett}
+  collection={`benchmarking/${collection}`}
+  slug={slug}
 >
   <Content />
 </LearnLayout>

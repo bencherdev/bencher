@@ -1,9 +1,8 @@
 ---
 import DocsLayout from "../../layouts/docs/DocsLayout.astro";
 import {getLangCollection, langPath} from "../../i18n/utils.ts"
-import { Language, allLanguages, alsoIn, architecture, defaultLang, explanation, howTo, languageName, tutorial } from "../../i18n/ui";
+import { Language, architecture, defaultLang, explanation, howTo, tutorial } from "../../i18n/ui";
 import { Collection } from "../../content/config";
-import AlsoIn from "../../i18n/AlsoIn";
 
 interface Props {
   lang: undefined | string;
@@ -111,6 +110,4 @@ const description = () => {
       }
     </ul>
   </nav>
-  <br />
-  <AlsoIn lang={lang} />
 </DocsLayout>

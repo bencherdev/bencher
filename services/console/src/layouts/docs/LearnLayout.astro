@@ -9,10 +9,12 @@ interface Props {
   description: string;
   heading?: string;
   lang?: string;
+  collection?: undefined | string;
+  slug?: undefined | string;
   author?: Author;
 }
 
-const { title, titleFmt, description, heading, lang, author } = Astro.props;
+const { title, titleFmt, description, heading, lang, collection, slug, author } = Astro.props;
 ---
 
 <DocsLayout
@@ -22,6 +24,8 @@ const { title, titleFmt, description, heading, lang, author } = Astro.props;
   heading={heading}
   tab={DocsTab.Learn}
   lang={lang}
+  collection={collection}
+  slug={slug}
   author={author}
 >
   <slot />

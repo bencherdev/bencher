@@ -1,0 +1,84 @@
+---
+import { DocsTab } from "../components/docs/docs_tab";
+import { Language, allLanguages, langBoxId, langButtonId, languageName } from "./ui";
+import { langPath } from "./utils";
+
+interface Props {
+  lang: Language;
+  tab: DocsTab;
+  collection?: undefined | string;
+  slug?: undefined | string;
+}
+
+const { tab, collection, slug } = Astro.props;
+const lang: Language = Astro.props.lang;
+
+const path = (langauge: Language) => {
+  if (collection && slug) {
+    return `/${langPath(langauge)}${pathTab()}/${pathCollection()}/${slug}/`;
+  } else if (collection) {
+    return `/${langPath(langauge)}${pathTab()}/${pathCollection()}/`;
+  } else if (slug) {
+    return `/${langPath(langauge)}${pathTab()}/${slug}/`;
+  } else {
+    return `/${langPath(langauge)}${pathTab()}/`;
+  }
+};
+const pathTab = () => {
+  switch (tab) {
+    case DocsTab.Docs:
+      return "docs";
+    case DocsTab.Learn:
+      return "learn";
+  }
+}
+const pathCollection = () => collection?.replace('_', '-');
+---
+
+<nav>
+  <div class="menu-label">
+    <button
+      id={langButtonId}
+      class="button is-small is-outlined is-fullwidth"
+      title="View Project Perf"
+    >
+      <span class="icon is-small">
+        <i class="fas fa-globe" aria-hidden="true" />
+      </span>
+    </button>
+  </div>
+  <div id={langBoxId} class="box" style="display: none;">
+    <ul class="menu-list">
+      {
+        allLanguages.map((langauge) => (
+          <li>
+            <a href={path(langauge)} class={lang === langauge ? "is-active" : ""}>
+									{languageName(langauge)}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</nav>
+<script >
+  import {langBoxId, langButtonId} from "./ui";
+
+  const langButton = document.getElementById(langButtonId);
+  const langBox = document.getElementById(langBoxId);
+
+  function toggleLangBox() {
+    switch (langBox?.style.display) {
+      case "none":
+        langBox.style.display = "block";
+        break;
+      case "block":
+        langBox.style.display = "none";
+        break;
+    }
+  }
+
+  langButton?.addEventListener("click", () => {
+    toggleLangBox();
+  });
+</script>

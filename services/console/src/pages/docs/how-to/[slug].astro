@@ -2,7 +2,6 @@
 import DocsLayout from "../../../layouts/docs/DocsLayout.astro";
 import { Collection } from "../../../content/config";
 import { getEnPaths } from "../../../i18n/utils";
-import { AlsoInEn } from "../../../i18n/AlsoIn";
 
 // 1. Generate a new path for every collection entry
 export async function getStaticPaths() {
@@ -11,6 +10,7 @@ export async function getStaticPaths() {
 // 2. When it's time to render, you can get the entry directly from the prop
 const { slug } = Astro.params;
 const page = Astro.props;
+const collection = page?.collection;
 const { Content } = await page.render();
 ---
 
@@ -18,7 +18,8 @@ const { Content } = await page.render();
   title={page.data.title}
   description={page.data.description}
   heading={page.data.heading}
+  collection={collection}
+  slug={slug}
 >
   <Content />
-  <AlsoInEn path={`how-to/${slug}/`}/>
 </DocsLayout>

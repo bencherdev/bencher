@@ -9,8 +9,9 @@ export async function getStaticPaths() {
   return await getLangPaths(Collection.reference);
 }
 // 2. When it's time to render, you can get the entry directly from the prop
-const { lang } = Astro.params;
+const { lang, slug } = Astro.params;
 const page = Astro.props;
+const collection = page?.collection;
 const { Content } = await page.render();
 ---
 
@@ -18,6 +19,8 @@ const { Content } = await page.render();
   title={page.data.title}
   description={page.data.description}
   heading={page.data.heading}
+  collection={collection}
+  slug={slug}
   lang={lang}
   canonical={page.data.canonical ? `${BENCHER_SITE_URL}/docs/reference/${page.data.canonical}/` : undefined}
 >

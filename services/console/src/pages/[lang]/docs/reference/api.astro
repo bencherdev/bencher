@@ -35,6 +35,7 @@ const description = () => {
 }
 ---
 
-<DocsLayout title={title} description={description()} lang={lang}>
+<DocsLayout title={title} description={description()} lang={lang} collection="reference"
+slug="api">
   <SwaggerPanel client:only="solid-js" apiUrl={BENCHER_API_URL} lang={lang} />
 </DocsLayout>
