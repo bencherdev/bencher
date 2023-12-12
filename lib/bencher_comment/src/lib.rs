@@ -76,7 +76,7 @@ impl ReportComment {
 
     fn html_header(&self, html: &mut String) {
         html.push_str(&format!(
-            r#"<h1><a href="{endpoint_url}"><img src="https://s3.amazonaws.com/public.bencher.dev/bencher_rabbit.svg" width="32" height="32" alt="🐰" /></a>Bencher</h1>"#,
+            r#"<h1><a href="{endpoint_url}"><img src="https://bencher.dev/favicon.svg" width="32" height="32" alt="🐰" /></a>Bencher</h1>"#,
             endpoint_url = self.endpoint_url,
         ));
     }

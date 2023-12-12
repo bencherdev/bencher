@@ -46,12 +46,12 @@ jobs:
             🐰 Congratulations on your first issue! 🎉
             If you haven't already, hop on over to our [Discord server](https://discord.gg/yGEsdUh7R4).
             <br />
-            <p align="center"><a href="https://discord.gg/yGEsdUh7R4"><img src="https://s3.amazonaws.com/public.bencher.dev/discord_invite.png" alt="Bencher Discord Server" /></a></p>
+            <p align="center"><a href="https://discord.gg/yGEsdUh7R4"><img src="https://s3.amazonaws.com/public.bencher.dev/chat/discord_invite.png" alt="Bencher Discord Server" /></a></p>
           pr-message: |-
             🐰 Congratulations on your first PR! 🎉
             If you haven't already, hop on over to our [Discord server](https://discord.gg/yGEsdUh7R4).
             <br />
-            <p align="center"><a href="https://discord.gg/yGEsdUh7R4"><img src="https://s3.amazonaws.com/public.bencher.dev/discord_invite.png" alt="Bencher Discord Server" /></a></p>
+            <p align="center"><a href="https://discord.gg/yGEsdUh7R4"><img src="https://s3.amazonaws.com/public.bencher.dev/chat/discord_invite.png" alt="Bencher Discord Server" /></a></p>
 
   bencher_github_action:
     name: Bencher CLI GitHub Action

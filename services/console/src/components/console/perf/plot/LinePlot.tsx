@@ -17,8 +17,9 @@ import { addTooltips } from "./tooltip";
 
 // Source: https://twemoji.twitter.com
 // License: https://creativecommons.org/licenses/by/4.0
-const WARNING_URL = "https://s3.amazonaws.com/public.bencher.dev/warning.png";
-const SIREN_URL = "https://s3.amazonaws.com/public.bencher.dev/siren.png";
+const WARNING_URL =
+	"https://s3.amazonaws.com/public.bencher.dev/perf/warning.png";
+const SIREN_URL = "https://s3.amazonaws.com/public.bencher.dev/perf/siren.png";
 
 export interface Props {
 	isConsole: boolean;
