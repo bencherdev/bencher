@@ -9,20 +9,20 @@ on:
 
 jobs:
   track_with_bencher:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     env:
       BENCHER_PROJECT: save-walter-white
       BENCHER_ADAPTER: json
       BENCHER_TESTBED: ubuntu-latest
       BENCHMARK_RESULTS: benchmark_results.json
-      PR_EVENT: pr_event.json
+      PR_EVENT: event.json
     steps:
       - name: Download Benchmark Results
         uses: actions/github-script@v6
         with:
           script: |
-            function downloadArtifact(artifactName) {
+            async function downloadArtifact(artifactName) {
               let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -43,8 +43,8 @@ jobs:
               let fs = require('fs');
               fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/${artifactName}.zip`, Buffer.from(download.data));
             }
-            downloadArtifact(process.env.BENCHMARK_RESULTS);
-            downloadArtifact(process.env.PR_EVENT);
+            await downloadArtifact(process.env.BENCHMARK_RESULTS);
+            await downloadArtifact(process.env.PR_EVENT);
       - name: Unzip Benchmark Results
         run: |
           unzip $BENCHMARK_RESULTS.zip
@@ -55,20 +55,20 @@ jobs:
           script: |
             let fs = require('fs');
             let prEvent = JSON.parse(fs.readFileSync(process.env.PR_EVENT, {encoding: 'utf8'}));
-            fs.appendFileSync(process.env.GITHUB_ENV, `PR_HEAD=${prEvent.pull_request.head.ref}`);
-            fs.appendFileSync(process.env.GITHUB_ENV, `PR_BASE=${prEvent.pull_request.base.ref}`);
-            fs.appendFileSync(process.env.GITHUB_ENV, `PR_DEFAULT=${prEvent.pull_request.base.repo.default_branch}`);
-            fs.appendFileSync(process.env.GITHUB_ENV, `PR_NUMBER=${prEvent.number}`);
+            core.exportVariable("PR_HEAD", prEvent.pull_request.head.ref);
+            core.exportVariable("PR_BASE", prEvent.pull_request.base.ref);
+            core.exportVariable("PR_DEFAULT", prEvent.pull_request.base.repo.default_branch);
+            core.exportVariable("PR_NUMBER", prEvent.number);
       - uses: bencherdev/bencher@main
-          - name: Track Benchmarks with Bencher
-            run: |
-              bencher run \
-              --if-branch '${{ env.PR_HEAD }}' \
-              --else-if-branch '${{ env.PR_BASE }}' \
-              --else-if-branch '${{ env.PR_DEFAULT }}' \
-              --ci-number '${{ env.PR_NUMBER }}' \
-              --github-actions "${{ secrets.GITHUB_TOKEN }}" \
-              --token "${{ secrets.BENCHER_API_TOKEN }}" \
-              --err \
-              --file "$BENCHMARK_RESULTS"
+      - name: Track Benchmarks with Bencher
+        run: |
+          bencher run \
+          --if-branch '${{ env.PR_HEAD }}' \
+          --else-if-branch '${{ env.PR_BASE }}' \
+          --else-if-branch '${{ env.PR_DEFAULT }}' \
+          --ci-number '${{ env.PR_NUMBER }}' \
+          --github-actions "${{ secrets.GITHUB_TOKEN }}" \
+          --token "${{ secrets.BENCHER_API_TOKEN }}" \
+          --err \
+          --file "$BENCHMARK_RESULTS"
 ```

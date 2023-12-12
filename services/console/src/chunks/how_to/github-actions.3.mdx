@@ -3,8 +3,7 @@ on: pull_request_target
 
 jobs:
   fork_pr_requires_review:
-    environment:
-      ${{ (github.event.pull_request.head.repo.full_name == github.repository && 'internal') || 'external' }}
+    environment: (github.event.pull_request.head.repo.full_name == github.repository && 'internal') || 'external'
     runs-on: ubuntu-latest
     steps:
       - run: true
