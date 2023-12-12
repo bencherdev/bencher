@@ -89,7 +89,7 @@ const Showcase = (_props: {}) => {
 
 const ProjectLogo = (props: { project: Project }) => {
 	return (
-		<div class="column has-text-centered is-2">
+		<div class="column has-text-centered is-2-tablet">
 			<a href={`https://bencher.dev/perf/${props.project.slug}`}>
 				<img width="88%" src={props.project.logo} alt={props.project.name} />
 			</a>

@@ -84,7 +84,7 @@ const PublicProjects = (props: Props) => {
 
 	const handlePage = (page: number) => {
 		if (validU32(page)) {
-			setSearchParams({ [PAGE_PARAM]: page });
+			setSearchParams({ [PAGE_PARAM]: page }, { scroll: true });
 		}
 	};
 

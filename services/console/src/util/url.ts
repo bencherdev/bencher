@@ -68,6 +68,9 @@ export const useNavigateSoft = () => {
 	return (to: string | number, options?: Partial<NavigateOptions>) => {
 		const to_str = to.toString();
 		const state = { path: to_str };
+		if (options?.scroll) {
+			window.scrollTo(0, 0);
+		}
 		if (options?.replace) {
 			// https://developer.mozilla.org/en-US/docs/Web/API/History/replaceState
 			window.history.replaceState(state, "", to_str);
