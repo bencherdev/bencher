@@ -262,7 +262,7 @@ const PerfPanel = (props: Props) => {
 		}
 
 		if (Object.keys(initParams).length !== 0) {
-			setSearchParams(initParams);
+			setSearchParams(initParams, { replace: true });
 		}
 	});
 
@@ -554,7 +554,7 @@ const PerfPanel = (props: Props) => {
 		) {
 			const first_measure =
 				first_report?.results?.[first]?.[first]?.measure?.uuid;
-			handleReportChecked(first, first_measure);
+			handleReportChecked(first, first_measure, true);
 		}
 	});
 
@@ -619,6 +619,7 @@ const PerfPanel = (props: Props) => {
 	const handleReportChecked = (
 		index: number,
 		measure_uuid: undefined | string,
+		replace?: boolean,
 	) => {
 		if (!measure_uuid) {
 			return;
@@ -628,22 +629,25 @@ const PerfPanel = (props: Props) => {
 			?.find((result) => result.measure?.uuid === measure_uuid)
 			?.benchmarks?.map((benchmark) => benchmark.uuid);
 		const start_time = dateTimeMillis(report?.start_time);
-		setSearchParams({
-			[REPORT_PARAM]: report?.uuid,
-			[BRANCHES_PARAM]: report?.branch?.uuid,
-			[TESTBEDS_PARAM]: report?.testbed?.uuid,
-			[BENCHMARKS_PARAM]: arrayToString(benchmarks ?? []),
-			[MEASURES_PARAM]: measure_uuid,
-			[START_TIME_PARAM]: start_time
-				? start_time - DEFAULT_REPORT_HISTORY
-				: null,
-			[END_TIME_PARAM]: dateTimeMillis(report?.end_time),
-			[LOWER_VALUE_PARAM]: null,
-			[UPPER_VALUE_PARAM]: null,
-			[LOWER_BOUNDARY_PARAM]: null,
-			[UPPER_BOUNDARY_PARAM]: null,
-			[CLEAR_PARAM]: true,
-		});
+		setSearchParams(
+			{
+				[REPORT_PARAM]: report?.uuid,
+				[BRANCHES_PARAM]: report?.branch?.uuid,
+				[TESTBEDS_PARAM]: report?.testbed?.uuid,
+				[BENCHMARKS_PARAM]: arrayToString(benchmarks ?? []),
+				[MEASURES_PARAM]: measure_uuid,
+				[START_TIME_PARAM]: start_time
+					? start_time - DEFAULT_REPORT_HISTORY
+					: null,
+				[END_TIME_PARAM]: dateTimeMillis(report?.end_time),
+				[LOWER_VALUE_PARAM]: null,
+				[UPPER_VALUE_PARAM]: null,
+				[LOWER_BOUNDARY_PARAM]: null,
+				[UPPER_BOUNDARY_PARAM]: null,
+				[CLEAR_PARAM]: true,
+			},
+			{ replace: replace ?? false },
+		);
 	};
 	const handleChecked = (
 		resource_tab: any[],

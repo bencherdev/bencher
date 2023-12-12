@@ -1,25 +1,25 @@
+import type { Params } from "astro";
+import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import {
-	createSignal,
-	createResource,
-	createMemo,
 	createEffect,
+	createMemo,
+	createResource,
+	createSignal,
 } from "solid-js";
-import Pagination, { PaginationSize } from "../../site/Pagination";
-import { useNavigate, useSearchParams } from "../../../util/url";
-import { validJwt, validU32 } from "../../../util/valid";
 import consoleConfig from "../../../config/console";
 import {
+	type BencherResource,
 	Operation,
 	resourcePlural,
-	type Resource,
 } from "../../../config/types";
-import { httpGet } from "../../../util/http";
 import { authUser } from "../../../util/auth";
-import bencher_valid_init, { type InitOutput } from "bencher_valid";
-import TableHeader, { type TableHeaderConfig } from "./TableHeader";
-import Table, { type TableConfig, TableState } from "./Table";
-import type { Params } from "astro";
+import { httpGet } from "../../../util/http";
 import { NotifyKind, pageNotify } from "../../../util/notify";
+import { useNavigate, useSearchParams } from "../../../util/url";
+import { validJwt, validU32 } from "../../../util/valid";
+import Pagination, { PaginationSize } from "../../site/Pagination";
+import Table, { type TableConfig, TableState } from "./Table";
+import TableHeader, { type TableHeaderConfig } from "./TableHeader";
 
 const PER_PAGE_PARAM = "per_page";
 const PAGE_PARAM = "page";
@@ -30,7 +30,7 @@ const DEFAULT_PAGE = 1;
 interface Props {
 	apiUrl: string;
 	params: Params;
-	resource: Resource;
+	resource: BencherResource;
 }
 
 interface TablePanelConfig {
@@ -44,22 +44,23 @@ const TablePanel = (props: Props) => {
 		async () => await bencher_valid_init(),
 	);
 	const [searchParams, setSearchParams] = useSearchParams();
-	const navigate = useNavigate();
 
 	const config = createMemo<TablePanelConfig>(
 		() => consoleConfig[props.resource]?.[Operation.LIST],
 	);
 
-	const initParams: Record<string, null | number | boolean> = {};
-	if (!validU32(searchParams[PER_PAGE_PARAM])) {
-		initParams[PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
-	}
-	if (!validU32(searchParams[PAGE_PARAM])) {
-		initParams[PAGE_PARAM] = DEFAULT_PAGE;
-	}
-	if (Object.keys(initParams).length !== 0) {
-		setSearchParams(initParams);
-	}
+	createEffect(() => {
+		const initParams: Record<string, null | number | boolean> = {};
+		if (!validU32(searchParams[PER_PAGE_PARAM])) {
+			initParams[PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
+		}
+		if (!validU32(searchParams[PAGE_PARAM])) {
+			initParams[PAGE_PARAM] = DEFAULT_PAGE;
+		}
+		if (Object.keys(initParams).length !== 0) {
+			setSearchParams(initParams, { replace: true });
+		}
+	});
 
 	const per_page = createMemo(() => Number(searchParams[PER_PAGE_PARAM]));
 	const page = createMemo(() => Number(searchParams[PAGE_PARAM]));
@@ -133,19 +134,6 @@ const TablePanel = (props: Props) => {
 		getData,
 	);
 	const tableDataLength = createMemo(() => tableData()?.length);
-
-	createEffect(() => {
-		const newParams: Record<string, null | number | boolean> = {};
-		if (!validU32(searchParams[PER_PAGE_PARAM])) {
-			newParams[PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
-		}
-		if (!validU32(searchParams[PAGE_PARAM])) {
-			newParams[PAGE_PARAM] = DEFAULT_PAGE;
-		}
-		if (Object.keys(newParams).length !== 0) {
-			setSearchParams(newParams);
-		}
-	});
 
 	const handlePage = (page: number) => {
 		if (validU32(page)) {

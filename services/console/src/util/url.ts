@@ -3,13 +3,13 @@
 /// However, since the underlying router is not being used
 /// A kludge to simply poll for the current window location and state is used
 import {
-	createMemo,
 	type Accessor,
-	getOwner,
-	runWithOwner,
-	on,
-	untrack,
+	createMemo,
 	createSignal,
+	getOwner,
+	on,
+	runWithOwner,
+	untrack,
 } from "solid-js";
 
 export type Params = Record<string, string>;
@@ -65,11 +65,16 @@ export const useLocation = <S = unknown>() =>
 
 // No page refresh
 export const useNavigateSoft = () => {
-	return (to: string | number, _options?: Partial<NavigateOptions>) => {
-		// https://developer.mozilla.org/en-US/docs/Web/API/History/pushState
+	return (to: string | number, options?: Partial<NavigateOptions>) => {
 		const to_str = to.toString();
 		const state = { path: to_str };
-		window.history.pushState(state, "", to_str);
+		if (options?.replace) {
+			// https://developer.mozilla.org/en-US/docs/Web/API/History/replaceState
+			window.history.replaceState(state, "", to_str);
+		} else {
+			// https://developer.mozilla.org/en-US/docs/Web/API/History/pushState
+			window.history.pushState(state, "", to_str);
+		}
 	};
 };
 

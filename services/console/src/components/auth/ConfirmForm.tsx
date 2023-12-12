@@ -6,23 +6,23 @@ import {
 	createSignal,
 } from "solid-js";
 
+import { createStore } from "solid-js/store";
+import type {
+	Email,
+	JsonAuthToken,
+	JsonLogin,
+	Jwt,
+	PlanLevel,
+} from "../../types/bencher";
+import { setUser } from "../../util/auth";
+import { httpPost } from "../../util/http";
+import { NotifyKind, navigateNotify, pageNotify } from "../../util/notify";
+import { useSearchParams } from "../../util/url";
+import { validEmail, validJwt, validPlanLevel } from "../../util/valid";
 import type { FieldHandler } from "../field/Field";
 import Field from "../field/Field";
 import FieldKind from "../field/kind";
 import { AUTH_FIELDS, EMAIL_PARAM, PLAN_PARAM, TOKEN_PARAM } from "./auth";
-import { useSearchParams } from "../../util/url";
-import { validEmail, validJwt, validPlanLevel } from "../../util/valid";
-import { createStore } from "solid-js/store";
-import { httpPost } from "../../util/http";
-import { setUser } from "../../util/auth";
-import type {
-	Email,
-	Jwt,
-	PlanLevel,
-	JsonAuthToken,
-	JsonLogin,
-} from "../../types/bencher";
-import { NotifyKind, navigateNotify, pageNotify } from "../../util/notify";
 
 export interface Props {
 	apiUrl: string;
@@ -136,22 +136,22 @@ const ConfirmForm = (props: Props) => {
 			return;
 		}
 
-		const newParams: Record<string, null | string> = {};
+		const initParams: Record<string, null | string> = {};
 		if (!validJwt(searchParams[TOKEN_PARAM])) {
-			newParams[TOKEN_PARAM] = null;
+			initParams[TOKEN_PARAM] = null;
 		}
 		if (!validPlanLevel(searchParams[PLAN_PARAM])) {
-			newParams[PLAN_PARAM] = null;
+			initParams[PLAN_PARAM] = null;
 		}
 		if (!validEmail(searchParams[EMAIL_PARAM])) {
-			newParams[EMAIL_PARAM] = null;
+			initParams[EMAIL_PARAM] = null;
 		}
 		const token_value = form.token?.value;
 		if (validJwt(token_value)) {
-			newParams[TOKEN_PARAM] = token_value;
+			initParams[TOKEN_PARAM] = token_value;
 		}
-		if (Object.keys(newParams).length !== 0) {
-			setSearchParams(newParams);
+		if (Object.keys(initParams).length !== 0) {
+			setSearchParams(initParams);
 		}
 
 		const token_valid = form.token?.valid;

@@ -1,4 +1,4 @@
-import { pathname, useSearchParams } from "../../util/url";
+import { Show, createMemo } from "solid-js";
 import {
 	NOTIFY_KIND_PARAM,
 	NOTIFY_TEXT_PARAM,
@@ -6,7 +6,7 @@ import {
 	isNotifyKind,
 	isNotifyText,
 } from "../../util/notify";
-import { Show, createMemo } from "solid-js";
+import { pathname, useSearchParams } from "../../util/url";
 
 const Notification = (props: { suppress?: undefined | boolean }) => {
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -14,13 +14,12 @@ const Notification = (props: { suppress?: undefined | boolean }) => {
 	const initParams: Record<string, null> = {};
 	if (!isNotifyKind(searchParams[NOTIFY_KIND_PARAM])) {
 		initParams[NOTIFY_KIND_PARAM] = null;
-		setSearchParams({ [NOTIFY_KIND_PARAM]: null });
 	}
 	if (!isNotifyText(searchParams[NOTIFY_TEXT_PARAM])) {
 		initParams[NOTIFY_TEXT_PARAM] = null;
 	}
 	if (Object.keys(initParams).length !== 0) {
-		setSearchParams(initParams);
+		setSearchParams(initParams, { replace: true });
 	}
 
 	const notifyKind = createMemo(() => searchParams[NOTIFY_KIND_PARAM]);
@@ -33,10 +32,13 @@ const Notification = (props: { suppress?: undefined | boolean }) => {
 		// Check to see if the pathname is still the same
 		// Otherwise, this whiplashes the user back to the page that generated the notification
 		if (pathname() === window.location.pathname) {
-			setSearchParams({
-				[NOTIFY_KIND_PARAM]: null,
-				[NOTIFY_TEXT_PARAM]: null,
-			});
+			setSearchParams(
+				{
+					[NOTIFY_KIND_PARAM]: null,
+					[NOTIFY_TEXT_PARAM]: null,
+				},
+				{ replace: true },
+			);
 		}
 	};
 

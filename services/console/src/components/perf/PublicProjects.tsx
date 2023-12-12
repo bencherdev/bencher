@@ -27,16 +27,18 @@ export interface Props {
 const PublicProjects = (props: Props) => {
 	const [searchParams, setSearchParams] = useSearchParams();
 
-	const initParams: Record<string, number> = {};
-	if (!validU32(searchParams[PER_PAGE_PARAM])) {
-		initParams[PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
-	}
-	if (!validU32(searchParams[PAGE_PARAM])) {
-		initParams[PAGE_PARAM] = DEFAULT_PAGE;
-	}
-	if (Object.keys(initParams).length !== 0) {
-		setSearchParams(initParams);
-	}
+	createEffect(() => {
+		const initParams: Record<string, number> = {};
+		if (!validU32(searchParams[PER_PAGE_PARAM])) {
+			initParams[PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
+		}
+		if (!validU32(searchParams[PAGE_PARAM])) {
+			initParams[PAGE_PARAM] = DEFAULT_PAGE;
+		}
+		if (Object.keys(initParams).length !== 0) {
+			setSearchParams(initParams, { replace: true });
+		}
+	});
 
 	const per_page = createMemo(() => Number(searchParams[PER_PAGE_PARAM]));
 	const page = createMemo(() => Number(searchParams[PAGE_PARAM]));
@@ -79,19 +81,6 @@ const PublicProjects = (props: Props) => {
 	};
 	const [projects] = createResource<JsonProject[]>(fetcher, fetchProjects);
 	const projectsLength = createMemo(() => projects()?.length);
-
-	createEffect(() => {
-		const newParams: Record<string, number> = {};
-		if (!validU32(searchParams[PER_PAGE_PARAM])) {
-			newParams[PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
-		}
-		if (!validU32(searchParams[PAGE_PARAM])) {
-			newParams[PAGE_PARAM] = DEFAULT_PAGE;
-		}
-		if (Object.keys(newParams).length !== 0) {
-			setSearchParams(newParams);
-		}
-	});
 
 	const handlePage = (page: number) => {
 		if (validU32(page)) {

@@ -106,10 +106,13 @@ export const navigateNotify = (
 
 export const pageNotify = (notifyKind: NotifyKind, notifyText: string) => {
 	const [_searchParams, setSearchParams] = useSearchParams();
-	setSearchParams({
-		[NOTIFY_KIND_PARAM]: notifyKind,
-		[NOTIFY_TEXT_PARAM]: notifyText,
-	});
+	setSearchParams(
+		{
+			[NOTIFY_KIND_PARAM]: notifyKind,
+			[NOTIFY_TEXT_PARAM]: notifyText,
+		},
+		{ replace: true },
+	);
 	window.scrollTo({
 		top: 0,
 		behavior: "smooth",
