@@ -1,0 +1,61 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import HelpPanel from "../components/console/help/Help";
+import HelpRedirect from "../components/console/help/HelpRedirect";
+
+const title = "Brand Kit";
+const titleFmt = (title: string) => `🐰 ${title}`;
+const description = "Bencher Brand Kit: Logo, Wordmark, and more.";
+---
+
+<BaseLayout title={title} titleFmt={titleFmt} description={description}>
+    <section class="section">
+        <div class="container">
+          <div class="columns is-centered">
+            <div class="column">
+              <h1 class="title is-1">Brand Kit</h1>
+              <h2 class="subtitle is-3">Use of the Bencher Logo and Bencher Wordmark are bound by our <a href="https://bencher.dev/legal/trademark">Trademark Policy</a></h2>
+            </div>
+          </div>
+            <hr />
+        </div>
+    </section>
+    <section class="section" style="margin-bottom: 12rem;">
+        <div class="container">
+            <div class="columns is-centered">
+                <div class="column has-text-centered is-half">
+                    <div class="card">
+                        <header class="card-header">
+                            <p class="card-header-title">
+                                Bencher Logo
+                            </p>
+                        </header>
+                        <div class="card-image">
+                            <img width="128px" src="https://bencher.dev/favicon.svg" alt="Bencher Logo" style="margin-top: 1rem; margin-bottom: 1rem;" />
+                        </div>
+                        <footer class="card-footer">
+                            <a href="https://bencher.dev/favicon.svg" class="card-footer-item" download="bencher-logo.svg">SVG</a>
+                            <a href="https://s3.amazonaws.com/public.bencher.dev/img/android-chrome-512x512.png" class="card-footer-item" download="bencher-logo.png">PNG</a>
+                        </footer>
+                    </div>
+                </div>
+                <div class="column has-text-centered is-half">
+                    <div class="card">
+                        <header class="card-header">
+                            <p class="card-header-title">
+                                Bencher Wordmark
+                            </p>
+                        </header>
+                        <div class="card-image">
+                            <img height="128px" src="https://bencher.dev/wordmark.svg" alt="Bencher Wordmark" style="margin-top: 1rem; margin-bottom: 1rem;" />
+                        </div>
+                        <footer class="card-footer">
+                            <a href="https://bencher.dev/wordmark.svg" class="card-footer-item" download="bencher-wordmark.svg">SVG</a>
+                            <a href="https://s3.amazonaws.com/public.bencher.dev/img/bencher-wordmark.png" class="card-footer-item" download="bencher-wordmark.png">PNG</a>
+                        </footer>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</BaseLayout>

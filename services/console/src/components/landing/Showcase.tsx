@@ -10,7 +10,7 @@ const PROJECTS: Project[][] = [
 	[
 		{
 			name: "Rustls",
-			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/rustls-rust-tls.png",
+			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/rustls.png",
 			slug: "rustls-821705769",
 		},
 		{
@@ -32,7 +32,7 @@ const PROJECTS: Project[][] = [
 		},
 		{
 			name: "GreptimeDB",
-			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/greptimedb.png",
+			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/greptimedb.svg",
 			slug: "greptimedb",
 		},
 		{
@@ -89,9 +89,9 @@ const Showcase = (_props: {}) => {
 
 const ProjectLogo = (props: { project: Project }) => {
 	return (
-		<div class="column is-2">
+		<div class="column has-text-centered is-2">
 			<a href={`https://bencher.dev/perf/${props.project.slug}`}>
-				<img src={props.project.logo} alt={props.project.name} />
+				<img width="88%" src={props.project.logo} alt={props.project.name} />
 			</a>
 		</div>
 	);
