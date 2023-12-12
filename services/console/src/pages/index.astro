@@ -6,6 +6,7 @@ import { BENCHER_CALENDLY_URL } from "../util/ext";
 import AuthRedirect from "../components/auth/AuthRedirect";
 import SelfHostedRedirect from "../components/site/SelfHostedRedirct";
 import { BENCHER_DESCRIPTION, BENCHER_TITLE } from "../util/resource";
+import Showcase from "../components/landing/Showcase";
 ---
 
 <BaseLayout
@@ -126,9 +127,9 @@ import { BENCHER_DESCRIPTION, BENCHER_TITLE } from "../util/resource";
     </div>
   </div>
 
-  <Toolbox />
+  <Showcase />
 
-  <section class="section" style="margin-top: 8rem;">
+  <section class="section" style="margin-top: 4rem;">
     <div class="container">
       <div class="columns is-centered">
         <div class="column">
@@ -154,6 +155,8 @@ import { BENCHER_DESCRIPTION, BENCHER_TITLE } from "../util/resource";
       </div>
     </div>
   </section>
+
+  <Toolbox />
 
   <section class="section" style="margin-top: 8rem">
     <div class="container">

@@ -113,6 +113,116 @@ Though Bencher is open source, there is also a hosted version available [Bencher
 
 👉 For more details see the [explanation of benchmark harness adapters](https://bencher.dev/docs/explanation/adapters/).
 
+## Showcase
+
+<table>
+  <tr>
+    <td>
+      <p align="center">
+        <a href="https://bencher.dev/perf/rustls-821705769">
+          <img
+            src="https://s3.amazonaws.com/public.bencher.dev/case-study/rustls-rust-tls.png"
+            alt="Rustls TLS Library"
+          />
+        </a>
+      </p>
+      <p align="center">Rustls</p>
+    </td>
+    <td>
+      <p align="center">
+        <a href="https://bencher.dev/perf/k-framework">
+          <img
+            src="https://s3.amazonaws.com/public.bencher.dev/case-study/k-framework.png"
+            alt="K Framework"
+          />
+        </a>
+      </p>
+      <p align="center">K Framework</p>
+    </td>
+    <td>
+      <p align="center">
+        <a href="https://bencher.dev/perf/poolifier">
+          <img
+            src="https://s3.amazonaws.com/public.bencher.dev/case-study/poolifier.png"
+            alt="Poolifier"
+          />
+        </a>
+      </p>
+      <p align="center">Poolifier</p>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <p align="center">
+        <a href="https://bencher.dev/perf/hydra-postgres">
+          <img
+            src="https://s3.amazonaws.com/public.bencher.dev/case-study/hydra-db.svg"
+            alt="Hydra Database"
+          />
+        </a>
+      </p>
+      <p align="center">Hydra Database</p>
+    </td>
+    <td>
+      <p align="center">
+        <a href="https://bencher.dev/perf/greptimedb">
+          <img
+            src="https://s3.amazonaws.com/public.bencher.dev/case-study/greptimedb.png"
+            alt="GreptimeDB"
+          />
+        </a>
+      </p>
+      <p align="center">GreptimeDB</p>
+    </td>
+    <td>
+      <p align="center">
+        <a href="https://bencher.dev/perf/hotstar">
+          <img
+            src="https://s3.amazonaws.com/public.bencher.dev/case-study/disney-hotstar.png"
+            alt="Disney+ Hotstar"
+          />
+        </a>
+      </p>
+      <p align="center">Disney+ Hotstar</p>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <p align="center">
+        <a href="https://bencher.dev/perf/trace4rs">
+          <img
+            src="https://s3.amazonaws.com/public.bencher.dev/case-study/trace4rs.png"
+            alt="trace4rs"
+          />
+        </a>
+      </p>
+      <p align="center">trace4rs</p>
+    </td>
+    <td>
+      <p align="center">
+        <a href="https://bencher.dev/perf/stratum">
+          <img
+            src="https://s3.amazonaws.com/public.bencher.dev/case-study/stratum.svg"
+            alt="Stratum"
+          />
+        </a>
+      </p>
+      <p align="center">Stratum</p>
+    </td>
+    <td>
+      <p align="center">
+        <a href="https://bencher.dev/perf/raft">
+          <img
+            src="https://s3.amazonaws.com/public.bencher.dev/case-study/raft.png"
+            alt="raft"
+          />
+        </a>
+      </p>
+      <p align="center">raft</p>
+    </td>
+  </tr>
+</table>
+
 ## GitHub Actions
 
 Install the Bencher CLI using the [GitHub Action](https://github.com/marketplace/actions/bencher-cli),
