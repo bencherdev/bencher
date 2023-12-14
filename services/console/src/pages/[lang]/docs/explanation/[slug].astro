@@ -24,8 +24,8 @@ const { Content } = await page.render();
   lang={lang}
   collection={collection}
   slug={slug}
-  canonical={page.data.canonical ? `${BENCHER_SITE_URL}/docs/explanation/${page.data.canonical}/` : undefined}
+  canonical={page.data.canonicalize ? `${BENCHER_SITE_URL}/docs/explanation/${slug}/` : undefined}
 >
   <Content />
-  <Disclosure collection={Collection.explanation} lang={lang} />
+  <Disclosure collection={Collection.explanation} slug={slug} lang={lang} />
 </DocsLayout>

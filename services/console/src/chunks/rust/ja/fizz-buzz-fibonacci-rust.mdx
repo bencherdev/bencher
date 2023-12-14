@@ -1,0 +1,38 @@
+import FizzBuzzFibonacciRules from "../../benchmarking/ja/fizz-buzz-fibonacci-rules.mdx";
+import IsFibonacciNumberRustCode from "../is-fibonacci-number-rust-code.mdx";
+import FizzBuzzFibonacciRustCode from "../fizz-buzz-fibonacci-rust-code.mdx";
+import PlayGameRustCode from "../play-game-rust-code.mdx";
+
+## RustでFizzBuzzFibonacciを書く
+
+私たちの主要業績指標（KPI）が下降しているため、製品マネージャー（PM）は新機能の追加を希望しています。多くのブレインストーミングとユーザーインタビューの結果、単なるFizzBuzzだけでは足りないと判断されました。今日の子供たちは新しいゲーム、FizzBuzzFibonacciを求めています。
+
+<FizzBuzzFibonacciRules />
+
+<IsFibonacciNumberRustCode />
+
+- `is_fibonacci_number`という名前の関数を作成し、符号なし整数を引数に取り、ブールを返します。
+- `0`から我々の与えられた数`n`の間で全ての数値に対して反復します。
+- フィボナッチ数列を`0`および`1`から開始し、それぞれを`previous`と`current`の両方の数値とし初期化します。
+- `current` の数値が現在の `i` の反復より少ない間反復します。
+- `previous` と `current` の数値を加えて `next` の数値を取得します。
+- `previous` の数値を `current` の数値にアップデートします。
+- `current` の数値を `next` の数値にアップデートします。
+- 一度 `current` が与えられた数値 `n` と等しいかそれ以上になったら、ループを終了します。
+- `current` の数値が与えられた数値 `n` と等しいかどうか確認し、そうであれば `true` を返します。
+- それ以外の場合は、 `false` を返します。
+
+次に `fizz_buzz` 関数を更新する必要があります：
+
+<FizzBuzzFibonacciRustCode />
+
+- `fizz_buzz` 関数の名前を `fizz_buzz_fibonacci` に変更して、より説明的にします。
+- 弊社の `is_fibonacci_number` ヘルパー関数を呼び出します。
+- `is_fibonacci_number` から得た結果が `true` の場合は `Fibonacci` を返します。
+- `is_fibonacci_number` の結果が `false` の場合は、同じ `Fizz` 、 `Buzz` 、 `FizzBuzz` 、または数値のロジックを実行し、結果を返します。
+
+`fizz_buzz` を `fizz_buzz_fibonacci` に変更するため、 `play_game` 関数も更新する必要があります：
+
+<PlayGameRustCode />
+
+私たちの `main` と `bench_play_game` の両関数は全く同じままで構いません。

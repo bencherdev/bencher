@@ -1,0 +1,16 @@
+import FizzBuzzRefactorRustCode from "../fizz-buzz-refactor-rust-code.mdx";
+
+### FizzBuzz Refactor
+
+FizzBuzz 애플리케이션을 테스트하기 위해서는 로직을 프로그램의 `main` 함수에서 분리해야 합니다. 
+벤치마크 하네스는 `main` 함수를 벤치마크할 수 없습니다.
+
+코드를 다음과 같이 업데이트 합니다:
+
+<FizzBuzzRefactorRustCode />
+
+우리는 이제 코드를 아래와 같이 세 가지 다른 함수로 분류했습니다:
+
+- `main`: 프로그램의 주요 진입점으로 숫자 `1`에서 `100` 까지 포함하여 반복하고 각 숫자에 대해 `play_game`을 호출합니다.
+- `play_game`: 부호 없는 정수 `n`을 입력으로 받고, 그 숫자를 사용하여 `fizz_buzz`를 호출하고 결과를 출력합니다.
+- `fizz_buzz`: 부호 없는 정수 `n`을 인자로 받고 실제로 `Fizz`, `Buzz`, `FizzBuzz`, 또는 숫자 로직을 수행하여 결과를 문자열로 반환합니다.

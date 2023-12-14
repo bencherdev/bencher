@@ -1,0 +1,18 @@
+import FizzBuzzRules from "../../benchmarking/ja/fizz-buzz-rules.mdx";
+import FizzBuzzRustCode from "../fizz-buzz-rust-code.mdx";
+
+## RustでFizzBuzzを書く
+
+<FizzBuzzRules />
+
+<FizzBuzzRustCode />
+
+- `main`関数を作成する
+- `1` から `100` までを含む範囲で繰り返します。
+- 各数値に対して、`3` と `5` の両方で余り（除算後の余り）を計算します。
+- 2つの余りにパターンマッチを行います。
+    余りが `0` の場合、その数は指定された因数の倍数です。
+- `3` と `5` の両方で余りが `0` の場合は `FizzBuzz` を出力します。
+- `3` のみで余りが `0` の場合は `Fizz` を出力します。
+- `5` のみで余りが `0` の場合は `Buzz` を出力します。
+- それ以外の場合は、単に数字を出力します。

@@ -1,0 +1,18 @@
+import FizzBuzzRules from "../../benchmarking/zh/fizz-buzz-rules.mdx";
+import FizzBuzzRustCode from "../fizz-buzz-rust-code.mdx";
+
+## 用 Rust 编写 FizzBuzz
+
+<FizzBuzzRules />
+
+<FizzBuzzRustCode />
+
+- 创建一个 `main` 函数
+- 从 `1` 迭代到 `100`（含）。
+- 对于每个数字，分别计算 `3` 和 `5` 的取余（除后余数）。
+- 对两个余数进行模式匹配。
+    如果余数为 `0`，那么这个数就是给定因素的倍数。
+- 如果 `3` 和 `5` 的余数都为 `0`，则打印 `FizzBuzz`。
+- 如果只有 `3` 的余数为 `0`，则打印 `Fizz`。
+- 如果只有 `5` 的余数为 `0`，则打印 `Buzz`。
+- 否则，就打印这个数字。

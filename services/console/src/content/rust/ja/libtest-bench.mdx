@@ -1,0 +1,165 @@
+---
+title: "libtest bench"
+description: "libtest benchを使用してRustコードのベンチマークを取る方法についてのステップバイステップガイド"
+heading: "libtest benchを使用してRustコードのベンチマークを取る方法"
+sortOrder: 1
+---
+
+import Benchmarking from "../../../chunks/benchmarking/ja/benchmarking.mdx";
+import WhatIsRust from "../../../chunks/rust/ja/what-is-rust.mdx";
+import FizzBuzzRules from "../../../chunks/benchmarking/ja/fizz-buzz-rules.mdx";
+import FizzBuzzRustCode from "../../../chunks/rust/fizz-buzz-rust-code.mdx";
+import FizzBuzzRust from "../../../chunks/rust/ja/fizz-buzz-rust.mdx";
+import StepByStepRust from "../../../chunks/rust/ja/step-by-step-rust.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/ja/micro-vs-macro.mdx";
+import BenchmarkingRust from "../../../chunks/rust/ja/benchmarking-rust.mdx";
+import RustToolchainRustBenchCode from "../../../chunks/rust/bench/rust-toolchain-rust-bench-code.mdx";
+import RustToolchainRustBenchTree from "../../../chunks/rust/bench/rust-toolchain-rust-bench-tree.mdx";
+import FizzBuzzRefactorRust from "../../../chunks/rust/ja/fizz-buzz-refactor-rust.mdx";
+import TestCreateRustBenchCode from "../../../chunks/rust/bench/test-crate-rust-bench-code.mdx"
+import BenchPlayGameRustBenchCode from "../../../chunks/rust/bench/bench-play-game-rust-bench-code.mdx";
+import BenchPlayGameRustBenchOutput from "../../../chunks/rust/bench/bench-play-game-rust-bench-output.mdx";
+import FizzBuzzFibonacciRust from "../../../chunks/rust/ja/fizz-buzz-fibonacci-rust.mdx";
+import BenchPlayGameFibonacciRustBenchOutput from "../../../chunks/rust/bench/bench-play-game-fibonacci-rust-bench-output.mdx";
+import FizzBuzzFibonacciOpenRust from "../../../chunks/rust/ja/fizz-buzz-fibonacci-open-rust.mdx";
+import TheEnd from "../../../chunks/benchmarking/ja/the-end.mdx";
+import OnFire from "../../../chunks/benchmarking/ja/on-fire.mdx";
+import BenchPlayGameOnFireRustBenchCode from "../../../chunks/rust/bench/bench-play-game-on-fire-rust-bench-code.mdx";
+import BenchPlayGameOnFireRustBenchOutputStart from "../../../chunks/rust/bench/bench-play-game-on-fire-rust-bench-output-start.mdx";
+import BenchPlayGameOnFireRustBenchOutput from "../../../chunks/rust/bench/bench-play-game-on-fire-rust-bench-output.mdx";
+import FizzBuzzFibonacciFixRust from "../../../chunks/rust/ja/fizz-buzz-fibonacci-fix-rust.mdx";
+import BenchPlayGameFixRustBenchOutput from "../../../chunks/rust/bench/bench-play-game-fix-rust-bench-output.mdx";
+import CatchInCi from "../../../chunks/benchmarking/ja/catch-in-ci.mdx";
+import CatchInCiRustBenchOutput from "../../../chunks/rust/bench/catch-in-ci-rust-bench-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/ja/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/rust/bench/catch-in-ci-plot-rust-bench.mdx";
+import BencherFooter from "../../../chunks/learn/ja/bencher-footer.mdx";
+
+<Benchmarking />
+
+<WhatIsRust />
+
+<FizzBuzzRust />
+
+<StepByStepRust />
+
+<MicroVsMacro />
+
+<BenchmarkingRust />
+
+すべてが [Bencherによってサポートされています](/docs/ja/explanation/adapters/)。では、なぜlibtest benchを選ぶのでしょうか？
+プロジェクトの外部依存関係を制限しようとしている、またはプロジェクトがすでに`nightly`ツールチェインを使用している場合、
+それを使用すると良いかもしれません。その他の場合、CriterionまたはIaiを使用することをお勧めします。
+
+### Rust `nightly` のインストール
+
+以上を踏まえて、libtest benchを使用することにしたので、Rustツールチェーンを `nightly` に設定しましょう。
+`game`プロジェクトのルートに`rust-toolchain.toml`ファイルを作成し、`Cargo.toml`の隣に配置します。
+
+<RustToolchainRustBenchCode />
+
+あなたのディレクトリ構造は次のようになる必要があります。
+
+<RustToolchainRustBenchTree />
+
+それが完了したら、`cargo run`を再実行します。
+新しい, `nightly`ツールチェインのインストールに少々時間がかかるかもしれません。
+その後、再実行し、以前と同じ出力を得られるはずです。
+
+<FizzBuzzRefactorRust />
+
+## FizzBuzzのベンチマーク取得
+
+安定していないlibtestクレートを使用するには、 `test` 機能をコードに有効にし、`test`クレートをインポートする必要があります。 `main.rs`の _一番上に_ 次の行を追加します。
+
+<TestCreateRustBenchCode />
+
+これで最初のベンチマークを追加する準備が整いました！
+`main.rs`の _一番下に_ 次の行を追加します。
+
+<BenchPlayGameRustBenchCode />
+
+- `benchmarks`という名前のモジュールを作成し、
+  [コンパイラ設定](https://doc.rust-lang.org/reference/conditional-compilation.html#the-cfg-attribute)
+  を[`test` mode](https://doc.rust-lang.org/book/ch11-03-test-organization.html#the-tests-module-and-cfgtest)にします。
+- ベンチマークランナー`Bencher`をインポートします。(🐰クールな名前ですね！)
+- 私たちの`play_game`関数をインポートします。
+- `Bencher`への可変参照を取る、`bench_play_game`という名前のベンチマークを作成します。
+- `bench_play_game`がベンチマークであることを示すために、`#[bench]`属性を設定します。
+- `Bencher`のインスタンス(`b`)を使って、私たちのマクロベンチマークを何度も実行します。
+- コンパイラがコードを最適化しないように、私たちのマクロベンチマークを"ブラックボックス"内で実行します。
+- `1`から`100`までを含めてイテレートします。
+- それぞれの数字で、`play_game`を呼び出します。
+
+これでコードのベンチマークを取る準備が整いました、`cargo bench`を実行します：
+
+<BenchPlayGameRustBenchOutput />
+
+> 🐰 レティスとターニップのビート!私たちが最初のベンチマークメトリックをゲットしたよ！
+
+ついに、我々は疲れた開発者の頭を休めることができます...
+冗談です、我々のユーザーは新しい機能を望んでいます！
+
+<FizzBuzzFibonacciRust />
+
+## FizzBuzzFibonacciのベンチマーク取得
+
+これで、私たちのベンチマークを再度実行することができます：
+
+<BenchPlayGameFibonacciRustBenchOutput />
+
+私たちのターミナル履歴を戻してみると、FizzBuzzとFizzBuzzFibonacciのゲーム性能を眼球で比較できます：`4,879 ns` vs `22,167 ns`。
+あなたの数字は私のものと少し異なるかもしれません。
+しかし、2つのゲーム間の差はおそらく5倍の範囲にあります。
+それは私にとって良いように思えます！特に、私たちのゲームに_Fibonacci_というファンシーそうな機能を追加しているので。
+子供たちはそれを愛するでしょう！
+
+<FizzBuzzFibonacciOpenRust />
+
+<TheEnd />
+
+<br />
+
+<OnFire />
+
+<BenchPlayGameOnFireRustBenchCode />
+
+- ゲームを数字一百(`100`)で遊ぶためのマイクロベンチマーク`bench_play_game_100`
+- ゲームを数字一百万(`1_000_000`)で遊ぶためのマイクロベンチマーク`bench_play_game_1_000_000`
+
+私がこれを実行した時、私はこれを得ました:
+
+<BenchPlayGameOnFireRustBenchOutputStart />
+
+待って、待って...
+
+<BenchPlayGameOnFireRustBenchOutput />
+
+何！ `439 ns` x `1,000`は `439,000 ns`であるべきで、`9,586,977 ns`ではありません 🤯
+私が私のフィボナッチ順列コードを機能的に正しく得たにもかかわらず、どこかにパフォーマンスバグがあるはずです。
+
+<FizzBuzzFibonacciFixRust />
+
+さて、これらのベンチマークを再度実行して、どのようになったか見てみましょう：
+
+<BenchPlayGameFixRustBenchOutput />
+
+おお、素晴らしい！私たちの`bench_play_game`ベンチマークは、オリジナルのFizzBuzzの頃のレベルに戻っています。
+そのスコアが正確に何だったか覚えていればいいのですが。それは3週間前ですからね。
+私のターミナル履歴はそこまで遡っていません。
+しかし、それは近いと思います！
+
+`bench_play_game_100` ベンチマークは、ほぼ10x下がりました、 `439 ns` から `46 ns`に。
+そして、`bench_play_game_1_000_000` ベンチマークは10,000x以上下がりました！ `9,586,977 ns` から `53 ns`に！
+
+> 🐰 さて、少なくともこのパフォーマンスバグをプロダクションに送り出す前に見つけることができた... え？ そうですね、うーん...
+
+<CatchInCi />
+
+<CatchInCiRustBenchOutput />
+
+<CatchInCiPlot />
+
+<CatchInCiPlotRustBench title="libtest benchを使用してRustをベンチマークする方法" />
+
+<BencherFooter />

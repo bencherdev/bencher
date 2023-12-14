@@ -1,0 +1,36 @@
+import FizzBuzzFibonacciOpenRules from "../../benchmarking/fr/fizz-buzz-fibonacci-open-rules.mdx";
+import FizzBuzzFibonacciOpenRustCode from "../fizz-buzz-fibonacci-open-rust-code.mdx";
+import FizzBuzzFibonacciOpenRustOutput from "../fizz-buzz-fibonacci-open-rust-output.mdx";
+import FizzBuzzFibonacciOpenRustOutputDefault from "../fizz-buzz-fibonacci-open-rust-output-default.mdx";
+
+## Étendre FizzBuzzFibonacci en Rust
+
+Notre jeu est un succès! Les enfants adorent jouer à FizzBuzzFibonacci.
+Tellement que les dirigeants veulent une suite.
+Mais c'est le monde moderne, nous avons besoin de revenus récurrents annuels (ARR) et non de ventes uniques!
+La nouvelle vision de notre jeu est qu'il est sans fin, plus besoin de vivre entre les limites de `1` et `100` (même si c'est inclusif).
+Non, nous partons vers de nouveaux horizons!
+
+<FizzBuzzFibonacciOpenRules />
+
+Pour faire fonctionner notre jeu pour n'importe quel nombre, nous devrons accepter un argument de ligne de commande.
+Mettez à jour la fonction `main` pour qu'elle ressemble à ceci :
+
+<FizzBuzzFibonacciOpenRustCode />
+
+- Collectez tous les arguments (`args`) passés à notre jeu depuis la ligne de commande.
+- Obtenez le premier argument passé à notre jeu et analysez-le comme un entier non signé `i`.
+- Si l'analyse échoue ou si aucun argument n'est transmis, par défaut, jouez à notre jeu avec `15` comme entrée.
+- Enfin, jouez à notre jeu avec le nouvel entier non signé `i` analysé.
+
+Maintenant, nous pouvons jouer à notre jeu avec n'importe quel nombre!
+Utilisez `cargo run` suivi de `--` pour passer des arguments à notre jeu :
+
+<FizzBuzzFibonacciOpenRustOutput />
+
+Et si nous oublions de fournir un numéro ou fournissons un numéro invalide :
+
+<FizzBuzzFibonacciOpenRustOutputDefault />
+
+Wow, c'était des tests très approfondis! CI passe. Nos patrons sont ravis.
+Expédions-le! 🚀

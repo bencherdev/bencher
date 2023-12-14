@@ -1,0 +1,14 @@
+```rust
+pub fn fizz_buzz_fibonacci(n: u32) -> String {
+    if is_fibonacci_number(n) {
+        "Fibonacci".to_string()
+    } else {
+        match (n % 3, n % 5) {
+            (0, 0) => "FizzBuzz".to_string(),
+            (0, _) => "Fizz".to_string(),
+            (_, 0) => "Buzz".to_string(),
+            (_, _) => n.to_string(),
+        }
+    }
+}
+```

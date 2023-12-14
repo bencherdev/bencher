@@ -1,0 +1,37 @@
+import FizzBuzzFibonacciOpenRules from "../../benchmarking/zh/fizz-buzz-fibonacci-open-rules.mdx";
+import FizzBuzzFibonacciOpenRustCode from "../fizz-buzz-fibonacci-open-rust-code.mdx";
+import FizzBuzzFibonacciOpenRustOutput from "../fizz-buzz-fibonacci-open-rust-output.mdx";
+import FizzBuzzFibonacciOpenRustOutputDefault from "../fizz-buzz-fibonacci-open-rust-output-default.mdx";
+
+## 在 Rust 中展开 FizzBuzzFibonacci
+
+我们的游戏很受欢迎！孩子们确实喜欢玩 FizzBuzzFibonacci。
+为此，高层下达了他们想要续集的消息。
+但这是现代世界，我们需要的是年度循环收入（ARR），而不是一次性购买！
+我们游戏的新愿景是开放性的，不再固定在 `1` 和 `100` 之间（即使是包含在内的）。
+不，我们正在开拓新的疆域！
+
+<FizzBuzzFibonacciOpenRules />
+
+为了让我们的游戏适应任何数字，我们需要接受一个命令行参数。
+将 `main` 函数更新为如下形式：
+
+<FizzBuzzFibonacciOpenRustCode />
+
+- 收集所有从命令行传递给我们游戏的参数（`args`）。
+- 获取传递给我们游戏的第一个参数，并将其解析为无符号整数 `i`。
+- 如果解析失败或没有传入参数，就默认以 `15` 作为输入运行我们的游戏。
+- 最后，用新解析的无符号整数 `i` 来玩我们的游戏。
+
+现在我们可以用任何数字来玩我们的游戏了！
+使用 `cargo run` 后跟 `--` 将参数传递给我们的游戏：
+
+
+<FizzBuzzFibonacciOpenRustOutput />
+
+如果我们省略或提供了无效的数字：
+
+<FizzBuzzFibonacciOpenRustOutputDefault />
+
+哇，这是一个仔细的测试过程！CI 通过了。我们的上司非常高兴。
+让我们发布吧！🚀

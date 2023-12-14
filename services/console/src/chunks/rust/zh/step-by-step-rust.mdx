@@ -1,0 +1,33 @@
+import GameTree from "../game-tree.mdx";
+import HelloWorld from "../hello-world-rust-code.mdx";
+import FizzBuzzOutput from "../fizz-buzz-output.mdx";
+import GameLockTree from "../game-lock-tree.mdx";
+
+### 按步骤操作
+
+为了与本教程进行同步学习，您需要 [安装 Rust](https://rustup.rs/)。
+
+> 🐰 这篇文章的源代码在 [GitHub 上可以找到](https://github.com/bencherdev/bencher/tree/main/examples/rust/bench)
+
+安装好 Rust 后，您可以打开一个终端窗口，然后输入：`cargo init game`
+
+然后导航至新创建的 `game` 目录。
+
+<GameTree />
+
+你应该能看到一个名为 `src` 的目录，其中有一个名为 `main.rs` 的文件：
+
+<HelloWorld />
+
+将其内容替换为上述的 FizzBuzz 实现。然后运行 `cargo run`。
+输出结果应该像这样：
+
+<FizzBuzzOutput />
+
+> 🐰 砰！你正在破解编程面试！
+
+应该生成了一个新的 `Cargo.lock` 文件：
+
+<GameLockTree />
+
+在进一步探讨之前，有必要讨论微基准测试和宏基准测试之间的区别。

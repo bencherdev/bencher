@@ -1,0 +1,16 @@
+import FizzBuzzRefactorRustCode from "../fizz-buzz-refactor-rust-code.mdx";
+
+### Refatoração do FizzBuzz
+
+Para testar nossa aplicação FizzBuzz, precisamos desacoplar nossa lógica da função `main` do programa.
+Os bancos de teste não conseguem testar a função `main`.
+
+Atualize seu código para ficar assim:
+
+<FizzBuzzRefactorRustCode />
+
+Agora, separamos nosso código em três funções diferentes:
+
+- `main`: A entrada principal do nosso programa que itera pelos números de `1` a `100` inclusivo e chama `play_game` para cada número.
+- `play_game`: Recebe um inteiro não assinado `n`, chama `fizz_buzz` com esse número e imprime o resultado.
+- `fizz_buzz`: Recebe um inteiro não assinado `n` e realiza a lógica `Fizz`, `Buzz`, `FizzBuzz`, ou número retornando o resultado como uma string.

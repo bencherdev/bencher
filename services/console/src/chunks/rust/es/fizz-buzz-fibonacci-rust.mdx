@@ -1,0 +1,40 @@
+import FizzBuzzFibonacciRules from "../../benchmarking/es/fizz-buzz-fibonacci-rules.mdx";
+import IsFibonacciNumberRustCode from "../is-fibonacci-number-rust-code.mdx";
+import FizzBuzzFibonacciRustCode from "../fizz-buzz-fibonacci-rust-code.mdx";
+import PlayGameRustCode from "../play-game-rust-code.mdx";
+
+## Escribe FizzBuzzFibonacci en Rust
+
+Nuestros Indicadores Clave de Desempeño (KPIs) están bajos, por lo que nuestro Gerente de Producto (PM) quiere que agreguemos una nueva función. 
+Después de mucho lluvia de ideas y muchas entrevistas con usuarios, se decidió que el FizzBuzz de siempre no es suficiente.
+Los niños de hoy en día quieren un nuevo juego, FizzBuzzFibonacci.
+
+<FizzBuzzFibonacciRules />
+
+<IsFibonacciNumberRustCode />
+
+- Crea una función llamada `is_fibonacci_number` que toma un número entero sin signo y devuelve un booleano.
+- Itera para todos los números desde `0` hasta nuestro número dado `n` inclusive.
+- Inicializa nuestra secuencia Fibonacci comenzando con `0` y `1` como los números `anterior` y `actual` respectivamente.
+- Itera mientras el número `actual` sea menor que la iteración actual `i`.
+- Suma el número `anterior` y el número `actual` para obtener el número `siguiente`.
+- Actualiza el número `anterior` al número `actual`.
+- Actualiza el número `actual` al número `siguiente`.
+- Una vez que `actual` sea mayor o igual al número dado `n`, saldremos del bucle.
+- Verifica si el número `actual` es igual al número dado `n` y si es así, devuelve `true`.
+- De lo contrario, devuelve `false`.
+
+Ahora necesitaremos actualizar nuestra función `fizz_buzz`:
+
+<FizzBuzzFibonacciRustCode />
+
+- Renombra la función `fizz_buzz` a `fizz_buzz_fibonacci` para que sea más descriptiva.
+- Llama a nuestra función auxiliar `is_fibonacci_number`.
+- Si el resultado de `is_fibonacci_number` es `true`, entonces devuelve `Fibonacci`.
+- Si el resultado de `is_fibonacci_number` es `false`, entonces realiza la misma lógica de `Fizz`, `Buzz`, `FizzBuzz` o número devolviendo el resultado.
+
+Debido a que renombramos `fizz_buzz` a `fizz_buzz_fibonacci` también necesitamos actualizar nuestra función `play_game`:
+
+<PlayGameRustCode />
+
+Tanto nuestras funciones `main` como `bench_play_game` pueden permanecer exactamente iguales.

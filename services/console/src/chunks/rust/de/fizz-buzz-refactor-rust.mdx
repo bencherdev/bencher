@@ -1,0 +1,16 @@
+import FizzBuzzRefactorRustCode from "../fizz-buzz-refactor-rust-code.mdx";
+
+### FizzBuzz neu strukturieren
+
+Um unsere FizzBuzz-Anwendung zu testen, müssen wir unsere Logik von der `main` Funktion des Programms entkoppeln.
+Benchmark-Harnesses können die `main` Funktion nicht benchmarken.
+
+Aktualisieren Sie Ihren Code, sodass er nun so aussieht:
+
+<FizzBuzzRefactorRustCode />
+
+Wir haben nun unseren Code in drei verschiedene Funktionen aufgeteilt:
+
+- `main`: Der Haupt-Einstiegspunkt in unser Programm, der die Zahlen `1` bis `100` inklusive durchläuft und für jede Zahl `play_game` aufruft.
+- `play_game`: Nimmt eine vorzeichenlose Ganzzahl `n` entgegen, ruft `fizz_buzz` mit dieser Zahl auf, und gibt das Ergebnis aus.
+- `fizz_buzz`: Nimmt eine vorzeichenlose Ganzzahl `n` entgegen und führt die tatsächliche `Fizz`, `Buzz`, `FizzBuzz` oder Numerik-Logik aus, die das Ergebnis als Zeichenkette zurückgibt.

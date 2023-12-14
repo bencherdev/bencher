@@ -1,0 +1,13 @@
+## 在 CI 中捕获性能回归
+
+由于我那个小小的性能错误，我们的游戏收到了大量的负面评论，这让高管们非常不满。
+他们告诉我不要让这种情况再次发生，而当我询问如何做到时，他们只是告诉我不要再犯。
+我该如何管理这个问题呢‽
+
+幸运的是，我找到了这款叫做 Bencher 的超棒开源工具。
+它有一个非常慷慨的免费层，因此我可以在我的个人项目中使用 [Bencher Cloud](/)。
+而在工作中需要在我们的私有云内，我已经开始使用 [Bencher Self-Hosted](/docs/zh/tutorial/docker/)。
+
+Bencher有一个[内建的适配器](/docs/zh/explanation/adapters/)，
+所以很容易集成到 CI 中。在[遵循快速开始指南](/docs/zh/tutorial/quick-start/)后，
+我能够运行我的基准测试并用 Bencher 追踪它们。

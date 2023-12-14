@@ -1,0 +1,16 @@
+import FizzBuzzRefactorRustCode from "../fizz-buzz-refactor-rust-code.mdx";
+
+### Refactor FizzBuzz
+
+In order to test our FizzBuzz application, we need to decouple our logic from program's `main` function.
+Benchmark harnesses can't benchmark the `main` function.
+
+Update your code to look like this:
+
+<FizzBuzzRefactorRustCode />
+
+We have now separated our code out into three different functions:
+
+- `main`: Then main entrypoint into our program that iterates through the numbers `1` to `100` inclusive and calls `play_game` for each number.
+- `play_game`: Takes in an unsigned integer `n`, calls `fizz_buzz` with that number, and prints the result.
+- `fizz_buzz`: Takes in an unsigned integer `n` and performs the actual `Fizz`, `Buzz`, `FizzBuzz`, or number logic returning the result as a string.

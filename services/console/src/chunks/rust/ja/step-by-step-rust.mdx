@@ -1,0 +1,35 @@
+```markdown
+import GameTree from "../game-tree.mdx";
+import HelloWorld from "../hello-world-rust-code.mdx";
+import FizzBuzzOutput from "../fizz-buzz-output.mdx";
+import GameLockTree from "../game-lock-tree.mdx";
+
+### ステップバイステップで進める
+
+このステップバイステップのチュートリアルを進めるには、まず[Rustをインストール](https://rustup.rs/)する必要があります。
+
+> 🐰 このポストのソースコードは[GitHub上で利用可能](https://github.com/bencherdev/bencher/tree/main/examples/rust/bench)です。
+
+Rustがインストールされたら、ターミナルウィンドウを開き、次のコマンドを入力します：`cargo init game`
+
+その後、新たに作成された`game`ディレクトリに移動します。
+
+<GameTree />
+
+`src`という名前のディレクトリがあり、その中に`main.rs`というファイルが存在しているはずです：
+
+<HelloWorld />
+
+先ほどのFizzBuzzの実装をその内容と置き換えてから、`cargo run`を実行します。
+出力結果は次のようになるはずです：
+
+<FizzBuzzOutput />
+
+> 🐰 ブーム！ コーディングインタビューを突破していますね！
+
+新たな`Cargo.lock`ファイルが生成されているはずです：
+
+<GameLockTree />
+
+これ以上進む前に、マイクロベンチマークとマクロベンチマークの違いについて話すことが重要です。
+```

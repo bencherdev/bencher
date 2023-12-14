@@ -1,0 +1,166 @@
+---
+title: "libtest 벤치"
+description: "libtest 벤치를 사용하여 Rust 코드를 벤치마킹하는 방법에 대한 단계별 가이드"
+heading: "libtest 벤치를 사용하여 Rust 코드 벤치마킹하기"
+sortOrder: 1
+---
+
+import Benchmarking from "../../../chunks/benchmarking/ko/benchmarking.mdx";
+import WhatIsRust from "../../../chunks/rust/ko/what-is-rust.mdx";
+import FizzBuzzRules from "../../../chunks/benchmarking/ko/fizz-buzz-rules.mdx";
+import FizzBuzzRustCode from "../../../chunks/rust/fizz-buzz-rust-code.mdx";
+import FizzBuzzRust from "../../../chunks/rust/ko/fizz-buzz-rust.mdx";
+import StepByStepRust from "../../../chunks/rust/ko/step-by-step-rust.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/ko/micro-vs-macro.mdx";
+import BenchmarkingRust from "../../../chunks/rust/ko/benchmarking-rust.mdx";
+import RustToolchainRustBenchCode from "../../../chunks/rust/bench/rust-toolchain-rust-bench-code.mdx";
+import RustToolchainRustBenchTree from "../../../chunks/rust/bench/rust-toolchain-rust-bench-tree.mdx";
+import FizzBuzzRefactorRust from "../../../chunks/rust/ko/fizz-buzz-refactor-rust.mdx";
+import TestCreateRustBenchCode from "../../../chunks/rust/bench/test-crate-rust-bench-code.mdx"
+import BenchPlayGameRustBenchCode from "../../../chunks/rust/bench/bench-play-game-rust-bench-code.mdx";
+import BenchPlayGameRustBenchOutput from "../../../chunks/rust/bench/bench-play-game-rust-bench-output.mdx";
+import FizzBuzzFibonacciRust from "../../../chunks/rust/ko/fizz-buzz-fibonacci-rust.mdx";
+import BenchPlayGameFibonacciRustBenchOutput from "../../../chunks/rust/bench/bench-play-game-fibonacci-rust-bench-output.mdx";
+import FizzBuzzFibonacciOpenRust from "../../../chunks/rust/ko/fizz-buzz-fibonacci-open-rust.mdx";
+import TheEnd from "../../../chunks/benchmarking/ko/the-end.mdx";
+import OnFire from "../../../chunks/benchmarking/ko/on-fire.mdx";
+import BenchPlayGameOnFireRustBenchCode from "../../../chunks/rust/bench/bench-play-game-on-fire-rust-bench-code.mdx";
+import BenchPlayGameOnFireRustBenchOutputStart from "../../../chunks/rust/bench/bench-play-game-on-fire-rust-bench-output-start.mdx";
+import BenchPlayGameOnFireRustBenchOutput from "../../../chunks/rust/bench/bench-play-game-on-fire-rust-bench-output.mdx";
+import FizzBuzzFibonacciFixRust from "../../../chunks/rust/ko/fizz-buzz-fibonacci-fix-rust.mdx";
+import BenchPlayGameFixRustBenchOutput from "../../../chunks/rust/bench/bench-play-game-fix-rust-bench-output.mdx";
+import CatchInCi from "../../../chunks/benchmarking/ko/catch-in-ci.mdx";
+import CatchInCiRustBenchOutput from "../../../chunks/rust/bench/catch-in-ci-rust-bench-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/ko/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/rust/bench/catch-in-ci-plot-rust-bench.mdx";
+import BencherFooter from "../../../chunks/learn/ko/bencher-footer.mdx";
+
+<Benchmarking />
+
+<WhatIsRust />
+
+<FizzBuzzRust />
+
+<StepByStepRust />
+
+<MicroVsMacro />
+
+<BenchmarkingRust />
+
+이 세 가지는 모두 [Bencher가 지원합니다](/docs/ko/explanation/adapters/). 그렇다면 왜 libtest bench를 선택해야 할까요?
+프로젝트의 외부 종속성을 제한하려고 시도하고 프로젝트가 이미 `nightly` 툴체인을 사용하고 있는 경우 좋은 선택이 될 수 있습니다.
+그 외에는 사용 사례에 따라 Criterion 또는 Iai를 사용하는 것을 권장합니다.
+
+### Rust `nightly` 설치
+
+이제 준비가 되었으니, libtest bench를 사용할 것이므로 우리의 Rust 툴체인을 `nightly`로 설정합시다.
+`game` 프로젝트의 루트에 `Cargo.toml` 옆에 `rust-toolchain.toml` 파일을 만듭니다.
+
+<RustToolchainRustBenchCode />
+
+이제 디렉토리 구조는 다음과 같아야 합니다:
+
+<RustToolchainRustBenchTree />
+
+완료되었다면, 다시 `cargo run`을 실행합니다.
+새롭게, `nightly` 툴체인이 설치되기까지 조금 시간이 걸릴 것입니다
+이전과 같은 출력을 제공하기 전에 다시 실행합니다.
+
+<FizzBuzzRefactorRust />
+
+## FizzBuzz 벤치마킹
+
+불안정한 libtest crate를 사용하려면 코드에 `test` 기능을 활성화하고 `test` crate를 가져와야 합니다. 다음을 `main.rs`의 _맨 위_에 추가합니다:
+
+<TestCreateRustBenchCode />
+
+이제 첫 번째 벤치마크를 추가할 준비가 되었습니다!
+다음을 `main.rs`의 _맨 아래_에 추가합니다:
+
+<BenchPlayGameRustBenchCode />
+
+- 'benchmarks'라는 모듈을 만들고
+  [컴파일러 설정](https://doc.rust-lang.org/reference/conditional-compilation.html#the-cfg-attribute)
+  을 [`test` mode](https://doc.rust-lang.org/book/ch11-03-test-organization.html#the-tests-module-and-cfgtest)로 설정합니다.
+- 벤치마크 러너 `Bencher`를 가져옵니다. (🐰 멋진 이름이네요!)
+- 우리의 `play_game` 함수를 가져옵니다.
+- `Bencher`에 대한 변경 가능한 참조를 가져오는 `bench_play_game`이라는 벤치마크를 만듭니다.
+- `#[bench]` 특성을 설정하여 `bench_play_game`이 벤치마크임을 나타냅니다.
+- `Bencher` 인스턴스 (`b`)를 사용하여 우리의 매크로 벤치마크를 여러 번 실행합니다.
+- 컴파일러가 우리의 코드를 최적화하지 않도록 "블랙 박스" 내에서 우리의 매크로 벤치마크를 실행합니다.
+- `1`에서 `100`까지 포함하여 반복합니다.
+- 각 번호에 대해 `play_game`을 호출합니다.
+
+이제 코드 벤치마킹을 준비했으니, `cargo bench`를 실행합니다:
+
+<BenchPlayGameRustBenchOutput />
+
+> 🐰 Lettuce turnip the beet! 우리는 첫 번째 벤치마크 메트릭을 얻었습니다!
+
+드디어 우리는 피곤한 개발자 머리를 쉴 수 있습니다...
+그냥 장난이에요, 사용자들이 새로운 기능을 원합니다!
+
+<FizzBuzzFibonacciRust />
+
+## FizzBuzzFibonacci 벤치마킹
+
+이제 벤치마크를 다시 실행할 수 있습니다:
+
+<BenchPlayGameFibonacciRustBenchOutput />
+
+터미널 기록을 뒤로 스크롤하여,
+우리의 FizzBuzz와 FizzBuzzFibonacci 게임의 성능 사이의 차이를 눈으로 비교할 수 있습니다: `4,879 ns` 대 `22,167 ns`.
+당신의 숫자는 나의 것과 약간 다를 것입니다.
+그러나 두 게임 사이의 차이는 아마도 5배 범위일 것입니다.
+그것은 나에게 좋아 보입니다! 특히 _Fibonacci_와 같은 멋진 소리하는 기능을 우리 게임에 추가하는 것에 대해.
+아이들이 그것을 사랑할 것입니다!
+
+<FizzBuzzFibonacciOpenRust />
+
+<TheEnd />
+
+<br />
+
+<OnFire />
+
+<BenchPlayGameOnFireRustBenchCode />
+
+- 숫자 한 백 (`100`)으로 게임을 하는 마이크로 벤치마크 `bench_play_game_100`
+- 숫자 백만 (`1_000_000`)으로 게임을 하는 마이크로 벤치마크 `bench_play_game_1_000_000`
+
+내가 실행하면 이렇게 나옵니다:
+
+<BenchPlayGameOnFireRustBenchOutputStart />
+
+기다려봅시다... 기다려봅시다...
+
+<BenchPlayGameOnFireRustBenchOutput />
+
+뭐야! `439 ns` x `1,000`은 `439,000 ns`이야, `9,586,977 ns`가 아니야 🤯
+Fibonacci sequence 코드가 기능적으로는 잘 돌아가지만, 어딘가에 성능 버그가 있어야 합니다.
+
+<FizzBuzzFibonacciFixRust />
+
+이제 벤치마크를 다시 실행하고 어떻게 했는지 봅시다:
+
+<BenchPlayGameFixRustBenchOutput />
+
+오, 와! 우리의 `bench_play_game` 벤치마크가 원래 FizzBuzz의 점수 주변으로 다시 내려왔습니다.
+내가 그 점수가 정확히 얼마였는지 기억할 수 있었으면 좋겠어. 그러나 이미 3주가 지났어.
+내 터미널 기록은 그렇게 멀리 돌아가지 않아.
+하지만 가깝다고 생각합니다!
+
+`bench_play_game_100` 벤치마크는 거의 10배 가량 내려갔습니다. `439 ns`에서 `46 ns`로.
+그리고 `bench_play_game_1_000_000` 벤치마크는 10,000배 이상 내려갔습니다! `9,586,977 ns`에서 `53 ns`로!
+
+> 🐰 헤, 적어도 우리는 이 성능 버그를 생산 환경에 도달하기 전에 잡아냈네... 아, 맞다. 뭐..
+
+<CatchInCi />
+
+<CatchInCiRustBenchOutput />
+
+<CatchInCiPlot />
+
+<CatchInCiPlotRustBench title="libtest bench로 Rust 벤치마킹하는 방법" />
+
+<BencherFooter />

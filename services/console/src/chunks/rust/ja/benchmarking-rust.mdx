@@ -1,0 +1,24 @@
+## Rustにおけるベンチマーキング
+
+Rustでのベンチマーキングには、3つの主要なオプションがあります。
+それらは、[libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)、
+[Criterion](https://github.com/bheisler/criterion.rs)、そして
+[Iai](https://github.com/bheisler/iai)です。
+
+libtestはRustの組み込みユニットテストとベンチマーキングフレームワークです。
+Rust標準ライブラリの一部ながらも、libtest benchはまだ不安定と見なされており、
+`nightly`コンパイラリリースでのみ利用可能です。
+安定版のRustコンパイラ上で動作させるには、
+[別のベンチマーキングハーネス](https://github.com/bluss/bencher)
+が必要です。
+ただし、どちらも積極的に開発が行われているわけではありません。
+
+Rustエコシステム内で最も積極的にメンテナンスされているベンチマーキングハーネスはCriterionです。
+Criterionは安定版および`nightly`のRustコンパイラリリースの両方で動作し、
+そして Rustコミュニティ内で事実上の標準となっています。
+また、libtest benchと比較すると、Criterionははるかに機能が豊富です。
+
+Criterionとは異なる実験的な選択肢としてIaiがあります。これはCriterionと同じクリエーターからのものです。
+しかし、これは壁時計の時間の代わりに命令数を使用します：
+CPU命令、L1アクセス、L2アクセス、そしてRAMアクセス。
+これにより、これらのメトリクスが実行間でほぼ同一に保たれるべきであるため、一発のベンチマーキングが可能になります。

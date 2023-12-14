@@ -1,0 +1,18 @@
+import FizzBuzzRules from "../../benchmarking/en/fizz-buzz-rules.mdx";
+import FizzBuzzRustCode from "../fizz-buzz-rust-code.mdx";
+
+## Write FizzBuzz in Rust
+
+<FizzBuzzRules />
+
+<FizzBuzzRustCode />
+
+- Create a `main` function
+- Iterate from `1` to `100` inclusively.
+- For each number, calculate the modulus (remainder after division) for both `3` and `5`.
+- Pattern match on the two remainders.
+    If the remainder is `0`, then the number is a multiple of the given factor.
+- If the remainder is `0` for both `3` and `5` then print `FizzBuzz`.
+- If the remainder is `0` for only `3` then print `Fizz`.
+- If the remainder is `0` for only `5` then print `Buzz`.
+- Otherwise, just print the number.

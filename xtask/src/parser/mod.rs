@@ -66,7 +66,7 @@ pub struct CliPrompt {
 #[derive(Parser, Debug)]
 pub struct CliTranslate {
     /// File input path (relative to `services/console/src/`)
-    pub input_path: Utf8PathBuf,
+    pub input_path: Vec<Utf8PathBuf>,
 
     // Target language
     #[clap(value_enum, long)]

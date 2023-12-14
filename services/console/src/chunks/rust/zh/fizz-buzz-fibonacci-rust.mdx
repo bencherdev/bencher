@@ -1,0 +1,40 @@
+import FizzBuzzFibonacciRules from "../../benchmarking/zh/fizz-buzz-fibonacci-rules.mdx";
+import IsFibonacciNumberRustCode from "../is-fibonacci-number-rust-code.mdx";
+import FizzBuzzFibonacciRustCode from "../fizz-buzz-fibonacci-rust-code.mdx";
+import PlayGameRustCode from "../play-game-rust-code.mdx";
+
+## 用 Rust 编写 FizzBuzzFibonacci
+
+我们的关键绩效指标（KPI）下降了，所以我们的产品经理（PM）希望我们添加新功能。
+经过多次头脑风暴和许多用户采访后，我们决定光有 FizzBuzz 已经不够了。
+现在的孩子们希望有一个新的游戏，FizzBuzzFibonacci。
+
+<FizzBuzzFibonacciRules />
+
+<IsFibonacciNumberRustCode />
+
+- 创建一个名为 `is_fibonacci_number` 的函数，该函数接收一个无符号整数，并返回一个布尔值。
+- 遍历从 `0` 到我们给定的数 `n`（包含 `n`）的所有数字。
+- 用 `0` 和 `1` 分别作为`前一个` 和 `当前` 数字来初始化我们的斐波那契序列。
+- 当`当前`数字小于当前迭代 `i` 时持续迭代。
+- 添加`前一个` 和 `当前` 数字来获得 `下一个` 数字。
+- 将 `前一个` 数字更新为 `当前` 数字。
+- 将 `当前` 数字更新为 `下一个` 数字。
+- 一旦 `当前` 大于或等于给定数字 `n`，我们将退出循环。
+- 检查 `当前` 数字是否等于给定数字 `n`，如果是，则返回 `true`。
+- 否则，返回 `false`。
+
+现在我们需要更新我们的 `fizz_buzz` 功能：
+
+<FizzBuzzFibonacciRustCode />
+
+- 将 `fizz_buzz` 功能重命名为 `fizz_buzz_fibonacci` 以使其更具描述性。
+- 调用我们的 `is_fibonacci_number` 辅助函数。
+- 如果 `is_fibonacci_number` 的结果为 `true`，则返回 `Fibonacci`。
+- 如果 `is_fibonacci_number` 的结果为 `false`，则执行相同的 `Fizz`、`Buzz`、`FizzBuzz` 或数字逻辑，并返回结果。
+
+因为我们将 `fizz_buzz` 重命名为 `fizz_buzz_fibonacci`，我们也需要更新我们的 `play_game` 功能：
+
+<PlayGameRustCode />
+
+我们的 `main` 和 `bench_play_game` 功能可以保持完全相同。

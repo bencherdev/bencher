@@ -1,0 +1,33 @@
+import GameTree from "../game-tree.mdx";
+import HelloWorld from "../hello-world-rust-code.mdx";
+import FizzBuzzOutput from "../fizz-buzz-output.mdx";
+import GameLockTree from "../game-lock-tree.mdx";
+
+### 단계별 따라하기
+
+이 단계별 튜토리얼을 따라가려면, 먼저 [Rust를 설치](https://rustup.rs/)해야 합니다.
+
+> 🐰 이 게시물의 소스 코드는 [GitHub에서 사용할 수 있습니다](https://github.com/bencherdev/bencher/tree/main/examples/rust/bench)
+
+Rust를 설치한 후, 터미널 창을 열고 `cargo init game`을 입력할 수 있습니다.
+
+그런 다음 새로 만들어진 `game` 디렉토리로 이동합니다.
+
+<GameTree />
+
+`src`라는 디렉토리와 `main.rs`라는 파일을 볼 수 있어야 합니다:
+
+<HelloWorld />
+
+그 내용을 위의 FizzBuzz 구현으로 교체한 다음 `cargo run`를 실행합니다.
+출력 결과는 다음과 같아야 합니다:
+
+<FizzBuzzOutput />
+
+> 🐰 펑! 코딩 인터뷰를 깨고 있습니다!
+
+새로운 `Cargo.lock` 파일이 생성되어야 합니다:
+
+<GameLockTree />
+
+더 진행하기 전에, 미세 벤치마킹과 거시 벤치마킹의 차이점을 논의하는 것이 중요합니다.

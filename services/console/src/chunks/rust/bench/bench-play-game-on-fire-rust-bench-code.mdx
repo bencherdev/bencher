@@ -1,0 +1,11 @@
+```rust
+#[bench]
+fn bench_play_game_100(b: &mut Bencher) {
+    b.iter(|| std::hint::black_box(play_game(100)));
+}
+
+#[bench]
+fn bench_play_game_1_000_000(b: &mut Bencher) {
+    b.iter(|| std::hint::black_box(play_game(1_000_000)));
+}
+```

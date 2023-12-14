@@ -1,0 +1,16 @@
+import FizzBuzzRefactorRustCode from "../fizz-buzz-refactor-rust-code.mdx";
+
+### Refactorisation FizzBuzz
+
+Pour tester notre application FizzBuzz, nous devons découpler notre logique de la fonction principale `main` du programme.
+Les harnais de test ne peuvent pas évaluer la fonction `main`.
+
+Mettez à jour votre code pour qu'il ressemble à ceci :
+
+<FizzBuzzRefactorRustCode />
+
+Nous avons maintenant séparé notre code en trois fonctions différentes :
+
+- `main` : L'entrée principale dans notre programme qui parcourt les nombres de `1` à `100` inclus et appelle `play_game` pour chaque nombre.
+- `play_game` : Prend un entier non signé `n`, appelle `fizz_buzz` avec ce nombre et imprime le résultat.
+- `fizz_buzz` : Prend un entier non signé `n` et effectue la logique réelle `Fizz`, `Buzz`, `FizzBuzz`, ou le nombre renvoie le résultat sous forme de chaîne.

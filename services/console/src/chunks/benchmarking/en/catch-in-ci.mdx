@@ -1,0 +1,13 @@
+## Catch Performance Regressions in CI
+
+The execs weren't happy about the deluge of negative reviews our game received due to my little performance bug.
+They told me not to let it happen again, and when I asked how, they just told me not to do it again.
+How am I supposed to manage that‽
+
+Luckily, I've found this awesome open source tool called Bencher.
+There's a super generous free tier, so I can just use [Bencher Cloud](/) for my personal projects.
+And at work where everything needs to be in our private cloud, I've started using [Bencher Self-Hosted](/docs/tutorial/docker/).
+
+Bencher has a [built in adapters](/docs/explanation/adapters/),
+so it's easy to integrate into CI. After [following the Quick Start guide](/docs/tutorial/quick-start/),
+I'm able to run my benchmarks and track them with Bencher.

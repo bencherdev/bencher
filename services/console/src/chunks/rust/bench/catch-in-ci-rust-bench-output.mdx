@@ -1,0 +1,19 @@
+```
+$ bencher run --project game "cargo bench"
+    Finished bench [optimized] target(s) in 0.03s
+     Running unittests src/main.rs (target/release/deps/game-6e1cb3355509b761)
+
+running 3 tests
+test benchmarks::bench_play_game           ... bench:       5,690 ns/iter (+/- 1,091)
+test benchmarks::bench_play_game_100       ... bench:          48 ns/iter (+/- 7)
+test benchmarks::bench_play_game_1_000_000 ... bench:          51 ns/iter (+/- 3)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 3 measured; 0 filtered out; finished in 2.81s
+
+Bencher New Report:
+...
+View results:
+- benchmarks::bench_play_game (Latency): https://bencher.dev/console/projects/game/perf?measures=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=077449e5-5b45-4c00-bdfb-3a277413180d&start_time=1697224006000&end_time=1699816009000&upper_boundary=true
+- benchmarks::bench_play_game_100 (Latency): https://bencher.dev/console/projects/game/perf?measures=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=96508869-4fa2-44ac-8e60-b635b83a17b7&start_time=1697224006000&end_time=1699816009000&upper_boundary=true
+- benchmarks::bench_play_game_1_000_000 (Latency): https://bencher.dev/console/projects/game/perf?measures=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=ff014217-4570-42ea-8813-6ed0284500a4&start_time=1697224006000&end_time=1699816009000&upper_boundary=true
+```

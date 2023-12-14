@@ -51,7 +51,7 @@ const explanation = defineCollection({
 		description: z.string(),
 		heading: z.string(),
 		sortOrder: z.number(),
-		canonical: z.string().optional(),
+		canonicalize: z.boolean().optional(),
 	}),
 });
 const reference = defineCollection({
@@ -61,7 +61,7 @@ const reference = defineCollection({
 		description: z.string(),
 		heading: z.string(),
 		sortOrder: z.number(),
-		canonical: z.string().optional(),
+		canonicalize: z.boolean().optional(),
 	}),
 });
 

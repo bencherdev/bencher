@@ -1,0 +1,18 @@
+import FizzBuzzRules from "../../benchmarking/fr/fizz-buzz-rules.mdx";
+import FizzBuzzRustCode from "../fizz-buzz-rust-code.mdx";
+
+## Écrire FizzBuzz en Rust
+
+<FizzBuzzRules />
+
+<FizzBuzzRustCode />
+
+- Créer une fonction `main`
+- Itérer de `1` à `100` inclusivement.
+- Pour chaque nombre, calculez le modulo (reste après division) pour `3` et `5`.
+- Utilisez le pattern matching sur les deux restes.
+    Si le reste est `0`, alors le nombre est un multiple du facteur donné.
+- Si le reste est `0` pour `3` et `5`, alors imprimez `FizzBuzz`.
+- Si le reste est `0` pour seulement `3`, alors imprimez `Fizz`.
+- Si le reste est `0` pour seulement `5`, alors imprimez `Buzz`.
+- Sinon, imprimez simplement le nombre.

@@ -1,0 +1,40 @@
+import FizzBuzzFibonacciRules from "../../benchmarking/en/fizz-buzz-fibonacci-rules.mdx";
+import IsFibonacciNumberRustCode from "../is-fibonacci-number-rust-code.mdx";
+import FizzBuzzFibonacciRustCode from "../fizz-buzz-fibonacci-rust-code.mdx";
+import PlayGameRustCode from "../play-game-rust-code.mdx";
+
+## Write FizzBuzzFibonacci in Rust
+
+Our Key Performance Indicators (KPIs) are down, so our Product Manager (PM) wants us to add a new feature.
+After much brainstorming and many user interviews, it is decided that good ole FizzBuzz isn't enough.
+Kids these days want a new game, FizzBuzzFibonacci.
+
+<FizzBuzzFibonacciRules />
+
+<IsFibonacciNumberRustCode />
+
+- Create a function named `is_fibonacci_number` that takes in an unsigned integer and returns a boolean.
+- Iterate for all number from `0` to our given number `n` inclusive.
+- Initialize our Fibonacci sequence starting with `0` and `1` as the `previous` and `current` numbers respectively.
+- Iterate while the `current` number is less than the current iteration `i`.
+- Add the `previous` and `current` number to get the `next` number.
+- Update the `previous` number to the `current` number.
+- Update the `current` number to the `next` number.
+- Once `current` is greater than or equal to the given number `n`, we will exit the loop.
+- Check to see is the `current` number is equal to the given number `n` and if so return `true`.
+- Otherwise, return `false`.
+
+Now we will need to update our `fizz_buzz` function:
+
+<FizzBuzzFibonacciRustCode />
+
+- Rename the `fizz_buzz` function to `fizz_buzz_fibonacci` to make it more descriptive.
+- Call our `is_fibonacci_number` helper function.
+- If the result from `is_fibonacci_number` is `true` then return `Fibonacci`.
+- If the result from `is_fibonacci_number` is `false` then perform the same `Fizz`, `Buzz`, `FizzBuzz`, or number logic returning the result.
+
+Because we rename `fizz_buzz` to `fizz_buzz_fibonacci` we also need to update our `play_game` function:
+
+<PlayGameRustCode />
+
+Both our `main` and `bench_play_game` functions can stay exactly the same.

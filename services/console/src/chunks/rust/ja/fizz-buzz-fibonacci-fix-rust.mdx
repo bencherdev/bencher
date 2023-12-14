@@ -1,0 +1,23 @@
+import IsFibonacciNumberRustCode from "../is-fibonacci-number-rust-code.mdx";
+import IsFibonacciNumberFixRustCode from "../is-fibonacci-number-fix-rust-code.mdx";
+
+## RustでFizzBuzzFibonacciを修正する
+
+もう一度 `is_fibonacci_number`関数を見てみましょう：
+
+<IsFibonacciNumberRustCode />
+
+パフォーマンスを考えると、不要な余分なループがあることに気づきます。
+`for i in 0..=n {}` ループを完全に取り除き、
+与えられた数値（`n`）と `current` の値を単に比較するだけで良いのです🤦
+
+<IsFibonacciNumberFixRustCode />
+
+- あなたの `is_fibonacci_number`関数を更新します。
+- フィボナッチ数列を `0` と `1`から始める `previous`と `current` の数で初期化します。
+- _与えられた数_ `n` よりも `current` 数が小さい間、繰り返します。
+- `previous`と `current`の数を足して `next`の数を得ます。
+- `previous`の数を `current`の数に更新します。
+- `current`の数を `next`の数に更新します。
+- `current`が与えられた数 `n`よりも大きくなれば、ループを退出します。
+- `current`の数が与えられた数 `n`と等しいかどうかを確認し、その結果を返します。

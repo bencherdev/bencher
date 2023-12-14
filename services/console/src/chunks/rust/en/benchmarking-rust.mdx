@@ -1,0 +1,24 @@
+## Benchmarking in Rust
+
+The three popular options for benchmarking in Rust are:
+[libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks),
+[Criterion](https://github.com/bheisler/criterion.rs), and
+[Iai](https://github.com/bheisler/iai).
+
+libtest is Rust's built-in unit testing and benchmarking framework.
+Though part of the Rust standard library, libtest bench is still considered unstable,
+so it is only available on `nightly` compiler releases.
+To work on the stable Rust compiler,
+[a separate benchmarking harness](https://github.com/bluss/bencher)
+needs to be used.
+Neither is being actively developed, though.
+
+The most actively maintained benchmarking harness within the Rust ecosystem is Criterion.
+It works on both stable and `nightly` Rust compiler releases,
+and it has become the de facto standard within the Rust community.
+Criterion is also much more feature-rich compared to libtest bench.
+
+An experimental alternative to Criterion is Iai, from the same creator as Criterion.
+However, it uses instruction counts instead of wall clock time:
+CPU instructions, L1 accesses, L2 access and RAM accesses.
+This allows for single-shot benchmarking since these metrics should stay nearly identical between runs.

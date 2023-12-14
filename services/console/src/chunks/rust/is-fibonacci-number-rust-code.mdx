@@ -1,0 +1,16 @@
+```rust
+fn is_fibonacci_number(n: u32) -> bool {
+    for i in 0..=n {
+        let (mut previous, mut current) = (0, 1);
+        while current < i {
+            let next = previous + current;
+            previous = current;
+            current = next;
+        }
+        if current == n {
+            return true;
+        }
+    }
+    false
+}
+```

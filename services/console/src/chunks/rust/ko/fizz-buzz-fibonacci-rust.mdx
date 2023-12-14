@@ -1,0 +1,40 @@
+import FizzBuzzFibonacciRules from "../../benchmarking/ko/fizz-buzz-fibonacci-rules.mdx";
+import IsFibonacciNumberRustCode from "../is-fibonacci-number-rust-code.mdx";
+import FizzBuzzFibonacciRustCode from "../fizz-buzz-fibonacci-rust-code.mdx";
+import PlayGameRustCode from "../play-game-rust-code.mdx";
+
+## Rust로 FizzBuzzFibonacci 쓰기
+
+우리의 주요 성과 지표 (KPI)가 하락하여 상품 관리자 (PM)가 새로운 기능을 추가하길 원합니다.
+많은 브레인스토밍과 사용자 인터뷰를 거친 후, 예전의 FizzBuzz 만으로는 충분하지 않다는 결론을 내렸습니다. 
+이 시대의 아이들은 새로운 게임, FizzBuzzFibonacci를 원합니다.
+
+<FizzBuzzFibonacciRules />
+
+<IsFibonacciNumberRustCode />
+
+- 부호 없는 정수를 입력으로 받고 불린을 반환하는 `is_fibonacci_number`라는 함수를 만듭니다.
+- 주어진 숫자 `n`에 이르는 `0`부터 모든 숫자에 대해 반복합니다.
+- `previous`와 `current` 숫자를 각각 `0`과 `1`로 시작하는 피보나치 수열을 초기화합니다.
+- `current` 숫자가 현재 반복 `i`보다 작은 동안 반복합니다.
+- `previous`와 `current` 숫자를 더하여 `next` 숫자를 가져옵니다.
+- `previous` 숫자를 `current` 숫자로 업데이트합니다.
+- `current` 숫자를 `next` 숫자로 업데이트합니다.
+- `current`가 주어진 숫자 `n`보다 크거나 같으면 루프를 종료합니다.
+- `current` 숫자가 주어진 숫자 `n`과 같은지 확인하고, 그렇다면 `true`를 반환합니다.
+- 그렇지 않다면, `false`를 반환합니다.
+
+이제 우리는 `fizz_buzz` 함수를 업데이트해야 합니다:
+
+<FizzBuzzFibonacciRustCode />
+
+- `fizz_buzz` 함수의 이름을 `fizz_buzz_fibonacci`로 변경하여 더 설명적으로 만듭니다.
+- 우리의 `is_fibonacci_number` 보조 함수를 호출합니다.
+- `is_fibonacci_number`의 결과가 `true`이면 `Fibonacci`를 반환합니다.
+- `is_fibonacci_number`의 결과가 `false`이면 동일한 `Fizz`, `Buzz`, `FizzBuzz`, 또는 숫자 로직을 수행하여 결과를 반환합니다.
+
+`fizz_buzz`를 `fizz_buzz_fibonacci`로 이름을 바꾸었기 때문에 우리의 `play_game` 함수도 업데이트해야 합니다:
+
+<PlayGameRustCode />
+
+우리의 `main` 함수와 `bench_play_game` 함수는 그대로 유지될 수 있습니다.

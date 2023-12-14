@@ -5,141 +5,47 @@ heading: "How to benchmark Rust code with libtest bench"
 sortOrder: 1
 ---
 
-import Benchmarking from "../../../chunks/rust/en/benchmarking.mdx";
+import Benchmarking from "../../../chunks/benchmarking/en/benchmarking.mdx";
 import WhatIsRust from "../../../chunks/rust/en/what-is-rust.mdx";
-import FizzBuzzRules from "../../../chunks/rust/en/fizz-buzz-rules.mdx";
-import MicroVsMacro from "../../../chunks/rust/en/micro-vs-macro.mdx";
-import FizzBuzzFibonacciRules from "../../../chunks/rust/en/fizz-buzz-fibonacci-rules.mdx";
-import FizzBuzzFibonacciOpenRules from "../../../chunks/rust/en/fizz-buzz-fibonacci-open-rules.mdx";
-import { BENCHER_WORDMARK } from "../../../util/ext";
+import FizzBuzzRules from "../../../chunks/benchmarking/en/fizz-buzz-rules.mdx";
+import FizzBuzzRustCode from "../../../chunks/rust/fizz-buzz-rust-code.mdx";
+import FizzBuzzRust from "../../../chunks/rust/en/fizz-buzz-rust.mdx";
+import StepByStepRust from "../../../chunks/rust/en/step-by-step-rust.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/en/micro-vs-macro.mdx";
+import BenchmarkingRust from "../../../chunks/rust/en/benchmarking-rust.mdx";
+import RustToolchainRustBenchCode from "../../../chunks/rust/bench/rust-toolchain-rust-bench-code.mdx";
+import RustToolchainRustBenchTree from "../../../chunks/rust/bench/rust-toolchain-rust-bench-tree.mdx";
+import FizzBuzzRefactorRust from "../../../chunks/rust/en/fizz-buzz-refactor-rust.mdx";
+import TestCreateRustBenchCode from "../../../chunks/rust/bench/test-crate-rust-bench-code.mdx"
+import BenchPlayGameRustBenchCode from "../../../chunks/rust/bench/bench-play-game-rust-bench-code.mdx";
+import BenchPlayGameRustBenchOutput from "../../../chunks/rust/bench/bench-play-game-rust-bench-output.mdx";
+import FizzBuzzFibonacciRust from "../../../chunks/rust/en/fizz-buzz-fibonacci-rust.mdx";
+import BenchPlayGameFibonacciRustBenchOutput from "../../../chunks/rust/bench/bench-play-game-fibonacci-rust-bench-output.mdx";
+import FizzBuzzFibonacciOpenRust from "../../../chunks/rust/en/fizz-buzz-fibonacci-open-rust.mdx";
+import TheEnd from "../../../chunks/benchmarking/en/the-end.mdx";
+import OnFire from "../../../chunks/benchmarking/en/on-fire.mdx";
+import BenchPlayGameOnFireRustBenchCode from "../../../chunks/rust/bench/bench-play-game-on-fire-rust-bench-code.mdx";
+import BenchPlayGameOnFireRustBenchOutputStart from "../../../chunks/rust/bench/bench-play-game-on-fire-rust-bench-output-start.mdx";
+import BenchPlayGameOnFireRustBenchOutput from "../../../chunks/rust/bench/bench-play-game-on-fire-rust-bench-output.mdx";
+import FizzBuzzFibonacciFixRust from "../../../chunks/rust/en/fizz-buzz-fibonacci-fix-rust.mdx";
+import BenchPlayGameFixRustBenchOutput from "../../../chunks/rust/bench/bench-play-game-fix-rust-bench-output.mdx";
+import CatchInCi from "../../../chunks/benchmarking/en/catch-in-ci.mdx";
+import CatchInCiRustBenchOutput from "../../../chunks/rust/bench/catch-in-ci-rust-bench-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/en/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/rust/bench/catch-in-ci-plot-rust-bench.mdx";
+import BencherFooter from "../../../chunks/learn/en/bencher-footer.mdx";
 
 <Benchmarking />
 
 <WhatIsRust />
 
-## Write FizzBuzz in Rust
+<FizzBuzzRust />
 
-<FizzBuzzRules />
-
-```rust
-fn main() {
-    for i in 1..=100 {
-        match (i % 3, i % 5) {
-            (0, 0) => println!("FizzBuzz"),
-            (0, _) => println!("Fizz"),
-            (_, 0) => println!("Buzz"),
-            (_, _) => println!("{i}"),
-        }
-    }
-}
-```
-
-- Create a `main` function
-- Iterate from `1` to `100` inclusively.
-- For each number, calculate the modulus (remainder after division) for both `3` and `5`.
-- Pattern match on the two remainders.
-    If the remainder is `0`, then the number is a multiple of the given factor.
-- If the remainder is `0` for both `3` and `5` then print `FizzBuzz`.
-- If the remainder is `0` for only `3` then print `Fizz`.
-- If the remainder is `0` for only `5` then print `Buzz`.
-- Otherwise, just print the number.
-
-### Follow Step-by-Step
-
-In order to follow along with this set-by-step tutorial, you will need to [install Rust](https://rustup.rs/).
-
-> 🐰 The source code for this post is [available on GitHub](https://github.com/bencherdev/bencher/tree/main/examples/rust/bench)
-
-With Rust installed, you can then open a terminal window and enter: `cargo init game`
-
-Then navigate into the newly created `game` directory.
-
-```
-game
-├── Cargo.toml
-└── src
-    └── main.rs
-```
-
-You should see a directory called `src` with file named `main.rs`:
-
-```rust
-fn main() {
-    println!("Hello, world!");
-}
-```
-
-Replace its contents with the above FizzBuzz implementation. Then run `cargo run`.
-The output should look like:
-
-```
-$ cargo run
-   Compiling playground v0.0.1 (/home/bencher)
-    Finished dev [unoptimized + debuginfo] target(s) in 0.44s
-     Running `target/debug/game`
-
-1
-2
-Fizz
-4
-Buzz
-Fizz
-7
-8
-Fizz
-Buzz
-11
-Fizz
-13
-14
-FizzBuzz
-...
-97
-98
-Fizz
-Buzz
-```
-
-> 🐰 Boom! You're cracking the coding interview!
-
-A new `Cargo.lock` file should have been generated:
-
-```
-game
-├── Cargo.lock
-├── Cargo.toml
-└── src
-    └── main.rs
-```
-
-Before going any further, it is important to discuss the differences between micro-benchmarking and macro-benchmarking.
+<StepByStepRust />
 
 <MicroVsMacro />
 
-## Benchmarking in Rust
-
-The three popular options for benchmarking in Rust are:
-[libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks),
-[Criterion](https://github.com/bheisler/criterion.rs), and
-[Iai](https://github.com/bheisler/iai).
-
-libtest is Rust's built-in unit testing and benchmarking framework.
-Though part of the Rust standard library, libtest bench is still considered unstable,
-so it is only available on `nightly` compiler releases.
-To work on the stable Rust compiler,
-[a separate benchmarking harness](https://github.com/bluss/bencher)
-needs to be used.
-Neither is being actively developed, though.
-
-The most actively maintained benchmarking harness within the Rust ecosystem is Criterion.
-It works on both stable and `nightly` Rust compiler releases,
-and it has become the de facto standard within the Rust community.
-Criterion is also much more feature-rich compared to libtest bench.
-
-An experimental alternative to Criterion is Iai, from the same creator as Criterion.
-However, it uses instruction counts instead of wall clock time:
-CPU instructions, L1 accesses, L2 access and RAM accesses.
-This allows for single-shot benchmarking since these metrics should stay nearly identical between runs.
+<BenchmarkingRust />
 
 All three are [support by Bencher](/docs/explanation/adapters/). So why choose libtest bench?
 It may be a good idea if you are trying to limit the external dependencies of your project
@@ -151,89 +57,28 @@ Outside of that, I would suggest using either Criterion or Iai depending on your
 With all that said, we're going to use libtest bench, so let's set our Rust toolchain to `nightly`.
 Create a `rust-toolchain.toml` file in the root of your `game` project, next to `Cargo.toml`.
 
-```toml
-[toolchain]
-channel = "nightly"
-```
+<RustToolchainRustBenchCode />
 
 Your directory structure should now look like this:
 
-```
-game
-├── Cargo.lock
-├── Cargo.toml
-├── rust-toolchain.toml
-└── src
-    └── main.rs
-```
+<RustToolchainRustBenchTree />
 
 Once that is complete, rerun `cargo run`.
 It should take minute for the new, nightly toolchain to install
 before rerunning and giving you the same output as before.
 
-### Refactor FizzBuzz
-
-In order to test our FizzBuzz application, we need to decouple our logic from program's `main` function.
-Benchmark harnesses can't benchmark the `main` function.
-
-Update your code to look like this:
-
-```rust
-fn main() {
-    for i in 1..=100 {
-        play_game(i);
-    }
-}
-
-pub fn play_game(n: u32) {
-    println!("{}", fizz_buzz(n));
-}
-
-pub fn fizz_buzz(n: u32) -> String {
-    match (n % 3, n % 5) {
-        (0, 0) => "FizzBuzz".to_string(),
-        (0, _) => "Fizz".to_string(),
-        (_, 0) => "Buzz".to_string(),
-        (_, _) => n.to_string(),
-    }
-}
-```
-
-We have now separated our code out into three different functions:
-
-- `main`: Then main entrypoint into our program that iterates through the numbers `1` to `100` inclusive and calls `play_game` for each number.
-- `play_game`: Takes in an unsigned integer `n`, calls `fizz_buzz` with that number, and prints the result.
-- `fizz_buzz`: Takes in an unsigned integer `n` and performs the actual `Fizz`, `Buzz`, `FizzBuzz`, or number logic returning the result as a string.
+<FizzBuzzRefactorRust />
 
 ## Benchmarking FizzBuzz
 
 In order to use the unstable libtest crate we need to enable the `test` feature for our code and import the `test` crate. Add the following to the _very top_ of `main.rs`:
 
-```rust
-#![feature(test)]
-extern crate test;
-```
+<TestCreateRustBenchCode />
 
 Now we're ready to add our first benchmark!
 Add the following to the _very bottom_ of `main.rs`:
 
-```rust
-#[cfg(test)]
-mod benchmarks {
-    use test::Bencher;
-
-    use super::play_game;
-
-    #[bench]
-    fn bench_play_game(b: &mut Bencher) {
-        b.iter(|| {
-            std::hint::black_box(for i in 1..=100 {
-                play_game(i)
-            });
-        });
-    }
-}
-```
+<BenchPlayGameRustBenchCode />
 
 - Create a module named `benchmarks` and set the
   [compiler configuration](https://doc.rust-lang.org/reference/conditional-compilation.html#the-cfg-attribute)
@@ -249,106 +94,20 @@ mod benchmarks {
 
 Now we're ready to benchmark our code, run `cargo bench`:
 
-```
-$ cargo bench
-   Compiling playground v0.0.1 (/home/bencher)
-    Finished bench [optimized] target(s) in 0.02s
-     Running unittests src/main.rs (target/release/deps/game-68f58c96f4025bd4)
-
-running 1 test
-test benchmarks::bench_play_game ... bench:       4,879 ns/iter (+/- 170)
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in 0.68s
-```
+<BenchPlayGameRustBenchOutput />
 
 > 🐰 Lettuce turnip the beet! We've got our first benchmark metrics!
 
 Finally, we can rest our weary developer heads...
 Just kidding, our users want a new feature!
 
-## Write FizzBuzzFibonacci in Rust
-
-Our Key Performance Indicators (KPIs) are down, so our Product Manager (PM) wants us to add a new feature.
-After much brainstorming and many user interviews, it is decided that good ole FizzBuzz isn't enough.
-Kids these days want a new game, FizzBuzzFibonacci.
-
-<FizzBuzzFibonacciRules />
-
-```rust
-fn is_fibonacci_number(n: u32) -> bool {
-    for i in 0..=n {
-        let (mut previous, mut current) = (0, 1);
-        while current < i {
-            let next = previous + current;
-            previous = current;
-            current = next;
-        }
-        if current == n {
-            return true;
-        }
-    }
-    false
-}
-```
-
-- Create a function named `is_fibonacci_number` that takes in an unsigned integer and returns a boolean.
-- Iterate for all number from `0` to our given number `n` inclusive.
-- Initialize our Fibonacci sequence starting with `0` and `1` as the `previous` and `current` numbers respectively.
-- Iterate while the `current` number is less than the current iteration `i`.
-- Add the `previous` and `current` number to get the `next` number.
-- Update the `previous` number to the `current` number.
-- Update the `current` number to the `next` number.
-- Once `current` is greater than or equal to the given number `n`, we will exit the loop.
-- Check to see is the `current` number is equal to the given number `n` and if so return `true`.
-- Otherwise, return `false`.
-
-Now we will need to update our `fizz_buzz` function:
-
-```rust
-pub fn fizz_buzz_fibonacci(n: u32) -> String {
-    if is_fibonacci_number(n) {
-        "Fibonacci".to_string()
-    } else {
-        match (n % 3, n % 5) {
-            (0, 0) => "FizzBuzz".to_string(),
-            (0, _) => "Fizz".to_string(),
-            (_, 0) => "Buzz".to_string(),
-            (_, _) => n.to_string(),
-        }
-    }
-}
-```
-
-- Rename the `fizz_buzz` function to `fizz_buzz_fibonacci` to make it more descriptive.
-- Call our `is_fibonacci_number` helper function.
-- If the result from `is_fibonacci_number` is `true` then return `Fibonacci`.
-- If the result from `is_fibonacci_number` is `false` then perform the same `Fizz`, `Buzz`, `FizzBuzz`, or number logic returning the result.
-
-Because we rename `fizz_buzz` to `fizz_buzz_fibonacci` we also need to update our `play_game` function:
-
-```rust
-pub fn play_game(n: u32) {
-    println!("{}", fizz_buzz_fibonacci(n));
-}
-```
-
-Both our `main` and `bench_play_game` functions can stay exactly the same.
+<FizzBuzzFibonacciRust />
 
 ## Benchmarking FizzBuzzFibonacci
 
 Now we can rerun our benchmark:
 
-```
-$ cargo bench
-   Compiling playground v0.0.1 (/home/bencher)
-    Finished bench [optimized] target(s) in 0.00s
-     Running unittests src/main.rs (target/release/deps/game-68f58c96f4025bd4)
-
-running 1 test
-test benchmarks::bench_play_game ... bench:      22,167 ns/iter (+/- 502)
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in 0.62s
-```
+<BenchPlayGameFibonacciRustBenchOutput />
 
 Scrolling back through our terminal history,
 we can make an eyeball comparison between the performance of our FizzBuzz and FizzBuzzFibonacci games: `4,879 ns` vs `22,167 ns`.
@@ -357,217 +116,35 @@ However, the difference between the two games is likely in the 5x range.
 That seems good to me! Especially for adding a feature as fancy sounding as _Fibonacci_ to our game.
 The kids will love it!
 
-## Expand FizzBuzzFibonacci in Rust
+<FizzBuzzFibonacciOpenRust />
 
-Our game is a hit! The kids do indeed love playing FizzBuzzFibonacci.
-So much so that word has come down from the execs that they want a sequel.
-But this is the modern world, we need Annual Recurring Revenue (ARR) not one time purchases!
-The new vision for our game is that it is open ended, no more living between the bound of `1` and `100` (even if it is inclusive).
-No, we're on to new frontiers!
-
-<FizzBuzzFibonacciOpenRules />
-
-In order to have our game work for any number, we will need to accept a command line argument.
-Update the `main` function to look like this:
-
-```rust
-fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    let i = args
-        .get(1)
-        .map(|s| s.parse::<u32>())
-        .unwrap_or(Ok(15))
-        .unwrap_or(15);
-    play_game(i);
-}
-```
-
-- Collect all of the arguments (`args`) passed to our game from the command line.
-- Get the first argument passed to our game and parse it as an unsigned integer `i`.
-- If parsing fails or no argument is passed in, default to playing our game with `15` as the input.
-- Finally, play our game with the newly parsed unsigned integer `i`.
-
-Now we can play our game with any number!
-Use `cargo run` followed by `--` to pass arguments to our game:
-
-```
-$ cargo run -- 9
-   Compiling playground v0.0.1 (/home/bencher)
-    Finished dev [unoptimized + debuginfo] target(s) in 0.44s
-     Running `target/debug/game 9`
-Fizz
-```
-
-```
-$ cargo run -- 10
-    Finished dev [unoptimized + debuginfo] target(s) in 0.03s
-     Running `target/debug/game 10`
-Buzz
-```
-
-```
-$ cargo run -- 13
-    Finished dev [unoptimized + debuginfo] target(s) in 0.04s
-     Running `target/debug/game 13`
-Fibonacci
-```
-
-And if we omit or provide an invalid number:
-
-```
-$ cargo run
-    Finished dev [unoptimized + debuginfo] target(s) in 0.03s
-     Running `target/debug/game`
-FizzBuzz
-```
-
-```
-$ cargo run -- bad
-    Finished dev [unoptimized + debuginfo] target(s) in 0.05s
-     Running `target/debug/game bad`
-FizzBuzz
-```
-
-Wow, that was some thorough testing! CI passes. Our bosses are thrilled.
-Let's ship it! 🚀
-
-## The End
+<TheEnd />
 
 <br />
 
-<div class="content has-text-centered">
-<img src="https://s3.amazonaws.com/public.bencher.dev/learn/three-weeks-later.jpeg" width="1280" title="Three Weeks Later" alt="SpongeBob SquarePants Three Weeks Later" />
-</div>
+<OnFire />
 
-<div class="content has-text-centered">
-<img src="https://s3.amazonaws.com/public.bencher.dev/learn/this-is-fine.jpg" width="1280" title="This is Fine" alt="This is Fine meme" />
-</div>
-
-> 🐰 ... the end of your career maybe?
-
-<br />
-
-## Just kidding! Everything is on fire! 🔥
-
-Well, at first everything seemed to be going fine.
-And then at 02:07 AM on Saturday my pager went off:
-
-> 📟 Your game is on fire! 🔥
-
-After scrambling out of bed, I tried to figure out what was going on.
-I tried to search through the logs, but that was hard because everything kept crashing.
-Finally, I found the issue. The kids! They loved our game so much, they were playing it all the way up to a million!
-In a flash of brilliance, I added two new benchmarks:
-
-```rust
-#[bench]
-fn bench_play_game_100(b: &mut Bencher) {
-    b.iter(|| std::hint::black_box(play_game(100)));
-}
-
-#[bench]
-fn bench_play_game_1_000_000(b: &mut Bencher) {
-    b.iter(|| std::hint::black_box(play_game(1_000_000)));
-}
-```
+<BenchPlayGameOnFireRustBenchCode />
 
 - A micro-benchmark `bench_play_game_100` for playing the game with the number one hundred (`100`)
 - A micro-benchmark `bench_play_game_1_000_000` for playing the game with the number one million (`1_000_000`)
 
 When I ran it, I got this:
 
-```
-$ cargo bench
-   Compiling game v0.1.0 (/home/bencher)
-    Finished bench [optimized] target(s) in 0.75s
-     Running unittests src/main.rs (target/release/deps/game-6e1cb3355509b761)
-
-running 3 tests
-test benchmarks::bench_play_game           ... bench:      22,458 ns/iter (+/- 1,508)
-test benchmarks::bench_play_game_100       ... bench:         439 ns/iter (+/- 21)
-
-```
+<BenchPlayGameOnFireRustBenchOutputStart />
 
 Wait for it... wait for it...
 
-```
-$ cargo bench
-   Compiling game v0.1.0 (/home/bencher)
-    Finished bench [optimized] target(s) in 0.75s
-     Running unittests src/main.rs (target/release/deps/game-6e1cb3355509b761)
-
-running 3 tests
-test benchmarks::bench_play_game           ... bench:      22,458 ns/iter (+/- 1,508)
-test benchmarks::bench_play_game_100       ... bench:         439 ns/iter (+/- 21)
-test benchmarks::bench_play_game_1_000_000 ... bench:   9,586,977 ns/iter (+/- 158,821)
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 3 measured; 0 filtered out; finished in 9.82s
-```
+<BenchPlayGameOnFireRustBenchOutput />
 
 What! `439 ns` x `1,000` should be `439,000 ns` not `9,586,977 ns` 🤯
 Even though I got my Fibonacci sequence code functionally correct, I must have a performance bug in there somewhere.
 
-## Fix FizzBuzzFibonacci in Rust
-
-Let's take another look at that `is_fibonacci_number` function:
-
-```rust
-fn is_fibonacci_number(n: u32) -> bool {
-    for i in 0..=n {
-        let (mut previous, mut current) = (0, 1);
-        while current < i {
-            let next = previous + current;
-            previous = current;
-            current = next;
-        }
-        if current == n {
-            return true;
-        }
-    }
-    false
-}
-```
-
-Now that I'm thinking about performance, I do realize that I have an unnecessary, extra loop.
-We can completely get rid of the `for i in 0..=n {}` loop and
-just compare the `current` value to the given number (`n`) 🤦
-
-```rust
-fn is_fibonacci_number(n: u32) -> bool {
-    let (mut previous, mut current) = (0, 1);
-    while current < n {
-        let next = previous + current;
-        previous = current;
-        current = next;
-    }
-    current == n
-}
-```
-
-- Update your `is_fibonacci_number` function.
-- Initialize our Fibonacci sequence starting with `0` and `1` as the `previous` and `current` numbers respectively.
-- Iterate while the `current` number is less than the _given number_ `n`.
-- Add the `previous` and `current` number to get the `next` number.
-- Update the `previous` number to the `current` number.
-- Update the `current` number to the `next` number.
-- Once `current` is greater than or equal to the given number `n`, we will exit the loop.
-- Check to see if the `current` number is equal to the given number `n` and return that result.
+<FizzBuzzFibonacciFixRust />
 
 Now lets rerun those benchmarks and see how we did:
 
-```
-$ cargo bench
-   Compiling game v0.1.0 (/home/bencher)
-    Finished bench [optimized] target(s) in 0.75s
-     Running unittests src/main.rs (target/release/deps/game-6e1cb3355509b761)
-
-running 3 tests
-test benchmarks::bench_play_game           ... bench:       5,570 ns/iter (+/- 390)
-test benchmarks::bench_play_game_100       ... bench:          46 ns/iter (+/- 3)
-test benchmarks::bench_play_game_1_000_000 ... bench:          53 ns/iter (+/- 4)
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 3 measured; 0 filtered out; finished in 9.24s
-```
+<BenchPlayGameFixRustBenchOutput />
 
 Oh, wow! Our `bench_play_game` benchmark is back down to around where it was for the original FizzBuzz.
 I wish I could remember exactly what that score was. It's been three weeks though.
@@ -579,74 +156,12 @@ And the `bench_play_game_1_000_000` benchmark is down more than 10,000x! `9,586,
 
 > 🐰 Hey, at least we caught this performance bug before it made it to production... oh, right. Nevermind...
 
+<CatchInCi />
 
-## Catch Performance Regressions in CI
+<CatchInCiRustBenchOutput />
 
-The execs weren't happy about the deluge of negative reviews our game received due to my little performance bug.
-They told me not to let it happen again, and when I asked how, they just told me not to do it again.
-How am I supposed to manage that‽
+<CatchInCiPlot />
 
-Luckily, I've found this awesome open source tool called Bencher.
-There's a super generous free tier, so I can just use [Bencher Cloud](/) for my personal projects.
-And at work where everything needs to be in our private cloud, I've started using [Bencher Self-Hosted](/docs/tutorial/docker/).
+<CatchInCiPlotRustBench title="How to Benchmark Rust with libtest bench" />
 
-Bencher has a [built in adapter for libtest bench](/docs/explanation/adapters#-rust-bench),
-so it's easy to integrate into CI. After [following the Quick Start guide](/docs/tutorial/quick-start/),
-I'm able to run my benchmarks and track them with Bencher.
-
-```
-$ export BENCHER_API_TOKEN=MY_API_TOKEN
-
-$ bencher run --project game "cargo bench"
-    Finished bench [optimized] target(s) in 0.03s
-     Running unittests src/main.rs (target/release/deps/game-6e1cb3355509b761)
-
-running 3 tests
-test benchmarks::bench_play_game           ... bench:       5,690 ns/iter (+/- 1,091)
-test benchmarks::bench_play_game_100       ... bench:          48 ns/iter (+/- 7)
-test benchmarks::bench_play_game_1_000_000 ... bench:          51 ns/iter (+/- 3)
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 3 measured; 0 filtered out; finished in 2.81s
-
-Bencher New Report:
-...
-View results:
-- benchmarks::bench_play_game (Latency): https://bencher.dev/console/projects/game/perf?measures=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=077449e5-5b45-4c00-bdfb-3a277413180d&start_time=1697224006000&end_time=1699816009000&upper_boundary=true
-- benchmarks::bench_play_game_100 (Latency): https://bencher.dev/console/projects/game/perf?measures=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=96508869-4fa2-44ac-8e60-b635b83a17b7&start_time=1697224006000&end_time=1699816009000&upper_boundary=true
-- benchmarks::bench_play_game_1_000_000 (Latency): https://bencher.dev/console/projects/game/perf?measures=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=ff014217-4570-42ea-8813-6ed0284500a4&start_time=1697224006000&end_time=1699816009000&upper_boundary=true
-```
-
-Using this nifty time travel device that a nice rabbit gave me,
-I was able to go back in time and replay what would have happened if we were using Bencher all along.
-Unlucky version #13 is where we first pushed the buggy FizzBuzzFibonacci implementation.
-I immediately got failures in CI as a comment on my pull request.
-That same day, I fixed the performance bug, getting rid of that needless, extra loop.
-No fires. Just happy users.
-
-<iframe
-    title="How to Benchmark Rust with libtest bench"
-    width="100%"
-    height="800px"
-    style="border: 1rem solid #ed6704;"
-    src="https://bencher.dev/perf/game/embed?reports_per_page=4&reports_page=1&branches_per_page=8&branches_page=1&testbeds_per_page=8&testbeds_page=1&benchmarks_per_page=8&benchmarks_page=1&clear=true&tab=benchmarks&measures=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=077449e5-5b45-4c00-bdfb-3a277413180d&upper_boundary=true&start_time=1697414400000">
-</iframe>
-
-## [Bencher](/pricing): Continuous Benchmarking
-<div class="content has-text-centered">
-    <a href="/pricing">
-        <img src={BENCHER_WORDMARK} width="90%" alt="🐰 Bencher" />
-    </a>
-</div>
-
-[Bencher](/pricing) is a suite of continuous benchmarking tools.
-Have you ever had a performance regression impact your users?
-Bencher could have prevented that from happening.
-Bencher allows you to detect and prevent performance regressions _before_ they make it to production.
-
-- **Run**: Run your benchmarks locally or in CI using your favorite benchmarking tools. The `bencher` CLI simply wraps your existing benchmark harness and stores its results.
-- **Track**: Track the results of your benchmarks over time. Monitor, query, and graph the results using the Bencher web console based on the source branch, testbed, and measure.
-- **Catch**: Catch performance regressions in CI. Bencher uses state of the art, customizable analytics to detect performance regressions before they make it to production.
-
-For the same reasons that unit tests are run in CI to prevent feature regressions, benchmarks should be run in CI with Bencher to prevent performance regressions. Performance bugs are bugs!
-
-Start catching performance regressions in CI — [try Bencher Cloud for free](/pricing).
+<BencherFooter />

@@ -1,0 +1,23 @@
+import IsFibonacciNumberRustCode from "../is-fibonacci-number-rust-code.mdx";
+import IsFibonacciNumberFixRustCode from "../is-fibonacci-number-fix-rust-code.mdx";
+
+## FizzBuzzFibonacci in Rust korrigieren
+
+Lassen Sie uns noch einmal einen Blick auf diese `is_fibonacci_number` Funktion werfen:
+
+<IsFibonacciNumberRustCode />
+
+Jetzt, wo ich über die Leistung nachdenke, realisiere ich, dass ich eine unnötige, zusätzliche Schleife habe.
+Wir können die `for i in 0..=n {}` Schleife komplett loswerden und
+vergleicht einfach den `current` Wert mit der gegebenen Zahl (`n`) 🤦
+
+<IsFibonacciNumberFixRustCode />
+
+- Aktualisieren Sie Ihre `is_fibonacci_number` Funktion.
+- Initialisieren Sie unsere Fibonacci-Sequenz, die mit `0` und `1` als `previous` und `current` Zahlen beginnt.
+- Iterieren Sie, solange die `current` Zahl kleiner ist als die _gegebene Zahl_ `n`.
+- Addieren Sie die `previous` und `current` Zahl, um die `next` Zahl zu erhalten.
+- Aktualisieren Sie die `previous` Zahl zur `current` Zahl.
+- Aktualisieren Sie die `current` Zahl zur `next` Zahl.
+- Sobald `current` größer oder gleich der gegebenen Zahl `n` ist, werden wir die Schleife verlassen.
+- Überprüfen Sie, ob die `current` Zahl gleich der gegebenen Zahl `n` ist und geben Sie dieses Ergebnis zurück.

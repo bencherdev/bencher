@@ -1,0 +1,40 @@
+import FizzBuzzFibonacciRules from "../../benchmarking/pt/fizz-buzz-fibonacci-rules.mdx";
+import IsFibonacciNumberRustCode from "../is-fibonacci-number-rust-code.mdx";
+import FizzBuzzFibonacciRustCode from "../fizz-buzz-fibonacci-rust-code.mdx";
+import PlayGameRustCode from "../play-game-rust-code.mdx";
+
+## Escreva FizzBuzzFibonacci em Rust
+
+Nossos Indicadores Chave de Desempenho (KPIs) estão em baixa, então nosso Gerente de Produto (PM) quer que adicionemos um novo recurso.
+Após muitas discussões e várias entrevistas com usuários, decidiu-se que o bom e velho FizzBuzz não é suficiente.
+As crianças de hoje querem um novo jogo, FizzBuzzFibonacci.
+
+<FizzBuzzFibonacciRules />
+
+<IsFibonacciNumberRustCode />
+
+- Crie uma função chamada `is_fibonacci_number` que recebe um número inteiro sem sinal e retorna um booleano.
+- Itere para todos os números de `0` ao nosso número específico `n` inclusive.
+- Inicialize nossa sequência Fibonacci começando com `0` e `1` como os números `anterior` e `atual` respectivamente.
+- Itere enquanto o número `atual` for menor que a iteração atual `i`.
+- Adicione o número `atual` e `anterior` para obter o número `próximo`.
+- Atualize o número `anterior` para o número `atual`.
+- Atualize o número `atual` para o número `próximo`.
+- Uma vez que `atual` for maior ou igual ao número especifico `n`, nós sairemos do loop.
+- Verifique se o número `atual` é igual ao número especificado `n` e, se for, retorne `true`.
+- Caso contrário, retorne `false`.
+
+Agora precisaremos atualizar nossa função `fizz_buzz`:
+
+<FizzBuzzFibonacciRustCode />
+
+- Renomeie a função `fizz_buzz` para `fizz_buzz_fibonacci` para torná-la mais descritiva.
+- Chame nossa função auxiliar `is_fibonacci_number`.
+- Se o resultado de `is_fibonacci_number` for `true` retorne `Fibonacci`.
+- Se o resultado de `is_fibonacci_number` for `false`, execute a mesma lógica `Fizz`, `Buzz`, `FizzBuzz`, ou número retornando o resultado.
+
+Como renomeamos `fizz_buzz` para `fizz_buzz_fibonacci`, também precisamos atualizar nossa função `play_game`:
+
+<PlayGameRustCode />
+
+Ambas as funções `main` e `bench_play_game` podem permanecer exatamente as mesmas.

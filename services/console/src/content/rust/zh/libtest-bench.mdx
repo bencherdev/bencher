@@ -1,0 +1,163 @@
+---
+title: "libtest基准测试"
+description: "逐步指导如何使用libtest bench对Rust代码进行基准测试"
+heading: "如何使用libtest bench对Rust代码进行基准测试"
+sortOrder: 1
+---
+
+import Benchmarking from "../../../chunks/benchmarking/zh/benchmarking.mdx";
+import WhatIsRust from "../../../chunks/rust/zh/what-is-rust.mdx";
+import FizzBuzzRules from "../../../chunks/benchmarking/zh/fizz-buzz-rules.mdx";
+import FizzBuzzRustCode from "../../../chunks/rust/fizz-buzz-rust-code.mdx";
+import FizzBuzzRust from "../../../chunks/rust/zh/fizz-buzz-rust.mdx";
+import StepByStepRust from "../../../chunks/rust/zh/step-by-step-rust.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/zh/micro-vs-macro.mdx";
+import BenchmarkingRust from "../../../chunks/rust/zh/benchmarking-rust.mdx";
+import RustToolchainRustBenchCode from "../../../chunks/rust/bench/rust-toolchain-rust-bench-code.mdx";
+import RustToolchainRustBenchTree from "../../../chunks/rust/bench/rust-toolchain-rust-bench-tree.mdx";
+import FizzBuzzRefactorRust from "../../../chunks/rust/zh/fizz-buzz-refactor-rust.mdx";
+import TestCreateRustBenchCode from "../../../chunks/rust/bench/test-crate-rust-bench-code.mdx"
+import BenchPlayGameRustBenchCode from "../../../chunks/rust/bench/bench-play-game-rust-bench-code.mdx";
+import BenchPlayGameRustBenchOutput from "../../../chunks/rust/bench/bench-play-game-rust-bench-output.mdx";
+import FizzBuzzFibonacciRust from "../../../chunks/rust/zh/fizz-buzz-fibonacci-rust.mdx";
+import BenchPlayGameFibonacciRustBenchOutput from "../../../chunks/rust/bench/bench-play-game-fibonacci-rust-bench-output.mdx";
+import FizzBuzzFibonacciOpenRust from "../../../chunks/rust/zh/fizz-buzz-fibonacci-open-rust.mdx";
+import TheEnd from "../../../chunks/benchmarking/zh/the-end.mdx";
+import OnFire from "../../../chunks/benchmarking/zh/on-fire.mdx";
+import BenchPlayGameOnFireRustBenchCode from "../../../chunks/rust/bench/bench-play-game-on-fire-rust-bench-code.mdx";
+import BenchPlayGameOnFireRustBenchOutputStart from "../../../chunks/rust/bench/bench-play-game-on-fire-rust-bench-output-start.mdx";
+import BenchPlayGameOnFireRustBenchOutput from "../../../chunks/rust/bench/bench-play-game-on-fire-rust-bench-output.mdx";
+import FizzBuzzFibonacciFixRust from "../../../chunks/rust/zh/fizz-buzz-fibonacci-fix-rust.mdx";
+import BenchPlayGameFixRustBenchOutput from "../../../chunks/rust/bench/bench-play-game-fix-rust-bench-output.mdx";
+import CatchInCi from "../../../chunks/benchmarking/zh/catch-in-ci.mdx";
+import CatchInCiRustBenchOutput from "../../../chunks/rust/bench/catch-in-ci-rust-bench-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/zh/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/rust/bench/catch-in-ci-plot-rust-bench.mdx";
+import BencherFooter from "../../../chunks/learn/zh/bencher-footer.mdx";
+
+<Benchmarking />
+
+<WhatIsRust />
+
+<FizzBuzzRust />
+
+<StepByStepRust />
+
+<MicroVsMacro />
+
+<BenchmarkingRust />
+
+所有这三个都是[由Bencher支持](/docs/zh/explanation/adapters/)。那么为什么要选择libtest bench呢?
+如果你试图限制项目的外部依赖，并且你的项目已经使用了`夜间版`工具链，那么这可能是个好主意。
+除此之外，根据你的使用场景，我会建议使用 Criterion 或者 Iai。
+
+### 安装Rust `夜间版`
+
+那么说了这么多，我们要用到libtest bench，所以让我们将Rust工具链设置为`夜间版`。
+在你的`game`项目的根目录中创建一个`rust-toolchain.toml`文件，与`Cargo.toml`同级。
+
+<RustToolchainRustBenchCode />
+
+你的目录结构现在应该看起来像这样：
+
+<RustToolchainRustBenchTree />
+
+一旦完成，重新运行`cargo run`。
+新的夜间版工具链的安装应该会花费一点时间，然后再重新运行，然后给出和以前一样的输出。
+
+<FizzBuzzRefactorRust />
+
+## 对FizzBuzz进行基准测试
+
+为了使用不稳定的libtest crate，我们需要启用我们代码的`test`特性并导入`test` crate。在`main.rs`的_顶部_添加以下内容：
+
+<TestCreateRustBenchCode />
+
+现在我们准备添加我们的第一个基准测试！
+在`main.rs`的_底部_添加以下内容：
+
+<BenchPlayGameRustBenchCode />
+
+- 创建一个名为`benchmarks`的模块，并设置[编译器配置](https://doc.rust-lang.org/reference/conditional-compilation.html#the-cfg-attribute)为[`测试模式`](https://doc.rust-lang.org/book/ch11-03-test-organization.html#the-tests-module-and-cfgtest)。
+- 引入`Bencher`基准测试运行器。（🐰 哇，酷名字！）
+- 引入我们的`play_game`功能。
+- 创建一个名为`bench_play_game`的基准，它接受一个指向`Bencher`的可变引用。
+- 设置`#[bench]`属性以表明`bench_play_game`是一个基准。
+- 使用`Bencher`实例 (`b`)多次运行我们的宏基准。
+- 在一个"黑匣子"里运行我们的宏基准，以便编译器不优化我们的代码。
+- 从`1`迭代到`100`（包含）。
+- 对每个数字，调用`play_game`。
+
+现在我们准备对我们的代码进行基准测试，运行`cargo bench`：
+
+<BenchPlayGameRustBenchOutput />
+
+> 🐰 让我们加大胡萝卜的力量！我们已经拿到了我们的第一份基准测试度量数据！
+
+终于，我们可以让自己疲惫的开发者大脑休息一下...
+开玩笑的，我们的用户想要一个新特性！
+
+<FizzBuzzFibonacciRust />
+
+## 对FizzBuzzFibonacci进行基准测试
+
+现在我们可以重新运行我们的基准：
+
+<BenchPlayGameFibonacciRustBenchOutput />
+
+回看我们的终端历史记录，
+我们可以用眼睛比较FizzBuzz和FizzBuzzFibonacci游戏的性能：`4,879 ns`对`22,167 ns`。
+你的数字可能会和我有一点点不同。
+不过，两款游戏的差距可能在5倍的范围内。
+这对我来说看起来不错！特别是对添加了像_Fibonacci_这样花哨 sounding 的功能到我们的游戏。
+孩子们会爱上它的！
+
+<FizzBuzzFibonacciOpenRust />
+
+<TheEnd />
+
+<br />
+
+<OnFire />
+
+<BenchPlayGameOnFireRustBenchCode />
+
+- 一个带有数字一百（`100`）的据此游戏的微观基准测试`bench_play_game_100`
+- 一个带有数字一百万（`1_000_000`）的据此游戏的微观基准测试`bench_play_game_1_000_000`
+
+当我运行的时候，我得到了这个：
+
+<BenchPlayGameOnFireRustBenchOutputStart />
+
+等一下... 等一下...
+
+<BenchPlayGameOnFireRustBenchOutput />
+
+什么！`439 ns` x `1,000` 应该是 `439,000 ns`，不是 `9,586,977 ns` 🤯
+即使我得到了正确的Fibonacci序列代码，我还是可能在某处有性能bug。
+
+<FizzBuzzFibonacciFixRust />
+
+现在让我们重新运行那些基准，看看我们做得怎么样：
+
+<BenchPlayGameFixRustBenchOutput />
+
+哦，哇！我们的 `bench_play_game` 基准又回到了与原始的FizzBuzz差不多的地方。
+我希望我记得那个分数到底是多少。不过已经过去三周了。
+我的终端历史记录已经无法追溯那么长时间了。
+不过我想这个分数应该和它很接近！
+
+`bench_play_game_100` 基准下降了将近10倍，从`439 ns`到`46 ns`。
+而`bench_play_game_1_000_000`基准下降了超过10,000倍！ `9,586,977 ns` 降到 `53 ns`！
+
+> 🐰 嗨，至少我们在这个性能bug进入生产环境之前发现了它...哦，对。忘记了...
+
+<CatchInCi />
+
+<CatchInCiRustBenchOutput />
+
+<CatchInCiPlot />
+
+<CatchInCiPlotRustBench title="如何使用libtest bench 对Rust进行基准测试" />
+
+<BencherFooter />

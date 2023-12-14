@@ -1,0 +1,16 @@
+import FizzBuzzRefactorRustCode from "../fizz-buzz-refactor-rust-code.mdx";
+
+### 重构 FizzBuzz
+
+为了测试我们的FizzBuzz应用，我们需要从程序的`main`函数中分离出我们的逻辑。
+基准测试工具无法对`main`函数进行基准测试。
+
+请更新您的代码以使它看起来像这样：
+
+<FizzBuzzRefactorRustCode />
+
+我们现在已经把我们的代码分离成了三个不同的函数：
+
+- `main`：我们程序的主要入口点，它遍历`1`至`100`（包含）的数字，并对每一个数字调用`play_game`函数。
+- `play_game`：接取一个无符号整数`n`，调用`fizz_buzz`并使用那个数值，并打印结果。
+- `fizz_buzz`：接取一个无符号整数`n`，然后实际进行`Fizz`，`Buzz`，`FizzBuzz`，或数字逻辑，并以字符串形式返回结果。

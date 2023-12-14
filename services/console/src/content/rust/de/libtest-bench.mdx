@@ -1,0 +1,167 @@
+---
+title: "libtest bench"
+description: "Eine Schritt-für-Schritt-Anleitung, wie man Rust-Code mit libtest bench benchmarkt"
+heading: "Benchmark von Rust-Code mit libtest bench"
+sortOrder: 1
+---
+
+import Benchmarking from "../../../chunks/benchmarking/de/benchmarking.mdx";
+import WhatIsRust from "../../../chunks/rust/de/what-is-rust.mdx";
+import FizzBuzzRules from "../../../chunks/benchmarking/de/fizz-buzz-rules.mdx";
+import FizzBuzzRustCode from "../../../chunks/rust/fizz-buzz-rust-code.mdx";
+import FizzBuzzRust from "../../../chunks/rust/de/fizz-buzz-rust.mdx";
+import StepByStepRust from "../../../chunks/rust/de/step-by-step-rust.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/de/micro-vs-macro.mdx";
+import BenchmarkingRust from "../../../chunks/rust/de/benchmarking-rust.mdx";
+import RustToolchainRustBenchCode from "../../../chunks/rust/bench/rust-toolchain-rust-bench-code.mdx";
+import RustToolchainRustBenchTree from "../../../chunks/rust/bench/rust-toolchain-rust-bench-tree.mdx";
+import FizzBuzzRefactorRust from "../../../chunks/rust/de/fizz-buzz-refactor-rust.mdx";
+import TestCreateRustBenchCode from "../../../chunks/rust/bench/test-crate-rust-bench-code.mdx"
+import BenchPlayGameRustBenchCode from "../../../chunks/rust/bench/bench-play-game-rust-bench-code.mdx";
+import BenchPlayGameRustBenchOutput from "../../../chunks/rust/bench/bench-play-game-rust-bench-output.mdx";
+import FizzBuzzFibonacciRust from "../../../chunks/rust/de/fizz-buzz-fibonacci-rust.mdx";
+import BenchPlayGameFibonacciRustBenchOutput from "../../../chunks/rust/bench/bench-play-game-fibonacci-rust-bench-output.mdx";
+import FizzBuzzFibonacciOpenRust from "../../../chunks/rust/de/fizz-buzz-fibonacci-open-rust.mdx";
+import TheEnd from "../../../chunks/benchmarking/de/the-end.mdx";
+import OnFire from "../../../chunks/benchmarking/de/on-fire.mdx";
+import BenchPlayGameOnFireRustBenchCode from "../../../chunks/rust/bench/bench-play-game-on-fire-rust-bench-code.mdx";
+import BenchPlayGameOnFireRustBenchOutputStart from "../../../chunks/rust/bench/bench-play-game-on-fire-rust-bench-output-start.mdx";
+import BenchPlayGameOnFireRustBenchOutput from "../../../chunks/rust/bench/bench-play-game-on-fire-rust-bench-output.mdx";
+import FizzBuzzFibonacciFixRust from "../../../chunks/rust/de/fizz-buzz-fibonacci-fix-rust.mdx";
+import BenchPlayGameFixRustBenchOutput from "../../../chunks/rust/bench/bench-play-game-fix-rust-bench-output.mdx";
+import CatchInCi from "../../../chunks/benchmarking/de/catch-in-ci.mdx";
+import CatchInCiRustBenchOutput from "../../../chunks/rust/bench/catch-in-ci-rust-bench-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/de/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/rust/bench/catch-in-ci-plot-rust-bench.mdx";
+import BencherFooter from "../../../chunks/learn/de/bencher-footer.mdx";
+
+<Benchmarking />
+
+<WhatIsRust />
+
+<FizzBuzzRust />
+
+<StepByStepRust />
+
+<MicroVsMacro />
+
+<BenchmarkingRust />
+
+Alle drei werden von [Bencher unterstützt](/docs/de/explanation/adapters/). Warum also libtest bench wählen?
+Es könnte eine gute Idee sein, wenn Sie versuchen, die externen Abhängigkeiten Ihres Projekts zu begrenzen
+und Ihr Projekt verwendet bereits die `Nightly`-Toolchain.
+Abgesehen davon würde ich entweder Criterion oder Iai je nach Anwendungsfall empfehlen.
+
+### Installation von Rust `nightly`
+
+All das gesagt, wir werden libtest bench verwenden, also stellen wir unsere Rust-Toolchain auf `nightly`.
+Erstellen Sie eine Datei `rust-toolchain.toml` im Wurzelverzeichnis Ihres `game`-Projekts, neben `Cargo.toml`.
+
+<RustToolchainRustBenchCode />
+
+Ihre Verzeichnisstruktur sollte jetzt so aussehen:
+
+<RustToolchainRustBenchTree />
+
+Wenn das erledigt ist, führen Sie `cargo run` erneut aus.
+Es sollte eine Minute dauern, bis die neue, nächtliche Toolchain installiert ist,
+bevor sie erneut ausgeführt wird und Ihnen die gleiche Ausgabe wie zuvor liefert.
+
+<FizzBuzzRefactorRust />
+
+## Benchmarking FizzBuzz
+
+Um die instabile libtest crate zu verwenden, müssen wir das `test`-Feature für unseren Code aktivieren und die `test` crate importieren. Fügen Sie das oben auf `main.rs` ein:
+
+<TestCreateRustBenchCode />
+
+Jetzt sind wir bereit, unseren ersten Benchmak hinzuzufügen!
+Fügen Sie das ganz unten auf `main.rs` ein:
+
+<BenchPlayGameRustBenchCode />
+
+- Erstellen Sie ein Modul mit dem Namen `benchmarks` und stellen Sie die 
+  [Compiler-Konfiguration](https://doc.rust-lang.org/reference/conditional-compilation.html#the-cfg-attribute)
+  auf den [`test` Modus](https://doc.rust-lang.org/book/ch11-03-test-organization.html#the-tests-module-and-cfgtest).
+- Importieren Sie den Benchmark-Runner `Bencher`. (🐰 Cooler Name!)
+- Importieren Sie unsere Funktion `play_game`.
+- Erstellen Sie einen Benchmark namens `bench_play_game`, der eine veränderbare Referenz auf `Bencher` erhält.
+- Stellen Sie das `#[bench]` Attribut ein, um anzugeben, dass `bench_play_game` ein Benchmark ist.
+- Nutzen Sie die `Bencher`-Instanz (`b`), um unseren Makro-Benchmark mehrmals auszuführen.
+- Führen Sie unseren Makro-Benchmark innerhalb einer "Black Box" aus, damit der Compiler unseren Code nicht optimiert.
+- Iterieren Sie von `1` bis `100` einschließlich.
+- Rufen Sie für jede Zahl `play_game` auf.
+
+Jetzt sind wir bereit, unseren Code zu benchmarken, führen Sie `cargo bench` aus:
+
+<BenchPlayGameRustBenchOutput />
+
+> 🐰 Lassen Sie uns die Rübe drehen! Wir haben unsere ersten Benchmark-Metriken!
+
+Endlich können wir unsere müden Entwicklerköpfe ausruhen...
+Nur ein Scherz, unsere Benutzer wollen ein neues Feature!
+
+<FizzBuzzFibonacciRust />
+
+## Benchmark von FizzBuzzFibonacci
+
+Jetzt können wir unseren Benchmark erneut ausführen:
+
+<BenchPlayGameFibonacciRustBenchOutput />
+
+Wenn wir in unserer Terminal-Historie zurückscrollen,
+können wir einen Augenvergleich zwischen der Leistung unseres FizzBuzz und FizzBuzzFibonacci-Spiels machen: `4.879 ns` vs `22.167 ns`.
+Ihre Zahlen werden etwas von meinen abweichen.
+Jedoch ist der Unterschied zwischen den beiden Spielen wahrscheinlich im Bereich von 5x.
+Das scheint mir gut zu sein! Besonders für das Hinzufügen eines so schick klingenden Features wie _Fibonacci_ zu unserem Spiel.
+Den Kindern wird es gefallen!
+
+<FizzBuzzFibonacciOpenRust />
+
+<TheEnd />
+
+<br />
+
+<OnFire />
+
+<BenchPlayGameOnFireRustBenchCode />
+
+- Ein Mikro-Benchmark `bench_play_game_100` für das Spielen des Spiels mit der Zahl hundert (`100`)
+- Ein Mikro-Benchmark `bench_play_game_1_000_000` für das Spielen des Spiels mit der Zahl eine Million (`1_000_000`)
+
+Als ich es ausgeführt habe, habe ich das bekommen:
+
+<BenchPlayGameOnFireRustBenchOutputStart />
+
+Warten Sie darauf... warten Sie darauf...
+
+<BenchPlayGameOnFireRustBenchOutput />
+
+Was! `439 ns` x `1.000` sollte `439.000 ns` und nicht `9.586.977 ns` sein 🤯
+Obwohl ich meinen Fibonacci-Sequenzcode funktional richtig bekommen habe, muss ich irgendwo einen Leistungsfehler haben.
+
+<FizzBuzzFibonacciFixRust />
+
+Jetzt lassen Sie uns diese Benchmarks erneut durchführen und sehen, wie wir abgeschnitten haben:
+
+<BenchPlayGameFixRustBenchOutput />
+
+Oh, wow! Unsere `bench_play_game`-Benchmark ist wieder auf etwa demselben Niveau wie die ursprüngliche FizzBuzz.
+Ich wünschte, ich könnte mich genau an diese Punktzahl erinnern. Es sind aber schon drei Wochen vergangen.
+Die Historie meines Terminals geht nicht so weit zurück.
+Aber ich denke, es ist eng!
+
+Die `bench_play_game_100`-Benchmark ist fast 10x abgesunken, von `439 ns` auf `46 ns`.
+Und das `bench_play_game_1_000_000`-Benchmark ist um mehr als 10.000x gesunken! Von `9.586.977 ns` auf `53 ns`!
+
+> 🐰 Hey, wenigstens haben wir diesen Performance-Bug erkannt, bevor er in die Produktion gelangt ist... ach, stimmt. Nein...
+
+<CatchInCi />
+
+<CatchInCiRustBenchOutput />
+
+<CatchInCiPlot />
+
+<CatchInCiPlotRustBench title="Wie man Rust mit libtest bench benchmarkt" />
+
+<BencherFooter />

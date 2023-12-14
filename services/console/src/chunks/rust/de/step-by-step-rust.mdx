@@ -1,0 +1,33 @@
+import GameTree from "../game-tree.mdx";
+import HelloWorld from "../hello-world-rust-code.mdx";
+import FizzBuzzOutput from "../fizz-buzz-output.mdx";
+import GameLockTree from "../game-lock-tree.mdx";
+
+### Schritt für Schritt folgen
+
+Um dieser ausführlichen Anleitung zu folgen, müssen Sie zuerst [Rust installieren](https://rustup.rs/).
+
+> 🐰 Der Quellcode für diesen Beitrag ist [auf GitHub verfügbar](https://github.com/bencherdev/bencher/tree/main/examples/rust/bench)
+
+Nachdem Sie Rust installiert haben, können Sie ein Terminalfenster öffnen und eingeben: `cargo init game`
+
+Navigieren Sie dann in das neu erstellte Verzeichnis `game`.
+
+<GameTree />
+
+Sie sollten ein Verzeichnis namens `src` mit einer Datei namens `main.rs` sehen:
+
+<HelloWorld />
+
+Ersetzen Sie dessen Inhalt mit der oben genannten FizzBuzz-Implementierung. Führen Sie dann `cargo run` aus.
+Die Ausgabe sollte so aussehen:
+
+<FizzBuzzOutput />
+
+> 🐰 Boom! Sie meistern das Coding-Interview!
+
+Eine neue Datei `Cargo.lock` sollte erzeugt worden sein:
+
+<GameLockTree />
+
+Bevor wir weitermachen, ist es wichtig, die Unterschiede zwischen Mikro-Benchmarking und Makro-Benchmarking zu besprechen.

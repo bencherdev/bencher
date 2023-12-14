@@ -1,0 +1,13 @@
+## Détection des régressions de performances dans l'intégration continue (CI)
+
+Les dirigeants n'étaient pas contents du torrent de critiques négatives que notre jeu a reçu à cause de mon petit bug de performance.
+Ils m'ont dit de ne pas laisser cela se reproduire, et quand j'ai demandé comment, ils m'ont juste dit de ne pas le refaire.
+Comment suis-je censé gérer cela‽
+
+Heureusement, j'ai trouvé cet outil open source génial appelé Bencher.
+Il y a un niveau gratuit super généreux, donc je peux simplement utiliser [Bencher Cloud](/) pour mes projets personnels.
+Et au travail où tout doit être dans notre cloud privé, j'ai commencé à utiliser [Bencher Self-Hosted](/docs/fr/tutorial/docker/).
+
+Bencher a des [adaptateurs intégrés](/docs/fr/explanation/adapters/),
+il est donc facile de l'intégrer dans CI. Après avoir [suivi le guide de démarrage rapide](/docs/fr/tutorial/quick-start/),
+je suis en mesure d'exécuter mes benchmarks et de les suivre avec Bencher.

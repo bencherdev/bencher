@@ -1,0 +1,37 @@
+import FizzBuzzFibonacciOpenRules from "../../benchmarking/ko/fizz-buzz-fibonacci-open-rules.mdx";
+import FizzBuzzFibonacciOpenRustCode from "../fizz-buzz-fibonacci-open-rust-code.mdx";
+import FizzBuzzFibonacciOpenRustOutput from "../fizz-buzz-fibonacci-open-rust-output.mdx";
+import FizzBuzzFibonacciOpenRustOutputDefault from "../fizz-buzz-fibonacci-open-rust-output-default.mdx";
+
+## Rust에서 FizzBuzzFibonacci 확장하기
+
+우리의 게임이 대박입니다! 어린이들이 FizzBuzzFibonacci를 정말 좋아하고 있어요.
+그만큼 인기가 많아 익사들로 부터 후속작을 만들라는 소식이 전해졌습니다.
+하지만 이건 현대적인 세계, 단번에 구매를 하는 것이 아닌 연간 재발생 수익(ARR)이 필요합니다!
+우리 게임의 새로운 비전은 끝이 없는 것입니다, `1`과 `100` 사이의 한계에 묶여 사는 것은 없습니다 (비록 포함된다 해도).
+아니요, 우리는 새로운 경계를 넘어가고 있습니다!
+
+<FizzBuzzFibonacciOpenRules />
+
+우리의 게임이 어떤 숫자든 작동하도록 하기 위해, 우리는 명령행 인자를 받아들일 필요가 있습니다.
+`main` 함수를 다음과 같이 업데이트합니다:
+
+<FizzBuzzFibonacciOpenRustCode />
+
+- 명령행에서 우리 게임에 전달된 모든 인자 (`args`)를 수집합니다.
+- 우리 게임에 전달된 첫 번째 인자를 부호 없는 정수 `i`로 파싱합니다.
+- 파싱이 실패하거나 인자가 전달되지 않으면, 우리 게임을 입력값으로 `15`를 사용하여 기본으로 실행합니다.
+- 마지막으로, 새로 파싱된 부호 없는 정수 `i`로 우리 게임을 실행합니다.
+
+이제 우리는 어떤 숫자로든 우리의 게임을 할 수 있습니다!
+명령행 인자를 우리 게임에 전달하려면 `--`를 따라 `cargo run`을 사용하세요:
+
+
+<FizzBuzzFibonacciOpenRustOutput />
+
+그리고 우리가 숫자를 생략하거나 유효하지 않은 숫자를 제공하면:
+
+<FizzBuzzFibonacciOpenRustOutputDefault />
+
+와우, 그것은 상당히 철저한 테스팅 이었습니다! CI가 통과합니다. 우리의 상사들은 매우 만족합니다.
+발송해봅시다! 🚀

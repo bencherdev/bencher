@@ -22,7 +22,7 @@ const { Content } = await page.render();
   collection={collection}
   slug={slug}
   lang={lang}
-  canonical={page.data.canonical ? `${BENCHER_SITE_URL}/docs/reference/${page.data.canonical}/` : undefined}
+  canonical={page.data.canonicalize ? `${BENCHER_SITE_URL}/docs/reference/${slug}/` : undefined}
 >
   <Content />
 </DocsLayout>

@@ -1,0 +1,17 @@
+```rust
+#[cfg(test)]
+mod benchmarks {
+    use test::Bencher;
+
+    use super::play_game;
+
+    #[bench]
+    fn bench_play_game(b: &mut Bencher) {
+        b.iter(|| {
+            std::hint::black_box(for i in 1..=100 {
+                play_game(i)
+            });
+        });
+    }
+}
+```

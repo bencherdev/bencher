@@ -59,6 +59,9 @@ const tokenText = () => {
 
 const page = Astro.props;
 const { Content } = await page.render();
+
+const collection = "tutorial";
+const slug = "quick-start";
 ---
 
 <DocsLayout
@@ -66,8 +69,8 @@ const { Content } = await page.render();
   description={page?.data?.description}
   heading={page?.data?.heading}
   lang={lang}
-  collection="tutorial"
-  slug="quick-start"
+  collection={collection}
+  slug={slug}
 >
   <Content />
   <AuthOverride client:only="solid-js" elementId={signupId}>
@@ -79,5 +82,5 @@ const { Content } = await page.render();
     </h4>
   </AuthOverride>
 
-  <Disclosure slug="quick-start" lang={lang} />
+  <Disclosure collection={collection} slug={slug} lang={lang} />
 </DocsLayout>

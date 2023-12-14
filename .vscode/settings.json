@@ -57,6 +57,7 @@
     "bindgen",
     "Bulma",
     "camino",
+    "canonicalize",
     "chrono",
     "codegen",
     "devel",

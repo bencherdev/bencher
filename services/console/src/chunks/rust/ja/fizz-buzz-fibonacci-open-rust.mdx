@@ -1,0 +1,35 @@
+import FizzBuzzFibonacciOpenRules from "../../benchmarking/ja/fizz-buzz-fibonacci-open-rules.mdx";
+import FizzBuzzFibonacciOpenRustCode from "../fizz-buzz-fibonacci-open-rust-code.mdx";
+import FizzBuzzFibonacciOpenRustOutput from "../fizz-buzz-fibonacci-open-rust-output.mdx";
+import FizzBuzzFibonacciOpenRustOutputDefault from "../fizz-buzz-fibonacci-open-rust-output-default.mdx";
+
+## RustにてFizzBuzzFibonacciを展開
+
+我々のゲームは大ヒットです！子供たちは確かにFizzBuzzFibonacciを遊ぶのが大好きです。
+それほどに、経営陣から続編を求める声が聞こえてきました。
+しかし、これは現代の世界、我々は一度きりの購入ではなく、年間定期収入（ARR）が必要です！
+我々のゲームの新たなビジョンは、それがオープンエンドであり、`1`から`100`（包含）の間に生息するのではなく、新たなフロンティアへと向かうことです。
+
+<FizzBuzzFibonacciOpenRules />
+
+我々のゲームが任意の数値で動作できるようにするため、コマンドライン引数を受け取る必要があります。
+`main`関数を以下のように更新してください：
+
+<FizzBuzzFibonacciOpenRustCode />
+
+- コマンドラインから我々のゲームに渡されたすべての引数（`args`）を収集します。
+- 我々のゲームに渡された最初の引数を取得し、それを符号なし整数`i`として解析します。
+- 解析に失敗した場合、または引数が渡されない場合は、入力として`15`を用いて我々のゲームをデフォルトで遊びます。
+- 最後に、新たに解析した符号なし整数`i`で我々のゲームを遊びます。
+
+これで我々のゲームは何の数でも遊べます！
+我々のゲームに引数を渡すために`cargo run`の後に`--`を使用してください：
+
+<FizzBuzzFibonacciOpenRustOutput />
+
+そして、もし我々が数字を省略したり、無効な数字が提供されたりすると：
+
+<FizzBuzzFibonacciOpenRustOutputDefault />
+
+うわー、それは手厚いテストだった！CIがパスします。我々の上司たちは大喜びです。
+それでは、出荷しましょう！ 🚀

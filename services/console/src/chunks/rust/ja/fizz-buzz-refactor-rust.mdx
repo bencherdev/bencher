@@ -1,0 +1,16 @@
+import FizzBuzzRefactorRustCode from "../fizz-buzz-refactor-rust-code.mdx";
+
+### FizzBuzzのリファクタリング
+
+FizzBuzzアプリケーションをテストするためには、ロジックをプログラムの`main`関数から分離する必要があります。
+ベンチマークハーネスは`main`関数をベンチマークできません。
+
+あなたのコードを下記のように更新してください：
+
+<FizzBuzzRefactorRustCode />
+
+これで、コードを以下の３つの異なる関数に分割しました：
+
+- `main`: プログラムへの主なエントリーポイントで、数値の `1` から `100` まで（両方を含む）を通過し、各数値について `play_game` を呼び出します。
+- `play_game`: 符号なし整数 `n` を引き取り、その数値を使って `fizz_buzz` を呼び出し、結果を出力します。
+- `fizz_buzz`: 符号なし整数 `n` を引き取り、実際の `Fizz`、`Buzz`、`FizzBuzz`、または数値のロジックを行い、結果を文字列として返します。

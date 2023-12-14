@@ -1,0 +1,13 @@
+```
+$ cargo bench
+   Compiling game v0.1.0 (/home/bencher)
+    Finished bench [optimized] target(s) in 0.75s
+     Running unittests src/main.rs (target/release/deps/game-6e1cb3355509b761)
+
+running 3 tests
+test benchmarks::bench_play_game           ... bench:       5,570 ns/iter (+/- 390)
+test benchmarks::bench_play_game_100       ... bench:          46 ns/iter (+/- 3)
+test benchmarks::bench_play_game_1_000_000 ... bench:          53 ns/iter (+/- 4)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 3 measured; 0 filtered out; finished in 9.24s
+```

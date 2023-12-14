@@ -1,0 +1,16 @@
+import FizzBuzzRefactorRustCode from "../fizz-buzz-refactor-rust-code.mdx";
+
+### Refactorizar FizzBuzz
+
+Para probar nuestra aplicación FizzBuzz, necesitamos desacoplar nuestra lógica de la función `main` del programa.
+Las superestructuras de rendimiento no pueden medir el rendimiento de la función `main`.
+
+Actualiza tu código para que se vea así:
+
+<FizzBuzzRefactorRustCode />
+
+Ahora hemos separado nuestro código en tres funciones diferentes:
+
+- `main`: El punto de entrada principal a nuestro programa que itera a través de los números del `1` al `100`, inclusive, y llama a `play_game` para cada número.
+- `play_game`: Toma un número entero sin signo `n`, llama a `fizz_buzz` con ese número, e imprime el resultado.
+- `fizz_buzz`: Toma un número entero sin signo `n` y realiza la lógica de `Fizz`, `Buzz`, `FizzBuzz` o número, devolviendo el resultado como una cadena.

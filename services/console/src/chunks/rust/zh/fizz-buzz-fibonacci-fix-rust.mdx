@@ -1,0 +1,23 @@
+import IsFibonacciNumberRustCode from "../is-fibonacci-number-rust-code.mdx";
+import IsFibonacciNumberFixRustCode from "../is-fibonacci-number-fix-rust-code.mdx";
+
+## 修复 Rust 中的 FizzBuzzFibonacci
+
+让我们再次看一下 `is_fibonacci_number` 函数：
+
+<IsFibonacciNumberRustCode />
+
+现在我在考虑性能，我意识到我有一个不必要的，额外的循环。
+我们可以完全摆脱 `for i in 0..=n {}` 循环，
+只需直接比较 `current` 值和给定的数字 (`n`) 🤦
+
+<IsFibonacciNumberFixRustCode />
+
+- 更新您的 `is_fibonacci_number` 函数。
+- 用 `0` 和 `1` 初始化我们的斐波那契序列作为 `previous` 和 `current` 数字。
+- 当 `current` 数字小于 _给定数字_ `n` 时迭代。
+- 将 `previous` 和 `current` 数字相加以获得 `next` 数字。
+- 把 `previous` 数字更新为 `current` 数字。
+- 把 `current` 数字更新为 `next` 数字。
+- 一旦 `current` 大于或等于给定的数字 `n`，我们将退出循环。
+- 检查 `current` 数字是否等于给定的数字 `n` 并返回该结果。

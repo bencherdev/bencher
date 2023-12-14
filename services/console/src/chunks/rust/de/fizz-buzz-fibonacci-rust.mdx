@@ -1,0 +1,40 @@
+import FizzBuzzFibonacciRules from "../../benchmarking/de/fizz-buzz-fibonacci-rules.mdx";
+import IsFibonacciNumberRustCode from "../is-fibonacci-number-rust-code.mdx";
+import FizzBuzzFibonacciRustCode from "../fizz-buzz-fibonacci-rust-code.mdx";
+import PlayGameRustCode from "../play-game-rust-code.mdx";
+
+## Schreiben Sie FizzBuzzFibonacci in Rust
+
+Unsere Key Performance Indicators (KPIs) sind runter, daher möchte unser Produkt Manager (PM), dass wir ein neues Feature hinzufügen.
+Nach viel Brainstorming und vielen Nutzerinterviews wurde entschieden, dass das gute alte FizzBuzz nicht ausreicht.
+Die Kids heutzutage wollen ein neues Spiel, FizzBuzzFibonacci.
+
+<FizzBuzzFibonacciRules />
+
+<IsFibonacciNumberRustCode />
+
+- Erstellen Sie eine Funktion namens `is_fibonacci_number` die eine nicht signierte ganze Zahl nimmt und einen boolschen Wert zurückgibt.
+- Iterieren Sie über alle Zahlen von `0` bis zur gegebenen Zahl `n` einschließlich.
+- Initialisieren Sie unsere Fibonacci-Sequenz mit `0` und `1` als den `previous`- und `current`-Zahlen.
+- Iterieren Sie solange die `current` Zahl kleiner ist als die aktuelle Iteration `i`.
+- Addieren Sie die `previous` und `current` Zahlen, um die `next` Zahl zu bekommen.
+- Aktualisieren Sie die `previous` Zahl auf die `current` Zahl.
+- Aktualisieren Sie die `current` Zahl auf die `next` Zahl.
+- Sobald `current` größer oder gleich der gegebenen Zahl `n` ist, beenden wir die Schleife.
+- Überprüfen Sie, ob die `current` Zahl gleich der gegebenen Zahl `n` ist und geben Sie in diesem Fall `true` zurück.
+- Andernfalls, geben Sie `false` zurück.
+
+Nun müssen wir unsere `fizz_buzz` Funktion aktualisieren:
+
+<FizzBuzzFibonacciRustCode />
+
+- Benennen Sie die `fizz_buzz` Funktion in `fizz_buzz_fibonacci` um, um sie aussagekräftiger zu machen.
+- Rufen Sie unsere Hilfsfunktion `is_fibonacci_number` auf.
+- Wenn das Ergebnis von `is_fibonacci_number` `true` ist, dann geben Sie `Fibonacci` zurück.
+- Wenn das Ergebnis von `is_fibonacci_number` `false` ist, dann führen Sie die gleiche `Fizz`, `Buzz`, `FizzBuzz`, oder Zahl Logik aus und geben Sie das Ergebnis zurück.
+
+Da wir `fizz_buzz` in `fizz_buzz_fibonacci` umbenannt haben, müssen wir auch unsere `play_game` Funktion aktualisieren:
+
+<PlayGameRustCode />
+
+Unsere Funktionen `main` und `bench_play_game` können genau gleich bleiben.
