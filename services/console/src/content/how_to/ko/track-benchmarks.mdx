@@ -59,7 +59,7 @@ bencher threshold create \
 --testbed localhost \
 --measure latency \
 --test t \
---right-side 0.95
+--upper-boundary 0.95
 
 bencher run \
 --if-branch "$FEATURE_BRANCH" \
@@ -69,12 +69,25 @@ bencher run \
 "bencher mock"
 ```
 
-1. 기능 브랜치를 체크아웃하세요. (예: `feature-branch`)
-1. 기능 브랜치 이름과 짧은 git commit ID를 연결한 환경 변수를 생성하세요. 이는 중요합니다! 각 실행마다 새 브랜치가 생성되도록 보장합니다.
-1. 타겟 브랜치를 체크아웃하세요. (예: `main`)
-1. 타겟 브랜치를 위해 `bencher run`을 실행합니다:
-    1. 제공된 브랜치는 아직 존재하지 않을 것입니다. (예: `--if-branch "$FEATURE_BRANCH"`)
-    1. 그래서 생성될 것입니다. (예: `--else-branch`)
+1. 피처 브랜치를 확인하세요. (예: `feature-branch`)
+1. 피처 브랜치 이름에 짧은 git 커밋 ID가 추가된 환경 변수를 생성하세요. 이것은 중요합니다! 각 실행 마다 새로운 브랜치가 생성되도록 보장합니다.
+1. 타겟 브랜치를 확인하세요. (예: `main`)
+1. 타겟 브랜치에 대해 `bencher run`을 실행합니다:
+    1. 주어진 브랜치는 아직 존재하지 않을 것입니다. (예: `--if-branch "$FEATURE_BRANCH"`)
+    1. 그래서 이것은 생성될 것입니다. (예: `--else-branch`)
+    1. 벤치마크를 세 번 실행하세요. (예: `--iter 3`)
+1. 피처 브랜치를 확인하세요. (예: `feature-branch`)
+1. 피처 브랜치에 대한 [임계값](/docs/ko/explanation/thresholds/)을 생성합니다:
+    1. 브랜치는 git 커밋 ID가 추가된 피처 브랜치입니다. (예: `--branch "$FEATURE_BRANCH"`)
+    1. 테스트베드는 로컬에서 실행되고 있습니다. (예: `--testbed localhost`)
+    1. 벤치마크를 위한 측정은 대기시간입니다. (예: `--measure latency`)
+    1. 30개 이하의 메트릭이 있을 경우, 학생의 t-검정을 사용하세요. (예: `--test t`)
+    1. 더 큰 대기시간은 성능 저하를 나타내므로 오른쪽 경계를 95.0%로 설정하세요. (예: `--upper-boundary 0.95`)
+1. 피처 브랜치에 대해 `bencher run`을 실행합니다:
+    1. 브랜치는 방금 생성되었으므로 존재할 것입니다. (예: `--branch "$FEATURE_BRANCH"`)
+    1. 테스트를 세 번 실행하세요. (예: `--iter 3`)
+    1. 세 개의 메트릭을 모두 최소값으로 접어 넣으세요. (예: `--fold min`)
+    1. [임계값](/docs/ko/explanation/thresholds/)에 의해 생성된 경고가 있으면 명령을 실패하도록 설정하세요. (예: `--err`)
 
 <br/>
 <br/>

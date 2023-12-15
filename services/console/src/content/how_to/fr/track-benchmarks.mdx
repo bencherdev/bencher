@@ -60,7 +60,7 @@ bencher threshold create \
 --testbed localhost \
 --measure latency \
 --test t \
---right-side 0.95
+--upper-boundary 0.95
 
 bencher run \
 --if-branch "$BRANCHE_FONCTIONNALITÉ" \
@@ -83,7 +83,7 @@ bencher run \
     1. Le Testbed est en cours d'exécution localement. (ex: `--testbed localhost`)
     1. Le type de métrique pour les benchmarks est la Latence. (ex: `--measure latency`)
     1. Il y a moins de 30 métriques, utilisez un test t de Student. (ex: `--test t`)
-    1. Définissez une limite supérieure de 95.0% car une latence plus grande indique une régression de performance. (ex: `--right-side 0.95`)
+    1. Définissez une limite supérieure de 95.0% car une latence plus grande indique une régression de performance. (ex: `--upper-boundary 0.95`)
 1. Exécutez `bencher run` pour la branche de fonctionnalité :
     1. La branche existera puisqu'elle vient d'être créée. (ex: `--if-branch "$BRANCHE_FONCTIONNALITÉ"`)
     1. Exécutez les tests trois fois. (ex: `--iter 3`)

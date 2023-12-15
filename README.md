@@ -223,6 +223,8 @@ Though Bencher is open source, there is also a hosted version available [Bencher
   </tr>
 </table>
 
+👉 Checkout [all public projects](https://bencher.dev/perf).
+
 ## GitHub Actions
 
 Install the Bencher CLI using the [GitHub Action](https://github.com/marketplace/actions/bencher-cli),

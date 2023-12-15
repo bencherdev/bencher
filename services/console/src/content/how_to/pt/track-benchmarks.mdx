@@ -59,10 +59,10 @@ bencher threshold create \
 --testbed localhost \
 --measure latency \
 --test t \
---right-side 0.95
+--upper-boundary 0.95
 
 bencher run \
---if-branch "$FEATURE_BRANCH" \
+--branch "$FEATURE_BRANCH" \
 --iter 3 \
 --fold min \
 --err \
@@ -82,9 +82,9 @@ bencher run \
     1. O Testbed está sendo executado localmente. (ex: `--testbed localhost`)
     1. O Tipo de Métrica para os benchmarks é Latência. (ex: `--measure latency`)
     1. Existem menos de 30 métricas, use um teste t de Student. (ex: `--test t`)
-    1. Defina um limite à direita de 95,0% porque uma Latência maior indica uma regressão de desempenho. (ex: `--right-side 0.95`)
+    1. Defina um limite à direita de 95,0% porque uma Latência maior indica uma regressão de desempenho. (ex: `--upper-boundary 0.95`)
 1. Execute `bencher run` para a branch de funcionalidade:
-    1. A Branch existirá pois acabou de ser criada. (ex: `--if-branch "$FEATURE_BRANCH"`)
+    1. A Branch existirá pois acabou de ser criada. (ex: `--branch "$FEATURE_BRANCH"`)
     1. Execute os testes três vezes. (ex: `--iter 3`)
     1. Dobre todas as três métricas para o valor mínimo. (ex: `--fold min`)
     1. Defina o comando para falhar se um Alerta for gerado pelo [Threshold](/pt/docs/explanation/thresholds/). (ex: `--err`)

@@ -59,10 +59,10 @@ bencher threshold create \
 --testbed localhost \
 --measure latency \
 --test t \
---right-side 0.95
+--upper-boundary 0.95
 
 bencher run \
---if-branch "$FEATURE_BRANCH" \
+--branch "$FEATURE_BRANCH" \
 --iter 3 \
 --fold min \
 --err \
@@ -82,9 +82,9 @@ bencher run \
     1. Testbedはローカルで実行されます。(例：`--testbed localhost`)
     1. ベンチマークのMeasureはLatencyです。(例：`--measure latency`)
     1. 30以下のメトリクスがある場合は、Studentのtテストを使用します。(例：`--test t`)
-    1. パフォーマンスが後退することを示すため、Latencyが大きいほど右側の境界を95.0%に設定します。(例：`--right-side 0.95`)
+    1. パフォーマンスが後退することを示すため、Latencyが大きいほど右側の境界を95.0%に設定します。(例：`--upper-boundary 0.95`)
 1. フィーチャーブランチに対して `bencher run` を実行します：
-    1. ブランチは、先ほど作成したため存在するはずです。(例：`--if-branch "$FEATURE_BRANCH"`)
+    1. ブランチは、先ほど作成したため存在するはずです。(例：`--branch "$FEATURE_BRANCH"`)
     1. テストを3回実行します。(例：`--iter 3`)
     1. 3つのメトリクスすべてを最小値に折り畳みます。(例：`--fold min`)
     1. [しきい値](/ja/docs/explanation/thresholds/)によりアラートが生成された場合にコマンドが失敗するように設定します。(例：`--err`)

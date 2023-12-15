@@ -60,10 +60,10 @@ bencher threshold create \
 --testbed localhost \
 --measure latency \
 --test t \
---right-side 0.95
+--upper-boundary 0.95
 
 bencher run \
---if-branch "$FEATURE_BRANCH" \
+--branch "$FEATURE_BRANCH" \
 --iter 3 \
 --fold min \
 --err \
@@ -83,9 +83,9 @@ bencher run \
     1. Das Testbed läuft lokal. (z. B.: `--testbed localhost`)
     1. Die Metrikart für die Benchmarks ist die Latenz. (z. B.: `--measure latency`)
     1. Es gibt weniger als 30 Metriken, verwenden Sie einen Student's t-Test. (z. B.: `--test t`)
-    1. Setzen Sie eine rechte Seite Grenze von 95,0 %, da eine größere Latenz auf eine Leistungsregression hinweist. (z. B.: `--right-side 0.95`)
+    1. Setzen Sie eine rechte Seite Grenze von 95,0 %, da eine größere Latenz auf eine Leistungsregression hinweist. (z. B.: `--upper-boundary 0.95`)
 1. Führen Sie `bencher run` für den Feature-Zweig aus:
-    1. Der Zweig wird existieren, da er gerade erstellt wurde. (z. B.: `--if-branch "$FEATURE_BRANCH"`)
+    1. Der Zweig wird existieren, da er gerade erstellt wurde. (z. B.: `--branch "$FEATURE_BRANCH"`)
     1. Führen Sie die Tests dreimal aus. (z. B.: `--iter 3`)
     1. Fassen Sie alle drei Metriken in den minimalen Wert zusammen. (z. B.: `--fold min`)
     1. Setzen Sie den Befehl so, dass er fehlschlägt, wenn ein Alert durch die [Schwelle](/de/docs/explanation/thresholds/) generiert wird. (z. B.: `--err`)
