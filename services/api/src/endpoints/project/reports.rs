@@ -36,6 +36,7 @@ use crate::{
         user::auth::BearerToken,
     },
     schema,
+    util::name_id::filter_name_id,
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -116,30 +117,10 @@ async fn get_ls_inner(
         .into_boxed();
 
     if let Some(branch) = json_report_query.branch.as_ref() {
-        match branch.try_into()? {
-            crate::util::name_id::NameId::Uuid(uuid) => {
-                query = query.filter(schema::branch::uuid.eq(uuid.to_string()));
-            },
-            crate::util::name_id::NameId::Slug(slug) => {
-                query = query.filter(schema::branch::slug.eq(slug.to_string()));
-            },
-            crate::util::name_id::NameId::Name(name) => {
-                query = query.filter(schema::branch::name.eq(name.to_string()));
-            },
-        }
+        filter_name_id!(query, branch, branch);
     }
     if let Some(testbed) = json_report_query.testbed.as_ref() {
-        match testbed.try_into()? {
-            crate::util::name_id::NameId::Uuid(uuid) => {
-                query = query.filter(schema::testbed::uuid.eq(uuid.to_string()));
-            },
-            crate::util::name_id::NameId::Slug(slug) => {
-                query = query.filter(schema::testbed::slug.eq(slug.to_string()));
-            },
-            crate::util::name_id::NameId::Name(name) => {
-                query = query.filter(schema::testbed::name.eq(name.to_string()));
-            },
-        }
+        filter_name_id!(query, testbed, testbed);
     }
 
     if let Some(start_time) = json_report_query.start_time {

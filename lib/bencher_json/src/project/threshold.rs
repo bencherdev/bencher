@@ -3,7 +3,10 @@ use bencher_valid::{Boundary, DateTime, NameId, SampleSize, Window};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{JsonBranch, JsonMeasure, JsonTestbed, ProjectUuid};
+use crate::{
+    urlencoded::{from_urlencoded, to_urlencoded, UrlEncodedError},
+    JsonBranch, JsonMeasure, JsonTestbed, ProjectUuid,
+};
 
 crate::typed_uuid::typed_uuid!(ThresholdUuid);
 crate::typed_uuid::typed_uuid!(StatisticUuid);
@@ -155,6 +158,69 @@ pub struct JsonThresholdStatistic {
     pub project: ProjectUuid,
     pub statistic: JsonStatistic,
     pub created: DateTime,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonThresholdQueryParams {
+    pub branch: Option<String>,
+    pub testbed: Option<String>,
+    pub measure: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct JsonThresholdQuery {
+    pub branch: Option<NameId>,
+    pub testbed: Option<NameId>,
+    pub measure: Option<NameId>,
+}
+
+impl TryFrom<JsonThresholdQueryParams> for JsonThresholdQuery {
+    type Error = UrlEncodedError;
+
+    fn try_from(query_params: JsonThresholdQueryParams) -> Result<Self, Self::Error> {
+        let JsonThresholdQueryParams {
+            branch,
+            testbed,
+            measure,
+        } = query_params;
+
+        let branch = if let Some(branch) = branch {
+            Some(from_urlencoded(&branch)?)
+        } else {
+            None
+        };
+        let testbed = if let Some(testbed) = testbed {
+            Some(from_urlencoded(&testbed)?)
+        } else {
+            None
+        };
+        let measure = if let Some(measure) = measure {
+            Some(from_urlencoded(&measure)?)
+        } else {
+            None
+        };
+
+        Ok(Self {
+            branch,
+            testbed,
+            measure,
+        })
+    }
+}
+
+impl JsonThresholdQuery {
+    pub fn branch(&self) -> Option<String> {
+        self.branch.as_ref().map(to_urlencoded)
+    }
+
+    pub fn testbed(&self) -> Option<String> {
+        self.testbed.as_ref().map(to_urlencoded)
+    }
+
+    pub fn measure(&self) -> Option<String> {
+        self.measure.as_ref().map(to_urlencoded)
+    }
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]

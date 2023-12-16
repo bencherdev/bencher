@@ -83,3 +83,21 @@ macro_rules! fn_from_name_id {
 }
 
 pub(crate) use fn_from_name_id;
+
+macro_rules! filter_name_id {
+    ($query:ident, $table:ident, $name_id:ident) => {
+        match $name_id.try_into()? {
+            crate::util::name_id::NameId::Uuid(uuid) => {
+                $query = $query.filter(schema::$table::uuid.eq(uuid.to_string()));
+            },
+            crate::util::name_id::NameId::Slug(slug) => {
+                $query = $query.filter(schema::$table::slug.eq(slug.to_string()));
+            },
+            crate::util::name_id::NameId::Name(name) => {
+                $query = $query.filter(schema::$table::name.eq(name.to_string()));
+            },
+        }
+    };
+}
+
+pub(crate) use filter_name_id;

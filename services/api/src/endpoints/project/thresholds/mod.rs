@@ -1,9 +1,12 @@
 use bencher_json::{
-    project::threshold::{JsonNewThreshold, JsonThreshold, JsonUpdateThreshold},
+    project::threshold::{
+        JsonNewThreshold, JsonThreshold, JsonThresholdQuery, JsonThresholdQueryParams,
+        JsonUpdateThreshold,
+    },
     JsonDirection, JsonPagination, JsonThresholds, ResourceId, ThresholdUuid,
 };
 use bencher_rbac::project::Permission;
-use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -16,7 +19,7 @@ use crate::{
         },
         Endpoint,
     },
-    error::{resource_conflict_err, resource_not_found_err},
+    error::{bad_request_error, resource_conflict_err, resource_not_found_err},
     model::user::auth::{AuthUser, PubBearerToken},
     model::{
         project::{
@@ -31,6 +34,7 @@ use crate::{
         user::auth::BearerToken,
     },
     schema,
+    util::name_id::filter_name_id,
 };
 
 pub mod alerts;
@@ -61,6 +65,7 @@ pub async fn proj_thresholds_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjThresholdsParams>,
     _pagination_params: Query<ProjThresholdsPagination>,
+    _query_params: Query<JsonThresholdQueryParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
@@ -72,16 +77,23 @@ pub async fn proj_thresholds_options(
 }]
 pub async fn proj_thresholds_get(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: PubBearerToken,
     path_params: Path<ProjThresholdsParams>,
     pagination_params: Query<ProjThresholdsPagination>,
+    query_params: Query<JsonThresholdQueryParams>,
 ) -> Result<ResponseOk<JsonThresholds>, HttpError> {
-    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
+    // Second round of marshaling
+    let json_threshold_query = query_params
+        .into_inner()
+        .try_into()
+        .map_err(bad_request_error)?;
+
+    let auth_user = AuthUser::new_pub(&rqctx).await?;
     let json = get_ls_inner(
         rqctx.context(),
         auth_user.as_ref(),
         path_params.into_inner(),
         pagination_params.into_inner(),
+        json_threshold_query,
     )
     .await?;
     Ok(Get::response_ok(json, auth_user.is_some()))
@@ -92,13 +104,28 @@ async fn get_ls_inner(
     auth_user: Option<&AuthUser>,
     path_params: ProjThresholdsParams,
     pagination_params: ProjThresholdsPagination,
+    json_threshold_query: JsonThresholdQuery,
 ) -> Result<JsonThresholds, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_project =
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
-    let mut query = QueryThreshold::belonging_to(&query_project).into_boxed();
+    let mut query = QueryThreshold::belonging_to(&query_project)
+        .inner_join(schema::branch::table)
+        .inner_join(schema::testbed::table)
+        .inner_join(schema::measure::table)
+        .into_boxed();
+
+    if let Some(branch) = json_threshold_query.branch.as_ref() {
+        filter_name_id!(query, branch, branch);
+    }
+    if let Some(testbed) = json_threshold_query.testbed.as_ref() {
+        filter_name_id!(query, testbed, testbed);
+    }
+    if let Some(measure) = json_threshold_query.measure.as_ref() {
+        filter_name_id!(query, measure, measure);
+    }
 
     query = match pagination_params.order() {
         ProjThresholdsSort::Created => match pagination_params.direction {
@@ -115,6 +142,7 @@ async fn get_ls_inner(
     Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
+        .select(QueryThreshold::as_select())
         .load::<QueryThreshold>(conn)
         .map_err(resource_not_found_err!(Threshold, project))?
         .into_iter()

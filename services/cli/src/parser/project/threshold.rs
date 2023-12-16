@@ -28,6 +28,18 @@ pub struct CliThresholdList {
     #[clap(long)]
     pub project: ResourceId,
 
+    /// Branch name, slug, or UUID
+    #[clap(long)]
+    pub branch: Option<NameId>,
+
+    /// Testbed name, slug, or UUID
+    #[clap(long)]
+    pub testbed: Option<NameId>,
+
+    /// Measure name, slug, or UUID
+    #[clap(long)]
+    pub measure: Option<NameId>,
+
     #[clap(flatten)]
     pub pagination: CliPagination<CliThresholdsSort>,
 

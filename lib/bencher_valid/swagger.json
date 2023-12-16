@@ -4506,6 +4506,30 @@
             "schema": {
               "$ref": "#/components/schemas/ProjThresholdsSort"
             }
+          },
+          {
+            "in": "query",
+            "name": "branch",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "measure",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "testbed",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
           }
         ],
         "responses": {

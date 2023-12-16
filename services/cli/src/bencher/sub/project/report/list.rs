@@ -129,6 +129,7 @@ impl SubCmd for List {
                 if let Some(page) = self.pagination.page {
                     client = client.page(page);
                 }
+
                 client.send().await
             })
             .await?;
