@@ -7013,7 +7013,7 @@
         "type": "object",
         "properties": {
           "branch": {
-            "$ref": "#/components/schemas/ResourceId"
+            "$ref": "#/components/schemas/NameId"
           },
           "end_time": {
             "$ref": "#/components/schemas/DateTime"
@@ -7044,7 +7044,7 @@
             "$ref": "#/components/schemas/DateTime"
           },
           "testbed": {
-            "$ref": "#/components/schemas/ResourceId"
+            "$ref": "#/components/schemas/NameId"
           }
         },
         "required": [
@@ -8641,9 +8641,6 @@
         "type": "string",
         "format": "uuid"
       },
-      "ResourceId": {
-        "type": "string"
-      },
       "SampleSize": {
         "type": "integer",
         "format": "uint32",
@@ -8784,6 +8781,9 @@
         "enum": [
           "name"
         ]
+      },
+      "ResourceId": {
+        "type": "string"
       },
       "OrganizationPermission": {
         "type": "string",

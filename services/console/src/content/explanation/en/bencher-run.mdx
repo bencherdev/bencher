@@ -55,8 +55,8 @@ If both are defined, the `--token` option takes precedence over the `BENCHER_API
 <br />
 
 ### `--branch <BRANCH>`
-### `--if-branch <IF_BRANCH>`
-### `--else-if-branch <ELSE_IF_BRANCH>`
+### `--if-branch <BRANCH_NAME>`
+### `--else-if-branch <BRANCH_NAME>`
 ### `--else-branch`
 ### `--endif-branch`
 
@@ -81,7 +81,7 @@ Therefore, they will have the same branch version number.
 <br />
 
 Optional: Either the `--testbed` option or the `BENCHER_TESTBED` environment variable
-may be set to the slug or UUID of an already existing testbed.
+may be set to the name, slug, or UUID of an already existing testbed.
 If both are defined, the `--testbed` option takes precedence over the `BENCHER_TESTBED` environment variable.
 If neither are defined then `localhost` is used as the default testbed.
 
@@ -210,7 +210,7 @@ Requires: `--github-actions`
 
 <br/>
 
-### `--github-actions`
+### `--github-actions <GITHUB_TOKEN>`
 
 <br />
 
@@ -242,7 +242,7 @@ Optional: Shell command flag. Defaults to `-c` on Unix-like environments and `/C
 
 <br />
 
-### `--host <HOST>`
+### `--host <URL>`
 
 <br />
 
@@ -259,7 +259,7 @@ Optional: Max request retry attempts. Defaults to `10`.
 <br />
 
 
-### `--retry-after <RETRY_AFTER>`
+### `--retry-after <RETRY_AFTER_SECONDS>`
 
 <br />
 

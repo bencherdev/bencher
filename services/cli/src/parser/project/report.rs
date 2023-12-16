@@ -1,4 +1,4 @@
-use bencher_json::{DateTime, ReportUuid, ResourceId};
+use bencher_json::{DateTime, NameId, ReportUuid, ResourceId};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use super::run::CliRun;
@@ -26,13 +26,13 @@ pub struct CliReportList {
     #[clap(long)]
     pub project: ResourceId,
 
-    /// Branch slug or UUID
+    /// Branch name, slug, or UUID
     #[clap(long)]
-    pub branch: Option<ResourceId>,
+    pub branch: Option<NameId>,
 
-    /// Testbed slug or UUID
+    /// Testbed name, slug, or UUID
     #[clap(long)]
-    pub testbed: Option<ResourceId>,
+    pub testbed: Option<NameId>,
 
     /// Start time (seconds since epoch)
     #[clap(long)]

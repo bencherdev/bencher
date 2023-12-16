@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::{JsonDirection, ProjReportsSort};
-use bencher_json::{project::report::JsonReportQuery, DateTime, ResourceId};
+use bencher_json::{project::report::JsonReportQuery, DateTime, NameId, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -16,8 +16,8 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct List {
     pub project: ResourceId,
-    pub branch: Option<ResourceId>,
-    pub testbed: Option<ResourceId>,
+    pub branch: Option<NameId>,
+    pub testbed: Option<NameId>,
     pub start_time: Option<DateTime>,
     pub end_time: Option<DateTime>,
     pub pagination: Pagination,

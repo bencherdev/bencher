@@ -117,21 +117,27 @@ async fn get_ls_inner(
 
     if let Some(branch) = json_report_query.branch.as_ref() {
         match branch.try_into()? {
-            crate::util::resource_id::ResourceId::Uuid(uuid) => {
+            crate::util::name_id::NameId::Uuid(uuid) => {
                 query = query.filter(schema::branch::uuid.eq(uuid.to_string()));
             },
-            crate::util::resource_id::ResourceId::Slug(slug) => {
+            crate::util::name_id::NameId::Slug(slug) => {
                 query = query.filter(schema::branch::slug.eq(slug.to_string()));
+            },
+            crate::util::name_id::NameId::Name(name) => {
+                query = query.filter(schema::branch::name.eq(name.to_string()));
             },
         }
     }
     if let Some(testbed) = json_report_query.testbed.as_ref() {
         match testbed.try_into()? {
-            crate::util::resource_id::ResourceId::Uuid(uuid) => {
+            crate::util::name_id::NameId::Uuid(uuid) => {
                 query = query.filter(schema::testbed::uuid.eq(uuid.to_string()));
             },
-            crate::util::resource_id::ResourceId::Slug(slug) => {
+            crate::util::name_id::NameId::Slug(slug) => {
                 query = query.filter(schema::testbed::slug.eq(slug.to_string()));
+            },
+            crate::util::name_id::NameId::Name(name) => {
+                query = query.filter(schema::testbed::name.eq(name.to_string()));
             },
         }
     }
@@ -225,8 +231,8 @@ async fn post_inner(
     let project_id = project.id;
 
     // Verify that the branch and testbed are part of the same project
-    let branch_id = QueryBranch::from_resource_id(conn, project_id, &json_report.branch)?.id;
-    let testbed_id = QueryTestbed::from_resource_id(conn, project_id, &json_report.testbed)?.id;
+    let branch_id = QueryBranch::from_name_id(conn, project_id, &json_report.branch)?.id;
+    let testbed_id = QueryTestbed::from_name_id(conn, project_id, &json_report.testbed)?.id;
 
     // Check to see if the project is public or private
     // If private, then validate that there is an active subscription or license

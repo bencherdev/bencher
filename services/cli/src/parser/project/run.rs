@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use bencher_json::{BranchName, DateTime, GitHash, NonEmpty, ResourceId};
+use bencher_json::{BranchName, DateTime, GitHash, NameId, NonEmpty, ResourceId};
 use clap::{ArgGroup, Args, Parser, ValueEnum};
 
 use crate::parser::CliBackend;
@@ -19,11 +19,11 @@ pub struct CliRun {
     #[clap(long)]
     pub hash: Option<GitHash>,
 
-    /// Testbed slug or UUID (or set BENCHER_TESTBED) (default is "localhost")
+    /// Testbed name, slug, or UUID (or set BENCHER_TESTBED) (default is "localhost")
     #[clap(long)]
-    pub testbed: Option<ResourceId>,
+    pub testbed: Option<NameId>,
 
-    /// Benchmark harness adapter
+    /// Benchmark harness adapter (or set BENCHER_ADAPTER) (default is "magic")
     #[clap(value_enum, long)]
     pub adapter: Option<CliRunAdapter>,
 
@@ -73,15 +73,16 @@ pub struct CliRun {
 #[derive(Args, Debug)]
 #[allow(clippy::option_option)]
 pub struct CliRunBranch {
-    /// Branch slug or UUID (or set BENCHER_BRANCH) (default is "main")
+    /// Branch name, slug, or UUID (or set BENCHER_BRANCH) (default is "main")
     #[clap(long)]
-    pub branch: Option<ResourceId>,
+    pub branch: Option<NameId>,
 
-    /// Run iff a single instance of the branch name exists
+    /// Run using the given branch name if it exists
     #[clap(long, conflicts_with = "branch")]
     pub if_branch: Option<Option<BranchName>>,
 
-    /// Create a new branch, clone data, and run iff a single instance of the start point branch name exists (requires `--if-branch`)
+    /// If `--else-if-branch` exists, create a new branch named after `--if-branch`
+    /// with a clone the data and thresholds from `--else-if-branch` (requires `--if-branch`)
     #[clap(long, requires = "if_branch")]
     pub else_if_branch: Vec<String>,
 

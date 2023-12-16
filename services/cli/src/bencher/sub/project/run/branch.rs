@@ -12,7 +12,7 @@ use super::BENCHER_BRANCH;
 
 #[derive(Debug, Clone)]
 pub enum Branch {
-    ResourceId(ResourceId),
+    NameId(NameId),
     Name {
         name: BranchName,
         start_points: Vec<String>,
@@ -51,12 +51,12 @@ impl TryFrom<CliRunBranch> for Branch {
             endif_branch: _,
         } = run_branch;
         Ok(if let Some(branch) = branch {
-            Self::ResourceId(branch)
+            Self::NameId(branch)
         } else if let Ok(env_branch) = std::env::var(BENCHER_BRANCH) {
             env_branch
                 .as_str()
                 .parse()
-                .map(Self::ResourceId)
+                .map(Self::NameId)
                 .map_err(BranchError::ParseBranch)?
         } else if let Some(branch_name) = if_branch {
             if let Some(name) = branch_name {
@@ -71,21 +71,21 @@ impl TryFrom<CliRunBranch> for Branch {
         } else {
             BRANCH_MAIN_STR
                 .parse()
-                .map(Self::ResourceId)
+                .map(Self::NameId)
                 .map_err(BranchError::ParseBranch)?
         })
     }
 }
 
 impl Branch {
-    pub async fn resource_id(
+    pub async fn get(
         &self,
         project: &ResourceId,
         dry_run: bool,
         backend: &Backend,
-    ) -> Result<Option<ResourceId>, BranchError> {
+    ) -> Result<Option<NameId>, BranchError> {
         Ok(match self {
-            Self::ResourceId(resource_id) => Some(resource_id.clone()),
+            Self::NameId(name_id) => Some(name_id.clone()),
             Self::Name {
                 name,
                 start_points,

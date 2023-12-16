@@ -6,9 +6,9 @@ export type VersionNumber = number;
 
 export type BenchmarkName = string;
 
-export type ResourceId = string;
+export type NameId = string;
 
-export type Measure = ResourceId;
+export type MeasureNameId = NameId;
 
 export interface JsonMetric {
 	value: number;
@@ -16,7 +16,7 @@ export interface JsonMetric {
 	upper_value?: number;
 }
 
-export type JsonMetricsMap = Record<Measure, JsonMetric>;
+export type JsonMetricsMap = Record<MeasureNameId, JsonMetric>;
 
 export type JsonResultsMap = Record<BenchmarkName, JsonMetricsMap>;
 
@@ -164,8 +164,6 @@ export type GitHash = string;
 
 export type Jwt = string;
 
-export type NameId = string;
-
 export type CardCvc = string;
 
 export type Entitlements = number;
@@ -181,6 +179,8 @@ export type MeteredPlanId = string;
 export type LicensedPlanId = string;
 
 export type ExpirationYear = number;
+
+export type ResourceId = string;
 
 export type Secret = string;
 

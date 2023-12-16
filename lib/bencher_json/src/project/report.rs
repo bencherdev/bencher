@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     urlencoded::{from_urlencoded, to_urlencoded, UrlEncodedError},
-    JsonAlert, JsonMeasure, JsonProject, JsonTestbed, JsonUser, ResourceId,
+    JsonAlert, JsonMeasure, JsonProject, JsonTestbed, JsonUser, NameId,
 };
 
 use super::{
@@ -17,9 +17,9 @@ crate::typed_uuid::typed_uuid!(ReportUuid);
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewReport {
-    pub branch: ResourceId,
+    pub branch: NameId,
     pub hash: Option<GitHash>,
-    pub testbed: ResourceId,
+    pub testbed: NameId,
     pub start_time: DateTime,
     pub end_time: DateTime,
     pub results: Vec<String>,
@@ -264,8 +264,8 @@ pub struct JsonReportQueryParams {
 
 #[derive(Debug, Clone)]
 pub struct JsonReportQuery {
-    pub branch: Option<ResourceId>,
-    pub testbed: Option<ResourceId>,
+    pub branch: Option<NameId>,
+    pub testbed: Option<NameId>,
     pub start_time: Option<DateTime>,
     pub end_time: Option<DateTime>,
 }

@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings};
 use bencher_comment::ReportComment;
 use bencher_json::{
-    project::testbed::TESTBED_LOCALHOST_STR, DateTime, GitHash, JsonEndpoint, JsonReport,
+    project::testbed::TESTBED_LOCALHOST_STR, DateTime, GitHash, JsonEndpoint, JsonReport, NameId,
     ResourceId,
 };
 use clap::ValueEnum;
@@ -45,7 +45,7 @@ pub struct Run {
     runner: Runner,
     branch: Branch,
     hash: Option<GitHash>,
-    testbed: ResourceId,
+    testbed: NameId,
     adapter: Option<Adapter>,
     average: Option<JsonAverage>,
     iter: usize,
@@ -114,7 +114,7 @@ fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, RunError> {
     })
 }
 
-fn unwrap_testbed(testbed: Option<ResourceId>) -> Result<ResourceId, RunError> {
+fn unwrap_testbed(testbed: Option<NameId>) -> Result<NameId, RunError> {
     Ok(if let Some(testbed) = testbed {
         testbed
     } else if let Ok(env_testbed) = std::env::var(BENCHER_TESTBED) {
@@ -206,7 +206,7 @@ impl Run {
     async fn generate_report(&self) -> Result<Option<JsonNewReport>, RunError> {
         let Some(branch) = self
             .branch
-            .resource_id(&self.project, self.dry_run, &self.backend)
+            .get(&self.project, self.dry_run, &self.backend)
             .await?
         else {
             return Ok(None);
