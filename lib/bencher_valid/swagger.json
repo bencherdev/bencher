@@ -7963,7 +7963,7 @@
         "type": "object",
         "properties": {
           "branch": {
-            "$ref": "#/components/schemas/ResourceId"
+            "$ref": "#/components/schemas/NameId"
           },
           "thresholds": {
             "nullable": true,

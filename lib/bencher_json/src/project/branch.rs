@@ -1,6 +1,6 @@
 use std::fmt;
 
-use bencher_valid::{BranchName, DateTime, GitHash, ResourceId, Slug};
+use bencher_valid::{BranchName, DateTime, GitHash, NameId, Slug};
 use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -50,7 +50,7 @@ impl JsonNewBranch {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonStartPoint {
-    pub branch: ResourceId,
+    pub branch: NameId,
     pub thresholds: Option<bool>,
 }
 

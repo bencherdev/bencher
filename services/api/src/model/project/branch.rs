@@ -156,8 +156,7 @@ impl InsertBranch {
     ) -> Result<(), HttpError> {
         let JsonStartPoint { branch, thresholds } = start_point;
 
-        let start_point_branch_id =
-            QueryBranch::from_resource_id(conn, self.project_id, branch)?.id;
+        let start_point_branch_id = QueryBranch::from_name_id(conn, self.project_id, branch)?.id;
         let new_branch_id = QueryBranch::get_id(conn, self.uuid)?;
 
         // Get all versions for the start point branch

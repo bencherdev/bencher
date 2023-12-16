@@ -2,7 +2,8 @@ use std::{convert::TryFrom, str::FromStr};
 
 use bencher_client::types::{JsonNewBranch, JsonStartPoint};
 use bencher_json::{
-    project::branch::BRANCH_MAIN_STR, BranchName, BranchUuid, JsonBranch, JsonBranches, ResourceId,
+    project::branch::BRANCH_MAIN_STR, BranchName, BranchUuid, JsonBranch, JsonBranches, NameId,
+    ResourceId,
 };
 
 use crate::{bencher::backend::Backend, cli_println, parser::project::run::CliRunBranch};
@@ -200,7 +201,7 @@ async fn get_branch(
 async fn create_branch(
     project: &ResourceId,
     branch_name: &BranchName,
-    start_point: Option<ResourceId>,
+    start_point: Option<NameId>,
     backend: &Backend,
 ) -> Result<BranchUuid, BranchError> {
     // Default to cloning the thresholds from the start point branch

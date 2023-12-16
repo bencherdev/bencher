@@ -47,6 +47,13 @@ macro_rules! typed_uuid {
         }
 
         #[allow(unused_qualifications)]
+        impl From<$name> for crate::NameId {
+            fn from(uuid: $name) -> Self {
+                uuid.0.into()
+            }
+        }
+
+        #[allow(unused_qualifications)]
         impl std::str::FromStr for $name {
             type Err = uuid::Error;
 

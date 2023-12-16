@@ -1,5 +1,5 @@
-use bencher_json::{BranchName, ResourceId, Slug};
-use clap::{Parser, Subcommand, ValueEnum};
+use bencher_json::{BranchName, NameId, ResourceId, Slug};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliBackend, CliPagination};
 
@@ -64,17 +64,23 @@ pub struct CliBranchCreate {
     #[clap(long)]
     pub soft: bool,
 
-    /// Branch slug or UUID to use as the new branch start point
+    #[clap(flatten)]
+    pub start_point: CliBranchStartPoint,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Args, Debug)]
+pub struct CliBranchStartPoint {
+    /// Branch name, slug, or UUID to use as the new branch start point
     /// https://git-scm.com/docs/git-branch#Documentation/git-branch.txt-ltstart-pointgt
     #[clap(long)]
-    pub start_point_branch: Option<ResourceId>,
+    pub start_point_branch: Option<NameId>,
 
     /// Clone thresholds for the new branch start point
     #[clap(long, requires = "start_point_branch")]
     pub start_point_thresholds: bool,
-
-    #[clap(flatten)]
-    pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]
