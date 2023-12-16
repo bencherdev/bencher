@@ -3,6 +3,7 @@
 "Uuid" = "string"
 "OrganizationUuid" = "Uuid"
 "ProjectUuid" = "Uuid"
+"ReportUuid" = "Uuid"
 "BranchUuid" = "Uuid"
 "TestbedUuid" = "Uuid"
 "BenchmarkUuid" = "Uuid"
@@ -10,7 +11,6 @@
 "ThresholdUuid" = "Uuid"
 "StatisticUuid" = "Uuid"
 "AlertUuid" = "Uuid"
-"ReportUuid" = "Uuid"
 "UserUuid" = "Uuid"
 "TokenUuid" = "Uuid"
 # Other types

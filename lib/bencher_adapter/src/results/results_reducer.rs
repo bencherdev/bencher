@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use bencher_json::{project::metric::Median, BenchmarkName, JsonMetric};
+use bencher_json::{project::metric::Median, BenchmarkName, JsonMetric, MeasureNameId};
 
 use super::{
-    adapter_metrics::AdapterMetrics, adapter_results::AdapterResults, AdapterResultsArray, Measure,
+    adapter_metrics::AdapterMetrics, adapter_results::AdapterResults, AdapterResultsArray,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -50,7 +50,7 @@ impl ResultsReducer {
 
 #[derive(Debug, Clone)]
 pub struct MeasuresMap {
-    pub inner: HashMap<Measure, Vec<JsonMetric>>,
+    pub inner: HashMap<MeasureNameId, Vec<JsonMetric>>,
 }
 
 impl MeasuresMap {

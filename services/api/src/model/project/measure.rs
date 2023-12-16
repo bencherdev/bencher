@@ -5,7 +5,7 @@ use bencher_json::{
         L2_ACCESSES_NAME_STR, L2_ACCESSES_SLUG_STR, LATENCY_NAME_STR, LATENCY_SLUG_STR,
         RAM_ACCESSES_NAME_STR, RAM_ACCESSES_SLUG_STR, THROUGHPUT_NAME_STR, THROUGHPUT_SLUG_STR,
     },
-    DateTime, JsonMeasure, JsonNewMeasure, NonEmpty, ResourceId, Slug,
+    DateTime, JsonMeasure, JsonNewMeasure, MeasureNameId, NonEmpty, Slug,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
@@ -58,9 +58,9 @@ impl QueryMeasure {
     pub fn get_or_create(
         conn: &mut DbConnection,
         project_id: ProjectId,
-        measure: &ResourceId,
+        measure: &MeasureNameId,
     ) -> Result<MeasureId, HttpError> {
-        let query_measure = Self::from_resource_id(conn, project_id, measure);
+        let query_measure = Self::from_name_id(conn, project_id, measure);
 
         let http_error = match query_measure {
             Ok(measure) => return Ok(measure.id),

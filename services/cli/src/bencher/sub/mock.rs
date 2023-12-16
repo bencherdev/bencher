@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use bencher_adapter::{
-    results::{adapter_metrics::AdapterMetrics, adapter_results::LATENCY_RESOURCE_ID},
+    results::{adapter_metrics::AdapterMetrics, adapter_results::LATENCY_NAME_ID},
     AdapterResults,
 };
 use bencher_json::JsonMetric;
@@ -96,7 +96,7 @@ impl Mock {
                     .map_err(MockError::ParseBenchmarkName)?,
                 AdapterMetrics {
                     inner: hmap! {
-                        LATENCY_RESOURCE_ID.clone() => JsonMetric {
+                        LATENCY_NAME_ID.clone() => JsonMetric {
                              value: value.into(),
                              lower_value: Some((value - variance).into()),
                              upper_value: Some((value + variance).into()),

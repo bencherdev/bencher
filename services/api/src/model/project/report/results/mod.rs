@@ -1,15 +1,15 @@
 use std::collections::HashMap;
 
 use bencher_adapter::{
-    results::{adapter_metrics::AdapterMetrics, Measure},
-    AdapterResults, AdapterResultsArray, Settings as AdapterSettings,
+    results::adapter_metrics::AdapterMetrics, AdapterResults, AdapterResultsArray,
+    Settings as AdapterSettings,
 };
 use bencher_json::{
     project::{
         perf::Iteration,
         report::{Adapter, JsonReportSettings},
     },
-    BenchmarkName,
+    BenchmarkName, MeasureNameId,
 };
 use diesel::RunQueryDsl;
 use dropshot::HttpError;
@@ -43,7 +43,7 @@ pub struct ReportResults {
     pub branch_id: BranchId,
     pub testbed_id: TestbedId,
     pub report_id: ReportId,
-    pub measure_cache: HashMap<Measure, MeasureId>,
+    pub measure_cache: HashMap<MeasureNameId, MeasureId>,
     pub detector_cache: HashMap<MeasureId, Option<Detector>>,
 }
 
@@ -194,13 +194,13 @@ impl ReportResults {
     fn measure_id(
         &mut self,
         conn: &mut DbConnection,
-        measure_key: Measure,
+        measure: MeasureNameId,
     ) -> Result<MeasureId, HttpError> {
-        Ok(if let Some(id) = self.measure_cache.get(&measure_key) {
+        Ok(if let Some(id) = self.measure_cache.get(&measure) {
             *id
         } else {
-            let measure_id = QueryMeasure::get_or_create(conn, self.project_id, &measure_key)?;
-            self.measure_cache.insert(measure_key, measure_id);
+            let measure_id = QueryMeasure::get_or_create(conn, self.project_id, &measure)?;
+            self.measure_cache.insert(measure, measure_id);
             measure_id
         })
     }

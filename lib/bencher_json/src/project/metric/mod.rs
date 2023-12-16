@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, collections::HashMap, fmt, iter::Sum, ops::Add};
 
-use bencher_valid::{BenchmarkName, ResourceId};
+use bencher_valid::{BenchmarkName, NameId};
 use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -18,10 +18,10 @@ crate::typed_uuid::typed_uuid!(MetricUuid);
 pub type JsonResultsMap = HashMap<BenchmarkName, JsonMetricsMap>;
 
 #[typeshare::typeshare]
-pub type JsonMetricsMap = HashMap<Measure, JsonMetric>;
+pub type JsonMetricsMap = HashMap<MeasureNameId, JsonMetric>;
 
 #[typeshare::typeshare]
-pub type Measure = ResourceId;
+pub type MeasureNameId = NameId;
 
 #[typeshare::typeshare]
 #[derive(Debug, Copy, Clone, Default, Eq, Serialize, Deserialize)]

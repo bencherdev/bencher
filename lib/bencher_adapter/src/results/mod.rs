@@ -1,11 +1,8 @@
 use std::collections::HashMap;
 
-use bencher_json::{
-    project::{
-        metric::Mean,
-        report::{Adapter, JsonFold},
-    },
-    ResourceId,
+use bencher_json::project::{
+    metric::Mean,
+    report::{Adapter, JsonFold},
 };
 
 use crate::{Adaptable, AdapterError, Settings};
@@ -16,8 +13,6 @@ pub mod results_reducer;
 
 use adapter_results::{AdapterResults, ResultsMap};
 use results_reducer::ResultsReducer;
-
-pub type Measure = ResourceId;
 
 #[derive(Debug, Clone)]
 pub struct AdapterResultsArray {

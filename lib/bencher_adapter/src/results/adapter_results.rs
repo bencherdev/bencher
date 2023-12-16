@@ -8,7 +8,7 @@ use bencher_json::{
         },
         metric::Mean,
     },
-    BenchmarkName, JsonMetric, ResourceId,
+    BenchmarkName, JsonMetric, NameId,
 };
 use literally::hmap;
 use once_cell::sync::Lazy;
@@ -19,31 +19,31 @@ use super::{adapter_metrics::AdapterMetrics, CombinedKind};
 const MEASURE_SLUG_ERROR: &str = "Failed to parse measure slug.";
 
 #[allow(clippy::expect_used)]
-pub static LATENCY_RESOURCE_ID: Lazy<ResourceId> =
+pub static LATENCY_NAME_ID: Lazy<NameId> =
     Lazy::new(|| LATENCY_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR));
 
 #[allow(clippy::expect_used)]
-pub static THROUGHPUT_RESOURCE_ID: Lazy<ResourceId> =
+pub static THROUGHPUT_NAME_ID: Lazy<NameId> =
     Lazy::new(|| THROUGHPUT_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR));
 
 #[allow(clippy::expect_used)]
-pub static INSTRUCTIONS_RESOURCE_ID: Lazy<ResourceId> =
+pub static INSTRUCTIONS_NAME_ID: Lazy<NameId> =
     Lazy::new(|| INSTRUCTIONS_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR));
 
 #[allow(clippy::expect_used)]
-pub static L1_ACCESSES_RESOURCE_ID: Lazy<ResourceId> =
+pub static L1_ACCESSES_NAME_ID: Lazy<NameId> =
     Lazy::new(|| L1_ACCESSES_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR));
 
 #[allow(clippy::expect_used)]
-pub static L2_ACCESSES_RESOURCE_ID: Lazy<ResourceId> =
+pub static L2_ACCESSES_NAME_ID: Lazy<NameId> =
     Lazy::new(|| L2_ACCESSES_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR));
 
 #[allow(clippy::expect_used)]
-pub static RAM_ACCESSES_RESOURCE_ID: Lazy<ResourceId> =
+pub static RAM_ACCESSES_NAME_ID: Lazy<NameId> =
     Lazy::new(|| RAM_ACCESSES_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR));
 
 #[allow(clippy::expect_used)]
-pub static ESTIMATED_CYCLES_RESOURCE_ID: Lazy<ResourceId> =
+pub static ESTIMATED_CYCLES_NAME_ID: Lazy<NameId> =
     Lazy::new(|| ESTIMATED_CYCLES_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR));
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -87,12 +87,12 @@ impl AdapterResults {
                 inner: match measure {
                     AdapterMeasure::Latency(json_metric) => {
                         hmap! {
-                            LATENCY_RESOURCE_ID.clone() => json_metric
+                            LATENCY_NAME_ID.clone() => json_metric
                         }
                     },
                     AdapterMeasure::Throughput(json_metric) => {
                         hmap! {
-                            THROUGHPUT_RESOURCE_ID.clone() => json_metric
+                            THROUGHPUT_NAME_ID.clone() => json_metric
                         }
                     },
                 },
@@ -138,19 +138,19 @@ impl AdapterResults {
             for metric in metrics {
                 let (resource_id, metric) = match metric {
                     IaiMeasure::Instructions(json_metric) => {
-                        (INSTRUCTIONS_RESOURCE_ID.clone(), json_metric)
+                        (INSTRUCTIONS_NAME_ID.clone(), json_metric)
                     },
                     IaiMeasure::L1Accesses(json_metric) => {
-                        (L1_ACCESSES_RESOURCE_ID.clone(), json_metric)
+                        (L1_ACCESSES_NAME_ID.clone(), json_metric)
                     },
                     IaiMeasure::L2Accesses(json_metric) => {
-                        (L2_ACCESSES_RESOURCE_ID.clone(), json_metric)
+                        (L2_ACCESSES_NAME_ID.clone(), json_metric)
                     },
                     IaiMeasure::RamAccesses(json_metric) => {
-                        (RAM_ACCESSES_RESOURCE_ID.clone(), json_metric)
+                        (RAM_ACCESSES_NAME_ID.clone(), json_metric)
                     },
                     IaiMeasure::EstimatedCycles(json_metric) => {
-                        (ESTIMATED_CYCLES_RESOURCE_ID.clone(), json_metric)
+                        (ESTIMATED_CYCLES_NAME_ID.clone(), json_metric)
                     },
                 };
                 metrics_value.inner.insert(resource_id, metric);
