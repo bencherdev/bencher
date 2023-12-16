@@ -9,7 +9,7 @@ use url::Url;
 
 use crate::{
     bencher::backend::Backend,
-    cli_eprintln, cli_println,
+    cli_eprintln_quietable, cli_println, cli_println_quietable,
     parser::project::run::{CliRun, CliRunAdapter},
     CliError,
 };
@@ -140,14 +140,12 @@ impl Run {
             return Ok(());
         };
 
-        if self.log {
-            cli_println!("\nBencher New Report:");
-            cli_println!(
-                "{}",
-                serde_json::to_string_pretty(&json_new_report)
-                    .map_err(RunError::SerializeReport)?
-            );
-        }
+        cli_println_quietable!(self.log, "\nBencher New Report:");
+        cli_println_quietable!(
+            self.log,
+            "{}",
+            serde_json::to_string_pretty(&json_new_report).map_err(RunError::SerializeReport)?
+        );
 
         // If performing a dry run, don't actually send the report
         if self.dry_run {
@@ -190,7 +188,7 @@ impl Run {
     async fn generate_report(&self) -> Result<Option<JsonNewReport>, RunError> {
         let Some(branch) = self
             .branch
-            .get(&self.project, self.dry_run, &self.backend)
+            .get(&self.project, self.dry_run, self.log, &self.backend)
             .await?
         else {
             return Ok(None);
@@ -207,19 +205,15 @@ impl Run {
             if output.is_success() {
                 results.push(output.result());
             } else if self.allow_failure {
-                if self.log {
-                    cli_eprintln!("Skipping failure:\n{}", output);
-                }
+                cli_eprintln_quietable!(self.log, "Skipping failure:\n{}", output);
             } else {
                 return Err(RunError::ExitStatus(output));
             }
         }
 
-        if self.log {
-            cli_println!("\nBenchmark Harness Results:");
-            for result in &results {
-                cli_println!("{result}");
-            }
+        cli_println_quietable!(self.log, "\nBenchmark Harness Results:");
+        for result in &results {
+            cli_println_quietable!(self.log, "{result}");
         }
 
         let end_time = DateTime::now();
@@ -270,7 +264,7 @@ impl Run {
         }
 
         if let Some(ci) = &self.ci {
-            ci.run(&report_comment).await?;
+            ci.run(&report_comment, self.log).await?;
         }
 
         Ok(())

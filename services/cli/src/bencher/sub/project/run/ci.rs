@@ -2,7 +2,7 @@ use bencher_comment::ReportComment;
 use bencher_json::NonEmpty;
 use octocrab::{models::CommentId, Octocrab};
 
-use crate::cli_println;
+use crate::cli_println_quietable;
 use crate::parser::project::run::CliRunCi;
 
 #[derive(Debug)]
@@ -100,11 +100,12 @@ impl TryFrom<CliRunCi> for Option<Ci> {
 }
 
 impl Ci {
-    pub async fn run(&self, report_comment: &ReportComment) -> Result<(), CiError> {
+    pub async fn run(&self, report_comment: &ReportComment, log: bool) -> Result<(), CiError> {
         match self {
-            Self::GitHubActions(github_actions) => {
-                github_actions.run(report_comment).await.map_err(Into::into)
-            },
+            Self::GitHubActions(github_actions) => github_actions
+                .run(report_comment, log)
+                .await
+                .map_err(Into::into),
         }
     }
 }
@@ -122,10 +123,11 @@ pub struct GitHubActions {
 }
 
 impl GitHubActions {
-    pub async fn run(&self, report_comment: &ReportComment) -> Result<(), GitHubError> {
+    #[allow(clippy::too_many_lines)]
+    pub async fn run(&self, report_comment: &ReportComment, log: bool) -> Result<(), GitHubError> {
         // Only post to CI if there are thresholds set
         if self.ci_only_thresholds && !report_comment.has_threshold() {
-            cli_println!("No thresholds set. Skipping CI integration.");
+            cli_println_quietable!(log, "No thresholds set. Skipping CI integration.");
             return Ok(());
         }
 
@@ -134,7 +136,8 @@ impl GitHubActions {
         match std::env::var(GITHUB_ACTIONS).ok() {
             Some(github_actions) if github_actions == "true" => {},
             _ => {
-                cli_println!(
+                cli_println_quietable!(
+                    log,
                     "Not running as a GitHub Action. Skipping CI integration.\n{}",
                     docker_env(GITHUB_ACTIONS)
                 );
@@ -180,7 +183,8 @@ impl GitHubActions {
                 self.ci_number.ok_or(GitHubError::NoWorkflowRunPRNumber)?
             },
             _ => {
-                cli_println!(
+                cli_println_quietable!(
+                    log,
                     "Not running as an expected GitHub Action event (`pull_request`, `pull_request_target`, or `workflow_run`). Skipping CI integration.\n{}",
                     docker_env(GITHUB_EVENT_NAME)
                 );
@@ -235,7 +239,7 @@ impl GitHubActions {
                 .map_err(GitHubError::UpdateComment)?
         } else {
             if self.ci_only_on_alert && !report_comment.has_alert() {
-                cli_println!("No alerts found. Skipping CI integration.");
+                cli_println_quietable!(log, "No alerts found. Skipping CI integration.");
                 return Ok(());
             }
             issue_handler

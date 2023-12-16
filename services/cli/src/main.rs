@@ -45,10 +45,25 @@ macro_rules! cli_println {
     ($fmt:expr, $($arg:tt)*) => ({
         use std::io::Write;
         let _w = writeln!(std::io::stdout(), $fmt, $($arg)*);
-    })
+    });
 }
 
 pub(crate) use cli_println;
+
+macro_rules! cli_println_quietable {
+    ($log:expr, $fmt:expr) => ({
+        if $log {
+            crate::cli_println!($fmt);
+        }
+    });
+    ($log:expr, $fmt:expr, $($arg:tt)*) => ({
+        if $log {
+            crate::cli_println!($fmt, $($arg)*);
+        }
+    });
+}
+
+pub(crate) use cli_println_quietable;
 
 macro_rules! cli_eprintln {
     // () => (eprint!("\n"));
@@ -63,3 +78,18 @@ macro_rules! cli_eprintln {
 }
 
 pub(crate) use cli_eprintln;
+
+macro_rules! cli_eprintln_quietable {
+    ($log:expr, $fmt:expr) => ({
+        if $log {
+            crate::cli_eprintln!($fmt);
+        }
+    });
+    ($log:expr, $fmt:expr, $($arg:tt)*) => ({
+        if $log {
+            crate::cli_eprintln!($fmt, $($arg)*);
+        }
+    });
+}
+
+pub(crate) use cli_eprintln_quietable;

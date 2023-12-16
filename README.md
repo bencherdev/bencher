@@ -9,7 +9,7 @@
   Bencher
 </h1>
 
-[Bencher](https://bencher.dev) a suite of [continuous benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking/) tools.
+[Bencher](https://bencher.dev) is a suite of [continuous benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking/) tools.
 Have you ever had a performance regression impact your users?
 Bencher could have prevented that from happening.
 Bencher allows you to detect and prevent performance regressions _before_ they hit production.

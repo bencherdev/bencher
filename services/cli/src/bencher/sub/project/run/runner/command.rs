@@ -7,7 +7,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 
 use super::{flag::Flag, output::Output, shell::Shell};
 use crate::{bencher::sub::RunError, parser::project::run::CliRunShell};
-use crate::{cli_eprintln, cli_println};
+use crate::{cli_eprintln_quietable, cli_println_quietable};
 
 #[derive(Debug)]
 pub struct Command {
@@ -46,9 +46,7 @@ impl Command {
 
             let mut stdout = String::new();
             while let Ok(Some(line)) = stdout_lines.next_line().await {
-                if log {
-                    cli_println!("{line}");
-                }
+                cli_println_quietable!(log, "{line}");
                 if stdout.is_empty() {
                     stdout = line;
                 } else {
@@ -66,9 +64,7 @@ impl Command {
 
             let mut stderr = String::new();
             while let Ok(Some(line)) = stderr_lines.next_line().await {
-                if log {
-                    cli_eprintln!("{line}");
-                }
+                cli_eprintln_quietable!(log, "{line}");
                 if stderr.is_empty() {
                     stderr = line;
                 } else {

@@ -6,7 +6,7 @@ use bencher_json::{
     NameIdKind, ResourceId,
 };
 
-use crate::{bencher::backend::Backend, cli_println, parser::project::run::CliRunBranch};
+use crate::{bencher::backend::Backend, cli_println_quietable, parser::project::run::CliRunBranch};
 
 use super::BENCHER_BRANCH;
 
@@ -91,6 +91,7 @@ impl Branch {
         &self,
         project: &ResourceId,
         dry_run: bool,
+        log: bool,
         backend: &Backend,
     ) -> Result<Option<NameId>, BranchError> {
         Ok(match self {
@@ -128,18 +129,19 @@ impl Branch {
                 create,
             } => {
                 if let Some(uuid) =
-                    if_branch(project, name, start_points, *create, dry_run, backend).await?
+                    if_branch(project, name, start_points, *create, dry_run, log, backend).await?
                 {
                     Some(uuid.into())
                 } else {
-                    cli_println!(
+                    cli_println_quietable!(
+                        log,
                         "Failed to find or create branch \"{name}\". Skipping benchmark run."
                     );
                     None
                 }
             },
             Self::None => {
-                cli_println!("Failed to get branch name. Skipping benchmark run.");
+                cli_println_quietable!(log, "Failed to get branch name. Skipping benchmark run.");
                 None
             },
         })
@@ -152,6 +154,7 @@ async fn if_branch(
     start_points: &[String],
     create: bool,
     dry_run: bool,
+    log: bool,
     backend: &Backend,
 ) -> Result<Option<BranchUuid>, BranchError> {
     let branch = get_branch_query(project, branch_name, backend).await?;
@@ -160,12 +163,16 @@ async fn if_branch(
         return Ok(branch);
     }
 
-    cli_println!("Failed to find branch with name \"{branch_name}\" in project \"{project}\".");
+    cli_println_quietable!(
+        log,
+        "Failed to find branch with name \"{branch_name}\" in project \"{project}\"."
+    );
 
     for (index, start_point) in start_points.iter().enumerate() {
         let count = index.checked_add(1).unwrap_or_default();
         let Ok(start_point) = BranchName::from_str(start_point) else {
-            cli_println!(
+            cli_println_quietable!(
+                log,
                 "Failed to parse start point branch #{count} \"{start_point}\" for \"{branch_name}\" in project \"{project}\"."
             );
             continue;
@@ -182,7 +189,8 @@ async fn if_branch(
             return Ok(new_branch);
         }
 
-        cli_println!(
+        cli_println_quietable!(
+            log,
             "Failed to find start point branch #{count} \"{start_point}\" for \"{branch_name}\" in project \"{project}\"."
         );
     }
