@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 
@@ -9,6 +11,7 @@ mod email;
 mod error;
 mod git_hash;
 mod jwt;
+mod name_id;
 mod non_empty;
 #[cfg(feature = "plus")]
 mod plus;
@@ -31,6 +34,7 @@ pub use email::Email;
 pub use error::ValidError;
 use error::REGEX_ERROR;
 pub use jwt::Jwt;
+pub use name_id::NameId;
 pub use non_empty::NonEmpty;
 #[cfg(feature = "plus")]
 pub use plus::{
@@ -53,6 +57,12 @@ pub fn startup() {
 
 fn is_valid_len(input: &str) -> bool {
     !input.is_empty() && input.len() <= MAX_LEN && input == input.trim()
+}
+
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+#[cfg_attr(not(feature = "wasm"), allow(dead_code))]
+pub fn is_valid_uuid(uuid: &str) -> bool {
+    uuid::Uuid::from_str(uuid).is_ok()
 }
 
 pub trait Sanitize {

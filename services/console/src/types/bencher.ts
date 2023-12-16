@@ -164,6 +164,8 @@ export type GitHash = string;
 
 export type Jwt = string;
 
+export type NameId = string;
+
 export type CardCvc = string;
 
 export type Entitlements = number;
