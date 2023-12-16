@@ -4933,7 +4933,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonCreated"
+                  "$ref": "#/components/schemas/JsonBackupCreated"
                 }
               }
             }
@@ -6227,6 +6227,17 @@
           }
         }
       },
+      "JsonBackupCreated": {
+        "type": "object",
+        "properties": {
+          "created": {
+            "$ref": "#/components/schemas/DateTime"
+          }
+        },
+        "required": [
+          "created"
+        ]
+      },
       "JsonBenchmark": {
         "type": "object",
         "properties": {
@@ -6584,18 +6595,6 @@
         },
         "required": [
           "url"
-        ]
-      },
-      "JsonCreated": {
-        "description": "A pre-`v1.0` future proof way to check the result of most create and update operations.",
-        "type": "object",
-        "properties": {
-          "created": {
-            "$ref": "#/components/schemas/DateTime"
-          }
-        },
-        "required": [
-          "created"
         ]
       },
       "JsonCustomer": {

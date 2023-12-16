@@ -8,7 +8,7 @@ pub enum RunError {
     #[error("{0}")]
     Branch(#[from] super::branch::BranchError),
 
-    #[error("Failed to parse UUID or slug for the testbed: {0}")]
+    #[error("Failed to parse UUID, slug, or name for the testbed: {0}")]
     ParseTestbed(bencher_json::ValidError),
 
     #[error("No default shell command path for target family. Try setting a custom shell with the `--shell` flag.")]

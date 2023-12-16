@@ -2,7 +2,7 @@ use std::{ffi::OsStr, path::PathBuf};
 
 use async_compression::tokio::write::GzipEncoder;
 use bencher_json::system::backup::JsonDataStore;
-use bencher_json::{DateTime, JsonBackup, JsonCreated, JsonRestart};
+use bencher_json::{DateTime, JsonBackup, JsonBackupCreated, JsonRestart};
 use chrono::Utc;
 use diesel::connection::SimpleConnection;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
@@ -40,7 +40,7 @@ pub async fn server_backup_post(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
     body: TypedBody<JsonBackup>,
-) -> Result<ResponseCreated<JsonCreated>, HttpError> {
+) -> Result<ResponseCreated<JsonBackupCreated>, HttpError> {
     let _admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(rqctx.context(), body.into_inner()).await?;
     Ok(Post::auth_response_created(json))
@@ -49,7 +49,7 @@ pub async fn server_backup_post(
 async fn post_inner(
     context: &ApiContext,
     json_backup: JsonBackup,
-) -> Result<JsonCreated, HttpError> {
+) -> Result<JsonBackupCreated, HttpError> {
     backup(context, json_backup)
         .await
         .map_err(bad_request_error)
@@ -79,7 +79,10 @@ pub enum BackupError {
     RmFile(std::io::Error),
 }
 
-async fn backup(context: &ApiContext, json_backup: JsonBackup) -> Result<JsonCreated, BackupError> {
+async fn backup(
+    context: &ApiContext,
+    json_backup: JsonBackup,
+) -> Result<JsonBackupCreated, BackupError> {
     // Create a database backup
     let Backup {
         file_path: backup_file_path,
@@ -113,7 +116,7 @@ async fn backup(context: &ApiContext, json_backup: JsonBackup) -> Result<JsonCre
             .map_err(BackupError::RmZipFile)?;
     }
 
-    Ok(JsonCreated { created })
+    Ok(JsonBackupCreated { created })
 }
 
 struct Backup {

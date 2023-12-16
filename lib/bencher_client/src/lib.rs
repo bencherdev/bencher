@@ -106,7 +106,6 @@ macro_rules! try_from_client {
 }
 
 try_from_client!(
-    JsonCreated,
     JsonMember,
     JsonMembers,
     JsonAllowed,
@@ -135,6 +134,7 @@ try_from_client!(
     JsonAuthUser,
     JsonLogin,
     JsonSignup,
+    JsonBackupCreated,
     JsonConfig,
     JsonEndpoint,
     JsonApiVersion,
@@ -160,16 +160,50 @@ impl From<bencher_json::DateTimeMillis> for types::DateTimeMillis {
     }
 }
 
-macro_rules! into_created {
+macro_rules! into_uuids {
+    ($($list:ident[$name:ident]),*) => {
+        $(
+            impl TryFrom<types::$list> for bencher_json::JsonUuids {
+                type Error = serde_json::Error;
+
+                fn try_from(list: types::$list) -> Result<Self, Self::Error> {
+                    Ok(Self(list.0.into_iter().map(
+                        |json|  {
+                            let types::$name { uuid, .. } = json;
+                            bencher_json::JsonUuid {
+                                uuid: uuid.into(),
+                            }
+                        }).collect()
+                    ))
+                }
+            }
+        )*
+    };
+}
+
+into_uuids!(
+    JsonMembers[JsonMember],
+    JsonOrganizations[JsonOrganization],
+    JsonAlerts[JsonAlert],
+    JsonBenchmarks[JsonBenchmark],
+    JsonBranches[JsonBranch],
+    JsonMeasures[JsonMeasure],
+    JsonProjects[JsonProject],
+    JsonReports[JsonReport],
+    JsonTestbeds[JsonTestbed],
+    JsonThresholds[JsonThreshold]
+);
+
+macro_rules! into_uuid {
     ($($name:ident),*) => {
         $(
-            impl TryFrom<types::$name> for bencher_json::JsonCreated {
+            impl TryFrom<types::$name> for bencher_json::JsonUuid {
                 type Error = serde_json::Error;
 
                 fn try_from(json: types::$name) -> Result<Self, Self::Error> {
-                    let types::$name { created, .. } = json;
-                    Ok(bencher_json::JsonCreated {
-                        created: created.0.into(),
+                    let types::$name { uuid, .. } = json;
+                    Ok(bencher_json::JsonUuid {
+                        uuid: uuid.into(),
                     })
                 }
             }
@@ -177,7 +211,7 @@ macro_rules! into_created {
     };
 }
 
-into_created!(
+into_uuid!(
     JsonMember,
     JsonOrganization,
     JsonAlert,

@@ -2,8 +2,8 @@ use std::{convert::TryFrom, str::FromStr};
 
 use bencher_client::types::{JsonNewBranch, JsonStartPoint};
 use bencher_json::{
-    project::branch::BRANCH_MAIN_STR, BranchName, BranchUuid, JsonBranch, JsonBranches, NameId,
-    ResourceId,
+    project::branch::BRANCH_MAIN_STR, BranchName, BranchUuid, JsonBranch, JsonBranches, JsonUuid,
+    JsonUuids, NameId, NameIdKind, ResourceId,
 };
 
 use crate::{bencher::backend::Backend, cli_println, parser::project::run::CliRunBranch};
@@ -23,7 +23,7 @@ pub enum Branch {
 
 #[derive(thiserror::Error, Debug)]
 pub enum BranchError {
-    #[error("Failed to parse UUID or slug for the branch: {0}")]
+    #[error("Failed to parse UUID, slug, or name for the branch: {0}")]
     ParseBranch(bencher_json::ValidError),
     #[error(
         "{count} branches were found with name \"{branch_name}\" in project \"{project}\"! Exactly one was expected."
@@ -85,7 +85,19 @@ impl Branch {
         backend: &Backend,
     ) -> Result<Option<NameId>, BranchError> {
         Ok(match self {
-            Self::NameId(name_id) => Some(name_id.clone()),
+            Self::NameId(name_id) => {
+                if dry_run {
+                    return Ok(Some(name_id.clone()));
+                }
+                match name_id.try_into().map_err(BranchError::ParseBranch)? {
+                    NameIdKind::Uuid(uuid) => {},
+                    NameIdKind::Slug(slug) => {},
+                    NameIdKind::Name(name) => {
+                        get_branch(project, &name, backend).await?;
+                    },
+                }
+                Some(name_id.clone())
+            },
             Self::Name {
                 name,
                 start_points,
@@ -169,7 +181,8 @@ async fn get_branch(
     branch_name: &BranchName,
     backend: &Backend,
 ) -> Result<Option<BranchUuid>, BranchError> {
-    let json_branches: JsonBranches = backend
+    // Use `JsonUuids` to future proof against breaking changes
+    let json_branches: JsonUuids = backend
         .send_with(|client| async move {
             client
                 .proj_branches_get()
@@ -185,7 +198,7 @@ async fn get_branch(
     let branch_count = json_branches.len();
     if let Some(branch) = json_branches.pop() {
         if branch_count == 1 {
-            Ok(Some(branch.uuid))
+            Ok(Some(branch.uuid.into()))
         } else {
             Err(BranchError::BranchName {
                 project: project.to_string(),
@@ -216,7 +229,8 @@ async fn create_branch(
         start_point,
     };
 
-    let json_branch: JsonBranch = backend
+    // Use `JsonUuid` to future proof against breaking changes
+    let json_branch: JsonUuid = backend
         .send_with(|client| async move {
             client
                 .proj_branch_post()
@@ -228,5 +242,5 @@ async fn create_branch(
         .await
         .map_err(BranchError::CreateBranch)?;
 
-    Ok(json_branch.uuid)
+    Ok(json_branch.uuid.into())
 }

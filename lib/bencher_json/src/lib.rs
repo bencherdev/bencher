@@ -51,7 +51,7 @@ pub use project::{
 pub use system::server::{JsonServer, JsonServerStats, ServerUuid};
 pub use system::{
     auth::{JsonAuth, JsonAuthToken, JsonAuthUser, JsonLogin, JsonSignup},
-    backup::JsonBackup,
+    backup::{JsonBackup, JsonBackupCreated},
     config::JsonConfig,
     endpoint::JsonEndpoint,
     ping::JsonPing,
@@ -110,11 +110,16 @@ pub static DEVEL_BENCHER_API_URL: Lazy<url::Url> = Lazy::new(|| {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonAny {}
 
-/// A pre-`v1.0` future proof way to check the result of most create and update operations.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonUuids(pub Vec<JsonUuid>);
+
+crate::from_vec!(JsonUuids[JsonUuid]);
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonCreated {
-    pub created: DateTime,
+pub struct JsonUuid {
+    pub uuid: uuid::Uuid,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
