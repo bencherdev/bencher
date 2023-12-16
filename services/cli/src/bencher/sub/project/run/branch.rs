@@ -26,16 +26,23 @@ pub enum BranchError {
     #[error("Failed to parse UUID, slug, or name for the branch: {0}")]
     ParseBranch(bencher_json::ValidError),
     #[error(
-        "{count} branches were found with name \"{branch_name}\" in project \"{project}\"! Exactly one was expected."
+        "No branches were found with name \"{branch_name}\" in project \"{project}\". Exactly one was expected.\nDoes it exist? Branches need to already exist when using `--branch` or `BENCHER_BRANCH`.\nSee: https://bencher.dev/docs/explanation/branch-selection/"
     )]
-    BranchName {
+    NoBranches {
+        project: String,
+        branch_name: String,
+    },
+    #[error(
+        "{count} branches were found with name \"{branch_name}\" in project \"{project}\"! Exactly one was expected.\nThis is likely a bug. Please report it here: https://github.com/bencherdev/bencher/issues"
+    )]
+    MultipleBranches {
         project: String,
         branch_name: String,
         count: usize,
     },
-    #[error("Failed to get branch: {0}")]
+    #[error("Failed to get branch: {0}\nDoes it exist? Branches need to already exist when using `--branch` or `BENCHER_BRANCH`.\nSee: https://bencher.dev/docs/explanation/branch-selection/")]
     GetBranch(crate::bencher::BackendError),
-    #[error("Failed to find branch: {0}")]
+    #[error("Failed to query branches: {0}")]
     GetBranches(crate::bencher::BackendError),
     #[error("Failed to create new branch: {0}")]
     CreateBranch(crate::bencher::BackendError),
@@ -88,6 +95,7 @@ impl Branch {
     ) -> Result<Option<NameId>, BranchError> {
         Ok(match self {
             Self::NameId(name_id) => {
+                // Check to make sure that the branch exists before running the benchmarks
                 match name_id.try_into().map_err(BranchError::ParseBranch)? {
                     NameIdKind::Uuid(uuid) => {
                         if !dry_run {
@@ -103,7 +111,12 @@ impl Branch {
                         let branch_name =
                             name.as_ref().parse().map_err(BranchError::ParseBranch)?;
                         if !dry_run {
-                            get_branch_query(project, &branch_name, backend).await?;
+                            get_branch_query(project, &branch_name, backend)
+                                .await?
+                                .ok_or_else(|| BranchError::NoBranches {
+                                    project: project.to_string(),
+                                    branch_name: branch_name.as_ref().into(),
+                                })?;
                         }
                     },
                 }
@@ -232,7 +245,7 @@ async fn get_branch_query(
         if branch_count == 1 {
             Ok(Some(branch.uuid.into()))
         } else {
-            Err(BranchError::BranchName {
+            Err(BranchError::MultipleBranches {
                 project: project.to_string(),
                 branch_name: branch_name.as_ref().into(),
                 count: branch_count,

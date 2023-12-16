@@ -3,10 +3,7 @@ use std::{convert::TryFrom, future::Future, pin::Pin};
 use async_trait::async_trait;
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings};
 use bencher_comment::ReportComment;
-use bencher_json::{
-    project::testbed::TESTBED_LOCALHOST_STR, DateTime, GitHash, JsonEndpoint, JsonReport, NameId,
-    ResourceId,
-};
+use bencher_json::{DateTime, GitHash, JsonEndpoint, JsonReport, ResourceId};
 use clap::ValueEnum;
 use url::Url;
 
@@ -24,11 +21,13 @@ mod ci;
 mod error;
 mod fold;
 pub mod runner;
+mod testbed;
 
 use branch::Branch;
 use ci::Ci;
 pub use error::RunError;
 use runner::Runner;
+use testbed::Testbed;
 
 use crate::bencher::SubCmd;
 
@@ -45,7 +44,7 @@ pub struct Run {
     runner: Runner,
     branch: Branch,
     hash: Option<GitHash>,
-    testbed: NameId,
+    testbed: Testbed,
     adapter: Option<Adapter>,
     average: Option<JsonAverage>,
     iter: usize,
@@ -87,7 +86,7 @@ impl TryFrom<CliRun> for Run {
             runner: command.try_into()?,
             branch: run_branch.try_into().map_err(RunError::Branch)?,
             hash,
-            testbed: unwrap_testbed(testbed)?,
+            testbed: testbed.try_into().map_err(RunError::Testbed)?,
             adapter: map_adapter(adapter),
             average: average.map(Into::into),
             iter: iter.unwrap_or(1),
@@ -111,21 +110,6 @@ fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, RunError> {
         env_project.parse().map_err(RunError::ParseProject)?
     } else {
         return Err(RunError::ProjectNotFound);
-    })
-}
-
-fn unwrap_testbed(testbed: Option<NameId>) -> Result<NameId, RunError> {
-    Ok(if let Some(testbed) = testbed {
-        testbed
-    } else if let Ok(env_testbed) = std::env::var(BENCHER_TESTBED) {
-        env_testbed
-            .as_str()
-            .parse()
-            .map_err(RunError::ParseTestbed)?
-    } else {
-        TESTBED_LOCALHOST_STR
-            .parse()
-            .map_err(RunError::ParseTestbed)?
     })
 }
 
@@ -211,6 +195,10 @@ impl Run {
         else {
             return Ok(None);
         };
+        let testbed = self
+            .testbed
+            .get(&self.project, self.dry_run, &self.backend)
+            .await?;
 
         let start_time = DateTime::now();
         let mut results = Vec::with_capacity(self.iter);
@@ -246,7 +234,7 @@ impl Run {
         Ok(Some(JsonNewReport {
             branch: branch.into(),
             hash: self.hash.clone().map(Into::into),
-            testbed: self.testbed.clone().into(),
+            testbed: testbed.into(),
             start_time: start_time.into(),
             end_time: end_time.into(),
             results,
