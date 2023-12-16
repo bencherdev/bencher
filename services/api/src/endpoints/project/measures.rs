@@ -224,7 +224,7 @@ async fn get_one_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     QueryMeasure::belonging_to(&query_project)
-        .filter(QueryMeasure::resource_id(&path_params.measure)?)
+        .filter(QueryMeasure::eq_resource_id(&path_params.measure)?)
         .first::<QueryMeasure>(conn)
         .map(|measure| measure.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(

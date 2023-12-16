@@ -223,7 +223,7 @@ async fn get_one_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     QueryBenchmark::belonging_to(&query_project)
-        .filter(QueryBenchmark::resource_id(&path_params.benchmark)?)
+        .filter(QueryBenchmark::eq_resource_id(&path_params.benchmark)?)
         .first::<QueryBenchmark>(conn)
         .map(|benchmark| benchmark.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(

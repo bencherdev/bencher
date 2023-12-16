@@ -16,6 +16,12 @@ use crate::{NonEmpty, Slug, ValidError};
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct NameId(String);
 
+pub enum NameIdKind {
+    Uuid(Uuid),
+    Slug(Slug),
+    Name(NonEmpty),
+}
+
 impl FromStr for NameId {
     type Err = ValidError;
 
@@ -28,6 +34,22 @@ impl FromStr for NameId {
             Ok(Self(non_empty.into()))
         } else {
             Err(ValidError::NameId(value.into()))
+        }
+    }
+}
+
+impl TryFrom<&NameId> for NameIdKind {
+    type Error = ValidError;
+
+    fn try_from(name_id: &NameId) -> Result<Self, Self::Error> {
+        if let Ok(uuid) = Uuid::from_str(name_id.as_ref()) {
+            Ok(Self::Uuid(uuid))
+        } else if let Ok(slug) = Slug::from_str(name_id.as_ref()) {
+            Ok(Self::Slug(slug))
+        } else if let Ok(non_empty) = NonEmpty::from_str(name_id.as_ref()) {
+            Ok(Self::Name(non_empty))
+        } else {
+            Err(ValidError::NameId(name_id.to_string()))
         }
     }
 }

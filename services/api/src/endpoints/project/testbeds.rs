@@ -224,7 +224,7 @@ async fn get_one_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     QueryTestbed::belonging_to(&query_project)
-        .filter(QueryTestbed::resource_id(&path_params.testbed)?)
+        .filter(QueryTestbed::eq_resource_id(&path_params.testbed)?)
         .first::<QueryTestbed>(conn)
         .map(|testbed| testbed.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(

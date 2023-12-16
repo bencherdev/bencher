@@ -15,7 +15,7 @@ use crate::{
     schema::{self, project as project_table},
     util::{
         fn_get::{fn_get, fn_get_uuid},
-        resource_id::{fn_from_resource_id, fn_resource_id},
+        resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
     },
 };
@@ -52,7 +52,7 @@ pub struct QueryProject {
 }
 
 impl QueryProject {
-    fn_resource_id!(project);
+    fn_eq_resource_id!(project);
     fn_from_resource_id!(project, Project, true);
 
     fn_get!(project, ProjectId);

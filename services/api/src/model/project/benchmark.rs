@@ -13,7 +13,7 @@ use crate::{
     schema::benchmark as benchmark_table,
     util::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
-        resource_id::{fn_from_resource_id, fn_resource_id},
+        resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
     },
 };
@@ -36,7 +36,7 @@ pub struct QueryBenchmark {
 }
 
 impl QueryBenchmark {
-    fn_resource_id!(benchmark);
+    fn_eq_resource_id!(benchmark);
     fn_from_resource_id!(benchmark, Benchmark);
 
     fn_get!(benchmark, BenchmarkId);

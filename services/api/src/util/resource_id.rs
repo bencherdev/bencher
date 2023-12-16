@@ -1,36 +1,7 @@
-use std::str::FromStr;
-
-use bencher_json::Slug;
-use dropshot::HttpError;
-use uuid::Uuid;
-
-use crate::error::bad_request_error;
-
-pub enum ResourceId {
-    Uuid(Uuid),
-    Slug(Slug),
-}
-
-impl TryFrom<&bencher_json::ResourceId> for ResourceId {
-    type Error = HttpError;
-
-    fn try_from(resource_id: &bencher_json::ResourceId) -> Result<Self, Self::Error> {
-        if let Ok(uuid) = Uuid::from_str(resource_id.as_ref()) {
-            Ok(ResourceId::Uuid(uuid))
-        } else if let Ok(slug) = Slug::from_str(resource_id.as_ref()) {
-            Ok(ResourceId::Slug(slug))
-        } else {
-            Err(bad_request_error(format!(
-                "Failed to parse resource ID: {resource_id}"
-            )))
-        }
-    }
-}
-
-macro_rules! fn_resource_id {
+macro_rules! fn_eq_resource_id {
     ($table:ident) => {
         #[allow(unused_qualifications)]
-        pub fn resource_id(
+        pub fn eq_resource_id(
             resource_id: &bencher_json::ResourceId,
         ) -> Result<
             Box<
@@ -42,19 +13,28 @@ macro_rules! fn_resource_id {
             >,
             dropshot::HttpError,
         > {
-            Ok(match resource_id.try_into()? {
-                crate::util::resource_id::ResourceId::Uuid(uuid) => {
-                    Box::new(crate::schema::$table::uuid.eq(uuid.to_string()))
+            Ok(
+                match resource_id.try_into().map_err(|e| {
+                    crate::error::issue_error(
+                        http::StatusCode::INTERNAL_SERVER_ERROR,
+                        "Failed to parse resource ID",
+                        "Failed to parse resource ID.",
+                        e,
+                    )
+                })? {
+                    bencher_json::ResourceIdKind::Uuid(uuid) => {
+                        Box::new(crate::schema::$table::uuid.eq(uuid.to_string()))
+                    },
+                    bencher_json::ResourceIdKind::Slug(slug) => {
+                        Box::new(crate::schema::$table::slug.eq(slug.to_string()))
+                    },
                 },
-                crate::util::resource_id::ResourceId::Slug(slug) => {
-                    Box::new(crate::schema::$table::slug.eq(slug.to_string()))
-                },
-            })
+            )
         }
     };
 }
 
-pub(crate) use fn_resource_id;
+pub(crate) use fn_eq_resource_id;
 
 macro_rules! fn_from_resource_id {
     // The `root` parameter is just a kludge to distinguish between top level and project level resources
@@ -65,7 +45,7 @@ macro_rules! fn_from_resource_id {
             resource_id: &bencher_json::ResourceId,
         ) -> Result<Self, HttpError> {
             schema::$table::table
-                .filter(Self::resource_id(resource_id)?)
+                .filter(Self::eq_resource_id(resource_id)?)
                 .first::<Self>(conn)
                 .map_err(crate::error::resource_not_found_err!(
                     $resource,
@@ -82,7 +62,7 @@ macro_rules! fn_from_resource_id {
         ) -> Result<Self, HttpError> {
             schema::$table::table
                 .filter(schema::$table::project_id.eq(project_id))
-                .filter(Self::resource_id(resource_id)?)
+                .filter(Self::eq_resource_id(resource_id)?)
                 .first::<Self>(conn)
                 .map_err(crate::error::resource_not_found_err!(
                     $resource,

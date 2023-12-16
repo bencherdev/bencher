@@ -1,39 +1,7 @@
-use std::str::FromStr;
-
-use bencher_json::{NonEmpty, Slug};
-use dropshot::HttpError;
-use uuid::Uuid;
-
-use crate::error::bad_request_error;
-
-pub enum NameId {
-    Uuid(Uuid),
-    Slug(Slug),
-    Name(NonEmpty),
-}
-
-impl TryFrom<&bencher_json::NameId> for NameId {
-    type Error = HttpError;
-
-    fn try_from(name_id: &bencher_json::NameId) -> Result<Self, Self::Error> {
-        if let Ok(uuid) = Uuid::from_str(name_id.as_ref()) {
-            Ok(NameId::Uuid(uuid))
-        } else if let Ok(slug) = Slug::from_str(name_id.as_ref()) {
-            Ok(NameId::Slug(slug))
-        } else if let Ok(non_empty) = NonEmpty::from_str(name_id.as_ref()) {
-            Ok(NameId::Name(non_empty))
-        } else {
-            Err(bad_request_error(format!(
-                "Failed to parse name ID: {name_id}"
-            )))
-        }
-    }
-}
-
-macro_rules! fn_name_id {
+macro_rules! fn_eq_name_id {
     ($table:ident) => {
         #[allow(unused_qualifications)]
-        pub fn name_id(
+        pub fn eq_name_id(
             name_id: &bencher_json::NameId,
         ) -> Result<
             Box<
@@ -45,22 +13,31 @@ macro_rules! fn_name_id {
             >,
             dropshot::HttpError,
         > {
-            Ok(match name_id.try_into()? {
-                crate::util::name_id::NameId::Uuid(uuid) => {
-                    Box::new(crate::schema::$table::uuid.eq(uuid.to_string()))
+            Ok(
+                match name_id.try_into().map_err(|e| {
+                    crate::error::issue_error(
+                        http::StatusCode::INTERNAL_SERVER_ERROR,
+                        "Failed to parse name ID",
+                        "Failed to parse name ID.",
+                        e,
+                    )
+                })? {
+                    bencher_json::NameIdKind::Uuid(uuid) => {
+                        Box::new(crate::schema::$table::uuid.eq(uuid.to_string()))
+                    },
+                    bencher_json::NameIdKind::Slug(slug) => {
+                        Box::new(crate::schema::$table::slug.eq(slug.to_string()))
+                    },
+                    bencher_json::NameIdKind::Name(name) => {
+                        Box::new(crate::schema::$table::name.eq(name.to_string()))
+                    },
                 },
-                crate::util::name_id::NameId::Slug(slug) => {
-                    Box::new(crate::schema::$table::slug.eq(slug.to_string()))
-                },
-                crate::util::name_id::NameId::Name(name) => {
-                    Box::new(crate::schema::$table::name.eq(name.to_string()))
-                },
-            })
+            )
         }
     };
 }
 
-pub(crate) use fn_name_id;
+pub(crate) use fn_eq_name_id;
 
 macro_rules! fn_from_name_id {
     ($table:ident, $resource:ident) => {
@@ -72,7 +49,7 @@ macro_rules! fn_from_name_id {
         ) -> Result<Self, HttpError> {
             schema::$table::table
                 .filter(schema::$table::project_id.eq(project_id))
-                .filter(Self::name_id(name_id)?)
+                .filter(Self::eq_name_id(name_id)?)
                 .first::<Self>(conn)
                 .map_err(crate::error::resource_not_found_err!(
                     $resource,
@@ -86,14 +63,22 @@ pub(crate) use fn_from_name_id;
 
 macro_rules! filter_name_id {
     ($query:ident, $table:ident, $name_id:ident) => {
-        match $name_id.try_into()? {
-            crate::util::name_id::NameId::Uuid(uuid) => {
+        #[allow(unused_qualifications)]
+        match $name_id.try_into().map_err(|e| {
+            crate::error::issue_error(
+                http::StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to parse name ID",
+                "Failed to parse name ID.",
+                e,
+            )
+        })? {
+            bencher_json::NameIdKind::Uuid(uuid) => {
                 $query = $query.filter(schema::$table::uuid.eq(uuid.to_string()));
             },
-            crate::util::name_id::NameId::Slug(slug) => {
+            bencher_json::NameIdKind::Slug(slug) => {
                 $query = $query.filter(schema::$table::slug.eq(slug.to_string()));
             },
-            crate::util::name_id::NameId::Name(name) => {
+            bencher_json::NameIdKind::Name(name) => {
                 $query = $query.filter(schema::$table::name.eq(name.to_string()));
             },
         }

@@ -8,7 +8,7 @@ use crate::{
     schema::{self, user as user_table},
     util::{
         fn_get::{fn_get, fn_get_id, fn_get_uuid},
-        resource_id::{fn_from_resource_id, fn_resource_id},
+        resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
     },
 };
@@ -43,7 +43,7 @@ pub struct QueryUser {
 }
 
 impl QueryUser {
-    fn_resource_id!(user);
+    fn_eq_resource_id!(user);
     fn_from_resource_id!(user, User, true);
 
     fn_get!(user, UserId);

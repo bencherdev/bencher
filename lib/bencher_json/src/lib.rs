@@ -1,6 +1,7 @@
 pub use bencher_valid::{
     BenchmarkName, Boundary, BranchName, DateTime, DateTimeMillis, Email, GitHash, Jwt, NameId,
-    NonEmpty, ResourceId, SampleSize, Sanitize, Secret, Slug, Url, UserName, ValidError, Window,
+    NameIdKind, NonEmpty, ResourceId, ResourceIdKind, SampleSize, Sanitize, Secret, Slug, Url,
+    UserName, ValidError, Window,
 };
 #[cfg(feature = "plus")]
 pub use bencher_valid::{

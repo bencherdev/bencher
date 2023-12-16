@@ -242,7 +242,7 @@ async fn get_one_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     QueryBranch::belonging_to(&query_project)
-        .filter(QueryBranch::resource_id(&path_params.branch)?)
+        .filter(QueryBranch::eq_resource_id(&path_params.branch)?)
         .first::<QueryBranch>(conn)
         .map(|branch| branch.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(

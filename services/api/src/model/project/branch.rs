@@ -19,8 +19,8 @@ use crate::{
     schema::branch as branch_table,
     util::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
-        name_id::{fn_from_name_id, fn_name_id},
-        resource_id::{fn_from_resource_id, fn_resource_id},
+        name_id::{fn_eq_name_id, fn_from_name_id},
+        resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
     },
 };
@@ -43,10 +43,10 @@ pub struct QueryBranch {
 }
 
 impl QueryBranch {
-    fn_resource_id!(branch);
+    fn_eq_resource_id!(branch);
     fn_from_resource_id!(branch, Branch);
 
-    fn_name_id!(branch);
+    fn_eq_name_id!(branch);
     fn_from_name_id!(branch, Branch);
 
     fn_get!(branch, BranchId);
