@@ -50,10 +50,10 @@ macro_rules! fn_name_id {
                     Box::new(crate::schema::$table::uuid.eq(uuid.to_string()))
                 },
                 crate::util::name_id::NameId::Slug(slug) => {
-                    Box::new(crate::schema::$table::slug.eq(slug.as_ref()))
+                    Box::new(crate::schema::$table::slug.eq(slug.to_string()))
                 },
                 crate::util::name_id::NameId::Name(name) => {
-                    Box::new(crate::schema::$table::name.eq(name.as_ref()))
+                    Box::new(crate::schema::$table::name.eq(name.to_string()))
                 },
             })
         }
@@ -63,22 +63,12 @@ macro_rules! fn_name_id {
 pub(crate) use fn_name_id;
 
 macro_rules! fn_from_name_id {
-    // The `root` parameter is just a kludge to distinguish between top level and project level resources
-    ($table:ident, $resource:ident, $root:expr) => {
-        #[allow(unused_qualifications)]
-        pub fn from_name_id(conn: &mut DbConnection, name_id: &NameId) -> Result<Self, HttpError> {
-            schema::$table::table
-                .filter(Self::name_id(name_id)?)
-                .first::<Self>(conn)
-                .map_err(crate::error::resource_not_found_err!($resource, name_id))
-        }
-    };
     ($table:ident, $resource:ident) => {
         #[allow(unused_qualifications)]
         pub fn from_name_id(
-            conn: &mut DbConnection,
-            project_id: ProjectId,
-            name_id: &NameId,
+            conn: &mut crate::context::DbConnection,
+            project_id: crate::model::project::ProjectId,
+            name_id: &bencher_json::NameId,
         ) -> Result<Self, HttpError> {
             schema::$table::table
                 .filter(schema::$table::project_id.eq(project_id))

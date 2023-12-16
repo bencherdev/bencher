@@ -1,4 +1,4 @@
-use bencher_json::{DateTime, Email, JsonSignup, JsonUser, ResourceId, Slug, UserName, UserUuid};
+use bencher_json::{DateTime, Email, JsonSignup, JsonUser, Slug, UserName, UserUuid};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 

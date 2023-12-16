@@ -34,6 +34,7 @@ from_client!(
     Email,
     GitHash,
     Jwt,
+    NameId,
     NonEmpty,
     ResourceId,
     SampleSize,

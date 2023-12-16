@@ -7078,7 +7078,7 @@
         "type": "object",
         "properties": {
           "branch": {
-            "$ref": "#/components/schemas/ResourceId"
+            "$ref": "#/components/schemas/NameId"
           },
           "lower_boundary": {
             "nullable": true,
@@ -7097,7 +7097,7 @@
             ]
           },
           "measure": {
-            "$ref": "#/components/schemas/ResourceId"
+            "$ref": "#/components/schemas/NameId"
           },
           "min_sample_size": {
             "nullable": true,
@@ -7111,7 +7111,7 @@
             "$ref": "#/components/schemas/StatisticKind"
           },
           "testbed": {
-            "$ref": "#/components/schemas/ResourceId"
+            "$ref": "#/components/schemas/NameId"
           },
           "upper_boundary": {
             "nullable": true,
@@ -8595,6 +8595,9 @@
       "MeasureUuid": {
         "type": "string",
         "format": "uuid"
+      },
+      "NameId": {
+        "type": "string"
       },
       "NonEmpty": {
         "type": "string"

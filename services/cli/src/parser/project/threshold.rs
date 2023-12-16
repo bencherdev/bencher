@@ -1,4 +1,4 @@
-use bencher_json::{Boundary, ResourceId, SampleSize, ThresholdUuid, Window};
+use bencher_json::{Boundary, NameId, ResourceId, SampleSize, ThresholdUuid, Window};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliBackend, CliPagination};
@@ -50,17 +50,17 @@ pub struct CliThresholdCreate {
     #[clap(long)]
     pub project: ResourceId,
 
-    /// Branch slug or UUID
+    /// Branch name, slug, or UUID
     #[clap(long)]
-    pub branch: ResourceId,
+    pub branch: NameId,
 
-    /// Testbed slug or UUID
+    /// Testbed name, slug, or UUID
     #[clap(long)]
-    pub testbed: ResourceId,
+    pub testbed: NameId,
 
-    /// Measure slug or UUID
+    /// Measure name, slug, or UUID
     #[clap(long)]
-    pub measure: ResourceId,
+    pub measure: NameId,
 
     #[clap(flatten)]
     pub statistic: CliStatisticCreate,

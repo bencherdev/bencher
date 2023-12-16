@@ -61,8 +61,8 @@ macro_rules! fn_from_resource_id {
     ($table:ident, $resource:ident, $root:expr) => {
         #[allow(unused_qualifications)]
         pub fn from_resource_id(
-            conn: &mut DbConnection,
-            resource_id: &ResourceId,
+            conn: &mut crate::context::DbConnection,
+            resource_id: &bencher_json::ResourceId,
         ) -> Result<Self, HttpError> {
             schema::$table::table
                 .filter(Self::resource_id(resource_id)?)
@@ -76,9 +76,9 @@ macro_rules! fn_from_resource_id {
     ($table:ident, $resource:ident) => {
         #[allow(unused_qualifications)]
         pub fn from_resource_id(
-            conn: &mut DbConnection,
-            project_id: ProjectId,
-            resource_id: &ResourceId,
+            conn: &mut crate::context::DbConnection,
+            project_id: crate::model::project::ProjectId,
+            resource_id: &bencher_json::ResourceId,
         ) -> Result<Self, HttpError> {
             schema::$table::table
                 .filter(schema::$table::project_id.eq(project_id))

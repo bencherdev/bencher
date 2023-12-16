@@ -1,6 +1,6 @@
 use bencher_json::{
     project::branch::{JsonBranchVersion, JsonStartPoint, JsonUpdateBranch, BRANCH_MAIN_STR},
-    BranchName, BranchUuid, DateTime, JsonBranch, JsonNewBranch, ResourceId, Slug,
+    BranchName, BranchUuid, DateTime, JsonBranch, JsonNewBranch, Slug,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
@@ -19,6 +19,7 @@ use crate::{
     schema::branch as branch_table,
     util::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
+        name_id::{fn_from_name_id, fn_name_id},
         resource_id::{fn_from_resource_id, fn_resource_id},
         slug::ok_slug,
     },
@@ -44,6 +45,9 @@ pub struct QueryBranch {
 impl QueryBranch {
     fn_resource_id!(branch);
     fn_from_resource_id!(branch, Branch);
+
+    fn_name_id!(branch);
+    fn_from_name_id!(branch, Branch);
 
     fn_get!(branch, BranchId);
     fn_get_id!(branch, BranchId, BranchUuid);

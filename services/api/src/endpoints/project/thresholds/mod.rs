@@ -171,9 +171,9 @@ async fn post_inner(
 
     let project_id = query_project.id;
     // Verify that the branch, testbed, and measure are part of the same project
-    let branch_id = QueryBranch::from_resource_id(conn, project_id, &json_threshold.branch)?.id;
-    let testbed_id = QueryTestbed::from_resource_id(conn, project_id, &json_threshold.testbed)?.id;
-    let measure_id = QueryMeasure::from_resource_id(conn, project_id, &json_threshold.measure)?.id;
+    let branch_id = QueryBranch::from_name_id(conn, project_id, &json_threshold.branch)?.id;
+    let testbed_id = QueryTestbed::from_name_id(conn, project_id, &json_threshold.testbed)?.id;
+    let measure_id = QueryMeasure::from_name_id(conn, project_id, &json_threshold.measure)?.id;
 
     // Create the new threshold
     let threshold_id = InsertThreshold::insert_from_json(

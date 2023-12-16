@@ -1,9 +1,9 @@
-use bencher_valid::{Boundary, DateTime, SampleSize, Window};
+use bencher_valid::{Boundary, DateTime, NameId, SampleSize, Window};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{JsonBranch, JsonMeasure, JsonTestbed, ProjectUuid, ResourceId};
+use crate::{JsonBranch, JsonMeasure, JsonTestbed, ProjectUuid};
 
 crate::typed_uuid::typed_uuid!(ThresholdUuid);
 crate::typed_uuid::typed_uuid!(StatisticUuid);
@@ -11,9 +11,9 @@ crate::typed_uuid::typed_uuid!(StatisticUuid);
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewThreshold {
-    pub branch: ResourceId,
-    pub testbed: ResourceId,
-    pub measure: ResourceId,
+    pub branch: NameId,
+    pub testbed: NameId,
+    pub measure: NameId,
     #[serde(flatten)]
     pub statistic: JsonNewStatistic,
 }

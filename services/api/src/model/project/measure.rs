@@ -18,6 +18,7 @@ use crate::{
     schema::measure as measure_table,
     util::{
         fn_get::{fn_get, fn_get_id, fn_get_uuid},
+        name_id::{fn_from_name_id, fn_name_id},
         resource_id::{fn_from_resource_id, fn_resource_id},
         slug::ok_slug,
     },
@@ -46,6 +47,9 @@ pub struct QueryMeasure {
 impl QueryMeasure {
     fn_resource_id!(measure);
     fn_from_resource_id!(measure, Measure);
+
+    fn_name_id!(measure);
+    fn_from_name_id!(measure, Measure);
 
     fn_get!(measure, MeasureId);
     fn_get_id!(measure, MeasureId, MeasureUuid);
