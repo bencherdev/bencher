@@ -5,7 +5,7 @@ heading: "Branch Selection with bencher run"
 sortOrder: 3
 ---
 
-There are a few ways for setting the project branch in the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand.
+There are a few ways to select the project branch in the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand.
 If none of these options or flags are set then `main` is used as the default branch.
 
 <br />
@@ -14,7 +14,7 @@ If none of these options or flags are set then `main` is used as the default bra
 
 <br />
 
-The simplest way to select as branch is to set the `--branch` option or the `BENCHER_BRANCH` environment variable to the name, slug, or UUID of an already existing branch.
+The simplest way to select a branch is to set the `--branch` option or the `BENCHER_BRANCH` environment variable to the name, slug, or UUID of an already existing branch.
 If both are defined, the `--branch` option takes precedence over the `BENCHER_BRANCH` environment variable.
 
 In CI/CD environments, new branches are popping up all the time, so there is a way to create new branches with `bencher run`

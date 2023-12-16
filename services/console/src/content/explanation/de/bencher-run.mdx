@@ -55,8 +55,8 @@ Wenn beide definiert sind, hat die Option `--token` Vorrang vor der Umgebungsvar
 <br />
 
 ### `--branch <BRANCH>`
-### `--if-branch <IF_BRANCH>`
-### `--else-if-branch <ELSE_IF_BRANCH>`
+### `--if-branch <BRANCH_NAME>`
+### `--else-if-branch <BRANCH_NAME>`
 ### `--else-branch`
 ### `--endif-branch`
 
@@ -219,7 +219,7 @@ Erforderlich: `--github-actions`
 
 <br/>
 
-### `--github-actions`
+### `--github-actions <GITHUB_TOKEN>`
 
 <br />
 
@@ -251,7 +251,7 @@ Optional: Shell-Befehlsflag. Standardmäßig ist dies `-c` in Unix-ähnlichen Um
 
 <br />
 
-### `--host <HOST>`
+### `--host <URL>`
 
 <br />
 
@@ -268,7 +268,7 @@ Optional: Max. Anzahl der Wiederholungsversuche der Anfrage. Standardmäßig ist
 <br />
 
 
-### `--retry-after <RETRY_AFTER>`
+### `--retry-after <RETRY_AFTER_SECONDS>`
 
 <br />
 

@@ -55,8 +55,8 @@ Si ambas están definidas, la opción `--token` tiene prioridad sobre la variabl
 <br />
 
 ### `--branch <BRANCH>`
-### `--if-branch <IF_BRANCH>`
-### `--else-if-branch <ELSE_IF_BRANCH>`
+### `--if-branch <BRANCH_NAME>`
+### `--else-if-branch <BRANCH_NAME>`
 ### `--else-branch`
 ### `--endif-branch`
 
@@ -210,7 +210,7 @@ Requiere: `--github-actions`
 
 <br/>
 
-### `--github-actions`
+### `--github-actions <GITHUB_TOKEN>`
 
 <br />
 
@@ -242,7 +242,7 @@ Opcional: Banderas del comando de la shell. Predeterminado en `-c` en entornos t
 
 <br />
 
-### `--host <HOST>`
+### `--host <URL>`
 
 <br />
 
@@ -259,7 +259,7 @@ Opcional: Intentos maximos de reintentos de solicitud. Predeterminado en `10`.
 <br />
 
 
-### `--retry-after <RETRY_AFTER>`
+### `--retry-after <RETRY_AFTER_SECONDS>`
 
 <br />
 
