@@ -44,4 +44,4 @@ export const swaggerSpec = (apiUrl: string) => {
 };
 
 export const isBencherCloud = (): boolean =>
-	import.meta.env.PUBLIC_IS_BENCHER_CLOUD === "true";
+	`${import.meta.env.PUBLIC_IS_BENCHER_CLOUD}` === "true";
