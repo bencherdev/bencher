@@ -5,6 +5,7 @@ heading: "Démarrage Rapide"
 sortOrder: 1
 ---
 
+import BencherIntro from "../../../chunks/general/fr/bencher-intro.mdx";
 import QuickStart1 from "../../../chunks/tutorial/quick-start.1.mdx";
 import QuickStart2 from "../../../chunks/tutorial/quick-start.2.mdx";
 import QuickStart3 from "../../../chunks/tutorial/quick-start.3.mdx";
@@ -19,16 +20,7 @@ import QuickStart11 from "../../../chunks/tutorial/quick-start.11.mdx";
 
 ## Qu'est-ce que Bencher?
 
-Bencher est un ensemble d'outils de [benchmarking continu](/fr/docs/explanation/continuous-benchmarking/).
-Avez-vous déjà subi un impact de la régression de performance sur vos utilisateurs?
-Bencher aurait pu empêcher cela.
-Bencher vous permet de détecter et d'éviter les régressions de performance _avant_ qu'elles n'arrivent en production.
-
-- **Exécuter**: Exécutez vos benchmarks localement ou dans CI en utilisant vos outils de benchmarking préférés. Le CLI `bencher` enveloppe simplement votre harnais de benchmarking existant et enregistre ses résultats.
-- **Suivre**: Suivez les résultats de vos benchmarks dans le temps. Surveillez, interrogez et tracez les résultats à l'aide de la console web Bencher selon la branche source, la plate-forme de test, et le type de métrique.
-- **Attraper**: Attrapez les régressions de performance dans CI. Bencher utilise des analyses personnalisables de pointe pour détecter les régressions de performance avant qu'elles n'arrivent en production.
-
-Pour les mêmes raisons que les tests unitaires sont exécutés en CI pour prévenir les régressions de fonctionnalités, les benchmarks devraient être exécutés en CI avec Bencher pour prévenir les régressions de performance. Les bugs de performance sont des bugs!
+<BencherIntro />
 
 <br />
 

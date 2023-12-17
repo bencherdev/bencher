@@ -1,0 +1,10 @@
+[Bencher](/docs/es/pricing) es un conjunto de herramientas de benchmarking continuo.
+¿Alguna vez has tenido un impacto de regresión de rendimiento en tus usuarios?
+Bencher podría haber evitado que eso sucediera.
+Bencher te permite detectar y prevenir las regresiones de rendimiento _antes_ de que lleguen a producción.
+
+- **Ejecutar**: Ejecute sus benchmarks localmente o en CI usando sus herramientas de benchmarking favoritas. La CLI `bencher` simplemente envuelve su arnés de benchmarks existente y almacena sus resultados.
+- **Seguir**: Sigue los resultados de tus benchmarks con el tiempo. Monitoriza, realiza consultas y representa gráficamente los resultados utilizando la consola web de Bencher basándose en la rama de origen, el banco de pruebas y la medida.
+- **Capturar**: Captura las regresiones de rendimiento en CI. Bencher utiliza analíticas de vanguardia y personalizables para detectar regresiones de rendimiento antes de que lleguen a producción.
+
+Por las mismas razones que las pruebas unitarias se ejecutan en CI para prevenir regresiones funcionales, los benchmarks deberían ejecutarse en CI con Bencher para prevenir regresiones de rendimiento. ¡Los errores de rendimiento son errores!

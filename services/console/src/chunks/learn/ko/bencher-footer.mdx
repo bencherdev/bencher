@@ -1,4 +1,5 @@
 import { BENCHER_WORDMARK } from "../../../util/ext";
+import BencherIntro from "../../general/ko/bencher-intro.mdx";
 
 ## [Bencher](/docs/ko/pricing): 지속적인 벤치마킹
 <div class="content has-text-centered">
@@ -7,15 +8,6 @@ import { BENCHER_WORDMARK } from "../../../util/ext";
     </a>
 </div>
 
-[Bencher](/docs/ko/pricing)는 지속적인 벤치마킹 도구 모음입니다. 
-성능 회귀가 사용자에게 영향을 미친 경험이 있나요?
-Bencher가 그런 일이 일어나는 것을 막을 수 있었습니다. 
-Bencher를 이용하면 성능 회귀를 _상용 환경으로 이동하기 전에_ 탐지하고 예방할 수 있습니다.
-
-- **실행**: 기존 벤치마킹 도구를 사용하여 로컬 또는 CI에서 벤치마크를 실행합니다. `bencher` CLI는 기존 벤치마킹 하네스를 감싸고 결과를 저장합니다.
-- **추적**: 벤치마크 결과를 시간이 지남에 따라 추적합니다. 소스 브랜치, 테스트 베드, 측정 기반의 Bencher 웹 콘솔을 사용하여 결과를 모니터링, 쿼리, 그래프로 만듭니다.
-- **캐치**: CI에서 성능 회귀를 잡아냅니다. Bencher는 최첨단, 사용자 정의 가능한 분석을 사용하여 상용 환경으로 가기 전에 성능 회귀를 탐지합니다.
-
-단위 테스트가 CI에서 기능 회귀를 방지하기 위해 실행되는 것처럼, 벤치마크는 Bencher와 함께 CI에서 실행되어 성능 회귀를 방지해야 합니다. 성능 버그도 버그입니다!
+<BencherIntro />
 
 CI에서 성능 회귀를 잡아내기 시작하세요 - [Bencher Cloud를 무료로 시도해보세요](/docs/ko/pricing).

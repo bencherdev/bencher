@@ -5,6 +5,7 @@ heading: "Schnellstart"
 sortOrder: 1
 ---
 
+import BencherIntro from "../../../chunks/general/de/bencher-intro.mdx";
 import QuickStart1 from "../../../chunks/tutorial/quick-start.1.mdx";
 import QuickStart2 from "../../../chunks/tutorial/quick-start.2.mdx";
 import QuickStart3 from "../../../chunks/tutorial/quick-start.3.mdx";
@@ -19,16 +20,7 @@ import QuickStart11 from "../../../chunks/tutorial/quick-start.11.mdx";
 
 ## Was ist Bencher?
 
-Bencher ist eine Suite von [kontinuierlichen Benchmarking](/de/docs/explanation/continuous-benchmarking/) Tools.
-Hatten Sie jemals Performance-Einbußen, die Ihre Nutzer beeinträchtigt haben?
-Bencher hätte das verhindern können.
-Bencher erlaubt Ihnen Leistungsrückgänge zu erkennen und zu verhindern, _bevor_ sie es in die Produktion schaffen.
-
-- **Laufen lassen**: Führen Sie Ihre Benchmarks lokal oder in CI mit Ihren bevorzugten Benchmarking-Tools durch. Die `bencher` CLI wickelt einfach Ihre bestehenden Benchmark-Harnesses und speichert deren Ergebnisse.
-- **Verfolgen**: Verfolgen Sie die Ergebnisse Ihrer Benchmarks im Laufe der Zeit. Überwachen, abfragen und grafische Darstellung der Ergebnisse mit der Bencher-Webkonsole basierend auf dem Quellzweig, dem Testbett und der Messart.
-- **Fangen**: Fangen Sie Leistungsrückgänge in CI. Bencher verwendet modernste, anpassbare Analysen, um Leistungseinbrüche zu erkennen, bevor sie in die Produktion gelangen.
-
-Aus den gleichen Gründen, warum Unit-Tests in CI durchgeführt werden, um Funktionsregressionen zu verhindern, sollten Benchmarks mit Bencher in CI durchgeführt werden, um Leistungseinbrüche zu verhindern. Performance Bug sind Bugs!
+<BencherIntro />
 
 <br />
 

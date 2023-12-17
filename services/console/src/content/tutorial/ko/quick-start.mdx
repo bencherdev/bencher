@@ -5,6 +5,7 @@ heading: "빠른 시작"
 sortOrder: 1
 ---
 
+import BencherIntro from "../../../chunks/general/ko/bencher-intro.mdx";
 import QuickStart1 from "../../../chunks/tutorial/quick-start.1.mdx";
 import QuickStart2 from "../../../chunks/tutorial/quick-start.2.mdx";
 import QuickStart3 from "../../../chunks/tutorial/quick-start.3.mdx";
@@ -19,16 +20,7 @@ import QuickStart11 from "../../../chunks/tutorial/quick-start.11.mdx";
 
 ## Bencher가 무엇인가요?
 
-Bencher는 [지속적인 벤치마킹](/ko/docs/explanation/continuous-benchmarking/) 도구 모음입니다.
-성능 성하위가 사용자에게 영향을 미친 적이 있나요?
-Bencher를 사용하면 그런 현상을 막을 수 있습니다.
-Bencher를 사용하면 성능 성하위를 _제작환경에 도입하기 _전에 탐지하고 방지할 수 있습니다.
-
-- **실행**: 벤치마킹 도구를 이용하여 로컬이나 CI에서 벤치마크를 실행하세요. `bencher` CLI는 기존의 벤치마크 하네스를 감싸고 그 결과를 저장합니다.
-- **추적**: 벤치마크 결과를 시간에 따라 추적하세요. 소스 브랜치, 테스트베드, 메트릭 종류 등에 따라 Bencher 웹 콘솔을 이용하여 결과를 감시하고, 쿼리하고, 그래프로 표현하세요.
-- **탐지**: CI에서 성능 성하위를 탐지하세요. Bencher는 최신, 커스터마이징 가능한 분석을 사용해 성능 성하위를 제작환경에 도입되기 전에 검출합니다.
-
-기능 성하위를 방지하기 위해 CI에서 단위 테스트를 실행하는 이유와 마찬가지로, Bencher를 사용하여 CI에서 벤치마크를 실행하여 성능 성하위를 방지해야 합니다. 성능 버그도 버그입니다!
+<BencherIntro />
 
 <br />
 

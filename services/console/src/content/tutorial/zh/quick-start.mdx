@@ -5,6 +5,7 @@ heading: "快速开始"
 sortOrder: 1
 ---
 
+import BencherIntro from "../../../chunks/general/zh/bencher-intro.mdx";
 import QuickStart1 from "../../../chunks/tutorial/quick-start.1.mdx";
 import QuickStart2 from "../../../chunks/tutorial/quick-start.2.mdx";
 import QuickStart3 from "../../../chunks/tutorial/quick-start.3.mdx";
@@ -19,16 +20,7 @@ import QuickStart11 from "../../../chunks/tutorial/quick-start.11.mdx";
 
 ## 什么是Bencher？
 
-Bencher是一套[连续基准测试](/zh/docs/explanation/continuous-benchmarking/)工具。
-你是否曾经有性能退化影响你的用户？
-Bencher可以防止这种情况发生。
-Bencher让你能在性能退化_进入_生产环境前就检测和防止它。
-
-- **运行**：在本地或CI中使用你最喜欢的基准测试工具运行你的基准测试。 `bencher` CLI只是包装了你现有的基准测试工具，并存储其结果。
-- **追踪**：跟踪你基准测试的结果。基于源分支、测试平台和度量类型，使用基于Bencher的web控制台监控、查询和图形化结果。
-- **捕获**：在CI中捕获性能退化。Bencher使用最先进的、可定制的分析工具在性能退化进入生产环境前就检测到它。
-
-出于同样的原因，单元测试在CI中运行是为了防止功能退化，基准测试应该在CI中使用Bencher运行，以防止性能退化。性能bug就是bug！
+<BencherIntro />
 
 <br />
 

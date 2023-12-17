@@ -6,19 +6,11 @@ sortOrder: 2
 ---
 
 import { BENCHER_VERSION } from "../../../util/ext";
+import BencherIntro from "../../../chunks/general/zh/bencher-intro.mdx";
 
 ## 什么是 Bencher?
 
-Bencher 是一套[持续性能测试](/zh/docs/explanation/continuous-benchmarking/)工具套件。
-你有没有遇到过性能退化影响到你的用户？
-Bencher 能够防止这种情况发生。
-Bencher 允许你在性能退化进入生产环境之前检测并防止它。
-
-- **运行**：使用你最喜欢的性能测试工具，在本地或者 CI 中运行你的性能测试。 `bencher` 命令行就简单包装你现有的性能测试工具并存储其结果。
-- **追踪**：追踪你的性能测试结果随时间的变化。根据源代码分支、测试环境和度量类型，使用基于 Bencher 的 web 控制台来监控、查询、绘制结果图形。
-- **捕捉**：在 CI 中捕捉性能退化。Bencher 使用的是最新的，可定制的分析技术来在性能退化进入生产环境之前就检测它。
-
-为了防止功能退化，单元测试通常会在 CI 中运行，基于同样的原因，为了防止性能退化，我们也应该在 CI 中运行 Bencher 的性能测试。性能问题就是 bug！
+<BencherIntro />
 
 Bencher 是开源的并且自托管的。
 如果你有意使用 Bencher Cloud，可以查看 [Bencher Cloud 快速上手教程](/zh/docs/tutorial/quick-start/)。

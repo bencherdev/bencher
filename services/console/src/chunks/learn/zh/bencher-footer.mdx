@@ -1,4 +1,5 @@
 import { BENCHER_WORDMARK } from "../../../util/ext";
+import BencherIntro from "../../general/zh/bencher-intro.mdx";
 
 ## [Bencher](/docs/zh/pricing): 持续性能基准测试
 <div class="content has-text-centered">
@@ -7,15 +8,6 @@ import { BENCHER_WORDMARK } from "../../../util/ext";
     </a>
 </div>
 
-[Bencher](/docs/zh/pricing)是一套持续型的性能基准测试工具。
-你是否曾经因为性能回归影响到了你的用户？
-Bencher可以防止这种情况的发生。
-Bencher让你有能力在性能回归进入生产环境 _之前_ 就进行检测和预防。
-
-- **运行**: 使用你喜爱的基准测试工具在本地或CI中执行你的基准测试。`bencher` CLI简单地包装了你现有的基准测验设备并存储其结果。
-- **追踪**: 追踪你的基准测试结果的趋势。根据源分支、测试床和度量，使用Bencher web控制台来监视、查询和绘制结果图表。
-- **捕获**: 在CI中捕获性能回归。Bencher使用最先进的、可定制的分析技术在它们进入生产环境之前就检测到性能回归。
-
-基于防止功能回归的原因，在CI中运行单元测试，我们也应该使用Bencher在CI中运行基准测试以防止性能回归。性能问题就是错误！
+<BencherIntro />
 
 开始在CI中捕捉性能回归 — [免费试用Bencher Cloud](/docs/zh/pricing)。

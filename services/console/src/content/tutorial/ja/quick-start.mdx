@@ -5,6 +5,7 @@ heading: "クイックスタート"
 sortOrder: 1
 ---
 
+import BencherIntro from "../../../chunks/general/ja/bencher-intro.mdx";
 import QuickStart1 from "../../../chunks/tutorial/quick-start.1.mdx";
 import QuickStart2 from "../../../chunks/tutorial/quick-start.2.mdx";
 import QuickStart3 from "../../../chunks/tutorial/quick-start.3.mdx";
@@ -19,16 +20,7 @@ import QuickStart11 from "../../../chunks/tutorial/quick-start.11.mdx";
 
 ## Bencherとは何ですか？
 
-Bencherは[継続的なベンチマーキング](/ja/docs/explanation/continuous-benchmarking/)ツールの組です。
-パフォーマンスリグレッションがユーザーに影響を与えたことはありますか？
-そのようなことが起こるのを防ぐことができたのがBencherです。
-Bencherは、パフォーマンスリグレッションを検出し、それが本番環境に達する前に防止することができます。
-
-- **実行**: ローカルまたはCIでベンチマークを実行します。お使いのお気に入りのベンチマーキングツールを使用します。`bencher` CLIは既存のベンチマークハーネスをラップし、その結果を保存します。
-- **追跡**: ベンチマークの結果を時間経過で追跡します。BencherのWebコンソールを使用して、ソースブランチ、テストベッド、メトリックの種類に基づいて結果を監視、クエリ、グラフィック表示します。
-- **キャッチ**: CIでパフォーマンスリグレッションをキャッチします。Bencherは、最先端のカスタマイズ可能な分析を使用して、パフォーマンスリグレッションを本番環境前に検出します。
-
-機能リグレッションを防ぐためにユニットテストがCIで実行されるのと同様に、パフォーマンスリグレッションを防ぐためにベンチマークもBencherでCIで実行されるべきです。パフォーマンスバグはバグです！
+<BencherIntro />
 
 <br />
 

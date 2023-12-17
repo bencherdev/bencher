@@ -6,19 +6,11 @@ sortOrder: 2
 ---
 
 import { BENCHER_VERSION } from "../../../util/ext";
+import BencherIntro from "../../../chunks/general/de/bencher-intro.mdx";
 
 ## Was ist Bencher?
 
-Bencher ist eine Suite von [kontinuierlichen Benchmarking](/de/docs/explanation/continuous-benchmarking/) Werkzeugen.
-Haben Sie jemals erlebt, dass eine Performance-Regression Ihre Nutzer beeinträchtigt hat?
-Bencher hätte das verhindern können.
-Bencher ermöglicht es Ihnen, Performance-Regresionen _vor_ ihrem Erscheinen in der Produktion zu erkennen und zu verhindern.
-
-- **Laufen lassen**: Führen Sie Ihre Benchmarks lokal oder in CI aus, mit Ihren bevorzugten Benchmarking-Tools. Die `bencher` CLI umschließt nur Ihre bestehende Benchmark-Harness und speichert deren Ergebnisse.
-- **Verfolgen**: Verfolgen Sie die Ergebnisse Ihrer Benchmarks im Laufe der Zeit. Überwachen, abfragen und erstellen Sie Grafiken der Ergebnisse mit der Bencher Web-Konsole, basierend auf dem Quellzweig, der Testumgebung und der Art der Metrik.
-- **Fangen**: Fangen Sie Performance-Regressionen in CI. Bencher verwendet hochmoderne, anpassbare Analysen, um Performance-Regressionen zu erkennen, bevor sie in die Produktion gelangen.
-
-Aus den gleichen Gründen, warum Unit-Tests in CI laufen, um Feature-Regressionen zu verhindern, sollten auch Benchmarks in CI mit Bencher laufen, um Performance-Regressionen zu verhindern. Performance-Fehler sind Fehler!
+<BencherIntro />
 
 Bencher ist Open-Source und kann selbst gehostet werden.
 Wenn Sie an der Nutzung von Bencher Cloud interessiert sind, schauen Sie sich das [Bencher Cloud Quick Start Tutorial](/de/docs/tutorial/quick-start/) an.

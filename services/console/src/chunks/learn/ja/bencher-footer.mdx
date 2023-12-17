@@ -1,4 +1,5 @@
 import { BENCHER_WORDMARK } from "../../../util/ext";
+import BencherIntro from "../../general/ja/bencher-intro.mdx";
 
 ## [Bencher](/docs/ja/pricing): 連続ベンチマーキング
 <div class="content has-text-centered">
@@ -7,15 +8,6 @@ import { BENCHER_WORDMARK } from "../../../util/ext";
     </a>
 </div>
 
-[Bencher](/docs/ja/pricing)は、連続ベンチマーキングツールのスイートです。
-パフォーマンスの後退があなたのユーザーに影響を与えたことはありますか？
-Bencherなら、それが起こるのを防げた可能性があります。
-Bencherは、パフォーマンスの低下を_productionに到達する_前に検出し、防止することを可能にします。
-
-- **実行**: お気に入りのベンチマーキングツールを使用してベンチマークをローカルまたはCIで実行します。 `bencher` CLIは単にあなたの既存のベンチマークハーネスをラップし、その結果を保存します。
-- **追跡**: ベンチマークの結果を時間と共に追跡します。ソースブランチ、テストベッド、測定基準に基づいてBencherのWebコンソールを使用して結果を監視、クエリ、グラフ化します。
-- **キャッチ**: CIでパフォーマンスの後退をキャッチします。Bencherは最先端のカスタマイズ可能な分析を使用して、パフォーマンスの後退がProductionに到達する前にそれを検出します。
-
-機能の後退を防ぐためにユニットテストがCIで実行されるのと同じ理由で、Bencherを使用してCIでベンチマークを実行してパフォーマンスの後退を防ぐべきです。パフォーマンスのバグはバグです！
+<BencherIntro />
 
 CIでパフォーマンスの回帰を捉えるのを開始してください - [Bencher Cloudを無料で試す](/docs/ja/pricing)。
