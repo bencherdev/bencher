@@ -5,22 +5,14 @@ heading: "如何使用 Bencher 追踪基准测试"
 sortOrder: 2
 ---
 
+import TrackHistorical from "../../../chunks/how_to/track-historical.mdx";
+import TrackRelative from "../../../chunks/how_to/track-relative.mdx";
+
 追踪你的基准最简单的方法就是 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> 命令行子命令。
 对于更深入的解释，请查看 [基准测试概览](/zh/docs/explanation/benchmarking/)。
 下面是一个<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code>命令行子命令的示例，用于追踪在一个合适命名为`feature-branch`的功能分支上的基准:
 
-```
-bencher run \
---project save-walter-white \
---token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjbGllbnQiLCJleHAiOjE2NzQwNjA3NTAsImlhdCI6MTY3MTQ2ODc1MCwiaXNzIjoiYmVuY2hlci5kZXYiLCJzdWIiOiJzYXVsQGJldHRlcmNhbGxzYXVsLmNvbSIsIm9yZyI6bnVsbH0.CABcvWlPobAHs7wsdR6wX5p0R2jaCd7RmpsnMp5pwEc \
---adapter json \
---if-branch feature-branch \
---else-if-branch main \
---else-branch \
---testbed phoenix \
---err \
-"bencher mock"`
-```
+<TrackHistorical />
 
 1. 项目必须已经存在。设置 `--project` 标志或者 `BENCHER_PROJECT` 环境变量为项目的简写或 UUID。（例如： `--project save-walter-white`）
 1. API 令牌必须已经存在。设置 `--token` 标志或者 `BENCHER_API_TOKEN` 环境变量为 API 令牌。（例如： `--token ...`）
@@ -29,7 +21,7 @@ bencher run \
     1. 使用已经存在的当前分支。（例如： `--if-branch feature-branch`）
     1. 如果目标分支已经存在则创建一个目标分支数据的副本。（例如： `--else-if-branch main`）
     1. 否则，使用 `--if-branch` 提供的名称创建新分支，这里会是 `feature-branch`。 (例如： `--else-branch`)
-1. 选择设置: 设置 `--testbed` 标志或者 `BENCHER_TESTBED` 环境变量为 Testbed 的简写或者 UUID。Testbed 必须已经存在。如果没有设置，那么默认的 `localhost` Testbed 将会被使用。（例如： `--testbed phoenix`）
+1. 选择设置: 设置 `--testbed` 标志或者 `BENCHER_TESTBED` 环境变量为 Testbed 的简写或者 UUID。Testbed 必须已经存在。如果没有设置，那么默认的 `localhost` Testbed 将会被使用。（例如： `--testbed localhost`）
 1. 如果生成一个警告就让命令执行失败。为了警告被生成，一项 [阈值](/zh/docs/explanation/thresholds/) 必须已经存在。（例如： `--err`）
 1. 运行你的基准并从结果中生成一份报告。（例如： `"bencher mock"`）
 
@@ -40,35 +32,7 @@ bencher run \
 运行中所可用资源在不同的运行间可能变化很大。
 下面是一个<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code>命令行子命令的示例，用于在一个合适命名为`feature-branch`的功能分支上执行相对基准:
 
-```
-git checkout feature-branch
-
-export FEATURE_BRANCH=feature-branch-$(git rev-parse --short HEAD)
-
-git checkout main
-
-bencher run \
---if-branch "$FEATURE_BRANCH" \
---else-branch \
---iter 3 \
-"bencher mock"
-
-git checkout feature-branch
-
-bencher threshold create \
---branch "$FEATURE_BRANCH" \
---testbed localhost \
---measure latency \
---test t \
---upper-boundary 0.95
-
-bencher run \
---branch "$FEATURE_BRANCH" \
---iter 3 \
---fold min \
---err \
-"bencher mock"
-```
+<TrackRelative />
 
 1. 检出功能分支。（例如： `feature-branch`）
 1. 创建一个环境变量，将功能分支的名称和短的 git 提交 ID 连接起来。这是重要的！它保证了每次运行都会创建一个新的分支。

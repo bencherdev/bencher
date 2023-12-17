@@ -5,22 +5,14 @@ heading: "Bencherを使用してベンチマークを追跡する方法"
 sortOrder: 2
 ---
 
+import TrackHistorical from "../../../chunks/how_to/track-historical.mdx";
+import TrackRelative from "../../../chunks/how_to/track-relative.mdx";
+
 ベンチマークを追跡する最も簡単な方法は、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドです。
 より詳しい説明については、[ベンチマーキング概要](/ja/docs/explanation/benchmarking/)をご覧ください。
 以下は、`feature-branch`という適切な名前のフィーチャーブランチでベンチマークを追跡するための<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドの例です：
 
-```
-bencher run \
---project save-walter-white \
---token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjbGllbnQiLCJleHAiOjE2NzQwNjA3NTAsImlhdCI6MTY3MTQ2ODc1MCwiaXNzIjoiYmVuY2hlci5kZXYiLCJzdWIiOiJzYXVsQGJldHRlcmNhbGxzYXVsLmNvbSIsIm9yZyI6bnVsbH0.CABcvWlPobAHs7wsdR6wX5p0R2jaCd7RmpsnMp5pwEc \
---adapter json \
---if-branch feature-branch \
---else-if-branch main \
---else-branch \
---testbed phoenix \
---err \
-"bencher mock"`
-```
+<TrackHistorical />
 
 1. プロジェクトは既に存在している必要があります。`--project`フラグまたは`BENCHER_PROJECT`環境変数をプロジェクトのスラッグまたはUUIDに設定します。(例：`--project save-walter-white`)
 1. APIトークンは既に存在している必要があります。`--token`フラグまたは`BENCHER_API_TOKEN`環境変数をAPIトークンに設定します。(例：`--token ...`)
@@ -29,7 +21,7 @@ bencher run \
     1. 既に存在する現在のブランチを使用します。(例：`--if-branch feature-branch`)
     1. 既に存在するターゲットブランチのデータのクローンを作成します。(例：`--else-if-branch main`)
     1. それ以外の場合、`--if-branch`に提供した名前で新しいブランチを作成します。これは`feature-branch`となるでしょう。(例：`--else-branch`)
-1. オプション：`--testbed`フラグまたは`BENCHER_TESTBED`環境変数をTestbedのスラッグまたはUUIDに設定します。Testbedは既に存在している必要があります。これが設定されていない場合、デフォルトの`localhost` Testbedが使用されます。(例：`--testbed phoenix`)
+1. オプション：`--testbed`フラグまたは`BENCHER_TESTBED`環境変数をTestbedのスラッグまたはUUIDに設定します。Testbedは既に存在している必要があります。これが設定されていない場合、デフォルトの`localhost` Testbedが使用されます。(例：`--testbed localhost`)
 1. アラートが生成された場合にコマンドを失敗させるように設定します。アラートを生成するためには、[しきい値](/ja/docs/explanation/thresholds/)が既に存在している必要があります。(例：`--err`)
 1. ベンチマークを実行し、結果からレポートを生成します。(例：`"bencher mock"`)
 
@@ -39,35 +31,7 @@ bencher run \
 これは、利用可能なリソースが実行間で大幅に変動する可能性のあるノイズの多いCI/CD環境に対処する際に便利です。
 以下は、`feature-branch`という適切な名前のフィーチャーブランチで相対ベンチマーキングを実行するための<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドの例です：
 
-```
-git checkout feature-branch
-
-export FEATURE_BRANCH=feature-branch-$(git rev-parse --short HEAD)
-
-git checkout main
-
-bencher run \
---if-branch "$FEATURE_BRANCH" \
---else-branch \
---iter 3 \
-"bencher mock"
-
-git checkout feature-branch
-
-bencher threshold create \
---branch "$FEATURE_BRANCH" \
---testbed localhost \
---measure latency \
---test t \
---upper-boundary 0.95
-
-bencher run \
---branch "$FEATURE_BRANCH" \
---iter 3 \
---fold min \
---err \
-"bencher mock"
-```
+<TrackRelative />
 
 1. フィーチャーブランチをチェックアウトします。(例：`feature-branch`)
 1. フィーチャーブランチの名前と短いgitコミットIDを連結した環境変数を作成します。これは重要です！これにより、各実行ごとに新しいブランチが作成されることが保証されます。

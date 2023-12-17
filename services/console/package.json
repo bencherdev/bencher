@@ -11,22 +11,23 @@
     "start": "astro dev --port 3000",
     "test": "npm run setup && vitest",
     "build": "export $(cat .env.runtime) && astro build",
-    "node": "npm install && npm install @astrojs/node@6.0.0 && npx astro add node -y && npm run build",
-    "netlify": "npm install && npm install @astrojs/netlify@3.0.1 && npx astro add netlify -y && npm run build",
+    "node": "npm install && npm install @astrojs/node@7.0.1 && npx astro add node -y && npm run build",
+    "netlify": "npm install && npm install @astrojs/netlify@3.1.1 && npx astro add netlify -y && npm run build",
     "preview": "export BENCHER_API_URL=http://127.0.0.1:61016 && astro preview --port 3000",
     "astro": "astro",
     "check": "astro check"
   },
   "dependencies": {
-    "@astrojs/check": "^0.3.1",
-    "@astrojs/mdx": "^1.1.5",
+    "@astrojs/check": "^0.3.3",
+    "@astrojs/mdx": "^2.0.1",
     "@astrojs/partytown": "^2.0.2",
     "@astrojs/sitemap": "^3.0.3",
     "@astrojs/solid-js": "^3.0.2",
-    "@observablehq/plot": "^0.6.11",
+    "@observablehq/plot": "^0.6.13",
     "@solid-primitives/resize-observer": "^2.0.22",
     "@solid-primitives/scheduled": "^1.4.1",
-    "astro": "^3.6.4",
+    "astro": "^4.0.6",
+    "astro-expressive-code": "^0.30.1",
     "astro-seo": "^0.8.0",
     "axios": "^1.6.2",
     "bulma": "^0.9.4",
@@ -37,9 +38,9 @@
     "d3": "^7.8.5",
     "htl": "^0.3.1",
     "mermaid": "^10.6.1",
-    "solid-js": "^1.8.5",
-    "swagger-ui-dist": "^5.10.0",
-    "typescript": "^5.2.2",
+    "solid-js": "^1.8.7",
+    "swagger-ui-dist": "^5.10.5",
+    "typescript": "^5.3.3",
     "vite-plugin-wasm-pack": "^0.1.12"
   },
   "devDependencies": {
@@ -49,6 +50,6 @@
     "rehype-autolink-headings": "^7.1.0",
     "rehype-slug": "^6.0.0",
     "sass": "^1.69.5",
-    "vitest": "^0.34.6"
+    "vitest": "^1.0.4"
   }
 }

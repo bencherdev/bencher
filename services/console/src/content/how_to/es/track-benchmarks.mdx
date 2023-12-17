@@ -5,22 +5,14 @@ heading: "Cómo usar Bencher para realizar seguimiento a los Puntos de Referenci
 sortOrder: 2
 ---
 
+import TrackHistorical from "../../../chunks/how_to/track-historical.mdx";
+import TrackRelative from "../../../chunks/how_to/track-relative.mdx";
+
 La forma más sencilla de rastrear tus puntos de referencia es el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>.
 Consulta el [resumen del establecimiento de puntos de referencia](/es/docs/explanation/benchmarking/) para una explicación más detallada.
 Este es un ejemplo de un subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code> para rastrear puntos de referencia en una rama de funciones llamada de manera apropiada `feature-branch`:
 
-```
-bencher run \
---project save-walter-white \
---token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjbGllbnQiLCJleHAiOjE2NzQwNjA3NTAsImlhdCI6MTY3MTQ2ODc1MCwiaXNzIjoiYmVuY2hlci5kZXYiLCJzdWIiOiJzYXVsQGJldHRlcmNhbGxzYXVsLmNvbSIsIm9yZyI6bnVsbH0.CABcvWlPobAHs7wsdR6wX5p0R2jaCd7RmpsnMp5pwEc \
---adapter json \
---if-branch feature-branch \
---else-if-branch main \
---else-branch \
---testbed phoenix \
---err \
-"bencher mock"`
-```
+<TrackHistorical />
 
 1. El Proyecto ya debe existir. Establezca la bandera `--project` o la variable de entorno `BENCHER_PROJECT` al slug o UUID del Proyecto. (ex: `--project save-walter-white`)
 1. La ficha de API ya debe existir. Establezca la bandera `--token` o la variable de entorno `BENCHER_API_TOKEN` a la ficha de API. (ex: `--token ...`)
@@ -29,7 +21,7 @@ bencher run \
     1. Utilice la rama actual si ya existe. (ex: `--if-branch feature-branch`)
     1. Cree una copia de los datos de la rama objetivo si ya existe. (ex: `--else-if-branch main`)
     1. De lo contrario, cree una nueva rama con el nombre proporcionado a `--if-branch`, que sería `feature-branch`. (ex: `--else-branch`)
-1. Opcional: Establezca la bandera `--testbed` o la variable de entorno `BENCHER_TESTBED` al slug o UUID del Testbed. El Testbed ya debe existir. Si no se establece esto, entonces el Testbed `localhost` predeterminado será utilizado. (ex: `--testbed phoenix`)
+1. Opcional: Establezca la bandera `--testbed` o la variable de entorno `BENCHER_TESTBED` al slug o UUID del Testbed. El Testbed ya debe existir. Si no se establece esto, entonces el Testbed `localhost` predeterminado será utilizado. (ex: `--testbed localhost`)
 1. Establezca el comando para fallar si se genera una Alerta. Para que se genere una Alerta, ya debe existir un [Umbral](/es/docs/explanation/thresholds/). (ex: `--err`)
 1. Ejecute sus puntos de referencia y genere un Informe a partir de los resultados. (ex: `"bencher mock"`)
 
@@ -40,35 +32,7 @@ Esto puede ser útil cuando se trata con entornos ruidosos de CI/CD,
 donde el recurso disponible puede variar mucho entre las ejecuciones.
 Este es un ejemplo de un subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code> para realizar benchmarking relativo en una rama de features apropiadamente llamada `feature-branch`:
 
-```
-git checkout feature-branch
-
-export FEATURE_BRANCH=feature-branch-$(git rev-parse --short HEAD)
-
-git checkout main
-
-bencher run \
---if-branch "$FEATURE_BRANCH" \
---else-branch \
---iter 3 \
-"bencher mock"
-
-git checkout feature-branch
-
-bencher threshold create \
---branch "$FEATURE_BRANCH" \
---testbed localhost \
---measure latency \
---test t \
---upper-boundary 0.95
-
-bencher run \
---branch "$FEATURE_BRANCH" \
---iter 3 \
---fold min \
---err \
-"bencher mock"
-```
+<TrackRelative />
 
 1. Haga checkout de la rama de features. (ex: `feature-branch`)
 1. Crea una variable de entorno que es el nombre de la rama de features concatenado con el ID corto del commit de git. ¡Esto es importante! Garantiza que por cada ejecución se crea una nueva rama.

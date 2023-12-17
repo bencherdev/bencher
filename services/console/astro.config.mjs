@@ -8,6 +8,8 @@ import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeSlug from "rehype-slug";
 import wasmPack from "vite-plugin-wasm-pack";
 
+import expressiveCode from "astro-expressive-code";
+
 // https://astro.build/config
 export default defineConfig({
 	// https://docs.astro.build/en/reference/configuration-reference/#site
@@ -38,6 +40,24 @@ export default defineConfig({
 		"/learn/[lang]/benchmarking": "/[lang]/learn/benchmarking",
 		"/learn/[lang]/benchmarking/rust": "/[lang]/learn/benchmarking/rust",
 	},
+	// https://docs.astro.build/en/guides/internationalization/
+	i18n: {
+		defaultLocale: "en",
+		locales: ["de", "en", "es", "fr", "ja", "ko", "pt", "ru", "zh"],
+		routing: {
+			prefixDefaultLocale: false,
+		},
+		fallback: {
+			de: "en",
+			es: "en",
+			fr: "en",
+			ja: "en",
+			ko: "en",
+			pt: "en",
+			ru: "en",
+			zh: "en",
+		},
+	},
 	integrations: [
 		// https://docs.astro.build/en/guides/integrations-guide/sitemap
 		sitemap({
@@ -46,7 +66,8 @@ export default defineConfig({
 				defaultLocale: "en",
 				locales: {
 					de: "de-DE",
-					en: "en-US", // The `defaultLocale` value must present in `locales` keys
+					en: "en-US",
+					// The `defaultLocale` value must present in `locales` keys
 					es: "es-ES",
 					fr: "fr-FR",
 					ja: "ja-JP",
@@ -65,6 +86,9 @@ export default defineConfig({
 					page.includes("bencher.dev/repo")
 				),
 		}),
+		// Expressive Code must be before MDX
+		// https://github.com/expressive-code/expressive-code/blob/main/packages/astro-expressive-code/README.md
+		expressiveCode(),
 		// https://docs.astro.build/en/guides/integrations-guide/mdx
 		mdx(),
 		// https://docs.astro.build/en/guides/integrations-guide/partytown
@@ -88,10 +112,14 @@ export default defineConfig({
 				rehypeAutolinkHeadings,
 				{
 					behavior: "append",
-					properties: { style: "padding-left: 0.3em; color: #fdb07e;" },
+					properties: {
+						style: "padding-left: 0.3em; color: #fdb07e;",
+					},
 					content: fromHtmlIsomorphic(
 						'<small><i class="fas fa-link" aria-hidden="true" /></small>',
-						{ fragment: true },
+						{
+							fragment: true,
+						},
 					),
 				},
 			],

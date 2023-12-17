@@ -40,12 +40,17 @@ export async function getLangPaths(collection: Collection) {
 
 async function getPaths(collection: Collection) {
 	const pages = await getCollection(collection);
-	return pages.map((page) => {
-		const [lang, ...slug] = page.id
-			.substring(0, page.id.lastIndexOf("."))
-			?.split("/");
-		return { params: { lang, slug: slug.join("/") || undefined }, props: page };
-	});
+	return pages
+		.filter((page) => !page.data.draft)
+		.map((page) => {
+			const [lang, ...slug] = page.id
+				.substring(0, page.id.lastIndexOf("."))
+				?.split("/");
+			return {
+				params: { lang, slug: slug.join("/") || undefined },
+				props: page,
+			};
+		});
 }
 
 export async function getLangCollection(collection: Collection) {
