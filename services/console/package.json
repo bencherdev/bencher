@@ -11,8 +11,8 @@
     "start": "astro dev --port 3000",
     "test": "npm run setup && vitest",
     "build": "export $(cat .env.runtime) && astro build",
-    "node": "npm install && npm install @astrojs/node@6.0.0 && npx astro add node -y && npm run build",
-    "netlify": "npm install && npm install @astrojs/netlify@3.0.1 && npx astro add netlify -y && npm run build",
+    "node": "npm install && npm install @astrojs/node@7.0.1 && npx astro add node -y && npm run build",
+    "netlify": "npm install && npm install @astrojs/netlify@3.1.1 && npx astro add netlify -y && npm run build",
     "preview": "export BENCHER_API_URL=http://127.0.0.1:61016 && astro preview --port 3000",
     "astro": "astro",
     "check": "astro check"
