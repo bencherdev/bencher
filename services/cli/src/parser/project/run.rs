@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use bencher_json::{BranchName, DateTime, GitHash, NameId, NonEmpty, ResourceId};
+use bencher_json::{BranchName, DateTime, GitHash, NameId, ResourceId};
 use clap::{ArgGroup, Args, Parser, ValueEnum};
 
 use crate::parser::CliBackend;
@@ -236,7 +236,7 @@ pub struct CliRunCi {
     pub ci_public_links: bool,
     /// Custom ID for posting results to CI (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
-    pub ci_id: Option<NonEmpty>,
+    pub ci_id: Option<String>,
     /// Issue number for posting results to CI (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_number: Option<u64>,

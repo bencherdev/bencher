@@ -1,5 +1,4 @@
 use bencher_comment::ReportComment;
-use bencher_json::NonEmpty;
 use octocrab::{models::CommentId, Octocrab};
 
 use crate::cli_println_quietable;
@@ -117,7 +116,7 @@ pub struct GitHubActions {
     pub ci_only_thresholds: bool,
     pub ci_only_on_alert: bool,
     pub ci_public_links: bool,
-    pub ci_id: Option<NonEmpty>,
+    pub ci_id: Option<String>,
     pub ci_number: Option<u64>,
     pub token: String,
 }
@@ -220,7 +219,7 @@ impl GitHubActions {
             &owner,
             &repo,
             issue_number,
-            &report_comment.bencher_tag(self.ci_id.as_ref()),
+            &report_comment.bencher_tag(self.ci_id.as_deref()),
         )
         .await?;
 
@@ -229,7 +228,7 @@ impl GitHubActions {
         let body = report_comment.html(
             !self.ci_no_metrics,
             self.ci_only_thresholds,
-            self.ci_id.as_ref(),
+            self.ci_id.as_deref(),
         );
         // Always update the comment if it exists
         let _comment = if let Some(comment_id) = comment_id {

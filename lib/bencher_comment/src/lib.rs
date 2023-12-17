@@ -56,12 +56,7 @@ impl ReportComment {
         comment
     }
 
-    pub fn html(
-        &self,
-        with_metrics: bool,
-        require_threshold: bool,
-        id: Option<&NonEmpty>,
-    ) -> String {
+    pub fn html(&self, with_metrics: bool, require_threshold: bool, id: Option<&str>) -> String {
         let mut html = String::new();
         let html_mut = &mut html;
         let public_links = self.json_report.project.visibility.is_public();
@@ -338,12 +333,12 @@ impl ReportComment {
         ));
     }
 
-    fn html_bencher_tag(&self, html: &mut String, id: Option<&NonEmpty>) {
+    fn html_bencher_tag(&self, html: &mut String, id: Option<&str>) {
         html.push_str(&self.bencher_tag(id));
     }
 
     // The Bencher tag allows us to easily check whether a comment is a Bencher report when updating
-    pub fn bencher_tag(&self, id: Option<&NonEmpty>) -> String {
+    pub fn bencher_tag(&self, id: Option<&str>) -> String {
         let id = id.map_or_else(
             || {
                 format!(
