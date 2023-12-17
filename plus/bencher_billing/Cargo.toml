@@ -11,7 +11,7 @@ thiserror.workspace = true
 tokio = { workspace = true, features = ["rt", "macros"] }
 uuid.workspace = true
 # Crate
-async-stripe = { version = "0.25", features = ["runtime-tokio-hyper"] }
+async-stripe = { version = "0.26", features = ["runtime-tokio-hyper"] }
 
 [dev-dependencies]
 chrono.workspace = true

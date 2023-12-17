@@ -30,10 +30,10 @@ chrono = { version = "0.4", default-features = false }
 clap = { version = "4.4", features = ["derive"] }
 derive_more = "0.99"
 diesel = "2.1"
-jsonwebtoken = "9.1"
+jsonwebtoken = "9.2"
 literally = "0.1"
-once_cell = "1.18"
-ordered-float = "4.1"
+once_cell = "1.19"
+ordered-float = "4.2"
 oso = "0.27"
 pretty_assertions = "1.4"
 rand = "0.8"
@@ -46,14 +46,14 @@ slog = "2.7"
 slug = "0.1"
 tabled = "0.14"
 thiserror = "1.0"
-tokio = "1.33"
+tokio = "1.35"
 typeshare = "1.0"
-url = "2.4"
-uuid = "1.5"
+url = "2.5"
+uuid = "1.6"
 # github.com
-dropshot = { git = "https://github.com/oxidecomputer/dropshot", rev = "7bd2ce547ebf0b955b02236fe3fef0c52bf2fae4" }
-progenitor = { git = "https://github.com/epompeii/progenitor", rev = "39c04ebcbbd3851e42d89ab5ff1ff082982b9726" }
-progenitor-client = { git = "https://github.com/epompeii/progenitor", rev = "39c04ebcbbd3851e42d89ab5ff1ff082982b9726" }
+dropshot = { git = "https://github.com/oxidecomputer/dropshot", rev = "cf285b192cfd26ce0a28e737994fce4b79db95b5" }
+progenitor = { git = "https://github.com/epompeii/progenitor", rev = "8db4bac9300d67170fb39f165e45eac35b296c4a" }
+progenitor-client = { git = "https://github.com/epompeii/progenitor", rev = "8db4bac9300d67170fb39f165e45eac35b296c4a" }
 
 [workspace.lints.rust]
 # https://doc.rust-lang.org/rustc/lints/listing/index.html
