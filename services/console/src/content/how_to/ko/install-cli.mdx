@@ -6,29 +6,29 @@ sortOrder: 1
 ---
 
 import { BENCHER_VERSION } from "../../../util/ext";
+import CliDebian from "../../../chunks/how_to/cli-debian.mdx";
+import CliGitHubActions from "../../../chunks/how_to/cli-github-actions.mdx";
+import CliGitHubActionsVersion from "../../../chunks/how_to/cli-github-actions-version.mdx";
+import CliFromSource from "../../../chunks/how_to/cli-from-source.mdx";
+import CliOtherLinux from "../../../chunks/how_to/cli-other-linux.mdx";
 
 ## Debian
 
 Bencher 는 Debian과 Ubuntu와 같은 Debian 기반 배포판에 설치할 수 있는 편리한 `deb` 파일을 제공합니다.
 
-<pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">{`wget https://github.com/bencherdev/bencher/releases/download/v${BENCHER_VERSION}/bencher_${BENCHER_VERSION}_amd64.deb`}</span></span>
-<span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">{`sudo dpkg -i bencher_${BENCHER_VERSION}_amd64.deb`}</span></span></code></pre>
+<CliDebian />
 
 ## GitHub Actions
 
 [GitHub Action](https://github.com/marketplace/actions/bencher-cli)을 사용하여 Bencher CLI를 설치하세요.
 더 자세한 내용은 [GitHub Actions 사용 방법](/docs/how-to/github-actions/)을 참조하세요.
 
-```
-- uses: bencherdev/bencher@main
-```
+<CliGitHubActions />
 
 선택적으로 `version` 인수를 사용하여 사용하려는 Bencher CLI의 정확한 버전을 지정할 수 있습니다.
 그렇지 않으면 최신 CLI 버전이 기본으로 사용됩니다.
 
-<pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">- uses: bencherdev/bencher@main</span></span>
-<span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">  with:</span></span>
-<span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">    {`${BENCHER_VERSION}`}</span></span></code></pre>
+<CliGitHubActionsVersion />
 
 Bencher *Self-Hosted* 를 사용하는 경우 정확한 버전을 명시하세요.
 아직까지 이벤트 변환 변화가 있기 때문에 Bencher *Cloud* 를 사용하는 경우에는 정확한 버전을 명시하지 __마세요__.
@@ -37,14 +37,14 @@ Bencher *Self-Hosted* 를 사용하는 경우 정확한 버전을 명시하세�
 
 그 외의 모든 환경에서는 소스 코드에서 설치하는 것이 제안하는 설치 방법입니다.
 
-<pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">{`cargo install --git https://github.com/bencherdev/bencher --tag v${BENCHER_VERSION} --locked bencher_cli`}</span></span></code></pre>
+<CliFromSource />
 
 ## 다른 리눅스 배포판
 
 독립 실행형 Linux CLI 바이너리도 다운로드하여 사용할 수 있습니다
 만약 무엇을 하고 있는지 안다면.
 
-<pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">{`wget https://github.com/bencherdev/bencher/releases/download/v${BENCHER_VERSION}/bencher`}</span></span></code></pre>
+<CliOtherLinux />
 
 <br/>
 <br/>

@@ -6,30 +6,30 @@ sortOrder: 1
 ---
 
 import { BENCHER_VERSION } from "../../../util/ext";
+import CliDebian from "../../../chunks/how_to/cli-debian.mdx";
+import CliGitHubActions from "../../../chunks/how_to/cli-github-actions.mdx";
+import CliGitHubActionsVersion from "../../../chunks/how_to/cli-github-actions-version.mdx";
+import CliFromSource from "../../../chunks/how_to/cli-from-source.mdx";
+import CliOtherLinux from "../../../chunks/how_to/cli-other-linux.mdx";
 
 ## Debian
 
 Bencher bietet eine bequeme `deb`-Datei für die Installation auf Debian
 und Debian-basierten Distributionen wie Ubuntu.
 
-<pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">{`wget https://github.com/bencherdev/bencher/releases/download/v${BENCHER_VERSION}/bencher_${BENCHER_VERSION}_amd64.deb`}</span></span>
-<span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">{`sudo dpkg -i bencher_${BENCHER_VERSION}_amd64.deb`}</span></span></code></pre>
+<CliDebian />
 
 ## GitHub Actions
 
 Installieren Sie die Bencher CLI mit der [GitHub Action](https://github.com/marketplace/actions/bencher-cli).
 Siehe [So verwenden Sie GitHub Actions](/de/docs/how-to/github-actions/) für weitere Details.
 
-```
-- uses: bencherdev/bencher@main
-```
+<CliGitHubActions />
 
 Es gibt ein optionales `version` Argument, um eine genaue Version der Bencher CLI anzugeben.
 Andernfalls wird standardmäßig die neueste CLI-Version verwendet.
 
-<pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">- uses: bencherdev/bencher@main</span></span>
-<span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">  with:</span></span>
-<span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">    {`${BENCHER_VERSION}`}</span></span></code></pre>
+<CliGitHubActionsVersion />
 
 Geben Sie eine genaue Version an, wenn Sie Bencher *Self-Hosted* verwenden.
 Geben Sie __keine__ genaue Version an, wenn Sie Bencher *Cloud* verwenden, da es immer noch gelegentlich Versionsbrüche gibt.
@@ -38,14 +38,14 @@ Geben Sie __keine__ genaue Version an, wenn Sie Bencher *Cloud* verwenden, da es
 
 Für alle anderen Umgebungen ist die empfohlene Installationsmethode von der Quelle.
 
-<pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">{`cargo install --git https://github.com/bencherdev/bencher --tag v${BENCHER_VERSION} --locked bencher_cli`}</span></span></code></pre>
+<CliFromSource />
 
 ## Andere Linux-Distributionen
 
 Eine eigenständige Linux CLI-Binärdatei steht ebenfalls zum Download zur Verfügung,
 wenn Sie wissen, was Sie tun.
 
-<pre class="astro-code github-dark" style="background-color: rgb(36, 41, 46); overflow-x: auto;" tabindex="0" data-darkreader-inline-bgcolor=""><code><span class="line"><span style="color: rgb(225, 228, 232);" data-darkreader-inline-color="">{`wget https://github.com/bencherdev/bencher/releases/download/v${BENCHER_VERSION}/bencher`}</span></span></code></pre>
+<CliOtherLinux />
 
 <br/>
 <br/>
