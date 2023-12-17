@@ -38,6 +38,24 @@ export default defineConfig({
 		"/learn/[lang]/benchmarking": "/[lang]/learn/benchmarking",
 		"/learn/[lang]/benchmarking/rust": "/[lang]/learn/benchmarking/rust",
 	},
+	// https://docs.astro.build/en/guides/internationalization/
+	i18n: {
+		defaultLocale: "en",
+		locales: ["de", "en", "es", "fr", "ja", "ko", "pt", "ru", "zh"],
+		routing: {
+			prefixDefaultLocale: false,
+		},
+		fallback: {
+			de: "en",
+			es: "en",
+			fr: "en",
+			ja: "en",
+			ko: "en",
+			pt: "en",
+			ru: "en",
+			zh: "en",
+		},
+	},
 	integrations: [
 		// https://docs.astro.build/en/guides/integrations-guide/sitemap
 		sitemap({

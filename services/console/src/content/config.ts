@@ -22,6 +22,7 @@ const legal = defineCollection({
 		description: z.string(),
 		heading: z.string(),
 		sortOrder: z.number(),
+		draft: z.boolean().optional(),
 	}),
 });
 
@@ -33,6 +34,7 @@ const tutorial = defineCollection({
 		description: z.string(),
 		heading: z.string(),
 		sortOrder: z.number(),
+		draft: z.boolean().optional(),
 	}),
 });
 const how_to = defineCollection({
@@ -42,6 +44,7 @@ const how_to = defineCollection({
 		description: z.string(),
 		heading: z.string(),
 		sortOrder: z.number(),
+		draft: z.boolean().optional(),
 	}),
 });
 const explanation = defineCollection({
@@ -51,6 +54,7 @@ const explanation = defineCollection({
 		description: z.string(),
 		heading: z.string(),
 		sortOrder: z.number(),
+		draft: z.boolean().optional(),
 		canonicalize: z.boolean().optional(),
 	}),
 });
@@ -61,6 +65,7 @@ const reference = defineCollection({
 		description: z.string(),
 		heading: z.string(),
 		sortOrder: z.number(),
+		draft: z.boolean().optional(),
 		canonicalize: z.boolean().optional(),
 	}),
 });
@@ -73,6 +78,7 @@ const rust = defineCollection({
 		description: z.string(),
 		heading: z.string(),
 		sortOrder: z.number(),
+		draft: z.boolean().optional(),
 	}),
 });
 
