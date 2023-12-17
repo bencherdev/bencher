@@ -19,7 +19,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 4. Das Projekt muss bereits existieren. Geben Sie die `--project` Option or die `BENCHER_PROJECT` Umgebungsvariable mit dem Slug oder der UUID des Projekts an (z.B.: `BENCHER_PROJECT: save-walter-white`).
 6. Optional: Setzen Sie die `--testbed` Option oder die `BENCHER_TESTBED` Umgebungsvariable auf den Slug oder die UUID des Testbetts. (z.B.: `BENCHER_TESTBED: ubuntu-latest`). Das Testbett **muss** bereits existieren. Wenn dies nicht gesetzt ist, wird das Testbett `localhost` verwendet.
 7. Optional: Setzen Sie die `--adapter` Option oder die `BENCHER_ADAPTER` Umgebungsvariable auf den gewünschten Adapternamen. (z.B.: `BENCHER_ADAPTER: json`). Wenn dies nicht gesetzt ist, wird der `magic` Adapter verwendet. Siehe [Benchmark Harness Adapter](/de/docs/explanation/adapters/) für einen vollständigen Überblick.
-8. Prüfen Sie Ihren Quellcode aus. (z.B.: `uses: actions/checkout@v3`)
+8. Prüfen Sie Ihren Quellcode aus. (z.B.: `uses: actions/checkout@v4`)
 9. Installieren Sie die Bencher CLI mit der [GitHub Action](https://github.com/marketplace/actions/bencher-cli). (z.B.: `uses: bencherdev/bencher@main`)
 10. [Verfolgen Sie Ihre Benchmarks](/de/docs/how-to/track-benchmarks/) mit dem <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl:
     1.  Optional: Setzen Sie die `--branch` Option oder die `BENCHER_BRANCH` Umgebungsvariable auf den Slug oder die UUID des Branches. (z.B.: `--branch main`). Der Branch **muss** bereits existieren. Wenn dies nicht gesetzt ist, wird der `main` Branch verwendet.

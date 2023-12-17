@@ -19,7 +19,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 4. Le projet doit déjà exister. Définissez l'option `--project` ou la variable d'environnement `BENCHER_PROJECT` pour l'identifiant court ou l'UUID du projet (ex: `BENCHER_PROJECT: save-walter-white`).
 6. Facultatif: Utilisez l'option `--testbed` ou la variable d'environnement `BENCHER_TESTBED` pour l'identifiant court ou l'UUID du banc de test. (ex: `BENCHER_TESTBED: ubuntu-latest`) Le banc de test **doit** déjà exister. Si cela n'est pas défini, alors le banc de test `localhost` sera utilisé.
 7. Facultatif: Définissez l'option `--adapter` ou la variable d'environnement `BENCHER_ADAPTER` pour le nom de l'adaptateur désiré. (ex: `BENCHER_ADAPTER: json`) Si cela n'est pas défini, alors l'adaptateur `magic` sera utilisé. Voir [adaptateurs de banc de test](/fr/docs/explanation/adapters/) pour un aperçu complet.
-8. Enregistrez votre code source. (ex: `uses: actions/checkout@v3`)
+8. Enregistrez votre code source. (ex: `uses: actions/checkout@v4`)
 9. Installez le CLI Bencher à l'aide du [GitHub Action](https://github.com/marketplace/actions/bencher-cli). (ex: `uses: bencherdev/bencher@main`)
 10. [Suivez vos benchmarks](/fr/docs/how-to/track-benchmarks/) avec la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>:
     1. Facultatif: Définissez l'option `--branch` ou la variable d'environnement `BENCHER_BRANCH` pour l'identifiant court ou l'UUID de la branche. (ex: `--branch main`) La branche **doit** déjà exister. Si cela n'est pas défini, alors la branche `main` sera utilisée.

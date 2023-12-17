@@ -19,7 +19,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 4. プロジェクトはすでに存在している必要があります。`--project`フラグを設定するか、`BENCHER_PROJECT`環境変数をプロジェクトのスラッグまたはUUIDに設定します（例：`BENCHER_PROJECT: save-walter-white`）。
 6. オプション：`--testbed`フラグを設定するか、`BENCHER_TESTBED`環境変数をTestbedのスラッグまたはUUIDに設定します（例：`BENCHER_TESTBED: ubuntu-latest`）。Testbedは**必ず**すでに存在している必要があります。これが設定されていない場合、`localhost`のTestbedが使用されます。
 7. オプション：`--adapter`フラグを設定するか、`BENCHER_ADAPTER`環境変数を希望のアダプター名に設定します（例：`BENCHER_ADAPTER: json`）。これが設定されていない場合、`magic`のアダプターが使用されます。詳細は、[ベンチマークハーネスアダプター](/ja/docs/explanation/adapters/)をご覧ください。
-8. ソースコードをチェックアウトします（例：`uses: actions/checkout@v3`）。
+8. ソースコードをチェックアウトします（例：`uses: actions/checkout@v4`）。
 9. [GitHub Action](https://github.com/marketplace/actions/bencher-cli)を使用してBencher CLIをインストールします（例：`uses: bencherdev/bencher@main`）。
 10. <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIのサブコマンドを使用して[ベンチマークを追跡します](/ja/docs/how-to/track-benchmarks/)：
     1.  オプション：`--branch`フラグを設定するか、`BENCHER_BRANCH`環境変数をBranchのスラッグまたはUUIDに設定します（例：`--branch main`）。Branchは**必ず**すでに存在している必要があります。これが設定されていない場合、`main`のBranchが使用されます。

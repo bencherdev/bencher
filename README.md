@@ -243,7 +243,7 @@ jobs:
       - BENCHER_PROJECT: my-project-slug
       - BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: bencherdev/bencher@main
       - run: bencher run "bencher mock"
 ```

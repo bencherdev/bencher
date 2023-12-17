@@ -19,7 +19,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 4. El proyecto debe existir previamente. Establece la bandera `--project` o la variable de entorno `BENCHER_PROJECT` a la representación única o UUID del proyecto (ej: `BENCHER_PROJECT: save-walter-white`).
 6. Opcional: Configura la bandera `--testbed` o la variable de entorno `BENCHER_TESTBED` a la representación única o UUID de Testbed. (ej: `BENCHER_TESTBED: ubuntu-latest`) El Testbed **debe** existir previamente. Si no se establece esto, entonces se utilizará el Testbed `localhost`.
 7. Opcional: Configura la bandera `--adapter` o la variable de entorno `BENCHER_ADAPTER` al nombre del adaptador deseado. (ej: `BENCHER_ADAPTER: json`) Si no se establece esto, entonces se utilizará el adaptador `magic`. Consulte [adaptadores de arnés de benchmark](/es/docs/explanation/adapters/) para obtener una visión completa.
-8. Haz una copia de tu código fuente. (ej: `uses: actions/checkout@v3`)
+8. Haz una copia de tu código fuente. (ej: `uses: actions/checkout@v4`)
 9. Instala la CLI de Bencher utilizando la [Acción de GitHub](https://github.com/marketplace/actions/bencher-cli). (ej: `uses: bencherdev/bencher@main`)
 10. [Rastrea tus benchmarks](/es/docs/how-to/track-benchmarks/) con el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>:
     1.  Opcional: Configura la bandera `--branch` o la variable de entorno `BENCHER_BRANCH` a la representación única o UUID de la rama. (ej: `--branch main`) La rama **debe** existir previamente. Si no se establece esto, entonces se utilizará la rama `main`.

@@ -19,7 +19,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 4. 项目必须已经存在。设置`--project`标志或`BENCHER_PROJECT`环境变量为项目的slug或UUID (例如：`BENCHER_PROJECT: save-walter-white`)。
 6. 可选：设置 `--testbed` 参数或 `BENCHER_TESTBED`环境变量为Testbed的slug或UUID. (例如：`BENCHER_TESTBED: ubuntu-latest`)Testbed 必须事先存在。如果没有设置,那么`localhost` Testbed 会被默认使用。
 7. 可选：设置 `--adapter` 参数或`BENCHER_ADAPTER` 环境变量为想要的adapter名字。 (例如：`BENCHER_ADAPTER: json`) 如果没有设置，则会使用`magic`适配器。查看 [基准测试适配器](/zh/docs/explanation/adapters/)以获取完全概览。
-8. 检出你的源代码 （例如： `uses: actions/checkout@v3`）
+8. 检出你的源代码 （例如： `uses: actions/checkout@v4`）
 9. 使用 [GitHub Action](https://github.com/marketplace/actions/bencher-cli) 安装Bencher CLI。（例如：`uses: bencherdev/bencher@main`）
 10. 通过 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI子命令 [跟踪你的基准测试](/zh/docs/how-to/track-benchmarks/)：
     1.  可选：设置 `--branch` 标志或`BENCHER_BRANCH`环境变量为Branch的slug或UUID。（例如：`--branch main`）Branch必须事先存在。如果没有设置，那么`main` Branch会被默认使用。

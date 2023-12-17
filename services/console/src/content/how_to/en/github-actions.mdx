@@ -19,7 +19,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 4. The Project must already exist. Set the `--project` flag or the `BENCHER_PROJECT` environment variable to the Project slug or UUID (ex: `BENCHER_PROJECT: save-walter-white`).
 6. Optional: Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the Testbed slug or UUID.  (ex: `BENCHER_TESTBED: ubuntu-latest`) The Testbed **must** already exist. If this is not set, then the `localhost` Testbed will be used.
 7. Optional: Set the `--adapter` flag or the `BENCHER_ADAPTER` environment variable to the desired adapter name.  (ex: `BENCHER_ADAPTER: json`) If this is not set, then the `magic` Adapter will be used. See [benchmark harness adapters](/docs/explanation/adapters/) for a full overview.
-8. Checkout your source code. (ex: `uses: actions/checkout@v3`)
+8. Checkout your source code. (ex: `uses: actions/checkout@v4`)
 9.  Install the Bencher CLI using the [GitHub Action](https://github.com/marketplace/actions/bencher-cli). (ex: `uses: bencherdev/bencher@main`)
 10. [Track your benchmarks](/docs/how-to/track-benchmarks/) with the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand:
      1. Optional: Set the `--branch` flag or the `BENCHER_BRANCH` environment variable to the Branch slug or UUID. (ex: `--branch "$GITHUB_REF_NAME"`) This example uses the [GitHub Action default environment variable](https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables) `GITHUB_REF_NAME` to select the branch name. The Branch **must** already exist. If this is not set, then the `main` Branch will be used.

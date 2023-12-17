@@ -12,7 +12,7 @@ jobs:
       BENCHER_TESTBED: ubuntu-latest
       BENCHER_ADAPTER: json
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: bencherdev/bencher@main
       - name: Track Benchmarks with Bencher
         run: |

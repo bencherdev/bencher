@@ -19,7 +19,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 4. Проект уже должен существовать. Установите флаг `--project` или переменную окружения `BENCHER_PROJECT` для slug или UUID проекта (например: `BENCHER_PROJECT: save-walter-white`).
 6. Необязательно: Установите флаг `--testbed` или переменную окружения `BENCHER_TESTBED` для slug или UUID тестового окружения.  (например: `BENCHER_TESTBED: ubuntu-latest`) Тестовое окружение **должно** уже существовать. Если это не задано, то будет использовано тестовое окружение `localhost`.
 7. Необязательно: Установите флаг `--adapter` или переменную окружения `BENCHER_ADAPTER` для желаемого имени адаптера.  (например: `BENCHER_ADAPTER: json`) Если это не задано, то будет использован адаптер `magic`. Смотрите обзор адаптеров для бенчмаркования [здесь](/ru/docs/explanation/adapters/).
-8. Выполните checkout вашего исходного кода. (например: `uses: actions/checkout@v3`)
+8. Выполните checkout вашего исходного кода. (например: `uses: actions/checkout@v4`)
 9.  Установите CLI Bencher с помощью [GitHub Action](https://github.com/marketplace/actions/bencher-cli). (например: `uses: bencherdev/bencher@main`)
 10. [Отслеживайте ваш бенчмарк](/ru/docs/how-to/track-benchmarks/) с помощью подкоманды CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>:
     1.  Необязательно: Установите флаг `--branch` или переменную окружения `BENCHER_BRANCH` для slug или UUID ветки. (например: `--branch main`) Ветка **должна** уже существовать. Если это не задано, то будет использована ветка `main`.
