@@ -27,6 +27,7 @@
     "@solid-primitives/resize-observer": "^2.0.22",
     "@solid-primitives/scheduled": "^1.4.1",
     "astro": "^4.0.6",
+    "astro-expressive-code": "^0.30.1",
     "astro-seo": "^0.8.0",
     "axios": "^1.6.2",
     "bulma": "^0.9.4",
