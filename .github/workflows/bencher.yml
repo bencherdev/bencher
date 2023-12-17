@@ -465,7 +465,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Download `bencher_valid` Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
           path: ./lib/bencher_valid/pkg
@@ -620,7 +620,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Download CLI Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ env.CLI_BIN_NAME }}
       - name: Build .deb package
@@ -694,7 +694,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Download `bencher_valid` Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
           path: ./lib/bencher_valid/pkg
@@ -723,7 +723,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Download Local Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
       - name: Load & Tag Local Image
@@ -804,7 +804,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Download Litestream Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
       - name: Load & Tag Litestream Image
@@ -838,7 +838,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Download `bencher_valid` Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
           path: ./lib/bencher_valid/pkg
@@ -882,7 +882,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Download `bencher_valid` Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
           path: ./lib/bencher_valid/pkg
@@ -975,25 +975,25 @@ jobs:
       - uses: actions/checkout@v4
       # Download
       - name: Download Local API Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
       - name: Download Litestream API Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
       - name: Download CLI bin artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ env.CLI_BIN_NAME }}
       - name: export DEB_FILE
         run: echo "DEB_FILE=${CLI_BIN_NAME}_$(./scripts/version.sh)_${CLI_BIN_ARCH}.deb" >> $GITHUB_ENV
       - name: Download CLI .deb Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ env.DEB_FILE }}
       - name: Download UI Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ env.UI_DOCKER_IMAGE }}.tar.gz
       # Load
