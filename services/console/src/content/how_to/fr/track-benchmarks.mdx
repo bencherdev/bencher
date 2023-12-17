@@ -5,22 +5,14 @@ heading: "Comment utiliser Bencher pour suivre les Benchmarks"
 sortOrder: 2
 ---
 
+import TrackHistorical from "../../../chunks/how_to/track-historical.mdx";
+import TrackRelative from "../../../chunks/how_to/track-relative.mdx";
+
 La façon la plus simple de suivre vos benchmarks est la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>.
 Consultez l'[aperçu du benchmarking](/fr/docs/explanation/benchmarking/) pour une explication plus approfondie.
 Voici un exemple d'une sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code> pour suivre les benchmarks sur une branche de fonctionnalité judicieusement nommée `branche-fonctionnalité` :
 
-```
-bencher run \
---project sauver-walter-white \
---token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjbGllbnQiLCJleHAiOjE2NzQwNjA3NTAsImlhdCI6MTY3MTQ2ODc1MCwiaXNzIjoiYmVuY2hlci5kZXYiLCJzdWIiOiJzYXVsQGJldHRlcmNhbGxzYXVsLmNvbSIsIm9yZyI6bnVsbH0.CABcvWlPobAHs7wsdR6wX5p0R2jaCd7RmpsnMp5pwEc \
---adapter json \
---if-branch branche-fonctionnalité \
---else-if-branch main \
---else-branch \
---testbed phoenix \
---err \
-"bencher mock"`
-```
+<TrackHistorical />
 
 1. Le projet doit déjà exister. Définissez le drapeau `--project` ou la variable d'environnement `BENCHER_PROJECT` sur le slug du projet ou l'UUID. (ex: `--project sauver-walter-white`)
 1. Le token API doit déjà exister. Définissez le drapeau `--token` ou la variable d'environnement `BENCHER_API_TOKEN` sur le token API. (ex: `--token ...`)
@@ -29,7 +21,7 @@ bencher run \
     1. Utilisez la branche actuelle si elle existe déjà. (ex: `--if-branch branche-fonctionnalité`)
     1. Créez un clone des données de la branche cible si elle existe déjà. (ex: `--else-if-branch main`)
     1. Sinon, créez une nouvelle branche avec le nom fourni à `--if-branch`, qui serait `branche-fonctionnalité`. (ex: `--else-branch`)
-1. Optionnel : Définissez le drapeau `--testbed` ou la variable d'environnement `BENCHER_TESTBED` sur le slug du Testbed ou l'UUID. Le Testbed doit déjà exister. Si cela n'est pas défini, alors le Testbed par défaut `localhost` sera utilisé. (ex: `--testbed phoenix`)
+1. Optionnel : Définissez le drapeau `--testbed` ou la variable d'environnement `BENCHER_TESTBED` sur le slug du Testbed ou l'UUID. Le Testbed doit déjà exister. Si cela n'est pas défini, alors le Testbed par défaut `localhost` sera utilisé. (ex: `--testbed localhost`)
 1. Définissez la commande pour échouer si une alerte est générée. Pour qu'une alerte soit générée, un [Seuil](/fr/docs/explanation/thresholds/) doit déjà exister. (ex: `--err`)
 1. Exécutez vos benchmarks et générez un Rapport à partir des résultats. (ex: `"bencher mock"`)
 
@@ -40,35 +32,7 @@ Cela peut être utile lorsqu'on traite des environnements CI/CD bruyants,
 où la ressource disponible peut être très variable entre les exécutions.
 Voici un exemple d'une sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code> pour effectuer un benchmarking relatif sur une branche de fonctionnalité judicieusement nommée `branche-fonctionnalité` :
 
-```
-git checkout branche-fonctionnalité
-
-export BRANCHE_FONCTIONNALITÉ=branche-fonctionnalité-$(git rev-parse --short HEAD)
-
-git checkout main
-
-bencher run \
---if-branch "$BRANCHE_FONCTIONNALITÉ" \
---else-branch \
---iter 3 \
-"bencher mock"
-
-git checkout branche-fonctionnalité
-
-bencher threshold create \
---branch "$BRANCHE_FONCTIONNALITÉ" \
---testbed localhost \
---measure latency \
---test t \
---upper-boundary 0.95
-
-bencher run \
---if-branch "$BRANCHE_FONCTIONNALITÉ" \
---iter 3 \
---fold min \
---err \
-"bencher mock"
-```
+<TrackRelative />
 
 1. Passez à la branche de fonctionnalité. (ex: `branche-fonctionnalité`)
 1. Créez une variable d'environnement qui est le nom de la branche de fonctionnalité concaténé avec l'ID de commit git court. C'est important ! Cela garantit qu'une nouvelle branche est créée à chaque exécution.

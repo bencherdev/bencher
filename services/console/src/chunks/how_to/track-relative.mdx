@@ -1,0 +1,34 @@
+```
+git checkout feature-branch
+
+export FEATURE_BRANCH=feature-branch-$(git rev-parse --short HEAD)
+
+git checkout main
+
+bencher run \
+--project save-walter-white \
+--if-branch "$FEATURE_BRANCH" \
+--else-branch \
+--testbed localhost \
+--iter 3 \
+"bencher mock"
+
+git checkout feature-branch
+
+bencher threshold create \
+--project save-walter-white \
+--branch "$FEATURE_BRANCH" \
+--testbed localhost \
+--measure latency \
+--test t \
+--upper-boundary 0.95
+
+bencher run \
+--project save-walter-white \
+--branch "$FEATURE_BRANCH" \
+--testbed localhost \
+--iter 3 \
+--fold min \
+--err \
+"bencher mock"
+```

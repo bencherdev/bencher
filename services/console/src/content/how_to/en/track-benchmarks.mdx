@@ -5,22 +5,14 @@ heading: "How to use Bencher to Track Benchmarks"
 sortOrder: 2
 ---
 
+import TrackHistorical from "../../../chunks/how_to/track-historical.mdx";
+import TrackRelative from "../../../chunks/how_to/track-relative.mdx";
+
 The easiest way to track your benchmarks is the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand.
 See the [benchmarking overview](/docs/explanation/benchmarking/) for a more in-depth explanation.
 This is an example of a <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand to track benchmarks on a feature branch aptly named `feature-branch`:
 
-```
-bencher run \
---project save-walter-white \
---token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjbGllbnQiLCJleHAiOjE2NzQwNjA3NTAsImlhdCI6MTY3MTQ2ODc1MCwiaXNzIjoiYmVuY2hlci5kZXYiLCJzdWIiOiJzYXVsQGJldHRlcmNhbGxzYXVsLmNvbSIsIm9yZyI6bnVsbH0.CABcvWlPobAHs7wsdR6wX5p0R2jaCd7RmpsnMp5pwEc \
---adapter json \
---if-branch feature-branch \
---else-if-branch main \
---else-branch \
---testbed phoenix \
---err \
-"bencher mock"`
-```
+<TrackHistorical />
 
 1. The Project must already exist. Set the `--project` flag or the `BENCHER_PROJECT` environment variable to the Project slug or UUID. (ex: `--project save-walter-white`)
 1. The API token must already exist. Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable to the API token. (ex: `--token ...`)
@@ -29,7 +21,7 @@ bencher run \
     1. Use the current branch if it already exists. (ex: `--if-branch feature-branch`)
     1. Create a clone of target branch data if it already exists. (ex: `--else-if-branch main`)
     1. Otherwise, create a new branch with the name provided to `--if-branch`, which would be `feature-branch`. (ex: `--else-branch`)
-1. Optional: Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the Testbed slug or UUID. The Testbed must already exist. If this is not set, then the default `localhost` Testbed will be used. (ex: `--testbed phoenix`)
+1. Optional: Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the Testbed slug or UUID. The Testbed must already exist. If this is not set, then the default `localhost` Testbed will be used. (ex: `--testbed localhost`)
 1. Set the command to fail if an Alert is generated. In order for an Alert to be generated, a [Threshold](/docs/explanation/thresholds/) must already exist. (ex: `--err`)
 1. Run your benchmarks and generate a Report from the results. (ex: `"bencher mock"`)
 
@@ -40,35 +32,7 @@ This can be useful when dealing with noisy CI/CD environments,
 where the resource available can highly variable between runs.
 This is an example of a <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand to perform relative benchmarking on a feature branch aptly named `feature-branch`:
 
-```
-git checkout feature-branch
-
-export FEATURE_BRANCH=feature-branch-$(git rev-parse --short HEAD)
-
-git checkout main
-
-bencher run \
---if-branch "$FEATURE_BRANCH" \
---else-branch \
---iter 3 \
-"bencher mock"
-
-git checkout feature-branch
-
-bencher threshold create \
---branch "$FEATURE_BRANCH" \
---testbed localhost \
---measure latency \
---test t \
---upper-boundary 0.95
-
-bencher run \
---branch "$FEATURE_BRANCH" \
---iter 3 \
---fold min \
---err \
-"bencher mock"
-```
+<TrackRelative />
 
 1. Checkout the feature branch. (ex: `feature-branch`)
 1. Create an environment variable that is the name of the feature branch concatenated with the short git commit ID. This is important! It guarantees that for each run a new branch is created.
