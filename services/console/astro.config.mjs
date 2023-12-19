@@ -47,16 +47,6 @@ export default defineConfig({
 		routing: {
 			prefixDefaultLocale: false,
 		},
-		fallback: {
-			de: "en",
-			es: "en",
-			fr: "en",
-			ja: "en",
-			ko: "en",
-			pt: "en",
-			ru: "en",
-			zh: "en",
-		},
 	},
 	integrations: [
 		// https://docs.astro.build/en/guides/integrations-guide/sitemap
