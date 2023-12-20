@@ -1,10 +1,13 @@
-app = "bencher-api-dev"
+app = "bencher-api-test"
 primary_region = "iad"
 kill_signal = "SIGINT"
 kill_timeout = "6s"
 
 [build]
-image = "registry.fly.io/bencher-api-dev"
+image = "registry.fly.io/bencher-api"
+
+[env]
+LITESTREAM_DB_PATH = "/data/bencher.db"
 
 [[services]]
 protocol = "tcp"
@@ -18,6 +21,10 @@ force_https = true
 [[services.ports]]
 port = 443
 handlers = ["tls", "http"]
+[services.concurrency]
+type = "connections"
+hard_limit = 25
+soft_limit = 20
 
 [[vm]]
 cpu_kind = "shared"
