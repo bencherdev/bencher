@@ -245,8 +245,8 @@ pub(crate) mod test_go_bench {
     }
 
     #[test]
-    fn test_adapter_go_bench_aux() {
-        let results = convert_go_bench("aux");
+    fn test_adapter_go_bench_three() {
+        let results = convert_go_bench("three");
         assert_eq!(results.inner.len(), 3);
 
         let metrics = results.get("BenchmarkFib10-8").unwrap();
