@@ -33,10 +33,12 @@ env:
   UI_BUILD_DIST: bencher-ui-dist
   # Dev Container
   DEV_CONTAINER_DOCKER_IMAGE: bencher-dev-container
+  # Cache
+  CACHE_NAME: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/')) && github.ref_name) || (github.ref == 'refs/heads/express' && 'main') || (github.event_name == 'pull_request' && github.event.number) }}
 
 jobs:
   first_time_interaction:
-    if: (!(github.event_name == 'push' && github.ref == 'refs/heads/express'))
+    if: (!github.ref == 'refs/heads/express')
     name: Bencher First Time Interaction
     runs-on: ubuntu-latest
     steps:
@@ -57,7 +59,7 @@ jobs:
   bencher_github_action:
     name: Bencher CLI GitHub Action
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
     # This will fail during releases builds
     # because the version number requested is for the current, in progress release
     continue-on-error: true
@@ -76,8 +78,8 @@ jobs:
   cargo_fmt:
     name: Cargo Format
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - name: Add fmt
@@ -88,8 +90,8 @@ jobs:
   cargo_clippy:
     name: Cargo Clippy
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
@@ -100,7 +102,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-clippy-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ env.CACHE_NAME }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -111,9 +113,11 @@ jobs:
 
   # Cargo Test
   cargo_test:
-    if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     name: Cargo Test
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     env:
       TEST_BILLING_KEY: ${{ secrets.TEST_BILLING_KEY }}
     steps:
@@ -126,7 +130,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ env.CACHE_NAME }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -144,15 +148,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-test-pr-${{ hashFiles('**/Cargo.lock') }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -167,8 +162,8 @@ jobs:
   open_api_spec:
     name: OpenAPI Spec
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
@@ -179,7 +174,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-swagger-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-swagger-${{ env.CACHE_NAME }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -192,8 +187,8 @@ jobs:
   api_smoke_test:
     name: API Smoke Test
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
@@ -204,7 +199,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-api-smoke-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-release-${{ env.CACHE_NAME }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -218,7 +213,7 @@ jobs:
   api_smoke_test_compat:
     name: API Smoke Test Compat
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
     # This will fail whenever there is a breaking change in the API
     # Pre-1.0 this is okay but good to be aware of
     continue-on-error: true
@@ -232,7 +227,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-api-smoke-compat-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ env.CACHE_NAME }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -249,8 +244,8 @@ jobs:
   cargo_check_api_minus:
     name: Cargo Check API (Minus)
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
@@ -261,7 +256,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-api-minus-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-minus-${{ env.CACHE_NAME }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -272,8 +267,8 @@ jobs:
   cargo_check_cli_minus:
     name: Cargo Check CLI (Minus)
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
@@ -284,7 +279,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-cli-minus-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-minus-${{ env.CACHE_NAME }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -294,9 +289,10 @@ jobs:
 
   # Cargo Benchmark
   cargo_bench:
-    if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     name: Cargo Bench
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
     # This will fail whenever Bencher Cloud is down
     # or there are any breaking changes to the report format
     continue-on-error: true
@@ -315,7 +311,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-bench-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-release-${{ env.CACHE_NAME }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -332,9 +328,10 @@ jobs:
 
   # Cargo Audit
   cargo_audit:
-    if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     name: Cargo Audit
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -346,7 +343,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-audit-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ env.CACHE_NAME }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -358,8 +355,8 @@ jobs:
   cargo_udeps:
     name: Cargo Unused Deps
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
@@ -370,7 +367,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-udeps-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-nightly-${{ env.CACHE_NAME }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -389,8 +386,8 @@ jobs:
   npx_biome_format:
     name: Biome Format
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - name: Biome format Action
@@ -407,7 +404,7 @@ jobs:
   npx_biome_lint:
     name: Biome Lint
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
     # TODO fix all lints
     continue-on-error: true
     steps:
@@ -439,7 +436,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-valid-build-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-wasm-${{ env.CACHE_NAME }}
       - uses: jetli/wasm-pack-action@v0.4.0
       - name: WASM pack `bencher_valid`
         working-directory: ./lib/bencher_valid
@@ -458,8 +455,8 @@ jobs:
   test_bencher_valid_wasm:
     name: Test `bencher_valid` WASM
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     needs: build_bencher_valid_wasm
     steps:
       - uses: actions/checkout@v4
@@ -471,7 +468,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-valid-test-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-wasm-${{ env.CACHE_NAME }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -483,8 +480,8 @@ jobs:
   npx_vitest:
     name: vitest
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     needs: build_bencher_valid_wasm
     steps:
       - uses: actions/checkout@v4
@@ -505,8 +502,8 @@ jobs:
   build_local_api_docker:
     name: Build Local API
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     services:
       registry:
         image: registry:2
@@ -532,8 +529,8 @@ jobs:
           tags: localhost:5000/${{ env.API_BUILDER_DOCKER_IMAGE }}
           build-args: |
             MOLD_VERSION=${{ env.MOLD_VERSION }}
-          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_BUILDER_DOCKER_IMAGE }}:cache-${{ github.ref_name }}
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_BUILDER_DOCKER_IMAGE }}:cache-${{ github.ref_name }},mode=max
+          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_BUILDER_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }}
+          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_BUILDER_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }},mode=max
           push: true
       - name: Tag Cached Builder
         run: docker image ls -a
@@ -543,8 +540,8 @@ jobs:
           context: ./services/api
           file: ./services/api/local.Dockerfile
           tags: ${{ env.API_LOCAL_DOCKER_IMAGE }}
-          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_LOCAL_DOCKER_IMAGE }}:cache-${{ github.ref_name }}
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_LOCAL_DOCKER_IMAGE }}:cache-${{ github.ref_name }},mode=max
+          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_LOCAL_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }}
+          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_LOCAL_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }},mode=max
           build-contexts: |
             ${{ env.API_BUILDER_DOCKER_IMAGE }}=docker-image://localhost:5000/${{ env.API_BUILDER_DOCKER_IMAGE }}:latest
           load: true
@@ -587,8 +584,8 @@ jobs:
           tags: localhost:5000/${{ env.API_BUILDER_DOCKER_IMAGE }}
           build-args: |
             MOLD_VERSION=${{ env.MOLD_VERSION }}
-          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_BUILDER_DOCKER_IMAGE }}:cache-${{ github.ref_name }}
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_BUILDER_DOCKER_IMAGE }}:cache-${{ github.ref_name }},mode=max
+          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_BUILDER_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }}
+          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_BUILDER_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }},mode=max
           push: true
       - name: Build Litestream API
         uses: docker/build-push-action@v5
@@ -596,8 +593,8 @@ jobs:
           context: ./services/api
           file: ./services/api/litestream.Dockerfile
           tags: ${{ env.API_LITESTREAM_DOCKER_IMAGE }}
-          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_LITESTREAM_DOCKER_IMAGE }}:cache-${{ github.ref_name }}
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_LITESTREAM_DOCKER_IMAGE }}:cache-${{ github.ref_name }},mode=max
+          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_LITESTREAM_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }}
+          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_LITESTREAM_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }},mode=max
           build-contexts: |
             ${{ env.API_BUILDER_DOCKER_IMAGE }}=docker-image://localhost:5000/${{ env.API_BUILDER_DOCKER_IMAGE }}:latest
           load: true
@@ -616,8 +613,8 @@ jobs:
   build_cli_bin:
     name: Build CLI
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
@@ -628,7 +625,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-cli-zig-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-zig-${{ env.CACHE_NAME }}
       - uses: goto-bus-stop/setup-zig@v2
       - name: Install zigbuild
         run: cargo install --version 0.16.11 --locked --force cargo-zigbuild
@@ -644,8 +641,8 @@ jobs:
   build_cli_deb:
     name: Package CLI (.deb)
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     needs: build_cli_bin
     steps:
       - uses: actions/checkout@v4
@@ -667,8 +664,8 @@ jobs:
   build_ui_docker:
     name: Build Console UI Docker
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     services:
       registry:
         image: registry:2
@@ -694,16 +691,16 @@ jobs:
           tags: localhost:5000/${{ env.UI_BUILDER_DOCKER_IMAGE }}
           build-args: |
             MOLD_VERSION=${{ env.MOLD_VERSION }}
-          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_BUILDER_DOCKER_IMAGE }}:cache-${{ github.ref_name }}
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_BUILDER_DOCKER_IMAGE }}:cache-${{ github.ref_name }},mode=max
+          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_BUILDER_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }}
+          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_BUILDER_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }},mode=max
           push: true
       - name: Build Console UI
         uses: docker/build-push-action@v5
         with:
           context: ./services/console
           tags: ${{ env.UI_DOCKER_IMAGE }}
-          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_DOCKER_IMAGE }}:cache-${{ github.ref_name }}
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_DOCKER_IMAGE }}:cache-${{ github.ref_name }},mode=max
+          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }}
+          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }},mode=max
           build-contexts: |
             ${{ env.UI_BUILDER_DOCKER_IMAGE }}=docker-image://localhost:5000/${{ env.UI_BUILDER_DOCKER_IMAGE }}:latest
           load: true
@@ -818,7 +815,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-cli-backup-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-release-${{ env.CACHE_NAME }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
