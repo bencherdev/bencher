@@ -3,7 +3,7 @@ name: Bencher
 on:
   workflow_dispatch:
   push:
-    branches: [main, devel]
+    branches: [main, devel, express]
     tags: [v**]
   pull_request:
     branches: [main, devel]
@@ -36,6 +36,7 @@ env:
 
 jobs:
   first_time_interaction:
+    if: (!(github.event_name == 'push' && github.ref == 'refs/heads/express'))
     name: Bencher First Time Interaction
     runs-on: ubuntu-latest
     steps:
@@ -56,6 +57,7 @@ jobs:
   bencher_github_action:
     name: Bencher CLI GitHub Action
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
     # This will fail during releases builds
     # because the version number requested is for the current, in progress release
     continue-on-error: true
@@ -74,6 +76,8 @@ jobs:
   cargo_fmt:
     name: Cargo Format
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - name: Add fmt
@@ -84,6 +88,8 @@ jobs:
   cargo_clippy:
     name: Cargo Clippy
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
@@ -161,6 +167,8 @@ jobs:
   open_api_spec:
     name: OpenAPI Spec
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
@@ -184,6 +192,8 @@ jobs:
   api_smoke_test:
     name: API Smoke Test
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
@@ -208,6 +218,7 @@ jobs:
   api_smoke_test_compat:
     name: API Smoke Test Compat
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
     # This will fail whenever there is a breaking change in the API
     # Pre-1.0 this is okay but good to be aware of
     continue-on-error: true
@@ -238,6 +249,8 @@ jobs:
   cargo_check_api_minus:
     name: Cargo Check API (Minus)
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
@@ -259,6 +272,8 @@ jobs:
   cargo_check_cli_minus:
     name: Cargo Check CLI (Minus)
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
@@ -343,6 +358,8 @@ jobs:
   cargo_udeps:
     name: Cargo Unused Deps
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
@@ -372,6 +389,8 @@ jobs:
   npx_biome_format:
     name: Biome Format
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - name: Biome format Action
@@ -388,6 +407,7 @@ jobs:
   npx_biome_lint:
     name: Biome Lint
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
     # TODO fix all lints
     continue-on-error: true
     steps:
@@ -438,6 +458,8 @@ jobs:
   test_bencher_valid_wasm:
     name: Test `bencher_valid` WASM
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
     needs: build_bencher_valid_wasm
     steps:
       - uses: actions/checkout@v4
@@ -461,6 +483,8 @@ jobs:
   npx_vitest:
     name: vitest
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
     needs: build_bencher_valid_wasm
     steps:
       - uses: actions/checkout@v4
@@ -481,6 +505,8 @@ jobs:
   build_local_api_docker:
     name: Build Local API
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
     services:
       registry:
         image: registry:2
@@ -590,6 +616,8 @@ jobs:
   build_cli_bin:
     name: Build CLI
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
@@ -616,6 +644,8 @@ jobs:
   build_cli_deb:
     name: Package CLI (.deb)
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
     needs: build_cli_bin
     steps:
       - uses: actions/checkout@v4
@@ -637,6 +667,8 @@ jobs:
   build_ui_docker:
     name: Build Console UI Docker
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.event_name == 'push' && github.ref == 'refs/heads/express' }}
     services:
       registry:
         image: registry:2
@@ -687,7 +719,7 @@ jobs:
           path: ./${{ env.UI_DOCKER_IMAGE }}.tar.gz
 
   build_ui:
-    if: true && !startsWith(github.ref, 'refs/tags/')
+    if: (!startsWith(github.ref, 'refs/tags/'))
     name: Build Console UI
     runs-on: ubuntu-latest
     needs: build_bencher_valid_wasm
@@ -750,10 +782,10 @@ jobs:
         run: cargo xtask fly-test --dev
 
   backup_database:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/express'
     name: Backup Database
     runs-on: ubuntu-latest
-    # continue-on-error: true
+    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     needs:
       # Lint
       - cargo_fmt
