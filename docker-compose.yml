@@ -16,6 +16,6 @@ services:
     image: ghcr.io/bencherdev/bencher-ui:latest
     container_name: bencher_ui
     ports:
-      - 3000:80
+      - 3000:3000
     depends_on:
       - bencher_api
