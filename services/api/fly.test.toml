@@ -4,7 +4,7 @@ kill_signal = "SIGINT"
 kill_timeout = "6s"
 
 [build]
-image = "registry.fly.io/bencher-api"
+image = "registry.fly.io/bencher-api-test"
 
 [env]
 LITESTREAM_DB_PATH = "/data/bencher.db"
