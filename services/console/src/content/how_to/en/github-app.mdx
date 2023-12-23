@@ -1,0 +1,32 @@
+---
+title: "Self-Hosted GitHub App"
+description: "Create a GitHub App to allow Bencher Self-Hosted to authenticate with GitHub"
+heading: "How to Create a Self-Hosted GitHub App"
+sortOrder: 5
+draft: true
+---
+
+If you are using Bencher Cloud, then you can simply [sign up](/auth/signup) or [log in](/auth/login)
+using the `GitHub` OAuth2 button.
+If you are using Bencher Self-Hosted, then you will need to create your own GitHub App.
+
+- Create a [GitHub App](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app#registering-a-github-app)
+- Give it a name like: Bencher Cloud for My Enterprise
+- Set the `Callback URL` to: https://my-bencher-url.com/auth/github
+- Identifying and authorizing users:
+  - ✅ Expire user authorization tokens
+  - ✅ Request user authorization (OAuth) during installation
+  - ✅ Enable Device Flow
+- Webhook
+  - ❌ Active
+- Permissions
+  - Account permissions
+    - Email addresses: `Read-only`
+- Where can this GitHub App be installed?
+  - 🔘 Any account
+- Click `Create GitHub App`
+- Now the app is created, under `General`
+- Client secrets
+  - `Generate a new client secret`
+- Add a logo under Display information
+- Under `Private keys` generate or upload a new private key

@@ -2,32 +2,6 @@ import type { Collection } from "../content/config";
 import { Language, defaultLang, showDefaultLang } from "./ui";
 import { getCollection } from "astro:content";
 
-// export const languages = {
-// 	en: "English",
-// 	es: "Español",
-// 	fr: "Français",
-// };
-
-// export function getLangFromUrl(url: URL) {
-// 	const [, lang] = url.pathname.split("/");
-// 	if (lang in ui) return lang as keyof typeof ui;
-// 	return defaultLang;
-// }
-
-// export function useTranslations(lang: keyof typeof ui) {
-// 	return function t(key: keyof typeof ui[typeof defaultLang]) {
-// 		return ui[lang][key] || ui[defaultLang][key];
-// 	};
-// }
-
-// export function useTranslatedPath(lang: keyof typeof ui) {
-// 	return function translatePath(path: string, l: string = lang) {
-// 		return !showDefaultLang && l === defaultLang ? path : `/${l}${path}`;
-// 	};
-// }
-
-//
-
 export async function getEnPaths(collection: Collection) {
 	const pages = await getPaths(collection);
 	return pages.filter((page) => page.params.lang === defaultLang);
@@ -40,22 +14,21 @@ export async function getLangPaths(collection: Collection) {
 
 async function getPaths(collection: Collection) {
 	const pages = await getCollection(collection);
-	return pages
-		.filter((page) => !page.data.draft)
-		.map((page) => {
-			const [lang, ...slug] = page.id
-				.substring(0, page.id.lastIndexOf("."))
-				?.split("/");
-			return {
-				params: { lang, slug: slug.join("/") || undefined },
-				props: page,
-			};
-		});
+	return pages.filter(filterDraft).map((page) => {
+		const [lang, ...slug] = page.id
+			.substring(0, page.id.lastIndexOf("."))
+			?.split("/");
+		return {
+			params: { lang, slug: slug.join("/") || undefined },
+			props: page,
+		};
+	});
 }
 
 export async function getLangCollection(collection: Collection) {
 	const pages = await getCollection(collection);
 	const langPagesMap = pages
+		.filter(filterDraft)
 		.map((page) => {
 			const [lang, ...slug] = page.id
 				.substring(0, page.id.lastIndexOf("."))
@@ -82,3 +55,14 @@ export async function getLangCollection(collection: Collection) {
 
 export const langPath = (lang: Language) =>
 	!showDefaultLang && lang === defaultLang ? "" : `${lang}/`;
+
+const filterDraft = (page: { data: { draft: boolean } }): boolean => {
+	switch (import.meta.env.MODE) {
+		case "development":
+			return true;
+		case "production":
+			return !page.data.draft;
+		default:
+			return false;
+	}
+};

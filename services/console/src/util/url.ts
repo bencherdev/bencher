@@ -83,8 +83,12 @@ export const useNavigateSoft = () => {
 
 // Page refresh
 export const useNavigate = () => {
-	return (to: string | number, _options?: Partial<NavigateOptions>) => {
-		window.location.assign(to.toString());
+	return (to: string | number, options?: Partial<NavigateOptions>) => {
+		if (options?.replace) {
+			window.location.replace(to.toString());
+		} else {
+			window.location.assign(to.toString());
+		}
 	};
 };
 

@@ -65,11 +65,11 @@ const ConsoleRedirect = (props: Props) => {
 		}
 		if (orgs === null) {
 			removeUser();
-			navigate("/auth/login");
+			navigate("/auth/login", { replace: true });
 			return;
 		}
 		if (orgs.length !== 1) {
-			navigate("/console/organizations");
+			navigate("/console/organizations", { replace: true });
 			return;
 		}
 		const org = orgs[0] as JsonOrganization;
@@ -82,6 +82,7 @@ const ConsoleRedirect = (props: Props) => {
 					[NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM, PLAN_PARAM],
 					null,
 				),
+				{ replace: true },
 			);
 			return;
 		}
@@ -92,6 +93,7 @@ const ConsoleRedirect = (props: Props) => {
 				[NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM],
 				null,
 			),
+			{ replace: true },
 		);
 	});
 
