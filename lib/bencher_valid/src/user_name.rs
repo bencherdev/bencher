@@ -15,7 +15,7 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 
-use crate::{is_valid_len, NonEmpty, ValidError, REGEX_ERROR};
+use crate::{is_valid_len, ResourceName, ValidError, REGEX_ERROR};
 
 #[allow(clippy::expect_used)]
 static NAME_REGEX: Lazy<Regex> =
@@ -55,7 +55,7 @@ impl From<UserName> for String {
     }
 }
 
-impl From<UserName> for NonEmpty {
+impl From<UserName> for ResourceName {
     fn from(user_name: UserName) -> Self {
         Self(user_name.0)
     }

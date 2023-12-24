@@ -1,4 +1,4 @@
-use bencher_json::{NonEmpty, ResourceId, Slug};
+use bencher_json::{ResourceId, ResourceName, Slug};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::CliBackend;
@@ -40,7 +40,7 @@ pub enum CliOrganization {
 pub struct CliOrganizationList {
     /// Organization name
     #[clap(long)]
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
 
     #[clap(flatten)]
     pub pagination: CliPagination<CliOrganizationsSort>,
@@ -59,7 +59,7 @@ pub enum CliOrganizationsSort {
 #[derive(Parser, Debug)]
 pub struct CliOrganizationCreate {
     /// Organization name
-    pub name: NonEmpty,
+    pub name: ResourceName,
 
     /// Organization slug
     #[clap(long)]
@@ -85,7 +85,7 @@ pub struct CliOrganizationUpdate {
 
     /// New organization name
     #[clap(long)]
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
 
     /// New organization slug
     #[clap(long)]

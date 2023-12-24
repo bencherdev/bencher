@@ -2,7 +2,7 @@
 
 use bencher_valid::{
     CardBrand, CardCvc, CardNumber, DateTime, Email, Entitlements, ExpirationMonth, ExpirationYear,
-    Jwt, LastFour, NonEmpty, PlanLevel, PlanStatus,
+    Jwt, LastFour, PlanLevel, PlanStatus, ResourceName,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -30,7 +30,7 @@ pub struct JsonNewPlan {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonCustomer {
     pub uuid: UserUuid,
-    pub name: NonEmpty,
+    pub name: ResourceName,
     pub email: Email,
 }
 

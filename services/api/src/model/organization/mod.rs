@@ -2,8 +2,8 @@ use std::string::ToString;
 
 use bencher_json::{
     organization::{JsonOrganizationPatch, JsonOrganizationPatchNull, JsonUpdateOrganization},
-    DateTime, JsonNewOrganization, JsonOrganization, Jwt, NonEmpty, OrganizationUuid, ResourceId,
-    Slug,
+    DateTime, JsonNewOrganization, JsonOrganization, Jwt, OrganizationUuid, ResourceId,
+    ResourceName, Slug,
 };
 use bencher_rbac::Organization;
 use diesel::{ExpressionMethods, QueryDsl, Queryable, RunQueryDsl};
@@ -33,7 +33,7 @@ crate::util::typed_id::typed_id!(OrganizationId);
 pub struct QueryOrganization {
     pub id: OrganizationId,
     pub uuid: OrganizationUuid,
-    pub name: NonEmpty,
+    pub name: ResourceName,
     pub slug: Slug,
     pub license: Option<Jwt>,
     pub created: DateTime,
@@ -101,7 +101,7 @@ impl QueryOrganization {
 #[diesel(table_name = organization_table)]
 pub struct InsertOrganization {
     pub uuid: OrganizationUuid,
-    pub name: NonEmpty,
+    pub name: ResourceName,
     pub slug: Slug,
     pub created: DateTime,
     pub modified: DateTime,
@@ -139,7 +139,7 @@ impl InsertOrganization {
 #[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = organization_table)]
 pub struct UpdateOrganization {
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
     pub slug: Option<Slug>,
     #[cfg(feature = "plus")]
     pub license: Option<Option<Jwt>>,

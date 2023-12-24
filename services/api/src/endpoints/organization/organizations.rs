@@ -1,7 +1,7 @@
 use bencher_json::{
     organization::{member::OrganizationRole, JsonUpdateOrganization},
     DateTime, JsonDirection, JsonNewOrganization, JsonOrganization, JsonOrganizations,
-    JsonPagination, NonEmpty, ResourceId,
+    JsonPagination, ResourceId, ResourceName,
 };
 use bencher_rbac::organization::Permission;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -40,7 +40,7 @@ pub enum OrganizationsSort {
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrganizationsQuery {
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
 }
 
 #[allow(clippy::unused_async)]

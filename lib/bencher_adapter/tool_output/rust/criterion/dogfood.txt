@@ -90,7 +90,7 @@ test branch_name::test::test_branch_name ... ignored
 test email::test::test_email ... ignored
 test git_hash::test::test_git_hash ... ignored
 test jwt::test::test_jwt ... ignored
-test non_empty::test::test_non_empty ... ignored
+test resource_name::test::test_resource_name ... ignored
 test slug::test::test_slug ... ignored
 test test::test_is_valid_len ... ignored
 test url::test::test_email ... ignored

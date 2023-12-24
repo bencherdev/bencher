@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::JsonUpdateTestbed;
-use bencher_json::{NonEmpty, ResourceId, Slug};
+use bencher_json::{ResourceId, ResourceName, Slug};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -14,7 +14,7 @@ use crate::{
 pub struct Update {
     pub project: ResourceId,
     pub testbed: ResourceId,
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
     pub slug: Option<Slug>,
     pub backend: Backend,
 }

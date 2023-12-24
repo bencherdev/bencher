@@ -1,5 +1,5 @@
 import type { Params } from "astro";
-import { validNonEmpty, validSlug } from "../../util/valid";
+import { validResourceName, validSlug } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, addPath, viewSlugPath } from "../util";
 import type { JsonTestbed } from "../../types/bencher";
@@ -12,7 +12,7 @@ const TESTBED_FIELDS = {
 		placeholder: "Testbed Name",
 		icon: "fas fa-server",
 		help: "Must be a non-empty string",
-		validate: validNonEmpty,
+		validate: validResourceName,
 	},
 	slug: {
 		type: "text",

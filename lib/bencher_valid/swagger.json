@@ -308,7 +308,7 @@
             "in": "query",
             "name": "name",
             "schema": {
-              "$ref": "#/components/schemas/NonEmpty"
+              "$ref": "#/components/schemas/ResourceName"
             }
           }
         ],
@@ -1302,7 +1302,7 @@
             "in": "query",
             "name": "name",
             "schema": {
-              "$ref": "#/components/schemas/NonEmpty"
+              "$ref": "#/components/schemas/ResourceName"
             }
           }
         ],
@@ -1543,7 +1543,7 @@
             "in": "query",
             "name": "name",
             "schema": {
-              "$ref": "#/components/schemas/NonEmpty"
+              "$ref": "#/components/schemas/ResourceName"
             }
           },
           {
@@ -3004,7 +3004,7 @@
             "in": "query",
             "name": "name",
             "schema": {
-              "$ref": "#/components/schemas/NonEmpty"
+              "$ref": "#/components/schemas/ResourceName"
             }
           }
         ],
@@ -4104,7 +4104,7 @@
             "in": "query",
             "name": "name",
             "schema": {
-              "$ref": "#/components/schemas/NonEmpty"
+              "$ref": "#/components/schemas/ResourceName"
             }
           }
         ],
@@ -5613,7 +5613,7 @@
             "in": "query",
             "name": "name",
             "schema": {
-              "$ref": "#/components/schemas/NonEmpty"
+              "$ref": "#/components/schemas/ResourceName"
             }
           }
         ],
@@ -6604,7 +6604,7 @@
             "$ref": "#/components/schemas/Email"
           },
           "name": {
-            "$ref": "#/components/schemas/NonEmpty"
+            "$ref": "#/components/schemas/ResourceName"
           },
           "uuid": {
             "$ref": "#/components/schemas/UserUuid"
@@ -6748,7 +6748,7 @@
             "$ref": "#/components/schemas/DateTime"
           },
           "name": {
-            "$ref": "#/components/schemas/NonEmpty"
+            "$ref": "#/components/schemas/ResourceName"
           },
           "project": {
             "$ref": "#/components/schemas/ProjectUuid"
@@ -6757,7 +6757,7 @@
             "$ref": "#/components/schemas/Slug"
           },
           "units": {
-            "$ref": "#/components/schemas/NonEmpty"
+            "$ref": "#/components/schemas/ResourceName"
           },
           "uuid": {
             "$ref": "#/components/schemas/MeasureUuid"
@@ -6896,7 +6896,7 @@
         "type": "object",
         "properties": {
           "name": {
-            "$ref": "#/components/schemas/NonEmpty"
+            "$ref": "#/components/schemas/ResourceName"
           },
           "slug": {
             "nullable": true,
@@ -6907,7 +6907,7 @@
             ]
           },
           "units": {
-            "$ref": "#/components/schemas/NonEmpty"
+            "$ref": "#/components/schemas/ResourceName"
           }
         },
         "required": [
@@ -6942,7 +6942,7 @@
         "type": "object",
         "properties": {
           "name": {
-            "$ref": "#/components/schemas/NonEmpty"
+            "$ref": "#/components/schemas/ResourceName"
           },
           "slug": {
             "nullable": true,
@@ -7001,7 +7001,7 @@
         "type": "object",
         "properties": {
           "name": {
-            "$ref": "#/components/schemas/NonEmpty"
+            "$ref": "#/components/schemas/ResourceName"
           },
           "slug": {
             "nullable": true,
@@ -7082,7 +7082,7 @@
         "type": "object",
         "properties": {
           "name": {
-            "$ref": "#/components/schemas/NonEmpty"
+            "$ref": "#/components/schemas/ResourceName"
           },
           "slug": {
             "nullable": true,
@@ -7164,7 +7164,7 @@
         "type": "object",
         "properties": {
           "name": {
-            "$ref": "#/components/schemas/NonEmpty"
+            "$ref": "#/components/schemas/ResourceName"
           },
           "ttl": {
             "nullable": true,
@@ -7195,7 +7195,7 @@
             "$ref": "#/components/schemas/DateTime"
           },
           "name": {
-            "$ref": "#/components/schemas/NonEmpty"
+            "$ref": "#/components/schemas/ResourceName"
           },
           "slug": {
             "$ref": "#/components/schemas/Slug"
@@ -7227,7 +7227,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/NonEmpty"
+                "$ref": "#/components/schemas/ResourceName"
               }
             ]
           },
@@ -7254,7 +7254,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/NonEmpty"
+                "$ref": "#/components/schemas/ResourceName"
               }
             ]
           },
@@ -7543,7 +7543,7 @@
             "$ref": "#/components/schemas/DateTime"
           },
           "name": {
-            "$ref": "#/components/schemas/NonEmpty"
+            "$ref": "#/components/schemas/ResourceName"
           },
           "organization": {
             "$ref": "#/components/schemas/OrganizationUuid"
@@ -7583,7 +7583,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/NonEmpty"
+                "$ref": "#/components/schemas/ResourceName"
               }
             ]
           },
@@ -7620,7 +7620,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/NonEmpty"
+                "$ref": "#/components/schemas/ResourceName"
               }
             ]
           },
@@ -7951,10 +7951,10 @@
             "$ref": "#/components/schemas/Email"
           },
           "from_name": {
-            "$ref": "#/components/schemas/NonEmpty"
+            "$ref": "#/components/schemas/ResourceName"
           },
           "hostname": {
-            "$ref": "#/components/schemas/NonEmpty"
+            "$ref": "#/components/schemas/ResourceName"
           },
           "port": {
             "nullable": true,
@@ -7970,7 +7970,7 @@
             "type": "boolean"
           },
           "username": {
-            "$ref": "#/components/schemas/NonEmpty"
+            "$ref": "#/components/schemas/ResourceName"
           }
         },
         "required": [
@@ -8085,7 +8085,7 @@
             "$ref": "#/components/schemas/DateTime"
           },
           "name": {
-            "$ref": "#/components/schemas/NonEmpty"
+            "$ref": "#/components/schemas/ResourceName"
           },
           "project": {
             "$ref": "#/components/schemas/ProjectUuid"
@@ -8257,7 +8257,7 @@
             "$ref": "#/components/schemas/DateTime"
           },
           "name": {
-            "$ref": "#/components/schemas/NonEmpty"
+            "$ref": "#/components/schemas/ResourceName"
           },
           "token": {
             "$ref": "#/components/schemas/Jwt"
@@ -8363,7 +8363,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/NonEmpty"
+                "$ref": "#/components/schemas/ResourceName"
               }
             ]
           },
@@ -8379,7 +8379,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/NonEmpty"
+                "$ref": "#/components/schemas/ResourceName"
               }
             ]
           }
@@ -8425,7 +8425,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/NonEmpty"
+                "$ref": "#/components/schemas/ResourceName"
               }
             ]
           },
@@ -8497,7 +8497,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/NonEmpty"
+                "$ref": "#/components/schemas/ResourceName"
               }
             ]
           }
@@ -8622,9 +8622,6 @@
       "NameId": {
         "type": "string"
       },
-      "NonEmpty": {
-        "type": "string"
-      },
       "OrganizationRole": {
         "type": "string",
         "enum": [
@@ -8663,6 +8660,9 @@
       "ReportUuid": {
         "type": "string",
         "format": "uuid"
+      },
+      "ResourceName": {
+        "type": "string"
       },
       "SampleSize": {
         "type": "integer",

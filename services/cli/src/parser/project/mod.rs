@@ -1,4 +1,4 @@
-use bencher_json::{NonEmpty, ResourceId, Slug, Url};
+use bencher_json::{ResourceId, ResourceName, Slug, Url};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::CliBackend;
@@ -48,7 +48,7 @@ pub struct CliProjectList {
 
     /// Project name
     #[clap(long)]
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
 
     #[clap(flatten)]
     pub pagination: CliPagination<CliProjectsSort>,
@@ -71,7 +71,7 @@ pub struct CliProjectCreate {
     pub org: ResourceId,
 
     /// Project name
-    pub name: NonEmpty,
+    pub name: ResourceName,
 
     /// Project slug
     #[clap(long)]
@@ -116,7 +116,7 @@ pub struct CliProjectUpdate {
 
     /// Project name
     #[clap(long)]
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
 
     /// Project slug
     #[clap(long)]

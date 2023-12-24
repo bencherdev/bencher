@@ -2,7 +2,7 @@ import type { Params } from "astro";
 import FieldKind from "../../components/field/kind";
 import { type JsonProject, Visibility } from "../../types/bencher";
 import { isAllowedProjectEdit } from "../../util/auth";
-import { validNonEmpty, validOptionUrl, validSlug } from "../../util/valid";
+import { validResourceName, validOptionUrl, validSlug } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { addPath, parentPath } from "../util";
 
@@ -12,7 +12,7 @@ const PROJECT_FIELDS = {
 		placeholder: "Project Name",
 		icon: "fas fa-project-diagram",
 		help: "Must be non-empty string",
-		validate: validNonEmpty,
+		validate: validResourceName,
 	},
 	slug: {
 		type: "text",

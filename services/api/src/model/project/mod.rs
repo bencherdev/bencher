@@ -2,7 +2,7 @@ use std::string::ToString;
 
 use bencher_json::{
     project::{JsonProjectPatch, JsonProjectPatchNull, JsonUpdateProject, Visibility},
-    DateTime, JsonNewProject, JsonProject, NonEmpty, ProjectUuid, ResourceId, Slug, Url,
+    DateTime, JsonNewProject, JsonProject, ProjectUuid, ResourceId, ResourceName, Slug, Url,
 };
 use bencher_rbac::{Organization, Project};
 use diesel::{ExpressionMethods, QueryDsl, Queryable, RunQueryDsl};
@@ -43,7 +43,7 @@ pub struct QueryProject {
     pub id: ProjectId,
     pub uuid: ProjectUuid,
     pub organization_id: OrganizationId,
-    pub name: NonEmpty,
+    pub name: ResourceName,
     pub slug: Slug,
     pub url: Option<Url>,
     pub visibility: Visibility,
@@ -151,7 +151,7 @@ impl QueryProject {
 pub struct InsertProject {
     pub uuid: ProjectUuid,
     pub organization_id: OrganizationId,
-    pub name: NonEmpty,
+    pub name: ResourceName,
     pub slug: Slug,
     pub url: Option<Url>,
     pub visibility: Visibility,
@@ -189,7 +189,7 @@ impl InsertProject {
 #[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = project_table)]
 pub struct UpdateProject {
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
     pub slug: Option<Slug>,
     pub url: Option<Option<Url>>,
     pub visibility: Option<Visibility>,

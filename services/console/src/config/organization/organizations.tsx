@@ -8,7 +8,7 @@ import {
 	isAllowedOrganizationManage,
 } from "../../util/auth";
 import FieldKind from "../../components/field/kind";
-import { validNonEmpty, validOptionJwt, validSlug } from "../../util/valid";
+import { validResourceName, validOptionJwt, validSlug } from "../../util/valid";
 import { isBencherCloud } from "../../util/ext";
 
 const ORGANIZATION_FIELDS = {
@@ -18,7 +18,7 @@ const ORGANIZATION_FIELDS = {
 		placeholder: "Organization Name",
 		icon: "fas fa-project-diagram",
 		help: "Must be a non-empty string",
-		validate: validNonEmpty,
+		validate: validResourceName,
 	},
 	slug: {
 		label: "Slug",

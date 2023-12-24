@@ -1,4 +1,4 @@
-use bencher_valid::{Email, NonEmpty, Sanitize, Secret};
+use bencher_valid::{Email, ResourceName, Sanitize, Secret};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -6,12 +6,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonSmtp {
-    pub hostname: NonEmpty,
+    pub hostname: ResourceName,
     pub port: Option<u16>,
     pub starttls: Option<bool>,
-    pub username: NonEmpty,
+    pub username: ResourceName,
     pub secret: Secret,
-    pub from_name: NonEmpty,
+    pub from_name: ResourceName,
     pub from_email: Email,
 }
 

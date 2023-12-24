@@ -1,6 +1,6 @@
 use bencher_json::{
     project::measure::JsonUpdateMeasure, JsonDirection, JsonMeasure, JsonMeasures, JsonNewMeasure,
-    JsonPagination, NonEmpty, ResourceId,
+    JsonPagination, ResourceId, ResourceName,
 };
 use bencher_rbac::project::Permission;
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -44,7 +44,7 @@ pub enum ProjMeasuresSort {
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjMeasuresQuery {
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
 }
 
 #[allow(clippy::unused_async)]

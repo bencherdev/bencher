@@ -22,7 +22,7 @@ export type JsonResultsMap = Record<BenchmarkName, JsonMetricsMap>;
 
 export type Iteration = number;
 
-export type NonEmpty = string;
+export type ResourceName = string;
 
 export type Slug = string;
 
@@ -31,9 +31,9 @@ export type DateTime = string;
 export interface JsonMeasure {
 	uuid: Uuid;
 	project: Uuid;
-	name: NonEmpty;
+	name: ResourceName;
 	slug: Slug;
-	units: NonEmpty;
+	units: ResourceName;
 	created: string;
 	modified: string;
 }
@@ -111,7 +111,7 @@ export interface JsonBranch {
 export interface JsonTestbed {
 	uuid: Uuid;
 	project: Uuid;
-	name: NonEmpty;
+	name: ResourceName;
 	slug: Slug;
 	created: string;
 	modified: string;
@@ -190,7 +190,7 @@ export type UserName = string;
 
 export interface JsonOrganization {
 	uuid: Uuid;
-	name: NonEmpty;
+	name: ResourceName;
 	slug: Slug;
 	license?: Jwt;
 	created: string;
@@ -199,7 +199,7 @@ export interface JsonOrganization {
 
 export interface JsonCustomer {
 	uuid: Uuid;
-	name: NonEmpty;
+	name: ResourceName;
 	email: Email;
 }
 
@@ -343,7 +343,7 @@ export enum Visibility {
 export interface JsonProject {
 	uuid: Uuid;
 	organization: Uuid;
-	name: NonEmpty;
+	name: ResourceName;
 	slug: Slug;
 	url?: Url;
 	visibility: Visibility;
@@ -474,7 +474,7 @@ export interface JsonAuthUser {
 export interface JsonToken {
 	uuid: Uuid;
 	user: Uuid;
-	name: NonEmpty;
+	name: ResourceName;
 	token: Jwt;
 	creation: string;
 	expiration: string;

@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::{JsonDirection, OrganizationsSort};
-use bencher_json::NonEmpty;
+use bencher_json::ResourceName;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -15,7 +15,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct List {
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
     pub pagination: Pagination,
     pub backend: Backend,
 }

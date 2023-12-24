@@ -1,6 +1,6 @@
 use bencher_json::{
     user::token::JsonUpdateToken, JsonDirection, JsonNewToken, JsonPagination, JsonToken,
-    JsonTokens, NonEmpty, ResourceId,
+    JsonTokens, ResourceId, ResourceName,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
@@ -42,7 +42,7 @@ pub enum UserTokensSort {
 
 #[derive(Deserialize, JsonSchema)]
 pub struct UserTokensQuery {
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
 }
 
 #[allow(clippy::unused_async)]

@@ -8,7 +8,7 @@ import {
 	is_valid_expiration_month,
 	is_valid_expiration_year,
 	is_valid_jwt,
-	is_valid_non_empty,
+	is_valid_resource_name,
 	is_valid_plan_level,
 	is_valid_sample_size,
 	is_valid_slug,
@@ -39,8 +39,8 @@ export const validUuid = (uuid: string): boolean =>
 export const validUserName = (user_name: string): boolean =>
 	validString(user_name, is_valid_user_name);
 
-export const validNonEmpty = (non_empty: string): boolean =>
-	validString(non_empty, is_valid_non_empty);
+export const validResourceName = (resource_name: string): boolean =>
+	validString(resource_name, is_valid_resource_name);
 
 export const validBranchName = (branch_name: string): boolean =>
 	validString(branch_name, is_valid_branch_name);

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use bencher_valid::{DateTime, NonEmpty, Slug};
+use bencher_valid::{DateTime, ResourceName, Slug};
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -17,7 +17,7 @@ crate::typed_uuid::typed_uuid!(OrganizationUuid);
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewOrganization {
-    pub name: NonEmpty,
+    pub name: ResourceName,
     pub slug: Option<Slug>,
 }
 
@@ -32,7 +32,7 @@ crate::from_vec!(JsonOrganizations[JsonOrganization]);
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonOrganization {
     pub uuid: OrganizationUuid,
-    pub name: NonEmpty,
+    pub name: ResourceName,
     pub slug: Slug,
     #[cfg(feature = "plus")]
     pub license: Option<bencher_valid::Jwt>,
@@ -63,7 +63,7 @@ pub enum JsonUpdateOrganization {
 #[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonOrganizationPatch {
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
     pub slug: Option<Slug>,
     #[cfg(feature = "plus")]
     pub license: Option<bencher_valid::Jwt>,
@@ -72,7 +72,7 @@ pub struct JsonOrganizationPatch {
 #[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonOrganizationPatchNull {
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
     pub slug: Option<Slug>,
     #[cfg(feature = "plus")]
     pub license: (),

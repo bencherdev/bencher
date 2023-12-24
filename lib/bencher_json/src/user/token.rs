@@ -1,4 +1,4 @@
-use bencher_valid::{DateTime, Jwt, NonEmpty};
+use bencher_valid::{DateTime, Jwt, ResourceName};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -10,7 +10,7 @@ crate::typed_uuid::typed_uuid!(TokenUuid);
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewToken {
-    pub name: NonEmpty,
+    pub name: ResourceName,
     pub ttl: Option<u32>,
 }
 
@@ -26,7 +26,7 @@ crate::from_vec!(JsonTokens[JsonToken]);
 pub struct JsonToken {
     pub uuid: TokenUuid,
     pub user: UserUuid,
-    pub name: NonEmpty,
+    pub name: ResourceName,
     pub token: Jwt,
     pub creation: DateTime,
     pub expiration: DateTime,
@@ -35,5 +35,5 @@ pub struct JsonToken {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonUpdateToken {
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
 }

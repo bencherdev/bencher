@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_client::types::{
     JsonProjectPatch, JsonProjectPatchNull, JsonUpdateProject, Visibility,
 };
-use bencher_json::{NonEmpty, ResourceId, Slug, Url};
+use bencher_json::{ResourceId, ResourceName, Slug, Url};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -16,7 +16,7 @@ use crate::{
 #[allow(clippy::option_option)]
 pub struct Update {
     pub project: ResourceId,
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
     pub slug: Option<Slug>,
     pub url: Option<Option<Url>>,
     pub visibility: Option<Visibility>,

@@ -1,8 +1,8 @@
 #![cfg(feature = "plus")]
 
 use bencher_json::{
-    CardCvc, CardNumber, Email, Entitlements, ExpirationMonth, ExpirationYear, NonEmpty,
-    OrganizationUuid, ResourceId, UserUuid,
+    CardCvc, CardNumber, Email, Entitlements, ExpirationMonth, ExpirationYear, OrganizationUuid,
+    ResourceId, ResourceName, UserUuid,
 };
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
@@ -78,7 +78,7 @@ pub struct CliPlanCustomer {
 
     /// Name on card
     #[clap(long)]
-    pub name: NonEmpty,
+    pub name: ResourceName,
 
     /// User email
     #[clap(long)]

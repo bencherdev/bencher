@@ -1,4 +1,4 @@
-use bencher_json::{NonEmpty, ResourceId, TokenUuid};
+use bencher_json::{ResourceId, ResourceName, TokenUuid};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliBackend, CliPagination};
@@ -27,7 +27,7 @@ pub struct CliTokenList {
 
     /// Token name
     #[clap(long)]
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
 
     #[clap(flatten)]
     pub pagination: CliPagination<CliTokensSort>,
@@ -51,7 +51,7 @@ pub struct CliTokenCreate {
 
     /// Token name
     #[clap(long)]
-    pub name: NonEmpty,
+    pub name: ResourceName,
 
     /// Time to live (seconds)
     #[clap(long)]
@@ -82,7 +82,7 @@ pub struct CliTokenUpdate {
 
     /// Token name
     #[clap(long)]
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
 
     /// Token UUID
     pub token: TokenUuid,

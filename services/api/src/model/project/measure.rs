@@ -5,7 +5,7 @@ use bencher_json::{
         L2_ACCESSES_NAME_STR, L2_ACCESSES_SLUG_STR, LATENCY_NAME_STR, LATENCY_SLUG_STR,
         RAM_ACCESSES_NAME_STR, RAM_ACCESSES_SLUG_STR, THROUGHPUT_NAME_STR, THROUGHPUT_SLUG_STR,
     },
-    DateTime, JsonMeasure, JsonNewMeasure, MeasureNameId, NonEmpty, Slug,
+    DateTime, JsonMeasure, JsonNewMeasure, MeasureNameId, ResourceName, Slug,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
@@ -37,9 +37,9 @@ pub struct QueryMeasure {
     pub id: MeasureId,
     pub uuid: MeasureUuid,
     pub project_id: ProjectId,
-    pub name: NonEmpty,
+    pub name: ResourceName,
     pub slug: Slug,
-    pub units: NonEmpty,
+    pub units: ResourceName,
     pub created: DateTime,
     pub modified: DateTime,
 }
@@ -132,9 +132,9 @@ impl QueryMeasure {
 pub struct InsertMeasure {
     pub uuid: MeasureUuid,
     pub project_id: ProjectId,
-    pub name: NonEmpty,
+    pub name: ResourceName,
     pub slug: Slug,
-    pub units: NonEmpty,
+    pub units: ResourceName,
     pub created: DateTime,
     pub modified: DateTime,
 }
@@ -220,9 +220,9 @@ fn is_system(name: &str, slug: &str) -> bool {
 #[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = measure_table)]
 pub struct UpdateMeasure {
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
     pub slug: Option<Slug>,
-    pub units: Option<NonEmpty>,
+    pub units: Option<ResourceName>,
     pub modified: DateTime,
 }
 

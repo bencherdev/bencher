@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::JsonNewMeasure;
-use bencher_json::{NonEmpty, ResourceId, Slug};
+use bencher_json::{ResourceId, ResourceName, Slug};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -13,9 +13,9 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Create {
     pub project: ResourceId,
-    pub name: NonEmpty,
+    pub name: ResourceName,
     pub slug: Option<Slug>,
-    pub units: NonEmpty,
+    pub units: ResourceName,
     pub backend: Backend,
 }
 

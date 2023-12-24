@@ -1,6 +1,6 @@
 use bencher_json::{
     project::{JsonUpdateProject, Visibility},
-    JsonDirection, JsonPagination, JsonProject, JsonProjects, NonEmpty, ResourceId,
+    JsonDirection, JsonPagination, JsonProject, JsonProjects, ResourceId, ResourceName,
 };
 use bencher_rbac::project::Permission;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -33,7 +33,7 @@ pub enum ProjectsSort {
 
 #[derive(Clone, Deserialize, JsonSchema)]
 pub struct ProjectsQuery {
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
     pub public: Option<bool>,
 }
 

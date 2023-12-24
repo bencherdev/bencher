@@ -35,7 +35,7 @@ from_client!(
     GitHash,
     Jwt,
     NameId,
-    NonEmpty,
+    ResourceName,
     ResourceId,
     SampleSize,
     Slug,

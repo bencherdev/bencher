@@ -1,6 +1,6 @@
 import FieldKind from "../../components/field/kind";
 import type { Params } from "../../util/url";
-import { validNonEmpty, validU32 } from "../../util/valid";
+import { validResourceName, validU32 } from "../../util/valid";
 import { Button, Card, Display, Operation } from "../types";
 import { addPath, parentPath, viewUuidPath } from "../util";
 
@@ -10,7 +10,7 @@ const TOKEN_FIELDS = {
 		placeholder: "Token Name",
 		icon: "fas fa-stroopwafel",
 		help: "Must be a non-empty string",
-		validate: validNonEmpty,
+		validate: validResourceName,
 	},
 	ttl: {
 		type: "number",

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use bencher_valid::{DateTime, NonEmpty, Slug};
+use bencher_valid::{DateTime, ResourceName, Slug};
 use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -10,7 +10,7 @@ use crate::ProjectUuid;
 
 pub const TESTBED_LOCALHOST_STR: &str = "localhost";
 #[allow(clippy::expect_used)]
-static TESTBED_LOCALHOST: Lazy<NonEmpty> = Lazy::new(|| {
+static TESTBED_LOCALHOST: Lazy<ResourceName> = Lazy::new(|| {
     TESTBED_LOCALHOST_STR
         .parse()
         .expect("Failed to parse testbed name.")
@@ -29,7 +29,7 @@ crate::typed_uuid::typed_uuid!(TestbedUuid);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewTestbed {
-    pub name: NonEmpty,
+    pub name: ResourceName,
     pub slug: Option<Slug>,
 }
 
@@ -54,7 +54,7 @@ crate::from_vec!(JsonTestbeds[JsonTestbed]);
 pub struct JsonTestbed {
     pub uuid: TestbedUuid,
     pub project: ProjectUuid,
-    pub name: NonEmpty,
+    pub name: ResourceName,
     pub slug: Slug,
     pub created: DateTime,
     pub modified: DateTime,
@@ -69,6 +69,6 @@ impl fmt::Display for JsonTestbed {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonUpdateTestbed {
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
     pub slug: Option<Slug>,
 }

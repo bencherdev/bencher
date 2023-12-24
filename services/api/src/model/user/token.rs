@@ -1,5 +1,5 @@
 use bencher_json::{
-    user::token::JsonUpdateToken, DateTime, JsonNewToken, JsonToken, Jwt, NonEmpty, ResourceId,
+    user::token::JsonUpdateToken, DateTime, JsonNewToken, JsonToken, Jwt, ResourceId, ResourceName,
     TokenUuid,
 };
 use bencher_token::TokenKey;
@@ -27,7 +27,7 @@ pub struct QueryToken {
     pub id: TokenId,
     pub uuid: TokenUuid,
     pub user_id: UserId,
-    pub name: NonEmpty,
+    pub name: ResourceName,
     pub jwt: Jwt,
     pub creation: DateTime,
     pub expiration: DateTime,
@@ -87,7 +87,7 @@ impl QueryToken {
 pub struct InsertToken {
     pub uuid: TokenUuid,
     pub user_id: UserId,
-    pub name: NonEmpty,
+    pub name: ResourceName,
     pub jwt: Jwt,
     pub creation: DateTime,
     pub expiration: DateTime,
@@ -152,7 +152,7 @@ impl InsertToken {
 #[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = token_table)]
 pub struct UpdateToken {
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
 }
 
 impl From<JsonUpdateToken> for UpdateToken {

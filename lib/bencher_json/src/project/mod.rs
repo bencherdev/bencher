@@ -1,6 +1,6 @@
 use std::{fmt, str::FromStr};
 
-use bencher_valid::{DateTime, NonEmpty, Slug, Url};
+use bencher_valid::{DateTime, ResourceName, Slug, Url};
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -24,7 +24,7 @@ crate::typed_uuid::typed_uuid!(ProjectUuid);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewProject {
-    pub name: NonEmpty,
+    pub name: ResourceName,
     pub slug: Option<Slug>,
     pub url: Option<Url>,
     pub visibility: Option<Visibility>,
@@ -42,7 +42,7 @@ crate::from_vec!(JsonProjects[JsonProject]);
 pub struct JsonProject {
     pub uuid: ProjectUuid,
     pub organization: OrganizationUuid,
-    pub name: NonEmpty,
+    pub name: ResourceName,
     pub slug: Slug,
     pub url: Option<Url>,
     pub visibility: Visibility,
@@ -79,7 +79,7 @@ pub enum JsonUpdateProject {
 #[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonProjectPatch {
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
     pub slug: Option<Slug>,
     pub url: Option<Url>,
     pub visibility: Option<Visibility>,
@@ -88,7 +88,7 @@ pub struct JsonProjectPatch {
 #[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonProjectPatchNull {
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
     pub slug: Option<Slug>,
     pub url: (),
     pub visibility: Option<Visibility>,

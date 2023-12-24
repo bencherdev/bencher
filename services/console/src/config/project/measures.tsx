@@ -2,7 +2,7 @@ import type { Params } from "astro";
 import FieldKind from "../../components/field/kind";
 import type { JsonMeasure } from "../../types/bencher";
 import { isAllowedProjectDelete, isAllowedProjectEdit } from "../../util/auth";
-import { validNonEmpty, validSlug } from "../../util/valid";
+import { validResourceName, validSlug } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { addPath, parentPath, viewSlugPath } from "../util";
 
@@ -12,7 +12,7 @@ const MEASURE_FIELDS = {
 		placeholder: "Measure Name",
 		icon: "fas fa-shapes",
 		help: "Must be non-empty string",
-		validate: validNonEmpty,
+		validate: validResourceName,
 	},
 	slug: {
 		type: "text",
@@ -26,7 +26,7 @@ const MEASURE_FIELDS = {
 		placeholder: "units/time",
 		icon: "fas fa-ruler",
 		help: "Must be non-empty string",
-		validate: validNonEmpty,
+		validate: validResourceName,
 	},
 };
 

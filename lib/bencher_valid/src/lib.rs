@@ -12,10 +12,10 @@ mod error;
 mod git_hash;
 mod jwt;
 mod name_id;
-mod non_empty;
 #[cfg(feature = "plus")]
 mod plus;
 mod resource_id;
+mod resource_name;
 mod sample_size;
 mod secret;
 mod slug;
@@ -35,13 +35,13 @@ pub use error::ValidError;
 use error::REGEX_ERROR;
 pub use jwt::Jwt;
 pub use name_id::{NameId, NameIdKind};
-pub use non_empty::NonEmpty;
 #[cfg(feature = "plus")]
 pub use plus::{
     CardBrand, CardCvc, CardNumber, Entitlements, ExpirationMonth, ExpirationYear, LastFour,
     LicensedPlanId, MeteredPlanId, PlanLevel, PlanStatus,
 };
 pub use resource_id::{ResourceId, ResourceIdKind};
+pub use resource_name::ResourceName;
 pub use sample_size::SampleSize;
 pub use secret::Secret;
 pub use user_name::UserName;
@@ -119,17 +119,17 @@ macro_rules! typed_string {
 pub(crate) use typed_string;
 
 #[cfg(test)]
-mod test {
+pub mod test {
 
     use super::is_valid_len;
     use pretty_assertions::assert_eq;
 
-    const LEN_0_STR: &str = "";
+    pub const LEN_0_STR: &str = "";
     const LEN_1_STR: &str = "0";
     const LEN_2_STR: &str = "01";
     const LEN_3_STR: &str = "012";
-    const LEN_50_STR: &str = "01234567890123456789012345678901234567890123456789";
-    const LEN_51_STR: &str = "012345678901234567890123456789012345678901234567890";
+    pub const LEN_50_STR: &str = "01234567890123456789012345678901234567890123456789";
+    pub const LEN_51_STR: &str = "012345678901234567890123456789012345678901234567890";
 
     const PRE_SPACE_STR: &str = " 0123";
     const POST_SPACE_STR: &str = "0123 ";

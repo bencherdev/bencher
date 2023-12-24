@@ -3,7 +3,7 @@ use std::{collections::BTreeMap, time::Duration};
 use bencher_json::{
     project::perf::{LOWER_BOUNDARY, UPPER_BOUNDARY},
     AlertUuid, BenchmarkName, BenchmarkUuid, BranchUuid, DateTime, JsonBoundary, JsonPerfQuery,
-    JsonReport, MeasureUuid, NonEmpty, Slug, TestbedUuid,
+    JsonReport, MeasureUuid, ResourceName, Slug, TestbedUuid,
 };
 use url::Url;
 
@@ -376,9 +376,9 @@ struct Benchmark {
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Measure {
-    name: NonEmpty,
+    name: ResourceName,
     slug: Slug,
-    units: NonEmpty,
+    units: ResourceName,
 }
 
 #[derive(Clone)]

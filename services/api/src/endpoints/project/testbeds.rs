@@ -1,6 +1,6 @@
 use bencher_json::{
     project::testbed::JsonUpdateTestbed, JsonDirection, JsonNewTestbed, JsonPagination,
-    JsonTestbed, JsonTestbeds, NonEmpty, ResourceId,
+    JsonTestbed, JsonTestbeds, ResourceId, ResourceName,
 };
 use bencher_rbac::project::Permission;
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -44,7 +44,7 @@ pub enum ProjTestbedsSort {
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjTestbedsQuery {
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
 }
 
 #[allow(clippy::unused_async)]

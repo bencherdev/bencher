@@ -27,7 +27,7 @@ pub enum ValidError {
     #[error("Failed to validate name ID: {0}")]
     NameId(String),
     #[error("Failed to validate non-empty string: {0}")]
-    NonEmpty(String),
+    ResourceName(String),
     #[error("Failed to validate URL: {0}")]
     Url(String),
     #[error("Failed to translate internal URL ({0}): {1}")]

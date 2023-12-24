@@ -1,4 +1,4 @@
-use bencher_json::{NonEmpty, ResourceId, Slug};
+use bencher_json::{ResourceId, ResourceName, Slug};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliBackend, CliPagination};
@@ -30,7 +30,7 @@ pub struct CliMeasureList {
 
     /// Measure name
     #[clap(long)]
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
 
     #[clap(flatten)]
     pub pagination: CliPagination<CliMeasuresSort>,
@@ -53,7 +53,7 @@ pub struct CliMeasureCreate {
     pub project: ResourceId,
 
     /// Measure name
-    pub name: NonEmpty,
+    pub name: ResourceName,
 
     /// Measure slug
     #[clap(long)]
@@ -61,7 +61,7 @@ pub struct CliMeasureCreate {
 
     /// Units of measure
     #[clap(long)]
-    pub units: NonEmpty,
+    pub units: ResourceName,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -91,7 +91,7 @@ pub struct CliMeasureUpdate {
 
     /// Measure name
     #[clap(long)]
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
 
     /// Measure slug
     #[clap(long)]
@@ -99,7 +99,7 @@ pub struct CliMeasureUpdate {
 
     /// Units of measure
     #[clap(long)]
-    pub units: Option<NonEmpty>,
+    pub units: Option<ResourceName>,
 
     #[clap(flatten)]
     pub backend: CliBackend,

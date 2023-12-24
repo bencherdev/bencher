@@ -1,4 +1,4 @@
-use bencher_json::{NonEmpty, ResourceId, Slug};
+use bencher_json::{ResourceId, ResourceName, Slug};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliBackend, CliPagination};
@@ -30,7 +30,7 @@ pub struct CliTestbedList {
 
     /// Testbed name
     #[clap(long)]
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
 
     #[clap(flatten)]
     pub pagination: CliPagination<CliTestbedsSort>,
@@ -53,7 +53,7 @@ pub struct CliTestbedCreate {
     pub project: ResourceId,
 
     /// Testbed name
-    pub name: NonEmpty,
+    pub name: ResourceName,
 
     /// Testbed slug
     #[clap(long)]
@@ -87,7 +87,7 @@ pub struct CliTestbedUpdate {
 
     /// Testbed name
     #[clap(long)]
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
 
     /// Testbed slug
     #[clap(long)]

@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use bencher_valid::{DateTime, NonEmpty, Slug};
+use bencher_valid::{DateTime, ResourceName, Slug};
 use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -18,22 +18,22 @@ pub const LATENCY_NAME_STR: &str = "Latency";
 pub const LATENCY_SLUG_STR: &str = "latency";
 pub const LATENCY_UNITS_STR: &str = "nanoseconds (ns)";
 
-static LATENCY_NAME: Lazy<NonEmpty> =
+static LATENCY_NAME: Lazy<ResourceName> =
     Lazy::new(|| LATENCY_NAME_STR.parse().expect(MEASURE_NAME_ERROR));
 static LATENCY_SLUG: Lazy<Option<Slug>> =
     Lazy::new(|| Some(LATENCY_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR)));
-static LATENCY_UNITS: Lazy<NonEmpty> =
+static LATENCY_UNITS: Lazy<ResourceName> =
     Lazy::new(|| LATENCY_UNITS_STR.parse().expect(MEASURE_UNITS_ERROR));
 
 pub const THROUGHPUT_NAME_STR: &str = "Throughput";
 pub const THROUGHPUT_SLUG_STR: &str = "throughput";
 pub const THROUGHPUT_UNITS_STR: &str = "operations / second (ops/s)";
 
-static THROUGHPUT_NAME: Lazy<NonEmpty> =
+static THROUGHPUT_NAME: Lazy<ResourceName> =
     Lazy::new(|| THROUGHPUT_NAME_STR.parse().expect(MEASURE_NAME_ERROR));
 static THROUGHPUT_SLUG: Lazy<Option<Slug>> =
     Lazy::new(|| Some(THROUGHPUT_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR)));
-static THROUGHPUT_UNITS: Lazy<NonEmpty> =
+static THROUGHPUT_UNITS: Lazy<ResourceName> =
     Lazy::new(|| THROUGHPUT_UNITS_STR.parse().expect(MEASURE_UNITS_ERROR));
 
 // Iai measures
@@ -42,54 +42,54 @@ pub const INSTRUCTIONS_NAME_STR: &str = "Instructions";
 pub const INSTRUCTIONS_SLUG_STR: &str = "instructions";
 pub const INSTRUCTIONS_UNITS_STR: &str = "instructions";
 
-static INSTRUCTIONS_NAME: Lazy<NonEmpty> =
+static INSTRUCTIONS_NAME: Lazy<ResourceName> =
     Lazy::new(|| INSTRUCTIONS_NAME_STR.parse().expect(MEASURE_NAME_ERROR));
 static INSTRUCTIONS_SLUG: Lazy<Option<Slug>> =
     Lazy::new(|| Some(INSTRUCTIONS_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR)));
-static INSTRUCTIONS_UNITS: Lazy<NonEmpty> =
+static INSTRUCTIONS_UNITS: Lazy<ResourceName> =
     Lazy::new(|| INSTRUCTIONS_UNITS_STR.parse().expect(MEASURE_UNITS_ERROR));
 
 pub const L1_ACCESSES_NAME_STR: &str = "L1 Accesses";
 pub const L1_ACCESSES_SLUG_STR: &str = "l1-accesses";
 pub const L1_ACCESSES_UNITS_STR: &str = "accesses";
 
-static L1_ACCESSES_NAME: Lazy<NonEmpty> =
+static L1_ACCESSES_NAME: Lazy<ResourceName> =
     Lazy::new(|| L1_ACCESSES_NAME_STR.parse().expect(MEASURE_NAME_ERROR));
 static L1_ACCESSES_SLUG: Lazy<Option<Slug>> =
     Lazy::new(|| Some(L1_ACCESSES_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR)));
-static L1_ACCESSES_UNITS: Lazy<NonEmpty> =
+static L1_ACCESSES_UNITS: Lazy<ResourceName> =
     Lazy::new(|| L1_ACCESSES_UNITS_STR.parse().expect(MEASURE_UNITS_ERROR));
 
 pub const L2_ACCESSES_NAME_STR: &str = "L2 Accesses";
 pub const L2_ACCESSES_SLUG_STR: &str = "l2-accesses";
 pub const L2_ACCESSES_UNITS_STR: &str = "accesses";
 
-static L2_ACCESSES_NAME: Lazy<NonEmpty> =
+static L2_ACCESSES_NAME: Lazy<ResourceName> =
     Lazy::new(|| L2_ACCESSES_NAME_STR.parse().expect(MEASURE_NAME_ERROR));
 static L2_ACCESSES_SLUG: Lazy<Option<Slug>> =
     Lazy::new(|| Some(L2_ACCESSES_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR)));
-static L2_ACCESSES_UNITS: Lazy<NonEmpty> =
+static L2_ACCESSES_UNITS: Lazy<ResourceName> =
     Lazy::new(|| L2_ACCESSES_UNITS_STR.parse().expect(MEASURE_UNITS_ERROR));
 pub const RAM_ACCESSES_NAME_STR: &str = "RAM Accesses";
 pub const RAM_ACCESSES_SLUG_STR: &str = "ram-accesses";
 pub const RAM_ACCESSES_UNITS_STR: &str = "accesses";
 
-static RAM_ACCESSES_NAME: Lazy<NonEmpty> =
+static RAM_ACCESSES_NAME: Lazy<ResourceName> =
     Lazy::new(|| RAM_ACCESSES_NAME_STR.parse().expect(MEASURE_NAME_ERROR));
 static RAM_ACCESSES_SLUG: Lazy<Option<Slug>> =
     Lazy::new(|| Some(RAM_ACCESSES_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR)));
-static RAM_ACCESSES_UNITS: Lazy<NonEmpty> =
+static RAM_ACCESSES_UNITS: Lazy<ResourceName> =
     Lazy::new(|| RAM_ACCESSES_UNITS_STR.parse().expect(MEASURE_UNITS_ERROR));
 
 pub const ESTIMATED_CYCLES_NAME_STR: &str = "Estimated Cycles";
 pub const ESTIMATED_CYCLES_SLUG_STR: &str = "estimated-cycles";
 pub const ESTIMATED_CYCLES_UNITS_STR: &str = "estimated cycles";
 
-static ESTIMATED_CYCLES_NAME: Lazy<NonEmpty> =
+static ESTIMATED_CYCLES_NAME: Lazy<ResourceName> =
     Lazy::new(|| ESTIMATED_CYCLES_NAME_STR.parse().expect(MEASURE_NAME_ERROR));
 static ESTIMATED_CYCLES_SLUG: Lazy<Option<Slug>> =
     Lazy::new(|| Some(ESTIMATED_CYCLES_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR)));
-static ESTIMATED_CYCLES_UNITS: Lazy<NonEmpty> = Lazy::new(|| {
+static ESTIMATED_CYCLES_UNITS: Lazy<ResourceName> = Lazy::new(|| {
     ESTIMATED_CYCLES_UNITS_STR
         .parse()
         .expect(MEASURE_UNITS_ERROR)
@@ -100,9 +100,9 @@ crate::typed_uuid::typed_uuid!(MeasureUuid);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewMeasure {
-    pub name: NonEmpty,
+    pub name: ResourceName,
     pub slug: Option<Slug>,
-    pub units: NonEmpty,
+    pub units: ResourceName,
 }
 
 impl JsonNewMeasure {
@@ -175,9 +175,9 @@ crate::from_vec!(JsonMeasures[JsonMeasure]);
 pub struct JsonMeasure {
     pub uuid: MeasureUuid,
     pub project: ProjectUuid,
-    pub name: NonEmpty,
+    pub name: ResourceName,
     pub slug: Slug,
-    pub units: NonEmpty,
+    pub units: ResourceName,
     pub created: DateTime,
     pub modified: DateTime,
 }
@@ -191,7 +191,7 @@ impl fmt::Display for JsonMeasure {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonUpdateMeasure {
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
     pub slug: Option<Slug>,
-    pub units: Option<NonEmpty>,
+    pub units: Option<ResourceName>,
 }

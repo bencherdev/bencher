@@ -1,6 +1,6 @@
 use bencher_json::{
     project::testbed::{JsonUpdateTestbed, TESTBED_LOCALHOST_STR},
-    DateTime, JsonNewTestbed, JsonTestbed, NonEmpty, Slug, TestbedUuid,
+    DateTime, JsonNewTestbed, JsonTestbed, ResourceName, Slug, TestbedUuid,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
@@ -30,7 +30,7 @@ pub struct QueryTestbed {
     pub id: TestbedId,
     pub uuid: TestbedUuid,
     pub project_id: ProjectId,
-    pub name: NonEmpty,
+    pub name: ResourceName,
     pub slug: Slug,
     pub created: DateTime,
     pub modified: DateTime,
@@ -90,7 +90,7 @@ impl QueryTestbed {
 pub struct InsertTestbed {
     pub uuid: TestbedUuid,
     pub project_id: ProjectId,
-    pub name: NonEmpty,
+    pub name: ResourceName,
     pub slug: Slug,
     pub created: DateTime,
     pub modified: DateTime,
@@ -123,7 +123,7 @@ impl InsertTestbed {
 #[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = testbed_table)]
 pub struct UpdateTestbed {
-    pub name: Option<NonEmpty>,
+    pub name: Option<ResourceName>,
     pub slug: Option<Slug>,
     pub modified: DateTime,
 }

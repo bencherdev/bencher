@@ -1,6 +1,6 @@
 use bencher_json::{
-    project::testbed::TESTBED_LOCALHOST_STR, JsonUuid, JsonUuids, NameId, NameIdKind, NonEmpty,
-    ResourceId, TestbedUuid,
+    project::testbed::TESTBED_LOCALHOST_STR, JsonUuid, JsonUuids, NameId, NameIdKind, ResourceId,
+    ResourceName, TestbedUuid,
 };
 
 use crate::bencher::backend::Backend;
@@ -107,7 +107,7 @@ async fn get_testbed(
 
 async fn get_testbed_query(
     project: &ResourceId,
-    testbed_name: &NonEmpty,
+    testbed_name: &ResourceName,
     backend: &Backend,
 ) -> Result<Option<TestbedUuid>, TestbedError> {
     // Use `JsonUuids` to future proof against breaking changes
