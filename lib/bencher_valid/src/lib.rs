@@ -12,6 +12,7 @@ mod error;
 mod git_hash;
 mod jwt;
 mod name_id;
+mod non_empty;
 #[cfg(feature = "plus")]
 mod plus;
 mod resource_id;
@@ -55,8 +56,12 @@ pub fn startup() {
     console_error_panic_hook::set_once();
 }
 
+fn is_valid_non_empty(input: &str) -> bool {
+    !input.is_empty() && input == input.trim()
+}
+
 fn is_valid_len(input: &str) -> bool {
-    !input.is_empty() && input.len() <= MAX_LEN && input == input.trim()
+    is_valid_non_empty(input) && input.len() <= MAX_LEN
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
@@ -135,6 +140,21 @@ pub mod test {
     const POST_SPACE_STR: &str = "0123 ";
     const BOTH_SPACE_STR: &str = " 0123 ";
     const INNER_SPACE_STR: &str = "01 23";
+
+    #[test]
+    fn test_is_valid_non_empty() {
+        assert_eq!(true, is_valid_len(LEN_1_STR));
+        assert_eq!(true, is_valid_len(LEN_2_STR));
+        assert_eq!(true, is_valid_len(LEN_3_STR));
+        assert_eq!(true, is_valid_len(LEN_50_STR));
+        assert_eq!(false, is_valid_len(LEN_51_STR));
+        assert_eq!(true, is_valid_len(INNER_SPACE_STR));
+
+        assert_eq!(false, is_valid_len(LEN_0_STR));
+        assert_eq!(false, is_valid_len(PRE_SPACE_STR));
+        assert_eq!(false, is_valid_len(POST_SPACE_STR));
+        assert_eq!(false, is_valid_len(BOTH_SPACE_STR));
+    }
 
     #[test]
     fn test_is_valid_len() {

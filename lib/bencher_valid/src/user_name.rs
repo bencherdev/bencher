@@ -113,8 +113,10 @@ mod test {
         assert_eq!(true, is_valid_user_name("Muriel Linda-Bagge"));
         assert_eq!(true, is_valid_user_name("Muriel De'Bagge"));
         assert_eq!(true, is_valid_user_name("Mrs. Muriel Linda-De'Bagge"));
+        assert_eq!(true, is_valid_user_name(crate::test::LEN_50_STR));
 
-        assert_eq!(false, is_valid_user_name(""));
+        assert_eq!(false, is_valid_user_name(crate::test::LEN_0_STR));
+        assert_eq!(false, is_valid_user_name(crate::test::LEN_51_STR));
         assert_eq!(false, is_valid_user_name(" Muriel Bagge"));
         assert_eq!(false, is_valid_user_name("Muriel Bagge "));
         assert_eq!(false, is_valid_user_name(" Muriel Bagge "));

@@ -26,7 +26,9 @@ pub enum ValidError {
     BenchmarkName(String),
     #[error("Failed to validate name ID: {0}")]
     NameId(String),
-    #[error("Failed to validate non-empty string: {0}")]
+    #[error("Failed to validate non-empty ID: {0}")]
+    NonEmpty(String),
+    #[error("Failed to validate resource name string: {0}")]
     ResourceName(String),
     #[error("Failed to validate URL: {0}")]
     Url(String),
