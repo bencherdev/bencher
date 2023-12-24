@@ -9,7 +9,7 @@ use serde::{
 };
 use uuid::Uuid;
 
-use crate::{ResourceName, Slug, ValidError};
+use crate::{NonEmpty, Slug, ValidError};
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
@@ -19,7 +19,7 @@ pub struct NameId(String);
 pub enum NameIdKind {
     Uuid(Uuid),
     Slug(Slug),
-    Name(ResourceName),
+    Name(NonEmpty),
 }
 
 impl FromStr for NameId {
@@ -30,8 +30,8 @@ impl FromStr for NameId {
             Ok(Self(uuid.to_string()))
         } else if let Ok(slug) = Slug::from_str(value) {
             Ok(Self(slug.into()))
-        } else if let Ok(resource_name) = ResourceName::from_str(value) {
-            Ok(Self(resource_name.into()))
+        } else if let Ok(non_empty) = NonEmpty::from_str(value) {
+            Ok(Self(non_empty.into()))
         } else {
             Err(ValidError::NameId(value.into()))
         }
@@ -46,8 +46,8 @@ impl TryFrom<&NameId> for NameIdKind {
             Ok(Self::Uuid(uuid))
         } else if let Ok(slug) = Slug::from_str(name_id.as_ref()) {
             Ok(Self::Slug(slug))
-        } else if let Ok(resource_name) = ResourceName::from_str(name_id.as_ref()) {
-            Ok(Self::Name(resource_name))
+        } else if let Ok(non_empty) = NonEmpty::from_str(name_id.as_ref()) {
+            Ok(Self::Name(non_empty))
         } else {
             Err(ValidError::NameId(name_id.to_string()))
         }
@@ -66,9 +66,9 @@ impl From<Slug> for NameId {
     }
 }
 
-impl From<ResourceName> for NameId {
-    fn from(resource_name: ResourceName) -> Self {
-        Self(resource_name.into())
+impl From<NonEmpty> for NameId {
+    fn from(non_empty: NonEmpty) -> Self {
+        Self(non_empty.into())
     }
 }
 

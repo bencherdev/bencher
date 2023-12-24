@@ -36,6 +36,7 @@ pub use error::ValidError;
 use error::REGEX_ERROR;
 pub use jwt::Jwt;
 pub use name_id::{NameId, NameIdKind};
+pub use non_empty::NonEmpty;
 #[cfg(feature = "plus")]
 pub use plus::{
     CardBrand, CardCvc, CardNumber, Entitlements, ExpirationMonth, ExpirationYear, LastFour,
