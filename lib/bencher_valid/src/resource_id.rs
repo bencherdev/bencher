@@ -9,7 +9,7 @@ use serde::{
 };
 use uuid::Uuid;
 
-use crate::{Slug, ValidError};
+use crate::{slug::is_valid_slug, Slug, ValidError};
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
@@ -25,10 +25,10 @@ impl FromStr for ResourceId {
     type Err = ValidError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        if let Ok(uuid) = Uuid::from_str(value) {
-            Ok(Self(uuid.to_string()))
-        } else if let Ok(slug) = Slug::from_str(value) {
-            Ok(Self(slug.into()))
+        // A UUID is always a valid slug
+        // And a slug is always a valid resource ID
+        if is_valid_slug(value) {
+            Ok(Self(value.into()))
         } else {
             Err(ValidError::ResourceId(value.into()))
         }

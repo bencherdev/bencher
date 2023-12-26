@@ -9,7 +9,7 @@ use serde::{
 };
 use uuid::Uuid;
 
-use crate::{NonEmpty, Slug, ValidError};
+use crate::{non_empty::is_valid_non_empty, NonEmpty, Slug, ValidError};
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
@@ -26,12 +26,11 @@ impl FromStr for NameId {
     type Err = ValidError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        if let Ok(uuid) = Uuid::from_str(value) {
-            Ok(Self(uuid.to_string()))
-        } else if let Ok(slug) = Slug::from_str(value) {
-            Ok(Self(slug.into()))
-        } else if let Ok(non_empty) = NonEmpty::from_str(value) {
-            Ok(Self(non_empty.into()))
+        // A UUID always a valid slug
+        // A slug is always non-empty
+        // And a non-empty string is always a valid name ID
+        if is_valid_non_empty(value) {
+            Ok(Self(value.into()))
         } else {
             Err(ValidError::NameId(value.into()))
         }
