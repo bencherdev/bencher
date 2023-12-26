@@ -40,8 +40,10 @@ pub struct JsonConfig {
     pub server: JsonServer,
     pub logging: JsonLogging,
     pub database: JsonDatabase,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub smtp: Option<JsonSmtp>,
     #[cfg(feature = "plus")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub plus: Option<JsonPlus>,
 }
 

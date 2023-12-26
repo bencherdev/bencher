@@ -25,6 +25,9 @@ const AuthGitHub = (props: Props) => {
 		if (!code || !installationId || !setupAction) {
 			return;
 		}
+		console.log("code", code);
+		console.log("installationId", installationId);
+		console.log("setupAction", setupAction);
 	});
 
 	return <></>;

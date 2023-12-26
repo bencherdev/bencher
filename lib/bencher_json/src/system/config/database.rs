@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonDatabase {
     pub file: PathBuf,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub data_store: Option<DataStore>,
 }
 

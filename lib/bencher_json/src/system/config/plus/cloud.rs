@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 pub struct JsonCloud {
     pub billing: JsonBilling,
     pub license_pem: Secret,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sentry: Option<Secret>,
 }
 

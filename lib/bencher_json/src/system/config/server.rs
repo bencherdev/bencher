@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 pub struct JsonServer {
     pub bind_address: SocketAddr,
     pub request_body_max_bytes: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tls: Option<JsonTls>,
 }
 
