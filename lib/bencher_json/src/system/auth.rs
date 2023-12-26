@@ -1,6 +1,6 @@
 #[cfg(feature = "plus")]
 use bencher_valid::PlanLevel;
-use bencher_valid::{Email, Jwt, Slug, UserName};
+use bencher_valid::{Email, Jwt, Slug, Url, UserName};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -51,4 +51,12 @@ pub struct JsonAuthToken {
 pub struct JsonAuthUser {
     pub user: JsonUser,
     pub token: Jwt,
+}
+
+#[cfg(feature = "plus")]
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonOAuth {
+    pub url: Url,
 }

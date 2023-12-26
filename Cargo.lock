@@ -982,6 +982,7 @@ dependencies = [
  "bencher_valid",
  "oauth2",
  "once_cell",
+ "thiserror",
  "url",
 ]
 

@@ -7,6 +7,7 @@ edition.workspace = true
 [dependencies]
 bencher_valid.workspace = true
 once_cell.workspace = true
+thiserror.workspace = true
 url.workspace = true
 # Crate
 oauth2 = "4.4"

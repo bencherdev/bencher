@@ -3,16 +3,20 @@
 use bencher_json::JsonAuth;
 use bencher_json::JsonLogin;
 
+use bencher_json::system::auth::JsonOAuth;
+use diesel::sql_types::Json;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use http::StatusCode;
 use slog::Logger;
 
 use crate::endpoints::endpoint::CorsResponse;
+use crate::endpoints::endpoint::Get;
 use crate::endpoints::endpoint::Post;
 use crate::endpoints::endpoint::ResponseAccepted;
 use crate::endpoints::Endpoint;
 
+use crate::endpoints::endpoint::ResponseOk;
 use crate::error::forbidden_error;
 use crate::error::issue_error;
 use crate::error::resource_conflict_err;
@@ -36,7 +40,34 @@ use super::TOKEN_ARG;
 pub async fn auth_github_options(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Post.into()]))
+    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
+}
+
+#[endpoint {
+    method = GET,
+    path = "/v0/auth/github",
+    tags = ["auth"]
+}]
+pub async fn auth_github_get(
+    rqctx: RequestContext<ApiContext>,
+) -> Result<ResponseOk<JsonOAuth>, HttpError> {
+    let json = get_inner(&rqctx.log, rqctx.context()).await?;
+    Ok(Get::pub_response_ok(json))
+}
+
+#[allow(clippy::unused_async)]
+async fn get_inner(log: &Logger, context: &ApiContext) -> Result<JsonOAuth, HttpError> {
+    context
+        .github
+        .as_ref()
+        .map(|github| JsonOAuth {
+            url: github.authorize_url().into(),
+        })
+        .ok_or_else(|| {
+            let err = "GitHub OAuth2 is not configured";
+            slog::warn!(log, "{err}");
+            forbidden_error(err)
+        })
 }
 
 #[endpoint {
