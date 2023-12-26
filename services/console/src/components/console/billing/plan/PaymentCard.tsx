@@ -17,7 +17,7 @@ import {
 	validCardNumber,
 	validExpiration,
 	validJwt,
-	validResourceName,
+	validNonEmpty,
 } from "../../../../util/valid";
 import Field, { type FieldValue } from "../../../field/Field";
 import FieldKind from "../../../field/kind";
@@ -249,7 +249,7 @@ const CARD_FIELDS = {
 		placeholder: "Full Name",
 		icon: "fas fa-signature",
 		help: "Must be a non-empty string",
-		validate: validResourceName,
+		validate: validNonEmpty,
 	},
 	number: {
 		label: "Card Number",

@@ -8,6 +8,7 @@ import {
 	is_valid_expiration_month,
 	is_valid_expiration_year,
 	is_valid_jwt,
+	is_valid_non_empty,
 	is_valid_resource_name,
 	is_valid_plan_level,
 	is_valid_sample_size,
@@ -47,6 +48,9 @@ export const validBranchName = (branch_name: string): boolean =>
 
 export const validBenchmarkName = (benchmark_name: string): boolean =>
 	validString(benchmark_name, is_valid_benchmark_name);
+
+export const validNonEmpty = (non_empty: string): boolean =>
+	validString(non_empty, is_valid_non_empty);
 
 export const validSlug = (slug: undefined | null | string): boolean =>
 	validOptionString(slug, is_valid_slug);

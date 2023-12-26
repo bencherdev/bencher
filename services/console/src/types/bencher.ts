@@ -164,6 +164,8 @@ export type GitHash = string;
 
 export type Jwt = string;
 
+export type NonEmpty = string;
+
 export type CardCvc = string;
 
 export type Entitlements = number;
@@ -199,7 +201,7 @@ export interface JsonOrganization {
 
 export interface JsonCustomer {
 	uuid: Uuid;
-	name: ResourceName;
+	name: NonEmpty;
 	email: Email;
 }
 

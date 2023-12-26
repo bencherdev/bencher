@@ -6604,7 +6604,7 @@
             "$ref": "#/components/schemas/Email"
           },
           "name": {
-            "$ref": "#/components/schemas/ResourceName"
+            "$ref": "#/components/schemas/NonEmpty"
           },
           "uuid": {
             "$ref": "#/components/schemas/UserUuid"
@@ -8620,6 +8620,9 @@
         "format": "uuid"
       },
       "NameId": {
+        "type": "string"
+      },
+      "NonEmpty": {
         "type": "string"
       },
       "OrganizationRole": {
