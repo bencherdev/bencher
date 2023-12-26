@@ -25,8 +25,11 @@ If you are using Bencher Self-Hosted, then you will need to create your own GitH
 - Where can this GitHub App be installed?
   - 🔘 Any account
 - Click `Create GitHub App`
+- Note the `Client ID`
 - Now the app is created, under `General`
 - Client secrets
   - `Generate a new client secret`
 - Add a logo under Display information
 - Under `Private keys` generate or upload a new private key
+
+Set `GITHUB_CLIENT_ID` as an environment variable to `Client ID` when running the `bencher-ui` Docker image.

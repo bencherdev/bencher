@@ -8,6 +8,7 @@ interface ImportMetaEnv {
 	readonly PUBLIC_IS_BENCHER_CLOUD?: string;
 	// https://docs.astro.build/en/guides/integrations-guide/node/#runtime-environment-variables
 	readonly BENCHER_API_URL: string;
+	readonly GITHUB_CLIENT_ID: string;
 }
 
 interface ImportMeta {

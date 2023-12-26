@@ -473,6 +473,10 @@ export interface JsonAuthUser {
 	token: Jwt;
 }
 
+export interface JsonOAuth {
+	url: Url;
+}
+
 export interface JsonToken {
 	uuid: Uuid;
 	user: Uuid;

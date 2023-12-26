@@ -2,8 +2,6 @@
 use schemars::JsonSchema;
 use std::{fmt, str::FromStr};
 use uuid::Uuid;
-#[cfg(feature = "wasm")]
-use wasm_bindgen::prelude::*;
 
 use serde::{
     de::{self, Visitor},
