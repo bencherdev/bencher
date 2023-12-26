@@ -70,7 +70,7 @@ impl GitHub {
             .0
     }
 
-    pub async fn access_token(&self, code: NonEmpty) -> Result<GitHubUser, GitHubError> {
+    pub async fn oauth_user(&self, code: Secret) -> Result<GitHubUser, GitHubError> {
         let code = AuthorizationCode::new(code.into());
         let token = self
             .oauth2_client

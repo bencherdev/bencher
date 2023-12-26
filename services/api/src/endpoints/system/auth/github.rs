@@ -1,9 +1,11 @@
 #![cfg(feature = "plus")]
 
 use bencher_json::JsonAuth;
+use bencher_json::JsonAuthUser;
 use bencher_json::JsonLogin;
 
 use bencher_json::system::auth::JsonOAuth;
+use bencher_json::JsonSignup;
 use diesel::sql_types::Json;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
@@ -19,8 +21,11 @@ use crate::endpoints::Endpoint;
 use crate::endpoints::endpoint::ResponseOk;
 use crate::error::forbidden_error;
 use crate::error::issue_error;
+use crate::error::payment_required_error;
 use crate::error::resource_conflict_err;
 use crate::error::resource_not_found_err;
+use crate::error::unauthorized_error;
+use crate::model::user::InsertUser;
 use crate::{
     context::{ApiContext, Body, ButtonBody, Message},
     model::organization::organization_role::InsertOrganizationRole,
@@ -44,41 +49,14 @@ pub async fn auth_github_options(
 }
 
 #[endpoint {
-    method = GET,
-    path = "/v0/auth/github",
-    tags = ["auth"]
-}]
-pub async fn auth_github_get(
-    rqctx: RequestContext<ApiContext>,
-) -> Result<ResponseOk<JsonOAuth>, HttpError> {
-    let json = get_inner(&rqctx.log, rqctx.context()).await?;
-    Ok(Get::pub_response_ok(json))
-}
-
-#[allow(clippy::unused_async)]
-async fn get_inner(log: &Logger, context: &ApiContext) -> Result<JsonOAuth, HttpError> {
-    context
-        .github
-        .as_ref()
-        .map(|github| JsonOAuth {
-            url: github.authorize_url().into(),
-        })
-        .ok_or_else(|| {
-            let err = "GitHub OAuth2 is not configured";
-            slog::warn!(log, "{err}");
-            forbidden_error(err)
-        })
-}
-
-#[endpoint {
     method = POST,
     path = "/v0/auth/github",
     tags = ["auth"]
 }]
 pub async fn auth_github_post(
     rqctx: RequestContext<ApiContext>,
-    body: TypedBody<JsonLogin>,
-) -> Result<ResponseAccepted<JsonAuth>, HttpError> {
+    body: TypedBody<JsonOAuth>,
+) -> Result<ResponseAccepted<JsonAuthUser>, HttpError> {
     let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner()).await?;
     Ok(Post::pub_response_accepted(json))
 }
@@ -86,14 +64,50 @@ pub async fn auth_github_post(
 async fn post_inner(
     log: &Logger,
     context: &ApiContext,
-    json_login: JsonLogin,
-) -> Result<JsonAuth, HttpError> {
+    json_oauth: JsonOAuth,
+) -> Result<JsonAuthUser, HttpError> {
+    let Some(github) = &context.github else {
+        let err = "GitHub OAuth2 is not configured";
+        slog::warn!(log, "{err}");
+        return Err(payment_required_error(err));
+    };
     let conn = &mut *context.conn().await;
 
-    if let Some(github) = &context.github {
-        let url = github.authorize_url();
-        slog::debug!(log, "Redirecting to GitHub for OAuth2 authorization"; "url" => %url);
+    let github_user = github
+        .oauth_user(json_oauth.code)
+        .await
+        .map_err(unauthorized_error)?;
+    let email = github_user
+        .email
+        .ok_or_else(|| unauthorized_error("GitHub OAuth2 user does not have an email address"))?
+        .parse()
+        .map_err(unauthorized_error)?;
+
+    let query_user = QueryUser::get_id_from_email(conn, &email);
+
+    if query_user.is_ok() {
+    } else {
+        // If not on Bencher Cloud, then users must be invited to use OAuth2
+        if !context.is_bencher_cloud() && json_oauth.invite.is_none() {
+            return Err(payment_required_error(
+                "You must be invited to join Bencher",
+            ));
+        }
+
+        let json_signup = JsonSignup {
+            name: github_user.login.parse().map_err(unauthorized_error)?,
+            slug: None,
+            email,
+            i_agree: true,
+            invite: json_oauth.invite.clone(),
+            plan: None,
+        };
+
+        let invited = json_signup.invite.is_some();
+        let insert_user = InsertUser::insert_from_json(conn, &context.token_key, &json_signup)?;
     }
+
+    todo!()
 
     // let query_user = schema::user::table
     //     .filter(schema::user::email.eq(json_login.email.as_ref()))
@@ -176,7 +190,7 @@ async fn post_inner(
     // };
     // context.messenger.send(log, message);
 
-    Ok(JsonAuth {
-        email: json_login.email,
-    })
+    // Ok(JsonAuth {
+    //     email: json_login.email,
+    // })
 }

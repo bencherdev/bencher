@@ -84,6 +84,10 @@ pub static DEVEL_BENCHER_URL: Lazy<url::Url> = Lazy::new(|| {
         .parse()
         .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{DEVEL_BENCHER_URL_STR}\": {e}"))
 });
+#[cfg(feature = "plus")]
+pub fn is_bencher_cloud(url: &url::Url) -> bool {
+    *url == *BENCHER_URL || *url == *DEVEL_BENCHER_URL
+}
 
 #[cfg(debug_assertions)]
 pub const BENCHER_API_URL_STR: &str = "http://localhost:61016";

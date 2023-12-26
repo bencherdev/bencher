@@ -1,10 +1,16 @@
-use bencher_json::{DateTime, Email, JsonSignup, JsonUser, Slug, UserName, UserUuid};
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use bencher_json::{
+    organization::member::OrganizationRole, DateTime, Email, JsonSignup, JsonUser, Slug, UserName,
+    UserUuid,
+};
+use bencher_token::TokenKey;
+use diesel::{dsl::count, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
+use slog::Logger;
+use url::Url;
 
 use crate::{
-    context::DbConnection,
-    error::resource_not_found_err,
+    context::{Body, DbConnection, Message, Messenger, NewUserBody},
+    error::{resource_conflict_err, resource_not_found_err},
     schema::{self, user as user_table},
     util::{
         fn_get::{fn_get, fn_get_id, fn_get_uuid},
@@ -28,6 +34,10 @@ macro_rules! same_user {
 }
 
 pub(crate) use same_user;
+
+use super::organization::{
+    organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
+};
 
 #[derive(Debug, diesel::Queryable)]
 pub struct QueryUser {
@@ -108,6 +118,59 @@ pub struct InsertUser {
 }
 
 impl InsertUser {
+    pub fn insert_from_json(
+        conn: &mut DbConnection,
+        token_key: &TokenKey,
+        json_signup: &JsonSignup,
+    ) -> Result<Self, HttpError> {
+        let mut insert_user = InsertUser::from_json(conn, json_signup.clone())?;
+
+        let count = schema::user::table
+            .select(count(schema::user::id))
+            .first::<i64>(conn)
+            .map_err(resource_not_found_err!(User, json_signup))?;
+        // The first user to signup is admin
+        if count == 0 {
+            insert_user.admin = true;
+        }
+
+        // Insert user
+        diesel::insert_into(schema::user::table)
+            .values(&insert_user)
+            .execute(conn)
+            .map_err(resource_conflict_err!(User, insert_user))?;
+        let user_id = QueryUser::get_id(conn, insert_user.uuid)?;
+
+        let insert_org_role = if let Some(invite) = &json_signup.invite {
+            InsertOrganizationRole::from_jwt(conn, token_key, invite, user_id)?
+        } else {
+            // Create an organization for the user
+            let insert_org = InsertOrganization::from_user(&insert_user);
+            diesel::insert_into(schema::organization::table)
+                .values(&insert_org)
+                .execute(conn)
+                .map_err(resource_conflict_err!(Organization, insert_org))?;
+            let organization_id = QueryOrganization::get_id(conn, insert_org.uuid)?;
+
+            let timestamp = DateTime::now();
+            // Connect the user to the organization as a `Leader`
+            InsertOrganizationRole {
+                user_id,
+                organization_id,
+                role: OrganizationRole::Leader,
+                created: timestamp,
+                modified: timestamp,
+            }
+        };
+
+        diesel::insert_into(schema::organization_role::table)
+            .values(&insert_org_role)
+            .execute(conn)
+            .map_err(resource_conflict_err!(OrganizationRole, insert_org_role))?;
+
+        Ok(insert_user)
+    }
+
     pub fn from_json(conn: &mut DbConnection, signup: JsonSignup) -> Result<Self, HttpError> {
         let JsonSignup {
             name, slug, email, ..
@@ -124,5 +187,34 @@ impl InsertUser {
             created: timestamp,
             modified: timestamp,
         })
+    }
+
+    pub fn notify(
+        &self,
+        log: &Logger,
+        conn: &mut DbConnection,
+        messenger: &Messenger,
+        endpoint: &Url,
+        invited: bool,
+    ) -> Result<(), HttpError> {
+        if !self.admin {
+            let admins = QueryUser::get_admins(conn)?;
+            for admin in admins {
+                let message = Message {
+                    to_name: Some(admin.name.clone().into()),
+                    to_email: admin.email.into(),
+                    subject: Some("🐰 New Bencher User".into()),
+                    body: Some(Body::NewUser(NewUserBody {
+                        admin: admin.name.clone().into(),
+                        endpoint: endpoint.clone(),
+                        name: self.name.clone().into(),
+                        email: self.email.clone().into(),
+                        invited,
+                    })),
+                };
+                messenger.send(log, message);
+            }
+        }
+        Ok(())
     }
 }

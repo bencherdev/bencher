@@ -45,7 +45,6 @@ impl Api {
                 if http_options {
                     api.register(system::auth::github::auth_github_options)?;
                 }
-                api.register(system::auth::github::auth_github_get)?;
                 api.register(system::auth::github::auth_github_post)?;
             }
         }

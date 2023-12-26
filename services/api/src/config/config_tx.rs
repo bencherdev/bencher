@@ -114,7 +114,7 @@ impl ConfigTx {
         let config_dropshot = into_config_dropshot(server);
 
         #[cfg(feature = "plus")]
-        let is_bencher_cloud = context.biller.is_some();
+        let is_bencher_cloud = context.is_bencher_cloud();
         #[cfg(feature = "plus")]
         // Only setup stats if they are enabled
         if context.stats.enabled {

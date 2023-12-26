@@ -43,6 +43,11 @@ impl ApiContext {
     }
 
     #[cfg(feature = "plus")]
+    pub fn is_bencher_cloud(&self) -> bool {
+        bencher_json::is_bencher_cloud(&self.endpoint) && self.biller.is_some()
+    }
+
+    #[cfg(feature = "plus")]
     pub fn biller(&self) -> Result<&Biller, dropshot::HttpError> {
         self.biller.as_ref().ok_or_else(|| {
             crate::error::locked_error("Tried to use a Bencher Cloud route when Self-Hosted")
