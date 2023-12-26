@@ -37,6 +37,18 @@ impl Api {
         api.register(system::auth::login::auth_login_post)?;
         api.register(system::auth::confirm::auth_confirm_post)?;
 
+        #[cfg(feature = "plus")]
+        {
+            // GitHub OAuth
+            // Bencher Cloud only
+            if is_bencher_cloud {
+                if http_options {
+                    api.register(system::auth::github::auth_github_options)?;
+                }
+                api.register(system::auth::github::auth_github_post)?;
+            }
+        }
+
         // Organizations
         if http_options {
             api.register(organization::organizations::organizations_options)?;
