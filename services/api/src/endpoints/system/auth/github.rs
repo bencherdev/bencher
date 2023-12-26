@@ -25,6 +25,8 @@ use crate::error::payment_required_error;
 use crate::error::resource_conflict_err;
 use crate::error::resource_not_found_err;
 use crate::error::unauthorized_error;
+use crate::model::organization::plan::PlanKind;
+use crate::model::organization::QueryOrganization;
 use crate::model::user::InsertUser;
 use crate::{
     context::{ApiContext, Body, ButtonBody, Message},
@@ -88,10 +90,31 @@ async fn post_inner(
     if query_user.is_ok() {
     } else {
         // If not on Bencher Cloud, then users must be invited to use OAuth2
-        if !context.is_bencher_cloud() && json_oauth.invite.is_none() {
-            return Err(payment_required_error(
-                "You must be invited to join Bencher",
-            ));
+        if !context.is_bencher_cloud() {
+            let Some(invite) = &json_oauth.invite else {
+                return Err(payment_required_error(
+                    "You must be invited to join a Bencher Self-Hosted instance with GitHub OAuth2",
+                ));
+            };
+
+            let claims = context
+                .token_key
+                .validate_invite(invite)
+                .map_err(unauthorized_error)?;
+
+            let query_organization = schema::organization::table
+                .filter(schema::organization::uuid.eq(&claims.org.uuid))
+                .first::<QueryOrganization>(conn)
+                .map_err(resource_not_found_err!(Organization, claims))?;
+
+            // Make sure org has a valid Bencher Plus plan
+            PlanKind::new_for_organization(
+                conn,
+                context.biller.as_ref(),
+                &context.licensor,
+                &query_organization,
+            )
+            .await?;
         }
 
         let json_signup = JsonSignup {
@@ -105,6 +128,8 @@ async fn post_inner(
 
         let invited = json_signup.invite.is_some();
         let insert_user = InsertUser::insert_from_json(conn, &context.token_key, &json_signup)?;
+
+        insert_user.notify(log, conn, &context.messenger, &context.endpoint, invited)?;
     }
 
     todo!()

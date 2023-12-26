@@ -20,7 +20,7 @@ const description = "Sign up for Bencher and start catching performance regressi
   <h1 class="title is-1">{title}</h1>
 
   <AuthForm client:only="solid-js" apiUrl={BENCHER_API_URL} newUser={newUser} />
-  <OAuthForm githubClientId={GITHUB_CLIENT_ID} newUser={newUser} />
+  <OAuthForm client:only="solid-js" newUser={newUser} githubClientId={GITHUB_CLIENT_ID} />
 
   <hr />
 

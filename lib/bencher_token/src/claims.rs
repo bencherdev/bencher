@@ -56,6 +56,7 @@ impl Claims {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct InviteClaims {
     pub aud: String,
     pub exp: i64,

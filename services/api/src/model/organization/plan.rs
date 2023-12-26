@@ -292,6 +292,22 @@ impl PlanKind {
         }
     }
 
+    pub async fn new_for_organization(
+        conn: &mut DbConnection,
+        biller: Option<&Biller>,
+        licensor: &Licensor,
+        query_organization: &QueryOrganization,
+    ) -> Result<Self, HttpError> {
+        Self::new(
+            conn,
+            biller,
+            licensor,
+            query_organization,
+            Visibility::default(),
+        )
+        .await
+    }
+
     pub async fn new_for_project(
         conn: &mut DbConnection,
         biller: Option<&Biller>,
