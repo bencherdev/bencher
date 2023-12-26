@@ -854,6 +854,7 @@ dependencies = [
  "bencher_adapter",
  "bencher_billing",
  "bencher_boundary",
+ "bencher_github",
  "bencher_json",
  "bencher_license",
  "bencher_logger",
@@ -971,6 +972,16 @@ name = "bencher_comment"
 version = "0.3.25"
 dependencies = [
  "bencher_json",
+ "url",
+]
+
+[[package]]
+name = "bencher_github"
+version = "0.3.25"
+dependencies = [
+ "bencher_valid",
+ "oauth2",
+ "once_cell",
  "url",
 ]
 
@@ -3705,6 +3716,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2819ce041d2ee131036f4fc9d6ae7ae125a3a40e97ba64d04fe799ad9dabbb44"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "oauth2"
+version = "4.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c38841cdd844847e3e7c8d29cef9dcfed8877f8f56f9071f77843ecf3baf937f"
+dependencies = [
+ "base64 0.13.1",
+ "chrono",
+ "getrandom 0.2.11",
+ "http",
+ "rand 0.8.5",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_path_to_error",
+ "sha2",
+ "thiserror",
+ "url",
 ]
 
 [[package]]

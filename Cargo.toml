@@ -13,6 +13,7 @@ bencher_adapter = { path = "lib/bencher_adapter" }
 bencher_boundary = { path = "lib/bencher_boundary" }
 bencher_client = { path = "lib/bencher_client" }
 bencher_comment = { path = "lib/bencher_comment" }
+bencher_github = { path = "lib/bencher_github" }
 bencher_json = { path = "lib/bencher_json" }
 bencher_logger = { path = "lib/bencher_logger" }
 bencher_plot = { path = "lib/bencher_plot" }

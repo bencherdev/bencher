@@ -45,7 +45,7 @@ impl FromStr for Secret {
     type Err = ValidError;
 
     fn from_str(secret: &str) -> Result<Self, Self::Err> {
-        if is_valid_secret(secret) {
+        if crate::non_empty::is_valid_non_empty(secret) {
             Ok(Self(secret.into()))
         } else {
             Err(ValidError::Secret(secret.into()))
@@ -86,7 +86,7 @@ impl Visitor<'_> for SecretVisitor {
     type Value = Secret;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a non-empty string")
+        formatter.write_str("a non-empty secret string")
     }
 
     fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
@@ -94,32 +94,5 @@ impl Visitor<'_> for SecretVisitor {
         E: de::Error,
     {
         value.parse().map_err(E::custom)
-    }
-}
-
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
-pub fn is_valid_secret(secret: &str) -> bool {
-    crate::is_valid_non_empty(secret)
-}
-
-#[cfg(test)]
-mod test {
-    use super::is_valid_secret;
-    use pretty_assertions::assert_eq;
-
-    const LEN_50_STR: &str = "01234567890123456789012345678901234567890123456789";
-    const LEN_51_STR: &str = "012345678901234567890123456789012345678901234567890";
-
-    #[test]
-    fn test_secret() {
-        assert_eq!(true, is_valid_secret("a"));
-        assert_eq!(true, is_valid_secret("ab"));
-        assert_eq!(true, is_valid_secret("abc"));
-        assert_eq!(true, is_valid_secret("ABC"));
-        assert_eq!(true, is_valid_secret("abc ~ABC!"));
-        assert_eq!(true, is_valid_secret(LEN_50_STR));
-        assert_eq!(true, is_valid_secret(LEN_51_STR));
-
-        assert_eq!(false, is_valid_secret(""));
     }
 }

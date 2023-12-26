@@ -1,0 +1,15 @@
+[package]
+name = "bencher_github"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+bencher_valid.workspace = true
+once_cell.workspace = true
+url.workspace = true
+# Crate
+oauth2 = "4.4"
+
+[lints]
+workspace = true

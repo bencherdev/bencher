@@ -1,6 +1,7 @@
 #![cfg(feature = "plus")]
 
 use bencher_billing::Biller;
+use bencher_github::GitHub;
 use bencher_json::{
     system::config::{JsonPlus, JsonStats},
     BENCHER_URL, DEVEL_BENCHER_URL,
@@ -19,6 +20,7 @@ static DEFAULT_STATS_OFFSET: Lazy<NaiveTime> =
 const DEFAULT_STATS_ENABLED: bool = true;
 
 pub struct Plus {
+    pub github: Option<GitHub>,
     pub stats: StatsSettings,
     pub biller: Option<Biller>,
     pub licensor: Licensor,
@@ -43,16 +45,22 @@ impl Plus {
     pub fn new(endpoint: &Url, plus: Option<JsonPlus>) -> Result<Self, PlusError> {
         let Some(plus) = plus else {
             return Ok(Self {
+                github: None,
                 stats: StatsSettings::default(),
                 biller: None,
                 licensor: Licensor::self_hosted().map_err(PlusError::LicenseSelfHosted)?,
             });
         };
 
+        let github = plus
+            .github
+            .map(|github| GitHub::new(endpoint, github.client_id, github.client_secret));
+
         let stats = plus.stats.map(Into::into).unwrap_or_default();
 
         let Some(cloud) = plus.cloud else {
             return Ok(Self {
+                github,
                 stats,
                 biller: None,
                 licensor: Licensor::self_hosted().map_err(PlusError::LicenseSelfHosted)?,
@@ -74,6 +82,7 @@ impl Plus {
             Licensor::bencher_cloud(&cloud.license_pem).map_err(PlusError::LicenseCloud)?;
 
         Ok(Self {
+            github,
             stats,
             biller,
             licensor,

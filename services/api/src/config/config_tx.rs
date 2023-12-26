@@ -183,6 +183,7 @@ fn into_context(
     info!(&log, "Configuring Bencher Plus");
     #[cfg(feature = "plus")]
     let Plus {
+        github,
         stats,
         biller,
         licensor,
@@ -200,6 +201,8 @@ fn into_context(
             data_store,
         },
         restart_tx,
+        #[cfg(feature = "plus")]
+        github,
         #[cfg(feature = "plus")]
         stats,
         #[cfg(feature = "plus")]

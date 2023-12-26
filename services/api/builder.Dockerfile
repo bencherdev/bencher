@@ -15,6 +15,7 @@ WORKDIR /usr/src/lib
 COPY lib/bencher_adapter bencher_adapter
 COPY lib/bencher_boundary bencher_boundary
 COPY lib/bencher_comment bencher_comment
+COPY lib/bencher_github bencher_github
 COPY lib/bencher_json bencher_json
 COPY lib/bencher_logger bencher_logger
 COPY lib/bencher_plot bencher_plot

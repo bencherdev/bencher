@@ -1,5 +1,6 @@
 #[cfg(feature = "plus")]
 use bencher_billing::Biller;
+use bencher_github::GitHub;
 #[cfg(feature = "plus")]
 use bencher_license::Licensor;
 use bencher_token::TokenKey;
@@ -26,6 +27,8 @@ pub struct ApiContext {
     pub messenger: Messenger,
     pub database: Database,
     pub restart_tx: Sender<()>,
+    #[cfg(feature = "plus")]
+    pub github: Option<GitHub>,
     #[cfg(feature = "plus")]
     pub stats: StatsSettings,
     #[cfg(feature = "plus")]
