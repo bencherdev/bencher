@@ -99,7 +99,7 @@ impl Visitor<'_> for SecretVisitor {
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_secret(secret: &str) -> bool {
-    !secret.is_empty()
+    crate::is_valid_non_empty(secret)
 }
 
 #[cfg(test)]
