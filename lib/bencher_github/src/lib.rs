@@ -3,6 +3,8 @@ use oauth2::{
     basic::BasicClient, reqwest::AsyncHttpClientError, AuthUrl, AuthorizationCode, ClientId,
     ClientSecret, CsrfToken, RedirectUrl, Scope, TokenResponse, TokenUrl,
 };
+pub use octocrab::models::Author as GitHubUser;
+use octocrab::Octocrab;
 use once_cell::sync::Lazy;
 use url::Url;
 
@@ -30,12 +32,15 @@ pub struct GitHub {
 pub enum GitHubError {
     #[error("Failed to exchange code for access token: {0}")]
     Exchange(
-        #[from]
         oauth2::RequestTokenError<
             AsyncHttpClientError,
             oauth2::StandardErrorResponse<oauth2::basic::BasicErrorResponseType>,
         >,
     ),
+    #[error("Failed to authenticate using access token: {0}")]
+    Auth(octocrab::Error),
+    #[error("Failed to get current authenticated user: {0}")]
+    User(octocrab::Error),
 }
 
 impl GitHub {
@@ -65,14 +70,29 @@ impl GitHub {
             .0
     }
 
-    pub async fn access_token(&self, code: NonEmpty) -> Result<NonEmpty, GitHubError> {
+    pub async fn access_token(&self, code: NonEmpty) -> Result<GitHubUser, GitHubError> {
         let code = AuthorizationCode::new(code.into());
         let token = self
             .oauth2_client
             .exchange_code(code)
             .request_async(oauth2::reqwest::async_http_client)
-            .await?;
-        let access_token = token.access_token();
-        todo!();
+            .await
+            .map_err(GitHubError::Exchange)?;
+
+        let oauth = octocrab::auth::OAuth {
+            access_token: token.access_token().secret().clone().into(),
+            token_type: token.token_type().as_ref().to_owned(),
+            scope: token
+                .scopes()
+                .map(|s| s.iter().map(AsRef::as_ref).map(ToOwned::to_owned).collect())
+                .unwrap_or_default(),
+        };
+        let github_client = Octocrab::builder()
+            .oauth(oauth)
+            .build()
+            .map_err(GitHubError::Auth)?;
+
+        let current_user = github_client.current();
+        current_user.user().await.map_err(GitHubError::User)
     }
 }

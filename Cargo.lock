@@ -981,6 +981,7 @@ version = "0.3.25"
 dependencies = [
  "bencher_valid",
  "oauth2",
+ "octocrab",
  "once_cell",
  "thiserror",
  "url",

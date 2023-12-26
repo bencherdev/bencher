@@ -20,6 +20,7 @@ bencher_json = { workspace = true, features = ["lite", "table"] }
 chrono = { workspace = true, features = ["clock"] }
 clap.workspace = true
 literally.workspace = true
+octocrab.workspace = true
 once_cell.workspace = true
 progenitor-client.workspace = true
 rand.workspace = true
@@ -32,7 +33,6 @@ tokio = { workspace = true, features = ["macros", "process", "rt"] }
 url.workspace = true
 # Crate
 clap_mangen = { version = "0.2", optional = true }
-octocrab = "0.32"
 
 [dev-dependencies]
 # Workspace
