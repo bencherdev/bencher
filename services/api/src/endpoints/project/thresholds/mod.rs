@@ -34,7 +34,7 @@ use crate::{
         user::auth::BearerToken,
     },
     schema,
-    util::name_id::filter_name_id,
+    util::name_id::{filter_branch_name_id, filter_measure_name_id, filter_testbed_name_id},
 };
 
 pub mod alerts;
@@ -118,13 +118,13 @@ async fn get_ls_inner(
         .into_boxed();
 
     if let Some(branch) = json_threshold_query.branch.as_ref() {
-        filter_name_id!(query, branch, branch);
+        filter_branch_name_id!(query, branch);
     }
     if let Some(testbed) = json_threshold_query.testbed.as_ref() {
-        filter_name_id!(query, testbed, testbed);
+        filter_testbed_name_id!(query, testbed);
     }
     if let Some(measure) = json_threshold_query.measure.as_ref() {
-        filter_name_id!(query, measure, measure);
+        filter_measure_name_id!(query, measure);
     }
 
     query = match pagination_params.order() {

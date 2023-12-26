@@ -36,7 +36,7 @@ use crate::{
         user::auth::BearerToken,
     },
     schema,
-    util::name_id::filter_name_id,
+    util::name_id::{filter_branch_name_id, filter_testbed_name_id},
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -117,10 +117,10 @@ async fn get_ls_inner(
         .into_boxed();
 
     if let Some(branch) = json_report_query.branch.as_ref() {
-        filter_name_id!(query, branch, branch);
+        filter_branch_name_id!(query, branch);
     }
     if let Some(testbed) = json_report_query.testbed.as_ref() {
-        filter_name_id!(query, testbed, testbed);
+        filter_testbed_name_id!(query, testbed);
     }
 
     if let Some(start_time) = json_report_query.start_time {

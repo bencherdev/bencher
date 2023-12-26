@@ -109,6 +109,7 @@ impl Branch {
                         }
                     },
                     NameIdKind::Name(name) => {
+                        let name: BranchName = name;
                         let branch_name =
                             name.as_ref().parse().map_err(BranchError::ParseBranch)?;
                         if !dry_run {

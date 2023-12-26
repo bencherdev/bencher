@@ -46,7 +46,7 @@ impl QueryBranch {
     fn_eq_resource_id!(branch);
     fn_from_resource_id!(branch, Branch);
 
-    fn_eq_name_id!(branch);
+    fn_eq_name_id!(BranchName, branch);
     fn_from_name_id!(branch, Branch);
 
     fn_get!(branch, BranchId);

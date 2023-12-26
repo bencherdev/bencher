@@ -40,7 +40,7 @@ impl QueryTestbed {
     fn_eq_resource_id!(testbed);
     fn_from_resource_id!(testbed, Testbed);
 
-    fn_eq_name_id!(testbed);
+    fn_eq_name_id!(ResourceName, testbed);
     fn_from_name_id!(testbed, Testbed);
 
     fn_get!(testbed, TestbedId);

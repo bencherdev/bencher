@@ -74,6 +74,7 @@ impl Testbed {
                 }
             },
             NameIdKind::Name(name) => {
+                let name: ResourceName = name;
                 let testbed_name = name.as_ref().parse().map_err(TestbedError::ParseTestbed)?;
                 if !dry_run {
                     get_testbed_query(project, &testbed_name, backend).await?;

@@ -16,10 +16,10 @@ use crate::{NonEmpty, Slug, ValidError};
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct NameId(String);
 
-pub enum NameIdKind {
+pub enum NameIdKind<T> {
     Uuid(Uuid),
     Slug(Slug),
-    Name(NonEmpty),
+    Name(T),
 }
 
 impl FromStr for NameId {
@@ -38,7 +38,10 @@ impl FromStr for NameId {
     }
 }
 
-impl TryFrom<&NameId> for NameIdKind {
+impl<T> TryFrom<&NameId> for NameIdKind<T>
+where
+    T: FromStr<Err = ValidError>,
+{
     type Error = ValidError;
 
     fn try_from(name_id: &NameId) -> Result<Self, Self::Error> {
@@ -46,8 +49,8 @@ impl TryFrom<&NameId> for NameIdKind {
             Ok(Self::Uuid(uuid))
         } else if let Ok(slug) = Slug::from_str(name_id.as_ref()) {
             Ok(Self::Slug(slug))
-        } else if let Ok(non_empty) = NonEmpty::from_str(name_id.as_ref()) {
-            Ok(Self::Name(non_empty))
+        } else if let Ok(name) = T::from_str(name_id.as_ref()) {
+            Ok(Self::Name(name))
         } else {
             Err(ValidError::NameId(name_id.to_string()))
         }
@@ -81,6 +84,19 @@ impl AsRef<str> for NameId {
 impl From<NameId> for String {
     fn from(name_id: NameId) -> Self {
         name_id.0
+    }
+}
+
+impl<T> fmt::Display for NameIdKind<T>
+where
+    T: fmt::Display,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Uuid(uuid) => uuid.fmt(f),
+            Self::Slug(slug) => slug.fmt(f),
+            Self::Name(name) => name.fmt(f),
+        }
     }
 }
 
