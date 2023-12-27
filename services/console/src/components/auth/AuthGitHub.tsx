@@ -1,7 +1,8 @@
-import { createEffect, createMemo, createResource } from "solid-js";
-import { authUser } from "../../util/auth";
+import bencher_valid_init, { type InitOutput } from "bencher_valid";
+import { createMemo, createResource } from "solid-js";
+import { authUser, setUser } from "../../util/auth";
 import { useNavigate, useSearchParams } from "../../util/url";
-import type { JsonAuth, JsonAuthUser, JsonOAuth } from "../../types/bencher";
+import type { JsonAuthUser, JsonOAuth } from "../../types/bencher";
 import { httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify } from "../../util/notify";
 import { PLAN_PARAM } from "./auth";
@@ -16,20 +17,34 @@ interface Props {
 }
 
 const AuthGitHub = (props: Props) => {
+	const [bencher_valid] = createResource(
+		async () => await bencher_valid_init(),
+	);
+
 	const [searchParams, _setSearchParams] = useSearchParams();
 	const user = authUser();
 	const navigate = useNavigate();
 
 	const fetcher = createMemo(() => {
 		return {
+			user: user,
+			bencher_valid: bencher_valid,
 			code: searchParams[CODE_PARAM],
 			state: searchParams[STATE_PARAM],
 		};
 	});
 	const getAuthUser = async (fetcher: {
+		user: JsonAuthUser;
+		bencher_valid: InitOutput;
 		code: undefined | string;
 		state: undefined | string;
 	}) => {
+		if (fetcher?.user?.token) {
+			navigate("/console", { replace: true });
+		}
+		if (!fetcher.bencher_valid) {
+			return null;
+		}
 		if (!fetcher.code) {
 			return null;
 		}
@@ -39,35 +54,37 @@ const AuthGitHub = (props: Props) => {
 		} as JsonOAuth;
 		return await httpPost(props.apiUrl, "/v0/auth/github", null, oauth)
 			.then((resp) => {
-				navigateNotify(
-					NotifyKind.OK,
-					`Hoppy to git to see you!`,
-					"/console",
-					[PLAN_PARAM],
-					null,
-				);
-				return resp?.data;
+				const user = resp.data;
+				if (setUser(user)) {
+					navigateNotify(
+						NotifyKind.OK,
+						"Hoppy to git to see you!",
+						"/console",
+						[PLAN_PARAM],
+						null,
+					);
+				} else {
+					navigateNotify(
+						NotifyKind.ERROR,
+						"Invalid user. Please, try again.",
+						"/auth/login",
+						[PLAN_PARAM],
+						null,
+					);
+				}
 			})
 			.catch((error) => {
 				console.error(error);
-				return null;
+				navigateNotify(
+					NotifyKind.ERROR,
+					"Invalid user. Please, try again.",
+					"/auth/login",
+					[PLAN_PARAM],
+					null,
+				);
 			});
 	};
-	const [jsonAuthUser] = createResource<JsonAuthUser>(fetcher, getAuthUser);
-
-	createEffect(() => {
-		if (user?.token) {
-			navigate("/console", { replace: true });
-		}
-		const code = searchParams[CODE_PARAM];
-		const state = searchParams[STATE_PARAM];
-		if (!code) {
-			return;
-		}
-		// todo send over code and state -> invite to server to get auth creds then save to local storage
-		console.log("code", code);
-		console.log("state", state);
-	});
+	const [_jsonAuthUser] = createResource<JsonAuthUser>(fetcher, getAuthUser);
 
 	return <></>;
 };
