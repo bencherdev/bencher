@@ -85,10 +85,10 @@ async fn get_one_inner(
         .first::<QueryPlan>(conn)
         .map_err(resource_not_found_err!(Plan, query_organization))?;
 
-    if let Some(json_plan) = query_plan.metered_plan(biller).await? {
+    if let Some(json_plan) = query_plan.get_metered_plan(biller).await? {
         Ok(json_plan)
     } else if let Some(json_plan) = query_plan
-        .licensed_plan(biller, &context.licensor, query_organization.uuid)
+        .get_licensed_plan(biller, &context.licensor, query_organization.uuid)
         .await?
     {
         Ok(json_plan)
@@ -186,7 +186,7 @@ async fn post_inner(
             .first::<QueryPlan>(conn)
             .map_err(resource_not_found_err!(Plan, query_organization))?;
         if let Some(query_plan) = query_plan
-            .licensed_plan(biller, &context.licensor, query_organization.uuid)
+            .get_licensed_plan(biller, &context.licensor, query_organization.uuid)
             .await?
         {
             Ok(query_plan)
@@ -214,7 +214,7 @@ async fn post_inner(
         let query_plan = QueryPlan::belonging_to(&query_organization)
             .first::<QueryPlan>(conn)
             .map_err(resource_not_found_err!(Plan, query_organization))?;
-        if let Some(query_plan) = query_plan.metered_plan(biller).await? {
+        if let Some(query_plan) = query_plan.get_metered_plan(biller).await? {
             Ok(query_plan)
         } else {
             Err(issue_error(

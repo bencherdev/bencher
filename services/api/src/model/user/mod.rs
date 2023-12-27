@@ -203,6 +203,7 @@ impl InsertUser {
         messenger: &Messenger,
         endpoint: &Url,
         invited: bool,
+        method: &str,
     ) -> Result<(), HttpError> {
         if !self.admin {
             let admins = QueryUser::get_admins(conn)?;
@@ -217,6 +218,7 @@ impl InsertUser {
                         name: self.name.clone().into(),
                         email: self.email.clone().into(),
                         invited,
+                        method: method.to_owned(),
                     })),
                 };
                 messenger.send(log, message);

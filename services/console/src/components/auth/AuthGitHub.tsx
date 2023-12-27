@@ -25,6 +25,7 @@ const AuthGitHub = (props: Props) => {
 		if (!code) {
 			return;
 		}
+		// todo send over code and state -> invite to server to get auth creds then save to local storage
 		console.log("code", code);
 		console.log("state", state);
 	});

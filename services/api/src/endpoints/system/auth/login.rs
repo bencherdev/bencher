@@ -1,7 +1,7 @@
 use bencher_json::JsonAuth;
 use bencher_json::JsonLogin;
 
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::RunQueryDsl;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use http::StatusCode;
 use slog::Logger;
@@ -14,7 +14,6 @@ use crate::endpoints::Endpoint;
 use crate::error::forbidden_error;
 use crate::error::issue_error;
 use crate::error::resource_conflict_err;
-use crate::error::resource_not_found_err;
 use crate::{
     context::{ApiContext, Body, ButtonBody, Message},
     model::organization::organization_role::InsertOrganizationRole,

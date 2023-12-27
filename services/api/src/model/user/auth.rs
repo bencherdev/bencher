@@ -14,7 +14,7 @@ use oso::{PolarValue, ToPolar};
 
 use crate::{
     context::{ApiContext, DbConnection, Rbac},
-    error::{bad_request_error, forbidden_error, not_found_error},
+    error::{bad_request_error, forbidden_error},
     model::{organization::OrganizationId, project::ProjectId},
     schema,
 };

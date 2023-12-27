@@ -112,7 +112,14 @@ async fn post_inner(
     };
     context.messenger.send(log, message);
 
-    insert_user.notify(log, conn, &context.messenger, &context.endpoint, invited)?;
+    insert_user.notify(
+        log,
+        conn,
+        &context.messenger,
+        &context.endpoint,
+        invited,
+        "email",
+    )?;
 
     Ok(JsonAuth {
         email: insert_user.email,

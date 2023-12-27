@@ -8,6 +8,7 @@ pub struct NewUserBody {
     pub name: String,
     pub email: String,
     pub invited: bool,
+    pub method: String,
 }
 
 impl FmtBody for NewUserBody {
@@ -18,10 +19,11 @@ impl FmtBody for NewUserBody {
             name,
             email,
             invited,
+            method,
         } = self;
         format!(
             r#"Ahoy {admin},
-        A new user {invited_or_joined} your Bencher instance ({endpoint})!
+        A new user {invited_or_joined} your Bencher instance ({endpoint}) via {method}!
 
         Name: {name}
         Email: {email}
@@ -39,6 +41,7 @@ impl FmtBody for NewUserBody {
             name,
             email,
             invited,
+            method,
         } = self;
         format!(
             "<!doctype html>
@@ -51,7 +54,7 @@ impl FmtBody for NewUserBody {
     </head>
     <body>
         <p>Ahoy {admin},</p>
-        <p>A new user {invited_or_joined} your Bencher instance ({endpoint})!</p>
+        <p>A new user {invited_or_joined} your Bencher instance ({endpoint}) via {method}!</p>
         <br />
         <p>Name: {name}</p>
         <p>Email: {email}</p>

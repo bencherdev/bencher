@@ -90,7 +90,7 @@ async fn get_inner(
         };
 
         // Metered plan
-        if let Some(json_plan) = query_plan.metered_plan(biller).await? {
+        if let Some(json_plan) = query_plan.get_metered_plan(biller).await? {
             let start_time = json_plan.current_period_start;
             let end_time = json_plan.current_period_end;
             let usage = QueryMetric::usage(conn, query_organization.id, start_time, end_time)?;
@@ -105,7 +105,7 @@ async fn get_inner(
             })
         // Licensed plan
         } else if let Some(json_plan) = query_plan
-            .licensed_plan(biller, licensor, query_organization.uuid)
+            .get_licensed_plan(biller, licensor, query_organization.uuid)
             .await?
         {
             let Some(json_license) = json_plan.license.clone() else {

@@ -41,7 +41,7 @@ pub struct QueryPlan {
 }
 
 impl QueryPlan {
-    pub async fn metered_plan(&self, biller: &Biller) -> Result<Option<JsonPlan>, HttpError> {
+    pub async fn get_metered_plan(&self, biller: &Biller) -> Result<Option<JsonPlan>, HttpError> {
         let Some(metered_plan_id) = self.metered_plan.clone() else {
             return Ok(None);
         };
@@ -53,7 +53,7 @@ impl QueryPlan {
             .map_err(resource_not_found_err!(Plan, self))
     }
 
-    pub async fn licensed_plan(
+    pub async fn get_licensed_plan(
         &self,
         biller: &Biller,
         licensor: &Licensor,
@@ -85,6 +85,39 @@ impl QueryPlan {
         json_plan.license = Some(json_license);
 
         Ok(Some(json_plan))
+    }
+
+    pub async fn get_active_metered_plan(
+        conn: &mut DbConnection,
+        biller: Option<&Biller>,
+        query_organization: &QueryOrganization,
+    ) -> Result<Option<MeteredPlanId>, HttpError> {
+        let Some(biller) = biller else {
+            return Ok(None);
+        };
+
+        let Ok(query_plan) = Self::belonging_to(&query_organization).first::<QueryPlan>(conn)
+        else {
+            return Ok(None);
+        };
+
+        let Some(metered_plan_id) = query_plan.metered_plan.clone() else {
+            return Ok(None);
+        };
+
+        let plan_status = biller
+            .get_plan_status(metered_plan_id.clone())
+            .await
+            .map_err(not_found_error)?;
+
+        if plan_status.is_active() {
+            Ok(Some(metered_plan_id))
+        } else {
+            Err(payment_required_error(PlanKindError::InactiveMeteredPlan {
+                organization: query_organization.clone(),
+                metered_plan_id,
+            }))
+        }
     }
 }
 
@@ -242,11 +275,6 @@ pub enum PlanKind {
     None,
 }
 
-pub struct LicenseUsage {
-    pub entitlements: Entitlements,
-    pub usage: u32,
-}
-
 #[derive(Debug, thiserror::Error)]
 pub enum PlanKindError {
     #[error("Organization ({organization:?}) has an inactive metered plan ({metered_plan_id})")]
@@ -278,9 +306,11 @@ impl PlanKind {
         query_organization: &QueryOrganization,
         visibility: Visibility,
     ) -> Result<Self, HttpError> {
-        if let Some(metered_plan_id) = get_metered_plan(conn, biller, query_organization).await? {
+        if let Some(metered_plan_id) =
+            QueryPlan::get_active_metered_plan(conn, biller, query_organization).await?
+        {
             Ok(Self::Metered(metered_plan_id))
-        } else if let Some(license_usage) = get_license_usage(conn, licensor, query_organization)? {
+        } else if let Some(license_usage) = LicenseUsage::get(conn, licensor, query_organization)? {
             Ok(Self::Licensed(license_usage))
         } else if visibility.is_public() {
             Ok(Self::None)
@@ -290,22 +320,6 @@ impl PlanKind {
                 visibility,
             }))
         }
-    }
-
-    pub async fn new_for_organization(
-        conn: &mut DbConnection,
-        biller: Option<&Biller>,
-        licensor: &Licensor,
-        query_organization: &QueryOrganization,
-    ) -> Result<Self, HttpError> {
-        Self::new(
-            conn,
-            biller,
-            licensor,
-            query_organization,
-            Visibility::default(),
-        )
-        .await
     }
 
     pub async fn new_for_project(
@@ -373,65 +387,55 @@ impl PlanKind {
     }
 }
 
-async fn get_metered_plan(
-    conn: &mut DbConnection,
-    biller: Option<&Biller>,
-    query_organization: &QueryOrganization,
-) -> Result<Option<MeteredPlanId>, HttpError> {
-    let Some(biller) = biller else {
-        return Ok(None);
-    };
-
-    let Ok(query_plan) = QueryPlan::belonging_to(&query_organization).first::<QueryPlan>(conn)
-    else {
-        return Ok(None);
-    };
-
-    let Some(metered_plan_id) = query_plan.metered_plan.clone() else {
-        return Ok(None);
-    };
-
-    let plan_status = biller
-        .get_plan_status(metered_plan_id.clone())
-        .await
-        .map_err(not_found_error)?;
-
-    if plan_status.is_active() {
-        Ok(Some(metered_plan_id))
-    } else {
-        Err(payment_required_error(PlanKindError::InactiveMeteredPlan {
-            organization: query_organization.clone(),
-            metered_plan_id,
-        }))
-    }
+pub struct LicenseUsage {
+    pub entitlements: Entitlements,
+    pub usage: u32,
 }
 
-fn get_license_usage(
-    conn: &mut DbConnection,
-    licensor: &Licensor,
-    query_organization: &QueryOrganization,
-) -> Result<Option<LicenseUsage>, HttpError> {
-    // It is important that we check the organization license and NOT the plan license
-    // The organization license is the one that is actually in use, either on Bencher Cloud or Self-Hosted
-    // The plan license is simply there to keep track of the license on Bencher Cloud only
-    let Some(license) = &query_organization.license else {
-        return Ok(None);
-    };
+impl LicenseUsage {
+    pub fn get(
+        conn: &mut DbConnection,
+        licensor: &Licensor,
+        query_organization: &QueryOrganization,
+    ) -> Result<Option<LicenseUsage>, HttpError> {
+        // It is important that we check the organization license and NOT the plan license
+        // The organization license is the one that is actually in use, either on Bencher Cloud or Self-Hosted
+        // The plan license is simply there to keep track of the license on Bencher Cloud only
+        let Some(license) = &query_organization.license else {
+            return Ok(None);
+        };
 
-    let token_data = licensor
-        .validate_organization(license, query_organization.uuid)
-        .map_err(payment_required_error)?;
+        let token_data = licensor
+            .validate_organization(license, query_organization.uuid)
+            .map_err(payment_required_error)?;
 
-    let start_time = token_data.claims.issued_at();
-    let end_time = token_data.claims.expiration();
+        let start_time = token_data.claims.issued_at();
+        let end_time = token_data.claims.expiration();
 
-    let usage = QueryMetric::usage(conn, query_organization.id, start_time, end_time)?;
-    let entitlements = licensor
-        .validate_usage(&token_data.claims, usage)
-        .map_err(payment_required_error)?;
+        let usage = QueryMetric::usage(conn, query_organization.id, start_time, end_time)?;
+        let entitlements = licensor
+            .validate_usage(&token_data.claims, usage)
+            .map_err(payment_required_error)?;
 
-    Ok(Some(LicenseUsage {
-        entitlements,
-        usage,
-    }))
+        Ok(Some(LicenseUsage {
+            entitlements,
+            usage,
+        }))
+    }
+
+    pub fn get_for_server(
+        conn: &mut DbConnection,
+        licensor: &Licensor,
+    ) -> Result<Vec<Self>, HttpError> {
+        Ok(schema::organization::table
+            .load::<QueryOrganization>(conn)
+            .map_err(resource_not_found_err!(Organization))?
+            .into_iter()
+            .filter_map(|query_organization| {
+                Self::get(conn, licensor, &query_organization)
+                    .ok()
+                    .flatten()
+            })
+            .collect())
+    }
 }
