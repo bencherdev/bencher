@@ -1,0 +1,54 @@
+---
+title: "自己ホスト型 GitHub アプリ"
+description: "Bencher 自己ホスト型が GitHub で認証するための GitHub アプリを作成します"
+heading: "自己ホスト型 GitHub アプリの作成方法"
+sortOrder: 5
+---
+
+Bencher Cloud を使用している場合、単に [サインアップ](/auth/signup) または [ログイン](/auth/login)して、
+`GitHub` ボタンを使用することができます。
+
+Bencher 自己ホスト型を使用するためには、[Bencher Plus Enterprise プラン](/pricing/?level=enterprise) を持っている必要があり、自分で GitHub アプリを作成し、コンソールとサーバの設定を更新する必要があります。
+
+## GitHub アプリの作成
+
+- [GitHub アプリ](https://docs.github.com/ja/apps/creating-github-apps/registering-a-github-app/registering-a-github-app#registering-a-github-app)を作成します
+- GitHub アプリ名
+  - ユニークな名前を選びます (例：`My Enterprise のための Bencher`)
+- ホームページのURL
+  - これをBencher 自己ホスト型コンソールの URLに設定します (例：`https://bencher.example.com`)
+- ユーザの識別と認証
+  - コールバック URL
+    - このコールバック URL を Bencher 自己ホスト型コンソールの URL に設定し、パスは `/auth/github` にします (例：`https://bencher.example.com/auth/github`)
+  - ✅ユーザー承認トークンの期限切れ
+  - ✅インストール時にユーザー認証（OAuth）をリクエスト
+  - ✅デバイスフローを有効化
+- Webhook
+  - ❌アクティブ - このボックスのチェックを外します
+- 権限設定
+  - アカウント権限
+    - Eメールアドレス：`読み取り専用`
+- この GitHub アプリはどこにインストールできますか？
+  - 🔘任意のアカウント
+- `Create GitHub App` をクリックします
+- これで新たに作成したアプリの `General` の下に
+- `Client ID` を注意しておきます (例：`Iv1.12864abcd1232048`)
+- クライアントの秘密鍵
+  - `Generate a new client secret` をクリックします
+  - この⽂字列をメモしておきます (例：`00000abcd12345wxyz123456789abcdefgh0000`)
+- 表示情報の下に[Bencher の logo PNG](/brand/) を追加します
+- プライベートキー
+  - `Generate a private key` をクリックします
+
+## GitHub アプリの設定
+
+### コンソール UI
+`bencher-ui` Docker イメージを実行するときに、環境変数 `GITHUB_CLIENT_ID` を設定します (例：`GITHUB_CLIENT_ID=Iv1.12864abcd1232048`)。クライアント ID が存在しない場合、UI では GitHub ボタンが表示されません。
+
+### API サーバー
+サーバー設定の [`plus.github` セクション](/docs/ja/reference/server-config/#plusgithub) に `client_id` と `client_secret` を追加します。GitHub セクションが存在しない場合、サーバーは GitHub の認証リクエストすべてに対して失敗します。
+
+> 🐰 おめでとうございます！ GitHub アプリの設定方法を学びました！ 🎉
+
+## ガイドの次のステップ
+<h2><a href="/docs/ja/how-to/github-actions/">GitHub Actions に Bencher を追加する ➡</a></h2>

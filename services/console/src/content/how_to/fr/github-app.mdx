@@ -1,0 +1,57 @@
+---
+title: "Application GitHub Auto-Hébergée"
+description: "Créez une application GitHub pour permettre à Bencher Auto-Hébergé de s'authentifier avec GitHub"
+heading: "Comment créer une application GitHub Auto-Hébergée"
+sortOrder: 5
+---
+
+Si vous utilisez Bencher Cloud, vous pouvez simplement vous [inscrire](/auth/signup) ou vous [connecter](/auth/login)
+en utilisant le bouton `GitHub`.
+
+Pour Bencher Auto-Hébergé, vous devrez avoir un [plan Bencher Plus Entreprise](/pricing/?level=entreprise), créer votre propre application GitHub, et mettre à jour vos configurations de console et de serveur.
+
+## Créer une application GitHub
+
+- Créez une [Application GitHub](https://docs.github.com/fr/apps/creating-github-apps/registering-a-github-app/registering-a-github-app#registering-a-github-app)
+- Nom de l'application GitHub
+  - Choisissez un nom unique (ex : `Bencher pour Mon Entreprise`)
+- URL de la page d'accueil
+  - Réglez-le sur votre URL de Console Bencher Auto-Hébergé (ex : `https://bencher.example.com`)
+- Identification et autorisation des utilisateurs
+  - URL de rappel
+    - Réglez l'URL de rappel sur l'URL de votre Console Bencher Auto-Hébergé avec le chemin `/auth/github` (ex : `https://bencher.example.com/auth/github`)
+  - ✅ Expirez les jetons d'autorisation des utilisateurs
+  - ✅ Demandez l'autorisation de l'utilisateur (OAuth) pendant l'installation
+  - ✅ Activez le flux de l'appareil
+- Webhook
+  - ❌ Active - Décocher cette case
+- Permissions
+  - Permissions du compte
+    - Adresses email : `Lecture seule`
+- Où cette application GitHub peut-elle être installée ?
+  - 🔘 N'importe quel compte
+- Cliquez sur `Créer une application GitHub`
+- Maintenant sous `Général` pour l'application nouvellement créée
+- Notez le `Client ID` (ex : `Iv1.12864abcd1232048`)
+- Secrets du client
+  - Cliquez sur `Générer un nouveau secret client`
+  - Notez ce secret (ex : `00000abcd12345wxyz123456789abcdefgh0000`)
+- Ajoutez le [logo PNG de Bencher](/brand/) sous les informations d'affichage
+- Clés privées
+  - Cliquez sur `Générer une clé privée`
+
+## Configuration de l'application GitHub
+
+### Interface utilisateur de la console
+Définissez la variable d'environnement `GITHUB_CLIENT_ID` lorsque vous exécutez l'image Docker `bencher-ui`. (ex : `GITHUB_CLIENT_ID=Iv1.12864abcd1232048`) Si l'ID du client est manquant, alors les boutons GitHub n'apparaîtront pas dans l'UI.
+
+### Serveur API
+Ajoutez le `client_id` et le `client_secret` à [la section `plus.github` de la config du serveur](/docs/fr/reference/server-config/#plusgithub). Si la section GitHub est manquante, alors le serveur échouera pour toute demande d'authentification GitHub.
+
+<br/>
+
+> 🐰 Félicitations ! Vous avez appris comment configurer une application GitHub ! 🎉
+
+<br/>
+
+<h2><a href="/docs/fr/how-to/github-actions/">Ajoutez Bencher aux actions GitHub ➡</a></h2>

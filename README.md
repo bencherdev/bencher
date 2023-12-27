@@ -56,6 +56,7 @@ Though Bencher is open source, there is also a hosted version available [Bencher
   - [Track Benchmarks](https://bencher.dev/docs/how-to/track-benchmarks/)
   - [GitHub Actions](https://bencher.dev/docs/how-to/github-actions/)
   - [GitLab CI/CD](https://bencher.dev/docs/how-to/gitlab-ci-cd/)
+  - [Self-Hosted GitHub App](https://bencher.dev/docs/how-to/github-app/)
 - Explanation
   - [Benchmarking Overview](https://bencher.dev/docs/explanation/benchmarking/)
   - [`bencher run`](https://bencher.dev/docs/explanation/bencher-run/)

@@ -1,0 +1,58 @@
+---
+title: "Aplicativo GitHub Self-Hosted"
+description: "Crie um aplicativo GitHub para permitir que o Bencher Self-Hosted autentique-se com o GitHub"
+heading: "Como Criar um Aplicativo GitHub Self-Hosted"
+sortOrder: 5
+---
+
+Se você está usando o Bencher Cloud, então você pode simplesmente [se registrar](/auth/signup) ou [entrar](/auth/login)
+usando o botão `GitHub`.
+
+Para o Bencher Self-Hosted, você precisará ter um [plano Bencher Plus Enterprise](/pricing/?level=enterprise), criar seu próprio aplicativo GitHub e atualizar suas configurações de console e servidor.
+
+
+## Criar um apllicativo GitHub
+
+- Crie um [aplicativo GitHub](https://docs.github.com/pt/apps/creating-github-apps/registering-a-github-app/registering-a-github-app#registering-a-github-app)
+- Nome do aplicativo GitHub
+  - Escolha um nome único (ex: `Bencher para a Minha Empresa`)
+- URL da página inicial
+  - Defina-o para sua URL do Console Bencher Self-Hosted (ex: `https://bencher.example.com`)
+- Identificando e autorizando usuários
+  - URL de callback
+    - Defina o URL de callback para sua URL do Console Bencher Self-Hosted com o caminho `/auth/github` (ex: `https://bencher.example.com/auth/github`)
+  - ✅ Expirar tokens de autorização de usuário
+  - ✅ Solicitar autorização do usuário (OAuth) durante a instalação
+  - ✅ Ativar Fluxo de Dispositivo
+- Webhook
+  - ❌ Ativo - Desmarque esta caixa
+- Permissões
+  - Permissões da conta
+    - Endereços de e-mail: `Somente leitura`
+- Onde este aplicativo GitHub pode ser instalado?
+  - 🔘 Qualquer conta
+- Clique `Criar aplicativo GitHub`
+- Agora em `Geral` para o aplicativo recém-criado
+- Anote o `ID do Cliente` (ex: `Iv1.12864abcd1232048`)
+- Segredos do cliente
+  - Clique `Gerar um novo segredo de cliente`
+  - Anote este segredo (ex: `00000abcd12345wxyz123456789abcdefgh0000`)
+- Adicione o [logo PNG do Bencher](/brand/) em Informações de exibição
+- Chaves privadas
+  - Clique `Gerar uma chave privada`
+
+## Configuração do aplicativo GitHub
+
+### Interface do usuário do console
+Defina a variável de ambiente `GITHUB_CLIENT_ID` quando você executar a imagem Docker do `bencher-ui`. (ex: `GITHUB_CLIENT_ID=Iv1.12864abcd1232048`) Se o ID do cliente estiver faltando, então os botões do GitHub não aparecerão na UI.
+
+### Servidor API
+Adicione o `client_id` e o `client_secret` à [seção `plus.github` da configuração do servidor](/docs/pt/reference/server-config/#plusgithub). Se a seção GitHub estiver faltando, então o servidor falhará em qualquer solicitação de autenticação do GitHub.
+
+<br/>
+
+> 🐰 Parabéns! Você aprendeu a configurar um aplicativo do GitHub! 🎉
+
+<br/>
+
+<h2><a href="/docs/pt/how-to/github-actions/">Adicione Bencher às Ações do GitHub ➡</a></h2>

@@ -1,0 +1,57 @@
+---
+title: "셀프 호스팅 GitHub 앱"
+description: "Bencher Self-Hosted가 GitHub과 인증하도록 허용하는 GitHub 앱 생성"
+heading: "셀프 호스팅 GitHub 앱 생성 방법"
+sortOrder: 5
+---
+
+Bencher Cloud를 사용하고 있다면, 단순히 `GitHub` 버튼을 통해 [가입](/auth/signup) 또는 [로그인](/auth/login)하면 됩니다.
+
+Bencher Self-Hosted의 경우, [Bencher Plus Enterprise 계획](/ko/pricing/?level=enterprise)이 필요하며, GitHub App을 생성하고 콘솔 및 서버 구성을 업데이트해야 합니다.
+
+
+## GitHub 앱 생성
+
+- [GitHub 앱](https://docs.github.com/ko/apps/creating-github-apps/registering-a-github-app/registering-a-github-app#registering-a-github-app) 생성
+- GitHub 앱 이름
+  - 고유한 이름 선택 (예: `My Enterprise용 Bencher`)
+- 홈페이지 URL
+  - 이를 Bencher Self-Hosted 콘솔 URL로 설정 (예: `https://bencher.example.com`)
+- 사용자 식별 및 인증
+  - 콜백 URL
+    - 콜백 URL을 `/auth/github` 경로를 가진 Bencher Self-Hosted 콘솔 URL로 설정 (예: `https://bencher.example.com/auth/github`)
+  - ✅ 사용자 인증 토큰 만료
+  - ✅ 설치 도중 사용자 인증 (OAuth) 요청
+  - ✅ 디바이스 흐름 활성화
+- 웹훅
+  - ❌ 활성화 - 이 상자의 체크를 해제
+- 권한
+  - 계정 권한
+    - 이메일 주소: `읽기 전용`
+- 이 GitHub 앱을 어디에 설치할 수 있는가?
+  - 🔘 모든 계정
+- `GitHub 앱 생성` 클릭
+- 이제 새로 생성된 앱의 `일반`으로 가기
+- `Client ID`를 기재해 두세요 (예: `Iv1.12864abcd1232048`)
+- 클라이언트 비밀 유지
+  - `새 클라이언트 비밀 생성` 클릭
+  - 이 비밀을 기재해 두세요 (예: `00000abcd12345wxyz123456789abcdefgh0000`)
+- [Bencher 로고 PNG](/ko/brand/)를 디스플레이 정보 아래에 추가
+- 비공개 키
+  - `비공개 키 생성` 클릭
+
+## GitHub 앱 구성
+
+### 콘솔 UI
+`bencher-ui` Docker 이미지를 실행할 때 `GITHUB_CLIENT_ID` 환경 변수를 설정합니다. (예: `GITHUB_CLIENT_ID=Iv1.12864abcd1232048`) 만약 클라이언트 ID가 누락되면, UI에 GitHub 버튼이 표시되지 않습니다.
+
+### API 서버
+`client_id`와 `client_secret`를 [서버 구성의 `plus.github` 섹션](/docs/ko/reference/server-config/#plusgithub)에 추가합니다. 만약 GitHub 섹션이 누락되면, 서버는 GitHub 인증 요청을 실패시킵니다.
+
+<br/>
+
+> 🐰 축하합니다! GitHub 앱을 설정하는 방법을 배웠습니다! 🎉
+
+<br/>
+
+<h2><a href="/docs/ko/how-to/github-actions/">Bencher를 GitHub Actions에 추가하기 ➡</a></h2>
