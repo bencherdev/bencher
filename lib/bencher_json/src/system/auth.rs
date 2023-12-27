@@ -34,13 +34,6 @@ pub struct JsonLogin {
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonAcceptInvite {
-    pub invite: Jwt,
-}
-
-#[typeshare::typeshare]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonAuth {
     pub email: Email,
 }
@@ -48,8 +41,15 @@ pub struct JsonAuth {
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonAuthToken {
+pub struct JsonAuthConfirm {
     pub token: Jwt,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonAuthAccept {
+    pub invite: Jwt,
 }
 
 #[typeshare::typeshare]

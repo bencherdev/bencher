@@ -464,8 +464,12 @@ export interface JsonAuth {
 	email: Email;
 }
 
-export interface JsonAuthToken {
+export interface JsonAuthConfirm {
 	token: Jwt;
+}
+
+export interface JsonAuthAccept {
+	invite: Jwt;
 }
 
 export interface JsonAuthUser {
@@ -474,7 +478,8 @@ export interface JsonAuthUser {
 }
 
 export interface JsonOAuth {
-	url: Url;
+	code: Secret;
+	invite?: Jwt;
 }
 
 export interface JsonToken {

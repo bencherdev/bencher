@@ -65,6 +65,73 @@
         }
       }
     },
+    "/v0/auth/accept": {
+      "post": {
+        "tags": [
+          "auth",
+          "organizations"
+        ],
+        "operationId": "auth_accept_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonAuthAccept"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonAuth"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/auth/confirm": {
       "post": {
         "tags": [
@@ -75,7 +142,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/JsonAuthToken"
+                "$ref": "#/components/schemas/JsonAuthConfirm"
               }
             }
           },
@@ -84,6 +151,72 @@
         "responses": {
           "200": {
             "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonAuthUser"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/auth/github": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "auth_github_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonOAuth"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -6173,7 +6306,18 @@
           "email"
         ]
       },
-      "JsonAuthToken": {
+      "JsonAuthAccept": {
+        "type": "object",
+        "properties": {
+          "invite": {
+            "$ref": "#/components/schemas/Jwt"
+          }
+        },
+        "required": [
+          "invite"
+        ]
+      },
+      "JsonAuthConfirm": {
         "type": "object",
         "properties": {
           "token": {
@@ -6659,6 +6803,21 @@
           "max",
           "mean",
           "median"
+        ]
+      },
+      "JsonGitHub": {
+        "type": "object",
+        "properties": {
+          "client_id": {
+            "$ref": "#/components/schemas/NonEmpty"
+          },
+          "client_secret": {
+            "$ref": "#/components/schemas/Secret"
+          }
+        },
+        "required": [
+          "client_id",
+          "client_secret"
         ]
       },
       "JsonLicense": {
@@ -7177,6 +7336,25 @@
           "name"
         ]
       },
+      "JsonOAuth": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/Secret"
+          },
+          "invite": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Jwt"
+              }
+            ]
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
       "JsonOrganization": {
         "type": "object",
         "properties": {
@@ -7480,6 +7658,14 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonCloud"
+              }
+            ]
+          },
+          "github": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonGitHub"
               }
             ]
           },

@@ -1,4 +1,4 @@
-use bencher_json::system::auth::JsonAcceptInvite;
+use bencher_json::system::auth::JsonAuthAccept;
 use bencher_json::JsonAuth;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 
@@ -32,7 +32,7 @@ pub async fn auth_accept_options(
 pub async fn auth_accept_post(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
-    body: TypedBody<JsonAcceptInvite>,
+    body: TypedBody<JsonAuthAccept>,
 ) -> Result<ResponseAccepted<JsonAuth>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(rqctx.context(), body.into_inner(), &auth_user).await?;
@@ -41,14 +41,14 @@ pub async fn auth_accept_post(
 
 async fn post_inner(
     context: &ApiContext,
-    json_accept_invite: JsonAcceptInvite,
+    json_auth_accept: JsonAuthAccept,
     auth_user: &AuthUser,
 ) -> Result<JsonAuth, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_user = QueryUser::get(conn, auth_user.id)?;
     query_user.check_is_locked()?;
-    query_user.accept_invite(conn, &context.token_key, &json_accept_invite.invite)?;
+    query_user.accept_invite(conn, &context.token_key, &json_auth_accept.invite)?;
 
     Ok(JsonAuth {
         email: query_user.email,
