@@ -12,7 +12,7 @@ const description = "Bencher uses a one-time token to confirm your email address
 ---
 
 <AuthLayout title={title} description={description}>
-  <AuthRedirect client:only="solid-js" path="/console" />
+  <AuthRedirect client:only="solid-js" apiUrl={BENCHER_API_URL} path="/console" />
 
   <h1 class="title is-1">{title}</h1>
   <h2 class="subtitle is-4">

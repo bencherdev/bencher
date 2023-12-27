@@ -14,7 +14,6 @@ const OAuthForm = (props: Props) => {
 		let path = `https://github.com/login/oauth/authorize?client_id=${props.githubClientId}`;
 		const invite = searchParams[INVITE_PARAM];
 		if (invite) {
-			console.log(invite);
 			path += `&state=${invite}`;
 		}
 		return path;

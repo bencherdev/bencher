@@ -1,11 +1,73 @@
-import { Show } from "solid-js";
+import { Match, Show, Switch, createMemo, createResource } from "solid-js";
 import Redirect from "../site/Redirect";
 import { authUser } from "../../util/auth";
+import { useSearchParams } from "../../util/url";
+import { INVITE_PARAM, PLAN_PARAM } from "./auth";
+import type {
+	JsonAuth,
+	JsonAuthAccept,
+	JsonAuthUser,
+} from "../../types/bencher";
+import { httpPost } from "../../util/http";
+import { NotifyKind, navigateNotify } from "../../util/notify";
 
-const AuthRedirect = (props: { path: string }) => (
-	<Show when={authUser()?.token} fallback={<></>}>
-		<Redirect path={props.path} />
-	</Show>
-);
+const AuthRedirect = (props: { apiUrl?: string; path: string }) => {
+	const [searchParams, _setSearchParams] = useSearchParams();
+	const user = authUser();
+
+	const fetcher = createMemo(() => {
+		return {
+			user: user,
+			// bencher_valid: bencher_valid,
+			invite: searchParams[INVITE_PARAM],
+		};
+	});
+	const acceptInvite = async (fetcher: {
+		user: JsonAuthUser;
+		// bencher_valid: InitOutput;
+		invite: undefined | string;
+	}) => {
+		const token = fetcher.user?.token;
+		const invite = fetcher.invite;
+		if (!props.apiUrl || !token || !invite) {
+			return null;
+		}
+		const accept = {
+			invite,
+		} as JsonAuthAccept;
+		return await httpPost(props.apiUrl, "/v0/auth/accept", token, accept)
+			.then((_resp) => {
+				navigateNotify(
+					NotifyKind.OK,
+					"Invitation accepted!",
+					"/console",
+					[PLAN_PARAM],
+					null,
+				);
+			})
+			.catch((error) => {
+				console.error(error);
+				navigateNotify(
+					NotifyKind.ERROR,
+					"Invalid invitation. Please, try again.",
+					null,
+					[PLAN_PARAM],
+					null,
+				);
+			});
+	};
+	const [_jsonAuth] = createResource<JsonAuth>(fetcher, acceptInvite);
+
+	return (
+		<Switch fallback={<></>}>
+			<Match when={authUser()?.token && searchParams[INVITE_PARAM]}>
+				<></>
+			</Match>
+			<Match when={authUser()?.token && !searchParams[INVITE_PARAM]}>
+				<Redirect path={props.path} />
+			</Match>
+		</Switch>
+	);
+};
 
 export default AuthRedirect;

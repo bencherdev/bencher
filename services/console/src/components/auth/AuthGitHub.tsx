@@ -39,13 +39,10 @@ const AuthGitHub = (props: Props) => {
 		code: undefined | string;
 		state: undefined | string;
 	}) => {
-		if (fetcher?.user?.token) {
+		if (fetcher.user?.token) {
 			navigate("/console", { replace: true });
 		}
-		if (!fetcher.bencher_valid) {
-			return null;
-		}
-		if (!fetcher.code) {
+		if (!fetcher.bencher_valid || !fetcher.code) {
 			return null;
 		}
 		const oauth = {
