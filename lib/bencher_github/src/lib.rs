@@ -1,11 +1,11 @@
-use bencher_valid::{NonEmpty, Secret};
+use bencher_valid::{Email, NonEmpty, Secret, UserName};
 use oauth2::{
     basic::BasicClient, reqwest::AsyncHttpClientError, AuthUrl, AuthorizationCode, ClientId,
     ClientSecret, CsrfToken, RedirectUrl, Scope, TokenResponse, TokenUrl,
 };
-pub use octocrab::models::Author as GitHubUser;
 use octocrab::Octocrab;
 use once_cell::sync::Lazy;
+use serde::Deserialize;
 use url::Url;
 
 #[allow(clippy::expect_used)]
@@ -41,6 +41,14 @@ pub enum GitHubError {
     Auth(octocrab::Error),
     #[error("Failed to get current authenticated user: {0}")]
     User(octocrab::Error),
+    #[error("Failed to parse the current authenticated user login name: {0}")]
+    BadLogin(bencher_valid::ValidError),
+    #[error("Failed to get emails for the current authenticated user: {0}")]
+    Emails(octocrab::Error),
+    #[error("Failed to get a verified primary email for the current authenticated user")]
+    NoPrimaryEmail,
+    #[error("Failed to parse the verified primary email for the current authenticated user: {0}")]
+    BadEmail(bencher_valid::ValidError),
 }
 
 impl GitHub {
@@ -70,7 +78,7 @@ impl GitHub {
             .0
     }
 
-    pub async fn oauth_user(&self, code: Secret) -> Result<GitHubUser, GitHubError> {
+    pub async fn oauth_user(&self, code: Secret) -> Result<(UserName, Email), GitHubError> {
         let code = AuthorizationCode::new(code.into());
         let token = self
             .oauth2_client
@@ -92,7 +100,31 @@ impl GitHub {
             .build()
             .map_err(GitHubError::Auth)?;
 
-        let current_user = github_client.current();
-        current_user.user().await.map_err(GitHubError::User)
+        let user_name = github_client
+            .current()
+            .user()
+            .await
+            .map_err(GitHubError::User)
+            .and_then(|user| user.login.parse().map_err(GitHubError::BadLogin))?;
+
+        let email = github_client
+            .get::<Vec<GitHubUserEmail>, _, &str>("/user/emails", None)
+            .await
+            .map_err(GitHubError::Emails)?
+            .into_iter()
+            .find_map(|email| (email.primary && email.verified).then_some(email.email))
+            .ok_or(GitHubError::NoPrimaryEmail)
+            .and_then(|email| email.parse().map_err(GitHubError::BadEmail))?;
+
+        Ok((user_name, email))
     }
+}
+
+#[derive(Debug, Deserialize)]
+struct GitHubUserEmail {
+    email: String,
+    verified: bool,
+    primary: bool,
+    #[allow(dead_code)]
+    visibility: String,
 }

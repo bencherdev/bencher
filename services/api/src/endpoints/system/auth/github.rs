@@ -68,14 +68,9 @@ async fn post_inner(
             ));
     }
 
-    let github_user = github
+    let (name, email) = github
         .oauth_user(json_oauth.code)
         .await
-        .map_err(unauthorized_error)?;
-    let email = github_user
-        .email
-        .ok_or_else(|| unauthorized_error("GitHub OAuth2 user does not have an email address"))?
-        .parse()
         .map_err(unauthorized_error)?;
 
     // If the user already exists, then we just need to check if they are locked and possible accept an invite
@@ -88,7 +83,7 @@ async fn post_inner(
         query_user
     } else {
         let json_signup = JsonSignup {
-            name: github_user.login.parse().map_err(unauthorized_error)?,
+            name,
             slug: None,
             email: email.clone(),
             i_agree: true,

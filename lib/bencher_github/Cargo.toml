@@ -8,6 +8,7 @@ edition.workspace = true
 bencher_valid.workspace = true
 octocrab.workspace = true
 once_cell.workspace = true
+serde.workspace = true
 thiserror.workspace = true
 url.workspace = true
 # Crate
