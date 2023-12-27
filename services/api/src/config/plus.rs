@@ -54,7 +54,7 @@ impl Plus {
 
         let github = plus
             .github
-            .map(|github| GitHub::new(endpoint, github.client_id, github.client_secret));
+            .map(|github| GitHub::new(github.client_id, github.client_secret));
 
         let stats = plus.stats.map(Into::into).unwrap_or_default();
 

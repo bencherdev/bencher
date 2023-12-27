@@ -1,12 +1,11 @@
 use bencher_valid::{Email, NonEmpty, Secret, UserName};
 use oauth2::{
     basic::BasicClient, reqwest::AsyncHttpClientError, AuthUrl, AuthorizationCode, ClientId,
-    ClientSecret, CsrfToken, RedirectUrl, Scope, TokenResponse, TokenUrl,
+    ClientSecret, TokenResponse, TokenUrl,
 };
 use octocrab::Octocrab;
 use once_cell::sync::Lazy;
 use serde::Deserialize;
-use url::Url;
 
 #[allow(clippy::expect_used)]
 static AUTH_URL: Lazy<AuthUrl> = Lazy::new(|| {
@@ -19,9 +18,6 @@ static TOKEN_URL: Lazy<TokenUrl> = Lazy::new(|| {
     TokenUrl::new("https://github.com/login/oauth/access_token".to_owned())
         .expect("Invalid token endpoint URL")
 });
-
-#[allow(clippy::expect_used)]
-static USER_EMAIL_SCOPE: Lazy<Scope> = Lazy::new(|| Scope::new("user:email".to_owned()));
 
 #[derive(Debug, Clone)]
 pub struct GitHub {
@@ -52,30 +48,18 @@ pub enum GitHubError {
 }
 
 impl GitHub {
-    pub fn new(endpoint: &Url, client_id: NonEmpty, client_secret: Secret) -> Self {
+    pub fn new(client_id: NonEmpty, client_secret: Secret) -> Self {
         let client_id = ClientId::new(client_id.into());
         let client_secret = ClientSecret::new(client_secret.into());
-        let mut endpoint = endpoint.clone();
-        endpoint.set_path("/auth/github");
-        let redirect_url = RedirectUrl::from_url(endpoint);
 
         let oauth2_client = BasicClient::new(
             client_id,
             Some(client_secret),
             AUTH_URL.clone(),
             Some(TOKEN_URL.clone()),
-        )
-        .set_redirect_uri(redirect_url);
+        );
 
         Self { oauth2_client }
-    }
-
-    pub fn authorize_url(&self) -> Url {
-        self.oauth2_client
-            .authorize_url(CsrfToken::new_random)
-            .add_scope(USER_EMAIL_SCOPE.clone())
-            .url()
-            .0
     }
 
     pub async fn oauth_user(&self, code: Secret) -> Result<(UserName, Email), GitHubError> {
