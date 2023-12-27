@@ -43,6 +43,9 @@ const Pricing = (props: Props) => {
 						⎯⎯⎯
 					</div>
 					<div class="plan-item">Community Support</div>
+					<div class="plan-item" data-feature="Single Sign-On (SSO)">
+						⎯⎯⎯
+					</div>
 					<div class="plan-item" data-feature="Dedicated Onboarding">
 						⎯⎯⎯
 					</div>
@@ -71,6 +74,9 @@ const Pricing = (props: Props) => {
 					<div class="plan-item">Public Projects</div>
 					<div class="plan-item">Private Projects</div>
 					<div class="plan-item">Customer Support</div>
+					<div class="plan-item" data-feature="Single Sign-On (SSO)">
+						⎯⎯⎯
+					</div>
 					<div class="plan-item" data-feature="Dedicated Onboarding">
 						⎯⎯⎯
 					</div>
@@ -101,6 +107,7 @@ const Pricing = (props: Props) => {
 					<div class="plan-item">Public Projects</div>
 					<div class="plan-item">Private Projects</div>
 					<div class="plan-item">Priority Support</div>
+					<div class="plan-item">Single Sign-On (SSO)</div>
 					<div class="plan-item">Dedicated Onboarding</div>
 				</div>
 				<Footer
