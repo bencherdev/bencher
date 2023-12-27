@@ -42,13 +42,10 @@ impl Api {
         #[cfg(feature = "plus")]
         {
             // GitHub OAuth
-            // Bencher Cloud only
-            if is_bencher_cloud {
-                if http_options {
-                    api.register(system::auth::github::auth_github_options)?;
-                }
-                api.register(system::auth::github::auth_github_post)?;
+            if http_options {
+                api.register(system::auth::github::auth_github_options)?;
             }
+            api.register(system::auth::github::auth_github_post)?;
         }
 
         // Organizations
