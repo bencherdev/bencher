@@ -43,10 +43,12 @@ impl FromStr for Secret {
     type Err = ValidError;
 
     fn from_str(secret: &str) -> Result<Self, Self::Err> {
-        if crate::non_empty::is_valid_non_empty(secret) {
-            Ok(Self(secret.into()))
-        } else {
+        // Unlike `NonEmpty`, `Secret` is allowed to have surrounding whitespace.
+        // This is to accommodate keys with newlines at the end.
+        if secret.is_empty() {
             Err(ValidError::Secret(secret.into()))
+        } else {
+            Ok(Self(secret.into()))
         }
     }
 }
