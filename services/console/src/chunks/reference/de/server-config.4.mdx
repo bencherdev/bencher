@@ -2,6 +2,18 @@
 
 Dieser Abschnitt betrifft Funktionen, die von der [Bencher Plus-Lizenz](/legal/plus) abgedeckt sind.
 
+### `plus.github`
+
+Dieser Abschnitt spezifiziert die Konfiguration für [eine GitHub App, die für die OAuth2-Authentifizierung verwendet wird](/docs/de/how-to/github-app/).
+Sie müssen eine gültige Bencher Plus _Enterprise_ Lizenz für mindestens eine Organisation auf dem Server haben.
+Der gesamte Abschnitt ist optional.
+Wenn er nicht angegeben ist, wird die Authentifizierung mit GitHub nicht aktiviert.
+
+|     Name      |                Beispiel                 | Standard | Erforderlich |                                                                                                                                                                                                                   Beschreibung                                                                                                                                                                                                                   |
+| :-----------: | :-------------------------------------: | :------: | :----------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+|   client_id   |          Iv1.12864abcd1232048           |   ---    |      Ja      | Gibt die Client-ID für Ihre GitHub App an. Die Client-ID unterscheidet sich von der App-ID. Sie können die Client-ID auf der Einstellungsseite für Ihre App finden. Weitere Informationen zur Navigation zur Einstellungsseite für Ihre GitHub App finden Sie unter [Ändern einer GitHub App-Registrierung](https://docs.github.com/de/apps/maintaining-github-apps/modifying-a-github-app-registration#navigating-to-your-github-app-settings). |
+| client_secret | 00000abcd12345wxyz123456789abcdefgh0000 |   ---    |      Ja      |                                                                                                                                                           Das Client-Geheimnis für Ihre GitHub App. Sie können ein Client-Geheimnis auf der Einstellungsseite für Ihre App generieren.                                                                                                                                                           |
+
 ### `plus.stats`
 
 Dieser Abschnitt gibt an, ob und wann Serverstatistiken gesammelt werden.

@@ -7,29 +7,53 @@ draft: true
 ---
 
 If you are using Bencher Cloud, then you can simply [sign up](/auth/signup) or [log in](/auth/login)
-using the `GitHub` OAuth2 button.
-If you are using Bencher Self-Hosted, then you will need to create your own GitHub App.
+using the `GitHub` button.
+
+For Bencher Self-Hosted, you will need to have a [Bencher Plus Enterprise plan](/pricing/?level=enterprise), create your own GitHub App, and update your console and sever configurations.
+
+
+## Create a GitHub App
 
 - Create a [GitHub App](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app#registering-a-github-app)
-- Give it a name like: Bencher Cloud for My Enterprise
-- Set the `Callback URL` to: https://my-bencher-url.com/auth/github
-- Identifying and authorizing users:
+- GitHub App name
+  - Choose an unique name (ex: `Bencher for My Enterprise`)
+- Homepage URL
+  - Set it to your Bencher Self-Hosted Console URL (ex: `https://bencher.example.com`)
+- Identifying and authorizing users
+  - Callback URL
+    - Set the callback URL to your Bencher Self-Hosted Console URL with the path `/auth/github` (ex: `https://bencher.example.com/auth/github`)
   - ✅ Expire user authorization tokens
   - ✅ Request user authorization (OAuth) during installation
   - ✅ Enable Device Flow
 - Webhook
-  - ❌ Active
+  - ❌ Active - Uncheck this box
 - Permissions
   - Account permissions
     - Email addresses: `Read-only`
 - Where can this GitHub App be installed?
   - 🔘 Any account
 - Click `Create GitHub App`
-- Note the `Client ID`
-- Now the app is created, under `General`
+- Now under `General` for the newly created app
+- Note the `Client ID` (ex: `Iv1.12864abcd1232048`)
 - Client secrets
-  - `Generate a new client secret`
-- Add a logo under Display information
-- Under `Private keys` generate or upload a new private key
+  - Click `Generate a new client secret`
+  - Note this secret (ex: `00000abcd12345wxyz123456789abcdefgh0000`)
+- Add the [Bencher logo PNG](/brand/) under Display information
+- Private keys
+  - Click `Generate a private key`
 
-Set `GITHUB_CLIENT_ID` as an environment variable to `Client ID` when running the `bencher-ui` Docker image.
+## GitHub App Configuration
+
+### Console UI
+Set the `GITHUB_CLIENT_ID` environment variable when you run the `bencher-ui` Docker image. (ex: `GITHUB_CLIENT_ID=Iv1.12864abcd1232048`) If the Client ID is missing, then the GitHub buttons will not appear in the UI.
+
+### API Server
+Add the `client_id` and `client_secret` to [the `plus.github` section of the server config](/docs/reference/server-config/#plusgithub). If the GitHub section is missing, then the server will fail any GitHub authentication requests.
+
+<br/>
+
+> 🐰 Congrats! You have learned how to setup a GitHub App! 🎉
+
+<br/>
+
+<h2><a href="/docs/how-to/github-actions/">Add Bencher to GitHub Actions ➡</a></h2>
