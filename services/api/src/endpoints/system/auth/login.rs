@@ -57,10 +57,7 @@ async fn post_inner(
 ) -> Result<JsonAuth, HttpError> {
     let conn = &mut *context.conn().await;
 
-    let query_user = schema::user::table
-        .filter(schema::user::email.eq(json_login.email.as_ref()))
-        .first::<QueryUser>(conn)
-        .map_err(resource_not_found_err!(User, json_login))?;
+    let query_user = QueryUser::get_with_email(conn, &json_login.email)?;
 
     // Check to see if the user account has been locked
     if query_user.locked {

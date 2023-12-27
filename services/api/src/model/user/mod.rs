@@ -76,6 +76,13 @@ impl QueryUser {
             .map_err(resource_not_found_err!(User, id))
     }
 
+    pub fn get_with_email(conn: &mut DbConnection, email: &Email) -> Result<Self, HttpError> {
+        schema::user::table
+            .filter(schema::user::email.eq(email))
+            .first(conn)
+            .map_err(resource_not_found_err!(User, email))
+    }
+
     pub fn get_admins(conn: &mut DbConnection) -> Result<Vec<QueryUser>, HttpError> {
         schema::user::table
             .filter(schema::user::admin.eq(true))

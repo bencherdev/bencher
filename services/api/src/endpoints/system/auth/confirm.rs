@@ -52,12 +52,7 @@ async fn post_inner(
         .validate_auth(&json_token.token)
         .map_err(unauthorized_error)?;
     let email = claims.email();
-
-    let user = schema::user::table
-        .filter(schema::user::email.eq(email))
-        .first::<QueryUser>(conn)
-        .map_err(resource_not_found_err!(User, email))?
-        .into_json();
+    let user = QueryUser::get_with_email(conn, email)?.into_json();
 
     let token = context
         .token_key

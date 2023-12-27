@@ -19,7 +19,7 @@ use crate::{
     schema,
 };
 
-use super::UserId;
+use super::{QueryUser, UserId};
 
 pub const BEARER_TOKEN_FORMAT: &str = "Expected format is `Authorization: Bearer <bencher.api.token>`. Where `<bencher.api.token>` is your Bencher API token.";
 
@@ -62,13 +62,13 @@ impl AuthUser {
             .token_key
             .validate_client(bearer_token.as_ref())
             .map_err(|e| bad_request_error(format!("Failed to validate JSON Web Token: {e}")))?;
-
         let email = claims.email();
-        let (user_id, admin, locked) = schema::user::table
-            .filter(schema::user::email.eq(email))
-            .select((schema::user::id, schema::user::admin, schema::user::locked))
-            .first::<(UserId, bool, bool)>(conn)
-            .map_err(|e| not_found_error(format!("Failed to find user ({email}): {e}")))?;
+        let QueryUser {
+            id: user_id,
+            admin,
+            locked,
+            ..
+        } = QueryUser::get_with_email(conn, email)?;
 
         if locked {
             return Err(forbidden_error(format!("User account is locked ({email})")));

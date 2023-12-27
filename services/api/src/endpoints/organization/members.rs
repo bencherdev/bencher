@@ -193,15 +193,12 @@ async fn post_inner(
     let email = json_new_member.email.clone();
     // If a user already exists for the email then direct them to login.
     // Otherwise, direct them to signup.
-    let (name, route): (Option<String>, &str) = if let Ok(name) = schema::user::table
-        .filter(schema::user::email.eq(email.as_ref()))
-        .select(schema::user::name)
-        .first(conn)
-    {
-        (Some(name), "/auth/login")
-    } else {
-        (json_new_member.name.take().map(Into::into), "/auth/signup")
-    };
+    let (name, route): (Option<String>, &str) =
+        if let Ok(user) = QueryUser::get_with_email(conn, &email) {
+            (Some(user.name.into()), "/auth/login")
+        } else {
+            (json_new_member.name.take().map(Into::into), "/auth/signup")
+        };
 
     // Get the requester user name and email for the message
     let (user_name, user_email) = schema::user::table
