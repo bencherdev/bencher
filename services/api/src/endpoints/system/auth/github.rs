@@ -4,6 +4,7 @@ use bencher_json::JsonAuthUser;
 
 use bencher_json::system::auth::JsonOAuth;
 use bencher_json::JsonSignup;
+use bencher_json::PlanLevel;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use http::StatusCode;
 use slog::Logger;
@@ -61,10 +62,11 @@ async fn post_inner(
     let conn = &mut *context.conn().await;
     // If not on Bencher Cloud, then at least one organization must have a valid Bencher Plus license
     if !context.is_bencher_cloud()
-        && LicenseUsage::get_for_server(conn, &context.licensor)?.is_empty()
+        && LicenseUsage::get_for_server(conn, &context.licensor, Some(PlanLevel::Enterprise))?
+            .is_empty()
     {
         return Err(payment_required_error(
-                "You must have a valid Bencher Plus license for at least one organization on the server to use GitHub OAuth2",
+                "You must have a valid Bencher Plus Enterprise license for at least one organization on the server to use GitHub OAuth2",
             ));
     }
 

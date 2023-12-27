@@ -20,7 +20,7 @@ const BENCHER_TEAM: &str = "Bencher Team";
 const BENCHER_ENTERPRISE: &str = "Bencher Enterprise";
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, Copy, Default, Eq, PartialEq, Hash, Serialize)]
+#[derive(Debug, Display, Clone, Copy, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum PlanLevel {

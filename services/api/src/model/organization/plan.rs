@@ -370,6 +370,7 @@ impl PlanKind {
             Self::Licensed(LicenseUsage {
                 entitlements,
                 usage: prior_usage,
+                level: _,
             }) => {
                 if prior_usage + usage > entitlements.into() {
                     return Err(payment_required_error(PlanKindError::Overage {
@@ -390,6 +391,7 @@ impl PlanKind {
 pub struct LicenseUsage {
     pub entitlements: Entitlements,
     pub usage: u32,
+    pub level: PlanLevel,
 }
 
 impl LicenseUsage {
@@ -420,13 +422,16 @@ impl LicenseUsage {
         Ok(Some(LicenseUsage {
             entitlements,
             usage,
+            level: token_data.claims.level(),
         }))
     }
 
     pub fn get_for_server(
         conn: &mut DbConnection,
         licensor: &Licensor,
+        min_level: Option<PlanLevel>,
     ) -> Result<Vec<Self>, HttpError> {
+        let min_level = min_level.unwrap_or_default();
         Ok(schema::organization::table
             .load::<QueryOrganization>(conn)
             .map_err(resource_not_found_err!(Organization))?
@@ -435,6 +440,9 @@ impl LicenseUsage {
                 Self::get(conn, licensor, &query_organization)
                     .ok()
                     .flatten()
+                    .and_then(|license_usage| {
+                        (license_usage.level >= min_level).then_some(license_usage)
+                    })
             })
             .collect())
     }
