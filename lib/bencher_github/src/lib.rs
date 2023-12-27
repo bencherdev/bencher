@@ -126,5 +126,5 @@ struct GitHubUserEmail {
     verified: bool,
     primary: bool,
     #[allow(dead_code)]
-    visibility: String,
+    visibility: Option<String>,
 }
