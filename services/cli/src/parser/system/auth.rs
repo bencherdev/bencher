@@ -13,6 +13,8 @@ pub enum CliAuth {
     Login(CliAuthLogin),
     // Confirm token
     Confirm(CliAuthConfirm),
+    // Accept invite
+    Accept(CliAuthAccept),
 }
 
 #[derive(Parser, Debug)]
@@ -67,6 +69,15 @@ pub struct CliAuthLogin {
 pub struct CliAuthConfirm {
     /// Email confirmation JWT (JSON Web Token)
     pub confirm: Jwt,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliAuthAccept {
+    /// Organization membership invitation JWT (JSON Web Token)
+    pub invite: Jwt,
 
     #[clap(flatten)]
     pub backend: CliBackend,
