@@ -9,7 +9,7 @@ import {
 import { createStore } from "solid-js/store";
 import type {
 	Email,
-	JsonAuthConfirm,
+	JsonConfirm,
 	JsonLogin,
 	Jwt,
 	PlanLevel,
@@ -69,7 +69,7 @@ const ConfirmForm = (props: Props) => {
 	const handleSubmit = () => {
 		setSubmitting(true);
 
-		const authToken: JsonAuthConfirm = {
+		const authToken: JsonConfirm = {
 			token: token(),
 		};
 		httpPost(props.apiUrl, "/v0/auth/confirm", null, authToken)

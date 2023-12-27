@@ -4,8 +4,8 @@ import { authUser } from "../../util/auth";
 import { useSearchParams } from "../../util/url";
 import { INVITE_PARAM, PLAN_PARAM } from "./auth";
 import type {
-	JsonAuth,
-	JsonAuthAccept,
+	JsonAuthAck,
+	JsonAccept,
 	JsonAuthUser,
 } from "../../types/bencher";
 import { httpPost } from "../../util/http";
@@ -34,7 +34,7 @@ const AuthRedirect = (props: { apiUrl?: string; path: string }) => {
 		}
 		const accept = {
 			invite,
-		} as JsonAuthAccept;
+		} as JsonAccept;
 		return await httpPost(props.apiUrl, "/v0/auth/accept", token, accept)
 			.then((_resp) => {
 				navigateNotify(
@@ -56,7 +56,7 @@ const AuthRedirect = (props: { apiUrl?: string; path: string }) => {
 				);
 			});
 	};
-	const [_jsonAuth] = createResource<JsonAuth>(fetcher, acceptInvite);
+	const [_jsonAuth] = createResource<JsonAuthAck>(fetcher, acceptInvite);
 
 	return (
 		<Switch fallback={<></>}>

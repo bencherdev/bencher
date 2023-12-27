@@ -76,7 +76,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/JsonAuthAccept"
+                "$ref": "#/components/schemas/JsonAccept"
               }
             }
           },
@@ -118,7 +118,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonAuth"
+                  "$ref": "#/components/schemas/JsonAuthAck"
                 }
               }
             }
@@ -142,7 +142,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/JsonAuthConfirm"
+                "$ref": "#/components/schemas/JsonConfirm"
               }
             }
           },
@@ -316,7 +316,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonAuth"
+                  "$ref": "#/components/schemas/JsonAuthAck"
                 }
               }
             }
@@ -382,7 +382,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonAuth"
+                  "$ref": "#/components/schemas/JsonAuthAck"
                 }
               }
             }
@@ -943,7 +943,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonAuth"
+                  "$ref": "#/components/schemas/JsonAuthAck"
                 }
               }
             }
@@ -6213,6 +6213,17 @@
         "format": "uint32",
         "minimum": 0
       },
+      "JsonAccept": {
+        "type": "object",
+        "properties": {
+          "invite": {
+            "$ref": "#/components/schemas/Jwt"
+          }
+        },
+        "required": [
+          "invite"
+        ]
+      },
       "JsonAlert": {
         "type": "object",
         "properties": {
@@ -6295,7 +6306,7 @@
           "version"
         ]
       },
-      "JsonAuth": {
+      "JsonAuthAck": {
         "type": "object",
         "properties": {
           "email": {
@@ -6304,28 +6315,6 @@
         },
         "required": [
           "email"
-        ]
-      },
-      "JsonAuthAccept": {
-        "type": "object",
-        "properties": {
-          "invite": {
-            "$ref": "#/components/schemas/Jwt"
-          }
-        },
-        "required": [
-          "invite"
-        ]
-      },
-      "JsonAuthConfirm": {
-        "type": "object",
-        "properties": {
-          "token": {
-            "$ref": "#/components/schemas/Jwt"
-          }
-        },
-        "required": [
-          "token"
         ]
       },
       "JsonAuthUser": {
@@ -6728,6 +6717,17 @@
           "logging",
           "security",
           "server"
+        ]
+      },
+      "JsonConfirm": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "$ref": "#/components/schemas/Jwt"
+          }
+        },
+        "required": [
+          "token"
         ]
       },
       "JsonConsole": {

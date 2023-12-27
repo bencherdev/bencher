@@ -1,4 +1,4 @@
-use bencher_json::{system::auth::JsonAuthUser, JsonAuthConfirm};
+use bencher_json::{system::auth::JsonAuthUser, JsonConfirm};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use http::StatusCode;
 
@@ -33,7 +33,7 @@ pub async fn auth_confirm_options(
 }]
 pub async fn auth_confirm_post(
     rqctx: RequestContext<ApiContext>,
-    body: TypedBody<JsonAuthConfirm>,
+    body: TypedBody<JsonConfirm>,
 ) -> Result<ResponseOk<JsonAuthUser>, HttpError> {
     let json = post_inner(rqctx.context(), body.into_inner()).await?;
     Ok(Post::pub_response_ok(json))
@@ -41,13 +41,13 @@ pub async fn auth_confirm_post(
 
 async fn post_inner(
     context: &ApiContext,
-    json_auth_confirm: JsonAuthConfirm,
+    json_confirm: JsonConfirm,
 ) -> Result<JsonAuthUser, HttpError> {
     let conn = &mut *context.conn().await;
 
     let claims = context
         .token_key
-        .validate_auth(&json_auth_confirm.token)
+        .validate_auth(&json_confirm.token)
         .map_err(unauthorized_error)?;
     let email = claims.email();
     let user = QueryUser::get_with_email(conn, email)?.into_json();

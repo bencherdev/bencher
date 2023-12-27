@@ -1,6 +1,6 @@
 use bencher_json::{
     organization::member::{JsonNewMember, JsonUpdateMember},
-    JsonAuth, JsonDirection, JsonMember, JsonMembers, JsonPagination, ResourceId, UserName,
+    JsonAuthAck, JsonDirection, JsonMember, JsonMembers, JsonPagination, ResourceId, UserName,
 };
 use bencher_rbac::organization::Permission;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -159,7 +159,7 @@ pub async fn org_member_post(
     bearer_token: BearerToken,
     path_params: Path<OrgMembersParams>,
     body: TypedBody<JsonNewMember>,
-) -> Result<ResponseAccepted<JsonAuth>, HttpError> {
+) -> Result<ResponseAccepted<JsonAuthAck>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(
         &rqctx.log,
@@ -178,7 +178,7 @@ async fn post_inner(
     path_params: OrgMembersParams,
     mut json_new_member: JsonNewMember,
     auth_user: &AuthUser,
-) -> Result<JsonAuth, HttpError> {
+) -> Result<JsonAuthAck, HttpError> {
     let conn = &mut *context.conn().await;
 
     // Get the organization
@@ -266,7 +266,7 @@ async fn post_inner(
     };
     context.messenger.send(log, message);
 
-    Ok(JsonAuth { email })
+    Ok(JsonAuthAck { email })
 }
 
 #[derive(Deserialize, JsonSchema)]

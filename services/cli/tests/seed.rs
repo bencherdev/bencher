@@ -47,7 +47,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         "eustace.bagge@nowhere.com",
     ]);
     let assert = cmd.assert().success();
-    let _json: bencher_json::JsonAuth =
+    let _json: bencher_json::JsonAuthAck =
         serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- auth signup --host http://localhost:61016 --name "Muriel Bagge" muriel.bagge@nowhere.com
@@ -63,7 +63,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         "muriel.bagge@nowhere.com",
     ]);
     let assert = cmd.assert().success();
-    let _json: bencher_json::JsonAuth =
+    let _json: bencher_json::JsonAuthAck =
         serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- auth login --host http://localhost:61016 muriel.bagge@nowhere.com
@@ -76,7 +76,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         "muriel.bagge@nowhere.com",
     ]);
     let assert = cmd.assert().success();
-    let _json: bencher_json::JsonAuth =
+    let _json: bencher_json::JsonAuthAck =
         serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- org ls --host http://localhost:61016
@@ -119,7 +119,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         "leader",
     ]);
     let assert = cmd.assert().success();
-    let _json: bencher_json::JsonAuth =
+    let _json: bencher_json::JsonAuthAck =
         serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
     // cargo run -- project ls --host http://localhost:61016 --public

@@ -50,7 +50,7 @@ pub use project::{
 #[cfg(feature = "plus")]
 pub use system::server::{JsonServer, JsonServerStats, ServerUuid};
 pub use system::{
-    auth::{JsonAuth, JsonAuthConfirm, JsonAuthUser, JsonLogin, JsonSignup},
+    auth::{JsonAccept, JsonAuthAck, JsonAuthUser, JsonConfirm, JsonLogin, JsonOAuth, JsonSignup},
     backup::{JsonBackup, JsonBackupCreated},
     config::JsonConfig,
     endpoint::JsonEndpoint,

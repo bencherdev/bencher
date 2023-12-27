@@ -31,25 +31,34 @@ pub struct JsonLogin {
     pub invite: Option<Jwt>,
 }
 
+#[cfg(feature = "plus")]
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonAuth {
-    pub email: Email,
+pub struct JsonOAuth {
+    pub code: Secret,
+    pub invite: Option<Jwt>,
 }
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonAuthConfirm {
+pub struct JsonConfirm {
     pub token: Jwt,
 }
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonAuthAccept {
+pub struct JsonAccept {
     pub invite: Jwt,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonAuthAck {
+    pub email: Email,
 }
 
 #[typeshare::typeshare]
@@ -58,13 +67,4 @@ pub struct JsonAuthAccept {
 pub struct JsonAuthUser {
     pub user: JsonUser,
     pub token: Jwt,
-}
-
-#[cfg(feature = "plus")]
-#[typeshare::typeshare]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonOAuth {
-    pub code: Secret,
-    pub invite: Option<Jwt>,
 }

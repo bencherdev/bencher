@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_client::types::JsonAuthConfirm;
+use bencher_client::types::JsonConfirm;
 use bencher_json::Jwt;
 
 use crate::{
@@ -31,7 +31,7 @@ impl TryFrom<CliAuthConfirm> for Confirm {
     }
 }
 
-impl From<Confirm> for JsonAuthConfirm {
+impl From<Confirm> for JsonConfirm {
     fn from(confirm: Confirm) -> Self {
         let Confirm { token, .. } = confirm;
         Self {

@@ -1,4 +1,4 @@
-use bencher_json::JsonAuth;
+use bencher_json::JsonAuthAck;
 use bencher_json::JsonLogin;
 
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
@@ -39,7 +39,7 @@ pub async fn auth_login_options(
 pub async fn auth_login_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonLogin>,
-) -> Result<ResponseAccepted<JsonAuth>, HttpError> {
+) -> Result<ResponseAccepted<JsonAuthAck>, HttpError> {
     let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner()).await?;
     Ok(Post::pub_response_accepted(json))
 }
@@ -48,7 +48,7 @@ async fn post_inner(
     log: &Logger,
     context: &ApiContext,
     json_login: JsonLogin,
-) -> Result<JsonAuth, HttpError> {
+) -> Result<JsonAuthAck, HttpError> {
     let conn = &mut *context.conn().await;
 
     let query_user = QueryUser::get_with_email(conn, &json_login.email)?;
@@ -113,7 +113,7 @@ async fn post_inner(
     };
     context.messenger.send(log, message);
 
-    Ok(JsonAuth {
+    Ok(JsonAuthAck {
         email: json_login.email,
     })
 }

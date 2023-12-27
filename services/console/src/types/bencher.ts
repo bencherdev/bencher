@@ -460,26 +460,26 @@ export interface JsonLogin {
 	invite?: Jwt;
 }
 
-export interface JsonAuth {
-	email: Email;
+export interface JsonOAuth {
+	code: Secret;
+	invite?: Jwt;
 }
 
-export interface JsonAuthConfirm {
+export interface JsonConfirm {
 	token: Jwt;
 }
 
-export interface JsonAuthAccept {
+export interface JsonAccept {
 	invite: Jwt;
+}
+
+export interface JsonAuthAck {
+	email: Email;
 }
 
 export interface JsonAuthUser {
 	user: JsonUser;
 	token: Jwt;
-}
-
-export interface JsonOAuth {
-	code: Secret;
-	invite?: Jwt;
 }
 
 export interface JsonToken {

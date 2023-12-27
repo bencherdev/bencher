@@ -1,4 +1,4 @@
-use bencher_json::system::auth::JsonAuth;
+use bencher_json::system::auth::JsonAuthAck;
 use bencher_json::JsonSignup;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use http::StatusCode;
@@ -37,7 +37,7 @@ pub async fn auth_signup_options(
 pub async fn auth_signup_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonSignup>,
-) -> Result<ResponseAccepted<JsonAuth>, HttpError> {
+) -> Result<ResponseAccepted<JsonAuthAck>, HttpError> {
     let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner()).await?;
     Ok(Post::pub_response_accepted(json))
 }
@@ -46,7 +46,7 @@ async fn post_inner(
     log: &Logger,
     context: &ApiContext,
     json_signup: JsonSignup,
-) -> Result<JsonAuth, HttpError> {
+) -> Result<JsonAuthAck, HttpError> {
     if !json_signup.i_agree {
         return Err(forbidden_error(
             "You must agree to the Bencher Terms of Use (https://bencher.dev/legal/terms-of-use), Privacy Policy (https://bencher.dev/legal/privacy), and License Agreement (https://bencher.dev/legal/license)",
@@ -120,7 +120,7 @@ async fn post_inner(
         "email",
     )?;
 
-    Ok(JsonAuth {
+    Ok(JsonAuthAck {
         email: insert_user.email,
     })
 }
