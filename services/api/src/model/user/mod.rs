@@ -1,6 +1,6 @@
 use bencher_json::{
-    organization::member::OrganizationRole, DateTime, Email, JsonSignup, JsonUser, Slug, UserName,
-    UserUuid,
+    organization::member::OrganizationRole, DateTime, Email, JsonSignup, JsonUser, Jwt, Slug,
+    UserName, UserUuid,
 };
 use bencher_token::TokenKey;
 use diesel::{dsl::count, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -10,7 +10,7 @@ use url::Url;
 
 use crate::{
     context::{Body, DbConnection, Message, Messenger, NewUserBody},
-    error::{resource_conflict_err, resource_not_found_err},
+    error::{forbidden_error, resource_conflict_err, resource_not_found_err},
     schema::{self, user as user_table},
     util::{
         fn_get::{fn_get, fn_get_id, fn_get_uuid},
@@ -83,11 +83,39 @@ impl QueryUser {
             .map_err(resource_not_found_err!(User, email))
     }
 
-    pub fn get_admins(conn: &mut DbConnection) -> Result<Vec<QueryUser>, HttpError> {
+    pub fn get_admins(conn: &mut DbConnection) -> Result<Vec<Self>, HttpError> {
         schema::user::table
             .filter(schema::user::admin.eq(true))
             .load::<QueryUser>(conn)
             .map_err(resource_not_found_err!(User, true))
+    }
+
+    /// Check to see if the user account has been locked
+    pub fn check_is_locked(&self) -> Result<(), HttpError> {
+        if self.locked {
+            Err(forbidden_error(format!(
+                "Your account ({email}) has been locked. Please contact support.",
+                email = self.email
+            )))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn accept_invite(
+        &self,
+        conn: &mut DbConnection,
+        token_key: &TokenKey,
+        invite: &Jwt,
+    ) -> Result<(), HttpError> {
+        let insert_org_role = InsertOrganizationRole::from_jwt(conn, token_key, invite, self.id)?;
+
+        diesel::insert_into(schema::organization_role::table)
+            .values(&insert_org_role)
+            .execute(conn)
+            .map_err(resource_conflict_err!(OrganizationRole, insert_org_role))?;
+
+        Ok(())
     }
 
     pub fn into_json(self) -> JsonUser {

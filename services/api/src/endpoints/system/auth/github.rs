@@ -1,13 +1,9 @@
 #![cfg(feature = "plus")]
 
-use bencher_json::JsonAuth;
 use bencher_json::JsonAuthUser;
-use bencher_json::JsonLogin;
 
 use bencher_json::system::auth::JsonOAuth;
 use bencher_json::JsonSignup;
-use diesel::sql_types::Json;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use http::StatusCode;
 use slog::Logger;
@@ -18,28 +14,14 @@ use crate::endpoints::endpoint::Post;
 use crate::endpoints::endpoint::ResponseAccepted;
 use crate::endpoints::Endpoint;
 
-use crate::endpoints::endpoint::ResponseOk;
-use crate::error::forbidden_error;
 use crate::error::issue_error;
 use crate::error::payment_required_error;
-use crate::error::resource_conflict_err;
-use crate::error::resource_not_found_err;
 use crate::error::unauthorized_error;
 use crate::model::organization::plan::LicenseUsage;
-use crate::model::organization::plan::PlanKind;
-use crate::model::organization::QueryOrganization;
 use crate::model::user::InsertUser;
-use crate::schema::organization::license;
-use crate::{
-    context::{ApiContext, Body, ButtonBody, Message},
-    model::organization::organization_role::InsertOrganizationRole,
-    model::user::QueryUser,
-    schema,
-};
+use crate::{context::ApiContext, model::user::QueryUser};
 
-use super::AUTH_TOKEN_TTL;
 use super::CLIENT_TOKEN_TTL;
-use super::TOKEN_ARG;
 
 #[allow(clippy::unused_async)]
 #[endpoint {
@@ -96,8 +78,13 @@ async fn post_inner(
         .parse()
         .map_err(unauthorized_error)?;
 
+    // If the user already exists, then we just need to check if they are locked and possible accept an invite
+    // Otherwise, we need to create a new user and notify the admins
     let user = if let Ok(query_user) = QueryUser::get_with_email(conn, &email) {
-        // TODO handle invite for existing user
+        query_user.check_is_locked()?;
+        if let Some(invite) = &json_oauth.invite {
+            query_user.accept_invite(conn, &context.token_key, invite)?;
+        }
         query_user
     } else {
         let json_signup = JsonSignup {

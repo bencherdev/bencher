@@ -70,9 +70,8 @@ async fn post_inner(
                 &format!("Failed failed to create auth JWT ({insert_user:?} | {AUTH_TOKEN_TTL}) at signup"),
                 e,
             )
-        })?;
+        })?.to_string();
 
-    let token_string = token.to_string();
     let body = Body::Button(Box::new(ButtonBody {
         title: "Confirm Bencher Signup".into(),
         preheader: "Click the provided link to signup.".into(),
@@ -88,12 +87,12 @@ async fn post_inner(
                 #[cfg(feature = "plus")]
                 url.query_pairs_mut()
                     .append_pair(super::PLAN_ARG, plan.as_ref());
-                url.query_pairs_mut().append_pair(TOKEN_ARG, &token_string);
+                url.query_pairs_mut().append_pair(TOKEN_ARG, &token);
                 url.into()
             })
             .unwrap_or_default(),
         clipboard_text: "Confirmation Code".into(),
-        clipboard_target: token_string,
+        clipboard_target: token,
         post_body: String::new(),
         closing: "See you soon,".into(),
         signature: "The Bencher Team".into(),

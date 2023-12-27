@@ -1,5 +1,4 @@
 use bencher_json::{system::auth::JsonAuthUser, JsonAuthToken};
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use http::StatusCode;
 
@@ -9,9 +8,8 @@ use crate::{
         endpoint::{CorsResponse, Post, ResponseOk},
         Endpoint,
     },
-    error::{issue_error, resource_not_found_err, unauthorized_error},
+    error::{issue_error, unauthorized_error},
     model::user::QueryUser,
-    schema,
 };
 
 use super::CLIENT_TOKEN_TTL;

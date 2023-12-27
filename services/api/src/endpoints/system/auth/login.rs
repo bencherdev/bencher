@@ -1,7 +1,6 @@
 use bencher_json::JsonAuth;
 use bencher_json::JsonLogin;
 
-use diesel::RunQueryDsl;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use http::StatusCode;
 use slog::Logger;
@@ -11,14 +10,10 @@ use crate::endpoints::endpoint::Post;
 use crate::endpoints::endpoint::ResponseAccepted;
 use crate::endpoints::Endpoint;
 
-use crate::error::forbidden_error;
 use crate::error::issue_error;
-use crate::error::resource_conflict_err;
 use crate::{
     context::{ApiContext, Body, ButtonBody, Message},
-    model::organization::organization_role::InsertOrganizationRole,
     model::user::QueryUser,
-    schema,
 };
 
 use super::AUTH_TOKEN_TTL;
@@ -57,25 +52,9 @@ async fn post_inner(
     let conn = &mut *context.conn().await;
 
     let query_user = QueryUser::get_with_email(conn, &json_login.email)?;
-
-    // Check to see if the user account has been locked
-    if query_user.locked {
-        return Err(forbidden_error(format!(
-            "Your account ({json_login:?}) has been locked. Please contact support.",
-        )));
-    }
-
-    #[cfg(feature = "plus")]
-    let plan = json_login.plan;
-
+    query_user.check_is_locked()?;
     if let Some(invite) = &json_login.invite {
-        let insert_org_role =
-            InsertOrganizationRole::from_jwt(conn, &context.token_key, invite, query_user.id)?;
-
-        diesel::insert_into(schema::organization_role::table)
-            .values(&insert_org_role)
-            .execute(conn)
-            .map_err(resource_conflict_err!(OrganizationRole, insert_org_role))?;
+        query_user.accept_invite(conn, &context.token_key, invite)?;
     }
 
     let token = context
@@ -90,9 +69,9 @@ async fn post_inner(
                 ),
                 e,
             )
-        })?;
+        })?
+        .to_string();
 
-    let token_string = token.to_string();
     let body = Body::Button(Box::new(ButtonBody {
         title: "Confirm Bencher Login".into(),
         preheader: "Click the provided link to login.".into(),
@@ -106,16 +85,16 @@ async fn post_inner(
             .join("/auth/confirm")
             .map(|mut url| {
                 #[cfg(feature = "plus")]
-                if let Some(plan) = plan {
+                if let Some(plan) = json_login.plan {
                     url.query_pairs_mut()
                         .append_pair(super::PLAN_ARG, plan.as_ref());
                 }
-                url.query_pairs_mut().append_pair(TOKEN_ARG, &token_string);
+                url.query_pairs_mut().append_pair(TOKEN_ARG, &token);
                 url.into()
             })
             .unwrap_or_default(),
         clipboard_text: "Confirmation Code".into(),
-        clipboard_target: token_string,
+        clipboard_target: token,
         post_body: String::new(),
         closing: "See you soon,".into(),
         signature: "The Bencher Team".into(),
