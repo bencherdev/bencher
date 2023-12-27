@@ -48,9 +48,12 @@ pub use project::{
     JsonNewProject, JsonProject, JsonProjects, ProjectUuid,
 };
 #[cfg(feature = "plus")]
-pub use system::server::{JsonServer, JsonServerStats, ServerUuid};
 pub use system::{
-    auth::{JsonAccept, JsonAuthAck, JsonAuthUser, JsonConfirm, JsonLogin, JsonOAuth, JsonSignup},
+    auth::JsonOAuth,
+    server::{JsonServer, JsonServerStats, ServerUuid},
+};
+pub use system::{
+    auth::{JsonAccept, JsonAuthAck, JsonAuthUser, JsonConfirm, JsonLogin, JsonSignup},
     backup::{JsonBackup, JsonBackupCreated},
     config::JsonConfig,
     endpoint::JsonEndpoint,

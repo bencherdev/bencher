@@ -1,6 +1,6 @@
+use bencher_valid::{Email, Jwt, Slug, UserName};
 #[cfg(feature = "plus")]
-use bencher_valid::PlanLevel;
-use bencher_valid::{Email, Jwt, Secret, Slug, UserName};
+use bencher_valid::{PlanLevel, Secret};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
