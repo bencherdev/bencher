@@ -32,10 +32,12 @@ impl Api {
             api.register(system::auth::signup::auth_signup_options)?;
             api.register(system::auth::login::auth_login_options)?;
             api.register(system::auth::confirm::auth_confirm_options)?;
+            api.register(system::auth::accept::auth_accept_options)?;
         }
         api.register(system::auth::signup::auth_signup_post)?;
         api.register(system::auth::login::auth_login_post)?;
         api.register(system::auth::confirm::auth_confirm_post)?;
+        api.register(system::auth::accept::auth_accept_post)?;
 
         #[cfg(feature = "plus")]
         {
