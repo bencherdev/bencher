@@ -33,6 +33,7 @@
     "bulma": "^0.9.4",
     "bulma-divider": "^0.2.0",
     "bulma-pricingtable": "^0.2.0",
+    "bulma-steps": "^2.2.1",
     "bulma-switch": "^2.0.4",
     "bulma-tooltip": "^3.0.2",
     "d3": "^7.8.5",
