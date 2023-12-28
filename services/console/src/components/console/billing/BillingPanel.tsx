@@ -65,10 +65,7 @@ const BillingPanel = (props: Props) => {
 		bencher_valid: InitOutput;
 		token: string;
 	}) => {
-		if (!bencher_valid()) {
-			return null;
-		}
-		if (!validJwt(fetcher.token)) {
+		if (!fetcher.bencher_valid || !validJwt(fetcher.token)) {
 			return null;
 		}
 		const path = `/v0/organizations/${fetcher.params.organization}/usage`;

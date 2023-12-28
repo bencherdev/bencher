@@ -54,10 +54,7 @@ const DeckPanel = (props: Props) => {
 		token: string;
 	}) => {
 		const EMPTY_OBJECT = {};
-		if (!bencher_valid()) {
-			return EMPTY_OBJECT;
-		}
-		if (!validJwt(fetcher.token)) {
+		if (!fetcher.bencher_valid || !validJwt(fetcher.token)) {
 			return EMPTY_OBJECT;
 		}
 		return await httpGet(props.apiUrl, path(), fetcher.token)

@@ -47,13 +47,11 @@ const ConsoleMenu = (props: Props) => {
 		const DEFAULT_ALERT_STATS = {
 			active: 0,
 		};
-		if (!bencher_valid()) {
-			return DEFAULT_ALERT_STATS;
-		}
-		if (!validJwt(fetcher.token)) {
-			return DEFAULT_ALERT_STATS;
-		}
-		if (!fetcher.project_slug) {
+		if (
+			!fetcher.bencher_valid ||
+			!fetcher.project_slug ||
+			!validJwt(fetcher.token)
+		) {
 			return DEFAULT_ALERT_STATS;
 		}
 		const pathname = `/v0/projects/${fetcher.project_slug}/stats/alerts`;

@@ -35,14 +35,12 @@ const ConsoleRedirect = (props: Props) => {
 		bencher_valid: InitOutput;
 		token: string;
 	}) => {
-		if (!bencher_valid()) {
+		if (!fetcher.bencher_valid) {
 			return undefined;
 		}
-
 		if (!validJwt(fetcher.token)) {
 			return null;
 		}
-
 		const path = "/v0/organizations";
 		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {

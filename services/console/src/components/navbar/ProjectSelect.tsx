@@ -48,13 +48,11 @@ const ProjectSelect = (props: Props) => {
 		if (fetcher.organization_slug) {
 			return fetcher.organization_slug;
 		}
-		if (!bencher_valid()) {
-			return;
-		}
-		if (!validJwt(fetcher.token)) {
-			return;
-		}
-		if (!fetcher.project_slug) {
+		if (
+			!fetcher.bencher_valid ||
+			!fetcher.project_slug ||
+			!validJwt(fetcher.token)
+		) {
 			return;
 		}
 		const path = `/v0/projects/${fetcher.project_slug}`;
@@ -103,13 +101,11 @@ const ProjectSelect = (props: Props) => {
 			created: "",
 			modified: "",
 		};
-		if (!bencher_valid()) {
-			return [ALL_PROJECTS];
-		}
-		if (!validJwt(fetcher.token)) {
-			return [ALL_PROJECTS];
-		}
-		if (!fetcher.organization) {
+		if (
+			!fetcher.bencher_valid ||
+			!fetcher.organization ||
+			!validJwt(fetcher.token)
+		) {
 			return [ALL_PROJECTS];
 		}
 		const path = `/v0/organizations/${fetcher.organization}/projects?per_page=255`;

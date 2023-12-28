@@ -90,11 +90,7 @@ const TablePanel = (props: Props) => {
 		token: string;
 	}) => {
 		const EMPTY_ARRAY: Record<string, any>[] = [];
-		if (!bencher_valid()) {
-			return EMPTY_ARRAY;
-		}
-
-		if (!validJwt(fetcher.token)) {
+		if (!fetcher.bencher_valid || !validJwt(fetcher.token)) {
 			return EMPTY_ARRAY;
 		}
 		const searchParams = new URLSearchParams();
