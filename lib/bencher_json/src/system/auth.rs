@@ -37,6 +37,8 @@ pub struct JsonLogin {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonOAuth {
     pub code: Secret,
+    #[cfg(feature = "plus")]
+    pub plan: Option<PlanLevel>,
     pub invite: Option<Jwt>,
 }
 

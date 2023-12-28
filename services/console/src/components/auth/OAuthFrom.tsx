@@ -1,6 +1,6 @@
 import { createMemo } from "solid-js";
 import { useSearchParams } from "../../util/url";
-import { INVITE_PARAM } from "./auth";
+import { INVITE_PARAM, PLAN_PARAM } from "./auth";
 
 interface Props {
 	newUser: boolean;
@@ -13,8 +13,11 @@ const OAuthForm = (props: Props) => {
 	const githubPath = createMemo(() => {
 		let path = `https://github.com/login/oauth/authorize?client_id=${props.githubClientId}`;
 		const invite = searchParams[INVITE_PARAM];
+		const plan = searchParams[PLAN_PARAM];
 		if (invite) {
 			path += `&state=${invite}`;
+		} else if (plan) {
+			path += `&state=${plan}`;
 		}
 		return path;
 	});

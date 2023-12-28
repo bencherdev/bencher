@@ -6,6 +6,7 @@ import type { JsonAuthUser, JsonOAuth } from "../../types/bencher";
 import { httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify } from "../../util/notify";
 import { PLAN_PARAM } from "./auth";
+import { validJwt, validPlanLevel } from "../../util/valid";
 
 const CODE_PARAM = "code";
 const STATE_PARAM = "state";
@@ -28,7 +29,7 @@ const AuthGitHub = (props: Props) => {
 	const fetcher = createMemo(() => {
 		return {
 			user: user,
-			bencher_valid: bencher_valid,
+			bencher_valid: bencher_valid(),
 			code: searchParams[CODE_PARAM],
 			state: searchParams[STATE_PARAM],
 		};
@@ -47,25 +48,34 @@ const AuthGitHub = (props: Props) => {
 		}
 		const oauth = {
 			code: fetcher.code,
-			invite: fetcher.state,
 		} as JsonOAuth;
+		const state = fetcher.state;
+		const setParams = [];
+		if (validJwt(state)) {
+			oauth.invite = state;
+		} else if (validPlanLevel(state)) {
+			oauth.plan = state;
+			setParams.push([PLAN_PARAM, state]);
+		}
+		console.log("oauth", oauth);
 		return await httpPost(props.apiUrl, "/v0/auth/github", null, oauth)
 			.then((resp) => {
 				const user = resp.data;
+				console.log("user", user);
 				if (setUser(user)) {
 					navigateNotify(
 						NotifyKind.OK,
 						"Hoppy to git to see you!",
 						"/console",
-						[PLAN_PARAM],
 						null,
+						setParams,
 					);
 				} else {
 					navigateNotify(
 						NotifyKind.ERROR,
 						"Invalid user. Please, try again.",
 						"/auth/login",
-						[PLAN_PARAM],
+						null,
 						null,
 					);
 				}
@@ -76,7 +86,7 @@ const AuthGitHub = (props: Props) => {
 					NotifyKind.ERROR,
 					"Invalid user. Please, try again.",
 					"/auth/login",
-					[PLAN_PARAM],
+					null,
 					null,
 				);
 			});

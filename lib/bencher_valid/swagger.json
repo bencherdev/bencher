@@ -7349,6 +7349,14 @@
                 "$ref": "#/components/schemas/Jwt"
               }
             ]
+          },
+          "plan": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlanLevel"
+              }
+            ]
           }
         },
         "required": [

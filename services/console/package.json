@@ -7,7 +7,7 @@
     "typeshare": "typeshare ../.. --lang=typescript --output-file=./src/types/bencher.ts",
     "wasm": "../../scripts/build_wasm.sh",
     "setup": "npm run typeshare && npm run wasm",
-    "dev": "npm run setup && export BENCHER_API_URL=http://127.0.0.1:61016 && export GITHUB_CLIENT_ID=Iv1.12877f7bd5e10428 && astro dev --port 3000",
+    "dev": "npm run setup && export BENCHER_API_URL=http://127.0.0.1:61016 && export GITHUB_CLIENT_ID=Iv1.46f0fd7a007ef1af && astro dev --port 3000",
     "start": "astro dev --port 3000",
     "test": "npm run setup && vitest",
     "build": "export $(cat .env.runtime) && astro build",

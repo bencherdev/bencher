@@ -462,6 +462,7 @@ export interface JsonLogin {
 
 export interface JsonOAuth {
 	code: Secret;
+	plan?: PlanLevel;
 	invite?: Jwt;
 }
 

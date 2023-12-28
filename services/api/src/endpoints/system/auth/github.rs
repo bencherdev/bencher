@@ -88,9 +88,9 @@ async fn post_inner(
             name,
             slug: None,
             email: email.clone(),
-            i_agree: true,
+            plan: json_oauth.plan,
             invite: json_oauth.invite.clone(),
-            plan: None,
+            i_agree: true,
         };
 
         let invited = json_signup.invite.is_some();

@@ -54,7 +54,7 @@ const DeckPanel = (props: Props) => {
 		token: string;
 	}) => {
 		const EMPTY_OBJECT = {};
-		if (!fetcher.bencher_valid) {
+		if (!bencher_valid()) {
 			return EMPTY_OBJECT;
 		}
 		if (!validJwt(fetcher.token)) {

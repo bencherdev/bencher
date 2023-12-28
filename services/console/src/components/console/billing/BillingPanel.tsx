@@ -65,7 +65,7 @@ const BillingPanel = (props: Props) => {
 		bencher_valid: InitOutput;
 		token: string;
 	}) => {
-		if (!fetcher.bencher_valid) {
+		if (!bencher_valid()) {
 			return null;
 		}
 		if (!validJwt(fetcher.token)) {
@@ -78,7 +78,8 @@ const BillingPanel = (props: Props) => {
 				return resp?.data;
 			})
 			.catch((error) => {
-				console.log(error);
+				// This is not an error because it is expected
+				// console.log(error);
 				return null;
 			});
 	};

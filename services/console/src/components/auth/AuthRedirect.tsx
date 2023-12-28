@@ -1,4 +1,4 @@
-import { Match, Show, Switch, createMemo, createResource } from "solid-js";
+import { Match, Switch, createMemo, createResource } from "solid-js";
 import Redirect from "../site/Redirect";
 import { authUser } from "../../util/auth";
 import { useSearchParams } from "../../util/url";
@@ -18,13 +18,11 @@ const AuthRedirect = (props: { apiUrl?: string; path: string }) => {
 	const fetcher = createMemo(() => {
 		return {
 			user: user,
-			// bencher_valid: bencher_valid,
 			invite: searchParams[INVITE_PARAM],
 		};
 	});
 	const acceptInvite = async (fetcher: {
 		user: JsonAuthUser;
-		// bencher_valid: InitOutput;
 		invite: undefined | string;
 	}) => {
 		const token = fetcher.user?.token;
