@@ -5,7 +5,7 @@ use bencher_client::types::{JsonDirection, ProjReportsSort};
 use bencher_json::{project::report::JsonReportQuery, DateTime, NameId, ResourceId};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::PubBackend, sub::SubCmd},
     parser::{
         project::report::{CliReportList, CliReportsSort},
         CliPagination,
@@ -21,7 +21,7 @@ pub struct List {
     pub start_time: Option<DateTime>,
     pub end_time: Option<DateTime>,
     pub pagination: Pagination,
-    pub backend: Backend,
+    pub backend: PubBackend,
 }
 
 #[derive(Debug, Clone)]
@@ -100,6 +100,7 @@ impl SubCmd for List {
         let json_report_query: &JsonReportQuery = &self.clone().into();
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move {
                 let mut client = client.proj_reports_get().project(self.project.clone());
 

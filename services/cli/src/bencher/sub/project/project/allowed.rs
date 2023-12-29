@@ -5,7 +5,7 @@ use bencher_client::types::ProjectPermission;
 use bencher_json::ResourceId;
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::{CliProjectAllowed, CliProjectPermission},
     CliError,
 };
@@ -14,7 +14,7 @@ use crate::{
 pub struct Allowed {
     pub project: ResourceId,
     pub perm: ProjectPermission,
-    pub backend: Backend,
+    pub backend: AuthBackend,
 }
 
 impl TryFrom<CliProjectAllowed> for Allowed {
@@ -55,6 +55,7 @@ impl SubCmd for Allowed {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move {
                 client
                     .proj_allowed_get()

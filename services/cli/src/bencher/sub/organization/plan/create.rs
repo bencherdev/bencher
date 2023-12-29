@@ -7,7 +7,7 @@ use bencher_client::types::{
 use bencher_json::ResourceId;
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::AuthBackend, sub::SubCmd},
     parser::organization::plan::{CliPlanCard, CliPlanCreate, CliPlanCustomer, CliPlanLevel},
     CliError,
 };
@@ -21,7 +21,7 @@ pub struct Create {
     pub entitlements: Option<Entitlements>,
     pub organization: Option<OrganizationUuid>,
     pub i_agree: bool,
-    pub backend: Backend,
+    pub backend: AuthBackend,
 }
 
 impl TryFrom<CliPlanCreate> for Create {
@@ -117,6 +117,7 @@ impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move {
                 client
                     .org_plan_post()

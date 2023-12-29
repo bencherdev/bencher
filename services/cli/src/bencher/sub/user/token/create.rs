@@ -5,7 +5,7 @@ use bencher_client::types::JsonNewToken;
 use bencher_json::{ResourceId, ResourceName};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::AuthBackend, sub::SubCmd},
     parser::user::token::CliTokenCreate,
     CliError,
 };
@@ -15,7 +15,7 @@ pub struct Create {
     pub user: ResourceId,
     pub name: ResourceName,
     pub ttl: Option<u32>,
-    pub backend: Backend,
+    pub backend: AuthBackend,
 }
 
 impl TryFrom<CliTokenCreate> for Create {
@@ -52,6 +52,7 @@ impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move {
                 client
                     .user_token_post()

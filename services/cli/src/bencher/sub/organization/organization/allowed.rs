@@ -5,7 +5,7 @@ use bencher_client::types::OrganizationPermission;
 use bencher_json::ResourceId;
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::AuthBackend, sub::SubCmd},
     parser::organization::{CliOrganizationAllowed, CliOrganizationPermission},
     CliError,
 };
@@ -14,7 +14,7 @@ use crate::{
 pub struct Allowed {
     pub organization: ResourceId,
     pub perm: OrganizationPermission,
-    pub backend: Backend,
+    pub backend: AuthBackend,
 }
 
 impl TryFrom<CliOrganizationAllowed> for Allowed {
@@ -55,6 +55,7 @@ impl SubCmd for Allowed {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move {
                 client
                     .org_allowed_get()

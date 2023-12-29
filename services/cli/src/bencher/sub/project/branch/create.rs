@@ -5,7 +5,7 @@ use bencher_client::types::{JsonNewBranch, JsonStartPoint};
 use bencher_json::{BranchName, NameId, ResourceId, Slug};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::branch::{CliBranchCreate, CliBranchStartPoint},
     CliError,
 };
@@ -18,7 +18,7 @@ pub struct Create {
     pub soft: bool,
     pub start_point_branch: Option<NameId>,
     pub start_point_thresholds: bool,
-    pub backend: Backend,
+    pub backend: AuthBackend,
 }
 
 impl TryFrom<CliBranchCreate> for Create {
@@ -77,6 +77,7 @@ impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move {
                 client
                     .proj_branch_post()

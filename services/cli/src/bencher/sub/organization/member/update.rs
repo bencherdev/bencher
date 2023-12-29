@@ -5,7 +5,7 @@ use bencher_client::types::{JsonUpdateMember, OrganizationRole};
 use bencher_json::ResourceId;
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::AuthBackend, sub::SubCmd},
     parser::organization::member::CliMemberUpdate,
     CliError,
 };
@@ -15,7 +15,7 @@ pub struct Update {
     pub org: ResourceId,
     pub user: ResourceId,
     pub role: Option<OrganizationRole>,
-    pub backend: Backend,
+    pub backend: AuthBackend,
 }
 
 impl TryFrom<CliMemberUpdate> for Update {
@@ -48,6 +48,7 @@ impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move {
                 client
                     .org_member_patch()

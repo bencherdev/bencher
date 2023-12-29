@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_client::types::JsonRestart;
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::AuthBackend, sub::SubCmd},
     parser::system::server::CliRestart,
     CliError,
 };
@@ -12,7 +12,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Restart {
     pub delay: Option<u64>,
-    pub backend: Backend,
+    pub backend: AuthBackend,
 }
 
 impl TryFrom<CliRestart> for Restart {
@@ -39,6 +39,7 @@ impl SubCmd for Restart {
     async fn exec(&self) -> Result<(), CliError> {
         let _json =
             self.backend
+                .as_ref()
                 .send(|client| async move {
                     client.server_restart_post().body(self.clone()).send().await
                 })

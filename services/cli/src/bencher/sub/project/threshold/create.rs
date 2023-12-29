@@ -6,7 +6,7 @@ use bencher_json::{NameId, ResourceId};
 
 use super::statistic::Statistic;
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::threshold::CliThresholdCreate,
     CliError,
 };
@@ -18,7 +18,7 @@ pub struct Create {
     pub testbed: NameId,
     pub measure: NameId,
     pub statistic: Statistic,
-    pub backend: Backend,
+    pub backend: AuthBackend,
 }
 
 impl TryFrom<CliThresholdCreate> for Create {
@@ -80,6 +80,7 @@ impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move {
                 client
                     .proj_threshold_post()

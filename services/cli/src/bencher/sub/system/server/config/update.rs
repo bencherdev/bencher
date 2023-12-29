@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_client::types::{JsonConfig, JsonUpdateConfig};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::AuthBackend, sub::SubCmd},
     parser::system::server::CliConfigUpdate,
     CliError,
 };
@@ -13,7 +13,7 @@ use crate::{
 pub struct Update {
     pub config: Box<JsonConfig>,
     pub delay: Option<u64>,
-    pub backend: Backend,
+    pub backend: AuthBackend,
 }
 
 impl TryFrom<CliConfigUpdate> for Update {
@@ -48,6 +48,7 @@ impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(
                 |client| async move { client.server_config_put().body(self.clone()).send().await },
             )

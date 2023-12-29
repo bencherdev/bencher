@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_json::{ResourceId, StatisticUuid};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::PubBackend, sub::SubCmd},
     parser::project::statistic::CliStatisticView,
     CliError,
 };
@@ -13,7 +13,7 @@ use crate::{
 pub struct View {
     pub project: ResourceId,
     pub statistic: StatisticUuid,
-    pub backend: Backend,
+    pub backend: PubBackend,
 }
 
 impl TryFrom<CliStatisticView> for View {
@@ -38,6 +38,7 @@ impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move {
                 client
                     .proj_statistic_get()

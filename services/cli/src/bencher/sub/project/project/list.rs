@@ -5,7 +5,7 @@ use bencher_client::types::{JsonDirection, OrgProjectsSort, ProjectsSort};
 use bencher_json::{ResourceId, ResourceName};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::PubBackend, sub::SubCmd},
     parser::{
         project::{CliProjectList, CliProjectsSort},
         CliPagination,
@@ -19,7 +19,7 @@ pub struct List {
     pub public: Option<bool>,
     pub name: Option<ResourceName>,
     pub pagination: Pagination,
-    pub backend: Backend,
+    pub backend: PubBackend,
 }
 
 #[derive(Debug)]
@@ -79,6 +79,7 @@ impl SubCmd for List {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move {
                 if let Some(org) = self.org.clone() {
                     let mut client = client.org_projects_get().organization(org);

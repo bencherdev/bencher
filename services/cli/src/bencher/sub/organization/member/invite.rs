@@ -5,7 +5,7 @@ use bencher_client::types::{JsonNewMember, OrganizationRole};
 use bencher_json::{Email, ResourceId, UserName};
 
 use crate::{
-    bencher::backend::Backend,
+    bencher::backend::AuthBackend,
     parser::organization::member::{CliMemberInvite, CliMemberRole},
     CliError,
 };
@@ -18,7 +18,7 @@ pub struct Invite {
     name: Option<UserName>,
     email: Email,
     role: OrganizationRole,
-    backend: Backend,
+    backend: AuthBackend,
 }
 
 impl TryFrom<CliMemberInvite> for Invite {
@@ -70,6 +70,7 @@ impl SubCmd for Invite {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move {
                 client
                     .org_member_post()

@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_client::types::{JsonBackup, JsonDataStore};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::AuthBackend, sub::SubCmd},
     parser::system::server::{CliBackup, CliBackupDataStore},
     CliError,
 };
@@ -14,7 +14,7 @@ pub struct Backup {
     pub compress: Option<bool>,
     pub data_store: Option<JsonDataStore>,
     pub rm: Option<bool>,
-    pub backend: Backend,
+    pub backend: AuthBackend,
 }
 
 impl TryFrom<CliBackup> for Backup {
@@ -65,6 +65,7 @@ impl SubCmd for Backup {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(
                 |client| async move { client.server_backup_post().body(self.clone()).send().await },
             )

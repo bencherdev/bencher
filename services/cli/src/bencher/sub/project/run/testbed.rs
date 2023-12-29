@@ -3,7 +3,7 @@ use bencher_json::{
     ResourceName, TestbedUuid,
 };
 
-use crate::bencher::backend::Backend;
+use crate::bencher::backend::AuthBackend;
 
 use super::BENCHER_TESTBED;
 
@@ -59,7 +59,7 @@ impl Testbed {
         &self,
         project: &ResourceId,
         dry_run: bool,
-        backend: &Backend,
+        backend: &AuthBackend,
     ) -> Result<NameId, TestbedError> {
         // Check to make sure that the testbed exists before running the benchmarks
         match (&self.0).try_into().map_err(TestbedError::ParseTestbed)? {
@@ -88,10 +88,11 @@ impl Testbed {
 async fn get_testbed(
     project: &ResourceId,
     testbed: &ResourceId,
-    backend: &Backend,
+    backend: &AuthBackend,
 ) -> Result<TestbedUuid, TestbedError> {
     // Use `JsonUuid` to future proof against breaking changes
     let json_testbed: JsonUuid = backend
+        .as_ref()
         .send_with(|client| async move {
             client
                 .proj_testbed_get()
@@ -109,10 +110,11 @@ async fn get_testbed(
 async fn get_testbed_query(
     project: &ResourceId,
     testbed_name: &ResourceName,
-    backend: &Backend,
+    backend: &AuthBackend,
 ) -> Result<Option<TestbedUuid>, TestbedError> {
     // Use `JsonUuids` to future proof against breaking changes
     let json_testbeds: JsonUuids = backend
+        .as_ref()
         .send_with(|client| async move {
             client
                 .proj_testbeds_get()

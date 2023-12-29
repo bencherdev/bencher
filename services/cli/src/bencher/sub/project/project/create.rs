@@ -5,7 +5,7 @@ use bencher_client::types::{JsonNewProject, Visibility};
 use bencher_json::{ResourceId, ResourceName, Slug, Url};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::{CliProjectCreate, CliProjectVisibility},
     CliError,
 };
@@ -17,7 +17,7 @@ pub struct Create {
     pub slug: Option<Slug>,
     pub url: Option<Url>,
     pub visibility: Option<Visibility>,
-    pub backend: Backend,
+    pub backend: AuthBackend,
 }
 
 impl TryFrom<CliProjectCreate> for Create {
@@ -76,6 +76,7 @@ impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move {
                 client
                     .org_project_post()

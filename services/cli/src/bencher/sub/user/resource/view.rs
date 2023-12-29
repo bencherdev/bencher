@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_json::ResourceId;
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::AuthBackend, sub::SubCmd},
     parser::user::CliUserView,
     CliError,
 };
@@ -12,7 +12,7 @@ use crate::{
 #[derive(Debug)]
 pub struct View {
     pub user: ResourceId,
-    pub backend: Backend,
+    pub backend: AuthBackend,
 }
 
 impl TryFrom<CliUserView> for View {
@@ -32,6 +32,7 @@ impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move { client.user_get().user(self.user.clone()).send().await })
             .await?;
         Ok(())

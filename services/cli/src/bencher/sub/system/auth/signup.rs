@@ -7,7 +7,7 @@ use bencher_client::types::PlanLevel;
 use bencher_json::{Email, Jwt, Slug, UserName};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::PubBackend, sub::SubCmd},
     parser::system::auth::CliAuthSignup,
     CliError,
 };
@@ -21,7 +21,7 @@ pub struct Signup {
     pub plan: Option<PlanLevel>,
     pub invite: Option<Jwt>,
     pub i_agree: bool,
-    pub backend: Backend,
+    pub backend: PubBackend,
 }
 
 impl TryFrom<CliAuthSignup> for Signup {
@@ -82,6 +82,7 @@ impl SubCmd for Signup {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move { client.auth_signup_post().body(self.clone()).send().await })
             .await?;
         Ok(())

@@ -5,7 +5,7 @@ use bencher_client::types::JsonNewOrganization;
 use bencher_json::{ResourceName, Slug};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::AuthBackend, sub::SubCmd},
     parser::organization::CliOrganizationCreate,
     CliError,
 };
@@ -14,7 +14,7 @@ use crate::{
 pub struct Create {
     pub name: ResourceName,
     pub slug: Option<Slug>,
-    pub backend: Backend,
+    pub backend: AuthBackend,
 }
 
 impl TryFrom<CliOrganizationCreate> for Create {
@@ -49,6 +49,7 @@ impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(
                 |client| async move { client.organization_post().body(self.clone()).send().await },
             )

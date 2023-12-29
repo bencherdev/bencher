@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use bencher_json::ResourceId;
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::AuthBackend, sub::SubCmd},
     parser::organization::usage::CliOrganizationUsage,
     CliError,
 };
@@ -14,7 +14,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Usage {
     pub organization: ResourceId,
-    pub backend: Backend,
+    pub backend: AuthBackend,
 }
 
 impl TryFrom<CliOrganizationUsage> for Usage {
@@ -38,6 +38,7 @@ impl SubCmd for Usage {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move {
                 client
                     .org_usage_get()

@@ -5,7 +5,7 @@ use bencher_client::types::JsonUpdateMeasure;
 use bencher_json::{ResourceId, ResourceName, Slug};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::measure::CliMeasureUpdate,
     CliError,
 };
@@ -17,7 +17,7 @@ pub struct Update {
     pub name: Option<ResourceName>,
     pub slug: Option<Slug>,
     pub units: Option<ResourceName>,
-    pub backend: Backend,
+    pub backend: AuthBackend,
 }
 
 impl TryFrom<CliMeasureUpdate> for Update {
@@ -61,6 +61,7 @@ impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move {
                 client
                     .proj_measure_patch()

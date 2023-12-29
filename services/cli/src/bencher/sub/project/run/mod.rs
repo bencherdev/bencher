@@ -8,7 +8,7 @@ use clap::ValueEnum;
 use url::Url;
 
 use crate::{
-    bencher::backend::Backend,
+    bencher::backend::AuthBackend,
     cli_eprintln_quietable, cli_println, cli_println_quietable,
     parser::project::run::{CliRun, CliRunAdapter},
     CliError,
@@ -56,7 +56,7 @@ pub struct Run {
     log: bool,
     ci: Option<Ci>,
     dry_run: bool,
-    backend: Backend,
+    backend: AuthBackend,
 }
 
 impl TryFrom<CliRun> for Run {
@@ -98,7 +98,7 @@ impl TryFrom<CliRun> for Run {
             log: !fmt.quiet,
             ci: ci.try_into().map_err(RunError::Ci)?,
             dry_run,
-            backend: Backend::try_from(backend)?.log(false),
+            backend: AuthBackend::try_from(backend)?.log(false),
         })
     }
 }
@@ -109,7 +109,7 @@ fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, RunError> {
     } else if let Ok(env_project) = std::env::var(BENCHER_PROJECT) {
         env_project.parse().map_err(RunError::ParseProject)?
     } else {
-        return Err(RunError::ProjectNotFound);
+        return Err(RunError::NoProject);
     })
 }
 
@@ -157,6 +157,7 @@ impl Run {
         if !self.log {
             let json_report = self
                 .backend
+                .as_ref()
                 .send(sender)
                 .await
                 .map_err(RunError::SendReport)?;
@@ -168,6 +169,7 @@ impl Run {
         cli_println!("\nBencher Report:");
         let json_report: JsonReport = self
             .backend
+            .as_ref()
             .send_with(sender)
             .await
             .map_err(RunError::SendReport)?;
@@ -243,6 +245,7 @@ impl Run {
     async fn display_results(&self, json_report: JsonReport) -> Result<(), RunError> {
         let json_endpoint: JsonEndpoint = self
             .backend
+            .as_ref()
             .send_with(|client| async move { client.server_endpoint_get().send().await })
             .await
             .map_err(RunError::GetEndpoint)?;

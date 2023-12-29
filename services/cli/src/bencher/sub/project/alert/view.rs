@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_json::{AlertUuid, ResourceId};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::PubBackend, sub::SubCmd},
     parser::project::alert::CliAlertView,
     CliError,
 };
@@ -13,7 +13,7 @@ use crate::{
 pub struct View {
     pub project: ResourceId,
     pub alert: AlertUuid,
-    pub backend: Backend,
+    pub backend: PubBackend,
 }
 
 impl TryFrom<CliAlertView> for View {
@@ -38,6 +38,7 @@ impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move {
                 client
                     .proj_alert_get()

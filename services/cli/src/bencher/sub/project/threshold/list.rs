@@ -5,7 +5,7 @@ use bencher_client::types::{JsonDirection, ProjThresholdsSort};
 use bencher_json::{project::threshold::JsonThresholdQuery, NameId, ResourceId};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::PubBackend, sub::SubCmd},
     parser::{
         project::threshold::{CliThresholdList, CliThresholdsSort},
         CliPagination,
@@ -20,7 +20,7 @@ pub struct List {
     pub testbed: Option<NameId>,
     pub measure: Option<NameId>,
     pub pagination: Pagination,
-    pub backend: Backend,
+    pub backend: PubBackend,
 }
 
 #[derive(Debug, Clone)]
@@ -96,6 +96,7 @@ impl SubCmd for List {
         let json_threshold_query: &JsonThresholdQuery = &self.clone().into();
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move {
                 let mut client = client.proj_thresholds_get().project(self.project.clone());
 

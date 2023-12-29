@@ -5,14 +5,14 @@ use std::convert::TryFrom;
 use async_trait::async_trait;
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::AuthBackend, sub::SubCmd},
     parser::system::server::CliServerStats,
     CliError,
 };
 
 #[derive(Debug, Clone)]
 pub struct ServerStats {
-    pub backend: Backend,
+    pub backend: AuthBackend,
 }
 
 impl TryFrom<CliServerStats> for ServerStats {
@@ -31,6 +31,7 @@ impl SubCmd for ServerStats {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move { client.server_stats_get().send().await })
             .await?;
         Ok(())

@@ -9,7 +9,7 @@ use bencher_json::{
 };
 use tabled::Table;
 
-use crate::{bencher::backend::Backend, cli_println, parser::project::perf::CliPerf, CliError};
+use crate::{bencher::backend::PubBackend, cli_println, parser::project::perf::CliPerf, CliError};
 
 use crate::bencher::SubCmd;
 
@@ -28,7 +28,7 @@ pub struct Perf {
     start_time: Option<DateTime>,
     end_time: Option<DateTime>,
     table: Option<Option<TableStyle>>,
-    backend: Backend,
+    backend: PubBackend,
 }
 
 impl TryFrom<CliPerf> for Perf {
@@ -46,7 +46,7 @@ impl TryFrom<CliPerf> for Perf {
             table,
             backend,
         } = perf;
-        let backend = Backend::try_from(backend)?.log(table.is_none());
+        let backend = PubBackend::try_from(backend)?.log(table.is_none());
         Ok(Self {
             project,
             branches,
@@ -88,14 +88,14 @@ impl SubCmd for Perf {
     async fn exec(&self) -> Result<(), CliError> {
         let sender = perf_sender(self.project.clone(), self.clone());
         if let Some(table_style) = self.table {
-            let json_perf: JsonPerf = self.backend.send_with(sender).await?;
+            let json_perf: JsonPerf = self.backend.as_ref().send_with(sender).await?;
             let mut perf_table: Table = json_perf.into();
             if let Some(table_style) = table_style {
                 table_style.stylize(&mut perf_table);
             }
             cli_println!("{perf_table}");
         } else {
-            self.backend.send(sender).await?;
+            self.backend.as_ref().send(sender).await?;
         }
         Ok(())
     }

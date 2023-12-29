@@ -5,7 +5,7 @@ use bencher_client::types::JsonConfirm;
 use bencher_json::Jwt;
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::PubBackend, sub::SubCmd},
     parser::system::auth::CliAuthConfirm,
     CliError,
 };
@@ -13,7 +13,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Confirm {
     pub token: Jwt,
-    pub backend: Backend,
+    pub backend: PubBackend,
 }
 
 impl TryFrom<CliAuthConfirm> for Confirm {
@@ -45,6 +45,7 @@ impl SubCmd for Confirm {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(
                 |client| async move { client.auth_confirm_post().body(self.clone()).send().await },
             )

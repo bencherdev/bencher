@@ -5,7 +5,7 @@ use bencher_client::types::JsonUpdateToken;
 use bencher_json::{ResourceId, ResourceName, TokenUuid};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::AuthBackend, sub::SubCmd},
     parser::user::token::CliTokenUpdate,
     CliError,
 };
@@ -15,7 +15,7 @@ pub struct Update {
     pub user: ResourceId,
     pub token: TokenUuid,
     pub name: Option<ResourceName>,
-    pub backend: Backend,
+    pub backend: AuthBackend,
 }
 
 impl TryFrom<CliTokenUpdate> for Update {
@@ -51,6 +51,7 @@ impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move {
                 client
                     .user_token_patch()

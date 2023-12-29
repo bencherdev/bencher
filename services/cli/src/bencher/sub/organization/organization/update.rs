@@ -7,7 +7,7 @@ use bencher_client::types::{JsonOrganizationPatch, JsonUpdateOrganization};
 use bencher_json::{ResourceId, ResourceName, Slug};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::AuthBackend, sub::SubCmd},
     parser::organization::CliOrganizationUpdate,
     CliError,
 };
@@ -20,7 +20,7 @@ pub struct Update {
     #[cfg(feature = "plus")]
     #[cfg_attr(feature = "plus", allow(clippy::option_option))]
     pub license: Option<Option<bencher_json::Jwt>>,
-    pub backend: Backend,
+    pub backend: AuthBackend,
 }
 
 impl TryFrom<CliOrganizationUpdate> for Update {
@@ -99,6 +99,7 @@ impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move {
                 client
                     .organization_patch()

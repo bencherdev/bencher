@@ -5,7 +5,7 @@ use bencher_client::types::JsonNewBenchmark;
 use bencher_json::{BenchmarkName, ResourceId, Slug};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::benchmark::CliBenchmarkCreate,
     CliError,
 };
@@ -15,7 +15,7 @@ pub struct Create {
     pub project: ResourceId,
     pub name: BenchmarkName,
     pub slug: Option<Slug>,
-    pub backend: Backend,
+    pub backend: AuthBackend,
 }
 
 impl TryFrom<CliBenchmarkCreate> for Create {
@@ -52,6 +52,7 @@ impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move {
                 client
                     .proj_benchmark_post()

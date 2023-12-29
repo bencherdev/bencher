@@ -6,7 +6,9 @@ use bencher_json::{
     NameIdKind, ResourceId,
 };
 
-use crate::{bencher::backend::Backend, cli_println_quietable, parser::project::run::CliRunBranch};
+use crate::{
+    bencher::backend::AuthBackend, cli_println_quietable, parser::project::run::CliRunBranch,
+};
 
 use super::BENCHER_BRANCH;
 
@@ -92,7 +94,7 @@ impl Branch {
         project: &ResourceId,
         dry_run: bool,
         log: bool,
-        backend: &Backend,
+        backend: &AuthBackend,
     ) -> Result<Option<NameId>, BranchError> {
         Ok(match self {
             Self::NameId(name_id) => {
@@ -156,7 +158,7 @@ async fn if_branch(
     create: bool,
     dry_run: bool,
     log: bool,
-    backend: &Backend,
+    backend: &AuthBackend,
 ) -> Result<Option<BranchUuid>, BranchError> {
     let branch = get_branch_query(project, branch_name, backend).await?;
 
@@ -212,10 +214,11 @@ async fn if_branch(
 async fn get_branch(
     project: &ResourceId,
     branch: &ResourceId,
-    backend: &Backend,
+    backend: &AuthBackend,
 ) -> Result<BranchUuid, BranchError> {
     // Use `JsonUuid` to future proof against breaking changes
     let json_branch: JsonUuid = backend
+        .as_ref()
         .send_with(|client| async move {
             client
                 .proj_branch_get()
@@ -233,10 +236,11 @@ async fn get_branch(
 async fn get_branch_query(
     project: &ResourceId,
     branch_name: &BranchName,
-    backend: &Backend,
+    backend: &AuthBackend,
 ) -> Result<Option<BranchUuid>, BranchError> {
     // Use `JsonUuids` to future proof against breaking changes
     let json_branches: JsonUuids = backend
+        .as_ref()
         .send_with(|client| async move {
             client
                 .proj_branches_get()
@@ -269,7 +273,7 @@ async fn create_branch(
     project: &ResourceId,
     branch_name: &BranchName,
     start_point: Option<NameId>,
-    backend: &Backend,
+    backend: &AuthBackend,
 ) -> Result<BranchUuid, BranchError> {
     // Default to cloning the thresholds from the start point branch
     let start_point = start_point.map(|branch| JsonStartPoint {
@@ -285,6 +289,7 @@ async fn create_branch(
 
     // Use `JsonUuid` to future proof against breaking changes
     let json_branch: JsonUuid = backend
+        .as_ref()
         .send_with(|client| async move {
             client
                 .proj_branch_post()

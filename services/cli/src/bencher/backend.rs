@@ -9,7 +9,17 @@ pub const BENCHER_HOST: &str = "BENCHER_HOST";
 pub const BENCHER_API_TOKEN: &str = "BENCHER_API_TOKEN";
 
 #[derive(Debug, Clone)]
-pub struct Backend {
+pub struct PubBackend {
+    inner: Backend,
+}
+
+#[derive(Debug, Clone)]
+pub struct AuthBackend {
+    inner: Backend,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Backend {
     client: bencher_client::BencherClient,
 }
 
@@ -19,14 +29,32 @@ pub enum BackendError {
     ParseHost(url::ParseError),
     #[error("Failed to parse API token: {0}")]
     ParseToken(bencher_json::ValidError),
+    #[error("Failed to find Bencher API token, and this API endpoint requires authorization. Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable.")]
+    NoToken,
     #[error("{0}")]
     Client(#[from] bencher_client::ClientError),
 }
 
-impl TryFrom<CliBackend> for Backend {
+impl TryFrom<CliBackend> for PubBackend {
     type Error = BackendError;
 
     fn try_from(backend: CliBackend) -> Result<Self, Self::Error> {
+        (backend, true).try_into().map(|inner| Self { inner })
+    }
+}
+
+impl TryFrom<CliBackend> for AuthBackend {
+    type Error = BackendError;
+
+    fn try_from(backend: CliBackend) -> Result<Self, Self::Error> {
+        (backend, false).try_into().map(|inner| Self { inner })
+    }
+}
+
+impl TryFrom<(CliBackend, bool)> for Backend {
+    type Error = BackendError;
+
+    fn try_from((backend, is_public): (CliBackend, bool)) -> Result<Self, Self::Error> {
         let CliBackend {
             host,
             token,
@@ -35,7 +63,7 @@ impl TryFrom<CliBackend> for Backend {
             strict,
         } = backend;
         let host = map_host(host)?;
-        let token = map_token(token)?;
+        let token = map_token(token, is_public)?;
         let client = bencher_client::BencherClient::new(
             host,
             token,
@@ -57,22 +85,45 @@ fn map_host(host: Option<Url>) -> Result<Option<url::Url>, BackendError> {
         .map_err(BackendError::ParseHost)
 }
 
-fn map_token(token: Option<Jwt>) -> Result<Option<Jwt>, BackendError> {
-    Ok(if let Some(token) = token {
-        Some(token)
+fn map_token(token: Option<Jwt>, is_public: bool) -> Result<Option<Jwt>, BackendError> {
+    if let Some(token) = token {
+        Ok(Some(token))
     } else if let Ok(env_token) = std::env::var(BENCHER_API_TOKEN) {
-        Some(env_token.parse().map_err(BackendError::ParseToken)?)
+        Ok(Some(env_token.parse().map_err(BackendError::ParseToken)?))
+    } else if is_public {
+        Ok(None)
     } else {
-        None
-    })
+        Err(BackendError::NoToken)
+    }
+}
+
+impl AsRef<Backend> for PubBackend {
+    fn as_ref(&self) -> &Backend {
+        &self.inner
+    }
+}
+
+impl PubBackend {
+    pub fn log(mut self, log: bool) -> Self {
+        self.inner.client.log = log;
+        self
+    }
+}
+
+impl AsRef<Backend> for AuthBackend {
+    fn as_ref(&self) -> &Backend {
+        &self.inner
+    }
+}
+
+impl AuthBackend {
+    pub fn log(mut self, log: bool) -> Self {
+        self.inner.client.log = log;
+        self
+    }
 }
 
 impl Backend {
-    pub fn log(mut self, log: bool) -> Self {
-        self.client.log = log;
-        self
-    }
-
     pub async fn send<F, R, T, E>(&self, sender: F) -> Result<serde_json::Value, BackendError>
     where
         F: Fn(bencher_client::Client) -> R,

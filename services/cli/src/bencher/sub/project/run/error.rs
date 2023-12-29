@@ -1,7 +1,7 @@
 #[derive(thiserror::Error, Debug)]
 pub enum RunError {
     #[error("Failed to find Bencher project. Set the `--project` flag or the `BENCHER_PROJECT` environment variable.")]
-    ProjectNotFound,
+    NoProject,
     #[error("Failed to parse UUID or slug for the project: {0}")]
     ParseProject(bencher_json::ValidError),
 

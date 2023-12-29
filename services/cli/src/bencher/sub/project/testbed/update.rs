@@ -5,7 +5,7 @@ use bencher_client::types::JsonUpdateTestbed;
 use bencher_json::{ResourceId, ResourceName, Slug};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::testbed::CliTestbedUpdate,
     CliError,
 };
@@ -16,7 +16,7 @@ pub struct Update {
     pub testbed: ResourceId,
     pub name: Option<ResourceName>,
     pub slug: Option<Slug>,
-    pub backend: Backend,
+    pub backend: AuthBackend,
 }
 
 impl TryFrom<CliTestbedUpdate> for Update {
@@ -55,6 +55,7 @@ impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move {
                 client
                     .proj_testbed_patch()

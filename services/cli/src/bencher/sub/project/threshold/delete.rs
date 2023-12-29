@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_json::{ResourceId, ThresholdUuid};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::threshold::CliThresholdDelete,
     CliError,
 };
@@ -13,7 +13,7 @@ use crate::{
 pub struct Delete {
     pub project: ResourceId,
     pub threshold: ThresholdUuid,
-    pub backend: Backend,
+    pub backend: AuthBackend,
 }
 
 impl TryFrom<CliThresholdDelete> for Delete {
@@ -38,6 +38,7 @@ impl SubCmd for Delete {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move {
                 client
                     .proj_threshold_delete()

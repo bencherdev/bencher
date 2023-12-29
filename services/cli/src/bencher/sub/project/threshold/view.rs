@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_json::{ResourceId, ThresholdUuid};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::PubBackend, sub::SubCmd},
     parser::project::threshold::CliThresholdView,
     CliError,
 };
@@ -13,7 +13,7 @@ use crate::{
 pub struct View {
     pub project: ResourceId,
     pub threshold: ThresholdUuid,
-    pub backend: Backend,
+    pub backend: PubBackend,
 }
 
 impl TryFrom<CliThresholdView> for View {
@@ -38,6 +38,7 @@ impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
+            .as_ref()
             .send(|client| async move {
                 client
                     .proj_threshold_get()
