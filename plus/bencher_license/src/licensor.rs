@@ -17,6 +17,7 @@ pub const PUBLIC_PEM: &str = include_str!("../public.pem");
 static ALGORITHM: Lazy<Algorithm> = Lazy::new(|| Algorithm::ES256);
 static HEADER: Lazy<Header> = Lazy::new(|| Header::new(*ALGORITHM));
 
+#[derive(Clone)]
 pub enum Licensor {
     SelfHosted {
         decoding: DecodingKey,

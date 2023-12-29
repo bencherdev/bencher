@@ -116,19 +116,22 @@ impl ConfigTx {
         #[cfg(feature = "plus")]
         let is_bencher_cloud = context.is_bencher_cloud();
         #[cfg(feature = "plus")]
-        // Only setup stats if they are enabled
-        if context.stats.enabled {
+        {
             let conn = context.database.connection.clone();
             let query_server =
                 crate::model::server::QueryServer::get_or_create(&mut *conn.lock().await)
                     .map_err(ConfigTxError::ServerId)?;
-            info!(log, "Server ID: {}", query_server.uuid);
-            query_server.spawn_stats(
-                log.clone(),
-                conn,
-                context.stats.offset,
-                is_bencher_cloud.then(|| context.messenger.clone()),
-            );
+            info!(log, "Bencher API Server ID: {}", query_server.uuid);
+
+            // Bencher Cloud does not need to send stats to itself,
+            // so we just include the Messenger directly.
+            // Bencher Self-Hosted needs the Licensor in order to check for a valid license if stats are disabled.
+            let (licensor, messenger) = if is_bencher_cloud {
+                (None, Some(context.messenger.clone()))
+            } else {
+                (Some(context.licensor.clone()), None)
+            };
+            query_server.spawn_stats(log.clone(), conn, context.stats, licensor, messenger);
         }
 
         let mut api = ApiDescription::new();

@@ -2,16 +2,18 @@
 
 use std::sync::Arc;
 
-use bencher_json::{DateTime, JsonServer, JsonServerStats, ServerUuid, BENCHER_API_URL};
-use chrono::{Duration, NaiveTime, Utc};
+use bencher_json::{DateTime, JsonServer, JsonServerStats, PlanLevel, ServerUuid, BENCHER_API_URL};
+use bencher_license::Licensor;
+use chrono::{Duration, Utc};
 use diesel::RunQueryDsl;
 use dropshot::HttpError;
 use slog::Logger;
 
 use crate::{
+    config::plus::StatsSettings,
     context::{Body, DbConnection, Message, Messenger, ServerStatsBody},
     error::resource_conflict_err,
-    model::user::QueryUser,
+    model::{organization::plan::LicenseUsage, user::QueryUser},
     schema::{self, server as server_table},
     util::fn_get::fn_get,
 };
@@ -53,10 +55,13 @@ impl QueryServer {
         self,
         log: Logger,
         conn: Arc<tokio::sync::Mutex<DbConnection>>,
-        offset: NaiveTime,
+        stats: StatsSettings,
+        licensor: Option<Licensor>,
         messenger: Option<Messenger>,
     ) {
         tokio::spawn(async move {
+            let StatsSettings { offset, enabled } = stats;
+            let mut violations = 0;
             loop {
                 let now = Utc::now().naive_utc().time();
                 let sleep_time = match now.cmp(&offset) {
@@ -69,6 +74,30 @@ impl QueryServer {
                 tokio::time::sleep(sleep_time).await;
 
                 let conn = &mut *conn.lock().await;
+
+                if enabled {
+                    slog::info!(log, "Sending stats at {}", Utc::now());
+                } else if let Some(licensor) = licensor.as_ref() {
+                    match LicenseUsage::get_for_server(conn, licensor, Some(PlanLevel::Team)) {
+                        Ok(license_usages) if license_usages.is_empty() => {
+                            violations += 1;
+                            // Be kind. Even though they don't have a valid license, we should still honor their request to not send stats.
+                            slog::warn!(log, "Sending stats is disabled but there is no valid Bencher Plus license key! This is violation #{violations} of the Bencher License: https://bencher.dev/legal/license/");
+                        },
+                        Ok(_) => {
+                            slog::debug!(log, "Sending stats is disabled");
+                        },
+                        Err(e) => {
+                            slog::error!(log, "Failed to check stats: {e}");
+                        },
+                    }
+                    continue;
+                } else {
+                    let err = "Bencher Cloud server stats are disabled!";
+                    slog::error!(log, "{err}");
+                    sentry::capture_message(err, sentry::Level::Error);
+                }
+
                 let json_stats = match self.get_stats(conn, messenger.is_some()) {
                     Ok(json_stats) => json_stats,
                     Err(e) => {

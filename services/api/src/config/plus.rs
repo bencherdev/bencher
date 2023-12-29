@@ -3,8 +3,8 @@
 use bencher_billing::Biller;
 use bencher_github::GitHub;
 use bencher_json::{
+    is_bencher_cloud,
     system::config::{JsonPlus, JsonStats},
-    BENCHER_URL, DEVEL_BENCHER_URL,
 };
 use bencher_license::Licensor;
 use chrono::NaiveTime;
@@ -32,10 +32,7 @@ pub enum PlusError {
     LicenseSelfHosted(bencher_license::LicenseError),
     #[error("Failed to handle Bencher Cloud licensing: {0}")]
     LicenseCloud(bencher_license::LicenseError),
-    #[error(
-        "Tried to init Bencher Cloud for endpoint other than {url}: {0}",
-        url = *BENCHER_URL
-    )]
+    #[error("Tried to init Bencher Cloud for other endpoint: {0}")]
     BencherCloud(Url),
     #[error("Failed to setup billing: {0}")]
     Billing(bencher_billing::BillingError),
@@ -88,10 +85,6 @@ impl Plus {
             licensor,
         })
     }
-}
-
-fn is_bencher_cloud(url: &Url) -> bool {
-    *url == *BENCHER_URL || *url == *DEVEL_BENCHER_URL
 }
 
 #[derive(Debug, Clone, Copy)]
