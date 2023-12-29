@@ -22,6 +22,7 @@ env:
   CLI_BIN_NAME: bencher
   CLI_BIN_ARCH: amd64
   CLI_DEB_DIR: deb
+  ZIG_VERSION: 0.18.1
   # Use minimum supported glibc version for Rust Tier 1
   # https://doc.rust-lang.org/nightly/rustc/platform-support.html#tier-1-with-host-tools
   GLIBC_VERSION: 2.17
@@ -141,6 +142,7 @@ jobs:
         with:
           name: perf.jpeg
           path: ./lib/bencher_plot/perf.jpeg
+          if-no-files-found: error
 
   cargo_test_pr:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
@@ -158,6 +160,7 @@ jobs:
         with:
           name: perf.jpeg
           path: ./lib/bencher_plot/perf.jpeg
+          if-no-files-found: error
 
   open_api_spec:
     name: OpenAPI Spec
@@ -451,6 +454,7 @@ jobs:
         with:
           name: ${{ env.WASM_BENCHER_VALID }}
           path: ./lib/bencher_valid/pkg
+          if-no-files-found: error
 
   test_bencher_valid_wasm:
     name: Test `bencher_valid` WASM
@@ -555,6 +559,7 @@ jobs:
         with:
           name: ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
           path: ./${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
+          if-no-files-found: error
 
   build_litestream_api_docker:
     name: Build Litestream API
@@ -608,10 +613,68 @@ jobs:
         with:
           name: ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
           path: ./${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
+          if-no-files-found: error
 
   # CLI
-  build_cli_bin:
+  build_cli:
     name: Build CLI
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux
+          - build: linux-x86-64
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - build: linux-arm-64
+            os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+          # MacOS
+          - build: macos-x86-64
+            os: macos-latest
+            target: x86_64-apple-darwin
+          - build: macos-arm-64
+            os: macos-latest
+            target: aarch64-apple-darwin
+          # Windows
+          - build: win-x86-64
+            os: ubuntu-latest
+            target: x86_64-pc-windows-gnu
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust target
+        run: rustup target add ${{ matrix.target }}
+      - uses: goto-bus-stop/setup-zig@v2
+      - name: Install zigbuild
+        run: cargo install --version ${{ env.ZIG_VERSION }} --locked --force cargo-zigbuild
+      - name: cargo zigbuild Linux CLI
+        if: startsWith(matrix.build, 'linux')
+        working-directory: ./services/cli
+        run: cargo zigbuild --release --target ${{ matrix.target }}.${{ env.GLIBC_VERSION }}
+      - name: cargo zigbuild CLI
+        if: (!startsWith(matrix.build, 'linux'))
+        working-directory: ./services/cli
+        run: cargo zigbuild --release --target ${{ matrix.target }}
+      - name: Upload CLI Windows Artifact
+        if: startsWith(matrix.build, 'win')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ matrix.build }}.exe
+          path: ./target/${{ matrix.target }}/release/${{ env.CLI_BIN_NAME }}.exe
+          if-no-files-found: error
+      - name: Upload CLI Artifact
+        if: (!startsWith(matrix.build, 'win'))
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ matrix.build }}
+          path: ./target/${{ matrix.target }}/release/${{ env.CLI_BIN_NAME }}
+          if-no-files-found: error
+
+  build_cli_bin:
+    name: Build CLI Linux
     runs-on: ubuntu-latest
     timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
     continue-on-error: ${{ github.ref == 'refs/heads/express' }}
@@ -628,7 +691,7 @@ jobs:
           key: ${{ runner.os }}-cargo-zig-${{ env.CACHE_NAME }}
       - uses: goto-bus-stop/setup-zig@v2
       - name: Install zigbuild
-        run: cargo install --version 0.16.11 --locked --force cargo-zigbuild
+        run: cargo install --version ${{ env.ZIG_VERSION }} --locked --force cargo-zigbuild
       - name: cargo build CLI
         working-directory: ./services/cli
         run: cargo zigbuild --release --target x86_64-unknown-linux-gnu.${{ env.GLIBC_VERSION }}
@@ -637,6 +700,7 @@ jobs:
         with:
           name: ${{ env.CLI_BIN_NAME }}
           path: ./target/x86_64-unknown-linux-gnu/release/${{ env.CLI_BIN_NAME }}
+          if-no-files-found: error
 
   build_cli_deb:
     name: Package CLI (.deb)
@@ -660,6 +724,7 @@ jobs:
         with:
           name: ${{ env.DEB_FILE }}
           path: ${{ env.CLI_DEB_DIR }}/${{ env.DEB_FILE }}
+          if-no-files-found: error
 
   build_ui_docker:
     name: Build Console UI Docker
@@ -714,6 +779,7 @@ jobs:
         with:
           name: ${{ env.UI_DOCKER_IMAGE }}.tar.gz
           path: ./${{ env.UI_DOCKER_IMAGE }}.tar.gz
+          if-no-files-found: error
 
   build_ui:
     if: (!startsWith(github.ref, 'refs/tags/'))
