@@ -4,6 +4,7 @@ import PricingTable from "../components/pricing/PricingTable";
 import { BENCHER_CALENDLY_URL } from "../util/ext";
 import AuthRedirect from "../components/auth/AuthRedirect";
 import SelfHostedRedirect from "../components/site/SelfHostedRedirct";
+import LinkFragment from "../components/site/LinkFragment.astro";
 
 const title = "Pricing";
 const description =
@@ -46,13 +47,19 @@ const description =
     <section class="section">
       <div class="container">
         <div class="columns is-centered">
-          <div class="column">
-            <h2 class="title is-2">FAQ</h2>
+          <div id="faq" class="column">
+            <h2 class="title is-2">
+              FAQ
+              <LinkFragment fragment="faq"/>
+            </h2>
           </div>
         </div>
-        <div class="box">
+        <div id="faq-public-projects" class="box">
           <div class="content">
-            <h3 class="subtitle is-3">What is a Public Project?</h3>
+            <h3 class="subtitle is-3">
+              What is a Public Project?
+              <LinkFragment fragment="faq-public-projects"/>
+            </h3>
             <p>
               A Public Project is visible to anyone who has access to your
               Bencher instance.
@@ -67,9 +74,12 @@ const description =
             </p>
           </div>
         </div>
-        <div class="box">
+        <div id="faq-private-projects" class="box">
           <div class="content">
-            <h3 class="subtitle is-3">What is a Private Project?</h3>
+            <h3 class="subtitle is-3">
+              What is a Private Project?
+              <LinkFragment fragment="faq-private-projects"/>
+            </h3>
             <p>
               A Private Project is only visible to members of your organization.
             </p>
@@ -79,9 +89,12 @@ const description =
             </p>
           </div>
         </div>
-        <div class="box">
+        <div id="faq-metrics" class="box">
           <div class="content">
-            <h3 class="subtitle is-3">What is a Metric?</h3>
+            <h3 class="subtitle is-3">
+              What is a Metric?
+              <LinkFragment fragment="faq-metrics"/>
+            </h3>
             <p>A Metric is a single, point-in-time benchmark result.</p>
             <p>
               For example, if you have five benchmarks then they would create
@@ -91,9 +104,12 @@ const description =
             </p>
           </div>
         </div>
-        <div class="box">
+        <div id="faq-metrics-billing" class="box">
           <div class="content">
-            <h3 class="subtitle is-3">How are Metrics billed?</h3>
+            <h3 class="subtitle is-3">
+              How are Metrics billed?
+              <LinkFragment fragment="faq-metrics-billing"/>
+            </h3>
             <p>
               On Bencher Cloud Metrics are billed either:
               <ul>
@@ -114,19 +130,23 @@ const description =
 						</p>
           </div>
         </div>
-        <div class="box">
+        <div id="faq-metrics-public-projects" class="box">
           <div class="content">
-            <h3 class="subtitle is-3">Are Metrics for Public Projects counted?</h3>
+            <h3 class="subtitle is-3">
+              Are Metrics for Public Projects counted?
+              <LinkFragment fragment="faq-metrics-public-projects"/>
+            </h3>
             <p>
               Yes, if you have a valid Bencher Plus plan then Metrics from both
               your Public Projects and Private Projects are counted.
             </p>
           </div>
         </div>
-        <div class="box">
+        <div id="faq-license-quantity-limit" class="box">
 					<div class="content">
 						<h3 class="subtitle is-3">
 							What happens if I reach my licensed quantity limit?
+              <LinkFragment fragment="faq-license-quantity-limit"/>
 						</h3>
 						<p>
 							Once you reach your licensed quantity limit, no new Metrics will be
@@ -138,10 +158,11 @@ const description =
 						</p>
 					</div>
 				</div>
-        <div class="box">
+        <div id="faq-self-hosted-license" class="box">
           <div class="content">
             <h3 class="subtitle is-3">
               How does the Bencher License work for Bencher Self-Hosted?
+              <LinkFragment fragment="faq-self-hosted-license"/>
             </h3>
             <p>
               The <a href="/legal/license/">Bencher License</a> is heavily inspired by the
@@ -165,8 +186,11 @@ const description =
     <section class="section">
       <div class="container">
         <div class="columns is-centered">
-          <div class="column">
-            <h2 class="title is-2">Stewardship</h2>
+          <div id="stewardship" class="column">
+            <h2 class="title is-2">
+              Stewardship
+              <LinkFragment fragment="stewardship"/>
+            </h2>
           </div>
         </div>
         <div class="content">
@@ -183,7 +207,10 @@ const description =
            business model and generate almost all our revenue with subscriptions
           to paid tiers. We recognize that we must balance the need to generate
           income with the needs of the open source project.
-          <h3 class="title is-3">Commitments</h3>
+          <h3 id="stewardship-commitments" class="title is-3">
+            Commitments
+            <LinkFragment fragment="stewardship-commitments"/>
+          </h3>
           <ul>
             <li>
               When a feature is open source we won't move that feature to a paid
@@ -214,7 +241,10 @@ const description =
               We will always allow you to benchmark the performance of Bencher.
             </li>
           </ul>
-          <h3 class="title is-3">Software as a Service</h3>
+          <h3 id="stewardship-saas" class="title is-3">
+            Software as a Service
+            <LinkFragment fragment="stewardship-saas"/>
+          </h3>
           <p>
             Our stewardship promise applies only to the Bencher open source
             codebase, not to services such as Bencher Cloud. For Bencher Cloud,

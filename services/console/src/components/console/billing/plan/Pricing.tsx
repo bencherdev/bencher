@@ -24,7 +24,7 @@ interface Props {
 
 const Pricing = (props: Props) => {
 	return (
-		<div class="pricing-table is-comparative">
+		<div id="plans" class="pricing-table is-comparative">
 			<div
 				class={`pricing-plan ${props.plan === PlanLevel.Free && "is-active"}`}
 			>
