@@ -54,8 +54,8 @@ url = "2.5"
 uuid = "1.6"
 # github.com
 dropshot = { git = "https://github.com/oxidecomputer/dropshot", rev = "cf285b192cfd26ce0a28e737994fce4b79db95b5" }
-progenitor = { git = "https://github.com/epompeii/progenitor", rev = "8db4bac9300d67170fb39f165e45eac35b296c4a" }
-progenitor-client = { git = "https://github.com/epompeii/progenitor", rev = "8db4bac9300d67170fb39f165e45eac35b296c4a" }
+progenitor = { git = "https://github.com/oxidecomputer/progenitor", rev = "9694beaa20da82a2f26080a48447c48154f240ec" }
+progenitor-client = { git = "https://github.com/oxidecomputer/progenitor", rev = "9694beaa20da82a2f26080a48447c48154f240ec" }
 
 [workspace.lints.rust]
 # https://doc.rust-lang.org/rustc/lints/listing/index.html

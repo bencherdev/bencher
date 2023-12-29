@@ -38,9 +38,9 @@ pub enum ClientError {
     #[error("Error upgrading request: {0}")]
     InvalidUpgrade(reqwest::Error),
     #[error("Invalid response body bytes: {0}")]
-    InvalidResponseBytes(reqwest::Error),
+    ResponseBodyError(reqwest::Error),
     #[error("Invalid response payload ({len}): {1}", len = _0.len())]
-    InvalidResponsePayloadStrict(progenitor_client::Bytes, serde_json::Error),
+    InvalidResponsePayloadStrict(bytes::Bytes, serde_json::Error),
     #[error("Invalid response payload: {0}")]
     InvalidResponsePayload(serde_json::Error),
     #[error("Request succeeded with an unexpected response: {0:?}")]
@@ -203,8 +203,8 @@ impl BencherClient {
                 Err(crate::codegen::Error::InvalidUpgrade(e)) => {
                     return Err(ClientError::InvalidUpgrade(e))
                 },
-                Err(crate::codegen::Error::InvalidResponseBytes(e)) => {
-                    return Err(ClientError::InvalidResponseBytes(e))
+                Err(crate::codegen::Error::ResponseBodyError(e)) => {
+                    return Err(ClientError::ResponseBodyError(e))
                 },
                 Err(crate::codegen::Error::InvalidResponsePayload(bytes, e)) => {
                     return if self.strict {
