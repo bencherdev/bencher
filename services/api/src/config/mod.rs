@@ -22,6 +22,7 @@ pub const BENCHER_CONFIG: &str = "BENCHER_CONFIG";
 pub const BENCHER_CONFIG_PATH: &str = "BENCHER_CONFIG_PATH";
 
 const DEFAULT_CONFIG_PATH: &str = "bencher.json";
+const DEFAULT_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
 // Dynamic and/or Private Ports (49152-65535)
 // https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=61016
 const DEFAULT_PORT: u16 = 61016;
@@ -44,7 +45,7 @@ static DEFAULT_CONSOLE_URL: Lazy<Url> = Lazy::new(|| {
 });
 
 static DEFAULT_BIND_ADDRESS: Lazy<SocketAddr> =
-    Lazy::new(|| SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), DEFAULT_PORT));
+    Lazy::new(|| SocketAddr::new(DEFAULT_IP, DEFAULT_PORT));
 
 #[derive(Debug, Clone)]
 pub struct Config(JsonConfig);
