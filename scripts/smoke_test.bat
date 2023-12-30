@@ -1,7 +1,7 @@
 @echo off
 
 cd services\api
-start cmd /k cargo run
+start /B cargo run
 
 cd ..\cli
 echo "Waiting for API server"
