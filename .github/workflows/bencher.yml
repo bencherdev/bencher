@@ -657,9 +657,12 @@ jobs:
             os: macos-latest
             target: aarch64-apple-darwin
           # Windows
-          - build: win-x86-64
-            os: ubuntu-latest
-            target: x86_64-pc-windows-gnu
+          - build: windows-x86-64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - build: windows-arm-64
+            os: windows-latest
+            target: aarch64-pc-windows-msvc
     runs-on: ${{ matrix.os }}
     timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
     continue-on-error: ${{ github.ref == 'refs/heads/express' }}
@@ -668,29 +671,35 @@ jobs:
       - name: Install Rust target
         run: rustup target add ${{ matrix.target }}
       - uses: goto-bus-stop/setup-zig@v2
+        if: (!startsWith(matrix.build, 'windows'))
       - name: Install zigbuild
+        if: (!startsWith(matrix.build, 'windows'))
         run: cargo install --version ${{ env.ZIG_VERSION }} --locked --force cargo-zigbuild
       - name: cargo zigbuild Linux CLI
         if: startsWith(matrix.build, 'linux')
         working-directory: ./services/cli
         run: cargo zigbuild --release --target ${{ matrix.target }}.${{ env.GLIBC_VERSION }}
-      - name: cargo zigbuild CLI
-        if: (!startsWith(matrix.build, 'linux'))
+      - name: cargo zigbuild macos CLI
+        if: startsWith(matrix.build, 'macos')
         working-directory: ./services/cli
         run: cargo zigbuild --release --target ${{ matrix.target }}
-      - name: Upload CLI Windows Artifact
-        if: startsWith(matrix.build, 'win')
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.CLI_BIN_NAME }}-${{ matrix.build }}.exe
-          path: ./target/${{ matrix.target }}/release/${{ env.CLI_BIN_NAME }}.exe
-          if-no-files-found: error
+      - name: cargo build Windows CLI
+        if: startsWith(matrix.build, 'windows')
+        working-directory: ./services/cli
+        run: cargo build --release --target ${{ matrix.target }}
       - name: Upload CLI Artifact
-        if: (!startsWith(matrix.build, 'win'))
+        if: (!startsWith(matrix.build, 'windows'))
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ matrix.build }}
           path: ./target/${{ matrix.target }}/release/${{ env.CLI_BIN_NAME }}
+          if-no-files-found: error
+      - name: Upload CLI Windows Artifact
+        if: startsWith(matrix.build, 'windows')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ matrix.build }}.exe
+          path: ./target/${{ matrix.target }}/release/${{ env.CLI_BIN_NAME }}.exe
           if-no-files-found: error
 
   build_cli_bin:
