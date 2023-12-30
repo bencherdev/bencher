@@ -62,6 +62,12 @@ mail-send = "0.4"
 paste = "1.0"
 sentry = { version = "0.32", optional = true }
 
+# https://github.com/diesel-rs/diesel/blob/ba2f567b038179d16cea939c0bcaaecc216ea947/diesel/Cargo.toml#L19
+# https://github.com/tauri-apps/tauri/discussions/6183
+[target.'cfg(windows)'.dependencies.libsqlite3-sys]
+version = ">=0.17.2, <0.28.0"
+features = ["bundled"]
+
 [lints]
 workspace = true
 
