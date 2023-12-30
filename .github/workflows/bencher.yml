@@ -189,7 +189,26 @@ jobs:
   # API Smoke Test
   api_smoke_test:
     name: API Smoke Test
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux
+          - build: linux
+            os: ubuntu-latest
+            smoke_test: ./scripts/smoke_test.sh
+            examples: ./scripts/examples.sh
+          # MacOS
+          - build: macos
+            os: macos-latest
+            smoke_test: ./scripts/smoke_test.sh
+            examples: ./scripts/examples.sh
+          # Windows
+          - build: windows
+            os: windows-latest
+            smoke_test: .\scripts\smoke_test.bat
+            examples: .\scripts\examples.bat
+    runs-on: ${{ matrix.os }}
     timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
     continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
@@ -204,14 +223,15 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-release-${{ env.CACHE_NAME }}
       - uses: rui314/setup-mold@v1
+        if: startsWith(matrix.build, 'linux')
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Install `bencher` CLI
         run: cargo install --path services/cli --locked --force
       - name: Run API Smoke Test
-        run: ./scripts/smoke_test.sh
+        run: ${{ matrix.smoke_test }}
       - name: Run Examples
-        run: ./scripts/examples.sh
+        run: ${{ matrix.examples }}
 
   api_smoke_test_compat:
     name: API Smoke Test Compat

@@ -17,8 +17,11 @@ fn main() {
     let mut out_file = std::path::Path::new(&std::env::var("OUT_DIR").unwrap()).to_path_buf();
     out_file.push("codegen.rs");
 
-    let _ = std::fs::remove_file("./codegen.rs");
-    let _ = std::os::unix::fs::symlink(&out_file, "./codegen.rs");
+    #[cfg(unix)]
+    {
+        let _ = std::fs::remove_file("./codegen.rs");
+        let _ = std::os::unix::fs::symlink(&out_file, "./codegen.rs");
+    }
 
     std::fs::write(out_file, content).unwrap();
 }
