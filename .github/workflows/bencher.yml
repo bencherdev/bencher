@@ -694,10 +694,10 @@ jobs:
       # Rename
       - name: Rename Unix CLI bin
         if: (!startsWith(matrix.build, 'windows'))
-        run: mv ./target/${{ matrix.target }}/release/${{ env.CLI_BIN_NAME }} ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
+        run: mv ./target/${{ matrix.target }}/release-small/${{ env.CLI_BIN_NAME }} ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
       - name: Rename Windows CLI bin
         if: startsWith(matrix.build, 'windows')
-        run: mv ./target/${{ matrix.target }}/release/${{ env.CLI_BIN_NAME }}.exe ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.exe
+        run: mv ./target/${{ matrix.target }}/release-small/${{ env.CLI_BIN_NAME }}.exe ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.exe
       # Upload
       - name: Upload Unix CLI Artifact
         if: (!startsWith(matrix.build, 'windows'))
@@ -760,10 +760,10 @@ jobs:
         if: startsWith(matrix.build, 'linux')
         run: cargo xtask deb --dir ${{ env.CLI_DEB_DIR }} --arch ${{ matrix.arch }} ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
       - name: Test install .deb package
-        if: startsWith(matrix.build, 'linux')
+        if: matrix.build == 'linux-x86-64'
         run: sudo dpkg -i ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.deb
       - name: Sanity test .deb package installation
-        if: startsWith(matrix.build, 'linux')
+        if: matrix.build == 'linux-x86-64'
         run: bencher --version
       - name: Upload .deb Artifact
         if: startsWith(matrix.build, 'linux')

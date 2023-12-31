@@ -90,5 +90,10 @@
     "UNIONPAY",
     "vcentered",
     "wordmark"
-  ]
+  ],
+  "[javascript][typescript][typescriptreact]": {
+    "editor.codeActionsOnSave": {
+      "source.organizeImports.biome": "explicit"
+    }
+  }
 }
