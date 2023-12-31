@@ -732,12 +732,16 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
+          path: ${{ github.workspace }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
+      # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-an-environment-variable
+      - name: Export Bencher Version
+        run: echo "BENCHER_VERSION=$(./scripts/version.sh)" >> $GITHUB_ENV
       - name: Build .deb package
         if: startsWith(matrix.build, 'linux')
-        run: ./scripts/deb.sh ${{ env.CLI_BIN_NAME }} ${{ github.ref_name }} ${{ matrix.arch }} ${{ env.CLI_DEB_DIR }}
+        run: ./scripts/deb.sh ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }} ${{ env.BENCHER_VERSION }} ${{ matrix.arch }} ${{ env.CLI_DEB_DIR }}
       - name: Upload .deb Artifact
         if: startsWith(matrix.build, 'linux')
         uses: actions/upload-artifact@v4
