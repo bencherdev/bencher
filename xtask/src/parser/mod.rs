@@ -33,6 +33,8 @@ pub enum CliSub {
     FlyTest(CliFlyTest),
     /// Run tests against Netlify deployment
     NetlifyTest(CliNetlifyTest),
+    /// Create .deb
+    Deb(CliDeb),
     /// Generate release notes
     ReleaseNotes(CliReleaseNotes),
     /// Notify
@@ -111,6 +113,18 @@ pub struct CliNetlifyTest {
     /// Run devel tests
     #[clap(long)]
     pub dev: bool,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliDeb {
+    /// CLI bin path
+    pub bin: Utf8PathBuf,
+    /// .deb build directory
+    #[clap(long)]
+    pub dir: Utf8PathBuf,
+    /// Target architecture
+    #[clap(long)]
+    pub arch: String,
 }
 
 #[derive(Parser, Debug)]

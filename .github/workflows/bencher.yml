@@ -670,6 +670,7 @@ jobs:
     continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
+      # Install
       - name: Install Rust target
         run: rustup target add ${{ matrix.target }}
       - uses: goto-bus-stop/setup-zig@v2
@@ -677,31 +678,40 @@ jobs:
       - name: Install zigbuild
         if: (!startsWith(matrix.build, 'windows'))
         run: cargo install --version ${{ env.ZIG_VERSION }} --locked --force cargo-zigbuild
+      # Build
       - name: cargo zigbuild Linux CLI
         if: startsWith(matrix.build, 'linux')
         working-directory: ./services/cli
-        run: cargo zigbuild --release --target ${{ matrix.target }}.${{ env.GLIBC_VERSION }}
+        run: cargo zigbuild --profile release-small --target ${{ matrix.target }}.${{ env.GLIBC_VERSION }}
       - name: cargo zigbuild macos CLI
         if: startsWith(matrix.build, 'macos')
         working-directory: ./services/cli
-        run: cargo zigbuild --release --target ${{ matrix.target }}
+        run: cargo zigbuild --profile release-small --target ${{ matrix.target }}
       - name: cargo build Windows CLI
         if: startsWith(matrix.build, 'windows')
         working-directory: ./services/cli
-        run: cargo build --release --target ${{ matrix.target }}
-      - name: Upload CLI Artifact
+        run: cargo build --profile release-small --target ${{ matrix.target }}
+      # Rename
+      - name: Rename Unix CLI bin
+        if: (!startsWith(matrix.build, 'windows'))
+        run: mv ./target/${{ matrix.target }}/release/${{ env.CLI_BIN_NAME }} ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
+      - name: Rename Windows CLI bin
+        if: startsWith(matrix.build, 'windows')
+        run: mv ./target/${{ matrix.target }}/release/${{ env.CLI_BIN_NAME }}.exe ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.exe
+      # Upload
+      - name: Upload Unix CLI Artifact
         if: (!startsWith(matrix.build, 'windows'))
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
-          path: ./target/${{ matrix.target }}/release/${{ env.CLI_BIN_NAME }}
+          path: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
           if-no-files-found: error
-      - name: Upload CLI Windows Artifact
+      - name: Upload Windows CLI Artifact
         if: startsWith(matrix.build, 'windows')
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.exe
-          path: ./target/${{ matrix.target }}/release/${{ env.CLI_BIN_NAME }}.exe
+          path: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.exe
           if-no-files-found: error
 
   package_cli:
@@ -727,27 +737,40 @@ jobs:
       CLI_DEB_DIR: deb
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-xtask-${{ hashFiles('**/Cargo.lock') }}
       - name: Download CLI Artifact
         if: (!startsWith(matrix.build, 'windows'))
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
-          path: ${{ github.workspace }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
       - uses: rui314/setup-mold@v1
+        if: startsWith(matrix.build, 'linux')
         with:
           mold-version: ${{ env.MOLD_VERSION }}
-      # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-an-environment-variable
-      - name: Export Bencher Version
-        run: echo "BENCHER_VERSION=$(./scripts/version.sh)" >> $GITHUB_ENV
+      # Debian .deb
       - name: Build .deb package
         if: startsWith(matrix.build, 'linux')
-        run: ./scripts/deb.sh ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }} ${{ env.BENCHER_VERSION }} ${{ matrix.arch }} ${{ env.CLI_DEB_DIR }}
+        run: cargo xtask deb --dir ${{ env.CLI_DEB_DIR }} --arch ${{ matrix.arch }} ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
+      - name: Test install .deb package
+        if: startsWith(matrix.build, 'linux')
+        run: sudo dpkg -i ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.deb
+      - name: Sanity test .deb package installation
+        if: startsWith(matrix.build, 'linux')
+        run: bencher --version
       - name: Upload .deb Artifact
         if: startsWith(matrix.build, 'linux')
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.arch }}.deb
-          path: ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.arch }}.deb
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.deb
+          path: ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.deb
           if-no-files-found: error
 
   build_ui_docker:
@@ -1162,41 +1185,35 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_X86_64 }}
-          path: ${{ github.workspace }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_X86_64 }}
       - name: Download CLI Linux ARM64 Artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_ARM_64 }}
-          path: ${{ github.workspace }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_ARM_64 }}
       - name: Download CLI MacOS x86_64 Artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_MACOS_X86_64 }}
-          path: ${{ github.workspace }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_MACOS_X86_64 }}
       - name: Download CLI MacOS ARM64 Artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_MACOS_ARM_64 }}
-          path: ${{ github.workspace }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_MACOS_ARM_64 }}
       - name: Download CLI Windows x86_64 Artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_WINDOWS_X86_64 }}.exe
-          path: ${{ github.workspace }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_WINDOWS_X86_64 }}.exe
       - name: Download CLI Windows ARM64 Artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_WINDOWS_ARM_64 }}.exe
-          path: ${{ github.workspace }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_WINDOWS_ARM_64 }}.exe
       # Download CLI Packages
       - name: Download CLI Linux x86_64 .deb Artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-amd64.deb
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_X86_64 }}.deb
       - name: Download CLI Linux ARM64 .deb Artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-arm64.deb
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_ARM_64 }}.deb
       # Load
       - name: Load Local API Image
         run: docker load < ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz

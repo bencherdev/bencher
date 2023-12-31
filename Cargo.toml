@@ -153,6 +153,6 @@ wildcard_enum_match_arm = "warn"         # Checks for wildcard enum matches usin
 
 # TODO use this to generate wasm builds
 # https://github.com/bencherdev/bencher/issues/48
-[profile.release-wasm]
+[profile.release-small]
 inherits = "release"
 opt-level = "s"

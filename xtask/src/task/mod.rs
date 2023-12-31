@@ -2,6 +2,7 @@ use clap::Parser;
 
 use crate::parser::{CliSub, CliTask};
 
+mod deb;
 mod fly_test;
 mod netlify_test;
 mod notify;
@@ -16,6 +17,7 @@ mod translate;
 mod types;
 mod typeshare;
 
+use deb::Deb;
 use fly_test::FlyTest;
 use netlify_test::NetlifyTest;
 use notify::Notify;
@@ -49,6 +51,7 @@ pub enum Sub {
     Translate(Translate),
     FlyTest(FlyTest),
     NetlifyTest(NetlifyTest),
+    Deb(Deb),
     ReleaseNotes(ReleaseNotes),
     Notify(Notify),
 }
@@ -79,6 +82,7 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Translate(translate) => Self::Translate(translate.try_into()?),
             CliSub::FlyTest(fly_test) => Self::FlyTest(fly_test.try_into()?),
             CliSub::NetlifyTest(netlify_test) => Self::NetlifyTest(netlify_test.try_into()?),
+            CliSub::Deb(deb) => Self::Deb(deb.try_into()?),
             CliSub::ReleaseNotes(release_notes) => Self::ReleaseNotes(release_notes.try_into()?),
             CliSub::Notify(notify) => Self::Notify(notify.try_into()?),
         })
@@ -109,6 +113,7 @@ impl Sub {
             Self::Translate(translate) => translate.exec().await,
             Self::FlyTest(fly_test) => fly_test.exec(),
             Self::NetlifyTest(netlify_test) => netlify_test.exec().await,
+            Self::Deb(deb) => deb.exec(),
             Self::ReleaseNotes(release_notes) => release_notes.exec(),
             Self::Notify(notify) => notify.exec().await,
         }

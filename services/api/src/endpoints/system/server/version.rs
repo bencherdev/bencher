@@ -7,9 +7,8 @@ use crate::{
         endpoint::{CorsResponse, Get, ResponseOk},
         Endpoint,
     },
+    API_VERSION,
 };
-
-const API_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[allow(clippy::unused_async)]
 #[endpoint {
