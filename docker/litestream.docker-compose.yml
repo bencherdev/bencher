@@ -4,6 +4,8 @@ services:
     build:
       context: ../services/api
       dockerfile: litestream.Dockerfile
+      args:
+        - LITESTREAM_VERSION=0.3.13
     image: bencher-api-litestream
     container_name: bencher_api_litestream
     ports:

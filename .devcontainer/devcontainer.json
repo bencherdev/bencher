@@ -3,7 +3,7 @@
     "build": {
         "dockerfile": "Dockerfile",
         "args": {
-            "MOLD_VERSION": "2.0.0",
+            "MOLD_VERSION": "2.4.0",
             "MOLD_DEFAULT": "true",
             "RUST_VERSION": "1.74.0"
         }

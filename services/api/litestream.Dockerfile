@@ -19,8 +19,10 @@ RUN apt-get update \
     # Litestream
     wget sudo systemctl
 
-RUN wget https://github.com/benbjohnson/litestream/releases/download/v0.3.9/litestream-v0.3.9-linux-amd64.deb
-RUN dpkg -i litestream-v0.3.9-linux-amd64.deb
+ARG LITESTREAM_VERSION
+RUN echo "litestream v$LITESTREAM_VERSION"
+RUN wget https://github.com/benbjohnson/litestream/releases/download/v${LITESTREAM_VERSION}/litestream-v${LITESTREAM_VERSION}-linux-amd64.deb
+RUN dpkg -i litestream-v${LITESTREAM_VERSION}-linux-amd64.deb
 
 COPY entrypoint.sh /entrypoint.sh
 ENV PORT 61016
