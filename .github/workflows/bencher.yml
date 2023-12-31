@@ -20,8 +20,6 @@ env:
   API_LITESTREAM_DOCKER_IMAGE: bencher-api-litestream
   # CLI
   CLI_BIN_NAME: bencher
-  CLI_BIN_ARCH: amd64
-  CLI_DEB_DIR: deb
   ZIG_VERSION: 0.18.1
   # Use minimum supported glibc version for Rust Tier 1
   # https://doc.rust-lang.org/nightly/rustc/platform-support.html#tier-1-with-host-tools
@@ -233,6 +231,7 @@ jobs:
       - name: Run Examples
         run: ${{ matrix.examples }}
 
+  # TODO once Bencher GitHub Action supports it, run this as a matrix across all platforms
   api_smoke_test_compat:
     name: API Smoke Test Compat
     runs-on: ubuntu-latest
@@ -691,68 +690,57 @@ jobs:
         if: (!startsWith(matrix.build, 'windows'))
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.CLI_BIN_NAME }}-${{ matrix.build }}
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
           path: ./target/${{ matrix.target }}/release/${{ env.CLI_BIN_NAME }}
           if-no-files-found: error
       - name: Upload CLI Windows Artifact
         if: startsWith(matrix.build, 'windows')
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.CLI_BIN_NAME }}-${{ matrix.build }}.exe
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.exe
           path: ./target/${{ matrix.target }}/release/${{ env.CLI_BIN_NAME }}.exe
           if-no-files-found: error
 
-  build_cli_bin:
-    name: Build CLI Linux
-    runs-on: ubuntu-latest
+  package_cli:
+    name: Package CLI
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux
+          - build: linux-x86-64
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            arch: amd64
+          - build: linux-arm-64
+            os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            arch: arm64
+    runs-on: ${{ matrix.os }}
     timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
     continue-on-error: ${{ github.ref == 'refs/heads/express' }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-zig-${{ env.CACHE_NAME }}
-      - uses: goto-bus-stop/setup-zig@v2
-      - name: Install zigbuild
-        run: cargo install --version ${{ env.ZIG_VERSION }} --locked --force cargo-zigbuild
-      - name: cargo build CLI
-        working-directory: ./services/cli
-        run: cargo zigbuild --release --target x86_64-unknown-linux-gnu.${{ env.GLIBC_VERSION }}
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.CLI_BIN_NAME }}
-          path: ./target/x86_64-unknown-linux-gnu/release/${{ env.CLI_BIN_NAME }}
-          if-no-files-found: error
-
-  build_cli_deb:
-    name: Package CLI (.deb)
-    runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
-    needs: build_cli_bin
+    needs: build_cli
+    env:
+      CLI_DEB_DIR: deb
     steps:
       - uses: actions/checkout@v4
       - name: Download CLI Artifact
+        if: (!startsWith(matrix.build, 'windows'))
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.CLI_BIN_NAME }}
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
       - name: Build .deb package
-        run: |
-          ./scripts/deb.sh $CLI_BIN_NAME $(./scripts/version.sh) $CLI_BIN_ARCH $CLI_DEB_DIR
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-an-environment-variable
-          echo "DEB_FILE=${CLI_BIN_NAME}_$(./scripts/version.sh)_${CLI_BIN_ARCH}.deb" >> $GITHUB_ENV
-      - name: Upload Artifact
+        if: startsWith(matrix.build, 'linux')
+        run: ./scripts/deb.sh ${{ env.CLI_BIN_NAME }} ${{ github.ref_name }} ${{ matrix.arch }} ${{ env.CLI_DEB_DIR }}
+      - name: Upload .deb Artifact
+        if: startsWith(matrix.build, 'linux')
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.DEB_FILE }}
-          path: ${{ env.CLI_DEB_DIR }}/${{ env.DEB_FILE }}
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.arch }}.deb
+          path: ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.arch }}.deb
           if-no-files-found: error
 
   build_ui_docker:
@@ -919,7 +907,7 @@ jobs:
       # Build
       - build_litestream_api_docker
       - build_ui
-      - build_cli_bin
+      - build_cli
     env:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN_ADMIN }}
     steps:
@@ -1138,33 +1126,70 @@ jobs:
       # Build
       - build_local_api_docker
       - build_litestream_api_docker
-      - build_cli_deb
       - build_ui_docker
+      - package_cli
+    env:
+      BUILD_LINUX_X86_64: linux-x86-64
+      BUILD_LINUX_ARM_64: linux-arm-64
+      BUILD_MACOS_X86_64: macos-x86-64
+      BUILD_MACOS_ARM_64: macos-arm-64
+      BUILD_WINDOWS_X86_64: windows-x86-64
+      BUILD_WINDOWS_ARM_64: windows-arm-64
     steps:
       - uses: actions/checkout@v4
-      # Download
-      - name: Download Local API Artifact
+      # Download Docker
+      - name: Download Local API Docker Artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
-      - name: Download Litestream API Artifact
+      - name: Download Litestream API Docker Artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
-      - name: Download CLI bin artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ env.CLI_BIN_NAME }}
-      - name: export DEB_FILE
-        run: echo "DEB_FILE=${CLI_BIN_NAME}_$(./scripts/version.sh)_${CLI_BIN_ARCH}.deb" >> $GITHUB_ENV
-      - name: Download CLI .deb Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ env.DEB_FILE }}
-      - name: Download UI Artifact
+      - name: Download UI Docker Artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.UI_DOCKER_IMAGE }}.tar.gz
+      # Download CLI
+      - name: Download CLI Linux x86_64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_X86_64 }}
+          path: ${{ github.workspace }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_X86_64 }}
+      - name: Download CLI Linux ARM64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_ARM_64 }}
+          path: ${{ github.workspace }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_ARM_64 }}
+      - name: Download CLI MacOS x86_64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_MACOS_X86_64 }}
+          path: ${{ github.workspace }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_MACOS_X86_64 }}
+      - name: Download CLI MacOS ARM64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_MACOS_ARM_64 }}
+          path: ${{ github.workspace }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_MACOS_ARM_64 }}
+      - name: Download CLI Windows x86_64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_WINDOWS_X86_64 }}.exe
+          path: ${{ github.workspace }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_WINDOWS_X86_64 }}.exe
+      - name: Download CLI Windows ARM64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_WINDOWS_ARM_64 }}.exe
+          path: ${{ github.workspace }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_WINDOWS_ARM_64 }}.exe
+      # Download CLI Packages
+      - name: Download CLI Linux x86_64 .deb Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-amd64.deb
+      - name: Download CLI Linux ARM64 .deb Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-arm64.deb
       # Load
       - name: Load Local API Image
         run: docker load < ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
@@ -1222,9 +1247,15 @@ jobs:
           files: |
             ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
             ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
-            ${{ env.CLI_BIN_NAME }}
-            ${{ env.DEB_FILE }}
             ${{ env.UI_DOCKER_IMAGE }}.tar.gz
+            ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_X86_64 }}
+            ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_ARM_64 }}
+            ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_MACOS_X86_64 }}
+            ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_MACOS_ARM_64 }}
+            ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_WINDOWS_X86_64 }}.exe
+            ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_WINDOWS_ARM_64 }}.exe
+            ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-amd64.deb
+            ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-arm64.deb
 
   # Dev Container
   build_dev_container:
