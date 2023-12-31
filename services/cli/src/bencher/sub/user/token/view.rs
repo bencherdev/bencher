@@ -22,7 +22,7 @@ impl TryFrom<CliTokenView> for View {
     fn try_from(view: CliTokenView) -> Result<Self, Self::Error> {
         let CliTokenView {
             user,
-            token,
+            uuid: token,
             backend,
         } = view;
         Ok(Self {

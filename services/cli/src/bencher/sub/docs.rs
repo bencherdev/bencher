@@ -7,8 +7,8 @@ use clap::CommandFactory;
 
 use crate::{
     bencher::sub::SubCmd,
-    cli::docs::{CliDocs, CliDocsFmt},
-    cli::CliBencher,
+    parser::docs::{CliDocs, CliDocsFmt},
+    parser::CliBencher,
     CliError,
 };
 
@@ -64,12 +64,12 @@ impl SubCmd for Docs {
                 let cmd = CliBencher::command();
                 let man = clap_mangen::Man::new(cmd);
                 let mut buffer = Vec::default();
-                man.render(&mut buffer)?;
+                man.render(&mut buffer).map_err(CliError::Docs)?;
 
                 let mut path = self.path.clone();
                 path.push(&self.name);
                 path.set_extension(MAN_EXTENSION);
-                std::fs::write(path, buffer).map_err(Into::into)
+                std::fs::write(path, buffer).map_err(CliError::Docs)
             },
             Fmt::Html => Ok(()),
         }

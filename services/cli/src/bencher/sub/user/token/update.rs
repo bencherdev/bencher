@@ -24,7 +24,7 @@ impl TryFrom<CliTokenUpdate> for Update {
     fn try_from(view: CliTokenUpdate) -> Result<Self, Self::Error> {
         let CliTokenUpdate {
             user,
-            token,
+            uuid: token,
             name,
             backend,
         } = view;

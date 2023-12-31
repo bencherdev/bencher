@@ -68,7 +68,7 @@ pub struct CliTokenView {
     pub user: ResourceId,
 
     /// Token UUID
-    pub token: TokenUuid,
+    pub uuid: TokenUuid,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -85,7 +85,7 @@ pub struct CliTokenUpdate {
     pub name: Option<ResourceName>,
 
     /// Token UUID
-    pub token: TokenUuid,
+    pub uuid: TokenUuid,
 
     #[clap(flatten)]
     pub backend: CliBackend,
