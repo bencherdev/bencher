@@ -227,7 +227,9 @@ jobs:
             examples: .\scripts\examples.bat
     runs-on: ${{ matrix.os }}
     timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
+    # `compat` runs will fail whenever there is a breaking change in the API
+    # Pre-1.0 this is okay but good to be aware of
+    continue-on-error: ${{ github.ref == 'refs/heads/express' || matrix.compat }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
@@ -244,46 +246,17 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Install `bencher` CLI
-        # if: (!matrix.compat)
+        if: (!matrix.compat)
         run: cargo install --path services/cli --locked --force
-      # TODO enable once available on `main`
-      # - uses: bencherdev/bencher@main
-      #   if: matrix.compat
+      # Note that this really is using the latest version of the CLI
+      # and not the `@main` version of the CLI from the GitHub Action
+      # for the `smoke_test` step but it is used in the `examples` step
+      - uses: bencherdev/bencher@main
+        if: matrix.compat
       - name: Run API Smoke Test
         run: ${{ matrix.smoke_test }}
       - name: Run Examples
         run: ${{ matrix.examples }}
-
-  # TODO once Bencher GitHub Action supports it, run this as a matrix across all platforms
-  api_smoke_test_compat:
-    name: API Smoke Test Compat
-    runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    # This will fail whenever there is a breaking change in the API
-    # Pre-1.0 this is okay but good to be aware of
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ env.CACHE_NAME }}
-      - uses: rui314/setup-mold@v1
-        with:
-          mold-version: ${{ env.MOLD_VERSION }}
-      - uses: bencherdev/bencher@main
-      # Note that this really is using the latest version of the CLI
-      # and not the `@main` version of the CLI from the GitHub Action
-      # But this helps set up things for the Examples step
-      - name: Run API Smoke Test
-        run: ./scripts/smoke_test.sh
-      - name: Run Examples
-        run: ./scripts/examples.sh
 
   # This is useful for testing changes to the Bencher CLI GitHub Action
   api_smoke_test_devel:
@@ -995,7 +968,6 @@ jobs:
       - cargo_test
       - open_api_spec
       - api_smoke_test
-      - api_smoke_test_compat
       - cargo_bench
       - cargo_audit
       - cargo_udeps
@@ -1210,7 +1182,6 @@ jobs:
       - cargo_test
       - open_api_spec
       - api_smoke_test
-      - api_smoke_test_compat
       - cargo_check_api_minus
       - cargo_check_cli_minus
       - cargo_bench
