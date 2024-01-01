@@ -56,21 +56,53 @@ jobs:
             <br />
             <p align="center"><a href="https://discord.gg/yGEsdUh7R4"><img src="https://s3.amazonaws.com/public.bencher.dev/chat/discord_invite.png" alt="Bencher Discord Server" /></a></p>
 
-  bencher_github_action:
-    name: Bencher CLI GitHub Action
+  build_github_action:
+    name: Build GitHub Action
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    # This will fail during releases builds
-    # because the version number requested is for the current, in progress release
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-      - name: Build next Bencher CLI GitHub Action
+      - name: Install Bencher CLI GitHub Action Dependencies
         working-directory: ./services/action
-        run: |
-          npm install --include=dev
-          npm run build
+        run: npm install --include=dev
+      - name: Build Bencher CLI GitHub Action
+        working-directory: ./services/action
+        run: npm run build
+      - name: Check for changes
+        run: git diff --exit-code
+
+  test_github_action:
+    name: Test GitHub Action
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux
+          - build: linux
+            os: ubuntu-latest
+            branch: main
+          - build: linux
+            os: ubuntu-latest
+            branch: devel
+          # MacOS
+          - build: macos
+            os: macos-latest
+            branch: main
+          - build: macos
+            os: macos-latest
+            branch: devel
+          # Windows
+          - build: windows
+            os: windows-latest
+            branch: main
+          - build: windows
+            os: windows-latest
+            branch: devel
+    runs-on: ${{ matrix.os }}
+    steps:
       - uses: bencherdev/bencher@main
+        if: matrix.branch == 'main' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/express'
+      - uses: bencherdev/bencher@devel
+        if: matrix.branch == 'devel' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/express'
       - name: Run current Bencher CLI GitHub Action
         run: bencher run --project bencher --dry-run "bencher mock"
 
@@ -253,51 +285,6 @@ jobs:
       # for the `smoke_test` step but it is used in the `examples` step
       - uses: bencherdev/bencher@main
         if: matrix.compat
-      - name: Run API Smoke Test
-        run: ${{ matrix.smoke_test }}
-      - name: Run Examples
-        run: ${{ matrix.examples }}
-
-  # This is useful for testing changes to the Bencher CLI GitHub Action
-  api_smoke_test_devel:
-    name: API Smoke Test Devel
-    if: github.ref == 'refs/heads/devel'
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # Linux
-          - build: linux
-            os: ubuntu-latest
-            smoke_test: ./scripts/smoke_test.sh
-            examples: ./scripts/examples.sh
-          # MacOS
-          - build: macos
-            os: macos-latest
-            smoke_test: ./scripts/smoke_test.sh
-            examples: ./scripts/examples.sh
-          # Windows
-          - build: windows
-            os: windows-latest
-            smoke_test: .\scripts\smoke_test.bat
-            examples: .\scripts\examples.bat
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-release-${{ env.CACHE_NAME }}
-      - uses: rui314/setup-mold@v1
-        if: startsWith(matrix.build, 'linux')
-        with:
-          mold-version: ${{ env.MOLD_VERSION }}
-      - uses: bencherdev/bencher@devel
       - name: Run API Smoke Test
         run: ${{ matrix.smoke_test }}
       - name: Run Examples
@@ -1190,7 +1177,8 @@ jobs:
       - test_bencher_valid_wasm
       - npx_vitest
       # Integrations
-      - bencher_github_action
+      - build_github_action
+      - test_github_action
       # Build
       - build_local_api_docker
       - build_litestream_api_docker
