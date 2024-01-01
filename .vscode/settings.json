@@ -1,4 +1,5 @@
 {
+  "git.autofetch": true,
   "files.eol": "\n",
   "files.associations": {
     "*.mdx": "markdown"
@@ -70,6 +71,7 @@
     "libtest",
     "litestream",
     "luhn",
+    "mdx",
     "Microbenchmark",
     "milli",
     "nanos",
@@ -90,10 +92,5 @@
     "UNIONPAY",
     "vcentered",
     "wordmark"
-  ],
-  "[javascript][typescript][typescriptreact]": {
-    "editor.codeActionsOnSave": {
-      "source.organizeImports.biome": "explicit"
-    }
-  }
+  ]
 }
