@@ -1,6 +1,7 @@
 {
   "private": true,
   "scripts": {
+    "fmt": "biome format --write .",
     "build": "ncc build -o dist src/main.ts"
   },
   "dependencies": {

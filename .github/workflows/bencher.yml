@@ -56,6 +56,7 @@ jobs:
             <br />
             <p align="center"><a href="https://discord.gg/yGEsdUh7R4"><img src="https://s3.amazonaws.com/public.bencher.dev/chat/discord_invite.png" alt="Bencher Discord Server" /></a></p>
 
+  # Bencher CLI GitHub Action
   build_github_action:
     name: Build GitHub Action
     runs-on: ubuntu-latest
@@ -98,13 +99,14 @@ jobs:
             os: windows-latest
             branch: devel
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.branch == 'main' }}
     steps:
       - uses: bencherdev/bencher@main
-        if: matrix.branch == 'main' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/express'
+        if: matrix.branch == 'main'
       - uses: bencherdev/bencher@devel
-        if: matrix.branch == 'devel' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/express'
+        if: matrix.branch == 'devel'
       - name: Run current Bencher CLI GitHub Action
-        run: bencher run --project bencher --dry-run "bencher mock"
+        run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
 
   # Pretty Rust
   cargo_fmt:

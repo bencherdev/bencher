@@ -28240,10 +28240,11 @@ const getBin = (semVer) => {
             throw new Error("Unsupported operating system");
     }
 };
+const BENCHER_CLI = "bencher";
 const install = async (bin, url, semVer) => {
     const bencher = await toolCache.downloadTool(url);
     await (0, promises_1.chmod)(bencher, 0o755);
-    const cache = await toolCache.cacheFile(bencher, bin, "bencher", semVer);
+    const cache = await toolCache.cacheFile(bencher, BENCHER_CLI, BENCHER_CLI, semVer);
     core.addPath(cache);
 };
 run().catch((error) => {

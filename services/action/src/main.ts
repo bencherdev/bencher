@@ -65,10 +65,16 @@ const getBin = (semVer: string) => {
 	}
 };
 
+const BENCHER_CLI = "bencher";
 const install = async (bin: string, url: string, semVer: string) => {
 	const bencher = await toolCache.downloadTool(url);
 	await chmod(bencher, 0o755);
-	const cache = await toolCache.cacheFile(bencher, bin, "bencher", semVer);
+	const cache = await toolCache.cacheFile(
+		bencher,
+		BENCHER_CLI,
+		BENCHER_CLI,
+		semVer,
+	);
 	core.addPath(cache);
 };
 
