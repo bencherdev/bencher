@@ -5,36 +5,69 @@ import { chmod } from "fs/promises";
 import swagger from "../../../lib/bencher_valid/swagger.json";
 
 const run = async () => {
-	const cli_version = core.getInput("version");
-	const { url, version } = into_url(cli_version);
-	const toolPath = toolCache.find("bencher", version);
+	const { bin, url, semVer } = getUrl();
+	const toolPath = toolCache.find("bencher", semVer);
 	if (toolPath) {
 		core.addPath(toolPath);
 	} else {
-		core.info(`Downloading Bencher CLI ${version} from: ${url}`);
-		await install(url, version);
+		core.info(`Downloading Bencher CLI v${semVer} from: ${url}`);
+		await install(bin, url, semVer);
 	}
-	core.info(`Bencher CLI ${version} installed!`);
+	core.info(`Bencher CLI v${semVer} installed!`);
 };
 
-const into_url = (cli_version: string) => {
-	const version =
-		cli_version === "latest"
-			? swagger?.info?.version
-			: cli_version.replace(/^v/, "");
-	const url = `https://github.com/bencherdev/bencher/releases/download/v${version}/bencher`;
-	return { url, version };
+const getUrl = () => {
+	const semVer = getSemVer();
+	const bin = getBin(semVer);
+	const url = `https://github.com/bencherdev/bencher/releases/download/v${semVer}/${bin}`;
+	return { bin, url, semVer };
 };
 
-const install = async (url: string, version: string) => {
+const getSemVer = () => {
+	// Gets the value of the input for `version`
+	const version = core.getInput("version");
+	switch (version) {
+		//  `getInput` returns an empty string if the value is not defined.
+		case "":
+		// Except that it magically defaults to `latest` for `version`
+		case "latest":
+			// Get latest semantic version from swagger.json
+			return `${swagger?.info?.version}`;
+		default:
+			// Use user-specified version
+			// Remove leading `v` if present
+			// https://semver.org/#is-v123-a-semantic-version
+			return version.replace(/^v/, "");
+	}
+};
+
+const getBin = (semVer: string) => {
+	const arch = (() => {
+		switch (process.arch) {
+			case "x64":
+				return "x86-64";
+			case "arm64":
+				return "arm-64";
+			default:
+				throw new Error("Unsupported architecture");
+		}
+	})();
+	switch (process.platform) {
+		case "linux":
+			return `bencher-v${semVer}-linux-${arch}`;
+		case "darwin":
+			return `bencher-v${semVer}-macos-${arch}`;
+		case "win32":
+			return `bencher-v${semVer}-windows-${arch}.exe`;
+		default:
+			throw new Error("Unsupported operating system");
+	}
+};
+
+const install = async (bin: string, url: string, semVer: string) => {
 	const bencher = await toolCache.downloadTool(url);
 	await chmod(bencher, 0o755);
-	const cache = await toolCache.cacheFile(
-		bencher,
-		"bencher",
-		"bencher",
-		version,
-	);
+	const cache = await toolCache.cacheFile(bencher, bin, "bencher", semVer);
 	core.addPath(cache);
 };
 
