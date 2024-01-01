@@ -25,7 +25,7 @@ git add ./lib/bencher_valid/swagger.json
 git add ./services/action/dist/index.js
 git add ./services/console/package.json
 git add ./services/console/package-lock.json
-git add ./services/console/src/content/reference/changelog.mdx
+git add ./services/console/src/chunks/reference/en/changelog.mdx
 git add ./services/console/src/types/bencher.ts
 
 TAG="v$VERSION"
