@@ -99,7 +99,6 @@ jobs:
             os: windows-latest
             branch: devel
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.branch == 'main' }}
     steps:
       - uses: bencherdev/bencher@main
         if: matrix.branch == 'main'

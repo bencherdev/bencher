@@ -249,6 +249,13 @@ jobs:
       - run: bencher run "bencher mock"
 ```
 
+Supported Operating Systems:
+- Linux (x86_64 & ARM64)
+- MacOS (x86_64 & ARM64)
+- Windows (x86_64 & ARM64)
+
+<br />
+
 👉 For more details see the [explanation of how to use GitHub Actions](https://bencher.dev/docs/how-to/github-actions/).
 
 ### Repository Secrets
