@@ -218,7 +218,6 @@ async fn get_branch(
 ) -> Result<BranchUuid, BranchError> {
     // Use `JsonUuid` to future proof against breaking changes
     let json_branch: JsonUuid = backend
-        .as_ref()
         .send_with(|client| async move {
             client
                 .proj_branch_get()
@@ -240,7 +239,6 @@ async fn get_branch_query(
 ) -> Result<Option<BranchUuid>, BranchError> {
     // Use `JsonUuids` to future proof against breaking changes
     let json_branches: JsonUuids = backend
-        .as_ref()
         .send_with(|client| async move {
             client
                 .proj_branches_get()
@@ -289,7 +287,6 @@ async fn create_branch(
 
     // Use `JsonUuid` to future proof against breaking changes
     let json_branch: JsonUuid = backend
-        .as_ref()
         .send_with(|client| async move {
             client
                 .proj_branch_post()

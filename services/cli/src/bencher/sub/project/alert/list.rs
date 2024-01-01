@@ -70,7 +70,6 @@ impl SubCmd for List {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
-            .as_ref()
             .send(|client| async move {
                 let mut client = client.proj_alerts_get().project(self.project.clone());
                 if let Some(sort) = self.pagination.sort {

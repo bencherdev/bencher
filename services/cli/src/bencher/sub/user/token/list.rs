@@ -72,7 +72,6 @@ impl SubCmd for List {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
-            .as_ref()
             .send(|client| async move {
                 let mut client = client.user_tokens_get().user(self.user.clone());
                 if let Some(name) = self.name.clone() {

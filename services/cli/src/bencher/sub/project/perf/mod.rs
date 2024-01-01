@@ -88,14 +88,14 @@ impl SubCmd for Perf {
     async fn exec(&self) -> Result<(), CliError> {
         let sender = perf_sender(self.project.clone(), self.clone());
         if let Some(table_style) = self.table {
-            let json_perf: JsonPerf = self.backend.as_ref().send_with(sender).await?;
+            let json_perf: JsonPerf = self.backend.send_with(sender).await?;
             let mut perf_table: Table = json_perf.into();
             if let Some(table_style) = table_style {
                 table_style.stylize(&mut perf_table);
             }
             cli_println!("{perf_table}");
         } else {
-            self.backend.as_ref().send(sender).await?;
+            self.backend.send(sender).await?;
         }
         Ok(())
     }

@@ -100,7 +100,6 @@ impl SubCmd for List {
         let json_report_query: &JsonReportQuery = &self.clone().into();
         let _json = self
             .backend
-            .as_ref()
             .send(|client| async move {
                 let mut client = client.proj_reports_get().project(self.project.clone());
 

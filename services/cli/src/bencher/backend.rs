@@ -1,4 +1,4 @@
-use std::convert::TryFrom;
+use std::{convert::TryFrom, ops::Deref};
 
 use bencher_json::{Jwt, Url};
 use serde::{de::DeserializeOwned, Serialize};
@@ -19,7 +19,7 @@ pub struct AuthBackend {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Backend {
+pub struct Backend {
     client: bencher_client::BencherClient,
 }
 
@@ -97,8 +97,10 @@ fn map_token(token: Option<Jwt>, is_public: bool) -> Result<Option<Jwt>, Backend
     }
 }
 
-impl AsRef<Backend> for PubBackend {
-    fn as_ref(&self) -> &Backend {
+impl Deref for PubBackend {
+    type Target = Backend;
+
+    fn deref(&self) -> &Self::Target {
         &self.inner
     }
 }
@@ -110,8 +112,10 @@ impl PubBackend {
     }
 }
 
-impl AsRef<Backend> for AuthBackend {
-    fn as_ref(&self) -> &Backend {
+impl Deref for AuthBackend {
+    type Target = Backend;
+
+    fn deref(&self) -> &Self::Target {
         &self.inner
     }
 }

@@ -96,7 +96,6 @@ impl SubCmd for List {
         let json_threshold_query: &JsonThresholdQuery = &self.clone().into();
         let _json = self
             .backend
-            .as_ref()
             .send(|client| async move {
                 let mut client = client.proj_thresholds_get().project(self.project.clone());
 

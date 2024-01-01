@@ -82,7 +82,6 @@ impl SubCmd for Signup {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
-            .as_ref()
             .send(|client| async move { client.auth_signup_post().body(self.clone()).send().await })
             .await?;
         Ok(())

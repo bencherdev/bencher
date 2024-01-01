@@ -29,7 +29,6 @@ impl SubCmd for Endpoint {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
-            .as_ref()
             .send(|client| async move { client.server_endpoint_get().send().await })
             .await?;
         Ok(())

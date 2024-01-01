@@ -79,7 +79,6 @@ impl SubCmd for List {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
-            .as_ref()
             .send(|client| async move {
                 if let Some(org) = self.org.clone() {
                     let mut client = client.org_projects_get().organization(org);

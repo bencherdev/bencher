@@ -61,7 +61,6 @@ impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
-            .as_ref()
             .send(|client| async move {
                 client
                     .proj_measure_patch()

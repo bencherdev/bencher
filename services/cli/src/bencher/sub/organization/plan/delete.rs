@@ -35,7 +35,6 @@ impl SubCmd for Delete {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
-            .as_ref()
             .send(|client| async move {
                 client
                     .org_plan_delete()

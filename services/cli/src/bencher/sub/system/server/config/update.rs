@@ -48,7 +48,6 @@ impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
-            .as_ref()
             .send(
                 |client| async move { client.server_config_put().body(self.clone()).send().await },
             )

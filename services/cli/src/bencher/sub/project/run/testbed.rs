@@ -92,7 +92,6 @@ async fn get_testbed(
 ) -> Result<TestbedUuid, TestbedError> {
     // Use `JsonUuid` to future proof against breaking changes
     let json_testbed: JsonUuid = backend
-        .as_ref()
         .send_with(|client| async move {
             client
                 .proj_testbed_get()
@@ -114,7 +113,6 @@ async fn get_testbed_query(
 ) -> Result<Option<TestbedUuid>, TestbedError> {
     // Use `JsonUuids` to future proof against breaking changes
     let json_testbeds: JsonUuids = backend
-        .as_ref()
         .send_with(|client| async move {
             client
                 .proj_testbeds_get()

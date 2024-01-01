@@ -32,7 +32,6 @@ impl SubCmd for Stats {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self
             .backend
-            .as_ref()
             .send(|client| async move {
                 client
                     .proj_alert_stats_get()
