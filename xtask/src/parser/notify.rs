@@ -2,7 +2,7 @@ use clap::Parser;
 use url::Url;
 
 #[derive(Parser, Debug)]
-pub struct CliNotify {
+pub struct TaskNotify {
     pub message: String,
 
     #[clap(long)]

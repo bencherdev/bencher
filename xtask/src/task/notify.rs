@@ -1,7 +1,7 @@
 use serde::Serialize;
 use url::Url;
 
-use crate::parser::CliNotify;
+use crate::parser::TaskNotify;
 
 const NTFY_URL: &str = "https://ntfy.sh";
 const NTFY_TOPIC: &str = "bencherdev";
@@ -17,11 +17,11 @@ pub struct Notify {
     attach: Option<Url>,
 }
 
-impl TryFrom<CliNotify> for Notify {
+impl TryFrom<TaskNotify> for Notify {
     type Error = anyhow::Error;
 
-    fn try_from(stats: CliNotify) -> Result<Self, Self::Error> {
-        let CliNotify {
+    fn try_from(stats: TaskNotify) -> Result<Self, Self::Error> {
+        let TaskNotify {
             topic,
             message,
             title,

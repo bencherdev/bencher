@@ -1,15 +1,15 @@
 use clap::{Parser, ValueEnum};
 
 #[derive(Parser, Debug)]
-pub struct CliTemplate {
+pub struct TaskTemplate {
     /// Documentation format
-    pub template: CliTemplateKind,
+    pub template: TaskTemplateKind,
 }
 
 /// Template kind
 #[derive(ValueEnum, Debug, Clone)]
 #[clap(rename_all = "snake_case")]
-pub enum CliTemplateKind {
+pub enum TaskTemplateKind {
     /// Shell installer
     Sh,
     /// Powershell installer

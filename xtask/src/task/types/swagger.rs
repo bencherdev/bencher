@@ -1,16 +1,16 @@
 use std::process::Command;
 
-use crate::parser::CliSwagger;
+use crate::parser::TaskSwagger;
 
 const SWAGGER_PATH: &str = "./lib/bencher_valid/swagger.json";
 
 #[derive(Debug)]
 pub struct Swagger {}
 
-impl TryFrom<CliSwagger> for Swagger {
+impl TryFrom<TaskSwagger> for Swagger {
     type Error = anyhow::Error;
 
-    fn try_from(_swagger: CliSwagger) -> Result<Self, Self::Error> {
+    fn try_from(_swagger: TaskSwagger) -> Result<Self, Self::Error> {
         Ok(Self {})
     }
 }

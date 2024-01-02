@@ -2,7 +2,12 @@ use std::{fs::Permissions, os::unix::fs::PermissionsExt, process::Command};
 
 use camino::Utf8PathBuf;
 
-use crate::{parser::CliDeb, BENCHER_VERSION};
+use crate::{
+    parser::{TaskDeb, TaskMan},
+    BENCHER_VERSION,
+};
+
+use super::man::Man;
 
 #[derive(Debug)]
 pub struct Deb {
@@ -11,11 +16,11 @@ pub struct Deb {
     arch: String,
 }
 
-impl TryFrom<CliDeb> for Deb {
+impl TryFrom<TaskDeb> for Deb {
     type Error = anyhow::Error;
 
-    fn try_from(deb: CliDeb) -> Result<Self, Self::Error> {
-        let CliDeb { bin, dir, arch } = deb;
+    fn try_from(deb: TaskDeb) -> Result<Self, Self::Error> {
+        let TaskDeb { bin, dir, arch } = deb;
         Ok(Self { bin, dir, arch })
     }
 }
@@ -42,19 +47,11 @@ impl Deb {
         let control = format!("Package: bencher\nVersion: {BENCHER_VERSION}\nArchitecture: {arch}\nMaintainer: Bencher <info@bencher.dev>\nDescription: Continuous Benchmarking\n", arch = self.arch);
         std::fs::write(control_path, control)?;
 
-        let _docs = Command::new("cargo")
-            .args([
-                "run",
-                "--bin",
-                "bencher",
-                "--features",
-                "docs",
-                "--",
-                "docs",
-                "--path",
-                debian_path.as_ref(),
-            ])
-            .output()?;
+        let man = Man::try_from(TaskMan {
+            path: debian_path.clone(),
+            name: None,
+        })?;
+        man.exec()?;
 
         let _dpkg = Command::new("dpkg-deb")
             .args(["-Zxz", "--build", "--root-owner-group", deb_path.as_ref()])

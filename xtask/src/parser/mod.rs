@@ -9,56 +9,56 @@ mod template;
 mod test;
 mod types;
 
-pub use notify::CliNotify;
-pub use package::{CliDeb, CliMan};
+pub use notify::TaskNotify;
+pub use package::{TaskDeb, TaskMan};
 pub use plus::{
-    prompt::{CliLanguage, CliPrompt, CliTranslate},
-    stats::CliStats,
+    prompt::{TaskLanguage, TaskPrompt, TaskTranslate},
+    stats::TaskStats,
 };
-pub use release::CliReleaseNotes;
-pub use template::{CliTemplate, CliTemplateKind};
-pub use test::{CliFlyTest, CliNetlifyTest};
-pub use types::{CliSwagger, CliTypes, CliTypeshare};
+pub use release::TaskReleaseNotes;
+pub use template::{TaskTemplate, TaskTemplateKind};
+pub use test::{TaskFlyTest, TaskNetlifyTest};
+pub use types::{TaskSwagger, TaskTypes, TaskTypeshare};
 
 /// Bencher CLI
 #[derive(Parser, Debug)]
 #[clap(name = "bencher", author, version, about, long_about = None)]
-pub struct CliTask {
+pub struct TaskTask {
     /// Bencher subcommands
     #[clap(subcommand)]
-    pub sub: CliSub,
+    pub sub: TaskSub,
 }
 
 #[allow(variant_size_differences, clippy::large_enum_variant)]
 #[derive(Subcommand, Debug)]
-pub enum CliSub {
+pub enum TaskSub {
     /// Generate typeshare
-    Typeshare(CliTypeshare),
+    Typeshare(TaskTypeshare),
     /// Generate OpenAPI spec
-    Swagger(CliSwagger),
+    Swagger(TaskSwagger),
     /// Generate typeshare and OpenAPI spec
-    Types(CliTypes),
+    Types(TaskTypes),
     /// Template CLI install scripts
-    Template(CliTemplate),
+    Template(TaskTemplate),
     #[cfg(feature = "plus")]
     /// Send stats to bencher.dev
-    Stats(CliStats),
+    Stats(TaskStats),
     #[cfg(feature = "plus")]
     /// Prompt LLM
-    Prompt(CliPrompt),
+    Prompt(TaskPrompt),
     #[cfg(feature = "plus")]
     /// Prompt LLM to translate
-    Translate(CliTranslate),
+    Translate(TaskTranslate),
     /// Run tests against Fly.io deployment
-    FlyTest(CliFlyTest),
+    FlyTest(TaskFlyTest),
     /// Run tests against Netlify deployment
-    NetlifyTest(CliNetlifyTest),
+    NetlifyTest(TaskNetlifyTest),
     /// Create CLI man page
-    Man(CliMan),
+    Man(TaskMan),
     /// Create CLI .deb
-    Deb(CliDeb),
+    Deb(TaskDeb),
     /// Generate release notes
-    ReleaseNotes(CliReleaseNotes),
+    ReleaseNotes(TaskReleaseNotes),
     /// Notify
-    Notify(CliNotify),
+    Notify(TaskNotify),
 }

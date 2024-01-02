@@ -1,17 +1,17 @@
 use bencher_json::{JsonServerStats, PROD_BENCHER_API_URL_STR};
 
-use crate::parser::CliStats;
+use crate::parser::TaskStats;
 
 #[derive(Debug)]
 pub struct Stats {
     stats: JsonServerStats,
 }
 
-impl TryFrom<CliStats> for Stats {
+impl TryFrom<TaskStats> for Stats {
     type Error = anyhow::Error;
 
-    fn try_from(stats: CliStats) -> Result<Self, Self::Error> {
-        let CliStats { stats } = stats;
+    fn try_from(stats: TaskStats) -> Result<Self, Self::Error> {
+        let TaskStats { stats } = stats;
         Ok(Self {
             stats: serde_json::from_str(&stats)?,
         })

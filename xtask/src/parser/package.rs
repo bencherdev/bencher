@@ -2,18 +2,18 @@ use camino::Utf8PathBuf;
 use clap::Parser;
 
 #[derive(Parser, Debug)]
-pub struct CliMan {
+pub struct TaskMan {
     /// File output path
     #[clap(long)]
-    pub path: Option<String>,
+    pub path: Utf8PathBuf,
 
     /// File output name
     #[clap(long)]
-    pub name: Option<String>,
+    pub name: Option<Utf8PathBuf>,
 }
 
 #[derive(Parser, Debug)]
-pub struct CliDeb {
+pub struct TaskDeb {
     /// CLI bin path
     pub bin: Utf8PathBuf,
     /// .deb build directory

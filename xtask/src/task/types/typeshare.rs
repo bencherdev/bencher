@@ -1,14 +1,14 @@
 use std::process::Command;
 
-use crate::parser::CliTypeshare;
+use crate::parser::TaskTypeshare;
 
 #[derive(Debug)]
 pub struct Typeshare {}
 
-impl TryFrom<CliTypeshare> for Typeshare {
+impl TryFrom<TaskTypeshare> for Typeshare {
     type Error = anyhow::Error;
 
-    fn try_from(_typeshare: CliTypeshare) -> Result<Self, Self::Error> {
+    fn try_from(_typeshare: TaskTypeshare) -> Result<Self, Self::Error> {
         Ok(Self {})
     }
 }

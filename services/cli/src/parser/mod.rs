@@ -1,15 +1,12 @@
 use bencher_json::{Jwt, Url};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
-pub mod docs;
 pub mod mock;
 pub mod organization;
 pub mod project;
 pub mod system;
 pub mod user;
 
-#[cfg(feature = "docs")]
-use docs::CliDocs;
 use mock::CliMock;
 use organization::{member::CliMember, CliOrganization};
 use project::{
@@ -96,10 +93,6 @@ pub enum CliSub {
 
     /// Generate mock benchmark data
     Mock(CliMock),
-
-    #[cfg(feature = "docs")]
-    /// Generate documentation
-    Docs(CliDocs),
 }
 
 #[derive(Args, Debug)]

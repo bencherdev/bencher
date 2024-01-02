@@ -2,7 +2,7 @@ use std::process::Command;
 
 use bencher_json::{JsonApiVersion, DEVEL_BENCHER_API_URL_STR, PROD_BENCHER_API_URL_STR};
 
-use crate::{parser::CliFlyTest, task::types::swagger::swagger_spec};
+use crate::{parser::TaskFlyTest, task::types::swagger::swagger_spec};
 
 const BENCHER_API_URL_KEY: &str = "BENCHER_API_URL";
 const TEST_BENCHER_API_TOKEN: &str = "TEST_BENCHER_API_TOKEN";
@@ -13,11 +13,11 @@ pub struct FlyTest {
     pub dev: bool,
 }
 
-impl TryFrom<CliFlyTest> for FlyTest {
+impl TryFrom<TaskFlyTest> for FlyTest {
     type Error = anyhow::Error;
 
-    fn try_from(swagger: CliFlyTest) -> Result<Self, Self::Error> {
-        let CliFlyTest { dev } = swagger;
+    fn try_from(swagger: TaskFlyTest) -> Result<Self, Self::Error> {
+        let TaskFlyTest { dev } = swagger;
         Ok(Self { dev })
     }
 }

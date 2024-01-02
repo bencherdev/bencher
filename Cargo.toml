@@ -8,6 +8,8 @@ authors = ["Everett Pompeii <everett@bencher.dev>"]
 edition = "2021"
 
 [workspace.dependencies]
+# services
+bencher_cli = { path = "services/cli" }
 # lib
 bencher_adapter = { path = "lib/bencher_adapter" }
 bencher_boundary = { path = "lib/bencher_boundary" }

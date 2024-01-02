@@ -3,20 +3,20 @@ use clap::{Parser, ValueEnum};
 
 #[cfg(feature = "plus")]
 #[derive(Parser, Debug)]
-pub struct CliPrompt {
+pub struct TaskPrompt {
     /// Text prompt
     pub prompt: String,
 }
 
 #[cfg(feature = "plus")]
 #[derive(Parser, Debug)]
-pub struct CliTranslate {
+pub struct TaskTranslate {
     /// File input path (relative to `services/console/src/`)
     pub input_path: Vec<Utf8PathBuf>,
 
     // Target language
     #[clap(value_enum, long)]
-    pub lang: Option<Vec<CliLanguage>>,
+    pub lang: Option<Vec<TaskLanguage>>,
 
     /// File output path
     #[clap(long)]
@@ -26,7 +26,7 @@ pub struct CliTranslate {
 #[cfg(feature = "plus")]
 #[derive(ValueEnum, Debug, Clone, Copy)]
 #[clap(rename_all = "snake_case")]
-pub enum CliLanguage {
+pub enum TaskLanguage {
     #[clap(alias = "de")]
     German,
     #[clap(alias = "es")]

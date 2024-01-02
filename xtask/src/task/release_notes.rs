@@ -5,7 +5,7 @@ use std::{
 
 use camino::Utf8PathBuf;
 
-use crate::parser::CliReleaseNotes;
+use crate::parser::TaskReleaseNotes;
 
 #[derive(Debug)]
 pub struct ReleaseNotes {
@@ -13,11 +13,11 @@ pub struct ReleaseNotes {
     path: Option<Utf8PathBuf>,
 }
 
-impl TryFrom<CliReleaseNotes> for ReleaseNotes {
+impl TryFrom<TaskReleaseNotes> for ReleaseNotes {
     type Error = anyhow::Error;
 
-    fn try_from(release_notes: CliReleaseNotes) -> Result<Self, Self::Error> {
-        let CliReleaseNotes { changelog, path } = release_notes;
+    fn try_from(release_notes: TaskReleaseNotes) -> Result<Self, Self::Error> {
+        let TaskReleaseNotes { changelog, path } = release_notes;
         Ok(Self { changelog, path })
     }
 }

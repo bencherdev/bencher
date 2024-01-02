@@ -1,4 +1,4 @@
-use crate::parser::CliTypes;
+use crate::parser::TaskTypes;
 
 use super::{swagger::Swagger, typeshare::Typeshare};
 
@@ -8,10 +8,10 @@ pub struct Types {
     pub swagger: Swagger,
 }
 
-impl TryFrom<CliTypes> for Types {
+impl TryFrom<TaskTypes> for Types {
     type Error = anyhow::Error;
 
-    fn try_from(_types: CliTypes) -> Result<Self, Self::Error> {
+    fn try_from(_types: TaskTypes) -> Result<Self, Self::Error> {
         Ok(Self {
             typeshare: Typeshare {},
             swagger: Swagger {},

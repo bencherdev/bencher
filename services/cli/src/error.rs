@@ -15,8 +15,4 @@ pub enum CliError {
     Boundary(bencher_json::ValidError),
     #[error("Failed to serialize config: {0}")]
     SerializeConfig(serde_json::Error),
-
-    #[cfg(feature = "docs")]
-    #[error("Failed to create docs: {0}")]
-    Docs(std::io::Error),
 }

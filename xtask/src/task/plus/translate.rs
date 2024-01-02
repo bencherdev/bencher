@@ -13,7 +13,7 @@ use camino::Utf8PathBuf;
 use chrono::Utc;
 use notify_rust::Notification;
 
-use crate::parser::{CliLanguage, CliTranslate};
+use crate::parser::{TaskLanguage, TaskTranslate};
 
 // https://platform.openai.com/docs/models/gpt-4
 const GPT4_MODEL: &str = "gpt-4-0613";
@@ -22,15 +22,15 @@ const GPT4_MODEL: &str = "gpt-4-0613";
 #[derive(Debug)]
 pub struct Translate {
     pub input_path: Vec<Utf8PathBuf>,
-    pub lang: Option<Vec<CliLanguage>>,
+    pub lang: Option<Vec<TaskLanguage>>,
     pub output_path: Option<Utf8PathBuf>,
 }
 
-impl TryFrom<CliTranslate> for Translate {
+impl TryFrom<TaskTranslate> for Translate {
     type Error = anyhow::Error;
 
-    fn try_from(translate: CliTranslate) -> Result<Self, Self::Error> {
-        let CliTranslate {
+    fn try_from(translate: TaskTranslate) -> Result<Self, Self::Error> {
+        let TaskTranslate {
             input_path,
             lang,
             output_path,
@@ -43,50 +43,50 @@ impl TryFrom<CliTranslate> for Translate {
     }
 }
 
-impl fmt::Display for CliLanguage {
+impl fmt::Display for TaskLanguage {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}",
             match self {
-                CliLanguage::German => "German",
-                CliLanguage::Spanish => "Spanish",
-                CliLanguage::French => "French",
-                CliLanguage::Japanese => "Japanese",
-                CliLanguage::Korean => "Korean",
-                CliLanguage::Portuguese => "Brazilian Portuguese",
-                CliLanguage::Russian => "Russian",
-                CliLanguage::Chinese => "Simplified Chinese",
+                TaskLanguage::German => "German",
+                TaskLanguage::Spanish => "Spanish",
+                TaskLanguage::French => "French",
+                TaskLanguage::Japanese => "Japanese",
+                TaskLanguage::Korean => "Korean",
+                TaskLanguage::Portuguese => "Brazilian Portuguese",
+                TaskLanguage::Russian => "Russian",
+                TaskLanguage::Chinese => "Simplified Chinese",
             }
         )
     }
 }
 
-impl CliLanguage {
+impl TaskLanguage {
     // Returns the ISO 639-1 language code for the language
     fn iso_code(self) -> &'static str {
         match self {
-            CliLanguage::German => "de",
-            CliLanguage::Spanish => "es",
-            CliLanguage::French => "fr",
-            CliLanguage::Japanese => "ja",
-            CliLanguage::Korean => "ko",
-            CliLanguage::Portuguese => "pt",
-            CliLanguage::Russian => "ru",
-            CliLanguage::Chinese => "zh",
+            TaskLanguage::German => "de",
+            TaskLanguage::Spanish => "es",
+            TaskLanguage::French => "fr",
+            TaskLanguage::Japanese => "ja",
+            TaskLanguage::Korean => "ko",
+            TaskLanguage::Portuguese => "pt",
+            TaskLanguage::Russian => "ru",
+            TaskLanguage::Chinese => "zh",
         }
     }
 
-    fn all() -> Vec<CliLanguage> {
+    fn all() -> Vec<TaskLanguage> {
         vec![
-            CliLanguage::German,
-            CliLanguage::Spanish,
-            CliLanguage::French,
-            CliLanguage::Japanese,
-            CliLanguage::Korean,
-            CliLanguage::Portuguese,
-            CliLanguage::Russian,
-            CliLanguage::Chinese,
+            TaskLanguage::German,
+            TaskLanguage::Spanish,
+            TaskLanguage::French,
+            TaskLanguage::Japanese,
+            TaskLanguage::Korean,
+            TaskLanguage::Portuguese,
+            TaskLanguage::Russian,
+            TaskLanguage::Chinese,
         ]
     }
 }
@@ -95,7 +95,7 @@ impl Translate {
     #[allow(clippy::unused_async)]
     pub async fn exec(&self) -> anyhow::Result<()> {
         for input_path in &self.input_path {
-            let languages = self.lang.clone().unwrap_or_else(CliLanguage::all);
+            let languages = self.lang.clone().unwrap_or_else(TaskLanguage::all);
             let content_path = Utf8PathBuf::from("services/console/src/");
             // services/console/src/ + dir/content/section/en/example.md
             let input_path = if input_path == "scrap" {

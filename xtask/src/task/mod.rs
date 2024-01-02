@@ -1,6 +1,6 @@
 use clap::Parser;
 
-use crate::parser::{CliSub, CliTask};
+use crate::parser::{TaskSub, TaskTask};
 
 mod notify;
 mod package;
@@ -46,44 +46,44 @@ pub enum Sub {
     Notify(Notify),
 }
 
-impl TryFrom<CliTask> for Task {
+impl TryFrom<TaskTask> for Task {
     type Error = anyhow::Error;
 
-    fn try_from(task: CliTask) -> Result<Self, Self::Error> {
+    fn try_from(task: TaskTask) -> Result<Self, Self::Error> {
         Ok(Self {
             sub: task.sub.try_into()?,
         })
     }
 }
 
-impl TryFrom<CliSub> for Sub {
+impl TryFrom<TaskSub> for Sub {
     type Error = anyhow::Error;
 
-    fn try_from(sub: CliSub) -> Result<Self, Self::Error> {
+    fn try_from(sub: TaskSub) -> Result<Self, Self::Error> {
         Ok(match sub {
-            CliSub::Typeshare(typeshare) => Self::Typeshare(typeshare.try_into()?),
-            CliSub::Swagger(swagger) => Self::Swagger(swagger.try_into()?),
-            CliSub::Types(types) => Self::Types(types.try_into()?),
-            CliSub::Template(template) => Self::Template(template.try_into()?),
+            TaskSub::Typeshare(typeshare) => Self::Typeshare(typeshare.try_into()?),
+            TaskSub::Swagger(swagger) => Self::Swagger(swagger.try_into()?),
+            TaskSub::Types(types) => Self::Types(types.try_into()?),
+            TaskSub::Template(template) => Self::Template(template.try_into()?),
             #[cfg(feature = "plus")]
-            CliSub::Stats(stats) => Self::Stats(stats.try_into()?),
+            TaskSub::Stats(stats) => Self::Stats(stats.try_into()?),
             #[cfg(feature = "plus")]
-            CliSub::Prompt(prompt) => Self::Prompt(prompt.try_into()?),
+            TaskSub::Prompt(prompt) => Self::Prompt(prompt.try_into()?),
             #[cfg(feature = "plus")]
-            CliSub::Translate(translate) => Self::Translate(translate.try_into()?),
-            CliSub::FlyTest(fly_test) => Self::FlyTest(fly_test.try_into()?),
-            CliSub::NetlifyTest(netlify_test) => Self::NetlifyTest(netlify_test.try_into()?),
-            CliSub::Man(man) => Self::Man(man.try_into()?),
-            CliSub::Deb(deb) => Self::Deb(deb.try_into()?),
-            CliSub::ReleaseNotes(release_notes) => Self::ReleaseNotes(release_notes.try_into()?),
-            CliSub::Notify(notify) => Self::Notify(notify.try_into()?),
+            TaskSub::Translate(translate) => Self::Translate(translate.try_into()?),
+            TaskSub::FlyTest(fly_test) => Self::FlyTest(fly_test.try_into()?),
+            TaskSub::NetlifyTest(netlify_test) => Self::NetlifyTest(netlify_test.try_into()?),
+            TaskSub::Man(man) => Self::Man(man.try_into()?),
+            TaskSub::Deb(deb) => Self::Deb(deb.try_into()?),
+            TaskSub::ReleaseNotes(release_notes) => Self::ReleaseNotes(release_notes.try_into()?),
+            TaskSub::Notify(notify) => Self::Notify(notify.try_into()?),
         })
     }
 }
 
 impl Task {
     pub fn new() -> anyhow::Result<Self> {
-        CliTask::parse().try_into()
+        TaskTask::parse().try_into()
     }
 
     pub async fn exec(&self) -> anyhow::Result<()> {

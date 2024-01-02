@@ -2,7 +2,7 @@ use camino::Utf8PathBuf;
 use clap::Parser;
 
 #[derive(Parser, Debug)]
-pub struct CliReleaseNotes {
+pub struct TaskReleaseNotes {
     /// Changelog path
     #[clap(long)]
     pub changelog: Option<Utf8PathBuf>,

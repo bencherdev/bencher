@@ -1,10 +1,10 @@
 use clap::Parser;
 
 #[derive(Parser, Debug)]
-pub struct CliTypeshare {}
+pub struct TaskTypeshare {}
 
 #[derive(Parser, Debug)]
-pub struct CliSwagger {}
+pub struct TaskSwagger {}
 
 #[derive(Parser, Debug)]
-pub struct CliTypes {}
+pub struct TaskTypes {}

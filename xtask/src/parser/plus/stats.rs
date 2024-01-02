@@ -1,7 +1,7 @@
 use clap::Parser;
 
 #[derive(Parser, Debug)]
-pub struct CliStats {
+pub struct TaskStats {
     /// Stats JSON
     pub stats: String,
 }

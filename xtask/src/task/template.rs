@@ -1,15 +1,15 @@
-use crate::parser::{CliTemplate, CliTemplateKind};
+use crate::parser::{TaskTemplate, TaskTemplateKind};
 
 #[derive(Debug)]
 pub struct Template {
-    template: CliTemplateKind,
+    template: TaskTemplateKind,
 }
 
-impl TryFrom<CliTemplate> for Template {
+impl TryFrom<TaskTemplate> for Template {
     type Error = anyhow::Error;
 
-    fn try_from(template: CliTemplate) -> Result<Self, Self::Error> {
-        let CliTemplate { template } = template;
+    fn try_from(template: TaskTemplate) -> Result<Self, Self::Error> {
+        let TaskTemplate { template } = template;
         Ok(Self { template })
     }
 }

@@ -1,5 +1,3 @@
-#![cfg(feature = "plus")]
-
 use std::io::Write;
 
 use async_openai::{
@@ -12,7 +10,7 @@ use async_openai::{
 use chrono::Utc;
 use notify_rust::Notification;
 
-use crate::parser::CliPrompt;
+use crate::parser::TaskPrompt;
 
 // https://platform.openai.com/docs/models/gpt-4
 const GPT4_MODEL: &str = "gpt-4-0613";
@@ -23,11 +21,11 @@ pub struct Prompt {
     pub prompt: String,
 }
 
-impl TryFrom<CliPrompt> for Prompt {
+impl TryFrom<TaskPrompt> for Prompt {
     type Error = anyhow::Error;
 
-    fn try_from(translate: CliPrompt) -> Result<Self, Self::Error> {
-        let CliPrompt { prompt } = translate;
+    fn try_from(translate: TaskPrompt) -> Result<Self, Self::Error> {
+        let TaskPrompt { prompt } = translate;
         Ok(Self { prompt })
     }
 }

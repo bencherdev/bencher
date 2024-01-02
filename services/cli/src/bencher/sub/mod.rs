@@ -4,8 +4,6 @@ use async_trait::async_trait;
 
 use crate::{parser::CliSub, CliError};
 
-#[cfg(feature = "docs")]
-mod docs;
 mod mock;
 mod organization;
 mod project;
@@ -13,8 +11,6 @@ mod sub_cmd;
 mod system;
 mod user;
 
-#[cfg(feature = "docs")]
-use docs::Docs;
 use mock::Mock;
 pub use mock::MockError;
 use organization::{member::Member, organization::Organization};
@@ -51,8 +47,6 @@ pub enum Sub {
     Token(Token),
     Server(Server),
     Mock(Mock),
-    #[cfg(feature = "docs")]
-    Docs(Docs),
 }
 
 impl TryFrom<CliSub> for Sub {
@@ -80,8 +74,6 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Token(token) => Self::Token(token.try_into()?),
             CliSub::Server(server) => Self::Server(server.try_into()?),
             CliSub::Mock(mock) => Self::Mock(mock.into()),
-            #[cfg(feature = "docs")]
-            CliSub::Docs(docs) => Self::Docs(docs.into()),
         })
     }
 }
@@ -110,8 +102,6 @@ impl SubCmd for Sub {
             Self::Token(token) => token.exec().await,
             Self::Server(server) => server.exec().await,
             Self::Mock(mock) => mock.exec().await,
-            #[cfg(feature = "docs")]
-            Self::Docs(docs) => docs.exec().await,
         }
     }
 }

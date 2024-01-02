@@ -6,7 +6,6 @@ edition.workspace = true
 
 [features]
 default = ["plus"]
-docs = ["dep:clap_mangen"]
 plus = ["bencher_client/plus", "bencher_json/plus"]
 seed = []
 
@@ -31,8 +30,6 @@ tabled.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["macros", "process", "rt"] }
 url.workspace = true
-# Crate
-clap_mangen = { version = "0.2", optional = true }
 
 [dev-dependencies]
 # Workspace
