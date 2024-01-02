@@ -53,6 +53,7 @@
   "sqltools.useNodeRuntime": true,
   "cSpell.words": [
     "anychar",
+    "Astro",
     "AUTOINCREMENT",
     "bencherdev",
     "bindgen",

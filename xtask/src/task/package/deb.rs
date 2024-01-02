@@ -44,8 +44,10 @@ impl Deb {
         let control = format!("Package: bencher\nVersion: {API_VERSION}\nArchitecture: {arch}\nMaintainer: Bencher <info@bencher.dev>\nDescription: Continuous Benchmarking\n", arch = self.arch);
         std::fs::write(control_path, control)?;
 
+        let man_path = deb_path.join("usr/local/man/man1");
+        std::fs::create_dir_all(&man_path)?;
         let man = Man::try_from(TaskMan {
-            path: debian_path.clone(),
+            path: man_path,
             name: None,
         })?;
         man.exec()?;
