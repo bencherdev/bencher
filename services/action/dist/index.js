@@ -28181,7 +28181,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const toolCache = __importStar(__nccwpck_require__(7784));
 const promises_1 = __nccwpck_require__(3292);
-const swagger_json_1 = __importDefault(__nccwpck_require__(8385));
+const swagger_json_1 = __importDefault(__nccwpck_require__(4339));
 const run = async () => {
     const { bin, url, semVer } = getUrl();
     const toolPath = toolCache.find("bencher", semVer);
@@ -30126,7 +30126,7 @@ module.exports = parseParams
 
 /***/ }),
 
-/***/ 8385:
+/***/ 4339:
 /***/ ((module) => {
 
 "use strict";

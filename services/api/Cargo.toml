@@ -3,7 +3,6 @@ name = "bencher_api"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
-default-run = "api"
 
 [features]
 default = ["plus", "sentry"]
@@ -14,7 +13,6 @@ plus = [
     "dep:reqwest",
 ]
 sentry = ["dep:sentry"]
-swagger = ["dep:literally"]
 
 [dependencies]
 # Workspace
@@ -34,7 +32,6 @@ derive_more.workspace = true
 diesel = { workspace = true, features = ["chrono", "sqlite"] }
 dropshot.workspace = true
 jsonwebtoken.workspace = true
-literally = { workspace = true, optional = true }
 once_cell.workspace = true
 schemars.workspace = true
 serde.workspace = true
@@ -73,7 +70,4 @@ workspace = true
 
 [[bin]]
 name = "api"
-
-[[bin]]
-name = "swagger"
-required-features = ["swagger"]
+path = "src/main.rs"

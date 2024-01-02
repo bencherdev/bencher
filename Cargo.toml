@@ -9,6 +9,7 @@ edition = "2021"
 
 [workspace.dependencies]
 # services
+bencher_api = { path = "services/api" }
 bencher_cli = { path = "services/cli" }
 # lib
 bencher_adapter = { path = "lib/bencher_adapter" }

@@ -31,6 +31,7 @@ RUN cargo init --lib bencher_license
 
 WORKDIR /usr/src/services
 RUN cargo init api
+COPY services/api/swagger.json api/swagger.json
 RUN cargo init cli
 
 WORKDIR /usr/src

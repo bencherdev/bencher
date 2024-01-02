@@ -792,7 +792,10 @@ jobs:
         run: sudo dpkg -i ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.deb
       - name: Sanity test .deb package installation
         if: matrix.build == 'linux-x86-64'
-        run: bencher --version
+        run: |
+          bencher --version
+          bencher mock
+          man bencher
       - name: Upload .deb Artifact
         if: startsWith(matrix.build, 'linux')
         uses: actions/upload-artifact@v4
