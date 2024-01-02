@@ -1,11 +1,8 @@
 use std::{fs::Permissions, os::unix::fs::PermissionsExt, process::Command};
 
+use crate::parser::{TaskDeb, TaskMan};
+use bencher_api::API_VERSION;
 use camino::Utf8PathBuf;
-
-use crate::{
-    parser::{TaskDeb, TaskMan},
-    BENCHER_VERSION,
-};
 
 use super::man::Man;
 
@@ -44,7 +41,7 @@ impl Deb {
         std::fs::create_dir_all(&debian_path)?;
 
         let control_path = debian_path.join("control");
-        let control = format!("Package: bencher\nVersion: {BENCHER_VERSION}\nArchitecture: {arch}\nMaintainer: Bencher <info@bencher.dev>\nDescription: Continuous Benchmarking\n", arch = self.arch);
+        let control = format!("Package: bencher\nVersion: {API_VERSION}\nArchitecture: {arch}\nMaintainer: Bencher <info@bencher.dev>\nDescription: Continuous Benchmarking\n", arch = self.arch);
         std::fs::write(control_path, control)?;
 
         let man = Man::try_from(TaskMan {

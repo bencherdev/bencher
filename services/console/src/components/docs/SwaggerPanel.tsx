@@ -4,7 +4,6 @@ import { Language } from "../../i18n/ui";
 import {
 	BENCHER_CLOUD,
 	BENCHER_SELF_HOSTED,
-	BENCHER_VERSION,
 	isBencherCloud,
 	swaggerSpec,
 } from "../../util/ext";
@@ -158,7 +157,7 @@ const SwaggerPanel = (props: Props) => {
 			<p>{rustClientText(lang)}</p>
 			<code>
 				bencher_client = {"{"} git = "https://github.com/bencherdev/bencher",
-				tag = "v{BENCHER_VERSION}" {"}"}
+				branch = "main" {"}"}
 			</code>
 			<hr />
 			<div id="swagger" />

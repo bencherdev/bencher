@@ -3,11 +3,12 @@
 
 # Except
 !.cargo/
-!lib/
-!plus/
 !Cargo.toml
 !Cargo.lock
+!lib/
+!plus/
 !services/api/migrations/
 !services/api/src/
 !services/api/Cargo.toml
 !services/api/diesel.toml
+!services/api/swagger.json

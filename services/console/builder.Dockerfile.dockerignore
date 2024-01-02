@@ -3,9 +3,10 @@
 
 # Except
 !.cargo/
-!lib/bencher_valid/
 !Cargo.toml
 !Cargo.lock
+!lib/bencher_valid/
+!services/api/swagger.json
 !services/console/package-lock.json
 !services/console/package.json
 !services/console/public

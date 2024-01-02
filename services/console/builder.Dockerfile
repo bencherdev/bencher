@@ -31,6 +31,7 @@ RUN cargo init --lib bencher_license
 
 WORKDIR /usr/src/services
 RUN cargo init api
+COPY services/api/swagger.json api/swagger.json
 RUN cargo init cli
 
 WORKDIR /usr/src
@@ -44,6 +45,7 @@ RUN wasm-pack build --target web --no-default-features --features plus,wasm
 # https://hub.docker.com/_/node
 FROM node:18.17.1-bookworm
 COPY --from=wasm-builder /usr/src/lib/bencher_valid /usr/src/lib/bencher_valid
+COPY --from=wasm-builder /usr/src/services/api/swagger.json /usr/src/services/api/swagger.json
 
 WORKDIR /usr/src/services/ui
 COPY services/console/package-lock.json package-lock.json

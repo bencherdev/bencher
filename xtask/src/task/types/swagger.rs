@@ -1,8 +1,10 @@
-use std::process::Command;
+use std::fs::File;
 
 use crate::parser::TaskSwagger;
+use bencher_api::{endpoints::Api, API_VERSION};
+use dropshot::{ApiDescription, EndpointTagPolicy, TagConfig, TagDetails};
 
-const SWAGGER_PATH: &str = "./lib/bencher_valid/swagger.json";
+const SWAGGER_PATH: &str = "./services/api/swagger.json";
 
 #[derive(Debug)]
 pub struct Swagger {}
@@ -17,22 +19,49 @@ impl TryFrom<TaskSwagger> for Swagger {
 
 impl Swagger {
     pub fn exec(&self) -> anyhow::Result<()> {
-        let output = Command::new("cargo")
-            .args(["run", "--bin", "swagger", "--features", "swagger"])
-            .current_dir("./services/api")
-            .output()?;
+        let _log = bencher_logger::bootstrap_logger();
 
-        output.status.success().then_some(()).ok_or_else(|| {
-            eprintln!("{}", String::from_utf8_lossy(&output.stderr));
-            println!("{}", String::from_utf8_lossy(&output.stdout));
+        println!("🐰 Bencher OpenAPI Spec v{API_VERSION}",);
 
-            anyhow::anyhow!(
-                "Failed to generate swagger.json. Exit code: {:?}",
-                output.status.code()
-            )
-        })?;
+        println!("Generating OpenAPI JSON file at: {SWAGGER_PATH}");
+        let mut api_description = ApiDescription::new();
+        // TODO add an argument to toggle whether to include the plus endpoints
+        Api::register(
+            &mut api_description,
+            false,
+            #[cfg(feature = "plus")]
+            true,
+        )
+        .map_err(|e| anyhow::anyhow!("Failed to register API: {e}"))?;
+        let mut swagger_file = File::create(SWAGGER_PATH)?;
 
-        println!("Saved to: {SWAGGER_PATH}");
+        api_description.tag_config(TagConfig {
+            allow_other_tags: false,
+            endpoint_tag_policy: EndpointTagPolicy::AtLeastOne,
+            tag_definitions: literally::hmap!{
+                "auth" => TagDetails { description: Some("Auth".into()), external_docs: None},
+                "organizations" => TagDetails { description: Some("Organizations".into()), external_docs: None},
+                "projects" => TagDetails { description: Some("Projects".into()), external_docs: None},
+                "reports" => TagDetails { description: Some("Reports".into()), external_docs: None},
+                "perf" => TagDetails { description: Some("Perf Metrics".into()), external_docs: None},
+                "branches" => TagDetails { description: Some("Branches".into()), external_docs: None},
+                "testbeds" => TagDetails { description: Some("Testbeds".into()), external_docs: None},
+                "benchmarks" => TagDetails { description: Some("Benchmarks".into()), external_docs: None},
+                "measures" => TagDetails { description: Some("Measures".into()), external_docs: None},
+                "thresholds" => TagDetails { description: Some("Thresholds".into()), external_docs: None},
+                "statistics" => TagDetails { description: Some("Statistics".into()), external_docs: None},
+                "alerts" => TagDetails { description: Some("Alerts".into()), external_docs: None},
+                "users" => TagDetails { description: Some("Users".into()), external_docs: None},
+                "tokens" => TagDetails { description: Some("API Tokens".into()), external_docs: None},
+                "server" => TagDetails { description: Some("Server".into()), external_docs: None},
+                "spec" => TagDetails { description: Some("OpenAPI Spec".into()), external_docs: None},
+        }})
+            .openapi(bencher_api::config::API_NAME, API_VERSION)
+            .write(&mut swagger_file)
+            ?;
+
+        println!("Saved OpenAPI JSON file to: {SWAGGER_PATH}");
+
         swagger_spec()?;
 
         Ok(())

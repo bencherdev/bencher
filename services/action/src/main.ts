@@ -2,7 +2,7 @@ import * as core from "@actions/core";
 import * as toolCache from "@actions/tool-cache";
 import { chmod } from "fs/promises";
 
-import swagger from "../../../lib/bencher_valid/swagger.json";
+import swagger from "../../api/swagger.json";
 
 const run = async () => {
 	const { bin, url, semVer } = getUrl();

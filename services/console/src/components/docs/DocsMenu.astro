@@ -113,7 +113,7 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
       {
         rustCollection[lang]?.map((page) => (
           <li>
-            <a href={`/learn/${langPath(lang)}benchmarking/rust/${page.slug}/`}>{page.data.title}</a>
+            <a href={`/${langPath(lang)}learn/benchmarking/rust/${page.slug}/`}>{page.data.title}</a>
           </li>
         ))
       }

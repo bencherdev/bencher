@@ -40,5 +40,6 @@ COPY services/api/migrations migrations
 COPY services/api/src src
 COPY services/api/Cargo.toml Cargo.toml
 COPY services/api/diesel.toml diesel.toml
+COPY services/api/swagger.json swagger.json
 
 RUN cargo build --release
