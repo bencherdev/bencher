@@ -1,6 +1,24 @@
-use camino::Utf8PathBuf;
-use clap::{Parser, Subcommand, ValueEnum};
-use url::Url;
+use clap::{Parser, Subcommand};
+
+mod notify;
+mod package;
+#[cfg(feature = "plus")]
+mod plus;
+mod release;
+mod template;
+mod test;
+mod types;
+
+pub use notify::CliNotify;
+pub use package::CliDeb;
+pub use plus::{
+    prompt::{CliLanguage, CliPrompt, CliTranslate},
+    stats::CliStats,
+};
+pub use release::CliReleaseNotes;
+pub use template::{CliTemplate, CliTemplateKind};
+pub use test::{CliFlyTest, CliNetlifyTest};
+pub use types::{CliSwagger, CliTypes, CliTypeshare};
 
 /// Bencher CLI
 #[derive(Parser, Debug)]
@@ -41,135 +59,4 @@ pub enum CliSub {
     ReleaseNotes(CliReleaseNotes),
     /// Notify
     Notify(CliNotify),
-}
-
-#[derive(Parser, Debug)]
-pub struct CliTypeshare {}
-
-#[derive(Parser, Debug)]
-pub struct CliSwagger {}
-
-#[derive(Parser, Debug)]
-pub struct CliTypes {}
-
-#[derive(Parser, Debug)]
-pub struct CliTemplate {
-    /// Documentation format
-    pub template: CliTemplateTemplate,
-}
-
-/// Template template
-#[derive(ValueEnum, Debug, Clone)]
-#[clap(rename_all = "snake_case")]
-pub enum CliTemplateTemplate {
-    /// Shell installer
-    Sh,
-    /// Powershell installer
-    Ps1,
-}
-
-#[cfg(feature = "plus")]
-#[derive(Parser, Debug)]
-pub struct CliStats {
-    /// Stats JSON
-    pub stats: String,
-}
-
-#[cfg(feature = "plus")]
-#[derive(Parser, Debug)]
-pub struct CliPrompt {
-    /// Text prompt
-    pub prompt: String,
-}
-
-#[cfg(feature = "plus")]
-#[derive(Parser, Debug)]
-pub struct CliTranslate {
-    /// File input path (relative to `services/console/src/`)
-    pub input_path: Vec<Utf8PathBuf>,
-
-    // Target language
-    #[clap(value_enum, long)]
-    pub lang: Option<Vec<CliLanguage>>,
-
-    /// File output path
-    #[clap(long)]
-    pub output_path: Option<Utf8PathBuf>,
-}
-
-#[cfg(feature = "plus")]
-#[derive(ValueEnum, Debug, Clone, Copy)]
-#[clap(rename_all = "snake_case")]
-pub enum CliLanguage {
-    #[clap(alias = "de")]
-    German,
-    #[clap(alias = "es")]
-    Spanish,
-    #[clap(alias = "fr")]
-    French,
-    #[clap(alias = "ja")]
-    Japanese,
-    #[clap(alias = "ko")]
-    Korean,
-    #[clap(alias = "pt")]
-    Portuguese,
-    #[clap(alias = "ru")]
-    Russian,
-    #[clap(alias = "zh")]
-    Chinese,
-}
-
-#[derive(Parser, Debug)]
-pub struct CliFlyTest {
-    /// Run devel tests
-    #[clap(long)]
-    pub dev: bool,
-}
-
-#[derive(Parser, Debug)]
-pub struct CliNetlifyTest {
-    /// Run devel tests
-    #[clap(long)]
-    pub dev: bool,
-}
-
-#[derive(Parser, Debug)]
-pub struct CliDeb {
-    /// CLI bin path
-    pub bin: Utf8PathBuf,
-    /// .deb build directory
-    #[clap(long)]
-    pub dir: Utf8PathBuf,
-    /// Target architecture
-    #[clap(long)]
-    pub arch: String,
-}
-
-#[derive(Parser, Debug)]
-pub struct CliReleaseNotes {
-    /// Changelog path
-    #[clap(long)]
-    pub changelog: Option<Utf8PathBuf>,
-
-    /// File output path
-    #[clap(long)]
-    pub path: Option<Utf8PathBuf>,
-}
-
-#[derive(Parser, Debug)]
-pub struct CliNotify {
-    pub message: String,
-
-    #[clap(long)]
-    pub topic: Option<String>,
-    #[clap(long)]
-    pub title: Option<String>,
-    #[clap(long)]
-    pub tag: Option<String>,
-    #[clap(long)]
-    pub priority: Option<u8>,
-    #[clap(long)]
-    pub click: Option<Url>,
-    #[clap(long)]
-    pub attach: Option<Url>,
 }

@@ -1,8 +1,8 @@
-use crate::parser::{CliTemplate, CliTemplateTemplate};
+use crate::parser::{CliTemplate, CliTemplateKind};
 
 #[derive(Debug)]
 pub struct Template {
-    template: CliTemplateTemplate,
+    template: CliTemplateKind,
 }
 
 impl TryFrom<CliTemplate> for Template {
