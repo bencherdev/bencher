@@ -23,6 +23,7 @@ tokio = { workspace = true, features = ["macros", "rt"] }
 url.workspace = true
 # Crate
 async-openai = { version = "0.17", optional = true }
+minijinja = "1.0"
 notify-rust = { version = "4.10", optional = true }
 
 [lints]

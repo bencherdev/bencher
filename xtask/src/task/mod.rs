@@ -12,6 +12,7 @@ mod release_notes;
 #[cfg(feature = "plus")]
 mod stats;
 mod swagger;
+mod template;
 #[cfg(feature = "plus")]
 mod translate;
 mod types;
@@ -27,6 +28,7 @@ use release_notes::ReleaseNotes;
 #[cfg(feature = "plus")]
 use stats::Stats;
 use swagger::Swagger;
+use template::Template;
 #[cfg(feature = "plus")]
 use translate::Translate;
 use types::Types;
@@ -43,6 +45,7 @@ pub enum Sub {
     Typeshare(Typeshare),
     Swagger(Swagger),
     Types(Types),
+    Template(Template),
     #[cfg(feature = "plus")]
     Stats(Stats),
     #[cfg(feature = "plus")]
@@ -74,6 +77,7 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Typeshare(typeshare) => Self::Typeshare(typeshare.try_into()?),
             CliSub::Swagger(swagger) => Self::Swagger(swagger.try_into()?),
             CliSub::Types(types) => Self::Types(types.try_into()?),
+            CliSub::Template(template) => Self::Template(template.try_into()?),
             #[cfg(feature = "plus")]
             CliSub::Stats(stats) => Self::Stats(stats.try_into()?),
             #[cfg(feature = "plus")]
@@ -105,6 +109,7 @@ impl Sub {
             Self::Typeshare(typeshare) => typeshare.exec(),
             Self::Swagger(swagger) => swagger.exec(),
             Self::Types(types) => types.exec(),
+            Self::Template(template) => template.exec(),
             #[cfg(feature = "plus")]
             Self::Stats(stats) => stats.exec().await,
             #[cfg(feature = "plus")]

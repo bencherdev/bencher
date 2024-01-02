@@ -20,6 +20,8 @@ pub enum CliSub {
     Swagger(CliSwagger),
     /// Generate typeshare and OpenAPI spec
     Types(CliTypes),
+    /// Template CLI install scripts
+    Template(CliTemplate),
     #[cfg(feature = "plus")]
     /// Send stats to bencher.dev
     Stats(CliStats),
@@ -49,6 +51,22 @@ pub struct CliSwagger {}
 
 #[derive(Parser, Debug)]
 pub struct CliTypes {}
+
+#[derive(Parser, Debug)]
+pub struct CliTemplate {
+    /// Documentation format
+    pub template: CliTemplateTemplate,
+}
+
+/// Template template
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliTemplateTemplate {
+    /// Shell installer
+    Sh,
+    /// Powershell installer
+    Ps1,
+}
 
 #[cfg(feature = "plus")]
 #[derive(Parser, Debug)]
