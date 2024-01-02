@@ -2,7 +2,7 @@ use std::process::Command;
 
 use bencher_json::{JsonApiVersion, DEVEL_BENCHER_API_URL_STR, PROD_BENCHER_API_URL_STR};
 
-use crate::{parser::CliFlyTest, task::swagger::swagger_spec};
+use crate::{parser::CliFlyTest, task::types::swagger::swagger_spec};
 
 const BENCHER_API_URL_KEY: &str = "BENCHER_API_URL";
 const TEST_BENCHER_API_TOKEN: &str = "TEST_BENCHER_API_TOKEN";

@@ -1,4 +1,3 @@
-#![cfg(feature = "plus")]
 #![allow(clippy::unwrap_used)]
 
 use std::{fmt, io::Write};

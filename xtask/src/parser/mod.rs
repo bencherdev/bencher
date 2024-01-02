@@ -10,7 +10,7 @@ mod test;
 mod types;
 
 pub use notify::CliNotify;
-pub use package::CliDeb;
+pub use package::{CliDeb, CliMan};
 pub use plus::{
     prompt::{CliLanguage, CliPrompt, CliTranslate},
     stats::CliStats,
@@ -53,7 +53,9 @@ pub enum CliSub {
     FlyTest(CliFlyTest),
     /// Run tests against Netlify deployment
     NetlifyTest(CliNetlifyTest),
-    /// Create .deb
+    /// Create CLI man page
+    Man(CliMan),
+    /// Create CLI .deb
     Deb(CliDeb),
     /// Generate release notes
     ReleaseNotes(CliReleaseNotes),

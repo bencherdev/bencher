@@ -2,37 +2,23 @@ use clap::Parser;
 
 use crate::parser::{CliSub, CliTask};
 
-mod deb;
-mod fly_test;
-mod netlify_test;
 mod notify;
+mod package;
 #[cfg(feature = "plus")]
-mod prompt;
+mod plus;
 mod release_notes;
-#[cfg(feature = "plus")]
-mod stats;
-mod swagger;
 mod template;
-#[cfg(feature = "plus")]
-mod translate;
+mod test;
 mod types;
-mod typeshare;
 
-use deb::Deb;
-use fly_test::FlyTest;
-use netlify_test::NetlifyTest;
 use notify::Notify;
+use package::{deb::Deb, man::Man};
 #[cfg(feature = "plus")]
-use prompt::Prompt;
+use plus::{prompt::Prompt, stats::Stats, translate::Translate};
 use release_notes::ReleaseNotes;
-#[cfg(feature = "plus")]
-use stats::Stats;
-use swagger::Swagger;
 use template::Template;
-#[cfg(feature = "plus")]
-use translate::Translate;
-use types::Types;
-use typeshare::Typeshare;
+use test::{fly_test::FlyTest, netlify_test::NetlifyTest};
+use types::{swagger::Swagger, types::Types, typeshare::Typeshare};
 
 #[derive(Debug)]
 pub struct Task {
@@ -54,6 +40,7 @@ pub enum Sub {
     Translate(Translate),
     FlyTest(FlyTest),
     NetlifyTest(NetlifyTest),
+    Man(Man),
     Deb(Deb),
     ReleaseNotes(ReleaseNotes),
     Notify(Notify),
@@ -86,6 +73,7 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Translate(translate) => Self::Translate(translate.try_into()?),
             CliSub::FlyTest(fly_test) => Self::FlyTest(fly_test.try_into()?),
             CliSub::NetlifyTest(netlify_test) => Self::NetlifyTest(netlify_test.try_into()?),
+            CliSub::Man(man) => Self::Man(man.try_into()?),
             CliSub::Deb(deb) => Self::Deb(deb.try_into()?),
             CliSub::ReleaseNotes(release_notes) => Self::ReleaseNotes(release_notes.try_into()?),
             CliSub::Notify(notify) => Self::Notify(notify.try_into()?),
@@ -118,6 +106,7 @@ impl Sub {
             Self::Translate(translate) => translate.exec().await,
             Self::FlyTest(fly_test) => fly_test.exec(),
             Self::NetlifyTest(netlify_test) => netlify_test.exec().await,
+            Self::Man(man) => man.exec(),
             Self::Deb(deb) => deb.exec(),
             Self::ReleaseNotes(release_notes) => release_notes.exec(),
             Self::Notify(notify) => notify.exec().await,

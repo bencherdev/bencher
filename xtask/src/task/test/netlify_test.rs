@@ -3,7 +3,7 @@ use std::fs::File;
 use bencher_json::PROD_BENCHER_URL_STR;
 use camino::Utf8PathBuf;
 
-use crate::{parser::CliNetlifyTest, task::swagger::swagger_spec};
+use crate::{parser::CliNetlifyTest, task::types::swagger::swagger_spec};
 
 const NETLIFY_LOGS_URL_KEY: &str = "NETLIFY_LOGS_URL";
 const NETLIFY_URL: &str = "https://app.netlify.com/sites/bencher/deploys/";

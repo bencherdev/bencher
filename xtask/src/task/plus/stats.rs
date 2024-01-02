@@ -1,5 +1,3 @@
-#![cfg(feature = "plus")]
-
 use bencher_json::{JsonServerStats, PROD_BENCHER_API_URL_STR};
 
 use crate::parser::CliStats;
