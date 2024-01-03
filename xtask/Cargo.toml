@@ -29,7 +29,8 @@ url.workspace = true
 # Crate
 async-openai = { version = "0.17", optional = true }
 clap_mangen = "0.2"
-minijinja = "1.0"
+minijinja = { version = "1.0", features = ["loader"] }
+newline-converter = "0.3"
 notify-rust = { version = "4.10", optional = true }
 
 [lints]

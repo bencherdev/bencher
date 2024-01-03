@@ -75,6 +75,7 @@
     "mdx",
     "Microbenchmark",
     "milli",
+    "minijinja",
     "nanos",
     "octocrab",
     "openapi",
