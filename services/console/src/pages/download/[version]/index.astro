@@ -1,4 +1,11 @@
 ---
 export const prerender = false;
+
+const { version } = Astro.params;
+
+// Make the leading `v` optional
+// Remove leading `v` if present
+// https://semver.org/#is-v123-a-semantic-version
+const semVer = version?.replace(/^v/, "");
 ---
-<meta http-equiv="refresh" content="0;url=/download/" />
+<meta http-equiv="refresh" content={`0;url=https://github.com/bencherdev/bencher/releases/tag/v${semVer}`} />

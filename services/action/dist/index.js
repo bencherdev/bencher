@@ -28214,8 +28214,7 @@ const getSemVer = () => {
             // Use user-specified version
             // Remove leading `v` if present
             // https://semver.org/#is-v123-a-semantic-version
-            // And remove trailing `-rcX` where `X` is a number if present
-            return version.replace(/^v/, "").replace(/-rc\d+$/, "");
+            return version.replace(/^v/, "");
     }
 };
 const getBin = (semVer) => {
