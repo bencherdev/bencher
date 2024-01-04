@@ -2,13 +2,12 @@ import mdx from "@astrojs/mdx";
 import partytown from "@astrojs/partytown";
 import sitemap from "@astrojs/sitemap";
 import solidJs from "@astrojs/solid-js";
+import expressiveCode from "astro-expressive-code";
 import { defineConfig } from "astro/config";
 import { fromHtmlIsomorphic } from "hast-util-from-html-isomorphic";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeSlug from "rehype-slug";
 import wasmPack from "vite-plugin-wasm-pack";
-
-import expressiveCode from "astro-expressive-code";
 
 // https://astro.build/config
 export default defineConfig({
@@ -41,7 +40,8 @@ export default defineConfig({
 		"/learn/[lang]": "/[lang]/learn",
 		"/learn/[lang]/benchmarking": "/[lang]/learn/benchmarking",
 		"/learn/[lang]/benchmarking/rust": "/[lang]/learn/benchmarking/rust",
-		"/learn/[lang]/benchmarking/rust/[slug]": "/[lang]/learn/benchmarking/rust/[slug]",
+		"/learn/[lang]/benchmarking/rust/[slug]":
+			"/[lang]/learn/benchmarking/rust/[slug]",
 	},
 	// https://docs.astro.build/en/guides/internationalization/
 	i18n: {

@@ -16,3 +16,7 @@ pnpm-debug.log*
 
 # macOS-specific files
 .DS_Store
+
+# Copied public assets
+public/install-cli.sh
+public/install-cli.ps1
