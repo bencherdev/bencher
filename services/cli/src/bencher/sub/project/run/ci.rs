@@ -57,7 +57,12 @@ pub enum GitHubError {
     CreateComment(octocrab::Error),
     #[error("Failed to update GitHub PR comment: {0}")]
     UpdateComment(octocrab::Error),
+    #[error("GitHub Actions token (`GITHUB_TOKEN`) does not have `write` permissions for `issues`.\n{help}\nError: {0}", help = PERMISSIONS_HELP)]
+    BadPermissions(octocrab::Error),
 }
+
+// https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
+const PERMISSIONS_HELP: &str = "To fix, add `write` permissions to the job: `job: {{ \"permissions\": {{ \"issues\": \"write\" }} }}`\nSee: https://bencher.dev/docs/how-to/github-actions/#pull-requests";
 
 fn docker_env(env_var: &str) -> String {
     format!(
@@ -231,21 +236,29 @@ impl GitHubActions {
             self.ci_id.as_deref(),
         );
         // Always update the comment if it exists
-        let _comment = if let Some(comment_id) = comment_id {
-            issue_handler
-                .update_comment(comment_id, body)
-                .await
-                .map_err(GitHubError::UpdateComment)?
+        let comment = if let Some(comment_id) = comment_id {
+            issue_handler.update_comment(comment_id, body).await
         } else {
             if self.ci_only_on_alert && !report_comment.has_alert() {
                 cli_println_quietable!(log, "No alerts found. Skipping CI integration.");
                 return Ok(());
             }
-            issue_handler
-                .create_comment(issue_number, body)
-                .await
-                .map_err(GitHubError::CreateComment)?
+            issue_handler.create_comment(issue_number, body).await
         };
+        if let Err(e) = comment {
+            return Err(
+                // https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
+                if e.to_string()
+                    .contains("Resource not accessible by integration")
+                {
+                    GitHubError::BadPermissions(e)
+                } else if comment_id.is_some() {
+                    GitHubError::UpdateComment(e)
+                } else {
+                    GitHubError::CreateComment(e)
+                },
+            );
+        }
 
         Ok(())
     }

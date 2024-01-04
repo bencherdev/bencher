@@ -41,6 +41,7 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 
 1. Создайте файл `workflow` для GitHub Actions (например: `.github/workflows/pr_benchmarks.yml`)
 2. Запускайте при событиях `pull_request` только и только если запрос на вытягивание происходит из того же репозитория. Для обработки PR из форков см. [Запросы на вытягивание из форков](#pull-requests-from-forks) ниже.
+3. Установите [разрешения для `GITHUB_TOKEN`](https://docs.github.com/ru/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job) на `write` для `issues`. В зависимости от ваших настроек GitHub, это может быть не требуется. Но для всех организаций и персональных репозиториев [созданных после 02 февраля 2023 года](https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/), это становится поведением по умолчанию. См. [документацию GitHub](https://docs.github.com/ru/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token) для полного обзора.
 3. [Выберите ветку](http://localhost:3000/ru/docs/explanation/branch-selection/) для использования:
         1. Используйте текущие данные ветки, если они уже существуют. (например: `--if-branch "$GITHUB_REF_NAME"`)
         2. Создайте клон данных целевой ветки PR и порогов, если они уже существуют. (например: `--else-if-branch "$GITHUB_BASE_REF"`)

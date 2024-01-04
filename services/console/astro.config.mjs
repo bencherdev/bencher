@@ -17,6 +17,8 @@ export default defineConfig({
 	output: "hybrid",
 	// Do not use any trailing slashes in the paths below
 	redirects: {
+		"/docs/how-to/quick-start": "/docs/tutorial/quick-start",
+		"/docs/how-to/branch-selection": "/docs/explanation/branch-selection",
 		// Docs
 		"/docs/[lang]": "/[lang]/docs",
 		// Tutorial
@@ -39,6 +41,7 @@ export default defineConfig({
 		"/learn/[lang]": "/[lang]/learn",
 		"/learn/[lang]/benchmarking": "/[lang]/learn/benchmarking",
 		"/learn/[lang]/benchmarking/rust": "/[lang]/learn/benchmarking/rust",
+		"/learn/[lang]/benchmarking/rust/[slug]": "/[lang]/learn/benchmarking/rust/[slug]",
 	},
 	// https://docs.astro.build/en/guides/internationalization/
 	i18n: {
