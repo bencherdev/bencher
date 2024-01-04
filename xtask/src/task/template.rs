@@ -9,6 +9,7 @@ use crate::parser::{TaskTemplate, TaskTemplateKind};
 const CLI_PATH: &str = "services/cli";
 const SH_TEMPLATE: &str = "install-cli.sh.j2";
 const PS1_TEMPLATE: &str = "install-cli.ps1.j2";
+const TEMPLATES: &[TemplateKind] = &[TemplateKind::Sh, TemplateKind::Ps1];
 
 #[derive(Debug)]
 pub struct Template {
@@ -16,7 +17,7 @@ pub struct Template {
     templates: Vec<TemplateKind>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum TemplateKind {
     Sh,
     Ps1,
@@ -37,13 +38,13 @@ impl TryFrom<TaskTemplate> for Template {
             env.add_template_owned(name, source)?;
             vec![t]
         } else {
-            let sh = TemplateKind::Sh;
-            let (name, source) = sh.read()?;
-            env.add_template_owned(name, source)?;
-            let ps1 = TemplateKind::Ps1;
-            let (name, source) = ps1.read()?;
-            env.add_template_owned(name, source)?;
-            vec![sh, ps1]
+            let mut templates = Vec::with_capacity(TEMPLATES.len());
+            for template_kind in TEMPLATES {
+                let (name, source) = template_kind.read()?;
+                env.add_template_owned(name, source)?;
+                templates.push(*template_kind);
+            }
+            templates
         };
 
         Ok(Self { env, templates })
@@ -55,7 +56,7 @@ impl Template {
     pub fn exec(&self) -> anyhow::Result<()> {
         for template_kind in &self.templates {
             let template = self.env.get_template(template_kind.as_ref())?;
-            let ctx = TemplateContext::new(template_kind);
+            let ctx = TemplateContext::new(*template_kind);
             let mut rendered = template.render(&ctx)?;
             // minijinja strips trailing newlines from templates
             if !rendered.ends_with('\n') {
@@ -110,7 +111,7 @@ fn artifact_name(os_arch: &str) -> String {
 const BENCHER_BIN: &str = "bencher";
 
 impl TemplateKind {
-    pub fn read(&self) -> Result<(&'static str, String), std::io::Error> {
+    pub fn read(self) -> Result<(&'static str, String), std::io::Error> {
         let file = match self {
             Self::Sh => SH_TEMPLATE,
             Self::Ps1 => PS1_TEMPLATE,
@@ -118,14 +119,14 @@ impl TemplateKind {
         std::fs::read_to_string(format!("{CLI_PATH}/{file}")).map(|t| (file, t))
     }
 
-    pub fn artifacts(&self) -> Vec<TemplateArtifact> {
+    pub fn artifacts(self) -> Vec<TemplateArtifact> {
         match self {
             Self::Sh => SH_ARTIFACTS.iter().map(|a| self.as_artifact(a)).collect(),
             Self::Ps1 => PS1_ARTIFACTS.iter().map(|a| self.as_artifact(a)).collect(),
         }
     }
 
-    fn as_artifact(&self, (target_triple, os_arch): &(&str, &str)) -> TemplateArtifact {
+    fn as_artifact(self, (target_triple, os_arch): &(&str, &str)) -> TemplateArtifact {
         TemplateArtifact {
             name: artifact_name(os_arch),
             target_triple: (*target_triple).to_owned(),
@@ -144,7 +145,7 @@ pub struct TemplateContext {
 }
 
 impl TemplateContext {
-    pub fn new(template_kind: &TemplateKind) -> Self {
+    pub fn new(template_kind: TemplateKind) -> Self {
         let artifacts = template_kind.artifacts();
         Self {
             app_version: API_VERSION,

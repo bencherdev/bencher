@@ -93,6 +93,7 @@ export default defineConfig({
 		solidJs(),
 	],
 	vite: {
+		assetsInclude: ["**/*.sh", "**/*.ps1"],
 		plugins: [wasmPack("../../lib/bencher_valid")],
 	},
 	markdown: {

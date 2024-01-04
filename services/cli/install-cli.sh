@@ -17,7 +17,7 @@ set -u
 
 APP_NAME=bencher
 APP_VERSION="0.3.26-rc1"
-ARTIFACT_DOWNLOAD_URL="${INSTALLER_DOWNLOAD_URL:-https://bencher.dev/download/0.3.26-rc1}/"
+ARTIFACT_DOWNLOAD_URL="${INSTALLER_DOWNLOAD_URL:-https://bencher.dev/download/0.3.26-rc1}"
 PRINT_VERBOSE=${INSTALLER_PRINT_VERBOSE:-0}
 PRINT_QUIET=${INSTALLER_PRINT_QUIET:-0}
 NO_MODIFY_PATH=${INSTALLER_NO_MODIFY_PATH:-0}
@@ -33,7 +33,7 @@ usage() {
     cat <<EOF
 install-cli.sh
 
-Bencher CLI 0.3.26-rc1 Installer
+Bencher CLI v0.3.26-rc1 Installer
 
 This script detects what platform you're on and fetches an appropriate archive from https://bencher.dev.
 It then unpacks the binaries and installs them to \$CARGO_HOME/bin (\$HOME/.cargo/bin).
@@ -88,7 +88,7 @@ download_binary_and_run_installer() {
             *)
                 OPTIND=1
                 if [ "${arg%%--*}" = "" ]; then
-                    err "unknown option $arg"
+                    err "Unknown option: $arg"
                 fi
                 while getopts :hvq sub_arg "$arg"; do
                     case "$sub_arg" in
@@ -107,7 +107,7 @@ download_binary_and_run_installer() {
                             PRINT_QUIET=1
                             ;;
                         *)
-                            err "unknown option -$OPTARG"
+                            err "Unknown option: -$OPTARG"
                             ;;
                         esac
                 done
@@ -151,7 +151,9 @@ download_binary_and_run_installer() {
             _bin="bencher"
             ;;
         *)
-            err "there isn't a package for $_arch"
+            err "There isn't a package for $_arch"
+            err "If you would like for there to be, please open an issue on GitHub:"
+            err "https://github.com/bencherdev/bencher/issues"
             ;;
     esac
 
@@ -165,17 +167,17 @@ download_binary_and_run_installer() {
     fi
     local _file="$_dir/input$_zip_ext"
 
-    say "downloading $APP_NAME $APP_VERSION ${_arch}" 1>&2
-    say_verbose "  from $_url" 1>&2
-    say_verbose "  to $_file" 1>&2
+    say "Downloading Bencher CLI ($APP_NAME v$APP_VERSION)" 1>&2
+    say_verbose "  From: $_url" 1>&2
+    say_verbose "  To:   $_file" 1>&2
 
     ensure mkdir -p "$_dir"
 
     if ! downloader "$_url" "$_file"; then
-      say "failed to download $_url"
-      say "this may be a standard network error, but it may also indicate"
-      say "that $APP_NAME's release process is not working. When in doubt"
-      say "please feel free to open an issue!"
+      say "Failed to download Bencher CLI from $_url"
+      say "This may be a network error, or it may be an issue on our end."
+      say "If so please, open an issue on GitHub:"
+      say "https://github.com/bencherdev/bencher/issues"
       exit 1
     fi
 
@@ -189,12 +191,12 @@ download_binary_and_run_installer() {
             ensure tar xf "$_file" --strip-components 1 -C "$_dir"
             ;;
         "")
-            say_verbose "No archive format: $_zip_ext"
+            say_verbose "Installing single binary: $_bin"
             cp "$_file" "$_dir/$_bin"
-            _bins = "$_bin"
+            _bins="$_bin"
             ;;
         *)
-            err "unknown archive format: $_zip_ext"
+            err "Unknown archive format: $_zip_ext"
             ;;
     esac
 
@@ -277,9 +279,9 @@ install() {
         _install_dir_expr='$HOME/.cargo/bin'
         _env_script_path_expr='$HOME/.cargo/env'
     else
-        err "could not find your CARGO_HOME or HOME dir to install binaries to"
+        err "Home not found: Could not find your CARGO_HOME or HOME dir to install binaries"
     fi
-    say "installing to $_install_dir"
+    say "Installing Bencher CLI to $_install_dir"
     ensure mkdir -p "$_install_dir"
 
     # copy all the binaries to the install dir
@@ -290,10 +292,10 @@ install() {
         ensure cp "$_bin" "$_install_dir"
         # unzip seems to need this chmod
         ensure chmod +x "$_install_dir/$_bin_name"
-        say "  $_bin_name"
+        say_verbose "Installed: $_bin_name"
     done
 
-    say "everything's installed!"
+    say "🐰 Bencher CLI installed!"
 
     if [ "0" = "$NO_MODIFY_PATH" ]; then
         add_install_dir_to_path "$_install_dir_expr" "$_env_script_path" "$_env_script_path_expr" ".profile"
@@ -403,12 +405,12 @@ add_install_dir_to_path() {
             # If the script now exists, add the line to source it to the rcfile
             # (This will also create the rcfile if it doesn't exist)
             if [ -f "$_env_script_path" ]; then
-                say_verbose "adding $_robust_line to $_target"
+                say_verbose "Adding $_robust_line to $_target"
                 ensure echo "$_robust_line" >> "$_target"
                 return 1
             fi
         else
-            say_verbose "$_install_dir already on PATH"
+            say_verbose "$_install_dir already in PATH"
         fi
     fi
 }
@@ -436,7 +438,7 @@ check_proc() {
     # Check for /proc by looking for the /proc/self/exe link
     # This is only run on Linux
     if ! test -L /proc/self/exe ; then
-        err "fatal: Unable to find /proc/self/exe.  Is /proc mounted?  Installation cannot proceed without /proc."
+        err "proc not found: Unable to find /proc/self/exe.  Is /proc mounted?  Installation cannot proceed without /proc."
     fi
 }
 
@@ -455,7 +457,7 @@ get_bitness() {
     elif [ "$_current_exe_head" = "$(printf '\177ELF\002')" ]; then
         echo 64
     else
-        err "unknown platform bitness"
+        err "Unknown platform bitness"
     fi
 }
 
@@ -486,7 +488,7 @@ get_endianness() {
     elif [ "$_current_exe_endianness" = "$(printf '\002')" ]; then
         echo "${cputype}${suffix_eb}"
     else
-        err "unknown platform endianness"
+        err "Unknown platform endianness"
     fi
 }
 
@@ -580,7 +582,7 @@ get_architecture() {
             ;;
 
         *)
-            err "unrecognized OS type: $_ostype"
+            err "Unrecognized OS type: $_ostype"
             ;;
 
     esac
@@ -658,7 +660,7 @@ get_architecture() {
             _cputype=loongarch64
             ;;
         *)
-            err "unknown CPU type: $_cputype"
+            err "Unknown CPU type: $_cputype"
 
     esac
 
@@ -668,7 +670,7 @@ get_architecture() {
             x86_64)
                 # 32-bit executable for amd64 = x32
                 if is_host_amd64_elf; then {
-                    err "x32 linux unsupported"
+                    err "Unsuppored Userland: Linux x32"
                 }; else
                     _cputype=i686
                 fi
@@ -688,7 +690,7 @@ get_architecture() {
                 fi
                 ;;
             riscv64gc)
-                err "riscv64 with 32-bit userland unsupported"
+                err "Unsuppored Userland: riscv64 32-bit"
                 ;;
         esac
     fi
@@ -731,7 +733,7 @@ err() {
 
 need_cmd() {
     if ! check_cmd "$1"
-    then err "need '$1' (command not found)"
+    then err "Command not found: '$1'"
     fi
 }
 
@@ -748,7 +750,7 @@ assert_nz() {
 # will immediately terminate with an error showing the failing
 # command.
 ensure() {
-    if ! "$@"; then err "command failed: $*"; fi
+    if ! "$@"; then err "Command failed: $*"; fi
 }
 
 # This is just for indicating that commands' results are being
