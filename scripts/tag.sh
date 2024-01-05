@@ -11,6 +11,11 @@ cargo xtask types
 git add ./services/api/swagger.json
 git add ./services/console/src/types/bencher.ts
 
+# Generate CLI scripts
+cargo xtask template
+git add ./services/cli/install-cli.sh
+git add ./services/cli/install-cli.ps1
+
 # Generate the Bencher CLI GitHub Action
 cd ./services/action
 npm install --include=dev

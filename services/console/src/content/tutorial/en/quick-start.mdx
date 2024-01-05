@@ -6,10 +6,7 @@ sortOrder: 1
 ---
 
 import BencherIntro from "../../../chunks/general/en/bencher-intro.mdx";
-import QuickStart1 from "../../../chunks/tutorial/quick-start.1.mdx";
-import QuickStart2 from "../../../chunks/tutorial/quick-start.2.mdx";
-import QuickStart3 from "../../../chunks/tutorial/quick-start.3.mdx";
-import QuickStart4 from "../../../chunks/tutorial/quick-start.4.mdx";
+import CliInstallScript from "../../../chunks/general/en/cli-install-script.mdx";
 import QuickStart5 from "../../../chunks/tutorial/quick-start.5.mdx";
 import QuickStart6 from "../../../chunks/tutorial/quick-start.6.mdx";
 import QuickStart7 from "../../../chunks/tutorial/quick-start.7.mdx";
@@ -26,37 +23,11 @@ import QuickStart11 from "../../../chunks/tutorial/quick-start.11.mdx";
 
 ## Install `bencher` CLI
 
-In order to install the `bencher` CLI you will need to have `cargo` installed. Check to see if you have `cargo` installed.
+<CliInstallScript />
 
-Run: `cargo --version`
+For additional installation options, see [how to install the `bencher` CLI](/docs/how-to/install-cli).
 
-You should see something like:
-
-<QuickStart1 />
-
-It is okay if your version number is different. It's just important that this command works.
-If not follow the [instructions for installing `cargo` via `rustup`](https://rustup.rs/).
-
-On Linux or macOS, run:
-
-<QuickStart2 />
-
-<br />
-
-With `cargo` installed, we can install the `bencher` CLI.
-
-Run:
-<QuickStart3 />
-
-You should see something like:
-
-<QuickStart4 />
-
-Again, it is okay if your output is different. It's just important that this command works.
-
-<br />
-
-Finally, lets test that we have the `bencher` CLI installed.
+Now, lets test that we have the `bencher` CLI installed.
 
 Run: `bencher --version`
 

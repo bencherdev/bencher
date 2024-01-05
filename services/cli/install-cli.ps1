@@ -159,9 +159,9 @@ https://github.com/bencherdev/bencher/issues
       Break
     }
     "" {
-      Write-Verbose "Installing single binary: $bin_name"
-      Copy-Item -Path "$dir_path" -Destination "$tmp\$bin_name"
-      $bin_names = "$bin_name"
+      Write-Verbose "Installing single binary: $bin_name.exe"
+      Copy-Item -Path "$dir_path" -Destination "$tmp\$bin_name.exe"
+      $bin_names = "$bin_name.exe"
       Break
     }
     Default {
