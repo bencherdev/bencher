@@ -14,6 +14,12 @@ It then unpacks the binaries and installs them to $env:CARGO_HOME\bin ($HOME\.ca
 If $env:CARGO_HOME\bin does not exist, it falls back to creating it.
 It will then add that dir to PATH by editing your Environment.Path registry key.
 
+If you get an error that says "running scripts is disabled on this system":
+- `Open Powershell` with `Run as Administrator`
+- Run: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
+- Enter: `Y`
+- Rerun this script
+
 .PARAMETER ArtifactDownloadUrl
 The URL of the directory where artifacts can be fetched from
 
@@ -112,9 +118,11 @@ function Download($download_url, $platforms) {
   if (-not $platforms.ContainsKey($arch)) {
     # should not be possible, as currently we always produce X64 binaries.
     $platforms_json = ConvertTo-Json $platforms
-    throw @"Error: There isn't a package for $arch
+    throw @"
+Error: There isn't a package for $arch
 If you would like for there to be, please open an issue on GitHub:
-https://github.com/bencherdev/bencher/issues"@
+https://github.com/bencherdev/bencher/issues
+"@
   }
 
   # Lookup what we expect this platform to look like
@@ -126,7 +134,7 @@ https://github.com/bencherdev/bencher/issues"@
 
   # Make a new temp dir to unpack things to
   $tmp = New-Temp-Dir
-  $dir_path = "$tmp\$app_name$zip_ext"
+  $dir_path = "$tmp\input$zip_ext"
 
   # Download and unpack!
   $url = "$download_url/$artifact_name"
@@ -152,7 +160,7 @@ https://github.com/bencherdev/bencher/issues"@
     }
     "" {
       Write-Verbose "Installing single binary: $bin_name"
-      cp "$dir_path" "$tmp\$bin_name"
+      Copy-Item -Path "$dir_path" -Destination "$tmp\$bin_name"
       $bin_names = "$bin_name"
       Break
     }
@@ -172,7 +180,6 @@ https://github.com/bencherdev/bencher/issues"@
 
 function Invoke-Installer($bin_paths) {
   # first try CARGO_HOME, then fallback to HOME
-  # (for whatever reason $HOME is not a normal env var and doesn't need the $env: prefix)
   $dest_dir = if (($base_dir = $env:CARGO_HOME)) {
     Join-Path $base_dir "bin"
   } elseif (($base_dir = $HOME)) {
@@ -190,7 +197,9 @@ function Invoke-Installer($bin_paths) {
     Write-Verbose "Installed: $installed_file"
   }
 
-  Write-Information "🐰 Bencher CLI installed!"
+  $rabbit16 = [System.Convert]::toInt32("1F430", 16)
+  $rabbit32 = [System.Char]::ConvertFromUtf32($rabbit16)
+  Write-Information "$rabbit32 Bencher CLI installed!"
   if (-not $NoModifyPath) {
     if (Add-Path $dest_dir) {
         Write-Information ""
