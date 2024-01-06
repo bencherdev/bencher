@@ -1,13 +1,14 @@
 use bencher_json::{Jwt, Url};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
+pub mod docker;
 pub mod mock;
 pub mod organization;
 pub mod project;
 pub mod system;
-pub mod up;
 pub mod user;
 
+use docker::{CliDown, CliUp};
 use mock::CliMock;
 use organization::{member::CliMember, CliOrganization};
 use project::{
@@ -16,7 +17,6 @@ use project::{
     CliProject,
 };
 use system::{auth::CliAuth, server::CliServer};
-use up::CliUp;
 use user::{token::CliToken, CliUser};
 
 use self::project::statistic::CliStatistic;
@@ -98,6 +98,8 @@ pub enum CliSub {
 
     /// Run `docker compose up` for Bencher Self-Hosted
     Up(CliUp),
+    /// Run `docker compose down` for Bencher Self-Hosted
+    Down(CliDown),
 }
 
 #[derive(Args, Debug)]

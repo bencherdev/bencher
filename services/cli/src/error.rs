@@ -7,7 +7,7 @@ pub enum CliError {
     #[error("{0}")]
     Mock(#[from] crate::bencher::sub::MockError),
     #[error("{0}")]
-    Up(#[from] crate::bencher::sub::UpError),
+    Docker(#[from] crate::bencher::sub::DockerError),
 
     #[error("Failed to create date time from seconds: {0}")]
     DateTime(i64),

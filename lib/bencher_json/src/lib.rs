@@ -113,6 +113,10 @@ pub static DEVEL_BENCHER_API_URL: Lazy<url::Url> = Lazy::new(|| {
         .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{DEVEL_BENCHER_API_URL_STR}\": {e}"))
 });
 
+// Dynamic and/or Private Ports (49152-65535)
+// https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=61016
+pub const BENCHER_API_PORT: u16 = 61016;
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonAny {}

@@ -2,14 +2,16 @@ use std::convert::TryFrom;
 
 use crate::{parser::CliSub, CliError};
 
+mod docker;
 mod mock;
 mod organization;
 mod project;
 mod sub_cmd;
 mod system;
-mod up;
 mod user;
 
+pub use docker::DockerError;
+use docker::{down::Down, up::Up};
 use mock::Mock;
 pub use mock::MockError;
 use organization::{member::Member, organization::Organization};
@@ -21,8 +23,6 @@ use project::{
 };
 pub use sub_cmd::SubCmd;
 use system::{auth::Auth, server::Server};
-use up::Up;
-pub use up::UpError;
 use user::resource::User;
 use user::token::Token;
 
@@ -49,6 +49,7 @@ pub enum Sub {
     Server(Server),
     Mock(Mock),
     Up(Up),
+    Down(Down),
 }
 
 impl TryFrom<CliSub> for Sub {
@@ -77,6 +78,7 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Server(server) => Self::Server(server.try_into()?),
             CliSub::Mock(mock) => Self::Mock(mock.into()),
             CliSub::Up(up) => Self::Up(up.into()),
+            CliSub::Down(down) => Self::Down(down.into()),
         })
     }
 }
@@ -105,6 +107,7 @@ impl SubCmd for Sub {
             Self::Server(server) => server.exec().await,
             Self::Mock(mock) => mock.exec().await,
             Self::Up(up) => up.exec().await,
+            Self::Down(down) => down.exec().await,
         }
     }
 }

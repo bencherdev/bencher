@@ -5,7 +5,7 @@ use bencher_json::{
     system::config::{
         JsonConsole, JsonDatabase, JsonLogging, JsonSecurity, JsonServer, LogLevel, ServerLog,
     },
-    JsonConfig,
+    JsonConfig, BENCHER_API_PORT,
 };
 use bencher_token::DEFAULT_SECRET_KEY;
 use once_cell::sync::Lazy;
@@ -23,9 +23,7 @@ pub const BENCHER_CONFIG_PATH: &str = "BENCHER_CONFIG_PATH";
 
 const DEFAULT_CONFIG_PATH: &str = "bencher.json";
 const DEFAULT_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
-// Dynamic and/or Private Ports (49152-65535)
-// https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=61016
-const DEFAULT_PORT: u16 = 61016;
+
 // 1 megabyte or 1_048_576 bytes
 const DEFAULT_MAX_BODY_SIZE: usize = 2 << 19;
 const DEFAULT_DB_PATH: &str = "data/bencher.db";
@@ -45,7 +43,7 @@ static DEFAULT_CONSOLE_URL: Lazy<Url> = Lazy::new(|| {
 });
 
 static DEFAULT_BIND_ADDRESS: Lazy<SocketAddr> =
-    Lazy::new(|| SocketAddr::new(DEFAULT_IP, DEFAULT_PORT));
+    Lazy::new(|| SocketAddr::new(DEFAULT_IP, BENCHER_API_PORT));
 
 #[derive(Debug, Clone)]
 pub struct Config(JsonConfig);
