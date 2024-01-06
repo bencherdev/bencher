@@ -1,0 +1,33 @@
+import QSOrgLsOutput from "../qs-org-ls-output.mdx";
+import QSProjectCreateOutput from "../qs-project-create-output.mdx";
+
+## 创建一个项目
+
+现在我们有了用户帐户和API令牌，我们可以创建一个项目。
+首先，我们需要知道我们新项目将属于哪个组织。
+
+运行：`bencher org ls`
+
+你应该看到类似以下的东西：
+
+<QSOrgLsOutput />
+
+你的输出应比以上略有不同：
+- `uuid` 是伪随机的
+- `name` 和 `slug` 将基于你的用户名
+- `created` 和 `modified` 时间戳应该是你刚注册的时间
+
+<br />
+
+我们现在可以在你的组织中创建一个新项目。
+将你的组织slug替换到下方命令的 `--org` 参数 (例如 `你的组织_slug`)。
+
+运行：`bencher project create --org 你的组织_slug --url http://www.savewalterwhite.com "Save Walter White"`
+
+你应该看到类似以下的东西：
+
+<QSProjectCreateOutput />
+
+同样，你的输出应该和以上稍有不同。
+只需确保这个命令能正常运行。
+记下Project `slug` 字段 (例如 `save-walter-white-12345`)。

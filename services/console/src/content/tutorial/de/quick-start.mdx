@@ -7,18 +7,11 @@ sortOrder: 1
 
 import BencherIntro from "../../../chunks/general/de/bencher-intro.mdx";
 import QSInstallCli from "../../../chunks/tutorial/de/qs-install-cli.mdx";
-
-import QuickStart1 from "../../../chunks/tutorial/quick-start.1.mdx";
-import QuickStart2 from "../../../chunks/tutorial/quick-start.2.mdx";
-import QuickStart3 from "../../../chunks/tutorial/quick-start.3.mdx";
-import QuickStart4 from "../../../chunks/tutorial/quick-start.4.mdx";
-import QuickStart5 from "../../../chunks/tutorial/quick-start.5.mdx";
-import QuickStart6 from "../../../chunks/tutorial/quick-start.6.mdx";
-import QuickStart7 from "../../../chunks/tutorial/quick-start.7.mdx";
-import QuickStart8 from "../../../chunks/tutorial/quick-start.8.mdx";
-import QuickStart9 from "../../../chunks/tutorial/quick-start.9.mdx";
-import QuickStart10 from "../../../chunks/tutorial/quick-start.10.mdx";
-import QuickStart11 from "../../../chunks/tutorial/quick-start.11.mdx";
+import QSBencherCloud from "../../../chunks/tutorial/de/qs-bencher-cloud.mdx";
+import QSApiToken from "../../../chunks/tutorial/de/qs-api-token.mdx";
+import QSCreateProject from "../../../chunks/tutorial/de/qs-create-project.mdx";
+import QSRunReport from "../../../chunks/tutorial/de/qs-run-report.mdx";
+import QSGenerateAlert from "../../../chunks/tutorial/de/qs-generate-alert.mdx";
 
 ## Was ist Bencher?
 
@@ -30,186 +23,23 @@ import QuickStart11 from "../../../chunks/tutorial/quick-start.11.mdx";
 
 <br />
 
-## Erstellen Sie ein Bencher Cloud Konto
-
-Bencher ist Open-Source und selbst hostbar.
-Wenn Sie an Self-Hosting interessiert sind, schauen Sie sich das [Bencher Docker-Tutorial](/de/docs/tutorial/docker/) an.
-Für dieses Tutorial werden wir jedoch Bencher Cloud verwenden.
-
-### <a id="signup-for-bencher-cloud" href="/auth/signup" target="_blank">Registrieren Sie sich für Bencher Cloud</a>
-<br />
-
-Sobald Sie ein Konto erstellt haben, müssen Sie Ihre E-Mail-Adresse bestätigen.
-Überprüfen Sie Ihre E-Mails auf einen Bestätigungslink.
-Danach sollten Sie bei Bencher Cloud angemeldet sein.
+<QSBencherCloud />
 
 <br />
 
-## Erstellen Sie ein API-Token
-
-Um die Bencher-API zu verwenden, müssen Sie ein API-Token erstellen.
-<a href="/console" target="_blank">Navigieren Sie zur Bencher-Konsole</a>.
-Fahren Sie mit der Maus über Ihren Namen in der rechten oberen Ecke.
-Ein Dropdown-Menü sollte erscheinen. Wählen Sie `Tokens`.
-Auf der API-Tokens Seite klicken Sie auf den `➕ Hinzufügen`-Button.
-
-### <a id="add-an-api-token" href="/auth/signup" target="_blank">Ein API-Token hinzufügen</a>
-<br />
-
-Sobald Sie Ihr neues API-Token erstellt haben, müssen Sie es in Ihre Zwischenablage kopieren.
-Im Terminal, in dem Sie arbeiten möchten, exportieren Sie das API-Token als Umgebungsvariable.
-
-Führen Sie aus: `export BENCHER_API_TOKEN=IHR_TOKEN`
-
-Wenn Sie dann ausführen: `echo $BENCHER_API_TOKEN`
-
-Sollten Sie sehen:
-
-```
-$ echo $BENCHER_API_TOKEN
-IHR_TOKEN
-```
+<QSApiToken />
 
 <br />
 
-> 🐰 Hinweis: Wenn Sie zu einem anderen Terminal wechseln, müssen Sie das API-Token erneut exportieren.
+<QSCreateProject />
 
 <br />
 
-## Erstellen Sie ein Projekt
-
-Jetzt, da wir ein Benutzerkonto und ein API-Token haben, können wir ein Projekt erstellen.
-Zuerst müssen wir wissen, zu welcher Organisation unser neues Projekt gehört.
-
-Führen Sie aus: `bencher org ls`
-
-Sie sollten so etwas sehen:
-
-<QuickStart6 />
-
-Ihre Ausgabe sollte leicht von der oben gezeigten abweichen:
-- Die `uuid` ist pseudorandom
-- Der `name` und `slug` basieren auf Ihrem Benutzernamen
-- Die `created` und `modified` Zeitstempel stammen von Ihrer Anmeldung
+<QSRunReport />
 
 <br />
 
-Wir können nun ein neues Projekt innerhalb Ihrer Organisation erstellen.
-Ersetzen Sie Ihren Organisations-`slug` durch das Argument `--org` (dh `IHR_ORG_SLUG`) im unten stehenden Befehl.
-
-Führen Sie aus: `bencher project create --org IHR_ORG_SLUG --url http://www.savewalterwhite.com "Save Walter White"`
-
-Sie sollten so etwas sehen:
-
-<QuickStart7 />
-
-Wiederum sollte Ihr Ergebnis etwas anders aussehen als das oben gezeigte.
-Es ist nur wichtig, dass dieser Befehl funktioniert.
-Notieren Sie sich das Projekt `slug` Feld (z.B. `save-walter-white-12345`).
-
-<br />
-
-## Führen Sie einen Bericht aus
-
-Endlich sind wir bereit, einige Benchmark-Metriken zu sammeln!
-Um die Sache einfach zu halten, verwenden wir in diesem Tutorial Testdaten.
-
-Führen Sie aus: `bencher mock`
-
-Sie sollten so etwas sehen:
-
-<QuickStart8 />
-
-Ihre Ausgabe sollte leicht von der oben gezeigten abweichen, da die Daten pseudorandom sind.
-Es ist nur wichtig, dass dieser Befehl funktioniert.
-
-<br />
-
-Jetzt führen wir einen Bericht mit Test-Benchmark-Messdaten aus.
-Ersetzen Sie Ihren Projekt `slug` durch das Argument `--project` (dh `IHR_PROJECT_SLUG`) im unten stehenden Befehl.
-
-Führen Sie aus: `bencher run --project IHR_PROJECT_SLUG "bencher mock"`
-
-Sie sollten so etwas sehen:
-
-<QuickStart9 />
-
-<br />
-
-Sie können nun die Ergebnisse aus jedem der Benchmarks im Browser anzeigen.
-Klicken Sie auf die Links unter `View results` oder kopieren und fügen Sie sie ein.
-Es sollte nur einen einzigen Datenpunkt für jedes Benchmark geben, also lassen Sie uns mehr Daten hinzufügen!
-
-<br />
-
-Zuerst setzen wir unseren Projektslug als Umgebungsvariable, damit wir ihn nicht mit `--project` bei jedem einzelnen Lauf angeben müssen.
-
-Führen Sie aus: `export BENCHER_PROJECT=save-walter-white-12345`
-
-Wenn Sie dann ausführen: `echo $BENCHER_PROJECT`
-
-Sollten Sie sehen:
-
-<QuickStart10 />
-
-<br />
-
-Lassen Sie uns den gleichen Befehl erneut ohne `--project` ausführen, um mehr Daten zu generieren.
-
-Führen Sie aus: `bencher run "bencher mock"`
-
-<br />
-
-Jetzt generieren wir mehr Daten, aber diesmal leiten wir unsere Ergebnisse in `bencher run` um.
-
-Führen Sie aus: `bencher mock | bencher run`
-
-<br />
-
-Manchmal möchten Sie vielleicht Ihre Ergebnisse in einer Datei speichern und `bencher run` holt sie ab.
-
-Führen Sie aus: `bencher run "bencher mock > results.json" --file results.json`
-
-<br />
-
-Ebenso könnte ein separater Prozess Ihre Benchmarks durchführen und Ihre Ergebnisse in einer Datei speichern. Dann holt `bencher run` sie einfach ab.
-
-Führen Sie aus: `bencher mock > results.json && bencher run --file results.json`
-
-<br />
-
-Schließlich lassen Sie uns eine Menge Daten mit dem Argument `--iter` von `bencher run` generieren.
-
-Führen Sie aus: `bencher run --iter 16 "bencher mock"`
-
-<br />
-
-> 🐰 Tipp: Schauen Sie sich die [Unterlagen zu `bencher run` CLI-Unterbefehl](/de/docs/explanation/bencher-run/) für einen vollständigen Überblick darüber, was `bencher run` alles kann!
-
-<br />
-
-## Erstellen Sie einen Alert
-
-Jetzt, da wir einige historische Daten für unsere Benchmarks haben, lassen Sie uns einen Alert generieren!
-Alerts werden erzeugt, wenn ein Benchmark-Ergebnis als Leistungsrückgang erkannt wird.
-Also simulieren wir einen Leistungsrückgang!
-
-Führen Sie aus: `bencher run "bencher mock --pow 8"`
-
-<br />
-
-Am Ende der Ausgabe sollte ein neuer Abschnitt namens `View alerts`:
-
-<QuickStart11 />
-
-<br />
-
-Sie können nun die Alerts für jedes Benchmark im Browser anzeigen.
-Klicken Sie auf die Links unter `View alerts` oder kopieren und fügen Sie sie ein.
-
-<br />
-
-> 🐰 Tipp: Schauen Sie sich die [Schwellenwert- & Alert-Dokumentation](/de/docs/explanation/thresholds/) für einen vollständigen Überblick darüber an, wie Leistungsrückgänge erkannt werden!
+<QSGenerateAlert />
 
 <br />
 <br />

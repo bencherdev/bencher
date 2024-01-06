@@ -1,0 +1,80 @@
+import QSMockOutput from "../qs-mock-output.mdx";
+import QSRunOutput from "../qs-run-output.mdx";
+import QSExportProjectOutput from "../qs-export-project-output.mdx";
+
+## 보고서 실행
+
+드디어 벤치마크 정보를 수집할 준비가 되었습니다!
+이 튜토리얼에서는 간단하게 하기 위해 가짜 데이터를 사용하겠습니다.
+
+실행: `bencher mock`
+
+다음과 같은 내용이 나와야 합니다:
+
+<QSMockOutput />
+
+당신의 출력 결과는 위의 출력 결과와 약간 다르게 나올 것입니다, 데이터는 의사무작위입니다.
+이 명령이 작동하는 것이 중요합니다.
+
+<br />
+
+이제 가짜 벤치마크 메트릭 데이터를 사용하여 보고서를 실행해 보겠습니다.
+아래 명령에서 프로젝트의 `slug`를 `--project` 인수로 대체합니다 (예: `YOUR_PROJECT_SLUG`).
+
+실행: `bencher run --project YOUR_PROJECT_SLUG "bencher mock"`
+
+다음과 같은 내용이 나와야 합니다:
+
+<QSRunOutput />
+
+<br />
+
+이제 각 벤치마크의 결과를 브라우저에서 볼 수 있습니다.
+`View results` 링크를 클릭하거나 복사해서 붙여넣기하세요.
+각 벤치마크에 대해서는 단일 데이터 점만 있으므로, 데이터를 더 추가합시다!
+
+<br />
+
+먼저 프로젝트 슬러그를 환경 변수로 설정하여, 모든 실행에서 `--project`를 제공하지 않아도 되도록 합시다.
+
+실행: `export BENCHER_PROJECT=save-walter-white-12345`
+
+그런 다음 다음을 실행하면: `echo $BENCHER_PROJECT`
+
+다음을 볼 수 있어야 합니다:
+
+<QSExportProjectOutput />
+
+<br />
+
+다시 한번 `--project` 없이 동일한 명령을 실행하여 더 많은 데이터를 생성하겠습니다.
+
+실행: `bencher run "bencher mock"`
+
+<br />
+
+이번에는 결과를 `bencher run`으로 파이프하여 더 많은 데이터를 생성해 보겠습니다.
+
+실행: `bencher mock | bencher run`
+
+<br />
+
+가끔 결과를 파일에 저장하고 `bencher run`이 결과를 가져오게 하고 싶을 수도 있습니다.
+
+실행: `bencher run "bencher mock > results.json" --file results.json`
+
+<br />
+
+또한 다른 프로세스가 벤치마크를 실행하고 결과를 파일에 저장하도록 하고, `bencher run`이 그 결과를 가져오도록 만들 수도 있습니다.
+
+실행: `bencher mock > results.json && bencher run --file results.json`
+
+<br />
+
+마지막으로, `bencher run`의 `--iter` 인수를 사용하여 많은 데이터를 생성합시다.
+
+실행: `bencher run --iter 16 "bencher mock"`
+
+<br />
+
+> 🐰 팁: [`bencher run` CLI 서브커맨드 문서](/ko/docs/explanation/bencher-run/)에서 `bencher run`이 할 수 있는 모든 것에 대한 전체 개요를 확인하세요!

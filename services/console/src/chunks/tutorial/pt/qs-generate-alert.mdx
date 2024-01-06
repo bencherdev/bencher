@@ -1,0 +1,24 @@
+import QSAlertOutput from "../qs-alert-output.mdx";
+
+## Gerar um Alerta
+
+Agora que temos alguns dados históricos para nossos benchmarks, vamos gerar um Alerta!
+Os alertas são gerados quando o resultado de um benchmark é considerado uma regressão de desempenho.
+Então, vamos simular uma regressão de desempenho!
+
+Execute: `bencher run "bencher mock --pow 8"`
+
+<br />
+
+Deve haver uma nova seção no final da saída chamada `View alerts`:
+
+<QSAlertOutput />
+
+<br />
+
+Agora você pode ver os alertas para cada benchmark no navegador.
+Clique ou copie e cole os links de `View alerts`.
+
+<br />
+
+> 🐰 Dica: Confira a [documentação sobre Limiares & Alertas](/pt/docs/explanation/thresholds/) para uma visão completa de como regressões de desempenho são detectadas!

@@ -7,18 +7,11 @@ sortOrder: 1
 
 import BencherIntro from "../../../chunks/general/zh/bencher-intro.mdx";
 import QSInstallCli from "../../../chunks/tutorial/zh/qs-install-cli.mdx";
-
-import QuickStart1 from "../../../chunks/tutorial/quick-start.1.mdx";
-import QuickStart2 from "../../../chunks/tutorial/quick-start.2.mdx";
-import QuickStart3 from "../../../chunks/tutorial/quick-start.3.mdx";
-import QuickStart4 from "../../../chunks/tutorial/quick-start.4.mdx";
-import QuickStart5 from "../../../chunks/tutorial/quick-start.5.mdx";
-import QuickStart6 from "../../../chunks/tutorial/quick-start.6.mdx";
-import QuickStart7 from "../../../chunks/tutorial/quick-start.7.mdx";
-import QuickStart8 from "../../../chunks/tutorial/quick-start.8.mdx";
-import QuickStart9 from "../../../chunks/tutorial/quick-start.9.mdx";
-import QuickStart10 from "../../../chunks/tutorial/quick-start.10.mdx";
-import QuickStart11 from "../../../chunks/tutorial/quick-start.11.mdx";
+import QSBencherCloud from "../../../chunks/tutorial/zh/qs-bencher-cloud.mdx";
+import QSApiToken from "../../../chunks/tutorial/zh/qs-api-token.mdx";
+import QSCreateProject from "../../../chunks/tutorial/zh/qs-create-project.mdx";
+import QSRunReport from "../../../chunks/tutorial/zh/qs-run-report.mdx";
+import QSGenerateAlert from "../../../chunks/tutorial/zh/qs-generate-alert.mdx";
 
 ## 什么是Bencher？
 
@@ -30,186 +23,23 @@ import QuickStart11 from "../../../chunks/tutorial/quick-start.11.mdx";
 
 <br />
 
-## 创建一个Bencher Cloud账户
-
-Bencher是开源的，可以自行托管。
-如果你对自行托管感兴趣，请查看 [Bencher Docker教程](/zh/docs/tutorial/docker/)。
-不过在本教程中，我们将使用Bencher Cloud。
-
-### <a id="signup-for-bencher-cloud" href="/auth/signup" target="_blank">注册Bencher Cloud</a>
-<br />
-
-一旦你创建了一个帐户，你需要确认你的邮箱地址。
-查看你的邮箱中的确认链接。
-然后，你应该可以登录到Bencher Cloud。
+<QSBencherCloud />
 
 <br />
 
-## 创建一个API令牌
-
-为了使用Bencher API，你需要创建一个API令牌。
-<a href="/console" target="_blank">导航到Bencher Console</a>。
-将鼠标悬停在右上角的名字上。
-应该会出现一个下拉菜单。选择 `Tokens`。
-在API Tokens页面，点击 `➕添加` 按钮。
-
-### <a id="add-an-api-token" href="/auth/signup" target="_blank">添加一个API令牌</a>
-<br />
-
-一旦你创建了新的API令牌，你需要将它复制到剪贴板。
-在你计划使用的终端中，将API令牌作为环境变量导出。
-
-运行：`export BENCHER_API_TOKEN=你的令牌`
-
-然后运行: `echo $BENCHER_API_TOKEN`
-
-你应该看到：
-
-```
-$ echo $BENCHER_API_TOKEN
-你的令牌
-```
+<QSApiToken />
 
 <br />
 
-> 🐰 注意：如果你切换到其他终端，你需要再次导出API令牌。
+<QSCreateProject />
 
 <br />
 
-## 创建一个项目
-
-现在我们有了用户帐户和API令牌，我们可以创建一个项目。
-首先，我们需要知道我们新项目将属于哪个组织。
-
-运行：`bencher org ls`
-
-你应该看到类似以下的东西：
-
-<QuickStart6 />
-
-你的输出应比以上略有不同：
-- `uuid` 是伪随机的
-- `name` 和 `slug` 将基于你的用户名
-- `created` 和 `modified` 时间戳应该是你刚注册的时间
+<QSRunReport />
 
 <br />
 
-我们现在可以在你的组织中创建一个新项目。
-将你的组织slug替换到下方命令的 `--org` 参数 (例如 `你的组织_slug`)。
-
-运行：`bencher project create --org 你的组织_slug --url http://www.savewalterwhite.com "Save Walter White"`
-
-你应该看到类似以下的东西：
-
-<QuickStart7 />
-
-同样，你的输出应该和以上稍有不同。
-只需确保这个命令能正常运行。
-记下Project `slug` 字段 (例如 `save-walter-white-12345`)。
-
-<br />
-
-## 运行一个报告
-
-我们终于可以开始收集一些基准度量数据了！
-为了简单起见，我们在本教程中将使用模拟数据。
-
-运行：`bencher mock`
-
-你应该看到类似以下的东西：
-
-<QuickStart8 />
-
-你的输出应该和以上稍有不同，因为数据是伪随机的。
-只需这个命令能正常运行。
-
-<br />
-
-现在让我们使用模拟的基准度量数据运行一个报告。
-将你的项目 `slug`替换到下方命令的 `--project` 参数 (例如`你的项目_slug`)。
-
-运行：`bencher run --project 你的项目_slug "bencher mock"`
-
-你应该看到类似以下的东西：
-
-<QuickStart9 />
-
-<br />
-
-你现在可以在浏览器中查看每个基准测试的结果。
-点击或复制并粘贴 `View results` 的链接。
-现在每个基准测试应该只有一项数据，让我们添加更多数据！
-
-<br />
-
-首先，让我们将项目slug设置为环境变量，这样我们就不需要在每次运行命令时提供 `--project`。
-
-运行：`export BENCHER_PROJECT=save-walter-white-12345`
-
-然后运行：`echo $BENCHER_PROJECT`
-
-你应该看到：
-
-<QuickStart10 />
-
-<br />
-
-我们再次运行同样的命令（不使用 `--project`）来生成更多数据。
-
-运行：`bencher run "bencher mock"`
-
-<br />
-
-现在，让我们生成更多的数据，但这次我们将结果传给 `bencher run`。
-
-运行：`bencher mock | bencher run`
-
-<br />
-
-有时你可能想将你的结果保存到一个文件中，并让 `bencher run` 来读取它们。
-
-运行：`bencher run "bencher mock > results.json" --file results.json`
-
-<br />
-
-同样地，你可能有一个独立的进程运行你的基准测试并将你的结果保存到一个文件中。然后 `bencher run` 将会读取它们。
-
-运行：`bencher mock > results.json && bencher run --file results.json`
-
-<br />
-
-最后，让我们通过 `bencher run` 的 `--iter` 参数生成大量的数据。
-
-运行：`bencher run --iter 16 "bencher mock"`
-
-<br />
-
-> 🐰 提示：查看 [`bencher run` CLI子命令文档](/zh/docs/explanation/bencher-run/)以获取全面了解`bencher run`能干什么！
-
-<br />
-
-## 生成一个警报
-
-现在我们的基准测试有了一些历史数据，让我们生成一个警报！
-警报是当基准结果被确定为性能退化时生成的。
-所以让我们模拟一个性能退化！
-
-运行：`bencher run "bencher mock --pow 8"`
-
-<br />
-
-在输出的最后部分应该有一个新的区域，叫作 `View alerts`：
-
-<QuickStart11 />
-
-<br />
-
-你现在可以在浏览器中查看每个基准测试的警报。
-点击或复制并粘贴 `View alerts` 的链接。
-
-<br />
-
-> 🐰 提示：查看 [阈值和警报文档](/zh/docs/explanation/thresholds/)以全面了解如何检测性能退化！
+<QSGenerateAlert />
 
 <br />
 <br />

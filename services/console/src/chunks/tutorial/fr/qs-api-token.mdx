@@ -1,0 +1,28 @@
+## Créez un Jeton API
+
+Pour utiliser l'API Bencher, vous aurez besoin de créer un jeton API.
+<a href="/console" target="_blank">Rendez-vous sur la Console Bencher</a>.
+Passez votre souris sur votre nom dans le coin supérieur droit.
+Un menu déroulant devrait apparaître. Sélectionnez `Tokens`.
+Une fois sur la page des jetons API, cliquez sur le bouton `➕ Ajouter`.
+
+### <a id="add-an-api-token" href="/auth/signup" target="_blank">Ajoutez un Jeton API</a>
+<br />
+
+Une fois que vous avez créé votre nouveau jeton API, vous devrez le copier dans votre presse-papiers.
+Dans le terminal dans lequel vous prévoyez de travailler, exportez le jeton API en tant que variable d'environnement.
+
+Exécutez: `export BENCHER_API_TOKEN=VOTRE_TOKEN`
+
+Si vous exécutez ensuite: `echo $BENCHER_API_TOKEN`
+
+Vous devriez voir:
+
+```
+$ echo $BENCHER_API_TOKEN
+VOTRE_TOKEN
+```
+
+<br />
+
+> 🐰 Note: Si vous passez à un autre terminal, vous devrez exporter à nouveau le jeton API.

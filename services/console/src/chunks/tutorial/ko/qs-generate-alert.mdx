@@ -1,0 +1,24 @@
+import QSAlertOutput from "../qs-alert-output.mdx";
+
+## 알림 생성
+
+이제 벤치마크에 대한 히스토리 데이터가 있으니, 알림을 생성해 봅시다!
+알림은 벤치마크 결과가 성능 성하위로 판단되었을 때 생성됩니다.
+그럼 성능 성하위를 시뮬레이션해봅시다!
+
+실행: `bencher run "bencher mock --pow 8"`
+
+<br />
+
+출력 결과의 끝 부분에 새로운 섹션인 `View alerts`가 있어야 합니다:
+
+<QSAlertOutput />
+
+<br />
+
+이제 각 벤치마크의 알림을 브라우저에서 볼 수 있습니다.
+`View alerts` 링크를 클릭하거나 복사해서 붙여넣기하세요.
+
+<br />
+
+> 🐰 팁: 성능 성하위가 어떻게 검출되는지에 대한 전체 개요를 보려면 [임계값 & 알림 문서](/ko/docs/explanation/thresholds/)를 확인하세요!

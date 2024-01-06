@@ -1,0 +1,33 @@
+import QSOrgLsOutput from "../qs-org-ls-output.mdx";
+import QSProjectCreateOutput from "../qs-project-create-output.mdx";
+
+## 프로젝트 생성
+
+이제 사용자 계정과 API 토큰이 있으므로 프로젝트를 생성할 수 있습니다.
+먼저 새 프로젝트가 속할 조직을 알아야 합니다.
+
+실행: `bencher org ls`
+
+다음과 같은 내용이 나와야 합니다:
+
+<QSOrgLsOutput />
+
+당신의 출력 결과는 위의 출력 결과와 약간 다르게 나올 것입니다:
+- `uuid`는 의사무작위입니다
+- `name`와 `slug`는 이름에 기반합니다
+- `created`와 `modified` 타임스탬프는 당신이 방금 가입했을 때부터 시작됩니다
+
+<br />
+
+이제 조직 내에 새 프로젝트를 생성할 수 있습니다.
+아래 명령에서 조직의 `slug`를 `--org` 인수로 대체합니다 (예: `YOUR_ORG_SLUG`).
+
+실행: `bencher project create --org YOUR_ORG_SLUG --url http://www.savewalterwhite.com "Save Walter White"`
+
+다음과 같은 내용이 나와야 합니다:
+
+<QSProjectCreateOutput />
+
+다시 한 번, 당신의 출력 결과는 위의 출력 결과와 약간 다르게 나올 것입니다.
+이 명령이 작동하는 것이 중요합니다.
+프로젝트의 `slug` 필드 (예: `save-walter-white-12345`)를 기억해두세요.

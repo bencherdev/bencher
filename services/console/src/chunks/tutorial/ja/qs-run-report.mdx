@@ -1,0 +1,80 @@
+import QSMockOutput from "../qs-mock-output.mdx";
+import QSRunOutput from "../qs-run-output.mdx";
+import QSExportProjectOutput from "../qs-export-project-output.mdx";
+
+## レポートを実行する
+
+ついにベンチマークのメトリックを収集する準備が整いました！
+このチュートリアルでは簡単のため、モックデータを使用します。
+
+実行：`bencher mock`
+
+以下のような結果が表示されます：
+
+<QSMockOutput />
+
+あなたの出力は上記の結果と少し異なるはずです、なぜならデータは疑似ランダムだからです。
+大切なのは、このコマンドが動作することです。
+
+<br />
+
+では、モックのベンチマークメトリックデータを使用してレポートを実行してみましょう。
+下記のコマンドの`--project`引数に、プロジェクト`slug`（つまり、`YOUR_PROJECT_SLUG`）を代入します。
+
+実行：`bencher run --project YOUR_PROJECT_SLUG "bencher mock"`
+
+以下のような結果が表示されます：
+
+<QSRunOutput />
+
+<br />
+
+ここでもブラウザで各ベンチマークの結果を見ることができます。
+`View results`からリンクをクリックするか、コピーしてペーストします。
+各ベンチマークには一つだけのデータポイントがあるはずなので、データをもっと追加しましょう！
+
+<br />
+
+まず、プロジェクトのスラッグを環境変数として設定して、それぞれの実行で`--project`を指定しなくても済むようにしましょう。
+
+実行: `export BENCHER_PROJECT=save-walter-white-12345`
+
+その後、次のように実行してください： `echo $BENCHER_PROJECT`
+
+以下のように表示されます：
+
+<QSExportProjectOutput />
+
+<br />
+
+同じコマンドをもう一度`--project`なしで実行し、さらにデータを生成します。
+
+実行： `bencher run "bencher mock"`
+
+<br />
+
+さらにデータを生成しますが、今度は結果を`bencher run`にパイプします。
+
+実行: `bencher mock | bencher run`
+
+<br />
+
+時々、結果をファイルに保存し、`bencher run`でそれらを取得したいことがあります。
+
+実行： `bencher run "bencher mock > results.json" --file results.json`
+
+<br />
+
+また、別のプロセスでベンチマークを実行し、結果をファイルに保存すると、`bencher run`がそれらを取得します。
+
+実行: `bencher mock > results.json && bencher run --file results.json`
+
+<br />
+
+最後に、`bencher run`の`--iter`引数を使用して多くのデータを生成します。
+
+実行： `bencher run --iter 16 "bencher mock"`
+
+<br />
+
+> 🐰 ヒント: [`bencher run` CLIサブコマンドのドキュメント](/ja/docs/explanation/bencher-run/)をチェックして、`bencher run`ができるすべてのことを完全に把握してください！

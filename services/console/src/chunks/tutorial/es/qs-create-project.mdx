@@ -1,0 +1,33 @@
+import QSOrgLsOutput from "../qs-org-ls-output.mdx";
+import QSProjectCreateOutput from "../qs-project-create-output.mdx";
+
+## Crea un Proyecto
+
+Ahora que tenemos una cuenta de usuario y un token de API, podemos crear un Proyecto.
+Primero, necesitamos saber a qué organización pertenecerá nuestro nuevo proyecto.
+
+Ejecuta: `bencher org ls`
+
+Deberías ver algo como:
+
+<QSOrgLsOutput />
+
+Tu salida debería ser ligeramente diferente a la anterior:
+- El `uuid` es pseudorandom.
+- El `name` y `slug` estarán basados en tu nombre de usuario.
+- Las marcas de tiempo `created` y `modified` serán de cuando te acabas de registrar.
+
+<br />
+
+Ahora podemos crear un nuevo Proyecto dentro de tu Organización.
+Sustituye el `slug` de tu Organización por el argumento `--org` (es decir, `EL_SLUG_DE_TU_ORG`) en el comando de abajo.
+
+Ejecuta: `bencher project create --org EL_SLUG_DE_TU_ORG --url http://www.salvemosaWalterWhite.com "Save Walter White"`
+
+Deberías ver algo como:
+
+<QSProjectCreateOutput />
+
+De nuevo, tu resultado debe ser ligeramente diferente al anterior.
+Lo importante es que este comando funcione.
+Toma nota del campo `slug` del Proyecto (es decir, `save-walter-white-12345`).

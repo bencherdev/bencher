@@ -1,0 +1,24 @@
+import QSAlertOutput from "../qs-alert-output.mdx";
+
+## 生成一个警报
+
+现在我们的基准测试有了一些历史数据，让我们生成一个警报！
+警报是当基准结果被确定为性能退化时生成的。
+所以让我们模拟一个性能退化！
+
+运行：`bencher run "bencher mock --pow 8"`
+
+<br />
+
+在输出的最后部分应该有一个新的区域，叫作 `View alerts`：
+
+<QSAlertOutput />
+
+<br />
+
+你现在可以在浏览器中查看每个基准测试的警报。
+点击或复制并粘贴 `View alerts` 的链接。
+
+<br />
+
+> 🐰 提示：查看 [阈值和警报文档](/zh/docs/explanation/thresholds/)以全面了解如何检测性能退化！

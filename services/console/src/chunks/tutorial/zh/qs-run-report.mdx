@@ -1,0 +1,80 @@
+import QSMockOutput from "../qs-mock-output.mdx";
+import QSRunOutput from "../qs-run-output.mdx";
+import QSExportProjectOutput from "../qs-export-project-output.mdx";
+
+## 运行一个报告
+
+我们终于可以开始收集一些基准度量数据了！
+为了简单起见，我们在本教程中将使用模拟数据。
+
+运行：`bencher mock`
+
+你应该看到类似以下的东西：
+
+<QSMockOutput />
+
+你的输出应该和以上稍有不同，因为数据是伪随机的。
+只需这个命令能正常运行。
+
+<br />
+
+现在让我们使用模拟的基准度量数据运行一个报告。
+将你的项目 `slug`替换到下方命令的 `--project` 参数 (例如`你的项目_slug`)。
+
+运行：`bencher run --project 你的项目_slug "bencher mock"`
+
+你应该看到类似以下的东西：
+
+<QSRunOutput />
+
+<br />
+
+你现在可以在浏览器中查看每个基准测试的结果。
+点击或复制并粘贴 `View results` 的链接。
+现在每个基准测试应该只有一项数据，让我们添加更多数据！
+
+<br />
+
+首先，让我们将项目slug设置为环境变量，这样我们就不需要在每次运行命令时提供 `--project`。
+
+运行：`export BENCHER_PROJECT=save-walter-white-12345`
+
+然后运行：`echo $BENCHER_PROJECT`
+
+你应该看到：
+
+<QSExportProjectOutput />
+
+<br />
+
+我们再次运行同样的命令（不使用 `--project`）来生成更多数据。
+
+运行：`bencher run "bencher mock"`
+
+<br />
+
+现在，让我们生成更多的数据，但这次我们将结果传给 `bencher run`。
+
+运行：`bencher mock | bencher run`
+
+<br />
+
+有时你可能想将你的结果保存到一个文件中，并让 `bencher run` 来读取它们。
+
+运行：`bencher run "bencher mock > results.json" --file results.json`
+
+<br />
+
+同样地，你可能有一个独立的进程运行你的基准测试并将你的结果保存到一个文件中。然后 `bencher run` 将会读取它们。
+
+运行：`bencher mock > results.json && bencher run --file results.json`
+
+<br />
+
+最后，让我们通过 `bencher run` 的 `--iter` 参数生成大量的数据。
+
+运行：`bencher run --iter 16 "bencher mock"`
+
+<br />
+
+> 🐰 提示：查看 [`bencher run` CLI子命令文档](/zh/docs/explanation/bencher-run/)以获取全面了解`bencher run`能干什么！

@@ -1,0 +1,24 @@
+import QSAlertOutput from "../qs-alert-output.mdx";
+
+## Erstellen Sie einen Alert
+
+Jetzt, da wir einige historische Daten für unsere Benchmarks haben, lassen Sie uns einen Alert generieren!
+Alerts werden erzeugt, wenn ein Benchmark-Ergebnis als Leistungsrückgang erkannt wird.
+Also simulieren wir einen Leistungsrückgang!
+
+Führen Sie aus: `bencher run "bencher mock --pow 8"`
+
+<br />
+
+Am Ende der Ausgabe sollte ein neuer Abschnitt namens `View alerts`:
+
+<QSAlertOutput />
+
+<br />
+
+Sie können nun die Alerts für jedes Benchmark im Browser anzeigen.
+Klicken Sie auf die Links unter `View alerts` oder kopieren und fügen Sie sie ein.
+
+<br />
+
+> 🐰 Tipp: Schauen Sie sich die [Schwellenwert- & Alert-Dokumentation](/de/docs/explanation/thresholds/) für einen vollständigen Überblick darüber an, wie Leistungsrückgänge erkannt werden!

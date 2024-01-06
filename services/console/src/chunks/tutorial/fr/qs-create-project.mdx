@@ -1,0 +1,33 @@
+import QSOrgLsOutput from "../qs-org-ls-output.mdx";
+import QSProjectCreateOutput from "../qs-project-create-output.mdx";
+
+## Créez un Projet
+
+Maintenant que nous avons un compte d'utilisateur et un jeton API, nous pouvons créer un Projet.
+D'abord, nous devons savoir à quelle organisation notre nouveau projet appartiendra.
+
+Exécutez: `bencher org ls`
+
+Vous devriez voir quelque chose comme:
+
+<QSOrgLsOutput />
+
+Votre sortie devrait être légèrement différente de celle-ci:
+- Le `uuid` est pseudorandom
+- Le `name` et `slug` seront basés sur votre nom d'utilisateur
+- Les horodatages `created` et `modified` seront ceux de votre inscription récente
+
+<br />
+
+Nous pouvons maintenant créer un nouveau Projet à l'intérieur de votre Organisation.
+Substituez le `slug` de votre Organisation à l'argument `--org` (ie `VOTRE_SLUG_ORG`) dans la commande ci-dessous.
+
+Exécuter: `bencher project create --org VOTRE_SLUG_ORG --url http://www.savewalterwhite.com "Save Walter White"`
+
+Vous devriez voir quelque chose comme:
+
+<QSProjectCreateOutput />
+
+Encore une fois, votre sortie devrait être légèrement différente que celle-ci.
+Il est juste important que cette commande fonctionne.
+Prenez note du champ `slug` du Projet (ie `save-walter-white-12345`).

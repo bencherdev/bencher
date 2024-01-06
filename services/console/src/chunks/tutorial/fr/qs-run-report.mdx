@@ -1,0 +1,80 @@
+import QSMockOutput from "../qs-mock-output.mdx";
+import QSRunOutput from "../qs-run-output.mdx";
+import QSExportProjectOutput from "../qs-export-project-output.mdx";
+
+## Exécutez un Rapport
+
+Nous sommes enfin prêts à collecter quelques mesures de benchmark!
+Pour des raisons de simplicité, nous utiliserons des données fictives dans ce tutoriel.
+
+Exécutez: `bencher mock`
+
+Vous devriez voir quelque chose comme:
+
+<QSMockOutput />
+
+Votre sortie devrait être légèrement différente de celle-ci, car les données sont pseudorandom.
+Il est juste important que cette commande fonctionne.
+
+<br />
+
+Maintenant, exécutons un rapport en utilisant des données fictives de mesures de benchmark.
+Substituez votre `slug` de Projet à l'argument `--project` (ie `VOTRE_SLUG_PROJET`) dans la commande ci-dessous.
+
+Exécutez: `bencher run --project VOTRE_SLUG_PROJET "bencher mock"`
+
+Vous devriez voir quelque chose comme:
+
+<QSRunOutput />
+
+<br />
+
+Vous pouvez maintenant consulter les résultats de chacun des benchmarks dans le navigateur.
+Cliquez ou copiez et collez les liens de `View results`.
+Il ne devrait y avoir qu'un seul point de données pour chaque benchmark, alors ajoutons d'autres données!
+
+<br />
+
+D'abord, mettons notre slug de Projet en tant que variable d'environnement, de sorte que nous n'avons pas à le fournir avec le `--project` à chaque exécution.
+
+Exécutez: `export BENCHER_PROJECT=save-walter-white-12345`
+
+Si vous exécutez ensuite: `echo $BENCHER_PROJECT`
+
+Vous devriez voir:
+
+<QSExportProjectOutput />
+
+<br />
+
+Ré-exécutons la même commande encore sans `--project` pour générer plus de données.
+
+Exécutez: `bencher run "bencher mock"`
+
+<br />
+
+Maintenant, générions plus de données, mais cette fois nous transmettrons nos résultats dans `bencher run`.
+
+Exécutez: `bencher mock | bencher run`
+
+<br />
+
+Parfois, vous pouvez vouloir sauvegarder vos résultats dans un fichier et que `bencher run` les récupère.
+
+Exécutez: `bencher run "bencher mock > results.json" --file results.json`
+
+<br />
+
+De même, vous pouvez avoir un processus séparé qui exécute vos benchmarks et sauvegardez vos résultats dans un fichier. Ensuite `bencher run` viendra simplement les récupérer.
+
+Exécutez: `bencher mock > results.json && bencher run --file results.json`
+
+<br />
+
+Enfin, mettons en place beaucoup de données en utilisant l'argument `--iter` de `bencher run`.
+
+Exécutez: `bencher run --iter 16 "bencher mock"`
+
+<br />
+
+> 🐰 Astuce: Consultez les [doc CLI sous-commande `bencher run`](/fr/docs/explanation/bencher-run/) pour un aperçu complet de tout ce que `bencher run` peut faire!
