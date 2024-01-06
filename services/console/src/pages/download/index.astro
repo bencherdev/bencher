@@ -1,3 +1,33 @@
 ---
+import LegalLayout from "../../layouts/legal/LegalLayout.astro";
+import LinkFragment from "../../components/site/LinkFragment.astro";
+
+import * as CliPreBuiltBins from "../../chunks/general/cli-pre-built-bins.mdx";
+import * as CliPackages from "../../chunks/general/cli-packages.mdx";
+import * as ApiImages from "../../chunks/general/api-images.mdx";
+import * as ConsoleImages from "../../chunks/general/console-images.mdx";
+
+const PreBuiltBins = CliPreBuiltBins.Content;
+const Packages = CliPackages.Content;
+const ApiImgs = ApiImages.Content;
+const ConsoleImgs = ConsoleImages.Content;
 ---
-<meta http-equiv="refresh" content="0;url=https://github.com/bencherdev/bencher/releases" />
+
+<LegalLayout
+  title="Download"
+  description="Download Bencher software"
+  heading="Bencher Download"
+>
+    <h2 id="cli" class="title is-2">CLI <LinkFragment fragment="cli"/></h2>
+    <h3 id="cli-bins" class="title is-3">Pre-Built Binaries <LinkFragment fragment="cli-bins"/></h3>
+    <PreBuiltBins />
+    <h3 id="cli-packages" class="title is-3">Packages <LinkFragment fragment="cli-packages"/></h3>
+    <Packages />
+
+    <h2 id="api" class="title is-2">API<LinkFragment fragment="api"/></h2>
+    <ApiImgs />
+
+    <h2 id="console" class="title is-2">Web Console<LinkFragment fragment="console"/></h2>
+    <ConsoleImgs />
+
+</LegalLayout>

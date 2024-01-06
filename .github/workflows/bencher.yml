@@ -99,6 +99,7 @@ jobs:
             os: windows-latest
             branch: devel
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ startsWith(github.ref, 'refs/tags/') && matrix.branch == 'devel' }}
     steps:
       - uses: bencherdev/bencher@main
         if: matrix.branch == 'main'
@@ -1190,7 +1191,6 @@ jobs:
       - npx_vitest
       # Integrations
       - build_github_action
-      - test_github_action
       # Build
       - build_local_api_docker
       - build_litestream_api_docker

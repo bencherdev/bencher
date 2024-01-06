@@ -6,57 +6,29 @@ sortOrder: 1
 ---
 
 import { BENCHER_VERSION } from "../../../util/ext";
-import CliInstallScript from "../../../chunks/general/en/cli-install-script.mdx";
-
-import CliDebian from "../../../chunks/how_to/cli-debian.mdx";
-import CliGitHubActions from "../../../chunks/how_to/cli-github-actions.mdx";
-import CliGitHubActionsVersion from "../../../chunks/how_to/cli-github-actions-version.mdx";
-import CliFromSource from "../../../chunks/how_to/cli-from-source.mdx";
-import CliOtherLinux from "../../../chunks/how_to/cli-other-linux.mdx";
+import CliInstallScripts from "../../../chunks/general/en/cli-install-scripts.mdx";
+import CliInstallGitHubActions from "../../../chunks/how_to/en/cli-install-github-actions.mdx";
+import CliInstallSource from "../../../chunks/how_to/en/cli-install-source.mdx";
+import CliPreBuiltBins from "../../../chunks/general/cli-pre-built-bins.mdx";
+import CliPackages from "../../../chunks/general/cli-packages.mdx";
 
 ## Install CLI with Script
 
-<CliInstallScript />
+<CliInstallScripts />
 
-## GitHub Actions
+<CliInstallGitHubActions />
 
-Install the Bencher CLI using the [GitHub Action](https://github.com/marketplace/actions/bencher-cli).
-See [how to use GitHub Actions](/docs/how-to/github-actions/) for more details.
-
-<CliGitHubActions />
-
-There is an optional `version` argument to specify an exact version of the Bencher CLI to use.
-Otherwise, it will default to using the latest CLI version.
-Specify an exact version if and only if using Bencher *Self-Hosted*.
-Do __not__ specify an exact version if using Bencher *Cloud* as there are still occasional breaking changes.
-
-<CliGitHubActionsVersion />
-
-## From Source
-
-For all other environments, you can try to install from source.
-
-<CliFromSource />
+<CliInstallSource />
 
 ## Pre-Built Binaries
 
-- Linux
-  - <a href={`https://github.com/bencherdev/bencher/releases/download/v${BENCHER_VERSION}/bencher-v${BENCHER_VERSION}-linux-x86-64`}>x86_64</a>
-  - <a href={`https://github.com/bencherdev/bencher/releases/download/v${BENCHER_VERSION}/bencher-v${BENCHER_VERSION}-linux-arm-64`}>ARM64</a>
-- MacOS
-  - <a href={`https://github.com/bencherdev/bencher/releases/download/v${BENCHER_VERSION}/bencher-v${BENCHER_VERSION}-macos-x86-64`}>x86_64</a>
-  - <a href={`https://github.com/bencherdev/bencher/releases/download/v${BENCHER_VERSION}/bencher-v${BENCHER_VERSION}-macos-arm-64`}>ARM64</a>
-- Windows
-  - <a href={`https://github.com/bencherdev/bencher/releases/download/v${BENCHER_VERSION}/bencher-v${BENCHER_VERSION}-windows-x86-64.exe`}>x86_64</a>
-  - <a href={`https://github.com/bencherdev/bencher/releases/download/v${BENCHER_VERSION}/bencher-v${BENCHER_VERSION}-windows-arm-64.exe`}>ARM64</a>
+<CliPreBuiltBins />
 
 See the <a href={`https://github.com/bencherdev/bencher/releases/tag/v${BENCHER_VERSION}`}>latest release page</a> for a full list.
 
 ## Packages
 
-- Debian (.deb)
-  - <a href={`https://github.com/bencherdev/bencher/releases/download/v${BENCHER_VERSION}/bencher-v${BENCHER_VERSION}-x86-64.deb`}>x86_64</a>
-  - <a href={`https://github.com/bencherdev/bencher/releases/download/v${BENCHER_VERSION}/bencher-v${BENCHER_VERSION}-arm-64.deb`}>ARM64</a>
+<CliPackages />
 
 See the <a href={`https://github.com/bencherdev/bencher/releases/tag/v${BENCHER_VERSION}`}>latest release page</a> for a full list.
 
