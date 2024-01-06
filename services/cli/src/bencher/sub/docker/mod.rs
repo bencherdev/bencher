@@ -1,10 +1,3 @@
-use bollard::{
-    container::{RemoveContainerOptions, StopContainerOptions},
-    Docker,
-};
-
-use crate::cli_println;
-
 pub mod down;
 pub mod logs;
 pub mod up;
@@ -39,33 +32,4 @@ pub enum DockerError {
         container: String,
         err: bollard::errors::Error,
     },
-}
-
-async fn stop_container(docker: &Docker, container: &str) -> Result<(), DockerError> {
-    if docker.inspect_container(container, None).await.is_ok() {
-        cli_println!("Stopping existing `{container}` container...");
-        let options = Some(StopContainerOptions { t: 5 });
-        docker
-            .stop_container(container, options)
-            .await
-            .map_err(|err| DockerError::StopContainer {
-                container: container.to_owned(),
-                err,
-            })?;
-
-        cli_println!("Removing existing `{container}` container...");
-        let options = Some(RemoveContainerOptions {
-            force: true,
-            ..Default::default()
-        });
-        docker
-            .remove_container(container, options)
-            .await
-            .map_err(|err| DockerError::RemoveContainer {
-                container: container.to_owned(),
-                err,
-            })?;
-    }
-
-    Ok(())
 }

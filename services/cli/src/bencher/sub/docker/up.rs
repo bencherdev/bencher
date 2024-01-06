@@ -1,4 +1,3 @@
-use crate::{bencher::sub::SubCmd, parser::docker::CliUp, CliError};
 use bencher_json::{
     BENCHER_API_PORT, BENCHER_UI_PORT, LOCALHOST_BENCHER_API_URL_STR, LOCALHOST_BENCHER_URL_STR,
 };
@@ -8,7 +7,12 @@ use bollard::{
     Docker,
 };
 
-use crate::cli_println;
+use crate::{
+    bencher::sub::{docker::down::stop_container, SubCmd},
+    cli_println,
+    parser::docker::CliUp,
+    CliError,
+};
 
 use super::{
     DockerError, BENCHER_API_CONTAINER, BENCHER_API_IMAGE, BENCHER_UI_CONTAINER, BENCHER_UI_IMAGE,
@@ -28,8 +32,8 @@ impl SubCmd for Up {
     async fn exec(&self) -> Result<(), CliError> {
         let docker = Docker::connect_with_local_defaults().map_err(DockerError::Daemon)?;
 
-        super::stop_container(&docker, BENCHER_UI_CONTAINER).await?;
-        super::stop_container(&docker, BENCHER_API_CONTAINER).await?;
+        stop_container(&docker, BENCHER_UI_CONTAINER).await?;
+        stop_container(&docker, BENCHER_API_CONTAINER).await?;
 
         start_container(
             &docker,
