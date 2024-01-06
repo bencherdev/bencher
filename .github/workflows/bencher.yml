@@ -915,7 +915,7 @@ jobs:
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Deploy Local API to Fly.io
         working-directory: ./services/api
-        run: flyctl deploy --local-only --config fly.dev.toml --wait-timeout 300
+        run: flyctl deploy --local-only --config fly/fly.dev.toml --wait-timeout 300
       - uses: actions/cache@v3
         with:
           path: |
@@ -951,7 +951,7 @@ jobs:
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Deploy Litestream API to Fly.io Test
         working-directory: ./services/api
-        run: flyctl deploy --local-only --config fly.test.toml --wait-timeout 300
+        run: flyctl deploy --local-only --config fly/fly.test.toml --wait-timeout 300
 
   backup_database:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/express'
@@ -1019,7 +1019,7 @@ jobs:
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Deploy Litestream API to Fly.io Prod
         working-directory: ./services/api
-        run: flyctl deploy --local-only --config fly.toml --wait-timeout 300
+        run: flyctl deploy --local-only --config fly/fly.toml --wait-timeout 300
       - uses: actions/cache@v3
         with:
           path: |
