@@ -4,8 +4,8 @@ use super::{swagger::Swagger, typeshare::Typeshare};
 
 #[derive(Debug)]
 pub struct Types {
-    pub typeshare: Typeshare,
     pub swagger: Swagger,
+    pub typeshare: Typeshare,
 }
 
 impl TryFrom<TaskTypes> for Types {
@@ -13,16 +13,16 @@ impl TryFrom<TaskTypes> for Types {
 
     fn try_from(_types: TaskTypes) -> Result<Self, Self::Error> {
         Ok(Self {
-            typeshare: Typeshare {},
             swagger: Swagger {},
+            typeshare: Typeshare {},
         })
     }
 }
 
 impl Types {
     pub fn exec(&self) -> anyhow::Result<()> {
-        self.typeshare.exec()?;
         self.swagger.exec()?;
+        self.typeshare.exec()?;
 
         Ok(())
     }
