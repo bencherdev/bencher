@@ -1,0 +1,80 @@
+import QuickStart8 from "../quick-start.8.mdx";
+import QuickStart9 from "../quick-start.9.mdx";
+import QuickStart10 from "../quick-start.10.mdx";
+
+## Run a Report
+
+We are finally ready to collect some benchmark metrics!
+For simplicity's sake, we will be using mock data in this tutorial.
+
+Run: `bencher mock`
+
+You should see something like:
+
+<QuickStart8 />
+
+Your output should be slightly different than the above, as the data are pseudorandom.
+It's just important that this command works.
+
+<br />
+
+Now lets run a report using mock benchmark metric data.
+Substitute your Project `slug` for the `--project` argument (ie `YOUR_PROJECT_SLUG`) in the command below.
+
+Run: `bencher run --project YOUR_PROJECT_SLUG "bencher mock"`
+
+You should see something like:
+
+<QuickStart9 />
+
+<br />
+
+You can now view the results from each of the benchmarks in the browser.
+Click or copy and paste the links from `View results`.
+There should only be a single data point for each benchmark, so lets add some more data!
+
+<br />
+
+First, lets set our Project slug as an environment variable, so we don't have to provide it with the `--project` on every single run.
+
+Run: `export BENCHER_PROJECT=save-walter-white-12345`
+
+If you then run: `echo $BENCHER_PROJECT`
+
+You should see:
+
+<QuickStart10 />
+
+<br />
+
+Lets rerun the same command again without `--project` to generate more data.
+
+Run: `bencher run "bencher mock"`
+
+<br />
+
+Now, lets generate more data, but this time we will pipe our results into `bencher run`.
+
+Run: `bencher mock | bencher run`
+
+<br />
+
+Sometimes you may want to save your results to a file and have `bencher run` pick them up.
+
+Run: `bencher run "bencher mock > results.json" --file results.json`
+
+<br />
+
+Likewise, you may have a separate process run your benchmarks and save your results to a file. Then `bencher run` will just pick them up.
+
+Run: `bencher mock > results.json && bencher run --file results.json`
+
+<br />
+
+Finally, lets seed a lot of data using the `bencher run` `--iter` argument.
+
+Run: `bencher run --iter 16 "bencher mock"`
+
+<br />
+
+> 🐰 Tip: Checkout the [`bencher run` CLI Subcommand docs](/docs/explanation/bencher-run/) for a full overview of all that `bencher run` can do!

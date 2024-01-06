@@ -1,0 +1,33 @@
+import QuickStart6 from "../quick-start.6.mdx";
+import QuickStart7 from "../quick-start.7.mdx";
+
+## Create a Project
+
+Now that we have a user account and API token, we can create a Project.
+First, we need to know which organization our new project will belong to.
+
+Run: `bencher org ls`
+
+You should see something like:
+
+<QuickStart6 />
+
+Your output should be slightly different than the above:
+- The `uuid` is pseudorandom
+- The `name` and `slug` will be based on your username
+- The `created` and `modified` timestamps will be from when you just signed up
+
+<br />
+
+We can now create a new Project inside of your Organization.
+Substitute your Organization `slug` for the `--org` argument (ie `YOUR_ORG_SLUG`) in the command below.
+
+Run: `bencher project create --org YOUR_ORG_SLUG --url http://www.savewalterwhite.com "Save Walter White"`
+
+You should see something like:
+
+<QuickStart7 />
+
+Again, your output should be slightly different than the above.
+It's just important that this command works.
+Take note of the Project `slug` field (ie `save-walter-white-12345`).

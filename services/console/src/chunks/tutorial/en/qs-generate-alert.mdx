@@ -1,0 +1,24 @@
+import QuickStart11 from "../quick-start.11.mdx";
+
+## Generate an Alert
+
+Now that we have some historical data for our benchmarks, lets generate an Alert!
+Alerts are generated when a benchmark result is determined to be a performance regression.
+So lets simulate a performance regression!
+
+Run: `bencher run "bencher mock --pow 8"`
+
+<br />
+
+There should be a new section at the end of the output called `View alerts`:
+
+<QuickStart11 />
+
+<br />
+
+You can now view the Alerts for each benchmark in the browser.
+Click or copy and paste the links from `View alerts`.
+
+<br />
+
+> 🐰 Tip: Checkout the [Threshold & Alerts docs](/docs/explanation/thresholds/) for a full overview of how performance regressions are detected!
