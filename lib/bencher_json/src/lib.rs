@@ -67,13 +67,15 @@ pub use user::{
     JsonUser, UserUuid,
 };
 
-#[cfg(debug_assertions)]
-pub const BENCHER_URL_STR: &str = "http://localhost:3000";
-#[cfg(not(debug_assertions))]
-pub const BENCHER_URL_STR: &str = PROD_BENCHER_URL_STR;
-
+pub const BENCHER_UI_PORT: u16 = 3000;
+pub const LOCALHOST_BENCHER_URL_STR: &str = "http://localhost:3000";
 pub const PROD_BENCHER_URL_STR: &str = "https://bencher.dev";
 pub const DEVEL_BENCHER_URL_STR: &str = "https://devel--bencher.netlify.app";
+
+#[cfg(debug_assertions)]
+pub const BENCHER_URL_STR: &str = LOCALHOST_BENCHER_URL_STR;
+#[cfg(not(debug_assertions))]
+pub const BENCHER_URL_STR: &str = PROD_BENCHER_URL_STR;
 
 #[allow(clippy::panic)]
 pub static BENCHER_URL: Lazy<url::Url> = Lazy::new(|| {
@@ -92,13 +94,17 @@ pub fn is_bencher_cloud(url: &url::Url) -> bool {
     *url == *BENCHER_URL || *url == *DEVEL_BENCHER_URL
 }
 
-#[cfg(debug_assertions)]
-pub const BENCHER_API_URL_STR: &str = "http://localhost:61016";
-#[cfg(not(debug_assertions))]
-pub const BENCHER_API_URL_STR: &str = PROD_BENCHER_API_URL_STR;
-
+// Dynamic and/or Private Ports (49152-65535)
+// https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=61016
+pub const BENCHER_API_PORT: u16 = 61016;
+pub const LOCALHOST_BENCHER_API_URL_STR: &str = "http://localhost:61016";
 pub const PROD_BENCHER_API_URL_STR: &str = "https://api.bencher.dev";
 pub const DEVEL_BENCHER_API_URL_STR: &str = "https://bencher-api-dev.fly.dev";
+
+#[cfg(debug_assertions)]
+pub const BENCHER_API_URL_STR: &str = LOCALHOST_BENCHER_API_URL_STR;
+#[cfg(not(debug_assertions))]
+pub const BENCHER_API_URL_STR: &str = PROD_BENCHER_API_URL_STR;
 
 #[allow(clippy::panic)]
 pub static BENCHER_API_URL: Lazy<url::Url> = Lazy::new(|| {
@@ -112,10 +118,6 @@ pub static DEVEL_BENCHER_API_URL: Lazy<url::Url> = Lazy::new(|| {
         .parse()
         .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{DEVEL_BENCHER_API_URL_STR}\": {e}"))
 });
-
-// Dynamic and/or Private Ports (49152-65535)
-// https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=61016
-pub const BENCHER_API_PORT: u16 = 61016;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
