@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use bencher_client::types::JsonNewThreshold;
 use bencher_json::{NameId, ResourceId};
 
@@ -75,7 +74,6 @@ impl From<Create> for JsonNewThreshold {
     }
 }
 
-#[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self

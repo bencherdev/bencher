@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use bencher_client::types::{JsonNewMember, OrganizationRole};
 use bencher_json::{Email, ResourceId, UserName};
 
@@ -65,7 +64,6 @@ impl From<Invite> for JsonNewMember {
     }
 }
 
-#[async_trait]
 impl SubCmd for Invite {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self

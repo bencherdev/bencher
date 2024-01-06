@@ -1,7 +1,5 @@
 #![cfg(feature = "plus")]
 
-use async_trait::async_trait;
-
 use crate::{bencher::sub::SubCmd, parser::organization::plan::CliOrganizationPlan, CliError};
 
 mod create;
@@ -27,7 +25,6 @@ impl TryFrom<CliOrganizationPlan> for Plan {
     }
 }
 
-#[async_trait]
 impl SubCmd for Plan {
     async fn exec(&self) -> Result<(), CliError> {
         match self {

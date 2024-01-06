@@ -1,6 +1,5 @@
 use std::{convert::TryFrom, future::Future, pin::Pin};
 
-use async_trait::async_trait;
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings};
 use bencher_comment::ReportComment;
 use bencher_json::{DateTime, GitHash, JsonEndpoint, JsonReport, ResourceId};
@@ -128,7 +127,6 @@ fn map_adapter(adapter: Option<CliRunAdapter>) -> Option<Adapter> {
     }
 }
 
-#[async_trait]
 impl SubCmd for Run {
     async fn exec(&self) -> Result<(), CliError> {
         self.exec_inner().await.map_err(Into::into)

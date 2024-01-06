@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use bencher_client::types::JsonConfirm;
 use bencher_json::Jwt;
 
@@ -40,7 +39,6 @@ impl From<Confirm> for JsonConfirm {
     }
 }
 
-#[async_trait]
 impl SubCmd for Confirm {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self

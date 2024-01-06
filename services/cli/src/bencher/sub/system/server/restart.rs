@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use bencher_client::types::JsonRestart;
 
 use crate::{
@@ -34,7 +33,6 @@ impl From<Restart> for JsonRestart {
     }
 }
 
-#[async_trait]
 impl SubCmd for Restart {
     async fn exec(&self) -> Result<(), CliError> {
         let _json =

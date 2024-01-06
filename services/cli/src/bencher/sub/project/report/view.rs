@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use bencher_json::{ReportUuid, ResourceId};
 
 use crate::{
@@ -33,7 +32,6 @@ impl TryFrom<CliReportView> for View {
     }
 }
 
-#[async_trait]
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self

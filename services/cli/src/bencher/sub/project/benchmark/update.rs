@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use bencher_client::types::JsonUpdateBenchmark;
 use bencher_json::{BenchmarkName, ResourceId, Slug};
 
@@ -50,7 +49,6 @@ impl From<Update> for JsonUpdateBenchmark {
     }
 }
 
-#[async_trait]
 impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self

@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use bencher_client::types::{JsonDirection, ProjThresholdsSort};
 use bencher_json::{project::threshold::JsonThresholdQuery, NameId, ResourceId};
 
@@ -90,7 +89,6 @@ impl From<List> for JsonThresholdQuery {
     }
 }
 
-#[async_trait]
 impl SubCmd for List {
     async fn exec(&self) -> Result<(), CliError> {
         let json_threshold_query: &JsonThresholdQuery = &self.clone().into();

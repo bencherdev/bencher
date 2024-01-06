@@ -1,7 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
-
 use crate::{parser::CliSub, CliError};
 
 mod mock;
@@ -83,7 +81,6 @@ impl TryFrom<CliSub> for Sub {
     }
 }
 
-#[async_trait]
 impl SubCmd for Sub {
     async fn exec(&self) -> Result<(), CliError> {
         match self {

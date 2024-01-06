@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use bencher_client::types::JsonLogin;
 #[cfg(feature = "plus")]
 use bencher_client::types::PlanLevel;
@@ -62,7 +61,6 @@ impl From<Login> for JsonLogin {
     }
 }
 
-#[async_trait]
 impl SubCmd for Login {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self

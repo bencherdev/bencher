@@ -1,7 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
-
 use crate::{
     bencher::{backend::PubBackend, sub::SubCmd},
     parser::system::server::CliEndpoint,
@@ -24,7 +22,6 @@ impl TryFrom<CliEndpoint> for Endpoint {
     }
 }
 
-#[async_trait]
 impl SubCmd for Endpoint {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self

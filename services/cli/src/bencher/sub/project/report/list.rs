@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use bencher_client::types::{JsonDirection, ProjReportsSort};
 use bencher_json::{project::report::JsonReportQuery, DateTime, NameId, ResourceId};
 
@@ -94,7 +93,6 @@ impl From<List> for JsonReportQuery {
     }
 }
 
-#[async_trait]
 impl SubCmd for List {
     async fn exec(&self) -> Result<(), CliError> {
         let json_report_query: &JsonReportQuery = &self.clone().into();

@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use bencher_client::types::{
     Entitlements, JsonCard, JsonCustomer, JsonNewPlan, OrganizationUuid, PlanLevel,
 };
@@ -112,7 +111,6 @@ impl From<Create> for JsonNewPlan {
     }
 }
 
-#[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self

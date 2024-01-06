@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use bencher_client::types::{JsonNewProject, Visibility};
 use bencher_json::{ResourceId, ResourceName, Slug, Url};
 
@@ -71,7 +70,6 @@ impl From<Create> for JsonNewProject {
     }
 }
 
-#[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self

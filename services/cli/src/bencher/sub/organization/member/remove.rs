@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use bencher_json::ResourceId;
 
 use crate::{
@@ -29,7 +28,6 @@ impl TryFrom<CliMemberRemove> for Remove {
     }
 }
 
-#[async_trait]
 impl SubCmd for Remove {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self

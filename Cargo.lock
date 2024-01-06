@@ -925,7 +925,6 @@ name = "bencher_cli"
 version = "0.3.26"
 dependencies = [
  "assert_cmd",
- "async-trait",
  "bencher_adapter",
  "bencher_client",
  "bencher_comment",

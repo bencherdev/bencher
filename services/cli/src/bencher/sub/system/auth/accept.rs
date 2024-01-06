@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use bencher_client::types::JsonAccept;
 use bencher_json::Jwt;
 
@@ -37,7 +36,6 @@ impl From<Accept> for JsonAccept {
     }
 }
 
-#[async_trait]
 impl SubCmd for Accept {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self

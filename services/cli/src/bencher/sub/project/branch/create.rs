@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use bencher_client::types::{JsonNewBranch, JsonStartPoint};
 use bencher_json::{BranchName, NameId, ResourceId, Slug};
 
@@ -72,7 +71,6 @@ impl From<Create> for JsonNewBranch {
     }
 }
 
-#[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self

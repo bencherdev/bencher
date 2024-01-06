@@ -1,5 +1,3 @@
-use async_trait::async_trait;
-
 use crate::{bencher::sub::SubCmd, parser::user::token::CliToken, CliError};
 
 mod create;
@@ -28,7 +26,6 @@ impl TryFrom<CliToken> for Token {
     }
 }
 
-#[async_trait]
 impl SubCmd for Token {
     async fn exec(&self) -> Result<(), CliError> {
         match self {

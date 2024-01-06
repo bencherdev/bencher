@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use clap::Parser;
 
 use crate::{parser::CliBencher, CliError};
@@ -32,7 +31,6 @@ impl Bencher {
     }
 }
 
-#[async_trait]
 impl SubCmd for Bencher {
     async fn exec(&self) -> Result<(), CliError> {
         self.sub.exec().await

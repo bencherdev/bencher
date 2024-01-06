@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use bencher_client::types::{JsonDirection, ProjAlertsSort};
 use bencher_json::ResourceId;
 
@@ -65,7 +64,6 @@ impl From<CliPagination<CliAlertsSort>> for Pagination {
     }
 }
 
-#[async_trait]
 impl SubCmd for List {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self

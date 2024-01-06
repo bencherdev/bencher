@@ -1,5 +1,3 @@
-use async_trait::async_trait;
-
 use super::run::Run as Create;
 use crate::{bencher::sub::SubCmd, parser::project::report::CliReport, CliError};
 
@@ -28,7 +26,6 @@ impl TryFrom<CliReport> for Report {
     }
 }
 
-#[async_trait]
 impl SubCmd for Report {
     async fn exec(&self) -> Result<(), CliError> {
         match self {

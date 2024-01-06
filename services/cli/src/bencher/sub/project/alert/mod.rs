@@ -1,5 +1,3 @@
-use async_trait::async_trait;
-
 use crate::{bencher::sub::SubCmd, parser::project::alert::CliAlert, CliError};
 
 mod list;
@@ -28,7 +26,6 @@ impl TryFrom<CliAlert> for Alert {
     }
 }
 
-#[async_trait]
 impl SubCmd for Alert {
     async fn exec(&self) -> Result<(), CliError> {
         match self {

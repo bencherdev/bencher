@@ -1,5 +1,3 @@
-use async_trait::async_trait;
-
 use crate::{bencher::sub::SubCmd, parser::organization::CliOrganization, CliError};
 
 mod allowed;
@@ -37,7 +35,6 @@ impl TryFrom<CliOrganization> for Organization {
     }
 }
 
-#[async_trait]
 impl SubCmd for Organization {
     async fn exec(&self) -> Result<(), CliError> {
         match self {

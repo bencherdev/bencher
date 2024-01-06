@@ -1,5 +1,3 @@
-use async_trait::async_trait;
-
 use crate::{bencher::sub::SubCmd, parser::system::auth::CliAuth, CliError};
 
 mod accept;
@@ -33,7 +31,6 @@ impl TryFrom<CliAuth> for Auth {
     }
 }
 
-#[async_trait]
 impl SubCmd for Auth {
     async fn exec(&self) -> Result<(), CliError> {
         match self {

@@ -1,5 +1,3 @@
-use async_trait::async_trait;
-
 use crate::{bencher::sub::SubCmd, parser::project::CliProject, CliError};
 
 mod allowed;
@@ -34,7 +32,6 @@ impl TryFrom<CliProject> for Project {
     }
 }
 
-#[async_trait]
 impl SubCmd for Project {
     async fn exec(&self) -> Result<(), CliError> {
         match self {

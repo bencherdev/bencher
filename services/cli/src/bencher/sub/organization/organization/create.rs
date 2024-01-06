@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use bencher_client::types::JsonNewOrganization;
 use bencher_json::{ResourceName, Slug};
 
@@ -44,7 +43,6 @@ impl From<Create> for JsonNewOrganization {
     }
 }
 
-#[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self

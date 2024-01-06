@@ -1,5 +1,3 @@
-use async_trait::async_trait;
-
 use crate::{bencher::sub::SubCmd, parser::project::statistic::CliStatistic, CliError};
 
 mod view;
@@ -19,7 +17,6 @@ impl TryFrom<CliStatistic> for Statistic {
     }
 }
 
-#[async_trait]
 impl SubCmd for Statistic {
     async fn exec(&self) -> Result<(), CliError> {
         match self {

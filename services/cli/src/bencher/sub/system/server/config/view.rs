@@ -1,7 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
-
 use crate::{
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::system::server::CliConfigView,
@@ -24,7 +22,6 @@ impl TryFrom<CliConfigView> for View {
     }
 }
 
-#[async_trait]
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self

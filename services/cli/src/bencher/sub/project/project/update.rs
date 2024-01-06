@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use bencher_client::types::{
     JsonProjectPatch, JsonProjectPatchNull, JsonUpdateProject, Visibility,
 };
@@ -87,7 +86,6 @@ impl From<Update> for JsonUpdateProject {
     }
 }
 
-#[async_trait]
 impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self

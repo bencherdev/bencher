@@ -2,7 +2,6 @@ use std::convert::TryFrom;
 use std::future::Future;
 use std::pin::Pin;
 
-use async_trait::async_trait;
 use bencher_json::{
     BenchmarkUuid, BranchUuid, DateTime, JsonPerf, JsonPerfQuery, MeasureUuid, ResourceId,
     TestbedUuid,
@@ -83,7 +82,6 @@ impl From<Perf> for JsonPerfQuery {
     }
 }
 
-#[async_trait]
 impl SubCmd for Perf {
     async fn exec(&self) -> Result<(), CliError> {
         let sender = perf_sender(self.project.clone(), self.clone());

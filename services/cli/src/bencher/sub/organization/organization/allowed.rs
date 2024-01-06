@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use bencher_client::types::OrganizationPermission;
 use bencher_json::ResourceId;
 
@@ -50,7 +49,6 @@ impl From<CliOrganizationPermission> for OrganizationPermission {
     }
 }
 
-#[async_trait]
 impl SubCmd for Allowed {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self

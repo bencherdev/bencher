@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use bencher_client::types::{JsonBackup, JsonDataStore};
 
 use crate::{
@@ -60,7 +59,6 @@ impl From<Backup> for JsonBackup {
     }
 }
 
-#[async_trait]
 impl SubCmd for Backup {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self

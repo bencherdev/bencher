@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use bencher_client::types::{AlertStatus, JsonUpdateAlert};
 use bencher_json::{AlertUuid, ResourceId};
 
@@ -53,7 +52,6 @@ impl From<Update> for JsonUpdateAlert {
     }
 }
 
-#[async_trait]
 impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self

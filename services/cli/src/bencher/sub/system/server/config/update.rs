@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use bencher_client::types::{JsonConfig, JsonUpdateConfig};
 
 use crate::{
@@ -43,7 +42,6 @@ impl From<Update> for JsonUpdateConfig {
     }
 }
 
-#[async_trait]
 impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self

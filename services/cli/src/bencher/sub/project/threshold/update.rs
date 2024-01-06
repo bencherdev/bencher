@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 use bencher_client::types::JsonUpdateThreshold;
 use bencher_json::{ResourceId, ThresholdUuid};
 
@@ -61,7 +60,6 @@ impl From<Update> for JsonUpdateThreshold {
     }
 }
 
-#[async_trait]
 impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self

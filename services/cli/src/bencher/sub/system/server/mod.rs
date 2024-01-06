@@ -1,5 +1,3 @@
-use async_trait::async_trait;
-
 use crate::{bencher::sub::SubCmd, parser::system::server::CliServer, CliError};
 
 mod backup;
@@ -43,7 +41,6 @@ impl TryFrom<CliServer> for Server {
     }
 }
 
-#[async_trait]
 impl SubCmd for Server {
     async fn exec(&self) -> Result<(), CliError> {
         match self {

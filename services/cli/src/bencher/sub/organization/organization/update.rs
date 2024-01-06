@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use async_trait::async_trait;
 #[cfg(feature = "plus")]
 use bencher_client::types::JsonOrganizationPatchNull;
 use bencher_client::types::{JsonOrganizationPatch, JsonUpdateOrganization};
@@ -94,7 +93,6 @@ impl From<Update> for JsonUpdateOrganization {
     }
 }
 
-#[async_trait]
 impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
         let _json = self

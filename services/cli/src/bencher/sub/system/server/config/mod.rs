@@ -1,5 +1,3 @@
-use async_trait::async_trait;
-
 use crate::{bencher::sub::SubCmd, parser::system::server::CliConfig, CliError};
 
 mod update;
@@ -22,7 +20,6 @@ impl TryFrom<CliConfig> for Config {
     }
 }
 
-#[async_trait]
 impl SubCmd for Config {
     async fn exec(&self) -> Result<(), CliError> {
         match self {

@@ -1,5 +1,3 @@
-use async_trait::async_trait;
-
 use crate::{bencher::sub::SubCmd, parser::project::measure::CliMeasure, CliError};
 
 mod create;
@@ -31,7 +29,6 @@ impl TryFrom<CliMeasure> for Measure {
     }
 }
 
-#[async_trait]
 impl SubCmd for Measure {
     async fn exec(&self) -> Result<(), CliError> {
         match self {

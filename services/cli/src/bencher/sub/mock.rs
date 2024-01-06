@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use async_trait::async_trait;
 use bencher_adapter::{
     results::{adapter_metrics::AdapterMetrics, adapter_results::LATENCY_NAME_ID},
     AdapterResults,
@@ -52,7 +51,6 @@ impl From<CliMock> for Mock {
     }
 }
 
-#[async_trait]
 impl SubCmd for Mock {
     async fn exec(&self) -> Result<(), CliError> {
         self.exec_inner().map_err(Into::into)
