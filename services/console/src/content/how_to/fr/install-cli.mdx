@@ -6,46 +6,31 @@ sortOrder: 1
 ---
 
 import { BENCHER_VERSION } from "../../../util/ext";
-import CliDebian from "../../../chunks/how_to/cli-debian.mdx";
-import CliGitHubActions from "../../../chunks/how_to/cli-github-actions.mdx";
-import CliGitHubActionsVersion from "../../../chunks/how_to/cli-github-actions-version.mdx";
-import CliFromSource from "../../../chunks/how_to/cli-from-source.mdx";
-import CliOtherLinux from "../../../chunks/how_to/cli-other-linux.mdx";
+import CliInstallScripts from "../../../chunks/general/fr/cli-install-scripts.mdx";
+import CliInstallGitHubActions from "../../../chunks/how_to/fr/cli-install-github-actions.mdx";
+import CliInstallSource from "../../../chunks/how_to/fr/cli-install-source.mdx";
+import CliPreBuiltBins from "../../../chunks/general/cli-pre-built-bins.mdx";
+import CliPackages from "../../../chunks/general/cli-packages.mdx";
 
-## Debian
+## Install CLI with Script
 
-Bencher fournit un fichier `deb` pratique pour l'installation sur Debian
-et les distributions basées sur Debian comme Ubuntu.
+<CliInstallScripts />
 
-<CliDebian />
+<CliInstallGitHubActions />
 
-## GitHub Actions
+<CliInstallSource />
 
-Installez le CLI Bencher en utilisant le [GitHub Action](https://github.com/marketplace/actions/bencher-cli).
-Voir [comment utiliser GitHub Actions](/fr/docs/how-to/github-actions/) pour plus de détails.
+## Binaires Préconstruits
 
-<CliGitHubActions />
+<CliPreBuiltBins />
 
-Il existe un argument `version` facultatif pour spécifier une version exacte du CLI Bencher à utiliser.
-Sinon, il utilisera par défaut la dernière version du CLI.
+Consultez la <a href={`https://github.com/bencherdev/bencher/releases/tag/v${BENCHER_VERSION}`}>dernière page de version</a> pour une liste complète.
 
-<CliGitHubActionsVersion />
+## Paquets
 
-Spécifiez une version exacte si vous utilisez Bencher *Self-Hosted*.
-Ne spécifiez __pas__ une version exacte si vous utilisez Bencher *Cloud* car il y a encore des changements occasionnels qui cassent.
+<CliPackages />
 
-## Depuis la Source
-
-Pour tous les autres environnements, la méthode d'installation suggérée est à partir de la source.
-
-<CliFromSource />
-
-## Autres Distributions Linux
-
-Un binaire CLI Linux autonome est également disponible en téléchargement
-si vous savez ce que vous faites.
-
-<CliOtherLinux />
+Consultez la <a href={`https://github.com/bencherdev/bencher/releases/tag/v${BENCHER_VERSION}`}>dernière page de version</a> pour une liste complète.
 
 <br/>
 <br/>

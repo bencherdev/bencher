@@ -1,0 +1,16 @@
+import CliGitHubActions from "../cli-github-actions.mdx";
+import CliGitHubActionsVersion from "../cli-github-actions-version.mdx";
+
+## GitHub Actions
+
+Instala el CLI de Bencher utilizando la [Acción de GitHub](https://github.com/marketplace/actions/bencher-cli).
+Consulta [cómo usar las Acciones de GitHub](/docs/es/how-to/github-actions/) para obtener más detalles.
+
+<CliGitHubActions />
+
+Existe un argumento opcional `version` para especificar una versión exacta del CLI de Bencher a utilizar.
+De lo contrario, se usará la última versión del CLI por defecto.
+Especifica una versión exacta sólo y únicamente si estás utilizando Bencher *Autolocalizado*.
+No especifiques una versión exacta si estás utilizando Bencher *Cloud* ya que aún existen cambios ocasionales que rompen la compatibilidad.
+
+<CliGitHubActionsVersion />

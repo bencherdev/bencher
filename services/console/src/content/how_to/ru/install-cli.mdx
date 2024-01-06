@@ -6,46 +6,31 @@ sortOrder: 1
 ---
 
 import { BENCHER_VERSION } from "../../../util/ext";
-import CliDebian from "../../../chunks/how_to/cli-debian.mdx";
-import CliGitHubActions from "../../../chunks/how_to/cli-github-actions.mdx";
-import CliGitHubActionsVersion from "../../../chunks/how_to/cli-github-actions-version.mdx";
-import CliFromSource from "../../../chunks/how_to/cli-from-source.mdx";
-import CliOtherLinux from "../../../chunks/how_to/cli-other-linux.mdx";
+import CliInstallScripts from "../../../chunks/general/zh/cli-install-scripts.mdx";
+import CliInstallGitHubActions from "../../../chunks/how_to/zh/cli-install-github-actions.mdx";
+import CliInstallSource from "../../../chunks/how_to/zh/cli-install-source.mdx";
+import CliPreBuiltBins from "../../../chunks/general/cli-pre-built-bins.mdx";
+import CliPackages from "../../../chunks/general/cli-packages.mdx";
 
-## Debian
+## Install CLI with Script
 
-Bencher предоставляет удобный файл `deb` для установки на Debian
-и на основанных на Debian дистрибутивах, например, Ubuntu.
+<CliInstallScripts />
 
-<CliDebian />
+<CliInstallGitHubActions />
 
-## GitHub Actions
+<CliInstallSource />
 
-Установите CLI Bencher с использованием [GitHub Action](https://github.com/marketplace/actions/bencher-cli).
-Смотрите [как использовать GitHub Actions](/ru/docs/how-to/github-actions/) для получения более подробной информации.
+## Готовые бинарные файлы
 
-<CliGitHubActions />
+<CliPreBuiltBins />
 
-Есть необязательный аргумент `version` для указания точной версии Bencher CLI, которую следует использовать.
-В противном случае, будет использоваться последняя версия CLI.
+См. <a href={`https://github.com/bencherdev/bencher/releases/tag/v${BENCHER_VERSION}`}>страницу последнего релиза</a> для полного списка.
 
-<CliGitHubActionsVersion />
+## Пакеты
 
-Укажите точную версию, если используется Bencher *Self-Hosted*.
-__Не__ указывайте точную версию при использовании Bencher *Cloud*, так как все еще случаются обновления, ломающие совместимость.
+<CliPackages />
 
-## Из исходного кода
-
-Для всех остальных окружений рекомендуемый способ установки - из исходного кода.
-
-<CliFromSource />
-
-## Другие дистрибутивы Linux
-
-Также доступен самостоятельный бинарный файл Linux CLI для скачивания,
-если вы знаете, что делаете.
-
-<CliOtherLinux />
+См. <a href={`https://github.com/bencherdev/bencher/releases/tag/v${BENCHER_VERSION}`}>страницу последнего релиза</a> для полного списка.
 
 <br/>
 <br/>

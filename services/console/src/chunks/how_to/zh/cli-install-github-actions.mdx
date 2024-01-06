@@ -1,0 +1,16 @@
+import CliGitHubActions from "../cli-github-actions.mdx";
+import CliGitHubActionsVersion from "../cli-github-actions-version.mdx";
+
+## GitHub Actions
+
+使用[GitHub Action](https://github.com/marketplace/actions/bencher-cli)安装Bencher CLI。
+有关更多详细信息，请参阅[如何使用GitHub Actions](/docs/zh/how-to/github-actions/)。
+
+<CliGitHubActions />
+
+有一个可选的 `version` 参数来指定使用的Bencher CLI的确切版本。
+否则，它将默认使用最新的CLI版本。
+仅当使用Bencher *Self-Hosted*时才指定确切的版本。
+如果使用Bencher *Cloud*，则__不要__指定确切的版本，因为仍然偶尔会出现破坏性的更改。
+
+<CliGitHubActionsVersion />

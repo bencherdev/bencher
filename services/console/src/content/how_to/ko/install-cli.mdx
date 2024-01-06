@@ -6,45 +6,31 @@ sortOrder: 1
 ---
 
 import { BENCHER_VERSION } from "../../../util/ext";
-import CliDebian from "../../../chunks/how_to/cli-debian.mdx";
-import CliGitHubActions from "../../../chunks/how_to/cli-github-actions.mdx";
-import CliGitHubActionsVersion from "../../../chunks/how_to/cli-github-actions-version.mdx";
-import CliFromSource from "../../../chunks/how_to/cli-from-source.mdx";
-import CliOtherLinux from "../../../chunks/how_to/cli-other-linux.mdx";
+import CliInstallScripts from "../../../chunks/general/ko/cli-install-scripts.mdx";
+import CliInstallGitHubActions from "../../../chunks/how_to/ko/cli-install-github-actions.mdx";
+import CliInstallSource from "../../../chunks/how_to/ko/cli-install-source.mdx";
+import CliPreBuiltBins from "../../../chunks/general/cli-pre-built-bins.mdx";
+import CliPackages from "../../../chunks/general/cli-packages.mdx";
 
-## Debian
+## Install CLI with Script
 
-Bencher 는 Debian과 Ubuntu와 같은 Debian 기반 배포판에 설치할 수 있는 편리한 `deb` 파일을 제공합니다.
+<CliInstallScripts />
 
-<CliDebian />
+<CliInstallGitHubActions />
 
-## GitHub Actions
+<CliInstallSource />
 
-[GitHub Action](https://github.com/marketplace/actions/bencher-cli)을 사용하여 Bencher CLI를 설치하세요.
-더 자세한 내용은 [GitHub Actions 사용 방법](/docs/how-to/github-actions/)을 참조하세요.
+## 미리 빌드된 바이너리
 
-<CliGitHubActions />
+<CliPreBuiltBins />
 
-선택적으로 `version` 인수를 사용하여 사용하려는 Bencher CLI의 정확한 버전을 지정할 수 있습니다.
-그렇지 않으면 최신 CLI 버전이 기본으로 사용됩니다.
+전체 목록은 <a href={`https://github.com/bencherdev/bencher/releases/tag/v${BENCHER_VERSION}`}>최신 릴리즈 페이지</a>를 참고하세요.
 
-<CliGitHubActionsVersion />
+## 패키지
 
-Bencher *Self-Hosted* 를 사용하는 경우 정확한 버전을 명시하세요.
-아직까지 이벤트 변환 변화가 있기 때문에 Bencher *Cloud* 를 사용하는 경우에는 정확한 버전을 명시하지 __마세요__.
+<CliPackages />
 
-## 소스 코드에서
-
-그 외의 모든 환경에서는 소스 코드에서 설치하는 것이 제안하는 설치 방법입니다.
-
-<CliFromSource />
-
-## 다른 리눅스 배포판
-
-독립 실행형 Linux CLI 바이너리도 다운로드하여 사용할 수 있습니다
-만약 무엇을 하고 있는지 안다면.
-
-<CliOtherLinux />
+전체 목록은 <a href={`https://github.com/bencherdev/bencher/releases/tag/v${BENCHER_VERSION}`}>최신 릴리즈 페이지</a>를 참고하세요.
 
 <br/>
 <br/>
