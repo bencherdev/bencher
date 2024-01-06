@@ -1,0 +1,20 @@
+import CliUnixScript from "../cli-unix-script.mdx";
+import CliWindowsScript from "../cli-windows-script.mdx";
+
+### Linux, Mac, & Unix
+Für Linux, Mac und andere Unix-ähnliche Systeme führen Sie Folgendes in Ihrem Terminal aus:
+
+<CliUnixScript />
+
+### Windows
+Für Windows-Systeme führen Sie Folgendes in einem _PowerShell_-Terminal aus:
+
+<CliWindowsScript />
+
+<br />
+
+> 🐰 Wenn Sie einen Fehler erhalten, der besagt `Das Ausführen von Skripten ist auf diesem System deaktiviert`:
+> - `Öffnen Sie Powershell` mit `Als Administrator ausführen`
+> - Ausführen: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
+> - Eingeben: `Y`
+> - Führen Sie dieses Skript erneut aus

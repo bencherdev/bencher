@@ -1,0 +1,20 @@
+import CliUnixScript from "../cli-unix-script.mdx";
+import CliWindowsScript from "../cli-windows-script.mdx";
+
+### Linux、Mac、およびUnix
+Linux、Mac、およびその他のUnix系システムでは、ターミナルで以下を実行します：
+
+<CliUnixScript />
+
+### Windows
+Windowsシステムでは、以下のように_PowerShell_ターミナルで実行します：
+
+<CliWindowsScript />
+
+<br />
+
+> 🐰 `このシステムではスクリプトの実行が無効化されています`というエラーが表示される場合：
+> - `管理者として実行`で`Powershellを開く`
+> - 以下を実行： `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
+> - 次に入力：`Y`
+> - このスクリプトを再実行

@@ -1,0 +1,20 @@
+import CliUnixScript from "../cli-unix-script.mdx";
+import CliWindowsScript from "../cli-windows-script.mdx";
+
+### Linux，Mac，& Unix
+对于 Linux，Mac 和其他 Unix 类操作系统，请在你的终端运行以下命令：
+
+<CliUnixScript />
+
+### Windows
+对于 Windows 操作系统，打开 _PowerShell_ 终端，然后运行以下命令：
+
+<CliWindowsScript />
+
+<br />
+
+> 🐰 如果你遇到一个错误，显示 `running scripts is disabled on this system`（此系统上已禁止运行脚本）：
+> - 以 `管理员身份运行 Powershell`
+> - 运行：`Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
+> - 输入：`Y`
+> - 重新运行此脚本

@@ -6,6 +6,8 @@ sortOrder: 1
 ---
 
 import BencherIntro from "../../../chunks/general/ja/bencher-intro.mdx";
+import QSInstallCli from "../../../chunks/tutorial/ja/qs-install-cli.mdx";
+
 import QuickStart1 from "../../../chunks/tutorial/quick-start.1.mdx";
 import QuickStart2 from "../../../chunks/tutorial/quick-start.2.mdx";
 import QuickStart3 from "../../../chunks/tutorial/quick-start.3.mdx";
@@ -24,45 +26,7 @@ import QuickStart11 from "../../../chunks/tutorial/quick-start.11.mdx";
 
 <br />
 
-## `bencher` CLIのインストール
-
-`bencher` CLIをインストールするには、`cargo`がインストールされている必要があります。`cargo`がインストールされていることを確認します。
-
-実行: `cargo --version`
-
-以下のような結果が表示されます：
-
-<QuickStart1 />
-
-バージョン番号が異なっていても問題ありません。大切なのは、このコマンドが動作することです。
-もし動作しない場合は、[`rustup`を経由して`cargo`をインストールする](https://rustup.rs/)指示に従ってください。
-
-LinuxまたはmacOSでは、以下を実行します：
-
-<QuickStart2 />
-
-<br />
-
-`cargo`がインストールされたので、`bencher` CLIをインストールできます。
-
-実行：
-<QuickStart3 />
-
-以下のような結果を見るはずです。
-
-<QuickStart4 />
-
-やはり、出力が異なる場合でも問題ありません。大切なのは、このコマンドが動作することです。
-
-<br />
-
-最後に、`bencher` CLIがインストールされていることを確認しましょう。
-
-実行： `bencher --version`
-
-結果として、次のように表示されます。
-
-<QuickStart5 />
+<QSInstallCli />
 
 <br />
 
