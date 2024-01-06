@@ -1,0 +1,19 @@
+```yaml
+benchmark_with_bencher:
+    image: rust:bullseye
+    variables:
+        BENCHER_PROJECT: save-walter-white
+        BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+        BENCHER_ADAPTER: json
+        BENCHER_TESTBED: bullseye
+    before_script:
+        - curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
+    script:
+        - |
+        bencher run \\
+        --if-branch "$CI_COMMIT_REF_NAME" \\
+        --else-if-branch "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" \\
+        --else-if-branch main \\
+        --err \\
+        "bencher mock"
+```

@@ -5,31 +5,9 @@ heading: "Как использовать Bencher в GitLab CI/CD"
 sortOrder: 4
 ---
 
-import { BENCHER_VERSION } from "../../../util/ext";
+import GitLabCiYaml from "../../../chunks/how_to/gitlab-ci-yaml.mdx";
 
-<pre>
-  <code>
-    {`benchmark_with_bencher:
-    image: rust:bullseye
-    variables:
-      BENCHER_PROJECT: save-walter-white
-      BENCHER_API_TOKEN: \${{ secrets.BENCHER_API_TOKEN }}
-      BENCHER_ADAPTER: json
-      BENCHER_TESTBED: bullseye
-      BENCHER_VERSION: ${BENCHER_VERSION}
-    before_script:
-      - wget https://github.com/bencherdev/bencher/releases/download/v\${BENCHER_VERSION}/bencher_\${BENCHER_VERSION}_amd64.deb
-      - dpkg -i bencher_\${BENCHER_VERSION}_amd64.deb
-    script:
-      - |
-        bencher run \\
-        --if-branch "$CI_COMMIT_REF_NAME" \\
-        --else-if-branch "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" \\
-        --else-if-branch main \\
-        --err \\
-        "bencher mock"`}
-  </code>
-</pre>
+<GitLabCiYaml />
 
 1. Создайте файл GitLab CI/CD (например, `.gitlab-ci.yml`)
 1. Создайте `job` в GitLab CI/CD (например, `benchmark_with_bencher`)
@@ -39,8 +17,7 @@ import { BENCHER_VERSION } from "../../../util/ext";
 1. API-токен должен уже существовать. Установите флаг `--token` или переменную окружения `BENCHER_API_TOKEN` на API-токен (например, `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
 1. Необязательно: установите флаг `--adapter` или переменную окружения `BENCHER_ADAPTER` на желаемое имя адаптера. Если вы его не установите, будет использован адаптер `magic`. См. [адаптеры для бенчмаркинга](/ru/docs/explanation/adapters/) для полного обзора. (например, `BENCHER_ADAPTER: json`)
 1. Необязательно: установите флаг `--testbed` или переменную окружения `BENCHER_TESTBED` на слаг или UUID testbed. Testbed **должен** уже существовать. Если это не установлено, будет использоваться `localhost` Testbed (например, `BENCHER_TESTBED: bullseye`)
-1. Необязательно: создайте переменную окружения, чтобы легче отслеживать используемую версию CLI (например, <code>{`BENCHER_VERSION: ${BENCHER_VERSION}`}</code>)
-1. Скачайте и установите CLI Bencher из файла `.deb`.
+1. Скачайте и установите Bencher CLI [используя удобный скрипт](/docs/ru/how-to/install-cli/#linux-mac--unix).
 1. [Отслеживайте свои бенчмарки](/ru/docs/how-to/track-benchmarks/) с помощью подкоманды CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>:
     1. Существует несколько способов установить ветку проекта. См. [выбор ветки](/ru/docs/explanation/branch-selection/) для полного обзора. Предоставленная команда использует [предопределенные переменные GitLab CI/CD](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) и пытается:
         1. Использовать текущую ветку, если она уже существует. (например, `--if-branch "$CI_COMMIT_REF_NAME"`)

@@ -5,31 +5,9 @@ heading: "Verwendung von Bencher in GitLab CI/CD"
 sortOrder: 4
 ---
 
-import { BENCHER_VERSION } from "../../../util/ext";
+import GitLabCiYaml from "../../../chunks/how_to/gitlab-ci-yaml.mdx";
 
-<pre>
-  <code>
-    {`benchmark_with_bencher:
-    image: rust:bullseye
-    variables:
-      BENCHER_PROJECT: save-walter-white
-      BENCHER_API_TOKEN: \${{ secrets.BENCHER_API_TOKEN }}
-      BENCHER_ADAPTER: json
-      BENCHER_TESTBED: bullseye
-      BENCHER_VERSION: ${BENCHER_VERSION}
-    before_script:
-      - wget https://github.com/bencherdev/bencher/releases/download/v\${BENCHER_VERSION}/bencher_\${BENCHER_VERSION}_amd64.deb
-      - dpkg -i bencher_\${BENCHER_VERSION}_amd64.deb
-    script:
-      - |
-        bencher run \\
-        --if-branch "$CI_COMMIT_REF_NAME" \\
-        --else-if-branch "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" \\
-        --else-if-branch main \\
-        --err \\
-        "bencher mock"`}
-  </code>
-</pre>
+<GitLabCiYaml />
 
 1. Erstellen Sie eine GitLab CI/CD-Datei (z.B.: `.gitlab-ci.yml`)
 1. Erstellen Sie eine GitLab CI/CD `job` (z.B.: `benchmark_with_bencher`)
@@ -39,8 +17,7 @@ import { BENCHER_VERSION } from "../../../util/ext";
 1. Das API-Token muss bereits existieren. Setzen Sie das `--token` flag oder die `BENCHER_API_TOKEN` Umgebungsvariable auf das API-Token. (z.B.: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
 1. Optional: Setzen Sie das `--adapter` flag oder die `BENCHER_ADAPTER` Umgebungsvariable auf den gewünschten Adapternamen. Wenn dies nicht gesetzt ist, wird der `magic` Adapter verwendet. Siehe [Benchmark Harness Adapter](/de/docs/explanation/adapters/) für einen vollständigen Überblick. (z.B.: `BENCHER_ADAPTER: json`)
 1. Optional: Setzen Sie das `--testbed` flag oder die `BENCHER_TESTBED` Umgebungsvariable auf den Testbed-Slug oder die UUID. Das Testbed muss bereits vorhanden sein. Wenn dies nicht eingestellt ist, wird das `localhost` Testbed verwendet. (z.B.: `BENCHER_TESTBED: bullseye`)
-1. Optional: Erstellen Sie eine Umgebungsvariable, um die übersichtliche Kontrolle der verwendeten CLI-Version zu erleichtern. (z.B.: <code>{`BENCHER_VERSION: ${BENCHER_VERSION}`}</code>)
-1. Laden Sie die Bencher CLI herunter und installieren Sie sie von einer `.deb` Datei.
+1. Laden Sie die Bencher CLI [mit dem Convenience-Skript](/docs/de/how-to/install-cli/#linux-mac--unix) herunter und installieren Sie diese.
 1. Verfolgen Sie Ihre Benchmarks mit dem Befehl <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl:
     1. Es gibt mehrere Optionen zum Einstellen des Projektablaufs. Weitere Einzelheiten finden Sie unter [Zweigauswahl](/de/docs/explanation/branch-selection/). Der bereitgestellte Befehl verwendet [GitLab CI/CD vorausdefinierte Variablen](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) und versucht:
         1. Verwenden Sie den aktuellen Zweig, wenn er bereits existiert. (z.B.: `--if-branch "$CI_COMMIT_REF_NAME"`)

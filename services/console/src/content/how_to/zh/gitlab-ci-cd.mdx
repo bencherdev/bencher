@@ -5,31 +5,9 @@ heading: "如何在GitLab CI/CD中使用Bencher"
 sortOrder: 4
 ---
 
-import { BENCHER_VERSION } from "../../../util/ext";
+import GitLabCiYaml from "../../../chunks/how_to/gitlab-ci-yaml.mdx";
 
-<pre>
-  <code>
-    {`benchmark_with_bencher:
-    image: rust:bullseye
-    variables:
-      BENCHER_PROJECT: save-walter-white
-      BENCHER_API_TOKEN: \${{ secrets.BENCHER_API_TOKEN }}
-      BENCHER_ADAPTER: json
-      BENCHER_TESTBED: bullseye
-      BENCHER_VERSION: ${BENCHER_VERSION}
-    before_script:
-      - wget https://github.com/bencherdev/bencher/releases/download/v\${BENCHER_VERSION}/bencher_\${BENCHER_VERSION}_amd64.deb
-      - dpkg -i bencher_\${BENCHER_VERSION}_amd64.deb
-    script:
-      - |
-        bencher run \\
-        --if-branch "$CI_COMMIT_REF_NAME" \\
-        --else-if-branch "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" \\
-        --else-if-branch main \\
-        --err \\
-        "bencher mock"`}
-  </code>
-</pre>
+<GitLabCiYaml />
 
 1. 创建一个GitLab CI/CD文件 (例如：`.gitlab-ci.yml`)
 1. 创建一个GitLab CI/CD `job` (例如：`benchmark_with_bencher`)
@@ -39,8 +17,7 @@ import { BENCHER_VERSION } from "../../../util/ext";
 1. API令牌必须已经存在。将`--token`标志或`BENCHER_API_TOKEN`环境变量设置为API令牌。 (例如：`BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
 1. 可选：将`--adapter`标志或`BENCHER_ADAPTER`环境变量设置为所需的适配器名称。如果未设置，将使用`magic`适配器。请见[基准测试适配器](/zh/docs/explanation/adapters/)以获取完整概览。 (例如：`BENCHER_ADAPTER: json`)
 1. 可选：将`--testbed`标志或`BENCHER_TESTBED`环境变量设置为Testbed的标识符或UUID。Testbed**必须**已经存在。 如果未设置，将使用`localhost` Testbed。 (例如：`BENCHER_TESTBED: bullseye`)
-1. 可选：创建一个环境变量以方便跟踪使用的CLI版本。 (例如：<code>{`BENCHER_VERSION: ${BENCHER_VERSION}`}</code>)
-1. 从`.deb`文件中下载并安装Bencher CLI。
+1. 下载并安装 Bencher CLI [使用便捷脚本](/docs/zh/how-to/install-cli/#linux-mac--unix)。
 1. 使用<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI子命令[跟踪您的基准测试](/zh/docs/how-to/track-benchmarks/)：
     1. 有多种设置项目分支的选项。请见[分支选择](/zh/docs/explanation/branch-selection/)获取完整概览。提供的命令使用[GitLab CI/CD预定义变量](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html)，并尝试：
         1. 如果已经存在，使用当前分支。 (例如：`--if-branch "$CI_COMMIT_REF_NAME"`)
