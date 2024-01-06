@@ -6,6 +6,7 @@ use bencher_adapter::{
     AdapterResults,
 };
 use bencher_json::JsonMetric;
+use bollard::Docker;
 use literally::hmap;
 use rand::{distributions::Uniform, prelude::Distribution, Rng};
 
@@ -25,6 +26,9 @@ pub struct Up {
 
 #[derive(thiserror::Error, Debug)]
 pub enum UpError {
+    #[error("Failed to connect to Docker daemon: {0}")]
+    Docker(bollard::errors::Error),
+
     #[error("Failed to parse benchmark name: {0}")]
     ParseBenchmarkName(bencher_json::ValidError),
 
@@ -61,6 +65,8 @@ impl SubCmd for Up {
 
 impl Up {
     fn exec_inner(&self) -> Result<(), UpError> {
+        let _docker = Docker::connect_with_local_defaults().map_err(UpError::Docker);
+
         let adapter_results = self.generate_results()?;
 
         // TODO disable when quiet

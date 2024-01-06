@@ -31,7 +31,12 @@ thiserror.workspace = true
 tokio = { workspace = true, features = ["macros", "process", "rt"] }
 url.workspace = true
 # Crate
-# bollard = "0.15"
+bollard = "0.15"
+
+# TODO upstream the `winerror` feature
+# https://github.com/fussybeaver/bollard/blob/af08c3cb328654154ff63beaf23eedb201230215/Cargo.toml#L88C1-L89C17
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3.9", features = ["winerror"] }
 
 [dev-dependencies]
 # Workspace

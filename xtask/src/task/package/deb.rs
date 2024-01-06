@@ -46,10 +46,10 @@ impl Deb {
 
         let man_path = deb_path.join("usr/local/man/man1");
         std::fs::create_dir_all(&man_path)?;
-        let man = Man::try_from(TaskMan {
+        let man = Man::from(TaskMan {
             path: man_path,
             name: None,
-        })?;
+        });
         man.exec()?;
 
         let _dpkg = Command::new("dpkg-deb")

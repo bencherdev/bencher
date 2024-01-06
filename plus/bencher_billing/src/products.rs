@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use bencher_json::system::config::{JsonProduct, JsonProducts};
-pub use stripe::{CardDetailsParams as PaymentCard, Customer, Subscription};
 use stripe::{Client as StripeClient, Price as StripePrice, Product as StripeProduct};
 
 use crate::BillingError;
@@ -23,6 +22,7 @@ impl Products {
 }
 
 pub struct Product {
+    #[allow(clippy::struct_field_names)]
     pub product: StripeProduct,
     pub metered: HashMap<String, StripePrice>,
     pub licensed: HashMap<String, StripePrice>,

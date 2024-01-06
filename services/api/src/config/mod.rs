@@ -170,7 +170,10 @@ impl Config {
         Ok(Some(Self(json_config)))
     }
 
-    pub async fn write(log: &Logger, config: impl AsRef<[u8]>) -> Result<(), ConfigError> {
+    pub async fn write<C>(log: &Logger, config: C) -> Result<(), ConfigError>
+    where
+        C: AsRef<[u8]>,
+    {
         let path = std::env::var(BENCHER_CONFIG_PATH).unwrap_or_else(|e| {
             info!(log, "Failed to find \"{BENCHER_CONFIG_PATH}\" environment variable defaulting to \"{DEFAULT_CONFIG_PATH}\": {e}");
             DEFAULT_CONFIG_PATH.into()

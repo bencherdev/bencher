@@ -64,12 +64,15 @@ impl Rbac {
         self.is_allowed(actor, action, resource).unwrap_or_default()
     }
 
-    pub fn is_allowed_organization(
+    pub fn is_allowed_organization<O>(
         &self,
         auth_user: &AuthUser,
         permission: bencher_rbac::organization::Permission,
-        organization: impl Into<Organization>,
-    ) -> Result<(), RbacError> {
+        organization: O,
+    ) -> Result<(), RbacError>
+    where
+        O: Into<Organization>,
+    {
         let organization = organization.into();
         self.is_allowed_unwrap(auth_user, permission, organization.clone())
             .then_some(())
@@ -80,12 +83,15 @@ impl Rbac {
             })
     }
 
-    pub fn is_allowed_project(
+    pub fn is_allowed_project<P>(
         &self,
         auth_user: &AuthUser,
         permission: bencher_rbac::project::Permission,
-        project: impl Into<Project>,
-    ) -> Result<(), RbacError> {
+        project: P,
+    ) -> Result<(), RbacError>
+    where
+        P: Into<Project>,
+    {
         let project = project.into();
         self.is_allowed_unwrap(auth_user, permission, project.clone())
             .then_some(())

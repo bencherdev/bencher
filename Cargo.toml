@@ -49,16 +49,16 @@ serde_json = "1.0"
 serde_urlencoded = "0.7"
 slog = "2.7"
 slug = "0.1"
-tabled = "0.14"
+tabled = "0.15"
 thiserror = "1.0"
 tokio = "1.35"
 typeshare = "1.0"
 url = "2.5"
 uuid = "1.6"
 # github.com
-dropshot = { git = "https://github.com/oxidecomputer/dropshot", rev = "cf285b192cfd26ce0a28e737994fce4b79db95b5" }
-progenitor = { git = "https://github.com/oxidecomputer/progenitor", rev = "9694beaa20da82a2f26080a48447c48154f240ec" }
-progenitor-client = { git = "https://github.com/oxidecomputer/progenitor", rev = "9694beaa20da82a2f26080a48447c48154f240ec" }
+dropshot = { git = "https://github.com/oxidecomputer/dropshot", rev = "fb0bb0afcf6afb4703984e1d6c2975748dfe1406" }
+progenitor = { git = "https://github.com/oxidecomputer/progenitor", rev = "51db1278edfc47912cdedc558badc188bd1b8cdb" }
+progenitor-client = { git = "https://github.com/oxidecomputer/progenitor", rev = "51db1278edfc47912cdedc558badc188bd1b8cdb" }
 
 [workspace.lints.rust]
 # https://doc.rust-lang.org/rustc/lints/listing/index.html

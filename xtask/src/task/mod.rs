@@ -73,7 +73,7 @@ impl TryFrom<TaskSub> for Sub {
             TaskSub::Translate(translate) => Self::Translate(translate.try_into()?),
             TaskSub::FlyTest(fly_test) => Self::FlyTest(fly_test.try_into()?),
             TaskSub::NetlifyTest(netlify_test) => Self::NetlifyTest(netlify_test.try_into()?),
-            TaskSub::Man(man) => Self::Man(man.try_into()?),
+            TaskSub::Man(man) => Self::Man(man.into()),
             TaskSub::Deb(deb) => Self::Deb(deb.try_into()?),
             TaskSub::ReleaseNotes(release_notes) => Self::ReleaseNotes(release_notes.try_into()?),
             TaskSub::Notify(notify) => Self::Notify(notify.try_into()?),

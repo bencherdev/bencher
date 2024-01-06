@@ -55,6 +55,7 @@ pub struct Run {
     html: bool,
     log: bool,
     ci: Option<Ci>,
+    #[allow(clippy::struct_field_names)]
     dry_run: bool,
     backend: AuthBackend,
 }
