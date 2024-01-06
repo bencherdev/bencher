@@ -1305,6 +1305,7 @@ jobs:
       - name: GitHub Release
         uses: softprops/action-gh-release@v1
         with:
+          prerelease: ${{ endsWith(github.ref, '-rc*') }}
           body_path: release-notes.md
           files: |
             ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
@@ -1316,8 +1317,8 @@ jobs:
             ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_MACOS_ARM_64 }}
             ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_WINDOWS_X86_64 }}.exe
             ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_WINDOWS_ARM_64 }}.exe
-            ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-amd64.deb
-            ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-arm64.deb
+            ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_X86_64 }}.deb
+            ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_ARM_64 }}.deb
 
   # Dev Container
   build_dev_container:
