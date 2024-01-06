@@ -8,18 +8,16 @@ pub mod project;
 pub mod system;
 pub mod user;
 
-use docker::{CliDown, CliUp};
+use docker::{CliDown, CliLogs, CliUp};
 use mock::CliMock;
 use organization::{member::CliMember, CliOrganization};
 use project::{
     alert::CliAlert, benchmark::CliBenchmark, branch::CliBranch, measure::CliMeasure,
-    perf::CliPerf, report::CliReport, run::CliRun, testbed::CliTestbed, threshold::CliThreshold,
-    CliProject,
+    perf::CliPerf, report::CliReport, run::CliRun, statistic::CliStatistic, testbed::CliTestbed,
+    threshold::CliThreshold, CliProject,
 };
 use system::{auth::CliAuth, server::CliServer};
 use user::{token::CliToken, CliUser};
-
-use self::project::statistic::CliStatistic;
 
 /// Bencher CLI
 #[derive(Parser, Debug)]
@@ -100,6 +98,8 @@ pub enum CliSub {
     Up(CliUp),
     /// Run `docker compose down` for Bencher Self-Hosted
     Down(CliDown),
+    /// Run `docker compose logs` for Bencher Self-Hosted
+    Logs(CliLogs),
 }
 
 #[derive(Args, Debug)]

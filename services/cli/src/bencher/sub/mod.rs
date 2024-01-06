@@ -11,7 +11,7 @@ mod system;
 mod user;
 
 pub use docker::DockerError;
-use docker::{down::Down, up::Up};
+use docker::{down::Down, logs::Logs, up::Up};
 use mock::Mock;
 pub use mock::MockError;
 use organization::{member::Member, organization::Organization};
@@ -50,6 +50,7 @@ pub enum Sub {
     Mock(Mock),
     Up(Up),
     Down(Down),
+    Logs(Logs),
 }
 
 impl TryFrom<CliSub> for Sub {
@@ -79,6 +80,7 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Mock(mock) => Self::Mock(mock.into()),
             CliSub::Up(up) => Self::Up(up.into()),
             CliSub::Down(down) => Self::Down(down.into()),
+            CliSub::Logs(logs) => Self::Logs(logs.into()),
         })
     }
 }
@@ -108,6 +110,7 @@ impl SubCmd for Sub {
             Self::Mock(mock) => mock.exec().await,
             Self::Up(up) => up.exec().await,
             Self::Down(down) => down.exec().await,
+            Self::Logs(logs) => logs.exec().await,
         }
     }
 }

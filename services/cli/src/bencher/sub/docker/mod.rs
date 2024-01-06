@@ -6,6 +6,7 @@ use bollard::{
 use crate::cli_println;
 
 pub mod down;
+pub mod logs;
 pub mod up;
 
 const BENCHER_API_CONTAINER: &str = "bencher_api_local";
