@@ -932,7 +932,7 @@ jobs:
         run: cargo xtask fly-test --dev
 
   test_litestream_api_fly:
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/express' || github.ref == 'refs/heads/devel'
     name: Deploy Litestream API to Fly.io Test
     runs-on: ubuntu-latest
     needs: build_litestream_api_docker
