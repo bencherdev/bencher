@@ -18,5 +18,4 @@ pnpm-debug.log*
 .DS_Store
 
 # Copied public assets
-public/install-cli.sh
-public/install-cli.ps1
+public/download/

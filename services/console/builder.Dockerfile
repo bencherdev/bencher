@@ -33,8 +33,7 @@ WORKDIR /usr/src/services
 RUN cargo init api
 COPY services/api/swagger.json api/swagger.json
 RUN cargo init cli
-COPY services/cli/install-cli.sh cli/install-cli.sh
-COPY services/cli/install-cli.ps1 cli/install-cli.ps1
+COPY services/cli/templates/output cli/templates/output
 
 WORKDIR /usr/src
 COPY Cargo.toml Cargo.toml
@@ -48,8 +47,7 @@ RUN wasm-pack build --target web --no-default-features --features plus,wasm
 FROM node:18.17.1-bookworm
 COPY --from=wasm-builder /usr/src/lib/bencher_valid /usr/src/lib/bencher_valid
 COPY --from=wasm-builder /usr/src/services/api/swagger.json /usr/src/services/api/swagger.json
-COPY --from=wasm-builder /usr/src/services/cli/install-cli.sh /usr/src/services/cli/install-cli.sh
-COPY --from=wasm-builder /usr/src/services/cli/install-cli.ps1 /usr/src/services/cli/install-cli.ps1
+COPY --from=wasm-builder /usr/src/services/cli/templates/output /usr/src/services/cli/templates/output
 
 WORKDIR /usr/src/services/ui
 COPY services/console/package-lock.json package-lock.json

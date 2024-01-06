@@ -7,8 +7,7 @@
 !Cargo.lock
 !lib/bencher_valid/
 !services/api/swagger.json
-!services/cli/install-cli.sh
-!services/cli/install-cli.ps1
+!services/cli/templates/output
 !services/console/package-lock.json
 !services/console/package.json
 !services/console/public

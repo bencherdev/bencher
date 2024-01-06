@@ -6,7 +6,7 @@ use serde::Serialize;
 
 use crate::parser::{TaskTemplate, TaskTemplateKind};
 
-const CLI_PATH: &str = "services/cli";
+const CLI_TEMPLATES: &str = "services/cli/templates";
 const SH_TEMPLATE: &str = "install-cli.sh.j2";
 const PS1_TEMPLATE: &str = "install-cli.ps1.j2";
 const TEMPLATES: &[TemplateKind] = &[TemplateKind::Sh, TemplateKind::Ps1];
@@ -30,7 +30,7 @@ impl TryFrom<TaskTemplate> for Template {
         let TaskTemplate { template } = template;
 
         let mut env = Environment::new();
-        env.set_loader(minijinja::path_loader(CLI_PATH));
+        env.set_loader(minijinja::path_loader(CLI_TEMPLATES));
 
         let templates = if let Some(template) = template {
             let t = TemplateKind::from(template);
@@ -64,7 +64,7 @@ impl Template {
             }
             let cleaned = newline_converter::dos2unix(&rendered).into_owned();
             let path = format!(
-                "{CLI_PATH}/{file_name}",
+                "{CLI_TEMPLATES}/output/{file_name}",
                 file_name = template_kind.as_ref().trim_end_matches(".j2")
             );
             println!("Using context: {ctx:#?}");
@@ -116,7 +116,7 @@ impl TemplateKind {
             Self::Sh => SH_TEMPLATE,
             Self::Ps1 => PS1_TEMPLATE,
         };
-        std::fs::read_to_string(format!("{CLI_PATH}/{file}")).map(|t| (file, t))
+        std::fs::read_to_string(format!("{CLI_TEMPLATES}/{file}")).map(|t| (file, t))
     }
 
     pub fn artifacts(self) -> Vec<TemplateArtifact> {
