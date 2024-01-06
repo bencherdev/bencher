@@ -5,6 +5,7 @@ pub mod mock;
 pub mod organization;
 pub mod project;
 pub mod system;
+pub mod up;
 pub mod user;
 
 use mock::CliMock;
@@ -15,6 +16,7 @@ use project::{
     CliProject,
 };
 use system::{auth::CliAuth, server::CliServer};
+use up::CliUp;
 use user::{token::CliToken, CliUser};
 
 use self::project::statistic::CliStatistic;
@@ -93,6 +95,9 @@ pub enum CliSub {
 
     /// Generate mock benchmark data
     Mock(CliMock),
+
+    /// Run `docker compose up` for Bencher Self-Hosted
+    Up(CliUp),
 }
 
 #[derive(Args, Debug)]

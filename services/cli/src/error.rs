@@ -1,11 +1,13 @@
 #[derive(thiserror::Error, Debug)]
 pub enum CliError {
     #[error("{0}")]
-    Mock(#[from] crate::bencher::sub::MockError),
+    Backend(#[from] crate::bencher::BackendError),
     #[error("{0}")]
     Run(#[from] crate::bencher::sub::RunError),
     #[error("{0}")]
-    Backend(#[from] crate::bencher::BackendError),
+    Mock(#[from] crate::bencher::sub::MockError),
+    #[error("{0}")]
+    Up(#[from] crate::bencher::sub::UpError),
 
     #[error("Failed to create date time from seconds: {0}")]
     DateTime(i64),

@@ -30,6 +30,8 @@ tabled.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["macros", "process", "rt"] }
 url.workspace = true
+# Crate
+bollard = "0.15"
 
 [dev-dependencies]
 # Workspace

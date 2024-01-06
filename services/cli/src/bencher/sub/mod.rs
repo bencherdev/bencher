@@ -9,6 +9,7 @@ mod organization;
 mod project;
 mod sub_cmd;
 mod system;
+mod up;
 mod user;
 
 use mock::Mock;
@@ -22,6 +23,8 @@ use project::{
 };
 pub use sub_cmd::SubCmd;
 use system::{auth::Auth, server::Server};
+use up::Up;
+pub use up::UpError;
 use user::resource::User;
 use user::token::Token;
 
@@ -47,6 +50,7 @@ pub enum Sub {
     Token(Token),
     Server(Server),
     Mock(Mock),
+    Up(Up),
 }
 
 impl TryFrom<CliSub> for Sub {
@@ -74,6 +78,7 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Token(token) => Self::Token(token.try_into()?),
             CliSub::Server(server) => Self::Server(server.try_into()?),
             CliSub::Mock(mock) => Self::Mock(mock.into()),
+            CliSub::Up(up) => Self::Up(up.into()),
         })
     }
 }
@@ -102,6 +107,7 @@ impl SubCmd for Sub {
             Self::Token(token) => token.exec().await,
             Self::Server(server) => server.exec().await,
             Self::Mock(mock) => mock.exec().await,
+            Self::Up(up) => up.exec().await,
         }
     }
 }
