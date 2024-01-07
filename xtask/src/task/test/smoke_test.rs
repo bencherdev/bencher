@@ -16,8 +16,8 @@ pub struct FlyTest {
 impl TryFrom<TaskFlyTest> for FlyTest {
     type Error = anyhow::Error;
 
-    fn try_from(swagger: TaskFlyTest) -> Result<Self, Self::Error> {
-        let TaskFlyTest { dev } = swagger;
+    fn try_from(test: TaskFlyTest) -> Result<Self, Self::Error> {
+        let TaskFlyTest { dev } = test;
         Ok(Self { dev })
     }
 }
