@@ -8,7 +8,10 @@ use bollard::{
 };
 
 use crate::{
-    bencher::sub::{docker::down::stop_container, SubCmd},
+    bencher::sub::{
+        docker::{down::stop_container, logs::tail_container_logs},
+        SubCmd,
+    },
     cli_println,
     parser::docker::CliUp,
     CliError,
@@ -19,12 +22,14 @@ use super::{
 };
 
 #[derive(Debug, Clone)]
-pub struct Up {}
+pub struct Up {
+    detach: bool,
+}
 
 impl From<CliUp> for Up {
     fn from(up: CliUp) -> Self {
-        let CliUp {} = up;
-        Self {}
+        let CliUp { detach } = up;
+        Self { detach }
     }
 }
 
@@ -53,6 +58,17 @@ impl SubCmd for Up {
         cli_println!("🐰 Bencher Self-Hosted is up and running!");
         cli_println!("Web Console: {LOCALHOST_BENCHER_URL_STR}");
         cli_println!("API Server: {LOCALHOST_BENCHER_API_URL_STR}");
+        cli_println!("");
+
+        if self.detach {
+            cli_println!("Run `bencher down` to stop Bencher Self-Hosted.");
+        } else {
+            cli_println!("Press Ctrl+C to stop Bencher Self-Hosted.");
+            cli_println!("");
+            tail_container_logs(&docker).await;
+            stop_container(&docker, BENCHER_UI_CONTAINER).await?;
+            stop_container(&docker, BENCHER_API_CONTAINER).await?;
+        }
 
         Ok(())
     }
@@ -105,6 +121,8 @@ async fn start_container(
             container: container.to_owned(),
             err,
         })?;
+
+    cli_println!("");
 
     Ok(())
 }

@@ -28,10 +28,12 @@ impl SubCmd for Logs {
         if let Some(container) = &self.container {
             let mut logs = container_logs(&docker, container);
             cli_println!("🐰 Bencher Self-Hosted (`{container}`) logs...");
+            cli_println!("");
 
             loop {
                 tokio::select! {
                     _ = tokio::signal::ctrl_c() => {
+                        cli_println!("");
                         cli_println!("🐰 Bencher Self-Hosted (`{container}`) logs closed.");
                         break;
                     }
@@ -39,6 +41,7 @@ impl SubCmd for Logs {
                         match log {
                             Ok(log) => cli_println!("{log}"),
                             Err(err) => {
+                                cli_println!("");
                                 cli_eprintln!("🐰 Bencher Self-Hosted (`{container}`) logs closed: {err}");
                                 break;
                             }
@@ -47,22 +50,24 @@ impl SubCmd for Logs {
                 }
             }
         } else {
-            watch_container_logs(&docker).await;
+            tail_container_logs(&docker).await;
         }
 
         Ok(())
     }
 }
 
-pub async fn watch_container_logs(docker: &Docker) {
+pub async fn tail_container_logs(docker: &Docker) {
     let mut api_logs = container_logs(docker, BENCHER_API_CONTAINER);
     let mut ui_logs = container_logs(docker, BENCHER_UI_CONTAINER);
     cli_println!("🐰 Bencher Self-Hosted logs...");
+    cli_println!("");
 
     let mut closed = false;
     loop {
         tokio::select! {
             _ = tokio::signal::ctrl_c() => {
+                cli_println!("");
                 cli_println!("🐰 Bencher Self-Hosted logs closed.");
                 break;
             }
@@ -70,6 +75,7 @@ pub async fn watch_container_logs(docker: &Docker) {
                 match log {
                     Ok(log) => cli_println!("{log}"),
                     Err(err) => {
+                        cli_println!("");
                         cli_eprintln!("🐰 Bencher Self-Hosted API logs closed: {err}");
                         if closed {
                             break;
@@ -82,6 +88,7 @@ pub async fn watch_container_logs(docker: &Docker) {
                 match log {
                     Ok(log) => cli_println!("{log}"),
                     Err(err) => {
+                        cli_println!("");
                         cli_eprintln!("🐰 Bencher Self-Hosted UI logs closed: {err}");
                         if closed {
                             break;

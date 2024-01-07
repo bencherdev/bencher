@@ -55,6 +55,8 @@ pub async fn stop_container(docker: &Docker, container: &str) -> Result<(), Dock
                 container: container.to_owned(),
                 err,
             })?;
+
+        cli_println!("");
     }
 
     Ok(())

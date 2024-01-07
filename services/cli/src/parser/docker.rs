@@ -1,7 +1,11 @@
 use clap::Parser;
 
 #[derive(Parser, Debug)]
-pub struct CliUp {}
+pub struct CliUp {
+    /// Detached mode: Run containers in the background
+    #[clap(short, long)]
+    pub detach: bool,
+}
 
 #[derive(Parser, Debug)]
 pub struct CliDown {}
