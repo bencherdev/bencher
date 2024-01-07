@@ -54,7 +54,6 @@ impl TryFrom<TaskTemplate> for Template {
 }
 
 impl Template {
-    #[allow(clippy::unnecessary_wraps, clippy::use_debug)]
     pub fn exec(&self) -> anyhow::Result<()> {
         for template_kind in &self.templates {
             let template = self.env.get_template(template_kind.as_ref())?;

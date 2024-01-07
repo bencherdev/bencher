@@ -114,6 +114,12 @@ pub static BENCHER_API_URL: Lazy<url::Url> = Lazy::new(|| {
         .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{BENCHER_API_URL_STR}\": {e}"))
 });
 #[allow(clippy::panic)]
+pub static LOCALHOST_BENCHER_API_URL: Lazy<url::Url> = Lazy::new(|| {
+    LOCALHOST_BENCHER_API_URL_STR.parse().unwrap_or_else(|e| {
+        panic!("Failed to parse endpoint \"{LOCALHOST_BENCHER_API_URL_STR}\": {e}")
+    })
+});
+#[allow(clippy::panic)]
 pub static DEV_BENCHER_API_URL: Lazy<url::Url> = Lazy::new(|| {
     DEV_BENCHER_API_URL_STR
         .parse()
@@ -124,6 +130,12 @@ pub static TEST_BENCHER_API_URL: Lazy<url::Url> = Lazy::new(|| {
     TEST_BENCHER_API_URL_STR
         .parse()
         .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{TEST_BENCHER_API_URL_STR}\": {e}"))
+});
+#[allow(clippy::panic)]
+pub static PROD_BENCHER_API_URL: Lazy<url::Url> = Lazy::new(|| {
+    PROD_BENCHER_API_URL_STR
+        .parse()
+        .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{PROD_BENCHER_API_URL_STR}\": {e}"))
 });
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

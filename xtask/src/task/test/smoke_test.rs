@@ -1,18 +1,23 @@
 use std::process::{Child, Command};
 
 use bencher_json::{
-    JsonApiVersion, DEV_BENCHER_API_URL_STR, LOCALHOST_BENCHER_API_URL_STR,
-    PROD_BENCHER_API_URL_STR, TEST_BENCHER_API_URL_STR,
+    JsonApiVersion, Jwt, Url, DEV_BENCHER_API_URL, LOCALHOST_BENCHER_API_URL, PROD_BENCHER_API_URL,
+    TEST_BENCHER_API_URL,
 };
+use once_cell::sync::Lazy;
 
 use crate::{
-    parser::{TaskSmokeTest, TaskTestEnvironment},
-    task::types::swagger::swagger_spec,
+    parser::{TaskExamples, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment},
+    task::{
+        test::{examples::Examples, seed_test::SeedTest},
+        types::swagger::swagger_spec,
+    },
 };
 
-const BENCHER_API_URL_KEY: &str = "BENCHER_API_URL";
-const TEST_BENCHER_API_TOKEN: &str = "TEST_BENCHER_API_TOKEN";
-const DEV_BENCHER_API_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjQyMTU2LCJpYXQiOjE2OTg2NzQ4NjEsImlzcyI6Imh0dHBzOi8vZGV2ZWwtLWJlbmNoZXIubmV0bGlmeS5hcHAvIiwic3ViIjoibXVyaWVsLmJhZ2dlQG5vd2hlcmUuY29tIiwib3JnIjpudWxsfQ.9z7jmM53TcVzc1inDxTeX9_OR0PQPpZAsKsCE7lWHfo";
+const DEV_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjQyMTU2LCJpYXQiOjE2OTg2NzQ4NjEsImlzcyI6Imh0dHBzOi8vZGV2ZWwtLWJlbmNoZXIubmV0bGlmeS5hcHAvIiwic3ViIjoibXVyaWVsLmJhZ2dlQG5vd2hlcmUuY29tIiwib3JnIjpudWxsfQ.9z7jmM53TcVzc1inDxTeX9_OR0PQPpZAsKsCE7lWHfo";
+#[allow(clippy::expect_used)]
+pub static DEV_BENCHER_API_TOKEN: Lazy<Jwt> =
+    Lazy::new(|| DEV_BENCHER_API_TOKEN_STR.parse().expect("Invalid test JWT"));
 
 #[derive(Debug)]
 pub struct SmokeTest {
@@ -34,14 +39,14 @@ impl TryFrom<TaskSmokeTest> for SmokeTest {
     fn try_from(test: TaskSmokeTest) -> Result<Self, Self::Error> {
         let TaskSmokeTest { environment } = test;
         Ok(Self {
-            environment: environment.into(),
+            environment: environment.unwrap_or_default().into(),
         })
     }
 }
 
 impl From<TaskTestEnvironment> for Environment {
-    fn from(endpoint: TaskTestEnvironment) -> Self {
-        match endpoint {
+    fn from(environment: TaskTestEnvironment) -> Self {
+        match environment {
             TaskTestEnvironment::Localhost => Self::Localhost,
             TaskTestEnvironment::Docker => Self::Docker,
             TaskTestEnvironment::Dev => Self::Dev,
@@ -64,12 +69,12 @@ impl SmokeTest {
             Environment::Dev | Environment::Test | Environment::Prod => None,
         };
 
-        let api_url = self.environment.as_ref();
-        test_api_version(api_url, version)?;
+        let api_url = self.environment.as_url();
+        test_api_version(&api_url, version)?;
 
         match self.environment {
             Environment::Localhost => {
-                test(api_url, None)?;
+                test(&api_url, None)?;
                 #[allow(clippy::expect_used)]
                 child
                     .expect("Child process is expected for `localhost`")
@@ -77,7 +82,7 @@ impl SmokeTest {
                     .ok();
             },
             Environment::Docker => bencher_down()?,
-            Environment::Dev => test(api_url, Some(DEV_BENCHER_API_TOKEN))?,
+            Environment::Dev => test(&api_url, Some(&DEV_BENCHER_API_TOKEN))?,
             Environment::Test | Environment::Prod => {},
         }
 
@@ -85,14 +90,15 @@ impl SmokeTest {
     }
 }
 
-impl AsRef<str> for Environment {
-    fn as_ref(&self) -> &str {
+impl Environment {
+    fn as_url(self) -> Url {
         match self {
-            Self::Localhost | Self::Docker => LOCALHOST_BENCHER_API_URL_STR,
-            Self::Dev => DEV_BENCHER_API_URL_STR,
-            Self::Test => TEST_BENCHER_API_URL_STR,
-            Self::Prod => PROD_BENCHER_API_URL_STR,
+            Self::Localhost | Self::Docker => LOCALHOST_BENCHER_API_URL.clone(),
+            Self::Dev => DEV_BENCHER_API_URL.clone(),
+            Self::Test => TEST_BENCHER_API_URL.clone(),
+            Self::Prod => PROD_BENCHER_API_URL.clone(),
         }
+        .into()
     }
 }
 
@@ -116,10 +122,9 @@ fn bencher_up() -> anyhow::Result<()> {
         .current_dir("./services/cli")
         .output()?;
 
+    eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+    println!("{}", String::from_utf8_lossy(&output.stdout));
     output.status.success().then_some(()).ok_or_else(|| {
-        eprintln!("{}", String::from_utf8_lossy(&output.stderr));
-        println!("{}", String::from_utf8_lossy(&output.stdout));
-
         anyhow::anyhow!(
             "Failed to run `bencher up`. Exit code: {:?}",
             output.status.code()
@@ -140,10 +145,9 @@ fn bencher_down() -> anyhow::Result<()> {
         .current_dir("./services/cli")
         .output()?;
 
+    eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+    println!("{}", String::from_utf8_lossy(&output.stdout));
     output.status.success().then_some(()).ok_or_else(|| {
-        eprintln!("{}", String::from_utf8_lossy(&output.stderr));
-        println!("{}", String::from_utf8_lossy(&output.stdout));
-
         anyhow::anyhow!(
             "Failed to run `bencher down`. Exit code: {:?}",
             output.status.code()
@@ -153,18 +157,17 @@ fn bencher_down() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn test_api_version(api_url: &str, version: &str) -> anyhow::Result<()> {
+fn test_api_version(api_url: &Url, version: &str) -> anyhow::Result<()> {
     println!("Testing API deploy is version {version} at {api_url}");
 
     let output = Command::new("cargo")
-        .args(["run", "--", "server", "version", "--host", api_url])
+        .args(["run", "--", "server", "version", "--host", api_url.as_ref()])
         .current_dir("./services/cli")
         .output()?;
 
+    eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+    println!("{}", String::from_utf8_lossy(&output.stdout));
     output.status.success().then_some(()).ok_or_else(|| {
-        eprintln!("{}", String::from_utf8_lossy(&output.stderr));
-        println!("{}", String::from_utf8_lossy(&output.stdout));
-
         anyhow::anyhow!(
             "Failed to get server version. Exit code: {:?}",
             output.status.code()
@@ -182,59 +185,25 @@ fn test_api_version(api_url: &str, version: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn test(api_url: &str, token: Option<&str>) -> anyhow::Result<()> {
-    seed(api_url, token).and_then(|()| examples(api_url))
+fn test(api_url: &Url, token: Option<&Jwt>) -> anyhow::Result<()> {
+    seed(api_url, token).and_then(|()| examples(api_url, token))
 }
 
-fn seed(api_url: &str, token: Option<&str>) -> anyhow::Result<()> {
+fn seed(api_url: &Url, token: Option<&Jwt>) -> anyhow::Result<()> {
     println!("Seeding API deploy at {api_url}");
-
-    let mut cmd = Command::new("cargo");
-    let cmd = cmd
-        .args(["test", "--features", "seed", "--test", "seed"])
-        .current_dir("./services/cli")
-        .env(BENCHER_API_URL_KEY, api_url);
-    if let Some(token) = token {
-        cmd.env(TEST_BENCHER_API_TOKEN, token);
-    }
-    let output = cmd.output()?;
-
-    output.status.success().then_some(()).ok_or_else(|| {
-        eprintln!("{}", String::from_utf8_lossy(&output.stderr));
-        println!("{}", String::from_utf8_lossy(&output.stdout));
-
-        anyhow::anyhow!("Failed to seed. Exit code: {:?}", output.status.code())
-    })
+    let seed_test = SeedTest::try_from(TaskSeedTest {
+        url: Some(api_url.clone()),
+        token: token.map(Clone::clone),
+    })?;
+    seed_test.exec()
 }
 
-fn examples(api_url: &str) -> anyhow::Result<()> {
+fn examples(api_url: &Url, token: Option<&Jwt>) -> anyhow::Result<()> {
     println!("Running examples at {api_url}");
-
-    let output = Command::new("bencher")
-        .args([
-            "run",
-            "--host",
-            api_url,
-            "--token",
-            DEV_BENCHER_API_TOKEN,
-            "--project",
-            "the-computer",
-            "--branch",
-            "master",
-            "--testbed",
-            "base",
-            "cargo bench",
-        ])
-        .current_dir("./examples/rust/bench")
-        .output()?;
-
-    output.status.success().then_some(()).ok_or_else(|| {
-        eprintln!("{}", String::from_utf8_lossy(&output.stderr));
-        println!("{}", String::from_utf8_lossy(&output.stdout));
-
-        anyhow::anyhow!(
-            "Failed to run examples. Exit code: {:?}",
-            output.status.code()
-        )
-    })
+    let examples = Examples::try_from(TaskExamples {
+        url: Some(api_url.clone()),
+        token: token.map(Clone::clone),
+        example: None,
+    })?;
+    examples.exec()
 }

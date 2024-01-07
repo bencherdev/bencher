@@ -1,7 +1,7 @@
 use std::process::Command;
 
 use assert_cmd::{assert::OutputAssertExt, cargo::CommandCargoExt};
-use bencher_json::{Jwt, Url, BENCHER_API_URL};
+use bencher_json::{Jwt, Url, LOCALHOST_BENCHER_API_URL};
 use pretty_assertions::assert_eq;
 
 use crate::parser::TaskSeedTest;
@@ -32,7 +32,7 @@ impl TryFrom<TaskSeedTest> for SeedTest {
     fn try_from(test: TaskSeedTest) -> Result<Self, Self::Error> {
         let TaskSeedTest { url, token } = test;
         Ok(Self {
-            url: url.unwrap_or_else(|| BENCHER_API_URL.clone().into()),
+            url: url.unwrap_or_else(|| LOCALHOST_BENCHER_API_URL.clone().into()),
             token: token.unwrap_or_else(Jwt::test_token),
         })
     }

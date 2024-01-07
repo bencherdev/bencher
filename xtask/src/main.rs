@@ -1,4 +1,9 @@
-#![allow(clippy::print_stdout, clippy::print_stderr, clippy::unused_self)]
+#![allow(
+    clippy::print_stdout,
+    clippy::print_stderr,
+    clippy::unused_self,
+    clippy::use_debug
+)]
 
 mod parser;
 mod task;

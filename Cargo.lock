@@ -7192,6 +7192,7 @@ dependencies = [
  "minijinja",
  "newline-converter",
  "notify-rust",
+ "once_cell",
  "pretty_assertions",
  "reqwest",
  "serde",

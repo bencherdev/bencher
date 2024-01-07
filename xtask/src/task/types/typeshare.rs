@@ -20,10 +20,9 @@ impl Typeshare {
             .current_dir("./services/console")
             .output()?;
 
+        eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+        println!("{}", String::from_utf8_lossy(&output.stdout));
         output.status.success().then_some(()).ok_or_else(|| {
-            eprintln!("{}", String::from_utf8_lossy(&output.stderr));
-            println!("{}", String::from_utf8_lossy(&output.stdout));
-
             anyhow::anyhow!(
                 "Failed to generate typeshare. Exit code: {:?}",
                 output.status.code()

@@ -18,7 +18,9 @@ pub use plus::{
 };
 pub use release::TaskReleaseNotes;
 pub use template::{TaskTemplate, TaskTemplateKind};
-pub use test::{TaskNetlifyTest, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment};
+pub use test::{
+    TaskExample, TaskExamples, TaskNetlifyTest, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment,
+};
 pub use types::{TaskSwagger, TaskTypes, TaskTypeshare};
 
 /// Bencher CLI
@@ -52,6 +54,8 @@ pub enum TaskSub {
     Translate(TaskTranslate),
     /// Run Seed test
     SeedTest(TaskSeedTest),
+    // Run Example(s)
+    Examples(TaskExamples),
     /// Run smoke test
     SmokeTest(TaskSmokeTest),
     /// Run tests against Netlify deployment

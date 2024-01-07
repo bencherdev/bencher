@@ -148,7 +148,6 @@ impl Translate {
 
                 println!("\nResponse:\n");
                 let mut translation = String::new();
-                #[allow(clippy::use_debug)]
                 for choice in response.choices {
                     println!(
                         "{}: Role: {}  Content: {:?}",

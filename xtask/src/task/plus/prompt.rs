@@ -55,7 +55,6 @@ impl Prompt {
 
         println!("\nResponse:\n");
         let mut resp = String::new();
-        #[allow(clippy::use_debug)]
         for choice in response.choices {
             println!(
                 "{}: Role: {}  Content: {:?}",

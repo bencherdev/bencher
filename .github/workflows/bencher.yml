@@ -71,40 +71,47 @@ jobs:
       - name: Check for changes
         run: git diff --exit-code
 
-  test_github_action:
-    name: Test GitHub Action
+  test_cli_install:
+    name: Test CLI Install
     strategy:
       fail-fast: false
       matrix:
         include:
           # Linux
-          - build: linux
-            os: ubuntu-latest
-            branch: main
-          - build: linux
-            os: ubuntu-latest
-            branch: devel
+          - os: ubuntu-latest
+            source: main
+          - os: ubuntu-latest
+            source: devel
+          - os: ubuntu-latest
+            source: script
           # MacOS
-          - build: macos
-            os: macos-latest
-            branch: main
-          - build: macos
-            os: macos-latest
-            branch: devel
+          - os: macos-latest
+            source: main
+          - os: macos-latest
+            source: devel
+          - os: macos-latest
+            source: script
           # Windows
-          - build: windows
-            os: windows-latest
-            branch: main
-          - build: windows
-            os: windows-latest
-            branch: devel
+          - os: windows-latest
+            source: main
+          - os: windows-latest
+            source: devel
+          - os: windows-latest
+            source: script
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ startsWith(github.ref, 'refs/tags/') && matrix.branch == 'devel' }}
+    # This is expected to fail on `devel` when tagging a new release
+    continue-on-error: ${{ startsWith(github.ref, 'refs/tags/') && matrix.source == 'devel' }}
     steps:
       - uses: bencherdev/bencher@main
-        if: matrix.branch == 'main'
+        if: matrix.source == 'main'
       - uses: bencherdev/bencher@devel
-        if: matrix.branch == 'devel'
+        if: matrix.source == 'devel'
+      - name: Unix CLI Install Script
+        if: matrix.source == 'script' && matrix.os != 'windows-latest'
+        run: curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
+      - name: Windows CLI Install Script
+        if: matrix.source == 'script' && matrix.os == 'windows-latest'
+        run: irm https://bencher.dev/download/install-cli.ps1 | iex
       - name: Run current Bencher CLI GitHub Action
         run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
 
@@ -235,49 +242,23 @@ jobs:
       matrix:
         include:
           # Linux
-          - build: linux
-            os: ubuntu-latest
-            compat: false
+          - os: ubuntu-latest
             smoke_test: localhost
-          - build: linux
-            os: ubuntu-latest
-            compat: true
-            smoke_test: localhost
-          - build: linux
-            os: ubuntu-latest
-            compat: false
+          - os: ubuntu-latest
             smoke_test: docker
           # MacOS
-          - build: macos
-            os: macos-latest
-            compat: false
+          - os: macos-latest
             smoke_test: localhost
-          - build: macos
-            os: macos-latest
-            compat: true
-            smoke_test: localhost
-          - build: macos
-            os: macos-latest
-            compat: false
+          - os: macos-latest
             smoke_test: docker
           # Windows
-          - build: windows
-            os: windows-latest
-            compat: false
+          - os: windows-latest
             smoke_test: localhost
-          - build: windows
-            os: windows-latest
-            compat: true
-            smoke_test: localhost
-          - build: windows
-            os: windows-latest
-            compat: false
+          - os: windows-latest
             smoke_test: docker
     runs-on: ${{ matrix.os }}
     timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    # `compat` runs will fail whenever there is a breaking change in the API
-    # Pre-1.0 this is okay but good to be aware of
-    continue-on-error: ${{ github.ref == 'refs/heads/express' || matrix.compat }}
+    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
@@ -290,17 +271,11 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-xtask-${{ env.CACHE_NAME }}
       - uses: rui314/setup-mold@v1
-        if: startsWith(matrix.build, 'linux')
+        if: startsWith(matrix.os, 'ubuntu')
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Install `bencher` CLI
-        if: matrix.smoke_test == 'localhost' && !matrix.compat
         run: cargo install --path services/cli --locked --force
-      # Note that this really is using the latest version of the CLI
-      # and not the `@main` version of the CLI from the GitHub Action
-      # for the `smoke_test` step but it is used in the `examples` step
-      - uses: bencherdev/bencher@main
-        if: matrix.smoke_test == 'localhost' && matrix.compat
       - name: Run Smoke Test
         run: cargo xtask smoke-test ${{ matrix.smoke_test }}
 

@@ -18,7 +18,9 @@ use package::man::Man;
 use plus::{prompt::Prompt, stats::Stats, translate::Translate};
 use release_notes::ReleaseNotes;
 use template::Template;
-use test::{netlify_test::NetlifyTest, seed_test::SeedTest, smoke_test::SmokeTest};
+use test::{
+    examples::Examples, netlify_test::NetlifyTest, seed_test::SeedTest, smoke_test::SmokeTest,
+};
 use types::{swagger::Swagger, types::Types, typeshare::Typeshare};
 
 #[derive(Debug)]
@@ -40,6 +42,7 @@ pub enum Sub {
     #[cfg(feature = "plus")]
     Translate(Translate),
     SeedTest(SeedTest),
+    Examples(Examples),
     SmokeTest(SmokeTest),
     NetlifyTest(NetlifyTest),
     Man(Man),
@@ -74,6 +77,7 @@ impl TryFrom<TaskSub> for Sub {
             #[cfg(feature = "plus")]
             TaskSub::Translate(translate) => Self::Translate(translate.try_into()?),
             TaskSub::SeedTest(seed_test) => Self::SeedTest(seed_test.try_into()?),
+            TaskSub::Examples(examples) => Self::Examples(examples.try_into()?),
             TaskSub::SmokeTest(smoke_test) => Self::SmokeTest(smoke_test.try_into()?),
             TaskSub::NetlifyTest(netlify_test) => Self::NetlifyTest(netlify_test.try_into()?),
             TaskSub::Man(man) => Self::Man(man.into()),
@@ -108,6 +112,7 @@ impl Sub {
             #[cfg(feature = "plus")]
             Self::Translate(translate) => translate.exec().await,
             Self::SeedTest(seed_test) => seed_test.exec(),
+            Self::Examples(examples) => examples.exec(),
             Self::SmokeTest(smoke_test) => smoke_test.exec(),
             Self::NetlifyTest(netlify_test) => netlify_test.exec().await,
             Self::Man(man) => man.exec(),
