@@ -7,4 +7,7 @@ pub struct CliUp {}
 pub struct CliDown {}
 
 #[derive(Parser, Debug)]
-pub struct CliLogs {}
+pub struct CliLogs {
+    /// Docker container name
+    pub container: Option<String>,
+}
