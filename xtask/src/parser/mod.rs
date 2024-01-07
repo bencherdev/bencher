@@ -10,7 +10,6 @@ mod test;
 mod types;
 
 pub use notify::TaskNotify;
-#[cfg(target_os = "linux")]
 pub use package::TaskDeb;
 pub use package::TaskMan;
 pub use plus::{
@@ -60,7 +59,6 @@ pub enum TaskSub {
     /// Create CLI man page
     Man(TaskMan),
     /// Create CLI .deb
-    #[cfg(target_os = "linux")]
     Deb(TaskDeb),
     /// Generate release notes
     ReleaseNotes(TaskReleaseNotes),

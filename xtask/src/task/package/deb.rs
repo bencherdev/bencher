@@ -1,6 +1,6 @@
-#![cfg(target_os = "linux")]
-
-use std::{fs::Permissions, os::unix::fs::PermissionsExt, process::Command};
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+use std::{fs::Permissions, process::Command};
 
 use crate::parser::{TaskDeb, TaskMan};
 use bencher_api::API_VERSION;
@@ -36,6 +36,7 @@ impl Deb {
         let bencher_path = bin_path.join("bencher");
 
         std::fs::create_dir_all(&bin_path)?;
+        #[cfg(unix)]
         std::fs::set_permissions(&self.bin, Permissions::from_mode(0o755))?;
         std::fs::copy(&self.bin, bencher_path)?;
 

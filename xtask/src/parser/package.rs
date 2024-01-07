@@ -12,7 +12,6 @@ pub struct TaskMan {
     pub name: Option<Utf8PathBuf>,
 }
 
-#[cfg(target_os = "linux")]
 #[derive(Parser, Debug)]
 pub struct TaskDeb {
     /// CLI bin path

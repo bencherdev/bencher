@@ -1,16 +1,10 @@
-use std::process::{Child, Command};
+use std::process::Command;
 
 use assert_cmd::{assert::OutputAssertExt, cargo::CommandCargoExt};
-use bencher_json::{
-    JsonApiVersion, Jwt, Url, BENCHER_API_URL, DEV_BENCHER_API_URL_STR,
-    LOCALHOST_BENCHER_API_URL_STR, PROD_BENCHER_API_URL_STR, TEST_BENCHER_API_URL_STR,
-};
+use bencher_json::{Jwt, Url, BENCHER_API_URL};
 use pretty_assertions::assert_eq;
 
-use crate::{
-    parser::{TaskSeedTest, TaskTestEnvironment},
-    task::types::swagger::swagger_spec,
-};
+use crate::parser::TaskSeedTest;
 
 const BENCHER_CMD: &str = "bencher";
 const HOST_ARG: &str = "--host";
