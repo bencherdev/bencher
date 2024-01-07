@@ -1,3 +1,5 @@
+#![cfg(target_os = "linux")]
+
 use std::{fs::Permissions, os::unix::fs::PermissionsExt, process::Command};
 
 use crate::parser::{TaskDeb, TaskMan};

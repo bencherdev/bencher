@@ -10,7 +10,9 @@ mod test;
 mod types;
 
 pub use notify::TaskNotify;
-pub use package::{TaskDeb, TaskMan};
+#[cfg(target_os = "linux")]
+pub use package::TaskDeb;
+pub use package::TaskMan;
 pub use plus::{
     prompt::{TaskLanguage, TaskPrompt, TaskTranslate},
     stats::TaskStats,
@@ -56,6 +58,7 @@ pub enum TaskSub {
     /// Create CLI man page
     Man(TaskMan),
     /// Create CLI .deb
+    #[cfg(target_os = "linux")]
     Deb(TaskDeb),
     /// Generate release notes
     ReleaseNotes(TaskReleaseNotes),

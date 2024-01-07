@@ -12,7 +12,9 @@ mod test;
 mod types;
 
 use notify::Notify;
-use package::{deb::Deb, man::Man};
+#[cfg(target_os = "linux")]
+use package::deb::Deb;
+use package::man::Man;
 #[cfg(feature = "plus")]
 use plus::{prompt::Prompt, stats::Stats, translate::Translate};
 use release_notes::ReleaseNotes;
@@ -41,6 +43,7 @@ pub enum Sub {
     SmokeTest(SmokeTest),
     NetlifyTest(NetlifyTest),
     Man(Man),
+    #[cfg(target_os = "linux")]
     Deb(Deb),
     ReleaseNotes(ReleaseNotes),
     Notify(Notify),
@@ -74,6 +77,7 @@ impl TryFrom<TaskSub> for Sub {
             TaskSub::SmokeTest(smoke_test) => Self::SmokeTest(smoke_test.try_into()?),
             TaskSub::NetlifyTest(netlify_test) => Self::NetlifyTest(netlify_test.try_into()?),
             TaskSub::Man(man) => Self::Man(man.into()),
+            #[cfg(target_os = "linux")]
             TaskSub::Deb(deb) => Self::Deb(deb.try_into()?),
             TaskSub::ReleaseNotes(release_notes) => Self::ReleaseNotes(release_notes.try_into()?),
             TaskSub::Notify(notify) => Self::Notify(notify.try_into()?),
@@ -107,6 +111,7 @@ impl Sub {
             Self::SmokeTest(smoke_test) => smoke_test.exec(),
             Self::NetlifyTest(netlify_test) => netlify_test.exec().await,
             Self::Man(man) => man.exec(),
+            #[cfg(target_os = "linux")]
             Self::Deb(deb) => deb.exec(),
             Self::ReleaseNotes(release_notes) => release_notes.exec(),
             Self::Notify(notify) => notify.exec().await,
