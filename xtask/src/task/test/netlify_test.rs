@@ -16,8 +16,8 @@ pub struct NetlifyTest {
 impl TryFrom<TaskNetlifyTest> for NetlifyTest {
     type Error = anyhow::Error;
 
-    fn try_from(swagger: TaskNetlifyTest) -> Result<Self, Self::Error> {
-        let TaskNetlifyTest { dev } = swagger;
+    fn try_from(test: TaskNetlifyTest) -> Result<Self, Self::Error> {
+        let TaskNetlifyTest { dev } = test;
         Ok(Self { dev })
     }
 }

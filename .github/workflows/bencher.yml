@@ -238,35 +238,41 @@ jobs:
           - build: linux
             os: ubuntu-latest
             compat: false
-            smoke_test: ./scripts/smoke_test.sh
-            examples: ./scripts/examples.sh
+            smoke_test: localhost
           - build: linux
             os: ubuntu-latest
             compat: true
-            smoke_test: ./scripts/smoke_test.sh
-            examples: ./scripts/examples.sh
+            smoke_test: localhost
+          - build: linux
+            os: ubuntu-latest
+            compat: false
+            smoke_test: docker
           # MacOS
           - build: macos
             os: macos-latest
             compat: false
-            smoke_test: ./scripts/smoke_test.sh
-            examples: ./scripts/examples.sh
+            smoke_test: localhost
           - build: macos
             os: macos-latest
             compat: true
-            smoke_test: ./scripts/smoke_test.sh
-            examples: ./scripts/examples.sh
+            smoke_test: localhost
+          - build: macos
+            os: macos-latest
+            compat: false
+            smoke_test: docker
           # Windows
           - build: windows
             os: windows-latest
             compat: false
-            smoke_test: .\scripts\smoke_test.bat
-            examples: .\scripts\examples.bat
+            smoke_test: localhost
           - build: windows
             os: windows-latest
             compat: true
-            smoke_test: .\scripts\smoke_test.bat
-            examples: .\scripts\examples.bat
+            smoke_test: localhost
+          - build: windows
+            os: windows-latest
+            compat: false
+            smoke_test: docker
     runs-on: ${{ matrix.os }}
     timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
     # `compat` runs will fail whenever there is a breaking change in the API
@@ -282,23 +288,21 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-release-${{ env.CACHE_NAME }}
+          key: ${{ runner.os }}-cargo-xtask-${{ env.CACHE_NAME }}
       - uses: rui314/setup-mold@v1
         if: startsWith(matrix.build, 'linux')
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Install `bencher` CLI
-        if: (!matrix.compat)
+        if: matrix.smoke_test == 'localhost' && !matrix.compat
         run: cargo install --path services/cli --locked --force
       # Note that this really is using the latest version of the CLI
       # and not the `@main` version of the CLI from the GitHub Action
       # for the `smoke_test` step but it is used in the `examples` step
       - uses: bencherdev/bencher@main
-        if: matrix.compat
-      - name: Run API Smoke Test
-        run: ${{ matrix.smoke_test }}
-      - name: Run Examples
-        run: ${{ matrix.examples }}
+        if: matrix.smoke_test == 'localhost' && matrix.compat
+      - name: Run Smoke Test
+        run: cargo xtask smoke-test ${{ matrix.smoke_test }}
 
   # Cargo Check (Minus)
   cargo_check_api_minus:
@@ -928,8 +932,8 @@ jobs:
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
-      - name: Run Fly.io Dev Test
-        run: cargo xtask fly-test --dev
+      - name: Run Smoke Test
+        run: cargo xtask smoke-test dev
 
   test_litestream_api_fly:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/express' || github.ref == 'refs/heads/devel'
@@ -952,6 +956,20 @@ jobs:
       - name: Deploy Litestream API to Fly.io Test
         working-directory: ./services/api
         run: flyctl deploy --local-only --config fly/fly.test.toml --wait-timeout 300
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-xtask-${{ hashFiles('**/Cargo.lock') }}
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
+      - name: Run Smoke Test
+        run: cargo xtask smoke-test test
 
   backup_database:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/express'
@@ -1032,8 +1050,8 @@ jobs:
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
-      - name: Run Fly.io Test
-        run: cargo xtask fly-test
+      - name: Run Smoke Test
+        run: cargo xtask smoke-test prod
 
   # UI Netlify
   deploy_ui_netlify_dev:

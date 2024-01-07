@@ -17,7 +17,7 @@ pub use plus::{
 };
 pub use release::TaskReleaseNotes;
 pub use template::{TaskTemplate, TaskTemplateKind};
-pub use test::{TaskFlyTest, TaskNetlifyTest};
+pub use test::{TaskNetlifyTest, TaskSmokeTest, TaskTestEnvironment};
 pub use types::{TaskSwagger, TaskTypes, TaskTypeshare};
 
 /// Bencher CLI
@@ -49,8 +49,8 @@ pub enum TaskSub {
     #[cfg(feature = "plus")]
     /// Prompt LLM to translate
     Translate(TaskTranslate),
-    /// Run tests against Fly.io deployment
-    FlyTest(TaskFlyTest),
+    /// Run smoke test
+    SmokeTest(TaskSmokeTest),
     /// Run tests against Netlify deployment
     NetlifyTest(TaskNetlifyTest),
     /// Create CLI man page

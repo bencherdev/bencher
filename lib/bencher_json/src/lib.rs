@@ -69,8 +69,8 @@ pub use user::{
 
 pub const BENCHER_UI_PORT: u16 = 3000;
 pub const LOCALHOST_BENCHER_URL_STR: &str = "http://localhost:3000";
-pub const PROD_BENCHER_URL_STR: &str = "https://bencher.dev";
 pub const DEVEL_BENCHER_URL_STR: &str = "https://devel--bencher.netlify.app";
+pub const PROD_BENCHER_URL_STR: &str = "https://bencher.dev";
 
 #[cfg(debug_assertions)]
 pub const BENCHER_URL_STR: &str = LOCALHOST_BENCHER_URL_STR;
@@ -98,8 +98,9 @@ pub fn is_bencher_cloud(url: &url::Url) -> bool {
 // https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=61016
 pub const BENCHER_API_PORT: u16 = 61016;
 pub const LOCALHOST_BENCHER_API_URL_STR: &str = "http://localhost:61016";
+pub const DEV_BENCHER_API_URL_STR: &str = "https://bencher-api-dev.fly.dev";
+pub const TEST_BENCHER_API_URL_STR: &str = "https://bencher-api-test.fly.dev";
 pub const PROD_BENCHER_API_URL_STR: &str = "https://api.bencher.dev";
-pub const DEVEL_BENCHER_API_URL_STR: &str = "https://bencher-api-dev.fly.dev";
 
 #[cfg(debug_assertions)]
 pub const BENCHER_API_URL_STR: &str = LOCALHOST_BENCHER_API_URL_STR;
@@ -113,10 +114,16 @@ pub static BENCHER_API_URL: Lazy<url::Url> = Lazy::new(|| {
         .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{BENCHER_API_URL_STR}\": {e}"))
 });
 #[allow(clippy::panic)]
-pub static DEVEL_BENCHER_API_URL: Lazy<url::Url> = Lazy::new(|| {
-    DEVEL_BENCHER_API_URL_STR
+pub static DEV_BENCHER_API_URL: Lazy<url::Url> = Lazy::new(|| {
+    DEV_BENCHER_API_URL_STR
         .parse()
-        .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{DEVEL_BENCHER_API_URL_STR}\": {e}"))
+        .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{DEV_BENCHER_API_URL_STR}\": {e}"))
+});
+#[allow(clippy::panic)]
+pub static TEST_BENCHER_API_URL: Lazy<url::Url> = Lazy::new(|| {
+    TEST_BENCHER_API_URL_STR
+        .parse()
+        .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{TEST_BENCHER_API_URL_STR}\": {e}"))
 });
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

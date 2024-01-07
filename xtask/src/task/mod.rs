@@ -17,7 +17,7 @@ use package::{deb::Deb, man::Man};
 use plus::{prompt::Prompt, stats::Stats, translate::Translate};
 use release_notes::ReleaseNotes;
 use template::Template;
-use test::{fly_test::FlyTest, netlify_test::NetlifyTest};
+use test::{netlify_test::NetlifyTest, smoke_test::SmokeTest};
 use types::{swagger::Swagger, types::Types, typeshare::Typeshare};
 
 #[derive(Debug)]
@@ -38,7 +38,7 @@ pub enum Sub {
     Prompt(Prompt),
     #[cfg(feature = "plus")]
     Translate(Translate),
-    FlyTest(FlyTest),
+    SmokeTest(SmokeTest),
     NetlifyTest(NetlifyTest),
     Man(Man),
     Deb(Deb),
@@ -71,7 +71,7 @@ impl TryFrom<TaskSub> for Sub {
             TaskSub::Prompt(prompt) => Self::Prompt(prompt.try_into()?),
             #[cfg(feature = "plus")]
             TaskSub::Translate(translate) => Self::Translate(translate.try_into()?),
-            TaskSub::FlyTest(fly_test) => Self::FlyTest(fly_test.try_into()?),
+            TaskSub::SmokeTest(smoke_test) => Self::SmokeTest(smoke_test.try_into()?),
             TaskSub::NetlifyTest(netlify_test) => Self::NetlifyTest(netlify_test.try_into()?),
             TaskSub::Man(man) => Self::Man(man.into()),
             TaskSub::Deb(deb) => Self::Deb(deb.try_into()?),
@@ -104,7 +104,7 @@ impl Sub {
             Self::Prompt(prompt) => prompt.exec().await,
             #[cfg(feature = "plus")]
             Self::Translate(translate) => translate.exec().await,
-            Self::FlyTest(fly_test) => fly_test.exec(),
+            Self::SmokeTest(smoke_test) => smoke_test.exec(),
             Self::NetlifyTest(netlify_test) => netlify_test.exec().await,
             Self::Man(man) => man.exec(),
             Self::Deb(deb) => deb.exec(),
