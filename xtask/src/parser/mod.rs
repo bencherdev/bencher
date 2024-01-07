@@ -19,7 +19,7 @@ pub use plus::{
 };
 pub use release::TaskReleaseNotes;
 pub use template::{TaskTemplate, TaskTemplateKind};
-pub use test::{TaskNetlifyTest, TaskSmokeTest, TaskTestEnvironment};
+pub use test::{TaskNetlifyTest, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment};
 pub use types::{TaskSwagger, TaskTypes, TaskTypeshare};
 
 /// Bencher CLI
@@ -51,6 +51,8 @@ pub enum TaskSub {
     #[cfg(feature = "plus")]
     /// Prompt LLM to translate
     Translate(TaskTranslate),
+    /// Run Seed test
+    SeedTest(TaskSeedTest),
     /// Run smoke test
     SmokeTest(TaskSmokeTest),
     /// Run tests against Netlify deployment

@@ -7176,6 +7176,7 @@ name = "xtask"
 version = "0.3.26"
 dependencies = [
  "anyhow",
+ "assert_cmd",
  "async-openai",
  "bencher_api",
  "bencher_cli",
@@ -7191,6 +7192,7 @@ dependencies = [
  "minijinja",
  "newline-converter",
  "notify-rust",
+ "pretty_assertions",
  "reqwest",
  "serde",
  "serde_json",

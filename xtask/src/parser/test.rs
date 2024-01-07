@@ -1,4 +1,13 @@
+use bencher_json::{Jwt, Url};
 use clap::{Parser, ValueEnum};
+
+#[derive(Parser, Debug)]
+pub struct TaskSeedTest {
+    /// Test API URL
+    pub url: Option<Url>,
+    /// Test token
+    pub token: Option<Jwt>,
+}
 
 #[derive(Parser, Debug)]
 pub struct TaskSmokeTest {
