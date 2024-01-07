@@ -22,6 +22,11 @@ pub enum DockerError {
         container: String,
         err: bollard::errors::Error,
     },
+    #[error("Failed to pull Docker image (`{image}`): {err}")]
+    CreateImage {
+        image: String,
+        err: bollard::errors::Error,
+    },
     #[error("Failed to create Docker container (`{container}`): {err}")]
     CreateContainer {
         container: String,

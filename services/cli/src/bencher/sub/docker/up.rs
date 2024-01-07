@@ -3,9 +3,11 @@ use bencher_json::{
 };
 use bollard::{
     container::{Config, CreateContainerOptions, StartContainerOptions},
+    image::CreateImageOptions,
     service::{HostConfig, PortBinding},
     Docker,
 };
+use futures_util::TryStreamExt;
 
 use crate::{
     bencher::sub::{
@@ -80,6 +82,8 @@ async fn start_container(
     container: &str,
     port: u16,
 ) -> Result<(), DockerError> {
+    pull_image(docker, image).await?;
+
     let tcp_port = format!("{port}/tcp");
 
     cli_println!("Creating `{container}` container...");
@@ -124,5 +128,22 @@ async fn start_container(
 
     cli_println!("");
 
+    Ok(())
+}
+
+async fn pull_image(docker: &Docker, image: &str) -> Result<(), DockerError> {
+    cli_println!("Pulling `{image}` image...");
+    let options = Some(CreateImageOptions {
+        from_image: image,
+        ..Default::default()
+    });
+    docker
+        .create_image(options, None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .map_err(|err| DockerError::CreateImage {
+            image: image.to_owned(),
+            err,
+        })?;
     Ok(())
 }
