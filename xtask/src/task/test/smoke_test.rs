@@ -1,4 +1,4 @@
-use std::process::Command;
+use std::process::{Child, Command};
 
 use bencher_json::{
     JsonApiVersion, DEV_BENCHER_API_URL_STR, LOCALHOST_BENCHER_API_URL_STR,
@@ -58,21 +58,27 @@ impl SmokeTest {
             return Err(anyhow::anyhow!("No version found in swagger.json"));
         };
 
-        match self.environment {
-            Environment::Localhost => api_run()?,
-            Environment::Docker => bencher_up()?,
-            Environment::Dev | Environment::Test | Environment::Prod => {},
-        }
+        let child = match self.environment {
+            Environment::Localhost => Some(api_run()?),
+            Environment::Docker => bencher_up().map(|()| None)?,
+            Environment::Dev | Environment::Test | Environment::Prod => None,
+        };
 
         let api_url = self.environment.as_ref();
         test_api_version(api_url, version)?;
-        if self.environment.should_seed() {
-            seed(api_url)?;
-            examples(api_url)?;
-        }
 
-        if let Environment::Docker = self.environment {
-            bencher_down()?;
+        match self.environment {
+            Environment::Localhost => {
+                test(api_url, None)?;
+                #[allow(clippy::expect_used)]
+                child
+                    .expect("Child process is expected for `localhost`")
+                    .kill()
+                    .ok();
+            },
+            Environment::Docker => bencher_down()?,
+            Environment::Dev => test(api_url, Some(DEV_BENCHER_API_TOKEN))?,
+            Environment::Test | Environment::Prod => {},
         }
 
         Ok(())
@@ -90,14 +96,8 @@ impl AsRef<str> for Environment {
     }
 }
 
-impl Environment {
-    pub fn should_seed(self) -> bool {
-        matches!(self, Self::Localhost | Self::Dev)
-    }
-}
-
-fn api_run() -> anyhow::Result<()> {
-    let _child = Command::new("cargo")
+fn api_run() -> anyhow::Result<Child> {
+    let child = Command::new("cargo")
         .args(["run"])
         .current_dir("./services/api")
         .spawn()?;
@@ -107,7 +107,7 @@ fn api_run() -> anyhow::Result<()> {
         println!("Waiting for API server to start...");
     }
 
-    Ok(())
+    Ok(child)
 }
 
 fn bencher_up() -> anyhow::Result<()> {
@@ -182,15 +182,22 @@ fn test_api_version(api_url: &str, version: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn seed(api_url: &str) -> anyhow::Result<()> {
+fn test(api_url: &str, token: Option<&str>) -> anyhow::Result<()> {
+    seed(api_url, token).and_then(|()| examples(api_url))
+}
+
+fn seed(api_url: &str, token: Option<&str>) -> anyhow::Result<()> {
     println!("Seeding API deploy at {api_url}");
 
-    let output = Command::new("cargo")
+    let mut cmd = Command::new("cargo");
+    let cmd = cmd
         .args(["test", "--features", "seed", "--test", "seed"])
         .current_dir("./services/cli")
-        .env(BENCHER_API_URL_KEY, api_url)
-        .env(TEST_BENCHER_API_TOKEN, DEV_BENCHER_API_TOKEN)
-        .output()?;
+        .env(BENCHER_API_URL_KEY, api_url);
+    if let Some(token) = token {
+        cmd.env(TEST_BENCHER_API_TOKEN, token);
+    }
+    let output = cmd.output()?;
 
     output.status.success().then_some(()).ok_or_else(|| {
         eprintln!("{}", String::from_utf8_lossy(&output.stderr));
