@@ -15,7 +15,6 @@ use crate::{
 };
 
 const DEV_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjQyMTU2LCJpYXQiOjE2OTg2NzQ4NjEsImlzcyI6Imh0dHBzOi8vZGV2ZWwtLWJlbmNoZXIubmV0bGlmeS5hcHAvIiwic3ViIjoibXVyaWVsLmJhZ2dlQG5vd2hlcmUuY29tIiwib3JnIjpudWxsfQ.9z7jmM53TcVzc1inDxTeX9_OR0PQPpZAsKsCE7lWHfo";
-#[allow(clippy::expect_used)]
 pub static DEV_BENCHER_API_TOKEN: Lazy<Jwt> =
     Lazy::new(|| DEV_BENCHER_API_TOKEN_STR.parse().expect("Invalid test JWT"));
 
@@ -75,7 +74,6 @@ impl SmokeTest {
         match self.environment {
             Environment::Localhost => {
                 test(&api_url, None)?;
-                #[allow(clippy::expect_used)]
                 child
                     .expect("Child process is expected for `localhost`")
                     .kill()

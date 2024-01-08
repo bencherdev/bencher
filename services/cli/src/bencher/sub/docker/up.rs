@@ -14,7 +14,7 @@ use crate::{
         docker::{down::stop_container, logs::tail_container_logs},
         SubCmd,
     },
-    cli_println,
+    cli_eprintln, cli_println,
     parser::docker::CliUp,
     CliError,
 };
@@ -141,9 +141,14 @@ async fn pull_image(docker: &Docker, image: &str) -> Result<(), DockerError> {
         .create_image(options, None, None)
         .try_collect::<Vec<_>>()
         .await
-        .map_err(|err| DockerError::CreateImage {
-            image: image.to_owned(),
-            err,
+        .map_err(|err| {
+            if let bollard::errors::Error::DockerStreamError { error } = &err {
+                cli_eprintln!("{error}");
+            }
+            DockerError::CreateImage {
+                image: image.to_owned(),
+                err,
+            }
         })?;
     Ok(())
 }
