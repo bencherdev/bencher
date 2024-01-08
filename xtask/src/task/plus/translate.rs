@@ -1,5 +1,3 @@
-#![allow(clippy::unwrap_used)]
-
 use std::{fmt, io::Write};
 
 use async_openai::{

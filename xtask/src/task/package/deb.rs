@@ -26,7 +26,6 @@ impl TryFrom<TaskDeb> for Deb {
 
 impl Deb {
     pub fn exec(&self) -> anyhow::Result<()> {
-        #[allow(clippy::expect_used)]
         let deb_path = self.dir.join(
             self.bin
                 .file_name()

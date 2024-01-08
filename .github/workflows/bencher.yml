@@ -275,7 +275,13 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Install `bencher` CLI
-        run: cargo install --path services/cli --locked --force
+        run: cargo install --debug --path services/cli --locked --force
+      - name: Install Docker on MacOS
+        if: startsWith(matrix.os, 'macos') && matrix.smoke_test == 'docker'
+        run: |
+          brew install docker
+          brew install colima
+          colima start
       - name: Run Smoke Test
         run: cargo xtask smoke-test ${{ matrix.smoke_test }}
 
@@ -350,15 +356,16 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-release-${{ env.CACHE_NAME }}
+          key: ${{ runner.os }}-cargo-cli-${{ env.CACHE_NAME }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Install `bencher` CLI
-        run: cargo install --path services/cli --locked --force
+        run: cargo install --debug --path services/cli --locked --force
       - name: Dogfooding Benchmarks with Bencher
         run: |
           bencher run \
+          --host https://api.bencher.dev \
           --if-branch "$GITHUB_REF_NAME" \
           --else-if-branch "$GITHUB_BASE_REF" \
           --err \
@@ -907,6 +914,8 @@ jobs:
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
+      - name: Install `bencher` CLI
+        run: cargo install --debug --path services/cli --locked --force
       - name: Run Smoke Test
         run: cargo xtask smoke-test dev
 
@@ -982,12 +991,12 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-release-${{ env.CACHE_NAME }}
+          key: ${{ runner.os }}-cargo-cli-${{ env.CACHE_NAME }}
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Install `bencher` CLI
-        run: cargo install --path services/cli --locked --force
+        run: cargo install --debug --path services/cli --locked --force
       - name: Backup API Server Database
         run: bencher server backup --compress --data-store aws_s3 --rm
 

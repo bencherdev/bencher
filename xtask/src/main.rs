@@ -1,7 +1,9 @@
 #![allow(
+    clippy::expect_used,
     clippy::print_stdout,
     clippy::print_stderr,
     clippy::unused_self,
+    clippy::unwrap_used,
     clippy::use_debug
 )]
 

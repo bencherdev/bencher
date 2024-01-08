@@ -39,7 +39,7 @@ impl TryFrom<TaskSeedTest> for SeedTest {
 }
 
 impl SeedTest {
-    #[allow(clippy::too_many_lines, clippy::unwrap_used)]
+    #[allow(clippy::too_many_lines)]
     pub fn exec(&self) -> anyhow::Result<()> {
         // Signup Eustace Bagge first so he is admin
         // cargo run -- auth signup --host http://localhost:61016 --name "Eustace Bagge" eustace.bagge@nowhere.com
