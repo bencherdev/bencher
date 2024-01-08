@@ -144,6 +144,8 @@ async fn pull_image(docker: &Docker, image: &str) -> Result<(), DockerError> {
         .map_err(|err| {
             if let bollard::errors::Error::DockerStreamError { error } = &err {
                 cli_eprintln!("{error}");
+                cli_eprintln!("Are you running in Linux container mode?");
+                cli_eprintln!(r#"Try running: & 'C:\Program Files\Docker\Docker\DockerCli.exe' -SwitchLinuxEngine"#);
             }
             DockerError::CreateImage {
                 image: image.to_owned(),

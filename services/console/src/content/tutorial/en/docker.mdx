@@ -51,7 +51,13 @@ You should see something like:
 
 Again, it is okay if your output is different. It's just important that this command works.
 
-> 🐰 If you get an error from ghcr.io saying `"authentication required"` try running `docker logout ghcr.io`
+> 🐰 If you get an error from `ghcr.io` saying:
+> `"authentication required"`
+> Try running: `docker logout ghcr.io`
+
+> 🐰 On Windows, if you get an error saying:
+> `image operating system "linux" cannot be used on this platform: operating system is not supported`
+> Try running: `& 'C:\Program Files\Docker\Docker\DockerCli.exe' -SwitchLinuxEngine`
 
 ## Bencher API Server Logs
 
