@@ -117,19 +117,10 @@ fn api_run() -> anyhow::Result<Child> {
 }
 
 fn bencher_up() -> anyhow::Result<()> {
-    let output = Command::new("cargo")
+    Command::new("cargo")
         .args(["run", "--", "up", "-d"])
         .current_dir("./services/cli")
-        .output()?;
-
-    eprintln!("{}", String::from_utf8_lossy(&output.stderr));
-    println!("{}", String::from_utf8_lossy(&output.stdout));
-    output.status.success().then_some(()).ok_or_else(|| {
-        anyhow::anyhow!(
-            "Failed to run `bencher up`. Exit code: {:?}",
-            output.status.code()
-        )
-    })?;
+        .status()?;
 
     while std::net::TcpStream::connect("localhost:61016").is_err() {
         std::thread::sleep(std::time::Duration::from_secs(1));
@@ -140,19 +131,10 @@ fn bencher_up() -> anyhow::Result<()> {
 }
 
 fn bencher_down() -> anyhow::Result<()> {
-    let output = Command::new("cargo")
+    Command::new("cargo")
         .args(["run", "--", "down"])
         .current_dir("./services/cli")
-        .output()?;
-
-    eprintln!("{}", String::from_utf8_lossy(&output.stderr));
-    println!("{}", String::from_utf8_lossy(&output.stdout));
-    output.status.success().then_some(()).ok_or_else(|| {
-        anyhow::anyhow!(
-            "Failed to run `bencher down`. Exit code: {:?}",
-            output.status.code()
-        )
-    })?;
+        .status()?;
 
     Ok(())
 }

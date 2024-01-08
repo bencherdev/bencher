@@ -59,6 +59,17 @@ impl Example {
         &[Self::RustBench]
     }
 
+    pub fn require(self) -> anyhow::Result<()> {
+        match self {
+            Self::RustBench => {
+                Command::new("rustup")
+                    .args(["install", "nightly"])
+                    .status()?;
+                Ok(())
+            },
+        }
+    }
+
     pub fn dir(&self) -> &str {
         match self {
             Self::RustBench => "./examples/rust/bench",
@@ -73,7 +84,11 @@ impl Example {
 }
 
 fn run_example(api_url: &Url, token: &Jwt, example: Example) -> anyhow::Result<()> {
-    let output = Command::new("bencher")
+    println!("Running example: {example:?}");
+
+    example.require()?;
+
+    Command::new("bencher")
         .args([
             "run",
             "--host",
@@ -89,14 +104,7 @@ fn run_example(api_url: &Url, token: &Jwt, example: Example) -> anyhow::Result<(
             example.cmd(),
         ])
         .current_dir(example.dir())
-        .output()?;
+        .status()?;
 
-    eprintln!("{}", String::from_utf8_lossy(&output.stderr));
-    println!("{}", String::from_utf8_lossy(&output.stdout));
-    output.status.success().then_some(()).ok_or_else(|| {
-        anyhow::anyhow!(
-            "Failed to run examples ({example:?}). Exit code: {:?}",
-            output.status.code()
-        )
-    })
+    Ok(())
 }

@@ -15,19 +15,10 @@ impl TryFrom<TaskTypeshare> for Typeshare {
 
 impl Typeshare {
     pub fn exec(&self) -> anyhow::Result<()> {
-        let output = Command::new("npm")
+        Command::new("npm")
             .args(["run", "typeshare"])
             .current_dir("./services/console")
-            .output()?;
-
-        eprintln!("{}", String::from_utf8_lossy(&output.stderr));
-        println!("{}", String::from_utf8_lossy(&output.stdout));
-        output.status.success().then_some(()).ok_or_else(|| {
-            anyhow::anyhow!(
-                "Failed to generate typeshare. Exit code: {:?}",
-                output.status.code()
-            )
-        })?;
+            .status()?;
 
         println!("Saved to: ./services/console/src/types/bencher.ts");
 

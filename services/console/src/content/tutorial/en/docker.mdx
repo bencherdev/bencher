@@ -7,54 +7,21 @@ sortOrder: 2
 
 import { BENCHER_VERSION } from "../../../util/ext";
 import BencherIntro from "../../../chunks/general/en/bencher-intro.mdx";
+import DockerSelfHosted from "../../../chunks/tutorial/en/docker-self-hosted.mdx";
+import QSInstallCli from "../../../chunks/tutorial/en/qs-install-cli.mdx";
+import DockerVersionOutput from "../../../chunks/tutorial/docker-version-output.mdx";
+import DockerBencherUpOutput from "../../../chunks/tutorial/docker-bencher-up-output.mdx";
+import DockerBencherHostOutput from "../../../chunks/tutorial/docker-bencher-host-output.mdx";
 
 ## What is Bencher?
 
 <BencherIntro />
 
-Bencher is open source and self-hostable.
-If you are interested in using Bencher Cloud, check out the [Bencher Cloud Quick Start tutorial](/docs/tutorial/quick-start/).
-This tutorial will get you setup using Bencher Self-Hosted with Docker.
-Then you can continue on to the [Quick Start tutorial](/docs/tutorial/quick-start/) using your local instance of Bencher instead of Bencher Cloud.
+<DockerSelfHosted />
 
 <br />
 
-## Clone the Repo
-
-In order to work through this tutorial you will need to have `git` installed.
-Check to see if you have `git` installed.
-
-Run: `git --version`
-
-You should see something like:
-
-```
-$ git --version
-git version 2.37.3
-```
-
-It is okay if your version number is different.
-It's just important that this command works.
-If not follow the [instructions for installing `git`](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
-
-<br />
-
-With `git` installed, we can now clone the Bencher repository.
-
-Run: <code>{`git clone --branch v${BENCHER_VERSION} https://github.com/bencherdev/bencher.git`}</code>
-
-You should see something like:
-
-```
-$ git clone https://github.com/bencherdev/bencher.git
-Cloning into 'bencher'...
-remote: Enumerating objects: 24752, done.
-remote: Counting objects: 100% (7363/7363), done.
-remote: Compressing objects: 100% (2396/2396), done.
-remote: Total 24752 (delta 4862), reused 7274 (delta 4785), pack-reused 17389
-Receiving objects: 100% (24752/24752), 4.92 MiB | 12.43 MiB/s, done.
-Resolving deltas: 100% (16108/16108), done.
-```
+<QSInstallCli />
 
 <br />
 
@@ -67,10 +34,7 @@ Run: `docker --version`
 
 You should see something like:
 
-```
-$ docker --version
-Docker version 20.10.17, build 100c701
-```
+<DockerVersionOutput />
 
 It is okay if your version number is different. It's just important that this command works.
 If not follow the [instructions for installing `docker`](https://docs.docker.com/get-docker/).
@@ -79,52 +43,17 @@ If not follow the [instructions for installing `docker`](https://docs.docker.com
 
 With `docker` installed, we can now run the UI and API servers.
 
-Run: `docker compose up -d`
+Run: `bencher up`
 
 You should see something like:
 
-```
-$ docker compose up -d
-[+] Running 16/16
- ⠿ bencher_ui Pulled                                           5.9s
- ...
- ⠿ bencher_api Pulled                                          6.3s
- ...
-[+] Running 3/3
- ⠿ Network bencher_default      Started                        0.1s
- ⠿ Container bencher_ui         Started                        0.8s
- ⠿ Container bencher_api_local  Started                        0.4s
-```
+<DockerBencherUpOutput />
 
 Again, it is okay if your output is different. It's just important that this command works.
 
 > 🐰 If you get an error from ghcr.io saying `"authentication required"` try running `docker logout ghcr.io`
 
-<br />
-
-Next, check to see both docker containers are running.
-
-Run: `docker ps`
-
-You should see something like:
-
-```
-$ docker ps
-CONTAINER ID   IMAGE                                 COMMAND                  CREATED              STATUS              PORTS                                           NAMES
-1d2ed7c7481e   bencherdev/bencher-ui:latest          "/docker-entrypoint.…"   About a minute ago   Up About a minute   0.0.0.0:3000->80/tcp, :::3000->80/tcp           bencher_ui
-7a8590d7021a   bencherdev/bencher-api-local:latest   "/api"                   About a minute ago   Up About a minute   0.0.0.0:61016->61016/tcp, :::61016->61016/tcp   bencher_api_local
-```
-
-As before, it is okay if your output is different. It's just important that this command works.
-
-
-<br />
-
 ## Bencher API Server Logs
-
-Lets take a look at the Bencher API server logs.
-
-Run: `docker compose logs bencher_api`
 
 Because we won't have set up email/SMTP on the API server yet,
 the confirmation codes you will receive later in the tutorial are going to be in the server logs.
@@ -142,10 +71,7 @@ If you then run: `echo $BENCHER_HOST`
 
 You should see:
 
-```
-$ echo $BENCHER_HOST
-http://localhost:61016
-```
+<DockerBencherHostOutput />
 
 <br />
 <br />
