@@ -5,19 +5,29 @@ heading: "Docker Self-Hosted"
 sortOrder: 2
 ---
 
-import { BENCHER_VERSION } from "../../../util/ext";
 import BencherIntro from "../../../chunks/general/en/bencher-intro.mdx";
 import DockerSelfHosted from "../../../chunks/tutorial/en/docker-self-hosted.mdx";
 import QSInstallCli from "../../../chunks/tutorial/en/qs-install-cli.mdx";
-import DockerVersionOutput from "../../../chunks/tutorial/docker-version-output.mdx";
-import DockerBencherUpOutput from "../../../chunks/tutorial/docker-bencher-up-output.mdx";
-import DockerBencherHostOutput from "../../../chunks/tutorial/docker-bencher-host-output.mdx";
+import DockerInstall from "../../../chunks/tutorial/en/docker-install.mdx";
+import DockerRunServers from "../../../chunks/tutorial/en/docker-run-servers.mdx";
+import DockerBencherHost from "../../../chunks/tutorial/en/docker-bencher-host.mdx";
+import DockerSelfHostedAccount from "../../../chunks/tutorial/en/docker-self-hosted-account.mdx";
+import QSApiToken from "../../../chunks/tutorial/en/qs-api-token.mdx";
+import QSCreateProject from "../../../chunks/tutorial/en/qs-create-project.mdx";
+import QSRunReport from "../../../chunks/tutorial/en/qs-run-report.mdx";
+import QSGenerateAlert from "../../../chunks/tutorial/en/qs-generate-alert.mdx";
 
 ## What is Bencher?
 
 <BencherIntro />
 
+<br />
+
 <DockerSelfHosted />
+
+<br />
+
+<DockerInstall />
 
 <br />
 
@@ -25,66 +35,39 @@ import DockerBencherHostOutput from "../../../chunks/tutorial/docker-bencher-hos
 
 <br />
 
-## Run Bencher UI & API Servers
-
-In order to run the UI and API servers in this tutorial you will need to have `docker` installed.
-Check to see if you have `docker` installed.
-
-Run: `docker --version`
-
-You should see something like:
-
-<DockerVersionOutput />
-
-It is okay if your version number is different. It's just important that this command works.
-If not follow the [instructions for installing `docker`](https://docs.docker.com/get-docker/).
+<DockerRunServers />
 
 <br />
 
-With `docker` installed, we can now run the UI and API servers.
-
-Run: `bencher up`
-
-You should see something like:
-
-<DockerBencherUpOutput />
-
-Again, it is okay if your output is different. It's just important that this command works.
-
-> 🐰 If you get an error from `ghcr.io` saying:
-> `"authentication required"`
-> Try running: `docker logout ghcr.io`
-
-> 🐰 On Windows, if you get an error saying:
-> `image operating system "linux" cannot be used on this platform: operating system is not supported`
-> Try running: `& 'C:\Program Files\Docker\Docker\DockerCli.exe' -SwitchLinuxEngine`
-
-## Bencher API Server Logs
-
-Because we won't have set up email/SMTP on the API server yet,
-the confirmation codes you will receive later in the tutorial are going to be in the server logs.
+<DockerBencherHost />
 
 <br />
 
-## Set Bencher Host
+<DockerSelfHostedAccount />
 
-The `bencher` CLI default host is Bencher Cloud (ie [https://api.bencher.dev](https://api.bencher.dev)).
-So you need to set your hostname. The easiest way to do this is the with `BENCHER_HOST` environment variable.
+<br />
 
-Run: `export BENCHER_HOST=http://localhost:61016`
+<QSApiToken>
+    <a href="http://localhost:3000/auth/signup" target="_blank">Add an API Token</a>
+</QSApiToken>
 
-If you then run: `echo $BENCHER_HOST`
+<br />
 
-You should see:
+<QSCreateProject />
 
-<DockerBencherHostOutput />
+<br />
+
+<QSRunReport />
+
+<br />
+
+<QSGenerateAlert />
 
 <br />
 <br />
 
-> 🐰 Congrats! You have set up Bencher Self-Hosted! 🎉
-> You can now proceed with the Quick Start tutorial using Bencher Self-Hosted.
+> 🐰 Congrats! You caught your first perform regression with Bencher Self-Hosted! 🎉
 
 <br />
 
-<h2><a href="/docs/tutorial/quick-start/">Keep Going: Quick Start ➡</a></h2>
+<h2><a href="/docs/explanation/benchmarking/">Keep Going: Benchmarking Overview ➡</a></h2>

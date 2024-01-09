@@ -5,146 +5,69 @@ heading: "Docker Самостоятельное Развертывание"
 sortOrder: 2
 ---
 
-import { BENCHER_VERSION } from "../../../util/ext";
 import BencherIntro from "../../../chunks/general/ru/bencher-intro.mdx";
+import DockerSelfHosted from "../../../chunks/tutorial/ru/docker-self-hosted.mdx";
+import QSInstallCli from "../../../chunks/tutorial/ru/qs-install-cli.mdx";
+import DockerInstall from "../../../chunks/tutorial/ru/docker-install.mdx";
+import DockerRunServers from "../../../chunks/tutorial/ru/docker-run-servers.mdx";
+import DockerBencherHost from "../../../chunks/tutorial/ru/docker-bencher-host.mdx";
+import DockerSelfHostedAccount from "../../../chunks/tutorial/ru/docker-self-hosted-account.mdx";
+import QSApiToken from "../../../chunks/tutorial/ru/qs-api-token.mdx";
+import QSCreateProject from "../../../chunks/tutorial/ru/qs-create-project.mdx";
+import QSRunReport from "../../../chunks/tutorial/ru/qs-run-report.mdx";
+import QSGenerateAlert from "../../../chunks/tutorial/ru/qs-generate-alert.mdx";
 
 ## Что такое Bencher?
 
 <BencherIntro />
 
-Bencher - это открытое и самостоятельно развертываемое программное обеспечение.
-Если вы заинтересованы в использовании Bencher Cloud, ознакомьтесь с [руководством по быстрому старту для Bencher Cloud](/ru/docs/tutorial/quick-start/).
-В этом руководстве мы будем использовать Docker для самостоятельного развертывания Bencher.
+<br />
+
+<DockerSelfHosted />
 
 <br />
 
-## Клонирование Репозитория
-
-Для работы с этим руководством вам нужно установить `git`.
-Проверьте, установлен ли у вас `git`.
-
-Запустите: `git --version`
-
-Вы должны увидеть что-то вроде:
-
-```
-$ git --version
-git version 2.37.3
-```
-
-Это нормально, если ваш номер версии отличается.
-Важно, чтобы этот команд работала.
-Если нет, следуйте [инструкциям по установке `git`](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
+<DockerInstall />
 
 <br />
 
-Установив `git`, мы теперь можем склонировать репозиторий Bencher.
-
-Запустите: <code>{`git clone --branch v${BENCHER_VERSION} https://github.com/bencherdev/bencher.git`}</code>
-
-Вы должны увидеть что-то вроде:
-
-```
-$ git clone https://github.com/bencherdev/bencher.git
-Cloning into 'bencher'...
-remote: Enumerating objects: 24752, done.
-remote: Counting objects: 100% (7363/7363), done.
-remote: Compressing objects: 100% (2396/2396), done.
-remote: Total 24752 (delta 4862), reused 7274 (delta 4785), pack-reused 17389
-Receiving objects: 100% (24752/24752), 4.92 MiB | 12.43 MiB/s, done.
-Resolving deltas: 100% (16108/16108), done.
-```
+<QSInstallCli />
 
 <br />
 
-## Запуск Серверов UI & API Bencher
-
-Для запуска серверов UI и API в этом руководстве вам нужно установить `docker`.
-Проверьте, установлен ли у вас `docker`.
-
-Запустите: `docker --version`
-
-Вы должны увидеть что-то вроде:
-
-```
-$ docker --version
-Docker version 20.10.17, build 100c701
-```
-
-Это нормально, если ваш номер версии отличается. Важно, чтобы этот команд работала.
-Если нет, следуйте [инструкциям по установке `docker`](https://docs.docker.com/get-docker/).
-
-> 🐰 Если вы получаете ошибку от ghcr.io с сообщением `"authentication required"`, попробуйте выполнить команду `docker logout ghcr.io`
+<DockerRunServers />
 
 <br />
 
-Установив `docker`, мы можем теперь запустить серверы UI и API.
-
-Запустите: `docker compose up -d`
-
-Вы должны увидеть что-то вроде:
-
-```
-$ docker compose up -d
-[+] Running 16/16
- ⠿ bencher_ui Pulled                                           5.9s
- ...
- ⠿ bencher_api Pulled                                          6.3s
- ...
-[+] Running 3/3
- ⠿ Network bencher_default      Started                        0.1s
- ⠿ Container bencher_ui         Started                        0.8s
- ⠿ Container bencher_api_local  Started                        0.4s
-```
-
-Проверьте, работают ли оба docker контейнера.
-
-Запустите: `docker ps`
-
-Вы должны увидеть что-то вроде:
-
-```
-$ docker ps
-CONTAINER ID   IMAGE                                 COMMAND                  CREATED              STATUS              PORTS                                           NAMES
-1d2ed7c7481e   bencherdev/bencher-ui:latest          "/docker-entrypoint.…"   About a minute ago   Up About a minute   0.0.0.0:3000->80/tcp, :::3000->80/tcp           bencher_ui
-7a8590d7021a   bencherdev/bencher-api-local:latest   "/api"                   About a minute ago   Up About a minute   0.0.0.0:61016->61016/tcp, :::61016->61016/tcp   bencher_api_local
-```
+<DockerBencherHost />
 
 <br />
 
-## Журналы Сервера API Bencher
-
-Давайте посмотрим на журналы сервера API Bencher.
-
-Запустите: `docker compose logs bencher_api`
-
-Поскольку мы еще не настроили email/SMTP на сервере API,
-коды подтверждения, которые вы получите позже в руководстве, будут в логах сервера.
+<DockerSelfHostedAccount />
 
 <br />
 
-## Установка Хоста Bencher
+<QSApiToken>
+    <a href="http://localhost:3000/auth/signup" target="_blank">Добавить токен API</a>
+</QSApiToken>
 
-Хост CLI по умолчанию для `bencher` - это Bencher Cloud (то есть [https://api.bencher.dev](https://api.bencher.dev)).
-Поэтому вам потребуется установить ваше имя хоста. Самым простым способом сделать это является использование переменной окружения `BENCHER_HOST`.
+<br />
 
-Запустите: `export BENCHER_HOST=http://localhost:61016`
+<QSCreateProject />
 
-Если вы затем запустите: `echo $BENCHER_HOST`
+<br />
 
-Вы должны увидеть:
+<QSRunReport />
 
-```
-$ echo $BENCHER_HOST
-http://localhost:61016
-```
+<br />
+
+<QSGenerateAlert />
 
 <br />
 <br />
 
-> 🐰 Поздравляем! Вы настроили Bencher для самостоятельного развертывания! 🎉
-> Теперь вы можете продолжить обучение с руководством по быстрому старту, используя Bencher с самостоятельным развертыванием.
+> 🐰 Поздравляем! Вы поймали свою первую регрессию производительности! 🎉
 
 <br />
 
-<h2><a href="/ru/docs/tutorial/quick-start/">Продолжайте: Быстрый Старт ➡</a></h2>
+<h2><a href="/ru/docs/explanation/benchmarking/">Продолжить: Обзор нагрузочного тестирования ➡</a></h2>

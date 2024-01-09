@@ -1,0 +1,18 @@
+import DockerBencherHostOutput from "../docker-bencher-host-output.mdx";
+
+## 设置 Bencher 主机
+
+`bencher` CLI 默认的主机是 Bencher 云 (即 https://api.bencher.dev)。
+因此，我们需要设定你的主机名。最简单的方法就是使用 `BENCHER_HOST` 环境变量。
+
+打开一个新的终端窗口。
+
+在 Linux，Mac 和其他类 Unix 系统上运行：`export BENCHER_HOST=http://localhost:61016`
+
+在 Windows 上运行：`$env:BENCHER_HOST = "http://localhost:61016"`
+
+如果然后执行 `echo $BENCHER_HOST` 或 `Write-Output $env:BENCHER_HOST`。
+
+你应该会看到：
+
+<DockerBencherHostOutput />

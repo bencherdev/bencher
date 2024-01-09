@@ -5,153 +5,69 @@ heading: "Docker Selbst Gehostet"
 sortOrder: 2
 ---
 
-import { BENCHER_VERSION } from "../../../util/ext";
 import BencherIntro from "../../../chunks/general/de/bencher-intro.mdx";
+import DockerSelfHosted from "../../../chunks/tutorial/de/docker-self-hosted.mdx";
+import QSInstallCli from "../../../chunks/tutorial/de/qs-install-cli.mdx";
+import DockerInstall from "../../../chunks/tutorial/de/docker-install.mdx";
+import DockerRunServers from "../../../chunks/tutorial/de/docker-run-servers.mdx";
+import DockerBencherHost from "../../../chunks/tutorial/de/docker-bencher-host.mdx";
+import DockerSelfHostedAccount from "../../../chunks/tutorial/de/docker-self-hosted-account.mdx";
+import QSApiToken from "../../../chunks/tutorial/de/qs-api-token.mdx";
+import QSCreateProject from "../../../chunks/tutorial/de/qs-create-project.mdx";
+import QSRunReport from "../../../chunks/tutorial/de/qs-run-report.mdx";
+import QSGenerateAlert from "../../../chunks/tutorial/de/qs-generate-alert.mdx";
 
 ## Was ist Bencher?
 
 <BencherIntro />
 
-Bencher ist Open-Source und kann selbst gehostet werden.
-Wenn Sie an der Nutzung von Bencher Cloud interessiert sind, schauen Sie sich das [Bencher Cloud Quick Start Tutorial](/de/docs/tutorial/quick-start/) an.
-Für dieses Tutorial werden wir aber Bencher Selbst Gehostet mit Docker verwenden.
+<br />
+
+<DockerSelfHosted />
 
 <br />
 
-## Klonen Sie das Repo
-
-Um diesem Tutorial folgen zu können, müssen Sie `git` installiert haben.
-Überprüfen Sie, ob Sie `git` installiert haben.
-
-Führen Sie aus: `git --version`
-
-Sie sollten so etwas sehen:
-
-```
-$ git --version
-git version 2.37.3
-```
-
-Es ist in Ordnung, wenn Ihre Versionsnummer anders ist.
-Wichtig ist nur, dass dieser Befehl funktioniert.
-Falls nicht, folgen Sie den [Anweisungen zur Installation von `git`](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
+<DockerInstall />
 
 <br />
 
-Mit `git` installiert, können wir nun das Bencher-Repository klonen.
-
-Führen Sie aus: <code>{`git clone --branch v${BENCHER_VERSION} https://github.com/bencherdev/bencher.git`}</code>
-
-Sie sollten so etwas sehen:
-
-```
-$ git clone https://github.com/bencherdev/bencher.git
-Cloning into 'bencher'...
-remote: Enumerating objects: 24752, done.
-remote: Counting objects: 100% (7363/7363), done.
-remote: Compressing objects: 100% (2396/2396), done.
-remote: Total 24752 (delta 4862), reused 7274 (delta 4785), pack-reused 17389
-Receiving objects: 100% (24752/24752), 4.92 MiB | 12.43 MiB/s, done.
-Resolving deltas: 100% (16108/16108), done.
-```
+<QSInstallCli />
 
 <br />
 
-## Bencher UI & API Server laufen lassen
-
-Um die UI- und API-Server in diesem Tutorial ausführen zu können, müssen Sie `docker` installiert haben.
-Überprüfen Sie, ob Sie `docker` installiert haben.
-
-Führen Sie aus: `docker --version`
-
-Sie sollten so etwas sehen:
-
-```
-$ docker --version
-Docker version 20.10.17, build 100c701
-```
-
-Es ist in Ordnung, wenn Ihre Versionsnummer anders ist.
-Wichtig ist nur, dass dieser Befehl funktioniert.
-Falls nicht, folgen Sie den [Anweisungen zur Installation von `docker`](https://docs.docker.com/get-docker/).
+<DockerRunServers />
 
 <br />
 
-Mit `docker` installiert, können wir nun die UI- und API-Server ausführen.
-
-Führen Sie aus: `docker compose up -d`
-
-Sie sollten so etwas sehen:
-
-```
-$ docker compose up -d
-[+] Running 16/16
- ⠿ bencher_ui Pulled                                           5.9s
- ...
- ⠿ bencher_api Pulled                                          6.3s
- ...
-[+] Running 3/3
- ⠿ Network bencher_default      Started                        0.1s
- ⠿ Container bencher_ui         Started                        0.8s
- ⠿ Container bencher_api_local  Started                        0.4s
-```
-
-Auch hier ist es okay, wenn Ihre Ausgabe anders ist. Es ist nur wichtig, dass dieser Befehl funktioniert.
-
-> 🐰 Wenn Sie von ghcr.io einen Fehler mit der Meldung `"authentication required"` erhalten, versuchen Sie, `docker logout ghcr.io` auszuführen.
+<DockerBencherHost />
 
 <br />
 
-Überprüfen Sie als nächstes, ob beide Docker-Container laufen.
-
-Führen Sie aus: `docker ps`
-
-Sie sollten so etwas sehen:
-
-```
-$ docker ps
-CONTAINER ID   IMAGE                                 COMMAND                  CREATED              STATUS              PORTS                                           NAMES
-1d2ed7c7481e   bencherdev/bencher-ui:latest          "/docker-entrypoint.…"   About a minute ago   Up About a minute   0.0.0.0:3000->80/tcp, :::3000->80/tcp           bencher_ui
-7a8590d7021a   bencherdev/bencher-api-local:latest   "/api"                   About a minute ago   Up About a minute   0.0.0.0:61016->61016/tcp, :::61016->61016/tcp   bencher_api_local
-```
-
-Wie zuvor ist es okay, wenn Ihre Ausgabe anders ist. Es ist nur wichtig, dass dieser Befehl funktioniert.
+<DockerSelfHostedAccount />
 
 <br />
 
-## Bencher API Server Logs
-
-Lassen Sie uns einen Blick auf die Bencher API Server Logs werfen.
-
-Führen Sie aus: `docker compose logs bencher_api`
-
-Da wir die Email/SMTP noch nicht auf dem API-Server eingerichtet haben,
-werden die Bestätigungscodes, die Sie später im Tutorial erhalten, in den Serverlogs stehen.
+<QSApiToken>
+    <a href="http://localhost:3000/auth/signup" target="_blank">Ein API-Token hinzufügen</a>
+</QSApiToken>
 
 <br />
 
-## Bencher Host festlegen
+<QSCreateProject />
 
-Der Standardhost des `bencher` CLI ist Bencher Cloud (d.h. [https://api.bencher.dev](https://api.bencher.dev)).
-Sie müssen daher Ihren Hostnamen festlegen. Der einfachste Weg, dies zu tun, ist die `BENCHER_HOST` Umgebungsvariable.
+<br />
 
-Führen Sie aus: `export BENCHER_HOST=http://localhost:61016`
+<QSRunReport />
 
-Wenn Sie dann ausführen: `echo $BENCHER_HOST`
+<br />
 
-Sollten Sie sehen:
-
-```
-$ echo $BENCHER_HOST
-http://localhost:61016
-```
+<QSGenerateAlert />
 
 <br />
 <br />
 
-> 🐰 Glückwunsch! Sie haben Bencher Selbst Gehostet eingerichtet! 🎉
-> Sie können nun mit dem Quick Start Tutorial fortfahren und Bencher Selbst Gehostet verwenden.
+> 🐰 Herzlichen Glückwunsch! Sie haben Ihren ersten Leistungseinbruch erkannt! 🎉
 
 <br />
 
-<h2><a href="/de/docs/tutorial/quick-start/">Weitermachen: Quick Start ➡</a></h2>
+<h2><a href="/de/docs/explanation/benchmarking/">Weiter: Übersicht über Benchmarking ➡</a></h2>

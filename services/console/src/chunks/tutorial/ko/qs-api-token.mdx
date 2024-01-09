@@ -1,22 +1,24 @@
-## API 토큰 생성
+## API 토큰 생성하기
 
-Bencher API를 사용하려면 API 토큰을 만들어야 합니다.
-<a href="/console" target="_blank">Bencher 콘솔로 이동하세요</a>.
-오른쪽 상단에 있는 이름 위로 마우스를 올립니다.
-드롭다운 메뉴가 나타납니다. `Tokens`를 선택하세요.
-API 토큰 페이지에서 `➕ Add` 버튼을 클릭합니다.
+Bencher API를 사용하려면 API 토큰을 생성해야 합니다.
+Bencher Console로 이동하세요.
+오른쪽 상단에 있는 성함 부분에 마우스를 올려놓으세요.
+드롭다운 메뉴가 나타날 것입니다. `토큰들`을 선택하세요.
+API 토큰 페이지에 도착하면, `➕ 추가` 버튼을 클릭하세요.
 
-### <a id="add-an-api-token" href="/auth/signup" target="_blank">API 토큰 추가</a>
+### { props.children }
 <br />
 
-새 API 토큰을 생성한 후에는 클립보드에 복사해야 합니다.
-작업하려는 터미널에서 API 토큰을 환경 변수로 내보냅니다.
+새로운 API 토큰을 생성하면, 클립보드에 복사해야 합니다.
+작업할 터미널에서 API 토큰을 환경 변수로 내보냅니다.
 
-실행: `export BENCHER_API_TOKEN=YOUR_TOKEN`
+Linux, Mac 그리고 Unix 계열의 시스템에서 실행하세요: `export BENCHER_API_TOKEN=YOUR_TOKEN`
 
-그런 다음 다음을 실행하면: `echo $BENCHER_API_TOKEN`
+Windows에서 실행하세요: `$env:BENCHER_API_TOKEN = "YOUR_TOKEN"`
 
-다음을 볼 수 있어야 합니다:
+그 다음 `echo $BENCHER_API_TOKEN` 또는 `Write-Output $env:BENCHER_API_TOKEN`을 실행하세요.
+
+다음을 볼 수 있을 것입니다:
 
 ```
 $ echo $BENCHER_API_TOKEN
@@ -25,4 +27,4 @@ YOUR_TOKEN
 
 <br />
 
-> 🐰 노트: 다른 터미널로 이동하면 API 토큰을 다시 내보내야 합니다.
+> 🐰 참고: 다른 터미널로 이동하면 API 토큰을 다시 내보내야 합니다.

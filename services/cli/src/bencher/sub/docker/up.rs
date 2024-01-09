@@ -15,7 +15,7 @@ use crate::{
         SubCmd,
     },
     cli_eprintln, cli_println,
-    parser::docker::CliUp,
+    parser::docker::{CliUp, CliUpPull},
     CliError,
 };
 
@@ -26,12 +26,33 @@ use super::{
 #[derive(Debug, Clone)]
 pub struct Up {
     detach: bool,
+    pull: Pull,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Pull {
+    Always,
+    Missing,
+    Never,
 }
 
 impl From<CliUp> for Up {
     fn from(up: CliUp) -> Self {
-        let CliUp { detach } = up;
-        Self { detach }
+        let CliUp { detach, pull } = up;
+        Self {
+            detach,
+            pull: pull.unwrap_or_default().into(),
+        }
+    }
+}
+
+impl From<CliUpPull> for Pull {
+    fn from(pull: CliUpPull) -> Self {
+        match pull {
+            CliUpPull::Always => Self::Always,
+            CliUpPull::Missing => Self::Missing,
+            CliUpPull::Never => Self::Never,
+        }
     }
 }
 
@@ -44,6 +65,7 @@ impl SubCmd for Up {
 
         start_container(
             &docker,
+            self.pull,
             BENCHER_API_IMAGE,
             BENCHER_API_CONTAINER,
             BENCHER_API_PORT,
@@ -51,6 +73,7 @@ impl SubCmd for Up {
         .await?;
         start_container(
             &docker,
+            self.pull,
             BENCHER_UI_IMAGE,
             BENCHER_UI_CONTAINER,
             BENCHER_UI_PORT,
@@ -78,11 +101,22 @@ impl SubCmd for Up {
 
 async fn start_container(
     docker: &Docker,
+    pull: Pull,
     image: &str,
     container: &str,
     port: u16,
 ) -> Result<(), DockerError> {
-    pull_image(docker, image).await?;
+    match pull {
+        Pull::Always => {
+            pull_image(docker, image).await?;
+        },
+        Pull::Missing => {
+            if docker.inspect_image(image).await.is_err() {
+                pull_image(docker, image).await?;
+            }
+        },
+        Pull::Never => {},
+    }
 
     let tcp_port = format!("{port}/tcp");
 
@@ -144,7 +178,7 @@ async fn pull_image(docker: &Docker, image: &str) -> Result<(), DockerError> {
         .map_err(|err| {
             if let bollard::errors::Error::DockerStreamError { error } = &err {
                 cli_eprintln!("{error}");
-                cli_eprintln!("Are you running in Linux container mode?");
+                cli_eprintln!("Are you on Windows? Are you running in Linux container mode?");
                 cli_eprintln!(r#"Try running: & 'C:\Program Files\Docker\Docker\DockerCli.exe' -SwitchLinuxEngine"#);
             }
             DockerError::CreateImage {

@@ -249,13 +249,15 @@ jobs:
           # MacOS
           - os: macos-latest
             smoke_test: localhost
-          - os: macos-latest
-            smoke_test: docker
+          # https://github.com/actions/runner-images/issues/17#issuecomment-614726536
+          # - os: macos-latest
+          #   smoke_test: docker
           # Windows
           - os: windows-latest
             smoke_test: localhost
-          - os: windows-latest
-            smoke_test: docker
+          # https://github.com/orgs/community/discussions/25491#discussioncomment-3248089
+          # - os: windows-latest
+          #   smoke_test: docker
     runs-on: ${{ matrix.os }}
     timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
     continue-on-error: ${{ github.ref == 'refs/heads/express' }}
@@ -271,24 +273,11 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-xtask-${{ env.CACHE_NAME }}
       - uses: rui314/setup-mold@v1
-        if: startsWith(matrix.os, 'ubuntu')
+        if: matrix.os == 'ubuntu-latest'
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Install `bencher` CLI
         run: cargo install --debug --path services/cli --locked --force
-      # https://github.com/actions/runner-images/issues/8104
-      - name: Install Docker on MacOS
-        if: startsWith(matrix.os, 'macos') && matrix.smoke_test == 'docker'
-        run: |
-          brew reinstall qemu
-          brew install docker
-          colima start
-      - name: Install Docker on MacOS
-        if: startsWith(matrix.os, 'windows') && matrix.smoke_test == 'docker'
-        run: |
-          dir C:\Windows\system32\Docker
-          dir C:\Windows\system32\Docker\Docker
-          '& "C:\Windows\system32\Docker\Docker\DockerCli.exe" -SwitchLinuxEngine'
       - name: Run Smoke Test
         run: cargo xtask smoke-test ${{ matrix.smoke_test }}
 

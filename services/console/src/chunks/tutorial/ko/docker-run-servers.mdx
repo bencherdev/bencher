@@ -1,0 +1,27 @@
+import DockerBencherUpOutput from "../docker-bencher-up-output.mdx";
+
+## Bencher UI 및 API 서버 실행
+
+`docker`가 설치되어 있다면 이제 UI 및 API 서버를 실행할 수 있습니다.
+
+실행하세요: `bencher up`
+
+아래와 같은 내용을 볼 수 있어야 합니다:
+
+<DockerBencherUpOutput />
+
+출력 내용이 달라도 문제없습니다. 중요한 것은 이 명령어가 작동하는지 여부입니다.
+
+> 🐰 만약 `ghcr.io`로부터 다음과 같은 오류 메시지가 나온다면:
+> `"authentication required"`
+> 다음을 실행하세요: `docker logout ghcr.io`
+
+> 🐰 Windows에서, 아래와 같은 오류 메시지가 나온다면:
+> `image operating system "linux" cannot be used on this platform: operating system is not supported`
+> 다음을 실행하세요: `& 'C:\Program Files\Docker\Docker\DockerCli.exe' -SwitchLinuxEngine`
+
+### Bencher API 서버 로그
+
+아직 [API 서버에서 이메일/SMTP를 설정](/docs/ko/reference/server-config/#smtp)하지 않았기 때문에,
+이 튜토리얼 후반부에서 받게 될 확인 코드들이 위에서 보여진 것처럼 서버 로그에 나타날 것입니다.
+즉, 인증 자격증명서는 `bencher up`의 출력 내용에 표시될 것입니다.

@@ -1,0 +1,18 @@
+import DockerBencherHostOutput from "../docker-bencher-host-output.mdx";
+
+## Установка хоста Bencher
+
+Хост CLI`bencher` по умолчанию - это Bencher Cloud (т.е. https://api.bencher.dev).
+Поэтому нам нужно установить ваше имя хоста. Самый простой способ это сделать - с помощью переменной окружения `BENCHER_HOST`.
+
+Откройте новое окно терминала.
+
+На Linux, Mac и других подобных Unix системах выполните: `export BENCHER_HOST=http://localhost:61016`
+
+На Windows выполните: `$env:BENCHER_HOST = "http://localhost:61016"`
+
+Если вы затем выполните `echo $BENCHER_HOST` или `Write-Output $env:BENCHER_HOST` соответственно.
+
+Вы должны увидеть:
+
+<DockerBencherHostOutput />

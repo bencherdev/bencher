@@ -1,0 +1,17 @@
+import DockerSignupOutput from "../docker-signup-output.mdx";
+
+## 创建一个Bencher自托管账户
+
+### <a href="http://localhost:3000/auth/signup" target="_blank">注册Bencher自托管</a>
+<br />
+
+通过导航到以下网址在您的本地Bencher自托管实例上创建账户：http://localhost:3000/auth/signup
+
+创建账户后，返回到您运行 `bencher up` 的终端窗口。
+您应该会看到如下图所示的内容：
+
+<DockerSignupOutput />
+
+在您的浏览器中导航到 `确认邮件` 链接，或复制 `确认令牌` 到以下地址的 `确认令牌` 字段：http://localhost:3000/auth/confirm
+
+完成后，您应该已经登录到您的Bencher自托管账户！

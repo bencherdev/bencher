@@ -91,7 +91,7 @@ async fn post_inner(
                 url.into()
             })
             .unwrap_or_default(),
-        clipboard_text: "Confirmation Code".into(),
+        clipboard_text: "Confirmation Token".into(),
         clipboard_target: token,
         post_body: String::new(),
         closing: "See you soon,".into(),

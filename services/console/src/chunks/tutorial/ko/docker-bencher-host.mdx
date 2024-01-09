@@ -1,0 +1,18 @@
+import DockerBencherHostOutput from "../docker-bencher-host-output.mdx";
+
+## 벤처 호스트 설정
+
+`bencher` CLI의 기본 호스트는 Bencher Cloud입니다(예: https://api.bencher.dev).
+따라서 당신의 호스트네임을 설정해야 합니다. `BENCHER_HOST` 환경 변수를 이용하는 것이 가장 쉬운 방법입니다.
+
+새로운 터미널 창을 엽니다.
+
+Linux, Mac, 그리고 다른 Unix 계열 시스템에서는: `export BENCHER_HOST=http://localhost:61016`를 실행하세요.
+
+Windows에서는: `$env:BENCHER_HOST = "http://localhost:61016"`를 실행하세요.
+
+그 후 `echo $BENCHER_HOST` 혹은 `Write-Output $env:BENCHER_HOST`를 각각 실행하세요.
+
+다음과 같이 보여야 합니다:
+
+<DockerBencherHostOutput />

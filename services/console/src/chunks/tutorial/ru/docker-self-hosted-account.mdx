@@ -1,0 +1,17 @@
+import DockerSignupOutput from "../docker-signup-output.mdx";
+
+## Создание аккаунта Bencher Self-Hosted
+
+### <a href="http://localhost:3000/auth/signup" target="_blank">Регистрация на Bencher Self-Hosted</a>
+<br />
+
+Создайте аккаунт на вашем локальном экземпляре Bencher Self-Hosted, перейдя по следующей ссылке: http://localhost:3000/auth/signup
+
+После создания аккаунта вернитесь в терминал, где вы запускали `bencher up`.
+Вы должны увидеть что-то похожее:
+
+<DockerSignupOutput />
+
+Перейдите по ссылке `Подтвердить Email` в вашем браузере или скопируйте `Токен подтверждения` в поле `Подтвердить токен` на следующей странице: http://localhost:3000/auth/confirm
+
+После этого вы должны быть войти в свой аккаунт на Bencher Self-Hosted!

@@ -1,22 +1,24 @@
-## Erstellen Sie ein API-Token
+## Erstellen Sie einen API-Token
 
-Um die Bencher-API zu verwenden, müssen Sie ein API-Token erstellen.
-<a href="/console" target="_blank">Navigieren Sie zur Bencher-Konsole</a>.
+Um die Bencher-API verwenden zu können, müssen Sie ein API-Token erstellen.
+Navigieren Sie zur Bencher Console.
 Fahren Sie mit der Maus über Ihren Namen in der rechten oberen Ecke.
 Ein Dropdown-Menü sollte erscheinen. Wählen Sie `Tokens`.
-Auf der API-Tokens Seite klicken Sie auf den `➕ Hinzufügen`-Button.
+Sobald Sie auf der API-Tokens-Seite sind, klicken Sie auf den `➕ Hinzufügen`-Button.
 
-### <a id="add-an-api-token" href="/auth/signup" target="_blank">Ein API-Token hinzufügen</a>
+### { props.children }
 <br />
 
 Sobald Sie Ihr neues API-Token erstellt haben, müssen Sie es in Ihre Zwischenablage kopieren.
-Im Terminal, in dem Sie arbeiten möchten, exportieren Sie das API-Token als Umgebungsvariable.
+In dem Terminal, in dem Sie arbeiten möchten, exportieren Sie das API-Token als Umgebungsvariable.
 
-Führen Sie aus: `export BENCHER_API_TOKEN=IHR_TOKEN`
+Führen Sie auf Linux-, Mac- und anderen Unix-ähnlichen Systemen aus: `export BENCHER_API_TOKEN=IHR_TOKEN`
 
-Wenn Sie dann ausführen: `echo $BENCHER_API_TOKEN`
+Führen Sie auf Windows aus: `$env:BENCHER_API_TOKEN = "IHR_TOKEN"`
 
-Sollten Sie sehen:
+Wenn Sie dann `echo $BENCHER_API_TOKEN` oder `Write-Output $env:BENCHER_API_TOKEN` ausführen.
+
+Sie sollten sehen:
 
 ```
 $ echo $BENCHER_API_TOKEN

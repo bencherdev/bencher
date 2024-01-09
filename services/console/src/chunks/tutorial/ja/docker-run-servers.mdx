@@ -1,0 +1,26 @@
+import DockerBencherUpOutput from "../docker-bencher-up-output.mdx";
+
+## Bencher UI＆APIサーバーを実行する
+
+`docker`がインストールされていれば、UIとAPIサーバーを実行できます。
+
+実行コマンド：`bencher up`
+
+以下のような表示がされます：
+
+<DockerBencherUpOutput />
+
+出力が少し違っていても大丈夫です。このコマンドが動作すればそれで問題ありません。
+
+> 🐰 `ghcr.io`から:
+> `"authentication required"`というエラーメッセージが表示される場合は、
+> `docker logout ghcr.io`を実行してみてください。
+
+> 🐰 Windows上で：
+> `image operating system "linux" cannot be used on this platform: operating system is not supported`というエラーが出る場合は、
+> `& 'C:\Program Files\Docker\Docker\DockerCli.exe' -SwitchLinuxEngine`を実行してみてください。
+
+### Bencher APIサーバーログ
+
+まだ[APIサーバーで電子メール/SMTPを設定](/docs/ja/reference/server-config/#smtp)していないため、チュートリアルの後半で受け取る認証コードは、上記のようにサーバーログに表示されます。
+つまり、認証情報は`bencher up`の出力に表示されます。

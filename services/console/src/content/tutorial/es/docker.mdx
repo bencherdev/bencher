@@ -5,152 +5,69 @@ heading: "Docker Autoalojado"
 sortOrder: 2
 ---
 
-import { BENCHER_VERSION } from "../../../util/ext";
 import BencherIntro from "../../../chunks/general/es/bencher-intro.mdx";
+import DockerSelfHosted from "../../../chunks/tutorial/es/docker-self-hosted.mdx";
+import QSInstallCli from "../../../chunks/tutorial/es/qs-install-cli.mdx";
+import DockerInstall from "../../../chunks/tutorial/es/docker-install.mdx";
+import DockerRunServers from "../../../chunks/tutorial/es/docker-run-servers.mdx";
+import DockerBencherHost from "../../../chunks/tutorial/es/docker-bencher-host.mdx";
+import DockerSelfHostedAccount from "../../../chunks/tutorial/es/docker-self-hosted-account.mdx";
+import QSApiToken from "../../../chunks/tutorial/es/qs-api-token.mdx";
+import QSCreateProject from "../../../chunks/tutorial/es/qs-create-project.mdx";
+import QSRunReport from "../../../chunks/tutorial/es/qs-run-report.mdx";
+import QSGenerateAlert from "../../../chunks/tutorial/es/qs-generate-alert.mdx";
 
 ## ¿Qué es Bencher?
 
 <BencherIntro />
 
-Bencher es de código abierto y auto-alojable.
-Si estás interesado en usar Bencher Cloud, consulta el [tutorial de inicio rápido de Bencher Cloud](/es/docs/tutorial/quick-start/).
-Para este tutorial, vamos a usar Bencher Autoalojado con Docker.
+<br />
+
+<DockerSelfHosted />
 
 <br />
 
-## Clonar el Repositorio
-
-Para seguir este tutorial necesitarás tener `git` instalado.
-Comprueba si tienes `git` instalado.
-
-Ejecuta: `git --version`
-
-Deberías ver algo como esto:
-
-```
-$ git --version
-git version 2.37.3
-```
-
-Está bien si tu número de versión es diferente.
-Lo importante es que este comando funcione.
-Si no es así, sigue las [instrucciones para instalar `git`](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
+<DockerInstall />
 
 <br />
 
-Con `git` instalado, ahora podemos clonar el repositorio de Bencher.
-
-Ejecuta: <code>{`git clone --branch v${BENCHER_VERSION} https://github.com/bencherdev/bencher.git`}</code>
-
-Deberías ver algo como esto:
-
-```
-$ git clone https://github.com/bencherdev/bencher.git
-Cloning into 'bencher'...
-remote: Enumerating objects: 24752, done.
-remote: Counting objects: 100% (7363/7363), done.
-remote: Compressing objects: 100% (2396/2396), done.
-remote: Total 24752 (delta 4862), reused 7274 (delta 4785), pack-reused 17389
-Receiving objects: 100% (24752/24752), 4.92 MiB | 12.43 MiB/s, done.
-Resolving deltas: 100% (16108/16108), done.
-```
+<QSInstallCli />
 
 <br />
 
-## Ejecutar los Servidores de Interfaz de Usuario y API de Bencher
-
-Para ejecutar los servidores UI y API en este tutorial necesitarás tener `docker` instalado.
-Verifica si tienes `docker` instalado.
-
-Ejecuta: `docker --version`
-
-Deberías ver algo como esto:
-
-```
-$ docker --version
-Docker version 20.10.17, build 100c701
-```
-
-Está bien si tu número de versión es diferente. Lo importante es que este comando funcione.
-Si no es así, sigue las [instrucciones para instalar `docker`](https://docs.docker.com/get-docker/).
-
-> 🐰 Si obtienes un error de ghcr.io que dice `"authentication required"` intenta ejecutando `docker logout ghcr.io`
+<DockerRunServers />
 
 <br />
 
-Con `docker` instalado, ahora podemos ejecutar los servidores de interfaz de usuario y API.
-
-Ejecuta: `docker compose up -d`
-
-Deberías ver algo como esto:
-
-```
-$ docker compose up -d
-[+] Running 16/16
- ⠿ bencher_ui Pulled                                           5.9s
- ...
- ⠿ bencher_api Pulled                                          6.3s
- ...
-[+] Running 3/3
- ⠿ Network bencher_default      Started                        0.1s
- ⠿ Container bencher_ui         Started                        0.8s
- ⠿ Container bencher_api_local  Started                        0.4s
-```
-
-De nuevo, está bien si tu salida es diferente. Lo importante es que este comando funcione.
+<DockerBencherHost />
 
 <br />
 
-A continuación, comprueba que ambos contenedores docker están ejecutándose.
-
-Ejecuta: `docker ps`
-
-Deberías ver algo como esto:
-
-```
-$ docker ps
-CONTAINER ID   IMAGE                                 COMMAND                  CREATED              STATUS              PORTS                                           NAMES
-1d2ed7c7481e   bencherdev/bencher-ui:latest          "/docker-entrypoint.…"   About a minute ago   Up About a minute   0.0.0.0:3000->80/tcp, :::3000->80/tcp           bencher_ui
-7a8590d7021a   bencherdev/bencher-api-local:latest   "/api"                   About a minute ago   Up About a minute   0.0.0.0:61016->61016/tcp, :::61016->61016/tcp   bencher_api_local
-```
-
-Como antes, está bien si tu salida es diferente. Lo importante es que este comando funcione.
+<DockerSelfHostedAccount />
 
 <br />
 
-## Registros del Servidor API de Bencher
-
-Echemos un vistazo a los registros del servidor API de Bencher.
-
-Ejecuta: `docker compose logs bencher_api`
-
-Como aún no hemos configurado el email/SMTP en el servidor API,
-los códigos de confirmación que recibirás más adelante en el tutorial estarán en los registros del servidor.
+<QSApiToken>
+    <a href="http://localhost:3000/auth/signup" target="_blank">Añade un token de API</a>
+</QSApiToken>
 
 <br />
 
-## Establecer el Host de Bencher
+<QSCreateProject />
 
-El host predeterminado de la CLI `bencher` es Bencher Cloud (es decir, [https://api.bencher.dev](https://api.bencher.dev)).
-Por lo tanto, necesitas establecer tu nombre de host. La forma más sencilla de hacer esto es con la variable de entorno `BENCHER_HOST`.
+<br />
 
-Ejecuta: `export BENCHER_HOST=http://localhost:61016`
+<QSRunReport />
 
-Si luego ejecutas: `echo $BENCHER_HOST`
+<br />
 
-Deberías ver:
-
-```
-$ echo $BENCHER_HOST
-http://localhost:61016
-```
+<QSGenerateAlert />
 
 <br />
 <br />
 
-> 🐰 ¡Felicidades! ¡Has configurado Bencher Autoalojado! 🎉
-> Ahora puedes continuar con el tutorial de inicio rápido usando Bencher Autoalojado.
+> 🐰 ¡Felicidades! ¡Atrapaste tu primer regresión de rendimiento! 🎉
 
 <br />
 
-<h2><a href="/es/docs/tutorial/quick-start/">Continuar: Inicio Rápido ➡</a></h2>
+<h2><a href="/es/docs/explanation/benchmarking/">Continúa: Descripción General de Benchmarking ➡</a></h2>

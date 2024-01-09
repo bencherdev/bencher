@@ -1,21 +1,24 @@
-## APIトークンを作成する
+## APIトークンの生成
 
-Bencher APIを使用するには、APIトークンを作成する必要があります。
-<a href="/console" target="_blank">Bencherコンソールに移動します</a>。
-右上のあなたの名前をhoverします。ドロップダウンメニューが表示されます。`Tokens`を選びます。
-APIトークンページに移動したら、`➕追加`ボタンをクリックします。
+Bencher APIを使用するためには、APIトークンを生成する必要があります。
+Bencherコンソールに移動します。
+右上隅のあなたの名前の上にマウスを持って行きます。
+ドロップダウンメニューが表示されるはずです。`Tokens`を選択します。
+APIトークンページに移動したら、`➕ Add`ボタンをクリックします。
 
-### <a id="add-an-api-token" href="/auth/signup" target="_blank">APIトークンを追加します</a>
+### { props.children }
 <br />
 
-新しいAPIトークンを作成したら、それをクリップボードにコピーします。
-作業する予定のターミナルで、APIトークンを環境変数としてエクスポートします。
+新しいAPIトークンを生成したら、それをクリップボードにコピーする必要があります。
+作業予定のターミナルで、APIトークンを環境変数としてエクスポートします。
 
-実行：`export BENCHER_API_TOKEN=YOUR_TOKEN`
+Linux、Mac、その他のUnix系システムでは、次のように実行します: `export BENCHER_API_TOKEN=YOUR_TOKEN`
 
-その後、次のように実行してください：`echo $BENCHER_API_TOKEN`
+Windowsでは、次のように実行します: `$env:BENCHER_API_TOKEN = "YOUR_TOKEN"`
 
-以下のように表示されます：
+その後、`echo $BENCHER_API_TOKEN`または`Write-Output $env:BENCHER_API_TOKEN`を実行します。
+
+以下のように表示されるはずです:
 
 ```
 $ echo $BENCHER_API_TOKEN

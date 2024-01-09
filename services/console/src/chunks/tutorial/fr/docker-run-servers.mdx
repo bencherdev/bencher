@@ -1,0 +1,27 @@
+import DockerBencherUpOutput from "../docker-bencher-up-output.mdx";
+
+## Exécution de Bencher UI & API Servers
+
+Avec `docker` installé, nous pouvons maintenant exécuter les serveurs UI et API.
+
+Exécutez : `bencher up`
+
+Vous devriez voir quelque chose comme :
+
+<DockerBencherUpOutput />
+
+Encore une fois, ce n'est pas grave si votre sortie est différente. L'important est que cette commande fonctionne.
+
+> 🐰 Si vous recevez une erreur de `ghcr.io` disant :
+> `"authentication required"`
+> Essayez d'exécuter : `docker logout ghcr.io`
+
+> 🐰 Sur Windows, si vous recevez une erreur disant :
+> `image operating system "linux" cannot be used on this platform: operating system is not supported`
+> Essayez exécuter : `& 'C:\Program Files\Docker\Docker\DockerCli.exe' -SwitchLinuxEngine`
+
+### Logs du serveur API Bencher
+
+Parce que nous n'avons pas encore [configuré l'email/SMTP sur le serveur API](/docs/fr/reference/server-config/#smtp),
+les codes de confirmation que vous recevrez plus tard dans le tutoriel vont être dans les journaux du serveur, comme indiqué ci-dessus.
+C'est-à-dire, les informations d'authentification vont être montrées dans la sortie de `bencher up`.

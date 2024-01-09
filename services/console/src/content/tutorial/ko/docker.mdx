@@ -5,151 +5,69 @@ heading: "도커 자체 호스팅"
 sortOrder: 2
 ---
 
-import { BENCHER_VERSION } from "../../../util/ext";
 import BencherIntro from "../../../chunks/general/ko/bencher-intro.mdx";
+import DockerSelfHosted from "../../../chunks/tutorial/ko/docker-self-hosted.mdx";
+import QSInstallCli from "../../../chunks/tutorial/ko/qs-install-cli.mdx";
+import DockerInstall from "../../../chunks/tutorial/ko/docker-install.mdx";
+import DockerRunServers from "../../../chunks/tutorial/ko/docker-run-servers.mdx";
+import DockerBencherHost from "../../../chunks/tutorial/ko/docker-bencher-host.mdx";
+import DockerSelfHostedAccount from "../../../chunks/tutorial/ko/docker-self-hosted-account.mdx";
+import QSApiToken from "../../../chunks/tutorial/ko/qs-api-token.mdx";
+import QSCreateProject from "../../../chunks/tutorial/ko/qs-create-project.mdx";
+import QSRunReport from "../../../chunks/tutorial/ko/qs-run-report.mdx";
+import QSGenerateAlert from "../../../chunks/tutorial/ko/qs-generate-alert.mdx";
 
-## Bencher 란?
+## Bencher가 무엇인가요?
 
 <BencherIntro />
 
-Bencher는 오픈 소스이며 자체 호스팅이 가능합니다.
-Bencher 클라우드를 사용하는 데 관심이 있다면 [Bencher 클라우드 퀵 스타트 튜토리얼](/ko/docs/tutorial/quick-start/)을 확인해 보세요.
-하지만 이 튜토리얼에서는 도커를 사용한 Bencher 자체 호스팅에 대해 설명하겠습니다.
+<br />
+
+<DockerSelfHosted />
 
 <br />
 
-## 레포지토리 클론하기
-
-이 튜토리얼을 원활하게 진행하려면 `git`이 설치되어 있어야 합니다.
-`git`이 설치되어 있는지 확인하세요.
-
-실행: `git --version`
-
-다음과 비슷한 결과를 볼 수 있어야 합니다:
-
-```
-$ git --version
-git version 2.37.3
-```
-
-버전 번호가 다른 것은 괜찮습니다.
-이 명령이 동작하는 것이 중요합니다.
-그렇지 않다면 `git`을 설치하는 [지침](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)을 따르세요.
+<DockerInstall />
 
 <br />
 
-`git`이 설치되어 있다면 이제 Bencher 레포지토리를 클론할 수 있습니다.
-
-실행: <code>{`git clone --branch v${BENCHER_VERSION} https://github.com/bencherdev/bencher.git`}</code>
-
-다음과 비슷한 결과를 볼 수 있어야 합니다:
-
-```
-$ git clone https://github.com/bencherdev/bencher.git
-Cloning into 'bencher'...
-remote: Enumerating objects: 24752, done.
-remote: Counting objects: 100% (7363/7363), done.
-remote: Compressing objects: 100% (2396/2396), done.
-remote: Total 24752 (delta 4862), reused 7274 (delta 4785), pack-reused 17389
-Receiving objects: 100% (24752/24752), 4.92 MiB | 12.43 MiB/s, done.
-Resolving deltas: 100% (16108/16108), done.
-```
+<QSInstallCli />
 
 <br />
 
-## Bencher UI 및 API 서버 실행
-
-이 튜토리얼에서 UI 및 API 서버를 실행하려면 `docker`이 설치되어 있어야 합니다.
-`docker`이 설치되어 있는지 확인하세요.
-
-실행: `docker --version`
-
-다음과 비슷한 결과를 볼 수 있어야 합니다:
-
-```
-$ docker --version
-Docker version 20.10.17, build 100c701
-```
-
-버전 번호가 다른 것도 괜찮습니다. 이 명령이 동작하는 것이 중요합니다.
-그렇지 않다면 `docker`을 설치하는 [지침](https://docs.docker.com/get-docker/)을 따르세요.
-
-> 🐰 만약 ghcr.io에서 `"authentication required"`라는 오류를 받으면 `docker logout ghcr.io`를 실행해 보세요.
+<DockerRunServers />
 
 <br />
 
-`docker`이 설치되어 있다면 이제 UI와 API 서버를 실행할 수 있습니다.
-
-실행: `docker compose up -d`
-
-다음와 비슷한 결과를 볼 수 있어야 합니다:
-
-```
-$ docker compose up -d
-[+] Running 16/16
- ⠿ bencher_ui Pulled                                           5.9s
- ...
- ⠿ bencher_api Pulled                                          6.3s
- ...
-[+] Running 3/3
- ⠿ Network bencher_default      Started                        0.1s
- ⠿ Container bencher_ui         Started                        0.8s
- ⠿ Container bencher_api_local  Started                        0.4s
-```
-
-다시 한 번, 출력 결과가 다른 것은 괜찮습니다. 이 명령이 동작하는 것이 중요합니다.
+<DockerBencherHost />
 
 <br />
 
-그 다음, 두 개의 도커 컨테이너가 모두 실행 중인지 확인합니다.
-
-실행: `docker ps`
-
-다음과 비슷한 결과를 볼 수 있어야 합니다:
-
-```
-$ docker ps
-CONTAINER ID   IMAGE                                 COMMAND                  CREATED              STATUS              PORTS                                           NAMES
-1d2ed7c7481e   bencherdev/bencher-ui:latest          "/docker-entrypoint.…"   About a minute ago   Up About a minute   0.0.0.0:3000->80/tcp, :::3000->80/tcp           bencher_ui
-7a8590d7021a   bencherdev/bencher-api-local:latest   "/api"                   About a minute ago   Up About a minute   0.0.0.0:61016->61016/tcp, :::61016->61016/tcp   bencher_api_local
-```
-
-여전히, 출력 결과가 다른 것은 괜찮습니다. 이 명령이 동작하는 것이 중요합니다.
+<DockerSelfHostedAccount />
 
 <br />
 
-## Bencher API 서버 로그
-
-Bencher API 서버 로그를 확인해 봅시다.
-
-실행: `docker compose logs bencher_api`
-
-API 서버에 이메일/SMTP가 아직 설정되어 있지 않으므로, 튜토리얼 후반부에서 얻게 될 인증 코드들이 서버 로그에 표시될 것입니다.
+<QSApiToken>
+    <a href="http://localhost:3000/auth/signup" target="_blank">API 토큰 추가하기</a>
+</QSApiToken>
 
 <br />
 
-## Bencher 호스트 설정
+<QSCreateProject />
 
-`bencher` CLI의 기본 호스트는 Bencher 클라우드입니다(예: [https://api.bencher.dev](https://api.bencher.dev)).
-그러므로 당신의 호스트네임을 설정해야 합니다. 가장 쉬운 방법은 `BENCHER_HOST` 환경 변수를 사용하는 것입니다.
+<br />
 
-실행: `export BENCHER_HOST=http://localhost:61016`
+<QSRunReport />
 
-그런 다음 실행: `echo $BENCHER_HOST`
+<br />
 
-다음를 볼 수 있어야 합니다:
-
-```
-$ echo $BENCHER_HOST
-http://localhost:61016
-```
+<QSGenerateAlert />
 
 <br />
 <br />
 
-> 🐰 축하합니다! Bencher 자체 호스팅 설정을 마쳤습니다! 🎉
-> 이제 Bencher 자체 호스팅과 함께 퀵 스타트 튜토리얼을 진행할 수 있습니다.
+> 🐰 축하합니다! 첫 번째 성능 성하위를 잡았습니다! 🎉
 
 <br />
 
-<h2><a href="/ko/docs/tutorial/quick-start/">계속하기: 퀵 스타트 ➡</a></h2>
+<h2><a href="/ko/docs/explanation/benchmarking/">계속 진행: 벤치마킹 개요 ➡</a></h2>

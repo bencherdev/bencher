@@ -1,0 +1,17 @@
+import DockerSignupOutput from "../docker-signup-output.mdx";
+
+## ベンチャーセルフホストアカウントの作成
+
+### <a href="http://localhost:3000/auth/signup" target="_blank">Bencher Self-Hostedに登録する</a>
+<br />
+
+以下のURLに進んで、ローカルのBencher Self-Hostedインスタンスにアカウントを作成します：http://localhost:3000/auth/signup
+
+アカウントを作成したら、`bencher up`を実行したターミナルウィンドウに戻ります。
+次のような表示がされるはずです：
+
+<DockerSignupOutput />
+
+ブラウザで`Confirm Email`リンクに移動するか、`Confirmation Token`をコピーして、以下のURLの`Confirm Token`フィールドに貼り付けて下さい：http://localhost:3000/auth/confirm
+
+それを行った後、Bencher Self-Hostedのアカウントにログインすることができるはずです！

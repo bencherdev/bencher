@@ -5,152 +5,69 @@ heading: "Docker 自托管"
 sortOrder: 2
 ---
 
-import { BENCHER_VERSION } from "../../../util/ext";
 import BencherIntro from "../../../chunks/general/zh/bencher-intro.mdx";
+import DockerSelfHosted from "../../../chunks/tutorial/zh/docker-self-hosted.mdx";
+import QSInstallCli from "../../../chunks/tutorial/zh/qs-install-cli.mdx";
+import DockerInstall from "../../../chunks/tutorial/zh/docker-install.mdx";
+import DockerRunServers from "../../../chunks/tutorial/zh/docker-run-servers.mdx";
+import DockerBencherHost from "../../../chunks/tutorial/zh/docker-bencher-host.mdx";
+import DockerSelfHostedAccount from "../../../chunks/tutorial/zh/docker-self-hosted-account.mdx";
+import QSApiToken from "../../../chunks/tutorial/zh/qs-api-token.mdx";
+import QSCreateProject from "../../../chunks/tutorial/zh/qs-create-project.mdx";
+import QSRunReport from "../../../chunks/tutorial/zh/qs-run-report.mdx";
+import QSGenerateAlert from "../../../chunks/tutorial/zh/qs-generate-alert.mdx";
 
-## 什么是 Bencher?
+## 什么是Bencher？
 
 <BencherIntro />
 
-Bencher 是开源的并且自托管的。
-如果你有意使用 Bencher Cloud，可以查看 [Bencher Cloud 快速上手教程](/zh/docs/tutorial/quick-start/)。
-不过在这个教程中，我们将使用 Docker 来进行 Bencher 自托管。
+<br />
+
+<DockerSelfHosted />
 
 <br />
 
-## 克隆仓库
-
-为了完成这个教程，你需要安装 `git`。
-检查你是否安装了 `git`。
-
-运行： `git --version`
-
-你应该看到类似的输出：
-
-```
-$ git --version
-git version 2.37.3
-```
-
-没关系如果你的版本号不同。
-只要是这个命令可以运行就行。
-如果不行就按照这个[安装 `git` 的指导说明](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)来安装。
+<DockerInstall />
 
 <br />
 
-安装好 `git` 后，我们就可以克隆 Bencher 仓库了。
-
-运行: <code>{`git clone --branch v${BENCHER_VERSION} https://github.com/bencherdev/bencher.git`}</code>
-
-你应该能看到类似的输出：
-
-```
-$ git clone https://github.com/bencherdev/bencher.git
-Cloning into 'bencher'...
-remote: Enumerating objects: 24752, done.
-remote: Counting objects: 100% (7363/7363), done.
-remote: Compressing objects: 100% (2396/2396), done.
-remote: Total 24752 (delta 4862), reused 7274 (delta 4785), pack-reused 17389
-Receiving objects: 100% (24752/24752), 4.92 MiB | 12.43 MiB/s, done.
-Resolving deltas: 100% (16108/16108), done.
-```
+<QSInstallCli />
 
 <br />
 
-## 运行 Bencher UI & API 服务器
-
-为了在本教程中运行 UI 和 API 服务器，你需要安装 `docker`。
-检查你是否安装了 `docker`。
-
-运行： `docker --version`
-
-你应该看到类似的输出：
-
-```
-$ docker --version
-Docker version 20.10.17, build 100c701
-```
-
-没关系你的版本号不同。只要是这个命令能执行就行。
-如果不行，按照这个[安装 `docker` 的指导说明](https://docs.docker.com/get-docker/)来安装。
-
-> 🐰 如果你从 ghcr.io 得到了一个错误，提示 `"authentication required"`，试试运行 `docker logout ghcr.io`
+<DockerRunServers />
 
 <br />
 
-安装好 `docker` 后，我们可以开始运行 UI 和 API 服务器了。
-
-运行： `docker compose up -d`
-
-你应该能看到类似的输出：
-
-```
-$ docker compose up -d
-[+] Running 16/16
- ⠿ bencher_ui Pulled                                           5.9s
- ...
- ⠿ bencher_api Pulled                                          6.3s
- ...
-[+] Running 3/3
- ⠿ Network bencher_default      Started                        0.1s
- ⠿ Container bencher_ui         Started                        0.8s
- ⠿ Container bencher_api_local  Started                        0.4s
-```
-
-同样的，只要是这个命令能执行就行，输出可以不同。
+<DockerBencherHost />
 
 <br />
 
-接下来，检查看看两个 docker 容器是否都在运行。
-
-运行： `docker ps`
-
-你应该能看到类似的输出：
-
-```
-$ docker ps
-CONTAINER ID   IMAGE                                 COMMAND                  CREATED              STATUS              PORTS                                           NAMES
-1d2ed7c7481e   bencherdev/bencher-ui:latest          "/docker-entrypoint.…"   About a minute ago   Up About a minute   0.0.0.0:3000->80/tcp, :::3000->80/tcp           bencher_ui
-7a8590d7021a   bencherdev/bencher-api-local:latest   "/api"                   About a minute ago   Up About a minute   0.0.0.0:61016->61016/tcp, :::61016->61016/tcp   bencher_api_local
-```
-
-与之前一样，只要这个命令能执行就行，输出可以不同。
+<DockerSelfHostedAccount />
 
 <br />
 
-## Bencher API 服务器日志
-
-让我们查看一下 Bencher API 服务器的日志。
-
-运行： `docker compose logs bencher_api`
-
-因为我们还没有在 API 服务器上设置电子邮件/SMTP，
-所以在本教程后面的部分你会在服务器日志中看到确认码。
+<QSApiToken>
+    <a href="http://localhost:3000/auth/signup" target="_blank">添加 API 令牌</a>
+</QSApiToken>
 
 <br />
 
-## 设置 Bencher 主机
+<QSCreateProject />
 
-`bencher` 命令行默认的主机是 Bencher Cloud (即 [https://api.bencher.dev](https://api.bencher.dev))。
-所以你需要设置你的主机名。最简单的就是用 `BENCHER_HOST` 环境变量来设置了。
+<br />
 
-运行： `export BENCHER_HOST=http://localhost:61016`
+<QSRunReport />
 
-如果你然后运行： `echo $BENCHER_HOST`
+<br />
 
-你应该能看到：
-
-```
-$ echo $BENCHER_HOST
-http://localhost:61016
-```
+<QSGenerateAlert />
 
 <br />
 <br />
 
-> 🐰 恭喜！你已经设置好了 Bencher 自托管！🎉
-> 现在你可以开始使用 Bencher 自托管进行 快速上手 教程了。
+> 🐰 恭喜！你捕捉到了你的第一个性能退化！ 🎉
 
 <br />
 
-<h2><a href="/zh/docs/tutorial/quick-start/">继续学习: 快速上手 ➡</a></h2>
+<h2><a href="/zh/docs/explanation/benchmarking/">继续下去：基准测试概览 ➡</a></h2>

@@ -148,7 +148,7 @@ where
 }
 
 /// The direction to sort the results by
-#[derive(ValueEnum, Debug, Clone)]
+#[derive(ValueEnum, Debug, Clone, Copy)]
 #[clap(rename_all = "snake_case")]
 pub enum CliDirection {
     /// Ascending

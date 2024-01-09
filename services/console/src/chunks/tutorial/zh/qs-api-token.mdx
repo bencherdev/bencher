@@ -1,28 +1,30 @@
-## 创建一个API令牌
+## 创建 API 令牌
 
-为了使用Bencher API，你需要创建一个API令牌。
-<a href="/console" target="_blank">导航到Bencher Console</a>。
-将鼠标悬停在右上角的名字上。
-应该会出现一个下拉菜单。选择 `Tokens`。
-在API Tokens页面，点击 `➕添加` 按钮。
+如果要使用 Bencher API，您需要创建一个 API 令牌。
+导航至 Bencher 控制台。
+将鼠标悬停在右上角的您的名字上。
+应该会出现一个下拉菜单。选择`令牌`。
+在 API 令牌页面，点击`➕ 添加`按钮。
 
-### <a id="add-an-api-token" href="/auth/signup" target="_blank">添加一个API令牌</a>
+### { props.children }
 <br />
 
-一旦你创建了新的API令牌，你需要将它复制到剪贴板。
-在你计划使用的终端中，将API令牌作为环境变量导出。
+一旦您创建了新的 API 令牌，您需要将它复制到剪贴板。
+在您打算工作的终端中，将 API 令牌导入为环境变量。
 
-运行：`export BENCHER_API_TOKEN=你的令牌`
+在 Linux、Mac 和其他类 Unix 系统上运行：`export BENCHER_API_TOKEN=YOUR_TOKEN`
 
-然后运行: `echo $BENCHER_API_TOKEN`
+在 Windows 上运行：`$env:BENCHER_API_TOKEN = "YOUR_TOKEN"`
 
-你应该看到：
+然后运行 `echo $BENCHER_API_TOKEN` 或 `Write-Output $env:BENCHER_API_TOKEN`。
+
+你应该会看到：
 
 ```
 $ echo $BENCHER_API_TOKEN
-你的令牌
+YOUR_TOKEN
 ```
 
 <br />
 
-> 🐰 注意：如果你切换到其他终端，你需要再次导出API令牌。
+> 🐰 注意：如果你转到另一个终端，你将需要再次导出 API 令牌。

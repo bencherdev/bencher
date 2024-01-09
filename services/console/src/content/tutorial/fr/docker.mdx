@@ -5,152 +5,69 @@ heading: "Auto-hébergement Docker"
 sortOrder: 2
 ---
 
-import { BENCHER_VERSION } from "../../../util/ext";
 import BencherIntro from "../../../chunks/general/fr/bencher-intro.mdx";
+import DockerSelfHosted from "../../../chunks/tutorial/fr/docker-self-hosted.mdx";
+import QSInstallCli from "../../../chunks/tutorial/fr/qs-install-cli.mdx";
+import DockerInstall from "../../../chunks/tutorial/fr/docker-install.mdx";
+import DockerRunServers from "../../../chunks/tutorial/fr/docker-run-servers.mdx";
+import DockerBencherHost from "../../../chunks/tutorial/fr/docker-bencher-host.mdx";
+import DockerSelfHostedAccount from "../../../chunks/tutorial/fr/docker-self-hosted-account.mdx";
+import QSApiToken from "../../../chunks/tutorial/fr/qs-api-token.mdx";
+import QSCreateProject from "../../../chunks/tutorial/fr/qs-create-project.mdx";
+import QSRunReport from "../../../chunks/tutorial/fr/qs-run-report.mdx";
+import QSGenerateAlert from "../../../chunks/tutorial/fr/qs-generate-alert.mdx";
 
-## Qu'est-ce que Bencher ?
+## Qu'est-ce que Bencher?
 
 <BencherIntro />
 
-Bencher est open source et auto-hébergeable.
-Si vous êtes intéressé par l'utilisation de Bencher Cloud, consultez le [tutoriel de démarrage rapide de Bencher Cloud](/fr/docs/tutorial/quick-start/).
-Pour ce tutoriel, nous allons utiliser Bencher Self-Hosted avec Docker.
+<br />
+
+<DockerSelfHosted />
 
 <br />
 
-## Cloner le Répertoire
-
-Pour suivre ce tutoriel, vous devrez avoir `git` installé.
-Vérifiez si vous avez installé `git`.
-
-Exécutez : `git --version`
-
-Vous devriez voir quelque chose comme :
-
-```
-$ git --version
-git version 2.37.3
-```
-
-Il est acceptable si votre numéro de version est différent.
-Il est important que cette commande fonctionne.
-Si ce n'est pas le cas, suivez les [instructions pour installer `git`](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
+<DockerInstall />
 
 <br />
 
-Avec `git` installé, nous pouvons maintenant cloner le référentiel Bencher.
-
-Exécutez : <code>{`git clone --branch v${BENCHER_VERSION} https://github.com/bencherdev/bencher.git`}</code>
-
-Vous devriez voir quelque chose comme :
-
-```
-$ git clone https://github.com/bencherdev/bencher.git
-Cloning into 'bencher'...
-remote: Enumerating objects: 24752, done.
-remote: Counting objects: 100% (7363/7363), done.
-remote: Compressing objects: 100% (2396/2396), done.
-remote: Total 24752 (delta 4862), reused 7274 (delta 4785), pack-reused 17389
-Receiving objects: 100% (24752/24752), 4.92 MiB | 12.43 MiB/s, done.
-Resolving deltas: 100% (16108/16108), done.
-```
+<QSInstallCli />
 
 <br />
 
-## Exécuter les serveurs d'interface utilisateur et d'API de Bencher
-
-Pour exécuter les serveurs d'interface utilisateur et d'API dans ce tutoriel, vous devrez avoir `docker` installé.
-Vérifiez si vous avez installé `docker`.
-
-Exécutez : `docker --version`
-
-Vous devriez voir quelque chose comme :
-
-```
-$ docker --version
-Docker version 20.10.17, build 100c701
-```
-
-Il est acceptable si votre numéro de version est différent. C'est simplement important que cette commande fonctionne.
-Si ce n'est pas le cas, suivez les [instructions pour installer `docker`](https://docs.docker.com/get-docker/).
-
-> 🐰 Si vous recevez une erreur de ghcr.io disant `"authentication required"`, essayez d'exécuter `docker logout ghcr.io`
+<DockerRunServers />
 
 <br />
 
-Avec `docker` installé, nous pouvons maintenant exécuter les serveurs d'interface utilisateur et d'API.
-
-Exécutez : `docker compose up -d`
-
-Vous devriez voir quelque chose comme :
-
-```
-$ docker compose up -d
-[+] Running 16/16
- ⠿ bencher_ui Pulled                                           5.9s
- ...
- ⠿ bencher_api Pulled                                          6.3s
- ...
-[+] Running 3/3
- ⠿ Network bencher_default      Started                        0.1s
- ⠿ Container bencher_ui         Started                        0.8s
- ⠿ Container bencher_api_local  Started                        0.4s
-```
-
-Là encore, il est normal que votre sortie soit différente. Il est simplement important que cette commande fonctionne.
+<DockerBencherHost />
 
 <br />
 
-Ensuite, vérifiez que les deux conteneurs docker sont en cours d'exécution.
-
-Exécutez : `docker ps`
-
-Vous devriez voir quelque chose comme :
-
-```
-$ docker ps
-CONTAINER ID   IMAGE                                 COMMAND                  CREATED              STATUS              PORTS                                           NAMES
-1d2ed7c7481e   bencherdev/bencher-ui:latest          "/docker-entrypoint.…"   About a minute ago   Up About a minute   0.0.0.0:3000->80/tcp, :::3000->80/tcp           bencher_ui
-7a8590d7021a   bencherdev/bencher-api-local:latest   "/api"                   About a minute ago   Up About a minute   0.0.0.0:61016->61016/tcp, :::61016->61016/tcp   bencher_api_local
-```
-
-Comme avant, il est normal que votre sortie soit différente. Il est simplement important que cette commande fonctionne.
+<DockerSelfHostedAccount />
 
 <br />
 
-## Journaux du serveur API Bencher
-
-Jetons un coup d'oeil aux journaux du serveur API Bencher.
-
-Exécutez : `docker compose logs bencher_api`
-
-Comme nous n'aurons pas encore configuré de courrier/SMTP sur le serveur API,
-les codes de confirmation que vous recevrez plus tard dans le tutoriel seront dans les journaux du serveur.
+<QSApiToken>
+    <a href="http://localhost:3000/auth/signup" target="_blank">Ajouter un jeton API</a>
+</QSApiToken>
 
 <br />
 
-## Configurer l'hôte de Bencher
+<QSCreateProject />
 
-L'hôte par défaut de l'interface en ligne de commande `bencher` est Bencher Cloud (c'est-à-dire [https://api.bencher.dev](https://api.bencher.dev)).
-Donc, vous devez configurer votre nom d'hôte. La façon la plus simple de faire cela est avec la variable d'environnement `BENCHER_HOST`.
+<br />
 
-Exécutez : `export BENCHER_HOST=http://localhost:61016`
+<QSRunReport />
 
-Si vous exécutez alors : `echo $BENCHER_HOST`
+<br />
 
-Vous devriez voir :
-
-```
-$ echo $BENCHER_HOST
-http://localhost:61016
-```
+<QSGenerateAlert />
 
 <br />
 <br />
 
-> 🐰 Félicitations ! Vous avez configuré Bencher Auto-Hébergé ! 🎉
-> Vous pouvez maintenant poursuivre avec le tutoriel de démarrage rapide en utilisant Bencher Auto-Hébergé.
+> 🐰 Félicitations! Vous avez attrapé votre première régression de performance! 🎉
 
 <br />
 
-<h2><a href="/fr/docs/tutorial/quick-start/">Continuer: Démarrage Rapide ➡</a></h2>
+<h2><a href="/fr/docs/explanation/benchmarking/">Continuez: Aperçu du Benchmarking ➡</a></h2>
