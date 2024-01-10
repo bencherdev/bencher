@@ -1,6 +1,5 @@
-use std::fs::Permissions;
 #[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
+use std::{fs::Permissions, os::unix::fs::PermissionsExt};
 
 use bencher_api::API_VERSION;
 use minijinja::Environment;

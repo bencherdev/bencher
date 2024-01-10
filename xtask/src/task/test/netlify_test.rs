@@ -1,9 +1,10 @@
 use std::fs::File;
 
+use bencher_api::API_VERSION;
 use bencher_json::PROD_BENCHER_URL_STR;
 use camino::Utf8PathBuf;
 
-use crate::{parser::TaskNetlifyTest, task::types::swagger::swagger_spec};
+use crate::parser::TaskNetlifyTest;
 
 const NETLIFY_LOGS_URL_KEY: &str = "NETLIFY_LOGS_URL";
 const NETLIFY_URL: &str = "https://app.netlify.com/sites/bencher/deploys/";
@@ -24,18 +25,13 @@ impl TryFrom<TaskNetlifyTest> for NetlifyTest {
 
 impl NetlifyTest {
     pub async fn exec(&self) -> anyhow::Result<()> {
-        let swagger_spec = swagger_spec()?;
-        let Some(version) = swagger_spec.version() else {
-            return Err(anyhow::anyhow!("No version found in swagger.json"));
-        };
-
         let deploy_id = netlify_deploy_id("netlify.json")?;
         let console_url = if self.dev {
             format!("https://{deploy_id}--bencher.netlify.app")
         } else {
             PROD_BENCHER_URL_STR.to_owned()
         };
-        test_ui_version(&console_url, version).await?;
+        test_ui_version(&console_url).await?;
 
         // TODO replace this with some actual e2e tests
         let project_slug = if self.dev { "the-computer" } else { "bencher" };
@@ -80,8 +76,8 @@ fn netlify_deploy_id(path: &str) -> anyhow::Result<String> {
     Ok(id.to_owned())
 }
 
-async fn test_ui_version(console_url: &str, version: &str) -> anyhow::Result<()> {
-    println!("Testing UI deploy is version {version} at {console_url}");
+async fn test_ui_version(console_url: &str) -> anyhow::Result<()> {
+    println!("Testing UI deploy is version {API_VERSION} at {console_url}");
     let html = reqwest::get(console_url).await?.text().await?;
 
     // Looking for a line like:
@@ -95,9 +91,9 @@ async fn test_ui_version(console_url: &str, version: &str) -> anyhow::Result<()>
                 "Console version {v} does not match expected format"
             ));
         };
-        if console_version != version {
+        if console_version != API_VERSION {
             return Err(anyhow::anyhow!(
-                "Console version {console_version} does not match swagger.json version {version}"
+                "Console version {console_version} does not match swagger.json version {API_VERSION}"
             ));
         }
     }

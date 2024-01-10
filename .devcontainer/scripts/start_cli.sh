@@ -5,9 +5,7 @@ while ! nc -z localhost 61016; do
   sleep 1
 done
 
-RUST_BACKTRACE=full cargo test --features seed --test seed -- --nocapture
-
-cargo install --path . --locked
+cargo xtask seed-test
 
 echo "Bencher development environment is ready!"
 echo "Bencher UI Server: http://localhost:3000"

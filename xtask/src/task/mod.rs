@@ -10,6 +10,7 @@ mod release_notes;
 mod template;
 mod test;
 mod types;
+mod version;
 
 use notify::Notify;
 use package::deb::Deb;
@@ -22,6 +23,7 @@ use test::{
     examples::Examples, netlify_test::NetlifyTest, seed_test::SeedTest, smoke_test::SmokeTest,
 };
 use types::{swagger::Swagger, types::Types, typeshare::Typeshare};
+use version::Version;
 
 #[derive(Debug)]
 pub struct Task {
@@ -31,6 +33,7 @@ pub struct Task {
 #[allow(variant_size_differences)]
 #[derive(Debug)]
 pub enum Sub {
+    Version(Version),
     Typeshare(Typeshare),
     Swagger(Swagger),
     Types(Types),
@@ -66,6 +69,7 @@ impl TryFrom<TaskSub> for Sub {
 
     fn try_from(sub: TaskSub) -> Result<Self, Self::Error> {
         Ok(match sub {
+            TaskSub::Version(version) => Self::Version(version.try_into()?),
             TaskSub::Typeshare(typeshare) => Self::Typeshare(typeshare.try_into()?),
             TaskSub::Swagger(swagger) => Self::Swagger(swagger.try_into()?),
             TaskSub::Types(types) => Self::Types(types.try_into()?),
@@ -101,6 +105,7 @@ impl Task {
 impl Sub {
     pub async fn exec(&self) -> anyhow::Result<()> {
         match self {
+            Self::Version(version) => version.exec(),
             Self::Typeshare(typeshare) => typeshare.exec(),
             Self::Swagger(swagger) => swagger.exec(),
             Self::Types(types) => types.exec(),

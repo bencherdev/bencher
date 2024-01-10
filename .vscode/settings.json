@@ -62,6 +62,7 @@
     "canonicalize",
     "chrono",
     "codegen",
+    "devcontainer",
     "devel",
     "Dogfooding",
     "dropshot",

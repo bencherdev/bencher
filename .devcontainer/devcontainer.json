@@ -1,4 +1,3 @@
-// https://containers.dev/implementors/json_reference/
 {
     "build": {
         "dockerfile": "Dockerfile",
@@ -8,12 +7,12 @@
             "RUST_VERSION": "1.75.0"
         }
     },
-    "postCreateCommand": "./scripts/setup.sh",
+    "postCreateCommand": "./.devcontainer/scripts/setup.sh",
     "postStartCommand": {
         "init": "echo 'Initializing Bencher development environment, please wait...'",
         "api": "cd ./services/api && cargo run",
-        "cli": "cd ./services/cli && ../../scripts/start_cli.sh",
-        "ui": "cd ./services/console && ../../scripts/start_ui.sh"
+        "cli": "cd ./services/cli && ../../.devcontainer/scripts/start_cli.sh",
+        "ui": "cd ./services/console && ../../.devcontainer/scripts/start_ui.sh"
     },
     "forwardPorts": [
         3000,

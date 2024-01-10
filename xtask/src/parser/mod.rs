@@ -8,6 +8,7 @@ mod release;
 mod template;
 mod test;
 mod types;
+mod version;
 
 pub use notify::TaskNotify;
 pub use package::TaskDeb;
@@ -22,6 +23,7 @@ pub use test::{
     TaskExample, TaskExamples, TaskNetlifyTest, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment,
 };
 pub use types::{TaskSwagger, TaskTypes, TaskTypeshare};
+pub use version::TaskVersion;
 
 /// Bencher CLI
 #[derive(Parser, Debug)]
@@ -35,6 +37,8 @@ pub struct TaskTask {
 #[allow(variant_size_differences, clippy::large_enum_variant)]
 #[derive(Subcommand, Debug)]
 pub enum TaskSub {
+    /// Get current API version
+    Version(TaskVersion),
     /// Generate typeshare
     Typeshare(TaskTypeshare),
     /// Generate OpenAPI spec

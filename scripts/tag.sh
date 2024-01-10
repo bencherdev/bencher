@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION=$(./scripts/version.sh)
+VERSION=$(cargo xtask version)
 
 git add Cargo.toml
 git add Cargo.lock

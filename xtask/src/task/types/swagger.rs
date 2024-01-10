@@ -62,13 +62,21 @@ impl Swagger {
 
         println!("Saved OpenAPI JSON file to: {SWAGGER_PATH}");
 
-        swagger_spec()?;
+        test_swagger_spec()?;
 
         Ok(())
     }
 }
 
-pub fn swagger_spec() -> anyhow::Result<bencher_json::JsonSpec> {
+pub fn test_swagger_spec() -> anyhow::Result<()> {
     let swagger_spec_str = std::fs::read_to_string(SWAGGER_PATH)?;
-    serde_json::from_str(&swagger_spec_str).map_err(Into::into)
+    let swagger_spec: bencher_json::JsonSpec = serde_json::from_str(&swagger_spec_str)?;
+    let version = swagger_spec
+        .version()
+        .ok_or_else(|| anyhow::anyhow!("No version found in swagger.json"))?;
+    anyhow::ensure!(
+        version == API_VERSION,
+        "Swagger version {version} does not match current version {API_VERSION}"
+    );
+    Ok(())
 }

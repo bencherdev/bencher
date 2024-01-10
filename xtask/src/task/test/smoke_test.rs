@@ -1,5 +1,6 @@
 use std::process::{Child, Command};
 
+use bencher_api::API_VERSION;
 use bencher_json::{
     JsonApiVersion, Jwt, Url, DEV_BENCHER_API_URL, LOCALHOST_BENCHER_API_URL, PROD_BENCHER_API_URL,
     TEST_BENCHER_API_URL,
@@ -8,10 +9,7 @@ use once_cell::sync::Lazy;
 
 use crate::{
     parser::{TaskExamples, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment},
-    task::{
-        test::{examples::Examples, seed_test::SeedTest},
-        types::swagger::swagger_spec,
-    },
+    task::test::{examples::Examples, seed_test::SeedTest},
 };
 
 const DEV_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjQyMTU2LCJpYXQiOjE2OTg2NzQ4NjEsImlzcyI6Imh0dHBzOi8vZGV2ZWwtLWJlbmNoZXIubmV0bGlmeS5hcHAvIiwic3ViIjoibXVyaWVsLmJhZ2dlQG5vd2hlcmUuY29tIiwib3JnIjpudWxsfQ.9z7jmM53TcVzc1inDxTeX9_OR0PQPpZAsKsCE7lWHfo";
@@ -57,11 +55,6 @@ impl From<TaskTestEnvironment> for Environment {
 
 impl SmokeTest {
     pub fn exec(&self) -> anyhow::Result<()> {
-        let swagger_spec = swagger_spec()?;
-        let Some(version) = swagger_spec.version() else {
-            return Err(anyhow::anyhow!("No version found in swagger.json"));
-        };
-
         let child = match self.environment {
             Environment::Localhost => Some(api_run()?),
             Environment::Docker => bencher_up().map(|()| None)?,
@@ -69,7 +62,7 @@ impl SmokeTest {
         };
 
         let api_url = self.environment.as_url();
-        test_api_version(&api_url, version)?;
+        test_api_version(&api_url)?;
 
         match self.environment {
             Environment::Localhost => {
@@ -137,8 +130,8 @@ fn bencher_down() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn test_api_version(api_url: &Url, version: &str) -> anyhow::Result<()> {
-    println!("Testing API deploy is version {version} at {api_url}");
+fn test_api_version(api_url: &Url) -> anyhow::Result<()> {
+    println!("Testing API deploy is version {API_VERSION} at {api_url}");
 
     let output = Command::new("cargo")
         .args(["run", "--", "server", "version", "--host", api_url.as_ref()])
@@ -156,9 +149,9 @@ fn test_api_version(api_url: &Url, version: &str) -> anyhow::Result<()> {
 
     let api_version =
         serde_json::from_str::<JsonApiVersion>(std::str::from_utf8(&output.stdout)?)?.version;
-    if api_version != version {
+    if api_version != API_VERSION {
         return Err(anyhow::anyhow!(
-            "API version {api_version} does not match swagger.json version {version}"
+            "API version {api_version} does not match current version {API_VERSION}"
         ));
     }
 

@@ -1,6 +1,6 @@
+use std::process::Command;
 #[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
-use std::{fs::Permissions, process::Command};
+use std::{fs::Permissions, os::unix::fs::PermissionsExt};
 
 use crate::parser::{TaskDeb, TaskMan};
 use bencher_api::API_VERSION;
