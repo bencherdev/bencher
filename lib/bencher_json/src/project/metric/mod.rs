@@ -28,11 +28,7 @@ pub type MeasureNameId = NameId;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMetric {
     pub value: OrderedFloat<f64>,
-    // TODO remove in due time
-    #[serde(alias = "lower_bound")]
     pub lower_value: Option<OrderedFloat<f64>>,
-    // TODO remove in due time
-    #[serde(alias = "upper_bound")]
     pub upper_value: Option<OrderedFloat<f64>>,
 }
 

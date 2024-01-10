@@ -224,17 +224,11 @@ fn into_report_results_json(
         if let Some(result) = report_result.as_mut() {
             result.benchmarks.push(benchmark_metric);
         } else {
-            let measure = query_measure.into_json_for_project(project);
-            let threshold = if let Some((threshold, statistic)) = threshold_statistic {
-                Some(threshold.into_threshold_statistic_json_for_project(project, statistic))
-            } else {
-                None
-            };
             report_result = Some(JsonReportResult {
-                // TODO remove in due time
-                metric_kind: Some(measure.clone()),
-                measure,
-                threshold,
+                measure: query_measure.into_json_for_project(project),
+                threshold: threshold_statistic.map(|(threshold, statistic)| {
+                    threshold.into_threshold_statistic_json_for_project(project, statistic)
+                }),
                 benchmarks: vec![benchmark_metric],
             });
         }

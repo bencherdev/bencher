@@ -103,15 +103,12 @@ impl QueryThreshold {
             sentry::capture_error(&err);
             return Err(err);
         };
-        let measure = QueryMeasure::get(conn, measure_id)?.into_json(conn)?;
         Ok(JsonThreshold {
             uuid,
             project: QueryProject::get_uuid(conn, project_id)?,
             branch: QueryBranch::get(conn, branch_id)?.into_json(conn)?,
             testbed: QueryTestbed::get(conn, testbed_id)?.into_json(conn)?,
-            // TODO remove in due time
-            metric_kind: Some(measure.clone()),
-            measure,
+            measure: QueryMeasure::get(conn, measure_id)?.into_json(conn)?,
             statistic,
             created,
             modified,

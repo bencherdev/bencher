@@ -61,7 +61,6 @@ impl Mock {
     fn exec_inner(&self) -> Result<(), MockError> {
         let adapter_results = self.generate_results()?;
 
-        // TODO disable when quiet
         cli_println!(
             "{}",
             serde_json::to_string_pretty(&adapter_results).map_err(MockError::SerializeResults)?

@@ -5,8 +5,8 @@ max_retries = 10
 retry_wait_time = 1
 exclude = [
     "localhost:3000",
-    "http://localhost:3000/",
-    "http://localhost:61016/",
+    "http://localhost:3000*",
+    "http://localhost:61016*",
     "https://api.bencher.dev*",
     "https://discord.gg/yGEsdUh7R4",
     "https://github.com/bencherdev/bencher/issues/new*",

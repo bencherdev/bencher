@@ -70,9 +70,6 @@ pub struct JsonThreshold {
     pub project: ProjectUuid,
     pub branch: JsonBranch,
     pub testbed: JsonTestbed,
-    /// TODO remove in due time
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub metric_kind: Option<JsonMeasure>,
     pub measure: JsonMeasure,
     pub statistic: JsonStatistic,
     pub created: DateTime,

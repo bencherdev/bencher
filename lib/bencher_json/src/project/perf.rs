@@ -30,8 +30,6 @@ pub struct JsonPerfQueryParams {
     pub branches: String,
     pub testbeds: String,
     pub benchmarks: String,
-    // TODO remove in due time
-    #[serde(alias = "metric_kinds")]
     pub measures: String,
     pub start_time: Option<DateTimeMillis>,
     pub end_time: Option<DateTimeMillis>,
@@ -179,8 +177,6 @@ pub enum PerfQueryKey {
     // Console Keys
     LowerBoundary,
     UpperBoundary,
-    /// TODO remove in due time
-    MetricKinds,
 }
 
 pub const BRANCHES: &str = "branches";

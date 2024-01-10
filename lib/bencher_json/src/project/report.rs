@@ -241,9 +241,6 @@ pub type JsonReportIteration = Vec<JsonReportResult>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportResult {
-    /// TODO remove in due time
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub metric_kind: Option<JsonMeasure>,
     pub measure: JsonMeasure,
     // The threshold should be the same for all the benchmark results
     pub threshold: Option<JsonThresholdStatistic>,

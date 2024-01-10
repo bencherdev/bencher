@@ -7923,15 +7923,6 @@
           "measure": {
             "$ref": "#/components/schemas/JsonMeasure"
           },
-          "metric_kind": {
-            "nullable": true,
-            "description": "TODO remove in due time",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonMeasure"
-              }
-            ]
-          },
           "threshold": {
             "nullable": true,
             "allOf": [
@@ -8317,15 +8308,6 @@
           },
           "measure": {
             "$ref": "#/components/schemas/JsonMeasure"
-          },
-          "metric_kind": {
-            "nullable": true,
-            "description": "TODO remove in due time",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonMeasure"
-              }
-            ]
           },
           "modified": {
             "$ref": "#/components/schemas/DateTime"

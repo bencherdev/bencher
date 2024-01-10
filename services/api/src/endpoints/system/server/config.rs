@@ -80,7 +80,7 @@ async fn put_inner(
 ) -> Result<JsonConfig, HttpError> {
     let JsonUpdateConfig { config, delay } = json_config;
 
-    // todo() -> add validation here
+    // TODO add validation here
     let config_str = serde_json::to_string(&config).map_err(bad_request_error)?;
     std::env::set_var(BENCHER_CONFIG, &config_str);
     Config::write(log, config_str.as_bytes())

@@ -1,5 +1,8 @@
 ## Pending `v0.4.0`
-- **BREAKING CHANGES**
+- **BREAKING CHANGES** Remove backwards compatibility for renames:
+  - `Metric` (`lower_bound` => `lower_value` and `upper_bound` => `upper_value`)
+  - `Measure` (`metric_kind` => `measure` in `Report` and `Threshold`; `metric_kinds` => `measures` in `Perf`)
+  - `Boundary` (`average` => `baseline`)
 - Add `bencher up`, `bencher down`, and `bencher logs` commands to CLI to easily run Bencher Self-Hosted
 
 ## `v0.3.26`

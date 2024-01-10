@@ -37,8 +37,6 @@ import type { TabList } from "./plot/PlotTab";
 const BRANCHES_PARAM = PerfQueryKey.Branches;
 const TESTBEDS_PARAM = PerfQueryKey.Testbeds;
 const BENCHMARKS_PARAM = PerfQueryKey.Benchmarks;
-// TODO remove in due time
-const METRIC_KINDS_PARAM = PerfQueryKey.MetricKinds;
 const MEASURES_PARAM = PerfQueryKey.Measures;
 const START_TIME_PARAM = PerfQueryKey.StartTime;
 const END_TIME_PARAM = PerfQueryKey.EndTime;
@@ -191,14 +189,7 @@ const PerfPanel = (props: Props) => {
 		if (!Array.isArray(arrayFromString(searchParams[BENCHMARKS_PARAM]))) {
 			initParams[BENCHMARKS_PARAM] = null;
 		}
-		// TODO remove in due time
-		const metric_kinds = arrayFromString(searchParams[METRIC_KINDS_PARAM]);
-		if (Array.isArray(metric_kinds)) {
-			if (metric_kinds.length > 0) {
-				initParams[MEASURES_PARAM] = searchParams[METRIC_KINDS_PARAM];
-			}
-			initParams[METRIC_KINDS_PARAM] = null;
-		} else if (!Array.isArray(arrayFromString(searchParams[MEASURES_PARAM]))) {
+		if (!Array.isArray(arrayFromString(searchParams[MEASURES_PARAM]))) {
 			initParams[MEASURES_PARAM] = null;
 		}
 		if (!timeToDate(searchParams[START_TIME_PARAM])) {

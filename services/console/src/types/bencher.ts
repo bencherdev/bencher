@@ -86,8 +86,6 @@ export interface JsonBenchmarkMetric {
 }
 
 export interface JsonReportResult {
-	/** TODO remove in due time */
-	metric_kind?: JsonMeasure;
 	measure: JsonMeasure;
 	threshold?: JsonThresholdStatistic;
 	benchmarks: JsonBenchmarkMetric[];
@@ -122,8 +120,6 @@ export interface JsonThreshold {
 	project: Uuid;
 	branch: JsonBranch;
 	testbed: JsonTestbed;
-	/** TODO remove in due time */
-	metric_kind?: JsonMeasure;
 	measure: JsonMeasure;
 	statistic: JsonStatistic;
 	created: string;
@@ -525,7 +521,5 @@ export enum PerfQueryKey {
 	EndTime = "end_time",
 	LowerBoundary = "lower_boundary",
 	UpperBoundary = "upper_boundary",
-	/** TODO remove in due time */
-	MetricKinds = "metric_kinds",
 }
 
