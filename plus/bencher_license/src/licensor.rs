@@ -9,10 +9,13 @@ use once_cell::sync::Lazy;
 
 use crate::{audience::Audience, billing_cycle::BillingCycle, claims::Claims, LicenseError};
 
+pub const TEST_PUBLIC_PEM: &str = include_str!("./test/public.pem");
+pub const LIVE_PUBLIC_PEM: &str = include_str!("../public.pem");
+
 #[cfg(debug_assertions)]
-pub const PUBLIC_PEM: &str = include_str!("./test/public.pem");
+pub const PUBLIC_PEM: &str = TEST_PUBLIC_PEM;
 #[cfg(not(debug_assertions))]
-pub const PUBLIC_PEM: &str = include_str!("../public.pem");
+pub const PUBLIC_PEM: &str = LIVE_PUBLIC_PEM;
 
 static ALGORITHM: Lazy<Algorithm> = Lazy::new(|| Algorithm::ES256);
 static HEADER: Lazy<Header> = Lazy::new(|| Header::new(*ALGORITHM));
@@ -28,15 +31,28 @@ pub enum Licensor {
     },
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum PublicKey {
+    Test,
+    Live,
+}
+
 impl Licensor {
     pub fn self_hosted() -> Result<Self, LicenseError> {
-        let decoding = decoding_key()?;
+        let decoding = decoding_key(None)?;
         Ok(Self::SelfHosted { decoding })
     }
 
     pub fn bencher_cloud(private_pem: &Secret) -> Result<Self, LicenseError> {
+        Self::bencher_cloud_with_public_key(private_pem, None)
+    }
+
+    pub fn bencher_cloud_with_public_key(
+        private_pem: &Secret,
+        public_key: Option<PublicKey>,
+    ) -> Result<Self, LicenseError> {
         let encoding = encoding_key(private_pem.as_ref())?;
-        let decoding = decoding_key()?;
+        let decoding = decoding_key(public_key)?;
         Ok(Self::BencherCloud { encoding, decoding })
     }
 
@@ -53,13 +69,14 @@ impl Licensor {
         }
     }
 
-    fn new_license(
+    pub fn new_license(
         &self,
         audience: Audience,
         billing_cycle: BillingCycle,
         organization: OrganizationUuid,
         plan_level: PlanLevel,
         entitlements: Entitlements,
+        issuer: Option<String>,
     ) -> Result<Jwt, LicenseError> {
         let claims = Claims::new(
             audience,
@@ -67,6 +84,7 @@ impl Licensor {
             organization,
             plan_level,
             entitlements,
+            issuer,
         )?;
         let encoding = self.encoding()?;
         Ok(Jwt::from_str(&encode(&HEADER, &claims, encoding)?)?)
@@ -84,6 +102,7 @@ impl Licensor {
             organization,
             plan_level,
             entitlements,
+            None,
         )
     }
 
@@ -99,13 +118,22 @@ impl Licensor {
             organization,
             plan_level,
             entitlements,
+            None,
         )
     }
 
     pub fn validate(&self, license: &Jwt) -> Result<TokenData<Claims>, LicenseError> {
+        self.validate_with_issuer(license, BENCHER_URL_STR)
+    }
+
+    pub fn validate_with_issuer(
+        &self,
+        license: &Jwt,
+        issuer: &str,
+    ) -> Result<TokenData<Claims>, LicenseError> {
         let mut validation = Validation::new(*ALGORITHM);
         validation.set_audience(&[Audience::Bencher]);
-        validation.set_issuer(&[BENCHER_URL_STR]);
+        validation.set_issuer(&[issuer]);
         validation.set_required_spec_claims(&["aud", "exp", "iss", "sub"]);
 
         let token_data: TokenData<Claims> = decode(license.as_ref(), self.decoding(), &validation)?;
@@ -177,8 +205,13 @@ fn encoding_key(key: &str) -> Result<EncodingKey, LicenseError> {
     EncodingKey::from_ec_pem(key.as_bytes()).map_err(LicenseError::PrivatePem)
 }
 
-fn decoding_key() -> Result<DecodingKey, LicenseError> {
-    DecodingKey::from_ec_pem(PUBLIC_PEM.as_bytes()).map_err(LicenseError::PublicPem)
+fn decoding_key(public_key: Option<PublicKey>) -> Result<DecodingKey, LicenseError> {
+    let key = match public_key {
+        Some(PublicKey::Test) => TEST_PUBLIC_PEM,
+        Some(PublicKey::Live) => LIVE_PUBLIC_PEM,
+        None => PUBLIC_PEM,
+    };
+    DecodingKey::from_ec_pem(key.as_bytes()).map_err(LicenseError::PublicPem)
 }
 
 fn check_expiration(time: i64) -> Result<(), LicenseError> {

@@ -1,14 +1,12 @@
 use camino::Utf8PathBuf;
 use clap::{Parser, ValueEnum};
 
-#[cfg(feature = "plus")]
 #[derive(Parser, Debug)]
 pub struct TaskPrompt {
     /// Text prompt
     pub prompt: String,
 }
 
-#[cfg(feature = "plus")]
 #[derive(Parser, Debug)]
 pub struct TaskTranslate {
     /// File input path (relative to `services/console/src/`)
@@ -23,7 +21,6 @@ pub struct TaskTranslate {
     pub output_path: Option<Utf8PathBuf>,
 }
 
-#[cfg(feature = "plus")]
 #[derive(ValueEnum, Debug, Clone, Copy)]
 #[clap(rename_all = "snake_case")]
 pub enum TaskLanguage {

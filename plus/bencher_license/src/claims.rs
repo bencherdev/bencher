@@ -23,13 +23,14 @@ impl Claims {
         organization: OrganizationUuid,
         plan_level: PlanLevel,
         entitlements: Entitlements,
+        issuer: Option<String>,
     ) -> Result<Self, LicenseError> {
         let now = Utc::now().timestamp();
         Ok(Self {
             aud: audience,
             exp: now.checked_add(i64::from(billing_cycle)).unwrap_or(now),
             iat: now,
-            iss: BENCHER_URL_STR.into(),
+            iss: issuer.unwrap_or_else(|| BENCHER_URL_STR.into()),
             sub: organization,
             lvl: plan_level,
             ent: entitlements,

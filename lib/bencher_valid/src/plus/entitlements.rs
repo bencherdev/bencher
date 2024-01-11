@@ -85,6 +85,12 @@ impl Visitor<'_> for EntitlementsVisitor {
     }
 }
 
+impl Default for Entitlements {
+    fn default() -> Self {
+        Self::MIN
+    }
+}
+
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_entitlements(entitlements: u32) -> bool {
     entitlements > 0
@@ -99,6 +105,7 @@ mod test {
     #[test]
     #[allow(clippy::excessive_precision)]
     fn test_boundary() {
+        assert_eq!(true, is_valid_entitlements(Entitlements::default().into()));
         assert_eq!(true, is_valid_entitlements(Entitlements::MIN.into()));
         assert_eq!(true, is_valid_entitlements(2));
         assert_eq!(true, is_valid_entitlements(3));

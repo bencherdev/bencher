@@ -10,7 +10,7 @@ use serde::{
 
 use crate::{Sanitize, ValidError};
 
-const SANITIZED_SECRET: &str = "************";
+pub const SANITIZED_SECRET: &str = "************";
 
 #[typeshare::typeshare]
 #[derive(Clone, Eq, PartialEq, Hash, Serialize)]

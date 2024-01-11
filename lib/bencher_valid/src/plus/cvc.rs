@@ -1,4 +1,3 @@
-use derive_more::Display;
 use once_cell::sync::Lazy;
 #[cfg(all(feature = "full", not(feature = "lite")))]
 use regex::Regex;
@@ -15,13 +14,13 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 
-use crate::{error::REGEX_ERROR, ValidError};
+use crate::{error::REGEX_ERROR, secret::SANITIZED_SECRET, ValidError};
 
 #[allow(clippy::expect_used)]
 static CVC_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new("^[[:digit:]]{3,4}$").expect(REGEX_ERROR));
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct CardCvc(String);
 
@@ -55,6 +54,16 @@ impl<'de> Deserialize<'de> for CardCvc {
         D: Deserializer<'de>,
     {
         deserializer.deserialize_str(CardCvcVisitor)
+    }
+}
+
+impl fmt::Display for CardCvc {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if cfg!(debug_assertions) {
+            write!(f, "{}", self.0)
+        } else {
+            write!(f, "{SANITIZED_SECRET}",)
+        }
     }
 }
 

@@ -16,7 +16,7 @@ use notify::Notify;
 use package::deb::Deb;
 use package::man::Man;
 #[cfg(feature = "plus")]
-use plus::{prompt::Prompt, stats::Stats, translate::Translate};
+use plus::{license::License, prompt::Prompt, stats::Stats, translate::Translate};
 use release_notes::ReleaseNotes;
 use template::Template;
 use test::{
@@ -52,6 +52,7 @@ pub enum Sub {
     Deb(Deb),
     ReleaseNotes(ReleaseNotes),
     Notify(Notify),
+    License(License),
 }
 
 impl TryFrom<TaskTask> for Task {
@@ -88,6 +89,8 @@ impl TryFrom<TaskSub> for Sub {
             TaskSub::Deb(deb) => Self::Deb(deb.try_into()?),
             TaskSub::ReleaseNotes(release_notes) => Self::ReleaseNotes(release_notes.try_into()?),
             TaskSub::Notify(notify) => Self::Notify(notify.try_into()?),
+            #[cfg(feature = "plus")]
+            TaskSub::License(license) => Self::License(license.try_into()?),
         })
     }
 }
@@ -124,6 +127,8 @@ impl Sub {
             Self::Deb(deb) => deb.exec(),
             Self::ReleaseNotes(release_notes) => release_notes.exec(),
             Self::Notify(notify) => notify.exec().await,
+            #[cfg(feature = "plus")]
+            Self::License(license) => license.exec(),
         }
     }
 }

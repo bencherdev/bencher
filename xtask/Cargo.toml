@@ -6,7 +6,12 @@ edition.workspace = true
 
 [features]
 default = ["plus"]
-plus = ["bencher_json/plus", "dep:async-openai", "dep:notify-rust"]
+plus = [
+    "bencher_json/plus",
+    "bencher_license",
+    "dep:async-openai",
+    "dep:notify-rust",
+]
 
 [dependencies]
 # Workspace
@@ -14,6 +19,7 @@ anyhow.workspace = true
 bencher_api.workspace = true
 bencher_cli.workspace = true
 bencher_json = { workspace = true, features = ["lite"] }
+bencher_license = { workspace = true, optional = true }
 bencher_logger.workspace = true
 camino.workspace = true
 chrono.workspace = true

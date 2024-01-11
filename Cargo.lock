@@ -7181,6 +7181,7 @@ dependencies = [
  "bencher_api",
  "bencher_cli",
  "bencher_json",
+ "bencher_license",
  "bencher_logger",
  "camino",
  "chrono",

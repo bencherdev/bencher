@@ -1,4 +1,3 @@
-use derive_more::Display;
 use once_cell::sync::Lazy;
 #[cfg(all(feature = "full", not(feature = "lite")))]
 use regex::Regex;
@@ -15,14 +14,14 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 
-use crate::{error::REGEX_ERROR, ValidError};
+use crate::{error::REGEX_ERROR, secret::SANITIZED_SECRET, ValidError};
 
 #[allow(clippy::expect_used)]
 static NUMBER_REGEX: Lazy<Regex> =
     Lazy::new(|| Regex::new("^[[:digit:]]{12,19}$").expect(REGEX_ERROR));
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct CardNumber(String);
 
@@ -47,6 +46,20 @@ impl AsRef<str> for CardNumber {
 impl From<CardNumber> for String {
     fn from(card_number: CardNumber) -> Self {
         card_number.0
+    }
+}
+
+impl fmt::Display for CardNumber {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if cfg!(debug_assertions) {
+            write!(f, "{}", self.0)
+        } else {
+            write!(
+                f,
+                "{SANITIZED_SECRET}{}",
+                &self.0.get((self.0.len() - 4)..).unwrap_or_default()
+            )
+        }
     }
 }
 

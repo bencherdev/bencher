@@ -13,7 +13,9 @@ mod version;
 pub use notify::TaskNotify;
 pub use package::TaskDeb;
 pub use package::TaskMan;
+#[cfg(feature = "plus")]
 pub use plus::{
+    license::{TaskBillingCycle, TaskLicense, TaskLicenseGenerate, TaskLicenseValidate},
     prompt::{TaskLanguage, TaskPrompt, TaskTranslate},
     stats::TaskStats,
 };
@@ -72,4 +74,8 @@ pub enum TaskSub {
     ReleaseNotes(TaskReleaseNotes),
     /// Notify
     Notify(TaskNotify),
+    #[cfg(feature = "plus")]
+    #[clap(subcommand)]
+    /// License management
+    License(TaskLicense),
 }

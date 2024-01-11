@@ -141,6 +141,7 @@ const BillingForm = (props: Props) => {
 					handleOrganizationUuid={setOrganizationUuid}
 					organizationUuidValid={organizationUuidValid}
 				/>
+				<div id="payment-element"></div>
 				<PaymentCard
 					apiUrl={props.apiUrl}
 					params={props.params}
