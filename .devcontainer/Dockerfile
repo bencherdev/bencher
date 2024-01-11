@@ -52,15 +52,6 @@ RUN cargo install diesel_cli --no-default-features --features sqlite --locked
 RUN cargo install typeshare-cli --locked
 RUN cargo install lychee --locked
 
-WORKDIR /workspaces/bencher/services/api
-RUN cargo check
-
-WORKDIR /workspaces/bencher/services/cli
-RUN cargo install --debug --path . --locked
-
-WORKDIR /workspaces/bencher/services/console
-RUN npm install --include=dev
-
 # Install `flyctl`: https://fly.io/docs/getting-started/installing-flyctl/
 RUN curl -L https://fly.io/install.sh | sh
 RUN echo "export FLYCTL_INSTALL=\"/workspaces/bencher/.fly\"" >> $HOME/.bash_profile

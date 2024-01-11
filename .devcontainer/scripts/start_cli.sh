@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cargo install --debug --path . --locked
+
 echo "Waiting for API server"
 while ! nc -z localhost 61016; do
   sleep 1
