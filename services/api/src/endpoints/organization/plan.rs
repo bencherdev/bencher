@@ -122,7 +122,12 @@ pub async fn org_plan_post(
         body.into_inner(),
         &auth_user,
     )
-    .await?;
+    .await
+    .map_err(|e| {
+        #[cfg(feature = "sentry")]
+        sentry::capture_error(&e);
+        e
+    })?;
     Ok(Post::auth_response_created(json))
 }
 
@@ -240,7 +245,13 @@ pub async fn org_plan_delete(
     path_params: Path<OrgPlanParams>,
 ) -> Result<ResponseDeleted, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(|e| {
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(&e);
+            e
+        })?;
     Ok(Delete::auth_response_deleted())
 }
 
