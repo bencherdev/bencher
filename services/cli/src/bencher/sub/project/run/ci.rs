@@ -57,12 +57,12 @@ pub enum GitHubError {
     CreateComment(octocrab::Error),
     #[error("Failed to update GitHub PR comment: {0}")]
     UpdateComment(octocrab::Error),
-    #[error("GitHub Actions token (`GITHUB_TOKEN`) does not have `write` permissions for `issues`.\n{help}\nError: {0}", help = PERMISSIONS_HELP)]
+    #[error("GitHub Actions token (`GITHUB_TOKEN`) does not have `write` permissions for `pull-requests`.\n{help}\nError: {0}", help = PERMISSIONS_HELP)]
     BadPermissions(octocrab::Error),
 }
 
 // https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
-const PERMISSIONS_HELP: &str = "To fix, add `write` permissions to the job: `job: {{ \"permissions\": {{ \"issues\": \"write\" }} }}`\nSee: https://bencher.dev/docs/how-to/github-actions/#pull-requests";
+const PERMISSIONS_HELP: &str = "To fix, add `write` permissions to the job: `job: {{ \"permissions\": {{ \"pull-requests\": \"write\" }} }}`\nSee: https://bencher.dev/docs/how-to/github-actions/#pull-requests";
 
 fn docker_env(env_var: &str) -> String {
     format!(

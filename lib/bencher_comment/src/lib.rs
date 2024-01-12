@@ -521,13 +521,11 @@ impl BenchmarkUrl {
             format!("/console/projects/{}/perf", self.project_slug)
         };
         url.set_path(&path);
-        if let Some(boundary) = boundary {
-            url.set_query(Some(
-                &json_perf_query
-                    .to_query_string(&boundary.to_query_string())
-                    .unwrap_or_default(),
-            ));
-        }
+        url.set_query(Some(
+            &json_perf_query
+                .to_query_string(&boundary.map(Boundary::to_query_string).unwrap_or_default())
+                .unwrap_or_default(),
+        ));
 
         url
     }
