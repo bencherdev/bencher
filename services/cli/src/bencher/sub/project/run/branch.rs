@@ -42,7 +42,7 @@ pub enum BranchError {
         branch_name: String,
         count: usize,
     },
-    #[error("Failed to get branch: {0}\nDoes it exist? Branches need to already exist when using `--branch` or `BENCHER_BRANCH`.\nSee: https://bencher.dev/docs/explanation/branch-selection/")]
+    #[error("Failed to get branch: {0}\nDoes it exist? Branches must already exist when using `--branch` or `BENCHER_BRANCH` with a UUID.\nSee: https://bencher.dev/docs/explanation/branch-selection/")]
     GetBranch(crate::bencher::BackendError),
     #[error("Failed to query branches: {0}")]
     GetBranches(crate::bencher::BackendError),
@@ -115,7 +115,7 @@ impl Branch {
                         let branch_name =
                             name.as_ref().parse().map_err(BranchError::ParseBranch)?;
                         if !dry_run {
-                            get_branch_query(project, &branch_name, backend)
+                            get_branch_by_name(project, &branch_name, backend)
                                 .await?
                                 .ok_or_else(|| BranchError::NoBranches {
                                     project: project.to_string(),
@@ -160,7 +160,7 @@ async fn if_branch(
     log: bool,
     backend: &AuthBackend,
 ) -> Result<Option<BranchUuid>, BranchError> {
-    let branch = get_branch_query(project, branch_name, backend).await?;
+    let branch = get_branch_by_name(project, branch_name, backend).await?;
 
     if branch.is_some() {
         return Ok(branch);
@@ -182,7 +182,7 @@ async fn if_branch(
         };
 
         let new_branch =
-            if let Some(start_point) = get_branch_query(project, &start_point, backend).await? {
+            if let Some(start_point) = get_branch_by_name(project, &start_point, backend).await? {
                 Some(create_branch(project, branch_name, Some(start_point.into()), backend).await?)
             } else {
                 None
@@ -232,7 +232,7 @@ async fn get_branch(
     Ok(json_branch.uuid.into())
 }
 
-async fn get_branch_query(
+async fn get_branch_by_name(
     project: &ResourceId,
     branch_name: &BranchName,
     backend: &AuthBackend,

@@ -10,7 +10,7 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 
-use crate::{is_valid_len, ValidError};
+use crate::{is_valid_len, Slug, ValidError};
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
@@ -43,6 +43,12 @@ impl AsRef<str> for ResourceName {
 impl From<ResourceName> for String {
     fn from(resource_name: ResourceName) -> Self {
         resource_name.0
+    }
+}
+
+impl From<Slug> for ResourceName {
+    fn from(slug: Slug) -> Self {
+        Self(slug.into())
     }
 }
 

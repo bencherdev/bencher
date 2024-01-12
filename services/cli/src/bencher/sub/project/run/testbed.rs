@@ -1,3 +1,4 @@
+use bencher_client::types::JsonNewTestbed;
 use bencher_json::{
     project::testbed::TESTBED_LOCALHOST_STR, JsonUuid, JsonUuids, NameId, NameIdKind, ResourceId,
     ResourceName, TestbedUuid,
@@ -29,10 +30,12 @@ pub enum TestbedError {
         testbed_name: String,
         count: usize,
     },
-    #[error("Failed to get testbed: {0}\nDoes it exist? Testbeds need to already exist.\nSee: https://bencher.dev/docs/explanation/bencher-run/#--testbed-testbed")]
+    #[error("Failed to get testbed: {0}\nDoes it exist? Testbeds must already exist when using a UUID.\nSee: https://bencher.dev/docs/explanation/bencher-run/#--testbed-testbed")]
     GetTestbed(crate::bencher::BackendError),
     #[error("Failed to query testbeds: {0}")]
     GetTestbeds(crate::bencher::BackendError),
+    #[error("Failed to create new testbed: {0}")]
+    CreateTestbed(crate::bencher::BackendError),
 }
 
 impl TryFrom<Option<NameId>> for Testbed {
@@ -69,15 +72,23 @@ impl Testbed {
                 }
             },
             NameIdKind::Slug(slug) => {
-                if !dry_run {
-                    get_testbed(project, &slug.into(), backend).await?;
+                if !dry_run
+                    && get_testbed(project, &slug.clone().into(), backend)
+                        .await
+                        .is_err()
+                {
+                    create_testbed(project, &slug.into(), backend).await?;
                 }
             },
             NameIdKind::Name(name) => {
                 let name: ResourceName = name;
                 let testbed_name = name.as_ref().parse().map_err(TestbedError::ParseTestbed)?;
-                if !dry_run {
-                    get_testbed_query(project, &testbed_name, backend).await?;
+                if !dry_run
+                    && get_testbed_by_name(project, &testbed_name, backend)
+                        .await
+                        .is_err()
+                {
+                    create_testbed(project, &testbed_name, backend).await?;
                 }
             },
         }
@@ -106,7 +117,7 @@ async fn get_testbed(
     Ok(json_testbed.uuid.into())
 }
 
-async fn get_testbed_query(
+async fn get_testbed_by_name(
     project: &ResourceId,
     testbed_name: &ResourceName,
     backend: &AuthBackend,
@@ -142,4 +153,29 @@ async fn get_testbed_query(
             testbed_name: testbed_name.as_ref().into(),
         })
     }
+}
+
+async fn create_testbed(
+    project: &ResourceId,
+    testbed_name: &ResourceName,
+    backend: &AuthBackend,
+) -> Result<TestbedUuid, TestbedError> {
+    let new_testbed = &JsonNewTestbed {
+        name: testbed_name.clone().into(),
+        slug: None,
+    };
+    // Use `JsonUuid` to future proof against breaking changes
+    let json_testbed: JsonUuid = backend
+        .send_with(|client| async move {
+            client
+                .proj_testbed_post()
+                .project(project.clone())
+                .body(new_testbed.clone())
+                .send()
+                .await
+        })
+        .await
+        .map_err(TestbedError::CreateTestbed)?;
+
+    Ok(json_testbed.uuid.into())
 }
