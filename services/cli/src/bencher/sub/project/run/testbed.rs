@@ -72,23 +72,26 @@ impl Testbed {
                 }
             },
             NameIdKind::Slug(slug) => {
-                if !dry_run
-                    && get_testbed(project, &slug.clone().into(), backend)
-                        .await
-                        .is_err()
-                {
-                    create_testbed(project, &slug.into(), backend).await?;
+                if !dry_run {
+                    match get_testbed(project, &slug.clone().into(), backend).await {
+                        Ok(_) => {},
+                        Err(TestbedError::GetTestbed(_)) => {
+                            create_testbed(project, &slug.into(), backend).await?;
+                        },
+                        Err(e) => return Err(e),
+                    }
                 }
             },
             NameIdKind::Name(name) => {
-                let name: ResourceName = name;
-                let testbed_name = name.as_ref().parse().map_err(TestbedError::ParseTestbed)?;
-                if !dry_run
-                    && get_testbed_by_name(project, &testbed_name, backend)
-                        .await
-                        .is_err()
-                {
-                    create_testbed(project, &testbed_name, backend).await?;
+                let testbed_name: ResourceName = name;
+                if !dry_run {
+                    match get_testbed_by_name(project, &testbed_name, backend).await {
+                        Ok(_) => {},
+                        Err(TestbedError::NoTestbeds { .. }) => {
+                            create_testbed(project, &testbed_name, backend).await?;
+                        },
+                        Err(e) => return Err(e),
+                    }
                 }
             },
         }

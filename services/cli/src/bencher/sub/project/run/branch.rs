@@ -107,20 +107,25 @@ impl Branch {
                     },
                     NameIdKind::Slug(slug) => {
                         if !dry_run {
-                            get_branch(project, &slug.into(), backend).await?;
+                            match get_branch(project, &slug.clone().into(), backend).await {
+                                Ok(_) => {},
+                                Err(BranchError::GetBranch(_)) => {
+                                    create_branch(project, &slug.into(), None, backend).await?;
+                                },
+                                Err(e) => return Err(e),
+                            }
                         }
                     },
                     NameIdKind::Name(name) => {
-                        let name: BranchName = name;
-                        let branch_name =
-                            name.as_ref().parse().map_err(BranchError::ParseBranch)?;
+                        let branch_name: BranchName = name;
                         if !dry_run {
-                            get_branch_by_name(project, &branch_name, backend)
-                                .await?
-                                .ok_or_else(|| BranchError::NoBranches {
-                                    project: project.to_string(),
-                                    branch_name: branch_name.as_ref().into(),
-                                })?;
+                            match get_branch_by_name(project, &branch_name, backend).await {
+                                Ok(_) => {},
+                                Err(BranchError::NoBranches { .. }) => {
+                                    create_branch(project, &branch_name, None, backend).await?;
+                                },
+                                Err(e) => return Err(e),
+                            }
                         }
                     },
                 }

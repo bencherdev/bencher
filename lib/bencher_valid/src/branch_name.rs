@@ -11,7 +11,7 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 
-use crate::ValidError;
+use crate::{Slug, ValidError};
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
@@ -44,6 +44,12 @@ impl AsRef<str> for BranchName {
 impl From<BranchName> for String {
     fn from(branch_name: BranchName) -> Self {
         branch_name.0
+    }
+}
+
+impl From<Slug> for BranchName {
+    fn from(slug: Slug) -> Self {
+        Self(slug.into())
     }
 }
 
@@ -89,6 +95,7 @@ mod test {
         assert_eq!(true, is_valid_branch_name("main"));
         assert_eq!(true, is_valid_branch_name("MAIN"));
         assert_eq!(true, is_valid_branch_name("bencher/main"));
+        assert_eq!(true, is_valid_branch_name("bencher-main"));
 
         assert_eq!(false, is_valid_branch_name(""));
         assert_eq!(false, is_valid_branch_name(" main"));
