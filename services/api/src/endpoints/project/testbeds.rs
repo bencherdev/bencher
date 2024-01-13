@@ -160,6 +160,18 @@ async fn post_inner(
         Permission::Create,
     )?;
 
+    // Soft creation
+    // If the new testbed name already exists then return the existing testbed
+    // instead of erroring due to the unique constraint
+    // This is useful to help prevent race conditions in CI
+    if let Some(true) = json_testbed.soft {
+        if let Ok(testbed) = QueryTestbed::belonging_to(&query_project)
+            .filter(schema::testbed::name.eq(json_testbed.name.as_ref()))
+            .first::<QueryTestbed>(conn)
+        {
+            return Ok(testbed.into_json_for_project(&query_project));
+        }
+    }
     let insert_testbed = InsertTestbed::from_json(conn, query_project.id, json_testbed)?;
 
     diesel::insert_into(schema::testbed::table)

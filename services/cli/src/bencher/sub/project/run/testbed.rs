@@ -163,6 +163,7 @@ async fn create_testbed(
     let new_testbed = &JsonNewTestbed {
         name: testbed_name.clone().into(),
         slug: None,
+        soft: Some(true),
     };
     // Use `JsonUuid` to future proof against breaking changes
     let json_testbed: JsonUuid = backend

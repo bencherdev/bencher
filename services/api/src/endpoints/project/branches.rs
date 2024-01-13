@@ -161,7 +161,7 @@ async fn post_inner(
     )?;
 
     // Soft creation
-    // If the new branch name already exists then return the existing branch name
+    // If the new branch name already exists then return the existing branch
     // instead of erroring due to the unique constraint
     // This is useful to help prevent race conditions in CI
     if let Some(true) = json_branch.soft {

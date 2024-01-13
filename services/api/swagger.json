@@ -7250,6 +7250,10 @@
                 "$ref": "#/components/schemas/Slug"
               }
             ]
+          },
+          "soft": {
+            "nullable": true,
+            "type": "boolean"
           }
         },
         "required": [

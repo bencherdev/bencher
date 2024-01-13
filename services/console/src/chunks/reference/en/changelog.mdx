@@ -4,6 +4,7 @@
   - `Measure` (`metric_kind` => `measure` in `Report` and `Threshold`; `metric_kinds` => `measures` in `Perf`)
   - `Boundary` (`average` => `baseline`)
 - Add `bencher up`, `bencher down`, and `bencher logs` commands to CLI to easily run Bencher Self-Hosted
+- Branches and Testbeds are now created if they do not exit for `bencher run` if the value passed is a slug or name (UUIDs are still required to already exist)
 
 ## `v0.3.26`
 - Add OAuth2 based login for GitHub

@@ -102,7 +102,7 @@ impl InsertTestbed {
         project_id: ProjectId,
         testbed: JsonNewTestbed,
     ) -> Result<Self, HttpError> {
-        let JsonNewTestbed { name, slug } = testbed;
+        let JsonNewTestbed { name, slug, .. } = testbed;
         let slug = ok_slug!(conn, project_id, &name, slug, testbed, QueryTestbed)?;
         let timestamp = DateTime::now();
         Ok(Self {

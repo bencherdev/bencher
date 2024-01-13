@@ -60,7 +60,7 @@ pub struct CliBranchCreate {
     pub slug: Option<Slug>,
 
     /// Soft creation
-    /// If the new branch name already exists then return the existing branch name
+    /// If the new branch name already exists then return the existing branch
     #[clap(long)]
     pub soft: bool,
 

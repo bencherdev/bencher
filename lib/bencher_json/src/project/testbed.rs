@@ -31,6 +31,7 @@ crate::typed_uuid::typed_uuid!(TestbedUuid);
 pub struct JsonNewTestbed {
     pub name: ResourceName,
     pub slug: Option<Slug>,
+    pub soft: Option<bool>,
 }
 
 impl JsonNewTestbed {
@@ -38,6 +39,7 @@ impl JsonNewTestbed {
         Self {
             name: TESTBED_LOCALHOST.clone(),
             slug: TESTBED_LOCALHOST_SLUG.clone(),
+            soft: None,
         }
     }
 }
