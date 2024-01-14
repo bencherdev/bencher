@@ -1,8 +1,11 @@
 use std::{fmt, str::FromStr};
 
 use bencher_json::{
-    organization::plan::{JsonCard, JsonCardDetails, JsonCustomer, JsonPlan},
-    system::config::JsonBilling,
+    organization::plan::{JsonCardDetails, JsonPlan},
+    system::{
+        config::JsonBilling,
+        payment::{JsonCard, JsonCustomer},
+    },
     Email, Entitlements, LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus,
 };
 use stripe::{
@@ -551,8 +554,11 @@ mod test {
     use std::str::FromStr;
 
     use bencher_json::{
-        organization::plan::{JsonCard, JsonCustomer, DEFAULT_PRICE_NAME},
-        system::config::{JsonBilling, JsonProduct, JsonProducts},
+        organization::plan::DEFAULT_PRICE_NAME,
+        system::{
+            config::{JsonBilling, JsonProduct, JsonProducts},
+            payment::{JsonCard, JsonCustomer},
+        },
         Entitlements, LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus,
         UserUuid,
     };

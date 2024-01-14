@@ -1,21 +1,19 @@
 use std::convert::TryFrom;
 
-use bencher_client::types::{
-    Entitlements, JsonCard, JsonCustomer, JsonNewPlan, OrganizationUuid, PlanLevel,
-};
+use bencher_client::types::{Entitlements, JsonNewPlan, NonEmpty, OrganizationUuid, PlanLevel};
 use bencher_json::ResourceId;
 
 use crate::{
     bencher::{backend::AuthBackend, sub::SubCmd},
-    parser::organization::plan::{CliPlanCard, CliPlanCreate, CliPlanCustomer, CliPlanLevel},
+    parser::organization::plan::{CliPlanCreate, CliPlanLevel},
     CliError,
 };
 
 #[derive(Debug, Clone)]
 pub struct Create {
     pub org: ResourceId,
-    pub customer: JsonCustomer,
-    pub card: JsonCard,
+    pub customer: NonEmpty,
+    pub payment_method: NonEmpty,
     pub level: PlanLevel,
     pub entitlements: Option<Entitlements>,
     pub organization: Option<OrganizationUuid>,
@@ -30,7 +28,7 @@ impl TryFrom<CliPlanCreate> for Create {
         let CliPlanCreate {
             org,
             customer,
-            card,
+            payment_method,
             level,
             entitlements,
             organization,
@@ -40,41 +38,13 @@ impl TryFrom<CliPlanCreate> for Create {
         Ok(Self {
             org,
             customer: customer.into(),
-            card: card.into(),
+            payment_method: payment_method.into(),
             level: level.into(),
             entitlements: entitlements.map(Into::into),
             organization: organization.map(Into::into),
             i_agree,
             backend: backend.try_into()?,
         })
-    }
-}
-
-impl From<CliPlanCustomer> for JsonCustomer {
-    fn from(customer: CliPlanCustomer) -> Self {
-        let CliPlanCustomer { uuid, name, email } = customer;
-        Self {
-            uuid: uuid.into(),
-            name: name.into(),
-            email: email.into(),
-        }
-    }
-}
-
-impl From<CliPlanCard> for JsonCard {
-    fn from(card: CliPlanCard) -> Self {
-        let CliPlanCard {
-            number,
-            exp_month,
-            exp_year,
-            cvc,
-        } = card;
-        Self {
-            number: number.into(),
-            exp_month: exp_month.into(),
-            exp_year: exp_year.into(),
-            cvc: cvc.into(),
-        }
     }
 }
 
@@ -92,7 +62,7 @@ impl From<Create> for JsonNewPlan {
     fn from(create: Create) -> Self {
         let Create {
             customer,
-            card,
+            payment_method,
             level,
             entitlements,
             organization,
@@ -102,7 +72,7 @@ impl From<Create> for JsonNewPlan {
         #[allow(clippy::inconsistent_struct_constructor)]
         Self {
             customer,
-            card,
+            payment_method,
             level,
             entitlements,
             organization,

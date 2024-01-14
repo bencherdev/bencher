@@ -1631,6 +1631,72 @@
         }
       }
     },
+    "/v0/payments": {
+      "post": {
+        "tags": [
+          "payments"
+        ],
+        "operationId": "payments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonNewPayment"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "successful creation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonPayment"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/projects": {
       "get": {
         "tags": [
@@ -7116,7 +7182,7 @@
           "name"
         ]
       },
-      "JsonNewPlan": {
+      "JsonNewPayment": {
         "type": "object",
         "properties": {
           "card": {
@@ -7124,6 +7190,18 @@
           },
           "customer": {
             "$ref": "#/components/schemas/JsonCustomer"
+          }
+        },
+        "required": [
+          "card",
+          "customer"
+        ]
+      },
+      "JsonNewPlan": {
+        "type": "object",
+        "properties": {
+          "customer": {
+            "$ref": "#/components/schemas/NonEmpty"
           },
           "entitlements": {
             "nullable": true,
@@ -7147,13 +7225,16 @@
                 "$ref": "#/components/schemas/OrganizationUuid"
               }
             ]
+          },
+          "payment_method": {
+            "$ref": "#/components/schemas/NonEmpty"
           }
         },
         "required": [
-          "card",
           "customer",
           "i_agree",
-          "level"
+          "level",
+          "payment_method"
         ]
       },
       "JsonNewProject": {
@@ -7466,6 +7547,21 @@
         "items": {
           "$ref": "#/components/schemas/JsonOrganization"
         }
+      },
+      "JsonPayment": {
+        "type": "object",
+        "properties": {
+          "customer": {
+            "$ref": "#/components/schemas/NonEmpty"
+          },
+          "payment_method": {
+            "$ref": "#/components/schemas/NonEmpty"
+          }
+        },
+        "required": [
+          "customer",
+          "payment_method"
+        ]
       },
       "JsonPerf": {
         "type": "object",
@@ -9144,6 +9240,9 @@
     {
       "name": "organizations",
       "description": "Organizations"
+    },
+    {
+      "name": "payments"
     },
     {
       "name": "perf",

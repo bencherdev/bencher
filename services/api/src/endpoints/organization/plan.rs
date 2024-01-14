@@ -161,17 +161,26 @@ async fn post_inner(
         ));
     }
 
-    // Create a customer for the user
-    let customer_id = biller
-        .get_or_create_customer(&json_plan.customer)
-        .await
-        .map_err(resource_not_found_err!(Plan, &json_plan.customer))?;
-
-    // Create a payment method for the user
-    let payment_method_id = biller
-        .create_payment_method(customer_id.clone(), json_plan.card.clone())
-        .await
-        .map_err(resource_not_found_err!(Plan, customer_id))?;
+    // // Create a customer for the user
+    // let customer_id = biller
+    //     .get_or_create_customer(&json_plan.customer)
+    //     .await
+    //     .map_err(resource_not_found_err!(Plan, &json_plan.customer))?;
+    // // Create a payment method for the user
+    // let payment_method_id = biller
+    //     .create_payment_method(customer_id.clone(), json_plan.card.clone())
+    //     .await
+    //     .map_err(resource_not_found_err!(Plan, customer_id))?;
+    let customer_id = json_plan
+        .customer
+        .as_ref()
+        .parse()
+        .map_err(resource_not_found_err!(Plan, json_plan.customer))?;
+    let payment_method_id = json_plan
+        .payment_method
+        .as_ref()
+        .parse()
+        .map_err(resource_not_found_err!(Plan, json_plan.payment_method))?;
 
     if let Some(entitlements) = json_plan.entitlements {
         InsertPlan::licensed_plan(

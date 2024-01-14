@@ -261,6 +261,18 @@ impl Api {
             }
         }
 
+        #[cfg(feature = "plus")]
+        {
+            // Payments
+            // Bencher Cloud only
+            if is_bencher_cloud {
+                if http_options {
+                    api.register(system::payments::payments_options)?;
+                }
+                api.register(system::payments::payments_post)?;
+            }
+        }
+
         Ok(())
     }
 }

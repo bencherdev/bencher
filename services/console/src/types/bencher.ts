@@ -195,19 +195,6 @@ export interface JsonOrganization {
 	modified: string;
 }
 
-export interface JsonCustomer {
-	uuid: Uuid;
-	name: NonEmpty;
-	email: Email;
-}
-
-export interface JsonCard {
-	number: CardNumber;
-	exp_month: ExpirationMonth;
-	exp_year: ExpirationYear;
-	cvc: CardCvc;
-}
-
 export enum PlanLevel {
 	Free = "free",
 	Team = "team",
@@ -215,13 +202,19 @@ export enum PlanLevel {
 }
 
 export interface JsonNewPlan {
-	customer: JsonCustomer;
-	card: JsonCard;
+	customer: NonEmpty;
+	payment_method: NonEmpty;
 	level: PlanLevel;
 	entitlements?: Entitlements;
 	organization?: Uuid;
 	/** I agree to the Bencher Subscription Agreement (https://bencher.dev/legal/subscription) */
 	i_agree: boolean;
+}
+
+export interface JsonCustomer {
+	uuid: Uuid;
+	name: NonEmpty;
+	email: Email;
 }
 
 export enum CardBrand {
@@ -477,6 +470,23 @@ export interface JsonAuthAck {
 export interface JsonAuthUser {
 	user: JsonUser;
 	token: Jwt;
+}
+
+export interface JsonCard {
+	number: CardNumber;
+	exp_month: ExpirationMonth;
+	exp_year: ExpirationYear;
+	cvc: CardCvc;
+}
+
+export interface JsonNewPayment {
+	customer: JsonCustomer;
+	card: JsonCard;
+}
+
+export interface JsonPayment {
+	customer: NonEmpty;
+	payment_method: NonEmpty;
 }
 
 export interface JsonToken {

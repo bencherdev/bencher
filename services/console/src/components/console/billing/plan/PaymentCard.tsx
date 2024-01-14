@@ -5,6 +5,7 @@ import { createStore } from "solid-js/store";
 import type {
 	JsonAuthUser,
 	JsonCustomer,
+	JsonNewPayment,
 	JsonNewPlan,
 	PlanLevel,
 } from "../../../../types/bencher";
@@ -99,24 +100,39 @@ const PaymentCard = (props: Props) => {
 			exp_year: exp[1],
 			cvc: cvc,
 		};
-		const data: JsonNewPlan = {
-			customer: customer,
-			card: card,
-			level: props.plan(),
-			entitlements: props.entitlements(),
-			organization: props.organizationUuid(),
-			i_agree: form?.consent?.value,
+		const newPayment: JsonNewPayment = {
+			customer,
+			card,
 		};
 
 		setSubmitting(true);
-		httpPost(props.apiUrl, props.path, token, data)
-			.then((_resp) => {
-				setSubmitting(false);
-				props.handleRefresh();
-				pageNotify(
-					NotifyKind.OK,
-					"Somebunny loves us! Successful plan enrollment.",
-				);
+		httpPost(props.apiUrl, "/v0/payments", token, newPayment)
+			.then((payment) => {
+				const newPlan: JsonNewPlan = {
+					customer: payment?.data?.customer,
+					payment_method: payment?.data?.payment_method,
+					level: props.plan(),
+					entitlements: props.entitlements(),
+					organization: props.organizationUuid(),
+					i_agree: form?.consent?.value,
+				};
+				httpPost(props.apiUrl, props.path, token, newPlan)
+					.then((_resp) => {
+						setSubmitting(false);
+						props.handleRefresh();
+						pageNotify(
+							NotifyKind.OK,
+							"Somebunny loves us! Successful plan enrollment.",
+						);
+					})
+					.catch((error) => {
+						setSubmitting(false);
+						console.error(error);
+						pageNotify(
+							NotifyKind.ERROR,
+							"Lettuce romaine calm! Failed to enroll. Please, try again.",
+						);
+					});
 			})
 			.catch((error) => {
 				setSubmitting(false);

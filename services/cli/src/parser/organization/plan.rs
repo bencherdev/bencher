@@ -1,10 +1,7 @@
 #![cfg(feature = "plus")]
 
-use bencher_json::{
-    CardCvc, CardNumber, Email, Entitlements, ExpirationMonth, ExpirationYear, NonEmpty,
-    OrganizationUuid, ResourceId, UserUuid,
-};
-use clap::{Args, Parser, Subcommand, ValueEnum};
+use bencher_json::{Entitlements, NonEmpty, OrganizationUuid, ResourceId};
+use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::CliBackend;
 
@@ -26,11 +23,13 @@ pub struct CliPlanCreate {
     /// Organization slug or UUID
     pub org: ResourceId,
 
-    #[clap(flatten)]
-    pub customer: CliPlanCustomer,
+    /// Customer ID
+    #[clap(long)]
+    pub customer: NonEmpty,
 
-    #[clap(flatten)]
-    pub card: CliPlanCard,
+    /// Payment method ID
+    #[clap(long)]
+    pub payment_method: NonEmpty,
 
     /// Plan level
     #[clap(value_enum, long)]
@@ -68,40 +67,6 @@ pub struct CliPlanDelete {
 
     #[clap(flatten)]
     pub backend: CliBackend,
-}
-
-#[derive(Args, Debug)]
-pub struct CliPlanCustomer {
-    /// User UUID
-    #[clap(long)]
-    pub uuid: UserUuid,
-
-    /// Name on card
-    #[clap(long)]
-    pub name: NonEmpty,
-
-    /// User email
-    #[clap(long)]
-    pub email: Email,
-}
-
-#[derive(Args, Debug)]
-pub struct CliPlanCard {
-    /// Card number
-    #[clap(long)]
-    pub number: CardNumber,
-
-    /// Card expiration month
-    #[clap(long)]
-    pub exp_month: ExpirationMonth,
-
-    /// Card expiration year
-    #[clap(long)]
-    pub exp_year: ExpirationYear,
-
-    /// Card CVC
-    #[clap(long)]
-    pub cvc: CardCvc,
 }
 
 #[derive(ValueEnum, Debug, Clone)]
