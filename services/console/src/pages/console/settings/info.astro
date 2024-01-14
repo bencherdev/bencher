@@ -1,0 +1,23 @@
+---
+export const prerender = false;
+
+import AnonRedirect from "../../../components/console/redirects/AnonRedirect";
+import UserLayout from "../../../layouts/console/UserLayout.astro";
+import DeckPanel from "../../../components/console/deck/DeckPanel";
+import { BencherResource } from "../../../config/types";
+
+// Using `meta.env` requires `prerender = false`
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
+const params = Astro.params;
+const title = "View Token";
+---
+
+<UserLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
+    <DeckPanel
+            client:only="solid-js"
+            apiUrl={BENCHER_API_URL}
+            params={params}
+            resource={BencherResource.USERS}
+    />
+    <AnonRedirect client:only="solid-js" path="/auth/login" />
+</UserLayout>

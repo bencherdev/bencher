@@ -3,6 +3,9 @@ import type { Params } from "../../util/url";
 import { validResourceName, validU32 } from "../../util/valid";
 import { Button, Card, Display, Operation } from "../types";
 import { addPath, parentPath, viewUuidPath } from "../util";
+import {authUser} from "../../util/auth.ts";
+
+const user = authUser();
 
 const TOKEN_FIELDS = {
 	name: {
@@ -36,7 +39,7 @@ const tokensConfig = {
 			],
 		},
 		table: {
-			url: (params: Params) => `/v0/users/${params?.user}/tokens`,
+			url: (_params: Params) => `/v0/users/${user?.user?.name}/tokens`,
 			add: {
 				prefix: (
 					<div>
@@ -70,7 +73,7 @@ const tokensConfig = {
 			path_to: "API Tokens",
 		},
 		form: {
-			url: (params: Params) => `/v0/users/${params?.user}/tokens`,
+			url: (_params: Params) => `/v0/users/${user?.user?.name}/tokens`,
 			fields: [
 				{
 					kind: FieldKind.INPUT,
@@ -105,7 +108,7 @@ const tokensConfig = {
 		},
 		deck: {
 			url: (params: Params) =>
-				`/v0/users/${params?.user}/tokens/${params?.token}`,
+				`/v0/users/${user?.user?.name}/tokens/${params?.token}`,
 			cards: [
 				{
 					kind: Card.FIELD,

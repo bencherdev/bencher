@@ -108,13 +108,13 @@ const ConsoleNavbar = (props: Props) => {
 							<div class="navbar-dropdown">
 								<a
 									class="navbar-item"
-									href={`/console/users/${user?.user?.slug}/tokens`}
+									href={`/console/settings/tokens`}
 								>
 									Tokens
 								</a>
 								<a
 									class="navbar-item"
-									href={`/console/users/${user?.user?.slug}/settings`}
+									href={`/console/settings`}
 								>
 									Settings
 								</a>

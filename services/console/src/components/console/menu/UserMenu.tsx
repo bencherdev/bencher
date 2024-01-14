@@ -1,25 +1,22 @@
-import { authUser } from "../../../util/auth";
-
 enum Section {
 	TOKENS = "tokens",
-	SETTINGS = "settings",
+	INFO = "info",
 	HELP = "help",
 }
 
 const UserMenu = () => {
-	const user = authUser();
 	const path = (section: Section) =>
-		`/console/users/${user?.user?.slug}/${section}`;
+		`/console/settings/${section}`;
 
 	return (
 		<aside class="menu is-sticky">
 			<p class="menu-label">User</p>
 			<ul class="menu-list">
 				<li>
-					<a href={path(Section.TOKENS)}>API Tokens</a>
+					<a href={path(Section.INFO)}>User Info</a>
 				</li>
 				<li>
-					<a href={path(Section.SETTINGS)}>Settings</a>
+					<a href={path(Section.TOKENS)}>API Tokens</a>
 				</li>
 				<li>
 					<a href={path(Section.HELP)}>Help</a>

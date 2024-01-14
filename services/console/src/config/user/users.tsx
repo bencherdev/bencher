@@ -1,5 +1,8 @@
 import type { Params } from "../../util/url";
 import { Button, Card, Display, Operation } from "../types";
+import {authUser} from "../../util/auth.ts";
+
+const user = authUser();
 
 const usersConfig = {
 	[Operation.VIEW]: {
@@ -11,7 +14,7 @@ const usersConfig = {
 			buttons: [{ kind: Button.REFRESH }],
 		},
 		deck: {
-			url: (params: Params) => `/v0/users/${params?.user}`,
+			url: (_params: Params) => `/v0/users/${user?.user?.slug}`,
 			cards: [
 				{
 					kind: Card.FIELD,
