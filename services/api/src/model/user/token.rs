@@ -105,7 +105,7 @@ impl InsertToken {
         let JsonNewToken { name, ttl } = token;
 
         let query_user = QueryUser::from_resource_id(conn, user)?;
-        same_user!(auth_user, rbac, query_user.id);
+        same_user!(auth_user, rbac, query_user.uuid);
 
         // TODO Custom max TTL
         let max_ttl = u32::MAX;

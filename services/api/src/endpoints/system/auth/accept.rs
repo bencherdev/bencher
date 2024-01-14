@@ -8,9 +8,9 @@ use crate::endpoints::endpoint::Post;
 use crate::endpoints::endpoint::ResponseAccepted;
 use crate::endpoints::Endpoint;
 
+use crate::context::ApiContext;
 use crate::model::user::auth::AuthUser;
 use crate::model::user::auth::BearerToken;
-use crate::{context::ApiContext, model::user::QueryUser};
 
 #[allow(clippy::unused_async)]
 #[endpoint {
@@ -35,22 +35,23 @@ pub async fn auth_accept_post(
     body: TypedBody<JsonAccept>,
 ) -> Result<ResponseAccepted<JsonAuthAck>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user).await?;
+    let json = post_inner(rqctx.context(), body.into_inner(), auth_user).await?;
     Ok(Post::auth_response_accepted(json))
 }
 
 async fn post_inner(
     context: &ApiContext,
     json_accept: JsonAccept,
-    auth_user: &AuthUser,
+    auth_user: AuthUser,
 ) -> Result<JsonAuthAck, HttpError> {
     let conn = &mut *context.conn().await;
 
-    let query_user = QueryUser::get(conn, auth_user.id)?;
-    query_user.check_is_locked()?;
-    query_user.accept_invite(conn, &context.token_key, &json_accept.invite)?;
+    auth_user.user.check_is_locked()?;
+    auth_user
+        .user
+        .accept_invite(conn, &context.token_key, &json_accept.invite)?;
 
     Ok(JsonAuthAck {
-        email: query_user.email,
+        email: auth_user.user.email,
     })
 }

@@ -26,9 +26,9 @@ pub mod token;
 crate::util::typed_id::typed_id!(UserId);
 
 macro_rules! same_user {
-    ($auth_user:ident, $rbac:expr, $user_id:expr) => {
-        if !($auth_user.is_admin(&$rbac) || $auth_user.id == $user_id) {
-            return Err(crate::error::forbidden_error(format!("User is not admin and the authenticated user ({auth_user}) does not match the requested user ({requested_user})", auth_user = $auth_user.id, requested_user = $user_id)));
+    ($auth_user:ident, $rbac:expr, $user_uuid:expr) => {
+        if !($auth_user.is_admin(&$rbac) || $auth_user.uuid() == $user_uuid) {
+            return Err(crate::error::forbidden_error(format!("User is not admin and the authenticated user ({auth_user}) does not match the requested user ({requested_user})", auth_user = $auth_user.uuid(), requested_user = $user_uuid)));
         }
     };
 }
@@ -39,7 +39,7 @@ use super::organization::{
     organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
 };
 
-#[derive(Debug, diesel::Queryable)]
+#[derive(Debug, Clone, diesel::Queryable)]
 pub struct QueryUser {
     pub id: UserId,
     pub uuid: UserUuid,
@@ -59,6 +59,14 @@ impl QueryUser {
     fn_get!(user, UserId);
     fn_get_id!(user, UserId, UserUuid);
     fn_get_uuid!(user, UserId, UserUuid);
+
+    pub fn id(&self) -> UserId {
+        self.id
+    }
+
+    pub fn uuid(&self) -> UserUuid {
+        self.uuid
+    }
 
     pub fn get_id_from_email(conn: &mut DbConnection, email: &Email) -> Result<UserId, HttpError> {
         schema::user::table

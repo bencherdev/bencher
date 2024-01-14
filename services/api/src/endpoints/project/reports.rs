@@ -237,7 +237,7 @@ async fn post_inner(
 
     // Create a new report and add it to the database
     let insert_report = InsertReport::from_json(
-        auth_user.id,
+        auth_user.id(),
         project_id,
         branch_id,
         version_id,

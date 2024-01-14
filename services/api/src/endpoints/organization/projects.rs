@@ -194,7 +194,7 @@ async fn post_inner(
     let timestamp = DateTime::now();
     // Connect the user to the project as a `Maintainer`
     let insert_proj_role = InsertProjectRole {
-        user_id: auth_user.id,
+        user_id: auth_user.id(),
         project_id: query_project.id,
         role: ProjectRole::Maintainer,
         created: timestamp,

@@ -59,7 +59,7 @@ async fn get_one_inner(
     let conn = &mut *context.conn().await;
 
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
-    same_user!(auth_user, context.rbac, query_user.id);
+    same_user!(auth_user, context.rbac, query_user.uuid);
 
     Ok(query_user.into_json())
 }

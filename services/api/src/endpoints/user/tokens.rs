@@ -93,7 +93,7 @@ async fn get_ls_inner(
     let conn = &mut *context.conn().await;
 
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
-    same_user!(auth_user, context.rbac, query_user.id);
+    same_user!(auth_user, context.rbac, query_user.uuid);
 
     let mut query = schema::token::table
         .filter(schema::token::user_id.eq(query_user.id))
@@ -218,7 +218,7 @@ async fn get_one_inner(
     let conn = &mut *context.conn().await;
 
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
-    same_user!(auth_user, context.rbac, query_user.id);
+    same_user!(auth_user, context.rbac, query_user.uuid);
 
     QueryToken::get_user_token(conn, query_user.id, &path_params.token.to_string())?
         .into_json(conn)
@@ -259,7 +259,7 @@ async fn patch_inner(
     let conn = &mut *context.conn().await;
 
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
-    same_user!(auth_user, context.rbac, query_user.id);
+    same_user!(auth_user, context.rbac, query_user.uuid);
 
     let query_token =
         QueryToken::get_user_token(conn, query_user.id, &path_params.token.to_string())?;

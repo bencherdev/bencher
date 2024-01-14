@@ -200,13 +200,6 @@ async fn post_inner(
             (json_new_member.name.take().map(Into::into), "/auth/signup")
         };
 
-    // Get the requester user name and email for the message
-    let (user_name, user_email) = schema::user::table
-        .filter(schema::user::id.eq(auth_user.id))
-        .select((schema::user::name, schema::user::email))
-        .first::<(String, String)>(conn)
-        .map_err(resource_not_found_err!(User, auth_user))?;
-
     // Create an invite token
     let token = context
         .token_key
@@ -235,6 +228,8 @@ async fn post_inner(
             format!("Ahoy {name}!") } else { "Ahoy!".into() },
         pre_body: format!(
             "Please, click the button below or use the provided code to accept the invitation from {user_name} ({user_email}) to join {org_name} as a {org_role} on Bencher.",
+            user_name = auth_user.user.name,
+            user_email = auth_user.user.email,
         ),
         button_text: format!("Join {org_name}"),
         button_url: context

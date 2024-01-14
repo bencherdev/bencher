@@ -11,6 +11,10 @@ use crate::{
         Endpoint,
     },
     error::{issue_error, resource_not_found_err},
+    model::user::{
+        auth::{AuthUser, BearerToken},
+        same_user,
+    },
 };
 
 #[allow(clippy::unused_async)]
@@ -32,9 +36,11 @@ pub async fn payments_options(
 }]
 pub async fn payments_post(
     rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
     body: TypedBody<JsonNewPayment>,
 ) -> Result<ResponseCreated<JsonPayment>, HttpError> {
-    let json = post_inner(rqctx.context(), body.into_inner())
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user)
         .await
         .map_err(|e| {
             #[cfg(feature = "sentry")]
@@ -47,8 +53,11 @@ pub async fn payments_post(
 async fn post_inner(
     context: &ApiContext,
     json_payment: JsonNewPayment,
+    auth_user: &AuthUser,
 ) -> Result<JsonPayment, HttpError> {
     let biller = context.biller()?;
+
+    same_user!(auth_user, context.rbac, json_payment.customer.uuid);
 
     // Create a customer for the user
     let customer_id = biller

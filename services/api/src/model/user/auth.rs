@@ -25,7 +25,7 @@ pub const BEARER_TOKEN_FORMAT: &str = "Expected format is `Authorization: Bearer
 
 #[derive(Debug, Clone)]
 pub struct AuthUser {
-    pub id: UserId,
+    pub user: QueryUser,
     pub organizations: Vec<OrganizationId>,
     pub projects: Vec<OrgProjectId>,
     pub rbac: RbacUser,
@@ -63,28 +63,23 @@ impl AuthUser {
             .validate_client(bearer_token.as_ref())
             .map_err(|e| bad_request_error(format!("Failed to validate JSON Web Token: {e}")))?;
         let email = claims.email();
-        let QueryUser {
-            id: user_id,
-            admin,
-            locked,
-            ..
-        } = QueryUser::get_with_email(conn, email)?;
+        let query_user = QueryUser::get_with_email(conn, email)?;
 
-        if locked {
+        if query_user.locked {
             return Err(forbidden_error(format!("User account is locked ({email})")));
         }
 
-        let (org_ids, org_roles) = Self::organization_roles(conn, user_id, email)?;
-        let (proj_ids, proj_roles) = Self::project_roles(conn, user_id, email)?;
+        let (org_ids, org_roles) = Self::organization_roles(conn, query_user.id, email)?;
+        let (proj_ids, proj_roles) = Self::project_roles(conn, query_user.id, email)?;
         let rbac = RbacUser {
-            admin,
-            locked,
+            admin: query_user.admin,
+            locked: query_user.locked,
             organizations: org_roles,
             projects: proj_roles,
         };
 
         Ok(Self {
-            id: user_id,
+            user: query_user,
             organizations: org_ids,
             projects: proj_ids,
             rbac,
@@ -219,6 +214,14 @@ impl AuthUser {
                     .then_some(org_project_id.project_id)
             })
             .collect()
+    }
+}
+
+impl std::ops::Deref for AuthUser {
+    type Target = QueryUser;
+
+    fn deref(&self) -> &Self::Target {
+        &self.user
     }
 }
 
