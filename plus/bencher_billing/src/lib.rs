@@ -1,5 +1,5 @@
 pub use stripe::{
-    CardDetailsParams as PaymentCard, Customer, ParseIdError, PaymentMethod, SubscriptionId,
+    CardDetailsParams as PaymentCard, CustomerId, ParseIdError, PaymentMethodId, SubscriptionId,
 };
 
 mod biller;

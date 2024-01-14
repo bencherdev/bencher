@@ -8,9 +8,9 @@ use bencher_json::{
 use stripe::{
     AttachPaymentMethod, CancelSubscription, CardDetailsParams as PaymentCard,
     Client as StripeClient, CreateCustomer, CreatePaymentMethod, CreatePaymentMethodCardUnion,
-    CreateSubscription, CreateSubscriptionItems, CreateUsageRecord, Customer, Expandable,
-    ListCustomers, PaymentMethod, PaymentMethodTypeFilter, Subscription, SubscriptionId,
-    SubscriptionItem, SubscriptionStatus, UsageRecord,
+    CreateSubscription, CreateSubscriptionItems, CreateUsageRecord, Customer, CustomerId,
+    Expandable, ListCustomers, PaymentMethod, PaymentMethodId, PaymentMethodTypeFilter,
+    Subscription, SubscriptionId, SubscriptionItem, SubscriptionStatus, UsageRecord,
 };
 
 use crate::{products::Products, BillingError};
@@ -115,7 +115,7 @@ impl Biller {
     pub async fn get_or_create_customer(
         &self,
         customer: &JsonCustomer,
-    ) -> Result<Customer, BillingError> {
+    ) -> Result<CustomerId, BillingError> {
         if let Some(customer) = self.get_customer(&customer.email).await? {
             Ok(customer)
         } else {
@@ -123,7 +123,7 @@ impl Biller {
         }
     }
 
-    pub async fn get_customer(&self, email: &Email) -> Result<Option<Customer>, BillingError> {
+    pub async fn get_customer(&self, email: &Email) -> Result<Option<CustomerId>, BillingError> {
         let list_customers = ListCustomers {
             email: Some(email.as_ref()),
             ..Default::default()
@@ -132,7 +132,7 @@ impl Biller {
 
         if let Some(customer) = customers.data.pop() {
             if customers.data.is_empty() {
-                Ok(Some(customer))
+                Ok(Some(customer.id))
             } else {
                 Err(BillingError::EmailCollision(customer, customers.data))
             }
@@ -143,7 +143,7 @@ impl Biller {
 
     // WARNING: Use caution when calling this directly as multiple users with the same email can be created
     // Use `get_or_create_customer` instead!
-    async fn create_customer(&self, customer: &JsonCustomer) -> Result<Customer, BillingError> {
+    async fn create_customer(&self, customer: &JsonCustomer) -> Result<CustomerId, BillingError> {
         let create_customer = CreateCustomer {
             name: Some(customer.name.as_ref()),
             email: Some(customer.email.as_ref()),
@@ -156,15 +156,16 @@ impl Biller {
         };
         Customer::create(&self.client, create_customer)
             .await
+            .map(|customer| customer.id)
             .map_err(Into::into)
     }
 
     // WARNING: Use caution when calling this directly as multiple payment methods can be created
     pub async fn create_payment_method(
         &self,
-        customer: &Customer,
+        customer_id: CustomerId,
         json_card: JsonCard,
-    ) -> Result<PaymentMethod, BillingError> {
+    ) -> Result<PaymentMethodId, BillingError> {
         let create_payment_method = CreatePaymentMethod {
             type_: Some(PaymentMethodTypeFilter::Card),
             card: Some(CreatePaymentMethodCardUnion::CardDetailsParams(
@@ -178,25 +179,26 @@ impl Biller {
             &self.client,
             &payment_method.id,
             AttachPaymentMethod {
-                customer: customer.id.clone(),
+                customer: customer_id,
             },
         )
         .await
+        .map(|payment_method| payment_method.id)
         .map_err(Into::into)
     }
 
     pub async fn create_metered_subscription(
         &self,
         organization: OrganizationUuid,
-        customer: &Customer,
-        payment_method: &PaymentMethod,
+        customer_id: CustomerId,
+        payment_method_id: PaymentMethodId,
         plan_level: PlanLevel,
         price_name: String,
     ) -> Result<Subscription, BillingError> {
         self.create_subscription(
             organization,
-            customer,
-            payment_method,
+            customer_id,
+            payment_method_id,
             ProductPlan::metered(plan_level, price_name),
         )
         .await
@@ -205,16 +207,16 @@ impl Biller {
     pub async fn create_licensed_subscription(
         &self,
         organization: OrganizationUuid,
-        customer: &Customer,
-        payment_method: &PaymentMethod,
+        customer_id: CustomerId,
+        payment_method_id: PaymentMethodId,
         plan_level: PlanLevel,
         price_name: String,
         entitlements: Entitlements,
     ) -> Result<Subscription, BillingError> {
         self.create_subscription(
             organization,
-            customer,
-            payment_method,
+            customer_id,
+            payment_method_id,
             ProductPlan::licensed(plan_level, price_name, entitlements),
         )
         .await
@@ -224,11 +226,11 @@ impl Biller {
     async fn create_subscription(
         &self,
         organization: OrganizationUuid,
-        customer: &Customer,
-        payment_method: &PaymentMethod,
+        customer_id: CustomerId,
+        payment_method_id: PaymentMethodId,
         product_plan: ProductPlan,
     ) -> Result<Subscription, BillingError> {
-        let mut create_subscription = CreateSubscription::new(customer.id.clone());
+        let mut create_subscription = CreateSubscription::new(customer_id);
         let (price, entitlements) = match product_plan {
             ProductPlan::Free => return Err(BillingError::ProductLevelFree),
             ProductPlan::Team(product_usage) => match product_usage {
@@ -274,7 +276,7 @@ impl Biller {
             quantity: entitlements.map(Into::into),
             ..Default::default()
         }]);
-        create_subscription.default_payment_method = Some(&payment_method.id);
+        create_subscription.default_payment_method = Some(&payment_method_id);
         create_subscription.metadata = Some(
             [(METADATA_ORGANIZATION.to_owned(), organization.to_string())]
                 .into_iter()
@@ -557,7 +559,7 @@ mod test {
     use chrono::{Datelike, Utc};
     use literally::hmap;
     use pretty_assertions::assert_eq;
-    use stripe::{Customer, PaymentMethod};
+    use stripe::{CustomerId, PaymentMethodId};
 
     use crate::Biller;
 
@@ -593,8 +595,8 @@ mod test {
     async fn test_metered_subscription(
         biller: &Biller,
         organization: OrganizationUuid,
-        customer: &Customer,
-        payment_method: &PaymentMethod,
+        customer_id: CustomerId,
+        payment_method_id: PaymentMethodId,
         plan_level: PlanLevel,
         price_name: String,
         usage_count: usize,
@@ -602,8 +604,8 @@ mod test {
         let create_subscription = biller
             .create_metered_subscription(
                 organization,
-                customer,
-                payment_method,
+                customer_id,
+                payment_method_id,
                 plan_level,
                 price_name,
             )
@@ -640,8 +642,8 @@ mod test {
     async fn test_licensed_subscription(
         biller: &Biller,
         organization: OrganizationUuid,
-        customer: &Customer,
-        payment_method: &PaymentMethod,
+        customer_id: CustomerId,
+        payment_method_id: PaymentMethodId,
         plan_level: PlanLevel,
         price_name: String,
         entitlements: Entitlements,
@@ -649,8 +651,8 @@ mod test {
         let create_subscription = biller
             .create_licensed_subscription(
                 organization,
-                customer,
-                payment_method,
+                customer_id,
+                payment_method_id,
                 plan_level,
                 price_name,
                 entitlements,
@@ -726,16 +728,17 @@ mod test {
             .await
             .unwrap()
             .is_none());
-        let create_customer = biller.create_customer(&json_customer).await.unwrap();
-        let get_customer = biller
+        let create_customer_id = biller.create_customer(&json_customer).await.unwrap();
+        let get_customer_id = biller
             .get_customer(&json_customer.email)
             .await
             .unwrap()
             .unwrap();
-        assert_eq!(create_customer.id, get_customer.id);
-        let customer = create_customer;
-        let get_or_create_customer = biller.get_or_create_customer(&json_customer).await.unwrap();
-        assert_eq!(customer.id, get_or_create_customer.id);
+        assert_eq!(create_customer_id, get_customer_id);
+        let customer_id = create_customer_id;
+        let get_or_create_customer_id =
+            biller.get_or_create_customer(&json_customer).await.unwrap();
+        assert_eq!(customer_id, get_or_create_customer_id);
 
         // Payment Method
         let json_card = JsonCard {
@@ -744,19 +747,18 @@ mod test {
             exp_month: 1.try_into().unwrap(),
             cvc: "123".parse().unwrap(),
         };
-        let create_payment_method = biller
-            .create_payment_method(&customer, json_card.clone())
+        let payment_method_id = biller
+            .create_payment_method(customer_id.clone(), json_card.clone())
             .await
             .unwrap();
-        let payment_method = create_payment_method;
 
         // Team Metered Plan
         let organization = OrganizationUuid::new();
         test_metered_subscription(
             &biller,
             organization,
-            &customer,
-            &payment_method,
+            customer_id.clone(),
+            payment_method_id.clone(),
             PlanLevel::Team,
             DEFAULT_PRICE_NAME.into(),
             10,
@@ -768,8 +770,8 @@ mod test {
         test_licensed_subscription(
             &biller,
             organization,
-            &customer,
-            &payment_method,
+            customer_id.clone(),
+            payment_method_id.clone(),
             PlanLevel::Team,
             DEFAULT_PRICE_NAME.into(),
             1_000.try_into().unwrap(),
@@ -781,8 +783,8 @@ mod test {
         test_metered_subscription(
             &biller,
             organization,
-            &customer,
-            &payment_method,
+            customer_id.clone(),
+            payment_method_id.clone(),
             PlanLevel::Enterprise,
             DEFAULT_PRICE_NAME.into(),
             25,
@@ -794,8 +796,8 @@ mod test {
         test_licensed_subscription(
             &biller,
             organization,
-            &customer,
-            &payment_method,
+            customer_id.clone(),
+            payment_method_id.clone(),
             PlanLevel::Team,
             DEFAULT_PRICE_NAME.into(),
             1_000.try_into().unwrap(),

@@ -162,16 +162,16 @@ async fn post_inner(
     }
 
     // Create a customer for the user
-    let customer = biller
+    let customer_id = biller
         .get_or_create_customer(&json_plan.customer)
         .await
         .map_err(resource_not_found_err!(Plan, &json_plan.customer))?;
 
     // Create a payment method for the user
-    let payment_method = biller
-        .create_payment_method(&customer, json_plan.card.clone())
+    let payment_method_id = biller
+        .create_payment_method(customer_id.clone(), json_plan.card.clone())
         .await
-        .map_err(resource_not_found_err!(Plan, customer))?;
+        .map_err(resource_not_found_err!(Plan, customer_id))?;
 
     if let Some(entitlements) = json_plan.entitlements {
         InsertPlan::licensed_plan(
@@ -179,8 +179,8 @@ async fn post_inner(
             biller,
             &context.licensor,
             &query_organization,
-            &customer,
-            &payment_method,
+            customer_id,
+            payment_method_id,
             json_plan.level,
             DEFAULT_PRICE_NAME.into(),
             entitlements,
@@ -210,8 +210,8 @@ async fn post_inner(
             conn,
             biller,
             &query_organization,
-            &customer,
-            &payment_method,
+            customer_id,
+            payment_method_id,
             json_plan.level,
             DEFAULT_PRICE_NAME.into(),
         )

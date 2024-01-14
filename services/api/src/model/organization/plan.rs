@@ -1,6 +1,6 @@
 #![cfg(feature = "plus")]
 
-use bencher_billing::{Biller, Customer, PaymentMethod};
+use bencher_billing::{Biller, CustomerId, PaymentMethodId};
 use bencher_json::{
     project::Visibility, DateTime, Entitlements, JsonPlan, Jwt, LicensedPlanId, MeteredPlanId,
     OrganizationUuid, PlanLevel,
@@ -137,8 +137,8 @@ impl InsertPlan {
         conn: &mut DbConnection,
         biller: &Biller,
         query_organization: &QueryOrganization,
-        customer: &Customer,
-        payment_method: &PaymentMethod,
+        customer_id: CustomerId,
+        payment_method_id: PaymentMethodId,
         plan_level: PlanLevel,
         price_name: String,
     ) -> Result<Self, HttpError> {
@@ -146,15 +146,21 @@ impl InsertPlan {
         let subscription = biller
             .create_metered_subscription(
                 query_organization.uuid,
-                customer,
-                payment_method,
+                customer_id.clone(),
+                payment_method_id.clone(),
                 plan_level,
                 price_name.clone(),
             )
             .await
             .map_err(resource_conflict_err!(
                 Plan,
-                (&query_organization, customer, plan_level, price_name)
+                (
+                    &query_organization,
+                    customer_id,
+                    payment_method_id,
+                    plan_level,
+                    price_name
+                )
             ))?;
 
         let metered_plan_id: MeteredPlanId = subscription
@@ -187,8 +193,8 @@ impl InsertPlan {
         biller: &Biller,
         licensor: &Licensor,
         query_organization: &QueryOrganization,
-        customer: &Customer,
-        payment_method: &PaymentMethod,
+        customer_id: CustomerId,
+        payment_method_id: PaymentMethodId,
         plan_level: PlanLevel,
         price_name: String,
         license_entitlements: Entitlements,
@@ -198,8 +204,8 @@ impl InsertPlan {
         let subscription = biller
             .create_licensed_subscription(
                 query_organization.uuid,
-                customer,
-                payment_method,
+                customer_id.clone(),
+                payment_method_id.clone(),
                 plan_level,
                 price_name.clone(),
                 license_entitlements,
@@ -209,7 +215,8 @@ impl InsertPlan {
                 Plan,
                 (
                     &query_organization,
-                    customer,
+                    customer_id,
+                    payment_method_id,
                     plan_level,
                     price_name,
                     license_entitlements
