@@ -1,6 +1,6 @@
 use stripe::{
-    Customer, CustomerId, PaymentMethod, PaymentMethodId, PriceId, ProductId, Subscription,
-    SubscriptionItem, SubscriptionItemId,
+    CheckoutSession, Customer, CustomerId, PaymentMethod, PaymentMethodId, PriceId, ProductId,
+    Subscription, SubscriptionItem, SubscriptionItemId,
 };
 use thiserror::Error;
 
@@ -16,6 +16,9 @@ pub enum BillingError {
     BadUserUuid(String, uuid::Error),
     #[error("Failed to parse organization UUID ({0}): {1}")]
     BadOrganizationUuid(String, uuid::Error),
+
+    #[error("Failed to get checkout URL: {0:?}")]
+    NoCheckoutUrl(CheckoutSession),
 
     #[error("Failed to cast integer: {0}")]
     IntError(#[from] std::num::TryFromIntError),

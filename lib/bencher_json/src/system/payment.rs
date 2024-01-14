@@ -1,11 +1,14 @@
 #![cfg(feature = "plus")]
 
-use bencher_valid::{CardCvc, CardNumber, Email, ExpirationMonth, ExpirationYear, NonEmpty};
+use bencher_valid::{
+    CardCvc, CardNumber, Email, Entitlements, ExpirationMonth, ExpirationYear, NonEmpty, PlanLevel,
+    ResourceId,
+};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::UserUuid;
+use crate::{OrganizationUuid, UserUuid};
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,4 +43,24 @@ pub struct JsonCard {
 pub struct JsonPayment {
     pub customer: NonEmpty,
     pub payment_method: NonEmpty,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonNewCheckout {
+    pub organization: ResourceId,
+    pub level: PlanLevel,
+    pub entitlements: Option<Entitlements>,
+    pub self_hosted_organization: Option<OrganizationUuid>,
+    /// I agree to the Bencher Subscription Agreement (https://bencher.dev/legal/subscription)
+    pub i_agree: bool,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonCheckout {
+    pub session: String,
+    pub url: String,
 }

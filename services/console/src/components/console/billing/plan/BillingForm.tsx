@@ -21,8 +21,9 @@ import { validPlanLevel, validUuid } from "../../../../util/valid";
 import { PLAN_PARAM } from "../../../auth/auth";
 import Field from "../../../field/Field";
 import FieldKind from "../../../field/kind";
-import PaymentCard from "./PaymentCard";
+// import PaymentCard from "./PaymentCard";
 import Pricing from "./Pricing";
+import Checkout from "./Checkout";
 
 interface Props {
 	apiUrl: string;
@@ -141,12 +142,24 @@ const BillingForm = (props: Props) => {
 					handleOrganizationUuid={setOrganizationUuid}
 					organizationUuidValid={organizationUuidValid}
 				/>
-				<PaymentCard
+				{/* <PaymentCard
 					apiUrl={props.apiUrl}
 					params={props.params}
 					bencher_valid={props.bencher_valid}
 					user={props.user}
 					path={`/v0/organizations/${props.params.organization}/plan`}
+					plan={plan}
+					entitlements={entitlementsAnnualJson}
+					organizationUuid={organizationUuidJson}
+					organizationUuidValid={organizationUuidValidJson}
+					handleRefresh={props.handleRefresh}
+				/> */}
+				<Checkout
+					apiUrl={props.apiUrl}
+					params={props.params}
+					bencher_valid={props.bencher_valid}
+					user={props.user}
+					organization={props.usage()?.organization}
 					plan={plan}
 					entitlements={entitlementsAnnualJson}
 					organizationUuid={organizationUuidJson}

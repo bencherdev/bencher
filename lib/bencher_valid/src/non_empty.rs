@@ -10,7 +10,7 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 
-use crate::ValidError;
+use crate::{UserName, ValidError};
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
@@ -43,6 +43,12 @@ impl AsRef<str> for NonEmpty {
 impl From<NonEmpty> for String {
     fn from(non_empty: NonEmpty) -> Self {
         non_empty.0
+    }
+}
+
+impl From<UserName> for NonEmpty {
+    fn from(user_name: UserName) -> Self {
+        Self(user_name.into())
     }
 }
 

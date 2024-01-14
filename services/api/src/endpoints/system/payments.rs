@@ -1,6 +1,10 @@
 #![cfg(feature = "plus")]
 
-use bencher_json::system::payment::{JsonNewPayment, JsonPayment};
+use bencher_json::{
+    organization::plan::DEFAULT_PRICE_NAME,
+    system::payment::{JsonCheckout, JsonNewCheckout, JsonNewPayment, JsonPayment},
+};
+use bencher_rbac::organization::Permission;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use http::StatusCode;
 
@@ -10,10 +14,13 @@ use crate::{
         endpoint::{CorsResponse, Post, ResponseCreated},
         Endpoint,
     },
-    error::{issue_error, resource_not_found_err},
-    model::user::{
-        auth::{AuthUser, BearerToken},
-        same_user,
+    error::{forbidden_error, issue_error, resource_not_found_err},
+    model::{
+        organization::QueryOrganization,
+        user::{
+            auth::{AuthUser, BearerToken},
+            same_user,
+        },
     },
 };
 
@@ -89,4 +96,99 @@ async fn post_inner(
             )
         })?,
     })
+}
+
+#[allow(clippy::unused_async)]
+#[endpoint {
+    method = OPTIONS,
+    path =  "/v0/checkout",
+    tags = ["checkout"]
+}]
+pub async fn checkout_options(
+    _rqctx: RequestContext<ApiContext>,
+) -> Result<CorsResponse, HttpError> {
+    Ok(Endpoint::cors(&[Post.into()]))
+}
+
+#[endpoint {
+    method = POST,
+    path =  "/v0/checkout",
+    tags = ["checkout"]
+}]
+pub async fn checkout_post(
+    rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
+    body: TypedBody<JsonNewCheckout>,
+) -> Result<ResponseCreated<JsonCheckout>, HttpError> {
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    let json = checkout_post_inner(rqctx.context(), body.into_inner(), &auth_user)
+        .await
+        .map_err(|e| {
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(&e);
+            e
+        })?;
+    Ok(Post::pub_response_created(json))
+}
+
+async fn checkout_post_inner(
+    context: &ApiContext,
+    json_checkout: JsonNewCheckout,
+    auth_user: &AuthUser,
+) -> Result<JsonCheckout, HttpError> {
+    let biller = context.biller()?;
+    let JsonNewCheckout {
+        organization,
+        level,
+        entitlements,
+        self_hosted_organization,
+        i_agree,
+    } = json_checkout;
+    if !i_agree {
+        return Err(forbidden_error(
+            "You must agree to the Bencher Subscription Agreement (https://bencher.dev/legal/subscription)",
+        ));
+    }
+    let conn = &mut *context.conn().await;
+
+    // Get the organization
+    let query_organization = QueryOrganization::from_resource_id(conn, &organization)?;
+    // Check to see if user has permission to manage the organization
+    context
+        .rbac
+        .is_allowed_organization(auth_user, Permission::Manage, &query_organization)
+        .map_err(forbidden_error)?;
+    let customer = auth_user.to_customer();
+
+    let price = DEFAULT_PRICE_NAME;
+    let url = context
+        .endpoint
+        .clone()
+        .join(&format!(
+            "/console/organizations/{slug}/checkout?session_id={{CHECKOUT_SESSION_ID}}{license}{self_hosted}",
+            slug = query_organization.slug,
+            license = entitlements
+                .map(|entitlements| format!("&license={entitlements}"))
+                .unwrap_or_default(),
+            self_hosted = self_hosted_organization
+                .map(|uuid| format!("&self_hosted={uuid}"))
+                .unwrap_or_default(),
+        ))
+        .unwrap_or_else(|_| context.endpoint.clone());
+    biller
+        .checkout_session(
+            &customer,
+            level,
+            price.to_owned(),
+            entitlements,
+            url.as_ref(),
+        )
+        .await.map_err(|e| {
+            issue_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to create checkout session",
+                &format!("Failed to create checkout session for {customer:?} at {level:?} using {price} with {entitlements:?}."),
+                e,
+            )
+        })
 }

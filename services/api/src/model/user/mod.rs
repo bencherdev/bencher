@@ -28,6 +28,7 @@ crate::util::typed_id::typed_id!(UserId);
 macro_rules! same_user {
     ($auth_user:ident, $rbac:expr, $user_uuid:expr) => {
         if !($auth_user.is_admin(&$rbac) || $auth_user.uuid() == $user_uuid) {
+            #[allow(unused_qualifications)]
             return Err(crate::error::forbidden_error(format!("User is not admin and the authenticated user ({auth_user}) does not match the requested user ({requested_user})", auth_user = $auth_user.uuid(), requested_user = $user_uuid)));
         }
     };

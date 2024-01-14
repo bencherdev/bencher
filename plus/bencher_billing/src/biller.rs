@@ -4,16 +4,19 @@ use bencher_json::{
     organization::plan::{JsonCardDetails, JsonPlan},
     system::{
         config::JsonBilling,
-        payment::{JsonCard, JsonCustomer},
+        payment::{JsonCard, JsonCheckout, JsonCustomer},
     },
     Email, Entitlements, LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus,
 };
 use stripe::{
-    AttachPaymentMethod, CancelSubscription, CardDetailsParams as PaymentCard,
-    Client as StripeClient, CreateCustomer, CreatePaymentMethod, CreatePaymentMethodCardUnion,
-    CreateSubscription, CreateSubscriptionItems, CreateUsageRecord, Customer, CustomerId,
-    Expandable, ListCustomers, PaymentMethod, PaymentMethodId, PaymentMethodTypeFilter,
-    Subscription, SubscriptionId, SubscriptionItem, SubscriptionStatus, UsageRecord,
+    AttachPaymentMethod, CancelSubscription, CardDetailsParams as PaymentCard, CheckoutSession,
+    CheckoutSessionMode, Client as StripeClient, CreateCheckoutSession,
+    CreateCheckoutSessionLineItems, CreateCheckoutSessionLineItemsAdjustableQuantity,
+    CreateCheckoutSessionPaymentMethodTypes, CreateCustomer, CreatePaymentMethod,
+    CreatePaymentMethodCardUnion, CreateSubscription, CreateSubscriptionItems, CreateUsageRecord,
+    Customer, CustomerId, Expandable, ListCustomers, PaymentMethod, PaymentMethodId,
+    PaymentMethodTypeFilter, Price, Subscription, SubscriptionId, SubscriptionItem,
+    SubscriptionStatus, UsageRecord,
 };
 
 use crate::{products::Products, BillingError};
@@ -56,6 +59,51 @@ impl ProductPlan {
                 Self::Enterprise(ProductUsage::Licensed(price_name, entitlements))
             },
         }
+    }
+
+    fn into_price(
+        self,
+        products: &Products,
+    ) -> Result<(&Price, Option<Entitlements>), BillingError> {
+        Ok(match self {
+            ProductPlan::Free => return Err(BillingError::ProductLevelFree),
+            ProductPlan::Team(product_usage) => match product_usage {
+                ProductUsage::Metered(price_name) => (
+                    products
+                        .team
+                        .metered
+                        .get(&price_name)
+                        .ok_or(BillingError::PriceNotFound(price_name))?,
+                    None,
+                ),
+                ProductUsage::Licensed(price_name, entitlements) => (
+                    products
+                        .team
+                        .licensed
+                        .get(&price_name)
+                        .ok_or(BillingError::PriceNotFound(price_name))?,
+                    Some(entitlements),
+                ),
+            },
+            ProductPlan::Enterprise(product_usage) => match product_usage {
+                ProductUsage::Metered(price_name) => (
+                    products
+                        .enterprise
+                        .metered
+                        .get(&price_name)
+                        .ok_or(BillingError::PriceNotFound(price_name))?,
+                    None,
+                ),
+                ProductUsage::Licensed(price_name, entitlements) => (
+                    products
+                        .enterprise
+                        .licensed
+                        .get(&price_name)
+                        .ok_or(BillingError::PriceNotFound(price_name))?,
+                    Some(entitlements),
+                ),
+            },
+        })
     }
 }
 
@@ -113,6 +161,59 @@ impl Biller {
         let products = Products::new(&client, products).await?;
 
         Ok(Self { client, products })
+    }
+
+    pub async fn checkout_session(
+        &self,
+        customer: &JsonCustomer,
+        plan_level: PlanLevel,
+        price_name: String,
+        entitlements: Option<Entitlements>,
+        url: &str,
+    ) -> Result<JsonCheckout, BillingError> {
+        let customer = self.get_or_create_customer(customer).await?;
+
+        let product_plan = if let Some(entitlements) = entitlements {
+            ProductPlan::licensed(plan_level, price_name, entitlements)
+        } else {
+            ProductPlan::metered(plan_level, price_name)
+        };
+        let (price, entitlements) = product_plan.into_price(&self.products)?;
+
+        let new_checkout_session = CreateCheckoutSession::new(url);
+        let create_checkout_session = CreateCheckoutSession {
+            // ui_mode: stripe::CheckoutSessionUiMode::Embedded,
+            customer: Some(customer),
+            payment_method_types: Some(vec![
+                CreateCheckoutSessionPaymentMethodTypes::Card,
+                CreateCheckoutSessionPaymentMethodTypes::Paypal,
+            ]),
+            mode: Some(CheckoutSessionMode::Subscription),
+            line_items: Some(vec![CreateCheckoutSessionLineItems {
+                price: Some(price.id.to_string()),
+                quantity: entitlements.map(Into::into),
+                adjustable_quantity: entitlements.map(|ent| {
+                    CreateCheckoutSessionLineItemsAdjustableQuantity {
+                        enabled: true,
+                        minimum: Some(1_200),
+                        maximum: Some(std::cmp::max(120_000, i64::from(u32::from(ent)) * 2)),
+                    }
+                }),
+                ..Default::default()
+            }]),
+            // cancel_url: Some("https://example.com/cancel".into()),
+            ..new_checkout_session
+        };
+        let mut checkout_session =
+            CheckoutSession::create(&self.client, create_checkout_session).await?;
+
+        Ok(JsonCheckout {
+            session: checkout_session.id.to_string(),
+            url: checkout_session
+                .url
+                .take()
+                .ok_or(BillingError::NoCheckoutUrl(checkout_session))?,
+        })
     }
 
     pub async fn get_or_create_customer(
@@ -234,45 +335,7 @@ impl Biller {
         product_plan: ProductPlan,
     ) -> Result<Subscription, BillingError> {
         let mut create_subscription = CreateSubscription::new(customer_id);
-        let (price, entitlements) = match product_plan {
-            ProductPlan::Free => return Err(BillingError::ProductLevelFree),
-            ProductPlan::Team(product_usage) => match product_usage {
-                ProductUsage::Metered(price_name) => (
-                    self.products
-                        .team
-                        .metered
-                        .get(&price_name)
-                        .ok_or(BillingError::PriceNotFound(price_name))?,
-                    None,
-                ),
-                ProductUsage::Licensed(price_name, entitlements) => (
-                    self.products
-                        .team
-                        .licensed
-                        .get(&price_name)
-                        .ok_or(BillingError::PriceNotFound(price_name))?,
-                    Some(entitlements),
-                ),
-            },
-            ProductPlan::Enterprise(product_usage) => match product_usage {
-                ProductUsage::Metered(price_name) => (
-                    self.products
-                        .enterprise
-                        .metered
-                        .get(&price_name)
-                        .ok_or(BillingError::PriceNotFound(price_name))?,
-                    None,
-                ),
-                ProductUsage::Licensed(price_name, entitlements) => (
-                    self.products
-                        .enterprise
-                        .licensed
-                        .get(&price_name)
-                        .ok_or(BillingError::PriceNotFound(price_name))?,
-                    Some(entitlements),
-                ),
-            },
-        };
+        let (price, entitlements) = product_plan.into_price(&self.products)?;
 
         create_subscription.items = Some(vec![CreateSubscriptionItems {
             price: Some(price.id.to_string()),

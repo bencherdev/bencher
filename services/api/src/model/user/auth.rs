@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use bencher_json::{Email, Jwt};
+use bencher_json::{system::payment::JsonCustomer, Email, Jwt};
 use bencher_rbac::{
     user::{OrganizationRoles, ProjectRoles},
     Organization, Project, Server, User as RbacUser,
@@ -214,6 +214,14 @@ impl AuthUser {
                     .then_some(org_project_id.project_id)
             })
             .collect()
+    }
+
+    pub fn to_customer(&self) -> JsonCustomer {
+        JsonCustomer {
+            uuid: self.user.uuid,
+            name: self.user.name.clone().into(),
+            email: self.user.email.clone(),
+        }
     }
 }
 

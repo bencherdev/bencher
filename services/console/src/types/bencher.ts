@@ -489,6 +489,18 @@ export interface JsonPayment {
 	payment_method: NonEmpty;
 }
 
+export interface JsonNewCheckout {
+	organization: ResourceId;
+	level: PlanLevel;
+	entitlements?: Entitlements;
+	self_hosted_organization?: Uuid;
+}
+
+export interface JsonCheckout {
+	session: string;
+	url: string;
+}
+
 export interface JsonToken {
 	uuid: Uuid;
 	user: Uuid;
