@@ -16,7 +16,7 @@ use project::{
     perf::CliPerf, report::CliReport, run::CliRun, statistic::CliStatistic, testbed::CliTestbed,
     threshold::CliThreshold, CliProject,
 };
-use system::{auth::CliAuth, payment::CliPayment, server::CliServer};
+use system::{auth::CliAuth, server::CliServer};
 use user::{token::CliToken, CliUser};
 
 /// Bencher CLI
@@ -91,8 +91,9 @@ pub enum CliSub {
     #[clap(subcommand)]
     Server(CliServer),
 
+    #[cfg(feature = "plus")]
     /// Payment
-    Payment(CliPayment),
+    Payment(system::payment::CliPayment),
 
     /// Generate mock benchmark data
     Mock(CliMock),

@@ -52,6 +52,7 @@ pub enum Sub {
     Deb(Deb),
     ReleaseNotes(ReleaseNotes),
     Notify(Notify),
+    #[cfg(feature = "plus")]
     License(License),
 }
 
