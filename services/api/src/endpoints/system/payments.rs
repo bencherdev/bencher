@@ -142,13 +142,7 @@ async fn checkout_post_inner(
         level,
         entitlements,
         self_hosted_organization,
-        i_agree,
     } = json_checkout;
-    if !i_agree {
-        return Err(forbidden_error(
-            "You must agree to the Bencher Subscription Agreement (https://bencher.dev/legal/subscription)",
-        ));
-    }
     let conn = &mut *context.conn().await;
 
     // Get the organization
@@ -161,7 +155,7 @@ async fn checkout_post_inner(
     let customer = auth_user.to_customer();
 
     let price = DEFAULT_PRICE_NAME;
-    let url = context
+    let return_url = context
         .endpoint
         .clone()
         .join(&format!(
@@ -181,7 +175,7 @@ async fn checkout_post_inner(
             level,
             price.to_owned(),
             entitlements,
-            url.as_ref(),
+            return_url.as_ref(),
         )
         .await.map_err(|e| {
             issue_error(

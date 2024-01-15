@@ -10,11 +10,12 @@ use bencher_json::{
 };
 use stripe::{
     AttachPaymentMethod, CancelSubscription, CardDetailsParams as PaymentCard, CheckoutSession,
-    CheckoutSessionMode, Client as StripeClient, CreateCheckoutSession,
+    CheckoutSessionMode, CheckoutSessionUiMode, Client as StripeClient, CreateCheckoutSession,
+    CreateCheckoutSessionConsentCollection, CreateCheckoutSessionConsentCollectionTermsOfService,
     CreateCheckoutSessionLineItems, CreateCheckoutSessionLineItemsAdjustableQuantity,
     CreateCheckoutSessionPaymentMethodTypes, CreateCustomer, CreatePaymentMethod,
     CreatePaymentMethodCardUnion, CreateSubscription, CreateSubscriptionItems, CreateUsageRecord,
-    Customer, CustomerId, Expandable, ListCustomers, PaymentMethod, PaymentMethodId,
+    Currency, Customer, CustomerId, Expandable, ListCustomers, PaymentMethod, PaymentMethodId,
     PaymentMethodTypeFilter, Price, Subscription, SubscriptionId, SubscriptionItem,
     SubscriptionStatus, UsageRecord,
 };
@@ -169,7 +170,7 @@ impl Biller {
         plan_level: PlanLevel,
         price_name: String,
         entitlements: Option<Entitlements>,
-        url: &str,
+        return_url: &str,
     ) -> Result<JsonCheckout, BillingError> {
         let customer = self.get_or_create_customer(customer).await?;
 
@@ -180,14 +181,11 @@ impl Biller {
         };
         let (price, entitlements) = product_plan.into_price(&self.products)?;
 
-        let new_checkout_session = CreateCheckoutSession::new(url);
         let create_checkout_session = CreateCheckoutSession {
-            // ui_mode: stripe::CheckoutSessionUiMode::Embedded,
+            ui_mode: Some(CheckoutSessionUiMode::Hosted),
             customer: Some(customer),
-            payment_method_types: Some(vec![
-                CreateCheckoutSessionPaymentMethodTypes::Card,
-                CreateCheckoutSessionPaymentMethodTypes::Paypal,
-            ]),
+            payment_method_types: Some(vec![CreateCheckoutSessionPaymentMethodTypes::Card]),
+            currency: Some(Currency::USD),
             mode: Some(CheckoutSessionMode::Subscription),
             line_items: Some(vec![CreateCheckoutSessionLineItems {
                 price: Some(price.id.to_string()),
@@ -201,8 +199,15 @@ impl Biller {
                 }),
                 ..Default::default()
             }]),
-            // cancel_url: Some("https://example.com/cancel".into()),
-            ..new_checkout_session
+            consent_collection: Some(CreateCheckoutSessionConsentCollection {
+                // https://bencher.dev/legal/subscription/
+                terms_of_service: Some(
+                    CreateCheckoutSessionConsentCollectionTermsOfService::Required,
+                ),
+                ..Default::default()
+            }),
+            success_url: Some(return_url),
+            ..Default::default()
         };
         let mut checkout_session =
             CheckoutSession::create(&self.client, create_checkout_session).await?;

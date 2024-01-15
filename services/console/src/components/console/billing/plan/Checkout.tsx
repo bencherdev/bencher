@@ -29,26 +29,11 @@ interface Props {
 }
 
 const Checkout = (props: Props) => {
-	const [form, setForm] = createStore(initCardFrom());
 	const [submitting, setSubmitting] = createSignal(false);
 	const navigate = useNavigate();
 
 	const isSendable = (): boolean => {
-		return (
-			!submitting() &&
-			(form?.consent?.valid ?? false) &&
-			props.organizationUuidValid()
-		);
-	};
-
-	const handleField = (key: string, value: FieldValue, valid: boolean) => {
-		setForm({
-			...form,
-			[key]: {
-				value: value,
-				valid: valid,
-			},
-		});
+		return !submitting() && props.organizationUuidValid();
 	};
 
 	const sendForm = () => {
@@ -68,7 +53,6 @@ const Checkout = (props: Props) => {
 			level: props.plan(),
 			entitlements: props.entitlements(),
 			self_hosted_organization: props.organizationUuid(),
-			i_agree: form?.consent?.value,
 		};
 
 		setSubmitting(true);
@@ -90,14 +74,6 @@ const Checkout = (props: Props) => {
 
 	return (
 		<form class="box">
-			<Field
-				kind={FieldKind.CHECKBOX}
-				fieldKey="consent"
-				value={form?.consent?.value}
-				valid={form?.consent?.valid}
-				config={CARD_FIELDS.consent}
-				handleField={handleField}
-			/>
 			<button
 				class="button is-primary is-fullwidth"
 				disabled={!isSendable()}
@@ -110,41 +86,6 @@ const Checkout = (props: Props) => {
 			</button>
 		</form>
 	);
-};
-
-export interface CardForm {
-	consent: {
-		value: boolean;
-		valid: null | boolean;
-	};
-}
-
-export const initCardFrom = () => {
-	return {
-		consent: {
-			value: false,
-			valid: null,
-		},
-	} as CardForm;
-};
-
-const CARD_FIELDS = {
-	consent: {
-		label: "I Agree",
-		type: "checkbox",
-		placeholder: (
-			<small>
-				{" "}
-				I agree to the{" "}
-				{
-					<a href="/legal/subscription" target="_blank">
-						subscription agreement
-					</a>
-				}
-				.
-			</small>
-		),
-	},
 };
 
 export default Checkout;

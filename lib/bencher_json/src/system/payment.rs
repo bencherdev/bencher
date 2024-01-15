@@ -53,8 +53,6 @@ pub struct JsonNewCheckout {
     pub level: PlanLevel,
     pub entitlements: Option<Entitlements>,
     pub self_hosted_organization: Option<OrganizationUuid>,
-    /// I agree to the Bencher Subscription Agreement (https://bencher.dev/legal/subscription)
-    pub i_agree: bool,
 }
 
 #[typeshare::typeshare]
