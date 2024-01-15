@@ -1,7 +1,6 @@
 import type { Params } from "astro";
 import type { InitOutput } from "bencher_valid";
 import { type Accessor, type Resource, createSignal } from "solid-js";
-import { createStore } from "solid-js/store";
 import type {
 	JsonAuthUser,
 	JsonNewCheckout,
@@ -9,11 +8,8 @@ import type {
 } from "../../../../types/bencher";
 import { httpPost } from "../../../../util/http";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
-import { validJwt } from "../../../../util/valid";
-import Field, { type FieldValue } from "../../../field/Field";
-import FieldKind from "../../../field/kind";
-
 import { useNavigate } from "../../../../util/url";
+import { validJwt } from "../../../../util/valid";
 
 interface Props {
 	apiUrl: string;

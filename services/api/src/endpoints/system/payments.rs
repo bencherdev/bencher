@@ -46,6 +46,7 @@ pub async fn payments_post(
     bearer_token: BearerToken,
     body: TypedBody<JsonNewPayment>,
 ) -> Result<ResponseCreated<JsonPayment>, HttpError> {
+    sentry::capture_message("Payments endpoint activated", sentry::Level::Info);
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(rqctx.context(), body.into_inner(), &auth_user)
         .await
