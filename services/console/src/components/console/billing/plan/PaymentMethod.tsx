@@ -56,7 +56,7 @@ const CreditCard = (props: {
 			return <CreditCardBrand brand={genericCard()} name="Unionpay" />;
 		}
 		case CardBrand.Visa: {
-			return <CreditCardBrand brand={brandedCard("visa")} name="Visa" />;
+			return <CreditCardBrand brand={brandedCard("cc-visa")} name="Visa" />;
 		}
 		case CardBrand.Unknown: {
 			return <CreditCardBrand brand={genericCard()} name="Credit Card" />;
