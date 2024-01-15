@@ -1,5 +1,6 @@
 #[cfg(feature = "plus")]
 use bencher_billing::Biller;
+#[cfg(feature = "plus")]
 use bencher_github::GitHub;
 #[cfg(feature = "plus")]
 use bencher_license::Licensor;

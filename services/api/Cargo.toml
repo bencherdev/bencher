@@ -9,6 +9,7 @@ default = ["plus", "sentry"]
 plus = [
     "bencher_json/plus",
     "dep:bencher_billing",
+    "dep:bencher_github",
     "dep:bencher_license",
     "dep:reqwest",
 ]
@@ -20,7 +21,7 @@ async-trait.workspace = true
 bencher_adapter.workspace = true
 bencher_billing = { workspace = true, optional = true }
 bencher_boundary.workspace = true
-bencher_github.workspace = true
+bencher_github = { workspace = true, optional = true }
 bencher_json = { workspace = true, features = ["full", "db", "schema"] }
 bencher_license = { workspace = true, optional = true }
 bencher_logger.workspace = true

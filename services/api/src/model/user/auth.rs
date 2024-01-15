@@ -1,5 +1,7 @@
 use async_trait::async_trait;
-use bencher_json::{system::payment::JsonCustomer, Email, Jwt};
+#[cfg(feature = "plus")]
+use bencher_json::system::payment::JsonCustomer;
+use bencher_json::{Email, Jwt};
 use bencher_rbac::{
     user::{OrganizationRoles, ProjectRoles},
     Organization, Project, Server, User as RbacUser,
@@ -216,6 +218,7 @@ impl AuthUser {
             .collect()
     }
 
+    #[cfg(feature = "plus")]
     pub fn to_customer(&self) -> JsonCustomer {
         JsonCustomer {
             uuid: self.user.uuid,
