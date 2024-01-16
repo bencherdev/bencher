@@ -396,72 +396,6 @@
         }
       }
     },
-    "/v0/checkout": {
-      "post": {
-        "tags": [
-          "checkout"
-        ],
-        "operationId": "checkout_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/JsonNewCheckout"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "successful creation",
-            "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonCheckout"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      }
-    },
     "/v0/organizations": {
       "get": {
         "tags": [
@@ -6738,21 +6672,6 @@
           "last_four"
         ]
       },
-      "JsonCheckout": {
-        "type": "object",
-        "properties": {
-          "session": {
-            "type": "string"
-          },
-          "url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "session",
-          "url"
-        ]
-      },
       "JsonCloud": {
         "type": "object",
         "properties": {
@@ -7196,37 +7115,6 @@
         },
         "required": [
           "name"
-        ]
-      },
-      "JsonNewCheckout": {
-        "type": "object",
-        "properties": {
-          "entitlements": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Entitlements"
-              }
-            ]
-          },
-          "level": {
-            "$ref": "#/components/schemas/PlanLevel"
-          },
-          "organization": {
-            "$ref": "#/components/schemas/ResourceId"
-          },
-          "self_hosted_organization": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/OrganizationUuid"
-              }
-            ]
-          }
-        },
-        "required": [
-          "level",
-          "organization"
         ]
       },
       "JsonNewMeasure": {
@@ -9052,9 +8940,6 @@
         "type": "string",
         "format": "uuid"
       },
-      "ResourceId": {
-        "type": "string"
-      },
       "ResourceName": {
         "type": "string"
       },
@@ -9199,6 +9084,9 @@
           "name"
         ]
       },
+      "ResourceId": {
+        "type": "string"
+      },
       "OrganizationPermission": {
         "type": "string",
         "enum": [
@@ -9335,9 +9223,6 @@
     {
       "name": "branches",
       "description": "Branches"
-    },
-    {
-      "name": "checkout"
     },
     {
       "name": "config"

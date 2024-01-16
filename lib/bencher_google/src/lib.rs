@@ -190,7 +190,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    // #[ignore]
+    #[ignore]
     async fn test_google() {
         let service_key = std::fs::read_to_string("bencher.json").unwrap();
         let google = Google::new(service_key).unwrap();

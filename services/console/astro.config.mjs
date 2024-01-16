@@ -14,11 +14,6 @@ export default defineConfig({
 	// https://docs.astro.build/en/reference/configuration-reference/#site
 	site: "https://bencher.dev",
 	output: "hybrid",
-	server: {
-		headers: {
-			"Access-Control-Allow-Origin": "*",
-		},
-	},
 	// Do not use any trailing slashes in the paths below
 	redirects: {
 		"/docs/how-to/quick-start": "/docs/tutorial/quick-start",

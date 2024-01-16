@@ -1,3 +1,5 @@
+#![cfg(feature = "plus")]
+
 use std::convert::TryFrom;
 
 use bencher_client::types::{JsonCard, JsonCustomer, JsonNewPayment};

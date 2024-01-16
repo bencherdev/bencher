@@ -13,8 +13,8 @@ git add ./services/console/src/types/bencher.ts
 
 # Generate CLI scripts
 cargo xtask template
-git add ./services/cli/install-cli.sh
-git add ./services/cli/install-cli.ps1
+git add ./services/cli/templates/output/install-cli.sh
+git add ./services/cli/templates/output/install-cli.ps1
 
 # Generate the Bencher CLI GitHub Action
 cd ./services/action
