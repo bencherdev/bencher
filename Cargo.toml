@@ -17,6 +17,7 @@ bencher_boundary = { path = "lib/bencher_boundary" }
 bencher_client = { path = "lib/bencher_client" }
 bencher_comment = { path = "lib/bencher_comment" }
 bencher_github = { path = "lib/bencher_github" }
+bencher_google = { path = "lib/bencher_google" }
 bencher_json = { path = "lib/bencher_json" }
 bencher_logger = { path = "lib/bencher_logger" }
 bencher_plot = { path = "lib/bencher_plot" }
@@ -34,6 +35,8 @@ chrono = { version = "0.4", default-features = false }
 clap = { version = "4.4", features = ["derive"] }
 derive_more = "0.99"
 diesel = "2.1"
+http = "0.2"
+hyper = "0.14"
 jsonwebtoken = "9.2"
 literally = "0.1"
 octocrab = "0.32"

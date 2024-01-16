@@ -991,6 +991,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "bencher_google"
+version = "0.3.26"
+dependencies = [
+ "http 0.2.11",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tame-oauth",
+ "thiserror",
+ "tokio",
+ "url",
+]
+
+[[package]]
 name = "bencher_json"
 version = "0.3.26"
 dependencies = [
@@ -6018,6 +6032,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f764005d11ee5f36500a149ace24e00e3da98b0158b3e2d53a7495660d3f4d60"
 
 [[package]]
+name = "tame-oauth"
+version = "0.9.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd95ca1e8f5d9d3e83a626370af9ff1356ed1605ad128d99f9bea57432c112be"
+dependencies = [
+ "data-encoding",
+ "http 0.2.11",
+ "ring 0.17.7",
+ "serde",
+ "serde_json",
+ "twox-hash",
+ "url",
+]
+
+[[package]]
 name = "tap"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6438,6 +6467,16 @@ name = "ttf-parser"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "375812fa44dab6df41c195cd2f7fecb488f6c09fbaafb62807488cefab642bff"
+
+[[package]]
+name = "twox-hash"
+version = "1.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
+dependencies = [
+ "cfg-if",
+ "static_assertions",
+]
 
 [[package]]
 name = "typenum"

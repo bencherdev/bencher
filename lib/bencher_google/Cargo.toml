@@ -1,0 +1,23 @@
+[package]
+name = "bencher_google"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+# Workspace
+http.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+url = { workspace = true, features = ["serde"] }
+# Crate
+tame-oauth = "0.9"
+
+[dev-dependencies]
+reqwest = { workspace = true, features = ["default"] }
+tokio = { workspace = true, features = ["macros"] }
+
+[lints]
+workspace = true
