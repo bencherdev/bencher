@@ -13,5 +13,5 @@ pub const AUTH_TOKEN_TTL: u32 = 30 * 60;
 pub const CLIENT_TOKEN_TTL: u32 = 30 * 24 * 60 * 60;
 
 #[cfg(feature = "plus")]
-const PLAN_ARG: &str = "plan";
-const TOKEN_ARG: &str = "token";
+pub const PLAN_ARG: &str = "plan";
+pub const TOKEN_ARG: &str = "token";

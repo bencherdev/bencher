@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# run as `source ./env.sh` or `. ./env.sh`
+# Run as `source ./env.sh` or `. ./env.sh`
 
 # Use the `--admin` flag to get an admin token
 if [[ "$1" == "--admin" ]]; then

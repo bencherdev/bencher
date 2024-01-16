@@ -23,23 +23,23 @@
   "[javascript]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "biomejs.biome",
-    "editor.codeActionsOnSave": {
-      "source.organizeImports.biome": true
-    }
+    // "editor.codeActionsOnSave": {
+    //   "source.organizeImports.biome": true
+    // }
   },
   "[typescript]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "biomejs.biome",
-    "editor.codeActionsOnSave": {
-      "source.organizeImports.biome": true
-    }
+    // "editor.codeActionsOnSave": {
+    //   "source.organizeImports.biome": true
+    // }
   },
   "[typescriptreact]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "biomejs.biome",
-    "editor.codeActionsOnSave": {
-      "source.organizeImports.biome": true
-    }
+    // "editor.codeActionsOnSave": {
+    //   "source.organizeImports.biome": true
+    // }
   },
   "sqltools.connections": [
     {
@@ -95,10 +95,5 @@
     "UNIONPAY",
     "vcentered",
     "wordmark"
-  ],
-  "[javascript][typescript][typescriptreact]": {
-    "editor.codeActionsOnSave": {
-      "source.organizeImports.biome": "explicit"
-    }
-  }
+  ]
 }

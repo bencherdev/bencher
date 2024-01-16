@@ -286,12 +286,12 @@ async fn delete_inner(
 
     if let Some(metered_plan_id) = query_plan.metered_plan.as_ref() {
         biller
-            .cancel_metered_subscription(metered_plan_id.clone())
+            .cancel_metered_subscription(metered_plan_id)
             .await
             .map_err(resource_not_found_err!(Plan, query_plan))?;
     } else if let Some(licensed_plan_id) = query_plan.licensed_plan.as_ref() {
         biller
-            .cancel_licensed_subscription(licensed_plan_id.clone())
+            .cancel_licensed_subscription(licensed_plan_id)
             .await
             .map_err(resource_not_found_err!(Plan, query_plan))?;
 

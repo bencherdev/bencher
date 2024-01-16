@@ -1,6 +1,6 @@
 use stripe::{
     CheckoutSession, Customer, CustomerId, PaymentMethod, PaymentMethodId, PriceId, ProductId,
-    Subscription, SubscriptionItem, SubscriptionItemId,
+    Subscription, SubscriptionId, SubscriptionItem, SubscriptionItemId,
 };
 use thiserror::Error;
 
@@ -19,6 +19,10 @@ pub enum BillingError {
 
     #[error("Failed to get checkout URL: {0:?}")]
     NoCheckoutUrl(CheckoutSession),
+    #[error("Failed to parse checkout session ID: {0:?}")]
+    CheckoutSessionId(stripe::ParseIdError),
+    #[error("Failed to to find checkout session subscription: {0:?}")]
+    NoSubscription(CheckoutSession),
 
     #[error("Failed to cast integer: {0}")]
     IntError(#[from] std::num::TryFromIntError),
@@ -37,17 +41,13 @@ pub enum BillingError {
     #[error("Multiple subscriptions: {0:#?} {1:#?}")]
     MultipleSubscriptions(Subscription, Vec<Subscription>),
     #[error("Multiple subscription items for {0}: {1:#?} {2:#?}")]
-    MultipleSubscriptionItems(
-        crate::biller::PlanId,
-        SubscriptionItem,
-        Vec<SubscriptionItem>,
-    ),
+    MultipleSubscriptionItems(SubscriptionId, SubscriptionItem, Vec<SubscriptionItem>),
     #[error("No subscription item for {0}")]
-    NoSubscriptionItem(crate::biller::PlanId),
+    NoSubscriptionItem(SubscriptionId),
     #[error("No organization for {0}")]
-    NoOrganization(crate::biller::PlanId),
+    NoOrganization(SubscriptionId),
     #[error("Failed to parse date/time for {0} {1}: {2}")]
-    DateTime(crate::biller::PlanId, i64, bencher_json::ValidError),
+    DateTime(SubscriptionId, i64, bencher_json::ValidError),
     #[error("No customer info for {0}")]
     NoCustomerInfo(CustomerId),
     #[error("No UUID for {0}")]
@@ -57,7 +57,7 @@ pub enum BillingError {
     #[error("No email for {0}")]
     NoEmail(CustomerId),
     #[error("No default payment method for {0}")]
-    NoDefaultPaymentMethod(crate::biller::PlanId),
+    NoDefaultPaymentMethod(SubscriptionId),
     #[error("No default payment method info for {0}")]
     NoDefaultPaymentMethodInfo(PaymentMethodId),
     #[error("No card details for {0}")]

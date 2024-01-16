@@ -24,8 +24,8 @@ import FieldKind from "../../../field/kind";
 import Pricing from "./Pricing";
 
 // Toggle checkout flow
-import PaymentCard from "./PaymentCard";
-// import Checkout from "./Checkout";
+// import PaymentCard from "./PaymentCard";
+import Checkout from "./Checkout";
 
 interface Props {
 	apiUrl: string;
@@ -144,7 +144,7 @@ const BillingForm = (props: Props) => {
 					handleOrganizationUuid={setOrganizationUuid}
 					organizationUuidValid={organizationUuidValid}
 				/>
-				<PaymentCard
+				{/* <PaymentCard
 					apiUrl={props.apiUrl}
 					params={props.params}
 					bencher_valid={props.bencher_valid}
@@ -155,8 +155,8 @@ const BillingForm = (props: Props) => {
 					organizationUuid={organizationUuidJson}
 					organizationUuidValid={organizationUuidValidJson}
 					handleRefresh={props.handleRefresh}
-				/>
-				{/* <Checkout
+				/> */}
+				<Checkout
 					apiUrl={props.apiUrl}
 					params={props.params}
 					bencher_valid={props.bencher_valid}
@@ -167,7 +167,7 @@ const BillingForm = (props: Props) => {
 					organizationUuid={organizationUuidJson}
 					organizationUuidValid={organizationUuidValidJson}
 					handleRefresh={props.handleRefresh}
-				/> */}
+				/>
 			</Show>
 		</>
 	);

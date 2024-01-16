@@ -268,10 +268,12 @@ impl Api {
             if is_bencher_cloud {
                 if http_options {
                     api.register(system::payments::payments_options)?;
-                    // api.register(system::payments::checkout_options)?;
+                    api.register(system::payments::checkouts_options)?;
+                    api.register(system::payments::checkout_options)?;
                 }
                 api.register(system::payments::payments_post)?;
-                // api.register(system::payments::checkout_post)?;
+                api.register(system::payments::checkouts_post)?;
+                api.register(system::payments::checkout_get)?;
             }
         }
 

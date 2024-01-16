@@ -42,12 +42,12 @@ pub struct QueryPlan {
 
 impl QueryPlan {
     pub async fn get_metered_plan(&self, biller: &Biller) -> Result<Option<JsonPlan>, HttpError> {
-        let Some(metered_plan_id) = self.metered_plan.clone() else {
+        let Some(metered_plan_id) = &self.metered_plan else {
             return Ok(None);
         };
 
         biller
-            .get_plan(metered_plan_id)
+            .get_metered_plan(metered_plan_id)
             .await
             .map(Some)
             .map_err(resource_not_found_err!(Plan, self))
@@ -59,12 +59,12 @@ impl QueryPlan {
         licensor: &Licensor,
         organization_uuid: OrganizationUuid,
     ) -> Result<Option<JsonPlan>, HttpError> {
-        let Some(licensed_plan_id) = self.licensed_plan.clone() else {
+        let Some(licensed_plan_id) = &self.licensed_plan else {
             return Ok(None);
         };
 
         let mut json_plan = biller
-            .get_plan(licensed_plan_id)
+            .get_licensed_plan(licensed_plan_id)
             .await
             .map_err(resource_not_found_err!(Plan, self))?;
 
@@ -106,7 +106,7 @@ impl QueryPlan {
         };
 
         let plan_status = biller
-            .get_plan_status(metered_plan_id.clone())
+            .get_metered_plan_status(&metered_plan_id)
             .await
             .map_err(not_found_error)?;
 
@@ -133,6 +133,80 @@ pub struct InsertPlan {
 }
 
 impl InsertPlan {
+    #[allow(clippy::too_many_arguments)]
+    pub async fn new_json(
+        conn: &mut DbConnection,
+        biller: &Biller,
+        licensor: &Licensor,
+        query_organization: &QueryOrganization,
+        customer_id: CustomerId,
+        payment_method_id: PaymentMethodId,
+        plan_level: PlanLevel,
+        price_name: String,
+        entitlements: Option<Entitlements>,
+        self_hosted_organization: Option<OrganizationUuid>,
+    ) -> Result<JsonPlan, HttpError> {
+        if let Some(entitlements) = entitlements {
+            InsertPlan::licensed_plan(
+                conn,
+                biller,
+                licensor,
+                query_organization,
+                customer_id,
+                payment_method_id,
+                plan_level,
+                price_name,
+                entitlements,
+                self_hosted_organization,
+            )
+            .await?;
+            let query_plan = QueryPlan::belonging_to(query_organization)
+                .first::<QueryPlan>(conn)
+                .map_err(resource_not_found_err!(Plan, query_organization))?;
+            if let Some(json_plan) = query_plan
+                .get_licensed_plan(biller, licensor, query_organization.uuid)
+                .await?
+            {
+                Ok(json_plan)
+            } else {
+                Err(issue_error(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "Failed to find licensed plan after creating it",
+                    &format!(
+                        "Failed to find licensed plan for organization ({query_organization:?}) after creating it even though plan exists ({query_plan:?})."
+                         ),
+                    "Failed to find licensed plan after creating it"
+                    ))
+            }
+        } else {
+            InsertPlan::metered_plan(
+                conn,
+                biller,
+                query_organization,
+                customer_id,
+                payment_method_id,
+                plan_level,
+                price_name,
+            )
+            .await?;
+            let query_plan = QueryPlan::belonging_to(&query_organization)
+                .first::<QueryPlan>(conn)
+                .map_err(resource_not_found_err!(Plan, query_organization))?;
+            if let Some(json_plan) = query_plan.get_metered_plan(biller).await? {
+                Ok(json_plan)
+            } else {
+                Err(issue_error(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "Failed to find metered plan after creating it",
+                    &format!(
+                        "Failed to find metered plan for organization ({query_organization:?}) after creating it even though plan exists ({query_plan:?})."
+                         ),
+                    "Failed to find metered plan after creating it"
+                    ))
+            }
+        }
+    }
+
     pub async fn metered_plan(
         conn: &mut DbConnection,
         biller: &Biller,
@@ -363,7 +437,7 @@ impl PlanKind {
                     ));
                 };
                 biller
-                    .record_usage(metered_plan_id, usage)
+                    .record_metered_usage(&metered_plan_id, usage)
                     .await
                     .map_err(|e| {
                         issue_error(
