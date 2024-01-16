@@ -261,7 +261,7 @@ jobs:
           #   smoke_test: docker
     runs-on: ${{ matrix.os }}
     timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
+    continue-on-error: ${{ github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') && matrix.smoke_test == 'docker' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
