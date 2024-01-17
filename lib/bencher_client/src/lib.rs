@@ -61,13 +61,7 @@ from_client!(
 );
 
 #[cfg(feature = "plus")]
-from_client!(
-    CardCvc,
-    CardNumber,
-    Entitlements,
-    ExpirationMonth,
-    ExpirationYear
-);
+from_client!(Entitlements, ExpirationMonth, ExpirationYear);
 
 /// This type allows for forwards compatibility with the API response types.
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
@@ -149,7 +143,7 @@ try_from_client!(
 );
 
 #[cfg(feature = "plus")]
-try_from_client!(JsonOAuth, JsonPayment, JsonPlan, JsonUsage, JsonServerStats);
+try_from_client!(JsonOAuth, JsonPlan, JsonUsage, JsonServerStats);
 
 impl From<bencher_json::DateTime> for types::DateTime {
     fn from(date_time: bencher_json::DateTime) -> Self {

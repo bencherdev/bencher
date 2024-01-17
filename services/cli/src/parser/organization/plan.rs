@@ -23,13 +23,9 @@ pub struct CliPlanCreate {
     /// Organization slug or UUID
     pub org: ResourceId,
 
-    /// Customer ID
+    /// Checkout ID
     #[clap(long)]
-    pub customer: NonEmpty,
-
-    /// Payment method ID
-    #[clap(long)]
-    pub payment_method: NonEmpty,
+    pub checkout: NonEmpty,
 
     /// Plan level
     #[clap(value_enum, long)]
@@ -41,11 +37,7 @@ pub struct CliPlanCreate {
 
     /// Self-Hosted Organization UUID for license
     #[clap(long, requires = "entitlements")]
-    pub organization: Option<OrganizationUuid>,
-
-    /// I agree to the Bencher Subscription Agreement (https://bencher.dev/legal/subscription)
-    #[clap(long, required = true)]
-    pub i_agree: bool,
+    pub self_hosted: Option<OrganizationUuid>,
 
     #[clap(flatten)]
     pub backend: CliBackend,

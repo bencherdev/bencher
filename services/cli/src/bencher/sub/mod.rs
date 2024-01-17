@@ -46,8 +46,6 @@ pub enum Sub {
     User(User),
     Token(Token),
     Server(Server),
-    #[cfg(feature = "plus")]
-    Payment(system::payment::Payment),
     Mock(Mock),
     Up(Up),
     Down(Down),
@@ -78,8 +76,6 @@ impl TryFrom<CliSub> for Sub {
             CliSub::User(user) => Self::User(user.try_into()?),
             CliSub::Token(token) => Self::Token(token.try_into()?),
             CliSub::Server(server) => Self::Server(server.try_into()?),
-            #[cfg(feature = "plus")]
-            CliSub::Payment(payment) => Self::Payment(payment.try_into()?),
             CliSub::Mock(mock) => Self::Mock(mock.into()),
             CliSub::Up(up) => Self::Up(up.into()),
             CliSub::Down(down) => Self::Down(down.into()),
@@ -110,8 +106,6 @@ impl SubCmd for Sub {
             Self::User(user) => user.exec().await,
             Self::Token(token) => token.exec().await,
             Self::Server(server) => server.exec().await,
-            #[cfg(feature = "plus")]
-            Self::Payment(payment) => payment.exec().await,
             Self::Mock(mock) => mock.exec().await,
             Self::Up(up) => up.exec().await,
             Self::Down(down) => down.exec().await,

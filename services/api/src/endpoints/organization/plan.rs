@@ -1,7 +1,7 @@
 #![cfg(feature = "plus")]
 
 use bencher_json::{
-    organization::plan::{JsonNewPlan, JsonPlan, DEFAULT_PRICE_NAME},
+    organization::plan::{JsonNewPlan, JsonPlan},
     DateTime, ResourceId,
 };
 use bencher_rbac::organization::Permission;
@@ -85,10 +85,10 @@ async fn get_one_inner(
         .first::<QueryPlan>(conn)
         .map_err(resource_not_found_err!(Plan, query_organization))?;
 
-    if let Some(json_plan) = query_plan.get_metered_plan(biller).await? {
+    if let Some(json_plan) = query_plan.to_metered_plan(biller).await? {
         Ok(json_plan)
     } else if let Some(json_plan) = query_plan
-        .get_licensed_plan(biller, &context.licensor, query_organization.uuid)
+        .to_licensed_plan(biller, &context.licensor, query_organization.uuid)
         .await?
     {
         Ok(json_plan)
@@ -138,11 +138,6 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonPlan, HttpError> {
     let biller = context.biller()?;
-    if !json_plan.i_agree {
-        return Err(forbidden_error(
-            "You must agree to the Bencher Subscription Agreement (https://bencher.dev/legal/subscription)",
-        ));
-    }
     let conn = &mut *context.conn().await;
 
     // Get the organization
@@ -161,85 +156,68 @@ async fn post_inner(
         ));
     }
 
-    // // Create a customer for the user
-    // let customer_id = biller
-    //     .get_or_create_customer(&json_plan.customer)
-    //     .await
-    //     .map_err(resource_not_found_err!(Plan, &json_plan.customer))?;
-    // // Create a payment method for the user
-    // let payment_method_id = biller
-    //     .create_payment_method(customer_id.clone(), json_plan.card.clone())
-    //     .await
-    //     .map_err(resource_not_found_err!(Plan, customer_id))?;
-    let customer_id = json_plan
-        .customer
-        .as_ref()
-        .parse()
-        .map_err(resource_not_found_err!(Plan, json_plan.customer))?;
-    let payment_method_id = json_plan
-        .payment_method
-        .as_ref()
-        .parse()
-        .map_err(resource_not_found_err!(Plan, json_plan.payment_method))?;
+    let JsonNewPlan {
+        checkout,
+        level,
+        entitlements,
+        self_hosted,
+    } = json_plan;
 
-    if let Some(entitlements) = json_plan.entitlements {
+    let subscription_id = biller
+        .get_checkout_session(checkout.as_ref())
+        .await
+        .map_err(|e| {
+            issue_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to get checkout session",
+                &format!("Failed to get checkout session {checkout}.",),
+                e,
+            )
+        })?;
+
+    if let Some(entitlements) = entitlements {
+        let licensed_plan_id = subscription_id
+            .as_ref()
+            .parse()
+            .map_err(resource_not_found_err!(Plan, subscription_id))?;
         InsertPlan::licensed_plan(
             conn,
-            biller,
             &context.licensor,
+            licensed_plan_id,
             &query_organization,
-            customer_id,
-            payment_method_id,
-            json_plan.level,
-            DEFAULT_PRICE_NAME.into(),
+            level,
             entitlements,
-            json_plan.organization,
-        )
-        .await?;
-        let query_plan = QueryPlan::belonging_to(&query_organization)
+            self_hosted,
+        )?;
+        QueryPlan::belonging_to(&query_organization)
             .first::<QueryPlan>(conn)
-            .map_err(resource_not_found_err!(Plan, query_organization))?;
-        if let Some(query_plan) = query_plan
-            .get_licensed_plan(biller, &context.licensor, query_organization.uuid)
-            .await?
-        {
-            Ok(query_plan)
-        } else {
-            Err(issue_error(
+            .map_err(resource_not_found_err!(Plan, query_organization))?
+            .to_licensed_plan(biller, &context.licensor, query_organization.uuid).await?
+            .ok_or_else(|| {
+                issue_error(
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "Failed to find licensed plan after creating it",
-                &format!(
-                    "Failed to find licensed plan for organization ({query_organization:?}) after creating it even though plan exists ({query_plan:?})."
-                     ),
+                &format!("Failed to find licensed plan for organization ({query_organization:?}) after creating it even though plan exists."),
                 "Failed to find licensed plan after creating it"
-                ))
-        }
+                )
+            })
     } else {
-        InsertPlan::metered_plan(
-            conn,
-            biller,
-            &query_organization,
-            customer_id,
-            payment_method_id,
-            json_plan.level,
-            DEFAULT_PRICE_NAME.into(),
-        )
-        .await?;
-        let query_plan = QueryPlan::belonging_to(&query_organization)
+        let metered_plan_id = subscription_id
+            .as_ref()
+            .parse()
+            .map_err(resource_not_found_err!(Plan, subscription_id))?;
+        InsertPlan::metered_plan(conn, metered_plan_id, &query_organization)?;
+        QueryPlan::belonging_to(&query_organization)
             .first::<QueryPlan>(conn)
-            .map_err(resource_not_found_err!(Plan, query_organization))?;
-        if let Some(query_plan) = query_plan.get_metered_plan(biller).await? {
-            Ok(query_plan)
-        } else {
-            Err(issue_error(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Failed to find metered plan after creating it",
-                &format!(
-                    "Failed to find metered plan for organization ({query_organization:?}) after creating it even though plan exists ({query_plan:?})."
-                     ),
-                "Failed to find metered plan after creating it"
-                ))
-        }
+            .map_err(resource_not_found_err!(Plan, query_organization))?
+            .to_metered_plan(biller).await?
+            .ok_or_else(|| {
+                issue_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to find metered plan after creating it",
+            &format!("Failed to find metered plan for organization ({query_organization:?}) after creating it even though plan exists."),
+          "Failed to find metered plan after creating it"
+            )})
     }
 }
 

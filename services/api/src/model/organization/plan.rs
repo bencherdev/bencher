@@ -1,6 +1,6 @@
 #![cfg(feature = "plus")]
 
-use bencher_billing::{Biller, CustomerId, PaymentMethodId};
+use bencher_billing::Biller;
 use bencher_json::{
     project::Visibility, DateTime, Entitlements, JsonPlan, Jwt, LicensedPlanId, MeteredPlanId,
     OrganizationUuid, PlanLevel,
@@ -41,7 +41,7 @@ pub struct QueryPlan {
 }
 
 impl QueryPlan {
-    pub async fn get_metered_plan(&self, biller: &Biller) -> Result<Option<JsonPlan>, HttpError> {
+    pub async fn to_metered_plan(&self, biller: &Biller) -> Result<Option<JsonPlan>, HttpError> {
         let Some(metered_plan_id) = &self.metered_plan else {
             return Ok(None);
         };
@@ -53,7 +53,7 @@ impl QueryPlan {
             .map_err(resource_not_found_err!(Plan, self))
     }
 
-    pub async fn get_licensed_plan(
+    pub async fn to_licensed_plan(
         &self,
         biller: &Biller,
         licensor: &Licensor,
@@ -133,117 +133,12 @@ pub struct InsertPlan {
 }
 
 impl InsertPlan {
-    #[allow(clippy::too_many_arguments)]
-    pub async fn new_json(
+    pub fn metered_plan(
         conn: &mut DbConnection,
-        biller: &Biller,
-        licensor: &Licensor,
+        metered_plan_id: MeteredPlanId,
         query_organization: &QueryOrganization,
-        customer_id: CustomerId,
-        payment_method_id: PaymentMethodId,
-        plan_level: PlanLevel,
-        price_name: String,
-        entitlements: Option<Entitlements>,
-        self_hosted_organization: Option<OrganizationUuid>,
-    ) -> Result<JsonPlan, HttpError> {
-        if let Some(entitlements) = entitlements {
-            InsertPlan::licensed_plan(
-                conn,
-                biller,
-                licensor,
-                query_organization,
-                customer_id,
-                payment_method_id,
-                plan_level,
-                price_name,
-                entitlements,
-                self_hosted_organization,
-            )
-            .await?;
-            let query_plan = QueryPlan::belonging_to(query_organization)
-                .first::<QueryPlan>(conn)
-                .map_err(resource_not_found_err!(Plan, query_organization))?;
-            if let Some(json_plan) = query_plan
-                .get_licensed_plan(biller, licensor, query_organization.uuid)
-                .await?
-            {
-                Ok(json_plan)
-            } else {
-                Err(issue_error(
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "Failed to find licensed plan after creating it",
-                    &format!(
-                        "Failed to find licensed plan for organization ({query_organization:?}) after creating it even though plan exists ({query_plan:?})."
-                         ),
-                    "Failed to find licensed plan after creating it"
-                    ))
-            }
-        } else {
-            InsertPlan::metered_plan(
-                conn,
-                biller,
-                query_organization,
-                customer_id,
-                payment_method_id,
-                plan_level,
-                price_name,
-            )
-            .await?;
-            let query_plan = QueryPlan::belonging_to(&query_organization)
-                .first::<QueryPlan>(conn)
-                .map_err(resource_not_found_err!(Plan, query_organization))?;
-            if let Some(json_plan) = query_plan.get_metered_plan(biller).await? {
-                Ok(json_plan)
-            } else {
-                Err(issue_error(
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "Failed to find metered plan after creating it",
-                    &format!(
-                        "Failed to find metered plan for organization ({query_organization:?}) after creating it even though plan exists ({query_plan:?})."
-                         ),
-                    "Failed to find metered plan after creating it"
-                    ))
-            }
-        }
-    }
-
-    pub async fn metered_plan(
-        conn: &mut DbConnection,
-        biller: &Biller,
-        query_organization: &QueryOrganization,
-        customer_id: CustomerId,
-        payment_method_id: PaymentMethodId,
-        plan_level: PlanLevel,
-        price_name: String,
     ) -> Result<Self, HttpError> {
-        // Create a metered subscription for the organization
-        let subscription = biller
-            .create_metered_subscription(
-                query_organization.uuid,
-                customer_id.clone(),
-                payment_method_id.clone(),
-                plan_level,
-                price_name.clone(),
-            )
-            .await
-            .map_err(resource_conflict_err!(
-                Plan,
-                (
-                    &query_organization,
-                    customer_id,
-                    payment_method_id,
-                    plan_level,
-                    price_name
-                )
-            ))?;
-
-        let metered_plan_id: MeteredPlanId = subscription
-            .id
-            .as_ref()
-            .parse()
-            .map_err(resource_not_found_err!(Plan, subscription))?;
         let timestamp = DateTime::now();
-
         let insert_plan = InsertPlan {
             organization_id: query_organization.id,
             metered_plan: Some(metered_plan_id),
@@ -261,60 +156,27 @@ impl InsertPlan {
         Ok(insert_plan)
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub async fn licensed_plan(
+    pub fn licensed_plan(
         conn: &mut DbConnection,
-        biller: &Biller,
         licensor: &Licensor,
+        licensed_plan_id: LicensedPlanId,
         query_organization: &QueryOrganization,
-        customer_id: CustomerId,
-        payment_method_id: PaymentMethodId,
         plan_level: PlanLevel,
-        price_name: String,
-        license_entitlements: Entitlements,
-        license_organization: Option<OrganizationUuid>,
+        entitlements: Entitlements,
+        self_hosted: Option<OrganizationUuid>,
     ) -> Result<Self, HttpError> {
-        // Create a licensed subscription for the organization
-        let subscription = biller
-            .create_licensed_subscription(
-                query_organization.uuid,
-                customer_id.clone(),
-                payment_method_id.clone(),
-                plan_level,
-                price_name.clone(),
-                license_entitlements,
-            )
-            .await
-            .map_err(resource_conflict_err!(
-                Plan,
-                (
-                    &query_organization,
-                    customer_id,
-                    payment_method_id,
-                    plan_level,
-                    price_name,
-                    license_entitlements
-                )
-            ))?;
-
-        let licensed_plan_id: LicensedPlanId = subscription
-            .id
-            .as_ref()
-            .parse()
-            .map_err(resource_not_found_err!(Plan, subscription))?;
-
         // If license organization is not given, then use the current organization (Bencher Cloud license)
-        let organization_uuid = license_organization.unwrap_or(query_organization.uuid);
+        let organization_uuid = self_hosted.unwrap_or(query_organization.uuid);
         let license = licensor
-            .new_annual_license(organization_uuid, plan_level, license_entitlements)
+            .new_annual_license(organization_uuid, plan_level, entitlements)
             .map_err(|e| issue_error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to create license",
-                &format!("Failed to create license for organization ({query_organization:?}) with entitlements ({license_entitlements})."),
+                &format!("Failed to create license for organization ({query_organization:?}) with entitlements ({entitlements})."),
                 e,
             ))?;
-        let timestamp = DateTime::now();
 
+        let timestamp = DateTime::now();
         let insert_plan = InsertPlan {
             organization_id: query_organization.id,
             metered_plan: None,
@@ -330,7 +192,7 @@ impl InsertPlan {
             .map_err(resource_conflict_err!(Plan, insert_plan))?;
 
         // If the license is for this organization is not given, then update the current organization (Bencher Cloud license)
-        if license_organization.is_none() {
+        if self_hosted.is_none() {
             let organization_query = schema::organization::table
                 .filter(schema::organization::id.eq(query_organization.id));
             let update_organization = UpdateOrganization {

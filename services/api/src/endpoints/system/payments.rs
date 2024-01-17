@@ -3,18 +3,15 @@
 use bencher_json::{
     organization::plan::DEFAULT_PRICE_NAME,
     system::payment::{JsonCheckout, JsonNewCheckout, JsonNewPayment, JsonPayment},
-    JsonPlan, NonEmpty,
 };
 use bencher_rbac::organization::Permission;
-use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
+use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use http::StatusCode;
-use schemars::JsonSchema;
-use serde::Deserialize;
 
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{CorsResponse, Get, Post, ResponseCreated, ResponseOk},
+        endpoint::{CorsResponse, Post, ResponseCreated},
         Endpoint,
     },
     error::{forbidden_error, issue_error, resource_not_found_err},
@@ -26,8 +23,6 @@ use crate::{
         },
     },
 };
-
-use super::auth::PLAN_ARG;
 
 #[allow(clippy::unused_async)]
 #[endpoint {
@@ -126,6 +121,7 @@ pub async fn checkouts_post(
     bearer_token: BearerToken,
     body: TypedBody<JsonNewCheckout>,
 ) -> Result<ResponseCreated<JsonCheckout>, HttpError> {
+    sentry::capture_message("Checkout endpoint activated", sentry::Level::Info);
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = checkouts_post_inner(rqctx.context(), body.into_inner(), &auth_user)
         .await
@@ -147,7 +143,7 @@ async fn checkouts_post_inner(
         organization,
         level,
         entitlements,
-        self_hosted_organization,
+        self_hosted,
     } = json_checkout;
     let conn = &mut *context.conn().await;
 
@@ -166,18 +162,21 @@ async fn checkouts_post_inner(
         .endpoint
         .clone()
         .join(&format!(
-            "/console/organizations/{organization}/checkout?session_id={{CHECKOUT_SESSION_ID}}&{PLAN_ARG}={level}{license}{self_hosted}",
+            "/console/organizations/{organization}/checkout?checkout={{CHECKOUT_SESSION_ID}}&level={level}{license}{self_hosted}",
             organization = query_organization.slug,
+            level = level.as_ref(),
             license = entitlements
-                .map(|entitlements| format!("&license={entitlements}"))
+                .map(|entitlements| format!("&entitlements={entitlements}"))
                 .unwrap_or_default(),
-            self_hosted = self_hosted_organization
+            self_hosted = self_hosted
                 .map(|uuid| format!("&self_hosted={uuid}"))
                 .unwrap_or_default(),
         ))
         .unwrap_or_else(|_| context.endpoint.clone());
+
     biller
         .new_checkout_session(
+            query_organization.uuid,
             &customer,
             level,
             price_name.to_owned(),
@@ -192,92 +191,4 @@ async fn checkouts_post_inner(
                 e,
             )
         })
-}
-
-#[derive(Deserialize, JsonSchema)]
-pub struct CheckoutParams {
-    pub session: NonEmpty,
-}
-
-#[allow(clippy::unused_async)]
-#[endpoint {
-    method = OPTIONS,
-    path =  "/v0/checkout/{session}",
-    tags = ["checkout"]
-}]
-pub async fn checkout_options(
-    _rqctx: RequestContext<ApiContext>,
-) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into()]))
-}
-
-#[endpoint {
-    method = GET,
-    path =  "/v0/checkout/{session}",
-    tags = ["checkout"]
-}]
-pub async fn checkout_get(
-    rqctx: RequestContext<ApiContext>,
-    bearer_token: BearerToken,
-    path_params: Path<CheckoutParams>,
-    body: TypedBody<JsonNewCheckout>,
-) -> Result<ResponseOk<JsonPlan>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = get_one_inner(
-        rqctx.context(),
-        path_params.into_inner(),
-        body.into_inner(),
-        &auth_user,
-    )
-    .await?;
-    Ok(Get::auth_response_ok(json))
-}
-
-async fn get_one_inner(
-    context: &ApiContext,
-    path_params: CheckoutParams,
-    json_checkout: JsonNewCheckout,
-    auth_user: &AuthUser,
-) -> Result<JsonPlan, HttpError> {
-    let biller = context.biller()?;
-    let JsonNewCheckout {
-        organization,
-        level,
-        entitlements,
-        self_hosted_organization,
-    } = json_checkout;
-    let conn = &mut *context.conn().await;
-
-    // Get the organization
-    let query_organization = QueryOrganization::from_resource_id(conn, &organization)?;
-    // Check to see if user has permission to manage the organization
-    context
-        .rbac
-        .is_allowed_organization(auth_user, Permission::Manage, &query_organization)
-        .map_err(forbidden_error)?;
-    let customer = auth_user.to_customer();
-
-    let CheckoutParams { session } = path_params;
-    let plan = biller
-        .get_checkout_session_plan(session.as_ref())
-        .await
-        .map_err(|e| {
-            issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to get checkout session",
-                &format!("Failed to get checkout session {session}.",),
-                e,
-            )
-        })?;
-
-    // // Get the organization
-    // let query_organization = QueryOrganization::from_resource_id(conn, &organization)?;
-    // // Check to see if user has permission to manage the organization
-    // context
-    //     .rbac
-    //     .is_allowed_organization(auth_user, Permission::Manage, &query_organization)
-    //     .map_err(forbidden_error)?;
-    // let customer = auth_user.to_customer();
-
-    todo!()
 }

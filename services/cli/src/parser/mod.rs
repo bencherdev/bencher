@@ -91,10 +91,6 @@ pub enum CliSub {
     #[clap(subcommand)]
     Server(CliServer),
 
-    #[cfg(feature = "plus")]
-    /// Payment
-    Payment(system::payment::CliPayment),
-
     /// Generate mock benchmark data
     Mock(CliMock),
 

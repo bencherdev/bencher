@@ -202,13 +202,10 @@ export enum PlanLevel {
 }
 
 export interface JsonNewPlan {
-	customer: NonEmpty;
-	payment_method: NonEmpty;
+	checkout: NonEmpty;
 	level: PlanLevel;
 	entitlements?: Entitlements;
-	organization?: Uuid;
-	/** I agree to the Bencher Subscription Agreement (https://bencher.dev/legal/subscription) */
-	i_agree: boolean;
+	self_hosted?: Uuid;
 }
 
 export interface JsonCustomer {
@@ -493,7 +490,7 @@ export interface JsonNewCheckout {
 	organization: ResourceId;
 	level: PlanLevel;
 	entitlements?: Entitlements;
-	self_hosted_organization?: Uuid;
+	self_hosted?: Uuid;
 }
 
 export interface JsonCheckout {

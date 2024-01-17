@@ -48,13 +48,12 @@ const Checkout = (props: Props) => {
 			organization: props.organization,
 			level: props.plan(),
 			entitlements: props.entitlements(),
-			self_hosted_organization: props.organizationUuid(),
+			self_hosted: props.organizationUuid(),
 		};
 
 		setSubmitting(true);
 		httpPost(props.apiUrl, "/v0/checkout", token, newCheckout)
 			.then((checkout) => {
-				console.log(checkout.data);
 				navigate(checkout.data.url);
 				setSubmitting(false);
 			})

@@ -51,14 +51,14 @@ const BillingForm = (props: Props) => {
 	const plan = createMemo(() => searchParams[PLAN_PARAM] as PlanLevel);
 
 	const [planKind, setPlanKind] = createSignal(PlanKind.Metered);
-	const [entitlements, setEntitlements] = createSignal<number>(5);
+	const [entitlements, setEntitlements] = createSignal<number>(6);
 	const entitlementsAnnual = createMemo(() => {
 		switch (plan()) {
 			case PlanLevel.Free:
 				return null;
 			case PlanLevel.Team:
 			case PlanLevel.Enterprise:
-				return entitlements() * 100 * 12;
+				return entitlements() * 10_000;
 		}
 	});
 	const entitlementsAnnualCost = createMemo(() => {
@@ -66,9 +66,9 @@ const BillingForm = (props: Props) => {
 			case PlanLevel.Free:
 				return 0.0;
 			case PlanLevel.Team:
-				return (entitlementsAnnual() ?? 0.0) * 0.1;
+				return (entitlementsAnnual() ?? 0.0) * 0.01;
 			case PlanLevel.Enterprise:
-				return (entitlementsAnnual() ?? 0.0) * 0.5;
+				return (entitlementsAnnual() ?? 0.0) * 0.05;
 		}
 	});
 	const entitlementsAnnualJson = createMemo(() => {

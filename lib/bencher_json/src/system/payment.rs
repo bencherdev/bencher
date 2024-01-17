@@ -52,7 +52,7 @@ pub struct JsonNewCheckout {
     pub organization: ResourceId,
     pub level: PlanLevel,
     pub entitlements: Option<Entitlements>,
-    pub self_hosted_organization: Option<OrganizationUuid>,
+    pub self_hosted: Option<OrganizationUuid>,
 }
 
 #[typeshare::typeshare]

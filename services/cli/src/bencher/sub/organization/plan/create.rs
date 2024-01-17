@@ -12,12 +12,10 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Create {
     pub org: ResourceId,
-    pub customer: NonEmpty,
-    pub payment_method: NonEmpty,
+    pub checkout: NonEmpty,
     pub level: PlanLevel,
     pub entitlements: Option<Entitlements>,
-    pub organization: Option<OrganizationUuid>,
-    pub i_agree: bool,
+    pub self_hosted: Option<OrganizationUuid>,
     pub backend: AuthBackend,
 }
 
@@ -27,22 +25,18 @@ impl TryFrom<CliPlanCreate> for Create {
     fn try_from(create: CliPlanCreate) -> Result<Self, Self::Error> {
         let CliPlanCreate {
             org,
-            customer,
-            payment_method,
+            checkout,
             level,
             entitlements,
-            organization,
-            i_agree,
+            self_hosted,
             backend,
         } = create;
         Ok(Self {
             org,
-            customer: customer.into(),
-            payment_method: payment_method.into(),
+            checkout: checkout.into(),
             level: level.into(),
             entitlements: entitlements.map(Into::into),
-            organization: organization.map(Into::into),
-            i_agree,
+            self_hosted: self_hosted.map(Into::into),
             backend: backend.try_into()?,
         })
     }
@@ -61,22 +55,18 @@ impl From<CliPlanLevel> for PlanLevel {
 impl From<Create> for JsonNewPlan {
     fn from(create: Create) -> Self {
         let Create {
-            customer,
-            payment_method,
+            checkout,
             level,
             entitlements,
-            organization,
-            i_agree,
+            self_hosted,
             ..
         } = create;
         #[allow(clippy::inconsistent_struct_constructor)]
         Self {
-            customer,
-            payment_method,
+            checkout,
             level,
             entitlements,
-            organization,
-            i_agree,
+            self_hosted,
         }
     }
 }

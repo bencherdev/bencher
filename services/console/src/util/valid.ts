@@ -37,6 +37,9 @@ export const validOptionString = (
 export const validUuid = (uuid: string): boolean =>
 	validString(uuid, is_valid_uuid);
 
+export const validOptionUuid = (uuid: undefined | null | string): boolean =>
+	validOptionString(uuid, is_valid_uuid);
+
 export const validUserName = (user_name: string): boolean =>
 	validString(user_name, is_valid_user_name);
 

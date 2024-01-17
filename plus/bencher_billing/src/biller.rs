@@ -13,17 +13,18 @@ use stripe::{
     CheckoutSessionMode, CheckoutSessionUiMode, Client as StripeClient, CreateCheckoutSession,
     CreateCheckoutSessionConsentCollection, CreateCheckoutSessionConsentCollectionTermsOfService,
     CreateCheckoutSessionLineItems, CreateCheckoutSessionLineItemsAdjustableQuantity,
-    CreateCheckoutSessionPaymentMethodTypes, CreateCustomer, CreatePaymentMethod,
-    CreatePaymentMethodCardUnion, CreateSubscription, CreateSubscriptionItems, CreateUsageRecord,
-    Currency, Customer, CustomerId, Expandable, ListCustomers, PaymentMethod, PaymentMethodId,
-    PaymentMethodTypeFilter, Price, Subscription, SubscriptionId, SubscriptionItem,
-    SubscriptionStatus, UsageRecord,
+    CreateCheckoutSessionPaymentMethodTypes, CreateCheckoutSessionSubscriptionData, CreateCustomer,
+    CreatePaymentMethod, CreatePaymentMethodCardUnion, CreateSubscription, CreateSubscriptionItems,
+    CreateUsageRecord, Currency, Customer, CustomerId, Expandable, ListCustomers, PaymentMethod,
+    PaymentMethodId, PaymentMethodTypeFilter, Price, Subscription, SubscriptionId,
+    SubscriptionItem, SubscriptionStatus, UsageRecord,
 };
 
 use crate::{products::Products, BillingError};
 
 const METADATA_UUID: &str = "uuid";
 const METADATA_ORGANIZATION: &str = "organization";
+const STRIPE_MAX_QUANTITY: u32 = 999_999;
 
 pub struct Biller {
     client: StripeClient,
@@ -166,6 +167,7 @@ impl Biller {
 
     pub async fn new_checkout_session(
         &self,
+        organization: OrganizationUuid,
         customer: &JsonCustomer,
         plan_level: PlanLevel,
         price_name: String,
@@ -189,20 +191,28 @@ impl Biller {
             mode: Some(CheckoutSessionMode::Subscription),
             line_items: Some(vec![CreateCheckoutSessionLineItems {
                 price: Some(price.id.to_string()),
-                quantity: entitlements.map(Into::into),
-                adjustable_quantity: entitlements.map(|ent| {
+                quantity: entitlements.map(|e| std::cmp::min(e.into(), STRIPE_MAX_QUANTITY.into())),
+                adjustable_quantity: entitlements.and(Some(
                     CreateCheckoutSessionLineItemsAdjustableQuantity {
                         enabled: true,
-                        minimum: Some(1_200),
-                        maximum: Some(std::cmp::max(120_000, i64::from(u32::from(ent)) * 2)),
-                    }
-                }),
+                        minimum: Some(10_000),
+                        maximum: Some(STRIPE_MAX_QUANTITY.into()),
+                    },
+                )),
                 ..Default::default()
             }]),
             consent_collection: Some(CreateCheckoutSessionConsentCollection {
                 // https://bencher.dev/legal/subscription/
                 terms_of_service: Some(
                     CreateCheckoutSessionConsentCollectionTermsOfService::Required,
+                ),
+                ..Default::default()
+            }),
+            subscription_data: Some(CreateCheckoutSessionSubscriptionData {
+                metadata: Some(
+                    [(METADATA_ORGANIZATION.into(), organization.to_string())]
+                        .into_iter()
+                        .collect(),
                 ),
                 ..Default::default()
             }),
@@ -221,10 +231,10 @@ impl Biller {
         })
     }
 
-    pub async fn get_checkout_session_plan(
+    pub async fn get_checkout_session(
         &self,
         session_id: &str,
-    ) -> Result<JsonPlan, BillingError> {
+    ) -> Result<SubscriptionId, BillingError> {
         let session_id = session_id
             .parse()
             .map_err(BillingError::CheckoutSessionId)?;
@@ -234,7 +244,7 @@ impl Biller {
             .subscription
             .take()
             .ok_or(BillingError::NoSubscription(checkout_session))?;
-        self.get_plan(&subscription.id()).await
+        Ok(subscription.id())
     }
 
     pub async fn get_or_create_customer(

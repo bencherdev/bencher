@@ -16,13 +16,10 @@ pub const DEFAULT_PRICE_NAME: &str = "default";
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewPlan {
-    pub customer: NonEmpty,
-    pub payment_method: NonEmpty,
+    pub checkout: NonEmpty,
     pub level: PlanLevel,
     pub entitlements: Option<Entitlements>,
-    pub organization: Option<OrganizationUuid>,
-    /// I agree to the Bencher Subscription Agreement (https://bencher.dev/legal/subscription)
-    pub i_agree: bool,
+    pub self_hosted: Option<OrganizationUuid>,
 }
 
 #[typeshare::typeshare]
