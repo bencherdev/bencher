@@ -41,6 +41,14 @@ const Plot = (props: Props) => {
 		setPerfActive(active);
 	};
 
+	const togglePerfActive = () => {
+		const allActive = perfActive.reduce((acc, curr) => {
+			return acc && curr;
+		});
+		const active = perfActive.map(() => !allActive);
+		setPerfActive(active);
+	};
+
 	let plot_ref: HTMLDivElement | undefined;
 	const plot_size = createElementSize(() => plot_ref);
 	const width = createMemo(() => plot_size.width ?? 100);
@@ -67,6 +75,7 @@ const Plot = (props: Props) => {
 				handleKey={props.handleKey}
 				perfActive={perfActive}
 				handlePerfActive={handlePerfActive}
+				togglePerfActive={togglePerfActive}
 			/>
 		</div>
 	);

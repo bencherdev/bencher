@@ -1,5 +1,5 @@
 import * as d3 from "d3";
-import { type Accessor, For, type Resource, Show } from "solid-js";
+import { type Accessor, For, type Resource, Show, createMemo } from "solid-js";
 import type { JsonPerf } from "../../../../types/bencher";
 
 export interface Props {
@@ -8,6 +8,7 @@ export interface Props {
 	perfData: Resource<JsonPerf>;
 	perfActive: boolean[];
 	handlePerfActive: (index: number) => void;
+	togglePerfActive: () => void;
 }
 
 const PlotKey = (props: Props) => {
@@ -20,6 +21,7 @@ const PlotKey = (props: Props) => {
 					perfActive={props.perfActive}
 					handleKey={props.handleKey}
 					handlePerfActive={props.handlePerfActive}
+					togglePerfActive={props.togglePerfActive}
 				/>
 			}
 		>
@@ -28,6 +30,7 @@ const PlotKey = (props: Props) => {
 				perfActive={props.perfActive}
 				handleKey={props.handleKey}
 				handlePerfActive={props.handlePerfActive}
+				togglePerfActive={props.togglePerfActive}
 			/>
 		</Show>
 	);
@@ -38,11 +41,17 @@ const ExpandedKey = (props: {
 	handleKey: (key: boolean) => void;
 	perfActive: boolean[];
 	handlePerfActive: (index: number) => void;
+	togglePerfActive: () => void;
 }) => {
 	return (
 		<div class="columns is-centered is-gapless is-multiline">
 			<div class="column is-narrow">
 				<MinimizeKeyButton handleKey={props.handleKey} />
+				<br />
+				<KeyToggle
+					perfActive={props.perfActive}
+					togglePerfActive={props.togglePerfActive}
+				/>
 			</div>
 			<For each={props.perfData()?.results}>
 				{(
@@ -77,11 +86,18 @@ const MinimizedKey = (props: {
 	handleKey: (key: boolean) => void;
 	perfActive: boolean[];
 	handlePerfActive: (index: number) => void;
+	togglePerfActive: () => void;
 }) => {
 	return (
 		<div class="columns is-centered is-vcentered is-gapless is-multiline is-mobile">
 			<div class="column is-narrow">
 				<MaximizeKeyButton handleKey={props.handleKey} />
+			</div>
+			<div class="column is-narrow">
+				<KeyToggle
+					perfActive={props.perfActive}
+					togglePerfActive={props.togglePerfActive}
+				/>
 			</div>
 			<For each={props.perfData()?.results}>
 				{(_result, index) => (
@@ -166,6 +182,36 @@ const KeyButton = (props: {
 			onClick={() => props.handlePerfActive(props.index())}
 		>
 			{number}
+		</button>
+	);
+};
+
+const KeyToggle = (props: {
+	perfActive: boolean[];
+	togglePerfActive: () => void;
+}) => {
+	const allActive = createMemo(() =>
+		props.perfActive.reduce((acc, curr) => {
+			return acc && curr;
+		}),
+	);
+
+	return (
+		<button
+			class="button is-small is-fullwidth is-primary is-inverted"
+			title={allActive() ? `Hide all plots` : `Show all plots`}
+			onClick={() => {
+				props.togglePerfActive();
+			}}
+		>
+			<span class="icon">
+				<Show
+					when={allActive()}
+					fallback={<i class="far fa-eye fa-1x" aria-hidden="true" />}
+				>
+					<i class="far fa-eye-slash fa-1x" aria-hidden="true" />
+				</Show>
+			</span>
 		</button>
 	);
 };

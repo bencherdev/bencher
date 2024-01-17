@@ -37,7 +37,7 @@ impl JsonNewStatistic {
         Self {
             test: StatisticKind::T,
             min_sample_size: None,
-            max_sample_size: Some(SampleSize::THIRTY),
+            max_sample_size: Some(SampleSize::TWO_FIFTY_SIX),
             window: None,
             lower_boundary: Some(Boundary::NINETY_EIGHT),
             upper_boundary: None,
@@ -48,7 +48,7 @@ impl JsonNewStatistic {
         Self {
             test: StatisticKind::T,
             min_sample_size: None,
-            max_sample_size: Some(SampleSize::THIRTY),
+            max_sample_size: Some(SampleSize::TWO_FIFTY_SIX),
             window: None,
             lower_boundary: None,
             upper_boundary: Some(Boundary::NINETY_EIGHT),
