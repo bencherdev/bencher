@@ -23,7 +23,7 @@ pub struct QueryBoundary {
     pub threshold_id: ThresholdId,
     pub statistic_id: StatisticId,
     pub metric_id: MetricId,
-    pub baseline: f64,
+    pub baseline: Option<f64>,
     pub lower_limit: Option<f64>,
     pub upper_limit: Option<f64>,
 }
@@ -42,7 +42,7 @@ impl QueryBoundary {
 
     pub fn into_json(self) -> JsonBoundary {
         JsonBoundary {
-            baseline: self.baseline.into(),
+            baseline: self.baseline.map(Into::into),
             lower_limit: self.lower_limit.map(Into::into),
             upper_limit: self.upper_limit.map(Into::into),
         }
@@ -56,7 +56,7 @@ pub struct InsertBoundary {
     pub threshold_id: ThresholdId,
     pub statistic_id: StatisticId,
     pub metric_id: MetricId,
-    pub baseline: f64,
+    pub baseline: Option<f64>,
     pub lower_limit: Option<f64>,
     pub upper_limit: Option<f64>,
 }

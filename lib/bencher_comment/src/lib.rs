@@ -209,6 +209,7 @@ impl ReportComment {
         html.push_str("</tr>");
     }
 
+    #[allow(clippy::too_many_lines)]
     fn html_benchmarks_table_body(
         &self,
         html: &mut String,
@@ -279,10 +280,14 @@ impl ReportComment {
 
                 if with_metrics {
                     let value = *value;
-                    // If there is a boundary then show the percentage difference
-                    if let Some(boundary) = boundary {
-                        let value_percent = if value.is_normal() && boundary.baseline.is_normal() {
-                            ((value - boundary.baseline) / boundary.baseline) * 100.0
+                    // If there is a boundary with a baseline then show the percentage difference
+                    if let Some(Boundary {
+                        baseline: Some(baseline),
+                        ..
+                    }) = boundary
+                    {
+                        let value_percent = if value.is_normal() && baseline.is_normal() {
+                            ((value - baseline) / baseline) * 100.0
                         } else {
                             0.0
                         };
@@ -533,7 +538,7 @@ impl BenchmarkUrl {
 
 #[derive(Clone, Copy)]
 pub struct Boundary {
-    baseline: f64,
+    baseline: Option<f64>,
     lower_limit: Option<f64>,
     upper_limit: Option<f64>,
 }
@@ -541,7 +546,7 @@ pub struct Boundary {
 impl From<JsonBoundary> for Boundary {
     fn from(json_boundary: JsonBoundary) -> Self {
         Self {
-            baseline: json_boundary.baseline.into(),
+            baseline: json_boundary.baseline.map(Into::into),
             lower_limit: json_boundary.lower_limit.map(Into::into),
             upper_limit: json_boundary.upper_limit.map(Into::into),
         }

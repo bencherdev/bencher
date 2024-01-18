@@ -35,9 +35,9 @@ pub struct JsonNewStatistic {
 impl JsonNewStatistic {
     pub fn lower_boundary() -> Self {
         Self {
-            test: StatisticKind::T,
+            test: StatisticKind::TTest,
             min_sample_size: None,
-            max_sample_size: Some(SampleSize::TWO_FIFTY_SIX),
+            max_sample_size: Some(SampleSize::TWO_FIFTY_FIVE),
             window: None,
             lower_boundary: Some(Boundary::NINETY_EIGHT),
             upper_boundary: None,
@@ -46,9 +46,9 @@ impl JsonNewStatistic {
 
     pub fn upper_boundary() -> Self {
         Self {
-            test: StatisticKind::T,
+            test: StatisticKind::TTest,
             min_sample_size: None,
-            max_sample_size: Some(SampleSize::TWO_FIFTY_SIX),
+            max_sample_size: Some(SampleSize::TWO_FIFTY_FIVE),
             window: None,
             lower_boundary: None,
             upper_boundary: Some(Boundary::NINETY_EIGHT),
@@ -91,8 +91,12 @@ pub struct JsonStatistic {
     pub created: DateTime,
 }
 
-const Z_INT: i32 = 0;
-const T_INT: i32 = 1;
+const Z_SCORE_INT: i32 = 0;
+const T_TEST_INT: i32 = 1;
+const STATIC_INT: i32 = 2;
+const PERCENTAGE_INT: i32 = 3;
+const IQR_INT: i32 = 4;
+const LOG_NORMAL_INT: i32 = 5;
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, derive_more::Display, Serialize, Deserialize)]
@@ -102,13 +106,21 @@ const T_INT: i32 = 1;
 #[serde(rename_all = "snake_case")]
 #[repr(i32)]
 pub enum StatisticKind {
-    Z = Z_INT,
-    T = T_INT,
+    #[serde(alias = "z")]
+    ZScore = Z_SCORE_INT,
+    #[serde(alias = "t")]
+    TTest = T_TEST_INT,
+    Static = STATIC_INT,
+    Percentage = PERCENTAGE_INT,
+    IQR = IQR_INT,
+    LogNormal = LOG_NORMAL_INT,
 }
 
 #[cfg(feature = "db")]
 mod statistic_kind {
-    use super::{StatisticKind, T_INT, Z_INT};
+    use super::{
+        StatisticKind, IQR_INT, LOG_NORMAL_INT, PERCENTAGE_INT, STATIC_INT, T_TEST_INT, Z_SCORE_INT,
+    };
 
     #[derive(Debug, thiserror::Error)]
     pub enum StatisticKindError {
@@ -126,8 +138,12 @@ mod statistic_kind {
             out: &mut diesel::serialize::Output<'b, '_, DB>,
         ) -> diesel::serialize::Result {
             match self {
-                Self::Z => T_INT.to_sql(out),
-                Self::T => Z_INT.to_sql(out),
+                Self::ZScore => T_TEST_INT.to_sql(out),
+                Self::TTest => Z_SCORE_INT.to_sql(out),
+                Self::Static => STATIC_INT.to_sql(out),
+                Self::Percentage => PERCENTAGE_INT.to_sql(out),
+                Self::IQR => IQR_INT.to_sql(out),
+                Self::LogNormal => LOG_NORMAL_INT.to_sql(out),
             }
         }
     }
@@ -139,8 +155,12 @@ mod statistic_kind {
     {
         fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
             match i32::from_sql(bytes)? {
-                T_INT => Ok(Self::Z),
-                Z_INT => Ok(Self::T),
+                T_TEST_INT => Ok(Self::ZScore),
+                Z_SCORE_INT => Ok(Self::TTest),
+                STATIC_INT => Ok(Self::Static),
+                PERCENTAGE_INT => Ok(Self::Percentage),
+                IQR_INT => Ok(Self::IQR),
+                LOG_NORMAL_INT => Ok(Self::LogNormal),
                 value => Err(Box::new(StatisticKindError::Invalid(value))),
             }
         }

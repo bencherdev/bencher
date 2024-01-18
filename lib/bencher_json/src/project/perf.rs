@@ -297,7 +297,7 @@ pub mod table {
                     let (baseline, lower_limit, upper_limit) =
                         if let Some(boundary) = metric.boundary {
                             (
-                                DisplayOption(Some(boundary.baseline)),
+                                DisplayOption(boundary.baseline),
                                 DisplayOption(boundary.lower_limit),
                                 DisplayOption(boundary.upper_limit),
                             )

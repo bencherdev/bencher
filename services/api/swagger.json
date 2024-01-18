@@ -6530,6 +6530,7 @@
         "type": "object",
         "properties": {
           "baseline": {
+            "nullable": true,
             "type": "number",
             "format": "double"
           },
@@ -6543,10 +6544,7 @@
             "type": "number",
             "format": "double"
           }
-        },
-        "required": [
-          "baseline"
-        ]
+        }
       },
       "JsonBranch": {
         "type": "object",
@@ -8994,8 +8992,12 @@
       "StatisticKind": {
         "type": "string",
         "enum": [
-          "z",
-          "t"
+          "z_score",
+          "t_test",
+          "static",
+          "percentage",
+          "i_q_r",
+          "log_normal"
         ]
       },
       "StatisticUuid": {

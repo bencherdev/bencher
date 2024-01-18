@@ -3,7 +3,7 @@ use bencher_json::project::threshold::StatisticKind;
 use bencher_json::{Boundary, SampleSize};
 use slog::Logger;
 
-use crate::limits::{MetricsLimits, TestKind};
+use crate::limits::{MetricsLimits, StatisticalTestKind};
 use crate::{BoundaryError, MetricsData};
 
 #[derive(Debug, Default)]
@@ -17,7 +17,7 @@ impl MetricsBoundary {
         log: &Logger,
         datum: f64,
         metrics_data: &MetricsData,
-        test: StatisticKind,
+        statistic_kind: StatisticKind,
         min_sample_size: Option<SampleSize>,
         lower_boundary: Option<Boundary>,
         upper_boundary: Option<Boundary>,
@@ -26,7 +26,7 @@ impl MetricsBoundary {
             log,
             datum,
             metrics_data,
-            test,
+            statistic_kind,
             min_sample_size,
             lower_boundary,
             upper_boundary,
@@ -38,13 +38,16 @@ impl MetricsBoundary {
         log: &Logger,
         datum: f64,
         metrics_data: &MetricsData,
-        test: StatisticKind,
+        statistic_kind: StatisticKind,
         min_sample_size: Option<SampleSize>,
         lower_boundary: Option<Boundary>,
         upper_boundary: Option<Boundary>,
     ) -> Result<Option<Self>, BoundaryError> {
+        // If there is no boundary, then simply return.
+        if lower_boundary.is_none() && upper_boundary.is_none() {
+            return Ok(None);
+        }
         let data = &metrics_data.data;
-
         // If there is a min sample size, then check to see if it is met.
         // Otherwise, simply return.
         if let Some(min_sample_size) = min_sample_size {
@@ -52,6 +55,81 @@ impl MetricsBoundary {
                 return Ok(None);
             }
         }
+
+        match statistic_kind {
+            StatisticKind::Static => Ok(Some(Self::new_static(
+                datum,
+                lower_boundary,
+                upper_boundary,
+            ))),
+            StatisticKind::Percentage => {
+                Self::new_percentage(log, datum, data, lower_boundary, upper_boundary)
+            },
+            StatisticKind::ZScore => Self::new_statistical(
+                log,
+                datum,
+                data,
+                StatisticalTestKind::Z,
+                lower_boundary,
+                upper_boundary,
+            ),
+            StatisticKind::TTest => Self::new_statistical(
+                log,
+                datum,
+                data,
+                #[allow(clippy::cast_precision_loss)]
+                StatisticalTestKind::T {
+                    freedom: (data.len() - 1) as f64,
+                },
+                lower_boundary,
+                upper_boundary,
+            ),
+            StatisticKind::IQR | StatisticKind::LogNormal => Ok(None),
+        }
+    }
+
+    fn new_static(
+        datum: f64,
+        lower_boundary: Option<Boundary>,
+        upper_boundary: Option<Boundary>,
+    ) -> Self {
+        let limits = MetricsLimits::new_static(lower_boundary, upper_boundary);
+        let outlier = limits.outlier(datum);
+
+        Self { limits, outlier }
+    }
+
+    fn new_percentage(
+        log: &Logger,
+        datum: f64,
+        data: &[f64],
+        lower_boundary: Option<Boundary>,
+        upper_boundary: Option<Boundary>,
+    ) -> Result<Option<Self>, BoundaryError> {
+        let lower_boundary = lower_boundary.map(TryInto::try_into).transpose()?;
+        let upper_boundary = upper_boundary.map(TryInto::try_into).transpose()?;
+
+        // Get the mean of the historical data.
+        let Some(mean) = mean(data) else {
+            return Ok(None);
+        };
+
+        let limits = MetricsLimits::new_percentage(log, mean, lower_boundary, upper_boundary);
+        let outlier = limits.outlier(datum);
+
+        Ok(Some(Self { limits, outlier }))
+    }
+
+    fn new_statistical(
+        log: &Logger,
+        datum: f64,
+        data: &[f64],
+        test_kind: StatisticalTestKind,
+        lower_boundary: Option<Boundary>,
+        upper_boundary: Option<Boundary>,
+    ) -> Result<Option<Self>, BoundaryError> {
+        let lower_boundary = lower_boundary.map(TryInto::try_into).transpose()?;
+        let upper_boundary = upper_boundary.map(TryInto::try_into).transpose()?;
 
         // Get the mean and standard deviation of the historical data.
         let Some(mean) = mean(data) else {
@@ -61,15 +139,7 @@ impl MetricsBoundary {
             return Ok(None);
         };
 
-        let test_kind = match test {
-            StatisticKind::Z => TestKind::Z,
-            // T test requires the degrees of freedom to calculate.
-            #[allow(clippy::cast_precision_loss)]
-            StatisticKind::T => TestKind::T {
-                freedom: (data.len() - 1) as f64,
-            },
-        };
-        let limits = MetricsLimits::new(
+        let limits = MetricsLimits::new_statistical(
             log,
             mean,
             std_dev,

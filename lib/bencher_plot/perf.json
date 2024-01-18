@@ -63,7 +63,7 @@
                         "upper_value": 7.77769537103983
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -84,7 +84,7 @@
                         "upper_value": 0.42888834111643304
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -105,7 +105,7 @@
                         "upper_value": 9.479894251306463
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -126,7 +126,7 @@
                         "upper_value": 2.230259455682984
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -147,7 +147,7 @@
                         "upper_value": 1.75790566632238
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -168,7 +168,7 @@
                         "upper_value": 7.919264225616493
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -189,7 +189,7 @@
                         "upper_value": 6.730513463250489
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -210,7 +210,7 @@
                         "upper_value": 1.705054902251107
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -268,7 +268,7 @@
                         "upper_value": 11.789734452643785
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -289,7 +289,7 @@
                         "upper_value": 12.792694983439862
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -310,7 +310,7 @@
                         "upper_value": 21.158211172220017
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -331,7 +331,7 @@
                         "upper_value": 15.275818030706564
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -352,7 +352,7 @@
                         "upper_value": 13.331938046472612
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -373,7 +373,7 @@
                         "upper_value": 12.455637319373857
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -394,7 +394,7 @@
                         "upper_value": 21.12576228548968
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -415,7 +415,7 @@
                         "upper_value": 16.2707194175332
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -473,7 +473,7 @@
                         "upper_value": 22.76681165664697
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -494,7 +494,7 @@
                         "upper_value": 26.52982327360401
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -515,7 +515,7 @@
                         "upper_value": 32.268709732786036
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -536,7 +536,7 @@
                         "upper_value": 29.16501676321623
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -557,7 +557,7 @@
                         "upper_value": 29.44490454213086
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -578,7 +578,7 @@
                         "upper_value": 23.218678960881793
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -599,7 +599,7 @@
                         "upper_value": 25.78546425970939
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -620,7 +620,7 @@
                         "upper_value": 22.54976815000825
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }

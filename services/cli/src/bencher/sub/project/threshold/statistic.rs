@@ -36,8 +36,8 @@ impl From<CliStatisticCreate> for Statistic {
 impl From<CliStatisticKind> for StatisticKind {
     fn from(kind: CliStatisticKind) -> Self {
         match kind {
-            CliStatisticKind::Z => Self::Z,
-            CliStatisticKind::T => Self::T,
+            CliStatisticKind::Z => Self::ZScore,
+            CliStatisticKind::T => Self::TTest,
         }
     }
 }

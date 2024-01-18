@@ -63,7 +63,7 @@
                         "upper_value": 0.0000021863651953225523
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -84,7 +84,7 @@
                         "upper_value": 0.000004124188962040768
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -105,7 +105,7 @@
                         "upper_value": 0.0000035618365115095084
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -126,7 +126,7 @@
                         "upper_value": 0.000008447478504790066
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -147,7 +147,7 @@
                         "upper_value": 0.0000023280234069152165
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -205,7 +205,7 @@
                         "upper_value": 0.0000219779016688185
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -226,7 +226,7 @@
                         "upper_value": 0.000019002152584547023
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -247,7 +247,7 @@
                         "upper_value": 0.000020445669032365805
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -268,7 +268,7 @@
                         "upper_value": 0.000013449995970619926
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -289,7 +289,7 @@
                         "upper_value": 0.00001180860973802758
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -347,7 +347,7 @@
                         "upper_value": 0.000023873490357497584
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -368,7 +368,7 @@
                         "upper_value": 0.000031828448670215165
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -389,7 +389,7 @@
                         "upper_value": 0.0000319116368820667
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -410,7 +410,7 @@
                         "upper_value": 0.00003232275122975994
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }
@@ -431,7 +431,7 @@
                         "upper_value": 0.00003266720891469727
                     },
                     "boundary": {
-                        "baseline": 0.0,
+                        "baseline": null,
                         "lower_limit": null,
                         "upper_limit": null
                     }

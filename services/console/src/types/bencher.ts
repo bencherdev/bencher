@@ -39,8 +39,12 @@ export interface JsonMeasure {
 }
 
 export enum StatisticKind {
-	Z = "z",
-	T = "t",
+	ZScore = "z_score",
+	TTest = "t_test",
+	Static = "static",
+	Percentage = "percentage",
+	IQR = "iqr",
+	LogNormal = "log_normal",
 }
 
 export type SampleSize = number;
@@ -69,7 +73,7 @@ export interface JsonThresholdStatistic {
 }
 
 export interface JsonBoundary {
-	baseline: number;
+	baseline?: number;
 	lower_limit?: number;
 	upper_limit?: number;
 }
@@ -181,6 +185,8 @@ export type ExpirationYear = number;
 export type ResourceId = string;
 
 export type Secret = string;
+
+export type StatisticalBoundary = number;
 
 export type Url = string;
 
