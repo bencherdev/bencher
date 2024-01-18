@@ -137,6 +137,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         with:
           path: |
             ~/.cargo/bin/
@@ -144,7 +145,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ env.CACHE_NAME }}
+          key: ${{ runner.os }}-cargo
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -161,6 +162,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         with:
           path: |
             ~/.cargo/bin/
@@ -168,7 +170,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-xtask-${{ env.CACHE_NAME }}
+          key: ${{ runner.os }}-cargo-xtask
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -204,7 +206,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ env.CACHE_NAME }}
+          key: ${{ runner.os }}-cargo
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -265,6 +267,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         with:
           path: |
             ~/.cargo/bin/
@@ -272,7 +275,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-xtask-${{ env.CACHE_NAME }}
+          key: ${{ runner.os }}-cargo-xtask
       - uses: rui314/setup-mold@v1
         if: matrix.os == 'ubuntu-latest'
         with:
@@ -291,6 +294,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         with:
           path: |
             ~/.cargo/bin/
@@ -298,7 +302,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-minus-${{ env.CACHE_NAME }}
+          key: ${{ runner.os }}-cargo-minus
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -314,6 +318,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         with:
           path: |
             ~/.cargo/bin/
@@ -321,7 +326,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-minus-${{ env.CACHE_NAME }}
+          key: ${{ runner.os }}-cargo-minus
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -353,7 +358,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-cli-${{ env.CACHE_NAME }}
+          key: ${{ runner.os }}-cargo
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -386,7 +391,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ env.CACHE_NAME }}
+          key: ${{ runner.os }}-cargo
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -403,6 +408,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         with:
           path: |
             ~/.cargo/bin/
@@ -410,7 +416,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-nightly-${{ env.CACHE_NAME }}
+          key: ${{ runner.os }}-cargo-nightly
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -472,6 +478,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         with:
           path: |
             ~/.cargo/bin/
@@ -479,7 +486,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-wasm-${{ env.CACHE_NAME }}
+          key: ${{ runner.os }}-cargo-wasm
       - uses: jetli/wasm-pack-action@v0.4.0
       - name: WASM pack `bencher_valid`
         working-directory: ./lib/bencher_valid
@@ -505,6 +512,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         with:
           path: |
             ~/.cargo/bin/
@@ -512,7 +520,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-wasm-${{ env.CACHE_NAME }}
+          key: ${{ runner.os }}-cargo-wasm
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -758,6 +766,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         with:
           path: |
             ~/.cargo/bin/
@@ -765,7 +774,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-xtask-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-xtask
       - name: Download CLI Artifact
         if: (!startsWith(matrix.build, 'windows'))
         uses: actions/download-artifact@v4
@@ -907,7 +916,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-xtask-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-xtask
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -945,7 +954,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-xtask-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-xtask
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -988,7 +997,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-cli-${{ env.CACHE_NAME }}
+          key: ${{ runner.os }}-cargo
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -1027,7 +1036,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-xtask-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-xtask
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -1067,7 +1076,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-xtask-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-xtask
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -1093,7 +1102,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-xtask-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-xtask
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -1133,7 +1142,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-xtask-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-xtask
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -1159,7 +1168,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-xtask-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-xtask
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -1295,7 +1304,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-xtask-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-xtask
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
