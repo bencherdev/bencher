@@ -92,7 +92,7 @@ impl MetricsBoundary {
                 lower_boundary,
                 upper_boundary,
             ),
-            StatisticKind::IQR => Ok(None),
+            StatisticKind::Iqr => Self::new_iqr(log, datum, data, lower_boundary, upper_boundary),
         }
     }
 
@@ -159,6 +159,33 @@ impl MetricsBoundary {
 
         Ok(Some(Self { limits, outlier }))
     }
+
+    fn new_iqr(
+        log: &Logger,
+        datum: f64,
+        data: &[f64],
+        lower_boundary: Option<Boundary>,
+        upper_boundary: Option<Boundary>,
+    ) -> Result<Option<Self>, BoundaryError> {
+        // TODO this needs to be majorly refactored
+        // Currently we are just doing the equivilant of `cdf` for IQR
+        // But really we need to do the inverse of `cdf` for IQR
+        // That is we need the actual values to compare and not just the percentages
+        let lower_boundary = lower_boundary.map(TryInto::try_into).transpose()?;
+        let upper_boundary = upper_boundary.map(TryInto::try_into).transpose()?;
+
+        // Get the quartiles the historical data.
+        let Some((q1, q3)) = quartiles(data) else {
+            return Ok(None);
+        };
+
+        let datum = relative_change(data[data.len() - 1], datum);
+
+        let limits = MetricsLimits::new_iqr(log, q1, q3, lower_boundary, upper_boundary);
+        let outlier = limits.outlier(datum);
+
+        Ok(Some(Self { limits, outlier }))
+    }
 }
 
 #[allow(clippy::cast_precision_loss)]
@@ -180,14 +207,57 @@ fn std_deviation(mean: f64, data: &[f64]) -> Option<f64> {
 fn variance(mean: f64, data: &[f64]) -> Option<f64> {
     // Do not calculate variance if there are less than 2 data points
     if data.len() < 2 {
-        return None;
+        None
+    } else {
+        Some(
+            data.iter()
+                .map(|value| (*value - mean).powi(2))
+                .sum::<f64>()
+                / data.len() as f64,
+        )
     }
-    Some(
-        data.iter()
-            .map(|value| (*value - mean).powi(2))
-            .sum::<f64>()
-            / data.len() as f64,
-    )
+}
+
+// https://github.com/aochagavia/rustls-bench-app/blob/c1b31a018d98547e201867b9b71df1c23e55b95c/ci-bench-runner/src/job/bench_pr.rs#L398
+// https://github.com/rust-lang/rustc-perf/blob/4f313add609f43e928e98132358e8426ed3969ae/site/src/comparison.rs#L1219
+// A number line could be divided like this:
+//
+// ------o-------o----------
+//       ^   ^   ^
+//       |   |   |
+//       |   |   |
+//       |   |   ---- +significance_threshold
+//       |   |
+//       |   - not significant, includes zero
+//       |
+//       ---- -significance_threshold()
+#[allow(clippy::indexing_slicing, clippy::integer_division)]
+fn quartiles(data: &[f64]) -> Option<(f64, f64)> {
+    // Do not calculate inter-quartile range if there are less than 2 data points
+    if data.len() < 2 {
+        None
+    } else {
+        let changes = percent_changes(data);
+        let q1 = changes[changes.len() / 4];
+        let q3 = changes[(changes.len() * 3) / 4];
+        Some((q1, q3))
+    }
+}
+
+// The percent change of the absolute deltas between adjacent results
+// sorted from smallest delta to largest
+fn percent_changes(data: &[f64]) -> Vec<f64> {
+    #[allow(clippy::indexing_slicing)]
+    let mut historic_changes = data
+        .windows(2)
+        .map(|window| relative_change(window[0], window[1]))
+        .collect::<Vec<_>>();
+    historic_changes.sort_unstable_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
+    historic_changes
+}
+
+fn relative_change(last: f64, next: f64) -> f64 {
+    (last - next).abs() / next
 }
 
 #[cfg(test)]
@@ -202,6 +272,7 @@ mod test {
     const DATA_TWO: [f64; 2] = [1.0, 2.0];
     const DATA_THREE: [f64; 3] = [1.0, 2.0, 3.0];
     const DATA_FIVE: [f64; 5] = [1.0, 2.0, 3.0, 4.0, 5.0];
+    const DATA_FIVE_DESC: [f64; 5] = [5.0, 4.0, 3.0, 2.0, 1.0];
     const DATA_CONST: [f64; 5] = [1.0, 1.0, 1.0, 1.0, 1.0];
 
     const MEAN_ZERO: f64 = 0.0;
@@ -465,5 +536,89 @@ mod test {
 
         let std_dev = std_deviation(MEAN_FIVE, &DATA_CONST).unwrap();
         assert_eq!(std_dev, 2.0);
+    }
+
+    #[test]
+    fn test_percent_changes_zero() {
+        let percent_changes = super::percent_changes(&DATA_ZERO);
+        assert_eq!(percent_changes, Vec::<f64>::new());
+    }
+
+    #[test]
+    fn test_percent_changes_one() {
+        let percent_changes = super::percent_changes(&DATA_ONE);
+        assert_eq!(percent_changes, Vec::<f64>::new());
+    }
+
+    #[test]
+    fn test_percent_changes_two() {
+        let percent_changes = super::percent_changes(&DATA_TWO);
+        assert_eq!(percent_changes, vec![1.0]);
+    }
+
+    #[test]
+    fn test_percent_changes_three() {
+        let percent_changes = super::percent_changes(&DATA_THREE);
+        assert_eq!(percent_changes, vec![0.5, 1.0]);
+    }
+
+    #[test]
+    fn test_percent_changes_five() {
+        let percent_changes = super::percent_changes(&DATA_FIVE);
+        assert_eq!(percent_changes, vec![0.25, 0.3333333333333333, 0.5, 1.0]);
+    }
+
+    #[test]
+    fn test_percent_changes_five_desc() {
+        let percent_changes = super::percent_changes(&DATA_FIVE_DESC);
+        assert_eq!(percent_changes, vec![0.2, 0.25, 0.3333333333333333, 0.5]);
+    }
+
+    #[test]
+    fn test_percent_changes_const() {
+        let percent_changes = super::percent_changes(&DATA_CONST);
+        assert_eq!(percent_changes, vec![0.0, 0.0, 0.0, 0.0]);
+    }
+
+    #[test]
+    fn test_quartiles_zero() {
+        let quartiles = super::quartiles(&DATA_ZERO);
+        assert_eq!(quartiles, None);
+    }
+
+    #[test]
+    fn test_quartiles_one() {
+        let quartiles = super::quartiles(&DATA_ONE);
+        assert_eq!(quartiles, None);
+    }
+
+    #[test]
+    fn test_quartiles_two() {
+        let quartiles = super::quartiles(&DATA_TWO);
+        assert_eq!(quartiles, Some((1.0, 1.0)));
+    }
+
+    #[test]
+    fn test_quartiles_three() {
+        let quartiles = super::quartiles(&DATA_THREE);
+        assert_eq!(quartiles, Some((0.5, 1.0)));
+    }
+
+    #[test]
+    fn test_quartiles_five() {
+        let quartiles = super::quartiles(&DATA_FIVE);
+        assert_eq!(quartiles, Some((0.3333333333333333, 1.0)));
+    }
+
+    #[test]
+    fn test_quartiles_five_desc() {
+        let quartiles = super::quartiles(&DATA_FIVE);
+        assert_eq!(quartiles, Some((0.3333333333333333, 1.0)));
+    }
+
+    #[test]
+    fn test_quartiles_const() {
+        let quartiles = super::quartiles(&DATA_CONST);
+        assert_eq!(quartiles, Some((0.0, 0.0)));
     }
 }

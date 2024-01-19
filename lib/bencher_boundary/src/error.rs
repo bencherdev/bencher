@@ -1,9 +1,11 @@
 #[derive(Debug, thiserror::Error)]
 pub enum BoundaryError {
-    #[error("Invalid statistical boundary: {0}")]
-    NormalBoundary(f64),
     #[error("Invalid percentage boundary: {0}")]
     PercentageBoundary(f64),
+    #[error("Invalid statistical boundary: {0}")]
+    NormalBoundary(f64),
+    #[error("Invalid inter-quartile range boundary: {0}")]
+    IqrBoundary(f64),
     #[error("Invalid Normal Distribution (mean: {mean} | std dev: {std_dev}): {error}")]
     Normal {
         mean: f64,

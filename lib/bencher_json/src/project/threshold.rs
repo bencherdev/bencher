@@ -113,7 +113,7 @@ pub enum StatisticKind {
     Static = STATIC_INT,
     Percentage = PERCENTAGE_INT,
     LogNormal = LOG_NORMAL_INT,
-    IQR = IQR_INT,
+    Iqr = IQR_INT,
 }
 
 #[cfg(feature = "db")]
@@ -143,7 +143,7 @@ mod statistic_kind {
                 Self::Static => STATIC_INT.to_sql(out),
                 Self::Percentage => PERCENTAGE_INT.to_sql(out),
                 Self::LogNormal => LOG_NORMAL_INT.to_sql(out),
-                Self::IQR => IQR_INT.to_sql(out),
+                Self::Iqr => IQR_INT.to_sql(out),
             }
         }
     }
@@ -160,7 +160,7 @@ mod statistic_kind {
                 STATIC_INT => Ok(Self::Static),
                 PERCENTAGE_INT => Ok(Self::Percentage),
                 LOG_NORMAL_INT => Ok(Self::LogNormal),
-                IQR_INT => Ok(Self::IQR),
+                IQR_INT => Ok(Self::Iqr),
                 value => Err(Box::new(StatisticKindError::Invalid(value))),
             }
         }

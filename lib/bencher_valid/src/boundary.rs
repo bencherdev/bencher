@@ -103,6 +103,10 @@ impl Boundary {
     pub fn is_valid_normal(boundary: f64) -> bool {
         is_valid_normal_boundary(boundary)
     }
+
+    pub fn is_valid_iqr(boundary: f64) -> bool {
+        is_valid_iqr_boundary(boundary)
+    }
 }
 
 #[cfg(feature = "db")]
@@ -152,6 +156,11 @@ pub fn is_valid_normal_boundary(boundary: f64) -> bool {
     } else {
         boundary < 1.0
     }
+}
+
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+pub fn is_valid_iqr_boundary(boundary: f64) -> bool {
+    boundary >= 0.0
 }
 
 #[cfg(test)]

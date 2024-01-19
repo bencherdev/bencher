@@ -81,3 +81,38 @@ impl From<NormalBoundary> for Boundary {
         f64::from(boundary).try_into().unwrap_or(Boundary::ZERO)
     }
 }
+
+#[derive(Debug, Clone, Copy)]
+pub struct IqrBoundary(OrderedFloat<f64>);
+
+impl TryFrom<f64> for IqrBoundary {
+    type Error = BoundaryError;
+
+    fn try_from(boundary: f64) -> Result<Self, Self::Error> {
+        // The inter-quartile range boundary must be greater than or equal to 0.0
+        Boundary::is_valid_iqr(boundary)
+            .then(|| Self(boundary.into()))
+            .ok_or(BoundaryError::IqrBoundary(boundary))
+    }
+}
+
+impl From<IqrBoundary> for f64 {
+    fn from(boundary: IqrBoundary) -> Self {
+        boundary.0.into()
+    }
+}
+
+impl TryFrom<Boundary> for IqrBoundary {
+    type Error = BoundaryError;
+
+    fn try_from(boundary: Boundary) -> Result<Self, Self::Error> {
+        f64::from(boundary).try_into()
+    }
+}
+
+impl From<IqrBoundary> for Boundary {
+    fn from(boundary: IqrBoundary) -> Self {
+        // This should never fail because Boundary is a superset of IqrBoundary
+        f64::from(boundary).try_into().unwrap_or(Boundary::ZERO)
+    }
+}

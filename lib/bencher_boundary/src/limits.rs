@@ -2,7 +2,7 @@ use bencher_json::{project::boundary::BoundaryLimit, Boundary};
 use slog::{debug, Logger};
 use statrs::distribution::{ContinuousCDF, LogNormal, Normal, StudentsT};
 
-use crate::{BoundaryError, NormalBoundary, PercentageBoundary};
+use crate::{BoundaryError, IqrBoundary, NormalBoundary, PercentageBoundary};
 
 #[derive(Debug, Default)]
 pub struct MetricsLimits {
@@ -145,6 +145,28 @@ impl MetricsLimits {
         })
     }
 
+    pub fn new_iqr(
+        log: &Logger,
+        q1: f64,
+        q3: f64,
+        lower_boundary: Option<IqrBoundary>,
+        upper_boundary: Option<IqrBoundary>,
+    ) -> Self {
+        if lower_boundary.is_none() && upper_boundary.is_none() {
+            return Self::default();
+        }
+
+        debug!(log, "IQR: q1={q1} | q3={q3}");
+        let lower = lower_boundary.map(|boundary| MetricsLimit::iqr_lower(q1, q3, boundary));
+        let upper = upper_boundary.map(|boundary| MetricsLimit::iqr_upper(q1, q3, boundary));
+
+        Self {
+            baseline: Some(q3 - q1),
+            lower,
+            upper,
+        }
+    }
+
     // An outlier occurs when the  datum exceeds a boundary limit.
     pub fn outlier(&self, datum: f64) -> Option<BoundaryLimit> {
         match (self.lower.as_ref(), self.upper.as_ref()) {
@@ -187,6 +209,18 @@ impl MetricsLimit {
     fn normal_upper(abs_limit: f64) -> Self {
         Self { value: abs_limit }
     }
+
+    fn iqr_lower(q1: f64, q3: f64, boundary: IqrBoundary) -> Self {
+        Self {
+            value: q1 - (q3 - q1) * f64::from(boundary),
+        }
+    }
+
+    fn iqr_upper(q1: f64, q3: f64, boundary: IqrBoundary) -> Self {
+        Self {
+            value: q3 + (q3 - q1) * f64::from(boundary),
+        }
+    }
 }
 
 impl From<MetricsLimit> for f64 {
@@ -212,13 +246,15 @@ mod test {
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
-    use crate::{NormalBoundary, PercentageBoundary};
+    use crate::{IqrBoundary, NormalBoundary, PercentageBoundary};
 
     use super::{MetricsLimit, MetricsLimits, NormalTestKind};
 
     const MEAN: f64 = 0.0;
     const STD_DEV: f64 = 1.0;
     const FREEDOM: f64 = 5.0;
+    const IQR_Q1: f64 = -1.0;
+    const IQR_Q3: f64 = 1.0;
 
     static NEGATIVE_STATIC_LIMIT: Lazy<Boundary> =
         Lazy::new(|| (-5.0).try_into().expect("Failed to parse boundary."));
@@ -246,6 +282,13 @@ mod test {
     const T_LIMIT: f64 = 1.1557673428942912;
     const LOG_LIMIT: f64 = 2.8191070556640625;
 
+    static SIGNIFICANCE_THRESHOLD: Lazy<IqrBoundary> = Lazy::new(|| {
+        2.0.try_into()
+            .expect("Failed to parse inter-quartile range boundary.")
+    });
+    const IQR_LIMIT: f64 = 5.0;
+
+    const IQR_NEGATIVE_OUTLIER: f64 = -6.0;
     const LOG_NORMAL_NEGATIVE_OUTLIER: f64 = -3.0;
     const NORMAL_NEGATIVE_OUTLIER: f64 = -1.5;
     const NORMAL_NEGATIVE: f64 = -1.0;
@@ -253,6 +296,7 @@ mod test {
     const NORMAL_POSITIVE: f64 = 1.0;
     const NORMAL_POSITIVE_OUTLIER: f64 = 1.5;
     const LOG_NORMAL_POSITIVE_OUTLIER: f64 = 3.0;
+    const IQR_POSITIVE_OUTLIER: f64 = 6.0;
 
     #[test]
     fn test_limits_static_none() {
@@ -959,6 +1003,137 @@ mod test {
         assert_eq!(side, None);
 
         let side = limits.outlier(LOG_NORMAL_POSITIVE_OUTLIER);
+        assert_eq!(side, Some(BoundaryLimit::Upper));
+    }
+
+    #[test]
+    fn test_limits_iqr_none() {
+        let log = bootstrap_logger();
+        let limits = MetricsLimits::new_iqr(&log, IQR_Q1, IQR_Q3, None, None);
+        assert_eq!(limits.baseline, None);
+        assert_eq!(limits.lower, None);
+        assert_eq!(limits.upper, None);
+
+        let side = limits.outlier(NORMAL_NEGATIVE_OUTLIER);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_NEGATIVE);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_ZERO);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_POSITIVE);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_POSITIVE_OUTLIER);
+        assert_eq!(side, None);
+    }
+
+    #[test]
+    fn test_limits_iqr_lower() {
+        let log = bootstrap_logger();
+        let limits =
+            MetricsLimits::new_iqr(&log, IQR_Q1, IQR_Q3, Some(*SIGNIFICANCE_THRESHOLD), None);
+        assert_eq!(
+            OrderedFloat::from(limits.baseline.unwrap()),
+            OrderedFloat::from(IQR_Q3 - IQR_Q1)
+        );
+        assert_eq!(limits.lower, Some(MetricsLimit { value: -IQR_LIMIT }));
+        assert_eq!(limits.upper, None);
+
+        let side = limits.outlier(IQR_NEGATIVE_OUTLIER);
+        assert_eq!(side, Some(BoundaryLimit::Lower));
+
+        let side = limits.outlier(NORMAL_NEGATIVE_OUTLIER);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_NEGATIVE);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_ZERO);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_POSITIVE);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_POSITIVE_OUTLIER);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(IQR_POSITIVE_OUTLIER);
+        assert_eq!(side, None);
+    }
+
+    #[test]
+    fn test_limits_iqr_upper() {
+        let log = bootstrap_logger();
+        let limits =
+            MetricsLimits::new_iqr(&log, IQR_Q1, IQR_Q3, None, Some(*SIGNIFICANCE_THRESHOLD));
+        assert_eq!(
+            OrderedFloat::from(limits.baseline.unwrap()),
+            OrderedFloat::from(IQR_Q3 - IQR_Q1)
+        );
+        assert_eq!(limits.lower, None);
+        assert_eq!(limits.upper, Some(MetricsLimit { value: IQR_LIMIT }));
+
+        let side = limits.outlier(IQR_NEGATIVE_OUTLIER);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_NEGATIVE_OUTLIER);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_NEGATIVE);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_ZERO);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_POSITIVE);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_POSITIVE_OUTLIER);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(IQR_POSITIVE_OUTLIER);
+        assert_eq!(side, Some(BoundaryLimit::Upper));
+    }
+
+    #[test]
+    fn test_limits_iqr_both() {
+        let log = bootstrap_logger();
+        let limits = MetricsLimits::new_iqr(
+            &log,
+            IQR_Q1,
+            IQR_Q3,
+            Some(*SIGNIFICANCE_THRESHOLD),
+            Some(*SIGNIFICANCE_THRESHOLD),
+        );
+        assert_eq!(
+            OrderedFloat::from(limits.baseline.unwrap()),
+            OrderedFloat::from(IQR_Q3 - IQR_Q1)
+        );
+        assert_eq!(limits.lower, Some(MetricsLimit { value: -IQR_LIMIT }));
+        assert_eq!(limits.upper, Some(MetricsLimit { value: IQR_LIMIT }));
+
+        let side = limits.outlier(IQR_NEGATIVE_OUTLIER);
+        assert_eq!(side, Some(BoundaryLimit::Lower));
+
+        let side = limits.outlier(NORMAL_NEGATIVE_OUTLIER);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_NEGATIVE);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_ZERO);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_POSITIVE);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_POSITIVE_OUTLIER);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(IQR_POSITIVE_OUTLIER);
         assert_eq!(side, Some(BoundaryLimit::Upper));
     }
 }
