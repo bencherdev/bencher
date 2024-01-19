@@ -3,7 +3,7 @@ use bencher_json::project::threshold::StatisticKind;
 use bencher_json::{Boundary, SampleSize};
 use slog::Logger;
 
-use crate::limits::{MetricsLimits, StatisticalTestKind};
+use crate::limits::{MetricsLimits, NormalTestKind};
 use crate::{BoundaryError, MetricsData};
 
 #[derive(Debug, Default)]
@@ -65,26 +65,34 @@ impl MetricsBoundary {
             StatisticKind::Percentage => {
                 Self::new_percentage(log, datum, data, lower_boundary, upper_boundary)
             },
-            StatisticKind::ZScore => Self::new_statistical(
+            StatisticKind::ZScore => Self::new_normal(
                 log,
                 datum,
                 data,
-                StatisticalTestKind::Z,
+                NormalTestKind::Z,
                 lower_boundary,
                 upper_boundary,
             ),
-            StatisticKind::TTest => Self::new_statistical(
+            StatisticKind::TTest => Self::new_normal(
                 log,
                 datum,
                 data,
                 #[allow(clippy::cast_precision_loss)]
-                StatisticalTestKind::T {
+                NormalTestKind::T {
                     freedom: (data.len() - 1) as f64,
                 },
                 lower_boundary,
                 upper_boundary,
             ),
-            StatisticKind::IQR | StatisticKind::LogNormal => Ok(None),
+            StatisticKind::LogNormal => Self::new_normal(
+                log,
+                datum,
+                data,
+                NormalTestKind::Log,
+                lower_boundary,
+                upper_boundary,
+            ),
+            StatisticKind::IQR => Ok(None),
         }
     }
 
@@ -120,11 +128,11 @@ impl MetricsBoundary {
         Ok(Some(Self { limits, outlier }))
     }
 
-    fn new_statistical(
+    fn new_normal(
         log: &Logger,
         datum: f64,
         data: &[f64],
-        test_kind: StatisticalTestKind,
+        test_kind: NormalTestKind,
         lower_boundary: Option<Boundary>,
         upper_boundary: Option<Boundary>,
     ) -> Result<Option<Self>, BoundaryError> {
@@ -139,7 +147,7 @@ impl MetricsBoundary {
             return Ok(None);
         };
 
-        let limits = MetricsLimits::new_statistical(
+        let limits = MetricsLimits::new_normal(
             log,
             mean,
             std_dev,

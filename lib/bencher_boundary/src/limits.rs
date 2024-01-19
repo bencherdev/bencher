@@ -1,8 +1,8 @@
 use bencher_json::{project::boundary::BoundaryLimit, Boundary};
 use slog::{debug, Logger};
-use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
+use statrs::distribution::{ContinuousCDF, LogNormal, Normal, StudentsT};
 
-use crate::{BoundaryError, PercentageBoundary, StatisticalBoundary};
+use crate::{BoundaryError, NormalBoundary, PercentageBoundary};
 
 #[derive(Debug, Default)]
 pub struct MetricsLimits {
@@ -17,9 +17,10 @@ pub struct MetricsLimit {
 }
 
 #[derive(Clone, Copy)]
-pub enum StatisticalTestKind {
+pub enum NormalTestKind {
     Z,
     T { freedom: f64 },
+    Log,
 }
 
 impl MetricsLimits {
@@ -52,13 +53,13 @@ impl MetricsLimits {
         }
     }
 
-    pub fn new_statistical(
+    pub fn new_normal(
         log: &Logger,
         mean: f64,
         std_dev: f64,
-        test_kind: StatisticalTestKind,
-        lower_boundary: Option<StatisticalBoundary>,
-        upper_boundary: Option<StatisticalBoundary>,
+        test_kind: NormalTestKind,
+        lower_boundary: Option<NormalBoundary>,
+        upper_boundary: Option<NormalBoundary>,
     ) -> Result<Self, BoundaryError> {
         if lower_boundary.is_none() && upper_boundary.is_none() {
             return Ok(Self::default());
@@ -66,7 +67,7 @@ impl MetricsLimits {
 
         Ok(match test_kind {
             // Create a normal distribution and calculate the boundary limits for the threshold based on the boundary percentiles.
-            StatisticalTestKind::Z => {
+            NormalTestKind::Z => {
                 debug!(log, "Normal distribution: mean={mean}, std_dev={std_dev}");
                 let normal = Normal::new(mean, std_dev).map_err(|error| BoundaryError::Normal {
                     mean,
@@ -75,11 +76,11 @@ impl MetricsLimits {
                 })?;
                 let lower = lower_boundary.map(|limit| {
                     let abs_limit = normal.inverse_cdf(limit.into());
-                    MetricsLimit::statistical_lower(mean, abs_limit)
+                    MetricsLimit::normal_lower(mean, abs_limit)
                 });
                 let upper = upper_boundary.map(|limit| {
                     let abs_limit = normal.inverse_cdf(limit.into());
-                    MetricsLimit::statistical_upper(abs_limit)
+                    MetricsLimit::normal_upper(abs_limit)
                 });
                 Self {
                     baseline: Some(mean),
@@ -88,7 +89,7 @@ impl MetricsLimits {
                 }
             },
             // Create a Student's t distribution and calculate the boundary limits for the threshold based on the boundary percentiles.
-            StatisticalTestKind::T { freedom } => {
+            NormalTestKind::T { freedom } => {
                 debug!(
                     log,
                     "Students T distribution: mean={mean}, scale={std_dev}, freedom={freedom}"
@@ -103,11 +104,37 @@ impl MetricsLimits {
                 })?;
                 let lower = lower_boundary.map(|limit| {
                     let abs_limit = students_t.inverse_cdf(limit.into());
-                    MetricsLimit::statistical_lower(mean, abs_limit)
+                    MetricsLimit::normal_lower(mean, abs_limit)
                 });
                 let upper = upper_boundary.map(|limit| {
                     let abs_limit = students_t.inverse_cdf(limit.into());
-                    MetricsLimit::statistical_upper(abs_limit)
+                    MetricsLimit::normal_upper(abs_limit)
+                });
+                Self {
+                    baseline: Some(mean),
+                    lower,
+                    upper,
+                }
+            },
+            // Create a log normal distribution and calculate the boundary limits for the threshold based on the boundary percentiles.
+            NormalTestKind::Log => {
+                debug!(
+                    log,
+                    "Log Normal distribution: mean={mean}, std_dev={std_dev}"
+                );
+                let normal =
+                    LogNormal::new(mean, std_dev).map_err(|error| BoundaryError::LogNormal {
+                        mean,
+                        std_dev,
+                        error,
+                    })?;
+                let lower = lower_boundary.map(|limit| {
+                    let abs_limit = normal.inverse_cdf(limit.into());
+                    MetricsLimit::normal_lower(mean, abs_limit)
+                });
+                let upper = upper_boundary.map(|limit| {
+                    let abs_limit = normal.inverse_cdf(limit.into());
+                    MetricsLimit::normal_upper(abs_limit)
                 });
                 Self {
                     baseline: Some(mean),
@@ -151,13 +178,13 @@ impl MetricsLimit {
     }
 
     // Flip the absolute limit to the other side of the mean, creating the actual boundary limit.
-    fn statistical_lower(mean: f64, abs_limit: f64) -> Self {
+    fn normal_lower(mean: f64, abs_limit: f64) -> Self {
         Self {
             value: mean * 2.0 - abs_limit,
         }
     }
 
-    fn statistical_upper(abs_limit: f64) -> Self {
+    fn normal_upper(abs_limit: f64) -> Self {
         Self { value: abs_limit }
     }
 }
@@ -185,9 +212,9 @@ mod test {
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
-    use crate::{PercentageBoundary, StatisticalBoundary};
+    use crate::{NormalBoundary, PercentageBoundary};
 
-    use super::{MetricsLimit, MetricsLimits, StatisticalTestKind};
+    use super::{MetricsLimit, MetricsLimits, NormalTestKind};
 
     const MEAN: f64 = 0.0;
     const STD_DEV: f64 = 1.0;
@@ -211,18 +238,21 @@ mod test {
     const PERCENTAGE_NEGATIVE: f64 = -4.0;
     const PERCENTAGE_POSITIVE: f64 = 6.0;
 
-    static PERCENTILE: Lazy<StatisticalBoundary> = Lazy::new(|| {
+    static PERCENTILE: Lazy<NormalBoundary> = Lazy::new(|| {
         0.85.try_into()
             .expect("Failed to parse statistical boundary.")
     });
     const Z_LIMIT: f64 = 1.0364333894937896;
     const T_LIMIT: f64 = 1.1557673428942912;
+    const LOG_LIMIT: f64 = 2.8191070556640625;
 
-    const DATUM_NEGATIVE_OUTLIER: f64 = -1.5;
-    const DATUM_NEGATIVE: f64 = -1.0;
-    const DATUM_ZERO: f64 = 0.0;
-    const DATUM_POSITIVE: f64 = 1.0;
-    const DATUM_POSITIVE_OUTLIER: f64 = 1.5;
+    const LOG_NORMAL_NEGATIVE_OUTLIER: f64 = -3.0;
+    const NORMAL_NEGATIVE_OUTLIER: f64 = -1.5;
+    const NORMAL_NEGATIVE: f64 = -1.0;
+    const NORMAL_ZERO: f64 = 0.0;
+    const NORMAL_POSITIVE: f64 = 1.0;
+    const NORMAL_POSITIVE_OUTLIER: f64 = 1.5;
+    const LOG_NORMAL_POSITIVE_OUTLIER: f64 = 3.0;
 
     #[test]
     fn test_limits_static_none() {
@@ -467,36 +497,35 @@ mod test {
     fn test_limits_z_none() {
         let log = bootstrap_logger();
         let limits =
-            MetricsLimits::new_statistical(&log, MEAN, STD_DEV, StatisticalTestKind::Z, None, None)
-                .unwrap();
+            MetricsLimits::new_normal(&log, MEAN, STD_DEV, NormalTestKind::Z, None, None).unwrap();
         assert_eq!(limits.baseline, None);
         assert_eq!(limits.lower, None);
         assert_eq!(limits.upper, None);
 
-        let side = limits.outlier(DATUM_NEGATIVE_OUTLIER);
+        let side = limits.outlier(NORMAL_NEGATIVE_OUTLIER);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_NEGATIVE);
+        let side = limits.outlier(NORMAL_NEGATIVE);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_ZERO);
+        let side = limits.outlier(NORMAL_ZERO);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_POSITIVE);
+        let side = limits.outlier(NORMAL_POSITIVE);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_POSITIVE_OUTLIER);
+        let side = limits.outlier(NORMAL_POSITIVE_OUTLIER);
         assert_eq!(side, None);
     }
 
     #[test]
     fn test_limits_z_lower() {
         let log = bootstrap_logger();
-        let limits = MetricsLimits::new_statistical(
+        let limits = MetricsLimits::new_normal(
             &log,
             MEAN,
             STD_DEV,
-            StatisticalTestKind::Z,
+            NormalTestKind::Z,
             Some(*PERCENTILE),
             None,
         )
@@ -508,30 +537,30 @@ mod test {
         assert_eq!(limits.lower, Some(MetricsLimit { value: -Z_LIMIT }));
         assert_eq!(limits.upper, None);
 
-        let side = limits.outlier(DATUM_NEGATIVE_OUTLIER);
+        let side = limits.outlier(NORMAL_NEGATIVE_OUTLIER);
         assert_eq!(side, Some(BoundaryLimit::Lower));
 
-        let side = limits.outlier(DATUM_NEGATIVE);
+        let side = limits.outlier(NORMAL_NEGATIVE);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_ZERO);
+        let side = limits.outlier(NORMAL_ZERO);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_POSITIVE);
+        let side = limits.outlier(NORMAL_POSITIVE);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_POSITIVE_OUTLIER);
+        let side = limits.outlier(NORMAL_POSITIVE_OUTLIER);
         assert_eq!(side, None);
     }
 
     #[test]
     fn test_limits_z_upper() {
         let log = bootstrap_logger();
-        let limits = MetricsLimits::new_statistical(
+        let limits = MetricsLimits::new_normal(
             &log,
             MEAN,
             STD_DEV,
-            StatisticalTestKind::Z,
+            NormalTestKind::Z,
             None,
             Some(*PERCENTILE),
         )
@@ -543,30 +572,30 @@ mod test {
         assert_eq!(limits.lower, None);
         assert_eq!(limits.upper, Some(MetricsLimit { value: Z_LIMIT }));
 
-        let side = limits.outlier(DATUM_NEGATIVE_OUTLIER);
+        let side = limits.outlier(NORMAL_NEGATIVE_OUTLIER);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_NEGATIVE);
+        let side = limits.outlier(NORMAL_NEGATIVE);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_ZERO);
+        let side = limits.outlier(NORMAL_ZERO);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_POSITIVE);
+        let side = limits.outlier(NORMAL_POSITIVE);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_POSITIVE_OUTLIER);
+        let side = limits.outlier(NORMAL_POSITIVE_OUTLIER);
         assert_eq!(side, Some(BoundaryLimit::Upper));
     }
 
     #[test]
     fn test_limits_z_both() {
         let log = bootstrap_logger();
-        let limits = MetricsLimits::new_statistical(
+        let limits = MetricsLimits::new_normal(
             &log,
             MEAN,
             STD_DEV,
-            StatisticalTestKind::Z,
+            NormalTestKind::Z,
             Some(*PERCENTILE),
             Some(*PERCENTILE),
         )
@@ -578,19 +607,19 @@ mod test {
         assert_eq!(limits.lower, Some(MetricsLimit { value: -Z_LIMIT }));
         assert_eq!(limits.upper, Some(MetricsLimit { value: Z_LIMIT }));
 
-        let side = limits.outlier(DATUM_NEGATIVE_OUTLIER);
+        let side = limits.outlier(NORMAL_NEGATIVE_OUTLIER);
         assert_eq!(side, Some(BoundaryLimit::Lower));
 
-        let side = limits.outlier(DATUM_NEGATIVE);
+        let side = limits.outlier(NORMAL_NEGATIVE);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_ZERO);
+        let side = limits.outlier(NORMAL_ZERO);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_POSITIVE);
+        let side = limits.outlier(NORMAL_POSITIVE);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_POSITIVE_OUTLIER);
+        let side = limits.outlier(NORMAL_POSITIVE_OUTLIER);
         assert_eq!(side, Some(BoundaryLimit::Upper));
     }
 
@@ -599,11 +628,11 @@ mod test {
         const MEAN_100: f64 = 100.0;
         let log = bootstrap_logger();
         let boundary = 0.977.try_into().expect("Failed to create boundary.");
-        let limits = MetricsLimits::new_statistical(
+        let limits = MetricsLimits::new_normal(
             &log,
             MEAN_100,
             10.0,
-            StatisticalTestKind::Z,
+            NormalTestKind::Z,
             Some(boundary),
             Some(boundary),
         )
@@ -644,11 +673,11 @@ mod test {
     #[test]
     fn test_limits_t_none() {
         let log = bootstrap_logger();
-        let limits = MetricsLimits::new_statistical(
+        let limits = MetricsLimits::new_normal(
             &log,
             MEAN,
             STD_DEV,
-            StatisticalTestKind::T { freedom: FREEDOM },
+            NormalTestKind::T { freedom: FREEDOM },
             None,
             None,
         )
@@ -657,30 +686,30 @@ mod test {
         assert_eq!(limits.lower, None);
         assert_eq!(limits.upper, None);
 
-        let side = limits.outlier(DATUM_NEGATIVE_OUTLIER);
+        let side = limits.outlier(NORMAL_NEGATIVE_OUTLIER);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_NEGATIVE);
+        let side = limits.outlier(NORMAL_NEGATIVE);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_ZERO);
+        let side = limits.outlier(NORMAL_ZERO);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_POSITIVE);
+        let side = limits.outlier(NORMAL_POSITIVE);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_POSITIVE_OUTLIER);
+        let side = limits.outlier(NORMAL_POSITIVE_OUTLIER);
         assert_eq!(side, None);
     }
 
     #[test]
     fn test_limits_t_lower() {
         let log = bootstrap_logger();
-        let limits = MetricsLimits::new_statistical(
+        let limits = MetricsLimits::new_normal(
             &log,
             MEAN,
             STD_DEV,
-            StatisticalTestKind::T { freedom: FREEDOM },
+            NormalTestKind::T { freedom: FREEDOM },
             Some(*PERCENTILE),
             None,
         )
@@ -692,30 +721,30 @@ mod test {
         assert_eq!(limits.lower, Some(MetricsLimit { value: -T_LIMIT }));
         assert_eq!(limits.upper, None);
 
-        let side = limits.outlier(DATUM_NEGATIVE_OUTLIER);
+        let side = limits.outlier(NORMAL_NEGATIVE_OUTLIER);
         assert_eq!(side, Some(BoundaryLimit::Lower));
 
-        let side = limits.outlier(DATUM_NEGATIVE);
+        let side = limits.outlier(NORMAL_NEGATIVE);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_ZERO);
+        let side = limits.outlier(NORMAL_ZERO);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_POSITIVE);
+        let side = limits.outlier(NORMAL_POSITIVE);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_POSITIVE_OUTLIER);
+        let side = limits.outlier(NORMAL_POSITIVE_OUTLIER);
         assert_eq!(side, None);
     }
 
     #[test]
     fn test_limits_t_upper() {
         let log = bootstrap_logger();
-        let limits = MetricsLimits::new_statistical(
+        let limits = MetricsLimits::new_normal(
             &log,
             MEAN,
             STD_DEV,
-            StatisticalTestKind::T { freedom: FREEDOM },
+            NormalTestKind::T { freedom: FREEDOM },
             None,
             Some(*PERCENTILE),
         )
@@ -727,30 +756,30 @@ mod test {
         assert_eq!(limits.lower, None);
         assert_eq!(limits.upper, Some(MetricsLimit { value: T_LIMIT }));
 
-        let side = limits.outlier(DATUM_NEGATIVE_OUTLIER);
+        let side = limits.outlier(NORMAL_NEGATIVE_OUTLIER);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_NEGATIVE);
+        let side = limits.outlier(NORMAL_NEGATIVE);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_ZERO);
+        let side = limits.outlier(NORMAL_ZERO);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_POSITIVE);
+        let side = limits.outlier(NORMAL_POSITIVE);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_POSITIVE_OUTLIER);
+        let side = limits.outlier(NORMAL_POSITIVE_OUTLIER);
         assert_eq!(side, Some(BoundaryLimit::Upper));
     }
 
     #[test]
     fn test_limits_t_both() {
         let log = bootstrap_logger();
-        let limits = MetricsLimits::new_statistical(
+        let limits = MetricsLimits::new_normal(
             &log,
             MEAN,
             STD_DEV,
-            StatisticalTestKind::T { freedom: FREEDOM },
+            NormalTestKind::T { freedom: FREEDOM },
             Some(*PERCENTILE),
             Some(*PERCENTILE),
         )
@@ -762,19 +791,174 @@ mod test {
         assert_eq!(limits.lower, Some(MetricsLimit { value: -T_LIMIT }));
         assert_eq!(limits.upper, Some(MetricsLimit { value: T_LIMIT }));
 
-        let side = limits.outlier(DATUM_NEGATIVE_OUTLIER);
+        let side = limits.outlier(NORMAL_NEGATIVE_OUTLIER);
         assert_eq!(side, Some(BoundaryLimit::Lower));
 
-        let side = limits.outlier(DATUM_NEGATIVE);
+        let side = limits.outlier(NORMAL_NEGATIVE);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_ZERO);
+        let side = limits.outlier(NORMAL_ZERO);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_POSITIVE);
+        let side = limits.outlier(NORMAL_POSITIVE);
         assert_eq!(side, None);
 
-        let side = limits.outlier(DATUM_POSITIVE_OUTLIER);
+        let side = limits.outlier(NORMAL_POSITIVE_OUTLIER);
+        assert_eq!(side, Some(BoundaryLimit::Upper));
+    }
+
+    #[test]
+    fn test_limits_log_normal_none() {
+        let log = bootstrap_logger();
+        let limits =
+            MetricsLimits::new_normal(&log, MEAN, STD_DEV, NormalTestKind::Log, None, None)
+                .unwrap();
+        assert_eq!(limits.baseline, None);
+        assert_eq!(limits.lower, None);
+        assert_eq!(limits.upper, None);
+
+        let side = limits.outlier(LOG_NORMAL_NEGATIVE_OUTLIER);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_NEGATIVE_OUTLIER);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_NEGATIVE);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_ZERO);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_POSITIVE);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_POSITIVE_OUTLIER);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(LOG_NORMAL_POSITIVE_OUTLIER);
+        assert_eq!(side, None);
+    }
+
+    #[test]
+    fn test_limits_log_normal_lower() {
+        let log = bootstrap_logger();
+        let limits = MetricsLimits::new_normal(
+            &log,
+            MEAN,
+            STD_DEV,
+            NormalTestKind::Log,
+            Some(*PERCENTILE),
+            None,
+        )
+        .unwrap();
+        assert_eq!(
+            OrderedFloat::from(limits.baseline.unwrap()),
+            OrderedFloat::from(MEAN)
+        );
+        assert_eq!(limits.lower, Some(MetricsLimit { value: -LOG_LIMIT }));
+        assert_eq!(limits.upper, None);
+
+        let side = limits.outlier(LOG_NORMAL_NEGATIVE_OUTLIER);
+        assert_eq!(side, Some(BoundaryLimit::Lower));
+
+        let side = limits.outlier(NORMAL_NEGATIVE_OUTLIER);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_NEGATIVE);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_ZERO);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_POSITIVE);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_POSITIVE_OUTLIER);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(LOG_NORMAL_POSITIVE_OUTLIER);
+        assert_eq!(side, None);
+    }
+
+    #[test]
+    fn test_limits_log_normal_upper() {
+        let log = bootstrap_logger();
+        let limits = MetricsLimits::new_normal(
+            &log,
+            MEAN,
+            STD_DEV,
+            NormalTestKind::Log,
+            None,
+            Some(*PERCENTILE),
+        )
+        .unwrap();
+        assert_eq!(
+            OrderedFloat::from(limits.baseline.unwrap()),
+            OrderedFloat::from(MEAN)
+        );
+        assert_eq!(limits.lower, None);
+        assert_eq!(limits.upper, Some(MetricsLimit { value: LOG_LIMIT }));
+
+        let side = limits.outlier(LOG_NORMAL_NEGATIVE_OUTLIER);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_NEGATIVE_OUTLIER);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_NEGATIVE);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_ZERO);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_POSITIVE);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_POSITIVE_OUTLIER);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(LOG_NORMAL_POSITIVE_OUTLIER);
+        assert_eq!(side, Some(BoundaryLimit::Upper));
+    }
+
+    #[test]
+    fn test_limits_long_normal_both() {
+        let log = bootstrap_logger();
+        let limits = MetricsLimits::new_normal(
+            &log,
+            MEAN,
+            STD_DEV,
+            NormalTestKind::Log,
+            Some(*PERCENTILE),
+            Some(*PERCENTILE),
+        )
+        .unwrap();
+        assert_eq!(
+            OrderedFloat::from(limits.baseline.unwrap()),
+            OrderedFloat::from(MEAN)
+        );
+        assert_eq!(limits.lower, Some(MetricsLimit { value: -LOG_LIMIT }));
+        assert_eq!(limits.upper, Some(MetricsLimit { value: LOG_LIMIT }));
+
+        let side = limits.outlier(LOG_NORMAL_NEGATIVE_OUTLIER);
+        assert_eq!(side, Some(BoundaryLimit::Lower));
+
+        let side = limits.outlier(NORMAL_NEGATIVE_OUTLIER);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_NEGATIVE);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_ZERO);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_POSITIVE);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(NORMAL_POSITIVE_OUTLIER);
+        assert_eq!(side, None);
+
+        let side = limits.outlier(LOG_NORMAL_POSITIVE_OUTLIER);
         assert_eq!(side, Some(BoundaryLimit::Upper));
     }
 }

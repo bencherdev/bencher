@@ -24,7 +24,7 @@ impl TryFrom<f64> for Boundary {
     type Error = ValidError;
 
     fn try_from(boundary: f64) -> Result<Self, Self::Error> {
-        is_valid_boundary(boundary)
+        Self::is_valid(boundary)
             .then(|| Self(boundary.into()))
             .ok_or(ValidError::Boundary(boundary))
     }
@@ -91,6 +91,18 @@ impl Boundary {
     #[allow(clippy::unreadable_literal)]
     pub const SIXTEEN_NINES: Self = Self(OrderedFloat(0.9999999999999999));
     pub const MAX_STATISTICAL: Self = Self::SIXTEEN_NINES;
+
+    pub fn is_valid(boundary: f64) -> bool {
+        is_valid_boundary(boundary)
+    }
+
+    pub fn is_valid_percentage(boundary: f64) -> bool {
+        is_valid_percentage_boundary(boundary)
+    }
+
+    pub fn is_valid_normal(boundary: f64) -> bool {
+        is_valid_normal_boundary(boundary)
+    }
 }
 
 #[cfg(feature = "db")]
@@ -126,6 +138,20 @@ mod db {
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_boundary(boundary: f64) -> bool {
     boundary.is_finite()
+}
+
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+pub fn is_valid_percentage_boundary(boundary: f64) -> bool {
+    boundary >= 0.0
+}
+
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+pub fn is_valid_normal_boundary(boundary: f64) -> bool {
+    if boundary < 0.5 {
+        false
+    } else {
+        boundary < 1.0
+    }
 }
 
 #[cfg(test)]

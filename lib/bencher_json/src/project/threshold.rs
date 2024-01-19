@@ -95,8 +95,8 @@ const Z_SCORE_INT: i32 = 0;
 const T_TEST_INT: i32 = 1;
 const STATIC_INT: i32 = 2;
 const PERCENTAGE_INT: i32 = 3;
-const IQR_INT: i32 = 4;
-const LOG_NORMAL_INT: i32 = 5;
+const LOG_NORMAL_INT: i32 = 4;
+const IQR_INT: i32 = 5;
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, derive_more::Display, Serialize, Deserialize)]
@@ -112,8 +112,8 @@ pub enum StatisticKind {
     TTest = T_TEST_INT,
     Static = STATIC_INT,
     Percentage = PERCENTAGE_INT,
-    IQR = IQR_INT,
     LogNormal = LOG_NORMAL_INT,
+    IQR = IQR_INT,
 }
 
 #[cfg(feature = "db")]
@@ -142,8 +142,8 @@ mod statistic_kind {
                 Self::TTest => Z_SCORE_INT.to_sql(out),
                 Self::Static => STATIC_INT.to_sql(out),
                 Self::Percentage => PERCENTAGE_INT.to_sql(out),
-                Self::IQR => IQR_INT.to_sql(out),
                 Self::LogNormal => LOG_NORMAL_INT.to_sql(out),
+                Self::IQR => IQR_INT.to_sql(out),
             }
         }
     }
@@ -159,8 +159,8 @@ mod statistic_kind {
                 Z_SCORE_INT => Ok(Self::TTest),
                 STATIC_INT => Ok(Self::Static),
                 PERCENTAGE_INT => Ok(Self::Percentage),
-                IQR_INT => Ok(Self::IQR),
                 LOG_NORMAL_INT => Ok(Self::LogNormal),
+                IQR_INT => Ok(Self::IQR),
                 value => Err(Box::new(StatisticKindError::Invalid(value))),
             }
         }

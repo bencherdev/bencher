@@ -186,7 +186,7 @@ export type ResourceId = string;
 
 export type Secret = string;
 
-export type StatisticalBoundary = number;
+export type NormalBoundary = number;
 
 export type Url = string;
 
@@ -547,4 +547,3 @@ export enum PerfQueryKey {
 	LowerBoundary = "lower_boundary",
 	UpperBoundary = "upper_boundary",
 }
-

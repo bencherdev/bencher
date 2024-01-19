@@ -20,7 +20,7 @@ impl TryFrom<f64> for PercentageBoundary {
 
     fn try_from(boundary: f64) -> Result<Self, Self::Error> {
         // The percentage boundary must be greater than or equal to 0.0
-        (boundary >= 0.0)
+        Boundary::is_valid_percentage(boundary)
             .then(|| Self(boundary.into()))
             .ok_or(BoundaryError::PercentageBoundary(boundary))
     }
@@ -48,30 +48,26 @@ impl From<PercentageBoundary> for Boundary {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct StatisticalBoundary(OrderedFloat<f64>);
+pub struct NormalBoundary(OrderedFloat<f64>);
 
-impl TryFrom<f64> for StatisticalBoundary {
+impl TryFrom<f64> for NormalBoundary {
     type Error = BoundaryError;
 
     fn try_from(boundary: f64) -> Result<Self, Self::Error> {
-        // The statistical boundary must be greater than or equal to 0.5 and less than 1.0
-        if boundary < 0.5 {
-            false
-        } else {
-            boundary < 1.0
-        }
-        .then(|| Self(boundary.into()))
-        .ok_or(BoundaryError::StatisticalBoundary(boundary))
+        // The normal boundary must be greater than or equal to 0.5 and less than 1.0
+        Boundary::is_valid_normal(boundary)
+            .then(|| Self(boundary.into()))
+            .ok_or(BoundaryError::NormalBoundary(boundary))
     }
 }
 
-impl From<StatisticalBoundary> for f64 {
-    fn from(boundary: StatisticalBoundary) -> Self {
+impl From<NormalBoundary> for f64 {
+    fn from(boundary: NormalBoundary) -> Self {
         boundary.0.into()
     }
 }
 
-impl TryFrom<Boundary> for StatisticalBoundary {
+impl TryFrom<Boundary> for NormalBoundary {
     type Error = BoundaryError;
 
     fn try_from(boundary: Boundary) -> Result<Self, Self::Error> {
@@ -79,9 +75,9 @@ impl TryFrom<Boundary> for StatisticalBoundary {
     }
 }
 
-impl From<StatisticalBoundary> for Boundary {
-    fn from(boundary: StatisticalBoundary) -> Self {
-        // This should never fail because Boundary is a superset of StatisticalBoundary
+impl From<NormalBoundary> for Boundary {
+    fn from(boundary: NormalBoundary) -> Self {
+        // This should never fail because Boundary is a superset of NormalBoundary
         f64::from(boundary).try_into().unwrap_or(Boundary::ZERO)
     }
 }
