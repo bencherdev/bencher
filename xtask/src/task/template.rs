@@ -40,10 +40,10 @@ impl TryFrom<TaskTemplate> for Template {
             vec![t]
         } else {
             let mut templates = Vec::with_capacity(TEMPLATES.len());
-            for template_kind in TEMPLATES {
+            for &template_kind in TEMPLATES {
                 let (name, source) = template_kind.read()?;
                 env.add_template_owned(name, source)?;
-                templates.push(*template_kind);
+                templates.push(template_kind);
             }
             templates
         };
@@ -54,9 +54,9 @@ impl TryFrom<TaskTemplate> for Template {
 
 impl Template {
     pub fn exec(&self) -> anyhow::Result<()> {
-        for template_kind in &self.templates {
+        for &template_kind in &self.templates {
             let template = self.env.get_template(template_kind.as_ref())?;
-            let ctx = TemplateContext::new(*template_kind);
+            let ctx = TemplateContext::new(template_kind);
             let mut rendered = template.render(&ctx)?;
             // minijinja strips trailing newlines from templates
             if !rendered.ends_with('\n') {
@@ -127,10 +127,10 @@ impl TemplateKind {
         }
     }
 
-    fn as_artifact(self, (target_triple, os_arch): &(&str, &str)) -> TemplateArtifact {
+    fn as_artifact(self, &(target_triple, os_arch): &(&str, &str)) -> TemplateArtifact {
         TemplateArtifact {
             name: artifact_name(os_arch),
-            target_triple: (*target_triple).to_owned(),
+            target_triple: (target_triple).to_owned(),
             binaries: vec![BENCHER_BIN.to_owned()],
             zip_style: ZipStyle::TempDir,
         }

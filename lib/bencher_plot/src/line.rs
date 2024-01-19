@@ -141,7 +141,7 @@ impl LinePlot {
                 .y_desc(&perf_data.y_desc)
                 .y_labels(Y_LABELS)
                 .y_label_style((FontFamily::Monospace, 12))
-                .y_label_formatter(&|y| PerfData::y_label_fmt(*y))
+                .y_label_formatter(&|&y| PerfData::y_label_fmt(y))
                 .max_light_lines(4)
                 .draw()?;
 

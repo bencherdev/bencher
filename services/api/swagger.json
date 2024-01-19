@@ -8996,8 +8996,9 @@
           "t_test",
           "static",
           "percentage",
-          "i_q_r",
-          "log_normal"
+          "log_normal",
+          "iqr",
+          "delta_iqr"
         ]
       },
       "StatisticUuid": {

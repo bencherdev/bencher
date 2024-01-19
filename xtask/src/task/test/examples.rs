@@ -46,8 +46,8 @@ impl Examples {
         if let Some(example) = self.example {
             run_example(&self.url, &self.token, example)
         } else {
-            for example in Example::all() {
-                run_example(&self.url, &self.token, *example)?;
+            for &example in Example::all() {
+                run_example(&self.url, &self.token, example)?;
             }
             Ok(())
         }

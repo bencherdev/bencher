@@ -203,6 +203,9 @@ async fn post_inner(
     let testbed_id = QueryTestbed::from_name_id(conn, project_id, &json_threshold.testbed)?.id;
     let measure_id = QueryMeasure::from_name_id(conn, project_id, &json_threshold.measure)?.id;
 
+    // Validate the new statistic
+    bencher_boundary::validate_statistic(json_threshold.statistic).map_err(bad_request_error)?;
+
     // Create the new threshold
     let threshold_id = InsertThreshold::insert_from_json(
         conn,
@@ -318,6 +321,9 @@ async fn put_inner(
         auth_user,
         Permission::Edit,
     )?;
+
+    // Validate the new statistic
+    bencher_boundary::validate_statistic(json_threshold.statistic).map_err(bad_request_error)?;
 
     // Get the current threshold
     let query_threshold = QueryThreshold::belonging_to(&query_project)

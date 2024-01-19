@@ -34,10 +34,10 @@ impl AdapterResultsArray {
         settings: Settings,
     ) -> Result<Self, AdapterError> {
         let mut parsed_results_array = Vec::new();
-        for results in results_array {
+        for &results in results_array {
             let parsed_results = adapter
                 .convert(results, settings)
-                .ok_or_else(|| AdapterError::Convert((*results).to_owned()))?;
+                .ok_or_else(|| AdapterError::Convert((results).to_owned()))?;
             parsed_results_array.push(parsed_results);
         }
         Ok(parsed_results_array.into())

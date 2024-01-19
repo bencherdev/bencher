@@ -1,11 +1,15 @@
 pub mod boundary;
 mod error;
 pub mod limits;
+mod mean;
+mod quartiles;
+mod validate;
 
 use bencher_json::Boundary;
 pub use boundary::MetricsBoundary;
 pub use error::BoundaryError;
 use ordered_float::OrderedFloat;
+pub use validate::validate_statistic;
 
 #[derive(Debug, Clone)]
 pub struct MetricsData {

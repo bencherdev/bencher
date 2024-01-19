@@ -97,6 +97,7 @@ const STATIC_INT: i32 = 2;
 const PERCENTAGE_INT: i32 = 3;
 const LOG_NORMAL_INT: i32 = 4;
 const IQR_INT: i32 = 5;
+const DELTA_IQR_INT: i32 = 6;
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, derive_more::Display, Serialize, Deserialize)]
@@ -114,12 +115,14 @@ pub enum StatisticKind {
     Percentage = PERCENTAGE_INT,
     LogNormal = LOG_NORMAL_INT,
     Iqr = IQR_INT,
+    DeltaIqr = DELTA_IQR_INT,
 }
 
 #[cfg(feature = "db")]
 mod statistic_kind {
     use super::{
-        StatisticKind, IQR_INT, LOG_NORMAL_INT, PERCENTAGE_INT, STATIC_INT, T_TEST_INT, Z_SCORE_INT,
+        StatisticKind, DELTA_IQR_INT, IQR_INT, LOG_NORMAL_INT, PERCENTAGE_INT, STATIC_INT,
+        T_TEST_INT, Z_SCORE_INT,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -144,6 +147,7 @@ mod statistic_kind {
                 Self::Percentage => PERCENTAGE_INT.to_sql(out),
                 Self::LogNormal => LOG_NORMAL_INT.to_sql(out),
                 Self::Iqr => IQR_INT.to_sql(out),
+                Self::DeltaIqr => DELTA_IQR_INT.to_sql(out),
             }
         }
     }
@@ -161,6 +165,7 @@ mod statistic_kind {
                 PERCENTAGE_INT => Ok(Self::Percentage),
                 LOG_NORMAL_INT => Ok(Self::LogNormal),
                 IQR_INT => Ok(Self::Iqr),
+                DELTA_IQR_INT => Ok(Self::DeltaIqr),
                 value => Err(Box::new(StatisticKindError::Invalid(value))),
             }
         }

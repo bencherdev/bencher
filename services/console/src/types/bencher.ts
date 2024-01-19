@@ -43,8 +43,9 @@ export enum StatisticKind {
 	TTest = "t_test",
 	Static = "static",
 	Percentage = "percentage",
-	IQR = "iqr",
 	LogNormal = "log_normal",
+	Iqr = "iqr",
+	DeltaIqr = "delta_iqr",
 }
 
 export type SampleSize = number;
@@ -185,8 +186,6 @@ export type ExpirationYear = number;
 export type ResourceId = string;
 
 export type Secret = string;
-
-export type NormalBoundary = number;
 
 export type Url = string;
 
@@ -547,3 +546,4 @@ export enum PerfQueryKey {
 	LowerBoundary = "lower_boundary",
 	UpperBoundary = "upper_boundary",
 }
+
