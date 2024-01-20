@@ -31,7 +31,7 @@ impl TryFrom<CliThresholdUpdate> for Update {
         Ok(Self {
             project,
             threshold,
-            statistic: statistic.into(),
+            statistic: statistic.try_into()?,
             backend: backend.try_into()?,
         })
     }

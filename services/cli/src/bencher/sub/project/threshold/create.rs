@@ -37,7 +37,7 @@ impl TryFrom<CliThresholdCreate> for Create {
             branch,
             testbed,
             measure,
-            statistic: statistic.into(),
+            statistic: statistic.try_into()?,
             backend: backend.try_into()?,
         })
     }

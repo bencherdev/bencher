@@ -8,7 +8,7 @@ edition.workspace = true
 plus = ["bencher_json/plus"]
 
 [dependencies]
-bencher_json = { workspace = true, features = ["full"] }
+bencher_json.workspace = true
 ordered-float.workspace = true
 slog.workspace = true
 thiserror.workspace = true

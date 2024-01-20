@@ -109,12 +109,25 @@ pub struct CliStatisticCreate {
 }
 
 /// Supported kinds of statistic
-#[derive(ValueEnum, Debug, Clone)]
+#[derive(ValueEnum, Debug, Clone, Copy)]
+#[clap(rename_all = "snake_case")]
 pub enum CliStatisticKind {
-    /// z-score
-    Z,
-    /// t-test
-    T,
+    /// Static value
+    Static,
+    /// Percentage change from mean
+    Percentage,
+    /// z-score (normal distribution)
+    #[clap(alias = "z")]
+    ZScore,
+    /// t-test (normal distribution)
+    #[clap(alias = "t")]
+    TTest,
+    /// Log normal distribution
+    LogNormal,
+    /// Interquartile range (IQR)
+    Iqr,
+    /// Delta interquartile range (ΔIQR)
+    DeltaIqr,
 }
 
 #[derive(Parser, Debug)]
