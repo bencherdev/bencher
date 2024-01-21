@@ -114,15 +114,8 @@ pub struct CliRunCommand {
     pub exec: bool,
 
     /// Benchmark command
-    pub command: Option<String>,
-
-    /// Benchmark command arguments
-    #[clap(
-        requires = "command",
-        conflicts_with = "shell",
-        conflicts_with = "flag"
-    )]
-    pub arguments: Vec<String>,
+    #[clap(trailing_var_arg = true, allow_hyphen_values = true)]
+    pub command: Option<Vec<String>>,
 }
 
 #[derive(Args, Debug)]

@@ -26,8 +26,16 @@ impl TryFrom<CliRunCommand> for Runner {
     type Error = RunError;
 
     fn try_from(cmd: CliRunCommand) -> Result<Self, Self::Error> {
-        if let Some(command) = cmd.command {
-            let command = if !cmd.exec && cmd.arguments.is_empty() {
+        let var_arg = if let Some(command) = cmd.command {
+            let mut var_arg = command.into_iter();
+            var_arg
+                .next()
+                .map(|command| (command, var_arg.collect::<Vec<_>>()))
+        } else {
+            None
+        };
+        if let Some((command, arguments)) = var_arg {
+            let command = if !cmd.exec && arguments.is_empty() {
                 Command::new_shell(cmd.sh_c, command)?
             } else {
                 if let Some(shell) = cmd.sh_c.shell {
@@ -35,7 +43,7 @@ impl TryFrom<CliRunCommand> for Runner {
                 } else if let Some(flag) = cmd.sh_c.flag {
                     return Err(RunError::FlagWithExec(flag));
                 }
-                Command::new_exec(command, cmd.arguments)
+                Command::new_exec(command, arguments)
             };
             Ok(if let Some(file) = cmd.file {
                 Self::CommandToFile(command, file)
