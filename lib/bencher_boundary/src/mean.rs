@@ -15,19 +15,19 @@ impl Mean {
     }
 
     pub fn std_deviation(self, data: &[f64]) -> Option<f64> {
-        self.variance(data)
-        // If the variance is zero then the standard deviation is not going to work with `statrs`
-            .and_then(|std_dev| if std_dev == 0.0 { None } else { Some(std_dev) })
-            .map(f64::sqrt)
-            .and_then(|m| m.is_finite().then_some(m))
-    }
-
-    fn variance(self, data: &[f64]) -> Option<f64> {
-        variance(self.mean, data)
+        std_deviation(self.mean, data)
     }
 }
 
-pub fn variance(location: f64, data: &[f64]) -> Option<f64> {
+pub fn std_deviation(location: f64, data: &[f64]) -> Option<f64> {
+    variance(location, data)
+    // If the variance is zero then the standard deviation is not going to work with `statrs`
+        .and_then(|std_dev| if std_dev == 0.0 { None } else { Some(std_dev) })
+        .map(f64::sqrt)
+        .and_then(|m| m.is_finite().then_some(m))
+}
+
+fn variance(location: f64, data: &[f64]) -> Option<f64> {
     // Do not calculate variance if there are less than 2 data points
     if data.len() < 2 {
         None
@@ -48,6 +48,8 @@ pub fn variance(location: f64, data: &[f64]) -> Option<f64> {
 mod test {
     use once_cell::sync::Lazy;
     use pretty_assertions::assert_eq;
+
+    use crate::mean::variance;
 
     use super::Mean;
 
@@ -128,145 +130,145 @@ mod test {
 
     #[test]
     fn test_variance_zero() {
-        let v = MEAN_ZERO.variance(DATA_ZERO);
+        let v = variance(MEAN_ZERO.mean, DATA_ZERO);
         assert_eq!(v, None);
 
-        let v = MEAN_ONE.variance(DATA_ZERO);
+        let v = variance(MEAN_ONE.mean, DATA_ZERO);
         assert_eq!(v, None);
 
-        let v = MEAN_TWO.variance(DATA_ZERO);
+        let v = variance(MEAN_TWO.mean, DATA_ZERO);
         assert_eq!(v, None);
 
-        let v = MEAN_THREE.variance(DATA_ZERO);
+        let v = variance(MEAN_THREE.mean, DATA_ZERO);
         assert_eq!(v, None);
 
-        let v = MEAN_FIVE.variance(DATA_ZERO);
+        let v = variance(MEAN_FIVE.mean, DATA_ZERO);
         assert_eq!(v, None);
     }
 
     #[test]
     fn test_variance_one() {
-        let v = MEAN_ZERO.variance(DATA_ONE);
+        let v = variance(MEAN_ZERO.mean, DATA_ONE);
         assert_eq!(v, None);
 
-        let v = MEAN_ONE.variance(DATA_ONE);
+        let v = variance(MEAN_ONE.mean, DATA_ONE);
         assert_eq!(v, None);
 
-        let v = MEAN_TWO.variance(DATA_ONE);
+        let v = variance(MEAN_TWO.mean, DATA_ONE);
         assert_eq!(v, None);
 
-        let v = MEAN_THREE.variance(DATA_ONE);
+        let v = variance(MEAN_THREE.mean, DATA_ONE);
         assert_eq!(v, None);
 
-        let v = MEAN_FIVE.variance(DATA_ONE);
+        let v = variance(MEAN_FIVE.mean, DATA_ONE);
         assert_eq!(v, None);
     }
 
     #[test]
     fn test_variance_two() {
-        let v = MEAN_ZERO.variance(DATA_TWO).unwrap();
+        let v = variance(MEAN_ZERO.mean, DATA_TWO).unwrap();
         assert_eq!(v, 2.5);
 
-        let v = MEAN_ONE.variance(DATA_TWO).unwrap();
+        let v = variance(MEAN_ONE.mean, DATA_TWO).unwrap();
         assert_eq!(v, 0.5);
 
-        let v = MEAN_TWO.variance(DATA_TWO).unwrap();
+        let v = variance(MEAN_TWO.mean, DATA_TWO).unwrap();
         assert_eq!(v, 0.25);
 
-        let v = MEAN_THREE.variance(DATA_TWO).unwrap();
+        let v = variance(MEAN_THREE.mean, DATA_TWO).unwrap();
         assert_eq!(v, 0.5);
 
-        let v = MEAN_FIVE.variance(DATA_TWO).unwrap();
+        let v = variance(MEAN_FIVE.mean, DATA_TWO).unwrap();
         assert_eq!(v, 2.5);
     }
 
     #[test]
     fn test_variance_three() {
-        let v = MEAN_ZERO.variance(DATA_THREE).unwrap();
+        let v = variance(MEAN_ZERO.mean, DATA_THREE).unwrap();
         assert_eq!(v, 4.666666666666667);
 
-        let v = MEAN_ONE.variance(DATA_THREE).unwrap();
+        let v = variance(MEAN_ONE.mean, DATA_THREE).unwrap();
         assert_eq!(v, 1.6666666666666667);
 
-        let v = MEAN_TWO.variance(DATA_THREE).unwrap();
+        let v = variance(MEAN_TWO.mean, DATA_THREE).unwrap();
         assert_eq!(v, 0.9166666666666666);
 
-        let v = MEAN_THREE.variance(DATA_THREE).unwrap();
+        let v = variance(MEAN_THREE.mean, DATA_THREE).unwrap();
         assert_eq!(v, 0.6666666666666666);
 
-        let v = MEAN_FIVE.variance(DATA_THREE).unwrap();
+        let v = variance(MEAN_FIVE.mean, DATA_THREE).unwrap();
         assert_eq!(v, 1.6666666666666667);
     }
 
     #[test]
     fn test_variance_five() {
-        let v = MEAN_ZERO.variance(DATA_FIVE).unwrap();
+        let v = variance(MEAN_ZERO.mean, DATA_FIVE).unwrap();
         assert_eq!(v, 11.0);
 
-        let v = MEAN_ONE.variance(DATA_FIVE).unwrap();
+        let v = variance(MEAN_ONE.mean, DATA_FIVE).unwrap();
         assert_eq!(v, 6.0);
 
-        let v = MEAN_TWO.variance(DATA_FIVE).unwrap();
+        let v = variance(MEAN_TWO.mean, DATA_FIVE).unwrap();
         assert_eq!(v, 4.25);
 
-        let v = MEAN_THREE.variance(DATA_FIVE).unwrap();
+        let v = variance(MEAN_THREE.mean, DATA_FIVE).unwrap();
         assert_eq!(v, 3.0);
 
-        let v = MEAN_FIVE.variance(DATA_FIVE).unwrap();
+        let v = variance(MEAN_FIVE.mean, DATA_FIVE).unwrap();
         assert_eq!(v, 2.0);
     }
 
     #[test]
     fn test_variance_five_desc() {
-        let v = MEAN_ZERO.variance(DATA_FIVE_DESC).unwrap();
+        let v = variance(MEAN_ZERO.mean, DATA_FIVE_DESC).unwrap();
         assert_eq!(v, 11.0);
 
-        let v = MEAN_ONE.variance(DATA_FIVE_DESC).unwrap();
+        let v = variance(MEAN_ONE.mean, DATA_FIVE_DESC).unwrap();
         assert_eq!(v, 6.0);
 
-        let v = MEAN_TWO.variance(DATA_FIVE_DESC).unwrap();
+        let v = variance(MEAN_TWO.mean, DATA_FIVE_DESC).unwrap();
         assert_eq!(v, 4.25);
 
-        let v = MEAN_THREE.variance(DATA_FIVE_DESC).unwrap();
+        let v = variance(MEAN_THREE.mean, DATA_FIVE_DESC).unwrap();
         assert_eq!(v, 3.0);
 
-        let v = MEAN_FIVE.variance(DATA_FIVE_DESC).unwrap();
+        let v = variance(MEAN_FIVE.mean, DATA_FIVE_DESC).unwrap();
         assert_eq!(v, 2.0);
     }
 
     #[test]
     fn test_variance_five_neg() {
-        let v = MEAN_ZERO.variance(DATA_FIVE_NEG).unwrap();
+        let v = variance(MEAN_ZERO.mean, DATA_FIVE_NEG).unwrap();
         assert_eq!(v, 11.0);
 
-        let v = MEAN_NEG_ONE.variance(DATA_FIVE_NEG).unwrap();
+        let v = variance(MEAN_NEG_ONE.mean, DATA_FIVE_NEG).unwrap();
         assert_eq!(v, 6.0);
 
-        let v = MEAN_NEG_TWO.variance(DATA_FIVE_NEG).unwrap();
+        let v = variance(MEAN_NEG_TWO.mean, DATA_FIVE_NEG).unwrap();
         assert_eq!(v, 4.25);
 
-        let v = MEAN_NEG_THREE.variance(DATA_FIVE_NEG).unwrap();
+        let v = variance(MEAN_NEG_THREE.mean, DATA_FIVE_NEG).unwrap();
         assert_eq!(v, 3.0);
 
-        let v = MEAN_NEG_FIVE.variance(DATA_FIVE_NEG).unwrap();
+        let v = variance(MEAN_NEG_FIVE.mean, DATA_FIVE_NEG).unwrap();
         assert_eq!(v, 2.0);
     }
 
     #[test]
     fn test_variance_five_const() {
-        let v = MEAN_ZERO.variance(DATA_FIVE_CONST).unwrap();
+        let v = variance(MEAN_ZERO.mean, DATA_FIVE_CONST).unwrap();
         assert_eq!(v, 1.0);
 
-        let v = MEAN_ONE.variance(DATA_FIVE_CONST).unwrap();
+        let v = variance(MEAN_ONE.mean, DATA_FIVE_CONST).unwrap();
         assert_eq!(v, 0.0);
 
-        let v = MEAN_TWO.variance(DATA_FIVE_CONST).unwrap();
+        let v = variance(MEAN_TWO.mean, DATA_FIVE_CONST).unwrap();
         assert_eq!(v, 0.25);
 
-        let v = MEAN_THREE.variance(DATA_FIVE_CONST).unwrap();
+        let v = variance(MEAN_THREE.mean, DATA_FIVE_CONST).unwrap();
         assert_eq!(v, 1.0);
 
-        let v = MEAN_FIVE.variance(DATA_FIVE_CONST).unwrap();
+        let v = variance(MEAN_FIVE.mean, DATA_FIVE_CONST).unwrap();
         assert_eq!(v, 4.0);
     }
 

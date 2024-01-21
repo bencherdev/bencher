@@ -264,27 +264,13 @@ const Tab = (props: {
 			>
 				<For each={props.getTab()}>
 					{(report, index) => (
-						<For each={(report.resource as JsonReport)?.results?.[0]}>
-							{(result, _index) => (
-								<a
-									class="panel-block"
-									title={`View Report from ${fmtDateTime(
-										(report.resource as JsonReport)?.start_time,
-									)}`}
-									onClick={(_e) =>
-										// Send the Measure UUID instead of the Report UUID
-										props.handleChecked(index(), result.measure?.uuid)
-									}
-								>
+						<Show
+							when={(report.resource as JsonReport)?.results?.[0]?.length > 0}
+							fallback={
+								<div class="panel-block">
 									<div class="columns is-vcentered is-mobile">
 										<div class="column is-narrow">
-											<input
-												type="radio"
-												checked={
-													report.checked &&
-													result.measure?.uuid === props.measures()?.[0]
-												}
-											/>
+											<input type="radio" disabled={true} checked={false} />
 										</div>
 										<div class="column">
 											<small style="word-break: break-word;">
@@ -293,22 +279,60 @@ const Tab = (props: {
 												)}
 											</small>
 											<ReportDimension
-												icon="fas fa-code-branch"
-												name={(report.resource as JsonReport)?.branch?.name}
-											/>
-											<ReportDimension
-												icon="fas fa-server"
-												name={(report.resource as JsonReport)?.testbed?.name}
-											/>
-											<ReportDimension
-												icon="fas fa-shapes"
-												name={result.measure?.name}
+												icon="fab fa-creative-commons-zero"
+												name="No Results"
 											/>
 										</div>
 									</div>
-								</a>
-							)}
-						</For>
+								</div>
+							}
+						>
+							<For each={(report.resource as JsonReport)?.results?.[0]}>
+								{(result, _index) => (
+									<a
+										class="panel-block"
+										title={`View Report from ${fmtDateTime(
+											(report.resource as JsonReport)?.start_time,
+										)}`}
+										onClick={(_e) =>
+											// Send the Measure UUID instead of the Report UUID
+											props.handleChecked(index(), result.measure?.uuid)
+										}
+									>
+										<div class="columns is-vcentered is-mobile">
+											<div class="column is-narrow">
+												<input
+													type="radio"
+													checked={
+														report.checked &&
+														result.measure?.uuid === props.measures()?.[0]
+													}
+												/>
+											</div>
+											<div class="column">
+												<small style="word-break: break-word;">
+													{fmtDateTime(
+														(report.resource as JsonReport)?.start_time,
+													)}
+												</small>
+												<ReportDimension
+													icon="fas fa-code-branch"
+													name={(report.resource as JsonReport)?.branch?.name}
+												/>
+												<ReportDimension
+													icon="fas fa-server"
+													name={(report.resource as JsonReport)?.testbed?.name}
+												/>
+												<ReportDimension
+													icon="fas fa-shapes"
+													name={result.measure?.name}
+												/>
+											</div>
+										</div>
+									</a>
+								)}
+							</For>
+						</Show>
 					)}
 				</For>
 			</Match>

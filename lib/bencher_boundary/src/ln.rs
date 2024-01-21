@@ -1,4 +1,4 @@
-use crate::mean::variance;
+use crate::mean::std_deviation;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Ln {
@@ -19,7 +19,7 @@ impl Ln {
         if !location.is_finite() {
             return None;
         }
-        let scale = variance(location, &log_data)?.sqrt();
+        let scale = std_deviation(location, &log_data)?;
         scale.is_finite().then_some(Self { location, scale })
     }
 }
@@ -108,13 +108,7 @@ mod test {
 
     #[test]
     fn test_ln_five_const() {
-        let ln = Ln::new(DATA_FIVE_CONST).unwrap();
-        assert_eq!(
-            ln,
-            Ln {
-                location: 0.0,
-                scale: 0.0
-            }
-        );
+        let ln = Ln::new(DATA_FIVE_CONST);
+        assert_eq!(ln, None);
     }
 }

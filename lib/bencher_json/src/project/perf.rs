@@ -14,6 +14,7 @@ use super::alert::JsonPerfAlert;
 use super::boundary::JsonBoundary;
 use super::branch::JsonVersion;
 use super::metric::JsonMetric;
+use super::report::Iteration;
 use super::threshold::JsonThresholdStatistic;
 
 crate::typed_uuid::typed_uuid!(PerfUuid);
@@ -229,51 +230,6 @@ pub struct JsonPerfMetric {
     pub alert: Option<JsonPerfAlert>,
 }
 
-#[typeshare::typeshare]
-#[derive(
-    Debug, Clone, Copy, Default, PartialEq, Eq, Hash, derive_more::Display, Serialize, Deserialize,
-)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
-#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
-pub struct Iteration(pub u32);
-
-#[cfg(feature = "db")]
-mod iteration {
-    use super::Iteration;
-
-    impl From<usize> for Iteration {
-        fn from(value: usize) -> Self {
-            Self(u32::try_from(value).unwrap_or_default())
-        }
-    }
-
-    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for Iteration
-    where
-        DB: diesel::backend::Backend,
-        for<'a> i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>
-            + Into<<DB::BindCollector<'a> as diesel::query_builder::BindCollector<'a, DB>>::Buffer>,
-    {
-        fn to_sql<'b>(
-            &'b self,
-            out: &mut diesel::serialize::Output<'b, '_, DB>,
-        ) -> diesel::serialize::Result {
-            out.set_value(i32::try_from(self.0)?);
-            Ok(diesel::serialize::IsNull::No)
-        }
-    }
-
-    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for Iteration
-    where
-        DB: diesel::backend::Backend,
-        i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
-    {
-        fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
-            Ok(Self(u32::try_from(i32::from_sql(bytes)?)?))
-        }
-    }
-}
-
 #[cfg(feature = "table")]
 pub mod table {
     use std::fmt;
@@ -283,11 +239,10 @@ pub mod table {
     use tabled::{Table, Tabled};
 
     use crate::{
-        project::branch::VersionNumber, DateTime, JsonBenchmark, JsonBranch, JsonMeasure,
-        JsonMetric, JsonPerf, JsonProject, JsonTestbed,
+        project::{branch::VersionNumber, report::Iteration},
+        DateTime, JsonBenchmark, JsonBranch, JsonMeasure, JsonMetric, JsonPerf, JsonProject,
+        JsonTestbed,
     };
-
-    use super::Iteration;
 
     impl From<JsonPerf> for Table {
         fn from(json_perf: JsonPerf) -> Self {

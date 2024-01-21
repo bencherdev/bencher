@@ -1,7 +1,8 @@
 use bencher_json::{
     project::{
         branch::{JsonVersion, VersionNumber},
-        perf::{Iteration, JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
+        perf::{JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
+        report::Iteration,
     },
     BenchmarkUuid, BranchUuid, DateTime, GitHash, JsonPerf, JsonPerfQuery, MeasureUuid, ReportUuid,
     ResourceId, TestbedUuid,

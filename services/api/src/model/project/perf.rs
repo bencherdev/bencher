@@ -1,4 +1,4 @@
-use bencher_json::{project::perf::Iteration, PerfUuid};
+use bencher_json::{project::report::Iteration, PerfUuid};
 
 use crate::{
     schema::perf as perf_table,

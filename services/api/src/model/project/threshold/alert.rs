@@ -2,7 +2,7 @@ use bencher_json::{
     project::{
         alert::{AlertStatus, JsonAlert, JsonPerfAlert, JsonUpdateAlert},
         boundary::BoundaryLimit,
-        perf::Iteration,
+        report::Iteration,
     },
     AlertUuid, BoundaryUuid, DateTime, ReportUuid,
 };

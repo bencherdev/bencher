@@ -241,6 +241,7 @@ pub type JsonReportIteration = Vec<JsonReportResult>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportResult {
+    pub iteration: Iteration,
     pub measure: JsonMeasure,
     // The threshold should be the same for all the benchmark results
     pub threshold: Option<JsonThresholdStatistic>,
@@ -313,5 +314,50 @@ impl JsonReportQuery {
 
     pub fn end_time(&self) -> Option<DateTimeMillis> {
         self.end_time.map(Into::into)
+    }
+}
+
+#[typeshare::typeshare]
+#[derive(
+    Debug, Clone, Copy, Default, PartialEq, Eq, Hash, derive_more::Display, Serialize, Deserialize,
+)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
+pub struct Iteration(pub u32);
+
+#[cfg(feature = "db")]
+mod iteration {
+    use super::Iteration;
+
+    impl From<usize> for Iteration {
+        fn from(value: usize) -> Self {
+            Self(u32::try_from(value).unwrap_or_default())
+        }
+    }
+
+    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for Iteration
+    where
+        DB: diesel::backend::Backend,
+        for<'a> i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>
+            + Into<<DB::BindCollector<'a> as diesel::query_builder::BindCollector<'a, DB>>::Buffer>,
+    {
+        fn to_sql<'b>(
+            &'b self,
+            out: &mut diesel::serialize::Output<'b, '_, DB>,
+        ) -> diesel::serialize::Result {
+            out.set_value(i32::try_from(self.0)?);
+            Ok(diesel::serialize::IsNull::No)
+        }
+    }
+
+    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for Iteration
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
+    {
+        fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+            Ok(Self(u32::try_from(i32::from_sql(bytes)?)?))
+        }
     }
 }

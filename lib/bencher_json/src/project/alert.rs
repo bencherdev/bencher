@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{BigInt, DateTime, JsonThreshold};
 
 use super::{
-    benchmark::JsonBenchmarkMetric, boundary::BoundaryLimit, perf::Iteration, report::ReportUuid,
+    benchmark::JsonBenchmarkMetric, boundary::BoundaryLimit, report::Iteration, report::ReportUuid,
 };
 
 crate::typed_uuid::typed_uuid!(AlertUuid);

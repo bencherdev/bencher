@@ -5,10 +5,7 @@ use bencher_adapter::{
     Settings as AdapterSettings,
 };
 use bencher_json::{
-    project::{
-        perf::Iteration,
-        report::{Adapter, JsonReportSettings},
-    },
+    project::report::{Adapter, Iteration, JsonReportSettings},
     BenchmarkName, MeasureNameId,
 };
 use diesel::RunQueryDsl;

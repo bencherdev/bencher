@@ -7996,6 +7996,9 @@
               "$ref": "#/components/schemas/JsonBenchmarkMetric"
             }
           },
+          "iteration": {
+            "$ref": "#/components/schemas/Iteration"
+          },
           "measure": {
             "$ref": "#/components/schemas/JsonMeasure"
           },
@@ -8010,6 +8013,7 @@
         },
         "required": [
           "benchmarks",
+          "iteration",
           "measure"
         ]
       },

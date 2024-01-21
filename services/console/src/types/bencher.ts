@@ -91,6 +91,7 @@ export interface JsonBenchmarkMetric {
 }
 
 export interface JsonReportResult {
+	iteration: Iteration;
 	measure: JsonMeasure;
 	threshold?: JsonThresholdStatistic;
 	benchmarks: JsonBenchmarkMetric[];

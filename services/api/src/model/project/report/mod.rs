@@ -1,8 +1,5 @@
 use bencher_json::{
-    project::{
-        perf::Iteration,
-        report::{Adapter, JsonReportAlerts, JsonReportResult, JsonReportResults},
-    },
+    project::report::{Adapter, Iteration, JsonReportAlerts, JsonReportResult, JsonReportResults},
     DateTime, JsonNewReport, JsonReport, ReportUuid,
 };
 use diesel::{
@@ -194,7 +191,9 @@ fn into_report_results_json(
                 if let Some(result) = report_result.take() {
                     report_iteration.push(result);
                 }
-                report_results.push(std::mem::take(&mut report_iteration));
+                if !report_iteration.is_empty() {
+                    report_results.push(std::mem::take(&mut report_iteration));
+                }
             }
         }
         prev_iteration = Some(iteration);
@@ -225,6 +224,7 @@ fn into_report_results_json(
             result.benchmarks.push(benchmark_metric);
         } else {
             report_result = Some(JsonReportResult {
+                iteration,
                 measure: query_measure.into_json_for_project(project),
                 threshold: threshold_statistic.map(|(threshold, statistic)| {
                     threshold.into_threshold_statistic_json_for_project(project, statistic)
@@ -238,7 +238,9 @@ fn into_report_results_json(
     if let Some(result) = report_result.take() {
         report_iteration.push(result);
     }
-    report_results.push(report_iteration);
+    if !report_iteration.is_empty() {
+        report_results.push(report_iteration);
+    }
     slog::trace!(log, "Report results: {report_results:#?}");
 
     report_results
