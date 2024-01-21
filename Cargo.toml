@@ -57,7 +57,7 @@ thiserror = "1.0"
 tokio = "1.35"
 typeshare = "1.0"
 url = "2.5"
-uuid = "1.6"
+uuid = "1.7"
 # github.com
 dropshot = { git = "https://github.com/oxidecomputer/dropshot", rev = "fb0bb0afcf6afb4703984e1d6c2975748dfe1406" }
 progenitor = { git = "https://github.com/oxidecomputer/progenitor", rev = "51db1278edfc47912cdedc558badc188bd1b8cdb" }
