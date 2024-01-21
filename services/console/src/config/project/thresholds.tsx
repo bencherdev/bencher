@@ -86,15 +86,35 @@ const THRESHOLD_FIELDS = {
 };
 
 const TEST_VALUE = {
-	selected: "z",
+	selected: "t_test",
 	options: [
 		{
-			value: "z",
+			value: "static",
+			option: "Static",
+		},
+		{
+			value: "percentage",
+			option: "Percentage",
+		},
+		{
+			value: "z_score",
 			option: "Z-score",
 		},
 		{
-			value: "t",
+			value: "t_test",
 			option: "Student's t-test",
+		},
+		{
+			value: "log_normal",
+			option: "Log Normal",
+		},
+		{
+			value: "iqr",
+			option: "Inter-Quartile Range (IQR)",
+		},
+		{
+			value: "delta_iqr",
+			option: "Delta Inter-Quartile Range (ΔIQR)",
 		},
 	],
 };

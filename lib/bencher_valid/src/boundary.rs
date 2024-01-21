@@ -62,6 +62,14 @@ impl Visitor<'_> for BoundaryVisitor {
         formatter.write_str("a floating point boundary")
     }
 
+    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        #[allow(clippy::cast_precision_loss)]
+        (value as f64).try_into().map_err(E::custom)
+    }
+
     fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
     where
         E: de::Error,
