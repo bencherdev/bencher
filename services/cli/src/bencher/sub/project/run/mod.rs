@@ -40,7 +40,6 @@ const BENCHER_CMD: &str = "BENCHER_CMD";
 #[allow(clippy::struct_excessive_bools)]
 pub struct Run {
     project: ResourceId,
-    runner: Runner,
     branch: Branch,
     hash: Option<GitHash>,
     testbed: Testbed,
@@ -54,6 +53,7 @@ pub struct Run {
     html: bool,
     log: bool,
     ci: Option<Ci>,
+    runner: Runner,
     #[allow(clippy::struct_field_names)]
     dry_run: bool,
     backend: AuthBackend,
@@ -65,8 +65,6 @@ impl TryFrom<CliRun> for Run {
     fn try_from(run: CliRun) -> Result<Self, Self::Error> {
         let CliRun {
             project,
-            backend,
-            command,
             run_branch,
             hash,
             testbed,
@@ -79,11 +77,12 @@ impl TryFrom<CliRun> for Run {
             err,
             fmt,
             ci,
+            cmd,
             dry_run,
+            backend,
         } = run;
         Ok(Self {
             project: unwrap_project(project)?,
-            runner: command.try_into()?,
             branch: run_branch.try_into().map_err(RunError::Branch)?,
             hash,
             testbed: testbed.try_into().map_err(RunError::Testbed)?,
@@ -97,6 +96,7 @@ impl TryFrom<CliRun> for Run {
             html: fmt.html,
             log: !fmt.quiet,
             ci: ci.try_into().map_err(RunError::Ci)?,
+            runner: cmd.try_into()?,
             dry_run,
             backend: AuthBackend::try_from(backend)?.log(false),
         })

@@ -25,16 +25,15 @@ pub enum Runner {
 impl TryFrom<CliRunCommand> for Runner {
     type Error = RunError;
 
-    fn try_from(command: CliRunCommand) -> Result<Self, Self::Error> {
-        let cmd_str = command.cmd.or_else(|| std::env::var(BENCHER_CMD).ok());
-        if let Some(cmd_str) = cmd_str {
-            let cmd = Command::try_from((command.shell, cmd_str))?;
-            Ok(if let Some(file) = command.file {
-                Self::CommandToFile(cmd, file)
+    fn try_from(cmd: CliRunCommand) -> Result<Self, Self::Error> {
+        if let Some(cmd_str) = cmd.command.or_else(|| std::env::var(BENCHER_CMD).ok()) {
+            let command = Command::try_from((cmd.sh_c, cmd_str))?;
+            Ok(if let Some(file) = cmd.file {
+                Self::CommandToFile(command, file)
             } else {
-                Self::Command(cmd)
+                Self::Command(command)
             })
-        } else if let Some(file) = command.file {
+        } else if let Some(file) = cmd.file {
             Ok(Self::File(file))
         } else if let Some(pipe) = Pipe::new() {
             Ok(Self::Pipe(pipe))

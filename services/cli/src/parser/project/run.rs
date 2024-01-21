@@ -60,7 +60,7 @@ pub struct CliRun {
     pub ci: CliRunCi,
 
     #[clap(flatten)]
-    pub command: CliRunCommand,
+    pub cmd: CliRunCommand,
 
     /// Do a dry run (no data is saved)
     #[clap(long)]
@@ -102,20 +102,24 @@ pub struct CliRunCommand {
     pub file: Option<PathBuf>,
 
     #[clap(flatten)]
-    pub shell: CliRunShell,
+    pub sh_c: CliRunShell,
 
     /// Benchmark command
-    pub cmd: Option<String>,
+    pub command: Option<String>,
+
+    /// Benchmark command arguments
+    #[clap(conflicts_with = "shell", conflicts_with = "flag")]
+    pub arguments: Vec<String>,
 }
 
 #[derive(Args, Debug)]
 pub struct CliRunShell {
     /// Shell command path
-    #[clap(long, requires = "cmd")]
+    #[clap(long, requires = "command")]
     pub shell: Option<String>,
 
     /// Shell command flag
-    #[clap(long, requires = "cmd")]
+    #[clap(long, requires = "command")]
     pub flag: Option<String>,
 }
 
