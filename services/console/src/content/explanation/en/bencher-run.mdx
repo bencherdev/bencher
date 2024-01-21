@@ -5,74 +5,37 @@ heading: "bencher run CLI Subcommand"
 sortOrder: 2
 ---
 
-`bencher run` is the most popular CLI subcommand.
-It is used to run benchmarks and report the results.
-As such, it is one of the most complicated subcommands.
-This page will explain the options, flags, and arguments that can be passed to `bencher run`.
+import BencherRunIntro from "../../../chunks/explanation/en/bencher-run-intro.mdx";
+import BencherRunCmd from "../../../chunks/explanation/bencher-run-cmd.mdx";
+import BencherRunBenchmarkCommand from "../../../chunks/explanation/en/bencher-run-benchmark-command.mdx";
+import BencherRunProject from "../../../chunks/explanation/en/bencher-run-project.mdx";
+import BencherRunToken from "../../../chunks/explanation/en/bencher-run-token.mdx";
+import BencherRunBranchSelection from "../../../chunks/explanation/en/bencher-run-branch-selection.mdx";
+import BencherRunHash from "../../../chunks/explanation/en/bencher-run-hash.mdx";
 
-## Benchmark Command
+import BencherRunExec from "../../../chunks/explanation/en/bencher-run-exec.mdx";
 
-The first and only argument to `bencher run` is the optional benchmark command.
-This is the command that will be executed, invoking your benchmark harness.
-It can also be set using the `BENCHER_CMD` environment variable.
-The command is executed in a shell, which can be configured with the `--shell` and `--flag` options.
-Its output is parsed by a benchmark harness adapter, which can be set using the `--adapter` option.
-However, if the benchmark harness outputs to a file then the `--file` option must also be used to specify the output file path.
+<BencherRunIntro />
 
-<br />
+<BencherRunCmd />
 
-> 🐰 If your benchmark command is multiple words, then you must wrap it in quotes (ie `bencher run "bencher mock"`).
-
-<br />
-
-The benchmark command can be run multiple times using the `--iter` option,
-and those results can be folded into a single result using the `--fold` option.
-If any of the iterations fail, then the entire command is considered to have failed unless the `--allow-failure` flag is set.
-
-If the benchmark command is not specified but the `--file` option is, then `bencher run` will read from output file path instead.
-If both the benchmark command and  `--file` option are not specified, then `bencher run` will read from `stdin` instead.
-This allows you to save the output of another command to a file or pipe it into `bencher run`, respectively.
+<BencherRunBenchmarkCommand />
 
 ## Options
 
-### `--project <PROJECT>`
+<BencherRunProject />
 
 <br />
 
-Either the `--project` option or the `BENCHER_PROJECT` environment variable
-must be set to the slug or UUID of an already existing project.
-If both are defined, the `--project` option takes precedence over the `BENCHER_PROJECT` environment variable.
+<BencherRunToken />
 
 <br />
 
-### `--token <TOKEN>`
+<BencherRunBranchSelection />
 
 <br />
 
-Either the `--token` option or the `BENCHER_API_TOKEN` environment variable must be set to a valid API token.
-If both are defined, the `--token` option takes precedence over the `BENCHER_API_TOKEN` environment variable.
-
-<br />
-
-### `--branch <BRANCH>`
-### `--if-branch <BRANCH_NAME>`
-### `--else-if-branch <BRANCH_NAME>`
-### `--else-branch`
-### `--endif-branch`
-
-<br />
-
-See [branch selection](/docs/explanation/branch-selection/) for a full overview.
-
-<br />
-
-### `--hash <HASH>`
-
-<br />
-
-Optional: A 40-character SHA-1 commit hash.
-If two reports have the same branch and hash, they will be considered to be from the same commit.
-Therefore, they will have the same branch version number.
+<BencherRunHash />
 
 <br />
 
@@ -188,7 +151,7 @@ Requires: `--github-actions`
 
 <br />
 
-### `--ci-id`
+### `--ci-id <ID>`
 
 <br />
 
@@ -199,7 +162,7 @@ Requires: `--github-actions`
 
 <br/>
 
-### `--ci-number`
+### `--ci-number <NUMBER>`
 
 <br />
 
@@ -239,6 +202,10 @@ Optional: Shell command path. Defaults to `/bin/sh` on Unix-like environments an
 <br />
 
 Optional: Shell command flag. Defaults to `-c` on Unix-like environments and `/C` on Windows.
+
+<br />
+
+<BencherRunExec />
 
 <br />
 

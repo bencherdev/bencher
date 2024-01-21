@@ -1,0 +1,28 @@
+## Benchmark-Befehl
+
+Das erste Argument für `bencher run` ist der optionale Benchmark-Befehl.
+Dies ist der Befehl, der ausgeführt wird und Ihren Benchmark-Harness aufruft.
+Er kann auch über die Umgebungsvariable `BENCHER_CMD` gesetzt werden.
+Standardmäßig wird dieser Befehl in einer Shell ausgeführt, welche mit den Optionen `--shell` und `--flag` konfiguriert werden kann.
+Seine Ausgabe wird von einem Benchmark-Harness-Adapter analysiert, der mit der Option `--adapter` festgelegt werden kann.
+Wenn der Benchmark-Harness jedoch in eine Datei ausgibt, muss auch die Option `--file` verwendet werden, um den Ausgabedateipfad zu spezifizieren.
+
+Wenn Sie bevorzugen, dass der Befehl nicht in einer Shell ausgeführt wird, können Sie die `--exec`-Flag verwenden oder einfach zusätzliche Argumente zu Ihrem Befehl als zusätzliche Argumente zu `bencher run` hinzufügen.
+
+Shell-Form:
+```bash
+bencher run "bencher mock"
+```
+
+Exec-Form:
+```bash
+bencher run bencher mock
+```
+
+Der Benchmark-Befehl kann mehrere Male mit der Option `--iter` ausgeführt werden,
+und diese Ergebnisse können mit der Option `--fold` zu einem einzigen Ergebnis zusammengefasst werden.
+Wenn eine der Iterationen fehlschlägt, gilt der gesamte Befehl als fehlgeschlagen, es sei denn, die Flag `--allow-failure` ist gesetzt.
+
+Wenn der Benchmark-Befehl nicht angegeben ist, aber die `--file`-Option besteht, dann liest `bencher run` stattdessen aus dem Ausgabedateipfad.
+Wenn weder der Benchmark-Befehl noch die `--file`-Option angegeben sind, dann liest `bencher run` stattdessen von `stdin`.
+Dies ermöglicht es Ihnen, die Ausgabe eines anderen Befehls in eine Datei zu speichern oder in `bencher run` zu leiten.

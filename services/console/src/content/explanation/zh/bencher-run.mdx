@@ -5,74 +5,37 @@ heading: "bencher run CLI 子命令"
 sortOrder: 2
 ---
 
-`bencher run` 是最受欢迎的 CLI 子命令。
-它被用来运行基准测试并报告结果。
-因此，它是最复杂的子命令之一。
-本页面将解释可以传递给 `bencher run` 的选项，标志和参数。
+import BencherRunIntro from "../../../chunks/explanation/zh/bencher-run-intro.mdx";
+import BencherRunCmd from "../../../chunks/explanation/bencher-run-cmd.mdx";
+import BencherRunBenchmarkCommand from "../../../chunks/explanation/zh/bencher-run-benchmark-command.mdx";
+import BencherRunProject from "../../../chunks/explanation/zh/bencher-run-project.mdx";
+import BencherRunToken from "../../../chunks/explanation/zh/bencher-run-token.mdx";
+import BencherRunBranchSelection from "../../../chunks/explanation/zh/bencher-run-branch-selection.mdx";
+import BencherRunHash from "../../../chunks/explanation/zh/bencher-run-hash.mdx";
 
-## 基准测试命令
+import BencherRunExec from "../../../chunks/explanation/zh/bencher-run-exec.mdx";
 
-传递给 `bencher run` 的第一个也是唯一的参数是可选的基准测试命令。
-这是将要执行的命令，调用你的基准测试工具。
-也可以使用 `BENCHER_CMD` 环境变量来设置。
-该命令在shell中执行，可通过 `--shell` 和 `--flag` 选项进行配置。
-其输出由一个基准测试工具适配器进行解析，可以使用 `--adapter` 选项进行设置。
-但是，如果基准测试工具输出到文件，则还必须使用 `--file` 选项来指定输出文件路径。
+<BencherRunIntro />
 
-<br />
+<BencherRunCmd />
 
-> 🐰 如果你的基准测试命令有多个词，则必须用引号包裹起来 (例如 `bencher run "bencher mock"`)。
-
-<br />
-
-可以使用 `--iter` 选项多次执行基准测试命令，
-并可以使用 `--fold` 选项将这些结果合并为一个结果。
-如果任何迭代失败，那么整个命令都会被认为失败，除非设置了 `--allow-failure` 标志。
-
-如果没有指定基准测试命令，但是指定了 `--file` 选项，则 `bencher run` 将从输出文件路径中读取。
-如果基准测试命令和 `--file` 选项都未指定，则 `bencher run` 将从 `stdin` 读取。
-这允许你将另一个命令的输出保存到文件中，或者将它管道传输到 `bencher run`。
+<BencherRunBenchmarkCommand />
 
 ## 选项
 
-### `--project <项目>`
+<BencherRunProject />
 
 <br />
 
-必须设置 `--project` 选项或 `BENCHER_PROJECT` 环境变量
-为已经存在的项目的 slug 或 UUID。
-如果两者都被定义，`--project` 选项优先于 `BENCHER_PROJECT` 环境变量。
+<BencherRunToken />
 
 <br />
 
-### `--token <令牌>`
+<BencherRunBranchSelection />
 
 <br />
 
-必须设置 `--token` 选项或 `BENCHER_API_TOKEN` 环境变量为有效的 API 令牌。
-如果两者都被定义，`--token` 选项优先于 `BENCHER_API_TOKEN` 环境变量。
-
-<br />
-
-### `--branch <分支>`
-### `--if-branch <若分支>`
-### `--else-if-branch <否则若分支>`
-### `--else-branch`
-### `--endif-branch`
-
-<br />
-
-请参阅 [分支选择](/zh/docs/explanation/branch-selection/) 以获取完整的概述。
-
-<br />
-
-### `--hash <哈希值>`
-
-<br />
-
-可选：40个字符的 SHA-1 提交哈希值。
-如果两个报告具有相同的分支和哈希，他们将被认为是来自同一次提交。
-因此，他们将有相同的分支版本号。
+<BencherRunHash />
 
 <br />
 
@@ -238,6 +201,10 @@ Bencher 将尽最大努力检测出需要提交结果的 CI 问题编号。
 <br />
 
 可选：Shell 命令标志。在类 Unix 环境中默认为 `-c`，在 Windows 上默认为 `/C`。
+
+<br />
+
+<BencherRunExec />
 
 <br />
 

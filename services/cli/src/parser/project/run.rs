@@ -104,7 +104,7 @@ pub struct CliRunCommand {
     #[clap(flatten)]
     pub sh_c: CliRunShell,
 
-    /// Hint to run as an executable (not a shell command)
+    /// Run as an executable not a shell command (default if args > 1)
     #[clap(long)]
     #[clap(
         requires = "command",

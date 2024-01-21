@@ -1,0 +1,28 @@
+## Comando Benchmark
+
+El primer argumento para `bencher run` es el comando benchmark opcional.
+Este es el comando que se ejecutará, invocando tu arnés de pruebas de rendimiento.
+También se puede establecer usando la variable de entorno `BENCHER_CMD`.
+Por defecto, este comando se ejecuta en un shell, que se puede configurar con las opciones `--shell` y `--flag`.
+Su salida es analizada por un adaptador de arnés de pruebas de rendimiento, que se puede establecer usando la opción `--adapter`.
+Sin embargo, si el arnés de pruebas de rendimiento muestra los resultados en un archivo, entonces la opción `--file` también debe ser usada para especificar la ruta del archivo de salida.
+
+Si prefieres no tener el comando ejecutado en un shell, puedes usar la bandera `--exec` o simplemente proporcionar argumentos adicionales a tu comando como argumentos adicionales para `bencher run`.
+
+Forma Shell:
+```bash
+bencher run "bencher mock"
+```
+
+Forma Exec:
+```bash
+bencher run bencher mock
+```
+
+El comando benchmark puede ejecutarse varias veces usando la opción `--iter`,
+y esos resultados pueden consolidarse en un solo resultado usando la opción `--fold`.
+Si alguna de las iteraciones falla, entonces se considera que todo el comando ha fallado a menos que se establezca la bandera `--allow-failure`.
+
+Si el comando benchmark no se especifica pero la opción `--file` sí, entonces `bencher run` leerá la ruta del archivo de salida en su lugar.
+Si ni el comando benchmark ni  la opción `--file` están especificados, entonces `bencher run` leerá desde `stdin` en su lugar.
+Esto te permite guardar la salida de otro comando en un archivo o canalizarlo a `bencher run`, respectivamente.

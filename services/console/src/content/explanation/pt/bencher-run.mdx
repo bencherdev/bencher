@@ -5,68 +5,37 @@ heading: "Subcomando bencher run CLI"
 sortOrder: 2
 ---
 
-`bencher run` é o subcomando CLI mais popular. É usado para executar benchmarks e reportar os resultados. Por isso, é um dos subcomandos mais complicados. Esta página vai explicar as opções, flags e argumentos que podem ser passados para `bencher run`.
+import BencherRunIntro from "../../../chunks/explanation/pt/bencher-run-intro.mdx";
+import BencherRunCmd from "../../../chunks/explanation/bencher-run-cmd.mdx";
+import BencherRunBenchmarkCommand from "../../../chunks/explanation/pt/bencher-run-benchmark-command.mdx";
+import BencherRunProject from "../../../chunks/explanation/pt/bencher-run-project.mdx";
+import BencherRunToken from "../../../chunks/explanation/pt/bencher-run-token.mdx";
+import BencherRunBranchSelection from "../../../chunks/explanation/pt/bencher-run-branch-selection.mdx";
+import BencherRunHash from "../../../chunks/explanation/pt/bencher-run-hash.mdx";
 
-## Comando de Benchmark
+import BencherRunExec from "../../../chunks/explanation/pt/bencher-run-exec.mdx";
 
-O primeiro e único argumento para `bencher run` é o comando opcional de benchmark. Este é o comando que será executado e invocará seu sistema de benchmark. Ele também pode ser definido usando a variável de ambiente `BENCHER_CMD`.
-O comando é executado em um shell, que pode ser configurado com as opções `--shell` e `--flag`.
-A saída é analisada por um adaptador de benchmark, que pode ser configurado usando a opção `--adapter`.
-Porém, se o sistema de benchmark escrever em um arquivo, então a opção `--file` deve ser usada para especificar o caminho do arquivo de saída.
+<BencherRunIntro />
 
-<br />
+<BencherRunCmd />
 
-> 🐰 Se o seu comando de benchmark tem várias palavras, então você deve envolvê-lo em aspas (por exemplo `bencher run "bencher mock"`).
-
-<br />
-
-O comando de benchmark pode ser executado várias vezes usando a opção `--iter`,
-e esses resultados podem ser combinados em um único resultado usando a opção `--fold`.
-Se alguma das iterações falhar, então o comando inteiro é considerado uma falha, a menos que a flag `--allow-failure` esteja configurada.
-
-Se o comando do benchmark não estiver especificado, mas a opção `--file` estiver, então `bencher run` lerá o arquivo de saída o invés.
-Se tanto o comando do benchmark quanto a opção `--file` não estiverem especificados, então `bencher run` lerá o `stdin` ao invés.
-Isso permite que você salve a saída de outro comando em um arquivo ou a encaminhe para `bencher run`, respectivamente.
+<BencherRunBenchmarkCommand />
 
 ## Opções
 
-### `--project <PROJECT>`
+<BencherRunProject />
 
 <br />
 
-A opção `--project` ou a variável de ambiente `BENCHER_PROJECT` deve ser configurada para o slug ou UUID de um projeto já existente.
-Se ambos estiverem definidos, a opção `--project` tem precedência sobre a variável de ambiente `BENCHER_PROJECT`.
+<BencherRunToken />
 
 <br />
 
-### `--token <TOKEN>`
+<BencherRunBranchSelection />
 
 <br />
 
-A opção `--token` ou a variável de ambiente `BENCHER_API_TOKEN` deve ser configurada para um token API válido.
-Se ambos estiverem definidos, a opção `--token` tem precedência sobre a variável de ambiente `BENCHER_API_TOKEN`.
-
-<br />
-
-### `--branch <BRANCH>`
-### `--if-branch <BRANCH_NAME>`
-### `--else-if-branch <BRANCH_NAME>`
-### `--else-branch`
-### `--endif-branch`
-
-<br />
-
-Veja [seleção de branch](/pt/docs/explanation/branch-selection/) para uma visão geral completa.
-
-<br />
-
-### `--hash <HASH>`
-
-<br />
-
-Opcional: Um hash de commit SHA-1 de 40 caracteres.
-Se dois relatórios possuírem a mesma branch e hash, eles serão considerados do mesmo commit.
-Portanto, eles vão ter o mesmo número de versão da branch.
+<BencherRunHash />
 
 <br />
 
@@ -232,6 +201,10 @@ Opcional: Caminho do comando Shell. Por padrão é `/bin/sh` em ambientes Unix-l
 <br />
 
 Opcional: Flag do comando Shell. Por padrão é `-c` em ambientes Unix-like e `/C` no Windows.
+
+<br />
+
+<BencherRunExec />
 
 <br />
 

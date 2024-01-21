@@ -5,74 +5,37 @@ heading: "Sous-commande CLI bencher run"
 sortOrder: 2
 ---
 
-`bencher run` est la sous-commande CLI la plus utilisée.
-Elle est utilisée pour exécuter des benchmarks et en rapporter les résultats.
-De ce fait, c'est l'une des sous-commandes les plus compliquées.
-Cette page expliquera les options, flags, et arguments qui peuvent être passés à `bencher run`.
+import BencherRunIntro from "../../../chunks/explanation/fr/bencher-run-intro.mdx";
+import BencherRunCmd from "../../../chunks/explanation/bencher-run-cmd.mdx";
+import BencherRunBenchmarkCommand from "../../../chunks/explanation/fr/bencher-run-benchmark-command.mdx";
+import BencherRunProject from "../../../chunks/explanation/fr/bencher-run-project.mdx";
+import BencherRunToken from "../../../chunks/explanation/fr/bencher-run-token.mdx";
+import BencherRunBranchSelection from "../../../chunks/explanation/fr/bencher-run-branch-selection.mdx";
+import BencherRunHash from "../../../chunks/explanation/fr/bencher-run-hash.mdx";
 
-## Commande Benchmark
+import BencherRunExec from "../../../chunks/explanation/fr/bencher-run-exec.mdx";
 
-Le premier et seul argument de `bencher run` est la commande benchmark optionnelle.
-C'est la commande qui sera exécutée, invoquant votre harnais benchmark.
-Elle peut aussi être définie en utilisant la variable d'environnement `BENCHER_CMD`.
-La commande est exécutée dans un shell, qui peut être configuré avec les options `--shell` et `--flag`.
-Sa sortie est analysée par un adaptateur de harnais benchmark, qui peut être défini en utilisant l'option `--adapter`.
-Cependant, si le harnais benchmark sort vers un fichier, alors l'option `--file` doit également être utilisée pour spécifier le chemin du fichier de sortie.
+<BencherRunIntro />
 
-<br />
+<BencherRunCmd />
 
-> 🐰 Si votre commande de benchmark contient plusieurs mots, alors vous devez l'entourer de guillemets (par exemple `bencher run "bencher mock"`).
-
-<br />
-
-La commande de benchmark peut être exécutée plusieurs fois en utilisant l'option `--iter`,
-et ces résultats peuvent être regroupés en un seul résultat en utilisant l'option `--fold`.
-Si une des itérations échoue, alors la commande entière est considérée comme ayant échoué à moins que le flag `--allow-failure` ne soit défini.
-
-Si la commande de benchmark n'est pas spécifiée mais que l'option `--file` l'est, alors `bencher run` lira le chemin du fichier de sortie à la place.
-Si la commande de benchmark et l'option `--file` ne sont spécifiées, alors `bencher run` lira depuis `stdin` à la place.
-Cela vous permet de sauvegarder la sortie d'une autre commande dans un fichier ou de la conduire dans `bencher run`, respectivement.
+<BencherRunBenchmarkCommand />
 
 ## Options
 
-### `--project <PROJECT>`
+<BencherRunProject />
 
 <br />
 
-Soit l'option `--project` soit la variable d'environnement `BENCHER_PROJECT`
-doit être définie sur le slug ou UUID d'un projet déjà existant.
-Si les deux sont définis, l'option `--project` a la priorité sur la variable d'environnement `BENCHER_PROJECT`.
+<BencherRunToken />
 
 <br />
 
-### `--token <TOKEN>`
+<BencherRunBranchSelection />
 
 <br />
 
-Soit l'option `--token` soit la variable d'environnement `BENCHER_API_TOKEN` doit être définie sur un token API valide.
-Si les deux sont définis, l'option `--token` a la priorité sur la variable d'environnement `BENCHER_API_TOKEN`.
-
-<br />
-
-### `--branch <BRANCH>`
-### `--if-branch <BRANCH_NAME>`
-### `--else-if-branch <BRANCH_NAME>`
-### `--else-branch`
-### `--endif-branch`
-
-<br />
-
-Voir [sélection de branche](/fr/docs/explanation/branch-selection/) pour un aperçu complet.
-
-<br />
-
-### `--hash <HASH>`
-
-<br />
-
-Optionnel : Un hash de commit SHA-1 de 40 caractères.
-Si deux rapports ont la même branche et hash, ils seront considérés comme provenant du même commit.
-Donc, ils auront le même numéro de version de branche.
+<BencherRunHash />
 
 <br />
 
@@ -239,6 +202,10 @@ Optionnel : Chemin de la commande Shell. Par défaut à `/bin/sh` dans les envir
 <br />
 
 Optionnel : Flag de la commande Shell. Par défaut à `-c` dans les environnements Unix et `/C` sur Windows.
+
+<br />
+
+<BencherRunExec />
 
 <br />
 

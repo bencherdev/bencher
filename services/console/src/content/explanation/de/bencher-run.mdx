@@ -5,74 +5,37 @@ heading: "bencher run CLI-Unterbefehl"
 sortOrder: 2
 ---
 
-`bencher run` ist das beliebteste CLI-Unterkommando.
-Es wird verwendet, um Benchmarks auszuführen und die Ergebnisse zu berichten.
-Daher ist es eines der kompliziertesten Unterkommandos.
-Diese Seite wird die Optionen, Flags und Argumente erklären, die `bencher run` übergeben werden können.
+import BencherRunIntro from "../../../chunks/explanation/de/bencher-run-intro.mdx";
+import BencherRunCmd from "../../../chunks/explanation/bencher-run-cmd.mdx";
+import BencherRunBenchmarkCommand from "../../../chunks/explanation/de/bencher-run-benchmark-command.mdx";
+import BencherRunProject from "../../../chunks/explanation/de/bencher-run-project.mdx";
+import BencherRunToken from "../../../chunks/explanation/de/bencher-run-token.mdx";
+import BencherRunBranchSelection from "../../../chunks/explanation/de/bencher-run-branch-selection.mdx";
+import BencherRunHash from "../../../chunks/explanation/de/bencher-run-hash.mdx";
 
-## Benchmark Befehl
+import BencherRunExec from "../../../chunks/explanation/de/bencher-run-exec.mdx";
 
-Das erste und einzige Argument für `bencher run` ist der optionale Benchmark-Befehl.
-Dies ist der Befehl, der ausgeführt wird, um Ihre Benchmark-Aufhängung aufzurufen.
-Es kann auch mit der Umgebungsvariablen `BENCHER_CMD` gesetzt werden.
-Der Befehl wird in einer Shell ausgeführt, die mit den Optionen `--shell` und `--flag` konfiguriert werden kann.
-Seine Ausgabe wird von einem Benchmark-Harness-Adapter analysiert, der mit der Option `--adapter` gesetzt werden kann.
-Allerdings, wenn die Benchmark-Aufhängung auf eine Datei ausgibt, dann muss auch die Option `--file` verwendet werden, um den Ausgabedateipfad zu spezifizieren.
+<BencherRunIntro />
 
-<br />
+<BencherRunCmd />
 
-> 🐰 Wenn Ihr Benchmark-Befehl mehrere Wörter hat, müssen Sie ihn in Anführungszeichen setzen (d.h. `bencher run "bencher mock"`).
-
-<br />
-
-Der Benchmark-Befehl kann mehrere Male mit der Option `--iter` ausgeführt werden,
-und diese Ergebnisse können mit der Option `--fold` zu einem einzigen Ergebnis zusammengefasst werden.
-Wenn eine der Iterationen fehlschlägt, gilt der gesamte Befehl als fehlgeschlagen, es sei denn, das Flag `--allow-failure` ist gesetzt.
-
-Wenn der Benchmark-Befehl nicht spezifiziert ist, aber die Option `--file` ist, dann wird `bencher run` stattdessen von dem Ausgabedateipfad lesen.
-Wenn sowohl der Benchmark-Befehl und die `--file` Option nicht spezifiziert sind, dann wird `bencher run` stattdessen von `stdin` lesen.
-Das ermöglicht es Ihnen, die Ausgabe eines anderen Befehls in eine Datei zu speichern oder sie in `bencher run` zu leiten, bzw.
+<BencherRunBenchmarkCommand />
 
 ## Optionen
 
-### `--project <PROJECT>`
+<BencherRunProject />
 
 <br />
 
-Entweder die Option `--project` oder die Umgebungsvariable `BENCHER_PROJECT`
-muss auf den Slug oder UUID eines bereits existierenden Projekts gesetzt werden.
-Wenn beide definiert sind, hat die Option `--project` Vorrang vor der Umgebungsvariable `BENCHER_PROJECT`.
+<BencherRunToken />
 
 <br />
 
-### `--token <TOKEN>`
+<BencherRunBranchSelection />
 
 <br />
 
-Entweder die Option `--token` oder die Umgebungsvariable `BENCHER_API_TOKEN` muss auf ein gültiges API-Token gesetzt werden.
-Wenn beide definiert sind, hat die Option `--token` Vorrang vor der Umgebungsvariable `BENCHER_API_TOKEN`.
-
-<br />
-
-### `--branch <BRANCH>`
-### `--if-branch <BRANCH_NAME>`
-### `--else-if-branch <BRANCH_NAME>`
-### `--else-branch`
-### `--endif-branch`
-
-<br />
-
-Siehe [Branch-Auswahl](/de/docs/explanation/branch-selection/) für einen vollständigen Überblick.
-
-<br />
-
-### `--hash <HASH>`
-
-<br />
-
-Optional: Ein 40-stelliger SHA-1-Commit-Hash.
-Wenn zwei Berichte den gleichen Branch und Hash haben, werden sie als vom selben Commit angesehen.
-Daher werden sie die gleiche Branch-Version Nummer haben.
+<BencherRunHash />
 
 <br />
 
@@ -248,6 +211,10 @@ Optional: Shell-Befehlspfad. Standardmäßig ist dies `/bin/sh` in Unix-ähnlich
 <br />
 
 Optional: Shell-Befehlsflag. Standardmäßig ist dies `-c` in Unix-ähnlichen Umgebungen und `/C` in Windows.
+
+<br />
+
+<BencherRunExec />
 
 <br />
 

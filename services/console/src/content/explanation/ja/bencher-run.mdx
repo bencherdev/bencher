@@ -5,74 +5,37 @@ heading: "bencher run CLI サブコマンド"
 sortOrder: 2
 ---
 
-`bencher run`は最も人気のあるCLIサブコマンドです。
-これはベンチマークを実行し、結果を報告するために使用されます。
-したがって、それは最も複雑なサブコマンドの一つです。
-このページでは、`bencher run`に渡すことができるオプション、フラグ、引数を説明します。
+import BencherRunIntro from "../../../chunks/explanation/ja/bencher-run-intro.mdx";
+import BencherRunCmd from "../../../chunks/explanation/bencher-run-cmd.mdx";
+import BencherRunBenchmarkCommand from "../../../chunks/explanation/ja/bencher-run-benchmark-command.mdx";
+import BencherRunProject from "../../../chunks/explanation/ja/bencher-run-project.mdx";
+import BencherRunToken from "../../../chunks/explanation/ja/bencher-run-token.mdx";
+import BencherRunBranchSelection from "../../../chunks/explanation/ja/bencher-run-branch-selection.mdx";
+import BencherRunHash from "../../../chunks/explanation/ja/bencher-run-hash.mdx";
 
-## ベンチマークコマンド
+import BencherRunExec from "../../../chunks/explanation/ja/bencher-run-exec.mdx";
 
-`bencher run`への最初で唯一の引数は、オプションのベンチマークコマンドです。
-これは実行されるコマンドで、あなたのベンチマークハーネスを呼び出します。
-これはまた、`BENCHER_CMD`環境変数を使って設定することもできます。
-コマンドはシェルで実行され、これは`--shell`オプションと`--flag`オプションで設定することができます。
-その出力はベンチマークハーネスアダプタによって解析され、これは`--adapter`オプションを使って設定することができます。
-ただし、ベンチマークハーネスがファイルに出力する場合は、`--file`オプションも使用して出力ファイルパスを指定する必要があります。
+<BencherRunIntro />
 
-<br />
+<BencherRunCmd />
 
-> 🐰 あなたのベンチマークコマンドが複数の単語である場合、それを引用符で囲む必要があります（例 `bencher run "bencher mock"`）。
-
-<br />
-
-ベンチマークコマンドは`--iter`オプションを使って複数回実行することができ、
-その結果は`--fold`オプションを使って一つの結果にまとめることができます。
-もし何度かの繰り返しで失敗すると、そのコマンド全体が失敗したと見なされます。ただし、`--allow-failure`フラグが設定されている場合はそうは見なされません。
-
-ベンチマークコマンドが指定されていないが`--file`オプションが指定されている場合、その後`bencher run`は出力ファイルパスから読み込むでしょう。
-ベンチマークコマンドと`--file`オプションの両方が指定されていない場合、`bencher run`は代わりに`stdin`から読み込むでしょう。
-これにより、他のコマンドの出力をファイルに保存したり、それを`bencher run`にパイプすることができます。
+<BencherRunBenchmarkCommand />
 
 ## オプション
 
-### `--project <PROJECT>`
+<BencherRunProject />
 
 <br />
 
-`--project`オプションまたは`BENCHER_PROJECT`環境変数のどちらかを
-既存のプロジェクトのスラグまたはUUIDに設定する必要があります。
-両方が定義されている場合、`--project`オプションは`BENCHER_PROJECT`環境変数に優先します。
+<BencherRunToken />
 
 <br />
 
-### `--token <TOKEN>`
+<BencherRunBranchSelection />
 
 <br />
 
-`--token`オプションまたは`BENCHER_API_TOKEN`環境変数のどちらかを有効なAPIトークンに設定する必要があります。
-両方が定義されている場合、`--token`オプションは`BENCHER_API_TOKEN`環境変数に優先します。
-
-<br />
-
-### `--branch <BRANCH>`
-### `--if-branch <BRANCH_NAME>`
-### `--else-if-branch <BRANCH_NAME>`
-### `--else-branch`
-### `--endif-branch`
-
-<br />
-
-完全な概要については、[branch selection](/ja/docs/explanation/branch-selection/)を参照してください。
-
-<br />
-
-### `--hash <HASH>`
-
-<br />
-
-オプション：40文字のSHA-1コミットハッシュ。
-2つのレポートが同じブランチとハッシュを持っている場合、それらは同じコミットから来たものと見なされます。
-したがって、それらは同じブランチバージョン番号を持つでしょう。
+<BencherRunHash />
 
 <br />
 
@@ -237,6 +200,10 @@ Bencherは結果を投稿するために必要なCIの問題番号を検出す�
 <br />
 
 オプション：シェルコマンドフラグ。Unixライクな環境ではデフォルトで`-c`、Windowsでは`/C`になります。
+
+<br />
+
+<BencherRunExec />
 
 <br />
 

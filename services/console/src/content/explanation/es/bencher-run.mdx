@@ -5,74 +5,37 @@ heading: "Subcomando bencher run CLI"
 sortOrder: 2
 ---
 
-`bencher run` es el subcomando CLI más popular.
-Se usa para ejecutar benchmarks y reportar los resultados.
-Por lo tanto, es uno de los subcomandos más complicados.
-Esta página explicará las opciones, banderas y argumentos que se pueden pasar a `bencher run`.
+import BencherRunIntro from "../../../chunks/explanation/es/bencher-run-intro.mdx";
+import BencherRunCmd from "../../../chunks/explanation/bencher-run-cmd.mdx";
+import BencherRunBenchmarkCommand from "../../../chunks/explanation/es/bencher-run-benchmark-command.mdx";
+import BencherRunProject from "../../../chunks/explanation/es/bencher-run-project.mdx";
+import BencherRunToken from "../../../chunks/explanation/es/bencher-run-token.mdx";
+import BencherRunBranchSelection from "../../../chunks/explanation/es/bencher-run-branch-selection.mdx";
+import BencherRunHash from "../../../chunks/explanation/es/bencher-run-hash.mdx";
 
-## Comando Benchmark
+import BencherRunExec from "../../../chunks/explanation/es/bencher-run-exec.mdx";
 
-El primer y único argumento para `bencher run` es el comando benchmark opcional.
-Este es el comando que se ejecutará, invocando tu arnés de benchmark.
-También puede establecerse usando la variable de entorno `BENCHER_CMD`.
-El comando se ejecuta en una shell, que se puede configurar con las opciones `--shell` y `--flag`.
-Su salida es analizada por un adaptador de arnés de benchmark, que se puede establecer usando la opción `--adapter`.
-Sin embargo, si el arnés de benchmark produce una salida a un archivo, entonces la opción `--file` también debe usarse para especificar la ruta del archivo de salida.
+<BencherRunIntro />
 
-<br />
+<BencherRunCmd />
 
-> 🐰 Si tu comando benchmark consta de varias palabras, entonces debes envolverlo en comillas (es decir, `bencher run "bencher mock"`).
-
-<br />
-
-El comando de benchmark se puede ejecutar varias veces usando la opción `--iter`,
-y esos resultados se pueden condensar en un solo resultado usando la opción `--fold`.
-Si alguna de las iteraciones falla, entonces se considera que el comando completo ha fallado a menos que se configure la bandera `--allow-failure`.
-
-Si el comando de benchmark no se especifica pero se indica la opción `--file`, entonces `bencher run` leerá desde la ruta del archivo de salida en su lugar.
-Si no se especifican tanto el comando de benchmark como la opción `--file`, entonces `bencher run` leerá desde `stdin` en su lugar.
-Esto te permite guardar la salida de otro comando en un archivo o canalizarlo a `bencher run`, respectivamente.
+<BencherRunBenchmarkCommand />
 
 ## Opciones
 
-### `--project <PROJECT>`
+<BencherRunProject />
 
 <br />
 
-La opción `--project` o la variable de entorno `BENCHER_PROJECT`
-deben estar configuradas con el slug o UUID de un proyecto ya existente.
-Si ambas están definidas, la opción `--project` tiene prioridad sobre la variable de entorno `BENCHER_PROJECT`.
+<BencherRunToken />
 
 <br />
 
-### `--token <TOKEN>`
+<BencherRunBranchSelection />
 
 <br />
 
-La opción `--token` o la variable de entorno `BENCHER_API_TOKEN` deben estar configuradas con un token de API válido.
-Si ambas están definidas, la opción `--token` tiene prioridad sobre la variable de entorno `BENCHER_API_TOKEN`.
-
-<br />
-
-### `--branch <BRANCH>`
-### `--if-branch <BRANCH_NAME>`
-### `--else-if-branch <BRANCH_NAME>`
-### `--else-branch`
-### `--endif-branch`
-
-<br />
-
-Ver [selección de ramas](/es/docs/explanation/branch-selection/) para obtener una visión completa.
-
-<br />
-
-### `--hash <HASH>`
-
-<br />
-
-Opcional: Un hash de commit SHA-1 de 40 caracteres.
-Si dos informes tienen la misma rama y hash, se considerará que provienen del mismo commit.
-Por lo tanto, tendrán el mismo número de versión de rama.
+<BencherRunHash />
 
 <br />
 
@@ -239,6 +202,10 @@ Opcional: Ruta del comando de la shell. Predeterminado en `/bin/sh` en entornos 
 <br />
 
 Opcional: Banderas del comando de la shell. Predeterminado en `-c` en entornos tipo Unix y `/C` en Windows.
+
+<br />
+
+<BencherRunExec />
 
 <br />
 

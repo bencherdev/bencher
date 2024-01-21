@@ -5,73 +5,37 @@ heading: "bencher run CLI 하위 명령어"
 sortOrder: 2
 ---
 
-`bencher run`은 가장 인기 있는 CLI 하위 명령어입니다.
-이는 벤치마크를 실행하고 결과를 보고하는 데 사용됩니다.
-따라서 가장 복잡한 하위 명령어 중 하나입니다.
-이 페이지에서는 `bencher run`에 전달할 수 있는 옵션, 플래그, 인수에 대해 설명합니다.
+import BencherRunIntro from "../../../chunks/explanation/ko/bencher-run-intro.mdx";
+import BencherRunCmd from "../../../chunks/explanation/bencher-run-cmd.mdx";
+import BencherRunBenchmarkCommand from "../../../chunks/explanation/ko/bencher-run-benchmark-command.mdx";
+import BencherRunProject from "../../../chunks/explanation/ko/bencher-run-project.mdx";
+import BencherRunToken from "../../../chunks/explanation/ko/bencher-run-token.mdx";
+import BencherRunBranchSelection from "../../../chunks/explanation/ko/bencher-run-branch-selection.mdx";
+import BencherRunHash from "../../../chunks/explanation/ko/bencher-run-hash.mdx";
 
-## 벤치마크 명령어
+import BencherRunExec from "../../../chunks/explanation/ko/bencher-run-exec.mdx";
 
-첫 번째이면서 유일한 인수인 `bencher run`은 선택적인 벤치마크 명령어입니다.
-이는 당신의 벤치마크 하네스를 호출하는 명령어입니다.
-`BENCHER_CMD` 환경 변수를 사용해 설정할 수도 있습니다.
-명령어는 쉘에서 실행되며, 이는 `--shell` 및 `--flag` 옵션을 사용해 설정할 수 있습니다.
-출력은 벤치마크 하네스 어댑터가 파싱하며, `--adapter` 옵션을 사용해 설정할 수 있습니다.
-그러나, 벤치마크 하네스가 파일에 출력하는 경우, 출력 파일 경로를 지정하기 위해 `--file` 옵션도 사용해야 합니다.
+<BencherRunIntro />
 
-<br />
+<BencherRunCmd />
 
-> 🐰 벤치마크 명령어가 여러 단어인 경우, 따옴표로 감싸야 합니다 (예: `bencher run "bencher mock"`).
-
-<br />
-
-벤치마크 명령어는 `--iter` 옵션을 사용해 여러 번 실행할 수 있으며,
-그 결과들은 `--fold` 옵션을 사용해 단일 결과로 병합할 수 있습니다.
-반복 실행 중 어떠한 것이든 실패하면, 전체 명령어가 실패로 간주되며 `--allow-failure` 플래그가 설정된 경우에만 예외입니다.
-
-벤치마크 명령어가 지정되지 않지만 `--file` 옵션이 있는 경우, `bencher run`은 출력 파일 경로에서 대신 읽습니다.
-벤치마크 명령어와 `--file` 옵션이 모두 지정되지 않은 경우, `bencher run`은 대신 `stdin`에서 읽습니다.
-이를 통해 다른 명령어의 출력을 파일에 저장하거나 `bencher run`으로 파이프할 수 있습니다.
+<BencherRunBenchmarkCommand />
 
 ## 옵션
 
-### `--project <PROJECT>`
+<BencherRunProject />
 
 <br />
 
-`--project` 옵션이나 `BENCHER_PROJECT` 환경 변수가 이미 존재하는 프로젝트의 슬러그 또는 UUID로 설정되어야 합니다.
-둘 다 정의된 경우, `--project` 옵션이 `BENCHER_PROJECT` 환경 변수보다 우선순위를 가집니다.
+<BencherRunToken />
 
 <br />
 
-### `--token <TOKEN>`
+<BencherRunBranchSelection />
 
 <br />
 
-`--token` 옵션 또는 `BENCHER_API_TOKEN` 환경 변수는 유효한 API 토큰으로 설정되어야 합니다.
-둘 다 정의된 경우, `--token` 옵션이 `BENCHER_API_TOKEN` 환경 변수보다 우선순위를 가집니다.
-
-<br />
-
-### `--branch <BRANCH>`
-### `--if-branch <BRANCH_NAME>`
-### `--else-if-branch <BRANCH_NAME>`
-### `--else-branch`
-### `--endif-branch`
-
-<br />
-
-전체 개요는 [branch selection](/ko/docs/explanation/branch-selection/)를 참조하세요.
-
-<br />
-
-### `--hash <HASH>`
-
-<br />
-
-선택사항: 40자리 SHA-1 커밋 해시입니다.
-두 보고서가 동일한 branch와 hash를 가지면 동일한 커밋에서 비롯된 것으로 간주됩니다.
-따라서 동일한 branch 버전 번호를 가집니다.
+<BencherRunHash />
 
 <br />
 
@@ -237,6 +201,10 @@ Bencher는 결과를 게시하는 데 필요한 CI 이슈 번호를 감지하기
 <br />
 
 선택사항: 쉘 명령어 플래그입니다. 유닉스와 같은 환경에서는 기본값이 `-c`이고, 윈도우에서는 `/C`입니다.
+
+<br />
+
+<BencherRunExec />
 
 <br />
 

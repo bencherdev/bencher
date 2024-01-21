@@ -1,0 +1,28 @@
+## Commande de Benchmark
+
+Le premier argument à `bencher run` est la commande de benchmark optionnelle.
+C'est la commande qui sera exécutée, invoquant votre harnais de benchmark.
+Elle peut également être définie en utilisant la variable d'environnement `BENCHER_CMD`.
+Par défaut, cette commande est exécutée dans un shell, qui peut être configuré avec les options `--shell` et `--flag`.
+Sa sortie est analysée par un adaptateur de harnais de benchmark, qui peut être défini en utilisant l'option `--adapter`.
+Cependant, si le harnais de benchmark sort vers un fichier alors l'option `--file` doit également être utilisée pour spécifier le chemin du fichier de sortie.
+
+Si vous préférez ne pas avoir la commande exécutée dans un shell, vous pouvez utiliser le drapeau `--exec` ou simplement fournir des arguments supplémentaires à votre commande en tant qu'arguments supplémentaires à `bencher run`.
+
+Forme Shell :
+```bash
+bencher run "bencher mock"
+```
+
+Forme Exec :
+```bash
+bencher run bencher mock
+```
+
+La commande de benchmark peut être exécutée plusieurs fois en utilisant l'option `--iter`,
+et ces résultats peuvent être regroupés en un seul résultat en utilisant l'option `--fold`.
+Si l'une des itérations échoue, alors la commande entière est considérée comme ayant échoué à moins que le drapeau `--allow-failure` soit défini.
+
+Si la commande de benchmark n'est pas spécifiée mais que l'option `--file` l'est, alors `bencher run` lira à partir du chemin du fichier de sortie à la place.
+Si ni la commande de benchmark ni l'option `--file` ne sont spécifiées, alors `bencher run` lira à partir de `stdin` à la place.
+Cela vous permet d'enregistrer la sortie d'une autre commande dans un fichier ou de la faire passer dans `bencher run`, respectivement.
