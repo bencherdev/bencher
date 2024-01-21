@@ -1,4 +1,4 @@
-use std::{convert::TryFrom, fmt};
+use std::convert::TryFrom;
 
 use crate::bencher::sub::RunError;
 
@@ -28,16 +28,12 @@ impl TryFrom<Option<String>> for Flag {
     }
 }
 
-impl fmt::Display for Flag {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::Unix => UNIX_FLAG,
-                Self::Windows => WINDOWS_FLAG,
-                Self::Custom(shell) => shell,
-            }
-        )
+impl AsRef<str> for Flag {
+    fn as_ref(&self) -> &str {
+        match self {
+            Self::Unix => UNIX_FLAG,
+            Self::Windows => WINDOWS_FLAG,
+            Self::Custom(shell) => shell,
+        }
     }
 }

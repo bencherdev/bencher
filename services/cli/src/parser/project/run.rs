@@ -104,11 +104,24 @@ pub struct CliRunCommand {
     #[clap(flatten)]
     pub sh_c: CliRunShell,
 
+    /// Hint to run as an executable (not a shell command)
+    #[clap(long)]
+    #[clap(
+        requires = "command",
+        conflicts_with = "shell",
+        conflicts_with = "flag"
+    )]
+    pub exec: bool,
+
     /// Benchmark command
     pub command: Option<String>,
 
     /// Benchmark command arguments
-    #[clap(conflicts_with = "shell", conflicts_with = "flag")]
+    #[clap(
+        requires = "command",
+        conflicts_with = "shell",
+        conflicts_with = "flag"
+    )]
     pub arguments: Vec<String>,
 }
 

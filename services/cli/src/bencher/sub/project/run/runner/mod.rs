@@ -26,8 +26,24 @@ impl TryFrom<CliRunCommand> for Runner {
     type Error = RunError;
 
     fn try_from(cmd: CliRunCommand) -> Result<Self, Self::Error> {
-        if let Some(cmd_str) = cmd.command.or_else(|| std::env::var(BENCHER_CMD).ok()) {
-            let command = Command::try_from((cmd.sh_c, cmd_str))?;
+        if let Some(command) = cmd.command {
+            let command = if !cmd.exec && cmd.arguments.is_empty() {
+                Command::new_shell(cmd.sh_c, command)?
+            } else {
+                if let Some(shell) = cmd.sh_c.shell {
+                    return Err(RunError::ShellWithExec(shell));
+                } else if let Some(flag) = cmd.sh_c.flag {
+                    return Err(RunError::FlagWithExec(flag));
+                }
+                Command::new_exec(command, cmd.arguments)
+            };
+            Ok(if let Some(file) = cmd.file {
+                Self::CommandToFile(command, file)
+            } else {
+                Self::Command(command)
+            })
+        } else if let Ok(command) = std::env::var(BENCHER_CMD) {
+            let command = Command::new_shell(cmd.sh_c, command)?;
             Ok(if let Some(file) = cmd.file {
                 Self::CommandToFile(command, file)
             } else {

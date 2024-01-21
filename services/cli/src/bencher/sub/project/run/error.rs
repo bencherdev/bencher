@@ -17,6 +17,10 @@ pub enum RunError {
     #[error("The subcommand `run` requires either a command argument or results via stdin.")]
     NoCommand,
 
+    #[error("Set shell ({0}) when running command in exec mode")]
+    ShellWithExec(String),
+    #[error("Set shell flag ({0}) when running command in exec mode")]
+    FlagWithExec(String),
     #[error("Failed to spawn command: {0}")]
     SpawnCommand(std::io::Error),
     #[error("Failed to run command: {0}")]

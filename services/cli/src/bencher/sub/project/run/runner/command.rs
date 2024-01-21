@@ -1,7 +1,4 @@
-use std::{
-    convert::{TryFrom, TryInto},
-    process::Stdio,
-};
+use std::{convert::TryInto, process::Stdio};
 
 use tokio::io::{AsyncBufReadExt, BufReader};
 
@@ -10,34 +7,51 @@ use crate::{bencher::sub::RunError, parser::project::run::CliRunShell};
 use crate::{cli_eprintln_quietable, cli_println_quietable};
 
 #[derive(Debug)]
-pub struct Command {
-    pub shell: Shell,
-    pub flag: Flag,
-    pub cmd: String,
-}
-
-impl TryFrom<(CliRunShell, String)> for Command {
-    type Error = RunError;
-
-    fn try_from(shell_cmd: (CliRunShell, String)) -> Result<Self, Self::Error> {
-        let (shell, cmd) = shell_cmd;
-        Ok(Self {
-            shell: shell.shell.try_into()?,
-            flag: shell.flag.try_into()?,
-            cmd,
-        })
-    }
+pub enum Command {
+    Shell {
+        shell: Shell,
+        flag: Flag,
+        command: String,
+    },
+    Exec {
+        command: String,
+        arguments: Vec<String>,
+    },
 }
 
 impl Command {
+    pub fn new_shell(sh_c: CliRunShell, command: String) -> Result<Self, RunError> {
+        let CliRunShell { shell, flag } = sh_c;
+        Ok(Self::Shell {
+            shell: shell.try_into()?,
+            flag: flag.try_into()?,
+            command,
+        })
+    }
+
+    pub fn new_exec(command: String, arguments: Vec<String>) -> Self {
+        Self::Exec { command, arguments }
+    }
+
     pub async fn run(&self, log: bool) -> Result<Output, RunError> {
-        let mut child = tokio::process::Command::new(self.shell.to_string())
-            .arg(self.flag.to_string())
-            .arg(&self.cmd)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .map_err(RunError::SpawnCommand)?;
+        let mut child = match self {
+            Self::Shell {
+                shell,
+                flag,
+                command,
+            } => tokio::process::Command::new(shell.as_ref())
+                .arg(flag.as_ref())
+                .arg(command)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn(),
+            Self::Exec { command, arguments } => tokio::process::Command::new(command)
+                .args(arguments)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn(),
+        }
+        .map_err(RunError::SpawnCommand)?;
 
         let child_stdout = child.stdout.take().ok_or(RunError::PipeStdout)?;
         let stdout = tokio::spawn(async move {
