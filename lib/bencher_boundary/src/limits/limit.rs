@@ -25,13 +25,13 @@ impl MetricsLimit {
     }
 
     // Flip the absolute limit to the other side of the mean, creating the actual boundary limit.
-    pub fn normal_lower(mean: f64, abs_limit: f64) -> Self {
+    pub fn inverse_cdf_lower(mean: f64, abs_limit: f64) -> Self {
         Self {
             value: mean * 2.0 - abs_limit,
         }
     }
 
-    pub fn normal_upper(abs_limit: f64) -> Self {
+    pub fn inverse_cdf_upper(abs_limit: f64) -> Self {
         Self { value: abs_limit }
     }
 
@@ -110,17 +110,17 @@ mod test {
     }
 
     #[test]
-    fn test_limit_normal_lower() {
+    fn test_limit_inverse_cdf_lower() {
         let mean = 1.0;
         let abs_limit = 2.0;
-        let limit = MetricsLimit::normal_lower(mean, abs_limit);
+        let limit = MetricsLimit::inverse_cdf_lower(mean, abs_limit);
         assert_eq!(limit.value, 0.0);
     }
 
     #[test]
-    fn test_limit_normal_upper() {
+    fn test_limit_inverse_cdf_upper() {
         let abs_limit = 2.0;
-        let limit = MetricsLimit::normal_upper(abs_limit);
+        let limit = MetricsLimit::inverse_cdf_upper(abs_limit);
         assert_eq!(limit.value, 2.0);
     }
 

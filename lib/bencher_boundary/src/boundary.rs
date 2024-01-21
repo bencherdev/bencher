@@ -4,6 +4,7 @@ use bencher_json::{Boundary, SampleSize};
 use slog::Logger;
 
 use crate::limits::{MetricsLimits, NormalTestKind};
+use crate::ln::Ln;
 use crate::mean::Mean;
 use crate::quartiles::Quartiles;
 use crate::{BoundaryError, MetricsData};
@@ -86,14 +87,9 @@ impl MetricsBoundary {
                 lower_boundary,
                 upper_boundary,
             ),
-            StatisticKind::LogNormal => Self::new_normal(
-                log,
-                datum,
-                data,
-                NormalTestKind::Log,
-                lower_boundary,
-                upper_boundary,
-            ),
+            StatisticKind::LogNormal => {
+                Self::new_log_normal(log, datum, data, lower_boundary, upper_boundary)
+            },
             StatisticKind::Iqr => {
                 Self::new_iqr(log, datum, data, false, lower_boundary, upper_boundary)
             },
@@ -163,6 +159,26 @@ impl MetricsBoundary {
             lower_boundary,
             upper_boundary,
         )?;
+        let outlier = limits.outlier(datum);
+
+        Ok(Some(Self { limits, outlier }))
+    }
+
+    fn new_log_normal(
+        log: &Logger,
+        datum: f64,
+        data: &[f64],
+        lower_boundary: Option<Boundary>,
+        upper_boundary: Option<Boundary>,
+    ) -> Result<Option<Self>, BoundaryError> {
+        let lower_boundary = lower_boundary.map(TryInto::try_into).transpose()?;
+        let upper_boundary = upper_boundary.map(TryInto::try_into).transpose()?;
+
+        let Some(ln) = Ln::new(data) else {
+            return Ok(None);
+        };
+
+        let limits = MetricsLimits::new_log_normal(log, ln, lower_boundary, upper_boundary)?;
         let outlier = limits.outlier(datum);
 
         Ok(Some(Self { limits, outlier }))

@@ -1,6 +1,6 @@
 use bencher_json::{Boundary, SampleSize, Window};
 
-use crate::{IqrBoundary, NormalBoundary, PercentageBoundary};
+use crate::{CdfBoundary, IqrBoundary, PercentageBoundary};
 
 #[derive(Debug, thiserror::Error)]
 pub enum BoundaryError {
@@ -31,11 +31,11 @@ pub enum BoundaryError {
     PercentageNoBoundary,
 
     #[error("Invalid statistical boundary: {0}")]
-    NormalBoundary(f64),
+    CdfBoundary(f64),
     #[error("Invalid normal distribution statistic, lower boundary ({lower:?}) is greater than upper boundary ({upper:?})")]
     NormalBoundaries {
-        lower: NormalBoundary,
-        upper: NormalBoundary,
+        lower: CdfBoundary,
+        upper: CdfBoundary,
     },
     #[error("Invalid normal distribution statistic, no boundary provided")]
     NormalNoBoundary,
@@ -54,10 +54,10 @@ pub enum BoundaryError {
         freedom: f64,
         error: statrs::StatsError,
     },
-    #[error("Invalid Log Normal Distribution (mean: {mean} | std dev: {std_dev}): {error}")]
+    #[error("Invalid Log Normal Distribution (location: {location} | scale: {scale}): {error}")]
     LogNormal {
-        mean: f64,
-        std_dev: f64,
+        location: f64,
+        scale: f64,
         error: statrs::StatsError,
     },
 

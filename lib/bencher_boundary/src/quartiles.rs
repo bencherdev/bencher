@@ -44,15 +44,15 @@ impl Quartiles {
     }
 
     fn q1(data: &[f64]) -> Option<f64> {
-        Self::percentile_of_sorted(data, 0.25)
+        Self::percentile_of_sorted(data, 0.25).and_then(|q| q.is_finite().then_some(q))
     }
 
     fn q2(data: &[f64]) -> Option<f64> {
-        Self::percentile_of_sorted(data, 0.50)
+        Self::percentile_of_sorted(data, 0.50).and_then(|q| q.is_finite().then_some(q))
     }
 
     fn q3(data: &[f64]) -> Option<f64> {
-        Self::percentile_of_sorted(data, 0.75)
+        Self::percentile_of_sorted(data, 0.75).and_then(|q| q.is_finite().then_some(q))
     }
 
     #[allow(

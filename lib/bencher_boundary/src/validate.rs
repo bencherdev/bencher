@@ -3,7 +3,7 @@ use bencher_json::{
     Boundary, SampleSize,
 };
 
-use crate::{BoundaryError, IqrBoundary, NormalBoundary, PercentageBoundary};
+use crate::{BoundaryError, CdfBoundary, IqrBoundary, PercentageBoundary};
 
 pub fn validate_statistic(statistic: JsonNewStatistic) -> Result<(), BoundaryError> {
     let JsonNewStatistic {
@@ -42,7 +42,7 @@ pub fn validate_statistic(statistic: JsonNewStatistic) -> Result<(), BoundaryErr
         },
         StatisticKind::ZScore | StatisticKind::TTest | StatisticKind::LogNormal => {
             validate_sample_size(min_sample_size, max_sample_size)?;
-            validate_boundary::<NormalBoundary>(lower_boundary, upper_boundary)
+            validate_boundary::<CdfBoundary>(lower_boundary, upper_boundary)
         },
         StatisticKind::Iqr | StatisticKind::DeltaIqr => {
             validate_sample_size(min_sample_size, max_sample_size)?;
@@ -74,15 +74,14 @@ where
 {
     match (lower, upper) {
         (Some(lower), Some(upper)) => {
-            let l = B::try_from(lower)?;
-            let u = B::try_from(upper)?;
-            if f64::from(l) > f64::from(u) {
-                Err(BoundaryError::Boundaries { lower, upper })
-            } else {
-                Ok(())
-            }
+            B::try_from(lower)?;
+            B::try_from(upper)?;
+            Ok(())
         },
-        (Some(boundary), None) | (None, Some(boundary)) => B::try_from(boundary).map(|_| ()),
+        (Some(boundary), None) | (None, Some(boundary)) => {
+            B::try_from(boundary)?;
+            Ok(())
+        },
         (None, None) => Err(BoundaryError::NormalNoBoundary),
     }
 }

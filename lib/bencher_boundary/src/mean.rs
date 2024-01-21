@@ -19,21 +19,27 @@ impl Mean {
         // If the variance is zero then the standard deviation is not going to work with `statrs`
             .and_then(|std_dev| if std_dev == 0.0 { None } else { Some(std_dev) })
             .map(f64::sqrt)
+            .and_then(|m| m.is_finite().then_some(m))
     }
 
-    #[allow(clippy::cast_precision_loss)]
     fn variance(self, data: &[f64]) -> Option<f64> {
-        // Do not calculate variance if there are less than 2 data points
-        if data.len() < 2 {
-            None
-        } else {
-            Some(
-                data.iter()
-                    .map(|&value| (value - self.mean).powi(2))
-                    .sum::<f64>()
-                    / data.len() as f64,
-            )
-        }
+        variance(self.mean, data)
+    }
+}
+
+pub fn variance(location: f64, data: &[f64]) -> Option<f64> {
+    // Do not calculate variance if there are less than 2 data points
+    if data.len() < 2 {
+        None
+    } else {
+        #[allow(clippy::cast_precision_loss)]
+        Some(
+            data.iter()
+                .map(|&value| (value - location).powi(2))
+                .sum::<f64>()
+                / data.len() as f64,
+        )
+        .and_then(|v| v.is_finite().then_some(v))
     }
 }
 

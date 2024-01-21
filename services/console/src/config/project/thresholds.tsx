@@ -110,11 +110,11 @@ const TEST_VALUE = {
 		},
 		{
 			value: "iqr",
-			option: "Inter-Quartile Range (IQR)",
+			option: "Interquartile Range (IQR)",
 		},
 		{
 			value: "delta_iqr",
-			option: "Delta Inter-Quartile Range (ΔIQR)",
+			option: "Delta Interquartile Range (ΔIQR)",
 		},
 	],
 };

@@ -1,6 +1,7 @@
 pub mod boundary;
 mod error;
 pub mod limits;
+mod ln;
 mod mean;
 mod quartiles;
 mod validate;
@@ -52,26 +53,26 @@ impl From<PercentageBoundary> for Boundary {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct NormalBoundary(OrderedFloat<f64>);
+pub struct CdfBoundary(OrderedFloat<f64>);
 
-impl TryFrom<f64> for NormalBoundary {
+impl TryFrom<f64> for CdfBoundary {
     type Error = BoundaryError;
 
     fn try_from(boundary: f64) -> Result<Self, Self::Error> {
-        // The normal boundary must be greater than or equal to 0.5 and less than 1.0
+        // The CDF boundary must be greater than or equal to 0.5 and less than 1.0
         Boundary::is_valid_normal(boundary)
             .then(|| Self(boundary.into()))
-            .ok_or(BoundaryError::NormalBoundary(boundary))
+            .ok_or(BoundaryError::CdfBoundary(boundary))
     }
 }
 
-impl From<NormalBoundary> for f64 {
-    fn from(boundary: NormalBoundary) -> Self {
+impl From<CdfBoundary> for f64 {
+    fn from(boundary: CdfBoundary) -> Self {
         boundary.0.into()
     }
 }
 
-impl TryFrom<Boundary> for NormalBoundary {
+impl TryFrom<Boundary> for CdfBoundary {
     type Error = BoundaryError;
 
     fn try_from(boundary: Boundary) -> Result<Self, Self::Error> {
@@ -79,9 +80,9 @@ impl TryFrom<Boundary> for NormalBoundary {
     }
 }
 
-impl From<NormalBoundary> for Boundary {
-    fn from(boundary: NormalBoundary) -> Self {
-        // This should never fail because Boundary is a superset of NormalBoundary
+impl From<CdfBoundary> for Boundary {
+    fn from(boundary: CdfBoundary) -> Self {
+        // This should never fail because Boundary is a superset of CdfBoundary
         f64::from(boundary).try_into().unwrap_or(Boundary::ZERO)
     }
 }
