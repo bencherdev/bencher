@@ -1,4 +1,4 @@
-use crate::IqrBoundary;
+use bencher_json::IqrBoundary;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Quartiles {
@@ -104,10 +104,9 @@ impl Quartiles {
 #[cfg(test)]
 #[allow(clippy::float_cmp, clippy::unreadable_literal, clippy::unwrap_used)]
 mod test {
+    use bencher_json::IqrBoundary;
     use once_cell::sync::Lazy;
     use pretty_assertions::assert_eq;
-
-    use crate::IqrBoundary;
 
     use super::Quartiles;
 

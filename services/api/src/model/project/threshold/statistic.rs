@@ -1,6 +1,6 @@
 use bencher_json::{
-    project::threshold::{JsonNewStatistic, JsonStatistic, StatisticKind},
-    Boundary, DateTime, SampleSize, StatisticUuid, Window,
+    project::threshold::JsonStatistic, Boundary, DateTime, SampleSize, Statistic, StatisticKind,
+    StatisticUuid, Window,
 };
 use dropshot::HttpError;
 
@@ -115,15 +115,15 @@ impl From<QueryStatistic> for InsertStatistic {
 }
 
 impl InsertStatistic {
-    pub fn from_json(threshold_id: ThresholdId, json_statistic: JsonNewStatistic) -> Self {
-        let JsonNewStatistic {
+    pub fn from_json(threshold_id: ThresholdId, statistic: Statistic) -> Self {
+        let Statistic {
             test,
             min_sample_size,
             max_sample_size,
             window,
             lower_boundary,
             upper_boundary,
-        } = json_statistic;
+        } = statistic;
         Self {
             uuid: StatisticUuid::new(),
             threshold_id,

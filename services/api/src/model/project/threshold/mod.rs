@@ -1,6 +1,6 @@
 use bencher_json::{
-    project::threshold::{JsonNewStatistic, JsonThreshold, JsonThresholdStatistic},
-    DateTime, StatisticUuid, ThresholdUuid,
+    project::threshold::{JsonThreshold, JsonThresholdStatistic},
+    DateTime, Statistic, StatisticUuid, ThresholdUuid,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
@@ -203,7 +203,7 @@ impl InsertThreshold {
         branch_id: BranchId,
         testbed_id: TestbedId,
         measure_id: MeasureId,
-        json_statistic: JsonNewStatistic,
+        statistic: Statistic,
     ) -> Result<ThresholdId, HttpError> {
         // Create the new threshold
         let insert_threshold = InsertThreshold::new(project_id, branch_id, testbed_id, measure_id);
@@ -216,7 +216,7 @@ impl InsertThreshold {
         let threshold_id = QueryThreshold::get_id(conn, insert_threshold.uuid)?;
 
         // Create the new statistic
-        let insert_statistic = InsertStatistic::from_json(threshold_id, json_statistic);
+        let insert_statistic = InsertStatistic::from_json(threshold_id, statistic);
         diesel::insert_into(schema::statistic::table)
             .values(&insert_statistic)
             .execute(conn)
@@ -250,7 +250,7 @@ impl InsertThreshold {
             branch_id,
             testbed_id,
             measure_id,
-            JsonNewStatistic::lower_boundary(),
+            Statistic::lower_boundary(),
         )
     }
 
@@ -267,7 +267,7 @@ impl InsertThreshold {
             branch_id,
             testbed_id,
             measure_id,
-            JsonNewStatistic::upper_boundary(),
+            Statistic::upper_boundary(),
         )
     }
 }

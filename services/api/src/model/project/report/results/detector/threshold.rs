@@ -1,4 +1,4 @@
-use bencher_json::{project::threshold::StatisticKind, Boundary, SampleSize, Window};
+use bencher_json::{Boundary, SampleSize, StatisticKind, Window};
 use diesel::{
     ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
     SelectableHelper,

@@ -57,11 +57,9 @@ const AuthGitHub = (props: Props) => {
 			oauth.plan = state;
 			setParams.push([PLAN_PARAM, state]);
 		}
-		console.log("oauth", oauth);
 		return await httpPost(props.apiUrl, "/v0/auth/github", null, oauth)
 			.then((resp) => {
 				const user = resp.data;
-				console.log("user", user);
 				if (setUser(user)) {
 					navigateNotify(
 						NotifyKind.OK,

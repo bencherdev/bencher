@@ -65,8 +65,8 @@ const PaymentCard = (props: Props) => {
 		setForm({
 			...form,
 			[key]: {
-				value: value,
-				valid: valid,
+				value,
+				valid,
 			},
 		});
 	};

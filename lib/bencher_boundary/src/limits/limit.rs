@@ -1,6 +1,6 @@
-use bencher_json::Boundary;
+use bencher_json::{Boundary, IqrBoundary, PercentageBoundary};
 
-use crate::{quartiles::Quartiles, IqrBoundary, PercentageBoundary};
+use crate::quartiles::Quartiles;
 
 #[derive(Debug, PartialEq)]
 pub struct MetricsLimit {

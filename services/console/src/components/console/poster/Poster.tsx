@@ -104,8 +104,8 @@ const Poster = (props: Props) => {
 		}
 
 		setSubmitting(true);
-		let data: Record<string, undefined | number | string> = {};
-		for (let key of Object.keys(form)) {
+		const data: Record<string, undefined | number | string> = {};
+		for (const key of Object.keys(form)) {
 			const value = form?.[key]?.value;
 			switch (form?.[key]?.kind) {
 				case FieldKind.SELECT:
@@ -119,6 +119,12 @@ const Poster = (props: Props) => {
 						continue;
 					}
 					data[key] = Number(value);
+					break;
+				case FieldKind.STATISTIC:
+					// Flatten the statistic object
+					for (const [k, v] of Object.entries(value)) {
+						data[k] = v;
+					}
 					break;
 				default:
 					if (form?.[key]?.nullable && !value) {
@@ -169,8 +175,8 @@ const Poster = (props: Props) => {
 				...form,
 				[key]: {
 					...form?.[key],
-					value: value,
-					valid: valid,
+					value,
+					valid,
 				},
 			});
 

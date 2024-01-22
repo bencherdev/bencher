@@ -151,8 +151,8 @@ const UpdateCard = (props: Props) => {
 				...form,
 				[key]: {
 					...form?.[key],
-					value: value,
-					valid: valid,
+					value,
+					valid,
 				},
 			});
 

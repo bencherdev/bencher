@@ -5,6 +5,7 @@ enum FieldKind {
 	SWITCH,
 	SELECT,
 	RADIO,
+	STATISTIC,
 }
 
 export default FieldKind;

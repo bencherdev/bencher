@@ -16,6 +16,10 @@ import {
 	is_valid_url,
 	is_valid_user_name,
 	is_valid_uuid,
+	is_valid_percentage_boundary,
+	is_valid_cdf_boundary,
+	is_valid_iqr_boundary,
+	is_valid_statistic,
 } from "bencher_valid";
 import type { JsonAuthUser } from "../types/bencher";
 
@@ -106,10 +110,29 @@ export const validBoundary = (boundary: string): boolean => {
 	return validateNumber(boundary, is_valid_boundary);
 };
 
+export const validPercentageBoundary = (boundary: string): boolean => {
+	return validateNumber(boundary, is_valid_percentage_boundary);
+};
+
+export const validCdfBoundary = (boundary: string): boolean => {
+	return validateNumber(boundary, is_valid_cdf_boundary);
+};
+
+export const validIqrBoundary = (boundary: string): boolean => {
+	return validateNumber(boundary, is_valid_iqr_boundary);
+};
+
 export const validSampleSize = (sample_size: string) => {
 	return (
 		validU32(sample_size) && validateNumber(sample_size, is_valid_sample_size)
 	);
+};
+
+export const validStatistic = (statistic: object) => {
+	if (!statistic || typeof statistic !== "object") {
+		return false;
+	}
+	return is_valid_statistic(JSON.stringify(statistic));
 };
 
 // Billing

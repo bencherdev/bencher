@@ -1,5 +1,5 @@
 import { createMemo } from "solid-js";
-import { Operation, type Resource } from "../../../config/types";
+import { Operation, type BencherResource } from "../../../config/types";
 import Poster, { type PosterConfig } from "./Poster";
 import PosterHeader, { type PosterHeaderConfig } from "./PosterHeader";
 import consoleConfig from "../../../config/console";
@@ -8,7 +8,7 @@ import type { Params } from "astro";
 interface Props {
 	apiUrl: string;
 	params: Params;
-	resource: Resource;
+	resource: BencherResource;
 	operation?: Operation;
 }
 

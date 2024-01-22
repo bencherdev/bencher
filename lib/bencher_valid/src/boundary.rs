@@ -108,8 +108,8 @@ impl Boundary {
         is_valid_percentage_boundary(boundary)
     }
 
-    pub fn is_valid_normal(boundary: f64) -> bool {
-        is_valid_normal_boundary(boundary)
+    pub fn is_valid_cdf(boundary: f64) -> bool {
+        is_valid_cdf_boundary(boundary)
     }
 
     pub fn is_valid_iqr(boundary: f64) -> bool {
@@ -147,6 +147,111 @@ mod db {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct PercentageBoundary(OrderedFloat<f64>);
+
+impl TryFrom<f64> for PercentageBoundary {
+    type Error = ValidError;
+
+    fn try_from(boundary: f64) -> Result<Self, Self::Error> {
+        // The percentage boundary must be greater than or equal to 0.0
+        Boundary::is_valid_percentage(boundary)
+            .then(|| Self(boundary.into()))
+            .ok_or(ValidError::PercentageBoundary(boundary))
+    }
+}
+
+impl From<PercentageBoundary> for f64 {
+    fn from(boundary: PercentageBoundary) -> Self {
+        boundary.0.into()
+    }
+}
+
+impl TryFrom<Boundary> for PercentageBoundary {
+    type Error = ValidError;
+
+    fn try_from(boundary: Boundary) -> Result<Self, Self::Error> {
+        f64::from(boundary).try_into()
+    }
+}
+
+impl From<PercentageBoundary> for Boundary {
+    fn from(boundary: PercentageBoundary) -> Self {
+        // This should never fail because Boundary is a superset of PercentageBoundary
+        f64::from(boundary).try_into().unwrap_or(Boundary::ZERO)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct CdfBoundary(OrderedFloat<f64>);
+
+impl TryFrom<f64> for CdfBoundary {
+    type Error = ValidError;
+
+    fn try_from(boundary: f64) -> Result<Self, Self::Error> {
+        // The CDF boundary must be greater than or equal to 0.5 and less than 1.0
+        Boundary::is_valid_cdf(boundary)
+            .then(|| Self(boundary.into()))
+            .ok_or(ValidError::CdfBoundary(boundary))
+    }
+}
+
+impl From<CdfBoundary> for f64 {
+    fn from(boundary: CdfBoundary) -> Self {
+        boundary.0.into()
+    }
+}
+
+impl TryFrom<Boundary> for CdfBoundary {
+    type Error = ValidError;
+
+    fn try_from(boundary: Boundary) -> Result<Self, Self::Error> {
+        f64::from(boundary).try_into()
+    }
+}
+
+impl From<CdfBoundary> for Boundary {
+    fn from(boundary: CdfBoundary) -> Self {
+        // This should never fail because Boundary is a superset of CdfBoundary
+        f64::from(boundary).try_into().unwrap_or(Boundary::ZERO)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct IqrBoundary(OrderedFloat<f64>);
+
+impl TryFrom<f64> for IqrBoundary {
+    type Error = ValidError;
+
+    fn try_from(boundary: f64) -> Result<Self, Self::Error> {
+        // The inter-quartile range boundary must be greater than or equal to 0.0
+        Boundary::is_valid_iqr(boundary)
+            .then(|| Self(boundary.into()))
+            .ok_or(ValidError::IqrBoundary(boundary))
+    }
+}
+
+impl From<IqrBoundary> for f64 {
+    fn from(boundary: IqrBoundary) -> Self {
+        boundary.0.into()
+    }
+}
+
+impl TryFrom<Boundary> for IqrBoundary {
+    type Error = ValidError;
+
+    fn try_from(boundary: Boundary) -> Result<Self, Self::Error> {
+        f64::from(boundary).try_into()
+    }
+}
+
+impl From<IqrBoundary> for Boundary {
+    fn from(boundary: IqrBoundary) -> Self {
+        // This should never fail because Boundary is a superset of IqrBoundary
+        f64::from(boundary).try_into().unwrap_or(Boundary::ZERO)
+    }
+}
+
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_boundary(boundary: f64) -> bool {
     boundary.is_finite()
@@ -158,7 +263,7 @@ pub fn is_valid_percentage_boundary(boundary: f64) -> bool {
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
-pub fn is_valid_normal_boundary(boundary: f64) -> bool {
+pub fn is_valid_cdf_boundary(boundary: f64) -> bool {
     if boundary < 0.5 {
         false
     } else {

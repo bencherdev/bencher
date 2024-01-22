@@ -187,7 +187,10 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonThreshold, HttpError> {
     // Validate the new statistic
-    bencher_boundary::validate_statistic(json_threshold.statistic).map_err(bad_request_error)?;
+    json_threshold
+        .statistic
+        .validate()
+        .map_err(bad_request_error)?;
 
     let conn = &mut *context.conn().await;
 
@@ -312,7 +315,10 @@ async fn put_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonThreshold, HttpError> {
     // Validate the new statistic
-    bencher_boundary::validate_statistic(json_threshold.statistic).map_err(bad_request_error)?;
+    json_threshold
+        .statistic
+        .validate()
+        .map_err(bad_request_error)?;
 
     let conn = &mut *context.conn().await;
 

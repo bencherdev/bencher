@@ -9,7 +9,7 @@ import {
 import consoleConfig from "../../../config/console";
 import {
 	Operation,
-	type Resource,
+	type BencherResource,
 	resourceSingular,
 } from "../../../config/types";
 import { authUser } from "../../../util/auth";
@@ -23,7 +23,7 @@ import DeckHeader, { type DeckHeaderConfig } from "./header/DeckHeader";
 interface Props {
 	apiUrl: string;
 	params: Params;
-	resource: Resource;
+	resource: BencherResource;
 }
 
 interface DeckPanelConfig {

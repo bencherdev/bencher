@@ -1,10 +1,10 @@
-use bencher_json::{project::boundary::BoundaryLimit, Boundary};
+use bencher_json::{
+    project::boundary::BoundaryLimit, Boundary, CdfBoundary, IqrBoundary, PercentageBoundary,
+};
 use slog::{debug, Logger};
 use statrs::distribution::{ContinuousCDF, LogNormal, Normal, StudentsT};
 
-use crate::{
-    ln::Ln, quartiles::Quartiles, BoundaryError, CdfBoundary, IqrBoundary, PercentageBoundary,
-};
+use crate::{ln::Ln, quartiles::Quartiles, BoundaryError};
 
 mod limit;
 
@@ -219,13 +219,15 @@ impl MetricsLimits {
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unreadable_literal, clippy::unwrap_used)]
 mod test {
-    use bencher_json::{project::boundary::BoundaryLimit, Boundary};
+    use bencher_json::{
+        project::boundary::BoundaryLimit, Boundary, CdfBoundary, IqrBoundary, PercentageBoundary,
+    };
     use bencher_logger::bootstrap_logger;
     use once_cell::sync::Lazy;
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
-    use crate::{ln::Ln, quartiles::Quartiles, CdfBoundary, IqrBoundary, PercentageBoundary};
+    use crate::{ln::Ln, quartiles::Quartiles};
 
     use super::{MetricsLimit, MetricsLimits, NormalTestKind};
 

@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::{Boundary, SampleSize, Window};
+
 pub(crate) const REGEX_ERROR: &str = "Failed to compile regex.";
 
 #[derive(Debug, Error)]
@@ -93,4 +95,25 @@ pub enum ValidError {
     #[cfg(feature = "plus")]
     #[error("Failed to parse entitlements: {0}")]
     EntitlementsStr(std::num::ParseIntError),
+
+    #[error("Invalid statistic, minimum sample size ({min}) is greater than maximum sample size ({max})")]
+    SampleSizes { min: SampleSize, max: SampleSize },
+    #[error(
+        "Invalid statistic, lower boundary ({lower}) is greater than upper boundary ({upper})"
+    )]
+    Boundaries { lower: Boundary, upper: Boundary },
+    #[error("Invalid statistic, no boundary provided")]
+    NoBoundary,
+    #[error("Invalid static statistic, includes a minimum sample size: {0}")]
+    StaticMinSampleSize(SampleSize),
+    #[error("Invalid static statistic, includes a maximum sample size: {0}")]
+    StaticMaxSampleSize(SampleSize),
+    #[error("Invalid static statistic, includes a sampling window: {0}")]
+    StaticWindow(Window),
+    #[error("Invalid percentage boundary: {0}")]
+    PercentageBoundary(f64),
+    #[error("Invalid statistical boundary: {0}")]
+    CdfBoundary(f64),
+    #[error("Invalid inter-quartile range boundary: {0}")]
+    IqrBoundary(f64),
 }

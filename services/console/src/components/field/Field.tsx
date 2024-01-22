@@ -5,6 +5,8 @@ import Select, { SelectConfig, SelectValue } from "./kinds/Select";
 import FieldKind from "./kind";
 import Radio, { RadioConfig, RadioValue } from "./kinds/Radio";
 import type { Params } from "astro";
+import Statistic from "./kinds/Statistic";
+import { validStatistic } from "../../util/valid";
 
 export type FieldValue =
 	| SwitchValue
@@ -66,6 +68,9 @@ const Field = (props: Props) => {
 					config.validate ? config.validate(value as string) : true,
 				);
 				break;
+			case FieldKind.STATISTIC:
+				props.handleField(props.fieldKey, value, validStatistic(value));
+				break;
 		}
 	}
 
@@ -115,6 +120,15 @@ const Field = (props: Props) => {
 						handleField={handleField}
 					/>
 				);
+			case FieldKind.STATISTIC:
+				return (
+					<Statistic
+						value={props.value as InputValue}
+						valid={props.valid}
+						config={props.config as InputConfig}
+						handleField={handleField}
+					/>
+				);
 			default:
 				return <div>UNKNOWN FIELD</div>;
 		}
@@ -129,6 +143,7 @@ const Field = (props: Props) => {
 				return false;
 			case FieldKind.INPUT:
 			case FieldKind.NUMBER:
+			case FieldKind.STATISTIC:
 				return true;
 		}
 	}
@@ -138,7 +153,7 @@ const Field = (props: Props) => {
 			{props.label && <label class="label is-medium">{props.label}</label>}
 			{getField()}
 			{shouldValidate() && props.valid === false && (
-				<p class="help is-danger">{props.config.help}</p>
+				<p class="help is-danger">{props.config?.help}</p>
 			)}
 		</div>
 	);

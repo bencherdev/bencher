@@ -75,14 +75,14 @@ pub struct CliThresholdCreate {
     pub measure: NameId,
 
     #[clap(flatten)]
-    pub statistic: CliStatisticCreate,
+    pub statistic: CliStatistic,
 
     #[clap(flatten)]
     pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]
-pub struct CliStatisticCreate {
+pub struct CliStatistic {
     /// Statistic test kind
     #[clap(value_enum, long)]
     pub test: CliStatisticKind,
@@ -153,7 +153,7 @@ pub struct CliThresholdUpdate {
     pub threshold: ThresholdUuid,
 
     #[clap(flatten)]
-    pub statistic: CliStatisticCreate,
+    pub statistic: CliStatistic,
 
     #[clap(flatten)]
     pub backend: CliBackend,

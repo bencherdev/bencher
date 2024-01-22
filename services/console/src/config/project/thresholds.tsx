@@ -1,7 +1,6 @@
 import type { Params } from "astro";
 import FieldKind from "../../components/field/kind";
 import { isAllowedProjectDelete } from "../../util/auth";
-import { validBoundary, validSampleSize, validU32 } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { addPath, parentPath, viewUuidPath } from "../util";
 
@@ -45,78 +44,6 @@ const THRESHOLD_FIELDS = {
 		url: (params: undefined | Params, per_page: number, page: number) =>
 			paginationUrl(params, "measures", per_page, page),
 	},
-	test: {
-		icon: "fas fa-vial",
-	},
-	lower_boundary: {
-		type: "input",
-		placeholder: "0.98",
-		icon: "fas fa-arrow-down",
-		help: "Must be between 0.5000 and 1.0000 (lower is stricter; higher is looser)",
-		validate: validBoundary,
-	},
-	upper_boundary: {
-		type: "input",
-		placeholder: "0.98",
-		icon: "fas fa-arrow-up",
-		help: "Must be between 0.5000 and 1.0000 (lower is stricter; higher is looser)",
-		validate: validBoundary,
-	},
-	min_sample_size: {
-		type: "number",
-		placeholder: "30",
-		icon: "fas fa-cube",
-		help: "Must be an integer greater than or equal to 2",
-		validate: validSampleSize,
-	},
-	max_sample_size: {
-		type: "number",
-		placeholder: "30",
-		icon: "fas fa-cubes",
-		help: "Must be an integer greater than or equal to 2",
-		validate: validSampleSize,
-	},
-	window: {
-		type: "number",
-		placeholder: "525600",
-		icon: "fas fa-calendar-week",
-		help: "Must be an integer greater than zero",
-		validate: validU32,
-	},
-};
-
-const TEST_VALUE = {
-	selected: "t_test",
-	options: [
-		{
-			value: "static",
-			option: "Static",
-		},
-		{
-			value: "percentage",
-			option: "Percentage",
-		},
-		{
-			value: "z_score",
-			option: "Z-score",
-		},
-		{
-			value: "t_test",
-			option: "Student's t-test",
-		},
-		{
-			value: "log_normal",
-			option: "Log Normal",
-		},
-		{
-			value: "iqr",
-			option: "Interquartile Range (IQR)",
-		},
-		{
-			value: "delta_iqr",
-			option: "Delta Interquartile Range (ΔIQR)",
-		},
-	],
 };
 
 const thresholdsConfig = {
@@ -217,62 +144,12 @@ const thresholdsConfig = {
 					config: THRESHOLD_FIELDS.measure,
 				},
 				{
-					kind: FieldKind.SELECT,
-					label: "Statistical Significance Test",
-					key: "test",
-					value: TEST_VALUE,
-					validate: false,
-					config: THRESHOLD_FIELDS.test,
-				},
-				{
-					kind: FieldKind.NUMBER,
-					label: "Lower Boundary",
-					key: "lower_boundary",
-					value: "",
-					valid: true,
+					kind: FieldKind.STATISTIC,
+					label: null,
+					key: "statistic",
+					value: {},
 					validate: true,
-					nullable: true,
-					config: THRESHOLD_FIELDS.lower_boundary,
-				},
-				{
-					kind: FieldKind.NUMBER,
-					label: "Upper Boundary",
-					key: "upper_boundary",
-					value: "",
-					valid: true,
-					validate: true,
-					nullable: true,
-					config: THRESHOLD_FIELDS.upper_boundary,
-				},
-				{
-					kind: FieldKind.NUMBER,
-					label: "Minimum Sample Size",
-					key: "min_sample_size",
-					value: "",
-					valid: true,
-					validate: true,
-					nullable: true,
-					config: THRESHOLD_FIELDS.min_sample_size,
-				},
-				{
-					kind: FieldKind.NUMBER,
-					label: "Maximum Sample Size",
-					key: "max_sample_size",
-					value: "",
-					valid: true,
-					validate: true,
-					nullable: true,
-					config: THRESHOLD_FIELDS.max_sample_size,
-				},
-				{
-					kind: FieldKind.NUMBER,
-					label: "Window Size (seconds)",
-					key: "window",
-					value: "",
-					valid: true,
-					validate: true,
-					nullable: true,
-					config: THRESHOLD_FIELDS.window,
+					config: null,
 				},
 			],
 			path: parentPath,
@@ -381,62 +258,12 @@ const thresholdsConfig = {
 				`/v0/projects/${params?.project}/thresholds/${params?.threshold}`,
 			fields: [
 				{
-					kind: FieldKind.SELECT,
-					label: "Statistical Significance Test",
-					key: "test",
-					value: TEST_VALUE,
-					validate: false,
-					config: THRESHOLD_FIELDS.test,
-				},
-				{
-					kind: FieldKind.NUMBER,
-					label: "Lower Boundary",
-					key: "lower_boundary",
-					value: "",
-					valid: true,
+					kind: FieldKind.STATISTIC,
+					label: null,
+					key: "statistic",
+					value: {},
 					validate: true,
-					nullable: true,
-					config: THRESHOLD_FIELDS.lower_boundary,
-				},
-				{
-					kind: FieldKind.NUMBER,
-					label: "Upper Boundary",
-					key: "upper_boundary",
-					value: "",
-					valid: true,
-					validate: true,
-					nullable: true,
-					config: THRESHOLD_FIELDS.upper_boundary,
-				},
-				{
-					kind: FieldKind.NUMBER,
-					label: "Minimum Sample Size",
-					key: "min_sample_size",
-					value: "",
-					valid: true,
-					validate: true,
-					nullable: true,
-					config: THRESHOLD_FIELDS.min_sample_size,
-				},
-				{
-					kind: FieldKind.NUMBER,
-					label: "Maximum Sample Size",
-					key: "max_sample_size",
-					value: "",
-					valid: true,
-					validate: true,
-					nullable: true,
-					config: THRESHOLD_FIELDS.max_sample_size,
-				},
-				{
-					kind: FieldKind.NUMBER,
-					label: "Window Size (seconds)",
-					key: "window",
-					value: "",
-					valid: true,
-					validate: true,
-					nullable: true,
-					config: THRESHOLD_FIELDS.window,
+					config: null,
 				},
 			],
 			path: parentPath,

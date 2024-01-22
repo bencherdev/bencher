@@ -1,6 +1,4 @@
-use bencher_json::project::boundary::BoundaryLimit;
-use bencher_json::project::threshold::StatisticKind;
-use bencher_json::{Boundary, SampleSize};
+use bencher_json::{project::boundary::BoundaryLimit, Boundary, SampleSize, StatisticKind};
 use slog::Logger;
 
 use crate::limits::{MetricsLimits, NormalTestKind};
@@ -117,8 +115,14 @@ impl MetricsBoundary {
         lower_boundary: Option<Boundary>,
         upper_boundary: Option<Boundary>,
     ) -> Result<Option<Self>, BoundaryError> {
-        let lower_boundary = lower_boundary.map(TryInto::try_into).transpose()?;
-        let upper_boundary = upper_boundary.map(TryInto::try_into).transpose()?;
+        let lower_boundary = lower_boundary
+            .map(TryInto::try_into)
+            .transpose()
+            .map_err(BoundaryError::Valid)?;
+        let upper_boundary = upper_boundary
+            .map(TryInto::try_into)
+            .transpose()
+            .map_err(BoundaryError::Valid)?;
 
         // Get the mean of the historical data.
         let Some(Mean { mean }) = Mean::new(data) else {
@@ -139,8 +143,14 @@ impl MetricsBoundary {
         lower_boundary: Option<Boundary>,
         upper_boundary: Option<Boundary>,
     ) -> Result<Option<Self>, BoundaryError> {
-        let lower_boundary = lower_boundary.map(TryInto::try_into).transpose()?;
-        let upper_boundary = upper_boundary.map(TryInto::try_into).transpose()?;
+        let lower_boundary = lower_boundary
+            .map(TryInto::try_into)
+            .transpose()
+            .map_err(BoundaryError::Valid)?;
+        let upper_boundary = upper_boundary
+            .map(TryInto::try_into)
+            .transpose()
+            .map_err(BoundaryError::Valid)?;
 
         // Get the mean and standard deviation of the historical data.
         let Some(mean) = Mean::new(data) else {
@@ -171,8 +181,14 @@ impl MetricsBoundary {
         lower_boundary: Option<Boundary>,
         upper_boundary: Option<Boundary>,
     ) -> Result<Option<Self>, BoundaryError> {
-        let lower_boundary = lower_boundary.map(TryInto::try_into).transpose()?;
-        let upper_boundary = upper_boundary.map(TryInto::try_into).transpose()?;
+        let lower_boundary = lower_boundary
+            .map(TryInto::try_into)
+            .transpose()
+            .map_err(BoundaryError::Valid)?;
+        let upper_boundary = upper_boundary
+            .map(TryInto::try_into)
+            .transpose()
+            .map_err(BoundaryError::Valid)?;
 
         let Some(ln) = Ln::new(data) else {
             return Ok(None);
@@ -192,8 +208,14 @@ impl MetricsBoundary {
         lower_boundary: Option<Boundary>,
         upper_boundary: Option<Boundary>,
     ) -> Result<Option<Self>, BoundaryError> {
-        let lower_boundary = lower_boundary.map(TryInto::try_into).transpose()?;
-        let upper_boundary = upper_boundary.map(TryInto::try_into).transpose()?;
+        let lower_boundary = lower_boundary
+            .map(TryInto::try_into)
+            .transpose()
+            .map_err(BoundaryError::Valid)?;
+        let upper_boundary = upper_boundary
+            .map(TryInto::try_into)
+            .transpose()
+            .map_err(BoundaryError::Valid)?;
 
         let Some(quartiles) = Quartiles::new(data) else {
             return Ok(None);

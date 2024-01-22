@@ -1,8 +1,7 @@
 use bencher_client::types::{Boundary, SampleSize, StatisticKind, Window};
-use bencher_json::project::threshold::JsonNewStatistic;
 
 use crate::{
-    parser::project::threshold::{CliStatisticCreate, CliStatisticKind},
+    parser::project::threshold::{CliStatistic, CliStatisticKind},
     CliError,
 };
 
@@ -16,27 +15,28 @@ pub struct Statistic {
     pub upper_boundary: Option<Boundary>,
 }
 
-impl TryFrom<CliStatisticCreate> for Statistic {
+impl TryFrom<CliStatistic> for Statistic {
     type Error = CliError;
 
-    fn try_from(create: CliStatisticCreate) -> Result<Self, Self::Error> {
-        let CliStatisticCreate {
+    fn try_from(statistic: CliStatistic) -> Result<Self, Self::Error> {
+        let CliStatistic {
             test,
             min_sample_size,
             max_sample_size,
             window,
             lower_boundary,
             upper_boundary,
-        } = create;
-        let json_statistic = JsonNewStatistic {
+        } = statistic;
+        bencher_json::Statistic {
             test: test.into(),
             min_sample_size,
             max_sample_size,
             window,
             lower_boundary,
             upper_boundary,
-        };
-        bencher_boundary::validate_statistic(json_statistic).map_err(CliError::Statistic)?;
+        }
+        .validate()
+        .map_err(CliError::Statistic)?;
         Ok(Self {
             test: test.into(),
             min_sample_size: min_sample_size.map(Into::into),
@@ -48,7 +48,7 @@ impl TryFrom<CliStatisticCreate> for Statistic {
     }
 }
 
-impl From<CliStatisticKind> for bencher_json::project::threshold::StatisticKind {
+impl From<CliStatisticKind> for bencher_json::StatisticKind {
     fn from(kind: CliStatisticKind) -> Self {
         match kind {
             CliStatisticKind::Static => Self::Static,

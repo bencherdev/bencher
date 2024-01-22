@@ -64,7 +64,6 @@ const CheckoutRedirect = (props: Props) => {
 			newPlan,
 		)
 			.then((resp) => {
-				console.log(resp);
 				navigateNotify(
 					NotifyKind.OK,
 					"Somebunny loves us! Successful plan enrollment.",
