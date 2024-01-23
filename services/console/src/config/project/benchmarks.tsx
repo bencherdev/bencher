@@ -1,7 +1,7 @@
 import type { Params } from "astro";
 import { validBenchmarkName, validSlug } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation } from "../types";
-import { addPath, parentPath, viewSlugPath } from "../util";
+import { addPath, createdSlugPath, parentPath, viewSlugPath } from "../util";
 import type { JsonBenchmark } from "../../types/bencher";
 import FieldKind from "../../components/field/kind";
 import { isAllowedProjectDelete, isAllowedProjectEdit } from "../../util/auth";
@@ -51,7 +51,7 @@ const benchmarksConfig = {
 					</div>
 				),
 				path: (_pathname: string) => {
-					return "/docs/how-to/track-benchmarks";
+					return "https://bencher.dev/docs/how-to/track-benchmarks";
 				},
 				text: "Track Your Benchmarks",
 			},
@@ -86,7 +86,7 @@ const benchmarksConfig = {
 					config: BENCHMARK_FIELDS.name,
 				},
 			],
-			path: parentPath,
+			path: createdSlugPath,
 		},
 	},
 	[Operation.VIEW]: {

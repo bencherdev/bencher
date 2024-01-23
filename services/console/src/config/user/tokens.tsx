@@ -2,7 +2,7 @@ import FieldKind from "../../components/field/kind";
 import type { Params } from "../../util/url";
 import { validResourceName, validU32 } from "../../util/valid";
 import { Button, Card, Display, Operation } from "../types";
-import { addPath, parentPath, viewUuidPath } from "../util";
+import { addPath, createdUuidPath, parentPath, viewUuidPath } from "../util";
 
 const TOKEN_FIELDS = {
 	name: {
@@ -92,7 +92,7 @@ const tokensConfig = {
 					config: TOKEN_FIELDS.ttl,
 				},
 			],
-			path: parentPath,
+			path: createdUuidPath,
 		},
 	},
 	[Operation.VIEW]: {

@@ -225,26 +225,34 @@ const PlanLocality = (props: {
 						)}
 					</For>
 				</div>
-				<Show when={props.planKind() !== PlanKind.Metered}>
+				<Show
+					when={props.planKind() === PlanKind.Metered}
+					fallback={
+						<div class="content has-text-centered">
+							<p>
+								Annual Metrics:{" "}
+								{props.entitlementsAnnual()?.toLocaleString() ?? 0}
+							</p>
+							<p>
+								Annual Cost: ${props.entitlementsAnnualCost().toLocaleString()}
+							</p>
+							<input
+								class="slider"
+								type="range"
+								min="1"
+								max="100"
+								value={props.entitlements()}
+								style="width: 50%"
+								onChange={(_e) => {
+									props.handleEntitlements(Number(_e.currentTarget.value));
+								}}
+							></input>
+						</div>
+					}
+				>
 					<div class="content has-text-centered">
-						<p>
-							Annual Metrics:{" "}
-							{props.entitlementsAnnual()?.toLocaleString() ?? 0}
-						</p>
-						<p>
-							Annual Cost: ${props.entitlementsAnnualCost().toLocaleString()}
-						</p>
-						<input
-							class="slider"
-							type="range"
-							min="1"
-							max="100"
-							value={props.entitlements()}
-							style="width: 50%"
-							onChange={(_e) => {
-								props.handleEntitlements(Number(_e.currentTarget.value));
-							}}
-						></input>
+						<p>Annual Metrics: Metered (∞)</p>
+						<p>Annual Cost: $0.00</p>
 					</div>
 				</Show>
 				<Show when={props.planKind() === PlanKind.SelfHosted}>

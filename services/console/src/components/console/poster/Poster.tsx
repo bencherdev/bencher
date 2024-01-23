@@ -22,7 +22,7 @@ export interface Props {
 export interface PosterConfig {
 	url: (params: Params) => string;
 	fields: PosterFieldConfig[];
-	path: (pathname: string) => string;
+	path: (pathname: string, resp: any) => string;
 	button: string;
 }
 
@@ -140,14 +140,14 @@ const Poster = (props: Props) => {
 
 		const path = props.config?.url?.(props.params);
 		httpOperation(path, token, data)
-			.then((_resp) => {
+			.then((resp) => {
 				setSubmitting(false);
 				navigateNotify(
 					NotifyKind.OK,
 					`Hare's to your success! You've posted ${resourceSingular(
 						props.resource,
 					)}.`,
-					props.config?.path?.(pathname()),
+					props.config?.path?.(pathname(), resp.data),
 					null,
 					null,
 				);

@@ -23,7 +23,7 @@ const alertsConfig = {
 					</div>
 				),
 				path: (_pathname: string) => {
-					return "/docs/explanation/thresholds";
+					return "https://bencher.dev/docs/explanation/thresholds";
 				},
 				text: "Learn about Thresholds & Alerts",
 			},

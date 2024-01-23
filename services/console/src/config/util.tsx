@@ -4,6 +4,14 @@ export const parentPath = (pathname: string) => {
 	return `${pathname.substring(0, pathname.lastIndexOf("/"))}`;
 };
 
+export const createdSlugPath = (pathname: string, datum: { slug: Slug }) => {
+	return `${pathname.substring(0, pathname.lastIndexOf("/"))}/${datum?.slug}`;
+};
+
+export const createdUuidPath = (pathname: string, datum: { uuid: Slug }) => {
+	return `${pathname.substring(0, pathname.lastIndexOf("/"))}/${datum?.uuid}`;
+};
+
 export const addPath = (pathname: string) => {
 	return `${pathname}/add`;
 };

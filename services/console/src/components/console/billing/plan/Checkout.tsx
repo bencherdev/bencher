@@ -68,18 +68,20 @@ const Checkout = (props: Props) => {
 	};
 
 	return (
-		<form class="box">
-			<button
-				class="button is-primary is-fullwidth"
-				disabled={!isSendable()}
-				onClick={(e) => {
-					e.preventDefault();
-					sendForm();
-				}}
-			>
-				Let's Go!
-			</button>
-		</form>
+		<div class="columns is-centered" style="margin-top: 1rem;">
+			<div class="column is-half">
+				<button
+					class="button is-primary is-fullwidth"
+					disabled={!isSendable()}
+					onClick={(e) => {
+						e.preventDefault();
+						sendForm();
+					}}
+				>
+					Let's Go!
+				</button>
+			</div>
+		</div>
 	);
 };
 

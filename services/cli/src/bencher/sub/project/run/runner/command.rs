@@ -14,7 +14,7 @@ pub enum Command {
         command: String,
     },
     Exec {
-        command: String,
+        program: String,
         arguments: Vec<String>,
     },
 }
@@ -29,8 +29,8 @@ impl Command {
         })
     }
 
-    pub fn new_exec(command: String, arguments: Vec<String>) -> Self {
-        Self::Exec { command, arguments }
+    pub fn new_exec(program: String, arguments: Vec<String>) -> Self {
+        Self::Exec { program, arguments }
     }
 
     pub async fn run(&self, log: bool) -> Result<Output, RunError> {
@@ -45,7 +45,7 @@ impl Command {
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .spawn(),
-            Self::Exec { command, arguments } => tokio::process::Command::new(command)
+            Self::Exec { program, arguments } => tokio::process::Command::new(program)
                 .args(arguments)
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())

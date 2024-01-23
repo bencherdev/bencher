@@ -140,7 +140,8 @@ const projectsConfig = {
 					config: PROJECT_FIELDS.visibility,
 				},
 			],
-			path: parentPath,
+			path: (_pathname: string, data: JsonProject) =>
+				`/console/projects/${data?.slug}`,
 		},
 	},
 	[Operation.VIEW]: {

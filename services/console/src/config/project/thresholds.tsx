@@ -2,7 +2,7 @@ import type { Params } from "astro";
 import FieldKind from "../../components/field/kind";
 import { isAllowedProjectDelete } from "../../util/auth";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
-import { addPath, parentPath, viewUuidPath } from "../util";
+import { addPath, createdUuidPath, parentPath, viewUuidPath } from "../util";
 
 const paginationUrl = (
 	params: undefined | Params,
@@ -152,7 +152,7 @@ const thresholdsConfig = {
 					config: null,
 				},
 			],
-			path: parentPath,
+			path: createdUuidPath,
 		},
 	},
 	[Operation.VIEW]: {

@@ -12,7 +12,6 @@ seed = []
 [dependencies]
 # Workspace
 bencher_adapter.workspace = true
-bencher_boundary.workspace = true
 bencher_client.workspace = true
 bencher_comment.workspace = true
 bencher_json = { workspace = true, features = ["lite", "table"] }

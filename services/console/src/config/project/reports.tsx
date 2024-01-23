@@ -23,7 +23,8 @@ const reportsConfig = {
 						</p>
 					</div>
 				),
-				path: (_pathname: string) => "/docs/how-to/track-benchmarks",
+				path: (_pathname: string) =>
+					"https://bencher.dev/docs/how-to/track-benchmarks",
 				text: "Track Your Benchmarks",
 			},
 			row: {
