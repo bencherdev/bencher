@@ -1,0 +1,22 @@
+## Limites do Intervalo Interquartil
+
+Um Limite do Intervalo Interquartil mede quantas múltiplos do [intervalo interquartil](https://en.wikipedia.org/wiki/Interquartile_range) (IQR)
+uma nova Métrica está acima ou abaixo da mediana das suas Métricas históricas.
+Se uma nova Métrica estiver abaixo de um certo múltiplo do IQR da mediana (Limite Inferior)
+ou acima um certo múltiplo do IQR da mediana (Limite Superior) das suas Métricas históricas, um Alerta é gerado.
+Um Limite Inferior, Limite Superior, ou ambos devem ser definidos.
+
+- ### Limite Inferior do Intervalo Interquartil
+  - Um Limite Inferior do Intervalo Interquartil pode ser qualquer multiplicador maior ou igual a zero (ex: use `2.0` para `2x`).
+Ele é usado quando um valor menor indicaria uma regressão de desempenho.
+  - Por exemplo, se você tivesse um Limite do Intervalo Interquartil com um Limite Inferior definido como `2.0`
+e suas Métricas históricas tivessem uma mediana de `100` e um intervalo interquartil de `10`
+o Limite Inferior seria `80` e
+qualquer valor menor que `80` geraria um Alerta.
+- ### Limite Superior do Intervalo Interquartil
+  - Um Limite Superior do Intervalo Interquartil pode ser qualquer multiplicador maior ou igual a zero (ex: use `2.0` para `2x`).
+Ele é usado quando um valor maior indicaria uma regressão de desempenho.
+  - Por exemplo, se você tivesse um Limite do Intervalo Interquartil com um Limite Superior definido como `2.0`
+e suas Métricas históricas tivessem uma mediana de `100` e um intervalo interquartil de `10`
+o Limite Superior seria `120` e
+qualquer valor maior que `120` geraria um Alerta.

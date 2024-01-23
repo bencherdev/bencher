@@ -1,0 +1,20 @@
+## t-Test Schwellenwerte
+
+Ein t-Test Schwellenwert misst das [Konfidenzintervall](https://de.wikipedia.org/wiki/Konfidenzintervall) (KI) dafür, wie wahrscheinlich es ist, dass eine neue Metrik über oder unter dem Durchschnitt Ihrer historischen Metriken liegt, und verwendet dafür einen [Student's t-Test](https://de.wikipedia.org/wiki/Student's_t-Test).
+
+t-Test Schwellenwerte funktionieren am besten, wenn:
+- Es gibt keine extremen Unterschiede zwischen Benchmark-Läufen
+- Benchmark-Läufe völlig unabhängig voneinander sind
+- Die Anzahl der Iterationen für einen einzelnen Benchmark-Lauf weniger als 10% der historischen Metriken ausmacht
+
+Für t-Test Schwellenwerte werden Konfidenzintervalle als dezimales Vertrauensprozentsatz ausgedrückt.
+Wenn eine neue Metrik unter einem bestimmten linksseitigen Konfidenzprozentsatz (untere Grenze)
+oder über einem bestimmten rechtsseitigen Konfidenzprozentsatz (obere Grenze) für Ihre historischen Metriken liegt, wird ein Alarm ausgelöst.
+Entweder eine untere Grenze, eine obere Grenze oder beide müssen festgelegt werden.
+
+- ### Untere Grenze des t-Test-Schwellenwerts
+  - Eine untere Grenze des t-Test Schwellenwerts kann eine positive Dezimalzahl zwischen `0.5` und `1.0` sein. `0.5` repräsentiert den Durchschnitt und `1.0` repräsentiert alle möglichen linksseitigen Werte (-∞). Sie wird verwendet, wenn ein kleinerer Wert eine Leistungsverschlechterung anzeigen würde.
+  - Zum Beispiel, wenn Sie einen t-Test Schwellenwert mit einer unteren Grenze von `0.977` verwenden und Sie hatten `25` historische Metriken mit einem Durchschnitt von `100` und einer Standardabweichung von `10`, dann wäre das untere Grenzlimit `78.96` und jeder Wert kleiner als `78.96` würde einen Alarm auslösen.
+- ### Obere Grenze des t-Test Schwellenwerts
+  - Eine obere Grenze des t-Test Schwellenwerts kann jede positive Dezimalzahl zwischen `0.5` und `1.0` sein. `0.5` repräsentiert den Durchschnitt und `1.0` repräsentiert alle möglichen rechtsseitigen Werte (∞). Sie wird verwendet, wenn ein größerer Wert eine Leistungsminderung anzeigen würde.
+  - Zum Beispiel, wenn Sie einen t-Test Schwellenwert mit einer oberen Grenze von `0.977` verwenden und Sie hatten `25` historische Metriken mit einem Durchschnitt von `100` und einer Standardabweichung von `10`, dann wäre das obere Grenzlimit `121.04` und jeder Wert größer als `121.04` würde einen Alarm auslösen.

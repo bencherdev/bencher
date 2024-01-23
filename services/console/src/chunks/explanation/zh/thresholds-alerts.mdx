@@ -1,0 +1,17 @@
+## 警告
+当新的度量值低于阈值的下界限或超过阈值的上界限时，会生成警告。
+如果在出现警告的事件中失败了 CI 构建，请在使用 <code><a href="/docs/zh/explanation/bencher-run/">bencher run</a></code> CLI 子命令时设置 `--err` 标志。
+
+### 抑制警告
+有时，对特定的基准测试抑制警告可能很有用。
+最好的方法是将这些特殊后缀添加至特定的基准测试名称中：
+
+- `_bencher_ignore`
+- `BencherIgnore`
+- `-bencher-ignore`
+
+例如，如果你的基准测试命名为 `my_flaky_benchmark`，那么将它重命名为 `my_flaky_benchmark_bencher_ignore` 就能忽略该特定基准测试的警告。
+即使存在阈值，忽略的基准测试也不会被检查。
+然而，忽略的基准测试的度量值仍然会被保存。
+继续以我们的例子，`my_flaky_benchmark_bencher_ignore` 的结果依然会被保存在数据库中，名称为 `my_flaky_benchmark`。
+如果你移除后缀并恢复到原来的基准测试名称，一切会重新回到你停下的地方。

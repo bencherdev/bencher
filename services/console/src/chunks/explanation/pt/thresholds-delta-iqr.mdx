@@ -1,0 +1,10 @@
+## Limiares do Intervalo Interquartil Delta
+
+Um Limiar do Intervalo Interquartil Delta mede quantos múltiplos da média percentual de mudança (Δ) do [intervalo interquartil](https://pt.wikipedia.org/wiki/Amplitude_interquartil) (IIQ) uma nova Métrica está acima ou abaixo da mediana de suas Métricas históricas. Se uma nova Métrica estiver abaixo de um certo múltiplo do ΔIIQ da mediana (Limite Inferior), ou acima de um certo múltiplo do ΔIIQ da mediana (Limite Superior) de suas Métricas históricas, um Alerta é gerado. Deve ser definido um Limite Inferior, Superior, ou ambos.
+
+- ### Limite Inferior do Limiar do Intervalo Interquartil Delta
+  - Um Limite Inferior do Limiar do Intervalo Interquartil Delta pode ser qualquer multiplicador maior ou igual a zero (ex: use `2.0` para `2x`). É usado quando um valor menor indicaria uma regressão de desempenho.
+  - Por exemplo, se você tivesse um Limiar do Intervalo Interquartil Delta com um Limite Inferior definido como `2.0` e suas Métricas históricas tivessem uma mediana de `100`, um intervalo interquartil de `10` e uma média delta do intervalo interquartil de `0.2` (`20%`), o Limite Inferior seria `60` e qualquer valor menor que `60` geraria um Alerta.
+- ### Limite Superior do Limiar do Intervalo Interquartil Delta
+  - Um Limite Superior do Limiar do Intervalo Interquartil Delta pode ser qualquer multiplicador maior ou igual a zero (ex: use `2.0` para `2x`). É usado quando um valor maior indicaria uma regressão de desempenho.
+  - Por exemplo, se você tivesse um Limiar do Intervalo Interquartil Delta com um Limite Superior definido como `2.0` e suas Métricas históricas tivessem uma mediana de `100`, um intervalo interquartil de `10` e uma média delta do intervalo interquartil de `0.2` (`20%`), o Limite Superior seria `140` e qualquer valor maior que `140` geraria um Alerta.

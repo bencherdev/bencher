@@ -5,148 +5,33 @@ heading: "Seuils & Alertes"
 sortOrder: 4
 ---
 
-Les seuils peuvent être créés pour la combinaison unique d'un type de métrique, d'une branche et d'une plate-forme de test.
-Ce sont des tests de signification statistique qui utilisent soit un
-[score Z](https://fr.wikipedia.org/wiki/Cote_Z_(statistiques))
-ou un [test de Student](https://fr.wikipedia.org/wiki/Test_de_Student)
-afin de détecter les régressions de performance et de générer des alertes.
-Lorsqu'une métrique est en dessous de la limite inférieure d'un seuil ou au-dessus de la limite supérieure d'un seuil,
-une alerte est générée pour cette métrique.
+import ThresholdsIntro from "../../../chunks/explanation/fr/thresholds-intro.mdx";
+import ThresholdsStatic from "../../../chunks/explanation/fr/thresholds-static.mdx";
+import ThresholdsStatistical from "../../../chunks/explanation/fr/thresholds-statistical.mdx";
+import ThresholdsPercentage from "../../../chunks/explanation/fr/thresholds-percentage.mdx";
+import ThresholdsNormalImg from "../../../chunks/explanation/thresholds-normal-img.mdx";
+import ThresholdsZScore from "../../../chunks/explanation/fr/thresholds-z-score.mdx";
+import ThresholdsTTest from "../../../chunks/explanation/fr/thresholds-t-test.mdx";
+import ThresholdLogNormalImg from "../../../chunks/explanation/thresholds-log-normal-img.mdx";
+import ThresholdsLogNormal from "../../../chunks/explanation/fr/thresholds-log-normal.mdx";
+import ThresholdsIqrImg from "../../../chunks/explanation/thresholds-iqr-img.mdx";
+import ThresholdsIqr from "../../../chunks/explanation/fr/thresholds-iqr.mdx";
+import ThresholdsDeltaIqr from "../../../chunks/explanation/fr/thresholds-delta-iqr.mdx";
+import ThresholdsAlerts from "../../../chunks/explanation/fr/thresholds-alerts.mdx";
 
-Les seuils fonctionnent mieux lorsque :
-- Il n'y a pas de différences extrêmes entre les exécutions de benchmark
-- Les exécutions de benchmark sont totalement indépendantes les unes des autres
-- Le nombre d'itérations pour une seule exécution de benchmark est inférieur à 10% des métriques historiques
-
-S'il y a moins de 30 métriques historiques pour la combinaison de type de métrique, de branche et de plate-forme de test,
-alors un seuil de test de Student devrait être utilisé et __*pas*__ un seuil de score Z.
-
-<div class="content has-text-centered">
-    <figure>
-<img
-    src="https://upload.wikimedia.org/wikipedia/commons/2/25/The_Normal_Distribution.svg"
-    width="800"
-    height="600"
-    alt="La Distribution Normale https://commons.wikimedia.org/wiki/File:The_Normal_Distribution.svg"
-/>
-<br/>
-<small>🐰 Pas de panique ! Tout cela aura du sens dans une minute.</small>
-</figure>
-</div>
-
-## Test de Signification Statistique
-
-### Score Z
-
-Le score Z mesure le nombre d'[écarts types](https://fr.wikipedia.org/wiki/Écart_type) (σ) qu'une métrique donnée est au-dessus ou en dessous de la moyenne des métriques historiques.
-L'écart type (σ) peut également être exprimé en un pourcentage cumulé de borne _inférieure_ ou _supérieure_.
-
-Par exemple, deux écarts types (2σ) équivalent à un pourcentage cumulé de borne _supérieure_ de 97,7%, comme le montre l'image ci-dessus.
-Lors de la création de score Z, la notation décimale du pourcentage cumulé est utilisée.
-Dans cet exemple, le pourcentage cumulé de borne _supérieure_ de 97,7% serait une borne supérieure de `0,977`.
-En pratique, un seuil de ce type serait utile pour le type de métrique de latence.
-C'est-à-dire qu'une valeur plus grande indiquerait une régression des performances.
-
-Lorsqu'une valeur plus petite indique une régression de performance, comme avec le type de métrique de débit,
-un pourcentage cumulé de borne _inférieure_ devrait être utilisé.
-Un pourcentage cumulé de borne _inférieure_ de 97,7% correspondrait à deux écarts types sous la moyenne (-2σ).
-Ceci serait donné en notation décimale comme une borne inférieure de `0,977`.
-
-<br />
-
-> 🐰 Astuce: Lors de l'utilisation d'un seuil de score Z, fixez la taille minimale de l'échantillon à au moins 30.
-
-### Test de Student
-
-Le test de Student mesure la probabilité qu'une métrique donnée soit au-dessus ou en dessous de la moyenne des métriques historiques.
-Cette probabilité est appelée un intervalle de confiance (CI).
-L'intervalle de confiance (CI) est exprimé en un pourcentage de confiance de borne _inférieure_ ou _supérieure_.
-
-Par exemple, un pourcentage de confiance de borne _supérieure_ de 95,0% indique que 95,0% des métriques devraient être _inférieures_ à un maximum attendu.
-Lors de la création de seuils de test de Student, la notation décimale du pourcentage de confiance est utilisée.
-Dans cet exemple, le pourcentage de confiance de borne _supérieure_ de 95,0% serait une borne supérieure de `0,95`.
-En pratique, un seuil de ce type serait utile pour le type de métrique de latence.
-C'est-à-dire qu'une valeur plus grande indiquerait une régression des performances.
-
-Lorsqu'une valeur plus petite indiquerait une régression des performances, comme avec le type de métrique de débit,
-un pourcentage de confiance de borne _inférieure_ devrait être utilisé.
-Un pourcentage de confiance de borne _inférieure_ de 95,0% indiquerait que les Métriques devraient être _supérieures_ à un minimum attendu.
-Ceci serait donné en notation décimale comme une limite inférieure de `0,95`.
-
-<br />
-
-> 🐰 Astuce : Utilisez un seuil de test de Student si vous avez moins de 30 métriques historiques.
-
-## Limite de Signification Statistique
-
-La signification de la limite de signification statistique dépend du test de signification statistique :
-- Score Z : Écart type (σ) exprimé sous forme de pourcentage cumulé décimal
-- Test de Student : Intervalle de confiance (CI) exprimé sous forme de pourcentage de confiance décimal
-
-Chaque métrique est vérifiée par rapport à la limite de signification statistique du seuil si elle existe.
-Cela peut inclure une limite inférieure, une limite supérieure, ou les deux.
-Une limite est calculée pour chaque borne.
-Cette limite est ensuite comparée à la métrique actuelle.
-Si cette métrique tombe en dehors de la limite, une alerte sera générée.
-
-> 🐰 Astuce: Pour échouer une construction CI lorsqu'une borne est violée, utilisez le drapeau `--err` pour la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>.
-
-### Limite Inférieure
-Une limite inférieure peut être définie pour un seuil.
-Elle est utilisée lorsqu'une valeur plus petite indiquerait une régression des performances,
-comme avec le type de métrique de débit.
-La valeur doit être un décimal entre `0.5` et `1.0`.
-
-Par exemple, si vous utilisiez un score Z et que vos métriques historiques avaient une moyenne de `100` et un écart type de `10`,
-alors une limite inférieure de `0.977` créerait une limite inférieure à `80.05`.
-Toute valeur inférieure à `80.05` générerait une alerte.
-
-### Limite Supérieure
-Une limite supérieure peut être définie pour un seuil.
-Elle est utilisée lorsqu'une valeur plus grande indiquerait une régression des performances,
-comme avec le type de métrique de latence.
-La valeur doit être un décimal entre `0.5` et `1.0`.
-
-Par exemple, si vous utilisiez un score Z et que vos métriques historiques avaient une moyenne de `100` et un écart type de `10`,
-alors une limite supérieure de `0.977` créerait une limite supérieure à `119.95`.
-Toute valeur supérieure à `119.95` générerait une alerte.
-
-## Taille de l'Échantillon
-
-### Taille Minimale de l'Échantillon
-Une taille minimale d'échantillon peut être définie pour un seuil.
-Le seuil ne lancera son test de significativité statistique
-que si le nombre de métriques historiques est supérieur ou égal à la taille minimale de l'échantillon.
-
-### Taille Maximale de l'Échantillon
-Une taille maximale d'échantillon peut être définie pour un seuil.
-Le seuil se limitera aux métriques historiques les plus récentes
-plafonnées à la taille maximale de l'échantillon pour son test de signification statistique.
-
-## Taille de la Fenêtre
-Une taille de fenêtre en secondes peut être définie pour un seuil.
-Le seuil se limitera aux métriques historiques les plus récentes
-limitées par la fenêtre de temps donnée pour son test de signification statistique.
-
-## Alertes
-Des alertes sont générées lorsqu'une métrique est en dessous de la limite inférieure d'un seuil ou au-dessus de la limite supérieure d'un seuil.
-Pour échouer une construction CI en cas d'alerte, réglez le drapeau `--err` lors de l'utilisation de la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>.
-
-### Suppression des Alertes
-Il peut parfois être utile de supprimer les alertes pour un benchmark particulier.
-La meilleure façon de faire cela est d'ajouter l'un de ces suffixes spéciaux au nom de ce benchmark :
-
-- `_bencher_ignore`
-- `BencherIgnore`
-- `-bencher-ignore`
-
-Par exemple, si votre benchmark s'appelait `my_flaky_benchmark` alors le renommer en `my_flaky_benchmark_bencher_ignore`
-ignorerait juste ce benchmark particulier à l'avenir.
-Les benchmarks ignorés ne sont pas vérifiés contre le seuil même si un existe.
-Cependant, les métriques pour les benchmarks ignorés sont toujours stockées.
-Pour continuer avec notre exemple, les résultats de `my_flaky_benchmark_bencher_ignore` seraient toujours stockés dans la base de données sous `my_flaky_benchmark`.
-Si vous retirez le suffixe et revenez au nom de base du benchmark,
-alors les choses reprendront là où vous les avez laissées.
+<ThresholdsIntro />
+<ThresholdsStatic />
+<ThresholdsStatistical />
+<ThresholdsPercentage />
+<ThresholdsNormalImg />
+<ThresholdsZScore />
+<ThresholdsTTest />
+<ThresholdLogNormalImg />
+<ThresholdsLogNormal />
+<ThresholdsIqrImg />
+<ThresholdsIqr />
+<ThresholdsDeltaIqr />
+<ThresholdsAlerts />
 
 <br />
 <br />

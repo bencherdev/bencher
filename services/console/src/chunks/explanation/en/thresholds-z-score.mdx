@@ -1,0 +1,32 @@
+## z-score Thresholds
+
+A z-score Threshold measures the number of [standard deviations](https://en.wikipedia.org/wiki/Standard_deviation) (σ)
+a new Metric is from the mean of your historical Metrics using a [z-score](https://en.wikipedia.org/wiki/Standard_score).
+
+z-score Thresholds work best when:
+- There are no extreme differences between benchmark runs
+- Benchmark runs are totally independent of one another
+- The number of iterations for a single benchmark run is less than 10% of the historical Metrics
+- There are at least 30 historical Metrics (minimum Sample Size >= 30)
+
+For z-score Thresholds, standard deviations are expressed as a decimal cumulative percentage.
+If a new Metric is below a certain left-side cumulative percentage (Lower Boundary)
+or above a certain right-side cumulative percentage (Upper Boundary) for your historical Metrics an Alert is generated.
+Either a Lower Boundary, Upper Boundary, or both must be set.
+
+- ### z-score Threshold Lower Boundary
+  - A z-score Threshold Lower Boundary can be any positive decimal between `0.5` and `1.0`.
+Where `0.5` represents the mean and `1.0` represents all possible left-side values (-∞).
+It is used when a smaller value would indicate a performance regression.
+  - For example, if you used a z-score Threshold with a Lower Boundary of `0.977`
+and your historical Metrics had a mean of `100` and a standard deviation of `10`,
+the Lower Boundary Limit would be `80.05` and
+any value less than `80.05` would generate an Alert.
+- ### z-score Threshold Upper Boundary
+  - A z-score Threshold Upper Boundary can be any positive decimal between `0.5` and `1.0`.
+Where `0.5` represents the mean and `1.0` represents all possible right-side values (∞).
+It is used when a greater value would indicate a performance regression.
+  - For example, if you used a z-score Threshold with an Upper Boundary of `0.977`
+and your historical Metrics had a mean of `100` and a standard deviation of `10`,
+the Upper Boundary Limit would be `119.95` and
+any value greater than `119.95` would generate an Alert.

@@ -1,0 +1,22 @@
+## Prozentschwellen
+
+Eine Prozentschwelle ist die einfachste statistische Schwelle.
+Wenn eine neue Metrik unter einen bestimmten Prozentsatz des Mittelwerts (Untere Grenze) 
+oder über einen bestimmten Prozentsatz des Mittelwerts (Obere Grenze) Ihrer historischen Metriken liegt, wird ein Alarm ausgelöst.
+Entweder muss eine untere Grenze, eine obere Grenze, oder beides gesetzt werden.
+Prozentschwellen funktionieren am besten, wenn der Wert der Metrik innerhalb eines bekannten guten Bereichs bleiben sollte.
+
+- ### Untere Grenze der Prozentschwelle
+  - Eine untere Grenze der Prozentschwelle kann ein beliebiger Prozentsatz in Dezimalform sein, der größer oder gleich Null ist (z. B. verwenden Sie `0.10` für `10%`).
+Es wird verwendet, wenn ein kleinerer Wert auf eine Leistungsverschlechterung hinweisen würde.
+  - Zum Beispiel, wenn Sie eine Prozentschwelle mit einer unteren Grenze von `0.10` festgelegt hätten
+und Ihre historischen Metriken einen Mittelwert von `100` hatten,
+wäre das untere Grenzlimit `90` und
+jeder Wert unter `90` würde einen Alarm auslösen.
+- ### Obere Grenze der Prozentschwelle
+  - Eine obere Grenze der Prozentschwelle kann ein beliebiger Prozentsatz in Dezimalform sein, der größer oder gleich Null ist (z. B. verwenden Sie `0.10` für `10%`).
+Es wird verwendet, wenn ein größerer Wert auf eine Leistungsverschlechterung hinweisen würde.
+  - Zum Beispiel, wenn Sie eine Prozentschwelle mit einer oberen Grenze von `0.10` festgelegt hätten
+und Ihre historischen Metriken einen Mittelwert von `100` hatten,
+wäre das obere Grenzlimit `110` und
+jeder Wert über `110` würde einen Alarm auslösen.

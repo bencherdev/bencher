@@ -1,0 +1,23 @@
+## Static Thresholds
+
+A Static Threshold is the simplest Threshold.
+If a new Metric is below a set Lower Boundary or above a set Upper Boundary an Alert is generated.
+That is, the Lower/Upper Boundary is an explicit Lower/Upper Boundary Limit.
+Either a Lower Boundary, Upper Boundary, or both must be set.
+Static Thresholds work best when the value of the Metric should stay within a constant range,
+such as instruction counts.
+
+- ### Static Threshold Lower Boundary
+  - A Static Threshold Lower Boundary can be any floating point number.
+It is used when a smaller value would indicate a performance regression.
+The Lower Boundary must be less than or equal to the Upper Boundary, if both are specified.
+  - For example, if you had a Static Threshold with a Lower Boundary set to `100`
+the Lower Boundary Limit would likewise be `100` and
+any value less than `100` would generate an Alert.
+- ### Static Threshold Upper Boundary
+  - A Static Threshold Upper Boundary can be any floating point number.
+It is used when a greater value would indicate a performance regression.
+The Upper Boundary must be greater than or equal to the Lower Boundary, if both are specified.
+  - For example, if you had a Static Threshold with an Upper Boundary set to `100`
+the Upper Boundary Limit would likewise be `100` and
+any value greater than `100` would generate an Alert.

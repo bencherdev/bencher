@@ -1,0 +1,19 @@
+## Alerts
+Alerts are generated when a new Metric is below a Threshold's Lower Boundary Limit or above a Threshold's Upper Boundary Limit.
+To fail a CI build in the event of an Alert set the `--err` flag when using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand.
+
+### Suppressing Alerts
+Sometimes it can be useful to suppress Alerts for a particular Benchmark.
+The best way to do this is by adding one of these special suffixes to that Benchmark's name:
+
+- `_bencher_ignore`
+- `BencherIgnore`
+- `-bencher-ignore`
+
+For example, if your Benchmark was named `my_flaky_benchmark` then renaming it to `my_flaky_benchmark_bencher_ignore`
+would ignore just that particular Benchmark going forward.
+Ignored Benchmarks do not get checked against the Threshold even if one exists.
+However, the metrics for ignored Benchmarks are still stored.
+Continuing with our example, the results from `my_flaky_benchmark_bencher_ignore` would still be stored in the database under `my_flaky_benchmark`.
+If you remove the suffix and return to the original Benchmark name,
+then things will pick right back up where you left off.

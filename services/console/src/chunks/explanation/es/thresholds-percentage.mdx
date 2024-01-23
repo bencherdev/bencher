@@ -1,0 +1,20 @@
+## Umbrales Porcentuales
+
+Un Umbral Porcentual es el Umbral Estadístico más simple.
+Si una nueva Métrica está por debajo de un cierto porcentaje de la media (Límite Inferior)
+o por encima de un cierto porcentaje de la media (Límite Superior) de tus Métricas históricas, se genera una Alerta.
+Debe establecerse un Límite Inferior, un Límite Superior, o ambos.
+Los Umbrales Porcentuales son más eficaces cuando el valor de la Métrica debería permanecer dentro de un rango conocido y adecuado.
+
+- ### Límite Inferior del Umbral Porcentual
+  - Un Límite Inferior del Umbral Porcentual puede ser cualquier porcentaje mayor o igual a cero en forma decimal (por ejemplo: se utiliza `0.10` para `10%`). Se usa cuando un valor más pequeño indicaría una regresión de rendimiento.
+  - Por ejemplo, si tuvieras un Umbral Porcentual con un Límite Inferior establecido en `0.10`
+y tus Métricas históricas tenían una media de `100`,
+el Límite de Frontera Inferior sería `90` y
+cualquier valor menor a `90` generaría una Alerta.
+- ### Límite Superior del Umbral Porcentual
+  - Un Límite Superior del Umbral Porcentual puede ser cualquier porcentaje mayor o igual a cero en forma decimal (por ejemplo: se utiliza `0.10` para `10%`). Se usa cuando un valor mayor indicaría una regresión en el rendimiento.
+  - Por ejemplo, si tuvieras un Umbral Porcentual con un Límite Superior establecido en `0.10`
+y tus Métricas históricas tenían una media de `100`,
+el Límite de Frontera Superior sería `110` y
+cualquier valor mayor a `110` generaría una Alerta.

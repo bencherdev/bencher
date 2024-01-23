@@ -1,0 +1,21 @@
+## Statistische Schwellenwerte
+
+Alle anderen Schwellenwerte sind statistische Schwellenwerte.
+Jeder statistische Schwellenwert verwendet historische Metriken und einen einzigartigen statistischen Signifikanztest, um zu bestimmen, ob eine Warnung generiert wird.
+Daher bedeutet die untere/obere Grenze bei verschiedenen statistischen Schwellenwerten unterschiedliche Dinge.
+Zusätzlich zur Festlegung einer unteren und/oder oberen Grenze gibt es Kontrollen, welche historischen Metriken verwendet werden (d.h. abgetastet).
+
+- ### Mindest-Stichprobengröße
+  - Für einen statistischen Schwellenwert kann eine Mindest-Stichprobengröße festgelegt werden.
+Der statistische Schwellenwert führt seinen statistischen Signifikanztest nur durch, 
+wenn die Anzahl der historischen Metriken größer oder gleich der Mindest-Stichprobengröße ist.
+Die Mindest-Stichprobengröße muss kleiner oder gleich der maximalen Stichprobengröße sein, falls beide angegeben sind.
+- ### Maximale Stichprobengröße
+  - Für einen statistischen Schwellenwert kann eine maximale Stichprobengröße festgelegt werden.
+Der statistische Schwellenwert beschränkt sich nur auf die neuesten historischen Metriken,
+begrenzt durch die maximale Stichprobengröße für seinen statistischen Signifikanztest.
+Die maximale Stichprobengröße muss größer oder gleich der Mindest-Stichprobengröße sein, wenn beide angegeben sind.
+- ### Fenstergröße
+  - Für einen statistischen Schwellenwert kann eine Fenstergröße in Sekunden festgelegt werden.
+Der statistische Schwellenwert beschränkt sich nur auf die neuesten historischen Metriken,
+begrenzt durch das gegebene Zeitfenster für seinen statistischen Signifikanztest.

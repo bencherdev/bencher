@@ -1,0 +1,22 @@
+## Percentage Thresholds
+
+A Percentage Threshold is the simplest Statistical Threshold.
+If a new Metric is below a certain percentage of the mean (Lower Boundary)
+or above a certain percentage of the mean (Upper Boundary) of your historical Metrics an Alert is generated.
+Either a Lower Boundary, Upper Boundary, or both must be set.
+Percentage Thresholds work best when the value of the Metric should stay within a known good range.
+
+- ### Percentage Threshold Lower Boundary
+  - A Percentage Threshold Lower Boundary can be any percentage greater than or equal to zero in decimal form (ex: use `0.10` for `10%`).
+It is used when a smaller value would indicate a performance regression.
+  - For example, if you had a Percentage Threshold with a Lower Boundary set to `0.10`
+and your historical Metrics had a mean of `100`
+the Lower Boundary Limit would be `90` and
+any value less than `90` would generate an Alert.
+- ### Percentage Threshold Upper Boundary
+  - A Percentage Threshold Upper Boundary can be any percentage greater than or equal to zero in decimal form (ex: use `0.10` for `10%`).
+It is used when a greater value would indicate a performance regression.
+  - For example, if you had a Percentage Threshold with an Upper Boundary set to `0.10`
+and your historical Metrics had a mean of `100`
+the Upper Boundary Limit would be `110` and
+any value greater than `110` would generate an Alert.

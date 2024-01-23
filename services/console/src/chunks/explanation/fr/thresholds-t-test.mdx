@@ -1,0 +1,30 @@
+## Seuils de test t
+
+Un seuil de test t mesure l'[intervalle de confiance](https://fr.wikipedia.org/wiki/Intervalle_de_confiance) (IC) pour déterminer la probabilité qu'une nouvelle Métrique soit supérieure ou inférieure à la moyenne de vos Métriques historiques à l'aide d'un [test t de Student](https://fr.wikipedia.org/wiki/Test_t_de_Student).
+
+Les seuils de test t fonctionnent mieux lorsque :
+- Il n'y a pas de différences extrêmes entre les runs de benchmark
+- Les runs de benchmark sont totalement indépendants les uns des autres
+- Le nombre d'itérations pour un seul run de benchmark est inférieur à 10% des Métriques historiques
+
+Pour les seuils de test t, les intervalles de confiance sont exprimés en pourcentage de confiance décimal.
+Si une nouvelle Métrique est inférieure à un certain pourcentage de confiance côté gauche (Limite Inférieure)
+ou supérieure à un certain pourcentage de confiance côté droit (Limite Supérieure) pour vos Métriques historiques, une Alerte est générée.
+Soit une Limite Inférieure, soit une Limite Supérieure, ou les deux, doivent être définies.
+
+- ### Limite Inférieure du seuil de test t
+  - Une Limite Inférieure de seuil de test t peut être n'importe quel décimal positif entre `0.5` et `1.0`.
+Où `0.5` représente la moyenne et `1.0` représente toutes les valeurs possibles du côté gauche (-∞).
+Elle est utilisée lorsqu'une valeur plus petite indiquerait une régression de performance.
+  - Par exemple, si vous utilisiez un seuil de test t avec une Limite Inférieure de `0.977`
+et que vous aviez `25` Métriques historiques avec une moyenne de `100` et un écart type de `10`,
+la Limite de la Limite Inférieure serait de `78.96` et
+toute valeur inférieure à `78.96` générerait une Alerte.
+- ### Limite Supérieure du seuil de test t
+  - Une Limite Supérieure de seuil de test t peut être n'importe quel décimal positif entre `0.5` et `1.0`.
+Où `0.5` représente la moyenne et `1.0` représente toutes les valeurs possibles du côté droit (∞).
+Elle est utilisée lorsqu'une valeur plus grande indiquerait une régression de performance.
+  - Par exemple, si vous utilisiez un seuil de test t avec une Limite Supérieure de `0.977`
+et que vous aviez `25` Métriques historiques avec une moyenne de `100` et un écart type de `10`,
+la Limite de la Limite Supérieure serait de `121.04` et
+toute valeur supérieure à `121.04` générerait une Alerte.

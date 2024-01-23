@@ -1,0 +1,22 @@
+## Seuils de l'Intervalle Interquartile
+
+Un seuil de l'intervalle interquartile mesure combien de multiples de l'[intervalle interquartile](https://fr.wikipedia.org/wiki/%C3%89cart_interquartile) (IQR)
+une nouvelle métrique est au-dessus ou en dessous de la médiane de vos métriques historiques.
+Si une nouvelle métrique est en dessous d'un certain multiple de l'IQR par rapport à la médiane (limite inférieure)
+ou au-dessus d'un certain multiple de l'IQR par rapport à la médiane (limite supérieure) de vos métriques historiques, une alerte est générée.
+Une limite inférieure, une limite supérieure, ou les deux doivent être définies.
+
+- ### Limite Inférieure du Seuil de l'Intervalle Interquartile
+  - Une limite inférieure du seuil de l'intervalle interquartile peut être n'importe quel multiplicateur supérieur ou égal à zéro (ex: utilisez `2.0` pour `2x`).
+Elle est utilisée lorsqu'une valeur plus petite indiquerait une régression des performances.
+  - Par exemple, si vous aviez un seuil de l'intervalle interquartile avec une limite inférieure définie à `2.0`
+et que vos métriques historiques avaient une médiane de `100` et un intervalle interquartile de `10`,
+la limite inférieure serait de `80` et
+toute valeur inférieure à `80` générerait une alerte.
+- ### Limite Supérieure du Seuil de l'Intervalle Interquartile
+  - Une limite supérieure du seuil de l'intervalle interquartile peut être n'importe quel multiplicateur supérieur ou égal à zéro (ex: utilisez `2.0` pour `2x`).
+Elle est utilisée lorsqu'une valeur plus grande indiquerait une régression des performances.
+  - Par exemple, si vous aviez un seuil de l'intervalle interquartile avec une limite supérieure définie à `2.0`
+et que vos métriques historiques avaient une médiane de `100` et un intervalle interquartile de `10`,
+la limite supérieure serait de `120` et
+toute valeur supérieure à `120` générerait une alerte.

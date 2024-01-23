@@ -1,0 +1,23 @@
+## Statische Schwellenwerte
+
+Ein statischer Schwellenwert ist der einfachste Schwellenwert.
+Wenn ein neuer Metrikwert unter einer gesetzten unteren Grenze oder über einer gesetzten oberen Grenze liegt, wird ein Alarm erzeugt.
+Das heißt, die untere/obere Grenze ist eine explizite untere/obere Grenzbegrenzung.
+Entweder muss eine untere Grenze, eine obere Grenze oder beides gesetzt werden.
+Statische Schwellenwerte funktionieren am besten, wenn der Wert der Metrik innerhalb eines konstanten Bereichs bleiben sollte,
+wie zum Beispiel bei Anweisungsanzahlen.
+
+- ### Untere Grenze des statischen Schwellenwerts
+  - Eine untere Grenze des statischen Schwellenwerts kann eine beliebige Gleitkommazahl sein.
+Sie wird verwendet, wenn ein kleinerer Wert eine Leistungsverschlechterung anzeigen würde.
+Die untere Grenze muss kleiner oder gleich der oberen Grenze sein, wenn beide angegeben sind.
+  - Zum Beispiel, wenn Sie einen statischen Schwellenwert mit einer unteren Grenze von `100` hätten,
+wäre die untere Grenzbegrenzung ebenfalls `100` und
+jeder Wert kleiner als `100` würde einen Alarm auslösen.
+- ### Obere Grenze des statischen Schwellenwerts
+  - Eine obere Grenze des statischen Schwellenwerts kann eine beliebige Gleitkommazahl sein.
+Sie wird verwendet, wenn ein größerer Wert eine Leistungsverschlechterung anzeigen würde.
+Die obere Grenze muss größer oder gleich der unteren Grenze sein, wenn beide angegeben sind.
+  - Zum Beispiel, wenn Sie einen statischen Schwellenwert mit einer oberen Grenze von `100` hätten, 
+wäre die obere Grenzbegrenzung ebenfalls `100` und
+jeder Wert größer als `100` würde einen Alarm auslösen.

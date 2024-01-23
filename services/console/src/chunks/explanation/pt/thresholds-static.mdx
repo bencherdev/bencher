@@ -1,0 +1,23 @@
+## Limiares Estáticos
+
+Um Limiar Estático é o limiar mais simples.
+Se uma nova Métrica estiver abaixo de um Limite Inferior definido ou acima de um Limite Superior definido, um Alerta é gerado.
+Ou seja, o Limite Inferior/Superior é um Limite Inferior/Superior explícito.
+Deve ser definido um Limite Inferior, um Limite Superior, ou ambos.
+Os Limiares Estáticos funcionam melhor quando o valor da Métrica deve permanecer dentro de uma faixa constante,
+como contagens de instruções.
+
+- ### Limite Inferior do Limiar Estático
+  - Um Limite Inferior de Limiar Estático pode ser qualquer número de ponto flutuante.
+Ele é usado quando um valor menor indicaria uma regressão de desempenho.
+O Limite Inferior deve ser menor ou igual ao Limite Superior, se ambos forem especificados.
+  - Por exemplo, se você tivesse um Limiar Estático com um Limite Inferior definido para `100`,
+o Limite Inferior seria igualmente `100` e
+qualquer valor menor que `100` geraria um Alerta.
+- ### Limite Superior do Limiar Estático
+  - Um Limite Superior de Limiar Estático pode ser qualquer número de ponto flutuante.
+Ele é usado quando um valor maior indicaria uma regressão de desempenho.
+O Limite Superior deve ser maior ou igual ao Limite Inferior, se ambos forem especificados.
+  - Por exemplo, se você tivesse um Limiar Estático com um Limite Superior definido para `100`,
+o Limite Superior seria igualmente `100` e
+qualquer valor maior que `100` geraria um Alerta.

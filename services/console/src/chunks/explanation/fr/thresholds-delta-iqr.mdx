@@ -1,0 +1,22 @@
+## Seuils de l'Écart Interquartile Delta 
+
+Un seuil de l'écart interquartile Delta mesure combien de multiples du changement moyen en pourcentage (Δ) de l'[écart interquartile](https://fr.wikipedia.org/wiki/%C3%89cart_interquartile) (IQR)
+une nouvelle métrique est au-dessus ou en dessous de la médiane de vos métriques historiques.
+Si une nouvelle métrique est en dessous d'un certain multiple du ΔIQR de la médiane (Limite inférieure)
+ou au-dessus d'un certain multiple du ΔIQR de la médiane (Limite supérieure) de vos métriques historiques, une alerte est générée.
+Une limite inférieure, une limite supérieure, ou les deux doivent être définies.
+
+- ### Limite inférieure du seuil de l'écart interquartile Delta
+  - Une limite inférieure du seuil de l'écart interquartile Delta peut être n'importe quel multiplicateur supérieur ou égal à zéro (par exemple : utilisez `2.0` pour `2x`).
+Elle est utilisée lorsqu'une valeur plus petite indiquerait une régression des performances.
+  - Par exemple, si vous aviez un seuil de l'écart interquartile Delta avec une limite inférieure fixée à `2.0`
+et que vos métriques historiques avaient une médiane de `100`, un écart interquartile de `10`, et une moyenne de l'écart interquartile delta de `0.2` (`20%`)
+la limite inférieure serait de `60` et
+toute valeur inférieure à `60` générerait une alerte.
+- ### Limite supérieure du seuil de l'écart interquartile Delta
+  - Une limite supérieure du seuil de l'écart interquartile Delta peut être n'importe quel multiplicateur supérieur ou égal à zéro (par exemple : utilisez `2.0` pour `2x`).
+Elle est utilisée lorsqu'une valeur plus grande indiquerait une régression des performances.
+  - Par exemple, si vous aviez un seuil de l'écart interquartile Delta avec une limite supérieure fixée à `2.0`
+et que vos métriques historiques avaient une médiane de `100`, un écart interquartile de `10`, et une moyenne de l'écart interquartile delta de `0.2` (`20%`)
+la limite supérieure serait de `140` et
+toute valeur supérieure à `140` générerait une alerte.

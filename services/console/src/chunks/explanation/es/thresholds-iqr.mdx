@@ -1,0 +1,22 @@
+## Umbrales del Rango Intercuartil
+
+Un umbral del Rango Intercuartil mide cuántos múltiplos del [rango intercuartil](https://es.wikipedia.org/wiki/Rango_intercuart%C3%ADlico) (IQR)
+una nueva Métrica está por encima o por debajo de la mediana de tus Métricas históricas.
+Si una nueva Métrica se encuentra por debajo de un cierto múltiplo del IQR desde la mediana (Límite Inferior)
+o por encima de un cierto múltiplo del IQR desde la mediana (Límite Superior) de tus Métricas históricas, se genera una Alerta.
+Debe establecerse un Límite Inferior, un Límite Superior, o ambos.
+
+- ### Límite Inferior del umbral del Rango Intercuartil
+  - Un Límite Inferior del umbral del Rango Intercuartil puede ser cualquier multiplicador mayor o igual a cero (ej: use `2.0` para `2x`).
+Se utiliza cuando un valor menor indicaría una regresión del rendimiento.
+  - Por ejemplo, si tuvieras un umbral de Rango Intercuartil con un Límite Inferior establecido en `2.0`
+y tus Métricas históricas tenían una mediana de `100` y un rango intercuartil de `10`
+el Límite Inferior sería `80` y
+cualquier valor menos que `80` generaría una Alerta.
+- ### Límite Superior del umbral del Rango Intercuartil
+  - Un Límite Superior del umbral del Rango Intercuartil puede ser cualquier multiplicador mayor o igual a cero (ej: use `2.0` para `2x`).
+Se utiliza cuando un valor mayor indicaría una regresión del rendimiento.
+  - Por ejemplo, si tuvieras un umbral de Rango Intercuartil con un Límite Superior establecido en `2.0`
+y tus Métricas históricas tenían una mediana de `100` y un rango intercuartil de `10`
+el Límite Superior sería `120` y
+cualquier valor mayor que `120` generaría una Alerta.

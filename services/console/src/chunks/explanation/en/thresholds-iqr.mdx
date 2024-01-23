@@ -1,0 +1,22 @@
+## Interquartile Range Thresholds
+
+An Interquartile Range Threshold measures how many multiples of the [interquartile range](https://en.wikipedia.org/wiki/Interquartile_range) (IQR)
+a new Metric is above or below the median of your historical Metrics.
+If a new Metric is below a certain multiple of the IQR from the median (Lower Boundary)
+or above a certain multiple of the IQR from the median (Upper Boundary) of your historical Metrics an Alert is generated.
+Either a Lower Boundary, Upper Boundary, or both must be set.
+
+- ### Interquartile Range Threshold Lower Boundary
+  - An Interquartile Range Threshold Lower Boundary can be any multiplier greater than or equal to zero (ex: use `2.0` for `2x`).
+It is used when a smaller value would indicate a performance regression.
+  - For example, if you had an Interquartile Range Threshold with a Lower Boundary set to `2.0`
+and your historical Metrics had a median of `100` and an interquartile range of `10`
+the Lower Boundary Limit would be `80` and
+any value less than `80` would generate an Alert.
+- ### Interquartile Range Threshold Upper Boundary
+  - An Interquartile Range Threshold Upper Boundary can be any multiplier greater than or equal to zero (ex: use `2.0` for `2x`).
+It is used when a greater value would indicate a performance regression.
+  - For example, if you had an Interquartile Range Threshold with an Upper Boundary set to `2.0`
+and your historical Metrics had a median of `100` and an interquartile range of `10`
+the Upper Boundary Limit would be `120` and
+any value greater than `120` would generate an Alert.

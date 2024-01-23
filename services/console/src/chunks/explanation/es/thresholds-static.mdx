@@ -1,0 +1,23 @@
+## Umbrales Estáticos
+
+Un Umbral Estático es el umbral más sencillo.
+Si una nueva Métrica está por debajo de un Límite Inferior establecido o por encima de un Límite Superior establecido, se genera una Alerta.
+Es decir, el Límite Inferior/Superior es un Límite explícito Inferior/Superior.
+Debe establecerse un Límite Inferior, un Límite Superior, o ambos.
+Los Umbrales Estáticos funcionan mejor cuando el valor de la Métrica debe permanecer dentro de un rango constante,
+como conteos de instrucciones.
+
+- ### Límite Inferior de Umbral Estático
+  - Un Límite Inferior de Umbral Estático puede ser cualquier número de punto flotante.
+Se utiliza cuando un valor más pequeño indicaría una regresión de rendimiento.
+El Límite Inferior debe ser menor o igual al Límite Superior, si ambos se especifican.
+  - Por ejemplo, si tuvieras un Umbral Estático con un Límite Inferior establecido en `100`
+el Límite del Umbral Inferior también sería `100` y
+cualquier valor menor que `100` generaría una Alerta.
+- ### Límite Superior de Umbral Estático
+  - Un Límite Superior de Umbral Estático puede ser cualquier número de punto flotante.
+Se utiliza cuando un valor más grande indicaría una regresión de rendimiento.
+El Límite Superior debe ser mayor o igual que el Límite Inferior, si ambos se especifican.
+  - Por ejemplo, si tuvieras un Umbral Estático con un Límite Superior establecido en `100`
+el Límite del Umbral Superior también sería `100` y
+cualquier valor mayor que `100` generaría una Alerta.

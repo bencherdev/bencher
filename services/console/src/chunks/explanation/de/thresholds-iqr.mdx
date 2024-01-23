@@ -1,0 +1,22 @@
+## Schwellenwerte des Interquartilsbereichs
+
+Ein Schwellenwert des Interquartilsbereichs misst, wie viele Vielfache des [Interquartilsbereichs](https://de.wikipedia.org/wiki/Interquartilsabstand) (IQR)
+eine neue Metrik über oder unter dem Median Ihrer historischen Metriken liegt.
+Wenn eine neue Metrik unterhalb eines bestimmten Vielfachen des IQR vom Median (Untere Grenze)
+oder oberhalb eines bestimmten Vielfachen des IQR vom Median (Obere Grenze) Ihrer historischen Metriken liegt, wird ein Alarm ausgelöst.
+Entweder eine Untere Grenze, Obere Grenze, oder beides muss eingestellt werden.
+
+- ### Untere Grenze des Schwellenwerts des Interquartilsbereichs
+  - Eine Untere Grenze des Schwellenwerts des Interquartilsbereichs kann ein beliebiger Multiplikator sein, der größer oder gleich Null ist (z.B.: benutzen Sie `2.0` für `2x`).
+Sie wird verwendet, wenn ein kleinerer Wert eine Leistungseinbuße anzeigen würde.
+  - Zum Beispiel, wenn Sie einen Schwellenwert des Interquartilsbereichs mit einer Unteren Grenze von `2.0` eingestellt haben
+und Ihre historischen Metriken einen Median von `100` und einen Interquartilsbereich von `10` hatten
+wäre das Limit der Unteren Grenze `80` und
+jeder Wert unter `80` würde einen Alarm auslösen.
+- ### Obere Grenze des Schwellenwerts des Interquartilsbereichs
+  - Eine Obere Grenze des Schwellenwerts des Interquartilsbereichs kann ein beliebiger Multiplikator sein, der größer oder gleich Null ist (z.B.: benutzen Sie `2.0` für `2x`).
+Sie wird verwendet, wenn ein höherer Wert eine Leistungseinbuße anzeigen würde.
+  - Zum Beispiel, wenn Sie einen Schwellenwert des Interquartilsbereichs mit einer Oberen Grenze von `2.0` eingestellt haben
+und Ihre historischen Metriken einen Median von `100` und einen Interquartilsbereich von `10` hatten
+wäre das Limit der Oberen Grenze `120` und
+jeder Wert über `120` würde einen Alarm auslösen.

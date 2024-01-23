@@ -1,0 +1,25 @@
+재능있느라 어떻게 성능 회귀를 잡는지 알려주는 방법입니다.
+임계값은 고유한 조합에 할당됩니다 : 브랜치, 테스트 베드, 그리고 측정값.
+임계값은 하한선, 상한선 또는 둘 다 있어야 합니다.
+각 경계는 경계 제한을 계산하는 데 사용됩니다.
+그런 다음 모든 새로운 메트릭이 각 경계 제한에 대해 확인됩니다.
+
+- 하한선
+  - 하한선은 작은 값이 성능 저하를 나타낼 때 사용되는 Throughput Measure와 같습니다.
+- 상한선
+  - 상한선은 큰 값이 성능 저하를 나타낼 때 사용됩니다, 예를 들어 Latency Measure와 같습니다.
+
+임계값의 여러 종류가 있습니다:
+
+<ul>
+  <li>[정적](#ko/static-임계값)</li>
+  <li>[통계적](#ko/statistical-임계값)</li>
+  <ul>
+    <li>[백분율](#ko/percentage-임계값)</li>
+    <li>[z-점수](#ko/z-score-임계값)</li>
+    <li>[t-검정](#ko/t-test-임계값)</li>
+    <li>[로그 정규](#ko/log-normal-임계값)</li>
+    <li>[사분위 범위 (IQR)](#ko/interquartile-range-임계값)</li>
+    <li>[델타 사분위 범위 (ΔIQR)](#ko/delta-interquartile-range-임계값)</li>
+  </ul>
+</ul>

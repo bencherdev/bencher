@@ -1,0 +1,23 @@
+## Seuils Log Normaux
+
+Un seuil Log Normal mesure la probabilité qu'une nouvelle Métrique soit supérieure ou inférieure au point central de vos Métriques historiques en utilisant une [Distribution Log Normale](https://fr.wikipedia.org/wiki/Loi_log-normale).
+
+Les seuils Log Normaux fonctionnent au mieux quand :
+- Les exécutions de référence sont totalement indépendantes les unes des autres
+- Le nombre d'itérations pour une seule exécution de référence est inférieur à 10% des Métriques historiques
+- Toutes les données sont positives (le logarithme naturel d'un nombre négatif est `indéfini`)
+
+Pour les seuils Log Normaux, la probabilité est exprimée en pourcentage décimal.
+Si une nouvelle Métrique est inférieure à un certain pourcentage du côté gauche (Limite Inférieure) ou supérieure à un certain pourcentage du côté droit (Limite Supérieure) de vos Métriques historiques, une Alerte est générée.
+Une Limite Inférieure, une Limite Supérieure, ou les deux doivent être définies.
+
+- ### Limite inférieure du seuil Log Normal
+  - Une Limite inférieure du seuil Log Normal peut être n'importe quel décimal positif entre `0.5` et `1.0`.
+Où `0.5` représente le point central et `1.0` représente toutes les valeurs possibles du côté gauche (-∞).
+Elle est utilisée lorsqu'une valeur plus petite indiquerait une régression de performance.
+  - Par exemple, si vous utilisez un seuil Log Normal avec une Limite Inférieure de `0.977` et que vous avez `25` Métriques historiques centrées autour de `100` et un outlier précédent à `200`, la Limite Inférieure serait de `71.20` et toute valeur inférieure à `71.20` générerait une Alerte.
+- ### Limite supérieure du seuil Log Normal
+  - Une Limite supérieure du seuil Log Normal peut être n'importe quel décimal positif entre `0.5` et `1.0`.
+Où `0.5` représente le point central et `1.0` représente toutes les valeurs possibles du côté droit (∞).
+Elle est utilisée lorsqu'une valeur plus grande indiquerait une régression de performance.
+  - Par exemple, si vous utilisez un seuil Log Normal avec une Limite Supérieure de `0.977` et que vous avez `25` Métriques historiques centrées autour de `100` et un outlier précédent à `200`, la Limite Supérieure serait de `134.18` et toute valeur supérieure à `134.18` génèrerait une Alerte.

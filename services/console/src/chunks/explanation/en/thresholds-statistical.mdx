@@ -1,0 +1,21 @@
+## Statistical Thresholds
+
+All other Thresholds are Statistical Thresholds.
+Each Statistical Threshold uses historical Metrics and a unique statistical significance test to determine whether an Alert is generated.
+Therefore, the Lower/Upper Boundary will mean different things for different Statistical Thresholds.
+In addition to setting a Lower Boundary and/or an Upper Boundary, there are controls for which historical Metrics are used (ie sampled).
+
+- ### Minimum Sample Size
+  - A minimum Sample Size can be set for a Statistical Threshold.
+The Statistical Threshold will only run its statistical significance test
+if the number of historical Metrics is greater than or equal to the minimum Sample Size.
+The minimum Sample Size must be less than or equal to the maximum Sample Size, if both are specified.
+- ### Maximum Sample Size
+  - A maximum Sample Size can be set for a Statistical Threshold.
+The Statistical Threshold will limit itself to only the most recent historical Metrics
+capped at the maximum Sample Size for its statistical significance test.
+The maximum Sample Size must be greater than or equal to the minimum Sample Size, if both are specified.
+- ### Window Size
+  - A Window Size in seconds can be set for a Statistical Threshold.
+The Statistical Threshold will limit itself to only the most recent historical Metrics
+bounded by the given time window for its statistical significance test.

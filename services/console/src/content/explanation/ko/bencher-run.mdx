@@ -12,6 +12,15 @@ import BencherRunProject from "../../../chunks/explanation/ko/bencher-run-projec
 import BencherRunToken from "../../../chunks/explanation/ko/bencher-run-token.mdx";
 import BencherRunBranchSelection from "../../../chunks/explanation/ko/bencher-run-branch-selection.mdx";
 import BencherRunHash from "../../../chunks/explanation/ko/bencher-run-hash.mdx";
+import BencherRunTestbed from "../../../chunks/explanation/ko/bencher-run-testbed.mdx";
+import BencherRunAdapters from "../../../chunks/explanation/ko/bencher-run-adapters.mdx";
+import BencherRunIter from "../../../chunks/explanation/ko/bencher-run-iter.mdx";
+import BencherRunFold from "../../../chunks/explanation/ko/bencher-run-fold.mdx";
+import BencherRunBackdate from "../../../chunks/explanation/ko/bencher-run-backdate.mdx";
+import BencherRunAllowFailure from "../../../chunks/explanation/ko/bencher-run-allow-failure.mdx";
+import BencherRunErr from "../../../chunks/explanation/ko/bencher-run-err.mdx";
+import BencherRunHtml from "../../../chunks/explanation/ko/bencher-run-html.mdx";
+import BencherRunQuiet from "../../../chunks/explanation/ko/bencher-run-quiet.mdx";
 
 import BencherRunExec from "../../../chunks/explanation/ko/bencher-run-exec.mdx";
 
@@ -39,85 +48,39 @@ import BencherRunExec from "../../../chunks/explanation/ko/bencher-run-exec.mdx"
 
 <br />
 
-### `--testbed <TESTBED>`
+<BencherRunTestbed />
 
 <br />
 
-선택사항: `--testbed` 옵션 또는 `BENCHER_TESTBED` 환경 변수를 이미 존재하는 테스트베드의 슬러그 또는 UUID로 설정할 수 있습니다.
-둘 다 정의된 경우, `--testbed` 옵션이 `BENCHER_TESTBED` 환경 변수보다 우선순위를 가집니다.
-둘 다 정의되지 않은 경우, 기본 테스트베드로 `localhost`가 사용됩니다.
+<BencherRunAdapters />
 
 <br />
 
-### `--adapter <ADAPTER>`
-### `--average <AVERAGE>`
-### `--file <FILE>`
+<BencherRunIter />
 
 <br />
 
-전체 개요는 [benchmark harness adapter](/ko/docs/explanation/adapters/)를 참조하세요.
+<BencherRunFold />
 
 <br />
 
-### `--iter <ITER>`
+<BencherRunBackdate />
 
 <br />
 
-선택사항: 실행 반복 횟수입니다. 기본값은 `1`입니다.
-
-### `--fold <FOLD>`
+<BencherRunAllowFailure />
 
 <br />
 
-선택사항: 여러 결과들을 하나의 결과로 병합합니다. \
-필요사항: `--iter`가 설정되어야 합니다. \
-가능한 값들:
-    - `min`:    최소값
-    - `max`:    최대값
-    - `mean`:   평균값
-    - `median`: 중위값
+<BencherRunErr />
 
 <br />
 
-### `--backdate <DATETIME_SECONDS>`
+<BencherRunHtml />
 
 <br />
 
-선택사항: 보고서의 날짜를 과거로 변경합니다 (epoch 이후 초).
-주의: 이는 과거 보고서의 순서에 *영향을 줄 수 없습니다*!
-이는 프로젝트에 _연대순서대로_ 역사적 데이터를 초기 씨딩할 때 유용합니다.
-
-<br />
-
-### `--allow-failure`
-
-<br />
-
-선택사항: 벤치마크 테스트 실패를 허용합니다.
-
-<br />
-
-### `--err`
-
-<br />
-
-선택사항: 경고가 생성될 때 오류가 발생합니다. 전체 개요는 [thresholds and alerts](/ko/docs/explanation/thresholds/)를 참조하세요.
-
-<br />
-
-### `--html`
-
-<br />
-
-선택사항: 결과를 HTML 형식으로 출력합니다.
-
-<br />
-
-### `--quiet`
-
-<br />
-
-선택 사항 : 정적 모드, 최종 보고서 JSON 만 출력합니다. 기본값은 `false`입니다.
+<BencherRunQuiet />
 
 <br />
 

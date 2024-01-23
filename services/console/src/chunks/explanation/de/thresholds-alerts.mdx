@@ -1,0 +1,19 @@
+## Alarme
+Alarme werden generiert, wenn eine neue Metrik unterhalb einer Schwellenwertuntergrenze oder oberhalb einer Schwellenwertobergrenze liegt.
+Um einen CI-Build im Falle eines Alarms zu fehlschlagen, setzen Sie das `--err` Flag, wenn Sie den <code><a href="/docs/de/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl verwenden.
+
+### Unterdrückung von Alarmen
+Manchmal kann es nützlich sein, Alarme für einen bestimmten Benchmark zu unterdrücken.
+Die beste Möglichkeit, dies zu tun, besteht darin, einem der speziellen Suffixe zum Namen dieses Benchmarks hinzuzufügen:
+
+- `_bencher_ignore`
+- `BencherIgnore`
+- `-bencher-ignore`
+
+Zum Beispiel, wenn Ihr Benchmark `my_flaky_benchmark` genannt wird, dann wäre es hilfreich, es in `my_flaky_benchmark_bencher_ignore` umzubenennen
+und somit würde genau dieser Benchmark ignoriert.
+Ignorierte Benchmarks werden nicht gegen die Schwelle geprüft, auch wenn eine vorhanden ist.
+Die Metriken für ignorierte Benchmarks werden jedoch weiterhin gespeichert.
+Beim Fortfahren mit unserem Beispiel würden die Ergebnisse von `my_flaky_benchmark_bencher_ignore` weiterhin in der Datenbank unter `my_flaky_benchmark` gespeichert.
+Wenn Sie das Suffix entfernen und zum ursprünglichen Benchmark-Namen zurückkehren,
+dann fangen die Dinge genau dort an, wo Sie aufgehört haben.

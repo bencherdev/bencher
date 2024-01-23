@@ -1,0 +1,31 @@
+## Umbrales de prueba t
+
+Un umbral de prueba t mide el [intervalo de confianza](https://en.wikipedia.org/wiki/Confidence_interval) (IC) de cuán probable es que
+una nueva Métrica esté por encima o por debajo de la media de tus Métricas históricas utilizando una [prueba t de Student](https://en.wikipedia.org/wiki/Student's_t-test).
+
+Los umbrales de prueba t funcionan mejor cuando:
+- No hay diferencias extremas entre las ejecuciones de referencia
+- Las ejecuciones de referencia son totalmente independientes entre sí
+- El número de iteraciones para una única ejecución de referencia es menos del 10% de las Métricas históricas
+
+Para los umbrales de prueba t, los intervalos de confianza se expresan como un porcentaje de confianza decimal.
+Si una nueva Métrica está por debajo de un cierto porcentaje de confianza del lado izquierdo (Margen inferior)
+o por encima de un cierto porcentaje de confianza del lado derecho (Margen superior) para tus Métricas históricas, se generará una Alerta.
+Debe establecerse un Margen inferior, un Margen superior, o ambos.
+
+- ### Margen inferior de umbral de prueba t
+  - Un Margen inferior de umbral de prueba t puede ser cualquier número decimal positivo entre `0.5` y `1.0`.
+Donde `0.5` representa la media y `1.0` representa todos los valores posibles del lado izquierdo (-∞).
+Se utiliza cuando un valor menor indicaría una regresión de rendimiento.
+  - Por ejemplo, si usaste un umbral de prueba t con un Margen inferior de `0.977`
+y tenías `25` Métricas históricas con una media de `100` y una desviación estándar de `10`,
+el Límite del Margen inferior sería `78.96` y
+cualquier valor menor a `78.96` generaría una Alerta.
+- ### Margen superior de umbral de prueba t
+  - Un Margen superior de umbral de prueba t puede ser cualquier número decimal positivo entre `0.5` y `1.0`.
+Donde `0.5` representa la media y `1.0` representa todos los valores posibles del lado derecho (∞).
+Se utiliza cuando un valor mayor indicaría una regresión de rendimiento.
+  - Por ejemplo, si usaste un umbral de prueba t con un Margen superior de `0.977`
+y tenías `25` Métricas históricas con una media de `100` y una desviación estándar de `10`,
+el Límite del Margen superior sería `121.04` y
+cualquier valor mayor a `121.04` generaría una Alerta.

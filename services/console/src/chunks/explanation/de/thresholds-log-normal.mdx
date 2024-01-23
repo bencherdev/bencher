@@ -1,0 +1,31 @@
+## Log-Normal-Verteilungs-Schwellenwerte
+
+Ein Log-Normal-Verteilungs-Schwellenwert misst, wie wahrscheinlich es ist, dass eine neue Metrik über oder unter dem zentralen Wert Ihrer historischen Metriken liegt, unter Verwendung einer [Log-Normal-Verteilung](https://de.wikipedia.org/wiki/Logarithmische_Normalverteilung).
+
+Log-Normal-Verteilungs-Schwellenwerte funktionieren am besten, wenn:
+- Benchmark-Durchläufe vollständig unabhängig voneinander sind
+- Die Anzahl der Iterationen für einen einzelnen Benchmark-Durchlauf weniger als 10% der historischen Metriken beträgt
+- Alle Daten positiv sind (der natürliche Logarithmus einer negativen Zahl ist `undefined`)
+
+Bei Log-Normal-Verteilungs-Schwellenwerten wird die Wahrscheinlichkeit als dezimale Prozentsatz angegeben.
+Wenn eine neue Metrik unter einem bestimmten prozentualen Anteil auf der linken Seite (Untere Grenze)
+oder über einem bestimmten prozentualen Anteil auf der rechten Seite (Obere Grenze) Ihrer historischen Metriken liegt, wird ein Alarm ausgelöst.
+Es muss entweder eine untere Grenze, eine obere Grenze oder beide festgelegt werden.
+
+- ### Log-Normal-Verteilungs-Schwellenwert Untere Grenze
+  - Eine untere Grenze für den Log-Normal-Verteilungs-Schwellenwert kann jede positive Dezimalzahl zwischen `0.5` und `1.0` sein.
+`0.5` stellt den zentralen Standort dar und `1.0` repräsentiert alle möglichen Werte auf der linken Seite (-∞).
+Es wird verwendet, wenn ein kleinerer Wert eine Leistungsverschlechterung anzeigen würde.
+  - Wenn Sie beispielsweise einen Log-Normal-Verteilungs-Schwellenwert mit einer unteren Grenze von `0.977` verwendet haben
+und Sie hatten `25` historische Metriken um `100` zentriert und einen früheren Ausreißer bei `200`,
+wäre die Untere Grenzgrenze `71.20` und
+jeder Wert kleiner als `71.20` würde einen Alarm auslösen.
+  
+- ### Log-Normal-Verteilungs-Schwellenwert Obere Grenze
+  - Eine obere Grenze für den Log-Normal-Verteilungs-Schwellenwert kann jede positive Dezimalzahl zwischen `0.5` und `1.0` sein.
+`0.5` stellt den zentralen Standort dar und `1.0` repräsentiert alle möglichen Werte auf der rechten Seite (∞).
+Es wird verwendet, wenn ein größerer Wert eine Leistungsverschlechterung anzeigen würde.
+  - Wenn Sie beispielsweise einen Log-Normal-Verteilungs-Schwellenwert mit einer oberen Grenze von `0.977` verwendet haben
+und Sie hatten `25` historische Metriken um `100` zentriert und einen früheren Ausreißer bei `200`,
+wäre die Obere Grenzgrenze `134.18` und
+jeder Wert größer als `134.18` würde einen Alarm auslösen.

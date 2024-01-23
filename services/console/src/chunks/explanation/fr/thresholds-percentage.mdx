@@ -1,0 +1,20 @@
+## Seuils de Pourcentage
+
+Un Seuil de Pourcentage est le plus simple des Seuils Statistiques.
+Si une nouvelle Mesure est inférieure à un certain pourcentage de la moyenne (Limite Inférieure)
+ou supérieure à un certain pourcentage de la moyenne (Limite Supérieure) de vos Mesures historiques, une Alerte est générée.
+Une Limite Inférieure, une Limite Supérieure, ou les deux doivent être définies.
+Les Seuils de Pourcentage fonctionnent mieux lorsque la valeur de la Mesure doit rester dans une plage connue comme bonne.
+
+- ### Limite Inférieure du Seuil de Pourcentage
+  - Une Limite Inférieure du Seuil de Pourcentage peut être n'importe quel pourcentage supérieur ou égal à zéro sous forme décimale (ex: utilisez `0.10` pour `10%`).
+Elle est utilisée lorsqu'une valeur plus petite indiquerait une régression des performances.
+  - Par exemple, si vous aviez un Seuil de Pourcentage avec une Limite Inférieure définie à `0.10`
+et que vos Mesures historiques avaient une moyenne de `100`
+la Limite de la Limite Inférieure serait `90` et toute valeur inférieure à `90` générerait une Alerte.
+- ### Limite Supérieure du Seuil de Pourcentage
+  - Une Limite Supérieure du Seuil de Pourcentage peut être n'importe quel pourcentage supérieur ou égal à zéro sous forme décimale (ex: utilisez `0.10` pour `10%`). 
+Elle est utilisée lorsqu'une valeur supérieure indiquerait une régression des performances. 
+  - Par exemple, si vous aviez un Seuil de Pourcentage avec une Limite Supérieure définie à `0.10` 
+et que vos Mesures historiques avaient une moyenne de `100` 
+la Limite de la Limite Supérieure serait `110` et toute valeur supérieure à `110` générerait une Alerte.

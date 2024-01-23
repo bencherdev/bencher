@@ -1,0 +1,25 @@
+Los umbrales son la manera en que detectas las regresiones de rendimiento en Bencher.
+Un umbral se asigna a una combinación única de: Rama, Banco de pruebas y Medida.
+Un umbral debe tener un límite inferior, un límite superior, o ambos.
+Cada límite se utiliza para calcular un límite de contorno.
+Luego, cada nueva métrica se verifica en comparación a cada límite de contorno.
+
+- Límite inferior
+  - Un límite inferior se usa cuando un valor más pequeño indicaría una regresión de rendimiento, como con la medida de rendimiento.
+- Límite superior
+  - Un límite superior se utiliza cuando un valor más grande indicaría una regresión del rendimiento, como con la Medida de Retardo.
+
+Existen varios tipos de umbrales:
+
+<ul>
+  <li>[Estáticos](#umbrales-estáticos)</li>
+  <li>[Estadísticos](#umbrales-estadísticos)</li>
+  <ul>
+    <li>[Porcentaje](#umbrales-porcentaje)</li>
+    <li>[z-score](#umbrales-z-score)</li>
+    <li>[t-test](#umbrales-t-test)</li>
+    <li>[Log Normal](#umbrales-log-normal)</li>
+    <li>[Rango Interquartil (IQR)](#umbrales-rango-interquartil)</li>
+    <li>[Delta Rango Interquartil (ΔIQR)](#umbrales-delta-rango-interquartil)</li>
+  </ul>
+</ul>

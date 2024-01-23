@@ -5,269 +5,33 @@ heading: "Thresholds & Alerts"
 sortOrder: 4
 ---
 
-Thresholds are how you catch performance regressions in Bencher.
-If a new Metric exceeds a Threshold then an Alert is generated.
-A Threshold is assigned to a unique combination of: Branch, Testbed, and Measure.
+import ThresholdsIntro from "../../../chunks/explanation/en/thresholds-intro.mdx";
+import ThresholdsStatic from "../../../chunks/explanation/en/thresholds-static.mdx";
+import ThresholdsStatistical from "../../../chunks/explanation/en/thresholds-statistical.mdx";
+import ThresholdsPercentage from "../../../chunks/explanation/en/thresholds-percentage.mdx";
+import ThresholdsNormalImg from "../../../chunks/explanation/thresholds-normal-img.mdx";
+import ThresholdsZScore from "../../../chunks/explanation/en/thresholds-z-score.mdx";
+import ThresholdsTTest from "../../../chunks/explanation/en/thresholds-t-test.mdx";
+import ThresholdLogNormalImg from "../../../chunks/explanation/thresholds-log-normal-img.mdx";
+import ThresholdsLogNormal from "../../../chunks/explanation/en/thresholds-log-normal.mdx";
+import ThresholdsIqrImg from "../../../chunks/explanation/thresholds-iqr-img.mdx";
+import ThresholdsIqr from "../../../chunks/explanation/en/thresholds-iqr.mdx";
+import ThresholdsDeltaIqr from "../../../chunks/explanation/en/thresholds-delta-iqr.mdx";
+import ThresholdsAlerts from "../../../chunks/explanation/en/thresholds-alerts.mdx";
 
-There are a several types of Threshold:
-
-<ul>
-  <li>[Static](#static-thresholds)</li>
-  <li>[Statistical](#statistical-thresholds)</li>
-  <ul>
-    <li>[Percentage](#percentage-thresholds)</li>
-    <li>[z-score](#z-score-thresholds)</li>
-    <li>[t-test](#t-test-thresholds)</li>
-    <li>[Log Normal](#log-normal-thresholds)</li>
-    <li>[Interquartile Range (IQR)](#interquartile-range-thresholds)</li>
-    <li>[Delta Interquartile Range (ΔIQR)](#delta-interquartile-range-thresholds)</li>
-  </ul>
-</ul>
-
-## Static Thresholds
-
-A Static Threshold is the simplest Threshold.
-If a new Metric is below a set Lower Boundary or above a set Upper Boundary an Alert is generated.
-Either a Lower Boundary, Upper Boundary, or both must be set.
-Static Thresholds work best when the value of the Metric should stay within a constant range,
-such as instruction counts.
-
-- ### Static Threshold Lower Boundary
-  - A Static Threshold Lower Boundary can be any floating point number.
-It is used when a smaller value would indicate a performance regression.
-The Lower Boundary must be less than or equal to the Upper Boundary, if both are specified.
-  - For example, if you had a Static Threshold with a Lower Boundary set to `100`
-any value less than `100` would generate an Alert.
-- ### Static Threshold Upper Boundary
-  - A Static Threshold Upper Boundary can be any floating point number.
-It is used when a greater value would indicate a performance regression.
-The Upper Boundary must be greater than or equal to the Lower Boundary, if both are specified.
-  - For example, if you had a Static Threshold with an Upper Boundary set to `100`
-any value greater than `100` would generate an Alert.
-
-## Statistical Thresholds
-
-All other Thresholds are Statistical Thresholds.
-Each Statistical Threshold uses historical Metrics and a unique statistical significance test to determine whether an Alert is generated.
-Therefore, the Lower/Upper Boundary will mean different things for different Statistical Thresholds.
-In addition to setting a Lower Boundary and/or an Upper Boundary, there are controls for which historical Metrics are used (ie sampled).
-
-- ### Minimum Sample Size
-  - A minimum Sample Size can be set for a Statistical Threshold.
-The Statistical Threshold will only run its statistical significance test
-if the number of historical Metrics is greater than or equal to the minimum Sample Size.
-The minimum Sample Size must be less than or equal to the maximum Sample Size, if both are specified.
-- ### Maximum Sample Size
-  - A maximum Sample Size can be set for a Statistical Threshold.
-The Statistical Threshold will limit itself to only the most recent historical Metrics
-capped at the maximum Sample Size for its statistical significance test.
-The maximum Sample Size must be greater than or equal to the minimum Sample Size, if both are specified.
-- ### Window Size
-  - A Window Size in seconds can be set for a Statistical Threshold.
-The Statistical Threshold will limit itself to only the most recent historical Metrics
-bounded by the given time window for its statistical significance test.
-
-
-## Percentage Thresholds
-
-A Percentage Threshold is the simplest Statistical Threshold.
-If a new Metric is below a certain percentage of the mean (Lower Boundary)
-or above a certain percentage of the mean (Upper Boundary) of your historical Metrics an Alert is generated.
-Either a Lower Boundary, Upper Boundary, or both must be set.
-Percentage Thresholds work best when the value of the Metric should stay within a known good range.
-
-- ### Percentage Threshold Lower Boundary
-  - A Percentage Threshold Lower Boundary can be any percentage greater than or equal to zero in decimal form (ex: use `0.10` for `10%`).
-It is used when a smaller value would indicate a performance regression.
-  - For example, if you had a Percentage Threshold with a Lower Boundary set to `0.10`
-and your historical Metrics had a mean of `100`
-then any value less than `90` would generate an Alert.
-- ### Percentage Threshold Upper Boundary
-  - A Percentage Threshold Upper Boundary can be any percentage greater than or equal to zero in decimal form (ex: use `0.10` for `10%`).
-It is used when a greater value would indicate a performance regression.
-  - For example, if you had a Percentage Threshold with an Upper Boundary set to `0.10`
-and your historical Metrics had a mean of `100`
-then any value greater than `110` would generate an Alert.
-
-<div class="content has-text-centered">
-<img
-    src="https://s3.amazonaws.com/public.bencher.dev/docs/normal-distribution.svg"
-    width="800"
-    height="600"
-    alt="The Normal Distribution https://commons.wikimedia.org/wiki/File:The_Normal_Distribution.svg"
-/>
-</div>
-
-## z-score Thresholds
-
-A z-score Threshold measures the number of [standard deviations](https://en.wikipedia.org/wiki/Standard_deviation) (σ)
-a new Metric is from the mean of your historical Metrics using a [z-score](https://en.wikipedia.org/wiki/Standard_score).
-
-z-score Thresholds work best when:
-- There are no extreme differences between benchmark runs
-- Benchmark runs are totally independent of one another
-- The number of iterations for a single benchmark run is less than 10% of the historical Metrics
-- There are at least 30 historical Metrics (minimum Sample Size >= 30)
-
-For z-score Thresholds, standard deviations are expressed as a decimal cumulative percentage.
-If a new Metric is below a certain left-side cumulative percentage (Lower Boundary)
-or above a certain right-side cumulative percentage (Upper Boundary) for your historical Metrics an Alert is generated.
-Either a Lower Boundary, Upper Boundary, or both must be set.
-
-- ### z-score Threshold Lower Boundary
-  - A z-score Threshold Lower Boundary can be any positive decimal between `0.5` and `1.0`.
-Where `0.5` represents the mean and `1.0` represents all possible left-side values (-∞).
-It is used when a smaller value would indicate a performance regression.
-  - For example, if you used a z-score Threshold Lower boundary of `0.977`
-and your historical Metrics had a mean of `100` and a standard deviation of `10`,
-then any value less than `80.05` would generate an Alert.
-- ### z-score Threshold Upper Boundary
-  - A z-score Threshold Upper Boundary can be any positive decimal between `0.5` and `1.0`.
-Where `0.5` represents the mean and `1.0` represents all possible right-side values (∞).
-It is used when a greater value would indicate a performance regression.
-  - For example, if you used a z-score Threshold Upper boundary of `0.977`
-and your historical Metrics had a mean of `100` and a standard deviation of `10`,
-then any value greater than `119.95` would generate an Alert.
-
-## t-test Thresholds
-
-A t-test Threshold measures the [confidence interval](https://en.wikipedia.org/wiki/Confidence_interval) (CI) for how likely it is that
-a new Metric is above or below the mean of your historical Metrics using a [Student's t-test](https://en.wikipedia.org/wiki/Student's_t-test).
-
-t-test Thresholds work best when:
-- There are no extreme differences between benchmark runs
-- Benchmark runs are totally independent of one another
-- The number of iterations for a single benchmark run is less than 10% of the historical Metrics
-
-For t-test Thresholds, confidence intervals are expressed as a decimal confidence percentage.
-If a new Metric is below a certain left-side confidence percentage (Lower Boundary)
-or above a certain right-side confidence percentage (Upper Boundary) for your historical Metrics an Alert is generated.
-Either a Lower Boundary, Upper Boundary, or both must be set.
-
-- ### t-test Threshold Lower Boundary
-  - A t-test Threshold Lower Boundary can be any positive decimal between `0.5` and `1.0`.
-Where `0.5` represents the mean and `1.0` represents all possible left-side values (-∞).
-It is used when a smaller value would indicate a performance regression.
-  - For example, if you used a t-test Threshold Lower boundary of `0.977`
-and you had `25` historical Metrics with a mean of `100` and a standard deviation of `10`,
-then any value less than `78.96` would generate an Alert.
-- ### t-test Threshold Upper Boundary
-  - A t-test Threshold Upper Boundary can be any positive decimal between `0.5` and `1.0`.
-Where `0.5` represents the mean and `1.0` represents all possible right-side values (∞).
-It is used when a greater value would indicate a performance regression.
-  - For example, if you used a t-test Threshold Upper boundary of `0.977`
-and you had `25` historical Metrics with a mean of `100` and a standard deviation of `10`,
-then any value greater than `121.04` would generate an Alert.
-
-<div class="content has-text-centered">
-<img
-    src="https://s3.amazonaws.com/public.bencher.dev/docs/log-normal-distribution.svg"
-    width="800"
-    height="600"
-    alt="The Log Normal Distribution https://mathworld.wolfram.com/images/eps-svg/LogNormalDistribution_800.svg"
-/>
-</div>
-
-## Log Normal Thresholds
-
-A Log Normal Threshold measures how likely it is that
-a new Metric is above or below the center location of your historical Metrics using a [Log Normal Distribution](https://en.wikipedia.org/wiki/Log-normal_distribution).
-
-Log Normal Thresholds work best when:
-- Benchmark runs are totally independent of one another
-- The number of iterations for a single benchmark run is less than 10% of the historical Metrics
-- All data is positive (the natural log of a negative number is `undefined`)
-
-For Log Normal Thresholds, the likelihood expressed as a decimal percentage.
-If a new Metric is below a certain left-side percentage (Lower Boundary)
-or above a certain right-side percentage (Upper Boundary) for your historical Metrics an Alert is generated.
-Either a Lower Boundary, Upper Boundary, or both must be set.
-
-- ### Log Normal Threshold Lower Boundary
-  - A Log Normal Threshold Lower Boundary can be any positive decimal between `0.5` and `1.0`.
-Where `0.5` represents the center location and `1.0` represents all possible left-side values (-∞).
-It is used when a smaller value would indicate a performance regression.
-  - For example, if you used a Log Normal Threshold Lower boundary of `0.977`
-and you had `25` historical Metrics centered around `100` and one pervious outlier at `200`,
-then any value less than `71.20` would generate an Alert.
-- ### Log Normal Threshold Upper Boundary
-  - A Log Normal Threshold Upper Boundary can be any positive decimal between `0.5` and `1.0`.
-Where `0.5` represents the center location and `1.0` represents all possible right-side values (∞).
-It is used when a greater value would indicate a performance regression.
-  - For example, if you used a Log Normal Threshold Upper boundary of `0.977`
-and you had `25` historical Metrics centered around `100` and one previous outlier at `200`,
-then any value greater than `134.18` would generate an Alert.
-
-<div class="content has-text-centered">
-<img
-    src="https://s3.amazonaws.com/public.bencher.dev/docs/interquartile-range.svg"
-    width="800"
-    height="600"
-    alt="Interquartile Range https://access.openupresources.org/curricula/our6-8math/embeds/eyJfcmFpbHMiOnsibWVzc2FnZSI6IkJBaHBBbTRmIiwiZXhwIjpudWxsLCJwdXIiOiJibG9iX2lkIn19--941ca9b24415706ee262cc85b237c99ba4ca015b/6.8.19.Images.student.summary.03_en.svg"
-/>
-</div>
-
-## Interquartile Range Thresholds
-
-An Interquartile Range Threshold measures how many multiples of the [interquartile range](https://en.wikipedia.org/wiki/Interquartile_range) (IQR)
-a new Metric is above or below the median of your historical Metrics.
-If a new Metric is below a certain multiple of the IQR from the median (Lower Boundary)
-or above a certain multiple of the IQR from the median (Upper Boundary) of your historical Metrics an Alert is generated.
-Either a Lower Boundary, Upper Boundary, or both must be set.
-
-- ### Interquartile Range Threshold Lower Boundary
-  - An Interquartile Range Threshold Lower Boundary can be any multiplier greater than or equal to zero (ex: use `2.0` for `2x`).
-It is used when a smaller value would indicate a performance regression.
-  - For example, if you had an Interquartile Range Threshold with a Lower Boundary set to `2.0`
-and your historical Metrics had a median of `100` and an interquartile range of `10`
-then any value less than `80` would generate an Alert.
-- ### Interquartile Range Threshold Upper Boundary
-  - An Interquartile Range Threshold Upper Boundary can be any multiplier greater than or equal to zero (ex: use `2.0` for `2x`).
-It is used when a greater value would indicate a performance regression.
-  - For example, if you had an Interquartile Range Threshold with an Upper Boundary set to `2.0`
-and your historical Metrics had a median of `100` and an interquartile range of `10`
-then any value greater than `120` would generate an Alert.
-
-## Delta Interquartile Range Thresholds
-
-A Delta Interquartile Range Threshold measures how many multiples of the average percentage change (Δ) [interquartile range](https://en.wikipedia.org/wiki/Interquartile_range) (IQR)
-a new Metric is above or below the median of your historical Metrics.
-If a new Metric is below a certain multiple of the ΔIQR from the median (Lower Boundary)
-or above a certain multiple of the ΔIQR from the median (Upper Boundary) of your historical Metrics an Alert is generated.
-Either a Lower Boundary, Upper Boundary, or both must be set.
-
-- ### Delta Interquartile Range Threshold Lower Boundary
-  - A Delta Interquartile Range Threshold Lower Boundary can be any multiplier greater than or equal to zero (ex: use `2.0` for `2x`).
-It is used when a smaller value would indicate a performance regression.
-  - For example, if you had a Delta Interquartile Range Threshold with a Lower Boundary set to `2.0`
-and your historical Metrics had a median of `100`, an interquartile range of `10`, and an average delta interquartile range of `0.2` (`20%`)
-then any value less than `60` would generate an Alert.
-- ### Delta Interquartile Range Threshold Upper Boundary
-  - A Delta Interquartile Range Threshold Upper Boundary can be any multiplier greater than or equal to zero (ex: use `2.0` for `2x`).
-It is used when a greater value would indicate a performance regression.
-  - For example, if you had a Delta Interquartile Range Threshold with an Upper Boundary set to `2.0`
-and your historical Metrics had a median of `100`, an interquartile range of `10`, and an average delta interquartile range of `0.2` (`20%`)
-then any value greater than `140` would generate an Alert.
-
-## Alerts
-Alerts are generated when a new Metric is below a Threshold's Lower Boundary Limit or above a Threshold's Upper Boundary Limit.
-To fail a CI build in the event of an Alert set the `--err` flag when using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand.
-
-### Suppressing Alerts
-Sometimes it can be useful to suppress Alerts for a particular Benchmark.
-The best way to do this is by adding one of these special suffixes to that Benchmark's name:
-
-- `_bencher_ignore`
-- `BencherIgnore`
-- `-bencher-ignore`
-
-For example, if your Benchmark was named `my_flaky_benchmark` then renaming it to `my_flaky_benchmark_bencher_ignore`
-would ignore just that particular Benchmark going forward.
-Ignored Benchmarks do not get checked against the Threshold even if one exists.
-However, the metrics for ignored Benchmarks are still stored.
-Continuing with our example, the results from `my_flaky_benchmark_bencher_ignore` would still be stored in the database under `my_flaky_benchmark`.
-If you remove the suffix and return to the original Benchmark name,
-then things will pick right back up where you left off.
+<ThresholdsIntro />
+<ThresholdsStatic />
+<ThresholdsStatistical />
+<ThresholdsPercentage />
+<ThresholdsNormalImg />
+<ThresholdsZScore />
+<ThresholdsTTest />
+<ThresholdLogNormalImg />
+<ThresholdsLogNormal />
+<ThresholdsIqrImg />
+<ThresholdsIqr />
+<ThresholdsDeltaIqr />
+<ThresholdsAlerts />
 
 <br />
 <br />

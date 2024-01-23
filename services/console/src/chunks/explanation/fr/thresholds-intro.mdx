@@ -1,0 +1,25 @@
+Les seuils sont la manière dont vous détectez les régressions de performance dans Bencher.
+Un seuil est attribué à une combinaison unique de : Branche, Plateau de test, et Mesure.
+Un seuil doit avoir une limite inférieure, une limite supérieure, ou les deux.
+Chaque limite est utilisée pour calculer une limite de seuil.
+Ensuite, chaque nouvelle mesure est vérifiée par rapport à chaque limite de seuil.
+
+- Limite inférieure
+  - Une limite inférieure est utilisée lorsqu'une valeur plus petite indiquerait une régression de performance, comme avec la mesure du débit.
+- Limite supérieure
+  - Une limite supérieure est utilisée lorsqu'une valeur plus élevée indiquerait une régression de performance, comme avec la mesure de latence.
+
+Il existe plusieurs types de seuils :
+
+<ul>
+  <li>[Statique](#seuils-statiques)</li>
+  <li>[Statistique](#seuils-statistiques)</li>
+  <ul>
+    <li>[Pourcentage](#seuils-de-pourcentage)</li>
+    <li>[Score-z](#seuils-de-score-z)</li>
+    <li>[Test-t](#seuils-de-test-t)</li>
+    <li>[Log Normal](#seuils-log-normaux)</li>
+    <li>[Écart interquartile (IQR)](#seuils-decart-interquartile)</li>
+    <li>[Écart interquartile Delta (ΔIQR)](#seuils-decart-interquartile-delta)</li>
+  </ul>
+</ul>

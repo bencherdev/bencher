@@ -1,0 +1,25 @@
+しきい値は、Bencherでパフォーマンスの退行をキャッチする方法です。
+しきい値は、ブランチ、テストベッド、メジャーの一意の組み合わせに割り当てられます。
+しきい値には下限、上限、または両方が必要です。
+各境界は、境界限界を計算するために使用されます。
+その後、新しいメトリックはそれぞれの境界限界に対してチェックされます。
+
+- 下限
+  - 下限は、値が小さいとパフォーマンスが退行を示す場合に使用されます。例えば、スループットメジャーに対してです。
+- 上限
+  - 上限は、値が大きいとパフォーマンスが退行を示す場合に使用されます。例えば、レイテンシメジャーに対してです。
+
+いくつかのタイプのしきい値があります：
+
+<ul>
+  <li>[静的](#static-thresholds)</li>
+  <li>[統計的](#statistical-thresholds)</li>
+  <ul>
+    <li>[パーセンテージ](#percentage-thresholds)</li>
+    <li>[zスコア](#z-score-thresholds)</li>
+    <li>[tテスト](#t-test-thresholds)</li>
+    <li>[対数正規分布](#log-normal-thresholds)</li>
+    <li>[四分位範囲 (IQR)](#interquartile-range-thresholds)</li>
+    <li>[Δ四分位範囲 (ΔIQR)](#delta-interquartile-range-thresholds)</li>
+  </ul>
+</ul>

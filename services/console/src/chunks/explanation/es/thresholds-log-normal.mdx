@@ -1,0 +1,31 @@
+## Umbrales Log Normales
+
+Un Umbral Log Normal mide cuán probable es que
+una nueva Métrica esté por encima o por debajo del centro de ubicación de tus Métricas históricas utilizando una [Distribución Log Normal](https://es.wikipedia.org/wiki/Distribuci%C3%B3n_log-normal).
+
+Los Umbrales Log Normales funcionan mejor cuando:
+- Las ejecuciones de referencia son totalmente independientes una de otra
+- El número de iteraciones para una única ejecución de referencia es menos del 10% de las Métricas históricas
+- Todos los datos son positivos (el logaritmo natural de un número negativo es `indefinido`)
+
+Para los Umbrales Log Normales, la probabilidad se expresa como un porcentaje decimal.
+Si una nueva Métrica está por debajo de un cierto porcentaje del lado izquierdo (Límite Inferior)
+o por encima de un cierto porcentaje del lado derecho (Límite Superior) de tus Métricas históricas se genera una Alerta.
+Se debe establecer un Límite Inferior, un Límite Superior, o ambos.
+
+- ### Límite Inferior del Umbral Log Normal
+  - Un Límite Inferior del Umbral Log Normal puede ser cualquier decimal positivo entre `0.5` y `1.0`.
+Donde `0.5` representa la ubicación central y `1.0` representa todos los posibles valores del lado izquierdo (-∞).
+Se utiliza cuando un valor menor indicaría una regresión en el rendimiento.
+  - Por ejemplo, si utilizaste un Umbral Log Normal con un Límite Inferior de `0.977`
+y tuviste `25` Métricas históricas centradas alrededor de `100` y un valor atípico anterior en `200`,
+el Límite del Límite Inferior sería `71.20` y
+cualquier valor menor que `71.20` generaría una Alerta.
+- ### Límite Superior del Umbral Log Normal
+  - Un Límite Superior del Umbral Log Normal puede ser cualquier decimal positivo entre `0.5` y `1.0`.
+Donde `0.5` representa la ubicación central y `1.0` representa todos los posibles valores del lado derecho (∞).
+Se utiliza cuando un valor mayor indicaría una regresión en el rendimiento.
+  - Por ejemplo, si utilizaste un Umbral Log Normal con un Límite Superior de `0.977`
+y tuviste `25` Métricas históricas centradas alrededor de `100` y un valor atípico anterior en `200`,
+el Límite del Límite Superior sería `134.18` y
+cualquier valor mayor que `134.18` generaría una Alerta.

@@ -5,144 +5,33 @@ heading: "Schwellenwerte & Alarme"
 sortOrder: 4
 ---
 
-Schwellenwerte können für die einzigartige Kombination aus Metrikart, Branch und Testbed erstellt werden.
-Sie sind statistische Signifikanztests, die entweder eine
-[Z-Score](https://de.wikipedia.org/wiki/Standardisierung_(Statistik))
-oder [Student's T-Test](https://de.wikipedia.org/wiki/T-Test)
-verwenden, um Leistungseinbrüche zu detektieren und Alarme zu erzeugen.
-Wenn eine Metrik unterhalb der unteren Grenze eines Schwellenwerts oder oberhalb der oberen Grenze eines Schwellenwerts liegt,
-wird ein Alarm für diese Metrik erzeugt.
+import ThresholdsIntro from "../../../chunks/explanation/de/thresholds-intro.mdx";
+import ThresholdsStatic from "../../../chunks/explanation/de/thresholds-static.mdx";
+import ThresholdsStatistical from "../../../chunks/explanation/de/thresholds-statistical.mdx";
+import ThresholdsPercentage from "../../../chunks/explanation/de/thresholds-percentage.mdx";
+import ThresholdsNormalImg from "../../../chunks/explanation/thresholds-normal-img.mdx";
+import ThresholdsZScore from "../../../chunks/explanation/de/thresholds-z-score.mdx";
+import ThresholdsTTest from "../../../chunks/explanation/de/thresholds-t-test.mdx";
+import ThresholdLogNormalImg from "../../../chunks/explanation/thresholds-log-normal-img.mdx";
+import ThresholdsLogNormal from "../../../chunks/explanation/de/thresholds-log-normal.mdx";
+import ThresholdsIqrImg from "../../../chunks/explanation/thresholds-iqr-img.mdx";
+import ThresholdsIqr from "../../../chunks/explanation/de/thresholds-iqr.mdx";
+import ThresholdsDeltaIqr from "../../../chunks/explanation/de/thresholds-delta-iqr.mdx";
+import ThresholdsAlerts from "../../../chunks/explanation/de/thresholds-alerts.mdx";
 
-Schwellenwerte funktionieren am besten, wenn:
-- Es gibt keine extremen Unterschiede zwischen Benchmark-Läufen
-- Benchmark-Läufe sind völlig unabhängig voneinander
-- Die Anzahl der Iterationen für einen einzelnen Benchmark-Lauf ist weniger als 10% der historischen Metriken
-
-Wenn es weniger als 30 historische Metriken für die Kombination von Metrikart, Branch und Testbed gibt, dann sollte ein Student's T-Test-Schwellenwert verwendet werden und __*nicht*__ ein Z-Score-Schwellenwert.
-
-<div class="content has-text-centered">
-    <figure>
-<img
-    src="https://upload.wikimedia.org/wikipedia/commons/2/25/The_Normal_Distribution.svg"
-    width="800"
-    height="600"
-    alt="The Normal Distribution https://commons.wikimedia.org/wiki/File:The_Normal_Distribution.svg"
-/>
-<br/>
-<small>🐰 Keine Panik! Das wird in einer Minute alles Sinn machen.</small>
-</figure>
-</div>
-
-## Test auf statistische Signifikanz
-
-### Z-Score
-
-Der Z-Score misst die Anzahl der [Standardabweichungen](https://de.wikipedia.org/wiki/Standardabweichung) (σ), die eine gegebene Metrik über oder unter dem Durchschnitt der historischen Metriken liegt.
-Die Standardabweichung (σ) kann auch als _untere_ Grenze oder _obere_ Grenze kumulative Prozentzahl ausgedrückt werden.
-
-Zum Beispiel sind zwei Standardabweichungen (2σ) das Gleiche wie eine _obere_ Grenze kumulative Prozentzahl von 97,7%, wie oben dargestellt.
-Bei der Erstellung von Z-Score-Schwellenwerten wird die Dezimalschreibweise der kumulativen Prozentzahl verwendet.
-In diesem Beispiel wäre die _obere_ Grenze kumulative Prozentzahl von 97,7% eine obere Grenze von `0,977`.
-In der Praxis wäre ein solcher Schwellenwert nützlich für die Metrikart Latenz.
-Das heißt, ein größerer Wert würde auf eine Performance-Verschlechterung hinweisen.
-
-Wenn ein kleinerer Wert auf eine Leistungsverschlechterung hinweisen würde, wie bei der Metrikart Durchsatz,
-sollte eine _untere_ Grenze kumulative Prozentzahl verwendet werden.
-Eine _untere_ Grenze kumulative Prozentzahl von 97,7% würde zwei Standardabweichungen unter dem Durchschnitt (-2σ) entsprechen.
-Dies würde in Dezimalschreibweise als Unterer Grenzwert von `0,977` angegeben.
-
-<br />
-
-> 🐰 Tipp: Wenn Sie einen Z-Score-Schwellenwert verwenden, stellen Sie die Mindeststichprobengröße auf mindestens 30 ein.
-
-### Student's T-Test
-
-Der Student's T-Test misst, wie wahrscheinlich es ist, dass eine gegebene Metrik über oder unter dem Durchschnitt der historischen Metrik liegt.
-Diese Wahrscheinlichkeit wird als Konfidenzintervall (CI) bezeichnet.
-Das Konfidenzintervall (CI) wird als _untere_ Grenze oder _obere_ Grenze Konfidenzprozentzahl ausgedrückt.
-
-Zum Beispiel zeigt ein _oberer_ Grenzwert Konfidenzprozentsatz von 95,0% an, dass 95,0% der Metriken _kleiner_ als ein erwartetes _Maximum_ sein sollten.
-Bei der Erstellung von T-Test-Schwellenwerten wird die Dezimalschreibweise der Konfidenzprozentzahl verwendet.
-In diesem Beispiel würde die _obere_ Grenze Konfidenzprozentzahl von 95,0% eine obere Grenze von `0,95` bedeuten.
-In der Praxis wäre ein solcher Schwellenwert nützlich für die Metrikart Latenz.
-Das heißt, ein größerer Wert würde auf eine Performance-Verschlechterung hinweisen.
-
-Wenn ein kleinerer Wert auf eine Leistungsverschlechterung hinweisen würde, wie bei der Metrikart Durchsatz,
-sollte eine _untere_ Grenze Konfidenzprozentzahl verwendet werden.
-Eine _untere_ Grenze Konfidenzprozentzahl von 95,0% würde darauf hinweisen, dass die Metriken _größer_ als ein erwartetes _Minimum_ sein sollten.
-Dies würde in Dezimalschreibweise als Unterer Grenzwert von `0,95` angegeben.
-
-<br />
-
-> 🐰 Tipp: Verwenden Sie einen T-Test-Schwellenwert, wenn Sie weniger als 30 historische Metriken haben.
-
-## Statistische Signifikanzgrenze
-
-Die Bedeutung der statistischen Signifikanzgrenze hängt vom statistischen Signifikanztest ab:
-- Z-Score: Standardabweichung (σ) ausgedrückt als kumulative Dezimalprozentzahl
-- T-Test: Konfidenzintervall (CI) ausgedrückt als Dezimal-Konfidenzprozentzahl
-
-Jede Metrik wird, wenn sie existiert, gegen die statistische Signifikanzgrenze des Schwellenwerts geprüft.
-Dies kann eine Untere Grenze, eine Obere Grenze oder beides beinhalten.
-Eine Grenzlimit wird für jede Grenze berechnet.
-Dieses Grenzlimit wird dann mit der aktuellen Metrik verglichen.
-Wenn diese Metrik außerhalb des Grenzlimits liegt, wird ein Alarm erzeugt.
-
-> 🐰 Tipp: Um einen CI-Build zu verfehlen, wenn eine Grenze verletzt wird, verwenden Sie die `--err` Flagge für den <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl.
-
-### Unterschiedliches Verhalten
-Eine untere Grenze kann für einen Schwellenwert gesetzt werden.
-Es wird verwendet, wenn ein kleinerer Wert auf eine Leistungsverschlechterung hinweisen würde, wie bei der Metrikart Durchsatz.
-Der Wert muss eine Dezimalzahl zwischen `0.5` und `1.0` sein.
-
-Zum Beispiel, wenn Sie einen Z-Score verwendeten und Ihre historischen Metriken einen Durchschnitt von `100` und eine Standardabweichung von `10` hatten,
-dann würde eine untere Grenze von `0,977` eine untere Grenze bei `80,05` erzeugen.
-Ein Wert von weniger als `80,05` würde einen Alarm erzeugen.
-
-### Obergrenze
-Eine obere Grenze kann für einen Schwellenwert gesetzt werden.
-Es wird verwendet, wenn ein größerer Wert auf eine Leistungsverschlechterung hinweisen würde, wie bei der Metrikart Latenz.
-Der Wert muss eine Dezimalzahl zwischen `0.5` und `1.0` sein.
-
-Zum Beispiel, wenn Sie einen Z-Score verwendeten und Ihre historischen Metriken einen Durchschnitt von `100` und eine Standardabweichung von `10` hatten,
-dann würde eine obere Grenze von `0,977` eine obere Grenze bei `119,95` erzeugen.
-Ein Wert über `119,95` würde einen Alarm erzeugen.
-
-## Stichprobengröße
-
-### Mindeststichprobengröße
-Für einen Schwellenwert kann eine Mindeststichprobengröße gesetzt werden.
-Der Schwellenwert führt seinen Test auf statistische Signifikanz nur durch,
-wenn die Anzahl der historischen Metriken größer oder gleich der Mindeststichprobengröße ist.
-
-### Maximale Stichprobengröße
-Für einen Schwellenwert kann eine maximale Stichprobengröße gesetzt werden.
-Für seinen Test auf statistische Signifikanz beschränkt sich der Schwellenwert auf nur die neuesten historischen Metriken,
-begrenzt auf die maximale Stichprobengröße.
-
-## Fenstergröße
-Für einen Schwellenwert kann eine Fenstergröße in Sekunden gesetzt werden.
-Für seinen Test auf statistische Signifikanz beschränkt sich der Schwellenwert auf nur die neuesten historischen Metriken,
-begrenzt durch das gegebene Zeitfenster.
-
-## Alarme
-Alarme werden erzeugt, wenn eine Metrik unterhalb der unteren Grenze eines Schwellenwerts oder oberhalb der oberen Grenze eines Schwellenwerts liegt.
-Um einen CI-Build im Falle eines Alarms zu verfehlen, setzen Sie die `--err` Flagge beim Verwenden des <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehls.
-
-### Unterdrückung von Alarmen
-Manchmal kann es nützlich sein, Alarme für einen bestimmten Benchmark zu unterdrücken.
-Der beste Weg, dies zu tun, ist durch das Hinzufügen einer dieser speziellen Suffixe zum Namen dieses Benchmarks:
-
-- `_bencher_ignore`
-- `BencherIgnore`
-- `-bencher-ignore`
-
-Zum Beispiel, wenn Ihr Benchmark `my_flaky_benchmark` hieß, dann würde das Umbenennen in `my_flaky_benchmark_bencher_ignore`
-diesen bestimmten Benchmark von nun an ignorieren.
-Ignorierte Benchmarks werden nicht gegen den Schwellenwert geprüft, selbst wenn einer existiert.
-Allerdings werden die Metriken für ignorierte Benchmarks immer noch gespeichert.
-Unter Beibehaltung unseres Beispiels würden die Ergebnisse von `my_flaky_benchmark_bencher_ignore` immer noch in der Datenbank unter `my_flaky_benchmark` gespeichert.
-Entfernen Sie das Suffix und kehren Sie zum ursprünglichen Benchmark-Namen zurück, so wird dort fortgesetzt, wo Sie aufgehört haben.
+<ThresholdsIntro />
+<ThresholdsStatic />
+<ThresholdsStatistical />
+<ThresholdsPercentage />
+<ThresholdsNormalImg />
+<ThresholdsZScore />
+<ThresholdsTTest />
+<ThresholdLogNormalImg />
+<ThresholdsLogNormal />
+<ThresholdsIqrImg />
+<ThresholdsIqr />
+<ThresholdsDeltaIqr />
+<ThresholdsAlerts />
 
 <br />
 <br />

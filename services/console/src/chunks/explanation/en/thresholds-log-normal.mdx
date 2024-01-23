@@ -1,0 +1,31 @@
+## Log Normal Thresholds
+
+A Log Normal Threshold measures how likely it is that
+a new Metric is above or below the center location of your historical Metrics using a [Log Normal Distribution](https://en.wikipedia.org/wiki/Log-normal_distribution).
+
+Log Normal Thresholds work best when:
+- Benchmark runs are totally independent of one another
+- The number of iterations for a single benchmark run is less than 10% of the historical Metrics
+- All data is positive (the natural log of a negative number is `undefined`)
+
+For Log Normal Thresholds, the likelihood expressed as a decimal percentage.
+If a new Metric is below a certain left-side percentage (Lower Boundary)
+or above a certain right-side percentage (Upper Boundary) for your historical Metrics an Alert is generated.
+Either a Lower Boundary, Upper Boundary, or both must be set.
+
+- ### Log Normal Threshold Lower Boundary
+  - A Log Normal Threshold Lower Boundary can be any positive decimal between `0.5` and `1.0`.
+Where `0.5` represents the center location and `1.0` represents all possible left-side values (-∞).
+It is used when a smaller value would indicate a performance regression.
+  - For example, if you used a Log Normal Threshold with a Lower Boundary of `0.977`
+and you had `25` historical Metrics centered around `100` and one pervious outlier at `200`,
+the Lower Boundary Limit would be `71.20` and
+any value less than `71.20` would generate an Alert.
+- ### Log Normal Threshold Upper Boundary
+  - A Log Normal Threshold Upper Boundary can be any positive decimal between `0.5` and `1.0`.
+Where `0.5` represents the center location and `1.0` represents all possible right-side values (∞).
+It is used when a greater value would indicate a performance regression.
+  - For example, if you used a Log Normal Threshold with an Upper Boundary of `0.977`
+and you had `25` historical Metrics centered around `100` and one previous outlier at `200`,
+the Upper Boundary Limit would be `134.18` and
+any value greater than `134.18` would generate an Alert.

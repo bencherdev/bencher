@@ -1,0 +1,25 @@
+Thresholds are how you catch performance regressions in Bencher.
+A Threshold is assigned to a unique combination of: Branch, Testbed, and Measure.
+A Threshold must have a Lower Boundary, Upper Boundary, or both.
+Each Boundary is used to calculate a Boundary Limit.
+Then every new Metric is checked against each Boundary Limit.
+
+- Lower Boundary
+  - A Lower Boundary is used when a smaller value would indicate a performance regression, such as with the Throughput Measure.
+- Upper Boundary
+  - An Upper Boundary is used when a larger value would indicate a performance regression, such as with the Latency Measure.
+
+There are a several types of Thresholds:
+
+<ul>
+  <li>[Static](#static-thresholds)</li>
+  <li>[Statistical](#statistical-thresholds)</li>
+  <ul>
+    <li>[Percentage](#percentage-thresholds)</li>
+    <li>[z-score](#z-score-thresholds)</li>
+    <li>[t-test](#t-test-thresholds)</li>
+    <li>[Log Normal](#log-normal-thresholds)</li>
+    <li>[Interquartile Range (IQR)](#interquartile-range-thresholds)</li>
+    <li>[Delta Interquartile Range (ΔIQR)](#delta-interquartile-range-thresholds)</li>
+  </ul>
+</ul>

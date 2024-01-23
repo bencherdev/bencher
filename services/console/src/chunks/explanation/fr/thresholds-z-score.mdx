@@ -1,0 +1,32 @@
+## Seuils de z-score 
+
+Un seuil de z-score mesure le nombre d'[écarts types](https://fr.wikipedia.org/wiki/%C3%89cart_type) (σ)
+qu'une nouvelle métrique est par rapport à la moyenne de vos métriques historiques en utilisant un [z-score](https://fr.wikipedia.org/wiki/Z-score).
+
+Les seuils de z-score fonctionnent le mieux lorsque :
+- Il n'y a pas de différences extrêmes entre les exécutions de benchmark
+- Les exécutions de benchmark sont totalement indépendantes les unes des autres
+- Le nombre d'itérations pour une seule exécution de benchmark est inférieur à 10% des métriques historiques
+- Il y a au moins 30 métriques historiques (Taille de l'échantillon minimale >= 30)
+
+Pour les seuils de z-score, les écarts types sont exprimés en pourcentage cumulatif décimal.
+Si une nouvelle métrique est en dessous d'un certain pourcentage cumulatif du côté gauche (Limite inférieure)
+ou au-dessus d'un certain pourcentage cumulatif du côté droit (Limite supérieure) pour vos métriques historiques, une alerte est générée.
+Une limite inférieure, une limite supérieure, ou les deux doivent être définies.
+
+- ### Limite inférieure du seuil de z-score
+  - Une limite inférieure du seuil de z-score peut être un décimal positif entre `0.5` et `1.0`.
+Où `0.5` représente la moyenne et `1.0` représente toutes les valeurs possibles du côté gauche (-∞).
+Elle est utilisée lorsqu'une valeur plus petite indiquerait une régression des performances.
+  - Par exemple, si vous utilisiez un seuil de z-score avec une limite inférieure de `0.977`
+et que vos métriques historiques avaient une moyenne de `100` et un écart type de `10`,
+la limite de la limite inférieure serait `80.05` et
+toute valeur inférieure à `80.05` générerait une alerte.
+- ### Limite supérieure du seuil de z-score
+  - Une limite supérieure du seuil de z-score peut être un décimal positif entre `0.5` et `1.0`.
+Où `0.5` représente la moyenne et `1.0` représente toutes les valeurs possibles du côté droit (∞).
+Elle est utilisée lorsqu'une valeur plus grande indiquerait une régression des performances.
+  - Par exemple, si vous utilisiez un seuil de z-score avec une limite supérieure de `0.977`
+et que vos métriques historiques avaient une moyenne de `100` et un écart type de `10`,
+la limite de la limite supérieure serait `119.95` et
+toute valeur supérieure à `119.95` générerait une alerte.

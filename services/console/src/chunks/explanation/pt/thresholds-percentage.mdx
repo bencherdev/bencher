@@ -1,0 +1,22 @@
+## Limiares Percentuais
+
+Um Limiar Percentual é o mais simples Limiar Estatístico.
+Se uma nova Métrica estiver abaixo de uma certa percentagem da média (Limite Inferior)
+ou acima de uma certa percentagem da média (Limite Superior) de suas Métricas históricas, um Alerta é gerado.
+Um Limite Inferior, um Limite Superior, ou ambos devem ser configurados.
+Os Limiares Percentuais funcionam melhor quando o valor da Métrica deve permanecer dentro de uma faixa conhecida como boa.
+
+- ### Limiar Percentual Limite Inferior
+  - Um Limiar Percentual Limite Inferior pode ser qualquer percentagem maior ou igual a zero na forma decimal (ex: use `0,10` para `10%`).
+É usado quando um valor menor indicaria uma regressão de performance.
+  - Por exemplo, se você tivesse um Limiar Percentual com um Limite Inferior definido para `0,10`
+e suas Métricas históricas tivessem uma média de `100`
+o Limite Inferior seria `90` e
+qualquer valor menor que `90` geraria um Alerta.
+- ### Limiar Percentual Limite Superior
+  - Um Limiar Percentual Limite Superior pode ser qualquer percentagem maior ou igual a zero na forma decimal (ex: use `0,10` para `10%`).
+É usado quando um valor maior indicaria uma regressão de performance.
+  - Por exemplo, se você tivesse um Limiar Percentual com um Limite Superior definido para `0,10`
+e suas Métricas históricas tivessem uma média de `100`
+o Limite Superior seria `110` e
+qualquer valor maior que `110` geraria um Alerta.

@@ -1,0 +1,20 @@
+## Umbrales de z-score
+
+Un umbral de z-score mide la cantidad de [desviaciones estándar](https://es.wikipedia.org/wiki/Desviaci%C3%B3n_t%C3%ADpica) (σ)
+que una nueva métrica dista de la media de sus métricas históricas utilizando una [puntuación z](https://es.wikipedia.org/wiki/Estandarizaci%C3%B3n_(estad%C3%ADstica)).
+
+Los umbrales de z-score funcionan mejor cuando:
+
+- No hay diferencias extremas entre las ejecuciones de referencia
+- Las ejecuciones de referencia son totalmente independientes entre sí
+- El número de iteraciones para una única ejecución de referencia es menos del 10% de las métricas históricas
+- Hay al menos 30 métricas históricas (Tamaño de muestra mínimo >= 30)
+
+Para los umbrales de z-score, las desviaciones estándar se expresan como un porcentaje acumulativo decimal. Si una nueva métrica se encuentra por debajo de un cierto porcentaje acumulativo del lado izquierdo (Límite Inferior) o por encima de un cierto porcentaje acumulativo del lado derecho (Límite Superior) de tus métricas históricas, se genera una alerta. Se debe establecer un Límite Inferior, un Límite Superior, o ambos.
+
+- ### Límite inferior del umbral de z-score
+  - Un Límite Inferior del umbral de z-score puede ser cualquier decimal positivo entre `0.5` y `1.0`. Donde `0.5` representa la media y `1.0` representa todos los posibles valores del lado izquierdo (-∞). Se utiliza cuando un valor menor indicaría una regresión de rendimiento.
+  - Por ejemplo, si utilizaste un umbral de z-score con un Límite Inferior de `0.977` y tus métricas históricas tuvieron una media de `100` y una desviación estándar de `10`, el Límite Inferior sería `80.05` y cualquier valor menor a `80.05` generaría una alerta.
+- ### Límite superior del umbral de z-score
+  - Un Límite Superior del umbral de z-score puede ser cualquier decimal positivo entre `0.5` y `1.0`. Donde `0.5` representa la media y `1.0` representa todos los posibles valores del lado derecho (∞). Se utiliza cuando un valor mayor indicaría una regresión de rendimiento.
+  - Por ejemplo, si utilizaste un umbral de z-score con un Límite Superior de `0.977` y tus métricas históricas tuvieron una media de `100` y una desviación estándar de `10`, el Límite Superior sería `119.95` y cualquier valor mayor a `119.95` generaría una alerta.

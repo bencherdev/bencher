@@ -1,0 +1,25 @@
+Schwellenwerte sind der Weg, wie Sie Leistungsrückschritte in Bencher erfassen.
+Ein Schwellenwert wird einer eindeutigen Kombination aus Zweig, Testumgebung und Maßstab zugewiesen.
+Ein Schwellenwert muss eine untere Grenze, eine obere Grenze oder beides haben.
+Jede Grenze wird verwendet, um eine Grenzwertlimit zu berechnen.
+Dann wird jeder neue Maßstab gegen jedes Grenzwertlimit geprüft.
+
+- Untere Grenze
+  - Eine untere Grenze wird verwendet, wenn ein kleinerer Wert eine Leistungsverschlechterung angeben würde, wie zum Beispiel bei der Durchsatzmessung.
+- Obere Grenze
+  - Eine obere Grenze wird verwendet, wenn ein größerer Wert eine Leistungsverschlechterung angeben würde, wie zum Beispiel bei der Latenzmessung.
+
+Es gibt verschiedene Arten von Schwellenwerten:
+
+<ul>
+  <li>[Statisch](#statische-schwellenwerte)</li>
+  <li>[Statistisch](#statistische-schwellenwerte)</li>
+  <ul>
+    <li>[Prozentsatz](#prozentsatz-schwellenwerte)</li>
+    <li>[z-Wert](#z-wert-schwellenwerte)</li>
+    <li>[t-Test](#t-test-schwellenwerte)</li>
+    <li>[Log Normal](#log-normal-schwellenwerte)</li>
+    <li>[Interquartilbereich (IQR)](#interquartilsbereich-schwellenwerte)</li>
+    <li>[Delta Interquartilbereich (ΔIQR)](#delta-interquartilsbereich-schwellenwerte)</li>
+  </ul>
+</ul>

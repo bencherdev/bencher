@@ -12,6 +12,15 @@ import BencherRunProject from "../../../chunks/explanation/zh/bencher-run-projec
 import BencherRunToken from "../../../chunks/explanation/zh/bencher-run-token.mdx";
 import BencherRunBranchSelection from "../../../chunks/explanation/zh/bencher-run-branch-selection.mdx";
 import BencherRunHash from "../../../chunks/explanation/zh/bencher-run-hash.mdx";
+import BencherRunTestbed from "../../../chunks/explanation/zh/bencher-run-testbed.mdx";
+import BencherRunAdapters from "../../../chunks/explanation/zh/bencher-run-adapters.mdx";
+import BencherRunIter from "../../../chunks/explanation/zh/bencher-run-iter.mdx";
+import BencherRunFold from "../../../chunks/explanation/zh/bencher-run-fold.mdx";
+import BencherRunBackdate from "../../../chunks/explanation/zh/bencher-run-backdate.mdx";
+import BencherRunAllowFailure from "../../../chunks/explanation/zh/bencher-run-allow-failure.mdx";
+import BencherRunErr from "../../../chunks/explanation/zh/bencher-run-err.mdx";
+import BencherRunHtml from "../../../chunks/explanation/zh/bencher-run-html.mdx";
+import BencherRunQuiet from "../../../chunks/explanation/zh/bencher-run-quiet.mdx";
 
 import BencherRunExec from "../../../chunks/explanation/zh/bencher-run-exec.mdx";
 
@@ -39,85 +48,39 @@ import BencherRunExec from "../../../chunks/explanation/zh/bencher-run-exec.mdx"
 
 <br />
 
-### `--testbed <测试环境>`
+<BencherRunTestbed />
 
 <br />
 
-可选：可以设置 `--testbed` 选项或 `BENCHER_TESTBED` 环境变量
-为已经存在的测试环境的 slug 或 UUID。
-如果两者都被定义，`--testbed` 选项优先于 `BENCHER_TESTBED` 环境变量。
-如果两者都未定义，则使用 `localhost` 作为默认测试环境。
+<BencherRunAdapters />
 
 <br />
 
-### `--adapter <适配器>`
-### `--average <平均值>`
-### `--file <文件>`
+<BencherRunIter />
 
 <br />
 
-请参阅 [基准测试工具适配器](/zh/docs/explanation/adapters/) 以获取完整的概述。
+<BencherRunFold />
 
 <br />
 
-### `--iter <迭代次数>`
+<BencherRunBackdate />
 
 <br />
 
-可选：运行迭代的次数。默认为 `1`。
-
-### `--fold <合并>`
+<BencherRunAllowFailure />
 
 <br />
 
-可选：把多个结果合并为一个结果，需要设置 `--iter` 选项。\
-可能的值为：
-    - `min`:  最小值
-    - `max`:  最大值
-    - `mean`:  值的平均数
-    - `median`:  值的中位数
+<BencherRunErr />
 
 <br />
 
-### `--backdate <返回日期时间_秒>`
+<BencherRunHtml />
 
 <br />
 
-可选：将报告的日期时间回溯(自纪元以来的秒数)。
-注：这将*不会*影响过去报告的顺序！
-在_按时间顺序_将历史数据初始化到项目中时，这非常有用。
-
-<br />
-
-### `--allow-failure`
-
-<br />
-
-可选：允许基准测试失败。
-
-<br />
-
-### `--err`
-
-<br />
-
-可选：当生成警报时报错。请参阅 [阈值和警报](/zh/docs/explanation/thresholds/) 以获取完整的概述。
-
-<br />
-
-### `--html`
-
-<br />
-
-可选：以 HTML 格式输出结果。
-
-<br />
-
-### `--quiet`
-
-<br />
-
-可选：安静模式，只输出最终的报告 JSON。默认为`false`。
+<BencherRunQuiet />
 
 <br />
 

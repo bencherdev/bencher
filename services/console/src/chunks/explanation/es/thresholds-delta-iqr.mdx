@@ -1,0 +1,22 @@
+## Umbrales de Rango Interquartílico Delta
+
+Un umbral de Rango Interquartílico Delta mide cuántas veces el cambio porcentual promedio (Δ) [rango interquartílico](https://es.wikipedia.org/wiki/Rango_intercuart%C3%ADlico) (IQR)
+una nueva Métrica está por encima o por debajo de la mediana de tus Métricas históricas.
+Si una nueva Métrica está por debajo de un cierto múltiplo del ΔIQR desde la mediana (Límite Inferior)
+o por encima de un cierto múltiplo del ΔIQR desde la mediana (Límite Superior) de tus Métricas históricas, se genera una Alerta.
+Debe establecerse un Límite Inferior, un Límite Superior, o ambos.
+
+- ### Límite Inferior del umbral de Rango Interquartílico Delta
+  - Un Límite Inferior del umbral de Rango Interquartílico Delta puede ser cualquier multiplicador mayor o igual a cero (por ejemplo, usar `2.0` para `2x`).
+Se usa cuando un valor más pequeño indicaría una regresión de rendimiento.
+  - Por ejemplo, si tuvieras un umbral de Rango Interquartílico Delta con un Límite Inferior establecido en `2.0`
+y tus Métricas históricas tuvieran una mediana de `100`, un rango interquartílico de `10`, y un rango interquartílico delta promedio de `0.2` (`20%`)
+el Límite del Límite Inferior sería `60` y
+cualquier valor menor que `60` generaría una Alerta.
+- ### Límite Superior del umbral de Rango Interquartílico Delta
+  - Un Límite Superior del umbral de Rango Interquartílico Delta puede ser cualquier multiplicador mayor o igual a cero (por ejemplo, usar `2.0` para `2x`).
+Se usa cuando un valor mayor indicaría una regresión de rendimiento.
+  - Por ejemplo, si tuvieras un umbral de Rango Interquartílico Delta con un Límite Superior establecido en `2.0`
+y tus Métricas históricas tuvieran una mediana de `100`, un rango interquartílico de `10`, y un rango interquartílico delta promedio de `0.2` (`20%`)
+el Límite del Límite Superior sería `140` y
+cualquier valor mayor que `140` generaría una Alerta.

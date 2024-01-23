@@ -1,0 +1,16 @@
+## Seuils Statistiques
+
+Tous les autres Seuils sont des Seuils Statistiques.
+Chaque Seuil Statistique utilise des Métriques historiques et un test de signification statistique unique pour déterminer si une Alerte est générée. Par conséquent, la Limite Inférieure/Supérieure signifiera des choses différentes pour différents Seuils Statistiques.
+En plus de définir une Limite Inférieure et/ou une Limite Supérieure, il existe des contrôles pour les Métriques historiques utilisées (c'est-à-dire échantillonnées).
+
+- ### Taille d'Échantillon Minimum
+  - Une Taille d'Échantillon Minimum peut être définie pour un Seuil Statistique.
+Le Seuil Statistique n'exécutera son test de signification statistique que si le nombre de Métriques historiques est supérieur ou égal à la Taille d'Échantillon Minimum. La Taille d'Échantillon Minimum doit être inférieure ou égale à la Taille d'Échantillon Maximum, si les deux sont spécifiés.
+- ### Taille d'Échantillon Maximum
+  - Une Taille d'Échantillon Maximum peut être définie pour un Seuil Statistique. 
+Le Seuil Statistique se limitera uniquement aux Métriques historiques les plus récentes, plafonnées à la Taille d'Échantillon Maximum pour son test de signification statistique.
+La Taille d'Échantillon Maximum doit être supérieure ou égale à la Taille d'Échantillon Minimum, si les deux sont spécifiés.
+- ### Taille de la Fenêtre 
+  - Une Taille de la Fenêtre en secondes peut être définie pour un Seuil Statistique.
+Le Seuil Statistique se limitera uniquement aux Métriques historiques les plus récentes, limitées par la fenêtre de temps donnée pour son test de signification statistique.

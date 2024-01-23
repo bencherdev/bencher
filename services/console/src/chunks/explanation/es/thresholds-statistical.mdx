@@ -1,0 +1,21 @@
+## Umbrales Estadísticos
+
+Todos los demás umbrales son Umbrales Estadísticos.
+Cada Umbral Estadístico utiliza métricas históricas y una prueba de significación estadística única para determinar si se genera una Alerta.
+Por lo tanto, el Límite Inferior/Superior significará cosas diferentes para diferentes Umbrales Estadísticos.
+Además de establecer un Límite Inferior y/o Superior, hay controles para qué Métricas históricas se utilizan (es decir, muestreadas).
+
+- ### Tamaño de Muestra Mínimo
+  - Se puede establecer un Tamaño de Muestra Mínimo para un Umbral Estadístico.
+El Umbral Estadístico solo ejecutará su prueba de significación estadística
+si el número de Métricas históricas es mayor o igual al Tamaño de Muestra Mínimo.
+El Tamaño de Muestra Mínimo debe ser menor o igual al Tamaño de Muestra Máximo, si ambos se especifican.
+- ### Tamaño de Muestra Máximo
+  - Se puede establecer un Tamaño de Muestra Máximo para un Umbral Estadístico.
+El Umbral Estadístico se limitará a sólo las Métricas históricas más recientes
+limitadas al Tamaño de Muestra Máximo para su prueba de significación estadística.
+El Tamaño de Muestra Máximo debe ser mayor o igual al Tamaño de Muestra Mínimo, si ambos se especifican.
+- ### Tamaño de la Ventana
+  - Se puede establecer un Tamaño de Ventana en segundos para un Umbral Estadístico.
+El Umbral Estadístico se limitará a sólo las Métricas históricas más recientes
+limitadas por la ventana de tiempo dada para su prueba de significación estadística.

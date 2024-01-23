@@ -12,6 +12,15 @@ import BencherRunProject from "../../../chunks/explanation/pt/bencher-run-projec
 import BencherRunToken from "../../../chunks/explanation/pt/bencher-run-token.mdx";
 import BencherRunBranchSelection from "../../../chunks/explanation/pt/bencher-run-branch-selection.mdx";
 import BencherRunHash from "../../../chunks/explanation/pt/bencher-run-hash.mdx";
+import BencherRunTestbed from "../../../chunks/explanation/pt/bencher-run-testbed.mdx";
+import BencherRunAdapters from "../../../chunks/explanation/pt/bencher-run-adapters.mdx";
+import BencherRunIter from "../../../chunks/explanation/pt/bencher-run-iter.mdx";
+import BencherRunFold from "../../../chunks/explanation/pt/bencher-run-fold.mdx";
+import BencherRunBackdate from "../../../chunks/explanation/pt/bencher-run-backdate.mdx";
+import BencherRunAllowFailure from "../../../chunks/explanation/pt/bencher-run-allow-failure.mdx";
+import BencherRunErr from "../../../chunks/explanation/pt/bencher-run-err.mdx";
+import BencherRunHtml from "../../../chunks/explanation/pt/bencher-run-html.mdx";
+import BencherRunQuiet from "../../../chunks/explanation/pt/bencher-run-quiet.mdx";
 
 import BencherRunExec from "../../../chunks/explanation/pt/bencher-run-exec.mdx";
 
@@ -39,85 +48,39 @@ import BencherRunExec from "../../../chunks/explanation/pt/bencher-run-exec.mdx"
 
 <br />
 
-### `--testbed <TESTBED>`
+<BencherRunTestbed />
 
 <br />
 
-Opcional: A opção `--testbed` ou a variável de ambiente `BENCHER_TESTBED` pode ser configurada para o slug ou UUID de um testbed já existente.
-Se ambos estiverem definidos, a opção `--testbed` tem precedência sobre a variável de ambiente `BENCHER_TESTBED`.
-Se nenhum dos dois estarem definidos, então `localhost` é usado como o testbed padrão.
+<BencherRunAdapters />
 
 <br />
 
-### `--adapter <ADAPTER>`
-### `--average <AVERAGE>`
-### `--file <FILE>`
+<BencherRunIter />
 
 <br />
 
-Veja [adaptador de benchmark](/pt/docs/explanation/adapters/) para uma visão geral completa.
+<BencherRunFold />
 
 <br />
 
-### `--iter <ITER>`
+<BencherRunBackdate />
 
 <br />
 
-Opcional: Número de iterações de execução. O padrão é `1`.
-
-### `--fold <FOLD>`
+<BencherRunAllowFailure />
 
 <br />
 
-Opcional: Combine vários resultados em um único resultado. \
-Requer: `--iter` definido. \
-Valores possíveis:
-    - `min`:    Valor mínimo
-    - `max`:    Valor máximo
-    - `mean`:   Média dos valores
-    - `median`: Mediana dos valores
+<BencherRunErr />
 
 <br />
 
-### `--backdate <DATETIME_SECONDS>`
+<BencherRunHtml />
 
 <br />
 
-Opcional: Retrodata o relatório (segundos desde a época).
-NOTA: Isso *não* afetará a ordem dos relatórios passados!
-Isso é útil ao inicialmente inserir dados históricos em um projeto em ordem _cronológica_.
-
-<br />
-
-### `--allow-failure`
-
-<br />
-
-Opcional: Permita falha no teste de benchmark.
-
-<br />
-
-### `--err`
-
-<br />
-
-Opcional: Erro quando um alerta é gerado. Veja [limiares e alertas](/pt/docs/explanation/thresholds/) para uma visão geral completa.
-
-<br />
-
-### `--html`
-
-<br />
-
-Opcional: Saída dos resultados em formato HTML.
-
-<br/>
-
-### `--quiet`
-
-<br />
-
-Opcional: Modo silencioso, apenas produz a saída final do Relatório em JSON. O padrão é `false`.
+<BencherRunQuiet />
 
 <br />
 

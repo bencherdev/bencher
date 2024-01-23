@@ -1,0 +1,25 @@
+Os limites são como você detecta regressões de desempenho no Bencher.
+Um Limite é atribuído a uma combinação única de: Ramo, Bancada de Testes e Medida.
+Um Limite deve ter um Limite Inferior, Limite Superior, ou ambos.
+Cada Limite é usado para calcular um Limite de Margem.
+Em seguida, cada nova Métrica é verificada contra cada Limite de Margem.
+
+- Limite Inferior
+  - Um Limite Inferior é usado quando um valor menor indicaria uma regressão de desempenho, como com a Medida de Vazão.
+- Limite Superior
+  - Um Limite Superior é usado quando um valor maior indicaria uma regressão de desempenho, como com a Medida de Latência.
+
+Existem vários tipos de Limites:
+
+<ul>
+  <li>[Estático](#limites-estaticos)</li>
+  <li>[Estatístico](#limites-estatisticos)</li>
+  <ul>
+    <li>[Porcentagem](#limites-de-porcentagem)</li>
+    <li>[z-score](#limites-z-score)</li>
+    <li>[t-teste](#limites-t-teste)</li>
+    <li>[Log Normal](#limites-log-normal)</li>
+    <li>[Intervalo Interquartil (IQR)](#limites-intervalo-interquartil)</li>
+    <li>[Delta do Intervalo Interquartil (ΔIQR)](#delta-do-intervalo-interquartil)</li>
+  </ul>
+</ul>

@@ -1,0 +1,19 @@
+## Alertes
+Les alertes sont générées lorsqu'une nouvelle métrique est inférieure à une limite inférieure de seuil ou supérieure à une limite supérieure de seuil.
+Pour échouer une construction CI en cas d'alerte, définissez le drapeau `--err` lors de l'utilisation de la sous-commande CLI <code><a href="/docs/fr/explanation/bencher-run/">bencher run</a></code>.
+
+### Suppression des alertes
+Il peut parfois être utile de supprimer les alertes pour un Benchmark particulier. 
+La meilleure façon de faire cela est d'ajouter l'un de ces suffixes spéciaux au nom de ce Benchmark : 
+
+- `_bencher_ignore`
+- `BencherIgnore`
+- `-bencher-ignore`
+
+Par exemple, si votre Benchmark s'appelait `my_flaky_benchmark`, alors le renommer en `my_flaky_benchmark_bencher_ignore` 
+ignorerait juste ce Benchmark particulier à l'avenir. 
+Les Benchmarks ignorés ne sont pas vérifiés contre le seuil, même si un seuil existe. 
+Cependant, les mesures des Benchmarks ignorés sont toujours stockées. 
+En continuant avec notre exemple, les résultats de `my_flaky_benchmark_bencher_ignore` seraient toujours stockés dans la base de données sous `my_flaky_benchmark`.
+Si vous supprimez le suffixe et revenez au nom original du Benchmark,
+alors les choses reprennent exactement là où vous les avez laissées.

@@ -1,0 +1,19 @@
+## Alertas
+Las alertas se generan cuando una nueva métrica está por debajo del límite inferior de un umbral o por encima del límite superior de un umbral.
+Para hacer fallar una construcción de CI en el evento de una alerta, coloca la bandera `--err` al usar el subcomando CLI de <code><a href="/docs/es/explanation/bencher-run/">bencher run</a></code>.
+
+### Supresión de Alertas
+A veces puede ser útil suprimir Alertas para un Benchmark específico.
+La mejor manera de hacer esto es agregando uno de estos sufijos especiales al nombre de ese Benchmark:
+
+- `_bencher_ignore`
+- `BencherIgnore`
+- `-bencher-ignore`
+
+Por ejemplo, si tu Benchmark se llamaba `my_flaky_benchmark`, entonces renombrándolo a `my_flaky_benchmark_bencher_ignore`
+ignoraría solamente ese Benchmark específico en adelante.
+Los Benchmarks ignorados no se verifican con el Umbral, incluso si existe uno.
+Sin embargo, las métricas para los Benchmarks ignorados aún se almacenan.
+Continuando con nuestro ejemplo, los resultados de `my_flaky_benchmark_bencher_ignore` aún se almacenarían en la base de datos bajo `my_flaky_benchmark`.
+Si eliminas el sufijo y vuelves al nombre original del Benchmark,
+entonces las cosas continuarán justo donde lo dejaste.

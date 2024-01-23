@@ -1,0 +1,18 @@
+## Limites Estatísticos
+
+Todos os outros limites são Limites Estatísticos.
+Cada Limite Estatístico usa Métricas históricas e um teste estatístico de significância único para determinar se um Alerta é gerado.
+Portanto, o Limite Inferior/Superior significará coisas diferentes para diferentes Limites Estatísticos.
+Além de definir um Limite Inferior e/ou um Limite Superior, existem controles para quais Métricas históricas são usadas (ou seja, amostradas).
+
+- ### Tamanho mínimo da amostra
+  - Um Tamanho mínimo de amostra pode ser definido para um Limite Estatístico.
+O Limite Estatístico só executará seu teste de significância estatística se o número de Métricas históricas for maior ou igual ao Tamanho mínimo da amostra.
+O Tamanho mínimo da amostra deve ser menor ou igual ao Tamanho máximo da amostra, se ambos forem especificados.
+- ### Tamanho máximo da amostra
+  - Um Tamanho máximo de amostra pode ser definido para um Limite Estatístico.
+O Limite Estatístico se limitará apenas às Métricas históricas mais recentes, limitado ao Tamanho máximo da amostra para seu teste de significância estatística.
+O Tamanho máximo da amostra deve ser maior ou igual ao Tamanho mínimo da amostra, se ambos forem especificados.
+- ### Tamanho da Janela
+  - Um Tamanho de Janela em segundos pode ser definido para um Limite Estatístico.
+O Limite Estatístico se limitará apenas às Métricas históricas mais recentes, delimitadas pela janela de tempo dada para seu teste de significância estatística.

@@ -1,0 +1,33 @@
+## z-Score Schwellenwerte
+
+Ein z-Score Schwellenwert misst die Anzahl der [Standardabweichungen](https://de.wikipedia.org/wiki/Standardabweichung) (σ)
+anhand derer eine neue Metrik vom Durchschnitt Ihrer historischen Metriken mithilfe eines [z-Scores](https://de.wikipedia.org/wiki/Standardisierte_Werte) bestimmt wird.
+
+z-Score Schwellenwerte funktionieren am besten, wenn:
+- Es keine extremen Unterschiede zwischen Benchmark-Läufen gibt
+- Benchmark-Läufe völlig unabhängig voneinander sind
+- Die Anzahl der Iterationen für einen einzelnen Benchmark-Lauf weniger als 10% der historischen Metriken beträgt
+- Es mindestens 30 historische Metriken gibt (minimale Stichprobengröße >= 30)
+
+Bei z-Score Schwellenwerten werden Standardabweichungen als kumulative Dezimalprozentsätze ausgedrückt.
+Wenn eine neue Metrik unter einem bestimmten kumulativen Prozentsatz auf der linken Seite (untere Grenze)
+oder über einem bestimmten kumulativen Prozentsatz auf der rechten Seite (obere Grenze) für Ihre historischen Metriken liegt, wird ein Alarm generiert.
+Es muss entweder eine untere Grenze, eine obere Grenze oder beides festgelegt werden.
+
+- ### z-Score Schwellenwert untere Grenze
+  - Eine untere Grenze für den z-Score Schwellenwert kann jede positive Dezimalzahl zwischen `0.5` und `1.0` sein.
+Wo `0.5` den Mittelwert darstellt und `1.0` alle möglichen Werte auf der linken Seite (-∞).
+Es wird verwendet, wenn ein kleinerer Wert eine Leistungsverschlechterung anzeigen würde.
+  - Wenn Sie beispielsweise einen z-Score Schwellenwert mit einer unteren Grenze von `0.977`
+verwendet und Ihre historischen Metriken hatten einen Durchschnitt von `100` und eine Standardabweichung von `10`,
+wäre die untere Grenzlimite `80.05` und
+jeder Wert weniger als `80.05` würde einen Alarm generieren.
+
+- ### z-Score Schwellenwert obere Grenze
+  - Eine obere Grenze für den z-Score Schwellenwert kann jede positive Dezimalzahl zwischen `0.5` und `1.0` sein.
+Wo `0.5` den Mittelwert darstellt und `1.0` alle möglichen Werte auf der rechten Seite (∞).
+Es wird verwendet, wenn ein größerer Wert eine Leistungsverschlechterung anzeigen würde.
+  - Wenn Sie beispielsweise einen z-Score Schwellenwert mit einer oberen Grenze von `0.977`
+verwendet und Ihre historischen Metriken hatten einen Durchschnitt von `100` und eine Standardabweichung von `10`,
+wäre die obere Grenzlimite `119.95` und
+jeder Wert größer als `119.95` würde einen Alarm generieren.

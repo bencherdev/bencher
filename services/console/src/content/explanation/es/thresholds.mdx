@@ -5,147 +5,33 @@ heading: "Umbrales & Alertas"
 sortOrder: 4
 ---
 
-Los umbrales se pueden crear para la combinación única de un Tipo de Métrica, Rama y Banco de Pruebas.
-Son tests de significación estadística que utilizan ya sea un
-[score Z](https://es.wikipedia.org/wiki/Unidad_tipificada)
-o una [prueba t de Student](https://es.wikipedia.org/wiki/Prueba_t_de_Student)
-para detectar regresiones de rendimiento y generar Alertas.
-Cuando una Métrica está por debajo del límite inferior de un umbral o por encima de su límite superior,
-se genera una Alerta para esa Métrica.
+import ThresholdsIntro from "../../../chunks/explanation/es/thresholds-intro.mdx";
+import ThresholdsStatic from "../../../chunks/explanation/es/thresholds-static.mdx";
+import ThresholdsStatistical from "../../../chunks/explanation/es/thresholds-statistical.mdx";
+import ThresholdsPercentage from "../../../chunks/explanation/es/thresholds-percentage.mdx";
+import ThresholdsNormalImg from "../../../chunks/explanation/thresholds-normal-img.mdx";
+import ThresholdsZScore from "../../../chunks/explanation/es/thresholds-z-score.mdx";
+import ThresholdsTTest from "../../../chunks/explanation/es/thresholds-t-test.mdx";
+import ThresholdLogNormalImg from "../../../chunks/explanation/thresholds-log-normal-img.mdx";
+import ThresholdsLogNormal from "../../../chunks/explanation/es/thresholds-log-normal.mdx";
+import ThresholdsIqrImg from "../../../chunks/explanation/thresholds-iqr-img.mdx";
+import ThresholdsIqr from "../../../chunks/explanation/es/thresholds-iqr.mdx";
+import ThresholdsDeltaIqr from "../../../chunks/explanation/es/thresholds-delta-iqr.mdx";
+import ThresholdsAlerts from "../../../chunks/explanation/es/thresholds-alerts.mdx";
 
-Los umbrales funcionan mejor cuando:
-- No hay diferencias extremas entre las ejecuciones de benchmarks
-- Las ejecuciones de benchmarks son totalmente independientes entre sí
-- El número de iteraciones de una única ejecución de benchmark es menos del 10% de las métricas históricas
-
-Si hay menos de 30 métricas históricas para la combinación de Tipo de Métrica, Rama y Banco de Pruebas, entonces se debe utilizar un umbral de prueba t de Student y __*no*__ un umbral de score Z.
-
-<div class="content has-text-centered">
-    <figure>
-<img
-    src="https://upload.wikimedia.org/wikipedia/commons/2/25/The_Normal_Distribution.svg"
-    width="800"
-    height="600"
-    alt="La distribución Normal https://commons.wikimedia.org/wiki/File:The_Normal_Distribution.svg"
-/>
-<br/>
-<small>🐰 ¡No te alteres! Todo esto tendrá sentido en un minuto.</small>
-</figure>
-</div>
-
-## Prueba de Significancia Estadística
-
-### Score Z
-
-El score Z mide el número de [desviaciones estándar](https://es.wikipedia.org/wiki/Desviaci%C3%B3n_t%C3%ADpica) (σ) que una Métrica dada está por encima o por debajo de la media de las métricas históricas.
-La desviación estándar (σ) también puede expresarse como un porcentaje acumulativo de _límite inferior_ o _límite superior_.
-
-Por ejemplo, dos desviaciones estándar (2σ) son lo mismo que un porcentaje acumulativo de _límite superior_ del 97,7%, como se muestra arriba.
-Al crear umbrales de score Z, se utiliza la notación decimal del porcentaje acumulativo.
-En este ejemplo, el porcentaje acumulativo de _límite superior_ del 97,7% sería un Límite Superior de `0.977`.
-En la práctica, un umbral como este sería útil para el Tipo de Métrica de Latencia.
-Es decir, un valor más grande indicaría una regresión de rendimiento.
-
-Cuando un valor más pequeño indicaría una regresión de rendimiento, como en el Tipo de Métrica de Rendimiento,
-debería utilizarse un porcentaje acumulativo de _límite inferior_.
-Un porcentaje acumulativo de _límite inferior_ del 97,7% correspondería a dos desviaciones estándar por debajo de la media (-2σ).
-Esta sería la notación decimal como un Límite Inferior de `0.977`.
-
-<br />
-
-> 🐰 Consejo: Cuando uses un umbral de score Z, establece el Tamaño Mínimo de Muestra en al menos 30.
-
-### Prueba t de Student
-
-La prueba t de Student mide cuán probable es que una Métrica dada esté por encima o por debajo de la media de las métricas históricas.
-Esta probabilidad se llama intervalo de confianza (IC).
-El intervalo de confianza (IC) se expresa como un porcentaje de confianza de _límite inferior_ o _límite superior_.
-
-Por ejemplo, un porcentaje de confianza de _límite superior_ del 95.0% indica que el 95.0% de las Métricas deberían ser _menores_ que un _máximo_ esperado.
-Al crear umbrales de prueba t, se utiliza la notación decimal del porcentaje de confianza.
-En este ejemplo, el porcentaje de confianza de _límite superior_ del 95.0% sería un Límite Superior de `0.95`.
-En la práctica, un umbral como este sería útil para el Tipo de Métrica de Latencia.
-Es decir, un valor más grande indicaría una regresión de rendimiento.
-
-Cuando un valor más pequeño indicaría una regresión de rendimiento, como en el Tipo de Métrica de Rendimiento,
-debería utilizarse un porcentaje de confianza de _límite inferior_.
-Un porcentaje de confianza de _límite inferior_ del 95.0% indicaría que las Métricas deberían ser _mayores_ que un _mínimo_ esperado.
-Este se daría en notación decimal como un Límite Inferior de `0.95`.
-
-<br />
-
-> 🐰 Consejo: Usa un umbral de prueba t si tienes menos de 30 métricas históricas.
-
-## Límite de Significancia Estadística
-
-El significado del límite de significancia estadística depende de la prueba de significancia estadística:
-- Score Z: Desviación estándar (σ) expresada como un porcentaje acumulativo decimal
-- Prueba t: Intervalo de confianza (IC) expresado como un porcentaje de confianza decimal
-
-Cada Métrica se comprueba contra el límite de significancia estadística del umbral si existe.
-Esto puede incluir un Límite Inferior, Límite Superior, o ambos.
-Se calcula un Límite de umbral para cada Límite.
-Este Límite de umbral se compara luego con la Métrica actual.
-Si esa Métrica cae fuera del Límite de umbral, se generará una Alerta.
-
-> 🐰 Consejo: Para hacer fallar una compilación CI cuando un límite es violado usa la bandera `--err` para el comando de la interfaz de línea de comandos <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>.
-
-### Límite Inferior
-Se puede establecer un límite inferior para un umbral.
-Se utiliza cuando un valor más pequeño indicaría una regresión de rendimiento,
-como con el Tipo de Métrica de Rendimiento.
-El valor debe ser un decimal entre `0.5` y `1.0`.
-
-Por ejemplo, si usaste un score Z y tus métricas históricas tenían una media de `100` y una desviación estándar de `10`,
-entonces un Límite Inferior de `0.977` creará un Límite Inferior en `80.05`.
-Cualquier valor inferior a `80.05` generaría una Alerta.
-
-### Límite Superior
-Se puede establecer un límite superior para un umbral.
-Se utiliza cuando un valor mayor indicaría una regresión de rendimiento,
-como con el Tipo de Métrica de Latencia.
-El valor debe ser un decimal entre `0.5` y `1.0`.
-
-Por ejemplo, si usaste un score Z y tus métricas históricas tenían una media de `100` y una desviación estándar de `10`,
-entonces un Límite Superior de `0.977` crearía un Límite Superior en `119.95`.
-Cualquier valor superior a `119.95` generaría una Alerta.
-
-## Tamaño de la Muestra
-
-### Tamaño Mínimo de la Muestra
-Se puede establecer un tamaño mínimo de muestra para un umbral.
-El umbral sólo ejecutará su prueba de significancia estadística
-si el número de métricas históricas es mayor o igual al tamaño mínimo de muestra.
-
-### Tamaño Máximo de la Muestra
-Se puede establecer un tamaño máximo de muestra para un umbral.
-El umbral se limitará a sólo las métricas históricas más recientes
-limitado al tamaño máximo de la muestra para su prueba de significancia estadística.
-
-## Tamaño de la Ventana
-Se puede establecer un tamaño de ventana en segundos para un umbral.
-El umbral se limitará a sólo las métricas históricas más recientes
-delimitadas por la ventana de tiempo dada para su prueba de significancia estadística.
-
-## Alertas
-Se generan Alertas cuando una Métrica está por debajo del Límite Inferior de un umbral o por encima de su Límite Superior.
-Para hacer fallar una compilación CI en el caso de una Alerta, establece la bandera `--err` cuando utilices el comando de línea de comandos de  <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>.
-
-### Supresión de Alertas
-A veces puede ser útil suprimir Alertas para un Benchmark en particular.
-La mejor manera de hacer esto es agregando uno de estos sufijos especiales al nombre de ese Benchmark:
-
-- `_bencher_ignore`
-- `BencherIgnore`
-- `-bencher-ignore`
-
-Por ejemplo, si tu Benchmark se llamaba `my_flaky_benchmark` entonces renombrándolo a `my_flaky_benchmark_bencher_ignore`
-ignorarías justamente ese Benchmark en particular en adelante.
-Los Benchmarks ignorados no se verifican contra el umbral, incluso si existe uno.
-Sin embargo, las métricas de los Benchmarks ignorados aún se almacenan.
-Continuando con nuestro ejemplo, los resultados de `my_flaky_benchmark_bencher_ignore` todavía se almacenarían en la base de datos bajo `my_flaky_benchmark`.
-Si quitas el sufijo y vuelves al nombre del Benchmark original,
-entonces las cosas continuarán justo donde las dejaste.
+<ThresholdsIntro />
+<ThresholdsStatic />
+<ThresholdsStatistical />
+<ThresholdsPercentage />
+<ThresholdsNormalImg />
+<ThresholdsZScore />
+<ThresholdsTTest />
+<ThresholdLogNormalImg />
+<ThresholdsLogNormal />
+<ThresholdsIqrImg />
+<ThresholdsIqr />
+<ThresholdsDeltaIqr />
+<ThresholdsAlerts />
 
 <br />
 <br />

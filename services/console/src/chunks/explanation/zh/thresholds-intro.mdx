@@ -1,0 +1,25 @@
+阈值是你在Bencher中捕捉性能回归的方式。
+每个阈值都会分配给一个唯一的组合：分支，测试台和度量。
+阈值必须有一个下限，上限，或者同时具备。
+每个边界都用于计算边界限制。
+然后每个新的度量都会根据每个边界限制进行检查。
+
+- 下限
+  - 当较小的值表示性能回归时，就会使用下限，如吞吐量度量。
+- 上限
+  - 当较大的值表示性能回归时，就会使用上限，如延迟度量。
+
+有几种类型的阈值：
+
+<ul>
+  <li>[静态](#static-thresholds)</li>
+  <li>[统计](#statistical-thresholds)</li>
+  <ul>
+    <li>[百分比](#percentage-thresholds)</li>
+    <li>[z-得分](#z-score-thresholds)</li>
+    <li>[t-检验](#t-test-thresholds)</li>
+    <li>[对数正态分布](#log-normal-thresholds)</li>
+    <li>[四分位距（IQR）](#interquartile-range-thresholds)</li>
+    <li>[Delta 四分位距 (ΔIQR)](#delta-interquartile-range-thresholds)</li>
+  </ul>
+</ul>

@@ -1,0 +1,30 @@
+## Limiares Log Normais
+
+Um Limiar Log Normal mede a probabilidade de que uma nova Métrica esteja acima ou abaixo da localização central de suas Métricas históricas usando uma [Distribuição Log Normal](https://pt.wikipedia.org/wiki/Distribui%C3%A7%C3%A3o_log-normal).
+
+Os Limiares Log Normais funcionam melhor quando:
+- As execuções de benchmark são totalmente independentes uma da outra
+- O número de iterações para uma única execução de benchmark é inferior a 10% das Métricas históricas
+- Todos os dados são positivos (o log natural de um número negativo é `indefinido`)
+
+Para os Limiares Log Normais, a probabilidade é expressa como uma porcentagem decimal.
+Se uma nova Métrica estiver abaixo de uma certa porcentagem do lado esquerdo (Limite Inferior)
+ou acima de uma certa porcentagem do lado direito (Limite Superior) para suas Métricas históricas, um Alerta é gerado.
+Deve ser estabelecido um Limite Inferior, um Limite Superior, ou ambos.
+
+- ### Limite Inferior do Limiar Log Normal
+  - Um Limite Inferior do Limiar Log Normal pode ser qualquer decimal positivo entre `0.5` e `1.0`.
+Onde `0.5` representa a localização central e `1.0` representa todos os possíveis valores do lado esquerdo (-∞).
+É usado quando um valor menor indicaria uma regressão de desempenho.
+  - Por exemplo, se você usou um Limiar Log Normal com um Limite Inferior de `0.977`
+e você tivesse `25` Métricas históricas centradas em torno de `100` e um outlier anterior em `200`,
+o Limite do Limite Inferior seria `71.20` e
+qualquer valor inferior a `71.20` geraria um Alerta.
+- ### Limite Superior do Limiar Log Normal
+  - Um Limite Superior do Limiar Log Normal pode ser qualquer decimal positivo entre `0.5` e `1.0`.
+Onde `0.5` representa a localização central e `1.0` representa todos os possíveis valores do lado direito (∞).
+É usado quando um valor maior indicaria uma regressão de desempenho.
+  - Por exemplo, se você usou um Limiar Log Normal com um Limite Superior de `0.977`
+e você tivesse `25` Métricas históricas centradas em torno de `100` e um outlier anterior em `200`,
+o Limite do Limite Superior seria `134.18` e
+qualquer valor superior a `134.18` geraria um Alerta.

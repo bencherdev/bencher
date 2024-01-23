@@ -12,6 +12,15 @@ import BencherRunProject from "../../../chunks/explanation/ja/bencher-run-projec
 import BencherRunToken from "../../../chunks/explanation/ja/bencher-run-token.mdx";
 import BencherRunBranchSelection from "../../../chunks/explanation/ja/bencher-run-branch-selection.mdx";
 import BencherRunHash from "../../../chunks/explanation/ja/bencher-run-hash.mdx";
+import BencherRunTestbed from "../../../chunks/explanation/ja/bencher-run-testbed.mdx";
+import BencherRunAdapters from "../../../chunks/explanation/ja/bencher-run-adapters.mdx";
+import BencherRunIter from "../../../chunks/explanation/ja/bencher-run-iter.mdx";
+import BencherRunFold from "../../../chunks/explanation/ja/bencher-run-fold.mdx";
+import BencherRunBackdate from "../../../chunks/explanation/ja/bencher-run-backdate.mdx";
+import BencherRunAllowFailure from "../../../chunks/explanation/ja/bencher-run-allow-failure.mdx";
+import BencherRunErr from "../../../chunks/explanation/ja/bencher-run-err.mdx";
+import BencherRunHtml from "../../../chunks/explanation/ja/bencher-run-html.mdx";
+import BencherRunQuiet from "../../../chunks/explanation/ja/bencher-run-quiet.mdx";
 
 import BencherRunExec from "../../../chunks/explanation/ja/bencher-run-exec.mdx";
 
@@ -39,85 +48,39 @@ import BencherRunExec from "../../../chunks/explanation/ja/bencher-run-exec.mdx"
 
 <br />
 
-### `--testbed <TESTBED>`
+<BencherRunTestbed />
 
 <br />
 
-オプション：`--testbed`オプションまたは`BENCHER_TESTBED`環境変数のいずれかを既存のテストベッドのスラグまたはUUIDに設定することができます。
-両方が定義されている場合、`--testbed`オプションは`BENCHER_TESTBED`環境変数に優先します。
-どちらも定義されていない場合、デフォルトのテストベッドとして`localhost`が使用されます。
+<BencherRunAdapters />
 
 <br />
 
-### `--adapter <ADAPTER>`
-### `--average <AVERAGE>`
-### `--file <FILE>`
+<BencherRunIter />
 
 <br />
 
-完全な概要については、[benchmark harness adapter](/ja/docs/explanation/adapters/)を参照してください。
+<BencherRunFold />
 
 <br />
 
-### `--iter <ITER>`
+<BencherRunBackdate />
 
 <br />
 
-オプション：実行繰り返し数。デフォルトは`1`です。
-
-### `--fold <FOLD>`
+<BencherRunAllowFailure />
 
 <br />
 
-オプション：複数の結果を一つの結果にまとめます。 \
-必要条件：`--iter`が設定されていること。 \
-可能な値:
-    - `min`:    最小値
-    - `max`:    最大値
-    - `mean`:   値の平均
-    - `median`: 値の中央値
+<BencherRunErr />
 
 <br />
 
-### `--backdate <DATETIME_SECONDS>`
+<BencherRunHtml />
 
 <br />
 
-オプション：レポートのバックデート（エポックからの秒数）。
-注：これは過去のレポートの並べ替えに影響を*及ぼしません*！
-これは、プロジェクトに初めて歴史的データを_時系列_順にシーディングする際に便利です。
-
-<br />
-
-### `--allow-failure`
-
-<br />
-
-オプション：ベンチマークテストの失敗を許可する。
-
-<br />
-
-### `--err`
-
-<br />
-
-オプション：アラートが生成されたときにエラーになります。完全な概要については、[thresholds and alerts](/ja/docs/explanation/thresholds/)を参照してください。
-
-<br />
-
-### `--html`
-
-<br />
-
-オプション：結果をHTML形式で出力します。
-
-<br />
-
-### `--quiet`
-
-<br />
-
-オプション：クワイエットモード、最終レポートJSONのみを出力します。デフォルトは`false`です。
+<BencherRunQuiet />
 
 <br />
 

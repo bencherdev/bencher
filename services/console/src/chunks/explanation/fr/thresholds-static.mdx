@@ -1,0 +1,23 @@
+## Seuils Statiques
+
+Un Seuil Statique est le seuil le plus simple.
+Si une nouvelle Métrique est en dessous d'une Limite Inférieure définie ou au-dessus d'une Limite Supérieure définie, une Alerte est générée.
+C'est-à-dire que la Limite Inférieure/Supérieure est une Limite Inférieure/Supérieure explicite.
+Soit une Limite Inférieure, une Limite Supérieure, ou les deux doivent être définies.
+Les Seuils Statiques fonctionnent le mieux lorsque la valeur de la Métrique doit rester à l'intérieur d'une plage constante,
+comme les compteurs d'instructions.
+
+- ### Limite Inférieure du Seuil Statique
+  - Une Limite Inférieure de Seuil Statique peut être n'importe quel nombre flottant.
+Elle est utilisée lorsqu'une valeur inférieure indiquerait une régression de performance.
+La Limite Inférieure doit être inférieure ou égale à la Limite Supérieure, si les deux sont spécifiées.
+  - Par exemple, si vous aviez un Seuil Statique avec une Limite Inférieure définie à `100`
+la Limite de la Limite Inférieure serait également de `100` et
+toute valeur inférieure à `100` générera une Alerte.
+- ### Limite Supérieure du Seuil Statique
+  - Une Limite Supérieure de Seuil Statique peut être n'importe quel nombre flottant.
+Elle est utilisée lorsqu'une valeur supérieure indiquerait une régression de performance.
+La Limite Supérieure doit être supérieure ou égale à la Limite Inférieure, si les deux sont spécifiées.
+  - Par exemple, si vous aviez un Seuil Statique avec une Limite Supérieure définie à `100`
+la Limite de la Limite Supérieure serait également de `100` et
+toute valeur supérieure à `100` générera une Alerte.

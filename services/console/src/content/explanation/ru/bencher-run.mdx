@@ -12,6 +12,15 @@ import BencherRunProject from "../../../chunks/explanation/ru/bencher-run-projec
 import BencherRunToken from "../../../chunks/explanation/ru/bencher-run-token.mdx";
 import BencherRunBranchSelection from "../../../chunks/explanation/ru/bencher-run-branch-selection.mdx";
 import BencherRunHash from "../../../chunks/explanation/ru/bencher-run-hash.mdx";
+import BencherRunTestbed from "../../../chunks/explanation/ru/bencher-run-testbed.mdx";
+import BencherRunAdapters from "../../../chunks/explanation/ru/bencher-run-adapters.mdx";
+import BencherRunIter from "../../../chunks/explanation/ru/bencher-run-iter.mdx";
+import BencherRunFold from "../../../chunks/explanation/ru/bencher-run-fold.mdx";
+import BencherRunBackdate from "../../../chunks/explanation/ru/bencher-run-backdate.mdx";
+import BencherRunAllowFailure from "../../../chunks/explanation/ru/bencher-run-allow-failure.mdx";
+import BencherRunErr from "../../../chunks/explanation/ru/bencher-run-err.mdx";
+import BencherRunHtml from "../../../chunks/explanation/ru/bencher-run-html.mdx";
+import BencherRunQuiet from "../../../chunks/explanation/ru/bencher-run-quiet.mdx";
 
 import BencherRunExec from "../../../chunks/explanation/ru/bencher-run-exec.mdx";
 
@@ -39,86 +48,39 @@ import BencherRunExec from "../../../chunks/explanation/ru/bencher-run-exec.mdx"
 
 <br />
 
-### `--testbed <TESTBED>`
+<BencherRunTestbed />
 
 <br />
 
-Опционально: Можно установить либо опцию `--testbed`, либо переменную окружения `BENCHER_TESTBED`
-для указания ссылки или UUID уже существующего тестового стенда.
-Если оба определены, то значение опции `--testbed` имеет приоритет перед переменной окружения `BENCHER_TESTBED`.
-Если ни один из них не определен, то в качестве тестового стенда по умолчанию используется `localhost`.
+<BencherRunAdapters />
 
 <br />
 
-### `--adapter <ADAPTER>`
-### `--average <AVERAGE>`
-### `--file <FILE>`
+<BencherRunIter />
 
 <br />
 
-Смотрите [адаптеры оснастки для тестирования](/ru/docs/explanation/adapters/) для полного обзора.
+<BencherRunFold />
 
 <br />
 
-### `--iter <ITER>`
+<BencherRunBackdate />
 
 <br />
 
-Опционально: Число повторений тестирования. По умолчанию `1`.
-
-### `--fold <FOLD>`
+<BencherRunAllowFailure />
 
 <br />
 
-Опционально: Возможность объединения нескольких результатов в один. \
-Требует: установки `--iter`. \
-Возможные значения:
-    - `min`:    Минимальное значение
-    - `max`:    Максимальное значение
-    - `mean`:   Среднее значение
-    - `median`: Медианное значение
+<BencherRunErr />
 
 <br />
 
-### `--backdate <DATETIME_SECONDS>`
+<BencherRunHtml />
 
 <br />
 
-Опционально: Возможность отката даты отчета (секунды со времени эпохи).
-Внимание: Это *не* повлияет на порядок предыдущих отчетов!
-Это полезно при начальном занесении исторических данных в проект в _хронологическом_ порядке.
-
-<br />
-
-### `--allow-failure`
-
-<br />
-
-Опционально: Разрешить сбой теста производительности.
-
-<br />
-
-### `--err`
-
-<br />
-
-Опционально: Вывести ошибку при генерации оповещения. Смотрите [изменения и оповещения](/ru/docs/explanation/thresholds/) для полного обзора.
-
-<br />
-
-### `--html`
-
-<br />
-
-Опционально: Вывод результатов в формате HTML.
-
-<br />
-
-### `--quiet`
-
-<br />
-
-Опционально: Режим тишины, выводит только конечный отчет JSON. По умолчанию установлено значение `false`.
+<BencherRunQuiet />
 
 <br />
 

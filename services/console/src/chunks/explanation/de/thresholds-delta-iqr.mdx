@@ -1,0 +1,22 @@
+## Delta Interquartile Range Thresholds
+
+Ein Delta Interquartile Range Threshold misst, um wie viele Vielfache der durchschnittlichen prozentualen Änderung (Δ) [Interquartilsabstand](https://de.wikipedia.org/wiki/Interquartilabstand) (IQR) 
+ein neuer Metric über oder unter dem Median Ihrer historischen Metrics liegt.
+Wenn ein neuer Metric unterhalb einem bestimmten Vielfachen des ΔIQR vom Median (Untere Grenze) 
+oder oberhalb einem bestimmten Vielfachen des ΔIQR vom Median (Obere Grenze) Ihrer historischen Metrics liegt, wird ein Alarm ausgelöst.
+Entweder eine Untere Grenze, Obere Grenze oder beides müssen eingestellt sein.
+
+- ### Delta Interquartile Range Threshold Untere Grenze
+  - Eine Delta Interquartile Range Threshold Untere Grenze kann jeder Multiplikator sein, der größer oder gleich Null ist (z.B: nutzen Sie `2.0` für `2x`).
+Sie wird verwendet, wenn ein kleinerer Wert eine Leistungsregression anzeigen würde.
+  - Zum Beispiel, wenn Sie einen Delta Interquartile Range Threshold mit einer Unterer Grenze von `2.0` eingestellt haben
+und Ihre historischen Metrics hatten einen Median von `100`, einen Interquartilabstand von `10` und einen durchschnittlichen Delta-Interquartilbereich von `0.2` (`20%`) 
+wäre das Untere Grenzlimit `60` und 
+jeder Wert kleiner als `60` würde einen Alarm auslösen.
+- ### Delta Interquartile Range Threshold Obere Grenze
+  - Eine Delta Interquartile Range Threshold Obere Grenze kann jeder Multiplikator sein, der größer oder gleich Null ist (z.B: nutzen Sie `2.0` für `2x`).
+Sie wird verwendet, wenn ein größerer Wert eine Leistungsregression anzeigen würde.
+  - Zum Beispiel, wenn Sie einen Delta Interquartile Range Threshold mit einer Oberer Grenze von `2.0` eingestellt haben
+und Ihre historischen Metrics hatten einen Median von `100`, einen Interquartilabstand von `10` und einen durchschnittlichen Delta-Interquartilbereich von `0.2` (`20%`)
+wäre das Obere Grenzlimit `140` und 
+jeder Wert größer als `140` würde einen Alarm auslösen.
