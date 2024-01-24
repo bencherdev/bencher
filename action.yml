@@ -5,10 +5,10 @@ branding:
   icon: bar-chart
   color: orange
 runs:
-  using: node16
+  using: node20
   main: ./services/action/dist/index.js
 inputs:
   version:
-    description: "Version of the Bencher CLI to install (ex: `0.1.23`) (default `latest`)"
+    description: "Bencher Self-Hosted Only: Version of the Bencher CLI to install (ex: `0.1.23`) (default `latest`)"
     default: latest
     required: false

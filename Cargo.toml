@@ -57,11 +57,11 @@ thiserror = "1.0"
 tokio = "1.35"
 typeshare = "1.0"
 url = "2.5"
-uuid = "1.6"
+uuid = "1.7"
 # github.com
-dropshot = { git = "https://github.com/oxidecomputer/dropshot", rev = "fb0bb0afcf6afb4703984e1d6c2975748dfe1406" }
-progenitor = { git = "https://github.com/oxidecomputer/progenitor", rev = "51db1278edfc47912cdedc558badc188bd1b8cdb" }
-progenitor-client = { git = "https://github.com/oxidecomputer/progenitor", rev = "51db1278edfc47912cdedc558badc188bd1b8cdb" }
+dropshot = { git = "https://github.com/oxidecomputer/dropshot", rev = "29ae98d1f909c6832661408a4c03f929e8afa6e9" }
+progenitor = { git = "https://github.com/oxidecomputer/progenitor", rev = "2d3b9d0eb50a1907974c0b0ba7ee7893425b3e79" }
+progenitor-client = { git = "https://github.com/oxidecomputer/progenitor", rev = "2d3b9d0eb50a1907974c0b0ba7ee7893425b3e79" }
 
 [workspace.lints.rust]
 # https://doc.rust-lang.org/rustc/lints/listing/index.html
