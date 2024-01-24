@@ -32,7 +32,6 @@ const FieldCard = (props: Props) => {
 					params={props.params}
 					card={props.card}
 					value={props.value}
-					// refresh={props.refresh}
 					toggleUpdate={toggleUpdate}
 				/>
 			}

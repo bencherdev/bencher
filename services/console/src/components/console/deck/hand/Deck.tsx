@@ -37,7 +37,6 @@ const Deck = (props: Props) => {
 									path={props.path}
 									card={card}
 									data={props.data}
-									// refresh={props.refresh}
 									handleRefresh={props.handleRefresh}
 									handleLoopback={props.handleLoopback}
 								/>
@@ -46,7 +45,7 @@ const Deck = (props: Props) => {
 					</div>
 				)}
 			</For>
-			<Show when={props.config?.buttons} fallback={<></>}>
+			<Show when={props.config?.buttons}>
 				<For each={props.config?.buttons}>
 					{(button) => (
 						<DeckButton

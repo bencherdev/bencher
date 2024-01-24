@@ -19,7 +19,7 @@ export interface Props {
 
 const DeckCard = (props: Props) => {
 	return (
-		<Switch fallback={<></>}>
+		<Switch>
 			<Match when={props.card?.kind === Card.FIELD}>
 				<FieldCard
 					apiUrl={props.apiUrl}
@@ -28,7 +28,6 @@ const DeckCard = (props: Props) => {
 					path={props.path}
 					card={props.card}
 					value={props.card?.key ? props.data()?.[props.card?.key] : null}
-					// refresh={props.refresh}
 					handleRefresh={props.handleRefresh}
 					handleLoopback={props.handleLoopback}
 				/>
@@ -44,7 +43,6 @@ const DeckCard = (props: Props) => {
 					path={props.path}
 					card={props.card}
 					value={fmtNestedValue(props.data(), props.card?.keys)}
-					// refresh={props.refresh}
 					handleRefresh={props.handleRefresh}
 					handleLoopback={props.handleLoopback}
 				/>

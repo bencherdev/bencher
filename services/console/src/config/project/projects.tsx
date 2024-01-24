@@ -220,6 +220,7 @@ const projectsConfig = {
 					is_allowed: isAllowedProjectEdit,
 					field: {
 						kind: FieldKind.SELECT,
+						label: "Project Visibility",
 						key: "visibility",
 						value: VISIBILITY_VALUE,
 						validate: false,
