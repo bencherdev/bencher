@@ -204,7 +204,7 @@ impl MetricsBoundary {
         log: &Logger,
         datum: f64,
         data: &[f64],
-        deltas: bool,
+        delta: bool,
         lower_boundary: Option<Boundary>,
         upper_boundary: Option<Boundary>,
     ) -> Result<Option<Self>, BoundaryError> {
@@ -220,7 +220,7 @@ impl MetricsBoundary {
         let Some(quartiles) = Quartiles::new(data) else {
             return Ok(None);
         };
-        let delta_quartiles = if deltas {
+        let delta_quartiles = if delta {
             if let Some(delta_quartiles) = Quartiles::new_delta(data) {
                 Some(delta_quartiles)
             } else {

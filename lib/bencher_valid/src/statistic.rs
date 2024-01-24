@@ -136,13 +136,13 @@ pub fn is_valid_statistic(statistic: &str) -> bool {
     validate_statistic(statistic).is_ok()
 }
 
+const STATIC_INT: i32 = 20;
+const PERCENTAGE_INT: i32 = 30;
 const Z_SCORE_INT: i32 = 0;
 const T_TEST_INT: i32 = 1;
-const STATIC_INT: i32 = 2;
-const PERCENTAGE_INT: i32 = 3;
-const LOG_NORMAL_INT: i32 = 4;
-const IQR_INT: i32 = 5;
-const DELTA_IQR_INT: i32 = 6;
+const LOG_NORMAL_INT: i32 = 10;
+const IQR_INT: i32 = 40;
+const DELTA_IQR_INT: i32 = 41;
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, derive_more::Display, Serialize, Deserialize)]
@@ -152,12 +152,12 @@ const DELTA_IQR_INT: i32 = 6;
 #[serde(rename_all = "snake_case")]
 #[repr(i32)]
 pub enum StatisticKind {
+    Static = STATIC_INT,
+    Percentage = PERCENTAGE_INT,
     #[serde(alias = "z")]
     ZScore = Z_SCORE_INT,
     #[serde(alias = "t")]
     TTest = T_TEST_INT,
-    Static = STATIC_INT,
-    Percentage = PERCENTAGE_INT,
     LogNormal = LOG_NORMAL_INT,
     Iqr = IQR_INT,
     DeltaIqr = DELTA_IQR_INT,
@@ -186,10 +186,10 @@ mod statistic_kind {
             out: &mut diesel::serialize::Output<'b, '_, DB>,
         ) -> diesel::serialize::Result {
             match self {
-                Self::ZScore => T_TEST_INT.to_sql(out),
-                Self::TTest => Z_SCORE_INT.to_sql(out),
                 Self::Static => STATIC_INT.to_sql(out),
                 Self::Percentage => PERCENTAGE_INT.to_sql(out),
+                Self::ZScore => T_TEST_INT.to_sql(out),
+                Self::TTest => Z_SCORE_INT.to_sql(out),
                 Self::LogNormal => LOG_NORMAL_INT.to_sql(out),
                 Self::Iqr => IQR_INT.to_sql(out),
                 Self::DeltaIqr => DELTA_IQR_INT.to_sql(out),
@@ -204,10 +204,10 @@ mod statistic_kind {
     {
         fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
             match i32::from_sql(bytes)? {
-                T_TEST_INT => Ok(Self::ZScore),
-                Z_SCORE_INT => Ok(Self::TTest),
                 STATIC_INT => Ok(Self::Static),
                 PERCENTAGE_INT => Ok(Self::Percentage),
+                T_TEST_INT => Ok(Self::ZScore),
+                Z_SCORE_INT => Ok(Self::TTest),
                 LOG_NORMAL_INT => Ok(Self::LogNormal),
                 IQR_INT => Ok(Self::Iqr),
                 DELTA_IQR_INT => Ok(Self::DeltaIqr),

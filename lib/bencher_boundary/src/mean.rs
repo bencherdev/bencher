@@ -6,12 +6,7 @@ pub struct Mean {
 impl Mean {
     #[allow(clippy::cast_precision_loss)]
     pub fn new(data: &[f64]) -> Option<Self> {
-        if data.is_empty() {
-            return None;
-        }
-
-        let mean = data.iter().sum::<f64>() / data.len() as f64;
-        mean.is_finite().then_some(Self { mean })
+        mean(data).map(|mean| Self { mean })
     }
 
     pub fn std_deviation(self, data: &[f64]) -> Option<f64> {
@@ -19,12 +14,22 @@ impl Mean {
     }
 }
 
+pub fn mean(data: &[f64]) -> Option<f64> {
+    if data.is_empty() {
+        None
+    } else {
+        #[allow(clippy::cast_precision_loss)]
+        let mean = data.iter().sum::<f64>() / data.len() as f64;
+        mean.is_finite().then_some(mean)
+    }
+}
+
 pub fn std_deviation(location: f64, data: &[f64]) -> Option<f64> {
     variance(location, data)
-    // If the variance is zero then the standard deviation is not going to work with `statrs`
-        .and_then(|std_dev| if std_dev == 0.0 { None } else { Some(std_dev) })
+        // If the variance is zero then the standard deviation is not going to work with `statrs`
+        .and_then(|variance| if variance == 0.0 { None } else { Some(variance) })
         .map(f64::sqrt)
-        .and_then(|m| m.is_finite().then_some(m))
+        .and_then(|std_dev| std_dev.is_finite().then_some(std_dev))
 }
 
 fn variance(location: f64, data: &[f64]) -> Option<f64> {
@@ -61,13 +66,6 @@ mod test {
     const DATA_FIVE_DESC: &[f64] = &[5.0, 4.0, 3.0, 2.0, 1.0];
     const DATA_FIVE_NEG: &[f64] = &[-1.0, -2.0, -3.0, -4.0, -5.0];
     const DATA_FIVE_CONST: &[f64] = &[1.0, 1.0, 1.0, 1.0, 1.0];
-
-    // const MEAN_ZERO: f64 = 0.0;
-    // const MEAN_ONE: f64 = 1.0;
-    // const MEAN_TWO: f64 = 1.5;
-    // const MEAN_THREE: f64 = 2.0;
-    // const MEAN_FIVE: f64 = 3.0;
-    // const MEAN_SIX_BI: f64 = 0.3333333333333333;
 
     static MEAN_ZERO: Lazy<Mean> = Lazy::new(|| Mean { mean: 0.0 });
     static MEAN_ONE: Lazy<Mean> = Lazy::new(|| Mean { mean: 1.0 });

@@ -5,7 +5,7 @@ CREATE TABLE down_boundary (
     threshold_id INTEGER NOT NULL,
     statistic_id INTEGER NOT NULL,
     metric_id INTEGER NOT NULL UNIQUE,
-    baseline DOUBLE,
+    baseline DOUBLE NOT NULL,
     lower_limit DOUBLE,
     upper_limit DOUBLE,
     FOREIGN KEY (threshold_id) REFERENCES threshold (id),

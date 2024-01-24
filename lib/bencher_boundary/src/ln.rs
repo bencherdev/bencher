@@ -1,4 +1,4 @@
-use crate::mean::std_deviation;
+use crate::mean::{mean, std_deviation};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Ln {
@@ -8,18 +8,10 @@ pub struct Ln {
 
 impl Ln {
     pub fn new(data: &[f64]) -> Option<Self> {
-        if data.is_empty() {
-            return None;
-        }
-
         // https://towardsdatascience.com/log-normal-distribution-a-simple-explanation-7605864fb67c
-        let log_data = data.iter().copied().map(f64::ln).collect::<Vec<_>>();
-        #[allow(clippy::cast_precision_loss)]
-        let location = log_data.iter().copied().sum::<f64>() / log_data.len() as f64;
-        if !location.is_finite() {
-            return None;
-        }
-        let scale = std_deviation(location, &log_data)?;
+        let ln_data = data.iter().copied().map(f64::ln).collect::<Vec<_>>();
+        let location = mean(&ln_data)?;
+        let scale = std_deviation(location, &ln_data)?;
         scale.is_finite().then_some(Self { location, scale })
     }
 }

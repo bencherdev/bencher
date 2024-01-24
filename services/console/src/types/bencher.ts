@@ -39,10 +39,10 @@ export interface JsonMeasure {
 }
 
 export enum StatisticKind {
-	ZScore = "z_score",
-	TTest = "t_test",
 	Static = "static",
 	Percentage = "percentage",
+	ZScore = "z_score",
+	TTest = "t_test",
 	LogNormal = "log_normal",
 	Iqr = "iqr",
 	DeltaIqr = "delta_iqr",

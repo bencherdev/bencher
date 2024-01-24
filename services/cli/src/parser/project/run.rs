@@ -121,11 +121,11 @@ pub struct CliRunCommand {
 #[derive(Args, Debug)]
 pub struct CliRunShell {
     /// Shell command path
-    #[clap(long, requires = "command")]
+    #[clap(long)]
     pub shell: Option<String>,
 
     /// Shell command flag
-    #[clap(long, requires = "command")]
+    #[clap(long)]
     pub flag: Option<String>,
 }
 

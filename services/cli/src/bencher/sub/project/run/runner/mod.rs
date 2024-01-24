@@ -27,8 +27,8 @@ impl TryFrom<CliRunCommand> for Runner {
 
     fn try_from(cmd: CliRunCommand) -> Result<Self, Self::Error> {
         let program_arguments = cmd.command.and_then(|c| {
-            let mut cmd = c.into_iter();
-            cmd.next().map(|program| (program, cmd.collect::<Vec<_>>()))
+            let mut c = c.into_iter();
+            c.next().map(|program| (program, c.collect::<Vec<_>>()))
         });
         if let Some((program, arguments)) = program_arguments {
             let command = if !cmd.exec && arguments.is_empty() {

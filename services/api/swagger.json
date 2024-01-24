@@ -8996,10 +8996,10 @@
       "StatisticKind": {
         "type": "string",
         "enum": [
-          "z_score",
-          "t_test",
           "static",
           "percentage",
+          "z_score",
+          "t_test",
           "log_normal",
           "iqr",
           "delta_iqr"
