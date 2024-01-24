@@ -1402,6 +1402,14 @@
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
             }
+          },
+          {
+            "in": "query",
+            "name": "remote",
+            "schema": {
+              "nullable": true,
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -7213,6 +7221,10 @@
           },
           "level": {
             "$ref": "#/components/schemas/PlanLevel"
+          },
+          "remote": {
+            "nullable": true,
+            "type": "boolean"
           },
           "self_hosted": {
             "nullable": true,

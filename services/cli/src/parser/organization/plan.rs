@@ -23,7 +23,7 @@ pub struct CliPlanCreate {
     /// Organization slug or UUID
     pub org: ResourceId,
 
-    /// Checkout ID
+    /// Checkout session ID (subscription ID when `--skip-remote` is used)
     #[clap(long)]
     pub checkout: NonEmpty,
 
@@ -38,6 +38,10 @@ pub struct CliPlanCreate {
     /// Self-Hosted Organization UUID for license
     #[clap(long, requires = "entitlements")]
     pub self_hosted: Option<OrganizationUuid>,
+
+    /// Skip sending to remote provider
+    #[clap(long)]
+    pub skip_remote: bool,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -56,6 +60,10 @@ pub struct CliPlanView {
 pub struct CliPlanDelete {
     /// Organization slug or UUID
     pub organization: ResourceId,
+
+    /// Skip sending to remote provider
+    #[clap(long)]
+    pub skip_remote: bool,
 
     #[clap(flatten)]
     pub backend: CliBackend,

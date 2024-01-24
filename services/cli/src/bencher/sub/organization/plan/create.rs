@@ -16,6 +16,7 @@ pub struct Create {
     pub level: PlanLevel,
     pub entitlements: Option<Entitlements>,
     pub self_hosted: Option<OrganizationUuid>,
+    pub remote: Option<bool>,
     pub backend: AuthBackend,
 }
 
@@ -29,6 +30,7 @@ impl TryFrom<CliPlanCreate> for Create {
             level,
             entitlements,
             self_hosted,
+            skip_remote,
             backend,
         } = create;
         Ok(Self {
@@ -37,6 +39,7 @@ impl TryFrom<CliPlanCreate> for Create {
             level: level.into(),
             entitlements: entitlements.map(Into::into),
             self_hosted: self_hosted.map(Into::into),
+            remote: skip_remote.then_some(false),
             backend: backend.try_into()?,
         })
     }
@@ -59,6 +62,7 @@ impl From<Create> for JsonNewPlan {
             level,
             entitlements,
             self_hosted,
+            remote,
             ..
         } = create;
         #[allow(clippy::inconsistent_struct_constructor)]
@@ -67,6 +71,7 @@ impl From<Create> for JsonNewPlan {
             level,
             entitlements,
             self_hosted,
+            remote,
         }
     }
 }

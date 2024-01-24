@@ -6,7 +6,7 @@ use bencher_json::{
 };
 use bencher_rbac::organization::Permission;
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use http::StatusCode;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -161,19 +161,31 @@ async fn post_inner(
         level,
         entitlements,
         self_hosted,
+        remote,
     } = json_plan;
 
-    let subscription_id = biller
-        .get_checkout_session(checkout.as_ref())
-        .await
-        .map_err(|e| {
+    let subscription_id = if remote.unwrap_or(true) {
+        biller
+            .get_checkout_session(checkout.as_ref())
+            .await
+            .map_err(|e| {
+                issue_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Failed to get checkout session",
+                    &format!("Failed to get checkout session {checkout}.",),
+                    e,
+                )
+            })?
+    } else {
+        checkout.as_ref().parse().map_err(|e| {
             issue_error(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to get checkout session",
-                &format!("Failed to get checkout session {checkout}.",),
+                "Failed to parse subscription ID",
+                &format!("Failed to parse subscription ID {checkout}.",),
                 e,
             )
-        })?;
+        })?
+    };
 
     if let Some(entitlements) = entitlements {
         let licensed_plan_id = subscription_id
@@ -221,6 +233,11 @@ async fn post_inner(
     }
 }
 
+#[derive(Deserialize, JsonSchema)]
+pub struct OrgPlanQuery {
+    pub remote: Option<bool>,
+}
+
 #[endpoint {
     method = DELETE,
     path =  "/v0/organizations/{organization}/plan",
@@ -230,21 +247,28 @@ pub async fn org_plan_delete(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
     path_params: Path<OrgPlanParams>,
+    query_params: Query<OrgPlanQuery>,
 ) -> Result<ResponseDeleted, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
-        .await
-        .map_err(|e| {
-            #[cfg(feature = "sentry")]
-            sentry::capture_error(&e);
-            e
-        })?;
+    delete_inner(
+        rqctx.context(),
+        path_params.into_inner(),
+        query_params.into_inner(),
+        &auth_user,
+    )
+    .await
+    .map_err(|e| {
+        #[cfg(feature = "sentry")]
+        sentry::capture_error(&e);
+        e
+    })?;
     Ok(Delete::auth_response_deleted())
 }
 
 async fn delete_inner(
     context: &ApiContext,
     path_params: OrgPlanParams,
+    query_params: OrgPlanQuery,
     auth_user: &AuthUser,
 ) -> Result<(), HttpError> {
     let biller = context.biller()?;
@@ -262,16 +286,21 @@ async fn delete_inner(
         .first::<QueryPlan>(conn)
         .map_err(resource_not_found_err!(Plan, query_organization))?;
 
+    let remote = query_params.remote.unwrap_or(true);
     if let Some(metered_plan_id) = query_plan.metered_plan.as_ref() {
-        biller
-            .cancel_metered_subscription(metered_plan_id)
-            .await
-            .map_err(resource_not_found_err!(Plan, query_plan))?;
+        if remote {
+            biller
+                .cancel_metered_subscription(metered_plan_id)
+                .await
+                .map_err(resource_not_found_err!(Plan, query_plan))?;
+        }
     } else if let Some(licensed_plan_id) = query_plan.licensed_plan.as_ref() {
-        biller
-            .cancel_licensed_subscription(licensed_plan_id)
-            .await
-            .map_err(resource_not_found_err!(Plan, query_plan))?;
+        if remote {
+            biller
+                .cancel_licensed_subscription(licensed_plan_id)
+                .await
+                .map_err(resource_not_found_err!(Plan, query_plan))?;
+        }
 
         if query_organization.license.is_some() {
             let organization_query = schema::organization::table

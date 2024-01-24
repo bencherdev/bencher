@@ -212,6 +212,7 @@ export interface JsonNewPlan {
 	level: PlanLevel;
 	entitlements?: Entitlements;
 	self_hosted?: Uuid;
+	remote?: boolean;
 }
 
 export interface JsonCustomer {

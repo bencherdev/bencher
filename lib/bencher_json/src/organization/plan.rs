@@ -20,6 +20,7 @@ pub struct JsonNewPlan {
     pub level: PlanLevel,
     pub entitlements: Option<Entitlements>,
     pub self_hosted: Option<OrganizationUuid>,
+    pub remote: Option<bool>,
 }
 
 #[typeshare::typeshare]
