@@ -15,13 +15,15 @@ import MicroVsMacro from "../../../chunks/benchmarking/pt/micro-vs-macro.mdx";
 import BenchmarkingRust from "../../../chunks/rust/pt/benchmarking-rust.mdx";
 import RustToolchainRustBenchCode from "../../../chunks/rust/bench/rust-toolchain-rust-bench-code.mdx";
 import RustToolchainRustBenchTree from "../../../chunks/rust/bench/rust-toolchain-rust-bench-tree.mdx";
-import FizzBuzzRefactorRust from "../../../chunks/rust/pt/fizz-buzz-refactor-rust.mdx";
+import FizzBuzzRefactorRust from "../../../chunks/rust/bench/pt/fizz-buzz-refactor-rust.mdx";
 import TestCreateRustBenchCode from "../../../chunks/rust/bench/test-crate-rust-bench-code.mdx"
 import BenchPlayGameRustBenchCode from "../../../chunks/rust/bench/bench-play-game-rust-bench-code.mdx";
 import BenchPlayGameRustBenchOutput from "../../../chunks/rust/bench/bench-play-game-rust-bench-output.mdx";
 import FizzBuzzFibonacciRust from "../../../chunks/rust/pt/fizz-buzz-fibonacci-rust.mdx";
+import PlayGameRustCode from "../../../chunks/rust/bench/play-game-rust-code.mdx";
 import BenchPlayGameFibonacciRustBenchOutput from "../../../chunks/rust/bench/bench-play-game-fibonacci-rust-bench-output.mdx";
 import FizzBuzzFibonacciOpenRust from "../../../chunks/rust/pt/fizz-buzz-fibonacci-open-rust.mdx";
+import FizzBuzzFibonacciOpenRustCode from "../../../chunks/rust/bench/fizz-buzz-fibonacci-open-rust-code.mdx";
 import TheEnd from "../../../chunks/benchmarking/pt/the-end.mdx";
 import OnFire from "../../../chunks/benchmarking/pt/on-fire.mdx";
 import BenchPlayGameOnFireRustBenchCode from "../../../chunks/rust/bench/bench-play-game-on-fire-rust-bench-code.mdx";
@@ -32,7 +34,7 @@ import BenchPlayGameFixRustBenchOutput from "../../../chunks/rust/bench/bench-pl
 import CatchInCi from "../../../chunks/benchmarking/pt/catch-in-ci.mdx";
 import CatchInCiRustBenchOutput from "../../../chunks/rust/bench/catch-in-ci-rust-bench-output.mdx";
 import CatchInCiPlot from "../../../chunks/benchmarking/pt/catch-in-ci-plot.mdx";
-import CatchInCiPlotRustBench from "../../../chunks/rust/bench/catch-in-ci-plot-rust-bench.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/rust/catch-in-ci-plot-rust-bench.mdx";
 import BencherFooter from "../../../chunks/learn/pt/bencher-footer.mdx";
 
 <Benchmarking />
@@ -101,7 +103,9 @@ Agora estamos prontos para fazer o benchmark de nosso código, execute `cargo be
 Finalmente, podemos descansar nossas cansadas cabeças de desenvolvedores...
 Brincadeira, nossos usuários querem um novo recurso!
 
-<FizzBuzzFibonacciRust />
+<FizzBuzzFibonacciRust>
+  <PlayGameRustCode />
+</FizzBuzzFibonacciRust>
 
 ## Benchmarking FizzBuzzFibonacci
 
@@ -116,7 +120,9 @@ No entanto, a diferença entre os dois jogos provavelmente está na faixa de 5x.
 Parece bom para mim! Especialmente por adicionarmos um recurso com um nome tão sofisticado como _Fibonacci_ ao nosso jogo.
 As crianças vão adorar!
 
-<FizzBuzzFibonacciOpenRust />
+<FizzBuzzFibonacciOpenRust>
+  <FizzBuzzFibonacciOpenRustCode />
+</FizzBuzzFibonacciOpenRust>
 
 <TheEnd />
 

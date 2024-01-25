@@ -1,5 +1,4 @@
 import FizzBuzzFibonacciOpenRules from "../../benchmarking/zh/fizz-buzz-fibonacci-open-rules.mdx";
-import FizzBuzzFibonacciOpenRustCode from "../fizz-buzz-fibonacci-open-rust-code.mdx";
 import FizzBuzzFibonacciOpenRustOutput from "../fizz-buzz-fibonacci-open-rust-output.mdx";
 import FizzBuzzFibonacciOpenRustOutputDefault from "../fizz-buzz-fibonacci-open-rust-output-default.mdx";
 
@@ -16,7 +15,7 @@ import FizzBuzzFibonacciOpenRustOutputDefault from "../fizz-buzz-fibonacci-open-
 为了让我们的游戏适应任何数字，我们需要接受一个命令行参数。
 将 `main` 函数更新为如下形式：
 
-<FizzBuzzFibonacciOpenRustCode />
+{ props.children }
 
 - 收集所有从命令行传递给我们游戏的参数（`args`）。
 - 获取传递给我们游戏的第一个参数，并将其解析为无符号整数 `i`。

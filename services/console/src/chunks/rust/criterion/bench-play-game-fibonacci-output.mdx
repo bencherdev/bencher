@@ -1,0 +1,24 @@
+```
+$ cargo bench
+   Compiling playground v0.0.1 (/home/bencher)
+    Finished bench [optimized] target(s) in 4.79s
+     Running unittests src/main.rs (target/release/deps/game-68f58c96f4025bd4)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/release/deps/game-043972c4132076a9)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running benches/play_game.rs (target/release/deps/play_game-e0857103eb02eb56)
+bench_play_game         time:   [20.067 µs 20.107 µs 20.149 µs]
+                        change: [+557.22% +568.69% +577.93%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 6 outliers among 100 measurements (6.00%)
+  4 (4.00%) high mild
+  2 (2.00%) high severe
+```

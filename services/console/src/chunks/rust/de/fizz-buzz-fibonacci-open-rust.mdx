@@ -1,5 +1,4 @@
 import FizzBuzzFibonacciOpenRules from "../../benchmarking/de/fizz-buzz-fibonacci-open-rules.mdx";
-import FizzBuzzFibonacciOpenRustCode from "../fizz-buzz-fibonacci-open-rust-code.mdx";
 import FizzBuzzFibonacciOpenRustOutput from "../fizz-buzz-fibonacci-open-rust-output.mdx";
 import FizzBuzzFibonacciOpenRustOutputDefault from "../fizz-buzz-fibonacci-open-rust-output-default.mdx";
 
@@ -16,7 +15,7 @@ Nein, wir sind auf zu neuen Fronten!
 Um unser Spiel für jede Zahl funktionieren zu lassen, werden wir ein Kommandozeilenargument akzeptieren müssen.
 Aktualisieren Sie die `main` Funktion, um so auszusehen:
 
-<FizzBuzzFibonacciOpenRustCode />
+{ props.children }
 
 - Sammeln Sie alle Argumente (`args`), die unserer Spiel von der Kommandozeile aus übergeben werden.
 - Nehmen Sie das erste Argument, das zu unserem Spiel übergeben wird, und analysieren Sie es als eine vorzeichenlose Ganzzahl `i`.

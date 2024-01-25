@@ -1,5 +1,4 @@
 import FizzBuzzFibonacciOpenRules from "../../benchmarking/ru/fizz-buzz-fibonacci-open-rules.mdx";
-import FizzBuzzFibonacciOpenRustCode from "../fizz-buzz-fibonacci-open-rust-code.mdx";
 import FizzBuzzFibonacciOpenRustOutput from "../fizz-buzz-fibonacci-open-rust-output.mdx";
 import FizzBuzzFibonacciOpenRustOutputDefault from "../fizz-buzz-fibonacci-open-rust-output-default.mdx";
 
@@ -16,7 +15,7 @@ import FizzBuzzFibonacciOpenRustOutputDefault from "../fizz-buzz-fibonacci-open-
 Чтобы наша игра работала с любым числом, нам нужно будет принять аргумент командной строки.
 Обновите функцию `main` так, чтобы она выглядела так:
 
-<FizzBuzzFibonacciOpenRustCode />
+{ props.children }
 
 - Собираем все аргументы (`args`), переданные нашей игре из командной строки.
 - Получаем первый аргумент, переданный нашей игре, и анализируем его как беззнаковое целое число `i`.

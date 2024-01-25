@@ -1,0 +1,15 @@
+[workspace]
+
+[package]
+name = "game"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "play_game"
+harness = false

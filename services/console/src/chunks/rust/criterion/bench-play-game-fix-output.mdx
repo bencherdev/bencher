@@ -1,0 +1,36 @@
+```
+$ cargo bench
+   Compiling playground v0.0.1 (/home/bencher)
+    Finished bench [optimized] target(s) in 4.79s
+     Running unittests src/main.rs (target/release/deps/game-68f58c96f4025bd4)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/release/deps/game-043972c4132076a9)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running benches/play_game.rs (target/release/deps/play_game-e0857103eb02eb56)
+bench_play_game         time:   [3.1201 µs 3.1772 µs 3.2536 µs]
+                        change: [-84.469% -84.286% -84.016%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 5 outliers among 100 measurements (5.00%)
+  1 (1.00%) high mild
+  4 (4.00%) high severe
+
+bench_play_game_100     time:   [24.460 ns 24.555 ns 24.650 ns]
+                        change: [-93.976% -93.950% -93.927%] (p = 0.00 < 0.05)
+                        Performance has improved.
+
+bench_play_game_1_000_000
+                        time:   [30.260 ns 30.403 ns 30.564 ns]
+                        change: [-100.000% -100.000% -100.000%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 4 outliers among 100 measurements (4.00%)
+  1 (1.00%) high mild
+  3 (3.00%) high severe
+```

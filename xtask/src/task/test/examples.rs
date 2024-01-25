@@ -14,6 +14,7 @@ pub struct Examples {
 #[derive(Debug, Clone, Copy)]
 pub enum Example {
     RustBench,
+    RustCriterion,
 }
 
 impl TryFrom<TaskExamples> for Examples {
@@ -37,6 +38,7 @@ impl From<TaskExample> for Example {
     fn from(example: TaskExample) -> Self {
         match example {
             TaskExample::RustBench => Self::RustBench,
+            TaskExample::RustCriterion => Self::RustCriterion,
         }
     }
 }
@@ -67,18 +69,21 @@ impl Example {
                     .status()?;
                 Ok(())
             },
+            Self::RustCriterion => Ok(()),
         }
     }
 
     pub fn dir(&self) -> &str {
         match self {
             Self::RustBench => "./examples/rust/bench",
+            Self::RustCriterion => "./examples/rust/criterion",
         }
     }
 
     pub fn cmd(&self) -> &str {
         match self {
             Self::RustBench => "cargo +nightly bench",
+            Self::RustCriterion => "cargo bench",
         }
     }
 }

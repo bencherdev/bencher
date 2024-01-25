@@ -1,7 +1,6 @@
 import FizzBuzzFibonacciRules from "../../benchmarking/pt/fizz-buzz-fibonacci-rules.mdx";
 import IsFibonacciNumberRustCode from "../is-fibonacci-number-rust-code.mdx";
 import FizzBuzzFibonacciRustCode from "../fizz-buzz-fibonacci-rust-code.mdx";
-import PlayGameRustCode from "../play-game-rust-code.mdx";
 
 ## Escreva FizzBuzzFibonacci em Rust
 
@@ -35,6 +34,6 @@ Agora precisaremos atualizar nossa função `fizz_buzz`:
 
 Como renomeamos `fizz_buzz` para `fizz_buzz_fibonacci`, também precisamos atualizar nossa função `play_game`:
 
-<PlayGameRustCode />
+{ props.children }
 
 Ambas as funções `main` e `bench_play_game` podem permanecer exatamente as mesmas.

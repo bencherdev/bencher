@@ -1,5 +1,4 @@
 import FizzBuzzFibonacciOpenRules from "../../benchmarking/ko/fizz-buzz-fibonacci-open-rules.mdx";
-import FizzBuzzFibonacciOpenRustCode from "../fizz-buzz-fibonacci-open-rust-code.mdx";
 import FizzBuzzFibonacciOpenRustOutput from "../fizz-buzz-fibonacci-open-rust-output.mdx";
 import FizzBuzzFibonacciOpenRustOutputDefault from "../fizz-buzz-fibonacci-open-rust-output-default.mdx";
 
@@ -16,7 +15,7 @@ import FizzBuzzFibonacciOpenRustOutputDefault from "../fizz-buzz-fibonacci-open-
 우리의 게임이 어떤 숫자든 작동하도록 하기 위해, 우리는 명령행 인자를 받아들일 필요가 있습니다.
 `main` 함수를 다음과 같이 업데이트합니다:
 
-<FizzBuzzFibonacciOpenRustCode />
+{ props.children }
 
 - 명령행에서 우리 게임에 전달된 모든 인자 (`args`)를 수집합니다.
 - 우리 게임에 전달된 첫 번째 인자를 부호 없는 정수 `i`로 파싱합니다.

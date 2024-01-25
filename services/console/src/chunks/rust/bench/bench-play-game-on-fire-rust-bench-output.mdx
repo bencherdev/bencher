@@ -1,11 +1,3 @@
-```rust
-#[bench]
-fn bench_play_game_100(b: &mut Bencher) {
-    b.iter(|| std::hint::black_box(play_game(100)));
-}
-
-#[bench]
-fn bench_play_game_1_000_000(b: &mut Bencher) {
-    b.iter(|| std::hint::black_box(play_game(1_000_000)));
-}
+```
+test benchmarks::bench_play_game_1_000_000 ... bench:   9,586,977 ns/iter (+/- 15,923)
 ```

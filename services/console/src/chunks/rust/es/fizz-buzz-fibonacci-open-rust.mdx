@@ -1,5 +1,4 @@
 import FizzBuzzFibonacciOpenRules from "../../benchmarking/es/fizz-buzz-fibonacci-open-rules.mdx";
-import FizzBuzzFibonacciOpenRustCode from "../fizz-buzz-fibonacci-open-rust-code.mdx";
 import FizzBuzzFibonacciOpenRustOutput from "../fizz-buzz-fibonacci-open-rust-output.mdx";
 import FizzBuzzFibonacciOpenRustOutputDefault from "../fizz-buzz-fibonacci-open-rust-output-default.mdx";
 
@@ -16,7 +15,7 @@ La nueva visión para nuestro juego es que sea abierto, ¡no más limitaciones e
 Para que nuestro juego funcione con cualquier número, necesitaremos aceptar un argumento de línea de comandos.
 Actualiza la función `main` para que se vea así:
 
-<FizzBuzzFibonacciOpenRustCode />
+{ props.children }
 
 - Recolecta todos los argumentos (`args`) pasados a nuestro juego desde la línea de comandos.
 - Obtén el primer argumento pasando a nuestro juego y analízalo como un entero sin signo `i`.

@@ -1,5 +1,4 @@
 import FizzBuzzFibonacciOpenRules from "../../benchmarking/fr/fizz-buzz-fibonacci-open-rules.mdx";
-import FizzBuzzFibonacciOpenRustCode from "../fizz-buzz-fibonacci-open-rust-code.mdx";
 import FizzBuzzFibonacciOpenRustOutput from "../fizz-buzz-fibonacci-open-rust-output.mdx";
 import FizzBuzzFibonacciOpenRustOutputDefault from "../fizz-buzz-fibonacci-open-rust-output-default.mdx";
 
@@ -16,7 +15,7 @@ Non, nous partons vers de nouveaux horizons!
 Pour faire fonctionner notre jeu pour n'importe quel nombre, nous devrons accepter un argument de ligne de commande.
 Mettez à jour la fonction `main` pour qu'elle ressemble à ceci :
 
-<FizzBuzzFibonacciOpenRustCode />
+{ props.children }
 
 - Collectez tous les arguments (`args`) passés à notre jeu depuis la ligne de commande.
 - Obtenez le premier argument passé à notre jeu et analysez-le comme un entier non signé `i`.

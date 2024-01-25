@@ -1,7 +1,6 @@
 import FizzBuzzFibonacciRules from "../../benchmarking/en/fizz-buzz-fibonacci-rules.mdx";
 import IsFibonacciNumberRustCode from "../is-fibonacci-number-rust-code.mdx";
 import FizzBuzzFibonacciRustCode from "../fizz-buzz-fibonacci-rust-code.mdx";
-import PlayGameRustCode from "../play-game-rust-code.mdx";
 
 ## Write FizzBuzzFibonacci in Rust
 
@@ -33,8 +32,8 @@ Now we will need to update our `fizz_buzz` function:
 - If the result from `is_fibonacci_number` is `true` then return `Fibonacci`.
 - If the result from `is_fibonacci_number` is `false` then perform the same `Fizz`, `Buzz`, `FizzBuzz`, or number logic returning the result.
 
-Because we rename `fizz_buzz` to `fizz_buzz_fibonacci` we also need to update our `play_game` function:
+Because we renamed `fizz_buzz` to `fizz_buzz_fibonacci` we also need to update our `play_game` function:
 
-<PlayGameRustCode />
+{ props.children }
 
 Both our `main` and `bench_play_game` functions can stay exactly the same.

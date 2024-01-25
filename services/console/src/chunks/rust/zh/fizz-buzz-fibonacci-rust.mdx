@@ -1,7 +1,6 @@
 import FizzBuzzFibonacciRules from "../../benchmarking/zh/fizz-buzz-fibonacci-rules.mdx";
 import IsFibonacciNumberRustCode from "../is-fibonacci-number-rust-code.mdx";
 import FizzBuzzFibonacciRustCode from "../fizz-buzz-fibonacci-rust-code.mdx";
-import PlayGameRustCode from "../play-game-rust-code.mdx";
 
 ## 用 Rust 编写 FizzBuzzFibonacci
 
@@ -35,6 +34,6 @@ import PlayGameRustCode from "../play-game-rust-code.mdx";
 
 因为我们将 `fizz_buzz` 重命名为 `fizz_buzz_fibonacci`，我们也需要更新我们的 `play_game` 功能：
 
-<PlayGameRustCode />
+{ props.children }
 
 我们的 `main` 和 `bench_play_game` 功能可以保持完全相同。

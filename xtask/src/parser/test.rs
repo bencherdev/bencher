@@ -29,6 +29,8 @@ pub struct TaskExamples {
 pub enum TaskExample {
     /// Rust libtest bench
     RustBench,
+    /// Rust Criterion
+    RustCriterion,
 }
 
 #[derive(Parser, Debug)]

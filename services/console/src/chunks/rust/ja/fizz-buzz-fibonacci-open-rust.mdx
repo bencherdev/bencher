@@ -1,5 +1,4 @@
 import FizzBuzzFibonacciOpenRules from "../../benchmarking/ja/fizz-buzz-fibonacci-open-rules.mdx";
-import FizzBuzzFibonacciOpenRustCode from "../fizz-buzz-fibonacci-open-rust-code.mdx";
 import FizzBuzzFibonacciOpenRustOutput from "../fizz-buzz-fibonacci-open-rust-output.mdx";
 import FizzBuzzFibonacciOpenRustOutputDefault from "../fizz-buzz-fibonacci-open-rust-output-default.mdx";
 
@@ -15,7 +14,7 @@ import FizzBuzzFibonacciOpenRustOutputDefault from "../fizz-buzz-fibonacci-open-
 我々のゲームが任意の数値で動作できるようにするため、コマンドライン引数を受け取る必要があります。
 `main`関数を以下のように更新してください：
 
-<FizzBuzzFibonacciOpenRustCode />
+{ props.children }
 
 - コマンドラインから我々のゲームに渡されたすべての引数（`args`）を収集します。
 - 我々のゲームに渡された最初の引数を取得し、それを符号なし整数`i`として解析します。

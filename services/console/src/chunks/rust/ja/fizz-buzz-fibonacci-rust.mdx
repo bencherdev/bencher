@@ -1,7 +1,6 @@
 import FizzBuzzFibonacciRules from "../../benchmarking/ja/fizz-buzz-fibonacci-rules.mdx";
 import IsFibonacciNumberRustCode from "../is-fibonacci-number-rust-code.mdx";
 import FizzBuzzFibonacciRustCode from "../fizz-buzz-fibonacci-rust-code.mdx";
-import PlayGameRustCode from "../play-game-rust-code.mdx";
 
 ## RustでFizzBuzzFibonacciを書く
 
@@ -33,6 +32,6 @@ import PlayGameRustCode from "../play-game-rust-code.mdx";
 
 `fizz_buzz` を `fizz_buzz_fibonacci` に変更するため、 `play_game` 関数も更新する必要があります：
 
-<PlayGameRustCode />
+{ props.children }
 
 私たちの `main` と `bench_play_game` の両関数は全く同じままで構いません。

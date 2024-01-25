@@ -1,0 +1,40 @@
+```
+$ bencher run --project game "cargo bench"
+    Finished bench [optimized] target(s) in 0.07s
+     Running unittests src/lib.rs (target/release/deps/game-13f4bad779fbfde4)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/release/deps/game-043972c4132076a9)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running benches/play_game.rs (target/release/deps/play_game-e0857103eb02eb56)
+Gnuplot not found, using plotters backend
+bench_play_game         time:   [3.0713 µs 3.0902 µs 3.1132 µs]
+Found 16 outliers among 100 measurements (16.00%)
+  3 (3.00%) high mild
+  13 (13.00%) high severe
+
+bench_play_game_100     time:   [23.938 ns 23.970 ns 24.009 ns]
+Found 15 outliers among 100 measurements (15.00%)
+  5 (5.00%) high mild
+  10 (10.00%) high severe
+
+bench_play_game_1_000_000
+                        time:   [30.004 ns 30.127 ns 30.279 ns]
+Found 5 outliers among 100 measurements (5.00%)
+  1 (1.00%) high mild
+  4 (4.00%) high severe
+
+Bencher New Report:
+...
+View results:
+- benchmarks::bench_play_game (Latency): https://bencher.dev/console/projects/game/perf?measures=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=077449e5-5b45-4c00-bdfb-3a277413180d&start_time=1697224006000&end_time=1699816009000&upper_boundary=true
+- benchmarks::bench_play_game_100 (Latency): https://bencher.dev/console/projects/game/perf?measures=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=96508869-4fa2-44ac-8e60-b635b83a17b7&start_time=1697224006000&end_time=1699816009000&upper_boundary=true
+- benchmarks::bench_play_game_1_000_000 (Latency): https://bencher.dev/console/projects/game/perf?measures=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=ff014217-4570-42ea-8813-6ed0284500a4&start_time=1697224006000&end_time=1699816009000&upper_boundary=true
+```
