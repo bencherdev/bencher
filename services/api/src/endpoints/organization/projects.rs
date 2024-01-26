@@ -7,6 +7,7 @@ use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
+use slog::Logger;
 
 use crate::{
     context::ApiContext,
@@ -141,6 +142,7 @@ pub async fn org_project_post(
 ) -> Result<ResponseCreated<JsonProject>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(
+        &rqctx.log,
         rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
@@ -151,6 +153,7 @@ pub async fn org_project_post(
 }
 
 async fn post_inner(
+    log: &Logger,
     context: &ApiContext,
     path_params: OrgProjectsParams,
     json_project: JsonNewProject,
@@ -162,7 +165,7 @@ async fn post_inner(
 
     // Check project visibility
     #[cfg(not(feature = "plus"))]
-    QueryProject::is_public(json_project.visibility)?;
+    QueryProject::is_visibility_public(json_project.visibility)?;
     #[cfg(feature = "plus")]
     crate::model::organization::plan::PlanKind::new(
         conn,
@@ -240,6 +243,9 @@ async fn post_inner(
     let measure_id = QueryMeasure::get_id(conn, insert_measure.uuid)?;
     // Add a `throughput` threshold to the project
     InsertThreshold::lower_boundary(conn, query_project.id, branch_id, testbed_id, measure_id)?;
+
+    #[cfg(feature = "plus")]
+    context.update_index(log, &query_project).await;
 
     query_project.into_json(conn)
 }

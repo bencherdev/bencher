@@ -4,13 +4,15 @@ use bencher_billing::Biller;
 use bencher_github::GitHub;
 use bencher_json::{
     is_bencher_cloud,
-    system::config::{JsonPlus, JsonStats},
+    system::config::{JsonCloud, JsonPlus, JsonStats},
 };
 use bencher_license::Licensor;
 use chrono::NaiveTime;
 use once_cell::sync::Lazy;
 use tokio::runtime::Handle;
 use url::Url;
+
+use crate::context::Indexer;
 
 // Run at 03:07:22 UTC by default (offset 11,242 seconds)
 #[allow(clippy::expect_used)]
@@ -21,6 +23,7 @@ const DEFAULT_STATS_ENABLED: bool = true;
 
 pub struct Plus {
     pub github: Option<GitHub>,
+    pub indexer: Option<Indexer>,
     pub stats: StatsSettings,
     pub biller: Option<Biller>,
     pub licensor: Licensor,
@@ -36,6 +39,8 @@ pub enum PlusError {
     BencherCloud(Url),
     #[error("Failed to setup billing: {0}")]
     Billing(bencher_billing::BillingError),
+    #[error("Failed to setup Google Index: {0}")]
+    GoogleIndex(bencher_google_index::GoogleIndexError),
 }
 
 impl Plus {
@@ -43,6 +48,7 @@ impl Plus {
         let Some(plus) = plus else {
             return Ok(Self {
                 github: None,
+                indexer: None,
                 stats: StatsSettings::default(),
                 biller: None,
                 licensor: Licensor::self_hosted().map_err(PlusError::LicenseSelfHosted)?,
@@ -55,9 +61,16 @@ impl Plus {
 
         let stats = plus.stats.map(Into::into).unwrap_or_default();
 
-        let Some(cloud) = plus.cloud else {
+        let Some(JsonCloud {
+            billing,
+            license_pem,
+            index,
+            ..
+        }) = plus.cloud
+        else {
             return Ok(Self {
                 github,
+                indexer: None,
                 stats,
                 biller: None,
                 licensor: Licensor::self_hosted().map_err(PlusError::LicenseSelfHosted)?,
@@ -69,17 +82,19 @@ impl Plus {
             return Err(PlusError::BencherCloud(endpoint.clone()));
         }
 
+        let indexer = index.map(TryInto::try_into).transpose()?;
+
         let biller = Some(
             tokio::task::block_in_place(move || {
-                Handle::current().block_on(async { Biller::new(cloud.billing).await })
+                Handle::current().block_on(async { Biller::new(billing).await })
             })
             .map_err(PlusError::Billing)?,
         );
-        let licensor =
-            Licensor::bencher_cloud(&cloud.license_pem).map_err(PlusError::LicenseCloud)?;
+        let licensor = Licensor::bencher_cloud(&license_pem).map_err(PlusError::LicenseCloud)?;
 
         Ok(Self {
             github,
+            indexer,
             stats,
             biller,
             licensor,

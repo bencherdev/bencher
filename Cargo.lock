@@ -856,6 +856,7 @@ dependencies = [
  "bencher_billing",
  "bencher_boundary",
  "bencher_github",
+ "bencher_google_index",
  "bencher_json",
  "bencher_license",
  "bencher_logger",
@@ -992,7 +993,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bencher_google"
+name = "bencher_google_index"
 version = "0.4.1"
 dependencies = [
  "http 0.2.11",
@@ -7190,7 +7191,7 @@ dependencies = [
  "async-openai",
  "bencher_api",
  "bencher_cli",
- "bencher_google",
+ "bencher_google_index",
  "bencher_json",
  "bencher_license",
  "bencher_logger",

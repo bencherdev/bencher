@@ -58,8 +58,12 @@ impl QueryProject {
     fn_get!(project, ProjectId);
     fn_get_uuid!(project, ProjectId, ProjectUuid);
 
+    pub fn is_public(&self) -> bool {
+        self.visibility.is_public()
+    }
+
     #[cfg(not(feature = "plus"))]
-    pub fn is_public(visibility: Option<Visibility>) -> Result<(), HttpError> {
+    pub fn is_visibility_public(visibility: Option<Visibility>) -> Result<(), HttpError> {
         visibility
             .unwrap_or_default()
             .is_public()
@@ -91,7 +95,7 @@ impl QueryProject {
         let query_project = Self::from_resource_id(conn, project)?;
         // Check to see if the project is public
         // If so, anyone can access it
-        if query_project.visibility.is_public() {
+        if query_project.is_public() {
             Ok(query_project)
         } else if let Some(auth_user) = auth_user {
             // If there is an `AuthUser` then validate access
@@ -108,6 +112,25 @@ impl QueryProject {
                 "Project ({query_project:?}) is not public and requires authentication.\n{BEARER_TOKEN_FORMAT}",
             )))
         }
+    }
+
+    #[cfg(feature = "plus")]
+    pub fn perf_url(&self, endpoint: &url::Url) -> Result<Option<url::Url>, HttpError> {
+        if !self.is_public() {
+            return Ok(None);
+        }
+        let path = format!("/perf/{}", self.slug);
+        endpoint
+            .join(&path)
+            .map_err(|e| {
+                crate::error::issue_error(
+                    http::StatusCode::INTERNAL_SERVER_ERROR,
+                    "Failed to create new perf URL.",
+                    &format!("Failed to create new perf URL for {endpoint} at {path}",),
+                    e,
+                )
+            })
+            .map(Some)
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonProject, HttpError> {

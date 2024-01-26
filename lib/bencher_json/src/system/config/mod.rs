@@ -19,6 +19,7 @@ pub use logging::{IfExists, JsonLogging, LogLevel, ServerLog};
 pub use plus::{
     cloud::{
         billing::{JsonBilling, JsonProduct, JsonProducts},
+        index::{JsonGoogleIndex, JsonIndex},
         JsonCloud,
     },
     stats::JsonStats,

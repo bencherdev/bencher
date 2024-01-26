@@ -190,6 +190,7 @@ fn into_context(
         stats,
         biller,
         licensor,
+        indexer,
     } = Plus::new(&endpoint, plus).map_err(ConfigTxError::Plus)?;
 
     debug!(&log, "Creating API context");
@@ -212,6 +213,8 @@ fn into_context(
         biller,
         #[cfg(feature = "plus")]
         licensor,
+        #[cfg(feature = "plus")]
+        indexer,
     })
 }
 

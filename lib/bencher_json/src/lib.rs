@@ -91,9 +91,15 @@ pub static DEVEL_BENCHER_URL: Lazy<url::Url> = Lazy::new(|| {
         .parse()
         .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{DEVEL_BENCHER_URL_STR}\": {e}"))
 });
+#[allow(clippy::panic)]
+pub static PROD_BENCHER_URL: Lazy<url::Url> = Lazy::new(|| {
+    PROD_BENCHER_URL_STR
+        .parse()
+        .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{PROD_BENCHER_URL_STR}\": {e}"))
+});
 #[cfg(feature = "plus")]
 pub fn is_bencher_cloud(url: &url::Url) -> bool {
-    *url == *BENCHER_URL || *url == *DEVEL_BENCHER_URL
+    *url == *BENCHER_URL || *url == *DEVEL_BENCHER_URL || *url == *PROD_BENCHER_URL
 }
 
 // Dynamic and/or Private Ports (49152-65535)

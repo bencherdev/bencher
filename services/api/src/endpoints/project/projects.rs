@@ -7,6 +7,7 @@ use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
+use slog::Logger;
 
 use crate::{
     context::ApiContext,
@@ -190,6 +191,7 @@ pub async fn project_patch(
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let context = rqctx.context();
     let json = patch_inner(
+        &rqctx.log,
         context,
         path_params.into_inner(),
         body.into_inner(),
@@ -200,6 +202,7 @@ pub async fn project_patch(
 }
 
 async fn patch_inner(
+    log: &Logger,
     context: &ApiContext,
     path_params: ProjectParams,
     json_project: JsonUpdateProject,
@@ -218,7 +221,7 @@ async fn patch_inner(
 
     // Check project visibility
     #[cfg(not(feature = "plus"))]
-    QueryProject::is_public(json_project.visibility())?;
+    QueryProject::is_visibility_public(json_project.visibility())?;
     #[cfg(feature = "plus")]
     crate::model::organization::plan::PlanKind::new_for_project(
         conn,
@@ -236,9 +239,18 @@ async fn patch_inner(
             (&query_project, &json_project)
         ))?;
 
-    QueryProject::get(conn, query_project.id)
-        .map_err(resource_not_found_err!(Project, query_project))?
-        .into_json(conn)
+    let new_query_project = QueryProject::get(conn, query_project.id)
+        .map_err(resource_not_found_err!(Project, query_project))?;
+
+    #[cfg(feature = "plus")]
+    if query_project.slug == new_query_project.slug {
+        context.update_index(log, &new_query_project).await;
+    } else {
+        context.delete_index(log, &query_project).await;
+        context.update_index(log, &new_query_project).await;
+    }
+
+    new_query_project.into_json(conn)
 }
 
 #[endpoint {
@@ -252,11 +264,18 @@ pub async fn project_delete(
     path_params: Path<ProjectParams>,
 ) -> Result<ResponseDeleted, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    delete_inner(
+        &rqctx.log,
+        rqctx.context(),
+        path_params.into_inner(),
+        &auth_user,
+    )
+    .await?;
     Ok(Delete::auth_response_deleted())
 }
 
 async fn delete_inner(
+    log: &Logger,
     context: &ApiContext,
     path_params: ProjectParams,
     auth_user: &AuthUser,
@@ -275,6 +294,9 @@ async fn delete_inner(
     diesel::delete(schema::project::table.filter(schema::project::id.eq(query_project.id)))
         .execute(conn)
         .map_err(resource_conflict_err!(Project, query_project))?;
+
+    #[cfg(feature = "plus")]
+    context.delete_index(log, &query_project).await;
 
     Ok(())
 }

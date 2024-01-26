@@ -10,7 +10,7 @@ plus = [
     "bencher_json/plus",
     "dep:async-openai",
     "dep:bencher_license",
-    "dep:bencher_google",
+    "dep:bencher_google_index",
     "dep:notify-rust",
 ]
 
@@ -21,7 +21,7 @@ bencher_api.workspace = true
 bencher_cli.workspace = true
 bencher_json = { workspace = true, features = ["lite"] }
 bencher_license = { workspace = true, optional = true }
-bencher_google = { workspace = true, optional = true }
+bencher_google_index = { workspace = true, optional = true }
 bencher_logger.workspace = true
 camino.workspace = true
 chrono.workspace = true

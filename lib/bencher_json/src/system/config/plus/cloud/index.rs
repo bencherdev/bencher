@@ -6,12 +6,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonIndex {
-    pub google: Option<JsonIndexGoogle>,
+    pub google: JsonGoogleIndex,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonIndexGoogle {
+pub struct JsonGoogleIndex {
     pub private_key: Secret,
     pub client_email: NonEmpty,
     pub token_uri: NonEmpty,
@@ -23,7 +23,7 @@ impl Sanitize for JsonIndex {
     }
 }
 
-impl Sanitize for JsonIndexGoogle {
+impl Sanitize for JsonGoogleIndex {
     fn sanitize(&mut self) {
         self.private_key.sanitize();
     }

@@ -14,12 +14,12 @@ use url::Url;
 const GOOGLE_INDEXING_SCOPE: &str = "https://www.googleapis.com/auth/indexing";
 const GOOGLE_INDEXING_API_URL: &str = "https://indexing.googleapis.com/v3/urlNotifications:publish";
 
-pub struct Google {
+pub struct GoogleIndex {
     inner: CachedTokenProvider<ServiceAccountProviderInner>,
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum GoogleError {
+pub enum GoogleIndexError {
     #[error("Failed to deserialize service account info: {0}")]
     Deserialize(tame_oauth::Error),
     #[error("Failed to create service account provider: {0}")]
@@ -48,23 +48,23 @@ pub enum GoogleError {
     BadIndexResponse(reqwest::Response),
 }
 
-impl Google {
+impl GoogleIndex {
     pub fn new(
         private_key: String,
         client_email: String,
         token_uri: String,
-    ) -> Result<Self, GoogleError> {
+    ) -> Result<Self, GoogleIndexError> {
         let info = ServiceAccountInfo {
             private_key,
             client_email,
             token_uri,
         };
         Ok(Self {
-            inner: ServiceAccountProvider::new(info).map_err(GoogleError::CreateProvider)?,
+            inner: ServiceAccountProvider::new(info).map_err(GoogleIndexError::CreateProvider)?,
         })
     }
 
-    pub async fn get_token(&self, scopes: &[&str]) -> Result<Token, GoogleError> {
+    pub async fn get_token(&self, scopes: &[&str]) -> Result<Token, GoogleIndexError> {
         match self.inner.get_token(scopes) {
             // Attempt to get a token, since we have never used this accessor
             // before, it's guaranteed that we will need to make an HTTPS
@@ -87,7 +87,7 @@ impl Google {
                 // This will always be a POST, but for completeness sake...
                 let builder = match parts.method {
                     http::Method::POST => client.post(&uri),
-                    method => return Err(GoogleError::BadMethod(method)),
+                    method => return Err(GoogleIndexError::BadMethod(method)),
                 };
 
                 // Build the full request from the headers and body that were
@@ -96,13 +96,13 @@ impl Google {
                     .headers(parts.headers)
                     .body(body)
                     .build()
-                    .map_err(GoogleError::BuildRequest)?;
+                    .map_err(GoogleIndexError::BuildRequest)?;
 
                 // Send the actual request
                 let response = client
                     .execute(request)
                     .await
-                    .map_err(GoogleError::BadRequest)?;
+                    .map_err(GoogleIndexError::BadRequest)?;
 
                 let mut builder = http::Response::builder()
                     .status(response.status())
@@ -110,7 +110,7 @@ impl Google {
 
                 let headers = builder
                     .headers_mut()
-                    .ok_or(GoogleError::BadResponseHeaders)?;
+                    .ok_or(GoogleIndexError::BadResponseHeaders)?;
 
                 // Unfortunately http doesn't expose a way to just use
                 // an existing HeaderMap, so we have to copy them :(
@@ -124,8 +124,10 @@ impl Google {
                 let buffer = response
                     .bytes()
                     .await
-                    .map_err(GoogleError::BadResponseBytes)?;
-                let response = builder.body(buffer).map_err(GoogleError::BadResponseBody)?;
+                    .map_err(GoogleIndexError::BadResponseBytes)?;
+                let response = builder
+                    .body(buffer)
+                    .map_err(GoogleIndexError::BadResponseBody)?;
 
                 // Tell our accessor about the response, also passing
                 // the scope_hash for the scopes we initially requested,
@@ -133,24 +135,28 @@ impl Google {
                 // to use a cached token, at least until it expires (~1 hour)
                 self.inner
                     .parse_token_response(scope_hash, response)
-                    .map_err(GoogleError::ParseToken)
+                    .map_err(GoogleIndexError::ParseToken)
             },
             // Retrieving a token for the same scopes for which a token has been acquired
             // will use the cached token until it expires
             Ok(TokenOrRequest::Token(token)) => Ok(token),
-            Err(e) => Err(GoogleError::CreateToken(e)),
+            Err(e) => Err(GoogleIndexError::CreateToken(e)),
         }
     }
 
-    pub async fn url_updated(&self, url: Url) -> Result<(), GoogleError> {
+    pub async fn url_updated(&self, url: Url) -> Result<(), GoogleIndexError> {
         self.index_url(url, JsonIndexingType::UrlUpdated).await
     }
 
-    pub async fn url_deleted(&self, url: Url) -> Result<(), GoogleError> {
+    pub async fn url_deleted(&self, url: Url) -> Result<(), GoogleIndexError> {
         self.index_url(url, JsonIndexingType::UrlDeleted).await
     }
 
-    async fn index_url(&self, url: Url, index_type: JsonIndexingType) -> Result<(), GoogleError> {
+    async fn index_url(
+        &self,
+        url: Url,
+        index_type: JsonIndexingType,
+    ) -> Result<(), GoogleIndexError> {
         let token = self.get_token(&[GOOGLE_INDEXING_SCOPE]).await?;
         let client = reqwest::Client::new();
         let json_indexing = JsonIndexing {
@@ -158,25 +164,25 @@ impl Google {
             r#type: index_type,
         };
         let json_indexing_str =
-            serde_json::to_string(&json_indexing).map_err(GoogleError::BadIndex)?;
+            serde_json::to_string(&json_indexing).map_err(GoogleIndexError::BadIndex)?;
         let response = client
             .post(GOOGLE_INDEXING_API_URL)
             .bearer_auth(token.access_token)
             .body(json_indexing_str)
             .send()
             .await
-            .map_err(GoogleError::BadIndexRequest)?;
+            .map_err(GoogleIndexError::BadIndexRequest)?;
         // https://developers.google.com/search/apis/indexing-api/v3/core-errors
         response
             .status()
             .is_success()
             .then_some(())
-            .ok_or_else(|| GoogleError::BadIndexResponse(response))
+            .ok_or_else(|| GoogleIndexError::BadIndexResponse(response))
     }
 }
 
-impl FromStr for Google {
-    type Err = GoogleError;
+impl FromStr for GoogleIndex {
+    type Err = GoogleIndexError;
 
     fn from_str(key_data: &str) -> Result<Self, Self::Err> {
         // https://github.com/EmbarkStudios/tame-oauth/blob/main/examples/svc_account.rs
@@ -184,7 +190,7 @@ impl FromStr for Google {
             private_key,
             client_email,
             token_uri,
-        } = ServiceAccountInfo::deserialize(key_data).map_err(GoogleError::Deserialize)?;
+        } = ServiceAccountInfo::deserialize(key_data).map_err(GoogleIndexError::Deserialize)?;
         Self::new(private_key, client_email, token_uri)
     }
 }
@@ -212,7 +218,7 @@ mod tests {
     #[ignore]
     async fn test_google() {
         let service_key = std::fs::read_to_string("google.json").unwrap();
-        let google = Google::from_str(&service_key).unwrap();
+        let google = GoogleIndex::from_str(&service_key).unwrap();
         let test_url_str = "https://bencher.dev/perf/save-walter-white-3250590663";
         let test_url = Url::parse(test_url_str).unwrap();
         google.url_updated(test_url.clone()).await.unwrap();

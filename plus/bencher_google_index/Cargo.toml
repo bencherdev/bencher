@@ -1,5 +1,5 @@
 [package]
-name = "bencher_google"
+name = "bencher_google_index"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true

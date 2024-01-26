@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_google::Google;
+use bencher_google_index::GoogleIndex;
 
 use crate::parser::TaskSearchEngine;
 
@@ -34,8 +34,8 @@ impl SearchEngine {
         }
     }
 
-    fn google() -> anyhow::Result<Google> {
+    fn google() -> anyhow::Result<GoogleIndex> {
         let service_key = std::fs::read_to_string("./plus/bencher_google/google.json")?;
-        Google::from_str(&service_key).map_err(Into::into)
+        GoogleIndex::from_str(&service_key).map_err(Into::into)
     }
 }
