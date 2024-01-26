@@ -5,6 +5,9 @@ heading: "Adaptadores de Ferramenta de Benchmark"
 sortOrder: 3
 ---
 
+import BmfExample from "../../../chunks/explanation/bmf-example.mdx";
+import BmfSchema from "../../../chunks/explanation/bmf-schema.mdx";
+
 Os adaptadores convertem a saída da ferramenta de benchmark em JSON padronizado, no Formato de Métrica do Bencher (BMF).
 Os adaptadores são executados no servidor API quando um novo relatório é recebido.
 Veja a [visão geral do benchmarking](/pt/docs/explanation/benchmarking/) para uma explicação mais aprofundada.
@@ -37,17 +40,7 @@ O Adaptador JSON (`json`) espera um JSON no formato BMF.
 
 Exemplo de BMF:
 
-```
-{
-    "benchmark_name": {
-        "latency": {
-            value: 88.0,
-            lower_value: 87.42,
-            upper_value: 88.88
-        }
-    }
-}
-```
+<BmfExample />
 
 Neste exemplo, a chave `benchmark_name` seria o nome de um benchmark.
 Os nomes do benchmark podem ser qualquer string não vazia de até 1024 caracteres.
@@ -70,7 +63,7 @@ então você pode usar o subcomando <code><a href="/pt/docs/explanation/bencher-
 Isso funciona tanto com um comando de benchmark (ex: `bencher run "bencher mock > results.json" --file results.json`)
 quanto sem um comando de benchmark (ex: `bencher mock > results.json && bencher run --file results.json`).
 
-<br/>
+<BmfSchema />
 
 > 🐰 Nota: O subcomando CLI `bencher mock` gera Métricas BMF falsas.
 

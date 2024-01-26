@@ -5,6 +5,9 @@ heading: "Adaptadores de Arnés de Referencia"
 sortOrder: 3
 ---
 
+import BmfExample from "../../../chunks/explanation/bmf-example.mdx";
+import BmfSchema from "../../../chunks/explanation/bmf-schema.mdx";
+
 Los adaptadores convierten la salida del arnés de referencia en JSON estandarizado, Formato de Métrica Bencher (BMF).
 Los adaptadores se ejecutan en el servidor de la API cuando se recibe un nuevo informe.
 Vea la [descripción general de la evaluación comparativa](/es/docs/explanation/benchmarking/) para obtener una explicación más detallada.
@@ -36,17 +39,7 @@ Es perfecto para integrar arneses de referencia personalizados con Bencher.
 
 Ejemplo de BMF:
 
-```
-{
-    "benchmark_name": {
-        "latency": {
-            value: 88.0,
-            lower_value: 87.42,
-            upper_value: 88.88
-        }
-    }
-}
-```
+<BmfExample />
 
 En este ejemplo, la clave `benchmark_name` sería el nombre de una referencia.
 Los nombres de las referencias pueden ser cualquier cadena no vacía de hasta 1024 caracteres.
@@ -69,7 +62,7 @@ entonces puedes usar el subcomando CLI de <code><a href="/es/docs/explanation/be
 Esto funciona tanto con un comando de referencia (ejemplo: `bencher run "bencher mock > results.json" --file results.json`)
 y sin un comando de referencia (ejemplo: `bencher mock > results.json && bencher run --file results.json`).
 
-<br/>
+<BmfSchema />
 
 > 🐰 Nota: El subcomando de la CLI `bencher mock` genera Metrics de BMF simuladas.
 

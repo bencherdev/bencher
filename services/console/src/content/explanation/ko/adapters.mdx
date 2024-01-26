@@ -5,6 +5,9 @@ heading: "벤치마크 하네스 어댑터"
 sortOrder: 3
 ---
 
+import BmfExample from "../../../chunks/explanation/bmf-example.mdx";
+import BmfSchema from "../../../chunks/explanation/bmf-schema.mdx";
+
 어댑터는 벤치마크 하네스 출력을 표준화된 JSON, Bencher Metric Format (BMF)로 변환합니다.
 어댑터는 새 보고서가 수신되었을 때 API 서버에서 실행됩니다.
 더 깊은 설명을 위해 [벤치마크 개요](/ko/docs/explanation/benchmarking/)를 참조하세요.
@@ -38,17 +41,7 @@ JSON 어댑터(`json`)는 BMF JSON을 기대합니다.
 
 BMF 예시:
 
-```
-{
-    "benchmark_name": {
-        "latency": {
-            value: 88.0,
-            lower_value: 87.42,
-            upper_value: 88.88
-        }
-    }
-}
-```
+<BmfExample />
 
 이 예시에서, 키 `benchmark_name`은 벤치마크의 이름이 될 것입니다.
 벤치마크 이름은 1024자까지의 비어있지 않은 문자열이 될 수 있습니다.
@@ -70,7 +63,7 @@ Measure 객체는 최대 세 가지 측정치를 포함하는 Metric을 포함�
 그 파일 경로를 지정하기 위해 선택적 `--file` 인수를 사용하여 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드를 사용할 수 있습니다.
 이것은 벤치마크 커맨드(ex: `bencher run "bencher mock > results.json" --file results.json`)와 벤치마크 커맨드 없이도 동작합니다(ex: `bencher mock > results.json && bencher run --file results.json`).
 
-<br/>
+<BmfSchema />
 
 > 🐰 참고: `bencher mock` CLI 서브커맨드는 모의 BMF 메트릭을 생성합니다.
 

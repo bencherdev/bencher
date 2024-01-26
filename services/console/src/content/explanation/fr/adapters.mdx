@@ -5,6 +5,9 @@ heading: "Adaptateurs de Harnais de Benchmark"
 sortOrder: 3
 ---
 
+import BmfExample from "../../../chunks/explanation/bmf-example.mdx";
+import BmfSchema from "../../../chunks/explanation/bmf-schema.mdx";
+
 Les adaptateurs transforment la sortie du harnais de benchmark en JSON standardisé, Format de Métrique Bencher (BMF).
 Les adaptateurs s'exécutent sur le serveur API lorsqu'un nouveau rapport est reçu.
 Voir l'[aperçu du benchmarking](/fr/docs/explanation/benchmarking/) pour une explication plus approfondie.
@@ -38,17 +41,7 @@ Il est parfait pour intégrer des harnais de benchmark personnalisés avec Bench
 
 Exemple de BMF :
 
-```
-{
-    "nom_du_benchmark": {
-        "latence": {
-            value: 88.0,
-            lower_value: 87.42,
-            upper_value: 88.88
-        }
-    }
-}
-```
+<BmfExample />
 
 Dans cet exemple, la clé `nom_du_benchmark` serait le nom d'un benchmark.
 Les noms de benchmark peuvent être n'importe quelle chaîne non vide jusqu'à 1024 caractères.
@@ -71,7 +64,7 @@ alors vous pouvez utiliser la sous-commande CLI <code><a href="/fr/docs/explanat
 Cela fonctionne à la fois avec une commande de benchmark (ex : `bencher run "bencher mock > results.json" --file results.json`)
 et sans une commande de benchmark (ex : `bencher mock > results.json && bencher run --file results.json`).
 
-<br/>
+<BmfSchema />
 
 > 🐰 Remarque: La sous-commande CLI `bencher mock` génère des métriques BMF fictives.
 

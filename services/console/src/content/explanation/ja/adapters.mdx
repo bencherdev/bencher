@@ -5,6 +5,9 @@ heading: "ベンチマークハーネスアダプター"
 sortOrder: 3
 ---
 
+import BmfExample from "../../../chunks/explanation/bmf-example.mdx";
+import BmfSchema from "../../../chunks/explanation/bmf-schema.mdx";
+
 アダプターは、ベンチマークハーネスの出力を標準化されたJSON、Bencherメトリックフォーマット（BMF）に変換します。
 アダプターは、新しいレポートが受け取られたときにAPIサーバー上で実行されます。
 より深い説明のために、[ベンチマークの概観](/ja/docs/explanation/benchmarking/)を参照してください。
@@ -37,17 +40,7 @@ Bencherとカスタムベンチマークハーネスを統合するのに最適�
 
 BMFの例です：
 
-```
-{
-    "benchmark_name": {
-        "latency": {
-            value: 88.0,
-            lower_value: 87.42,
-            upper_value: 88.88
-        }
-    }
-}
-```
+<BmfExample />
 
 この例では、キー`benchmark_name`はベンチマークの名前になります。
 ベンチマークの名前は、1024文字までの非空の文字列が使えます。
@@ -66,7 +59,7 @@ Measure オブジェクトには、最大3つの測定値が含まれていま�
 もしBMF JSONがファイルに保存されているなら、そのファイルのパスを指定するためにオプションの`--file`引数を付けた<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用できます。
 ベンチマークコマンドにも（例：`bencher run "bencher mock > results.json" --file results.json`）、ベンチマークコマンドなしにも（例：`bencher mock > results.json && bencher run --file results.json`）対応します。
 
-<br/>
+<BmfSchema />
 
 > 🐰 メモ: `bencher mock` CLIサブコマンドはモックBMFメトリクスを生成します。
 

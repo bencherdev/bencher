@@ -5,6 +5,9 @@ heading: "基准测试程序适配器"
 sortOrder: 3
 ---
 
+import BmfExample from "../../../chunks/explanation/bmf-example.mdx";
+import BmfSchema from "../../../chunks/explanation/bmf-schema.mdx";
+
 适配器将基准测试程序的输出转换为标准化的JSON，Bencher度量格式（BMF）。
 当接收到新报告时，适配器会在API服务器上运行。
 查看[基准测试概述](/zh/docs/explanation/benchmarking/)以便更深入地理解。
@@ -38,17 +41,7 @@ JSON适配器(`json`)期待BMF JSON。
 
 BMF的例子：
 
-```
-{
-    "benchmark_name": {
-        "latency": {
-            value: 88.0,
-            lower_value: 87.42,
-            upper_value: 88.88
-        }
-    }
-}
-```
+<BmfExample />
 
 在这个例子中，键`benchmark_name`将是一个基准测试的名称。
 基准测试的名字可以是任何长度不超过1024个字符的非空字符串。
@@ -71,7 +64,7 @@ BMF的例子：
 这对于具有基准测试命令（例如：`bencher run "bencher mock > results.json" --file results.json`）
 和没有基准测试命令的情况都适用（例如：`bencher mock > results.json && bencher run --file results.json`）。
 
-<br/>
+<BmfSchema />
 
 > 🐰 注意：`bencher mock` CLI子命令会生成模拟BMF度量值。
 

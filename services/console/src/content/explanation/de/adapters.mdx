@@ -5,6 +5,9 @@ heading: "Benchmark-Harness-Adapter"
 sortOrder: 3
 ---
 
+import BmfExample from "../../../chunks/explanation/bmf-example.mdx";
+import BmfSchema from "../../../chunks/explanation/bmf-schema.mdx";
+
 Adapter konvertieren die Ausgabe von Benchmark-Harnesses in standardisiertes JSON, das Bencher-Messformat (BMF).
 Die Adapter laufen auf dem API-Server, wenn ein neuer Bericht empfangen wird.
 Eine ausführlichere Erklärung finden Sie in der [Benchmarking-Übersicht](/de/docs/explanation/benchmarking/).
@@ -38,17 +41,7 @@ Er ist perfekt für die Integration von benutzerdefinierten Benchmark-Harnesses 
 
 Beispiel für BMF:
 
-```
-{
-    "benchmark_name": {
-        "latency": {
-            value: 88.0,
-            lower_value: 87.42,
-            upper_value: 88.88
-        }
-    }
-}
-```
+<BmfExample />
 
 In diesem Beispiel wäre der Schlüssel `benchmark_name` der Name eines Benchmarks.
 Benchmark-Namen können jeder nicht-leere String bis zu 1024 Zeichen sein.
@@ -71,7 +64,7 @@ dann können Sie den <code><a href="/de/docs/explanation/bencher-run/">bencher r
 Dies funktioniert sowohl mit einem Benchmark-Befehl (z.B.: `bencher run "bencher mock > results.json" --file results.json`)
 als auch ohne einen Benchmark-Befehl (z.B.: `bencher mock > results.json && bencher run --file results.json`).
 
-<br/>
+<BmfSchema />
 
 > 🐰 Hinweis: Der `bencher mock` CLI-Unterbefehl erzeugt Mock-BMF-Metriken.
 
