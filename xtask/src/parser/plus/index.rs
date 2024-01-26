@@ -23,6 +23,8 @@ pub type TaskIndexDelete = TaskIndexUpdate;
 #[derive(ValueEnum, Debug, Clone, Copy)]
 #[clap(rename_all = "snake_case")]
 pub enum TaskSearchEngine {
+    /// Bing
+    Bing,
     /// Google
     Google,
 }

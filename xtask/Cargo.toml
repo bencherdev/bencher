@@ -9,6 +9,7 @@ default = ["plus"]
 plus = [
     "bencher_json/plus",
     "dep:async-openai",
+    "dep:bencher_bing_index",
     "dep:bencher_license",
     "dep:bencher_google_index",
     "dep:notify-rust",
@@ -18,6 +19,7 @@ plus = [
 # Workspace
 anyhow.workspace = true
 bencher_api.workspace = true
+bencher_bing_index = { workspace = true, optional = true }
 bencher_cli.workspace = true
 bencher_json = { workspace = true, features = ["lite"] }
 bencher_license = { workspace = true, optional = true }

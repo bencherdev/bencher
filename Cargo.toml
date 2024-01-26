@@ -25,6 +25,7 @@ bencher_token = { path = "lib/bencher_token" }
 bencher_valid = { path = "lib/bencher_valid" }
 # plus
 bencher_billing = { path = "plus/bencher_billing" }
+bencher_bing_index = { path = "plus/bencher_bing_index" }
 bencher_google_index = { path = "plus/bencher_google_index" }
 bencher_license = { path = "plus/bencher_license" }
 # crates.io

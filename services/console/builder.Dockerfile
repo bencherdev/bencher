@@ -27,7 +27,9 @@ COPY lib/bencher_valid bencher_valid
 
 WORKDIR /usr/src/plus
 RUN cargo init --lib bencher_billing
+RUN cargo init --lib bencher_bing_index
 RUN cargo init --lib bencher_license
+RUN cargo init --lib bencher_google_index
 
 WORKDIR /usr/src/services
 RUN cargo init api

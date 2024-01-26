@@ -854,6 +854,7 @@ dependencies = [
  "aws-sdk-s3",
  "bencher_adapter",
  "bencher_billing",
+ "bencher_bing_index",
  "bencher_boundary",
  "bencher_github",
  "bencher_google_index",
@@ -906,6 +907,17 @@ dependencies = [
  "thiserror",
  "tokio",
  "uuid 1.7.0",
+]
+
+[[package]]
+name = "bencher_bing_index"
+version = "0.4.1"
+dependencies = [
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "url",
 ]
 
 [[package]]
@@ -7190,6 +7202,7 @@ dependencies = [
  "assert_cmd",
  "async-openai",
  "bencher_api",
+ "bencher_bing_index",
  "bencher_cli",
  "bencher_google_index",
  "bencher_json",

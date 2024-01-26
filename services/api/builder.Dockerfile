@@ -25,7 +25,9 @@ COPY lib/bencher_valid bencher_valid
 
 WORKDIR /usr/src/plus
 COPY plus/bencher_billing bencher_billing
+COPY plus/bencher_bing_index bencher_bing_index
 COPY plus/bencher_license bencher_license
+COPY plus/bencher_google_index bencher_google_index
 
 WORKDIR /usr/src
 COPY Cargo.toml Cargo.toml

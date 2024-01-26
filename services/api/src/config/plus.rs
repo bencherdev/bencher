@@ -39,7 +39,11 @@ pub enum PlusError {
     BencherCloud(Url),
     #[error("Failed to setup billing: {0}")]
     Billing(bencher_billing::BillingError),
-    #[error("Failed to setup Google Index: {0}")]
+    #[error("Failed to parse Bing Index key location: {0}")]
+    KeyLocation(bencher_json::ValidError),
+    #[error("Bing Index failed: {0}")]
+    BingIndex(bencher_bing_index::BingIndexError),
+    #[error("Google Index failed: {0}")]
     GoogleIndex(bencher_google_index::GoogleIndexError),
 }
 
