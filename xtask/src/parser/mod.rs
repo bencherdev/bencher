@@ -15,6 +15,7 @@ pub use package::TaskDeb;
 pub use package::TaskMan;
 #[cfg(feature = "plus")]
 pub use plus::{
+    index::{TaskIndex, TaskIndexDelete, TaskIndexUpdate, TaskSearchEngine},
     license::{TaskBillingCycle, TaskLicense, TaskLicenseGenerate, TaskLicenseValidate},
     prompt::{TaskLanguage, TaskPrompt, TaskTranslate},
     stats::TaskStats,
@@ -49,6 +50,10 @@ pub enum TaskSub {
     Types(TaskTypes),
     /// Template CLI install scripts
     Template(TaskTemplate),
+    #[cfg(feature = "plus")]
+    #[clap(subcommand)]
+    /// URLindexing
+    Index(TaskIndex),
     #[cfg(feature = "plus")]
     /// Send stats to bencher.dev
     Stats(TaskStats),

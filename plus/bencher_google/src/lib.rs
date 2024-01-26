@@ -211,7 +211,7 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn test_google() {
-        let service_key = std::fs::read_to_string("bencher.json").unwrap();
+        let service_key = std::fs::read_to_string("google.json").unwrap();
         let google = Google::from_str(&service_key).unwrap();
         let test_url_str = "https://bencher.dev/perf/save-walter-white-3250590663";
         let test_url = Url::parse(test_url_str).unwrap();

@@ -12,8 +12,8 @@ pub enum License {
 impl TryFrom<TaskLicense> for License {
     type Error = anyhow::Error;
 
-    fn try_from(project: TaskLicense) -> Result<Self, Self::Error> {
-        Ok(match project {
+    fn try_from(license: TaskLicense) -> Result<Self, Self::Error> {
+        Ok(match license {
             TaskLicense::Generate(generate) => Self::Generate(generate.try_into()?),
             TaskLicense::Validate(validate) => Self::Validate(validate.try_into()?),
         })

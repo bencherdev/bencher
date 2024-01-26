@@ -16,7 +16,7 @@ use notify::Notify;
 use package::deb::Deb;
 use package::man::Man;
 #[cfg(feature = "plus")]
-use plus::{license::License, prompt::Prompt, stats::Stats, translate::Translate};
+use plus::{index::Index, license::License, prompt::Prompt, stats::Stats, translate::Translate};
 use release_notes::ReleaseNotes;
 use template::Template;
 use test::{
@@ -38,6 +38,8 @@ pub enum Sub {
     Swagger(Swagger),
     Types(Types),
     Template(Template),
+    #[cfg(feature = "plus")]
+    Index(Index),
     #[cfg(feature = "plus")]
     Stats(Stats),
     #[cfg(feature = "plus")]
@@ -77,6 +79,8 @@ impl TryFrom<TaskSub> for Sub {
             TaskSub::Types(types) => Self::Types(types.try_into()?),
             TaskSub::Template(template) => Self::Template(template.try_into()?),
             #[cfg(feature = "plus")]
+            TaskSub::Index(index) => Self::Index(index.try_into()?),
+            #[cfg(feature = "plus")]
             TaskSub::Stats(stats) => Self::Stats(stats.try_into()?),
             #[cfg(feature = "plus")]
             TaskSub::Prompt(prompt) => Self::Prompt(prompt.try_into()?),
@@ -114,6 +118,8 @@ impl Sub {
             Self::Swagger(swagger) => swagger.exec(),
             Self::Types(types) => types.exec(),
             Self::Template(template) => template.exec(),
+            #[cfg(feature = "plus")]
+            Self::Index(index) => index.exec().await,
             #[cfg(feature = "plus")]
             Self::Stats(stats) => stats.exec().await,
             #[cfg(feature = "plus")]

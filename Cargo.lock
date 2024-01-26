@@ -7190,6 +7190,7 @@ dependencies = [
  "async-openai",
  "bencher_api",
  "bencher_cli",
+ "bencher_google",
  "bencher_json",
  "bencher_license",
  "bencher_logger",
