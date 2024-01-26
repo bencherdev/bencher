@@ -17,7 +17,6 @@ bencher_boundary = { path = "lib/bencher_boundary" }
 bencher_client = { path = "lib/bencher_client" }
 bencher_comment = { path = "lib/bencher_comment" }
 bencher_github = { path = "lib/bencher_github" }
-bencher_google = { path = "lib/bencher_google" }
 bencher_json = { path = "lib/bencher_json" }
 bencher_logger = { path = "lib/bencher_logger" }
 bencher_plot = { path = "lib/bencher_plot" }
@@ -26,6 +25,7 @@ bencher_token = { path = "lib/bencher_token" }
 bencher_valid = { path = "lib/bencher_valid" }
 # plus
 bencher_billing = { path = "plus/bencher_billing" }
+bencher_google = { path = "lib/bencher_google" }
 bencher_license = { path = "plus/bencher_license" }
 # crates.io
 anyhow = "1.0"

@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use serde::Serialize;
 use tame_oauth::{
     gcp::{
@@ -47,16 +49,19 @@ pub enum GoogleError {
 }
 
 impl Google {
-    pub fn new<K>(key_data: K) -> Result<Self, GoogleError>
-    where
-        K: AsRef<[u8]>,
-    {
-        // https://github.com/EmbarkStudios/tame-oauth/blob/main/examples/svc_account.rs
-        let acct_info =
-            ServiceAccountInfo::deserialize(key_data).map_err(GoogleError::Deserialize)?;
-        let sa_provider =
-            ServiceAccountProvider::new(acct_info).map_err(GoogleError::CreateProvider)?;
-        Ok(Self { inner: sa_provider })
+    pub fn new(
+        private_key: String,
+        client_email: String,
+        token_uri: String,
+    ) -> Result<Self, GoogleError> {
+        let info = ServiceAccountInfo {
+            private_key,
+            client_email,
+            token_uri,
+        };
+        Ok(Self {
+            inner: ServiceAccountProvider::new(info).map_err(GoogleError::CreateProvider)?,
+        })
     }
 
     pub async fn get_token(&self, scopes: &[&str]) -> Result<Token, GoogleError> {
@@ -170,6 +175,20 @@ impl Google {
     }
 }
 
+impl FromStr for Google {
+    type Err = GoogleError;
+
+    fn from_str(key_data: &str) -> Result<Self, Self::Err> {
+        // https://github.com/EmbarkStudios/tame-oauth/blob/main/examples/svc_account.rs
+        let ServiceAccountInfo {
+            private_key,
+            client_email,
+            token_uri,
+        } = ServiceAccountInfo::deserialize(key_data).map_err(GoogleError::Deserialize)?;
+        Self::new(private_key, client_email, token_uri)
+    }
+}
+
 // https://developers.google.com/search/apis/indexing-api/v3/using-api
 #[derive(Debug, Serialize)]
 pub struct JsonIndexing {
@@ -193,7 +212,7 @@ mod tests {
     #[ignore]
     async fn test_google() {
         let service_key = std::fs::read_to_string("bencher.json").unwrap();
-        let google = Google::new(service_key).unwrap();
+        let google = Google::from_str(&service_key).unwrap();
         let test_url_str = "https://bencher.dev/perf/save-walter-white-3250590663";
         let test_url = Url::parse(test_url_str).unwrap();
         google.url_updated(test_url.clone()).await.unwrap();
