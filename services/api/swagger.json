@@ -6534,6 +6534,25 @@
           "secret_key"
         ]
       },
+      "JsonBingIndex": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/NonEmpty"
+          },
+          "key_location": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Url"
+              }
+            ]
+          }
+        },
+        "required": [
+          "key"
+        ]
+      },
       "JsonBoundary": {
         "type": "object",
         "properties": {
@@ -6669,6 +6688,14 @@
         "properties": {
           "billing": {
             "$ref": "#/components/schemas/JsonBilling"
+          },
+          "index": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonIndex"
+              }
+            ]
           },
           "license_pem": {
             "$ref": "#/components/schemas/Secret"
@@ -6876,6 +6903,40 @@
         "required": [
           "client_id",
           "client_secret"
+        ]
+      },
+      "JsonGoogleIndex": {
+        "type": "object",
+        "properties": {
+          "client_email": {
+            "$ref": "#/components/schemas/NonEmpty"
+          },
+          "private_key": {
+            "$ref": "#/components/schemas/Secret"
+          },
+          "token_uri": {
+            "$ref": "#/components/schemas/NonEmpty"
+          }
+        },
+        "required": [
+          "client_email",
+          "private_key",
+          "token_uri"
+        ]
+      },
+      "JsonIndex": {
+        "type": "object",
+        "properties": {
+          "bing": {
+            "$ref": "#/components/schemas/JsonBingIndex"
+          },
+          "google": {
+            "$ref": "#/components/schemas/JsonGoogleIndex"
+          }
+        },
+        "required": [
+          "bing",
+          "google"
         ]
       },
       "JsonLicense": {
