@@ -11,6 +11,7 @@ import {
 	runWithOwner,
 	untrack,
 } from "solid-js";
+import { encodeBase64 } from "./convert";
 
 export type Params = Record<string, string>;
 export declare type SetParams = Record<
@@ -270,3 +271,9 @@ export const hiddenRedirect = (url: string): void => {
 };
 
 export const pathname = createMemo(() => useLocation().pathname);
+
+export const encodedPath = createMemo(() => {
+	const location = useLocation();
+	const back = encodeBase64(`${location.pathname}${location.search}`);
+	return back;
+});

@@ -10,8 +10,7 @@ import type {
 } from "../../../../types/bencher";
 import Pagination, { PaginationSize } from "../../../site/Pagination";
 import { DEFAULT_PAGE } from "../PerfPanel";
-import { encodeBase64 } from "../../../../util/convert";
-import { useLocation } from "../../../../util/url";
+import { encodedPath } from "../../../../util/url";
 
 export type TabList<T> = TabElement<T>[];
 
@@ -415,15 +414,13 @@ const ViewReportButton = (props: {
 	tab: Accessor<PerfTab>;
 	report: JsonReport;
 }) => {
-	const location = useLocation();
-	const back = encodeBase64(`${location.pathname}${location.search}`);
 	return (
 		<a
 			class="button"
 			title={`View Report from ${fmtDateTime(props.report?.start_time)}`}
 			href={`/console/projects/${props.project_slug()}/${props.tab()}/${
 				props.report?.uuid
-			}?back=${back}`}
+			}?back=${encodedPath()}`}
 		>
 			View
 		</a>
@@ -435,15 +432,13 @@ const ViewDimensionButton = (props: {
 	tab: Accessor<PerfTab>;
 	dimension: JsonBranch | JsonTestbed | JsonBenchmark | JsonMeasure;
 }) => {
-	const location = useLocation();
-	const back = encodeBase64(`${location.pathname}${location.search}`);
 	return (
 		<a
 			class="button"
 			title={`View ${props.dimension?.name}`}
 			href={`/console/projects/${props.project_slug()}/${props.tab()}/${
 				props.dimension?.slug
-			}?back=${back}`}
+			}?back=${encodedPath()}`}
 		>
 			View
 		</a>

@@ -8,16 +8,10 @@ import {
 	validSampleSize,
 	validU32,
 } from "../../../util/valid";
-import type {
-	FieldConfig,
-	FieldHandler,
-	FieldValue,
-	FieldValueHandler,
-} from "../Field";
+import type { FieldConfig, FieldHandler, FieldValue } from "../Field";
 import FieldKind from "../kind";
 import { createStore } from "solid-js/store";
 import Field from "../Field";
-import { set } from "astro/zod";
 
 export type InputValue = string | number | null | undefined;
 
@@ -164,26 +158,24 @@ const testSelectConfig = (statistic: StatisticKind) => {
 	return {
 		kind: FieldKind.SELECT,
 		label: (
-			<>
-				<div class="level is-mobile">
-					<div class="level-left">
-						<p class="level-item">Significance Test</p>
-						<a
-							class="level-item"
-							href={`https://bencher.dev/docs/explanation/thresholds/#${testFragment(
-								statistic,
-							)}`}
-							// biome-ignore lint/a11y/noBlankTarget: <explanation>
-							target="_blank"
-							title="Open documentation in new tab"
-						>
-							<span class="icon">
-								<i class="fas fa-book-open" aria-hidden="true" />
-							</span>
-						</a>
-					</div>
+			<div class="level is-mobile">
+				<div class="level-left">
+					<p class="level-item">Significance Test</p>
+					<a
+						class="level-item"
+						href={`https://bencher.dev/docs/explanation/thresholds/#${testFragment(
+							statistic,
+						)}`}
+						// biome-ignore lint/a11y/noBlankTarget: <explanation>
+						target="_blank"
+						title="Open documentation in new tab"
+					>
+						<span class="icon">
+							<i class="fas fa-book-open" aria-hidden="true" />
+						</span>
+					</a>
 				</div>
-			</>
+			</div>
 		),
 		key: "test",
 		value: testValue(statistic),

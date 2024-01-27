@@ -17,6 +17,7 @@ import type {
 import { BENCHER_WORDMARK } from "../../../../util/ext";
 import { httpGet } from "../../../../util/http";
 import { BENCHER_MEASURE_ID } from "./util";
+import { encodedPath, useLocation } from "../../../../util/url";
 
 const BENCHER_MEASURE = "--bencher-measure--";
 
@@ -89,8 +90,7 @@ const FullPlotHeader = (props: Props) => {
 		}/measures?${searchParams.toString()}`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
-				let data = resp?.data;
-				data.push(SELECT_MEASURE);
+				const data = [SELECT_MEASURE, ...(resp?.data ?? [])];
 				return data;
 			})
 			.catch((error) => {
@@ -101,6 +101,9 @@ const FullPlotHeader = (props: Props) => {
 	const [measures] = createResource<JsonMeasure[]>(
 		measures_fetcher,
 		getMeasures,
+	);
+	const measure = createMemo(() =>
+		measures()?.find((measure) => props.measures()?.includes(measure.uuid)),
 	);
 
 	const getSelected = () => {
@@ -133,7 +136,26 @@ const FullPlotHeader = (props: Props) => {
 	return (
 		<nav class="panel-heading columns is-vcentered">
 			<div class="column">
-				<p id={BENCHER_MEASURE_ID}>Measure</p>
+				<div class="level is-mobile" style="margin-bottom: 0.5rem;">
+					<div class="level-left">
+						<div class="level-item">
+							<p id={BENCHER_MEASURE_ID} class="level-item">
+								Measure
+							</p>
+							<Show when={props.isConsole}>
+								<a
+									class="level-item button is-small is-outlined is-rounded"
+									title={`View ${measure()?.name}`}
+									href={`/console/projects/${props.project_slug()}/measures/${
+										measure()?.slug
+									}?back=${encodedPath()}`}
+								>
+									<small>View</small>
+								</a>
+							</Show>
+						</div>
+					</div>
+				</div>
 				<select
 					class="card-header-title level-item"
 					title="Select Measure"
