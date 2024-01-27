@@ -1,7 +1,13 @@
 import type { Params } from "astro";
 import { validBenchmarkName, validSlug } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation } from "../types";
-import { addPath, createdSlugPath, parentPath, viewSlugPath } from "../util";
+import {
+	addPath,
+	backOrParentPath,
+	createdSlugPath,
+	parentPath,
+	viewSlugPath,
+} from "../util";
 import type { JsonBenchmark } from "../../types/bencher";
 import FieldKind from "../../components/field/kind";
 import { isAllowedProjectDelete, isAllowedProjectEdit } from "../../util/auth";
@@ -93,7 +99,7 @@ const benchmarksConfig = {
 		operation: Operation.VIEW,
 		header: {
 			key: "name",
-			path: parentPath,
+			path: backOrParentPath,
 			path_to: "Benchmarks",
 			buttons: [{ kind: Button.REFRESH }],
 		},

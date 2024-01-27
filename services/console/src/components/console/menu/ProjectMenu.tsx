@@ -71,18 +71,15 @@ const ConsoleMenu = (props: Props) => {
 	return (
 		<aside class="menu is-sticky">
 			<div class="menu-label">
-				<button
+				<a
 					class="button is-outlined is-fullwidth"
 					title="View Project Perf"
-					onClick={(e) => {
-						e.preventDefault();
-						navigate(path(Section.PERF));
-					}}
+					href={path(Section.PERF)}
 				>
 					<span class="icon">
 						<i class="fas fa-chart-line" aria-hidden="true" />
 					</span>
-				</button>
+				</a>
 			</div>
 			<p class="menu-label">Project</p>
 			<ul class="menu-list">

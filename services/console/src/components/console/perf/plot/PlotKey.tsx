@@ -193,7 +193,7 @@ const KeyToggle = (props: {
 	const allActive = createMemo(() =>
 		props.perfActive.reduce((acc, curr) => {
 			return acc && curr;
-		}),
+		}, true),
 	);
 
 	return (

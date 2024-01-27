@@ -44,7 +44,7 @@ const Plot = (props: Props) => {
 	const togglePerfActive = () => {
 		const allActive = perfActive.reduce((acc, curr) => {
 			return acc && curr;
-		});
+		}, true);
 		const active = perfActive.map(() => !allActive);
 		setPerfActive(active);
 	};

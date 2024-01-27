@@ -4,7 +4,13 @@ import type { JsonMeasure } from "../../types/bencher";
 import { isAllowedProjectDelete, isAllowedProjectEdit } from "../../util/auth";
 import { validResourceName, validSlug } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
-import { addPath, createdSlugPath, parentPath, viewSlugPath } from "../util";
+import {
+	addPath,
+	backOrParentPath,
+	createdSlugPath,
+	parentPath,
+	viewSlugPath,
+} from "../util";
 
 const MEASURE_FIELDS = {
 	name: {
@@ -118,7 +124,7 @@ const measuresConfig = {
 		operation: Operation.VIEW,
 		header: {
 			key: "name",
-			path: parentPath,
+			path: backOrParentPath,
 			path_to: "Measures",
 			buttons: [{ kind: Button.REFRESH }],
 		},

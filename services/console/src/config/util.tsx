@@ -1,7 +1,21 @@
 import type { Slug } from "../types/bencher";
+import { decodeBase64 } from "../util/convert";
+import { useSearchParams } from "../util/url";
+
+export const BACK_PARAM = "back";
 
 export const parentPath = (pathname: string) => {
 	return `${pathname.substring(0, pathname.lastIndexOf("/"))}`;
+};
+
+export const backOrParentPath = (pathname: string) => {
+	const [searchParams, _setSearchParams] = useSearchParams();
+	const back = searchParams[BACK_PARAM];
+	if (back) {
+		return decodeBase64(back);
+	} else {
+		return parentPath(pathname);
+	}
 };
 
 export const createdSlugPath = (pathname: string, datum: { slug: Slug }) => {
