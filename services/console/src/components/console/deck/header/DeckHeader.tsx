@@ -8,7 +8,7 @@ import {
 } from "solid-js";
 import type { JsonAuthUser } from "../../../../types/bencher";
 import { fmtValues, setPageTitle } from "../../../../util/resource";
-import { pathname, useNavigate } from "../../../../util/url";
+import { pathname } from "../../../../util/url";
 import DeckHeaderButton, {
 	type DeckHeaderButtonConfig,
 } from "./DeckHeaderButton";
@@ -32,8 +32,6 @@ export interface DeckHeaderConfig {
 }
 
 const DeckHeader = (props: Props) => {
-	const navigate = useNavigate();
-
 	const title = createMemo(() =>
 		fmtValues(props.data(), props.config?.key, props.config?.keys, " | "),
 	);
@@ -45,19 +43,16 @@ const DeckHeader = (props: Props) => {
 	return (
 		<div class="columns is-centered">
 			<div class="column is-narrow">
-				<button
+				<a
 					class="button is-outlined is-fullwidth"
 					title={`Back to ${props.config?.path_to}`}
-					onClick={(e) => {
-						e.preventDefault();
-						navigate(props.config?.path(pathname()));
-					}}
+					href={props.config?.path(pathname())}
 				>
 					<span class="icon">
 						<i class="fas fa-chevron-left" aria-hidden="true" />
 					</span>
 					<span>Back</span>
-				</button>
+				</a>
 			</div>
 			<div class="column">
 				<div class="content has-text-centered">

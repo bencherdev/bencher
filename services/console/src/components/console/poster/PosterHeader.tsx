@@ -1,4 +1,4 @@
-import { pathname, useNavigate } from "../../../util/url";
+import { pathname } from "../../../util/url";
 
 export interface Props {
 	config: PosterHeaderConfig;
@@ -11,24 +11,19 @@ export interface PosterHeaderConfig {
 }
 
 const PosterHeader = (props: Props) => {
-	const navigate = useNavigate();
-
 	return (
 		<nav class="level">
 			<div class="level-left">
-				<button
+				<a
 					class="button is-outlined"
 					title={`Back to ${props.config?.path_to}`}
-					onClick={(e) => {
-						e.preventDefault();
-						navigate(props.config?.path(pathname()));
-					}}
+					href={props.config?.path(pathname())}
 				>
 					<span class="icon">
 						<i class="fas fa-chevron-left" aria-hidden="true" />
 					</span>
 					<span>Back</span>
-				</button>
+				</a>
 			</div>
 			<div class="level-left">
 				<div class="level-item">

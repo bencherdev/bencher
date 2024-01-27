@@ -1,5 +1,5 @@
 import { createResource, For, Match, Switch } from "solid-js";
-import { pathname, useNavigate } from "../../../util/url";
+import { pathname } from "../../../util/url";
 import { Button } from "../../../config/types";
 import type { Params } from "astro";
 
@@ -57,8 +57,6 @@ const TableHeaderButton = (props: {
 	button: TableButton;
 	handleRefresh: () => void;
 }) => {
-	const navigate = useNavigate();
-
 	const [isAllowed] = createResource(props.params, (params) =>
 		props.button.is_allowed?.(props.apiUrl, params),
 	);
@@ -67,34 +65,28 @@ const TableHeaderButton = (props: {
 		<p class="level-item">
 			<Switch fallback={<></>}>
 				<Match when={props.button.kind === Button.ADD}>
-					<button
+					<a
 						class="button is-outlined"
 						title={`Add ${props.button.title}`}
-						onClick={(e) => {
-							e.preventDefault();
-							navigate(props.button.path(pathname()));
-						}}
+						href={props.button.path(pathname())}
 					>
 						<span class="icon">
 							<i class="fas fa-plus" aria-hidden="true" />
 						</span>
 						<span>Add</span>
-					</button>
+					</a>
 				</Match>
 				<Match when={props.button.kind === Button.INVITE && isAllowed()}>
-					<button
+					<a
 						class="button is-outlined"
 						title={`Invite to ${props.button.title}`}
-						onClick={(e) => {
-							e.preventDefault();
-							navigate(props.button.path(pathname()));
-						}}
+						href={props.button.path(pathname())}
 					>
 						<span class="icon">
 							<i class="fas fa-envelope" aria-hidden="true" />
 						</span>
 						<span>Invite</span>
-					</button>
+					</a>
 				</Match>
 				<Match when={props.button.kind === Button.REFRESH}>
 					<button

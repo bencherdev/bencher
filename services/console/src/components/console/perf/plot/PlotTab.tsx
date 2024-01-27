@@ -4,6 +4,7 @@ import { fmtDateTime, toCapitalized } from "../../../../config/util";
 import type {
 	JsonBenchmark,
 	JsonBranch,
+	JsonMeasure,
 	JsonReport,
 	JsonTestbed,
 } from "../../../../types/bencher";
@@ -265,152 +266,144 @@ const Tab = (props: {
 				when={props.tab() === PerfTab.REPORTS && props.getTab().length > 0}
 			>
 				<For each={props.getTab()}>
-					{(report, index) => (
-						<Show
-							when={(report.resource as JsonReport)?.results?.[0]?.length > 0}
-							fallback={
-								<div class="panel-block columns is-vcentered is-mobile">
-									<div class="column" style="color: black;">
-										<div class="columns is-vcentered is-mobile">
-											<div class="column is-narrow">
-												<input type="radio" disabled={true} checked={false} />
-											</div>
-											<div class="column">
-												<small style="word-break: break-word;">
-													{fmtDateTime(
-														(report.resource as JsonReport)?.start_time,
-													)}
-												</small>
-												<ReportDimension
-													icon="fab fa-creative-commons-zero"
-													name="No Results"
-												/>
-											</div>
-										</div>
-									</div>
-									<Show when={props.isConsole}>
-										<div class="column is-narrow">
-											<ViewReportButton
-												project_slug={props.project_slug}
-												tab={props.tab}
-												report={report}
-											/>
-										</div>
-									</Show>
-								</div>
-							}
-						>
-							<For each={(report.resource as JsonReport)?.results?.[0]}>
-								{(result, _index) => (
+					{(report, index) => {
+						const resource = report.resource as JsonReport;
+						return (
+							<Show
+								when={(resource?.results?.[0]?.length ?? 0) > 0}
+								fallback={
 									<div class="panel-block columns is-vcentered is-mobile">
-										<a
-											class="column"
-											style="color: black;"
-											title={`View Report from ${fmtDateTime(
-												(report.resource as JsonReport)?.start_time,
-											)}`}
-											onClick={(_e) =>
-												// Send the Measure UUID instead of the Report UUID
-												props.handleChecked(index(), result.measure?.uuid)
-											}
-										>
+										<div class="column" style="color: black;">
 											<div class="columns is-vcentered is-mobile">
 												<div class="column is-narrow">
-													<input
-														type="radio"
-														checked={
-															report.checked &&
-															result.measure?.uuid === props.measures()?.[0]
-														}
-													/>
+													<input type="radio" disabled={true} checked={false} />
 												</div>
 												<div class="column">
 													<small style="word-break: break-word;">
-														{fmtDateTime(
-															(report.resource as JsonReport)?.start_time,
-														)}
+														{fmtDateTime(resource?.start_time)}
 													</small>
 													<ReportDimension
-														icon="fas fa-code-branch"
-														name={(report.resource as JsonReport)?.branch?.name}
-													/>
-													<ReportDimension
-														icon="fas fa-server"
-														name={
-															(report.resource as JsonReport)?.testbed?.name
-														}
-													/>
-													<ReportDimension
-														icon="fas fa-shapes"
-														name={result.measure?.name}
+														icon="fab fa-creative-commons-zero"
+														name="No Results"
 													/>
 												</div>
 											</div>
-										</a>
+										</div>
 										<Show when={props.isConsole}>
 											<div class="column is-narrow">
 												<ViewReportButton
 													project_slug={props.project_slug}
 													tab={props.tab}
-													report={report}
+													report={resource}
 												/>
 											</div>
 										</Show>
 									</div>
-								)}
-							</For>
-						</Show>
-					)}
+								}
+							>
+								<For each={resource?.results?.[0]}>
+									{(result, _index) => (
+										<div class="panel-block columns is-vcentered is-mobile">
+											<a
+												class="column"
+												style="color: black;"
+												title={`View Report from ${fmtDateTime(
+													resource?.start_time,
+												)}`}
+												onClick={(_e) =>
+													// Send the Measure UUID instead of the Report UUID
+													props.handleChecked(index(), result.measure?.uuid)
+												}
+											>
+												<div class="columns is-vcentered is-mobile">
+													<div class="column is-narrow">
+														<input
+															type="radio"
+															checked={
+																report.checked &&
+																result.measure?.uuid === props.measures()?.[0]
+															}
+														/>
+													</div>
+													<div class="column">
+														<small style="word-break: break-word;">
+															{fmtDateTime(resource?.start_time)}
+														</small>
+														<ReportDimension
+															icon="fas fa-code-branch"
+															name={resource?.branch?.name}
+														/>
+														<ReportDimension
+															icon="fas fa-server"
+															name={resource?.testbed?.name}
+														/>
+														<ReportDimension
+															icon="fas fa-shapes"
+															name={result.measure?.name}
+														/>
+													</div>
+												</div>
+											</a>
+											<Show when={props.isConsole}>
+												<div class="column is-narrow">
+													<ViewReportButton
+														project_slug={props.project_slug}
+														tab={props.tab}
+														report={resource}
+													/>
+												</div>
+											</Show>
+										</div>
+									)}
+								</For>
+							</Show>
+						);
+					}}
 				</For>
 			</Match>
 			<Match
 				when={props.tab() !== PerfTab.REPORTS && props.getTab().length > 0}
 			>
 				<For each={props.getTab()}>
-					{(dimension, index) => (
-						<div class="panel-block columns is-vcentered is-mobile">
-							<a
-								class="column"
-								style="color: black;"
-								title={`${dimension.checked ? "Remove" : "Add"} ${
-									(
-										dimension.resource as
-											| JsonBranch
-											| JsonTestbed
-											| JsonBenchmark
-									)?.name
-								}`}
-								onClick={(_e) => props.handleChecked(index())}
-							>
-								<div class="columns is-vcentered is-mobile">
-									<div class="column is-narrow">
-										<input type="checkbox" checked={dimension.checked} />
+					{(dimension, index) => {
+						const resource = dimension?.resource as
+							| JsonBranch
+							| JsonTestbed
+							| JsonBenchmark
+							| JsonMeasure;
+						return (
+							<div class="panel-block columns is-vcentered is-mobile">
+								<a
+									class="column"
+									style="color: black;"
+									title={`${dimension.checked ? "Remove" : "Add"} ${
+										resource?.name
+									}`}
+									onClick={(_e) => props.handleChecked(index())}
+								>
+									<div class="columns is-vcentered is-mobile">
+										<div class="column is-narrow">
+											<input type="checkbox" checked={dimension.checked} />
+										</div>
+										<div class="column is-narrow">
+											<small style="word-break: break-word;">
+												{resource?.name}
+											</small>
+										</div>
 									</div>
+								</a>
+								<Show when={props.isConsole}>
 									<div class="column is-narrow">
-										<small style="word-break: break-word;">
-											{
-												(
-													dimension.resource as
-														| JsonBranch
-														| JsonTestbed
-														| JsonBenchmark
-												)?.name
-											}
-										</small>
+										<ViewDimensionButton
+											project_slug={props.project_slug}
+											tab={props.tab}
+											dimension={resource}
+										/>
 									</div>
-								</div>
-							</a>
-							<Show when={props.isConsole}>
-								<div class="column is-narrow">
-									<ViewDimensionButton
-										project_slug={props.project_slug}
-										tab={props.tab}
-										dimension={dimension}
-									/>
-								</div>
-							</Show>
-						</div>
-					)}
+								</Show>
+							</div>
+						);
+					}}
 				</For>
 			</Match>
 		</Switch>
@@ -420,17 +413,16 @@ const Tab = (props: {
 const ViewReportButton = (props: {
 	project_slug: Accessor<undefined | string>;
 	tab: Accessor<PerfTab>;
-	report: object;
+	report: JsonReport;
 }) => {
-	const resource = props.report?.resource as JsonReport;
 	const location = useLocation();
 	const back = encodeBase64(`${location.pathname}${location.search}`);
 	return (
 		<a
 			class="button"
-			title={`View Report from ${fmtDateTime(resource?.start_time)}`}
+			title={`View Report from ${fmtDateTime(props.report?.start_time)}`}
 			href={`/console/projects/${props.project_slug()}/${props.tab()}/${
-				resource?.uuid
+				props.report?.uuid
 			}?back=${back}`}
 		>
 			View
@@ -441,20 +433,16 @@ const ViewReportButton = (props: {
 const ViewDimensionButton = (props: {
 	project_slug: Accessor<undefined | string>;
 	tab: Accessor<PerfTab>;
-	dimension: object;
+	dimension: JsonBranch | JsonTestbed | JsonBenchmark | JsonMeasure;
 }) => {
-	const resource = props.dimension?.resource as
-		| JsonBranch
-		| JsonTestbed
-		| JsonBenchmark;
 	const location = useLocation();
 	const back = encodeBase64(`${location.pathname}${location.search}`);
 	return (
 		<a
 			class="button"
-			title={`View ${resource?.name}`}
+			title={`View ${props.dimension?.name}`}
 			href={`/console/projects/${props.project_slug()}/${props.tab()}/${
-				resource?.slug
+				props.dimension?.slug
 			}?back=${back}`}
 		>
 			View

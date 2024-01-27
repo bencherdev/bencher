@@ -2,7 +2,7 @@ import type { Params } from "astro";
 import { type Accessor, Match, type Resource, Switch } from "solid-js";
 import { Button } from "../../../../config/types";
 import type { JsonAuthUser } from "../../../../types/bencher";
-import { pathname, useNavigate } from "../../../../util/url";
+import { pathname } from "../../../../util/url";
 import ConsoleButton from "./ConsoleButton";
 import PerfButton from "./PerfButton";
 import StatusButton from "./StatusButton";
@@ -25,27 +25,19 @@ export interface DeckHeaderButtonConfig {
 }
 
 const DeckHeaderButton = (props: Props) => {
-	const navigate = useNavigate();
-
 	return (
 		<Switch fallback={<></>}>
 			<Match when={props.button.kind === Button.EDIT}>
-				<button
+				<a
 					class="button is-outlined is-fullwidth"
 					title={`Edit ${props.title()}`}
-					onClick={(e) => {
-						e.preventDefault();
-						const path = props.button?.path?.(pathname());
-						if (path) {
-							navigate(path);
-						}
-					}}
+					href={props.button?.path?.(pathname())}
 				>
 					<span class="icon">
 						<i class="fas fa-pen" aria-hidden="true" />
 					</span>
 					<span>Edit</span>
-				</button>
+				</a>
 			</Match>
 			<Match when={props.button.kind === Button.STATUS}>
 				<StatusButton
