@@ -1,0 +1,153 @@
+---
+title: "Criterion"
+description: "Criterion을 사용하여 Rust 코드를 벤치마킹하는 방법에 대한 단계별 가이드"
+heading: "Criterion을 이용한 Rust 코드 벤치마킹 방법"
+sortOrder: 2
+---
+
+import Benchmarking from "../../../chunks/benchmarking/ko/benchmarking.mdx";
+import WhatIsRust from "../../../chunks/rust/ko/what-is-rust.mdx";
+import FizzBuzzRules from "../../../chunks/benchmarking/ko/fizz-buzz-rules.mdx";
+import FizzBuzzRust from "../../../chunks/rust/ko/fizz-buzz-rust.mdx";
+import StepByStepRust from "../../../chunks/rust/ko/step-by-step-rust.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/ko/micro-vs-macro.mdx";
+import BenchmarkingRust from "../../../chunks/rust/ko/benchmarking-rust.mdx";
+import FizzBuzzRefactor from "../../../chunks/rust/criterion/ko/fizz-buzz-refactor.mdx";
+import GameBenchesTree from "../../../chunks/rust/criterion/game-benches-tree.mdx";
+import FizzBuzzRefactorBenchesCode from "../../../chunks/rust/criterion/fizz-buzz-refactor-benches-code.mdx";
+import GameCargoToml from "../../../chunks/rust/criterion/game-cargo-toml.mdx";
+import BenchPlayGameOutput from "../../../chunks/rust/criterion/bench-play-game-output.mdx";
+import FizzBuzzFibonacciRust from "../../../chunks/rust/ko/fizz-buzz-fibonacci-rust.mdx";
+import PlayGameRustCode from "../../../chunks/rust/criterion/play-game-rust-code.mdx";
+import BenchPlayGameFibonacciOutput from "../../../chunks/rust/criterion/bench-play-game-fibonacci-output.mdx";
+import FizzBuzzFibonacciOpenRust from "../../../chunks/rust/ko/fizz-buzz-fibonacci-open-rust.mdx";
+import FizzBuzzFibonacciOpenRustCode from "../../../chunks/rust/criterion/fizz-buzz-fibonacci-open-rust-code.mdx";
+import TheEnd from "../../../chunks/benchmarking/ko/the-end.mdx";
+import OnFire from "../../../chunks/benchmarking/ko/on-fire.mdx";
+import BenchPlayGameOnFireCode from "../../../chunks/rust/criterion/bench-play-game-on-fire-code.mdx";
+import BenchPlayGameOnFireOutputStart from "../../../chunks/rust/criterion/bench-play-game-on-fire-output-start.mdx";
+import BenchPlayGameOnFireOutput from "../../../chunks/rust/criterion/bench-play-game-on-fire-output.mdx";
+import FizzBuzzFibonacciFixRust from "../../../chunks/rust/ko/fizz-buzz-fibonacci-fix-rust.mdx";
+import BenchPlayGameFixOutput from "../../../chunks/rust/criterion/bench-play-game-fix-output.mdx";
+import CatchInCi from "../../../chunks/benchmarking/ko/catch-in-ci.mdx";
+import CatchInCiOutput from "../../../chunks/rust/criterion/catch-in-ci-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/ko/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/rust/catch-in-ci-plot-rust-bench.mdx";
+import BencherFooter from "../../../chunks/learn/ko/bencher-footer.mdx";
+
+<Benchmarking />
+
+<WhatIsRust />
+
+<FizzBuzzRust />
+
+<StepByStepRust />
+
+<MicroVsMacro />
+
+<BenchmarkingRust />
+
+세 가지 모두 [Bencher에 의해 지원됩니다](/docs/ko/explanation/adapters/).그렇다면 왜 Criterion을 선택해야 할까요?
+Criterion은 Rust 커뮤니티의 벤치마킹용 표준 도구입니다.
+코드의 지연 시간을 벤치마킹하는 데 Criterion을 사용하는 것을 추천합니다.
+즉, Criterion은 벽시계 시간을 측정하는 데 탁월합니다.
+
+<FizzBuzzRefactor />
+
+## FizzBuzz 벤치마킹
+
+코드를 벤치마킹하기 위해 `benches` 디렉토리를 생성하고 벤치마크를 포함하는 파일 `play_game.rs`를 추가해야 합니다:
+
+<GameBenchesTree />
+
+`play_game.rs`에 다음 코드를 추가합니다:
+
+<FizzBuzzRefactorBenchesCode />
+
+자, 이제 `game` 크레이트를 구성하여 벤치마킹을 실행할 준비를 해봅시다.
+
+`Cargo.toml` 파일의 _하단_에 다음을 추가해주세요:
+
+<GameCargoToml />
+
+- `criterion`: `criterion`를 개발 의존성으로 추가하였습니다. 이는 우리가 성능 테스팅에만 이를 사용하기 때문입니다.
+- `bench`: `play_game`을 벤치마크로 등록하고 `harness`를 `false`로 설정하였습니다. 이는 우리가 Criterion을 벤치마킹 하네스로 사용할 것이기 때문입니다.
+
+이제 코드를 벤치마킹할 준비가 되었습니다. `cargo bench`를 실행해보세요:
+
+<BenchPlayGameOutput />
+
+> 🐰 우리는 이제 첫 번째 벤치마크 메트릭을 가지게 되었습니다!
+
+드디어 우리는 지친 개발자의 머리를 쉬게 해줄 수 있습니다...
+아마도, 우리의 사용자들은 새로운 기능을 원합니다!
+
+<FizzBuzzFibonacciRust>
+  <PlayGameRustCode />
+</FizzBuzzFibonacciRust>
+
+## FizzBuzzFibonacci 벤치마킹
+
+이제 벤치마크를 다시 실행할 수 있습니다:
+
+<BenchPlayGameFibonacciOutput />
+
+오, 대단하네! Criterion은 FizzBuzz와 FizzBuzzFibonacci 게임의 성능 차이가 `+568.69%`라고 말해줍니다.
+당신의 숫자들은 제 것과 약간 다를 수도 있습니다.
+그러나 두 게임간의 차이는 `5x` 범위 안에 있을 가능성이 높습니다.
+그것은 나에게 좋아 보입니다! 특히 우리의 게임에 이렇게 멋진 기능인 _피보나치_를 추가하는 것에 대한 대가로 말이죠.
+아이들은 그것을 사랑할 것입니다!
+
+<FizzBuzzFibonacciOpenRust>
+  <FizzBuzzFibonacciOpenRustCode />
+</FizzBuzzFibonacciOpenRust>
+
+<TheEnd />
+
+<br />
+
+<OnFire />
+
+<BenchPlayGameOnFireCode />
+
+- 숫자 100(`100`)으로 게임을 하는 마이크로벤치마크 `bench_play_game_100`
+- 숫자 백만(`1,000,000`)으로 게임을 하는 마이크로벤치마크 `bench_play_game_1_000_000`
+
+저는 이 현상을 실행 했을때 다음과 같은 결과를 얻었습니다:
+
+<BenchPlayGameOnFireOutputStart />
+
+잠깐만 기다려보세요...
+
+<BenchPlayGameOnFireOutput />
+
+무엇! `403.57 ns` x `1,000`은 `403,570 ns`이어야 하고 `9,596,800 ns` (`9.5968 ms` x `1_000_000 ns/1 ms`)는 아니어야 합니다. 🤯
+처럼 보이는데 제 피보나치 수열 코드는 기능적으론 맞게 작성되었지만, 어딘가에 성능 버그가 있어 보입니다.
+
+<FizzBuzzFibonacciFixRust />
+
+자, 이제 벤치마크를 다시 실행하고 어떻게 되는지 알아봅시다:
+
+<BenchPlayGameFixOutput />
+
+오, 와우! 우리의 `bench_play_game` 벤치마크는 원래의 FizzBuzz 벤치마크 결과 값 쯤으로 돌아와 있습니다.
+그 점수가 어떤 값이었는지 기억할 수 있으면 좋겠는데, 벌써 3주가 지났습니다.
+내 터미널 기록은 그 정도 까지 돌아가지 않아요.
+그리고 Criterion은 가장 최근의 결과값만 비교합니다.
+하지만 그 차이는 비슷할 것 같아요!
+
+`bench_play_game_100` 벤치마크는 거의 10배 가량 떨어졌습니다, `-93.950%`.
+그리고 `bench_play_game_1_000_000` 벤치마크는 10,000배 이상 떨어졌습니다! `9,596,800 ns` 에서 `30.403 ns`로!
+우리는 심지어 Criterion의 변화율 게이지를 최대치로 올렸습니다. 이는 `-100.000%`까지만 계산되기 때문입니다!
+
+> 🐰 헤이, 적어도 우리는 이 성능 버그를 제품이 출시되기 전에 잡아낸 것 같네요...아, 그래도 없었나봐요...
+
+<CatchInCi />
+
+<CatchInCiOutput />
+
+<CatchInCiPlot />
+
+<CatchInCiPlotRustBench title="Criterion을 이용한 Rust 벤치마킹 방법" />
+
+<BencherFooter />

@@ -1,0 +1,26 @@
+import GameLibTree from "../game-lib-tree.mdx";
+import FizzBuzzRefactorLibCode from "../fizz-buzz-refactor-lib-code.mdx";
+import FizzBuzzRefactorMainCode from "../fizz-buzz-refactor-main-code.mdx";
+
+### FizzBuzzのリファクタリング
+
+FizzBuzzアプリケーションをテストするためには、ロジックとプログラムの`main`関数を切り離す必要があります。
+ベンチマークハーネスは`main`関数をベンチマークできません。これを行うためには、いくつかの変更を行う必要があります。
+
+`src`の下に、新しいファイル`lib.rs`を作成します：
+
+<GameLibTree />
+
+以下のコードを`lib.rs`に追加します：
+
+<FizzBuzzRefactorLibCode />
+
+- `play_game`: 符号なし整数`n`を指定して`fizz_buzz`を呼び出し、`print`が`true`の場合は結果を出力します。
+- `fizz_buzz`: 符号なし整数`n`を受け取り、実際の`Fizz`、`Buzz`、`FizzBuzz`、または数字のロジックを実行して結果を文字列として返します。
+
+その後`main.rs`を以下のように更新します：
+
+<FizzBuzzRefactorMainCode />
+
+- `game::play_game`: `lib.rs`で作成した`game`クレートから`play_game`をインポートします。
+- `main`: プログラムのメインエントリーポイントで、`1`から`100`までの数字を反復処理し、各数字に対して`play_game`を呼び出し、`print`を`true`に設定します。

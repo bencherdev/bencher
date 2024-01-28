@@ -1,0 +1,26 @@
+import GameLibTree from "../game-lib-tree.mdx";
+import FizzBuzzRefactorLibCode from "../fizz-buzz-refactor-lib-code.mdx";
+import FizzBuzzRefactorMainCode from "../fizz-buzz-refactor-main-code.mdx";
+
+### Refactorizar FizzBuzz
+
+Para probar nuestra aplicación FizzBuzz, necesitamos desacoplar nuestra lógica de la función `main` del programa.
+Los arneses de benchmark no pueden marcar la función `main`. Para hacer esto, necesitamos hacer algunos cambios.
+
+Bajo `src`, crea un nuevo archivo llamado `lib.rs`:
+
+<GameLibTree />
+
+Agrega el siguiente código a `lib.rs`:
+
+<FizzBuzzRefactorLibCode />
+
+- `play_game`: Recibe un número entero sin signo `n`, llama a `fizz_buzz` con ese número, y si `print` es `true` imprime el resultado.
+- `fizz_buzz`: Recibe un número entero sin signo `n` y realiza la lógica real de `Fizz`, `Buzz`, `FizzBuzz`, o número regresando el resultado como string.
+
+Luego actualiza `main.rs` para que se vea así:
+
+<FizzBuzzRefactorMainCode />
+
+- `game::play_game`: Importa `play_game` del crate `game` que acabamos de crear con `lib.rs`.
+- `main`: El punto de entrada principal a nuestro programa que itera a través de los números del `1` al `100` inclusive y llama `play_game` para cada número, con `print` establecido a `true`.

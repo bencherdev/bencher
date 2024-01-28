@@ -1,0 +1,26 @@
+import GameLibTree from "../game-lib-tree.mdx";
+import FizzBuzzRefactorLibCode from "../fizz-buzz-refactor-lib-code.mdx";
+import FizzBuzzRefactorMainCode from "../fizz-buzz-refactor-main-code.mdx";
+
+### FizzBuzz 재구성
+
+FizzBuzz 애플리케이션을 테스트하기 위해서는 우리의 로직을 프로그램의 `main` 함수에서 분리해야 합니다.
+벤치마크 하니스는 `main` 함수를 벤치마크할 수 없습니다. 이를 위해서는 몇 가지 변경이 필요합니다.
+
+`src` 내에 `lib.rs`라는 새 파일을 생성하세요:
+
+<GameLibTree />
+
+다음의 코드를 `lib.rs`에 추가하세요:
+
+<FizzBuzzRefactorLibCode />
+
+- `play_game`: 부호 없는 정수 `n`을 인자로 받아, `fizz_buzz`를 해당 숫자와 함께 호출하고, `print`가 `true`일 경우 결과를 출력합니다.
+- `fizz_buzz`: 부호 없는 정수 `n`을 인자로 받아 실제 `Fizz`, `Buzz`, `FizzBuzz`, 또는 숫자 로직을 수행하고 결과를 문자열로 반환합니다.
+
+그리고 `main.rs`를 다음과 같이 업데이트하세요:
+
+<FizzBuzzRefactorMainCode />
+
+- `game::play_game`: 우리가 `lib.rs`로 생성한 `game` 크레이트에서 `play_game`를 가져옵니다.
+- `main`: 프로그램의 주 진입점으로, 숫자 `1`에서 `100`까지 반복하면서 각 숫자에 대해 `print`를 `true`로 설정한 상태로 `play_game`를 호출합니다.

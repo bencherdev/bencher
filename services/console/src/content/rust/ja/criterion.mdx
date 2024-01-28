@@ -1,0 +1,161 @@
+---
+title: "Criterion"
+description: "Criterionを使用してRustコードをベンチマークする方法についてのステップバイステップガイド"
+heading: "Criterionを使ってRustコードをベンチマークする方法"
+sortOrder: 2
+---
+
+import Benchmarking from "../../../chunks/benchmarking/ja/benchmarking.mdx";
+import WhatIsRust from "../../../chunks/rust/ja/what-is-rust.mdx";
+import FizzBuzzRules from "../../../chunks/benchmarking/ja/fizz-buzz-rules.mdx";
+import FizzBuzzRust from "../../../chunks/rust/ja/fizz-buzz-rust.mdx";
+import StepByStepRust from "../../../chunks/rust/ja/step-by-step-rust.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/ja/micro-vs-macro.mdx";
+import BenchmarkingRust from "../../../chunks/rust/ja/benchmarking-rust.mdx";
+import FizzBuzzRefactor from "../../../chunks/rust/criterion/ja/fizz-buzz-refactor.mdx";
+import GameBenchesTree from "../../../chunks/rust/criterion/game-benches-tree.mdx";
+import FizzBuzzRefactorBenchesCode from "../../../chunks/rust/criterion/fizz-buzz-refactor-benches-code.mdx";
+import GameCargoToml from "../../../chunks/rust/criterion/game-cargo-toml.mdx";
+import BenchPlayGameOutput from "../../../chunks/rust/criterion/bench-play-game-output.mdx";
+import FizzBuzzFibonacciRust from "../../../chunks/rust/ja/fizz-buzz-fibonacci-rust.mdx";
+import PlayGameRustCode from "../../../chunks/rust/criterion/play-game-rust-code.mdx";
+import BenchPlayGameFibonacciOutput from "../../../chunks/rust/criterion/bench-play-game-fibonacci-output.mdx";
+import FizzBuzzFibonacciOpenRust from "../../../chunks/rust/ja/fizz-buzz-fibonacci-open-rust.mdx";
+import FizzBuzzFibonacciOpenRustCode from "../../../chunks/rust/criterion/fizz-buzz-fibonacci-open-rust-code.mdx";
+import TheEnd from "../../../chunks/benchmarking/ja/the-end.mdx";
+import OnFire from "../../../chunks/benchmarking/ja/on-fire.mdx";
+import BenchPlayGameOnFireCode from "../../../chunks/rust/criterion/bench-play-game-on-fire-code.mdx";
+import BenchPlayGameOnFireOutputStart from "../../../chunks/rust/criterion/bench-play-game-on-fire-output-start.mdx";
+import BenchPlayGameOnFireOutput from "../../../chunks/rust/criterion/bench-play-game-on-fire-output.mdx";
+import FizzBuzzFibonacciFixRust from "../../../chunks/rust/ja/fizz-buzz-fibonacci-fix-rust.mdx";
+import BenchPlayGameFixOutput from "../../../chunks/rust/criterion/bench-play-game-fix-output.mdx";
+import CatchInCi from "../../../chunks/benchmarking/ja/catch-in-ci.mdx";
+import CatchInCiOutput from "../../../chunks/rust/criterion/catch-in-ci-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/ja/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/rust/catch-in-ci-plot-rust-bench.mdx";
+import BencherFooter from "../../../chunks/learn/ja/bencher-footer.mdx";
+
+<Benchmarking />
+
+<WhatIsRust />
+
+<FizzBuzzRust />
+
+<StepByStepRust />
+
+<MicroVsMacro />
+
+<BenchmarkingRust />
+
+全てが[Bencherによってサポートされています](/docs/ja/explanation/adapters/)。それならばなぜCriterionを選ぶのでしょうか？
+Criterionは、Rustコミュニティにおける事実上の標準ベンチマーキングハーネスです。
+私は、コードのレイテンシをベンチマーキングするためにCriterionを使用することをお勧めします。
+つまり、Criterionは壁時計時間の測定に適しています。
+
+<FizzBuzzRefactor />
+
+## FizzBuzzのベンチマーク
+
+コードをベンチマークするために、`benches` ディレクトリを作成し、ベンチマークを含むファイル `play_game.rs` を追加する必要があります：
+
+<GameBenchesTree />
+
+`play_game.rs` に次のコードを追加します：
+
+<FizzBuzzRefactorBenchesCode />
+
+- `Criterion` ベンチマークランナーをインポートします。
+- 我々の `game` クレートから `play_game` 関数をインポートします。
+- `Criterion` の mutable reference を受け取る `bench_play_game` という名前の関数を作成します。
+- `Criterion` インスタンス（`c`）を使用して、 `bench_play_game` という名前のベンチマークを作成します。
+- ベンチマークランナー（`b`）を使用して、マクロベンチマークを何度も実行します。
+- コンパイラが我々のコードを最適化しないように、"black box" 内でマクロベンチマークを実行します。
+- `1` から `100` まで繰り返します。
+- 各数字に対して、`play_game` を呼び出します。`print` を `false` に設定します。
+
+次に、ベンチマークを実行するための `game` クレートを設定する必要があります。
+
+あなたの `Cargo.toml` ファイルの _最後_ に、以下を追加してください：
+
+<GameCargoToml />
+
+- `criterion`: パフォーマンステストのためにのみ使用するので、開発依存関係として `criterion` を追加します。
+- `bench`: `play_game` をベンチマークとして登録し、`harness` を `false` に設定します。なぜなら、我々は Criterion をベンチマークハーネスとして使用するからです。
+
+さあ、コードをベンチマークする準備が整いました。`cargo bench` を実行します:
+
+<BenchPlayGameOutput />
+
+> 🐰 レタスターニップビート！私たちは最初のベンチマークメトリクスを得ました！
+
+ついに...ちょっと待って、私たちのユーザーは新機能を求めています！
+
+<FizzBuzzFibonacciRust>
+  <PlayGameRustCode />
+</FizzBuzzFibonacciRust>
+
+## FizzBuzzFibonacciのベンチマーク
+
+ここで、私たちはベンチマークを再実行できます：
+
+<BenchPlayGameFibonacciOutput />
+
+おお、すごい！Criterionは、私たちのFizzBuzzとFizzBuzzFibonacciゲームのパフォーマンスの違いを`+568.69%`と教えてくれました。
+あなたの数字は私のものと少し違うでしょう。
+しかし、2つのゲームの違いはおそらく`5x`の範囲内でしょう。
+これは私にとっては良い感じです！特に、私たちのゲームに_Fibonacci_という高尚な響きのフィーチャーを追加することによるものです。
+子供たちはそれを大好きになるでしょう！
+
+<FizzBuzzFibonacciOpenRust>
+  <FizzBuzzFibonacciOpenRustCode />
+</FizzBuzzFibonacciOpenRust>
+
+<TheEnd />
+
+<br />
+
+<OnFire />
+
+<BenchPlayGameOnFireCode />
+
+- ゲームを数字一百（`100`）でプレイするためのマイクロベンチマーク `bench_play_game_100`
+- ゲームを数字一百万（`1_000_000`）でプレイするためのマイクロベンチマーク `bench_play_game_1_000_000`
+
+私がそれを実行したとき、これを得ました：
+
+<BenchPlayGameOnFireOutputStart />
+
+それを待って...それを待って...
+
+<BenchPlayGameOnFireOutput />
+
+何！`403.57 ns` x `1,000` は `403,570 ns` になるべきで、`9,596,800 ns` （`9.5968 ms` x `1_000_000 ns/1 ms`）にはならないはずです 🤯
+私がフィボナッチ数列コードを機能的に正しく実装したにもかかわらず、どこかにパフォーマンスのバグがあるはずです。
+
+<FizzBuzzFibonacciFixRust />
+
+それでは、ベンチマークを再実行し、どうなったか見てみましょう：
+
+<BenchPlayGameFixOutput />
+
+おお、ワ オ！私たちの `bench_play_game` ベンチマークは、元のFizzBuzzのときのものと同じくらいに戻ってきました。
+そのスコアがもともとどれくらいだったか覚えていられれば良かったのですが、もう3週間も経っています。
+私のターミナルの履歴はそこまで遡ることができません。
+また、Criterionは最新の結果についてしか比較しません。
+しかし、それは近いと思います！
+
+`bench_play_game_100` ベンチマークはほぼ10倍下がりました。 `-93.950%`。
+そして `bench_play_game_1_000_000` ベンチマークは10,000倍以上下がりました！ `9,596,800 ns` から `30.403 ns` に！
+私たちはさえもCriterionの変化のメーターを最大まで振り切りました、それは `-100.000%` までしか表示しません！
+
+> 🐰 ねえ、少なくとも私たちはこのパフォーマンスバグを本番環境に進出する前に捕まえた...ああ、そうだった...
+
+<CatchInCi />
+
+<CatchInCiOutput />
+
+<CatchInCiPlot />
+
+<CatchInCiPlotRustBench title="CriterionでRustをベンチマークする方法" />
+
+<BencherFooter />

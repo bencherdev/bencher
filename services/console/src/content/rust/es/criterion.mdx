@@ -1,0 +1,162 @@
+---
+title: "Criterion"
+description: "Una guía paso a paso sobre cómo hacer un benchmarking del código Rust con Criterion"
+heading: "Cómo hacer un benchmarking del código Rust con Criterion"
+sortOrder: 2
+---
+
+import Benchmarking from "../../../chunks/benchmarking/es/benchmarking.mdx";
+import WhatIsRust from "../../../chunks/rust/es/what-is-rust.mdx";
+import FizzBuzzRules from "../../../chunks/benchmarking/es/fizz-buzz-rules.mdx";
+import FizzBuzzRust from "../../../chunks/rust/es/fizz-buzz-rust.mdx";
+import StepByStepRust from "../../../chunks/rust/es/step-by-step-rust.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/es/micro-vs-macro.mdx";
+import BenchmarkingRust from "../../../chunks/rust/es/benchmarking-rust.mdx";
+import FizzBuzzRefactor from "../../../chunks/rust/criterion/es/fizz-buzz-refactor.mdx";
+import GameBenchesTree from "../../../chunks/rust/criterion/game-benches-tree.mdx";
+import FizzBuzzRefactorBenchesCode from "../../../chunks/rust/criterion/fizz-buzz-refactor-benches-code.mdx";
+import GameCargoToml from "../../../chunks/rust/criterion/game-cargo-toml.mdx";
+import BenchPlayGameOutput from "../../../chunks/rust/criterion/bench-play-game-output.mdx";
+import FizzBuzzFibonacciRust from "../../../chunks/rust/es/fizz-buzz-fibonacci-rust.mdx";
+import PlayGameRustCode from "../../../chunks/rust/criterion/play-game-rust-code.mdx";
+import BenchPlayGameFibonacciOutput from "../../../chunks/rust/criterion/bench-play-game-fibonacci-output.mdx";
+import FizzBuzzFibonacciOpenRust from "../../../chunks/rust/es/fizz-buzz-fibonacci-open-rust.mdx";
+import FizzBuzzFibonacciOpenRustCode from "../../../chunks/rust/criterion/fizz-buzz-fibonacci-open-rust-code.mdx";
+import TheEnd from "../../../chunks/benchmarking/es/the-end.mdx";
+import OnFire from "../../../chunks/benchmarking/es/on-fire.mdx";
+import BenchPlayGameOnFireCode from "../../../chunks/rust/criterion/bench-play-game-on-fire-code.mdx";
+import BenchPlayGameOnFireOutputStart from "../../../chunks/rust/criterion/bench-play-game-on-fire-output-start.mdx";
+import BenchPlayGameOnFireOutput from "../../../chunks/rust/criterion/bench-play-game-on-fire-output.mdx";
+import FizzBuzzFibonacciFixRust from "../../../chunks/rust/es/fizz-buzz-fibonacci-fix-rust.mdx";
+import BenchPlayGameFixOutput from "../../../chunks/rust/criterion/bench-play-game-fix-output.mdx";
+import CatchInCi from "../../../chunks/benchmarking/es/catch-in-ci.mdx";
+import CatchInCiOutput from "../../../chunks/rust/criterion/catch-in-ci-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/es/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/rust/catch-in-ci-plot-rust-bench.mdx";
+import BencherFooter from "../../../chunks/learn/es/bencher-footer.mdx";
+
+<Benchmarking />
+
+<WhatIsRust />
+
+<FizzBuzzRust />
+
+<StepByStepRust />
+
+<MicroVsMacro />
+
+<BenchmarkingRust />
+
+Los tres están [soportados por Bencher](/docs/es/explanation/adapters/). Entonces, ¿por qué elegir Criterion?
+Criterion es la herramienta estándar de facto para hacer benchmarking en la comunidad Rust.
+Yo sugeriría usar Criterion para hacer benchmarking del tiempo de latencia de tu código.
+Es decir, Criterion es excelente para medir el tiempo en tiempo real.
+
+<FizzBuzzRefactor />
+
+## Haciendo benchmarking a FizzBuzz
+
+Para hacer benchmarking a nuestro código, necesitamos crear un directorio `benches` y agregar un archivo para contener nuestros benchmarks, `play_game.rs`:
+
+<GameBenchesTree />
+
+Dentro de `play_game.rs` agrega el siguiente código:
+
+<FizzBuzzRefactorBenchesCode />
+
+- Importa el ejecutor de benchmarking `Criterion`.
+- Importa la función `play_game` de nuestro paquete `game`.
+- Crea una función llamada `bench_play_game` que reciba una referencia mutable a `Criterion`.
+- Usa la instancia `Criterion` (`c`) para crear un benchmark llamado `bench_play_game`.
+- Luego usa el ejecutor de benchmarking (`b`) para ejecutar nuestro macro-benchmark varias veces.
+- Ejecuta nuestro macro-benchmark dentro de una "caja negra" para que el compilador no optimice nuestro código.
+- Itera desde `1` hasta `100` inclusive.
+- Para cada número, llama a `play_game`, con `print` puesto en `false`.
+
+Ahora necesitamos configurar el paquete `game` para ejecutar nuestros benchmarks.
+
+Añade lo siguiente al _final_ de tu archivo `Cargo.toml`:
+
+<GameCargoToml />
+
+- `criterion`: Añade `criterion` como una dependencia de desarrollo, ya que solo lo estamos utilizando para pruebas de rendimiento.
+- `bench`: Registra `play_game` como un benchmark y establece `harness` en `false`, ya que estaremos utilizando Criterion como nuestra herramienta de benchmarking.
+
+Ahora estamos listos para hacer benchmarking a nuestro código, ejecuta `cargo bench`:
+
+<BenchPlayGameOutput />
+
+> 🐰 ¡Vamos a subir el ritmo! ¡Tenemos nuestras primeras métricas de benchmarking!
+
+Finalmente, podemos descansar nuestras cansadas cabezas de desarrolladores...
+¡Es broma, nuestros usuarios quieren una nueva funcionalidad!
+
+<FizzBuzzFibonacciRust>
+  <PlayGameRustCode />
+</FizzBuzzFibonacciRust>
+
+## Haciendo benchmarking a FizzBuzzFibonacci
+
+Ahora podemos volver a ejecutar nuestro benchmark:
+
+<BenchPlayGameFibonacciOutput />
+
+¡Genial! Criterion nos dice que la diferencia entre el rendimiento de nuestros juegos FizzBuzz y FizzBuzzFibonacci es de `+568.69%`.
+Tus números serán un poco diferentes a los míos.
+Sin embargo, la diferencia entre los dos juegos probablemente esté en el rango de `5x`.
+¡Eso me parece bien! Especialmente para añadir una funcionalidad tan elegante como la de _Fibonacci_ a nuestro juego.
+¡A los niños les encantará!
+
+<FizzBuzzFibonacciOpenRust>
+  <FizzBuzzFibonacciOpenRustCode />
+</FizzBuzzFibonacciOpenRust>
+
+<TheEnd />
+
+<br />
+
+<OnFire />
+
+<BenchPlayGameOnFireCode />
+
+- Un micro-benchmark `bench_play_game_100` para jugar el juego con el número cien (`100`)
+- Un micro-benchmark `bench_play_game_1_000_000` para jugar el juego con el número un millón (`1_000_000`)
+
+Cuando lo ejecuté, conseguí esto:
+
+<BenchPlayGameOnFireOutputStart />
+
+Espera... espera...
+
+<BenchPlayGameOnFireOutput />
+
+¡¿Qué?! `403.57 ns` x `1,000` debería ser `403,570 ns` no `9,596,800 ns` (`9.5968 ms` x `1_000_000 ns/1 ms`) 🤯
+A pesar de que conseguí que mi código de la secuencia de Fibonacci funcione correctamente, debo tener un error de rendimiento en algún lugar.
+
+<FizzBuzzFibonacciFixRust />
+
+Ahora volvamos a ejecutar esos benchmarks y veamos cómo nos fue:
+
+<BenchPlayGameFixOutput />
+
+¡Oh, guau! Nuestro benchmark `bench_play_game` ha vuelto a bajar a donde estaba para el FizzBuzz original.
+Desearía poder recordar exactamente cuál era esa puntuación. Pero han pasado tres semanas.
+Mi historial de terminal no va tan atrás.
+Y Criterion solo compara contra el resultado más reciente.
+Pero creo que está cerca!
+
+El benchmark `bench_play_game_100` ha bajado casi 10x, `-93.950%`.
+Y el benchmark `bench_play_game_1_000_000` ha bajado más de 10,000x! ¡De `9,596,800 ns` a `30.403 ns`!
+¡Incluso llegamos al máximo del medidor de cambio de Criterion, que solo llega hasta `-100.000%`!
+
+> 🐰 Oye, al menos atrapamos este error de rendimiento antes de que llegara a producción... ah, cierto. Nunca importó...
+
+<CatchInCi />
+
+<CatchInCiOutput />
+
+<CatchInCiPlot />
+
+<CatchInCiPlotRustBench title="Cómo hacer benchmarking en Rust con Criterion" />
+
+<BencherFooter />

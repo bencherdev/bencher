@@ -1,0 +1,162 @@
+---
+title: "标准"
+description: "如何用Criterion对Rust代码进行基准测试的详细步骤指南"
+heading: "如何标准Rust代码与Criterion"
+sortOrder: 2
+---
+
+import Benchmarking from "../../../chunks/benchmarking/zh/benchmarking.mdx";
+import WhatIsRust from "../../../chunks/rust/zh/what-is-rust.mdx";
+import FizzBuzzRules from "../../../chunks/benchmarking/zh/fizz-buzz-rules.mdx";
+import FizzBuzzRust from "../../../chunks/rust/zh/fizz-buzz-rust.mdx";
+import StepByStepRust from "../../../chunks/rust/zh/step-by-step-rust.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/zh/micro-vs-macro.mdx";
+import BenchmarkingRust from "../../../chunks/rust/zh/benchmarking-rust.mdx";
+import FizzBuzzRefactor from "../../../chunks/rust/criterion/zh/fizz-buzz-refactor.mdx";
+import GameBenchesTree from "../../../chunks/rust/criterion/game-benches-tree.mdx";
+import FizzBuzzRefactorBenchesCode from "../../../chunks/rust/criterion/fizz-buzz-refactor-benches-code.mdx";
+import GameCargoToml from "../../../chunks/rust/criterion/game-cargo-toml.mdx";
+import BenchPlayGameOutput from "../../../chunks/rust/criterion/bench-play-game-output.mdx";
+import FizzBuzzFibonacciRust from "../../../chunks/rust/zh/fizz-buzz-fibonacci-rust.mdx";
+import PlayGameRustCode from "../../../chunks/rust/criterion/play-game-rust-code.mdx";
+import BenchPlayGameFibonacciOutput from "../../../chunks/rust/criterion/bench-play-game-fibonacci-output.mdx";
+import FizzBuzzFibonacciOpenRust from "../../../chunks/rust/zh/fizz-buzz-fibonacci-open-rust.mdx";
+import FizzBuzzFibonacciOpenRustCode from "../../../chunks/rust/criterion/fizz-buzz-fibonacci-open-rust-code.mdx";
+import TheEnd from "../../../chunks/benchmarking/zh/the-end.mdx";
+import OnFire from "../../../chunks/benchmarking/zh/on-fire.mdx";
+import BenchPlayGameOnFireCode from "../../../chunks/rust/criterion/bench-play-game-on-fire-code.mdx";
+import BenchPlayGameOnFireOutputStart from "../../../chunks/rust/criterion/bench-play-game-on-fire-output-start.mdx";
+import BenchPlayGameOnFireOutput from "../../../chunks/rust/criterion/bench-play-game-on-fire-output.mdx";
+import FizzBuzzFibonacciFixRust from "../../../chunks/rust/zh/fizz-buzz-fibonacci-fix-rust.mdx";
+import BenchPlayGameFixOutput from "../../../chunks/rust/criterion/bench-play-game-fix-output.mdx";
+import CatchInCi from "../../../chunks/benchmarking/zh/catch-in-ci.mdx";
+import CatchInCiOutput from "../../../chunks/rust/criterion/catch-in-ci-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/zh/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/rust/catch-in-ci-plot-rust-bench.mdx";
+import BencherFooter from "../../../chunks/learn/zh/bencher-footer.mdx";
+
+<Benchmarking />
+
+<WhatIsRust />
+
+<FizzBuzzRust />
+
+<StepByStepRust />
+
+<MicroVsMacro />
+
+<BenchmarkingRust />
+
+三者都是[由Bencher支持的](/docs/zh/explanation/adapters/)。那么为什么要选择Criterion呢？
+Criterion是Rust社区的事实标准基准测试工具。
+我推荐使用Criterion来测试你的代码的延迟。
+也就是说，Criterion非常适合测量时钟时间。
+
+<FizzBuzzRefactor />
+
+## 对FizzBuzz的基准测试
+
+为了对我们的代码进行基准测试，我们需要创建一个`benches`目录，并添加一个文件来包含我们的基准测试，`play_game.rs`：
+
+<GameBenchesTree />
+
+在`play_game.rs`中增加下列代码：
+
+<FizzBuzzRefactorBenchesCode />
+
+- 导入`Criterion`基准测试运行器。
+- 从我们的`game`包中导入`play_game`函数。
+- 创建一个名为`bench_play_game`的函数，它接受一个对`Criterion`的可变引用。
+- 使用`Criterion`实例（`c`）来创建一个名为`bench_play_game`的基准测试。
+- 然后使用基准测试运行器（`b`）来多次运行我们的宏基准测试。
+- 在一个"黑箱"中运行我们的宏基准测试，这样编译器就不会优化我们的代码。
+- 从`1`到`100`包括，进行迭代。
+- 对于每一个数字，调用`play_game`，设置`print`为`false`。
+
+现在我们需要配置`game`包来运行我们的基准测试。
+
+在你的`Cargo.toml`文件的底部添加以下内容：
+
+<GameCargoToml />
+
+- `criterion`：将`criterion`添加为开发依赖，因为我们只在性能测试中使用它。
+- `bench`：注册`play_game`作为一个基准测试，并设置`harness`为`false`，因为我们将使用Criterion作为我们的基准测试工具。
+
+现在我们已经准备好进行基准测试了，运行`cargo bench`：
+
+<BenchPlayGameOutput />
+
+> 🐰 让我们调高节拍！我们已经得到了第一个基准测试指标！
+
+最后，我们可以让我们疲倦的开发者头脑得到休息...
+开玩笑，我们的用户想要一个新功能！
+
+<FizzBuzzFibonacciRust>
+  <PlayGameRustCode />
+</FizzBuzzFibonacciRust>
+
+## 对FizzBuzzFibonacci的基准测试
+
+现在我们可以重新运行我们的基准测试了：
+
+<BenchPlayGameFibonacciOutput />
+
+哦哦！Criterion向我们显示了FizzBuzz和FizzBuzzFibonacci游戏之间性能差距为`+568.69%`。
+你的数字会比我的稍微有些不同。
+然而，两者之间的差距可能在`5x`的范围内。
+这对我来说看起来是比较好的结果！特别是考虑到我们将像_Fibonacci_这样的花哨功能添加到我们的游戏中。
+孩子们会喜欢的！
+
+<FizzBuzzFibonacciOpenRust>
+  <FizzBuzzFibonacciOpenRustCode />
+</FizzBuzzFibonacciOpenRust>
+
+<TheEnd />
+
+<br />
+
+<OnFire />
+
+<BenchPlayGameOnFireCode />
+
+- 一个用于玩游戏并输入数字一百（`100`）的微基准测试`bench_play_game_100`。
+- 一个用于玩游戏并输入数字一百万（`1_000_000`）的微基准测试`bench_play_game_1_000_000`。
+
+当我运行它时，我得到了这个：
+
+<BenchPlayGameOnFireOutputStart />
+
+等待一下... 等待一下...
+
+<BenchPlayGameOnFireOutput />
+
+什么！`403.57 ns` x `1,000` 应该是 `403,570 ns` 而不是 `9,596,800 ns` (`9.5968 ms` x `1_000_000 ns/1 ms`) 🤯
+尽管我的斐波那契数列代码功能上是正确的，我必须在某个地方有一个性能bug。
+
+<FizzBuzzFibonacciFixRust />
+
+现在，让我们重新运行这些基准测试，看看我们做得如何：
+
+<BenchPlayGameFixOutput />
+
+哦哇！我们的`bench_play_game`基准测试回落到原来FizzBuzz测试的附近位置。
+我希望我能记住那个得分是多少。但是已经过了三个星期了。
+我的终端历史记录没有回溯这么远。
+而Criterion只会和最近的结果进行比较。
+但我认为这是很接近的！
+
+`bench_play_game_100`基准测试的结果下降了近10倍，`-93.950%`。
+和`bench_play_game_1_000_000`基准测试的结果下降了超过10,000倍！从`9,596,800 ns`降到`30.403 ns`！
+我们甚至让Criterion的改变计数器达到了最大值，它只会达到`-100.000%`！
+
+> 🐰 嘿，至少我们在性能bug赶到生产环境之前抓住了它... 哦，对了。算了...
+
+<CatchInCi />
+
+<CatchInCiOutput />
+
+<CatchInCiPlot />
+
+<CatchInCiPlotRustBench title="如何用Criterion对Rust进行基准测试" />
+
+<BencherFooter />

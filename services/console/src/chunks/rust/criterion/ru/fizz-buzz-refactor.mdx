@@ -1,0 +1,26 @@
+import GameLibTree from "../game-lib-tree.mdx";
+import FizzBuzzRefactorLibCode from "../fizz-buzz-refactor-lib-code.mdx";
+import FizzBuzzRefactorMainCode from "../fizz-buzz-refactor-main-code.mdx";
+
+### Рефакторинг FizzBuzz
+
+Для тестирования нашего приложения FizzBuzz нам нужно отделить нашу логику от функции `main` программы.
+Инструменты для тестирования производительности не могут тестировать функцию `main`. Чтобы сделать это, нам нужно внести несколько изменений.
+
+В директории `src` создайте новый файл под названием `lib.rs`:
+
+<GameLibTree />
+
+Добавьте следующий код в `lib.rs`:
+
+<FizzBuzzRefactorLibCode />
+
+- `play_game`: Принимает беззнаковое целое число `n`, вызывает `fizz_buzz` с этим числом и, если `print` равно `true`, выводит результат.
+- `fizz_buzz`: Принимает беззнаковое целое число `n` и выполняет собственно логику `Fizz`, `Buzz`, `FizzBuzz`, или число, возвращая результат в виде строки.
+
+Затем обновите `main.rs` так, чтобы он выглядел следующим образом:
+
+<FizzBuzzRefactorMainCode />
+
+- `game::play_game`: Импортируйте `play_game` из только что созданного нами ящика `game` с `lib.rs`.
+- `main`: Основная точка входа в нашу программу, которая проходит через числа `1` до `100` включительно и вызывает `play_game` для каждого числа, при этом `print` установлен в `true`.

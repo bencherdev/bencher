@@ -1,0 +1,26 @@
+import GameLibTree from "../game-lib-tree.mdx";
+import FizzBuzzRefactorLibCode from "../fizz-buzz-refactor-lib-code.mdx";
+import FizzBuzzRefactorMainCode from "../fizz-buzz-refactor-main-code.mdx";
+
+### 重构 FizzBuzz
+
+为了测试我们的 FizzBuzz 应用，我们需要将逻辑从程序的 `main` 函数中解耦出来。
+基准测试工具无法对 `main` 函数进行基准测试。为了做到这一点，我们需要做一些改动。
+
+在 `src` 下，创建一个新的名为 `lib.rs` 的文件：
+
+<GameLibTree />
+
+将以下代码添加到 `lib.rs`：
+
+<FizzBuzzRefactorLibCode />
+
+- `play_game`：接受一个无符号整数 `n`，用该数字调用 `fizz_buzz`，如果 `print` 为 `true`，则打印结果。
+- `fizz_buzz`：接受一个无符号整数 `n`，执行实际的 `Fizz`、`Buzz`、`FizzBuzz` 或数字逻辑，然后将结果作为字符串返回。
+
+然后更新 `main.rs`，使其看起来像这样：
+
+<FizzBuzzRefactorMainCode />
+
+- `game::play_game`：从我们刚刚用 `lib.rs` 创建的 `game` 包中导入 `play_game`。
+- `main`：我们程序的主入口点，遍历从 `1` 到 `100` 的数字，对每个数字调用 `play_game`，并将 `print` 设为 `true`。
