@@ -105,7 +105,7 @@ impl QueryServer {
                         continue;
                     },
                 };
-                let json_stats_str = match serde_json::to_string(&json_stats) {
+                let json_stats_str = match serde_json::to_string_pretty(&json_stats) {
                     Ok(json_stats_str) => json_stats_str,
                     Err(e) => {
                         slog::error!(log, "Failed to serialize stats: {e}");

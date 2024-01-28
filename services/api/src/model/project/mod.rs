@@ -5,7 +5,7 @@ use bencher_json::{
     DateTime, JsonNewProject, JsonProject, ProjectUuid, ResourceId, ResourceName, Slug, Url,
 };
 use bencher_rbac::{Organization, Project};
-use diesel::{ExpressionMethods, QueryDsl, Queryable, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
 use crate::{
@@ -36,7 +36,9 @@ pub mod version;
 
 crate::util::typed_id::typed_id!(ProjectId);
 
-#[derive(Debug, Clone, Queryable, diesel::Identifiable, diesel::Associations)]
+#[derive(
+    Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
+)]
 #[diesel(table_name = project_table)]
 #[diesel(belongs_to(QueryOrganization, foreign_key = organization_id))]
 pub struct QueryProject {

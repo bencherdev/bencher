@@ -8195,25 +8195,60 @@
         "type": "object",
         "properties": {
           "active_projects": {
-            "$ref": "#/components/schemas/JsonCohort"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohort"
+              }
+            ]
           },
           "metrics": {
-            "$ref": "#/components/schemas/JsonCohort"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohort"
+              }
+            ]
           },
           "metrics_per_report": {
-            "$ref": "#/components/schemas/JsonCohortAvg"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohortAvg"
+              }
+            ]
           },
           "organizations": {
-            "$ref": "#/components/schemas/JsonOrganizations"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonOrganizations"
+              }
+            ]
           },
           "projects": {
-            "$ref": "#/components/schemas/JsonCohort"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohort"
+              }
+            ]
           },
           "reports": {
-            "$ref": "#/components/schemas/JsonCohort"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohort"
+              }
+            ]
           },
           "reports_per_project": {
-            "$ref": "#/components/schemas/JsonCohortAvg"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohortAvg"
+              }
+            ]
           },
           "server": {
             "$ref": "#/components/schemas/JsonServer2"
@@ -8221,21 +8256,26 @@
           "timestamp": {
             "$ref": "#/components/schemas/DateTime"
           },
+          "top_projects": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonTopCohort"
+              }
+            ]
+          },
           "users": {
-            "$ref": "#/components/schemas/JsonCohort"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCohort"
+              }
+            ]
           }
         },
         "required": [
-          "active_projects",
-          "metrics",
-          "metrics_per_report",
-          "organizations",
-          "projects",
-          "reports",
-          "reports_per_project",
           "server",
-          "timestamp",
-          "users"
+          "timestamp"
         ]
       },
       "JsonSignup": {
@@ -8612,6 +8652,60 @@
         "items": {
           "$ref": "#/components/schemas/JsonToken"
         }
+      },
+      "JsonTopCohort": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonTopProject"
+            }
+          },
+          "total": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonTopProject"
+            }
+          },
+          "week": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonTopProject"
+            }
+          }
+        },
+        "required": [
+          "month",
+          "total",
+          "week"
+        ]
+      },
+      "JsonTopProject": {
+        "type": "object",
+        "properties": {
+          "metrics": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
+          "name": {
+            "$ref": "#/components/schemas/ResourceName"
+          },
+          "percentage": {
+            "type": "number",
+            "format": "double"
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/ProjectUuid"
+          }
+        },
+        "required": [
+          "metrics",
+          "name",
+          "percentage",
+          "uuid"
+        ]
       },
       "JsonUpdateAlert": {
         "type": "object",

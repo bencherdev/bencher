@@ -1,12 +1,14 @@
 use bencher_json::{
-    system::server::{JsonCohort, JsonCohortAvg},
+    system::server::{JsonCohort, JsonCohortAvg, JsonTopCohort, JsonTopProject, JsonTopProjects},
     DateTime, JsonServerStats,
 };
-use diesel::{dsl::count, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{dsl::count, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
 use dropshot::HttpError;
 
 use crate::{
-    context::DbConnection, error::resource_not_found_err, model::organization::QueryOrganization,
+    context::DbConnection,
+    error::resource_not_found_err,
+    model::{organization::QueryOrganization, project::QueryProject},
     schema,
 };
 
@@ -14,6 +16,7 @@ use super::QueryServer;
 
 const THIS_WEEK: i64 = 7 * 24 * 60 * 60;
 const THIS_MONTH: i64 = THIS_WEEK * 4;
+const TOP_PROJECTS: usize = 10;
 
 #[allow(
     clippy::cast_possible_truncation,
@@ -32,14 +35,16 @@ pub fn get_stats(
 
     // organizations
     let organizations = if is_bencher_cloud {
-        Vec::new().into()
+        None
     } else {
-        schema::organization::table
-            .load::<QueryOrganization>(conn)
-            .map_err(resource_not_found_err!(Organization))?
-            .into_iter()
-            .map(QueryOrganization::into_json)
-            .collect()
+        Some(
+            schema::organization::table
+                .load::<QueryOrganization>(conn)
+                .map_err(resource_not_found_err!(Organization))?
+                .into_iter()
+                .map(QueryOrganization::into_json)
+                .collect(),
+        )
     };
 
     // users
@@ -140,11 +145,7 @@ pub fn get_stats(
 
     // metrics and median metrics per report
     let mut weekly_metrics = schema::metric::table
-        .inner_join(
-            schema::perf::table
-                .inner_join(schema::benchmark::table.inner_join(schema::project::table))
-                .inner_join(schema::report::table),
-        )
+        .inner_join(schema::perf::table.inner_join(schema::report::table))
         .filter(schema::report::created.ge(this_week))
         .group_by(schema::report::id)
         .select(count(schema::metric::id))
@@ -154,11 +155,7 @@ pub fn get_stats(
     let weekly_metrics_per_project = median(&mut weekly_metrics);
 
     let mut monthly_metrics = schema::metric::table
-        .inner_join(
-            schema::perf::table
-                .inner_join(schema::benchmark::table.inner_join(schema::project::table))
-                .inner_join(schema::report::table),
-        )
+        .inner_join(schema::perf::table.inner_join(schema::report::table))
         .filter(schema::report::created.ge(this_month))
         .group_by(schema::report::id)
         .select(count(schema::metric::id))
@@ -168,11 +165,7 @@ pub fn get_stats(
     let monthly_metrics_per_project = median(&mut monthly_metrics);
 
     let mut total_metrics = schema::metric::table
-        .inner_join(
-            schema::perf::table
-                .inner_join(schema::benchmark::table.inner_join(schema::project::table))
-                .inner_join(schema::report::table),
-        )
+        .inner_join(schema::perf::table.inner_join(schema::report::table))
         .group_by(schema::report::id)
         .select(count(schema::metric::id))
         .load::<i64>(conn)
@@ -192,24 +185,68 @@ pub fn get_stats(
         total: total_metrics_per_project,
     };
 
+    // top projects
+    let weekly_project_metrics = schema::metric::table
+        .inner_join(
+            schema::perf::table
+                .inner_join(schema::report::table.inner_join(schema::project::table)),
+        )
+        .filter(schema::report::created.ge(this_week))
+        .group_by(schema::project::id)
+        .select((QueryProject::as_select(), count(schema::metric::id)))
+        .load::<(QueryProject, i64)>(conn)
+        .map_err(resource_not_found_err!(Project))?;
+    let weekly_project_metrics = top_projects(weekly_project_metrics, weekly_metrics_total);
+
+    let monthly_project_metrics = schema::metric::table
+        .inner_join(
+            schema::perf::table
+                .inner_join(schema::report::table.inner_join(schema::project::table)),
+        )
+        .filter(schema::report::created.ge(this_month))
+        .group_by(schema::project::id)
+        .select((QueryProject::as_select(), count(schema::metric::id)))
+        .load::<(QueryProject, i64)>(conn)
+        .map_err(resource_not_found_err!(Project))?;
+    let monthly_project_metrics = top_projects(monthly_project_metrics, monthly_metrics_total);
+
+    let total_project_metrics = schema::metric::table
+        .inner_join(
+            schema::perf::table
+                .inner_join(schema::report::table.inner_join(schema::project::table)),
+        )
+        .filter(schema::report::created.ge(this_month))
+        .group_by(schema::project::id)
+        .select((QueryProject::as_select(), count(schema::metric::id)))
+        .load::<(QueryProject, i64)>(conn)
+        .map_err(resource_not_found_err!(Metric))?;
+    let total_project_metrics = top_projects(total_project_metrics, total_metrics_total);
+
+    let top_projects_cohort = JsonTopCohort {
+        week: weekly_project_metrics,
+        month: monthly_project_metrics,
+        total: total_project_metrics,
+    };
+
     Ok(JsonServerStats {
         server: query_server.into_json(),
-        organizations,
         timestamp: now,
-        users: users_cohort,
-        projects: projects_cohort,
-        active_projects: active_projects_cohort,
-        reports: reports_cohort,
-        reports_per_project: reports_per_project_cohort,
-        metrics: metrics_cohort,
-        metrics_per_report: metrics_per_report_cohort,
+        organizations,
+        users: Some(users_cohort),
+        projects: Some(projects_cohort),
+        active_projects: Some(active_projects_cohort),
+        reports: Some(reports_cohort),
+        reports_per_project: Some(reports_per_project_cohort),
+        metrics: Some(metrics_cohort),
+        metrics_per_report: Some(metrics_per_report_cohort),
+        top_projects: Some(top_projects_cohort),
     })
 }
 
 #[allow(
-    clippy::integer_division,
     clippy::cast_precision_loss,
-    clippy::indexing_slicing
+    clippy::indexing_slicing,
+    clippy::integer_division
 )]
 fn median(array: &mut Vec<i64>) -> f64 {
     if array.is_empty() {
@@ -226,4 +263,22 @@ fn median(array: &mut Vec<i64>) -> f64 {
     } else {
         array[size / 2] as f64
     }
+}
+
+#[allow(clippy::cast_precision_loss, clippy::cast_sign_loss)]
+fn top_projects(mut project_metrics: Vec<(QueryProject, i64)>, total: i64) -> JsonTopProjects {
+    project_metrics.sort_unstable_by(|a, b| a.1.cmp(&b.1));
+    project_metrics.reverse();
+    if project_metrics.len() > TOP_PROJECTS {
+        project_metrics.truncate(TOP_PROJECTS);
+    }
+    project_metrics
+        .into_iter()
+        .map(|(project, metrics)| JsonTopProject {
+            name: project.name,
+            uuid: project.uuid,
+            metrics: metrics as u64,
+            percentage: metrics as f64 / total as f64,
+        })
+        .collect()
 }

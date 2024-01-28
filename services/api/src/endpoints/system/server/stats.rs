@@ -72,7 +72,7 @@ async fn post_inner(
     let _biller = context.biller()?;
     let conn = &mut *context.conn().await;
 
-    let server_stats = serde_json::to_string(&json_server_stats).map_err(|e| {
+    let server_stats = serde_json::to_string_pretty(&json_server_stats).map_err(|e| {
         slog::error!(log, "Failed to serialize stats: {e}");
         issue_error(
             StatusCode::INTERNAL_SERVER_ERROR,
