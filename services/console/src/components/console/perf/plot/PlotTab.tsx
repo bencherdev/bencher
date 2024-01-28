@@ -10,7 +10,7 @@ import type {
 } from "../../../../types/bencher";
 import Pagination, { PaginationSize } from "../../../site/Pagination";
 import { DEFAULT_PAGE } from "../PerfPanel";
-import { encodedPath } from "../../../../util/url";
+import { BACK_PARAM, encodePath } from "../../../../util/url";
 
 export type TabList<T> = TabElement<T>[];
 
@@ -420,7 +420,7 @@ const ViewReportButton = (props: {
 			title={`View Report from ${fmtDateTime(props.report?.start_time)}`}
 			href={`/console/projects/${props.project_slug()}/${props.tab()}/${
 				props.report?.uuid
-			}?back=${encodedPath()}`}
+			}?${BACK_PARAM}=${encodePath()}`}
 		>
 			View
 		</a>
@@ -438,7 +438,7 @@ const ViewDimensionButton = (props: {
 			title={`View ${props.dimension?.name}`}
 			href={`/console/projects/${props.project_slug()}/${props.tab()}/${
 				props.dimension?.slug
-			}?back=${encodedPath()}`}
+			}?${BACK_PARAM}=${encodePath()}`}
 		>
 			View
 		</a>

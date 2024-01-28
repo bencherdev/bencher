@@ -1,6 +1,6 @@
 import type { Params } from "astro";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
-import { backOrParentPath, parentPath, viewUuidPath } from "../util";
+import { parentPath, viewUuidPath } from "../util";
 import { isAllowedProjectDelete } from "../../util/auth";
 
 const reportsConfig = {
@@ -57,7 +57,7 @@ const reportsConfig = {
 		operation: Operation.VIEW,
 		header: {
 			key: "start_time",
-			path: backOrParentPath,
+			path: parentPath,
 			path_to: "Reports",
 			buttons: [{ kind: Button.REFRESH }],
 		},

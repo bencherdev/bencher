@@ -11,7 +11,7 @@ import {
 	runWithOwner,
 	untrack,
 } from "solid-js";
-import { encodeBase64 } from "./convert";
+import { decodeBase64, encodeBase64 } from "./convert";
 
 export type Params = Record<string, string>;
 export declare type SetParams = Record<
@@ -272,8 +272,19 @@ export const hiddenRedirect = (url: string): void => {
 
 export const pathname = createMemo(() => useLocation().pathname);
 
-export const encodedPath = createMemo(() => {
+export const BACK_PARAM = "back";
+
+export const encodePath = createMemo(() => {
 	const location = useLocation();
 	const back = encodeBase64(`${location.pathname}${location.search}`);
 	return back;
 });
+
+export const decodePath = (fallback: string) => {
+	const [searchParams, _setSearchParams] = useSearchParams();
+	const back = searchParams[BACK_PARAM];
+	if (back) {
+		return decodeBase64(back);
+	}
+	return fallback;
+};

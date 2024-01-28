@@ -1,13 +1,7 @@
 import type { Params } from "astro";
 import { validResourceName, validSlug } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
-import {
-	parentPath,
-	addPath,
-	viewSlugPath,
-	createdSlugPath,
-	backOrParentPath,
-} from "../util";
+import { parentPath, addPath, viewSlugPath, createdSlugPath } from "../util";
 import type { JsonTestbed } from "../../types/bencher";
 import FieldKind from "../../components/field/kind";
 import { isAllowedProjectDelete, isAllowedProjectEdit } from "../../util/auth";
@@ -107,7 +101,7 @@ const testbedsConfig = {
 		operation: Operation.VIEW,
 		header: {
 			key: "name",
-			path: backOrParentPath,
+			path: parentPath,
 			path_to: "Testbeds",
 			buttons: [{ kind: Button.REFRESH }],
 		},

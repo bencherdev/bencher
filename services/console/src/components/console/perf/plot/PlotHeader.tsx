@@ -17,7 +17,7 @@ import type {
 import { BENCHER_WORDMARK } from "../../../../util/ext";
 import { httpGet } from "../../../../util/http";
 import { BENCHER_MEASURE_ID } from "./util";
-import { encodedPath, useLocation } from "../../../../util/url";
+import { BACK_PARAM, encodePath } from "../../../../util/url";
 
 const BENCHER_MEASURE = "--bencher-measure--";
 
@@ -148,7 +148,7 @@ const FullPlotHeader = (props: Props) => {
 									title={`View ${measure()?.name}`}
 									href={`/console/projects/${props.project_slug()}/measures/${
 										measure()?.slug
-									}?back=${encodedPath()}`}
+									}?${BACK_PARAM}=${encodePath()}`}
 								>
 									<small>View</small>
 								</a>

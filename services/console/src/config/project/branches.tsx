@@ -1,13 +1,7 @@
 import type { Params } from "astro";
 import { validBranchName, validSlug } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
-import {
-	parentPath,
-	addPath,
-	viewSlugPath,
-	createdSlugPath,
-	backOrParentPath,
-} from "../util";
+import { parentPath, addPath, viewSlugPath, createdSlugPath } from "../util";
 import type { JsonBranch } from "../../types/bencher";
 import FieldKind from "../../components/field/kind";
 import { isAllowedProjectDelete, isAllowedProjectEdit } from "../../util/auth";
@@ -105,7 +99,7 @@ const branchesConfig = {
 		operation: Operation.VIEW,
 		header: {
 			key: "name",
-			path: backOrParentPath,
+			path: parentPath,
 			path_to: "Branches",
 			buttons: [{ kind: Button.REFRESH }],
 		},

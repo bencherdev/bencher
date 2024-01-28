@@ -4,7 +4,7 @@ import { type JsonProject, Visibility } from "../../types/bencher";
 import { isAllowedProjectEdit } from "../../util/auth";
 import { validResourceName, validOptionUrl, validSlug } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
-import { addPath, backOrParentPath, parentPath } from "../util";
+import { addPath, parentPath } from "../util";
 
 const PROJECT_FIELDS = {
 	name: {
@@ -148,7 +148,7 @@ const projectsConfig = {
 		operation: Operation.VIEW,
 		header: {
 			key: "name",
-			path: backOrParentPath,
+			path: parentPath,
 			path_to: "Projects",
 			buttons: [{ kind: Button.REFRESH }],
 		},

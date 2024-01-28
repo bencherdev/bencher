@@ -8,7 +8,7 @@ import {
 } from "solid-js";
 import type { JsonAuthUser } from "../../../../types/bencher";
 import { fmtValues, setPageTitle } from "../../../../util/resource";
-import { pathname } from "../../../../util/url";
+import { decodePath, pathname } from "../../../../util/url";
 import DeckHeaderButton, {
 	type DeckHeaderButtonConfig,
 } from "./DeckHeaderButton";
@@ -46,7 +46,7 @@ const DeckHeader = (props: Props) => {
 				<a
 					class="button is-outlined is-fullwidth"
 					title={`Back to ${props.config?.path_to}`}
-					href={props.config?.path(pathname())}
+					href={decodePath(props.config?.path(pathname()))}
 				>
 					<span class="icon">
 						<i class="fas fa-chevron-left" aria-hidden="true" />
