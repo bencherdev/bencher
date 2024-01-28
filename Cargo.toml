@@ -40,7 +40,7 @@ http = "0.2"
 hyper = "0.14"
 jsonwebtoken = "9.2"
 literally = "0.1"
-octocrab = "0.32"
+octocrab = "0.33"
 once_cell = "1.19"
 ordered-float = "4.2"
 oso = "0.27"
@@ -60,9 +60,9 @@ typeshare = "1.0"
 url = "2.5"
 uuid = "1.7"
 # github.com
-dropshot = { git = "https://github.com/oxidecomputer/dropshot", rev = "29ae98d1f909c6832661408a4c03f929e8afa6e9" }
-progenitor = { git = "https://github.com/oxidecomputer/progenitor", rev = "2d3b9d0eb50a1907974c0b0ba7ee7893425b3e79" }
-progenitor-client = { git = "https://github.com/oxidecomputer/progenitor", rev = "2d3b9d0eb50a1907974c0b0ba7ee7893425b3e79" }
+dropshot = { git = "https://github.com/oxidecomputer/dropshot", rev = "605a6d1421b610b37cf9435c5094e15b59de88b9" }
+progenitor = { git = "https://github.com/oxidecomputer/progenitor", rev = "86b60220b88a2ca3629fb87acf8f83ff35f63aaa" }
+progenitor-client = { git = "https://github.com/oxidecomputer/progenitor", rev = "86b60220b88a2ca3629fb87acf8f83ff35f63aaa" }
 
 [workspace.lints.rust]
 # https://doc.rust-lang.org/rustc/lints/listing/index.html

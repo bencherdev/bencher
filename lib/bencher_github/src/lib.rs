@@ -78,6 +78,9 @@ impl GitHub {
                 .scopes()
                 .map(|s| s.iter().map(AsRef::as_ref).map(ToOwned::to_owned).collect())
                 .unwrap_or_default(),
+            expires_in: None,
+            refresh_token: None,
+            refresh_token_expires_in: None,
         };
         let github_client = Octocrab::builder()
             .oauth(oauth)
