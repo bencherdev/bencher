@@ -6,11 +6,13 @@ import type { JsonTestbed } from "../../types/bencher";
 import FieldKind from "../../components/field/kind";
 import { isAllowedProjectDelete, isAllowedProjectEdit } from "../../util/auth";
 
+export const TESTBED_ICON = "fas fa-server";
+
 const TESTBED_FIELDS = {
 	name: {
 		type: "text",
 		placeholder: "Testbed Name",
-		icon: "fas fa-server",
+		icon: TESTBED_ICON,
 		help: "Must be a non-empty string",
 		validate: validResourceName,
 	},

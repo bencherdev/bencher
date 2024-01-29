@@ -6,11 +6,13 @@ import type { JsonBranch } from "../../types/bencher";
 import FieldKind from "../../components/field/kind";
 import { isAllowedProjectDelete, isAllowedProjectEdit } from "../../util/auth";
 
+export const BRANCH_ICON = "fas fa-code-branch";
+
 const BRANCH_FIELDS = {
 	name: {
 		type: "text",
 		placeholder: "branch-name",
-		icon: "fas fa-code-branch",
+		icon: BRANCH_ICON,
 		help: "Must be a valid git reference",
 		validate: validBranchName,
 	},

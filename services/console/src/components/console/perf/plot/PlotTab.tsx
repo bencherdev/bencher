@@ -11,6 +11,9 @@ import type {
 import Pagination, { PaginationSize } from "../../../site/Pagination";
 import { DEFAULT_PAGE } from "../PerfPanel";
 import { BACK_PARAM, encodePath } from "../../../../util/url";
+import { BRANCH_ICON } from "../../../../config/project/branches";
+import { TESTBED_ICON } from "../../../../config/project/testbeds";
+import { MEASURE_ICON } from "../../../../config/project/measures";
 
 export type TabList<T> = TabElement<T>[];
 
@@ -271,87 +274,104 @@ const Tab = (props: {
 							<Show
 								when={(resource?.results?.[0]?.length ?? 0) > 0}
 								fallback={
-									<div class="panel-block columns is-vcentered is-mobile">
-										<div class="column" style="color: black;">
-											<div class="columns is-vcentered is-mobile">
-												<div class="column is-narrow">
-													<input type="radio" disabled={true} checked={false} />
-												</div>
-												<div class="column">
-													<small style="word-break: break-word;">
-														{fmtDateTime(resource?.start_time)}
-													</small>
-													<ReportDimension
-														icon="fab fa-creative-commons-zero"
-														name="No Results"
-													/>
+									<div class="panel-block is-block">
+										<div class="level">
+											<div class="level-left" style="color: black;">
+												<div class="level-item">
+													<div class="columns is-vcentered is-mobile">
+														<div class="column is-narrow">
+															<input
+																type="radio"
+																disabled={true}
+																checked={false}
+															/>
+														</div>
+														<div class="column">
+															<small style="word-break: break-word;">
+																{fmtDateTime(resource?.start_time)}
+															</small>
+															<ReportDimension
+																icon="fab fa-creative-commons-zero"
+																name="No Results"
+															/>
+														</div>
+													</div>
 												</div>
 											</div>
+											<Show when={props.isConsole}>
+												<div class="level-right">
+													<div class="level-item">
+														<ViewReportButton
+															project_slug={props.project_slug}
+															tab={props.tab}
+															report={resource}
+														/>
+													</div>
+												</div>
+											</Show>
 										</div>
-										<Show when={props.isConsole}>
-											<div class="column is-narrow">
-												<ViewReportButton
-													project_slug={props.project_slug}
-													tab={props.tab}
-													report={resource}
-												/>
-											</div>
-										</Show>
 									</div>
 								}
 							>
 								<For each={resource?.results?.[0]}>
 									{(result, _index) => (
-										<div class="panel-block columns is-vcentered is-mobile">
-											<a
-												class="column"
-												style="color: black;"
-												title={`View Report from ${fmtDateTime(
-													resource?.start_time,
-												)}`}
-												onClick={(_e) =>
-													// Send the Measure UUID instead of the Report UUID
-													props.handleChecked(index(), result.measure?.uuid)
-												}
-											>
-												<div class="columns is-vcentered is-mobile">
-													<div class="column is-narrow">
-														<input
-															type="radio"
-															checked={
-																report.checked &&
-																result.measure?.uuid === props.measures()?.[0]
-															}
-														/>
+										<div class="panel-block is-block">
+											<div class="level">
+												<a
+													class="level-left"
+													style="color: black;"
+													title={`View Report from ${fmtDateTime(
+														resource?.start_time,
+													)}`}
+													onClick={(_e) =>
+														// Send the Measure UUID instead of the Report UUID
+														props.handleChecked(index(), result.measure?.uuid)
+													}
+												>
+													<div class="level-item">
+														<div class="columns is-vcentered is-mobile">
+															<div class="column is-narrow">
+																<input
+																	type="radio"
+																	checked={
+																		report.checked &&
+																		result.measure?.uuid ===
+																			props.measures()?.[0]
+																	}
+																/>
+															</div>
+															<div class="column">
+																<small style="word-break: break-word;">
+																	{fmtDateTime(resource?.start_time)}
+																</small>
+																<ReportDimension
+																	icon={BRANCH_ICON}
+																	name={resource?.branch?.name}
+																/>
+																<ReportDimension
+																	icon={TESTBED_ICON}
+																	name={resource?.testbed?.name}
+																/>
+																<ReportDimension
+																	icon={MEASURE_ICON}
+																	name={result.measure?.name}
+																/>
+															</div>
+														</div>
 													</div>
-													<div class="column">
-														<small style="word-break: break-word;">
-															{fmtDateTime(resource?.start_time)}
-														</small>
-														<ReportDimension
-															icon="fas fa-code-branch"
-															name={resource?.branch?.name}
-														/>
-														<ReportDimension
-															icon="fas fa-server"
-															name={resource?.testbed?.name}
-														/>
-														<ReportDimension
-															icon="fas fa-shapes"
-															name={result.measure?.name}
-														/>
+												</a>
+												<Show when={props.isConsole}>
+													<div class="level-right">
+														<div class="level-item">
+															<ViewReportButton
+																project_slug={props.project_slug}
+																tab={props.tab}
+																report={resource}
+															/>
+														</div>
 													</div>
-												</div>
-											</a>
-											<Show when={props.isConsole}>
-												<div class="column is-narrow">
-													<ViewReportButton
-														project_slug={props.project_slug}
-														tab={props.tab}
-														report={resource}
-													/>
-												</div>
-											</Show>
+												</Show>
+											</div>
 										</div>
 									)}
 								</For>
@@ -371,35 +391,41 @@ const Tab = (props: {
 							| JsonBenchmark
 							| JsonMeasure;
 						return (
-							<div class="panel-block columns is-vcentered is-mobile">
-								<a
-									class="column"
-									style="color: black;"
-									title={`${dimension.checked ? "Remove" : "Add"} ${
-										resource?.name
-									}`}
-									onClick={(_e) => props.handleChecked(index())}
-								>
-									<div class="columns is-vcentered is-mobile">
-										<div class="column is-narrow">
-											<input type="checkbox" checked={dimension.checked} />
+							<div class="panel-block is-block">
+								<div class="level">
+									<a
+										class="level-left"
+										style="color: black;"
+										title={`${dimension.checked ? "Remove" : "Add"} ${
+											resource?.name
+										}`}
+										onClick={(_e) => props.handleChecked(index())}
+									>
+										<div class="level-item">
+											<div class="columns is-vcentered is-mobile">
+												<div class="column is-narrow">
+													<input type="checkbox" checked={dimension.checked} />
+												</div>
+												<div class="column">
+													<small style="word-break: break-word;">
+														{resource?.name}
+													</small>
+												</div>
+											</div>
 										</div>
-										<div class="column is-narrow">
-											<small style="word-break: break-word;">
-												{resource?.name}
-											</small>
+									</a>
+									<Show when={props.isConsole}>
+										<div class="level-right">
+											<div class="level-item">
+												<ViewDimensionButton
+													project_slug={props.project_slug}
+													tab={props.tab}
+													dimension={resource}
+												/>
+											</div>
 										</div>
-									</div>
-								</a>
-								<Show when={props.isConsole}>
-									<div class="column is-narrow">
-										<ViewDimensionButton
-											project_slug={props.project_slug}
-											tab={props.tab}
-											dimension={resource}
-										/>
-									</div>
-								</Show>
+									</Show>
+								</div>
 							</div>
 						);
 					}}

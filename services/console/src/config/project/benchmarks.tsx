@@ -6,11 +6,13 @@ import type { JsonBenchmark } from "../../types/bencher";
 import FieldKind from "../../components/field/kind";
 import { isAllowedProjectDelete, isAllowedProjectEdit } from "../../util/auth";
 
+export const BENCHMARK_ICON = "fas fa-tachometer-alt";
+
 const BENCHMARK_FIELDS = {
 	name: {
 		type: "text",
 		placeholder: "Benchmark Name",
-		icon: "fas fa-tachometer-alt",
+		icon: BENCHMARK_ICON,
 		help: "Must be a non-empty string",
 		validate: validBenchmarkName,
 	},

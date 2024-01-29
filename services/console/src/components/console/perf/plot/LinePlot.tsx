@@ -9,6 +9,7 @@ import {
 import { PerfRange } from "../../../../config/types";
 import {
 	AlertStatus,
+	BoundaryLimit,
 	type Boundary,
 	type JsonPerf,
 	type JsonPerfAlert,
@@ -33,34 +34,29 @@ export interface Props {
 	width: Accessor<number>;
 }
 
-enum Position {
-	Lower,
-	Upper,
-}
-
-const value_end_position_key = (position: Position) => {
-	switch (position) {
-		case Position.Lower:
+const value_end_position_key = (limit: BoundaryLimit) => {
+	switch (limit) {
+		case BoundaryLimit.Lower:
 			return "lower_value";
-		case Position.Upper:
+		case BoundaryLimit.Upper:
 			return "upper_value";
 	}
 };
 
-const boundary_position_key = (position: Position) => {
-	switch (position) {
-		case Position.Lower:
+const boundary_position_key = (limit: BoundaryLimit) => {
+	switch (limit) {
+		case BoundaryLimit.Lower:
 			return "lower_limit";
-		case Position.Upper:
+		case BoundaryLimit.Upper:
 			return "upper_limit";
 	}
 };
 
-const position_label = (position: Position) => {
-	switch (position) {
-		case Position.Lower:
+const position_label = (limit: BoundaryLimit) => {
+	switch (limit) {
+		case BoundaryLimit.Lower:
 			return "Lower";
-		case Position.Upper:
+		case BoundaryLimit.Upper:
 			return "Upper";
 	}
 };
@@ -132,6 +128,7 @@ const LinePlot = (props: Props) => {
 		let metrics_found = false;
 		const colors = d3.schemeTableau10;
 		const project_slug = json_perf.project.slug;
+		// biome-ignore lint/complexity/noForEach: <explanation>
 		json_perf.results.forEach((result, index) => {
 			const perf_metrics = result.metrics;
 			if (!(Array.isArray(perf_metrics) && props.perfActive[index])) {
@@ -139,10 +136,12 @@ const LinePlot = (props: Props) => {
 			}
 
 			const line_data = [];
-			const alert_data = [];
+			const lower_alert_data = [];
+			const upper_alert_data = [];
 			const boundary_data = [];
 			const skipped_lower_data = [];
 			const skipped_upper_data = [];
+			// biome-ignore lint/complexity/noForEach: <explanation>
 			perf_metrics.forEach((perf_metric) => {
 				const datum = {
 					report: perf_metric.report,
@@ -167,7 +166,20 @@ const LinePlot = (props: Props) => {
 					upper_limit: datum.upper_limit,
 				};
 				if (perf_metric.alert && is_active(perf_metric.alert)) {
-					alert_data.push({ ...limit_datum, alert: perf_metric.alert });
+					switch (perf_metric.alert?.limit) {
+						case BoundaryLimit.Lower:
+							lower_alert_data.push({
+								...limit_datum,
+								alert: perf_metric.alert,
+							});
+							break;
+						case BoundaryLimit.Upper:
+							upper_alert_data.push({
+								...limit_datum,
+								alert: perf_metric.alert,
+							});
+							break;
+					}
 				} else {
 					boundary_data.push(limit_datum);
 				}
@@ -223,54 +235,88 @@ const LinePlot = (props: Props) => {
 			// Lower Value
 			if (props.lower_value()) {
 				plot_arrays.push(
-					Plot.line(line_data, value_end_line(x_axis, Position.Lower, color)),
+					Plot.line(
+						line_data,
+						value_end_line(x_axis, BoundaryLimit.Lower, color),
+					),
 				);
 				plot_arrays.push(
-					Plot.dot(line_data, value_end_dot(x_axis, Position.Lower, color)),
+					Plot.dot(
+						line_data,
+						value_end_dot(x_axis, BoundaryLimit.Lower, color),
+					),
 				);
 			}
 
 			// Upper Value
 			if (props.upper_value()) {
 				plot_arrays.push(
-					Plot.line(line_data, value_end_line(x_axis, Position.Upper, color)),
+					Plot.line(
+						line_data,
+						value_end_line(x_axis, BoundaryLimit.Upper, color),
+					),
 				);
 				plot_arrays.push(
-					Plot.dot(line_data, value_end_dot(x_axis, Position.Upper, color)),
+					Plot.dot(
+						line_data,
+						value_end_dot(x_axis, BoundaryLimit.Upper, color),
+					),
 				);
 			}
 
 			// Lower Boundary
 			if (props.lower_boundary()) {
 				plot_arrays.push(
-					Plot.line(line_data, boundary_line(x_axis, Position.Lower, color)),
+					Plot.line(
+						line_data,
+						boundary_line(x_axis, BoundaryLimit.Lower, color),
+					),
 				);
 				plot_arrays.push(
-					Plot.dot(boundary_data, boundary_dot(x_axis, Position.Lower, color)),
+					Plot.dot(
+						boundary_data,
+						boundary_dot(x_axis, BoundaryLimit.Lower, color),
+					),
 				);
 				warn_arrays.push(Plot.image(skipped_lower_data, warning_image(x_axis)));
 			}
 			alert_arrays.push(
 				Plot.image(
-					alert_data,
-					alert_image(x_axis, Position.Lower, project_slug, props.isConsole),
+					lower_alert_data,
+					alert_image(
+						x_axis,
+						BoundaryLimit.Lower,
+						project_slug,
+						props.isConsole,
+					),
 				),
 			);
 
 			// Upper Boundary
 			if (props.upper_boundary()) {
 				plot_arrays.push(
-					Plot.line(line_data, boundary_line(x_axis, Position.Upper, color)),
+					Plot.line(
+						line_data,
+						boundary_line(x_axis, BoundaryLimit.Upper, color),
+					),
 				);
 				plot_arrays.push(
-					Plot.dot(boundary_data, boundary_dot(x_axis, Position.Upper, color)),
+					Plot.dot(
+						boundary_data,
+						boundary_dot(x_axis, BoundaryLimit.Upper, color),
+					),
 				);
 				warn_arrays.push(Plot.image(skipped_upper_data, warning_image(x_axis)));
 			}
 			alert_arrays.push(
 				Plot.image(
-					alert_data,
-					alert_image(x_axis, Position.Upper, project_slug, props.isConsole),
+					upper_alert_data,
+					alert_image(
+						x_axis,
+						BoundaryLimit.Upper,
+						project_slug,
+						props.isConsole,
+					),
 				),
 			);
 		});
@@ -343,10 +389,14 @@ const to_title = (prefix, datum, suffix) =>
 		datum.hash ? `\nVersion Hash: ${datum.hash}` : ""
 	}\nIteration: ${datum.iteration}${suffix}`;
 
-const value_end_line = (x_axis: string, position: Position, color: string) => {
+const value_end_line = (
+	x_axis: string,
+	limit: BoundaryLimit,
+	color: string,
+) => {
 	return {
 		x: x_axis,
-		y: value_end_position_key(position),
+		y: value_end_position_key(limit),
 		stroke: color,
 		strokeWidth: 2,
 		strokeOpacity: 0.9,
@@ -354,16 +404,16 @@ const value_end_line = (x_axis: string, position: Position, color: string) => {
 	};
 };
 
-const value_end_dot = (x_axis: string, position: Position, color: string) => {
+const value_end_dot = (x_axis: string, limit: BoundaryLimit, color: string) => {
 	return {
 		x: x_axis,
-		y: value_end_position_key(position),
+		y: value_end_position_key(limit),
 		stroke: color,
 		strokeWidth: 2,
 		strokeOpacity: 0.9,
 		fill: color,
 		fillOpacity: 0.9,
-		title: (datum) => value_end_title(position, datum, ""),
+		title: (datum) => value_end_title(limit, datum, ""),
 		// TODO enable this when there is an endpoint for getting a historical threshold statistic
 		// That is, the statistic displayed needs to be historical, not current.
 		// Just like with the Alerts.
@@ -374,10 +424,10 @@ const value_end_dot = (x_axis: string, position: Position, color: string) => {
 	};
 };
 
-const boundary_line = (x_axis: string, position: Position, color) => {
+const boundary_line = (x_axis: string, limit: BoundaryLimit, color) => {
 	return {
 		x: x_axis,
-		y: boundary_position_key(position),
+		y: boundary_position_key(limit),
 		stroke: color,
 		strokeWidth: 4,
 		strokeOpacity: 0.666,
@@ -385,16 +435,16 @@ const boundary_line = (x_axis: string, position: Position, color) => {
 	};
 };
 
-const boundary_dot = (x_axis: string, position: Position, color: string) => {
+const boundary_dot = (x_axis: string, limit: BoundaryLimit, color: string) => {
 	return {
 		x: x_axis,
-		y: boundary_position_key(position),
+		y: boundary_position_key(limit),
 		stroke: color,
 		strokeWidth: 4,
 		strokeOpacity: 0.666,
 		fill: color,
 		fillOpacity: 0.666,
-		title: (datum) => limit_title(position, datum, ""),
+		title: (datum) => limit_title(limit, datum, ""),
 		// TODO enable this when there is an endpoint for getting a historical threshold statistic
 		// That is, the statistic displayed needs to be historical, not current.
 		// Just like with the Alerts.
@@ -418,16 +468,16 @@ const warning_image = (x_axis: string) => {
 
 const alert_image = (
 	x_axis: string,
-	position: Position,
+	limit: BoundaryLimit,
 	project_slug: string,
 	isConsole: boolean,
 ) => {
 	return {
 		x: x_axis,
-		y: boundary_position_key(position),
+		y: boundary_position_key(limit),
 		src: SIREN_URL,
 		width: 18,
-		title: (datum) => limit_title(position, datum, "\nClick to view Alert"),
+		title: (datum) => limit_title(limit, datum, "\nClick to view Alert"),
 		href: (datum) =>
 			isConsole
 				? `/console/projects/${project_slug}/alerts/${datum.alert?.uuid}`
@@ -436,20 +486,16 @@ const alert_image = (
 	};
 };
 
-const value_end_title = (position: Position, datum, suffix) =>
+const value_end_title = (limit: BoundaryLimit, datum, suffix) =>
 	to_title(
-		`${position_label(position)} Value: ${
-			datum[value_end_position_key(position)]
-		}`,
+		`${position_label(limit)} Value: ${datum[value_end_position_key(limit)]}`,
 		datum,
 		suffix,
 	);
 
-const limit_title = (position: Position, datum, suffix) =>
+const limit_title = (limit: BoundaryLimit, datum, suffix) =>
 	to_title(
-		`${position_label(position)} Limit: ${
-			datum[boundary_position_key(position)]
-		}`,
+		`${position_label(limit)} Limit: ${datum[boundary_position_key(limit)]}`,
 		datum,
 		suffix,
 	);

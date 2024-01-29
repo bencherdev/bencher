@@ -6,11 +6,13 @@ import { validResourceName, validSlug } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { addPath, createdSlugPath, parentPath, viewSlugPath } from "../util";
 
+export const MEASURE_ICON = "fas fa-shapes";
+
 const MEASURE_FIELDS = {
 	name: {
 		type: "text",
 		placeholder: "Measure Name",
-		icon: "fas fa-shapes",
+		icon: MEASURE_ICON,
 		help: "Must be non-empty string",
 		validate: validResourceName,
 	},
