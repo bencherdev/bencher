@@ -68,7 +68,7 @@ impl Prompt {
         f.write_all(resp.as_bytes())?;
 
         let duration = end_time - start_time;
-        let body = format!("Written in {duration}",);
+        let body = format!("Written in {duration}");
         Notification::new()
             .summary("🤖 Writing complete!")
             .body(&body)

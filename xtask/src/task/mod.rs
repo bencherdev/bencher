@@ -16,7 +16,10 @@ use notify::Notify;
 use package::deb::Deb;
 use package::man::Man;
 #[cfg(feature = "plus")]
-use plus::{index::Index, license::License, prompt::Prompt, stats::Stats, translate::Translate};
+use plus::{
+    image::Image, index::Index, license::License, prompt::Prompt, stats::Stats,
+    translate::Translate,
+};
 use release_notes::ReleaseNotes;
 use template::Template;
 use test::{
@@ -46,6 +49,8 @@ pub enum Sub {
     Prompt(Prompt),
     #[cfg(feature = "plus")]
     Translate(Translate),
+    #[cfg(feature = "plus")]
+    Image(Image),
     SeedTest(SeedTest),
     Examples(Examples),
     SmokeTest(SmokeTest),
@@ -86,6 +91,8 @@ impl TryFrom<TaskSub> for Sub {
             TaskSub::Prompt(prompt) => Self::Prompt(prompt.try_into()?),
             #[cfg(feature = "plus")]
             TaskSub::Translate(translate) => Self::Translate(translate.try_into()?),
+            #[cfg(feature = "plus")]
+            TaskSub::Image(image) => Self::Image(image.try_into()?),
             TaskSub::SeedTest(seed_test) => Self::SeedTest(seed_test.try_into()?),
             TaskSub::Examples(examples) => Self::Examples(examples.try_into()?),
             TaskSub::SmokeTest(smoke_test) => Self::SmokeTest(smoke_test.try_into()?),
@@ -126,6 +133,8 @@ impl Sub {
             Self::Prompt(prompt) => prompt.exec().await,
             #[cfg(feature = "plus")]
             Self::Translate(translate) => translate.exec().await,
+            #[cfg(feature = "plus")]
+            Self::Image(image) => image.exec().await,
             Self::SeedTest(seed_test) => seed_test.exec(),
             Self::Examples(examples) => examples.exec(),
             Self::SmokeTest(smoke_test) => smoke_test.exec(),

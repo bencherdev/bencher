@@ -17,7 +17,7 @@ pub use package::TaskMan;
 pub use plus::{
     index::{TaskIndex, TaskIndexDelete, TaskIndexUpdate, TaskSearchEngine},
     license::{TaskBillingCycle, TaskLicense, TaskLicenseGenerate, TaskLicenseValidate},
-    prompt::{TaskLanguage, TaskPrompt, TaskTranslate},
+    prompt::{TaskImage, TaskLanguage, TaskPrompt, TaskTranslate},
     stats::TaskStats,
 };
 pub use release::TaskReleaseNotes;
@@ -63,6 +63,9 @@ pub enum TaskSub {
     #[cfg(feature = "plus")]
     /// Prompt LLM to translate
     Translate(TaskTranslate),
+    #[cfg(feature = "plus")]
+    /// Prompt to generate image
+    Image(TaskImage),
     /// Run Seed test
     SeedTest(TaskSeedTest),
     // Run Example(s)

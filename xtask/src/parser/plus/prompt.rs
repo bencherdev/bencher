@@ -41,3 +41,9 @@ pub enum TaskLanguage {
     #[clap(alias = "zh")]
     Chinese,
 }
+
+#[derive(Parser, Debug)]
+pub struct TaskImage {
+    /// Image prompt
+    pub prompt: String,
+}
