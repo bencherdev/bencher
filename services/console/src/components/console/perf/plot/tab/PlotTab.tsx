@@ -1,19 +1,14 @@
-import { type Accessor, For, Match, Switch, createMemo, Show } from "solid-js";
+import { type Accessor, For, createMemo } from "solid-js";
 import { PerfTab } from "../../../../../config/types";
-import { fmtDateTime, toCapitalized } from "../../../../../config/util";
+import { toCapitalized } from "../../../../../config/util";
 import type {
 	JsonBenchmark,
 	JsonBranch,
-	JsonMeasure,
 	JsonReport,
 	JsonTestbed,
 } from "../../../../../types/bencher";
 import Pagination, { PaginationSize } from "../../../../site/Pagination";
-import { DEFAULT_PAGE } from "../../PerfPanel";
-import { BACK_PARAM, encodePath } from "../../../../../util/url";
-import { BRANCH_ICON } from "../../../../../config/project/branches";
-import { TESTBED_ICON } from "../../../../../config/project/testbeds";
-import { MEASURE_ICON } from "../../../../../config/project/measures";
+import Tab from "./Tab";
 
 export type TabList<T> = TabElement<T>[];
 
@@ -66,83 +61,33 @@ export interface Props {
 }
 
 const PlotTab = (props: Props) => {
-	const getTab = () => {
+	const page = createMemo(() => {
 		switch (props.tab()) {
 			case PerfTab.REPORTS:
-				return props.reports_tab;
+				return props.reports_page();
 			case PerfTab.BRANCHES:
-				return props.branches_tab;
+				return props.branches_page();
 			case PerfTab.TESTBEDS:
-				return props.testbeds_tab;
+				return props.testbeds_page();
 			case PerfTab.BENCHMARKS:
-				return props.benchmarks_tab;
+				return props.benchmarks_page();
 			default:
-				return [];
+				return 1;
 		}
-	};
+	});
 
-	const reportsLength = createMemo(() => props.reports_tab.length);
-	const branchesLength = createMemo(() => props.branches_tab.length);
-	const testbedsLength = createMemo(() => props.testbeds_tab.length);
-	const benchmarksLength = createMemo(() => props.benchmarks_tab.length);
-	const getTabLength = () => {
+	const handlePage = (page: number) => {
 		switch (props.tab()) {
 			case PerfTab.REPORTS:
-				return reportsLength;
+				return props.handleReportsPage(page);
 			case PerfTab.BRANCHES:
-				return branchesLength;
+				return props.handleBranchesPage(page);
 			case PerfTab.TESTBEDS:
-				return testbedsLength;
+				return props.handleTestbedsPage(page);
 			case PerfTab.BENCHMARKS:
-				return benchmarksLength;
+				return props.handleBenchmarksPage(page);
 			default:
-				return () => 0;
-		}
-	};
-
-	const getPerPage = () => {
-		switch (props.tab()) {
-			case PerfTab.REPORTS:
-				return props.reports_per_page;
-			case PerfTab.BRANCHES:
-				return props.branches_per_page;
-			case PerfTab.TESTBEDS:
-				return props.testbeds_per_page;
-			case PerfTab.BENCHMARKS:
-				return props.benchmarks_per_page;
-			default:
-				return () => 8;
-		}
-	};
-
-	const getPage = () => {
-		switch (props.tab()) {
-			case PerfTab.REPORTS:
-				return props.reports_page;
-			case PerfTab.BRANCHES:
-				return props.branches_page;
-			case PerfTab.TESTBEDS:
-				return props.testbeds_page;
-			case PerfTab.BENCHMARKS:
-				return props.benchmarks_page;
-			default:
-				return () => 1;
-		}
-	};
-
-	const getHandlePage = () => {
-		switch (props.tab()) {
-			case PerfTab.REPORTS:
-				return props.handleReportsPage;
-			case PerfTab.BRANCHES:
-				return props.handleBranchesPage;
-			case PerfTab.TESTBEDS:
-				return props.handleTestbedsPage;
-			case PerfTab.BENCHMARKS:
-				return props.handleBenchmarksPage;
-			default:
-				return (page: number) =>
-					console.error("No handle for tab", props.tab(), page);
+				return console.error("No handle for tab", props.tab(), page);
 		}
 	};
 
@@ -161,6 +106,41 @@ const PlotTab = (props: Props) => {
 		}
 	};
 
+	// Pagination
+	const reportsLength = createMemo(() => props.reports_tab.length);
+	const branchesLength = createMemo(() => props.branches_tab.length);
+	const testbedsLength = createMemo(() => props.testbeds_tab.length);
+	const benchmarksLength = createMemo(() => props.benchmarks_tab.length);
+	const tabLength = createMemo(() => {
+		switch (props.tab()) {
+			case PerfTab.REPORTS:
+				return reportsLength();
+			case PerfTab.BRANCHES:
+				return branchesLength();
+			case PerfTab.TESTBEDS:
+				return testbedsLength();
+			case PerfTab.BENCHMARKS:
+				return benchmarksLength();
+			default:
+				return 0;
+		}
+	});
+
+	const perPage = createMemo(() => {
+		switch (props.tab()) {
+			case PerfTab.REPORTS:
+				return props.reports_per_page();
+			case PerfTab.BRANCHES:
+				return props.branches_per_page();
+			case PerfTab.TESTBEDS:
+				return props.testbeds_per_page();
+			case PerfTab.BENCHMARKS:
+				return props.benchmarks_per_page();
+			default:
+				return 8;
+		}
+	});
+
 	return (
 		<>
 			<div class="panel-tabs">
@@ -170,11 +150,13 @@ const PlotTab = (props: Props) => {
 							<a
 								class={props.tab() === tab ? "is-active" : ""}
 								title={`View ${toCapitalized(tab)}`}
+								// biome-ignore lint/a11y/useValidAnchor: stateful anchor
 								onClick={() => props.handleTab(tab)}
 							>
 								{toCapitalized(tab)}
 							</a>
 							{index() === 0 && (
+								// biome-ignore lint/a11y/useValidAnchor: disabled anchor
 								<a style="pointer-events: none; cursor: default; color: #fdb07e;">
 									||
 								</a>
@@ -187,10 +169,13 @@ const PlotTab = (props: Props) => {
 				project_slug={props.project_slug}
 				isConsole={props.isConsole}
 				measures={props.measures}
+				reports_tab={props.reports_tab}
+				branches_tab={props.branches_tab}
+				testbeds_tab={props.testbeds_tab}
+				benchmarks_tab={props.benchmarks_tab}
 				tab={props.tab}
-				getTab={getTab}
-				getPage={getPage}
-				getHandlePage={getHandlePage}
+				page={page}
+				handlePage={handlePage}
 				handleChecked={handleChecked}
 			/>
 			<div class="panel-block">
@@ -200,10 +185,10 @@ const PlotTab = (props: Props) => {
 							<br />
 							<Pagination
 								size={PaginationSize.SMALL}
-								data_len={getTabLength()}
-								per_page={getPerPage()}
-								page={getPage()}
-								handlePage={getHandlePage()}
+								data_len={tabLength}
+								per_page={perPage}
+								page={page}
+								handlePage={handlePage}
 							/>
 							<br />
 						</div>
@@ -211,335 +196,6 @@ const PlotTab = (props: Props) => {
 				</div>
 			</div>
 		</>
-	);
-};
-
-const Tab = (props: {
-	project_slug: Accessor<undefined | string>;
-	isConsole: boolean;
-	measures: Accessor<string[]>;
-	tab: Accessor<PerfTab>;
-	getTab: () => TabList<JsonReport | JsonBranch | JsonTestbed | JsonBenchmark>;
-	getPage: () => Accessor<number>;
-	getHandlePage: () => (page: number) => void;
-	handleChecked: (index: number, slug?: string) => void;
-}) => {
-	return (
-		<Switch
-			fallback={
-				<div class="box">
-					<p>No {props.tab()} found</p>
-				</div>
-			}
-		>
-			<Match
-				when={
-					props.isConsole &&
-					props.getTab().length === 0 &&
-					props.getPage()?.() === DEFAULT_PAGE
-				}
-			>
-				<div class="box">
-					<div class="columns is-centered">
-						<div class="column is-5">
-							<AddButton project_slug={props.project_slug} tab={props.tab} />
-						</div>
-					</div>
-				</div>
-			</Match>
-			<Match
-				when={
-					props.getTab().length === 0 && props.getPage()?.() !== DEFAULT_PAGE
-				}
-			>
-				<div class="box">
-					<div class="columns is-centered">
-						<div class="column is-5">
-							<BackButton
-								tab={props.tab}
-								page={props.getPage()}
-								handlePage={props.getHandlePage()}
-							/>
-						</div>
-					</div>
-				</div>
-			</Match>
-			<Match
-				when={props.tab() === PerfTab.REPORTS && props.getTab().length > 0}
-			>
-				<For each={props.getTab()}>
-					{(report, index) => {
-						const resource = report.resource as JsonReport;
-						return (
-							<Show
-								when={(resource?.results?.[0]?.length ?? 0) > 0}
-								fallback={
-									<div class="panel-block is-block">
-										<div class="level">
-											<div class="level-left" style="color: black;">
-												<div class="level-item">
-													<div class="columns is-vcentered is-mobile">
-														<div class="column is-narrow">
-															<input
-																type="radio"
-																disabled={true}
-																checked={false}
-															/>
-														</div>
-														<div class="column">
-															<small style="word-break: break-word;">
-																{fmtDateTime(resource?.start_time)}
-															</small>
-															<ReportDimension
-																icon="fab fa-creative-commons-zero"
-																name="No Results"
-															/>
-														</div>
-													</div>
-												</div>
-											</div>
-											<Show when={props.isConsole}>
-												<div class="level-right">
-													<div class="level-item">
-														<ViewReportButton
-															project_slug={props.project_slug}
-															tab={props.tab}
-															report={resource}
-														/>
-													</div>
-												</div>
-											</Show>
-										</div>
-									</div>
-								}
-							>
-								<For each={resource?.results?.[0]}>
-									{(result, _index) => (
-										<div class="panel-block is-block">
-											<div class="level">
-												<a
-													class="level-left"
-													style="color: black;"
-													title={`View Report from ${fmtDateTime(
-														resource?.start_time,
-													)}`}
-													onClick={(_e) =>
-														// Send the Measure UUID instead of the Report UUID
-														props.handleChecked(index(), result.measure?.uuid)
-													}
-												>
-													<div class="level-item">
-														<div class="columns is-vcentered is-mobile">
-															<div class="column is-narrow">
-																<input
-																	type="radio"
-																	checked={
-																		report.checked &&
-																		result.measure?.uuid ===
-																			props.measures()?.[0]
-																	}
-																/>
-															</div>
-															<div class="column">
-																<small style="word-break: break-word;">
-																	{fmtDateTime(resource?.start_time)}
-																</small>
-																<ReportDimension
-																	icon={BRANCH_ICON}
-																	name={resource?.branch?.name}
-																/>
-																<ReportDimension
-																	icon={TESTBED_ICON}
-																	name={resource?.testbed?.name}
-																/>
-																<ReportDimension
-																	icon={MEASURE_ICON}
-																	name={result.measure?.name}
-																/>
-															</div>
-														</div>
-													</div>
-												</a>
-												<Show when={props.isConsole}>
-													<div class="level-right">
-														<div class="level-item">
-															<ViewReportButton
-																project_slug={props.project_slug}
-																tab={props.tab}
-																report={resource}
-															/>
-														</div>
-													</div>
-												</Show>
-											</div>
-										</div>
-									)}
-								</For>
-							</Show>
-						);
-					}}
-				</For>
-			</Match>
-			<Match
-				when={props.tab() !== PerfTab.REPORTS && props.getTab().length > 0}
-			>
-				<For each={props.getTab()}>
-					{(dimension, index) => {
-						const resource = dimension?.resource as
-							| JsonBranch
-							| JsonTestbed
-							| JsonBenchmark
-							| JsonMeasure;
-						return (
-							<div class="panel-block is-block">
-								<div class="level">
-									<a
-										class="level-left"
-										style="color: black;"
-										title={`${dimension.checked ? "Remove" : "Add"} ${
-											resource?.name
-										}`}
-										onClick={(_e) => props.handleChecked(index())}
-									>
-										<div class="level-item">
-											<div class="columns is-vcentered is-mobile">
-												<div class="column is-narrow">
-													<input type="checkbox" checked={dimension.checked} />
-												</div>
-												<div class="column">
-													<small style="word-break: break-word;">
-														{resource?.name}
-													</small>
-												</div>
-											</div>
-										</div>
-									</a>
-									<Show when={props.isConsole}>
-										<div class="level-right">
-											<div class="level-item">
-												<ViewDimensionButton
-													project_slug={props.project_slug}
-													tab={props.tab}
-													dimension={resource}
-												/>
-											</div>
-										</div>
-									</Show>
-								</div>
-							</div>
-						);
-					}}
-				</For>
-			</Match>
-		</Switch>
-	);
-};
-
-const ViewReportButton = (props: {
-	project_slug: Accessor<undefined | string>;
-	tab: Accessor<PerfTab>;
-	report: JsonReport;
-}) => {
-	return (
-		<a
-			class="button"
-			title={`View Report from ${fmtDateTime(props.report?.start_time)}`}
-			href={`/console/projects/${props.project_slug()}/${props.tab()}/${
-				props.report?.uuid
-			}?${BACK_PARAM}=${encodePath()}`}
-		>
-			View
-		</a>
-	);
-};
-
-const ViewDimensionButton = (props: {
-	project_slug: Accessor<undefined | string>;
-	tab: Accessor<PerfTab>;
-	dimension: JsonBranch | JsonTestbed | JsonBenchmark | JsonMeasure;
-}) => {
-	return (
-		<a
-			class="button"
-			title={`View ${props.dimension?.name}`}
-			href={`/console/projects/${props.project_slug()}/${props.tab()}/${
-				props.dimension?.slug
-			}?${BACK_PARAM}=${encodePath()}`}
-		>
-			View
-		</a>
-	);
-};
-
-const AddButton = (props: {
-	project_slug: Accessor<undefined | string>;
-	tab: Accessor<PerfTab>;
-}) => {
-	const getHref = () => {
-		switch (props.tab()) {
-			case PerfTab.BRANCHES:
-			case PerfTab.TESTBEDS:
-				return `/console/projects/${props.project_slug()}/${props.tab()}/add`;
-			case PerfTab.REPORTS:
-			case PerfTab.BENCHMARKS:
-				return "/docs/how-to/track-benchmarks";
-			default:
-				return "#";
-		}
-	};
-
-	const getText = () => {
-		switch (props.tab()) {
-			case PerfTab.BRANCHES:
-				return "Add a Branch";
-			case PerfTab.TESTBEDS:
-				return "Add a Testbed";
-			case PerfTab.REPORTS:
-			case PerfTab.BENCHMARKS:
-				return "Track Your Benchmarks";
-			default:
-				return "Unknown Tab";
-		}
-	};
-
-	return (
-		<a
-			class="button is-primary is-fullwidth"
-			title={getText()}
-			href={getHref()}
-		>
-			{getText()}
-		</a>
-	);
-};
-
-const BackButton = (props: {
-	tab: Accessor<PerfTab>;
-	page: Accessor<number>;
-	handlePage: (page: number) => void;
-}) => {
-	return (
-		<button
-			class="button is-primary is-fullwidth"
-			title="Go back to the previous page"
-			onClick={(e) => {
-				e.preventDefault();
-				props.handlePage(props.page() - 1);
-			}}
-		>
-			That's all the {props.tab()}. Go back.
-		</button>
-	);
-};
-
-const ReportDimension = (props: { icon: string; name: string }) => {
-	return (
-		<div>
-			<span class="icon">
-				<i class={props.icon} aria-hidden="true" />
-			</span>
-			<small style="word-break: break-all;">{props.name}</small>
-		</div>
 	);
 };
 
