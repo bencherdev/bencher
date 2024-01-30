@@ -31,7 +31,7 @@ import { useSearchParams } from "../../../util/url";
 import { validU32 } from "../../../util/valid";
 import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
-import type { TabList } from "./plot/PlotTab";
+import type { TabList } from "./plot/tab/PlotTab";
 
 // Perf query params
 const BRANCHES_PARAM = PerfQueryKey.Branches;

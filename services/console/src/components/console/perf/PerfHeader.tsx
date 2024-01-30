@@ -203,6 +203,7 @@ const ShareModal = (props: ShareProps) => {
 					<p class="modal-card-title">Share {props.project()?.name}</p>
 					<button
 						class="delete"
+						type="button"
 						aria-label="close"
 						onClick={(e) => {
 							e.preventDefault();
@@ -281,6 +282,7 @@ const ShareModal = (props: ShareProps) => {
 				<footer class="modal-card-foot">
 					<button
 						class="button is-primary is-outlined is-fullwidth"
+						type="button"
 						onClick={(e) => {
 							e.preventDefault();
 							props.setShare(false);

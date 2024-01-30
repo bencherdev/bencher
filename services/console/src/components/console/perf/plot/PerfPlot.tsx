@@ -12,7 +12,7 @@ import type {
 import Plot from "./Plot";
 import PlotHeader from "./PlotHeader";
 import PlotInit from "./PlotInit";
-import PlotTab, { type TabList } from "./PlotTab";
+import PlotTab, { type TabList } from "./tab/PlotTab";
 
 export interface Props {
 	apiUrl: string;
@@ -138,7 +138,7 @@ const PerfPlot = (props: Props) => {
 									class="progress is-primary"
 									style="margin-top: 8rem; margin-bottom: 12rem;"
 									max="100"
-								></progress>
+								/>
 							</Match>
 						</Switch>
 					</div>

@@ -32,7 +32,8 @@ const PlotInit = (props: Props) => {
 					Select at least one{" "}
 					<a
 						title="View Branches"
-						onClick={() => {
+						// biome-ignore lint/a11y/useValidAnchor: stateful anchor
+						onClick={(_e) => {
 							props.handleTab(PerfTab.BRANCHES);
 						}}
 					>
@@ -49,7 +50,8 @@ const PlotInit = (props: Props) => {
 					Select at least one{" "}
 					<a
 						title="View Testbeds"
-						onClick={() => {
+						// biome-ignore lint/a11y/useValidAnchor: stateful anchor
+						onClick={(_e) => {
 							props.handleTab(PerfTab.TESTBEDS);
 						}}
 					>
@@ -66,7 +68,8 @@ const PlotInit = (props: Props) => {
 					Select at least one{" "}
 					<a
 						title="View Benchmarks"
-						onClick={() => {
+						// biome-ignore lint/a11y/useValidAnchor: stateful anchor
+						onClick={(_e) => {
 							props.handleTab(PerfTab.BENCHMARKS);
 						}}
 					>

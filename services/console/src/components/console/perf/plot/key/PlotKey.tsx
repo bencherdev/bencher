@@ -1,6 +1,6 @@
 import * as d3 from "d3";
 import { type Accessor, For, type Resource, Show, createMemo } from "solid-js";
-import type { JsonPerf } from "../../../../types/bencher";
+import type { JsonPerf } from "../../../../../types/bencher";
 
 export interface Props {
 	key: Accessor<boolean>;

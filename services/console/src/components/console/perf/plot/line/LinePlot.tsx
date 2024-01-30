@@ -6,14 +6,14 @@ import {
 	createEffect,
 	createSignal,
 } from "solid-js";
-import { PerfRange } from "../../../../config/types";
+import { PerfRange } from "../../../../../config/types";
 import {
 	AlertStatus,
 	BoundaryLimit,
 	type Boundary,
 	type JsonPerf,
 	type JsonPerfAlert,
-} from "../../../../types/bencher";
+} from "../../../../../types/bencher";
 import { addTooltips } from "./tooltip";
 
 // Source: https://twemoji.twitter.com

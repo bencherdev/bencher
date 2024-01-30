@@ -8,8 +8,8 @@ import {
 import { createStore } from "solid-js/store";
 import type { PerfRange } from "../../../../config/types";
 import type { JsonPerf } from "../../../../types/bencher";
-import LinePlot from "./LinePlot";
-import PlotKey from "./PlotKey";
+import LinePlot from "./line/LinePlot";
+import PlotKey from "./key/PlotKey";
 
 export interface Props {
 	isConsole: boolean;

@@ -1,19 +1,19 @@
 import { type Accessor, For, Match, Switch, createMemo, Show } from "solid-js";
-import { PerfTab } from "../../../../config/types";
-import { fmtDateTime, toCapitalized } from "../../../../config/util";
+import { PerfTab } from "../../../../../config/types";
+import { fmtDateTime, toCapitalized } from "../../../../../config/util";
 import type {
 	JsonBenchmark,
 	JsonBranch,
 	JsonMeasure,
 	JsonReport,
 	JsonTestbed,
-} from "../../../../types/bencher";
-import Pagination, { PaginationSize } from "../../../site/Pagination";
-import { DEFAULT_PAGE } from "../PerfPanel";
-import { BACK_PARAM, encodePath } from "../../../../util/url";
-import { BRANCH_ICON } from "../../../../config/project/branches";
-import { TESTBED_ICON } from "../../../../config/project/testbeds";
-import { MEASURE_ICON } from "../../../../config/project/measures";
+} from "../../../../../types/bencher";
+import Pagination, { PaginationSize } from "../../../../site/Pagination";
+import { DEFAULT_PAGE } from "../../PerfPanel";
+import { BACK_PARAM, encodePath } from "../../../../../util/url";
+import { BRANCH_ICON } from "../../../../../config/project/branches";
+import { TESTBED_ICON } from "../../../../../config/project/testbeds";
+import { MEASURE_ICON } from "../../../../../config/project/measures";
 
 export type TabList<T> = TabElement<T>[];
 

@@ -110,9 +110,8 @@ const FullPlotHeader = (props: Props) => {
 		const uuid = props.measures()?.[0];
 		if (uuid) {
 			return uuid;
-		} else {
-			return BENCHER_MEASURE;
 		}
+		return BENCHER_MEASURE;
 	};
 	const [selected, setSelected] = createSignal(getSelected());
 
@@ -190,6 +189,7 @@ const EmbedPlotHeader = (props: Props) => {
 		<nav class="panel-heading">
 			<div class="columns is-mobile is-centered is-vcentered is-gapless">
 				<div class="column has-text-centered">
+					{/* biome-ignore lint/a11y/noBlankTarget: internal */}
 					<a href={perfUrl()} target="_blank">
 						<img src={BENCHER_WORDMARK} width="128em" alt="🐰 Bencher" />
 					</a>
