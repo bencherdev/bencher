@@ -57,7 +57,7 @@ const PerfHeader = (props: Props) => {
 			<div class="column is-narrow">
 				<nav class="level">
 					<div class="level-right">
-						<Show when={props.project()?.url} fallback={<></>}>
+						<Show when={props.project()?.url}>
 							<div class="level-item">
 								<a
 									class="button is-outlined is-fullwidth"
@@ -73,15 +73,13 @@ const PerfHeader = (props: Props) => {
 								</a>
 							</div>
 						</Show>
-						<Show when={!props.isPlotInit()} fallback={<></>}>
+						<Show when={!props.isPlotInit()}>
 							<nav class="level is-mobile">
-								<Show
-									when={props.project()?.visibility === Visibility.Public}
-									fallback={<></>}
-								>
+								<Show when={props.project()?.visibility === Visibility.Public}>
 									<div class="level-item">
 										<button
 											class="button is-outlined is-fullwidth"
+											type="button"
 											title={`Share ${props.project()?.name}`}
 											onClick={(e) => {
 												e.preventDefault();
@@ -99,6 +97,7 @@ const PerfHeader = (props: Props) => {
 								<div class="level-item">
 									<button
 										class="button is-outlined is-fullwidth"
+										type="button"
 										title="Refresh Query"
 										onClick={(e) => {
 											e.preventDefault();

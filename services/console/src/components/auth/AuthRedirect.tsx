@@ -1,4 +1,4 @@
-import { Match, Switch, createMemo, createResource } from "solid-js";
+import { Show, createMemo, createResource } from "solid-js";
 import Redirect from "../site/Redirect";
 import { authUser } from "../../util/auth";
 import { useSearchParams } from "../../util/url";
@@ -57,14 +57,9 @@ const AuthRedirect = (props: { apiUrl?: string; path: string }) => {
 	const [_jsonAuth] = createResource<JsonAuthAck>(fetcher, acceptInvite);
 
 	return (
-		<Switch fallback={<></>}>
-			<Match when={authUser()?.token && searchParams[INVITE_PARAM]}>
-				<></>
-			</Match>
-			<Match when={authUser()?.token && !searchParams[INVITE_PARAM]}>
-				<Redirect path={props.path} />
-			</Match>
-		</Switch>
+		<Show when={authUser()?.token && !searchParams[INVITE_PARAM]}>
+			<Redirect path={props.path} />
+		</Show>
 	);
 };
 

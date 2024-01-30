@@ -16,6 +16,7 @@ const BillingHeader = (props: Props) => {
 			<div class="level-left">
 				<button
 					class="button is-outlined"
+					type="button"
 					onClick={(e) => {
 						e.preventDefault();
 						navigate(props.config?.path(pathname()));

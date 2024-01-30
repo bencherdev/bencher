@@ -95,13 +95,13 @@ const BillingForm = (props: Props) => {
 			case PlanKind.Metered:
 			case PlanKind.Licensed:
 				return true;
-			case PlanKind.SelfHosted:
+			case PlanKind.SelfHosted: {
 				const uuid = organizationUuid();
 				if (uuid) {
 					return validUuid(uuid) && uuid !== props.usage()?.organization;
-				} else {
-					return null;
 				}
+				return null;
+			}
 		}
 	});
 	const organizationUuidValidJson = createMemo(
@@ -218,6 +218,7 @@ const PlanLocality = (props: {
 								class={`button ${
 									props.planKind() === kind && "is-primary is-selected"
 								}`}
+								type="button"
 								onClick={(_e) => props.handlePlanKind(kind as PlanKind)}
 							>
 								{name}
@@ -246,7 +247,7 @@ const PlanLocality = (props: {
 								onChange={(_e) => {
 									props.handleEntitlements(Number(_e.currentTarget.value));
 								}}
-							></input>
+							/>
 						</div>
 					}
 				>

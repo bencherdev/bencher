@@ -31,8 +31,9 @@ export interface TableConfig {
 
 const Table = (props: Props) => {
 	return (
-		<Switch fallback={<>ERROR: Unknown table state</>}>
+		<Switch fallback={<p>ERROR: Unknown table state</p>}>
 			<Match when={props.state() === TableState.LOADING}>
+				{/* biome-ignore lint/complexity/noUselessFragments: loading */}
 				<></>
 			</Match>
 
@@ -70,16 +71,19 @@ const Table = (props: Props) => {
 														</Match>
 														<Match when={item.kind === Row.SELECT}>
 															{item.key &&
-																item.value?.options.reduce((field, option) => {
-																	if (
-																		item.key &&
-																		datum[item.key] === option.value
-																	) {
-																		return option.option;
-																	} else {
-																		return field;
-																	}
-																}, datum[item.key])}
+																item.value?.options.reduce(
+																	(field, option) => {
+																		if (
+																			item.key &&
+																			datum[item.key] === option.value
+																		) {
+																			return option.option;
+																		} else {
+																			return field;
+																		}
+																	},
+																	datum[item.key],
+																)}
 														</Match>
 														<Match when={item.kind === Row.NESTED_TEXT}>
 															{item.keys && fmtNestedValue(datum, item.keys)}
@@ -184,6 +188,7 @@ const RowButton = (props: {
 	return (
 		<button
 			class="button is-fullwidth"
+			type="button"
 			onClick={(e) => {
 				e.preventDefault();
 				navigate(props.config?.path?.(pathname(), props.datum));
@@ -202,6 +207,7 @@ const BackButton = (props: {
 	return (
 		<button
 			class="button is-primary is-fullwidth"
+			type="button"
 			onClick={(e) => {
 				e.preventDefault();
 				props.handlePage(props.page() - 1);

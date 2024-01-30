@@ -65,6 +65,7 @@ const Notification = (props: { suppress?: undefined | boolean }) => {
 				🐰 {notifyText()}
 				<button
 					class="delete"
+					type="button"
 					onClick={(e) => {
 						e.preventDefault();
 						removeNotification();
@@ -82,7 +83,6 @@ const Notification = (props: { suppress?: undefined | boolean }) => {
 					isNotifyKind(notifyKind()) &&
 					isNotifyText(notifyText())
 				}
-				fallback={<></>}
 			>
 				<section class="section">
 					<div class="container">{notification()}</div>

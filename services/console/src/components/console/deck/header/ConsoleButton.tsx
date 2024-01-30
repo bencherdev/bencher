@@ -11,6 +11,7 @@ const ConsoleButton = (props: Props) => {
 	return (
 		<button
 			class="button is-outlined is-fullwidth"
+			type="button"
 			title="View in Console"
 			onClick={(e) => {
 				e.preventDefault();

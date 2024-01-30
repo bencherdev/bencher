@@ -22,6 +22,7 @@ const Pagination = (props: {
 		>
 			<button
 				class="pagination-previous"
+				type="button"
 				title="Go to previous page"
 				disabled={props.page() < 2}
 				onClick={(e) => {
@@ -36,6 +37,7 @@ const Pagination = (props: {
 					<li>
 						<button
 							class="pagination-link"
+							type="button"
 							title="Go to page 1"
 							onClick={(e) => {
 								e.preventDefault();
@@ -55,6 +57,7 @@ const Pagination = (props: {
 					<li>
 						<button
 							class="pagination-link"
+							type="button"
 							title={`Go to page ${props.page() - 1}`}
 							onClick={(e) => {
 								e.preventDefault();
@@ -68,6 +71,7 @@ const Pagination = (props: {
 				<li>
 					<button
 						class="pagination-link is-current"
+						type="button"
 						title={`Page ${props.page()}`}
 						aria-current="page"
 					>
@@ -78,6 +82,7 @@ const Pagination = (props: {
 					<li>
 						<button
 							class="pagination-link"
+							type="button"
 							title={`Go to page ${props.page() + 1}`}
 							onClick={(e) => {
 								e.preventDefault();
@@ -91,8 +96,9 @@ const Pagination = (props: {
 			</ul>
 			<button
 				class="pagination-next"
+				type="button"
 				title="Go to next page"
-				disabled={props.data_len() < props.per_page()}
+				disabled={(props.data_len() ?? 0) < props.per_page()}
 				onClick={(e) => {
 					e.preventDefault();
 					props.handlePage(props.page() + 1);

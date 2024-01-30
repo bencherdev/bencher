@@ -182,6 +182,7 @@ const ConfirmForm = (props: Props) => {
 					<p class="control">
 						<button
 							class="button is-primary is-fullwidth"
+							type="submit"
 							disabled={!isSendable()}
 							onClick={(e) => {
 								e.preventDefault();
@@ -201,6 +202,7 @@ const ConfirmForm = (props: Props) => {
 					<div class="content has-text-centered">
 						<button
 							class="button is-small is-black is-inverted"
+							type="submit"
 							disabled={submitting() || coolDown()}
 							onClick={(e) => {
 								e.preventDefault();

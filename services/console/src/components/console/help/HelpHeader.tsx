@@ -8,6 +8,7 @@ const HelpHeader = () => {
 			<div class="level-left">
 				<button
 					class="button is-outlined"
+					type="button"
 					onClick={(e) => {
 						e.preventDefault();
 						navigate("/console");

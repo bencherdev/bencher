@@ -27,7 +27,7 @@ const DeckButton = (props: Props) => {
 				<form class="box">
 					<div class="field">
 						<p class="control">
-							<Switch fallback={<></>}>
+							<Switch>
 								<Match
 									when={
 										props.config?.kind === ActionButton.DELETE &&

@@ -1,9 +1,12 @@
-import Input, { InputConfig, InputValue } from "./kinds/Input";
-import Checkbox, { CheckboxConfig, CheckboxValue } from "./kinds/Checkbox";
-import Switch, { SwitchConfig, SwitchValue } from "./kinds/Switch";
-import Select, { SelectConfig, SelectValue } from "./kinds/Select";
+import Input, { type InputConfig, type InputValue } from "./kinds/Input";
+import Checkbox, {
+	type CheckboxConfig,
+	type CheckboxValue,
+} from "./kinds/Checkbox";
+import Switch, { type SwitchConfig, type SwitchValue } from "./kinds/Switch";
+import Select, { type SelectConfig, type SelectValue } from "./kinds/Select";
 import FieldKind from "./kind";
-import Radio, { RadioConfig, RadioValue } from "./kinds/Radio";
+import Radio, { type RadioConfig, type RadioValue } from "./kinds/Radio";
 import type { Params } from "astro";
 import Statistic from "./kinds/Statistic";
 import { validStatistic } from "../../util/valid";
@@ -43,7 +46,7 @@ export interface Props {
 }
 
 const Field = (props: Props) => {
-	function handleField(value: FieldValue) {
+	const handleField = (value: FieldValue) => {
 		switch (props.kind) {
 			case FieldKind.CHECKBOX:
 				props.handleField(props.fieldKey, value, value as CheckboxValue);
@@ -60,7 +63,7 @@ const Field = (props: Props) => {
 				);
 				break;
 			case FieldKind.INPUT:
-			case FieldKind.NUMBER:
+			case FieldKind.NUMBER: {
 				const config = props.config as InputConfig;
 				props.handleField(
 					props.fieldKey,
@@ -68,13 +71,17 @@ const Field = (props: Props) => {
 					config.validate ? config.validate(value as string) : true,
 				);
 				break;
+			}
 			case FieldKind.STATISTIC:
 				props.handleField(props.fieldKey, value, validStatistic(value));
 				break;
+			case FieldKind.SEARCH:
+				props.handleField(props.fieldKey, value, true);
+				break;
 		}
-	}
+	};
 
-	function getField() {
+	const getField = () => {
 		switch (props.kind) {
 			case FieldKind.CHECKBOX:
 				return (
@@ -103,7 +110,7 @@ const Field = (props: Props) => {
 			case FieldKind.RADIO:
 				return (
 					<Radio
-						apiUrl={props.apiUrl}
+						apiUrl={props.apiUrl as string}
 						value={props.value as RadioValue}
 						config={props.config as RadioConfig}
 						params={props.params}
@@ -129,24 +136,34 @@ const Field = (props: Props) => {
 						handleField={handleField}
 					/>
 				);
+			case FieldKind.SEARCH:
+				return (
+					<Input
+						value={props.value as InputValue}
+						valid={props.valid}
+						config={props.config as InputConfig}
+						handleField={handleField}
+					/>
+				);
 			default:
 				return <div>UNKNOWN FIELD</div>;
 		}
-	}
+	};
 
-	function shouldValidate() {
+	const shouldValidate = () => {
 		switch (props.kind) {
 			case FieldKind.CHECKBOX:
 			case FieldKind.SWITCH:
 			case FieldKind.SELECT:
 			case FieldKind.RADIO:
+			case FieldKind.SEARCH:
 				return false;
 			case FieldKind.INPUT:
 			case FieldKind.NUMBER:
 			case FieldKind.STATISTIC:
 				return true;
 		}
-	}
+	};
 
 	return (
 		<div class="field">

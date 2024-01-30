@@ -19,6 +19,7 @@ const PerfButton = (props: Props) => {
 	return (
 		<button
 			class="button is-outlined is-fullwidth"
+			type="button"
 			title="View Alert"
 			onClick={(e) => {
 				e.preventDefault();

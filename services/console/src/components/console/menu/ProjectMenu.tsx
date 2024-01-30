@@ -106,9 +106,12 @@ const ConsoleMenu = (props: Props) => {
 						<nav class="level is-mobile">
 							<div class="level-left">
 								<div class="level-item">Alerts</div>
-								<Show when={active_alerts()} fallback={<></>}>
+								<Show when={active_alerts()}>
 									<div class="level-item">
-										<button class="button is-primary is-small is-rounded">
+										<button
+											class="button is-primary is-small is-rounded"
+											type="button"
+										>
 											{active_alerts()}
 										</button>
 									</div>

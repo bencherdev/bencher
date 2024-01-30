@@ -26,12 +26,12 @@ export interface DeckHeaderButtonConfig {
 
 const DeckHeaderButton = (props: Props) => {
 	return (
-		<Switch fallback={<></>}>
+		<Switch>
 			<Match when={props.button.kind === Button.EDIT}>
 				<a
 					class="button is-outlined is-fullwidth"
 					title={`Edit ${props.title()}`}
-					href={props.button?.path?.(pathname())}
+					href={props.button?.path?.(pathname()) ?? "#"}
 				>
 					<span class="icon">
 						<i class="fas fa-pen" aria-hidden="true" />
@@ -61,6 +61,7 @@ const DeckHeaderButton = (props: Props) => {
 			<Match when={props.button.kind === Button.REFRESH}>
 				<button
 					class="button is-outlined is-fullwidth"
+					type="button"
 					title={`Refresh ${props.title()}`}
 					onClick={(e) => {
 						e.preventDefault();

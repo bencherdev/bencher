@@ -63,10 +63,11 @@ const DeleteButton = (props: Props) => {
 	};
 
 	return (
-		<Switch fallback={<></>}>
+		<Switch>
 			<Match when={deleteClicked() === false}>
 				<button
 					class="button is-danger is-fullwidth"
+					type="button"
 					onClick={(e) => {
 						e.preventDefault();
 						setDeleteClicked(true);
@@ -84,6 +85,7 @@ const DeleteButton = (props: Props) => {
 					<div class="column">
 						<button
 							class="button is-fullwidth"
+							type="submit"
 							disabled={deleting()}
 							onClick={(e) => {
 								e.preventDefault();
@@ -96,6 +98,7 @@ const DeleteButton = (props: Props) => {
 					<div class="column">
 						<button
 							class="button is-primary is-fullwidth"
+							type="button"
 							onClick={(e) => {
 								e.preventDefault();
 								setDeleteClicked(false);

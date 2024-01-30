@@ -23,7 +23,7 @@ const ViewCard = (props: Props) => {
 			</div>
 			<div class="card-content">
 				<div class="content">
-					<Switch fallback={<></>}>
+					<Switch>
 						<Match when={props.card?.display === Display.RAW}>
 							<p style="word-break: break-word;">{props.value}</p>
 						</Match>

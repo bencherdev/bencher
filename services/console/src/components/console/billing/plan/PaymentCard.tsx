@@ -198,6 +198,7 @@ const PaymentCard = (props: Props) => {
 			</Show>
 			<button
 				class="button is-primary is-fullwidth"
+				type="submit"
 				disabled={!isSendable()}
 				onClick={(e) => {
 					e.preventDefault();

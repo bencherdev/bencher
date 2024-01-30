@@ -22,7 +22,7 @@ const PROJECT_FIELDS = {
 		validate: validSlug,
 	},
 	url: {
-		type: "text",
+		type: "url",
 		placeholder: "https://www.example.com",
 		icon: "fas fa-link",
 		help: "Must be a valid URL",

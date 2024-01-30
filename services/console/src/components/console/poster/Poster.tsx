@@ -218,6 +218,7 @@ const Poster = (props: Props) => {
 						<p class="control">
 							<button
 								class="button is-primary is-fullwidth"
+								type="submit"
 								disabled={!isSendable()}
 								onClick={(e) => {
 									e.preventDefault();

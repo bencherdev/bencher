@@ -72,6 +72,7 @@ const Checkout = (props: Props) => {
 			<div class="column is-half">
 				<button
 					class="button is-primary is-fullwidth"
+					type="submit"
 					disabled={!isSendable()}
 					onClick={(e) => {
 						e.preventDefault();

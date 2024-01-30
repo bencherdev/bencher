@@ -70,10 +70,11 @@ const StatusButton = (props: Props) => {
 	};
 
 	return (
-		<Switch fallback={<></>}>
+		<Switch>
 			<Match when={props.data()?.status === AlertStatus.Active}>
 				<button
 					class="button is-primary is-fullwidth"
+					type="button"
 					title="Dismiss alert"
 					disabled={submitting()}
 					onClick={(e) => {
@@ -90,6 +91,7 @@ const StatusButton = (props: Props) => {
 			<Match when={props.data()?.status === AlertStatus.Dismissed}>
 				<button
 					class="button is-outlined is-fullwidth"
+					type="button"
 					title="Reactivate alert"
 					disabled={submitting()}
 					onClick={(e) => {

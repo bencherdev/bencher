@@ -48,7 +48,7 @@ const OrgMenu = (props: Props) => {
 				<li>
 					<a href={path(Section.SETTINGS)}>Settings</a>
 				</li>
-				<Show when={billing} fallback={<></>}>
+				<Show when={billing}>
 					<li>
 						<a href={path(Section.BILLING)}>Billing</a>
 					</li>

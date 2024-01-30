@@ -217,7 +217,7 @@ const SharedPlot = (props: Props) => {
 
 	return (
 		<>
-			<Show when={!props.isPlotInit()} fallback={<></>}>
+			<Show when={!props.isPlotInit()}>
 				<div class="column is-narrow">
 					<div class="level is-mobile" style="margin-bottom: 0;">
 						<div class="level-item">
@@ -229,7 +229,7 @@ const SharedPlot = (props: Props) => {
 								<span class="icon">
 									<i class="fas fa-info-circle" aria-hidden="true" />
 								</span>
-								<span style="padding-right: 1em"></span>
+								<span style="padding-right: 1em" />
 							</div>
 						</div>
 					</div>
@@ -298,6 +298,7 @@ const SharedPlot = (props: Props) => {
 					</div>
 					<button
 						class="button is-outlined is-fullwidth"
+						type="button"
 						title={
 							props.range() === PerfRange.DATE_TIME
 								? "Switch to Version Range"
@@ -349,7 +350,7 @@ const SharedPlot = (props: Props) => {
 					</div>
 				</div>
 			</div>
-			<Show when={!props.isPlotInit() && !props.isEmbed} fallback={<></>}>
+			<Show when={!props.isPlotInit() && !props.isEmbed}>
 				<div class="column is-narrow">
 					<p
 						class="has-text-centered"
@@ -359,6 +360,7 @@ const SharedPlot = (props: Props) => {
 					</p>
 					<button
 						class="button is-outlined is-fullwidth"
+						type="reset"
 						title="Clear Query"
 						onClick={(e) => {
 							e.preventDefault();
@@ -386,6 +388,7 @@ const LineArrowButton = (props: {
 			class={`button ${
 				props.param_key() ? "is-primary" : "is-outlined"
 			} is-fullwidth`}
+			type="button"
 			title={`${props.param_key() ? "Hide" : "Show"} ${props.position}`}
 			onClick={(e) => {
 				e.preventDefault();

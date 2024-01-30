@@ -118,6 +118,7 @@ const MinimizeKeyButton = (props: { handleKey: (key: boolean) => void }) => {
 	return (
 		<button
 			title="Minimize Key"
+			type="button"
 			class="button is-small is-fullwidth is-primary is-inverted"
 			onClick={() => props.handleKey(false)}
 		>
@@ -132,6 +133,7 @@ const MaximizeKeyButton = (props: { handleKey: (key: boolean) => void }) => {
 	return (
 		<button
 			title="Expand Key"
+			type="button"
 			class="button is-small is-fullwidth is-primary is-inverted"
 			onClick={() => props.handleKey(true)}
 		>
@@ -169,6 +171,7 @@ const KeyButton = (props: {
 			// On click toggle visibility of key
 			// move button over to being is-outlined
 			class="button is-small is-fullwidth"
+			type="button"
 			title={
 				props.perfActive[props.index()]
 					? `Hide Plot ${number}`
@@ -199,6 +202,7 @@ const KeyToggle = (props: {
 	return (
 		<button
 			class="button is-small is-fullwidth is-primary is-inverted"
+			type="button"
 			title={allActive() ? `Hide all plots` : `Show all plots`}
 			onClick={() => {
 				props.togglePerfActive();

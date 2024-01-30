@@ -125,6 +125,7 @@ const BackButton = (props: {
 	return (
 		<button
 			class="button is-primary is-small is-fullwidth"
+			type="button"
 			onClick={(e) => {
 				e.preventDefault();
 				props.handlePage(props.page - 1);

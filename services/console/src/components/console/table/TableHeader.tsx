@@ -63,7 +63,7 @@ const TableHeaderButton = (props: {
 
 	return (
 		<p class="level-item">
-			<Switch fallback={<></>}>
+			<Switch>
 				<Match when={props.button.kind === Button.ADD}>
 					<a
 						class="button is-outlined"
@@ -91,6 +91,7 @@ const TableHeaderButton = (props: {
 				<Match when={props.button.kind === Button.REFRESH}>
 					<button
 						class="button is-outlined"
+						type="button"
 						title={`Refresh ${props.title}`}
 						onClick={(e) => {
 							e.preventDefault();

@@ -136,6 +136,7 @@ const Footer = (props: {
 						<div class="column is-11">
 							<button
 								class="button is-fullwidth"
+								type="button"
 								onClick={(e) => {
 									e.preventDefault();
 									props.handlePlanLevel();
@@ -149,6 +150,7 @@ const Footer = (props: {
 			>
 				<button
 					class="button is-fullwidth"
+					type="button"
 					onClick={(e) => {
 						e.preventDefault();
 						props.handlePlanLevel();

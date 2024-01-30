@@ -36,6 +36,7 @@ const ConsoleNavbar = (props: Props) => {
 
 				<button
 					class={`navbar-burger ${burger() && "is-active"}`}
+					type="button"
 					aria-label="menu"
 					aria-expanded="false"
 					onClick={(_e) => setBurger(!burger())}
@@ -69,7 +70,6 @@ const ConsoleNavbar = (props: Props) => {
 					</a>
 					<Show
 						when={user && (props.params?.organization || props.params?.project)}
-						fallback={<></>}
 					>
 						<div class="navbar-item">
 							<ProjectSelect

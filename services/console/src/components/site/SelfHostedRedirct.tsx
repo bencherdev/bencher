@@ -3,7 +3,7 @@ import { isBencherCloud } from "../../util/ext";
 import Redirect from "./Redirect";
 
 const SelfHostedRedirect = (props: { path: string }) => (
-	<Show when={!isBencherCloud()} fallback={<></>}>
+	<Show when={!isBencherCloud()}>
 		<Redirect path={props.path} />
 	</Show>
 );

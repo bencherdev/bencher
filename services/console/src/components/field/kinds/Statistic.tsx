@@ -16,9 +16,6 @@ import Field from "../Field";
 export type InputValue = string | number | null | undefined;
 
 export interface Props {
-	kind: FieldKind;
-	fieldKey: string;
-	label?: undefined | string;
 	value: FieldValue;
 	valid: undefined | null | boolean;
 	config: FieldConfig;
