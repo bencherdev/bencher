@@ -17,6 +17,7 @@ pub struct List {
     pub org: Option<ResourceId>,
     pub public: Option<bool>,
     pub name: Option<ResourceName>,
+    pub search: Option<String>,
     pub pagination: Pagination,
     pub backend: PubBackend,
 }
@@ -38,6 +39,7 @@ impl TryFrom<CliProjectList> for List {
             org,
             public,
             name,
+            search,
             pagination,
             backend,
         } = list;
@@ -45,6 +47,7 @@ impl TryFrom<CliProjectList> for List {
             org,
             public: public.then_some(public),
             name,
+            search,
             pagination: pagination.into(),
             backend: backend.try_into()?,
         })
@@ -83,6 +86,9 @@ impl SubCmd for List {
                     if let Some(name) = self.name.clone() {
                         client = client.name(name);
                     }
+                    if let Some(search) = self.search.clone() {
+                        client = client.search(search);
+                    }
                     if let Some(sort) = self.pagination.org_projects_sort {
                         client = client.sort(sort);
                     }
@@ -103,6 +109,9 @@ impl SubCmd for List {
                     }
                     if let Some(name) = self.name.clone() {
                         client = client.name(name);
+                    }
+                    if let Some(search) = self.search.clone() {
+                        client = client.search(search);
                     }
                     if let Some(sort) = self.pagination.projects_sort {
                         client = client.sort(sort);

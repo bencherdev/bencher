@@ -3,7 +3,10 @@ use bencher_json::{
     BenchmarkName, JsonBenchmark, JsonBenchmarks, JsonDirection, JsonPagination, ResourceId,
 };
 use bencher_rbac::project::Permission;
-use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{
+    BelongingToDsl, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl,
+    TextExpressionMethods,
+};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -25,6 +28,7 @@ use crate::{
         user::auth::{AuthUser, BearerToken, PubBearerToken},
     },
     schema,
+    util::search::Search,
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -44,6 +48,7 @@ pub enum ProjBenchmarksSort {
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjBenchmarksQuery {
     pub name: Option<BenchmarkName>,
+    pub search: Option<Search>,
 }
 
 #[allow(clippy::unused_async)]
@@ -99,7 +104,14 @@ async fn get_ls_inner(
     let mut query = QueryBenchmark::belonging_to(&query_project).into_boxed();
 
     if let Some(name) = query_params.name.as_ref() {
-        query = query.filter(schema::benchmark::name.eq(name.as_ref()));
+        query = query.filter(schema::benchmark::name.eq(name));
+    }
+    if let Some(search) = query_params.search.as_ref() {
+        query = query.filter(
+            schema::benchmark::name
+                .like(search)
+                .or(schema::benchmark::slug.like(search)),
+        );
     }
 
     query = match pagination_params.order() {

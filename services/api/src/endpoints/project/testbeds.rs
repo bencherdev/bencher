@@ -3,7 +3,10 @@ use bencher_json::{
     JsonTestbed, JsonTestbeds, ResourceId, ResourceName,
 };
 use bencher_rbac::project::Permission;
-use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{
+    BelongingToDsl, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl,
+    TextExpressionMethods,
+};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -26,6 +29,7 @@ use crate::{
         user::auth::BearerToken,
     },
     schema,
+    util::search::Search,
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -45,6 +49,7 @@ pub enum ProjTestbedsSort {
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjTestbedsQuery {
     pub name: Option<ResourceName>,
+    pub search: Option<Search>,
 }
 
 #[allow(clippy::unused_async)]
@@ -100,7 +105,14 @@ async fn get_ls_inner(
     let mut query = QueryTestbed::belonging_to(&query_project).into_boxed();
 
     if let Some(name) = query_params.name.as_ref() {
-        query = query.filter(schema::testbed::name.eq(name.as_ref()));
+        query = query.filter(schema::testbed::name.eq(name));
+    }
+    if let Some(search) = query_params.search.as_ref() {
+        query = query.filter(
+            schema::testbed::name
+                .like(search)
+                .or(schema::testbed::slug.like(search)),
+        );
     }
 
     query = match pagination_params.order() {

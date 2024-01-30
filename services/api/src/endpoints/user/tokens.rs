@@ -2,7 +2,7 @@ use bencher_json::{
     user::token::JsonUpdateToken, JsonDirection, JsonNewToken, JsonPagination, JsonToken,
     JsonTokens, ResourceId, ResourceName,
 };
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -24,6 +24,7 @@ use crate::{
         },
     },
     schema,
+    util::search::Search,
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -43,6 +44,7 @@ pub enum UserTokensSort {
 #[derive(Deserialize, JsonSchema)]
 pub struct UserTokensQuery {
     pub name: Option<ResourceName>,
+    pub search: Option<Search>,
 }
 
 #[allow(clippy::unused_async)]
@@ -100,7 +102,10 @@ async fn get_ls_inner(
         .into_boxed();
 
     if let Some(name) = query_params.name.as_ref() {
-        query = query.filter(schema::token::name.eq(name.as_ref()));
+        query = query.filter(schema::token::name.eq(name));
+    }
+    if let Some(search) = query_params.search.as_ref() {
+        query = query.filter(schema::token::name.like(search));
     }
 
     query = match pagination_params.order() {

@@ -42,6 +42,10 @@ pub struct CliOrganizationList {
     #[clap(long)]
     pub name: Option<ResourceName>,
 
+    /// Organization search string
+    #[clap(long)]
+    pub search: Option<String>,
+
     #[clap(flatten)]
     pub pagination: CliPagination<CliOrganizationsSort>,
 

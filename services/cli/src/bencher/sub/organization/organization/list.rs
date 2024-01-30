@@ -15,6 +15,7 @@ use crate::{
 #[derive(Debug)]
 pub struct List {
     pub name: Option<ResourceName>,
+    pub search: Option<String>,
     pub pagination: Pagination,
     pub backend: AuthBackend,
 }
@@ -33,11 +34,13 @@ impl TryFrom<CliOrganizationList> for List {
     fn try_from(list: CliOrganizationList) -> Result<Self, Self::Error> {
         let CliOrganizationList {
             name,
+            search,
             pagination,
             backend,
         } = list;
         Ok(Self {
             name,
+            search,
             pagination: pagination.into(),
             backend: backend.try_into()?,
         })
@@ -71,6 +74,9 @@ impl SubCmd for List {
                 let mut client = client.organizations_get();
                 if let Some(name) = self.name.clone() {
                     client = client.name(name);
+                }
+                if let Some(search) = self.search.clone() {
+                    client = client.search(search);
                 }
                 if let Some(sort) = self.pagination.sort {
                     client = client.sort(sort);

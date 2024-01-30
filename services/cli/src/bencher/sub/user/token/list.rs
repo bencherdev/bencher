@@ -16,6 +16,7 @@ use crate::{
 pub struct List {
     pub user: ResourceId,
     pub name: Option<ResourceName>,
+    pub search: Option<String>,
     pub pagination: Pagination,
     pub backend: AuthBackend,
 }
@@ -35,12 +36,14 @@ impl TryFrom<CliTokenList> for List {
         let CliTokenList {
             user,
             name,
+            search,
             pagination,
             backend,
         } = list;
         Ok(Self {
             user,
             name,
+            search,
             pagination: pagination.into(),
             backend: backend.try_into()?,
         })
@@ -74,6 +77,9 @@ impl SubCmd for List {
                 let mut client = client.user_tokens_get().user(self.user.clone());
                 if let Some(name) = self.name.clone() {
                     client = client.name(name);
+                }
+                if let Some(search) = self.search.clone() {
+                    client = client.search(search);
                 }
                 if let Some(sort) = self.pagination.sort {
                     client = client.sort(sort);

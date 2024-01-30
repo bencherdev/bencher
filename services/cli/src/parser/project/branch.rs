@@ -32,6 +32,10 @@ pub struct CliBranchList {
     #[clap(long)]
     pub name: Option<BranchName>,
 
+    /// Branch search string
+    #[clap(long)]
+    pub search: Option<String>,
+
     #[clap(flatten)]
     pub pagination: CliPagination<CliBranchesSort>,
 

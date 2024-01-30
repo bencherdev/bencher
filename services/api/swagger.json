@@ -509,6 +509,13 @@
             "schema": {
               "$ref": "#/components/schemas/ResourceName"
             }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "$ref": "#/components/schemas/Search"
+            }
           }
         ],
         "responses": {
@@ -895,6 +902,13 @@
             "name": "name",
             "schema": {
               "$ref": "#/components/schemas/UserName"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "$ref": "#/components/schemas/Search"
             }
           }
         ],
@@ -1511,6 +1525,13 @@
             "schema": {
               "$ref": "#/components/schemas/ResourceName"
             }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "$ref": "#/components/schemas/Search"
+            }
           }
         ],
         "responses": {
@@ -1759,6 +1780,13 @@
             "schema": {
               "nullable": true,
               "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "$ref": "#/components/schemas/Search"
             }
           }
         ],
@@ -2399,6 +2427,13 @@
             "schema": {
               "$ref": "#/components/schemas/BenchmarkName"
             }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "$ref": "#/components/schemas/Search"
+            }
           }
         ],
         "responses": {
@@ -2806,6 +2841,13 @@
             "schema": {
               "$ref": "#/components/schemas/BranchName"
             }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "$ref": "#/components/schemas/Search"
+            }
           }
         ],
         "responses": {
@@ -3212,6 +3254,13 @@
             "name": "name",
             "schema": {
               "$ref": "#/components/schemas/ResourceName"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "$ref": "#/components/schemas/Search"
             }
           }
         ],
@@ -4312,6 +4361,13 @@
             "name": "name",
             "schema": {
               "$ref": "#/components/schemas/ResourceName"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "$ref": "#/components/schemas/Search"
             }
           }
         ],
@@ -5821,6 +5877,13 @@
             "name": "name",
             "schema": {
               "$ref": "#/components/schemas/ResourceName"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "$ref": "#/components/schemas/Search"
             }
           }
         ],
@@ -9238,6 +9301,9 @@
         "enum": [
           "name"
         ]
+      },
+      "Search": {
+        "type": "string"
       },
       "OrganizationPermission": {
         "type": "string",

@@ -31,6 +31,10 @@ pub struct CliMemberList {
     #[clap(long)]
     pub name: Option<UserName>,
 
+    /// Member search string
+    #[clap(long)]
+    pub search: Option<String>,
+
     #[clap(flatten)]
     pub pagination: CliPagination<CliMembersSort>,
 

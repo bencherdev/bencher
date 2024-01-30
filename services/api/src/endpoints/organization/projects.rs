@@ -3,7 +3,10 @@ use bencher_json::{
     JsonProjects, ResourceId, ResourceName,
 };
 use bencher_rbac::organization::Permission;
-use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{
+    BelongingToDsl, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl,
+    TextExpressionMethods,
+};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -29,6 +32,7 @@ use crate::{
         user::auth::{AuthUser, BearerToken},
     },
     schema,
+    util::search::Search,
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -48,6 +52,7 @@ pub enum OrgProjectsSort {
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgProjectsQuery {
     pub name: Option<ResourceName>,
+    pub search: Option<Search>,
 }
 
 #[allow(clippy::unused_async)]
@@ -108,7 +113,14 @@ async fn get_ls_inner(
     let mut query = QueryProject::belonging_to(&query_organization).into_boxed();
 
     if let Some(name) = query_params.name.as_ref() {
-        query = query.filter(schema::project::name.eq(name.as_ref()));
+        query = query.filter(schema::project::name.eq(name));
+    }
+    if let Some(search) = query_params.search.as_ref() {
+        query = query.filter(
+            schema::project::name
+                .like(search)
+                .or(schema::project::slug.like(search)),
+        );
     }
 
     query = match pagination_params.order() {

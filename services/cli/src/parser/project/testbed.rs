@@ -32,6 +32,10 @@ pub struct CliTestbedList {
     #[clap(long)]
     pub name: Option<ResourceName>,
 
+    /// Testbed search string
+    #[clap(long)]
+    pub search: Option<String>,
+
     #[clap(flatten)]
     pub pagination: CliPagination<CliTestbedsSort>,
 

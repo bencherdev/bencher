@@ -29,6 +29,10 @@ pub struct CliTokenList {
     #[clap(long)]
     pub name: Option<ResourceName>,
 
+    /// Token search string
+    #[clap(long)]
+    pub search: Option<String>,
+
     #[clap(flatten)]
     pub pagination: CliPagination<CliTokensSort>,
 

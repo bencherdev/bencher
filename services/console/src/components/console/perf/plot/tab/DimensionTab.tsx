@@ -8,6 +8,8 @@ import type {
 } from "../../../../../types/bencher";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import type { TabElement, TabList } from "./PlotTab";
+import Field from "../../../../field/Field";
+import FieldKind from "../../../../field/kind";
 
 const DimensionsTab = (props: {
 	project_slug: Accessor<undefined | string>;
@@ -17,18 +19,30 @@ const DimensionsTab = (props: {
 	handleChecked: (index: number, slug?: string) => void;
 }) => {
 	return (
-		<For each={props.tabList()}>
-			{(dimension, index) => (
-				<DimensionRow
-					project_slug={props.project_slug}
-					isConsole={props.isConsole}
-					tab={props.tab}
-					dimension={dimension}
-					index={index}
-					handleChecked={props.handleChecked}
+		<>
+			{/* <div class="panel-block is-block">
+				<Field
+					kind={FieldKind.SEARCH}
+					fieldKey="search"
+					value={form?.consent?.value}
+					valid={form?.consent?.valid}
+					config={AUTH_FIELDS.consent}
+					handleField={handleField}
 				/>
-			)}
-		</For>
+			</div> */}
+			<For each={props.tabList()}>
+				{(dimension, index) => (
+					<DimensionRow
+						project_slug={props.project_slug}
+						isConsole={props.isConsole}
+						tab={props.tab}
+						dimension={dimension}
+						index={index}
+						handleChecked={props.handleChecked}
+					/>
+				)}
+			</For>
+		</>
 	);
 };
 

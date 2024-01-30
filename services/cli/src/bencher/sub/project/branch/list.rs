@@ -16,6 +16,7 @@ use crate::{
 pub struct List {
     pub project: ResourceId,
     pub name: Option<BranchName>,
+    pub search: Option<String>,
     pub pagination: Pagination,
     pub backend: PubBackend,
 }
@@ -35,12 +36,14 @@ impl TryFrom<CliBranchList> for List {
         let CliBranchList {
             project,
             name,
+            search,
             pagination,
             backend,
         } = list;
         Ok(Self {
             project,
             name,
+            search,
             pagination: pagination.into(),
             backend: backend.try_into()?,
         })
@@ -74,6 +77,9 @@ impl SubCmd for List {
                 let mut client = client.proj_branches_get().project(self.project.clone());
                 if let Some(name) = self.name.clone() {
                     client = client.name(name);
+                }
+                if let Some(search) = self.search.clone() {
+                    client = client.search(search);
                 }
                 if let Some(sort) = self.pagination.sort {
                     client = client.sort(sort);

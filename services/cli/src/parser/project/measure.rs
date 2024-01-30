@@ -32,6 +32,10 @@ pub struct CliMeasureList {
     #[clap(long)]
     pub name: Option<ResourceName>,
 
+    /// Measure search string
+    #[clap(long)]
+    pub search: Option<String>,
+
     #[clap(flatten)]
     pub pagination: CliPagination<CliMeasuresSort>,
 

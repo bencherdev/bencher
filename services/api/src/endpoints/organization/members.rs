@@ -3,7 +3,9 @@ use bencher_json::{
     JsonAuthAck, JsonDirection, JsonMember, JsonMembers, JsonPagination, ResourceId, UserName,
 };
 use bencher_rbac::organization::Permission;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods,
+};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use http::StatusCode;
 use schemars::JsonSchema;
@@ -28,6 +30,7 @@ use crate::{
         user::UserId,
     },
     schema,
+    util::search::Search,
 };
 
 // TODO Custom max TTL
@@ -50,6 +53,7 @@ pub enum OrgMembersSort {
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgMembersQuery {
     pub name: Option<UserName>,
+    pub search: Option<Search>,
 }
 
 #[allow(clippy::unused_async)]
@@ -122,7 +126,14 @@ async fn get_ls_inner(
         .into_boxed();
 
     if let Some(name) = query_params.name.as_ref() {
-        query = query.filter(schema::user::name.eq(name.as_ref()));
+        query = query.filter(schema::user::name.eq(name));
+    }
+    if let Some(search) = query_params.search.as_ref() {
+        query = query.filter(
+            schema::user::name
+                .like(search)
+                .or(schema::user::slug.like(search)),
+        );
     }
 
     query = match pagination_params.order() {

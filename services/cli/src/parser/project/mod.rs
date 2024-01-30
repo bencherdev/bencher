@@ -50,6 +50,10 @@ pub struct CliProjectList {
     #[clap(long)]
     pub name: Option<ResourceName>,
 
+    /// Project search string
+    #[clap(long)]
+    pub search: Option<String>,
+
     #[clap(flatten)]
     pub pagination: CliPagination<CliProjectsSort>,
 

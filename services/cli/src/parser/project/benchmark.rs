@@ -32,6 +32,10 @@ pub struct CliBenchmarkList {
     #[clap(long)]
     pub name: Option<BenchmarkName>,
 
+    /// Benchmark search string
+    #[clap(long)]
+    pub search: Option<String>,
+
     #[clap(flatten)]
     pub pagination: CliPagination<CliBenchmarksSort>,
 

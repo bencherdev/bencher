@@ -3,7 +3,9 @@ use bencher_json::{
     JsonDirection, JsonPagination, JsonProject, JsonProjects, ResourceId, ResourceName,
 };
 use bencher_rbac::project::Permission;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods,
+};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -21,6 +23,7 @@ use crate::{
         user::auth::{AuthUser, BearerToken, PubBearerToken},
     },
     schema,
+    util::search::Search,
 };
 
 pub type ProjectsPagination = JsonPagination<ProjectsSort>;
@@ -36,6 +39,7 @@ pub enum ProjectsSort {
 pub struct ProjectsQuery {
     pub name: Option<ResourceName>,
     pub public: Option<bool>,
+    pub search: Option<Search>,
 }
 
 #[allow(clippy::unused_async)]
@@ -100,7 +104,14 @@ async fn get_ls_inner(
     }
 
     if let Some(name) = query_params.name.as_ref() {
-        query = query.filter(schema::project::name.eq(name.as_ref()));
+        query = query.filter(schema::project::name.eq(name));
+    }
+    if let Some(search) = query_params.search.as_ref() {
+        query = query.filter(
+            schema::project::name
+                .like(search)
+                .or(schema::project::slug.like(search)),
+        );
     }
 
     query = match pagination_params.order() {
