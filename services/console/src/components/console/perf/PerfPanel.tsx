@@ -32,6 +32,7 @@ import { validU32 } from "../../../util/valid";
 import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
 import type { TabList } from "./plot/tab/PlotTab";
+import { debounce } from "@solid-primitives/scheduled";
 
 // Perf query params
 const BRANCHES_PARAM = PerfQueryKey.Branches;
@@ -54,6 +55,11 @@ const BRANCHES_PAGE_PARAM = "branches_page";
 const TESTBEDS_PAGE_PARAM = "testbeds_page";
 const BENCHMARKS_PAGE_PARAM = "benchmarks_page";
 
+const REPORTS_SEARCH_PARAM = "reports_search";
+const BRANCHES_SEARCH_PARAM = "branches_search";
+const TESTBEDS_SEARCH_PARAM = "testbeds_search";
+const BENCHMARKS_SEARCH_PARAM = "benchmarks_search";
+
 const TAB_PARAM = "tab";
 const KEY_PARAM = "key";
 const RANGE_PARAM = "range";
@@ -73,6 +79,7 @@ const DEFAULT_PERF_BOUNDARY = false;
 const DEFAULT_PER_PAGE = 8;
 const REPORTS_PER_PAGE = 4;
 export const DEFAULT_PAGE = 1;
+export const DEBOUNCE_DELAY = 250;
 
 // 30 days
 const DEFAULT_REPORT_HISTORY = 30 * 24 * 60 * 60 * 1000;
@@ -252,6 +259,19 @@ const PerfPanel = (props: Props) => {
 			initParams[BENCHMARKS_PAGE_PARAM] = DEFAULT_PAGE;
 		}
 
+		if (typeof searchParams[REPORTS_SEARCH_PARAM] !== "string") {
+			initParams[REPORTS_SEARCH_PARAM] = null;
+		}
+		if (typeof searchParams[BRANCHES_SEARCH_PARAM] !== "string") {
+			initParams[BRANCHES_SEARCH_PARAM] = null;
+		}
+		if (typeof searchParams[TESTBEDS_SEARCH_PARAM] !== "string") {
+			initParams[TESTBEDS_SEARCH_PARAM] = null;
+		}
+		if (typeof searchParams[BENCHMARKS_SEARCH_PARAM] !== "string") {
+			initParams[BENCHMARKS_SEARCH_PARAM] = null;
+		}
+
 		if (Object.keys(initParams).length !== 0) {
 			setSearchParams(initParams, { replace: true });
 		}
@@ -359,6 +379,13 @@ const PerfPanel = (props: Props) => {
 	);
 	const benchmarks_page = createMemo(() =>
 		Number(searchParams[BENCHMARKS_PAGE_PARAM]),
+	);
+
+	const reports_search = createMemo(() => searchParams[REPORTS_SEARCH_PARAM]);
+	const branches_search = createMemo(() => searchParams[BRANCHES_SEARCH_PARAM]);
+	const testbeds_search = createMemo(() => searchParams[TESTBEDS_SEARCH_PARAM]);
+	const benchmarks_search = createMemo(
+		() => searchParams[BENCHMARKS_SEARCH_PARAM],
 	);
 
 	// The perf query sent to the server
@@ -483,6 +510,8 @@ const PerfPanel = (props: Props) => {
 			project_slug: undefined | string;
 			per_page: number;
 			page: number;
+			search: undefined | string;
+			refresh: number;
 			token: string;
 		},
 	) {
@@ -505,6 +534,9 @@ const PerfPanel = (props: Props) => {
 		const search_params = new URLSearchParams();
 		search_params.set("per_page", fetcher.per_page.toString());
 		search_params.set("page", fetcher.page.toString());
+		if (fetcher.search) {
+			search_params.set("search", fetcher.search.trim());
+		}
 		const path = `/v0/projects/${
 			fetcher.project_slug
 		}/${perfTab}?${search_params.toString()}`;
@@ -523,6 +555,7 @@ const PerfPanel = (props: Props) => {
 			project_slug: project_slug(),
 			per_page: reports_per_page(),
 			page: reports_page(),
+			search: reports_search(),
 			refresh: refresh(),
 			token: user?.token,
 		};
@@ -554,6 +587,7 @@ const PerfPanel = (props: Props) => {
 			project_slug: project_slug(),
 			per_page: branches_per_page(),
 			page: branches_page(),
+			search: branches_search(),
 			refresh: refresh(),
 			token: user?.token,
 		};
@@ -573,6 +607,7 @@ const PerfPanel = (props: Props) => {
 			project_slug: project_slug(),
 			per_page: testbeds_per_page(),
 			page: testbeds_page(),
+			search: testbeds_search(),
 			refresh: refresh(),
 			token: user?.token,
 		};
@@ -592,6 +627,7 @@ const PerfPanel = (props: Props) => {
 			project_slug: project_slug(),
 			per_page: benchmarks_per_page(),
 			page: benchmarks_page(),
+			search: benchmarks_search(),
 			refresh: refresh(),
 			token: user?.token,
 		};
@@ -756,6 +792,39 @@ const PerfPanel = (props: Props) => {
 	const handleBenchmarksPage = (page: number) =>
 		setSearchParams({ [BENCHMARKS_PAGE_PARAM]: page });
 
+	const handleReportsSearch = debounce(
+		(search: string) =>
+			setSearchParams({
+				[REPORTS_PAGE_PARAM]: DEFAULT_PAGE,
+				[REPORTS_SEARCH_PARAM]: search,
+			}),
+		DEBOUNCE_DELAY,
+	);
+	const handleBranchesSearch = debounce(
+		(search: string) =>
+			setSearchParams({
+				[BRANCHES_PAGE_PARAM]: DEFAULT_PAGE,
+				[BRANCHES_SEARCH_PARAM]: search,
+			}),
+		DEBOUNCE_DELAY,
+	);
+	const handleTestbedsSearch = debounce(
+		(search: string) =>
+			setSearchParams({
+				[TESTBEDS_PAGE_PARAM]: DEFAULT_PAGE,
+				[TESTBEDS_SEARCH_PARAM]: search,
+			}),
+		DEBOUNCE_DELAY,
+	);
+	const handleBenchmarksSearch = debounce(
+		(search: string) =>
+			setSearchParams({
+				[BENCHMARKS_PAGE_PARAM]: DEFAULT_PAGE,
+				[BENCHMARKS_SEARCH_PARAM]: search,
+			}),
+		DEBOUNCE_DELAY,
+	);
+
 	return (
 		<>
 			<Show when={!props.isEmbed}>
@@ -806,6 +875,10 @@ const PerfPanel = (props: Props) => {
 				branches_page={branches_page}
 				testbeds_page={testbeds_page}
 				benchmarks_page={benchmarks_page}
+				reports_search={reports_search}
+				branches_search={branches_search}
+				testbeds_search={testbeds_search}
+				benchmarks_search={benchmarks_search}
 				handleMeasure={handleMeasure}
 				handleStartTime={handleStartTime}
 				handleEndTime={handleEndTime}
@@ -825,6 +898,10 @@ const PerfPanel = (props: Props) => {
 				handleBranchesPage={handleBranchesPage}
 				handleTestbedsPage={handleTestbedsPage}
 				handleBenchmarksPage={handleBenchmarksPage}
+				handleReportsSearch={handleReportsSearch}
+				handleBranchesSearch={handleBranchesSearch}
+				handleTestbedsSearch={handleTestbedsSearch}
+				handleBenchmarksSearch={handleBenchmarksSearch}
 			/>
 		</>
 	);

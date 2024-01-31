@@ -45,6 +45,11 @@ export interface Props {
 	branches_page: Accessor<number>;
 	testbeds_page: Accessor<number>;
 	benchmarks_page: Accessor<number>;
+	// Search
+	reports_search: Accessor<undefined | string>;
+	branches_search: Accessor<undefined | string>;
+	testbeds_search: Accessor<undefined | string>;
+	benchmarks_search: Accessor<undefined | string>;
 	// Handle checked
 	handleReportChecked: (
 		index: number,
@@ -58,6 +63,11 @@ export interface Props {
 	handleBranchesPage: (branches_page: number) => void;
 	handleTestbedsPage: (testbeds_page: number) => void;
 	handleBenchmarksPage: (benchmarks_page: number) => void;
+	// Handle search
+	handleReportsSearch: (reports_search: string) => void;
+	handleBranchesSearch: (branches_search: string) => void;
+	handleTestbedsSearch: (testbeds_search: string) => void;
+	handleBenchmarksSearch: (benchmarks_search: string) => void;
 }
 
 const PlotTab = (props: Props) => {
@@ -141,6 +151,36 @@ const PlotTab = (props: Props) => {
 		}
 	});
 
+	const search = createMemo(() => {
+		switch (props.tab()) {
+			case PerfTab.REPORTS:
+				return props.reports_search();
+			case PerfTab.BRANCHES:
+				return props.branches_search();
+			case PerfTab.TESTBEDS:
+				return props.testbeds_search();
+			case PerfTab.BENCHMARKS:
+				return props.benchmarks_search();
+			default:
+				return "";
+		}
+	});
+
+	const handleSearch = (_key: string, search: string, _valid: boolean) => {
+		switch (props.tab()) {
+			case PerfTab.REPORTS:
+				return props.handleReportsSearch(search);
+			case PerfTab.BRANCHES:
+				return props.handleBranchesSearch(search);
+			case PerfTab.TESTBEDS:
+				return props.handleTestbedsSearch(search);
+			case PerfTab.BENCHMARKS:
+				return props.handleBenchmarksSearch(search);
+			default:
+				return console.error("No handle for tab", props.tab(), search);
+		}
+	};
+
 	return (
 		<>
 			<div class="panel-tabs">
@@ -175,8 +215,10 @@ const PlotTab = (props: Props) => {
 				benchmarks_tab={props.benchmarks_tab}
 				tab={props.tab}
 				page={page}
+				search={search}
 				handlePage={handlePage}
 				handleChecked={handleChecked}
+				handleSearch={handleSearch}
 			/>
 			<div class="panel-block">
 				<div class="container">

@@ -18,6 +18,7 @@ import { apiUrl } from "../../../util/http";
 import { setPageTitle } from "../../../util/resource";
 import Field from "../../field/Field";
 import FieldKind from "../../field/kind";
+import { DEBOUNCE_DELAY } from "./PerfPanel";
 
 export interface Props {
 	apiUrl: string;
@@ -136,7 +137,10 @@ const ShareModal = (props: ShareProps) => {
 
 	const [title, setTitle] = createSignal(null);
 
-	const handle_title = debounce((_key, value, _valid) => setTitle(value), 250);
+	const handle_title = debounce(
+		(_key, value, _valid) => setTitle(value),
+		DEBOUNCE_DELAY,
+	);
 
 	const perf_page_url = createMemo(
 		() =>

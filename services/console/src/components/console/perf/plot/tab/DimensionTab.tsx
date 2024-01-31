@@ -8,7 +8,7 @@ import type {
 } from "../../../../../types/bencher";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import type { TabElement, TabList } from "./PlotTab";
-import Field from "../../../../field/Field";
+import Field, { type FieldHandler } from "../../../../field/Field";
 import FieldKind from "../../../../field/kind";
 
 const DimensionsTab = (props: {
@@ -16,20 +16,24 @@ const DimensionsTab = (props: {
 	isConsole: boolean;
 	tab: Accessor<PerfTab>;
 	tabList: Accessor<TabList<JsonBranch | JsonTestbed | JsonBenchmark>>;
+	search: Accessor<undefined | string>;
 	handleChecked: (index: number, slug?: string) => void;
+	handleSearch: FieldHandler;
 }) => {
+	console.log(props.search());
 	return (
 		<>
-			{/* <div class="panel-block is-block">
+			<div class="panel-block is-block">
 				<Field
 					kind={FieldKind.SEARCH}
 					fieldKey="search"
-					value={form?.consent?.value}
-					valid={form?.consent?.valid}
-					config={AUTH_FIELDS.consent}
-					handleField={handleField}
+					value={props.search() ?? ""}
+					config={{
+						placeholder: `Search ${props.tab()}...`,
+					}}
+					handleField={props.handleSearch}
 				/>
-			</div> */}
+			</div>
 			<For each={props.tabList()}>
 				{(dimension, index) => (
 					<DimensionRow

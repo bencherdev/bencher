@@ -10,6 +10,7 @@ import { DEFAULT_PAGE } from "../../PerfPanel";
 import type { TabList } from "./PlotTab";
 import ReportsTab from "./ReportsTab";
 import DimensionsTab from "./DimensionTab";
+import type { FieldHandler } from "../../../../field/Field";
 
 const Tab = (props: {
 	project_slug: Accessor<undefined | string>;
@@ -22,8 +23,10 @@ const Tab = (props: {
 	benchmarks_tab: TabList<JsonBenchmark>;
 	tab: Accessor<PerfTab>;
 	page: Accessor<number>;
+	search: Accessor<undefined | string>;
 	handlePage: (page: number) => void;
 	handleChecked: (index: number, slug?: string) => void;
+	handleSearch: FieldHandler;
 }) => {
 	const tabList = createMemo(() => {
 		switch (props.tab()) {
@@ -52,7 +55,8 @@ const Tab = (props: {
 				when={
 					props.isConsole &&
 					tabList().length === 0 &&
-					props.page() === DEFAULT_PAGE
+					props.page() === DEFAULT_PAGE &&
+					props.search() === undefined
 				}
 			>
 				<div class="box">
@@ -76,7 +80,12 @@ const Tab = (props: {
 					</div>
 				</div>
 			</Match>
-			<Match when={props.tab() === PerfTab.REPORTS && tabList().length > 0}>
+			<Match
+				when={
+					props.tab() === PerfTab.REPORTS &&
+					(props.search() || tabList().length > 0)
+				}
+			>
 				<ReportsTab
 					project_slug={props.project_slug}
 					isConsole={props.isConsole}
@@ -86,7 +95,12 @@ const Tab = (props: {
 					handleChecked={props.handleChecked}
 				/>
 			</Match>
-			<Match when={props.tab() !== PerfTab.REPORTS && tabList().length > 0}>
+			<Match
+				when={
+					props.tab() !== PerfTab.REPORTS &&
+					(typeof props.search() === "string" || tabList().length > 0)
+				}
+			>
 				<DimensionsTab
 					project_slug={props.project_slug}
 					isConsole={props.isConsole}
@@ -96,7 +110,9 @@ const Tab = (props: {
 							TabList<JsonBranch | JsonTestbed | JsonBenchmark>
 						>
 					}
+					search={props.search}
 					handleChecked={props.handleChecked}
+					handleSearch={props.handleSearch}
 				/>
 			</Match>
 		</Switch>

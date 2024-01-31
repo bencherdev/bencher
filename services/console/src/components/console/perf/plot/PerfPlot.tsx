@@ -51,6 +51,10 @@ export interface Props {
 	branches_page: Accessor<number>;
 	testbeds_page: Accessor<number>;
 	benchmarks_page: Accessor<number>;
+	reports_search: Accessor<undefined | string>;
+	branches_search: Accessor<undefined | string>;
+	testbeds_search: Accessor<undefined | string>;
+	benchmarks_search: Accessor<undefined | string>;
 	handleMeasure: (measure: null | string) => void;
 	handleStartTime: (start_time: string) => void;
 	handleEndTime: (end_time: string) => void;
@@ -73,6 +77,10 @@ export interface Props {
 	handleBranchesPage: (branches_page: number) => void;
 	handleTestbedsPage: (testbeds_page: number) => void;
 	handleBenchmarksPage: (benchmarks_page: number) => void;
+	handleReportsSearch: (reports_search: string) => void;
+	handleBranchesSearch: (branches_search: string) => void;
+	handleTestbedsSearch: (testbeds_search: string) => void;
+	handleBenchmarksSearch: (benchmarks_search: string) => void;
 }
 
 const PerfPlot = (props: Props) => {
@@ -160,6 +168,10 @@ const PerfPlot = (props: Props) => {
 							branches_page={props.branches_page}
 							testbeds_page={props.testbeds_page}
 							benchmarks_page={props.benchmarks_page}
+							reports_search={props.reports_search}
+							branches_search={props.branches_search}
+							testbeds_search={props.testbeds_search}
+							benchmarks_search={props.benchmarks_search}
 							handleTab={props.handleTab}
 							handleReportChecked={props.handleReportChecked}
 							handleBranchChecked={props.handleBranchChecked}
@@ -169,6 +181,10 @@ const PerfPlot = (props: Props) => {
 							handleBranchesPage={props.handleBranchesPage}
 							handleTestbedsPage={props.handleTestbedsPage}
 							handleBenchmarksPage={props.handleBenchmarksPage}
+							handleReportsSearch={props.handleReportsSearch}
+							handleBranchesSearch={props.handleBranchesSearch}
+							handleTestbedsSearch={props.handleTestbedsSearch}
+							handleBenchmarksSearch={props.handleBenchmarksSearch}
 						/>
 					</Show>
 				</nav>

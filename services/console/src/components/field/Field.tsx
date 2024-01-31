@@ -10,20 +10,24 @@ import Radio, { type RadioConfig, type RadioValue } from "./kinds/Radio";
 import type { Params } from "astro";
 import Statistic from "./kinds/Statistic";
 import { validStatistic } from "../../util/valid";
+import type { SearchConfig, SearchValue } from "./kinds/Search";
+import Search from "./kinds/Search";
 
 export type FieldValue =
 	| SwitchValue
 	| CheckboxValue
 	| InputValue
 	| SelectValue
-	| RadioValue;
+	| RadioValue
+	| SearchValue;
 
 export type FieldConfig =
 	| SwitchConfig
 	| CheckboxConfig
 	| InputConfig
 	| SelectConfig
-	| RadioConfig;
+	| RadioConfig
+	| SearchConfig;
 
 export type FieldHandler = (
 	key: string,
@@ -138,10 +142,9 @@ const Field = (props: Props) => {
 				);
 			case FieldKind.SEARCH:
 				return (
-					<Input
-						value={props.value as InputValue}
-						valid={props.valid}
-						config={props.config as InputConfig}
+					<Search
+						value={props.value as SearchValue}
+						config={props.config as SearchConfig}
 						handleField={handleField}
 					/>
 				);
