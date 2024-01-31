@@ -21,9 +21,16 @@ import Pagination, { PaginationSize } from "../../site/Pagination";
 import Table, { type TableConfig, TableState } from "./Table";
 import TableHeader, { type TableHeaderConfig } from "./TableHeader";
 import { debounce } from "@solid-primitives/scheduled";
+import {
+	dateToTime,
+	timeToDate,
+	timeToDateOnlyIso,
+} from "../../../util/convert";
 
 const PER_PAGE_PARAM = "per_page";
 const PAGE_PARAM = "page";
+const START_TIME_PARAM = "start_time";
+const END_TIME_PARAM = "end_time";
 const SEARCH_PARAM = "search";
 
 const DEFAULT_PER_PAGE = 8;
@@ -59,6 +66,16 @@ const TablePanel = (props: Props) => {
 		if (!validU32(searchParams[PAGE_PARAM])) {
 			initParams[PAGE_PARAM] = DEFAULT_PAGE;
 		}
+		if (!timeToDate(searchParams[START_TIME_PARAM])) {
+			initParams[START_TIME_PARAM] = null;
+		}
+		if (!timeToDate(searchParams[END_TIME_PARAM])) {
+			initParams[END_TIME_PARAM] = null;
+		}
+		if (typeof searchParams[SEARCH_PARAM] !== "string") {
+			initParams[SEARCH_PARAM] = null;
+		}
+
 		if (Object.keys(initParams).length !== 0) {
 			setSearchParams(initParams, { replace: true });
 		}
@@ -66,12 +83,20 @@ const TablePanel = (props: Props) => {
 
 	const per_page = createMemo(() => Number(searchParams[PER_PAGE_PARAM]));
 	const page = createMemo(() => Number(searchParams[PAGE_PARAM]));
+
+	const start_time = createMemo(() => searchParams[START_TIME_PARAM]);
+	const start_date = createMemo(() => timeToDateOnlyIso(start_time()));
+	const end_time = createMemo(() => searchParams[END_TIME_PARAM]);
+	const end_date = createMemo(() => timeToDateOnlyIso(end_time()));
+
 	const search = createMemo(() => searchParams[SEARCH_PARAM]);
 
-	const paginationQuery = createMemo(() => {
+	const searchQuery = createMemo(() => {
 		return {
 			per_page: per_page(),
 			page: page(),
+			start_time: start_time(),
+			end_time: end_time(),
 			search: search(),
 		};
 	});
@@ -79,7 +104,7 @@ const TablePanel = (props: Props) => {
 	const fetcher = createMemo(() => {
 		return {
 			bencher_valid: bencher_valid(),
-			paginationQuery: paginationQuery(),
+			searchQuery: searchQuery(),
 			token: authUser()?.token,
 		};
 	});
@@ -87,9 +112,12 @@ const TablePanel = (props: Props) => {
 	const [state, setState] = createSignal(TableState.LOADING);
 	const getData = async (fetcher: {
 		bencher_valid: InitOutput;
-		paginationQuery: {
+		searchQuery: {
 			per_page: number;
 			page: number;
+			start_time: undefined | string;
+			end_time: undefined | string;
+			search: undefined | string;
 		};
 		token: string;
 	}) => {
@@ -98,7 +126,7 @@ const TablePanel = (props: Props) => {
 			return EMPTY_ARRAY;
 		}
 		const searchParams = new URLSearchParams();
-		for (const [key, value] of Object.entries(fetcher.paginationQuery)) {
+		for (const [key, value] of Object.entries(fetcher.searchQuery)) {
 			if (value) {
 				searchParams.set(key, value.toString());
 			}
@@ -141,6 +169,18 @@ const TablePanel = (props: Props) => {
 		}
 	};
 
+	const handleStartTime = (date: string) => {
+		setSearchParams(
+			{ [PAGE_PARAM]: DEFAULT_PAGE, [START_TIME_PARAM]: dateToTime(date) },
+			{ scroll: true },
+		);
+	};
+	const handleEndTime = (date: string) => {
+		setSearchParams(
+			{ [PAGE_PARAM]: DEFAULT_PAGE, [END_TIME_PARAM]: dateToTime(date) },
+			{ scroll: true },
+		);
+	};
 	const handleSearch = debounce(
 		(search: string) =>
 			setSearchParams(
@@ -156,8 +196,12 @@ const TablePanel = (props: Props) => {
 				apiUrl={props.apiUrl}
 				params={props.params}
 				config={config()?.header}
+				start_date={start_date}
+				end_date={end_date}
 				search={search}
 				handleRefresh={refetch}
+				handleStartTime={handleStartTime}
+				handleEndTime={handleEndTime}
 				handleSearch={handleSearch}
 			/>
 			<Table

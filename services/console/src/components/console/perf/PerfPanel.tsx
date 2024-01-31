@@ -24,7 +24,17 @@ import {
 	PerfQueryKey,
 } from "../../../types/bencher";
 import { authUser } from "../../../util/auth";
-import { dateTimeMillis } from "../../../util/convert";
+import {
+	addToArray,
+	arrayFromString,
+	arrayToString,
+	dateTimeMillis,
+	dateToTime,
+	isBoolParam,
+	removeFromArray,
+	timeToDate,
+	timeToDateOnlyIso,
+} from "../../../util/convert";
 import { httpGet } from "../../../util/http";
 import { NotifyKind, pageNotify } from "../../../util/notify";
 import { useSearchParams } from "../../../util/url";
@@ -55,7 +65,8 @@ const BRANCHES_PAGE_PARAM = "branches_page";
 const TESTBEDS_PAGE_PARAM = "testbeds_page";
 const BENCHMARKS_PAGE_PARAM = "benchmarks_page";
 
-const REPORTS_SEARCH_PARAM = "reports_search";
+const REPORTS_START_TIME_PARAM = "reports_start_time";
+const REPORTS_END_TIME_PARAM = "reports_end_time";
 const BRANCHES_SEARCH_PARAM = "branches_search";
 const TESTBEDS_SEARCH_PARAM = "testbeds_search";
 const BENCHMARKS_SEARCH_PARAM = "benchmarks_search";
@@ -91,70 +102,6 @@ export interface Props {
 	project?: JsonProject;
 }
 
-const addToArray = (array: any[], add: any): string[] => {
-	if (!array.includes(add)) {
-		array.push(add);
-	}
-	return array;
-};
-const removeFromArray = (array: any[], remove: any): string[] => {
-	const index = array.indexOf(remove);
-	if (index > -1) {
-		array.splice(index, 1);
-	}
-	return array;
-};
-
-const arrayFromString = (array_str: undefined | string): string[] => {
-	if (typeof array_str === "string") {
-		const array = array_str.split(",");
-		return removeFromArray(array, "");
-	}
-	return [];
-};
-const arrayToString = (array: any[]) => array.join();
-
-const timeToDate = (time_str: undefined | string): null | Date => {
-	if (typeof time_str === "string") {
-		const time = parseInt(time_str);
-		if (Number.isInteger(time)) {
-			const date = new Date(time);
-			if (date) {
-				return date;
-			}
-		}
-	}
-	return null;
-};
-
-const timeToDateIso = (time_str: undefined | string): null | string => {
-	const date = timeToDate(time_str);
-	if (date) {
-		return date.toISOString();
-	}
-	return null;
-};
-
-const timeToDateOnlyIso = (
-	time_str: undefined | string,
-): undefined | string => {
-	const iso_date = timeToDateIso(time_str);
-	if (iso_date) {
-		return iso_date.split("T")?.[0];
-	}
-	return;
-};
-
-const dateToTime = (date_str: undefined | string): null | string => {
-	if (typeof date_str === "string") {
-		const time = Date.parse(date_str);
-		if (time) {
-			return `${time}`;
-		}
-	}
-	return null;
-};
-
 function resourcesToCheckable<T>(
 	resources: { uuid: string }[],
 	params: (undefined | string)[],
@@ -166,10 +113,6 @@ function resourcesToCheckable<T>(
 		};
 	});
 }
-
-const isBoolParam = (param: undefined | string): boolean => {
-	return param === "false" || param === "true";
-};
 
 const PerfPanel = (props: Props) => {
 	const params = createMemo(() => props.params);
@@ -258,8 +201,11 @@ const PerfPanel = (props: Props) => {
 			initParams[BENCHMARKS_PAGE_PARAM] = DEFAULT_PAGE;
 		}
 
-		if (typeof searchParams[REPORTS_SEARCH_PARAM] !== "string") {
-			initParams[REPORTS_SEARCH_PARAM] = null;
+		if (!timeToDate(searchParams[REPORTS_START_TIME_PARAM])) {
+			initParams[REPORTS_START_TIME_PARAM] = null;
+		}
+		if (!timeToDate(searchParams[REPORTS_END_TIME_PARAM])) {
+			initParams[REPORTS_END_TIME_PARAM] = null;
 		}
 		if (typeof searchParams[BRANCHES_SEARCH_PARAM] !== "string") {
 			initParams[BRANCHES_SEARCH_PARAM] = null;
@@ -303,9 +249,8 @@ const PerfPanel = (props: Props) => {
 		const perfTab = searchParams[TAB_PARAM];
 		if (perfTab && isPerfTab(perfTab)) {
 			return perfTab as PerfTab;
-		} else {
-			return DEFAULT_PERF_TAB;
 		}
+		return DEFAULT_PERF_TAB;
 	});
 
 	// This check is required for the initial load
@@ -313,9 +258,8 @@ const PerfPanel = (props: Props) => {
 	const isBoolParamOrDefault = (param: string, default_value: boolean) => {
 		if (isBoolParam(searchParams[param])) {
 			return searchParams[param] === "true";
-		} else {
-			return default_value;
 		}
+		return default_value;
 	};
 
 	const key = createMemo(() =>
@@ -328,9 +272,8 @@ const PerfPanel = (props: Props) => {
 		const perfRange = searchParams[RANGE_PARAM];
 		if (perfRange && isPerfRange(perfRange)) {
 			return perfRange as PerfRange;
-		} else {
-			return DEFAULT_PERF_RANGE;
 		}
+		return DEFAULT_PERF_RANGE;
 	});
 
 	// Ironically, a better name for the `clear` param would actually be `dirty`.
@@ -380,7 +323,19 @@ const PerfPanel = (props: Props) => {
 		Number(searchParams[BENCHMARKS_PAGE_PARAM]),
 	);
 
-	const reports_search = createMemo(() => searchParams[REPORTS_SEARCH_PARAM]);
+	const reports_start_time = createMemo(
+		() => searchParams[REPORTS_START_TIME_PARAM],
+	);
+	const reports_start_date = createMemo(() =>
+		timeToDateOnlyIso(reports_start_time()),
+	);
+	const reports_end_time = createMemo(
+		() => searchParams[REPORTS_END_TIME_PARAM],
+	);
+	const reports_end_date = createMemo(() =>
+		timeToDateOnlyIso(reports_end_time()),
+	);
+
 	const branches_search = createMemo(() => searchParams[BRANCHES_SEARCH_PARAM]);
 	const testbeds_search = createMemo(() => searchParams[TESTBEDS_SEARCH_PARAM]);
 	const benchmarks_search = createMemo(
@@ -438,7 +393,7 @@ const PerfPanel = (props: Props) => {
 		const path = `/v0/projects/${fetcher.project_slug}`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
-				return resp?.data;
+				return resp?.data as JsonProject;
 			})
 			.catch((error) => {
 				console.error(error);
@@ -509,7 +464,9 @@ const PerfPanel = (props: Props) => {
 			project_slug: undefined | string;
 			per_page: number;
 			page: number;
-			search: undefined | string;
+			start_time?: undefined | string;
+			end_time?: undefined | string;
+			search?: undefined | string;
 			refresh: number;
 			token: string;
 		},
@@ -533,6 +490,12 @@ const PerfPanel = (props: Props) => {
 		const search_params = new URLSearchParams();
 		search_params.set("per_page", fetcher.per_page.toString());
 		search_params.set("page", fetcher.page.toString());
+		if (fetcher.start_time) {
+			search_params.set("start_time", fetcher.start_time);
+		}
+		if (fetcher.end_time) {
+			search_params.set("end_time", fetcher.end_time);
+		}
 		if (fetcher.search) {
 			search_params.set("search", fetcher.search.trim());
 		}
@@ -554,7 +517,8 @@ const PerfPanel = (props: Props) => {
 			project_slug: project_slug(),
 			per_page: reports_per_page(),
 			page: reports_page(),
-			search: reports_search(),
+			start_time: reports_start_time(),
+			end_time: reports_end_time(),
 			refresh: refresh(),
 			token: user?.token,
 		};
@@ -769,7 +733,8 @@ const PerfPanel = (props: Props) => {
 					[BRANCHES_PAGE_PARAM]: DEFAULT_PAGE,
 					[TESTBEDS_PAGE_PARAM]: DEFAULT_PAGE,
 					[BENCHMARKS_PAGE_PARAM]: DEFAULT_PAGE,
-					[REPORTS_SEARCH_PARAM]: null,
+					[REPORTS_START_TIME_PARAM]: null,
+					[REPORTS_END_TIME_PARAM]: null,
 					[BRANCHES_SEARCH_PARAM]: null,
 					[TESTBEDS_SEARCH_PARAM]: null,
 					[BENCHMARKS_SEARCH_PARAM]: null,
@@ -804,14 +769,16 @@ const PerfPanel = (props: Props) => {
 	const handleBenchmarksPage = (page: number) =>
 		setSearchParams({ [BENCHMARKS_PAGE_PARAM]: page });
 
-	const handleReportsSearch = debounce(
-		(search: string) =>
-			setSearchParams({
-				[REPORTS_PAGE_PARAM]: DEFAULT_PAGE,
-				[REPORTS_SEARCH_PARAM]: search,
-			}),
-		DEBOUNCE_DELAY,
-	);
+	const handleReportsStartTime = (date: string) =>
+		setSearchParams({
+			[REPORTS_PAGE_PARAM]: DEFAULT_PAGE,
+			[REPORTS_START_TIME_PARAM]: dateToTime(date),
+		});
+	const handleReportsEndTime = (date: string) =>
+		setSearchParams({
+			[REPORTS_PAGE_PARAM]: DEFAULT_PAGE,
+			[REPORTS_END_TIME_PARAM]: dateToTime(date),
+		});
 	const handleBranchesSearch = debounce(
 		(search: string) =>
 			setSearchParams({
@@ -887,7 +854,8 @@ const PerfPanel = (props: Props) => {
 				branches_page={branches_page}
 				testbeds_page={testbeds_page}
 				benchmarks_page={benchmarks_page}
-				reports_search={reports_search}
+				reports_start_date={reports_start_date}
+				reports_end_date={reports_end_date}
 				branches_search={branches_search}
 				testbeds_search={testbeds_search}
 				benchmarks_search={benchmarks_search}
@@ -910,7 +878,8 @@ const PerfPanel = (props: Props) => {
 				handleBranchesPage={handleBranchesPage}
 				handleTestbedsPage={handleTestbedsPage}
 				handleBenchmarksPage={handleBenchmarksPage}
-				handleReportsSearch={handleReportsSearch}
+				handleReportsStartTime={handleReportsStartTime}
+				handleReportsEndTime={handleReportsEndTime}
 				handleBranchesSearch={handleBranchesSearch}
 				handleTestbedsSearch={handleTestbedsSearch}
 				handleBenchmarksSearch={handleBenchmarksSearch}

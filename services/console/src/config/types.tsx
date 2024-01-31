@@ -99,6 +99,7 @@ export enum Button {
 	REFRESH,
 	BACK,
 	SEARCH,
+	DATE_TIME,
 }
 
 export enum ActionButton {

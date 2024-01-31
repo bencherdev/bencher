@@ -9,6 +9,7 @@ import type {
 } from "../../../../../types/bencher";
 import Pagination, { PaginationSize } from "../../../../site/Pagination";
 import Tab from "./Tab";
+import type { FieldHandler } from "../../../../field/Field";
 
 export type TabList<T> = TabElement<T>[];
 
@@ -46,7 +47,8 @@ export interface Props {
 	testbeds_page: Accessor<number>;
 	benchmarks_page: Accessor<number>;
 	// Search
-	reports_search: Accessor<undefined | string>;
+	reports_start_date: Accessor<undefined | string>;
+	reports_end_date: Accessor<undefined | string>;
 	branches_search: Accessor<undefined | string>;
 	testbeds_search: Accessor<undefined | string>;
 	benchmarks_search: Accessor<undefined | string>;
@@ -64,7 +66,8 @@ export interface Props {
 	handleTestbedsPage: (testbeds_page: number) => void;
 	handleBenchmarksPage: (benchmarks_page: number) => void;
 	// Handle search
-	handleReportsSearch: (reports_search: string) => void;
+	handleReportsStartTime: (start_time: string) => void;
+	handleReportsEndTime: (end_time: string) => void;
 	handleBranchesSearch: (branches_search: string) => void;
 	handleTestbedsSearch: (testbeds_search: string) => void;
 	handleBenchmarksSearch: (benchmarks_search: string) => void;
@@ -153,8 +156,6 @@ const PlotTab = (props: Props) => {
 
 	const search = createMemo(() => {
 		switch (props.tab()) {
-			case PerfTab.REPORTS:
-				return props.reports_search();
 			case PerfTab.BRANCHES:
 				return props.branches_search();
 			case PerfTab.TESTBEDS:
@@ -168,8 +169,6 @@ const PlotTab = (props: Props) => {
 
 	const handleSearch = (_key: string, search: string, _valid: boolean) => {
 		switch (props.tab()) {
-			case PerfTab.REPORTS:
-				return props.handleReportsSearch(search);
 			case PerfTab.BRANCHES:
 				return props.handleBranchesSearch(search);
 			case PerfTab.TESTBEDS:
@@ -216,9 +215,13 @@ const PlotTab = (props: Props) => {
 				tab={props.tab}
 				page={page}
 				search={search}
+				reports_start_date={props.reports_start_date}
+				reports_end_date={props.reports_end_date}
 				handlePage={handlePage}
 				handleChecked={handleChecked}
-				handleSearch={handleSearch}
+				handleSearch={handleSearch as FieldHandler}
+				handleReportsStartTime={props.handleReportsStartTime}
+				handleReportsEndTime={props.handleReportsEndTime}
 			/>
 			<div class="panel-block">
 				<div class="container">

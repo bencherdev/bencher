@@ -24,9 +24,13 @@ const Tab = (props: {
 	tab: Accessor<PerfTab>;
 	page: Accessor<number>;
 	search: Accessor<undefined | string>;
+	reports_start_date: Accessor<undefined | string>;
+	reports_end_date: Accessor<undefined | string>;
 	handlePage: (page: number) => void;
 	handleChecked: (index: number, slug?: string) => void;
 	handleSearch: FieldHandler;
+	handleReportsStartTime: (start_time: string) => void;
+	handleReportsEndTime: (end_time: string) => void;
 }) => {
 	const tabList = createMemo(() => {
 		switch (props.tab()) {
@@ -92,7 +96,11 @@ const Tab = (props: {
 					measures={props.measures}
 					tab={props.tab}
 					tabList={tabList as Accessor<TabList<JsonReport>>}
+					start_date={props.reports_start_date}
+					end_date={props.reports_end_date}
 					handleChecked={props.handleChecked}
+					handleStartTime={props.handleReportsStartTime}
+					handleEndTime={props.handleReportsEndTime}
 				/>
 			</Match>
 			<Match

@@ -7,6 +7,7 @@ import { BRANCH_ICON } from "../../../../../config/project/branches";
 import { TESTBED_ICON } from "../../../../../config/project/testbeds";
 import { MEASURE_ICON } from "../../../../../config/project/measures";
 import type { TabElement, TabList } from "./PlotTab";
+import DateRange from "../../../../field/kinds/DateRange";
 
 const ReportsTab = (props: {
 	project_slug: Accessor<undefined | string>;
@@ -14,22 +15,36 @@ const ReportsTab = (props: {
 	measures: Accessor<string[]>;
 	tab: Accessor<PerfTab>;
 	tabList: Accessor<TabList<JsonReport>>;
+	start_date: Accessor<undefined | string>;
+	end_date: Accessor<undefined | string>;
 	handleChecked: (index: number, slug?: string) => void;
+	handleStartTime: (start_time: string) => void;
+	handleEndTime: (end_time: string) => void;
 }) => {
 	return (
-		<For each={props.tabList()}>
-			{(report, index) => (
-				<ReportRow
-					project_slug={props.project_slug}
-					isConsole={props.isConsole}
-					measures={props.measures}
-					tab={props.tab}
-					report={report}
-					index={index}
-					handleChecked={props.handleChecked}
+		<>
+			<div class="panel-block is-block">
+				<DateRange
+					start_date={props.start_date}
+					end_date={props.end_date}
+					handleStartTime={props.handleStartTime}
+					handleEndTime={props.handleEndTime}
 				/>
-			)}
-		</For>
+			</div>
+			<For each={props.tabList()}>
+				{(report, index) => (
+					<ReportRow
+						project_slug={props.project_slug}
+						isConsole={props.isConsole}
+						measures={props.measures}
+						tab={props.tab}
+						report={report}
+						index={index}
+						handleChecked={props.handleChecked}
+					/>
+				)}
+			</For>
+		</>
 	);
 };
 

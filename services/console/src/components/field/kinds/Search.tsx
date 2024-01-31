@@ -10,7 +10,6 @@ export interface Props {
 
 export interface SearchConfig {
 	placeholder: string;
-	value: SearchValue;
 }
 
 const Search = (props: Props) => {

@@ -51,7 +51,8 @@ export interface Props {
 	branches_page: Accessor<number>;
 	testbeds_page: Accessor<number>;
 	benchmarks_page: Accessor<number>;
-	reports_search: Accessor<undefined | string>;
+	reports_start_date: Accessor<undefined | string>;
+	reports_end_date: Accessor<undefined | string>;
 	branches_search: Accessor<undefined | string>;
 	testbeds_search: Accessor<undefined | string>;
 	benchmarks_search: Accessor<undefined | string>;
@@ -77,7 +78,8 @@ export interface Props {
 	handleBranchesPage: (branches_page: number) => void;
 	handleTestbedsPage: (testbeds_page: number) => void;
 	handleBenchmarksPage: (benchmarks_page: number) => void;
-	handleReportsSearch: (reports_search: string) => void;
+	handleReportsStartTime: (start_time: string) => void;
+	handleReportsEndTime: (end_time: string) => void;
 	handleBranchesSearch: (branches_search: string) => void;
 	handleTestbedsSearch: (testbeds_search: string) => void;
 	handleBenchmarksSearch: (benchmarks_search: string) => void;
@@ -168,7 +170,8 @@ const PerfPlot = (props: Props) => {
 							branches_page={props.branches_page}
 							testbeds_page={props.testbeds_page}
 							benchmarks_page={props.benchmarks_page}
-							reports_search={props.reports_search}
+							reports_start_date={props.reports_start_date}
+							reports_end_date={props.reports_end_date}
 							branches_search={props.branches_search}
 							testbeds_search={props.testbeds_search}
 							benchmarks_search={props.benchmarks_search}
@@ -181,7 +184,8 @@ const PerfPlot = (props: Props) => {
 							handleBranchesPage={props.handleBranchesPage}
 							handleTestbedsPage={props.handleTestbedsPage}
 							handleBenchmarksPage={props.handleBenchmarksPage}
-							handleReportsSearch={props.handleReportsSearch}
+							handleReportsStartTime={props.handleReportsStartTime}
+							handleReportsEndTime={props.handleReportsEndTime}
 							handleBranchesSearch={props.handleBranchesSearch}
 							handleTestbedsSearch={props.handleTestbedsSearch}
 							handleBenchmarksSearch={props.handleBenchmarksSearch}

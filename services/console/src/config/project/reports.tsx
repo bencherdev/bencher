@@ -8,7 +8,7 @@ const reportsConfig = {
 		operation: Operation.LIST,
 		header: {
 			title: "Reports",
-			buttons: [{ kind: Button.REFRESH }],
+			buttons: [{ kind: Button.DATE_TIME }, { kind: Button.REFRESH }],
 		},
 		table: {
 			url: (params: Params) => `/v0/projects/${params?.project}/reports`,

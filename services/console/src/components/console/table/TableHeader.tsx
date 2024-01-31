@@ -4,13 +4,18 @@ import { Button } from "../../../config/types";
 import type { Params } from "astro";
 import Field from "../../field/Field";
 import FieldKind from "../../field/kind";
+import DateRange from "../../field/kinds/DateRange";
 
 export interface Props {
 	apiUrl: string;
 	params: Params;
 	config: TableHeaderConfig;
-	search: Accessor<string>;
+	start_date: Accessor<undefined | string>;
+	end_date: Accessor<undefined | string>;
+	search: Accessor<undefined | string>;
 	handleRefresh: () => void;
+	handleStartTime: (start_time: string) => void;
+	handleEndTime: (end_time: string) => void;
 	handleSearch: (search: string) => void;
 }
 
@@ -36,10 +41,14 @@ const TableHeader = (props: Props) => {
 						<TableHeaderButton
 							apiUrl={props.apiUrl}
 							params={props.params}
+							start_date={props.start_date}
+							end_date={props.end_date}
 							search={props.search}
 							title={title}
 							button={button}
 							handleRefresh={props.handleRefresh}
+							handleStartTime={props.handleStartTime}
+							handleEndTime={props.handleEndTime}
 							handleSearch={props.handleSearch}
 						/>
 					)}
@@ -59,10 +68,14 @@ interface TableButton {
 const TableHeaderButton = (props: {
 	apiUrl: string;
 	params: Params;
-	search: Accessor<string>;
+	start_date: Accessor<undefined | string>;
+	end_date: Accessor<undefined | string>;
+	search: Accessor<undefined | string>;
 	title: string;
 	button: TableButton;
 	handleRefresh: () => void;
+	handleStartTime: (start_time: string) => void;
+	handleEndTime: (end_time: string) => void;
 	handleSearch: (search: string) => void;
 }) => {
 	const [isAllowed] = createResource(props.params, (params) =>
@@ -72,6 +85,16 @@ const TableHeaderButton = (props: {
 	return (
 		<p class="level-item">
 			<Switch>
+				<Match when={props.button.kind === Button.DATE_TIME}>
+					<div class="box">
+						<DateRange
+							start_date={props.start_date}
+							end_date={props.end_date}
+							handleStartTime={props.handleStartTime}
+							handleEndTime={props.handleEndTime}
+						/>
+					</div>
+				</Match>
 				<Match when={props.button.kind === Button.SEARCH}>
 					<Field
 						kind={FieldKind.SEARCH}
@@ -80,7 +103,9 @@ const TableHeaderButton = (props: {
 						config={{
 							placeholder: `Search ${props.title}`,
 						}}
-						handleField={(_key, search, _valid) => props.handleSearch(search)}
+						handleField={(_key, search, _valid) =>
+							props.handleSearch(search as string)
+						}
 					/>
 				</Match>
 				<Match when={props.button.kind === Button.ADD}>
