@@ -43,7 +43,7 @@ const organizationsConfig = {
 		operation: Operation.LIST,
 		header: {
 			title: "Organizations",
-			buttons: [{ kind: Button.REFRESH }],
+			buttons: [{ kind: Button.SEARCH }, { kind: Button.REFRESH }],
 		},
 		table: {
 			url: (_params: Params) => `/v0/organizations`,

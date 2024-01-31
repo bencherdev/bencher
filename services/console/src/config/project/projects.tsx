@@ -53,6 +53,7 @@ const projectsConfig = {
 		header: {
 			title: "Projects",
 			buttons: [
+				{ kind: Button.SEARCH },
 				{
 					kind: Button.ADD,
 					title: "Project",

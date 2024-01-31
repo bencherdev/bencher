@@ -98,6 +98,7 @@ export enum Button {
 	PERF,
 	REFRESH,
 	BACK,
+	SEARCH,
 }
 
 export enum ActionButton {

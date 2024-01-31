@@ -20,7 +20,6 @@ const DimensionsTab = (props: {
 	handleChecked: (index: number, slug?: string) => void;
 	handleSearch: FieldHandler;
 }) => {
-	console.log(props.search());
 	return (
 		<>
 			<div class="panel-block is-block">
@@ -29,7 +28,9 @@ const DimensionsTab = (props: {
 					fieldKey="search"
 					value={props.search() ?? ""}
 					config={{
-						placeholder: `Search ${props.tab()}...`,
+						placeholder: `Search ${
+							props.tab()?.charAt(0)?.toUpperCase() + props.tab()?.slice(1)
+						}`,
 					}}
 					handleField={props.handleSearch}
 				/>

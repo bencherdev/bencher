@@ -54,6 +54,7 @@ const MembersConfig = {
 		header: {
 			title: "Organization Members",
 			buttons: [
+				{ kind: Button.SEARCH },
 				{
 					kind: Button.INVITE,
 					title: "Organization",

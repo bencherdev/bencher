@@ -23,6 +23,8 @@ import {
 } from "bencher_valid";
 import type { JsonAuthUser } from "../types/bencher";
 
+export const DEBOUNCE_DELAY = 250;
+
 export const validString = (
 	input: string,
 	validator: (input: string) => boolean,

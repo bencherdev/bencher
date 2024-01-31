@@ -38,6 +38,7 @@ const measuresConfig = {
 		header: {
 			title: "Measures",
 			buttons: [
+				{ kind: Button.SEARCH },
 				{
 					kind: Button.ADD,
 					title: "Measure",

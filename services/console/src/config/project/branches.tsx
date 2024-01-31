@@ -31,6 +31,7 @@ const branchesConfig = {
 		header: {
 			title: "Branches",
 			buttons: [
+				{ kind: Button.SEARCH },
 				{
 					kind: Button.ADD,
 					title: "Branch",

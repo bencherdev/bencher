@@ -1,13 +1,17 @@
-import { createResource, For, Match, Switch } from "solid-js";
+import { createResource, For, Match, Switch, type Accessor } from "solid-js";
 import { pathname } from "../../../util/url";
 import { Button } from "../../../config/types";
 import type { Params } from "astro";
+import Field from "../../field/Field";
+import FieldKind from "../../field/kind";
 
 export interface Props {
 	apiUrl: string;
 	params: Params;
 	config: TableHeaderConfig;
+	search: Accessor<string>;
 	handleRefresh: () => void;
+	handleSearch: (search: string) => void;
 }
 
 export interface TableHeaderConfig {
@@ -32,9 +36,11 @@ const TableHeader = (props: Props) => {
 						<TableHeaderButton
 							apiUrl={props.apiUrl}
 							params={props.params}
+							search={props.search}
 							title={title}
 							button={button}
 							handleRefresh={props.handleRefresh}
+							handleSearch={props.handleSearch}
 						/>
 					)}
 				</For>
@@ -53,9 +59,11 @@ interface TableButton {
 const TableHeaderButton = (props: {
 	apiUrl: string;
 	params: Params;
+	search: Accessor<string>;
 	title: string;
 	button: TableButton;
 	handleRefresh: () => void;
+	handleSearch: (search: string) => void;
 }) => {
 	const [isAllowed] = createResource(props.params, (params) =>
 		props.button.is_allowed?.(props.apiUrl, params),
@@ -64,6 +72,17 @@ const TableHeaderButton = (props: {
 	return (
 		<p class="level-item">
 			<Switch>
+				<Match when={props.button.kind === Button.SEARCH}>
+					<Field
+						kind={FieldKind.SEARCH}
+						fieldKey="search"
+						value={props.search() ?? ""}
+						config={{
+							placeholder: `Search ${props.title}`,
+						}}
+						handleField={(_key, search, _valid) => props.handleSearch(search)}
+					/>
+				</Match>
 				<Match when={props.button.kind === Button.ADD}>
 					<a
 						class="button is-outlined"

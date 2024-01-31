@@ -18,7 +18,7 @@ import { apiUrl } from "../../../util/http";
 import { setPageTitle } from "../../../util/resource";
 import Field from "../../field/Field";
 import FieldKind from "../../field/kind";
-import { DEBOUNCE_DELAY } from "./PerfPanel";
+import { DEBOUNCE_DELAY } from "../../../util/valid";
 
 export interface Props {
 	apiUrl: string;

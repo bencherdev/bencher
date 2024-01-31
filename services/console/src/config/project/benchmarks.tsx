@@ -31,6 +31,7 @@ const benchmarksConfig = {
 		header: {
 			title: "Benchmarks",
 			buttons: [
+				{ kind: Button.SEARCH },
 				{
 					kind: Button.ADD,
 					title: "Benchmark",

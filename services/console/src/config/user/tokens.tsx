@@ -27,6 +27,7 @@ const tokensConfig = {
 		header: {
 			title: "API Tokens",
 			buttons: [
+				{ kind: Button.SEARCH },
 				{
 					kind: Button.ADD,
 					title: "API Token",

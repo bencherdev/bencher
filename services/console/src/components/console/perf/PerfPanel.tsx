@@ -28,7 +28,7 @@ import { dateTimeMillis } from "../../../util/convert";
 import { httpGet } from "../../../util/http";
 import { NotifyKind, pageNotify } from "../../../util/notify";
 import { useSearchParams } from "../../../util/url";
-import { validU32 } from "../../../util/valid";
+import { DEBOUNCE_DELAY, validU32 } from "../../../util/valid";
 import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
 import type { TabList } from "./plot/tab/PlotTab";
@@ -79,7 +79,6 @@ const DEFAULT_PERF_BOUNDARY = false;
 const DEFAULT_PER_PAGE = 8;
 const REPORTS_PER_PAGE = 4;
 export const DEFAULT_PAGE = 1;
-export const DEBOUNCE_DELAY = 250;
 
 // 30 days
 const DEFAULT_REPORT_HISTORY = 30 * 24 * 60 * 60 * 1000;
@@ -761,6 +760,19 @@ const PerfPanel = (props: Props) => {
 					[UPPER_VALUE_PARAM]: null,
 					[LOWER_BOUNDARY_PARAM]: null,
 					[UPPER_BOUNDARY_PARAM]: null,
+					[TAB_PARAM]: DEFAULT_PERF_TAB,
+					[REPORTS_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
+					[BRANCHES_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
+					[TESTBEDS_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
+					[BENCHMARKS_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
+					[REPORTS_PAGE_PARAM]: DEFAULT_PAGE,
+					[BRANCHES_PAGE_PARAM]: DEFAULT_PAGE,
+					[TESTBEDS_PAGE_PARAM]: DEFAULT_PAGE,
+					[BENCHMARKS_PAGE_PARAM]: DEFAULT_PAGE,
+					[REPORTS_SEARCH_PARAM]: null,
+					[BRANCHES_SEARCH_PARAM]: null,
+					[TESTBEDS_SEARCH_PARAM]: null,
+					[BENCHMARKS_SEARCH_PARAM]: null,
 					[CLEAR_PARAM]: true,
 				});
 			} else {

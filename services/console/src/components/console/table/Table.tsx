@@ -4,7 +4,12 @@ import { Row } from "../../../config/types";
 import { fmtDateTime } from "../../../config/util";
 import type { Slug } from "../../../types/bencher";
 import { fmtNestedValue, fmtValues } from "../../../util/resource";
-import { pathname, useNavigate } from "../../../util/url";
+import {
+	BACK_PARAM,
+	encodePath,
+	pathname,
+	useNavigate,
+} from "../../../util/url";
 
 export enum TableState {
 	LOADING = 0,
@@ -71,19 +76,16 @@ const Table = (props: Props) => {
 														</Match>
 														<Match when={item.kind === Row.SELECT}>
 															{item.key &&
-																item.value?.options.reduce(
-																	(field, option) => {
-																		if (
-																			item.key &&
-																			datum[item.key] === option.value
-																		) {
-																			return option.option;
-																		} else {
-																			return field;
-																		}
-																	},
-																	datum[item.key],
-																)}
+																item.value?.options.reduce((field, option) => {
+																	if (
+																		item.key &&
+																		datum[item.key] === option.value
+																	) {
+																		return option.option;
+																	} else {
+																		return field;
+																	}
+																}, datum[item.key])}
 														</Match>
 														<Match when={item.kind === Row.NESTED_TEXT}>
 															{item.keys && fmtNestedValue(datum, item.keys)}
@@ -183,19 +185,17 @@ const RowButton = (props: {
 	config: RowsButtonConfig;
 	datum: Record<string, any>;
 }) => {
-	const navigate = useNavigate();
-
 	return (
-		<button
+		<a
 			class="button is-fullwidth"
 			type="button"
-			onClick={(e) => {
-				e.preventDefault();
-				navigate(props.config?.path?.(pathname(), props.datum));
-			}}
+			href={`${props.config?.path?.(
+				pathname(),
+				props.datum,
+			)}?${BACK_PARAM}=${encodePath()}`}
 		>
 			{props.config?.text}
-		</button>
+		</a>
 	);
 };
 

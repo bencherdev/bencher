@@ -15,14 +15,16 @@ import {
 import { authUser } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
 import { NotifyKind, pageNotify } from "../../../util/notify";
-import { useNavigate, useSearchParams } from "../../../util/url";
-import { validJwt, validU32 } from "../../../util/valid";
+import { useSearchParams } from "../../../util/url";
+import { DEBOUNCE_DELAY, validJwt, validU32 } from "../../../util/valid";
 import Pagination, { PaginationSize } from "../../site/Pagination";
 import Table, { type TableConfig, TableState } from "./Table";
 import TableHeader, { type TableHeaderConfig } from "./TableHeader";
+import { debounce } from "@solid-primitives/scheduled";
 
 const PER_PAGE_PARAM = "per_page";
 const PAGE_PARAM = "page";
+const SEARCH_PARAM = "search";
 
 const DEFAULT_PER_PAGE = 8;
 const DEFAULT_PAGE = 1;
@@ -64,11 +66,13 @@ const TablePanel = (props: Props) => {
 
 	const per_page = createMemo(() => Number(searchParams[PER_PAGE_PARAM]));
 	const page = createMemo(() => Number(searchParams[PAGE_PARAM]));
+	const search = createMemo(() => searchParams[SEARCH_PARAM]);
 
 	const paginationQuery = createMemo(() => {
 		return {
 			per_page: per_page(),
 			page: page(),
+			search: search(),
 		};
 	});
 
@@ -137,13 +141,24 @@ const TablePanel = (props: Props) => {
 		}
 	};
 
+	const handleSearch = debounce(
+		(search: string) =>
+			setSearchParams(
+				{ [PAGE_PARAM]: DEFAULT_PAGE, [SEARCH_PARAM]: search },
+				{ scroll: true },
+			),
+		DEBOUNCE_DELAY,
+	);
+
 	return (
 		<>
 			<TableHeader
 				apiUrl={props.apiUrl}
 				params={props.params}
 				config={config()?.header}
+				search={search}
 				handleRefresh={refetch}
+				handleSearch={handleSearch}
 			/>
 			<Table
 				config={config()?.table}

@@ -31,6 +31,7 @@ const testbedsConfig = {
 		header: {
 			title: "Testbeds",
 			buttons: [
+				{ kind: Button.SEARCH },
 				{
 					kind: Button.ADD,
 					title: "Testbed",
