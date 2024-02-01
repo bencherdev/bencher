@@ -9,13 +9,9 @@ RUN apt-get update \
     pkg-config libfreetype6-dev libfontconfig1-dev \
     # Stipe
     ca-certificates
-WORKDIR /usr/src/target/debug/deps
-# WORKDIR /usr/src/target/release/deps
-RUN ln -s /usr/bin/sqlite3 /usr/src/target/debug/deps/libsqlite3.so
-# RUN ln -s /usr/bin/sqlite3 /usr/src/target/release/deps/libsqlite3.so
 ENV LD_LIBRARY_PATH=/usr/lib:/usr/local/lib:$LD_LIBRARY_PATH
 
-WORKDIR /tmp
+WORKDIR /tmp/zig
 ARG ZIG_BIN
 RUN wget https://ziglang.org/builds/${ZIG_BIN}.tar.xz
 RUN tar -xf ${ZIG_BIN}.tar.xz -C /usr/local
@@ -23,8 +19,6 @@ ENV PATH="/usr/local/${ZIG_BIN}:${PATH}"
 
 ARG ZIG_VERSION
 RUN cargo install --version ${ZIG_VERSION} --locked --force cargo-zigbuild
-
-WORKDIR /data
 
 WORKDIR /usr/src/lib
 COPY lib/bencher_adapter bencher_adapter
@@ -59,7 +53,21 @@ COPY services/api/Cargo.toml Cargo.toml
 COPY services/api/diesel.toml diesel.toml
 COPY services/api/swagger.json swagger.json
 
-ARG TARGET
+ARG ARCH
 ARG GLIBC_VERSION
-RUN cargo zigbuild --target ${TARGET}.${GLIBC_VERSION}
+RUN cargo zigbuild --target ${ARCH}-unknown-linux-gnu.${GLIBC_VERSION}
 # RUN cargo zigbuild --release --target ${TARGET}.${GLIBC_VERSION}
+
+WORKDIR /usr/lib/bencher
+RUN cp /usr/lib/${ARCH}-linux-gnu/libexpat.so.1 libexpat.so.1
+RUN cp /usr/lib/${ARCH}-linux-gnu/libfontconfig.so.1 libfontconfig.so.1
+RUN cp /usr/lib/${ARCH}-linux-gnu/libfreetype.so.6 libfreetype.so.6
+RUN cp /usr/lib/${ARCH}-linux-gnu/libpng16.so.16 libpng16.so.16
+RUN cp /usr/lib/${ARCH}-linux-gnu/libbrotlicommon.so.1 libbrotlicommon.so.1
+RUN cp /usr/lib/${ARCH}-linux-gnu/libbrotlidec.so.1 libbrotlidec.so.1
+RUN cp /usr/lib/${ARCH}-linux-gnu/libz.so.1 libz.so.1
+
+WORKDIR /usr/bin/bencher/data
+WORKDIR /usr/bin/bencher
+RUN cp /usr/src/target/${ARCH}-unknown-linux-gnu/debug/api api
+# RUN cp /usr/src/target/${ARCH}-unknown-linux-gnu/release/api api

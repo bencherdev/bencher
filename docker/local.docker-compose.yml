@@ -4,11 +4,6 @@ services:
     build:
       context: ../services/api
       dockerfile: local.Dockerfile
-      args:
-        # - TARGET=x86_64-unknown-linux-gnu
-        - TARGET=aarch64-unknown-linux-gnu
-        # - ARCH=x86_64-linux-gnu
-        - ARCH=aarch64-linux-gnu
     image: bencher-api-local
     container_name: bencher_api_local
     ports:
