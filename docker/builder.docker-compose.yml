@@ -5,15 +5,20 @@ services:
       context: ..
       dockerfile: ./services/api/builder.Dockerfile
       args:
-        - MOLD_VERSION=2.4.0
+        # - ZIG_BIN=zig-linux-x86_64-0.12.0-dev.2341+92211135f
+        - ZIG_BIN=zig-linux-aarch64-0.12.0-dev.2536+788a0409a
+        - ZIG_VERSION=0.18.3
+        # - TARGET=x86_64-unknown-linux-gnu
+        - TARGET=aarch64-unknown-linux-gnu
+        - GLIBC_VERSION=2.17
     image: bencher-api-builder
     container_name: bencher_api_builder
 
-  bencher-ui-builder:
-    build:
-      context: ..
-      dockerfile: ./services/console/builder.Dockerfile
-      args:
-        - MOLD_VERSION=2.4.0
-    image: bencher-ui-builder
-    container_name: bencher_ui_builder
+  # bencher-ui-builder:
+  #   build:
+  #     context: ..
+  #     dockerfile: ./services/console/builder.Dockerfile
+  #     args:
+  #       - MOLD_VERSION=2.4.0
+  #   image: bencher-ui-builder
+  #   container_name: bencher_ui_builder

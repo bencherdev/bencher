@@ -292,7 +292,7 @@ const SharedPlot = (props: Props) => {
 								<span class="icon">
 									<i class="fas fa-info-circle" aria-hidden="true" />
 								</span>
-								<span style="padding-right: 0.5em"></span>
+								<span style="padding-right: 0.5em" />
 							</div>
 						</div>
 					</div>

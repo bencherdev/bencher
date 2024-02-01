@@ -4,29 +4,35 @@ services:
     build:
       context: ../services/api
       dockerfile: local.Dockerfile
+      args:
+        # - TARGET=x86_64-unknown-linux-gnu
+        - TARGET=aarch64-unknown-linux-gnu
+        # - ARCH=x86_64-linux-gnu
+        - ARCH=aarch64-linux-gnu
     image: bencher-api-local
     container_name: bencher_api_local
     ports:
       - 61016:61016
     volumes:
       - "../services/api/data:/data"
-    # environment:
+    environment:
+      - BENCHER_CONFIG_PATH=/data/bencher.json
     #   # Set configuration string or filepath
     #   - BENCHER_CONFIG=
     #   - BENCHER_CONFIG_PATH=
     #   - SENTRY_DSN=
 
-  bencher_ui:
-    build:
-      context: ../services/console
-      dockerfile: Dockerfile
-    image: bencher-ui
-    container_name: bencher_ui
-    ports:
-      - 3000:3000
-    environment:
-      # Set this to your actual host if different
-      - BENCHER_API_URL=http://127.0.0.1:61016
-      # - GOOGLE_ANALYTICS_ID=
-    depends_on:
-      - bencher_api
+  # bencher_ui:
+  #   build:
+  #     context: ../services/console
+  #     dockerfile: Dockerfile
+  #   image: bencher-ui
+  #   container_name: bencher_ui
+  #   ports:
+  #     - 3000:3000
+  #   environment:
+  #     # Set this to your actual host if different
+  #     - BENCHER_API_URL=http://127.0.0.1:61016
+  #     # - GOOGLE_ANALYTICS_ID=
+  #   depends_on:
+  #     - bencher_api

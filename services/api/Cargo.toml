@@ -47,7 +47,7 @@ serde_urlencoded.workspace = true
 ordered-float.workspace = true
 oso.workspace = true
 rand.workspace = true
-reqwest = { workspace = true, optional = true, features = ["default"] }
+reqwest = { workspace = true, optional = true, features = ["rustls-tls"] }
 slog.workspace = true
 slug.workspace = true
 thiserror.workspace = true
@@ -62,11 +62,15 @@ css-inline = "0.13"
 diesel_migrations = "2.1"
 mail-send = "0.4"
 paste = "1.0"
-sentry = { version = "0.32", optional = true }
+sentry = { version = "0.32", optional = true, default-features = false, features = [
+    "reqwest",
+    "rustls",
+] }
 
 # https://github.com/diesel-rs/diesel/blob/ba2f567b038179d16cea939c0bcaaecc216ea947/diesel/Cargo.toml#L19
 # https://github.com/tauri-apps/tauri/discussions/6183
-[target.'cfg(windows)'.dependencies.libsqlite3-sys]
+# Always needed for Windows and all other targets when building a distroless image
+[dependencies.libsqlite3-sys]
 version = ">=0.17.2, <0.28.0"
 features = ["bundled"]
 

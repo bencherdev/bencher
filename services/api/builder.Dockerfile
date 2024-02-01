@@ -1,15 +1,30 @@
 # https://hub.docker.com/_/rust
 FROM rust:1.75.0-bookworm
 
-RUN apt-get update && \
-    apt-get install -y clang
+RUN apt-get update \
+    && apt-get install -y \
+    # Database
+    sqlite3 libsqlite3-dev \
+    # Plot
+    pkg-config libfreetype6-dev libfontconfig1-dev \
+    # Stipe
+    ca-certificates
+WORKDIR /usr/src/target/debug/deps
+# WORKDIR /usr/src/target/release/deps
+RUN ln -s /usr/bin/sqlite3 /usr/src/target/debug/deps/libsqlite3.so
+# RUN ln -s /usr/bin/sqlite3 /usr/src/target/release/deps/libsqlite3.so
+ENV LD_LIBRARY_PATH=/usr/lib:/usr/local/lib:$LD_LIBRARY_PATH
 
-ARG MOLD_VERSION
-RUN curl -L --retry 10 --silent --show-error https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-$(uname -m)-linux.tar.gz | tar -C /usr/local --strip-components=1 -xzf -
-RUN "$(realpath /usr/bin/ld)" != /usr/local/bin/mold && sudo ln -sf /usr/local/bin/mold "$(realpath /usr/bin/ld)"; true
+WORKDIR /tmp
+ARG ZIG_BIN
+RUN wget https://ziglang.org/builds/${ZIG_BIN}.tar.xz
+RUN tar -xf ${ZIG_BIN}.tar.xz -C /usr/local
+ENV PATH="/usr/local/${ZIG_BIN}:${PATH}"
 
-WORKDIR /usr/src/.cargo
-COPY .cargo/config.toml config.toml
+ARG ZIG_VERSION
+RUN cargo install --version ${ZIG_VERSION} --locked --force cargo-zigbuild
+
+WORKDIR /data
 
 WORKDIR /usr/src/lib
 COPY lib/bencher_adapter bencher_adapter
@@ -44,4 +59,7 @@ COPY services/api/Cargo.toml Cargo.toml
 COPY services/api/diesel.toml diesel.toml
 COPY services/api/swagger.json swagger.json
 
-RUN cargo build --release
+ARG TARGET
+ARG GLIBC_VERSION
+RUN cargo zigbuild --target ${TARGET}.${GLIBC_VERSION}
+# RUN cargo zigbuild --release --target ${TARGET}.${GLIBC_VERSION}

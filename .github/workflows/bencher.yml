@@ -21,7 +21,7 @@ env:
   LITESTREAM_VERSION: 0.3.13
   # CLI
   CLI_BIN_NAME: bencher
-  ZIG_VERSION: 0.18.1
+  ZIG_VERSION: 0.18.3
   # Use minimum supported glibc version for Rust Tier 1
   # https://doc.rust-lang.org/nightly/rustc/platform-support.html#tier-1-with-host-tools
   GLIBC_VERSION: 2.17
