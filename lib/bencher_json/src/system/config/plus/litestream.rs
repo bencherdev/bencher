@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use bencher_valid::{Sanitize, Secret, Url};
+use bencher_valid::{Sanitize, Secret};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -22,38 +22,58 @@ impl Sanitize for JsonLitestream {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(tag = "service", rename_all = "snake_case")]
+#[serde(tag = "scheme", rename_all = "snake_case")]
 pub enum JsonReplica {
-    // https://litestream.io/guides/s3/
-    AwsS3 {
-        access_key_id: String,
-        secret_access_key: Secret,
-        url: Url,
-    },
-    // https://litestream.io/guides/azure/
-    AzureBlobStorage {
-        account_key: Secret,
-        url: Url,
-    },
     // https://litestream.io/reference/config/#file-replica
     File {
         path: PathBuf,
     },
     // https://litestream.io/guides/sftp/
     Sftp {
+        host: String,
+        port: u16,
+        user: String,
+        password: Secret,
+        path: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
         key_path: Option<PathBuf>,
-        url: Url,
+    },
+    // https://litestream.io/guides/s3/
+    S3 {
+        bucket: String,
+        path: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        endpoint: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        region: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        force_path_style: Option<bool>,
+        access_key_id: String,
+        secret_access_key: Secret,
+    },
+    // https://litestream.io/guides/azure/
+    Abs {
+        account_name: String,
+        bucket: String,
+        path: String,
+        account_key: Secret,
+    },
+    // https://litestream.io/guides/gcs/
+    Gcs {
+        bucket: String,
+        path: String,
     },
 }
 
 impl Sanitize for JsonReplica {
     fn sanitize(&mut self) {
         match self {
-            Self::AwsS3 {
+            Self::File { .. } | Self::Gcs { .. } => {},
+            Self::Sftp { password, .. } => password.sanitize(),
+            Self::S3 {
                 secret_access_key, ..
             } => secret_access_key.sanitize(),
-            Self::AzureBlobStorage { account_key, .. } => account_key.sanitize(),
-            Self::File { .. } | Self::Sftp { .. } => {},
+            Self::Abs { account_key, .. } => account_key.sanitize(),
         }
     }
 }
@@ -62,7 +82,7 @@ impl Sanitize for JsonReplica {
 mod db {
     use std::path::PathBuf;
 
-    use bencher_valid::{Secret, Url};
+    use bencher_valid::Secret;
     use serde::Serialize;
 
     use crate::system::config::LogLevel;
@@ -104,45 +124,98 @@ mod db {
         pub replicas: Vec<LitestreamReplica>,
     }
 
+    // TODO move over to explicit bucket, path, and optional region
+    // https://litestream.io/guides/s3/
+    // also add optional endpoint param
     #[derive(Debug, Clone, Serialize)]
-    #[serde(untagged, rename_all_fields = "kebab-case")]
+    #[serde(
+        tag = "type",
+        rename_all = "kebab-case",
+        rename_all_fields = "kebab-case"
+    )]
     pub enum LitestreamReplica {
-        S3 {
-            access_key_id: String,
-            secret_access_key: Secret,
-            url: Url,
-        },
-        Abs {
-            account_key: Secret,
-            url: Url,
-        },
         File {
             path: PathBuf,
         },
         Sftp {
+            host: String,
+            user: String,
+            password: Secret,
+            path: String,
             #[serde(skip_serializing_if = "Option::is_none")]
             key_path: Option<PathBuf>,
-            url: Url,
+        },
+        S3 {
+            bucket: String,
+            path: String,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            endpoint: Option<String>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            region: Option<String>,
+            access_key_id: String,
+            secret_access_key: Secret,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            force_path_style: Option<bool>,
+        },
+        Abs {
+            account_name: String,
+            bucket: String,
+            path: String,
+            account_key: Secret,
+        },
+        Gcs {
+            bucket: String,
+            path: String,
         },
     }
 
     impl From<JsonReplica> for LitestreamReplica {
         fn from(replica: JsonReplica) -> Self {
             match replica {
-                JsonReplica::AwsS3 {
-                    access_key_id,
-                    secret_access_key,
-                    url,
-                } => Self::S3 {
-                    access_key_id,
-                    secret_access_key,
-                    url,
-                },
-                JsonReplica::AzureBlobStorage { account_key, url } => {
-                    Self::Abs { account_key, url }
-                },
                 JsonReplica::File { path } => Self::File { path },
-                JsonReplica::Sftp { key_path, url } => Self::Sftp { key_path, url },
+                JsonReplica::Sftp {
+                    host,
+                    port,
+                    user,
+                    password,
+                    path,
+                    key_path,
+                } => Self::Sftp {
+                    host: format!("{host}:{port}"),
+                    user,
+                    password,
+                    path,
+                    key_path,
+                },
+                JsonReplica::S3 {
+                    bucket,
+                    path,
+                    endpoint,
+                    region,
+                    force_path_style,
+                    access_key_id,
+                    secret_access_key,
+                } => Self::S3 {
+                    bucket,
+                    path,
+                    endpoint,
+                    region,
+                    access_key_id,
+                    secret_access_key,
+                    force_path_style,
+                },
+                JsonReplica::Abs {
+                    account_name,
+                    bucket,
+                    path,
+                    account_key,
+                } => Self::Abs {
+                    account_name,
+                    bucket,
+                    path,
+                    account_key,
+                },
+                JsonReplica::Gcs { bucket, path } => Self::Gcs { bucket, path },
             }
         }
     }
@@ -178,10 +251,14 @@ mod db {
     #[allow(clippy::unwrap_used)]
     fn test_into_yaml() {
         let json_litestream = JsonLitestream {
-            replicas: vec![JsonReplica::AwsS3 {
+            replicas: vec![JsonReplica::S3 {
+                bucket: "bucket".to_owned(),
+                path: "/path/to/backup".to_owned(),
+                endpoint: None,
+                region: None,
+                force_path_style: None,
                 access_key_id: "access_key_id".to_owned(),
                 secret_access_key: "secret_access_key".parse().unwrap(),
-                url: "https://example.com".parse().unwrap(),
             }],
         };
         let path = PathBuf::from("/path/to/db");
@@ -192,10 +269,11 @@ mod db {
             "dbs:
 - path: /path/to/db
   replicas:
-  - type: aws-s3
+  - type: s3
+    bucket: bucket
+    path: /path/to/backup
     access-key-id: access_key_id
     secret-access-key: secret_access_key
-    url: https://example.com
 logging:
   level: info
 "
