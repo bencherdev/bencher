@@ -24,6 +24,14 @@ pub enum ServerLog {
     },
 }
 
+impl ServerLog {
+    pub fn level(&self) -> LogLevel {
+        match self {
+            Self::StderrTerminal { level } | Self::File { level, .. } => level.clone(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]

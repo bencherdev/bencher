@@ -22,6 +22,7 @@ pub use plus::{
         index::{JsonBingIndex, JsonGoogleIndex, JsonIndex},
         JsonCloud,
     },
+    litestream::{JsonLitestream, JsonReplica},
     stats::JsonStats,
     JsonPlus,
 };

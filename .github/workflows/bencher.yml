@@ -211,7 +211,7 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: cargo test
-        run: RUST_BACKTRACE=1 cargo test -- --nocapture
+        run: RUST_BACKTRACE=1 cargo test --all-features -- --nocapture
       - name: Upload Perf JPEG
         uses: actions/upload-artifact@v4
         with:
@@ -229,7 +229,7 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: cargo test
-        run: RUST_BACKTRACE=1 cargo test -- --nocapture
+        run: RUST_BACKTRACE=1 cargo test --all-features -- --nocapture
       - name: Upload Perf JPEG
         uses: actions/upload-artifact@v4
         with:

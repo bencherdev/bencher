@@ -7,10 +7,12 @@ use serde::{Deserialize, Serialize};
 
 pub mod cloud;
 pub mod github;
+pub mod litestream;
 pub mod stats;
 
 pub use cloud::JsonCloud;
 pub use github::JsonGitHub;
+pub use litestream::JsonLitestream;
 pub use stats::JsonStats;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,6 +20,8 @@ pub use stats::JsonStats;
 pub struct JsonPlus {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub github: Option<JsonGitHub>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub litestream: Option<JsonLitestream>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stats: Option<JsonStats>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -27,6 +31,7 @@ pub struct JsonPlus {
 impl Sanitize for JsonPlus {
     fn sanitize(&mut self) {
         self.github.sanitize();
+        self.litestream.sanitize();
         self.cloud.sanitize();
     }
 }

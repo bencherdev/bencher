@@ -7,7 +7,6 @@ edition.workspace = true
 [features]
 default = ["plus"]
 plus = ["bencher_client/plus", "bencher_json/plus"]
-seed = []
 
 [dependencies]
 # Workspace

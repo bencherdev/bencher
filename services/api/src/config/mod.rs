@@ -1,4 +1,7 @@
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    ops::Deref,
+};
 
 use bencher_json::{
     sanitize_json,
@@ -60,12 +63,6 @@ pub enum ConfigError {
     WriteFile(String, std::io::Error),
     #[error("Failed to parse default config ({0:?}): {1}")]
     ParseDefault(Box<JsonConfig>, serde_json::Error),
-}
-
-impl AsRef<JsonConfig> for Config {
-    fn as_ref(&self) -> &JsonConfig {
-        &self.0
-    }
 }
 
 impl Config {
@@ -223,5 +220,13 @@ impl Default for Config {
 impl From<Config> for JsonConfig {
     fn from(config: Config) -> Self {
         config.0
+    }
+}
+
+impl Deref for Config {
+    type Target = JsonConfig;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
