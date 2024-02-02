@@ -56,3 +56,8 @@ RUN cargo install lychee --locked
 RUN curl -L https://fly.io/install.sh | sh
 RUN echo "export FLYCTL_INSTALL=\"/workspaces/bencher/.fly\"" >> $HOME/.bash_profile
 RUN echo "export PATH=\"/workspaces/bencher/.fly/bin:$PATH\"" >> $HOME/.bash_profile
+
+# Install `litestream`: https://litestream.io/install/debian/
+ENV LITESTREAM_VERSION=0.3.13
+RUN wget https://github.com/benbjohnson/litestream/releases/download/v${LITESTREAM_VERSION}/litestream-v${LITESTREAM_VERSION}-linux-$(uname -m).deb
+RUN dpkg -i litestream-v${LITESTREAM_VERSION}-linux-$(uname -m).deb
