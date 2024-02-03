@@ -1,7 +1,14 @@
+#[cfg(feature = "sentry")]
+use std::path::{Path, PathBuf};
+
 use bencher_api::{
     config::{config_tx::ConfigTx, Config},
     API_VERSION,
 };
+#[cfg(feature = "plus")]
+use bencher_json::system::config::JsonLitestream;
+#[cfg(feature = "plus")]
+use path_absolutize::Absolutize;
 #[cfg(feature = "sentry")]
 use sentry::ClientInitGuard;
 use slog::{error, info, Logger};
@@ -12,26 +19,8 @@ pub enum ApiError {
     #[error("{0}")]
     Config(bencher_api::config::ConfigError),
     #[cfg(feature = "plus")]
-    #[error("Failed to convert Bencher config to Litestream config. This is likely a bug. Please report it: {0}")]
-    LitestreamYaml(serde_yaml::Error),
-    #[cfg(feature = "plus")]
-    #[error("Failed to write Litestream config: {0}")]
-    WriteLitestreamYaml(std::io::Error),
-    #[cfg(feature = "plus")]
-    #[error("Failed to run Litestream restore: {0}")]
-    RestoreLitestream(std::io::Error),
-    #[cfg(feature = "plus")]
-    #[error("Failed to run Litestream replicate: {0}")]
-    ReplicateLitestream(std::io::Error),
-    #[cfg(feature = "plus")]
-    #[error("Failed to send Litestream replicate message")]
-    ReplicateLitestreamSend(()),
-    #[cfg(feature = "plus")]
-    #[error("Failed to receive Litestream replicate message")]
-    ReplicateLitestreamRecv(tokio::sync::oneshot::error::RecvError),
-    #[cfg(feature = "plus")]
-    #[error("Failed to replicate: {0:?}")]
-    ReplicateLitestreamExit(std::process::ExitStatus),
+    #[error("{0}")]
+    Litestream(#[from] LitestreamError),
     #[error("{0}")]
     ConfigTxError(bencher_api::config::config_tx::ConfigTxError),
     #[error("Unexpected empty shutdown signal. This is likely a bug. Please report it.")]
@@ -64,7 +53,6 @@ async fn main() -> Result<(), ApiError> {
     Ok(())
 }
 
-#[allow(clippy::too_many_lines)]
 async fn run(
     log: &Logger,
     #[cfg(feature = "sentry")] mut _guard: ClientInitGuard,
@@ -75,100 +63,19 @@ async fn run(
             .map_err(ApiError::Config)?;
 
         #[cfg(all(feature = "plus", feature = "sentry"))]
-        let _guard = config
-            .plus
-            .as_ref()
-            .and_then(|plus| plus.cloud.as_ref())
-            .and_then(|cloud| cloud.sentry.as_ref())
-            .map(|sentry_dsn| {
-                sentry::init((
-                    sentry_dsn.as_ref(),
-                    sentry::ClientOptions {
-                        release: sentry::release_name!(),
-                        ..Default::default()
-                    },
-                ))
-            });
+        let _guard = init_sentry(&config);
 
+        let (restart_tx, mut restart_rx) = tokio::sync::mpsc::channel(1);
         #[cfg(feature = "plus")]
-        let (replicate_rx, litestream) = if let Some(litestream) = config
+        if let Some(litestream) = config
             .plus
             .as_ref()
             .and_then(|plus| plus.litestream.clone())
         {
-            let (tx, rx) = tokio::sync::oneshot::channel();
-            (Some(rx), Some((litestream, tx)))
-        } else {
-            (None, None)
-        };
+            let (replicate_tx, replicate_rx) = tokio::sync::oneshot::channel();
+            let mut litestream_handle = run_litestream(log, &config, litestream, replicate_tx)?;
+            replicate_rx.await.map_err(LitestreamError::ReplicateRecv)?;
 
-        let (restart_tx, mut restart_rx) = tokio::sync::mpsc::channel(1);
-
-        #[cfg(feature = "plus")]
-        if let Some((litestream, replicate_tx)) = litestream {
-            use std::path::{Path, PathBuf};
-
-            let db_path = config.database.file.clone();
-            let config_path = db_path
-                .parent()
-                .map_or(PathBuf::from("/"), Path::to_path_buf)
-                .join("litestream.yml");
-            let yaml = litestream
-                .into_yaml(db_path.clone(), config.logging.log.level())
-                .map_err(ApiError::LitestreamYaml)?;
-            std::fs::write(&config_path, &yaml).map_err(ApiError::WriteLitestreamYaml)?;
-
-            let litestream_logger = log.clone();
-            let mut litestream_handle = tokio::spawn(async move {
-                // litestream restore -no-expand-env -if-replica-exists -o "$LITESTREAM_DB_PATH" "$LITESTREAM_REPLICA_URL"
-                let restore = Command::new("litestream")
-                    .arg("restore")
-                    .arg("-if-replica-exists")
-                    .arg("-if-db-not-exists")
-                    .arg("-config")
-                    .arg(&config_path)
-                    .arg("-no-expand-env")
-                    .arg(&db_path)
-                    .output()
-                    .await
-                    .map_err(ApiError::RestoreLitestream)?;
-                slog::info!(litestream_logger, "Litestream restore: {:?}", restore);
-
-                //exec litestream replicate -no-expand-env -exec "/api" "$LITESTREAM_DB_PATH" "$LITESTREAM_REPLICA_URL"
-                let mut replicate = Command::new("litestream")
-                    .arg("replicate")
-                    .arg("-config")
-                    .arg(&config_path)
-                    .arg("-no-expand-env")
-                    .spawn()
-                    .map_err(ApiError::ReplicateLitestream)?;
-                replicate_tx
-                    .send(())
-                    .map_err(ApiError::ReplicateLitestreamSend)?;
-                let replicate = replicate
-                    .wait()
-                    .await
-                    .map_err(ApiError::ReplicateLitestream)?;
-
-                replicate
-                    .success()
-                    .then_some(())
-                    .ok_or(ApiError::ReplicateLitestreamExit(replicate))
-
-                // restart_tx.send(()).await.unwrap();
-
-                // loop {
-                //     tokio::time::sleep(tokio::time::Duration::from_secs(5 * 60)).await;
-                //     // restart_tx.send(()).await.unwrap();
-                // }
-                // Ok(())
-            });
-
-            if let Some(rx) = replicate_rx {
-                rx.await.map_err(ApiError::ReplicateLitestreamRecv)?;
-            }
-
-            let restart_tx = restart_tx.clone();
             let mut api_handle = run_api_server(config, restart_tx);
             tokio::select! {
                 _ = tokio::signal::ctrl_c() => return Ok(()),
@@ -183,8 +90,8 @@ async fn run(
                 result = &mut litestream_handle => {
                     return match result {
                         Ok(result) => result,
-                        Err(e) => Err(ApiError::JoinHandle(e))
-                    };
+                        Err(e) => Err(LitestreamError::JoinHandle(e))
+                    }.map_err(Into::into);
                 },
                 result = &mut api_handle => {
                     return match result {
@@ -213,6 +120,108 @@ async fn run(
             },
         }
     }
+}
+
+#[cfg(all(feature = "plus", feature = "sentry"))]
+fn init_sentry(config: &Config) -> Option<ClientInitGuard> {
+    config
+        .plus
+        .as_ref()
+        .and_then(|plus| plus.cloud.as_ref())
+        .and_then(|cloud| cloud.sentry.as_ref())
+        .map(|sentry_dsn| {
+            sentry::init((
+                sentry_dsn.as_ref(),
+                sentry::ClientOptions {
+                    release: sentry::release_name!(),
+                    ..Default::default()
+                },
+            ))
+        })
+}
+
+#[cfg(feature = "plus")]
+#[derive(Debug, thiserror::Error)]
+pub enum LitestreamError {
+    #[error("Failed to absolutize the database path: {0}")]
+    Database(std::io::Error),
+    #[error("Failed to convert Bencher config to Litestream config. This is likely a bug. Please report this: {0}")]
+    Yaml(serde_yaml::Error),
+    #[error("Failed to write Litestream config: {0}")]
+    WriteYaml(std::io::Error),
+    #[error("Failed to run `litestream restore`: {0}")]
+    Restore(std::io::Error),
+    #[error("Failed to run `litestream replicate`: {0}")]
+    Replicate(std::io::Error),
+    #[error("Failed to send replication start message")]
+    ReplicateSend(()),
+    #[error("Failed to receive replication start message")]
+    ReplicateRecv(tokio::sync::oneshot::error::RecvError),
+    #[error("Failed to replicate: {0:?}")]
+    ReplicateExit(std::process::ExitStatus),
+    #[error("Failed to join Litestream handle: {0}")]
+    JoinHandle(tokio::task::JoinError),
+}
+
+#[cfg(feature = "plus")]
+fn run_litestream(
+    log: &Logger,
+    config: &Config,
+    litestream: JsonLitestream,
+    replicate_tx: tokio::sync::oneshot::Sender<()>,
+) -> Result<JoinHandle<Result<(), LitestreamError>>, LitestreamError> {
+    // Get the database path from the config
+    let db_path = config
+        .database
+        .file
+        .absolutize()
+        .map_err(LitestreamError::Database)?
+        .to_path_buf();
+    // The Litestream config file is always in the same directory as the database
+    let config_path = db_path
+        .parent()
+        .map_or(PathBuf::from("/"), Path::to_path_buf)
+        .join("litestream.yml");
+    let yaml = litestream
+        .into_yaml(db_path.clone(), config.logging.log.level())
+        .map_err(LitestreamError::Yaml)?;
+    std::fs::write(&config_path, yaml).map_err(LitestreamError::WriteYaml)?;
+
+    let litestream_logger = log.clone();
+    Ok(tokio::spawn(async move {
+        // https://litestream.io/reference/restore/
+        let restore = Command::new("litestream")
+            .arg("restore")
+            .arg("-if-replica-exists")
+            .arg("-if-db-not-exists")
+            .arg("-config")
+            .arg(&config_path)
+            .arg("-no-expand-env")
+            .arg(&db_path)
+            .output()
+            .await
+            .map_err(LitestreamError::Restore)?;
+        slog::info!(litestream_logger, "Litestream restore: {:?}", restore);
+
+        // https://litestream.io/reference/replicate/
+        let mut replicate = Command::new("litestream")
+            .arg("replicate")
+            .arg("-config")
+            .arg(&config_path)
+            .arg("-no-expand-env")
+            .spawn()
+            .map_err(LitestreamError::Replicate)?;
+        // Let the server know that Litestream is running
+        replicate_tx
+            .send(())
+            .map_err(LitestreamError::ReplicateSend)?;
+        // Litestream should run indefinitely
+        let replicate = replicate.wait().await.map_err(LitestreamError::Replicate)?;
+        replicate
+            .success()
+            .then_some(())
+            .ok_or(LitestreamError::ReplicateExit(replicate))
+    }))
 }
 
 fn run_api_server(
