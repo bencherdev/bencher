@@ -55,7 +55,7 @@ jobs:
           script: |
             let fs = require('fs');
             let prEvent = JSON.parse(fs.readFileSync(process.env.PR_EVENT, {encoding: 'utf8'}));
-            core.exportVariable("PR_HEAD", prEvent.pull_request.head.ref);
+            core.exportVariable("PR_HEAD", `${prEvent.number}/merge`);
             core.exportVariable("PR_BASE", prEvent.pull_request.base.ref);
             core.exportVariable("PR_DEFAULT", prEvent.pull_request.base.repo.default_branch);
             core.exportVariable("PR_NUMBER", prEvent.number);
