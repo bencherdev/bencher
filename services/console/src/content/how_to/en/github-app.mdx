@@ -44,7 +44,7 @@ For Bencher Self-Hosted, you will need to have a [Bencher Plus Enterprise plan](
 ## GitHub App Configuration
 
 ### Console UI
-Set the `GITHUB_CLIENT_ID` environment variable when you run the `bencher-ui` Docker image. (ex: `GITHUB_CLIENT_ID=Iv1.12864abcd1232048`) If the Client ID is missing, then the GitHub buttons will not appear in the UI.
+Set the `GITHUB_CLIENT_ID` environment variable when you run the `bencher-console` Docker image. (ex: `GITHUB_CLIENT_ID=Iv1.12864abcd1232048`) If the Client ID is missing, then the GitHub buttons will not appear in the UI.
 
 ### API Server
 Add the `client_id` and `client_secret` to [the `plus.github` section of the server config](/docs/reference/server-config/#plusgithub). If the GitHub section is missing, then the server will fail any GitHub authentication requests.

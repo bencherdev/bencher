@@ -12,10 +12,10 @@ services:
       # - BENCHER_CONFIG=
       # - BENCHER_CONFIG_PATH=
 
-  bencher_ui_compose:
-    image: ghcr.io/bencherdev/bencher-ui:latest
-    container_name: bencher_ui
+  bencher_console_compose:
+    image: ghcr.io/bencherdev/bencher-console:latest
+    container_name: bencher_console
     ports:
       - 3000:3000
     depends_on:
-      - bencher_api
+      - bencher_api_compose

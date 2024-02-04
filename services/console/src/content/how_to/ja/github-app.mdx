@@ -43,7 +43,7 @@ Bencher 自己ホスト型を使用するためには、[Bencher Plus Enterprise
 ## GitHub アプリの設定
 
 ### コンソール UI
-`bencher-ui` Docker イメージを実行するときに、環境変数 `GITHUB_CLIENT_ID` を設定します (例：`GITHUB_CLIENT_ID=Iv1.12864abcd1232048`)。クライアント ID が存在しない場合、UI では GitHub ボタンが表示されません。
+`bencher-console` Docker イメージを実行するときに、環境変数 `GITHUB_CLIENT_ID` を設定します (例：`GITHUB_CLIENT_ID=Iv1.12864abcd1232048`)。クライアント ID が存在しない場合、UI では GitHub ボタンが表示されません。
 
 ### API サーバー
 サーバー設定の [`plus.github` セクション](/docs/ja/reference/server-config/#plusgithub) に `client_id` と `client_secret` を追加します。GitHub セクションが存在しない場合、サーバーは GitHub の認証リクエストすべてに対して失敗します。

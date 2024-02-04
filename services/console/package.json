@@ -1,5 +1,5 @@
 {
-  "name": "bencher-ui",
+  "name": "bencher-console",
   "type": "module",
   "version": "0.4.1",
   "scripts": {

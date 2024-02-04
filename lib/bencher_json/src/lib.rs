@@ -69,7 +69,7 @@ pub use user::{
     JsonUser, UserUuid,
 };
 
-pub const BENCHER_UI_PORT: u16 = 3000;
+pub const BENCHER_CONSOLE_PORT: u16 = 3000;
 pub const LOCALHOST_BENCHER_URL_STR: &str = "http://localhost:3000";
 pub const DEVEL_BENCHER_URL_STR: &str = "https://devel--bencher.netlify.app";
 pub const PROD_BENCHER_URL_STR: &str = "https://bencher.dev";
