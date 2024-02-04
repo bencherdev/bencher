@@ -74,7 +74,7 @@ RUN cp /usr/lib/${ARCH}-linux-gnu/libbrotlicommon.so.1 libbrotlicommon.so.1
 RUN cp /usr/lib/${ARCH}-linux-gnu/libbrotlidec.so.1 libbrotlidec.so.1
 RUN cp /usr/lib/${ARCH}-linux-gnu/libz.so.1 libz.so.1
 
-WORKDIR /usr/bin/bencher/data
 WORKDIR /usr/bin/bencher
 RUN cp /usr/src/target/${ARCH}-unknown-linux-gnu/debug/api api
+RUN mkdir -p /usr/bin/bencher/data
 # RUN cp /usr/src/target/${ARCH}-unknown-linux-gnu/release/api api

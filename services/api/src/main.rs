@@ -7,8 +7,6 @@ use bencher_api::{
 };
 #[cfg(feature = "plus")]
 use bencher_json::system::config::JsonLitestream;
-#[cfg(feature = "plus")]
-use path_absolutize::Absolutize;
 #[cfg(feature = "sentry")]
 use sentry::ClientInitGuard;
 use slog::{error, info, Logger};
@@ -76,6 +74,7 @@ async fn run(
         {
             let (replicate_tx, replicate_rx) = tokio::sync::oneshot::channel();
             let mut litestream_handle = run_litestream(log, &config, litestream, replicate_tx)?;
+            // Wait for Litestream to start replicating
             replicate_rx.await.map_err(LitestreamError::ReplicateRecv)?;
 
             let mut api_handle = run_api_server(config, restart_tx);
@@ -149,8 +148,8 @@ pub enum LitestreamError {
     Database(std::io::Error),
     #[error("Failed to convert Bencher config to Litestream config. This is likely a bug. Please report this: {0}")]
     Yaml(serde_yaml::Error),
-    #[error("Failed to write Litestream config: {0}")]
-    WriteYaml(std::io::Error),
+    #[error("Failed to write Litestream config ({0}): {1}")]
+    WriteYaml(PathBuf, std::io::Error),
     #[error("Failed to run `litestream restore`: {0}")]
     Restore(std::io::Error),
     #[error("Failed to run `litestream replicate`: {0}")]
@@ -172,13 +171,14 @@ fn run_litestream(
     litestream: JsonLitestream,
     replicate_tx: tokio::sync::oneshot::Sender<()>,
 ) -> Result<JoinHandle<Result<(), LitestreamError>>, LitestreamError> {
-    // Get the database path from the config
-    let db_path = config
-        .database
-        .file
-        .absolutize()
-        .map_err(LitestreamError::Database)?
-        .to_path_buf();
+    // Get the absolute database path from the config
+    let db_path = if config.database.file.is_absolute() {
+        config.database.file.clone()
+    } else {
+        std::env::current_dir()
+            .map_err(LitestreamError::Database)?
+            .join(&config.database.file)
+    };
     // The Litestream config file is always in the same directory as the database
     let config_path = db_path
         .parent()
@@ -187,7 +187,8 @@ fn run_litestream(
     let yaml = litestream
         .into_yaml(db_path.clone(), config.logging.log.level())
         .map_err(LitestreamError::Yaml)?;
-    std::fs::write(&config_path, yaml).map_err(LitestreamError::WriteYaml)?;
+    std::fs::write(&config_path, yaml)
+        .map_err(|e| LitestreamError::WriteYaml(config_path.clone(), e))?;
 
     let litestream_logger = log.clone();
     Ok(tokio::spawn(async move {
@@ -203,7 +204,7 @@ fn run_litestream(
             .output()
             .await
             .map_err(LitestreamError::Restore)?;
-        slog::info!(litestream_logger, "Litestream restore: {:?}", restore);
+        slog::info!(litestream_logger, "Litestream restore: {restore:?}");
 
         // https://litestream.io/reference/replicate/
         let mut replicate = Command::new("litestream")
