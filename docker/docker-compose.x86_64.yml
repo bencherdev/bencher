@@ -3,7 +3,7 @@ services:
   bencher_api_compose:
     build:
       context: ..
-      dockerfile: ./services/api/builder.Dockerfile
+      dockerfile: ./services/api/Dockerfile
       args:
         LITESTREAM_ARCH: amd64
         ARCH: x86_64

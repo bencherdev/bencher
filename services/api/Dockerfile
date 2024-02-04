@@ -65,8 +65,8 @@ COPY services/api/Cargo.toml Cargo.toml
 COPY services/api/diesel.toml diesel.toml
 COPY services/api/swagger.json swagger.json
 
-RUN cargo zigbuild --target ${ARCH}-unknown-linux-gnu.${GLIBC_VERSION}
-# RUN cargo zigbuild --release --target ${TARGET}.${GLIBC_VERSION}
+# RUN cargo zigbuild --target ${ARCH}-unknown-linux-gnu.${GLIBC_VERSION}
+RUN cargo zigbuild --release --target ${ARCH}-unknown-linux-gnu.${GLIBC_VERSION}
 
 WORKDIR /usr/lib/bencher
 RUN cp /usr/lib/${ARCH}-linux-gnu/libexpat.so.1 libexpat.so.1
@@ -78,8 +78,8 @@ RUN cp /usr/lib/${ARCH}-linux-gnu/libbrotlidec.so.1 libbrotlidec.so.1
 RUN cp /usr/lib/${ARCH}-linux-gnu/libz.so.1 libz.so.1
 
 WORKDIR /usr/bin/bencher
-RUN cp /usr/src/target/${ARCH}-unknown-linux-gnu/debug/api api
-# RUN cp /usr/src/target/${ARCH}-unknown-linux-gnu/release/api api
+# RUN cp /usr/src/target/${ARCH}-unknown-linux-gnu/debug/api api
+RUN cp /usr/src/target/${ARCH}-unknown-linux-gnu/release/api api
 RUN mkdir -p /usr/bin/bencher/data
 
 # https://github.com/GoogleContainerTools/distroless/blob/main/cc/README.md
