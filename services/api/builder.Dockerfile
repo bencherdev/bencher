@@ -1,5 +1,5 @@
 # https://hub.docker.com/_/rust
-FROM rust:1.75.0-bookworm
+FROM rust:1.75.0-bookworm as builder
 
 RUN apt-get update \
     && apt-get install -y \
@@ -76,5 +76,19 @@ RUN cp /usr/lib/${ARCH}-linux-gnu/libz.so.1 libz.so.1
 
 WORKDIR /usr/bin/bencher
 RUN cp /usr/src/target/${ARCH}-unknown-linux-gnu/debug/api api
-RUN mkdir -p /usr/bin/bencher/data
 # RUN cp /usr/src/target/${ARCH}-unknown-linux-gnu/release/api api
+RUN mkdir -p /usr/bin/bencher/data
+
+# https://github.com/GoogleContainerTools/distroless/blob/main/cc/README.md
+FROM gcr.io/distroless/cc-debian12
+COPY --from=builder /etc/fonts /etc/fonts
+COPY --from=builder /usr/include/fontconfig /usr/include/fontconfig
+COPY --from=builder /usr/lib/bencher /usr/lib
+COPY --from=builder /usr/share/fonts /usr/share/fonts
+
+COPY --from=builder /usr/bin/litestream/litestream /usr/bin/litestream
+COPY --from=builder /usr/bin/bencher /usr/bin/bencher
+
+ENV PORT 61016
+
+CMD ["/usr/bin/bencher/api"]
