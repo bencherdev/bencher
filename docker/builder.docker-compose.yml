@@ -5,9 +5,12 @@ services:
       context: ..
       dockerfile: ./services/api/builder.Dockerfile
       args:
+        - LITESTREAM_VERSION=0.3.13
+        # - LITESTREAM_BIN=/litestream-v0.3.13-linux-amd64
+        - LITESTREAM_BIN=litestream-v0.3.13-linux-arm64
+        - ZIG_VERSION=0.18.3
         # - ZIG_BIN=zig-linux-x86_64-0.12.0-dev.2341+92211135f
         - ZIG_BIN=zig-linux-aarch64-0.12.0-dev.2536+788a0409a
-        - ZIG_VERSION=0.18.3
         # - ARCH=x86_64
         - ARCH=aarch64
         - GLIBC_VERSION=2.17

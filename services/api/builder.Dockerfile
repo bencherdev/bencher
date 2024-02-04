@@ -11,6 +11,13 @@ RUN apt-get update \
     ca-certificates
 ENV LD_LIBRARY_PATH=/usr/lib:/usr/local/lib:$LD_LIBRARY_PATH
 
+WORKDIR /tmp/litestream
+ARG LITESTREAM_VERSION
+ARG LITESTREAM_BIN
+RUN wget https://github.com/benbjohnson/litestream/releases/download/v${LITESTREAM_VERSION}/${LITESTREAM_BIN}.tar.gz
+RUN tar -xzf ${LITESTREAM_BIN}.tar.gz
+RUN cp -r /tmp/litestream /usr/bin/litestream
+
 WORKDIR /tmp/zig
 ARG ZIG_BIN
 RUN wget https://ziglang.org/builds/${ZIG_BIN}.tar.xz
