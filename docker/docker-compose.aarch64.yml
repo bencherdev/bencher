@@ -5,12 +5,9 @@ services:
       context: ..
       dockerfile: ./services/api/builder.Dockerfile
       args:
-        - LITESTREAM_VERSION=0.3.13
-        - LITESTREAM_BIN=litestream-v0.3.13-linux-arm64
-        - ZIG_VERSION=0.18.3
-        - ZIG_BIN=zig-linux-aarch64-0.12.0-dev.2536+788a0409a
-        - ARCH=aarch64
-        - GLIBC_VERSION=2.17
+        LITESTREAM_ARCH: arm64
+        ARCH: aarch64
+        ZIG_VERSION: 0.12.0-dev.2536+788a0409a
     image: bencher-api
     container_name: bencher_api
     ports:
@@ -19,8 +16,8 @@ services:
       - "../services/api/data:/usr/bin/bencher/data"
     environment:
       # Set configuration string or filepath
-      # - BENCHER_CONFIG=
-      - BENCHER_CONFIG_PATH=/usr/bin/bencher/data/bencher.json
+      # BENCHER_CONFIG: '{}'
+      BENCHER_CONFIG_PATH: /usr/bin/bencher/data/bencher.json
 
   # bencher-ui-builder:
   #   build:

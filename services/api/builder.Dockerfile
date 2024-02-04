@@ -1,6 +1,15 @@
 # https://hub.docker.com/_/rust
 FROM rust:1.75.0-bookworm as builder
 
+ARG LITESTREAM_VERSION=0.3.13
+ARG LITESTREAM_ARCH
+ARG LITESTREAM_BIN=litestream-v${LITESTREAM_VERSION}-linux-${LITESTREAM_ARCH}
+ARG ARCH
+ARG ZIG_VERSION
+ARG ZIG_BIN=zig-linux-${ARCH}-${ZIG_VERSION}
+ARG ZIG_BUILD_VERSION=0.18.3
+ARG GLIBC_VERSION=2.17
+
 RUN apt-get update \
     && apt-get install -y \
     # Database
@@ -12,20 +21,16 @@ RUN apt-get update \
 ENV LD_LIBRARY_PATH=/usr/lib:/usr/local/lib:$LD_LIBRARY_PATH
 
 WORKDIR /tmp/litestream
-ARG LITESTREAM_VERSION
-ARG LITESTREAM_BIN
 RUN wget https://github.com/benbjohnson/litestream/releases/download/v${LITESTREAM_VERSION}/${LITESTREAM_BIN}.tar.gz
 RUN tar -xzf ${LITESTREAM_BIN}.tar.gz
 RUN cp -r /tmp/litestream /usr/bin/litestream
 
 WORKDIR /tmp/zig
-ARG ZIG_BIN
 RUN wget https://ziglang.org/builds/${ZIG_BIN}.tar.xz
 RUN tar -xf ${ZIG_BIN}.tar.xz -C /usr/local
 ENV PATH="/usr/local/${ZIG_BIN}:${PATH}"
 
-ARG ZIG_VERSION
-RUN cargo install --version ${ZIG_VERSION} --locked --force cargo-zigbuild
+RUN cargo install --version ${ZIG_BUILD_VERSION} --locked --force cargo-zigbuild
 
 WORKDIR /usr/src/lib
 COPY lib/bencher_adapter bencher_adapter
@@ -60,8 +65,6 @@ COPY services/api/Cargo.toml Cargo.toml
 COPY services/api/diesel.toml diesel.toml
 COPY services/api/swagger.json swagger.json
 
-ARG ARCH
-ARG GLIBC_VERSION
 RUN cargo zigbuild --target ${ARCH}-unknown-linux-gnu.${GLIBC_VERSION}
 # RUN cargo zigbuild --release --target ${TARGET}.${GLIBC_VERSION}
 
