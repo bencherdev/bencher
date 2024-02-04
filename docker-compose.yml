@@ -1,18 +1,18 @@
 version: "3.9"
 services:
-  bencher_api:
-    image: ghcr.io/bencherdev/bencher-api-local:latest
-    container_name: bencher_api_local
+  bencher_api_compose:
+    image: ghcr.io/bencherdev/bencher-api:latest
+    container_name: bencher_api
     ports:
       - 61016:61016
     volumes:
-      - "./data:/data"
+      - "./services/api/data:/usr/bin/bencher/data"
       # environment:
       # Set configuration string or file path
       # - BENCHER_CONFIG=
       # - BENCHER_CONFIG_PATH=
 
-  bencher_ui:
+  bencher_ui_compose:
     image: ghcr.io/bencherdev/bencher-ui:latest
     container_name: bencher_ui
     ports:

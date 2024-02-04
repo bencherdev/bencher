@@ -2,8 +2,8 @@ pub mod down;
 pub mod logs;
 pub mod up;
 
-const BENCHER_API_CONTAINER: &str = "bencher_api_local";
-const BENCHER_API_IMAGE: &str = "ghcr.io/bencherdev/bencher-api-local:latest";
+const BENCHER_API_CONTAINER: &str = "bencher_api";
+const BENCHER_API_IMAGE: &str = "ghcr.io/bencherdev/bencher-api:latest";
 
 const BENCHER_UI_CONTAINER: &str = "bencher_ui";
 const BENCHER_UI_IMAGE: &str = "ghcr.io/bencherdev/bencher-ui:latest";

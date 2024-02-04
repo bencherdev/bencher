@@ -8,6 +8,7 @@ exclude = [
     "http://localhost:3000*",
     "http://localhost:61016*",
     "https://api.bencher.dev*",
+    "https://api.bencher.example.com*",
     "https://discord.gg/yGEsdUh7R4",
     "https://github.com/bencherdev/bencher/issues/new*",
     "https://www.linkedin.com/in/epompeii/",

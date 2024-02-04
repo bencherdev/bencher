@@ -37,12 +37,6 @@ futures-util = "0.3"
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3.9", features = ["winerror"] }
 
-[dev-dependencies]
-# Workspace
-pretty_assertions.workspace = true
-# Crate
-assert_cmd = "2.0"
-
 [lints]
 workspace = true
 
