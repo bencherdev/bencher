@@ -20,7 +20,7 @@ pub use stats::JsonStats;
 pub struct JsonPlus {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub github: Option<JsonGitHub>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(alias = "disaster_recovery", skip_serializing_if = "Option::is_none")]
     pub litestream: Option<JsonLitestream>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stats: Option<JsonStats>,

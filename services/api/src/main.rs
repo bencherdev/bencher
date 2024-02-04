@@ -12,7 +12,9 @@ use path_absolutize::Absolutize;
 #[cfg(feature = "sentry")]
 use sentry::ClientInitGuard;
 use slog::{error, info, Logger};
-use tokio::{process::Command, task::JoinHandle};
+#[cfg(feature = "plus")]
+use tokio::process::Command;
+use tokio::task::JoinHandle;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {
@@ -81,8 +83,8 @@ async fn run(
                 _ = tokio::signal::ctrl_c() => return Ok(()),
                 restart = restart_rx.recv() => {
                     if restart.is_some() {
-                        litestream_handle.abort();
                         api_handle.abort();
+                        litestream_handle.abort();
                         continue;
                     }
                     return Err(ApiError::EmptyShutdown);
@@ -157,7 +159,7 @@ pub enum LitestreamError {
     ReplicateSend(()),
     #[error("Failed to receive replication start message")]
     ReplicateRecv(tokio::sync::oneshot::error::RecvError),
-    #[error("Failed to replicate: {0:?}")]
+    #[error("Failed to replicate: {0}")]
     ReplicateExit(std::process::ExitStatus),
     #[error("Failed to join Litestream handle: {0}")]
     JoinHandle(tokio::task::JoinError),
@@ -216,11 +218,9 @@ fn run_litestream(
             .send(())
             .map_err(LitestreamError::ReplicateSend)?;
         // Litestream should run indefinitely
-        let replicate = replicate.wait().await.map_err(LitestreamError::Replicate)?;
-        replicate
-            .success()
-            .then_some(())
-            .ok_or(LitestreamError::ReplicateExit(replicate))
+        Err(LitestreamError::ReplicateExit(
+            replicate.wait().await.map_err(LitestreamError::Replicate)?,
+        ))
     }))
 }
 
