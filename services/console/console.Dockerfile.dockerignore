@@ -1,0 +1,19 @@
+# Ignore all
+*
+
+# Except
+!.cargo/
+!Cargo.toml
+!Cargo.lock
+!lib/bencher_valid/
+!services/api/swagger.json
+!services/cli/templates/output
+!services/console/package-lock.json
+!services/console/package.json
+!services/console/public
+!services/console/src
+!services/console/astro.config.mjs
+!services/console/site.js
+!services/console/tsconfig.json
+!services/console/.env.runtime
+!services/console/build_wasm.sh
