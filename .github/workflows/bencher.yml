@@ -27,10 +27,8 @@ env:
   GLIBC_VERSION: 2.17
   # WASM
   WASM_BENCHER_VALID: bencher-valid-pkg
-  # UI
-  UI_BUILDER_DOCKER_IMAGE: bencher-ui-builder
-  UI_DOCKER_IMAGE: bencher-ui
-  UI_BUILD_DIST: bencher-ui-dist
+  # Console
+  CONSOLE_DOCKER_IMAGE: bencher-console
   # Dev Container
   DEV_CONTAINER_DOCKER_IMAGE: bencher-dev-container
   # Cache
@@ -612,10 +610,10 @@ jobs:
             target: aarch64-unknown-linux-gnu
           # MacOS
           - build: macos-x86-64
-            os: macos-latest
+            os: ubuntu-latest
             target: x86_64-apple-darwin
           - build: macos-arm-64
-            os: macos-latest
+            os: ubuntu-latest
             target: aarch64-apple-darwin
           # Windows
           - build: windows-x86-64
@@ -736,59 +734,44 @@ jobs:
           path: ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.deb
           if-no-files-found: error
 
-  build_ui_docker:
-    name: Build Console UI Docker
+  build_console_docker:
+    name: Build Console Docker
     runs-on: ubuntu-latest
     timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
     continue-on-error: ${{ github.ref == 'refs/heads/express' }}
-    services:
-      registry:
-        image: registry:2
-        ports:
-          - 5000:5000
     steps:
       - uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          driver-opts: network=host
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.GITHUB_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build Builder Stage
+      - name: Build Console Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./services/console/builder.Dockerfile
-          tags: localhost:5000/${{ env.UI_BUILDER_DOCKER_IMAGE }}
+          file: ./services/console/Dockerfile
+          tags: ${{ env.CONSOLE_DOCKER_IMAGE }}
           build-args: |
             MOLD_VERSION=${{ env.MOLD_VERSION }}
-          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_BUILDER_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }}
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_BUILDER_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }},mode=max
-          push: true
-      - name: Build Console UI
-        uses: docker/build-push-action@v5
-        with:
-          context: ./services/console
-          tags: ${{ env.UI_DOCKER_IMAGE }}
-          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }}
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }},mode=max
-          build-contexts: |
-            ${{ env.UI_BUILDER_DOCKER_IMAGE }}=docker-image://localhost:5000/${{ env.UI_BUILDER_DOCKER_IMAGE }}:latest
+          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }}
+          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }},mode=max
           load: true
           push: false
-      - name: Save Console UI
+      - name: Save Console Docker Image
         run: |
-          docker save ${{ env.UI_DOCKER_IMAGE }} \
-          | gzip > ${{ env.UI_DOCKER_IMAGE }}.tar.gz
-      - name: Upload Console UI Artifact
+          docker save ${{ env.CONSOLE_DOCKER_IMAGE }} \
+          | gzip > ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
+      - name: Upload Console Docker Image Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.UI_DOCKER_IMAGE }}.tar.gz
-          path: ./${{ env.UI_DOCKER_IMAGE }}.tar.gz
+          name: ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
+          path: ./${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
           if-no-files-found: error
 
   build_ui:
@@ -1132,7 +1115,7 @@ jobs:
       - build_github_action
       # Build
       - build_api_docker
-      - build_ui_docker
+      - build_console_docker
       - package_cli
     env:
       BUILD_LINUX_X86_64: linux-x86-64
@@ -1148,10 +1131,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
-      - name: Download UI Docker Artifact
+      - name: Download Console Docker Artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.UI_DOCKER_IMAGE }}.tar.gz
+          name: ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
       # Download CLI
       - name: Download CLI Linux x86_64 Artifact
         uses: actions/download-artifact@v4
@@ -1189,8 +1172,8 @@ jobs:
       # Load
       - name: Load API Image
         run: docker load < ${{ env.API_DOCKER_IMAGE }}.tar.gz
-      - name: Load UI Image
-        run: docker load < ${{ env.UI_DOCKER_IMAGE }}.tar.gz
+      - name: Load Console Image
+        run: docker load < ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
       # Login GHCR
       - name: Log in to the Container registry
         uses: docker/login-action@v3
@@ -1206,11 +1189,11 @@ jobs:
           docker tag ${{ env.API_DOCKER_IMAGE }} ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
           docker push ${GITHUB_IMAGE}:latest
           docker push ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
-      - name: Tag & Push UI Image
+      - name: Tag & Push Console Image
         run: |
-          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_DOCKER_IMAGE }}
-          docker tag ${{ env.UI_DOCKER_IMAGE }} ${GITHUB_IMAGE}:latest
-          docker tag ${{ env.UI_DOCKER_IMAGE }} ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
+          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}
+          docker tag ${{ env.CONSOLE_DOCKER_IMAGE }} ${GITHUB_IMAGE}:latest
+          docker tag ${{ env.CONSOLE_DOCKER_IMAGE }} ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
           docker push ${GITHUB_IMAGE}:latest
           docker push ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
       - uses: actions/cache@v4
@@ -1234,7 +1217,7 @@ jobs:
           body_path: release-notes.md
           files: |
             ${{ env.API_DOCKER_IMAGE }}.tar.gz
-            ${{ env.UI_DOCKER_IMAGE }}.tar.gz
+            ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
             ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_X86_64 }}
             ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_ARM_64 }}
             ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_MACOS_X86_64 }}
