@@ -6,9 +6,6 @@ kill_timeout = "6s"
 [build]
 image = "registry.fly.io/bencher-api-test"
 
-[env]
-LITESTREAM_DB_PATH = "/data/bencher.db"
-
 [[services]]
 protocol = "tcp"
 internal_port = 61016

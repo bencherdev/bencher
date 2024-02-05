@@ -29,7 +29,10 @@ const DEFAULT_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
 
 // 1 megabyte or 1_048_576 bytes
 const DEFAULT_MAX_BODY_SIZE: usize = 2 << 19;
+#[cfg(debug_assertions)]
 const DEFAULT_DB_PATH: &str = "data/bencher.db";
+#[cfg(not(debug_assertions))]
+const DEFAULT_DB_PATH: &str = "/usr/bin/bencher/data/bencher.db";
 const DEFAULT_SMTP_PORT: u16 = 587;
 
 #[cfg(debug_assertions)]
