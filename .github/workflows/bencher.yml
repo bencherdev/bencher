@@ -753,8 +753,6 @@ jobs:
           context: .
           file: ./services/console/Dockerfile
           tags: ${{ env.CONSOLE_DOCKER_IMAGE }}
-          build-args: |
-            MOLD_VERSION=${{ env.MOLD_VERSION }}
           cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }}
           cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }},mode=max
           load: true

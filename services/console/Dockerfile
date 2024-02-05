@@ -1,21 +1,7 @@
 # https://hub.docker.com/_/rust
 FROM rust:1.75.0-bookworm as wasm-builder
 
-RUN apt-get update && \
-    apt-get install -y \
-    # Linker
-    clang
-
-WORKDIR /tmp/mold
-ARG MOLD_VERSION
-RUN curl -L --retry 10 --silent --show-error https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-$(uname -m)-linux.tar.gz | tar -C /usr/local --strip-components=1 -xzf -
-RUN "$(realpath /usr/bin/ld)" != /usr/local/bin/mold && sudo ln -sf /usr/local/bin/mold "$(realpath /usr/bin/ld)"; true
-
-WORKDIR /tmp/wasm
 RUN curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-
-WORKDIR /usr/src/.cargo
-COPY .cargo/config.toml config.toml
 
 WORKDIR /usr/src/lib
 RUN cargo init --lib bencher_adapter
@@ -50,7 +36,7 @@ RUN chmod +x build_wasm.sh
 RUN ./build_wasm.sh
 
 # https://hub.docker.com/_/node
-FROM node:18.17.1-bookworm as builder
+FROM node:20.11.0-bookworm as builder
 COPY services/api/swagger.json /usr/src/services/api/swagger.json
 COPY services/cli/templates/output /usr/src/services/cli/templates/output
 COPY --from=wasm-builder /usr/src/lib/bencher_valid/pkg /usr/src/lib/bencher_valid/pkg
@@ -71,7 +57,7 @@ COPY services/console/.env.runtime .env.runtime
 RUN npm run node
 
 # https://hub.docker.com/_/node
-FROM node:18.17.1-bookworm as packager
+FROM node:20.11.0-bookworm as packager
 COPY --from=builder /usr/src/services/console/dist /usr/src/services/console/dist
 COPY --from=builder /usr/src/services/console/package-lock.json /usr/src/services/console/package-lock.json
 COPY --from=builder /usr/src/services/console/package.json /usr/src/services/console/package.json
