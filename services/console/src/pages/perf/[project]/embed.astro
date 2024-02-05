@@ -10,11 +10,19 @@ const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
 const getProjectUrl =  `${BENCHER_API_URL}/v0/projects/${params.project}`;
 
-const projectResponse = await fetch(getProjectUrl);
-const jsonProject: JsonProject = await projectResponse.json();
-
-const title = `${jsonProject.name}`;
-const description = `View ${jsonProject.name} continuous benchmarking results and performance regressions on Bencher`;
+let jsonProject: undefined | JsonProject;
+let title: string;
+let description: string;
+try {
+  const projectResponse = await fetch(getProjectUrl);
+  jsonProject = await projectResponse.json();
+  title = `${jsonProject?.name}`;
+  description = `View ${jsonProject?.name} continuous benchmarking results and performance regressions on Bencher`;
+} catch (e) {
+  console.error(`Failed to fetch project data: ${e}`);
+  title = "Public Project";
+  description = "View continuous benchmarking results and performance regressions";
+}
 
 // GitHub query for use of embeds:
 // /https:\/\/bencher.dev\/perf\/.*\/embed/

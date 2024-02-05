@@ -5,7 +5,7 @@ import PerfPanel from "../console/perf/PerfPanel";
 export interface Props {
 	apiUrl: string;
 	params: Params;
-	project: JsonProject;
+	project: undefined | JsonProject;
 }
 
 const PublicProject = (props: Props) => {

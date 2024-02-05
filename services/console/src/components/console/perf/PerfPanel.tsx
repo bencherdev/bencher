@@ -99,7 +99,7 @@ export interface Props {
 	params: Params;
 	isConsole?: boolean;
 	isEmbed?: boolean;
-	project?: JsonProject;
+	project?: undefined | JsonProject;
 }
 
 function resourcesToCheckable<T>(

@@ -13,11 +13,20 @@ const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
 const getAlertUrl =  `${BENCHER_API_URL}/v0/projects/${params.project}/alerts/${params.alert}`;
 
-const alertResponse = await fetch(getAlertUrl);
-const jsonAlert: JsonAlert = await alertResponse.json();
+let jsonAlert: undefined | JsonAlert;
+let title: string;
+let description: string;
+try {
+  const alertResponse = await fetch(getAlertUrl);
+  jsonAlert = await alertResponse.json();
+  title = `${jsonAlert?.benchmark?.name} Alert (${jsonAlert?.status === AlertStatus.Active ? "🔔" : "🔕"})`;
+  description = `View a continuous benchmarking alert for the ${jsonAlert?.benchmark?.name} benchmark on Bencher`;
+} catch (e) {
+  console.error(`Failed to fetch alert data: ${e}`);
+  title = "Public Alert";
+  description = "View a continuous benchmarking alert";
+}
 
-const title = `${jsonAlert?.benchmark?.name} Alert (${jsonAlert?.status === AlertStatus.Active ? "🔔" : "🔕"})`;
-const description = `View a continuous benchmarking alert for the ${jsonAlert?.benchmark?.name} benchmark on Bencher`;
 const deck = alertsConfig[Operation.VIEW]?.deck as DeckConfig;
 ---
 

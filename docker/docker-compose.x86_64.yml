@@ -24,7 +24,7 @@ services:
       context: ..
       dockerfile: ./services/console/Dockerfile
       args:
-        - MOLD_VERSION=2.4.0
+        MOLD_VERSION: 2.4.0
     image: bencher-console
     container_name: bencher_console
     ports:
