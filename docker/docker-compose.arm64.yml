@@ -1,36 +1,36 @@
 version: "3.9"
 services:
-  # bencher_api_compose:
-  #   build:
-  #     context: ..
-  #     dockerfile: ./services/api/Dockerfile
-  #     args:
-  #       LITESTREAM_ARCH: arm64
-  #       ARCH: aarch64
-  #       ZIG_VERSION: 0.12.0-dev.2536+788a0409a
-  #   image: bencher-api
-  #   container_name: bencher_api
-  #   ports:
-  #     - 61016:61016
-  #   volumes:
-  #     - "../services/api/data:/usr/bin/bencher/data"
+  bencher_api_compose:
+    build:
+      context: ..
+      dockerfile: ./services/api/Dockerfile
+      args:
+        MOLD_VERSION: 2.4.0
+        LITESTREAM_VERSION: 0.3.13
+        LITESTREAM_ARCH: arm64
+    image: bencher-api
+    container_name: bencher_api
+    ports:
+      - 61016:61016
+    volumes:
+      - "../services/api/data:/usr/bin/bencher/data"
     # environment:
       # Set configuration string or filepath
       # BENCHER_CONFIG: '{}'
       # BENCHER_CONFIG_PATH: /usr/bin/bencher/data/bencher.json
 
-  bencher_console_compose:
-    build:
-      context: ..
-      dockerfile: ./services/console/Dockerfile
-      args:
-        MOLD_VERSION: 2.4.0
-    image: bencher-console
-    container_name: bencher_console
-    ports:
-      - 3000:3000
-    environment:
+  # bencher_console_compose:
+  #   build:
+  #     context: ..
+  #     dockerfile: ./services/console/Dockerfile
+  #     args:
+  #       MOLD_VERSION: 2.4.0
+  #   image: bencher-console
+  #   container_name: bencher_console
+  #   ports:
+  #     - 3000:3000
+  #   environment:
       # Set this to your actual host if different
-      - BENCHER_API_URL=http://127.0.0.1:61016
+      # - BENCHER_API_URL=http://127.0.0.1:61016
   #   depends_on:
   #     - bencher_api_compose

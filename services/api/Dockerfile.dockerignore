@@ -2,6 +2,7 @@
 *
 
 # Except
+!.cargo/
 !Cargo.toml
 !Cargo.lock
 !lib/

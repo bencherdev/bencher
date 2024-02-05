@@ -5,9 +5,9 @@ services:
       context: ..
       dockerfile: ./services/api/Dockerfile
       args:
-        LITESTREAM_ARCH: amd64
-        ARCH: x86_64
-        ZIG_VERSION: 0.12.0-dev.2341+92211135f
+        MOLD_VERSION: 2.4.0
+        LITESTREAM_VERSION: 0.3.13
+        LITESTREAM_ARCH: arm64
     image: bencher-api
     container_name: bencher_api
     ports:

@@ -11,17 +11,16 @@ on:
 env:
   # General
   CARGO_TERM_COLOR: always
-  GITHUB_REGISTRY: ghcr.io
-  FLY_REGISTRY: registry.fly.io
   MOLD_VERSION: 2.4.0
-  ZIG_BUILD_VERSION: 0.18.3
+  GITHUB_REGISTRY: ghcr.io
   # API
   API_DOCKER_IMAGE: bencher-api
+  LITESTREAM_VERSION: 0.3.13
   LITESTREAM_ARCH: amd64
-  ARCH: x86_64
-  ZIG_VERSION: 0.12.0-dev.2341+92211135f
+  FLY_REGISTRY: registry.fly.io
   # CLI
   CLI_BIN_NAME: bencher
+  ZIG_BUILD_VERSION: 0.18.3
   # Use minimum supported glibc version for Rust Tier 1
   # https://doc.rust-lang.org/nightly/rustc/platform-support.html#tier-1-with-host-tools
   GLIBC_VERSION: 2.17
@@ -574,11 +573,8 @@ jobs:
           tags: ${{ env.API_DOCKER_IMAGE }}
           build-args: |
             MOLD_VERSION=${{ env.MOLD_VERSION }}
+            LITESTREAM_VERSION=${{ env.LITESTREAM_VERSION }}
             LITESTREAM_ARCH=${{ env.LITESTREAM_ARCH }}
-            ARCH=${{ env.ARCH }}
-            ZIG_VERSION=${{ env.ZIG_VERSION }}
-            ZIG_BUILD_VERSION=${{ env.ZIG_BUILD_VERSION }}
-            GLIBC_VERSION=${{ env.GLIBC_VERSION }}
           cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }}
           cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }},mode=max
           load: true
