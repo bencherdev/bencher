@@ -111,7 +111,8 @@ async fn get_ls_inner(
         query = query.filter(
             schema::testbed::name
                 .like(search)
-                .or(schema::testbed::slug.like(search)),
+                .or(schema::testbed::slug.like(search))
+                .or(schema::testbed::uuid.like(search)),
         );
     }
 

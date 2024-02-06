@@ -2,7 +2,9 @@ use bencher_json::{
     user::token::JsonUpdateToken, JsonDirection, JsonNewToken, JsonPagination, JsonToken,
     JsonTokens, ResourceId, ResourceName,
 };
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods};
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods,
+};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -105,7 +107,11 @@ async fn get_ls_inner(
         query = query.filter(schema::token::name.eq(name));
     }
     if let Some(search) = query_params.search.as_ref() {
-        query = query.filter(schema::token::name.like(search));
+        query = query.filter(
+            schema::token::name
+                .like(search)
+                .or(schema::token::uuid.like(search)),
+        );
     }
 
     query = match pagination_params.order() {

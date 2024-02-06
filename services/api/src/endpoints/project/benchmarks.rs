@@ -110,7 +110,8 @@ async fn get_ls_inner(
         query = query.filter(
             schema::benchmark::name
                 .like(search)
-                .or(schema::benchmark::slug.like(search)),
+                .or(schema::benchmark::slug.like(search))
+                .or(schema::benchmark::uuid.like(search)),
         );
     }
 

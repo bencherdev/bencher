@@ -110,7 +110,8 @@ async fn get_ls_inner(
         query = query.filter(
             schema::project::name
                 .like(search)
-                .or(schema::project::slug.like(search)),
+                .or(schema::project::slug.like(search))
+                .or(schema::project::uuid.like(search)),
         );
     }
 

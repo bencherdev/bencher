@@ -111,7 +111,8 @@ async fn get_ls_inner(
         query = query.filter(
             schema::measure::name
                 .like(search)
-                .or(schema::measure::slug.like(search)),
+                .or(schema::measure::slug.like(search))
+                .or(schema::measure::uuid.like(search)),
         );
     }
 
