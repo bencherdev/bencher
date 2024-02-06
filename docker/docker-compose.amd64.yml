@@ -7,7 +7,7 @@ services:
       args:
         MOLD_VERSION: 2.4.0
         LITESTREAM_VERSION: 0.3.13
-        LITESTREAM_ARCH: arm64
+        LITESTREAM_ARCH: amd64
     image: bencher-api
     container_name: bencher_api
     ports:
@@ -28,7 +28,9 @@ services:
     ports:
       - 3000:3000
     environment:
-      # Set this to your actual host if different
       - BENCHER_API_URL=http://127.0.0.1:61016
+      # This is needed for Docker-to-Docker communication when using a local `BENCHER_API_URL`
+      # Do not set this when using a remote `BENCHER_API_URL`, such as https://bencher.example.com
+      - INTERNAL_API_URL=http://host.docker.internal:61016
     depends_on:
       - bencher_api_compose

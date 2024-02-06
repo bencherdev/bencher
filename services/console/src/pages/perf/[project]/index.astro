@@ -7,8 +7,9 @@ import type { JsonProject } from "../../../types/bencher";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
+const INTERNAL_API_URL = import.meta.env.INTERNAL_API_URL;
 const params = Astro.params;
-const getProjectUrl =  `${BENCHER_API_URL}/v0/projects/${params.project}`;
+const getProjectUrl =  `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${params.project}`;
 
 let jsonProject: undefined | JsonProject;
 let title: string;
