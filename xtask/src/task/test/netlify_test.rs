@@ -1,10 +1,10 @@
 use std::fs::File;
 
-use bencher_api::API_VERSION;
 use bencher_json::PROD_BENCHER_URL_STR;
 use camino::Utf8PathBuf;
 
 use crate::parser::TaskNetlifyTest;
+use crate::API_VERSION;
 
 const NETLIFY_LOGS_URL_KEY: &str = "NETLIFY_LOGS_URL";
 const NETLIFY_URL: &str = "https://app.netlify.com/sites/bencher/deploys/";

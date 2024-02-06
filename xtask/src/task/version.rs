@@ -1,6 +1,5 @@
-use bencher_api::API_VERSION;
-
 use crate::parser::TaskVersion;
+use crate::API_VERSION;
 
 #[derive(Debug)]
 pub struct Version {}

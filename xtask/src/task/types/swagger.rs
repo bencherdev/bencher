@@ -1,8 +1,10 @@
 use std::fs::File;
 
-use crate::parser::TaskSwagger;
-use bencher_api::{endpoints::Api, API_VERSION};
+use bencher_api::endpoints::Api;
 use dropshot::{ApiDescription, EndpointTagPolicy, TagConfig, TagDetails};
+
+use crate::parser::TaskSwagger;
+use crate::API_VERSION;
 
 const SWAGGER_PATH: &str = "./services/api/swagger.json";
 

@@ -11,8 +11,8 @@ mod types;
 mod version;
 
 pub use notify::TaskNotify;
-pub use package::TaskDeb;
-pub use package::TaskMan;
+#[cfg(feature = "cli")]
+pub use package::{TaskDeb, TaskMan};
 #[cfg(feature = "plus")]
 pub use plus::{
     index::{TaskIndex, TaskIndexDelete, TaskIndexUpdate, TaskSearchEngine},
@@ -25,6 +25,7 @@ pub use template::{TaskTemplate, TaskTemplateKind};
 pub use test::{
     TaskExample, TaskExamples, TaskNetlifyTest, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment,
 };
+#[cfg(feature = "api")]
 pub use types::{TaskSwagger, TaskTypes, TaskTypeshare};
 pub use version::TaskVersion;
 
@@ -42,10 +43,13 @@ pub struct TaskTask {
 pub enum TaskSub {
     /// Get current API version
     Version(TaskVersion),
+    #[cfg(feature = "api")]
     /// Generate typeshare
     Typeshare(TaskTypeshare),
+    #[cfg(feature = "api")]
     /// Generate OpenAPI spec
     Swagger(TaskSwagger),
+    #[cfg(feature = "api")]
     /// Generate typeshare and OpenAPI spec
     Types(TaskTypes),
     /// Template CLI install scripts
@@ -74,8 +78,10 @@ pub enum TaskSub {
     SmokeTest(TaskSmokeTest),
     /// Run tests against Netlify deployment
     NetlifyTest(TaskNetlifyTest),
+    #[cfg(feature = "cli")]
     /// Create CLI man page
     Man(TaskMan),
+    #[cfg(feature = "cli")]
     /// Create CLI .deb
     Deb(TaskDeb),
     /// Generate release notes

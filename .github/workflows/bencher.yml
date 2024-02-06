@@ -81,6 +81,8 @@ jobs:
           - os: ubuntu-latest
             source: devel
           - os: ubuntu-latest
+            source: download
+          - os: ubuntu-latest
             source: script
           # MacOS
           - os: macos-latest
@@ -88,12 +90,16 @@ jobs:
           - os: macos-latest
             source: devel
           - os: macos-latest
+            source: download
+          - os: macos-latest
             source: script
           # Windows
           - os: windows-latest
             source: main
           - os: windows-latest
             source: devel
+          - os: windows-latest
+            source: download
           - os: windows-latest
             source: script
     runs-on: ${{ matrix.os }}
@@ -104,12 +110,18 @@ jobs:
         if: matrix.source == 'main'
       - uses: bencherdev/bencher@devel
         if: matrix.source == 'devel'
+      - name: Unix CLI Download Install Script
+        if: matrix.source == 'download' && matrix.os != 'windows-latest'
+        run: curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
+      - name: Windows CLI Download Install Script
+        if: matrix.source == 'download' && matrix.os == 'windows-latest'
+        run: irm https://bencher.dev/download/install-cli.ps1 | iex
       - name: Unix CLI Install Script
         if: matrix.source == 'script' && matrix.os != 'windows-latest'
-        run: curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
+        run: cat services/cli/templates/output/install-cli.sh | sh
       - name: Windows CLI Install Script
         if: matrix.source == 'script' && matrix.os == 'windows-latest'
-        run: irm https://bencher.dev/download/install-cli.ps1 | iex
+        run: gc services/cli/templates/output/install-cli.ps1 | iex
       - name: Run current Bencher CLI GitHub Action
         run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
 
@@ -172,7 +184,7 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Generate OpenAPI Spec
-        run: cargo xtask swagger
+        run: cargo xtask-api swagger
       - name: Check OpenAPI Spec for changes
         run: git diff --exit-code
       - name: Generate Unix CLI install scripts
@@ -244,8 +256,9 @@ jobs:
           # Linux
           - os: ubuntu-latest
             smoke_test: localhost
-          - os: ubuntu-latest
-            smoke_test: docker
+          # TODO re-enable when non-arm images are pushed
+          # - os: ubuntu-latest
+          #   smoke_test: docker
           # MacOS
           - os: macos-latest
             smoke_test: localhost
@@ -606,10 +619,10 @@ jobs:
             target: aarch64-unknown-linux-gnu
           # MacOS
           - build: macos-x86-64
-            os: ubuntu-latest
+            os: macos-latest
             target: x86_64-apple-darwin
           - build: macos-arm-64
-            os: ubuntu-latest
+            os: macos-latest
             target: aarch64-apple-darwin
           # Windows
           - build: windows-x86-64
@@ -627,9 +640,9 @@ jobs:
       - name: Install Rust target
         run: rustup target add ${{ matrix.target }}
       - uses: goto-bus-stop/setup-zig@v2
-        if: (!startsWith(matrix.build, 'windows'))
+        if: startsWith(matrix.build, 'linux')
       - name: Install zigbuild
-        if: (!startsWith(matrix.build, 'windows'))
+        if: startsWith(matrix.build, 'linux')
         run: cargo install --version ${{ env.ZIG_BUILD_VERSION }} --locked --force cargo-zigbuild
       # Build
       - name: cargo zigbuild Linux CLI
@@ -639,7 +652,7 @@ jobs:
       - name: cargo zigbuild macos CLI
         if: startsWith(matrix.build, 'macos')
         working-directory: ./services/cli
-        run: cargo zigbuild --profile release-small --target ${{ matrix.target }}
+        run: cargo build --profile release-small --target ${{ matrix.target }}
       - name: cargo build Windows CLI
         if: startsWith(matrix.build, 'windows')
         working-directory: ./services/cli
@@ -712,7 +725,7 @@ jobs:
       # Debian .deb
       - name: Build .deb package
         if: startsWith(matrix.build, 'linux')
-        run: cargo xtask deb --dir ${{ env.CLI_DEB_DIR }} --arch ${{ matrix.arch }} ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
+        run: cargo xtask-cli deb --dir ${{ env.CLI_DEB_DIR }} --arch ${{ matrix.arch }} ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
       - name: Test install .deb package
         if: matrix.build == 'linux-x86-64'
         run: sudo dpkg -i ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.deb

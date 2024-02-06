@@ -1,11 +1,11 @@
 #[cfg(unix)]
 use std::{fs::Permissions, os::unix::fs::PermissionsExt};
 
-use bencher_api::API_VERSION;
 use minijinja::Environment;
 use serde::Serialize;
 
 use crate::parser::{TaskTemplate, TaskTemplateKind};
+use crate::API_VERSION;
 
 const CLI_TEMPLATES: &str = "services/cli/templates";
 const SH_TEMPLATE: &str = "install-cli.sh.j2";
