@@ -2,7 +2,7 @@
 class="mermaid">
 graph TD
 
-Ui(Bencher UI Server)
+Console(Bencher Console Server)
 Cli[/Bencher CLI/]
 Api(Bencher API Server)
 Db[(SQLite Database)]
@@ -12,9 +12,9 @@ Smtp[[SMTP Server]]
 CiCd[[CI/CD]]
 BenchmarkHarness[/Benchmark Harness/]
 
-Ui ---> Api
-subgraph UI Container
-    Ui
+Console ---> Api
+subgraph Console Container
+    Console
 end
 
 CiCd --> BenchmarkingServer
