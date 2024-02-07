@@ -116,12 +116,14 @@ jobs:
       - name: Windows CLI Download Install Script
         if: matrix.source == 'download' && matrix.os == 'windows-latest'
         run: irm https://bencher.dev/download/install-cli.ps1 | iex
+      - uses: actions/checkout@v4
+        if: matrix.source == 'script'
       - name: Unix CLI Install Script
         if: matrix.source == 'script' && matrix.os != 'windows-latest'
         run: cat services/cli/templates/output/install-cli.sh | sh
       - name: Windows CLI Install Script
         if: matrix.source == 'script' && matrix.os == 'windows-latest'
-        run: gc services/cli/templates/output/install-cli.ps1 | iex
+        run: gc -Raw services/cli/templates/output/install-cli.ps1 | iex
       - name: Run current Bencher CLI GitHub Action
         run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
 
@@ -433,9 +435,11 @@ jobs:
       - name: Install nightly toolchain
         run: rustup toolchain install nightly
       - name: Install udeps
-        run: cargo install --version 0.1.42 --locked --force cargo-udeps
+        run: cargo install --version 0.1.45 --locked --force cargo-udeps
       - name: Run API udeps
         working-directory: ./services/api
+        # TODO remove once servo error is fixed
+        continue-on-error: true
         run: cargo +nightly udeps --all-targets
       - name: Run CLI udeps
         working-directory: ./services/cli

@@ -1,7 +1,3 @@
-## `plus`
-
-Esta sección es para las características que están cubiertas por la [Licencia Bencher Plus](/legal/plus).
-
 ### `plus.github`
 
 Esta sección especifica la configuración para [una aplicación de GitHub utilizada para la autenticación OAuth2](/docs/es/how-to/github-app/).
@@ -13,16 +9,3 @@ Si no se especifica, la autenticación con GitHub no estará habilitada.
 | :-----------: | :-------------------------------------: | :------------: | :-------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
 |   client_id   |          Iv1.12864abcd1232048           |      ---       |    Sí     | Especifica el ID de cliente de tu aplicación de GitHub. El ID de cliente es diferente del ID de la aplicación. Puedes encontrar el ID de cliente en la página de configuración de tu aplicación. Para más información sobre cómo navegar a la página de configuración de tu aplicación de GitHub, consulta [Modificar el registro de una aplicación de GitHub](https://docs.github.com/es/apps/maintaining-github-apps/modifying-a-github-app-registration#navigating-to-your-github-app-settings). |
 | client_secret | 00000abcd12345wxyz123456789abcdefgh0000 |      ---       |    Sí     |                                                                                                                                                                              El secreto de cliente para tu aplicación de GitHub. Puedes generar un secreto de cliente en la página de configuración de tu aplicación.                                                                                                                                                                               |
-
-### `plus.stats`
-
-Esta sección especifica si y cuándo se recogen las estadísticas del servidor.
-Toda la sección es opcional.
-Si no se especifica, se utilizarán los valores predeterminados listados.
-Es decir, las estadísticas del servidor son de opt-out.
-Establece `enabled` en `false` para desactivar las estadísticas del servidor.
-
-| Nombre  | Ejemplo | Predeterminado | Obligatorio |                                                                       Descripción                                                                       |
-| :-----: | :-----: | :------------: | :---------: | :-----------------------------------------------------------------------------------------------------------------------------------------------------: |
-| offset  |  11242  |     11242      |     No      | Especifica el desplazamiento desde la medianoche en segundos para la recogida de estadísticas del servidor. Por defecto, se ejecuta a las 03:07:22 UTC. |
-| enabled |  true   |      true      |     No      |                        Controla si se recogen las estadísticas del servidor. Establece en `false` para optar por no participar.                         |
