@@ -13,11 +13,12 @@ services:
     ports:
       - 61016:61016
     volumes:
-      - "../services/api/data:/usr/bin/bencher/data"
+      - "../services/api/etc:/etc/bencher"
+      - "../services/api/data:/var/lib/bencher/data"
     # environment:
       # Set configuration string or filepath
-      # BENCHER_CONFIG: '{}'
-      # BENCHER_CONFIG_PATH: /usr/bin/bencher/data/bencher.json
+      # BENCHER_CONFIG:
+      # BENCHER_CONFIG_PATH:
 
   bencher_console_compose:
     build:

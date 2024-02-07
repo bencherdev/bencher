@@ -24,7 +24,10 @@ pub const API_NAME: &str = "Bencher API";
 pub const BENCHER_CONFIG: &str = "BENCHER_CONFIG";
 pub const BENCHER_CONFIG_PATH: &str = "BENCHER_CONFIG_PATH";
 
+#[cfg(debug_assertions)]
 const DEFAULT_CONFIG_PATH: &str = "bencher.json";
+#[cfg(not(debug_assertions))]
+const DEFAULT_CONFIG_PATH: &str = "/etc/bencher/bencher.json";
 const DEFAULT_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
 
 // 1 megabyte or 1_048_576 bytes
@@ -32,7 +35,7 @@ const DEFAULT_MAX_BODY_SIZE: usize = 2 << 19;
 #[cfg(debug_assertions)]
 const DEFAULT_DB_PATH: &str = "data/bencher.db";
 #[cfg(not(debug_assertions))]
-const DEFAULT_DB_PATH: &str = "/usr/bin/bencher/data/bencher.db";
+const DEFAULT_DB_PATH: &str = "/var/lib/bencher/data/bencher.db";
 const DEFAULT_SMTP_PORT: u16 = 587;
 
 #[cfg(debug_assertions)]

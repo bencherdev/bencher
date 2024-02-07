@@ -6,8 +6,9 @@ services:
     ports:
       - 61016:61016
     volumes:
-      - "./services/api/data:/usr/bin/bencher/data"
-      # environment:
+      - "./services/api/etc:/etc/bencher"
+      - "./services/api/data:/var/lib/bencher/data"
+    # environment:
       # Set configuration string or file path
       # - BENCHER_CONFIG=
       # - BENCHER_CONFIG_PATH=

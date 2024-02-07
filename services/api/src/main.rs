@@ -1,5 +1,5 @@
 #[cfg(feature = "sentry")]
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use bencher_api::{
     config::{config_tx::ConfigTx, Config},
@@ -179,11 +179,10 @@ fn run_litestream(
             .map_err(LitestreamError::Database)?
             .join(&config.database.file)
     };
-    // The Litestream config file is always in the same directory as the database
-    let config_path = db_path
-        .parent()
-        .map_or(PathBuf::from("/"), Path::to_path_buf)
-        .join("litestream.yml");
+    #[cfg(debug_assertions)]
+    let config_path = PathBuf::from("litestream.yml");
+    #[cfg(not(debug_assertions))]
+    let config_path = PathBuf::from("/etc/litestream.yml");
     let yaml = litestream
         .into_yaml(db_path.clone(), config.logging.log.level())
         .map_err(LitestreamError::Yaml)?;

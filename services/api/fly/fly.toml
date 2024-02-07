@@ -8,7 +8,7 @@ image = "registry.fly.io/bencher-api"
 
 [[mounts]]
 source = "bencher_data_machines"
-destination = "/usr/bin/bencher/data"
+destination = "/var/lib/bencher/data"
 processes = ["app"]
 
 [[services]]
