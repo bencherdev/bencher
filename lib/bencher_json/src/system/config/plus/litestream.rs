@@ -33,21 +33,22 @@ pub enum JsonReplica {
         host: String,
         port: u16,
         user: String,
-        password: Secret,
-        path: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        password: Option<Secret>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        path: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         key_path: Option<PathBuf>,
     },
     // https://litestream.io/guides/s3/
     S3 {
         bucket: String,
-        path: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        path: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         endpoint: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         region: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        force_path_style: Option<bool>,
         access_key_id: String,
         secret_access_key: Secret,
     },
@@ -61,7 +62,8 @@ pub enum JsonReplica {
     // https://litestream.io/guides/gcs/
     Gcs {
         bucket: String,
-        path: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        path: Option<String>,
     },
 }
 
@@ -140,22 +142,23 @@ mod db {
         Sftp {
             host: String,
             user: String,
-            password: Secret,
-            path: String,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            password: Option<Secret>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            path: Option<String>,
             #[serde(skip_serializing_if = "Option::is_none")]
             key_path: Option<PathBuf>,
         },
         S3 {
             bucket: String,
-            path: String,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            path: Option<String>,
             #[serde(skip_serializing_if = "Option::is_none")]
             endpoint: Option<String>,
             #[serde(skip_serializing_if = "Option::is_none")]
             region: Option<String>,
             access_key_id: String,
             secret_access_key: Secret,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            force_path_style: Option<bool>,
         },
         Abs {
             account_name: String,
@@ -165,7 +168,8 @@ mod db {
         },
         Gcs {
             bucket: String,
-            path: String,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            path: Option<String>,
         },
     }
 
@@ -192,7 +196,6 @@ mod db {
                     path,
                     endpoint,
                     region,
-                    force_path_style,
                     access_key_id,
                     secret_access_key,
                 } => Self::S3 {
@@ -202,7 +205,6 @@ mod db {
                     region,
                     access_key_id,
                     secret_access_key,
-                    force_path_style,
                 },
                 JsonReplica::Abs {
                     account_name,
@@ -253,10 +255,9 @@ mod db {
         let json_litestream = JsonLitestream {
             replicas: vec![JsonReplica::S3 {
                 bucket: "bucket".to_owned(),
-                path: "/path/to/backup".to_owned(),
+                path: Some("/path/to/backup".to_owned()),
                 endpoint: None,
                 region: None,
-                force_path_style: None,
                 access_key_id: "access_key_id".to_owned(),
                 secret_access_key: "secret_access_key".parse().unwrap(),
             }],

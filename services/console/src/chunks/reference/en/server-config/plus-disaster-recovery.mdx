@@ -1,0 +1,38 @@
+### `plus.disaster_recovery`
+
+This section specifies the disaster recovery configuration.
+Bencher supports continuously replicating all database changes.
+For running on demand or scheduled backups, see the `database.data_store` section of the configuration.
+
+There are four replication `scheme`s:
+- `file`: Replicate to a local file path
+    - `path`: Path to replicate to
+- `sftp`: Replicate over SFTP
+    - `host`: Target system hostname
+    - `port`: Target system port number
+    - `user`: Username on target system
+    - `password`: (Optional) Password on target system
+    - `path`: (Optional) Path on target system
+    - `key_path`: (Optional) Path to SSH key
+- `s3`: Replicate to any S3 compatible blob storage
+    - `bucket`: Bucket name
+    - `path`: (Optional) Path in bucket
+    - `endpoint`: (AWS: Optional | Non-AWS: Required) Replication endpoint
+    - `region`: (Optional) Bucket region
+    - `access_key_id`: S3 access key
+    - `secret_access_key`: S3 secret access key
+- `abs`: Replicate to Azure Blob Storage
+    - `account_name`: Account name
+    - `bucket`: Bucket name
+    - `path`: (Optional) Path in bucket
+    - `account_key`: Azure account key
+- `gcs`: Replicate to Google Cloud Storage
+    - `bucket`: Bucket name
+    - `path`: (Optional) Path in bucket
+    - `GOOGLE_APPLICATION_CREDENTIALS`: Environment variable set to file path pointing to service account credentials
+
+|           Name           |  Example  | Default | Required |                                     Description                                     |
+| :----------------------: | :-------: | :-----: | :------: | :---------------------------------------------------------------------------------: |
+|         replicas         |  [ ... ]  |   ---   |   Yes    |                           Specifies an array of replicas.                           |
+|    replicas[replica]     | \{ ... \} |   ---   |   Yes    |                             Specifies a replica object.                             |
+| replicas[replica].scheme |   "s3"    |   ---   |   Yes    | Specifies the replication scheme. For all other `replica` keys, see the list above. |

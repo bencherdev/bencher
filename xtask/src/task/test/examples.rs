@@ -105,7 +105,7 @@ impl Example {
             Self::RustBench => "./examples/rust/bench",
             Self::RustCriterion => "./examples/rust/criterion",
             Self::RustIai => "./examples/rust/iai",
-            Self::RustIaiCallgrind => "./examples/rust/iai-callgrind",
+            Self::RustIaiCallgrind => "./examples/rust/iai_callgrind",
         }
     }
 
