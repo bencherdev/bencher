@@ -33,7 +33,10 @@ mod test_magic {
         json::test_json,
         python::{asv::test_python_asv, pytest::test_python_pytest},
         ruby::benchmark::test_ruby_benchmark,
-        rust::{bench::test_rust_bench, criterion::test_rust_criterion, iai::test_rust_iai},
+        rust::{
+            bench::test_rust_bench, criterion::test_rust_criterion, iai::test_rust_iai,
+            iai_callgrind::test_rust_iai_callgrind,
+        },
         shell::hyperfine::test_shell_hyperfine,
         test_util::convert_file_path,
     };
@@ -120,6 +123,12 @@ mod test_magic {
     fn test_adapter_magic_rust_iai() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/rust/iai/two.txt");
         test_rust_iai::validate_adapter_rust_iai(&results);
+    }
+
+    #[test]
+    fn test_adapter_magic_rust_iai_callgrind() {
+        let results = convert_file_path::<AdapterMagic>("./tool_output/rust/iai_callgrind/two.txt");
+        test_rust_iai_callgrind::validate_adapter_rust_iai_callgrind(&results);
     }
 
     #[test]

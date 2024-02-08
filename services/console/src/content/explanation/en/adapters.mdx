@@ -192,6 +192,14 @@ Only these measures (ie `value`) are available. There are no `lower_value` and `
 The Measures for this adapter are not created by default for all projects.
 However, when you use this adapter, these Measures will be automatically created for your Project.
 
+## 🦀 Rust Iai-Callgrind
+
+The Rust Iai Adapter (`rust_iai_callgrind`) expects [Iai-Callgrind](https://github.com/iai-callgrind/iai-callgrind) output.
+The `instructions`, `l1_access`, `l2_access`, `ram_access`, `total_read_write`, and `estimated_cycles` Measures are gathered.
+Only these measures (ie `value`) are available. There are no `lower_value` and `upper_value` measures.
+The Measures for this adapter are not created by default for all projects.
+However, when you use this adapter, these Measures will be automatically created for your Project.
+
 ## ❯_ Shell
 
 The Shell Adapter (`shell`) is a superset of `shell_hyperfine`.

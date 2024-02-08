@@ -5,6 +5,7 @@ use bencher_json::{
         measure::{
             ESTIMATED_CYCLES_SLUG_STR, INSTRUCTIONS_SLUG_STR, L1_ACCESSES_SLUG_STR,
             L2_ACCESSES_SLUG_STR, LATENCY_SLUG_STR, RAM_ACCESSES_SLUG_STR, THROUGHPUT_SLUG_STR,
+            TOTAL_READ_WRITE_SLUG_STR,
         },
         metric::Mean,
     },
@@ -43,6 +44,10 @@ pub static RAM_ACCESSES_NAME_ID: Lazy<NameId> =
     Lazy::new(|| RAM_ACCESSES_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR));
 
 #[allow(clippy::expect_used)]
+pub static TOTAL_READ_WRITE_NAME_ID: Lazy<NameId> =
+    Lazy::new(|| TOTAL_READ_WRITE_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR));
+
+#[allow(clippy::expect_used)]
 pub static ESTIMATED_CYCLES_NAME_ID: Lazy<NameId> =
     Lazy::new(|| ESTIMATED_CYCLES_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR));
 
@@ -72,6 +77,16 @@ pub enum IaiMeasure {
     L1Accesses(JsonMetric),
     L2Accesses(JsonMetric),
     RamAccesses(JsonMetric),
+    EstimatedCycles(JsonMetric),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum IaiCallgrindMeasure {
+    Instructions(JsonMetric),
+    L1Accesses(JsonMetric),
+    L2Accesses(JsonMetric),
+    RamAccesses(JsonMetric),
+    TotalReadWrite(JsonMetric),
     EstimatedCycles(JsonMetric),
 }
 
@@ -150,6 +165,46 @@ impl AdapterResults {
                         (RAM_ACCESSES_NAME_ID.clone(), json_metric)
                     },
                     IaiMeasure::EstimatedCycles(json_metric) => {
+                        (ESTIMATED_CYCLES_NAME_ID.clone(), json_metric)
+                    },
+                };
+                metrics_value.inner.insert(resource_id, metric);
+            }
+        }
+
+        Some(results_map.into())
+    }
+
+    pub fn new_iai_callgrind(
+        benchmark_metrics: Vec<(BenchmarkName, Vec<IaiCallgrindMeasure>)>,
+    ) -> Option<Self> {
+        if benchmark_metrics.is_empty() {
+            return None;
+        }
+
+        let mut results_map = HashMap::new();
+        for (benchmark_name, metrics) in benchmark_metrics {
+            let metrics_value = results_map
+                .entry(benchmark_name)
+                .or_insert_with(AdapterMetrics::default);
+            for metric in metrics {
+                let (resource_id, metric) = match metric {
+                    IaiCallgrindMeasure::Instructions(json_metric) => {
+                        (INSTRUCTIONS_NAME_ID.clone(), json_metric)
+                    },
+                    IaiCallgrindMeasure::L1Accesses(json_metric) => {
+                        (L1_ACCESSES_NAME_ID.clone(), json_metric)
+                    },
+                    IaiCallgrindMeasure::L2Accesses(json_metric) => {
+                        (L2_ACCESSES_NAME_ID.clone(), json_metric)
+                    },
+                    IaiCallgrindMeasure::RamAccesses(json_metric) => {
+                        (RAM_ACCESSES_NAME_ID.clone(), json_metric)
+                    },
+                    IaiCallgrindMeasure::TotalReadWrite(json_metric) => {
+                        (TOTAL_READ_WRITE_NAME_ID.clone(), json_metric)
+                    },
+                    IaiCallgrindMeasure::EstimatedCycles(json_metric) => {
                         (ESTIMATED_CYCLES_NAME_ID.clone(), json_metric)
                     },
                 };

@@ -58,6 +58,7 @@
     "bencherdev",
     "bindgen",
     "Bulma",
+    "callgrind",
     "camino",
     "canonicalize",
     "chrono",

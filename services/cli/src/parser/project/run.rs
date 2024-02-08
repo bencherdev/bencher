@@ -179,6 +179,8 @@ pub enum CliRunAdapter {
     RustCriterion,
     /// 🦀 Rust Iai
     RustIai,
+    /// 🦀 Rust Iai-Callgrind
+    RustIaiCallgrind,
     /// ❯_ Shell
     Shell,
     /// ❯_ Shell Hyperfine

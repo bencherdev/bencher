@@ -13,7 +13,8 @@ use adapters::{
     python::{asv::AdapterPythonAsv, pytest::AdapterPythonPytest, AdapterPython},
     ruby::{benchmark::AdapterRubyBenchmark, AdapterRuby},
     rust::{
-        bench::AdapterRustBench, criterion::AdapterRustCriterion, iai::AdapterRustIai, AdapterRust,
+        bench::AdapterRustBench, criterion::AdapterRustCriterion, iai::AdapterRustIai,
+        iai_callgrind::AdapterRustIaiCallgrind, AdapterRust,
     },
     shell::{hyperfine::AdapterShellHyperfine, AdapterShell},
 };
@@ -56,6 +57,7 @@ impl Adaptable for Adapter {
             Adapter::RustBench => AdapterRustBench::parse(input, settings),
             Adapter::RustCriterion => AdapterRustCriterion::parse(input, settings),
             Adapter::RustIai => AdapterRustIai::parse(input, settings),
+            Adapter::RustIaiCallgrind => AdapterRustIaiCallgrind::parse(input, settings),
             Adapter::Shell => AdapterShell::parse(input, settings),
             Adapter::ShellHyperfine => AdapterShellHyperfine::parse(input, settings),
         }

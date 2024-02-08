@@ -8,4 +8,6 @@
   - [pytest-benchmark](python)
 - 🦀 Rust
   - [libtest bench](rust/bench)
+  - [Criterion](rust/criterion)
   - [iai](rust/iai)
+  - [iai-callgrind](rust/iai_callgrind)
