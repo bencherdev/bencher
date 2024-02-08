@@ -1,8 +1,11 @@
 pub mod bench;
 pub mod criterion;
 pub mod iai;
+pub mod iai_callgrind;
 
-use self::{criterion::AdapterRustCriterion, iai::AdapterRustIai};
+use self::{
+    criterion::AdapterRustCriterion, iai::AdapterRustIai, iai_callgrind::AdapterRustIaiCallgrind,
+};
 use crate::{Adaptable, AdapterResults, Settings};
 use bench::AdapterRustBench;
 
@@ -13,6 +16,7 @@ impl Adaptable for AdapterRust {
         AdapterRustBench::parse(input, settings)
             .or_else(|| AdapterRustCriterion::parse(input, settings))
             .or_else(|| AdapterRustIai::parse(input, settings))
+            .or_else(|| AdapterRustIaiCallgrind::parse(input, settings))
     }
 }
 
@@ -20,7 +24,10 @@ impl Adaptable for AdapterRust {
 mod test_rust {
     use super::AdapterRust;
     use crate::adapters::{
-        rust::{bench::test_rust_bench, criterion::test_rust_criterion, iai::test_rust_iai},
+        rust::{
+            bench::test_rust_bench, criterion::test_rust_criterion, iai::test_rust_iai,
+            iai_callgrind::test_rust_iai_callgrind,
+        },
         test_util::convert_file_path,
     };
 
@@ -40,5 +47,11 @@ mod test_rust {
     fn test_adapter_rust_iai() {
         let results = convert_file_path::<AdapterRust>("./tool_output/rust/iai/two.txt");
         test_rust_iai::validate_adapter_rust_iai(&results);
+    }
+
+    #[test]
+    fn test_adapter_rust_iai_callgrind() {
+        let results = convert_file_path::<AdapterRust>("./tool_output/rust/iai_callgrind/two.txt");
+        test_rust_iai_callgrind::validate_adapter_rust_iai_callgrind(&results);
     }
 }

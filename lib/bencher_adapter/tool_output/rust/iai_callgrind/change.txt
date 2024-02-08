@@ -1,0 +1,19 @@
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci short:10
+  Instructions:                1650|1734            (-4.84429%) [-1.05091x]
+  L1 Hits:                     2275|2359            (-3.56083%) [-1.03692x]
+  L2 Hits:                        0|0               (No change)
+  RAM Hits:                       3|3               (No change)
+  Total read+write:            2278|2362            (-3.55631%) [-1.03687x]
+  Estimated Cycles:            2380|2464            (-3.40909%) [-1.03529x]
+rust_iai_callgrind::bench_fibonacci_group::bench_fibonacci long:30
+  Instructions:            24943490|26214734        (-4.84935%) [-1.05096x]
+  L1 Hits:                 34367375|35638619        (-3.56704%) [-1.03699x]
+  L2 Hits:                        0|0               (No change)
+  RAM Hits:                       3|3               (No change)
+  Total read+write:        34367378|35638622        (-3.56704%) [-1.03699x]
+  Estimated Cycles:        34367480|35638724        (-3.56703%) [-1.03699x]

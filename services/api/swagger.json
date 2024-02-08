@@ -6184,6 +6184,7 @@
           "rust_bench",
           "rust_criterion",
           "rust_iai",
+          "rust_iai_callgrind",
           "cpp",
           "cpp_google",
           "cpp_catch2",

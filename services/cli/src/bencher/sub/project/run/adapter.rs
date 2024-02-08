@@ -28,6 +28,7 @@ impl From<CliRunAdapter> for Adapter {
             CliRunAdapter::RustBench => Self::RustBench,
             CliRunAdapter::RustCriterion => Self::RustCriterion,
             CliRunAdapter::RustIai => Self::RustIai,
+            CliRunAdapter::RustIaiCallgrind => Self::RustIaiCallgrind,
             CliRunAdapter::Shell => Self::Shell,
             CliRunAdapter::ShellHyperfine => Self::ShellHyperfine,
         }

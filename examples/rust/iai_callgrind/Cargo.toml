@@ -1,0 +1,16 @@
+[workspace]
+
+[package]
+name = "rust_iai_callgrind"
+version = "0.1.0"
+edition = "2021"
+
+[dev-dependencies]
+iai-callgrind = "0.10.2"
+
+[[bench]]
+name = "rust_iai_callgrind"
+harness = false
+
+[profile.bench]
+debug = true

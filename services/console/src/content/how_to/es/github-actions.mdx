@@ -42,13 +42,13 @@ Si solo esperas tener PRs de ramas dentro del **mismo** repositorio, entonces pu
 1. Crea un archivo de `workflow` para GitHub Actions. (ej: `.github/workflows/pr_benchmarks.yml`)
 2. Ejecutar en eventos de `pull_request` solo si la solicitud de extracción proviene del mismo repositorio. Para gestionar PRs de Forks, vea [Solicitudes de extracción de Forks](#solicitudes-de-extracción-de-forks) a continuación.
 3. Establece [los permisos para el `GITHUB_TOKEN`](https://docs.github.com/es/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job) en `write` para `pull-requests`. Dependiendo de tus configuraciones de GitHub, esto puede no ser necesario. Pero para todas las organizaciones y repositorios personales [creados después del 02 de febrero de 2023](https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/), este es el comportamiento predeterminado. Consulta [la documentación de GitHub](https://docs.github.com/es/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token) para obtener una visión general completa.
-3. [Selecciona la rama](http://localhost:3000/es/docs/explanation/branch-selection/) a utilizar:
+4. [Selecciona la rama](/es/docs/explanation/branch-selection/) a utilizar:
         1. Usar los datos de la rama actual si ya existen. (ej: `--if-branch "$GITHUB_REF_NAME"`)
         2. Crear un clon de los datos y umbrales de la rama objetivo de la PR si ya existen. (ej: `--else-if-branch "$GITHUB_BASE_REF"`)
         3. De lo contrario, crea un clon de los datos y umbrales de la rama `main`. (ej: `--else-if-branch main`)
-4. Configurar el token de autenticación de la API de GitHub. (ej: `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) Cuando esta opción se establece como parte de una solicitud de extracción, entonces los resultados se añadirán a la solicitud de extracción como un comentario. Esto utiliza [la variable de entorno `GITHUB_TOKEN` de GitHub Actions](https://docs.github.com/es/actions/security-guides/automatic-token-authentication).
-5. Consulta la documentación de [ejecución de bencher](/es/docs/explanation/bencher-run/) para obtener una visión general completa de todas las formas de configurar el comentario de solicitud de extracción con las banderas `--ci-*`.
-6. (No mostrado) Crea un segundo archivo de `workflow` para GitHub Actions y utiliza el ejemplo inicial de arriba para ejecutar en eventos `push` a la rama `main`. (ej: `.github/workflows/benchmarks.yml`)
+5. Configurar el token de autenticación de la API de GitHub. (ej: `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) Cuando esta opción se establece como parte de una solicitud de extracción, entonces los resultados se añadirán a la solicitud de extracción como un comentario. Esto utiliza [la variable de entorno `GITHUB_TOKEN` de GitHub Actions](https://docs.github.com/es/actions/security-guides/automatic-token-authentication).
+6. Consulta la documentación de [ejecución de bencher](/es/docs/explanation/bencher-run/) para obtener una visión general completa de todas las formas de configurar el comentario de solicitud de extracción con las banderas `--ci-*`.
+7. (No mostrado) Crea un segundo archivo de `workflow` para GitHub Actions y utiliza el ejemplo inicial de arriba para ejecutar en eventos `push` a la rama `main`. (ej: `.github/workflows/benchmarks.yml`)
 
 ## Pull Requests desde Forks
 

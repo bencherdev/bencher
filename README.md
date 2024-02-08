@@ -109,6 +109,7 @@ Though Bencher is open source, there is also a hosted version available [Bencher
   - [libtest bench](https://bencher.dev/docs/explanation/adapters/#-rust-bench)
   - [Criterion](https://bencher.dev/docs/explanation/adapters/#-rust-criterion)
   - [Iai](https://bencher.dev/docs/explanation/adapters/#-rust-iai)
+  - [Iai-Callgrind](https://bencher.dev/docs/explanation/adapters/#-rust-iai-callgrind)
 - ❯_ Shell
   - [Hyperfine](https://bencher.dev/docs/explanation/adapters/#_%EF%B8%8F-shell-hyperfine)
 
