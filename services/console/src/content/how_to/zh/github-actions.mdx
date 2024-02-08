@@ -42,13 +42,13 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 1. 创建一个GitHub Actions `workflow` 文件。（例如：`.github/workflows/pr_benchmarks.yml`）
 2. 仅当来自同一仓库的拉取请求(`pull_request`)事件发生时运行。对于处理Fork PRs，请看下面的[从Forks的Pull请求](#pull-requests-from-forks)。
 3. 为 `GITHUB_TOKEN` [设置权限](https://docs.github.com/zh/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job)，将 `pull-requests` 的权限设为 `write`。根据您的 GitHub 设置，这可能并非必需。但是，对所有在[2023年2月2日之后建立的](https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/)组织和个人仓库来说，这是默认行为。查看[GitHub 文档](https://docs.github.com/zh/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token)以获取完整概览。
-3. [选择分支](http://localhost:3000/zh/docs/explanation/branch-selection/)来使用：
+4. [选择分支](/zh/docs/explanation/branch-selection/)来使用：
         1. 如果当前分支数据已经存在，则使用当前分支数据。（例如：`--if-branch "$GITHUB_REF_NAME"`）
         2. 如果PR目标分支的数据和阈值已经存在，则创建一个克隆。（例如：`--else-if-branch "$GITHUB_BASE_REF"`）
         3. 否则，请创建`main`分支数据和阈值的克隆。（例如：`--else-if-branch main`）
-4. 设置GitHub API身份验证令牌。（例如：`--github-actions "${{ secrets.GITHUB_TOKEN }}"`）当作为拉取请求的一部分设置此选项时，结果将以评论的形式添加到拉取请求中。这使用了[GitHub Actions `GITHUB_TOKEN` 环境变量](https://docs.github.com/ja/actions/security-guides/automatic-token-authentication)。
-5. 查看[bencher run](/zh/docs/explanation/bencher-run/)文档，全面了解如何使用`--ci-*`标志配置拉取请求评论的所有方式。
-6. （未显示）创建第二个GitHub Actions `workflow` 文件，并使用上述初始示例在`push`事件发生到`main`分支时运行。（例如：`.github/workflows/benchmarks.yml`）
+5. 设置GitHub API身份验证令牌。（例如：`--github-actions "${{ secrets.GITHUB_TOKEN }}"`）当作为拉取请求的一部分设置此选项时，结果将以评论的形式添加到拉取请求中。这使用了[GitHub Actions `GITHUB_TOKEN` 环境变量](https://docs.github.com/ja/actions/security-guides/automatic-token-authentication)。
+6. 查看[bencher run](/zh/docs/explanation/bencher-run/)文档，全面了解如何使用`--ci-*`标志配置拉取请求评论的所有方式。
+7. （未显示）创建第二个GitHub Actions `workflow` 文件，并使用上述初始示例在`push`事件发生到`main`分支时运行。（例如：`.github/workflows/benchmarks.yml`）
 
 ## Forks的Pull请求
 

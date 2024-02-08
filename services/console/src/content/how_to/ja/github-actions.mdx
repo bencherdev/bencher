@@ -42,13 +42,13 @@ PRsが**同一**のリポジトリからのものだけであると想定して�
 1. GitHub Actionsの `workflow` ファイルを作成します。(例： `.github/workflows/pr_benchmarks.yml`)
 2. プルリクエストが同一リポジトリからのものである限り、`pull_request` イベントで実行します。ForkされたPRの処理については、以下の[フォークからのプルリクエスト](#pull-requests-from-forks)を参照してください。
 3. `GITHUB_TOKEN`の[パーミッションを`pull-requests`に対して`write`に設定します](https://docs.github.com/ja/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job)。あなたのGitHubの設定によりますが、これが必要ない場合もあります。しかし、すべての組織と個人のレポジトリについては、[2023年2月2日以降に作成されたもの](https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/)では、これがデフォルトの振る舞いです。完全な概要については、[GitHubのドキュメント](https://docs.github.com/ja/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token)をご覧ください。
-3. [使用するブランチを選択](http://localhost:3000/ja/docs/explanation/branch-selection/)します:
+4. [使用するブランチを選択](/ja/docs/explanation/branch-selection/)します:
         1. 既に存在する場合は、現在のブランチのデータを使用します。(例： `--if-branch "$GITHUB_REF_NAME"`)
         2. 既に存在する場合は、PRターゲットブランチのデータと閾値のクローンを作成します。(例： `--else-if-branch "$GITHUB_BASE_REF"`)
         3. それ以外の場合は、`main`ブランチのデータと閾値のクローンを作成します。(例： `--else-if-branch main`)
-4. GitHub API認証トークンを設定します。(例： `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) このオプションがプルリクエストの一部として設定されると、結果がプルリクエストにコメントとして追加されます。これは[GitHub Actionsの `GITHUB_TOKEN` 環境変数](https://docs.github.com/ja/actions/security-guides/automatic-token-authentication)を使用します。
-5. `--ci-*` フラグでプルリクエストのコメントを設定するすべての方法については、[bencher run](/ja/docs/explanation/bencher-run/)ドキュメンテーションを全て覧下さい。
-6. (表示されていません) 2つ目のGitHub Actions `workflow` ファイルを作成し、上記の初期例を使用して`main`ブランチへの`push`イベントで実行します。(例： `.github/workflows/benchmarks.yml`)
+5. GitHub API認証トークンを設定します。(例： `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) このオプションがプルリクエストの一部として設定されると、結果がプルリクエストにコメントとして追加されます。これは[GitHub Actionsの `GITHUB_TOKEN` 環境変数](https://docs.github.com/ja/actions/security-guides/automatic-token-authentication)を使用します。
+6. `--ci-*` フラグでプルリクエストのコメントを設定するすべての方法については、[bencher run](/ja/docs/explanation/bencher-run/)ドキュメンテーションを全て覧下さい。
+7. (表示されていません) 2つ目のGitHub Actions `workflow` ファイルを作成し、上記の初期例を使用して`main`ブランチへの`push`イベントで実行します。(例： `.github/workflows/benchmarks.yml`)
 
 ## フォークからのプルリクエスト
 

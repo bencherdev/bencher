@@ -42,13 +42,13 @@ import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 1. Создайте файл `workflow` для GitHub Actions (например: `.github/workflows/pr_benchmarks.yml`)
 2. Запускайте при событиях `pull_request` только и только если запрос на вытягивание происходит из того же репозитория. Для обработки PR из форков см. [Запросы на вытягивание из форков](#pull-requests-from-forks) ниже.
 3. Установите [разрешения для `GITHUB_TOKEN`](https://docs.github.com/ru/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job) на `write` для `pull-requests`. В зависимости от ваших настроек GitHub, это может быть не требуется. Но для всех организаций и персональных репозиториев [созданных после 02 февраля 2023 года](https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/), это становится поведением по умолчанию. См. [документацию GitHub](https://docs.github.com/ru/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token) для полного обзора.
-3. [Выберите ветку](http://localhost:3000/ru/docs/explanation/branch-selection/) для использования:
+4. [Выберите ветку](/ru/docs/explanation/branch-selection/) для использования:
         1. Используйте текущие данные ветки, если они уже существуют. (например: `--if-branch "$GITHUB_REF_NAME"`)
         2. Создайте клон данных целевой ветки PR и порогов, если они уже существуют. (например: `--else-if-branch "$GITHUB_BASE_REF"`)
         3. В противном случае создайте клон данных основной ветки (`main`) и порогов. (например: `--else-if-branch main`)
-4. Установите токен аутентификации API GitHub. (например: `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) Когда этот параметр установлен в рамках запроса на вытягивание, то результаты будут добавлены к запросу на вытягивание в виде комментария. Использует [переменную среды `GITHUB_TOKEN` от GitHub Actions](https://docs.github.com/ja/actions/security-guides/automatic-token-authentication).
-5. Посмотрите в документации [bencher run](/ru/docs/explanation/bencher-run/) полное описание всех способов настройки комментария запроса на вытягивание с `--ci-*` флагами.
-6. (Не показано) Создайте второй файл `workflow` для GitHub Actions и используйте приведенный выше пример для запуска по событиям `push` в основную ветку (`main`). (например: `.github/workflows/benchmarks.yml`)
+5. Установите токен аутентификации API GitHub. (например: `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) Когда этот параметр установлен в рамках запроса на вытягивание, то результаты будут добавлены к запросу на вытягивание в виде комментария. Использует [переменную среды `GITHUB_TOKEN` от GitHub Actions](https://docs.github.com/ja/actions/security-guides/automatic-token-authentication).
+6. Посмотрите в документации [bencher run](/ru/docs/explanation/bencher-run/) полное описание всех способов настройки комментария запроса на вытягивание с `--ci-*` флагами.
+7. (Не показано) Создайте второй файл `workflow` для GitHub Actions и используйте приведенный выше пример для запуска по событиям `push` в основную ветку (`main`). (например: `.github/workflows/benchmarks.yml`)
 
 ## Pull Requests из Forks
 

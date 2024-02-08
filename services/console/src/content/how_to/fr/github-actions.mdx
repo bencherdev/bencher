@@ -42,13 +42,13 @@ Si vous ne vous attendez qu'à n'avoir des demandes de fusion que provenant de b
 1. Créez un fichier `workflow` pour GitHub Actions. (ex : `.github/workflows/pr_benchmarks.yml`)
 2. Exécutez lors des événements `pull_request` si et seulement si la pull request provient du même dépôt. Pour gérer les Pull Requests depuis des Forks, voir [Pull Requests de Forks](#pull-requests-de-forks) ci-dessous.
 3. Définissez [les permissions pour le `GITHUB_TOKEN`](https://docs.github.com/fr/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job) sur `write` pour les `pull-requests`. Selon vos paramètres GitHub, cela peut ne pas être nécessaire. Cependant, pour toutes les organisations et les dépôts personnels [créés après le 02 février 2023](https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/), c'est le comportement par défaut. Consultez [la documentation GitHub](https://docs.github.com/fr/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token) pour un aperçu complet.
-3. [Sélectionnez la branche](http://localhost:3000/fr/docs/explanation/branch-selection/) à utiliser :
+4. [Sélectionnez la branche](/fr/docs/explanation/branch-selection/) à utiliser :
         1. Utilisez les données de branche actuelle si elles existent déjà. (ex : `--if-branch "$GITHUB_REF_NAME"`)
         2. Créez un clone des données et des seuils de la branche cible de la PR s'ils existent déjà. (ex : `--else-if-branch "$GITHUB_BASE_REF"`)
         3. Sinon, créez un clone des données et des seuils de la branche `main`. (ex : `--else-if-branch main`)
-4. Définissez le jeton d'authentification de l'API GitHub. (ex : `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) Lorsque cette option est définie dans le cadre d'une pull request, les résultats seront ajoutés à la pull request sous forme de commentaire. Cela utilise [la variable d'environnement `GITHUB_TOKEN` des GitHub Actions](https://docs.github.com/fr/actions/security-guides/automatic-token-authentication).
-5. Consultez la documentation [bencher run](/fr/docs/explanation/bencher-run/) pour un aperçu complet de toutes les façons de configurer le commentaire de la pull request avec les drapeaux `--ci-*`.
-6. (Non montré) Créez un second fichier `workflow` pour les GitHub Actions et utilisez l'exemple initial ci-dessus pour exécuter lors des événements `push` vers la branche `main`. (ex : `.github/workflows/benchmarks.yml`)
+5. Définissez le jeton d'authentification de l'API GitHub. (ex : `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) Lorsque cette option est définie dans le cadre d'une pull request, les résultats seront ajoutés à la pull request sous forme de commentaire. Cela utilise [la variable d'environnement `GITHUB_TOKEN` des GitHub Actions](https://docs.github.com/fr/actions/security-guides/automatic-token-authentication).
+6. Consultez la documentation [bencher run](/fr/docs/explanation/bencher-run/) pour un aperçu complet de toutes les façons de configurer le commentaire de la pull request avec les drapeaux `--ci-*`.
+7. (Non montré) Créez un second fichier `workflow` pour les GitHub Actions et utilisez l'exemple initial ci-dessus pour exécuter lors des événements `push` vers la branche `main`. (ex : `.github/workflows/benchmarks.yml`)
 
 ## Demandes de Fusion à partir de Forks
 

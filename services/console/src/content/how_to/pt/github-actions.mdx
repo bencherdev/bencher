@@ -42,13 +42,13 @@ Se você espera apenas ter PRs de branches dentro do mesmo repositório, você p
 1. Crie um arquivo `workflow` do GitHub Actions. (ex: `.github/workflows/pr_benchmarks.yml`)
 2. Execute em eventos `pull_request` apenas se o pull request for do mesmo repositório. Para lidar com Pull Requests de Forks, veja [Pull Requests de Forks](#pull-requests-from-forks) abaixo.
 3. Defina [as permissões para o `GITHUB_TOKEN`](https://docs.github.com/pt/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job) como `write` para `pull-requests`. Dependendo das suas configurações do GitHub, isso pode não ser necessário. No entanto, para todas as organizações e repositórios pessoais [criados após 02 de fevereiro de 2023](https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/), esse é o comportamento padrão. Consulte [a documentação do GitHub](https://docs.github.com/pt/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token) para uma visão geral completa.
-3. [Selecione a branch](http://localhost:3000/pt/docs/explanation/branch-selection/) para usar:
+4. [Selecione a branch](/pt/docs/explanation/branch-selection/) para usar:
         1. Use os dados da branch atual se já existirem. (ex: `--if-branch "$GITHUB_REF_NAME"`)
         2. Crie um clone dos dados e limites da branch alvo do PR, se existirem. (ex: `--else-if-branch "$GITHUB_BASE_REF"`)
         3. Caso contrário, crie uma cópia dos dados e limites da branch `main`. (ex: `--else-if-branch main`)
-4. Defina o token de autenticação da API do GitHub. (ex: `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) Quando esta opção é definida como parte de um pull request, os resultados serão adicionados ao pull request como um comentário. Isso usa [a variável de ambiente `GITHUB_TOKEN` das GitHub Actions](https://docs.github.com/pt/actions/security-guides/automatic-token-authentication).
-5. Veja a documentação de [execução do bencher](/pt/docs/explanation/bencher-run/) para uma visão geral completa de todas as maneiras de configurar o comentário do pull request com as flags `--ci-*`.
-6. (Não mostrado) Crie um segundo arquivo `workflow` de GitHub Actions e use o exemplo inicial acima para executar em eventos `push` para a branch `main`. (ex: `.github/workflows/benchmarks.yml`)
+5. Defina o token de autenticação da API do GitHub. (ex: `--github-actions "${{ secrets.GITHUB_TOKEN }}"`) Quando esta opção é definida como parte de um pull request, os resultados serão adicionados ao pull request como um comentário. Isso usa [a variável de ambiente `GITHUB_TOKEN` das GitHub Actions](https://docs.github.com/pt/actions/security-guides/automatic-token-authentication).
+6. Veja a documentação de [execução do bencher](/pt/docs/explanation/bencher-run/) para uma visão geral completa de todas as maneiras de configurar o comentário do pull request com as flags `--ci-*`.
+7. (Não mostrado) Crie um segundo arquivo `workflow` de GitHub Actions e use o exemplo inicial acima para executar em eventos `push` para a branch `main`. (ex: `.github/workflows/benchmarks.yml`)
 
 ## Pull Requests de Forks
 
