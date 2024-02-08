@@ -7,7 +7,7 @@ use futures_util::stream::StreamExt;
 
 use crate::{cli_eprintln, cli_println};
 
-use super::{DockerError, BENCHER_API_CONTAINER, BENCHER_UI_CONTAINER};
+use super::{DockerError, BENCHER_API_CONTAINER, BENCHER_CONSOLE_CONTAINER};
 
 #[derive(Debug, Clone)]
 pub struct Logs {
@@ -59,7 +59,7 @@ impl SubCmd for Logs {
 
 pub async fn tail_container_logs(docker: &Docker) {
     let mut api_logs = container_logs(docker, BENCHER_API_CONTAINER);
-    let mut ui_logs = container_logs(docker, BENCHER_UI_CONTAINER);
+    let mut ui_logs = container_logs(docker, BENCHER_CONSOLE_CONTAINER);
     cli_println!("🐰 Bencher Self-Hosted logs...");
     cli_println!("");
 

@@ -2,9 +2,10 @@ use std::process::Command;
 #[cfg(unix)]
 use std::{fs::Permissions, os::unix::fs::PermissionsExt};
 
-use crate::parser::{TaskDeb, TaskMan};
-use bencher_api::API_VERSION;
 use camino::Utf8PathBuf;
+
+use crate::parser::{TaskDeb, TaskMan};
+use crate::API_VERSION;
 
 use super::man::Man;
 

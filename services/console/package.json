@@ -1,5 +1,5 @@
 {
-  "name": "bencher-ui",
+  "name": "bencher-console",
   "type": "module",
   "version": "0.4.1",
   "scripts": {
@@ -20,15 +20,15 @@
   },
   "dependencies": {
     "@astrojs/check": "^0.4.1",
-    "@astrojs/mdx": "^2.1.0",
+    "@astrojs/mdx": "^2.1.1",
     "@astrojs/partytown": "^2.0.4",
     "@astrojs/sitemap": "^3.0.5",
     "@astrojs/solid-js": "^4.0.1",
     "@observablehq/plot": "^0.6.13",
     "@solid-primitives/resize-observer": "^2.0.23",
     "@solid-primitives/scheduled": "^1.4.2",
-    "astro": "^4.2.6",
-    "astro-expressive-code": "^0.32.2",
+    "astro": "^4.3.2",
+    "astro-expressive-code": "^0.32.4",
     "astro-seo": "^0.8.0",
     "axios": "^1.6.7",
     "bulma": "^0.9.4",
@@ -39,8 +39,8 @@
     "bulma-tooltip": "^3.0.2",
     "d3": "^7.8.5",
     "htl": "^0.3.1",
-    "mermaid": "^10.7.0",
-    "solid-js": "^1.8.12",
+    "mermaid": "^10.8.0",
+    "solid-js": "^1.8.14",
     "swagger-ui-dist": "^5.11.1",
     "typescript": "^5.3.3",
     "vite-plugin-wasm-pack": "^0.1.12"

@@ -7,7 +7,6 @@ edition.workspace = true
 [features]
 default = ["plus"]
 plus = ["bencher_client/plus", "bencher_json/plus"]
-seed = []
 
 [dependencies]
 # Workspace
@@ -37,12 +36,6 @@ futures-util = "0.3"
 # https://github.com/fussybeaver/bollard/pull/361#event-11409619983
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3.9", features = ["winerror"] }
-
-[dev-dependencies]
-# Workspace
-pretty_assertions.workspace = true
-# Crate
-assert_cmd = "2.0"
 
 [lints]
 workspace = true

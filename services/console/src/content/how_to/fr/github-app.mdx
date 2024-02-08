@@ -43,7 +43,7 @@ Pour Bencher Auto-Hébergé, vous devrez avoir un [plan Bencher Plus Entreprise]
 ## Configuration de l'application GitHub
 
 ### Interface utilisateur de la console
-Définissez la variable d'environnement `GITHUB_CLIENT_ID` lorsque vous exécutez l'image Docker `bencher-ui`. (ex : `GITHUB_CLIENT_ID=Iv1.12864abcd1232048`) Si l'ID du client est manquant, alors les boutons GitHub n'apparaîtront pas dans l'UI.
+Définissez la variable d'environnement `GITHUB_CLIENT_ID` lorsque vous exécutez l'image Docker `bencher-console`. (ex : `GITHUB_CLIENT_ID=Iv1.12864abcd1232048`) Si l'ID du client est manquant, alors les boutons GitHub n'apparaîtront pas dans l'UI.
 
 ### Serveur API
 Ajoutez le `client_id` et le `client_secret` à [la section `plus.github` de la config du serveur](/docs/fr/reference/server-config/#plusgithub). Si la section GitHub est manquante, alors le serveur échouera pour toute demande d'authentification GitHub.

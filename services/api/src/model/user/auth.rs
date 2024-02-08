@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use async_trait::async_trait;
 #[cfg(feature = "plus")]
 use bencher_json::system::payment::JsonCustomer;
@@ -62,7 +64,7 @@ impl AuthUser {
         let conn = &mut *context.conn().await;
         let claims = context
             .token_key
-            .validate_client(bearer_token.as_ref())
+            .validate_client(&bearer_token)
             .map_err(|e| bad_request_error(format!("Failed to validate JSON Web Token: {e}")))?;
         let email = claims.email();
         let query_user = QueryUser::get_with_email(conn, email)?;
@@ -228,7 +230,7 @@ impl AuthUser {
     }
 }
 
-impl std::ops::Deref for AuthUser {
+impl Deref for AuthUser {
     type Target = QueryUser;
 
     fn deref(&self) -> &Self::Target {
@@ -264,8 +266,10 @@ impl From<Jwt> for BearerToken {
     }
 }
 
-impl AsRef<Jwt> for BearerToken {
-    fn as_ref(&self) -> &Jwt {
+impl Deref for BearerToken {
+    type Target = Jwt;
+
+    fn deref(&self) -> &Self::Target {
         &self.0
     }
 }

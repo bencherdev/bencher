@@ -1,4 +1,7 @@
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    ops::Deref,
+};
 
 use bencher_json::{
     sanitize_json,
@@ -21,12 +24,18 @@ pub const API_NAME: &str = "Bencher API";
 pub const BENCHER_CONFIG: &str = "BENCHER_CONFIG";
 pub const BENCHER_CONFIG_PATH: &str = "BENCHER_CONFIG_PATH";
 
-const DEFAULT_CONFIG_PATH: &str = "bencher.json";
+#[cfg(debug_assertions)]
+const DEFAULT_CONFIG_PATH: &str = "etc/bencher.json";
+#[cfg(not(debug_assertions))]
+const DEFAULT_CONFIG_PATH: &str = "/etc/bencher/bencher.json";
 const DEFAULT_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
 
 // 1 megabyte or 1_048_576 bytes
 const DEFAULT_MAX_BODY_SIZE: usize = 2 << 19;
+#[cfg(debug_assertions)]
 const DEFAULT_DB_PATH: &str = "data/bencher.db";
+#[cfg(not(debug_assertions))]
+const DEFAULT_DB_PATH: &str = "/var/lib/bencher/data/bencher.db";
 const DEFAULT_SMTP_PORT: u16 = 587;
 
 #[cfg(debug_assertions)]
@@ -60,12 +69,6 @@ pub enum ConfigError {
     WriteFile(String, std::io::Error),
     #[error("Failed to parse default config ({0:?}): {1}")]
     ParseDefault(Box<JsonConfig>, serde_json::Error),
-}
-
-impl AsRef<JsonConfig> for Config {
-    fn as_ref(&self) -> &JsonConfig {
-        &self.0
-    }
 }
 
 impl Config {
@@ -223,5 +226,13 @@ impl Default for Config {
 impl From<Config> for JsonConfig {
     fn from(config: Config) -> Self {
         config.0
+    }
+}
+
+impl Deref for Config {
+    type Target = JsonConfig;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }

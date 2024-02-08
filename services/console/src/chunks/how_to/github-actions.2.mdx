@@ -1,5 +1,7 @@
 ```yaml
-on: pull_request
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
 
 jobs:
   benchmark_pr_with_bencher:

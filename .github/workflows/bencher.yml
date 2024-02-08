@@ -11,26 +11,23 @@ on:
 env:
   # General
   CARGO_TERM_COLOR: always
-  GITHUB_REGISTRY: ghcr.io
-  FLY_REGISTRY: registry.fly.io
   MOLD_VERSION: 2.4.0
+  GITHUB_REGISTRY: ghcr.io
   # API
-  API_BUILDER_DOCKER_IMAGE: bencher-api-builder
-  API_LOCAL_DOCKER_IMAGE: bencher-api-local
-  API_LITESTREAM_DOCKER_IMAGE: bencher-api-litestream
+  API_DOCKER_IMAGE: bencher-api
   LITESTREAM_VERSION: 0.3.13
+  LITESTREAM_ARCH: amd64
+  FLY_REGISTRY: registry.fly.io
   # CLI
   CLI_BIN_NAME: bencher
-  ZIG_VERSION: 0.18.1
+  ZIG_BUILD_VERSION: 0.18.3
   # Use minimum supported glibc version for Rust Tier 1
   # https://doc.rust-lang.org/nightly/rustc/platform-support.html#tier-1-with-host-tools
   GLIBC_VERSION: 2.17
   # WASM
   WASM_BENCHER_VALID: bencher-valid-pkg
-  # UI
-  UI_BUILDER_DOCKER_IMAGE: bencher-ui-builder
-  UI_DOCKER_IMAGE: bencher-ui
-  UI_BUILD_DIST: bencher-ui-dist
+  # Console
+  CONSOLE_DOCKER_IMAGE: bencher-console
   # Dev Container
   DEV_CONTAINER_DOCKER_IMAGE: bencher-dev-container
   # Cache
@@ -84,6 +81,8 @@ jobs:
           - os: ubuntu-latest
             source: devel
           - os: ubuntu-latest
+            source: download
+          - os: ubuntu-latest
             source: script
           # MacOS
           - os: macos-latest
@@ -91,12 +90,16 @@ jobs:
           - os: macos-latest
             source: devel
           - os: macos-latest
+            source: download
+          - os: macos-latest
             source: script
           # Windows
           - os: windows-latest
             source: main
           - os: windows-latest
             source: devel
+          - os: windows-latest
+            source: download
           - os: windows-latest
             source: script
     runs-on: ${{ matrix.os }}
@@ -107,12 +110,20 @@ jobs:
         if: matrix.source == 'main'
       - uses: bencherdev/bencher@devel
         if: matrix.source == 'devel'
+      - name: Unix CLI Download Install Script
+        if: matrix.source == 'download' && matrix.os != 'windows-latest'
+        run: curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
+      - name: Windows CLI Download Install Script
+        if: matrix.source == 'download' && matrix.os == 'windows-latest'
+        run: irm https://bencher.dev/download/install-cli.ps1 | iex
+      - uses: actions/checkout@v4
+        if: matrix.source == 'script'
       - name: Unix CLI Install Script
         if: matrix.source == 'script' && matrix.os != 'windows-latest'
-        run: curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
+        run: cat services/cli/templates/output/install-cli.sh | sh
       - name: Windows CLI Install Script
         if: matrix.source == 'script' && matrix.os == 'windows-latest'
-        run: irm https://bencher.dev/download/install-cli.ps1 | iex
+        run: gc -Raw services/cli/templates/output/install-cli.ps1 | iex
       - name: Run current Bencher CLI GitHub Action
         run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
 
@@ -175,7 +186,7 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Generate OpenAPI Spec
-        run: cargo xtask swagger
+        run: cargo xtask-api swagger
       - name: Check OpenAPI Spec for changes
         run: git diff --exit-code
       - name: Generate Unix CLI install scripts
@@ -211,7 +222,7 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: cargo test
-        run: RUST_BACKTRACE=1 cargo test -- --nocapture
+        run: RUST_BACKTRACE=1 cargo test --all-features -- --nocapture
       - name: Upload Perf JPEG
         uses: actions/upload-artifact@v4
         with:
@@ -229,7 +240,7 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: cargo test
-        run: RUST_BACKTRACE=1 cargo test -- --nocapture
+        run: RUST_BACKTRACE=1 cargo test --all-features -- --nocapture
       - name: Upload Perf JPEG
         uses: actions/upload-artifact@v4
         with:
@@ -247,8 +258,9 @@ jobs:
           # Linux
           - os: ubuntu-latest
             smoke_test: localhost
-          - os: ubuntu-latest
-            smoke_test: docker
+          # TODO re-enable when non-arm images are pushed
+          # - os: ubuntu-latest
+          #   smoke_test: docker
           # MacOS
           - os: macos-latest
             smoke_test: localhost
@@ -423,13 +435,15 @@ jobs:
       - name: Install nightly toolchain
         run: rustup toolchain install nightly
       - name: Install udeps
-        run: cargo install --version 0.1.42 --locked --force cargo-udeps
+        run: cargo install --version 0.1.45 --locked --force cargo-udeps
       - name: Run API udeps
         working-directory: ./services/api
+        # TODO remove once servo error is fixed
+        continue-on-error: true
         run: cargo +nightly udeps --all-targets
       - name: Run CLI udeps
         working-directory: ./services/cli
-        run: cargo +nightly udeps --all-targets --features seed
+        run: cargo +nightly udeps --all-targets
 
   # Pretty JS
   npx_biome_format:
@@ -551,118 +565,46 @@ jobs:
   # API Docker
   # https://docs.docker.com/build/ci/github-actions/named-contexts/#using-with-a-container-builder
   # https://www.kenmuse.com/blog/implementing-docker-layer-caching-in-github-actions/
-  build_local_api_docker:
-    name: Build Local API
+  build_api_docker:
+    name: Build API Docker
     runs-on: ubuntu-latest
     timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
     continue-on-error: ${{ github.ref == 'refs/heads/express' }}
-    services:
-      registry:
-        image: registry:2
-        ports:
-          - 5000:5000
     steps:
       - uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          driver-opts: network=host
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.GITHUB_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build Builder Stage
+      - name: Build API Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./services/api/builder.Dockerfile
-          tags: localhost:5000/${{ env.API_BUILDER_DOCKER_IMAGE }}
+          file: ./services/api/Dockerfile
+          tags: ${{ env.API_DOCKER_IMAGE }}
           build-args: |
             MOLD_VERSION=${{ env.MOLD_VERSION }}
-          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_BUILDER_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }}
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_BUILDER_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }},mode=max
-          push: true
-      - name: Tag Cached Builder
-        run: docker image ls -a
-      - name: Build Local API
-        uses: docker/build-push-action@v5
-        with:
-          context: ./services/api
-          file: ./services/api/local.Dockerfile
-          tags: ${{ env.API_LOCAL_DOCKER_IMAGE }}
-          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_LOCAL_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }}
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_LOCAL_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }},mode=max
-          build-contexts: |
-            ${{ env.API_BUILDER_DOCKER_IMAGE }}=docker-image://localhost:5000/${{ env.API_BUILDER_DOCKER_IMAGE }}:latest
-          load: true
-          push: false
-      - name: Save Local API
-        run: |
-          docker save ${{ env.API_LOCAL_DOCKER_IMAGE }} \
-          | gzip > ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
-      - name: Upload Local API Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
-          path: ./${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
-          if-no-files-found: error
-
-  build_litestream_api_docker:
-    name: Build Litestream API
-    runs-on: ubuntu-latest
-    services:
-      registry:
-        image: registry:2
-        ports:
-          - 5000:5000
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          driver-opts: network=host
-      - name: Log in to the Container registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.GITHUB_REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build Builder Stage
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./services/api/builder.Dockerfile
-          tags: localhost:5000/${{ env.API_BUILDER_DOCKER_IMAGE }}
-          build-args: |
-            MOLD_VERSION=${{ env.MOLD_VERSION }}
-          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_BUILDER_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }}
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_BUILDER_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }},mode=max
-          push: true
-      - name: Build Litestream API
-        uses: docker/build-push-action@v5
-        with:
-          context: ./services/api
-          file: ./services/api/litestream.Dockerfile
-          tags: ${{ env.API_LITESTREAM_DOCKER_IMAGE }}
-          build-args: |
             LITESTREAM_VERSION=${{ env.LITESTREAM_VERSION }}
-          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_LITESTREAM_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }}
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_LITESTREAM_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }},mode=max
-          build-contexts: |
-            ${{ env.API_BUILDER_DOCKER_IMAGE }}=docker-image://localhost:5000/${{ env.API_BUILDER_DOCKER_IMAGE }}:latest
+            LITESTREAM_ARCH=${{ env.LITESTREAM_ARCH }}
+          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }}
+          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }},mode=max
           load: true
           push: false
-      - name: Save Litestream API
+      - name: Save API Docker Image
         run: |
-          docker save ${{ env.API_LITESTREAM_DOCKER_IMAGE }} \
-          | gzip > ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
-      - name: Upload Litestream API Artifact
+          docker save ${{ env.API_DOCKER_IMAGE }} \
+          | gzip > ${{ env.API_DOCKER_IMAGE }}.tar.gz
+      - name: Upload API Docker Image Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
-          path: ./${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
+          name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
+          path: ./${{ env.API_DOCKER_IMAGE }}.tar.gz
           if-no-files-found: error
 
   # CLI
@@ -702,10 +644,10 @@ jobs:
       - name: Install Rust target
         run: rustup target add ${{ matrix.target }}
       - uses: goto-bus-stop/setup-zig@v2
-        if: (!startsWith(matrix.build, 'windows'))
+        if: startsWith(matrix.build, 'linux')
       - name: Install zigbuild
-        if: (!startsWith(matrix.build, 'windows'))
-        run: cargo install --version ${{ env.ZIG_VERSION }} --locked --force cargo-zigbuild
+        if: startsWith(matrix.build, 'linux')
+        run: cargo install --version ${{ env.ZIG_BUILD_VERSION }} --locked --force cargo-zigbuild
       # Build
       - name: cargo zigbuild Linux CLI
         if: startsWith(matrix.build, 'linux')
@@ -714,7 +656,7 @@ jobs:
       - name: cargo zigbuild macos CLI
         if: startsWith(matrix.build, 'macos')
         working-directory: ./services/cli
-        run: cargo zigbuild --profile release-small --target ${{ matrix.target }}
+        run: cargo build --profile release-small --target ${{ matrix.target }}
       - name: cargo build Windows CLI
         if: startsWith(matrix.build, 'windows')
         working-directory: ./services/cli
@@ -787,7 +729,7 @@ jobs:
       # Debian .deb
       - name: Build .deb package
         if: startsWith(matrix.build, 'linux')
-        run: cargo xtask deb --dir ${{ env.CLI_DEB_DIR }} --arch ${{ matrix.arch }} ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
+        run: cargo xtask-cli deb --dir ${{ env.CLI_DEB_DIR }} --arch ${{ matrix.arch }} ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
       - name: Test install .deb package
         if: matrix.build == 'linux-x86-64'
         run: sudo dpkg -i ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.deb
@@ -805,59 +747,42 @@ jobs:
           path: ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.deb
           if-no-files-found: error
 
-  build_ui_docker:
-    name: Build Console UI Docker
+  build_console_docker:
+    name: Build Console Docker
     runs-on: ubuntu-latest
     timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
     continue-on-error: ${{ github.ref == 'refs/heads/express' }}
-    services:
-      registry:
-        image: registry:2
-        ports:
-          - 5000:5000
     steps:
       - uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          driver-opts: network=host
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.GITHUB_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build Builder Stage
+      - name: Build Console Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./services/console/builder.Dockerfile
-          tags: localhost:5000/${{ env.UI_BUILDER_DOCKER_IMAGE }}
-          build-args: |
-            MOLD_VERSION=${{ env.MOLD_VERSION }}
-          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_BUILDER_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }}
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_BUILDER_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }},mode=max
-          push: true
-      - name: Build Console UI
-        uses: docker/build-push-action@v5
-        with:
-          context: ./services/console
-          tags: ${{ env.UI_DOCKER_IMAGE }}
-          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }}
-          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }},mode=max
-          build-contexts: |
-            ${{ env.UI_BUILDER_DOCKER_IMAGE }}=docker-image://localhost:5000/${{ env.UI_BUILDER_DOCKER_IMAGE }}:latest
+          file: ./services/console/Dockerfile
+          tags: ${{ env.CONSOLE_DOCKER_IMAGE }}
+          cache-from: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }}
+          cache-to: type=registry,ref=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}:cache-${{ env.CACHE_NAME }},mode=max
           load: true
           push: false
-      - name: Save Console UI
+      - name: Save Console Docker Image
         run: |
-          docker save ${{ env.UI_DOCKER_IMAGE }} \
-          | gzip > ${{ env.UI_DOCKER_IMAGE }}.tar.gz
-      - name: Upload Console UI Artifact
+          docker save ${{ env.CONSOLE_DOCKER_IMAGE }} \
+          | gzip > ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
+      - name: Upload Console Docker Image Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.UI_DOCKER_IMAGE }}.tar.gz
-          path: ./${{ env.UI_DOCKER_IMAGE }}.tar.gz
+          name: ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
+          path: ./${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
           if-no-files-found: error
 
   build_ui:
@@ -876,7 +801,7 @@ jobs:
         working-directory: ./services/console
         run: npm run netlify
       - name: Test Links
-        uses: lycheeverse/lychee-action@v1.9.2
+        uses: lycheeverse/lychee-action@v1.9.3
         with:
           args: --config ./services/console/lychee.toml ./services/console/dist
       - name: Failed Lychee
@@ -885,12 +810,12 @@ jobs:
         run: exit ${{ env.lychee_exit_code }}
 
   # API Fly.io
-  deploy_local_api_fly:
+  deploy_api_fly_dev:
     if: github.ref == 'refs/heads/devel'
-    name: Deploy Local API to Fly.io
+    name: Deploy API to Fly.io Dev
     runs-on: ubuntu-latest
     needs:
-      - build_local_api_docker
+      - build_api_docker
       - build_ui
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -899,11 +824,11 @@ jobs:
       - name: Download Local Artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
+          name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
       - name: Load & Tag Local Image
         run: |
-          docker load < ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
-          docker tag ${{ env.API_LOCAL_DOCKER_IMAGE }} ${{ env.FLY_REGISTRY }}/bencher-api-dev
+          docker load < ${{ env.API_DOCKER_IMAGE }}.tar.gz
+          docker tag ${{ env.API_DOCKER_IMAGE }} ${{ env.FLY_REGISTRY }}/bencher-api-dev
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Deploy Local API to Fly.io
         working-directory: ./services/api
@@ -925,11 +850,11 @@ jobs:
       - name: Run Smoke Test
         run: cargo xtask smoke-test dev
 
-  test_litestream_api_fly:
+  deploy_api_fly_test:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/express' || github.ref == 'refs/heads/devel'
-    name: Deploy Litestream API to Fly.io Test
+    name: Deploy API to Fly.io Test
     runs-on: ubuntu-latest
-    needs: build_litestream_api_docker
+    needs: build_api_docker
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
@@ -937,11 +862,11 @@ jobs:
       - name: Download Litestream Artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
+          name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
       - name: Load & Tag Litestream Image
         run: |
-          docker load < ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
-          docker tag ${{ env.API_LITESTREAM_DOCKER_IMAGE }} ${{ env.FLY_REGISTRY }}/bencher-api-test
+          docker load < ${{ env.API_DOCKER_IMAGE }}.tar.gz
+          docker tag ${{ env.API_DOCKER_IMAGE }} ${{ env.FLY_REGISTRY }}/bencher-api-test
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Deploy Litestream API to Fly.io Test
         working-directory: ./services/api
@@ -982,7 +907,7 @@ jobs:
       - test_bencher_valid_wasm
       - npx_vitest
       # Build
-      - build_litestream_api_docker
+      - build_api_docker
       - build_ui
       - build_cli
     env:
@@ -1006,11 +931,11 @@ jobs:
       - name: Backup API Server Database
         run: bencher server backup --host https://api.bencher.dev --compress --data-store aws_s3 --rm
 
-  deploy_litestream_api_fly:
-    name: Deploy Litestream API to Fly.io Prod
+  deploy_api_fly:
+    name: Deploy API to Fly.io Prod
     runs-on: ubuntu-latest
     needs:
-      - test_litestream_api_fly
+      - deploy_api_fly_test
       - backup_database
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -1019,13 +944,13 @@ jobs:
       - name: Download Litestream Artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
+          name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
       - name: Load & Tag Litestream Image
         run: |
-          docker load < ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
-          docker tag ${{ env.API_LITESTREAM_DOCKER_IMAGE }} ${{ env.FLY_REGISTRY }}/bencher-api
+          docker load < ${{ env.API_DOCKER_IMAGE }}.tar.gz
+          docker tag ${{ env.API_DOCKER_IMAGE }} ${{ env.FLY_REGISTRY }}/bencher-api
       - uses: superfly/flyctl-actions/setup-flyctl@master
-      - name: Deploy Litestream API to Fly.io Prod
+      - name: Deploy API to Fly.io Prod
         working-directory: ./services/api
         run: flyctl deploy --local-only --config fly/fly.toml --wait-timeout 300
       - uses: actions/cache@v4
@@ -1047,7 +972,7 @@ jobs:
   deploy_ui_netlify_dev:
     name: Deploy Console UI to Netlify
     runs-on: ubuntu-latest
-    needs: deploy_local_api_fly
+    needs: deploy_api_fly_dev
     steps:
       - uses: actions/checkout@v4
       - name: Download `bencher_valid` Artifact
@@ -1088,7 +1013,7 @@ jobs:
           echo '${{ toJson(steps.netlify.outputs) }}' > ./netlify.json
           cargo xtask netlify-test --dev
 
-  deploy_dev_notify:
+  deploy_notify_dev:
     name: Notify of deployment
     runs-on: ubuntu-latest
     needs: deploy_ui_netlify_dev
@@ -1109,10 +1034,10 @@ jobs:
       - name: Notify of deployment
         run: cargo xtask notify "Deployed ${{ github.ref_name }}"
 
-  deploy_ui_netlify_prod:
+  deploy_ui_netlify:
     name: Deploy UI to Netlify Prod
     runs-on: ubuntu-latest
-    needs: deploy_litestream_api_fly
+    needs: deploy_api_fly
     steps:
       - uses: actions/checkout@v4
       - name: Download `bencher_valid` Artifact
@@ -1154,10 +1079,10 @@ jobs:
           echo '${{ toJson(steps.netlify.outputs) }}' > ./netlify.json
           cargo xtask netlify-test
 
-  deploy_prod_notify:
+  deploy_notify:
     name: Notify of deployment
     runs-on: ubuntu-latest
-    needs: deploy_ui_netlify_prod
+    needs: deploy_ui_netlify
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
@@ -1200,9 +1125,8 @@ jobs:
       # Integrations
       - build_github_action
       # Build
-      - build_local_api_docker
-      - build_litestream_api_docker
-      - build_ui_docker
+      - build_api_docker
+      - build_console_docker
       - package_cli
     env:
       BUILD_LINUX_X86_64: linux-x86-64
@@ -1214,18 +1138,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # Download Docker
-      - name: Download Local API Docker Artifact
+      - name: Download API Docker Artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
-      - name: Download Litestream API Docker Artifact
+          name: ${{ env.API_DOCKER_IMAGE }}.tar.gz
+      - name: Download Console Docker Artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
-      - name: Download UI Docker Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ env.UI_DOCKER_IMAGE }}.tar.gz
+          name: ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
       # Download CLI
       - name: Download CLI Linux x86_64 Artifact
         uses: actions/download-artifact@v4
@@ -1261,12 +1181,10 @@ jobs:
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_ARM_64 }}.deb
       # Load
-      - name: Load Local API Image
-        run: docker load < ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
-      - name: Load Litestream API Image
-        run: docker load < ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
-      - name: Load UI Image
-        run: docker load < ${{ env.UI_DOCKER_IMAGE }}.tar.gz
+      - name: Load API Image
+        run: docker load < ${{ env.API_DOCKER_IMAGE }}.tar.gz
+      - name: Load Console Image
+        run: docker load < ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
       # Login GHCR
       - name: Log in to the Container registry
         uses: docker/login-action@v3
@@ -1275,25 +1193,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       # Tag & Push
-      - name: Tag & Push Local API Image
+      - name: Tag & Push API Image
         run: |
-          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_LOCAL_DOCKER_IMAGE }}
-          docker tag ${{ env.API_LOCAL_DOCKER_IMAGE }} ${GITHUB_IMAGE}:latest
-          docker tag ${{ env.API_LOCAL_DOCKER_IMAGE }} ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
+          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_DOCKER_IMAGE }}
+          docker tag ${{ env.API_DOCKER_IMAGE }} ${GITHUB_IMAGE}:latest
+          docker tag ${{ env.API_DOCKER_IMAGE }} ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
           docker push ${GITHUB_IMAGE}:latest
           docker push ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
-      - name: Tag & Push Litestream API Image
+      - name: Tag & Push Console Image
         run: |
-          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_LITESTREAM_DOCKER_IMAGE }}
-          docker tag ${{ env.API_LITESTREAM_DOCKER_IMAGE }} ${GITHUB_IMAGE}:latest
-          docker tag ${{ env.API_LITESTREAM_DOCKER_IMAGE }} ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
-          docker push ${GITHUB_IMAGE}:latest
-          docker push ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
-      - name: Tag & Push UI Image
-        run: |
-          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_DOCKER_IMAGE }}
-          docker tag ${{ env.UI_DOCKER_IMAGE }} ${GITHUB_IMAGE}:latest
-          docker tag ${{ env.UI_DOCKER_IMAGE }} ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
+          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.CONSOLE_DOCKER_IMAGE }}
+          docker tag ${{ env.CONSOLE_DOCKER_IMAGE }} ${GITHUB_IMAGE}:latest
+          docker tag ${{ env.CONSOLE_DOCKER_IMAGE }} ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
           docker push ${GITHUB_IMAGE}:latest
           docker push ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
       - uses: actions/cache@v4
@@ -1316,9 +1227,8 @@ jobs:
           prerelease: ${{ endsWith(github.ref, '-rc*') }}
           body_path: release-notes.md
           files: |
-            ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
-            ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
-            ${{ env.UI_DOCKER_IMAGE }}.tar.gz
+            ${{ env.API_DOCKER_IMAGE }}.tar.gz
+            ${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
             ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_X86_64 }}
             ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_LINUX_ARM_64 }}
             ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ env.BUILD_MACOS_X86_64 }}
@@ -1335,6 +1245,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v3
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:

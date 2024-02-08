@@ -42,7 +42,7 @@ sortOrder: 5
 ## GitHub应用配置
 
 ### 控制台UI
-在运行`bencher-ui` Docker镜像的时候，设定`GITHUB_CLIENT_ID`环境变量（例如：`GITHUB_CLIENT_ID=Iv1.12864abcd1232048`）。如果客户端ID丢失，GitHub的按钮将不会在UI上显示。
+在运行`bencher-console` Docker镜像的时候，设定`GITHUB_CLIENT_ID`环境变量（例如：`GITHUB_CLIENT_ID=Iv1.12864abcd1232048`）。如果客户端ID丢失，GitHub的按钮将不会在UI上显示。
 
 ### API服务器
 在服务器配置的[`plus.github`部分](/docs/zh/reference/server-config/#plusgithub)，添加 `client_id` 和 `client_secret`。如果GitHub部分丢失，服务器将无法接受GitHub的认证请求。

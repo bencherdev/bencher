@@ -6,6 +6,8 @@ edition.workspace = true
 
 [features]
 default = ["plus"]
+api = ["dep:bencher_api"]
+cli = ["dep:bencher_cli"]
 plus = [
     "bencher_json/plus",
     "dep:async-openai",
@@ -18,9 +20,9 @@ plus = [
 [dependencies]
 # Workspace
 anyhow.workspace = true
-bencher_api.workspace = true
+bencher_api = { workspace = true, optional = true }
 bencher_bing_index = { workspace = true, optional = true }
-bencher_cli.workspace = true
+bencher_cli = { workspace = true, optional = true }
 bencher_json = { workspace = true, features = ["lite"] }
 bencher_license = { workspace = true, optional = true }
 bencher_google_index = { workspace = true, optional = true }

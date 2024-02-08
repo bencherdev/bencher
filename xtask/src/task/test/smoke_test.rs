@@ -1,6 +1,5 @@
 use std::process::{Child, Command};
 
-use bencher_api::API_VERSION;
 use bencher_json::{
     JsonApiVersion, Jwt, Url, DEV_BENCHER_API_URL, LOCALHOST_BENCHER_API_URL, PROD_BENCHER_API_URL,
     TEST_BENCHER_API_URL,
@@ -10,6 +9,7 @@ use once_cell::sync::Lazy;
 use crate::{
     parser::{TaskExamples, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment},
     task::test::{examples::Examples, seed_test::SeedTest},
+    API_VERSION,
 };
 
 const DEV_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjQyMTU2LCJpYXQiOjE2OTg2NzQ4NjEsImlzcyI6Imh0dHBzOi8vZGV2ZWwtLWJlbmNoZXIubmV0bGlmeS5hcHAvIiwic3ViIjoibXVyaWVsLmJhZ2dlQG5vd2hlcmUuY29tIiwib3JnIjpudWxsfQ.9z7jmM53TcVzc1inDxTeX9_OR0PQPpZAsKsCE7lWHfo";

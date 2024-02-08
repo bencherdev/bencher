@@ -1,7 +1,9 @@
 ```yaml
 name: Run and Cache Benchmarks
 
-on: pull_request
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
 
 jobs:
   benchmark:

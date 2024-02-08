@@ -1,5 +1,6 @@
 use bencher_json::{
-    BENCHER_API_PORT, BENCHER_UI_PORT, LOCALHOST_BENCHER_API_URL_STR, LOCALHOST_BENCHER_URL_STR,
+    BENCHER_API_PORT, BENCHER_CONSOLE_PORT, LOCALHOST_BENCHER_API_URL_STR,
+    LOCALHOST_BENCHER_URL_STR,
 };
 use bollard::{
     container::{Config, CreateContainerOptions, StartContainerOptions},
@@ -20,7 +21,8 @@ use crate::{
 };
 
 use super::{
-    DockerError, BENCHER_API_CONTAINER, BENCHER_API_IMAGE, BENCHER_UI_CONTAINER, BENCHER_UI_IMAGE,
+    DockerError, BENCHER_API_CONTAINER, BENCHER_API_IMAGE, BENCHER_CONSOLE_CONTAINER,
+    BENCHER_CONSOLE_IMAGE,
 };
 
 #[derive(Debug, Clone)]
@@ -60,7 +62,7 @@ impl SubCmd for Up {
     async fn exec(&self) -> Result<(), CliError> {
         let docker = Docker::connect_with_local_defaults().map_err(DockerError::Daemon)?;
 
-        stop_container(&docker, BENCHER_UI_CONTAINER).await?;
+        stop_container(&docker, BENCHER_CONSOLE_CONTAINER).await?;
         stop_container(&docker, BENCHER_API_CONTAINER).await?;
 
         start_container(
@@ -74,9 +76,9 @@ impl SubCmd for Up {
         start_container(
             &docker,
             self.pull,
-            BENCHER_UI_IMAGE,
-            BENCHER_UI_CONTAINER,
-            BENCHER_UI_PORT,
+            BENCHER_CONSOLE_IMAGE,
+            BENCHER_CONSOLE_CONTAINER,
+            BENCHER_CONSOLE_PORT,
         )
         .await?;
 
@@ -91,7 +93,7 @@ impl SubCmd for Up {
             cli_println!("Press Ctrl+C to stop Bencher Self-Hosted.");
             cli_println!("");
             tail_container_logs(&docker).await;
-            stop_container(&docker, BENCHER_UI_CONTAINER).await?;
+            stop_container(&docker, BENCHER_CONSOLE_CONTAINER).await?;
             stop_container(&docker, BENCHER_API_CONTAINER).await?;
         }
 

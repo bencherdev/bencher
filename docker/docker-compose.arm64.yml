@@ -1,0 +1,37 @@
+version: "3.9"
+services:
+  bencher_api_compose:
+    build:
+      context: ..
+      dockerfile: ./services/api/Dockerfile
+      args:
+        MOLD_VERSION: 2.4.0
+        LITESTREAM_VERSION: 0.3.13
+        LITESTREAM_ARCH: arm64
+    image: bencher-api
+    container_name: bencher_api
+    ports:
+      - 61016:61016
+    volumes:
+      - "../services/api/etc:/etc/bencher"
+      - "../services/api/data:/var/lib/bencher/data"
+    # environment:
+      # Set configuration string or filepath
+      # BENCHER_CONFIG:
+      # BENCHER_CONFIG_PATH:
+
+  bencher_console_compose:
+    build:
+      context: ..
+      dockerfile: ./services/console/Dockerfile
+    image: bencher-console
+    container_name: bencher_console
+    ports:
+      - 3000:3000
+    environment:
+      - BENCHER_API_URL=http://127.0.0.1:61016
+      # This is needed for Docker-to-Docker communication when using a local `BENCHER_API_URL`
+      # Do not set this when using a remote `BENCHER_API_URL`, such as https://bencher.example.com
+      - INTERNAL_API_URL=http://host.docker.internal:61016
+    depends_on:
+      - bencher_api_compose

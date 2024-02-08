@@ -5,7 +5,6 @@ use bencher_github::GitHub;
 #[cfg(feature = "plus")]
 use bencher_license::Licensor;
 use bencher_token::TokenKey;
-use dropshot::HttpError;
 use tokio::sync::mpsc::Sender;
 use url::Url;
 
@@ -58,7 +57,7 @@ impl ApiContext {
     }
 
     #[cfg(feature = "plus")]
-    pub fn biller(&self) -> Result<&Biller, HttpError> {
+    pub fn biller(&self) -> Result<&Biller, dropshot::HttpError> {
         self.biller.as_ref().ok_or_else(|| {
             crate::error::locked_error("Tried to use a Bencher Cloud route when Self-Hosted")
         })

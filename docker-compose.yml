@@ -1,21 +1,27 @@
 version: "3.9"
 services:
-  bencher_api:
-    image: ghcr.io/bencherdev/bencher-api-local:latest
-    container_name: bencher_api_local
+  bencher_api_compose:
+    image: ghcr.io/bencherdev/bencher-api:latest
+    container_name: bencher_api
     ports:
       - 61016:61016
     volumes:
-      - "./data:/data"
-      # environment:
+      - "./services/api/etc:/etc/bencher"
+      - "./services/api/data:/var/lib/bencher/data"
+    # environment:
       # Set configuration string or file path
       # - BENCHER_CONFIG=
       # - BENCHER_CONFIG_PATH=
 
-  bencher_ui:
-    image: ghcr.io/bencherdev/bencher-ui:latest
-    container_name: bencher_ui
+  bencher_console_compose:
+    image: ghcr.io/bencherdev/bencher-console:latest
+    container_name: bencher_console
     ports:
       - 3000:3000
+    environment:
+      - BENCHER_API_URL=http://127.0.0.1:61016
+      # This is needed for Docker-to-Docker communication when using a local `BENCHER_API_URL`
+      # Do not set this when using a remote `BENCHER_API_URL`, such as https://bencher.example.com
+      - INTERNAL_API_URL=http://host.docker.internal:61016
     depends_on:
-      - bencher_api
+      - bencher_api_compose

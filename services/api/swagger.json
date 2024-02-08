@@ -7038,6 +7038,20 @@
           "self_hosted"
         ]
       },
+      "JsonLitestream": {
+        "type": "object",
+        "properties": {
+          "replicas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonReplica"
+            }
+          }
+        },
+        "required": [
+          "replicas"
+        ]
+      },
       "JsonLogging": {
         "type": "object",
         "properties": {
@@ -7890,6 +7904,14 @@
               }
             ]
           },
+          "litestream": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonLitestream"
+              }
+            ]
+          },
           "stats": {
             "nullable": true,
             "allOf": [
@@ -8063,6 +8085,162 @@
         "items": {
           "$ref": "#/components/schemas/JsonProject"
         }
+      },
+      "JsonReplica": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "scheme": {
+                "type": "string",
+                "enum": [
+                  "file"
+                ]
+              }
+            },
+            "required": [
+              "path",
+              "scheme"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "host": {
+                "type": "string"
+              },
+              "key_path": {
+                "nullable": true,
+                "type": "string"
+              },
+              "password": {
+                "$ref": "#/components/schemas/Secret"
+              },
+              "path": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer",
+                "format": "uint16",
+                "minimum": 0
+              },
+              "scheme": {
+                "type": "string",
+                "enum": [
+                  "sftp"
+                ]
+              },
+              "user": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "host",
+              "password",
+              "path",
+              "port",
+              "scheme",
+              "user"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "access_key_id": {
+                "type": "string"
+              },
+              "bucket": {
+                "type": "string"
+              },
+              "endpoint": {
+                "nullable": true,
+                "type": "string"
+              },
+              "force_path_style": {
+                "nullable": true,
+                "type": "boolean"
+              },
+              "path": {
+                "type": "string"
+              },
+              "region": {
+                "nullable": true,
+                "type": "string"
+              },
+              "scheme": {
+                "type": "string",
+                "enum": [
+                  "s3"
+                ]
+              },
+              "secret_access_key": {
+                "$ref": "#/components/schemas/Secret"
+              }
+            },
+            "required": [
+              "access_key_id",
+              "bucket",
+              "path",
+              "scheme",
+              "secret_access_key"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "account_key": {
+                "$ref": "#/components/schemas/Secret"
+              },
+              "account_name": {
+                "type": "string"
+              },
+              "bucket": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "scheme": {
+                "type": "string",
+                "enum": [
+                  "abs"
+                ]
+              }
+            },
+            "required": [
+              "account_key",
+              "account_name",
+              "bucket",
+              "path",
+              "scheme"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "bucket": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "scheme": {
+                "type": "string",
+                "enum": [
+                  "gcs"
+                ]
+              }
+            },
+            "required": [
+              "bucket",
+              "path",
+              "scheme"
+            ]
+          }
+        ]
       },
       "JsonReport": {
         "type": "object",

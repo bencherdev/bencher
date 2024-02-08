@@ -6,12 +6,9 @@ kill_timeout = "6s"
 [build]
 image = "registry.fly.io/bencher-api"
 
-[env]
-LITESTREAM_DB_PATH = "/data/bencher.db"
-
 [[mounts]]
 source = "bencher_data_machines"
-destination = "/data"
+destination = "/var/lib/bencher/data"
 processes = ["app"]
 
 [[services]]

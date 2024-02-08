@@ -26,7 +26,7 @@ Bencher consists of:
 
 - `bencher` CLI
 - Bencher API Server
-- Bencher Web UI
+- Bencher Console Web UI
 
 <br />
 

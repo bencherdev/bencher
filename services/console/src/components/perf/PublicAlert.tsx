@@ -7,12 +7,13 @@ import { authUser } from "../../util/auth";
 import type { DeckConfig } from "../console/deck/hand/Deck";
 import Deck from "../console/deck/hand/Deck";
 import DeckHeaderButton from "../console/deck/header/DeckHeaderButton";
+import { httpGet } from "../../util/http";
 
 export interface Props {
 	apiUrl: string;
 	params: Params;
 	deck: DeckConfig;
-	data: JsonAlert;
+	data: undefined | JsonAlert;
 }
 
 const PublicAlert = (props: Props) => {
@@ -24,7 +25,19 @@ const PublicAlert = (props: Props) => {
 	const title = createMemo(() => props.data?.benchmark?.name);
 
 	const getData = async (_bencher_valid: InitOutput) => {
-		return props.data;
+		if (props.data) {
+			return props.data;
+		}
+
+		const path = `/v0/projects/${props.params?.project}/alerts/${props.params?.alert}`;
+		return await httpGet(props.apiUrl, path, null)
+			.then((resp) => {
+				return resp?.data as JsonAlert;
+			})
+			.catch((error) => {
+				console.error(error);
+				return {};
+			});
 	};
 	const [alertData, { refetch }] = createResource(bencher_valid, getData);
 	const [_loopback, setLoopback] = createSignal(null);
