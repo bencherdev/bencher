@@ -224,7 +224,7 @@ pub(crate) mod test_rust_iai {
     }
 
     #[test]
-    fn test_adapter_rust_aia() {
+    fn test_adapter_rust_iai() {
         let results = convert_rust_iai("two");
         validate_adapter_rust_iai(&results);
     }
@@ -257,7 +257,7 @@ pub(crate) mod test_rust_iai {
     }
 
     #[test]
-    fn test_adapter_rust_aia_change() {
+    fn test_adapter_rust_iai_change() {
         let results = convert_rust_iai("change");
         assert_eq!(results.inner.len(), 2);
 
