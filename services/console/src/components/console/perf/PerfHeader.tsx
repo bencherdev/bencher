@@ -188,7 +188,7 @@ const ShareModal = (props: ShareProps) => {
 				title() ? title() : props.project()?.name
 			}" alt="${title() ? `${title()} for ` : ""}${
 				props.project()?.name
-			} - Bencher" width="1024" height="768" /></a>`,
+			} - Bencher" /></a>`,
 	);
 
 	const embed_tag = createMemo(

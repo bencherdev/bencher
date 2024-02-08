@@ -180,7 +180,7 @@ fn run_litestream(
             .join(&config.database.file)
     };
     #[cfg(debug_assertions)]
-    let config_path = PathBuf::from("litestream.yml");
+    let config_path = PathBuf::from("etc/litestream.yml");
     #[cfg(not(debug_assertions))]
     let config_path = PathBuf::from("/etc/litestream.yml");
     let yaml = litestream

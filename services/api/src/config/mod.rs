@@ -25,7 +25,7 @@ pub const BENCHER_CONFIG: &str = "BENCHER_CONFIG";
 pub const BENCHER_CONFIG_PATH: &str = "BENCHER_CONFIG_PATH";
 
 #[cfg(debug_assertions)]
-const DEFAULT_CONFIG_PATH: &str = "bencher.json";
+const DEFAULT_CONFIG_PATH: &str = "etc/bencher.json";
 #[cfg(not(debug_assertions))]
 const DEFAULT_CONFIG_PATH: &str = "/etc/bencher/bencher.json";
 const DEFAULT_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
