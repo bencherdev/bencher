@@ -26,11 +26,16 @@ pub struct TaskExamples {
 /// Template kind
 #[derive(ValueEnum, Debug, Clone, Copy)]
 #[clap(rename_all = "snake_case")]
+#[allow(clippy::enum_variant_names)]
 pub enum TaskExample {
     /// Rust libtest bench
     RustBench,
     /// Rust Criterion
     RustCriterion,
+    /// Rust Iai
+    RustIai,
+    /// Rust Iai Callgrind
+    RustIaiCallgrind,
 }
 
 #[derive(Parser, Debug)]

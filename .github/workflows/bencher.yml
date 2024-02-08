@@ -277,6 +277,10 @@ jobs:
     timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
     continue-on-error: ${{ github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') && matrix.smoke_test == 'docker' }}
     steps:
+      - uses: jlumbroso/free-disk-space@main
+        if: matrix.os == 'ubuntu-latest'
+        with:
+          large-packages: false
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)

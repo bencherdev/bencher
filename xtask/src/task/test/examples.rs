@@ -12,9 +12,12 @@ pub struct Examples {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[allow(clippy::enum_variant_names)]
 pub enum Example {
     RustBench,
     RustCriterion,
+    RustIai,
+    RustIaiCallgrind,
 }
 
 impl TryFrom<TaskExamples> for Examples {
@@ -39,6 +42,8 @@ impl From<TaskExample> for Example {
         match example {
             TaskExample::RustBench => Self::RustBench,
             TaskExample::RustCriterion => Self::RustCriterion,
+            TaskExample::RustIai => Self::RustIai,
+            TaskExample::RustIaiCallgrind => Self::RustIaiCallgrind,
         }
     }
 }
@@ -58,7 +63,14 @@ impl Examples {
 
 impl Example {
     pub fn all() -> &'static [Self] {
-        &[Self::RustBench]
+        &[
+            Self::RustBench,
+            Self::RustCriterion,
+            #[cfg(target_os = "linux")]
+            Self::RustIai,
+            #[cfg(target_os = "linux")]
+            Self::RustIaiCallgrind,
+        ]
     }
 
     pub fn require(self) -> anyhow::Result<()> {
@@ -70,6 +82,21 @@ impl Example {
                 Ok(())
             },
             Self::RustCriterion => Ok(()),
+            Self::RustIai => {
+                Command::new("sudo")
+                    .args(["apt", "install", "valgrind"])
+                    .status()?;
+                Ok(())
+            },
+            Self::RustIaiCallgrind => {
+                Command::new("sudo")
+                    .args(["apt", "install", "valgrind"])
+                    .status()?;
+                Command::new("cargo")
+                    .args(["install", "iai-callgrind-runner"])
+                    .status()?;
+                Ok(())
+            },
         }
     }
 
@@ -77,13 +104,15 @@ impl Example {
         match self {
             Self::RustBench => "./examples/rust/bench",
             Self::RustCriterion => "./examples/rust/criterion",
+            Self::RustIai => "./examples/rust/iai",
+            Self::RustIaiCallgrind => "./examples/rust/iai-callgrind",
         }
     }
 
     pub fn cmd(&self) -> &str {
         match self {
             Self::RustBench => "cargo +nightly bench",
-            Self::RustCriterion => "cargo bench",
+            Self::RustCriterion | Self::RustIai | Self::RustIaiCallgrind => "cargo bench",
         }
     }
 }

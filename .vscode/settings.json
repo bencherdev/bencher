@@ -94,6 +94,7 @@
     "thiserror",
     "typeshare",
     "UNIONPAY",
+    "valgrind",
     "vcentered",
     "wordmark"
   ]

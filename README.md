@@ -325,6 +325,7 @@ Everything you need will already be there!
 Once set up, both the UI and API should be built, running, and seeded at [localhost:3000](http://localhost:3000) and [localhost:61016](http://localhost:61016) respectively.
 To make any changes to the UI or API though, you will have to exit the startup process and restart the UI and API yourself.
 
+#### 🐰 All pull requests should target the `devel` branch
 
 <br />
 <p align="center">
