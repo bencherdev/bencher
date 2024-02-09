@@ -50,7 +50,6 @@ static INSTRUCTIONS_UNITS: Lazy<ResourceName> =
     Lazy::new(|| INSTRUCTIONS_UNITS_STR.parse().expect(MEASURE_UNITS_ERROR));
 
 pub const L1_ACCESSES_NAME_STR: &str = "L1 Accesses";
-pub const L1_ACCESSES_NAME_STR_IAI_CALLGRIND: &str = "L1 Hits";
 pub const L1_ACCESSES_SLUG_STR: &str = "l1-accesses";
 pub const L1_ACCESSES_UNITS_STR: &str = "accesses";
 
@@ -62,7 +61,6 @@ static L1_ACCESSES_UNITS: Lazy<ResourceName> =
     Lazy::new(|| L1_ACCESSES_UNITS_STR.parse().expect(MEASURE_UNITS_ERROR));
 
 pub const L2_ACCESSES_NAME_STR: &str = "L2 Accesses";
-pub const L2_ACCESSES_NAME_STR_IAI_CALLGRIND: &str = "L2 Hits";
 pub const L2_ACCESSES_SLUG_STR: &str = "l2-accesses";
 pub const L2_ACCESSES_UNITS_STR: &str = "accesses";
 
@@ -74,7 +72,6 @@ static L2_ACCESSES_UNITS: Lazy<ResourceName> =
     Lazy::new(|| L2_ACCESSES_UNITS_STR.parse().expect(MEASURE_UNITS_ERROR));
 
 pub const RAM_ACCESSES_NAME_STR: &str = "RAM Accesses";
-pub const RAM_ACCESSES_NAME_STR_IAI_CALLGRIND: &str = "RAM Hits";
 pub const RAM_ACCESSES_SLUG_STR: &str = "ram-accesses";
 pub const RAM_ACCESSES_UNITS_STR: &str = "accesses";
 
@@ -85,19 +82,16 @@ static RAM_ACCESSES_SLUG: Lazy<Option<Slug>> =
 static RAM_ACCESSES_UNITS: Lazy<ResourceName> =
     Lazy::new(|| RAM_ACCESSES_UNITS_STR.parse().expect(MEASURE_UNITS_ERROR));
 
-pub const TOTAL_READ_WRITE_NAME_STR: &str = "Total read+write";
-pub const TOTAL_READ_WRITE_SLUG_STR: &str = "total-read-write";
-pub const TOTAL_READ_WRITE_UNITS_STR: &str = "accesses";
+pub const TOTAL_ACCESSES_NAME_STR: &str = "Total Accesses";
+pub const TOTAL_ACCESSES_SLUG_STR: &str = "total-accesses";
+pub const TOTAL_ACCESSES_UNITS_STR: &str = "accesses";
 
-static TOTAL_READ_WRITE_NAME: Lazy<ResourceName> =
-    Lazy::new(|| TOTAL_READ_WRITE_NAME_STR.parse().expect(MEASURE_NAME_ERROR));
-static TOTAL_READ_WRITE_SLUG: Lazy<Option<Slug>> =
-    Lazy::new(|| Some(TOTAL_READ_WRITE_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR)));
-static TOTAL_READ_WRITE_UNITS: Lazy<ResourceName> = Lazy::new(|| {
-    TOTAL_READ_WRITE_UNITS_STR
-        .parse()
-        .expect(MEASURE_UNITS_ERROR)
-});
+static TOTAL_ACCESSES_NAME: Lazy<ResourceName> =
+    Lazy::new(|| TOTAL_ACCESSES_NAME_STR.parse().expect(MEASURE_NAME_ERROR));
+static TOTAL_ACCESSES_SLUG: Lazy<Option<Slug>> =
+    Lazy::new(|| Some(TOTAL_ACCESSES_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR)));
+static TOTAL_ACCESSES_UNITS: Lazy<ResourceName> =
+    Lazy::new(|| TOTAL_ACCESSES_SLUG_STR.parse().expect(MEASURE_UNITS_ERROR));
 
 pub const ESTIMATED_CYCLES_NAME_STR: &str = "Estimated Cycles";
 pub const ESTIMATED_CYCLES_SLUG_STR: &str = "estimated-cycles";
@@ -172,11 +166,11 @@ impl JsonNewMeasure {
         }
     }
 
-    pub fn total_read_write() -> Self {
+    pub fn total_accesses() -> Self {
         Self {
-            name: TOTAL_READ_WRITE_NAME.clone(),
-            slug: TOTAL_READ_WRITE_SLUG.clone(),
-            units: TOTAL_READ_WRITE_UNITS.clone(),
+            name: TOTAL_ACCESSES_NAME.clone(),
+            slug: TOTAL_ACCESSES_SLUG.clone(),
+            units: TOTAL_ACCESSES_UNITS.clone(),
         }
     }
 

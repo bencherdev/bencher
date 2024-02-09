@@ -5,7 +5,7 @@ use bencher_json::{
         measure::{
             ESTIMATED_CYCLES_SLUG_STR, INSTRUCTIONS_SLUG_STR, L1_ACCESSES_SLUG_STR,
             L2_ACCESSES_SLUG_STR, LATENCY_SLUG_STR, RAM_ACCESSES_SLUG_STR, THROUGHPUT_SLUG_STR,
-            TOTAL_READ_WRITE_SLUG_STR,
+            TOTAL_ACCESSES_SLUG_STR,
         },
         metric::Mean,
     },
@@ -44,8 +44,8 @@ pub static RAM_ACCESSES_NAME_ID: Lazy<NameId> =
     Lazy::new(|| RAM_ACCESSES_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR));
 
 #[allow(clippy::expect_used)]
-pub static TOTAL_READ_WRITE_NAME_ID: Lazy<NameId> =
-    Lazy::new(|| TOTAL_READ_WRITE_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR));
+pub static TOTAL_ACCESSES_NAME_ID: Lazy<NameId> =
+    Lazy::new(|| TOTAL_ACCESSES_SLUG_STR.parse().expect(MEASURE_SLUG_ERROR));
 
 #[allow(clippy::expect_used)]
 pub static ESTIMATED_CYCLES_NAME_ID: Lazy<NameId> =
@@ -202,7 +202,7 @@ impl AdapterResults {
                         (RAM_ACCESSES_NAME_ID.clone(), json_metric)
                     },
                     IaiCallgrindMeasure::TotalReadWrite(json_metric) => {
-                        (TOTAL_READ_WRITE_NAME_ID.clone(), json_metric)
+                        (TOTAL_ACCESSES_NAME_ID.clone(), json_metric)
                     },
                     IaiCallgrindMeasure::EstimatedCycles(json_metric) => {
                         (ESTIMATED_CYCLES_NAME_ID.clone(), json_metric)

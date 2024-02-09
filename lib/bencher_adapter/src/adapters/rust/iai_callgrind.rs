@@ -1,10 +1,6 @@
 use bencher_json::{
     project::{
-        measure::{
-            ESTIMATED_CYCLES_NAME_STR, INSTRUCTIONS_NAME_STR, L1_ACCESSES_NAME_STR_IAI_CALLGRIND,
-            L2_ACCESSES_NAME_STR_IAI_CALLGRIND, RAM_ACCESSES_NAME_STR_IAI_CALLGRIND,
-            TOTAL_READ_WRITE_NAME_STR,
-        },
+        measure::{ESTIMATED_CYCLES_NAME_STR, INSTRUCTIONS_NAME_STR},
         report::JsonAverage,
     },
     BenchmarkName, JsonMetric,
@@ -27,6 +23,10 @@ use crate::{
 pub struct AdapterRustIaiCallgrind;
 
 const IAI_CALLGRIND_METRICS_LINE_COUNT: usize = 7;
+const L1_HITS_NAME_STR: &str = "L1 Hits";
+const L2_HITS_NAME_STR: &str = "L2 Hits";
+const RAM_HITS_NAME_STR: &str = "RAM Hits";
+const TOTAL_READ_WRITE_NAME_STR: &str = "Total read+write";
 
 impl Adaptable for AdapterRustIaiCallgrind {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
@@ -69,17 +69,17 @@ fn parse_iai_lines(
             IaiCallgrindMeasure::Instructions as fn(JsonMetric) -> IaiCallgrindMeasure,
         ),
         (
-            L1_ACCESSES_NAME_STR_IAI_CALLGRIND,
+            L1_HITS_NAME_STR,
             l1_accesses_line,
             IaiCallgrindMeasure::L1Accesses,
         ),
         (
-            L2_ACCESSES_NAME_STR_IAI_CALLGRIND,
+            L2_HITS_NAME_STR,
             l2_accesses_line,
             IaiCallgrindMeasure::L2Accesses,
         ),
         (
-            RAM_ACCESSES_NAME_STR_IAI_CALLGRIND,
+            RAM_HITS_NAME_STR,
             ram_accesses_line,
             IaiCallgrindMeasure::RamAccesses,
         ),
@@ -171,7 +171,7 @@ pub(crate) mod test_rust_iai_callgrind {
         project::measure::{
             ESTIMATED_CYCLES_SLUG_STR, INSTRUCTIONS_NAME_STR, INSTRUCTIONS_SLUG_STR,
             L1_ACCESSES_SLUG_STR, L2_ACCESSES_SLUG_STR, RAM_ACCESSES_SLUG_STR,
-            TOTAL_READ_WRITE_SLUG_STR,
+            TOTAL_ACCESSES_SLUG_STR,
         },
         JsonMetric,
     };
@@ -275,7 +275,7 @@ pub(crate) mod test_rust_iai_callgrind {
                 (L1_ACCESSES_SLUG_STR, 2359.0),
                 (L2_ACCESSES_SLUG_STR, 0.0),
                 (RAM_ACCESSES_SLUG_STR, 3.0),
-                (TOTAL_READ_WRITE_SLUG_STR, 2362.0),
+                (TOTAL_ACCESSES_SLUG_STR, 2362.0),
                 (ESTIMATED_CYCLES_SLUG_STR, 2464.0),
             ],
         );
@@ -289,7 +289,7 @@ pub(crate) mod test_rust_iai_callgrind {
                 (L1_ACCESSES_SLUG_STR, 35_638_619.0),
                 (L2_ACCESSES_SLUG_STR, 0.0),
                 (RAM_ACCESSES_SLUG_STR, 3.0),
-                (TOTAL_READ_WRITE_SLUG_STR, 35_638_622.0),
+                (TOTAL_ACCESSES_SLUG_STR, 35_638_622.0),
                 (ESTIMATED_CYCLES_SLUG_STR, 35_638_724.0),
             ],
         );
@@ -310,7 +310,7 @@ pub(crate) mod test_rust_iai_callgrind {
                 (L1_ACCESSES_SLUG_STR, 2275.0),
                 (L2_ACCESSES_SLUG_STR, 0.0),
                 (RAM_ACCESSES_SLUG_STR, 3.0),
-                (TOTAL_READ_WRITE_SLUG_STR, 2278.0),
+                (TOTAL_ACCESSES_SLUG_STR, 2278.0),
                 (ESTIMATED_CYCLES_SLUG_STR, 2380.0),
             ],
         );
@@ -324,7 +324,7 @@ pub(crate) mod test_rust_iai_callgrind {
                 (L1_ACCESSES_SLUG_STR, 34_367_375.0),
                 (L2_ACCESSES_SLUG_STR, 0.0),
                 (RAM_ACCESSES_SLUG_STR, 3.0),
-                (TOTAL_READ_WRITE_SLUG_STR, 34_367_378.0),
+                (TOTAL_ACCESSES_SLUG_STR, 34_367_378.0),
                 (ESTIMATED_CYCLES_SLUG_STR, 34_367_480.0),
             ],
         );

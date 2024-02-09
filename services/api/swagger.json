@@ -8117,9 +8117,15 @@
                 "type": "string"
               },
               "password": {
-                "$ref": "#/components/schemas/Secret"
+                "nullable": true,
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Secret"
+                  }
+                ]
               },
               "path": {
+                "nullable": true,
                 "type": "string"
               },
               "port": {
@@ -8139,8 +8145,6 @@
             },
             "required": [
               "host",
-              "password",
-              "path",
               "port",
               "scheme",
               "user"
@@ -8159,11 +8163,8 @@
                 "nullable": true,
                 "type": "string"
               },
-              "force_path_style": {
-                "nullable": true,
-                "type": "boolean"
-              },
               "path": {
+                "nullable": true,
                 "type": "string"
               },
               "region": {
@@ -8183,7 +8184,6 @@
             "required": [
               "access_key_id",
               "bucket",
-              "path",
               "scheme",
               "secret_access_key"
             ]
@@ -8225,6 +8225,7 @@
                 "type": "string"
               },
               "path": {
+                "nullable": true,
                 "type": "string"
               },
               "scheme": {
@@ -8236,7 +8237,6 @@
             },
             "required": [
               "bucket",
-              "path",
               "scheme"
             ]
           }

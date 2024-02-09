@@ -4,7 +4,7 @@ use bencher_json::{
         INSTRUCTIONS_NAME_STR, INSTRUCTIONS_SLUG_STR, L1_ACCESSES_NAME_STR, L1_ACCESSES_SLUG_STR,
         L2_ACCESSES_NAME_STR, L2_ACCESSES_SLUG_STR, LATENCY_NAME_STR, LATENCY_SLUG_STR,
         RAM_ACCESSES_NAME_STR, RAM_ACCESSES_SLUG_STR, THROUGHPUT_NAME_STR, THROUGHPUT_SLUG_STR,
-        TOTAL_READ_WRITE_SLUG_STR,
+        TOTAL_ACCESSES_SLUG_STR,
     },
     DateTime, JsonMeasure, JsonNewMeasure, MeasureNameId, ResourceName, Slug,
 };
@@ -79,7 +79,7 @@ impl QueryMeasure {
             L1_ACCESSES_SLUG_STR => InsertMeasure::l1_accesses(conn, project_id),
             L2_ACCESSES_SLUG_STR => InsertMeasure::l2_accesses(conn, project_id),
             RAM_ACCESSES_SLUG_STR => InsertMeasure::ram_accesses(conn, project_id),
-            TOTAL_READ_WRITE_SLUG_STR => InsertMeasure::total_read_write(conn, project_id),
+            TOTAL_ACCESSES_SLUG_STR => InsertMeasure::total_accesses(conn, project_id),
             ESTIMATED_CYCLES_SLUG_STR => InsertMeasure::estimated_cycles(conn, project_id),
             _ => return Err(http_error),
         }?;
@@ -185,11 +185,11 @@ impl InsertMeasure {
         Self::from_json(conn, project_id, JsonNewMeasure::ram_accesses())
     }
 
-    pub fn total_read_write(
+    pub fn total_accesses(
         conn: &mut DbConnection,
         project_id: ProjectId,
     ) -> Result<Self, HttpError> {
-        Self::from_json(conn, project_id, JsonNewMeasure::total_read_write())
+        Self::from_json(conn, project_id, JsonNewMeasure::total_accesses())
     }
 
     pub fn estimated_cycles(
@@ -213,6 +213,7 @@ fn is_system(name: &str, slug: &str) -> bool {
             | L1_ACCESSES_NAME_STR
             | L2_ACCESSES_NAME_STR
             | RAM_ACCESSES_NAME_STR
+            | TOTAL_ACCESSES_SLUG_STR
             | ESTIMATED_CYCLES_NAME_STR
     ) || matches!(
         slug,
@@ -222,6 +223,7 @@ fn is_system(name: &str, slug: &str) -> bool {
             | L1_ACCESSES_SLUG_STR
             | L2_ACCESSES_SLUG_STR
             | RAM_ACCESSES_SLUG_STR
+            | TOTAL_ACCESSES_SLUG_STR
             | ESTIMATED_CYCLES_SLUG_STR
     )
 }
