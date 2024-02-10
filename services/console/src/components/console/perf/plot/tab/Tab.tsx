@@ -11,6 +11,7 @@ import type { TabList } from "./PlotTab";
 import ReportsTab from "./ReportsTab";
 import DimensionsTab from "./DimensionTab";
 import type { FieldHandler } from "../../../../field/Field";
+import { BACK_PARAM, encodePath } from "../../../../../util/url";
 
 const Tab = (props: {
 	project_slug: Accessor<undefined | string>;
@@ -139,10 +140,10 @@ const AddButton = (props: {
 		switch (props.tab()) {
 			case PerfTab.BRANCHES:
 			case PerfTab.TESTBEDS:
-				return `/console/projects/${props.project_slug()}/${props.tab()}/add`;
+				return `/console/projects/${props.project_slug()}/${props.tab()}/add?${BACK_PARAM}=${encodePath()}`;
 			case PerfTab.REPORTS:
 			case PerfTab.BENCHMARKS:
-				return "/docs/how-to/track-benchmarks";
+				return `https://bencher.dev/docs/how-to/track-benchmarks?${BACK_PARAM}=${encodePath()}`;
 			default:
 				return "#";
 		}

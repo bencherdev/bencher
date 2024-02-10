@@ -1,4 +1,5 @@
 import { BENCHER_VERSION, BENCHER_WORDMARK } from "../../util/ext";
+import { decodePath } from "../../util/url";
 import AuthOverride from "../auth/AuthOverride";
 import BENCHER_NAVBAR_ID from "./id";
 
@@ -40,13 +41,13 @@ const AuthNavbar = () => {
 								</a>
 							</div>
 							<div class="navbar-item" />
-							<a class="button is-outlined" href="/console">
+							<a class="button is-outlined" href={decodePath("/console")}>
 								<span class="icon has-text-primary">
 									<i class="fas fa-angle-left" aria-hidden="true" />
 								</span>
 								<span>Back to Console</span>
 							</a>
-							<div class="navbar-item"></div>
+							<div class="navbar-item" />
 						</div>
 					</div>
 				</div>

@@ -283,6 +283,7 @@ export const encodePath = createMemo(() => {
 export const decodePath = (fallback: string) => {
 	const [searchParams, _setSearchParams] = useSearchParams();
 	const back = searchParams[BACK_PARAM];
+	console.log(back);
 	if (back) {
 		return decodeBase64(back);
 	}
