@@ -145,7 +145,9 @@ const AddButton = (props: {
 			<div class="content has-text-centered">{props.config?.prefix}</div>
 			<a
 				class="button is-primary is-fullwidth"
-				href={props.config?.path?.(pathname())}
+				href={`${props.config?.path?.(
+					pathname(),
+				)}?${BACK_PARAM}=${encodePath()}`}
 			>
 				{props.config?.text}
 			</a>
