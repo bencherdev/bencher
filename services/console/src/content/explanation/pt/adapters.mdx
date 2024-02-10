@@ -8,6 +8,8 @@ sortOrder: 3
 import BmfExample from "../../../chunks/explanation/bmf-example.mdx";
 import BmfSchema from "../../../chunks/explanation/bmf-schema.mdx";
 
+import RustIaiCallgrind from "../../../chunks/explanation/pt/adapter-rust-iai-callgrind.mdx";
+
 Os adaptadores convertem a saída da ferramenta de benchmark em JSON padronizado, no Formato de Métrica do Bencher (BMF).
 Os adaptadores são executados no servidor API quando um novo relatório é recebido.
 Veja a [visão geral do benchmarking](/pt/docs/explanation/benchmarking/) para uma explicação mais aprofundada.
@@ -186,6 +188,8 @@ Os Tipos de Métrica `instructions`, `l1_access`, `l2_access`, `ram_access`, e `
 Apenas essas medidas (ou seja, `value`) estão disponíveis. Não existem medidas `lower_value` e `upper_value`.
 Os Tipos de Métrica para este adaptador não são criados por padrão para todos os projetos.
 Entretanto, quando você usa este adaptador, esses Tipos de Métrica serão automaticamente criados para o seu Projeto.
+
+<RustIaiCallgrind />
 
 ## ❯_ Shell
 

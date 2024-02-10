@@ -8,6 +8,8 @@ sortOrder: 3
 import BmfExample from "../../../chunks/explanation/bmf-example.mdx";
 import BmfSchema from "../../../chunks/explanation/bmf-schema.mdx";
 
+import RustIaiCallgrind from "../../../chunks/explanation/fr/adapter-rust-iai-callgrind.mdx";
+
 Les adaptateurs transforment la sortie du harnais de benchmark en JSON standardisé, Format de Métrique Bencher (BMF).
 Les adaptateurs s'exécutent sur le serveur API lorsqu'un nouveau rapport est reçu.
 Voir l'[aperçu du benchmarking](/fr/docs/explanation/benchmarking/) pour une explication plus approfondie.
@@ -187,6 +189,8 @@ Les types de mesure `instructions`, `l1_acces`, `l2_acces`, `ram_acces`, et `est
 Seules ces mesures (c'est-à-dire `value`) sont disponibles. Il n'y a pas de mesures `lower_value` et `upper_value`.
 Les types de mesure pour cet adaptateur ne sont pas créés par défaut pour tous les projets.
 Cependant, lorsque vous utilisez cet adaptateur, ces types de mesure seront automatiquement créés pour votre projet.
+
+<RustIaiCallgrind />
 
 ## ❯_ Shell
 

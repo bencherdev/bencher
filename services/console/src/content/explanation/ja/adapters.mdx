@@ -8,6 +8,8 @@ sortOrder: 3
 import BmfExample from "../../../chunks/explanation/bmf-example.mdx";
 import BmfSchema from "../../../chunks/explanation/bmf-schema.mdx";
 
+import RustIaiCallgrind from "../../../chunks/explanation/ja/adapter-rust-iai-callgrind.mdx";
+
 アダプターは、ベンチマークハーネスの出力を標準化されたJSON、Bencherメトリックフォーマット（BMF）に変換します。
 アダプターは、新しいレポートが受け取られたときにAPIサーバー上で実行されます。
 より深い説明のために、[ベンチマークの概観](/ja/docs/explanation/benchmarking/)を参照してください。
@@ -182,6 +184,8 @@ Rust Iaiアダプター(`rust_iai`)は、[Iai](https://github.com/bheisler/iai)�
 これらの測定値（つまり `value`）しか利用できません。`lower_value`と`upper_value`の測定はありません。
 このアダプターのMeasuresはデフォルトですべてのプロジェクトに作られません。
 しかし、このアダプターを使用すると、これらのMeasuresはプロジェクトに自動的に作られます。
+
+<RustIaiCallgrind />
 
 ## ❯_ Shell
 

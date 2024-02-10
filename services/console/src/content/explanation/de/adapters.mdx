@@ -8,6 +8,8 @@ sortOrder: 3
 import BmfExample from "../../../chunks/explanation/bmf-example.mdx";
 import BmfSchema from "../../../chunks/explanation/bmf-schema.mdx";
 
+import RustIaiCallgrind from "../../../chunks/explanation/de/adapter-rust-iai-callgrind.mdx";
+
 Adapter konvertieren die Ausgabe von Benchmark-Harnesses in standardisiertes JSON, das Bencher-Messformat (BMF).
 Die Adapter laufen auf dem API-Server, wenn ein neuer Bericht empfangen wird.
 Eine ausführlichere Erklärung finden Sie in der [Benchmarking-Übersicht](/de/docs/explanation/benchmarking/).
@@ -187,6 +189,8 @@ Die Metrikarten `instructions`, `l1_access`, `l2_access`, `ram_access`, und `est
 Nur diese Maßnahmen (d. h. `value`) sind verfügbar. Es gibt keine `lower_value` und `upper_value` Maßnahmen.
 Die Metrikarten für diesen Adapter werden nicht standardmäßig für alle Projekte erstellt.
 Wenn Sie diesen Adapter jedoch verwenden, werden diese Metrikarten automatisch für Ihr Projekt erstellt.
+
+<RustIaiCallgrind />
 
 ## ❯_ Shell
 

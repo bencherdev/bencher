@@ -8,6 +8,8 @@ sortOrder: 3
 import BmfExample from "../../../chunks/explanation/bmf-example.mdx";
 import BmfSchema from "../../../chunks/explanation/bmf-schema.mdx";
 
+import RustIaiCallgrind from "../../../chunks/explanation/ko/adapter-rust-iai-callgrind.mdx";
+
 어댑터는 벤치마크 하네스 출력을 표준화된 JSON, Bencher Metric Format (BMF)로 변환합니다.
 어댑터는 새 보고서가 수신되었을 때 API 서버에서 실행됩니다.
 더 깊은 설명을 위해 [벤치마크 개요](/ko/docs/explanation/benchmarking/)를 참조하세요.
@@ -186,6 +188,8 @@ Rust Iai 어댑터(`rust_iai`)는 [Iai](https://github.com/bheisler/iai) 출력�
 이_measure_(즉, `value`)만 가능합니다. `lower_value`와 `upper_value`가 없습니다.
 이 어댑터에 대한 Measures는 모든 프로젝트에 대해 기본적으로 생성되지 않습니다.
 그러나, 이 어댑터를 사용하면, 이 Measures는 프로젝트에 대해 자동으로 생성됩니다.
+
+<RustIaiCallgrind />
 
 ## ❯_ Shell
 

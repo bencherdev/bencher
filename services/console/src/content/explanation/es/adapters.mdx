@@ -8,6 +8,8 @@ sortOrder: 3
 import BmfExample from "../../../chunks/explanation/bmf-example.mdx";
 import BmfSchema from "../../../chunks/explanation/bmf-schema.mdx";
 
+import RustIaiCallgrind from "../../../chunks/explanation/es/adapter-rust-iai-callgrind.mdx";
+
 Los adaptadores convierten la salida del arnés de referencia en JSON estandarizado, Formato de Métrica Bencher (BMF).
 Los adaptadores se ejecutan en el servidor de la API cuando se recibe un nuevo informe.
 Vea la [descripción general de la evaluación comparativa](/es/docs/explanation/benchmarking/) para obtener una explicación más detallada.
@@ -185,6 +187,8 @@ Se recogen las Latency Measures `instructions`, `l1_access`, `l2_access`, `ram_a
 Solo estas medidas (es decir `value`) están disponibles. No hay medidas `lower_value` y `upper_value`.
 Las Measures para este adaptador no se crean por defecto para todos los proyectos.
 Sin embargo, cuando utilices este adaptador, estas Measures se crearán automáticamente para tu Proyecto.
+
+<RustIaiCallgrind />
 
 ## ❯_ Shell
 

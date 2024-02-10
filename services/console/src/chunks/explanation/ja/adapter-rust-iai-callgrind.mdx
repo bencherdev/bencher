@@ -1,0 +1,7 @@
+## 🦀 Rust Iai-Callgrind
+
+Rust Iaiアダプター（`rust_iai_callgrind`）は、[Iai-Callgrind](https://github.com/iai-callgrind/iai-callgrind)の出力を期待しています。
+`instructions`、`l1_access`、`l2_access`、`ram_access`、`total_accesses`、そして `estimated_cycles`といった指標が収集されます。
+これらの指標（すなわち `value`）のみが利用可能で、`lower_value`および`upper_value`指標はありません。
+このアダプタの指標は、すべてのプロジェクトでデフォルトで作成されるわけではありません。
+しかし、このアダプタを使用すると、これらの指標は自動的にプロジェクトで作成されます。

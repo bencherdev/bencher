@@ -8,6 +8,8 @@ sortOrder: 3
 import BmfExample from "../../../chunks/explanation/bmf-example.mdx";
 import BmfSchema from "../../../chunks/explanation/bmf-schema.mdx";
 
+import RustIaiCallgrind from "../../../chunks/explanation/zh/adapter-rust-iai-callgrind.mdx";
+
 适配器将基准测试程序的输出转换为标准化的JSON，Bencher度量格式（BMF）。
 当接收到新报告时，适配器会在API服务器上运行。
 查看[基准测试概述](/zh/docs/explanation/benchmarking/)以便更深入地理解。
@@ -187,6 +189,8 @@ Rust Iai适配器 (`rust_iai`)期待[Iai](https://github.com/bheisler/iai)的输
 只有这些测量值(即 `value`) 可用。没有 `lower_value`和`upper_value`测量值。
 这个适配器的度量种类不会默认为所有项目创建。
 但是，当你使用这个适配器时，这些度量种类会自动为你的项目创建。
+
+<RustIaiCallgrind />
 
 ## ❯_ Shell
 

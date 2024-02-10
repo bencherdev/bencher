@@ -8,6 +8,8 @@ sortOrder: 3
 import BmfExample from "../../../chunks/explanation/bmf-example.mdx";
 import BmfSchema from "../../../chunks/explanation/bmf-schema.mdx";
 
+import RustIaiCallgrind from "../../../chunks/explanation/ru/adapter-rust-iai-callgrind.mdx";
+
 Адаптеры преобразуют вывод данных профилировщиков в стандартизированный JSON формат - Bencher Metric Format (BMF).
 Адаптеры работают на API-сервере при получении нового отчета.
 Более глубокое объяснение можно найти в [обзоре тестирования производительности](/ru/docs/explanation/benchmarking/).
@@ -187,6 +189,8 @@ Measure `latency` (т.е. `наносекунды (ns)`) собирается.
 Доступны только эти меры (т.е. `value`). Нет `lower_value` и `upper_value`.
 Measures для этого адаптера не создаются по умолчанию для всех проектов.
 Однако, когда вы используете этот адаптер, эти Measures будут автоматически созданы для вашего проекта.
+
+<RustIaiCallgrind />
 
 ## ❯_ Shell
 
