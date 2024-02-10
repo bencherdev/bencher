@@ -75,7 +75,7 @@ const MembersConfig = {
 			add: {
 				prefix: (
 					<div>
-						<h4>🐰 Who am I‽</h4>
+						<h4>🐰 Invite your collaborators!</h4>
 						<p>
 							It's easy to add a new organization member.
 							<br />

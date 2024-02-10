@@ -163,7 +163,7 @@ const PlotTab = (props: Props) => {
 			case PerfTab.BENCHMARKS:
 				return props.benchmarks_search();
 			default:
-				return "";
+				return undefined;
 		}
 	});
 

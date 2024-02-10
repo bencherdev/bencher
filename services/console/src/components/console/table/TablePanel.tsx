@@ -208,6 +208,9 @@ const TablePanel = (props: Props) => {
 				config={config()?.table}
 				state={state}
 				tableData={tableData}
+				start_date={start_date}
+				end_date={end_date}
+				search={search}
 				page={page}
 				handlePage={handlePage}
 			/>

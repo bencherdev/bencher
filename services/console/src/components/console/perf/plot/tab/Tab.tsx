@@ -51,7 +51,7 @@ const Tab = (props: {
 		<Switch
 			fallback={
 				<div class="box">
-					<p>No {props.tab()} found</p>
+					<p>🐰 No {props.tab()} found</p>
 				</div>
 			}
 		>
@@ -60,7 +60,9 @@ const Tab = (props: {
 					props.isConsole &&
 					tabList().length === 0 &&
 					props.page() === DEFAULT_PAGE &&
-					props.search() === undefined
+					!props.search() &&
+					!props.reports_start_date() &&
+					!props.reports_end_date()
 				}
 			>
 				<div class="box">
@@ -87,7 +89,9 @@ const Tab = (props: {
 			<Match
 				when={
 					props.tab() === PerfTab.REPORTS &&
-					(props.search() || tabList().length > 0)
+					(typeof props.reports_start_date() === "string" ||
+						typeof props.reports_end_date() === "string" ||
+						tabList().length > 0)
 				}
 			>
 				<ReportsTab

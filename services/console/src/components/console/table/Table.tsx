@@ -1,15 +1,17 @@
 import type { Params } from "astro";
-import { Accessor, For, Match, Resource, Switch } from "solid-js";
+import {
+	type Accessor,
+	For,
+	Match,
+	type Resource,
+	Switch,
+	Show,
+} from "solid-js";
 import { Row } from "../../../config/types";
 import { fmtDateTime } from "../../../config/util";
 import type { Slug } from "../../../types/bencher";
 import { fmtNestedValue, fmtValues } from "../../../util/resource";
-import {
-	BACK_PARAM,
-	encodePath,
-	pathname,
-	useNavigate,
-} from "../../../util/url";
+import { BACK_PARAM, encodePath, pathname } from "../../../util/url";
 
 export enum TableState {
 	LOADING = 0,
@@ -23,6 +25,9 @@ export interface Props {
 	config: TableConfig;
 	state: Accessor<TableState>;
 	tableData: Resource<any[]>;
+	start_date: Accessor<undefined | string>;
+	end_date: Accessor<undefined | string>;
+	search: Accessor<undefined | string>;
 	page: Accessor<number>;
 	handlePage: (page: number) => void;
 }
@@ -43,13 +48,17 @@ const Table = (props: Props) => {
 			</Match>
 
 			<Match when={props.state() === TableState.EMPTY}>
-				<div class="box">
-					{props.config?.add ? (
-						<AddButton config={props.config?.add} />
-					) : (
-						<p>🤷</p>
-					)}
-				</div>
+				<Show
+					when={
+						props.config?.add &&
+						!props.start_date() &&
+						!props.end_date() &&
+						!props.search()
+					}
+					fallback={<p>🐰 No {props.config?.name} found</p>}
+				>
+					<AddButton config={props.config?.add as AddButtonConfig} />
+				</Show>
 			</Match>
 
 			<Match when={props.state() === TableState.OK}>

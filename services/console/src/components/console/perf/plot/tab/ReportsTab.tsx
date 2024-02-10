@@ -31,19 +31,24 @@ const ReportsTab = (props: {
 					handleEndTime={props.handleEndTime}
 				/>
 			</div>
-			<For each={props.tabList()}>
-				{(report, index) => (
-					<ReportRow
-						project_slug={props.project_slug}
-						isConsole={props.isConsole}
-						measures={props.measures}
-						tab={props.tab}
-						report={report}
-						index={index}
-						handleChecked={props.handleChecked}
-					/>
-				)}
-			</For>
+			<Show
+				when={props.tabList().length > 0}
+				fallback={<div class="panel-block">🐰 No reports found</div>}
+			>
+				<For each={props.tabList()}>
+					{(report, index) => (
+						<ReportRow
+							project_slug={props.project_slug}
+							isConsole={props.isConsole}
+							measures={props.measures}
+							tab={props.tab}
+							report={report}
+							index={index}
+							handleChecked={props.handleChecked}
+						/>
+					)}
+				</For>
+			</Show>
 		</>
 	);
 };

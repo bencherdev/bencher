@@ -35,18 +35,23 @@ const DimensionsTab = (props: {
 					handleField={props.handleSearch}
 				/>
 			</div>
-			<For each={props.tabList()}>
-				{(dimension, index) => (
-					<DimensionRow
-						project_slug={props.project_slug}
-						isConsole={props.isConsole}
-						tab={props.tab}
-						dimension={dimension}
-						index={index}
-						handleChecked={props.handleChecked}
-					/>
-				)}
-			</For>
+			<Show
+				when={props.tabList().length > 0}
+				fallback={<div class="panel-block">🐰 No {props.tab()} found</div>}
+			>
+				<For each={props.tabList()}>
+					{(dimension, index) => (
+						<DimensionRow
+							project_slug={props.project_slug}
+							isConsole={props.isConsole}
+							tab={props.tab}
+							dimension={dimension}
+							index={index}
+							handleChecked={props.handleChecked}
+						/>
+					)}
+				</For>
+			</Show>
 		</>
 	);
 };
