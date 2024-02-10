@@ -4,6 +4,7 @@ import {
 	createEffect,
 	createMemo,
 	createResource,
+	Show,
 } from "solid-js";
 import type { JsonProject } from "../../types/bencher";
 import { authUser } from "../../util/auth";
@@ -127,17 +128,26 @@ const PublicProjects = (props: Props) => {
 								}
 							/>
 							<br />
-							<For each={projects()}>
-								{(project) => (
-									<a
-										class="box"
-										title={`View ${project.name}`}
-										href={`/perf/${project.slug}`}
-									>
-										{project.name}
-									</a>
-								)}
-							</For>
+							<Show
+								when={projectsLength() > 0}
+								fallback={
+									<div class="box">
+										<p>🐰 No projects found</p>
+									</div>
+								}
+							>
+								<For each={projects()}>
+									{(project) => (
+										<a
+											class="box"
+											title={`View ${project.name}`}
+											href={`/perf/${project.slug}`}
+										>
+											{project.name}
+										</a>
+									)}
+								</For>
+							</Show>
 							{projectsLength() === 0 && page() !== 1 && (
 								<div class="box">
 									<BackButton page={page} handlePage={handlePage} />
