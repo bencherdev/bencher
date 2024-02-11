@@ -1,13 +1,15 @@
 [workspace]
 
 [package]
-name = "rust_iai"
+name = "game"
 version = "0.1.0"
 edition = "2021"
+
+[dependencies]
 
 [dev-dependencies]
 iai = "0.1"
 
 [[bench]]
-name = "rust_iai"
+name = "play_game"
 harness = false

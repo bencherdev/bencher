@@ -1,35 +1,45 @@
 ```
 $ bencher run --project game "cargo bench"
+    Finished bench [optimized] target(s) in 0.18s
+     Running unittests src/lib.rs (target/release/deps/game-9b1b504669ca4b29)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/release/deps/game-8d61ca5a97299729)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running benches/play_game.rs (target/release/deps/play_game-6896309faf45cd96)
+bench_play_game
+  Instructions:               38331 (+0.046981%)
+  L1 Accesses:                53765 (+0.048382%)
+  L2 Accesses:                    6 (-14.28571%)
+  RAM Accesses:                  45 (+4.651163%)
+  Estimated Cycles:           55370 (+0.164619%)
+
+bench_play_game_100
+  Instructions:                 313 (+6.101695%)
+  L1 Accesses:                  416 (+6.940874%)
+  L2 Accesses:                    2 (No change)
+  RAM Accesses:                  13 (No change)
+  Estimated Cycles:             881 (+3.161593%)
+
+bench_play_game_1_000_000
+  Instructions:                 409 (+4.603581%)
+  L1 Accesses:                  512 (+5.567010%)
+  L2 Accesses:                    2 (No change)
+  RAM Accesses:                  13 (No change)
+  Estimated Cycles:             977 (+2.842105%)
     Finished bench [optimized] target(s) in 0.07s
      Running unittests src/lib.rs (target/release/deps/game-13f4bad779fbfde4)
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-
-     Running unittests src/main.rs (target/release/deps/game-043972c4132076a9)
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-
-     Running benches/play_game.rs (target/release/deps/play_game-e0857103eb02eb56)
-Gnuplot not found, using plotters backend
-bench_play_game         time:   [3.0713 µs 3.0902 µs 3.1132 µs]
-Found 16 outliers among 100 measurements (16.00%)
-  3 (3.00%) high mild
-  13 (13.00%) high severe
-
-bench_play_game_100     time:   [23.938 ns 23.970 ns 24.009 ns]
-Found 15 outliers among 100 measurements (15.00%)
-  5 (5.00%) high mild
-  10 (10.00%) high severe
-
-bench_play_game_1_000_000
-                        time:   [30.004 ns 30.127 ns 30.279 ns]
-Found 5 outliers among 100 measurements (5.00%)
-  1 (1.00%) high mild
-  4 (4.00%) high severe
 
 Bencher New Report:
 ...

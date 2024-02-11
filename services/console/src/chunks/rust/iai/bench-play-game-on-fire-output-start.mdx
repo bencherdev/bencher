@@ -1,0 +1,31 @@
+```
+$ cargo bench
+   Compiling game v0.1.0 (/home/bencher)
+    Finished bench [optimized] target(s) in 1.92s
+     Running unittests src/lib.rs (target/release/deps/game-9b1b504669ca4b29)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/release/deps/game-8d61ca5a97299729)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running benches/play_game.rs (target/release/deps/play_game-6896309faf45cd96)
+bench_play_game
+  Instructions:              304598 (No change)
+  L1 Accesses:               320025 (+0.000312%)
+  L2 Accesses:                    7 (-12.50000%)
+  RAM Accesses:                  42 (No change)
+  Estimated Cycles:          321530 (-0.001244%)
+
+bench_play_game_100
+  Instructions:                6194
+  L1 Accesses:                 6290
+  L2 Accesses:                    2
+  RAM Accesses:                  11
+  Estimated Cycles:            6685
+```

@@ -1,0 +1,9 @@
+```rust
+fn bench_play_game_100() {
+    iai::black_box(play_game(100, false));
+}
+
+fn bench_play_game_1_000_000() {
+    iai::black_box(play_game(1_000_000, false));
+}
+```
