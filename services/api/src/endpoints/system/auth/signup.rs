@@ -34,6 +34,8 @@ pub async fn auth_signup_options(
     path =  "/v0/auth/signup",
     tags = ["auth"]
 }]
+/// When a user signs up, a new personal organization is automatically created.
+/// Except when a user signs up with an invitation, then the user is just added to the inviting organization.
 pub async fn auth_signup_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonSignup>,

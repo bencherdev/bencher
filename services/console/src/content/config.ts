@@ -10,6 +10,8 @@ export enum Collection {
 	how_to = "how_to",
 	explanation = "explanation",
 	reference = "reference",
+	// API
+	organizations = "organizations",
 	// Learn
 	rust = "rust",
 }
@@ -70,6 +72,18 @@ const reference = defineCollection({
 	}),
 });
 
+// api
+const organizations = defineCollection({
+	type: "content", // v2.5.0 and later
+	schema: z.object({
+		title: z.string(),
+		description: z.string(),
+		heading: z.string(),
+		sortOrder: z.number(),
+		draft: z.boolean().optional(),
+	}),
+});
+
 // learn
 const rust = defineCollection({
 	type: "content", // v2.5.0 and later
@@ -90,6 +104,8 @@ export const collections = {
 	how_to: how_to,
 	explanation: explanation,
 	reference: reference,
+	// api
+	organizations: organizations,
 	// learn
 	rust: rust,
 };

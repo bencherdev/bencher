@@ -2,6 +2,7 @@ use clap::Parser;
 
 use crate::parser::{TaskSub, TaskTask};
 
+mod api_docs;
 mod notify;
 #[cfg(feature = "cli")]
 mod package;
@@ -14,6 +15,7 @@ mod test;
 mod types;
 mod version;
 
+use api_docs::ApiDocs;
 use notify::Notify;
 #[cfg(feature = "cli")]
 use package::{deb::Deb, man::Man};
@@ -47,6 +49,7 @@ pub enum Sub {
     #[cfg(feature = "api")]
     Types(Types),
     Template(Template),
+    ApiDocs(ApiDocs),
     #[cfg(feature = "plus")]
     Index(Index),
     #[cfg(feature = "plus")]
@@ -94,6 +97,7 @@ impl TryFrom<TaskSub> for Sub {
             #[cfg(feature = "api")]
             TaskSub::Types(types) => Self::Types(types.try_into()?),
             TaskSub::Template(template) => Self::Template(template.try_into()?),
+            TaskSub::ApiDocs(api_docs) => Self::ApiDocs(api_docs.try_into()?),
             #[cfg(feature = "plus")]
             TaskSub::Index(index) => Self::Index(index.try_into()?),
             #[cfg(feature = "plus")]
@@ -141,6 +145,7 @@ impl Sub {
             #[cfg(feature = "api")]
             Self::Types(types) => types.exec(),
             Self::Template(template) => template.exec(),
+            Self::ApiDocs(api_docs) => api_docs.exec(),
             #[cfg(feature = "plus")]
             Self::Index(index) => index.exec().await,
             #[cfg(feature = "plus")]

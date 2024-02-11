@@ -335,6 +335,8 @@
         "tags": [
           "auth"
         ],
+        "summary": "When a user signs up, a new personal organization is automatically created.",
+        "description": "Except when a user signs up with an invitation, then the user is just added to the inviting organization.",
         "operationId": "auth_signup_post",
         "requestBody": {
           "content": {
@@ -467,6 +469,8 @@
         "tags": [
           "organizations"
         ],
+        "summary": "List organizations belonged to by the authenticated user",
+        "description": "List organizations belonged to by the authenticated user. When a user is an admin, all organizations are listed.",
         "operationId": "organizations_get",
         "parameters": [
           {

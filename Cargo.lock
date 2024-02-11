@@ -7063,6 +7063,7 @@ dependencies = [
  "newline-converter",
  "notify-rust",
  "once_cell",
+ "openapiv3",
  "pretty_assertions",
  "reqwest",
  "serde",

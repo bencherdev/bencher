@@ -66,6 +66,10 @@ pub async fn organizations_options(
     path = "/v0/organizations",
     tags = ["organizations"]
 }]
+/// List organizations belonged to by the authenticated user
+///
+/// List organizations belonged to by the authenticated user.
+/// When a user is an admin, all organizations are listed.
 pub async fn organizations_get(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
