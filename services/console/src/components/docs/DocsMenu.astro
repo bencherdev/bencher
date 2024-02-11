@@ -44,7 +44,15 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
         return tab === DocsTab.Learn;
     }
   }
-  return `display: ${isVisible(menu, tab) ? "block" : "none"};`;
+  const marginBottom = (menu: DocsMenuId) => {
+    switch (menu) {
+      case DocsMenuId.Docs:
+        return 1 + tutorialCollection[lang].length + 1 + howToCollection[lang].length + 1 + explanationCollection[lang].length + 1 + referenceCollection[lang].length;
+      case DocsMenuId.Learn:
+        return 1 + rustCollection[lang].length;
+    }
+  }
+  return `display: ${isVisible(menu, tab) ? "block" : "none"}; margin-bottom: ${marginBottom(menu) * 1.5}rem;`;
 }
 ---
 
