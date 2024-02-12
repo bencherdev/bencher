@@ -28,6 +28,8 @@ const pathTab = () => {
   switch (tab) {
     case DocsTab.Docs:
       return "docs";
+    case DocsTab.Api:
+      return "docs/api";
     case DocsTab.Learn:
       return "learn";
   }
@@ -36,9 +38,8 @@ const pathCollection = () => collection?.replace('_', '-');
 ---
 
 <nav>
-  <div class="menu-label">
+  <div id={langButtonId} class="menu-label">
     <button
-      id={langButtonId}
       class="button is-small is-outlined is-fullwidth"
       type="button"
       title="View Project Perf"

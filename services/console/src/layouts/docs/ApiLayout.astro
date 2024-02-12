@@ -1,32 +1,27 @@
 ---
 import DocsLayout from "./DocsLayout.astro";
 import { DocsTab } from "../../components/docs/docs_tab";
-import type { Author } from "../../components/docs/author";
 
 interface Props {
   title: string;
   titleFmt?: undefined | ((title: string) => string);
   description: string;
   heading?: string;
-  lang?: string;
   collection?: undefined | string;
   slug?: undefined | string;
-  author?: Author;
 }
 
-const { title, titleFmt, description, heading, lang, collection, slug, author } = Astro.props;
+const { title, titleFmt, description, heading, collection, slug } = Astro.props;
 ---
 
 <DocsLayout
   title={title}
-  titleFmt={titleFmt ?? ((title) => `🐰 ${heading ?? title}`)}
+  titleFmt={titleFmt ?? ((title) => `🧑‍💻 ${heading ?? title}`)}
   description={description}
   heading={heading}
-  tab={DocsTab.Learn}
-  lang={lang}
+  tab={DocsTab.Api}
   collection={collection}
   slug={slug}
-  author={author}
 >
   <slot />
 </DocsLayout>

@@ -1,4 +1,5 @@
 ---
+import { getCollection } from "astro:content";
 import {DocsTab, DocsMenuId} from "./docs_tab";
 import {Language, architecture, benchmarking, defaultLang, explanation, howTo, tutorial } from "../../i18n/ui.ts";
 import {getLangCollection, langPath} from "../../i18n/utils.ts"
@@ -18,6 +19,9 @@ const howToCollection = await getLangCollection(Collection.how_to);
 const explanationCollection = await getLangCollection(Collection.explanation);
 const referenceCollection = await getLangCollection(Collection.reference);
 
+// Api
+const organizationsCollection = await getCollection(Collection.organizations);
+
 // Learn
 const rustCollection = await getLangCollection(Collection.rust);
 
@@ -29,17 +33,22 @@ const tabClass = (tab: DocsTab, current: DocsTab) => {
     switch (tab) {
       case DocsTab.Docs:
         return current === DocsTab.Docs;
+      case DocsTab.Api:
+        return current === DocsTab.Api;
       case DocsTab.Learn:
         return current === DocsTab.Learn;
     }
   }
   return isCurrent(tab, current) ? "is-active" : "";
 }
+
 const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
   const isVisible = (menu: DocsMenuId, tab: DocsTab) => {
     switch (menu) {
       case DocsMenuId.Docs:
         return tab === DocsTab.Docs;
+      case DocsMenuId.Api:
+        return tab === DocsTab.Api;
       case DocsMenuId.Learn:
         return tab === DocsTab.Learn;
     }
@@ -48,6 +57,8 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
     switch (menu) {
       case DocsMenuId.Docs:
         return 1 + tutorialCollection[lang].length + 1 + howToCollection[lang].length + 1 + explanationCollection[lang].length + 1 + referenceCollection[lang].length;
+      case DocsMenuId.Api:
+        return 1 + organizationsCollection.length;
       case DocsMenuId.Learn:
         return 1 + rustCollection[lang].length;
     }
@@ -57,14 +68,15 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
 ---
 
 <aside class="menu is-sticky">
+  <LangButton lang={lang} tab={tab} collection={collection} slug={slug} />
   <!-- Docs -->
   <div class="tabs is-centered">
     <ul>
       <li id={DocsTab.Docs} class={tabClass(DocsTab.Docs, tab)}><a>Docs</a></li>
+      <li id={DocsTab.Api} class={tabClass(DocsTab.Api, tab)}><a>API</a></li>
       <li id={DocsTab.Learn} class={tabClass(DocsTab.Learn, tab)}><a>Learn</a></li>
     </ul>
   </div>
-  <LangButton lang={lang} tab={tab} collection={collection} slug={slug} />
   <nav id={DocsMenuId.Docs} style={displayStyle(DocsMenuId.Docs, tab)}>
     <p class="menu-label">{tutorial(lang)}</p>
     <ul class="menu-list">
@@ -113,6 +125,19 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
       }
     </ul>
   </nav>
+  <!-- API -->
+  <nav id={DocsMenuId.Api} style={displayStyle(DocsMenuId.Api, tab)}>
+    <p class="menu-label">Organizations</p>
+    <ul class="menu-list">
+      {
+        organizationsCollection.map((page) => (
+          <li>
+            <a href={`/docs/api/organizations/${page.slug}/`}>{page.data.title}</a>
+          </li>
+        ))
+      }
+    </ul>
+  </nav>
   <!-- Learn -->
   <nav id={DocsMenuId.Learn} style={displayStyle(DocsMenuId.Learn, tab)}>
     <p class="menu-label">{benchmarking(lang)}</p>
@@ -133,28 +158,48 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
 
   // Find all buttons with the `alert` class on the page.
   const docsTab = document.getElementById(DocsTab.Docs);
+  const apiTab = document.getElementById(DocsTab.Api);
   const learnTab = document.getElementById(DocsTab.Learn);
+
   const docsMenu = document.getElementById(DocsMenuId.Docs);
+  const apiMenu = document.getElementById(DocsMenuId.Api);
   const learnMenu = document.getElementById(DocsMenuId.Learn);
 
   function setDocs() {
     docsTab?.classList.add("is-active");
+    apiTab?.classList.remove("is-active");
     learnTab?.classList.remove("is-active");
 
     docsMenu ? docsMenu.style.display = "block" : null;
+    apiMenu ? apiMenu.style.display = "none" : null;
+    learnMenu ? learnMenu.style.display = "none" : null;
+  }
+
+  function setApi() {
+    docsTab?.classList.remove("is-active");
+    apiTab?.classList.add("is-active");
+    learnTab?.classList.remove("is-active");
+
+    docsMenu ? docsMenu.style.display = "none" : null;
+    apiMenu ? apiMenu.style.display = "block" : null;
     learnMenu ? learnMenu.style.display = "none" : null;
   }
 
   function setLearn() {
     docsTab?.classList.remove("is-active");
+    apiTab?.classList.remove("is-active");
     learnTab?.classList.add("is-active");
 
     docsMenu ? docsMenu.style.display = "none" : null;
+    apiMenu ? apiMenu.style.display = "none" : null;
     learnMenu ? learnMenu.style.display = "block" : null;
   }
 
   docsTab?.addEventListener("click", () => {
     setDocs();
+  });
+  apiTab?.addEventListener("click", () => {
+    setApi();
   });
   learnTab?.addEventListener("click", () => {
     setLearn();

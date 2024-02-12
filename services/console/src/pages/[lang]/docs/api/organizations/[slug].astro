@@ -1,14 +1,18 @@
 ---
 import { getCollection } from "astro:content";
-import ApiLayout from "../../../../layouts/docs/ApiLayout.astro";
-import { Collection } from "../../../../content/config";
+import ApiLayout from "../../../../../layouts/docs/ApiLayout.astro";
+import { Collection } from "../../../../../content/config";
+import { otherLanguages } from "../../../../../i18n/ui";
+
 // 1. Generate a new path for every collection entry
 export async function getStaticPaths() {
   const pages = await getCollection(Collection.organizations);
-  return pages.map((page) => ({
-    params: { slug: page.slug },
-    props: { page },
-  }));
+  return otherLanguages.map((lang) => {
+    return pages.map((page) => ({
+      params: { lang, slug: page.slug },
+      props: { page },
+    }));
+  }).flat();
 }
 // 2. When it's time to render, you can get the entry directly from the prop
 const { page } = Astro.props;
