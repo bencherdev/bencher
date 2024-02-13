@@ -7069,6 +7069,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
+ "slug",
  "tokio",
  "url",
 ]

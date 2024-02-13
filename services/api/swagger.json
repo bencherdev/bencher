@@ -469,8 +469,8 @@
         "tags": [
           "organizations"
         ],
-        "summary": "List organizations belonged to by the authenticated user",
-        "description": "List organizations belonged to by the authenticated user. When a user is an admin, all organizations are listed.",
+        "summary": "List organizations where the authenticated user is a member",
+        "description": "List organizations where the authenticated user is a member. When a user is an admin, all organizations are listed.",
         "operationId": "organizations_get",
         "parameters": [
           {

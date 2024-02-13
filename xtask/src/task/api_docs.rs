@@ -27,6 +27,7 @@ impl TryFrom<TaskApiDocs> for ApiDocs {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 enum Method {
     Get,
     Post,
@@ -47,7 +48,7 @@ impl fmt::Display for Method {
     }
 }
 
-const PATHS: &[(&str, Method)] = &[("/v0/organizations", Method::Get)];
+const PATHS: &[(&str, Method, &str)] = &[("/v0/organizations", Method::Get, "organization list")];
 
 impl ApiDocs {
     pub fn exec(&self) -> anyhow::Result<()> {
@@ -55,7 +56,7 @@ impl ApiDocs {
         let spec: openapiv3::OpenAPI = serde_json::from_reader(file)?;
         fs::write("xtask/spec.rs", format!("{spec:#?}"))?;
 
-        for (path, method) in PATHS {
+        for (path, method, cli_cmd) in PATHS {
             let path_spec = spec
                 .paths
                 .paths
@@ -65,50 +66,54 @@ impl ApiDocs {
             let path_spec = path_spec
                 .as_item()
                 .ok_or_else(|| anyhow::anyhow!("Path not found in spec: {path}"))?;
-            match method {
-                Method::Get => {
-                    let get_spec = path_spec.get.as_ref().ok_or_else(|| {
-                        anyhow::anyhow!("Method not found in {path} spec: {method}")
-                    })?;
 
-                    let summary = get_spec.summary.as_ref().ok_or_else(|| {
-                        anyhow::anyhow!("Summary not found in {path} spec: {method}")
-                    })?;
-                    let description = get_spec.description.as_ref().ok_or_else(|| {
-                        anyhow::anyhow!("Description not found in {path} spec: {method}")
-                    })?;
-
-                    let relative_path = path.strip_prefix('/').unwrap_or(path);
-                    let full_path = self.path.join(relative_path);
-                    println!("{}", full_path);
-                    fs::create_dir_all(&full_path)?;
-                    fs::write(
-                        full_path.join(format!("{method}.mdx")),
-                        format!("{summary}\n\n{description}"),
-                    )?;
-                },
-                Method::Post => {
-                    let post_spec = path_spec.post.as_ref().ok_or_else(|| {
-                        anyhow::anyhow!("Method not found in {path} spec: {method}")
-                    })?;
-                },
-                Method::Patch => {
-                    let path_spec = path_spec.patch.as_ref().ok_or_else(|| {
-                        anyhow::anyhow!("Method not found in {path} spec: {method}")
-                    })?;
-                },
-                Method::Put => {
-                    let put_spec = path_spec
-                        .put
-                        .as_ref()
-                        .ok_or_else(|| anyhow::anyhow!("Method not found in spec: {method}"))?;
-                },
-                Method::Delete => {
-                    let delete_spec = path_spec.delete.as_ref().ok_or_else(|| {
-                        anyhow::anyhow!("Method not found in {path} spec: {method}")
-                    })?;
-                },
+            let id = slug::slugify(format!("{method} {path}"));
+            let spec = match method {
+                Method::Get => path_spec.get.as_ref(),
+                Method::Post => path_spec.post.as_ref(),
+                Method::Patch => path_spec.patch.as_ref(),
+                Method::Put => path_spec.put.as_ref(),
+                Method::Delete => path_spec.delete.as_ref(),
             }
+            .ok_or_else(|| anyhow::anyhow!("Method not found in {path} spec: {method}"))?;
+
+            let summary = spec
+                .summary
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("Summary not found in {path} spec: {method}"))?;
+            let description = spec
+                .description
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("Description not found in {path} spec: {method}"))?;
+
+            let relative_path = path.strip_prefix('/').unwrap_or(path);
+            let full_path = self.path.join(relative_path);
+            fs::create_dir_all(&full_path)?;
+            fs::write(
+                full_path.join(format!("{method}.mdx")),
+                format!(
+                    r##"
+<h2 id="{id}" class="title is-4">{summary}<a href="#{id}"><i class="fas fa-link" aria-hidden="true" style="padding-left: 0.3em; color: #fdb07e;"></i></a></h2>
+<hr />
+<div class="columns">
+<div class="column">{description}</div>
+<div class="column">
+<div class="level">
+<div class="level-left">
+    <div class="level-item">
+        <span class="tag is-info is-medium is-rounded">{method}</span>
+    </div>
+    <div class="level-item">
+        <p>{path}</p>
+    </div>
+</div>
+</div>
+<div class="card"><header class="card-header"><p class="card-header-title">Bencher CLI</p></header><pre><code>bencher {cli_cmd}</code></pre></div>
+</div>
+</div>
+                    "##
+                ),
+            )?;
         }
 
         Ok(())
