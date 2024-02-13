@@ -1,0 +1,57 @@
+---
+import openapi from "../../../../public/download/openapi.json";
+import slugify from "slugify";
+import {MethodKind, Method} from "./method.ts";
+import QueryParameters from "./QueryParameters.astro";
+import BodyParameters from "./BodyParameters.astro";
+
+interface Props {
+  path: string;
+  method: MethodKind;
+  cli: string;
+  index: number;
+}
+
+const { path, method, cli, index } = Astro.props;
+const operation = openapi?.paths?.[path]?.[method];
+const id = slugify(`${method}-${path}`);
+const methodClass = new Method(method);
+---
+
+<h2 id={id} class="title is-4" style={index > 0 ? "margin-top: 6rem;" : ""}>
+  {operation?.summary}
+  <a href={`#${id}`}>
+    <i class="fas fa-link" aria-hidden="true" style="padding-left: 0.3em; color: #fdb07e;" />
+  </a>
+</h2>
+<hr />
+<div class="columns">
+  <div class="column">
+    <p>{operation?.description}</p>
+    <QueryParameters parameters={operation?.parameters} />
+    <BodyParameters requestBody={operation?.requestBody} />
+  </div>
+  <div class="column">
+    <div class="level">
+      <div class="level-left">
+          <div class="level-item">
+              <span class={`tag ${methodClass.color()} is-medium is-rounded`}>{methodClass.name()}</span>
+          </div>
+          <div class="level-item">
+              <p>{path}</p>
+          </div>
+      </div>
+      <div class="level-right">
+          <div class="level-item">
+              <a class="button" href="/download/openapi.json">View OpenAPI Spec</a>
+          </div>
+      </div>
+      </div>
+      <div class="card">
+      <header class="card-header">
+          <p class="card-header-title">Bencher CLI</p>
+      </header>
+      <pre><code>bencher {cli}</code></pre>
+    </div>
+  </div>
+</div>

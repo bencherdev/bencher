@@ -147,6 +147,10 @@ async fn get_ls_inner(
     path = "/v0/organizations",
     tags = ["organizations"]
 }]
+/// Create an organization for the authenticated admin user
+///
+/// Create an organization for the authenticated admin user.
+/// The user must be an admin on the server to use this route.
 pub async fn organization_post(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,

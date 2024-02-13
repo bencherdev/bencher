@@ -40,6 +40,7 @@
     "d3": "^7.8.5",
     "htl": "^0.3.1",
     "mermaid": "^10.8.0",
+    "slugify": "^1.6.6",
     "solid-js": "^1.8.14",
     "swagger-ui-dist": "^5.11.1",
     "typescript": "^5.3.3",

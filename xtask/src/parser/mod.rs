@@ -1,6 +1,5 @@
 use clap::{Parser, Subcommand};
 
-mod api_docs;
 mod notify;
 mod package;
 #[cfg(feature = "plus")]
@@ -11,7 +10,6 @@ mod test;
 mod types;
 mod version;
 
-pub use api_docs::TaskApiDocs;
 pub use notify::TaskNotify;
 #[cfg(feature = "cli")]
 pub use package::{TaskDeb, TaskMan};
@@ -56,8 +54,6 @@ pub enum TaskSub {
     Types(TaskTypes),
     /// Template CLI install scripts
     Template(TaskTemplate),
-    /// API documentation
-    ApiDocs(TaskApiDocs),
     #[cfg(feature = "plus")]
     #[clap(subcommand)]
     /// URLindexing

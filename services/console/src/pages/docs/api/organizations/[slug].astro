@@ -2,6 +2,8 @@
 import { getCollection } from "astro:content";
 import ApiLayout from "../../../../layouts/docs/ApiLayout.astro";
 import { Collection } from "../../../../content/config";
+import Operation from "../../../../components/docs/api/Operation.astro";
+
 // 1. Generate a new path for every collection entry
 export async function getStaticPaths() {
   const pages = await getCollection(Collection.organizations);
@@ -13,7 +15,6 @@ export async function getStaticPaths() {
 // 2. When it's time to render, you can get the entry directly from the prop
 const { page } = Astro.props;
 const { slug } = Astro.params;
-const { Content } = await page.render();
 ---
 
 <ApiLayout
@@ -24,5 +25,7 @@ const { Content } = await page.render();
   collection="organizations"
   slug={slug}
 >
-  <Content />
+  {page.data.paths.map(({path, method, cli}, index) =>
+    <Operation path={path} method={method} cli={cli} index={index}/>
+  )}
 </ApiLayout>

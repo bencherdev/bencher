@@ -3,8 +3,11 @@ title: "Organizations"
 description: "The Bencher Organizations REST API"
 heading: "Organizations REST API"
 sortOrder: 1
+paths:
+  - path: "/v0/organizations"
+    method: "get"
+    cli: "organization list"
+  - path: "/v0/organizations"
+    method: "post"
+    cli: "organization create"
 ---
-
-import Get from "../../chunks/api/v0/organizations/GET.mdx";
-
-<Get />

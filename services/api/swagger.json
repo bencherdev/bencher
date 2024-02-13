@@ -581,6 +581,8 @@
         "tags": [
           "organizations"
         ],
+        "summary": "Create an organization for the authenticated admin user",
+        "description": "Create an organization for the authenticated admin user. The user must be an admin on the server to use this route.",
         "operationId": "organization_post",
         "requestBody": {
           "content": {

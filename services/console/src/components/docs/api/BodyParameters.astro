@@ -1,0 +1,16 @@
+---
+import openapi from "../../../../public/download/openapi.json";
+
+interface Props {
+  requestBody: object;
+}
+
+const { requestBody } = Astro.props;
+
+const requestBodyRef = requestBody?.content?.["application/json"]?.schema?.["$ref"]?.split("/")?.pop();
+const requestBodySchema = openapi.components.schemas?.[requestBodyRef];
+---
+
+{requestBodySchema && (
+  <h3 class="title is-5">Body Parameters</h3>
+)}

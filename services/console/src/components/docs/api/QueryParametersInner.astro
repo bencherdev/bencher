@@ -1,0 +1,13 @@
+---
+interface Props {
+  parameters: Array<object>;
+}
+
+const { parameters } = Astro.props;
+---
+
+{parameters.map((parameter) => (
+  <hr />
+  <p><code>{parameter.name}</code></p>
+  <p>{parameter.description}</p>
+))}
