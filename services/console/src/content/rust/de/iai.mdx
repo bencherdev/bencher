@@ -1,0 +1,175 @@
+---
+title: "Iai"
+description: "Eine Schritt-für-Schritt-Anleitung zum Benchmarking von Rust-Code mit Iai"
+heading: "Wie man Rust-Code mit Iai benchmarkt"
+sortOrder: 3
+---
+
+import Benchmarking from "../../../chunks/benchmarking/de/benchmarking.mdx";
+import WhatIsRust from "../../../chunks/rust/de/what-is-rust.mdx";
+import FizzBuzzRules from "../../../chunks/benchmarking/de/fizz-buzz-rules.mdx";
+import FizzBuzzRust from "../../../chunks/rust/de/fizz-buzz-rust.mdx";
+import StepByStepRust from "../../../chunks/rust/de/step-by-step-rust.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/de/micro-vs-macro.mdx";
+import BenchmarkingRust from "../../../chunks/rust/de/benchmarking-rust.mdx";
+import FizzBuzzRefactor from "../../../chunks/rust/criterion/de/fizz-buzz-refactor.mdx";
+import GameBenchesTree from "../../../chunks/rust/criterion/game-benches-tree.mdx";
+import FizzBuzzRefactorBenchesCode from "../../../chunks/rust/iai/fizz-buzz-refactor-benches-code.mdx";
+import GameCargoToml from "../../../chunks/rust/iai/game-cargo-toml.mdx";
+import BenchPlayGameOutput from "../../../chunks/rust/iai/bench-play-game-output.mdx";
+import FizzBuzzFibonacciRust from "../../../chunks/rust/de/fizz-buzz-fibonacci-rust.mdx";
+import PlayGameRustCode from "../../../chunks/rust/criterion/play-game-rust-code.mdx";
+import BenchPlayGameFibonacciOutput from "../../../chunks/rust/iai/bench-play-game-fibonacci-output.mdx";
+import FizzBuzzFibonacciOpenRust from "../../../chunks/rust/de/fizz-buzz-fibonacci-open-rust.mdx";
+import FizzBuzzFibonacciOpenRustCode from "../../../chunks/rust/criterion/fizz-buzz-fibonacci-open-rust-code.mdx";
+import TheEnd from "../../../chunks/benchmarking/de/the-end.mdx";
+import OnFire from "../../../chunks/benchmarking/de/on-fire.mdx";
+import BenchPlayGameOnFireCode from "../../../chunks/rust/iai/bench-play-game-on-fire-code.mdx";
+import BenchPlayGameOnFireOutputStart from "../../../chunks/rust/iai/bench-play-game-on-fire-output-start.mdx";
+import BenchPlayGameOnFireOutput from "../../../chunks/rust/iai/bench-play-game-on-fire-output.mdx";
+import FizzBuzzFibonacciFixRust from "../../../chunks/rust/de/fizz-buzz-fibonacci-fix-rust.mdx";
+import BenchPlayGameFixOutput from "../../../chunks/rust/iai/bench-play-game-fix-output.mdx";
+import CatchInCi from "../../../chunks/benchmarking/de/catch-in-ci.mdx";
+import CatchInCiOutput from "../../../chunks/rust/iai/catch-in-ci-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/de/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/rust/catch-in-ci-plot-rust-bench.mdx";
+import BencherFooter from "../../../chunks/learn/de/bencher-footer.mdx";
+
+<Benchmarking />
+
+<WhatIsRust />
+
+<FizzBuzzRust />
+
+<StepByStepRust />
+
+<MicroVsMacro />
+
+<BenchmarkingRust />
+
+Alle drei werden [unterstützt von Bencher](/docs/de/explanation/adapters/). Warum also Iai wählen?
+Iai verwendet Anweisungszähler statt Echtzeit.
+Das macht es ideal für [dauerndes Benchmarking](/docs/de/explanation/continuous-benchmarking/), also Benchmarking in CI.
+Ich würde vorschlagen, Iai für dauerndes Benchmarking zu verwenden, besonders wenn Sie gemeinsam genutzte Runner verwenden.
+Es ist wichtig zu verstehen, dass Iai nur ein Proxy für das misst, was Sie wirklich interessiert.
+Bedeutet der Wechsel von 1.000 Anweisungen auf 2.000 Anweisungen eine Verdoppelung der Latenz Ihrer Anwendung?
+Vielleicht ja, vielleicht nein.
+Aus diesem Grund kann es nützlich sein, auch Echtzeit-basierte Benchmarks parallel zu Anweisungszähler-basierten Benchmarks durchzuführen.
+
+> 🐰 Iai wurde [seit über 3 Jahren nicht mehr aktualisiert](https://github.com/bheisler/iai/commits/main/). Daher könnten Sie in Betracht ziehen, [Iai-Callgrind](/docs/de/explanation/adapters/#-rust-iai-callgrind) zu verwenden.
+
+## Install Valgrind
+
+Iai verwendet ein Tool namens [Valgrind](https://valgrind.org/) zur Erfassung von Anweisungszählern.
+Valgrind unterstützt Linux, Solaris, FreeBSD und MacOS.
+Die Unterstützung von MacOS ist jedoch auf x86_64-Prozessoren beschränkt, da [arm64-Prozessoren (M1, M2 usw.) noch nicht unterstützt werden](https://github.com/LouisBrunner/valgrind-macos/issues/56).
+
+Auf Debian laufen: `sudo apt-get install valgrind`
+
+Auf MacOS (x86_64/Intel-Chip only): `brew install valgrind`
+
+<FizzBuzzRefactor />
+
+## Benchmarking von FizzBuzz
+
+Um unseren Code zu benchmarken, benötigen wir ein `benches` Verzeichnis und fügen eine Datei hinzu, um unsere Benchmarks zu enthalten, `play_game.rs`:
+
+<GameBenchesTree />
+
+Fügen Sie in `play_game.rs` den folgenden Code hinzu:
+
+<FizzBuzzRefactorBenchesCode />
+
+- Importieren Sie die Funktion `play_game` aus unserer `game` crate.
+- Erstellen Sie eine Funktion namens `bench_play_game`.
+- Führen Sie unser Macro-Benchmark in einer "Black Box" aus, damit der Compiler unseren Code nicht optimiert.
+- Zählen Sie von `1` bis `100` einschließlich.
+- Rufen Sie für jede Zahl `play_game` auf, mit `print` auf `false` gesetzt.
+
+Jetzt müssen wir das `game` crate konfigurieren, um unsere Benchmarks auszuführen.
+
+Fügen Sie folgendes am _Ende_ Ihrer `Cargo.toml` Datei hinzu:
+
+<GameCargoToml />
+
+- `iai`: Fügen Sie `iai` als Entwicklungsabhängigkeit hinzu, da wir es nur für Performance-Tests verwenden.
+- `bench`: Registrieren Sie `play_game` als Benchmark und stellen Sie `harness` auf `false`, da wir Iai als unser Benchmarking-Gestell verwenden.
+
+Jetzt sind wir bereit, unseren Code zu benchmarken, laufen Sie `cargo bench`:
+
+<BenchPlayGameOutput />
+
+> 🐰 Salat Rübe die Rübe! Wir haben unsere ersten Benchmark-Messwerte!
+
+Endlich können wir unsere müden Entwicklerköpfe zur Ruhe legen...
+Nur ein Scherz, unsere Benutzer wollen ein neues Feature!
+
+<FizzBuzzFibonacciRust>
+  <PlayGameRustCode />
+</FizzBuzzFibonacciRust>
+
+## Benchmarking von FizzBuzzFibonacci
+
+Jetzt können wir unser Benchmark erneut ausführen:
+
+<BenchPlayGameFibonacciOutput />
+
+Oh, toll! Iai sagt uns, dass der Unterschied zwischen den geschätzten Zyklen unserer FizzBuzz und FizzBuzzFibonacci-Spiele `+522,6091%` beträgt.
+Ihre Zahlen werden ein wenig anders als meine sein.
+Der Unterschied zwischen den beiden Spielen liegt jedoch wahrscheinlich im Bereich von `5x`.
+Das scheint mir gut zu sein! Vor allem für die Hinzufügung eines so ausgefallenen Features wie _Fibonacci_ zu unserem Spiel.
+Die Kinder werden es lieben!
+
+<FizzBuzzFibonacciOpenRust>
+  <FizzBuzzFibonacciOpenRustCode />
+</FizzBuzzFibonacciOpenRust>
+
+<TheEnd />
+
+<br />
+
+<OnFire />
+
+<BenchPlayGameOnFireCode />
+
+- Ein Mikro-Benchmark `bench_play_game_100` zum Spielen des Spiels mit der Zahl einhundert (`100`)
+- Ein Mikro-Benchmark `bench_play_game_1_000_000` zum Spielen des Spiels mit der Zahl eine Million (`1_000_000`)
+
+Als ich es laufen ließ, bekam ich dies:
+
+<BenchPlayGameOnFireOutputStart />
+
+Warten Sie darauf... warten Sie darauf...
+
+<BenchPlayGameOnFireOutput />
+
+Was?! `6,685 geschätzte Zyklen` x `1,000` sollten `6,685,000 geschätzte Zyklen` sein, nicht `155,109,206 geschätzte Zyklen` 🤯
+Obwohl ich meinen Fibonacci-Sequenz-Code funktional korrekt bekommen habe, muss ich irgendwo einen Leistungsfehler drin haben.
+
+<FizzBuzzFibonacciFixRust />
+
+Jetzt lassen Sie uns diese Benchmarks erneut laufen und sehen, wie es uns ergangen ist:
+
+<BenchPlayGameFixOutput />
+
+Oh, wow! Unser Benchmark `bench_play_game` ist wieder etwa da, wo es für den originalen FizzBuzz war.
+Ich wünschte, ich könnte mich genau an diesen Score erinnern. Es sind jedoch drei Wochen vergangen.
+Meine Terminalhistorie reicht nicht so weit zurück.
+Und Iai vergleicht nur mit dem neuesten Resultat.
+Aber ich denke, es ist nahe dran!
+
+Der Benchmark `bench_play_game_100` ist fast 10x down, `-87,22513%`.
+Und der Benchmark `bench_play_game_1_000_000` ist mehr als 10,000x down! Von `155,109,206 geschätzten Zyklen` auf `950 geschätzte` geschätzte Zyklen!
+Das ist `-99,99939%`!
+
+> 🐰 Hey, zumindest haben wir diesen Performance-Bug erwischt, bevor er es bis zur Produktion geschafft hat... oh, richtig. Leider nicht...
+
+<CatchInCi />
+
+<CatchInCiOutput />
+
+<CatchInCiPlot />
+
+<CatchInCiPlotRustBench title="Wie man Rust mit Iai benchmarkt" />
+
+<BencherFooter />

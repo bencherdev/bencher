@@ -1,0 +1,174 @@
+---
+title: "Iai"
+description: "RustコードをIaiでベンチマークするためのステップバイステップガイド"
+heading: "Iaiを使用してRustコードをベンチマークする方法"
+sortOrder: 3
+---
+
+import Benchmarking from "../../../chunks/benchmarking/ja/benchmarking.mdx";
+import WhatIsRust from "../../../chunks/rust/ja/what-is-rust.mdx";
+import FizzBuzzRules from "../../../chunks/benchmarking/ja/fizz-buzz-rules.mdx";
+import FizzBuzzRust from "../../../chunks/rust/ja/fizz-buzz-rust.mdx";
+import StepByStepRust from "../../../chunks/rust/ja/step-by-step-rust.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/ja/micro-vs-macro.mdx";
+import BenchmarkingRust from "../../../chunks/rust/ja/benchmarking-rust.mdx";
+import FizzBuzzRefactor from "../../../chunks/rust/criterion/ja/fizz-buzz-refactor.mdx";
+import GameBenchesTree from "../../../chunks/rust/criterion/game-benches-tree.mdx";
+import FizzBuzzRefactorBenchesCode from "../../../chunks/rust/iai/fizz-buzz-refactor-benches-code.mdx";
+import GameCargoToml from "../../../chunks/rust/iai/game-cargo-toml.mdx";
+import BenchPlayGameOutput from "../../../chunks/rust/iai/bench-play-game-output.mdx";
+import FizzBuzzFibonacciRust from "../../../chunks/rust/ja/fizz-buzz-fibonacci-rust.mdx";
+import PlayGameRustCode from "../../../chunks/rust/criterion/play-game-rust-code.mdx";
+import BenchPlayGameFibonacciOutput from "../../../chunks/rust/iai/bench-play-game-fibonacci-output.mdx";
+import FizzBuzzFibonacciOpenRust from "../../../chunks/rust/ja/fizz-buzz-fibonacci-open-rust.mdx";
+import FizzBuzzFibonacciOpenRustCode from "../../../chunks/rust/criterion/fizz-buzz-fibonacci-open-rust-code.mdx";
+import TheEnd from "../../../chunks/benchmarking/ja/the-end.mdx";
+import OnFire from "../../../chunks/benchmarking/ja/on-fire.mdx";
+import BenchPlayGameOnFireCode from "../../../chunks/rust/iai/bench-play-game-on-fire-code.mdx";
+import BenchPlayGameOnFireOutputStart from "../../../chunks/rust/iai/bench-play-game-on-fire-output-start.mdx";
+import BenchPlayGameOnFireOutput from "../../../chunks/rust/iai/bench-play-game-on-fire-output.mdx";
+import FizzBuzzFibonacciFixRust from "../../../chunks/rust/ja/fizz-buzz-fibonacci-fix-rust.mdx";
+import BenchPlayGameFixOutput from "../../../chunks/rust/iai/bench-play-game-fix-output.mdx";
+import CatchInCi from "../../../chunks/benchmarking/ja/catch-in-ci.mdx";
+import CatchInCiOutput from "../../../chunks/rust/iai/catch-in-ci-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/ja/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/rust/catch-in-ci-plot-rust-bench.mdx";
+import BencherFooter from "../../../chunks/learn/ja/bencher-footer.mdx";
+
+<Benchmarking />
+
+<WhatIsRust />
+
+<FizzBuzzRust />
+
+<StepByStepRust />
+
+<MicroVsMacro />
+
+<BenchmarkingRust />
+
+すべてが[ベンチャーによってサポートされています](/docs/ja/explanation/adapters/)。なぜIaiを選ぶのでしょうか？
+Iaiは壁掛け時間ではなく、命令数を使用します。
+これは、CIでのベンチマーク、つまり[連続的なベンチマーキング](/docs/ja/explanation/continuous-benchmarking/)に理想的です。
+特に共有ランナーを使用している場合、CIでの連続的なベンチマーキングにはIaiを使用することをお勧めします。
+Iaiが本当に気になることの代理としか測定しないことを理解することが重要です。
+1,000命令から2,000命令に増加することで、アプリケーションのレイテンシが2倍になるのでしょうか？
+それはもしかしたらそうかもしれませんし、そうでないかもしれません。
+このため、命令数ベースのベンチマークと並行して壁掛け時間ベースのベンチマークを実行することも有用です。
+
+> 🐰 Iaiは[3年以上更新されていません](https://github.com/bheisler/iai/commits/main/)。そのため、代わりに[Iai-Callgrindの使用](/docs/ja/explanation/adapters/#-rust-iai-callgrind)を検討することができます。
+
+## Valgrindのインストール
+
+Iaiは命令数を収集するために[Valgrind](https://valgrind.org/)というツールを使用します。
+ValgrindはLinux、Solaris、FreeBSD、macOSをサポートしています。
+ただし、macOSのサポートはx86_64プロセッサに限定されており、[まだarm64（M1、M2など）プロセッサはサポートされていません](https://github.com/LouisBrunner/valgrind-macos/issues/56)。
+
+Debianでの実行：`sudo apt-get install valgrind`
+
+MacOS（x86_64/Intelチップのみ）：`brew install valgrind`
+
+<FizzBuzzRefactor />
+
+## FizzBuzzをベンチマークする
+
+コードをベンチマークするために、`benches`ディレクトリを作成し、ベンチマークを含むファイル`play_game.rs`を追加する必要があります：
+
+<GameBenchesTree />
+
+`play_game.rs`の中に以下のコードを追加します：
+
+<FizzBuzzRefactorBenchesCode />
+
+- `game`クレートから`play_game`関数をインポートします。
+- `bench_play_game`という名前の関数を作成します。
+- コンパイラがコードを最適化するのを防ぐために、マクロベンチマークを"black box"の中で実行します。
+- `1`から`100`まで（含む）を反復します。
+- 各数字に対して、`play_game`を呼び出し、`print`を`偽`に設定します。
+
+次に、ベンチマークを実行するために`game`クレートを設定する必要があります。
+
+`Cargo.toml`ファイルの_下部_に以下を追加します：
+
+<GameCargoToml />
+
+- `iai`: パフォーマンステストにのみ使用するため、`iai`を開発依存関係として追加します。
+- `bench`: `play_game`をベンチマークとして登録し、ハーネスを`false`に設定します。なぜなら、私たちはIaiをベンチマークハーネスとして使用する予定だからです。
+
+これでコードのベンチマークが可能になりました。 `cargo bench`を実行します：
+
+<BenchPlayGameOutput />
+
+>🐰 レタスのビートをターンアップ！ 我々は我々の最初のベンチマーク測定値を得ました！
+
+ついに、我々は疲れ果てた開発者の頭を休めることができます...
+冗談です、ユーザーは新機能を望んでいます！
+
+<FizzBuzzFibonacciRust>
+  <PlayGameRustCode />
+</FizzBuzzFibonacciRust>
+
+## FizzBuzzFibonacciのベンチマーク
+
+これで、私たちのベンチマークを再度実行することができます：
+
+<BenchPlayGameFibonacciOutput />
+
+おお、それは素晴らしい！Iaiは、私たちのFizzBuzzとFizzBuzzFibonacciゲームの推定サイクルの差が `+522.6091%`であると言っています。
+あなたの数字は私のものと少し異なるでしょう。
+ただし、2つのゲーム間の違いは、おそらく`5x`の範囲にあります。
+私はそれが良いと思う！ 特にゲームに_Fibonacci_という派手な機能を追加することにより。子供たちはそれを愛するでしょう！
+
+<FizzBuzzFibonacciOpenRust>
+  <FizzBuzzFibonacciOpenRustCode />
+</FizzBuzzFibonacciOpenRust>
+
+<TheEnd />
+
+<br />
+
+<OnFire />
+
+<BenchPlayGameOnFireCode />
+
+- 数字百でゲームをするミクロベンチマーク `bench_play_game_100`
+- 数字100万でゲームをするミクロベンチマーク `bench_play_game_1_000_000`
+
+私がそれを実行したとき、私はこれを得ました：
+
+<BenchPlayGameOnFireOutputStart />
+
+それを待って...それを待って...
+
+<BenchPlayGameOnFireOutput />
+
+何！ `6,685推定サイクル` x `1,000`は `6,685,000推定サイクル`であるべきであり、 `155,109,206推定サイクル`ではない🤯
+フィボナッチシーケンスのコードが機能的には正しいにもかかわらず、何かしらのパフォーマンスのバグがあるはずです。
+
+<FizzBuzzFibonacciFixRust />
+
+それでは、これらのベンチマークを再実行して、どのようになったか見てみましょう：
+
+<BenchPlayGameFixOutput />
+
+おお、わあ！ 私たちの`bench_play_game`ベンチマークがオリジナルのFizzBuzzのところに戻ってきました。
+そのスコアが正確に何だったか思い出せたら良かったのですが。それは3週間前の事です。
+私のターミナルの履歴はそれほど遡らない。
+そしてIaiは最新の結果とのみ比較します。
+しかし、それは近いと思います！
+
+`bench_play_game_100`のベンチマークはほぼ10倍、 `-87.22513%`減りました。
+そして`bench_play_game_1_000_000`のベンチマークは10,000倍以上減りました！ `155,109,206推定サイクル`から`950推定`推定サイクルに！
+それは `-99.99939%` です！
+
+> 🐰 まあ、少なくともこのパフォーマンスバグを製品版に出す前に見つけられた、ね... あ、そうだ。忘れてた...
+
+<CatchInCi />
+
+<CatchInCiOutput />
+
+<CatchInCiPlot />
+
+<CatchInCiPlotRustBench title="Iaiを使用してRustベンチマークの方法" />
+
+<BencherFooter />

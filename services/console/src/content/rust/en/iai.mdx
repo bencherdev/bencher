@@ -50,11 +50,13 @@ import BencherFooter from "../../../chunks/learn/en/bencher-footer.mdx";
 All three are [support by Bencher](/docs/explanation/adapters/). So why choose Iai?
 Iai uses instruction counts instead of wall clock time.
 This makes it ideal for [continuous benchmarking](/docs/explanation/continuous-benchmarking/), that is benchmarking in CI.
-I would suggest using Iai for continuous benchmarking with Linux based shared, noisy runners.
+I would suggest using Iai for continuous benchmarking, especially if you are using shared runners.
 It is important to understand that Iai only measures a proxy for what you really care about.
 Does going from 1,000 instructions to 2,000 instructions double the latency of your application?
 Maybe or maybe not.
 For this reason, it can be useful to also run wall clock time based benchmarks in parallel with instruction count based benchmarks.
+
+> 🐰 Iai hasn't been update [in over 3 years](https://github.com/bheisler/iai/commits/main/). So you might consider [using Iai-Callgrind](/docs/explanation/adapters/#-rust-iai-callgrind) instead.
 
 ## Install Valgrind
 

@@ -1,0 +1,175 @@
+---
+title: "Iai"
+description: "Rust 코드를 Iai로 벤치마킹하는 단계별 가이드"
+heading: "Rust 코드를 Iai로 벤치마킹하는 방법"
+sortOrder: 3
+---
+
+import Benchmarking from "../../../chunks/benchmarking/ko/benchmarking.mdx";
+import WhatIsRust from "../../../chunks/rust/ko/what-is-rust.mdx";
+import FizzBuzzRules from "../../../chunks/benchmarking/ko/fizz-buzz-rules.mdx";
+import FizzBuzzRust from "../../../chunks/rust/ko/fizz-buzz-rust.mdx";
+import StepByStepRust from "../../../chunks/rust/ko/step-by-step-rust.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/ko/micro-vs-macro.mdx";
+import BenchmarkingRust from "../../../chunks/rust/ko/benchmarking-rust.mdx";
+import FizzBuzzRefactor from "../../../chunks/rust/criterion/ko/fizz-buzz-refactor.mdx";
+import GameBenchesTree from "../../../chunks/rust/criterion/game-benches-tree.mdx";
+import FizzBuzzRefactorBenchesCode from "../../../chunks/rust/iai/fizz-buzz-refactor-benches-code.mdx";
+import GameCargoToml from "../../../chunks/rust/iai/game-cargo-toml.mdx";
+import BenchPlayGameOutput from "../../../chunks/rust/iai/bench-play-game-output.mdx";
+import FizzBuzzFibonacciRust from "../../../chunks/rust/ko/fizz-buzz-fibonacci-rust.mdx";
+import PlayGameRustCode from "../../../chunks/rust/criterion/play-game-rust-code.mdx";
+import BenchPlayGameFibonacciOutput from "../../../chunks/rust/iai/bench-play-game-fibonacci-output.mdx";
+import FizzBuzzFibonacciOpenRust from "../../../chunks/rust/ko/fizz-buzz-fibonacci-open-rust.mdx";
+import FizzBuzzFibonacciOpenRustCode from "../../../chunks/rust/criterion/fizz-buzz-fibonacci-open-rust-code.mdx";
+import TheEnd from "../../../chunks/benchmarking/ko/the-end.mdx";
+import OnFire from "../../../chunks/benchmarking/ko/on-fire.mdx";
+import BenchPlayGameOnFireCode from "../../../chunks/rust/iai/bench-play-game-on-fire-code.mdx";
+import BenchPlayGameOnFireOutputStart from "../../../chunks/rust/iai/bench-play-game-on-fire-output-start.mdx";
+import BenchPlayGameOnFireOutput from "../../../chunks/rust/iai/bench-play-game-on-fire-output.mdx";
+import FizzBuzzFibonacciFixRust from "../../../chunks/rust/ko/fizz-buzz-fibonacci-fix-rust.mdx";
+import BenchPlayGameFixOutput from "../../../chunks/rust/iai/bench-play-game-fix-output.mdx";
+import CatchInCi from "../../../chunks/benchmarking/ko/catch-in-ci.mdx";
+import CatchInCiOutput from "../../../chunks/rust/iai/catch-in-ci-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/ko/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/rust/catch-in-ci-plot-rust-bench.mdx";
+import BencherFooter from "../../../chunks/learn/ko/bencher-footer.mdx";
+
+<Benchmarking />
+
+<WhatIsRust />
+
+<FizzBuzzRust />
+
+<StepByStepRust />
+
+<MicroVsMacro />
+
+<BenchmarkingRust />
+
+세 가지 모두 [Bencher가 지원](/docs/ko/explanation/adapters/)합니다. 그렇다면 왜 Iai를 선택하나요?
+Iai는 벽시계 시간 대신 명령 수를 사용합니다.
+이는 CI에서의 [지속적인 벤치마킹](/docs/ko/explanation/continuous-benchmarking/)에 이상적입니다.
+특히 공유 실행자를 사용하는 경우에는 Iai를 사용하여 지속적인 벤치마킹을 하는 것이 좋습니다.
+Iai가 실제로 중요한 것에 대한 프록시만 측정한다는 것을 이해하는 것이 중요합니다.
+1,000개의 명령이 2,000개로 늘어나면 애플리케이션의 대기 시간이 두 배가 됩니까?
+아마 그렇거나 그렇지 않을 수 있습니다.
+이런 이유로, 명령 개수에 기반을 둔 벤치마크와 동시에 벽시계 시간에 기반을 둔 벤치마크를 실행하는 것이 유용할 수 있습니다.
+
+> 🐰 Iai는 [3년 이상 업데이트되지 않았습니다](https://github.com/bheisler/iai/commits/main/). 그래서 [Iai-Callgrind를 사용](/docs/ko/explanation/adapters/#-rust-iai-callgrind)하는 것을 고려해 볼 수 있습니다.
+
+## Valgrind 설치
+
+Iai는 명령 수를 수집하기 위해 [Valgrind](https://valgrind.org/)라는 도구를 사용합니다.
+Valgrind는 Linux, Solaris, FreeBSD, 그리고 MacOS를 지원합니다.
+그러나 MacOS 지원은 [아직 지원되지 않는](https://github.com/LouisBrunner/valgrind-macos/issues/56) arm64 (M1, M2 등) 프로세서를 제외한 x86_64 프로세서로 제한됩니다.
+
+Debian에서 실행: `sudo apt-get install valgrind`
+
+MacOS (x86_64/Intel chip only): `brew install valgrind`
+
+<FizzBuzzRefactor />
+
+## FizzBuzz 벤치마킹
+
+코드를 벤치마크하려면 `benches` 디렉토리를 생성하고 벤치마크를 포함할 파일인 `play_game.rs`를 추가해야 합니다:
+
+<GameBenchesTree />
+
+`play_game.rs` 내에 다음 코드를 추가합니다:
+
+<FizzBuzzRefactorBenchesCode />
+
+- `game` 크레이트에서 `play_game` 함수를 import합니다.
+- `bench_play_game`이라는 함수를 생성합니다.
+- 컴파일러가 우리의 코드를 최적화하지 못하도록 "black box" 내에서 우리의 macro-benchmark를 실행합니다.
+- `1`부터 `100`까지 순차적으로 반복합니다.
+- 각 숫자에 대해 `play_game`을 호출하고, `print`를 `false`로 설정합니다.
+
+이제 벤치마크를 실행하기 위해 `game` 크레이트를 설정해야 합니다.
+
+`Cargo.toml` 파일의 _바닥_에 다음을 추가합니다:
+
+<GameCargoToml />
+
+- `iai`: `iai`를 개발 종속성으로 추가합니다. 왜냐하면 우리는 이를 성능 테스팅을 위해 사용하기 때문입니다.
+- `bench`: `play_game`을 벤치마크로 등록하고 `harness`를 `false`로 설정합니다. 왜냐하면 벤치마킹 하네스로 Iai를 사용할 것이기 때문입니다.
+
+이제 코드를 벤치마킹할 준비가 되었습니다, `cargo bench`를 실행하세요:
+
+<BenchPlayGameOutput />
+
+> 🐰 Lettuce turnip the beet! 우리는 첫 벤치마크 메트릭을 얻었습니다!
+
+드디어, 우리는 지친 개발자 머리를 쉴 수 있습니다...
+농담입니다, 우리 사용자들은 새로운 기능을 원합니다!
+
+<FizzBuzzFibonacciRust>
+  <PlayGameRustCode />
+</FizzBuzzFibonacciRust>
+
+## FizzBuzzFibonacci 벤치마킹
+
+이제 벤치마크를 다시 실행할 수 있습니다:
+
+<BenchPlayGameFibonacciOutput />
+
+오, 깔끔! Iai는 우리의 FizzBuzz와 FizzBuzzFibonacci 게임의 추정된 사이클 사이의 차이는 `+522.6091%`라고 알려줍니다.
+당신의 숫자는 제 숫자와 약간 다를 것입니다.
+그러나 두 게임 사이의 차이는 아마 `5x` 범위에 있을 겁니다.
+그게 좋은 것 같아요! 특히 우리 게임에 _Fibonacci_처럼 멋진 기능을 추가했을 때 말이죠.
+아이들이 이것을 좋아할 거예요!
+
+<FizzBuzzFibonacciOpenRust>
+  <FizzBuzzFibonacciOpenRustCode />
+</FizzBuzzFibonacciOpenRust>
+
+<TheEnd />
+
+<br />
+
+<OnFire />
+
+<BenchPlayGameOnFireCode />
+
+- 숫자 백 (`100`)으로 게임을 플레이하는 마이크로 벤치마크 `bench_play_game_100`
+- 숫자 백만 (`1_000_000`)으로 게임을 플레이하는 마이크로 벤치마크 `bench_play_game_1_000_000`
+
+그것을 실행했을 때, 저는 이렇게 받았습니다:
+
+<BenchPlayGameOnFireOutputStart />
+
+기다리고... 기다리고...
+
+<BenchPlayGameOnFireOutput />
+
+무엇! `6,685 추정 사이클` x `1,000`은 `6,685,000 추정 사이클`이어야 하지 `155,109,206 추정 사이클`이 아니야 🤯
+비록 나의 피보나치 수열 코드가 기능적으로 정확하다고 해도, 어딘가에 성능 버그가 있어야 합니다.
+
+<FizzBuzzFibonacciFixRust />
+
+이제 벤치마크를 다시 실행하고 얼마나 했는지 확인해 봅시다:
+
+<BenchPlayGameFixOutput />
+
+오, 와우! 우리의 `bench_play_game` 벤치마크는 원래의 FizzBuzz에서처럼 다시 떨어졌네요.
+그 점수가 정확히 얼마나 됐었는지 기억하고 싶군요. 이제 세 주가 지났네요.
+내 터미널 기록은 그렇게 멀리 돌아가지 않아요.
+그리고 Iai는 가장 최근의 결과와만 비교합니다.
+하지만 가까워 보이네요!
+
+`bench_play_game_100` 벤치마크는 거의 10배 떨어졌고, `-87.22513%`.
+그리고 `bench_play_game_1_000_000` 벤치마크는 10,000배 이상 떨어졌습니다! `155,109,206 추정 사이클`에서 `950` 추정 사이클로!
+`-99.99939%`!
+
+> 🐰 헤이, 적어도 이 성능 버그를 프로덕션에 들어가기 전에 잡았다... 아, 맞다. 실수했다...
+
+<CatchInCi />
+
+<CatchInCiOutput />
+
+<CatchInCiPlot />
+
+<CatchInCiPlotRustBench title="Rust를 Iai로 벤치마킹하는 방법" />
+
+<BencherFooter />

@@ -1,0 +1,175 @@
+---
+title: "Iai"
+description: "如何使用Iai对Rust代码进行基准测试的逐步指南"
+heading: "如何使用Iai对Rust代码进行基准测试"
+sortOrder: 3
+---
+
+import Benchmarking from "../../../chunks/benchmarking/zh/benchmarking.mdx";
+import WhatIsRust from "../../../chunks/rust/zh/what-is-rust.mdx";
+import FizzBuzzRules from "../../../chunks/benchmarking/zh/fizz-buzz-rules.mdx";
+import FizzBuzzRust from "../../../chunks/rust/zh/fizz-buzz-rust.mdx";
+import StepByStepRust from "../../../chunks/rust/zh/step-by-step-rust.mdx";
+import MicroVsMacro from "../../../chunks/benchmarking/zh/micro-vs-macro.mdx";
+import BenchmarkingRust from "../../../chunks/rust/zh/benchmarking-rust.mdx";
+import FizzBuzzRefactor from "../../../chunks/rust/criterion/zh/fizz-buzz-refactor.mdx";
+import GameBenchesTree from "../../../chunks/rust/criterion/game-benches-tree.mdx";
+import FizzBuzzRefactorBenchesCode from "../../../chunks/rust/iai/fizz-buzz-refactor-benches-code.mdx";
+import GameCargoToml from "../../../chunks/rust/iai/game-cargo-toml.mdx";
+import BenchPlayGameOutput from "../../../chunks/rust/iai/bench-play-game-output.mdx";
+import FizzBuzzFibonacciRust from "../../../chunks/rust/zh/fizz-buzz-fibonacci-rust.mdx";
+import PlayGameRustCode from "../../../chunks/rust/criterion/play-game-rust-code.mdx";
+import BenchPlayGameFibonacciOutput from "../../../chunks/rust/iai/bench-play-game-fibonacci-output.mdx";
+import FizzBuzzFibonacciOpenRust from "../../../chunks/rust/zh/fizz-buzz-fibonacci-open-rust.mdx";
+import FizzBuzzFibonacciOpenRustCode from "../../../chunks/rust/criterion/fizz-buzz-fibonacci-open-rust-code.mdx";
+import TheEnd from "../../../chunks/benchmarking/zh/the-end.mdx";
+import OnFire from "../../../chunks/benchmarking/zh/on-fire.mdx";
+import BenchPlayGameOnFireCode from "../../../chunks/rust/iai/bench-play-game-on-fire-code.mdx";
+import BenchPlayGameOnFireOutputStart from "../../../chunks/rust/iai/bench-play-game-on-fire-output-start.mdx";
+import BenchPlayGameOnFireOutput from "../../../chunks/rust/iai/bench-play-game-on-fire-output.mdx";
+import FizzBuzzFibonacciFixRust from "../../../chunks/rust/zh/fizz-buzz-fibonacci-fix-rust.mdx";
+import BenchPlayGameFixOutput from "../../../chunks/rust/iai/bench-play-game-fix-output.mdx";
+import CatchInCi from "../../../chunks/benchmarking/zh/catch-in-ci.mdx";
+import CatchInCiOutput from "../../../chunks/rust/iai/catch-in-ci-output.mdx";
+import CatchInCiPlot from "../../../chunks/benchmarking/zh/catch-in-ci-plot.mdx";
+import CatchInCiPlotRustBench from "../../../chunks/rust/catch-in-ci-plot-rust-bench.mdx";
+import BencherFooter from "../../../chunks/learn/zh/bencher-footer.mdx";
+
+<Benchmarking />
+
+<WhatIsRust />
+
+<FizzBuzzRust />
+
+<StepByStepRust />
+
+<MicroVsMacro />
+
+<BenchmarkingRust />
+
+三者都被 [Bencher 支持](/docs/zh/explanation/adapters/)。那么为什么选择Iai呢？
+Iai使用指令计数而非墙钟时间。
+这使其理想的适合[持续性基准测试](/docs/zh/explanation/continuous-benchmarking/)，也就是在CI中进行基准测试。
+我建议对于持续化基准测试使用Iai，特别是如果你正在使用共享的运行器。
+了解一件重要的事情，Iai仅测量你真正关心之事的代理。
+你的应用程序的延迟是否会因从1000个指令增加到2000个指令而加倍？
+可能会也可能不会。
+因此，与基于指令计数的基准测试并行运行基于墙钟时间的基准测试可能会比较有用。
+
+> 🐰 Iai 已经超过3年没有更新了（查看 [这里](https://github.com/bheisler/iai/commits/main/)）。所以你可能需要考虑[使用 Iai-Callgrind](/docs/zh/explanation/adapters/#-rust-iai-callgrind) 替代。
+
+## 安装 Valgrind
+
+Iai使用一个叫做 [Valgrind](https://valgrind.org/) 的工具收集指令计数。
+Valgrind支持Linux，Solaris，FreeBSD和MacOS。
+然而，MacOS 是限售x86_64处理器，[arm64 (M1, M2, etc) 处理器目前不支持](https://github.com/LouisBrunner/valgrind-macos/issues/56)。
+
+在 Debian 上运行：`sudo apt-get install valgrind`
+
+在 MacOS （仅限x86_64/Intel芯片）上：`brew install valgrind`
+
+<FizzBuzzRefactor />
+
+## 对FizzBuzz进行基准测试
+
+为了测试我们的代码，我们需要建立一个 `benches` 文件夹并添加文件来记录我们的基准测试， `play_game.rs`:
+
+<GameBenchesTree />
+
+在 `play_game.rs` 文件里添加下列代码：
+
+<FizzBuzzRefactorBenchesCode />
+
+- 导入我们 `game` 包中的 `play_game` 函数。
+- 创建名为 `bench_play_game` 的函数。
+- 在"black box"里运行我们的宏基准，这样编译器就不会优化我们的代码。
+- 从 `1` 到 `100` 进行迭代。
+- 对每个数字，调用 `play_game`，将打印设置为 `false`。
+
+现在我们需要配置 `game` 包以运行我们的基准测试。
+
+在你的 `Cargo.toml` 文件底部添加以下内容：
+
+<GameCargoToml />
+
+- `iai`：将 `iai` 添加为开发依赖项，因为我们仅在性能测试中使用它。
+- `bench`：注册 `play_game` 作为基准测试并将 `harness` 设置为 `false`，因为我们将使用 Iai 作为我们的基准测试框架。
+
+现在我们已准备好对代码进行基准测试，运行 `cargo bench`：
+
+<BenchPlayGameOutput />
+
+> 🐰 开始升温吧！我们得到了我们的第一次基准测试数据！
+
+终于，我们可以休息下我们疲惫的开发者头脑了...
+开个玩笑，我们的用户需要一个新的特性！
+
+<FizzBuzzFibonacciRust>
+  <PlayGameRustCode />
+</FizzBuzzFibonacciRust>
+
+## 对FizzBuzzFibonacci进行基准测试
+
+现在我们可以重新运行我们的基准测试：
+
+<BenchPlayGameFibonacciOutput />
+
+哦，太棒了！Iai 告诉我们，FizzBuzz 和 FizzBuzzFibonacci 游戏之间预计周期的区别是 `+522.6091%`。
+你的结果会稍微有些不同于我的。
+然而，两款游戏之间的区别可能在 `5x` 左右。
+我觉得这已经很好了！尤其是对于增加一个听起来很高级的 _斐波那契数列_ 功能到我们的游戏中。
+孩子们一定会喜欢它的！
+
+<FizzBuzzFibonacciOpenRust>
+  <FizzBuzzFibonacciOpenRustCode />
+</FizzBuzzFibonacciOpenRust>
+
+<TheEnd />
+
+<br />
+
+<OnFire />
+
+<BenchPlayGameOnFireCode />
+
+- `bench_play_game_100` 微基准测试用于播放游戏数字一百 (`100`)
+- `bench_play_game_1_000_000` 微基准测试用于播放游戏数字一百万 (`1_000_000`)
+
+当我运行它，我得到这个：
+
+<BenchPlayGameOnFireOutputStart />
+
+等待一下... 等待一下...
+
+<BenchPlayGameOnFireOutput />
+
+等等！ `6,685 预计周期` x `1,000` 应该是 `6,685,000 预计周期` 不是 `155,109,206 预计周期` 🤯
+尽管我得到了我的斐波那契数列代码功能正确，我一定在某处有性能的bug。
+
+<FizzBuzzFibonacciFixRust />
+
+现在让我们重新运行那些基准测试，看看我们做的如何：
+
+<BenchPlayGameFixOutput />
+
+哦，哇！我们的 `bench_play_game` 基准测试回归到了与最初的 FizzBuzz 相关的水平附近。
+我真希望我能记住那个分数是多少。但已经过去三个星期了。
+我的终端历史已经找不到了。
+而且 Iai 只是与最近的结果进行比较。
+但是我想应该差不多！
+
+`bench_play_game_100` 基准测试几乎下降了10倍， `-87.22513%`。
+而 `bench_play_game_1_000_000` 基准测试下降了超过10,000倍！从 `155,109,206 预计周期` 到 `950 预计周期`！
+那是 `-99.99939%`！
+
+> 🐰 嗯，至少我们在这个性能bug进入生产之前发现了它... 噢，对了，已经忘了...
+
+<CatchInCi />
+
+<CatchInCiOutput />
+
+<CatchInCiPlot />
+
+<CatchInCiPlotRustBench title="如何使用Iai对Rust进行基准测试" />
+
+<BencherFooter />
