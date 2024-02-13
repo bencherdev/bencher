@@ -38,12 +38,17 @@ pub type OrganizationsPagination = JsonPagination<OrganizationsSort>;
 #[serde(rename_all = "snake_case")]
 pub enum OrganizationsSort {
     #[default]
+    /// Sort by name
     Name,
 }
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrganizationsQuery {
+    /// Filter by name, exact match.
+    /// If not specified, all organizations are returned.
     pub name: Option<ResourceName>,
+    /// Search by name, slug, or UUID.
+    /// If not specified, all organizations are returned.
     pub search: Option<Search>,
 }
 

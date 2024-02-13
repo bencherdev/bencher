@@ -9,9 +9,17 @@ const DEFAULT_PER_PAGE: u8 = 8;
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPagination<S> {
+    /// The field to sort by.
+    /// If not specified, the default sort field is used.
     pub sort: Option<S>,
+    /// The direction to sort by.
+    /// If not specified, the default sort direction is used.
     pub direction: Option<JsonDirection>,
+    /// The number of items to return per page.
+    /// If not specified, the default number of items per page (8) is used.
     pub per_page: Option<u8>,
+    /// The page number to return.
+    /// If not specified, the first page is returned.
     pub page: Option<u32>,
 }
 

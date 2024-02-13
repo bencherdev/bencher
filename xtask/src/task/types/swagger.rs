@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::fs;
 
 use bencher_api::endpoints::Api;
 use dropshot::{ApiDescription, EndpointTagPolicy, TagConfig, TagDetails};
@@ -35,7 +35,7 @@ impl Swagger {
             true,
         )
         .map_err(|e| anyhow::anyhow!("Failed to register API: {e}"))?;
-        let mut swagger_file = File::create(SWAGGER_PATH)?;
+        let mut swagger_file = fs::File::create(SWAGGER_PATH)?;
 
         api_description.tag_config(TagConfig {
             allow_other_tags: false,
@@ -65,6 +65,10 @@ impl Swagger {
         println!("Saved OpenAPI JSON file to: {SWAGGER_PATH}");
 
         test_swagger_spec()?;
+        fs::copy(
+            SWAGGER_PATH,
+            "./services/console/public/download/openapi.json",
+        )?;
 
         Ok(())
     }

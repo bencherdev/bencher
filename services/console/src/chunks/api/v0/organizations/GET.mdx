@@ -2,7 +2,34 @@
 <h2 id="get-v0-organizations" class="title is-4">List organizations where the authenticated user is a member<a href="#get-v0-organizations"><i class="fas fa-link" aria-hidden="true" style="padding-left: 0.3em; color: #fdb07e;"></i></a></h2>
 <hr />
 <div class="columns">
-<div class="column">List organizations where the authenticated user is a member. When a user is an admin, all organizations are listed.</div>
+<div class="column">
+<p>List organizations where the authenticated user is a member. When a user is an admin, all organizations are listed.</p>
+<h3 class="title is-5">Query Parameters</h3>
+<hr />
+<p><strong>direction</strong></p>
+<p>The direction to sort by. If not specified, the default sort direction is used.</p>
+                
+<hr />
+<p><strong>page</strong></p>
+<p>The page number to return. If not specified, the first page is returned.</p>
+                
+<hr />
+<p><strong>per_page</strong></p>
+<p>The number of items to return per page. If not specified, the default number of items per page (8) is used.</p>
+                
+<hr />
+<p><strong>sort</strong></p>
+<p>The field to sort by. If not specified, the default sort field is used.</p>
+                
+<hr />
+<p><strong>name</strong></p>
+<p>Filter by name, exact match. If not specified, all organizations are returned.</p>
+                
+<hr />
+<p><strong>search</strong></p>
+<p>Search by name, slug, or UUID. If not specified, all organizations are returned.</p>
+                
+</div>
 <div class="column">
 <div class="level">
 <div class="level-left">
@@ -11,6 +38,11 @@
     </div>
     <div class="level-item">
         <p>/v0/organizations</p>
+    </div>
+</div>
+<div class="level-right">
+    <div class="level-item">
+        <a class="button" href="/download/openapi.json">View OpenAPI Spec</a>
     </div>
 </div>
 </div>

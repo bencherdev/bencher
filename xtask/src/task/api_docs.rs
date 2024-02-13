@@ -2,6 +2,7 @@ use core::fmt;
 use std::fs;
 
 use camino::Utf8PathBuf;
+use openapiv3::{Parameter, ReferenceOr};
 
 use crate::parser::TaskApiDocs;
 
@@ -48,6 +49,18 @@ impl fmt::Display for Method {
     }
 }
 
+impl Method {
+    fn color(self) -> &'static str {
+        match self {
+            Method::Get => "is-info",
+            Method::Post => "is-success",
+            Method::Patch => "is-warning",
+            Method::Put => "is-warning",
+            Method::Delete => "is-danger",
+        }
+    }
+}
+
 const PATHS: &[(&str, Method, &str)] = &[("/v0/organizations", Method::Get, "organization list")];
 
 impl ApiDocs {
@@ -76,6 +89,7 @@ impl ApiDocs {
                 Method::Delete => path_spec.delete.as_ref(),
             }
             .ok_or_else(|| anyhow::anyhow!("Method not found in {path} spec: {method}"))?;
+            let method_color = method.color();
 
             let summary = spec
                 .summary
@@ -89,6 +103,9 @@ impl ApiDocs {
             let relative_path = path.strip_prefix('/').unwrap_or(path);
             let full_path = self.path.join(relative_path);
             fs::create_dir_all(&full_path)?;
+
+            let query_params = query_params(path, *method, &spec.parameters)?;
+
             fs::write(
                 full_path.join(format!("{method}.mdx")),
                 format!(
@@ -96,15 +113,23 @@ impl ApiDocs {
 <h2 id="{id}" class="title is-4">{summary}<a href="#{id}"><i class="fas fa-link" aria-hidden="true" style="padding-left: 0.3em; color: #fdb07e;"></i></a></h2>
 <hr />
 <div class="columns">
-<div class="column">{description}</div>
+<div class="column">
+<p>{description}</p>
+{query_params}
+</div>
 <div class="column">
 <div class="level">
 <div class="level-left">
     <div class="level-item">
-        <span class="tag is-info is-medium is-rounded">{method}</span>
+        <span class="tag {method_color} is-medium is-rounded">{method}</span>
     </div>
     <div class="level-item">
         <p>{path}</p>
+    </div>
+</div>
+<div class="level-right">
+    <div class="level-item">
+        <a class="button" href="/download/openapi.json">View OpenAPI Spec</a>
     </div>
 </div>
 </div>
@@ -118,4 +143,39 @@ impl ApiDocs {
 
         Ok(())
     }
+}
+
+fn query_params(
+    path: &str,
+    method: Method,
+    parameters: &[ReferenceOr<Parameter>],
+) -> anyhow::Result<String> {
+    if parameters.is_empty() {
+        return Ok(String::new());
+    }
+
+    let mut query_params = r#"<h3 class="title is-5">Query Parameters</h3>"#.to_owned();
+    for param in parameters {
+        let param = param.as_item().ok_or_else(|| {
+            anyhow::anyhow!("Query parameter {param:?} not found in {path} spec: {method}")
+        })?;
+        if let Parameter::Query { parameter_data, .. } = param {
+            let description = parameter_data.description.as_ref().ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Description not found for query parameter {param:?} in {path} spec: {method}"
+                )
+            })?;
+
+            query_params.push_str(&format!(
+                r#"
+<hr />
+<p><strong>{name}</strong></p>
+<p>{description}</p>
+                "#,
+                name = parameter_data.name,
+            ));
+        }
+    }
+
+    Ok(query_params)
 }

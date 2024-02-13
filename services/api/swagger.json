@@ -476,6 +476,7 @@
           {
             "in": "query",
             "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
             "schema": {
               "$ref": "#/components/schemas/JsonDirection"
             }
@@ -483,6 +484,7 @@
           {
             "in": "query",
             "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -493,6 +495,7 @@
           {
             "in": "query",
             "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -503,6 +506,7 @@
           {
             "in": "query",
             "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
             "schema": {
               "$ref": "#/components/schemas/OrganizationsSort"
             }
@@ -510,6 +514,7 @@
           {
             "in": "query",
             "name": "name",
+            "description": "Filter by name, exact match. If not specified, all organizations are returned.",
             "schema": {
               "$ref": "#/components/schemas/ResourceName"
             }
@@ -517,6 +522,7 @@
           {
             "in": "query",
             "name": "search",
+            "description": "Search by name, slug, or UUID. If not specified, all organizations are returned.",
             "schema": {
               "$ref": "#/components/schemas/Search"
             }
@@ -870,6 +876,7 @@
           {
             "in": "query",
             "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
             "schema": {
               "$ref": "#/components/schemas/JsonDirection"
             }
@@ -877,6 +884,7 @@
           {
             "in": "query",
             "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -887,6 +895,7 @@
           {
             "in": "query",
             "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -897,6 +906,7 @@
           {
             "in": "query",
             "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
             "schema": {
               "$ref": "#/components/schemas/OrgMembersSort"
             }
@@ -1492,6 +1502,7 @@
           {
             "in": "query",
             "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
             "schema": {
               "$ref": "#/components/schemas/JsonDirection"
             }
@@ -1499,6 +1510,7 @@
           {
             "in": "query",
             "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -1509,6 +1521,7 @@
           {
             "in": "query",
             "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -1519,6 +1532,7 @@
           {
             "in": "query",
             "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
             "schema": {
               "$ref": "#/components/schemas/OrgProjectsSort"
             }
@@ -1740,6 +1754,7 @@
           {
             "in": "query",
             "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
             "schema": {
               "$ref": "#/components/schemas/JsonDirection"
             }
@@ -1747,6 +1762,7 @@
           {
             "in": "query",
             "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -1757,6 +1773,7 @@
           {
             "in": "query",
             "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -1767,6 +1784,7 @@
           {
             "in": "query",
             "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
             "schema": {
               "$ref": "#/components/schemas/ProjectsSort"
             }
@@ -2060,6 +2078,7 @@
           {
             "in": "query",
             "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
             "schema": {
               "$ref": "#/components/schemas/JsonDirection"
             }
@@ -2067,6 +2086,7 @@
           {
             "in": "query",
             "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -2077,6 +2097,7 @@
           {
             "in": "query",
             "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -2087,6 +2108,7 @@
           {
             "in": "query",
             "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
             "schema": {
               "$ref": "#/components/schemas/ProjAlertsSort"
             }
@@ -2394,6 +2416,7 @@
           {
             "in": "query",
             "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
             "schema": {
               "$ref": "#/components/schemas/JsonDirection"
             }
@@ -2401,6 +2424,7 @@
           {
             "in": "query",
             "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -2411,6 +2435,7 @@
           {
             "in": "query",
             "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -2421,6 +2446,7 @@
           {
             "in": "query",
             "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
             "schema": {
               "$ref": "#/components/schemas/ProjBenchmarksSort"
             }
@@ -2808,6 +2834,7 @@
           {
             "in": "query",
             "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
             "schema": {
               "$ref": "#/components/schemas/JsonDirection"
             }
@@ -2815,6 +2842,7 @@
           {
             "in": "query",
             "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -2825,6 +2853,7 @@
           {
             "in": "query",
             "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -2835,6 +2864,7 @@
           {
             "in": "query",
             "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
             "schema": {
               "$ref": "#/components/schemas/ProjBranchesSort"
             }
@@ -3222,6 +3252,7 @@
           {
             "in": "query",
             "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
             "schema": {
               "$ref": "#/components/schemas/JsonDirection"
             }
@@ -3229,6 +3260,7 @@
           {
             "in": "query",
             "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -3239,6 +3271,7 @@
           {
             "in": "query",
             "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -3249,6 +3282,7 @@
           {
             "in": "query",
             "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
             "schema": {
               "$ref": "#/components/schemas/ProjMeasuresSort"
             }
@@ -3840,6 +3874,7 @@
           {
             "in": "query",
             "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
             "schema": {
               "$ref": "#/components/schemas/JsonDirection"
             }
@@ -3847,6 +3882,7 @@
           {
             "in": "query",
             "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -3857,6 +3893,7 @@
           {
             "in": "query",
             "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -3867,6 +3904,7 @@
           {
             "in": "query",
             "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
             "schema": {
               "$ref": "#/components/schemas/ProjReportsSort"
             }
@@ -4329,6 +4367,7 @@
           {
             "in": "query",
             "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
             "schema": {
               "$ref": "#/components/schemas/JsonDirection"
             }
@@ -4336,6 +4375,7 @@
           {
             "in": "query",
             "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -4346,6 +4386,7 @@
           {
             "in": "query",
             "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -4356,6 +4397,7 @@
           {
             "in": "query",
             "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
             "schema": {
               "$ref": "#/components/schemas/ProjTestbedsSort"
             }
@@ -4743,6 +4785,7 @@
           {
             "in": "query",
             "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
             "schema": {
               "$ref": "#/components/schemas/JsonDirection"
             }
@@ -4750,6 +4793,7 @@
           {
             "in": "query",
             "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -4760,6 +4804,7 @@
           {
             "in": "query",
             "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -4770,6 +4815,7 @@
           {
             "in": "query",
             "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
             "schema": {
               "$ref": "#/components/schemas/ProjThresholdsSort"
             }
@@ -5845,6 +5891,7 @@
           {
             "in": "query",
             "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
             "schema": {
               "$ref": "#/components/schemas/JsonDirection"
             }
@@ -5852,6 +5899,7 @@
           {
             "in": "query",
             "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -5862,6 +5910,7 @@
           {
             "in": "query",
             "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
             "schema": {
               "nullable": true,
               "type": "integer",
@@ -5872,6 +5921,7 @@
           {
             "in": "query",
             "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
             "schema": {
               "$ref": "#/components/schemas/UserTokensSort"
             }
@@ -9480,9 +9530,14 @@
         ]
       },
       "OrganizationsSort": {
-        "type": "string",
-        "enum": [
-          "name"
+        "oneOf": [
+          {
+            "description": "Sort by name",
+            "type": "string",
+            "enum": [
+              "name"
+            ]
+          }
         ]
       },
       "Search": {
