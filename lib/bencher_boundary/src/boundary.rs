@@ -46,15 +46,27 @@ impl MetricsBoundary {
     ) -> Result<Option<Self>, BoundaryError> {
         // If there is no boundary, then simply return.
         if lower_boundary.is_none() && upper_boundary.is_none() {
+            slog::debug!(
+                log,
+                "No lower or upper boundary for statistic kind {statistic_kind:?}",
+            );
             return Ok(None);
         }
         let data = &metrics_data.data;
+        let data_len = data.len();
         // If there is a min sample size, then check to see if it is met.
         // Otherwise, simply return.
         if let Some(min_sample_size) = min_sample_size {
-            if data.len() < min_sample_size.into() {
+            if data_len < min_sample_size.into() {
+                slog::debug!(
+                    log,
+                    "Data length ({data_len}) is less than min sample size ({min_sample_size})",
+                );
                 return Ok(None);
             }
+        } else if data_len == 0 {
+            slog::debug!(log, "No data for statistic kind {statistic_kind:?}");
+            return Ok(None);
         }
 
         match statistic_kind {
