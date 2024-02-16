@@ -469,8 +469,8 @@
         "tags": [
           "organizations"
         ],
-        "summary": "List organizations where the authenticated user is a member",
-        "description": "List organizations where the authenticated user is a member. When a user is an admin, all organizations are listed.",
+        "summary": "List organizations",
+        "description": "List all organizations where the user is a member. The user must have `view` permissions for each organization.",
         "operationId": "organizations_get",
         "parameters": [
           {
@@ -581,8 +581,8 @@
         "tags": [
           "organizations"
         ],
-        "summary": "Create an organization for the authenticated admin user",
-        "description": "Create an organization for the authenticated admin user. The user must be an admin on the server to use this route.",
+        "summary": "Create an organization",
+        "description": "Create a new organization. The user must be an admin on the server to use this route.",
         "operationId": "organization_post",
         "requestBody": {
           "content": {
@@ -649,11 +649,14 @@
         "tags": [
           "organizations"
         ],
+        "summary": "View an organization",
+        "description": "View an organization where the user is a member. The user must have `view` permissions for the organization.",
         "operationId": "organization_get",
         "parameters": [
           {
             "in": "path",
             "name": "organization",
+            "description": "The slug or UUID for the organization.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -713,11 +716,14 @@
         "tags": [
           "organizations"
         ],
+        "summary": "Update an organization",
+        "description": "Update an organization where the user is a member. The user must have `edit` permissions for the organization. If updating the license, the user must have `manage` permissions for the organization.",
         "operationId": "organization_patch",
         "parameters": [
           {
             "in": "path",
             "name": "organization",
+            "description": "The slug or UUID for the organization.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -1491,11 +1497,14 @@
           "organizations",
           "projects"
         ],
+        "summary": "List organization projects",
+        "description": "List projects for the organization. The user must have `view` permissions for the organization.",
         "operationId": "org_projects_get",
         "parameters": [
           {
             "in": "path",
             "name": "organization",
+            "description": "The slug or UUID for the organization.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -1542,6 +1551,7 @@
           {
             "in": "query",
             "name": "name",
+            "description": "Filter by name, exact match. If not specified, all projects for the organization are returned.",
             "schema": {
               "$ref": "#/components/schemas/ResourceName"
             }
@@ -1549,6 +1559,7 @@
           {
             "in": "query",
             "name": "search",
+            "description": "Search by name, slug, or UUID. If not specified, all projects for the organization are returned.",
             "schema": {
               "$ref": "#/components/schemas/Search"
             }
@@ -1608,11 +1619,14 @@
           "organizations",
           "projects"
         ],
+        "summary": "Create a project for an organization",
+        "description": "Create a new project for an organization. The user must have `create` permissions for the organization.",
         "operationId": "org_project_post",
         "parameters": [
           {
             "in": "path",
             "name": "organization",
+            "description": "The slug or UUID for the organization.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -7385,10 +7399,16 @@
         "type": "object",
         "properties": {
           "name": {
-            "$ref": "#/components/schemas/ResourceName"
+            "description": "The name of the organization. Maximum length is 64 characters.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceName"
+              }
+            ]
           },
           "slug": {
             "nullable": true,
+            "description": "The preferred slug for the organization. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 1,024 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Slug"
@@ -7439,10 +7459,16 @@
         "type": "object",
         "properties": {
           "name": {
-            "$ref": "#/components/schemas/ResourceName"
+            "description": "The name of the project. Maximum length is 64 characters.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceName"
+              }
+            ]
           },
           "slug": {
             "nullable": true,
+            "description": "The preferred slug for the project. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 1,024 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Slug"
@@ -7451,6 +7477,7 @@
           },
           "url": {
             "nullable": true,
+            "description": "The URL for the project. If the project is public, the URL will be accessible listed on its Perf Page.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Url"
@@ -7459,6 +7486,7 @@
           },
           "visibility": {
             "nullable": true,
+            "description": "The visibility of the project. ➕ Bencher Plus: Creating a `private` project requires a valid Bencher Plus subscription.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Visibility"
@@ -7686,6 +7714,7 @@
         "properties": {
           "license": {
             "nullable": true,
+            "description": "➕ Bencher Plus: The new license for the organization. Set to `null` to remove the current license.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Jwt"
@@ -7694,6 +7723,7 @@
           },
           "name": {
             "nullable": true,
+            "description": "The new name of the organization. Maximum length is 64 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/ResourceName"
@@ -7702,6 +7732,7 @@
           },
           "slug": {
             "nullable": true,
+            "description": "The preferred new slug for the organization. Maximum length is 1,024 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Slug"
@@ -9566,9 +9597,14 @@
         ]
       },
       "OrgProjectsSort": {
-        "type": "string",
-        "enum": [
-          "name"
+        "oneOf": [
+          {
+            "description": "Sort by name",
+            "type": "string",
+            "enum": [
+              "name"
+            ]
+          }
         ]
       },
       "ProjectsSort": {

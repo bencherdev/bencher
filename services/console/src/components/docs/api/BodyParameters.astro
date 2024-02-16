@@ -2,15 +2,101 @@
 import openapi from "../../../../public/download/openapi.json";
 
 interface Props {
+  path: string;
   requestBody: object;
 }
 
-const { requestBody } = Astro.props;
+const { path, requestBody } = Astro.props;
 
-const requestBodyRef = requestBody?.content?.["application/json"]?.schema?.["$ref"]?.split("/")?.pop();
-const requestBodySchema = openapi.components.schemas?.[requestBodyRef];
+const ref = requestBody?.content?.["application/json"]?.schema?.["$ref"]?.split("/")?.pop();
+const schema = openapi?.components?.schemas?.[ref];
+
+const getDefault = (name) => {
+  switch (name) {
+    case "visibility":
+      return "public";
+    default:
+      return;
+  }
+};
+
+const getTypes = (propertyKey, propertyValue) => {
+  if (Array.isArray(propertyValue?.allOf)) {
+        const types = propertyValue.allOf.map(schema => {
+            const ref = schema?.["$ref"]?.split("/")?.pop();
+            return openapi?.components?.schemas?.[ref]?.type;
+        });
+
+        const variants = propertyValue.allOf.map(schema => {
+            const ref = schema?.["$ref"]?.split("/")?.pop();
+            return openapi?.components?.schemas?.[ref]?.enum;
+        }).filter((v) => v).flat();
+        const oneOf = variants?.length > 0 ? variants : null;
+
+        // Filter out undefined types and join the types into a comma-separated list
+        return [types?.filter(type => type !== undefined).join(", "), getDefault(propertyKey), oneOf];
+    }
+  return [null, null, null];
+};
+
+const nullablePatch = (anyOf) => {
+  if (anyOf?.length !== 2) {
+    return;
+  }
+  const base = anyOf?.[0]?.["$ref"]?.split("/")?.pop();
+  const nullable = anyOf?.[1]?.["$ref"]?.split("/")?.pop();
+  // This relies on the convention that the nullable type is the base type with "Null" appended
+  if (`${base}Null` !== nullable) {
+    return;
+  }
+  return openapi?.components?.schemas?.[base]?.properties;
+}
+
+const getProperties = () => {
+  if (schema?.properties) {
+    return schema?.properties;
+  }
+  const nullable = nullablePatch(schema?.anyOf);
+  if (nullable) {
+    return nullable;
+  }
+}
+
+const properties = getProperties();
+
 ---
 
-{requestBodySchema && (
-  <h3 class="title is-5">Body Parameters</h3>
+{schema && (
+  <h3 class="title is-5" style="margin-top: 4rem;">Body Parameters</h3>
+  <>
+  {properties && Object.entries(properties)?.map(([propertyKey, propertyValue]) => {
+    const [types, defaultParam, oneOf] = getTypes(propertyKey, propertyValue);
+    return (
+    <hr />
+    <p>
+      <div class="level">
+        <div class="level-left">
+            <div class="level-item">
+              <code>{propertyKey}</code>
+            </div>
+            {types?.length > 0 &&
+            <div class="level-item">
+              <p>{types}</p>
+            </div>}
+          {(schema?.required?.includes(propertyKey) || propertyValue?.nullable !== true) &&
+            <div class="level-item">
+              <b>Required</b>
+            </div>}
+        </div>
+      </div>
+    </p>
+    <p>{propertyValue?.description}</p>
+    <>
+    {defaultParam && <p>Default: <code>{defaultParam}</code></p>}
+    </>
+    <>
+    {oneOf && <p>One of: {oneOf.map((variant, index) => { return <>{index !== 0 && ", "}<code>{variant}</code></>})}</p>}
+    </>
+  )})}
+  </>
 )}

@@ -1,0 +1,70 @@
+---
+import { HeadersKind } from './method';
+
+interface Props {
+  headers: HeadersKind;
+}
+
+const { headers } = Astro.props;
+
+const applicationJson = () => {
+    switch (headers) {
+        case HeadersKind.Pub:
+        case HeadersKind.Auth:
+            return true;
+        case HeadersKind.Img:
+            return false;
+    }
+}
+
+const authBearer = () => {
+    switch (headers) {
+        case HeadersKind.Auth:
+            return true;
+        case HeadersKind.Pub:
+        case HeadersKind.Img:
+            return false;
+    }
+}
+
+---
+
+<h3 class="title is-5">Headers</h3>
+{applicationJson() &&
+<hr />
+<p>
+<div class="level">
+    <div class="level-left">
+        <div class="level-item">
+            <code>Content-Type</code>
+        </div>
+        <div class="level-item">
+            <p>string</p>
+        </div>
+        <div class="level-item">
+            <b>Required</b>
+        </div>
+    </div>
+</div>
+</p>
+<p>Set to <code>application/json</code>.</p>
+}
+{authBearer() &&
+<hr />
+<p>
+<div class="level">
+    <div class="level-left">
+        <div class="level-item">
+            <code>Authorization</code>
+        </div>
+        <div class="level-item">
+            <p>string</p>
+        </div>
+        <div class="level-item">
+            <b>Required</b>
+        </div>
+    </div>
+</div>
+</p>
+<p>Set to <code>Bearer BENCHER_API_TOKEN</code>, where <code>BENCHER_API_TOKEN</code> is a vaild Bencher API token.</p>
+}

@@ -28,3 +28,9 @@ export class Method {
 		}
 	}
 }
+
+export enum HeadersKind {
+	Pub = "pub",
+	Auth = "auth",
+	Img = "img",
+}

@@ -37,6 +37,7 @@ use crate::{
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgProjectsParams {
+    /// The slug or UUID for the organization.
     pub organization: ResourceId,
 }
 
@@ -45,13 +46,18 @@ pub type OrgProjectsPagination = JsonPagination<OrgProjectsSort>;
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum OrgProjectsSort {
+    /// Sort by name
     #[default]
     Name,
 }
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgProjectsQuery {
+    /// Filter by name, exact match.
+    /// If not specified, all projects for the organization are returned.
     pub name: Option<ResourceName>,
+    /// Search by name, slug, or UUID.
+    /// If not specified, all projects for the organization are returned.
     pub search: Option<Search>,
 }
 
@@ -70,6 +76,10 @@ pub async fn org_projects_options(
     Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
+/// List organization projects
+///
+/// List projects for the organization.
+/// The user must have `view` permissions for the organization.
 #[endpoint {
     method = GET,
     path =  "/v0/organizations/{organization}/projects",
@@ -142,6 +152,10 @@ async fn get_ls_inner(
         .collect())
 }
 
+/// Create a project for an organization
+///
+/// Create a new project for an organization.
+/// The user must have `create` permissions for the organization.
 #[endpoint {
     method = POST,
     path =  "/v0/organizations/{organization}/projects",

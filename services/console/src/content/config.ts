@@ -82,7 +82,12 @@ const organizations = defineCollection({
 		sortOrder: z.number(),
 		draft: z.boolean().optional(),
 		paths: z.array(
-			z.object({ path: z.string(), method: z.string(), cli: z.string() }),
+			z.object({
+				path: z.string(),
+				method: z.string(),
+				headers: z.string(),
+				cli: z.string(),
+			}),
 		),
 	}),
 });

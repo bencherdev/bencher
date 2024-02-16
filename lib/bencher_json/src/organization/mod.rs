@@ -17,7 +17,13 @@ crate::typed_uuid::typed_uuid!(OrganizationUuid);
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewOrganization {
+    /// The name of the organization.
+    /// Maximum length is 64 characters.
     pub name: ResourceName,
+    /// The preferred slug for the organization.
+    /// If not provided, the slug will be generated from the name.
+    /// If the provided or generated slug is already in use, a unique slug will be generated.
+    /// Maximum length is 1,024 characters.
     pub slug: Option<Slug>,
 }
 
@@ -63,8 +69,14 @@ pub enum JsonUpdateOrganization {
 #[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonOrganizationPatch {
+    /// The new name of the organization.
+    /// Maximum length is 64 characters.
     pub name: Option<ResourceName>,
+    /// The preferred new slug for the organization.
+    /// Maximum length is 1,024 characters.
     pub slug: Option<Slug>,
+    /// ➕ Bencher Plus: The new license for the organization.
+    /// Set to `null` to remove the current license.
     #[cfg(feature = "plus")]
     pub license: Option<bencher_valid::Jwt>,
 }

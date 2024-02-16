@@ -19,7 +19,7 @@ use crate::{is_valid_len, ValidError, REGEX_ERROR};
 
 #[allow(clippy::expect_used)]
 static NAME_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^[0-9A-Za-z ,\.\-']{1,50}$").expect(REGEX_ERROR));
+    Lazy::new(|| Regex::new(r"^[0-9A-Za-z ,\.\-']{1,64}$").expect(REGEX_ERROR));
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
@@ -107,10 +107,10 @@ mod test {
         assert_eq!(true, is_valid_user_name("Muriel Linda-Bagge"));
         assert_eq!(true, is_valid_user_name("Muriel De'Bagge"));
         assert_eq!(true, is_valid_user_name("Mrs. Muriel Linda-De'Bagge"));
-        assert_eq!(true, is_valid_user_name(crate::test::LEN_50_STR));
+        assert_eq!(true, is_valid_user_name(crate::test::LEN_64_STR));
 
         assert_eq!(false, is_valid_user_name(crate::test::LEN_0_STR));
-        assert_eq!(false, is_valid_user_name(crate::test::LEN_51_STR));
+        assert_eq!(false, is_valid_user_name(crate::test::LEN_65_STR));
         assert_eq!(false, is_valid_user_name(" Muriel Bagge"));
         assert_eq!(false, is_valid_user_name("Muriel Bagge "));
         assert_eq!(false, is_valid_user_name(" Muriel Bagge "));

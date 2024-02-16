@@ -101,9 +101,9 @@ mod test {
         assert_eq!(true, is_valid_resource_name("abc"));
         assert_eq!(true, is_valid_resource_name("ABC"));
         assert_eq!(true, is_valid_resource_name("abc ~ABC!"));
-        assert_eq!(true, is_valid_resource_name(crate::test::LEN_50_STR));
+        assert_eq!(true, is_valid_resource_name(crate::test::LEN_64_STR));
 
         assert_eq!(false, is_valid_resource_name(crate::test::LEN_0_STR));
-        assert_eq!(false, is_valid_resource_name(crate::test::LEN_51_STR));
+        assert_eq!(false, is_valid_resource_name(crate::test::LEN_65_STR));
     }
 }

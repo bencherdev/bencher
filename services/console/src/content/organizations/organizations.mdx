@@ -4,10 +4,20 @@ description: "The Bencher Organizations REST API"
 heading: "Organizations REST API"
 sortOrder: 1
 paths:
-  - path: "/v0/organizations"
-    method: "get"
-    cli: "organization list"
-  - path: "/v0/organizations"
-    method: "post"
-    cli: "organization create"
+  - path: /v0/organizations
+    method: get
+    headers: auth
+    cli: organization list
+  - path: /v0/organizations
+    method: post
+    headers: auth
+    cli: organization create
+  - path: /v0/organizations/{organization}
+    method: get
+    headers: auth
+    cli: organization view ORGANIZATION
+  - path: /v0/organizations/{organization}
+    method: patch
+    headers: auth
+    cli: organization update ORGANIZATION
 ---

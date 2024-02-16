@@ -1,0 +1,48 @@
+---
+import openapi from "../../../../public/download/openapi.json";
+
+interface Props {
+  parameters: Array<object>;
+}
+
+const { parameters } = Astro.props;
+
+const params = parameters?.filter((param) => param.in === "path");
+
+const getTypes = (parameter) => {
+  const schema = parameter?.schema;
+  const ref = schema?.["$ref"]?.split("/")?.pop();
+ return openapi?.components?.schemas?.[ref]?.type;
+};
+
+---
+
+{params?.length > 0 && (
+  <h3 class="title is-5" style="margin-top: 4rem;">Path Parameters</h3>
+  <>
+  {params.map((parameter) => {
+    const types = getTypes(parameter);
+    return (
+    <hr />
+    <p>
+      <div class="level">
+        <div class="level-left">
+            <div class="level-item">
+              <code>{parameter?.name}</code>
+            </div>
+            {types?.length > 0 &&
+            <div class="level-item">
+                <p>{types}</p>
+            </div>
+            }
+            {parameter?.required === true &&
+            <div class="level-item">
+              <b>Required</b>
+            </div>}
+        </div>
+      </div>
+    </p>
+    <p>{parameter?.description}</p>
+  )})}
+  </>
+)}

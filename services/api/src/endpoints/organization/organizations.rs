@@ -37,8 +37,8 @@ pub type OrganizationsPagination = JsonPagination<OrganizationsSort>;
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum OrganizationsSort {
-    #[default]
     /// Sort by name
+    #[default]
     Name,
 }
 
@@ -66,15 +66,15 @@ pub async fn organizations_options(
     Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
+/// List organizations
+///
+/// List all organizations where the user is a member.
+/// The user must have `view` permissions for each organization.
 #[endpoint {
     method = GET,
     path = "/v0/organizations",
     tags = ["organizations"]
 }]
-/// List organizations where the authenticated user is a member
-///
-/// List organizations where the authenticated user is a member.
-/// When a user is an admin, all organizations are listed.
 pub async fn organizations_get(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
@@ -142,15 +142,15 @@ async fn get_ls_inner(
         .collect())
 }
 
+/// Create an organization
+///
+/// Create a new organization.
+/// The user must be an admin on the server to use this route.
 #[endpoint {
     method = POST,
     path = "/v0/organizations",
     tags = ["organizations"]
 }]
-/// Create an organization for the authenticated admin user
-///
-/// Create an organization for the authenticated admin user.
-/// The user must be an admin on the server to use this route.
 pub async fn organization_post(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
@@ -198,6 +198,7 @@ async fn post_inner(
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrganizationParams {
+    /// The slug or UUID for the organization.
     pub organization: ResourceId,
 }
 
@@ -214,6 +215,10 @@ pub async fn organization_options(
     Ok(Endpoint::cors(&[Get.into(), Patch.into()]))
 }
 
+/// View an organization
+///
+/// View an organization where the user is a member.
+/// The user must have `view` permissions for the organization.
 #[endpoint {
     method = GET,
     path = "/v0/organizations/{organization}",
@@ -246,6 +251,11 @@ async fn get_one_inner(
     .into_json())
 }
 
+/// Update an organization
+///
+/// Update an organization where the user is a member.
+/// The user must have `edit` permissions for the organization.
+/// If updating the license, the user must have `manage` permissions for the organization.
 #[endpoint {
     method = PATCH,
     path =  "/v0/organizations/{organization}",

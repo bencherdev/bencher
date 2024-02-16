@@ -1,0 +1,15 @@
+---
+title: "Organization Projects"
+description: "The Bencher Organization Projects REST API"
+heading: "Organization Projects REST API"
+sortOrder: 2
+paths:
+  - path: /v0/organizations/{organization}/projects
+    method: get
+    headers: auth
+    cli: project list --org ORGANIZATION
+  - path: /v0/organizations/{organization}/projects
+    method: post
+    headers: auth
+    cli: project create
+---

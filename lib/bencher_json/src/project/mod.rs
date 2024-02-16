@@ -24,9 +24,19 @@ crate::typed_uuid::typed_uuid!(ProjectUuid);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewProject {
+    /// The name of the project.
+    /// Maximum length is 64 characters.
     pub name: ResourceName,
+    /// The preferred slug for the project.
+    /// If not provided, the slug will be generated from the name.
+    /// If the provided or generated slug is already in use, a unique slug will be generated.
+    /// Maximum length is 1,024 characters.
     pub slug: Option<Slug>,
+    /// The URL for the project.
+    /// If the project is public, the URL will be accessible listed on its Perf Page.
     pub url: Option<Url>,
+    /// The visibility of the project.
+    /// ➕ Bencher Plus: Creating a `private` project requires a valid Bencher Plus subscription.
     pub visibility: Option<Visibility>,
 }
 

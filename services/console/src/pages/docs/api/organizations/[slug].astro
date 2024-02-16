@@ -25,7 +25,7 @@ const { slug } = Astro.params;
   collection="organizations"
   slug={slug}
 >
-  {page.data.paths.map(({path, method, cli}, index) =>
-    <Operation path={path} method={method} cli={cli} index={index}/>
+  {page.data.paths.map(({path, method, headers, cli}, index) =>
+    <Operation path={path} method={method} headers={headers} cli={cli} index={index}/>
   )}
 </ApiLayout>

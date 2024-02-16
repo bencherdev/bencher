@@ -1,18 +1,21 @@
 ---
 import openapi from "../../../../public/download/openapi.json";
 import slugify from "slugify";
-import {MethodKind, Method} from "./method.ts";
+import {MethodKind, Method, HeadersKind} from "./method.ts";
+import PathParameters from "./PathParameters.astro";
 import QueryParameters from "./QueryParameters.astro";
 import BodyParameters from "./BodyParameters.astro";
+import Headers from "./Headers.astro";
 
 interface Props {
   path: string;
   method: MethodKind;
+  headers: HeadersKind;
   cli: string;
   index: number;
 }
 
-const { path, method, cli, index } = Astro.props;
+const { path, method, headers, cli, index } = Astro.props;
 const operation = openapi?.paths?.[path]?.[method];
 const id = slugify(`${method}-${path}`);
 const methodClass = new Method(method);
@@ -28,8 +31,10 @@ const methodClass = new Method(method);
 <div class="columns">
   <div class="column">
     <p>{operation?.description}</p>
-    <QueryParameters parameters={operation?.parameters} />
-    <BodyParameters requestBody={operation?.requestBody} />
+    <Headers headers={headers} />
+    <PathParameters parameters={operation?.parameters} />
+    <QueryParameters path={path} parameters={operation?.parameters} />
+    <BodyParameters path={path} requestBody={operation?.requestBody} />
   </div>
   <div class="column">
     <div class="level">
@@ -41,17 +46,14 @@ const methodClass = new Method(method);
               <p>{path}</p>
           </div>
       </div>
-      <div class="level-right">
-          <div class="level-item">
-              <a class="button" href="/download/openapi.json">View OpenAPI Spec</a>
-          </div>
-      </div>
-      </div>
-      <div class="card">
+    </div>
+    <div class="card">
       <header class="card-header">
           <p class="card-header-title">Bencher CLI</p>
       </header>
       <pre><code>bencher {cli}</code></pre>
     </div>
+    <br />
+    <a class="button is-fullwidth" href="/download/openapi.json">View OpenAPI Spec</a>
   </div>
 </div>

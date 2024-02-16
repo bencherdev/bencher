@@ -95,8 +95,8 @@ mod test {
         assert_eq!(true, is_valid_non_empty("abc"));
         assert_eq!(true, is_valid_non_empty("ABC"));
         assert_eq!(true, is_valid_non_empty("abc ~ABC!"));
-        assert_eq!(true, is_valid_non_empty(crate::test::LEN_50_STR));
-        assert_eq!(true, is_valid_non_empty(crate::test::LEN_51_STR));
+        assert_eq!(true, is_valid_non_empty(crate::test::LEN_64_STR));
+        assert_eq!(true, is_valid_non_empty(crate::test::LEN_65_STR));
 
         assert_eq!(false, is_valid_non_empty(crate::test::LEN_0_STR));
     }
