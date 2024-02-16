@@ -50,8 +50,8 @@ pub type ProjThresholdsPagination = JsonPagination<ProjThresholdsSort>;
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjThresholdsSort {
-    Created,
     #[default]
+    Created,
     Modified,
 }
 
