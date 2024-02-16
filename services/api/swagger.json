@@ -7408,7 +7408,7 @@
           },
           "slug": {
             "nullable": true,
-            "description": "The preferred slug for the organization. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 1,024 characters.",
+            "description": "The preferred slug for the organization. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 64 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Slug"
@@ -7468,7 +7468,7 @@
           },
           "slug": {
             "nullable": true,
-            "description": "The preferred slug for the project. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 1,024 characters.",
+            "description": "The preferred slug for the project. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 64 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Slug"
@@ -7486,7 +7486,7 @@
           },
           "visibility": {
             "nullable": true,
-            "description": "The visibility of the project. ➕ Bencher Plus: Creating a `private` project requires a valid Bencher Plus subscription.",
+            "description": "➕ Bencher Plus: Set the visibility of the project. Creating a `private` project requires a valid Bencher Plus subscription.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Visibility"
@@ -7732,7 +7732,7 @@
           },
           "slug": {
             "nullable": true,
-            "description": "The preferred new slug for the organization. Maximum length is 1,024 characters.",
+            "description": "The preferred new slug for the organization. Maximum length is 64 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Slug"

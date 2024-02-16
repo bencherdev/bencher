@@ -13,6 +13,9 @@ use serde::{
 
 use crate::{Slug, ValidError};
 
+// https://stackoverflow.com/questions/60045157/what-is-the-maximum-length-of-a-github-branch-name
+pub(crate) const MAX_BRANCH_LEN: usize = 256;
+
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -81,7 +84,7 @@ impl Visitor<'_> for BranchNameVisitor {
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_branch_name(branch_name: &str) -> bool {
-    name_partial(branch_name.into()).is_ok()
+    branch_name.len() <= MAX_BRANCH_LEN && name_partial(branch_name.into()).is_ok()
 }
 
 #[cfg(test)]

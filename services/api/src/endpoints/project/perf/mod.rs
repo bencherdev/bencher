@@ -42,7 +42,7 @@ use crate::{
 
 pub mod img;
 
-const MAX_PERMUTATIONS: usize = u8::MAX as usize;
+const MAX_PERMUTATIONS: usize = 256;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjPerfParams {

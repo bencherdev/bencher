@@ -23,7 +23,7 @@ pub struct JsonNewOrganization {
     /// The preferred slug for the organization.
     /// If not provided, the slug will be generated from the name.
     /// If the provided or generated slug is already in use, a unique slug will be generated.
-    /// Maximum length is 1,024 characters.
+    /// Maximum length is 64 characters.
     pub slug: Option<Slug>,
 }
 
@@ -73,7 +73,7 @@ pub struct JsonOrganizationPatch {
     /// Maximum length is 64 characters.
     pub name: Option<ResourceName>,
     /// The preferred new slug for the organization.
-    /// Maximum length is 1,024 characters.
+    /// Maximum length is 64 characters.
     pub slug: Option<Slug>,
     /// ➕ Bencher Plus: The new license for the organization.
     /// Set to `null` to remove the current license.

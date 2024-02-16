@@ -10,7 +10,7 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 
-use crate::{benchmark_name::MAX_BENCHMARK_NAME_LEN, ValidError};
+use crate::{is_valid_len, ValidError, MAX_LEN};
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
@@ -74,11 +74,11 @@ impl Visitor<'_> for SlugVisitor {
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_slug(slug: &str) -> bool {
-    !slug.is_empty() && slug.len() <= MAX_BENCHMARK_NAME_LEN && slug == slug::slugify(slug)
+    is_valid_len(slug) && slug == slug::slugify(slug)
 }
 
 impl Slug {
-    pub const MAX: usize = MAX_BENCHMARK_NAME_LEN;
+    pub const MAX: usize = MAX_LEN;
 
     #[cfg(feature = "full")]
     pub fn new<S>(slug: S) -> Self
@@ -100,6 +100,8 @@ impl Slug {
 #[cfg(test)]
 mod test {
 
+    use crate::test::{LEN_64_STR, LEN_65_STR};
+
     use super::is_valid_slug;
     use pretty_assertions::assert_eq;
 
@@ -107,7 +109,7 @@ mod test {
     fn test_slug() {
         assert_eq!(true, is_valid_slug("a-valid-slug"));
         assert_eq!(true, is_valid_slug("2nd-valid-slug"));
-        assert_eq!(true, is_valid_slug("client-submit-serialize-deserialize-handle-client-submit-serialize-deserialize-handle-1996529012"));
+        assert_eq!(true, is_valid_slug(LEN_64_STR));
 
         assert_eq!(false, is_valid_slug(""));
         assert_eq!(false, is_valid_slug(" a-valid-slug"));
@@ -119,5 +121,7 @@ mod test {
         assert_eq!(false, is_valid_slug("-a-valid-slug-"));
         assert_eq!(false, is_valid_slug("a--valid-slug"));
         assert_eq!(false, is_valid_slug("a-Valid-slug"));
+        assert_eq!(false, is_valid_slug(LEN_65_STR));
+        assert_eq!(false, is_valid_slug("client-submit-serialize-deserialize-handle-client-submit-serialize-deserialize-handle-1996529012"));
     }
 }
