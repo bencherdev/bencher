@@ -86,6 +86,8 @@ mod test {
     use super::{is_valid_email, Email};
     use pretty_assertions::assert_eq;
 
+    use crate::test::{LEN_64_STR, LEN_65_STR};
+
     #[test]
     fn test_email() {
         assert_eq!(true, is_valid_email("abc.xyz@example.com"));
@@ -101,6 +103,7 @@ mod test {
             Email::from_str("abc.xyz@example.com").unwrap(),
             Email::from_str("ABC.xYz@Example.coM").unwrap()
         );
+        assert_eq!(true, is_valid_email(&format!("{LEN_64_STR}@example.com")));
 
         assert_eq!(false, is_valid_email(""));
         assert_eq!(false, is_valid_email(" abc@example.com"));
@@ -109,5 +112,6 @@ mod test {
         assert_eq!(false, is_valid_email("example.com"));
         assert_eq!(false, is_valid_email("abc.example.com"));
         assert_eq!(false, is_valid_email("abc!example.com"));
+        assert_eq!(false, is_valid_email(&format!("{LEN_65_STR}@example.com")));
     }
 }

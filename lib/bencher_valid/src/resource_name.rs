@@ -91,6 +91,8 @@ pub fn is_valid_resource_name(resource_name: &str) -> bool {
 
 #[cfg(test)]
 mod test {
+    use crate::test::{LEN_0_STR, LEN_64_STR, LEN_65_STR};
+
     use super::is_valid_resource_name;
     use pretty_assertions::assert_eq;
 
@@ -101,9 +103,9 @@ mod test {
         assert_eq!(true, is_valid_resource_name("abc"));
         assert_eq!(true, is_valid_resource_name("ABC"));
         assert_eq!(true, is_valid_resource_name("abc ~ABC!"));
-        assert_eq!(true, is_valid_resource_name(crate::test::LEN_64_STR));
+        assert_eq!(true, is_valid_resource_name(LEN_64_STR));
 
-        assert_eq!(false, is_valid_resource_name(crate::test::LEN_0_STR));
-        assert_eq!(false, is_valid_resource_name(crate::test::LEN_65_STR));
+        assert_eq!(false, is_valid_resource_name(LEN_0_STR));
+        assert_eq!(false, is_valid_resource_name(LEN_65_STR));
     }
 }

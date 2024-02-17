@@ -42,7 +42,7 @@ impl From<Window> for u32 {
 }
 
 impl Window {
-    pub const MIN: Self = Self(0);
+    pub const MIN: Self = Self(1);
     pub const DAY: Self = Self(60 * 60 * 24);
     pub const THIRTY: Self = Self(30 * Self::DAY.0);
     pub const SIXTY: Self = Self(60 * Self::DAY.0);
@@ -125,8 +125,8 @@ mod db {
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
-pub fn is_valid_window(_window: u32) -> bool {
-    true
+pub fn is_valid_window(window: u32) -> bool {
+    window > 0
 }
 
 #[cfg(test)]
@@ -144,5 +144,7 @@ mod test {
         assert_eq!(true, is_valid_window(Window::NINETY.into()));
         assert_eq!(true, is_valid_window(Window::YEAR.into()));
         assert_eq!(true, is_valid_window(Window::MAX.into()));
+
+        assert_eq!(false, is_valid_window(0));
     }
 }

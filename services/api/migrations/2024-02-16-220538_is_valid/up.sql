@@ -1,4 +1,3 @@
-PRAGMA foreign_keys = off;
 -- organization
 UPDATE organization
 SET slug = uuid
@@ -9,11 +8,11 @@ SET slug = uuid
 WHERE LENGTH(slug) > 64;
 -- branch
 UPDATE branch
-SET slug = uuid
-WHERE LENGTH(slug) > 64;
-UPDATE branch
 SET name = uuid
 WHERE LENGTH(name) > 256;
+UPDATE branch
+SET slug = uuid
+WHERE LENGTH(slug) > 64;
 -- testbed
 UPDATE testbed
 SET slug = uuid
@@ -26,7 +25,10 @@ WHERE LENGTH(slug) > 64;
 UPDATE measure
 SET slug = uuid
 WHERE LENGTH(slug) > 64;
-PRAGMA foreign_keys = on;
+-- statistic
+UPDATE statistic
+SET window = null
+WHERE window < 1;
 -- user
 UPDATE user
 SET slug = uuid

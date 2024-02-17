@@ -12,6 +12,7 @@ use serde::{
 
 use crate::ValidError;
 
+// In practice, this may need to be raised all the way up to 4096.
 pub(crate) const MAX_BENCHMARK_NAME_LEN: usize = 1024;
 
 const BENCHER_IGNORE_SNAKE_CASE: &str = "_bencher_ignore";
