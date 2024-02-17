@@ -17,8 +17,13 @@ let description: string;
 try {
   const projectResponse = await fetch(getProjectUrl);
   jsonProject = await projectResponse.json();
-  title = `${jsonProject?.name}`;
-  description = `View ${jsonProject?.name} continuous benchmarking results and performance regressions on Bencher`;
+  if (jsonProject?.uuid) {
+    title = `${jsonProject?.name}`;
+    description = `View ${jsonProject?.name} continuous benchmarking results and performance regressions on Bencher`;
+  } else {
+    title = "Not Found";
+    description = "Public Project not found";
+  }
 } catch (e) {
   console.error(`Failed to fetch project data: ${e}`);
   title = "Public Project";
@@ -34,5 +39,22 @@ try {
   titleFmt={(title) => `📈 ${title}`}
   description={description}
 >
+  { jsonProject?.uuid ?
   <PublicProject client:only="solid-js" apiUrl={BENCHER_API_URL} params={params} project={jsonProject} />
+  :
+  <section class="section">
+			<div class="container">
+				<div class="columns is-mobile">
+					<div class="column">
+						<h1 class="title is-1">Project Not Found</h1>
+            <hr />
+            <p>Could not find Project: <code>{params.project}</code></p>
+            <p>The Project may be private or it may not exist.</p>
+            <br />
+            <a class="button" href="/perf">Go to Public Projects</a>
+					</div>
+				</div>
+			</div>
+		</section>
+  }
 </PerfLayout>

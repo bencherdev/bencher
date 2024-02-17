@@ -21,8 +21,13 @@ let description: string;
 try {
   const alertResponse = await fetch(getAlertUrl);
   jsonAlert = await alertResponse.json();
-  title = `${jsonAlert?.benchmark?.name} Alert (${jsonAlert?.status === AlertStatus.Active ? "🔔" : "🔕"})`;
-  description = `View a continuous benchmarking alert for the ${jsonAlert?.benchmark?.name} benchmark on Bencher`;
+  if (jsonAlert?.uuid) {
+    title = `${jsonAlert?.benchmark?.name} Alert (${jsonAlert?.status === AlertStatus.Active ? "🔔" : "🔕"})`;
+    description = `View a continuous benchmarking alert for the ${jsonAlert?.benchmark?.name} benchmark on Bencher`;
+  } else {
+    title = "Not Found";
+    description = "Public Project Alert not found";
+  }
 } catch (e) {
   console.error(`Failed to fetch alert data: ${e}`);
   title = "Public Alert";
@@ -37,5 +42,22 @@ const deck = alertsConfig[Operation.VIEW]?.deck as DeckConfig;
   titleFmt={(title) => `🚨 ${title}`}
   description={description}
 >
+  { jsonAlert?.uuid ?
   <PublicAlert client:only="solid-js" apiUrl={BENCHER_API_URL} params={params} deck={deck} data={jsonAlert} />
+  :
+  <section class="section">
+			<div class="container">
+				<div class="columns is-mobile">
+					<div class="column">
+						<h1 class="title is-1">Alert Not Found</h1>
+            <hr />
+            <p>Could not find Alert <code>{params.alert}</code> for Project <code>{params.project}</code></p>
+            <p>The Project may be private or the Alert may not exist.</p>
+            <br />
+            <a class="button" href={`/perf/${params.project}`}>Go to Project</a>
+					</div>
+				</div>
+			</div>
+		</section>
+  }
 </PerfLayout>
