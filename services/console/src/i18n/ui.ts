@@ -100,7 +100,7 @@ export const tutorial = (lang: Language) => {
 	}
 };
 export const signupId = "signup-for-bencher-cloud";
-export const tokenId = "add-an-api-token";
+export const tokenId = "add-api-token";
 
 export const howTo = (lang: Language) => {
 	switch (lang) {

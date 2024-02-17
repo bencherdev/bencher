@@ -1,8 +1,7 @@
 ---
 import DocsLayout from "../../../../layouts/docs/DocsLayout.astro";
 import AuthOverride from "../../../../components/auth/AuthOverride";
-import AddAnApiToken from "../../../../components/docs/override/AddAnApiToken";
-import { Language, signupId, tokenId } from "../../../../i18n/ui";
+import { Language, signupId } from "../../../../i18n/ui";
 import Disclosure from "../../../../components/docs/Disclosure";
 import { Collection } from "../../../../content/config";
 import { getLangPaths } from "../../../../i18n/utils";
@@ -36,27 +35,6 @@ const signupText = () => {
   }
 }
 
-const tokenText = () => {
-  switch (lang) {
-    case Language.de:
-      return "Fügen Sie ein API-Token hinzu";
-    case Language.es:
-      return "Añadir un token de API";
-    case Language.fr:
-      return "Ajouter un jeton API";
-    case Language.ja:
-      return "API トークンを追加する";
-    case Language.pt:
-      return "Adicionar um token de API";
-    case Language.ru:
-      return "Добавить токен API";
-    case Language.zh:
-      return "添加 API 令牌";
-    default:
-      return "Add an API Token";
-  }
-}
-
 const page = Astro.props;
 const { Content } = await page.render();
 
@@ -75,11 +53,6 @@ const slug = "quick-start";
   <Content />
   <AuthOverride client:only="solid-js" elementId={signupId}>
     <h4 id={signupId}>✅ {signupText}</h4>
-  </AuthOverride>
-  <AuthOverride client:only="solid-js" elementId={tokenId}>
-    <h4 id={tokenId}>
-      <AddAnApiToken client:only="solid-js" text={tokenText()} />
-    </h4>
   </AuthOverride>
 
   <Disclosure collection={collection} slug={slug} lang={lang} />
