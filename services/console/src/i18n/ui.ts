@@ -99,8 +99,7 @@ export const tutorial = (lang: Language) => {
 			return "教程";
 	}
 };
-export const signupId = "signup-for-bencher-cloud";
-export const tokenId = "add-api-token";
+export const signupId = "sign-up-bencher-cloud";
 
 export const howTo = (lang: Language) => {
 	switch (lang) {
