@@ -4,7 +4,7 @@ import Field, { type FieldConfig, type FieldValue } from "../../field/Field";
 import FieldKind from "../../field/kind";
 import { createStore } from "solid-js/store";
 import { authUser } from "../../../util/auth";
-import { pathname } from "../../../util/url";
+import { BACK_PARAM, pathname } from "../../../util/url";
 import { validJwt } from "../../../util/valid";
 import { Operation, Resource, resourceSingular } from "../../../config/types";
 import { httpPost, httpPut } from "../../../util/http";
@@ -148,7 +148,7 @@ const Poster = (props: Props) => {
 						props.resource,
 					)}.`,
 					props.config?.path?.(pathname(), resp.data),
-					null,
+					[BACK_PARAM],
 					null,
 				);
 			})

@@ -1,0 +1,14 @@
+---
+export const prerender = false;
+
+import BaseLayout from "../../../../layouts/BaseLayout.astro";
+import UserRedirect from "../../../../components/console/redirects/UserRedirect";
+
+const title = "Bencher Console";
+---
+
+<BaseLayout title={title} description={title}>
+  <div slot="navbar"></div>
+  <UserRedirect client:only="solid-js" path="tokens" />
+  <div slot="footer"></div>
+</BaseLayout>
