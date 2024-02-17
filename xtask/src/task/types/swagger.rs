@@ -65,6 +65,7 @@ impl Swagger {
         println!("Saved OpenAPI JSON file to: {SWAGGER_PATH}");
 
         test_swagger_spec()?;
+        fs::create_dir_all("./services/console/public/download")?;
         fs::copy(
             SWAGGER_PATH,
             "./services/console/public/download/openapi.json",
