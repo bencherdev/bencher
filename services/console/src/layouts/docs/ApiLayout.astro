@@ -7,11 +7,12 @@ interface Props {
   titleFmt?: undefined | ((title: string) => string);
   description: string;
   heading?: string;
+  lang?: string;
   collection?: undefined | string;
   slug?: undefined | string;
 }
 
-const { title, titleFmt, description, heading, collection, slug } = Astro.props;
+const { title, titleFmt, description, heading, lang, collection, slug } = Astro.props;
 ---
 
 <DocsLayout
@@ -22,6 +23,7 @@ const { title, titleFmt, description, heading, collection, slug } = Astro.props;
   tab={DocsTab.Api}
   collection={collection}
   slug={slug}
+  lang={lang}
 >
   <slot />
 </DocsLayout>

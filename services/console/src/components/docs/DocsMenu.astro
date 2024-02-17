@@ -132,7 +132,7 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
       {
         organizationsCollection.map((page) => (
           <li>
-            <a href={`/docs/api/organizations/${page.slug}/`}>{page.data.title}</a>
+            <a href={`/${langPath(lang)}docs/api/organizations/${page.slug}/`}>{page.data.title}</a>
           </li>
         ))
       }

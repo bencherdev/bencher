@@ -17,7 +17,7 @@ export async function getStaticPaths() {
 }
 // 2. When it's time to render, you can get the entry directly from the prop
 const { page } = Astro.props;
-const { slug } = Astro.params;
+const { lang, slug } = Astro.params;
 ---
 
 <ApiLayout
@@ -27,6 +27,7 @@ const { slug } = Astro.params;
   heading={page.data.heading}
   collection="organizations"
   slug={slug}
+  lang={lang}
 >
   {page.data.paths.map(({path, method, headers, cli}, index) =>
     <Operation path={path} method={method} headers={headers} cli={cli} index={index} />
