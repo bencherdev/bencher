@@ -1,24 +1,19 @@
-import { useNavigate } from "../../../util/url";
+import { decodePath } from "../../../util/url";
 
 const HelpHeader = () => {
-	const navigate = useNavigate();
-
 	return (
 		<nav class="level">
 			<div class="level-left">
-				<button
+				<a
 					class="button is-outlined"
-					type="button"
-					onClick={(e) => {
-						e.preventDefault();
-						navigate("/console");
-					}}
+					title="Back"
+					href={decodePath("/console")}
 				>
 					<span class="icon">
 						<i class="fas fa-chevron-left" aria-hidden="true" />
 					</span>
 					<span>Back</span>
-				</button>
+				</a>
 			</div>
 			<div class="level-left">
 				<div class="level-item">

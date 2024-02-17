@@ -3,8 +3,7 @@ import DocsLayout from "../../../layouts/docs/DocsLayout.astro";
 import { Content } from "../../../content/tutorial/en/quick-start.mdx";
 import * as quickStart from "../../../content/tutorial/en/quick-start.mdx";
 import AuthOverride from "../../../components/auth/AuthOverride";
-import AddAnApiToken from "../../../components/docs/override/AddAnApiToken";
-import { signupId, tokenId } from "../../../i18n/ui";
+import { signupId } from "../../../i18n/ui";
 ---
 
 <DocsLayout
@@ -17,10 +16,5 @@ import { signupId, tokenId } from "../../../i18n/ui";
   <Content />
   <AuthOverride client:only="solid-js" elementId={signupId}>
     <h4 id={signupId}>✅ You are signed up for Bencher Cloud</h4>
-  </AuthOverride>
-  <AuthOverride client:only="solid-js" elementId={tokenId}>
-    <h4 id={tokenId}>
-      <AddAnApiToken client:only="solid-js" text="Add an API Token"/>
-    </h4>
   </AuthOverride>
 </DocsLayout>

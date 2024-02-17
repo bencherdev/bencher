@@ -10,6 +10,7 @@ import {
 } from "../../util/ext";
 import ProjectSelect from "./ProjectSelect";
 import BENCHER_NAVBAR_ID from "./id";
+import { BACK_PARAM, encodePath } from "../../util/url";
 
 export interface Props {
 	apiUrl: string;
@@ -86,7 +87,9 @@ const ConsoleNavbar = (props: Props) => {
 						<div class="navbar-item">
 							<a
 								class="button is-outlined"
-								href={`/console/users/${user?.user?.slug}/help/`}
+								href={`/console/users/${
+									user?.user?.slug
+								}/help/?${BACK_PARAM}=${encodePath()}`}
 							>
 								<span class="icon has-text-primary">
 									<i class="fas fa-life-ring" aria-hidden="true" />
@@ -114,7 +117,9 @@ const ConsoleNavbar = (props: Props) => {
 								</a>
 								<a
 									class="navbar-item"
-									href={`/console/users/${user?.user?.slug}/settings`}
+									href={`/console/users/${
+										user?.user?.slug
+									}/settings?${BACK_PARAM}=${encodePath()}`}
 								>
 									Settings
 								</a>
