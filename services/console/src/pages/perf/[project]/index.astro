@@ -4,6 +4,7 @@ export const prerender = false;
 import PerfLayout from "../../../layouts/perf/PerfLayout.astro";
 import PublicProject from "../../../components/perf/PublicProject";
 import type { JsonProject } from "../../../types/bencher";
+import Tetris from "../../../components/site/Tetris.astro";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
@@ -43,18 +44,21 @@ try {
   <PublicProject client:only="solid-js" apiUrl={BENCHER_API_URL} params={params} project={jsonProject} />
   :
   <section class="section">
-			<div class="container">
-				<div class="columns is-mobile">
-					<div class="column">
-						<h1 class="title is-1">Project Not Found</h1>
-            <hr />
-            <p>Could not find Project: <code>{params.project}</code></p>
-            <p>The Project may be private or it may not exist.</p>
-            <br />
-            <a class="button" href="/perf">Go to Public Projects</a>
-					</div>
-				</div>
-			</div>
-		</section>
+    <div class="container">
+      <div class="columns">
+        <div class="column">
+          <h1 class="title is-1">Project Not Found</h1>
+          <hr />
+          <p>Could not find Project: <code>{params.project}</code></p>
+          <p>The Project may be private or it may not exist.</p>
+          <br />
+          <a class="button" href="/perf">Go to Public Projects</a>
+        </div>
+        <div class="column">
+          <Tetris />
+        </div>
+      </div>
+    </div>
+  </section>
   }
 </PerfLayout>

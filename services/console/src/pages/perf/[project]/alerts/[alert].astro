@@ -7,6 +7,7 @@ import PublicAlert from "../../../../components/perf/PublicAlert";
 import alertsConfig from "../../../../config/project/alerts";
 import { Operation } from "../../../../config/types";
 import type { DeckConfig } from "../../../../components/console/deck/hand/Deck";
+import Tetris from "../../../../components/site/Tetris.astro";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
@@ -46,18 +47,21 @@ const deck = alertsConfig[Operation.VIEW]?.deck as DeckConfig;
   <PublicAlert client:only="solid-js" apiUrl={BENCHER_API_URL} params={params} deck={deck} data={jsonAlert} />
   :
   <section class="section">
-			<div class="container">
-				<div class="columns is-mobile">
-					<div class="column">
-						<h1 class="title is-1">Alert Not Found</h1>
-            <hr />
-            <p>Could not find Alert <code>{params.alert}</code> for Project <code>{params.project}</code></p>
-            <p>The Project may be private or the Alert may not exist.</p>
-            <br />
-            <a class="button" href={`/perf/${params.project}`}>Go to Project</a>
-					</div>
-				</div>
-			</div>
-		</section>
+    <div class="container">
+      <div class="columns is-mobile">
+        <div class="column">
+          <h1 class="title is-1">Alert Not Found</h1>
+          <hr />
+          <p>Could not find Alert <code>{params.alert}</code> for Project <code>{params.project}</code></p>
+          <p>The Project may be private or the Alert may not exist.</p>
+          <br />
+          <a class="button" href={`/perf/${params.project}`}>Go to Project</a>
+        </div>
+        <div class="column">
+          <Tetris />
+        </div>
+      </div>
+    </div>
+  </section>
   }
 </PerfLayout>

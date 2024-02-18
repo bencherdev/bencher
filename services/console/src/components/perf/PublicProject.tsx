@@ -12,7 +12,7 @@ const PublicProject = (props: Props) => {
 	return (
 		<section class="section">
 			<div class="container">
-				<div class="columns is-mobile">
+				<div class="columns">
 					<div class="column">
 						<PerfPanel
 							apiUrl={props.apiUrl}

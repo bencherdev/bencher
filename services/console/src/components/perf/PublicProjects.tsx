@@ -111,7 +111,7 @@ const PublicProjects = (props: Props) => {
 	return (
 		<section class="section">
 			<div class="container">
-				<div class="columns is-mobile">
+				<div class="columns">
 					<div class="column">
 						<div class="content">
 							<h1 class="title is-1">Projects</h1>

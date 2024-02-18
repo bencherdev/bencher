@@ -1,0 +1,22 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Tetris from "../components/site/Tetris.astro";
+
+const title = "Play";
+const titleFmt = (title: string) => `🕹️ ${title}`;
+const description = "Play your favorite tetromino based puzzle game!";
+---
+
+<BaseLayout title={title} titleFmt={titleFmt} description={description}>
+    <section class="section">
+        <div class="container">
+            <div class="columns is-centered">
+                <div class="column" />
+                <div class="column">
+                    <Tetris />
+                </div>
+                <div class="column" />
+            </div>
+        </div>
+    </section>
+</BaseLayout>
