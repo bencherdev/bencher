@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use bencher_client::types::{JsonUpdateMember, OrganizationRole};
 use bencher_json::ResourceId;
 

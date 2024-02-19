@@ -1,11 +1,11 @@
-use std::convert::TryFrom;
+use std::fmt;
 
 use crate::bencher::sub::RunError;
 
 const UNIX_FLAG: &str = "-c";
 const WINDOWS_FLAG: &str = "/C";
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Flag {
     Unix,
     Windows,
@@ -35,5 +35,11 @@ impl AsRef<str> for Flag {
             Self::Windows => WINDOWS_FLAG,
             Self::Custom(shell) => shell,
         }
+    }
+}
+
+impl fmt::Display for Flag {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.as_ref())
     }
 }

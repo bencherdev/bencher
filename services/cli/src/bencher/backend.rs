@@ -1,4 +1,4 @@
-use std::{convert::TryFrom, ops::Deref};
+use std::ops::Deref;
 
 use bencher_json::{Jwt, Url};
 use serde::{de::DeserializeOwned, Serialize};

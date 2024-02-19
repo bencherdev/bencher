@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use crate::{parser::CliSub, CliError};
 
 mod docker;

@@ -1,4 +1,4 @@
-use std::{convert::TryFrom, str::FromStr};
+use std::str::FromStr;
 
 use bencher_client::types::{JsonNewBranch, JsonStartPoint};
 use bencher_json::{

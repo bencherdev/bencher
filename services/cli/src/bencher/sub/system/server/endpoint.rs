@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use crate::{
     bencher::{backend::PubBackend, sub::SubCmd},
     parser::system::server::CliEndpoint,

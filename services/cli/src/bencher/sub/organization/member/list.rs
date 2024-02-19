@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use bencher_client::types::{JsonDirection, OrgMembersSort};
 use bencher_json::{ResourceId, UserName};
 

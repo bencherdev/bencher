@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use bencher_client::types::JsonAccept;
 use bencher_json::Jwt;
 

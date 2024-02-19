@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use bencher_client::types::JsonUpdateMeasure;
 use bencher_json::{ResourceId, ResourceName, Slug};
 

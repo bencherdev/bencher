@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use bencher_client::types::{JsonDirection, ProjThresholdsSort};
 use bencher_json::{project::threshold::JsonThresholdQuery, NameId, ResourceId};
 

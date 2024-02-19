@@ -1,7 +1,5 @@
 #![cfg(feature = "plus")]
 
-use std::convert::TryFrom;
-
 use bencher_json::ResourceId;
 
 use crate::{

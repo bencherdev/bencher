@@ -1,8 +1,10 @@
-use std::{convert::TryFrom, path::PathBuf};
+use std::fmt;
+
+use camino::Utf8PathBuf;
 
 use crate::parser::project::run::CliRunCommand;
 
-mod command;
+pub mod command;
 mod flag;
 pub mod output;
 mod pipe;
@@ -14,12 +16,12 @@ use pipe::Pipe;
 
 use super::{RunError, BENCHER_CMD};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Runner {
     Pipe(Pipe),
     Command(Command),
-    CommandToFile(Command, PathBuf),
-    File(PathBuf),
+    CommandToFile(Command, Utf8PathBuf),
+    File(Utf8PathBuf),
 }
 
 impl TryFrom<CliRunCommand> for Runner {
@@ -59,6 +61,19 @@ impl TryFrom<CliRunCommand> for Runner {
             Ok(Self::Pipe(pipe))
         } else {
             Err(RunError::NoCommand)
+        }
+    }
+}
+
+impl fmt::Display for Runner {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Pipe(pipe) => write!(f, "{pipe}"),
+            Self::Command(command) => write!(f, "{command}"),
+            Self::CommandToFile(command, file_path) => {
+                write!(f, "{command} > {file_path}")
+            },
+            Self::File(file_path) => write!(f, "{file_path}"),
         }
     }
 }

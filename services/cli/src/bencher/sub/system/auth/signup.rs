@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use bencher_client::types::JsonSignup;
 #[cfg(feature = "plus")]
 use bencher_client::types::PlanLevel;

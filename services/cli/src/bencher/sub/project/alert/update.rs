@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use bencher_client::types::{AlertStatus, JsonUpdateAlert};
 use bencher_json::{AlertUuid, ResourceId};
 

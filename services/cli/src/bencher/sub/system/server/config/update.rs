@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use bencher_client::types::{JsonConfig, JsonUpdateConfig};
 
 use crate::{

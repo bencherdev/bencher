@@ -1,4 +1,4 @@
-use std::{convert::TryInto, process::Stdio};
+use std::{fmt, process::Stdio};
 
 use tokio::io::{AsyncBufReadExt, BufReader};
 
@@ -6,7 +6,7 @@ use super::{flag::Flag, output::Output, shell::Shell};
 use crate::{bencher::sub::RunError, parser::project::run::CliRunShell};
 use crate::{cli_eprintln_quietable, cli_println_quietable};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Command {
     Shell {
         shell: Shell,
@@ -17,6 +17,22 @@ pub enum Command {
         program: String,
         arguments: Vec<String>,
     },
+}
+
+impl fmt::Display for Command {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Shell {
+                shell,
+                flag,
+                command,
+            } => write!(f, "{shell} {flag} {command}"),
+            Self::Exec { program, arguments } => {
+                let args = arguments.join(" ");
+                write!(f, "{program} {args}")
+            },
+        }
+    }
 }
 
 impl Command {
@@ -51,9 +67,15 @@ impl Command {
                 .stderr(Stdio::piped())
                 .spawn(),
         }
-        .map_err(RunError::SpawnCommand)?;
+        .map_err(|err| RunError::SpawnCommand {
+            command: self.clone(),
+            err,
+        })?;
 
-        let child_stdout = child.stdout.take().ok_or(RunError::PipeStdout)?;
+        let child_stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| RunError::PipeStdout(self.clone()))?;
         let stdout = tokio::spawn(async move {
             let stdout_reader = BufReader::new(child_stdout);
             let mut stdout_lines = stdout_reader.lines();
@@ -71,7 +93,10 @@ impl Command {
             stdout
         });
 
-        let child_stderr = child.stderr.take().ok_or(RunError::PipeStderr)?;
+        let child_stderr = child
+            .stderr
+            .take()
+            .ok_or_else(|| RunError::PipeStderr(self.clone()))?;
         let stderr = tokio::spawn(async move {
             let stderr_reader = BufReader::new(child_stderr);
             let mut stderr_lines = stderr_reader.lines();
@@ -90,9 +115,18 @@ impl Command {
         });
 
         let (status, stdout, stderr) = tokio::join!(child.wait(), stdout, stderr);
-        let status = status.map_err(RunError::RunCommand)?;
-        let stdout = stdout.map_err(RunError::StdoutJoinError)?;
-        let stderr = stderr.map_err(RunError::StderrJoinError)?;
+        let status = status.map_err(|err| RunError::RunCommand {
+            command: self.clone(),
+            err,
+        })?;
+        let stdout = stdout.map_err(|err| RunError::StdoutJoinError {
+            command: self.clone(),
+            err,
+        })?;
+        let stderr = stderr.map_err(|err| RunError::StderrJoinError {
+            command: self.clone(),
+            err,
+        })?;
 
         Ok(Output {
             status: status.into(),

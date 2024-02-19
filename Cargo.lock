@@ -920,6 +920,7 @@ dependencies = [
  "bencher_comment",
  "bencher_json",
  "bollard",
+ "camino",
  "chrono",
  "clap",
  "futures-util",

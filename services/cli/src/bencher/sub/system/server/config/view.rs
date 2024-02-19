@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use crate::{
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::system::server::CliConfigView,

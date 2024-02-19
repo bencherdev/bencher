@@ -1,6 +1,5 @@
-use std::path::PathBuf;
-
 use bencher_json::{BranchName, DateTime, GitHash, NameId, ResourceId};
+use camino::Utf8PathBuf;
 use clap::{ArgGroup, Args, Parser, ValueEnum};
 
 use crate::parser::CliBackend;
@@ -99,7 +98,7 @@ pub struct CliRunBranch {
 pub struct CliRunCommand {
     /// Benchmark command output file path
     #[clap(long)]
-    pub file: Option<PathBuf>,
+    pub file: Option<Utf8PathBuf>,
 
     #[clap(flatten)]
     pub sh_c: CliRunShell,

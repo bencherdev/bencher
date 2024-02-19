@@ -1,3 +1,5 @@
+use super::runner::{command::Command, Runner};
+
 #[derive(thiserror::Error, Debug)]
 pub enum RunError {
     #[error("Failed to find Bencher project. Set the `--project` flag or the `BENCHER_PROJECT` environment variable.")]
@@ -21,21 +23,35 @@ pub enum RunError {
     ShellWithExec(String),
     #[error("Set shell flag ({0}) when running command in exec mode")]
     FlagWithExec(String),
-    #[error("Failed to spawn command: {0}")]
-    SpawnCommand(std::io::Error),
-    #[error("Failed to run command: {0}")]
-    RunCommand(std::io::Error),
-    #[error("Failed to pipe stdout")]
-    PipeStdout,
-    #[error("Failed to pipe stderr")]
-    PipeStderr,
-    #[error("Failed to join stdout: {0}")]
-    StdoutJoinError(tokio::task::JoinError),
-    #[error("Failed to join stderr: {0}")]
-    StderrJoinError(tokio::task::JoinError),
-    #[error("Failed to run command due to a non-zero exit code: {0}")]
-    ExitStatus(crate::bencher::sub::Output),
-
+    #[error("Failed to spawn command `{command}`: {err}")]
+    SpawnCommand {
+        command: Command,
+        err: std::io::Error,
+    },
+    #[error("Failed to pipe stdout for command `{0}`")]
+    PipeStdout(Command),
+    #[error("Failed to pipe stderr for command `{0}`")]
+    PipeStderr(Command),
+    #[error("Failed to run command `{command}: {err}")]
+    RunCommand {
+        command: Command,
+        err: std::io::Error,
+    },
+    #[error("Failed to join stdout for command `{command}`: {err}")]
+    StdoutJoinError {
+        command: Command,
+        err: tokio::task::JoinError,
+    },
+    #[error("Failed to join stderr for command `{command}`: {err}")]
+    StderrJoinError {
+        command: Command,
+        err: tokio::task::JoinError,
+    },
+    #[error("Failed to run command due to a non-zero exit code for runner `{runner}`: {output}")]
+    ExitStatus {
+        runner: Box<Runner>,
+        output: crate::bencher::sub::Output,
+    },
     #[error("Failed to read from output file: {0}")]
     OutputFileRead(std::io::Error),
 

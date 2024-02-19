@@ -1,11 +1,11 @@
-use std::convert::TryFrom;
+use std::fmt;
 
 use crate::bencher::sub::RunError;
 
 const UNIX_SHELL: &str = "/bin/sh";
 const WINDOWS_SHELL: &str = "cmd";
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Shell {
     Unix,
     Windows,
@@ -35,5 +35,11 @@ impl AsRef<str> for Shell {
             Self::Windows => WINDOWS_SHELL,
             Self::Custom(shell) => shell,
         }
+    }
+}
+
+impl fmt::Display for Shell {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.as_ref())
     }
 }

@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use bencher_json::{ResourceId, TokenUuid};
 
 use crate::{

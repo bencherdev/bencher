@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 #[cfg(feature = "plus")]
 use bencher_client::types::JsonOrganizationPatchNull;
 use bencher_client::types::{JsonOrganizationPatch, JsonUpdateOrganization};

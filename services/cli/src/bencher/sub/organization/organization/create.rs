@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use bencher_client::types::JsonNewOrganization;
 use bencher_json::{ResourceName, Slug};
 

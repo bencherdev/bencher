@@ -1,4 +1,4 @@
-use std::{convert::TryFrom, future::Future, pin::Pin};
+use std::{future::Future, pin::Pin};
 
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings};
 use bencher_comment::ReportComment;
@@ -206,7 +206,10 @@ impl Run {
             } else if self.allow_failure {
                 cli_eprintln_quietable!(self.log, "Skipping failure:\n{}", output);
             } else {
-                return Err(RunError::ExitStatus(output));
+                return Err(RunError::ExitStatus {
+                    runner: Box::new(self.runner.clone()),
+                    output,
+                });
             }
         }
 

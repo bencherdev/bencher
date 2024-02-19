@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use bencher_client::types::{JsonNewBranch, JsonStartPoint};
 use bencher_json::{BranchName, NameId, ResourceId, Slug};
 

@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use bencher_client::types::JsonNewThreshold;
 use bencher_json::{NameId, ResourceId};
 

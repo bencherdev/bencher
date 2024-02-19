@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use bencher_client::types::{JsonDirection, ProjReportsSort};
 use bencher_json::{project::report::JsonReportQuery, DateTime, NameId, ResourceId};
 

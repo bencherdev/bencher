@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use bencher_client::types::{JsonDirection, ProjMeasuresSort};
 use bencher_json::{ResourceId, ResourceName};
 

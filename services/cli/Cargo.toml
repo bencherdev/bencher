@@ -14,6 +14,7 @@ bencher_adapter.workspace = true
 bencher_client.workspace = true
 bencher_comment.workspace = true
 bencher_json = { workspace = true, features = ["lite", "table"] }
+camino.workspace = true
 chrono = { workspace = true, features = ["clock"] }
 clap.workspace = true
 literally.workspace = true

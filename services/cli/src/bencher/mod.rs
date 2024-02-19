@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use clap::Parser;
 
 use crate::{parser::CliBencher, CliError};

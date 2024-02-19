@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use bencher_client::types::{JsonNewMember, OrganizationRole};
 use bencher_json::{Email, ResourceId, UserName};
 

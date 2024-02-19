@@ -1,8 +1,8 @@
-use std::io::BufRead;
+use std::{fmt, io::BufRead};
 
 use super::Output;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Pipe(Output);
 
 impl Pipe {
@@ -27,5 +27,11 @@ impl Pipe {
 
     pub fn output(&self) -> Output {
         self.0.clone()
+    }
+}
+
+impl fmt::Display for Pipe {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
