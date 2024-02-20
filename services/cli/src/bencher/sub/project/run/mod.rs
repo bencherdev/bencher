@@ -135,6 +135,10 @@ impl SubCmd for Run {
 
 impl Run {
     async fn exec_inner(&self) -> Result<(), RunError> {
+        if let Some(ci) = &self.ci {
+            ci.safety_check().await?;
+        }
+
         let Some(json_new_report) = self.generate_report().await? else {
             return Ok(());
         };
