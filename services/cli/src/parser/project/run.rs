@@ -251,6 +251,9 @@ pub struct CliRunCi {
     /// Issue number for posting results to CI (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_number: Option<u64>,
+    /// CAUTION: Override safety checks and accept that you are vulnerable to pwn requests (requires: `--github-actions`)
+    #[clap(long, requires = "ci_cd")]
+    pub ci_i_am_vulnerable_to_pwn_requests: bool,
     /// GitHub API authentication token for GitHub Actions to comment on PRs (ie `--github-actions ${{ secrets.GITHUB_TOKEN }}`)
     #[clap(long)]
     pub github_actions: Option<String>,
