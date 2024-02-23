@@ -7,6 +7,9 @@ pub enum RunError {
     #[error("Failed to parse UUID or slug for the project: {0}")]
     ParseProject(bencher_json::ValidError),
 
+    #[error("Failed to check API version: {0}")]
+    ApiVersion(crate::BackendError),
+
     #[error("{0}")]
     Branch(#[from] super::branch::BranchError),
     #[error("{0}")]

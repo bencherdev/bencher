@@ -135,6 +135,15 @@ impl SubCmd for Run {
 
 impl Run {
     async fn exec_inner(&self) -> Result<(), RunError> {
+        if let Some(mismatch) = self
+            .backend
+            .check_version()
+            .await
+            .map_err(RunError::ApiVersion)?
+        {
+            cli_eprintln_quietable!(self.log, "Warning: {mismatch}");
+        }
+
         if let Some(ci) = &self.ci {
             ci.safety_check(self.log)?;
         }

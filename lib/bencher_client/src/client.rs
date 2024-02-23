@@ -88,6 +88,18 @@ impl BencherClient {
         BencherClientBuilder::default()
     }
 
+    /// Turn the `BencherClient` into a `BencherClientBuilder`
+    pub fn into_builder(self) -> BencherClientBuilder {
+        BencherClientBuilder {
+            host: Some(self.host),
+            token: self.token,
+            attempts: Some(self.attempts),
+            retry_after: Some(self.retry_after),
+            strict: Some(self.strict),
+            log: Some(self.log),
+        }
+    }
+
     /// Send a request to the Bencher API
     ///
     /// Returns a generic JSON value as the response.

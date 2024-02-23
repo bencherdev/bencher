@@ -10,6 +10,8 @@ pub use bencher::{
 pub use error::CliError;
 pub use parser::CliBencher;
 
+pub const CLI_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 pub async fn exec() -> Result<(), CliError> {
     let bencher = Bencher::new()?;
     bencher.exec().await

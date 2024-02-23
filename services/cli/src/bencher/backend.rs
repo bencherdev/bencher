@@ -1,9 +1,9 @@
-use std::ops::Deref;
+use std::{fmt, ops::Deref};
 
-use bencher_json::{Jwt, Url};
+use bencher_json::{JsonApiVersion, Jwt, Url, BENCHER_API_URL};
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::parser::CliBackend;
+use crate::{cli_eprintln_quietable, parser::CliBackend, CLI_VERSION};
 
 pub const BENCHER_HOST: &str = "BENCHER_HOST";
 pub const BENCHER_API_TOKEN: &str = "BENCHER_API_TOKEN";
@@ -31,6 +31,13 @@ pub enum BackendError {
     ParseToken(bencher_json::ValidError),
     #[error("Failed to find Bencher API token, and this API endpoint requires authorization. Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable.")]
     NoToken,
+    #[error("Failed to get API server version: {0}")]
+    ApiVersion(bencher_client::ClientError),
+    #[error("{err}\nHint: This may be due to a version mismatch. {mismatch}")]
+    ClientMismatch {
+        mismatch: Box<VersionMismatch>,
+        err: bencher_client::ClientError,
+    },
     #[error("{0}")]
     Client(#[from] bencher_client::ClientError),
 }
@@ -141,7 +148,17 @@ impl Backend {
         E: std::error::Error + Send + Sync + 'static,
         bencher_client::JsonValue: TryFrom<T, Error = E>,
     {
-        self.client.send(sender).await.map_err(Into::into)
+        let mismatch = self.check_version().await?;
+        self.client.send(sender).await.map_err(|err| {
+            if let Some(mismatch) = mismatch {
+                BackendError::ClientMismatch {
+                    mismatch: Box::new(mismatch),
+                    err,
+                }
+            } else {
+                err.into()
+            }
+        })
     }
 
     pub async fn send_with<F, R, T, Json, E>(&self, sender: F) -> Result<Json, BackendError>
@@ -157,6 +174,67 @@ impl Backend {
         Json: DeserializeOwned + Serialize + TryFrom<T, Error = E>,
         E: std::error::Error + Send + Sync + 'static,
     {
-        self.client.send_with(sender).await.map_err(Into::into)
+        let mismatch = self.check_version().await?;
+        self.client.send_with(sender).await.map_err(|err| {
+            if let Some(mismatch) = mismatch {
+                BackendError::ClientMismatch {
+                    mismatch: Box::new(mismatch),
+                    err,
+                }
+            } else {
+                err.into()
+            }
+        })
+    }
+
+    pub async fn check_version(&self) -> Result<Option<VersionMismatch>, BackendError> {
+        let json_api_version: JsonApiVersion = self
+            .client
+            .clone()
+            .into_builder()
+            .log(false)
+            .build()
+            .send_with(|client| async move { client.server_version_get().send().await })
+            .await
+            .map_err(BackendError::ApiVersion)?;
+        let api_version = json_api_version.version;
+        let mismatch = VersionMismatch::check(&self.client.host, api_version);
+        if let Some(mismatch) = &mismatch {
+            cli_eprintln_quietable!(self.client.log, "Warning: {mismatch}",);
+        }
+        Ok(mismatch)
+    }
+}
+
+#[derive(Debug)]
+pub struct VersionMismatch {
+    pub host: url::Url,
+    pub api_version: String,
+    pub cli_version: String,
+}
+
+impl fmt::Display for VersionMismatch {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "The Bencher API server version is {}, but this CLI version is {}.\n{}",
+            self.api_version,
+            self.cli_version,
+            if self.host == *BENCHER_API_URL {
+                "You should use the latest version of the Bencher CLI when using Bencher Cloud."
+            } else {
+                "You should use the same version of the Bencher CLI as your Bencher Self-Hosted server."
+            }
+        )
+    }
+}
+
+impl VersionMismatch {
+    pub fn check(host: &url::Url, api_version: String) -> Option<Self> {
+        (api_version != CLI_VERSION).then(|| Self {
+            host: host.clone(),
+            api_version,
+            cli_version: CLI_VERSION.into(),
+        })
     }
 }
