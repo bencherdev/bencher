@@ -132,14 +132,14 @@ Though Bencher is open source, there is also a hosted version available [Bencher
     </td>
     <td>
       <p align="center">
-        <a href="https://bencher.dev/perf/k-framework">
+        <a href="https://bencher.dev/perf/diesel">
           <img
-            src="https://s3.amazonaws.com/public.bencher.dev/case-study/k-framework.png"
-            alt="K Framework"
+            src="https://s3.amazonaws.com/public.bencher.dev/case-study/diesel.svg"
+            alt="Diesel"
           />
         </a>
       </p>
-      <p align="center">K Framework</p>
+      <p align="center">Diesel</p>
     </td>
     <td>
       <p align="center">
@@ -191,25 +191,14 @@ Though Bencher is open source, there is also a hosted version available [Bencher
   <tr>
     <td>
       <p align="center">
-        <a href="https://bencher.dev/perf/trace4rs">
+        <a href="https://bencher.dev/perf/k-framework">
           <img
-            src="https://s3.amazonaws.com/public.bencher.dev/case-study/trace4rs.png"
-            alt="trace4rs"
+            src="https://s3.amazonaws.com/public.bencher.dev/case-study/k-framework.png"
+            alt="K Framework"
           />
         </a>
       </p>
-      <p align="center">trace4rs</p>
-    </td>
-    <td>
-      <p align="center">
-        <a href="https://bencher.dev/perf/stratum">
-          <img
-            src="https://s3.amazonaws.com/public.bencher.dev/case-study/stratum.svg"
-            alt="Stratum"
-          />
-        </a>
-      </p>
-      <p align="center">Stratum</p>
+      <p align="center">K Framework</p>
     </td>
     <td>
       <p align="center">
@@ -221,6 +210,17 @@ Though Bencher is open source, there is also a hosted version available [Bencher
         </a>
       </p>
       <p align="center">raft</p>
+    </td>
+    <td>
+      <p align="center">
+        <a href="https://bencher.dev/perf/stratum">
+          <img
+            src="https://s3.amazonaws.com/public.bencher.dev/case-study/stratum.svg"
+            alt="Stratum"
+          />
+        </a>
+      </p>
+      <p align="center">Stratum</p>
     </td>
   </tr>
 </table>

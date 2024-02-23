@@ -14,10 +14,11 @@ const PROJECTS: Project[][] = [
 			slug: "rustls-821705769",
 		},
 		{
-			name: "K Framework",
-			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/k-framework.png",
-			slug: "k-framework",
+			name: "Diesel",
+			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/diesel.svg",
+			slug: "diesel",
 		},
+
 		{
 			name: "Poolifier",
 			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/poolifier.png",
@@ -43,19 +44,19 @@ const PROJECTS: Project[][] = [
 	],
 	[
 		{
-			name: "trace4rs",
-			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/trace4rs.png",
-			slug: "trace4rs",
-		},
-		{
-			name: "Stratum",
-			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/stratum.svg",
-			slug: "stratum",
+			name: "K Framework",
+			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/k-framework.png",
+			slug: "k-framework",
 		},
 		{
 			name: "raft",
 			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/raft.png",
 			slug: "raft",
+		},
+		{
+			name: "Stratum",
+			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/stratum.svg",
+			slug: "stratum",
 		},
 	],
 ];
