@@ -1,7 +1,7 @@
 ---
 import LearnLayout from "../../layouts/docs/LearnLayout.astro";
 import {getLangCollection, langPath} from "../../i18n/utils.ts"
-import { Language, allLanguages, alsoIn,  defaultLang, languageName } from "../../i18n/ui";
+import { Language, defaultLang } from "../../i18n/ui";
 import { Collection } from "../../content/config";
 
 interface Props {
@@ -96,13 +96,4 @@ const howToBenchmark = () => {
       }
     </ul>
   </div>
-  <h3 class="title is-3">{alsoIn(lang)}</h3>
-  <ul>
-    {allLanguages.map((language) =>
-       lang !== language &&
-        <li>
-          <a href={`/learn/${langPath(language)}`}>{languageName(language)}</a>
-        </li>
-    )}
-  </ul>
 </LearnLayout>

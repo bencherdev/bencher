@@ -1,0 +1,75 @@
+---
+import { getCollection } from "astro:content";
+import ApiLayout from "../../../layouts/docs/ApiLayout.astro";
+import {getLangCollection, langPath} from "../../../i18n/utils.ts"
+import { Language, architecture, defaultLang, explanation, howTo, tutorial } from "../../../i18n/ui";
+import { Collection } from "../../../content/config";
+
+interface Props {
+  lang: undefined | string;
+}
+const lang: Language = Astro.props.lang ?? defaultLang;
+
+const organizationsCollection = await getCollection(Collection.organizations);
+
+const title = () => {
+  switch(lang) {
+    case Language.en:
+      return "Bencher REST API Docs";
+    case Language.de:
+      return "Bencher REST API Dokumentation";
+    case Language.es:
+      return "Documentación de la API REST de Bencher";
+    case Language.fr:
+      return "Documentation de l'API REST de Bencher";
+    case Language.ja:
+      return "Bencher REST API ドキュメント";
+    case Language.ko:
+      return "Bencher REST API 문서";
+    case Language.pt:
+      return "Documentação da API REST do Bencher";
+    case Language.ru:
+      return "Документация по REST API Bencher";
+    case Language.zh:
+      return "Bencher REST API 文档";
+  }
+};
+
+const description = () => {
+  switch (lang) {
+    case Language.en:
+      return "Table of contents for the Bencher REST API documentation. Learn how to setup continuous benchmarking for your project.";
+    case Language.de:
+      return "Inhaltsverzeichnis für die Bencher REST API-Dokumentation. Erfahren Sie, wie Sie kontinuierliches Benchmarking für Ihr Projekt einrichten.";
+    case Language.es:
+      return "Tabla de contenido de la documentación de la API REST de Bencher. Aprenda cómo configurar el benchmarking continuo para su proyecto.";
+    case Language.fr:
+      return "Table des matières de la documentation de l'API REST de Bencher. Apprenez à configurer le benchmarking continu pour votre projet.";
+    case Language.ja:
+      return "Bencher REST API ドキュメントの目次。 プロジェクトに継続的なベンチマーキングを設定する方法を学びます。";
+    case Language.ko:
+      return "Bencher REST API 문서의 목차. 프로젝트에 대한 지속적인 벤치마킹을 설정하는 방법을 배우십시오.";
+    case Language.pt:
+      return "Sumário da documentação da API REST do Bencher. Aprenda a configurar o benchmarking contínuo para o seu projeto.";
+    case Language.ru:
+      return "Оглавление документации по REST API Bencher. Узнайте, как настроить непрерывное тестирование проекта.";
+    case Language.zh:
+      return "Bencher REST API 文档的目录。 了解如何为您的项目设置持续的基准测试。";
+  }
+}
+---
+
+<ApiLayout title={title()} description={description()} heading={title()} lang={lang}>
+  <nav class="menu">
+    <p class="menu-label">Organizations</p>
+    <ul class="menu-list">
+      {
+        organizationsCollection.map((page) => (
+          <li>
+            <a href={`/${langPath(lang)}docs/api/${page.slug}/`}>{page.data.heading}</a>
+          </li>
+        ))
+      }
+    </ul>
+  </nav>
+</DocsLayout>

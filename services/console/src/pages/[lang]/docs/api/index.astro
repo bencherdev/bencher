@@ -1,4 +1,5 @@
 ---
+import ApiPanel from "../../../../components/docs/api/ApiPanel.astro";
 import { otherLanguages } from "../../../../i18n/ui";
 export async function getStaticPaths() {
     return otherLanguages.map((lang) => {return { params: { lang } }});
@@ -6,4 +7,4 @@ export async function getStaticPaths() {
 const { lang } = Astro.params;
 ---
 
-TODO {lang}
+<ApiPanel lang={lang}/>
