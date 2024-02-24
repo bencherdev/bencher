@@ -656,7 +656,7 @@
           {
             "in": "path",
             "name": "organization",
-            "description": "The slug or UUID for the organization.",
+            "description": "The slug or UUID for an organization.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -723,7 +723,7 @@
           {
             "in": "path",
             "name": "organization",
-            "description": "The slug or UUID for the organization.",
+            "description": "The slug or UUID for an organization.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -871,11 +871,14 @@
           "organizations",
           "members"
         ],
+        "summary": "List organization members",
+        "description": "List members for an organization. The user must have `view_role` permissions for the organization.",
         "operationId": "org_members_get",
         "parameters": [
           {
             "in": "path",
             "name": "organization",
+            "description": "The slug or UUID for an organization.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -922,6 +925,7 @@
           {
             "in": "query",
             "name": "name",
+            "description": "Filter by user name, exact match. If not specified, all members for the organization are returned.",
             "schema": {
               "$ref": "#/components/schemas/UserName"
             }
@@ -929,6 +933,7 @@
           {
             "in": "query",
             "name": "search",
+            "description": "Search by user name, slug, or UUID. If not specified, all members for the organization are returned.",
             "schema": {
               "$ref": "#/components/schemas/Search"
             }
@@ -988,11 +993,14 @@
           "organizations",
           "members"
         ],
+        "summary": "Invite a member to an organization",
+        "description": "Invite another user to become a member of an organization. The user must have `create_role` permissions for the organization. The invitee is sent an email with a link to accept the invitation, and they are not added to the organization until they accept the invitation.",
         "operationId": "org_member_post",
         "parameters": [
           {
             "in": "path",
             "name": "organization",
+            "description": "The slug or UUID for an organization.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -1065,11 +1073,14 @@
           "organizations",
           "members"
         ],
+        "summary": "View a member of an organization",
+        "description": "View a member of an organization. The user must have `view_role` permissions for the organization.",
         "operationId": "org_member_get",
         "parameters": [
           {
             "in": "path",
             "name": "organization",
+            "description": "The slug or UUID for an organization.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -1078,6 +1089,7 @@
           {
             "in": "path",
             "name": "user",
+            "description": "The slug or UUID for an organization member.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -1138,11 +1150,14 @@
           "organizations",
           "members"
         ],
+        "summary": "Remove a member of an organization",
+        "description": "Remove a member member of an organization. The user must have `delete_role` permissions for the organization.",
         "operationId": "org_member_delete",
         "parameters": [
           {
             "in": "path",
             "name": "organization",
+            "description": "The slug or UUID for an organization.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -1151,6 +1166,7 @@
           {
             "in": "path",
             "name": "user",
+            "description": "The slug or UUID for an organization member.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -1204,11 +1220,14 @@
           "organizations",
           "members"
         ],
+        "summary": "Update the role for a member of an organization",
+        "description": "Update the role for a member of an organization. The user must have `edit_role` permissions for the organization.",
         "operationId": "org_member_patch",
         "parameters": [
           {
             "in": "path",
             "name": "organization",
+            "description": "The slug or UUID for an organization.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -1217,6 +1236,7 @@
           {
             "in": "path",
             "name": "user",
+            "description": "The slug or UUID for an organization member.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -1498,13 +1518,13 @@
           "projects"
         ],
         "summary": "List organization projects",
-        "description": "List projects for the organization. The user must have `view` permissions for the organization.",
+        "description": "List projects for an organization. The user must have `view` permissions for the organization.",
         "operationId": "org_projects_get",
         "parameters": [
           {
             "in": "path",
             "name": "organization",
-            "description": "The slug or UUID for the organization.",
+            "description": "The slug or UUID for an organization.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -1626,7 +1646,7 @@
           {
             "in": "path",
             "name": "organization",
-            "description": "The slug or UUID for the organization.",
+            "description": "The slug or UUID for an organization.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -7209,25 +7229,60 @@
         "type": "object",
         "properties": {
           "created": {
-            "$ref": "#/components/schemas/DateTime"
+            "description": "The date time the member was created.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
           },
           "email": {
-            "$ref": "#/components/schemas/Email"
+            "description": "The member email.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Email"
+              }
+            ]
           },
           "modified": {
-            "$ref": "#/components/schemas/DateTime"
+            "description": "The date time the member was last modified.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
           },
           "name": {
-            "$ref": "#/components/schemas/UserName"
+            "description": "The member user name.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserName"
+              }
+            ]
           },
           "role": {
-            "$ref": "#/components/schemas/OrganizationRole"
+            "description": "The member organization role.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrganizationRole"
+              }
+            ]
           },
           "slug": {
-            "$ref": "#/components/schemas/Slug"
+            "description": "The member slug.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Slug"
+              }
+            ]
           },
           "uuid": {
-            "$ref": "#/components/schemas/UserUuid"
+            "description": "The member UUID.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserUuid"
+              }
+            ]
           }
         },
         "required": [
@@ -7376,10 +7431,16 @@
         "type": "object",
         "properties": {
           "email": {
-            "$ref": "#/components/schemas/Email"
+            "description": "The email for the invitee. This will be used to both send the invite and to create the user account if they do not exist.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Email"
+              }
+            ]
           },
           "name": {
             "nullable": true,
+            "description": "The user name for the invitee.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/UserName"
@@ -7387,7 +7448,12 @@
             ]
           },
           "role": {
-            "$ref": "#/components/schemas/OrganizationRole"
+            "description": "The organization role for the invitee.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrganizationRole"
+              }
+            ]
           }
         },
         "required": [
@@ -9142,6 +9208,7 @@
         "properties": {
           "role": {
             "nullable": true,
+            "description": "The new organization role for the member.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/OrganizationRole"
@@ -9378,9 +9445,14 @@
         "type": "string"
       },
       "OrganizationRole": {
-        "type": "string",
-        "enum": [
-          "leader"
+        "oneOf": [
+          {
+            "description": "The organization leader role.",
+            "type": "string",
+            "enum": [
+              "leader"
+            ]
+          }
         ]
       },
       "OrganizationUuid": {
@@ -9565,7 +9637,7 @@
       "OrganizationsSort": {
         "oneOf": [
           {
-            "description": "Sort by name",
+            "description": "Sort by name.",
             "type": "string",
             "enum": [
               "name"
@@ -9591,15 +9663,20 @@
         ]
       },
       "OrgMembersSort": {
-        "type": "string",
-        "enum": [
-          "name"
+        "oneOf": [
+          {
+            "description": "Sort by user name.",
+            "type": "string",
+            "enum": [
+              "name"
+            ]
+          }
         ]
       },
       "OrgProjectsSort": {
         "oneOf": [
           {
-            "description": "Sort by name",
+            "description": "Sort by name.",
             "type": "string",
             "enum": [
               "name"

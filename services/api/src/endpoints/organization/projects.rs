@@ -37,7 +37,7 @@ use crate::{
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgProjectsParams {
-    /// The slug or UUID for the organization.
+    /// The slug or UUID for an organization.
     pub organization: ResourceId,
 }
 
@@ -46,7 +46,7 @@ pub type OrgProjectsPagination = JsonPagination<OrgProjectsSort>;
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum OrgProjectsSort {
-    /// Sort by name
+    /// Sort by name.
     #[default]
     Name,
 }
@@ -78,7 +78,7 @@ pub async fn org_projects_options(
 
 /// List organization projects
 ///
-/// List projects for the organization.
+/// List projects for an organization.
 /// The user must have `view` permissions for the organization.
 #[endpoint {
     method = GET,

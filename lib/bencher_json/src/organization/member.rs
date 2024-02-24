@@ -13,8 +13,13 @@ pub const LEADER_ROLE: &str = "leader";
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewMember {
+    /// The user name for the invitee.
     pub name: Option<UserName>,
+    /// The email for the invitee.
+    /// This will be used to both send the invite
+    /// and to create the user account if they do not exist.
     pub email: Email,
+    /// The organization role for the invitee.
     pub role: OrganizationRole,
 }
 
@@ -27,18 +32,26 @@ crate::from_vec!(JsonMembers[JsonMember]);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMember {
+    /// The member UUID.
     pub uuid: UserUuid,
+    /// The member user name.
     pub name: UserName,
+    /// The member slug.
     pub slug: Slug,
+    /// The member email.
     pub email: Email,
+    /// The member organization role.
     pub role: OrganizationRole,
+    /// The date time the member was created.
     pub created: DateTime,
+    /// The date time the member was last modified.
     pub modified: DateTime,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonUpdateMember {
+    /// The new organization role for the member.
     pub role: Option<OrganizationRole>,
 }
 
@@ -50,6 +63,7 @@ pub struct JsonUpdateMember {
 pub enum OrganizationRole {
     // TODO Team Management
     // Member,
+    /// The organization leader role.
     Leader,
 }
 

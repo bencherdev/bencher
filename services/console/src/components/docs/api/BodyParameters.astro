@@ -24,17 +24,30 @@ const getTypes = (propertyKey, propertyValue) => {
   if (Array.isArray(propertyValue?.allOf)) {
         const types = propertyValue.allOf.map(schema => {
             const ref = schema?.["$ref"]?.split("/")?.pop();
-            return openapi?.components?.schemas?.[ref]?.type;
+            const schemaRef = openapi?.components?.schemas?.[ref];
+            if (schemaRef?.type) {
+                return schemaRef.type;
+            }
+            if (schemaRef?.oneOf) {
+                return schemaRef.oneOf.map(one => one?.type).filter((v) => v).flat();
+            }
         });
 
         const variants = propertyValue.allOf.map(schema => {
             const ref = schema?.["$ref"]?.split("/")?.pop();
-            return openapi?.components?.schemas?.[ref]?.enum;
+            const schemaRef = openapi?.components?.schemas?.[ref];
+            if (schemaRef?.enum) {
+                return schemaRef.enum;
+            }
+            if (schemaRef?.oneOf) {
+                return schemaRef.oneOf.map(one => one?.enum).filter((v) => v).flat();
+            }
         }).filter((v) => v).flat();
         const oneOf = variants?.length > 0 ? variants : null;
+        console.log(variants, oneOf);
 
         // Filter out undefined types and join the types into a comma-separated list
-        return [types?.filter(type => type !== undefined).join(", "), getDefault(propertyKey), oneOf];
+        return [types?.filter(t => t).join(", "), getDefault(propertyKey), oneOf];
     }
   return [null, null, null];
 };

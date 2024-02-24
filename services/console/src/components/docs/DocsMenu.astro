@@ -1,8 +1,7 @@
 ---
-import { getCollection } from "astro:content";
 import {DocsTab, DocsMenuId} from "./docs_tab";
 import {Language, architecture, benchmarking, defaultLang, explanation, howTo, tutorial } from "../../i18n/ui.ts";
-import {getLangCollection, langPath} from "../../i18n/utils.ts"
+import {getEnCollection, getLangCollection, langPath} from "../../i18n/utils.ts"
 import { Collection } from "../../content/config";
 import LangButton from "../../i18n/LangButton.astro";
 
@@ -20,7 +19,7 @@ const explanationCollection = await getLangCollection(Collection.explanation);
 const referenceCollection = await getLangCollection(Collection.reference);
 
 // Api
-const organizationsCollection = await getCollection(Collection.organizations);
+const organizationsCollection = await getEnCollection(Collection.organizations);
 
 // Learn
 const rustCollection = await getLangCollection(Collection.rust);

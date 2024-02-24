@@ -66,3 +66,10 @@ const filterDraft = (page: { data: { draft: boolean } }): boolean => {
 			return false;
 	}
 };
+
+export const getEnCollection = async (collection: Collection) => {
+	const pages = await getCollection(collection);
+	return pages
+		.filter(filterDraft)
+		.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
+};

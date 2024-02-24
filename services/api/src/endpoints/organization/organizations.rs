@@ -37,7 +37,7 @@ pub type OrganizationsPagination = JsonPagination<OrganizationsSort>;
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum OrganizationsSort {
-    /// Sort by name
+    /// Sort by name.
     #[default]
     Name,
 }
@@ -198,7 +198,7 @@ async fn post_inner(
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrganizationParams {
-    /// The slug or UUID for the organization.
+    /// The slug or UUID for an organization.
     pub organization: ResourceId,
 }
 

@@ -1,0 +1,27 @@
+---
+title: "Organization Members"
+description: "The Bencher Organization Members REST API"
+heading: "Organization Members REST API"
+sortOrder: 3
+paths:
+  - path: /v0/organizations/{organization}/members
+    method: get
+    headers: auth
+    cli: member list --org ORGANIZATION
+  - path: /v0/organizations/{organization}/members
+    method: post
+    headers: auth
+    cli: member invite --org ORGANIZATION
+  - path: /v0/organizations/{organization}/members/{user}
+    method: get
+    headers: auth
+    cli: member view --org ORGANIZATION USER
+  - path: /v0/organizations/{organization}/members/{user}
+    method: patch
+    headers: auth
+    cli: member update --org ORGANIZATION USER
+  - path: /v0/organizations/{organization}/members/{user}
+    method: delete
+    headers: auth
+    cli: member remove --org ORGANIZATION USER
+---

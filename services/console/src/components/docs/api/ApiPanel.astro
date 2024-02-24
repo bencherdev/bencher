@@ -1,7 +1,6 @@
 ---
-import { getCollection } from "astro:content";
 import ApiLayout from "../../../layouts/docs/ApiLayout.astro";
-import {getLangCollection, langPath} from "../../../i18n/utils.ts"
+import {getEnCollection, langPath} from "../../../i18n/utils.ts"
 import { Language, architecture, defaultLang, explanation, howTo, tutorial } from "../../../i18n/ui";
 import { Collection } from "../../../content/config";
 
@@ -10,7 +9,7 @@ interface Props {
 }
 const lang: Language = Astro.props.lang ?? defaultLang;
 
-const organizationsCollection = await getCollection(Collection.organizations);
+const organizationsCollection = await getEnCollection(Collection.organizations);
 
 const title = () => {
   switch(lang) {
@@ -66,7 +65,7 @@ const description = () => {
       {
         organizationsCollection.map((page) => (
           <li>
-            <a href={`/${langPath(lang)}docs/api/${page.slug}/`}>{page.data.heading}</a>
+            <a href={`/${langPath(lang)}docs/api/organizations/${page.slug}/`}>{page.data.heading}</a>
           </li>
         ))
       }

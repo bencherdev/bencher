@@ -38,6 +38,7 @@ pub const INVITE_TOKEN_TTL: u32 = u32::MAX;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgMembersParams {
+    /// The slug or UUID for an organization.
     pub organization: ResourceId,
 }
 
@@ -46,13 +47,18 @@ pub type OrgMembersPagination = JsonPagination<OrgMembersSort>;
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum OrgMembersSort {
+    /// Sort by user name.
     #[default]
     Name,
 }
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgMembersQuery {
+    /// Filter by user name, exact match.
+    /// If not specified, all members for the organization are returned.
     pub name: Option<UserName>,
+    /// Search by user name, slug, or UUID.
+    /// If not specified, all members for the organization are returned.
     pub search: Option<Search>,
 }
 
@@ -71,6 +77,10 @@ pub async fn org_members_options(
     Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
+/// List organization members
+///
+/// List members for an organization.
+/// The user must have `view_role` permissions for the organization.
 #[endpoint {
     method = GET,
     path =  "/v0/organizations/{organization}/members",
@@ -161,6 +171,12 @@ async fn get_ls_inner(
         .collect())
 }
 
+/// Invite a member to an organization
+///
+/// Invite another user to become a member of an organization.
+/// The user must have `create_role` permissions for the organization.
+/// The invitee is sent an email with a link to accept the invitation, and
+/// they are not added to the organization until they accept the invitation.
 #[endpoint {
     method = POST,
     path =  "/v0/organizations/{organization}/members",
@@ -278,7 +294,9 @@ async fn post_inner(
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgMemberParams {
+    /// The slug or UUID for an organization.
     pub organization: ResourceId,
+    /// The slug or UUID for an organization member.
     pub user: ResourceId,
 }
 
@@ -295,6 +313,10 @@ pub async fn org_member_options(
     Ok(Endpoint::cors(&[Get.into(), Patch.into(), Delete.into()]))
 }
 
+/// View a member of an organization
+///
+/// View a member of an organization.
+/// The user must have `view_role` permissions for the organization.
 #[endpoint {
     method = GET,
     path =  "/v0/organizations/{organization}/members/{user}",
@@ -329,6 +351,10 @@ async fn get_one_inner(
     json_member(conn, query_user.id, query_organization.id)
 }
 
+/// Update the role for a member of an organization
+///
+/// Update the role for a member of an organization.
+/// The user must have `edit_role` permissions for the organization.
 #[endpoint {
     method = PATCH,
     path =  "/v0/organizations/{organization}/members/{user}",
@@ -387,6 +413,10 @@ async fn patch_inner(
     json_member(conn, query_user.id, query_organization.id)
 }
 
+/// Remove a member of an organization
+///
+/// Remove a member member of an organization.
+/// The user must have `delete_role` permissions for the organization.
 #[endpoint {
     method = DELETE,
     path =  "/v0/organizations/{organization}/members/{user}",
