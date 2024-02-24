@@ -56,7 +56,7 @@ const PROJECTS: Project[][] = [
 		{
 			name: "Stratum",
 			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/stratum.svg",
-			slug: "stratum",
+			slug: "stratum-v2-sri",
 		},
 	],
 ];

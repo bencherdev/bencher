@@ -213,7 +213,7 @@ Though Bencher is open source, there is also a hosted version available [Bencher
     </td>
     <td>
       <p align="center">
-        <a href="https://bencher.dev/perf/stratum">
+        <a href="https://bencher.dev/perf/stratum-v2-sri">
           <img
             src="https://s3.amazonaws.com/public.bencher.dev/case-study/stratum.svg"
             alt="Stratum"
