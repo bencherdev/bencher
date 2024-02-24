@@ -32,6 +32,7 @@ const DEFAULT_USAGE_HISTORY: Duration = Duration::from_secs(30 * 24 * 60 * 60);
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgUsageParams {
+    /// The slug or UUID for an organization.
     pub organization: ResourceId,
 }
 
@@ -48,6 +49,12 @@ pub async fn org_usage_options(
     Ok(Endpoint::cors(&[Get.into()]))
 }
 
+/// View the metrics usage of an organization
+///
+/// View the metrics usage of an organization.
+/// The user must have `manage` permissions for the organization.
+/// ➕ Bencher Plus: This endpoint offers an estimate of metered usage
+/// and exact usage for licensed organizations, both on Bencher Cloud and Bencher Self-Hosted.
 #[endpoint {
     method = GET,
     path = "/v0/organizations/{organization}/usage",

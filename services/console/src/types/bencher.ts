@@ -273,21 +273,34 @@ export interface JsonPlan {
 }
 
 export enum UsageKind {
+	/** Bencher Cloud (Free) */
 	CloudFree = "cloud_free",
+	/** Bencher Cloud (Metered) */
 	CloudMetered = "cloud_metered",
+	/** Bencher Cloud (Licensed) */
 	CloudLicensed = "cloud_licensed",
+	/** Bencher Self-Hosted (Licensed) via Bencher Cloud */
 	CloudSelfHostedLicensed = "cloud_self_hosted_licensed",
+	/** Bencher Self-Hosted (Free) */
 	SelfHostedFree = "self_hosted_free",
+	/** Bencher Self-Hosted (Licensed) */
 	SelfHostedLicensed = "self_hosted_licensed",
 }
 
 export interface JsonUsage {
+	/** The organization UUID. */
 	organization: Uuid;
+	/** The kind of usage. */
 	kind: UsageKind;
+	/** The organization plan. */
 	plan?: JsonPlan;
+	/** The organization license. */
 	license?: JsonLicense;
+	/** The start time of the usage. */
 	start_time: string;
+	/** The end time of the usage. */
 	end_time: string;
+	/** The metrics usage amount. */
 	usage?: number;
 }
 

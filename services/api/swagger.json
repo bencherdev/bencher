@@ -1719,11 +1719,14 @@
           "organizations",
           "usage"
         ],
+        "summary": "View the metrics usage of an organization",
+        "description": "View the metrics usage of an organization. The user must have `manage` permissions for the organization. ➕ Bencher Plus: This endpoint offers an estimate of metered usage and exact usage for licensed organizations, both on Bencher Cloud and Bencher Self-Hosted.",
         "operationId": "org_usage_get",
         "parameters": [
           {
             "in": "path",
             "name": "organization",
+            "description": "The slug or UUID for an organization.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -9326,13 +9329,24 @@
         "type": "object",
         "properties": {
           "end_time": {
-            "$ref": "#/components/schemas/DateTime"
+            "description": "The end time of the usage.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
           },
           "kind": {
-            "$ref": "#/components/schemas/UsageKind"
+            "description": "The kind of usage.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UsageKind"
+              }
+            ]
           },
           "license": {
             "nullable": true,
+            "description": "The organization license.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonLicense"
@@ -9340,10 +9354,16 @@
             ]
           },
           "organization": {
-            "$ref": "#/components/schemas/OrganizationUuid"
+            "description": "The organization UUID.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrganizationUuid"
+              }
+            ]
           },
           "plan": {
             "nullable": true,
+            "description": "The organization plan.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonPlan"
@@ -9351,10 +9371,16 @@
             ]
           },
           "start_time": {
-            "$ref": "#/components/schemas/DateTime"
+            "description": "The start time of the usage.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
           },
           "usage": {
             "nullable": true,
+            "description": "The metrics usage amount.",
             "type": "integer",
             "format": "uint32",
             "minimum": 0
@@ -9593,14 +9619,49 @@
         "type": "string"
       },
       "UsageKind": {
-        "type": "string",
-        "enum": [
-          "cloud_free",
-          "cloud_metered",
-          "cloud_licensed",
-          "cloud_self_hosted_licensed",
-          "self_hosted_free",
-          "self_hosted_licensed"
+        "oneOf": [
+          {
+            "description": "Bencher Cloud (Free)",
+            "type": "string",
+            "enum": [
+              "cloud_free"
+            ]
+          },
+          {
+            "description": "Bencher Cloud (Metered)",
+            "type": "string",
+            "enum": [
+              "cloud_metered"
+            ]
+          },
+          {
+            "description": "Bencher Cloud (Licensed)",
+            "type": "string",
+            "enum": [
+              "cloud_licensed"
+            ]
+          },
+          {
+            "description": "Bencher Self-Hosted (Licensed) via Bencher Cloud",
+            "type": "string",
+            "enum": [
+              "cloud_self_hosted_licensed"
+            ]
+          },
+          {
+            "description": "Bencher Self-Hosted (Free)",
+            "type": "string",
+            "enum": [
+              "self_hosted_free"
+            ]
+          },
+          {
+            "description": "Bencher Self-Hosted (Licensed)",
+            "type": "string",
+            "enum": [
+              "self_hosted_licensed"
+            ]
+          }
         ]
       },
       "UserName": {

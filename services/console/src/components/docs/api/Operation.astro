@@ -6,6 +6,7 @@ import PathParameters from "./PathParameters.astro";
 import QueryParameters from "./QueryParameters.astro";
 import BodyParameters from "./BodyParameters.astro";
 import Headers from "./Headers.astro";
+import Endpoint from "./Endpoint.astro";
 
 interface Props {
   path: string;
@@ -47,6 +48,7 @@ const methodClass = new Method(method);
           </div>
       </div>
     </div>
+    <Endpoint />
     <div class="card">
       <header class="card-header">
           <p class="card-header-title">Bencher CLI</p>
