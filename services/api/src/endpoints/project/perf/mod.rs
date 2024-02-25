@@ -15,7 +15,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    context::{ApiContext, DbConnection},
+    context::ApiContext,
     endpoints::{
         endpoint::{CorsResponse, Get, ResponseOk},
         Endpoint,
@@ -97,10 +97,12 @@ async fn get_inner(
     json_perf_query: JsonPerfQuery,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonPerf, HttpError> {
-    let conn = &mut *context.conn().await;
-
-    let project =
-        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
+    let project = QueryProject::is_allowed_public(
+        &mut *context.conn().await,
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+    )?;
 
     let JsonPerfQuery {
         branches,
@@ -117,17 +119,18 @@ async fn get_inner(
     };
 
     let results = perf_results(
-        conn,
+        context,
         &project,
         &branches,
         &testbeds,
         &benchmarks,
         &measures,
         times,
-    )?;
+    )
+    .await?;
 
     Ok(JsonPerf {
-        project: project.into_json(conn)?,
+        project: project.into_json(&mut *context.conn().await)?,
         start_time,
         end_time,
         results,
@@ -140,8 +143,8 @@ struct Times {
     end_time: Option<DateTime>,
 }
 
-fn perf_results(
-    conn: &mut DbConnection,
+async fn perf_results(
+    context: &ApiContext,
     project: &QueryProject,
     branches: &[BranchUuid],
     testbeds: &[TestbedUuid],
@@ -167,14 +170,15 @@ fn perf_results(
                     }
 
                     if let Some(perf_metrics) = perf_query(
-                        conn,
+                        context,
                         project,
                         *branch_uuid,
                         *testbed_uuid,
                         *benchmark_uuid,
                         *measure_uuid,
                         times,
-                    )?
+                    )
+                    .await?
                     .into_iter()
                     .fold(
                         None,
@@ -198,8 +202,9 @@ fn perf_results(
     Ok(results)
 }
 
-fn perf_query(
-    conn: &mut DbConnection,
+#[allow(clippy::too_many_lines)]
+async fn perf_query(
+    context: &ApiContext,
     project: &QueryProject,
     branch_uuid: BranchUuid,
     testbed_uuid: TestbedUuid,
@@ -314,7 +319,10 @@ fn perf_query(
             ).nullable(),
             QueryMetric::as_select(),
         ))
-        .load::<PerfQuery>(conn)
+        // Acquire the lock on the database connection for every query.
+        // This helps to avoid resource contention when the database is under heavy load.
+        // This will make the perf query itself slower, but it will make the overall system more stable.
+        .load::<PerfQuery>(&mut *context.conn().await)
         .map_err(resource_not_found_err!(Metric, (project,  branch_uuid, testbed_uuid, benchmark_uuid, measure_uuid)))
 }
 
