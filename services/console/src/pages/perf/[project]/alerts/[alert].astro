@@ -8,6 +8,7 @@ import alertsConfig from "../../../../config/project/alerts";
 import { Operation } from "../../../../config/types";
 import type { DeckConfig } from "../../../../components/console/deck/hand/Deck";
 import Tetris from "../../../../components/site/Tetris.astro";
+import { fetchSSR } from "../../../../components/perf/util";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
@@ -20,7 +21,7 @@ let jsonAlert: undefined | JsonAlert;
 let title: string;
 let description: string;
 try {
-  const alertResponse = await fetch(getAlertUrl);
+  const alertResponse = await fetchSSR(getAlertUrl);
   jsonAlert = await alertResponse.json();
   if (jsonAlert?.uuid) {
     title = `${jsonAlert?.benchmark?.name} Alert (${jsonAlert?.status === AlertStatus.Active ? "🔔" : "🔕"})`;

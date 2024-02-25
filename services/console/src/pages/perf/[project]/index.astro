@@ -5,6 +5,7 @@ import PerfLayout from "../../../layouts/perf/PerfLayout.astro";
 import PublicProject from "../../../components/perf/PublicProject";
 import type { JsonProject } from "../../../types/bencher";
 import Tetris from "../../../components/site/Tetris.astro";
+import { fetchSSR } from "../../../components/perf/util";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
@@ -16,7 +17,7 @@ let jsonProject: undefined | JsonProject;
 let title: string;
 let description: string;
 try {
-  const projectResponse = await fetch(getProjectUrl);
+  const projectResponse = await fetchSSR(getProjectUrl);
   jsonProject = await projectResponse.json();
   if (jsonProject?.uuid) {
     title = `${jsonProject?.name}`;

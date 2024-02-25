@@ -44,7 +44,6 @@ const getTypes = (propertyKey, propertyValue) => {
             }
         }).filter((v) => v).flat();
         const oneOf = variants?.length > 0 ? variants : null;
-        console.log(variants, oneOf);
 
         // Filter out undefined types and join the types into a comma-separated list
         return [types?.filter(t => t).join(", "), getDefault(propertyKey), oneOf];

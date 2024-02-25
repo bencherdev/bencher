@@ -4,6 +4,7 @@ export const prerender = false;
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import type { JsonProject } from "../../../types/bencher";
 import PerfPanel from "../../../components/console/perf/PerfPanel";
+import { fetchSSR } from "../../../components/perf/util";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
@@ -15,10 +16,15 @@ let jsonProject: undefined | JsonProject;
 let title: string;
 let description: string;
 try {
-  const projectResponse = await fetch(getProjectUrl);
+  const projectResponse = await fetchSSR(getProjectUrl);
   jsonProject = await projectResponse.json();
-  title = `${jsonProject?.name}`;
-  description = `View ${jsonProject?.name} continuous benchmarking results and performance regressions on Bencher`;
+  if (jsonProject?.uuid) {
+    title = `${jsonProject?.name}`;
+    description = `View ${jsonProject?.name} continuous benchmarking results and performance regressions on Bencher`;
+  } else {
+    title = "Not Found";
+    description = "Public Project not found";
+  }
 } catch (e) {
   console.error(`Failed to fetch project data: ${e}`);
   title = "Public Project";
