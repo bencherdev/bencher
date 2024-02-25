@@ -354,14 +354,14 @@ async fn get_one_inner(
         auth_user,
     )?;
 
-    QueryReport::belonging_to(&query_project)
+    conn!(context, |conn| QueryReport::belonging_to(&query_project)
         .filter(schema::report::uuid.eq(path_params.report.to_string()))
-        .first::<QueryReport>(conn!(context))
+        .first::<QueryReport>(conn)
         .map_err(resource_not_found_err!(
             Report,
             (&query_project, path_params.report)
         ))?
-        .into_json(log, conn!(context))
+        .into_json(log, conn))
 }
 
 #[endpoint {

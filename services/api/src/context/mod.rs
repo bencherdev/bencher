@@ -47,6 +47,8 @@ pub struct ApiContext {
 }
 
 #[macro_export]
+/// Warning: Do not call `conn!` multiple times in the same line, as it will deadlock.
+/// Use the `|conn|` syntax to reuse the same connection multiple times in the same line.
 macro_rules! conn {
     ($context:ident) => {
         &mut *$context.conn().await
