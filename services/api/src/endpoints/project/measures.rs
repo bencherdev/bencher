@@ -12,7 +12,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    conn,
+    conn_lock,
     context::ApiContext,
     endpoints::{
         endpoint::{
@@ -99,7 +99,7 @@ async fn get_ls_inner(
     query_params: ProjMeasuresQuery,
 ) -> Result<JsonMeasures, HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -129,7 +129,7 @@ async fn get_ls_inner(
     Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryMeasure>(conn!(context))
+        .load::<QueryMeasure>(conn_lock!(context))
         .map_err(resource_not_found_err!(Measure, &query_project))?
         .into_iter()
         .map(|measure| measure.into_json_for_project(&query_project))
@@ -166,23 +166,24 @@ async fn post_inner(
 ) -> Result<JsonMeasure, HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Create,
     )?;
 
-    let insert_measure = InsertMeasure::from_json(conn!(context), query_project.id, json_measure)?;
+    let insert_measure =
+        InsertMeasure::from_json(conn_lock!(context), query_project.id, json_measure)?;
 
     diesel::insert_into(schema::measure::table)
         .values(&insert_measure)
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Measure, insert_measure))?;
 
     schema::measure::table
         .filter(schema::measure::uuid.eq(&insert_measure.uuid))
-        .first::<QueryMeasure>(conn!(context))
+        .first::<QueryMeasure>(conn_lock!(context))
         .map(|measure| measure.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(Measure, insert_measure))
 }
@@ -232,7 +233,7 @@ async fn get_one_inner(
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonMeasure, HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -240,7 +241,7 @@ async fn get_one_inner(
 
     QueryMeasure::belonging_to(&query_project)
         .filter(QueryMeasure::eq_resource_id(&path_params.measure)?)
-        .first::<QueryMeasure>(conn!(context))
+        .first::<QueryMeasure>(conn_lock!(context))
         .map(|measure| measure.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(
             Measure,
@@ -278,25 +279,28 @@ async fn patch_inner(
 ) -> Result<JsonMeasure, HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Edit,
     )?;
 
-    let query_measure =
-        QueryMeasure::from_resource_id(conn!(context), query_project.id, &path_params.measure)?;
+    let query_measure = QueryMeasure::from_resource_id(
+        conn_lock!(context),
+        query_project.id,
+        &path_params.measure,
+    )?;
     let update_measure = UpdateMeasure::from(json_measure.clone());
     diesel::update(schema::measure::table.filter(schema::measure::id.eq(query_measure.id)))
         .set(&update_measure)
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(
             Measure,
             (&query_measure, &json_measure)
         ))?;
 
-    QueryMeasure::get(conn!(context), query_measure.id)
+    QueryMeasure::get(conn_lock!(context), query_measure.id)
         .map(|measure| measure.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(Measure, query_measure))
 }
@@ -323,18 +327,21 @@ async fn delete_inner(
 ) -> Result<(), HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Delete,
     )?;
 
-    let query_measure =
-        QueryMeasure::from_resource_id(conn!(context), query_project.id, &path_params.measure)?;
+    let query_measure = QueryMeasure::from_resource_id(
+        conn_lock!(context),
+        query_project.id,
+        &path_params.measure,
+    )?;
 
     diesel::delete(schema::measure::table.filter(schema::measure::id.eq(query_measure.id)))
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Measure, query_measure))?;
 
     Ok(())

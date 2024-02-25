@@ -10,12 +10,16 @@ use tokio::fs::remove_file;
 use tokio::io::{AsyncReadExt, BufWriter};
 use tokio::io::{AsyncWriteExt, BufReader};
 
-use crate::conn;
-use crate::endpoints::endpoint::{CorsResponse, Post, ResponseCreated};
-use crate::error::bad_request_error;
-use crate::model::user::admin::AdminUser;
-use crate::model::user::auth::BearerToken;
-use crate::{context::ApiContext, endpoints::Endpoint};
+use crate::{
+    conn_lock,
+    context::ApiContext,
+    endpoints::{
+        endpoint::{CorsResponse, Post, ResponseCreated},
+        Endpoint,
+    },
+    error::bad_request_error,
+    model::user::{admin::AdminUser, auth::BearerToken},
+};
 
 const BUFFER_SIZE: usize = 1024;
 
@@ -146,7 +150,7 @@ async fn backup_database(context: &ApiContext) -> Result<Backup, BackupError> {
     let file_path_str = file_path.to_string_lossy();
     let query = format!("VACUUM INTO '{file_path_str}'");
 
-    conn!(context)
+    conn_lock!(context)
         .batch_execute(&query)
         .map_err(BackupError::BatchExecute)?;
 

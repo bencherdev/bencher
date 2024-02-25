@@ -12,7 +12,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    conn,
+    conn_lock,
     context::ApiContext,
     endpoints::{
         endpoint::{CorsResponse, Get, Patch, Post, ResponseCreated, ResponseOk},
@@ -134,7 +134,7 @@ async fn get_ls_inner(
     Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryOrganization>(conn!(context))
+        .load::<QueryOrganization>(conn_lock!(context))
         .map_err(resource_not_found_err!(Organization))?
         .into_iter()
         .map(QueryOrganization::into_json)
@@ -166,14 +166,15 @@ async fn post_inner(
     admin_user: &AdminUser,
 ) -> Result<JsonOrganization, HttpError> {
     // Create the organization
-    let insert_organization = InsertOrganization::from_json(conn!(context), json_organization)?;
+    let insert_organization =
+        InsertOrganization::from_json(conn_lock!(context), json_organization)?;
     diesel::insert_into(schema::organization::table)
         .values(&insert_organization)
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Organization, insert_organization))?;
     let query_organization = schema::organization::table
         .filter(schema::organization::uuid.eq(&insert_organization.uuid))
-        .first::<QueryOrganization>(conn!(context))
+        .first::<QueryOrganization>(conn_lock!(context))
         .map_err(resource_not_found_err!(Organization, insert_organization))?;
 
     let timestamp = DateTime::now();
@@ -187,7 +188,7 @@ async fn post_inner(
     };
     diesel::insert_into(schema::organization_role::table)
         .values(&insert_org_role)
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(OrganizationRole, insert_org_role))?;
 
     Ok(query_organization.into_json())
@@ -237,7 +238,7 @@ async fn get_one_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonOrganization, HttpError> {
     Ok(QueryOrganization::is_allowed_resource_id(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.organization,
         auth_user,
@@ -291,7 +292,7 @@ async fn patch_inner(
         Permission::Edit
     };
     let query_organization = QueryOrganization::is_allowed_resource_id(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.organization,
         auth_user,
@@ -322,8 +323,8 @@ async fn patch_inner(
     let update_organization = UpdateOrganization::from(json_organization);
     diesel::update(organization_query)
         .set(&update_organization)
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Organization, update_organization))?;
 
-    Ok(QueryOrganization::get(conn!(context), query_organization.id)?.into_json())
+    Ok(QueryOrganization::get(conn_lock!(context), query_organization.id)?.into_json())
 }

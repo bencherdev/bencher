@@ -1,17 +1,15 @@
-use bencher_json::system::auth::JsonAccept;
-use bencher_json::JsonAuthAck;
+use bencher_json::{system::auth::JsonAccept, JsonAuthAck};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 
-use crate::conn;
-use crate::endpoints::endpoint::CorsResponse;
-use crate::endpoints::endpoint::Get;
-use crate::endpoints::endpoint::Post;
-use crate::endpoints::endpoint::ResponseAccepted;
-use crate::endpoints::Endpoint;
-
-use crate::context::ApiContext;
-use crate::model::user::auth::AuthUser;
-use crate::model::user::auth::BearerToken;
+use crate::{
+    conn_lock,
+    context::ApiContext,
+    endpoints::{
+        endpoint::{CorsResponse, Get, Post, ResponseAccepted},
+        Endpoint,
+    },
+    model::user::auth::{AuthUser, BearerToken},
+};
 
 #[allow(clippy::unused_async)]
 #[endpoint {
@@ -48,7 +46,7 @@ async fn post_inner(
     auth_user.user.check_is_locked()?;
     auth_user
         .user
-        .accept_invite(conn!(context), &context.token_key, &json_accept.invite)?;
+        .accept_invite(conn_lock!(context), &context.token_key, &json_accept.invite)?;
 
     Ok(JsonAuthAck {
         email: auth_user.user.email,

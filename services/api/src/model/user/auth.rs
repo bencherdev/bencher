@@ -17,7 +17,7 @@ use http::StatusCode;
 use oso::{PolarValue, ToPolar};
 
 use crate::{
-    conn,
+    conn_lock,
     context::{ApiContext, DbConnection, Rbac},
     error::{bad_request_error, forbidden_error},
     model::{organization::OrganizationId, project::ProjectId},
@@ -71,7 +71,7 @@ impl AuthUser {
         let email = claims.email();
 
         // Hold the connection for all permissions related queries
-        let conn = conn!(context);
+        let conn = conn_lock!(context);
         let query_user = QueryUser::get_with_email(conn, email)?;
         if query_user.locked {
             return Err(forbidden_error(format!("User account is locked ({email})")));

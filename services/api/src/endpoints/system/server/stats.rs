@@ -6,7 +6,7 @@ use http::StatusCode;
 use slog::Logger;
 
 use crate::{
-    conn,
+    conn_lock,
     context::ApiContext,
     endpoints::{
         endpoint::{CorsResponse, Get, Post, ResponseAccepted, ResponseOk},
@@ -46,9 +46,9 @@ pub async fn server_stats_get(
 }
 
 async fn get_one_inner(context: &ApiContext) -> Result<JsonServerStats, HttpError> {
-    let query_server = QueryServer::get_server(conn!(context))?;
+    let query_server = QueryServer::get_server(conn_lock!(context))?;
     let is_bencher_cloud = context.is_bencher_cloud();
-    query_server.get_stats(conn!(context), is_bencher_cloud)
+    query_server.get_stats(conn_lock!(context), is_bencher_cloud)
 }
 
 #[endpoint {
@@ -83,7 +83,7 @@ async fn post_inner(
     slog::info!(log, "Self-Hosted Stats: {server_stats:?}");
     QueryServer::send_stats_to_backend(
         log,
-        conn!(context),
+        conn_lock!(context),
         &context.messenger,
         &server_stats,
         false,

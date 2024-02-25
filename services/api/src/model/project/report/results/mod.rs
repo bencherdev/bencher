@@ -14,7 +14,7 @@ use http::StatusCode;
 use slog::Logger;
 
 use crate::{
-    conn,
+    conn_lock,
     context::ApiContext,
     error::{bad_request_error, issue_error, resource_conflict_err},
     model::project::{
@@ -148,9 +148,9 @@ impl ReportResults {
         let insert_perf = InsertPerf::from_json(self.report_id, iteration, benchmark_id);
         diesel::insert_into(schema::perf::table)
             .values(&insert_perf)
-            .execute(conn!(context))
+            .execute(conn_lock!(context))
             .map_err(resource_conflict_err!(Perf, insert_perf))?;
-        let perf_id = QueryPerf::get_id(conn!(context), insert_perf.uuid)?;
+        let perf_id = QueryPerf::get_id(conn_lock!(context), insert_perf.uuid)?;
 
         for (measure_key, metric) in metrics.inner {
             let measure_id = self.measure_id(context, measure_key).await?;
@@ -158,7 +158,7 @@ impl ReportResults {
             let insert_metric = InsertMetric::from_json(perf_id, measure_id, metric);
             diesel::insert_into(schema::metric::table)
                 .values(&insert_metric)
-                .execute(conn!(context))
+                .execute(conn_lock!(context))
                 .map_err(resource_conflict_err!(Metric, insert_metric))?;
 
             #[cfg(feature = "plus")]
@@ -170,7 +170,7 @@ impl ReportResults {
             // Ignored benchmarks do not get checked against the threshold even if one exists
             if !ignore_benchmark {
                 if let Some(detector) = self.detector(context, measure_id).await {
-                    let query_metric = QueryMetric::from_uuid(conn!(context), insert_metric.uuid).map_err(|e| {
+                    let query_metric = QueryMetric::from_uuid(conn_lock!(context), insert_metric.uuid).map_err(|e| {
                         issue_error(
                             StatusCode::NOT_FOUND,
                             "Failed to find metric",
@@ -178,7 +178,7 @@ impl ReportResults {
                             e,
                         )
                     })?;
-                    detector.detect(log, conn!(context), benchmark_id, &query_metric)?;
+                    detector.detect(log, conn_lock!(context), benchmark_id, &query_metric)?;
                 }
             }
         }
@@ -196,7 +196,7 @@ impl ReportResults {
                 *id
             } else {
                 let benchmark_id = QueryBenchmark::get_or_create(
-                    conn!(context),
+                    conn_lock!(context),
                     self.project_id,
                     benchmark_name.clone(),
                 )?;
@@ -215,7 +215,7 @@ impl ReportResults {
             *id
         } else {
             let measure_id =
-                QueryMeasure::get_or_create(conn!(context), self.project_id, &measure)?;
+                QueryMeasure::get_or_create(conn_lock!(context), self.project_id, &measure)?;
             self.measure_cache.insert(measure, measure_id);
             measure_id
         })
@@ -225,8 +225,12 @@ impl ReportResults {
         if let Some(detector) = self.detector_cache.get(&measure_id) {
             detector.clone()
         } else {
-            let detector =
-                Detector::new(conn!(context), self.branch_id, self.testbed_id, measure_id);
+            let detector = Detector::new(
+                conn_lock!(context),
+                self.branch_id,
+                self.testbed_id,
+                measure_id,
+            );
             self.detector_cache.insert(measure_id, detector.clone());
             detector
         }

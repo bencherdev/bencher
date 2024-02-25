@@ -9,7 +9,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    conn,
+    conn_lock,
     context::ApiContext,
     endpoints::{
         endpoint::{CorsResponse, Get, Patch, ResponseOk},
@@ -85,7 +85,7 @@ async fn get_ls_inner(
     pagination_params: ProjAlertsPagination,
 ) -> Result<JsonAlerts, HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -136,7 +136,7 @@ async fn get_ls_inner(
         },
     };
 
-    conn!(context, |conn| Ok(query
+    conn_lock!(context, |conn| Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load(conn)
@@ -199,13 +199,13 @@ async fn get_one_inner(
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonAlert, HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
     )?;
 
-    conn!(context, |conn| QueryAlert::from_uuid(
+    conn_lock!(context, |conn| QueryAlert::from_uuid(
         conn,
         query_project.id,
         path_params.alert
@@ -243,21 +243,22 @@ async fn patch_inner(
 ) -> Result<JsonAlert, HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Edit,
     )?;
 
-    let query_alert = QueryAlert::from_uuid(conn!(context), query_project.id, path_params.alert)?;
+    let query_alert =
+        QueryAlert::from_uuid(conn_lock!(context), query_project.id, path_params.alert)?;
     let update_alert = UpdateAlert::from(json_alert.clone());
     diesel::update(schema::alert::table.filter(schema::alert::id.eq(query_alert.id)))
         .set(&update_alert)
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Alert, (&query_alert, &json_alert)))?;
 
-    conn!(context, |conn| QueryAlert::get(conn, query_alert.id)?
+    conn_lock!(context, |conn| QueryAlert::get(conn, query_alert.id)?
         .into_json(conn))
 }
 
@@ -301,7 +302,7 @@ async fn get_stats_inner(
     path_params: ProjAlertsParams,
 ) -> Result<JsonAlertStats, HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -317,7 +318,7 @@ async fn get_stats_inner(
         )
         .filter(schema::benchmark::project_id.eq(query_project.id))
         .select(count(schema::alert::id))
-        .first::<i64>(conn!(context))
+        .first::<i64>(conn_lock!(context))
         .map_err(resource_not_found_err!(Alert, query_project))?;
 
     Ok(JsonAlertStats {

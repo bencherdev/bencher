@@ -12,7 +12,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    conn,
+    conn_lock,
     context::ApiContext,
     endpoints::{
         endpoint::{
@@ -98,7 +98,7 @@ async fn get_ls_inner(
     query_params: ProjBenchmarksQuery,
 ) -> Result<JsonBenchmarks, HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -128,7 +128,7 @@ async fn get_ls_inner(
     Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryBenchmark>(conn!(context))
+        .load::<QueryBenchmark>(conn_lock!(context))
         .map_err(resource_not_found_err!(Benchmark, &query_project))?
         .into_iter()
         .map(|benchmark| benchmark.into_json_for_project(&query_project))
@@ -165,7 +165,7 @@ async fn post_inner(
 ) -> Result<JsonBenchmark, HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -173,16 +173,16 @@ async fn post_inner(
     )?;
 
     let insert_benchmark =
-        InsertBenchmark::from_json(conn!(context), query_project.id, json_benchmark)?;
+        InsertBenchmark::from_json(conn_lock!(context), query_project.id, json_benchmark)?;
 
     diesel::insert_into(schema::benchmark::table)
         .values(&insert_benchmark)
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Benchmark, insert_benchmark))?;
 
     schema::benchmark::table
         .filter(schema::benchmark::uuid.eq(&insert_benchmark.uuid))
-        .first::<QueryBenchmark>(conn!(context))
+        .first::<QueryBenchmark>(conn_lock!(context))
         .map(|benchmark| benchmark.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(Benchmark, insert_benchmark))
 }
@@ -232,7 +232,7 @@ async fn get_one_inner(
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonBenchmark, HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -240,7 +240,7 @@ async fn get_one_inner(
 
     QueryBenchmark::belonging_to(&query_project)
         .filter(QueryBenchmark::eq_resource_id(&path_params.benchmark)?)
-        .first::<QueryBenchmark>(conn!(context))
+        .first::<QueryBenchmark>(conn_lock!(context))
         .map(|benchmark| benchmark.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(
             Benchmark,
@@ -278,25 +278,28 @@ async fn patch_inner(
 ) -> Result<JsonBenchmark, HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Edit,
     )?;
 
-    let query_benchmark =
-        QueryBenchmark::from_resource_id(conn!(context), query_project.id, &path_params.benchmark)?;
+    let query_benchmark = QueryBenchmark::from_resource_id(
+        conn_lock!(context),
+        query_project.id,
+        &path_params.benchmark,
+    )?;
     let update_benchmark = UpdateBenchmark::from(json_benchmark.clone());
     diesel::update(schema::benchmark::table.filter(schema::benchmark::id.eq(query_benchmark.id)))
         .set(&update_benchmark)
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(
             Benchmark,
             (&query_benchmark, &json_benchmark)
         ))?;
 
-    QueryBenchmark::get(conn!(context), query_benchmark.id)
+    QueryBenchmark::get(conn_lock!(context), query_benchmark.id)
         .map(|benchmark| benchmark.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(Benchmark, query_benchmark))
 }
@@ -323,17 +326,20 @@ async fn delete_inner(
 ) -> Result<(), HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Delete,
     )?;
 
-    let query_benchmark =
-        QueryBenchmark::from_resource_id(conn!(context), query_project.id, &path_params.benchmark)?;
+    let query_benchmark = QueryBenchmark::from_resource_id(
+        conn_lock!(context),
+        query_project.id,
+        &path_params.benchmark,
+    )?;
     diesel::delete(schema::benchmark::table.filter(schema::benchmark::id.eq(query_benchmark.id)))
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Benchmark, query_benchmark))?;
 
     Ok(())

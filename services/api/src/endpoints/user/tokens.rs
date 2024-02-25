@@ -11,7 +11,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    conn,
+    conn_lock,
     context::ApiContext,
     endpoints::{
         endpoint::{CorsResponse, Get, Patch, Post, ResponseCreated, ResponseOk},
@@ -95,7 +95,7 @@ async fn get_ls_inner(
     query_params: UserTokensQuery,
     auth_user: &AuthUser,
 ) -> Result<JsonTokens, HttpError> {
-    let query_user = QueryUser::from_resource_id(conn!(context), &path_params.user)?;
+    let query_user = QueryUser::from_resource_id(conn_lock!(context), &path_params.user)?;
     same_user!(auth_user, context.rbac, query_user.uuid);
 
     let mut query = schema::token::table
@@ -128,7 +128,7 @@ async fn get_ls_inner(
     Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryToken>(conn!(context))
+        .load::<QueryToken>(conn_lock!(context))
         .map_err(resource_not_found_err!(Token, user))?
         .into_iter()
         .map(|query_token| query_token.into_json_for_user(user))
@@ -164,7 +164,7 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonToken, HttpError> {
     let insert_token = InsertToken::from_json(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &context.token_key,
         &path_params.user,
@@ -174,10 +174,10 @@ async fn post_inner(
 
     diesel::insert_into(schema::token::table)
         .values(&insert_token)
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Token, insert_token))?;
 
-    conn!(context, |conn| schema::token::table
+    conn_lock!(context, |conn| schema::token::table
         .filter(schema::token::uuid.eq(&insert_token.uuid))
         .first::<QueryToken>(conn)
         .map_err(resource_not_found_err!(Token, insert_token))?
@@ -223,10 +223,10 @@ async fn get_one_inner(
     path_params: UserTokenParams,
     auth_user: &AuthUser,
 ) -> Result<JsonToken, HttpError> {
-    let query_user = QueryUser::from_resource_id(conn!(context), &path_params.user)?;
+    let query_user = QueryUser::from_resource_id(conn_lock!(context), &path_params.user)?;
     same_user!(auth_user, context.rbac, query_user.uuid);
 
-    conn!(context, |conn| QueryToken::get_user_token(
+    conn_lock!(context, |conn| QueryToken::get_user_token(
         conn,
         query_user.id,
         &path_params.token.to_string()
@@ -266,11 +266,11 @@ async fn patch_inner(
     json_token: JsonUpdateToken,
     auth_user: &AuthUser,
 ) -> Result<JsonToken, HttpError> {
-    let query_user = QueryUser::from_resource_id(conn!(context), &path_params.user)?;
+    let query_user = QueryUser::from_resource_id(conn_lock!(context), &path_params.user)?;
     same_user!(auth_user, context.rbac, query_user.uuid);
 
     let query_token = QueryToken::get_user_token(
-        conn!(context),
+        conn_lock!(context),
         query_user.id,
         &path_params.token.to_string(),
     )?;
@@ -278,9 +278,9 @@ async fn patch_inner(
     let update_token = UpdateToken::from(json_token);
     diesel::update(schema::token::table.filter(schema::token::id.eq(query_token.id)))
         .set(&update_token)
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Token, (&query_user, &query_token)))?;
 
-    conn!(context, |conn| QueryToken::get(conn, query_token.id)?
+    conn_lock!(context, |conn| QueryToken::get(conn, query_token.id)?
         .into_json(conn))
 }

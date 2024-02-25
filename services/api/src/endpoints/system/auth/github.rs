@@ -1,27 +1,23 @@
 #![cfg(feature = "plus")]
 
-use bencher_json::JsonAuthUser;
-
-use bencher_json::system::auth::JsonOAuth;
-use bencher_json::JsonSignup;
-use bencher_json::PlanLevel;
+use bencher_json::{system::auth::JsonOAuth, JsonAuthUser, JsonSignup, PlanLevel};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use http::StatusCode;
 use slog::Logger;
 
-use crate::conn;
-use crate::endpoints::endpoint::CorsResponse;
-use crate::endpoints::endpoint::Get;
-use crate::endpoints::endpoint::Post;
-use crate::endpoints::endpoint::ResponseAccepted;
-use crate::endpoints::Endpoint;
-
-use crate::error::issue_error;
-use crate::error::payment_required_error;
-use crate::error::unauthorized_error;
-use crate::model::organization::plan::LicenseUsage;
-use crate::model::user::InsertUser;
-use crate::{context::ApiContext, model::user::QueryUser};
+use crate::{
+    conn_lock,
+    context::ApiContext,
+    endpoints::{
+        endpoint::{CorsResponse, Get, Post, ResponseAccepted},
+        Endpoint,
+    },
+    error::{issue_error, payment_required_error, unauthorized_error},
+    model::{
+        organization::plan::LicenseUsage,
+        user::{InsertUser, QueryUser},
+    },
+};
 
 use super::CLIENT_TOKEN_TTL;
 
@@ -63,7 +59,7 @@ async fn post_inner(
     // If not on Bencher Cloud, then at least one organization must have a valid Bencher Plus license
     if !context.is_bencher_cloud()
         && LicenseUsage::get_for_server(
-            conn!(context),
+            conn_lock!(context),
             &context.licensor,
             Some(PlanLevel::Enterprise),
         )?
@@ -81,10 +77,10 @@ async fn post_inner(
 
     // If the user already exists, then we just need to check if they are locked and possible accept an invite
     // Otherwise, we need to create a new user and notify the admins
-    let user = if let Ok(query_user) = QueryUser::get_with_email(conn!(context), &email) {
+    let user = if let Ok(query_user) = QueryUser::get_with_email(conn_lock!(context), &email) {
         query_user.check_is_locked()?;
         if let Some(invite) = &json_oauth.invite {
-            query_user.accept_invite(conn!(context), &context.token_key, invite)?;
+            query_user.accept_invite(conn_lock!(context), &context.token_key, invite)?;
         }
         query_user
     } else {
@@ -99,18 +95,18 @@ async fn post_inner(
 
         let invited = json_signup.invite.is_some();
         let insert_user =
-            InsertUser::insert_from_json(conn!(context), &context.token_key, &json_signup)?;
+            InsertUser::insert_from_json(conn_lock!(context), &context.token_key, &json_signup)?;
 
         insert_user.notify(
             log,
-            conn!(context),
+            conn_lock!(context),
             &context.messenger,
             &context.endpoint,
             invited,
             "GitHub OAuth2",
         )?;
 
-        QueryUser::get_with_email(conn!(context), &email)?
+        QueryUser::get_with_email(conn_lock!(context), &email)?
     }
     .into_json();
 

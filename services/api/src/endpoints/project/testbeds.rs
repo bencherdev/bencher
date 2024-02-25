@@ -12,7 +12,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    conn,
+    conn_lock,
     context::ApiContext,
     endpoints::{
         endpoint::{
@@ -99,7 +99,7 @@ async fn get_ls_inner(
     query_params: ProjTestbedsQuery,
 ) -> Result<JsonTestbeds, HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -129,7 +129,7 @@ async fn get_ls_inner(
     Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryTestbed>(conn!(context))
+        .load::<QueryTestbed>(conn_lock!(context))
         .map_err(resource_not_found_err!(Testbed, &query_project))?
         .into_iter()
         .map(|testbed| testbed.into_json_for_project(&query_project))
@@ -166,7 +166,7 @@ async fn post_inner(
 ) -> Result<JsonTestbed, HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -180,21 +180,22 @@ async fn post_inner(
     if let Some(true) = json_testbed.soft {
         if let Ok(testbed) = QueryTestbed::belonging_to(&query_project)
             .filter(schema::testbed::name.eq(json_testbed.name.as_ref()))
-            .first::<QueryTestbed>(conn!(context))
+            .first::<QueryTestbed>(conn_lock!(context))
         {
             return Ok(testbed.into_json_for_project(&query_project));
         }
     }
-    let insert_testbed = InsertTestbed::from_json(conn!(context), query_project.id, json_testbed)?;
+    let insert_testbed =
+        InsertTestbed::from_json(conn_lock!(context), query_project.id, json_testbed)?;
 
     diesel::insert_into(schema::testbed::table)
         .values(&insert_testbed)
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Testbed, insert_testbed))?;
 
     schema::testbed::table
         .filter(schema::testbed::uuid.eq(&insert_testbed.uuid))
-        .first::<QueryTestbed>(conn!(context))
+        .first::<QueryTestbed>(conn_lock!(context))
         .map(|testbed| testbed.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(Testbed, insert_testbed))
 }
@@ -244,7 +245,7 @@ async fn get_one_inner(
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonTestbed, HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -252,7 +253,7 @@ async fn get_one_inner(
 
     QueryTestbed::belonging_to(&query_project)
         .filter(QueryTestbed::eq_resource_id(&path_params.testbed)?)
-        .first::<QueryTestbed>(conn!(context))
+        .first::<QueryTestbed>(conn_lock!(context))
         .map(|testbed| testbed.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(
             Testbed,
@@ -291,25 +292,28 @@ async fn patch_inner(
 ) -> Result<JsonTestbed, HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Edit,
     )?;
 
-    let query_testbed =
-        QueryTestbed::from_resource_id(conn!(context), query_project.id, &path_params.testbed)?;
+    let query_testbed = QueryTestbed::from_resource_id(
+        conn_lock!(context),
+        query_project.id,
+        &path_params.testbed,
+    )?;
     let update_testbed = UpdateTestbed::from(json_testbed.clone());
     diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))
         .set(&update_testbed)
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(
             Testbed,
             (&query_testbed, &json_testbed)
         ))?;
 
-    QueryTestbed::get(conn!(context), query_testbed.id)
+    QueryTestbed::get(conn_lock!(context), query_testbed.id)
         .map(|testbed| testbed.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(Testbed, query_testbed))
 }
@@ -336,18 +340,21 @@ async fn delete_inner(
 ) -> Result<(), HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Delete,
     )?;
 
-    let query_testbed =
-        QueryTestbed::from_resource_id(conn!(context), query_project.id, &path_params.testbed)?;
+    let query_testbed = QueryTestbed::from_resource_id(
+        conn_lock!(context),
+        query_project.id,
+        &path_params.testbed,
+    )?;
 
     diesel::delete(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Testbed, query_testbed))?;
 
     Ok(())

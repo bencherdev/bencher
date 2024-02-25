@@ -34,9 +34,7 @@ const PerfHeader = (props: Props) => {
 	const [share, setShare] = createSignal(false);
 
 	createEffect(() => {
-		if (props.isConsole) {
-			setPageTitle(props.project()?.name);
-		}
+		setPageTitle(props.project()?.name);
 	});
 
 	return (

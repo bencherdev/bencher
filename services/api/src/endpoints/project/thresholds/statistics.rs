@@ -5,7 +5,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    conn,
+    conn_lock,
     context::ApiContext,
     endpoints::{
         endpoint::{CorsResponse, Get, ResponseOk},
@@ -65,13 +65,13 @@ async fn get_one_inner(
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonStatistic, HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
     )?;
 
-    conn!(context, |conn| schema::statistic::table
+    conn_lock!(context, |conn| schema::statistic::table
         .inner_join(
             schema::threshold::table.on(schema::statistic::threshold_id.eq(schema::threshold::id)),
         )

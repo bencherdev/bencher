@@ -18,7 +18,7 @@ use serde::Deserialize;
 use slog::Logger;
 
 use crate::{
-    conn,
+    conn_lock,
     context::ApiContext,
     endpoints::{
         endpoint::{CorsResponse, Delete, Get, Post, ResponseCreated, ResponseDeleted, ResponseOk},
@@ -108,7 +108,7 @@ async fn get_ls_inner(
     json_report_query: JsonReportQuery,
 ) -> Result<JsonReports, HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -148,7 +148,7 @@ async fn get_ls_inner(
         },
     };
 
-    conn!(context, |conn| Ok(query
+    conn_lock!(context, |conn| Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .select(QueryReport::as_select())
@@ -203,7 +203,7 @@ async fn post_inner(
 ) -> Result<JsonReport, HttpError> {
     // Verify that the user is allowed
     let project = QueryProject::is_allowed(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -212,15 +212,16 @@ async fn post_inner(
     let project_id = project.id;
 
     // Verify that the branch and testbed are part of the same project
-    let branch_id = QueryBranch::from_name_id(conn!(context), project_id, &json_report.branch)?.id;
+    let branch_id =
+        QueryBranch::from_name_id(conn_lock!(context), project_id, &json_report.branch)?.id;
     let testbed_id =
-        QueryTestbed::from_name_id(conn!(context), project_id, &json_report.testbed)?.id;
+        QueryTestbed::from_name_id(conn_lock!(context), project_id, &json_report.testbed)?.id;
 
     // Check to see if the project is public or private
     // If private, then validate that there is an active subscription or license
     #[cfg(feature = "plus")]
     let plan_kind = crate::model::organization::plan::PlanKind::new_for_project(
-        conn!(context),
+        conn_lock!(context),
         context.biller.as_ref(),
         &context.licensor,
         &project,
@@ -231,7 +232,7 @@ async fn post_inner(
     // this branch with that particular hash.
     // Otherwise, create a new code version for this branch with/without the hash.
     let version_id = QueryVersion::get_or_increment(
-        conn!(context),
+        conn_lock!(context),
         project_id,
         branch_id,
         json_report.hash.as_ref(),
@@ -253,12 +254,12 @@ async fn post_inner(
 
     diesel::insert_into(schema::report::table)
         .values(&insert_report)
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Report, insert_report))?;
 
     let query_report = schema::report::table
         .filter(schema::report::uuid.eq(&insert_report.uuid))
-        .first::<QueryReport>(conn!(context))
+        .first::<QueryReport>(conn_lock!(context))
         .map_err(|e| {
             issue_error(
                 StatusCode::NOT_FOUND,
@@ -298,7 +299,7 @@ async fn post_inner(
     // Don't return the error from processing the report until after the metrics usage has been checked
     processed_report?;
     // If the report was processed successfully, then return the report with the results
-    query_report.into_json(log, conn!(context))
+    query_report.into_json(log, conn_lock!(context))
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -348,13 +349,13 @@ async fn get_one_inner(
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonReport, HttpError> {
     let query_project = QueryProject::is_allowed_public(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
     )?;
 
-    conn!(context, |conn| QueryReport::belonging_to(&query_project)
+    conn_lock!(context, |conn| QueryReport::belonging_to(&query_project)
         .filter(schema::report::uuid.eq(path_params.report.to_string()))
         .first::<QueryReport>(conn)
         .map_err(resource_not_found_err!(
@@ -386,7 +387,7 @@ async fn delete_inner(
 ) -> Result<(), HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -396,13 +397,13 @@ async fn delete_inner(
     let (report_id, version_id) = QueryReport::belonging_to(&query_project)
         .filter(schema::report::uuid.eq(path_params.report.to_string()))
         .select((schema::report::id, schema::report::version_id))
-        .first::<(ReportId, VersionId)>(conn!(context))
+        .first::<(ReportId, VersionId)>(conn_lock!(context))
         .map_err(resource_not_found_err!(
             Report,
             (&query_project, path_params.report)
         ))?;
     diesel::delete(schema::report::table.filter(schema::report::id.eq(report_id)))
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Report, report_id))?;
 
     // If there are no more reports for this version, delete the version
@@ -412,20 +413,20 @@ async fn delete_inner(
     if schema::report::table
         .filter(schema::report::version_id.eq(version_id))
         .select(count(schema::report::id))
-        .first::<i64>(conn!(context))
+        .first::<i64>(conn_lock!(context))
         .map_err(resource_not_found_err!(
             Version,
             (&query_project, report_id, version_id)
         ))?
         == 0
     {
-        let query_version = QueryVersion::get(conn!(context), version_id)?;
+        let query_version = QueryVersion::get(conn_lock!(context), version_id)?;
         // Get all branches that use this version
         let branches = schema::branch::table
             .inner_join(schema::branch_version::table)
             .filter(schema::branch_version::version_id.eq(version_id))
             .select(schema::branch::id)
-            .load::<BranchId>(conn!(context))
+            .load::<BranchId>(conn_lock!(context))
             .map_err(resource_not_found_err!(
                 Branch,
                 (&query_project, report_id, version_id)
@@ -439,7 +440,7 @@ async fn delete_inner(
                 .inner_join(schema::branch_version::table)
                 .filter(schema::branch_version::branch_id.eq(branch_id))
                 .select((schema::version::id, schema::version::number))
-                .load::<(VersionId, VersionNumber)>(conn!(context))
+                .load::<(VersionId, VersionNumber)>(conn_lock!(context))
                 .map_err(resource_not_found_err!(
                     Version,
                     (&query_project, report_id, branch_id, &query_version)
@@ -455,7 +456,7 @@ async fn delete_inner(
             if let Err(e) =
                 diesel::update(schema::version::table.filter(schema::version::id.eq(version_id)))
                     .set(schema::version::number.eq(version_number.decrement()))
-                    .execute(conn!(context))
+                    .execute(conn_lock!(context))
             {
                 debug_assert!(
                     false,
@@ -468,7 +469,7 @@ async fn delete_inner(
 
         // Finally delete the dangling version
         diesel::delete(schema::version::table.filter(schema::version::id.eq(version_id)))
-            .execute(conn!(context))
+            .execute(conn_lock!(context))
             .map_err(resource_conflict_err!(
                 Version,
                 (&query_project, report_id, &query_version)

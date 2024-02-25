@@ -15,7 +15,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    conn,
+    conn_lock,
     context::ApiContext,
     endpoints::{
         endpoint::{CorsResponse, Get, ResponseOk},
@@ -99,7 +99,7 @@ async fn get_inner(
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonPerf, HttpError> {
     let project = QueryProject::is_allowed_public(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -131,7 +131,7 @@ async fn get_inner(
     .await?;
 
     Ok(JsonPerf {
-        project: project.into_json(conn!(context))?,
+        project: project.into_json(conn_lock!(context))?,
         start_time,
         end_time,
         results,
@@ -323,7 +323,7 @@ async fn perf_query(
         // Acquire the lock on the database connection for every query.
         // This helps to avoid resource contention when the database is under heavy load.
         // This will make the perf query itself slower, but it will make the overall system more stable.
-        .load::<PerfQuery>(conn!(context))
+        .load::<PerfQuery>(conn_lock!(context))
         .map_err(resource_not_found_err!(Metric, (project,  branch_uuid, testbed_uuid, benchmark_uuid, measure_uuid)))
 }
 

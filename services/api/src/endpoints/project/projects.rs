@@ -12,7 +12,7 @@ use serde::Deserialize;
 use slog::Logger;
 
 use crate::{
-    conn,
+    conn_lock,
     context::ApiContext,
     endpoints::{
         endpoint::{CorsResponse, Delete, Get, Patch, ResponseDeleted, ResponseOk},
@@ -121,7 +121,7 @@ async fn get_ls_inner(
         },
     };
 
-    conn!(context, |conn| Ok(query
+    conn_lock!(context, |conn| Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryProject>(conn)
@@ -182,7 +182,7 @@ async fn get_one_inner(
     path_params: ProjectParams,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonProject, HttpError> {
-    conn!(context, |conn| QueryProject::is_allowed_public(
+    conn_lock!(context, |conn| QueryProject::is_allowed_public(
         conn,
         &context.rbac,
         &path_params.project,
@@ -224,7 +224,7 @@ async fn patch_inner(
 ) -> Result<JsonProject, HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -236,7 +236,7 @@ async fn patch_inner(
     QueryProject::is_visibility_public(json_project.visibility())?;
     #[cfg(feature = "plus")]
     crate::model::organization::plan::PlanKind::new_for_project(
-        conn!(context),
+        conn_lock!(context),
         context.biller.as_ref(),
         &context.licensor,
         &query_project,
@@ -246,13 +246,13 @@ async fn patch_inner(
     let update_project = UpdateProject::from(json_project.clone());
     diesel::update(schema::project::table.filter(schema::project::id.eq(query_project.id)))
         .set(&update_project)
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(
             Project,
             (&query_project, &json_project)
         ))?;
 
-    let new_query_project = QueryProject::get(conn!(context), query_project.id)
+    let new_query_project = QueryProject::get(conn_lock!(context), query_project.id)
         .map_err(resource_not_found_err!(Project, query_project))?;
 
     #[cfg(feature = "plus")]
@@ -263,7 +263,7 @@ async fn patch_inner(
         context.update_index(log, &new_query_project).await;
     }
 
-    new_query_project.into_json(conn!(context))
+    new_query_project.into_json(conn_lock!(context))
 }
 
 #[endpoint {
@@ -295,7 +295,7 @@ async fn delete_inner(
 ) -> Result<(), HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -303,7 +303,7 @@ async fn delete_inner(
     )?;
 
     diesel::delete(schema::project::table.filter(schema::project::id.eq(query_project.id)))
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Project, query_project))?;
 
     #[cfg(feature = "plus")]

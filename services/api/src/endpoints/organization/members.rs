@@ -13,7 +13,7 @@ use serde::Deserialize;
 use slog::Logger;
 
 use crate::{
-    conn,
+    conn_lock,
     context::{ApiContext, Body, ButtonBody, DbConnection, Message},
     endpoints::{
         endpoint::{
@@ -113,7 +113,7 @@ async fn get_ls_inner(
     query_params: OrgMembersQuery,
 ) -> Result<JsonMembers, HttpError> {
     let query_organization = QueryOrganization::is_allowed_resource_id(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.organization,
         auth_user,
@@ -160,7 +160,7 @@ async fn get_ls_inner(
     Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryMember>(conn!(context))
+        .load::<QueryMember>(conn_lock!(context))
         .map_err(resource_not_found_err!(
             OrganizationRole,
             query_organization
@@ -207,7 +207,8 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonAuthAck, HttpError> {
     // Get the organization
-    let query_org = QueryOrganization::from_resource_id(conn!(context), &path_params.organization)?;
+    let query_org =
+        QueryOrganization::from_resource_id(conn_lock!(context), &path_params.organization)?;
 
     // Check to see if user has permission to create a project within the organization
     context
@@ -219,7 +220,7 @@ async fn post_inner(
     // If a user already exists for the email then direct them to login.
     // Otherwise, direct them to signup.
     let (name, route): (Option<String>, &str) =
-        if let Ok(user) = QueryUser::get_with_email(conn!(context), &email) {
+        if let Ok(user) = QueryUser::get_with_email(conn_lock!(context), &email) {
             (Some(user.name.into()), "/auth/login")
         } else {
             (json_new_member.name.take().map(Into::into), "/auth/signup")
@@ -335,15 +336,15 @@ async fn get_one_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonMember, HttpError> {
     let query_organization = QueryOrganization::is_allowed_resource_id(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.organization,
         auth_user,
         Permission::ViewRole,
     )?;
-    let query_user = QueryUser::from_resource_id(conn!(context), &path_params.user)?;
+    let query_user = QueryUser::from_resource_id(conn_lock!(context), &path_params.user)?;
 
-    json_member(conn!(context), query_user.id, query_organization.id)
+    json_member(conn_lock!(context), query_user.id, query_organization.id)
 }
 
 /// Update the role for a member of an organization
@@ -379,13 +380,13 @@ async fn patch_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonMember, HttpError> {
     let query_organization =
-        QueryOrganization::from_resource_id(conn!(context), &path_params.organization)?;
-    let query_user = QueryUser::from_resource_id(conn!(context), &path_params.user)?;
+        QueryOrganization::from_resource_id(conn_lock!(context), &path_params.organization)?;
+    let query_user = QueryUser::from_resource_id(conn_lock!(context), &path_params.user)?;
 
     if let Some(role) = json_update.role {
         // Verify that the user is allowed to update member role
         QueryOrganization::is_allowed_id(
-            conn!(context),
+            conn_lock!(context),
             &context.rbac,
             query_organization.id,
             auth_user,
@@ -397,14 +398,14 @@ async fn patch_inner(
                 .filter(schema::organization_role::organization_id.eq(query_organization.id)),
         )
         .set(schema::organization_role::role.eq(role.to_string()))
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(
             OrganizationRole,
             (&query_user, &query_organization, role)
         ))?;
     }
 
-    json_member(conn!(context), query_user.id, query_organization.id)
+    json_member(conn_lock!(context), query_user.id, query_organization.id)
 }
 
 /// Remove a member of an organization
@@ -432,20 +433,20 @@ async fn delete_inner(
     auth_user: &AuthUser,
 ) -> Result<(), HttpError> {
     let query_organization = QueryOrganization::is_allowed_resource_id(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.organization,
         auth_user,
         Permission::DeleteRole,
     )?;
-    let query_user = QueryUser::from_resource_id(conn!(context), &path_params.user)?;
+    let query_user = QueryUser::from_resource_id(conn_lock!(context), &path_params.user)?;
 
     diesel::delete(
         schema::organization_role::table
             .filter(schema::organization_role::user_id.eq(query_user.id))
             .filter(schema::organization_role::organization_id.eq(query_organization.id)),
     )
-    .execute(conn!(context))
+    .execute(conn_lock!(context))
     .map_err(resource_conflict_err!(
         OrganizationRole,
         (&query_user, query_organization)

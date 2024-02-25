@@ -13,7 +13,7 @@ use serde::Deserialize;
 use slog::Logger;
 
 use crate::{
-    conn,
+    conn_lock,
     context::ApiContext,
     endpoints::{
         endpoint::{CorsResponse, Get, Post, ResponseCreated, ResponseOk},
@@ -112,7 +112,7 @@ async fn get_ls_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonProjects, HttpError> {
     let query_organization = QueryOrganization::is_allowed_resource_id(
-        conn!(context),
+        conn_lock!(context),
         &context.rbac,
         &path_params.organization,
         auth_user,
@@ -144,7 +144,7 @@ async fn get_ls_inner(
     Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryProject>(conn!(context))
+        .load::<QueryProject>(conn_lock!(context))
         .map_err(resource_not_found_err!(Project, organization))?
         .into_iter()
         .map(|project| project.into_json_for_organization(organization))
@@ -186,14 +186,14 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonProject, HttpError> {
     let query_organization =
-        QueryOrganization::from_resource_id(conn!(context), &path_params.organization)?;
+        QueryOrganization::from_resource_id(conn_lock!(context), &path_params.organization)?;
 
     // Check project visibility
     #[cfg(not(feature = "plus"))]
     QueryProject::is_visibility_public(json_project.visibility)?;
     #[cfg(feature = "plus")]
     crate::model::organization::plan::PlanKind::new(
-        conn!(context),
+        conn_lock!(context),
         context.biller.as_ref(),
         &context.licensor,
         &query_organization,
@@ -203,7 +203,7 @@ async fn post_inner(
 
     // Create the project
     let insert_project =
-        InsertProject::from_json(conn!(context), &query_organization, json_project)?;
+        InsertProject::from_json(conn_lock!(context), &query_organization, json_project)?;
 
     // Check to see if user has permission to create a project within the organization
     context
@@ -213,11 +213,11 @@ async fn post_inner(
 
     diesel::insert_into(schema::project::table)
         .values(&insert_project)
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Project, insert_project))?;
     let query_project = schema::project::table
         .filter(schema::project::uuid.eq(&insert_project.uuid))
-        .first::<QueryProject>(conn!(context))
+        .first::<QueryProject>(conn_lock!(context))
         .map_err(resource_not_found_err!(Project, insert_project))?;
 
     let timestamp = DateTime::now();
@@ -231,35 +231,35 @@ async fn post_inner(
     };
     diesel::insert_into(schema::project_role::table)
         .values(&insert_proj_role)
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(ProjectRole, insert_proj_role))?;
 
     // Add a `main` branch to the project
-    let insert_branch = InsertBranch::main(conn!(context), query_project.id)?;
+    let insert_branch = InsertBranch::main(conn_lock!(context), query_project.id)?;
     diesel::insert_into(schema::branch::table)
         .values(&insert_branch)
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Branch, insert_branch))?;
-    let branch_id = QueryBranch::get_id(conn!(context), insert_branch.uuid)?;
+    let branch_id = QueryBranch::get_id(conn_lock!(context), insert_branch.uuid)?;
 
     // Add a `localhost` testbed to the project
-    let insert_testbed = InsertTestbed::localhost(conn!(context), query_project.id)?;
+    let insert_testbed = InsertTestbed::localhost(conn_lock!(context), query_project.id)?;
     diesel::insert_into(schema::testbed::table)
         .values(&insert_testbed)
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Testbed, insert_testbed))?;
-    let testbed_id = QueryTestbed::get_id(conn!(context), insert_testbed.uuid)?;
+    let testbed_id = QueryTestbed::get_id(conn_lock!(context), insert_testbed.uuid)?;
 
     // Add a `latency` measure to the project
-    let insert_measure = InsertMeasure::latency(conn!(context), query_project.id)?;
+    let insert_measure = InsertMeasure::latency(conn_lock!(context), query_project.id)?;
     diesel::insert_into(schema::measure::table)
         .values(&insert_measure)
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Measure, insert_measure))?;
-    let measure_id = QueryMeasure::get_id(conn!(context), insert_measure.uuid)?;
+    let measure_id = QueryMeasure::get_id(conn_lock!(context), insert_measure.uuid)?;
     // Add a `latency` threshold to the project
     InsertThreshold::upper_boundary(
-        conn!(context),
+        conn_lock!(context),
         query_project.id,
         branch_id,
         testbed_id,
@@ -267,15 +267,15 @@ async fn post_inner(
     )?;
 
     // Add a `throughput` measure to the project
-    let insert_measure = InsertMeasure::throughput(conn!(context), query_project.id)?;
+    let insert_measure = InsertMeasure::throughput(conn_lock!(context), query_project.id)?;
     diesel::insert_into(schema::measure::table)
         .values(&insert_measure)
-        .execute(conn!(context))
+        .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Measure, insert_measure))?;
-    let measure_id = QueryMeasure::get_id(conn!(context), insert_measure.uuid)?;
+    let measure_id = QueryMeasure::get_id(conn_lock!(context), insert_measure.uuid)?;
     // Add a `throughput` threshold to the project
     InsertThreshold::lower_boundary(
-        conn!(context),
+        conn_lock!(context),
         query_project.id,
         branch_id,
         testbed_id,
@@ -285,5 +285,5 @@ async fn post_inner(
     #[cfg(feature = "plus")]
     context.update_index(log, &query_project).await;
 
-    query_project.into_json(conn!(context))
+    query_project.into_json(conn_lock!(context))
 }

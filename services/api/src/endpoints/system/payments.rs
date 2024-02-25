@@ -9,7 +9,7 @@ use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use http::StatusCode;
 
 use crate::{
-    conn,
+    conn_lock,
     context::ApiContext,
     endpoints::{
         endpoint::{CorsResponse, Post, ResponseCreated},
@@ -148,7 +148,8 @@ async fn checkouts_post_inner(
     } = json_checkout;
 
     // Get the organization
-    let query_organization = QueryOrganization::from_resource_id(conn!(context), &organization)?;
+    let query_organization =
+        QueryOrganization::from_resource_id(conn_lock!(context), &organization)?;
     // Check to see if user has permission to manage the organization
     context
         .rbac

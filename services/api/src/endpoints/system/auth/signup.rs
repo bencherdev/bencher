@@ -4,14 +4,14 @@ use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use http::StatusCode;
 use slog::Logger;
 
-use crate::conn;
-use crate::endpoints::endpoint::CorsResponse;
-use crate::endpoints::endpoint::Post;
-use crate::endpoints::endpoint::{Endpoint, ResponseAccepted};
-use crate::error::{forbidden_error, issue_error};
-
 use crate::{
+    conn_lock,
     context::{ApiContext, Body, ButtonBody, Message},
+    endpoints::{
+        endpoint::{CorsResponse, Post, ResponseAccepted},
+        Endpoint,
+    },
+    error::{forbidden_error, issue_error},
     model::user::InsertUser,
 };
 
@@ -61,7 +61,7 @@ async fn post_inner(
 
     let invited = json_signup.invite.is_some();
     let insert_user =
-        InsertUser::insert_from_json(conn!(context), &context.token_key, &json_signup)?;
+        InsertUser::insert_from_json(conn_lock!(context), &context.token_key, &json_signup)?;
 
     let token = context
         .token_key
@@ -116,7 +116,7 @@ async fn post_inner(
 
     insert_user.notify(
         log,
-        conn!(context),
+        conn_lock!(context),
         &context.messenger,
         &context.endpoint,
         invited,

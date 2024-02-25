@@ -5,15 +5,14 @@ use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use http::StatusCode;
 use slog::Logger;
 
-use crate::conn;
-use crate::endpoints::endpoint::CorsResponse;
-use crate::endpoints::endpoint::Post;
-use crate::endpoints::endpoint::ResponseAccepted;
-use crate::endpoints::Endpoint;
-
-use crate::error::issue_error;
 use crate::{
+    conn_lock,
     context::{ApiContext, Body, ButtonBody, Message},
+    endpoints::{
+        endpoint::{CorsResponse, Post, ResponseAccepted},
+        Endpoint,
+    },
+    error::issue_error,
     model::user::QueryUser,
 };
 
@@ -50,10 +49,10 @@ async fn post_inner(
     context: &ApiContext,
     json_login: JsonLogin,
 ) -> Result<JsonAuthAck, HttpError> {
-    let query_user = QueryUser::get_with_email(conn!(context), &json_login.email)?;
+    let query_user = QueryUser::get_with_email(conn_lock!(context), &json_login.email)?;
     query_user.check_is_locked()?;
     if let Some(invite) = &json_login.invite {
-        query_user.accept_invite(conn!(context), &context.token_key, invite)?;
+        query_user.accept_invite(conn_lock!(context), &context.token_key, invite)?;
     }
 
     let token = context
