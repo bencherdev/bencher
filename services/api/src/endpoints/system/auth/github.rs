@@ -9,6 +9,7 @@ use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use http::StatusCode;
 use slog::Logger;
 
+use crate::conn;
 use crate::endpoints::endpoint::CorsResponse;
 use crate::endpoints::endpoint::Get;
 use crate::endpoints::endpoint::Post;
@@ -59,11 +60,14 @@ async fn post_inner(
         slog::warn!(log, "{err}");
         return Err(payment_required_error(err));
     };
-    let conn = &mut *context.conn().await;
     // If not on Bencher Cloud, then at least one organization must have a valid Bencher Plus license
     if !context.is_bencher_cloud()
-        && LicenseUsage::get_for_server(conn, &context.licensor, Some(PlanLevel::Enterprise))?
-            .is_empty()
+        && LicenseUsage::get_for_server(
+            conn!(context),
+            &context.licensor,
+            Some(PlanLevel::Enterprise),
+        )?
+        .is_empty()
     {
         return Err(payment_required_error(
                 "You must have a valid Bencher Plus Enterprise license for at least one organization on the server to use GitHub OAuth2",
@@ -77,10 +81,10 @@ async fn post_inner(
 
     // If the user already exists, then we just need to check if they are locked and possible accept an invite
     // Otherwise, we need to create a new user and notify the admins
-    let user = if let Ok(query_user) = QueryUser::get_with_email(conn, &email) {
+    let user = if let Ok(query_user) = QueryUser::get_with_email(conn!(context), &email) {
         query_user.check_is_locked()?;
         if let Some(invite) = &json_oauth.invite {
-            query_user.accept_invite(conn, &context.token_key, invite)?;
+            query_user.accept_invite(conn!(context), &context.token_key, invite)?;
         }
         query_user
     } else {
@@ -94,18 +98,19 @@ async fn post_inner(
         };
 
         let invited = json_signup.invite.is_some();
-        let insert_user = InsertUser::insert_from_json(conn, &context.token_key, &json_signup)?;
+        let insert_user =
+            InsertUser::insert_from_json(conn!(context), &context.token_key, &json_signup)?;
 
         insert_user.notify(
             log,
-            conn,
+            conn!(context),
             &context.messenger,
             &context.endpoint,
             invited,
             "GitHub OAuth2",
         )?;
 
-        QueryUser::get_with_email(conn, &email)?
+        QueryUser::get_with_email(conn!(context), &email)?
     }
     .into_json();
 

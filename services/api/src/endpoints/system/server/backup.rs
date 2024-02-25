@@ -10,6 +10,7 @@ use tokio::fs::remove_file;
 use tokio::io::{AsyncReadExt, BufWriter};
 use tokio::io::{AsyncWriteExt, BufReader};
 
+use crate::conn;
 use crate::endpoints::endpoint::{CorsResponse, Post, ResponseCreated};
 use crate::error::bad_request_error;
 use crate::model::user::admin::AdminUser;
@@ -126,7 +127,6 @@ struct Backup {
 }
 
 async fn backup_database(context: &ApiContext) -> Result<Backup, BackupError> {
-    let conn = &mut *context.conn().await;
     let mut file_path = context.database.path.clone();
 
     let file_stem = file_path
@@ -146,7 +146,8 @@ async fn backup_database(context: &ApiContext) -> Result<Backup, BackupError> {
     let file_path_str = file_path.to_string_lossy();
     let query = format!("VACUUM INTO '{file_path_str}'");
 
-    conn.batch_execute(&query)
+    conn!(context)
+        .batch_execute(&query)
         .map_err(BackupError::BatchExecute)?;
 
     Ok(Backup {

@@ -17,6 +17,7 @@ use http::StatusCode;
 use oso::{PolarValue, ToPolar};
 
 use crate::{
+    conn,
     context::{ApiContext, DbConnection, Rbac},
     error::{bad_request_error, forbidden_error},
     model::{organization::OrganizationId, project::ProjectId},
@@ -38,12 +39,14 @@ pub struct AuthUser {
 impl AuthUser {
     // This is required due to a limitation in `dropshot` where only four extractors are allowed.
     pub async fn new_pub(rqctx: &RequestContext<ApiContext>) -> Result<Option<Self>, HttpError> {
-        Self::from_pub_token(rqctx.context(), PubBearerToken::from_request(rqctx).await?).await
+        let pub_bearer_token = PubBearerToken::from_request(rqctx).await?;
+        Self::from_pub_token(rqctx.context(), pub_bearer_token).await
     }
 
     // This is required due to a limitation in `dropshot` where only four extractors are allowed.
     pub async fn new(rqctx: &RequestContext<ApiContext>) -> Result<Self, HttpError> {
-        Self::from_token(rqctx.context(), BearerToken::from_request(rqctx).await?).await
+        let bearer_token = BearerToken::from_request(rqctx).await?;
+        Self::from_token(rqctx.context(), bearer_token).await
     }
 
     pub async fn from_pub_token(
@@ -61,27 +64,27 @@ impl AuthUser {
         context: &ApiContext,
         bearer_token: BearerToken,
     ) -> Result<Self, HttpError> {
-        let conn = &mut *context.conn().await;
         let claims = context
             .token_key
             .validate_client(&bearer_token)
             .map_err(|e| bad_request_error(format!("Failed to validate JSON Web Token: {e}")))?;
         let email = claims.email();
-        let query_user = QueryUser::get_with_email(conn, email)?;
 
+        // Hold the connection for all permissions related queries
+        let conn = conn!(context);
+        let query_user = QueryUser::get_with_email(conn, email)?;
         if query_user.locked {
             return Err(forbidden_error(format!("User account is locked ({email})")));
         }
-
         let (org_ids, org_roles) = Self::organization_roles(conn, query_user.id, email)?;
         let (proj_ids, proj_roles) = Self::project_roles(conn, query_user.id, email)?;
+
         let rbac = RbacUser {
             admin: query_user.admin,
             locked: query_user.locked,
             organizations: org_roles,
             projects: proj_roles,
         };
-
         Ok(Self {
             user: query_user,
             organizations: org_ids,

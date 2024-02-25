@@ -2,6 +2,7 @@ use bencher_json::system::auth::JsonAccept;
 use bencher_json::JsonAuthAck;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 
+use crate::conn;
 use crate::endpoints::endpoint::CorsResponse;
 use crate::endpoints::endpoint::Get;
 use crate::endpoints::endpoint::Post;
@@ -44,12 +45,10 @@ async fn post_inner(
     json_accept: JsonAccept,
     auth_user: AuthUser,
 ) -> Result<JsonAuthAck, HttpError> {
-    let conn = &mut *context.conn().await;
-
     auth_user.user.check_is_locked()?;
     auth_user
         .user
-        .accept_invite(conn, &context.token_key, &json_accept.invite)?;
+        .accept_invite(conn!(context), &context.token_key, &json_accept.invite)?;
 
     Ok(JsonAuthAck {
         email: auth_user.user.email,

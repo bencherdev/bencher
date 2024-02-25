@@ -51,6 +51,10 @@ macro_rules! conn {
     ($context:ident) => {
         &mut *$context.conn().await
     };
+    ($context:ident, |$conn:ident| $multi:expr) => {{
+        let $conn = $crate::conn!($context);
+        $multi
+    }};
 }
 
 impl ApiContext {

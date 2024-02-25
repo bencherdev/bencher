@@ -12,6 +12,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
+    conn,
     context::ApiContext,
     endpoints::{
         endpoint::{
@@ -97,10 +98,12 @@ async fn get_ls_inner(
     pagination_params: ProjMeasuresPagination,
     query_params: ProjMeasuresQuery,
 ) -> Result<JsonMeasures, HttpError> {
-    let conn = &mut *context.conn().await;
-
-    let query_project =
-        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
+    let query_project = QueryProject::is_allowed_public(
+        conn!(context),
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+    )?;
 
     let mut query = QueryMeasure::belonging_to(&query_project).into_boxed();
 
@@ -123,14 +126,13 @@ async fn get_ls_inner(
         },
     };
 
-    let project = &query_project;
     Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryMeasure>(conn)
-        .map_err(resource_not_found_err!(Measure, project))?
+        .load::<QueryMeasure>(conn!(context))
+        .map_err(resource_not_found_err!(Measure, &query_project))?
         .into_iter()
-        .map(|measure| measure.into_json_for_project(project))
+        .map(|measure| measure.into_json_for_project(&query_project))
         .collect())
 }
 
@@ -162,27 +164,25 @@ async fn post_inner(
     json_measure: JsonNewMeasure,
     auth_user: &AuthUser,
 ) -> Result<JsonMeasure, HttpError> {
-    let conn = &mut *context.conn().await;
-
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn,
+        conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Create,
     )?;
 
-    let insert_measure = InsertMeasure::from_json(conn, query_project.id, json_measure)?;
+    let insert_measure = InsertMeasure::from_json(conn!(context), query_project.id, json_measure)?;
 
     diesel::insert_into(schema::measure::table)
         .values(&insert_measure)
-        .execute(conn)
+        .execute(conn!(context))
         .map_err(resource_conflict_err!(Measure, insert_measure))?;
 
     schema::measure::table
         .filter(schema::measure::uuid.eq(&insert_measure.uuid))
-        .first::<QueryMeasure>(conn)
+        .first::<QueryMeasure>(conn!(context))
         .map(|measure| measure.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(Measure, insert_measure))
 }
@@ -231,14 +231,16 @@ async fn get_one_inner(
     path_params: ProjMeasureParams,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonMeasure, HttpError> {
-    let conn = &mut *context.conn().await;
-
-    let query_project =
-        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
+    let query_project = QueryProject::is_allowed_public(
+        conn!(context),
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+    )?;
 
     QueryMeasure::belonging_to(&query_project)
         .filter(QueryMeasure::eq_resource_id(&path_params.measure)?)
-        .first::<QueryMeasure>(conn)
+        .first::<QueryMeasure>(conn!(context))
         .map(|measure| measure.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(
             Measure,
@@ -274,11 +276,9 @@ async fn patch_inner(
     json_measure: JsonUpdateMeasure,
     auth_user: &AuthUser,
 ) -> Result<JsonMeasure, HttpError> {
-    let conn = &mut *context.conn().await;
-
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn,
+        conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -286,17 +286,17 @@ async fn patch_inner(
     )?;
 
     let query_measure =
-        QueryMeasure::from_resource_id(conn, query_project.id, &path_params.measure)?;
+        QueryMeasure::from_resource_id(conn!(context), query_project.id, &path_params.measure)?;
 
     diesel::update(schema::measure::table.filter(schema::measure::id.eq(query_measure.id)))
         .set(&UpdateMeasure::from(json_measure.clone()))
-        .execute(conn)
+        .execute(conn!(context))
         .map_err(resource_conflict_err!(
             Measure,
             (&query_measure, &json_measure)
         ))?;
 
-    QueryMeasure::get(conn, query_measure.id)
+    QueryMeasure::get(conn!(context), query_measure.id)
         .map(|measure| measure.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(Measure, query_measure))
 }
@@ -321,11 +321,9 @@ async fn delete_inner(
     path_params: ProjMeasureParams,
     auth_user: &AuthUser,
 ) -> Result<(), HttpError> {
-    let conn = &mut *context.conn().await;
-
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn,
+        conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -333,10 +331,10 @@ async fn delete_inner(
     )?;
 
     let query_measure =
-        QueryMeasure::from_resource_id(conn, query_project.id, &path_params.measure)?;
+        QueryMeasure::from_resource_id(conn!(context), query_project.id, &path_params.measure)?;
 
     diesel::delete(schema::measure::table.filter(schema::measure::id.eq(query_measure.id)))
-        .execute(conn)
+        .execute(conn!(context))
         .map_err(resource_conflict_err!(Measure, query_measure))?;
 
     Ok(())

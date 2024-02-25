@@ -9,6 +9,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
+    conn,
     context::ApiContext,
     endpoints::{
         endpoint::{CorsResponse, Get, Patch, ResponseOk},
@@ -83,10 +84,12 @@ async fn get_ls_inner(
     path_params: ProjAlertsParams,
     pagination_params: ProjAlertsPagination,
 ) -> Result<JsonAlerts, HttpError> {
-    let conn = &mut *context.conn().await;
-
-    let query_project =
-        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
+    let query_project = QueryProject::is_allowed_public(
+        conn!(context),
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+    )?;
 
     let mut query = schema::alert::table
         .inner_join(
@@ -133,12 +136,11 @@ async fn get_ls_inner(
         },
     };
 
-    let project = &query_project;
-    Ok(query
+    conn!(context, |conn| Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load(conn)
-        .map_err(resource_not_found_err!(Alert, project))?
+        .map_err(resource_not_found_err!(Alert, &query_project))?
         .into_iter()
         .filter_map(|alert| match alert.into_json(conn) {
             Ok(alert) => Some(alert),
@@ -149,7 +151,7 @@ async fn get_ls_inner(
                 None
             },
         })
-        .collect())
+        .collect()))
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -196,12 +198,19 @@ async fn get_one_inner(
     path_params: ProjAlertParams,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonAlert, HttpError> {
-    let conn = &mut *context.conn().await;
+    let query_project = QueryProject::is_allowed_public(
+        conn!(context),
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+    )?;
 
-    let query_project =
-        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
-
-    QueryAlert::from_uuid(conn, query_project.id, path_params.alert)?.into_json(conn)
+    conn!(context, |conn| QueryAlert::from_uuid(
+        conn,
+        query_project.id,
+        path_params.alert
+    )?
+    .into_json(conn))
 }
 
 #[endpoint {
@@ -232,24 +241,23 @@ async fn patch_inner(
     json_alert: JsonUpdateAlert,
     auth_user: &AuthUser,
 ) -> Result<JsonAlert, HttpError> {
-    let conn = &mut *context.conn().await;
-
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn,
+        conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Edit,
     )?;
 
-    let query_alert = QueryAlert::from_uuid(conn, query_project.id, path_params.alert)?;
+    let query_alert = QueryAlert::from_uuid(conn!(context), query_project.id, path_params.alert)?;
     diesel::update(schema::alert::table.filter(schema::alert::id.eq(query_alert.id)))
         .set(&UpdateAlert::from(json_alert.clone()))
-        .execute(conn)
+        .execute(conn!(context))
         .map_err(resource_conflict_err!(Alert, (&query_alert, &json_alert)))?;
 
-    QueryAlert::get(conn, query_alert.id)?.into_json(conn)
+    conn!(context, |conn| QueryAlert::get(conn, query_alert.id)?
+        .into_json(conn))
 }
 
 #[allow(clippy::unused_async)]
@@ -291,10 +299,12 @@ async fn get_stats_inner(
     auth_user: Option<&AuthUser>,
     path_params: ProjAlertsParams,
 ) -> Result<JsonAlertStats, HttpError> {
-    let conn = &mut *context.conn().await;
-
-    let query_project =
-        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
+    let query_project = QueryProject::is_allowed_public(
+        conn!(context),
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+    )?;
 
     let active = schema::alert::table
         .filter(schema::alert::status.eq(AlertStatus::Active))
@@ -306,7 +316,7 @@ async fn get_stats_inner(
         )
         .filter(schema::benchmark::project_id.eq(query_project.id))
         .select(count(schema::alert::id))
-        .first::<i64>(conn)
+        .first::<i64>(conn!(context))
         .map_err(resource_not_found_err!(Alert, query_project))?;
 
     Ok(JsonAlertStats {

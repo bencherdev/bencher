@@ -4,6 +4,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
+    conn,
     context::ApiContext,
     endpoints::{
         endpoint::{CorsResponse, Get, ResponseOk},
@@ -56,9 +57,7 @@ async fn get_one_inner(
     path_params: UserParams,
     auth_user: &AuthUser,
 ) -> Result<JsonUser, HttpError> {
-    let conn = &mut *context.conn().await;
-
-    let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
+    let query_user = QueryUser::from_resource_id(conn!(context), &path_params.user)?;
     same_user!(auth_user, context.rbac, query_user.uuid);
 
     Ok(query_user.into_json())

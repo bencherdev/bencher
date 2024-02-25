@@ -3,6 +3,7 @@ use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use http::StatusCode;
 
 use crate::{
+    conn,
     context::ApiContext,
     endpoints::{
         endpoint::{CorsResponse, Post, ResponseOk},
@@ -43,14 +44,12 @@ async fn post_inner(
     context: &ApiContext,
     json_confirm: JsonConfirm,
 ) -> Result<JsonAuthUser, HttpError> {
-    let conn = &mut *context.conn().await;
-
     let claims = context
         .token_key
         .validate_auth(&json_confirm.token)
         .map_err(unauthorized_error)?;
     let email = claims.email();
-    let user = QueryUser::get_with_email(conn, email)?.into_json();
+    let user = QueryUser::get_with_email(conn!(context), email)?.into_json();
 
     let token = context
         .token_key

@@ -12,6 +12,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
+    conn,
     context::ApiContext,
     endpoints::{
         endpoint::{
@@ -96,10 +97,12 @@ async fn get_ls_inner(
     pagination_params: ProjBenchmarksPagination,
     query_params: ProjBenchmarksQuery,
 ) -> Result<JsonBenchmarks, HttpError> {
-    let conn = &mut *context.conn().await;
-
-    let query_project =
-        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
+    let query_project = QueryProject::is_allowed_public(
+        conn!(context),
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+    )?;
 
     let mut query = QueryBenchmark::belonging_to(&query_project).into_boxed();
 
@@ -122,14 +125,13 @@ async fn get_ls_inner(
         },
     };
 
-    let project = &query_project;
     Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryBenchmark>(conn)
-        .map_err(resource_not_found_err!(Benchmark, project))?
+        .load::<QueryBenchmark>(conn!(context))
+        .map_err(resource_not_found_err!(Benchmark, &query_project))?
         .into_iter()
-        .map(|benchmark| benchmark.into_json_for_project(project))
+        .map(|benchmark| benchmark.into_json_for_project(&query_project))
         .collect())
 }
 
@@ -161,27 +163,26 @@ async fn post_inner(
     json_benchmark: JsonNewBenchmark,
     auth_user: &AuthUser,
 ) -> Result<JsonBenchmark, HttpError> {
-    let conn = &mut *context.conn().await;
-
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn,
+        conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Create,
     )?;
 
-    let insert_benchmark = InsertBenchmark::from_json(conn, query_project.id, json_benchmark)?;
+    let insert_benchmark =
+        InsertBenchmark::from_json(conn!(context), query_project.id, json_benchmark)?;
 
     diesel::insert_into(schema::benchmark::table)
         .values(&insert_benchmark)
-        .execute(conn)
+        .execute(conn!(context))
         .map_err(resource_conflict_err!(Benchmark, insert_benchmark))?;
 
     schema::benchmark::table
         .filter(schema::benchmark::uuid.eq(&insert_benchmark.uuid))
-        .first::<QueryBenchmark>(conn)
+        .first::<QueryBenchmark>(conn!(context))
         .map(|benchmark| benchmark.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(Benchmark, insert_benchmark))
 }
@@ -230,14 +231,16 @@ async fn get_one_inner(
     path_params: ProjBenchmarkParams,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonBenchmark, HttpError> {
-    let conn = &mut *context.conn().await;
-
-    let query_project =
-        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
+    let query_project = QueryProject::is_allowed_public(
+        conn!(context),
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+    )?;
 
     QueryBenchmark::belonging_to(&query_project)
         .filter(QueryBenchmark::eq_resource_id(&path_params.benchmark)?)
-        .first::<QueryBenchmark>(conn)
+        .first::<QueryBenchmark>(conn!(context))
         .map(|benchmark| benchmark.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(
             Benchmark,
@@ -273,11 +276,9 @@ async fn patch_inner(
     json_benchmark: JsonUpdateBenchmark,
     auth_user: &AuthUser,
 ) -> Result<JsonBenchmark, HttpError> {
-    let conn = &mut *context.conn().await;
-
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn,
+        conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -285,16 +286,16 @@ async fn patch_inner(
     )?;
 
     let query_benchmark =
-        QueryBenchmark::from_resource_id(conn, query_project.id, &path_params.benchmark)?;
+        QueryBenchmark::from_resource_id(conn!(context), query_project.id, &path_params.benchmark)?;
     diesel::update(schema::benchmark::table.filter(schema::benchmark::id.eq(query_benchmark.id)))
         .set(&UpdateBenchmark::from(json_benchmark.clone()))
-        .execute(conn)
+        .execute(conn!(context))
         .map_err(resource_conflict_err!(
             Benchmark,
             (&query_benchmark, &json_benchmark)
         ))?;
 
-    QueryBenchmark::get(conn, query_benchmark.id)
+    QueryBenchmark::get(conn!(context), query_benchmark.id)
         .map(|benchmark| benchmark.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(Benchmark, query_benchmark))
 }
@@ -319,11 +320,9 @@ async fn delete_inner(
     path_params: ProjBenchmarkParams,
     auth_user: &AuthUser,
 ) -> Result<(), HttpError> {
-    let conn = &mut *context.conn().await;
-
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn,
+        conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -331,9 +330,9 @@ async fn delete_inner(
     )?;
 
     let query_benchmark =
-        QueryBenchmark::from_resource_id(conn, query_project.id, &path_params.benchmark)?;
+        QueryBenchmark::from_resource_id(conn!(context), query_project.id, &path_params.benchmark)?;
     diesel::delete(schema::benchmark::table.filter(schema::benchmark::id.eq(query_benchmark.id)))
-        .execute(conn)
+        .execute(conn!(context))
         .map_err(resource_conflict_err!(Benchmark, query_benchmark))?;
 
     Ok(())

@@ -12,6 +12,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
+    conn,
     context::ApiContext,
     endpoints::{
         endpoint::{CorsResponse, Delete, Get, Post, ResponseCreated, ResponseDeleted, ResponseOk},
@@ -71,10 +72,10 @@ async fn get_one_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonPlan, HttpError> {
     let biller = context.biller()?;
-    let conn = &mut *context.conn().await;
 
     // Get the organization
-    let query_organization = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
+    let query_organization =
+        QueryOrganization::from_resource_id(conn!(context), &path_params.organization)?;
     // Check to see if user has permission to manage the organization
     context
         .rbac
@@ -82,7 +83,7 @@ async fn get_one_inner(
         .map_err(forbidden_error)?;
     // Get the plan for the organization
     let query_plan = QueryPlan::belonging_to(&query_organization)
-        .first::<QueryPlan>(conn)
+        .first::<QueryPlan>(conn!(context))
         .map_err(resource_not_found_err!(Plan, query_organization))?;
 
     if let Some(json_plan) = query_plan.to_metered_plan(biller).await? {
@@ -138,17 +139,19 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonPlan, HttpError> {
     let biller = context.biller()?;
-    let conn = &mut *context.conn().await;
 
     // Get the organization
-    let query_organization = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
+    let query_organization =
+        QueryOrganization::from_resource_id(conn!(context), &path_params.organization)?;
     // Check to see if user has permission to manage the organization
     context
         .rbac
         .is_allowed_organization(auth_user, Permission::Manage, &query_organization)
         .map_err(forbidden_error)?;
     // Check to make sure the organization doesn't already have a plan
-    if let Ok(query_plan) = QueryPlan::belonging_to(&query_organization).first::<QueryPlan>(conn) {
+    if let Ok(query_plan) =
+        QueryPlan::belonging_to(&query_organization).first::<QueryPlan>(conn!(context))
+    {
         return Err(resource_conflict_error(
             BencherResource::Plan,
             (query_organization, query_plan),
@@ -193,7 +196,7 @@ async fn post_inner(
             .parse()
             .map_err(resource_not_found_err!(Plan, subscription_id))?;
         InsertPlan::licensed_plan(
-            conn,
+            conn!(context),
             &context.licensor,
             licensed_plan_id,
             &query_organization,
@@ -202,7 +205,7 @@ async fn post_inner(
             self_hosted,
         )?;
         QueryPlan::belonging_to(&query_organization)
-            .first::<QueryPlan>(conn)
+            .first::<QueryPlan>(conn!(context))
             .map_err(resource_not_found_err!(Plan, query_organization))?
             .to_licensed_plan(biller, &context.licensor, query_organization.uuid).await?
             .ok_or_else(|| {
@@ -218,9 +221,9 @@ async fn post_inner(
             .as_ref()
             .parse()
             .map_err(resource_not_found_err!(Plan, subscription_id))?;
-        InsertPlan::metered_plan(conn, metered_plan_id, &query_organization)?;
+        InsertPlan::metered_plan(conn!(context), metered_plan_id, &query_organization)?;
         QueryPlan::belonging_to(&query_organization)
-            .first::<QueryPlan>(conn)
+            .first::<QueryPlan>(conn!(context))
             .map_err(resource_not_found_err!(Plan, query_organization))?
             .to_metered_plan(biller).await?
             .ok_or_else(|| {
@@ -272,10 +275,10 @@ async fn delete_inner(
     auth_user: &AuthUser,
 ) -> Result<(), HttpError> {
     let biller = context.biller()?;
-    let conn = &mut *context.conn().await;
 
     // Get the organization
-    let query_organization = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
+    let query_organization =
+        QueryOrganization::from_resource_id(conn!(context), &path_params.organization)?;
     // Check to see if user has permission to manage the organization
     context
         .rbac
@@ -283,7 +286,7 @@ async fn delete_inner(
         .map_err(forbidden_error)?;
     // Get the plan for the organization
     let query_plan = QueryPlan::belonging_to(&query_organization)
-        .first::<QueryPlan>(conn)
+        .first::<QueryPlan>(conn!(context))
         .map_err(resource_not_found_err!(Plan, query_organization))?;
 
     let remote = query_params.remote.unwrap_or(true);
@@ -313,7 +316,7 @@ async fn delete_inner(
             };
             diesel::update(organization_query)
                 .set(&update_organization)
-                .execute(conn)
+                .execute(conn!(context))
                 .map_err(resource_conflict_err!(Organization, update_organization))?;
         }
     } else {
@@ -328,7 +331,7 @@ async fn delete_inner(
     }
 
     diesel::delete(schema::plan::table.filter(schema::plan::id.eq(query_plan.id)))
-        .execute(conn)
+        .execute(conn!(context))
         .map_err(resource_conflict_err!(Plan, query_plan))?;
 
     Ok(())

@@ -12,6 +12,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
+    conn,
     context::ApiContext,
     endpoints::{
         endpoint::{
@@ -97,10 +98,12 @@ async fn get_ls_inner(
     pagination_params: ProjBranchesPagination,
     query_params: ProjBranchesQuery,
 ) -> Result<JsonBranches, HttpError> {
-    let conn = &mut *context.conn().await;
-
-    let query_project =
-        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
+    let query_project = QueryProject::is_allowed_public(
+        conn!(context),
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+    )?;
 
     let mut query = QueryBranch::belonging_to(&query_project).into_boxed();
 
@@ -123,14 +126,13 @@ async fn get_ls_inner(
         },
     };
 
-    let project = &query_project;
     Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryBranch>(conn)
-        .map_err(resource_not_found_err!(Branch, project))?
+        .load::<QueryBranch>(conn!(context))
+        .map_err(resource_not_found_err!(Branch, &query_project))?
         .into_iter()
-        .map(|branch| branch.into_json_for_project(project))
+        .map(|branch| branch.into_json_for_project(&query_project))
         .collect())
 }
 
@@ -162,11 +164,9 @@ async fn post_inner(
     mut json_branch: JsonNewBranch,
     auth_user: &AuthUser,
 ) -> Result<JsonBranch, HttpError> {
-    let conn = &mut *context.conn().await;
-
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn,
+        conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -180,27 +180,27 @@ async fn post_inner(
     if let Some(true) = json_branch.soft {
         if let Ok(branch) = QueryBranch::belonging_to(&query_project)
             .filter(schema::branch::name.eq(json_branch.name.as_ref()))
-            .first::<QueryBranch>(conn)
+            .first::<QueryBranch>(conn!(context))
         {
             return Ok(branch.into_json_for_project(&query_project));
         }
     }
     let start_point = json_branch.start_point.take();
-    let insert_branch = InsertBranch::from_json(conn, query_project.id, json_branch)?;
+    let insert_branch = InsertBranch::from_json(conn!(context), query_project.id, json_branch)?;
 
     diesel::insert_into(schema::branch::table)
         .values(&insert_branch)
-        .execute(conn)
+        .execute(conn!(context))
         .map_err(resource_conflict_err!(Branch, insert_branch))?;
 
     // Clone data and optionally thresholds from the start point
     if let Some(start_point) = &start_point {
-        insert_branch.start_point(conn, start_point)?;
+        insert_branch.start_point(conn!(context), start_point)?;
     }
 
     schema::branch::table
         .filter(schema::branch::uuid.eq(&insert_branch.uuid))
-        .first::<QueryBranch>(conn)
+        .first::<QueryBranch>(conn!(context))
         .map(|branch| branch.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(Branch, insert_branch))
 }
@@ -249,14 +249,16 @@ async fn get_one_inner(
     path_params: ProjBranchParams,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonBranch, HttpError> {
-    let conn = &mut *context.conn().await;
-
-    let query_project =
-        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
+    let query_project = QueryProject::is_allowed_public(
+        conn!(context),
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+    )?;
 
     QueryBranch::belonging_to(&query_project)
         .filter(QueryBranch::eq_resource_id(&path_params.branch)?)
-        .first::<QueryBranch>(conn)
+        .first::<QueryBranch>(conn!(context))
         .map(|branch| branch.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(
             Branch,
@@ -292,28 +294,27 @@ async fn patch_inner(
     json_branch: JsonUpdateBranch,
     auth_user: &AuthUser,
 ) -> Result<JsonBranch, HttpError> {
-    let conn = &mut *context.conn().await;
-
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn,
+        conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Edit,
     )?;
 
-    let query_branch = QueryBranch::from_resource_id(conn, query_project.id, &path_params.branch)?;
+    let query_branch =
+        QueryBranch::from_resource_id(conn!(context), query_project.id, &path_params.branch)?;
 
     diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
         .set(&UpdateBranch::from(json_branch.clone()))
-        .execute(conn)
+        .execute(conn!(context))
         .map_err(resource_conflict_err!(
             Branch,
             (&query_branch, &json_branch)
         ))?;
 
-    QueryBranch::get(conn, query_branch.id)
+    QueryBranch::get(conn!(context), query_branch.id)
         .map(|branch| branch.into_json_for_project(&query_project))
         .map_err(resource_not_found_err!(Branch, query_branch))
 }
@@ -338,21 +339,20 @@ async fn delete_inner(
     path_params: ProjBranchParams,
     auth_user: &AuthUser,
 ) -> Result<(), HttpError> {
-    let conn = &mut *context.conn().await;
-
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
-        conn,
+        conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
         Permission::Delete,
     )?;
 
-    let query_branch = QueryBranch::from_resource_id(conn, query_project.id, &path_params.branch)?;
+    let query_branch =
+        QueryBranch::from_resource_id(conn!(context), query_project.id, &path_params.branch)?;
 
     diesel::delete(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
-        .execute(conn)
+        .execute(conn!(context))
         .map_err(resource_conflict_err!(Branch, query_branch))?;
 
     Ok(())

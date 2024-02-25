@@ -6,6 +6,7 @@ use http::StatusCode;
 use slog::Logger;
 
 use crate::{
+    conn,
     context::ApiContext,
     endpoints::{
         endpoint::{CorsResponse, Get, Post, ResponseAccepted, ResponseOk},
@@ -45,10 +46,9 @@ pub async fn server_stats_get(
 }
 
 async fn get_one_inner(context: &ApiContext) -> Result<JsonServerStats, HttpError> {
-    let conn = &mut *context.conn().await;
-    let query_server = QueryServer::get_server(conn)?;
+    let query_server = QueryServer::get_server(conn!(context))?;
     let is_bencher_cloud = context.is_bencher_cloud();
-    query_server.get_stats(conn, is_bencher_cloud)
+    query_server.get_stats(conn!(context), is_bencher_cloud)
 }
 
 #[endpoint {
@@ -70,7 +70,6 @@ async fn post_inner(
     json_server_stats: JsonServerStats,
 ) -> Result<(), HttpError> {
     let _biller = context.biller()?;
-    let conn = &mut *context.conn().await;
 
     let server_stats = serde_json::to_string_pretty(&json_server_stats).map_err(|e| {
         slog::error!(log, "Failed to serialize stats: {e}");
@@ -82,7 +81,13 @@ async fn post_inner(
         )
     })?;
     slog::info!(log, "Self-Hosted Stats: {server_stats:?}");
-    QueryServer::send_stats_to_backend(log, conn, &context.messenger, &server_stats, false)?;
+    QueryServer::send_stats_to_backend(
+        log,
+        conn!(context),
+        &context.messenger,
+        &server_stats,
+        false,
+    )?;
 
     Ok(())
 }

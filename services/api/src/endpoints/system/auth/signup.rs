@@ -4,6 +4,7 @@ use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use http::StatusCode;
 use slog::Logger;
 
+use crate::conn;
 use crate::endpoints::endpoint::CorsResponse;
 use crate::endpoints::endpoint::Post;
 use crate::endpoints::endpoint::{Endpoint, ResponseAccepted};
@@ -54,13 +55,13 @@ async fn post_inner(
             "You must agree to the Bencher Terms of Use (https://bencher.dev/legal/terms-of-use), Privacy Policy (https://bencher.dev/legal/privacy), and License Agreement (https://bencher.dev/legal/license)",
         ));
     }
-    let conn = &mut *context.conn().await;
 
     #[cfg(feature = "plus")]
     let plan = json_signup.plan.unwrap_or_default();
 
     let invited = json_signup.invite.is_some();
-    let insert_user = InsertUser::insert_from_json(conn, &context.token_key, &json_signup)?;
+    let insert_user =
+        InsertUser::insert_from_json(conn!(context), &context.token_key, &json_signup)?;
 
     let token = context
         .token_key
@@ -115,7 +116,7 @@ async fn post_inner(
 
     insert_user.notify(
         log,
-        conn,
+        conn!(context),
         &context.messenger,
         &context.endpoint,
         invited,

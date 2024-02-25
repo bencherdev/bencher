@@ -14,6 +14,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
+    conn,
     context::{ApiContext, DbConnection},
     endpoints::{
         endpoint::{CorsResponse, Get, ResponseOk},
@@ -76,10 +77,10 @@ async fn get_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonUsage, HttpError> {
     let licensor = &context.licensor;
-    let conn = &mut *context.conn().await;
 
     // Get the organization
-    let query_organization = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
+    let query_organization =
+        QueryOrganization::from_resource_id(conn!(context), &path_params.organization)?;
     // Check to see if user has permission to manage a project within the organization
     context
         .rbac
@@ -89,18 +90,19 @@ async fn get_inner(
     // Bencher Cloud
     if let Ok(biller) = context.biller() {
         let Ok(query_plan) = QueryPlan::belonging_to(&query_organization)
-            .first::<QueryPlan>(conn)
+            .first::<QueryPlan>(conn!(context))
             .map_err(resource_not_found_err!(Plan, query_organization))
         // Cloud Free
         else {
-            return free_plan_usage(conn, &query_organization, UsageKind::CloudFree);
+            return free_plan_usage(conn!(context), &query_organization, UsageKind::CloudFree);
         };
 
         // Metered plan
         if let Some(json_plan) = query_plan.to_metered_plan(biller).await? {
             let start_time = json_plan.current_period_start;
             let end_time = json_plan.current_period_end;
-            let usage = QueryMetric::usage(conn, query_organization.id, start_time, end_time)?;
+            let usage =
+                QueryMetric::usage(conn!(context), query_organization.id, start_time, end_time)?;
             Ok(JsonUsage {
                 organization: query_organization.uuid,
                 kind: UsageKind::CloudMetered,
@@ -131,7 +133,12 @@ async fn get_inner(
             let (kind, usage) = if json_license.self_hosted {
                 (UsageKind::CloudSelfHostedLicensed, None)
             } else {
-                let usage = QueryMetric::usage(conn, query_organization.id, start_time, end_time)?;
+                let usage = QueryMetric::usage(
+                    conn!(context),
+                    query_organization.id,
+                    start_time,
+                    end_time,
+                )?;
                 (UsageKind::CloudLicensed, Some(usage))
             };
             Ok(JsonUsage {
@@ -160,7 +167,8 @@ async fn get_inner(
             .map_err(payment_required_error)?;
         let start_time = json_license.issued_at;
         let end_time = json_license.expiration;
-        let usage = QueryMetric::usage(conn, query_organization.id, start_time, end_time)?;
+        let usage =
+            QueryMetric::usage(conn!(context), query_organization.id, start_time, end_time)?;
         Ok(JsonUsage {
             organization: query_organization.uuid,
             kind: UsageKind::SelfHostedLicensed,
@@ -172,7 +180,11 @@ async fn get_inner(
         })
     // Self-Hosted Free
     } else {
-        free_plan_usage(conn, &query_organization, UsageKind::SelfHostedFree)
+        free_plan_usage(
+            conn!(context),
+            &query_organization,
+            UsageKind::SelfHostedFree,
+        )
     }
 }
 

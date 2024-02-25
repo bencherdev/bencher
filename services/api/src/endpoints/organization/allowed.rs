@@ -4,6 +4,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
+    conn,
     context::ApiContext,
     endpoints::{
         endpoint::{CorsResponse, Get, ResponseOk},
@@ -54,11 +55,9 @@ async fn get_inner(
     path_params: OrgAllowedParams,
     auth_user: &AuthUser,
 ) -> Result<JsonAllowed, HttpError> {
-    let conn = &mut *context.conn().await;
-
     Ok(JsonAllowed {
         allowed: QueryOrganization::is_allowed_resource_id(
-            conn,
+            conn!(context),
             &context.rbac,
             &path_params.organization,
             auth_user,
