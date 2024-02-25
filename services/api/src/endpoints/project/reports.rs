@@ -18,6 +18,7 @@ use serde::Deserialize;
 use slog::Logger;
 
 use crate::{
+    conn,
     context::ApiContext,
     endpoints::{
         endpoint::{CorsResponse, Delete, Get, Post, ResponseCreated, ResponseDeleted, ResponseOk},
@@ -199,11 +200,9 @@ async fn post_inner(
     mut json_report: JsonNewReport,
     auth_user: &AuthUser,
 ) -> Result<JsonReport, HttpError> {
-    let conn = &mut *context.conn().await;
-
     // Verify that the user is allowed
     let project = QueryProject::is_allowed(
-        conn,
+        conn!(context),
         &context.rbac,
         &path_params.project,
         auth_user,
@@ -212,14 +211,15 @@ async fn post_inner(
     let project_id = project.id;
 
     // Verify that the branch and testbed are part of the same project
-    let branch_id = QueryBranch::from_name_id(conn, project_id, &json_report.branch)?.id;
-    let testbed_id = QueryTestbed::from_name_id(conn, project_id, &json_report.testbed)?.id;
+    let branch_id = QueryBranch::from_name_id(conn!(context), project_id, &json_report.branch)?.id;
+    let testbed_id =
+        QueryTestbed::from_name_id(conn!(context), project_id, &json_report.testbed)?.id;
 
     // Check to see if the project is public or private
     // If private, then validate that there is an active subscription or license
     #[cfg(feature = "plus")]
     let plan_kind = crate::model::organization::plan::PlanKind::new_for_project(
-        conn,
+        conn!(context),
         context.biller.as_ref(),
         &context.licensor,
         &project,
@@ -229,8 +229,12 @@ async fn post_inner(
     // If there is a hash then try to see if there is already a code version for
     // this branch with that particular hash.
     // Otherwise, create a new code version for this branch with/without the hash.
-    let version_id =
-        QueryVersion::get_or_increment(conn, project_id, branch_id, json_report.hash.as_ref())?;
+    let version_id = QueryVersion::get_or_increment(
+        conn!(context),
+        project_id,
+        branch_id,
+        json_report.hash.as_ref(),
+    )?;
 
     let json_settings = json_report.settings.take().unwrap_or_default();
     let adapter = json_settings.adapter.unwrap_or_default();
@@ -248,12 +252,12 @@ async fn post_inner(
 
     diesel::insert_into(schema::report::table)
         .values(&insert_report)
-        .execute(conn)
+        .execute(conn!(context))
         .map_err(resource_conflict_err!(Report, insert_report))?;
 
     let query_report = schema::report::table
         .filter(schema::report::uuid.eq(&insert_report.uuid))
-        .first::<QueryReport>(conn)
+        .first::<QueryReport>(conn!(context))
         .map_err(|e| {
             issue_error(
                 StatusCode::NOT_FOUND,
@@ -273,15 +277,17 @@ async fn post_inner(
         .iter()
         .map(AsRef::as_ref)
         .collect::<Vec<&str>>();
-    let processed_report = report_results.process(
-        log,
-        conn,
-        &results_array,
-        adapter,
-        json_settings,
-        #[cfg(feature = "plus")]
-        &mut usage,
-    );
+    let processed_report = report_results
+        .process(
+            log,
+            context,
+            &results_array,
+            adapter,
+            json_settings,
+            #[cfg(feature = "plus")]
+            &mut usage,
+        )
+        .await;
 
     #[cfg(feature = "plus")]
     plan_kind
@@ -289,10 +295,9 @@ async fn post_inner(
         .await?;
 
     // Don't return the error from processing the report until after the metrics usage has been checked
-    processed_report.and_then(|()| {
-        // If the report was processed successfully, then return the report with the results
-        query_report.into_json(log, conn)
-    })
+    processed_report?;
+    // If the report was processed successfully, then return the report with the results
+    query_report.into_json(log, conn!(context))
 }
 
 #[derive(Deserialize, JsonSchema)]

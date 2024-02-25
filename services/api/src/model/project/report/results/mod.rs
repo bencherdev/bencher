@@ -14,7 +14,8 @@ use http::StatusCode;
 use slog::Logger;
 
 use crate::{
-    context::DbConnection,
+    conn,
+    context::ApiContext,
     error::{bad_request_error, issue_error, resource_conflict_err},
     model::project::{
         benchmark::{BenchmarkId, QueryBenchmark},
@@ -40,6 +41,7 @@ pub struct ReportResults {
     pub branch_id: BranchId,
     pub testbed_id: TestbedId,
     pub report_id: ReportId,
+    pub benchmark_cache: HashMap<BenchmarkName, BenchmarkId>,
     pub measure_cache: HashMap<MeasureNameId, MeasureId>,
     pub detector_cache: HashMap<MeasureId, Option<Detector>>,
 }
@@ -56,15 +58,16 @@ impl ReportResults {
             branch_id,
             testbed_id,
             report_id,
+            benchmark_cache: HashMap::new(),
             measure_cache: HashMap::new(),
             detector_cache: HashMap::new(),
         }
     }
 
-    pub fn process(
+    pub async fn process(
         &mut self,
         log: &Logger,
-        conn: &mut DbConnection,
+        context: &ApiContext,
         results_array: &[&str],
         adapter: Adapter,
         settings: JsonReportSettings,
@@ -82,32 +85,34 @@ impl ReportResults {
             let results = results_array.fold(fold);
             self.results(
                 log,
-                conn,
+                context,
                 Iteration::default(),
                 results,
                 #[cfg(feature = "plus")]
                 usage,
-            )?;
+            )
+            .await?;
         } else {
             for (iteration, results) in results_array.inner.into_iter().enumerate() {
                 self.results(
                     log,
-                    conn,
+                    context,
                     iteration.into(),
                     results,
                     #[cfg(feature = "plus")]
                     usage,
-                )?;
+                )
+                .await?;
             }
         };
 
         Ok(())
     }
 
-    fn results(
+    async fn results(
         &mut self,
         log: &Logger,
-        conn: &mut DbConnection,
+        context: &ApiContext,
         iteration: Iteration,
         results: AdapterResults,
         #[cfg(feature = "plus")] usage: &mut u32,
@@ -115,21 +120,22 @@ impl ReportResults {
         for (benchmark_name, metrics) in results.inner {
             self.metrics(
                 log,
-                conn,
+                context,
                 iteration,
                 &benchmark_name,
                 metrics,
                 #[cfg(feature = "plus")]
                 usage,
-            )?;
+            )
+            .await?;
         }
         Ok(())
     }
 
-    fn metrics(
+    async fn metrics(
         &mut self,
         log: &Logger,
-        conn: &mut DbConnection,
+        context: &ApiContext,
         iteration: Iteration,
         benchmark_name: &BenchmarkName,
         metrics: AdapterMetrics,
@@ -137,22 +143,22 @@ impl ReportResults {
     ) -> Result<(), HttpError> {
         // If benchmark name is ignored then strip the special suffix before querying
         let (benchmark_name, ignore_benchmark) = benchmark_name.to_strip_ignore();
-        let benchmark_id = self.benchmark_id(conn, benchmark_name)?;
+        let benchmark_id = self.benchmark_id(context, benchmark_name).await?;
 
         let insert_perf = InsertPerf::from_json(self.report_id, iteration, benchmark_id);
         diesel::insert_into(schema::perf::table)
             .values(&insert_perf)
-            .execute(conn)
+            .execute(conn!(context))
             .map_err(resource_conflict_err!(Perf, insert_perf))?;
-        let perf_id = QueryPerf::get_id(conn, insert_perf.uuid)?;
+        let perf_id = QueryPerf::get_id(conn!(context), insert_perf.uuid)?;
 
         for (measure_key, metric) in metrics.inner {
-            let measure_id = self.measure_id(conn, measure_key)?;
+            let measure_id = self.measure_id(context, measure_key).await?;
 
             let insert_metric = InsertMetric::from_json(perf_id, measure_id, metric);
             diesel::insert_into(schema::metric::table)
                 .values(&insert_metric)
-                .execute(conn)
+                .execute(conn!(context))
                 .map_err(resource_conflict_err!(Metric, insert_metric))?;
 
             #[cfg(feature = "plus")]
@@ -163,8 +169,8 @@ impl ReportResults {
 
             // Ignored benchmarks do not get checked against the threshold even if one exists
             if !ignore_benchmark {
-                if let Some(detector) = self.detector(conn, measure_id) {
-                    let query_metric = QueryMetric::from_uuid(conn, insert_metric.uuid).map_err(|e| {
+                if let Some(detector) = self.detector(context, measure_id).await {
+                    let query_metric = QueryMetric::from_uuid(conn!(context), insert_metric.uuid).map_err(|e| {
                         issue_error(
                             StatusCode::NOT_FOUND,
                             "Failed to find metric",
@@ -172,7 +178,7 @@ impl ReportResults {
                             e,
                         )
                     })?;
-                    detector.detect(log, conn, benchmark_id, &query_metric)?;
+                    detector.detect(log, conn!(context), benchmark_id, &query_metric)?;
                 }
             }
         }
@@ -180,33 +186,47 @@ impl ReportResults {
         Ok(())
     }
 
-    fn benchmark_id(
+    async fn benchmark_id(
         &mut self,
-        conn: &mut DbConnection,
+        context: &ApiContext,
         benchmark_name: BenchmarkName,
     ) -> Result<BenchmarkId, HttpError> {
-        QueryBenchmark::get_or_create(conn, self.project_id, benchmark_name).map_err(Into::into)
+        Ok(
+            if let Some(id) = self.benchmark_cache.get(&benchmark_name) {
+                *id
+            } else {
+                let benchmark_id = QueryBenchmark::get_or_create(
+                    conn!(context),
+                    self.project_id,
+                    benchmark_name.clone(),
+                )?;
+                self.benchmark_cache.insert(benchmark_name, benchmark_id);
+                benchmark_id
+            },
+        )
     }
 
-    fn measure_id(
+    async fn measure_id(
         &mut self,
-        conn: &mut DbConnection,
+        context: &ApiContext,
         measure: MeasureNameId,
     ) -> Result<MeasureId, HttpError> {
         Ok(if let Some(id) = self.measure_cache.get(&measure) {
             *id
         } else {
-            let measure_id = QueryMeasure::get_or_create(conn, self.project_id, &measure)?;
+            let measure_id =
+                QueryMeasure::get_or_create(conn!(context), self.project_id, &measure)?;
             self.measure_cache.insert(measure, measure_id);
             measure_id
         })
     }
 
-    fn detector(&mut self, conn: &mut DbConnection, measure_id: MeasureId) -> Option<Detector> {
+    async fn detector(&mut self, context: &ApiContext, measure_id: MeasureId) -> Option<Detector> {
         if let Some(detector) = self.detector_cache.get(&measure_id) {
             detector.clone()
         } else {
-            let detector = Detector::new(conn, self.branch_id, self.testbed_id, measure_id);
+            let detector =
+                Detector::new(conn!(context), self.branch_id, self.testbed_id, measure_id);
             self.detector_cache.insert(measure_id, detector.clone());
             detector
         }

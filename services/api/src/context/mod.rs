@@ -46,6 +46,13 @@ pub struct ApiContext {
     pub licensor: Licensor,
 }
 
+#[macro_export]
+macro_rules! conn {
+    ($context:ident) => {
+        &mut *$context.conn().await
+    };
+}
+
 impl ApiContext {
     pub async fn conn(&self) -> tokio::sync::MutexGuard<DbConnection> {
         self.database.connection.lock().await
