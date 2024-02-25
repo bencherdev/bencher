@@ -243,8 +243,9 @@ async fn patch_inner(
     )
     .await?;
 
+    let update_project = UpdateProject::from(json_project.clone());
     diesel::update(schema::project::table.filter(schema::project::id.eq(query_project.id)))
-        .set(&UpdateProject::from(json_project.clone()))
+        .set(&update_project)
         .execute(conn!(context))
         .map_err(resource_conflict_err!(
             Project,

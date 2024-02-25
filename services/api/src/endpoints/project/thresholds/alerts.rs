@@ -251,8 +251,9 @@ async fn patch_inner(
     )?;
 
     let query_alert = QueryAlert::from_uuid(conn!(context), query_project.id, path_params.alert)?;
+    let update_alert = UpdateAlert::from(json_alert.clone());
     diesel::update(schema::alert::table.filter(schema::alert::id.eq(query_alert.id)))
-        .set(&UpdateAlert::from(json_alert.clone()))
+        .set(&update_alert)
         .execute(conn!(context))
         .map_err(resource_conflict_err!(Alert, (&query_alert, &json_alert)))?;
 

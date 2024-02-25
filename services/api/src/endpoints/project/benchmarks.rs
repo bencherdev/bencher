@@ -287,8 +287,9 @@ async fn patch_inner(
 
     let query_benchmark =
         QueryBenchmark::from_resource_id(conn!(context), query_project.id, &path_params.benchmark)?;
+    let update_benchmark = UpdateBenchmark::from(json_benchmark.clone());
     diesel::update(schema::benchmark::table.filter(schema::benchmark::id.eq(query_benchmark.id)))
-        .set(&UpdateBenchmark::from(json_benchmark.clone()))
+        .set(&update_benchmark)
         .execute(conn!(context))
         .map_err(resource_conflict_err!(
             Benchmark,

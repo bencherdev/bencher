@@ -300,9 +300,9 @@ async fn patch_inner(
 
     let query_testbed =
         QueryTestbed::from_resource_id(conn!(context), query_project.id, &path_params.testbed)?;
-
+    let update_testbed = UpdateTestbed::from(json_testbed.clone());
     diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))
-        .set(&UpdateTestbed::from(json_testbed.clone()))
+        .set(&update_testbed)
         .execute(conn!(context))
         .map_err(resource_conflict_err!(
             Testbed,

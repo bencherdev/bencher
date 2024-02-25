@@ -305,9 +305,9 @@ async fn patch_inner(
 
     let query_branch =
         QueryBranch::from_resource_id(conn!(context), query_project.id, &path_params.branch)?;
-
+    let update_branch = UpdateBranch::from(json_branch.clone());
     diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
-        .set(&UpdateBranch::from(json_branch.clone()))
+        .set(&update_branch)
         .execute(conn!(context))
         .map_err(resource_conflict_err!(
             Branch,

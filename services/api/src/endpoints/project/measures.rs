@@ -287,9 +287,9 @@ async fn patch_inner(
 
     let query_measure =
         QueryMeasure::from_resource_id(conn!(context), query_project.id, &path_params.measure)?;
-
+    let update_measure = UpdateMeasure::from(json_measure.clone());
     diesel::update(schema::measure::table.filter(schema::measure::id.eq(query_measure.id)))
-        .set(&UpdateMeasure::from(json_measure.clone()))
+        .set(&update_measure)
         .execute(conn!(context))
         .map_err(resource_conflict_err!(
             Measure,

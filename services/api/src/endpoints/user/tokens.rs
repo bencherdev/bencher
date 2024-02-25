@@ -275,8 +275,9 @@ async fn patch_inner(
         &path_params.token.to_string(),
     )?;
 
+    let update_token = UpdateToken::from(json_token);
     diesel::update(schema::token::table.filter(schema::token::id.eq(query_token.id)))
-        .set(&UpdateToken::from(json_token))
+        .set(&update_token)
         .execute(conn!(context))
         .map_err(resource_conflict_err!(Token, (&query_user, &query_token)))?;
 

@@ -354,11 +354,9 @@ async fn put_inner(
         ))?;
 
     // Update the current threshold to use the new statistic
+    let update_threshold = UpdateThreshold::new_statistic(conn!(context), insert_statistic.uuid)?;
     diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(query_threshold.id)))
-        .set(&UpdateThreshold::new_statistic(
-            conn!(context),
-            insert_statistic.uuid,
-        )?)
+        .set(&update_threshold)
         .execute(conn!(context))
         .map_err(resource_conflict_err!(
             Threshold,
