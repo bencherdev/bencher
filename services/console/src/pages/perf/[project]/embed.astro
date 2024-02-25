@@ -15,6 +15,7 @@ const getProjectUrl =  `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${par
 let jsonProject: undefined | JsonProject;
 let title: string;
 let description: string;
+let notFound: boolean = false;
 try {
   const projectResponse = await fetchSSR(getProjectUrl);
   jsonProject = await projectResponse.json();
@@ -24,6 +25,7 @@ try {
   } else {
     title = "Not Found";
     description = "Public Project not found";
+    notFound = true;
   }
 } catch (e) {
   console.error(`Failed to fetch project data: ${e}`);
@@ -49,5 +51,17 @@ try {
       project={jsonProject}
       isEmbed={true}
     />
+    {notFound && (
+      <div class="container box">
+        <div class="columns is-centered">
+          <div class="column is-narrow">
+            <h2 class="title is-2">Project Not Found</h1>
+            <hr />
+            <p>Could not find Project: <code>{params.project}</code></p>
+            <p>The Project may be private or it may not exist.</p>
+          </div>
+        </div>
+      </div>
+    )}
     <div slot="footer"></div>
 </BaseLayout>

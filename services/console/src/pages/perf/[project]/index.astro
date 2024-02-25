@@ -16,6 +16,7 @@ const getProjectUrl =  `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${par
 let jsonProject: undefined | JsonProject;
 let title: string;
 let description: string;
+let notFound: boolean = false;
 try {
   const projectResponse = await fetchSSR(getProjectUrl);
   jsonProject = await projectResponse.json();
@@ -25,6 +26,7 @@ try {
   } else {
     title = "Not Found";
     description = "Public Project not found";
+    notFound = true;
   }
 } catch (e) {
   console.error(`Failed to fetch project data: ${e}`);
@@ -41,9 +43,7 @@ try {
   titleFmt={(title) => `📈 ${title}`}
   description={description}
 >
-  { jsonProject?.uuid ?
-  <PublicProject client:only="solid-js" apiUrl={BENCHER_API_URL} params={params} project={jsonProject} />
-  :
+  { notFound ?
   <section class="section">
     <div class="container">
       <div class="columns">
@@ -61,5 +61,7 @@ try {
       </div>
     </div>
   </section>
+  :
+  <PublicProject client:only="solid-js" apiUrl={BENCHER_API_URL} params={params} project={jsonProject} />
   }
 </PerfLayout>

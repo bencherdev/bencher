@@ -20,6 +20,7 @@ const getAlertUrl =  `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${param
 let jsonAlert: undefined | JsonAlert;
 let title: string;
 let description: string;
+let notFound: boolean = false;
 try {
   const alertResponse = await fetchSSR(getAlertUrl);
   jsonAlert = await alertResponse.json();
@@ -29,6 +30,7 @@ try {
   } else {
     title = "Not Found";
     description = "Public Project Alert not found";
+    notFound = true;
   }
 } catch (e) {
   console.error(`Failed to fetch alert data: ${e}`);
@@ -44,9 +46,7 @@ const deck = alertsConfig[Operation.VIEW]?.deck as DeckConfig;
   titleFmt={(title) => `🚨 ${title}`}
   description={description}
 >
-  { jsonAlert?.uuid ?
-  <PublicAlert client:only="solid-js" apiUrl={BENCHER_API_URL} params={params} deck={deck} data={jsonAlert} />
-  :
+  { notFound ?
   <section class="section">
     <div class="container">
       <div class="columns is-mobile">
@@ -64,5 +64,7 @@ const deck = alertsConfig[Operation.VIEW]?.deck as DeckConfig;
       </div>
     </div>
   </section>
+  :
+  <PublicAlert client:only="solid-js" apiUrl={BENCHER_API_URL} params={params} deck={deck} data={jsonAlert} />
   }
 </PerfLayout>
