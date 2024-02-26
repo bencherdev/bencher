@@ -2,6 +2,7 @@
 import DocsLayout from "./DocsLayout.astro";
 import { DocsTab } from "../../components/docs/docs_tab";
 import type { Author } from "../../components/docs/author";
+import type { Collection } from "../../content/config";
 
 interface Props {
   title: string;
@@ -9,7 +10,7 @@ interface Props {
   description: string;
   heading?: string;
   lang?: string;
-  collection?: undefined | string;
+  collection?: undefined | Collection;
   slug?: undefined | string;
   author?: Author;
 }

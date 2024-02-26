@@ -5,6 +5,7 @@ import DocsMenu from "../../components/docs/DocsMenu.astro";
 import { DocsTab } from "../../components/docs/docs_tab";
 import SelfHostedRedirect from "../../components/site/SelfHostedRedirct";
 import { Author } from "../../components/docs/author";
+import type { Collection } from "../../content/config";
 
 interface Props {
   title: string;
@@ -13,7 +14,7 @@ interface Props {
   heading?: undefined | string;
   tab?: DocsTab;
   lang?: undefined | string;
-  collection?: undefined | string;
+  collection?: undefined | Collection;
   slug?: undefined | string;
   author?: undefined | Author;
   canonical?: undefined | string;
@@ -30,7 +31,7 @@ const { title, titleFmt, description, heading, tab, lang, collection, slug, auth
   author={author}
   canonical={canonical}
 >
-  <SelfHostedRedirect client:only="solid-js" path="/console" />
+  <SelfHostedRedirect client:only="solid-js" path="/docs/api" collection={collection} />
   <!-- Note that the AuthNavbar does *not* fill the slot `navbar`. It is a client-side override.  -->
   <AuthNavbar client:only="solid-js" />
   <div class="is-widescreen">
