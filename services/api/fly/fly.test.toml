@@ -19,6 +19,11 @@ force_https = true
 port = 443
 handlers = ["tls", "http"]
 
+[services.concurrency]
+type = "connections"
+hard_limit = 1024
+soft_limit = 1024
+
 [[vm]]
 cpu_kind = "shared"
 cpus = 1
