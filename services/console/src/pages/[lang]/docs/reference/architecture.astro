@@ -2,6 +2,9 @@
 import ArchitecturePanel from "../../../../components/docs/ArchitecturePanel.astro";
 import DocsLayout from "../../../../layouts/docs/DocsLayout.astro";
 import { Language, architecture, otherLanguages } from "../../../../i18n/ui";
+import { Collection } from "../../../../content/config";
+
+const collection = Collection.reference;
 
 export async function getStaticPaths() {
     return otherLanguages.map((lang) => {return { params: { lang } }});
@@ -56,7 +59,7 @@ const heading = () => {
 }
 ---
 
-<DocsLayout title={architecture(lang)} description={description()} heading={heading()} lang={lang} collection="reference"
+<DocsLayout title={architecture(lang)} description={description()} heading={heading()} lang={lang} collection={collection}
 slug="architecture">
   <ArchitecturePanel />
 </DocsLayout>

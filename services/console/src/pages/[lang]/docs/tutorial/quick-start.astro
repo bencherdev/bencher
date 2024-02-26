@@ -6,9 +6,12 @@ import Disclosure from "../../../../components/docs/Disclosure";
 import { Collection } from "../../../../content/config";
 import { getLangPaths } from "../../../../i18n/utils";
 
+const collection = Collection.tutorial;
+
 // 1. Generate a new path for every collection entry
 export async function getStaticPaths() {
-  const pages = await getLangPaths(Collection.tutorial);
+  const collection = Collection.tutorial;
+  const pages = await getLangPaths(collection);
   return pages.filter(page => page.params.slug === "quick-start");
 }
 // 2. When it's time to render, you can get the entry directly from the prop
@@ -38,7 +41,6 @@ const signupText = () => {
 const page = Astro.props;
 const { Content } = await page.render();
 
-const collection = "tutorial";
 const slug = "quick-start";
 ---
 

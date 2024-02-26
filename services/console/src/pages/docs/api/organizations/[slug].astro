@@ -4,9 +4,12 @@ import { Collection } from "../../../../content/config";
 import Operation from "../../../../components/docs/api/Operation.astro";
 import { getEnCollection } from "../../../../i18n/utils";
 
+const collection = Collection.organizations;
+
 // 1. Generate a new path for every collection entry
 export async function getStaticPaths() {
-  const pages = await getEnCollection(Collection.organizations);
+  const collection = Collection.organizations;
+  const pages = await getEnCollection(collection);
   return pages.map((page) => ({
     params: { slug: page.slug },
     props: { page },
@@ -22,7 +25,7 @@ const { slug } = Astro.params;
   titleFmt={(_title) => `🐰 ${page.data.heading}`}
   description={page.data.description}
   heading={page.data.heading}
-  collection="organizations"
+  collection={collection}
   slug={slug}
 >
   {page.data.paths.map(({path, method, headers, cli}, index) =>

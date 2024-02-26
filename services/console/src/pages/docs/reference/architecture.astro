@@ -1,15 +1,15 @@
 ---
 import ArchitecturePanel from "../../../components/docs/ArchitecturePanel.astro";
+import { Collection } from "../../../content/config";
 import DocsLayout from "../../../layouts/docs/DocsLayout.astro";
+
+const collection = Collection.reference;
 
 const title = "Architecture";
 const description = "Diagram of the Bencher Architecture";
 const heading = "Bencher Architecture";
 ---
 
-<DocsLayout title={title} description={description} heading={heading}
-collection="reference"
-slug="architecture"
->
+<DocsLayout title={title} description={description} heading={heading} collection={collection} slug="architecture">
   <ArchitecturePanel />
 </DocsLayout>

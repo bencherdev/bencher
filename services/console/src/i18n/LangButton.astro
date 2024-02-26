@@ -1,12 +1,13 @@
 ---
 import { DocsTab } from "../components/docs/docs_tab";
+import { Collection } from "../content/config";
 import { Language, allLanguages, langBoxId, langButtonId, languageName } from "./ui";
 import { langPath } from "./utils";
 
 interface Props {
   lang: Language;
   tab: DocsTab;
-  collection?: undefined | string;
+  collection?: undefined | Collection;
   slug?: undefined | string;
 }
 
@@ -15,16 +16,16 @@ const lang: Language = Astro.props.lang;
 
 const path = (langauge: Language) => {
   if (collection && slug) {
-    return `/${langPath(langauge)}${pathTab()}/${pathCollection()}/${slug}/`;
+    return `/${langPath(langauge)}${tabPath()}/${collectionPath(collection)}/${slug}/`;
   } else if (collection) {
-    return `/${langPath(langauge)}${pathTab()}/${pathCollection()}/`;
+    return `/${langPath(langauge)}${tabPath()}/${collectionPath(collection)}/`;
   } else if (slug) {
-    return `/${langPath(langauge)}${pathTab()}/${slug}/`;
+    return `/${langPath(langauge)}${tabPath()}/${slug}/`;
   } else {
-    return `/${langPath(langauge)}${pathTab()}/`;
+    return `/${langPath(langauge)}${tabPath()}/`;
   }
 };
-const pathTab = () => {
+const tabPath = () => {
   switch (tab) {
     case DocsTab.Docs:
       return "docs";
@@ -34,7 +35,24 @@ const pathTab = () => {
       return "learn";
   }
 }
-const pathCollection = () => collection?.replace('_', '-');
+const collectionPath = (collection: Collection) => {
+	switch (collection) {
+		case Collection.legal:
+			return "legal";
+		case Collection.tutorial:
+			return "tutorial";
+		case Collection.how_to:
+			return "how-to";
+		case Collection.explanation:
+			return "explanation";
+		case Collection.reference:
+			return "reference";
+		case Collection.organizations:
+			return "organizations";
+		case Collection.rust:
+			return "benchmarking/rust";
+	}
+};
 ---
 
 <nav>
