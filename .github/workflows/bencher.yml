@@ -572,8 +572,6 @@ jobs:
   build_api_docker:
     name: Build API Docker
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
