@@ -410,6 +410,7 @@ async fn delete_inner(
     // This is necessary because multiple reports can use the same version via a git hash
     // This will cascade and delete all branch versions for this version
     // Before doing so, decrement all greater versions
+    // Otherwise, just return since the version is still in use
     if schema::report::table
         .filter(schema::report::version_id.eq(version_id))
         .select(count(schema::report::id))
@@ -418,63 +419,65 @@ async fn delete_inner(
             Version,
             (&query_project, report_id, version_id)
         ))?
-        == 0
+        != 0
     {
-        let query_version = QueryVersion::get(conn_lock!(context), version_id)?;
-        // Get all branches that use this version
-        let branches = schema::branch::table
-            .inner_join(schema::branch_version::table)
-            .filter(schema::branch_version::version_id.eq(version_id))
-            .select(schema::branch::id)
-            .load::<BranchId>(conn_lock!(context))
-            .map_err(resource_not_found_err!(
-                Branch,
-                (&query_project, report_id, version_id)
-            ))?;
-
-        let mut version_map = HashMap::new();
-        // Get all versions greater than this one for each of the branches
-        for branch_id in branches {
-            schema::version::table
-                .filter(schema::version::number.gt(query_version.number))
-                .inner_join(schema::branch_version::table)
-                .filter(schema::branch_version::branch_id.eq(branch_id))
-                .select((schema::version::id, schema::version::number))
-                .load::<(VersionId, VersionNumber)>(conn_lock!(context))
-                .map_err(resource_not_found_err!(
-                    Version,
-                    (&query_project, report_id, branch_id, &query_version)
-                ))?
-                .into_iter()
-                .for_each(|(version_id, version_number)| {
-                    version_map.insert(version_id, version_number);
-                });
-        }
-
-        // For each version greater than this one, decrement the version number
-        for (version_id, version_number) in version_map {
-            if let Err(e) =
-                diesel::update(schema::version::table.filter(schema::version::id.eq(version_id)))
-                    .set(schema::version::number.eq(version_number.decrement()))
-                    .execute(conn_lock!(context))
-            {
-                debug_assert!(
-                    false,
-                    "Failed to decrement version ({version_id}) number ({version_number}): {e}"
-                );
-                #[cfg(feature = "sentry")]
-                sentry::capture_error(&e);
-            }
-        }
-
-        // Finally delete the dangling version
-        diesel::delete(schema::version::table.filter(schema::version::id.eq(version_id)))
-            .execute(conn_lock!(context))
-            .map_err(resource_conflict_err!(
-                Version,
-                (&query_project, report_id, &query_version)
-            ))?;
+        return Ok(());
     }
+
+    let query_version = QueryVersion::get(conn_lock!(context), version_id)?;
+    // Get all branches that use this version
+    let branches = schema::branch::table
+        .inner_join(schema::branch_version::table)
+        .filter(schema::branch_version::version_id.eq(version_id))
+        .select(schema::branch::id)
+        .load::<BranchId>(conn_lock!(context))
+        .map_err(resource_not_found_err!(
+            Branch,
+            (&query_project, report_id, version_id)
+        ))?;
+
+    let mut version_map = HashMap::new();
+    // Get all versions greater than this one for each of the branches
+    for branch_id in branches {
+        schema::version::table
+            .filter(schema::version::number.gt(query_version.number))
+            .inner_join(schema::branch_version::table)
+            .filter(schema::branch_version::branch_id.eq(branch_id))
+            .select((schema::version::id, schema::version::number))
+            .load::<(VersionId, VersionNumber)>(conn_lock!(context))
+            .map_err(resource_not_found_err!(
+                Version,
+                (&query_project, report_id, branch_id, &query_version)
+            ))?
+            .into_iter()
+            .for_each(|(version_id, version_number)| {
+                version_map.insert(version_id, version_number);
+            });
+    }
+
+    // For each version greater than this one, decrement the version number
+    for (version_id, version_number) in version_map {
+        if let Err(e) =
+            diesel::update(schema::version::table.filter(schema::version::id.eq(version_id)))
+                .set(schema::version::number.eq(version_number.decrement()))
+                .execute(conn_lock!(context))
+        {
+            debug_assert!(
+                false,
+                "Failed to decrement version ({version_id}) number ({version_number}): {e}"
+            );
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(&e);
+        }
+    }
+
+    // Finally delete the dangling version
+    diesel::delete(schema::version::table.filter(schema::version::id.eq(version_id)))
+        .execute(conn_lock!(context))
+        .map_err(resource_conflict_err!(
+            Version,
+            (&query_project, report_id, &query_version)
+        ))?;
 
     Ok(())
 }
