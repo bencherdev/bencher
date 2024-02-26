@@ -77,7 +77,8 @@ async fn post_inner(
 
     // If the user already exists, then we just need to check if they are locked and possible accept an invite
     // Otherwise, we need to create a new user and notify the admins
-    let user = if let Ok(query_user) = QueryUser::get_with_email(conn_lock!(context), &email) {
+    let query_user = QueryUser::get_with_email(conn_lock!(context), &email);
+    let user = if let Ok(query_user) = query_user {
         query_user.check_is_locked()?;
         if let Some(invite) = &json_oauth.invite {
             query_user.accept_invite(conn_lock!(context), &context.token_key, invite)?;
