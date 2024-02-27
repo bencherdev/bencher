@@ -2,8 +2,8 @@
 import {DocsTab, DocsMenuId} from "./docs_tab";
 import {Language, architecture, benchmarking, defaultLang, explanation, howTo, tutorial } from "../../i18n/ui.ts";
 import {getEnCollection, getLangCollection, langPath} from "../../i18n/utils.ts"
-import { Collection } from "../../content/config";
 import LangButton from "../../i18n/LangButton.astro";
+import Collection from "../../util/collection";
 
 interface Props {
   tab: DocsTab;

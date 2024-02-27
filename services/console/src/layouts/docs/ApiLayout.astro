@@ -1,7 +1,7 @@
 ---
-import DocsLayout from "./DocsLayout.astro";
+import InnerLayout from "./InnerLayout.astro";
 import { DocsTab } from "../../components/docs/docs_tab";
-import type { Collection } from "../../content/config";
+import type Collection from "../../util/collection";
 
 interface Props {
   title: string;
@@ -16,7 +16,7 @@ interface Props {
 const { title, titleFmt, description, heading, lang, collection, slug } = Astro.props;
 ---
 
-<DocsLayout
+<InnerLayout
   title={title}
   titleFmt={titleFmt ?? ((title) => `🧑‍💻 ${heading ?? title}`)}
   description={description}
@@ -27,4 +27,4 @@ const { title, titleFmt, description, heading, lang, collection, slug } = Astro.
   lang={lang}
 >
   <slot />
-</DocsLayout>
+</InnerLayout>

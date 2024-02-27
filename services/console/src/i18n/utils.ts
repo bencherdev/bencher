@@ -1,4 +1,4 @@
-import type { Collection } from "../content/config";
+import type Collection from "../util/collection";
 import { Language, defaultLang, showDefaultLang } from "./ui";
 import { getCollection } from "astro:content";
 

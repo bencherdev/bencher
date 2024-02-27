@@ -1,8 +1,8 @@
 ---
 import ApiLayout from "../../../layouts/docs/ApiLayout.astro";
 import {getEnCollection, langPath} from "../../../i18n/utils.ts"
-import { Language, architecture, defaultLang, explanation, howTo, tutorial } from "../../../i18n/ui";
-import { Collection } from "../../../content/config";
+import { Language,  defaultLang } from "../../../i18n/ui";
+import Collection from "../../../util/collection";
 
 interface Props {
   lang: undefined | string;

@@ -1,8 +1,9 @@
 ---
-import DocsLayout from "./DocsLayout.astro";
+import InnerLayout from "./InnerLayout.astro";
 import { DocsTab } from "../../components/docs/docs_tab";
 import type { Author } from "../../components/docs/author";
-import type { Collection } from "../../content/config";
+import type Collection from "../../util/collection";
+import SelfHostedRedirect from "../../components/site/SelfHostedRedirct";
 
 interface Props {
   title: string;
@@ -18,7 +19,7 @@ interface Props {
 const { title, titleFmt, description, heading, lang, collection, slug, author } = Astro.props;
 ---
 
-<DocsLayout
+<InnerLayout
   title={title}
   titleFmt={titleFmt ?? ((title) => `🐰 ${heading ?? title}`)}
   description={description}
@@ -29,5 +30,6 @@ const { title, titleFmt, description, heading, lang, collection, slug, author } 
   slug={slug}
   author={author}
 >
+  <SelfHostedRedirect client:only="solid-js" path="/docs/api" />
   <slot />
-</DocsLayout>
+</InnerLayout>

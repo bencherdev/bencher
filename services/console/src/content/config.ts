@@ -2,22 +2,6 @@
 // 1. Import utilities from `astro:content`
 import { defineCollection, z } from "astro:content";
 
-export enum Collection {
-	// Legal
-	legal = "legal",
-	// Docs
-	tutorial = "tutorial",
-	how_to = "how_to",
-	explanation = "explanation",
-	reference = "reference",
-	// API
-	organizations = "organizations",
-	// Learn
-	rust = "rust",
-}
-
-export const ApiCollections = [Collection.organizations];
-
 // 2. Define a `type` and `schema` for each collection
 const legal = defineCollection({
 	type: "content", // v2.5.0 and later

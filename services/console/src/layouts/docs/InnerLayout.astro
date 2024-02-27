@@ -1,0 +1,73 @@
+---
+import BaseLayout from "../BaseLayout.astro";
+import AuthNavbar from "../../components/navbar/AuthNavbar";
+import DocsMenu from "../../components/docs/DocsMenu.astro";
+import { DocsTab } from "../../components/docs/docs_tab";
+import { Author } from "../../components/docs/author";
+import type Collection from "../../util/collection";
+
+interface Props {
+  title: string;
+  titleFmt?: undefined | ((title: string) => string);
+  description: string;
+  heading?: undefined | string;
+  tab?: DocsTab;
+  lang?: undefined | string;
+  collection?: undefined | Collection;
+  slug?: undefined | string;
+  author?: undefined | Author;
+  canonical?: undefined | string;
+}
+
+const { title, titleFmt, description, heading, tab, lang, collection, slug, author, canonical } = Astro.props;
+---
+
+<BaseLayout
+  title={title}
+  titleFmt={titleFmt}
+  description={description}
+  lang={lang}
+  author={author}
+  canonical={canonical}
+>
+  <!-- Note that the AuthNavbar does *not* fill the slot `navbar`. It is a client-side override.  -->
+  <AuthNavbar client:only="solid-js" />
+  <div class="is-widescreen">
+    <div class="columns is-reverse-mobile">
+      <div class="columns">
+        <div class="column is-narrow">
+          <DocsMenu tab={tab ?? DocsTab.Docs} lang={lang} collection={collection} slug={slug}/>
+        </div>
+      </div>
+      <div class="column is-two-thirds">
+        <section class="section">
+          <div class="continer">
+            {
+              heading ? (
+                <div class="content">
+                  <h1 class="title is-1">{heading}</h1>
+                  { author === Author.everett &&
+                    <nav class="level subtitle is-mobile">
+                      <div class="level-left">
+                        <div class="level-item">
+                            <img src="https://s3.amazonaws.com/public.bencher.dev/author/everett-pompeii-500.jpg" style="border-radius: 50%;" width="32" alt="Everett Pompeii" />
+                        </div>
+                        <div class="level-item">
+                          <a class="subtitle is-5" href="/author/everett-pompeii">Everett Pompeii</a>
+                        </div>
+                      </div>
+                    </nav>
+                  }
+                  <hr />
+                  <slot />
+                </div>
+              ) : (
+                <slot />
+              )
+            }
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
