@@ -13,7 +13,6 @@ use crate::{
 #[derive(Debug)]
 pub struct List {
     pub org: Option<ResourceId>,
-    pub public: Option<bool>,
     pub name: Option<ResourceName>,
     pub search: Option<String>,
     pub pagination: Pagination,
@@ -35,7 +34,6 @@ impl TryFrom<CliProjectList> for List {
     fn try_from(list: CliProjectList) -> Result<Self, Self::Error> {
         let CliProjectList {
             org,
-            public,
             name,
             search,
             pagination,
@@ -43,7 +41,6 @@ impl TryFrom<CliProjectList> for List {
         } = list;
         Ok(Self {
             org,
-            public: public.then_some(public),
             name,
             search,
             pagination: pagination.into(),
@@ -102,9 +99,6 @@ impl SubCmd for List {
                     client.send().await
                 } else {
                     let mut client = client.projects_get();
-                    if let Some(public) = self.public {
-                        client = client.public(public);
-                    }
                     if let Some(name) = self.name.clone() {
                         client = client.name(name);
                     }

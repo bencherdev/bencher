@@ -18,7 +18,7 @@ use crate::{
         endpoint::{CorsResponse, Delete, Get, Patch, ResponseDeleted, ResponseOk},
         Endpoint,
     },
-    error::{resource_conflict_err, resource_not_found_err, unauthorized_error},
+    error::{resource_conflict_err, resource_not_found_err},
     model::{
         project::{QueryProject, UpdateProject},
         user::auth::{AuthUser, BearerToken, PubBearerToken},
@@ -32,14 +32,18 @@ pub type ProjectsPagination = JsonPagination<ProjectsSort>;
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjectsSort {
+    /// Sort by name.
     #[default]
     Name,
 }
 
 #[derive(Clone, Deserialize, JsonSchema)]
 pub struct ProjectsQuery {
+    /// Filter by name, exact match.
+    /// If not specified, all projects are returned.
     pub name: Option<ResourceName>,
-    pub public: Option<bool>,
+    /// Search by name, slug, or UUID.
+    /// If not specified, all projects are returned.
     pub search: Option<Search>,
 }
 
@@ -57,6 +61,12 @@ pub async fn projects_options(
     Ok(Endpoint::cors(&[Get.into()]))
 }
 
+/// List all projects
+///
+/// List all projects.
+/// If the user is not authenticated, then only public projects are returned.
+/// If the user is authenticated, then all public projects and
+/// any private project where the user has `view` permissions are returned.
 #[endpoint {
     method = GET,
     path =  "/v0/projects",
@@ -88,18 +98,18 @@ async fn get_ls_inner(
     let mut query = schema::project::table.into_boxed();
 
     // All users should just see the public projects if the query is for public projects
-    if let Some(true) = query_params.public {
-        query = query.filter(schema::project::visibility.eq(Visibility::Public));
-    } else if let Some(auth_user) = auth_user {
+    if let Some(auth_user) = auth_user {
         if !auth_user.is_admin(&context.rbac) {
             let projects =
                 auth_user.projects(&context.rbac, bencher_rbac::project::Permission::View);
-            query = query.filter(schema::project::id.eq_any(projects));
+            query = query.filter(
+                schema::project::id
+                    .eq_any(projects)
+                    .or(schema::project::visibility.eq(Visibility::Public)),
+            );
         }
     } else {
-        return Err(unauthorized_error(
-            "Anonymous user tried to query private projects",
-        ));
+        query = query.filter(schema::project::visibility.eq(Visibility::Public));
     }
 
     if let Some(name) = query_params.name.as_ref() {
@@ -141,6 +151,7 @@ async fn get_ls_inner(
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjectParams {
+    /// The slug or UUID for a project.
     pub project: ResourceId,
 }
 
@@ -157,6 +168,12 @@ pub async fn project_options(
     Ok(Endpoint::cors(&[Get.into(), Patch.into(), Delete.into()]))
 }
 
+/// View a project
+///
+/// View a project.
+/// If the user is not authenticated, then only a public project is available.
+/// If the user is authenticated, then any public project and
+/// any private project where the user has `view` permissions is available.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}",
@@ -191,6 +208,10 @@ async fn get_one_inner(
     .into_json(conn))
 }
 
+/// Update a project
+///
+/// Update a project.
+/// The user must have `edit` permissions for the project.
 #[endpoint {
     method = PATCH,
     path =  "/v0/projects/{project}",
@@ -266,6 +287,10 @@ async fn patch_inner(
     new_query_project.into_json(conn_lock!(context))
 }
 
+/// Delete a project
+///
+/// Delete a project.
+/// The user must have `delete` permissions for the project.
 #[endpoint {
     method = DELETE,
     path =  "/v0/projects/{project}",

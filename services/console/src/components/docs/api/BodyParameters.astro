@@ -14,7 +14,10 @@ const schema = openapi?.components?.schemas?.[ref];
 const getDefault = (name) => {
   switch (name) {
     case "visibility":
-      return "public";
+      if (ref === "JsonNewProject") {
+        return "public";
+      }
+      return;
     default:
       return;
   }

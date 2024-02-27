@@ -89,9 +89,17 @@ pub enum JsonUpdateProject {
 #[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonProjectPatch {
+    /// The new name of the project.
+    /// Maximum length is 64 characters.
     pub name: Option<ResourceName>,
+    /// The preferred new slug for the project.
+    /// Maximum length is 64 characters.
     pub slug: Option<Slug>,
+    /// The new URL of the project.
+    /// Set to `null` to remove the current URL.
     pub url: Option<Url>,
+    /// ➕ Bencher Plus: Set the new visibility of the project.
+    /// Moving to a `private` project requires a valid Bencher Plus subscription.
     pub visibility: Option<Visibility>,
 }
 

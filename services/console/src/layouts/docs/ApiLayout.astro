@@ -11,11 +11,23 @@ interface Props {
   description: string;
   heading?: string;
   lang?: string;
-  collection: Collection;
+  collection?: Collection;
   slug?: undefined | string;
 }
 
 const { title, titleFmt, description, heading, lang, collection, slug } = Astro.props;
+
+const canonical = () => {
+  if (collection && slug) {
+    return `${BENCHER_SITE_URL}/docs/api/${collectionPath(collection)}/${slug}/`;
+  } else if (collection) {
+    return `${BENCHER_SITE_URL}/docs/api/${collectionPath(collection)}/`;
+  } else if (slug) {
+    return `${BENCHER_SITE_URL}/docs/api/${slug}/`;
+  } else {
+    return `${BENCHER_SITE_URL}/docs/api/`;
+  }
+};
 ---
 
 <InnerLayout
@@ -27,7 +39,7 @@ const { title, titleFmt, description, heading, lang, collection, slug } = Astro.
   collection={collection}
   slug={slug}
   lang={lang}
-  canonical={`${BENCHER_SITE_URL}/docs/api/${collectionPath(collection)}/${slug}/`}
+  canonical={canonical()}
 >
   <slot />
 </InnerLayout>

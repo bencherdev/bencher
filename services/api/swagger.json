@@ -1788,6 +1788,8 @@
         "tags": [
           "projects"
         ],
+        "summary": "List all projects",
+        "description": "List all projects. If the user is not authenticated, then only public projects are returned. If the user is authenticated, then all public projects and any private project where the user has `view` permissions are returned.",
         "operationId": "projects_get",
         "parameters": [
           {
@@ -1831,21 +1833,15 @@
           {
             "in": "query",
             "name": "name",
+            "description": "Filter by name, exact match. If not specified, all projects are returned.",
             "schema": {
               "$ref": "#/components/schemas/ResourceName"
             }
           },
           {
             "in": "query",
-            "name": "public",
-            "schema": {
-              "nullable": true,
-              "type": "boolean"
-            }
-          },
-          {
-            "in": "query",
             "name": "search",
+            "description": "Search by name, slug, or UUID. If not specified, all projects are returned.",
             "schema": {
               "$ref": "#/components/schemas/Search"
             }
@@ -1906,11 +1902,14 @@
         "tags": [
           "projects"
         ],
+        "summary": "View a project",
+        "description": "View a project. If the user is not authenticated, then only a public project is available. If the user is authenticated, then any public project and any private project where the user has `view` permissions is available.",
         "operationId": "project_get",
         "parameters": [
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -1970,11 +1969,14 @@
         "tags": [
           "projects"
         ],
+        "summary": "Delete a project",
+        "description": "Delete a project. The user must have `delete` permissions for the project.",
         "operationId": "project_delete",
         "parameters": [
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -2027,11 +2029,14 @@
         "tags": [
           "projects"
         ],
+        "summary": "Update a project",
+        "description": "Update a project. The user must have `edit` permissions for the project.",
         "operationId": "project_patch",
         "parameters": [
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -8166,6 +8171,7 @@
         "properties": {
           "name": {
             "nullable": true,
+            "description": "The new name of the project. Maximum length is 64 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/ResourceName"
@@ -8174,6 +8180,7 @@
           },
           "slug": {
             "nullable": true,
+            "description": "The preferred new slug for the project. Maximum length is 64 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Slug"
@@ -8182,6 +8189,7 @@
           },
           "url": {
             "nullable": true,
+            "description": "The new URL of the project. Set to `null` to remove the current URL.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Url"
@@ -8190,6 +8198,7 @@
           },
           "visibility": {
             "nullable": true,
+            "description": "➕ Bencher Plus: Set the new visibility of the project. Moving to a `private` project requires a valid Bencher Plus subscription.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Visibility"
@@ -9746,9 +9755,14 @@
         ]
       },
       "ProjectsSort": {
-        "type": "string",
-        "enum": [
-          "name"
+        "oneOf": [
+          {
+            "description": "Sort by name.",
+            "type": "string",
+            "enum": [
+              "name"
+            ]
+          }
         ]
       },
       "ProjAlertsSort": {

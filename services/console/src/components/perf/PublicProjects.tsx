@@ -7,7 +7,6 @@ import {
 	Show,
 } from "solid-js";
 import type { JsonProject } from "../../types/bencher";
-import { authUser } from "../../util/auth";
 import { httpGet } from "../../util/http";
 import { useSearchParams } from "../../util/url";
 import { DEBOUNCE_DELAY, validU32 } from "../../util/valid";
@@ -56,24 +55,20 @@ const PublicProjects = (props: Props) => {
 		return {
 			per_page: per_page(),
 			page: page(),
-			public: true,
 			search: search(),
 		};
 	});
 	const fetcher = createMemo(() => {
 		return {
 			pagination: pagination(),
-			token: authUser()?.token,
 		};
 	});
 	const fetchProjects = async (fetcher: {
 		pagination: {
 			per_page: number;
 			page: number;
-			public: boolean;
 			search: undefined | string;
 		};
-		token: undefined | string;
 	}) => {
 		const EMPTY_ARRAY: JsonProject[] = [];
 		const searchParams = new URLSearchParams();
@@ -83,7 +78,7 @@ const PublicProjects = (props: Props) => {
 			}
 		}
 		const path = `/v0/projects?${searchParams.toString()}`;
-		return await httpGet(props.apiUrl, path, fetcher.token)
+		return await httpGet(props.apiUrl, path, null)
 			.then((resp) => resp?.data)
 			.catch((error) => {
 				console.error(error);

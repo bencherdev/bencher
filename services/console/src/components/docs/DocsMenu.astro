@@ -20,6 +20,7 @@ const referenceCollection = await getLangCollection(Collection.reference);
 
 // Api
 const organizationsCollection = await getEnCollection(Collection.organizations);
+const projectsCollection = await getEnCollection(Collection.projects);
 
 // Learn
 const rustCollection = await getLangCollection(Collection.rust);
@@ -132,6 +133,16 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
         organizationsCollection.map((page) => (
           <li>
             <a href={`/${langPath(lang)}docs/api/organizations/${page.slug}/`}>{page.data.title}</a>
+          </li>
+        ))
+      }
+    </ul>
+    <p class="menu-label">Projects</p>
+    <ul class="menu-list">
+      {
+        projectsCollection.map((page) => (
+          <li>
+            <a href={`/${langPath(lang)}docs/api/projects/${page.slug}/`}>{page.data.title}</a>
           </li>
         ))
       }

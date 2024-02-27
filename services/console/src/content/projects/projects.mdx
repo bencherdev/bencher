@@ -1,0 +1,23 @@
+---
+title: "Projects"
+description: "The Bencher Projects REST API"
+heading: "Projects REST API"
+sortOrder: 1
+paths:
+  - path: /v0/projects
+    method: get
+    headers: pub
+    cli: project list
+  - path: /v0/projects/{project}
+    method: get
+    headers: pub
+    cli: project view PROJECT
+  - path: /v0/projects/{project}
+    method: patch
+    headers: auth
+    cli: project update PROJECT
+  - path: /v0/projects/{project}
+    method: delete
+    headers: auth
+    cli: project delete PROJECT
+---

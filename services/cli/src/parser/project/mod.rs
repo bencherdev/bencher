@@ -42,10 +42,6 @@ pub struct CliProjectList {
     #[clap(long)]
     pub org: Option<ResourceId>,
 
-    ///  Public projects only
-    #[clap(long, conflicts_with = "org")]
-    pub public: bool,
-
     /// Project name
     #[clap(long)]
     pub name: Option<ResourceName>,
