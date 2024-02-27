@@ -250,15 +250,8 @@ impl SeedTest {
 
         // cargo run -- measure ls --host http://localhost:61016 --project the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "measure",
-            "ls",
-            HOST_ARG,
-            self.url.as_ref(),
-            PROJECT_ARG,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
+        cmd.args(["measure", "ls", HOST_ARG, self.url.as_ref(), PROJECT_SLUG])
+            .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let measures: bencher_json::JsonMeasures =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
@@ -273,12 +266,11 @@ impl SeedTest {
             self.url.as_ref(),
             TOKEN_ARG,
             self.token.as_ref(),
-            PROJECT_ARG,
-            PROJECT_SLUG,
             "--slug",
             MEASURE_SLUG,
             "--units",
             "decibels",
+            PROJECT_SLUG,
             MEASURE_SLUG,
         ])
         .current_dir(CLI_DIR);
@@ -288,15 +280,8 @@ impl SeedTest {
 
         // cargo run -- measure ls --host http://localhost:61016 --project the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "measure",
-            "ls",
-            HOST_ARG,
-            self.url.as_ref(),
-            PROJECT_ARG,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
+        cmd.args(["measure", "ls", HOST_ARG, self.url.as_ref(), PROJECT_SLUG])
+            .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let measures: bencher_json::JsonMeasures =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
@@ -309,7 +294,6 @@ impl SeedTest {
             "view",
             HOST_ARG,
             self.url.as_ref(),
-            PROJECT_ARG,
             PROJECT_SLUG,
             MEASURE_SLUG,
         ])
@@ -320,15 +304,8 @@ impl SeedTest {
 
         // cargo run -- branch ls --host http://localhost:61016 --project the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "branch",
-            "ls",
-            HOST_ARG,
-            self.url.as_ref(),
-            PROJECT_ARG,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
+        cmd.args(["branch", "ls", HOST_ARG, self.url.as_ref(), PROJECT_SLUG])
+            .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let branches: bencher_json::JsonBranches =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
@@ -343,10 +320,9 @@ impl SeedTest {
             self.url.as_ref(),
             TOKEN_ARG,
             self.token.as_ref(),
-            PROJECT_ARG,
-            PROJECT_SLUG,
             "--slug",
             BRANCH_SLUG,
+            PROJECT_SLUG,
             "master",
         ])
         .current_dir(CLI_DIR);
@@ -356,15 +332,8 @@ impl SeedTest {
 
         // cargo run -- branch ls --host http://localhost:61016 --project the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "branch",
-            "ls",
-            HOST_ARG,
-            self.url.as_ref(),
-            PROJECT_ARG,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
+        cmd.args(["branch", "ls", HOST_ARG, self.url.as_ref(), PROJECT_SLUG])
+            .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let branches: bencher_json::JsonBranches =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
@@ -377,7 +346,6 @@ impl SeedTest {
             "view",
             HOST_ARG,
             self.url.as_ref(),
-            PROJECT_ARG,
             PROJECT_SLUG,
             BRANCH_SLUG,
         ])
@@ -388,15 +356,8 @@ impl SeedTest {
 
         // cargo run -- testbed ls --host http://localhost:61016 --project the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "testbed",
-            "ls",
-            HOST_ARG,
-            self.url.as_ref(),
-            PROJECT_ARG,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
+        cmd.args(["testbed", "ls", HOST_ARG, self.url.as_ref(), PROJECT_SLUG])
+            .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let testbeds: bencher_json::JsonTestbeds =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
@@ -411,10 +372,9 @@ impl SeedTest {
             self.url.as_ref(),
             TOKEN_ARG,
             self.token.as_ref(),
-            PROJECT_ARG,
-            PROJECT_SLUG,
             "--slug",
             TESTBED_SLUG,
+            PROJECT_SLUG,
             "base",
         ])
         .current_dir(CLI_DIR);
@@ -424,15 +384,8 @@ impl SeedTest {
 
         // cargo run -- testbed ls --host http://localhost:61016 --project the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "testbed",
-            "ls",
-            HOST_ARG,
-            self.url.as_ref(),
-            PROJECT_ARG,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
+        cmd.args(["testbed", "ls", HOST_ARG, self.url.as_ref(), PROJECT_SLUG])
+            .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let testbeds: bencher_json::JsonTestbeds =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
@@ -445,7 +398,6 @@ impl SeedTest {
             "view",
             HOST_ARG,
             self.url.as_ref(),
-            PROJECT_ARG,
             PROJECT_SLUG,
             TESTBED_SLUG,
         ])
@@ -456,15 +408,8 @@ impl SeedTest {
 
         // cargo run -- threshold ls --host http://localhost:61016 --project the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "threshold",
-            "ls",
-            HOST_ARG,
-            self.url.as_ref(),
-            PROJECT_ARG,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
+        cmd.args(["threshold", "ls", HOST_ARG, self.url.as_ref(), PROJECT_SLUG])
+            .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let thresholds: bencher_json::JsonThresholds =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
@@ -479,13 +424,12 @@ impl SeedTest {
             self.url.as_ref(),
             TOKEN_ARG,
             self.token.as_ref(),
-            PROJECT_ARG,
-            PROJECT_SLUG,
             MEASURE_ARG,
             "latency",
             BRANCH_ARG,
             BRANCH_SLUG,
             TESTBED_ARG,
+            PROJECT_SLUG,
             TESTBED_SLUG,
             "--test",
             "t",
@@ -499,15 +443,8 @@ impl SeedTest {
 
         // cargo run -- threshold ls --host http://localhost:61016 --project the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "threshold",
-            "ls",
-            HOST_ARG,
-            self.url.as_ref(),
-            PROJECT_ARG,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
+        cmd.args(["threshold", "ls", HOST_ARG, self.url.as_ref(), PROJECT_SLUG])
+            .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let thresholds: bencher_json::JsonThresholds =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
@@ -520,7 +457,6 @@ impl SeedTest {
             "view",
             HOST_ARG,
             self.url.as_ref(),
-            PROJECT_ARG,
             PROJECT_SLUG,
             &threshold.uuid.to_string(),
         ])
@@ -531,15 +467,8 @@ impl SeedTest {
 
         // cargo run -- alert ls --host http://localhost:61016 --project the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "alert",
-            "ls",
-            HOST_ARG,
-            self.url.as_ref(),
-            PROJECT_ARG,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
+        cmd.args(["alert", "ls", HOST_ARG, self.url.as_ref(), PROJECT_SLUG])
+            .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let alerts: bencher_json::JsonAlerts =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
@@ -547,15 +476,8 @@ impl SeedTest {
 
         // cargo run -- alert stats --host http://localhost:61016 --project the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "alert",
-            "stats",
-            HOST_ARG,
-            self.url.as_ref(),
-            PROJECT_ARG,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
+        cmd.args(["alert", "stats", HOST_ARG, self.url.as_ref(), PROJECT_SLUG])
+            .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let alert_stats: bencher_json::JsonAlertStats =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
@@ -591,15 +513,8 @@ impl SeedTest {
 
         // cargo run -- alert stats --host http://localhost:61016 --project the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "alert",
-            "stats",
-            HOST_ARG,
-            self.url.as_ref(),
-            PROJECT_ARG,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
+        cmd.args(["alert", "stats", HOST_ARG, self.url.as_ref(), PROJECT_SLUG])
+            .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let alert_stats: bencher_json::JsonAlertStats =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
@@ -633,15 +548,8 @@ impl SeedTest {
 
         // cargo run -- alert ls --host http://localhost:61016 --project the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "alert",
-            "ls",
-            HOST_ARG,
-            self.url.as_ref(),
-            PROJECT_ARG,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
+        cmd.args(["alert", "ls", HOST_ARG, self.url.as_ref(), PROJECT_SLUG])
+            .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let alerts: bencher_json::JsonAlerts =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
@@ -649,15 +557,8 @@ impl SeedTest {
 
         // cargo run -- alert stats --host http://localhost:61016 --project the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "alert",
-            "stats",
-            HOST_ARG,
-            self.url.as_ref(),
-            PROJECT_ARG,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
+        cmd.args(["alert", "stats", HOST_ARG, self.url.as_ref(), PROJECT_SLUG])
+            .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let alert_stats: bencher_json::JsonAlertStats =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
@@ -670,7 +571,6 @@ impl SeedTest {
             "view",
             HOST_ARG,
             self.url.as_ref(),
-            PROJECT_ARG,
             PROJECT_SLUG,
             #[allow(clippy::indexing_slicing)]
             alerts.0[0].uuid.to_string().as_str(),

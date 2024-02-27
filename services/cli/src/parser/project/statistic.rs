@@ -13,7 +13,6 @@ pub enum CliStatistic {
 #[derive(Parser, Debug)]
 pub struct CliStatisticView {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Statistic UUID

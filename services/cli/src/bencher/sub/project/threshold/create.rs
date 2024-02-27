@@ -3,8 +3,11 @@ use bencher_json::{NameId, ResourceId};
 
 use super::statistic::Statistic;
 use crate::{
-    bencher::{backend::AuthBackend, sub::SubCmd},
-    parser::project::threshold::CliThresholdCreate,
+    bencher::{
+        backend::AuthBackend,
+        sub::{project::run::BENCHER_PROJECT, SubCmd},
+    },
+    parser::project::threshold::{CliThresholdCreate, CliThresholdCreateProject},
     CliError,
 };
 
@@ -16,6 +19,14 @@ pub struct Create {
     pub measure: NameId,
     pub statistic: Statistic,
     pub backend: AuthBackend,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ThresholdError {
+    #[error("Failed to find Bencher project. Set the project as the first argument, use the `--project` argument, or the `BENCHER_PROJECT` environment variable.")]
+    NoProject,
+    #[error("Failed to parse UUID or slug for the project: {0}")]
+    ParseProject(bencher_json::ValidError),
 }
 
 impl TryFrom<CliThresholdCreate> for Create {
@@ -31,7 +42,7 @@ impl TryFrom<CliThresholdCreate> for Create {
             backend,
         } = create;
         Ok(Self {
-            project,
+            project: unwrap_project(project)?,
             branch,
             testbed,
             measure,
@@ -39,6 +50,18 @@ impl TryFrom<CliThresholdCreate> for Create {
             backend: backend.try_into()?,
         })
     }
+}
+
+fn unwrap_project(project: CliThresholdCreateProject) -> Result<ResourceId, ThresholdError> {
+    Ok(if let Some(project) = project.project {
+        project
+    } else if let Some(project) = project.threshold_project {
+        project
+    } else if let Ok(env_project) = std::env::var(BENCHER_PROJECT) {
+        env_project.parse().map_err(ThresholdError::ParseProject)?
+    } else {
+        return Err(ThresholdError::NoProject);
+    })
 }
 
 impl From<Create> for JsonNewThreshold {

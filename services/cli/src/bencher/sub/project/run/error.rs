@@ -2,7 +2,7 @@ use super::runner::{command::Command, Runner};
 
 #[derive(thiserror::Error, Debug)]
 pub enum RunError {
-    #[error("Failed to find Bencher project. Set the `--project` flag or the `BENCHER_PROJECT` environment variable.")]
+    #[error("Failed to find Bencher project. Set the `--project` argument or the `BENCHER_PROJECT` environment variable.")]
     NoProject,
     #[error("Failed to parse UUID or slug for the project: {0}")]
     ParseProject(bencher_json::ValidError),
@@ -15,9 +15,9 @@ pub enum RunError {
     #[error("{0}")]
     Testbed(#[from] super::testbed::TestbedError),
 
-    #[error("No default shell command path for target family. Try setting a custom shell with the `--shell` flag.")]
+    #[error("No default shell command path for target family. Try setting a custom shell with the `--shell` argument.")]
     Shell,
-    #[error("No default shell command flag for target family. Try setting a custom shell command flag with the `--flag` flag.")]
+    #[error("No default shell command flag for target family. Try setting a custom shell command flag with the `--flag` argument.")]
     Flag,
     #[error("The subcommand `run` requires either a command argument or results via stdin.")]
     NoCommand,

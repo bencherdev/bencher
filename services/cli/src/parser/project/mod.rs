@@ -39,8 +39,7 @@ pub enum CliProject {
 #[derive(Parser, Debug)]
 pub struct CliProjectList {
     /// Organization slug or UUID
-    #[clap(long)]
-    pub org: Option<ResourceId>,
+    pub organization: Option<ResourceId>,
 
     /// Project name
     #[clap(long)]
@@ -67,10 +66,10 @@ pub enum CliProjectsSort {
 #[derive(Parser, Debug)]
 pub struct CliProjectCreate {
     /// Organization slug or UUID
-    #[clap(long)]
-    pub org: ResourceId,
+    pub organization: ResourceId,
 
     /// Project name
+    #[clap(long)]
     pub name: ResourceName,
 
     /// Project slug

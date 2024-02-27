@@ -63,6 +63,7 @@ pub enum CliOrganizationsSort {
 #[derive(Parser, Debug)]
 pub struct CliOrganizationCreate {
     /// Organization name
+    #[clap(long)]
     pub name: ResourceName,
 
     /// Organization slug

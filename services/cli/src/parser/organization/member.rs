@@ -24,8 +24,7 @@ pub enum CliMember {
 #[derive(Parser, Debug)]
 pub struct CliMemberList {
     /// Organization slug or UUID
-    #[clap(long)]
-    pub org: ResourceId,
+    pub organization: ResourceId,
 
     /// Member name
     #[clap(long)]
@@ -52,8 +51,7 @@ pub enum CliMembersSort {
 #[derive(Parser, Debug)]
 pub struct CliMemberInvite {
     /// Organization slug or UUID
-    #[clap(long)]
-    pub org: ResourceId,
+    pub organization: ResourceId,
 
     /// Name of user for invitation (optional)
     #[clap(long)]
@@ -74,8 +72,7 @@ pub struct CliMemberInvite {
 #[derive(Parser, Debug)]
 pub struct CliMemberView {
     /// Organization slug or UUID
-    #[clap(long)]
-    pub org: ResourceId,
+    pub organization: ResourceId,
 
     /// User slug or UUID
     pub user: ResourceId,
@@ -87,8 +84,7 @@ pub struct CliMemberView {
 #[derive(Parser, Debug)]
 pub struct CliMemberUpdate {
     /// Organization slug or UUID
-    #[clap(long)]
-    pub org: ResourceId,
+    pub organization: ResourceId,
 
     /// User slug or UUID
     pub user: ResourceId,
@@ -104,8 +100,7 @@ pub struct CliMemberUpdate {
 #[derive(Parser, Debug)]
 pub struct CliMemberRemove {
     /// Organization slug or UUID
-    #[clap(long)]
-    pub org: ResourceId,
+    pub organization: ResourceId,
 
     /// User slug or UUID
     pub user: ResourceId,

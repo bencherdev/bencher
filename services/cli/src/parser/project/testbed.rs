@@ -25,7 +25,6 @@ pub enum CliTestbed {
 #[derive(Parser, Debug)]
 pub struct CliTestbedList {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Testbed name
@@ -53,10 +52,10 @@ pub enum CliTestbedsSort {
 #[derive(Parser, Debug)]
 pub struct CliTestbedCreate {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Testbed name
+    #[clap(long)]
     pub name: ResourceName,
 
     /// Testbed slug
@@ -75,7 +74,6 @@ pub struct CliTestbedCreate {
 #[derive(Parser, Debug)]
 pub struct CliTestbedView {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Testbed slug or UUID
@@ -88,7 +86,6 @@ pub struct CliTestbedView {
 #[derive(Parser, Debug)]
 pub struct CliTestbedUpdate {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Testbed slug or UUID
@@ -109,7 +106,6 @@ pub struct CliTestbedUpdate {
 #[derive(Parser, Debug)]
 pub struct CliTestbedDelete {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Testbed slug or UUID

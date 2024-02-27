@@ -7,21 +7,21 @@ paths:
   - path: /v0/organizations/{organization}/members
     method: get
     headers: auth
-    cli: member list --org ORGANIZATION
+    cli: member list ORGANIZATION
   - path: /v0/organizations/{organization}/members
     method: post
     headers: auth
-    cli: member invite --org ORGANIZATION
+    cli: member invite ORGANIZATION
   - path: /v0/organizations/{organization}/members/{user}
     method: get
     headers: auth
-    cli: member view --org ORGANIZATION USER
+    cli: member view ORGANIZATION USER
   - path: /v0/organizations/{organization}/members/{user}
     method: patch
     headers: auth
-    cli: member update --org ORGANIZATION USER
+    cli: member update ORGANIZATION USER
   - path: /v0/organizations/{organization}/members/{user}
     method: delete
     headers: auth
-    cli: member remove --org ORGANIZATION USER
+    cli: member remove ORGANIZATION USER
 ---

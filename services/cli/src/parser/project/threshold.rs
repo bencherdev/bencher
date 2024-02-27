@@ -1,5 +1,5 @@
 use bencher_json::{Boundary, NameId, ResourceId, SampleSize, ThresholdUuid, Window};
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{ArgGroup, Args, Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliBackend, CliPagination};
 
@@ -25,7 +25,6 @@ pub enum CliThreshold {
 #[derive(Parser, Debug)]
 pub struct CliThresholdList {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Branch name, slug, or UUID
@@ -58,9 +57,8 @@ pub enum CliThresholdsSort {
 
 #[derive(Parser, Debug)]
 pub struct CliThresholdCreate {
-    /// Project slug or UUID
-    #[clap(long)]
-    pub project: ResourceId,
+    #[clap(flatten)]
+    pub project: CliThresholdCreateProject,
 
     /// Branch name, slug, or UUID
     #[clap(long)]
@@ -79,6 +77,20 @@ pub struct CliThresholdCreate {
 
     #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+#[derive(Args, Debug)]
+#[clap(group(
+    ArgGroup::new("threshold_create_project")
+        .multiple(false)
+        .args(&["threshold_project", "project"]),
+))]
+pub struct CliThresholdCreateProject {
+    /// Project slug or UUID (or set BENCHER_PROJECT)
+    pub threshold_project: Option<ResourceId>,
+    /// Project slug or UUID (or set BENCHER_PROJECT)
+    #[clap(long)]
+    pub project: Option<ResourceId>,
 }
 
 #[derive(Parser, Debug)]
@@ -133,7 +145,6 @@ pub enum CliStatisticKind {
 #[derive(Parser, Debug)]
 pub struct CliThresholdView {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Threshold UUID
@@ -146,7 +157,6 @@ pub struct CliThresholdView {
 #[derive(Parser, Debug)]
 pub struct CliThresholdUpdate {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Threshold UUID
@@ -162,7 +172,6 @@ pub struct CliThresholdUpdate {
 #[derive(Parser, Debug)]
 pub struct CliThresholdDelete {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Threshold UUID

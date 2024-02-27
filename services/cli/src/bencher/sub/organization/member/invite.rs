@@ -11,7 +11,7 @@ use crate::bencher::SubCmd;
 
 #[derive(Debug, Clone)]
 pub struct Invite {
-    org: ResourceId,
+    organization: ResourceId,
     name: Option<UserName>,
     email: Email,
     role: OrganizationRole,
@@ -23,14 +23,14 @@ impl TryFrom<CliMemberInvite> for Invite {
 
     fn try_from(invite: CliMemberInvite) -> Result<Self, Self::Error> {
         let CliMemberInvite {
-            org,
+            organization,
             name,
             email,
             role,
             backend,
         } = invite;
         Ok(Self {
-            org,
+            organization,
             name,
             email,
             role: role.into(),
@@ -69,7 +69,7 @@ impl SubCmd for Invite {
             .send(|client| async move {
                 client
                     .org_member_post()
-                    .organization(self.org.clone())
+                    .organization(self.organization.clone())
                     .body(self.clone())
                     .send()
                     .await

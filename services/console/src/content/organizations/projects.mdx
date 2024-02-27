@@ -7,9 +7,9 @@ paths:
   - path: /v0/organizations/{organization}/projects
     method: get
     headers: auth
-    cli: project list --org ORGANIZATION
+    cli: project list ORGANIZATION
   - path: /v0/organizations/{organization}/projects
     method: post
     headers: auth
-    cli: project create
+    cli: project create ORGANIZATION
 ---

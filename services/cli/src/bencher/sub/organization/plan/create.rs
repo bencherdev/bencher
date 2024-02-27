@@ -9,7 +9,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Create {
-    pub org: ResourceId,
+    pub organization: ResourceId,
     pub checkout: NonEmpty,
     pub level: PlanLevel,
     pub entitlements: Option<Entitlements>,
@@ -23,7 +23,7 @@ impl TryFrom<CliPlanCreate> for Create {
 
     fn try_from(create: CliPlanCreate) -> Result<Self, Self::Error> {
         let CliPlanCreate {
-            org,
+            organization,
             checkout,
             level,
             entitlements,
@@ -32,7 +32,7 @@ impl TryFrom<CliPlanCreate> for Create {
             backend,
         } = create;
         Ok(Self {
-            org,
+            organization,
             checkout: checkout.into(),
             level: level.into(),
             entitlements: entitlements.map(Into::into),
@@ -81,7 +81,7 @@ impl SubCmd for Create {
             .send(|client| async move {
                 client
                     .org_plan_post()
-                    .organization(self.org.clone())
+                    .organization(self.organization.clone())
                     .body(self.clone())
                     .send()
                     .await

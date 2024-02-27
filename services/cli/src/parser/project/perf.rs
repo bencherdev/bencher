@@ -7,7 +7,6 @@ use crate::parser::CliBackend;
 #[allow(clippy::option_option)]
 pub struct CliPerf {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Branch UUIDs

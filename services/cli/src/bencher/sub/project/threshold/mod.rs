@@ -7,6 +7,8 @@ mod statistic;
 mod update;
 mod view;
 
+pub use create::ThresholdError;
+
 #[derive(Debug)]
 pub enum Threshold {
     List(list::List),

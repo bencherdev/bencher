@@ -25,7 +25,6 @@ pub enum CliMeasure {
 #[derive(Parser, Debug)]
 pub struct CliMeasureList {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Measure name
@@ -53,10 +52,10 @@ pub enum CliMeasuresSort {
 #[derive(Parser, Debug)]
 pub struct CliMeasureCreate {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Measure name
+    #[clap(long)]
     pub name: ResourceName,
 
     /// Measure slug
@@ -74,7 +73,6 @@ pub struct CliMeasureCreate {
 #[derive(Parser, Debug)]
 pub struct CliMeasureView {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Measure slug or UUID
@@ -87,7 +85,6 @@ pub struct CliMeasureView {
 #[derive(Parser, Debug)]
 pub struct CliMeasureUpdate {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Measure slug or UUID
@@ -112,7 +109,6 @@ pub struct CliMeasureUpdate {
 #[derive(Parser, Debug)]
 pub struct CliMeasureDelete {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Measure slug or UUID

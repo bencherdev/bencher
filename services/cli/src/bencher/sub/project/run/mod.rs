@@ -30,7 +30,7 @@ use testbed::Testbed;
 
 use crate::bencher::SubCmd;
 
-const BENCHER_PROJECT: &str = "BENCHER_PROJECT";
+pub const BENCHER_PROJECT: &str = "BENCHER_PROJECT";
 const BENCHER_BRANCH: &str = "BENCHER_BRANCH";
 const BENCHER_TESTBED: &str = "BENCHER_TESTBED";
 const BENCHER_ADAPTER: &str = "BENCHER_ADAPTER";

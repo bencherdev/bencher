@@ -4,7 +4,7 @@ mod parser;
 
 use bencher::{sub::SubCmd, Bencher};
 pub use bencher::{
-    sub::{MockError, RunError},
+    sub::{MockError, RunError, ThresholdError},
     BackendError,
 };
 pub use error::CliError;

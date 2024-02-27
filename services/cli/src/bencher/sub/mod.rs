@@ -13,11 +13,14 @@ use docker::{down::Down, logs::Logs, up::Up};
 use mock::Mock;
 pub use mock::MockError;
 use organization::{member::Member, organization::Organization};
-pub use project::run::{runner::output::Output, RunError};
 use project::{
     alert::Alert, benchmark::Benchmark, branch::Branch, measure::Measure, perf::Perf,
     project::Project, report::Report, run::Run, statistic::Statistic, testbed::Testbed,
     threshold::Threshold,
+};
+pub use project::{
+    run::{runner::output::Output, RunError},
+    threshold::ThresholdError,
 };
 pub use sub_cmd::SubCmd;
 use system::{auth::Auth, server::Server};

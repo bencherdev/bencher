@@ -21,7 +21,6 @@ pub enum CliAlert {
 #[derive(Parser, Debug)]
 pub struct CliAlertList {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     #[clap(flatten)]
@@ -43,7 +42,6 @@ pub enum CliAlertsSort {
 #[derive(Parser, Debug)]
 pub struct CliAlertView {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Alert UUID
@@ -56,7 +54,6 @@ pub struct CliAlertView {
 #[derive(Parser, Debug)]
 pub struct CliAlertUpdate {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Alert UUID
@@ -83,7 +80,6 @@ pub enum CliAlertStatus {
 #[derive(Parser, Debug)]
 pub struct CliAlertStats {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     #[clap(flatten)]

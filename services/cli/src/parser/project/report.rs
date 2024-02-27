@@ -23,7 +23,6 @@ pub enum CliReport {
 #[derive(Parser, Debug)]
 pub struct CliReportList {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Branch name, slug, or UUID
@@ -59,7 +58,6 @@ pub enum CliReportsSort {
 #[derive(Parser, Debug)]
 pub struct CliReportView {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Report UUID
@@ -72,7 +70,6 @@ pub struct CliReportView {
 #[derive(Parser, Debug)]
 pub struct CliReportDelete {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Report UUID

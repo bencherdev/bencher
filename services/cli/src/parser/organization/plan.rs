@@ -21,7 +21,7 @@ pub enum CliOrganizationPlan {
 #[derive(Parser, Debug)]
 pub struct CliPlanCreate {
     /// Organization slug or UUID
-    pub org: ResourceId,
+    pub organization: ResourceId,
 
     /// Checkout session ID (subscription ID when `--skip-remote` is used)
     #[clap(long)]

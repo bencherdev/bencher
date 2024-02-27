@@ -12,7 +12,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct List {
-    pub org: ResourceId,
+    pub organization: ResourceId,
     pub name: Option<UserName>,
     pub search: Option<String>,
     pub pagination: Pagination,
@@ -32,14 +32,14 @@ impl TryFrom<CliMemberList> for List {
 
     fn try_from(list: CliMemberList) -> Result<Self, Self::Error> {
         let CliMemberList {
-            org,
+            organization,
             name,
             search,
             pagination,
             backend,
         } = list;
         Ok(Self {
-            org,
+            organization,
             name,
             search,
             pagination: pagination.into(),
@@ -72,7 +72,9 @@ impl SubCmd for List {
         let _json = self
             .backend
             .send(|client| async move {
-                let mut client = client.org_members_get().organization(self.org.clone());
+                let mut client = client
+                    .org_members_get()
+                    .organization(self.organization.clone());
                 if let Some(name) = self.name.clone() {
                     client = client.name(name);
                 }

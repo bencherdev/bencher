@@ -9,7 +9,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Update {
-    pub org: ResourceId,
+    pub organization: ResourceId,
     pub user: ResourceId,
     pub role: Option<OrganizationRole>,
     pub backend: AuthBackend,
@@ -20,13 +20,13 @@ impl TryFrom<CliMemberUpdate> for Update {
 
     fn try_from(update: CliMemberUpdate) -> Result<Self, Self::Error> {
         let CliMemberUpdate {
-            org,
+            organization,
             user,
             role,
             backend,
         } = update;
         Ok(Self {
-            org,
+            organization,
             user,
             role: role.map(Into::into),
             backend: backend.try_into()?,
@@ -47,7 +47,7 @@ impl SubCmd for Update {
             .send(|client| async move {
                 client
                     .org_member_patch()
-                    .organization(self.org.clone())
+                    .organization(self.organization.clone())
                     .body(self.clone())
                     .send()
                     .await

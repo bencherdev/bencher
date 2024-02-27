@@ -25,7 +25,6 @@ pub enum CliBranch {
 #[derive(Parser, Debug)]
 pub struct CliBranchList {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Branch name
@@ -53,10 +52,10 @@ pub enum CliBranchesSort {
 #[derive(Parser, Debug)]
 pub struct CliBranchCreate {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Branch name
+    #[clap(long)]
     pub name: BranchName,
 
     /// Branch slug
@@ -90,7 +89,6 @@ pub struct CliBranchStartPoint {
 #[derive(Parser, Debug)]
 pub struct CliBranchView {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Branch slug or UUID
@@ -103,7 +101,6 @@ pub struct CliBranchView {
 #[derive(Parser, Debug)]
 pub struct CliBranchUpdate {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Branch slug or UUID
@@ -124,7 +121,6 @@ pub struct CliBranchUpdate {
 #[derive(Parser, Debug)]
 pub struct CliBranchDelete {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Branch slug or UUID

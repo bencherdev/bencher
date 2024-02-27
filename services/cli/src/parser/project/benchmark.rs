@@ -25,7 +25,6 @@ pub enum CliBenchmark {
 #[derive(Parser, Debug)]
 pub struct CliBenchmarkList {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Benchmark name
@@ -53,10 +52,10 @@ pub enum CliBenchmarksSort {
 #[derive(Parser, Debug)]
 pub struct CliBenchmarkCreate {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Benchmark name
+    #[clap(long)]
     pub name: BenchmarkName,
 
     /// Benchmark slug
@@ -70,10 +69,9 @@ pub struct CliBenchmarkCreate {
 #[derive(Parser, Debug)]
 pub struct CliBenchmarkView {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
-    /// Benchmark UUID
+    /// Benchmark slug or UUID
     pub benchmark: ResourceId,
 
     #[clap(flatten)]
@@ -83,7 +81,6 @@ pub struct CliBenchmarkView {
 #[derive(Parser, Debug)]
 pub struct CliBenchmarkUpdate {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Benchmark slug or UUID
@@ -104,7 +101,6 @@ pub struct CliBenchmarkUpdate {
 #[derive(Parser, Debug)]
 pub struct CliBenchmarkDelete {
     /// Project slug or UUID
-    #[clap(long)]
     pub project: ResourceId,
 
     /// Benchmark slug or UUID

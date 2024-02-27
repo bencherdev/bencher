@@ -8,7 +8,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct Remove {
-    pub org: ResourceId,
+    pub organization: ResourceId,
     pub user: ResourceId,
     pub backend: AuthBackend,
 }
@@ -17,9 +17,13 @@ impl TryFrom<CliMemberRemove> for Remove {
     type Error = CliError;
 
     fn try_from(remove: CliMemberRemove) -> Result<Self, Self::Error> {
-        let CliMemberRemove { org, user, backend } = remove;
+        let CliMemberRemove {
+            organization,
+            user,
+            backend,
+        } = remove;
         Ok(Self {
-            org,
+            organization,
             user,
             backend: backend.try_into()?,
         })
@@ -33,7 +37,7 @@ impl SubCmd for Remove {
             .send(|client| async move {
                 client
                     .org_member_delete()
-                    .organization(self.org.clone())
+                    .organization(self.organization.clone())
                     .user(self.user.clone())
                     .send()
                     .await
