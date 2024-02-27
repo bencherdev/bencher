@@ -1,6 +1,6 @@
 ---
 import { DocsTab } from "../components/docs/docs_tab";
-import Collection from "../util/collection";
+import Collection, { collectionPath } from "../util/collection";
 import { Language, allLanguages, langBoxId, langButtonId, languageName } from "./ui";
 import { langPath } from "./utils";
 
@@ -35,24 +35,6 @@ const tabPath = () => {
       return "learn";
   }
 }
-const collectionPath = (collection: Collection) => {
-	switch (collection) {
-		case Collection.legal:
-			return "legal";
-		case Collection.tutorial:
-			return "tutorial";
-		case Collection.how_to:
-			return "how-to";
-		case Collection.explanation:
-			return "explanation";
-		case Collection.reference:
-			return "reference";
-		case Collection.organizations:
-			return "organizations";
-		case Collection.rust:
-			return "benchmarking/rust";
-	}
-};
 ---
 
 <nav>

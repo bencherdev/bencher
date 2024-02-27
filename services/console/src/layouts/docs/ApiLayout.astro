@@ -2,6 +2,8 @@
 import InnerLayout from "./InnerLayout.astro";
 import { DocsTab } from "../../components/docs/docs_tab";
 import type Collection from "../../util/collection";
+import { BENCHER_SITE_URL } from "../../util/ext";
+import { collectionPath } from "../../util/collection";
 
 interface Props {
   title: string;
@@ -9,7 +11,7 @@ interface Props {
   description: string;
   heading?: string;
   lang?: string;
-  collection?: undefined | Collection;
+  collection: Collection;
   slug?: undefined | string;
 }
 
@@ -25,6 +27,7 @@ const { title, titleFmt, description, heading, lang, collection, slug } = Astro.
   collection={collection}
   slug={slug}
   lang={lang}
+  canonical={`${BENCHER_SITE_URL}/docs/api/${collectionPath(collection)}/${slug}/`}
 >
   <slot />
 </InnerLayout>
