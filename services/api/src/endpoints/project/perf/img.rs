@@ -1,4 +1,7 @@
-use bencher_json::{project::perf::JsonPerfQueryParams, JsonPerfQuery};
+use bencher_json::{
+    project::perf::{JsonPerfImgQueryParams, JsonPerfQueryParams},
+    JsonPerfQuery,
+};
 use bencher_plot::LinePlot;
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use http::{Response, StatusCode};
@@ -30,6 +33,12 @@ pub async fn proj_perf_img_options(
     Ok(Endpoint::cors(&[Get.into()]))
 }
 
+/// Generate a dynamic image of performance metrics for a project
+///
+/// Generate a dynamic image of performance metrics for a project.
+/// The query results are every permutation of each branch, testbed, benchmark, and measure.
+/// There is a limit of 8 permutations for a single image.
+/// Therefore, only the first 8 permutations are plotted.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/perf/img",
@@ -39,10 +48,11 @@ pub async fn proj_perf_img_get(
     rqctx: RequestContext<ApiContext>,
     bearer_token: PubBearerToken,
     path_params: Path<ProjPerfParams>,
-    query_params: Query<JsonPerfQueryParams>,
+    query_params: Query<JsonPerfImgQueryParams>,
 ) -> Result<Response<Body>, HttpError> {
-    let mut json_perf_query_params = query_params.into_inner();
-    let title = json_perf_query_params.title.take();
+    let mut json_perf_img_query_params = query_params.into_inner();
+    let title = json_perf_img_query_params.title.take();
+    let json_perf_query_params: JsonPerfQueryParams = json_perf_img_query_params.into();
     // Second round of marshaling
     let json_perf_query = json_perf_query_params
         .try_into()

@@ -32,6 +32,8 @@ const DATE_TIME_FMT: &str = "%d %b %Y %H:%M:%S";
 // https://docs.rs/image/latest/image/struct.Rgb.html
 const BUFFER_SIZE: usize = IMG_WIDTH as usize * IMG_HEIGHT as usize * 3;
 
+const MAX_LINES: usize = 8;
+
 pub const BENCHER_WORDMARK: &[u8; 4910] = include_bytes!("../wordmark.png");
 #[allow(clippy::expect_used)]
 static WORDMARK_ELEMENT: Lazy<BitMapElement<(i32, i32)>> = Lazy::new(|| {
@@ -104,23 +106,6 @@ impl LinePlot {
                 return root_area.present().map_err(Into::into);
             };
 
-            let lines_len = perf_data.lines.len();
-
-            if lines_len > 10 {
-                // Return an informative message if there is too much data to be shown
-                let _chart_context = ChartBuilder::on(&plot_area)
-                    .margin_top(TITLE_HEIGHT)
-                    .caption(
-                        format!(
-                            "Too Many Data Sets: {lines_len} found which exceeds the max of 10"
-                        ),
-                        (FontFamily::Monospace, 24),
-                    )
-                    .build_cartesian_2d(PerfData::default_x_range(), PerfData::default_y_range())?;
-
-                return root_area.present().map_err(Into::into);
-            }
-
             let (plot_area, key_area) = plot_area.split_vertically(PLOT_HEIGHT);
 
             let mut chart_context = ChartBuilder::on(&plot_area)
@@ -147,6 +132,7 @@ impl LinePlot {
 
             const KEY_LEFT_MARGIN: usize = 48;
             const BOX_GAP: usize = 12;
+            let lines_len = perf_data.lines.len();
             let (box_x_left, box_width, box_gap) = if lines_len > 3 {
                 const MIN_GAP: usize = 4;
                 let extra_lines = lines_len - 4;
@@ -244,6 +230,7 @@ impl PerfData {
         let lines = json_perf
             .results
             .iter()
+            .take(MAX_LINES)
             .enumerate()
             .map(|(index, result)| {
                 let data = result

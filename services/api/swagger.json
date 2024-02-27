@@ -3701,6 +3701,8 @@
           "projects",
           "perf"
         ],
+        "summary": "Query the performance metrics for a project",
+        "description": "Query the performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 256 permutations for a single request. Therefore, only the first 256 permutations are returned.",
         "operationId": "proj_perf_get",
         "parameters": [
           {
@@ -3714,6 +3716,7 @@
           {
             "in": "query",
             "name": "benchmarks",
+            "description": "A comma separated list of benchmark UUIDs to query.",
             "required": true,
             "schema": {
               "type": "string"
@@ -3722,6 +3725,7 @@
           {
             "in": "query",
             "name": "branches",
+            "description": "A comma separated list of branch UUIDs to query.",
             "required": true,
             "schema": {
               "type": "string"
@@ -3730,6 +3734,7 @@
           {
             "in": "query",
             "name": "end_time",
+            "description": "The end time of the reports to query.",
             "schema": {
               "$ref": "#/components/schemas/DateTimeMillis"
             }
@@ -3737,6 +3742,7 @@
           {
             "in": "query",
             "name": "measures",
+            "description": "A comma separated list of measure UUIDs to query.",
             "required": true,
             "schema": {
               "type": "string"
@@ -3745,6 +3751,7 @@
           {
             "in": "query",
             "name": "start_time",
+            "description": "The start time of the reports to query.",
             "schema": {
               "$ref": "#/components/schemas/DateTimeMillis"
             }
@@ -3752,16 +3759,9 @@
           {
             "in": "query",
             "name": "testbeds",
+            "description": "A comma separated list of testbed UUIDs to query.",
             "required": true,
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "title",
-            "schema": {
-              "nullable": true,
               "type": "string"
             }
           }
@@ -3822,6 +3822,8 @@
           "projects",
           "perf"
         ],
+        "summary": "Generate a dynamic image of performance metrics for a project",
+        "description": "Generate a dynamic image of performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 8 permutations for a single image. Therefore, only the first 8 permutations are plotted.",
         "operationId": "proj_perf_img_get",
         "parameters": [
           {
@@ -3835,6 +3837,7 @@
           {
             "in": "query",
             "name": "benchmarks",
+            "description": "A comma separated list of benchmark UUIDs to query.",
             "required": true,
             "schema": {
               "type": "string"
@@ -3843,6 +3846,7 @@
           {
             "in": "query",
             "name": "branches",
+            "description": "A comma separated list of branch UUIDs to query.",
             "required": true,
             "schema": {
               "type": "string"
@@ -3851,6 +3855,7 @@
           {
             "in": "query",
             "name": "end_time",
+            "description": "The end time of the reports to query.",
             "schema": {
               "$ref": "#/components/schemas/DateTimeMillis"
             }
@@ -3858,6 +3863,7 @@
           {
             "in": "query",
             "name": "measures",
+            "description": "A comma separated list of measure UUIDs to query.",
             "required": true,
             "schema": {
               "type": "string"
@@ -3866,6 +3872,7 @@
           {
             "in": "query",
             "name": "start_time",
+            "description": "The start time of the reports to query.",
             "schema": {
               "$ref": "#/components/schemas/DateTimeMillis"
             }
@@ -3873,6 +3880,7 @@
           {
             "in": "query",
             "name": "testbeds",
+            "description": "A comma separated list of testbed UUIDs to query.",
             "required": true,
             "schema": {
               "type": "string"
@@ -3881,6 +3889,7 @@
           {
             "in": "query",
             "name": "title",
+            "description": "The title for the perf plot. If not provided, the project name will be used.",
             "schema": {
               "nullable": true,
               "type": "string"

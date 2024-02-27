@@ -64,6 +64,12 @@ pub async fn proj_perf_options(
     Ok(Endpoint::cors(&[Get.into()]))
 }
 
+/// Query the performance metrics for a project
+///
+/// Query the performance metrics for a project.
+/// The query results are every permutation of each branch, testbed, benchmark, and measure.
+/// There is a limit of 256 permutations for a single request.
+/// Therefore, only the first 256 permutations are returned.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/perf",

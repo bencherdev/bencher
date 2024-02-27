@@ -27,7 +27,7 @@ const swagger = defineCollection({
 				path: z.string(),
 				method: z.string(),
 				headers: z.string(),
-				cli: z.string(),
+				cli: z.string().optional().nullable(),
 			}),
 		),
 	}),

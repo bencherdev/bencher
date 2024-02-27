@@ -27,13 +27,60 @@ crate::typed_uuid::typed_uuid!(PerfUuid);
 #[derive(Debug, Clone, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfQueryParams {
-    pub title: Option<String>,
+    /// A comma separated list of branch UUIDs to query.
     pub branches: String,
+    /// A comma separated list of testbed UUIDs to query.
     pub testbeds: String,
+    /// A comma separated list of benchmark UUIDs to query.
     pub benchmarks: String,
+    /// A comma separated list of measure UUIDs to query.
     pub measures: String,
+    /// The start time of the reports to query.
     pub start_time: Option<DateTimeMillis>,
+    /// The end time of the reports to query.
     pub end_time: Option<DateTimeMillis>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonPerfImgQueryParams {
+    /// The title for the perf plot.
+    /// If not provided, the project name will be used.
+    pub title: Option<String>,
+    /// A comma separated list of branch UUIDs to query.
+    pub branches: String,
+    /// A comma separated list of testbed UUIDs to query.
+    pub testbeds: String,
+    /// A comma separated list of benchmark UUIDs to query.
+    pub benchmarks: String,
+    /// A comma separated list of measure UUIDs to query.
+    pub measures: String,
+    /// The start time of the reports to query.
+    pub start_time: Option<DateTimeMillis>,
+    /// The end time of the reports to query.
+    pub end_time: Option<DateTimeMillis>,
+}
+
+impl From<JsonPerfImgQueryParams> for JsonPerfQueryParams {
+    fn from(query: JsonPerfImgQueryParams) -> Self {
+        let JsonPerfImgQueryParams {
+            title: _,
+            branches,
+            testbeds,
+            benchmarks,
+            measures,
+            start_time,
+            end_time,
+        } = query;
+        Self {
+            branches,
+            testbeds,
+            benchmarks,
+            measures,
+            start_time,
+            end_time,
+        }
+    }
 }
 
 /// `JsonPerfQuery` is the full, strongly typed version of `JsonPerfQueryParams`.
@@ -54,7 +101,6 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
 
     fn try_from(query_params: JsonPerfQueryParams) -> Result<Self, Self::Error> {
         let JsonPerfQueryParams {
-            title: _,
             branches,
             testbeds,
             benchmarks,
@@ -62,6 +108,19 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
             start_time,
             end_time,
         } = query_params;
+
+        if branches.is_empty() {
+            return Err(UrlEncodedError::EmptyBranches);
+        }
+        if testbeds.is_empty() {
+            return Err(UrlEncodedError::EmptyTestbeds);
+        }
+        if benchmarks.is_empty() {
+            return Err(UrlEncodedError::EmptyBenchmarks);
+        }
+        if measures.is_empty() {
+            return Err(UrlEncodedError::EmptyMeasures);
+        }
 
         let branches = from_urlencoded_list(&branches)?;
         let testbeds = from_urlencoded_list(&testbeds)?;

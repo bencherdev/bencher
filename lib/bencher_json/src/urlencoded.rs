@@ -8,6 +8,16 @@ const FRAGMENT: &AsciiSet = &CONTROLS.add(b' ').add(b'"').add(b'<').add(b'>').ad
 
 #[derive(Debug, Error)]
 pub enum UrlEncodedError {
+    #[error("Empty `branches` parameter")]
+    EmptyBranches,
+    #[error("Empty `testbeds` parameter")]
+    EmptyTestbeds,
+    #[error("Empty `benchmarks` parameter")]
+    EmptyBenchmarks,
+    #[error("Empty `measures` parameter")]
+    EmptyMeasures,
+    #[error("Empty value in list: {0}")]
+    EmptyValue(String),
     #[error("JSON: {0}")]
     SerdeJson(#[from] serde_json::Error),
     #[error("Serialize urlencoded: {0}")]
@@ -36,6 +46,9 @@ where
 {
     let mut values = Vec::new();
     for value in list.split(',') {
+        if value.is_empty() {
+            return Err(UrlEncodedError::EmptyValue(list.into()));
+        }
         values.push(from_urlencoded(value)?);
     }
     Ok(values)

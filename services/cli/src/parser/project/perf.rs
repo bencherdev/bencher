@@ -10,19 +10,19 @@ pub struct CliPerf {
     pub project: ResourceId,
 
     /// Branch UUIDs
-    #[clap(long)]
+    #[clap(long, required = true)]
     pub branches: Vec<BranchUuid>,
 
     /// Testbed UUIDs
-    #[clap(long)]
+    #[clap(long, required = true)]
     pub testbeds: Vec<TestbedUuid>,
 
     /// Benchmark UUIDs
-    #[clap(long)]
+    #[clap(long, required = true)]
     pub benchmarks: Vec<BenchmarkUuid>,
 
     /// Measure UUIDs
-    #[clap(long)]
+    #[clap(long, required = true)]
     pub measures: Vec<MeasureUuid>,
 
     /// Start time (seconds since epoch)

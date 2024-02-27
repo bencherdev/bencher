@@ -7,13 +7,13 @@ interface Props {
 
 const { headers } = Astro.props;
 
-const applicationJson = () => {
+const contentType = () => {
     switch (headers) {
         case HeadersKind.Pub:
         case HeadersKind.Auth:
-            return true;
+            return "application/json";
         case HeadersKind.Img:
-            return false;
+            return "image/jpeg";
     }
 }
 
@@ -30,7 +30,6 @@ const authBearerRequired = () => {
 ---
 
 <h3 class="title is-5" style="margin-top: 2rem;">Headers</h3>
-{applicationJson() &&
 <hr />
 <p>
 <div class="level">
@@ -47,8 +46,7 @@ const authBearerRequired = () => {
     </div>
 </div>
 </p>
-<p>Set to <code>application/json</code>.</p>
-}
+<p>Set to <code>{contentType()}</code>.</p>
 <hr />
 <p>
 <div class="level">
