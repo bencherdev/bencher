@@ -47,6 +47,7 @@ const MAX_PERMUTATIONS: usize = 256;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjPerfParams {
+    /// The slug or UUID for a project.
     pub project: ResourceId,
 }
 
@@ -64,12 +65,14 @@ pub async fn proj_perf_options(
     Ok(Endpoint::cors(&[Get.into()]))
 }
 
-/// Query the performance metrics for a project
+/// Query project performance metrics
 ///
 /// Query the performance metrics for a project.
 /// The query results are every permutation of each branch, testbed, benchmark, and measure.
 /// There is a limit of 256 permutations for a single request.
 /// Therefore, only the first 256 permutations are returned.
+/// If the project is public, then the user does not need to be authenticated.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/perf",

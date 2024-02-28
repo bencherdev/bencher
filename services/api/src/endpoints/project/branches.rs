@@ -35,6 +35,7 @@ use crate::{
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjBranchesParams {
+    /// The slug or UUID for a project.
     pub project: ResourceId,
 }
 
@@ -208,7 +209,9 @@ async fn post_inner(
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjBranchParams {
+    /// The slug or UUID for a project.
     pub project: ResourceId,
+    /// The slug or UUID for a branch.
     pub branch: ResourceId,
 }
 

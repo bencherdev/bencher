@@ -22,7 +22,9 @@ use crate::{
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjStatisticParams {
+    /// The slug or UUID for a project.
     pub project: ResourceId,
+    /// The UUID for a statistic.
     pub statistic: StatisticUuid,
 }
 

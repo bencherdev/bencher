@@ -2,6 +2,8 @@
 - Fix resource contention during large Perf queries
 - Remove `public` query param from `/v0/projects` endpoint
 - **BREAKING CHANGE** Move all CLI commands using `--org` and `--project` over to positional arguments, except `bencher run` and `bencher threshold create`
+- Add a `bencher report create` CLI subcommand
+- `bencher run` now tries to auto-fill the git commit hash for the report
 
 ## `v0.4.3`
 - **BREAKING CHANGE** Limit branch names to 256 characters and all slug lengths to 64 characters. Any existing values greater than these new limits are set to their respective UUID.

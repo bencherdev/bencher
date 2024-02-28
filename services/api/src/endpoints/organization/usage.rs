@@ -50,7 +50,7 @@ pub async fn org_usage_options(
     Ok(Endpoint::cors(&[Get.into()]))
 }
 
-/// View the metrics usage of an organization
+/// View organization metrics usage
 ///
 /// View the metrics usage of an organization.
 /// The user must have `manage` permissions for the organization.

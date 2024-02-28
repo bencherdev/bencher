@@ -5,3 +5,8 @@
 Opcional: Um hash de commit SHA-1 de 40 caracteres.
 Se dois relatórios possuírem a mesma branch e hash, eles serão considerados do mesmo commit.
 Portanto, eles vão ter o mesmo número de versão da branch.
+
+Se não for fornecido, o Bencher CLI tenta encontrar o hash git atual.
+Ele começa procurando por um repositório git no diretório de trabalho atual.
+Se não for bem-sucedido, ele continua para o diretório pai e tenta novamente até o diretório raiz.
+Se um repositório git for encontrado, então o hash git HEAD da branch atual é usado.

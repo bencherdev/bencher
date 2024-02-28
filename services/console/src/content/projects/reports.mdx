@@ -1,0 +1,23 @@
+---
+title: "Project Reports"
+description: "The Bencher Project Reports REST API"
+heading: "Project Reports REST API"
+sortOrder: 3
+paths:
+  - path: /v0/projects/{project}/reports
+    method: get
+    headers: pub
+    cli: report list PROJECT
+  - path: /v0/projects/{project}/reports
+    method: post
+    headers: auth
+    cli: report create PROJECT
+  - path: /v0/projects/{project}/reports/{report}
+    method: get
+    headers: pub
+    cli: report view PROJECT
+  - path: /v0/projects/{project}/reports/{report}
+    method: delete
+    headers: auth
+    cli: report delete PROJECT
+---

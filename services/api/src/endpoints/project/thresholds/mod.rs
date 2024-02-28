@@ -43,6 +43,7 @@ pub mod statistics;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjThresholdsParams {
+    /// The slug or UUID for a project.
     pub project: ResourceId,
 }
 
@@ -232,7 +233,9 @@ async fn post_inner(
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjThresholdParams {
+    /// The slug or UUID for a project.
     pub project: ResourceId,
+    /// The UUID for a threshold.
     pub threshold: ThresholdUuid,
 }
 

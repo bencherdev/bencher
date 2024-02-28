@@ -5,3 +5,8 @@
 Optional: Ein 40-stelliger SHA-1-Commit-Hash.
 Wenn zwei Berichte den gleichen Branch und Hash haben, werden sie als vom selben Commit angesehen.
 Daher werden sie die gleiche Branch-Version Nummer haben.
+
+Wenn nicht angegeben, versucht die Bencher CLI, den aktuellen Git-Hash zu finden.
+Es beginnt mit der Suche nach einem Git-Repository im aktuellen Arbeitsverzeichnis.
+Wenn dies nicht erfolgreich ist, wechselt es zu seinem übergeordneten Verzeichnis und wiederholt den Vorgang bis zum Stammverzeichnis.
+Wenn ein Git-Repository gefunden wird, dann wird der Git-Hash des HEAD der aktuellen Branch verwendet.

@@ -18,7 +18,9 @@ use crate::{
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjAllowedParams {
+    /// The slug or UUID for a project.
     pub project: ResourceId,
+    /// The permission to check.
     pub permission: ProjectPermission,
 }
 

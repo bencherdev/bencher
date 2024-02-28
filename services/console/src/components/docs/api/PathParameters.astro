@@ -1,5 +1,5 @@
 ---
-import openapi from "../../../../public/download/openapi.json";
+import { getSchema } from './method';
 
 interface Props {
   parameters: Array<object>;
@@ -8,20 +8,13 @@ interface Props {
 const { parameters } = Astro.props;
 
 const params = parameters?.filter((param) => param.in === "path");
-
-const getTypes = (parameter) => {
-  const schema = parameter?.schema;
-  const ref = schema?.["$ref"]?.split("/")?.pop();
- return openapi?.components?.schemas?.[ref]?.type;
-};
-
 ---
 
 {params?.length > 0 && (
   <h3 class="title is-5" style="margin-top: 4rem;">Path Parameters</h3>
   <>
   {params.map((parameter) => {
-    const types = getTypes(parameter);
+    const types = getSchema(parameter.schema);
     return (
     <hr />
     <p>

@@ -1,0 +1,25 @@
+---
+import { MethodKind, getSchema } from "./method";
+import BodyParametersInner from "./BodyParametersInner.astro";
+
+interface Props {
+  path: string;
+  method: MethodKind;
+  propertyKey: string;
+  propertyValue: object;
+}
+
+const { path, method, propertyKey, propertyValue } = Astro.props;
+
+const properties = getSchema(propertyValue?.allOf?.[0])?.properties ;
+---
+
+<details>
+  <summary>Properties of <code>{propertyKey}</code></summary>
+  <div class="columns">
+  <div class="column is-1"></div>
+  <div class="column">
+  <BodyParametersInner schema={propertyValue} path={path} method={method} properties={properties}  />
+  </div>
+  </div>
+</details>

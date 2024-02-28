@@ -35,6 +35,7 @@ use crate::{
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgPlanParams {
+    /// The slug or UUID for an organization.
     pub organization: ResourceId,
 }
 

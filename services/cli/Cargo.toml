@@ -32,6 +32,7 @@ url.workspace = true
 # Crate
 bollard = "0.15"
 futures-util = "0.3"
+gix = { version = "0.58", features = ["revision"] }
 
 # Remove once upstreamed fixes are released
 # https://github.com/fussybeaver/bollard/pull/361#event-11409619983

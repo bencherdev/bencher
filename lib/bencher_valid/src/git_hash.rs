@@ -47,6 +47,12 @@ impl From<GitHash> for String {
     }
 }
 
+impl From<ObjectId> for GitHash {
+    fn from(object_id: ObjectId) -> Self {
+        Self(object_id.to_string())
+    }
+}
+
 impl<'de> Deserialize<'de> for GitHash {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

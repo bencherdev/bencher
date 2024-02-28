@@ -40,10 +40,8 @@ pub enum ProjectsSort {
 #[derive(Clone, Deserialize, JsonSchema)]
 pub struct ProjectsQuery {
     /// Filter by name, exact match.
-    /// If not specified, all projects are returned.
     pub name: Option<ResourceName>,
     /// Search by name, slug, or UUID.
-    /// If not specified, all projects are returned.
     pub search: Option<Search>,
 }
 
@@ -61,7 +59,7 @@ pub async fn projects_options(
     Ok(Endpoint::cors(&[Get.into()]))
 }
 
-/// List all projects
+/// List projects
 ///
 /// List all projects.
 /// If the user is not authenticated, then only public projects are returned.

@@ -29,6 +29,7 @@ use crate::{
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjAlertsParams {
+    /// The slug or UUID for a project.
     pub project: ResourceId,
 }
 
@@ -156,7 +157,9 @@ async fn get_ls_inner(
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjAlertParams {
+    /// The slug or UUID for a project.
     pub project: ResourceId,
+    /// The UUID for an alert.
     pub alert: AlertUuid,
 }
 

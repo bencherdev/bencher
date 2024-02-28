@@ -56,10 +56,8 @@ pub enum OrgMembersSort {
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgMembersQuery {
     /// Filter by user name, exact match.
-    /// If not specified, all members for the organization are returned.
     pub name: Option<UserName>,
     /// Search by user name, slug, or UUID.
-    /// If not specified, all members for the organization are returned.
     pub search: Option<Search>,
 }
 
@@ -170,7 +168,7 @@ async fn get_ls_inner(
         .collect())
 }
 
-/// Invite a member to an organization
+/// Invite a user to an organization
 ///
 /// Invite another user to become a member of an organization.
 /// The user must have `create_role` permissions for the organization.
@@ -311,7 +309,7 @@ pub async fn org_member_options(
     Ok(Endpoint::cors(&[Get.into(), Patch.into(), Delete.into()]))
 }
 
-/// View a member of an organization
+/// View an organization member
 ///
 /// View a member of an organization.
 /// The user must have `view_role` permissions for the organization.
@@ -347,7 +345,7 @@ async fn get_one_inner(
     json_member(conn_lock!(context), query_user.id, query_organization.id)
 }
 
-/// Update the role for a member of an organization
+/// Update an organization member
 ///
 /// Update the role for a member of an organization.
 /// The user must have `edit_role` permissions for the organization.
@@ -408,7 +406,7 @@ async fn patch_inner(
     json_member(conn_lock!(context), query_user.id, query_organization.id)
 }
 
-/// Remove a member of an organization
+/// Remove an organization member
 ///
 /// Remove a member member of an organization.
 /// The user must have `delete_role` permissions for the organization.

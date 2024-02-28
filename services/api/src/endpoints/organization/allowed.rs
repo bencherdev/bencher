@@ -18,7 +18,9 @@ use crate::{
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgAllowedParams {
+    /// The slug or UUID for an organization.
     pub organization: ResourceId,
+    /// The permission to check.
     pub permission: OrganizationPermission,
 }
 

@@ -5,3 +5,8 @@
 Optionnel : Un hash de commit SHA-1 de 40 caractères.
 Si deux rapports ont la même branche et hash, ils seront considérés comme provenant du même commit.
 Donc, ils auront le même numéro de version de branche.
+
+Si non fourni, le CLI Bencher essaie de trouver le hash git actuel.
+Il commence par rechercher un dépôt git dans le répertoire de travail actuel.
+Si cela ne réussit pas, il continue vers son répertoire parent et réessaie jusqu'au répertoire racine.
+Si un dépôt git est trouvé, alors le hash git de la tête de la branche actuelle est utilisé.

@@ -1,3 +1,5 @@
+import openapi from "../../../../public/download/openapi.json";
+
 export enum MethodKind {
 	Get = "get",
 	Post = "post",
@@ -34,3 +36,17 @@ export enum HeadersKind {
 	Auth = "auth",
 	Img = "img",
 }
+
+export const getSchema = (schema) => getRef(parseSchemaRef(schema));
+
+export const parseSchemaRef = (schema) => schema?.["$ref"]?.split("/")?.pop();
+
+export const getRef = (ref) => openapi?.components?.schemas?.[ref];
+
+export const getSchemaRecursive = (schema) => {
+	const ref = getSchema(schema);
+	if (parseSchemaRef(ref)) {
+		return getSchemaRecursive(ref);
+	}
+	return ref;
+};

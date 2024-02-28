@@ -14,7 +14,7 @@ pub struct CliRun {
     #[clap(flatten)]
     pub run_branch: CliRunBranch,
 
-    /// Software commit hash
+    /// Git commit hash (defaults to HEAD)
     #[clap(long)]
     pub hash: Option<GitHash>,
 

@@ -84,7 +84,7 @@ impl TryFrom<CliRun> for Run {
         Ok(Self {
             project: unwrap_project(project)?,
             branch: run_branch.try_into().map_err(RunError::Branch)?,
-            hash,
+            hash: map_hash(hash),
             testbed: testbed.try_into().map_err(RunError::Testbed)?,
             adapter: map_adapter(adapter),
             average: average.map(Into::into),
@@ -111,6 +111,24 @@ fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, RunError> {
     } else {
         return Err(RunError::NoProject);
     })
+}
+
+fn map_hash(hash: Option<GitHash>) -> Option<GitHash> {
+    if let Some(hash) = hash {
+        return Some(hash);
+    }
+
+    let current_dir = std::env::current_dir().ok()?;
+    for directory in current_dir.ancestors() {
+        let Some(repo) = gix::open(directory).ok() else {
+            continue;
+        };
+        let head_id = repo.head_id().ok()?;
+        let head_object = head_id.object().ok()?;
+        return Some(head_object.id.into());
+    }
+
+    None
 }
 
 fn map_adapter(adapter: Option<CliRunAdapter>) -> Option<Adapter> {

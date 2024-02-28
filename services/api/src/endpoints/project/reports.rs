@@ -42,6 +42,7 @@ use crate::{
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjReportsParams {
+    /// The slug or UUID for a project.
     pub project: ResourceId,
 }
 
@@ -50,6 +51,7 @@ pub type ProjReportsPagination = JsonPagination<ProjReportsSort>;
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjReportsSort {
+    /// Sort by date time.
     #[default]
     DateTime,
 }
@@ -69,6 +71,11 @@ pub async fn proj_reports_options(
     Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
+/// List reports for a project
+///
+/// List all reports for a project.
+/// If the project is public, then the user does not need to be authenticated.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/reports",
@@ -167,6 +174,12 @@ async fn get_ls_inner(
         .collect()))
 }
 
+/// Create a report for a project
+///
+/// Create a report for a project.
+/// The user must have `create` permissions for the project.
+/// If using the Bencher CLI, it is recommended to use the `bencher run` subcommand
+/// instead of trying to create a report manually.
 #[endpoint {
     method = POST,
     path =  "/v0/projects/{project}/reports",
@@ -304,7 +317,9 @@ async fn post_inner(
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjReportParams {
+    /// The slug or UUID for a project.
     pub project: ResourceId,
+    /// The UUID for a report.
     pub report: ReportUuid,
 }
 
@@ -321,6 +336,11 @@ pub async fn proj_report_options(
     Ok(Endpoint::cors(&[Get.into(), Delete.into()]))
 }
 
+/// View a report for a project
+///
+/// View a report for a project.
+/// If the project is public, then the user does not need to be authenticated.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/reports/{report}",
@@ -365,6 +385,12 @@ async fn get_one_inner(
         .into_json(log, conn))
 }
 
+/// Delete a report for a project
+///
+/// Delete a report for a project.
+/// The user must have `delete` permissions for the project.
+/// If there are no more reports for a branch version, then that version will be deleted.
+/// All later branch versions will have their version numbers decremented.
 #[endpoint {
     method = DELETE,
     path =  "/v0/projects/{project}/reports/{report}",

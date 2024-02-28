@@ -55,10 +55,8 @@ pub enum OrgProjectsSort {
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgProjectsQuery {
     /// Filter by name, exact match.
-    /// If not specified, all projects for the organization are returned.
     pub name: Option<ResourceName>,
     /// Search by name, slug, or UUID.
-    /// If not specified, all projects for the organization are returned.
     pub search: Option<Search>,
 }
 

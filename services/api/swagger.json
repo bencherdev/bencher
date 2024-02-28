@@ -514,7 +514,7 @@
           {
             "in": "query",
             "name": "name",
-            "description": "Filter by name, exact match. If not specified, all organizations are returned.",
+            "description": "Filter by name, exact match.",
             "schema": {
               "$ref": "#/components/schemas/ResourceName"
             }
@@ -522,7 +522,7 @@
           {
             "in": "query",
             "name": "search",
-            "description": "Search by name, slug, or UUID. If not specified, all organizations are returned.",
+            "description": "Search by name, slug, or UUID.",
             "schema": {
               "$ref": "#/components/schemas/Search"
             }
@@ -801,6 +801,7 @@
           {
             "in": "path",
             "name": "organization",
+            "description": "The slug or UUID for an organization.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -809,6 +810,7 @@
           {
             "in": "path",
             "name": "permission",
+            "description": "The permission to check.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/OrganizationPermission"
@@ -925,7 +927,7 @@
           {
             "in": "query",
             "name": "name",
-            "description": "Filter by user name, exact match. If not specified, all members for the organization are returned.",
+            "description": "Filter by user name, exact match.",
             "schema": {
               "$ref": "#/components/schemas/UserName"
             }
@@ -933,7 +935,7 @@
           {
             "in": "query",
             "name": "search",
-            "description": "Search by user name, slug, or UUID. If not specified, all members for the organization are returned.",
+            "description": "Search by user name, slug, or UUID.",
             "schema": {
               "$ref": "#/components/schemas/Search"
             }
@@ -993,7 +995,7 @@
           "organizations",
           "members"
         ],
-        "summary": "Invite a member to an organization",
+        "summary": "Invite a user to an organization",
         "description": "Invite another user to become a member of an organization. The user must have `create_role` permissions for the organization. The invitee is sent an email with a link to accept the invitation, and they are not added to the organization until they accept the invitation.",
         "operationId": "org_member_post",
         "parameters": [
@@ -1073,7 +1075,7 @@
           "organizations",
           "members"
         ],
-        "summary": "View a member of an organization",
+        "summary": "View an organization member",
         "description": "View a member of an organization. The user must have `view_role` permissions for the organization.",
         "operationId": "org_member_get",
         "parameters": [
@@ -1150,7 +1152,7 @@
           "organizations",
           "members"
         ],
-        "summary": "Remove a member of an organization",
+        "summary": "Remove an organization member",
         "description": "Remove a member member of an organization. The user must have `delete_role` permissions for the organization.",
         "operationId": "org_member_delete",
         "parameters": [
@@ -1220,7 +1222,7 @@
           "organizations",
           "members"
         ],
-        "summary": "Update the role for a member of an organization",
+        "summary": "Update an organization member",
         "description": "Update the role for a member of an organization. The user must have `edit_role` permissions for the organization.",
         "operationId": "org_member_patch",
         "parameters": [
@@ -1314,6 +1316,7 @@
           {
             "in": "path",
             "name": "organization",
+            "description": "The slug or UUID for an organization.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -1379,6 +1382,7 @@
           {
             "in": "path",
             "name": "organization",
+            "description": "The slug or UUID for an organization.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -1454,6 +1458,7 @@
           {
             "in": "path",
             "name": "organization",
+            "description": "The slug or UUID for an organization.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -1571,7 +1576,7 @@
           {
             "in": "query",
             "name": "name",
-            "description": "Filter by name, exact match. If not specified, all projects for the organization are returned.",
+            "description": "Filter by name, exact match.",
             "schema": {
               "$ref": "#/components/schemas/ResourceName"
             }
@@ -1579,7 +1584,7 @@
           {
             "in": "query",
             "name": "search",
-            "description": "Search by name, slug, or UUID. If not specified, all projects for the organization are returned.",
+            "description": "Search by name, slug, or UUID.",
             "schema": {
               "$ref": "#/components/schemas/Search"
             }
@@ -1719,7 +1724,7 @@
           "organizations",
           "usage"
         ],
-        "summary": "View the metrics usage of an organization",
+        "summary": "View organization metrics usage",
         "description": "View the metrics usage of an organization. The user must have `manage` permissions for the organization. ➕ Bencher Plus: This endpoint offers an estimate of metered usage and exact usage for licensed organizations, both on Bencher Cloud and Bencher Self-Hosted.",
         "operationId": "org_usage_get",
         "parameters": [
@@ -1788,7 +1793,7 @@
         "tags": [
           "projects"
         ],
-        "summary": "List all projects",
+        "summary": "List projects",
         "description": "List all projects. If the user is not authenticated, then only public projects are returned. If the user is authenticated, then all public projects and any private project where the user has `view` permissions are returned.",
         "operationId": "projects_get",
         "parameters": [
@@ -1833,7 +1838,7 @@
           {
             "in": "query",
             "name": "name",
-            "description": "Filter by name, exact match. If not specified, all projects are returned.",
+            "description": "Filter by name, exact match.",
             "schema": {
               "$ref": "#/components/schemas/ResourceName"
             }
@@ -1841,7 +1846,7 @@
           {
             "in": "query",
             "name": "search",
-            "description": "Search by name, slug, or UUID. If not specified, all projects are returned.",
+            "description": "Search by name, slug, or UUID.",
             "schema": {
               "$ref": "#/components/schemas/Search"
             }
@@ -2114,6 +2119,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -2219,6 +2225,7 @@
           {
             "in": "path",
             "name": "alert",
+            "description": "The UUID for an alert.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/AlertUuid"
@@ -2227,6 +2234,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -2292,6 +2300,7 @@
           {
             "in": "path",
             "name": "alert",
+            "description": "The UUID for an alert.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/AlertUuid"
@@ -2300,6 +2309,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -2377,6 +2387,7 @@
           {
             "in": "path",
             "name": "permission",
+            "description": "The permission to check.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ProjectPermission"
@@ -2385,6 +2396,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -2452,6 +2464,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -2569,6 +2582,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -2646,6 +2660,7 @@
           {
             "in": "path",
             "name": "benchmark",
+            "description": "The slug or UUID for a benchmark.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -2654,6 +2669,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -2719,6 +2735,7 @@
           {
             "in": "path",
             "name": "benchmark",
+            "description": "The slug or UUID for a benchmark.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -2727,6 +2744,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -2785,6 +2803,7 @@
           {
             "in": "path",
             "name": "benchmark",
+            "description": "The slug or UUID for a benchmark.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -2793,6 +2812,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -2870,6 +2890,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -2987,6 +3008,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -3064,6 +3086,7 @@
           {
             "in": "path",
             "name": "branch",
+            "description": "The slug or UUID for a branch.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -3072,6 +3095,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -3137,6 +3161,7 @@
           {
             "in": "path",
             "name": "branch",
+            "description": "The slug or UUID for a branch.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -3145,6 +3170,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -3203,6 +3229,7 @@
           {
             "in": "path",
             "name": "branch",
+            "description": "The slug or UUID for a branch.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -3211,6 +3238,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -3288,6 +3316,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -3405,6 +3434,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -3482,6 +3512,7 @@
           {
             "in": "path",
             "name": "measure",
+            "description": "The slug or UUID for a measure.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -3490,6 +3521,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -3555,6 +3587,7 @@
           {
             "in": "path",
             "name": "measure",
+            "description": "The slug or UUID for a measure.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -3563,6 +3596,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -3621,6 +3655,7 @@
           {
             "in": "path",
             "name": "measure",
+            "description": "The slug or UUID for a measure.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -3629,6 +3664,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -3701,13 +3737,14 @@
           "projects",
           "perf"
         ],
-        "summary": "Query the performance metrics for a project",
-        "description": "Query the performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 256 permutations for a single request. Therefore, only the first 256 permutations are returned.",
+        "summary": "Query project performance metrics",
+        "description": "Query the performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 256 permutations for a single request. Therefore, only the first 256 permutations are returned. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
         "operationId": "proj_perf_get",
         "parameters": [
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -3734,7 +3771,7 @@
           {
             "in": "query",
             "name": "end_time",
-            "description": "The end time of the reports to query.",
+            "description": "Search for metrics before the given date time in milliseconds.",
             "schema": {
               "$ref": "#/components/schemas/DateTimeMillis"
             }
@@ -3751,7 +3788,7 @@
           {
             "in": "query",
             "name": "start_time",
-            "description": "The start time of the reports to query.",
+            "description": "Search for metrics after the given date time in milliseconds.",
             "schema": {
               "$ref": "#/components/schemas/DateTimeMillis"
             }
@@ -3822,13 +3859,14 @@
           "projects",
           "perf"
         ],
-        "summary": "Generate a dynamic image of performance metrics for a project",
-        "description": "Generate a dynamic image of performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 8 permutations for a single image. Therefore, only the first 8 permutations are plotted.",
+        "summary": "Generate a dynamic image of project performance metrics",
+        "description": "Generate a dynamic image of performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 8 permutations for a single image. Therefore, only the first 8 permutations are plotted. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
         "operationId": "proj_perf_img_get",
         "parameters": [
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -3855,7 +3893,7 @@
           {
             "in": "query",
             "name": "end_time",
-            "description": "The end time of the reports to query.",
+            "description": "Search for metrics before the given date time in milliseconds.",
             "schema": {
               "$ref": "#/components/schemas/DateTimeMillis"
             }
@@ -3872,7 +3910,7 @@
           {
             "in": "query",
             "name": "start_time",
-            "description": "The start time of the reports to query.",
+            "description": "Search for metrics after the given date time in milliseconds.",
             "schema": {
               "$ref": "#/components/schemas/DateTimeMillis"
             }
@@ -3914,11 +3952,14 @@
           "projects",
           "reports"
         ],
+        "summary": "List reports for a project",
+        "description": "List all reports for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
         "operationId": "proj_reports_get",
         "parameters": [
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -3965,6 +4006,7 @@
           {
             "in": "query",
             "name": "branch",
+            "description": "Filter by branch UUID, slug, or name exact match.",
             "schema": {
               "nullable": true,
               "type": "string"
@@ -3973,6 +4015,7 @@
           {
             "in": "query",
             "name": "end_time",
+            "description": "Filter for reports before the given date time in milliseconds.",
             "schema": {
               "$ref": "#/components/schemas/DateTimeMillis"
             }
@@ -3980,6 +4023,7 @@
           {
             "in": "query",
             "name": "start_time",
+            "description": "Filter for reports after the given date time in milliseconds.",
             "schema": {
               "$ref": "#/components/schemas/DateTimeMillis"
             }
@@ -3987,6 +4031,7 @@
           {
             "in": "query",
             "name": "testbed",
+            "description": "Filter by testbed UUID, slug, or name exact match.",
             "schema": {
               "nullable": true,
               "type": "string"
@@ -4047,11 +4092,14 @@
           "projects",
           "reports"
         ],
+        "summary": "Create a report for a project",
+        "description": "Create a report for a project. The user must have `create` permissions for the project. If using the Bencher CLI, it is recommended to use the `bencher run` subcommand instead of trying to create a report manually.",
         "operationId": "proj_report_post",
         "parameters": [
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -4124,11 +4172,14 @@
           "projects",
           "reports"
         ],
+        "summary": "View a report for a project",
+        "description": "View a report for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
         "operationId": "proj_report_get",
         "parameters": [
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -4137,6 +4188,7 @@
           {
             "in": "path",
             "name": "report",
+            "description": "The UUID for a report.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ReportUuid"
@@ -4197,11 +4249,14 @@
           "projects",
           "reports"
         ],
+        "summary": "Delete a report for a project",
+        "description": "Delete a report for a project. The user must have `delete` permissions for the project. If there are no more reports for a branch version, then that version will be deleted. All later branch versions will have their version numbers decremented.",
         "operationId": "proj_report_delete",
         "parameters": [
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -4210,6 +4265,7 @@
           {
             "in": "path",
             "name": "report",
+            "description": "The UUID for a report.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ReportUuid"
@@ -4270,6 +4326,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -4278,6 +4335,7 @@
           {
             "in": "path",
             "name": "statistic",
+            "description": "The UUID for a statistic.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/StatisticUuid"
@@ -4345,6 +4403,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -4412,6 +4471,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -4529,6 +4589,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -4606,6 +4667,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -4614,6 +4676,7 @@
           {
             "in": "path",
             "name": "testbed",
+            "description": "The slug or UUID for a testbed.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -4679,6 +4742,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -4687,6 +4751,7 @@
           {
             "in": "path",
             "name": "testbed",
+            "description": "The slug or UUID for a testbed.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -4745,6 +4810,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -4753,6 +4819,7 @@
           {
             "in": "path",
             "name": "testbed",
+            "description": "The slug or UUID for a testbed.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -4830,6 +4897,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -4957,6 +5025,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -5034,6 +5103,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -5042,6 +5112,7 @@
           {
             "in": "path",
             "name": "threshold",
+            "description": "The UUID for a threshold.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ThresholdUuid"
@@ -5107,6 +5178,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -5115,6 +5187,7 @@
           {
             "in": "path",
             "name": "threshold",
+            "description": "The UUID for a threshold.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ThresholdUuid"
@@ -5190,6 +5263,7 @@
           {
             "in": "path",
             "name": "project",
+            "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -5198,6 +5272,7 @@
           {
             "in": "path",
             "name": "threshold",
+            "description": "The UUID for a threshold.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ThresholdUuid"
@@ -7585,13 +7660,24 @@
         "type": "object",
         "properties": {
           "branch": {
-            "$ref": "#/components/schemas/NameId"
+            "description": "Branch UUID, slug, or name.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NameId"
+              }
+            ]
           },
           "end_time": {
-            "$ref": "#/components/schemas/DateTime"
+            "description": "End time for the report. Must be an ISO 8601 formatted string.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
           },
           "hash": {
             "nullable": true,
+            "description": "Full Git commit hash. All reports with the same Git commit hash will be considered part of the same branch version. This can be useful for tracking the performance of a specific commit across multiple testbeds.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/GitHash"
@@ -7599,6 +7685,7 @@
             ]
           },
           "results": {
+            "description": "An array of benchmarks results.",
             "type": "array",
             "items": {
               "type": "string"
@@ -7606,6 +7693,7 @@
           },
           "settings": {
             "nullable": true,
+            "description": "Settings for how to handle the report.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonReportSettings"
@@ -7613,10 +7701,20 @@
             ]
           },
           "start_time": {
-            "$ref": "#/components/schemas/DateTime"
+            "description": "Start time for the report. Must be an ISO 8601 formatted string.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
           },
           "testbed": {
-            "$ref": "#/components/schemas/NameId"
+            "description": "Testbed UUID, slug, or name.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NameId"
+              }
+            ]
           }
         },
         "required": [
@@ -8511,6 +8609,7 @@
         "properties": {
           "adapter": {
             "nullable": true,
+            "description": "The benchmark harness adapter for parsing the benchmark results. If no adapter is specified, then the Magic adapter will be used.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Adapter"
@@ -8519,6 +8618,7 @@
           },
           "average": {
             "nullable": true,
+            "description": "Benchmark harness suggested central tendency (ie average). Some benchmarking harnesses provide multiple averages, such as mean and median.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonAverage"
@@ -8527,6 +8627,7 @@
           },
           "fold": {
             "nullable": true,
+            "description": "Fold multiple results into a single result using the selected operation. This can be useful for taking the min, max, mean, or median of the benchmark results.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonFold"
@@ -9821,9 +9922,14 @@
         "format": "int64"
       },
       "ProjReportsSort": {
-        "type": "string",
-        "enum": [
-          "date_time"
+        "oneOf": [
+          {
+            "description": "Sort by date time.",
+            "type": "string",
+            "enum": [
+              "date_time"
+            ]
+          }
         ]
       },
       "ProjTestbedsSort": {

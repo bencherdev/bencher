@@ -35,7 +35,7 @@ const methodClass = new Method(method);
     <Headers headers={headers} />
     <PathParameters parameters={operation?.parameters} />
     <QueryParameters path={path} parameters={operation?.parameters} />
-    <BodyParameters path={path} requestBody={operation?.requestBody} />
+    <BodyParameters path={path} method={method} requestBody={operation?.requestBody} />
   </div>
   <div class="column">
     <div class="level">

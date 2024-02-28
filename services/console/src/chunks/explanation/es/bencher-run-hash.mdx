@@ -5,3 +5,8 @@
 Opcional: Un hash de commit SHA-1 de 40 caracteres.
 Si dos informes tienen la misma rama y hash, se considerará que provienen del mismo commit.
 Por lo tanto, tendrán el mismo número de versión de rama.
+
+Si no se proporciona, la CLI de Bencher intenta encontrar el hash git actual.
+Comienza buscando un repositorio git en el directorio de trabajo actual.
+Si no tiene éxito, continúa hacia su directorio padre y vuelve a intentar todo el camino hasta el directorio raíz.
+Si se encuentra un repositorio git, entonces se utiliza el hash git de la HEAD de la rama actual.

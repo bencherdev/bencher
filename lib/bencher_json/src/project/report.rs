@@ -17,20 +17,35 @@ crate::typed_uuid::typed_uuid!(ReportUuid);
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewReport {
+    /// Branch UUID, slug, or name.
     pub branch: NameId,
+    /// Full Git commit hash.
+    /// All reports with the same Git commit hash will be considered part of the same branch version.
+    /// This can be useful for tracking the performance of a specific commit across multiple testbeds.
     pub hash: Option<GitHash>,
+    /// Testbed UUID, slug, or name.
     pub testbed: NameId,
+    /// Start time for the report. Must be an ISO 8601 formatted string.
     pub start_time: DateTime,
+    /// End time for the report. Must be an ISO 8601 formatted string.
     pub end_time: DateTime,
+    /// An array of benchmarks results.
     pub results: Vec<String>,
+    /// Settings for how to handle the report.
     pub settings: Option<JsonReportSettings>,
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportSettings {
+    /// The benchmark harness adapter for parsing the benchmark results.
+    /// If no adapter is specified, then the Magic adapter will be used.
     pub adapter: Option<Adapter>,
+    /// Benchmark harness suggested central tendency (ie average).
+    /// Some benchmarking harnesses provide multiple averages, such as mean and median.
     pub average: Option<JsonAverage>,
+    /// Fold multiple results into a single result using the selected operation.
+    /// This can be useful for taking the min, max, mean, or median of the benchmark results.
     pub fold: Option<JsonFold>,
 }
 
@@ -258,9 +273,13 @@ pub type JsonReportAlerts = Vec<JsonAlert>;
 #[derive(Debug, Clone, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportQueryParams {
+    /// Filter by branch UUID, slug, or name exact match.
     pub branch: Option<String>,
+    /// Filter by testbed UUID, slug, or name exact match.
     pub testbed: Option<String>,
+    /// Filter for reports after the given date time in milliseconds.
     pub start_time: Option<DateTimeMillis>,
+    /// Filter for reports before the given date time in milliseconds.
     pub end_time: Option<DateTimeMillis>,
 }
 

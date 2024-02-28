@@ -1,5 +1,5 @@
 ---
-import openapi from "../../../../public/download/openapi.json";
+import { getSchema, getSchemaRecursive } from "./method";
 
 interface Props {
   path: string;
@@ -34,17 +34,17 @@ const getTypes = (parameter) => {
   if (schema?.type) {
     return [schema.type, getDefault(name), null];
   }
-  const ref = schema?.["$ref"]?.split("/")?.pop();
-  if (!ref) {
-    return [null, null, null];
-  }
-  const refSchema = openapi?.components?.schemas?.[ref];
+  const refSchema = getSchemaRecursive(schema);
 
   if (refSchema?.type === "string") {
     if (refSchema?.enum) {
       return ["string", getDefault(name), refSchema.enum];
     }
     return ["string", getDefault(name), null];
+  }
+
+  if (refSchema?.type === "integer") {
+    return ["integer", getDefault(name), null];
   }
 
   if (Array.isArray(refSchema?.oneOf)) {

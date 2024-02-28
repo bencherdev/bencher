@@ -33,12 +33,14 @@ pub async fn proj_perf_img_options(
     Ok(Endpoint::cors(&[Get.into()]))
 }
 
-/// Generate a dynamic image of performance metrics for a project
+/// Generate a dynamic image of project performance metrics
 ///
 /// Generate a dynamic image of performance metrics for a project.
 /// The query results are every permutation of each branch, testbed, benchmark, and measure.
 /// There is a limit of 8 permutations for a single image.
 /// Therefore, only the first 8 permutations are plotted.
+/// If the project is public, then the user does not need to be authenticated.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/perf/img",

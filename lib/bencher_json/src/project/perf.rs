@@ -35,9 +35,9 @@ pub struct JsonPerfQueryParams {
     pub benchmarks: String,
     /// A comma separated list of measure UUIDs to query.
     pub measures: String,
-    /// The start time of the reports to query.
+    /// Search for metrics after the given date time in milliseconds.
     pub start_time: Option<DateTimeMillis>,
-    /// The end time of the reports to query.
+    /// Search for metrics before the given date time in milliseconds.
     pub end_time: Option<DateTimeMillis>,
 }
 
@@ -55,9 +55,9 @@ pub struct JsonPerfImgQueryParams {
     pub benchmarks: String,
     /// A comma separated list of measure UUIDs to query.
     pub measures: String,
-    /// The start time of the reports to query.
+    /// Search for metrics after the given date time in milliseconds.
     pub start_time: Option<DateTimeMillis>,
-    /// The end time of the reports to query.
+    /// Search for metrics before the given date time in milliseconds.
     pub end_time: Option<DateTimeMillis>,
 }
 

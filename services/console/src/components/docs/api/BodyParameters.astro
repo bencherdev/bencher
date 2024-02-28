@@ -1,71 +1,17 @@
 ---
 import openapi from "../../../../public/download/openapi.json";
+import { MethodKind, getSchema, parseSchemaRef } from "./method";
+import BodyParametersInner from "./BodyParametersInner.astro";
 
 interface Props {
   path: string;
+  method: MethodKind;
   requestBody: object;
 }
 
-const { path, requestBody } = Astro.props;
+const { path, method, requestBody } = Astro.props;
 
-const ref = requestBody?.content?.["application/json"]?.schema?.["$ref"]?.split("/")?.pop();
-const schema = openapi?.components?.schemas?.[ref];
-
-const getDefault = (name) => {
-  switch (name) {
-    case "visibility":
-      if (ref === "JsonNewProject") {
-        return "public";
-      }
-      return;
-    default:
-      return;
-  }
-};
-
-const getTypes = (propertyKey, propertyValue) => {
-  if (Array.isArray(propertyValue?.allOf)) {
-        const types = propertyValue.allOf.map(schema => {
-            const ref = schema?.["$ref"]?.split("/")?.pop();
-            const schemaRef = openapi?.components?.schemas?.[ref];
-            if (schemaRef?.type) {
-                return schemaRef.type;
-            }
-            if (schemaRef?.oneOf) {
-                return schemaRef.oneOf.map(one => one?.type).filter((v) => v).flat();
-            }
-        });
-
-        const variants = propertyValue.allOf.map(schema => {
-            const ref = schema?.["$ref"]?.split("/")?.pop();
-            const schemaRef = openapi?.components?.schemas?.[ref];
-            if (schemaRef?.enum) {
-                return schemaRef.enum;
-            }
-            if (schemaRef?.oneOf) {
-                return schemaRef.oneOf.map(one => one?.enum).filter((v) => v).flat();
-            }
-        }).filter((v) => v).flat();
-        const oneOf = variants?.length > 0 ? variants : null;
-
-        // Filter out undefined types and join the types into a comma-separated list
-        return [types?.filter(t => t).join(", "), getDefault(propertyKey), oneOf];
-    }
-  return [null, null, null];
-};
-
-const nullablePatch = (anyOf) => {
-  if (anyOf?.length !== 2) {
-    return;
-  }
-  const base = anyOf?.[0]?.["$ref"]?.split("/")?.pop();
-  const nullable = anyOf?.[1]?.["$ref"]?.split("/")?.pop();
-  // This relies on the convention that the nullable type is the base type with "Null" appended
-  if (`${base}Null` !== nullable) {
-    return;
-  }
-  return openapi?.components?.schemas?.[base]?.properties;
-}
+const schema = getSchema(requestBody?.content?.["application/json"]?.schema);
 
 const getProperties = () => {
   if (schema?.properties) {
@@ -77,41 +23,21 @@ const getProperties = () => {
   }
 }
 
-const properties = getProperties();
-
+const nullablePatch = (anyOf) => {
+  if (anyOf?.length !== 2) {
+    return;
+  }
+  const base = parseSchemaRef(anyOf?.[0]);
+  const nullable = parseSchemaRef(anyOf?.[1]);
+  // This relies on the convention that the nullable type is the base type with "Null" appended
+  if (`${base}Null` !== nullable) {
+    return;
+  }
+  return openapi?.components?.schemas?.[base]?.properties;
+}
 ---
 
 {schema && (
   <h3 class="title is-5" style="margin-top: 4rem;">Body Parameters</h3>
-  <>
-  {properties && Object.entries(properties)?.map(([propertyKey, propertyValue]) => {
-    const [types, defaultParam, oneOf] = getTypes(propertyKey, propertyValue);
-    return (
-    <hr />
-    <p>
-      <div class="level">
-        <div class="level-left">
-            <div class="level-item">
-              <code>{propertyKey}</code>
-            </div>
-            {types?.length > 0 &&
-            <div class="level-item">
-              <p>{types}</p>
-            </div>}
-          {(schema?.required?.includes(propertyKey) || propertyValue?.nullable !== true) &&
-            <div class="level-item">
-              <b>Required</b>
-            </div>}
-        </div>
-      </div>
-    </p>
-    <p>{propertyValue?.description}</p>
-    <>
-    {defaultParam && <p>Default: <code>{defaultParam}</code></p>}
-    </>
-    <>
-    {oneOf && <p>One of: {oneOf.map((variant, index) => { return <>{index !== 0 && ", "}<code>{variant}</code></>})}</p>}
-    </>
-  )})}
-  </>
+  <BodyParametersInner schema={schema} path={path} method={method} properties={getProperties()} />
 )}

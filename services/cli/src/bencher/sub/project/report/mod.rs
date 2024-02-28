@@ -1,6 +1,6 @@
-use super::run::Run as Create;
 use crate::{bencher::sub::SubCmd, parser::project::report::CliReport, CliError};
 
+mod create;
 mod delete;
 mod list;
 mod view;
@@ -8,7 +8,7 @@ mod view;
 #[derive(Debug)]
 pub enum Report {
     List(list::List),
-    Create(Box<Create>),
+    Create(create::Create),
     View(view::View),
     Delete(delete::Delete),
 }
@@ -19,7 +19,7 @@ impl TryFrom<CliReport> for Report {
     fn try_from(report: CliReport) -> Result<Self, Self::Error> {
         Ok(match report {
             CliReport::List(list) => Self::List(list.try_into()?),
-            CliReport::Create(create) => Self::Create(Box::new((*create).try_into()?)),
+            CliReport::Create(create) => Self::Create(create.try_into()?),
             CliReport::View(view) => Self::View(view.try_into()?),
             CliReport::Delete(delete) => Self::Delete(delete.try_into()?),
         })

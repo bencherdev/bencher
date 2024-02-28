@@ -1,7 +1,7 @@
-use bencher_json::{DateTime, NameId, ReportUuid, ResourceId};
+use bencher_json::{DateTime, GitHash, NameId, ReportUuid, ResourceId};
 use clap::{Parser, Subcommand, ValueEnum};
 
-use super::run::CliRun;
+use super::run::{CliRunAdapter, CliRunAverage, CliRunFold};
 use crate::parser::{CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
@@ -11,7 +11,7 @@ pub enum CliReport {
     List(CliReportList),
     /// Create a report (alias to `bencher run`)
     #[clap(alias = "add")]
-    Create(Box<CliRun>),
+    Create(CliReportCreate),
     /// View a report
     #[clap(alias = "get")]
     View(CliReportView),
@@ -53,6 +53,51 @@ pub struct CliReportList {
 pub enum CliReportsSort {
     /// Date time of the report
     DateTime,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliReportCreate {
+    /// Project slug or UUID
+    pub project: ResourceId,
+
+    /// Branch name, slug, or UUID
+    #[clap(long)]
+    pub branch: NameId,
+
+    /// Git commit hash
+    #[clap(long)]
+    pub hash: Option<GitHash>,
+
+    /// Testbed name, slug, or UUID
+    #[clap(long)]
+    pub testbed: NameId,
+
+    /// Start time (ISO 8601 formatted string)
+    #[clap(long)]
+    pub start_time: chrono::DateTime<chrono::Utc>,
+
+    /// End time (ISO 8601 formatted string)
+    #[clap(long)]
+    pub end_time: chrono::DateTime<chrono::Utc>,
+
+    /// Benchmark results
+    #[clap(long)]
+    pub results: Vec<String>,
+
+    /// Benchmark harness adapter (or set BENCHER_ADAPTER) (default is "magic")
+    #[clap(value_enum, long)]
+    pub adapter: Option<CliRunAdapter>,
+
+    /// Benchmark harness suggested central tendency (ie average)
+    #[clap(value_enum, long)]
+    pub average: Option<CliRunAverage>,
+
+    /// Fold multiple results into a single result
+    #[clap(value_enum, long)]
+    pub fold: Option<CliRunFold>,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]

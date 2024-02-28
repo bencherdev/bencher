@@ -1,0 +1,101 @@
+---
+import { MethodKind, getSchema } from "./method";
+import BodyObject from "./BodyObject.astro";
+
+interface Props {
+  schema: object;
+  path: string;
+  method: MethodKind;
+  properties: object;
+}
+
+const { schema, path, method, properties } = Astro.props;
+
+const getDefault = (name) => {
+  switch (name) {
+    case "visibility":
+      if (path === "/v0/organizations/{organization}/projects" && method === MethodKind.Post) {
+        return "public";
+      }
+      return;
+    case "adapter":
+      if (path === "/v0/projects/{project}/reports" && method === MethodKind.Post) {
+        return "magic";
+      }
+      return;
+    default:
+      return;
+  }
+};
+
+const getTypes = (propertyKey, propertyValue) => {
+  if (Array.isArray(propertyValue?.allOf)) {
+    const types = propertyValue.allOf.map(schema => {
+        const schemaRef = getSchema(schema);
+        if (schemaRef?.type) {
+            return schemaRef.type;
+        }
+        if (schemaRef?.oneOf) {
+            return schemaRef.oneOf.map(one => one?.type).filter((v) => v).flat();
+        }
+    });
+
+    const variants = propertyValue.allOf.map(schema => {
+        const schemaRef = getSchema(schema);
+        if (schemaRef?.enum) {
+            return schemaRef.enum;
+        }
+        if (schemaRef?.oneOf) {
+            return schemaRef.oneOf.map(one => one?.enum).filter((v) => v).flat();
+        }
+    }).filter((v) => v).flat();
+    const oneOf = variants?.length > 0 ? variants : null;
+
+    // Filter out undefined types and join the types into a comma-separated list
+    return [types?.filter(t => t).join(", "), getDefault(propertyKey), oneOf];
+  }
+
+  if (propertyValue?.type === "array" && propertyValue?.items?.type === "string") {
+    return ["array of strings", getDefault(propertyKey), null];
+  }
+
+  return [null, null, null];
+};
+---
+
+{properties && Object.entries(properties)?.map(([propertyKey, propertyValue]) => {
+  const [types, defaultParam, oneOf] = getTypes(propertyKey, propertyValue);
+  return (
+  <hr />
+  <p>
+    <div class="level">
+      <div class="level-left">
+        <div class="level-item">
+          <code>{propertyKey}</code>
+        </div>
+        {types?.length > 0 &&
+          <div class="level-item">
+            <p>{types}</p>
+          </div>
+        }
+        {(schema?.required?.includes(propertyKey) || propertyValue?.nullable !== true) &&
+          <div class="level-item">
+            <b>Required</b>
+          </div>
+        }
+      </div>
+    </div>
+  </p>
+  <p>{propertyValue?.description}</p>
+  <>
+  {defaultParam && <p>Default: <code>{defaultParam}</code></p>}
+  </>
+  <>
+  {oneOf && <p>One of: {oneOf.map((variant, index) => { return <>{index !== 0 && ", "}<code>{variant}</code></>})}</p>}
+  </>
+  <>
+  {types === "object" &&
+    <BodyObject path={path} method={method} propertyKey={propertyKey} propertyValue={propertyValue} />
+  }
+  </>
+)})}
