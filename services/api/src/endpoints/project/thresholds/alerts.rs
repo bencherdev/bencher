@@ -38,7 +38,9 @@ pub type ProjAlertsPagination = JsonPagination<ProjAlertsSort>;
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjAlertsSort {
+    /// Sort by alert creation date time.
     Created,
+    /// Sort by alert modified date time.
     #[default]
     Modified,
 }
@@ -57,6 +59,12 @@ pub async fn proj_alerts_options(
     Ok(Endpoint::cors(&[Get.into()]))
 }
 
+/// List alerts for a project
+///
+/// List all alerts for a project.
+/// If the project is public, then the user does not need to be authenticated.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// By default, the alerts are sorted by status (active then dismissed) and modification date time in reverse chronological order.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/alerts",
@@ -176,6 +184,11 @@ pub async fn proj_alert_options(
     Ok(Endpoint::cors(&[Get.into(), Patch.into()]))
 }
 
+/// View an alert
+///
+/// View an alert for a project.
+/// If the project is public, then the user does not need to be authenticated.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/alerts/{alert}",
@@ -216,6 +229,11 @@ async fn get_one_inner(
     .into_json(conn))
 }
 
+/// Update an alert
+///
+/// Update an alert for a project.
+/// The user must have `edit` permissions for the project.
+/// Use this endpoint to dismiss an alert.
 #[endpoint {
     method = PATCH,
     path =  "/v0/projects/{project}/alerts/{alert}",
@@ -279,6 +297,12 @@ pub async fn proj_alert_stats_options(
     Ok(Endpoint::cors(&[Get.into()]))
 }
 
+/// View the total number of active alerts for a project
+///
+/// View the total number of active alerts for a project.
+/// If the project is public, then the user does not need to be authenticated.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// Use this endpoint to monitor the number of active alerts for a project.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/stats/alerts",

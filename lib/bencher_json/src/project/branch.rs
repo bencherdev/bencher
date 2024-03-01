@@ -30,9 +30,25 @@ static BRANCH_MAIN_SLUG: Lazy<Option<Slug>> = Lazy::new(|| {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewBranch {
+    /// The name of the branch.
+    /// Maximum length is 256 characters.
     pub name: BranchName,
+    /// The preferred slug for the branch.
+    /// If not provided, the slug will be generated from the name.
+    /// If the provided or generated slug is already in use, a unique slug will be generated.
+    /// Maximum length is 64 characters.
     pub slug: Option<Slug>,
+    /// If set to `true` and a branch with the same name already exits,
+    /// the existing branch will be returned without an error.
+    /// This is useful in cases where there may be a race condition to create a new branch,
+    /// such as multiple jobs in a CI/CD pipeline.
     pub soft: Option<bool>,
+    /// The start point for the new branch.
+    /// All branch versions from the start point branch will be shallow copied over to the new branch.
+    /// That is, all historical metrics data for the start point branch will appear in queries for the new branch.
+    /// For example, pull request branches often use their target branch as their start point branch.
+    /// After the new branch is created, it is not kept in sync with the start point branch.
+    /// If not provided, the new branch will have no historical data.
     pub start_point: Option<JsonStartPoint>,
 }
 
@@ -50,7 +66,10 @@ impl JsonNewBranch {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonStartPoint {
+    /// The UUID, slug, or name of the branch to use as the start point.
     pub branch: NameId,
+    /// If set to `true`, the thresholds from the start point branch will be deep copied to the new branch.
+    /// This can be useful for pull request branches that should have the same thresholds as their target branch.
     pub thresholds: Option<bool>,
 }
 
@@ -102,7 +121,11 @@ pub struct JsonVersion {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonUpdateBranch {
+    /// The new name of the branch.
+    /// Maximum length is 256 characters.
     pub name: Option<BranchName>,
+    /// The preferred new slug for the branch.
+    /// Maximum length is 64 characters.
     pub slug: Option<Slug>,
 }
 

@@ -14,8 +14,11 @@ crate::typed_uuid::typed_uuid!(StatisticUuid);
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewThreshold {
+    /// The UUID, slug, or name of the threshold branch.
     pub branch: NameId,
+    /// The UUID, slug, or name of the threshold testbed.
     pub testbed: NameId,
+    /// The UUID, slug, or name of the threshold measure.
     pub measure: NameId,
     #[serde(flatten)]
     pub statistic: Statistic,
@@ -69,8 +72,11 @@ pub struct JsonThresholdStatistic {
 #[derive(Debug, Clone, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonThresholdQueryParams {
+    /// Filter by branch name, exact match.
     pub branch: Option<String>,
+    /// Filter by testbed name, exact match.
     pub testbed: Option<String>,
+    /// Filter by measure name, exact match.
     pub measure: Option<String>,
 }
 

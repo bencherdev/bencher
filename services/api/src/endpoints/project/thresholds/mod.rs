@@ -52,8 +52,10 @@ pub type ProjThresholdsPagination = JsonPagination<ProjThresholdsSort>;
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjThresholdsSort {
+    /// Sort by threshold creation date time.
     #[default]
     Created,
+    /// Sort by threshold modified date time.
     Modified,
 }
 
@@ -72,6 +74,12 @@ pub async fn proj_thresholds_options(
     Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
+/// List thresholds for a project
+///
+/// List all thresholds for a project.
+/// If the project is public, then the user does not need to be authenticated.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// By default, the thresholds are sorted by creation date time in chronological order.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/thresholds",
@@ -161,6 +169,11 @@ async fn get_ls_inner(
         .collect()))
 }
 
+/// Create a threshold
+///
+/// Create a threshold for a project.
+/// The user must have `create` permissions for the project.
+/// There can only be one threshold for any unique combination of: branch, testbed, and measure.
 #[endpoint {
     method = POST,
     path =  "/v0/projects/{project}/thresholds",
@@ -252,6 +265,11 @@ pub async fn proj_threshold_options(
     Ok(Endpoint::cors(&[Get.into(), Put.into(), Delete.into()]))
 }
 
+/// View a threshold
+///
+/// View a threshold for a project.
+/// If the project is public, then the user does not need to be authenticated.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/thresholds/{threshold}",
@@ -294,6 +312,12 @@ async fn get_one_inner(
         .into_json(conn))
 }
 
+/// Update a threshold
+///
+/// Update a threshold for a project.
+/// The user must have `edit` permissions for the project.
+/// The new statistic will be added to the threshold and used going forward.
+/// The old statistic will still show up in the report history and alerts created when it was active.
 #[endpoint {
     method = PUT,
     path =  "/v0/projects/{project}/thresholds/{threshold}",
@@ -374,6 +398,11 @@ async fn put_inner(
     .into_json(conn))
 }
 
+/// Delete a threshold
+///
+/// Delete a threshold for a project.
+/// The user must have `delete` permissions for the project.
+/// A thresholds must be deleted before its branch, testbed, or measure can be deleted.
 #[endpoint {
     method = DELETE,
     path =  "/v0/projects/{project}/thresholds/{threshold}",

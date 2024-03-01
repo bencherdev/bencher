@@ -112,8 +112,16 @@ crate::typed_uuid::typed_uuid!(MeasureUuid);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewMeasure {
+    /// The name of the measure.
+    /// Maximum length is 64 characters.
     pub name: ResourceName,
+    /// The preferred slug for the measure.
+    /// If not provided, the slug will be generated from the name.
+    /// If the provided or generated slug is already in use, a unique slug will be generated.
+    /// Maximum length is 64 characters.
     pub slug: Option<Slug>,
+    /// The units of measure.
+    /// Maximum length is 64 characters.
     pub units: ResourceName,
 }
 
@@ -211,7 +219,13 @@ impl fmt::Display for JsonMeasure {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonUpdateMeasure {
+    /// The new name of the measure.
+    /// Maximum length is 64 characters.
     pub name: Option<ResourceName>,
+    /// The preferred new slug for the measure.
+    /// Maximum length is 64 characters.
     pub slug: Option<Slug>,
+    /// The new units of measure.
+    /// Maximum length is 64 characters.
     pub units: Option<ResourceName>,
 }

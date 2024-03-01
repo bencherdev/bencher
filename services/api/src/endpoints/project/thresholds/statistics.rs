@@ -41,6 +41,13 @@ pub async fn proj_statistic_options(
     Ok(Endpoint::cors(&[Get.into()]))
 }
 
+/// View a statistic
+///
+/// View a statistic for a project.
+/// If the project is public, then the user does not need to be authenticated.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// The statistics returned by this endpoint may no longer be active for their threshold,
+/// if their threshold has been updated with a new statistic.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/statistics/{statistic}",

@@ -29,8 +29,18 @@ crate::typed_uuid::typed_uuid!(TestbedUuid);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewTestbed {
+    /// The name of the testbed.
+    /// Maximum length is 64 characters.
     pub name: ResourceName,
+    /// The preferred slug for the testbed.
+    /// If not provided, the slug will be generated from the name.
+    /// If the provided or generated slug is already in use, a unique slug will be generated.
+    /// Maximum length is 64 characters.
     pub slug: Option<Slug>,
+    /// If set to `true` and a testbed with the same name already exits,
+    /// the existing testbed will be returned without an error.
+    /// This is useful in cases where there may be a race condition to create a new testbed,
+    /// such as multiple jobs in a CI/CD pipeline.
     pub soft: Option<bool>,
 }
 
@@ -71,6 +81,10 @@ impl fmt::Display for JsonTestbed {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonUpdateTestbed {
+    /// The new name of the testbed.
+    /// Maximum length is 64 characters.
     pub name: Option<ResourceName>,
+    /// The preferred new slug for the testbed.
+    /// Maximum length is 64 characters.
     pub slug: Option<Slug>,
 }

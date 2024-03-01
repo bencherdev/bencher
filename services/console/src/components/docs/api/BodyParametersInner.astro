@@ -59,6 +59,10 @@ const getTypes = (propertyKey, propertyValue) => {
     return ["array of strings", getDefault(propertyKey), null];
   }
 
+  if (propertyValue?.type === "boolean") {
+    return ["boolean", getDefault(propertyKey), null];
+  }
+
   return [null, null, null];
 };
 ---

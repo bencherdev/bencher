@@ -14,7 +14,7 @@ const params = parameters?.filter((param) => param.in === "path");
   <h3 class="title is-5" style="margin-top: 4rem;">Path Parameters</h3>
   <>
   {params.map((parameter) => {
-    const types = getSchema(parameter.schema);
+    const type = getSchema(parameter.schema)?.type;
     return (
     <hr />
     <p>
@@ -23,9 +23,9 @@ const params = parameters?.filter((param) => param.in === "path");
             <div class="level-item">
               <code>{parameter?.name}</code>
             </div>
-            {types?.length > 0 &&
+            {type?.length > 0 &&
             <div class="level-item">
-                <p>{types}</p>
+                <p>{type}</p>
             </div>
             }
             {parameter?.required === true &&

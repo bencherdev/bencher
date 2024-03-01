@@ -1,0 +1,27 @@
+---
+title: "Project Benchmarks"
+description: "The Bencher Project Benchmarks REST API"
+heading: "Project Benchmarks REST API"
+sortOrder: 6
+paths:
+  - path: /v0/projects/{project}/benchmarks
+    method: get
+    headers: pub
+    cli: benchmark list PROJECT
+  - path: /v0/projects/{project}/benchmarks
+    method: post
+    headers: auth
+    cli: benchmark create PROJECT
+  - path: /v0/projects/{project}/benchmarks/{benchmark}
+    method: get
+    headers: pub
+    cli: benchmark view PROJECT BENCHMARK
+  - path: /v0/projects/{project}/benchmarks/{benchmark}
+    method: patch
+    headers: auth
+    cli: benchmark update PROJECT BENCHMARK
+  - path: /v0/projects/{project}/benchmarks/{benchmark}
+    method: delete
+    headers: auth
+    cli: benchmark delete PROJECT BENCHMARK
+---

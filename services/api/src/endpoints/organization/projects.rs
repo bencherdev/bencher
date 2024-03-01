@@ -47,16 +47,16 @@ pub type OrgProjectsPagination = JsonPagination<OrgProjectsSort>;
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum OrgProjectsSort {
-    /// Sort by name.
+    /// Sort by project name.
     #[default]
     Name,
 }
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgProjectsQuery {
-    /// Filter by name, exact match.
+    /// Filter by project name, exact match.
     pub name: Option<ResourceName>,
-    /// Search by name, slug, or UUID.
+    /// Search by project name, slug, or UUID.
     pub search: Option<Search>,
 }
 
@@ -79,6 +79,7 @@ pub async fn org_projects_options(
 ///
 /// List projects for an organization.
 /// The user must have `view` permissions for the organization.
+/// By default, the projects are sorted in alphabetical order by name.
 #[endpoint {
     method = GET,
     path =  "/v0/organizations/{organization}/projects",
@@ -153,6 +154,8 @@ async fn get_ls_inner(
 ///
 /// Create a new project for an organization.
 /// The user must have `create` permissions for the organization.
+/// The new project will have a `main` branch, a `localhost` testbed, `latency` and `throughput` measures, and a threshold for both measures.
+/// ➕ Bencher Plus: The project visibility must be `public` unless the organization has a valid Bencher Plus subscription.
 #[endpoint {
     method = POST,
     path =  "/v0/organizations/{organization}/projects",

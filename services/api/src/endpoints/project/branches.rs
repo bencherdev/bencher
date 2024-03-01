@@ -44,13 +44,16 @@ pub type ProjBranchesPagination = JsonPagination<ProjBranchesSort>;
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjBranchesSort {
+    /// Sort by branch name.
     #[default]
     Name,
 }
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjBranchesQuery {
+    /// Filter by branch name, exact match.
     pub name: Option<BranchName>,
+    /// Search by branch name, slug, or UUID.
     pub search: Option<Search>,
 }
 
@@ -69,6 +72,12 @@ pub async fn proj_branches_options(
     Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
+/// List branches for a project
+///
+/// List all branches for a project.
+/// If the project is public, then the user does not need to be authenticated.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// By default, the branches are sorted in alphabetical order by name.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/branches",
@@ -137,6 +146,10 @@ async fn get_ls_inner(
         .collect())
 }
 
+/// Create a branch
+///
+/// Create a branch for a project.
+/// The user must have `create` permissions for the project.
 #[endpoint {
     method = POST,
     path =  "/v0/projects/{project}/branches",
@@ -228,6 +241,11 @@ pub async fn proj_branch_options(
     Ok(Endpoint::cors(&[Get.into(), Patch.into(), Delete.into()]))
 }
 
+/// View a branch
+///
+/// View a branch for a project.
+/// If the project is public, then the user does not need to be authenticated.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/branches/{branch}",
@@ -270,6 +288,10 @@ async fn get_one_inner(
         ))
 }
 
+/// Update a branch
+///
+/// Update a branch for a project.
+/// The user must have `edit` permissions for the project.
 #[endpoint {
     method = PATCH,
     path =  "/v0/projects/{project}/branches/{branch}",
@@ -323,6 +345,11 @@ async fn patch_inner(
         .map_err(resource_not_found_err!(Branch, query_branch))
 }
 
+/// Delete a branch
+///
+/// Delete a branch for a project.
+/// The user must have `delete` permissions for the project.
+/// All reports and thresholds that use this branch must be deleted first!
 #[endpoint {
     method = DELETE,
     path =  "/v0/projects/{project}/branches/{branch}",

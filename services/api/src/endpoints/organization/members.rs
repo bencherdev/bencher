@@ -80,6 +80,7 @@ pub async fn org_members_options(
 ///
 /// List members for an organization.
 /// The user must have `view_role` permissions for the organization.
+/// By default, the members are sorted in alphabetical order by name.
 #[endpoint {
     method = GET,
     path =  "/v0/organizations/{organization}/members",

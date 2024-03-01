@@ -38,16 +38,16 @@ pub type OrganizationsPagination = JsonPagination<OrganizationsSort>;
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum OrganizationsSort {
-    /// Sort by name.
+    /// Sort by organization name.
     #[default]
     Name,
 }
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrganizationsQuery {
-    /// Filter by name, exact match.
+    /// Filter by organization name, exact match.
     pub name: Option<ResourceName>,
-    /// Search by name, slug, or UUID.
+    /// Search by organization name, slug, or UUID.
     pub search: Option<Search>,
 }
 
@@ -69,6 +69,7 @@ pub async fn organizations_options(
 ///
 /// List all organizations where the user is a member.
 /// The user must have `view` permissions for each organization.
+/// By default, the organizations are sorted in alphabetical order by name.
 #[endpoint {
     method = GET,
     path = "/v0/organizations",

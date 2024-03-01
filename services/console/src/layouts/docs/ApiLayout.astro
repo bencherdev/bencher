@@ -31,8 +31,8 @@ const canonical = () => {
 ---
 
 <InnerLayout
-  title={title}
-  titleFmt={titleFmt ?? ((title) => `🧑‍💻 ${heading ?? title}`)}
+  title={`${title} API`}
+  titleFmt={titleFmt ?? ((title) => `🧑‍💻 ${heading ?? `${title} API`}`)}
   description={description}
   heading={heading}
   tab={DocsTab.Api}

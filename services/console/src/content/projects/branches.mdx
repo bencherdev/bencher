@@ -1,0 +1,27 @@
+---
+title: "Project Branches"
+description: "The Bencher Project Branches REST API"
+heading: "Project Branches REST API"
+sortOrder: 4
+paths:
+  - path: /v0/projects/{project}/branches
+    method: get
+    headers: pub
+    cli: branch list PROJECT
+  - path: /v0/projects/{project}/branches
+    method: post
+    headers: auth
+    cli: branch create PROJECT
+  - path: /v0/projects/{project}/branches/{branch}
+    method: get
+    headers: pub
+    cli: branch view PROJECT BRANCH
+  - path: /v0/projects/{project}/branches/{branch}
+    method: patch
+    headers: auth
+    cli: branch update PROJECT BRANCH
+  - path: /v0/projects/{project}/branches/{branch}
+    method: delete
+    headers: auth
+    cli: branch delete PROJECT BRANCH
+---

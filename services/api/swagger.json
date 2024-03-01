@@ -470,7 +470,7 @@
           "organizations"
         ],
         "summary": "List organizations",
-        "description": "List all organizations where the user is a member. The user must have `view` permissions for each organization.",
+        "description": "List all organizations where the user is a member. The user must have `view` permissions for each organization. By default, the organizations are sorted in alphabetical order by name.",
         "operationId": "organizations_get",
         "parameters": [
           {
@@ -514,7 +514,7 @@
           {
             "in": "query",
             "name": "name",
-            "description": "Filter by name, exact match.",
+            "description": "Filter by organization name, exact match.",
             "schema": {
               "$ref": "#/components/schemas/ResourceName"
             }
@@ -522,7 +522,7 @@
           {
             "in": "query",
             "name": "search",
-            "description": "Search by name, slug, or UUID.",
+            "description": "Search by organization name, slug, or UUID.",
             "schema": {
               "$ref": "#/components/schemas/Search"
             }
@@ -874,7 +874,7 @@
           "members"
         ],
         "summary": "List organization members",
-        "description": "List members for an organization. The user must have `view_role` permissions for the organization.",
+        "description": "List members for an organization. The user must have `view_role` permissions for the organization. By default, the members are sorted in alphabetical order by name.",
         "operationId": "org_members_get",
         "parameters": [
           {
@@ -1523,7 +1523,7 @@
           "projects"
         ],
         "summary": "List organization projects",
-        "description": "List projects for an organization. The user must have `view` permissions for the organization.",
+        "description": "List projects for an organization. The user must have `view` permissions for the organization. By default, the projects are sorted in alphabetical order by name.",
         "operationId": "org_projects_get",
         "parameters": [
           {
@@ -1576,7 +1576,7 @@
           {
             "in": "query",
             "name": "name",
-            "description": "Filter by name, exact match.",
+            "description": "Filter by project name, exact match.",
             "schema": {
               "$ref": "#/components/schemas/ResourceName"
             }
@@ -1584,7 +1584,7 @@
           {
             "in": "query",
             "name": "search",
-            "description": "Search by name, slug, or UUID.",
+            "description": "Search by project name, slug, or UUID.",
             "schema": {
               "$ref": "#/components/schemas/Search"
             }
@@ -1645,7 +1645,7 @@
           "projects"
         ],
         "summary": "Create a project for an organization",
-        "description": "Create a new project for an organization. The user must have `create` permissions for the organization.",
+        "description": "Create a new project for an organization. The user must have `create` permissions for the organization. The new project will have a `main` branch, a `localhost` testbed, `latency` and `throughput` measures, and a threshold for both measures. ➕ Bencher Plus: The project visibility must be `public` unless the organization has a valid Bencher Plus subscription.",
         "operationId": "org_project_post",
         "parameters": [
           {
@@ -1794,7 +1794,7 @@
           "projects"
         ],
         "summary": "List projects",
-        "description": "List all projects. If the user is not authenticated, then only public projects are returned. If the user is authenticated, then all public projects and any private project where the user has `view` permissions are returned.",
+        "description": "List all projects. If the user is not authenticated, then only public projects are returned. If the user is authenticated, then all public projects and any private project where the user has `view` permissions are returned. By default, the projects are sorted in alphabetical order by name.",
         "operationId": "projects_get",
         "parameters": [
           {
@@ -1838,7 +1838,7 @@
           {
             "in": "query",
             "name": "name",
-            "description": "Filter by name, exact match.",
+            "description": "Filter by project name, exact match.",
             "schema": {
               "$ref": "#/components/schemas/ResourceName"
             }
@@ -1846,7 +1846,7 @@
           {
             "in": "query",
             "name": "search",
-            "description": "Search by name, slug, or UUID.",
+            "description": "Search by project name, slug, or UUID.",
             "schema": {
               "$ref": "#/components/schemas/Search"
             }
@@ -2114,6 +2114,8 @@
           "projects",
           "alerts"
         ],
+        "summary": "List alerts for a project",
+        "description": "List all alerts for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the alerts are sorted by status (active then dismissed) and modification date time in reverse chronological order.",
         "operationId": "proj_alerts_get",
         "parameters": [
           {
@@ -2220,6 +2222,8 @@
           "projects",
           "alerts"
         ],
+        "summary": "View an alert",
+        "description": "View an alert for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
         "operationId": "proj_alert_get",
         "parameters": [
           {
@@ -2295,6 +2299,8 @@
           "projects",
           "alerts"
         ],
+        "summary": "Update an alert",
+        "description": "Update an alert for a project. The user must have `edit` permissions for the project. Use this endpoint to dismiss an alert.",
         "operationId": "proj_alert_patch",
         "parameters": [
           {
@@ -2459,6 +2465,8 @@
           "projects",
           "benchmarks"
         ],
+        "summary": "List benchmarks for a project",
+        "description": "List all benchmarks for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the benchmarks are sorted in alphabetical order by name.",
         "operationId": "proj_benchmarks_get",
         "parameters": [
           {
@@ -2511,6 +2519,7 @@
           {
             "in": "query",
             "name": "name",
+            "description": "Filter by benchmark name, exact match.",
             "schema": {
               "$ref": "#/components/schemas/BenchmarkName"
             }
@@ -2518,6 +2527,7 @@
           {
             "in": "query",
             "name": "search",
+            "description": "Search by benchmark name, slug, or UUID.",
             "schema": {
               "$ref": "#/components/schemas/Search"
             }
@@ -2577,6 +2587,8 @@
           "projects",
           "benchmarks"
         ],
+        "summary": "Create a benchmark",
+        "description": "Create a benchmark for a project. The user must have `create` permissions for the project.",
         "operationId": "proj_benchmark_post",
         "parameters": [
           {
@@ -2655,6 +2667,8 @@
           "projects",
           "benchmarks"
         ],
+        "summary": "View a benchmark",
+        "description": "View a benchmark for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
         "operationId": "proj_benchmark_get",
         "parameters": [
           {
@@ -2730,6 +2744,8 @@
           "projects",
           "benchmarks"
         ],
+        "summary": "Delete a benchmark",
+        "description": "Delete a benchmark for a project. The user must have `delete` permissions for the project. All reports that use this benchmark must be deleted first!",
         "operationId": "proj_benchmark_delete",
         "parameters": [
           {
@@ -2798,6 +2814,8 @@
           "projects",
           "benchmarks"
         ],
+        "summary": "Update a benchmark",
+        "description": "Update a benchmark for a project. The user must have `edit` permissions for the project.",
         "operationId": "proj_benchmark_patch",
         "parameters": [
           {
@@ -2885,6 +2903,8 @@
           "projects",
           "branches"
         ],
+        "summary": "List branches for a project",
+        "description": "List all branches for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the branches are sorted in alphabetical order by name.",
         "operationId": "proj_branches_get",
         "parameters": [
           {
@@ -2937,6 +2957,7 @@
           {
             "in": "query",
             "name": "name",
+            "description": "Filter by branch name, exact match.",
             "schema": {
               "$ref": "#/components/schemas/BranchName"
             }
@@ -2944,6 +2965,7 @@
           {
             "in": "query",
             "name": "search",
+            "description": "Search by branch name, slug, or UUID.",
             "schema": {
               "$ref": "#/components/schemas/Search"
             }
@@ -3003,6 +3025,8 @@
           "projects",
           "branches"
         ],
+        "summary": "Create a branch",
+        "description": "Create a branch for a project. The user must have `create` permissions for the project.",
         "operationId": "proj_branch_post",
         "parameters": [
           {
@@ -3081,6 +3105,8 @@
           "projects",
           "branches"
         ],
+        "summary": "View a branch",
+        "description": "View a branch for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
         "operationId": "proj_branch_get",
         "parameters": [
           {
@@ -3156,6 +3182,8 @@
           "projects",
           "branches"
         ],
+        "summary": "Delete a branch",
+        "description": "Delete a branch for a project. The user must have `delete` permissions for the project. All reports and thresholds that use this branch must be deleted first!",
         "operationId": "proj_branch_delete",
         "parameters": [
           {
@@ -3224,6 +3252,8 @@
           "projects",
           "branches"
         ],
+        "summary": "Update a branch",
+        "description": "Update a branch for a project. The user must have `edit` permissions for the project.",
         "operationId": "proj_branch_patch",
         "parameters": [
           {
@@ -3311,6 +3341,8 @@
           "projects",
           "measures"
         ],
+        "summary": "List measures for a project",
+        "description": "List all measures for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the measures are sorted in alphabetical order by name.",
         "operationId": "proj_measures_get",
         "parameters": [
           {
@@ -3363,6 +3395,7 @@
           {
             "in": "query",
             "name": "name",
+            "description": "Filter by measure name, exact match.",
             "schema": {
               "$ref": "#/components/schemas/ResourceName"
             }
@@ -3370,6 +3403,7 @@
           {
             "in": "query",
             "name": "search",
+            "description": "Search by measure name, slug, or UUID.",
             "schema": {
               "$ref": "#/components/schemas/Search"
             }
@@ -3429,6 +3463,8 @@
           "projects",
           "measures"
         ],
+        "summary": "Create a measure",
+        "description": "Create a measure for a project. The user must have `create` permissions for the project.",
         "operationId": "proj_measure_post",
         "parameters": [
           {
@@ -3507,6 +3543,8 @@
           "projects",
           "measures"
         ],
+        "summary": "View a measure",
+        "description": "View a measure for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
         "operationId": "proj_measure_get",
         "parameters": [
           {
@@ -3582,6 +3620,8 @@
           "projects",
           "measures"
         ],
+        "summary": "Delete a measure",
+        "description": "Delete a measure for a project. The user must have `delete` permissions for the project. All reports and thresholds that use this measure must be deleted first!",
         "operationId": "proj_measure_delete",
         "parameters": [
           {
@@ -3650,6 +3690,8 @@
           "projects",
           "measures"
         ],
+        "summary": "Update a measure",
+        "description": "Update a measure for a project. The user must have `edit` permissions for the project.",
         "operationId": "proj_measure_patch",
         "parameters": [
           {
@@ -3953,7 +3995,7 @@
           "reports"
         ],
         "summary": "List reports for a project",
-        "description": "List all reports for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
+        "description": "List all reports for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the reports are sorted by date time in reverse chronological order.",
         "operationId": "proj_reports_get",
         "parameters": [
           {
@@ -4092,7 +4134,7 @@
           "projects",
           "reports"
         ],
-        "summary": "Create a report for a project",
+        "summary": "Create a report",
         "description": "Create a report for a project. The user must have `create` permissions for the project. If using the Bencher CLI, it is recommended to use the `bencher run` subcommand instead of trying to create a report manually.",
         "operationId": "proj_report_post",
         "parameters": [
@@ -4172,7 +4214,7 @@
           "projects",
           "reports"
         ],
-        "summary": "View a report for a project",
+        "summary": "View a report",
         "description": "View a report for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
         "operationId": "proj_report_get",
         "parameters": [
@@ -4249,7 +4291,7 @@
           "projects",
           "reports"
         ],
-        "summary": "Delete a report for a project",
+        "summary": "Delete a report",
         "description": "Delete a report for a project. The user must have `delete` permissions for the project. If there are no more reports for a branch version, then that version will be deleted. All later branch versions will have their version numbers decremented.",
         "operationId": "proj_report_delete",
         "parameters": [
@@ -4321,6 +4363,8 @@
           "projects",
           "statistics"
         ],
+        "summary": "View a statistic",
+        "description": "View a statistic for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. The statistics returned by this endpoint may no longer be active for their threshold, if their threshold has been updated with a new statistic.",
         "operationId": "proj_statistic_get",
         "parameters": [
           {
@@ -4398,6 +4442,8 @@
           "projects",
           "alerts"
         ],
+        "summary": "View the total number of active alerts for a project",
+        "description": "View the total number of active alerts for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. Use this endpoint to monitor the number of active alerts for a project.",
         "operationId": "proj_alert_stats_get",
         "parameters": [
           {
@@ -4466,6 +4512,8 @@
           "projects",
           "testbeds"
         ],
+        "summary": "List testbeds for a project",
+        "description": "List all testbeds for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the testbeds are sorted in alphabetical order by name.",
         "operationId": "proj_testbeds_get",
         "parameters": [
           {
@@ -4518,6 +4566,7 @@
           {
             "in": "query",
             "name": "name",
+            "description": "Filter by testbed name, exact match.",
             "schema": {
               "$ref": "#/components/schemas/ResourceName"
             }
@@ -4525,6 +4574,7 @@
           {
             "in": "query",
             "name": "search",
+            "description": "Search by testbed name, slug, or UUID.",
             "schema": {
               "$ref": "#/components/schemas/Search"
             }
@@ -4584,6 +4634,8 @@
           "projects",
           "testbeds"
         ],
+        "summary": "Create a testbed",
+        "description": "Create a testbed for a project. The user must have `create` permissions for the project.",
         "operationId": "proj_testbed_post",
         "parameters": [
           {
@@ -4662,6 +4714,8 @@
           "projects",
           "testbeds"
         ],
+        "summary": "View a testbed",
+        "description": "View a testbed for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
         "operationId": "proj_testbed_get",
         "parameters": [
           {
@@ -4737,6 +4791,8 @@
           "projects",
           "testbeds"
         ],
+        "summary": "Delete a testbed",
+        "description": "Delete a testbed for a project. The user must have `delete` permissions for the project. All reports and thresholds that use this testbed must be deleted first!",
         "operationId": "proj_testbed_delete",
         "parameters": [
           {
@@ -4805,6 +4861,8 @@
           "projects",
           "testbeds"
         ],
+        "summary": "Update a testbed",
+        "description": "Update a testbed for a project. The user must have `edit` permissions for the project.",
         "operationId": "proj_testbed_patch",
         "parameters": [
           {
@@ -4892,6 +4950,8 @@
           "projects",
           "thresholds"
         ],
+        "summary": "List thresholds for a project",
+        "description": "List all thresholds for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the thresholds are sorted by creation date time in chronological order.",
         "operationId": "proj_thresholds_get",
         "parameters": [
           {
@@ -4944,6 +5004,7 @@
           {
             "in": "query",
             "name": "branch",
+            "description": "Filter by branch name, exact match.",
             "schema": {
               "nullable": true,
               "type": "string"
@@ -4952,6 +5013,7 @@
           {
             "in": "query",
             "name": "measure",
+            "description": "Filter by measure name, exact match.",
             "schema": {
               "nullable": true,
               "type": "string"
@@ -4960,6 +5022,7 @@
           {
             "in": "query",
             "name": "testbed",
+            "description": "Filter by testbed name, exact match.",
             "schema": {
               "nullable": true,
               "type": "string"
@@ -5020,6 +5083,8 @@
           "projects",
           "thresholds"
         ],
+        "summary": "Create a threshold",
+        "description": "Create a threshold for a project. The user must have `create` permissions for the project. There can only be one threshold for any unique combination of: branch, testbed, and measure.",
         "operationId": "proj_threshold_post",
         "parameters": [
           {
@@ -5098,6 +5163,8 @@
           "projects",
           "thresholds"
         ],
+        "summary": "View a threshold",
+        "description": "View a threshold for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
         "operationId": "proj_threshold_get",
         "parameters": [
           {
@@ -5173,6 +5240,8 @@
           "projects",
           "thresholds"
         ],
+        "summary": "Update a threshold",
+        "description": "Update a threshold for a project. The user must have `edit` permissions for the project. The new statistic will be added to the threshold and used going forward. The old statistic will still show up in the report history and alerts created when it was active.",
         "operationId": "proj_threshold_put",
         "parameters": [
           {
@@ -5258,6 +5327,8 @@
           "projects",
           "thresholds"
         ],
+        "summary": "Delete a threshold",
+        "description": "Delete a threshold for a project. The user must have `delete` permissions for the project. A thresholds must be deleted before its branch, testbed, or measure can be deleted.",
         "operationId": "proj_threshold_delete",
         "parameters": [
           {
@@ -7419,10 +7490,16 @@
         "type": "object",
         "properties": {
           "name": {
-            "$ref": "#/components/schemas/BenchmarkName"
+            "description": "The name of the benchmark. Maximum length is 1,024 characters.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BenchmarkName"
+              }
+            ]
           },
           "slug": {
             "nullable": true,
+            "description": "The preferred slug for the benchmark. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 64 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Slug"
@@ -7438,10 +7515,16 @@
         "type": "object",
         "properties": {
           "name": {
-            "$ref": "#/components/schemas/BranchName"
+            "description": "The name of the branch. Maximum length is 256 characters.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BranchName"
+              }
+            ]
           },
           "slug": {
             "nullable": true,
+            "description": "The preferred slug for the branch. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 64 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Slug"
@@ -7450,10 +7533,12 @@
           },
           "soft": {
             "nullable": true,
+            "description": "If set to `true` and a branch with the same name already exits, the existing branch will be returned without an error. This is useful in cases where there may be a race condition to create a new branch, such as multiple jobs in a CI/CD pipeline.",
             "type": "boolean"
           },
           "start_point": {
             "nullable": true,
+            "description": "The start point for the new branch. All branch versions from the start point branch will be shallow copied over to the new branch. That is, all historical metrics data for the start point branch will appear in queries for the new branch. For example, pull request branches often use their target branch as their start point branch. After the new branch is created, it is not kept in sync with the start point branch. If not provided, the new branch will have no historical data.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonStartPoint"
@@ -7500,10 +7585,16 @@
         "type": "object",
         "properties": {
           "name": {
-            "$ref": "#/components/schemas/ResourceName"
+            "description": "The name of the measure. Maximum length is 64 characters.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceName"
+              }
+            ]
           },
           "slug": {
             "nullable": true,
+            "description": "The preferred slug for the measure. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 64 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Slug"
@@ -7511,7 +7602,12 @@
             ]
           },
           "units": {
-            "$ref": "#/components/schemas/ResourceName"
+            "description": "The units of measure. Maximum length is 64 characters.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceName"
+              }
+            ]
           }
         },
         "required": [
@@ -7729,10 +7825,16 @@
         "type": "object",
         "properties": {
           "name": {
-            "$ref": "#/components/schemas/ResourceName"
+            "description": "The name of the testbed. Maximum length is 64 characters.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceName"
+              }
+            ]
           },
           "slug": {
             "nullable": true,
+            "description": "The preferred slug for the testbed. If not provided, the slug will be generated from the name. If the provided or generated slug is already in use, a unique slug will be generated. Maximum length is 64 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Slug"
@@ -7741,6 +7843,7 @@
           },
           "soft": {
             "nullable": true,
+            "description": "If set to `true` and a testbed with the same name already exits, the existing testbed will be returned without an error. This is useful in cases where there may be a race condition to create a new testbed, such as multiple jobs in a CI/CD pipeline.",
             "type": "boolean"
           }
         },
@@ -7752,10 +7855,16 @@
         "type": "object",
         "properties": {
           "branch": {
-            "$ref": "#/components/schemas/NameId"
+            "description": "The UUID, slug, or name of the threshold branch.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NameId"
+              }
+            ]
           },
           "lower_boundary": {
             "nullable": true,
+            "description": "The lower boundary used to calculate the lower boundary limit. The requirements for this field depend on which `test` is selected.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Boundary"
@@ -7764,6 +7873,7 @@
           },
           "max_sample_size": {
             "nullable": true,
+            "description": "The maximum number of samples used to perform the test. Only the most recent samples will be used if there are more.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/SampleSize"
@@ -7771,10 +7881,16 @@
             ]
           },
           "measure": {
-            "$ref": "#/components/schemas/NameId"
+            "description": "The UUID, slug, or name of the threshold measure.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NameId"
+              }
+            ]
           },
           "min_sample_size": {
             "nullable": true,
+            "description": "The minimum number of samples required to perform the test. If there are fewer samples, the test will not be performed.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/SampleSize"
@@ -7782,13 +7898,24 @@
             ]
           },
           "test": {
-            "$ref": "#/components/schemas/StatisticKind"
+            "description": "The kind of test to use to calculate the baseline and boundary limits.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StatisticKind"
+              }
+            ]
           },
           "testbed": {
-            "$ref": "#/components/schemas/NameId"
+            "description": "The UUID, slug, or name of the threshold testbed.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NameId"
+              }
+            ]
           },
           "upper_boundary": {
             "nullable": true,
+            "description": "The upper boundary used to calculate the upper boundary limit. The requirements for this field depend on which `test` is selected.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Boundary"
@@ -7797,6 +7924,7 @@
           },
           "window": {
             "nullable": true,
+            "description": "The window of time for samples used to perform the test, in seconds. Samples outside of this window will be omitted.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Window"
@@ -8881,10 +9009,16 @@
         "type": "object",
         "properties": {
           "branch": {
-            "$ref": "#/components/schemas/NameId"
+            "description": "The UUID, slug, or name of the branch to use as the start point.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NameId"
+              }
+            ]
           },
           "thresholds": {
             "nullable": true,
+            "description": "If set to `true`, the thresholds from the start point branch will be deep copied to the new branch. This can be useful for pull request branches that should have the same thresholds as their target branch.",
             "type": "boolean"
           }
         },
@@ -9242,6 +9376,7 @@
         "properties": {
           "name": {
             "nullable": true,
+            "description": "The new name of the benchmark. Maximum length is 1,024 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/BenchmarkName"
@@ -9250,6 +9385,7 @@
           },
           "slug": {
             "nullable": true,
+            "description": "The preferred new slug for the benchmark. Maximum length is 64 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Slug"
@@ -9263,6 +9399,7 @@
         "properties": {
           "name": {
             "nullable": true,
+            "description": "The new name of the branch. Maximum length is 256 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/BranchName"
@@ -9271,6 +9408,7 @@
           },
           "slug": {
             "nullable": true,
+            "description": "The preferred new slug for the branch. Maximum length is 64 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Slug"
@@ -9301,6 +9439,7 @@
         "properties": {
           "name": {
             "nullable": true,
+            "description": "The new name of the measure. Maximum length is 64 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/ResourceName"
@@ -9309,6 +9448,7 @@
           },
           "slug": {
             "nullable": true,
+            "description": "The preferred new slug for the measure. Maximum length is 64 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Slug"
@@ -9317,6 +9457,7 @@
           },
           "units": {
             "nullable": true,
+            "description": "The new units of measure. Maximum length is 64 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/ResourceName"
@@ -9364,6 +9505,7 @@
         "properties": {
           "name": {
             "nullable": true,
+            "description": "The new name of the testbed. Maximum length is 64 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/ResourceName"
@@ -9372,6 +9514,7 @@
           },
           "slug": {
             "nullable": true,
+            "description": "The preferred new slug for the testbed. Maximum length is 64 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Slug"
@@ -9385,6 +9528,7 @@
         "properties": {
           "lower_boundary": {
             "nullable": true,
+            "description": "The lower boundary used to calculate the lower boundary limit. The requirements for this field depend on which `test` is selected.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Boundary"
@@ -9393,6 +9537,7 @@
           },
           "max_sample_size": {
             "nullable": true,
+            "description": "The maximum number of samples used to perform the test. Only the most recent samples will be used if there are more.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/SampleSize"
@@ -9401,6 +9546,7 @@
           },
           "min_sample_size": {
             "nullable": true,
+            "description": "The minimum number of samples required to perform the test. If there are fewer samples, the test will not be performed.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/SampleSize"
@@ -9408,10 +9554,16 @@
             ]
           },
           "test": {
-            "$ref": "#/components/schemas/StatisticKind"
+            "description": "The kind of test to use to calculate the baseline and boundary limits.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StatisticKind"
+              }
+            ]
           },
           "upper_boundary": {
             "nullable": true,
+            "description": "The upper boundary used to calculate the upper boundary limit. The requirements for this field depend on which `test` is selected.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Boundary"
@@ -9420,6 +9572,7 @@
           },
           "window": {
             "nullable": true,
+            "description": "The window of time for samples used to perform the test, in seconds. Samples outside of this window will be omitted.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Window"
@@ -9817,7 +9970,7 @@
       "OrganizationsSort": {
         "oneOf": [
           {
-            "description": "Sort by name.",
+            "description": "Sort by organization name.",
             "type": "string",
             "enum": [
               "name"
@@ -9856,7 +10009,7 @@
       "OrgProjectsSort": {
         "oneOf": [
           {
-            "description": "Sort by name.",
+            "description": "Sort by project name.",
             "type": "string",
             "enum": [
               "name"
@@ -9867,7 +10020,7 @@
       "ProjectsSort": {
         "oneOf": [
           {
-            "description": "Sort by name.",
+            "description": "Sort by project name.",
             "type": "string",
             "enum": [
               "name"
@@ -9876,10 +10029,21 @@
         ]
       },
       "ProjAlertsSort": {
-        "type": "string",
-        "enum": [
-          "created",
-          "modified"
+        "oneOf": [
+          {
+            "description": "Sort by alert creation date time.",
+            "type": "string",
+            "enum": [
+              "created"
+            ]
+          },
+          {
+            "description": "Sort by alert modified date time.",
+            "type": "string",
+            "enum": [
+              "modified"
+            ]
+          }
         ]
       },
       "ProjectPermission": {
@@ -9897,21 +10061,36 @@
         ]
       },
       "ProjBenchmarksSort": {
-        "type": "string",
-        "enum": [
-          "name"
+        "oneOf": [
+          {
+            "description": "Sort by benchmark name.",
+            "type": "string",
+            "enum": [
+              "name"
+            ]
+          }
         ]
       },
       "ProjBranchesSort": {
-        "type": "string",
-        "enum": [
-          "name"
+        "oneOf": [
+          {
+            "description": "Sort by branch name.",
+            "type": "string",
+            "enum": [
+              "name"
+            ]
+          }
         ]
       },
       "ProjMeasuresSort": {
-        "type": "string",
-        "enum": [
-          "name"
+        "oneOf": [
+          {
+            "description": "Sort by measure name.",
+            "type": "string",
+            "enum": [
+              "name"
+            ]
+          }
         ]
       },
       "DateTimeMillis": {
@@ -9933,16 +10112,32 @@
         ]
       },
       "ProjTestbedsSort": {
-        "type": "string",
-        "enum": [
-          "name"
+        "oneOf": [
+          {
+            "description": "Sort by testbed name.",
+            "type": "string",
+            "enum": [
+              "name"
+            ]
+          }
         ]
       },
       "ProjThresholdsSort": {
-        "type": "string",
-        "enum": [
-          "created",
-          "modified"
+        "oneOf": [
+          {
+            "description": "Sort by threshold creation date time.",
+            "type": "string",
+            "enum": [
+              "created"
+            ]
+          },
+          {
+            "description": "Sort by threshold modified date time.",
+            "type": "string",
+            "enum": [
+              "modified"
+            ]
+          }
         ]
       },
       "UserTokensSort": {

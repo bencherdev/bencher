@@ -13,11 +13,22 @@ use crate::{
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Statistic {
+    /// The kind of test to use to calculate the baseline and boundary limits.
     pub test: StatisticKind,
+    /// The minimum number of samples required to perform the test.
+    /// If there are fewer samples, the test will not be performed.
     pub min_sample_size: Option<SampleSize>,
+    /// The maximum number of samples used to perform the test.
+    /// Only the most recent samples will be used if there are more.
     pub max_sample_size: Option<SampleSize>,
+    /// The window of time for samples used to perform the test, in seconds.
+    /// Samples outside of this window will be omitted.
     pub window: Option<Window>,
+    /// The lower boundary used to calculate the lower boundary limit.
+    /// The requirements for this field depend on which `test` is selected.
     pub lower_boundary: Option<Boundary>,
+    /// The upper boundary used to calculate the upper boundary limit.
+    /// The requirements for this field depend on which `test` is selected.
     pub upper_boundary: Option<Boundary>,
 }
 

@@ -1,0 +1,27 @@
+---
+title: "Project Testbeds"
+description: "The Bencher Project Testbeds REST API"
+heading: "Project Testbeds REST API"
+sortOrder: 5
+paths:
+  - path: /v0/projects/{project}/testbeds
+    method: get
+    headers: pub
+    cli: testbed list PROJECT
+  - path: /v0/projects/{project}/testbeds
+    method: post
+    headers: auth
+    cli: testbed create PROJECT
+  - path: /v0/projects/{project}/testbeds/{testbed}
+    method: get
+    headers: pub
+    cli: testbed view PROJECT TESTBED
+  - path: /v0/projects/{project}/testbeds/{testbed}
+    method: patch
+    headers: auth
+    cli: testbed update PROJECT TESTBED
+  - path: /v0/projects/{project}/testbeds/{testbed}
+    method: delete
+    headers: auth
+    cli: testbed delete PROJECT TESTBED
+---

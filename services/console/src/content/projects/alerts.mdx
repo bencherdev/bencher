@@ -1,0 +1,19 @@
+---
+title: "Project Alerts"
+description: "The Bencher Project Alerts REST API"
+heading: "Project Alerts REST API"
+sortOrder: 9
+paths:
+  - path: /v0/projects/{project}/alerts
+    method: get
+    headers: pub
+    cli: alert list PROJECT
+  - path: /v0/projects/{project}/alerts/{alert}
+    method: get
+    headers: pub
+    cli: alert view PROJECT ALERT
+  - path: /v0/projects/{project}/alerts/{alert}
+    method: patch
+    headers: auth
+    cli: alert update PROJECT ALERT
+---

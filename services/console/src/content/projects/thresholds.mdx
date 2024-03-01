@@ -1,0 +1,27 @@
+---
+title: "Project Thresholds"
+description: "The Bencher Project Thresholds REST API"
+heading: "Project Thresholds REST API"
+sortOrder: 7
+paths:
+  - path: /v0/projects/{project}/thresholds
+    method: get
+    headers: pub
+    cli: threshold list PROJECT
+  - path: /v0/projects/{project}/thresholds
+    method: post
+    headers: auth
+    cli: threshold create PROJECT
+  - path: /v0/projects/{project}/thresholds/{threshold}
+    method: get
+    headers: pub
+    cli: threshold view PROJECT THRESHOLD
+  - path: /v0/projects/{project}/thresholds/{threshold}
+    method: put
+    headers: auth
+    cli: threshold update PROJECT THRESHOLD
+  - path: /v0/projects/{project}/thresholds/{threshold}
+    method: delete
+    headers: auth
+    cli: threshold delete PROJECT THRESHOLD
+---

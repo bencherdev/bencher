@@ -43,13 +43,16 @@ pub type ProjBenchmarksPagination = JsonPagination<ProjBenchmarksSort>;
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjBenchmarksSort {
+    /// Sort by benchmark name.
     #[default]
     Name,
 }
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjBenchmarksQuery {
+    /// Filter by benchmark name, exact match.
     pub name: Option<BenchmarkName>,
+    /// Search by benchmark name, slug, or UUID.
     pub search: Option<Search>,
 }
 
@@ -68,6 +71,12 @@ pub async fn proj_benchmarks_options(
     Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
+/// List benchmarks for a project
+///
+/// List all benchmarks for a project.
+/// If the project is public, then the user does not need to be authenticated.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// By default, the benchmarks are sorted in alphabetical order by name.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/benchmarks",
@@ -136,6 +145,10 @@ async fn get_ls_inner(
         .collect())
 }
 
+/// Create a benchmark
+///
+/// Create a benchmark for a project.
+/// The user must have `create` permissions for the project.
 #[endpoint {
     method = POST,
     path =  "/v0/projects/{project}/benchmarks",
@@ -209,6 +222,11 @@ pub async fn proj_benchmark_options(
     Ok(Endpoint::cors(&[Get.into(), Patch.into(), Delete.into()]))
 }
 
+/// View a benchmark
+///
+/// View a benchmark for a project.
+/// If the project is public, then the user does not need to be authenticated.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/benchmarks/{benchmark}",
@@ -251,6 +269,10 @@ async fn get_one_inner(
         ))
 }
 
+/// Update a benchmark
+///
+/// Update a benchmark for a project.
+/// The user must have `edit` permissions for the project.
 #[endpoint {
     method = PATCH,
     path =  "/v0/projects/{project}/benchmarks/{benchmark}",
@@ -307,6 +329,11 @@ async fn patch_inner(
         .map_err(resource_not_found_err!(Benchmark, query_benchmark))
 }
 
+/// Delete a benchmark
+///
+/// Delete a benchmark for a project.
+/// The user must have `delete` permissions for the project.
+/// All reports that use this benchmark must be deleted first!
 #[endpoint {
     method = DELETE,
     path =  "/v0/projects/{project}/benchmarks/{benchmark}",

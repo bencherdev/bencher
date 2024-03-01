@@ -76,6 +76,7 @@ pub async fn proj_reports_options(
 /// List all reports for a project.
 /// If the project is public, then the user does not need to be authenticated.
 /// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// By default, the reports are sorted by date time in reverse chronological order.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/reports",
@@ -174,7 +175,7 @@ async fn get_ls_inner(
         .collect()))
 }
 
-/// Create a report for a project
+/// Create a report
 ///
 /// Create a report for a project.
 /// The user must have `create` permissions for the project.
@@ -336,7 +337,7 @@ pub async fn proj_report_options(
     Ok(Endpoint::cors(&[Get.into(), Delete.into()]))
 }
 
-/// View a report for a project
+/// View a report
 ///
 /// View a report for a project.
 /// If the project is public, then the user does not need to be authenticated.
@@ -385,7 +386,7 @@ async fn get_one_inner(
         .into_json(log, conn))
 }
 
-/// Delete a report for a project
+/// Delete a report
 ///
 /// Delete a report for a project.
 /// The user must have `delete` permissions for the project.

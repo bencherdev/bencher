@@ -44,13 +44,16 @@ pub type ProjMeasuresPagination = JsonPagination<ProjMeasuresSort>;
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjMeasuresSort {
+    /// Sort by measure name.
     #[default]
     Name,
 }
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjMeasuresQuery {
+    /// Filter by measure name, exact match.
     pub name: Option<ResourceName>,
+    /// Search by measure name, slug, or UUID.
     pub search: Option<Search>,
 }
 
@@ -69,6 +72,12 @@ pub async fn proj_measures_options(
     Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
+/// List measures for a project
+///
+/// List all measures for a project.
+/// If the project is public, then the user does not need to be authenticated.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+/// By default, the measures are sorted in alphabetical order by name.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/measures",
@@ -137,6 +146,10 @@ async fn get_ls_inner(
         .collect())
 }
 
+/// Create a measure
+///
+/// Create a measure for a project.
+/// The user must have `create` permissions for the project.
 #[endpoint {
     method = POST,
     path =  "/v0/projects/{project}/measures",
@@ -210,6 +223,11 @@ pub async fn proj_measure_options(
     Ok(Endpoint::cors(&[Get.into(), Patch.into(), Delete.into()]))
 }
 
+/// View a measure
+///
+/// View a measure for a project.
+/// If the project is public, then the user does not need to be authenticated.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/measures/{measure}",
@@ -252,6 +270,10 @@ async fn get_one_inner(
         ))
 }
 
+/// Update a measure
+///
+/// Update a measure for a project.
+/// The user must have `edit` permissions for the project.
 #[endpoint {
     method = PATCH,
     path =  "/v0/projects/{project}/measures/{measure}",
@@ -308,6 +330,11 @@ async fn patch_inner(
         .map_err(resource_not_found_err!(Measure, query_measure))
 }
 
+/// Delete a measure
+///
+/// Delete a measure for a project.
+/// The user must have `delete` permissions for the project.
+/// All reports and thresholds that use this measure must be deleted first!
 #[endpoint {
     method = DELETE,
     path =  "/v0/projects/{project}/measures/{measure}",

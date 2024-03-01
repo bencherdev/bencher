@@ -32,16 +32,16 @@ pub type ProjectsPagination = JsonPagination<ProjectsSort>;
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjectsSort {
-    /// Sort by name.
+    /// Sort by project name.
     #[default]
     Name,
 }
 
 #[derive(Clone, Deserialize, JsonSchema)]
 pub struct ProjectsQuery {
-    /// Filter by name, exact match.
+    /// Filter by project name, exact match.
     pub name: Option<ResourceName>,
-    /// Search by name, slug, or UUID.
+    /// Search by project name, slug, or UUID.
     pub search: Option<Search>,
 }
 
@@ -65,6 +65,7 @@ pub async fn projects_options(
 /// If the user is not authenticated, then only public projects are returned.
 /// If the user is authenticated, then all public projects and
 /// any private project where the user has `view` permissions are returned.
+/// By default, the projects are sorted in alphabetical order by name.
 #[endpoint {
     method = GET,
     path =  "/v0/projects",
