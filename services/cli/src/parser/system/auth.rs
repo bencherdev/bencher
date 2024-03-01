@@ -19,6 +19,9 @@ pub enum CliAuth {
 
 #[derive(Parser, Debug)]
 pub struct CliAuthSignup {
+    /// User email
+    pub email: Email,
+
     /// User name
     #[clap(long)]
     pub name: UserName,
@@ -40,15 +43,15 @@ pub struct CliAuthSignup {
     #[clap(long, required = true)]
     pub i_agree: bool,
 
-    /// User email
-    pub email: Email,
-
     #[clap(flatten)]
     pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]
 pub struct CliAuthLogin {
+    /// User email
+    pub email: Email,
+
     #[cfg(feature = "plus")]
     /// Plan level
     #[clap(long)]
@@ -57,9 +60,6 @@ pub struct CliAuthLogin {
     /// User invitation JWT (JSON Web Token)
     #[clap(long)]
     pub invite: Option<Jwt>,
-
-    /// User email
-    pub email: Email,
 
     #[clap(flatten)]
     pub backend: CliBackend,
