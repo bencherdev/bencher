@@ -28,7 +28,7 @@ diesel::table! {
         id -> Integer,
         uuid -> Text,
         threshold_id -> Integer,
-        statistic_id -> Integer,
+        model_id -> Integer,
         metric_id -> Integer,
         baseline -> Nullable<Double>,
         lower_limit -> Nullable<Double>,
@@ -78,6 +78,22 @@ diesel::table! {
         value -> Double,
         lower_value -> Nullable<Double>,
         upper_value -> Nullable<Double>,
+    }
+}
+
+diesel::table! {
+    model (id) {
+        id -> Integer,
+        uuid -> Text,
+        threshold_id -> Integer,
+        test -> Integer,
+        min_sample_size -> Nullable<BigInt>,
+        max_sample_size -> Nullable<BigInt>,
+        window -> Nullable<BigInt>,
+        lower_boundary -> Nullable<Double>,
+        upper_boundary -> Nullable<Double>,
+        created -> BigInt,
+        replaced -> Nullable<BigInt>,
     }
 }
 
@@ -176,21 +192,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    statistic (id) {
-        id -> Integer,
-        uuid -> Text,
-        threshold_id -> Integer,
-        test -> Integer,
-        min_sample_size -> Nullable<BigInt>,
-        max_sample_size -> Nullable<BigInt>,
-        window -> Nullable<BigInt>,
-        lower_boundary -> Nullable<Double>,
-        upper_boundary -> Nullable<Double>,
-        created -> BigInt,
-    }
-}
-
-diesel::table! {
     testbed (id) {
         id -> Integer,
         uuid -> Text,
@@ -210,7 +211,7 @@ diesel::table! {
         branch_id -> Integer,
         testbed_id -> Integer,
         measure_id -> Integer,
-        statistic_id -> Nullable<Integer>,
+        model_id -> Nullable<Integer>,
         created -> BigInt,
         modified -> BigInt,
     }
@@ -255,7 +256,7 @@ diesel::table! {
 diesel::joinable!(alert -> boundary (boundary_id));
 diesel::joinable!(benchmark -> project (project_id));
 diesel::joinable!(boundary -> metric (metric_id));
-diesel::joinable!(boundary -> statistic (statistic_id));
+diesel::joinable!(boundary -> model (model_id));
 diesel::joinable!(boundary -> threshold (threshold_id));
 diesel::joinable!(branch -> project (project_id));
 diesel::joinable!(branch_version -> branch (branch_id));
@@ -291,6 +292,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     branch_version,
     measure,
     metric,
+    model,
     organization,
     organization_role,
     perf,
@@ -299,7 +301,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     project_role,
     report,
     server,
-    statistic,
     testbed,
     threshold,
     token,
