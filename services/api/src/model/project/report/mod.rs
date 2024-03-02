@@ -18,7 +18,7 @@ use crate::{
             measure::QueryMeasure,
             metric::QueryMetric,
             testbed::{QueryTestbed, TestbedId},
-            threshold::statistic::QueryStatistic,
+            threshold::model::QueryModel,
             threshold::{alert::QueryAlert, boundary::QueryBoundary, QueryThreshold},
             version::VersionId,
             ProjectId, QueryProject,
@@ -96,7 +96,7 @@ type ResultsQuery = (
     QueryMeasure,
     QueryMetric,
     Option<QueryBoundary>,
-    Option<(QueryThreshold, QueryStatistic)>,
+    Option<(QueryThreshold, QueryModel)>,
 );
 
 fn get_report_results(
@@ -113,7 +113,7 @@ fn get_report_results(
         // There may or may not be a boundary for any given metric
         .left_join(schema::boundary::table
             .inner_join(schema::threshold::table)
-            .inner_join(schema::statistic::table)
+            .inner_join(schema::model::table)
         )
     )
     // It is important to order by the iteration first in order to make sure they are grouped together below
@@ -128,7 +128,7 @@ fn get_report_results(
             schema::boundary::id,
             schema::boundary::uuid,
             schema::boundary::threshold_id,
-            schema::boundary::statistic_id,
+            schema::boundary::model_id,
             schema::boundary::metric_id,
             schema::boundary::baseline,
             schema::boundary::lower_limit,
@@ -142,21 +142,22 @@ fn get_report_results(
                 schema::threshold::measure_id,
                 schema::threshold::branch_id,
                 schema::threshold::testbed_id,
-                schema::threshold::statistic_id,
+                schema::threshold::model_id,
                 schema::threshold::created,
                 schema::threshold::modified,
             ),
             (
-                schema::statistic::id,
-                schema::statistic::uuid,
-                schema::statistic::threshold_id,
-                schema::statistic::test,
-                schema::statistic::min_sample_size,
-                schema::statistic::max_sample_size,
-                schema::statistic::window,
-                schema::statistic::lower_boundary,
-                schema::statistic::upper_boundary,
-                schema::statistic::created,
+                schema::model::id,
+                schema::model::uuid,
+                schema::model::threshold_id,
+                schema::model::test,
+                schema::model::min_sample_size,
+                schema::model::max_sample_size,
+                schema::model::window,
+                schema::model::lower_boundary,
+                schema::model::upper_boundary,
+                schema::model::created,
+                schema::model::replaced,
             )
         ).nullable(),
     ))
@@ -180,7 +181,7 @@ fn into_report_results_json(
         query_measure,
         query_metric,
         query_boundary,
-        threshold_statistic,
+        threshold_model,
     ) in results
     {
         // If onto a new iteration, then add the result to the report iteration list.
@@ -226,8 +227,8 @@ fn into_report_results_json(
             report_result = Some(JsonReportResult {
                 iteration,
                 measure: query_measure.into_json_for_project(project),
-                threshold: threshold_statistic.map(|(threshold, statistic)| {
-                    threshold.into_threshold_statistic_json_for_project(project, statistic)
+                threshold: threshold_model.map(|(threshold, model)| {
+                    threshold.into_threshold_model_json_for_project(project, model)
                 }),
                 benchmarks: vec![benchmark_metric],
             });

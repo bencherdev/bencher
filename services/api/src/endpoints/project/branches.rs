@@ -210,7 +210,7 @@ async fn post_inner(
 
     // Clone data and optionally thresholds from the start point
     if let Some(start_point) = &start_point {
-        insert_branch.start_point(conn_lock!(context), start_point)?;
+        insert_branch.start_point(&context, start_point).await?;
     }
 
     schema::branch::table

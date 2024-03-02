@@ -31,8 +31,7 @@ use crate::{
             metric::QueryMetric,
             testbed::QueryTestbed,
             threshold::{
-                alert::QueryAlert, boundary::QueryBoundary, statistic::QueryStatistic,
-                QueryThreshold,
+                alert::QueryAlert, boundary::QueryBoundary, model::QueryModel, QueryThreshold,
             },
             QueryProject,
         },
@@ -247,7 +246,7 @@ async fn perf_query(
         .left_join(
             schema::boundary::table
                 .inner_join(schema::threshold::table)
-                .inner_join(schema::statistic::table)
+                .inner_join(schema::model::table)
                 // There may or may not be an alert for any given boundary
                 .left_join(schema::alert::table),
         )
@@ -307,16 +306,17 @@ async fn perf_query(
                     schema::threshold::modified,
                 ),
                 (
-                    schema::statistic::id,
-                    schema::statistic::uuid,
-                    schema::statistic::threshold_id,
-                    schema::statistic::test,
-                    schema::statistic::min_sample_size,
-                    schema::statistic::max_sample_size,
-                    schema::statistic::window,
-                    schema::statistic::lower_boundary,
-                    schema::statistic::upper_boundary,
-                    schema::statistic::created,
+                    schema::model::id,
+                    schema::model::uuid,
+                    schema::model::threshold_id,
+                    schema::model::test,
+                    schema::model::min_sample_size,
+                    schema::model::max_sample_size,
+                    schema::model::window,
+                    schema::model::lower_boundary,
+                    schema::model::upper_boundary,
+                    schema::model::created,
+                    schema::model::replaced,
                 ),
                 (
                     schema::alert::id,
@@ -350,7 +350,7 @@ type PerfQuery = (
     Option<(
         QueryBoundary,
         QueryThreshold,
-        QueryStatistic,
+        QueryModel,
         Option<QueryAlert>,
     )>,
     QueryMetric,
@@ -373,7 +373,7 @@ type PerfMetricQuery = (
     Option<(
         QueryBoundary,
         QueryThreshold,
-        QueryStatistic,
+        QueryModel,
         Option<QueryAlert>,
     )>,
     QueryMetric,
@@ -458,7 +458,7 @@ fn new_perf_metric(
         {
             let boundary = Some(query_boundary.into_json());
             let threshold = Some(
-                query_threshold.into_threshold_statistic_json_for_project(project, query_statistic),
+                query_threshold.into_threshold_model_json_for_project(project, query_statistic),
             );
             let alert = query_alert.map(QueryAlert::into_perf_json);
             (boundary, threshold, alert)

@@ -4,19 +4,23 @@ use bencher_json::{
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
+use http::StatusCode;
 
 use super::{
     branch_version::InsertBranchVersion,
-    threshold::statistic::{InsertStatistic, QueryStatistic},
+    threshold::model::{InsertModel, QueryModel},
     version::{QueryVersion, VersionId},
     ProjectId, QueryProject,
 };
 use crate::{
-    context::DbConnection,
-    error::{assert_parentage, resource_conflict_err, resource_not_found_err, BencherResource},
+    conn_lock,
+    context::{ApiContext, DbConnection},
+    error::{
+        assert_parentage, issue_error, resource_conflict_err, resource_not_found_err,
+        BencherResource,
+    },
     model::project::threshold::{InsertThreshold, QueryThreshold},
-    schema,
-    schema::branch as branch_table,
+    schema::{self, branch as branch_table},
     util::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
         name_id::{fn_eq_name_id, fn_from_name_id},
@@ -149,21 +153,39 @@ impl InsertBranch {
         Self::from_json(conn, project_id, JsonNewBranch::main())
     }
 
-    pub fn start_point(
+    pub async fn start_point(
         &self,
-        conn: &mut DbConnection,
+        context: &ApiContext,
         start_point: &JsonStartPoint,
     ) -> Result<(), HttpError> {
         let JsonStartPoint { branch, thresholds } = start_point;
 
-        let start_point_branch_id = QueryBranch::from_name_id(conn, self.project_id, branch)?.id;
-        let new_branch_id = QueryBranch::get_id(conn, self.uuid)?;
+        let start_point_branch_id =
+            QueryBranch::from_name_id(conn_lock!(context), self.project_id, branch)?.id;
+        let new_branch_id = QueryBranch::get_id(conn_lock!(context), self.uuid)?;
 
+        self.clone_versions(context, new_branch_id, start_point_branch_id)
+            .await?;
+
+        if let Some(true) = thresholds {
+            self.clone_thresholds(context, new_branch_id, start_point_branch_id)
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    async fn clone_versions(
+        &self,
+        context: &ApiContext,
+        new_branch_id: BranchId,
+        start_point_branch_id: BranchId,
+    ) -> Result<(), HttpError> {
         // Get all versions for the start point branch
         let version_ids = schema::branch_version::table
             .filter(schema::branch_version::branch_id.eq(start_point_branch_id))
             .select(schema::branch_version::version_id)
-            .load::<VersionId>(conn)
+            .load::<VersionId>(conn_lock!(context))
             .map_err(resource_not_found_err!(
                 BranchVersion,
                 start_point_branch_id
@@ -178,71 +200,100 @@ impl InsertBranch {
 
             diesel::insert_into(schema::branch_version::table)
                 .values(&insert_branch_version)
-                .execute(conn)
+                .execute(conn_lock!(context))
                 .map_err(resource_conflict_err!(BranchVersion, insert_branch_version))?;
         }
 
-        if let Some(true) = thresholds {
-            // Get all thresholds for the start point branch
-            let query_thresholds = schema::threshold::table
-                .filter(schema::threshold::branch_id.eq(start_point_branch_id))
-                .load::<QueryThreshold>(conn)
-                .map_err(resource_not_found_err!(Threshold, start_point_branch_id))?;
+        Ok(())
+    }
 
-            // Add new branch to cloned thresholds with cloned statistics
-            for query_threshold in query_thresholds {
-                // Clone the threshold for the new branch
-                let insert_threshold = InsertThreshold::new(
-                    self.project_id,
-                    new_branch_id,
-                    query_threshold.testbed_id,
-                    query_threshold.measure_id,
-                );
+    async fn clone_thresholds(
+        &self,
+        context: &ApiContext,
+        new_branch_id: BranchId,
+        start_point_branch_id: BranchId,
+    ) -> Result<(), HttpError> {
+        // Get all thresholds for the start point branch
+        let query_thresholds = schema::threshold::table
+            .filter(schema::threshold::branch_id.eq(start_point_branch_id))
+            .load::<QueryThreshold>(conn_lock!(context))
+            .map_err(resource_not_found_err!(Threshold, start_point_branch_id))?;
 
-                // Create the new threshold
-                diesel::insert_into(schema::threshold::table)
-                    .values(&insert_threshold)
-                    .execute(conn)
-                    .map_err(resource_conflict_err!(Threshold, insert_threshold))?;
-
-                // If there is a statistic, clone that too
-                let Some(statistic_id) = query_threshold.statistic_id else {
-                    continue;
-                };
-
-                // Get the new threshold
-                let threshold_id = QueryThreshold::get_id(conn, insert_threshold.uuid)?;
-
-                // Get the current threshold statistic
-                let query_statistic = schema::statistic::table
-                    .filter(schema::statistic::id.eq(statistic_id))
-                    .first::<QueryStatistic>(conn)
-                    .map_err(resource_not_found_err!(Statistic, query_threshold))?;
-
-                // Clone the current threshold statistic
-                let mut insert_statistic = InsertStatistic::from(query_statistic.clone());
-                // For the new threshold
-                insert_statistic.threshold_id = threshold_id;
-                diesel::insert_into(schema::statistic::table)
-                    .values(&insert_statistic)
-                    .execute(conn)
-                    .map_err(resource_conflict_err!(Statistic, insert_statistic))?;
-
-                // Get the new threshold statistic
-                let statistic_id = QueryStatistic::get_id(conn, insert_statistic.uuid)?;
-
-                // Set the new statistic for the new threshold
-                diesel::update(
-                    schema::threshold::table.filter(schema::threshold::id.eq(threshold_id)),
-                )
-                .set(schema::threshold::statistic_id.eq(statistic_id))
-                .execute(conn)
-                .map_err(resource_conflict_err!(
-                    Threshold,
-                    (&query_threshold, &query_statistic)
-                ))?;
-            }
+        // Add new branch to cloned thresholds with cloned current threshold model
+        for query_threshold in query_thresholds {
+            // Hold the database lock across the entire `clone_threshold` call
+            self.clone_threshold(conn_lock!(context), new_branch_id, query_threshold)?;
         }
+
+        Ok(())
+    }
+
+    fn clone_threshold(
+        &self,
+        conn: &mut DbConnection,
+        new_branch_id: BranchId,
+        query_threshold: QueryThreshold,
+    ) -> Result<(), HttpError> {
+        // Clone the threshold for the new branch
+        let insert_threshold = InsertThreshold::new(
+            self.project_id,
+            new_branch_id,
+            query_threshold.testbed_id,
+            query_threshold.measure_id,
+        );
+
+        // Create the new threshold
+        diesel::insert_into(schema::threshold::table)
+            .values(&insert_threshold)
+            .execute(conn)
+            .map_err(resource_conflict_err!(Threshold, insert_threshold))?;
+
+        // If there is a model, clone that too
+        let Some(model_id) = query_threshold.model_id else {
+            let err = issue_error(
+                StatusCode::NOT_FOUND,
+                "Failed to find threshold model",
+                &format!(
+                    "No threshold model: {}/{}",
+                    self.project_id, query_threshold.uuid
+                ),
+                "threshold model is null",
+            );
+            debug_assert!(false, "{err}");
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(&err);
+            return Err(err);
+        };
+
+        // Get the new threshold
+        let threshold_id = QueryThreshold::get_id(conn, insert_threshold.uuid)?;
+
+        // Get the current threshold model
+        let query_model = schema::model::table
+            .filter(schema::model::id.eq(model_id))
+            .first::<QueryModel>(conn)
+            .map_err(resource_not_found_err!(Model, query_threshold))?;
+
+        // Clone the current threshold model
+        let mut insert_model = InsertModel::from(query_model.clone());
+        // Set the cloned model to the new threshold
+        insert_model.threshold_id = threshold_id;
+        diesel::insert_into(schema::model::table)
+            .values(&insert_model)
+            .execute(conn)
+            .map_err(resource_conflict_err!(Model, insert_model))?;
+
+        // Get the new model
+        let model_id = QueryModel::get_id(conn, insert_model.uuid)?;
+
+        // Set the new model for the new threshold
+        diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(threshold_id)))
+            .set(schema::threshold::model_id.eq(model_id))
+            .execute(conn)
+            .map_err(resource_conflict_err!(
+                Threshold,
+                (&query_threshold, &query_model)
+            ))?;
 
         Ok(())
     }

@@ -20,5 +20,5 @@ pub struct JsonModel {
     pub lower_boundary: Option<Boundary>,
     pub upper_boundary: Option<Boundary>,
     pub created: DateTime,
-    pub removed: Option<DateTime>,
+    pub replaced: Option<DateTime>,
 }

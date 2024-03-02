@@ -13,7 +13,7 @@ use crate::{
     schema,
 };
 
-use super::threshold::MetricsStatistic;
+use super::threshold::ThresholdModel;
 
 pub fn metrics_data(
     log: &Logger,
@@ -22,7 +22,7 @@ pub fn metrics_data(
     testbed_id: TestbedId,
     benchmark_id: BenchmarkId,
     measure_id: MeasureId,
-    statistic: &MetricsStatistic,
+    model: &ThresholdModel,
 ) -> Result<MetricsData, HttpError> {
     let mut query = schema::metric::table
         .inner_join(
@@ -42,7 +42,7 @@ pub fn metrics_data(
         .filter(schema::metric::measure_id.eq(measure_id))
         .into_boxed();
 
-    if let Some(window) = statistic.window {
+    if let Some(window) = model.window {
         let now = Utc::now().timestamp();
         if let Some(start_time) = now.checked_sub(window.into()) {
             query = query.filter(schema::report::start_time.ge(start_time));
@@ -61,7 +61,7 @@ pub fn metrics_data(
         schema::perf::iteration.desc(),
     ));
 
-    if let Some(max_sample_size) = statistic.max_sample_size {
+    if let Some(max_sample_size) = model.max_sample_size {
         query = query.limit(max_sample_size.into());
     }
 

@@ -5,7 +5,8 @@ use dropshot::HttpError;
 use slog::Logger;
 
 use crate::{
-    context::DbConnection,
+    conn_lock,
+    context::{ApiContext, DbConnection},
     error::{bad_request_error, resource_conflict_err},
     model::project::{
         benchmark::BenchmarkId,
@@ -22,14 +23,14 @@ pub mod data;
 pub mod threshold;
 
 use data::metrics_data;
-use threshold::MetricsThreshold;
+use threshold::Threshold;
 
 #[derive(Debug, Clone)]
 pub struct Detector {
     pub branch_id: BranchId,
     pub testbed_id: TestbedId,
     pub measure_id: MeasureId,
-    pub threshold: MetricsThreshold,
+    pub threshold: Threshold,
 }
 
 impl Detector {
@@ -41,7 +42,7 @@ impl Detector {
     ) -> Option<Self> {
         // Check to see if there is a threshold for the branch/testbed/measure grouping.
         // If not, then there will be nothing to detect.
-        MetricsThreshold::new(conn, branch_id, testbed_id, measure_id).map(|threshold| Self {
+        Threshold::new(conn, branch_id, testbed_id, measure_id).map(|threshold| Self {
             branch_id,
             testbed_id,
             measure_id,
@@ -49,33 +50,33 @@ impl Detector {
         })
     }
 
-    pub fn detect(
+    pub async fn detect(
         &self,
         log: &Logger,
-        conn: &mut DbConnection,
+        context: &ApiContext,
         benchmark_id: BenchmarkId,
         query_metric: &QueryMetric,
     ) -> Result<(), HttpError> {
         // Query the historical population/sample data for the benchmark
         let metrics_data = metrics_data(
             log,
-            conn,
+            conn_lock!(context),
             self.branch_id,
             self.testbed_id,
             benchmark_id,
             self.measure_id,
-            &self.threshold.statistic,
+            &self.threshold.model,
         )?;
 
-        // Check to see if the metric has a boundary check for the given threshold statistic.
+        // Check to see if the metric has a boundary check for the given threshold model.
         let boundary = MetricsBoundary::new(
             log,
             query_metric.value,
             &metrics_data,
-            self.threshold.statistic.test,
-            self.threshold.statistic.min_sample_size,
-            self.threshold.statistic.lower_boundary,
-            self.threshold.statistic.upper_boundary,
+            self.threshold.model.test,
+            self.threshold.model.min_sample_size,
+            self.threshold.model.lower_boundary,
+            self.threshold.model.upper_boundary,
         )
         .map_err(bad_request_error)?;
 
@@ -83,7 +84,7 @@ impl Detector {
         let insert_boundary = InsertBoundary {
             uuid: boundary_uuid,
             threshold_id: self.threshold.id,
-            statistic_id: self.threshold.statistic.id,
+            model_id: self.threshold.model.id,
             metric_id: query_metric.id,
             baseline: boundary.limits.baseline,
             lower_limit: boundary.limits.lower.map(Into::into),
@@ -92,12 +93,12 @@ impl Detector {
 
         diesel::insert_into(schema::boundary::table)
             .values(&insert_boundary)
-            .execute(conn)
+            .execute(conn_lock!(context))
             .map_err(resource_conflict_err!(Boundary, insert_boundary))?;
 
         // If the boundary check detects an outlier then create an alert for it on the given side.
         if let Some(boundary_limit) = boundary.outlier {
-            InsertAlert::from_boundary(conn, boundary_uuid, boundary_limit)
+            InsertAlert::from_boundary(conn_lock!(context), boundary_uuid, boundary_limit)
         } else {
             Ok(())
         }

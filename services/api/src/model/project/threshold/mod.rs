@@ -1,12 +1,12 @@
 use bencher_json::{
-    project::threshold::{JsonThreshold, JsonThresholdStatistic},
-    DateTime, Statistic, StatisticUuid, ThresholdUuid,
+    project::threshold::{JsonThreshold, JsonThresholdModel},
+    DateTime, Model, ModelUuid, ThresholdUuid,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 use http::StatusCode;
 
-use self::statistic::{InsertStatistic, QueryStatistic, StatisticId};
+use self::model::{InsertModel, ModelId, QueryModel};
 use super::{
     branch::{BranchId, QueryBranch},
     measure::{MeasureId, QueryMeasure},
@@ -23,7 +23,7 @@ use crate::{
 
 pub mod alert;
 pub mod boundary;
-pub mod statistic;
+pub mod model;
 
 crate::util::typed_id::typed_id!(ThresholdId);
 
@@ -39,7 +39,7 @@ pub struct QueryThreshold {
     pub branch_id: BranchId,
     pub testbed_id: TestbedId,
     pub measure_id: MeasureId,
-    pub statistic_id: Option<StatisticId>,
+    pub model_id: Option<ModelId>,
     pub created: DateTime,
     pub modified: DateTime,
 }
@@ -49,32 +49,23 @@ impl QueryThreshold {
     fn_get_id!(threshold, ThresholdId, ThresholdUuid);
     fn_get_uuid!(threshold, ThresholdId, ThresholdUuid);
 
-    pub fn get_with_statistic(
+    pub fn get_with_model(
         conn: &mut DbConnection,
         threshold_id: ThresholdId,
-        statistic_id: StatisticId,
+        model_id: ModelId,
     ) -> Result<Self, HttpError> {
         let mut threshold = Self::get(conn, threshold_id)?;
-        // IMPORTANT: Set the statistic ID to the one specified and not the current value!
-        threshold.statistic_id = Some(statistic_id);
+        // IMPORTANT: Set the model ID to the one specified and not the current value!
+        threshold.model_id = Some(model_id);
         Ok(threshold)
     }
 
     pub fn get_json(
         conn: &mut DbConnection,
         threshold_id: ThresholdId,
-        statistic_id: StatisticId,
+        model_id: ModelId,
     ) -> Result<JsonThreshold, HttpError> {
-        Self::get_with_statistic(conn, threshold_id, statistic_id)?.into_json(conn)
-    }
-
-    pub fn get_threshold_statistic_json(
-        conn: &mut DbConnection,
-        threshold_id: ThresholdId,
-        statistic_id: StatisticId,
-    ) -> Result<JsonThresholdStatistic, HttpError> {
-        Self::get_with_statistic(conn, threshold_id, statistic_id)?
-            .into_threshold_statistic_json(conn)
+        Self::get_with_model(conn, threshold_id, model_id)?.into_json(conn)
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonThreshold, HttpError> {
@@ -84,19 +75,19 @@ impl QueryThreshold {
             branch_id,
             testbed_id,
             measure_id,
-            statistic_id,
+            model_id,
             created,
             modified,
             ..
         } = self;
-        let statistic = if let Some(statistic_id) = statistic_id {
-            QueryStatistic::get(conn, statistic_id)?.into_json(conn)?
+        let model = if let Some(model_id) = model_id {
+            QueryModel::get(conn, model_id)?.into_json(conn)?
         } else {
             let err = issue_error(
                 StatusCode::NOT_FOUND,
-                "Failed to find statistic for threshold",
-                &format!("No statistic for threshold: {project_id}/{uuid}"),
-                "statistic is null",
+                "Failed to find threshold model",
+                &format!("No threshold model: {project_id}/{uuid}"),
+                "threshold model is null",
             );
             debug_assert!(false, "{err}");
             #[cfg(feature = "sentry")]
@@ -109,40 +100,42 @@ impl QueryThreshold {
             branch: QueryBranch::get(conn, branch_id)?.into_json(conn)?,
             testbed: QueryTestbed::get(conn, testbed_id)?.into_json(conn)?,
             measure: QueryMeasure::get(conn, measure_id)?.into_json(conn)?,
-            statistic,
+            // TODO remove in due time
+            statistic: Some(model.clone()),
+            model,
             created,
             modified,
         })
     }
 
-    pub fn into_threshold_statistic_json(
+    pub fn into_threshold_model_json(
         self,
         conn: &mut DbConnection,
-    ) -> Result<JsonThresholdStatistic, HttpError> {
+    ) -> Result<JsonThresholdModel, HttpError> {
         let project = QueryProject::get(conn, self.project_id)?;
-        let statistic = if let Some(statistic_id) = self.statistic_id {
-            QueryStatistic::get(conn, statistic_id)?
+        let model = if let Some(model_id) = self.model_id {
+            QueryModel::get(conn, model_id)?
         } else {
             let err = issue_error(
                 StatusCode::NOT_FOUND,
-                "Failed to find threshold statistic ",
-                &format!("No threshold statistic: {self:?}"),
-                "statistic is null",
+                "Failed to find threshold model",
+                &format!("No threshold model: {self:?}"),
+                "threshold model is null",
             );
             debug_assert!(false, "{err}");
             #[cfg(feature = "sentry")]
             sentry::capture_error(&err);
             return Err(err);
         };
-        Ok(self.into_threshold_statistic_json_for_project(&project, statistic))
+        Ok(self.into_threshold_model_json_for_project(&project, model))
     }
 
-    pub fn into_threshold_statistic_json_for_project(
+    pub fn into_threshold_model_json_for_project(
         self,
         project: &QueryProject,
-        statistic: QueryStatistic,
-    ) -> JsonThresholdStatistic {
-        let statistic = statistic.into_json_for_threshold(&self);
+        model: QueryModel,
+    ) -> JsonThresholdModel {
+        let model = model.into_json_for_threshold(&self);
         let Self {
             uuid,
             project_id,
@@ -155,10 +148,12 @@ impl QueryThreshold {
             BencherResource::Threshold,
             project_id,
         );
-        JsonThresholdStatistic {
+        JsonThresholdModel {
             uuid,
             project: project.uuid,
-            statistic,
+            // TODO remove in due time
+            statistic: Some(model.clone()),
+            model,
             created,
         }
     }
@@ -172,7 +167,7 @@ pub struct InsertThreshold {
     pub branch_id: BranchId,
     pub testbed_id: TestbedId,
     pub measure_id: MeasureId,
-    pub statistic_id: Option<StatisticId>,
+    pub model_id: Option<ModelId>,
     pub created: DateTime,
     pub modified: DateTime,
 }
@@ -191,7 +186,7 @@ impl InsertThreshold {
             branch_id,
             testbed_id,
             measure_id,
-            statistic_id: None,
+            model_id: None,
             created: timestamp,
             modified: timestamp,
         }
@@ -203,7 +198,7 @@ impl InsertThreshold {
         branch_id: BranchId,
         testbed_id: TestbedId,
         measure_id: MeasureId,
-        statistic: Statistic,
+        model: Model,
     ) -> Result<ThresholdId, HttpError> {
         // Create the new threshold
         let insert_threshold = InsertThreshold::new(project_id, branch_id, testbed_id, measure_id);
@@ -215,23 +210,23 @@ impl InsertThreshold {
         // Get the new threshold ID
         let threshold_id = QueryThreshold::get_id(conn, insert_threshold.uuid)?;
 
-        // Create the new statistic
-        let insert_statistic = InsertStatistic::from_json(threshold_id, statistic);
-        diesel::insert_into(schema::statistic::table)
-            .values(&insert_statistic)
+        // Create the new model
+        let insert_model = InsertModel::from_json(threshold_id, model);
+        diesel::insert_into(schema::model::table)
+            .values(&insert_model)
             .execute(conn)
-            .map_err(resource_conflict_err!(Statistic, insert_statistic))?;
+            .map_err(resource_conflict_err!(Model, insert_model))?;
 
-        // Get the new statistic ID
-        let statistic_id = QueryStatistic::get_id(conn, insert_statistic.uuid)?;
+        // Get the new model ID
+        let model_id = QueryModel::get_id(conn, insert_model.uuid)?;
 
-        // Set the new statistic for the new threshold
+        // Set the new model for the new threshold
         diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(threshold_id)))
-            .set(schema::threshold::statistic_id.eq(statistic_id))
+            .set(schema::threshold::model_id.eq(model_id))
             .execute(conn)
             .map_err(resource_conflict_err!(
                 Threshold,
-                (threshold_id, &insert_statistic)
+                (threshold_id, &insert_model)
             ))?;
 
         Ok(threshold_id)
@@ -250,7 +245,7 @@ impl InsertThreshold {
             branch_id,
             testbed_id,
             measure_id,
-            Statistic::lower_boundary(),
+            Model::lower_boundary(),
         )
     }
 
@@ -267,7 +262,7 @@ impl InsertThreshold {
             branch_id,
             testbed_id,
             measure_id,
-            Statistic::upper_boundary(),
+            Model::upper_boundary(),
         )
     }
 }
@@ -275,17 +270,14 @@ impl InsertThreshold {
 #[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = threshold_table)]
 pub struct UpdateThreshold {
-    pub statistic_id: StatisticId,
+    pub model_id: ModelId,
     pub modified: DateTime,
 }
 
 impl UpdateThreshold {
-    pub fn new_statistic(
-        conn: &mut DbConnection,
-        statistic_uuid: StatisticUuid,
-    ) -> Result<Self, HttpError> {
+    pub fn new_model(conn: &mut DbConnection, model_uuid: ModelUuid) -> Result<Self, HttpError> {
         Ok(Self {
-            statistic_id: QueryStatistic::get_id(conn, statistic_uuid)?,
+            model_id: QueryModel::get_id(conn, model_uuid)?,
             modified: DateTime::now(),
         })
     }

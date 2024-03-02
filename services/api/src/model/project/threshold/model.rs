@@ -1,46 +1,46 @@
 use bencher_json::{
-    project::threshold::JsonStatistic, Boundary, DateTime, SampleSize, Statistic, StatisticKind,
-    StatisticUuid, Window,
+    Boundary, DateTime, JsonModel, Model, ModelTest, ModelUuid, SampleSize, Window,
 };
 use dropshot::HttpError;
 
 use crate::{
     context::DbConnection,
     error::{assert_parentage, BencherResource},
-    schema::statistic as statistic_table,
+    schema::model as model_table,
     util::fn_get::{fn_get, fn_get_id, fn_get_uuid},
 };
 
 use super::{QueryThreshold, ThresholdId};
 
-crate::util::typed_id::typed_id!(StatisticId);
+crate::util::typed_id::typed_id!(ModelId);
 
 #[derive(Debug, Clone, diesel::Queryable, diesel::Selectable)]
-#[diesel(table_name = statistic_table)]
-pub struct QueryStatistic {
-    pub id: StatisticId,
-    pub uuid: StatisticUuid,
+#[diesel(table_name = model_table)]
+pub struct QueryModel {
+    pub id: ModelId,
+    pub uuid: ModelUuid,
     pub threshold_id: ThresholdId,
-    pub test: StatisticKind,
+    pub test: ModelTest,
     pub min_sample_size: Option<SampleSize>,
     pub max_sample_size: Option<SampleSize>,
     pub window: Option<Window>,
     pub lower_boundary: Option<Boundary>,
     pub upper_boundary: Option<Boundary>,
     pub created: DateTime,
+    pub replaced: Option<DateTime>,
 }
 
-impl QueryStatistic {
-    fn_get!(statistic, StatisticId);
-    fn_get_id!(statistic, StatisticId, StatisticUuid);
-    fn_get_uuid!(statistic, StatisticId, StatisticUuid);
+impl QueryModel {
+    fn_get!(model, ModelId);
+    fn_get_id!(model, ModelId, ModelUuid);
+    fn_get_uuid!(model, ModelId, ModelUuid);
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonStatistic, HttpError> {
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonModel, HttpError> {
         let threshold = QueryThreshold::get(conn, self.threshold_id)?;
         Ok(self.into_json_for_threshold(&threshold))
     }
 
-    pub fn into_json_for_threshold(self, threshold: &QueryThreshold) -> JsonStatistic {
+    pub fn into_json_for_threshold(self, threshold: &QueryThreshold) -> JsonModel {
         let Self {
             uuid,
             threshold_id,
@@ -51,15 +51,16 @@ impl QueryStatistic {
             lower_boundary,
             upper_boundary,
             created,
+            replaced,
             ..
         } = self;
         assert_parentage(
             BencherResource::Threshold,
             threshold.id,
-            BencherResource::Statistic,
+            BencherResource::Model,
             threshold_id,
         );
-        JsonStatistic {
+        JsonModel {
             uuid,
             threshold: threshold.uuid,
             test,
@@ -69,27 +70,29 @@ impl QueryStatistic {
             lower_boundary,
             upper_boundary,
             created,
+            replaced,
         }
     }
 }
 
 #[derive(Debug, Clone, diesel::Insertable)]
-#[diesel(table_name = statistic_table)]
-pub struct InsertStatistic {
-    pub uuid: StatisticUuid,
+#[diesel(table_name = model_table)]
+pub struct InsertModel {
+    pub uuid: ModelUuid,
     pub threshold_id: ThresholdId,
-    pub test: StatisticKind,
+    pub test: ModelTest,
     pub min_sample_size: Option<SampleSize>,
     pub max_sample_size: Option<SampleSize>,
     pub window: Option<Window>,
     pub lower_boundary: Option<Boundary>,
     pub upper_boundary: Option<Boundary>,
     pub created: DateTime,
+    pub replaced: Option<DateTime>,
 }
 
-impl From<QueryStatistic> for InsertStatistic {
-    fn from(query_statistic: QueryStatistic) -> Self {
-        let QueryStatistic {
+impl From<QueryModel> for InsertModel {
+    fn from(query_model: QueryModel) -> Self {
+        let QueryModel {
             threshold_id,
             test,
             min_sample_size,
@@ -98,10 +101,11 @@ impl From<QueryStatistic> for InsertStatistic {
             lower_boundary,
             upper_boundary,
             created,
+            replaced,
             ..
-        } = query_statistic;
+        } = query_model;
         Self {
-            uuid: StatisticUuid::new(),
+            uuid: ModelUuid::new(),
             threshold_id,
             test,
             min_sample_size,
@@ -110,22 +114,23 @@ impl From<QueryStatistic> for InsertStatistic {
             lower_boundary,
             upper_boundary,
             created,
+            replaced,
         }
     }
 }
 
-impl InsertStatistic {
-    pub fn from_json(threshold_id: ThresholdId, statistic: Statistic) -> Self {
-        let Statistic {
+impl InsertModel {
+    pub fn from_json(threshold_id: ThresholdId, model: Model) -> Self {
+        let Model {
             test,
             min_sample_size,
             max_sample_size,
             window,
             lower_boundary,
             upper_boundary,
-        } = statistic;
+        } = model;
         Self {
-            uuid: StatisticUuid::new(),
+            uuid: ModelUuid::new(),
             threshold_id,
             test,
             min_sample_size,
@@ -134,6 +139,21 @@ impl InsertStatistic {
             lower_boundary,
             upper_boundary,
             created: DateTime::now(),
+            replaced: None,
         }
+    }
+}
+
+#[derive(Debug, Clone, diesel::AsChangeset)]
+#[diesel(table_name = model_table)]
+pub struct UpdateModel {
+    pub replaced: DateTime,
+}
+
+impl UpdateModel {
+    pub fn replace() -> Result<Self, HttpError> {
+        Ok(Self {
+            replaced: DateTime::now(),
+        })
     }
 }

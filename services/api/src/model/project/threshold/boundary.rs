@@ -11,7 +11,7 @@ use crate::{
     util::fn_get::{fn_get, fn_get_id, fn_get_uuid},
 };
 
-use super::{statistic::StatisticId, ThresholdId};
+use super::{model::ModelId, ThresholdId};
 
 crate::util::typed_id::typed_id!(BoundaryId);
 
@@ -21,7 +21,7 @@ pub struct QueryBoundary {
     pub id: BoundaryId,
     pub uuid: BoundaryUuid,
     pub threshold_id: ThresholdId,
-    pub statistic_id: StatisticId,
+    pub model_id: ModelId,
     pub metric_id: MetricId,
     pub baseline: Option<f64>,
     pub lower_limit: Option<f64>,
@@ -54,7 +54,7 @@ impl QueryBoundary {
 pub struct InsertBoundary {
     pub uuid: BoundaryUuid,
     pub threshold_id: ThresholdId,
-    pub statistic_id: StatisticId,
+    pub model_id: ModelId,
     pub metric_id: MetricId,
     pub baseline: Option<f64>,
     pub lower_limit: Option<f64>,

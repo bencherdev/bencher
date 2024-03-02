@@ -1,4 +1,4 @@
-use bencher_json::{project::threshold::JsonStatistic, ResourceId, StatisticUuid};
+use bencher_json::{project::threshold::JsonStatistic, ModelUuid, ResourceId};
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
 use dropshot::{endpoint, HttpError, Path, RequestContext};
 use schemars::JsonSchema;
@@ -14,7 +14,7 @@ use crate::{
     error::resource_not_found_err,
     model::user::auth::AuthUser,
     model::{
-        project::{threshold::statistic::QueryStatistic, QueryProject},
+        project::{threshold::model::QueryModel, QueryProject},
         user::auth::PubBearerToken,
     },
     schema,
@@ -25,7 +25,7 @@ pub struct ProjStatisticParams {
     /// The slug or UUID for a project.
     pub project: ResourceId,
     /// The UUID for a statistic.
-    pub statistic: StatisticUuid,
+    pub statistic: ModelUuid,
 }
 
 #[allow(clippy::unused_async)]
@@ -80,13 +80,13 @@ async fn get_one_inner(
         auth_user,
     )?;
 
-    conn_lock!(context, |conn| schema::statistic::table
+    conn_lock!(context, |conn| schema::model::table
         .inner_join(
-            schema::threshold::table.on(schema::statistic::threshold_id.eq(schema::threshold::id)),
+            schema::threshold::table.on(schema::model::threshold_id.eq(schema::threshold::id)),
         )
         .filter(schema::threshold::project_id.eq(query_project.id))
-        .filter(schema::statistic::uuid.eq(path_params.statistic))
-        .select(QueryStatistic::as_select())
+        .filter(schema::model::uuid.eq(path_params.statistic))
+        .select(QueryModel::as_select())
         .first(conn)
         .map_err(resource_not_found_err!(
             Statistic,

@@ -27,9 +27,7 @@ use crate::{
             branch::QueryBranch,
             measure::QueryMeasure,
             testbed::QueryTestbed,
-            threshold::{
-                statistic::InsertStatistic, InsertThreshold, QueryThreshold, UpdateThreshold,
-            },
+            threshold::{model::InsertModel, InsertThreshold, QueryThreshold, UpdateThreshold},
             QueryProject,
         },
         user::auth::BearerToken,
@@ -371,8 +369,8 @@ async fn put_inner(
         ))?;
 
     // Insert the new statistic
-    let insert_statistic = InsertStatistic::from_json(query_threshold.id, json_threshold.statistic);
-    diesel::insert_into(schema::statistic::table)
+    let insert_statistic = InsertModel::from_json(query_threshold.id, json_threshold.statistic);
+    diesel::insert_into(schema::model::table)
         .values(&insert_statistic)
         .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(
