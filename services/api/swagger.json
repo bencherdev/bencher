@@ -3773,6 +3773,85 @@
         }
       }
     },
+    "/v0/projects/{project}/models/{model}": {
+      "get": {
+        "tags": [
+          "projects",
+          "models"
+        ],
+        "summary": "View a threshold model",
+        "description": "View a threshold model for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. The models returned by this endpoint may have been replaced in their threshold. The `replaced` field indicates if and when the model has been replaced.",
+        "operationId": "proj_model_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model",
+            "description": "The UUID for a model.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ModelUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonModel"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/projects/{project}/perf": {
       "get": {
         "tags": [
@@ -4344,85 +4423,6 @@
                 "required": true,
                 "schema": {
                   "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      }
-    },
-    "/v0/projects/{project}/statistics/{statistic}": {
-      "get": {
-        "tags": [
-          "projects",
-          "statistics"
-        ],
-        "summary": "View a statistic",
-        "description": "View a statistic for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. The statistics returned by this endpoint may no longer be active for their threshold, if their threshold has been updated with a new statistic.",
-        "operationId": "proj_statistic_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project",
-            "description": "The slug or UUID for a project.",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          },
-          {
-            "in": "path",
-            "name": "statistic",
-            "description": "The UUID for a statistic.",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/StatisticUuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonStatistic"
                 }
               }
             }
@@ -5241,7 +5241,7 @@
           "thresholds"
         ],
         "summary": "Update a threshold",
-        "description": "Update a threshold for a project. The user must have `edit` permissions for the project. The new statistic will be added to the threshold and used going forward. The old statistic will still show up in the report history and alerts created when it was active.",
+        "description": "Update a threshold for a project. The user must have `edit` permissions for the project. The new model will be added to the threshold and used going forward. The old model will be replaced but still show up in the report history and alerts created when it was active.",
         "operationId": "proj_threshold_put",
         "parameters": [
           {
@@ -7486,6 +7486,77 @@
           "value"
         ]
       },
+      "JsonModel": {
+        "type": "object",
+        "properties": {
+          "created": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "lower_boundary": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Boundary"
+              }
+            ]
+          },
+          "max_sample_size": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
+          },
+          "min_sample_size": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
+          },
+          "replaced": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "test": {
+            "$ref": "#/components/schemas/ModelTest"
+          },
+          "threshold": {
+            "$ref": "#/components/schemas/ThresholdUuid"
+          },
+          "upper_boundary": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Boundary"
+              }
+            ]
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/ModelUuid"
+          },
+          "window": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Window"
+              }
+            ]
+          }
+        },
+        "required": [
+          "created",
+          "test",
+          "threshold",
+          "uuid"
+        ]
+      },
       "JsonNewBenchmark": {
         "type": "object",
         "properties": {
@@ -7898,10 +7969,10 @@
             ]
           },
           "test": {
-            "description": "The kind of test to use to calculate the baseline and boundary limits.",
+            "description": "The test used by the threshold model to calculate the baseline and boundary limits.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/StatisticKind"
+                "$ref": "#/components/schemas/ModelTest"
               }
             ]
           },
@@ -8181,7 +8252,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonThresholdStatistic"
+                "$ref": "#/components/schemas/JsonThresholdModel"
               }
             ]
           },
@@ -8721,7 +8792,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonThresholdStatistic"
+                "$ref": "#/components/schemas/JsonThresholdModel"
               }
             ]
           }
@@ -9026,69 +9097,6 @@
           "branch"
         ]
       },
-      "JsonStatistic": {
-        "type": "object",
-        "properties": {
-          "created": {
-            "$ref": "#/components/schemas/DateTime"
-          },
-          "lower_boundary": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Boundary"
-              }
-            ]
-          },
-          "max_sample_size": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/SampleSize"
-              }
-            ]
-          },
-          "min_sample_size": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/SampleSize"
-              }
-            ]
-          },
-          "test": {
-            "$ref": "#/components/schemas/StatisticKind"
-          },
-          "threshold": {
-            "$ref": "#/components/schemas/ThresholdUuid"
-          },
-          "upper_boundary": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Boundary"
-              }
-            ]
-          },
-          "uuid": {
-            "$ref": "#/components/schemas/StatisticUuid"
-          },
-          "window": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Window"
-              }
-            ]
-          }
-        },
-        "required": [
-          "created",
-          "test",
-          "threshold",
-          "uuid"
-        ]
-      },
       "JsonStats": {
         "type": "object",
         "properties": {
@@ -9153,6 +9161,9 @@
           "measure": {
             "$ref": "#/components/schemas/JsonMeasure"
           },
+          "model": {
+            "$ref": "#/components/schemas/JsonModel"
+          },
           "modified": {
             "$ref": "#/components/schemas/DateTime"
           },
@@ -9160,7 +9171,12 @@
             "$ref": "#/components/schemas/ProjectUuid"
           },
           "statistic": {
-            "$ref": "#/components/schemas/JsonStatistic"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonModel"
+              }
+            ]
           },
           "testbed": {
             "$ref": "#/components/schemas/JsonTestbed"
@@ -9173,24 +9189,32 @@
           "branch",
           "created",
           "measure",
+          "model",
           "modified",
           "project",
-          "statistic",
           "testbed",
           "uuid"
         ]
       },
-      "JsonThresholdStatistic": {
+      "JsonThresholdModel": {
         "type": "object",
         "properties": {
           "created": {
             "$ref": "#/components/schemas/DateTime"
           },
+          "model": {
+            "$ref": "#/components/schemas/JsonModel"
+          },
           "project": {
             "$ref": "#/components/schemas/ProjectUuid"
           },
           "statistic": {
-            "$ref": "#/components/schemas/JsonStatistic"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonModel"
+              }
+            ]
           },
           "uuid": {
             "$ref": "#/components/schemas/ThresholdUuid"
@@ -9198,8 +9222,8 @@
         },
         "required": [
           "created",
+          "model",
           "project",
-          "statistic",
           "uuid"
         ]
       },
@@ -9554,10 +9578,10 @@
             ]
           },
           "test": {
-            "description": "The kind of test to use to calculate the baseline and boundary limits.",
+            "description": "The test used by the threshold model to calculate the baseline and boundary limits.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/StatisticKind"
+                "$ref": "#/components/schemas/ModelTest"
               }
             ]
           },
@@ -9736,6 +9760,22 @@
         "type": "string",
         "format": "uuid"
       },
+      "ModelTest": {
+        "type": "string",
+        "enum": [
+          "static",
+          "percentage",
+          "z_score",
+          "t_test",
+          "log_normal",
+          "iqr",
+          "delta_iqr"
+        ]
+      },
+      "ModelUuid": {
+        "type": "string",
+        "format": "uuid"
+      },
       "NameId": {
         "type": "string"
       },
@@ -9858,22 +9898,6 @@
       },
       "Slug": {
         "type": "string"
-      },
-      "StatisticKind": {
-        "type": "string",
-        "enum": [
-          "static",
-          "percentage",
-          "z_score",
-          "t_test",
-          "log_normal",
-          "iqr",
-          "delta_iqr"
-        ]
-      },
-      "StatisticUuid": {
-        "type": "string",
-        "format": "uuid"
       },
       "TestbedUuid": {
         "type": "string",
@@ -10197,6 +10221,10 @@
       "name": "members"
     },
     {
+      "name": "models",
+      "description": "Models"
+    },
+    {
       "name": "organizations",
       "description": "Organizations"
     },
@@ -10225,10 +10253,6 @@
     {
       "name": "spec",
       "description": "OpenAPI Spec"
-    },
-    {
-      "name": "statistics",
-      "description": "Statistics"
     },
     {
       "name": "stats"

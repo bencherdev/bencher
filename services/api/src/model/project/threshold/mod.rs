@@ -49,6 +49,22 @@ impl QueryThreshold {
     fn_get_id!(threshold, ThresholdId, ThresholdUuid);
     fn_get_uuid!(threshold, ThresholdId, ThresholdUuid);
 
+    pub fn model_id(&self) -> Result<ModelId, HttpError> {
+        self.model_id.ok_or_else(|| {
+            // A threshold should always have a model
+            let err = issue_error(
+                StatusCode::NOT_FOUND,
+                "Failed to find threshold model",
+                &format!("No threshold model: {}/{}", self.project_id, self.uuid),
+                "threshold model is null",
+            );
+            debug_assert!(false, "{err}");
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(&err);
+            err
+        })
+    }
+
     pub fn get_with_model(
         conn: &mut DbConnection,
         threshold_id: ThresholdId,
@@ -68,32 +84,44 @@ impl QueryThreshold {
         Self::get_with_model(conn, threshold_id, model_id)?.into_json(conn)
     }
 
+    pub fn update_from_json(&self, conn: &mut DbConnection, model: Model) -> Result<(), HttpError> {
+        // Insert the new model
+        let insert_model = InsertModel::from_json(self.id, model);
+        diesel::insert_into(schema::model::table)
+            .values(&insert_model)
+            .execute(conn)
+            .map_err(resource_conflict_err!(Model, (self, &insert_model)))?;
+
+        // Update the current threshold to use the new model
+        let update_threshold = UpdateThreshold::new_model(conn, insert_model.uuid)?;
+        diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(self.id)))
+            .set(&update_threshold)
+            .execute(conn)
+            .map_err(resource_conflict_err!(Threshold, (&self, &insert_model)))?;
+
+        let model_id = self.model_id()?;
+        // Update the old model to be replaced
+        diesel::update(schema::model::table.filter(schema::model::id.eq(model_id)))
+            .set(schema::model::replaced.eq(Some(DateTime::now())))
+            .execute(conn)
+            .map_err(resource_conflict_err!(Model, model_id))?;
+
+        Ok(())
+    }
+
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonThreshold, HttpError> {
+        let model_id = self.model_id()?;
         let Self {
             uuid,
             project_id,
             branch_id,
             testbed_id,
             measure_id,
-            model_id,
             created,
             modified,
             ..
         } = self;
-        let model = if let Some(model_id) = model_id {
-            QueryModel::get(conn, model_id)?.into_json(conn)?
-        } else {
-            let err = issue_error(
-                StatusCode::NOT_FOUND,
-                "Failed to find threshold model",
-                &format!("No threshold model: {project_id}/{uuid}"),
-                "threshold model is null",
-            );
-            debug_assert!(false, "{err}");
-            #[cfg(feature = "sentry")]
-            sentry::capture_error(&err);
-            return Err(err);
-        };
+        let model = QueryModel::get(conn, model_id)?.into_json(conn)?;
         Ok(JsonThreshold {
             uuid,
             project: QueryProject::get_uuid(conn, project_id)?,
@@ -101,7 +129,7 @@ impl QueryThreshold {
             testbed: QueryTestbed::get(conn, testbed_id)?.into_json(conn)?,
             measure: QueryMeasure::get(conn, measure_id)?.into_json(conn)?,
             // TODO remove in due time
-            statistic: Some(model.clone()),
+            statistic: Some(model),
             model,
             created,
             modified,
@@ -113,20 +141,8 @@ impl QueryThreshold {
         conn: &mut DbConnection,
     ) -> Result<JsonThresholdModel, HttpError> {
         let project = QueryProject::get(conn, self.project_id)?;
-        let model = if let Some(model_id) = self.model_id {
-            QueryModel::get(conn, model_id)?
-        } else {
-            let err = issue_error(
-                StatusCode::NOT_FOUND,
-                "Failed to find threshold model",
-                &format!("No threshold model: {self:?}"),
-                "threshold model is null",
-            );
-            debug_assert!(false, "{err}");
-            #[cfg(feature = "sentry")]
-            sentry::capture_error(&err);
-            return Err(err);
-        };
+        let model_id = self.model_id()?;
+        let model = QueryModel::get(conn, model_id)?;
         Ok(self.into_threshold_model_json_for_project(&project, model))
     }
 
@@ -152,7 +168,7 @@ impl QueryThreshold {
             uuid,
             project: project.uuid,
             // TODO remove in due time
-            statistic: Some(model.clone()),
+            statistic: Some(model),
             model,
             created,
         }

@@ -38,7 +38,7 @@ export interface JsonMeasure {
 	modified: string;
 }
 
-export enum StatisticKind {
+export enum ModelTest {
 	Static = "static",
 	Percentage = "percentage",
 	ZScore = "z_score",
@@ -54,22 +54,24 @@ export type Window = number;
 
 export type Boundary = number;
 
-export interface JsonStatistic {
-	uuid: Uuid;
+export interface JsonModel {
+	uuid: ModelUuid;
 	threshold: Uuid;
-	test: StatisticKind;
+	test: ModelTest;
 	min_sample_size?: SampleSize;
 	max_sample_size?: SampleSize;
 	window?: Window;
 	lower_boundary?: Boundary;
 	upper_boundary?: Boundary;
 	created: string;
+	replaced?: string;
 }
 
-export interface JsonThresholdStatistic {
+export interface JsonThresholdModel {
 	uuid: Uuid;
 	project: Uuid;
-	statistic: JsonStatistic;
+	statistic?: JsonModel;
+	model: JsonModel;
 	created: string;
 }
 
@@ -93,7 +95,7 @@ export interface JsonBenchmarkMetric {
 export interface JsonReportResult {
 	iteration: Iteration;
 	measure: JsonMeasure;
-	threshold?: JsonThresholdStatistic;
+	threshold?: JsonThresholdModel;
 	benchmarks: JsonBenchmarkMetric[];
 }
 
@@ -127,7 +129,8 @@ export interface JsonThreshold {
 	branch: JsonBranch;
 	testbed: JsonTestbed;
 	measure: JsonMeasure;
-	statistic: JsonStatistic;
+	statistic?: JsonModel;
+	model: JsonModel;
 	created: string;
 	modified: string;
 }
@@ -378,7 +381,7 @@ export interface JsonPerfMetric {
 	start_time: string;
 	end_time: string;
 	version: JsonVersion;
-	threshold?: JsonThresholdStatistic;
+	threshold?: JsonThresholdModel;
 	metric: JsonMetric;
 	boundary?: JsonBoundary;
 	alert?: JsonPerfAlert;

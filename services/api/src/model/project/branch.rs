@@ -4,7 +4,7 @@ use bencher_json::{
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
-use http::StatusCode;
+use slog::Logger;
 
 use super::{
     branch_version::InsertBranchVersion,
@@ -15,10 +15,7 @@ use super::{
 use crate::{
     conn_lock,
     context::{ApiContext, DbConnection},
-    error::{
-        assert_parentage, issue_error, resource_conflict_err, resource_not_found_err,
-        BencherResource,
-    },
+    error::{assert_parentage, resource_conflict_err, resource_not_found_err, BencherResource},
     model::project::threshold::{InsertThreshold, QueryThreshold},
     schema::{self, branch as branch_table},
     util::{
@@ -155,6 +152,7 @@ impl InsertBranch {
 
     pub async fn start_point(
         &self,
+        log: &Logger,
         context: &ApiContext,
         start_point: &JsonStartPoint,
     ) -> Result<(), HttpError> {
@@ -168,7 +166,7 @@ impl InsertBranch {
             .await?;
 
         if let Some(true) = thresholds {
-            self.clone_thresholds(context, new_branch_id, start_point_branch_id)
+            self.clone_thresholds(log, context, new_branch_id, start_point_branch_id)
                 .await?;
         }
 
@@ -209,6 +207,7 @@ impl InsertBranch {
 
     async fn clone_thresholds(
         &self,
+        log: &Logger,
         context: &ApiContext,
         new_branch_id: BranchId,
         start_point_branch_id: BranchId,
@@ -222,7 +221,11 @@ impl InsertBranch {
         // Add new branch to cloned thresholds with cloned current threshold model
         for query_threshold in query_thresholds {
             // Hold the database lock across the entire `clone_threshold` call
-            self.clone_threshold(conn_lock!(context), new_branch_id, query_threshold)?;
+            if let Err(e) =
+                self.clone_threshold(conn_lock!(context), new_branch_id, &query_threshold)
+            {
+                slog::warn!(log, "Failed to clone threshold: {e}");
+            }
         }
 
         Ok(())
@@ -232,7 +235,7 @@ impl InsertBranch {
         &self,
         conn: &mut DbConnection,
         new_branch_id: BranchId,
-        query_threshold: QueryThreshold,
+        query_threshold: &QueryThreshold,
     ) -> Result<(), HttpError> {
         // Clone the threshold for the new branch
         let insert_threshold = InsertThreshold::new(
@@ -248,22 +251,7 @@ impl InsertBranch {
             .execute(conn)
             .map_err(resource_conflict_err!(Threshold, insert_threshold))?;
 
-        // If there is a model, clone that too
-        let Some(model_id) = query_threshold.model_id else {
-            let err = issue_error(
-                StatusCode::NOT_FOUND,
-                "Failed to find threshold model",
-                &format!(
-                    "No threshold model: {}/{}",
-                    self.project_id, query_threshold.uuid
-                ),
-                "threshold model is null",
-            );
-            debug_assert!(false, "{err}");
-            #[cfg(feature = "sentry")]
-            sentry::capture_error(&err);
-            return Err(err);
-        };
+        let model_id = query_threshold.model_id()?;
 
         // Get the new threshold
         let threshold_id = QueryThreshold::get_id(conn, insert_threshold.uuid)?;

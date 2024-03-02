@@ -196,11 +196,11 @@ impl Api {
         api.register(project::thresholds::proj_threshold_put)?;
         api.register(project::thresholds::proj_threshold_delete)?;
 
-        // Threshold Statistics
+        // Threshold Models
         if http_options {
-            api.register(project::thresholds::statistics::proj_statistic_options)?;
+            api.register(project::thresholds::model::proj_model_options)?;
         }
-        api.register(project::thresholds::statistics::proj_statistic_get)?;
+        api.register(project::thresholds::model::proj_model_get)?;
 
         // Threshold Alerts
         if http_options {

@@ -27,7 +27,7 @@ use crate::{
             branch::QueryBranch,
             measure::QueryMeasure,
             testbed::QueryTestbed,
-            threshold::{model::InsertModel, InsertThreshold, QueryThreshold, UpdateThreshold},
+            threshold::{InsertThreshold, QueryThreshold},
             QueryProject,
         },
         user::auth::BearerToken,
@@ -37,7 +37,7 @@ use crate::{
 };
 
 pub mod alerts;
-pub mod statistics;
+pub mod model;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjThresholdsParams {
@@ -200,11 +200,8 @@ async fn post_inner(
     json_threshold: &JsonNewThreshold,
     auth_user: &AuthUser,
 ) -> Result<JsonThreshold, HttpError> {
-    // Validate the new statistic
-    json_threshold
-        .statistic
-        .validate()
-        .map_err(bad_request_error)?;
+    // Validate the new model
+    json_threshold.model.validate().map_err(bad_request_error)?;
 
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
@@ -231,10 +228,10 @@ async fn post_inner(
         branch_id,
         testbed_id,
         measure_id,
-        json_threshold.statistic,
+        json_threshold.model,
     )?;
 
-    // Return the new threshold with the new statistic
+    // Return the new threshold with the new model
     conn_lock!(context, |conn| schema::threshold::table
         .filter(schema::threshold::id.eq(threshold_id))
         .first::<QueryThreshold>(conn)
@@ -314,8 +311,8 @@ async fn get_one_inner(
 ///
 /// Update a threshold for a project.
 /// The user must have `edit` permissions for the project.
-/// The new statistic will be added to the threshold and used going forward.
-/// The old statistic will still show up in the report history and alerts created when it was active.
+/// The new model will be added to the threshold and used going forward.
+/// The old model will be replaced but still show up in the report history and alerts created when it was active.
 #[endpoint {
     method = PUT,
     path =  "/v0/projects/{project}/thresholds/{threshold}",
@@ -344,11 +341,8 @@ async fn put_inner(
     json_threshold: JsonUpdateThreshold,
     auth_user: &AuthUser,
 ) -> Result<JsonThreshold, HttpError> {
-    // Validate the new statistic
-    json_threshold
-        .statistic
-        .validate()
-        .map_err(bad_request_error)?;
+    // Validate the new model
+    json_threshold.model.validate().map_err(bad_request_error)?;
 
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed(
@@ -368,26 +362,9 @@ async fn put_inner(
             (&query_project, path_params.threshold)
         ))?;
 
-    // Insert the new statistic
-    let insert_statistic = InsertModel::from_json(query_threshold.id, json_threshold.statistic);
-    diesel::insert_into(schema::model::table)
-        .values(&insert_statistic)
-        .execute(conn_lock!(context))
-        .map_err(resource_conflict_err!(
-            Statistic,
-            (&query_threshold, &insert_statistic)
-        ))?;
-
-    // Update the current threshold to use the new statistic
-    let update_threshold =
-        UpdateThreshold::new_statistic(conn_lock!(context), insert_statistic.uuid)?;
-    diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(query_threshold.id)))
-        .set(&update_threshold)
-        .execute(conn_lock!(context))
-        .map_err(resource_conflict_err!(
-            Threshold,
-            (&query_threshold, &insert_statistic)
-        ))?;
+    // Update the current threshold with the new model
+    // Hold the database lock across the entire `update_from_json` call
+    query_threshold.update_from_json(conn_lock!(context), json_threshold.model)?;
 
     conn_lock!(context, |conn| QueryThreshold::get(
         conn,

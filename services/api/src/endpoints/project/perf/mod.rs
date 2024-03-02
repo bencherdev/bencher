@@ -285,23 +285,13 @@ async fn perf_query(
             schema::version::hash,
             (
                 (
-                    schema::boundary::id,
-                    schema::boundary::uuid,
-                    schema::boundary::threshold_id,
-                    schema::boundary::statistic_id,
-                    schema::boundary::metric_id,
-                    schema::boundary::baseline,
-                    schema::boundary::lower_limit,
-                    schema::boundary::upper_limit,
-                ),
-                (
                     schema::threshold::id,
                     schema::threshold::uuid,
                     schema::threshold::project_id,
                     schema::threshold::measure_id,
                     schema::threshold::branch_id,
                     schema::threshold::testbed_id,
-                    schema::threshold::statistic_id,
+                    schema::threshold::model_id,
                     schema::threshold::created,
                     schema::threshold::modified,
                 ),
@@ -317,6 +307,16 @@ async fn perf_query(
                     schema::model::upper_boundary,
                     schema::model::created,
                     schema::model::replaced,
+                ),
+                (
+                    schema::boundary::id,
+                    schema::boundary::uuid,
+                    schema::boundary::threshold_id,
+                    schema::boundary::model_id,
+                    schema::boundary::metric_id,
+                    schema::boundary::baseline,
+                    schema::boundary::lower_limit,
+                    schema::boundary::upper_limit,
                 ),
                 (
                     schema::alert::id,
@@ -348,9 +348,9 @@ type PerfQuery = (
     VersionNumber,
     Option<GitHash>,
     Option<(
-        QueryBoundary,
         QueryThreshold,
         QueryModel,
+        QueryBoundary,
         Option<QueryAlert>,
     )>,
     QueryMetric,
@@ -371,9 +371,9 @@ type PerfMetricQuery = (
     VersionNumber,
     Option<GitHash>,
     Option<(
-        QueryBoundary,
         QueryThreshold,
         QueryModel,
+        QueryBoundary,
         Option<QueryAlert>,
     )>,
     QueryMetric,
@@ -453,13 +453,10 @@ fn new_perf_metric(
     };
 
     let (boundary, threshold, alert) =
-        if let Some((query_boundary, query_threshold, query_statistic, query_alert)) =
-            boundary_limit
-        {
+        if let Some((query_threshold, query_model, query_boundary, query_alert)) = boundary_limit {
             let boundary = Some(query_boundary.into_json());
-            let threshold = Some(
-                query_threshold.into_threshold_model_json_for_project(project, query_statistic),
-            );
+            let threshold =
+                Some(query_threshold.into_threshold_model_json_for_project(project, query_model));
             let alert = query_alert.map(QueryAlert::into_perf_json);
             (boundary, threshold, alert)
         } else {
