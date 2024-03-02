@@ -5184,6 +5184,14 @@
             "schema": {
               "$ref": "#/components/schemas/ThresholdUuid"
             }
+          },
+          {
+            "in": "query",
+            "name": "model",
+            "description": "Use the specified model for the threshold. This can be useful for displaying historical threshold models that have since been replaced by a new model.",
+            "schema": {
+              "$ref": "#/components/schemas/ModelUuid"
+            }
           }
         ],
         "responses": {

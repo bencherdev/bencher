@@ -141,6 +141,7 @@ macro_rules! resource_not_found_err {
     // Get one
     ($resource:ident, $value:expr) => {
         |e| {
+            #[allow(unused_qualifications)]
             crate::error::resource_not_found_error(
                 crate::error::BencherResource::$resource,
                 &$value,

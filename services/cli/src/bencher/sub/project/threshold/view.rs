@@ -1,4 +1,4 @@
-use bencher_json::{ResourceId, ThresholdUuid};
+use bencher_json::{ModelUuid, ResourceId, ThresholdUuid};
 
 use crate::{
     bencher::{backend::PubBackend, sub::SubCmd},
@@ -10,6 +10,7 @@ use crate::{
 pub struct View {
     pub project: ResourceId,
     pub threshold: ThresholdUuid,
+    pub model: Option<ModelUuid>,
     pub backend: PubBackend,
 }
 
@@ -20,11 +21,13 @@ impl TryFrom<CliThresholdView> for View {
         let CliThresholdView {
             project,
             threshold,
+            model,
             backend,
         } = view;
         Ok(Self {
             project,
             threshold,
+            model,
             backend: backend.try_into()?,
         })
     }
@@ -35,12 +38,16 @@ impl SubCmd for View {
         let _json = self
             .backend
             .send(|client| async move {
-                client
+                let mut client = client
                     .proj_threshold_get()
                     .project(self.project.clone())
-                    .threshold(self.threshold)
-                    .send()
-                    .await
+                    .threshold(self.threshold);
+
+                if let Some(model) = self.model {
+                    client = client.model(model);
+                }
+
+                client.send().await
             })
             .await?;
         Ok(())

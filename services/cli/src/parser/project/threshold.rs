@@ -1,4 +1,4 @@
-use bencher_json::{Boundary, NameId, ResourceId, SampleSize, ThresholdUuid, Window};
+use bencher_json::{Boundary, ModelUuid, NameId, ResourceId, SampleSize, ThresholdUuid, Window};
 use clap::{ArgGroup, Args, Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliBackend, CliPagination};
@@ -149,6 +149,10 @@ pub struct CliThresholdView {
 
     /// Threshold UUID
     pub threshold: ThresholdUuid,
+
+    /// Specify the threshold model to view
+    #[clap(long)]
+    pub model: Option<ModelUuid>,
 
     #[clap(flatten)]
     pub backend: CliBackend,
