@@ -1,12 +1,14 @@
 use bencher_json::{
     Boundary, DateTime, JsonModel, Model, ModelTest, ModelUuid, SampleSize, Window,
 };
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
 use dropshot::HttpError;
 
 use crate::{
     context::DbConnection,
-    error::{assert_parentage, BencherResource},
-    schema::model as model_table,
+    error::{assert_parentage, resource_not_found_err, BencherResource},
+    model::project::ProjectId,
+    schema::{self, model as model_table},
     util::fn_get::{fn_get, fn_get_id, fn_get_uuid},
 };
 
@@ -34,6 +36,22 @@ impl QueryModel {
     fn_get!(model, ModelId);
     fn_get_id!(model, ModelId, ModelUuid);
     fn_get_uuid!(model, ModelId, ModelUuid);
+
+    pub fn from_uuid(
+        conn: &mut DbConnection,
+        project_id: ProjectId,
+        model_uuid: ModelUuid,
+    ) -> Result<Self, HttpError> {
+        schema::model::table
+            .inner_join(
+                schema::threshold::table.on(schema::model::threshold_id.eq(schema::threshold::id)),
+            )
+            .filter(schema::threshold::project_id.eq(project_id))
+            .filter(schema::model::uuid.eq(model_uuid))
+            .select(QueryModel::as_select())
+            .first(conn)
+            .map_err(resource_not_found_err!(Model, (project_id, model_uuid)))
+    }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonModel, HttpError> {
         let threshold = QueryThreshold::get(conn, self.threshold_id)?;

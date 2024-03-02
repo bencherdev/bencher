@@ -1,5 +1,4 @@
 use bencher_json::{JsonModel, ModelUuid, ResourceId};
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
 use dropshot::{endpoint, HttpError, Path, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -11,13 +10,11 @@ use crate::{
         endpoint::{CorsResponse, Get, ResponseOk},
         Endpoint,
     },
-    error::resource_not_found_err,
     model::user::auth::AuthUser,
     model::{
         project::{threshold::model::QueryModel, QueryProject},
         user::auth::PubBearerToken,
     },
-    schema,
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -80,17 +77,10 @@ async fn get_one_inner(
         auth_user,
     )?;
 
-    conn_lock!(context, |conn| schema::model::table
-        .inner_join(
-            schema::threshold::table.on(schema::model::threshold_id.eq(schema::threshold::id)),
-        )
-        .filter(schema::threshold::project_id.eq(query_project.id))
-        .filter(schema::model::uuid.eq(path_params.model))
-        .select(QueryModel::as_select())
-        .first(conn)
-        .map_err(resource_not_found_err!(
-            Model,
-            (&query_project, path_params.model)
-        ))?
-        .into_json(conn))
+    conn_lock!(context, |conn| QueryModel::from_uuid(
+        conn,
+        query_project.id,
+        path_params.model
+    )?
+    .into_json(conn))
 }

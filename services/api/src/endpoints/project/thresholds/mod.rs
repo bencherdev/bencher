@@ -3,7 +3,7 @@ use bencher_json::{
         JsonNewThreshold, JsonThreshold, JsonThresholdQuery, JsonThresholdQueryParams,
         JsonUpdateThreshold,
     },
-    JsonDirection, JsonPagination, JsonThresholds, ResourceId, ThresholdUuid,
+    JsonDirection, JsonPagination, JsonThresholds, ModelUuid, ResourceId, ThresholdUuid,
 };
 use bencher_rbac::project::Permission;
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
@@ -20,17 +20,19 @@ use crate::{
         },
         Endpoint,
     },
-    error::{bad_request_error, resource_conflict_err, resource_not_found_err},
-    model::user::auth::{AuthUser, PubBearerToken},
+    error::{
+        bad_request_error, resource_conflict_err, resource_not_found_err, resource_not_found_error,
+        BencherResource,
+    },
     model::{
         project::{
             branch::QueryBranch,
             measure::QueryMeasure,
             testbed::QueryTestbed,
-            threshold::{InsertThreshold, QueryThreshold},
+            threshold::{model::QueryModel, InsertThreshold, QueryThreshold},
             QueryProject,
         },
-        user::auth::BearerToken,
+        user::auth::{AuthUser, BearerToken, PubBearerToken},
     },
     schema,
     util::name_id::{filter_branch_name_id, filter_measure_name_id, filter_testbed_name_id},
@@ -247,6 +249,14 @@ pub struct ProjThresholdParams {
     pub threshold: ThresholdUuid,
 }
 
+#[derive(Deserialize, JsonSchema)]
+pub struct ProjThresholdQuery {
+    /// Use the specified model for the threshold.
+    /// This can be useful for displaying historical threshold models
+    /// that have since been replaced by a new model.
+    pub model: Option<ModelUuid>,
+}
+
 #[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
@@ -256,6 +266,7 @@ pub struct ProjThresholdParams {
 pub async fn proj_threshold_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjThresholdParams>,
+    _query_params: Query<ProjThresholdQuery>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(Endpoint::cors(&[Get.into(), Put.into(), Delete.into()]))
 }
@@ -274,11 +285,13 @@ pub async fn proj_threshold_get(
     rqctx: RequestContext<ApiContext>,
     bearer_token: PubBearerToken,
     path_params: Path<ProjThresholdParams>,
+    query_params: Query<ProjThresholdQuery>,
 ) -> Result<ResponseOk<JsonThreshold>, HttpError> {
     let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
     let json = get_one_inner(
         rqctx.context(),
         path_params.into_inner(),
+        query_params.into_inner(),
         auth_user.as_ref(),
     )
     .await?;
@@ -288,6 +301,7 @@ pub async fn proj_threshold_get(
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjThresholdParams,
+    query_params: ProjThresholdQuery,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonThreshold, HttpError> {
     let query_project = QueryProject::is_allowed_public(
@@ -297,14 +311,30 @@ async fn get_one_inner(
         auth_user,
     )?;
 
-    conn_lock!(context, |conn| QueryThreshold::belonging_to(&query_project)
+    let query_threshold = QueryThreshold::belonging_to(&query_project)
         .filter(schema::threshold::uuid.eq(path_params.threshold))
-        .first::<QueryThreshold>(conn)
+        .first::<QueryThreshold>(conn_lock!(context))
         .map_err(resource_not_found_err!(
             Threshold,
             (&query_project, path_params.threshold)
-        ))?
-        .into_json(conn))
+        ))?;
+
+    if let Some(model_uuid) = query_params.model {
+        let query_model = QueryModel::from_uuid(conn_lock!(context), query_project.id, model_uuid)?;
+        if query_model.threshold_id != query_threshold.id {
+            return Err(resource_not_found_error(
+                BencherResource::Model,
+                model_uuid,
+                format!(
+                    "Specified model {model_uuid} does not belong to threshold {threshold_uuid}",
+                    threshold_uuid = query_threshold.uuid
+                ),
+            ));
+        }
+        query_threshold.into_json_for_model(conn_lock!(context), query_model)
+    } else {
+        query_threshold.into_json(conn_lock!(context))
+    }
 }
 
 /// Update a threshold

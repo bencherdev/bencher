@@ -111,6 +111,22 @@ impl QueryThreshold {
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonThreshold, HttpError> {
         let model_id = self.model_id()?;
+        let query_model = QueryModel::get(conn, model_id)?;
+        self.into_json_for_model(conn, query_model)
+    }
+
+    pub fn into_json_for_model(
+        self,
+        conn: &mut DbConnection,
+        query_model: QueryModel,
+    ) -> Result<JsonThreshold, HttpError> {
+        assert_parentage(
+            BencherResource::Threshold,
+            self.id,
+            BencherResource::Model,
+            query_model.threshold_id,
+        );
+        let model = query_model.into_json_for_threshold(&self);
         let Self {
             uuid,
             project_id,
@@ -121,7 +137,6 @@ impl QueryThreshold {
             modified,
             ..
         } = self;
-        let model = QueryModel::get(conn, model_id)?.into_json(conn)?;
         Ok(JsonThreshold {
             uuid,
             project: QueryProject::get_uuid(conn, project_id)?,
