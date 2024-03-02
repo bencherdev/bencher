@@ -73,7 +73,7 @@ pub struct CliThresholdCreate {
     pub measure: NameId,
 
     #[clap(flatten)]
-    pub statistic: CliStatistic,
+    pub model: CliModel,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -94,10 +94,10 @@ pub struct CliThresholdCreateProject {
 }
 
 #[derive(Parser, Debug)]
-pub struct CliStatistic {
-    /// Statistic test kind
+pub struct CliModel {
+    /// Threshold model test
     #[clap(value_enum, long)]
-    pub test: CliStatisticKind,
+    pub test: CliModelTest,
 
     /// Min sample size
     #[clap(long)]
@@ -111,11 +111,11 @@ pub struct CliStatistic {
     #[clap(long)]
     pub window: Option<Window>,
 
-    /// Lower statistical boundary
+    /// Lower boundary
     #[clap(long)]
     pub lower_boundary: Option<Boundary>,
 
-    /// Upper statistical boundary
+    /// Upper boundary
     #[clap(long)]
     pub upper_boundary: Option<Boundary>,
 }
@@ -123,7 +123,7 @@ pub struct CliStatistic {
 /// Supported kinds of statistic
 #[derive(ValueEnum, Debug, Clone, Copy)]
 #[clap(rename_all = "snake_case")]
-pub enum CliStatisticKind {
+pub enum CliModelTest {
     /// Static value
     Static,
     /// Percentage change from mean
@@ -163,7 +163,7 @@ pub struct CliThresholdUpdate {
     pub threshold: ThresholdUuid,
 
     #[clap(flatten)]
-    pub statistic: CliStatistic,
+    pub model: CliModel,
 
     #[clap(flatten)]
     pub backend: CliBackend,

@@ -13,7 +13,7 @@ use mock::CliMock;
 use organization::{member::CliMember, CliOrganization};
 use project::{
     alert::CliAlert, benchmark::CliBenchmark, branch::CliBranch, measure::CliMeasure,
-    perf::CliPerf, report::CliReport, run::CliRun, statistic::CliStatistic, testbed::CliTestbed,
+    model::CliModel, perf::CliPerf, report::CliReport, run::CliRun, testbed::CliTestbed,
     threshold::CliThreshold, CliProject,
 };
 use system::{auth::CliAuth, server::CliServer};
@@ -73,9 +73,10 @@ pub enum CliSub {
     /// Manage thresholds
     #[clap(subcommand)]
     Threshold(CliThreshold),
+    // TODO remove in due time (alias = "statistic")
     /// Manage threshold statistics
-    #[clap(subcommand)]
-    Statistic(CliStatistic),
+    #[clap(subcommand, alias = "statistic")]
+    Model(CliModel),
     /// View alerts
     #[clap(subcommand)]
     Alert(CliAlert),

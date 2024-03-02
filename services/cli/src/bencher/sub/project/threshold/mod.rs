@@ -3,7 +3,7 @@ use crate::{bencher::sub::SubCmd, parser::project::threshold::CliThreshold, CliE
 mod create;
 mod delete;
 mod list;
-mod statistic;
+mod model;
 mod update;
 mod view;
 

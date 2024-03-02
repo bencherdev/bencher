@@ -1,7 +1,7 @@
 use bencher_client::types::JsonUpdateThreshold;
 use bencher_json::{ResourceId, ThresholdUuid};
 
-use super::statistic::Statistic;
+use super::model::Model;
 use crate::{
     bencher::{backend::AuthBackend, sub::SubCmd},
     parser::project::threshold::CliThresholdUpdate,
@@ -12,7 +12,7 @@ use crate::{
 pub struct Update {
     pub project: ResourceId,
     pub threshold: ThresholdUuid,
-    pub statistic: Statistic,
+    pub model: Model,
     pub backend: AuthBackend,
 }
 
@@ -23,13 +23,13 @@ impl TryFrom<CliThresholdUpdate> for Update {
         let CliThresholdUpdate {
             project,
             threshold,
-            statistic,
+            model,
             backend,
         } = update;
         Ok(Self {
             project,
             threshold,
-            statistic: statistic.try_into()?,
+            model: model.try_into()?,
             backend: backend.try_into()?,
         })
     }
@@ -37,15 +37,15 @@ impl TryFrom<CliThresholdUpdate> for Update {
 
 impl From<Update> for JsonUpdateThreshold {
     fn from(update: Update) -> Self {
-        let Update { statistic, .. } = update;
-        let Statistic {
+        let Update { model, .. } = update;
+        let Model {
             test,
             min_sample_size,
             max_sample_size,
             window,
             lower_boundary,
             upper_boundary,
-        } = statistic;
+        } = model;
         #[allow(clippy::inconsistent_struct_constructor)]
         Self {
             test,

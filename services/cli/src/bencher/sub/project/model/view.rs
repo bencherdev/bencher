@@ -1,30 +1,30 @@
-use bencher_json::{ResourceId, StatisticUuid};
+use bencher_json::{ModelUuid, ResourceId};
 
 use crate::{
     bencher::{backend::PubBackend, sub::SubCmd},
-    parser::project::statistic::CliStatisticView,
+    parser::project::model::CliModelView,
     CliError,
 };
 
 #[derive(Debug)]
 pub struct View {
     pub project: ResourceId,
-    pub statistic: StatisticUuid,
+    pub model: ModelUuid,
     pub backend: PubBackend,
 }
 
-impl TryFrom<CliStatisticView> for View {
+impl TryFrom<CliModelView> for View {
     type Error = CliError;
 
-    fn try_from(view: CliStatisticView) -> Result<Self, Self::Error> {
-        let CliStatisticView {
+    fn try_from(view: CliModelView) -> Result<Self, Self::Error> {
+        let CliModelView {
             project,
-            statistic,
+            model,
             backend,
         } = view;
         Ok(Self {
             project,
-            statistic,
+            model,
             backend: backend.try_into()?,
         })
     }
@@ -36,9 +36,9 @@ impl SubCmd for View {
             .backend
             .send(|client| async move {
                 client
-                    .proj_statistic_get()
+                    .proj_model_get()
                     .project(self.project.clone())
-                    .statistic(self.statistic)
+                    .model(self.model)
                     .send()
                     .await
             })

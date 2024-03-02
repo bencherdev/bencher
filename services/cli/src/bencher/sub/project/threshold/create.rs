@@ -1,7 +1,7 @@
 use bencher_client::types::JsonNewThreshold;
 use bencher_json::{NameId, ResourceId};
 
-use super::statistic::Statistic;
+use super::model::Model;
 use crate::{
     bencher::{
         backend::AuthBackend,
@@ -17,7 +17,7 @@ pub struct Create {
     pub branch: NameId,
     pub testbed: NameId,
     pub measure: NameId,
-    pub statistic: Statistic,
+    pub model: Model,
     pub backend: AuthBackend,
 }
 
@@ -38,7 +38,7 @@ impl TryFrom<CliThresholdCreate> for Create {
             branch,
             testbed,
             measure,
-            statistic,
+            model,
             backend,
         } = create;
         Ok(Self {
@@ -46,7 +46,7 @@ impl TryFrom<CliThresholdCreate> for Create {
             branch,
             testbed,
             measure,
-            statistic: statistic.try_into()?,
+            model: model.try_into()?,
             backend: backend.try_into()?,
         })
     }
@@ -69,18 +69,18 @@ impl From<Create> for JsonNewThreshold {
         let Create {
             branch,
             testbed,
-            statistic,
+            model,
             measure,
             ..
         } = create;
-        let Statistic {
+        let Model {
             test,
             min_sample_size,
             max_sample_size,
             window,
             lower_boundary,
             upper_boundary,
-        } = statistic;
+        } = model;
         Self {
             branch: branch.into(),
             testbed: testbed.into(),

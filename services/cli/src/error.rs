@@ -11,8 +11,8 @@ pub enum CliError {
     #[error("{0}")]
     Docker(#[from] crate::bencher::sub::DockerError),
 
-    #[error("Invalid threshold statistic: {0}")]
-    Statistic(bencher_json::ValidError),
+    #[error("Invalid threshold model: {0}")]
+    Model(bencher_json::ValidError),
     #[error("Failed to serialize config: {0}")]
     SerializeConfig(serde_json::Error),
 }
