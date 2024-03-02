@@ -171,8 +171,10 @@ const thresholdsConfig = {
 			],
 		},
 		deck: {
-			url: (params: Params) =>
-				`/v0/projects/${params?.project}/thresholds/${params?.threshold}`,
+			url: (params: Params, search: Params) =>
+				`/v0/projects/${params?.project}/thresholds/${params?.threshold}${
+					search?.model ? `?model=${search?.model}` : ""
+				}`,
 			cards: [
 				{
 					kind: Card.FIELD,

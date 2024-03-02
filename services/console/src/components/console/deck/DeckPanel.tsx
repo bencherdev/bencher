@@ -15,7 +15,7 @@ import {
 import { authUser } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
 import { NotifyKind, pageNotify } from "../../../util/notify";
-import { pathname } from "../../../util/url";
+import { pathname, useSearchParams } from "../../../util/url";
 import { validJwt } from "../../../util/valid";
 import Deck, { type DeckConfig } from "./hand/Deck";
 import DeckHeader, { type DeckHeaderConfig } from "./header/DeckHeader";
@@ -36,11 +36,14 @@ const DeckPanel = (props: Props) => {
 	const [bencher_valid] = createResource(
 		async () => await bencher_valid_init(),
 	);
+	const [searchParams, _setSearchParams] = useSearchParams();
 	const user = authUser();
 	const config = createMemo<DeckPanelConfig>(
 		() => consoleConfig[props.resource]?.[Operation.VIEW],
 	);
-	const path = createMemo(() => config()?.deck?.url(props.params));
+	const path = createMemo(() =>
+		config()?.deck?.url(props.params, searchParams),
+	);
 
 	const fetcher = createMemo(() => {
 		return {

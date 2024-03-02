@@ -49,7 +49,11 @@ const DeckHeaderButton = (props: Props) => {
 				/>
 			</Match>
 			<Match when={props.button.kind === Button.CONSOLE}>
-				<ConsoleButton params={props.params} />
+				<ConsoleButton
+					params={props.params}
+					resource={props.button.resource}
+					param={props.button.param}
+				/>
 			</Match>
 			<Match when={props.button.kind === Button.PERF}>
 				<PerfButton

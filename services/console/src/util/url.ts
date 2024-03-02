@@ -275,17 +275,26 @@ export const pathname = createMemo(() => useLocation().pathname);
 export const BACK_PARAM = "back";
 
 export const encodePath = createMemo(() => {
-	const location = useLocation();
-	const back = encodeBase64(`${location.pathname}${location.search}`);
-	return back;
+	try {
+		const location = useLocation();
+		const back = encodeBase64(`${location.pathname}${location.search}`);
+		return back;
+	} catch (e) {
+		console.error(e);
+		return "L2hlbHA=";
+	}
 });
 
 export const decodePath = (fallback: string) => {
-	const [searchParams, _setSearchParams] = useSearchParams();
-	const back = searchParams[BACK_PARAM];
-	console.log(back);
-	if (back) {
-		return decodeBase64(back);
+	try {
+		const [searchParams, _setSearchParams] = useSearchParams();
+		const back = searchParams[BACK_PARAM];
+		if (back) {
+			return decodeBase64(back);
+		}
+		return fallback;
+	} catch (e) {
+		console.error(e);
+		return fallback;
 	}
-	return fallback;
 };

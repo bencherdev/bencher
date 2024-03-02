@@ -15,6 +15,7 @@ import {
 	type JsonPerfAlert,
 } from "../../../../../types/bencher";
 import { addTooltips } from "./tooltip";
+import { BACK_PARAM, encodePath } from "../../../../../util/url";
 
 // Source: https://twemoji.twitter.com
 // License: https://creativecommons.org/licenses/by/4.0
@@ -164,6 +165,7 @@ const LinePlot = (props: Props) => {
 					iteration: datum.iteration,
 					lower_limit: datum.lower_limit,
 					upper_limit: datum.upper_limit,
+					threshold: perf_metric.threshold,
 				};
 				if (perf_metric.alert && is_active(perf_metric.alert)) {
 					switch (perf_metric.alert?.limit) {
@@ -194,6 +196,7 @@ const LinePlot = (props: Props) => {
 						date_time: datum.date_time,
 						number: datum.number,
 						y: perf_metric.metric?.value * 0.9,
+						threshold: perf_metric.threshold,
 					});
 				}
 				if (
@@ -206,6 +209,7 @@ const LinePlot = (props: Props) => {
 						date_time: datum.date_time,
 						number: datum.number,
 						y: perf_metric.metric?.value * 1.1,
+						threshold: perf_metric.threshold,
 					});
 				}
 
@@ -275,10 +279,21 @@ const LinePlot = (props: Props) => {
 				plot_arrays.push(
 					Plot.dot(
 						boundary_data,
-						boundary_dot(x_axis, BoundaryLimit.Lower, color),
+						boundary_dot(
+							x_axis,
+							BoundaryLimit.Lower,
+							color,
+							project_slug,
+							props.isConsole,
+						),
 					),
 				);
-				warn_arrays.push(Plot.image(skipped_lower_data, warning_image(x_axis)));
+				warn_arrays.push(
+					Plot.image(
+						skipped_lower_data,
+						warning_image(x_axis, project_slug, props.isConsole),
+					),
+				);
 			}
 			alert_arrays.push(
 				Plot.image(
@@ -303,10 +318,21 @@ const LinePlot = (props: Props) => {
 				plot_arrays.push(
 					Plot.dot(
 						boundary_data,
-						boundary_dot(x_axis, BoundaryLimit.Upper, color),
+						boundary_dot(
+							x_axis,
+							BoundaryLimit.Upper,
+							color,
+							project_slug,
+							props.isConsole,
+						),
 					),
 				);
-				warn_arrays.push(Plot.image(skipped_upper_data, warning_image(x_axis)));
+				warn_arrays.push(
+					Plot.image(
+						skipped_upper_data,
+						warning_image(x_axis, project_slug, props.isConsole),
+					),
+				);
 			}
 			alert_arrays.push(
 				Plot.image(
@@ -414,13 +440,6 @@ const value_end_dot = (x_axis: string, limit: BoundaryLimit, color: string) => {
 		fill: color,
 		fillOpacity: 0.9,
 		title: (datum) => value_end_title(limit, datum, ""),
-		// TODO enable this when there is an endpoint for getting a historical threshold model
-		// That is, the model displayed needs to be historical, not current.
-		// Just like with the Alerts.
-		// href: (datum) =>
-		// 	!is_active(datum.alert) &&
-		// 	`/console/projects/${project_slug}/thresholds/${datum.threshold}`,
-		// target: "_blank",
 	};
 };
 
@@ -435,7 +454,13 @@ const boundary_line = (x_axis: string, limit: BoundaryLimit, color) => {
 	};
 };
 
-const boundary_dot = (x_axis: string, limit: BoundaryLimit, color: string) => {
+const boundary_dot = (
+	x_axis: string,
+	limit: BoundaryLimit,
+	color: string,
+	project_slug: string,
+	isConsole: boolean,
+) => {
 	return {
 		x: x_axis,
 		y: boundary_position_key(limit),
@@ -444,27 +469,37 @@ const boundary_dot = (x_axis: string, limit: BoundaryLimit, color: string) => {
 		strokeOpacity: 0.666,
 		fill: color,
 		fillOpacity: 0.666,
-		title: (datum) => limit_title(limit, datum, ""),
-		// TODO enable this when there is an endpoint for getting a historical threshold model
-		// That is, the model displayed needs to be historical, not current.
-		// Just like with the Alerts.
-		// href: (datum) =>
-		// 	!is_active(datum.alert) &&
-		// 	`/console/projects/${project_slug}/thresholds/${datum.threshold}`,
-		// target: "_blank",
+		title: (datum) => limit_title(limit, datum, "\nClick to view Threshold"),
+		href: (datum) => thresholdUrl(project_slug, isConsole, datum),
 	};
 };
 
-const warning_image = (x_axis: string) => {
+const warning_image = (
+	x_axis: string,
+	project_slug: string,
+	isConsole: boolean,
+) => {
 	return {
 		x: x_axis,
 		y: "y",
 		src: WARNING_URL,
 		width: 18,
 		title: (_datum) =>
-			"Boundary Limit was not calculated.\nThis can happen for a couple of reasons:\n- There is not enough data yet (n < 2) (Most Common)\n- All the metric values are the same (variance == 0)",
+			"Boundary Limit was not calculated.\nThis can happen for a couple of reasons:\n- There is not enough data yet (n < 2) (Most Common)\n- All the metric values are the same (variance == 0)\nClick to view Threshold",
+		href: (datum) => thresholdUrl(project_slug, isConsole, datum),
 	};
 };
+
+const thresholdUrl = (
+	project_slug: string,
+	isConsole: boolean,
+	datum: object,
+) =>
+	`${
+		isConsole
+			? `/console/projects/${project_slug}/thresholds/${datum.threshold?.uuid}`
+			: `/perf/${project_slug}/thresholds/${datum.threshold?.uuid}`
+	}?${BACK_PARAM}=${encodePath()}&model=${datum.threshold?.model?.uuid}`;
 
 const alert_image = (
 	x_axis: string,
@@ -479,10 +514,13 @@ const alert_image = (
 		width: 18,
 		title: (datum) => limit_title(limit, datum, "\nClick to view Alert"),
 		href: (datum) =>
-			isConsole
-				? `/console/projects/${project_slug}/alerts/${datum.alert?.uuid}`
-				: `/perf/${project_slug}/alerts/${datum.alert?.uuid}`,
-		target: "_blank",
+			`${
+				isConsole
+					? `/console/projects/${project_slug}/alerts/${datum.alert?.uuid}`
+					: `/perf/${project_slug}/alerts/${datum.alert?.uuid}`
+			}
+			?${BACK_PARAM}=${encodePath()}`,
+		// target: "_blank",
 	};
 };
 

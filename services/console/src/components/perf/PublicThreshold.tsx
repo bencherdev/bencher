@@ -9,24 +9,26 @@ import {
 	createSignal,
 } from "solid-js";
 import { Button, Operation } from "../../config/types";
-import type { JsonAlert } from "../../types/bencher";
+import type { JsonThreshold } from "../../types/bencher";
 import { authUser } from "../../util/auth";
 import type { DeckConfig } from "../console/deck/hand/Deck";
 import Deck from "../console/deck/hand/Deck";
 import DeckHeaderButton from "../console/deck/header/DeckHeaderButton";
 import { httpGet } from "../../util/http";
-import alertsConfig from "../../config/project/alerts";
 import { BACK_PARAM, decodePath, useSearchParams } from "../../util/url";
+import thresholdsConfig from "../../config/project/thresholds";
 
-const deck = alertsConfig[Operation.VIEW]?.deck as DeckConfig;
+const MODEL_PARAM = "model";
+
+const deck = thresholdsConfig[Operation.VIEW]?.deck as DeckConfig;
 
 export interface Props {
 	apiUrl: string;
 	params: Params;
-	data: undefined | JsonAlert;
+	data: undefined | JsonThreshold;
 }
 
-const PublicAlert = (props: Props) => {
+const PublicThreshold = (props: Props) => {
 	const [bencher_valid] = createResource(
 		async () => await bencher_valid_init(),
 	);
@@ -37,33 +39,55 @@ const PublicAlert = (props: Props) => {
 		if (typeof searchParams[BACK_PARAM] !== "string") {
 			initParams[BACK_PARAM] = null;
 		}
+		if (typeof searchParams[MODEL_PARAM] !== "string") {
+			initParams[MODEL_PARAM] = null;
+		}
 		if (Object.keys(initParams).length !== 0) {
 			setSearchParams(initParams, { replace: true });
 		}
 	});
 
 	const back = createMemo(() => searchParams[BACK_PARAM]);
+	const model = createMemo(() => searchParams[MODEL_PARAM]);
 
 	const user = authUser();
 	const path = createMemo(() => props.apiUrl);
-	const title = createMemo(() => props.data?.benchmark?.name);
+	const title = createMemo(
+		() =>
+			`${props.data?.branch?.name} | ${props.data?.testbed?.name} | ${props.data?.measure?.name}`,
+	);
 
-	const getData = async (_bencher_valid: InitOutput) => {
-		if (props.data) {
+	const fetcher = createMemo(() => {
+		return {
+			bencher_valid: bencher_valid(),
+			model: model(),
+		};
+	});
+	const getData = async (fetcher: {
+		bencher_valid: InitOutput;
+		model: undefined | null | string;
+	}) => {
+		if (props.data && !fetcher.model) {
 			return props.data;
 		}
 
-		const path = `/v0/projects/${props.params?.project}/alerts/${props.params?.alert}`;
+		const searchParams = new URLSearchParams();
+		if (fetcher.model) {
+			searchParams.set(MODEL_PARAM, fetcher.model);
+		}
+		const path = `/v0/projects/${props.params?.project}/thresholds/${
+			props.params?.threshold
+		}?${searchParams.toString()}`;
 		return await httpGet(props.apiUrl, path, null)
 			.then((resp) => {
-				return resp?.data as JsonAlert;
+				return resp?.data as JsonThreshold;
 			})
 			.catch((error) => {
 				console.error(error);
 				return {};
 			});
 	};
-	const [alertData, { refetch }] = createResource(bencher_valid, getData);
+	const [thresholdData, { refetch }] = createResource(fetcher, getData);
 	const [_loopback, setLoopback] = createSignal(null);
 
 	return (
@@ -100,10 +124,9 @@ const PublicAlert = (props: Props) => {
 									each={[
 										{
 											kind: Button.CONSOLE,
-											resource: "alerts",
-											param: "alert",
+											resource: "thresholds",
+											param: "threshold",
 										},
-										{ kind: Button.PERF },
 									]}
 								>
 									{(button) => (
@@ -115,7 +138,7 @@ const PublicAlert = (props: Props) => {
 												user={user}
 												button={button}
 												path={path}
-												data={alertData}
+												data={thresholdData}
 												title={title}
 												handleRefresh={refetch}
 											/>
@@ -129,12 +152,13 @@ const PublicAlert = (props: Props) => {
 				<div class="columns is-mobile">
 					<div class="column">
 						<Deck
+							isConsole={false}
 							apiUrl={props.apiUrl}
 							params={props.params}
 							user={user}
 							config={deck}
 							path={path}
-							data={alertData}
+							data={thresholdData}
 							handleRefresh={refetch}
 							handleLoopback={setLoopback}
 						/>
@@ -145,4 +169,4 @@ const PublicAlert = (props: Props) => {
 	);
 };
 
-export default PublicAlert;
+export default PublicThreshold;

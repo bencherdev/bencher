@@ -4,9 +4,6 @@ export const prerender = false;
 import PerfLayout from "../../../../layouts/perf/PerfLayout.astro";
 import { AlertStatus, type JsonAlert } from "../../../../types/bencher";
 import PublicAlert from "../../../../components/perf/PublicAlert";
-import alertsConfig from "../../../../config/project/alerts";
-import { Operation } from "../../../../config/types";
-import type { DeckConfig } from "../../../../components/console/deck/hand/Deck";
 import Tetris from "../../../../components/site/Tetris.astro";
 import { fetchSSR } from "../../../../components/perf/util";
 
@@ -37,8 +34,6 @@ try {
   title = "Public Alert";
   description = "View a continuous benchmarking alert";
 }
-
-const deck = alertsConfig[Operation.VIEW]?.deck as DeckConfig;
 ---
 
 <PerfLayout
@@ -65,6 +60,6 @@ const deck = alertsConfig[Operation.VIEW]?.deck as DeckConfig;
     </div>
   </section>
   :
-  <PublicAlert client:only="solid-js" apiUrl={BENCHER_API_URL} params={params} deck={deck} data={jsonAlert} />
+  <PublicAlert client:only="solid-js" apiUrl={BENCHER_API_URL} params={params} data={jsonAlert} />
   }
 </PerfLayout>

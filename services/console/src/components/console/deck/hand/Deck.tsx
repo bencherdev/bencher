@@ -6,6 +6,7 @@ import type CardConfig from "./card/CardConfig";
 import DeckCard from "./card/DeckCard";
 
 export interface Props {
+	isConsole?: boolean;
 	apiUrl: string;
 	params: Params;
 	user: JsonAuthUser;
@@ -17,7 +18,7 @@ export interface Props {
 }
 
 export interface DeckConfig {
-	url: (params: Params) => string;
+	url: (params: Params, search?: Params) => string;
 	cards: CardConfig[];
 	buttons?: DeckButtonConfig[];
 }
@@ -45,7 +46,7 @@ const Deck = (props: Props) => {
 					</div>
 				)}
 			</For>
-			<Show when={props.config?.buttons}>
+			<Show when={props.isConsole !== false && props.config?.buttons}>
 				<For each={props.config?.buttons}>
 					{(button) => (
 						<DeckButton

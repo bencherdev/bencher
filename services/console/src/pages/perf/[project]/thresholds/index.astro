@@ -1,0 +1,5 @@
+---
+export const prerender = false;
+const { project } = Astro.params;
+---
+<meta http-equiv="refresh" content={`0;url=/perf/${project}`} />
