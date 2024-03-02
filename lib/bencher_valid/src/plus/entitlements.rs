@@ -67,7 +67,7 @@ impl Visitor<'_> for EntitlementsVisitor {
     type Value = Entitlements;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a statistical sample size greater than or equal to 2")
+        formatter.write_str("an integer greater than zero")
     }
 
     fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>

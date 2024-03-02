@@ -120,8 +120,8 @@ const Poster = (props: Props) => {
 					}
 					data[key] = Number(value);
 					break;
-				case FieldKind.STATISTIC:
-					// Flatten the statistic object
+				case FieldKind.MODEL:
+					// Flatten the model object
 					for (const [k, v] of Object.entries(value)) {
 						data[k] = v;
 					}

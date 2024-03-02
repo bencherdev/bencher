@@ -74,7 +74,7 @@ pub enum CliSub {
     #[clap(subcommand)]
     Threshold(CliThreshold),
     // TODO remove in due time (alias = "statistic")
-    /// Manage threshold statistics
+    /// Manage threshold models
     #[clap(subcommand, alias = "statistic")]
     Model(CliModel),
     /// View alerts

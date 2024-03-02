@@ -8,8 +8,8 @@ import Select, { type SelectConfig, type SelectValue } from "./kinds/Select";
 import FieldKind from "./kind";
 import Radio, { type RadioConfig, type RadioValue } from "./kinds/Radio";
 import type { Params } from "astro";
-import Statistic from "./kinds/Statistic";
-import { validStatistic } from "../../util/valid";
+import Model from "./kinds/Model";
+import { validModel } from "../../util/valid";
 import type { SearchConfig, SearchValue } from "./kinds/Search";
 import Search from "./kinds/Search";
 
@@ -76,8 +76,8 @@ const Field = (props: Props) => {
 				);
 				break;
 			}
-			case FieldKind.STATISTIC:
-				props.handleField(props.fieldKey, value, validStatistic(value));
+			case FieldKind.MODEL:
+				props.handleField(props.fieldKey, value, validModel(value));
 				break;
 			case FieldKind.SEARCH:
 				props.handleField(props.fieldKey, value, true);
@@ -131,9 +131,9 @@ const Field = (props: Props) => {
 						handleField={handleField}
 					/>
 				);
-			case FieldKind.STATISTIC:
+			case FieldKind.MODEL:
 				return (
-					<Statistic
+					<Model
 						value={props.value as InputValue}
 						valid={props.valid}
 						config={props.config as InputConfig}
@@ -163,7 +163,7 @@ const Field = (props: Props) => {
 				return false;
 			case FieldKind.INPUT:
 			case FieldKind.NUMBER:
-			case FieldKind.STATISTIC:
+			case FieldKind.MODEL:
 				return true;
 		}
 	};

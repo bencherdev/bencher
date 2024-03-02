@@ -19,7 +19,7 @@ import {
 	is_valid_percentage_boundary,
 	is_valid_cdf_boundary,
 	is_valid_iqr_boundary,
-	is_valid_statistic,
+	is_valid_model,
 } from "bencher_valid";
 import type { JsonAuthUser } from "../types/bencher";
 
@@ -130,11 +130,11 @@ export const validSampleSize = (sample_size: string) => {
 	);
 };
 
-export const validStatistic = (statistic: object) => {
-	if (!statistic || typeof statistic !== "object") {
+export const validModel = (model: object) => {
+	if (!model || typeof model !== "object") {
 		return false;
 	}
-	return is_valid_statistic(JSON.stringify(statistic));
+	return is_valid_model(JSON.stringify(model));
 };
 
 // Billing

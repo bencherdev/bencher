@@ -1,5 +1,5 @@
 import { For, createMemo, createSignal } from "solid-js";
-import { StatisticKind } from "../../../types/bencher";
+import { ModelTest } from "../../../types/bencher";
 import {
 	validBoundary,
 	validCdfBoundary,
@@ -115,43 +115,43 @@ const STATISTIC_FIELDS = {
 	},
 };
 
-const testValue = (selected: StatisticKind) => {
+const testValue = (selected: ModelTest) => {
 	return {
 		selected,
 		options: [
 			{
-				value: StatisticKind.Static,
+				value: ModelTest.Static,
 				option: "Static",
 			},
 			{
-				value: StatisticKind.Percentage,
+				value: ModelTest.Percentage,
 				option: "Percentage",
 			},
 			{
-				value: StatisticKind.ZScore,
+				value: ModelTest.ZScore,
 				option: "z-score",
 			},
 			{
-				value: StatisticKind.TTest,
+				value: ModelTest.TTest,
 				option: "t-test",
 			},
 			{
-				value: StatisticKind.LogNormal,
+				value: ModelTest.LogNormal,
 				option: "Log Normal",
 			},
 			{
-				value: StatisticKind.Iqr,
+				value: ModelTest.Iqr,
 				option: "Interquartile Range (IQR)",
 			},
 			{
-				value: StatisticKind.DeltaIqr,
+				value: ModelTest.DeltaIqr,
 				option: "Delta Interquartile Range (ΔIQR)",
 			},
 		],
 	};
 };
 
-const testSelectConfig = (statistic: StatisticKind) => {
+const testSelectConfig = (modelTest: ModelTest) => {
 	return {
 		kind: FieldKind.SELECT,
 		label: (
@@ -161,7 +161,7 @@ const testSelectConfig = (statistic: StatisticKind) => {
 					<a
 						class="level-item"
 						href={`https://bencher.dev/docs/explanation/thresholds/#${testFragment(
-							statistic,
+							modelTest,
 						)}`}
 						// biome-ignore lint/a11y/noBlankTarget: <explanation>
 						target="_blank"
@@ -175,34 +175,34 @@ const testSelectConfig = (statistic: StatisticKind) => {
 			</div>
 		),
 		key: "test",
-		value: testValue(statistic),
+		value: testValue(modelTest),
 		validate: false,
 		config: STATISTIC_FIELDS.test,
 	};
 };
 
-const testFragment = (statistic: StatisticKind) => {
-	switch (statistic) {
-		case StatisticKind.Static:
+const testFragment = (modelTest: ModelTest) => {
+	switch (modelTest) {
+		case ModelTest.Static:
 			return "static-thresholds";
-		case StatisticKind.Percentage:
+		case ModelTest.Percentage:
 			return "percentage-thresholds";
-		case StatisticKind.ZScore:
+		case ModelTest.ZScore:
 			return "z-score-thresholds";
-		case StatisticKind.TTest:
+		case ModelTest.TTest:
 			return "t-test-thresholds";
-		case StatisticKind.LogNormal:
+		case ModelTest.LogNormal:
 			return "log-normal-thresholds";
-		case StatisticKind.Iqr:
+		case ModelTest.Iqr:
 			return "iqr-thresholds";
-		case StatisticKind.DeltaIqr:
+		case ModelTest.DeltaIqr:
 			return "delta-iqr-thresholds";
 	}
 };
 
-const cdfConfig = (statistic: StatisticKind) => {
+const cdfConfig = (modelTest: ModelTest) => {
 	return [
-		testSelectConfig(statistic),
+		testSelectConfig(modelTest),
 		{
 			kind: FieldKind.NUMBER,
 			label: "Lower Boundary",
@@ -227,9 +227,9 @@ const cdfConfig = (statistic: StatisticKind) => {
 	];
 };
 
-const iqrConfig = (statistic: StatisticKind) => {
+const iqrConfig = (modelTest: ModelTest) => {
 	return [
-		testSelectConfig(statistic),
+		testSelectConfig(modelTest),
 		{
 			kind: FieldKind.NUMBER,
 			label: "Lower Boundary",
@@ -288,8 +288,8 @@ const SAMPLE_SIZE = [
 ];
 
 const FIELDS = {
-	[StatisticKind.Static]: [
-		testSelectConfig(StatisticKind.Static),
+	[ModelTest.Static]: [
+		testSelectConfig(ModelTest.Static),
 		{
 			kind: FieldKind.NUMBER,
 			label: "Lower Boundary",
@@ -311,8 +311,8 @@ const FIELDS = {
 			config: STATISTIC_FIELDS.static_upper_boundary,
 		},
 	],
-	[StatisticKind.Percentage]: [
-		testSelectConfig(StatisticKind.Percentage),
+	[ModelTest.Percentage]: [
+		testSelectConfig(ModelTest.Percentage),
 		{
 			kind: FieldKind.NUMBER,
 			label: "Lower Boundary",
@@ -335,11 +335,11 @@ const FIELDS = {
 		},
 		...SAMPLE_SIZE,
 	],
-	[StatisticKind.ZScore]: cdfConfig(StatisticKind.ZScore),
-	[StatisticKind.TTest]: cdfConfig(StatisticKind.TTest),
-	[StatisticKind.LogNormal]: cdfConfig(StatisticKind.LogNormal),
-	[StatisticKind.Iqr]: iqrConfig(StatisticKind.Iqr),
-	[StatisticKind.DeltaIqr]: iqrConfig(StatisticKind.DeltaIqr),
+	[ModelTest.ZScore]: cdfConfig(ModelTest.ZScore),
+	[ModelTest.TTest]: cdfConfig(ModelTest.TTest),
+	[ModelTest.LogNormal]: cdfConfig(ModelTest.LogNormal),
+	[ModelTest.Iqr]: iqrConfig(ModelTest.Iqr),
+	[ModelTest.DeltaIqr]: iqrConfig(ModelTest.DeltaIqr),
 };
 
 const initForm = (fields) => {
@@ -359,8 +359,8 @@ const initForm = (fields) => {
 	return newForm;
 };
 
-const Statistic = (props: Props) => {
-	const [test, setTest] = createSignal(StatisticKind.TTest);
+const Model = (props: Props) => {
+	const [test, setTest] = createSignal(ModelTest.TTest);
 	const fields = createMemo(() => FIELDS[test()]);
 
 	const [form, setForm] = createStore(initForm(fields()));
@@ -442,4 +442,4 @@ const Statistic = (props: Props) => {
 	);
 };
 
-export default Statistic;
+export default Model;

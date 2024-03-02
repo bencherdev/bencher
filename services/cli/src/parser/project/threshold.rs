@@ -120,7 +120,7 @@ pub struct CliModel {
     pub upper_boundary: Option<Boundary>,
 }
 
-/// Supported kinds of statistic
+/// Supported threshold model tests
 #[derive(ValueEnum, Debug, Clone, Copy)]
 #[clap(rename_all = "snake_case")]
 pub enum CliModelTest {

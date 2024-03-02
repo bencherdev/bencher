@@ -5,7 +5,7 @@ enum FieldKind {
 	SWITCH,
 	SELECT,
 	RADIO,
-	STATISTIC,
+	MODEL,
 	SEARCH,
 }
 

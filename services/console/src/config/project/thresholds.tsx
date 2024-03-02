@@ -144,9 +144,9 @@ const thresholdsConfig = {
 					config: THRESHOLD_FIELDS.measure,
 				},
 				{
-					kind: FieldKind.STATISTIC,
+					kind: FieldKind.MODEL,
 					label: null,
-					key: "statistic",
+					key: "model",
 					value: {},
 					validate: true,
 					config: null,
@@ -201,37 +201,37 @@ const thresholdsConfig = {
 				{
 					kind: Card.NESTED_FIELD,
 					label: "Statistical Significance Test",
-					keys: ["statistic", "test"],
+					keys: ["model", "test"],
 					display: Display.RAW,
 				},
 				{
 					kind: Card.NESTED_FIELD,
 					label: "Lower Boundary",
-					keys: ["statistic", "lower_boundary"],
+					keys: ["model", "lower_boundary"],
 					display: Display.RAW,
 				},
 				{
 					kind: Card.NESTED_FIELD,
 					label: "Upper Boundary",
-					keys: ["statistic", "upper_boundary"],
+					keys: ["model", "upper_boundary"],
 					display: Display.RAW,
 				},
 				{
 					kind: Card.NESTED_FIELD,
 					label: "Minimum Sample Size",
-					keys: ["statistic", "min_sample_size"],
+					keys: ["model", "min_sample_size"],
 					display: Display.RAW,
 				},
 				{
 					kind: Card.NESTED_FIELD,
 					label: "Maximum Sample Size",
-					keys: ["statistic", "max_sample_size"],
+					keys: ["model", "max_sample_size"],
 					display: Display.RAW,
 				},
 				{
 					kind: Card.NESTED_FIELD,
 					label: "Window Size (seconds)",
-					keys: ["statistic", "window"],
+					keys: ["model", "window"],
 					display: Display.RAW,
 				},
 			],
@@ -249,7 +249,7 @@ const thresholdsConfig = {
 	[Operation.EDIT]: {
 		operation: Operation.EDIT,
 		header: {
-			title: "Edit Threshold Statistic",
+			title: "Edit Threshold Model",
 			path: parentPath,
 			path_to: "Threshold",
 		},
@@ -258,9 +258,9 @@ const thresholdsConfig = {
 				`/v0/projects/${params?.project}/thresholds/${params?.threshold}`,
 			fields: [
 				{
-					kind: FieldKind.STATISTIC,
+					kind: FieldKind.MODEL,
 					label: null,
-					key: "statistic",
+					key: "model",
 					value: {},
 					validate: true,
 					config: null,

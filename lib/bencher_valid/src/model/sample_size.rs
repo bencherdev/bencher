@@ -77,7 +77,7 @@ impl Visitor<'_> for SampleSizeVisitor {
     type Value = SampleSize;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a statistical sample size greater than or equal to 2")
+        formatter.write_str("a model sample size greater than or equal to 2")
     }
 
     fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>

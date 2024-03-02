@@ -4,6 +4,7 @@
 - **BREAKING CHANGE** Move all CLI commands using `--org` and `--project` over to positional arguments, except `bencher run` and `bencher threshold create`
 - Add a `bencher report create` CLI subcommand
 - `bencher run` now tries to auto-fill the git commit hash for the report
+- **BREAKING CHANGE** Rename `statistic` to `model`
 
 ## `v0.4.3`
 - **BREAKING CHANGE** Limit branch names to 256 characters and all slug lengths to 64 characters. Any existing values greater than these new limits are set to their respective UUID.

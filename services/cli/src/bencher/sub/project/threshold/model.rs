@@ -18,7 +18,7 @@ pub struct Model {
 impl TryFrom<CliModel> for Model {
     type Error = CliError;
 
-    fn try_from(statistic: CliModel) -> Result<Self, Self::Error> {
+    fn try_from(model: CliModel) -> Result<Self, Self::Error> {
         let CliModel {
             test,
             min_sample_size,
@@ -26,7 +26,7 @@ impl TryFrom<CliModel> for Model {
             window,
             lower_boundary,
             upper_boundary,
-        } = statistic;
+        } = model;
         bencher_json::Model {
             test: test.into(),
             min_sample_size,

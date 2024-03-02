@@ -40,17 +40,17 @@ pub enum ValidError {
     GitHash(String),
     #[error("Failed to validate secret: {0}")]
     Secret(String),
-    #[error("Invalid statistical boundary: {0}")]
+    #[error("Invalid model boundary: {0}")]
     Boundary(f64),
-    #[error("Failed to parse boundary: {0}")]
+    #[error("Failed to parse model boundary: {0}")]
     BoundaryStr(std::num::ParseFloatError),
-    #[error("Invalid statistical sample size: {0}")]
+    #[error("Invalid model sample size: {0}")]
     SampleSize(u32),
-    #[error("Failed to parse sample size: {0}")]
+    #[error("Failed to parse model sample size: {0}")]
     SampleSizeStr(std::num::ParseIntError),
-    #[error("Invalid statistical window: {0}")]
+    #[error("Invalid model window: {0}")]
     Window(u32),
-    #[error("Failed to parse window: {0}")]
+    #[error("Failed to parse model window: {0}")]
     WindowStr(std::num::ParseIntError),
 
     #[cfg(feature = "plus")]
@@ -96,19 +96,19 @@ pub enum ValidError {
     #[error("Failed to parse entitlements: {0}")]
     EntitlementsStr(std::num::ParseIntError),
 
-    #[error("Invalid statistic, minimum sample size ({min}) is greater than maximum sample size ({max})")]
-    SampleSizes { min: SampleSize, max: SampleSize },
     #[error(
-        "Invalid statistic, lower boundary ({lower}) is greater than upper boundary ({upper})"
+        "Invalid model, minimum sample size ({min}) is greater than maximum sample size ({max})"
     )]
+    SampleSizes { min: SampleSize, max: SampleSize },
+    #[error("Invalid model, lower boundary ({lower}) is greater than upper boundary ({upper})")]
     Boundaries { lower: Boundary, upper: Boundary },
-    #[error("Invalid statistic, no boundary provided")]
+    #[error("Invalid model, no boundary provided")]
     NoBoundary,
-    #[error("Invalid static statistic, includes a minimum sample size: {0}")]
+    #[error("Invalid static model, includes a minimum sample size: {0}")]
     StaticMinSampleSize(SampleSize),
-    #[error("Invalid static statistic, includes a maximum sample size: {0}")]
+    #[error("Invalid static model, includes a maximum sample size: {0}")]
     StaticMaxSampleSize(SampleSize),
-    #[error("Invalid static statistic, includes a sampling window: {0}")]
+    #[error("Invalid static model, includes a sampling window: {0}")]
     StaticWindow(Window),
     #[error("Invalid percentage boundary: {0}")]
     PercentageBoundary(f64),

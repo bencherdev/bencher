@@ -186,7 +186,7 @@ const LinePlot = (props: Props) => {
 
 				if (
 					boundary_skipped(
-						perf_metric.threshold?.statistic?.lower_boundary,
+						perf_metric.threshold?.model?.lower_boundary,
 						perf_metric.boundary?.lower_limit,
 					)
 				) {
@@ -198,7 +198,7 @@ const LinePlot = (props: Props) => {
 				}
 				if (
 					boundary_skipped(
-						perf_metric.threshold?.statistic?.upper_boundary,
+						perf_metric.threshold?.model?.upper_boundary,
 						perf_metric.boundary?.upper_limit,
 					)
 				) {
@@ -414,8 +414,8 @@ const value_end_dot = (x_axis: string, limit: BoundaryLimit, color: string) => {
 		fill: color,
 		fillOpacity: 0.9,
 		title: (datum) => value_end_title(limit, datum, ""),
-		// TODO enable this when there is an endpoint for getting a historical threshold statistic
-		// That is, the statistic displayed needs to be historical, not current.
+		// TODO enable this when there is an endpoint for getting a historical threshold model
+		// That is, the model displayed needs to be historical, not current.
 		// Just like with the Alerts.
 		// href: (datum) =>
 		// 	!is_active(datum.alert) &&
@@ -445,8 +445,8 @@ const boundary_dot = (x_axis: string, limit: BoundaryLimit, color: string) => {
 		fill: color,
 		fillOpacity: 0.666,
 		title: (datum) => limit_title(limit, datum, ""),
-		// TODO enable this when there is an endpoint for getting a historical threshold statistic
-		// That is, the statistic displayed needs to be historical, not current.
+		// TODO enable this when there is an endpoint for getting a historical threshold model
+		// That is, the model displayed needs to be historical, not current.
 		// Just like with the Alerts.
 		// href: (datum) =>
 		// 	!is_active(datum.alert) &&
