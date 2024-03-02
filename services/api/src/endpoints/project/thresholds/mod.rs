@@ -39,7 +39,6 @@ use crate::{
 };
 
 pub mod alerts;
-pub mod model;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjThresholdsParams {
@@ -251,7 +250,7 @@ pub struct ProjThresholdParams {
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjThresholdQuery {
-    /// Use the specified model for the threshold.
+    /// Use the specified model UUID for the threshold.
     /// This can be useful for displaying historical threshold models
     /// that have since been replaced by a new model.
     pub model: Option<ModelUuid>,

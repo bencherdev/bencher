@@ -3773,85 +3773,6 @@
         }
       }
     },
-    "/v0/projects/{project}/models/{model}": {
-      "get": {
-        "tags": [
-          "projects",
-          "models"
-        ],
-        "summary": "View a threshold model",
-        "description": "View a threshold model for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. The models returned by this endpoint may have been replaced in their threshold. The `replaced` field indicates if and when the model has been replaced.",
-        "operationId": "proj_model_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "model",
-            "description": "The UUID for a model.",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ModelUuid"
-            }
-          },
-          {
-            "in": "path",
-            "name": "project",
-            "description": "The slug or UUID for a project.",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonModel"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      }
-    },
     "/v0/projects/{project}/perf": {
       "get": {
         "tags": [
@@ -5188,7 +5109,7 @@
           {
             "in": "query",
             "name": "model",
-            "description": "Use the specified model for the threshold. This can be useful for displaying historical threshold models that have since been replaced by a new model.",
+            "description": "Use the specified model UUID for the threshold. This can be useful for displaying historical threshold models that have since been replaced by a new model.",
             "schema": {
               "$ref": "#/components/schemas/ModelUuid"
             }
