@@ -54,7 +54,7 @@ from_client!(
     BenchmarkUuid,
     MeasureUuid,
     ThresholdUuid,
-    StatisticUuid,
+    ModelUuid,
     AlertUuid,
     UserUuid,
     TokenUuid
@@ -120,7 +120,7 @@ try_from_client!(
     JsonPerf,
     JsonReports,
     JsonReport,
-    JsonStatistic,
+    JsonModel,
     JsonTestbeds,
     JsonTestbed,
     JsonThresholds,
@@ -217,7 +217,7 @@ into_uuid!(
     JsonMeasure,
     JsonProject,
     JsonReport,
-    JsonStatistic,
+    JsonModel,
     JsonTestbed,
     JsonThreshold
 );

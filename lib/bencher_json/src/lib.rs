@@ -1,7 +1,7 @@
 pub use bencher_valid::{
     BenchmarkName, Boundary, BranchName, CdfBoundary, DateTime, DateTimeMillis, Email, GitHash,
-    IqrBoundary, Jwt, NameId, NameIdKind, NonEmpty, PercentageBoundary, ResourceId, ResourceIdKind,
-    ResourceName, SampleSize, Sanitize, Secret, Slug, Statistic, StatisticKind, Url, UserName,
+    IqrBoundary, Jwt, Model, ModelTest, NameId, NameIdKind, NonEmpty, PercentageBoundary,
+    ResourceId, ResourceIdKind, ResourceName, SampleSize, Sanitize, Secret, Slug, Url, UserName,
     ValidError, Window,
 };
 #[cfg(feature = "plus")]
@@ -39,13 +39,11 @@ pub use project::{
     branch::{BranchUuid, JsonBranch, JsonBranches, JsonNewBranch, VersionUuid},
     measure::{JsonMeasure, JsonMeasures, JsonNewMeasure, MeasureUuid},
     metric::{JsonMetric, JsonMetricsMap, JsonResultsMap, MeasureNameId, MetricUuid},
+    model::{JsonModel, ModelUuid},
     perf::{JsonPerf, JsonPerfQuery, PerfUuid},
     report::{JsonNewReport, JsonReport, JsonReports, ReportUuid},
     testbed::{JsonNewTestbed, JsonTestbed, JsonTestbeds, TestbedUuid},
-    threshold::{
-        JsonNewThreshold, JsonStatistic, JsonThreshold, JsonThresholds, StatisticUuid,
-        ThresholdUuid,
-    },
+    threshold::{JsonNewThreshold, JsonThreshold, JsonThresholds, ThresholdUuid},
     JsonNewProject, JsonProject, JsonProjects, ProjectUuid,
 };
 #[cfg(feature = "plus")]

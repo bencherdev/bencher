@@ -4,38 +4,41 @@ use std::str::FromStr;
 use wasm_bindgen::prelude::*;
 
 mod benchmark_name;
-mod boundary;
 mod branch_name;
 mod date_time;
 mod email;
 mod error;
 mod git_hash;
 mod jwt;
+mod model;
 mod name_id;
 mod non_empty;
 #[cfg(feature = "plus")]
 mod plus;
 mod resource_id;
 mod resource_name;
-mod sample_size;
 mod secret;
 mod slug;
-mod statistic;
 mod url;
 mod user_name;
-mod window;
 
 pub use crate::git_hash::GitHash;
 pub use crate::slug::Slug;
 pub use crate::url::Url;
 pub use benchmark_name::BenchmarkName;
-pub use boundary::{Boundary, CdfBoundary, IqrBoundary, PercentageBoundary};
 pub use branch_name::BranchName;
 pub use date_time::{DateTime, DateTimeMillis};
 pub use email::Email;
 pub use error::ValidError;
 use error::REGEX_ERROR;
 pub use jwt::Jwt;
+pub use model::{
+    boundary::{Boundary, CdfBoundary, IqrBoundary, PercentageBoundary},
+    model_test::ModelTest,
+    sample_size::SampleSize,
+    window::Window,
+    Model,
+};
 pub use name_id::{NameId, NameIdKind};
 pub use non_empty::NonEmpty;
 #[cfg(feature = "plus")]
@@ -45,11 +48,8 @@ pub use plus::{
 };
 pub use resource_id::{ResourceId, ResourceIdKind};
 pub use resource_name::ResourceName;
-pub use sample_size::SampleSize;
 pub use secret::Secret;
-pub use statistic::{Statistic, StatisticKind};
 pub use user_name::UserName;
-pub use window::Window;
 
 const MAX_LEN: usize = 64;
 

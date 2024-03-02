@@ -14,6 +14,7 @@ pub mod boundary;
 pub mod branch;
 pub mod measure;
 pub mod metric;
+pub mod model;
 pub mod perf;
 pub mod report;
 pub mod testbed;

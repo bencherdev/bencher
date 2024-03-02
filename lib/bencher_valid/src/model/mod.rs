@@ -5,16 +5,23 @@ use wasm_bindgen::prelude::*;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    boundary::{CdfBoundary, IqrBoundary, PercentageBoundary},
-    Boundary, SampleSize, ValidError, Window,
-};
+use crate::ValidError;
+
+pub mod boundary;
+pub mod model_test;
+pub mod sample_size;
+pub mod window;
+
+use boundary::{Boundary, CdfBoundary, IqrBoundary, PercentageBoundary};
+use model_test::ModelTest;
+use sample_size::SampleSize;
+use window::Window;
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct Statistic {
-    /// The kind of test to use to calculate the baseline and boundary limits.
-    pub test: StatisticKind,
+pub struct Model {
+    /// The test used by the threshold model to calculate the baseline and boundary limits.
+    pub test: ModelTest,
     /// The minimum number of samples required to perform the test.
     /// If there are fewer samples, the test will not be performed.
     pub min_sample_size: Option<SampleSize>,
@@ -32,10 +39,10 @@ pub struct Statistic {
     pub upper_boundary: Option<Boundary>,
 }
 
-impl Statistic {
+impl Model {
     pub fn lower_boundary() -> Self {
         Self {
-            test: StatisticKind::TTest,
+            test: ModelTest::TTest,
             min_sample_size: None,
             max_sample_size: Some(SampleSize::TWO_FIFTY_FIVE),
             window: None,
@@ -46,7 +53,7 @@ impl Statistic {
 
     pub fn upper_boundary() -> Self {
         Self {
-            test: StatisticKind::TTest,
+            test: ModelTest::TTest,
             min_sample_size: None,
             max_sample_size: Some(SampleSize::TWO_FIFTY_FIVE),
             window: None,
@@ -56,21 +63,21 @@ impl Statistic {
     }
 
     pub fn validate(self) -> Result<(), ValidError> {
-        validate_statistic(self)
+        validate_model(self)
     }
 }
 
-pub fn validate_statistic(statistic: Statistic) -> Result<(), ValidError> {
-    let Statistic {
+pub fn validate_model(model: Model) -> Result<(), ValidError> {
+    let Model {
         test,
         min_sample_size,
         max_sample_size,
         window,
         lower_boundary,
         upper_boundary,
-    } = statistic;
+    } = model;
     match test {
-        StatisticKind::Static => {
+        ModelTest::Static => {
             if let Some(&min_sample_size) = min_sample_size.as_ref() {
                 return Err(ValidError::StaticMinSampleSize(min_sample_size));
             } else if let Some(&max_sample_size) = max_sample_size.as_ref() {
@@ -91,15 +98,15 @@ pub fn validate_statistic(statistic: Statistic) -> Result<(), ValidError> {
                 (None, None) => Err(ValidError::NoBoundary),
             }
         },
-        StatisticKind::Percentage => {
+        ModelTest::Percentage => {
             validate_sample_size(min_sample_size, max_sample_size)?;
             validate_boundary::<PercentageBoundary>(lower_boundary, upper_boundary)
         },
-        StatisticKind::ZScore | StatisticKind::TTest | StatisticKind::LogNormal => {
+        ModelTest::ZScore | ModelTest::TTest | ModelTest::LogNormal => {
             validate_sample_size(min_sample_size, max_sample_size)?;
             validate_boundary::<CdfBoundary>(lower_boundary, upper_boundary)
         },
-        StatisticKind::Iqr | StatisticKind::DeltaIqr => {
+        ModelTest::Iqr | ModelTest::DeltaIqr => {
             validate_sample_size(min_sample_size, max_sample_size)?;
             validate_boundary::<IqrBoundary>(lower_boundary, upper_boundary)
         },
@@ -140,90 +147,9 @@ where
 
 #[cfg(feature = "wasm")]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
-pub fn is_valid_statistic(statistic: &str) -> bool {
-    let Ok(statistic) = serde_json::from_str(statistic) else {
+pub fn is_valid_model(model: &str) -> bool {
+    let Ok(model) = serde_json::from_str(model) else {
         return false;
     };
-    validate_statistic(statistic).is_ok()
-}
-
-const STATIC_INT: i32 = 20;
-const PERCENTAGE_INT: i32 = 30;
-const Z_SCORE_INT: i32 = 0;
-const T_TEST_INT: i32 = 1;
-const LOG_NORMAL_INT: i32 = 10;
-const IQR_INT: i32 = 40;
-const DELTA_IQR_INT: i32 = 41;
-
-#[typeshare::typeshare]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, derive_more::Display, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
-#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
-#[serde(rename_all = "snake_case")]
-#[repr(i32)]
-pub enum StatisticKind {
-    Static = STATIC_INT,
-    Percentage = PERCENTAGE_INT,
-    #[serde(alias = "z")]
-    ZScore = Z_SCORE_INT,
-    #[serde(alias = "t")]
-    TTest = T_TEST_INT,
-    LogNormal = LOG_NORMAL_INT,
-    Iqr = IQR_INT,
-    DeltaIqr = DELTA_IQR_INT,
-}
-
-#[cfg(feature = "db")]
-mod statistic_kind {
-    use super::{
-        StatisticKind, DELTA_IQR_INT, IQR_INT, LOG_NORMAL_INT, PERCENTAGE_INT, STATIC_INT,
-        T_TEST_INT, Z_SCORE_INT,
-    };
-
-    #[derive(Debug, thiserror::Error)]
-    pub enum StatisticKindError {
-        #[error("Invalid statistic kind value: {0}")]
-        Invalid(i32),
-    }
-
-    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for StatisticKind
-    where
-        DB: diesel::backend::Backend,
-        i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>,
-    {
-        fn to_sql<'b>(
-            &'b self,
-            out: &mut diesel::serialize::Output<'b, '_, DB>,
-        ) -> diesel::serialize::Result {
-            match self {
-                Self::Static => STATIC_INT.to_sql(out),
-                Self::Percentage => PERCENTAGE_INT.to_sql(out),
-                Self::ZScore => T_TEST_INT.to_sql(out),
-                Self::TTest => Z_SCORE_INT.to_sql(out),
-                Self::LogNormal => LOG_NORMAL_INT.to_sql(out),
-                Self::Iqr => IQR_INT.to_sql(out),
-                Self::DeltaIqr => DELTA_IQR_INT.to_sql(out),
-            }
-        }
-    }
-
-    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for StatisticKind
-    where
-        DB: diesel::backend::Backend,
-        i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
-    {
-        fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
-            match i32::from_sql(bytes)? {
-                STATIC_INT => Ok(Self::Static),
-                PERCENTAGE_INT => Ok(Self::Percentage),
-                T_TEST_INT => Ok(Self::ZScore),
-                Z_SCORE_INT => Ok(Self::TTest),
-                LOG_NORMAL_INT => Ok(Self::LogNormal),
-                IQR_INT => Ok(Self::Iqr),
-                DELTA_IQR_INT => Ok(Self::DeltaIqr),
-                value => Err(Box::new(StatisticKindError::Invalid(value))),
-            }
-        }
-    }
+    validate_model(model).is_ok()
 }

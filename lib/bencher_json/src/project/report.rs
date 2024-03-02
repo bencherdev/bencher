@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::{
-    benchmark::JsonBenchmarkMetric, branch::JsonBranchVersion, threshold::JsonThresholdStatistic,
+    benchmark::JsonBenchmarkMetric, branch::JsonBranchVersion, threshold::JsonThresholdModel,
 };
 
 crate::typed_uuid::typed_uuid!(ReportUuid);
@@ -262,8 +262,8 @@ pub type JsonReportIteration = Vec<JsonReportResult>;
 pub struct JsonReportResult {
     pub iteration: Iteration,
     pub measure: JsonMeasure,
-    // The threshold should be the same for all the benchmark results
-    pub threshold: Option<JsonThresholdStatistic>,
+    // The threshold model should be the same for all the benchmark results
+    pub threshold: Option<JsonThresholdModel>,
     pub benchmarks: Vec<JsonBenchmarkMetric>,
 }
 

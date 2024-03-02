@@ -1,4 +1,4 @@
-use bencher_json::{project::boundary::BoundaryLimit, Boundary, SampleSize, StatisticKind};
+use bencher_json::{project::boundary::BoundaryLimit, Boundary, ModelTest, SampleSize};
 use slog::Logger;
 
 use crate::limits::{MetricsLimits, NormalTestKind};
@@ -18,7 +18,7 @@ impl MetricsBoundary {
         log: &Logger,
         datum: f64,
         metrics_data: &MetricsData,
-        statistic_kind: StatisticKind,
+        model_test: ModelTest,
         min_sample_size: Option<SampleSize>,
         lower_boundary: Option<Boundary>,
         upper_boundary: Option<Boundary>,
@@ -27,7 +27,7 @@ impl MetricsBoundary {
             log,
             datum,
             metrics_data,
-            statistic_kind,
+            model_test,
             min_sample_size,
             lower_boundary,
             upper_boundary,
@@ -39,7 +39,7 @@ impl MetricsBoundary {
         log: &Logger,
         datum: f64,
         metrics_data: &MetricsData,
-        statistic_kind: StatisticKind,
+        model_test: ModelTest,
         min_sample_size: Option<SampleSize>,
         lower_boundary: Option<Boundary>,
         upper_boundary: Option<Boundary>,
@@ -48,7 +48,7 @@ impl MetricsBoundary {
         if lower_boundary.is_none() && upper_boundary.is_none() {
             slog::debug!(
                 log,
-                "No lower or upper boundary for statistic kind {statistic_kind:?}",
+                "No lower or upper boundary for threshold model test {model_test:?}",
             );
             return Ok(None);
         }
@@ -65,20 +65,20 @@ impl MetricsBoundary {
                 return Ok(None);
             }
         } else if data_len == 0 {
-            slog::debug!(log, "No data for statistic kind {statistic_kind:?}");
+            slog::debug!(log, "No data for threshold model test {model_test:?}");
             return Ok(None);
         }
 
-        match statistic_kind {
-            StatisticKind::Static => Ok(Some(Self::new_static(
+        match model_test {
+            ModelTest::Static => Ok(Some(Self::new_static(
                 datum,
                 lower_boundary,
                 upper_boundary,
             ))),
-            StatisticKind::Percentage => {
+            ModelTest::Percentage => {
                 Self::new_percentage(log, datum, data, lower_boundary, upper_boundary)
             },
-            StatisticKind::ZScore => Self::new_normal(
+            ModelTest::ZScore => Self::new_normal(
                 log,
                 datum,
                 data,
@@ -86,7 +86,7 @@ impl MetricsBoundary {
                 lower_boundary,
                 upper_boundary,
             ),
-            StatisticKind::TTest => Self::new_normal(
+            ModelTest::TTest => Self::new_normal(
                 log,
                 datum,
                 data,
@@ -97,13 +97,13 @@ impl MetricsBoundary {
                 lower_boundary,
                 upper_boundary,
             ),
-            StatisticKind::LogNormal => {
+            ModelTest::LogNormal => {
                 Self::new_log_normal(log, datum, data, lower_boundary, upper_boundary)
             },
-            StatisticKind::Iqr => {
+            ModelTest::Iqr => {
                 Self::new_iqr(log, datum, data, false, lower_boundary, upper_boundary)
             },
-            StatisticKind::DeltaIqr => {
+            ModelTest::DeltaIqr => {
                 Self::new_iqr(log, datum, data, true, lower_boundary, upper_boundary)
             },
         }

@@ -15,7 +15,7 @@ use super::boundary::JsonBoundary;
 use super::branch::JsonVersion;
 use super::metric::JsonMetric;
 use super::report::Iteration;
-use super::threshold::JsonThresholdStatistic;
+use super::threshold::JsonThresholdModel;
 
 crate::typed_uuid::typed_uuid!(PerfUuid);
 
@@ -282,8 +282,8 @@ pub struct JsonPerfMetric {
     pub start_time: DateTime,
     pub end_time: DateTime,
     pub version: JsonVersion,
-    // Threshold is necessary for each metric as the statistic may change over time
-    pub threshold: Option<JsonThresholdStatistic>,
+    // The threshold model is necessary for each metric as it may change over time
+    pub threshold: Option<JsonThresholdModel>,
     pub metric: JsonMetric,
     pub boundary: Option<JsonBoundary>,
     pub alert: Option<JsonPerfAlert>,

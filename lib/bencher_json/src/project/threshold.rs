@@ -1,15 +1,14 @@
-use bencher_valid::{Boundary, DateTime, NameId, SampleSize, Statistic, StatisticKind, Window};
+use bencher_valid::{DateTime, Model, NameId};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     urlencoded::{from_urlencoded, to_urlencoded, UrlEncodedError},
-    JsonBranch, JsonMeasure, JsonTestbed, ProjectUuid,
+    JsonBranch, JsonMeasure, JsonModel, JsonTestbed, ProjectUuid,
 };
 
 crate::typed_uuid::typed_uuid!(ThresholdUuid);
-crate::typed_uuid::typed_uuid!(StatisticUuid);
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -21,7 +20,7 @@ pub struct JsonNewThreshold {
     /// The UUID, slug, or name of the threshold measure.
     pub measure: NameId,
     #[serde(flatten)]
-    pub statistic: Statistic,
+    pub model: Model,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,33 +38,22 @@ pub struct JsonThreshold {
     pub branch: JsonBranch,
     pub testbed: JsonTestbed,
     pub measure: JsonMeasure,
-    pub statistic: JsonStatistic,
+    // TODO remove in due time
+    pub statistic: Option<JsonModel>,
+    pub model: JsonModel,
     pub created: DateTime,
     pub modified: DateTime,
 }
 
 #[typeshare::typeshare]
-#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonStatistic {
-    pub uuid: StatisticUuid,
-    pub threshold: ThresholdUuid,
-    pub test: StatisticKind,
-    pub min_sample_size: Option<SampleSize>,
-    pub max_sample_size: Option<SampleSize>,
-    pub window: Option<Window>,
-    pub lower_boundary: Option<Boundary>,
-    pub upper_boundary: Option<Boundary>,
-    pub created: DateTime,
-}
-
-#[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonThresholdStatistic {
+pub struct JsonThresholdModel {
     pub uuid: ThresholdUuid,
     pub project: ProjectUuid,
-    pub statistic: JsonStatistic,
+    // TODO remove in due time
+    pub statistic: Option<JsonModel>,
+    pub model: JsonModel,
     pub created: DateTime,
 }
 
@@ -139,5 +127,5 @@ impl JsonThresholdQuery {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonUpdateThreshold {
     #[serde(flatten)]
-    pub statistic: Statistic,
+    pub model: Model,
 }
