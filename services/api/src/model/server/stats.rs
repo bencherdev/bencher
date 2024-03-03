@@ -248,7 +248,7 @@ pub fn get_stats(
     clippy::indexing_slicing,
     clippy::integer_division
 )]
-fn median(array: &mut Vec<i64>) -> f64 {
+fn median(array: &mut [i64]) -> f64 {
     if array.is_empty() {
         return 0.0;
     }

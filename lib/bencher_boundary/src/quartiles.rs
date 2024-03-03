@@ -86,10 +86,17 @@ impl Quartiles {
     // https://github.com/aochagavia/rustls-bench-app/blob/c1b31a018d98547e201867b9b71df1c23e55b95c/ci-bench-runner/src/job/bench_pr.rs#L398
     // https://github.com/rust-lang/rustc-perf/blob/4f313add609f43e928e98132358e8426ed3969ae/site/src/comparison.rs#L1219
     fn percent_changes(data: &[f64]) -> Vec<f64> {
-        #[allow(clippy::indexing_slicing)]
+        const WINDOW_SIZE: usize = 2;
+        #[allow(clippy::indexing_slicing, clippy::missing_asserts_for_indexing)]
         let mut changes = data
-            .windows(2)
-            .map(|window| Self::abs_percent_change(window[0], window[1]))
+            .windows(WINDOW_SIZE)
+            .map(|window| {
+                assert!(
+                    window.len() == WINDOW_SIZE,
+                    "window size is not {WINDOW_SIZE}"
+                );
+                Self::abs_percent_change(window[0], window[1])
+            })
             .collect::<Vec<_>>();
         changes.sort_unstable_by(|l, r| l.partial_cmp(r).unwrap_or(std::cmp::Ordering::Equal));
         changes

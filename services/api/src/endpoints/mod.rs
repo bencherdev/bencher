@@ -1,4 +1,4 @@
-#![allow(clippy::str_to_string)]
+#![allow(clippy::no_effect_underscore_binding, clippy::str_to_string)]
 
 use dropshot::ApiDescription;
 

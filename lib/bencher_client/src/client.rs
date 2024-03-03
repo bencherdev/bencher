@@ -33,6 +33,8 @@ pub enum ClientError {
 
     #[error("Invalid request. The request did not conform to API requirements: {0}")]
     InvalidRequest(String),
+    #[error("Error processing the request: {0}")]
+    PreHookError(String),
     #[error("Error processing request:\n{0}")]
     ErrorResponse(ErrorResponse),
     #[error("Error upgrading request: {0}")]
@@ -199,6 +201,9 @@ impl BencherClient {
                 },
                 Err(crate::codegen::Error::InvalidRequest(e)) => {
                     return Err(ClientError::InvalidRequest(e))
+                },
+                Err(crate::codegen::Error::PreHookError(e)) => {
+                    return Err(ClientError::PreHookError(e))
                 },
                 Err(crate::codegen::Error::ErrorResponse(e)) => {
                     let status = e.status();

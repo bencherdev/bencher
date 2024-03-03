@@ -33,14 +33,14 @@ anyhow = "1.0"
 async-trait = "0.1"
 camino = "1.1"
 chrono = { version = "0.4", default-features = false }
-clap = { version = "4.4", features = ["derive"] }
+clap = { version = "4.5", features = ["derive"] }
 derive_more = "0.99"
 diesel = "2.1"
 http = "0.2"
 hyper = "0.14"
 jsonwebtoken = "9.2"
 literally = "0.1"
-octocrab = "0.33"
+octocrab = "0.34"
 once_cell = "1.19"
 ordered-float = "4.2"
 oso = "0.27"
@@ -56,14 +56,14 @@ slog = "2.7"
 slug = "0.1"
 tabled = "0.15"
 thiserror = "1.0"
-tokio = "1.35"
+tokio = "1.36"
 typeshare = "1.0"
 url = "2.5"
 uuid = "1.7"
-# github.com
-dropshot = { git = "https://github.com/oxidecomputer/dropshot", rev = "605a6d1421b610b37cf9435c5094e15b59de88b9" }
-progenitor = { git = "https://github.com/oxidecomputer/progenitor", rev = "86b60220b88a2ca3629fb87acf8f83ff35f63aaa" }
-progenitor-client = { git = "https://github.com/oxidecomputer/progenitor", rev = "86b60220b88a2ca3629fb87acf8f83ff35f63aaa" }
+# oxide
+dropshot = "0.10"
+progenitor = "0.6"
+progenitor-client = "0.6"
 
 [workspace.lints.rust]
 # https://doc.rust-lang.org/rustc/lints/listing/index.html
@@ -105,6 +105,7 @@ as_underscore = "warn"                   # Checks for the usage of as _ conversi
 big_endian_bytes = "warn"                # Checks for the usage of the to_be_bytes method and/or the function from_be_bytes.
 dbg_macro = "warn"                       # Checks for usage of the dbg! macro.
 decimal_literal_representation = "warn"  # Warns if there is a better representation for a numeric literal.
+error_impl_error = "warn"                # Checks for types named Error that implement Error.
 exit = "warn"                            # Detects calls to the exit() function which terminates the program.
 expect_used = "warn"                     # Checks for .expect() or .expect_err() calls on Results and .expect() call on Options.
 filetype_is_file = "warn"                # Checks for FileType::is_file().
@@ -115,15 +116,19 @@ host_endian_bytes = "warn"               # Checks for the usage of the to_ne_byt
 if_then_some_else_none = "warn"          # Checks for if-else that could be written using either bool::then or bool::then_some.
 impl_trait_in_params = "warn"            # Lints when impl Trait is being used in a function’s parameters.
 indexing_slicing = "warn"                # Checks for usage of indexing or slicing. Arrays are special cases, this lint does report on arrays if we can tell that slicing operations are in bounds and does not lint on constant usize indexing on arrays because that is handled by rustc’s const_err lint.
+infinite_loop = "warn"                   # Checks for infinite loops in a function where the return type is not ! and lint accordingly.
 inline_asm_x86_att_syntax = "warn"       # Checks for usage of AT&T x86 assembly syntax.
 inline_asm_x86_intel_syntax = "warn"     # Checks for usage of Intel x86 assembly syntax.
 integer_division = "warn"                # Checks for division of integers
+into_iter_without_iter = "warn"          # This is the opposite of the iter_without_into_iter lint. It looks for IntoIterator for (&|&mut) Type implementations without an inherent iter or iter_mut method on the type or on any of the types in its Deref chain.
+iter_without_into_iter = "warn"          # Looks for iter and iter_mut methods without an associated IntoIterator for (&|&mut) Type implementation.
 large_include_file = "warn"              # Checks for the inclusion of large files via include_bytes!() and include_str!()
 little_endian_bytes = "warn"             # Checks for the usage of the to_le_bytes method and/or the function from_le_bytes.
 lossy_float_literal = "warn"             # Checks for whole number float literals that cannot be represented as the underlying type without loss.
 map_err_ignore = "warn"                  # Checks for instances of map_err(|_| Some::Enum)
 mem_forget = "warn"                      # Checks for usage of std::mem::forget(t) where t is Drop or has a field that implements Drop.
 missing_assert_message = "warn"          # Checks assertions without a custom panic message.
+missing_asserts_for_indexing = "warn"    # Checks for repeated slice indexing without asserting beforehand that the length is greater than the largest index used to index into the slice.
 mixed_read_write_in_expression = "warn"  # Checks for a read and a write to the same variable where whether the read occurs before or after the write depends on the evaluation order of sub-expressions.
 modulo_arithmetic = "warn"               # Checks for modulo arithmetic.
 multiple_inherent_impl = "warn"          # Checks for multiple inherent implementations of a struct
@@ -141,10 +146,12 @@ rest_pat_in_fully_bound_structs = "warn" # Checks for unnecessary ‘…’ patt
 same_name_method = "warn"                # It lints if a struct has two methods with the same name: one from a trait, another not from trait.
 semicolon_inside_block = "warn"          # Suggests moving the semicolon after a block to the inside of the block, after its last expression.
 separated_literal_suffix = "warn"        # Warns if literal suffixes are separated by an underscore. To enforce separated literal suffix style, see the unseparated_literal_suffix lint.
+should_panic_without_expect = "warn"     # Checks for #[should_panic] attributes without specifying the expected panic message.
 str_to_string = "warn"                   # This lint checks for .to_string() method calls on values of type &str.
 string_add = "warn"                      # Checks for all instances of x + _ where x is of type String, but only if string_add_assign does not match.
 string_slice = "warn"                    # Checks for slice operations on strings
 string_to_string = "warn"                # This lint checks for .to_string() method calls on values of type String.
+struct_field_names = "warn"              # Detects struct fields that are prefixed or suffixed by the same characters or the name of the struct itself.
 suspicious_xor_used_as_pow = "warn"      # Warns for a Bitwise XOR (^) operator being probably confused as a powering. It will not trigger if any of the numbers are not in decimal.
 todo = "warn"                            # Checks for usage of todo!.
 try_err = "warn"                         # Checks for usage of Err(x)?.

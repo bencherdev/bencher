@@ -62,6 +62,7 @@ impl QueryServer {
         tokio::spawn(async move {
             let StatsSettings { offset, enabled } = stats;
             let mut violations = 0;
+            #[allow(clippy::infinite_loop)]
             loop {
                 let now = Utc::now().naive_utc().time();
                 let sleep_time = match now.cmp(&offset) {

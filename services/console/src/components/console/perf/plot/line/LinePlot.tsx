@@ -230,6 +230,7 @@ const LinePlot = (props: Props) => {
 				Plot.dot(line_data, {
 					x: x_axis,
 					y: "value",
+					symbol: "circle",
 					stroke: color,
 					fill: color,
 					title: (datum) => to_title(`${datum.value}`, datum, ""),
@@ -434,6 +435,7 @@ const value_end_dot = (x_axis: string, limit: BoundaryLimit, color: string) => {
 	return {
 		x: x_axis,
 		y: value_end_position_key(limit),
+		symbol: "diamond",
 		stroke: color,
 		strokeWidth: 2,
 		strokeOpacity: 0.9,
@@ -464,6 +466,7 @@ const boundary_dot = (
 	return {
 		x: x_axis,
 		y: boundary_position_key(limit),
+		symbol: "square",
 		stroke: color,
 		strokeWidth: 4,
 		strokeOpacity: 0.666,
