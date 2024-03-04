@@ -50,7 +50,7 @@ pub struct ProjPerfParams {
     pub project: ResourceId,
 }
 
-#[allow(clippy::unused_async)]
+#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/perf",

@@ -56,7 +56,7 @@ pub enum ProjReportsSort {
     DateTime,
 }
 
-#[allow(clippy::unused_async)]
+#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/reports",
@@ -324,7 +324,7 @@ pub struct ProjReportParams {
     pub report: ReportUuid,
 }
 
-#[allow(clippy::unused_async)]
+#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/reports/{report}",

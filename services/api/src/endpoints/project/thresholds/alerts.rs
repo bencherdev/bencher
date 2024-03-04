@@ -45,7 +45,7 @@ pub enum ProjAlertsSort {
     Modified,
 }
 
-#[allow(clippy::unused_async)]
+#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/alerts",
@@ -171,7 +171,7 @@ pub struct ProjAlertParams {
     pub alert: AlertUuid,
 }
 
-#[allow(clippy::unused_async)]
+#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/alerts/{alert}",
@@ -283,7 +283,7 @@ async fn patch_inner(
         .into_json(conn))
 }
 
-#[allow(clippy::unused_async)]
+#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/stats/alerts",

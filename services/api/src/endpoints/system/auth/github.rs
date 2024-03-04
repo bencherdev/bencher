@@ -21,7 +21,7 @@ use crate::{
 
 use super::CLIENT_TOKEN_TTL;
 
-#[allow(clippy::unused_async)]
+#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/auth/github",

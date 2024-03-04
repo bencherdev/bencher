@@ -58,7 +58,7 @@ pub struct ProjBranchesQuery {
     pub search: Option<Search>,
 }
 
-#[allow(clippy::unused_async)]
+#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/branches",
@@ -231,7 +231,7 @@ pub struct ProjBranchParams {
     pub branch: ResourceId,
 }
 
-#[allow(clippy::unused_async)]
+#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/branches/{branch}",

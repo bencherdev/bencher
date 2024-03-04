@@ -8,7 +8,7 @@ use crate::{
     },
 };
 
-#[allow(clippy::unused_async)]
+#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/",
@@ -20,7 +20,7 @@ pub async fn server_root_options(
     Ok(Endpoint::cors(&[Get.into()]))
 }
 
-#[allow(clippy::unused_async)]
+#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = GET,
     path = "/",

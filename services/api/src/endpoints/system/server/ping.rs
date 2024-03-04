@@ -9,7 +9,7 @@ use crate::{
     },
 };
 
-#[allow(clippy::unused_async)]
+#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/server/ping",
@@ -21,7 +21,7 @@ pub async fn server_ping_options(
     Ok(Endpoint::cors(&[Get.into()]))
 }
 
-#[allow(clippy::unused_async)]
+#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = GET,
     path = "/v0/server/ping",

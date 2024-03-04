@@ -14,7 +14,7 @@ use crate::{
 
 pub const DEFAULT_DELAY: u64 = 3;
 
-#[allow(clippy::unused_async)]
+#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/server/restart",
@@ -42,7 +42,7 @@ pub async fn server_restart_post(
     Ok(Post::auth_response_accepted(()))
 }
 
-#[allow(clippy::unused_async)]
+#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 async fn post_inner(
     log: &Logger,
     context: &ApiContext,
