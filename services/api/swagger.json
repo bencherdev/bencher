@@ -5109,7 +5109,7 @@
           {
             "in": "query",
             "name": "model",
-            "description": "Use the specified model UUID for the threshold. This can be useful for displaying historical threshold models that have since been replaced by a new model.",
+            "description": "View the threshold with the specified model UUID. This can be useful for viewing thresholds with historical models that have since been replaced by a new model. If no specified, then the current model is used.",
             "schema": {
               "$ref": "#/components/schemas/ModelUuid"
             }
@@ -5939,17 +5939,97 @@
         "tags": [
           "users"
         ],
+        "summary": "View a user",
+        "description": "View a user. Only the authenticated user themselves and server admins have access to this endpoint. To view users within your organization, use the organization members endpoints.",
         "operationId": "user_get",
         "parameters": [
           {
             "in": "path",
             "name": "user",
+            "description": "The slug or UUID for a user.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonUser"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Update a user",
+        "description": "Update a user. Only the authenticated user themselves and server admins have access to this endpoint. Some fields can only be updated by an admin. To manage users within your organization, use the organization members endpoints.",
+        "operationId": "user_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user",
+            "description": "The slug or UUID for a user.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonUpdateUser"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "successful operation",
@@ -6006,11 +6086,14 @@
           "users",
           "tokens"
         ],
+        "summary": "List tokens for a user",
+        "description": "List all API tokens for a user. Only the authenticated user themselves and server admins have access to this endpoint. By default, the tokens are sorted in alphabetical order by name.",
         "operationId": "user_tokens_get",
         "parameters": [
           {
             "in": "path",
             "name": "user",
+            "description": "The slug or UUID for a user.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -6057,6 +6140,7 @@
           {
             "in": "query",
             "name": "name",
+            "description": "Filter by token name, exact match.",
             "schema": {
               "$ref": "#/components/schemas/ResourceName"
             }
@@ -6064,6 +6148,7 @@
           {
             "in": "query",
             "name": "search",
+            "description": "Search by token name, slug, or UUID.",
             "schema": {
               "$ref": "#/components/schemas/Search"
             }
@@ -6123,11 +6208,14 @@
           "users",
           "tokens"
         ],
+        "summary": "Create a token",
+        "description": "Create an API token for a user. Only the authenticated user themselves and server admins have access to this endpoint.",
         "operationId": "user_token_post",
         "parameters": [
           {
             "in": "path",
             "name": "user",
+            "description": "The slug or UUID for a user.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -6200,11 +6288,14 @@
           "users",
           "tokens"
         ],
+        "summary": "View a token",
+        "description": "View an API token for a user. Only the authenticated user themselves and server admins have access to this endpoint.",
         "operationId": "user_token_get",
         "parameters": [
           {
             "in": "path",
             "name": "token",
+            "description": "The UUID for a token.",
             "required": true,
             "schema": {
               "type": "string",
@@ -6214,6 +6305,7 @@
           {
             "in": "path",
             "name": "user",
+            "description": "The slug or UUID for a user.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -6274,11 +6366,14 @@
           "users",
           "tokens"
         ],
+        "summary": "Update a token",
+        "description": "Update an API token for a user. Only the authenticated user themselves and server admins have access to this endpoint.",
         "operationId": "user_token_patch",
         "parameters": [
           {
             "in": "path",
             "name": "token",
+            "description": "The UUID for a token.",
             "required": true,
             "schema": {
               "type": "string",
@@ -6288,6 +6383,7 @@
           {
             "in": "path",
             "name": "user",
+            "description": "The slug or UUID for a user.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
@@ -7943,10 +8039,16 @@
         "type": "object",
         "properties": {
           "name": {
-            "$ref": "#/components/schemas/ResourceName"
+            "description": "The name of the token. Maximum length is 64 characters.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceName"
+              }
+            ]
           },
           "ttl": {
             "nullable": true,
+            "description": "The time-to-live (TTL) for the token in seconds. If not provided, the token will not expire for over 128 years.",
             "type": "integer",
             "format": "uint32",
             "minimum": 0
@@ -9316,6 +9418,7 @@
         "properties": {
           "status": {
             "nullable": true,
+            "description": "The new status of the alert.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/AlertStatus"
@@ -9542,9 +9645,52 @@
         "properties": {
           "name": {
             "nullable": true,
+            "description": "The new name of the token. Maximum length is 64 characters.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/ResourceName"
+              }
+            ]
+          }
+        }
+      },
+      "JsonUpdateUser": {
+        "type": "object",
+        "properties": {
+          "admin": {
+            "nullable": true,
+            "description": "Update whether the user is an admin. Must be an admin to update this field.",
+            "type": "boolean"
+          },
+          "email": {
+            "nullable": true,
+            "description": "The new email for the user.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Email"
+              }
+            ]
+          },
+          "locked": {
+            "nullable": true,
+            "description": "Update whether the user is locked. Must be an admin to update this field.",
+            "type": "boolean"
+          },
+          "name": {
+            "nullable": true,
+            "description": "The new name of the user. Maximum length is 64 characters. May only contain alphanumeric characters, non-leading or trailing spaces, and the following characters: , . - '",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserName"
+              }
+            ]
+          },
+          "slug": {
+            "nullable": true,
+            "description": "The preferred new slug for the user. Maximum length is 64 characters.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Slug"
               }
             ]
           }
@@ -10094,9 +10240,14 @@
         ]
       },
       "UserTokensSort": {
-        "type": "string",
-        "enum": [
-          "name"
+        "oneOf": [
+          {
+            "description": "Sort by token name.",
+            "type": "string",
+            "enum": [
+              "name"
+            ]
+          }
         ]
       }
     },

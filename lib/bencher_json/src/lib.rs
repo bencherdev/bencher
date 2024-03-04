@@ -64,7 +64,7 @@ pub use system::{
 };
 pub use user::{
     token::{JsonNewToken, JsonToken, JsonTokens, TokenUuid},
-    JsonUser, UserUuid,
+    JsonUpdateUser, JsonUser, UserUuid,
 };
 
 pub const BENCHER_CONSOLE_PORT: u16 = 3000;

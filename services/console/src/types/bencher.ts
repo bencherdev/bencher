@@ -312,6 +312,7 @@ export interface JsonAlertStats {
 }
 
 export interface JsonUpdateAlert {
+	/** The new status of the alert. */
 	status?: AlertStatus;
 }
 
@@ -520,6 +521,32 @@ export interface JsonNewCheckout {
 export interface JsonCheckout {
 	session: string;
 	url: string;
+}
+
+export interface JsonUpdateUser {
+	/**
+	 * The new name of the user.
+	 * Maximum length is 64 characters.
+	 * May only contain alphanumeric characters, non-leading or trailing spaces, and the following characters: , . - '
+	 */
+	name?: UserName;
+	/**
+	 * The preferred new slug for the user.
+	 * Maximum length is 64 characters.
+	 */
+	slug?: Slug;
+	/** The new email for the user. */
+	email?: Email;
+	/**
+	 * Update whether the user is an admin.
+	 * Must be an admin to update this field.
+	 */
+	admin?: boolean;
+	/**
+	 * Update whether the user is locked.
+	 * Must be an admin to update this field.
+	 */
+	locked?: boolean;
 }
 
 export interface JsonToken {

@@ -63,6 +63,10 @@ const getTypes = (propertyKey, propertyValue) => {
     return ["boolean", getDefault(propertyKey), null];
   }
 
+  if (propertyValue?.type === "integer") {
+    return ["integer", getDefault(propertyKey), null];
+  }
+
   return [null, null, null];
 };
 ---

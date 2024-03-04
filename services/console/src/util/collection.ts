@@ -9,6 +9,7 @@ enum Collection {
 	// API
 	organizations = "organizations",
 	projects = "projects",
+	users = "users",
 	// Learn
 	rust = "rust",
 }
@@ -31,6 +32,8 @@ export const collectionPath = (collection: Collection) => {
 			return "organizations";
 		case Collection.projects:
 			return "projects";
+		case Collection.users:
+			return "users";
 		case Collection.rust:
 			return "benchmarking/rust";
 	}

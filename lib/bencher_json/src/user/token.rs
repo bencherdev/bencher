@@ -10,7 +10,11 @@ crate::typed_uuid::typed_uuid!(TokenUuid);
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewToken {
+    /// The name of the token.
+    /// Maximum length is 64 characters.
     pub name: ResourceName,
+    /// The time-to-live (TTL) for the token in seconds.
+    /// If not provided, the token will not expire for over 128 years.
     pub ttl: Option<u32>,
 }
 
@@ -35,5 +39,7 @@ pub struct JsonToken {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonUpdateToken {
+    /// The new name of the token.
+    /// Maximum length is 64 characters.
     pub name: Option<ResourceName>,
 }

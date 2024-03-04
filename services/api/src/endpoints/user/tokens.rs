@@ -32,6 +32,7 @@ use crate::{
 
 #[derive(Deserialize, JsonSchema)]
 pub struct UserTokensParams {
+    /// The slug or UUID for a user.
     pub user: ResourceId,
 }
 
@@ -40,13 +41,16 @@ pub type UserTokensPagination = JsonPagination<UserTokensSort>;
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum UserTokensSort {
+    /// Sort by token name.
     #[default]
     Name,
 }
 
 #[derive(Deserialize, JsonSchema)]
 pub struct UserTokensQuery {
+    /// Filter by token name, exact match.
     pub name: Option<ResourceName>,
+    /// Search by token name, slug, or UUID.
     pub search: Option<Search>,
 }
 
@@ -65,6 +69,11 @@ pub async fn user_tokens_options(
     Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
+/// List tokens for a user
+///
+/// List all API tokens for a user.
+/// Only the authenticated user themselves and server admins have access to this endpoint.
+/// By default, the tokens are sorted in alphabetical order by name.
 #[endpoint {
     method = GET,
     path =  "/v0/users/{user}/tokens",
@@ -135,6 +144,10 @@ async fn get_ls_inner(
         .collect())
 }
 
+/// Create a token
+///
+/// Create an API token for a user.
+/// Only the authenticated user themselves and server admins have access to this endpoint.
 #[endpoint {
     method = POST,
     path =  "/v0/users/{user}/tokens",
@@ -186,7 +199,9 @@ async fn post_inner(
 
 #[derive(Deserialize, JsonSchema)]
 pub struct UserTokenParams {
+    /// The slug or UUID for a user.
     pub user: ResourceId,
+    /// The UUID for a token.
     pub token: Uuid,
 }
 
@@ -203,6 +218,10 @@ pub async fn user_token_options(
     Ok(Endpoint::cors(&[Get.into(), Patch.into()]))
 }
 
+/// View a token
+///
+/// View an API token for a user.
+/// Only the authenticated user themselves and server admins have access to this endpoint.
 #[endpoint {
     method = GET,
     path =  "/v0/users/{user}/tokens/{token}",
@@ -238,6 +257,10 @@ async fn get_one_inner(
     )))
 }
 
+/// Update a token
+///
+/// Update an API token for a user.
+/// Only the authenticated user themselves and server admins have access to this endpoint.
 #[endpoint {
     method = PATCH,
     path =  "/v0/users/{user}/tokens/{token}",

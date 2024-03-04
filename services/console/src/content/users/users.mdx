@@ -1,0 +1,15 @@
+---
+title: "Users"
+description: "The Bencher Users REST API"
+heading: "Users REST API"
+sortOrder: 1
+paths:
+  - path: /v0/users/{user}
+    method: get
+    headers: auth
+    cli: user view USER
+  - path: /v0/users/{user}
+    method: patch
+    headers: auth
+    cli: user update USER
+---

@@ -99,6 +99,7 @@ pub struct JsonAlertStats {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonUpdateAlert {
+    /// The new status of the alert.
     pub status: Option<AlertStatus>,
 }
 

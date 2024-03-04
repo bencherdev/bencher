@@ -1,6 +1,6 @@
 use bencher_json::{
-    organization::member::OrganizationRole, DateTime, Email, JsonSignup, JsonUser, Jwt, Slug,
-    UserName, UserUuid,
+    organization::member::OrganizationRole, DateTime, Email, JsonSignup, JsonUpdateUser, JsonUser,
+    Jwt, Slug, UserName, UserUuid,
 };
 use bencher_token::TokenKey;
 use diesel::{dsl::count, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -262,5 +262,36 @@ impl InsertUser {
             }
         }
         Ok(())
+    }
+}
+
+#[derive(Debug, Clone, diesel::AsChangeset)]
+#[diesel(table_name = user_table)]
+pub struct UpdateUser {
+    pub name: Option<UserName>,
+    pub slug: Option<Slug>,
+    pub email: Option<Email>,
+    pub admin: Option<bool>,
+    pub locked: Option<bool>,
+    pub modified: DateTime,
+}
+
+impl From<JsonUpdateUser> for UpdateUser {
+    fn from(update: JsonUpdateUser) -> Self {
+        let JsonUpdateUser {
+            name,
+            slug,
+            email,
+            admin,
+            locked,
+        } = update;
+        Self {
+            name,
+            slug,
+            email,
+            admin,
+            locked,
+            modified: DateTime::now(),
+        }
     }
 }

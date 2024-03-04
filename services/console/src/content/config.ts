@@ -44,6 +44,7 @@ export const collections = {
 	// api
 	organizations: swagger,
 	projects: swagger,
+	users: swagger,
 	// learn
 	rust: page,
 };

@@ -22,7 +22,6 @@ pub enum CliToken {
 #[derive(Parser, Debug)]
 pub struct CliTokenList {
     /// User slug or UUID
-    #[clap(long)]
     pub user: ResourceId,
 
     /// Token name
@@ -50,7 +49,6 @@ pub enum CliTokensSort {
 #[derive(Parser, Debug)]
 pub struct CliTokenCreate {
     /// User slug or UUID
-    #[clap(long)]
     pub user: ResourceId,
 
     /// Token name
@@ -68,7 +66,6 @@ pub struct CliTokenCreate {
 #[derive(Parser, Debug)]
 pub struct CliTokenView {
     /// User slug or UUID
-    #[clap(long)]
     pub user: ResourceId,
 
     /// Token UUID
@@ -81,15 +78,14 @@ pub struct CliTokenView {
 #[derive(Parser, Debug)]
 pub struct CliTokenUpdate {
     /// User slug or UUID
-    #[clap(long)]
     pub user: ResourceId,
+
+    /// Token UUID
+    pub uuid: TokenUuid,
 
     /// Token name
     #[clap(long)]
     pub name: Option<ResourceName>,
-
-    /// Token UUID
-    pub uuid: TokenUuid,
 
     #[clap(flatten)]
     pub backend: CliBackend,

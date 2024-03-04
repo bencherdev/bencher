@@ -212,6 +212,7 @@ impl Api {
             api.register(user::users::user_options)?;
         }
         api.register(user::users::user_get)?;
+        api.register(user::users::user_patch)?;
 
         // Tokens
         if http_options {

@@ -1,0 +1,23 @@
+---
+title: "API Tokens"
+description: "The Bencher User API Tokens REST API"
+heading: "API Tokens REST API"
+sortOrder: 2
+paths:
+  - path: /v0/users/{user}/tokens
+    method: get
+    headers: auth
+    cli: token list USER
+  - path: /v0/users/{user}/tokens
+    method: post
+    headers: auth
+    cli: token create USER
+  - path: /v0/users/{user}/tokens/{token}
+    method: get
+    headers: auth
+    cli: token view USER TOKEN
+  - path: /v0/users/{user}/tokens/{token}
+    method: patch
+    headers: auth
+    cli: token update USER TOKEN
+---
