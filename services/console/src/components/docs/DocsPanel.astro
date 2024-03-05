@@ -1,8 +1,8 @@
 ---
 import DocsLayout from "../../layouts/docs/DocsLayout.astro";
 import {getLangCollection, langPath} from "../../i18n/utils.ts"
-import { Language, architecture, defaultLang, explanation, howTo, tutorial } from "../../i18n/ui";
-import Collection from "../../util/collection";
+import { Language, architecture, defaultLang, explanation, howTo, reference, tutorial } from "../../i18n/ui";
+import Collection, { collectionPath } from "../../util/collection";
 
 interface Props {
   lang: undefined | string;
@@ -63,51 +63,47 @@ const description = () => {
 
 <DocsLayout title={title()} description={description()} heading={title()} lang={lang}>
   <nav class="menu">
-    <p class="menu-label">{tutorial(lang)}</p>
-    <ul class="menu-list">
+    {[
       {
-        tutorialCollection[lang]?.map((page) => (
-          <li>
-            <a href={`/${langPath(lang)}docs/tutorial/${page.slug}/`}>{page.data.heading}</a>
-          </li>
-        ))
-      }
-    </ul>
-    <p class="menu-label">{howTo(lang)}</p>
-    <ul class="menu-list">
+        label: tutorial(lang),
+        collection: Collection.tutorial,
+        content: tutorialCollection[lang],
+      },
       {
-        howToCollection[lang]?.map((page) => (
-          <li>
-            <a href={`/${langPath(lang)}docs/how-to/${page.slug}/`}>{page.data.heading}</a>
-          </li>
-        ))
-      }
-    </ul>
-    <p class="menu-label">{explanation(lang)}</p>
-    <ul class="menu-list">
+        label: howTo(lang),
+        collection: Collection.how_to,
+        content: howToCollection[lang],
+      },
       {
-        explanationCollection[lang]?.map((page) => (
-          <li>
-            <a href={`/${langPath(lang)}docs/explanation/${page.slug}/`}>{page.data.heading}</a>
-          </li>
-        ))
-      }
-    </ul>
-    <p class="menu-label">Reference</p>
-    <ul class="menu-list">
-      <li>
-        <a href={`/${langPath(lang)}docs/reference/api`}>REST API</a>
-      </li>
-      <li>
-        <a href={`/${langPath(lang)}docs/reference/architecture/`}>{architecture(lang)}</a>
-      </li>
+        label: explanation(lang),
+        collection: Collection.explanation,
+        content: explanationCollection[lang],
+      },
       {
-        referenceCollection[lang]?.map((page) => (
+        label: reference(lang),
+        collection: Collection.reference,
+        content: referenceCollection[lang],
+        prefix: (
           <li>
-            <a href={`/${langPath(lang)}docs/reference/${page.slug}/`}>{page.data.heading}</a>
+            <a href={`/${langPath(lang)}docs/reference/api`}>REST API</a>
           </li>
-        ))
+          <li>
+            <a href={`/${langPath(lang)}docs/reference/architecture/`}>{architecture(lang)}</a>
+          </li>
+        ),
       }
-    </ul>
+    ].map(({ label, collection, content, prefix }) => (
+      <p class="menu-label">{label}</p>
+      <ul class="menu-list">
+        {prefix}
+        {
+          content?.map((page) => (
+            <li>
+              <a href={`/${langPath(lang)}docs/${collectionPath(collection)}/${page.slug}/`}>{page.data.heading}</a>
+            </li>
+          ))
+        }
+      </ul>
+    ))}
   </nav>
 </DocsLayout>

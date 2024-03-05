@@ -1,9 +1,9 @@
 ---
-import {DocsTab, DocsMenuId} from "./docs_tab";
-import {Language, architecture, benchmarking, defaultLang, explanation, howTo, tutorial } from "../../i18n/ui.ts";
-import {getEnCollection, getLangCollection, langPath} from "../../i18n/utils.ts"
-import LangButton from "../../i18n/LangButton.astro";
-import Collection from "../../util/collection";
+import {DocsTab, DocsMenuId} from "./docs_tab.tsx";
+import {Language, architecture, benchmarking, defaultLang, explanation, howTo, reference, tutorial } from "../../../i18n/ui.ts";
+import {getEnCollection, getLangCollection, langPath} from "../../../i18n/utils.ts"
+import LangButton from "../../../i18n/LangButton.astro";
+import Collection, { collectionPath } from "../../../util/collection.ts";
 
 interface Props {
   tab: DocsTab;
@@ -22,6 +22,7 @@ const referenceCollection = await getLangCollection(Collection.reference);
 const organizationsCollection = await getEnCollection(Collection.organizations);
 const projectsCollection = await getEnCollection(Collection.projects);
 const usersCollection = await getEnCollection(Collection.users);
+const serverCollection = await getEnCollection(Collection.server);
 
 // Learn
 const rustCollection = await getLangCollection(Collection.rust);
@@ -79,99 +80,115 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
     </ul>
   </div>
   <nav id={DocsMenuId.Docs} style={displayStyle(DocsMenuId.Docs, tab)}>
-    <p class="menu-label">{tutorial(lang)}</p>
-    <ul class="menu-list">
+    {[
       {
-        tutorialCollection[lang]?.map((page) => (
-          <li>
-            <a href={`/${langPath(lang)}docs/tutorial/${page.slug}/`}>{page.data.title}</a>
-          </li>
-        ))
-      }
-    </ul>
-    <p class="menu-label">{howTo(lang)}</p>
-    <ul class="menu-list">
+        label: tutorial(lang),
+        collection: Collection.tutorial,
+        content: tutorialCollection[lang],
+      },
       {
-        howToCollection[lang]?.map((page) => (
-          <li>
-            <a href={`/${langPath(lang)}docs/how-to/${page.slug}/`}>{page.data.title}</a>
-          </li>
-        ))
-      }
-    </ul>
-    <p class="menu-label">{explanation(lang)}</p>
-    <ul class="menu-list">
+        label: howTo(lang),
+        collection: Collection.how_to,
+        content: howToCollection[lang],
+      },
       {
-        explanationCollection[lang]?.map((page) => (
-          <li>
-            <a href={`/${langPath(lang)}docs/explanation/${page.slug}/`}>{page.data.title}</a>
-          </li>
-        ))
-      }
-    </ul>
-    <p class="menu-label">Reference</p>
-    <ul class="menu-list">
-      <li>
-        <a href={`/${langPath(lang)}docs/reference/api`}>REST API</a>
-      </li>
-      <li>
-        <a href={`/${langPath(lang)}docs/reference/architecture/`}>{architecture(lang)}</a>
-      </li>
+        label: explanation(lang),
+        collection: Collection.explanation,
+        content: explanationCollection[lang],
+      },
       {
-        referenceCollection[lang]?.map((page) => (
+        label: reference(lang),
+        collection: Collection.reference,
+        content: referenceCollection[lang],
+        prefix: (
           <li>
-            <a href={`/${langPath(lang)}docs/reference/${page.slug}/`}>{page.data.title}</a>
+            <a href={`/${langPath(lang)}docs/reference/api`}>REST API</a>
           </li>
-        ))
+          <li>
+            <a href={`/${langPath(lang)}docs/reference/architecture/`}>{architecture(lang)}</a>
+          </li>
+        ),
       }
-    </ul>
+    ].map(({ label, collection, content, prefix }) => (
+      <p class="menu-label">{label}</p>
+      <ul class="menu-list">
+        {prefix}
+        {
+          content?.map((page) => (
+            <li>
+              <a href={`/${langPath(lang)}docs/${collectionPath(collection)}/${page.slug}/`}>{page.data.title}</a>
+            </li>
+          ))
+        }
+      </ul>
+    ))}
   </nav>
   <!-- API -->
   <nav id={DocsMenuId.Api} style={displayStyle(DocsMenuId.Api, tab)}>
-    <p class="menu-label">Organizations</p>
-    <ul class="menu-list">
+    {[
       {
-        organizationsCollection.map((page) => (
-          <li>
-            <a href={`/${langPath(lang)}docs/api/organizations/${page.slug}/`}>{page.data.title}</a>
-          </li>
-        ))
-      }
-    </ul>
-    <p class="menu-label">Projects</p>
-    <ul class="menu-list">
+        label: "Organizations",
+        collection: Collection.organizations,
+        content: organizationsCollection,
+      },
       {
-        projectsCollection.map((page) => (
-          <li>
-            <a href={`/${langPath(lang)}docs/api/projects/${page.slug}/`}>{page.data.title}</a>
-          </li>
-        ))
-      }
-    </ul>
-    <p class="menu-label">Users</p>
-    <ul class="menu-list">
+        label: "Projects",
+        collection: Collection.projects,
+        content: projectsCollection,
+      },
       {
-        usersCollection.map((page) => (
-          <li>
-            <a href={`/${langPath(lang)}docs/api/users/${page.slug}/`}>{page.data.title}</a>
-          </li>
-        ))
+        label: "Users",
+        collection: Collection.users,
+        content: usersCollection,
+      },
+      {
+        label: "Server",
+        collection: Collection.server,
+        content: serverCollection,
       }
-    </ul>
+    ].map(({ label, collection, content }) => (
+      <p class="menu-label">{label}</p>
+      <ul class="menu-list">
+        {
+          content?.map((page) => (
+            <li>
+              <a href={`/${langPath(lang)}docs/api/${collectionPath(collection)}/${page.slug}/`}>{page.data.title}</a>
+            </li>
+          ))
+        }
+      </ul>
+    ))}
   </nav>
   <!-- Learn -->
   <nav id={DocsMenuId.Learn} style={displayStyle(DocsMenuId.Learn, tab)}>
-    <p class="menu-label">{benchmarking(lang)}</p>
-    <p>Rust</p>
-    <ul class="menu-list">
+    {[
       {
-        rustCollection[lang]?.map((page) => (
-          <li>
-            <a href={`/${langPath(lang)}learn/benchmarking/rust/${page.slug}/`}>{page.data.title}</a>
-          </li>
-        ))
-      }
-    </ul>
+        label: benchmarking(lang),
+        sections: [
+          {
+            section: "Rust",
+            collection: Collection.rust,
+            content: rustCollection,
+          }
+        ],
+      },
+    ].map(({ label, sections }) => (
+      <p class="menu-label">{label}</p>
+      <div>
+      {sections.map(({ section, collection, content }) => (
+        <p>{section}</p>
+        <ul class="menu-list">
+          {
+            content[lang]?.map((page) => (
+              <li>
+                <a href={`/${langPath(lang)}learn/${collectionPath(collection)}/${page.slug}/`}>{page.data.title}</a>
+              </li>
+            ))
+          }
+        </ul>
+      ))}
+      </div>
+    ))}
   </nav>
 </aside>
 <script >

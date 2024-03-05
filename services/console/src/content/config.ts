@@ -35,6 +35,7 @@ const swagger = defineCollection({
 
 // 3. Export a single `collections` object to register your collection(s)
 export const collections = {
+	// legal
 	legal: page,
 	// docs
 	tutorial: page,
@@ -45,6 +46,7 @@ export const collections = {
 	organizations: swagger,
 	projects: swagger,
 	users: swagger,
+	server: swagger,
 	// learn
 	rust: page,
 };

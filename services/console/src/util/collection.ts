@@ -10,6 +10,7 @@ enum Collection {
 	organizations = "organizations",
 	projects = "projects",
 	users = "users",
+	server = "server",
 	// Learn
 	rust = "rust",
 }
@@ -34,6 +35,8 @@ export const collectionPath = (collection: Collection) => {
 			return "projects";
 		case Collection.users:
 			return "users";
+		case Collection.server:
+			return "server";
 		case Collection.rust:
 			return "benchmarking/rust";
 	}
