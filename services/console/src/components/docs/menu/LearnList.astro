@@ -1,0 +1,43 @@
+---
+import { benchmarking } from "../../../i18n/ui.ts";
+import { getLangCollection, langPath} from "../../../i18n/utils.ts"
+import Collection, { collectionPath } from "../../../util/collection.ts";
+
+interface Props {
+  lang: string;
+}
+
+// Learn
+const rustCollection = await getLangCollection(Collection.rust);
+
+const { lang } = Astro.props;
+---
+
+{[
+  {
+    label: benchmarking(lang),
+    sections: [
+      {
+        section: "Rust",
+        collection: Collection.rust,
+        content: rustCollection,
+      }
+    ],
+  },
+].map(({ label, sections }) => (
+  <p class="menu-label">{label}</p>
+  <div>
+  {sections.map(({ section, collection, content }) => (
+    <p>{section}</p>
+    <ul class="menu-list">
+      {
+        content[lang]?.map((page) => (
+          <li>
+            <a href={`/${langPath(lang)}learn/${collectionPath(collection)}/${page.slug}/`}>{page.data.title}</a>
+          </li>
+        ))
+      }
+    </ul>
+  ))}
+  </div>
+))}

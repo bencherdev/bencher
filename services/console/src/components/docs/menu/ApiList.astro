@@ -1,0 +1,50 @@
+---
+import {getEnCollection, langPath} from "../../../i18n/utils.ts"
+import Collection, { collectionPath } from "../../../util/collection.ts";
+
+interface Props {
+  lang: string;
+}
+
+// Api
+const organizationsCollection = await getEnCollection(Collection.organizations);
+const projectsCollection = await getEnCollection(Collection.projects);
+const usersCollection = await getEnCollection(Collection.users);
+const serverCollection = await getEnCollection(Collection.server);
+
+const { lang } = Astro.props;
+---
+
+{[
+    {
+      label: "Organizations",
+      collection: Collection.organizations,
+      content: organizationsCollection,
+    },
+    {
+      label: "Projects",
+      collection: Collection.projects,
+      content: projectsCollection,
+    },
+    {
+      label: "Users",
+      collection: Collection.users,
+      content: usersCollection,
+    },
+    {
+      label: "Server",
+      collection: Collection.server,
+      content: serverCollection,
+    }
+].map(({ label, collection, content }) => (
+  <p class="menu-label">{label}</p>
+  <ul class="menu-list">
+    {
+      content?.map((page) => (
+        <li>
+          <a href={`/${langPath(lang)}docs/api/${collectionPath(collection)}/${page.slug}/`}>{page.data.title}</a>
+        </li>
+      ))
+    }
+  </ul>
+))}

@@ -1,17 +1,12 @@
 ---
 import ApiLayout from "../../../layouts/docs/ApiLayout.astro";
-import {getEnCollection, langPath} from "../../../i18n/utils.ts"
 import { Language,  defaultLang } from "../../../i18n/ui";
-import Collection from "../../../util/collection";
+import ApiList from "../menu/ApiList.astro";
 
 interface Props {
   lang: undefined | string;
 }
 const lang: Language = Astro.props.lang ?? defaultLang;
-
-const organizationsCollection = await getEnCollection(Collection.organizations);
-const projectsCollection = await getEnCollection(Collection.projects);
-const usersCollection = await getEnCollection(Collection.users);
 
 const title = () => {
   switch(lang) {
@@ -62,37 +57,6 @@ const description = () => {
 
 <ApiLayout title={title()} description={description()} heading={title()} lang={lang}>
   <nav class="menu">
-    <p class="menu-label">Organizations</p>
-    <ul class="menu-list">
-      {
-        organizationsCollection.map((page) => (
-          <li>
-            <a href={`/${langPath(lang)}docs/api/organizations/${page.slug}/`}>{page.data.heading}</a>
-          </li>
-        ))
-      }
-    </ul>
-
-    <p class="menu-label">Projects</p>
-    <ul class="menu-list">
-      {
-        projectsCollection.map((page) => (
-          <li>
-            <a href={`/${langPath(lang)}docs/api/projects/${page.slug}/`}>{page.data.heading}</a>
-          </li>
-        ))
-      }
-    </ul>
-
-    <p class="menu-label">Users</p>
-    <ul class="menu-list">
-      {
-        usersCollection.map((page) => (
-          <li>
-            <a href={`/${langPath(lang)}docs/api/users/${page.slug}/`}>{page.data.heading}</a>
-          </li>
-        ))
-      }
-    </ul>
+    <ApiList lang={lang} />
   </nav>
 </DocsLayout>

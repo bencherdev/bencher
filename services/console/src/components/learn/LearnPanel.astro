@@ -1,16 +1,12 @@
 ---
 import LearnLayout from "../../layouts/docs/LearnLayout.astro";
-import {getLangCollection, langPath} from "../../i18n/utils.ts"
 import { Language, defaultLang } from "../../i18n/ui";
-import Collection from "../../util/collection";
+import LearnList from "../docs/menu/LearnList.astro";
 
 interface Props {
   lang: undefined | string;
 }
 const lang: Language = Astro.props.lang ?? defaultLang;
-
-// Learn
-const rustCollection = await getLangCollection(Collection.rust);
 
 const title = () => {
   switch(lang) {
@@ -57,43 +53,10 @@ const description = () => {
       return "了解如何对 C#、C++、Go、Java、Python、Ruby、Rust 等语言的代码进行基准测试和分析！";
   }
 }
-
-const howToBenchmark = () => {
-  switch(lang) {
-    case Language.en:
-      return "How to Benchmark Code";
-    case Language.de:
-      return "So Vergleichen Sie Code";
-    case Language.es:
-      return "Cómo Comparar el Código";
-    case Language.fr:
-      return "Comment Comparer le Code";
-    case Language.ja:
-      return "コードをベンチマークする方法";
-    case Language.ko:
-      return "코드를 벤치마킹하는 방법";
-    case Language.pt:
-      return "Como Comparar o Código";
-    case Language.ru:
-      return "Как протестировать код";
-    case Language.zh:
-      return "如何对代码进行基准测试";
-  }
-};
 ---
 
 <LearnLayout title={title()} description={description()} heading={title()} lang={lang}>
   <div class="menu">
-    <p class="menu-label">{howToBenchmark()}</p>
-    <p>Rust</p>
-    <ul class="menu-list">
-      {
-        rustCollection[lang]?.map((page) => (
-          <li>
-            <a href={`/${langPath(lang)}learn/benchmarking/rust/${page.slug}`}>{page.data.heading}</a>
-          </li>
-        ))
-      }
-    </ul>
+    <LearnList lang={lang} />
   </div>
 </LearnLayout>

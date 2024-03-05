@@ -1,0 +1,60 @@
+---
+import { architecture, explanation, howTo, reference, tutorial } from "../../../i18n/ui.ts";
+import { getLangCollection, langPath} from "../../../i18n/utils.ts"
+import Collection, { collectionPath } from "../../../util/collection.ts";
+
+interface Props {
+  lang: string;
+}
+
+// Docs
+const tutorialCollection = await getLangCollection(Collection.tutorial);
+const howToCollection = await getLangCollection(Collection.how_to);
+const explanationCollection = await getLangCollection(Collection.explanation);
+const referenceCollection = await getLangCollection(Collection.reference);
+
+const { lang } = Astro.props;
+---
+
+{[
+  {
+    label: tutorial(lang),
+    collection: Collection.tutorial,
+    content: tutorialCollection[lang],
+  },
+  {
+    label: howTo(lang),
+    collection: Collection.how_to,
+    content: howToCollection[lang],
+  },
+  {
+    label: explanation(lang),
+    collection: Collection.explanation,
+    content: explanationCollection[lang],
+  },
+  {
+    label: reference(lang),
+    collection: Collection.reference,
+    content: referenceCollection[lang],
+    prefix: (
+      <li>
+        <a href={`/${langPath(lang)}docs/reference/api`}>REST API</a>
+      </li>
+      <li>
+        <a href={`/${langPath(lang)}docs/reference/architecture/`}>{architecture(lang)}</a>
+      </li>
+    ),
+  }
+].map(({ label, collection, content, prefix }) => (
+  <p class="menu-label">{label}</p>
+  <ul class="menu-list">
+    {prefix}
+    {
+      content?.map((page) => (
+        <li>
+          <a href={`/${langPath(lang)}docs/${collectionPath(collection)}/${page.slug}/`}>{page.data.title}</a>
+        </li>
+      ))
+    }
+  </ul>
+))}
