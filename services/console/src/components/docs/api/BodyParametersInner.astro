@@ -1,15 +1,18 @@
 ---
 import { MethodKind, getSchema } from "./method";
 import BodyObject from "./BodyObject.astro";
+import type { Language } from "../../../i18n/ui";
+import { langPath } from "../../../i18n/utils";
 
 interface Props {
+  lang: Language;
   schema: object;
   path: string;
   method: MethodKind;
   properties: object;
 }
 
-const { schema, path, method, properties } = Astro.props;
+const { lang, schema, path, method, properties } = Astro.props;
 
 const getDefault = (name) => {
   switch (name) {
@@ -21,6 +24,11 @@ const getDefault = (name) => {
     case "adapter":
       if (path === "/v0/projects/{project}/reports" && method === MethodKind.Post) {
         return "magic";
+      }
+      return;
+    case "delay":
+      if ((path === "/v0/server/restart" && method === MethodKind.Post) || (path === "/v0/server/config" && method === MethodKind.Put)) {
+        return 3;
       }
       return;
     default:
@@ -103,7 +111,9 @@ const getTypes = (propertyKey, propertyValue) => {
   </>
   <>
   {types === "object" &&
-    <BodyObject path={path} method={method} propertyKey={propertyKey} propertyValue={propertyValue} />
+    ((path === "/v0/server/config" && method === MethodKind.Put) ?
+    <p>See the <a href={`/${langPath(lang)}docs/reference/server-config/`}>Server Config reference</a> for a full overview.</p> :
+    <BodyObject path={path} method={method} propertyKey={propertyKey} propertyValue={propertyValue} />)
   }
   </>
 )})}

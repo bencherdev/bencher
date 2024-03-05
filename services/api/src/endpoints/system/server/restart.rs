@@ -12,7 +12,7 @@ use crate::{
     model::user::{admin::AdminUser, auth::BearerToken, UserId},
 };
 
-pub const DEFAULT_DELAY: u64 = 3;
+const DEFAULT_DELAY: u64 = 3;
 
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
@@ -27,6 +27,10 @@ pub async fn server_restart_options(
     Ok(Endpoint::cors(&[Post.into()]))
 }
 
+/// Restart server
+///
+/// Restart the API server.
+/// The user must be an admin on the server to use this route.
 #[endpoint {
     method = POST,
     path =  "/v0/server/restart",
@@ -52,14 +56,15 @@ async fn post_inner(
     countdown(
         log,
         context.restart_tx.clone(),
-        json_restart.delay.unwrap_or(DEFAULT_DELAY),
+        json_restart.delay,
         admin_user.user().id,
     );
 
     Ok(())
 }
 
-pub fn countdown(log: &Logger, restart_tx: Sender<()>, delay: u64, user_id: UserId) {
+pub fn countdown(log: &Logger, restart_tx: Sender<()>, delay: Option<u64>, user_id: UserId) {
+    let delay = delay.unwrap_or(DEFAULT_DELAY);
     let countdown_log = log.clone();
     tokio::spawn(async move {
         for tick in (0..=delay).rev() {

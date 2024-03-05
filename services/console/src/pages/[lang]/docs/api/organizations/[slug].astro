@@ -33,6 +33,6 @@ const { lang, slug } = Astro.params;
   lang={lang}
 >
   {page.data.paths.map(({path, method, headers, cli}, index) =>
-    <Operation path={path} method={method} headers={headers} cli={cli} index={index} />
+    <Operation lang={lang} path={path} method={method} headers={headers} cli={cli} index={index} />
   )}
 </ApiLayout>

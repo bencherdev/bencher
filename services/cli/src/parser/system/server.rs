@@ -4,8 +4,6 @@ use crate::parser::CliBackend;
 
 #[derive(Subcommand, Debug)]
 pub enum CliServer {
-    /// Ping server
-    Ping(CliPing),
     /// Server version
     Version(CliVersion),
     /// Server OpenAPI Spec
@@ -22,12 +20,6 @@ pub enum CliServer {
     #[cfg(feature = "plus")]
     /// Server usage statistics
     Stats(CliServerStats),
-}
-
-#[derive(Parser, Debug)]
-pub struct CliPing {
-    #[clap(flatten)]
-    pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]

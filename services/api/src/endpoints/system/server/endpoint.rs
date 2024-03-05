@@ -14,7 +14,7 @@ use crate::{
 #[endpoint {
         method = OPTIONS,
         path =  "/v0/server/endpoint",
-        tags = ["server", "endpoint"]
+        tags = ["server"]
     }]
 pub async fn server_endpoint_options(
     _rqctx: RequestContext<ApiContext>,
@@ -25,7 +25,7 @@ pub async fn server_endpoint_options(
 #[endpoint {
         method = GET,
         path =  "/v0/server/endpoint",
-        tags = ["server", "endpoint"]
+        tags = ["server"]
     }]
 pub async fn server_endpoint_get(
     rqctx: RequestContext<ApiContext>,

@@ -4,7 +4,6 @@ pub mod config;
 pub mod endpoint;
 #[cfg(feature = "plus")]
 pub mod payment;
-pub mod ping;
 pub mod restart;
 #[cfg(feature = "plus")]
 pub mod server;

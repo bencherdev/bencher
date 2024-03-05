@@ -5391,8 +5391,7 @@
     "/v0/server/config": {
       "get": {
         "tags": [
-          "server",
-          "config"
+          "server"
         ],
         "operationId": "server_config_get",
         "responses": {
@@ -5446,8 +5445,7 @@
       },
       "put": {
         "tags": [
-          "server",
-          "config"
+          "server"
         ],
         "operationId": "server_config_put",
         "requestBody": {
@@ -5513,8 +5511,7 @@
     "/v0/server/endpoint": {
       "get": {
         "tags": [
-          "server",
-          "endpoint"
+          "server"
         ],
         "operationId": "server_endpoint_get",
         "responses": {
@@ -5567,68 +5564,13 @@
         }
       }
     },
-    "/v0/server/ping": {
-      "get": {
-        "tags": [
-          "server",
-          "ping"
-        ],
-        "operationId": "server_ping_get",
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonPing"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      }
-    },
     "/v0/server/restart": {
       "post": {
         "tags": [
           "server"
         ],
+        "summary": "Restart server",
+        "description": "Restart the API server. The user must be an admin on the server to use this route.",
         "operationId": "server_restart_post",
         "requestBody": {
           "content": {
@@ -5697,9 +5639,10 @@
     "/v0/server/spec": {
       "get": {
         "tags": [
-          "server",
-          "spec"
+          "server"
         ],
+        "summary": "View server OpenAPI specification",
+        "description": "View the API server OpenAPI specification. The OpenAPI specification can be used to generate API client code.",
         "operationId": "server_spec_get",
         "responses": {
           "200": {
@@ -5757,6 +5700,8 @@
           "server",
           "stats"
         ],
+        "summary": "View server stats",
+        "description": "➕ Bencher Plus: View the API server stats. The user must be an admin on the server to use this route.",
         "operationId": "server_stats_get",
         "responses": {
           "200": {
@@ -5880,9 +5825,10 @@
     "/v0/server/version": {
       "get": {
         "tags": [
-          "server",
-          "version"
+          "server"
         ],
+        "summary": "View server version",
+        "description": "View the API server version. This is used to verify that the CLI and API server are compatible. It can also be used as a simple endpoint to verify that the server is running.",
         "operationId": "server_version_get",
         "responses": {
           "200": {
@@ -8330,12 +8276,6 @@
           "testbed"
         ]
       },
-      "JsonPing": {
-        "type": "string",
-        "enum": [
-          "pong"
-        ]
-      },
       "JsonPlan": {
         "type": "object",
         "properties": {
@@ -8877,6 +8817,7 @@
         "properties": {
           "delay": {
             "nullable": true,
+            "description": "The delay in seconds before the server restarts. Defaults to 3 seconds, if not specified.",
             "type": "integer",
             "format": "uint64",
             "minimum": 0
@@ -10288,12 +10229,6 @@
       "name": "checkout"
     },
     {
-      "name": "config"
-    },
-    {
-      "name": "endpoint"
-    },
-    {
       "name": "measures",
       "description": "Measures"
     },
@@ -10313,9 +10248,6 @@
       "description": "Perf Metrics"
     },
     {
-      "name": "ping"
-    },
-    {
       "name": "plan"
     },
     {
@@ -10329,10 +10261,6 @@
     {
       "name": "server",
       "description": "Server"
-    },
-    {
-      "name": "spec",
-      "description": "OpenAPI Spec"
     },
     {
       "name": "stats"
@@ -10355,9 +10283,6 @@
     {
       "name": "users",
       "description": "Users"
-    },
-    {
-      "name": "version"
     }
   ]
 }

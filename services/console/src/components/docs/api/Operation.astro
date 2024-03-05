@@ -7,14 +7,18 @@ import QueryParameters from "./QueryParameters.astro";
 import BodyParameters from "./BodyParameters.astro";
 import Headers from "./Headers.astro";
 import Endpoint from "./Endpoint.astro";
+import { defaultLang, type Language } from "../../../i18n/ui";
 
 interface Props {
+  lang?: undefined | string;
   path: string;
   method: MethodKind;
   headers: HeadersKind;
   cli?: undefined | null | string;
   index: number;
 }
+
+const lang: Language = Astro.props.lang ?? defaultLang;
 
 const { path, method, headers, cli, index } = Astro.props;
 const operation = openapi?.paths?.[path]?.[method];
@@ -35,7 +39,7 @@ const methodClass = new Method(method);
     <Headers headers={headers} />
     <PathParameters parameters={operation?.parameters} />
     <QueryParameters path={path} parameters={operation?.parameters} />
-    <BodyParameters path={path} method={method} requestBody={operation?.requestBody} />
+    <BodyParameters lang={lang} path={path} method={method} requestBody={operation?.requestBody} />
   </div>
   <div class="column">
     <div class="level">

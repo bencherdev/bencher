@@ -31,6 +31,10 @@ pub async fn server_stats_options(
     Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
+/// View server stats
+///
+/// ➕ Bencher Plus: View the API server stats.
+/// The user must be an admin on the server to use this route.
 #[endpoint {
     method = GET,
     path =  "/v0/server/stats",

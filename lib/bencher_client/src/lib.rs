@@ -136,7 +136,6 @@ try_from_client!(
     JsonEndpoint,
     JsonApiVersion,
     JsonSpec,
-    JsonPing,
     JsonTokens,
     JsonToken,
     JsonUser

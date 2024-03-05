@@ -4,20 +4,20 @@ description: "The Bencher Server REST API"
 heading: "Server REST API"
 sortOrder: 1
 paths:
-  - path: /v0/users/{user}/tokens
+  - path: /v0/server/version
     method: get
-    headers: auth
-    cli: token list USER
-  - path: /v0/users/{user}/tokens
+    headers: pub
+    cli: server version
+  - path: /v0/server/spec
+    method: get
+    headers: pub
+    cli: server spec
+  - path: /v0/server/restart
     method: post
     headers: auth
-    cli: token create USER
-  - path: /v0/users/{user}/tokens/{token}
+    cli: server restart
+  - path: /v0/server/stats
     method: get
     headers: auth
-    cli: token view USER TOKEN
-  - path: /v0/users/{user}/tokens/{token}
-    method: patch
-    headers: auth
-    cli: token update USER TOKEN
+    cli: server stats
 ---

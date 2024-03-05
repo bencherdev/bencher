@@ -57,7 +57,6 @@ pub use system::{
     backup::{JsonBackup, JsonBackupCreated},
     config::JsonConfig,
     endpoint::JsonEndpoint,
-    ping::JsonPing,
     restart::JsonRestart,
     spec::JsonSpec,
     version::JsonApiVersion,
