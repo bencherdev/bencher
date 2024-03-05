@@ -117,18 +117,18 @@ impl QueryProject {
     }
 
     #[cfg(feature = "plus")]
-    pub fn perf_url(&self, endpoint: &url::Url) -> Result<Option<url::Url>, HttpError> {
+    pub fn perf_url(&self, console_url: &url::Url) -> Result<Option<url::Url>, HttpError> {
         if !self.is_public() {
             return Ok(None);
         }
         let path = format!("/perf/{}", self.slug);
-        endpoint
+        console_url
             .join(&path)
             .map_err(|e| {
                 crate::error::issue_error(
                     http::StatusCode::INTERNAL_SERVER_ERROR,
                     "Failed to create new perf URL.",
-                    &format!("Failed to create new perf URL for {endpoint} at {path}",),
+                    &format!("Failed to create new perf URL for {console_url} at {path}",),
                     e,
                 )
             })

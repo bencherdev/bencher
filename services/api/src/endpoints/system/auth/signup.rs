@@ -83,7 +83,7 @@ async fn post_inner(
             .into(),
         button_text: "Confirm Email".into(),
         button_url: context
-            .endpoint
+            .console_url
             .clone()
             .join("/auth/confirm")
             .map(|mut url| {
@@ -100,7 +100,7 @@ async fn post_inner(
         closing: "See you soon,".into(),
         signature: "The Bencher Team".into(),
         settings_url: context
-            .endpoint
+            .console_url
             .clone()
             .join("/help")
             .map(Into::into)
@@ -118,7 +118,7 @@ async fn post_inner(
         log,
         conn_lock!(context),
         &context.messenger,
-        &context.endpoint,
+        &context.console_url,
         invited,
         "email",
     )?;

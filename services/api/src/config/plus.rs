@@ -35,7 +35,7 @@ pub enum PlusError {
     LicenseSelfHosted(bencher_license::LicenseError),
     #[error("Failed to handle Bencher Cloud licensing: {0}")]
     LicenseCloud(bencher_license::LicenseError),
-    #[error("Tried to init Bencher Cloud for other endpoint: {0}")]
+    #[error("Tried to init Bencher Cloud for other Console URL: {0}")]
     BencherCloud(Url),
     #[error("Failed to setup billing: {0}")]
     Billing(bencher_billing::BillingError),
@@ -48,7 +48,7 @@ pub enum PlusError {
 }
 
 impl Plus {
-    pub fn new(endpoint: &Url, plus: Option<JsonPlus>) -> Result<Self, PlusError> {
+    pub fn new(console_url: &Url, plus: Option<JsonPlus>) -> Result<Self, PlusError> {
         let Some(plus) = plus else {
             return Ok(Self {
                 github: None,
@@ -81,9 +81,9 @@ impl Plus {
             });
         };
 
-        // The only endpoint that should be using the `cloud` section is https://bencher.dev
-        if !is_bencher_cloud(endpoint) {
-            return Err(PlusError::BencherCloud(endpoint.clone()));
+        // The only Console URL that should be using the `cloud` section is https://bencher.dev
+        if !is_bencher_cloud(console_url) {
+            return Err(PlusError::BencherCloud(console_url.clone()));
         }
 
         let indexer = index.map(TryInto::try_into).transpose()?;

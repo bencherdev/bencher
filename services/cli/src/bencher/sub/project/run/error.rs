@@ -62,9 +62,9 @@ pub enum RunError {
     SerializeReport(serde_json::Error),
     #[error("Failed to create new report: {0}")]
     SendReport(crate::bencher::BackendError),
-    #[error("Failed to get console endpoint: {0}")]
+    #[error("Failed to get console URL: {0}")]
     GetEndpoint(crate::bencher::BackendError),
-    #[error("Invalid console endpoint: {0}")]
+    #[error("Invalid console URL: {0}")]
     BadEndpoint(bencher_json::ValidError),
     #[error("Alerts detected ({0})")]
     Alerts(usize),

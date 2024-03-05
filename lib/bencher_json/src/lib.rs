@@ -49,6 +49,7 @@ pub use project::{
 #[cfg(feature = "plus")]
 pub use system::{
     auth::JsonOAuth,
+    config::JsonConsole,
     payment::JsonPayment,
     server::{JsonServer, JsonServerStats, ServerUuid},
 };

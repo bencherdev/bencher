@@ -5393,6 +5393,8 @@
         "tags": [
           "server"
         ],
+        "summary": "View server configuration",
+        "description": "View the API server configuration. The user must be an admin on the server to use this route.",
         "operationId": "server_config_get",
         "responses": {
           "200": {
@@ -5447,6 +5449,8 @@
         "tags": [
           "server"
         ],
+        "summary": "Update server configuration",
+        "description": "Update the API server configuration. The user must be an admin on the server to use this route. Updating the configuration will cause the server to restart.",
         "operationId": "server_config_put",
         "requestBody": {
           "content": {
@@ -5508,11 +5512,70 @@
         }
       }
     },
+    "/v0/server/config/console": {
+      "get": {
+        "tags": [
+          "server"
+        ],
+        "summary": "View console configuration",
+        "description": "View the Bencher Console configuration managed by the API server. This is a public route and does not require authentication.",
+        "operationId": "server_config_console_get",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonConsole"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/server/endpoint": {
       "get": {
         "tags": [
           "server"
         ],
+        "summary": "DEPRECATED: View server endpoint",
         "operationId": "server_endpoint_get",
         "responses": {
           "200": {
@@ -7107,7 +7170,12 @@
         "type": "object",
         "properties": {
           "url": {
-            "$ref": "#/components/schemas/Url"
+            "description": "The URL for the Bencher Console UI.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Url"
+              }
+            ]
           }
         },
         "required": [

@@ -8,8 +8,6 @@ pub enum CliServer {
     Version(CliVersion),
     /// Server OpenAPI Spec
     Spec(CliSpec),
-    /// View server endpoint
-    Endpoint(CliEndpoint),
     /// Restart server
     Restart(CliRestart),
     /// Manager server config
@@ -35,12 +33,6 @@ pub struct CliSpec {
 }
 
 #[derive(Parser, Debug)]
-pub struct CliEndpoint {
-    #[clap(flatten)]
-    pub backend: CliBackend,
-}
-
-#[derive(Parser, Debug)]
 pub struct CliRestart {
     /// Server restart delay seconds (default: 3)
     #[clap(long)]
@@ -52,10 +44,18 @@ pub struct CliRestart {
 
 #[derive(Subcommand, Debug)]
 pub enum CliConfig {
-    /// Update server config and restart
-    Update(CliConfigUpdate),
     /// View server config
     View(CliConfigView),
+    /// Update server config and restart
+    Update(CliConfigUpdate),
+    /// View console config
+    Console(CliConfigConsole),
+}
+
+#[derive(Parser, Debug)]
+pub struct CliConfigView {
+    #[clap(flatten)]
+    pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]
@@ -73,7 +73,7 @@ pub struct CliConfigUpdate {
 }
 
 #[derive(Parser, Debug)]
-pub struct CliConfigView {
+pub struct CliConfigConsole {
     #[clap(flatten)]
     pub backend: CliBackend,
 }

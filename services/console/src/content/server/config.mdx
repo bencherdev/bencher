@@ -4,10 +4,6 @@ description: "The Bencher Server Config REST API"
 heading: "Server Config REST API"
 sortOrder: 2
 paths:
-  - path: /v0/server/endpoint
-    method: get
-    headers: pub
-    cli: server endpoint
   - path: /v0/server/config
     method: get
     headers: auth
@@ -16,4 +12,8 @@ paths:
     method: put
     headers: auth
     cli: server config update
+  - path: /v0/server/config/console
+    method: get
+    headers: pub
+    cli: server config console
 ---

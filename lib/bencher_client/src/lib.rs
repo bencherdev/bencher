@@ -133,7 +133,7 @@ try_from_client!(
     JsonAuthUser,
     JsonBackupCreated,
     JsonConfig,
-    JsonEndpoint,
+    JsonConsole,
     JsonApiVersion,
     JsonSpec,
     JsonTokens,

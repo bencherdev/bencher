@@ -8,7 +8,7 @@ use bencher_json::{
 use url::Url;
 
 pub struct ReportComment {
-    endpoint_url: Url,
+    console_url: Url,
     project_slug: Slug,
     json_report: JsonReport,
     benchmark_urls: BenchmarkUrls,
@@ -16,13 +16,13 @@ pub struct ReportComment {
 }
 
 impl ReportComment {
-    pub fn new(endpoint_url: Url, json_report: JsonReport) -> Self {
+    pub fn new(console_url: Url, json_report: JsonReport) -> Self {
         Self {
-            alert_urls: AlertUrls::new(&endpoint_url, &json_report),
-            benchmark_urls: BenchmarkUrls::new(endpoint_url.clone(), &json_report),
+            alert_urls: AlertUrls::new(&console_url, &json_report),
+            benchmark_urls: BenchmarkUrls::new(console_url.clone(), &json_report),
             project_slug: json_report.project.slug.clone(),
             json_report,
-            endpoint_url,
+            console_url,
         }
     }
 
@@ -71,8 +71,8 @@ impl ReportComment {
 
     fn html_header(&self, html: &mut String) {
         html.push_str(&format!(
-            r#"<h1><a href="{endpoint_url}"><img src="https://bencher.dev/favicon.svg" width="32" height="32" alt="🐰" /></a>Bencher</h1>"#,
-            endpoint_url = self.endpoint_url,
+            r#"<h1><a href="{console_url}"><img src="https://bencher.dev/favicon.svg" width="32" height="32" alt="🐰" /></a>Bencher</h1>"#,
+            console_url = self.console_url,
         ));
     }
 
@@ -118,7 +118,7 @@ impl ReportComment {
             ),
         ] {
             if let Some(path) = path {
-                let url = self.endpoint_url.clone();
+                let url = self.console_url.clone();
                 let url = url.join(&path).unwrap_or(url);
                 html.push_str(&format!(
                     r#"<tr><td>{row}</td><td><a href="{url}">{name}</a></td></tr>"#
@@ -175,7 +175,7 @@ impl ReportComment {
                     "/console/projects/{}/measures/{}",
                     self.project_slug, measure.slug
                 );
-                let url = self.endpoint_url.clone();
+                let url = self.console_url.clone();
                 let url = url.join(&measure_path).unwrap_or(url);
                 html.push_str(&format!(r#"<th><a href="{url}">{measure_name}</a></th>"#));
             }
@@ -226,7 +226,7 @@ impl ReportComment {
                     "/console/projects/{}/benchmarks/{}",
                     self.project_slug, benchmark.slug
                 );
-                let url = self.endpoint_url.clone();
+                let url = self.console_url.clone();
                 let url = url.join(&benchmark_path).unwrap_or(url);
                 html.push_str(&format!(
                     r#"<td><a href="{url}">{name}</a></td>"#,
@@ -329,7 +329,7 @@ impl ReportComment {
         html.push_str(&format!(r#"<br/><small><a href="https://bencher.dev">Bencher - Continuous Benchmarking</a></small>{}<br/><small><a href="https://bencher.dev/docs/">Docs</a> | <a href="https://bencher.dev/repo/">Repo</a> | <a href="https://bencher.dev/chat/">Chat</a> | <a href="https://bencher.dev/help/">Help</a></small>"#,
         if self.json_report.project.visibility.is_public() {
             let path = format!("/perf/{}", self.project_slug);
-            let url = self.endpoint_url.clone();
+            let url = self.console_url.clone();
             let url = url.join(&path).unwrap_or(url);
             format!(r#"<br/><small><a href="{url}">View Public Perf Page</a></small>"#)
         } else {
@@ -395,9 +395,9 @@ pub struct MeasureData {
 }
 
 impl BenchmarkUrls {
-    pub fn new(endpoint_url: Url, json_report: &JsonReport) -> Self {
+    pub fn new(console_url: Url, json_report: &JsonReport) -> Self {
         let benchmark_url = BenchmarkUrl::new(
-            endpoint_url,
+            console_url,
             json_report.project.slug.clone(),
             json_report.branch.uuid,
             json_report.testbed.uuid,
@@ -455,7 +455,7 @@ impl BenchmarkUrls {
 }
 
 struct BenchmarkUrl {
-    endpoint: Url,
+    console_url: Url,
     project_slug: Slug,
     branch: BranchUuid,
     testbed: TestbedUuid,
@@ -468,7 +468,7 @@ const DEFAULT_REPORT_HISTORY: Duration = Duration::from_secs(30 * 24 * 60 * 60);
 
 impl BenchmarkUrl {
     fn new(
-        endpoint: Url,
+        console_url: Url,
         project_slug: Slug,
         branch: BranchUuid,
         testbed: TestbedUuid,
@@ -476,7 +476,7 @@ impl BenchmarkUrl {
         end_time: DateTime,
     ) -> Self {
         Self {
-            endpoint,
+            console_url,
             project_slug,
             branch,
             testbed,
@@ -519,7 +519,7 @@ impl BenchmarkUrl {
             end_time: Some(self.end_time),
         };
 
-        let mut url = self.endpoint.clone();
+        let mut url = self.console_url.clone();
         let path = if public_links {
             format!("/perf/{}", self.project_slug)
         } else {
@@ -579,7 +579,7 @@ pub struct AlertData {
 }
 
 impl AlertUrls {
-    pub fn new(endpoint_url: &Url, json_report: &JsonReport) -> Self {
+    pub fn new(console_url: &Url, json_report: &JsonReport) -> Self {
         let mut urls = BTreeMap::new();
 
         for alert in &json_report.alerts {
@@ -593,9 +593,9 @@ impl AlertUrls {
                 units: alert.threshold.measure.units.clone(),
             };
             let public_url =
-                Self::to_public_url(endpoint_url.clone(), &json_report.project.slug, alert.uuid);
+                Self::to_public_url(console_url.clone(), &json_report.project.slug, alert.uuid);
             let console_url =
-                Self::to_console_url(endpoint_url.clone(), &json_report.project.slug, alert.uuid);
+                Self::to_console_url(console_url.clone(), &json_report.project.slug, alert.uuid);
             let data = AlertData {
                 public_url,
                 console_url,
@@ -606,13 +606,13 @@ impl AlertUrls {
         Self(urls)
     }
 
-    fn to_public_url(mut endpoint: Url, project_slug: &Slug, alert: AlertUuid) -> Url {
-        endpoint.set_path(&format!("/perf/{project_slug}/alerts/{alert}"));
-        endpoint
+    fn to_public_url(mut console_url: Url, project_slug: &Slug, alert: AlertUuid) -> Url {
+        console_url.set_path(&format!("/perf/{project_slug}/alerts/{alert}"));
+        console_url
     }
 
-    fn to_console_url(mut endpoint: Url, project_slug: &Slug, alert: AlertUuid) -> Url {
-        endpoint.set_path(&format!("/console/projects/{project_slug}/alerts/{alert}"));
-        endpoint
+    fn to_console_url(mut console_url: Url, project_slug: &Slug, alert: AlertUuid) -> Url {
+        console_url.set_path(&format!("/console/projects/{project_slug}/alerts/{alert}"));
+        console_url
     }
 }

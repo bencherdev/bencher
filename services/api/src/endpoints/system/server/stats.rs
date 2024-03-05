@@ -51,7 +51,7 @@ pub async fn server_stats_get(
 
 async fn get_one_inner(context: &ApiContext) -> Result<JsonServerStats, HttpError> {
     let query_server = QueryServer::get_server(conn_lock!(context))?;
-    let is_bencher_cloud = context.is_bencher_cloud();
+    let is_bencher_cloud = context.is_bencher_cloud;
     query_server.get_stats(conn_lock!(context), is_bencher_cloud)
 }
 

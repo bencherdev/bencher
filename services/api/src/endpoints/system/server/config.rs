@@ -1,4 +1,7 @@
-use bencher_json::{system::config::JsonUpdateConfig, JsonConfig};
+use bencher_json::{
+    system::config::{JsonConsole, JsonUpdateConfig},
+    JsonConfig,
+};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use http::StatusCode;
 use slog::Logger;
@@ -11,7 +14,10 @@ use crate::{
         Endpoint,
     },
     error::{bad_request_error, issue_error},
-    model::user::{admin::AdminUser, auth::BearerToken},
+    model::user::{
+        admin::AdminUser,
+        auth::{AuthUser, BearerToken, PubBearerToken},
+    },
 };
 
 use super::restart::countdown;
@@ -107,4 +113,38 @@ async fn put_inner(
     countdown(log, context.restart_tx.clone(), delay, admin_user.user().id);
 
     Ok(json_config)
+}
+
+#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+#[endpoint {
+        method = OPTIONS,
+        path =  "/v0/server/config/console",
+        tags = ["server"]
+    }]
+pub async fn server_config_console_options(
+    _rqctx: RequestContext<ApiContext>,
+) -> Result<CorsResponse, HttpError> {
+    Ok(Endpoint::cors(&[Get.into()]))
+}
+
+/// View console configuration
+///
+/// View the Bencher Console configuration managed by the API server.
+/// This is a public route and does not require authentication.
+#[endpoint {
+        method = GET,
+        path =  "/v0/server/config/console",
+        tags = ["server"]
+    }]
+pub async fn server_config_console_get(
+    rqctx: RequestContext<ApiContext>,
+    bearer_token: PubBearerToken,
+) -> Result<ResponseOk<JsonConsole>, HttpError> {
+    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
+    Ok(Get::response_ok(
+        JsonConsole {
+            url: rqctx.context().console_url.clone().into(),
+        },
+        auth_user.is_some(),
+    ))
 }

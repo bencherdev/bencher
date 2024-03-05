@@ -302,7 +302,7 @@ async fn patch_inner(
         // If updating the license make sure that the server is not Bencher Cloud
         // All Bencher Cloud license updates should be handled via plans directly
         // Only Self-Hosted should be able to update the license
-        if context.is_bencher_cloud() {
+        if context.is_bencher_cloud {
             return Err(crate::error::locked_error(
                 "Direct license updates are not allowed on Bencher Cloud. Please update your plan instead.",
             ));

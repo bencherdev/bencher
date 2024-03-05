@@ -1,10 +1,12 @@
 use url::Url;
 
+use crate::endpoints::system::auth::github::GITHUB_OAUTH2;
+
 use super::FmtBody;
 
 pub struct NewUserBody {
     pub admin: String,
-    pub endpoint: Url,
+    pub console_url: Url,
     pub name: String,
     pub email: String,
     pub invited: bool,
@@ -15,7 +17,7 @@ impl FmtBody for NewUserBody {
     fn text(&self) -> String {
         let Self {
             admin,
-            endpoint,
+            console_url,
             name,
             email,
             invited,
@@ -23,7 +25,7 @@ impl FmtBody for NewUserBody {
         } = self;
         format!(
             r#"Ahoy {admin},
-        A new user {invited_or_joined} your Bencher instance ({endpoint}) via {method}!
+        A new user {invited_or_joined} your Bencher instance ({console_url}) via {method}!
 
         Name: {name}
         Email: {email}
@@ -37,7 +39,7 @@ impl FmtBody for NewUserBody {
     fn html(&self) -> String {
         let Self {
             admin,
-            endpoint,
+            console_url,
             name,
             email,
             invited,
@@ -54,15 +56,21 @@ impl FmtBody for NewUserBody {
     </head>
     <body>
         <p>Ahoy {admin},</p>
-        <p>A new user {invited_or_joined} your Bencher instance ({endpoint}) via {method}!</p>
+        <p>A new user {invited_or_joined} your Bencher instance ({console_url}) via {method}!</p>
         <br />
         <p>Name: {name}</p>
         <p>Email: {email}</p>
         <br/>
+        {github_link}
         <p>🐰 Bencher</p>
     </body>
 </html>",
-            invited_or_joined = invited_or_joined(*invited)
+            invited_or_joined = invited_or_joined(*invited),
+            github_link = (method == GITHUB_OAUTH2)
+                .then_some(format!(
+                    r#"<a href="https://github.com/{name}">View {name} on GitHub</a><br/>"#
+                ))
+                .unwrap_or_default()
         )
     }
 }

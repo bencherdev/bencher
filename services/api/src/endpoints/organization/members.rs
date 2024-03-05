@@ -258,7 +258,7 @@ async fn post_inner(
         ),
         button_text: format!("Join {org_name}"),
         button_url: context
-            .endpoint
+            .console_url
             .clone()
             .join(route)
             .map(|mut url| {
@@ -272,7 +272,7 @@ async fn post_inner(
         closing: "See you soon,".into(),
         signature: "The Bencher Team".into(),
         settings_url: context
-            .endpoint
+            .console_url
             .clone()
             .join("/help")
             .map(Into::into)

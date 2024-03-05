@@ -21,6 +21,8 @@ use crate::{
 
 use super::CLIENT_TOKEN_TTL;
 
+pub const GITHUB_OAUTH2: &str = "GitHub OAuth2";
+
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
@@ -57,7 +59,7 @@ async fn post_inner(
         return Err(payment_required_error(err));
     };
     // If not on Bencher Cloud, then at least one organization must have a valid Bencher Plus license
-    if !context.is_bencher_cloud()
+    if !context.is_bencher_cloud
         && LicenseUsage::get_for_server(
             conn_lock!(context),
             &context.licensor,
@@ -102,9 +104,9 @@ async fn post_inner(
             log,
             conn_lock!(context),
             &context.messenger,
-            &context.endpoint,
+            &context.console_url,
             invited,
-            "GitHub OAuth2",
+            GITHUB_OAUTH2,
         )?;
 
         QueryUser::get_with_email(conn_lock!(context), &email)?

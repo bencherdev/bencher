@@ -114,8 +114,6 @@ impl ConfigTx {
         let config_dropshot = into_config_dropshot(server);
 
         #[cfg(feature = "plus")]
-        let is_bencher_cloud = context.is_bencher_cloud();
-        #[cfg(feature = "plus")]
         {
             let conn = context.database.connection.clone();
             let query_server =
@@ -126,7 +124,7 @@ impl ConfigTx {
             // Bencher Cloud does not need to send stats to itself,
             // so we just include the Messenger directly.
             // Bencher Self-Hosted needs the Licensor in order to check for a valid license if stats are disabled.
-            let (licensor, messenger) = if is_bencher_cloud {
+            let (licensor, messenger) = if context.is_bencher_cloud {
                 (None, Some(context.messenger.clone()))
             } else {
                 (Some(context.licensor.clone()), None)
@@ -140,7 +138,7 @@ impl ConfigTx {
             &mut api,
             true,
             #[cfg(feature = "plus")]
-            is_bencher_cloud,
+            context.is_bencher_cloud,
         )
         .map_err(ConfigTxError::Register)?;
 
@@ -161,7 +159,7 @@ fn into_context(
     restart_tx: Sender<()>,
     #[cfg(feature = "plus")] plus: Option<JsonPlus>,
 ) -> Result<ApiContext, ConfigTxError> {
-    let endpoint: url::Url = console.url.try_into().map_err(ConfigTxError::Endpoint)?;
+    let console_url: url::Url = console.url.try_into().map_err(ConfigTxError::Endpoint)?;
     let database_path = json_database.file.to_string_lossy();
     diesel_database_url(log, &database_path);
 
@@ -179,7 +177,7 @@ fn into_context(
 
     info!(&log, "Loading secret key");
     let token_key = TokenKey::new(
-        security.issuer.unwrap_or_else(|| endpoint.to_string()),
+        security.issuer.unwrap_or_else(|| console_url.to_string()),
         &security.secret_key,
     );
 
@@ -191,11 +189,14 @@ fn into_context(
         biller,
         licensor,
         indexer,
-    } = Plus::new(&endpoint, plus).map_err(ConfigTxError::Plus)?;
+    } = Plus::new(&console_url, plus).map_err(ConfigTxError::Plus)?;
+
+    #[cfg(feature = "plus")]
+    let is_bencher_cloud = bencher_json::is_bencher_cloud(&console_url) && biller.is_some();
 
     debug!(&log, "Creating API context");
     Ok(ApiContext {
-        endpoint,
+        console_url,
         token_key,
         rbac: init_rbac().map_err(ConfigTxError::Polar)?.into(),
         messenger: into_messenger(smtp),
@@ -215,6 +216,8 @@ fn into_context(
         licensor,
         #[cfg(feature = "plus")]
         indexer,
+        #[cfg(feature = "plus")]
+        is_bencher_cloud,
     })
 }
 

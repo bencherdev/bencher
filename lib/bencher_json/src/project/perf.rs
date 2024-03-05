@@ -155,11 +155,11 @@ impl Serialize for JsonPerfQuery {
 impl JsonPerfQuery {
     pub fn to_url(
         &self,
-        endpoint: &str,
+        console_url: &str,
         path: &str,
         query: &[(&str, Option<String>)],
     ) -> Result<Url, UrlEncodedError> {
-        let mut url = Url::parse(endpoint)?;
+        let mut url = Url::parse(console_url)?;
         url.set_path(path);
         url.set_query(Some(&self.to_query_string(query)?));
         Ok(url)

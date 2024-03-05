@@ -238,7 +238,7 @@ impl InsertUser {
         log: &Logger,
         conn: &mut DbConnection,
         messenger: &Messenger,
-        endpoint: &Url,
+        console_url: &Url,
         invited: bool,
         method: &str,
     ) -> Result<(), HttpError> {
@@ -251,7 +251,7 @@ impl InsertUser {
                     subject: Some("🐰 New Bencher User".into()),
                     body: Some(Body::NewUser(NewUserBody {
                         admin: admin.name.clone().into(),
-                        endpoint: endpoint.clone(),
+                        console_url: console_url.clone(),
                         name: self.name.clone().into(),
                         email: self.email.clone().into(),
                         invited,

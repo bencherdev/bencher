@@ -2,7 +2,7 @@ use std::{future::Future, pin::Pin};
 
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings};
 use bencher_comment::ReportComment;
-use bencher_json::{DateTime, GitHash, JsonEndpoint, JsonReport, ResourceId};
+use bencher_json::{DateTime, GitHash, JsonConsole, JsonReport, ResourceId};
 use clap::ValueEnum;
 use url::Url;
 
@@ -274,16 +274,13 @@ impl Run {
     }
 
     async fn display_results(&self, json_report: JsonReport) -> Result<(), RunError> {
-        let json_endpoint: JsonEndpoint = self
+        let json_console: JsonConsole = self
             .backend
-            .send_with(|client| async move { client.server_endpoint_get().send().await })
+            .send_with(|client| async move { client.server_config_console_get().send().await })
             .await
             .map_err(RunError::GetEndpoint)?;
-        let endpoint_url: Url = json_endpoint
-            .endpoint
-            .try_into()
-            .map_err(RunError::BadEndpoint)?;
-        let report_comment = ReportComment::new(endpoint_url.clone(), json_report);
+        let console_url: Url = json_console.url.try_into().map_err(RunError::BadEndpoint)?;
+        let report_comment = ReportComment::new(console_url, json_report);
 
         if self.html {
             let with_metrics = true;

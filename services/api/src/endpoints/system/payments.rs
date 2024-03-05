@@ -160,7 +160,7 @@ async fn checkouts_post_inner(
     // TODO Dynamic pricing
     let price_name = DEFAULT_PRICE_NAME;
     let return_url = context
-        .endpoint
+        .console_url
         .clone()
         .join(&format!(
             "/console/organizations/{organization}/checkout?checkout={{CHECKOUT_SESSION_ID}}&level={level}{license}{self_hosted}",
@@ -173,7 +173,7 @@ async fn checkouts_post_inner(
                 .map(|uuid| format!("&self_hosted={uuid}"))
                 .unwrap_or_default(),
         ))
-        .unwrap_or_else(|_| context.endpoint.clone());
+        .unwrap_or_else(|_| context.console_url.clone());
 
     biller
         .new_checkout_session(

@@ -28,7 +28,7 @@ pub use messenger::{Body, ButtonBody, Email, Message, Messenger, NewUserBody};
 pub use rbac::{Rbac, RbacError};
 
 pub struct ApiContext {
-    pub endpoint: Url,
+    pub console_url: Url,
     pub token_key: TokenKey,
     pub rbac: Rbac,
     pub messenger: Messenger,
@@ -44,6 +44,8 @@ pub struct ApiContext {
     pub biller: Option<Biller>,
     #[cfg(feature = "plus")]
     pub licensor: Licensor,
+    #[cfg(feature = "plus")]
+    pub is_bencher_cloud: bool,
 }
 
 #[macro_export]
@@ -65,11 +67,6 @@ impl ApiContext {
     }
 
     #[cfg(feature = "plus")]
-    pub fn is_bencher_cloud(&self) -> bool {
-        bencher_json::is_bencher_cloud(&self.endpoint) && self.biller.is_some()
-    }
-
-    #[cfg(feature = "plus")]
     pub fn biller(&self) -> Result<&Biller, dropshot::HttpError> {
         self.biller.as_ref().ok_or_else(|| {
             crate::error::locked_error("Tried to use a Bencher Cloud route when Self-Hosted")
@@ -82,7 +79,7 @@ impl ApiContext {
             return;
         };
 
-        let url = match query_project.perf_url(&self.endpoint) {
+        let url = match query_project.perf_url(&self.console_url) {
             Ok(Some(url)) => url,
             Ok(None) => return,
             Err(e) => {
@@ -105,7 +102,7 @@ impl ApiContext {
             return;
         };
 
-        let url = match query_project.perf_url(&self.endpoint) {
+        let url = match query_project.perf_url(&self.console_url) {
             Ok(Some(url)) => url,
             Ok(None) => return,
             Err(e) => {

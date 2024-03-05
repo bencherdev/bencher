@@ -10,6 +10,7 @@ use crate::{
     model::user::auth::{AuthUser, PubBearerToken},
 };
 
+// TODO remove in due time
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
 #[endpoint {
         method = OPTIONS,
@@ -22,6 +23,8 @@ pub async fn server_endpoint_options(
     Ok(Endpoint::cors(&[Get.into()]))
 }
 
+// TODO remove in due time
+/// DEPRECATED: View server endpoint
 #[endpoint {
         method = GET,
         path =  "/v0/server/endpoint",
@@ -34,7 +37,7 @@ pub async fn server_endpoint_get(
     let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
     Ok(Get::response_ok(
         JsonEndpoint {
-            endpoint: rqctx.context().endpoint.clone().into(),
+            endpoint: rqctx.context().console_url.clone().into(),
         },
         auth_user.is_some(),
     ))
