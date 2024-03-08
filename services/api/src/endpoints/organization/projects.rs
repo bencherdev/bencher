@@ -205,6 +205,7 @@ async fn post_inner(
     // Create the project
     let insert_project =
         InsertProject::from_json(conn_lock!(context), &query_organization, json_project)?;
+    slog::debug!(log, "Creating project: {insert_project:?}");
 
     // Check to see if user has permission to create a project within the organization
     context
@@ -220,6 +221,7 @@ async fn post_inner(
         .filter(schema::project::uuid.eq(&insert_project.uuid))
         .first::<QueryProject>(conn_lock!(context))
         .map_err(resource_not_found_err!(Project, insert_project))?;
+    slog::debug!(log, "Created project: {query_project:?}");
 
     let timestamp = DateTime::now();
     // Connect the user to the project as a `Maintainer`
@@ -234,6 +236,7 @@ async fn post_inner(
         .values(&insert_proj_role)
         .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(ProjectRole, insert_proj_role))?;
+    slog::debug!(log, "Added project role: {insert_proj_role:?}");
 
     // Add a `main` branch to the project
     let insert_branch = InsertBranch::main(conn_lock!(context), query_project.id)?;
@@ -242,6 +245,7 @@ async fn post_inner(
         .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Branch, insert_branch))?;
     let branch_id = QueryBranch::get_id(conn_lock!(context), insert_branch.uuid)?;
+    slog::debug!(log, "Added project branch: {insert_branch:?}");
 
     // Add a `localhost` testbed to the project
     let insert_testbed = InsertTestbed::localhost(conn_lock!(context), query_project.id)?;
@@ -250,6 +254,7 @@ async fn post_inner(
         .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Testbed, insert_testbed))?;
     let testbed_id = QueryTestbed::get_id(conn_lock!(context), insert_testbed.uuid)?;
+    slog::debug!(log, "Added project testbed: {insert_testbed:?}");
 
     // Add a `latency` measure to the project
     let insert_measure = InsertMeasure::latency(conn_lock!(context), query_project.id)?;
@@ -258,14 +263,16 @@ async fn post_inner(
         .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Measure, insert_measure))?;
     let measure_id = QueryMeasure::get_id(conn_lock!(context), insert_measure.uuid)?;
+    slog::debug!(log, "Added project measure: {insert_measure:?}");
     // Add a `latency` threshold to the project
-    InsertThreshold::upper_boundary(
+    let threshold_id = InsertThreshold::upper_boundary(
         conn_lock!(context),
         query_project.id,
         branch_id,
         testbed_id,
         measure_id,
     )?;
+    slog::debug!(log, "Added project threshold: {threshold_id}");
 
     // Add a `throughput` measure to the project
     let insert_measure = InsertMeasure::throughput(conn_lock!(context), query_project.id)?;
@@ -274,14 +281,16 @@ async fn post_inner(
         .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Measure, insert_measure))?;
     let measure_id = QueryMeasure::get_id(conn_lock!(context), insert_measure.uuid)?;
+    slog::debug!(log, "Added project measure: {insert_measure:?}");
     // Add a `throughput` threshold to the project
-    InsertThreshold::lower_boundary(
+    let threshold_id = InsertThreshold::lower_boundary(
         conn_lock!(context),
         query_project.id,
         branch_id,
         testbed_id,
         measure_id,
     )?;
+    slog::debug!(log, "Added project threshold: {threshold_id}");
 
     #[cfg(feature = "plus")]
     context.update_index(log, &query_project).await;

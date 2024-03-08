@@ -1,5 +1,6 @@
 use url::Url;
 
+#[cfg(feature = "plus")]
 use crate::endpoints::system::auth::github::GITHUB_OAUTH2;
 
 use super::FmtBody;
@@ -45,6 +46,14 @@ impl FmtBody for NewUserBody {
             invited,
             method,
         } = self;
+        #[cfg(feature = "plus")]
+        let github_link = (method == GITHUB_OAUTH2)
+            .then_some(format!(
+                r#"<a href="https://github.com/{name}">View {name} on GitHub</a><br/>"#
+            ))
+            .unwrap_or_default();
+        #[cfg(not(feature = "plus"))]
+        let github_link = String::new();
         format!(
             "<!doctype html>
 <html>
@@ -65,12 +74,7 @@ impl FmtBody for NewUserBody {
         <p>🐰 Bencher</p>
     </body>
 </html>",
-            invited_or_joined = invited_or_joined(*invited),
-            github_link = (method == GITHUB_OAUTH2)
-                .then_some(format!(
-                    r#"<a href="https://github.com/{name}">View {name} on GitHub</a><br/>"#
-                ))
-                .unwrap_or_default()
+            invited_or_joined = invited_or_joined(*invited)
         )
     }
 }
