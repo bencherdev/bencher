@@ -133,7 +133,7 @@ const alertsConfig = {
 				},
 				{
 					kind: Card.NESTED_FIELD,
-					label: "Statistical Significance Test",
+					label: "Threshold Model Test",
 					keys: ["threshold", "model", "test"],
 					display: Display.RAW,
 				},

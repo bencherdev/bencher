@@ -253,7 +253,7 @@ pub struct ProjThresholdQuery {
     /// View the threshold with the specified model UUID.
     /// This can be useful for viewing thresholds with historical models
     /// that have since been replaced by a new model.
-    /// If no specified, then the current model is used.
+    /// If not specified, then the current model is used.
     pub model: Option<ModelUuid>,
 }
 

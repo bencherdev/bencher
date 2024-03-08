@@ -502,7 +502,7 @@ const thresholdUrl = (
 		isConsole
 			? `/console/projects/${project_slug}/thresholds/${datum.threshold?.uuid}`
 			: `/perf/${project_slug}/thresholds/${datum.threshold?.uuid}`
-	}?${BACK_PARAM}=${encodePath()}&model=${datum.threshold?.model?.uuid}`;
+	}?model=${datum.threshold?.model?.uuid}&${BACK_PARAM}=${encodePath()}`;
 
 const alert_image = (
 	x_axis: string,

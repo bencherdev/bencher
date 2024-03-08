@@ -23,7 +23,7 @@ pub use project::{
 };
 pub use sub_cmd::SubCmd;
 use system::{auth::Auth, server::Server};
-use user::{resource::User, token::Token};
+use user::{token::Token, user::User};
 
 #[derive(Debug)]
 pub enum Sub {

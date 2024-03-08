@@ -251,12 +251,11 @@ impl InsertBranch {
             .execute(conn)
             .map_err(resource_conflict_err!(Threshold, insert_threshold))?;
 
-        let model_id = query_threshold.model_id()?;
-
         // Get the new threshold
         let threshold_id = QueryThreshold::get_id(conn, insert_threshold.uuid)?;
 
         // Get the current threshold model
+        let model_id = query_threshold.model_id()?;
         let query_model = schema::model::table
             .filter(schema::model::id.eq(model_id))
             .first::<QueryModel>(conn)
@@ -264,8 +263,9 @@ impl InsertBranch {
 
         // Clone the current threshold model
         let mut insert_model = InsertModel::from(query_model.clone());
-        // Set the cloned model to the new threshold
+        // Set the new model to the new threshold
         insert_model.threshold_id = threshold_id;
+        // Create the new model for the new threshold
         diesel::insert_into(schema::model::table)
             .values(&insert_model)
             .execute(conn)

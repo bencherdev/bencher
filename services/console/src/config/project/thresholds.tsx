@@ -202,7 +202,7 @@ const thresholdsConfig = {
 				},
 				{
 					kind: Card.NESTED_FIELD,
-					label: "Statistical Significance Test",
+					label: "Threshold Model Test",
 					keys: ["model", "test"],
 					display: Display.RAW,
 				},

@@ -9,7 +9,7 @@ import { Button, Card, Display, Operation } from "../types";
 const USER_FIELDS = {
 	slug: {
 		type: "text",
-		placeholder: "Testbed Slug",
+		placeholder: "User Slug",
 		icon: "fas fa-exclamation-triangle",
 		help: "Must be a valid slug",
 		validate: validSlug,

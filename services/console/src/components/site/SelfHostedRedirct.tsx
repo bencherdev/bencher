@@ -7,7 +7,6 @@ const SelfHostedRedirect = (props: {
 	path: string;
 	collection?: undefined | Collection;
 }) => {
-	console.log(props.collection);
 	return (
 		<Show
 			when={

@@ -99,8 +99,8 @@ impl QueryThreshold {
             .execute(conn)
             .map_err(resource_conflict_err!(Threshold, (&self, &insert_model)))?;
 
-        let model_id = self.model_id()?;
         // Update the old model to be replaced
+        let model_id = self.model_id()?;
         diesel::update(schema::model::table.filter(schema::model::id.eq(model_id)))
             .set(schema::model::replaced.eq(Some(DateTime::now())))
             .execute(conn)
