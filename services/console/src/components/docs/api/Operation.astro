@@ -22,7 +22,7 @@ const lang: Language = Astro.props.lang ?? defaultLang;
 
 const { path, method, headers, cli, index } = Astro.props;
 const operation = openapi?.paths?.[path]?.[method];
-const id = slugify(`${method}-${path}`);
+const id = slugify(`${method}-${path}`, { lower: true, strict: true});
 const methodClass = new Method(method);
 ---
 
@@ -33,6 +33,9 @@ const methodClass = new Method(method);
   </a>
 </h2>
 <hr />
+<blockquote>⚠️ Breaking Changes: The Bencher API is in beta and under active development.
+  We may introduce breaking changes in future releases. We will announce any breaking changes in the <a href="/docs/reference/changelog/">release notes</a>.
+</blockquote>
 <div class="columns">
   <div class="column">
     <p>{operation?.description}</p>

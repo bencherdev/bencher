@@ -5109,7 +5109,7 @@
           {
             "in": "query",
             "name": "model",
-            "description": "View the threshold with the specified model UUID. This can be useful for viewing thresholds with historical models that have since been replaced by a new model. If no specified, then the current model is used.",
+            "description": "View the threshold with the specified model UUID. This can be useful for viewing thresholds with historical models that have since been replaced by a new model. If not specified, then the current model is used.",
             "schema": {
               "$ref": "#/components/schemas/ModelUuid"
             }
@@ -5327,6 +5327,8 @@
         "tags": [
           "server"
         ],
+        "summary": "Backup server",
+        "description": "Backup the API server database to blob storage. The user must be an admin on the server to use this route.",
         "operationId": "server_backup_post",
         "requestBody": {
           "content": {

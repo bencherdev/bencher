@@ -16,6 +16,10 @@ paths:
     method: post
     headers: auth
     cli: server restart
+  - path: /v0/server/backup
+    method: post
+    headers: auth
+    cli: server backup
   - path: /v0/server/stats
     method: get
     headers: auth

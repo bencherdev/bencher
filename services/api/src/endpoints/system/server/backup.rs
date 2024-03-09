@@ -36,6 +36,10 @@ pub async fn server_backup_options(
     Ok(Endpoint::cors(&[Post.into()]))
 }
 
+/// Backup server
+///
+/// Backup the API server database to blob storage.
+/// The user must be an admin on the server to use this route.
 #[endpoint {
     method = POST,
     path =  "/v0/server/backup",
