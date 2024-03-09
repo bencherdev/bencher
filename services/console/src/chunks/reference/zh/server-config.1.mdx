@@ -7,7 +7,7 @@ Bencher API服务器在启动时需要一个JSON配置。
 如果找不到配置，则加载默认配置。
 
 服务器运行时，管理员可以使用 CLI `bencher server config update` 命令更新配置，
-该命令会触发 [PUT `/v0/server/config`](/docs/reference/api) 路由。
+该命令会触发 [PUT `/v0/server/config`](/zh/docs/api/server/config/#put-v0serverconfig) 路由。
 所有更新的配置都保存到 `BENCHER_CONFIG` 环境变量
 和磁盘上的 `BENCHER_CONFIG_PATH`。
 

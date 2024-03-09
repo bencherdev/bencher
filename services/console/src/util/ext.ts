@@ -1,5 +1,4 @@
 import swagger from "../../../api/swagger.json";
-import { apiHost } from "./http";
 
 export const BENCHER_SITE_URL = "https://bencher.dev";
 export const BENCHER_CLOUD_API_URL: string = "https://api.bencher.dev";
@@ -22,26 +21,6 @@ export const BENCHER_VERSION = `${swagger?.info?.version}`;
 export const SWAGGER = swagger;
 export const BENCHER_CLOUD = "Bencher Cloud";
 export const BENCHER_SELF_HOSTED = "Bencher Self-Hosted";
-
-export const swaggerSpec = (apiUrl: string) => {
-	const url = apiHost(apiUrl);
-
-	const swagger = SWAGGER;
-	// https://swagger.io/docs/specification/api-host-and-base-path/
-	swagger.servers = [];
-	if (!isBencherCloud()) {
-		swagger.servers.push({
-			url: url,
-			description: BENCHER_SELF_HOSTED,
-		});
-	}
-	swagger.servers.push({
-		url: BENCHER_CLOUD_API_URL,
-		description: BENCHER_CLOUD,
-	});
-
-	return [url, swagger];
-};
 
 export const isBencherCloud = (): boolean =>
 	`${import.meta.env.PUBLIC_IS_BENCHER_CLOUD}` === "true";

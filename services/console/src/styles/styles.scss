@@ -22,8 +22,6 @@ $badoge-z-index: 5 !default;
 @import "../node_modules/bulma-tooltip/src/sass/index.sass";
 @import "../node_modules/bulma-steps/src/sass/index.sass";
 
-@import "./swagger-ui.css";
-
 .rows {
   display: flex;
   flex-direction: column;
