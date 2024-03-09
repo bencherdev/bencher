@@ -1,44 +1,8 @@
 ---
-export const prerender = false;
-
-import DocsLayout from "../../../../layouts/docs/DocsLayout.astro";
-import SwaggerPanel from "../../../../components/docs/SwaggerPanel";
-import { Language } from "../../../../i18n/ui";
-import Collection from "../../../../util/collection";
-
-const collection = Collection.reference;
-
-// Using `meta.env` requires `prerender = false`
-const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
-
-const { lang } = Astro.params;
-
-const title = "REST API";
-const description = () => {
-  switch (lang as Language) {
-    case Language.en:
-      return "The REST API for continuous benchmarking with Bencher";
-    case Language.de:
-      return "Die REST API für kontinuierliches Benchmarking mit Bencher";
-    case Language.es:
-      return "La API REST para el benchmarking continuo con Bencher";
-    case Language.fr:
-      return "L'API REST pour le benchmarking continu avec Bencher";
-    case Language.ja:
-      return "Bencherを使った継続的ベンチマークのためのREST API";
-    case Language.ko:
-      return "Bencher를 사용한 지속적인 벤치마킹을 위한 REST API";
-    case Language.pt:
-      return "A API REST para benchmarking contínuo com Bencher";
-    case Language.ru:
-      return "REST API для непрерывного бенчмаркинга с Bencher";
-    case Language.zh:
-      return "用于持续基准测试的REST API";
-  }
+import { otherLanguages } from "../../../../i18n/ui";
+export async function getStaticPaths() {
+    return otherLanguages.map((lang) => {return { params: { lang } }});
 }
+const { lang } = Astro.params;
 ---
-
-<DocsLayout title={title} description={description()} lang={lang} collection={collection}
-slug="api">
-  <SwaggerPanel client:only="solid-js" apiUrl={BENCHER_API_URL} lang={lang} />
-</DocsLayout>
+<meta http-equiv="refresh" content={`0;url=/${lang}/docs/api/`} />
