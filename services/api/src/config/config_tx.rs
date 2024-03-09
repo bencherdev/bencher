@@ -239,11 +239,19 @@ fn diesel_database_url(log: &Logger, database_path: &str) {
 }
 
 fn run_migrations(database: &mut DbConnection) -> Result<(), ConfigTxError> {
+    // It is not possible to enable or disable foreign key constraints in the middle of a multi-statement transaction
+    // (when SQLite is not in autocommit mode).
+    // Attempting to do so does not return an error; it simply has no effect.
+    // https://www.sqlite.org/foreignkeys.html#fk_enable
+    // Therefore, we must run all migrations with foreign key constraints disabled.
+    // Still use `PRAGMA foreign_keys = OFF` in the migration scripts to disable foreign key constraints when using the CLI.
+    database
+        .batch_execute("PRAGMA foreign_keys = OFF")
+        .map_err(ConfigTxError::Pragma)?;
     database
         .run_pending_migrations(MIGRATIONS)
         .map(|_| ())
         .map_err(ConfigTxError::Migrations)?;
-    // https://www.sqlite.org/foreignkeys.html#fk_enable
     database
         .batch_execute("PRAGMA foreign_keys = ON")
         .map_err(ConfigTxError::Pragma)?;
