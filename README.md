@@ -66,7 +66,7 @@ Though Bencher is open source, there is also a hosted version available [Bencher
   - [Continuous Benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking/)
   - [Talks](https://bencher.dev/docs/explanation/talks/)
 - Reference
-  - [REST API](https://bencher.dev/docs/reference/api/)
+  - [REST API](https://bencher.dev/docs/api/)
   - [Architecture](https://bencher.dev/docs/reference/architecture/)
   - [Server Config](https://bencher.dev/docs/reference/server-config/)
   - [Prior Art](https://bencher.dev/docs/reference/prior-art/)
