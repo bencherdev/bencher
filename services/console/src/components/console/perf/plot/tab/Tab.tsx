@@ -22,6 +22,7 @@ const Tab = (props: {
 	branches_tab: TabList<JsonBranch>;
 	testbeds_tab: TabList<JsonTestbed>;
 	benchmarks_tab: TabList<JsonBenchmark>;
+	loading: Accessor<boolean>;
 	tab: Accessor<PerfTab>;
 	page: Accessor<number>;
 	search: Accessor<undefined | string>;
@@ -127,6 +128,15 @@ const Tab = (props: {
 					handleChecked={props.handleChecked}
 					handleSearch={props.handleSearch}
 				/>
+			</Match>
+			<Match when={props.loading()}>
+				<div class="panel-block is-block">
+					<progress
+						class="progress is-primary"
+						style="margin-top: 4rem; margin-bottom: 6rem;"
+						max="100"
+					/>
+				</div>
 			</Match>
 		</Switch>
 	);

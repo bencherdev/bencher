@@ -842,6 +842,10 @@ const PerfPanel = (props: Props) => {
 				upper_value={upper_value}
 				lower_boundary={lower_boundary}
 				upper_boundary={upper_boundary}
+				reports_data={reports_data}
+				branches_data={branches_data}
+				testbeds_data={testbeds_data}
+				benchmarks_data={benchmarks_data}
 				reports_tab={reports_tab}
 				branches_tab={branches_tab}
 				testbeds_tab={testbeds_tab}

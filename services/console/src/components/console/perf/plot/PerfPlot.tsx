@@ -39,6 +39,10 @@ export interface Props {
 	upper_value: Accessor<boolean>;
 	lower_boundary: Accessor<boolean>;
 	upper_boundary: Accessor<boolean>;
+	reports_data: Resource<JsonReport>;
+	branches_data: Resource<JsonBranch>;
+	testbeds_data: Resource<JsonTestbed>;
+	benchmarks_data: Resource<JsonBenchmark>;
 	reports_tab: TabList<JsonReport>;
 	branches_tab: TabList<JsonBranch>;
 	testbeds_tab: TabList<JsonTestbed>;
@@ -158,6 +162,10 @@ const PerfPlot = (props: Props) => {
 							isConsole={props.isConsole}
 							measures={props.measures}
 							tab={props.tab}
+							reports_data={props.reports_data}
+							branches_data={props.branches_data}
+							testbeds_data={props.testbeds_data}
+							benchmarks_data={props.benchmarks_data}
 							reports_tab={props.reports_tab}
 							branches_tab={props.branches_tab}
 							testbeds_tab={props.testbeds_tab}

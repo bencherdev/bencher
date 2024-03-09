@@ -1,4 +1,4 @@
-import { type Accessor, For, createMemo } from "solid-js";
+import { type Accessor, For, createMemo, type Resource } from "solid-js";
 import { PerfTab } from "../../../../../config/types";
 import { toCapitalized } from "../../../../../config/util";
 import type {
@@ -31,6 +31,11 @@ export interface Props {
 	measures: Accessor<string[]>;
 	tab: Accessor<PerfTab>;
 	handleTab: (tab: PerfTab) => void;
+	// Tab data
+	reports_data: Resource<JsonReport>;
+	branches_data: Resource<JsonBranch>;
+	testbeds_data: Resource<JsonTestbed>;
+	benchmarks_data: Resource<JsonBenchmark>;
 	// Tabs
 	reports_tab: TabList<JsonReport>;
 	branches_tab: TabList<JsonBranch>;
@@ -74,6 +79,21 @@ export interface Props {
 }
 
 const PlotTab = (props: Props) => {
+	const loading = createMemo(() => {
+		switch (props.tab()) {
+			case PerfTab.REPORTS:
+				return props.reports_data.loading;
+			case PerfTab.BRANCHES:
+				return props.branches_data.loading;
+			case PerfTab.TESTBEDS:
+				return props.testbeds_data.loading;
+			case PerfTab.BENCHMARKS:
+				return props.benchmarks_data.loading;
+			default:
+				return false;
+		}
+	});
+
 	const page = createMemo(() => {
 		switch (props.tab()) {
 			case PerfTab.REPORTS:
@@ -212,6 +232,7 @@ const PlotTab = (props: Props) => {
 				branches_tab={props.branches_tab}
 				testbeds_tab={props.testbeds_tab}
 				benchmarks_tab={props.benchmarks_tab}
+				loading={loading}
 				tab={props.tab}
 				page={page}
 				search={search}
