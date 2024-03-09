@@ -166,7 +166,10 @@ const thresholdsConfig = {
 			path: parentPath,
 			path_to: "Thresholds",
 			buttons: [
-				{ kind: Button.EDIT, path: (pathname: string) => `${pathname}/edit` },
+				{
+					kind: Button.EDIT,
+					path: (pathname: string) => `${pathname}/edit`,
+				},
 				{ kind: Button.REFRESH },
 			],
 		},
