@@ -1,4 +1,4 @@
-import { pathname, useNavigate } from "../../../util/url";
+import { decodePath, pathname } from "../../../util/url";
 
 export interface Props {
 	config: BillingHeaderConfig;
@@ -10,23 +10,19 @@ export interface BillingHeaderConfig {
 }
 
 const BillingHeader = (props: Props) => {
-	const navigate = useNavigate();
 	return (
 		<nav class="level">
 			<div class="level-left">
-				<button
+				<a
 					class="button is-outlined"
 					type="button"
-					onClick={(e) => {
-						e.preventDefault();
-						navigate(props.config?.path(pathname()));
-					}}
+					href={decodePath(props.config?.path(pathname()))}
 				>
 					<span class="icon">
 						<i class="fas fa-chevron-left" aria-hidden="true" />
 					</span>
 					<span>Back</span>
-				</button>
+				</a>
 			</div>
 			<div class="level-left">
 				<div class="level-item">

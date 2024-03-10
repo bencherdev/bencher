@@ -6,12 +6,13 @@ import {
 	NOTIFY_TEXT_PARAM,
 	forwardParams,
 } from "../../../util/notify";
-import { useNavigate, useSearchParams } from "../../../util/url";
+import { BACK_PARAM, useNavigate, useSearchParams } from "../../../util/url";
 import { PLAN_PARAM } from "../../auth/auth";
 import { createEffect, createMemo, createResource } from "solid-js";
 import { validJwt } from "../../../util/valid";
 import { httpGet } from "../../../util/http";
 import type { JsonOrganization } from "../../../types/bencher";
+import { encodeBase64 } from "../../../util/convert";
 
 export interface Props {
 	apiUrl: string;
@@ -78,7 +79,12 @@ const ConsoleRedirect = (props: Props) => {
 				forwardParams(
 					`/console/organizations/${org.slug}/billing`,
 					[NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM, PLAN_PARAM],
-					null,
+					[
+						[
+							BACK_PARAM,
+							encodeBase64(`/console/organizations/${org.slug}/projects/add`),
+						],
+					],
 				),
 				{ replace: true },
 			);
