@@ -1,7 +1,7 @@
 import bencher_valid_init from "bencher_valid";
 import { authUser } from "../../../util/auth";
 import { NotifyKind, navigateNotify } from "../../../util/notify";
-import { useNavigate, useSearchParams } from "../../../util/url";
+import { useSearchParams } from "../../../util/url";
 import { PLAN_PARAM } from "../../auth/auth";
 import { createEffect, createResource } from "solid-js";
 import {
@@ -24,7 +24,6 @@ const CheckoutRedirect = (props: Props) => {
 	);
 	const user = authUser();
 	const [searchParams, _setSearchParams] = useSearchParams();
-	const navigate = useNavigate();
 
 	createEffect(() => {
 		if (!bencher_valid()) {
@@ -63,7 +62,7 @@ const CheckoutRedirect = (props: Props) => {
 			token,
 			newPlan,
 		)
-			.then((resp) => {
+			.then((_resp) => {
 				navigateNotify(
 					NotifyKind.OK,
 					"Somebunny loves us! Successful plan enrollment.",

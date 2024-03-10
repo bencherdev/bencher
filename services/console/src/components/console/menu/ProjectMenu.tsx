@@ -4,7 +4,6 @@ import { Show, createMemo, createResource } from "solid-js";
 import type { JsonAlertStats } from "../../../types/bencher";
 import { authUser } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
-import { useNavigate } from "../../../util/url";
 import { validJwt } from "../../../util/valid";
 
 interface Props {
@@ -24,12 +23,11 @@ enum Section {
 	SETTINGS = "settings",
 }
 
-const ConsoleMenu = (props: Props) => {
+const ProjectMenu = (props: Props) => {
 	const [bencher_valid] = createResource(
 		async () => await bencher_valid_init(),
 	);
 	const params = createMemo(() => props.params);
-	const navigate = useNavigate();
 	const user = authUser();
 
 	const fetcher = createMemo(() => {
@@ -128,4 +126,4 @@ const ConsoleMenu = (props: Props) => {
 	);
 };
 
-export default ConsoleMenu;
+export default ProjectMenu;
