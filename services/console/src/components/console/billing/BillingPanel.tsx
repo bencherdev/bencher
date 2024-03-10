@@ -364,7 +364,7 @@ const SelfHostedFreePanel = (props: {
 							</a>
 						</code>
 					</li>
-					<li>Enter your billing information</li>
+					<li>Click "Subscribe" and enter your billing information</li>
 					<li>Copy the Self-Hosted license key that is generated</li>
 					<li>
 						Back on <i>this</i> server, enter your license key below ⬇️

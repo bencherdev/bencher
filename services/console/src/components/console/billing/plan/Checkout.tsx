@@ -79,7 +79,7 @@ const Checkout = (props: Props) => {
 						sendForm();
 					}}
 				>
-					Let's Go!
+					Subscribe
 				</button>
 			</div>
 		</div>
