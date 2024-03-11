@@ -1,5 +1,4 @@
-import { For } from "solid-js";
-
+---
 interface Project {
 	name: string;
 	logo: string;
@@ -60,42 +59,28 @@ const PROJECTS: Project[][] = [
 		},
 	],
 ];
+---
 
-const Showcase = (_props: {}) => {
-	return (
-		<section class="section" style="margin-top: 4rem;">
-			<div class="content has-text-centered">
-				<h2 class="title is-2">You are in good company</h2>
-				<br />
-				<br />
-				<div class="columns is-centered is-vcentered">
-					<div class="column">
-						<For each={PROJECTS}>
-							{([left_project, center_project, right_project]) => (
-								<div class="columns is-centered is-vcentered is-mobile">
-									<ProjectLogo project={left_project as Project} />
-									<br />
-									<ProjectLogo project={center_project as Project} />
-									<br />
-									<ProjectLogo project={right_project as Project} />
-								</div>
-							)}
-						</For>
+<section class="section" style="margin-top: 4rem;">
+	<div class="content has-text-centered">
+		<h2 class="title is-2">You are in good company</h2>
+		<br />
+		<br />
+		<div class="columns is-centered is-vcentered">
+			<div class="column">
+				{PROJECTS.map((projects) => (
+					<div class="columns is-centered is-vcentered is-mobile">
+						{projects.map((project) => (
+						<div class="column has-text-centered is-2-tablet">
+							<a href={`https://bencher.dev/perf/${project.slug}`}>
+								<img width="88%" src={project.logo} alt={project.name} />
+							</a>
+						</div>
+						))}
 					</div>
-				</div>
+				))}
 			</div>
-		</section>
-	);
-};
-
-const ProjectLogo = (props: { project: Project }) => {
-	return (
-		<div class="column has-text-centered is-2-tablet">
-			<a href={`https://bencher.dev/perf/${props.project.slug}`}>
-				<img width="88%" src={props.project.logo} alt={props.project.name} />
-			</a>
 		</div>
-	);
-};
+	</div>
+</section>
 
-export default Showcase;

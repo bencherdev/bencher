@@ -130,7 +130,7 @@ const ConsoleNavbar = (props: Props) => {
 									</a>
 								</div>
 								<hr class="navbar-divider" />
-								<div class="navbar-item">BETA v{BENCHER_VERSION}</div>
+								<div class="navbar-item">v{BENCHER_VERSION}</div>
 							</div>
 						</div>
 						<div class="navbar-item" />

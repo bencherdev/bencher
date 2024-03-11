@@ -1,0 +1,35 @@
+---
+const LANGUAGES: string[][] = [
+	["devicon-cplusplus-line", "devicon-python-plain"],
+	["devicon-java-plain", "devicon-javascript-plain"],
+	["devicon-ruby-plain", "devicon-csharp-line"],
+	["devicon-go-original-wordmark", "devicon-rust-plain"],
+];
+---
+
+<section class="section" style="margin-top: 8rem;">
+	<div class="content has-text-centered">
+		<h2 class="title is-2">Use Your Favorite Benchmark Harness</h2>
+		<br />
+		<br />
+		<div class="columns is-centered is-vcentered">
+			{LANGUAGES.map(([left_icon, right_icon]) => (
+				<div class="column is-one-quarter">
+					<div class="columns is-mobile">
+						<div class="column is-half">
+							<span class="icon has-text-primary is-large">
+								<i class={`${left_icon} fa-5x`} aria-hidden="true" />
+							</span>
+						</div>
+						<br />
+						<div class="column is-half">
+							<span class="icon has-text-primary is-large">
+								<i class={`${right_icon} fa-5x`} aria-hidden="true" />
+							</span>
+						</div>
+					</div>
+				</div>
+			))}
+		</div>
+	</div>
+</section>

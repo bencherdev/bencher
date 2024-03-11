@@ -1,0 +1,140 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import AuthRedirect from "../components/auth/AuthRedirect";
+import SelfHostedRedirect from "../components/site/SelfHostedRedirct";
+import HowItWorks from "../components/landing/HowItWorks.astro";
+import Showcase from "../components/landing/Showcase.astro";
+import PRComment from "../components/landing/PRComment.astro";
+import Hosting from "../components/landing/Hosting.astro";
+import PerfImg from "../components/landing/PerfImg.astro";
+---
+
+<BaseLayout
+  title="Benchmark with hyperfine"
+  description="Track the results of your hyperfine benchmarks over time with Bencher"
+>
+  <SelfHostedRedirect client:only="solid-js" path="/console" />
+  <AuthRedirect client:only="solid-js" path="/console" />
+  <section class="hero is-large">
+    <div class="hero-body">
+      <div class="columns is-centered is-vcentered">
+        <div class="column is-three-quarters">
+          <div class="content has-text-centered">
+            <h1 class="title is-1">Track your <code>hyperfine</code> benchmarks</h1>
+            <h2 class="subtitle is-4" style="margin-top: 1rem;">
+                Track the results of your benchmarks over time with Bencher
+            </h2>
+
+            <div class="columns is-centered">
+              <div class="column is-one-fourth"></div>
+
+              <div class="column is-one-fourth">
+                <a
+                  class="button is-primary is-large is-responsive is-fullwidth"
+                  href="/pricing"
+                >
+                  Start Now
+                </a>
+              </div>
+
+              <div class="column is-one-fourth"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <HowItWorks />
+
+  <Showcase />
+
+  <section class="section" style="margin-top: 4rem;">
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column">
+          <h2 class="title is-2">Track your <code>hyperfine</code> benchmarks</h2>
+        </div>
+      </div>
+      <div class="columns is-centered">
+        <div class="column">
+          <div class="content">
+            <p>
+                Track the results of your <code>hyperfine</code> benchmarks over time.
+                Monitor, query, and graph the results using the Bencher web console based on the source branch and testbed.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="columns is-centered">
+        <div class="column is-7">
+          <div class="box" style="border: 1rem solid #ed6704;">
+            <pre><code>$ bencher run --file results.json hyperfine --export-json results.json 'sleep 0.3'
+Benchmark 1: sleep 0.3
+  Time (mean ± σ):     311.0 ms ±   3.7 ms    [User: 1.1 ms, System: 2.5 ms]
+  Range (min … max):   306.8 ms … 316.5 ms    10 runs
+
+Benchmark Harness Results:
+&lcub;
+  "results": [
+    &lcub;
+      "command": "sleep 0.3",
+      "mean": 0.31100947182,
+      "stddev": 0.0036727203564211972,
+      "median": 0.31172578012,
+      "user": 0.00112766,
+      "system": 0.0025237199999999993,
+      "min": 0.30678948862,
+      "max": 0.31653086362,
+      "times": [
+        0.30732828062,
+        0.30698090562,
+        0.31075336362,
+        0.30678948862,
+        0.31275773762000003,
+        0.31653086362,
+        0.31551086362,
+        0.31322536262,
+        0.30751965562,
+        0.31269819662000004
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    &rcub;
+  ]
+&rcub;
+
+Bencher New Report:
+&lcub;
+  "branch": "main",
+  "end_time": "2024-03-10T20:34:00.981095Z",
+  "hash": "a7d081e048b77c5d4bfc0fb66f48cbf05cb49464",
+  "results": [
+    "&lcub;\n  \"results\": [\n    &lcub;\n      \"command\": \"sleep 0.3\",\n      \"mean\": 0.31100947182,\n      \"stddev\": 0.0036727203564211972,\n      \"median\": 0.31172578012,\n      \"user\": 0.00112766,\n      \"system\": 0.0025237199999999993,\n      \"min\": 0.30678948862,\n      \"max\": 0.31653086362,\n      \"times\": [\n        0.30732828062,\n        0.30698090562,\n        0.31075336362,\n        0.30678948862,\n        0.31275773762000003,\n        0.31653086362,\n        0.31551086362,\n        0.31322536262,\n        0.30751965562,\n        0.31269819662000004\n      ],\n      \"exit_codes\": [\n        0,\n        0,\n        0,\n        0,\n        0,\n        0,\n        0,\n        0,\n        0,\n        0\n      ]\n    &rcub;\n  ]\n&rcub;\n"
+  ],
+  "settings": &lcub;&rcub;,
+  "start_time": "2024-03-10T20:33:57.722930Z",
+  "testbed": "localhost"
+&rcub;</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <PRComment />
+
+  <Hosting />
+
+  <PerfImg />
+</BaseLayout>
