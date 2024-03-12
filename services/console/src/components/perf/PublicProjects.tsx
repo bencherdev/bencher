@@ -5,6 +5,8 @@ import {
 	createMemo,
 	createResource,
 	Show,
+	Switch,
+	Match,
 } from "solid-js";
 import type { JsonProject } from "../../types/bencher";
 import { httpGet } from "../../util/http";
@@ -123,27 +125,37 @@ const PublicProjects = (props: Props) => {
 								}
 							/>
 							<br />
-							<Show
-								when={projectsLength() > 0}
+							<Switch
 								fallback={
 									<div class="box">
 										<p>🐰 No projects found</p>
 									</div>
 								}
 							>
-								<For each={projects()}>
-									{(project) => (
-										<a
-											class="box"
-											title={`View ${project.name}`}
-											href={`/perf/${project.slug}`}
-										>
-											{project.name}
-										</a>
-									)}
-								</For>
-							</Show>
-							{projectsLength() === 0 && page() !== 1 && (
+								<Match when={projectsLength() > 0}>
+									<For each={projects()}>
+										{(project) => (
+											<a
+												class="box"
+												title={`View ${project.name}`}
+												href={`/perf/${project.slug}`}
+											>
+												{project.name}
+											</a>
+										)}
+									</For>
+								</Match>
+								<Match when={projects.loading}>
+									<For each={Array(per_page())}>
+										{() => (
+											<div class="box">
+												<p>Loading...</p>
+											</div>
+										)}
+									</For>
+								</Match>
+							</Switch>
+							{!projects.loading && projectsLength() === 0 && page() !== 1 && (
 								<div class="box">
 									<BackButton page={page} handlePage={handlePage} />
 								</div>
