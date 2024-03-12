@@ -2,7 +2,49 @@
 ---
 
 <!-- https://gist.github.com/straker/3c98304f8a6a9174efd8292800891ea1-->
-<canvas width="320" height="640" id="game" style="background: black;"></canvas>
+<div class="columns is-centered is-vcentered is-mobile">
+  <div class="column is-narrow">
+    <canvas width="320" height="640" id="game" style="background: black;"></canvas>
+  </div>
+</div>
+<div class="columns is-centered is-vcentered is-mobile">
+  <div class="column is-3">
+    <button class="button is-fullwidth">
+      <span class="icon">
+        <i class="fas fa-arrow-left" aria-hidden="true" />
+      </span>
+    </button>
+  </div>
+  <div class="column is-2">
+    <button class="button is-fullwidth">
+    <span class="icon">
+      <i class="fas fa-undo-alt" aria-hidden="true" />
+    </span>
+  </button>
+  </div>
+  <div class="column is-3">
+    <button class="button is-fullwidth">
+    <span class="icon">
+      <i class="fas fa-arrow-down" aria-hidden="true" />
+    </span>
+  </button>
+  </div>
+  <div class="column is-2">
+    <button class="button is-fullwidth">
+    <span class="icon">
+      <i class="fas fa-redo-alt" aria-hidden="true" />
+    </span>
+  </button>
+  </div>
+  <div class="column is-3">
+    <button class="button is-fullwidth">
+    <span class="icon">
+      <i class="fas fa-arrow-right" aria-hidden="true" />
+    </span>
+  </button>
+  </div>
+</div>
+
 <script>
 // https://tetris.fandom.com/wiki/Tetris_Guideline
 
@@ -256,42 +298,37 @@ function loop() {
 
 // listen to keyboard events to move the active tetromino
 document.addEventListener('keydown', function(e) {
+  console.log(e.key);
   if (gameOver) return;
 
-  // left and right arrow keys (move)
-  if (e.which === 37 || e.which === 39) {
-    e.preventDefault();
-    const col = e.which === 37
-      ? tetromino.col - 1
-      : tetromino.col + 1;
-
-    if (isValidMove(tetromino.matrix, tetromino.row, col)) {
-      tetromino.col = col;
-    }
-  }
-
-  // up arrow key (rotate)
-  if (e.which === 38) {
-    e.preventDefault();
-    const matrix = rotate(tetromino.matrix);
-    if (isValidMove(matrix, tetromino.row, tetromino.col)) {
-      tetromino.matrix = matrix;
-    }
-  }
-
-  // down arrow key (drop)
-  if(e.which === 40) {
-    e.preventDefault();
-    const row = tetromino.row + 1;
-
-    if (!isValidMove(tetromino.matrix, row, tetromino.col)) {
-      tetromino.row = row - 1;
-
-      placeTetromino();
-      return;
-    }
-
-    tetromino.row = row;
+  switch (e.key) {
+    case 'ArrowLeft':
+      e.preventDefault();
+      if (isValidMove(tetromino.matrix, tetromino.row, tetromino.col - 1)) {
+        tetromino.col--;
+      }
+      break;
+    case 'ArrowRight':
+      e.preventDefault();
+      if (isValidMove(tetromino.matrix, tetromino.row, tetromino.col + 1)) {
+        tetromino.col++;
+      }
+      break;
+    case 'ArrowUp':
+      e.preventDefault();
+      const matrix = rotate(tetromino.matrix);
+      if (isValidMove(matrix, tetromino.row, tetromino.col)) {
+        tetromino.matrix = matrix;
+      }
+      break;
+    case 'ArrowDown':
+      e.preventDefault();
+      if (isValidMove(tetromino.matrix, tetromino.row + 1, tetromino.col)) {
+        tetromino.row++;
+      } else {
+        placeTetromino();
+      }
+      break;
   }
 });
 
