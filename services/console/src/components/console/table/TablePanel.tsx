@@ -81,8 +81,12 @@ const TablePanel = (props: Props) => {
 		}
 	});
 
-	const per_page = createMemo(() => Number(searchParams[PER_PAGE_PARAM]));
-	const page = createMemo(() => Number(searchParams[PAGE_PARAM]));
+	const per_page = createMemo(() =>
+		Number(searchParams[PER_PAGE_PARAM] ?? DEFAULT_PER_PAGE),
+	);
+	const page = createMemo(() =>
+		Number(searchParams[PAGE_PARAM] ?? DEFAULT_PAGE),
+	);
 
 	const start_time = createMemo(() => searchParams[START_TIME_PARAM]);
 	const start_date = createMemo(() => timeToDateOnlyIso(start_time()));

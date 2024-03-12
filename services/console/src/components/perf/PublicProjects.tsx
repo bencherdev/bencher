@@ -4,7 +4,6 @@ import {
 	createEffect,
 	createMemo,
 	createResource,
-	Show,
 	Switch,
 	Match,
 } from "solid-js";
@@ -49,8 +48,12 @@ const PublicProjects = (props: Props) => {
 		}
 	});
 
-	const per_page = createMemo(() => Number(searchParams[PER_PAGE_PARAM]));
-	const page = createMemo(() => Number(searchParams[PAGE_PARAM]));
+	const per_page = createMemo(() =>
+		Number(searchParams[PER_PAGE_PARAM] ?? DEFAULT_PER_PAGE),
+	);
+	const page = createMemo(() =>
+		Number(searchParams[PAGE_PARAM] ?? DEFAULT_PAGE),
+	);
 	const search = createMemo(() => searchParams[SEARCH_PARAM]);
 
 	const pagination = createMemo(() => {
@@ -146,7 +149,7 @@ const PublicProjects = (props: Props) => {
 									</For>
 								</Match>
 								<Match when={projects.loading}>
-									<For each={Array(per_page())}>
+									<For each={Array(per_page() ?? DEFAULT_PER_PAGE)}>
 										{() => (
 											<div class="box">
 												<p>Loading...</p>

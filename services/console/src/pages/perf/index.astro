@@ -3,6 +3,7 @@ export const prerender = false;
 
 import PerfLayout from "../../layouts/perf/PerfLayout.astro";
 import PublicProjects from "../../components/perf/PublicProjects";
+import FallbackProjects from "../../components/perf/FallbackProjects";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
@@ -14,5 +15,8 @@ const title = "Bencher Projects";
   titleFmt={(title) => `📈 ${title}`}
   description="View continuous benchmarking results and performance regressions for public projects on Bencher"
 >
-  <PublicProjects client:only="solid-js" apiUrl={BENCHER_API_URL} />
+  <PublicProjects client:only="solid-js" apiUrl={BENCHER_API_URL} >
+    <!-- https://github.com/withastro/roadmap/discussions/724#discussioncomment-7251623 -->
+    <FallbackProjects slot="fallback" />
+  </PublicProjects>
 </PerfLayout>
