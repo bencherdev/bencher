@@ -9,39 +9,38 @@
 </div>
 <div class="columns is-centered is-vcentered is-mobile">
   <div class="column is-3">
-    <button class="button is-fullwidth">
+  </div>
+  <div class="column is-3">
+    <button id="up" class="button is-fullwidth">
+      <span class="icon">
+        <i class="fas fa-arrow-up" aria-hidden="true" />
+      </span>
+    </button>
+  </div>
+  <div class="column is-3">
+  </div>
+</div>
+<div class="columns is-centered is-vcentered is-mobile">
+  <div class="column is-3">
+    <button id="left" class="button is-fullwidth">
       <span class="icon">
         <i class="fas fa-arrow-left" aria-hidden="true" />
       </span>
     </button>
   </div>
-  <div class="column is-2">
-    <button class="button is-fullwidth">
-    <span class="icon">
-      <i class="fas fa-undo-alt" aria-hidden="true" />
-    </span>
-  </button>
+  <div class="column is-3">
+    <button id="down" class="button is-fullwidth">
+      <span class="icon">
+        <i class="fas fa-arrow-down" aria-hidden="true" />
+      </span>
+    </button>
   </div>
   <div class="column is-3">
-    <button class="button is-fullwidth">
-    <span class="icon">
-      <i class="fas fa-arrow-down" aria-hidden="true" />
-    </span>
-  </button>
-  </div>
-  <div class="column is-2">
-    <button class="button is-fullwidth">
-    <span class="icon">
-      <i class="fas fa-redo-alt" aria-hidden="true" />
-    </span>
-  </button>
-  </div>
-  <div class="column is-3">
-    <button class="button is-fullwidth">
-    <span class="icon">
-      <i class="fas fa-arrow-right" aria-hidden="true" />
-    </span>
-  </button>
+    <button id="right" class="button is-fullwidth">
+      <span class="icon">
+        <i class="fas fa-arrow-right" aria-hidden="true" />
+      </span>
+    </button>
   </div>
 </div>
 
@@ -296,32 +295,56 @@ function loop() {
   }
 }
 
+enum Arrow {
+  Left = "ArrowLeft",
+  Right = "ArrowRight",
+  Up = "ArrowUp",
+  Down = "ArrowDown",
+}
+
+function simulateKeyPress(key: Arrow) {
+  // Create a new KeyboardEvent
+  var event = new KeyboardEvent('keydown', {
+    key: key,
+    code: key,
+    view: window,
+    bubbles: true,
+    cancelable: true
+  });
+
+  // Dispatch the event
+  document.dispatchEvent(event);
+}
+document?.getElementById("left")?.addEventListener("click", (_e) => simulateKeyPress(Arrow.Left));
+document?.getElementById("right")?.addEventListener("click", (_e) => simulateKeyPress(Arrow.Right));
+document?.getElementById("up")?.addEventListener("click", (_e) => simulateKeyPress(Arrow.Up));
+document?.getElementById("down")?.addEventListener("click", (_e) => simulateKeyPress(Arrow.Down));
+
 // listen to keyboard events to move the active tetromino
 document.addEventListener('keydown', function(e) {
-  console.log(e.key);
   if (gameOver) return;
 
   switch (e.key) {
-    case 'ArrowLeft':
+    case Arrow.Left:
       e.preventDefault();
       if (isValidMove(tetromino.matrix, tetromino.row, tetromino.col - 1)) {
         tetromino.col--;
       }
       break;
-    case 'ArrowRight':
+    case Arrow.Right:
       e.preventDefault();
       if (isValidMove(tetromino.matrix, tetromino.row, tetromino.col + 1)) {
         tetromino.col++;
       }
       break;
-    case 'ArrowUp':
+    case Arrow.Up:
       e.preventDefault();
       const matrix = rotate(tetromino.matrix);
       if (isValidMove(matrix, tetromino.row, tetromino.col)) {
         tetromino.matrix = matrix;
       }
       break;
-    case 'ArrowDown':
+    case Arrow.Down:
       e.preventDefault();
       if (isValidMove(tetromino.matrix, tetromino.row + 1, tetromino.col)) {
         tetromino.row++;
