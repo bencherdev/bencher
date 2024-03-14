@@ -1,0 +1,46 @@
+---
+title: "Rustls"
+description: "A continuous benchmarking case study for the Rustls project. Learn how they catch performance regressions in CI."
+heading: "Rustls: Continuous Benchmarking Case Study"
+sortOrder: 1
+draft: true
+---
+
+## What is Rustls?
+[Rustls][rustls] is a modern Transport Layer Security (TLS) library written in Rust,
+with the aim of replacing less safe alternatives such as OpenSSL.
+The TLS protocol is used to provide secure communications,
+typically between a web server and a client.
+TLS was previously called Secure Socket Layer (SSL).
+It ensures that the data transmitted between the two parties is encrypted
+and secure from eavesdropping or tampering.
+Therefore, it is vital for a TLS library like Rustls to be both fast and secure.
+
+> 🐰 The `s` in `https` means that you are using TLS to view this page!
+
+## Benchmarking Rustls
+Rustls first commit was made by the project's creator [Joseph Birr-Pixton](ctz) on 02 May 2016
+with the first successful TLS connection not happening until the 27th of that same month.
+By that September, he was [already benchmarking Rustls][bay area rust].
+With substantial performance improvements under his belt,
+he did [a head-to-head benchmark comparison of Rustls vs OpenSSL][rustls vs openssl] in July 2019.
+
+The results from that benchmark comparison are as follows:
+- Rustls was 15% quicker to send data.
+- Rustls was 5% quicker to receive data.
+- Rustls was 20-40% quicker to set up a client connection.
+- Rustls was 10% quicker to set up a server connection.
+- Rustls was 30-70% quicker to resume a client connection.
+- Rustls was 10-20% quicker to resume a server connection.
+- Rustls used less than half the memory of OpenSSL.
+
+Though later versions of OpenSSL have caught up on some of these benchmarks,
+the biggest performance concern for the Rustls project is no longer a head-to-head comparison against OpenSSL.
+Rather, their primary focus is on guaranteeing that _new_ code does not introduce a performance regression.
+
+## Continuous Benchmarking for Rustls
+
+[rustls]: https://github.com/rustls/rustls
+[ctz]: https://github.com/ctz/
+[bay area rust]: https://raw.githubusercontent.com/ctz/talks/master/rustls.pdf
+[rustls vs openssl]: https://jbp.io/2019/07/01/rustls-vs-openssl-performance.html

@@ -13,6 +13,7 @@ enum Collection {
 	server = "server",
 	// Learn
 	rust = "rust",
+	case_study = "case_study",
 }
 
 export const ApiCollections = [Collection.organizations];
@@ -39,6 +40,8 @@ export const collectionPath = (collection: Collection) => {
 			return "server";
 		case Collection.rust:
 			return "benchmarking/rust";
+		case Collection.case_study:
+			return "case-study";
 	}
 };
 

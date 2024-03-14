@@ -1,0 +1,30 @@
+---
+import LearnLayout from "../../../layouts/docs/LearnLayout.astro";
+import { getEnPaths } from "../../../i18n/utils";
+import { Author } from "../../../components/docs/author";
+import Collection from "../../../util/collection";
+
+const collection = Collection.case_study;
+
+// 1. Generate a new path for every collection entry
+export async function getStaticPaths() {
+  const collection = Collection.case_study;
+  return await getEnPaths(collection);
+}
+// 2. When it's time to render, you can get the entry directly from the prop
+const { slug } = Astro.params;
+const page = Astro.props;
+const { Content } = await page.render();
+---
+
+<LearnLayout
+  title={page.data.title}
+  titleFmt={(_title) => `🔬 ${page.data.heading}`}
+  description={page.data.description}
+  heading={page.data.heading}
+  author={Author.everett}
+  collection={collection}
+  slug={slug}
+>
+  <Content />
+</LearnLayout>

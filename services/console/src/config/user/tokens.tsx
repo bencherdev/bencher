@@ -132,7 +132,11 @@ const tokensConfig = {
 				},
 				{
 					kind: Card.FIELD,
-					label: "API Token",
+					label: (
+						<>
+							API Token (<code>BENCHER_API_TOKEN</code>)
+						</>
+					),
 					key: "token",
 					display: Display.RAW,
 				},

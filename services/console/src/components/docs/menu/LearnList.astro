@@ -1,5 +1,5 @@
 ---
-import { benchmarking } from "../../../i18n/ui.ts";
+import { benchmarking, caseStudy } from "../../../i18n/ui.ts";
 import { getLangCollection, langPath} from "../../../i18n/utils.ts"
 import Collection, { collectionPath } from "../../../util/collection.ts";
 
@@ -9,6 +9,7 @@ interface Props {
 
 // Learn
 const rustCollection = await getLangCollection(Collection.rust);
+const caseStudyCollection = await getLangCollection(Collection.case_study);
 
 const { lang } = Astro.props;
 ---
@@ -24,11 +25,21 @@ const { lang } = Astro.props;
       }
     ],
   },
+  {
+    label: caseStudy(lang),
+    sections: [
+      {
+        section: null,
+        collection: Collection.case_study,
+        content: caseStudyCollection,
+      }
+    ],
+  },
 ].map(({ label, sections }) => (
   <p class="menu-label">{label}</p>
   <div>
   {sections.map(({ section, collection, content }) => (
-    <p>{section}</p>
+    <>{ section && <p>{section}</p>}</>
     <ul class="menu-list">
       {
         content[lang]?.map((page) => (

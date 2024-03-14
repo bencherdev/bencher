@@ -49,6 +49,7 @@ export const collections = {
 	server: swagger,
 	// learn
 	rust: page,
+	case_study: page,
 };
 
 export const keywords = ["Continuous Benchmarking"];

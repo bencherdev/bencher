@@ -215,3 +215,26 @@ export const benchmarking = (lang: Language) => {
 			return "标杆管理";
 	}
 };
+
+export const caseStudy = (lang: Language) => {
+	switch (lang) {
+		case Language.en:
+			return "Case Study";
+		case Language.de:
+			return "Fallstudie";
+		case Language.es:
+			return "Estudio de Caso";
+		case Language.fr:
+			return "Étude de cas";
+		case Language.ja:
+			return "事例研究";
+		case Language.ko:
+			return "사례 연구";
+		case Language.pt:
+			return "Estudo de Caso";
+		case Language.ru:
+			return "Кейс-стади";
+		case Language.zh:
+			return "案例研究";
+	}
+};
