@@ -1,14 +1,15 @@
 ---
-import BaseLayout from "../layouts/BaseLayout.astro";
-import HelpPanel from "../components/console/help/Help";
+import LegalLayout from "../layouts/legal/LegalLayout.astro";
+import PubHelp from "../components/console/help/Help.astro";
 import UserRedirect from "../components/console/redirects/UserRedirect";
 
 const title = "Help";
 const titleFmt = (title: string) => `🛟 ${title}`;
 const description = "Get help with Bencher and continuous benchmarking";
+const heading = "Help";
 ---
 
-<BaseLayout title={title} titleFmt={titleFmt} description={description}>
+<LegalLayout title={title} titleFmt={titleFmt} description={description} heading={heading}>
   <UserRedirect client:only="solid-js" path="help" />
-  <HelpPanel client:only="solid-js" />
-</BaseLayout>
+  <PubHelp />
+</LegalLayout>

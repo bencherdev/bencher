@@ -1,11 +1,11 @@
-import Help from "./Help";
+import AuthHelp from "./AuthHelp";
 import HelpHeader from "./HelpHeader";
 
 const HelpPanel = () => {
 	return (
 		<>
 			<HelpHeader />
-			<Help />
+			<AuthHelp />
 		</>
 	);
 };

@@ -1,6 +1,6 @@
 ---
-import Help from "../components/console/help/Help";
 import LegalLayout from "../layouts/legal/LegalLayout.astro";
+import Help from "../components/console/help/Help.astro";
 ---
 
 <LegalLayout
@@ -8,5 +8,5 @@ import LegalLayout from "../layouts/legal/LegalLayout.astro";
   description="Whoops! Page not found 🙃"
   heading="404: Not Found"
 >
-  <Help client:only="solid-js" />
+  <Help />
 </LegalLayout>

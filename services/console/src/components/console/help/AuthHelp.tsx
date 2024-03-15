@@ -1,7 +1,7 @@
 import { authUser } from "../../../util/auth";
 import { BENCHER_CHAT_URL, BENCHER_GITHUB_URL } from "../../../util/ext";
 
-const Help = () => {
+const AuthHelp = () => {
 	const user = authUser();
 
 	return (
@@ -13,6 +13,18 @@ const Help = () => {
 							Ahoy{user?.user?.name && ` ${user?.user?.name}`}!
 						</h4>
 						<h4 class="subtitle is-4">There are many ways to get help</h4>
+						<br />
+
+						<h4 class="title is-4">Bencher Docs</h4>
+						<h4 class="subtitle is-4">
+							<a href="/docs/">Read the docs</a>
+						</h4>
+						<br />
+
+						<h4 class="title is-4">Bencher API Docs</h4>
+						<h4 class="subtitle is-4">
+							<a href="/docs/api/">Read the docs</a>
+						</h4>
 						<br />
 
 						<h4 class="title is-4">GitHub</h4>
@@ -48,4 +60,4 @@ const Help = () => {
 	);
 };
 
-export default Help;
+export default AuthHelp;
