@@ -420,7 +420,7 @@ jobs:
     name: Cargo Unused Deps
     runs-on: ubuntu-latest
     timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
+    continue-on-error: ${{ !startsWith(github.ref, 'refs/tags/') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
@@ -442,8 +442,6 @@ jobs:
         run: cargo install --version 0.1.45 --locked --force cargo-udeps
       - name: Run API udeps
         working-directory: ./services/api
-        # TODO remove once servo error is fixed
-        continue-on-error: true
         run: cargo +nightly udeps --all-targets
       - name: Run CLI udeps
         working-directory: ./services/cli
