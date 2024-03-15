@@ -19,6 +19,12 @@ import { setPageTitle } from "../../../util/resource";
 import Field from "../../field/Field";
 import FieldKind from "../../field/kind";
 import { DEBOUNCE_DELAY } from "../../../util/valid";
+import { useSearchParams } from "../../../util/url";
+import {
+	EMBED_TITLE_PARAM,
+	PERF_PLOT_EMBED_PARAMS,
+	PERF_PLOT_PARAMS,
+} from "./PerfPanel";
 
 export interface Props {
 	apiUrl: string;
@@ -132,6 +138,7 @@ export interface ShareProps {
 
 const ShareModal = (props: ShareProps) => {
 	const location = window.location;
+	const [searchParams, _setSearchParams] = useSearchParams();
 
 	const [title, setTitle] = createSignal(null);
 
@@ -140,11 +147,21 @@ const ShareModal = (props: ShareProps) => {
 		DEBOUNCE_DELAY,
 	);
 
+	const perfPlotParams = createMemo(() => {
+		const newParams = new URLSearchParams();
+		for (const [key, value] of Object.entries(searchParams)) {
+			if (value && PERF_PLOT_PARAMS.includes(key)) {
+				newParams.set(key, value);
+			}
+		}
+		return newParams.toString();
+	});
+
 	const perf_page_url = createMemo(
 		() =>
 			`${location.protocol}//${location.hostname}${
 				location.port ? `:${location.port}` : ""
-			}/perf/${props.project()?.slug}${location.search}`,
+			}/perf/${props.project()?.slug}?${perfPlotParams()}`,
 	);
 
 	const perf_img_url = createMemo(() => {
@@ -173,11 +190,25 @@ const ShareModal = (props: ShareProps) => {
 		return url;
 	});
 
+	const perfPlotEmbedParams = createMemo(() => {
+		const newParams = new URLSearchParams();
+		for (const [key, value] of Object.entries(searchParams)) {
+			if (value && PERF_PLOT_EMBED_PARAMS.includes(key)) {
+				newParams.set(key, value);
+			}
+		}
+		const img_title = title();
+		if (img_title) {
+			newParams.set(EMBED_TITLE_PARAM, img_title);
+		}
+		return newParams.toString();
+	});
+
 	const perf_embed_url = createMemo(
 		() =>
 			`${location.protocol}//${location.hostname}${
 				location.port ? `:${location.port}` : ""
-			}/perf/${props.project()?.slug}/embed${location.search}`,
+			}/perf/${props.project()?.slug}/embed?${perfPlotEmbedParams()}`,
 	);
 
 	const img_tag = createMemo(
@@ -238,6 +269,7 @@ const ShareModal = (props: ShareProps) => {
 					</h4>
 					{/* biome-ignore lint/a11y/useValidAnchor: Copy tag */}
 					<a
+						style="word-break: break-all;"
 						href=""
 						onClick={(e) => {
 							e.preventDefault();
@@ -256,6 +288,7 @@ const ShareModal = (props: ShareProps) => {
 					<h4 class="subtitle is-4">Click to Copy Embed Tag</h4>
 					{/* biome-ignore lint/a11y/useValidAnchor: Copy link */}
 					<a
+						style="word-break: break-all;"
 						href=""
 						onClick={(e) => {
 							e.preventDefault();
@@ -267,9 +300,10 @@ const ShareModal = (props: ShareProps) => {
 
 					<div class="is-divider" data-content="OR" />
 
-					<h4 class="title is-4">Click to Copy URL</h4>
+					<h4 class="title is-4">Click to Copy Public URL</h4>
 					{/* biome-ignore lint/a11y/useValidAnchor: Copy link */}
 					<a
+						style="word-break: break-all;"
 						href=""
 						onClick={(e) => {
 							e.preventDefault();

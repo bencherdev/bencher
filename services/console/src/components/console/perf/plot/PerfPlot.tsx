@@ -60,6 +60,9 @@ export interface Props {
 	branches_search: Accessor<undefined | string>;
 	testbeds_search: Accessor<undefined | string>;
 	benchmarks_search: Accessor<undefined | string>;
+	embed_title: Accessor<undefined | string>;
+	embed_header: Accessor<boolean>;
+	embed_key: Accessor<boolean>;
 	handleMeasure: (measure: null | string) => void;
 	handleStartTime: (start_time: string) => void;
 	handleEndTime: (end_time: string) => void;
@@ -112,6 +115,8 @@ const PerfPlot = (props: Props) => {
 						upper_value={props.upper_value}
 						lower_boundary={props.lower_boundary}
 						upper_boundary={props.upper_boundary}
+						embed_title={props.embed_title}
+						embed_header={props.embed_header}
 						handleMeasure={props.handleMeasure}
 						handleStartTime={props.handleStartTime}
 						handleEndTime={props.handleEndTime}
@@ -127,6 +132,7 @@ const PerfPlot = (props: Props) => {
 							fallback={
 								<Plot
 									isConsole={props.isConsole}
+									isEmbed={props.isEmbed}
 									range={props.range}
 									lower_value={props.lower_value}
 									upper_value={props.upper_value}
@@ -134,6 +140,7 @@ const PerfPlot = (props: Props) => {
 									upper_boundary={props.upper_boundary}
 									perfData={props.perfData}
 									key={props.key}
+									embed_key={props.embed_key}
 									handleKey={props.handleKey}
 								/>
 							}

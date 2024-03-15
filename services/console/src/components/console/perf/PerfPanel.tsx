@@ -80,12 +80,60 @@ const UPPER_VALUE_PARAM = "upper_value";
 const LOWER_BOUNDARY_PARAM = PerfQueryKey.LowerBoundary;
 const UPPER_BOUNDARY_PARAM = PerfQueryKey.UpperBoundary;
 
+// These are currently for internal use only
+// TODO add a way to set these in the Share modal
+// The title can be set but there is no way to set an empty title
+export const EMBED_TITLE_PARAM = "embed_title";
+const EMBED_HEADER_PARAM = "embed_header";
+const EMBED_KEY_PARAM = "embed_key";
+
+// This is used to trim down the number of query params when embedding, etc.
+export const PERF_PLOT_PARAMS = [
+	BRANCHES_PARAM,
+	TESTBEDS_PARAM,
+	BENCHMARKS_PARAM,
+	MEASURES_PARAM,
+	START_TIME_PARAM,
+	END_TIME_PARAM,
+	REPORT_PARAM,
+	REPORTS_PER_PAGE_PARAM,
+	BRANCHES_PER_PAGE_PARAM,
+	TESTBEDS_PER_PAGE_PARAM,
+	BENCHMARKS_PER_PAGE_PARAM,
+	REPORTS_PAGE_PARAM,
+	BRANCHES_PAGE_PARAM,
+	TESTBEDS_PAGE_PARAM,
+	BENCHMARKS_PAGE_PARAM,
+	REPORTS_START_TIME_PARAM,
+	REPORTS_END_TIME_PARAM,
+	BRANCHES_SEARCH_PARAM,
+	TESTBEDS_SEARCH_PARAM,
+	BENCHMARKS_SEARCH_PARAM,
+	TAB_PARAM,
+	KEY_PARAM,
+	RANGE_PARAM,
+	CLEAR_PARAM,
+	LOWER_VALUE_PARAM,
+	UPPER_VALUE_PARAM,
+	LOWER_BOUNDARY_PARAM,
+	UPPER_BOUNDARY_PARAM,
+];
+export const PERF_PLOT_EMBED_PARAMS = [
+	...PERF_PLOT_PARAMS,
+	EMBED_TITLE_PARAM,
+	EMBED_HEADER_PARAM,
+	EMBED_KEY_PARAM,
+];
+
 const DEFAULT_PERF_TAB = PerfTab.REPORTS;
 const DEFAULT_PERF_KEY = true;
 const DEFAULT_PERF_RANGE = PerfRange.DATE_TIME;
 const DEFAULT_PERF_CLEAR = false;
 const DEFAULT_PERF_END_VALUE = false;
 const DEFAULT_PERF_BOUNDARY = false;
+
+const DEFAULT_EMBED_HEADER = true;
+const DEFAULT_EMBED_KEY = true;
 
 const DEFAULT_PER_PAGE = 8;
 const REPORTS_PER_PAGE = 4;
@@ -217,6 +265,17 @@ const PerfPanel = (props: Props) => {
 			initParams[BENCHMARKS_SEARCH_PARAM] = null;
 		}
 
+		// Embed params
+		if (typeof searchParams[EMBED_TITLE_PARAM] !== "string") {
+			initParams[EMBED_TITLE_PARAM] = null;
+		}
+		if (!isBoolParam(searchParams[EMBED_HEADER_PARAM])) {
+			initParams[EMBED_HEADER_PARAM] = null;
+		}
+		if (!isBoolParam(searchParams[EMBED_KEY_PARAM])) {
+			initParams[EMBED_KEY_PARAM] = null;
+		}
+
 		if (Object.keys(initParams).length !== 0) {
 			setSearchParams(initParams, { replace: true });
 		}
@@ -340,6 +399,15 @@ const PerfPanel = (props: Props) => {
 	const testbeds_search = createMemo(() => searchParams[TESTBEDS_SEARCH_PARAM]);
 	const benchmarks_search = createMemo(
 		() => searchParams[BENCHMARKS_SEARCH_PARAM],
+	);
+
+	// Embed params
+	const embed_title = createMemo(() => searchParams[EMBED_TITLE_PARAM]);
+	const embed_header = createMemo(() =>
+		isBoolParamOrDefault(EMBED_HEADER_PARAM, DEFAULT_EMBED_HEADER),
+	);
+	const embed_key = createMemo(() =>
+		isBoolParamOrDefault(EMBED_KEY_PARAM, DEFAULT_EMBED_KEY),
 	);
 
 	// The perf query sent to the server
@@ -738,6 +806,9 @@ const PerfPanel = (props: Props) => {
 					[BRANCHES_SEARCH_PARAM]: null,
 					[TESTBEDS_SEARCH_PARAM]: null,
 					[BENCHMARKS_SEARCH_PARAM]: null,
+					[EMBED_TITLE_PARAM]: null,
+					[EMBED_HEADER_PARAM]: null,
+					[EMBED_KEY_PARAM]: null,
 					[CLEAR_PARAM]: true,
 				});
 			} else {
@@ -863,6 +934,9 @@ const PerfPanel = (props: Props) => {
 				branches_search={branches_search}
 				testbeds_search={testbeds_search}
 				benchmarks_search={benchmarks_search}
+				embed_title={embed_title}
+				embed_header={embed_header}
+				embed_key={embed_key}
 				handleMeasure={handleMeasure}
 				handleStartTime={handleStartTime}
 				handleEndTime={handleEndTime}

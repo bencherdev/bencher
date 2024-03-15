@@ -39,6 +39,8 @@ export interface Props {
 	upper_value: Accessor<boolean>;
 	lower_boundary: Accessor<boolean>;
 	upper_boundary: Accessor<boolean>;
+	embed_title: Accessor<undefined | string>;
+	embed_header: Accessor<boolean>;
 	handleMeasure: (measure: null | string) => void;
 	handleStartTime: (start_time: string) => void;
 	handleEndTime: (end_time: string) => void;
@@ -185,6 +187,20 @@ const EmbedPlotHeader = (props: Props) => {
 		}/perf/${props.project()?.slug}/${location.search}`;
 	});
 
+	const title = createMemo(() => {
+		const embedTitle = props.embed_title();
+		switch (embedTitle) {
+			case "":
+				return <></>;
+			default:
+				return (
+					<h1 class="title is-3" style="word-break: break-word;">
+						{embedTitle ?? props.project()?.name}
+					</h1>
+				);
+		}
+	});
+
 	return (
 		<nav class="panel-heading">
 			<div class="columns is-mobile is-centered is-vcentered is-gapless">
@@ -193,14 +209,14 @@ const EmbedPlotHeader = (props: Props) => {
 					<a href={perfUrl()} target="_blank">
 						<img src={BENCHER_WORDMARK} width="128em" alt="🐰 Bencher" />
 					</a>
-					<h1 class="title is-3" style="word-break: break-word;">
-						{props.project()?.name}
-					</h1>
+					{title()}
 				</div>
 			</div>
-			<div class="columns is-centered is-vcentered">
-				<SharedPlot {...props} />
-			</div>
+			<Show when={props.embed_header()}>
+				<div class="columns is-centered is-vcentered">
+					<SharedPlot {...props} />
+				</div>
+			</Show>
 		</nav>
 	);
 };

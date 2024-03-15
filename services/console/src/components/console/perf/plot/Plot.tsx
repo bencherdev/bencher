@@ -4,6 +4,7 @@ import {
 	type Resource,
 	createMemo,
 	createResource,
+	Show,
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import type { PerfRange } from "../../../../config/types";
@@ -13,6 +14,7 @@ import PlotKey from "./key/PlotKey";
 
 export interface Props {
 	isConsole: boolean;
+	isEmbed: boolean;
 	range: Accessor<PerfRange>;
 	lower_value: Accessor<boolean>;
 	upper_value: Accessor<boolean>;
@@ -20,6 +22,7 @@ export interface Props {
 	upper_boundary: Accessor<boolean>;
 	perfData: Resource<JsonPerf>;
 	key: Accessor<boolean>;
+	embed_key: Accessor<boolean>;
 	handleKey: (key: boolean) => void;
 }
 
@@ -69,14 +72,16 @@ const Plot = (props: Props) => {
 				/>
 			</div>
 			<br />
-			<PlotKey
-				perfData={props.perfData}
-				key={props.key}
-				handleKey={props.handleKey}
-				perfActive={perfActive}
-				handlePerfActive={handlePerfActive}
-				togglePerfActive={togglePerfActive}
-			/>
+			<Show when={!props.isEmbed || props.embed_key()}>
+				<PlotKey
+					perfData={props.perfData}
+					key={props.key}
+					handleKey={props.handleKey}
+					perfActive={perfActive}
+					handlePerfActive={handlePerfActive}
+					togglePerfActive={togglePerfActive}
+				/>
+			</Show>
 		</div>
 	);
 };
