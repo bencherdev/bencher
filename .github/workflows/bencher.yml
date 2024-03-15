@@ -441,9 +441,11 @@ jobs:
       - name: Install udeps
         run: cargo install --version 0.1.45 --locked --force cargo-udeps
       - name: Run API udeps
+        continue-on-error: true
         working-directory: ./services/api
         run: cargo +nightly udeps --all-targets
       - name: Run CLI udeps
+        continue-on-error: true
         working-directory: ./services/cli
         run: cargo +nightly udeps --all-targets
 

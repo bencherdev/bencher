@@ -135,6 +135,15 @@ const PublicProjects = (props: Props) => {
 									</div>
 								}
 							>
+								<Match when={projects.loading}>
+									<For each={Array(per_page() ?? DEFAULT_PER_PAGE)}>
+										{() => (
+											<div class="box">
+												<p>Loading...</p>
+											</div>
+										)}
+									</For>
+								</Match>
 								<Match when={projectsLength() > 0}>
 									<For each={projects()}>
 										{(project) => (
@@ -145,15 +154,6 @@ const PublicProjects = (props: Props) => {
 											>
 												{project.name}
 											</a>
-										)}
-									</For>
-								</Match>
-								<Match when={projects.loading}>
-									<For each={Array(per_page() ?? DEFAULT_PER_PAGE)}>
-										{() => (
-											<div class="box">
-												<p>Loading...</p>
-											</div>
 										)}
 									</For>
 								</Match>

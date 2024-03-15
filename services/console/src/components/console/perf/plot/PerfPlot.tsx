@@ -145,6 +145,13 @@ const PerfPlot = (props: Props) => {
 								/>
 							}
 						>
+							<Match when={props.perfData.loading}>
+								<progress
+									class="progress is-primary"
+									style="margin-top: 8rem; margin-bottom: 12rem;"
+									max="100"
+								/>
+							</Match>
 							<Match when={props.isPlotInit()}>
 								<PlotInit
 									measures={props.measures}
@@ -152,13 +159,6 @@ const PerfPlot = (props: Props) => {
 									testbeds={props.testbeds}
 									benchmarks={props.benchmarks}
 									handleTab={props.handleTab}
-								/>
-							</Match>
-							<Match when={props.perfData.loading}>
-								<progress
-									class="progress is-primary"
-									style="margin-top: 8rem; margin-bottom: 12rem;"
-									max="100"
 								/>
 							</Match>
 						</Switch>

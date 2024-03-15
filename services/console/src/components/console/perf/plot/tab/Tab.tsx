@@ -57,6 +57,15 @@ const Tab = (props: {
 				</div>
 			}
 		>
+			<Match when={props.loading()}>
+				<div class="panel-block is-block">
+					<progress
+						class="progress is-primary"
+						style="margin-top: 4rem; margin-bottom: 6rem;"
+						max="100"
+					/>
+				</div>
+			</Match>
 			<Match
 				when={
 					props.isConsole &&
@@ -128,15 +137,6 @@ const Tab = (props: {
 					handleChecked={props.handleChecked}
 					handleSearch={props.handleSearch}
 				/>
-			</Match>
-			<Match when={props.loading()}>
-				<div class="panel-block is-block">
-					<progress
-						class="progress is-primary"
-						style="margin-top: 4rem; margin-bottom: 6rem;"
-						max="100"
-					/>
-				</div>
 			</Match>
 		</Switch>
 	);
