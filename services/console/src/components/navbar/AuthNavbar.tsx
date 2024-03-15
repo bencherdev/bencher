@@ -1,4 +1,4 @@
-import { BENCHER_VERSION, BENCHER_WORDMARK } from "../../util/ext";
+import { BENCHER_WORDMARK } from "../../util/ext";
 import { decodePath } from "../../util/url";
 import AuthOverride from "../auth/AuthOverride";
 import BENCHER_NAVBAR_ID from "./id";
@@ -23,8 +23,8 @@ const AuthNavbar = () => {
 						<a class="navbar-item" href="/docs/">
 							Docs
 						</a>
-						<a class="navbar-item" href="/perf">
-							Public Projects
+						<a class="navbar-item" href="/explore/">
+							Explore
 						</a>
 					</div>
 

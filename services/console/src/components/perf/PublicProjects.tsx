@@ -114,7 +114,7 @@ const PublicProjects = (props: Props) => {
 				<div class="columns">
 					<div class="column">
 						<div class="content">
-							<h1 class="title is-1">Projects</h1>
+							<h1 class="title is-1">Public Projects</h1>
 							<hr />
 							<Field
 								kind={FieldKind.SEARCH}

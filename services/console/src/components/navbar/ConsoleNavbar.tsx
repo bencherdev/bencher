@@ -66,8 +66,8 @@ const ConsoleNavbar = (props: Props) => {
 							Docs
 						</a>
 					</Show>
-					<a class="navbar-item" href="/perf">
-						Public Projects
+					<a class="navbar-item" href="/explore/">
+						Explore
 					</a>
 					<Show
 						when={user && (props.params?.organization || props.params?.project)}

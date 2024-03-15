@@ -1,64 +1,6 @@
 ---
-interface Project {
-	name: string;
-	logo: string;
-	slug: string;
-}
+import { PROJECTS } from "./projects.ts";
 
-const PROJECTS: Project[][] = [
-	[
-		{
-			name: "Rustls",
-			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/rustls.png",
-			slug: "rustls-821705769",
-		},
-		{
-			name: "Diesel",
-			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/diesel.svg",
-			slug: "diesel",
-		},
-
-		{
-			name: "Poolifier",
-			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/poolifier.png",
-			slug: "poolifier",
-		},
-	],
-	[
-		{
-			name: "Hydra Database",
-			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/hydra-db.svg",
-			slug: "hydra-postgres",
-		},
-		{
-			name: "GreptimeDB",
-			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/greptimedb.svg",
-			slug: "greptimedb",
-		},
-		{
-			name: "Disney+ Hotstar",
-			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/disney-hotstar.png",
-			slug: "hotstar",
-		},
-	],
-	[
-		{
-			name: "K Framework",
-			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/k-framework.png",
-			slug: "k-framework",
-		},
-		{
-			name: "raft",
-			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/raft.png",
-			slug: "raft",
-		},
-		{
-			name: "Stratum",
-			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/stratum.svg",
-			slug: "stratum-v2-sri",
-		},
-	],
-];
 ---
 
 <section class="section" style="margin-top: 4rem;">
@@ -72,7 +14,7 @@ const PROJECTS: Project[][] = [
 					<div class="columns is-centered is-vcentered is-mobile">
 						{projects.map((project) => (
 						<div class="column has-text-centered is-2-tablet">
-							<a href={`https://bencher.dev/perf/${project.slug}`}>
+							<a href={`https://bencher.dev/perf/${project.slug}?${project.query}`}>
 								<img width="88%" src={project.logo} alt={project.name} />
 							</a>
 						</div>

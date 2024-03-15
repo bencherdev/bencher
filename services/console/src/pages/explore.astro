@@ -1,0 +1,34 @@
+---
+import LegalLayout from "../layouts/legal/LegalLayout.astro";
+import { PROJECTS } from "../components/landing/projects.ts";
+
+const title = "Explore";
+const titleFmt = (title: string) => `🔭 ${title}`;
+const description = "Explore continuous benchmarking results and performance regressions for public projects on Bencher"
+---
+
+<LegalLayout title={title} titleFmt={titleFmt} description={description} heading={title}>
+  {PROJECTS.flat().map((project)=> (
+    <a class="box"
+      title={`View ${project.name}`}
+      href={`/perf/${project.slug}?${project.query}`}>
+      <div class="columns is-vcentered is-mobile">
+        <div class="column is-narrow">
+          <img src={project.logo} alt={project.name} width="64">
+        </div>
+        <div class="column">
+            <h3 class="title is-3">{project.name}</h3>
+        </div>
+      </div>
+      <p>{project.about}</p>
+    </a>
+  ))}
+  <br />
+  <a
+    class="button is-fullwidth is-outlined"
+    title="View all public projects"
+    href="/perf"
+  >
+      See all public projects
+  </a>
+</LegalLayout>
