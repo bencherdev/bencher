@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import PricingTable from "../components/pricing/PricingTable";
+import FallbackPricingTable from "../components/pricing/FallbackPricingTable";
 import { BENCHER_CALENDLY_URL } from "../util/ext";
 import AuthRedirect from "../components/auth/AuthRedirect";
 import SelfHostedRedirect from "../components/site/SelfHostedRedirct";
@@ -36,7 +37,9 @@ const description =
     </section>
     <hr />
     <section class="section">
-      <PricingTable client:only="solid-js" />
+      <PricingTable client:only="solid-js" >
+        <FallbackPricingTable slot="fallback" />
+      </PricingTable>
     </section>
 
     <br />

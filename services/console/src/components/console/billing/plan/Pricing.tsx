@@ -35,7 +35,7 @@ const Pricing = (props: Props) => {
 					<span class="plan-price-amount">$0</span>
 				</div>
 				<div class="content has-text-centered">
-					<small>/metric</small>
+					<sup>per benchmark result</sup>
 				</div>
 				<div class="plan-items">
 					<div class="plan-item">Public Projects</div>
@@ -68,7 +68,7 @@ const Pricing = (props: Props) => {
 					<span class="plan-price-amount">$0.01</span>
 				</div>
 				<div class="content has-text-centered">
-					<small>/metric</small>
+					<sup>per benchmark result</sup>
 				</div>
 				<div class="plan-items">
 					<div class="plan-item">Public Projects</div>
@@ -101,7 +101,7 @@ const Pricing = (props: Props) => {
 					<span class="plan-price-amount">$0.05</span>
 				</div>
 				<div class="content has-text-centered">
-					<small>/metric</small>
+					<sup>per benchmark result</sup>
 				</div>
 				<div class="plan-items">
 					<div class="plan-item">Public Projects</div>

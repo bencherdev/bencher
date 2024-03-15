@@ -1,6 +1,6 @@
 import { useNavigate } from "../../util/url";
 import { PlanLevel } from "../../types/bencher";
-import Pricing from "../console/billing/plan/Pricing";
+import InnerPricingTable from "./InnerPricingTable";
 
 const PricingTable = () => {
 	const navigate = useNavigate();
@@ -10,17 +10,13 @@ const PricingTable = () => {
 	};
 
 	return (
-		<Pricing
-			plan={PlanLevel.Team}
-			freeText="Sign up for free"
+		<InnerPricingTable
 			handleFree={() => {
 				navigate(url(PlanLevel.Free));
 			}}
-			teamText="Continue with Team"
 			handleTeam={() => {
 				navigate(url(PlanLevel.Team));
 			}}
-			enterpriseText="Continue with Enterprise"
 			handleEnterprise={() => {
 				navigate(url(PlanLevel.Enterprise));
 			}}
