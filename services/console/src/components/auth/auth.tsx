@@ -1,4 +1,5 @@
 import { validEmail, validJwt, validUserName } from "../../util/valid";
+import { EMAIL, USERNAME } from "./authFields";
 
 export const PLAN_PARAM = "plan";
 export const INVITE_PARAM = "invite";
@@ -7,19 +8,11 @@ export const TOKEN_PARAM = "token";
 
 export const AUTH_FIELDS = {
 	username: {
-		label: "Name",
-		type: "text",
-		placeholder: "Full Name",
-		icon: "fas fa-user",
-		help: "May only use: letters, numbers, contained spaces, apostrophes, periods, commas, and dashes",
+		...USERNAME,
 		validate: validUserName,
 	},
 	email: {
-		label: "Email",
-		type: "email",
-		placeholder: "email@example.com",
-		icon: "fas fa-envelope",
-		help: "Must be a valid email address",
+		...EMAIL,
 		validate: validEmail,
 	},
 	consent: {
