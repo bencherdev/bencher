@@ -1,0 +1,25 @@
+### Executador de Benchmarks Rustls
+O Executador de Benchmarks Rustls é um servidor personalizado de benchmarking contínuo.
+Ele foi projetado para ser executado em um host de metal nú.
+E recebe eventos de um aplicativo complementar do GitHub via webhooks.
+A cada push para o branch `main`,
+o Executador de Benchmarks executa tanto os benchmarks de contagem de instrução quanto os de tempo real.
+Os resultados são armazenados localmente e
+enviados para [o projeto Rustls no Bencher][bencher rustls] usando a [API do Bencher][bencher api].
+
+Sempre que um pull request é aprovado
+ou um comentário contendo `@rustls-benchmarking bench` é deixado por um mantenedor do Rustls,
+o conjunto de benchmarks é executado.
+O Executador de Benchmarks recebe um webhook do GitHub,
+puxa o código do pull request,
+executa os benchmarks de contagem de instrução,
+executa os benchmarks de tempo real,
+compara os resultados do pull request com os resultados do branch `main`alvo,
+e então posta os resultados como um comentário no pull request.
+O Executador de Benchmarks usa um modelo de [Intervalo Interquartil Delta][delta iqr] para seu limite estatístico
+para determinar se uma regressão de desempenho ocorreu.
+Resultados que excedem esse limite são destacados no comentário do pull request.
+
+[bencher rustls]: /perf/rustls-821705769?key=true&reports_per_page=8&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&clear=true&tab=branches&measures=013468de-9c37-4605-b363-aebbbf63268d&branches=28fae530-2b53-4482-acd4-47e16030d54f&testbeds=62ed31c3-8a58-479c-b828-52521ed67bee&benchmarks=bd25f73c-b2b9-4188-91b4-f632287c0a1b%2C8d443816-7a23-40a1-a54c-59de911eb517%2C42edb37f-ca91-4984-8835-445514575c85&start_time=1704067200000
+[bencher api]: /docs/pt/api/
+[delta iqr]: /docs/pt/explanation/thresholds/#delta-interquartile-range-thresholds

@@ -1,0 +1,28 @@
+### Rustls CI Bench
+CI Bench é um equipamento de referência de última geração para benchmarks contínuos.
+Ele executa o mesmo benchmark exato em dois modos diferentes: modo de contagem de instruções e modo de tempo de parede.
+Isso é realizado usando um runtime async personalizado e engenhoso.
+Para o modo de contagem de instruções, a I/O ainda é realmente bloqueante.
+Por debaixo dos panos, as tarefas simplesmente são concluídas em uma única pesquisa.
+Depois, para o modo de tempo de parede, a I/O é realmente não bloqueante.
+Isso permite a simulação de buffers compartilhados e em memória.
+O servidor e o cliente são pesquisados alternadamente.
+Isso permite que CI Bench elimine o ruído e o indeterminismo de um runtime async em seus benchmarks.
+
+Rustls escolheu rastrear as instruções da CPU usando [cachegrind][cachegrind].
+Essa decisão foi baseada na [solução de benchmark contínuo do compilador Rust][rustc perf].
+As contagens de instruções fornecem uma forma muito consistente de comparar duas versões do mesmo software.
+Isso o torna ideal para benchmarking contínuo.
+No entanto, não é possível inferir o custo de tempo de execução real de um aumento na contagem de instruções.
+Um aumento de 10% nas instruções não resulta necessariamente em um aumento de 10% no desempenho do tempo de execução.
+Mas um aumento significativo nas instruções provavelmente significa que há algum aumento no desempenho do tempo de execução.
+Por esta razão, CI Bench também mede o tempo de parede.
+
+O tempo de parede é o que o projeto Rustls realmente se preocupa.
+Medir as contagens de instruções é apenas um proxy útil.
+Benchmarks baseados na contagem de instruções não podem desambiguar mudanças que usam o mesmo número de instruções
+mas levam a um desempenho de tempo de parede muito diferente.
+Por exemplo, um novo algoritmo pode acontecer de ter o mesmo número exato de instruções, mas funciona duas vezes mais devagar.
+
+[cachegrind]: https://valgrind.org/docs/manual/cg-manual.html
+[rustc perf]: https://github.com/rust-lang/rustc-perf

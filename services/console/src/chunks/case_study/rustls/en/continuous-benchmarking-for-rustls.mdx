@@ -1,0 +1,17 @@
+## Continuous Benchmarking for Rustls
+In order to catch performance regressions before they get released,
+the Rustls project decided to invest in [Continuous Benchmarking][continuous benchmarking].
+
+> Continuous Benchmarking is a software development practice where members of a team benchmark their work frequently,
+> usually each person benchmarks at least daily - leading to multiple benchmarks per day.
+> Each benchmark is verified by an automated build to detect performance regressions as quickly as possible.
+> Many teams find that this approach leads to significantly reduced performance regressions
+> and allows a team to develop performant software more rapidly.
+
+The Rustls project's continuous benchmarking solution consists of two main components:
+- [CI Bench][ci bench]: A custom benchmarking harness designed specifically for running benchmarks in CI
+- [Bench Runner][rustls bench app]: A custom, bare metal continuous benchmarking server and companion GitHub App
+
+[continuous benchmarking]: /docs/explanation/continuous-benchmarking/
+[ci bench]: https://github.com/rustls/rustls/tree/main/ci-bench
+[rustls bench app]: https://github.com/rustls/rustls-bench-app

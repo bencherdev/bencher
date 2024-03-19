@@ -3,174 +3,33 @@ title: "Rustls"
 description: "A continuous benchmarking case study for the Rustls project. Learn how they catch performance regressions in CI."
 heading: "Rustls: Continuous Benchmarking Case Study"
 sortOrder: 1
-draft: false
 ---
 
-import BencherFooter from "../../../chunks/learn/en/bencher-footer.mdx"
+import WhatIsRustls from "../../../chunks/case_study/rustls/en/what-is-rustls.mdx";
+import BenchmarkingRustls from "../../../chunks/case_study/rustls/en/benchmarking-rustls.mdx";
+import ContinuousBenchmarkingForRustls from "../../../chunks/case_study/rustls/en/continuous-benchmarking-for-rustls.mdx";
+import RustlsCiBench from "../../../chunks/case_study/rustls/en/rustls-ci-bench.mdx";
+import RustlsBenchRunner from "../../../chunks/case_study/rustls/en/rustls-bench-runner.mdx";
+import BareMetalServer from "../../../chunks/case_study/rustls/en/bare-metal-server.mdx";
+import TrophyCase from "../../../chunks/case_study/rustls/en/trophy-case.mdx";
+import WrapUp from "../../../chunks/case_study/rustls/en/wrap-up.mdx";
+import BencherFooter from "../../../chunks/learn/en/bencher-footer.mdx";
 
-## What is Rustls?
-[Rustls][rustls] is a modern Transport Layer Security (TLS) library written in Rust,
-with the aim of replacing non-memory safe alternatives such as OpenSSL.
-The TLS protocol is used to provide secure communications,
-typically between a web server and a client.
-TLS was previously called Secure Socket Layer (SSL).
-It ensures that the data transmitted between the two parties is encrypted
-and secure from eavesdropping or tampering.
-Therefore, it is vital for a TLS library like Rustls to be both fast and secure.
+<WhatIsRustls />
 
-> 🐰 The `s` in `https` means that you are using TLS to view this page!
+<BenchmarkingRustls />
 
-[rustls]: https://github.com/rustls/rustls
+<ContinuousBenchmarkingForRustls />
 
-## Benchmarking Rustls
-Rustls first commit was made by the project's creator [Joseph Birr-Pixton][ctz] on 02 May 2016
-with the first successful TLS connection not happening until the 27th of that same month.
-By that September, he was [already benchmarking Rustls][bay area rust].
-With substantial performance improvements under his belt,
-he did [a head-to-head benchmark comparison of Rustls vs OpenSSL][rustls vs openssl 2019] in July 2019.
+<RustlsCiBench />
 
-The results from that benchmark comparison were:
-- Rustls was 15% quicker to send data.
-- Rustls was 5% quicker to receive data.
-- Rustls was 20-40% quicker to set up a client connection.
-- Rustls was 10% quicker to set up a server connection.
-- Rustls was 30-70% quicker to resume a client connection.
-- Rustls was 10-20% quicker to resume a server connection.
-- Rustls used less than half the memory of OpenSSL.
+<RustlsBenchRunner />
 
-In 2023, the Internet Security Research Group [funded performance benchmarking of the Rustls project][rustls performance],
-and that generated [an updated head-to-head benchmark comparison of Rustls vs OpenSSL][rustls vs openssl 2023].
-Though these updated results were informative for the Rustls project
-on both areas of strength and areas to improve,
-the largest performance concern is now on guaranteeing that _new_ code does not introduce a performance regression.
+<BareMetalServer />
 
-[ctz]: https://github.com/ctz/
-[bay area rust]: https://raw.githubusercontent.com/ctz/talks/master/rustls.pdf
-[rustls vs openssl 2019]: https://jbp.io/2019/07/01/rustls-vs-openssl-performance.html
-[rustls performance]: https://www.memorysafety.org/blog/rustls-performance/
-[rustls vs openssl 2023]: https://github.com/aochagavia/rustls-bench-results
+<TrophyCase />
 
-## Continuous Benchmarking for Rustls
-In order to catch performance regressions before they get released,
-the Rustls project decided to invest in [Continuous Benchmarking][continuous benchmarking].
-
-> Continuous Benchmarking is a software development practice where members of a team benchmark their work frequently,
-> usually each person benchmarks at least daily - leading to multiple benchmarks per day.
-> Each benchmark is verified by an automated build to detect performance regressions as quickly as possible.
-> Many teams find that this approach leads to significantly reduced performance regressions
-> and allows a team to develop performant software more rapidly.
-
-The Rustls project's continuous benchmarking solution consists of two main components:
-- [CI Bench][ci bench]: A custom benchmarking harness designed specifically for running benchmarks in CI
-- [Bench Runner][rustls bench app]: A custom, bare metal continuous benchmarking server and companion GitHub App
-
-[continuous benchmarking]: /docs/explanation/continuous-benchmarking/
-[ci bench]: https://github.com/rustls/rustls/tree/main/ci-bench
-[rustls bench app]: https://github.com/rustls/rustls-bench-app
-
-### Rustls CI Bench
-CI Bench is a best-in-class harness for continuous benchmarking.
-It runs the exact same benchmark in two different modes: instruction count mode and wall-time mode.
-This is accomplished using an ingenious custom async runtime.
-For instruction count mode, the I/O is actually still blocking.
-Under the hood, tasks just complete in a single poll.
-Then for wall-time mode, the I/O is really non-blocking.
-This allows for simulating shared, in-memory buffers.
-The server and client are polled in turns.
-This allows CI Bench to eliminate the noise and non-determinism of an async runtime in their benchmarks.
-
-Rustls chose to track CPU instructions using [cachegrind][cachegrind].
-This decision was modeled after [the Rust compiler's continuous benchmarking solution][rustc perf].
-Instruction counts provide a very consistent way to compare two versions of the same software.
-This makes it ideal for continuous benchmarking.
-However, it is not possible to infer the actual runtime cost of an instruction count increase.
-A 10% increase in instructions does not necessarily result in a 10% increase in runtime performance.
-But a significant increase in instructions likely means that there is some increase in runtime performance.
-For this reason, CI Bench also measures wall-time.
-
-Wall-time is the thing that the Rustls project really cares about.
-Measuring instruction counts is just a useful proxy.
-Instruction count based benchmarking can't disambiguate changes that use the same number of instructions
-but lead to wildly different wall-time performance.
-For example, a new algorithm may happen to have the exact same number of instructions but run twice as slow.
-
-[cachegrind]: https://valgrind.org/docs/manual/cg-manual.html
-[rustc perf]: https://github.com/rust-lang/rustc-perf
-
-### Rustls Bench Runner
-The Rustls Bench Runner is custom continuous benchmarking server.
-It is designed to run on a bare metal host,
-and it receives events from a companion GitHub App via webhooks.
-On every push to the `main` branch,
-the Bench Runner runs both the instruction count and wall-time benchmarks.
-The results are stored locally and
-sent to [the Rustls project on Bencher][bencher rustls] using the [Bencher API][bencher api].
-
-Whenever a pull request is approved
-or a comment containing `@rustls-benchmarking bench` is left by a Rustls maintainer,
-the benchmarking suite is run.
-The Bench Runner receives a webhook from GitHub,
-pulls the code for the pull request,
-runs the instruction count benchmarks,
-runs the wall-time benchmarks,
-compares the pull request results to the target `main` branch results,
-and then posts the results as a comment on the pull request.
-The Bench Runner uses a [Delta Interquartile Range model][delta iqr] for its statistical threshold
-to determine whether a performance regression has ocurred.
-Results that exceed this threshold are highlighted in the pull request comment.
-
-[bencher rustls]: /perf/rustls-821705769?key=true&reports_per_page=8&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&clear=true&tab=branches&measures=013468de-9c37-4605-b363-aebbbf63268d&branches=28fae530-2b53-4482-acd4-47e16030d54f&testbeds=62ed31c3-8a58-479c-b828-52521ed67bee&benchmarks=bd25f73c-b2b9-4188-91b4-f632287c0a1b%2C8d443816-7a23-40a1-a54c-59de911eb517%2C42edb37f-ca91-4984-8835-445514575c85&start_time=1704067200000
-[bencher api]: /docs/api/
-[delta iqr]: /docs/explanation/thresholds/#delta-interquartile-range-thresholds
-
-#### Bare Metal Server
-In order to get a 1% resolution on their wall-time benchmarks,
-the Rustls project invested in a [specially configured][server config],
-bare metal continuous benchmarking server.
-Unlike most modern CI runners, this server is _not_ ephemeral.
-That is, the same underlying server hardware and operating system are used for each run.
-There is no virtualization.
-
-The bare metal server has been specifically configured to create the most consistent results possible.
-Frequency scaling (Intel's TurboBoost)
-and simultaneous multithreading (Intel's Hyper-Threading) have both been disabled in the BIOS.
-CPU scaling is set to `performance`.
-Address Space Layout Randomization (ASLR) and the Non-Maskable Interrupt (NMI) watchdog
-are both disabled by setting `kernel.randomize_va_space=0` and `kernel.nmi_watchdog=0`
-in `sysctl.conf`, respectively.
-The bare metal server is hosted by [OHVcloud][OVHcloud].
-
-[server config]: https://github.com/rust-lang/rustc-perf/blob/master/docs/perf-runner.md
-[OVHcloud]: https://www.ovhcloud.com/en/
-
-## Trophy Case
-
-- [PR #1640][pr 1640]: One of the first uses of the Rustls continuous benchmarking integration for evaluating the transition from `write_vectored` to `write`. This change improved the Rustls send-direction transfer benchmarks by almost 20% in some cases.
-- [PR #1730][pr 1730]: Found performance regressions when randomizing the order of TLS ClientHello extensions. This resulted in another iteration of development and the use of a more efficient approach.
-- [PR #1834][pr 1834]: Helped to quickly validate a critical security fix did no introduce a performance regression. This allowed the team to focus on getting multiple security patched versions released quickly.
-
-[pr 1640]: https://github.com/rustls/rustls/pull/1640#issuecomment-1854147668
-[pr 1730]: https://github.com/rustls/rustls/pull/1730#issuecomment-1883180496
-[pr 1834]: https://github.com/rustls/rustls/pull/1834#issuecomment-1974811046
-
-## Wrap Up
-
-Building on the foundation set by the project's creator,
-[Adolfo Ochagavía][aochagavia] has built an impressive continuous benchmarking solution for the Rustls project.
-This includes a custom benchmarking harness that runs both instruction count and wall-time benchmarks for the same test,
-a custom benchmark runner, a custom GitHub App, and a custom, dedicated bare metal server.
-It is one of the most impressive [project specific continuous benchmarking solutions][prior art] out there.
-If your project has the time and resources to build and maintain a bespoke continuous benchmarking solution,
-the Rustls project sets a high bar to aim for.
-
-A very special thank you to Adolfo Ochagavía for reviewing this case study.
-His blog posts on [Continuous Benchmarking for Rustls][Continuous benchmarking for rustls]
-and [Rustls performance][rustls performance] were the basis for its content.
-
-[aochagavia]: https://github.com/aochagavia
-[prior art]: /docs/reference/prior-art/#project-specific
-[Continuous benchmarking for rustls]: https://ochagavia.nl/blog/continuous-benchmarking-for-rustls/
-[rustls performance]: https://www.memorysafety.org/blog/rustls-performance/
+<WrapUp />
 
 <BencherFooter>
 The Rustls project uses Bencher to track and visualize their historical benchmark results.

@@ -1,0 +1,17 @@
+## Kontinuierliches Benchmarking für Rustls
+Um Leistungseinbußen zu erkennen, bevor sie veröffentlicht werden,
+hat das Rustls-Projekt beschlossen, in [Kontinuierliches Benchmarking][kontinuierliches Benchmarking] zu investieren.
+
+> Kontinuierliches Benchmarking ist eine Softwareentwicklungspraxis, bei der Teammitglieder ihre Arbeit häufig benchmarken,
+> normalerweise führt jede Person mindestens täglich Benchmarks durch - was zu mehreren Benchmarks pro Tag führt.
+> Jeder Benchmark wird von einem automatisierten Build verifiziert, um Leistungsrückgänge so schnell wie möglich zu erkennen.
+> Viele Teams stellen fest, dass dieser Ansatz zu einer signifikanten Reduzierung der Leistungsrückgänge führt
+> und ermöglicht es einem Team, leistungsfähige Software schneller zu entwickeln.
+
+Die kontinuierliche Benchmarking-Lösung des Rustls-Projekts besteht aus zwei Hauptkomponenten:
+- [CI Bench][ci bench]: Ein angepasstes Benchmarking-Harness, das speziell für das Ausführen von Benchmarks in CI entwickelt wurde
+- [Bench Runner][Rustls bench app]: Ein angepasster, bare-metal kontinuierlicher Benchmarking-Server und zugehörige GitHub App
+
+[kontinuierliches Benchmarking]: /docs/de/explanation/continuous-benchmarking/
+[ci bench]: https://github.com/rustls/rustls/tree/main/ci-bench
+[Rustls bench app]: https://github.com/rustls/rustls-bench-app

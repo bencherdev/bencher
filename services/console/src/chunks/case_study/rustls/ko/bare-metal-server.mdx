@@ -1,0 +1,14 @@
+#### 베어 메탈 서버
+월타임 벤치마크에 1%의 해상도를 얻기 위해, Rustls 프로젝트는 [특별히 구성된][server config] 베어 메탈 지속적인 벤치마킹 서버에 투자했습니다.
+대부분의 현대 CI 러너와 달리, 이 서버는 _일시적이지 않습니다_. 
+즉, 각 실행에 동일한 기본 서버 하드웨어와 운영 체제가 사용됩니다.
+가상화는 없습니다.
+
+베어 메탈 서버는 가능한 가장 일관된 결과를 생성하도록 특별히 구성되었습니다.
+주파수 스케일링 (인텔의 TurboBoost) 및 동시다발적 멀티스레딩 (인텔의 Hyper-Threading)은 BIOS에서 모두 비활성화되었습니다.
+CPU 스케일링은 `performance`로 설정됩니다.
+주소 공간 레이아웃 무작위화 (ASLR) 및 Non-Maskable Interrupt (NMI) 감시dog은 각각 `sysctl.conf`에서 `kernel.randomize_va_space=0` 및 `kernel.nmi_watchdog=0` 설정으로 비활성화됩니다.
+베어 메탈 서버는 [OHVcloud][OVHcloud]에 의해 호스팅됩니다.
+
+[server config]: https://github.com/rust-lang/rustc-perf/blob/master/docs/ko/perf-runner.md
+[OVHcloud]: https://www.ovhcloud.com/ko/

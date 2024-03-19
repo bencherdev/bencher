@@ -1,0 +1,21 @@
+## 对 Rustls 的基准测试
+Rustls 的第一次提交是由项目的创建者 [Joseph Birr-Pixton][ctz] 在 2016 年 5 月 2 日进行的，而第一次成功的 TLS 连接直到同月的 27 日才发生。
+到了那一年的 9 月，他已经开始[对 Rustls 进行基准测试][bay area rust]了。在他的带领下，项目做出了显著的性能改进，
+他在 2019 年 7 月进行了 [Rustls 与 OpenSSL 的头对头的基准测试对比][rustls vs openssl 2019]。
+
+那次基准测试对比的结果如下：
+- Rustls 发送数据要快 15%。
+- Rustls 接收数据要快 5%。
+- Rustls 建立客户端连接要快 20-40%。
+- Rustls 建立服务器连接要快 10%。
+- Rustls 恢复客户端连接要快 30-70%。
+- Rustls 恢复服务器连接要快 10-20%。
+- Rustls 使用的内存不到 OpenSSL 的一半。
+
+在 2023 年，互联网安全研究组 [资助了对 Rustls 项目的性能基准测试][rustls performance]，并且产生了 [更新的 Rustls 与 OpenSSL 的头对头基准测试对比][rustls vs openssl 2023]。虽然这些更新的结果对 Rustls 项目在优势区域和改进区域的了解都很有帮助，但现在最大的性能关注点是保证_新的_代码不会引入性能回归。
+
+[ctz]: https://github.com/ctz/
+[bay area rust]: https://raw.githubusercontent.com/ctz/talks/master/rustls.pdf
+[rustls vs openssl 2019]: https://jbp.io/2019/07/01/rustls-vs-openssl-performance.html
+[rustls performance]: https://www.memorysafety.org/blog/rustls-performance/
+[rustls vs openssl 2023]: https://github.com/aochagavia/rustls-bench-results

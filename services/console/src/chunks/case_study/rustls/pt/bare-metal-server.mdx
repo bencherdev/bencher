@@ -1,0 +1,19 @@
+#### Servidor Bare Metal
+Para obter uma resolução de 1% em seus benchmarks de tempo de parede,
+o projeto Rustls investiu em um servidor de benchmarking contínuo [especialmente configurado][configuração do servidor],
+bare metal.
+Diferentemente da maioria dos runners de CI modernos, este servidor _não_ é efêmero.
+Ou seja, o mesmo hardware de servidor subjacente e o sistema operacional são usados para cada execução.
+Não há virtualização.
+
+O servidor bare metal foi especificamente configurado para criar os resultados mais consistentes possíveis.
+O escalonamento de frequência (TurboBoost da Intel)
+e a multithreading simultânea (Hyper-Threading da Intel) foram ambos desativados no BIOS.
+O escalonamento da CPU está definido para `performance`.
+Randomização do Layout do Espaço de Endereço (ASLR) e o watchdog do Interrupt Não-Mascarável (NMI)
+ambos são desabilitados ao definir `kernel.randomize_va_space=0` e `kernel.nmi_watchdog=0`
+no `sysctl.conf`, respectivamente.
+O servidor bare metal é hospedado pela [OVHcloud][OVHcloud].
+
+[configuração do servidor]: https://github.com/rust-lang/rustc-perf/blob/master/docs/pt/perf-runner.md
+[OVHcloud]: https://www.ovhcloud.com/pt-br/

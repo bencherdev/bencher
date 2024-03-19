@@ -1,0 +1,16 @@
+## Rustls的持续性基准测试
+为了在发布之前发现性能退化，Rustls项目决定投资于[持续性基准测试][continuous benchmarking]。
+
+> 持续性基准测试是一种软件开发实践，团队成员经常对他们的工作进行基准测试，
+> 通常每个人每天至少完成一次基准测试 — 这将导致每天进行多次基准测试。
+> 每次基准测试都由一个自动化构建来验证，以尽快发现性能退化。
+> 许多团队发现这种方法显著减少了性能退化
+> 并且使团队能更快地开发高性能的软件。
+
+Rustls项目的持续性基准测试解决方案主要包括两个组件：
+- [CI Bench][ci bench]：一个专门为CI中运行基准测试而设计的自定义基准测试工具
+- [Bench Runner][rustls bench app]：一个定制的，裸机持续基准测试服务器和配套的GitHub应用
+
+[continuous benchmarking]: /docs/zh/explanation/continuous-benchmarking/
+[ci bench]: https://github.com/rustls/rustls/tree/main/ci-bench
+[rustls bench app]: https://github.com/rustls/rustls-bench-app

@@ -1,0 +1,45 @@
+---
+title: Getting started with our API
+description: Learn the basics of setting up and making calls to our API.
+slug: /docs/getting-started
+---
+
+# Getting Started
+
+Welcome to our official guide on how to get started with our API. This guide will cover the basics, such as:
+
+- Setting up your API keys
+- Making your first request
+- Understanding our error codes
+
+## Setting Up Your API Keys
+
+The first step is to set up your API keys. API keys allow you to authenticate your requests. Here's how to get yours:
+
+1. Go to the [developer portal](https://developer.example.com)
+2. Click on 'Create New App'
+3. Fill in the required details 
+4. Click 'Create'
+5. Your API keys will be displayed on the screen
+
+## Making Your First Request
+
+With your API keys set up, you can now make your first request. Here's an example of a basic request:
+
+```javascript
+fetch('https://api.example.com/data', {
+  method: 'GET',
+  headers: {
+    'API-Key': 'your-api-key',
+  },
+})
+```
+Remember to replace "your-api-key" with the actual API key you received.
+
+## Understanding Our Error Codes
+
+You may occasionally encounter errors when working with our API. We use standard HTTP status codes to indicate the success or failure of a request. You can find a complete list of our error codes in the [API Error Codes](/docs/api-error-codes) section of our documentation.
+
+Happy coding!
+
+---

@@ -1,0 +1,7 @@
+#### Bare-Metal-Server
+Um eine Auflösung von 1% bei ihren Wandzeit-Benchmarks zu erreichen, investierte das Rustls-Projekt in einen [speziell konfigurierten][server config], dedizierten kontinuierlichen Benchmarking-Server. Im Gegensatz zu den meisten modernen CI-Läufern ist dieser Server _nicht_ flüchtig. Das bedeutet, dass für jeden Durchlauf die gleiche zugrundeliegende Server-Hardware und das gleiche Betriebssystem verwendet werden. Es gibt keine Virtualisierung.
+
+Der Bare-Metal-Server wurde speziell konfiguriert, um die konsequentesten Ergebnisse zu erzielen. Die Frequenzskalierung (Intel's TurboBoost) und das simultane Multithreading (Intel's Hyper-Threading) wurden beide im BIOS deaktiviert. Die CPU-Skalierung ist auf `performance` eingestellt. Die Adressraumlayout-Randomisierung (ASLR) und der nicht maskierbare Interrupt (NMI) Watchdog sind beide deaktiviert, indem `kernel.randomize_va_space=0` und `kernel.nmi_watchdog=0` in `sysctl.conf` eingestellt werden. Der Bare-Metal-Server wird von [OHVcloud][OVHcloud] gehostet.
+
+[server config]: https://github.com/rust-lang/rustc-perf/blob/master/docs/de/perf-runner.md
+[OVHcloud]: https://www.ovhcloud.com/en/

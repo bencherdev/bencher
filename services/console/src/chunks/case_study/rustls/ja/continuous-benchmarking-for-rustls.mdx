@@ -1,0 +1,17 @@
+## Rustlsのための継続的ベンチマーキング
+リリース前にパフォーマンスの後退を検出するために、Rustlsプロジェクトは[継続的ベンチマーキング][continuous benchmarking]に投資することにしました。
+
+> 継続的ベンチマーキングとは、チームのメンバーが自分たちの作業を頻繁にベンチマークし、
+> 通常は一人一日に少なくとも一度ベンチマークを行うというソフトウェア開発の実践です。
+> これにより、一日に複数回のベンチマークが行われます。
+> 各ベンチマークは自動ビルドにより検証され、パフォーマンスの後退をできるだけ早く検出します。
+> このアプローチを採用することで、多くのチームはパフォーマンスの後退が大幅に減少し、
+> パフォーマントなソフトウェアをより迅速に開発できると感じています。
+
+Rustlsプロジェクトの継続的ベンチマーキングの解決策は主に2つのコンポーネントから構成されています：
+- [CI Bench][ci bench]: CIでベンチマークを実行するために特別に設計されたカスタムベンチマーキングハーネス
+- [Bench Runner][rustls bench app]: カスタム、ベアメタルの継続的ベンチマーキングサーバーとパートナーのGitHub App
+
+[continuous benchmarking]: /docs/ja/explanation/continuous-benchmarking/
+[ci bench]: https://github.com/rustls/rustls/tree/main/ci-bench
+[rustls bench app]: https://github.com/rustls/rustls-bench-app

@@ -5,6 +5,7 @@ import PerfLayout from "../../../layouts/perf/PerfLayout.astro";
 import PublicProject from "../../../components/perf/PublicProject";
 import type { JsonProject } from "../../../types/bencher";
 import Tetris from "../../../components/site/Tetris.astro";
+import Notification from "../../../components/site/Notification";
 import { fetchSSR } from "../../../components/perf/util";
 
 // Using `meta.env` requires `prerender = false`
@@ -62,6 +63,9 @@ try {
     </div>
   </section>
   :
+  <>
+  <Notification client:only="solid-js" />
   <PublicProject client:only="solid-js" apiUrl={BENCHER_API_URL} params={params} project={jsonProject} />
+  </>
   }
 </PerfLayout>

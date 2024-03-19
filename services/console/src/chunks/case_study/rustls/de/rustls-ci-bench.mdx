@@ -1,0 +1,28 @@
+### Rustls CI Bench
+CI Bench ist ein erstklassiges Gerüst für kontinuierliche Benchmarking.
+Es führt den genau gleichen Benchmark in zwei verschiedenen Modi aus: Instruktionszählmodus und Wanduhrenmodus.
+Dies wird mit Hilfe einer genialen benutzerdefinierten asynchronen Laufzeit erreicht.
+Im Instruktionszählmodus ist die I/O tatsächlich immer noch blockierend.
+Im Hintergrund werden Aufgaben in einer einzigen Abfrage abgeschlossen.
+Dann, im Wanduhrenmodus, ist die I/O wirklich nicht blockierend.
+Dies ermöglicht die Simulation von gemeinsam genutzten, im Speicher vorhandenen Puffern.
+Der Server und der Client werden abwechselnd abgefragt.
+Auf diese Weise ermöglicht CI Bench das Eliminieren von Störgeräuschen und Nicht-Determinismus in ihren Benchmarks.
+
+Rustls hat sich dafür entschieden, CPU-Instruktionen mithilfe von [cachegrind][cachegrind] zu verfolgen.
+Diese Entscheidung richtete sich nach [der kontinuierlichen Benchmarking-Lösung des Rust-Compilers][rustc perf].
+Instruktionszahlen bieten eine sehr konsistente Möglichkeit, zwei Versionen derselben Software zu vergleichen.
+Dies macht es ideal für kontinuierliche Benchmarking.
+Es ist jedoch nicht möglich, die tatsächlichen Laufzeitkosten einer Erhöhung der Instruktionszahl abzuschätzen.
+Ein Anstieg der Instruktionen um 10% führt nicht unbedingt zu einer Leistungssteigerung der Laufzeit um 10%.
+Ein signifikanter Anstieg der Instruktionen bedeutet jedoch wahrscheinlich, dass es einen Anstieg der Laufzeitleistung gibt.
+Aus diesem Grund misst CI Bench auch die Wandzeit.
+
+Die Wandzeit ist das, was dem Rustls-Projekt wirklich wichtig ist.
+Die Messung von Instruktionszahlen ist nur ein nützlicher Proxy.
+Benchmarking auf Basis von Instruktionszählung kann Änderungen nicht differenzieren, die die gleiche Anzahl von Instruktionen verwenden,
+aber zu völlig unterschiedlichen Wandzeitleistungen führen.
+Zum Beispiel könnte ein neuer Algorithmus zufällig genau die gleiche Anzahl von Anweisungen haben, aber doppelt so langsam laufen.
+
+[cachegrind]: https://valgrind.org/docs/manual/cg-manual.html
+[rustc perf]: https://github.com/rust-lang/rustc-perf

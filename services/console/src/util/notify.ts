@@ -2,6 +2,9 @@ import { hiddenRedirect, pathname, useNavigate, useSearchParams } from "./url";
 
 export const NOTIFY_KIND_PARAM = "notify_kind";
 export const NOTIFY_TEXT_PARAM = "notify_text";
+export const NOTIFY_TIMEOUT_PARAM = "notify_timeout";
+export const NOTIFY_LINK_URL_PARAM = "notify_link_url";
+export const NOTIFY_LINK_TEXT_PARAM = "notify_link_text";
 
 export enum NotifyKind {
 	OK = "ok",
@@ -22,6 +25,11 @@ export const isNotifyKind = (kind: undefined | string) => {
 
 export const isNotifyText = (text: undefined | string) =>
 	typeof text === "string" && text.length > 0;
+
+export const isNotifyTimeout = (timeout: undefined | string) =>
+	typeof timeout === "string" &&
+	timeout.length > 0 &&
+	Number.isInteger(parseInt(timeout));
 
 export const forwardParams = (
 	pathname: string,

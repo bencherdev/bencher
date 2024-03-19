@@ -1,0 +1,25 @@
+### Rustls 测试套件运行器
+Rustls Bench Runner 是一个定制的持续基准测试服务器。
+它设计为在裸金属主机上运行，
+它通过 webhooks 从伴随的 GitHub App 接收事件。
+每次推送到 `main` 分支时，
+Bench Runner 都会运行指令计数和预计运行时间的基准测试。
+结果被存储在本地并
+通过 [Bencher API][bencher api] 发送到 [在 Bencher 上的 Rustls 项目][bencher rustls]。
+
+每当一个拉取请求被批准
+或者 Rustls 维护者留下包含 `@rustls-benchmarking bench` 的评论时，
+基准测试套件就会运行。
+Bench Runner 会从 GitHub 接收一个 webhook，
+拉取拉取请求的代码，
+运行指令计数基准测试，
+运行预计运行时间的基准测试，
+将拉取请求的结果与目标 `main` 分支的结果进行比较，
+然后将结果作为一个评论发布在拉取请求上。
+Bench Runner 使用一个 [Delta 四分位距模型][delta iqr] 作为它的统计阈值
+用来确定是否发生了性能回归。
+超过此阈值的结果将在拉取请求评论中被高亮显示。
+
+[bencher rustls]: /perf/rustls-821705769?key=true&reports_per_page=8&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&clear=true&tab=branches&measures=013468de-9c37-4605-b363-aebbbf63268d&branches=28fae530-2b53-4482-acd4-47e16030d54f&testbeds=62ed31c3-8a58-479c-b828-52521ed67bee&benchmarks=bd25f73c-b2b9-4188-91b4-f632287c0a1b%2C8d443816-7a23-40a1-a54c-59de911eb517%2C42edb37f-ca91-4984-8835-445514575c85&start_time=1704067200000
+[bencher api]: /docs/zh/api/
+[delta iqr]: /docs/zh/explanation/thresholds/#delta-interquartile-range-thresholds

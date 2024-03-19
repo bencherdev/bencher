@@ -1,0 +1,28 @@
+### Rustls CI Bench
+CI Bench is a best-in-class harness for continuous benchmarking.
+It runs the exact same benchmark in two different modes: instruction count mode and wall-time mode.
+This is accomplished using an ingenious custom async runtime.
+For instruction count mode, the I/O is actually still blocking.
+Under the hood, tasks just complete in a single poll.
+Then for wall-time mode, the I/O is really non-blocking.
+This allows for simulating shared, in-memory buffers.
+The server and client are polled in turns.
+This allows CI Bench to eliminate the noise and non-determinism of an async runtime in their benchmarks.
+
+Rustls chose to track CPU instructions using [cachegrind][cachegrind].
+This decision was modeled after [the Rust compiler's continuous benchmarking solution][rustc perf].
+Instruction counts provide a very consistent way to compare two versions of the same software.
+This makes it ideal for continuous benchmarking.
+However, it is not possible to infer the actual runtime cost of an instruction count increase.
+A 10% increase in instructions does not necessarily result in a 10% increase in runtime performance.
+But a significant increase in instructions likely means that there is some increase in runtime performance.
+For this reason, CI Bench also measures wall-time.
+
+Wall-time is the thing that the Rustls project really cares about.
+Measuring instruction counts is just a useful proxy.
+Instruction count based benchmarking can't disambiguate changes that use the same number of instructions
+but lead to wildly different wall-time performance.
+For example, a new algorithm may happen to have the exact same number of instructions but run twice as slow.
+
+[cachegrind]: https://valgrind.org/docs/manual/cg-manual.html
+[rustc perf]: https://github.com/rust-lang/rustc-perf

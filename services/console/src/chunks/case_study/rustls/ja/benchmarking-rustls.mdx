@@ -1,0 +1,27 @@
+## Rustlsのベンチマークテスト
+Rustlsの最初のコミットは、プロジェクトの作成者[Joseph Birr-Pixton][ctz]が2016年5月2日に行いました。
+最初の成功したTLS接続が実際に行われたのは、同月の27日でした。
+その年の9月には、彼は既に[Rustlsのベンチマークテスト][bay area rust]を行っていました。
+彼が手にした大幅なパフォーマンスの向上を元に、
+彼は2019年7月に[RustlsとOpenSSLのヘッドツーヘッドのベンチマーク比較][rustls vs openssl 2019]を行いました。
+
+そのベンチマーク比較の結果は以下の通りでした：
+- Rustlsはデータ送信が15％速かった。
+- Rustlsはデータ受信が5％高速でした。
+- Rustlsはクライアント接続の設定が20-40％速かった。
+- Rustlsはサーバー接続の設定が10％速かった。
+- Rustlsはクライアント接続の再開が30-70％速かった。
+- Rustlsはサーバー接続の再開が10-20％速かった。
+- RustlsはOpenSSLの半分以下のメモリを使用した。
+
+2023年に、Internet Security Research Groupは[Rustlsプロジェクトのパフォーマンスベンチマークを資金提供][rustls performance]し、
+それが[RustlsとOpenSSLの最新のヘッドツーヘッドのベンチマーク比較][rustls vs openssl 2023]を生み出しました。
+これらの更新結果はRustlsプロジェクトにとって
+強みのエリアと改善が必要なエリアの両方に対して有益でしたが、
+最も大きなパフォーマンス上の懸念は、_新しい_コードがパフォーマンスの低下を引き起こさないことを保証することにあります。
+
+[ctz]: https://github.com/ctz/
+[bay area rust]: https://raw.githubusercontent.com/ctz/talks/master/rustls.pdf
+[rustls vs openssl 2019]: https://jbp.io/2019/07/01/rustls-vs-openssl-performance.html
+[rustls performance]: https://www.memorysafety.org/blog/rustls-performance/
+[rustls vs openssl 2023]: https://github.com/aochagavia/rustls-bench-results

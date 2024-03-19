@@ -1,0 +1,28 @@
+### Rustls CI Bench
+CI Bench est un harnais de choix pour le benchmarking continu.
+Il exécute le même benchmark exact dans deux modes différents : le mode de comptage d'instructions et le mode de temps réel.
+Ceci est accompli en utilisant un runtime asynchrone personnalisé ingénieux.
+Pour le mode de comptage d'instructions, l'I/O est toujours bloquant.
+Sous le capot, les tâches se terminent en un seul sondage.
+Ensuite, pour le mode de temps réel, l'I/O est vraiment non bloquant.
+Cela permet de simuler des tampons partagés en mémoire.
+Le serveur et le client sont sondés à tour de rôle.
+Cela permet à CI Bench d'éliminer le bruit et le non-déterminisme d'un runtime asynchrone dans leurs benchmarks.
+
+Rustls a choisi de suivre les instructions CPU en utilisant [cachegrind][cachegrind].
+Cette décision a été modelée après [la solution de benchmarking continu du compilateur Rust][rustc perf].
+Le compte d'instructions fournit une manière très consistante de comparer deux versions du même logiciel.
+Cela le rend idéal pour le benchmarking continu.
+Cependant, il n'est pas possible de déduire le coût d'exécution réel d'une augmentation du nombre d'instructions.
+Une augmentation de 10% des instructions ne résulte pas nécessairement en une augmentation de 10% des performances d'exécution.
+Mais une augmentation significative des instructions signifie probablement qu'il y a une certaine augmentation des performances d'exécution.
+Pour cette raison, CI Bench mesure également le temps réel.
+
+Le temps réel est la chose que le projet Rustls se soucie vraiment.
+Mesurer les comptes d'instructions n'est qu'un proxy utile.
+Le benchmarking basé sur le compte d'instructions ne peut pas désambiguïser les changements qui utilisent le même nombre d'instructions
+mais conduisent à des performances en temps réel très différentes.
+Par exemple, un nouvel algorithme peut arriver à avoir exactement le même nombre d'instructions mais fonctionner deux fois plus lentement.
+
+[cachegrind]: https://valgrind.org/docs/manual/cg-manual.html
+[rustc perf]: https://github.com/rust-lang/rustc-perf

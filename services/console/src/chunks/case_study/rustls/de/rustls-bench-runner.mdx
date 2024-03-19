@@ -1,0 +1,25 @@
+### Rustls Bench Runner
+Der Rustls Bench Runner ist ein benutzerdefinierter kontinuierlicher Benchmarking-Server.
+Er ist dafür ausgelegt, auf einem Bare-Metal-Host zu laufen,
+und erhält Ereignisse von einer begleitenden GitHub-App über Webhooks.
+Bei jedem Push auf den `Haupt` Zweig,
+führt der Bench Runner sowohl die Anweisungszähler als auch die Wall-Time-Benchmarks aus.
+Die Ergebnisse werden lokal gespeichert und
+an [das Rustls Projekt auf Bencher][bencher rustls] unter Verwendung der [Bencher API][bencher api] gesendet.
+
+Immer wenn ein Pull-Request genehmigt wird
+oder ein Kommentar mit `@rustls-benchmarking bench` von einem Rustls-Maintainer hinterlassen wird,
+wird die Benchmarking-Suite ausgeführt.
+Der Bench Runner erhält einen Webhook von GitHub,
+zieht den Code für den Pull-Request,
+führt die Anweisungszähler-Benchmarks aus,
+führt die Wall-Time-Benchmarks aus,
+vergleicht die Ergebnisse des Pull-Requests mit den Ergebnissen des Ziel-`Haupt`-Zweigs,
+und postet dann die Ergebnisse als Kommentar zum Pull-Request.
+Der Bench Runner verwendet ein [Delta Interquartile Range Modell][delta iqr] als statistischen Schwellenwert,
+um zu ermitteln, ob eine Performance-Regression eingetreten ist.
+Ergebnisse, die diese Schwelle überschreiten, werden im Pull-Request-Kommentar hervorgehoben.
+
+[bencher rustls]: /perf/rustls-821705769?key=true&reports_per_page=8&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&clear=true&tab=branches&measures=013468de-9c37-4605-b363-aebbbf63268d&branches=28fae530-2b53-4482-acd4-47e16030d54f&testbeds=62ed31c3-8a58-479c-b828-52521ed67bee&benchmarks=bd25f73c-b2b9-4188-91b4-f632287c0a1b%2C8d443816-7a23-40a1-a54c-59de911eb517%2C42edb37f-ca91-4984-8835-445514575c85&start_time=1704067200000
+[bencher api]: /docs/de/api/
+[delta iqr]: /docs/de/explanation/thresholds/#delta-interquartile-range-thresholds

@@ -1,0 +1,27 @@
+## Rustls 벤치마킹
+Rustls의 첫 커밋은 프로젝트의 창시자 [Joseph Birr-Pixton][ctz]이 2016년 5월 2일에 만들었으며,
+첫 번째 성공적인 TLS 연결은 그달의 27일까지 이루어지지 않았습니다.
+그 해 9월까지, 그는 이미 [Rustls를 벤치마킹하고 있었습니다][bay area rust].
+그의 허리에 상당한 성능 향상을 가지고,
+그는 2019년 7월에 [Rustls와 OpenSSL을 비교한 직접적인 벤치마크를 수행했습니다][rustls vs openssl 2019].
+
+그 벤치마크 비교에서 나온 결과는 다음과 같습니다:
+- Rustls는 데이터를 전송하는 데 15% 더 빨랐습니다.
+- Rustls는 데이터를 수신하는 데 5% 더 빨랐습니다.
+- Rustls는 클라이언트 연결을 설정하는 데 20-40% 더 빨랐습니다.
+- Rustls는 서버 연결을 설정하는 데 10% 더 빨랐습니다.
+- Rustls는 클라이언트 연결을 재개하는 데 30-70% 더 빨랐습니다.
+- Rustls는 서버 연결을 재개하는 데 10-20% 더 빨랐습니다.
+- Rustls는 OpenSSL의 절반 이하의 메모리를 사용했습니다.
+
+2023년에, 인터넷 보안 연구 그룹은 [Rustls 프로젝트의 성능 벤치마킹을 지원했으며][rustls performance],
+그결과 [Rustls와 OpenSSL을 비교한 갱신된 직접적인 벤치마크 비교가 생겼습니다][rustls vs openssl 2023].
+이러한 갱신된 결과들은 Rustls 프로젝트에 대해
+강점과 향상할 수 있는 영역 모두에 대한 정보를 제공했으나,
+가장 큰 성능 관련 문제는 이제 _새로운_ 코드가 성능 회귀를 초래하지 않도록 보장하는 데 있습니다.
+
+[ctz]: https://github.com/ctz/
+[bay area rust]: https://raw.githubusercontent.com/ctz/talks/master/rustls.pdf
+[rustls vs openssl 2019]: https://jbp.io/2019/07/01/rustls-vs-openssl-performance.html
+[rustls performance]: https://www.memorysafety.org/blog/rustls-performance/
+[rustls vs openssl 2023]: https://github.com/aochagavia/rustls-bench-results

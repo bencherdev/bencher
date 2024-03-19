@@ -1,0 +1,25 @@
+### Rustls Bench Runner
+The Rustls Bench Runner is custom continuous benchmarking server.
+It is designed to run on a bare metal host,
+and it receives events from a companion GitHub App via webhooks.
+On every push to the `main` branch,
+the Bench Runner runs both the instruction count and wall-time benchmarks.
+The results are stored locally and
+sent to [the Rustls project on Bencher][bencher rustls] using the [Bencher API][bencher api].
+
+Whenever a pull request is approved
+or a comment containing `@rustls-benchmarking bench` is left by a Rustls maintainer,
+the benchmarking suite is run.
+The Bench Runner receives a webhook from GitHub,
+pulls the code for the pull request,
+runs the instruction count benchmarks,
+runs the wall-time benchmarks,
+compares the pull request results to the target `main` branch results,
+and then posts the results as a comment on the pull request.
+The Bench Runner uses a [Delta Interquartile Range model][delta iqr] for its statistical threshold
+to determine whether a performance regression has ocurred.
+Results that exceed this threshold are highlighted in the pull request comment.
+
+[bencher rustls]: /perf/rustls-821705769?key=true&reports_per_page=8&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&clear=true&tab=branches&measures=013468de-9c37-4605-b363-aebbbf63268d&branches=28fae530-2b53-4482-acd4-47e16030d54f&testbeds=62ed31c3-8a58-479c-b828-52521ed67bee&benchmarks=bd25f73c-b2b9-4188-91b4-f632287c0a1b%2C8d443816-7a23-40a1-a54c-59de911eb517%2C42edb37f-ca91-4984-8835-445514575c85&start_time=1704067200000
+[bencher api]: /docs/api/
+[delta iqr]: /docs/explanation/thresholds/#delta-interquartile-range-thresholds

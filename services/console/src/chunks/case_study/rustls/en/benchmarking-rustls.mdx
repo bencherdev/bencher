@@ -1,0 +1,27 @@
+## Benchmarking Rustls
+Rustls first commit was made by the project's creator [Joseph Birr-Pixton][ctz] on 02 May 2016
+with the first successful TLS connection not happening until the 27th of that same month.
+By that September, he was [already benchmarking Rustls][bay area rust].
+With substantial performance improvements under his belt,
+he did [a head-to-head benchmark comparison of Rustls vs OpenSSL][rustls vs openssl 2019] in July 2019.
+
+The results from that benchmark comparison were:
+- Rustls was 15% quicker to send data.
+- Rustls was 5% quicker to receive data.
+- Rustls was 20-40% quicker to set up a client connection.
+- Rustls was 10% quicker to set up a server connection.
+- Rustls was 30-70% quicker to resume a client connection.
+- Rustls was 10-20% quicker to resume a server connection.
+- Rustls used less than half the memory of OpenSSL.
+
+In 2023, the Internet Security Research Group [funded performance benchmarking of the Rustls project][rustls performance],
+and that generated [an updated head-to-head benchmark comparison of Rustls vs OpenSSL][rustls vs openssl 2023].
+Though these updated results were informative for the Rustls project
+on both areas of strength and areas to improve,
+the largest performance concern is now on guaranteeing that _new_ code does not introduce a performance regression.
+
+[ctz]: https://github.com/ctz/
+[bay area rust]: https://raw.githubusercontent.com/ctz/talks/master/rustls.pdf
+[rustls vs openssl 2019]: https://jbp.io/2019/07/01/rustls-vs-openssl-performance.html
+[rustls performance]: https://www.memorysafety.org/blog/rustls-performance/
+[rustls vs openssl 2023]: https://github.com/aochagavia/rustls-bench-results

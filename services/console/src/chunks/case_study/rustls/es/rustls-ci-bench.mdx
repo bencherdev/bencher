@@ -1,0 +1,28 @@
+### Rustls CI Bench
+CI Bench es un arnés de primer nivel para el rendimiento continuo.
+Ejecuta el mismo benchmark exactamente en dos modos diferentes: modo de conteo de instrucciones y modo de tiempo de pared.
+Esto se logra utilizando un ingenioso runtime personalizado asíncrono.
+Para el modo de conteo de instrucciones, la I/O sigue siendo bloqueante.
+Bajo el capó, las tareas simplemente se completan en un solo sondeo.
+Luego, en el modo de tiempo de pared, la I/O es realmente no bloqueante.
+Esto permite simular buffers de memoria compartidos en la memoria.
+El servidor y el cliente se sondean alternativamente.
+Esto permite a CI Bench eliminar el ruido y la indeterminación de un runtime asíncrono en sus benchmarks.
+
+Rustls decidió seguir las instrucciones de CPU utilizando [cachegrind][cachegrind].
+Esta decisión fue modelada según [la solución de rendimiento continuo del compilador Rust][rustc perf].
+El conteo de instrucciones proporciona una forma muy consistente de comparar dos versiones del mismo software.
+Esto lo hace ideal para el rendimiento continuo.
+Sin embargo, no es posible inferir el coste de tiempo de ejecución real de un aumento en el conteo de instrucciones.
+Un aumento del 10% en las instrucciones no necesariamente resulta en un aumento del 10% en el rendimiento de tiempo de ejecución.
+Pero un aumento significativo en las instrucciones probablemente significa que hay algún aumento en el rendimiento de tiempo de ejecución.
+Por esta razón, CI Bench también mide el tiempo de pared.
+
+El tiempo de pared es lo que realmente le importa al proyecto Rustls.
+La medición de los conteos de instrucciones es solo un proxy útil.
+El rendimiento basado en el conteo de instrucciones no puede desambiguar los cambios que utilizan el mismo número de instrucciones
+pero conducen a un rendimiento de tiempo de pared extremadamente diferente.
+Por ejemplo, un nuevo algoritmo puede suceder que tenga exactamente el mismo número de instrucciones, pero se ejecute el doble de lento.
+
+[cachegrind]: https://valgrind.org/docs/manual/cg-manual.html
+[rustc perf]: https://github.com/rust-lang/rustc-perf

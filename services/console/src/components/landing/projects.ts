@@ -6,6 +6,19 @@ interface Project {
 	query: string;
 }
 
+const caseStudy = (project: string, slug: string) => {
+	const notifyKind = "alert";
+	const notifyText = `Learn more about continuous benchmarking for the ${project} project.`;
+	const notifyTimeout = 2147483647;
+	const notifyLinkUrl = `https://bencher.dev/learn/case-study/${slug}/`;
+	const notifyLinkText = "Read the case study";
+	return `notify_kind=${notifyKind}&notify_text=${encodeURIComponent(
+		notifyText,
+	)}&notify_timeout=${notifyTimeout}&notify_link_url=${encodeURIComponent(
+		notifyLinkUrl,
+	)}&notify_link_text=${encodeURIComponent(notifyLinkText)}`;
+};
+
 export const PROJECTS: Project[][] = [
 	[
 		{
@@ -13,8 +26,10 @@ export const PROJECTS: Project[][] = [
 			about: "A modern TLS library written in Rust",
 			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/rustls.png",
 			slug: "rustls-821705769",
-			query:
-				"key=true&reports_per_page=8&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&clear=true&tab=branches&measures=013468de-9c37-4605-b363-aebbbf63268d&branches=28fae530-2b53-4482-acd4-47e16030d54f&testbeds=62ed31c3-8a58-479c-b828-52521ed67bee&benchmarks=bd25f73c-b2b9-4188-91b4-f632287c0a1b%2C8d443816-7a23-40a1-a54c-59de911eb517%2C42edb37f-ca91-4984-8835-445514575c85&start_time=1704067200000",
+			query: `key=true&reports_per_page=8&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&clear=true&tab=branches&measures=013468de-9c37-4605-b363-aebbbf63268d&branches=28fae530-2b53-4482-acd4-47e16030d54f&testbeds=62ed31c3-8a58-479c-b828-52521ed67bee&benchmarks=bd25f73c-b2b9-4188-91b4-f632287c0a1b%2C8d443816-7a23-40a1-a54c-59de911eb517%2C42edb37f-ca91-4984-8835-445514575c85&start_time=1704067200000&${caseStudy(
+				"Rustls",
+				"rustls",
+			)}`,
 		},
 		{
 			name: "Diesel",

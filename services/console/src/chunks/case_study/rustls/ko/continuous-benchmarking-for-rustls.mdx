@@ -1,0 +1,16 @@
+## Rustls를 위한 지속적인 벤치마킹
+성능 저하를 릴리스 되기 전에 잡기 위해, Rustls 프로젝트는 [지속적인 벤치마킹][continuous benchmarking]에 투자하기로 결정했습니다.
+
+> 지속적인 벤치마킹은 팀원들이 자주 자신의 작업을 벤치마킹하는 소프트웨어 개발 방법론이며, 
+> 보통 각 사람들이 하루에 적어도 한 번은 벤치마킹을 하기 때문에 하루에 여러 번의 벤치마킹이 이루어집니다. 
+> 각 벤치마킹은 자동화된 빌드에 의해 검증되어 가능한 빠르게 성능 저하를 감지합니다. 
+> 많은 팀들이 이 방법으로 성능 저하는 크게 줄였다는 것을 알게 되며, 
+> 이러한 접근 방식을 통해 팀이 보다 빠르게 성능이 우수한 소프트웨어를 개발할 수 있게 되었습니다.
+
+Rustls 프로젝트의 지속적인 벤치마킹 해결책은 두 가지 주요 구성 요소로 이루어져 있습니다:
+- [CI 벤치][ci bench]: CI에서 벤치마킹을 실행하기 위해 특별히 설계된 커스텀 벤치마킹 허니스
+- [벤치 러너][rustls bench app]: 커스텀, 베어 메탈 지속적인 벤치마킹 서버 및 동반 GitHub App
+
+[continuous benchmarking]: /docs/ko/explanation/continuous-benchmarking/
+[ci bench]: https://github.com/rustls/rustls/tree/main/ci-bench
+[rustls bench app]: https://github.com/rustls/rustls-bench-app

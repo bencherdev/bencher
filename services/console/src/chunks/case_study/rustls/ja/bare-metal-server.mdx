@@ -1,0 +1,14 @@
+#### ベアメタルサーバ
+Rustlsプロジェクトは、ウォールタイムベンチマークで1％の解像度を得るために、[特別に設定された][server config]ベアメタルの継続的ベンチマーキングサーバに投資しました。
+このサーバは、最近のほとんどのCIランナーとは異なり、_一時的ではありません_。
+つまり、各実行には同じ基本的なサーバハードウェアとオペレーティングシステムが使用されます。
+仮想化はありません。
+
+ベアメタルサーバは、可能な限り一貫した結果を生成するように特別に設定されています。
+周波数スケーリング（IntelのTurboBoost）や同時マルチスレッディング（IntelのHyper-Threading）は、BIOSでどちらも無効化されています。
+CPUスケーリングは`performance`に設定されています。
+アドレススペースレイアウトランダム化（ASLR）とNon-Maskable Interrupt（NMI）ウォッチドッグは、それぞれ`kernel.randomize_va_space=0`と`kernel.nmi_watchdog=0`を`sysctl.conf`に設定することで無効化されています。
+ベアメタルサーバは[OHVcloud][OVHcloud]がホスティングしています。
+
+[server config]: https://github.com/rust-lang/rustc-perf/blob/master/docs/ja/perf-runner.md
+[OVHcloud]: https://www.ovhcloud.com/en/
