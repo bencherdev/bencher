@@ -1,5 +1,6 @@
 ---
 import LegalLayout from "../layouts/legal/LegalLayout.astro";
+import { isBencherCloud } from "../util/ext";
 import { PROJECTS } from "../components/landing/projects.ts";
 
 const title = "Explore";
@@ -8,7 +9,7 @@ const description = "Explore continuous benchmarking results and performance reg
 ---
 
 <LegalLayout title={title} titleFmt={titleFmt} description={description} heading={title}>
-  {PROJECTS.flat().map((project)=> (
+  {isBencherCloud() && PROJECTS.flat().map((project)=> (
     <a class="box"
       title={`View ${project.name}`}
       href={`/perf/${project.slug}?${project.query}`}>
