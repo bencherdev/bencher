@@ -1,32 +1,9 @@
----
-title: "Getting Started Guide"
-description: "A brief guide to getting started with our software."
-date: "2019-04-15"
-categories: ["Software"]
----
+## Galería de Trofeos
 
-# Getting Started Guide
+- [PR #1640][pr 1640]: Uno de los primeros usos de la integración de benchmarking continuo de Rustls para evaluar la transición de `write_vectored` a `write`. Este cambio mejoró los benchmarks de transferencia en la dirección de envío de Rustls en casi un 20% en algunos casos.
+- [PR #1730][pr 1730]: Se encontraron regresiones de rendimiento al aleatorizar el orden de las extensiones de Cliente TLS ClientHello. Esto resultó en otra iteración de desarrollo y el uso de un enfoque más eficiente.
+- [PR #1834][pr 1834]: Ayudó a validar rápidamente que una solución crítica de seguridad no introdujo una regresión de rendimiento. Esto permitió al equipo concentrarse en la liberación rápida de varias versiones con parches de seguridad.
 
-Welcome to our software! This guide will help you get started.
-
-## Installing the Software
-
-To begin, [download the software](/docs/software) and follow the instructions. 
-
-Near the end of the installation process, you'll need to input your license key.
-
-If you have problems installing the software, check our [Troubleshooting Page](/docs/troubleshooting).
-
-## Using the Software
-
-Once installed, open the software and log in with your user credentials.
-
-From here, you can start creating projects. 
-
-To learn how to create a project, go to our [Project Creation Guide](/docs/project_creation).
-
-## Conclusion
-
-Congratulations, you're now ready to start using our software. If you have any concerns or suggestions, don't hesitate to get in touch via our [Contact Page](/docs/contact).
-
-Happy Coding!
+[pr 1640]: https://github.com/rustls/rustls/pull/1640#issuecomment-1854147668
+[pr 1730]: https://github.com/rustls/rustls/pull/1730#issuecomment-1883180496
+[pr 1834]: https://github.com/rustls/rustls/pull/1834#issuecomment-1974811046

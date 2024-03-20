@@ -1,36 +1,9 @@
----
-title: "Working with Array"
-description: "This page explains how to manipulate arrays in JavaScript"
-slug: "/docs/array-manipulation"
-language: "en"
----
+## Ehrenvitrine
 
-# Working with Arrays
+- [PR #1640][pr 1640]: Eine der ersten Anwendungen der Rustls kontinuierlichen Benchmarking-Integration zur Evaluierung des Übergangs von `write_vectored` zu `write`. Diese Änderung verbesserte die Rustls Send-Richtung Übertragungs-Benchmarks in einigen Fällen um fast 20%.
+- [PR #1730][pr 1730]: Leistungsregressionen gefunden, wenn die Reihenfolge der TLS ClientHello-Erweiterungen zufällig geändert wurde. Dies führte zu einer weiteren Entwicklungsiteration und der Nutzung eines effizienteren Ansatzes.
+- [PR #1834][pr 1834]: Half dabei, schnell zu validieren, dass eine kritische Sicherheitskorrektur keine Leistungsregression einführte. Dies ermöglichte dem Team, sich auf die schnelle Freigabe mehrerer Sicherheitsgepatchter Versionen zu konzentrieren.
 
-An array is a special variable, which can hold more than one value at a time. In JavaScript, arrays can hold many different types of values.
-
-## Creating Arrays
-
-You create an array by simply assigning values to a variable.
-
-Here is an example:
-
-```javascript
-let cars = ["Saab", "Volvo", "BMW"];
-```
-
-## Accessing Array Elements
-
-You access an array element by referring to its index number. The first array element is [0].
-
-Here is an example of how to access elements in an array:
-
-```javascript
-let name = cars[0];
-```
-
-Find more information on our [main explanation page](/docs/explanation).
-
----
-
-End of document.
+[pr 1640]: https://github.com/rustls/rustls/pull/1640#issuecomment-1854147668
+[pr 1730]: https://github.com/rustls/rustls/pull/1730#issuecomment-1883180496
+[pr 1834]: https://github.com/rustls/rustls/pull/1834#issuecomment-1974811046

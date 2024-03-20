@@ -1,45 +1,9 @@
----
-title: Getting started with our API
-description: Learn the basics of setting up and making calls to our API.
-slug: /docs/getting-started
----
+## 트로피 케이스
 
-# Getting Started
+- [PR #1640][pr 1640]: `write_vectored`에서 `write`로 전환을 평가하기 위해 Rustls 연속 벤치마킹 통합의 첫 번째 사용 중 하나입니다. 이 변경으로 Rustls의 송신 방향 전송 벤치마크가 일부 경우에 거의 20% 향상되었습니다.
+- [PR #1730][pr 1730]: TLS ClientHello 확장의 순서를 무작위로 변경할 때 성능 하락이 발생했습니다. 이로 인해 개발의 또 다른 반복과 더 효율적인 접근법의 사용을 초래하였습니다.
+- [PR #1834][pr 1834]: 중요한 보안 수정이 성능 하락을 도입하지 않았음을 빠르게 검증하는데 도움을 주었습니다. 이를 통해 팀은 여러 보안 패치 버전을 빠르게 출시하는 데 집중할 수 있었습니다.
 
-Welcome to our official guide on how to get started with our API. This guide will cover the basics, such as:
-
-- Setting up your API keys
-- Making your first request
-- Understanding our error codes
-
-## Setting Up Your API Keys
-
-The first step is to set up your API keys. API keys allow you to authenticate your requests. Here's how to get yours:
-
-1. Go to the [developer portal](https://developer.example.com)
-2. Click on 'Create New App'
-3. Fill in the required details 
-4. Click 'Create'
-5. Your API keys will be displayed on the screen
-
-## Making Your First Request
-
-With your API keys set up, you can now make your first request. Here's an example of a basic request:
-
-```javascript
-fetch('https://api.example.com/data', {
-  method: 'GET',
-  headers: {
-    'API-Key': 'your-api-key',
-  },
-})
-```
-Remember to replace "your-api-key" with the actual API key you received.
-
-## Understanding Our Error Codes
-
-You may occasionally encounter errors when working with our API. We use standard HTTP status codes to indicate the success or failure of a request. You can find a complete list of our error codes in the [API Error Codes](/docs/api-error-codes) section of our documentation.
-
-Happy coding!
-
----
+[pr 1640]: https://github.com/rustls/rustls/pull/1640#issuecomment-1854147668
+[pr 1730]: https://github.com/rustls/rustls/pull/1730#issuecomment-1883180496
+[pr 1834]: https://github.com/rustls/rustls/pull/1834#issuecomment-1974811046

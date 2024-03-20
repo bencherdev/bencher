@@ -1,0 +1,9 @@
+## トロフィーケース
+
+- [PR #1640][pr 1640]: Rustlsの連続ベンチマークインテグレーションを初めて使用し、`write_vectored`から`write`への遷移を評価しました。この変更により、Rustlsの送信方向転送ベンチマークが一部のケースでほぼ20%向上しました。
+- [PR #1730][pr 1730]: TLS ClientHello拡張の順序をランダム化したときのパフォーマンスの後退を見つけました。これにより開発の別のイテレーションが行われ、より効率的なアプローチが使用されました。
+- [PR #1834][pr 1834]: クリティカルなセキュリティ修正がパフォーマンスの後退をもたらさなかったことを素早く確認しました。これにより、チームは複数のセキュリティパッチ版の迅速なリリースに集中することができました。
+
+[pr 1640]: https://github.com/rustls/rustls/pull/1640#issuecomment-1854147668
+[pr 1730]: https://github.com/rustls/rustls/pull/1730#issuecomment-1883180496
+[pr 1834]: https://github.com/rustls/rustls/pull/1834#issuecomment-1974811046
