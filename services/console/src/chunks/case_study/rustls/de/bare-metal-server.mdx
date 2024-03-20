@@ -3,5 +3,5 @@ Um eine Auflösung von 1% bei ihren Wandzeit-Benchmarks zu erreichen, investiert
 
 Der Bare-Metal-Server wurde speziell konfiguriert, um die konsequentesten Ergebnisse zu erzielen. Die Frequenzskalierung (Intel's TurboBoost) und das simultane Multithreading (Intel's Hyper-Threading) wurden beide im BIOS deaktiviert. Die CPU-Skalierung ist auf `performance` eingestellt. Die Adressraumlayout-Randomisierung (ASLR) und der nicht maskierbare Interrupt (NMI) Watchdog sind beide deaktiviert, indem `kernel.randomize_va_space=0` und `kernel.nmi_watchdog=0` in `sysctl.conf` eingestellt werden. Der Bare-Metal-Server wird von [OHVcloud][OVHcloud] gehostet.
 
-[server config]: https://github.com/rust-lang/rustc-perf/blob/master/docs/de/perf-runner.md
-[OVHcloud]: https://www.ovhcloud.com/en/
+[server config]: https://github.com/rust-lang/rustc-perf/blob/master/docs/perf-runner.md
+[OVHcloud]: https://www.ovhcloud.com/

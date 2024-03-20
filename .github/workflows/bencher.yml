@@ -892,7 +892,6 @@ jobs:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/express'
     name: Backup Database
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
     continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     needs:
       # Lint

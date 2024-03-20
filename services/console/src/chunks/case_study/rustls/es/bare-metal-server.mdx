@@ -3,5 +3,5 @@ Para obtener una resolución del 1% en sus benchmarks de tiempo de pared, el pro
 
 El servidor bare metal ha sido configurado específicamente para crear los resultados más consistentes posibles. El escalado de frecuencia (TurboBoost de Intel) y el multihilo simultáneo (Hyper-Threading de Intel) se han desactivado en la BIOS. El escalado de CPU está configurado para `performance`. La Randomización del Espacio de Direcciones del Layout (ASLR) y el watchdog de Interrupción no Enmascarable (NMI) se han desactivado al establecer `kernel.randomize_va_space=0` y `kernel.nmi_watchdog=0` en `sysctl.conf`, respectivamente. El servidor bare metal está hospedado por [OVHcloud][OVHcloud].
 
-[configuración del servidor]: https://github.com/rust-lang/rustc-perf/blob/master/docs/es/perf-runner.md
-[OVHcloud]: https://www.ovhcloud.com/es/
+[configuración del servidor]: https://github.com/rust-lang/rustc-perf/blob/master/docs/perf-runner.md
+[OVHcloud]: https://www.ovhcloud.com/

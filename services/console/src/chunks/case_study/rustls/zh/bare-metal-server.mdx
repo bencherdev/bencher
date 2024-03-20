@@ -4,5 +4,5 @@
 
 裸金属服务器已经特别配置，以便创建尽可能一致的结果。频率缩放（Intel 的 TurboBoost）和同时多线程（Intel的超线程）在 BIOS 中都已禁用。CPU缩放设置为`性能`。通过在 `sysctl.conf`中设置`kernel.randomize_va_space=0` 和 `kernel.nmi_watchdog=0`， 分别禁用了地址空间布局随机化（ASLR）和非屏蔽中断（NMI）看门狗。裸金属服务器由[OVHcloud][OVHcloud]托管。
 
-[服务器配置]: https://github.com/rust-lang/rustc-perf/blob/master/docs/zh/perf-runner.md
-[OVHcloud]: https://www.ovhcloud.com/en/
+[服务器配置]: https://github.com/rust-lang/rustc-perf/blob/master/docs/perf-runner.md
+[OVHcloud]: https://www.ovhcloud.com/
