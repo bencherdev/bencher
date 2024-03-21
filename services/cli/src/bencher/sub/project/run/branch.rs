@@ -1,8 +1,6 @@
-use std::str::FromStr;
-
 use bencher_client::types::{JsonNewBranch, JsonStartPoint};
 use bencher_json::{
-    project::branch::BRANCH_MAIN_STR, BranchName, BranchUuid, JsonUuid, JsonUuids, NameId,
+    project::branch::BRANCH_MAIN_STR, BranchName, BranchUuid, GitHash, JsonUuid, JsonUuids, NameId,
     NameIdKind, ResourceId,
 };
 
@@ -13,14 +11,15 @@ use crate::{
 use super::BENCHER_BRANCH;
 
 #[derive(Debug, Clone)]
-pub enum Branch {
-    NameId(NameId),
-    Name {
-        name: BranchName,
-        start_points: Vec<String>,
-        create: bool,
-    },
-    None,
+pub struct Branch {
+    branch: NameId,
+    start_point: Option<StartPoint>,
+}
+
+#[derive(Debug, Clone)]
+pub struct StartPoint {
+    branch: NameId,
+    hash: Option<GitHash>,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -56,34 +55,30 @@ impl TryFrom<CliRunBranch> for Branch {
     fn try_from(run_branch: CliRunBranch) -> Result<Self, Self::Error> {
         let CliRunBranch {
             branch,
-            if_branch,
-            else_if_branch,
-            else_branch,
+            start_point_branch,
+            start_point_hash,
             endif_branch: _,
         } = run_branch;
-        Ok(if let Some(branch) = branch {
-            Self::NameId(branch)
+        let branch = if let Some(branch) = branch {
+            branch
         } else if let Ok(env_branch) = std::env::var(BENCHER_BRANCH) {
             env_branch
                 .as_str()
                 .parse()
-                .map(Self::NameId)
                 .map_err(BranchError::ParseBranch)?
-        } else if let Some(branch_name) = if_branch {
-            if let Some(name) = branch_name {
-                Self::Name {
-                    name,
-                    start_points: else_if_branch,
-                    create: else_branch,
-                }
-            } else {
-                Self::None
-            }
         } else {
-            BRANCH_MAIN_STR
-                .parse()
-                .map(Self::NameId)
-                .map_err(BranchError::ParseBranch)?
+            BRANCH_MAIN_STR.parse().map_err(BranchError::ParseBranch)?
+        };
+        let start_point = start_point_branch
+            .first()
+            .cloned()
+            .map(|branch| StartPoint {
+                branch,
+                hash: start_point_hash,
+            });
+        Ok(Self {
+            branch,
+            start_point,
         })
     }
 }
@@ -96,124 +91,56 @@ impl Branch {
         log: bool,
         backend: &AuthBackend,
     ) -> Result<Option<NameId>, BranchError> {
-        Ok(match self {
-            Self::NameId(name_id) => {
-                // Check to make sure that the branch exists before running the benchmarks
-                match name_id.try_into().map_err(BranchError::ParseBranch)? {
-                    NameIdKind::Uuid(uuid) => {
-                        if !dry_run {
-                            get_branch(project, &uuid.into(), backend).await?;
-                        }
-                    },
-                    NameIdKind::Slug(slug) => {
-                        if !dry_run {
-                            match get_branch(project, &slug.clone().into(), backend).await {
-                                Ok(_) => {},
-                                Err(BranchError::GetBranch(_)) => {
-                                    create_branch(project, &slug.into(), None, backend).await?;
-                                },
-                                Err(e) => return Err(e),
-                            }
-                        }
-                    },
-                    NameIdKind::Name(name) => {
-                        let branch_name: BranchName = name;
-                        if !dry_run {
-                            match get_branch_by_name(project, &branch_name, backend).await {
-                                Ok(_) => {},
-                                Err(BranchError::NoBranches { .. }) => {
-                                    create_branch(project, &branch_name, None, backend).await?;
-                                },
-                                Err(e) => return Err(e),
-                            }
-                        }
-                    },
-                }
-                Some(name_id.clone())
-            },
-            Self::Name {
-                name,
-                start_points,
-                create,
-            } => {
-                if let Some(uuid) =
-                    if_branch(project, name, start_points, *create, dry_run, log, backend).await?
-                {
-                    Some(uuid.into())
-                } else {
-                    cli_println_quietable!(
-                        log,
-                        "Failed to find or create branch \"{name}\". Skipping benchmark run."
-                    );
-                    None
+        // Check to make sure that the branch exists before running the benchmarks
+        match (&self.branch)
+            .try_into()
+            .map_err(BranchError::ParseBranch)?
+        {
+            NameIdKind::Uuid(uuid) => {
+                if !dry_run {
+                    get_branch(project, &uuid.into(), backend).await?;
                 }
             },
-            Self::None => {
-                cli_println_quietable!(log, "Failed to get branch name. Skipping benchmark run.");
-                None
+            NameIdKind::Slug(slug) => {
+                if !dry_run {
+                    match get_branch(project, &slug.clone().into(), backend).await {
+                        Ok(_) => {},
+                        Err(BranchError::GetBranch(_)) => {
+                            create_branch(
+                                project,
+                                &slug.into(),
+                                self.start_point.clone(),
+                                log,
+                                backend,
+                            )
+                            .await?;
+                        },
+                        Err(e) => return Err(e),
+                    }
+                }
             },
-        })
-    }
-}
-
-async fn if_branch(
-    project: &ResourceId,
-    branch_name: &BranchName,
-    start_points: &[String],
-    create: bool,
-    dry_run: bool,
-    log: bool,
-    backend: &AuthBackend,
-) -> Result<Option<BranchUuid>, BranchError> {
-    let branch = get_branch_by_name(project, branch_name, backend).await?;
-
-    if branch.is_some() {
-        return Ok(branch);
-    }
-
-    cli_println_quietable!(
-        log,
-        "Failed to find branch with name \"{branch_name}\" in project \"{project}\"."
-    );
-
-    for (index, start_point) in start_points.iter().enumerate() {
-        let count = index.checked_add(1).unwrap_or_default();
-        let Ok(start_point) = BranchName::from_str(start_point) else {
-            cli_println_quietable!(
-                log,
-                "Failed to parse start point branch #{count} \"{start_point}\" for \"{branch_name}\" in project \"{project}\"."
-            );
-            continue;
-        };
-
-        let new_branch =
-            if let Some(start_point) = get_branch_by_name(project, &start_point, backend).await? {
-                Some(create_branch(project, branch_name, Some(start_point.into()), backend).await?)
-            } else {
-                None
-            };
-
-        if new_branch.is_some() {
-            return Ok(new_branch);
+            NameIdKind::Name(name) => {
+                let branch_name: BranchName = name;
+                if !dry_run {
+                    match get_branch_by_name(project, &branch_name, backend).await {
+                        Ok(_) => {},
+                        Err(BranchError::NoBranches { .. }) => {
+                            create_branch(
+                                project,
+                                &branch_name,
+                                self.start_point.clone(),
+                                log,
+                                backend,
+                            )
+                            .await?;
+                        },
+                        Err(e) => return Err(e),
+                    }
+                }
+            },
         }
-
-        cli_println_quietable!(
-            log,
-            "Failed to find start point branch #{count} \"{start_point}\" for \"{branch_name}\" in project \"{project}\"."
-        );
+        Ok(Some(self.branch.clone()))
     }
-
-    #[allow(clippy::if_then_some_else_none)]
-    Ok(if create {
-        // If we're just doing a dry run, we don't need to actually create the branch
-        Some(if dry_run {
-            BranchUuid::new()
-        } else {
-            create_branch(project, branch_name, None, backend).await?
-        })
-    } else {
-        None
-    })
 }
 
 async fn get_branch(
@@ -275,14 +202,37 @@ async fn get_branch_by_name(
 async fn create_branch(
     project: &ResourceId,
     branch_name: &BranchName,
-    start_point: Option<NameId>,
+    start_point: Option<StartPoint>,
+    log: bool,
     backend: &AuthBackend,
 ) -> Result<BranchUuid, BranchError> {
-    // Default to cloning the thresholds from the start point branch
-    let start_point = start_point.map(|branch| JsonStartPoint {
-        branch: branch.into(),
-        thresholds: Some(true),
-    });
+    cli_println_quietable!(
+        log,
+        "Failed to find branch with name \"{branch_name}\" in project \"{project}\"."
+    );
+    let (start_point, message) = if let Some(start_point) = start_point {
+        let StartPoint { branch, hash } = start_point;
+        let message = format!(
+            " with start point branch {branch}{}",
+            hash.as_ref()
+                .map(|hash| format!(" and hash {hash}"))
+                .unwrap_or_default(),
+        );
+        // Default to cloning the thresholds from the start point branch
+        let start_point = JsonStartPoint {
+            branch: branch.clone().into(),
+            hash: hash.clone().map(Into::into),
+            thresholds: Some(true),
+        };
+        (Some(start_point), Some(message))
+    } else {
+        (None, None)
+    };
+    cli_println_quietable!(
+        log,
+        "Creating a new branch with name \"{branch_name}\" in project \"{project}\"{message}.",
+        message = message.unwrap_or_default()
+    );
     let new_branch = &JsonNewBranch {
         name: branch_name.clone().into(),
         slug: None,

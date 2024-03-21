@@ -7,7 +7,7 @@ use dropshot::HttpError;
 use slog::Logger;
 
 use super::{
-    branch_version::InsertBranchVersion,
+    branch_version::{BranchVersionId, InsertBranchVersion},
     threshold::model::{InsertModel, QueryModel},
     version::{QueryVersion, VersionId},
     ProjectId, QueryProject,
@@ -39,6 +39,7 @@ pub struct QueryBranch {
     pub project_id: ProjectId,
     pub name: BranchName,
     pub slug: Slug,
+    pub start_point_id: Option<BranchVersionId>,
     pub created: DateTime,
     pub modified: DateTime,
 }
@@ -123,6 +124,7 @@ pub struct InsertBranch {
     pub project_id: ProjectId,
     pub name: BranchName,
     pub slug: Slug,
+    pub start_point_id: Option<BranchVersionId>,
     pub created: DateTime,
     pub modified: DateTime,
 }
@@ -133,7 +135,12 @@ impl InsertBranch {
         project_id: ProjectId,
         branch: JsonNewBranch,
     ) -> Result<Self, HttpError> {
-        let JsonNewBranch { name, slug, .. } = branch;
+        let JsonNewBranch {
+            name,
+            slug,
+            start_point,
+            ..
+        } = branch;
         let slug = ok_slug!(conn, project_id, &name, slug, branch, QueryBranch)?;
         let timestamp = DateTime::now();
         Ok(Self {
@@ -141,6 +148,7 @@ impl InsertBranch {
             project_id,
             name,
             slug,
+            start_point_id: None,
             created: timestamp,
             modified: timestamp,
         })
@@ -156,7 +164,11 @@ impl InsertBranch {
         context: &ApiContext,
         start_point: &JsonStartPoint,
     ) -> Result<(), HttpError> {
-        let JsonStartPoint { branch, thresholds } = start_point;
+        let JsonStartPoint {
+            branch,
+            hash,
+            thresholds,
+        } = start_point;
 
         let start_point_branch_id =
             QueryBranch::from_name_id(conn_lock!(context), self.project_id, branch)?.id;

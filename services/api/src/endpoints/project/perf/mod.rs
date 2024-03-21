@@ -8,7 +8,8 @@ use bencher_json::{
     ResourceId, TestbedUuid,
 };
 use diesel::{
-    ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
+    ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
+    SelectableHelper,
 };
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
@@ -227,7 +228,9 @@ async fn perf_query(
                 schema::report::table
                     .inner_join(schema::version::table
                         .inner_join(schema::branch_version::table
-                            .inner_join(schema::branch::table)
+                            .inner_join(schema::branch::table
+                                .on(schema::branch_version::branch_id.eq(schema::branch::id)),
+                            )
                         ),
                     )
                     .inner_join(schema::testbed::table)

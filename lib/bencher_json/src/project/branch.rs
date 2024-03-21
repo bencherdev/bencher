@@ -46,7 +46,7 @@ pub struct JsonNewBranch {
     /// The start point for the new branch.
     /// All branch versions from the start point branch will be shallow copied over to the new branch.
     /// That is, all historical metrics data for the start point branch will appear in queries for the new branch.
-    /// For example, pull request branches often use their target branch as their start point branch.
+    /// For example, pull request branches often use their base branch as their start point branch.
     /// After the new branch is created, it is not kept in sync with the start point branch.
     /// If not provided, the new branch will have no historical data.
     pub start_point: Option<JsonStartPoint>,
@@ -68,6 +68,8 @@ impl JsonNewBranch {
 pub struct JsonStartPoint {
     /// The UUID, slug, or name of the branch to use as the start point.
     pub branch: NameId,
+    /// The full Git hash of the branch to use as the start point.
+    pub hash: Option<GitHash>,
     /// If set to `true`, the thresholds from the start point branch will be deep copied to the new branch.
     /// This can be useful for pull request branches that should have the same thresholds as their target branch.
     pub thresholds: Option<bool>,

@@ -7650,7 +7650,7 @@
           },
           "start_point": {
             "nullable": true,
-            "description": "The start point for the new branch. All branch versions from the start point branch will be shallow copied over to the new branch. That is, all historical metrics data for the start point branch will appear in queries for the new branch. For example, pull request branches often use their target branch as their start point branch. After the new branch is created, it is not kept in sync with the start point branch. If not provided, the new branch will have no historical data.",
+            "description": "The start point for the new branch. All branch versions from the start point branch will be shallow copied over to the new branch. That is, all historical metrics data for the start point branch will appear in queries for the new branch. For example, pull request branches often use their base branch as their start point branch. After the new branch is created, it is not kept in sync with the start point branch. If not provided, the new branch will have no historical data.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonStartPoint"
@@ -9126,6 +9126,15 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/NameId"
+              }
+            ]
+          },
+          "hash": {
+            "nullable": true,
+            "description": "The full Git hash of the branch to use as the start point.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GitHash"
               }
             ]
           },

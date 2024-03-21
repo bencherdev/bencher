@@ -43,6 +43,7 @@ diesel::table! {
         project_id -> Integer,
         name -> Text,
         slug -> Text,
+        start_point_id -> Nullable<Integer>,
         created -> BigInt,
         modified -> BigInt,
     }
@@ -259,7 +260,6 @@ diesel::joinable!(boundary -> metric (metric_id));
 diesel::joinable!(boundary -> model (model_id));
 diesel::joinable!(boundary -> threshold (threshold_id));
 diesel::joinable!(branch -> project (project_id));
-diesel::joinable!(branch_version -> branch (branch_id));
 diesel::joinable!(branch_version -> version (version_id));
 diesel::joinable!(measure -> project (project_id));
 diesel::joinable!(metric -> measure (measure_id));

@@ -1,4 +1,4 @@
-use bencher_json::{BranchName, NameId, ResourceId, Slug};
+use bencher_json::{BranchName, GitHash, NameId, ResourceId, Slug};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use crate::parser::{CliBackend, CliPagination};
@@ -74,12 +74,17 @@ pub struct CliBranchCreate {
     pub backend: CliBackend,
 }
 
+#[allow(clippy::struct_field_names)]
 #[derive(Args, Debug)]
 pub struct CliBranchStartPoint {
     /// Branch name, slug, or UUID to use as the new branch start point
     /// https://git-scm.com/docs/git-branch#Documentation/git-branch.txt-ltstart-pointgt
     #[clap(long)]
     pub start_point_branch: Option<NameId>,
+
+    /// Branch Git hash to use as the new branch start point
+    #[clap(long, requires = "start_point_branch")]
+    pub start_point_hash: Option<GitHash>,
 
     /// Clone thresholds for the new branch start point
     #[clap(long, requires = "start_point_branch")]

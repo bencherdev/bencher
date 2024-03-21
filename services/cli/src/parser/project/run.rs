@@ -1,4 +1,4 @@
-use bencher_json::{BranchName, DateTime, GitHash, NameId, ResourceId};
+use bencher_json::{DateTime, GitHash, NameId, ResourceId};
 use camino::Utf8PathBuf;
 use clap::{ArgGroup, Args, Parser, ValueEnum};
 
@@ -19,6 +19,7 @@ pub struct CliRun {
     pub hash: Option<GitHash>,
 
     /// Testbed name, slug, or UUID (or set BENCHER_TESTBED) (default is "localhost")
+    /// If a name or slug is provided, the testbed will be created if it does not exist
     #[clap(long)]
     pub testbed: Option<NameId>,
 
@@ -73,24 +74,21 @@ pub struct CliRun {
 #[allow(clippy::option_option)]
 pub struct CliRunBranch {
     /// Branch name, slug, or UUID (or set BENCHER_BRANCH) (default is "main")
-    #[clap(long)]
+    /// If `branch` does not already exist, it will be created if a name or slug is provided
+    #[clap(long, alias = "if-branch")]
     pub branch: Option<NameId>,
 
-    /// Run using the given branch name if it exists
-    #[clap(long, conflicts_with = "branch")]
-    pub if_branch: Option<Option<BranchName>>,
+    /// If `branch` does not already exist, use this branch name, slug, or UUID as its start point
+    #[clap(long, alias = "else-if-branch")]
+    // TODO move this to Option<NameId> in due time
+    pub start_point_branch: Vec<NameId>,
 
-    /// If `--else-if-branch` exists, create a new branch named after `--if-branch`
-    /// with a clone the data and thresholds from `--else-if-branch` (requires `--if-branch`)
-    #[clap(long, requires = "if_branch")]
-    pub else_if_branch: Vec<String>,
+    /// If `branch` does not already exist, use this specific Git hash as its start point (requires: `--start-point-branch`)
+    #[clap(long, requires = "start_point_branch")]
+    pub start_point_hash: Option<GitHash>,
 
-    /// Create a new branch and run if neither `--if-branch` or `--else-if-branch` exists (requires `--if-branch`)
-    #[clap(long, requires = "if_branch")]
-    pub else_branch: bool,
-
-    /// An optional marker for the end of the if branch statement. (requires `--if-branch`)
-    #[clap(long, requires = "if_branch")]
+    /// Deprecated: Do not use. This will soon be removed.
+    #[clap(long, alias = "else-branch")]
     pub endif_branch: bool,
 }
 

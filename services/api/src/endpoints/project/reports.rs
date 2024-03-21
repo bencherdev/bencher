@@ -9,7 +9,8 @@ use bencher_json::{
 };
 use bencher_rbac::project::Permission;
 use diesel::{
-    dsl::count, BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
+    dsl::count, BelongingToDsl, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
+    SelectableHelper,
 };
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use http::StatusCode;
@@ -454,7 +455,10 @@ async fn delete_inner(
     let query_version = QueryVersion::get(conn_lock!(context), version_id)?;
     // Get all branches that use this version
     let branches = schema::branch::table
-        .inner_join(schema::branch_version::table)
+        .inner_join(
+            schema::branch_version::table
+                .on(schema::branch_version::branch_id.eq(schema::branch::id)),
+        )
         .filter(schema::branch_version::version_id.eq(version_id))
         .select(schema::branch::id)
         .load::<BranchId>(conn_lock!(context))

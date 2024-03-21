@@ -1,5 +1,5 @@
 use bencher_client::types::{JsonNewBranch, JsonStartPoint};
-use bencher_json::{BranchName, NameId, ResourceId, Slug};
+use bencher_json::{BranchName, GitHash, NameId, ResourceId, Slug};
 
 use crate::{
     bencher::{backend::AuthBackend, sub::SubCmd},
@@ -14,6 +14,7 @@ pub struct Create {
     pub slug: Option<Slug>,
     pub soft: bool,
     pub start_point_branch: Option<NameId>,
+    pub start_point_hash: Option<GitHash>,
     pub start_point_thresholds: bool,
     pub backend: AuthBackend,
 }
@@ -32,6 +33,7 @@ impl TryFrom<CliBranchCreate> for Create {
         } = create;
         let CliBranchStartPoint {
             start_point_branch,
+            start_point_hash,
             start_point_thresholds,
         } = start_point;
         Ok(Self {
@@ -40,6 +42,7 @@ impl TryFrom<CliBranchCreate> for Create {
             slug,
             soft,
             start_point_branch,
+            start_point_hash,
             start_point_thresholds,
             backend: backend.try_into()?,
         })
@@ -53,11 +56,13 @@ impl From<Create> for JsonNewBranch {
             slug,
             soft,
             start_point_branch,
+            start_point_hash,
             start_point_thresholds,
             ..
         } = create;
         let start_point = start_point_branch.map(|branch| JsonStartPoint {
             branch: branch.into(),
+            hash: start_point_hash.map(Into::into),
             thresholds: Some(start_point_thresholds),
         });
         Self {

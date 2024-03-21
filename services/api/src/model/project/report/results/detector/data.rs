@@ -1,6 +1,6 @@
 use bencher_boundary::MetricsData;
 use chrono::offset::Utc;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 use slog::{warn, Logger};
 
@@ -24,23 +24,28 @@ pub fn metrics_data(
     measure_id: MeasureId,
     model: &ThresholdModel,
 ) -> Result<MetricsData, HttpError> {
-    let mut query = schema::metric::table
-        .inner_join(
-            schema::perf::table
-                .inner_join(
-                    schema::report::table
-                        .inner_join(schema::version::table.inner_join(
-                            schema::branch_version::table.inner_join(schema::branch::table),
-                        ))
-                        .inner_join(schema::testbed::table),
-                )
-                .inner_join(schema::benchmark::table),
-        )
-        .filter(schema::branch::id.eq(branch_id))
-        .filter(schema::testbed::id.eq(testbed_id))
-        .filter(schema::benchmark::id.eq(benchmark_id))
-        .filter(schema::metric::measure_id.eq(measure_id))
-        .into_boxed();
+    let mut query =
+        schema::metric::table
+            .inner_join(
+                schema::perf::table
+                    .inner_join(
+                        schema::report::table
+                            .inner_join(schema::version::table.inner_join(
+                                schema::branch_version::table.inner_join(
+                                    schema::branch::table.on(
+                                        schema::branch_version::branch_id.eq(schema::branch::id),
+                                    ),
+                                ),
+                            ))
+                            .inner_join(schema::testbed::table),
+                    )
+                    .inner_join(schema::benchmark::table),
+            )
+            .filter(schema::branch::id.eq(branch_id))
+            .filter(schema::testbed::id.eq(testbed_id))
+            .filter(schema::benchmark::id.eq(benchmark_id))
+            .filter(schema::metric::measure_id.eq(measure_id))
+            .into_boxed();
 
     if let Some(window) = model.window {
         let now = Utc::now().timestamp();
