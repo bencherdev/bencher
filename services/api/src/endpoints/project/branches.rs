@@ -178,7 +178,7 @@ async fn post_inner(
     log: &Logger,
     context: &ApiContext,
     path_params: ProjBranchesParams,
-    mut json_branch: JsonNewBranch,
+    json_branch: JsonNewBranch,
     auth_user: &AuthUser,
 ) -> Result<JsonBranch, HttpError> {
     // Verify that the user is allowed
@@ -202,7 +202,10 @@ async fn post_inner(
             return Ok(branch.into_json_for_project(&query_project));
         }
     }
-    let start_point = json_branch.start_point.take();
+    let start_point_thresholds = json_branch
+        .start_point
+        .as_ref()
+        .and_then(|sp| sp.thresholds);
     let insert_branch =
         InsertBranch::from_json(conn_lock!(context), query_project.id, json_branch)?;
 
@@ -212,9 +215,9 @@ async fn post_inner(
         .map_err(resource_conflict_err!(Branch, insert_branch))?;
 
     // Clone data and optionally thresholds from the start point
-    if let Some(start_point) = &start_point {
-        insert_branch.start_point(log, context, start_point).await?;
-    }
+    insert_branch
+        .start_point(log, context, start_point_thresholds)
+        .await?;
 
     schema::branch::table
         .filter(schema::branch::uuid.eq(&insert_branch.uuid))

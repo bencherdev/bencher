@@ -7,7 +7,7 @@ use dropshot::HttpError;
 use slog::Logger;
 
 use super::{
-    branch_version::{BranchVersionId, InsertBranchVersion},
+    branch_version::{BranchVersionId, InsertBranchVersion, QueryBranchVersion},
     threshold::model::{InsertModel, QueryModel},
     version::{QueryVersion, VersionId},
     ProjectId, QueryProject,
@@ -143,12 +143,49 @@ impl InsertBranch {
         } = branch;
         let slug = ok_slug!(conn, project_id, &name, slug, branch, QueryBranch)?;
         let timestamp = DateTime::now();
+
+        let start_point_id = if let Some(JsonStartPoint {
+            branch,
+            hash,
+            thresholds,
+        }) = start_point
+        {
+            // Get the start point branch
+            let start_point_branch = QueryBranch::from_name_id(conn, project_id, &branch)?;
+            let mut query = schema::branch_version::table
+                .inner_join(schema::version::table)
+                // Filter for the start point branch
+                .filter(schema::branch_version::branch_id.eq(start_point_branch.id))
+                // Sanity check that we are in the right project
+                .filter(schema::version::project_id.eq(project_id))
+                .into_boxed();
+
+            if let Some(hash) = hash.as_ref() {
+                // Make sure the start point version has the correct hash, if specified.
+                query = query.filter(schema::version::hash.eq(hash));
+            }
+
+            Some(
+                query
+                    // If the hash is not specified, get the most recent version.
+                    .order(schema::version::number.desc())
+                    .select(schema::branch_version::id)
+                    .first::<BranchVersionId>(conn)
+                    .map_err(resource_not_found_err!(
+                        BranchVersion,
+                        (branch, hash, thresholds)
+                    ))?,
+            )
+        } else {
+            None
+        };
+
         Ok(Self {
             uuid: BranchUuid::new(),
             project_id,
             name,
             slug,
-            start_point_id: None,
+            start_point_id,
             created: timestamp,
             modified: timestamp,
         })
@@ -162,23 +199,19 @@ impl InsertBranch {
         &self,
         log: &Logger,
         context: &ApiContext,
-        start_point: &JsonStartPoint,
+        thresholds: Option<bool>,
     ) -> Result<(), HttpError> {
-        let JsonStartPoint {
-            branch,
-            hash,
-            thresholds,
-        } = start_point;
-
-        let start_point_branch_id =
-            QueryBranch::from_name_id(conn_lock!(context), self.project_id, branch)?.id;
+        let Some(start_point_id) = self.start_point_id else {
+            return Ok(());
+        };
+        let start_point = QueryBranchVersion::get(conn_lock!(context), start_point_id)?;
         let new_branch_id = QueryBranch::get_id(conn_lock!(context), self.uuid)?;
 
-        self.clone_versions(context, new_branch_id, start_point_branch_id)
+        self.clone_versions(context, &start_point, new_branch_id)
             .await?;
 
         if let Some(true) = thresholds {
-            self.clone_thresholds(log, context, new_branch_id, start_point_branch_id)
+            self.clone_thresholds(log, context, &start_point, new_branch_id)
                 .await?;
         }
 
@@ -188,17 +221,21 @@ impl InsertBranch {
     async fn clone_versions(
         &self,
         context: &ApiContext,
+        start_point: &QueryBranchVersion,
         new_branch_id: BranchId,
-        start_point_branch_id: BranchId,
     ) -> Result<(), HttpError> {
-        // Get all versions for the start point branch
+        let start_point_version = QueryVersion::get(conn_lock!(context), start_point.version_id)?;
+        // Get all prior versions (version number less than or equal to) for the start point branch
         let version_ids = schema::branch_version::table
-            .filter(schema::branch_version::branch_id.eq(start_point_branch_id))
+            .inner_join(schema::version::table)
+            .filter(schema::branch_version::branch_id.eq(start_point.branch_id))
+            .filter(schema::version::number.le(start_point_version.number))
+            .order(schema::version::number.desc())
             .select(schema::branch_version::version_id)
             .load::<VersionId>(conn_lock!(context))
             .map_err(resource_not_found_err!(
                 BranchVersion,
-                start_point_branch_id
+                (start_point, start_point_version)
             ))?;
 
         // Add new branch to all start point branch versions
@@ -221,14 +258,14 @@ impl InsertBranch {
         &self,
         log: &Logger,
         context: &ApiContext,
+        start_point: &QueryBranchVersion,
         new_branch_id: BranchId,
-        start_point_branch_id: BranchId,
     ) -> Result<(), HttpError> {
         // Get all thresholds for the start point branch
         let query_thresholds = schema::threshold::table
-            .filter(schema::threshold::branch_id.eq(start_point_branch_id))
+            .filter(schema::threshold::branch_id.eq(start_point.branch_id))
             .load::<QueryThreshold>(conn_lock!(context))
-            .map_err(resource_not_found_err!(Threshold, start_point_branch_id))?;
+            .map_err(resource_not_found_err!(Threshold, start_point))?;
 
         // Add new branch to cloned thresholds with cloned current threshold model
         for query_threshold in query_thresholds {

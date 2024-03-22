@@ -55,8 +55,8 @@ impl TryFrom<CliRunBranch> for Branch {
     fn try_from(run_branch: CliRunBranch) -> Result<Self, Self::Error> {
         let CliRunBranch {
             branch,
-            start_point_branch,
-            start_point_hash,
+            branch_start_point,
+            branch_start_point_hash,
             endif_branch: _,
         } = run_branch;
         let branch = if let Some(branch) = branch {
@@ -69,12 +69,12 @@ impl TryFrom<CliRunBranch> for Branch {
         } else {
             BRANCH_MAIN_STR.parse().map_err(BranchError::ParseBranch)?
         };
-        let start_point = start_point_branch
+        let start_point = branch_start_point
             .first()
             .cloned()
             .map(|branch| StartPoint {
                 branch,
-                hash: start_point_hash,
+                hash: branch_start_point_hash,
             });
         Ok(Self {
             branch,
@@ -92,6 +92,12 @@ impl Branch {
         backend: &AuthBackend,
     ) -> Result<Option<NameId>, BranchError> {
         // Check to make sure that the branch exists before running the benchmarks
+        // TODO If a start point is provided, check to see if the response from `get_branch` matches that start point
+        // both the branch and the hash (if provided) have to match!
+        // Otherwise, the old branch should be archived and a new branch should be created.
+        // The archived branch needs to have its name and slug updated in order to make way for the newly recreated branch.
+        // If no hash is provided for the existing branch: my_branch@version/42 where the current branch is on version 42.
+        // If a hash is provided for the existing branch: my_branch@hash/1234567890abcdef where the current branch start point has hash 1234567890abcdef.
         match (&self.branch)
             .try_into()
             .map_err(BranchError::ParseBranch)?

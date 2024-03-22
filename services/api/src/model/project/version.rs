@@ -43,6 +43,7 @@ impl QueryVersion {
             if let Ok(version_id) = schema::version::table
                 .inner_join(schema::branch_version::table)
                 .filter(schema::branch_version::branch_id.eq(branch_id))
+                .filter(schema::version::project_id.eq(project_id))
                 .filter(schema::version::hash.eq(hash.as_ref()))
                 .order(schema::version::number.desc())
                 .select(schema::version::id)

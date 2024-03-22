@@ -4,7 +4,7 @@ use super::{branch::BranchId, version::VersionId};
 
 crate::util::typed_id::typed_id!(BranchVersionId);
 
-#[derive(diesel::Queryable)]
+#[derive(Debug, diesel::Queryable)]
 pub struct QueryBranchVersion {
     pub id: BranchVersionId,
     pub branch_id: BranchId,
