@@ -137,14 +137,22 @@ async fn get_ls_inner(
         },
     };
 
-    Ok(query
+    conn_lock!(context, |conn| Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryBranch>(conn_lock!(context))
+        .load::<QueryBranch>(conn)
         .map_err(resource_not_found_err!(Branch, &query_project))?
         .into_iter()
-        .map(|branch| branch.into_json_for_project(&query_project))
-        .collect())
+        .filter_map(|branch| match branch.into_json(conn) {
+            Ok(branch) => Some(branch),
+            Err(err) => {
+                debug_assert!(false, "{err}");
+                #[cfg(feature = "sentry")]
+                sentry::capture_error(&err);
+                None
+            },
+        })
+        .collect()))
 }
 
 /// Create a branch
@@ -195,12 +203,15 @@ async fn post_inner(
     // instead of erroring due to the unique constraint
     // This is useful to help prevent race conditions in CI
     if let Some(true) = json_branch.soft {
-        if let Ok(branch) = QueryBranch::belonging_to(&query_project)
-            .filter(schema::branch::name.eq(json_branch.name.as_ref()))
-            .first::<QueryBranch>(conn_lock!(context))
-        {
-            return Ok(branch.into_json_for_project(&query_project));
-        }
+        conn_lock!(
+            context,
+            |conn| if let Ok(branch) = QueryBranch::belonging_to(&query_project)
+                .filter(schema::branch::name.eq(json_branch.name.as_ref()))
+                .first::<QueryBranch>(conn)
+            {
+                return branch.into_json_for_project(conn, &query_project);
+            }
+        );
     }
     let start_point_thresholds = json_branch
         .start_point
@@ -220,11 +231,13 @@ async fn post_inner(
         .start_point(log, context, start_point_thresholds)
         .await?;
 
-    schema::branch::table
+    conn_lock!(context, |conn| schema::branch::table
         .filter(schema::branch::uuid.eq(&insert_branch.uuid))
-        .first::<QueryBranch>(conn_lock!(context))
-        .map(|branch| branch.into_json_for_project(&query_project))
+        .first::<QueryBranch>(conn)
         .map_err(resource_not_found_err!(Branch, insert_branch))
+        .and_then(
+            |branch| branch.into_json_for_project(conn, &query_project)
+        ))
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -285,13 +298,15 @@ async fn get_one_inner(
         auth_user,
     )?;
 
-    QueryBranch::belonging_to(&query_project)
+    conn_lock!(context, |conn| QueryBranch::belonging_to(&query_project)
         .filter(QueryBranch::eq_resource_id(&path_params.branch)?)
-        .first::<QueryBranch>(conn_lock!(context))
-        .map(|branch| branch.into_json_for_project(&query_project))
+        .first::<QueryBranch>(conn)
         .map_err(resource_not_found_err!(
             Branch,
             (&query_project, path_params.branch)
+        ))
+        .and_then(
+            |branch| branch.into_json_for_project(conn, &query_project)
         ))
 }
 
@@ -347,9 +362,11 @@ async fn patch_inner(
             (&query_branch, &json_branch)
         ))?;
 
-    QueryBranch::get(conn_lock!(context), query_branch.id)
-        .map(|branch| branch.into_json_for_project(&query_project))
+    conn_lock!(context, |conn| QueryBranch::get(conn, query_branch.id)
         .map_err(resource_not_found_err!(Branch, query_branch))
+        .and_then(
+            |branch| branch.into_json_for_project(conn, &query_project)
+        ))
 }
 
 /// Delete a branch

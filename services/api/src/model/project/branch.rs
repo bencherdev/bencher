@@ -66,6 +66,7 @@ impl QueryBranch {
             project,
             name,
             slug,
+            start_point,
             created,
             modified,
         } = Self::get(conn, branch_id)?.into_json(conn)?;
@@ -75,6 +76,7 @@ impl QueryBranch {
             name,
             slug,
             version: QueryVersion::get(conn, version_id)?.into_json(),
+            start_point,
             created,
             modified,
         })
@@ -82,15 +84,20 @@ impl QueryBranch {
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonBranch, HttpError> {
         let project = QueryProject::get(conn, self.project_id)?;
-        Ok(self.into_json_for_project(&project))
+        self.into_json_for_project(conn, &project)
     }
 
-    pub fn into_json_for_project(self, project: &QueryProject) -> JsonBranch {
+    pub fn into_json_for_project(
+        self,
+        conn: &mut DbConnection,
+        project: &QueryProject,
+    ) -> Result<JsonBranch, HttpError> {
         let Self {
             uuid,
             project_id,
             name,
             slug,
+            start_point_id,
             created,
             modified,
             ..
@@ -101,14 +108,20 @@ impl QueryBranch {
             BencherResource::Branch,
             project_id,
         );
-        JsonBranch {
+        let start_point = if let Some(start_point_id) = start_point_id {
+            Some(QueryBranchVersion::get(conn, start_point_id)?.into_json(conn)?)
+        } else {
+            None
+        };
+        Ok(JsonBranch {
             uuid,
             project: project.uuid,
             name,
             slug,
+            start_point,
             created,
             modified,
-        }
+        })
     }
 
     pub fn is_system(&self) -> bool {

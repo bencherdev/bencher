@@ -36,7 +36,7 @@ pub use project::{
     alert::{AlertUuid, JsonAlert, JsonAlertStats, JsonAlerts},
     benchmark::{BenchmarkUuid, JsonBenchmark, JsonBenchmarks},
     boundary::{BoundaryUuid, JsonBoundaries, JsonBoundary},
-    branch::{BranchUuid, JsonBranch, JsonBranches, JsonNewBranch, VersionUuid},
+    branch::{BranchUuid, JsonBranch, JsonBranches, JsonNewBranch, JsonStartPoint, VersionUuid},
     measure::{JsonMeasure, JsonMeasures, JsonNewMeasure, MeasureUuid},
     metric::{JsonMetric, JsonMetricsMap, JsonResultsMap, MeasureNameId, MetricUuid},
     model::{JsonModel, ModelUuid},

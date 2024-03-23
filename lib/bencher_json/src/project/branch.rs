@@ -89,6 +89,7 @@ pub struct JsonBranch {
     pub project: ProjectUuid,
     pub name: BranchName,
     pub slug: Slug,
+    pub start_point: Option<JsonStartPoint>,
     pub created: DateTime,
     pub modified: DateTime,
 }
@@ -97,6 +98,13 @@ impl fmt::Display for JsonBranch {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name)
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonStartPoint {
+    pub branch: BranchUuid,
+    pub version: JsonVersion,
 }
 
 #[typeshare::typeshare]
@@ -108,6 +116,7 @@ pub struct JsonBranchVersion {
     pub name: BranchName,
     pub slug: Slug,
     pub version: JsonVersion,
+    pub start_point: Option<JsonStartPoint>,
     pub created: DateTime,
     pub modified: DateTime,
 }

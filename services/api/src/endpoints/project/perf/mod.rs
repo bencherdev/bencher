@@ -17,13 +17,12 @@ use serde::Deserialize;
 
 use crate::{
     conn_lock,
-    context::ApiContext,
+    context::{ApiContext, DbConnection},
     endpoints::{
         endpoint::{CorsResponse, Get, ResponseOk},
         Endpoint,
     },
     error::{bad_request_error, resource_not_found_err},
-    model::user::auth::AuthUser,
     model::{
         project::{
             benchmark::QueryBenchmark,
@@ -36,7 +35,7 @@ use crate::{
             },
             QueryProject,
         },
-        user::auth::PubBearerToken,
+        user::auth::{AuthUser, PubBearerToken},
     },
     schema,
 };
@@ -179,7 +178,7 @@ async fn perf_results(
                         return Ok(results);
                     }
 
-                    if let Some(perf_metrics) = perf_query(
+                    let pq = perf_query(
                         context,
                         project,
                         *branch_uuid,
@@ -188,21 +187,25 @@ async fn perf_results(
                         *measure_uuid,
                         times,
                     )
-                    .await?
-                    .into_iter()
-                    .fold(
-                        None,
-                        |perf_metrics: Option<JsonPerfMetrics>, perf_query| {
-                            let (query_dimensions, query) = split_perf_query(perf_query);
-                            let perf_metric = new_perf_metric(project, query);
-                            if let Some(mut perf_metrics) = perf_metrics {
-                                perf_metrics.metrics.push(perf_metric);
-                                Some(perf_metrics)
-                            } else {
-                                Some(new_perf_metrics(project, query_dimensions, perf_metric))
-                            }
-                        },
-                    ) {
+                    .await?;
+
+                    let mut perf_metrics: Option<JsonPerfMetrics> = None;
+                    for (query_dimensions, perf_metric) in
+                        pq.into_iter().map(|pq| split_perf_query(project, pq))
+                    {
+                        if let Some(perf_metrics) = &mut perf_metrics {
+                            perf_metrics.metrics.push(perf_metric);
+                        } else {
+                            perf_metrics = new_perf_metrics(
+                                conn_lock!(context),
+                                project,
+                                query_dimensions,
+                                perf_metric,
+                            )
+                            .ok();
+                        }
+                    }
+                    if let Some(perf_metrics) = perf_metrics.take() {
                         results.push(perf_metrics);
                     }
                 }
@@ -383,6 +386,7 @@ type PerfMetricQuery = (
 );
 
 fn split_perf_query(
+    project: &QueryProject,
     (
         branch,
         testbed,
@@ -397,7 +401,7 @@ fn split_perf_query(
         boundary_limit,
         query_metric,
     ): PerfQuery,
-) -> (QueryDimensions, PerfMetricQuery) {
+) -> (QueryDimensions, JsonPerfMetric) {
     let query_dimensions = QueryDimensions {
         branch,
         testbed,
@@ -414,27 +418,7 @@ fn split_perf_query(
         boundary_limit,
         query_metric,
     );
-    (query_dimensions, metric_query)
-}
-
-fn new_perf_metrics(
-    project: &QueryProject,
-    query_dimensions: QueryDimensions,
-    metric: JsonPerfMetric,
-) -> JsonPerfMetrics {
-    let QueryDimensions {
-        branch,
-        testbed,
-        benchmark,
-        measure,
-    } = query_dimensions;
-    JsonPerfMetrics {
-        branch: branch.into_json_for_project(project),
-        testbed: testbed.into_json_for_project(project),
-        benchmark: benchmark.into_json_for_project(project),
-        measure: measure.into_json_for_project(project),
-        metrics: vec![metric],
-    }
+    (query_dimensions, new_perf_metric(project, metric_query))
 }
 
 fn new_perf_metric(
@@ -477,4 +461,25 @@ fn new_perf_metric(
         boundary,
         alert,
     }
+}
+
+fn new_perf_metrics(
+    conn: &mut DbConnection,
+    project: &QueryProject,
+    query_dimensions: QueryDimensions,
+    metric: JsonPerfMetric,
+) -> Result<JsonPerfMetrics, HttpError> {
+    let QueryDimensions {
+        branch,
+        testbed,
+        benchmark,
+        measure,
+    } = query_dimensions;
+    Ok(JsonPerfMetrics {
+        branch: branch.into_json_for_project(conn, project)?,
+        testbed: testbed.into_json_for_project(project),
+        benchmark: benchmark.into_json_for_project(project),
+        measure: measure.into_json_for_project(project),
+        metrics: vec![metric],
+    })
 }
