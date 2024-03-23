@@ -110,6 +110,7 @@ export interface JsonBranch {
 	project: Uuid;
 	name: BranchName;
 	slug: Slug;
+	start_point?: JsonStartPoint;
 	created: string;
 	modified: string;
 }
@@ -343,6 +344,7 @@ export interface JsonBranchVersion {
 	name: BranchName;
 	slug: Slug;
 	version: JsonVersion;
+	start_point?: JsonStartPoint;
 	created: string;
 	modified: string;
 }

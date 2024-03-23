@@ -6944,6 +6944,14 @@
           "slug": {
             "$ref": "#/components/schemas/Slug"
           },
+          "start_point": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonStartPoint"
+              }
+            ]
+          },
           "uuid": {
             "$ref": "#/components/schemas/BranchUuid"
           }
@@ -6974,6 +6982,14 @@
           },
           "slug": {
             "$ref": "#/components/schemas/Slug"
+          },
+          "start_point": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonStartPoint"
+              }
+            ]
           },
           "uuid": {
             "$ref": "#/components/schemas/BranchUuid"
@@ -9148,6 +9164,21 @@
         ]
       },
       "JsonSpec": {},
+      "JsonStartPoint": {
+        "type": "object",
+        "properties": {
+          "branch": {
+            "$ref": "#/components/schemas/BranchUuid"
+          },
+          "version": {
+            "$ref": "#/components/schemas/JsonVersion"
+          }
+        },
+        "required": [
+          "branch",
+          "version"
+        ]
+      },
       "JsonStats": {
         "type": "object",
         "properties": {

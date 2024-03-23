@@ -216,16 +216,13 @@ impl Run {
     }
 
     async fn generate_report(&self) -> Result<Option<JsonNewReport>, RunError> {
-        let Some(branch) = self
+        let branch = self
             .branch
             .get(&self.project, self.dry_run, self.log, &self.backend)
-            .await?
-        else {
-            return Ok(None);
-        };
+            .await?;
         let testbed = self
             .testbed
-            .get(&self.project, self.dry_run, &self.backend)
+            .get(&self.project, self.dry_run, self.log, &self.backend)
             .await?;
 
         let start_time = DateTime::now();
