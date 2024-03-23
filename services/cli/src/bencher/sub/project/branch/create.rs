@@ -1,4 +1,4 @@
-use bencher_client::types::{JsonNewBranch, JsonStartPoint};
+use bencher_client::types::{JsonNewBranch, JsonNewStartPoint};
 use bencher_json::{BranchName, GitHash, NameId, ResourceId, Slug};
 
 use crate::{
@@ -60,7 +60,7 @@ impl From<Create> for JsonNewBranch {
             start_point_thresholds,
             ..
         } = create;
-        let start_point = start_point_branch.map(|branch| JsonStartPoint {
+        let start_point = start_point_branch.map(|branch| JsonNewStartPoint {
             branch: branch.into(),
             hash: start_point_hash.map(Into::into),
             thresholds: Some(start_point_thresholds),

@@ -83,6 +83,8 @@ pub struct CliRunBranch {
     /// If `branch` does exist and the start point is not different, then this argument is effectively ignored.
     /// If `branch` does exist and the start point is different, the old version of `branch` will be archived
     /// and a new `branch` will be created using this updated start point.
+    /// Specifying more than one start point is now deprecated.
+    /// Only the first start point will be used.
     #[clap(long, alias = "else-if-branch")]
     // TODO move this to Option<NameId> in due time
     pub branch_start_point: Vec<NameId>,

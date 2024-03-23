@@ -49,7 +49,7 @@ pub struct JsonNewBranch {
     /// For example, pull request branches often use their base branch as their start point branch.
     /// After the new branch is created, it is not kept in sync with the start point branch.
     /// If not provided, the new branch will have no historical data.
-    pub start_point: Option<JsonStartPoint>,
+    pub start_point: Option<JsonNewStartPoint>,
 }
 
 impl JsonNewBranch {
@@ -65,7 +65,7 @@ impl JsonNewBranch {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonStartPoint {
+pub struct JsonNewStartPoint {
     /// The UUID, slug, or name of the branch to use as the start point.
     pub branch: NameId,
     /// The full Git hash of the branch to use as the start point.

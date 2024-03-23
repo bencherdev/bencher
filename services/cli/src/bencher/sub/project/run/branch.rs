@@ -1,4 +1,4 @@
-use bencher_client::types::{JsonNewBranch, JsonStartPoint};
+use bencher_client::types::{JsonNewBranch, JsonNewStartPoint};
 use bencher_json::{
     project::branch::BRANCH_MAIN_STR, BranchName, BranchUuid, GitHash, JsonUuid, JsonUuids, NameId,
     NameIdKind, ResourceId,
@@ -225,7 +225,7 @@ async fn create_branch(
                 .unwrap_or_default(),
         );
         // Default to cloning the thresholds from the start point branch
-        let start_point = JsonStartPoint {
+        let start_point = JsonNewStartPoint {
             branch: branch.clone().into(),
             hash: hash.clone().map(Into::into),
             thresholds: Some(true),

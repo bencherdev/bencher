@@ -205,7 +205,8 @@ async fn post_inner(
     let start_point_thresholds = json_branch
         .start_point
         .as_ref()
-        .and_then(|sp| sp.thresholds);
+        .and_then(|sp| sp.thresholds)
+        .unwrap_or_default();
     let insert_branch =
         InsertBranch::from_json(conn_lock!(context), query_project.id, json_branch)?;
 

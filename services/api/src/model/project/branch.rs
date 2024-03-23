@@ -1,5 +1,5 @@
 use bencher_json::{
-    project::branch::{JsonBranchVersion, JsonStartPoint, JsonUpdateBranch, BRANCH_MAIN_STR},
+    project::branch::{JsonBranchVersion, JsonNewStartPoint, JsonUpdateBranch, BRANCH_MAIN_STR},
     BranchName, BranchUuid, DateTime, JsonBranch, JsonNewBranch, Slug,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -144,7 +144,7 @@ impl InsertBranch {
         let slug = ok_slug!(conn, project_id, &name, slug, branch, QueryBranch)?;
         let timestamp = DateTime::now();
 
-        let start_point_id = if let Some(JsonStartPoint {
+        let start_point_id = if let Some(JsonNewStartPoint {
             branch,
             hash,
             thresholds,
@@ -199,7 +199,7 @@ impl InsertBranch {
         &self,
         log: &Logger,
         context: &ApiContext,
-        thresholds: Option<bool>,
+        clone_thresholds: bool,
     ) -> Result<(), HttpError> {
         let Some(start_point_id) = self.start_point_id else {
             return Ok(());
@@ -210,7 +210,7 @@ impl InsertBranch {
         self.clone_versions(context, &start_point, new_branch_id)
             .await?;
 
-        if let Some(true) = thresholds {
+        if clone_thresholds {
             self.clone_thresholds(log, context, &start_point, new_branch_id)
                 .await?;
         }
