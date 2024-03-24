@@ -1,10 +1,7 @@
-use std::str::FromStr;
-
 use bencher_json::Slug;
 use dropshot::HttpError;
-use http::StatusCode;
 
-use crate::{context::DbConnection, error::issue_error, model::project::ProjectId};
+use crate::{context::DbConnection, model::project::ProjectId};
 
 pub type SlugExistsFn = dyn FnOnce(&mut DbConnection, Option<ProjectId>, &str) -> bool;
 
@@ -18,28 +15,12 @@ pub fn validate_slug<S>(
 where
     S: AsRef<str> + std::fmt::Display,
 {
-    let mut slug = if let Some(slug) = slug {
-        slug.into()
+    let new_slug = Slug::unwrap_or_new(name, slug);
+    Ok(if exists(conn, project_id, new_slug.as_ref()) {
+        new_slug.add_rand_suffix()
     } else {
-        slug::slugify(&name)
-    };
-
-    if slug.len() > Slug::MAX {
-        slug = slug::slugify(slug.split_at(Slug::MAX).0);
-    }
-
-    if exists(conn, project_id, &slug) {
-        Ok(Slug::new(&slug))
-    } else {
-        Slug::from_str(&slug).map_err(|e| {
-            issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Invalid slug",
-                &format!("An invalid slug was generated ({slug}) from the name: {name}"),
-                e,
-            )
-        })
-    }
+        new_slug
+    })
 }
 
 macro_rules! ok_slug {

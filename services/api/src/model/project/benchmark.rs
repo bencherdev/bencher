@@ -62,11 +62,14 @@ impl QueryBenchmark {
         project_id: ProjectId,
         name: BenchmarkName,
     ) -> Result<BenchmarkId, HttpError> {
+        // For historical reasons, we will only every be able to match on name and not name ID here.
+        // The benchmark slugs were always created with a random suffix for a while.
+        // Therefore, a name that happens to be a valid slug will fail to be found, when treated as a slug.
         if let Ok(id) = Self::get_id_from_name(conn, project_id, &name) {
             return Ok(id);
         }
 
-        let insert_benchmark = InsertBenchmark::from_name(project_id, name);
+        let insert_benchmark = InsertBenchmark::from_name(conn, project_id, name)?;
         diesel::insert_into(schema::benchmark::table)
             .values(&insert_benchmark)
             .execute(conn)
@@ -157,9 +160,13 @@ impl InsertBenchmark {
         Ok(Self::new(project_id, name, slug))
     }
 
-    fn from_name(project_id: ProjectId, name: BenchmarkName) -> Self {
-        let slug = Slug::new(&name);
-        Self::new(project_id, name, slug)
+    fn from_name(
+        conn: &mut DbConnection,
+        project_id: ProjectId,
+        name: BenchmarkName,
+    ) -> Result<Self, HttpError> {
+        let slug = ok_slug!(conn, project_id, &name, None, benchmark, QueryBenchmark)?;
+        Ok(Self::new(project_id, name, slug))
     }
 
     fn new(project_id: ProjectId, name: BenchmarkName, slug: Slug) -> Self {

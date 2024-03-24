@@ -80,20 +80,40 @@ pub fn is_valid_slug(slug: &str) -> bool {
 impl Slug {
     pub const MAX: usize = MAX_LEN;
 
-    #[cfg(feature = "full")]
     pub fn new<S>(slug: S) -> Self
     where
         S: AsRef<str>,
     {
-        let slug = slug.as_ref();
-        let rand_suffix = rand::random::<u32>().to_string();
-        let slug = slug::slugify(if slug.len() + 1 + rand_suffix.len() > Self::MAX {
-            let mid = Self::MAX - (1 + rand_suffix.len());
-            slug.split_at(mid).0
+        let new_slug = slug::slugify(&slug);
+        Self(if new_slug.len() > Self::MAX {
+            slug::slugify(new_slug.split_at(Slug::MAX).0)
         } else {
+            new_slug
+        })
+    }
+
+    pub fn unwrap_or_new<N>(name: N, slug: Option<Self>) -> Self
+    where
+        N: AsRef<str>,
+    {
+        if let Some(slug) = slug {
             slug
-        });
-        Self(format!("{slug}-{rand_suffix}"))
+        } else {
+            Self::new(name)
+        }
+    }
+
+    #[cfg(feature = "full")]
+    #[must_use]
+    pub fn add_rand_suffix(self) -> Self {
+        let rand_suffix = rand::random::<u32>().to_string();
+        let truncated = if self.as_ref().len() + 1 + rand_suffix.len() > Self::MAX {
+            let mid = Self::MAX - (1 + rand_suffix.len());
+            slug::slugify(self.as_ref().split_at(mid).0)
+        } else {
+            self.0
+        };
+        Self(format!("{truncated}-{rand_suffix}"))
     }
 }
 
