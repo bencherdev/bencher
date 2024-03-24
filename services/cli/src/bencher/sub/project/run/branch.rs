@@ -176,7 +176,9 @@ impl Branch {
         backend: &AuthBackend,
     ) -> Result<(), BranchError> {
         match (current_branch.start_point.clone(), self.start_point.clone()) {
+            // If both the current branch and the provided branch have a start point, then the start points need to be compared.
             (Some(current_start_point), Some(start_point)) => {
+                // Get the branch for the provided start point.
                 let start_point_branch = match (&start_point.branch)
                     .try_into()
                     .map_err(BranchError::ParseBranch)?

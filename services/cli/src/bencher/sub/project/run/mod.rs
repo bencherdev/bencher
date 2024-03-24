@@ -67,6 +67,7 @@ impl TryFrom<CliRun> for Run {
             project,
             run_branch,
             hash,
+            no_hash,
             testbed,
             adapter,
             average,
@@ -84,7 +85,7 @@ impl TryFrom<CliRun> for Run {
         Ok(Self {
             project: unwrap_project(project)?,
             branch: run_branch.try_into().map_err(RunError::Branch)?,
-            hash: map_hash(hash),
+            hash: map_hash(hash, no_hash),
             testbed: testbed.try_into().map_err(RunError::Testbed)?,
             adapter: map_adapter(adapter),
             average: average.map(Into::into),
@@ -113,9 +114,11 @@ fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, RunError> {
     })
 }
 
-fn map_hash(hash: Option<GitHash>) -> Option<GitHash> {
+fn map_hash(hash: Option<GitHash>, no_hash: bool) -> Option<GitHash> {
     if let Some(hash) = hash {
         return Some(hash);
+    } else if no_hash {
+        return None;
     }
 
     let current_dir = std::env::current_dir().ok()?;

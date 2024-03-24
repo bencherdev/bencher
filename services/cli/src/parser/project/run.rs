@@ -18,6 +18,10 @@ pub struct CliRun {
     #[clap(long)]
     pub hash: Option<GitHash>,
 
+    /// Do not try to find a Git commit hash
+    #[clap(long, conflicts_with = "hash")]
+    pub no_hash: bool,
+
     /// Testbed name, slug, or UUID (or set BENCHER_TESTBED) (default is "localhost")
     /// If a name or slug is provided, the testbed will be created if it does not exist
     #[clap(long)]
