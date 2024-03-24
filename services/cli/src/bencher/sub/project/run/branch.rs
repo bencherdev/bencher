@@ -168,6 +168,7 @@ impl Branch {
         Ok(())
     }
 
+    #[allow(clippy::too_many_lines)]
     async fn check_start_point(
         &self,
         project: &ResourceId,
@@ -223,8 +224,33 @@ impl Branch {
                     return Ok(());
                 }
 
-                match (current_start_point.version.hash, &start_point.hash) {
-                    (Some(current_hash), Some(hash)) => {},
+                match (&current_start_point.version.hash, &start_point.hash) {
+                    (Some(current_hash), Some(hash)) => {
+                        if current_hash == hash {
+                            return Ok(());
+                        }
+
+                        // Get the current start point branch, with its UUID.
+                        let current_start_point_branch =
+                            get_branch(project, &current_start_point.branch.into(), backend)
+                                .await?;
+                        let suffix = format!(
+                            "{branch_name}/{AT_HASH}/{current_hash}",
+                            branch_name = current_start_point_branch.name.as_ref()
+                        );
+                        // Rename current branch name and slug
+                        rename_branch(project, &current_branch, &suffix, log, backend).await?;
+                        // Create new branch with the same name and slug as the current branch
+                        create_branch(
+                            project,
+                            current_branch.name,
+                            Some(current_branch.slug),
+                            Some(start_point),
+                            log,
+                            backend,
+                        )
+                        .await?;
+                    },
                     // This should only rarely happen going forward, as most branches with a start point will have a hash.
                     (None, Some(_)) => {
                         // Get the current start point branch, with its UUID.
