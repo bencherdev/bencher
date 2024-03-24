@@ -1,7 +1,7 @@
 use bencher_client::types::JsonNewTestbed;
 use bencher_json::{
     project::testbed::TESTBED_LOCALHOST_STR, JsonUuid, JsonUuids, NameId, NameIdKind, ResourceId,
-    ResourceName, TestbedUuid,
+    ResourceName, Slug, TestbedUuid,
 };
 
 use crate::{bencher::backend::AuthBackend, cli_println_quietable};
@@ -79,20 +79,26 @@ impl Testbed {
                 match get_testbed(project, &slug.clone().into(), backend).await {
                     Ok(_) => {},
                     Err(TestbedError::GetTestbed(_)) => {
-                        create_testbed(project, &slug.into(), log, backend).await?;
+                        cli_println_quietable!(
+                            log,
+                            "Failed to find testbed with slug \"{slug}\" in project \"{project}\"."
+                        );
+                        create_testbed(project, slug.clone().into(), Some(slug), log, backend)
+                            .await?;
                     },
                     Err(e) => return Err(e),
                 }
             },
-            NameIdKind::Name(name) => {
-                let testbed_name: ResourceName = name;
-                match get_testbed_by_name(project, &testbed_name, backend).await {
-                    Ok(Some(_)) => {},
-                    Ok(None) => {
-                        create_testbed(project, &testbed_name, log, backend).await?;
-                    },
-                    Err(e) => return Err(e),
-                }
+            NameIdKind::Name(name) => match get_testbed_by_name(project, &name, backend).await {
+                Ok(Some(_)) => {},
+                Ok(None) => {
+                    cli_println_quietable!(
+                        log,
+                        "Failed to find testbed with name \"{name}\" in project \"{project}\"."
+                    );
+                    create_testbed(project, name, None, log, backend).await?;
+                },
+                Err(e) => return Err(e),
             },
         }
         Ok(())
@@ -157,21 +163,18 @@ async fn get_testbed_by_name(
 
 async fn create_testbed(
     project: &ResourceId,
-    testbed_name: &ResourceName,
+    testbed_name: ResourceName,
+    testbed_slug: Option<Slug>,
     log: bool,
     backend: &AuthBackend,
 ) -> Result<TestbedUuid, TestbedError> {
     cli_println_quietable!(
         log,
-        "Failed to find testbed with name \"{testbed_name}\" in project \"{project}\"."
-    );
-    cli_println_quietable!(
-        log,
         "Creating a new testbed with name \"{testbed_name}\" in project \"{project}\".",
     );
     let new_testbed = &JsonNewTestbed {
-        name: testbed_name.clone().into(),
-        slug: None,
+        name: testbed_name.into(),
+        slug: testbed_slug.map(Into::into),
         soft: Some(true),
     };
     // Use `JsonUuid` to future proof against breaking changes
