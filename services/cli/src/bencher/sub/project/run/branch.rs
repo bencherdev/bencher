@@ -1,8 +1,8 @@
-use bencher_client::types::{JsonNewBranch, JsonNewStartPoint};
+use bencher_client::types::{JsonNewBranch, JsonNewStartPoint, JsonUpdateBranch};
 use bencher_json::{
     project::branch::{JsonVersion, BRANCH_MAIN_STR},
     BranchName, BranchUuid, GitHash, JsonBranch, JsonBranches, JsonStartPoint, JsonUuid, JsonUuids,
-    NameId, NameIdKind, ResourceId,
+    NameId, NameIdKind, ResourceId, Slug,
 };
 
 use crate::{
@@ -41,6 +41,8 @@ pub enum BranchError {
     GetBranches(crate::bencher::BackendError),
     #[error("Failed to create new branch: {0}")]
     CreateBranch(crate::bencher::BackendError),
+    #[error("Failed to update detached branch: {0}")]
+    UpdateBranch(crate::bencher::BackendError),
 }
 
 impl TryFrom<CliRunBranch> for Branch {
@@ -299,45 +301,35 @@ async fn rename_branch(
     log: bool,
     backend: &AuthBackend,
 ) -> Result<JsonBranch, BranchError> {
-    let branch_name = format!(
-        "{branch_name}@{suffix}",
-        branch_name = json_branch.name.as_ref()
-    );
     cli_println_quietable!(
         log,
         "New start point for branch with name \"{branch_name}\" in project \"{project}\".",
         branch_name = json_branch.name.as_ref(),
     );
+    let branch_name = format!(
+        "{branch_name}@{suffix}",
+        branch_name = json_branch.name.as_ref()
+    );
+    let branch_slug = Slug::new(&branch_name);
     cli_println_quietable!(
         log,
-        "Renaming detached branch to have name \"{branch_name}\" in project \"{project}\"."
+        "Renaming detached branch to have name \"{branch_name}\" and slug \"{branch_slug}\" in project \"{project}\"."
     );
+    let update_branch = &JsonUpdateBranch {
+        name: Some(branch_name.into()),
+        slug: Some(branch_slug.into()),
+    };
 
-    // TODO this needs to be a branch update not create
-    // let new_branch = &JsonNewBranch {
-    //     name: branch_name.into(),
-    //     slug: None,
-    //     soft: Some(true),
-    //     start_point: json_branch
-    //         .start_point
-    //         .clone()
-    //         .map(|start_point| JsonNewStartPoint {
-    //             branch: start_point.branch.clone(),
-    //             hash: start_point.hash.clone(),
-    //             thresholds: Some(true),
-    //         }),
-    // };
-
-    // backend
-    //     .send_with(|client| async move {
-    //         client
-    //             .proj_branch_post()
-    //             .project(project.clone())
-    //             .body(new_branch.clone())
-    //             .send()
-    //             .await
-    //     })
-    //     .await
-    //     .map_err(BranchError::CreateBranch)
-    todo!()
+    backend
+        .send_with(|client| async move {
+            client
+                .proj_branch_patch()
+                .project(project.clone())
+                .branch(json_branch.slug.to_string())
+                .body(update_branch.clone())
+                .send()
+                .await
+        })
+        .await
+        .map_err(BranchError::CreateBranch)
 }
