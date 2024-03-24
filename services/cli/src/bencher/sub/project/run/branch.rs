@@ -1,8 +1,7 @@
 use bencher_client::types::{JsonNewBranch, JsonNewStartPoint, JsonUpdateBranch};
 use bencher_json::{
-    project::branch::{JsonVersion, BRANCH_MAIN_STR},
-    BranchName, BranchUuid, GitHash, JsonBranch, JsonBranches, JsonStartPoint, JsonUuid, JsonUuids,
-    NameId, NameIdKind, ResourceId, Slug,
+    project::branch::BRANCH_MAIN_STR, BranchName, GitHash, JsonBranch, JsonBranches,
+    JsonStartPoint, NameId, NameIdKind, ResourceId, Slug,
 };
 
 use crate::{
@@ -10,9 +9,6 @@ use crate::{
 };
 
 use super::BENCHER_BRANCH;
-
-const AT_VERSION: &str = "version";
-const AT_HASH: &str = "hash";
 
 #[derive(Debug, Clone)]
 pub struct Branch {
@@ -168,7 +164,6 @@ impl Branch {
         Ok(())
     }
 
-    #[allow(clippy::too_many_lines)]
     async fn check_start_point(
         &self,
         project: &ResourceId,
@@ -196,80 +191,36 @@ impl Branch {
 
                 // If the current start point branch does not match the provided start point branch, then the branch needs to be recreated from that new start point.
                 if current_start_point.branch != start_point_branch.uuid {
-                    // Get the current start point branch, with its UUID.
-                    let current_start_point_branch =
-                        get_branch(project, &current_start_point.branch.into(), backend).await?;
-                    let version_suffix = if let Some(hash) = &current_start_point.version.hash {
-                        format!("{AT_HASH}/{hash}")
-                    } else {
-                        format!("{AT_VERSION}/{}", current_start_point.version.number)
-                    };
-                    let suffix = format!(
-                        "{branch_name}/{version_suffix}",
-                        branch_name = current_start_point_branch.name.as_ref()
-                    );
-                    // Rename current branch name and slug
-                    rename_branch(project, &current_branch, &suffix, log, backend).await?;
-                    // Create new branch with the same name and slug as the current branch
-                    create_branch(
+                    return rename_and_create_branch(
                         project,
-                        current_branch.name,
-                        Some(current_branch.slug),
-                        Some(start_point),
+                        &current_branch,
+                        start_point,
                         log,
                         backend,
                     )
-                    .await?;
-
-                    return Ok(());
+                    .await;
                 }
 
                 match (&current_start_point.version.hash, &start_point.hash) {
                     (Some(current_hash), Some(hash)) => {
-                        if current_hash == hash {
-                            return Ok(());
+                        // Rename and create a new branch if the hashes do not match.
+                        if current_hash != hash {
+                            rename_and_create_branch(
+                                project,
+                                &current_branch,
+                                start_point,
+                                log,
+                                backend,
+                            )
+                            .await?;
                         }
-
-                        // Get the current start point branch, with its UUID.
-                        let current_start_point_branch =
-                            get_branch(project, &current_start_point.branch.into(), backend)
-                                .await?;
-                        let suffix = format!(
-                            "{branch_name}/{AT_HASH}/{current_hash}",
-                            branch_name = current_start_point_branch.name.as_ref()
-                        );
-                        // Rename current branch name and slug
-                        rename_branch(project, &current_branch, &suffix, log, backend).await?;
-                        // Create new branch with the same name and slug as the current branch
-                        create_branch(
-                            project,
-                            current_branch.name,
-                            Some(current_branch.slug),
-                            Some(start_point),
-                            log,
-                            backend,
-                        )
-                        .await?;
                     },
                     // This should only rarely happen going forward, as most branches with a start point will have a hash.
                     (None, Some(_)) => {
-                        // Get the current start point branch, with its UUID.
-                        let current_start_point_branch =
-                            get_branch(project, &current_start_point.branch.into(), backend)
-                                .await?;
-                        let suffix = format!(
-                            "{branch_name}/{AT_VERSION}/{version}",
-                            branch_name = current_start_point_branch.name.as_ref(),
-                            version = current_start_point.version.number
-                        );
-                        // Rename current branch name and slug
-                        rename_branch(project, &current_branch, &suffix, log, backend).await?;
-                        // Create new branch with the same name and slug as the current branch
-                        create_branch(
+                        rename_and_create_branch(
                             project,
-                            current_branch.name,
-                            Some(current_branch.slug),
-                            Some(start_point),
+                            &current_branch,
+                            start_point,
                             log,
                             backend,
                         )
@@ -284,18 +235,8 @@ impl Branch {
             // Because adding a start point is a one way operation with `bencher run`, this operation will only ever be performed once.
             // Therefore, using a set naming convention for the detached branch name and slug is okay: `branch_name@detached`
             (None, Some(start_point)) => {
-                // Rename current branch to `branch_name@detached` and slug as well
-                rename_branch(project, &current_branch, "detached", log, backend).await?;
-                // Create new branch with the same name and slug as the current branch
-                create_branch(
-                    project,
-                    current_branch.name,
-                    Some(current_branch.slug),
-                    Some(start_point.clone()),
-                    log,
-                    backend,
-                )
-                .await?;
+                rename_and_create_branch(project, &current_branch, start_point, log, backend)
+                    .await?;
             },
             // If a start point is not specified, then there is nothing to check.
             // Even if the current branch has a start point, it does not need to always be specified.
@@ -448,4 +389,49 @@ async fn rename_branch(
         })
         .await
         .map_err(BranchError::CreateBranch)
+}
+
+async fn rename_and_create_branch(
+    project: &ResourceId,
+    current_branch: &JsonBranch,
+    start_point: StartPoint,
+    log: bool,
+    backend: &AuthBackend,
+) -> Result<(), BranchError> {
+    let suffix = get_rename_suffix(project, current_branch.start_point.as_ref(), backend).await?;
+    // Rename current branch to `branch_name@detached` and slug as well
+    rename_branch(project, current_branch, &suffix, log, backend).await?;
+    // Create new branch with the same name and slug as the current branch
+    create_branch(
+        project,
+        current_branch.name.clone(),
+        Some(current_branch.slug.clone()),
+        Some(start_point),
+        log,
+        backend,
+    )
+    .await?;
+    Ok(())
+}
+
+async fn get_rename_suffix(
+    project: &ResourceId,
+    current_start_point: Option<&JsonStartPoint>,
+    backend: &AuthBackend,
+) -> Result<String, BranchError> {
+    let Some(current_start_point) = current_start_point else {
+        return Ok("detached".to_owned());
+    };
+
+    // Get the current start point branch, with its UUID.
+    let current_start_point_branch =
+        get_branch(project, &current_start_point.branch.into(), backend).await?;
+
+    let branch_name = current_start_point_branch.name.as_ref();
+    let version_suffix = if let Some(hash) = &current_start_point.version.hash {
+        format!("hash/{hash}")
+    } else {
+        format!("version/{}", current_start_point.version.number)
+    };
+    Ok(format!("{branch_name}/{version_suffix}"))
 }
