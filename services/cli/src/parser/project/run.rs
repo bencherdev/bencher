@@ -14,13 +14,8 @@ pub struct CliRun {
     #[clap(flatten)]
     pub run_branch: CliRunBranch,
 
-    /// Git commit hash (defaults to HEAD)
-    #[clap(long)]
-    pub hash: Option<GitHash>,
-
-    /// Do not try to find a Git commit hash
-    #[clap(long, conflicts_with = "hash")]
-    pub no_hash: bool,
+    #[clap(flatten)]
+    pub run_hash: CliRunHash,
 
     /// Testbed name, slug, or UUID (or set BENCHER_TESTBED) (default is "localhost")
     /// If a name or slug is provided, the testbed will be created if it does not exist
@@ -78,30 +73,42 @@ pub struct CliRun {
 #[allow(clippy::option_option)]
 pub struct CliRunBranch {
     /// Branch name, slug, or UUID (or set BENCHER_BRANCH) (default is "main")
-    /// If `branch` does not already exist, it will be created if a name or slug is provided
+    /// If `branch` does not already exist, it will be created if a name or slug is provided.
     #[clap(long, alias = "if-branch")]
     pub branch: Option<NameId>,
 
-    /// Use the given branch name, slug, or UUID as the start point for `branch`.
-    /// If `branch` does not exist, it will be created using this start point.
-    /// If `branch` does exist and the start point is not different, then this argument is effectively ignored.
-    /// If `branch` does exist and the start point is different, the old version of `branch` will be archived
-    /// and a new `branch` will be created using this updated start point.
+    /// Use the specified branch name, slug, or UUID as the start point for `branch`.
+    /// If `branch` already exists and the start point is different, a new branch will be created.
     /// Specifying more than one start point is now deprecated.
     /// Only the first start point will be used.
     #[clap(long, alias = "else-if-branch")]
     // TODO move this to Option<NameId> in due time
     pub branch_start_point: Vec<NameId>,
 
-    /// Use the given full Git hash as the start point for `branch` (requires: `--branch-start-point`)
-    /// If not specified, the most recent version for the branch start point will be used.
-    /// If specified, this will set the Git hash for the branch start point.
+    /// Use the specified full Git hash as the start point for `branch` (requires: `--branch-start-point`)
+    /// If `branch` already exists and the start point hash is different, a new branch will be created.
     #[clap(long, requires = "branch_start_point")]
     pub branch_start_point_hash: Option<GitHash>,
 
     /// Deprecated: Do not use. This will soon be removed.
-    #[clap(long, alias = "else-branch")]
-    pub endif_branch: bool,
+    #[clap(long, alias = "else-branch", alias = "endif-branch")]
+    pub deprecated: bool,
+}
+
+#[derive(Args, Debug)]
+#[clap(group(
+    ArgGroup::new("run_hash")
+        .multiple(false)
+        .args(&["hash", "no_hash"]),
+))]
+pub struct CliRunHash {
+    /// Git commit hash (defaults to HEAD)
+    #[clap(long)]
+    pub hash: Option<GitHash>,
+
+    /// Do not try to find a Git commit hash
+    #[clap(long)]
+    pub no_hash: bool,
 }
 
 #[derive(Args, Debug)]

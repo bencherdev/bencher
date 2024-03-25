@@ -9,7 +9,7 @@ use url::Url;
 use crate::{
     bencher::backend::AuthBackend,
     cli_eprintln_quietable, cli_println, cli_println_quietable,
-    parser::project::run::{CliRun, CliRunAdapter},
+    parser::project::run::{CliRun, CliRunAdapter, CliRunHash},
     CliError,
 };
 
@@ -66,8 +66,7 @@ impl TryFrom<CliRun> for Run {
         let CliRun {
             project,
             run_branch,
-            hash,
-            no_hash,
+            run_hash,
             testbed,
             adapter,
             average,
@@ -85,7 +84,7 @@ impl TryFrom<CliRun> for Run {
         Ok(Self {
             project: unwrap_project(project)?,
             branch: run_branch.try_into().map_err(RunError::Branch)?,
-            hash: map_hash(hash, no_hash),
+            hash: map_hash(run_hash),
             testbed: testbed.try_into().map_err(RunError::Testbed)?,
             adapter: map_adapter(adapter),
             average: average.map(Into::into),
@@ -114,7 +113,7 @@ fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, RunError> {
     })
 }
 
-fn map_hash(hash: Option<GitHash>, no_hash: bool) -> Option<GitHash> {
+fn map_hash(CliRunHash { hash, no_hash }: CliRunHash) -> Option<GitHash> {
     if let Some(hash) = hash {
         return Some(hash);
     } else if no_hash {

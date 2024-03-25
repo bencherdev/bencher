@@ -5,97 +5,79 @@ heading: "Branch Selection with bencher run"
 sortOrder: 3
 ---
 
-There are a few ways to select the project branch in the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand.
-If none of these options or flags are set then `main` is used as the default branch.
-
-<br />
-
 ### `--branch <BRANCH>`
 
 <br />
 
-The simplest way to select a branch is to set the `--branch` option or the `BENCHER_BRANCH` environment variable to the name, slug, or UUID of an already existing branch.
-If both are defined, the `--branch` option takes precedence over the `BENCHER_BRANCH` environment variable.
+To select a branch, set the `--branch` option or the `BENCHER_BRANCH` environment variable
+to the name, slug, or UUID for the branch.
+If the value specified is a name or slug and the branch does not already exist, it will be created for you.
+However, if the value specified is a UUID then the branch must already exist.
+If both are specified, the `--branch` option takes precedence over the `BENCHER_BRANCH` environment variable.
+If neither are specified then `main` is used as the default branch.
 
-In CI/CD environments, new branches are popping up all the time, so there is a way to create new branches with `bencher run`
-Instead of using `--branch` or the `BENCHER_BRANCH` environment variable, there is the `--if-branch` option.
-
-<br />
-
-### `--if-branch <BRANCH_NAME>`
-
-<br />
-
-The `--if-branch` option expects a branch _name_ argument and queries to see if a single branch with that name exists.
-If there is exactly one branch found, then `bencher run` proceeds using that branch.
-Otherwise, `bencher run` will simply log and exit successfully.
-
-For example, if `main` exists then using `--if-branch main` would find it. Then `bencher run` would proceed using `main`.
-
-The `--branch` option conflicts with the `--if-branch` option, but the `BENCHER_BRANCH` environment variable takes precedent over the `--if-branch` option.
+When [Continuous Benchmarking](/docs/explanation/continuous-benchmarking/), that is benchmarking in CI,
+you will often want to create a new branch based on an already existing branch.
+That is where the `--branch-start-point` and `branch-start-point-hash` options come in.
 
 <br />
 
-> 🐰 Note: Whenever using environment variables they should be wrapped in double quotes (ie `--if-branch "$MY_ENV_VAR"`).
+### `--branch-start-point <BRANCH>`
 
 <br />
 
-### `--else-if-branch <BRANCH_NAME>`
+Use the specified branch name, slug, or UUID as the [start point][start point] for the [`branch`](#--branch-branch) option.
+For GitHub this is usually [the `base` branch for a Pull Request][github base],
+and for GitLab this is usually [the `target` branch for a Merge Request][gitlab target].
 
-<br />
+- If `branch` does not exist, it will be created using this start point.
+- If `branch` does exist and the start point is the same, then this option is effectively ignored.
+- If `branch` does exist and the start point is different, the old version of `branch` will be renamed
+  and a new `branch` will be created using this updated start point.
 
-Often, when working on feature branches, it would be useful to have historical data from the parent/base branch.
-This is where the `--else-if-branch` option comes in.
-The `--else-if-branch` option expects another branch _name_ argument.
-If `--if-branch` fails, then `--else-if-branch` queries to see if a single branch with that name exists.
-If there is exactly one branch found, then all the data and thresholds from this starting point branch will be copied over to a newly created branch with the name given to `--if-branch`.
+If a new `branch` is created, then all the data and thresholds from the specified start point are copied over.
 
 For example, if `feature_branch` does not yet exist, but `main` does exist and has historical data.
-Then using `--if-branch feature_branch --else-if-branch main`, would create a new branch named `feature_branch`,
-and it would have a copy of all the data and thresholds from `main`.
-Then `bencher run` would proceed using `feature_branch`.
+Then using `--branch feature_branch --branch-start-point main` would:
+1. Create a new branch named `feature_branch`
+2. Copy of all the data and thresholds from `main` to `feature_branch`
+3. `bencher run` would proceed using `feature_branch`
 
-It is also possible to use multiple `--else-if-branch` options.
-For example if `mia_branch` does not exist, `--if-branch feature_branch --else-if-branch mia_branch --else-if-branch main`
-would effectively function the same as the previous example, copying all of the data and thresholds from `main` and proceeding.
-
-If the `--if-branch` query succeeds then `--else-if-branch` is never run, and if both `--if-branch` and `--else-if-branch` fail, `bencher run` will simply log and exit successfully.
-
-<br />
-
-> 🐰 Note: Whenever using environment variables they should be wrapped in double quotes (ie `--else-if-branch "$MY_ENV_VAR"`).
+[start point]: https://git-scm.com/docs/git-branch#Documentation/git-branch.txt-ltstart-pointgt
+[github base]: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-branches#working-with-branches
+[gitlab target]: https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html#from-the-merge-request-list
 
 <br />
 
-### `--else-branch`
+> 🐰 Note: Whenever using environment variables they should be wrapped in double quotes (ie `--branch-start-point "$MY_BRANCH_ENV_VAR"`).
 
 <br />
 
-To guarantee in all cases that the metrics from a run are stored, there is an `--else-branch` flag.
-The `--else-branch` flag takes no arguments.
-If `--if-branch` fails, then `--else-branch` simply creates a new branch with the name given to `--if-branch`.
-
-For example, if `feature_branch` does not yet exist.
-Then using `--if-branch feature_branch --else-branch`, would create a new branch named `feature_branch`,
-and it would have no initial data nor thresholds.
-Then `bencher run` would proceed using `feature_branch`.
-
-It is also possible to chain all three flags together: `--if-branch`, `--else-if-branch`, and `--else-branch`.
-For example, `--if-branch feature_branch --else-if-branch main --else-branch`.
-
-If the `--if-branch` query succeeds then `--else-branch` is never run, and likewise, if `--if-else-branch` succeeds then `--else-branch` is never run.
-And `--else-branch` is expected to always succeed and exit successfully.
+### `--branch-start-point-hash <HASH>`
 
 <br />
 
-### `--endif-branch`
+Use the specified full Git hash as the [start point][start point] for the `branch` option.
+This option requires the [`--branch-start-point`](#--branch-start-point-branch) option to be set.
 
-<br />
+- If `branch` does not exist, it will be created from `branch-start-point` at the specified hash.
+- If `branch` does exist and both `branch-start-point` and the specified hash are the same,
+  then this option is effectively ignored.
+- If `branch` already exists and either the `branch-start-point` or the specified hash are different,
+  the old version of `branch` will be renamed
+  and a new `branch` will be created from `branch-start-point` at the specified hash.
 
-The `--endif-branch` flag works as an optional noop flag to indicate the end of the `--if-branch` statement.
+For example, if `feature_branch` exists with its start point being the `main` branch
+at hash `32aea434d751648726097ed3ac760b57107edd8b`
+then using `--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`
+would:
 
-It is possible to chain all four flags together: `--if-branch`, `--else-if-branch`, `--else-branch`, and `--endif-branch`.
-For example, `--if-branch feature_branch --else-if-branch "$MY_ENV_VAR" --else-branch --endif-branch`.
+1. Rename the old `feature_branch` to `feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b`
+1. Create a new branch named `feature_branch`
+1. Copy of all the data and thresholds from `main` at hash `68b12758509ca5e2b1e3983525625e532eb5f562` to the new `feature_branch`
+1. `bencher run` would proceed using the new `feature_branch`
+
+[start point]: https://git-scm.com/docs/git-branch#Documentation/git-branch.txt-ltstart-pointgt
 
 <br />
 <br />
