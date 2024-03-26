@@ -5,6 +5,16 @@ heading: "Branch Selection with bencher run"
 sortOrder: 3
 ---
 
+A branch is the `git` ref used when running a report (ie branch name or tag).
+By default all projects start with a `main` branch.
+When using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand,
+`main` is the default branch if one is not provided.
+A branch can have a [start point][start point].
+A start point is another branch at a specific version (and `git` hash, if available).
+All the data and optionally [thresholds](/docs/explanation/thresholds/) are copied over from the start point.
+
+[start point]: https://git-scm.com/docs/git-branch#Documentation/git-branch.txt-ltstart-pointgt
+
 ### `--branch <BRANCH>`
 
 <br />
@@ -17,7 +27,7 @@ If both are specified, the `--branch` option takes precedence over the `BENCHER_
 If neither are specified then `main` is used as the default branch.
 
 When [Continuous Benchmarking](/docs/explanation/continuous-benchmarking/), that is benchmarking in CI,
-you will often want to create a new branch based on an already existing branch.
+you will often want to create or rebase a `branch` on an already existing branch.
 That is where the `--branch-start-point` and `branch-start-point-hash` options come in.
 
 <br />
@@ -30,12 +40,12 @@ Use the specified branch name, slug, or UUID as the [start point][start point] f
 For GitHub this is usually [the `base` branch for a Pull Request][github base],
 and for GitLab this is usually [the `target` branch for a Merge Request][gitlab target].
 
+- If the specified start point is an empty string, then this option is ignored.
 - If `branch` does not exist, it will be created using this start point.
-- If `branch` does exist and the start point is the same, then this option is effectively ignored.
+- If `branch` does exist and the start point is the same, then this option is ignored.
 - If `branch` does exist and the start point is different, the old version of `branch` will be renamed
   and a new `branch` will be created using this updated start point.
-
-If a new `branch` is created, then all the data and thresholds from the specified start point are copied over.
+- If a new `branch` is created, then all the data and thresholds from the specified start point are copied over.
 
 For example, if `feature_branch` does not yet exist, but `main` does exist and has historical data.
 Then using `--branch feature_branch --branch-start-point main` would:
@@ -62,7 +72,7 @@ This option requires the [`--branch-start-point`](#--branch-start-point-branch) 
 
 - If `branch` does not exist, it will be created from `branch-start-point` at the specified hash.
 - If `branch` does exist and both `branch-start-point` and the specified hash are the same,
-  then this option is effectively ignored.
+  then this option is ignored.
 - If `branch` already exists and either the `branch-start-point` or the specified hash are different,
   the old version of `branch` will be renamed
   and a new `branch` will be created from `branch-start-point` at the specified hash.

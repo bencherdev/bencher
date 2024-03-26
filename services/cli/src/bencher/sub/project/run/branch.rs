@@ -29,6 +29,12 @@ pub struct StartPoint {
 pub enum BranchError {
     #[error("Failed to parse UUID, slug, or name for the branch: {0}")]
     ParseBranch(bencher_json::ValidError),
+    #[error("Failed to get branch with UUID: {0}\nDoes it exist? Branches must already exist when using `--branch` or `BENCHER_BRANCH` with a UUID.\nSee: https://bencher.dev/docs/explanation/branch-selection/")]
+    GetBranchUuid(crate::BackendError),
+    #[error("Failed to get branch with slug: {0}")]
+    GetBranchSlug(crate::BackendError),
+    #[error("Failed to query branches: {0}")]
+    GetBranches(crate::BackendError),
     #[error(
         "{count} branches were found with name \"{branch_name}\" in project \"{project}\"! Exactly one was expected.\nThis is likely a bug. Please report it here: https://github.com/bencherdev/bencher/issues"
     )]
@@ -37,14 +43,8 @@ pub enum BranchError {
         branch_name: String,
         count: usize,
     },
-    #[error("Failed to get branch: {0}\nDoes it exist? Branches must already exist when using `--branch` or `BENCHER_BRANCH` with a UUID.\nSee: https://bencher.dev/docs/explanation/branch-selection/")]
-    GetBranch(crate::bencher::BackendError),
-    #[error("Failed to query branches: {0}")]
-    GetBranches(crate::bencher::BackendError),
-    #[error("Failed to create new branch: {0}")]
-    CreateBranch(crate::bencher::BackendError),
-    #[error("Failed to update detached branch: {0}")]
-    UpdateBranch(crate::bencher::BackendError),
+    #[error("Failed to get branch start point: {0}\nDoes it exist? The branch start point must already exist when using `--branch-start-point`\nSee: https://bencher.dev/docs/explanation/branch-selection/")]
+    GetStartPoint(crate::BackendError),
     #[error(
         "No branches were found for the start point with name \"{branch_name}\" in project \"{project}\". Exactly one was expected.\nDoes it exist?"
     )]
@@ -52,6 +52,12 @@ pub enum BranchError {
         project: String,
         branch_name: String,
     },
+    #[error("Failed to get current branch start point. This is likely a bug. Please report it here: https://github.com/bencherdev/bencher/issues")]
+    GetCurrentStartPoint(crate::BackendError),
+    #[error("Failed to create new branch: {0}")]
+    CreateBranch(crate::BackendError),
+    #[error("Failed to update detached branch: {0}")]
+    UpdateBranch(crate::BackendError),
 }
 
 impl TryFrom<CliRunBranch> for Branch {
@@ -74,13 +80,12 @@ impl TryFrom<CliRunBranch> for Branch {
         } else {
             BRANCH_MAIN_STR.parse().map_err(BranchError::ParseBranch)?
         };
-        let start_point = branch_start_point
-            .first()
-            .cloned()
-            .map(|branch| StartPoint {
-                branch,
+        let start_point = branch_start_point.first().cloned().and_then(|branch| {
+            Some(StartPoint {
+                branch: branch.parse().ok()?,
                 hash: branch_start_point_hash,
-            });
+            })
+        });
         Ok(Self {
             branch,
             start_point,
@@ -115,7 +120,9 @@ impl Branch {
             .map_err(BranchError::ParseBranch)?
         {
             NameIdKind::Uuid(uuid) => {
-                let branch = get_branch(project, &uuid.into(), backend).await?;
+                let branch = get_branch(project, &uuid.into(), backend)
+                    .await
+                    .map_err(BranchError::GetBranchUuid)?;
                 self.check_start_point(project, branch, log, backend)
                     .await?;
             },
@@ -125,7 +132,12 @@ impl Branch {
                         self.check_start_point(project, branch, log, backend)
                             .await?;
                     },
-                    Err(BranchError::GetBranch(_)) => {
+                    Err(crate::BackendError::Client(ClientError::ErrorResponse(
+                        ErrorResponse {
+                            status: reqwest::StatusCode::NOT_FOUND,
+                            ..
+                        },
+                    ))) => {
                         cli_println_quietable!(
                             log,
                             "Failed to find branch with slug \"{slug}\" in project \"{project}\"."
@@ -140,7 +152,7 @@ impl Branch {
                         )
                         .await?;
                     },
-                    Err(e) => return Err(e),
+                    Err(e) => return Err(BranchError::GetBranchSlug(e)),
                 }
             },
             NameIdKind::Name(name) => match get_branch_by_name(project, &name, backend).await {
@@ -178,8 +190,12 @@ impl Branch {
                     .try_into()
                     .map_err(BranchError::ParseBranch)?
                 {
-                    NameIdKind::Uuid(uuid) => get_branch(project, &uuid.into(), backend).await,
-                    NameIdKind::Slug(slug) => get_branch(project, &slug.into(), backend).await,
+                    NameIdKind::Uuid(uuid) => get_branch(project, &uuid.into(), backend)
+                        .await
+                        .map_err(BranchError::GetStartPoint),
+                    NameIdKind::Slug(slug) => get_branch(project, &slug.into(), backend)
+                        .await
+                        .map_err(BranchError::GetStartPoint),
                     NameIdKind::Name(name) => get_branch_by_name(project, &name, backend)
                         .await?
                         .ok_or_else(|| BranchError::NoStartPoint {
@@ -260,7 +276,7 @@ async fn get_branch(
     project: &ResourceId,
     branch: &ResourceId,
     backend: &AuthBackend,
-) -> Result<JsonBranch, BranchError> {
+) -> Result<JsonBranch, crate::BackendError> {
     backend
         .send_with(|client| async move {
             client
@@ -271,7 +287,6 @@ async fn get_branch(
                 .await
         })
         .await
-        .map_err(BranchError::GetBranch)
 }
 
 async fn get_branch_by_name(
@@ -478,7 +493,9 @@ async fn rename_branch_suffix(
 
     // Get the current start point branch, with its UUID.
     let current_start_point_branch =
-        get_branch(project, &current_start_point.branch.into(), backend).await?;
+        get_branch(project, &current_start_point.branch.into(), backend)
+            .await
+            .map_err(BranchError::GetCurrentStartPoint)?;
 
     let branch_name = current_start_point_branch.name.as_ref();
     let version_suffix = if let Some(hash) = &current_start_point.version.hash {

@@ -16,7 +16,8 @@ This Report is then sent to the Bencher API server,
 where the benchmark harness output is parsed using a [benchmark harness adapter](/docs/explanation/adapters/).
 The benchmark harness adapter detects all of the Benchmarks that are present and their corresponding Metrics.
 These Benchmarks and Metrics are then saved along with the Report.
-If there is a [Threshold](/docs/explanation/thresholds/) set, then the new Metrics are compared against the historical Metrics for each Benchmark present in the Report.
+If there is a [Threshold](/docs/explanation/thresholds/) set,
+then the new Metrics are compared against the historical Metrics for each Benchmark present in the Report.
 If a regression is detected, then an Alert will be generated.
 
 From here on out we will refer to your "benchmarks" as "performance regression tests" to avoid any confusion.
@@ -32,7 +33,8 @@ Otherwise, the renamed performance regression test will be considered a new Benc
 This same word of caution also applies to _moving_ some performance regression tests.
 Depending on the benchmark harness, the path to the performance regression test may be a part of its name.
 
-The only exception to the above caveat is ignoring a Benchmark. See [suppressing alerts](/docs/explanation/thresholds/) for a full overview.
+The only exception to the above caveat is ignoring a Benchmark.
+See [suppressing alerts](/docs/explanation/thresholds/) for a full overview.
 
 ### Metrics
 A Metric is a single, point-in-time performance regression test result.
@@ -59,6 +61,14 @@ By default all Projects start with a `main` Branch.
 When using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand,
 `main` is the default Branch if one is not provided.
 See [branch selection](/docs/explanation/branch-selection/) for a full overview.
+
+#### Start Point
+A Branch can have a [Start Point][start point].
+A Start Point is another Branch at a specific version (and `git` hash, if available).
+All the Metrics and optionally Thresholds are copied over from the Start Point.
+See [branch selection](/docs/explanation/branch-selection/) for a full overview.
+
+[start point]: https://git-scm.com/docs/git-branch#Documentation/git-branch.txt-ltstart-pointgt
 
 ### Testbed
 A Testbed is the name of the testing environment used when running a Report.

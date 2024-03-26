@@ -82,8 +82,8 @@ pub struct CliRunBranch {
     /// Specifying more than one start point is now deprecated.
     /// Only the first start point will be used.
     #[clap(long, alias = "else-if-branch")]
-    // TODO move this to Option<NameId> in due time
-    pub branch_start_point: Vec<NameId>,
+    // TODO move this to Option<String> in due time
+    pub branch_start_point: Vec<String>,
 
     /// Use the specified full Git hash as the start point for `branch` (requires: `--branch-start-point`)
     /// If `branch` already exists and the start point hash is different, a new branch will be created.
