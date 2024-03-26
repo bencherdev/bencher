@@ -104,9 +104,14 @@ impl Slug {
     }
 
     #[cfg(feature = "full")]
+    pub fn rand_suffix() -> String {
+        rand::random::<u32>().to_string()
+    }
+
+    #[cfg(feature = "full")]
     #[must_use]
     pub fn add_rand_suffix(self) -> Self {
-        let rand_suffix = rand::random::<u32>().to_string();
+        let rand_suffix = Self::rand_suffix();
         let truncated = if self.as_ref().len() + 1 + rand_suffix.len() > Self::MAX {
             let mid = Self::MAX - (1 + rand_suffix.len());
             slug::slugify(self.as_ref().split_at(mid).0)

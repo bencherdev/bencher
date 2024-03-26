@@ -276,11 +276,11 @@ impl BencherClient {
 
 #[derive(Debug)]
 pub struct ErrorResponse {
-    status: reqwest::StatusCode,
-    headers: reqwest::header::HeaderMap,
-    request_id: String,
-    error_code: Option<String>,
-    message: String,
+    pub status: reqwest::StatusCode,
+    pub headers: reqwest::header::HeaderMap,
+    pub request_id: String,
+    pub error_code: Option<String>,
+    pub message: String,
 }
 
 impl std::fmt::Display for ErrorResponse {

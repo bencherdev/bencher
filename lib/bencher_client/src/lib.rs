@@ -12,7 +12,7 @@ mod codegen {
 mod client;
 
 pub use bencher_json as json;
-pub use client::{BencherClient, BencherClientBuilder, ClientError};
+pub use client::{BencherClient, BencherClientBuilder, ClientError, ErrorResponse};
 pub use codegen::*;
 
 macro_rules! from_client {

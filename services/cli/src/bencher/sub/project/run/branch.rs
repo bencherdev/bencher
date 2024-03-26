@@ -1,4 +1,7 @@
-use bencher_client::types::{JsonNewBranch, JsonNewStartPoint, JsonUpdateBranch};
+use bencher_client::{
+    types::{JsonNewBranch, JsonNewStartPoint, JsonUpdateBranch},
+    ClientError, ErrorResponse,
+};
 use bencher_json::{
     project::branch::BRANCH_MAIN_STR, BranchName, GitHash, JsonBranch, JsonBranches,
     JsonStartPoint, NameId, NameIdKind, ResourceId, Slug,
@@ -401,18 +404,61 @@ async fn rename_branch(
         log,
         "Renaming detached branch to have name \"{branch_name}\" and slug \"{branch_slug}\" in project \"{project}\"."
     );
-    let update_branch = &JsonUpdateBranch {
-        name: Some(branch_name.into()),
-        slug: Some(branch_slug.into()),
-    };
 
     // TODO archive the detached branch
+    match update_branch(
+        project,
+        &current_branch.slug.clone().into(),
+        Some(branch_name.clone().into()),
+        Some(branch_slug.clone().into()),
+        backend,
+    )
+    .await
+    {
+        Ok(branch) => Ok(branch),
+        Err(BranchError::UpdateBranch(crate::BackendError::Client(
+            ClientError::ErrorResponse(ErrorResponse {
+                status: reqwest::StatusCode::CONFLICT,
+                ..
+            }),
+        ))) => {
+            cli_println_quietable!(
+                log,
+                "Branch with name \"{branch_name}\" or slug \"{branch_slug}\" in project \"{project}\" already exists."
+            );
+            let branch_name = format!("{branch_name}/{random}", random = Slug::rand_suffix());
+            let branch_slug = Slug::new(&branch_name);
+            cli_println_quietable!(
+                log,
+                "Renaming detached branch to have name \"{branch_name}\" and slug \"{branch_slug}\" in project \"{project}\" to avoid conflict."
+            );
+            update_branch(
+                project,
+                &current_branch.slug.clone().into(),
+                Some(branch_name.clone().into()),
+                Some(branch_slug.clone().into()),
+                backend,
+            )
+            .await
+        },
+        Err(e) => Err(e),
+    }
+}
+
+async fn update_branch(
+    project: &ResourceId,
+    resource_id: &ResourceId,
+    name: Option<bencher_client::types::BranchName>,
+    slug: Option<bencher_client::types::Slug>,
+    backend: &AuthBackend,
+) -> Result<JsonBranch, BranchError> {
+    let update_branch = &JsonUpdateBranch { name, slug };
     backend
         .send_with(|client| async move {
             client
                 .proj_branch_patch()
                 .project(project.clone())
-                .branch(current_branch.slug.to_string())
+                .branch(resource_id.clone())
                 .body(update_branch.clone())
                 .send()
                 .await
