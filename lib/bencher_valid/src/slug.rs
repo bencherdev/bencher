@@ -79,6 +79,7 @@ pub fn is_valid_slug(slug: &str) -> bool {
 
 impl Slug {
     pub const MAX: usize = MAX_LEN;
+    const RAND_LEN: usize = 8;
 
     pub fn new<S>(slug: S) -> Self
     where
@@ -105,19 +106,33 @@ impl Slug {
 
     #[cfg(feature = "full")]
     pub fn rand_suffix() -> String {
-        rand::random::<u32>().to_string()
+        use rand::Rng;
+
+        const CHARSET: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyz";
+        let mut rng = rand::thread_rng();
+
+        (0..Self::RAND_LEN)
+            .map(|_| {
+                let index = rng.gen_range(0..CHARSET.len());
+                if let Some(c) = CHARSET.get(index).copied() {
+                    c as char
+                } else {
+                    '0'
+                }
+            })
+            .collect()
     }
 
     #[cfg(feature = "full")]
     #[must_use]
     pub fn add_rand_suffix(self) -> Self {
-        let rand_suffix = Self::rand_suffix();
-        let truncated = if self.as_ref().len() + 1 + rand_suffix.len() > Self::MAX {
-            let mid = Self::MAX - (1 + rand_suffix.len());
+        let truncated = if self.as_ref().len() + 1 + Self::RAND_LEN > Self::MAX {
+            let mid = Self::MAX - (1 + Self::RAND_LEN);
             slug::slugify(self.as_ref().split_at(mid).0)
         } else {
             self.0
         };
+        let rand_suffix = Self::rand_suffix();
         Self(format!("{truncated}-{rand_suffix}"))
     }
 }
