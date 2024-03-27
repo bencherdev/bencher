@@ -1,31 +1,89 @@
 ---
-title: "Track Benchmarks"
-description: "Catch code benchmark performance regressions with historical continuous benchmarking or relative continuous benchmarking"
-heading: "How to use Bencher to Track Benchmarks"
+title: "Track Benchmarks in CI"
+description: "Catch performance regressions in CI with historical and relative continuous benchmarking"
+heading: "How to use Bencher to Track Benchmarks in CI"
 sortOrder: 2
 ---
 
 import TrackHistorical from "../../../chunks/how_to/track-historical.mdx";
 import TrackRelative from "../../../chunks/how_to/track-relative.mdx";
 
-The easiest way to track your benchmarks is the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand.
-See the [benchmarking overview](/docs/explanation/benchmarking/) for a more in-depth explanation.
-This is an example of a <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand to track benchmarks on a feature branch aptly named `feature-branch`:
+Most benchmark results are ephemeral.
+They disappear as soon as your terminal reaches its scrollback limit.
+Some benchmark harnesses let you cache results, but most only do so locally.
+Bencher allows you to track your benchmarks from both local and CI runs and compare the results,
+while still using [your favorite benchmark harness](/docs/explanation/adapters/).
+
+There are two popular ways to compare benchmark results when [Continuous Benchmarking](/docs/explanation/continuous-benchmarking/), that is benchmarking in CI:
+- Historical Benchmarking
+  - Track benchmark results over time to create a baseline
+  - Use this baseline along with [statistical thresholds](/docs/explanation/thresholds/) to create a statistical boundary
+  - Compare new results against this statistical boundary to detect performance regressions
+- Relative Benchmarking
+  - Run the benchmarks for the current baseline code
+  - Switch over to the new version of the code
+  - Run the benchmarks for the new version of the code
+  - Compare new version of the code results against the baseline code results to detect performance regressions
+
+[historical benchmarking]: #historical-benchmarking
+[relative benchmarking]: #relative-benchmarking
+
+The easiest way to track and compare your benchmarks
+is the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand.
+For a more in-depth explanation of the concepts used by Bencher,
+see the [benchmarking overview](/docs/explanation/benchmarking/).
+
+## Historical Continuous Benchmarking
+
+This is an example of using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand
+for historical [Continuous Benchmarking](/docs/explanation/continuous-benchmarking/).
+It picks up where we left off in the
+[Quick Start](/docs/tutorial/quick-start/) and [Docker Self-Hosted](/docs/tutorial/docker/) tutorials
+with a new feature Branch aptly named `feature-branch`:
 
 <TrackHistorical />
 
-1. The Project must already exist. Set the `--project` flag or the `BENCHER_PROJECT` environment variable to the Project slug or UUID. (ex: `--project save-walter-white`)
-1. The API token must already exist. Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable to the API token. (ex: `--token ...`)
-1. Optional: Set the `--adapter` flag or the `BENCHER_ADAPTER` environment variable to the desired adapter name. If this is not set, then the `magic` Adapter will be used. See [benchmark harness adapters](/docs/explanation/adapters/) for a full overview. (ex: `--adapter json`)
-1. There are several options for setting the project branch. See [branch selection](/docs/explanation/branch-selection/) for a full overview.
-    1. Use the current branch if it already exists. (ex: `--if-branch feature-branch`)
-    1. Create a clone of target branch data if it already exists. (ex: `--else-if-branch main`)
-    1. Otherwise, create a new branch with the name provided to `--if-branch`, which would be `feature-branch`. (ex: `--else-branch`)
-1. Optional: Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the Testbed slug or UUID. The Testbed must already exist. If this is not set, then the default `localhost` Testbed will be used. (ex: `--testbed localhost`)
-1. Set the command to fail if an Alert is generated. In order for an Alert to be generated, a [Threshold](/docs/explanation/thresholds/) must already exist. (ex: `--err`)
-1. Run your benchmarks and generate a Report from the results. (ex: `"bencher mock"`)
+1.  Use the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand.
+    See [the `bencher run` CLI subcommand](/docs/explanation/bencher-run/) for a full overview.
+    (ex: `bencher run`)
+2.  Set the `--project` option to the Project slug.
+    See [the `--project` docs](/docs/explanation/bencher-run/#--project-project) for more details.
+    (ex: `--project save-walter-white`)
+3.  Set the `--token` option to the API token.
+    See [the `--token` docs](/docs/explanation/bencher-run/#--token-token) for more details.
+    (ex: `--token eyJ0...pwEc`)
+4.  Set the `--adapter` option to the desired benchmark harness adapter.
+    See [benchmark harness adapters](/docs/explanation/adapters/) for a full overview.
+    (ex: `--adapter json`)
+5.  Set the `--branch` option to the feature Branch name.
+    See [branch selection](/docs/explanation/branch-selection/#--branch-branch) for a full overview.
+    (ex: `--branch feature-branch`)
+6.  Set the `--branch-start-point` option to the feature Branch start point.
+    See [branch selection](/docs/explanation/branch-selection/#--branch-start-point-branch) for a full overview.
+    (ex: `--branch-start-point main`)
+7.  Set the `--branch-start-point-hash` option to the feature Branch start point `git` hash.
+    See [branch selection](/docs/explanation/branch-selection/#--branch-start-point-hash-hash) for a full overview.
+    (ex: `--branch-start-point-hash 32ae...dd8b`)
+8.  Set the `--testbed` option to the Testbed name.
+    See [the `--tested` docs](/docs/explanation/bencher-run/#--testbed-testbed) for more details.
+    (ex: `--testbed ci-runner`)
+9.  Set the `--err` flag to fail the command if an Alert is generated.
+    See [Threshold & Alerts](/docs/explanation/thresholds/#alerts) for a full overview.
+    (ex: `--err`)
+10. Specify the benchmark command arguments.
+    See [benchmark command](/docs/explanation/bencher-run/#benchmark-command) for a full overview.
+    (ex: `bencher mock`)
 
-## Relative Benchmarking
+The first time this is command is run in CI,
+it will create both the `feature-branch` Branch
+and the `ci-runner` Testbed since neither of them exist yet.
+The new `feature-branch` will use the `main` Branch at hash `32aea434d751648726097ed3ac760b57107edd8b`
+as its start point.
+This means that `feature-branch` will have a copy of all the data and [Thresholds](/docs/explanation/thresholds/)
+from the `main` Branch to compare the results of `bencher mock` against,
+for both the first and all subsequent runs.
+
+## Relative Continuous Benchmarking
 
 Relative benchmarking runs a side-by-side comparison of two commits.
 This can be useful when dealing with noisy CI/CD environments,

@@ -64,7 +64,7 @@ pub struct CliReportCreate {
     #[clap(long)]
     pub branch: NameId,
 
-    /// Git commit hash
+    /// `git` commit hash
     #[clap(long)]
     pub hash: Option<GitHash>,
 

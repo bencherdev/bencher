@@ -84,6 +84,22 @@ import BencherRunExec from "../../../chunks/explanation/ja/bencher-run-exec.mdx"
 
 <br />
 
+### `--github-actions <GITHUB_TOKEN>`
+
+<br />
+
+オプション：GitHub API認証トークンを設定します（例 `--github-actions ${{ secrets.GITHUB_TOKEN }}`）。
+このオプションが設定されていて、`bencher run`がプルリクエストの一部としてGitHub Actionsで使用される場合、
+結果はプルリクエストにコメントとして追加されます。
+これを行う最も便利な方法は、[GitHub Actionsの`GITHUB_TOKEN`環境変数](https://docs.github.com/ja/actions/security-guides/automatic-token-authentication)です。
+
+> 🐰 GitHub Actionの中でDockerコンテナ内で実行している場合、次の環境変数を渡し、`GITHUB_EVENT_PATH`で指定されたパスをマウントする必要があります：
+> - `GITHUB_ACTIONS`
+> - `GITHUB_EVENT_NAME`
+> - `GITHUB_EVENT_PATH`
+
+<br />
+
 ### `--ci-no-metrics`
 
 <br />
@@ -134,22 +150,6 @@ Bencherは結果を投稿するために必要なCIの問題番号を検出す�
 
 <br/>
 
-### `--github-actions <GITHUB_TOKEN>`
-
-<br />
-
-オプション：GitHub API認証トークンを設定します（例 `--github-actions ${{ secrets.GITHUB_TOKEN }}`）。
-このオプションが設定されていて、`bencher run`がプルリクエストの一部としてGitHub Actionsで使用される場合、
-結果はプルリクエストにコメントとして追加されます。
-これを行う最も便利な方法は、[GitHub Actionsの`GITHUB_TOKEN`環境変数](https://docs.github.com/ja/actions/security-guides/automatic-token-authentication)です。
-
-> 🐰 GitHub Actionの中でDockerコンテナ内で実行している場合、次の環境変数を渡し、`GITHUB_EVENT_PATH`で指定されたパスをマウントする必要があります：
-> - `GITHUB_ACTIONS`
-> - `GITHUB_EVENT_NAME`
-> - `GITHUB_EVENT_PATH`
-
-<br />
-
 ### `--shell <SHELL>`
 
 <br />
@@ -192,15 +192,6 @@ Bencherは結果を投稿するために必要なCIの問題番号を検出す�
 <br />
 
 オプション：指定した秒数後にリクエストを再試行します (指数関数的バックオフ)。デフォルトは`1`秒です。
-
-<br />
-
-### `--strict`
-
-<br />
-
-任意：JSONのレスポンスを厳密に解析します。デフォルトは `false` です。
-この機能を有効にすると、破損変更のためにクライアントの更新をより頻繁に行う必要があります。
 
 <br />
 

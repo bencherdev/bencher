@@ -82,7 +82,7 @@ pub struct CliBranchStartPoint {
     #[clap(long)]
     pub start_point_branch: Option<NameId>,
 
-    /// Branch Git hash to use as the new branch start point
+    /// Branch `git` hash to use as the new branch start point
     #[clap(long, requires = "start_point_branch")]
     pub start_point_hash: Option<GitHash>,
 

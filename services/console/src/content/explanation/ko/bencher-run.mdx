@@ -84,6 +84,22 @@ import BencherRunExec from "../../../chunks/explanation/ko/bencher-run-exec.mdx"
 
 <br />
 
+### `--github-actions <GITHUB_TOKEN>`
+
+<br />
+
+선택사항: GitHub API 인증 토큰을 설정합니다 (예: `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
+이 옵션이 설정되고 `bencher run`이 풀 리퀘스트의 일부로 GitHub Actions에서 사용되면,
+결과는 풀 리퀘스트에 댓글로 추가될 것입니다.
+이를 하는 가장 편리한 방법은 [GitHub Actions `GITHUB_TOKEN` 환경 변수](https://docs.github.com/ko/actions/security-guides/automatic-token-authentication)입니다.
+
+> 🐰 Docker 컨테이너 내부에서 실행되는 GitHub Action인 경우, 다음 환경 변수를 전달하고 `GITHUB_EVENT_PATH`에 지정된 경로를 마운트해야 합니다:
+> - `GITHUB_ACTIONS`
+> - `GITHUB_EVENT_NAME`
+> - `GITHUB_EVENT_PATH`
+
+<br />
+
 ### `--ci-no-metrics`
 
 <br />
@@ -135,22 +151,6 @@ Bencher는 결과를 게시하는 데 필요한 CI 이슈 번호를 감지하기
 
 <br/>
 
-### `--github-actions <GITHUB_TOKEN>`
-
-<br />
-
-선택사항: GitHub API 인증 토큰을 설정합니다 (예: `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
-이 옵션이 설정되고 `bencher run`이 풀 리퀘스트의 일부로 GitHub Actions에서 사용되면,
-결과는 풀 리퀘스트에 댓글로 추가될 것입니다.
-이를 하는 가장 편리한 방법은 [GitHub Actions `GITHUB_TOKEN` 환경 변수](https://docs.github.com/ko/actions/security-guides/automatic-token-authentication)입니다.
-
-> 🐰 Docker 컨테이너 내부에서 실행되는 GitHub Action인 경우, 다음 환경 변수를 전달하고 `GITHUB_EVENT_PATH`에 지정된 경로를 마운트해야 합니다:
-> - `GITHUB_ACTIONS`
-> - `GITHUB_EVENT_NAME`
-> - `GITHUB_EVENT_PATH`
-
-<br />
-
 ### `--shell <SHELL>`
 
 <br />
@@ -192,15 +192,6 @@ Bencher는 결과를 게시하는 데 필요한 CI 이슈 번호를 감지하기
 <br />
 
 선택사항: 주어진 초 수 후에 요청을 재시도합니다 (지수 백오프). 기본값은 `1`입니다.
-
-<br />
-
-### `--strict`
-
-<br />
-
-선택적: JSON 응답을 엄격하게 파싱합니다. 기본값은 `false`입니다.
-이 기능을 활성화하면 중단 변경으로 인해 클라이언트 업데이트가 더 자주 필요하게 됩니다.
 
 <br />
 

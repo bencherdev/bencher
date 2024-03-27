@@ -19,8 +19,8 @@ crate::typed_uuid::typed_uuid!(ReportUuid);
 pub struct JsonNewReport {
     /// Branch UUID, slug, or name.
     pub branch: NameId,
-    /// Full Git commit hash.
-    /// All reports with the same Git commit hash will be considered part of the same branch version.
+    /// Full `git` commit hash.
+    /// All reports with the same `git` commit hash will be considered part of the same branch version.
     /// This can be useful for tracking the performance of a specific commit across multiple testbeds.
     pub hash: Option<GitHash>,
     /// Testbed UUID, slug, or name.

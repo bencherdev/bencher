@@ -84,6 +84,22 @@ import BencherRunExec from "../../../chunks/explanation/fr/bencher-run-exec.mdx"
 
 <br />
 
+### `--github-actions <GITHUB_TOKEN>`
+
+<br />
+
+Optionnel : Définir le token d'authentification de l'API GitHub (c'est-à-dire `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
+Lorsque cette option est définie et que `bencher run` est utilisé dans GitHub Actions dans le cadre d'une pull request,
+alors les résultats seront ajoutés à la pull request en tant que commentaire.
+La manière la plus commode de faire ceci est la [variable d'environnement `GITHUB_TOKEN` de GitHub Actions](https://docs.github.com/fr/actions/security-guides/automatic-token-authentication).
+
+> 🐰 Si vous exécutez à l'intérieur d'un conteneur Docker dans GitHub Action, vous aurez besoin de passer les variables d'environnement suivantes et de monter le chemin spécifié par `GITHUB_EVENT_PATH` :
+> - `GITHUB_ACTIONS`
+> - `GITHUB_EVENT_NAME`
+> - `GITHUB_EVENT_PATH`
+
+<br />
+
 ### `--ci-no-metrics`
 
 <br />
@@ -135,22 +151,6 @@ Nécessite : `--github-actions`
 
 <br/>
 
-### `--github-actions <GITHUB_TOKEN>`
-
-<br />
-
-Optionnel : Définir le token d'authentification de l'API GitHub (c'est-à-dire `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
-Lorsque cette option est définie et que `bencher run` est utilisé dans GitHub Actions dans le cadre d'une pull request,
-alors les résultats seront ajoutés à la pull request en tant que commentaire.
-La manière la plus commode de faire ceci est la [variable d'environnement `GITHUB_TOKEN` de GitHub Actions](https://docs.github.com/fr/actions/security-guides/automatic-token-authentication).
-
-> 🐰 Si vous exécutez à l'intérieur d'un conteneur Docker dans GitHub Action, vous aurez besoin de passer les variables d'environnement suivantes et de monter le chemin spécifié par `GITHUB_EVENT_PATH` :
-> - `GITHUB_ACTIONS`
-> - `GITHUB_EVENT_NAME`
-> - `GITHUB_EVENT_PATH`
-
-<br />
-
 ### `--shell <SHELL>`
 
 <br />
@@ -193,15 +193,6 @@ Optionnel : Nombre maximal de tentatives de requête. Par défaut à `10`.
 <br />
 
 Optionnel : Réessayer la requête après le nombre de secondes donné (retard exponentiel). Par défaut à `1`.
-
-<br />
-
-### `--strict`
-
-<br />
-
-Optionnel : Analyser strictement les réponses JSON. Par défaut, c'est `false`.
-L'activation de cette fonctionnalité nécessitera des mises à jour client plus fréquentes en raison de changements incompatibles.
 
 <br />
 

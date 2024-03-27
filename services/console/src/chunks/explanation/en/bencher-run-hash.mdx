@@ -2,11 +2,11 @@
 
 <br />
 
-Optional: A 40-character SHA-1 commit hash.
+Optional: A 40-character SHA-1 `git` commit hash.
 If two reports have the same branch and hash, they will be considered to be from the same commit.
 Therefore, they will have the same branch version number.
 
-If not provided, the Bencher CLI tries to find the current git hash.
-It starts by looking for a git repository in the current working directory.
+If not provided, the Bencher CLI tries to find the current `git` hash.
+It starts by looking for a `git` repository in the current working directory.
 If unsuccessful, it continues to its parent directory and retries all the way up to the root directory.
-If a git repository is found, then the current branch's HEAD git hash is used.
+If a `git` repository is found, then the current branch's HEAD `git` hash is used.

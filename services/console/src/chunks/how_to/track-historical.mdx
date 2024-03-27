@@ -3,10 +3,10 @@ bencher run \
 --project save-walter-white \
 --token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjbGllbnQiLCJleHAiOjE2NzQwNjA3NTAsImlhdCI6MTY3MTQ2ODc1MCwiaXNzIjoiYmVuY2hlci5kZXYiLCJzdWIiOiJzYXVsQGJldHRlcmNhbGxzYXVsLmNvbSIsIm9yZyI6bnVsbH0.CABcvWlPobAHs7wsdR6wX5p0R2jaCd7RmpsnMp5pwEc \
 --adapter json \
---if-branch feature-branch \
---else-if-branch main \
---else-branch \
---testbed localhost \
+--branch feature-branch \
+--branch-start-point main \
+--branch-start-point-hash 32aea434d751648726097ed3ac760b57107edd8b \
+--testbed ci-runner \
 --err \
-"bencher mock"`
+bencher mock
 ```

@@ -68,7 +68,7 @@ impl JsonNewBranch {
 pub struct JsonNewStartPoint {
     /// The UUID, slug, or name of the branch to use as the start point.
     pub branch: NameId,
-    /// The full Git hash of the branch to use as the start point.
+    /// The full `git` hash of the branch to use as the start point.
     pub hash: Option<GitHash>,
     /// If set to `true`, the thresholds from the start point branch will be deep copied to the new branch.
     /// This can be useful for pull request branches that should have the same thresholds as their target branch.

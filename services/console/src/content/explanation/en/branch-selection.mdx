@@ -5,13 +5,20 @@ heading: "Branch Selection with bencher run"
 sortOrder: 3
 ---
 
-A branch is the `git` ref used when running a report (ie branch name or tag).
-By default all projects start with a `main` branch.
+A branch is the `git` ref (ie branch name or tag).
 When using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand,
-`main` is the default branch if one is not provided.
-A branch can have a [start point][start point].
+select a branch with the `--branch` option or the `BENCHER_BRANCH` environment variable.
+By default all projects start with a `main` branch, and
+`main` is used by default if neither are specified.
+
+When [Continuous Benchmarking](/docs/explanation/continuous-benchmarking/), that is benchmarking in CI,
+you will often want to create or rebase a `branch` on an already existing branch.
+This is called a branch [start point][start point].
 A start point is another branch at a specific version (and `git` hash, if available).
-All the data and optionally [thresholds](/docs/explanation/thresholds/) are copied over from the start point.
+When using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand,
+select a start point with the `--branch-start-point` option.
+Additionally, use the `--branch-start-point-hash` option to specify a specific `git` hash for the start point.
+All the data and [thresholds](/docs/explanation/thresholds/) are copied over from the start point.
 
 [start point]: https://git-scm.com/docs/git-branch#Documentation/git-branch.txt-ltstart-pointgt
 
@@ -25,12 +32,6 @@ If the value specified is a name or slug and the branch does not already exist, 
 However, if the value specified is a UUID then the branch must already exist.
 If both are specified, the `--branch` option takes precedence over the `BENCHER_BRANCH` environment variable.
 If neither are specified then `main` is used as the default branch.
-
-When [Continuous Benchmarking](/docs/explanation/continuous-benchmarking/), that is benchmarking in CI,
-you will often want to create or rebase a `branch` on an already existing branch.
-That is where the `--branch-start-point` and `branch-start-point-hash` options come in.
-
-<br />
 
 ### `--branch-start-point <BRANCH>`
 
@@ -61,8 +62,6 @@ Then using `--branch feature_branch --branch-start-point main` would:
 
 > 🐰 Note: Whenever using environment variables they should be wrapped in double quotes (ie `--branch-start-point "$MY_BRANCH_ENV_VAR"`).
 
-<br />
-
 ### `--branch-start-point-hash <HASH>`
 
 <br />
@@ -89,7 +88,6 @@ would:
 
 [start point]: https://git-scm.com/docs/git-branch#Documentation/git-branch.txt-ltstart-pointgt
 
-<br />
 <br />
 
 > 🐰 Congrats! You have learned all about branch selection! 🎉

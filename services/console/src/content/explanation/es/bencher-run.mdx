@@ -84,6 +84,22 @@ import BencherRunExec from "../../../chunks/explanation/es/bencher-run-exec.mdx"
 
 <br />
 
+### `--github-actions <GITHUB_TOKEN>`
+
+<br />
+
+Opcional: Establecer el token de autenticación de API de GitHub (es decir, `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
+Cuando esta opción está establecida y `bencher run` se usa en GitHub Actions como parte de una solicitud de extracción,
+entonces los resultados se agregarán a la solicitud de extracción como un comentario.
+La forma más conveniente de hacer esto es utilizando la [variable de entorno `GITHUB_TOKEN`de GitHub Actions](https://docs.github.com/es/actions/security-guides/automatic-token-authentication).
+
+> 🐰 Si estás ejecutando en un contenedor Docker dentro de GitHub Action, necesitarás pasar las siguientes variables de entorno y montar la ruta especificada por `GITHUB_EVENT_PATH`:
+> - `GITHUB_ACTIONS`
+> - `GITHUB_EVENT_NAME`
+> - `GITHUB_EVENT_PATH`
+
+<br />
+
 ### `--ci-no-metrics`
 
 <br />
@@ -135,22 +151,6 @@ Requiere: `--github-actions`
 
 <br/>
 
-### `--github-actions <GITHUB_TOKEN>`
-
-<br />
-
-Opcional: Establecer el token de autenticación de API de GitHub (es decir, `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
-Cuando esta opción está establecida y `bencher run` se usa en GitHub Actions como parte de una solicitud de extracción,
-entonces los resultados se agregarán a la solicitud de extracción como un comentario.
-La forma más conveniente de hacer esto es utilizando la [variable de entorno `GITHUB_TOKEN`de GitHub Actions](https://docs.github.com/es/actions/security-guides/automatic-token-authentication).
-
-> 🐰 Si estás ejecutando en un contenedor Docker dentro de GitHub Action, necesitarás pasar las siguientes variables de entorno y montar la ruta especificada por `GITHUB_EVENT_PATH`:
-> - `GITHUB_ACTIONS`
-> - `GITHUB_EVENT_NAME`
-> - `GITHUB_EVENT_PATH`
-
-<br />
-
 ### `--shell <SHELL>`
 
 <br />
@@ -193,15 +193,6 @@ Opcional: Intentos maximos de reintentos de solicitud. Predeterminado en `10`.
 <br />
 
 Opcional: Reintentar solicitud después del número de segundos dado (retroceso exponencial). Predeterminado en `1`.
-
-<br />
-
-### `--strict`
-
-<br />
-
-Opcional: Analizar estrictamente las respuestas JSON. Por defecto es `false`.
-Habilitar esta función requerirá actualizaciones de clientes más frecuentes debido a cambios disruptivos.
 
 <br />
 

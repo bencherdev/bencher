@@ -7901,7 +7901,7 @@
           },
           "hash": {
             "nullable": true,
-            "description": "Full Git commit hash. All reports with the same Git commit hash will be considered part of the same branch version. This can be useful for tracking the performance of a specific commit across multiple testbeds.",
+            "description": "Full `git` commit hash. All reports with the same `git` commit hash will be considered part of the same branch version. This can be useful for tracking the performance of a specific commit across multiple testbeds.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/GitHash"
@@ -7962,7 +7962,7 @@
           },
           "hash": {
             "nullable": true,
-            "description": "The full Git hash of the branch to use as the start point.",
+            "description": "The full `git` hash of the branch to use as the start point.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/GitHash"

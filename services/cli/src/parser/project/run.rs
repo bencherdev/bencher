@@ -17,7 +17,7 @@ pub struct CliRun {
     #[clap(flatten)]
     pub run_hash: CliRunHash,
 
-    /// Testbed name, slug, or UUID (or set BENCHER_TESTBED) (default is "localhost")
+    /// Testbed name, slug, or UUID (or set BENCHER_TESTBED) (default is "localhost").
     /// If a name or slug is provided, the testbed will be created if it does not exist
     #[clap(long)]
     pub testbed: Option<NameId>,
@@ -30,7 +30,7 @@ pub struct CliRun {
     #[clap(value_enum, long)]
     pub average: Option<CliRunAverage>,
 
-    /// Number of run iterations (default is `1`)
+    /// Number of run iterations (default is 1)
     #[clap(long)]
     pub iter: Option<usize>,
 
@@ -39,11 +39,11 @@ pub struct CliRun {
     pub fold: Option<CliRunFold>,
 
     /// Backdate the report (seconds since epoch)
-    /// NOTE: This will *not* effect the ordering of past reports
+    /// NOTE: This will NOT effect the ordering of past reports
     #[clap(long)]
     pub backdate: Option<DateTime>,
 
-    /// Allow test failure
+    /// Allow benchmark test failure
     #[clap(long)]
     pub allow_failure: bool,
 
@@ -72,7 +72,7 @@ pub struct CliRun {
 #[derive(Args, Debug)]
 #[allow(clippy::option_option)]
 pub struct CliRunBranch {
-    /// Branch name, slug, or UUID (or set BENCHER_BRANCH) (default is "main")
+    /// Branch name, slug, or UUID (or set BENCHER_BRANCH) (default is "main").
     /// If `branch` does not already exist, it will be created if a name or slug is provided.
     #[clap(long, alias = "if-branch")]
     pub branch: Option<NameId>,
@@ -85,7 +85,7 @@ pub struct CliRunBranch {
     // TODO move this to Option<String> in due time
     pub branch_start_point: Vec<String>,
 
-    /// Use the specified full Git hash as the start point for `branch` (requires: `--branch-start-point`)
+    /// Use the specified full `git` hash as the start point for `branch` (requires: `--branch-start-point`).
     /// If `branch` already exists and the start point hash is different, a new branch will be created.
     #[clap(long, requires = "branch_start_point")]
     pub branch_start_point_hash: Option<GitHash>,
@@ -102,11 +102,11 @@ pub struct CliRunBranch {
         .args(&["hash", "no_hash"]),
 ))]
 pub struct CliRunHash {
-    /// Git commit hash (defaults to HEAD)
+    /// `git` commit hash (defaults to HEAD)
     #[clap(long)]
     pub hash: Option<GitHash>,
 
-    /// Do not try to find a Git commit hash
+    /// Do not try to find a `git` commit hash
     #[clap(long)]
     pub no_hash: bool,
 }
@@ -250,6 +250,9 @@ pub struct CliRunFmt {
         .args(&["github_actions"]),
 ))]
 pub struct CliRunCi {
+    /// GitHub API authentication token for GitHub Actions to comment on PRs (ie `--github-actions ${{ secrets.GITHUB_TOKEN }}`)
+    #[clap(long)]
+    pub github_actions: Option<String>,
     /// Omit Benchmark Metrics and Boundary Limits (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_no_metrics: bool,
@@ -271,7 +274,4 @@ pub struct CliRunCi {
     /// CAUTION: Override safety checks and accept that you are vulnerable to pwn requests (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_i_am_vulnerable_to_pwn_requests: bool,
-    /// GitHub API authentication token for GitHub Actions to comment on PRs (ie `--github-actions ${{ secrets.GITHUB_TOKEN }}`)
-    #[clap(long)]
-    pub github_actions: Option<String>,
 }
