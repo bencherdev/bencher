@@ -17,8 +17,11 @@ jobs:
       - name: Track Benchmarks with Bencher
         run: |
           bencher run \
-          --branch "$GITHUB_REF_NAME" \
+          --project save-walter-white-1234abcd
           --token "${{ secrets.BENCHER_API_TOKEN }}" \
+          --branch "$GITHUB_REF_NAME" \
+          --testbed ubuntu-latest \
+          --adapter json
           --err \
           "bencher mock"
 ```

@@ -11,21 +11,99 @@ import GitHubActions3 from "../../../chunks/how_to/github-actions.3.mdx";
 import GitHubActions4 from "../../../chunks/how_to/github-actions.4.mdx";
 import GitHubActions5 from "../../../chunks/how_to/github-actions.5.mdx";
 
-<GitHubActions1 />
+A cornerstone of [Statistical Continuous Benchmarking](/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking)
+is having a historical baseline for your base branch.
+This historical baseline is then used to detect performance regressions in Pull Requests.
 
-1. Create a GitHub Actions `workflow` file. (ex: `.github/workflows/benchmarks.yml`)
-2. Run on `push` events to the `main` branch. See the [GitHub Actions `on` documentation](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on) for a full overview. Also see [Pull Requests](#pull-requests) below.
-3. Create a GitHub Actions `job`. (ex: `benchmark_with_bencher`)
+Depending on your use case, you can set up [Continuous Benchmarking](/docs/explanation/continuous-benchmarking/) for your:
+- Base Branch
+- Pull Requests
+- Pull Requests from Forks
+  <ul>
+   <li> ⚠️ Riskier: [Benchmark Fork PR from Target Branch with Required Reviewers](#benchmark-fork-pr-from-target-branch-with-required-reviewers)</li>
+   <li> ⛑️ Safer: [Benchmark Fork PR and Upload from Default Branch](#benchmark-fork-pr-and-upload-from-default-branch)</li>
+  </ul>
+
+## Base Branch
+
+```yaml
+on:
+  push:
+    branches: main
+
+jobs:
+  benchmark_base_branch:
+    name: Continuous Benchmarking with Bencher
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bencherdev/bencher@main
+      - name: Track base branch benchmarks with Bencher
+        run: |
+          bencher run \
+          --project save-walter-white-1234abcd
+          --token "${{ secrets.BENCHER_API_TOKEN }}" \
+          --branch "$GITHUB_REF_NAME" \
+          --testbed ubuntu-latest \
+          --adapter json
+          --err \
+          "bencher mock"
+```
+
+1. Create a GitHub Actions `workflow` file.
+   (ex: `.github/workflows/benchmarks.yml`)
+2. Run on `push` events to the `main` branch.
+   See the [GitHub Actions `on` documentation](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on) for a full overview.
+   (ex: `on: push: branches: main`)
+3. Create a GitHub Actions `job`.
+   (ex: `benchmark_base_branch`)
+4. Checkout your base branch source code.
+   (ex: `uses: actions/checkout@v4`)
+5. Install the Bencher CLI using the [GitHub Action](https://github.com/marketplace/actions/bencher-cli).
+   (ex: `uses: bencherdev/bencher@main`)
+6. Use the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand.
+   See [the `bencher run` CLI subcommand](/docs/explanation/bencher-run/) for a full overview.
+   (ex: `bencher run`)
+7. Set the `--project` option to the Project slug.
+   See [the `--project` docs](/docs/explanation/bencher-run/#--project-project) for more details.
+   (ex: `--project save-walter-white-1234abcd`)
+8. Add `BENCHER_API_TOKEN` as a **Repository** secret and set the `--token` option to this secret.
+   Navigate to `Your Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`.
+   (ex: `--token ${{ secrets.BENCHER_API_TOKEN }}`)
+
+1.  Set the `--branch` option to the feature Branch name.
+   See [branch selection](/docs/explanation/branch-selection/#--branch-branch) for a full overview.
+   (ex: `--branch feature-branch`)
+2.  Set the `--branch-start-point` option to the feature Branch start point.
+   See [branch selection](/docs/explanation/branch-selection/#--branch-start-point-branch) for a full overview.
+   (ex: `--branch-start-point main`)
+3.  Set the `--branch-start-point-hash` option to the feature Branch start point `git` hash.
+   See [branch selection](/docs/explanation/branch-selection/#--branch-start-point-hash-hash) for a full overview.
+   (ex: `--branch-start-point-hash 32ae...dd8b`)
+4.  Set the `--testbed` option to the Testbed name.
+   See [the `--tested` docs](/docs/explanation/bencher-run/#--testbed-testbed) for more details.
+   (ex: `--testbed ci-runner`)
+5.  Set the `--adapter` option to the desired benchmark harness adapter.
+   See [benchmark harness adapters](/docs/explanation/adapters/) for a full overview.
+   (ex: `--adapter json`)
+6.  Set the `--err` flag to fail the command if an Alert is generated.
+   See [Threshold & Alerts](/docs/explanation/thresholds/#alerts) for a full overview.
+   (ex: `--err`)
+7.  Specify the benchmark command arguments.
+   See [benchmark command](/docs/explanation/bencher-run/#benchmark-command) for a full overview.
+   (ex: `bencher mock`)
+
+
+
 4. The Project must already exist. Set the `--project` flag or the `BENCHER_PROJECT` environment variable to the Project slug or UUID (ex: `BENCHER_PROJECT: save-walter-white`).
-6. Optional: Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the Testbed slug or UUID.  (ex: `BENCHER_TESTBED: ubuntu-latest`) The Testbed **must** already exist. If this is not set, then the `localhost` Testbed will be used.
-7. Optional: Set the `--adapter` flag or the `BENCHER_ADAPTER` environment variable to the desired adapter name.  (ex: `BENCHER_ADAPTER: json`) If this is not set, then the `magic` Adapter will be used. See [benchmark harness adapters](/docs/explanation/adapters/) for a full overview.
-8. Checkout your source code. (ex: `uses: actions/checkout@v4`)
-9.  Install the Bencher CLI using the [GitHub Action](https://github.com/marketplace/actions/bencher-cli). (ex: `uses: bencherdev/bencher@main`)
-10. [Track your benchmarks](/docs/how-to/track-benchmarks/) with the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand:
+5. Optional: Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the Testbed slug or UUID.  (ex: `BENCHER_TESTBED: ubuntu-latest`) The Testbed **must** already exist. If this is not set, then the `localhost` Testbed will be used.
+6. Optional: Set the `--adapter` flag or the `BENCHER_ADAPTER` environment variable to the desired adapter name.  (ex: `BENCHER_ADAPTER: json`) If this is not set, then the `magic` Adapter will be used. See [benchmark harness adapters](/docs/explanation/adapters/) for a full overview.
+
+9.  [Track your benchmarks](/docs/how-to/track-benchmarks/) with the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand:
      1. Optional: Set the `--branch` flag or the `BENCHER_BRANCH` environment variable to the Branch slug or UUID. (ex: `--branch "$GITHUB_REF_NAME"`) This example uses the [GitHub Action default environment variable](https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables) `GITHUB_REF_NAME` to select the branch name. The Branch **must** already exist. If this is not set, then the `main` Branch will be used.
-    2. The API token must already exist. Add `BENCHER_API_TOKEN` as a **Repository** secret. (ex: `Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`) Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable to the API token. (ex: `--token ${{ secrets.BENCHER_API_TOKEN }}`)
-    3.  Set the command to fail if an Alert is generated. (ex: `--err`) In order for an Alert to be generated, a [Threshold](/docs/explanation/thresholds/) must already exist.
-    4.  Run your benchmarks and generate a Report from the results. (ex: `"bencher mock"`)
+    1. The API token must already exist. Add `BENCHER_API_TOKEN` as a **Repository** secret. (ex: `Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`) Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable to the API token. (ex: `--token ${{ secrets.BENCHER_API_TOKEN }}`)
+    2.  Set the command to fail if an Alert is generated. (ex: `--err`) In order for an Alert to be generated, a [Threshold](/docs/explanation/thresholds/) must already exist.
+    3.  Run your benchmarks and generate a Report from the results. (ex: `"bencher mock"`)
 
 <br/>
 

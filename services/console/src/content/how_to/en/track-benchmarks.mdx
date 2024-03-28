@@ -93,11 +93,11 @@ This is how we would track the performance of a new feature branch, named `featu
 ```
 bencher run \
 --project save-walter-white-1234abcd \
---adapter json \
 --branch feature-branch \
 --branch-start-point main \
 --branch-start-point-hash 32aea434d751648726097ed3ac760b57107edd8b \
 --testbed ci-runner \
+--adapter json \
 --err \
 bencher mock
 ```
@@ -108,27 +108,27 @@ bencher mock
 2. Set the `--project` option to the Project slug.
    See [the `--project` docs](/docs/explanation/bencher-run/#--project-project) for more details.
    (ex: `--project save-walter-white-1234abcd`)
-4. Set the `--adapter` option to the desired benchmark harness adapter.
-   See [benchmark harness adapters](/docs/explanation/adapters/) for a full overview.
-   (ex: `--adapter json`)
-5. Set the `--branch` option to the feature Branch name.
+3. Set the `--branch` option to the feature Branch name.
    See [branch selection](/docs/explanation/branch-selection/#--branch-branch) for a full overview.
    (ex: `--branch feature-branch`)
-6. Set the `--branch-start-point` option to the feature Branch start point.
+4. Set the `--branch-start-point` option to the feature Branch start point.
    See [branch selection](/docs/explanation/branch-selection/#--branch-start-point-branch) for a full overview.
    (ex: `--branch-start-point main`)
-7. Set the `--branch-start-point-hash` option to the feature Branch start point `git` hash.
+5. Set the `--branch-start-point-hash` option to the feature Branch start point `git` hash.
    See [branch selection](/docs/explanation/branch-selection/#--branch-start-point-hash-hash) for a full overview.
    (ex: `--branch-start-point-hash 32ae...dd8b`)
-8. Set the `--testbed` option to the Testbed name.
+6. Set the `--testbed` option to the Testbed name.
    See [the `--tested` docs](/docs/explanation/bencher-run/#--testbed-testbed) for more details.
    (ex: `--testbed ci-runner`)
-9. Set the `--err` flag to fail the command if an Alert is generated.
+7. Set the `--adapter` option to the desired benchmark harness adapter.
+   See [benchmark harness adapters](/docs/explanation/adapters/) for a full overview.
+   (ex: `--adapter json`)
+8. Set the `--err` flag to fail the command if an Alert is generated.
    See [Threshold & Alerts](/docs/explanation/thresholds/#alerts) for a full overview.
    (ex: `--err`)
-10. Specify the benchmark command arguments.
-    See [benchmark command](/docs/explanation/bencher-run/#benchmark-command) for a full overview.
-    (ex: `bencher mock`)
+9. Specify the benchmark command arguments.
+   See [benchmark command](/docs/explanation/bencher-run/#benchmark-command) for a full overview.
+   (ex: `bencher mock`)
 
 The first time this is command is run in CI,
 it will create the `feature-branch` Branch since it does not exist yet.
@@ -185,10 +185,10 @@ Then we need to run our benchmarks on the `main` branch in CI:
 ```
 bencher run \
 --project save-walter-white-1234abcd \
---adapter json \
 --branch feature-branch \
 --branch-reset \
 --testbed ci-runner \
+--adapter json \
 bencher mock
 ```
 
@@ -198,21 +198,21 @@ bencher mock
 2. Set the `--project` option to the Project slug.
    See [the `--project` docs](/docs/explanation/bencher-run/#--project-project) for more details.
    (ex: `--project save-walter-white-1234abcd`)
-3. Set the `--adapter` option to the desired benchmark harness adapter.
-   See [benchmark harness adapters](/docs/explanation/adapters/) for a full overview.
-   (ex: `--adapter json`)
-4. Set the `--branch` option to the feature Branch name.
+3. Set the `--branch` option to the feature Branch name.
    See [branch selection](/docs/explanation/branch-selection/#--branch-branch) for a full overview.
    (ex: `--branch feature-branch`)
-5. Set the `--branch-reset` flag.
+4. Set the `--branch-reset` flag.
    See [branch selection](/docs/explanation/branch-selection/#--branch-reset) for a full overview.
    (ex: `--branch-reset`)
-6. Set the `--branch-start-point-hash` option to the feature Branch start point `git` hash.
+5. Set the `--branch-start-point-hash` option to the feature Branch start point `git` hash.
    See [branch selection](/docs/explanation/branch-selection/#--branch-start-point-hash-hash) for a full overview.
    (ex: `--branch-start-point-hash 32ae...dd8b`)
-7. Set the `--testbed` option to the Testbed name.
+6. Set the `--testbed` option to the Testbed name.
    See [the `--tested` docs](/docs/explanation/bencher-run/#--testbed-testbed) for more details.
    (ex: `--testbed ci-runner`)
+7. Set the `--adapter` option to the desired benchmark harness adapter.
+   See [benchmark harness adapters](/docs/explanation/adapters/) for a full overview.
+   (ex: `--adapter json`)
 8.  Specify the benchmark command arguments.
     See [benchmark command](/docs/explanation/bencher-run/#benchmark-command) for a full overview.
     (ex: `bencher mock`)
@@ -265,9 +265,9 @@ Finally, we are ready to run our `feature-branch` benchmarks in CI:
 ```
 bencher run \
 --project save-walter-white-1234abcd \
---adapter json \
 --branch feature-branch \
 --testbed ci-runner \
+--adapter json \
 --err \
 bencher mock
 ```
@@ -278,15 +278,15 @@ bencher mock
 2. Set the `--project` option to the Project slug.
    See [the `--project` docs](/docs/explanation/bencher-run/#--project-project) for more details.
    (ex: `--project save-walter-white-1234abcd`)
-3. Set the `--adapter` option to the desired benchmark harness adapter.
-   See [benchmark harness adapters](/docs/explanation/adapters/) for a full overview.
-   (ex: `--adapter json`)
-4. Set the `--branch` option to the feature Branch name.
+3. Set the `--branch` option to the feature Branch name.
    See [branch selection](/docs/explanation/branch-selection/#--branch-branch) for a full overview.
    (ex: `--branch feature-branch`)
-5. Set the `--testbed` option to the Testbed name.
+4. Set the `--testbed` option to the Testbed name.
    See [the `--tested` docs](/docs/explanation/bencher-run/#--testbed-testbed) for more details.
    (ex: `--testbed ci-runner`)
+5. Set the `--adapter` option to the desired benchmark harness adapter.
+   See [benchmark harness adapters](/docs/explanation/adapters/) for a full overview.
+   (ex: `--adapter json`)
 6. Set the `--err` flag to fail the command if an Alert is generated.
    See [Threshold & Alerts](/docs/explanation/thresholds/#alerts) for a full overview.
    (ex: `--err`)
