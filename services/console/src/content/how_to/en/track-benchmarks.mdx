@@ -187,7 +187,7 @@ bencher run \
 --project save-walter-white-1234abcd \
 --adapter json \
 --branch feature-branch \
---branch-start-point feature-branch \
+--branch-reset \
 --testbed ci-runner \
 bencher mock
 ```
@@ -204,10 +204,9 @@ bencher mock
 4. Set the `--branch` option to the feature Branch name.
    See [branch selection](/docs/explanation/branch-selection/#--branch-branch) for a full overview.
    (ex: `--branch feature-branch`)
-5. Set the `--branch-start-point` option to the feature Branch start point,
-   which should be the _same_ as the feature Branch name.
-   See [branch selection](/docs/explanation/branch-selection/#--branch-start-point-branch) for a full overview.
-   (ex: `--branch-start-point feature-branch`)
+5. Set the `--branch-reset` flag.
+   See [branch selection](/docs/explanation/branch-selection/#--branch-reset) for a full overview.
+   (ex: `--branch-reset`)
 6. Set the `--branch-start-point-hash` option to the feature Branch start point `git` hash.
    See [branch selection](/docs/explanation/branch-selection/#--branch-start-point-hash-hash) for a full overview.
    (ex: `--branch-start-point-hash 32ae...dd8b`)
@@ -220,10 +219,9 @@ bencher mock
 
 The first time this is command is run in CI,
 it will create the `feature-branch` Branch since it does not exist yet.
-The new `feature-branch` will _not_ have a start point, since it is self-referential.
-This means that `feature-branch` will not have any existing data.
+The new `feature-branch` will _not_ have a start point, existing data, or Thresholds.
 On subsequent runs, the old version of `feature-branch` will be renamed
-and a new `feature-branch` will be created without a start point.
+and a new `feature-branch` will be created without a start point, existing data, or Thresholds.
 
 Next, we need to create a new [Threshold](/docs/explanation/thresholds/) in CI for our new `feature-branch` Branch:
 

@@ -13,10 +13,12 @@ use crate::{
 
 use super::BENCHER_BRANCH;
 
+#[allow(clippy::struct_field_names)]
 #[derive(Debug, Clone)]
 pub struct Branch {
     branch: NameId,
     start_point: Option<StartPoint>,
+    reset: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -87,6 +89,7 @@ impl TryFrom<CliRunBranch> for Branch {
             branch,
             branch_start_point,
             branch_start_point_hash,
+            branch_reset,
             deprecated: _,
         } = run_branch;
         let branch = if let Some(branch) = branch {
@@ -113,6 +116,7 @@ impl TryFrom<CliRunBranch> for Branch {
         Ok(Self {
             branch,
             start_point,
+            reset: branch_reset,
         })
     }
 }
@@ -239,7 +243,7 @@ impl Branch {
                     return rename_and_create_branch(
                         project,
                         &current_branch,
-                        start_point,
+                        Some(start_point),
                         log,
                         backend,
                     )
@@ -258,7 +262,7 @@ impl Branch {
                             rename_and_create_branch(
                                 project,
                                 &current_branch,
-                                start_point,
+                                Some(start_point),
                                 log,
                                 backend,
                             )
@@ -275,7 +279,7 @@ impl Branch {
                         rename_and_create_branch(
                             project,
                             &current_branch,
-                            start_point,
+                            Some(start_point),
                             log,
                             backend,
                         )
@@ -298,16 +302,22 @@ impl Branch {
                     log,
                     "No current start point branch and a start point branch was specified.",
                 );
-                rename_and_create_branch(project, &current_branch, start_point, log, backend)
+                rename_and_create_branch(project, &current_branch, Some(start_point), log, backend)
                     .await?;
             },
-            // If a start point is not specified, then there is nothing to check.
+            // If a start point is not specified and reset is not set, then there is nothing to check.
             // Even if the current branch has a start point, it does not need to always be specified.
             // That is, adding a start point is a one way operation with `bencher run`.
             // Alternatively, this could actually rename and create a new branch if there is a current start point,
             // so not specifying a start point when there is a current start point is equivalent to resetting the branch.
             // However, that behavior will likely be confusing to users.
-            (_, None) => {},
+            (_, None) => {
+                // If reset is set then the branch needs to be reset.
+                if self.reset {
+                    cli_println_quietable!(log, "Branch will be reset to an empty start point.",);
+                    rename_and_create_branch(project, &current_branch, None, log, backend).await?;
+                }
+            },
         }
 
         Ok(())
@@ -421,20 +431,21 @@ async fn create_branch(
 async fn rename_and_create_branch(
     project: &ResourceId,
     current_branch: &JsonBranch,
-    start_point: StartPoint,
+    start_point: Option<StartPoint>,
     log: bool,
     backend: &AuthBackend,
 ) -> Result<(), BranchError> {
     // Update the current branch name and slug
-    let renamed_branch = rename_branch(project, current_branch, &start_point, log, backend).await?;
+    let renamed_branch =
+        rename_branch(project, current_branch, start_point.as_ref(), log, backend).await?;
     // Update the start point branch if using a self-referential start point
-    let start_point = start_point.rename_self_ref(&renamed_branch);
+    let start_point = start_point.map(|sp| sp.rename_self_ref(&renamed_branch));
     // Create new branch with the same name and slug as the current branch
     create_branch(
         project,
         current_branch.name.clone(),
         Some(current_branch.slug.clone()),
-        Some(start_point),
+        start_point,
         log,
         backend,
     )
@@ -445,7 +456,7 @@ async fn rename_and_create_branch(
 async fn rename_branch(
     project: &ResourceId,
     current_branch: &JsonBranch,
-    start_point: &StartPoint,
+    start_point: Option<&StartPoint>,
     log: bool,
     backend: &AuthBackend,
 ) -> Result<JsonBranch, BranchError> {
@@ -537,7 +548,7 @@ async fn update_branch(
 async fn rename_branch_suffix(
     project: &ResourceId,
     current_start_point: Option<&JsonStartPoint>,
-    start_point: &StartPoint,
+    start_point: Option<&StartPoint>,
     backend: &AuthBackend,
 ) -> Result<String, BranchError> {
     let Some(current_start_point) = current_start_point else {
@@ -550,7 +561,7 @@ async fn rename_branch_suffix(
             .await
             .map_err(BranchError::GetCurrentStartPoint)?;
 
-    let branch_name = if start_point.is_self_ref() {
+    let branch_name = if start_point.map(StartPoint::is_self_ref).unwrap_or_default() {
         "HEAD"
     } else {
         current_start_point_branch.name.as_ref()

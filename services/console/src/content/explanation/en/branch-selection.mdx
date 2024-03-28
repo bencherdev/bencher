@@ -5,20 +5,20 @@ heading: "Branch Selection with bencher run"
 sortOrder: 3
 ---
 
-A branch is the `git` ref (ie branch name or tag).
+A Branch is the `git` ref (ie branch name or tag).
 When using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand,
-select a branch with the `--branch` option or the `BENCHER_BRANCH` environment variable.
-By default all projects start with a `main` branch, and
+select a Branch with the `--branch` option or the `BENCHER_BRANCH` environment variable.
+By default all projects start with a `main` Branch, and
 `main` is used by default if neither are specified.
 
 When [Continuous Benchmarking](/docs/explanation/continuous-benchmarking/), that is benchmarking in CI,
-you will often want to create or rebase a `branch` on an already existing branch.
-This is called a branch [start point][start point].
-A start point is another branch at a specific version (and `git` hash, if available).
+you will often want to create or rebase a `branch` on an already existing Branch.
+This is called a Branch [start point][start point].
+A start point is another Branch at a specific version (and `git` hash, if available).
 When using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand,
 select a start point with the `--branch-start-point` option.
 Additionally, use the `--branch-start-point-hash` option to specify a specific `git` hash for the start point.
-All the data and [thresholds](/docs/explanation/thresholds/) are copied over from the start point.
+All the data and [Thresholds](/docs/explanation/thresholds/) are copied over from the start point.
 
 [start point]: https://git-scm.com/docs/git-branch#Documentation/git-branch.txt-ltstart-pointgt
 
@@ -26,33 +26,36 @@ All the data and [thresholds](/docs/explanation/thresholds/) are copied over fro
 
 <br />
 
-To select a branch, set the `--branch` option or the `BENCHER_BRANCH` environment variable
-to the name, slug, or UUID for the branch.
-If the value specified is a name or slug and the branch does not already exist, it will be created for you.
-However, if the value specified is a UUID then the branch must already exist.
+To select a Branch, set the `--branch` option or the `BENCHER_BRANCH` environment variable
+to the name, slug, or UUID for the Branch.
+If the value specified is a name or slug and the Branch does not already exist, it will be created for you.
+However, if the value specified is a UUID then the Branch must already exist.
 If both are specified, the `--branch` option takes precedence over the `BENCHER_BRANCH` environment variable.
-If neither are specified then `main` is used as the default branch.
+If neither are specified then `main` is used as the default Branch.
 
 ### `--branch-start-point <BRANCH>`
 
 <br />
 
-Use the specified branch name, slug, or UUID as the [start point][start point] for the [`branch`](#--branch-branch) option.
+Use the specified Branch name, slug, or UUID as the [start point][start point] for the [`branch`](#--branch-branch) option.
 For GitHub this is usually [the `base` branch for a Pull Request][github base],
 and for GitLab this is usually [the `target` branch for a Merge Request][gitlab target].
+The primary use case for `--branch-start-point` is [Statistical Continuous Benchmarking](/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking).
 
 - If the specified start point is an empty string, then this option is ignored.
 - If `branch` does not exist, it will be created using this start point.
 - If `branch` does exist and the start point is the same, then this option is ignored.
-- If `branch` does exist and the start point is different, the old version of `branch` will be renamed
+- If `branch` does exist and the start point is different,
+  the old version of `branch` will be renamed
   and a new `branch` will be created using this updated start point.
-- If a new `branch` is created with a start point,
-  then all the data and thresholds from the specified start point are copied over.
+
+If a new `branch` is created with a start point,
+then all the data and Thresholds from the specified start point are copied over.
 
 For example, if `feature_branch` does not yet exist, but `main` does exist and has historical data.
 Then using `--branch feature_branch --branch-start-point main` would:
-1. Create a new branch named `feature_branch`
-2. Copy of all the data and thresholds from `main` to `feature_branch`
+1. Create a new Branch named `feature_branch`
+2. Copy of all the data and Thresholds from `main` to `feature_branch`
 3. `bencher run` would proceed using `feature_branch`
 
 [start point]: https://git-scm.com/docs/git-branch#Documentation/git-branch.txt-ltstart-pointgt
@@ -77,21 +80,46 @@ This option requires the [`--branch-start-point`](#--branch-start-point-branch) 
   the old version of `branch` will be renamed
   and a new `branch` will be created from `branch-start-point` at the specified hash.
 
-For example, if `feature_branch` exists with its start point being the `main` branch
+If a new `branch` is created with a start point,
+then all the data and Thresholds from the `branch-start-point` at the specified hash are copied over.
+
+For example, if `feature_branch` exists with its start point being the `main` Branch
 at hash `32aea434d751648726097ed3ac760b57107edd8b`
 then using `--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`
 would:
 
 1. Rename the old `feature_branch` to `feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b`
-1. Create a new branch named `feature_branch`
-1. Copy of all the data and thresholds from `main` at hash `68b12758509ca5e2b1e3983525625e532eb5f562` to the new `feature_branch`
-1. `bencher run` would proceed using the new `feature_branch`
+2. Create a new Branch named `feature_branch`
+3. Copy of all the data and Thresholds from `main` at hash `68b12758509ca5e2b1e3983525625e532eb5f562` to the new `feature_branch`
+4. `bencher run` would proceed using the new `feature_branch`
 
 [start point]: https://git-scm.com/docs/git-branch#Documentation/git-branch.txt-ltstart-pointgt
 
+### `--branch-reset`
+
 <br />
 
-> 🐰 Congrats! You have learned all about branch selection! 🎉
+Reset the specified `branch`.
+The primary use case for `--branch-reset` is [Relative Continuous Benchmarking](/docs/how-to/track-benchmarks/#relative-continuous-benchmarking).
+This flag conflicts with the [`--branch-start-point`](#--branch-start-point-branch) option.
+
+- If `branch` does not exit, it will be created.
+- If `branch` does exist, the old version of `branch` will be renamed
+  and a new `branch` will be created.
+
+When a new `branch` is created it will have no historical data or Thresholds.
+
+For example, if `feature_branch` exists without a start point
+then using `--branch feature_branch --branch-reset`
+would:
+
+1. Rename the old `feature_branch` to `feature_branch@detached`
+2. Create a new Branch named `feature_branch`
+3. `bencher run` would proceed using the new `feature_branch`
+
+<br />
+
+> 🐰 Congrats! You have learned all about Branch selection! 🎉
 
 <br/>
 
