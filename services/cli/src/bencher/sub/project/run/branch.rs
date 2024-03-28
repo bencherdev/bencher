@@ -23,6 +23,25 @@ pub struct Branch {
 pub struct StartPoint {
     branch: NameId,
     hash: Option<GitHash>,
+    self_ref: bool,
+}
+
+impl StartPoint {
+    // Check to see if the start point branch is the same as the specified branch.
+    fn is_self_ref(&self) -> bool {
+        self.self_ref
+    }
+
+    // Check to see if the start point branch matches the specified branch.
+    // If so, then the branch will start from the renamed version of itself.
+    fn rename_self_ref(mut self, branch: &JsonBranch) -> Self {
+        if self.is_self_ref() {
+            self.branch = branch.uuid.into();
+            self
+        } else {
+            self
+        }
+    }
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -80,10 +99,15 @@ impl TryFrom<CliRunBranch> for Branch {
         } else {
             BRANCH_MAIN_STR.parse().map_err(BranchError::ParseBranch)?
         };
-        let start_point = branch_start_point.first().cloned().and_then(|branch| {
+        let start_point = branch_start_point.first().cloned().and_then(|b| {
+            // The only invalid `NameId` is an empty string.
+            // This allows for "continue on empty" semantics for the branch start point.
+            let start_point_branch = b.parse().ok()?;
+            let self_ref = branch == start_point_branch;
             Some(StartPoint {
-                branch: branch.parse().ok()?,
+                branch: start_point_branch,
                 hash: branch_start_point_hash,
+                self_ref,
             })
         });
         Ok(Self {
@@ -206,6 +230,12 @@ impl Branch {
 
                 // If the current start point branch does not match the provided start point branch, then the branch needs to be recreated from that new start point.
                 if current_start_point.branch != start_point_branch.uuid {
+                    cli_println_quietable!(
+                        log,
+                        "Current start point branch ({current}) is different than the specified start point branch ({specified}).",
+                        current = current_start_point.branch,
+                        specified = start_point_branch.uuid,
+                    );
                     return rename_and_create_branch(
                         project,
                         &current_branch,
@@ -221,6 +251,10 @@ impl Branch {
                     (Some(current_hash), Some(hash)) => {
                         // Rename and create a new branch if the hashes do not match.
                         if current_hash != hash {
+                            cli_println_quietable!(
+                                log,
+                                "Current start point branch hash ({current_hash}) is different than the specified start point branch hash ({hash}).",
+                            );
                             rename_and_create_branch(
                                 project,
                                 &current_branch,
@@ -234,6 +268,10 @@ impl Branch {
                     // Rename the current branch if it does not have a start point hash and the provided start point does.
                     // This should only rarely happen going forward, as most branches with a start point will have a hash.
                     (None, Some(_)) => {
+                        cli_println_quietable!(
+                            log,
+                            "No current start point branch hash and a start point branch hash was specified.",
+                        );
                         rename_and_create_branch(
                             project,
                             &current_branch,
@@ -256,6 +294,10 @@ impl Branch {
             // Because adding a start point is a one way operation with `bencher run`, this operation will only ever be performed once.
             // Therefore, using a set naming convention for the detached branch name and slug is okay: `branch_name@detached`
             (None, Some(start_point)) => {
+                cli_println_quietable!(
+                    log,
+                    "No current start point branch and a start point branch was specified.",
+                );
                 rename_and_create_branch(project, &current_branch, start_point, log, backend)
                     .await?;
             },
@@ -331,14 +373,16 @@ async fn create_branch(
     log: bool,
     backend: &AuthBackend,
 ) -> Result<JsonBranch, BranchError> {
-    let (start_point, message) = if let Some(start_point) = start_point {
-        let StartPoint { branch, hash } = start_point;
+    let (start_point, message) = if let Some(StartPoint { branch, hash, .. }) = start_point {
         let message = format!(
             " with start point branch \"{branch}\"{}",
             hash.as_ref()
                 .map(|hash| format!(" and hash \"{hash}\""))
                 .unwrap_or_default(),
         );
+        // Only create a new branch with a start point if the branch is not the same as the start point.
+        // This is useful for relative benchmarking, where you want to be able to create a new bare branch, without a start point,
+        // and still take advantage of all the rename semantics found here.
         // Default to cloning the thresholds from the start point branch
         let start_point = JsonNewStartPoint {
             branch: branch.clone().into(),
@@ -382,7 +426,9 @@ async fn rename_and_create_branch(
     backend: &AuthBackend,
 ) -> Result<(), BranchError> {
     // Update the current branch name and slug
-    rename_branch(project, current_branch, log, backend).await?;
+    let renamed_branch = rename_branch(project, current_branch, &start_point, log, backend).await?;
+    // Update the start point branch if using a self-referential start point
+    let start_point = start_point.rename_self_ref(&renamed_branch);
     // Create new branch with the same name and slug as the current branch
     create_branch(
         project,
@@ -399,6 +445,7 @@ async fn rename_and_create_branch(
 async fn rename_branch(
     project: &ResourceId,
     current_branch: &JsonBranch,
+    start_point: &StartPoint,
     log: bool,
     backend: &AuthBackend,
 ) -> Result<JsonBranch, BranchError> {
@@ -408,8 +455,13 @@ async fn rename_branch(
         branch_name = current_branch.name.as_ref(),
     );
 
-    let suffix =
-        rename_branch_suffix(project, current_branch.start_point.as_ref(), backend).await?;
+    let suffix = rename_branch_suffix(
+        project,
+        current_branch.start_point.as_ref(),
+        start_point,
+        backend,
+    )
+    .await?;
     let branch_name = format!(
         "{branch_name}@{suffix}",
         branch_name = current_branch.name.as_ref()
@@ -485,6 +537,7 @@ async fn update_branch(
 async fn rename_branch_suffix(
     project: &ResourceId,
     current_start_point: Option<&JsonStartPoint>,
+    start_point: &StartPoint,
     backend: &AuthBackend,
 ) -> Result<String, BranchError> {
     let Some(current_start_point) = current_start_point else {
@@ -497,7 +550,11 @@ async fn rename_branch_suffix(
             .await
             .map_err(BranchError::GetCurrentStartPoint)?;
 
-    let branch_name = current_start_point_branch.name.as_ref();
+    let branch_name = if start_point.is_self_ref() {
+        "HEAD"
+    } else {
+        current_start_point_branch.name.as_ref()
+    };
     let version_suffix = if let Some(hash) = &current_start_point.version.hash {
         format!("hash/{hash}")
     } else {

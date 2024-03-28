@@ -46,7 +46,8 @@ and for GitLab this is usually [the `target` branch for a Merge Request][gitlab 
 - If `branch` does exist and the start point is the same, then this option is ignored.
 - If `branch` does exist and the start point is different, the old version of `branch` will be renamed
   and a new `branch` will be created using this updated start point.
-- If a new `branch` is created, then all the data and thresholds from the specified start point are copied over.
+- If a new `branch` is created with a start point,
+  then all the data and thresholds from the specified start point are copied over.
 
 For example, if `feature_branch` does not yet exist, but `main` does exist and has historical data.
 Then using `--branch feature_branch --branch-start-point main` would:
