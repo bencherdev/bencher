@@ -23,6 +23,7 @@ pub struct Branch {
 pub struct StartPoint {
     branch: NameId,
     hash: Option<GitHash>,
+    matches: bool,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -80,10 +81,13 @@ impl TryFrom<CliRunBranch> for Branch {
         } else {
             BRANCH_MAIN_STR.parse().map_err(BranchError::ParseBranch)?
         };
-        let start_point = branch_start_point.first().cloned().and_then(|branch| {
+        let start_point = branch_start_point.first().cloned().and_then(|b| {
+            let start_point_branch = b.parse().ok()?;
+            let matches = branch == start_point_branch;
             Some(StartPoint {
-                branch: branch.parse().ok()?,
+                branch: start_point_branch,
                 hash: branch_start_point_hash,
+                matches,
             })
         });
         Ok(Self {
@@ -331,21 +335,31 @@ async fn create_branch(
     log: bool,
     backend: &AuthBackend,
 ) -> Result<JsonBranch, BranchError> {
-    let (start_point, message) = if let Some(start_point) = start_point {
-        let StartPoint { branch, hash } = start_point;
+    let (start_point, message) = if let Some(StartPoint {
+        branch,
+        hash,
+        matches,
+    }) = start_point
+    {
         let message = format!(
-            " with start point branch \"{branch}\"{}",
+            " with start point branch \"{branch}\"{}{}",
             hash.as_ref()
                 .map(|hash| format!(" and hash \"{hash}\""))
                 .unwrap_or_default(),
+            matches
+                .then_some(" omitted because the branch names match")
+                .unwrap_or_default()
         );
+        // Only create a new branch with a start point if the branch is not the same as the start point.
+        // This is useful for relative benchmarking, where you want to be able to create a new bare branch, without a start point,
+        // and still take advantage of all the rename semantics found here.
         // Default to cloning the thresholds from the start point branch
-        let start_point = JsonNewStartPoint {
+        let start_point = (!matches).then(|| JsonNewStartPoint {
             branch: branch.clone().into(),
             hash: hash.clone().map(Into::into),
             thresholds: Some(true),
-        };
-        (Some(start_point), Some(message))
+        });
+        (start_point, Some(message))
     } else {
         (None, None)
     };
