@@ -1,30 +1,165 @@
 ---
 title: "GitLab CI/CD"
-description: "Use Bencher in GitLab CI/CD for continuous benchmarking on merge requests"
+description: "How to do Continuous Benchmarking in GitLab CI/CD with Bencher"
 heading: "How to use Bencher in GitLab CI/CD"
 sortOrder: 4
 ---
 
-import GitLabCiYaml from "../../../chunks/how_to/gitlab-ci-yaml.mdx";
+Depending on your use case, you can set up [Continuous Benchmarking](/docs/explanation/continuous-benchmarking/) in GitLab CI/CD for your:
+<ul>
+  <li>[Target Branch](#target-branch)</li>
+  <li>[Merge Requests](#merge-requests)</li>
+</ul>
 
-<GitLabCiYaml />
+> 🐰 Make sure you have [created an API token](/docs/tutorial/quick-start/#create-an-api-token)
+> and set it as a masked variable named `BENCHER_API_TOKEN` before continuing on!
+> Navigate to `Your Repo -> Settings -> CI/CD -> Variables -> Expand -> Add variable`.
+> The variable key should be `BENCHER_API_TOKEN` and the variable value should be your API token.
+> Check both the `Protect variable` and `Mask variable` boxes.
 
-1. Create a GitLab CI/CD file (ex: `.gitlab-ci.yml`)
-1. Create a GitLab CI/CD `job` (ex: `benchmark_with_bencher`)
-1. Select a Docker image to run your job in (ex: `image: rust:bullseye`)
-1. The Project must already exist. Set the `--project` flag or the `BENCHER_PROJECT` environment variable to the Project slug or UUID. (ex: `BENCHER_PROJECT: save-walter-white`)
-1. Add `BENCHER_API_TOKEN` to your project's CI/CD secrets, under `Settings -> CI / CD -> Variables -> Add Variable`
-1. The API token must already exist. Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable to the API token. (ex: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
-1. Optional: Set the `--adapter` flag or the `BENCHER_ADAPTER` environment variable to the desired adapter name. If this is not set, then the `magic` Adapter will be used. See [benchmark harness adapters](/docs/explanation/adapters/) for a full overview. (ex: `BENCHER_ADAPTER: json`)
-1. Optional: Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the Testbed slug or UUID. The Testbed **must** already exist. If this is not set, then the `localhost` Testbed will be used. (ex: `BENCHER_TESTBED: bullseye`)
-1. Download and install the Bencher CLI [using the convenience script](/docs/how-to/install-cli/#linux-mac--unix).
-1. [Track your benchmarks](/docs/how-to/track-benchmarks/) with the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand:
-    1. There are several options for setting the project branch. See [branch selection](/docs/explanation/branch-selection/) for a full overview. The provided command uses [GitLab CI/CD predefined variables](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) and it tries to:
-        1. Use the current branch if it already exists. (ex: `--if-branch "$CI_COMMIT_REF_NAME"`)
-        1. Create a clone of MR target branch data and thresholds if it already exists. (ex: `--else-if-branch  "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
-        1. Otherwise, create a clone of the `main` branch data and thresholds. (ex: `--else-if-branch main`)
-    1. Set the command to fail if an Alert is generated. In order for an Alert to be generated, a [Threshold](/docs/explanation/thresholds/) must already exist. (ex: `--err`)
-    1. Run your benchmarks and generate a Report from the results. (ex: `"bencher mock"`)
+## Target Branch
+
+A cornerstone of [Statistical Continuous Benchmarking](/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking)
+is having a historical baseline for your target branch.
+This historical baseline can then be used to detect performance regressions in Merge Requests.
+
+```yaml
+benchmark_target_branch:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+      when: always
+  image: debian:bullseye
+  before_script:
+    - curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
+  script:
+    - |
+      bencher run \
+      --project save-walter-white-1234abcd \
+      --token "$BENCHER_API_TOKEN" \
+      --branch main \
+      --testbed debian:bullseye \
+      --adapter json \
+      --err \
+      bencher mock
+```
+
+1. Create a GitLab CI/CD file.
+   (ex: `.gitlab-ci.yml`)
+2. Create a GitLab CI/CD job.
+   (ex: `benchmark_target_branch`)
+3. Run `if` the pipeline was triggered by a `push` to the `main` branch.
+   See the [GitLab CI/CD `rules` documentation](https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules)
+   and [GitLab CI/CD predefined variables documentation](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) for a full overview.
+   (ex: `rules: - if: ...`)
+4. Set the `image` the job will run in.
+   See the [GitLab CI/CD `image` documentation](https://docs.gitlab.com/ee/ci/yaml/index.html#image)
+   for a full overview.
+   (ex: `image: debian:bullseye`)
+5. Install the Bencher CLI using [the convenience script](/docs/how-to/install-cli/#install-cli-with-script).
+   (ex: `before_script: ...`)
+6. Use the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand
+   to run your `main` branch benchmarks.
+   See [the `bencher run` CLI subcommand](/docs/explanation/bencher-run/) for a full overview.
+   (ex: `bencher run`)
+7. Set the `--project` option to the Project slug.
+   See [the `--project` docs](/docs/explanation/bencher-run/#--project-project) for more details.
+   (ex: `--project save-walter-white-1234abcd`)
+8. Set the `--token` option to the masked `BENCHER_API_TOKEN` environment variable.
+   (ex: `--token "$BENCHER_API_TOKEN"`)
+9.  Set the `--branch` option to the Branch name.
+    See [branch selection](/docs/explanation/branch-selection/#--branch-branch) for a full overview.
+    (ex: `--branch main`)
+10. Set the `--testbed` option to the Testbed name.
+    This should likely match the machine selected in `image`.
+    See [the `--tested` docs](/docs/explanation/bencher-run/#--testbed-testbed) for more details.
+    (ex: `--testbed debian:bullseye`)
+11. Set the `--adapter` option to the desired benchmark harness adapter.
+    See [benchmark harness adapters](/docs/explanation/adapters/) for a full overview.
+    (ex: `--adapter json`)
+12. Set the `--err` flag to fail the command if an Alert is generated.
+    See [Threshold & Alerts](/docs/explanation/thresholds/#alerts) for a full overview.
+    (ex: `--err`)
+13. Specify the benchmark command arguments.
+    See [benchmark command](/docs/explanation/bencher-run/#benchmark-command) for a full overview.
+    (ex: `bencher mock`)
+
+<br />
+
+## Merge Requests
+
+In order to catch performance regression in Merge Requests, you will need to run your benchmarks on MRs.
+The below example should only be used for branches within the **same** repository.
+
+```yaml
+benchmark_mr_branch:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: always
+  image: debian:bullseye
+  before_script:
+    - curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
+  script:
+    - |
+      bencher run \
+      --project save-walter-white-1234abcd \
+      --token "$BENCHER_API_TOKEN" \
+      --branch "$CI_COMMIT_REF_NAME" \
+      --branch-start-point "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" \
+      --branch-start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA" \
+      --testbed debian:bullseye \
+      --adapter json \
+      --err \
+      bencher mock
+```
+
+1. Create or update a GitLab CI/CD file.
+   (ex: `.gitlab-ci.yml`)
+2. Create a GitLab CI/CD job.
+   (ex: `benchmark_mr_branch`)
+3. Run `if` the pipeline was triggered by a `merge_request_event`.
+   See the [GitLab CI/CD `rules` documentation](https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules)
+   and [GitLab CI/CD predefined variables documentation](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) for a full overview.
+   (ex: `rules: - if: ...`)
+4. Set the `image` the job will run in.
+   See the [GitLab CI/CD `image` documentation](https://docs.gitlab.com/ee/ci/yaml/index.html#image)
+   for a full overview.
+   (ex: `image: debian:bullseye`)
+5. Install the Bencher CLI using [the convenience script](/docs/how-to/install-cli/#install-cli-with-script).
+   (ex: `before_script: ...`)
+6. Use the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand
+   to run your merge request branch benchmarks.
+   See [the `bencher run` CLI subcommand](/docs/explanation/bencher-run/) for a full overview.
+   (ex: `bencher run`)
+7. Set the `--project` option to the Project slug.
+   See [the `--project` docs](/docs/explanation/bencher-run/#--project-project) for more details.
+   (ex: `--project save-walter-white-1234abcd`)
+8. Set the `--token` option to the masked `BENCHER_API_TOKEN` environment variable.
+   (ex: `--token "$BENCHER_API_TOKEN"`)
+9. Set the `--branch` option to the MR branch name using
+   [a GitLab CI/CD predefined variable](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html).
+   See [branch selection](/docs/explanation/branch-selection/#--branch-branch) for a full overview.
+   (ex: `--branch "$CI_COMMIT_REF_NAME"`)
+10. Set the `--branch-start-point` option to the MR target Branch start point using
+    [a GitLab CI/CD predefined variable](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html).
+    See [branch selection](/docs/explanation/branch-selection/#--branch-start-point-branch) for a full overview.
+    (ex: `--branch-start-point "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
+11. Set the `--branch-start-point-hash` option to the MR target Branch start point hash using
+    [a GitLab CI/CD predefined variable](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html).
+    See [branch selection](/docs/explanation/branch-selection/#--branch-start-point-hash-hash) for a full overview.
+    (ex: `--branch-start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA"`)
+12. Set the `--testbed` option to the Testbed name.
+    This should likely match the machine selected in `image`.
+    See [the `--tested` docs](/docs/explanation/bencher-run/#--testbed-testbed) for more details.
+    (ex: `--testbed debian:bullseye`)
+13. Set the `--adapter` option to the desired benchmark harness adapter.
+    See [benchmark harness adapters](/docs/explanation/adapters/) for a full overview.
+    (ex: `--adapter json`)
+14. Set the `--err` flag to fail the command if an Alert is generated.
+    See [Threshold & Alerts](/docs/explanation/thresholds/#alerts) for a full overview.
+    (ex: `--err`)
+15. Specify the benchmark command arguments.
+    See [benchmark command](/docs/explanation/bencher-run/#benchmark-command) for a full overview.
+    (ex: `bencher mock`)
 
 <br/>
 <br/>

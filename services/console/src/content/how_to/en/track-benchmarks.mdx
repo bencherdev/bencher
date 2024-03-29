@@ -5,9 +5,6 @@ heading: "How to Track Benchmarks in CI with Bencher"
 sortOrder: 2
 ---
 
-import TrackHistorical from "../../../chunks/how_to/track-historical.mdx";
-import TrackRelative from "../../../chunks/how_to/track-relative.mdx";
-
 Most benchmark results are ephemeral.
 They disappear as soon as your terminal reaches its scrollback limit.
 Some benchmark harnesses let you cache results, but most only do so locally.
@@ -15,15 +12,21 @@ Bencher allows you to track your benchmarks from both local and CI runs and comp
 while still using [your favorite benchmark harness](/docs/explanation/adapters/).
 
 There are two popular ways to compare benchmark results when [Continuous Benchmarking](/docs/explanation/continuous-benchmarking/), that is benchmarking in CI:
-- Statistical Continuous Benchmarking
-  - Track benchmark results over time to create a baseline
-  - Use this baseline along with [Statistical Thresholds](/docs/explanation/thresholds/) to create a statistical boundary
-  - Compare the new results against this statistical boundary to detect performance regressions
-- Relative Continuous Benchmarking
-  - Run the benchmarks for the current baseline code
-  - Switch over to the new version of the code
-  - Run the benchmarks for the new version of the code
-  - Compare the new version of the code results against the baseline code results to detect performance regressions
+<ul>
+   <li>[Statistical Continuous Benchmarking](#statistical-continuous-benchmarking)</li>
+   <ol>
+      <li>Track benchmark results over time to create a baseline</li>
+      <li>Use this baseline along with [Statistical Thresholds](/docs/explanation/thresholds/) to create a statistical boundary</li>
+      <li>Compare the new results against this statistical boundary to detect performance regressions</li>
+   </ol>
+   <li>[Relative Continuous Benchmarking](#relative-continuous-benchmarking)</li>
+   <ol>
+      <li>Run the benchmarks for the current baseline code</li>
+      <li>Switch over to the new version of the code</li>
+      <li>Run the benchmarks for the new version of the code</li>
+      <li>Compare the new version of the code results against the baseline code results to detect performance regressions</li>
+   </ol>
+</ul>
 
 ## Statistical Continuous Benchmarking
 
@@ -82,12 +85,48 @@ save-walter-white-1234abcd
 7. Specify the project argument as the `Save Walter White` project slug.
    (ex: `save-walter-white-1234abcd`)
 
-Finally, we are ready to run our benchmarks in CI.
+Now we are ready to run our benchmarks in CI.
 Because every CI environment is a little bit different,
 the following example is meant to be more illustrative than practical.
 For more specific examples, see [Continuous Benchmarking in GitHub Actions](/docs/how-to/github-actions/)
 and [Continuous Benchmarking in GitLab CI/CD](/docs/how-to/gitlab-ci-cd/).
 
+We need to create and maintain a historical baseline for our `main` branch by benchmarking every change in CI:
+
+```
+bencher run \
+--project save-walter-white-1234abcd \
+--branch main \
+--testbed ci-runner \
+--adapter json \
+--err \
+bencher mock
+```
+
+1. Use the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand
+   to run your `feature-branch` branch benchmarks.
+   See [the `bencher run` CLI subcommand](/docs/explanation/bencher-run/) for a full overview.
+   (ex: `bencher run`)
+2. Set the `--project` option to the Project slug.
+   See [the `--project` docs](/docs/explanation/bencher-run/#--project-project) for more details.
+   (ex: `--project save-walter-white-1234abcd`)
+3. Set the `--branch` option to the default Branch name.
+   See [branch selection](/docs/explanation/branch-selection/#--branch-branch) for a full overview.
+   (ex: `--branch main`)
+4. Set the `--testbed` option to the Testbed name.
+   See [the `--tested` docs](/docs/explanation/bencher-run/#--testbed-testbed) for more details.
+   (ex: `--testbed ci-runner`)
+5. Set the `--adapter` option to the desired benchmark harness adapter.
+   See [benchmark harness adapters](/docs/explanation/adapters/) for a full overview.
+   (ex: `--adapter json`)
+6. Set the `--err` flag to fail the command if an Alert is generated.
+   See [Threshold & Alerts](/docs/explanation/thresholds/#alerts) for a full overview.
+   (ex: `--err`)
+7. Specify the benchmark command arguments.
+   See [benchmark command](/docs/explanation/bencher-run/#benchmark-command) for a full overview.
+   (ex: `bencher mock`)
+
+Finally, we are ready to catch performance regressions in CI.
 This is how we would track the performance of a new feature branch, named `feature-branch`, in CI:
 
 ```
@@ -102,7 +141,8 @@ bencher run \
 bencher mock
 ```
 
-1. Use the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand.
+1. Use the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand
+   to run your `feature-branch` branch benchmarks.
    See [the `bencher run` CLI subcommand](/docs/explanation/bencher-run/) for a full overview.
    (ex: `bencher run`)
 2. Set the `--project` option to the Project slug.
@@ -192,7 +232,8 @@ bencher run \
 bencher mock
 ```
 
-1. Use the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand.
+1. Use the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand
+   to run your `main` branch benchmarks.
    See [the `bencher run` CLI subcommand](/docs/explanation/bencher-run/) for a full overview.
    (ex: `bencher run`)
 2. Set the `--project` option to the Project slug.
@@ -272,7 +313,8 @@ bencher run \
 bencher mock
 ```
 
-1. Use the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand.
+1. Use the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand
+   to run your `feature-branch` benchmarks.
    See [the `bencher run` CLI subcommand](/docs/explanation/bencher-run/) for a full overview.
    (ex: `bencher run`)
 2. Set the `--project` option to the Project slug.
