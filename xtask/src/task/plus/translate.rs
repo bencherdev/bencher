@@ -14,7 +14,7 @@ use notify_rust::Notification;
 use crate::parser::{TaskLanguage, TaskTranslate};
 
 // https://platform.openai.com/docs/models/gpt-4
-const GPT4_MODEL: &str = "gpt-4-0613";
+const GPT4_MODEL: &str = "gpt-4-0125-preview";
 
 // export OPENAI_API_KEY=sk-xxx
 #[derive(Debug)]

@@ -1,0 +1,26 @@
+Most benchmark results are ephemeral.
+They disappear as soon as your terminal reaches its scrollback limit.
+Some benchmark harnesses let you cache results, but most only do so locally.
+Bencher allows you to track your benchmarks from both local and CI runs and compare the results,
+while still using [your favorite benchmark harness][adapters].
+
+There are two popular ways to compare benchmark results when [Continuous Benchmarking][continuous benchmarking], that is benchmarking in CI:
+
+- [Statistical Continuous Benchmarking][statistical continuous benchmarking]
+  1. Track benchmark results over time to create a baseline
+  2. Use this baseline along with [Statistical Thresholds][thresholds] to create a statistical boundary
+  3. Compare the new results against this statistical boundary to detect performance regressions
+- [Relative Continuous Benchmarking][relative continuous benchmarking]
+  1. Run the benchmarks for the current baseline code
+  2. Use [Percentage Thresholds][percentage thresholds] to create a boundary for the baseline code
+  3. Switch over to the new version of the code
+  4. Run the benchmarks for the new version of the code
+  5. Compare the new version of the code results against the baseline code results to detect performance regressions
+
+[adapters]: /docs/explanation/adapters/
+[continuous benchmarking]: /docs/explanation/continuous-benchmarking/
+[thresholds]: /docs/explanation/thresholds/
+[percentage thresholds]: /docs/explanation/thresholds/#percentage-thresholds
+
+[statistical continuous benchmarking]: #statistical-continuous-benchmarking
+[relative continuous benchmarking]: #relative-continuous-benchmarking
