@@ -1,0 +1,146 @@
+import TestbedCreate from "../testbed-create.mdx";
+import ThresholdCreateStatistical from "../threshold-create-statistical.mdx";
+import RunMainStatistical from "../run-main-statistical.mdx";
+import RunFeatureStatistical from "../run-feature-statistical.mdx";
+
+## Benchmarking Continuo Estadístico
+
+Continuando donde nos quedamos en los tutoriales
+[Inicio Rápido][quick start] y [Docker Autogestionado][docker self-hosted], 
+agreguemos Benchmarking Continuo Estadístico a nuestro proyecto `Save Walter White`.
+
+> 🐰 Asegúrate de haber
+> [creado un token de API y establecerlo como la variable de entorno `BENCHER_API_TOKEN`][create an api token]
+> antes de continuar.
+
+Primero, necesitamos crear un nuevo Testbed para representar nuestros ejecutores de CI, con el nombre adecuado `ci-runner`.
+
+<TestbedCreate />
+
+1. Utiliza el subcomando CLI `bencher testbed create`.
+   Consulta [los documentos de `testbed create`][testbed create] para más detalles.
+   (ej: `bencher testbed create`)
+2. Establece la opción `--name` con el nombre deseado para el Testbed.
+   (ej: `--name ci-runner`)
+3. Especifica el argumento del proyecto como el slug del proyecto `Save Walter White`.
+   (ej: `save-walter-white-1234abcd`)
+
+A continuación, necesitamos crear un nuevo [Umbral][thresholds] para nuestro Testbed `ci-runner`:
+
+<ThresholdCreateStatistical />
+
+1. Utiliza el subcomando CLI `bencher threshold create`.
+   Consulta [los documentos de `threshold create`][threshold create] para más detalles.
+   (ej: `bencher threshold create`)
+2. Establece la opción `--branch` en la rama `main` por defecto.
+   (ej: `--branch main`)
+3. Establece la opción `--testbed` en el nuevo Testbed `ci-runner`.
+   (ej: `--testbed ci-runner`)
+4. Establece la opción `--measure` en la Medida `Latency` incorporada que se genera por `bencher mock`.
+   Consulta [la definición de Medida][measure] para más detalles.
+   (ej: `--measure Latency`)
+5. Establece la opción `--test` a un umbral de `t-test`.
+   Consulta [Umbrales y Alertas][t-test] para una visión completa.
+   (ej: `--test t-test`)
+6. Establece la opción `--upper-boundary` a un Límite Superior de `0.95`.
+   Consulta [Umbrales y Alertas][t-test upper boundary] para una visión completa.
+   (ej: `--upper-boundary 0.95`)
+7. Especifica el argumento del proyecto como el slug del proyecto `Save Walter White`.
+   (ej: `save-walter-white-1234abcd`)
+
+Ahora estamos listos para ejecutar nuestros benchmarks en CI.
+Dado que cada entorno de CI es un poco diferente,
+el siguiente ejemplo está destinado a ser más ilustrativo que práctico.
+Para ejemplos más específicos, ver [Benchmarking Continuo en GitHub Actions][github actions]
+y [Benchmarking Continuo en GitLab CI/CD][gitlab ci/cd].
+
+Necesitamos crear y mantener una línea base histórica para nuestra rama `main` al realizar benchmarks de cada cambio en CI:
+
+<RunMainStatistical />
+
+1. Utiliza el subcomando CLI <code><a href="/docs/es/explanation/bencher-run/">bencher run</a></code>
+   para ejecutar los benchmarks de tu rama `feature-branch`.
+   Consulta [el subcomando CLI `bencher run`][bencher run] para una visión completa.
+   (ej: `bencher run`)
+2. Establece la opción `--project` al slug del proyecto.
+   Consulta [los documentos de `--project`][project option] para más detalles.
+   (ej: `--project save-walter-white-1234abcd`)
+3. Establece la opción `--branch` al nombre de la Rama por defecto.
+   Consulta [selección de rama][branch selection branch] para una visión completa.
+   (ej: `--branch main`)
+4. Establece la opción `--testbed` al nombre del Testbed.
+   Consulta [los documentos de `--testbed`][testbed option] para más detalles.
+   (ej: `--testbed ci-runner`)
+5. Establece la opción `--adapter` al adaptador de arnés de benchmark deseado.
+   Consulta [adaptadores de arnés de benchmark][adapters] para una visión completa.
+   (ej: `--adapter json`)
+6. Establece la bandera `--err` para fallar el comando si se genera una Alerta.
+   Consulta [Umbrales y Alertas][alerts] para una visión completa.
+   (ej: `--err`)
+7. Especifica los argumentos del comando de benchmark.
+   Consulta [comando de benchmark][command argument] para una visión completa.
+   (ej: `bencher mock`)
+
+Finalmente, estamos listos para detectar regresiones de rendimiento en CI.
+Así es como rastrearíamos el rendimiento de una nueva rama de característica, llamada `feature-branch`, en CI:
+
+<RunFeatureStatistical />
+
+1. Utiliza el subcomando CLI <code><a href="/docs/es/explanation/bencher-run/">bencher run</a></code>
+   para ejecutar los benchmarks de tu rama `feature-branch`.
+   Consulta [el subcomando CLI `bencher run`][bencher run] para una visión completa.
+   (ej: `bencher run`)
+2. Establece la opción `--project` al slug del proyecto.
+   Consulta [los documentos de `--project`][project option] para más detalles.
+   (ej: `--project save-walter-white-1234abcd`)
+3. Establece la opción `--branch` al nombre de la rama de característica.
+   Consulta [selección de rama][branch selection branch] para una visión completa.
+   (ej: `--branch feature-branch`)
+4. Establece la opción `--branch-start-point` al punto de inicio de la rama de característica.
+   Consulta [selección de rama][branch selection start point] para una visión completa.
+   (ej: `--branch-start-point main`)
+5. Establece la opción `--branch-start-point-hash` al hash `git` del punto de inicio de la rama de característica.
+   Consulta [selección de rama][branch selection start point hash] para una visión completa.
+   (ej: `--branch-start-point-hash 32ae...dd8b`)
+6. Establece la opción `--testbed` al nombre del Testbed.
+   Consulta [los documentos de `--testbed`][testbed option] para más detalles.
+   (ej: `--testbed ci-runner`)
+7. Establece la opción `--adapter` al adaptador de arnés de benchmark deseado.
+   Consulta [adaptadores de arnés de benchmark][adapters] para una visión completa.
+   (ej: `--adapter json`)
+8. Establece la bandera `--err` para fallar el comando si se genera una Alerta.
+   Consulta [Umbrales y Alertas][alerts] para una visión completa.
+   (ej: `--err`)
+9. Especifica los argumentos del comando de benchmark.
+   Consulta [comando de benchmark][command argument] para una visión completa.
+   (ej: `bencher mock`)
+
+La primera vez que este comando se ejecute en CI,
+creará la rama `feature-branch` ya que aún no existe.
+La nueva rama `feature-branch` usará la rama `main`
+en el hash `32aea434d751648726097ed3ac760b57107edd8b` como su punto de inicio.
+Esto significa que `feature-branch` tendrá una copia de todos los datos y [Umbrales][thresholds]
+de la rama `main` para comparar los resultados de `bencher mock` contra,
+para la primera y todas las ejecuciones subsiguientes.
+
+[quick start]: /docs/es/tutorial/quick-start/
+[docker self-hosted]: /docs/es/tutorial/docker/
+[continuous benchmarking]: /docs/es/explanation/continuous-benchmarking/
+[create an api token]: /docs/es/tutorial/quick-start/#create-an-api-token
+[testbed create]: /docs/es/api/projects/testbeds/#post-v0projectsprojecttestbeds
+[thresholds]: /docs/es/explanation/thresholds/
+[threshold create]: /docs/es/api/projects/thresholds/#post-v0projectsprojectthresholds
+[measure]: /docs/es/explanation/benchmarking/#measures
+[t-test]: /docs/es/explanation/thresholds/#t-test-thresholds
+[t-test upper boundary]: /docs/es/explanation/thresholds/#t-test-threshold-upper-boundary
+[github actions]: /docs/es/how-to/github-actions/
+[gitlab ci/cd]: /docs/es/how-to/gitlab-ci-cd/
+[bencher run]: /docs/es/explanation/bencher-run/
+[project option]: /docs/es/explanation/bencher-run/#--project-project
+[branch selection branch]: /docs/es/explanation/branch-selection/#--branch-branch
+[testbed option]: /docs/es/explanation/bencher-run/#--testbed-testbed
+[adapters]: /docs/es/explanation/adapters/
+[alerts]: /docs/es/explanation/thresholds/#alerts
+[command argument]: /docs/es/explanation/bencher-run/#benchmark-command
+[branch selection start point]: /docs/es/explanation/branch-selection/#--branch-start-point-branch
+[branch selection start point hash]: /docs/es/explanation/branch-selection/#--branch-start-point-hash-hash

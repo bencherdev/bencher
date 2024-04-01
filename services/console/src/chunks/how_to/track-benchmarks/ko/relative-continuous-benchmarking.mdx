@@ -1,0 +1,148 @@
+```jsx
+import TestbedCreate from "../testbed-create.mdx";
+import GitCheckoutMain from "../git-checkout-main.mdx";
+import RunMainRelative from "../run-main-relative.mdx";
+import ThresholdCreateRelative from "../threshold-create-relative.mdx";
+import GitCheckoutFeature from "../git-checkout-feature.mdx";
+import RunFeatureRelative from "../run-feature-relative.mdx";
+
+## 상대적 연속 벤치마킹
+
+[빠른 시작][quick start] 및 [도커 자체 호스팅][docker self-hosted] 튜토리얼에서 이어서,
+`Save Walter White` 프로젝트에 상대적 [연속 벤치마킹][continuous benchmarking]을 추가해 보겠습니다.
+
+> 🐰 진행하시기 전에
+> [API 토큰을 생성하고 `BENCHER_API_TOKEN` 환경 변수로 설정했다는 것을][create an api token]
+> 확인하세요!
+
+먼저, CI 러너를 대표하는 새로운 Testbed를 `ci-runner`라는 이름으로 생성해야 합니다.
+
+<TestbedCreate />
+
+1. `bencher testbed create` CLI 서브커맨드를 사용합니다.
+   자세한 내용은 [the `testbed create` docs][testbed create]를 확인하세요.
+   (예: `bencher testbed create`)
+2. `--name` 옵션을 원하는 Testbed 이름으로 설정합니다.
+   (예: `--name ci-runner`)
+3. 프로젝트 인수를 `Save Walter White` 프로젝트 슬러그로 지정합니다.
+   (예: `save-walter-white-1234abcd`)
+
+상대적 연속 벤치마킹은 코드의 두 버전을 나란히 비교합니다.
+이는 CI/CD 환경이 복잡할 때, 실행간 사용 가능한 리소스가 크게 달라질 수 있는 경우 유용할 수 있습니다.
+이 예제에서는 `main` 브랜치에서 실행된 결과와 `feature-branch`라는 기능 브랜치에서 실행된 결과를 비교할 것입니다.
+모든 CI 환경이 약간씩 다르기 때문에, 다음 예제는 설명적이기보단 실용적입니다.
+특정 예제들은 [GitHub Actions의 연속 벤치마킹][github actions] 및 [GitLab CI/CD에서의 연속 벤치마킹][gitlab ci/cd]을 확인하세요.
+
+먼저, CI에서 `git`을 사용하여 `main` 브랜치를 체크아웃해야 합니다:
+
+<GitCheckoutMain />
+
+그 다음, CI에서 `main` 브랜치에 대한 벤치마크를 실행해야 합니다:
+
+<RunMainRelative />
+
+1. <code><a href="/docs/ko/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드를 사용하여
+   `main` 브랜치 벤치마크를 실행합니다.
+   전체 개요는 [the `bencher run` CLI subcommand][bencher run]를 참조하십시오.
+   (예: `bencher run`)
+2. `--project` 옵션을 프로젝트 슬러그로 설정합니다.
+   자세한 사항은 [the `--project` docs][project option]를 참조하십시오.
+   (예: `--project save-walter-white-1234abcd`)
+3. `--branch` 옵션을 기능 브랜치 이름으로 설정합니다.
+   전체 개요는 [branch selection][branch selection branch]을 참조하십시오.
+   (예: `--branch feature-branch`)
+4. `--branch-reset` 플래그를 설정합니다.
+   전체 개요는 [branch selection][branch selection reset]을 참조하십시오.
+   (예: `--branch-reset`)
+5. `--testbed` 옵션을 Testbed 이름으로 설정합니다.
+   자세한 사항은 [the `--tested` docs][testbed option]를 참조하십시오.
+   (예: `--testbed ci-runner`)
+6. 원하는 벤치마크 하네스 어댑터를 `--adapter` 옵션으로 설정합니다.
+   전체 개요는 [benchmark harness adapters][adapters]을 참조하십시오.
+   (예: `--adapter json`)
+7.  벤치마크 명령 인수를 지정합니다.
+    전체 개요는 [benchmark command][command argument]을 참조하십시오.
+    (예: `bencher mock`)
+
+CI에서 이 명령어가 처음 실행되면, `feature-branch` 브랜치가 아직 존재하지 않으므로 생성됩니다.
+새로운 `feature-branch`는 시작점, 기존 데이터, 또는 임계값을 갖지 않을 것입니다.
+이후 실행에서는 이전 버전의 `feature-branch`가 이름이 변경되고 새로운 `feature-branch`가 시작점, 기존 데이터, 또는 임계값 없이 생성됩니다.
+
+다음으로, 새로운 `feature-branch` 브랜치에 대한 새로운 [Threshold][thresholds]를 CI에서 생성해야 합니다:
+
+<ThresholdCreateRelative />
+
+1. `bencher threshold create` CLI 서브커맨드를 사용합니다.
+   자세한 내용은 [the `threshold create` docs][threshold create]를 참조하세요.
+   (예: `bencher threshold create`)
+2. 새로운 `feature-branch` 브랜치에 대한 `--branch` 옵션을 설정합니다.
+   (예: `--branch feature-branch`)
+3. `--branch` 옵션을 `ci-runner` Testbed로 설정합니다.
+   (예: `--testbed ci-runner`)
+4. `--measure` 옵션을 `bencher mock`에 의해 생성된 기본 `Latency` 측정값으로 설정합니다.
+   [the definition of Measure][measure]에서 세부 정보를 참조하세요.
+   (예: `--measure Latency`)
+5. `--test` 옵션을 `percentage` 임계값으로 설정합니다.
+   전체 개요는 [Thresholds & Alerts][percentage]를 참조하세요.
+   (예: `--test t-test`)
+6. 상한선을 `0.25`(즉, `25%`)로 설정하는 `--upper-boundary` 옵션을 설정합니다.
+   전체 개요는 [Thresholds & Alerts][percentage upper boundary]를 참조하세요.
+   (예: `--upper-boundary 0.25`)
+7. 프로젝트 인수를 `Save Walter White` 프로젝트 슬러그로 지정합니다.
+   (예: `save-walter-white-1234abcd`)
+
+그런 다음, CI에서 `git`을 사용하여 `feature-branch` 브랜치를 체크아웃해야 합니다:
+
+<GitCheckoutFeature />
+
+마지막으로, CI에서 `feature-branch` 벤치마크를 실행할 준비가 되었습니다:
+
+<RunFeatureRelative />
+
+1. <code><a href="/docs/ko/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드를 사용하여
+   `feature-branch` 벤치마크를 실행합니다.
+   전체 개요는 [the `bencher run` CLI subcommand][bencher run]를 참조하십시오.
+   (예: `bencher run`)
+2. `--project` 옵션을 프로젝트 슬러그로 설정합니다.
+   자세한 사항은 [the `--project` docs][project option]를 참조하십시오.
+   (예: `--project save-walter-white-1234abcd`)
+3. `--branch` 옵션을 기능 브랜치 이름으로 설정합니다.
+   전체 개요는 [branch selection][branch selection branch]을 참조하십시오.
+   (예: `--branch feature-branch`)
+4. `--testbed` 옵션을 Testbed 이름으로 설정합니다.
+   자세한 사항은 [the `--tested` docs][testbed option]를 참조하십시오.
+   (예: `--testbed ci-runner`)
+5. 원하는 벤치마크 하네스 어댑터를 `--adapter` 옵션으로 설정합니다.
+   전체 개요는 [benchmark harness adapters][adapters]을 참조하십시오.
+   (예: `--adapter json`)
+6. 경고가 생성되면 명령어가 실패하도록 `--err` 플래그를 설정합니다.
+   전체 개요는 [Threshold & Alerts][alerts]를 참조하십시오.
+   (예: `--err`)
+7. 벤치마크 명령 인수를 지정합니다.
+   전체 개요는 [benchmark command][command argument]를 참조하십시오.
+   (예: `bencher mock`)
+
+CI에서 이 명령이 실행될 때마다,
+`feature-branch`의 결과를 `main`에서 발생한 가장 최근의 결과와만 비교합니다.
+
+[quick start]: /docs/ko/tutorial/quick-start/
+[docker self-hosted]: /docs/ko/tutorial/docker/
+[continuous benchmarking]: /docs/ko/explanation/continuous-benchmarking/
+[create an api token]: /docs/ko/tutorial/quick-start/#create-an-api-token
+[testbed create]: /docs/ko/api/projects/testbeds/#post-v0projectsprojecttestbeds
+[github actions]: /docs/ko/how-to/github-actions/
+[gitlab ci/cd]: /docs/ko/how-to/gitlab-ci-cd/
+[bencher run]: /docs/ko/explanation/bencher-run/
+[project option]: /docs/ko/explanation/bencher-run/#--project-project
+[branch selection branch]: /docs/ko/explanation/branch-selection/#--branch-branch
+[branch selection reset]: /docs/ko/explanation/branch-selection/#--branch-reset
+[testbed option]: /docs/ko/explanation/bencher-run/#--testbed-testbed
+[adapters]: /docs/ko/explanation/adapters/
+[command argument]: /docs/ko/explanation/bencher-run/#benchmark-command
+[thresholds]: /docs/ko/explanation/thresholds/
+[threshold create]: /docs/ko/api/projects/thresholds/#post-v0projectsprojectthresholds
+[measure]: /docs/ko/explanation/benchmarking/#measures
+[percentage]: /docs/ko/explanation/thresholds/#percentage-thresholds
+[percentage upper boundary]: /docs/ko/explanation/thresholds/#percentage-threshold-upper-boundary
+[alerts]: /docs/ko/explanation/thresholds/#alerts
+```

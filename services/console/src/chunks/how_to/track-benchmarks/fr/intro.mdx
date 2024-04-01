@@ -1,0 +1,26 @@
+La plupart des résultats de benchmarks sont éphémères.
+Ils disparaissent dès que votre terminal atteint sa limite de défilement.
+Certains outils de benchmark permettent de mettre en cache les résultats, mais la plupart ne le font que localement.
+Bencher vous permet de suivre vos benchmarks à la fois locaux et depuis les CI et de comparer les résultats,
+tout en utilisant [votre outil de benchmark favori][adapters].
+
+Il existe deux manières populaires de comparer les résultats de benchmarks lors du [Benchmarking Continu][continuous benchmarking], c'est-à-dire le benchmarking en CI :
+
+- [Benchmarking Continu Statistique][statistical continuous benchmarking]
+  1. Suivre les résultats des benchmarks dans le temps pour créer une base de référence
+  2. Utiliser cette base de référence avec des [Seuils Statistiques][thresholds] pour créer une limite statistique
+  3. Comparer les nouveaux résultats à cette limite statistique pour détecter les régressions de performances
+- [Benchmarking Continu Relatif][relative continuous benchmarking]
+  1. Exécuter les benchmarks pour le code de base actuel
+  2. Utiliser des [Seuils en Pourcentage][percentage thresholds] pour créer une limite pour le code de base
+  3. Passer à la nouvelle version du code
+  4. Exécuter les benchmarks pour la nouvelle version du code
+  5. Comparer les résultats de la nouvelle version du code à ceux du code de base pour détecter les régressions de performances
+
+[adapters]: /docs/fr/explanation/adapters/
+[continuous benchmarking]: /docs/fr/explanation/continuous-benchmarking/
+[thresholds]: /docs/fr/explanation/thresholds/
+[percentage thresholds]: /docs/fr/explanation/thresholds/#percentage-thresholds
+
+[statistical continuous benchmarking]: #benchmarking-continu-statistique
+[relative continuous benchmarking]: #benchmarking-continu-relatif

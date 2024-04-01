@@ -1,0 +1,26 @@
+Die meisten Benchmark-Ergebnisse sind vergänglich.
+Sie verschwinden, sobald Ihr Terminal das Scrollback-Limit erreicht.
+Einige Benchmark-Harnesses ermöglichen es Ihnen, Ergebnisse zu speichern, aber die meisten tun dies nur lokal.
+Bencher ermöglicht es Ihnen, Ihre Benchmarks sowohl von lokalen als auch von CI-Durchläufen zu verfolgen und die Ergebnisse zu vergleichen,
+während Sie weiterhin [Ihren bevorzugten Benchmark-Harness][adapters] verwenden.
+
+Es gibt zwei beliebte Methoden, um Benchmark-Ergebnisse beim [Continuous Benchmarking][continuous benchmarking], d.h. Benchmarking in CI, zu vergleichen:
+
+- [Statistisches Continuous Benchmarking][statistical continuous benchmarking]
+  1. Verfolgen Sie Benchmark-Ergebnisse über die Zeit, um eine Basislinie zu erstellen.
+  2. Verwenden Sie diese Basislinie zusammen mit [Statistischen Schwellenwerten][thresholds], um eine statistische Grenze zu erstellen.
+  3. Vergleichen Sie die neuen Ergebnisse mit dieser statistischen Grenze, um Leistungsregressionen zu erkennen.
+- [Relatives Continuous Benchmarking][relative continuous benchmarking]
+  1. Führen Sie die Benchmarks für den aktuellen Basiscode aus.
+  2. Verwenden Sie [Prozentuale Schwellenwerte][percentage thresholds], um eine Grenze für den Basiscode zu erstellen.
+  3. Wechseln Sie zur neuen Version des Codes.
+  4. Führen Sie die Benchmarks für die neue Version des Codes aus.
+  5. Vergleichen Sie die Ergebnisse der neuen Version des Codes mit den Ergebnissen des Basiscode, um Leistungsregressionen zu erkennen.
+
+[adapters]: /docs/de/explanation/adapters/
+[continuous benchmarking]: /docs/de/explanation/continuous-benchmarking/
+[thresholds]: /docs/de/explanation/thresholds/
+[percentage thresholds]: /docs/de/explanation/thresholds/#percentage-thresholds
+
+[statistical continuous benchmarking]: #statistical-continuous-benchmarking
+[relative continuous benchmarking]: #relative-continuous-benchmarking

@@ -1,0 +1,132 @@
+## 통계적 지속 가능한 벤치마킹
+
+[빠른 시작][quick start] 및 [Docker 자체 호스팅][docker self-hosted] 튜토리얼에서 이어서,
+`Save Walter White` 프로젝트에 통계적 [지속 가능한 벤치마킹][continuous benchmarking]을 추가해 봅시다.
+
+> 🐰 진행하기 전에
+> [API 토큰을 생성하고 `BENCHER_API_TOKEN` 환경 변수로 설정했는지][create an api token] 확인하세요!
+
+먼저, CI 러너를 대표하는 새로운 Testbed를 생성해야 합니다. 이는 `ci-runner`라고 적절하게 명명됩니다.
+
+<TestbedCreate />
+
+1. `bencher testbed create` CLI 하위 명령어를 사용하십시오.
+   자세한 내용은 [the `testbed create` 문서][testbed create]를 참조하십시오.
+   (예: `bencher testbed create`)
+2. `--name` 옵션을 원하는 Testbed 이름으로 설정하십시오.
+   (예: `--name ci-runner`)
+3. 프로젝트 인수로 `Save Walter White` 프로젝트 슬러그를 지정하십시오.
+   (예: `save-walter-white-1234abcd`)
+
+다음으로, `ci-runner` Testbed에 대한 새로운 [Threshold][thresholds]를 생성해야 합니다:
+
+<ThresholdCreateStatistical />
+
+1. `bencher threshold create` CLI 하위 명령어를 사용하십시오.
+   자세한 내용은 [the `threshold create` 문서][threshold create]를 참조하십시오.
+   (예: `bencher threshold create`)
+2. `--branch` 옵션을 기본 `main` 브랜치로 설정하십시오.
+   (예: `--branch main`)
+3. `--testbed` 옵션을 새 `ci-runner` Testbed로 설정하십시오.
+   (예: `--testbed ci-runner`)
+4. `bencher mock`에 의해 생성된 내장 `지연시간(Latency)` 측정 기준을 `--measure` 옵션으로 설정하십시오.
+   측정 기준의 정의에 대한 자세한 내용은 [the definition of Measure][measure]을 참조하십시오.
+   (예: `--measure Latency`)
+5. `--test` 옵션을 `t-test` Threshold로 설정하십시오.
+   전체 개요는 [Thresholds & Alerts][t-test]를 참조하십시오.
+   (예: `--test t-test`)
+6. `--upper-boundary` 옵션을 상한선 `0.95`로 설정하십시오.
+   전체 개요는 [Thresholds & Alerts][t-test upper boundary]를 참조하십시오.
+   (예: `--upper-boundary 0.95`)
+7. 프로젝트 인수로 `Save Walter White` 프로젝트 슬러그를 지정하십시오.
+   (예: `save-walter-white-1234abcd`)
+
+이제 CI에서 벤치마킹을 실행할 준비가 되었습니다.
+모든 CI 환경이 조금씩 다르기 때문에,
+다음 예는 실제보다는 설명적인 목적으로 제공됩니다.
+보다 구체적인 예시는 [GitHub Actions에서의 지속 가능한 벤치마킹][github actions] 및 [GitLab CI/CD에서의 지속 가능한 벤치마킹][gitlab ci/cd]을 참조하십시오.
+
+CI에서 모든 변경 사항을 벤치마킹하여 `main` 브랜치에 대한 역사적 기준선을 생성하고 유지해야 합니다:
+
+<RunMainStatistical />
+
+1. `bencher run` CLI 하위 명령어를 사용하여 `feature-branch` 브랜치 벤치마크를 실행하십시오.
+   전체 개요는 [the `bencher run` CLI 하위 명령어][bencher run]를 참조하십시오.
+   (예: `bencher run`)
+2. `--project` 옵션을 프로젝트 슬러그로 설정하십시오.
+   자세한 내용은 [the `--project` 문서][project option]를 참조하십시오.
+   (예: `--project save-walter-white-1234abcd`)
+3. `--branch` 옵션을 기본 브랜치 이름으로 설정하십시오.
+   전체 개요는 [branch selection][branch selection branch]를 참조하십시오.
+   (예: `--branch main`)
+4. `--testbed` 옵션을 Testbed 이름으로 설정하십시오.
+   자세한 내용은 [the `--tested` 문서][testbed option]를 참조하십시오.
+   (예: `--testbed ci-runner`)
+5. 원하는 벤치마크 하네스 어댑터를 `--adapter` 옵션으로 설정하십시오.
+   전체 개요는 [benchmark harness adapters][adapters]를 참조하십시오.
+   (예: `--adapter json`)
+6. 경고가 생성되면 명령을 실패하도록 `--err` 플래그를 설정하십시오.
+   전체 개요는 [Threshold & Alerts][alerts]를 참조하십시오.
+   (예: `--err`)
+7. 벤치마크 명령 인수를 지정하십시오.
+   전체 개요는 [benchmark command][command argument]를 참조하십시오.
+   (예: `bencher mock`)
+
+마지막으로, CI에서 성능 회귀를 캐치할 준비가 되었습니다.
+CI에서 새 기능 브랜치인 `feature-branch`의 성능을 추적하는 방법은 다음과 같습니다:
+
+<RunFeatureStatistical />
+
+1. `bencher run` CLI 하위 명령어를 사용하여 `feature-branch` 브랜치 벤치마크를 실행하십시오.
+   전체 개요는 [the `bencher run` CLI 하위 명령어][bencher run]를 참조하십시오.
+   (예: `bencher run`)
+2. `--project` 옵션을 프로젝트 슬러그로 설정하십시오.
+   자세한 내용은 [the `--project` 문서][project option]를 참조하십시오.
+   (예: `--project save-walter-white-1234abcd`)
+3. `--branch` 옵션을 기능 브랜치 이름으로 설정하십시오.
+   전체 개요는 [branch selection][branch selection branch]를 참조하십시오.
+   (예: `--branch feature-branch`)
+4. 기능 브랜치 시작점을 `--branch-start-point` 옵션으로 설정하십시오.
+   전체 개요는 [branch selection][branch selection start point]를 참조하십시오.
+   (예: `--branch-start-point main`)
+5. 기능 브랜치 시작점 `git` 해시를 `--branch-start-point-hash` 옵션으로 설정하십시오.
+   전체 개요는 [branch selection][branch selection start point hash]를 참조하십시오.
+   (예: `--branch-start-point-hash 32ae...dd8b`)
+6. `--testbed` 옵션을 Testbed 이름으로 설정하십시오.
+   자세한 내용은 [the `--tested` 문서][testbed option]를 참조하십시오.
+   (예: `--testbed ci-runner`)
+7. 원하는 벤치마크 하네스 어댑터를 `--adapter` 옵션으로 설정하십시오.
+   전체 개요는 [benchmark harness adapters][adapters]를 참조하십시오.
+   (예: `--adapter json`)
+8. 경고가 생성되면 명령을 실패하도록 `--err` 플래그를 설정하십시오.
+   전체 개요는 [Threshold & Alerts][alerts]를 참조하십시오.
+   (예: `--err`)
+9. 벤치마크 명령 인수를 지정하십시오.
+   전체 개요는 [benchmark command][command argument]를 참조하십시오.
+   (예: `bencher mock`)
+
+CI에서 이 명령을 처음 실행하면, 아직 존재하지 않는 `feature-branch` 브랜치가 생성됩니다.
+새 `feature-branch`는 해시 `32aea434d751648726097ed3ac760b57107edd8b`에서 `main` 브랜치를 시작점으로 사용합니다.
+이는 `feature-branch`가 `bencher mock`의 결과를 비교하기 위해 첫 번째 실행과 모든 후속 실행에서 `main` 브랜치의 모든 데이터와 [Thresholds][thresholds]의 복사본을 가지게 됨을 의미합니다.
+
+[quick start]: /docs/ko/tutorial/quick-start/
+[docker self-hosted]: /docs/ko/tutorial/docker/
+[continuous benchmarking]: /docs/ko/explanation/continuous-benchmarking/
+[create an api token]: /docs/ko/tutorial/quick-start/#create-an-api-token
+[testbed create]: /docs/ko/api/projects/testbeds/#post-v0projectsprojecttestbeds
+[thresholds]: /docs/ko/explanation/thresholds/
+[threshold create]: /docs/ko/api/projects/thresholds/#post-v0projectsprojectthresholds
+[measure]: /docs/ko/explanation/benchmarking/#measures
+[t-test]: /docs/ko/explanation/thresholds/#t-test-thresholds
+[t-test upper boundary]: /docs/ko/explanation/thresholds/#t-test-threshold-upper-boundary
+[github actions]: /docs/ko/how-to/github-actions/
+[gitlab ci/cd]: /docs/ko/how-to/gitlab-ci-cd/
+[bencher run]: /docs/ko/explanation/bencher-run/
+[project option]: /docs/ko/explanation/bencher-run/#--project-project
+[branch selection branch]: /docs/ko/explanation/branch-selection/#--branch-branch
+[testbed option]: /docs/ko/explanation/bencher-run/#--testbed-testbed
+[adapters]: /docs/ko/explanation/adapters/
+[alerts]: /docs/ko/explanation/thresholds/#alerts
+[command argument]: /docs/ko/explanation/bencher-run/#benchmark-command
+[branch selection start point]: /docs/ko/explanation/branch-selection/#--branch-start-point-branch
+[branch selection start point hash]: /docs/ko/explanation/branch-selection/#--branch-start-point-hash-hash

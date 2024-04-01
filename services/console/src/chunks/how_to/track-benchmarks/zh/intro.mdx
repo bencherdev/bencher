@@ -1,0 +1,26 @@
+大多数基准测试结果都是短暂的。
+它们在你的终端回滚到限制处时就会消失。
+一些基准测试工具允许你缓存结果，但大多数只在本地这样做。
+Bencher 允许你跟踪来自本地和 CI 运行的基准测试，并比较结果，
+同时仍然使用[你最喜欢的基准测试工具][adapters]。
+
+当在 CI 中进行[持续性基准测试][continuous benchmarking]时，比较基准测试结果有两种流行的方法：
+
+- [统计型持续基准测试][statistical continuous benchmarking]
+  1. 随时间跟踪基准测试结果以创建基线
+  2. 使用这个基线以及[统计阈值][thresholds]创建一个统计边界
+  3. 将新结果与这个统计边界进行比较以检测性能退化
+- [相对性持续基准测试][relative continuous benchmarking]
+  1. 为当前的基线代码运行基准测试
+  2. 使用[百分比阈值][percentage thresholds]为基线代码创建一个边界
+  3. 转换到代码的新版本
+  4. 为代码的新版本运行基准测试
+  5. 将新版本代码的结果与基线代码的结果进行比较以检测性能退化
+
+[adapters]: /docs/zh/explanation/adapters/
+[continuous benchmarking]: /docs/zh/explanation/continuous-benchmarking/
+[thresholds]: /docs/zh/explanation/thresholds/
+[percentage thresholds]: /docs/zh/explanation/thresholds/#percentage-thresholds
+
+[statistical continuous benchmarking]: #statistical-continuous-benchmarking
+[relative continuous benchmarking]: #relative-continuous-benchmarking

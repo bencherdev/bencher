@@ -1,0 +1,26 @@
+A maioria dos resultados de benchmark é efêmera.
+Eles desaparecem assim que o seu terminal atinge o seu limite de retrocesso.
+Alguns sistemas de benchmark permitem armazenar os resultados, mas a maioria o faz apenas localmente.
+Bencher permite que você rastreie os seus benchmarks tanto de execuções locais quanto de CI e compare os resultados,
+enquanto ainda utiliza [seu sistema de benchmark favorito][adapters].
+
+Há duas maneiras populares de comparar resultados de benchmark quando se pratica o [Benchmark Contínuo][continuous benchmarking], ou seja, benchmark em CI:
+
+- [Benchmark Contínuo Estatístico][statistical continuous benchmarking]
+  1. Acompanhar os resultados de benchmark ao longo do tempo para criar uma base de referência
+  2. Usar essa base de referência junto com [Limites Estatísticos][thresholds] para criar um limite estatístico
+  3. Compara os novos resultados com este limite estatístico para detectar regressões de desempenho
+- [Benchmark Contínuo Relativo][relative continuous benchmarking]
+  1. Executar os benchmarks para o código de base atual
+  2. Usar [Limites Percentuais][percentage thresholds] para criar um limite para o código de base
+  3. Mudar para a nova versão do código
+  4. Executar os benchmarks para a nova versão do código
+  5. Comparar os resultados da nova versão do código com os resultados do código de base para detectar regressões de desempenho
+
+[adapters]: /docs/pt/explanation/adapters/
+[continuous benchmarking]: /docs/pt/explanation/continuous-benchmarking/
+[thresholds]: /docs/pt/explanation/thresholds/
+[percentage thresholds]: /docs/pt/explanation/thresholds/#limites-percentuais
+
+[statistical continuous benchmarking]: #benchmark-contínuo-estatístico
+[relative continuous benchmarking]: #benchmark-contínuo-relativo

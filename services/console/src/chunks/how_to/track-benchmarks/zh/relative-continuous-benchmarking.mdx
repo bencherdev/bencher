@@ -1,0 +1,148 @@
+import TestbedCreate from "../testbed-create.mdx";
+import GitCheckoutMain from "../git-checkout-main.mdx";
+import RunMainRelative from "../run-main-relative.mdx";
+import ThresholdCreateRelative from "../threshold-create-relative.mdx";
+import GitCheckoutFeature from "../git-checkout-feature.mdx";
+import RunFeatureRelative from "../run-feature-relative.mdx";
+
+## 相对连续基准测试
+
+基于我们在[快速开始][quick start]和[Docker 自托管][docker self-hosted]教程中的内容，现在让我们为我们的“拯救沃尔特·怀特”项目添加相对[连续基准测试][continuous benchmarking]。
+
+> 🐰 确保你已经
+> [创建了一个 API 令牌，并将其设置为 `BENCHER_API_TOKEN` 环境变量][create an api token]
+> 再继续！
+
+首先，我们需要创建一个新的 Testbed 来代表我们的 CI 运行器，恰当地命名为 `ci-runner`。
+
+<TestbedCreate />
+
+1. 使用 `bencher testbed create` CLI 子命令。
+   查看 [“testbed create”文档][testbed create] 获取更多详情。
+   (例如：`bencher testbed create`)
+2. 设置 `--name` 选项为所需的 Testbed 名称。
+   (例如：`--name ci-runner`)
+3. 指定项目参数为 `Save Walter White` 项目的 slug。
+   (例如：`save-walter-white-1234abcd`)
+
+相对连续基准测试通过对代码的两个版本进行并排比较。
+这在处理资源在运行之间可能高度变化的嘈杂 CI/CD 环境时很有用。
+在这个示例中，我们将比较在 `main` 分支上运行的结果与在名为 `feature-branch` 的特性分支上运行的结果。
+因为每个CI环境都有些许不同，以下示例意在说明而非实用。
+更具体的示例，参见[GitHub Actions 中的连续基准测试][github actions]
+和[GitLab CI/CD 中的连续基准测试][gitlab ci/cd]。
+
+首先，我们需要在 CI 中用 `git` 检出 `main` 分支：
+
+<GitCheckoutMain />
+
+然后我们需要在 CI 中在 `main` 分支上运行我们的基准测试：
+
+<RunMainRelative />
+
+1. 使用 <code><a href="/docs/zh/explanation/bencher-run/">bencher run</a></code> CLI 子命令
+   来运行你的 `main` 分支基准测试。
+   参见 [“bencher run” CLI 子命令][bencher run] 以获得完整概览。
+   (例如：`bencher run`)
+2. 设置 `--project` 选项为项目 slug。
+   参见 [“--project” 文档][project option] 获取更多细节。
+   (例如：`--project save-walter-white-1234abcd`)
+3. 设置 `--branch` 选项为特性分支名称。
+   参见 [分支选择][branch selection branch] 以获得完整概览。
+   (例如：`--branch feature-branch`)
+4. 设置 `--branch-reset` 标志。
+   参见 [分支选择][branch selection reset] 以获得完整概览。
+   (例如：`--branch-reset`)
+5. 设置 `--testbed` 选项为 Testbed 名称。
+   参见 [“--tested” 文档][testbed option] 获取更多细节。
+   (例如：`--testbed ci-runner`)
+6. 设置 `--adapter` 选项为所需的基准测试适配器。
+   参见 [基准测试适配器][adapters] 以获得完整概览。
+   (例如：`--adapter json`)
+7. 指定基准测试命令参数。
+    参见 [基准测试命令][command argument] 以获得完整概览。
+    (例如：`bencher mock`)
+
+这个命令在 CI 中首次运行时，
+将会创建 `feature-branch` 分支，因为它还不存在。
+新的 `feature-branch` 不会有起点、现有数据或阈值。
+在后续运行中，旧的 `feature-branch` 将被重命名，
+并创建一个没有起点、现有数据或阈值的新 `feature-branch`。
+
+接下来，我们需要在 CI 中为我们新的 `feature-branch` 分支创建一个新的[阈值][thresholds]：
+
+<ThresholdCreateRelative />
+
+1. 使用 `bencher threshold create` CLI 子命令。
+   查看 [“threshold create” 文档][threshold create] 以获得更多详情。
+   (例如：`bencher threshold create`)
+2. 设置 `--branch` 选项为新的 `feature-branch` 分支。
+   (例如：`--branch feature-branch`)
+3. 将 `--branch` 选项设置为 `ci-runner` Testbed。
+   (例如：`--testbed ci-runner`)
+4. 设置 `--measure` 选项为 `bencher mock` 生成的内置 `Latency` 度量。
+   查看 [度量定义][measure] 了解详情。
+   (例如：`--measure Latency`)
+5. 设置 `--test` 选项为一个 `percentage` 阈值。
+   参见 [阈值 & 警告][percentage] 以获得完整概览。
+   (例如：`--test t-test`)
+6. 设置 `--upper-boundary` 选项为 `0.25`（即 `25%`）的上界。
+   参见 [阈值 & 警告][percentage upper boundary] 以获得完整概览。
+   (例如：`--upper-boundary 0.25`)
+7. 指定项目参数为 `Save Walter White` 项目 slug。
+   (例如：`save-walter-white-1234abcd`)
+
+然后，我们需要在 CI 中用 `git` 检出 `feature-branch` 分支：
+
+<GitCheckoutFeature />
+
+最后，我们准备在 CI 中运行我们的 `feature-branch` 基准测试：
+
+<RunFeatureRelative />
+
+1. 使用 <code><a href="/docs/zh/explanation/bencher-run/">bencher run</a></code> CLI 子命令
+   来运行你的 `feature-branch` 基准测试。
+   参见 [“bencher run” CLI 子命令][bencher run] 以获得完整概览。
+   (例如：`bencher run`)
+2. 设置 `--project` 选项为项目 slug。
+   参见 [“--project” 文档][project option] 获取更多细节。
+   (例如：`--project save-walter-white-1234abcd`)
+3. 设置 `--branch` 选项为特性分支名称。
+   参见 [分支选择][branch selection branch] 以获得完整概览。
+   (例如：`--branch feature-branch`)
+4. 设置 `--testbed` 选项为 Testbed 名称。
+   参见 [“--tested” 文档][testbed option] 获取更多细节。
+   (例如：`--testbed ci-runner`)
+5. 设置 `--adapter` 选项为所需的基准测试适配器。
+   参见 [基准测试适配器][adapters] 以获得完整概览。
+   (例如：`--adapter json`)
+6. 设置 `--err` 标志以在生成警告时失败命令。
+   参见 [阈值 & 警告][alerts] 以获得完整概览。
+   (例如：`--err`)
+7. 指定基准测试命令参数。
+   参见 [基准测试命令][command argument] 以获得完整概览。
+   (例如：`bencher mock`)
+
+每次在 CI 中运行此命令时，
+它都仅将 `feature-branch` 的结果与 `main` 的最新结果进行比较。
+
+[quick start]: /docs/zh/tutorial/quick-start/
+[docker self-hosted]: /docs/zh/tutorial/docker/
+[continuous benchmarking]: /docs/zh/explanation/continuous-benchmarking/
+[create an api token]: /docs/zh/tutorial/quick-start/#create-an-api-token
+[testbed create]: /docs/zh/api/projects/testbeds/#post-v0projectsprojecttestbeds
+[github actions]: /docs/zh/how-to/github-actions/
+[gitlab ci/cd]: /docs/zh/how-to/gitlab-ci-cd/
+[bencher run]: /docs/zh/explanation/bencher-run/
+[project option]: /docs/zh/explanation/bencher-run/#--project-project
+[branch selection branch]: /docs/zh/explanation/branch-selection/#--branch-branch
+[branch selection reset]: /docs/zh/explanation/branch-selection/#--branch-reset
+[testbed option]: /docs/zh/explanation/bencher-run/#--testbed-testbed
+[adapters]: /docs/zh/explanation/adapters/
+[command argument]: /docs/zh/explanation/bencher-run/#benchmark-command
+[thresholds]: /docs/zh/explanation/thresholds/
+[threshold create]: /docs/zh/api/projects/thresholds/#post-v0projectsprojectthresholds
+[measure]: /docs/zh/explanation/benchmarking/#measures
+[percentage]: /docs/zh/explanation/thresholds/#percentage-thresholds
+[percentage upper boundary]: /docs/zh/explanation/thresholds/#percentage-threshold-upper-boundary
+[alerts]: /docs/zh/explanation/thresholds/#alerts

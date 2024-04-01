@@ -1,0 +1,155 @@
+```mdx
+import TestbedCreate from "../testbed-create.mdx";
+import GitCheckoutMain from "../git-checkout-main.mdx";
+import RunMainRelative from "../run-main-relative.mdx";
+import ThresholdCreateRelative from "../threshold-create-relative.mdx";
+import GitCheckoutFeature from "../git-checkout-feature.mdx";
+import RunFeatureRelative from "../run-feature-relative.mdx";
+
+## Benchmarking Continu Relatif
+
+Poursuivant là où nous nous étions arrêtés dans les tutoriels
+[Démarrage Rapide][quick start] et [Auto-hébergement Docker][docker self-hosted],
+ajoutons le Benchmarking Continu Relatif à notre projet `Save Walter White`.
+
+> 🐰 Assurez-vous d'avoir
+> [créé un jeton API et de l'avoir configuré comme la variable d'environnement `BENCHER_API_TOKEN`][create an api token]
+> avant de continuer !
+
+Tout d'abord, nous devons créer un nouveau Testbed pour représenter nos exécutants CI, judicieusement nommé `ci-runner`.
+
+<TestbedCreate />
+
+1. Utilisez la sous-commande CLI `bencher testbed create`.
+   Consultez [la doc `testbed create`][testbed create] pour plus de détails.
+   (ex: `bencher testbed create`)
+2. Définissez l'option `--name` au nom de Testbed souhaité.
+   (ex: `--name ci-runner`)
+3. Spécifiez l'argument projet comme le slug du projet `Save Walter White`.
+   (ex: `save-walter-white-1234abcd`)
+
+Le Benchmarking Continu Relatif exécute une comparaison côte à côte de deux versions de votre code.
+Cela peut être utile lorsqu'on traite avec des environnements CI/CD bruyants,
+où les ressources disponibles peuvent être très variables entre les exécutions.
+Dans cet exemple, nous comparerons les résultats de l'exécution sur la branche `main`
+aux résultats de l'exécution sur une branche de fonctionnalité nommée `feature-branch`.
+Comme chaque environnement CI est un peu différent,
+l'exemple suivant est plus illustratif que pratique.
+Pour des exemples plus spécifiques, voir [Benchmarking Continu dans GitHub Actions][github actions]
+et [Benchmarking Continu dans GitLab CI/CD][gitlab ci/cd].
+
+Tout d'abord, nous devons passer à la branche `main` avec `git` dans CI:
+
+<GitCheckoutMain />
+
+Puis nous devons exécuter nos benchmarks sur la branche `main` dans CI:
+
+<RunMainRelative />
+
+1. Utilisez la sous-commande CLI <code><a href="/docs/fr/explanation/bencher-run/">bencher run</a></code>
+   pour exécuter vos benchmarks de la branche `main`.
+   Consultez [la sous-commande CLI `bencher run`][bencher run] pour un aperçu complet.
+   (ex: `bencher run`)
+2. Définissez l'option `--project` au slug du projet.
+   Consultez [la doc `--project`][project option] pour plus de détails.
+   (ex: `--project save-walter-white-1234abcd`)
+3. Définissez l'option `--branch` au nom de la branche de fonctionnalité.
+   Consultez [la sélection de branche][branch selection branch] pour un aperçu complet.
+   (ex: `--branch feature-branch`)
+4. Définissez le drapeau `--branch-reset`.
+   Consultez [la sélection de branche][branch selection reset] pour un aperçu complet.
+   (ex: `--branch-reset`)
+5. Définissez l'option `--testbed` au nom du Testbed.
+   Consultez [la doc `--tested`][testbed option] pour plus de détails.
+   (ex: `--testbed ci-runner`)
+6. Définissez l'option `--adapter` à l'adaptateur de harnais de benchmark souhaité.
+   Consultez [les adaptateurs de harnais de benchmark][adapters] pour un aperçu complet.
+   (ex: `--adapter json`)
+7.  Spécifiez les arguments de la commande de benchmark.
+    Consultez [la commande de benchmark][command argument] pour un aperçu complet.
+    (ex: `bencher mock`)
+
+La première fois que cette commande est exécutée dans CI,
+elle créera la branche `feature-branch` puisqu'elle n'existe pas encore.
+La nouvelle `feature-branch` n'aura pas de point de départ, de données existantes, ou de Seuils.
+Lors des exécutions ultérieures, l'ancienne version de `feature-branch` sera renommée
+et une nouvelle `feature-branch` sera créée sans point de départ, de données existantes, ou de Seuils.
+
+Ensuite, nous devons créer un nouveau [Seuil][thresholds] dans CI pour notre nouvelle branche `feature-branch`:
+
+<ThresholdCreateRelative />
+
+1. Utilisez la sous-commande CLI `bencher threshold create`.
+   Consultez [la doc `threshold create`][threshold create] pour plus de détails.
+   (ex: `bencher threshold create`)
+2. Définissez l'option `--branch` à la nouvelle branche `feature-branch`.
+   (ex: `--branch feature-branch`)
+3. Définissez l'option `--testbed` au Testbed `ci-runner`.
+   (ex: `--testbed ci-runner`)
+4. Définissez l'option `--measure` à la mesure `Latency` intégrée qui est générée par `bencher mock`.
+   Consultez [la définition de Measure][measure] pour les détails.
+   (ex: `--measure Latency`)
+5. Définissez l'option `--test` à un seuil de `percentage`.
+   Consultez [Seuils & Alertes][percentage] pour un aperçu complet.
+   (ex: `--test t-test`)
+6. Définissez l'option `--upper-boundary` à une Limite Supérieure de `0.25` (soit `25%`).
+   Consultez [Seuils & Alertes][percentage upper boundary] pour un aperçu complet.
+   (ex: `--upper-boundary 0.25`)
+7. Spécifiez l'argument projet comme le slug du projet `Save Walter White`.
+   (ex: `save-walter-white-1234abcd`)
+
+Ensuite, nous devons passer à la branche `feature-branch` avec `git` dans CI:
+
+<GitCheckoutFeature />
+
+Enfin, nous sommes prêts à exécuter nos benchmarks `feature-branch` dans CI:
+
+<RunFeatureRelative />
+
+1. Utilisez la sous-commande CLI <code><a href="/docs/fr/explanation/bencher-run/">bencher run</a></code>
+   pour exécuter vos benchmarks de la branche `feature-branch`.
+   Consultez [la sous-commande CLI `bencher run`][bencher run] pour un aperçu complet.
+   (ex: `bencher run`)
+2. Définissez l'option `--project` au slug du projet.
+   Consultez [la doc `--project`][project option] pour plus de détails.
+   (ex: `--project save-walter-white-1234abcd`)
+3. Définissez l'option `--branch` au nom de la branche de fonctionnalité.
+   Consultez [la sélection de branche][branch selection branch] pour un aperçu complet.
+   (ex: `--branch feature-branch`)
+4. Définissez l'option `--testbed` au nom du Testbed.
+   Consultez [la doc `--tested`][testbed option] pour plus de détails.
+   (ex: `--testbed ci-runner`)
+5. Définissez l'option `--adapter` à l'adaptateur de harnais de benchmark souhaité.
+   Consultez [les adaptateurs de harnais de benchmark][adapters] pour un aperçu complet.
+   (ex: `--adapter json`)
+6. Définissez le drapeau `--err` pour échouer la commande si une Alerte est générée.
+   Consultez [Seuils & Alertes][alerts] pour un aperçu complet.
+   (ex: `--err`)
+7. Spécifiez les arguments de la commande de benchmark.
+   Consultez [la commande de benchmark][command argument] pour un aperçu complet.
+   (ex: `bencher mock`)
+
+Chaque fois que cette commande est exécutée dans CI,
+elle compare les résultats de `feature-branch` uniquement aux résultats les plus récents de `main`.
+
+[quick start]: /docs/fr/tutorial/quick-start/
+[docker self-hosted]: /docs/fr/tutorial/docker/
+[continuous benchmarking]: /docs/fr/explanation/continuous-benchmarking/
+[create an api token]: /docs/fr/tutorial/quick-start/#create-an-api-token
+[testbed create]: /docs/fr/api/projects/testbeds/#post-v0projectsprojecttestbeds
+[github actions]: /docs/fr/how-to/github-actions/
+[gitlab ci/cd]: /docs/fr/how-to/gitlab-ci-cd/
+[bencher run]: /docs/fr/explanation/bencher-run/
+[project option]: /docs/fr/explanation/bencher-run/#--project-project
+[branch selection branch]: /docs/fr/explanation/branch-selection/#--branch-branch
+[branch selection reset]: /docs/fr/explanation/branch-selection/#--branch-reset
+[testbed option]: /docs/fr/explanation/bencher-run/#--testbed-testbed
+[adapters]: /docs/fr/explanation/adapters/
+[command argument]: /docs/fr/explanation/bencher-run/#benchmark-command
+[thresholds]: /docs/fr/explanation/thresholds/
+[threshold create]: /docs/fr/api/projects/thresholds/#post-v0projectsprojectthresholds
+[measure]: /docs/fr/explanation/benchmarking/#measures
+[percentage]: /docs/fr/explanation/thresholds/#percentage-thresholds
+[percentage upper boundary]: /docs/fr/explanation/thresholds/#percentage-threshold-upper-boundary
+[alerts]: /docs/fr/explanation/thresholds/#alerts
+```
