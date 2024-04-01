@@ -1,65 +1,26 @@
 ---
-title: "追踪基准测试"
-description: "使用历史连续基准测试或相对连续基准测试捕捉代码基准性能回退"
-heading: "如何使用 Bencher 追踪基准测试"
+title: "在 CI 中跟踪基准测试"
+description: "通过统计和相对连续基准测试，在 CI 中捕获性能回归"
+heading: "如何使用 Bencher 在 CI 中跟踪基准测试"
 sortOrder: 2
 ---
 
-import TrackHistorical from "../../../chunks/how_to/track-historical.mdx";
-import TrackRelative from "../../../chunks/how_to/track-relative.mdx";
+import Intro from "../../../chunks/how_to/track-benchmarks/zh/intro.mdx";
+import StatisticalContinuousBenchmarking from "../../../chunks/how_to/track-benchmarks/zh/statistical-continuous-benchmarking.mdx";
+import RelativeContinuousBenchmarking from "../../../chunks/how_to/track-benchmarks/zh/relative-continuous-benchmarking.mdx";
 
-追踪你的基准最简单的方法就是 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> 命令行子命令。
-对于更深入的解释，请查看 [基准测试概览](/zh/docs/explanation/benchmarking/)。
-下面是一个<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code>命令行子命令的示例，用于追踪在一个合适命名为`feature-branch`的功能分支上的基准:
+<Intro />
 
-<TrackHistorical />
+<StatisticalContinuousBenchmarking />
 
-1. 项目必须已经存在。设置 `--project` 标志或者 `BENCHER_PROJECT` 环境变量为项目的简写或 UUID。（例如： `--project save-walter-white`）
-1. API 令牌必须已经存在。设置 `--token` 标志或者 `BENCHER_API_TOKEN` 环境变量为 API 令牌。（例如： `--token ...`）
-1. 选择设置: 设置 `--adapter` 标志或 `BENCHER_ADAPTER` 环境变量为所需的适配器名称。如果没有设置则会使用 `magic` 适配器。查看 [基准测试马具适配器](/zh/docs/explanation/adapters/) 获得全部概览。（例如： `--adapter json`）
-1. 有多种方式可以设置项目分支。查看 [分支选择](/zh/docs/explanation/branch-selection/) 获得全部概览。
-    1. 使用已经存在的当前分支。（例如： `--if-branch feature-branch`）
-    1. 如果目标分支已经存在则创建一个目标分支数据的副本。（例如： `--else-if-branch main`）
-    1. 否则，使用 `--if-branch` 提供的名称创建新分支，这里会是 `feature-branch`。 (例如： `--else-branch`)
-1. 选择设置: 设置 `--testbed` 标志或者 `BENCHER_TESTBED` 环境变量为 Testbed 的简写或者 UUID。Testbed 必须已经存在。如果没有设置，那么默认的 `localhost` Testbed 将会被使用。（例如： `--testbed localhost`）
-1. 如果生成一个警告就让命令执行失败。为了警告被生成，一项 [阈值](/zh/docs/explanation/thresholds/) 必须已经存在。（例如： `--err`）
-1. 运行你的基准并从结果中生成一份报告。（例如： `"bencher mock"`）
-
-## 相对基准
-
-相对基准在两个提交旁边互相对比运行。
-这在处理有噪音的 CI/CD 环境时非常有用，
-运行中所可用资源在不同的运行间可能变化很大。
-下面是一个<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code>命令行子命令的示例，用于在一个合适命名为`feature-branch`的功能分支上执行相对基准:
-
-<TrackRelative />
-
-1. 检出功能分支。（例如： `feature-branch`）
-1. 创建一个环境变量，将功能分支的名称和短的 git 提交 ID 连接起来。这是重要的！它保证了每次运行都会创建一个新的分支。
-1. 检出目标分支。（例如： `main`）
-1. 对目标分支运行 `bencher run`:
-    1. 给定的分支将不存在。（例如： `--if-branch "$FEATURE_BRANCH"`）
-    1. 因此，它会被创建。（例如： `--else-branch`）
-    1. 运行基准三次。（例如： `--iter 3`）
-1. 检出功能分支。（例如： `feature-branch`）
-1. 为功能分支创建一个 [阈值](/zh/docs/explanation/thresholds/):
-    1. 分支是功能分支和添加的 git 提交 ID。（例如： `--branch "$FEATURE_BRANCH"`）
-    1. Testbed 在本地运行。（例如： `--testbed localhost`）
-    1. 基准的度量为延迟。（例如： `--measure latency`）
-    1. 指标少于30，使用一个 Student's t-检验。（例如： `--test t`）
-    1. 设置一个 95.0% 的右边界，因为更大的延迟表示表现出回退。（例如： `--upper-boundary 0.95`）
-1. 对功能分支运行 `bencher run`:
-    1. 分支将存在，因为刚刚被创建。（例如： `--branch "$FEATURE_BRANCH"`）
-    1. 运行测试三次。（例如： `--iter 3`）
-    1. 将所有三个度量内折为最小值。（例如： `--fold min`）
-    1. 如果 [阈值](/zh/docs/explanation/thresholds/) 生成了警告则让命令执行失败。（例如： `--err`）
+<RelativeContinuousBenchmarking />
 
 <br/>
 <br/>
 
-> 🐰 恭喜！你已经学会了如何使用 Bencher 追踪基准测试！🎉
+> 🐰 恭喜！您已经学会了如何使用 Bencher 在 CI 中跟踪基准测试！🎉
 
 <br/>
 
-<h2><a href="/zh/docs/how-to/github-actions/">添加 Bencher 到 GitHub Actions ➡</a></h2>
-<h2><a href="/zh/docs/how-to/gitlab-ci-cd/">添加 Bencher 到 GitLab CI/CD ➡</a></h2>
+<h2><a href="/zh/docs/how-to/github-actions/">将 Bencher 添加到 GitHub Actions ➡</a></h2>
+<h2><a href="/zh/docs/how-to/gitlab-ci-cd/">将 Bencher 添加到 GitLab CI/CD ➡</a></h2>

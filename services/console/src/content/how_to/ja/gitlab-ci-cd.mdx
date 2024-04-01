@@ -17,7 +17,7 @@ import GitLabCiYaml from "../../../chunks/how_to/gitlab-ci-yaml.mdx";
 1. APIトークンはすでに存在していなければなりません。 `--token` フラグまたは `BENCHER_API_TOKEN` 環境変数をAPIトークンに設定します。（例： `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`）
 1. オプション： `--adapter` フラグまたは `BENCHER_ADAPTER` 環境変数を目的のアダプタ名に設定します。これが設定されていない場合、 `magic` アダプタが使用されます。完全な概観については、 [benchmark harness adapters](/ja/docs/explanation/adapters/) を参照してください。（例： `BENCHER_ADAPTER: json`）
 1. オプション： `--testbed` フラグまたは `BENCHER_TESTBED` 環境変数をTestbedのスラグまたはUUIDに設定します。Testbedはすでに存在している**必要があります**。これが設定されていない場合、 `localhost` Testbedが使用されます。（例： `BENCHER_TESTBED: bullseye`）
-1. 便利なスクリプトを使用してBencher CLIを[ダウンロードおよびインストール](/docs/ja/how-to/install-cli/#linux-mac--unix)します。
+1. 便利なスクリプトを使用してBencher CLIを[ダウンロードおよびインストール](/ja/docs/how-to/install-cli/#linux-mac--unix)します。
 1. <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使って、あなたのベンチマークを[追跡します](/ja/docs/how-to/track-benchmarks/):
     1. プロジェクトブランチの設定に関してはいくつかの選択肢があります。完全な概観については、[branch selection](/ja/docs/explanation/branch-selection/)を参照してください。提供されたコマンドは[GitLab CI/CD predefined variables](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html)を使用し、
         1. すでに存在している場合、現在のブランチを使用します。（例： `--if-branch "$CI_COMMIT_REF_NAME"`）

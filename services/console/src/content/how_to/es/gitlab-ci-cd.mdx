@@ -17,7 +17,7 @@ import GitLabCiYaml from "../../../chunks/how_to/gitlab-ci-yaml.mdx";
 1. El token de la API ya debe existir. Establece la bandera `--token` o la variable de entorno `BENCHER_API_TOKEN` al token de la API. (ej: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
 1. Opcional: Establece la bandera `--adapter` o la variable de entorno `BENCHER_ADAPTER` al nombre del adaptador deseado. Si no se establece, se utilizará el adaptador `magic`. Consulta [adaptadores de harness de pruebas](/es/docs/explanation/adapters/) para una descripción completa. (ej: `BENCHER_ADAPTER: json`)
 1. Opcional: Establece la bandera `--testbed` o la variable de entorno `BENCHER_TESTBED` al slug del Testbed o UUID. El Testbed **debe** existir ya. Si no se establece, se utilizará el Testbed `localhost`. (ej: `BENCHER_TESTBED: bullseye`)
-1. Descarga e instala la CLI de Bencher [usando el script de conveniencia](/docs/es/how-to/install-cli/#linux-mac--unix).
+1. Descarga e instala la CLI de Bencher [usando el script de conveniencia](/es/docs/how-to/install-cli/#linux-mac--unix).
 1. [Rastrea tus benchmarks](/es/docs/how-to/track-benchmarks/) con el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>:
     1. Hay varias opciones para establecer la rama del proyecto. Consulta [selección de rama](/es/docs/explanation/branch-selection/) para una descripción completa. El comando proporcionado utiliza [variables predefinidas de GitLab CI/CD](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) e intenta:
         1. Utilizar la rama actual si ya existe. (ej: `--if-branch "$CI_COMMIT_REF_NAME"`)

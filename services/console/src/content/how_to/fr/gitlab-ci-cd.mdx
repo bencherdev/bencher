@@ -17,7 +17,7 @@ import GitLabCiYaml from "../../../chunks/how_to/gitlab-ci-yaml.mdx";
 1. Le token API doit déjà exister. Définissez le flag `--token` ou la variable d'environnement `BENCHER_API_TOKEN` au token API. (ex: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
 1. Optionnel : Définissez le flag `--adapter` ou la variable d'environnement `BENCHER_ADAPTER` au nom de l'adaptateur souhaité. Si cela n'est pas défini, alors l'Adaptateur `magic` sera utilisé. Consultez [les adaptateurs de benchmark](/fr/docs/explanation/adapters/) pour un aperçu complet. (ex: `BENCHER_ADAPTER: json`)
 1. Optionnel : Définissez le flag `--testbed` ou la variable d'environnement `BENCHER_TESTBED` à l'identifiant ou au slug du Testbed. Le Testbed **doit** déjà exister. Si cela n'est pas défini, alors le Testbed `localhost` sera utilisé. (ex: `BENCHER_TESTBED: bullseye`)
-1. Téléchargez et installez le Bencher CLI [à l'aide du script de commodité](/docs/fr/how-to/install-cli/#linux-mac--unix).
+1. Téléchargez et installez le Bencher CLI [à l'aide du script de commodité](/fr/docs/how-to/install-cli/#linux-mac--unix).
 1. [Suivez vos benchmarks](/fr/docs/how-to/track-benchmarks/) avec la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code> :
     1. Il existe plusieurs options pour définir la branche du projet. Consultez [la sélection de branches](/fr/docs/explanation/branch-selection/) pour un aperçu complet. La commande fournie utilise [les variables prédéfinies de GitLab CI/CD](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) et elle essaie de :
         1. Utiliser la branche actuelle si elle existe déjà. (ex: `--if-branch "$CI_COMMIT_REF_NAME"`)

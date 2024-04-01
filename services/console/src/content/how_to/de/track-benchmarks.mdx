@@ -1,65 +1,26 @@
 ---
-title: "Benchmarks verfolgen"
-description: "Erkennen Sie Leistungsregressionen von Code-Benchmarks mit historischem kontinuierlichem Benchmarking oder relativem kontinuierlichem Benchmarking"
-heading: "Verwendung von Bencher zum Verfolgen von Benchmarks"
+title: "Benchmarks in CI verfolgen"
+description: "Performance-Regressionen in CI mit statistischem und relativem kontinuierlichem Benchmarking erkennen"
+heading: "Wie man Benchmarks in CI mit Bencher verfolgt"
 sortOrder: 2
 ---
 
-import TrackHistorical from "../../../chunks/how_to/track-historical.mdx";
-import TrackRelative from "../../../chunks/how_to/track-relative.mdx";
+import Intro from "../../../chunks/how_to/track-benchmarks/de/intro.mdx";
+import StatisticalContinuousBenchmarking from "../../../chunks/how_to/track-benchmarks/de/statistical-continuous-benchmarking.mdx";
+import RelativeContinuousBenchmarking from "../../../chunks/how_to/track-benchmarks/de/relative-continuous-benchmarking.mdx";
 
-Der einfachste Weg, Ihre Benchmarks zu verfolgen, ist der <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl.
-Sehen Sie sich die [Übersicht zum Benchmarking](/de/docs/explanation/benchmarking/) für eine ausführlichere Erklärung an.
-Dies ist ein Beispiel für einen <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl zum Verfolgen von Benchmarks in einem passenderweise `feature-branch` genannten Feature-Zweig:
+<Intro />
 
-<TrackHistorical />
+<StatisticalContinuousBenchmarking />
 
-1. Das Projekt muss bereits vorhanden sein. Setzen Sie das `--project` Flag oder die `BENCHER_PROJECT` Umgebungsvariable auf den Projekt-Slug oder UUID. (z. B.: `--project save-walter-white`)
-1. Das API-Token muss bereits vorhanden sein. Setzen Sie das `--token` Flag oder die `BENCHER_API_TOKEN` Umgebungsvariable auf das API-Token. (z. B.: `--token ...`)
-1. Optional: Setzen Sie das `--adapter` Flag oder die `BENCHER_ADAPTER` Umgebungsvariable auf den gewünschten Adapter-Namen. Wenn dies nicht gesetzt ist, wird der `magic` Adapter verwendet. Siehe [Benchmark Harness Adapters](/de/docs/explanation/adapters/) für eine vollständige Übersicht. (z. B.: `--adapter json`)
-1. Es gibt mehrere Optionen zum Festlegen des Projektzweigs. Siehe [Zweigauswahl](/de/docs/explanation/branch-selection/) für eine vollständige Übersicht.
-    1. Verwenden Sie den aktuellen Zweig, wenn er bereits vorhanden ist. (z. B.: `--if-branch feature-branch`)
-    1. Erstellen Sie eine Klon der Zielzweig-Daten, wenn sie bereits vorhanden sind. (z. B.: `--else-if-branch main`)
-    1. Ansonsten erstellen Sie einen neuen Zweig mit dem Namen, der an `--if-branch` übergeben wurde, was in diesem Fall `feature-branch` wäre. (z. B.: `--else-branch`)
-1. Optional: Setzen Sie das `--testbed` Flag oder die `BENCHER_TESTBED` Umgebungsvariable auf den Testbed-Slug oder UUID. Das Testbed muss bereits vorhanden sein. Wenn dies nicht gesetzt ist, wird das Standard `localhost` Testbed verwendet. (z. B.: `--testbed localhost`)
-1. Setzen Sie den Befehl so, dass er fehlschlägt, wenn ein Alert generiert wird. Damit ein Alert generiert wird, muss bereits eine [Schwelle](/de/docs/explanation/thresholds/) existieren. (z. B.: `--err`)
-1. Führen Sie Ihre Benchmarks aus und erstellen Sie einen Bericht aus den Ergebnissen. (z. B.: `"bencher mock"`)
-
-## Relatives Benchmarking
-
-Relatives Benchmarking führt einen direkten Vergleich von zwei Commits durch.
-Dies kann nützlich sein, wenn man mit lärmenden CI/CD-Umgebungen arbeitet,
-wo die verfügbaren Ressourcen zwischen den Durchläufen stark variieren können.
-Dies ist ein Beispiel für einen <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl zur Durchführung des relativen Benchmarking auf einem Feature-Zweig, der passenderweise `feature-branch` heißt:
-
-<TrackRelative />
-
-1. Wechseln Sie zum Feature-Zweig. (z. B.: `feature-branch`)
-1. Erstellen Sie eine Umgebungsvariable, die der Name des Feature-Zweigs in Verbindung mit der kurzen Git-Commit-ID ist. Dies ist wichtig! Es garantiert, dass für jeden Durchlauf ein neuer Zweig erstellt wird.
-1. Wechseln Sie zum Zielzweig. (z. B.: `main`)
-1. Führen Sie `bencher run` für den Zielzweig aus:
-    1. Der angegebene Zweig wird noch nicht existieren. (z. B.: `--if-branch "$FEATURE_BRANCH"`)
-    1. Es wird also erstellt. (z. B.: `--else-branch`)
-    1. Führen Sie die Benchmarks dreimal aus. (z. B.: `--iter 3`)
-1. Wechseln Sie zum Feature-Zweig. (z. B.: `feature-branch`)
-1. Erstellen Sie eine [Schwelle](/de/docs/explanation/thresholds/) für den Feature-Zweig:
-    1. Der Zweig ist der Feature-Zweig mit der angehängten Git-Commit-ID. (z. B.: `--branch "$FEATURE_BRANCH"`)
-    1. Das Testbed läuft lokal. (z. B.: `--testbed localhost`)
-    1. Die Metrikart für die Benchmarks ist die Latenz. (z. B.: `--measure latency`)
-    1. Es gibt weniger als 30 Metriken, verwenden Sie einen Student's t-Test. (z. B.: `--test t`)
-    1. Setzen Sie eine rechte Seite Grenze von 95,0 %, da eine größere Latenz auf eine Leistungsregression hinweist. (z. B.: `--upper-boundary 0.95`)
-1. Führen Sie `bencher run` für den Feature-Zweig aus:
-    1. Der Zweig wird existieren, da er gerade erstellt wurde. (z. B.: `--branch "$FEATURE_BRANCH"`)
-    1. Führen Sie die Tests dreimal aus. (z. B.: `--iter 3`)
-    1. Fassen Sie alle drei Metriken in den minimalen Wert zusammen. (z. B.: `--fold min`)
-    1. Setzen Sie den Befehl so, dass er fehlschlägt, wenn ein Alert durch die [Schwelle](/de/docs/explanation/thresholds/) generiert wird. (z. B.: `--err`)
+<RelativeContinuousBenchmarking />
 
 <br/>
 <br/>
 
-> 🐰 Herzlichen Glückwunsch! Sie haben gelernt, wie Sie Bencher zum Verfolgen von Benchmarks verwenden können! 🎉
+> 🐰 Glückwunsch! Sie haben gelernt, wie man Benchmarks in CI mit Bencher verfolgt! 🎉
 
 <br/>
 
-<h2><a href="/de/docs/how-to/github-actions/">Fügen Sie Bencher zu GitHub Actions hinzu ➡</a></h2>
-<h2><a href="/de/docs/how-to/gitlab-ci-cd/">Fügen Sie Bencher zu GitLab CI/CD hinzu ➡</a></h2>
+<h2><a href="/de/docs/how-to/github-actions/">Bencher zu GitHub Actions hinzufügen ➡</a></h2>
+<h2><a href="/de/docs/how-to/gitlab-ci-cd/">Bencher zu GitLab CI/CD hinzufügen ➡</a></h2>

@@ -44,16 +44,16 @@ import BencherFooter from "../../../chunks/learn/es/bencher-footer.mdx";
 
 <BenchmarkingRust />
 
-Los tres son [respaldados por Bencher](/docs/es/explanation/adapters/). Entonces, ¿por qué elegir Iai?
+Los tres son [respaldados por Bencher](/es/docs/explanation/adapters/). Entonces, ¿por qué elegir Iai?
 Iai utiliza recuentos de instrucciones en lugar de tiempo de reloj de pared.
-Esto lo hace ideal para [benchmarking continuo](/docs/es/explanation/continuous-benchmarking/), es decir, benchmarking en CI.
+Esto lo hace ideal para [benchmarking continuo](/es/docs/explanation/continuous-benchmarking/), es decir, benchmarking en CI.
 Sugeriría usar Iai para benchmarking continuo, especialmente si estás usando runners compartidos.
 Es importante entender que Iai solo mide un sustituto de lo que realmente te interesa.
 ¿Ir de 1,000 instrucciones a 2,000 instrucciones duplica la latencia de tu aplicación?
 Quizás sí, quizás no.
 Por esa razón, puede ser útil también ejecutar benchmarks basados en tiempo de reloj de pared en paralelo con benchmarks basados en recuento de instrucciones.
 
-> 🐰 Iai no ha sido actualizado [en más de 3 años](https://github.com/bheisler/iai/commits/main/). Por lo tanto, podrías considerar [usar Iai-Callgrind](/docs/es/explanation/adapters/#-rust-iai-callgrind) en su lugar.
+> 🐰 Iai no ha sido actualizado [en más de 3 años](https://github.com/bheisler/iai/commits/main/). Por lo tanto, podrías considerar [usar Iai-Callgrind](/es/docs/explanation/adapters/#-rust-iai-callgrind) en su lugar.
 
 ## Instalar Valgrind
 

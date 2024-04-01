@@ -17,7 +17,7 @@ import GitLabCiYaml from "../../../chunks/how_to/gitlab-ci-yaml.mdx";
 1. API 토큰은 이미 존재해야 합니다. `--token` 플래그를 설정하거나 `BENCHER_API_TOKEN` 환경 변수를 API 토큰으로 설정합니다 (예: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
 1. 선택 사항: `--adapter` 플래그를 설정하거나 `BENCHER_ADAPTER` 환경 변수를 원하는 어댑터 이름으로 설정합니다. 이 값이 설정되지 않으면 `magic` 어댑터가 사용됩니다. 전체 개요는 [벤치마크 하네스 어댑터](/ko/docs/explanation/adapters/)를 참조하십시오. (예: `BENCHER_ADAPTER: json`)
 1. 선택 사항: `--testbed` 플래그를 설정하거나 `BENCHER_TESTBED` 환경 변수를 Testbed의 슬러그 또는 UUID로 설정합니다. Testbed는 **반드시** 이미 존재해야 합니다. 이 값이 설정되지 않으면 `localhost` Testbed가 사용됩니다. (예: `BENCHER_TESTBED: bullseye`)
-1. 편리한 스크립트를 사용하여 Bencher CLI를 다운로드하고 설치하십시오 [/docs/ko/how-to/install-cli/#linux-mac--unix](/docs/ko/how-to/install-cli/#linux-mac--unix).
+1. 편리한 스크립트를 사용하여 Bencher CLI를 다운로드하고 설치하십시오 [/ko/docs/how-to/install-cli/#linux-mac--unix](/ko/docs/how-to/install-cli/#linux-mac--unix).
 1. <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 하위 명령어를 이용하여 벤치마크를 추적합니다([벤치마크 추적](/ko/docs/how-to/track-benchmarks/) 참조):
     1. 프로젝트의 브랜치를 설정하는 여러 옵션이 있습니다. 전체 개요는 [브랜치 선택](/ko/docs/explanation/branch-selection/)을 참조하십시오. 제공된 명령어는 [GitLab CI/CD 사전 정의 변수](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html)를 사용하며:
         1. 해당 브랜치가 이미 존재하면 해당 브랜치를 사용합니다 (예: `--if-branch "$CI_COMMIT_REF_NAME"`)
