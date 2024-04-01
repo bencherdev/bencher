@@ -1,0 +1,67 @@
+import BaseBranchCode from "../base-branch-code.mdx";
+
+## Base Branch
+
+A cornerstone of [Statistical Continuous Benchmarking][statistical continuous benchmarking]
+is having a historical baseline for your base branch.
+This historical baseline can then be used to detect performance regressions in Pull Requests.
+
+<BaseBranchCode />
+
+1. Create a GitHub Actions `workflow` file.
+   (ex: `.github/workflows/base_benchmarks.yml`)
+2. Run on `push` events to the `main` branch.
+   See the [GitHub Actions `on` documentation][github actions on]
+   and [GitHub Actions `push` documentation][github actions push] for a full overview.
+   (ex: `on: push: branches: main`)
+3. Create a GitHub Actions `job`.
+   (ex: `jobs: benchmark_base_branch`)
+4. Set the type of machine the job will run on.
+   See the [GitHub Actions `runs-on` documentation][github actions runs-on]
+   for a full overview.
+   (ex: `runs-on: ubuntu-latest`)
+5. Checkout your base branch source code.
+   (ex: `uses: actions/checkout@v4`)
+6. Install the Bencher CLI using [the GitHub Action][bencher cli github action].
+   (ex: `uses: bencherdev/bencher@main`)
+7. Use the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand
+   to run your `main` branch benchmarks.
+   See [the `bencher run` CLI subcommand][bencher run] for a full overview.
+   (ex: `bencher run`)
+8. Set the `--project` option to the Project slug.
+   See [the `--project` docs][project option] for more details.
+   (ex: `--project save-walter-white-1234abcd`)
+9. Set the `--token` option to the `BENCHER_API_TOKEN` **Repository** secret.
+   See [the `--token` docs][token option] for more details.
+   (ex: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+10. Set the `--branch` option to the Branch name.
+    See [branch selection][branch selection branch] for a full overview.
+    (ex: `--branch main`)
+11. Set the `--testbed` option to the Testbed name.
+    This should likely match the machine selected in `runs-on`.
+    See [the `--tested` docs][testbed option] for more details.
+    (ex: `--testbed ubuntu-latest`)
+12. Set the `--adapter` option to the desired benchmark harness adapter.
+    See [benchmark harness adapters][adapters] for a full overview.
+    (ex: `--adapter json`)
+13. Set the `--err` flag to fail the command if an Alert is generated.
+    See [Threshold & Alerts][alerts] for a full overview.
+    (ex: `--err`)
+14. Specify the benchmark command arguments.
+    See [benchmark command][command argument] for a full overview.
+    (ex: `bencher mock`)
+
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github actions push]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#push
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+
+[statistical continuous benchmarking]: /docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[bencher run]: /docs/explanation/bencher-run/
+[project option]: /docs/explanation/bencher-run/#--project-project
+[token option]: /docs/explanation/bencher-run/#--token-token
+[branch selection branch]: /docs/explanation/branch-selection/#--branch-branch
+[testbed option]: /docs/explanation/bencher-run/#--testbed-testbed
+[adapters]: /docs/explanation/adapters/
+[alerts]: /docs/explanation/thresholds/#alerts
+[command argument]: /docs/explanation/bencher-run/#benchmark-command

@@ -1,0 +1,21 @@
+Dependendo do seu caso de uso, você pode configurar o [Benchmarking Contínuo][continuous benchmarking] no GitHub Actions para o seu:
+
+- [Branch Base][base branch]
+- [Pull Requests][pull requests]
+- [Pull Requests de Forks][fork pull requests]
+    - ⛑️ Mais seguro: [Benchmark de PR de Fork e Upload a partir do Branch Padrão][benchmark fork pr and upload from default branch]
+    - ⚠️ Mais arriscado: [Benchmark de PR de Fork a partir do Branch Alvo com Revisores Obrigatórios][benchmark fork pr from target branch with required reviewers]
+
+> 🐰 Certifique-se de ter [criado um token da API][create an api token]
+> e configurá-lo como um segredo do **Repositório** chamado `BENCHER_API_TOKEN` antes de continuar!
+> Navegue até `Seu Repositório -> Configurações -> Segredos e variáveis -> Ações -> Novo segredo do repositório`.
+> Nomeie o segredo como `BENCHER_API_TOKEN` e defina o valor do segredo para o seu token da API.
+
+[continuous benchmarking]: /pt/docs/explanation/continuous-benchmarking/
+[create an api token]: /pt/docs/tutorial/quick-start/#create-an-api-token
+
+[base branch]: #base-branch
+[pull requests]: #pull-requests
+[fork pull requests]: #pull-requests-from-forks
+[benchmark fork pr and upload from default branch]: #benchmark-fork-pr-and-upload-from-default-branch
+[benchmark fork pr from target branch with required reviewers]: #benchmark-fork-pr-from-target-branch-with-required-reviewers

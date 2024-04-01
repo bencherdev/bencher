@@ -1,0 +1,107 @@
+```markdown
+import PullRequestsCode from "../pull-requests-code.mdx";
+
+## プルリクエスト
+
+プルリクエストでパフォーマンスの回帰を検出するためには、PR上でベンチマークを実行する必要があります。
+**同じ**リポジトリ内のブランチからのPRのみを想定している場合は、
+同じリポジトリからの`pull_request`イベントに対して別のワークフローを作成するだけで済みます。
+
+> ⚠️ このソリューションは、すべてのPRが**同じ**リポジトリからのものである場合にのみ機能します！
+> 下記の[フォークからのプルリクエスト][pull requests from forks]を参照してください。
+
+<PullRequestsCode />
+
+1. GitHub Actionsの`workflow`ファイルを作成します。
+   (例: `.github/workflows/pr_benchmarks.yml`)
+2. `pull_request`イベントで実行する：
+    - `opened` - プルリクエストが作成されました。
+    - `reopened` - 以前に閉じられたプルリクエストが再開されました。
+    - `edited` - プルリクエストのタイトルや本文が編集されたり、プルリクエストのベースブランチが変更されました。
+    - `synchronize` - プルリクエストのヘッドブランチが更新されました。
+      例えば、ベースブランチから更新されたか、ヘッドブランチに新しいコミットがプッシュされた場合です。
+
+   [GitHub Actionsの`on`ドキュメント][github actions on]と
+   [GitHub Actionsの`pull_request`ドキュメント][github action pull_request]をご覧ください。
+   (例: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
+3. GitHub Actionsの`job`を作成します。
+   (例: `jobs: benchmark_pr_branch`)
+4. プルリクエストが同じリポジトリからのものである場合に限り、`pull_request`イベントで実行します。
+   ⚠️ この行を削除しないでください！
+   フォークのPRを処理する方法は、下記の[フォークからのプルリクエスト][pull requests from forks]を参照してください。
+   (例: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
+5. `GITHUB_TOKEN`の[パーミッションを][github token permissions]
+   `pull-requests`に対して`write`に設定します。
+   GitHubの設定によっては、これが必要ない場合もあります。
+   しかし、すべての組織やパーソナルリポジトリで
+   [2023年2月2日以降に作成された][github token read only]ものでは、
+   これがデフォルトの動作です。
+   [GitHubドキュメント][github token permissions security]をご覧ください。
+   (例: `permissions: pull-requests: write`)
+6. ジョブが実行されるマシンのタイプを設定します。
+   [GitHub Actionsの`runs-on`ドキュメント][github actions runs-on]をご覧ください。
+   (例: `runs-on: ubuntu-latest`)
+7. PRブランチのソースコードをチェックアウトします。
+   (例: `uses: actions/checkout@v4`)
+8. [GitHub Actionを使用して][bencher cli github action]Bencher CLIをインストールします。
+   (例: `uses: bencherdev/bencher@main`)
+9. <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用して
+   プルリクエストブランチのベンチマークを実行します。
+   [the `bencher run` CLIサブコマンド][bencher run]をご覧ください。
+   (例: `bencher run`)
+10. `--project`オプションをプロジェクトスラッグに設定します。
+    [the `--project`ドキュメント][project option]をご覧ください。
+    (例: `--project save-walter-white-1234abcd`)
+11. `--token`オプションを`BENCHER_API_TOKEN`**リポジトリ**シークレットに設定します。
+    [the `--token`ドキュメント][token option]をご覧ください。
+    (例: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+12. [GitHub Actionsの`github`コンテキスト][github actions context]を使用してPRブランチ名を`--branch`オプションに設定します。
+    [ブランチの選択][branch selection branch]をご覧ください。
+    (例: `--branch '${{ github.head_ref }}'`)
+13. [GitHub Actionsの`github`コンテキスト][github actions context]を使用してPRベースブランチの開始点を`--branch-start-point`オプションに設定します。
+    [ブランチの選択開始点][branch selection start point]をご覧ください。
+    (例: `--branch-start-point '${{ github.base_ref }}'`)
+14. [GitHub Actionsの`pull_request`イベント][github action pull_request]を使用してPRベースブランチの開始点ハッシュを`--branch-start-point-hash`オプションに設定します。
+    [ブランチの選択開始点ハッシュ][branch selection start point hash]をご覧ください。
+    (例: `--branch-start-point-hash '${{ github.event.pull_request.base.sha }}'`)
+15. `--testbed`オプションをテストベッド名に設定します。
+    これは、`runs-on`で選択したマシンと一致するべきです。
+    [the `--tested`ドキュメント][testbed option]をご覧ください。
+    (例: `--testbed ubuntu-latest`)
+16. 希望するベンチマークハーネスアダプターを`--adapter`オプションに設定します。
+    [ベンチマークハーネスアダプター][adapters]をご覧ください。
+    (例: `--adapter json`)
+17. アラートが生成された場合にコマンドを失敗させるために`--err`フラグを設定します。
+    [しきい値とアラート][alerts]をご覧ください。
+    (例: `--err`)
+18. [GitHub Actionsの`GITHUB_TOKEN`環境変数][github token]を使用してGitHub API認証トークンを`--github-actions`オプションに設定し、プルリクエストにコメントとして結果を投稿します。
+    [the `--github-actions`ドキュメント][github actions option]をご覧ください。
+    (例: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+19. ベンチマークコマンドの引数を指定します。
+    [ベンチマークコマンド][command argument]をご覧ください。
+    (例: `bencher mock`)
+
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+[github token permissions]: https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
+[github token read only]: https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
+[github token permissions security]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+[github actions context]: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context
+[github token]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication
+
+[bencher run]: /ja/docs/explanation/bencher-run/
+[project option]: /ja/docs/explanation/bencher-run/#--project-project
+[token option]: /ja/docs/explanation/bencher-run/#--token-token
+[branch selection branch]: /ja/docs/explanation/branch-selection/#--branch-branch
+[branch selection start point]: /ja/docs/explanation/branch-selection/#--branch-start-point-branch
+[branch selection start point hash]: /ja/docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[testbed option]: /ja/docs/explanation/bencher-run/#--testbed-testbed
+[adapters]: /ja/docs/explanation/adapters/
+[alerts]: /ja/docs/explanation/thresholds/#alerts
+[github actions option]: /ja/docs/explanation/bencher-run/#--github-actions-github_token
+[command argument]: /ja/docs/explanation/bencher-run/#benchmark-command
+
+[pull requests from forks]: #pull-requests-from-forks
+```

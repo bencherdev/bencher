@@ -1,0 +1,113 @@
+```markdown
+import PullRequestsForkReviewerCode from "../pull-requests-fork-reviewer-code.mdx";
+
+### 使用要求审阅者的目标分支基准测试分支 PR
+
+为了保证一个分支的 PR (Pull Request，即拉取请求) 代码是安全的，这个 GitHub Action 会检查该分支是否来自其他仓库。如果该分支来自其他仓库，则需要进行审阅。
+
+> ⚠️ 在批准之前彻底审阅每一个分支的 PR 是**非常**、**非常**重要的！
+> 如果不这么做，可能会导致一个 pwn 请求！
+>
+> 如果你不想有这种压力，参考上面的 [默认分支基准测试和上传][benchmark fork pr and upload from default branch]。
+
+为了配置这个工作流，你需要创建两个 [GitHub Actions 环境][github actions environments]。导航到 `Your Repo -> Settings -> Environments -> New environment`。创建两个新环境，`internal` 和 `external`。`internal` 环境不应该有 `Deployment protection rules`。然而，`external` 环境应该设置 `Required reviewers`，以确保信任的审阅者在基准测试之前审阅分支 PR。参考 [这篇博客][iterative.ai blog] 以获得完整概述。
+
+这个设置之所以有效，是因为 `pull_request_target` 在拉取请求的目标分支上下文中运行，诸如 `BENCHER_API_TOKEN` 和 `GITHUB_TOKEN` 的机密是可用的。因此，这个工作流将只会在 _目标_ 分支上存在时运行。避免将任何机密设置为环境变量，例如 `GITHUB_TOKEN` 和 `BENCHER_API_TOKEN`。相反，应该明确地将你的机密传递给 `bencher run`。
+
+<PullRequestsForkReviewerCode />
+
+1. 创建一个 GitHub Actions `workflow` 文件。
+   (例如：`.github/workflows/pr_target_benchmarks.yml`)
+2. 在 `pull_request` 事件上运行：
+    - `opened` - 创建了一个拉取请求。
+    - `reopened` - 一个之前关闭的拉取请求被重新打开。
+    - `edited` - 拉取请求的标题或正文被编辑，或者拉取请求的基本分支被更改。
+    - `synchronize` - 拉取请求的头部分支被更新。
+      例如，头部分支从基本分支更新或新的提交被推送到头部分支。
+
+   参考 [GitHub Actions `on` 文档][github actions on]
+   和 [GitHub Actions `pull_request` 文档][github action pull_request] 以获得完整概述。
+   (例如：`on: pull_request: types: [opened, reopened, edited, synchronize]`)
+3. 创建第一个 GitHub Actions `job` 来检查工作流是否需要审阅。
+   (例如：`jobs: fork_pr_requires_review`)
+4. 如果且仅当拉取请求来自同一仓库时，将 `environment` 设置为 `internal`。否则，设置 `environment` 为 `external`，这将需要审阅者的批准才能继续进行。
+   ⚠️ 别删除这行！
+   (例如：`environment: ${{ (github.event.pull_request.head.repo.full_name == github.repository && 'internal') || 'external' }}`)
+5. 创建第二个 GitHub Actions `job` 来运行你的基准测试。
+   (例如：`benchmark_fork_pr_branch`)
+6. 让 `benchmark_fork_pr_branch` 任务需要 `fork_pr_requires_review` 任务才能运行。
+   ⚠️ 别删除这行！
+   参考 [GitHub Actions `needs` 文档][github actions needs]
+   以获得完整概述。
+   (例如：`needs: fork_pr_requires_review`)
+7. 设置作业运行的机器类型。
+   参考 [GitHub Actions `runs-on` 文档][github actions runs-on]
+   以获得完整概述。
+   (例如：`runs-on: ubuntu-latest`)
+8. 签出分支 PR 源代码。
+   由于 `pull_request_target` 在拉取请求的目标分支上下文中运行，你仍然需要签出拉取请求分支。
+   (例如：`uses: actions/checkout@v4`)
+    - 指定分支 PR 仓库（例如：`repository: ${{ github.event.pull_request.head.repo.full_name }}`）
+    - 指定分支 PR 哈希（例如：`ref: ${{ github.event.pull_request.head.sha }}`）
+    - 不要持久化你的 `git` 凭证（例如：`persist-credentials: false`）
+9. 使用 [GitHub Action][bencher cli github action] 安装 Bencher CLI。
+   (例如：`uses: bencherdev/bencher@main`)
+10. 使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令
+    运行你的分支拉取基准测试。
+    参考 [the `bencher run` CLI 子命令][bencher run] 以获得完整概述。
+    (例如：`bencher run`)
+11. 将 `--project` 选项设置为项目别名。
+    参考 [the `--project` 文档][project option] 了解更多详情。
+    (例如：`--project save-walter-white-1234abcd`)
+12. 将 `--token` 选项设置为 `BENCHER_API_TOKEN` **仓库**机密。
+    参考 [the `--token` 文档][token option] 了解更多详情。
+    (例如：`--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+13. 使用 [GitHub Actions `pull_request` 事件][github action pull_request] 格式化分支 PR 编号，
+    将 `--branch` 选项设置为分支号。
+    参考 [分支选择][branch selection branch] 以获得完整概述。
+    (例如：`--branch '${{ github.event.number }}/merge'`)
+14. 使用 [GitHub Actions `github` 上下文][github actions context] 将 `--branch-start-point` 选项设置为分支 PR 基础分支起点。
+    参考 [分支选择][branch selection start point] 以获得完整概述。
+    (例如：`--branch-start-point '${{ github.base_ref }}'`)
+15. 使用 [GitHub Actions `pull_request` 事件][github action pull_request] 将 `--branch-start-point-hash` 选项设置为分支 PR 基础分支起点哈希。
+    参考 [分支选择][branch selection start point hash] 以获得完整概述。
+    (例如：`--branch-start-point-hash '${{ github.event.pull_request.base.sha }}'`)
+16. 将 `--testbed` 选项设置为测试床名称。
+    这应当与 `runs-on` 中选定的机器匹配。
+    参考 [the `--testbed` 文档][testbed option] 了解更多详情。
+    (例如：`--testbed ubuntu-latest`)
+17. 将 `--adapter` 选项设置为希望的基准测试工具适配器。
+    参考 [基准测试工具适配器][adapters] 以获得完整概述。
+    (例如：`--adapter json`)
+18. 设置 `--err` 标志以在生成警报时使命令失败。
+    参考 [阈值与警报][alerts] 以获得完整概述。
+    (例如：`--err`)
+19. 使用 [GitHub Actions `GITHUB_TOKEN` 环境变量][github token] 将 `--github-actions` 选项设置为 GitHub API 认证令牌，以便在拉取请求上以评论形式发布结果。
+    参考 [the `--github-actions` 文档][github actions option] 了解更多详情。
+    (例如：`--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+20. 指定基准测试命令参数。
+    参考 [基准测试命令][command argument] 以获得完整概述。
+    (例如：`bencher mock`)
+
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+[github token]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication
+[github actions environments]: https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment#using-an-environment
+[iterative.ai blog]: https://iterative.ai/blog/testing-external-contributions-using-github-actions-secrets
+[github actions needs]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idneeds
+[github actions context]: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context
+
+[bencher run]: /zh/docs/explanation/bencher-run/
+[project option]: /zh/docs/explanation/bencher-run/#--project-project
+[token option]: /zh/docs/explanation/bencher-run/#--token-token
+[branch selection branch]: /zh/docs/explanation/branch-selection/#--branch-branch
+[branch selection start point]: /zh/docs/explanation/branch-selection/#--branch-start-point-branch
+[branch selection start point hash]: /zh/docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[testbed option]: /zh/docs/explanation/bencher-run/#--testbed-testbed
+[adapters]: /zh/docs/explanation/adapters/
+[alerts]: /zh/docs/explanation/thresholds/#alerts
+[github actions option]: /zh/docs/explanation/bencher-run/#--github-actions-github_token
+[command argument]: /zh/docs/explanation/bencher-run/#benchmark-command
+```

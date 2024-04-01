@@ -1,0 +1,65 @@
+import TargetBranchCode from "../target-branch-code.mdx";
+
+## Rama Objetivo
+
+Una piedra angular del [Benchmarking Continuo Estadístico][benchmarking continuo estadístico]
+es tener una línea base histórica para su rama objetivo.
+Esta línea base histórica puede utilizarse para detectar regresiones de rendimiento en Solicitudes de Fusión.
+
+<TargetBranchCode />
+
+1. Cree un archivo de CI/CD de GitLab.
+   (ej: `.gitlab-ci.yml`)
+2. Cree un trabajo de CI/CD de GitLab.
+   (ej: `benchmark_target_branch`)
+3. Ejecute `if` el pipeline fue activado por un `push` hacia la rama `main`.
+   Consulte la [documentación de `rules` de CI/CD de GitLab][gitlab ci cd rules]
+   y [la documentación de variables predefinidas de CI/CD de GitLab][gitlab ci cd redefined variables] para una visión completa.
+   (ej: `rules: - if: ...`)
+4. Establezca la `image` en la que el trabajo se ejecutará.
+   Consulte la [documentación de `image` de CI/CD de GitLab][gitlab ci cd image]
+   para una visión completa.
+   (ej: `image: debian:bullseye`)
+5. Instale el CLI de Bencher usando [el script de conveniencia][instalar bencher cli].
+   (ej: `before_script: ...`)
+6. Utilice el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
+   para ejecutar sus benchmarks de la rama `main`.
+   Consulte [el subcomando CLI `bencher run`][bencher run] para una visión completa.
+   (ej: `bencher run`)
+7. Establezca la opción `--project` al slug del Proyecto.
+   Consulte [los docs de `--project`][project option] para más detalles.
+   (ej: `--project save-walter-white-1234abcd`)
+8. Establezca la opción `--token` a la variable de entorno `BENCHER_API_TOKEN` enmascarada.
+   Consulte [los docs de `--token`][token option] para más detalles.
+   (ej: `--token "$BENCHER_API_TOKEN"`)
+9. Establezca la opción `--branch` al nombre de la Rama.
+    Consulte [selección de rama][branch selection branch] para una visión completa.
+    (ej: `--branch main`)
+10. Establezca la opción `--testbed` al nombre del Entorno de Pruebas.
+    Esto probablemente debería coincidir con la máquina seleccionada en `image`.
+    Consulte [los docs de `--testbed`][testbed option] para más detalles.
+    (ej: `--testbed debian:bullseye`)
+11. Establezca la opción `--adapter` al adaptador del arnés de evaluación comparativa deseado.
+    Consulte [adaptadores de arneses de evaluación comparativa][adapters] para una visión completa.
+    (ej: `--adapter json`)
+12. Establezca la bandera `--err` para fallar el comando si se genera una Alerta.
+    Consulte [Umbral & Alertas][alerts] para una visión completa.
+    (ej: `--err`)
+13. Especifique los argumentos del comando de benchmark.
+    Consulte [comando de benchmark][command argument] para una visión completa.
+    (ej: `bencher mock`)
+
+[gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
+[gitlab ci cd redefined variables]: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
+[gitlab ci cd image]: https://docs.gitlab.com/ee/ci/yaml/index.html#image
+
+[benchmarking continuo estadístico]: /es/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[instalar bencher cli]: /es/docs/how-to/install-cli/#install-cli-with-script
+[bencher run]: /es/docs/explanation/bencher-run/
+[project option]: /es/docs/explanation/bencher-run/#--project-project
+[token option]: /es/docs/explanation/bencher-run/#--token-token
+[branch selection branch]: /es/docs/explanation/branch-selection/#--branch-branch
+[testbed option]: /es/docs/explanation/bencher-run/#--testbed-testbed
+[adapters]: /es/docs/explanation/adapters/
+[alerts]: /es/docs/explanation/thresholds/#alerts
+[command argument]: /es/docs/explanation/bencher-run/#benchmark-command

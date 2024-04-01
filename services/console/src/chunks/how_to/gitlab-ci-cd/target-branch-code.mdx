@@ -1,0 +1,19 @@
+```yaml
+benchmark_target_branch:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+      when: always
+  image: debian:bullseye
+  before_script:
+    - curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
+  script:
+    - |
+      bencher run \
+      --project save-walter-white-1234abcd \
+      --token "$BENCHER_API_TOKEN" \
+      --branch main \
+      --testbed debian:bullseye \
+      --adapter json \
+      --err \
+      bencher mock
+```

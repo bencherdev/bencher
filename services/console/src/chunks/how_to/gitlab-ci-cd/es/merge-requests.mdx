@@ -1,0 +1,74 @@
+import MergeRequestsCode from "../merge-requests-code.mdx";
+
+## Solicitudes de Fusión
+
+Para detectar la regresión de rendimiento en las Solicitudes de Fusión, necesitarás ejecutar tus pruebas de referencia en las MRs.
+El siguiente ejemplo solo debe usarse para ramas dentro del **mismo** repositorio.
+
+<MergeRequestsCode />
+
+1. Crear o actualizar un archivo de CI/CD de GitLab.
+   (ej: `.gitlab-ci.yml`)
+2. Crear un trabajo de CI/CD de GitLab.
+   (ej: `benchmark_mr_branch`)
+3. Ejecutar `if` el pipeline fue disparado por un `merge_request_event`.
+   Consulta la [documentación de `rules` de CI/CD de GitLab][gitlab ci cd rules]
+   y la [documentación de variables predefinidas de CI/CD de GitLab][gitlab ci cd redefined variables] para una visión completa.
+   (ej: `rules: - if: ...`)
+4. Establecer la `image` en la que el trabajo se ejecutará.
+   Consulta la [documentación de `image` de CI/CD de GitLab][gitlab ci cd image]
+   para una visión completa.
+   (ej: `image: debian:bullseye`)
+5. Instala el CLI de Bencher usando [el script de conveniencia][install bencher cli].
+   (ej: `before_script: ...`)
+6. Usa el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
+   para ejecutar tus pruebas de rendimiento de la rama de la solicitud de fusión.
+   Consulta [el subcomando CLI `bencher run`][bencher run] para una visión completa.
+   (ej: `bencher run`)
+7. Establece la opción `--project` al slug del Proyecto.
+   Consulta [los docs de `--project`][project option] para más detalles.
+   (ej: `--project save-walter-white-1234abcd`)
+8. Establece la opción `--token` a la variable de entorno `BENCHER_API_TOKEN` enmascarada.
+   Consulta [los docs de `--token`][token option] para más detalles.
+   (ej: `--token "$BENCHER_API_TOKEN"`)
+9. Establece la opción `--branch` al nombre de la rama MR usando
+   [una variable predefinida de CI/CD de GitLab][branch selection branch].
+   Consulta [selección de rama](/es/docs/explanation/branch-selection/#--branch-branch) para una visión completa.
+   (ej: `--branch "$CI_COMMIT_REF_NAME"`)
+10. Establece la opción `--branch-start-point` al punto de inicio de la Rama objetivo de MR usando
+    [una variable predefinida de CI/CD de GitLab][gitlab ci cd redefined variables].
+    Consulta [selección de rama][branch selection start point] para una visión completa.
+    (ej: `--branch-start-point "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
+11. Establece la opción `--branch-start-point-hash` al hash del punto de inicio de la Rama objetivo de MR usando
+    [una variable predefinida de CI/CD de GitLab][gitlab ci cd redefined variables].
+    Consulta [selección de rama][branch selection start point hash] para una visión completa.
+    (ej: `--branch-start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA"`)
+12. Establece la opción `--testbed` al nombre del Entorno de Pruebas.
+    Esto probablemente debería coincidir con la máquina seleccionada en `image`.
+    Consulta los [docs de `--tested`][testbed option] para más detalles.
+    (ej: `--testbed debian:bullseye`)
+13. Establece la opción `--adapter` al adaptador deseado del banco de pruebas.
+    Consulta [adaptadores de banco de pruebas][adapters] para una visión completa.
+    (ej: `--adapter json`)
+14. Establece la bandera `--err` para fallar el comando si se genera una Alerta.
+    Consulta [Umbrales & Alertas][alerts] para una visión completa.
+    (ej: `--err`)
+15. Especificar los argumentos del comando de benchmark.
+    Consulta [comando de benchmark][command argument] para una visión completa.
+    (ej: `bencher mock`)
+
+[gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
+[gitlab ci cd redefined variables]: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
+[gitlab ci cd image]: https://docs.gitlab.com/ee/ci/yaml/index.html#image
+
+[install bencher cli]: /es/docs/how-to/install-cli/#install-cli-with-script
+[bencher run]: /es/docs/explanation/bencher-run/
+[project option]: /es/docs/explanation/bencher-run/#--project-project
+[token option]: /es/docs/explanation/bencher-run/#--token-token
+[branch selection branch]: /es/docs/explanation/branch-selection/#--branch-branch
+[branch selection start point]: /es/docs/explanation/branch-selection/#--branch-start-point-branch
+[branch selection start point hash]: /es/docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[testbed option]: /es/docs/explanation/bencher-run/#--testbed-testbed
+[adapters]: /es/docs/explanation/adapters/
+[alerts]: /es/docs/explanation/thresholds/#alerts
+[command argument]: /es/docs/explanation/bencher-run/#benchmark-command

@@ -1,0 +1,18 @@
+## Pull Request'ы из форков
+
+Если вы планируете принимать pull request'ы из форков, как это часто бывает в публичных проектах с открытым исходным кодом, вам потребуется немного иначе подходить к вопросу.
+Из соображений безопасности, такие секреты, как ваш `BENCHER_API_TOKEN` и `GITHUB_TOKEN`, недоступны в GitHub Actions для pull request'ов из форков. То есть, если внешний участник создает pull request из форка, приведенный выше пример **не** сработает.
+Есть два варианта для pull request'ов из форков:
+
+- ⛑️ Безопаснее: [Бенчмарк pull request'а из форка и загрузка из основной ветви][benchmark fork pr and upload from default branch]
+- ⚠️ Рискованнее: [Бенчмарк pull request'а из форка из целевой ветви с требованием рецензентов][benchmark fork pr from target branch with required reviewers]
+
+Смотрите этот [анализ GitHub Security Lab][github actions pwn requests]
+и [этот блог пост][nathandavison.com blog]
+для получения полного обзора по предотвращению pwn запросов.
+
+[github actions pwn requests]: https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
+[nathandavison.com blog]: https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests
+
+[benchmark fork pr and upload from default branch]: #benchmark-fork-pr-and-upload-from-default-branch
+[benchmark fork pr from target branch with required reviewers]: #benchmark-fork-pr-from-target-branch-with-required-reviewers

@@ -1,36 +1,27 @@
 ---
 title: "GitLab CI/CD"
-description: "在GitLab CI/CD中使用Bencher以在合并请求中进行持续的基准测试"
-heading: "如何在GitLab CI/CD中使用Bencher"
+description: "如何在 GitLab CI/CD 中进行持续基准测试与 Bencher"
+heading: "如何在 GitLab CI/CD 中使用 Bencher"
 sortOrder: 4
 ---
 
-import GitLabCiYaml from "../../../chunks/how_to/gitlab-ci-yaml.mdx";
+import Intro from "../../../chunks/how_to/gitlab-ci-cd/zh/intro.mdx";
+import TargetBranch from "../../../chunks/how_to/gitlab-ci-cd/zh/target-branch.mdx";
+import MergeRequests from "../../../chunks/how_to/gitlab-ci-cd/zh/merge-requests.mdx";
 
-<GitLabCiYaml />
+<Intro />
 
-1. 创建一个GitLab CI/CD文件 (例如：`.gitlab-ci.yml`)
-1. 创建一个GitLab CI/CD `job` (例如：`benchmark_with_bencher`)
-1. 选择一个Docker镜像来运行你的job (例如：`image: rust:bullseye`)
-1. 项目必须已经存在。将`--project`标志或`BENCHER_PROJECT`环境变量设置为项目的标识符或UUID。 (例如：`BENCHER_PROJECT: save-walter-white`)
-1. 在您的项目的CI/CD秘密文件中添加`BENCHER_API_TOKEN`，在`设置 -> CI / CD -> 变量 -> 添加变量`下
-1. API令牌必须已经存在。将`--token`标志或`BENCHER_API_TOKEN`环境变量设置为API令牌。 (例如：`BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
-1. 可选：将`--adapter`标志或`BENCHER_ADAPTER`环境变量设置为所需的适配器名称。如果未设置，将使用`magic`适配器。请见[基准测试适配器](/zh/docs/explanation/adapters/)以获取完整概览。 (例如：`BENCHER_ADAPTER: json`)
-1. 可选：将`--testbed`标志或`BENCHER_TESTBED`环境变量设置为Testbed的标识符或UUID。Testbed**必须**已经存在。 如果未设置，将使用`localhost` Testbed。 (例如：`BENCHER_TESTBED: bullseye`)
-1. 下载并安装 Bencher CLI [使用便捷脚本](/zh/docs/how-to/install-cli/#linux-mac--unix)。
-1. 使用<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI子命令[跟踪您的基准测试](/zh/docs/how-to/track-benchmarks/)：
-    1. 有多种设置项目分支的选项。请见[分支选择](/zh/docs/explanation/branch-selection/)获取完整概览。提供的命令使用[GitLab CI/CD预定义变量](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html)，并尝试：
-        1. 如果已经存在，使用当前分支。 (例如：`--if-branch "$CI_COMMIT_REF_NAME"`)
-        1. 如果已经存在，则创建MR目标分支数据和阈值的克隆。 (例如：`--else-if-branch  "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
-        1. 否则，创建`main`分支数据和阈值的克隆。 (例如：`--else-if-branch main`)
-    1. 如果生成了警报，设置命令失败。为了生成警报，必须已经存在一个[阈值](/zh/docs/explanation/thresholds/)。 (例如：`--err`)
-    1. 运行你的基准测试并从结果生成报告。 (例如：`"bencher mock"`)
+<TargetBranch />
+
+<br />
+
+<MergeRequests />
 
 <br/>
 <br/>
 
-> 🐰 恭喜！你已经学会了如何在GitLab CI/CD中使用Bencher！🎉
+> 🐰 恭喜！您已学会如何在 GitLab CI/CD 中使用 Bencher！🎉
 
 <br/>
 
-<h2><a href="/zh/docs/explanation/benchmarking/">继续前进：基准测试概述 ➡</a></h2>
+<h2><a href="/zh/docs/explanation/benchmarking/">继续前进：基准测试概览 ➡</a></h2>

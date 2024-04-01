@@ -1,0 +1,21 @@
+В зависимости от вашего случая использования, вы можете настроить [Непрерывное бенчмаркинг][continuous benchmarking] в GitHub Actions для вашего:
+
+- [Основного ветки][base branch]
+- [Запросов на вытягивание (Pull Requests)][pull requests]
+- [Запросов на вытягивание из форков][fork pull requests]
+    - ⛑️ Безопаснее: [Бенчмаркинг PR из форка и загрузка из основной ветки][benchmark fork pr and upload from default branch]
+    - ⚠️ Рискованнее: [Бенчмаркинг PR из форка из целевой ветки с обязательными рецензентами][benchmark fork pr from target branch with required reviewers]
+
+> 🐰 Убедитесь, что вы [создали токен API][create an api token]
+> и установили его как секрет **Репозитория** под названием `BENCHER_API_TOKEN` перед тем как продолжить!
+> Перейти к `Ваш Репозиторий -> Настройки -> Секреты и переменные -> Действия -> Новый секрет репозитория`.
+> Назовите секрет `BENCHER_API_TOKEN` и установите значение секрета вашим токеном API.
+
+[continuous benchmarking]: /ru/docs/explanation/continuous-benchmarking/
+[create an api token]: /ru/docs/tutorial/quick-start/#create-an-api-token
+
+[base branch]: #base-branch
+[pull requests]: #pull-requests
+[fork pull requests]: #pull-requests-from-forks
+[benchmark fork pr and upload from default branch]: #benchmark-fork-pr-and-upload-from-default-branch
+[benchmark fork pr from target branch with required reviewers]: #benchmark-fork-pr-from-target-branch-with-required-reviewers

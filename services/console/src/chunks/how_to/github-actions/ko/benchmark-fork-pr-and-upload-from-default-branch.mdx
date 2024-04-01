@@ -1,0 +1,133 @@
+import PullRequestsForkRunCode from "../pull-requests-fork-run-code.mdx";
+import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
+
+### 기본 브랜치에서 포크 PR을 벤치마킹하고 업로드하기
+
+이것은 포크된 풀 요청에 [지속적인 벤치마킹][continuous benchmarking]을 추가하는 안전하고 권장되는 방법입니다.
+두 개의 별도 워크플로우가 필요합니다.
+첫 번째 워크플로우는 `pull_request` 컨텍스트에서 벤치마크 결과를 실행하고 캐시합니다.
+여기서는 `BENCHER_API_TOKEN`과 `GITHUB_TOKEN`과 같은 비밀이 사용할 수 없습니다.
+그런 다음 두 번째 워크플로우가 캐시된 벤치마크 결과를 `workflow_run` 컨텍스트에서 다운로드하고 Bencher에 업로드합니다.
+이것은 `workflow_run`이 저장소의 기본 브랜치 컨텍스트에서 실행되기 때문에 작동하며,
+여기서는 `BENCHER_API_TOKEN`과 `GITHUB_TOKEN`과 같은 비밀을 사용할 수 있습니다.
+초기 `pull_request` 워크플로우에서 사용된 풀 요청 번호, 헤드 브랜치 및 베이스 브랜치는
+`workflow_run` 워크플로우에도 명시적으로 전달되어야 합니다. 왜냐하면 그것들은 거기에 사용할 수 없기 때문입니다.
+이러한 워크플로우는 _기본_ 브랜치에 존재하는 경우에만 실행됩니다.
+전체 개요는 [트리거 워크플로우에서 데이터 사용][github actions trigger workflow]을 참조하세요.
+
+<PullRequestsForkRunCode />
+
+1. 첫 번째 GitHub Actions `workflow` 파일을 생성합니다.
+   (예: `.github/workflows/run_fork_pr_benchmarks.yml`)
+2. 이 워크플로우에 이름을 지정하여 두 번째 워크플로우에서 참조할 수 있도록 합니다.
+   (예: `name: Run and Cache Benchmarks`)
+3. `pull_request` 이벤트에서 실행하도록 설정합니다:
+    - `opened` - 풀 요청이 생성되었습니다.
+    - `reopened` - 이전에 닫혔던 풀 요청이 다시 열렸습니다.
+    - `edited` - 풀 요청의 제목 또는 본문이 편집되었거나 풀 요청의 기본 브랜치가 변경되었습니다.
+    - `synchronize` - 풀 요청의 헤드 브랜치가 업데이트되었습니다.
+      예를 들어, 기본 브랜치에서 헤드 브랜치로 업데이트되었거나 헤드 브랜치에 새 커밋이 푸시되었습니다.
+
+   [GitHub Actions `on` 문서][github actions on]
+   및 [GitHub Actions `pull_request` 문서][github action pull_request]에서 전체 개요를 확인하세요.
+   (예: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
+4. GitHub Actions `job`을 생성합니다.
+   (예: `jobs: benchmark_fork_pr_branch`)
+5. 작업이 실행될 기계 유형을 설정합니다.
+   전체 개요는 [GitHub Actions `runs-on` 문서][github actions runs-on]를 참조하세요.
+   (예: `runs-on: ubuntu-latest`)
+6. 포크 PR 브랜치 소스 코드를 체크아웃합니다.
+   (예: `uses: actions/checkout@v4`)
+7. 벤치마크를 실행하고 결과를 파일에 저장합니다.
+   (예: `/bin/echo '{ ... }' > benchmark_results.json`)
+8. 벤치마크 결과 파일을 아티팩트로 업로드합니다.
+   (예: `uses: actions/upload-artifact@v4`)
+9. `pull_request` 이벤트 객체를 아티팩트로 업로드합니다.
+  (예: `uses: actions/upload-artifact@v4`)
+
+<PullRequestsForkTrackCode />
+
+1. 첫 번째 GitHub Actions `workflow` 파일을 생성합니다.
+   (예: `.github/workflows/track_fork_pr_benchmarks.yml`)
+2. 이 워크플로우에 이름을 지정하여 이를 두 번째 워크플로우로 지정합니다.
+   (예: `name: Track Benchmarks with Bencher`)
+3. [the `workflow_run` 이벤트][github actions workflow_run]를 사용하여 두 워크플로우를 연결합니다.
+   (예: `on: workflow_run: ...`)
+4. GitHub Actions `job`을 생성합니다.
+   (예: `jobs: track_fork_pr_branch`)
+5. 이전 워크플로우의 결론이 성공이었는지 여부에 따라 이 작업을 실행합니다.
+   [GitHub Actions `workflow_run` 이벤트][github actions workflow_run]를 사용합니다.
+   (예: `if: github.event.workflow_run.conclusion == 'success'`)
+6. 작업이 실행될 기계 유형을 설정합니다.
+   전체 개요는 [GitHub Actions `runs-on` 문서][github actions runs-on]를 참조하세요.
+   (예: `runs-on: ubuntu-latest`)
+7. 벤치마크 결과 및 `pull_request` 이벤트 객체 파일 이름을 환경 변수로 설정합니다.
+   (예: `env: ...`)
+8. 캐시된 벤치마크 결과 및 `pull_request` 이벤트를 다운로드합니다.
+   (예: `uses: actions/github-script@v6`)
+9. 캐시된 벤치마크 결과 및 `pull_request` 이벤트를 추출합니다.
+   (예: `unzip ...`)
+10. `pull_request` 이벤트에서 필요한 데이터를 환경 변수로 내보냅니다.
+    (예: `core.exportVariable(...)`)
+11. [GitHub 액션][bencher cli github action]을 사용하여 Bencher CLI를 설치합니다.
+   (예: `uses: bencherdev/bencher@main`)
+12. 포크 풀 브랜치 벤치마크를 추적하기 위해 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드를 사용합니다.
+    전체 개요는 [the `bencher run` CLI 서브커맨드][bencher run]를 참조하세요.
+    (예: `bencher run`)
+13. `--project` 옵션을 프로젝트 슬러그로 설정합니다.
+    자세한 내용은 [the `--project` 문서][project option]를 참조하세요.
+    (예: `--project save-walter-white-1234abcd`)
+14. `--token` 옵션을 `BENCHER_API_TOKEN` **저장소** 비밀로 설정합니다.
+    자세한 내용은 [the `--token` 문서][token option]를 참조하세요.
+    (예: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+15. [GitHub Actions `pull_request` 이벤트][github action pull_request]를 사용하여 포맷된 포크 PR 번호로 `--branch` 옵션을 설정합니다.
+    전체 개요는 [branch 선택][branch selection branch]를 참조하세요.
+    (예: `--branch '${{ env.PR_HEAD }}'`)
+16. [GitHub Actions `pull_request` 이벤트][github action pull_request]를 사용하여 포크 PR 베이스 브랜치 시작점으로 `--branch-start-point` 옵션을 설정합니다.
+    전체 개요는 [branch 선택][branch selection start point]를 참조하세요.
+    (예: `--branch-start-point '${{ env.PR_BASE }}'`)
+17. [GitHub Actions `pull_request` 이벤트][github action pull_request]를 사용하여 포크 PR 베이스 브랜치 시작점 해시로 `--branch-start-point-hash` 옵션을 설정합니다.
+    전체 개요는 [branch 선택][branch selection start point hash]를 참조하세요.
+    (예: `--branch-start-point-hash '${{ env.PR_BASE_SHA }}'`)
+18. `--testbed` 옵션을 테스트베드 이름으로 설정합니다.
+    이것은 `runs-on`에서 선택한 기계와 일치해야 합니다.
+    자세한 내용은 [the `--tested` 문서][testbed option]를 참조하세요.
+    (예: `--testbed ubuntu-latest`)
+19. 원하는 벤치마크 하네스 어댑터로 `--adapter` 옵션을 설정합니다.
+    전체 개요는 [벤치마크 하네스 어댑터][adapters]를 참조하세요.
+    (예: `--adapter json`)
+20. 경고가 생성되면 명령이 실패하도록 `--err` 플래그를 설정합니다.
+    전체 개요는 [임계값과 경고][alerts]를 참조하세요.
+    (예: `--err`)
+21. 풀 요청에 대한 댓글로 결과를 게시하기 위해 GitHub API 인증 토큰을 사용하여 `--github-actions` 옵션을 설정합니다.
+    [the GitHub Actions `GITHUB_TOKEN` 환경 변수][github token]를 사용합니다.
+    자세한 내용은 [the `--github-actions` 문서][github actions option]를 참조하세요.
+    (예: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+22. 풀 요청 번호에 대한 `--ci-number` 옵션을 설정합니다.
+    자세한 내용은 [the `--ci-number` 문서][ci number option]를 참조하세요.
+    (예: `--ci-number '${{ env.PR_NUMBER }}'`)
+23. 벤치마크 결과 파일 경로에 대한 `--file` 옵션을 설정합니다.
+    전체 개요는 [벤치마크 명령][command argument]을 참조하세요.
+    (예: `--file "$BENCHMARK_RESULTS"`)
+
+[github actions trigger workflow]: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+[github actions workflow_run]: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+[github token]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication
+
+[continuous benchmarking]: /ko/docs/explanation/continuous-benchmarking/
+[bencher run]: /ko/docs/explanation/bencher-run/
+[project option]: /ko/docs/explanation/bencher-run/#--project-project
+[token option]: /ko/docs/explanation/bencher-run/#--token-token
+[branch selection branch]: /ko/docs/explanation/branch-selection/#--branch-branch
+[branch selection start point]: /ko/docs/explanation/branch-selection/#--branch-start-point-branch
+[branch selection start point hash]: /ko/docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[testbed option]: /ko/docs/explanation/bencher-run/#--testbed-testbed
+[adapters]: /ko/docs/explanation/adapters/
+[alerts]: /ko/docs/explanation/thresholds/#alerts
+[github actions option]: /ko/docs/explanation/bencher-run/#--github-actions-github_token
+[ci number option]: /ko/docs/explanation/bencher-run/#--ci-id-id
+[command argument]: /ko/docs/explanation/bencher-run/#benchmark-command

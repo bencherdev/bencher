@@ -1,0 +1,15 @@
+사용 사례에 따라 GitLab CI/CD에서 다음을 위한 [지속적인 벤치마킹][continuous benchmarking]을 설정할 수 있습니다:
+
+- [타겟 브랜치](#target-branch)
+- [머지 리퀘스트들](#merge-requests)
+
+> 🐰 API 토큰을 [생성][created an api token]하였는지 확인하고, 계속하기 전에 `BENCHER_API_TOKEN`이라는 이름의 마스킹된 변수로 설정하세요!
+> `당신의 저장소 -> 설정 -> CI/CD -> 변수 -> 확장 -> 변수 추가`로 이동합니다.
+> 변수 키는 `BENCHER_API_TOKEN`이어야 하며 변수 값은 당신의 API 토큰이어야 합니다.
+> `변수 보호`와 `변수 마스크` 체크박스를 모두 선택하세요.
+
+[continuous benchmarking]: /ko/docs/explanation/continuous-benchmarking/
+[created an api token]: /ko/docs/tutorial/quick-start/#create-an-api-token
+
+[target branch]: #target-branch
+[merge requests]: #merge-requests

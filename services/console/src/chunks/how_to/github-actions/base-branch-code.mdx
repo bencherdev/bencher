@@ -4,24 +4,20 @@ on:
     branches: main
 
 jobs:
-  benchmark_with_bencher:
+  benchmark_base_branch:
     name: Continuous Benchmarking with Bencher
     runs-on: ubuntu-latest
-    env:
-      BENCHER_PROJECT: save-walter-white
-      BENCHER_TESTBED: ubuntu-latest
-      BENCHER_ADAPTER: json
     steps:
       - uses: actions/checkout@v4
       - uses: bencherdev/bencher@main
-      - name: Track Benchmarks with Bencher
+      - name: Track base branch benchmarks with Bencher
         run: |
           bencher run \
           --project save-walter-white-1234abcd
-          --token "${{ secrets.BENCHER_API_TOKEN }}" \
-          --branch "$GITHUB_REF_NAME" \
+          --token '${{ secrets.BENCHER_API_TOKEN }}' \
+          --branch main \
           --testbed ubuntu-latest \
-          --adapter json
+          --adapter json \
           --err \
-          "bencher mock"
+          bencher mock
 ```

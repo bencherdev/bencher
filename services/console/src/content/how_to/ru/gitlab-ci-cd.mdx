@@ -1,30 +1,21 @@
 ---
 title: "GitLab CI/CD"
-description: "Используйте Bencher в GitLab CI/CD для непрерывного бенчмаркинга при merge requests"
+description: "Как выполнять непрерывное сравнительное тестирование в GitLab CI/CD с помощью Bencher"
 heading: "Как использовать Bencher в GitLab CI/CD"
 sortOrder: 4
 ---
 
-import GitLabCiYaml from "../../../chunks/how_to/gitlab-ci-yaml.mdx";
+import Intro from "../../../chunks/how_to/gitlab-ci-cd/ru/intro.mdx";
+import TargetBranch from "../../../chunks/how_to/gitlab-ci-cd/ru/target-branch.mdx";
+import MergeRequests from "../../../chunks/how_to/gitlab-ci-cd/ru/merge-requests.mdx";
 
-<GitLabCiYaml />
+<Intro />
 
-1. Создайте файл GitLab CI/CD (например, `.gitlab-ci.yml`)
-1. Создайте `job` в GitLab CI/CD (например, `benchmark_with_bencher`)
-1. Выберите Docker-образ для выполнения вашего задания (например, `image: rust:bullseye`)
-1. Проект должен уже существовать. Установите флаг `--project` или переменную окружения `BENCHER_PROJECT` на слаг или UUID проекта (например, `BENCHER_PROJECT: save-walter-white`)
-1. Добавьте `BENCHER_API_TOKEN` в секреты CI/CD вашего проекта, в разделе `Настройки -> CI / CD -> Переменные -> Добавить переменную`
-1. API-токен должен уже существовать. Установите флаг `--token` или переменную окружения `BENCHER_API_TOKEN` на API-токен (например, `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
-1. Необязательно: установите флаг `--adapter` или переменную окружения `BENCHER_ADAPTER` на желаемое имя адаптера. Если вы его не установите, будет использован адаптер `magic`. См. [адаптеры для бенчмаркинга](/ru/docs/explanation/adapters/) для полного обзора. (например, `BENCHER_ADAPTER: json`)
-1. Необязательно: установите флаг `--testbed` или переменную окружения `BENCHER_TESTBED` на слаг или UUID testbed. Testbed **должен** уже существовать. Если это не установлено, будет использоваться `localhost` Testbed (например, `BENCHER_TESTBED: bullseye`)
-1. Скачайте и установите Bencher CLI [используя удобный скрипт](/ru/docs/how-to/install-cli/#linux-mac--unix).
-1. [Отслеживайте свои бенчмарки](/ru/docs/how-to/track-benchmarks/) с помощью подкоманды CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>:
-    1. Существует несколько способов установить ветку проекта. См. [выбор ветки](/ru/docs/explanation/branch-selection/) для полного обзора. Предоставленная команда использует [предопределенные переменные GitLab CI/CD](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) и пытается:
-        1. Использовать текущую ветку, если она уже существует. (например, `--if-branch "$CI_COMMIT_REF_NAME"`)
-        1. Создать копию данных и пороговой ветки для MR, если она уже существует. (например, `--else-if-branch  "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
-        1. В противном случае создать копию данных и порогов главной ветки. (например, `--else-if-branch main`)
-    1. Установите команду в состояние ошибки, если сгенерировано предупреждение. Для генерации предупреждения должен уже существовать [Порог](/ru/docs/explanation/thresholds/). (например, `--err`)
-    1. Запустите свои бенчмарки и сгенерируйте отчет из результатов. (например, `"bencher mock"`)
+<TargetBranch />
+
+<br />
+
+<MergeRequests />
 
 <br/>
 <br/>
@@ -33,4 +24,4 @@ import GitLabCiYaml from "../../../chunks/how_to/gitlab-ci-yaml.mdx";
 
 <br/>
 
-<h2><a href="/ru/docs/explanation/benchmarking/">Продолжайте: Обзор бенчмаркинга ➡</a></h2>
+<h2><a href="/ru/docs/explanation/benchmarking/">Продолжайте: Обзор сравнительного тестирования ➡</a></h2>

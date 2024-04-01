@@ -1,0 +1,16 @@
+根据您的使用情况，您可以为以下项目在 GitLab CI/CD 中设置[持续性能基准测试][continuous benchmarking]：
+
+- [目标分支](#target-branch)
+- [合并请求](#merge-requests)
+
+> 🐰 在继续之前，请确保您已[创建了 API 令牌][created an api token]
+> 并将其设置为名为 `BENCHER_API_TOKEN` 的掩码变量！
+> 导航至 `您的仓库 -> 设置 -> CI/CD -> 变量 -> 展开 -> 添加变量`。
+> 变量键应为 `BENCHER_API_TOKEN`，变量值应为您的 API 令牌。
+> 勾选 `保护变量` 和 `掩码变量` 复选框。
+
+[continuous benchmarking]: /zh/docs/explanation/continuous-benchmarking/
+[created an api token]: /zh/docs/tutorial/quick-start/#create-an-api-token
+
+[target branch]: #target-branch
+[merge requests]: #merge-requests

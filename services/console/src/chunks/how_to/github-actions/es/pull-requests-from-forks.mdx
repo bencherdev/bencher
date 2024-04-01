@@ -1,0 +1,20 @@
+## Solicitudes de Extracción desde Bifurcaciones
+
+Si planeas aceptar solicitudes de extracción de bifurcaciones, como suele ser el caso en proyectos de código abierto públicos,
+entonces necesitarás manejar las cosas de manera un poco diferente.
+Por razones de seguridad, secretos como tu `BENCHER_API_TOKEN` y el `GITHUB_TOKEN` no están disponibles en GitHub Actions para PRs de bifurcaciones.
+Es decir, si un contribuidor externo abre una PR desde una bifurcación el ejemplo anterior **no** funcionará.
+Hay dos opciones para PRs de bifurcaciones:
+
+- ⛑️ Más seguro: [Benchmark Fork PR and Upload from Default Branch][benchmark fork pr and upload from default branch]
+- ⚠️ Más riesgoso: [Benchmark Fork PR from Target Branch with Required Reviewers][benchmark fork pr from target branch with required reviewers]
+
+Consulta este [artículo de GitHub Security Lab][github actions pwn requests]
+y [este blog post][nathandavison.com blog]
+sobre la prevención de pwn requests para una visión completa.
+
+[github actions pwn requests]: https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
+[nathandavison.com blog]: https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests
+
+[benchmark fork pr and upload from default branch]: #benchmark-fork-pr-and-upload-from-default-branch
+[benchmark fork pr from target branch with required reviewers]: #benchmark-fork-pr-from-target-branch-with-required-reviewers

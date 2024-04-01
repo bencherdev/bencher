@@ -1,0 +1,68 @@
+```markdown
+import BaseBranchCode from "../base-branch-code.mdx";
+
+## 基础分支
+
+[统计持续基准化][statistical continuous benchmarking]的基石是为你的基础分支建立历史基线。
+然后，可以使用这个历史基线来检测拉取请求中的性能回归。
+
+<BaseBranchCode />
+
+1. 创建一个 GitHub Actions `workflow` 文件。
+   (例如：`.github/workflows/base_benchmarks.yml`)
+2. 对 `main` 分支的 `push` 事件运行。
+   查看 [GitHub Actions `on` 文档][github actions on]
+   和 [GitHub Actions `push` 文档][github actions push] 以获取完整概述。
+   (例如：`on: push: branches: main`)
+3. 创建一个 GitHub Actions `job`。
+   (例如：`jobs: benchmark_base_branch`)
+4. 设置作业将在其上运行的机器类型。
+   查看 [GitHub Actions `runs-on` 文档][github actions runs-on]
+   以获取完整概述。
+   (例如：`runs-on: ubuntu-latest`)
+5. 检出你的基础分支源代码。
+   (例如：`uses: actions/checkout@v4`)
+6. 使用 [GitHub Action][bencher cli github action] 安装 Bencher CLI。
+   (例如：`uses: bencherdev/bencher@main`)
+7. 使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI子命令
+   运行你的 `main` 分支基准测试。
+   查看 [the `bencher run` CLI子命令][bencher run] 以获取完整概述。
+   (例如：`bencher run`)
+8. 设置 `--project` 选项为项目标识符。
+   查看 [the `--project` 文档][project option] 获取更多详情。
+   (例如：`--project save-walter-white-1234abcd`)
+9. 设置 `--token` 选项为 `BENCHER_API_TOKEN` **仓库** 密钥。
+   查看 [the `--token` 文档][token option] 获取更多详情。
+   (例如：`--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+10. 设置 `--branch` 选项为分支名称。
+    查看 [分支选择][branch selection branch] 以获取完整概述。
+    (例如：`--branch main`)
+11. 设置 `--testbed` 选项为测试床名称。
+    这应该与 `runs-on` 中选择的机器相匹配。
+    查看 [the `--tested` 文档][testbed option] 获取更多详情。
+    (例如：`--testbed ubuntu-latest`)
+12. 设置 `--adapter` 选项为所需的基准测试适配器。
+    查看 [基准测试适配器][adapters] 以获取完整概述。
+    (例如：`--adapter json`)
+13. 如果生成警报，则设置 `--err` 标志以使命令失败。
+    查看 [阈值与警报][alerts] 以获取完整概述。
+    (例如：`--err`)
+14. 指定基准测试命令参数。
+    查看 [基准测试命令][command argument] 以获取完整概述。
+    (例如：`bencher mock`)
+
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github actions push]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#push
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+
+[statistical continuous benchmarking]: /zh/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[bencher run]: /zh/docs/explanation/bencher-run/
+[project option]: /zh/docs/explanation/bencher-run/#--project-project
+[token option]: /zh/docs/explanation/bencher-run/#--token-token
+[branch selection branch]: /zh/docs/explanation/branch-selection/#--branch-branch
+[testbed option]: /zh/docs/explanation/bencher-run/#--testbed-testbed
+[adapters]: /zh/docs/explanation/adapters/
+[alerts]: /zh/docs/explanation/thresholds/#alerts
+[command argument]: /zh/docs/explanation/bencher-run/#benchmark-command
+```

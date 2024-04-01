@@ -1,0 +1,74 @@
+import MergeRequestsCode from "../merge-requests-code.mdx";
+
+## Merge Requests
+
+In order to catch performance regression in Merge Requests, you will need to run your benchmarks on MRs.
+The below example should only be used for branches within the **same** repository.
+
+<MergeRequestsCode />
+
+1. Create or update a GitLab CI/CD file.
+   (ex: `.gitlab-ci.yml`)
+2. Create a GitLab CI/CD job.
+   (ex: `benchmark_mr_branch`)
+3. Run `if` the pipeline was triggered by a `merge_request_event`.
+   See the [GitLab CI/CD `rules` documentation][gitlab ci cd rules]
+   and [GitLab CI/CD predefined variables documentation][gitlab ci cd redefined variables] for a full overview.
+   (ex: `rules: - if: ...`)
+4. Set the `image` the job will run in.
+   See the [GitLab CI/CD `image` documentation][gitlab ci cd image]
+   for a full overview.
+   (ex: `image: debian:bullseye`)
+5. Install the Bencher CLI using [the convenience script][install bencher cli].
+   (ex: `before_script: ...`)
+6. Use the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand
+   to run your merge request branch benchmarks.
+   See [the `bencher run` CLI subcommand][bencher run] for a full overview.
+   (ex: `bencher run`)
+7. Set the `--project` option to the Project slug.
+   See [the `--project` docs][project option] for more details.
+   (ex: `--project save-walter-white-1234abcd`)
+8. Set the `--token` option to the masked `BENCHER_API_TOKEN` environment variable.
+   See [the `--token` docs][token option] for more details.
+   (ex: `--token "$BENCHER_API_TOKEN"`)
+9. Set the `--branch` option to the MR branch name using
+   [a GitLab CI/CD predefined variable][branch selection branch].
+   See [branch selection](/docs/explanation/branch-selection/#--branch-branch) for a full overview.
+   (ex: `--branch "$CI_COMMIT_REF_NAME"`)
+10. Set the `--branch-start-point` option to the MR target Branch start point using
+    [a GitLab CI/CD predefined variable][gitlab ci cd redefined variables].
+    See [branch selection][branch selection start point] for a full overview.
+    (ex: `--branch-start-point "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
+11. Set the `--branch-start-point-hash` option to the MR target Branch start point hash using
+    [a GitLab CI/CD predefined variable][gitlab ci cd redefined variables].
+    See [branch selection][branch selection start point hash] for a full overview.
+    (ex: `--branch-start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA"`)
+12. Set the `--testbed` option to the Testbed name.
+    This should likely match the machine selected in `image`.
+    See [the `--tested` docs][testbed option] for more details.
+    (ex: `--testbed debian:bullseye`)
+13. Set the `--adapter` option to the desired benchmark harness adapter.
+    See [benchmark harness adapters][adapters] for a full overview.
+    (ex: `--adapter json`)
+14. Set the `--err` flag to fail the command if an Alert is generated.
+    See [Threshold & Alerts][alerts] for a full overview.
+    (ex: `--err`)
+15. Specify the benchmark command arguments.
+    See [benchmark command][command argument] for a full overview.
+    (ex: `bencher mock`)
+
+[gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
+[gitlab ci cd redefined variables]: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
+[gitlab ci cd image]: https://docs.gitlab.com/ee/ci/yaml/index.html#image
+
+[install bencher cli]: /docs/how-to/install-cli/#install-cli-with-script
+[bencher run]: /docs/explanation/bencher-run/
+[project option]: /docs/explanation/bencher-run/#--project-project
+[token option]: /docs/explanation/bencher-run/#--token-token
+[branch selection branch]: /docs/explanation/branch-selection/#--branch-branch
+[branch selection start point]: /docs/explanation/branch-selection/#--branch-start-point-branch
+[branch selection start point hash]: /docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[testbed option]: /docs/explanation/bencher-run/#--testbed-testbed
+[adapters]: /docs/explanation/adapters/
+[alerts]: /docs/explanation/thresholds/#alerts
+[command argument]: /docs/explanation/bencher-run/#benchmark-command

@@ -1,0 +1,67 @@
+import BaseBranchCode from "../base-branch-code.mdx";
+
+## Basisbranch
+
+Eine Grundlage von [Statistischem kontinuierlichen Benchmarking][statistical continuous benchmarking]
+ist das Vorhandensein einer historischen Basislinie für Ihren Basisbranch.
+Diese historische Basislinie kann dann verwendet werden, um Leistungsregressionen in Pull Requests zu erkennen.
+
+<BaseBranchCode />
+
+1. Erstellen Sie eine GitHub Actions `workflow` Datei.
+   (z.B.: `.github/workflows/base_benchmarks.yml`)
+2. Ausführen bei `push` Ereignissen auf den `main` Branch.
+   Siehe die [GitHub Actions `on` Dokumentation][github actions on]
+   und [GitHub Actions `push` Dokumentation][github actions push] für einen vollständigen Überblick.
+   (z.B.: `on: push: branches: main`)
+3. Erstellen Sie einen GitHub Actions `job`.
+   (z.B.: `jobs: benchmark_base_branch`)
+4. Legen Sie den Typ der Maschine fest, auf der der Job ausgeführt werden soll.
+   Siehe die [GitHub Actions `runs-on` Dokumentation][github actions runs-on]
+   für einen vollständigen Überblick.
+   (z.B.: `runs-on: ubuntu-latest`)
+5. Checken Sie den Quellcode Ihres Basisbranches aus.
+   (z.B.: `uses: actions/checkout@v4`)
+6. Installieren Sie die Bencher CLI mit [der GitHub Action][bencher cli github action].
+   (z.B.: `uses: bencherdev/bencher@main`)
+7. Verwenden Sie das <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterkommando
+   um Ihre `main` Branch Benchmarks auszuführen.
+   Siehe [das `bencher run` CLI-Unterkommando][bencher run] für einen vollständigen Überblick.
+   (z.B.: `bencher run`)
+8. Legen Sie die `--project` Option auf den Projektslug fest.
+   Siehe [die `--project` Dokumentation][project option] für mehr Details.
+   (z.B.: `--project save-walter-white-1234abcd`)
+9. Legen Sie die `--token` Option auf das `BENCHER_API_TOKEN` **Repository** Geheimnis fest.
+   Siehe [die `--token` Dokumentation][token option] für mehr Details.
+   (z.B.: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+10. Legen Sie die `--branch` Option auf den Namen des Branches fest.
+    Siehe [Branchauswahl][branch selection branch] für einen vollständigen Überblick.
+    (z.B.: `--branch main`)
+11. Legen Sie die `--testbed` Option auf den Namen des Testbetts fest.
+    Dies sollte wahrscheinlich mit der in `runs-on` ausgewählten Maschine übereinstimmen.
+    Siehe [die `--testbed` Dokumentation][testbed option] für mehr Details.
+    (z.B.: `--testbed ubuntu-latest`)
+12. Legen Sie die `--adapter` Option auf den gewünschten Benchmark Harness Adapter fest.
+    Siehe [Benchmark Harness Adapter][adapters] für einen vollständigen Überblick.
+    (z.B.: `--adapter json`)
+13. Legen Sie den `--err` Schalter fest, um den Befehl bei Auslösung eines Alarms fehlschlagen zu lassen.
+    Siehe [Schwellenwert & Alarme][alerts] für einen vollständigen Überblick.
+    (z.B.: `--err`)
+14. Geben Sie die Benchmark-Befehlsargumente an.
+    Siehe [Benchmarkbefehl][command argument] für einen vollständigen Überblick.
+    (z.B.: `bencher mock`)
+
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github actions push]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#push
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+
+[statistical continuous benchmarking]: /de/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[bencher run]: /de/docs/explanation/bencher-run/
+[project option]: /de/docs/explanation/bencher-run/#--project-project
+[token option]: /de/docs/explanation/bencher-run/#--token-token
+[branch selection branch]: /de/docs/explanation/branch-selection/#--branch-branch
+[testbed option]: /de/docs/explanation/bencher-run/#--testbed-testbed
+[adapters]: /de/docs/explanation/adapters/
+[alerts]: /de/docs/explanation/thresholds/#alerts
+[command argument]: /de/docs/explanation/bencher-run/#benchmark-command

@@ -1,0 +1,21 @@
+```yaml
+benchmark_mr_branch:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: always
+  image: debian:bullseye
+  before_script:
+    - curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
+  script:
+    - |
+      bencher run \
+      --project save-walter-white-1234abcd \
+      --token "$BENCHER_API_TOKEN" \
+      --branch "$CI_COMMIT_REF_NAME" \
+      --branch-start-point "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" \
+      --branch-start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA" \
+      --testbed debian:bullseye \
+      --adapter json \
+      --err \
+      bencher mock
+```

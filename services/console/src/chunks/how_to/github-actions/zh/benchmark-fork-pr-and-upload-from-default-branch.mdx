@@ -1,0 +1,125 @@
+```markdown
+import PullRequestsForkRunCode from "../pull-requests-fork-run-code.mdx";
+import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
+
+### 基准测试 Fork PR 并从默认分支上传
+
+这是向 fork 拉取请求添加[持续基准测试][continuous benchmarking]的安全和建议方式。
+它需要两个独立的工作流。
+第一个工作流在 `pull_request` 上下文中运行并缓存基准测试结果。
+此处不可用任何秘密，如您的 `BENCHER_API_TOKEN` 和 `GITHUB_TOKEN`。
+然后第二个工作流在 `workflow_run` 上下文中下载缓存的基准测试结果并上传到 Bencher。
+这是因为 `workflow_run` 在仓库的默认分支的上下文中运行，
+其中可用秘密，如您的 `BENCHER_API_TOKEN` 和 `GITHUB_TOKEN`。
+在初始 `pull_request` 工作流中使用的拉取请求号、头分支和基分支
+也必须显式传递给 `workflow_run` 工作流，因为在那里不可用。
+这些工作流只会在 _default_ 分支上存在时运行。
+请参见[使用触发工作流的数据][github actions trigger workflow]以获取完整概览。
+
+<PullRequestsForkRunCode />
+
+1. 创建一个 GitHub Actions `workflow` 文件。
+   (例如：`.github/workflows/run_fork_pr_benchmarks.yml`)
+2. 命名此工作流以便能被第二个工作流引用。
+   (例如：`name: Run and Cache Benchmarks`)
+3. 在 `pull_request` 事件上运行：
+    - `opened` - 创建了一个拉取请求。
+    - `reopened` - 重新打开了之前关闭的拉取请求。
+    - `edited` - 编辑了拉取请求的标题或正文，或者改变了拉取请求的基分支。
+    - `synchronize` - 更新了拉取请求的头分支。
+      例如，从基分支更新了头分支或者向头分支推送了新的提交。
+
+   请参见 [GitHub Actions `on` 文档][github actions on]
+   和 [GitHub Actions `pull_request` 文档][github action pull_request] 以获取完整概览。
+   (例如：`on: pull_request: types: [opened, reopened, edited, synchronize]`)
+4. 创建一个 GitHub Actions `job`。
+   (例如：`jobs: benchmark_fork_pr_branch`)
+5. 设置任务将在哪种类型的机器上运行。
+   请参见 [GitHub Actions `runs-on` 文档][github actions runs-on]
+   以获取完整概览。
+   (例如：`runs-on: ubuntu-latest`)
+6. 检出 fork PR 分支的源代码。
+   (例如：`uses: actions/checkout@v4`)
+7. 运行您的基准测试并将结果保存到文件中。
+   (例如：`/bin/echo '{ ... }' > benchmark_results.json`)
+8. 将基准测试结果文件作为构件上传。
+   (例如：`uses: actions/upload-artifact@v4`)
+9. 将 `pull_request` 事件对象作为构件上传。
+  (例如：`uses: actions/upload-artifact@v4`)
+
+<PullRequestsForkTrackCode />
+
+1. 创建一个 GitHub Actions `workflow` 文件。
+   (例如：`.github/workflows/track_fork_pr_benchmarks.yml`)
+2. 命名此工作流为第二个工作流。
+   (例如：`name: Track Benchmarks with Bencher`)
+3. 使用
+   [the `workflow_run` 事件][github actions workflow_run].
+   链接两个工作流。
+   (例如：`on: workflow_run: ...`)
+4. 创建一个 GitHub Actions `job`。
+   (例如：`jobs: track_fork_pr_branch`)
+5. 仅当前一个工作流的结论为成功时运行此任务，
+   使用 [GitHub Actions `workflow_run` 事件][github actions workflow_run]。
+   (例如：`if: github.event.workflow_run.conclusion == 'success'`)
+6. 设置任务将在哪种类型的机器上运行。
+   请参见 [GitHub Actions `runs-on` 文档][github actions runs-on]
+   以获取完整概览。
+   (例如：`runs-on: ubuntu-latest`)
+7. 将基准测试结果和 `pull_request` 事件对象文件名称设置为环境变量。
+   (例如：`env: ...`)
+8. 下载缓存的基准测试结果和 `pull_request` 事件。
+   (例如：`uses: actions/github-script@v6`)
+9. 提取缓存的基准测试结果和 `pull_request` 事件。
+   (例如：`unzip ...`)
+10. 将 `pull_request` 事件中必要的数据作为环境变量导出。
+    (例如：`core.exportVariable(...)`)
+11. 使用 [the GitHub Action][bencher cli github action] 安装 Bencher CLI。
+   (例如：`uses: bencherdev/bencher@main`)
+12. 使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令
+    跟踪您的 fork 拉取分支基准测试。
+    请参见 [the `bencher run` CLI 子命令][bencher run] 以获取完整概览。
+    (例如：`bencher run`)
+13. 将 `--project` 选项设置为项目别名。
+    请参见 [the `--project` 文档][project option] 以获取更多详情。
+    (例如：`--project save-walter-white-1234abcd`)
+14. 将 `--token` 选项设置为 `BENCHER_API_TOKEN` **仓库**秘密。
+    请参见 [the `--token` 文档][token option] 以获取更多详情。
+    (例如：`--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+15. 使用
+    [the GitHub Actions `pull_request` 事件][github action pull_request]
+    将 `--branch` 选项设置为格式化后的 fork PR 号码。
+    请参见 [branch selection][branch selection branch] 以获取完整概览。
+    (例如：`--branch '${{ env.PR_HEAD }}'`)
+16. 使用
+    [the GitHub Actions `pull_request` 事件][github action pull_request]
+    将 `--branch-start-point` 选项设置为 fork PR 基分支开始点。
+    请参见 [branch selection][branch selection start point] 以获取完整概览。
+    (例如：`--branch-start-point '${{ env.PR_BASE }}'`)
+17. 使用
+    [the GitHub Actions `pull_request` 事件][github action pull_request]
+    将 `--branch-start-point-hash` 选项设置为 fork PR 基分支开始点的哈希值。
+    请参见 [branch selection][branch selection start point hash] 以获取完整概览。
+    (例如：`--branch-start-point-hash '${{ env.PR_BASE_SHA }}'`)
+18. 将 `--testbed` 选项设置为测试床名称。
+    这应与 `runs-on` 中选择的机器匹配。
+    请参见 [the `--tested` 文档][testbed option] 以获取更多详情。
+    (例如：`--testbed ubuntu-latest`)
+19. 将 `--adapter` 选项设置为所需的基准测试框架适配器。
+    请参见 [benchmark harness adapters][adapters] 以获取完整概览。
+    (例如：`--adapter json`)
+20. 如果生成了警告，则设置 `--err` 标志以使命令失败。
+    请参见 [Threshold & Alerts][alerts] 以获取完整概览。
+    (例如：`--err`)
+21. 使用
+    [the GitHub Actions `GITHUB_TOKEN` 环境变量][github token]
+    将 `--github-actions` 选项设置为 GitHub API 认证令牌，以在拉取请求上发表评论。
+    请参见 [the `--github-actions` 文档][github actions option] 以获取更多详情。
+    (例如：`--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+22. 将 `--ci-number` 选项设置为拉取请求号码。
+    请参见 [the `--ci-number` 文档][ci number option] 以获取更多详情。
+    (例如：`--ci-number '${{ env.PR_NUMBER }}'`)
+23. 将 `--file` 选项设置为基准测试结果文件路径。
+    请参见 [benchmark command][command argument] 以获取完整概览。
+    (例如：`--file "$BENCHMARK_RESULTS"`)
+```

@@ -1,0 +1,63 @@
+import TargetBranchCode from "../target-branch-code.mdx";
+
+## ターゲットブランチ
+
+[統計的連続ベンチマーキング][statistical continuous benchmarking]の基石は、ターゲットブランチの歴史的基準を持つことです。
+この歴史的基準を使用して、マージリクエスト内のパフォーマンスの退行を検出することができます。
+
+<TargetBranchCode />
+
+1. GitLab CI/CDファイルを作成します。
+   (例: `.gitlab-ci.yml`)
+2. GitLab CI/CDジョブを作成します。
+   (例: `benchmark_target_branch`)
+3. パイプラインが`main`ブランチへの`push`によってトリガーされた場合に実行します。
+   [GitLab CI/CD `rules`ドキュメント][gitlab ci cd rules]と
+   [GitLab CI/CD定義済み変数のドキュメント][gitlab ci cd redefined variables]を完全に概観する。
+   (例: `rules: - if: ...`)
+4. ジョブが実行される`image`を設定します。
+   [GitLab CI/CD `image`ドキュメント][gitlab ci cd image]を参照してください。
+   (例: `image: debian:bullseye`)
+5. [便利なスクリプト][install bencher cli]を使用してBencher CLIをインストールします。
+   (例: `before_script: ...`)
+6. <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用して
+   `main`ブランチのベンチマークを実行します。
+   [the `bencher run` CLI subcommand][bencher run] を完全に概観する。
+   (例: `bencher run`)
+7. `--project`オプションをプロジェクトスラグに設定します。
+    [the `--project` docs][project option]を詳しく見る。
+   (例: `--project save-walter-white-1234abcd`)
+8. `--token`オプションをマスクされた`BENCHER_API_TOKEN`環境変数に設定します。
+    [the `--token` docs][token option]を詳しく見る。
+   (例: `--token "$BENCHER_API_TOKEN"`)
+9.  `--branch`オプションをブランチ名に設定します。
+    [branch selection][branch selection branch]を完全に概観する。
+    (例: `--branch main`)
+10. `--testbed`オプションをテストベッド名に設定します。
+    これは、`image`で選択したマシンと一致することが望ましいです。
+    [the `--testbed` docs][testbed option]を詳しく見る。
+    (例: `--testbed debian:bullseye`)
+11. 希望するベンチマークハーネスアダプターを`--adapter`オプションに設定します。
+    [benchmark harness adapters][adapters]を完全に概観する。
+    (例: `--adapter json`)
+12. アラートが生成された場合にコマンドを失敗させるために`--err`フラグを設定します。
+    [Threshold & Alerts][alerts]を完全に概観する。
+    (例: `--err`)
+13. ベンチマークコマンド引数を指定します。
+    [benchmark command][command argument]を完全に概観する。
+    (例: `bencher mock`)
+
+[gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
+[gitlab ci cd redefined variables]: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
+[gitlab ci cd image]: https://docs.gitlab.com/ee/ci/yaml/index.html#image
+
+[statistical continuous benchmarking]: /ja/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[install bencher cli]: /ja/docs/how-to/install-cli/#install-cli-with-script
+[bencher run]: /ja/docs/explanation/bencher-run/
+[project option]: /ja/docs/explanation/bencher-run/#--project-project
+[token option]: /ja/docs/explanation/bencher-run/#--token-token
+[branch selection branch]: /ja/docs/explanation/branch-selection/#--branch-branch
+[testbed option]: /ja/docs/explanation/bencher-run/#--testbed-testbed
+[adapters]: /ja/docs/explanation/adapters/
+[alerts]: /ja/docs/explanation/thresholds/#alerts
+[command argument]: /ja/docs/explanation/bencher-run/#benchmark-command

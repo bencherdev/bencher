@@ -1,0 +1,65 @@
+import TargetBranchCode from "../target-branch-code.mdx";
+
+## 目标分支
+
+[Statistical Continuous Benchmarking][statistical continuous benchmarking]
+的基石是为您的目标分支拥有一个历史基线。
+然后，可以使用此历史基线来检测合并请求中的性能退化。
+
+<TargetBranchCode />
+
+1. 创建一个GitLab CI/CD文件。
+   （例：`.gitlab-ci.yml`）
+2. 创建一个GitLab CI/CD作业。
+   （例：`benchmark_target_branch`）
+3. 运行`if`管道是由`push`到`main`分支触发的。
+   参见 [GitLab CI/CD `rules` 文档][gitlab ci cd rules]
+   和 [GitLab CI/CD预定义变量文档][gitlab ci cd redefined variables] 以获取完整概述。
+   （例：`rules: - if: ...`）
+4. 设置作业将在其中运行的`image`。
+   参见 [GitLab CI/CD `image` 文档][gitlab ci cd image]
+   以获取完整概述。
+   （例：`image: debian:bullseye`）
+5. 使用[便捷脚本][install bencher cli]安装Bencher CLI。
+   （例：`before_script: ...`）
+6. 使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI子命令
+   运行您的`main`分支基准测试。
+   参见 [the `bencher run` CLI子命令][bencher run] 以获取完整概述。
+   （例：`bencher run`）
+7. 将`--project`选项设置为项目slug。
+   参见 [the `--project` 文档][project option] 了解更多详情。
+   （例：`--project save-walter-white-1234abcd`）
+8. 将`--token`选项设置为屏蔽的`BENCHER_API_TOKEN`环境变量。
+   参见 [the `--token` 文档][token option] 了解更多详情。
+   （例：`--token "$BENCHER_API_TOKEN"`）
+9. 将`--branch`选项设置为分支名称。
+    参见 [分支选择][branch selection branch] 以获取完整概述。
+    （例：`--branch main`）
+10. 将`--testbed`选项设置为测试床名称。
+    这应该与在`image`中选择的机器匹配。
+    参见 [the `--testbed` 文档][testbed option] 了解更多详情。
+    （例：`--testbed debian:bullseye`）
+11. 将`--adapter`选项设置为所需的基准测试适配器。
+    参见 [基准测试适配器][adapters] 以获取完整概述。
+    （例：`--adapter json`）
+12. 设置`--err`标志以在生成警报时使命令失败。
+    参见 [阈值和警报][alerts] 以获取完整概述。
+    （例：`--err`）
+13. 指定基准测试命令参数。
+    参见 [基准测试命令][command argument] 以获取完整概述。
+    （例：`bencher mock`）
+
+[gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
+[gitlab ci cd redefined variables]: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
+[gitlab ci cd image]: https://docs.gitlab.com/ee/ci/yaml/index.html#image
+
+[statistical continuous benchmarking]: /zh/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[install bencher cli]: /zh/docs/how-to/install-cli/#install-cli-with-script
+[bencher run]: /zh/docs/explanation/bencher-run/
+[project option]: /zh/docs/explanation/bencher-run/#--project-project
+[token option]: /zh/docs/explanation/bencher-run/#--token-token
+[branch selection branch]: /zh/docs/explanation/branch-selection/#--branch-branch
+[testbed option]: /zh/docs/explanation/bencher-run/#--testbed-testbed
+[adapters]: /zh/docs/explanation/adapters/
+[alerts]: /zh/docs/explanation/thresholds/#alerts
+[command argument]: /zh/docs/explanation/bencher-run/#benchmark-command

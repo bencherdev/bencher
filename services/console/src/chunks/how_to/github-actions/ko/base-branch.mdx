@@ -1,0 +1,64 @@
+import BaseBranchCode from "../base-branch-code.mdx";
+
+## 기본 브랜치
+
+[통계적 지속적 벤치마킹][statistical continuous benchmarking]의 핵심은 기본 브랜치에 대한 역사적 기준선을 가지고 있는 것입니다.
+이 역사적 기준선은 풀 리퀘스트에서 성능 회귀를 탐지하는 데 사용할 수 있습니다.
+
+<BaseBranchCode />
+
+1. GitHub Actions `workflow` 파일을 생성하세요.
+   (예: `.github/workflows/base_benchmarks.yml`)
+2. `main` 브랜치로의 `push` 이벤트에 대해 실행하세요.
+   [GitHub Actions `on` 문서][github actions on]와 [GitHub Actions `push` 문서][github actions push]를 참조하여 전체 개요를 확인하세요.
+   (예: `on: push: branches: main`)
+3. GitHub Actions `job`을 생성하세요.
+   (예: `jobs: benchmark_base_branch`)
+4. 작업이 실행될 기기의 유형을 설정하세요.
+   [GitHub Actions `runs-on` 문서][github actions runs-on]를 참조하여 전체 개요를 확인하세요.
+   (예: `runs-on: ubuntu-latest`)
+5. 기본 브랜치 소스 코드를 체크아웃하세요.
+   (예: `uses: actions/checkout@v4`)
+6. [GitHub Action을 사용하여][bencher cli github action] Bencher CLI를 설치하세요.
+   (예: `uses: bencherdev/bencher@main`)
+7. <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드를 사용하여 
+   `main` 브랜치 벤치마크를 실행하세요.
+   [the `bencher run` CLI 서브커맨드][bencher run]를 참조하여 전체 개요를 확인하세요.
+   (예: `bencher run`)
+8. `--project` 옵션을 프로젝트 슬러그로 설정하세요.
+   [the `--project` 문서][project option]를 참조하여 더 자세히 알아보세요.
+   (예: `--project save-walter-white-1234abcd`)
+9. `--token` 옵션을 `BENCHER_API_TOKEN` **Repository** 비밀로 설정하세요.
+   [the `--token` 문서][token option]를 참조하여 더 자세히 알아보세요.
+   (예: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+10. `--branch` 옵션을 브랜치 이름으로 설정하세요.
+    [branch 선택][branch selection branch]을 참조하여 전체 개요를 확인하세요.
+    (예: `--branch main`)
+11. `--testbed` 옵션을 테스트베드 이름으로 설정하세요.
+    이는 `runs-on`에서 선택한 기기와 일치해야 할 가능성이 높습니다.
+    [the `--testbed` 문서][testbed option]를 참조하여 더 자세히 알아보세요.
+    (예: `--testbed ubuntu-latest`)
+12. `--adapter` 옵션을 원하는 벤치마크 하네스 어댑터로 설정하세요.
+    [벤치마크 하네스 어댑터][adapters]를 참조하여 전체 개요를 확인하세요.
+    (예: `--adapter json`)
+13. 경고가 생성되면 명령을 실패하게 하는 `--err` 플래그를 설정하세요.
+    [Threshold & Alerts][alerts]를 참조하여 전체 개요를 확인하세요.
+    (예: `--err`)
+14. 벤치마크 커맨드 인자를 지정하세요.
+    [벤치마크 커맨드][command argument]를 참조하여 전체 개요를 확인하세요.
+    (예: `bencher mock`)
+
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github actions push]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#push
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+
+[statistical continuous benchmarking]: /ko/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[bencher run]: /ko/docs/explanation/bencher-run/
+[project option]: /ko/docs/explanation/bencher-run/#--project-project
+[token option]: /ko/docs/explanation/bencher-run/#--token-token
+[branch selection branch]: /ko/docs/explanation/branch-selection/#--branch-branch
+[testbed option]: /ko/docs/explanation/bencher-run/#--testbed-testbed
+[adapters]: /ko/docs/explanation/adapters/
+[alerts]: /ko/docs/explanation/thresholds/#alerts
+[command argument]: /ko/docs/explanation/bencher-run/#benchmark-command

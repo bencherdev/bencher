@@ -1,0 +1,30 @@
+```yaml
+on:
+  pull_request:
+    types: [opened, reopened, edited, synchronize]
+
+jobs:
+  benchmark_pr_branch:
+    name: Continuous Benchmarking PRs with Bencher
+    # DO NOT REMOVE: For handling Fork PRs see Pull Requests from Forks
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bencherdev/bencher@main
+      - name: Track PR Benchmarks with Bencher
+        run: |
+          bencher run \
+          --project save-walter-white-1234abcd
+          --token '${{ secrets.BENCHER_API_TOKEN }}' \
+          --branch '${{ github.head_ref }}' \
+          --branch-start-point '${{ github.base_ref }}' \
+          --branch-start-point-hash '${{ github.event.pull_request.base.sha }}' \
+          --testbed ubuntu-latest \
+          --adapter json \
+          --err \
+          --github-actions '${{ secrets.GITHUB_TOKEN }}' \
+          bencher mock
+```

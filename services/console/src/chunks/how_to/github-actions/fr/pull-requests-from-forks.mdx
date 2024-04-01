@@ -1,0 +1,20 @@
+## Les Pull Requests provenant de Forks
+
+Si vous prévoyez d'accepter les pull requests provenant de forks, comme c'est souvent le cas dans les projets open source publics,
+alors vous devrez gérer les choses un peu différemment.
+Pour des raisons de sécurité, les secrets tels que votre `BENCHER_API_TOKEN` et le `GITHUB_TOKEN` ne sont pas disponibles dans GitHub Actions pour les PR de forks.
+C'est-à-dire que si un contributeur externe ouvre une PR à partir d'un fork, l'exemple ci-dessus **ne** fonctionnera **pas**.
+Il y a deux options pour les PR de forks :
+
+- ⛑️ Plus sûr : [Benchmark Fork PR et Téléversement depuis la Branche par Défaut][benchmark fork pr and upload from default branch]
+- ⚠️ Plus risqué : [Benchmark Fork PR depuis la Branche Cible avec des Réviseurs Requis][benchmark fork pr from target branch with required reviewers]
+
+Voir ce [rapport du GitHub Security Lab][github actions pwn requests]
+et [ce billet de blog][nathandavison.com blog]
+sur la prévention des pwn requests pour un aperçu complet.
+
+[github actions pwn requests]: https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
+[nathandavison.com blog]: https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests
+
+[benchmark fork pr and upload from default branch]: #benchmark-fork-pr-et-téléversement-depuis-la-branche-par-défaut
+[benchmark fork pr from target branch with required reviewers]: #benchmark-fork-pr-depuis-la-branche-cible-avec-des-réviseurs-requis

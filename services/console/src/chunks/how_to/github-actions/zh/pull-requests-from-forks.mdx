@@ -1,0 +1,20 @@
+## 来自 Fork 的 Pull Requests
+
+如果您计划接受来自 fork 的 pull requests，这在公开的开源项目中经常是这种情况，
+那么您需要稍微不同地处理这些请求。
+出于安全原因，像 `BENCHER_API_TOKEN` 和 `GITHUB_TOKEN` 这样的秘密在 GitHub Actions 中对 fork PRs 是不可用的。
+也就是说，如果一个外部贡献者从 fork 提交了一个 PR，以上的例子将**不**会起作用。
+对于 fork PRs 有两个选项：
+
+- ⛑️ 更安全：[从默认分支对 Fork PR 进行基准测试并上传][benchmark fork pr and upload from default branch]
+- ⚠️ 更有风险：[从目标分支对 Fork PR 进行基准测试，且需要审阅者][benchmark fork pr from target branch with required reviewers]
+
+请参阅 [GitHub 安全实验室撰写][github actions pwn requests]
+和 [这篇博客文章][nathandavison.com blog]
+以获得完整的概述，了解如何防止 pwn 请求。
+
+[github actions pwn requests]: https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
+[nathandavison.com blog]: https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests
+
+[benchmark fork pr and upload from default branch]: #benchmark-fork-pr-and-upload-from-default-branch
+[benchmark fork pr from target branch with required reviewers]: #benchmark-fork-pr-from-target-branch-with-required-reviewers

@@ -1,0 +1,104 @@
+import PullRequestsForkReviewerCode from "../pull-requests-fork-reviewer-code.mdx";
+
+### Сравнение PR из вилки с целевой веткой с обязательными проверяющими
+
+Для гарантии безопасности кода из pull request вилки, это действие GitHub проверяет, что вилка из другого репозитория.
+Если вилка из другого репозитория, тогда ее необходимо проверить.
+
+> ⚠️ Это **очень**, **очень** важно тщательно проверять каждый PR из вилки перед его одобрением!
+> В противном случае можно получить pwn запрос!
+>
+> Если вы предпочитаете, чтобы это не висело над вами, смотрите [Сравнение PR из вилки и загрузку с ветки по умолчанию][benchmark fork pr and upload from default branch] выше.
+
+Для настройки этого рабочего процесса вам нужно создать два [Среды действий GitHub][github actions environments].
+Перейдите к `Ваш репозиторий -> Настройки -> Среды -> Создать среду`.
+Создайте две новые среды, `internal` и `external`.
+Среда `internal` не должна иметь `Правил защиты развертывания`.
+Однако, среда `external` должна иметь установленных `Обязательных проверяющих` для проверки PR из вилок перед сравнением.
+Смотрите [этот блог][iterative.ai blog] для полного обзора.
+
+Эта настройка работает потому что `pull_request_target` выполняется в контексте целевой ветки pull request,
+где такие секреты, как `BENCHER_API_TOKEN` и `GITHUB_TOKEN` доступны.
+Таким образом, этот рабочий процесс будет выполняться только если он существует в _целевой_ ветке.
+Избегайте установки любых секретов как переменные среды, такие как `GITHUB_TOKEN` и `BENCHER_API_TOKEN`.
+Вместо этого явно передавайте ваши секреты в `bencher run`.
+
+<PullRequestsForkReviewerCode />
+
+1. Создайте файл `workflow` действий GitHub.
+   (например: `.github/workflows/pr_target_benchmarks.yml`)
+2. Запускать на событиях `pull_request`:
+    - `opened` - Был создан pull request.
+    - `reopened` - Ранее закрытый pull request был снова открыт.
+    - `edited` - Заголовок или тело pull request были изменены, или базовая ветка pull request была изменена.
+    - `synchronize` - Ветка головы pull request была обновлена.
+      Например, ветка головы была обновлена от базовой ветки или в ветку головы были запушены новые коммиты.
+
+   Смотрите [документацию `on` действий GitHub][github actions on]
+   и [документацию действий GitHub `pull_request`][github action pull_request] для полного обзора.
+   (например: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
+3. Создайте первую задачу действий GitHub для проверки необходимости рассмотрения рабочего процесса.
+   (например: `jobs: fork_pr_requires_review`)
+4. Установите `environment` в `internal` если и только если pull request из того же репозитория.
+   В противном случае установите `environment` в `external`, что потребует одобрения от проверяющего для продолжения.
+   ⚠️ НЕ УДАЛЯЙТЕ ЭТУ СТРОКУ!
+   (например: `environment: ${{ (github.event.pull_request.head.repo.full_name == github.repository && 'internal') || 'external' }}`)
+5. Создайте вторую задачу действий GitHub для запуска ваших сравнений.
+   (например: `benchmark_fork_pr_branch`)
+6. Укажите, что задача `benchmark_fork_pr_branch` требует выполнения задачи `fork_pr_requires_review` для запуска.
+   ⚠️ НЕ УДАЛЯЙТЕ ЭТУ СТРОКУ!
+   Смотрите [документацию `needs` действий GitHub][github actions needs]
+   для полного обзора.
+   (например: `needs: fork_pr_requires_review`)
+7. Укажите тип машины, на которой будет выполняться задача.
+   Смотрите [документацию `runs-on` действий GitHub][github actions runs-on]
+   для полного обзора.
+   (например: `runs-on: ubuntu-latest`)
+8. Проверьте исходный код PR из вилки.
+   Так как `pull_request_target` выполняется в контексте целевой ветки pull request,
+   вам все еще нужно проверить ветку pull request.
+   (например: `uses: actions/checkout@v4`)
+    - Укажите репозиторий PR из вилки (например: `repository: ${{ github.event.pull_request.head.repo.full_name }}`)
+    - Укажите хэш PR из вилки (например: `ref: ${{ github.event.pull_request.head.sha }}`)
+    - Не сохраняйте ваши учетные данные `git` (например: `persist-credentials: false`)
+9. Установите CLI Bencher с использованием [действия GitHub][bencher cli github action].
+   (например: `uses: bencherdev/bencher@main`)
+10. Используйте подкоманду CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
+    для выполнения сравнений вашей ветки pull request из вилки.
+    Смотрите [подкоманду `bencher run` CLI][bencher run] для полного обзора.
+    (например: `bencher run`)
+11. Установите параметр `--project` на слаг проекта.
+    Смотрите [документацию `--project`][project option] для дополнительных деталей.
+    (например: `--project save-walter-white-1234abcd`)
+12. Установите параметр `--token` на секрет **репозитория** `BENCHER_API_TOKEN`.
+    Смотрите [документацию `--token`][token option] для дополнительных деталей.
+    (например: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+13. Установите параметр `--branch` на отформатированный номер PR из вилки с использованием
+    [события действий GitHub `pull_request`][github action pull_request].
+    Смотрите [выбор ветки][branch selection branch] для полного обзора.
+    (например: `--branch '${{ github.event.number }}/merge'`)
+14. Установите параметр `--branch-start-point` на начальную точку базовой ветки PR из вилки с использованием
+    [контекста `github` действий GitHub][github actions context].
+    Смотрите [выбор ветки][branch selection start point] для полного обзора.
+    (например: `--branch-start-point '${{ github.base_ref }}'`)
+15. Установите параметр `--branch-start-point-hash` на хэш начальной точки базовой ветки PR из вилки с использованием
+    [события действий GitHub `pull_request`][github action pull_request].
+    Смотрите [выбор ветки][branch selection start point hash] для полного обзора.
+    (например: `--branch-start-point-hash '${{ github.event.pull_request.base.sha }}'`)
+16. Установите параметр `--testbed` на имя тестовой среды.
+    Это, скорее всего, должно соответствовать машине, выбранной в `runs-on`.
+    Смотрите [документацию `--tested`][testbed option] для дополнительных деталей.
+    (например: `--testbed ubuntu-latest`)
+17. Установите параметр `--adapter` на желаемый адаптер среды тестирования.
+    Смотрите [адаптеры среды тестирования][adapters] для полного обзора.
+    (например: `--adapter json`)
+18. Установите флаг `--err`, чтобы команда завершилась с ошибкой, если генерируется предупреждение.
+    Смотрите [Пороги & Предупреждения][alerts] для полного обзора.
+    (например: `--err`)
+19. Установите параметр `--github-actions` на токен аутентификации API GitHub для публикации результатов в виде комментария к Pull Request с использованием
+    [переменной среды `GITHUB_TOKEN` действий GitHub][github token].
+    Смотрите [документацию `--github-actions`][github actions option] для дополнительных деталей.
+    (например: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+20. Укажите аргументы команды сравнения.
+    Смотрите [команду сравнения][command argument] для полного обзора.
+    (например: `bencher mock`)

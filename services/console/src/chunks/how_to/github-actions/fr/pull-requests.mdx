@@ -1,0 +1,114 @@
+```markdown
+import PullRequestsCode from "../pull-requests-code.mdx";
+
+## Demandes de Tirage (Pull Requests)
+
+Afin de détecter les régressions de performance dans les Demandes de Tirage, vous aurez besoin d'exécuter vos benchmarks sur les PRs.
+Si vous attendez uniquement des PRs provenant de branches **du même** dépôt,
+alors vous pouvez simplement créer un autre workflow pour exécuter `on` les événements `pull_request` provenant du même dépôt.
+
+> ⚠️ Cette solution fonctionne uniquement si toutes les PRs proviennent du **même** dépôt !
+> Voir [Demandes de Tirage depuis des Forks][pull requests from forks] ci-dessous.
+
+<PullRequestsCode />
+
+1. Créez un fichier `workflow` pour GitHub Actions.
+   (ex : `.github/workflows/pr_benchmarks.yml`)
+2. Exécutez on les événements `pull_request` :
+    - `opened` - Une demande de tirage a été créée.
+    - `reopened` - Une demande de tirage précédemment fermée a été rouverte.
+    - `edited` - Le titre ou le corps d'une demande de tirage a été édité, ou la branche de base d'une demande de tirage a été changée.
+    - `synchronize` - La branche 'head' d'une demande de tirage a été mise à jour.
+      Par exemple, la branche 'head' a été mise à jour depuis la branche de base ou de nouveaux commits ont été poussés vers la branche 'head'.
+
+   Voir la [documentation `on` GitHub Actions][github actions on]
+   et la [documentation `pull_request` GitHub Actions][github action pull_request] pour un aperçu complet.
+   (ex : `on: pull_request: types: [opened, reopened, edited, synchronize]`)
+3. Créez un `job` pour GitHub Actions.
+   (ex : `jobs: benchmark_pr_branch`)
+4. Exécutez on les événements `pull_request` si et seulement si la demande de tirage provient du même dépôt.
+   ⚠️ NE SUPPRIMEZ PAS CETTE LIGNE !
+   Pour gérer les PRs de Forks, voir [Demandes de Tirage depuis des Forks][pull requests from forks] ci-dessous.
+   (ex : `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
+5. Définissez [les permissions pour le `GITHUB_TOKEN`][github token permissions]
+   à `write` pour `pull-requests`.
+   Selon vos paramètres GitHub, cela peut ne pas être requis.
+   Mais pour toutes les organisations et les repos personnels
+   [créés après le 02 février 2023][github token read only],
+   c'est le comportement par défaut.
+   Voir [la documentation GitHub][github token permissions security]
+   pour un aperçu complet.
+   (ex : `permissions: pull-requests: write`)
+6. Définissez le type de machine sur lequel le job sera exécuté.
+   Voir la [documentation `runs-on` GitHub Actions][github actions runs-on]
+   pour un aperçu complet.
+   (ex : `runs-on: ubuntu-latest`)
+7. Récupérez le code source de la branche PR.
+   (ex : `uses: actions/checkout@v4`)
+8. Installez le CLI Bencher en utilisant [l'Action GitHub][bencher cli github action].
+   (ex : `uses: bencherdev/bencher@main`)
+9. Utilisez la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>
+   pour exécuter les benchmarks de votre branche de demande de tirage.
+   Voir [la sous-commande CLI `bencher run`][bencher run] pour un aperçu complet.
+   (ex : `bencher run`)
+10. Définissez l'option `--project` sur le slug du Projet.
+    Voir [la documentation `--project`][project option] pour plus de détails.
+    (ex : `--project save-walter-white-1234abcd`)
+11. Définissez l'option `--token` sur le secret **du dépôt** `BENCHER_API_TOKEN`.
+    Voir [la documentation `--token`][token option] pour plus de détails.
+    (ex : `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+12. Définissez l'option `--branch` sur le nom de la branche PR en utilisant
+    [le contexte GitHub Actions `github`][github actions context].
+    Voir [la sélection de branche][branch selection branch] pour un aperçu complet.
+    (ex : `--branch '${{ github.head_ref }}'`)
+13. Définissez l'option `--branch-start-point` sur le point de départ de la branche de base PR en utilisant
+    [le contexte GitHub Actions `github`][github actions context].
+    Voir [le point de départ de la sélection de branche][branch selection start point] pour un aperçu complet.
+    (ex : `--branch-start-point '${{ github.base_ref }}'`)
+14. Définissez l'option `--branch-start-point-hash` sur le hash du point de départ de la branche de base PR en utilisant
+    [l'événement GitHub Actions `pull_request`][github action pull_request].
+    Voir [le hash du point de départ de la sélection de branche][branch selection start point hash] pour un aperçu complet.
+    (ex : `--branch-start-point-hash '${{ github.event.pull_request.base.sha }}'`)
+15. Définissez l'option `--testbed` sur le nom du Testbed.
+    Cela devrait probablement correspondre à la machine sélectionnée dans `runs-on`.
+    Voir [la documentation `--testbed`][testbed option] pour plus de détails.
+    (ex : `--testbed ubuntu-latest`)
+16. Définissez l'option `--adapter` sur l'adaptateur de harnais de benchmarks désiré.
+    Voir [les adaptateurs de harnais de benchmarks][adapters] pour un aperçu complet.
+    (ex : `--adapter json`)
+17. Définissez le drapeau `--err` pour échouer la commande si une Alerte est générée.
+    Voir [Seuils & Alertes][alerts] pour un aperçu complet.
+    (ex : `--err`)
+18. Définissez l'option `--github-actions` sur le jeton d'authentification de l'API GitHub pour poster les résultats en tant que commentaire sur la Demande de Tirage en utilisant
+    [la variable d'environnement `GITHUB_TOKEN` GitHub Actions][github token].
+    Voir [la documentation `--github-actions`][github actions option] pour plus de détails.
+    (ex : `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+19. Spécifiez les arguments de la commande benchmark.
+    Voir [la commande benchmark][command argument] pour un aperçu complet.
+    (ex : `bencher mock`)
+
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+[github token permissions]: https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
+[github token read only]: https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
+[github token permissions security]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+[github actions context]: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context
+[github token]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication
+
+[bencher run]: /fr/docs/explanation/bencher-run/
+[project option]: /fr/docs/explanation/bencher-run/#--project-project
+[token option]: /fr/docs/explanation/bencher-run/#--token-token
+[branch selection branch]: /fr/docs/explanation/branch-selection/#--branch-branch
+[branch selection start point]: /fr/docs/explanation/branch-selection/#--branch-start-point-branch
+[branch selection start point hash]: /fr/docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[testbed option]: /fr/docs/explanation/bencher-run/#--testbed-testbed
+[adapters]: /fr/docs/explanation/adapters/
+[alerts]: /fr/docs/explanation/thresholds/#alerts
+[github actions option]: /fr/docs/explanation/bencher-run/#--github-actions-github_token
+[command argument]: /fr/docs/explanation/bencher-run/#benchmark-command
+
+[pull requests from forks]: #pull-requests-from-forks
+
+```

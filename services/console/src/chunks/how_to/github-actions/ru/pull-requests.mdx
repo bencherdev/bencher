@@ -1,0 +1,88 @@
+```mdx
+import PullRequestsCode from "../pull-requests-code.mdx";
+
+## Пулл Реквесты
+
+Чтобы отслеживать регрессию производительности в пулл реквестах, вам нужно будет запускать ваши бенчмарки на PR'ах.
+Если вы ожидаете пулл реквесты только из веток **того же** репозитория,
+то вы можете просто создать еще один workflow для запуска на событиях `pull_request` из того же репозитория.
+
+> ⚠️ Это решение работает, только если все PR'ы из **того же** репозитория!
+> Смотрите [Пулл Реквесты из Форков](#pull-requests-from-forks) ниже.
+
+<PullRequestsCode />
+
+1. Создайте файл `workflow` для GitHub Actions.
+   (например: `.github/workflows/pr_benchmarks.yml`)
+2. Запускайте на событиях `pull_request`:
+    - `opened` - Был создан пулл реквест.
+    - `reopened` - Ранее закрытый пулл реквест был повторно открыт.
+    - `edited` - Заголовок или тело пулл реквеста были отредактированы, или базовая ветка пулл реквеста была изменена.
+    - `synchronize` - Ветка заголовка пулл реквеста была обновлена.
+      Например, ветка заголовка была обновлена из базовой ветки или в ветку заголовка были добавлены новые коммиты.
+
+   Смотрите [документацию GitHub Actions `on`](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on)
+   и [документацию GitHub Actions `pull_request`](https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request) для полного описания.
+   (например: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
+3. Создайте `job` для GitHub Actions.
+   (например: `jobs: benchmark_pr_branch`)
+4. Запускайте на событиях `pull_request`, только если пулл реквест из того же репозитория.
+   ⚠️ НЕ УДАЛЯЙТЕ ЭТУ СТРОКУ!
+   Для обработки PR'ов из Форков смотрите [Пулл Реквесты из Форков](#pull-requests-from-forks) ниже.
+   (например: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
+5. Установите [права для `GITHUB_TOKEN`](https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job)
+   на `write` для `pull-requests`.
+   В зависимости от настроек вашего GitHub, это может быть не требуется.
+   Но для всех организаций и личных репозиториев
+   [созданных после 02 февраля 2023](https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/),
+   это поведение по умолчанию.
+   Смотрите [документацию GitHub](https://docs.github.com/en/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token) для полного описания.
+   (например: `permissions: pull-requests: write`)
+6. Укажите тип машины, на которой будет работать задача.
+   Смотрите [документацию GitHub Actions `runs-on`](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on)
+   для полного овервью.
+   (например: `runs-on: ubuntu-latest`)
+7. Проверьте исходный код ветки PR.
+   (например: `uses: actions/checkout@v4`)
+8. Установите Bencher CLI с использованием [GitHub Action](https://github.com/marketplace/actions/bencher-cli).
+   (например: `uses: bencherdev/bencher@main`)
+9. Используйте подкоманду CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
+   для запуска бенчмарков вашей ветки pull request.
+   Смотрите [подкоманду `bencher run` CLI](/ru/docs/explanation/bencher-run/) для полного описания.
+   (например: `bencher run`)
+10. Укажите опцию `--project` для Slug проекта.
+    Смотрите [документацию `--project`](/ru/docs/explanation/bencher-run/#--project-project) для дополнительных деталей.
+    (например: `--project save-walter-white-1234abcd`)
+11. Укажите опцию `--token` для **секрета репозитория** `BENCHER_API_TOKEN`.
+    Смотрите [документацию `--token`](/ru/docs/explanation/bencher-run/#--token-token) для дополнительных деталей.
+    (например: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+12. Укажите опцию `--branch` для имени ветки PR с использованием
+    [контекста GitHub Actions `github`](https://docs.github.com/en/actions/learn-github-actions/contexts#github-context).
+    Смотрите [выбор ветки](/ru/docs/explanation/branch-selection/#--branch-branch) для полного описания.
+    (например: `--branch '${{ github.head_ref }}'`)
+13. Укажите опцию `--branch-start-point` для стартовой точки базовой ветки PR с использованием
+    [контекста GitHub Actions `github`](https://docs.github.com/en/actions/learn-github-actions/contexts#github-context).
+    Смотрите [выбор стартовой точки ветки](/ru/docs/explanation/branch-selection/#--branch-start-point-branch) для полного описания.
+    (например: `--branch-start-point '${{ github.base_ref }}'`)
+14. Укажите опцию `--branch-start-point-hash` для хэша стартовой точки базовой ветки PR с использованием
+    [события GitHub Actions `pull_request`](https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request).
+    Смотрите [выбор хэша стартовой точки ветки](/ru/docs/explanation/branch-selection/#--branch-start-point-hash-hash) для полного описания.
+    (например: `--branch-start-point-hash '${{ github.event.pull_request.base.sha }}'`)
+15. Укажите опцию `--testbed` для имени тестовой среды.
+    Это должно, вероятно, соответствовать машине, выбранной в `runs-on`.
+    Смотрите [документацию `--testbed`](/ru/docs/explanation/bencher-run/#--testbed-testbed) для дополнительных деталей.
+    (например: `--testbed ubuntu-latest`)
+16. Укажите опцию `--adapter` для желаемого адаптера бенчмарк харнесса.
+    Смотрите [адаптеры бенчмарк харнесса](/ru/docs/explanation/adapters/) для полного описания.
+    (например: `--adapter json`)
+17. Укажите флаг `--err` для завершения команды с ошибкой, если сгенерировано предупреждение.
+    Смотрите [Пороги & Предупреждения](/ru/docs/explanation/thresholds/#alerts) для полного описания.
+    (например: `--err`)
+18. Укажите опцию `--github-actions` для токена аутентификации API GitHub для публикации результатов в виде комментария к пулл реквесту с использованием
+    [переменной окружения GitHub Actions `GITHUB_TOKEN`](https://docs.github.com/en/actions/security-guides/automatic-token-authentication).
+    Смотрите [документацию `--github-actions`](/ru/docs/explanation/bencher-run/#--github-actions-github_token) для дополнительных деталей.
+    (например: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+19. Укажите аргументы команды бенчмарка.
+    Смотрите [команду бенчмарка](/ru/docs/explanation/bencher-run/#benchmark-command) для полного описания.
+    (например: `bencher mock`)
+```

@@ -1,0 +1,143 @@
+```markdown
+import PullRequestsForkRunCode from "../pull-requests-fork-run-code.mdx";
+import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
+
+### Fork PR-Benchmark und Upload vom Standard-Branch
+
+Dies ist die sichere und vorgeschlagene Methode, um [kontinuierliches Benchmarking][continuous benchmarking] zu Fork-Pull-Requests hinzuzufügen.
+Dafür werden zwei separate Workflows benötigt.
+Der erste Workflow führt die Benchmarks aus und speichert die Ergebnisse im `pull_request`-Kontext.
+Dort sind keine Geheimnisse wie Ihr `BENCHER_API_TOKEN` und das `GITHUB_TOKEN` verfügbar.
+Dann lädt ein zweiter Workflow die gespeicherten Benchmark-Ergebnisse im `workflow_run`-Kontext herunter und lädt sie zu Bencher hoch.
+Das funktioniert, weil `workflow_run` im Kontext des Standard-Branchs des Repositories ausgeführt wird,
+wo Geheimnisse wie Ihr `BENCHER_API_TOKEN` und das `GITHUB_TOKEN` verfügbar sind.
+Die Pull-Request-Nummer, der Head-Branch und der Base-Branch, die im initialen `pull_request`-Workflow verwendet wurden,
+müssen auch explizit in den `workflow_run`-Workflow übergeben werden, da sie dort nicht verfügbar sind.
+Diese Workflows werden nur ausgeführt, wenn sie im _Standard_-Branch existieren.
+Siehe [Verwendung von Daten aus dem auslösenden Workflow][github actions trigger workflow] für einen vollständigen Überblick.
+
+<PullRequestsForkRunCode />
+
+1. Erstellen Sie eine erste GitHub-Actions `workflow`-Datei.
+   (z. B.: `.github/workflows/run_fork_pr_benchmarks.yml`)
+2. Bennen Sie diesen Workflow, damit er vom zweiten Workflow referenziert werden kann.
+   (z. B.: `name: Benchmarks ausführen und speichern`)
+3. Führen Sie bei `pull_request`-Ereignissen aus:
+    - `opened` - Ein Pull-Request wurde erstellt.
+    - `reopened` - Ein zuvor geschlossener Pull-Request wurde wieder geöffnet.
+    - `edited` - Der Titel oder Body eines Pull-Requests wurde bearbeitet, oder der Base-Branch eines Pull-Requests wurde geändert.
+    - `synchronize` - Der Head-Branch eines Pull-Requests wurde aktualisiert.
+      Zum Beispiel wurde der Head-Branch vom Base-Branch aktualisiert oder neue Commits wurden zum Head-Branch gepusht.
+
+   Siehe die [GitHub Actions `on`-Dokumentation][github actions on]
+   und [GitHub Actions `pull_request`-Dokumentation][github action pull_request] für einen vollständigen Überblick.
+   (z. B.: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
+4. Erstellen Sie einen GitHub-Actions `job`.
+   (z. B.: `jobs: benchmark_fork_pr_branch`)
+5. Bestimmen Sie den Typ der Maschine, auf der der Job ausgeführt wird.
+   Siehe die [GitHub Actions `runs-on`-Dokumentation][github actions runs-on]
+   für einen vollständigen Überblick.
+   (z. B.: `runs-on: ubuntu-latest`)
+6. Checken Sie den Quellcode des Fork-PR-Branches aus.
+   (z. B.: `uses: actions/checkout@v4`)
+7. Führen Sie Ihre Benchmarks aus und speichern Sie die Ergebnisse in einer Datei.
+   (z. B.: `/bin/echo '{ ... }' > benchmark_results.json`)
+8. Laden Sie die Datei mit den Benchmark-Ergebnissen als Artefakt hoch.
+   (z. B.: `uses: actions/upload-artifact@v4`)
+9. Laden Sie das `pull_request`-Ereignisobjekt als Artefakt hoch.
+  (z. B.: `uses: actions/upload-artifact@v4`)
+
+<PullRequestsForkTrackCode />
+
+1. Erstellen Sie eine erste GitHub-Actions `workflow`-Datei.
+   (z. B.: `.github/workflows/track_fork_pr_benchmarks.yml`)
+2. Bennen Sie diesen Workflow als zweiten Workflow.
+   (z. B.: `name: Benchmarks mit Bencher verfolgen`)
+3. Verketten Sie die beiden Workflows mit
+   [dem `workflow_run`-Ereignis][github actions workflow_run].
+   (z. B.: `on: workflow_run: ...`)
+4. Erstellen Sie einen GitHub-Actions `job`.
+   (z. B.: `jobs: track_fork_pr_branch`)
+5. Führen Sie diesen Job nur aus, wenn der Schluss des vorherigen Workflows erfolgreich war, mit
+   [dem GitHub-Actions `workflow_run`-Ereignis][github actions workflow_run].
+   (z. B.: `if: github.event.workflow_run.conclusion == 'success'`)
+6. Bestimmen Sie den Typ der Maschine, auf der der Job ausgeführt wird.
+   Siehe die [GitHub Actions `runs-on`-Dokumentation][github actions runs-on]
+   für einen vollständigen Überblick.
+   (z. B.: `runs-on: ubuntu-latest`)
+7. Setzen Sie die Dateinamen der Benchmark-Ergebnisse und des `pull_request`-Ereignisobjekts als Umgebungsvariablen.
+   (z. B.: `env: ...`)
+8. Laden Sie die gespeicherten Benchmark-Ergebnisse und das `pull_request`-Ereignis herunter.
+   (z. B.: `uses: actions/github-script@v6`)
+9. Extrahieren Sie die gespeicherten Benchmark-Ergebnisse und das `pull_request`-Ereignis.
+   (z. B.: `unzip ...`)
+10. Exportieren Sie die notwendigen Daten aus dem `pull_request`-Ereignis als Umgebungsvariablen.
+    (z. B.: `core.exportVariable(...)`)
+11. Installieren Sie die Bencher-CLI mit [der GitHub-Action][bencher cli github action].
+   (z. B.: `uses: bencherdev/bencher@main`)
+12. Verwenden Sie den <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code>-CLI-Subbefehl,
+    um Ihre Fork-Pull-Branch-Benchmarks zu verfolgen.
+    Siehe [den `bencher run`-CLI-Subbefehl][bencher run] für einen vollständigen Überblick.
+    (z. B.: `bencher run`)
+13. Setzen Sie die `--project`-Option auf den Projekt-Slug.
+    Siehe [die `--project`-Dokumentation][project option] für weitere Details.
+    (z. B.: `--project save-walter-white-1234abcd`)
+14. Setzen Sie die `--token`-Option auf das `BENCHER_API_TOKEN`-**Repository**-Geheimnis.
+    Siehe [die `--token`-Dokumentation][token option] für weitere Details.
+    (z. B.: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+15. Setzen Sie die `--branch`-Option auf die formatierte Fork-PR-Nummer mit
+    [dem GitHub-Actions `pull_request`-Ereignis][github action pull_request].
+    Siehe [Branch-Auswahl][branch selection branch] für einen vollständigen Überblick.
+    (z. B.: `--branch '${{ env.PR_HEAD }}'`)
+16. Setzen Sie die `--branch-start-point`-Option auf den Startpunkt des Fork-PR-Base-Branches mit
+    [dem GitHub-Actions `pull_request`-Ereignis][github action pull_request].
+    Siehe [Branch-Auswahl][branch selection start point] für einen vollständigen Überblick.
+    (z. B.: `--branch-start-point '${{ env.PR_BASE }}'`)
+17. Setzen Sie die `--branch-start-point-hash`-Option auf den Hash des Startpunkts des Fork-PR-Base-Branches mit
+    [dem GitHub-Actions `pull_request`-Ereignis][github action pull_request].
+    Siehe [Branch-Auswahl][branch selection start point hash] für einen vollständigen Überblick.
+    (z. B.: `--branch-start-point-hash '${{ env.PR_BASE_SHA }}'`)
+18. Setzen Sie die `--testbed`-Option auf den Namen des Testbetts.
+    Dies sollte wahrscheinlich der in `runs-on` ausgewählten Maschine entsprechen.
+    Siehe [die `--testbed`-Dokumentation][testbed option] für weitere Details.
+    (z. B.: `--testbed ubuntu-latest`)
+19. Setzen Sie die `--adapter`-Option auf den gewünschten Benchmark-Harness-Adapter.
+    Siehe [Benchmark-Harness-Adapter][adapters] für einen vollständigen Überblick.
+    (z. B.: `--adapter json`)
+20. Setzen Sie das `--err`-Flag, um den Befehl fehlschlagen zu lassen, wenn ein Alert erzeugt wird.
+    Siehe [Schwellenwerte & Alerts][alerts] für einen vollständigen Überblick.
+    (z. B.: `--err`)
+21. Setzen Sie die `--github-actions`-Option auf das GitHub-API-Authentifizierungstoken, um Ergebnisse als Kommentar im Pull-Request zu posten mit
+    [der GitHub-Actions `GITHUB_TOKEN`-Umgebungsvariablen][github token].
+    Siehe [die `--github-actions`-Dokumentation][github actions option] für weitere Details.
+    (z. B.: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+22. Setzen Sie die `--ci-number`-Option auf die Pull-Request-Nummer.
+    Siehe [die `--ci-number`-Dokumentation][ci number option] für weitere Details.
+    (z. B.: `--ci-number '${{ env.PR_NUMBER }}'`)
+23. Setzen Sie die `--file`-Option auf den Dateipfad der Benchmark-Ergebnisse.
+    Siehe [Benchmark-Befehl][command argument] für einen vollständigen Überblick.
+    (z. B.: `--file "$BENCHMARK_RESULTS"`)
+
+
+[github actions trigger workflow]: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+[github actions workflow_run]: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+[github token]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication
+
+[continuous benchmarking]: /de/docs/explanation/continuous-benchmarking/
+[bencher run]: /de/docs/explanation/bencher-run/
+[project option]: /de/docs/explanation/bencher-run/#--project-project
+[token option]: /de/docs/explanation/bencher-run/#--token-token
+[branch selection branch]: /de/docs/explanation/branch-selection/#--branch-branch
+[branch selection start point]: /de/docs/explanation/branch-selection/#--branch-start-point-branch
+[branch selection start point hash]: /de/docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[testbed option]: /de/docs/explanation/bencher-run/#--testbed-testbed
+[adapters]: /de/docs/explanation/adapters/
+[alerts]: /de/docs/explanation/thresholds/#alerts
+[github actions option]: /de/docs/explanation/bencher-run/#--github-actions-github_token
+[ci number option]: /de/docs/explanation/bencher-run/#--ci-id-id
+[command argument]: /de/docs/explanation/bencher-run/#benchmark-command
+```

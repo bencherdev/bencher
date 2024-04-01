@@ -1,0 +1,18 @@
+## 포크에서 온 풀 리퀘스트
+
+공개 오픈 소스 프로젝트에서 그렇듯이, 포크에서 온 풀 리퀘스트를 받으려고 한다면, 일을 조금 다르게 처리해야 할 필요가 있습니다.
+보안상의 이유로, `BENCHER_API_TOKEN` 및 `GITHUB_TOKEN`과 같은 비밀 값들은 포크 PR에서 GitHub Actions에서 이용할 수 없습니다.
+즉, 외부 기여자가 포크에서 풀 리퀘스트를 올릴 경우 이전 예제는 **작동하지 않습니다**.
+포크 PR에 대한 두 가지 옵션이 있습니다:
+
+- ⛑️ 안전함: [포크 PR을 벤치마크하고 기본 브랜치에서 업로드][benchmark fork pr and upload from default branch]
+- ⚠️ 더 위험함: [대상 브랜치의 포크 PR을 벤치마크하고 필수 리뷰어와 함께 검토][benchmark fork pr from target branch with required reviewers]
+
+이 [GitHub 보안 연구소 글][github actions pwn requests]과
+악의적인 풀 리퀘스트의 위협을 방지하는 방법에 대한 [이 블로그 포스트][nathandavison.com blog]를 참고하여 전체 개요를 확인하십시오.
+
+[github actions pwn requests]: https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
+[nathandavison.com blog]: https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests
+
+[benchmark fork pr and upload from default branch]: #포크-PR과-기본-브랜치에서-업로드
+[benchmark fork pr from target branch with required reviewers]: #대상-브랜치의-포크-PR-벤치마크-및-필수-리뷰어와-함께-검토

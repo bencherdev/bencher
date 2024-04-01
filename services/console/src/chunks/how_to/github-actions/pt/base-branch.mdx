@@ -1,0 +1,67 @@
+import BaseBranchCode from "../base-branch-code.mdx";
+
+## Ramo Base
+
+Um pilar do [Benchmarking Contínuo Estatístico][benchmarking contínuo estatístico]
+é ter uma linha de base histórica para o seu ramo base.
+Essa linha de base histórica pode então ser utilizada para detectar regressões de desempenho em Pull Requests.
+
+<BaseBranchCode />
+
+1. Crie um arquivo `workflow` do GitHub Actions.
+   (ex: `.github/workflows/base_benchmarks.yml`)
+2. Execute em eventos de `push` para o ramo `main`.
+   Veja a [documentação `on` do GitHub Actions][github actions on]
+   e a [documentação `push` do GitHub Actions][github actions push] para uma visão geral completa.
+   (ex: `on: push: branches: main`)
+3. Crie um `job` do GitHub Actions.
+   (ex: `jobs: benchmark_base_branch`)
+4. Defina o tipo de máquina em que o trabalho será executado.
+   Veja a [documentação `runs-on` do GitHub Actions][github actions runs-on]
+   para uma visão geral completa.
+   (ex: `runs-on: ubuntu-latest`)
+5. Faça checkout do código-fonte do seu ramo base.
+   (ex: `uses: actions/checkout@v4`)
+6. Instale o CLI Bencher usando [a GitHub Action][bencher cli github action].
+   (ex: `uses: bencherdev/bencher@main`)
+7. Use o subcomando CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>
+   para executar os benchmarks do seu ramo `main`.
+   Veja [o subcomando CLI `bencher run`][bencher run] para uma visão geral completa.
+   (ex: `bencher run`)
+8. Defina a opção `--project` para o slug do Projeto.
+   Veja [os docs `--project`][opção do projeto] para mais detalhes.
+   (ex: `--project save-walter-white-1234abcd`)
+9. Defina a opção `--token` para o segredo **Repositório** `BENCHER_API_TOKEN`.
+   Veja [os docs `--token`][opção de token] para mais detalhes.
+   (ex: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+10. Defina a opção `--branch` para o nome do Ramo.
+    Veja [seleção de ramo][seleção de ramo branch] para uma visão geral completa.
+    (ex: `--branch main`)
+11. Defina a opção `--testbed` para o nome da Base de teste.
+    Isso provavelmente deve corresponder à máquina selecionada em `runs-on`.
+    Veja [os docs `--tested`][opção de testbed] para mais detalhes.
+    (ex: `--testbed ubuntu-latest`)
+12. Defina a opção `--adapter` para o adaptador de conjunto de benchmarks desejado.
+    Veja [adaptadores de conjunto de benchmarks][adaptadores] para uma visão geral completa.
+    (ex: `--adapter json`)
+13. Defina a flag `--err` para falhar o comando se um Alerta for gerado.
+    Veja [Limiares & Alertas][alertas] para uma visão geral completa.
+    (ex: `--err`)
+14. Especifique os argumentos do comando de benchmark.
+    Veja [comando de benchmark][argumento de comando] para uma visão geral completa.
+    (ex: `bencher mock`)
+
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github actions push]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#push
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+
+[benchmarking contínuo estatístico]: /pt/docs/how-to/track-benchmarks/#benchmarking-contínuo-estatístico
+[bencher run]: /pt/docs/explanation/bencher-run/
+[opção do projeto]: /pt/docs/explanation/bencher-run/#--project-project
+[opção de token]: /pt/docs/explanation/bencher-run/#--token-token
+[seleção de ramo branch]: /pt/docs/explanation/branch-selection/#--branch-branch
+[opção de testbed]: /pt/docs/explanation/bencher-run/#--testbed-testbed
+[adaptadores]: /pt/docs/explanation/adapters/
+[alertas]: /pt/docs/explanation/thresholds/#alerts
+[argumento de comando]: /pt/docs/explanation/bencher-run/#benchmark-command

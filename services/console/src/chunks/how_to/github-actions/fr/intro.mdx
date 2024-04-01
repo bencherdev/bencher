@@ -1,0 +1,21 @@
+Selon votre cas d'usage, vous pouvez configurer le [benchmarking continu][continuous benchmarking] dans GitHub Actions pour votre :
+
+- [Branche de base][base branch]
+- [Demandes de tirage (Pull Requests)][pull requests]
+- [Demandes de tirage à partir de Forks][fork pull requests]
+    - ⛑️ Plus sûr : [Benchmark Fork PR et Upload depuis la Branche par Défaut][benchmark fork pr and upload from default branch]
+    - ⚠️ Plus risqué : [Benchmark Fork PR depuis la Branche Cible avec Réviseurs Requis][benchmark fork pr from target branch with required reviewers]
+
+> 🐰 Assurez-vous d'avoir [créé un jeton d'API][create an api token]
+> et de l'avoir défini comme un secret de **dépôt (Repository)** nommé `BENCHER_API_TOKEN` avant de continuer !
+> Naviguez vers `Votre dépôt -> Paramètres -> Secrets et variables -> Actions -> Nouveau secret de dépôt`.
+> Nommez le secret `BENCHER_API_TOKEN` et définissez la valeur du secret à votre jeton d'API.
+
+[continuous benchmarking]: /fr/docs/explanation/continuous-benchmarking/
+[create an api token]: /fr/docs/tutorial/quick-start/#create-an-api-token
+
+[base branch]: #base-branch
+[pull requests]: #pull-requests
+[fork pull requests]: #pull-requests-from-forks
+[benchmark fork pr and upload from default branch]: #benchmark-fork-pr-and-upload-from-default-branch
+[benchmark fork pr from target branch with required reviewers]: #benchmark-fork-pr-from-target-branch-with-required-reviewers

@@ -1,35 +1,26 @@
 ---
 title: "GitLab CI/CD"
-description: "Merge 요청에 대한 지속적인 벤치마킹을 위해 GitLab CI/CD에서 Bencher 사용"
-heading: "GitLab CI/CD에서 Bencher 를 사용하는 방법"
+description: "GitLab CI/CD에서 지속적인 벤치마킹을 하는 방법"
+heading: "GitLab CI/CD에서 Bencher 사용하기"
 sortOrder: 4
 ---
 
-import GitLabCiYaml from "../../../chunks/how_to/gitlab-ci-yaml.mdx";
+import Intro from "../../../chunks/how_to/gitlab-ci-cd/ko/intro.mdx";
+import TargetBranch from "../../../chunks/how_to/gitlab-ci-cd/ko/target-branch.mdx";
+import MergeRequests from "../../../chunks/how_to/gitlab-ci-cd/ko/merge-requests.mdx";
 
-<GitLabCiYaml />
+<Intro />
 
-1. GitLab CI/CD 파일을 생성합니다 (예: `.gitlab-ci.yml`)
-1. GitLab CI/CD `작업(job)`을 생성합니다 (예: `benchmark_with_bencher`)
-1. 작업을 실행할 Docker 이미지를 선택합니다 (예: `image: rust:bullseye`)
-1. 프로젝트는 이미 존재해야 합니다. `--project` 플래그를 설정하거나 `BENCHER_PROJECT` 환경 변수를 프로젝트 슬러그 또는 UUID로 설정합니다 (예: `BENCHER_PROJECT: save-walter-white`)
-1. `BENCHER_API_TOKEN`을 프로젝트의 CI/CD 시크릿에 추가합니다. `설정 -> CI / CD -> 변수 -> 변수 추가` 경로를 따라 이동합니다
-1. API 토큰은 이미 존재해야 합니다. `--token` 플래그를 설정하거나 `BENCHER_API_TOKEN` 환경 변수를 API 토큰으로 설정합니다 (예: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
-1. 선택 사항: `--adapter` 플래그를 설정하거나 `BENCHER_ADAPTER` 환경 변수를 원하는 어댑터 이름으로 설정합니다. 이 값이 설정되지 않으면 `magic` 어댑터가 사용됩니다. 전체 개요는 [벤치마크 하네스 어댑터](/ko/docs/explanation/adapters/)를 참조하십시오. (예: `BENCHER_ADAPTER: json`)
-1. 선택 사항: `--testbed` 플래그를 설정하거나 `BENCHER_TESTBED` 환경 변수를 Testbed의 슬러그 또는 UUID로 설정합니다. Testbed는 **반드시** 이미 존재해야 합니다. 이 값이 설정되지 않으면 `localhost` Testbed가 사용됩니다. (예: `BENCHER_TESTBED: bullseye`)
-1. 편리한 스크립트를 사용하여 Bencher CLI를 다운로드하고 설치하십시오 [/ko/docs/how-to/install-cli/#linux-mac--unix](/ko/docs/how-to/install-cli/#linux-mac--unix).
-1. <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 하위 명령어를 이용하여 벤치마크를 추적합니다([벤치마크 추적](/ko/docs/how-to/track-benchmarks/) 참조):
-    1. 프로젝트의 브랜치를 설정하는 여러 옵션이 있습니다. 전체 개요는 [브랜치 선택](/ko/docs/explanation/branch-selection/)을 참조하십시오. 제공된 명령어는 [GitLab CI/CD 사전 정의 변수](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html)를 사용하며:
-        1. 해당 브랜치가 이미 존재하면 해당 브랜치를 사용합니다 (예: `--if-branch "$CI_COMMIT_REF_NAME"`)
-        1. MR 타겟 브랜치 데이터와 임계값의 복제본을 생성합니다 (예: `--else-if-branch  "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
-        1. 그렇지 않으면, `main` 브랜치 데이터와 임계값의 복제본을 생성합니다 (예: `--else-if-branch main`)
-    1. 경고가 생성되면 명령어가 실패하도록 설정합니다. 경고가 생성되려면, [임계값](/ko/docs/explanation/thresholds/)이 이미 존재해야 합니다. (예: `--err`)
-    1. 벤치마크를 실행하고 결과보고서를 생성합니다 (예: `"bencher mock"`)
+<TargetBranch />
+
+<br />
+
+<MergeRequests />
 
 <br/>
 <br/>
 
-> 🐰 축하합니다! GitLab CI/CD에서 Bencher 를 사용하는 방법을 배웠습니다! 🎉
+> 🐰 축하합니다! GitLab CI/CD에서 Bencher를 사용하는 방법을 배웠습니다! 🎉
 
 <br/>
 

@@ -1,0 +1,66 @@
+import BaseBranchCode from "../base-branch-code.mdx";
+
+## 基本ブランチ
+
+[統計的連続ベンチマーキング][statistical continuous benchmarking]
+の基本は、基本ブランチのための歴史的なベースラインを持つことです。
+この歴史的なベースラインを利用して、プルリクエスト中のパフォーマンスの退行を検出できます。
+
+<BaseBranchCode />
+
+1. GitHub Actions `workflow` ファイルを作成します。
+   (例: `.github/workflows/base_benchmarks.yml`)
+2. `main` ブランチへの `push` イベントで実行します。
+   [GitHub Actions `on` documentation][github actions on]
+   および [GitHub Actions `push` documentation][github actions push] を参照して全体を理解してください。
+   (例: `on: push: branches: main`)
+3. GitHub Actions `job` を作成します。
+   (例: `jobs: benchmark_base_branch`)
+4. ジョブが実行されるマシンのタイプを設定します。
+   [GitHub Actions `runs-on` documentation][github actions runs-on]
+   を参照して全体を理解してください。
+   (例: `runs-on: ubuntu-latest`)
+5. 基本ブランチのソースコードをチェックアウトします。
+   (例: `uses: actions/checkout@v4`)
+6. [GitHub Action][bencher cli github action] を使用して Bencher CLI をインストールします。
+   (例: `uses: bencherdev/bencher@main`)
+7. `main` ブランチのベンチマークを実行するために <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLI サブコマンドを使用してください。
+   [the `bencher run` CLI サブコマンド][bencher run] を参照して全体を理解してください。
+   (例: `bencher run`)
+8. `--project` オプションをプロジェクトスラグに設定します。
+   [the `--project` docs][project option] を詳しく読んでください。
+   (例: `--project save-walter-white-1234abcd`)
+9. `--token` オプションを `BENCHER_API_TOKEN` **リポジトリー** シークレットに設定します。
+   [the `--token` docs][token option] を詳しく読んでください。
+   (例: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+10. `--branch` オプションをブランチ名に設定します。
+    [branch selection][branch selection branch] を参照して全体を理解してください。
+    (例: `--branch main`)
+11. `--testbed` オプションをテストベッド名に設定します。
+    これは `runs-on` で選択したマシンと一致するべきです。
+    [the `--tested` docs][testbed option] を詳しく読んでください。
+    (例: `--testbed ubuntu-latest`)
+12. `--adapter` オプションを希望のベンチマークハーネスアダプターに設定します。
+    [benchmark harness adapters][adapters] を参照して全体を理解してください。
+    (例: `--adapter json`)
+13. アラートが生成された場合にコマンドを失敗させる `--err` フラグを設定します。
+    [Threshold & Alerts][alerts] を参照して全体を理解してください。
+    (例: `--err`)
+14. ベンチマークコマンド引数を指定します。
+    [benchmark command][command argument] を参照して全体を理解してください。
+    (例: `bencher mock`)
+
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github actions push]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#push
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+
+[statistical continuous benchmarking]: /ja/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[bencher run]: /ja/docs/explanation/bencher-run/
+[project option]: /ja/docs/explanation/bencher-run/#--project-project
+[token option]: /ja/docs/explanation/bencher-run/#--token-token
+[branch selection branch]: /ja/docs/explanation/branch-selection/#--branch-branch
+[testbed option]: /ja/docs/explanation/bencher-run/#--testbed-testbed
+[adapters]: /ja/docs/explanation/adapters/
+[alerts]: /ja/docs/explanation/thresholds/#alerts
+[command argument]: /ja/docs/explanation/bencher-run/#benchmark-command

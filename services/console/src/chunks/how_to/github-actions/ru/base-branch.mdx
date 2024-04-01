@@ -1,0 +1,67 @@
+import BaseBranchCode from "../base-branch-code.mdx";
+
+## Основная ветка
+
+Краеугольным камнем [Статистического Непрерывного Бенчмаркинга][статистический непрерывный бенчмаркинг]
+является наличие исторической базы для вашей основной ветки.
+Эта историческая база может быть использована для обнаружения регрессий производительности в запросах на слияние (Pull Requests).
+
+<BaseBranchCode />
+
+1. Создайте файл `workflow` для GitHub Actions.
+   (например, `.github/workflows/base_benchmarks.yml`)
+2. Запустите на событиях `push` в ветку `main`.
+   Смотрите [документацию `on` GitHub Actions][github actions on]
+   и [документацию `push` GitHub Actions][github actions push] для полного обзора.
+   (например: `on: push: branches: main`)
+3. Создайте `job` для GitHub Actions.
+   (например: `jobs: benchmark_base_branch`)
+4. Установите тип машины, на которой будет выполняться задание.
+   Смотрите [документацию `runs-on` GitHub Actions][github actions runs-on]
+   для полного обзора.
+   (например: `runs-on: ubuntu-latest`)
+5. Выполните checkout исходного кода вашей основной ветки.
+   (например: `uses: actions/checkout@v4`)
+6. Установите Bencher CLI, используя [действие GitHub][bencher cli github action].
+   (например: `uses: bencherdev/bencher@main`)
+7. Используйте подкоманду CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
+   для запуска бенчмарков вашей ветки `main`.
+   Смотрите [подкоманду CLI `bencher run`][bencher run] для полного обзора.
+   (например: `bencher run`)
+8. Установите опцию `--project` в слаг проекта.
+   Смотрите [документацию `--project`][project option] для более подробной информации.
+   (например: `--project save-walter-white-1234abcd`)
+9. Установите опцию `--token` в секрет **Репозитория** `BENCHER_API_TOKEN`.
+   Смотрите [документацию `--token`][token option] для более подробной информации.
+   (например: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+10. Установите опцию `--branch` в имя ветки.
+    Смотрите [выбор ветки][branch selection branch] для полного обзора.
+    (например: `--branch main`)
+11. Установите опцию `--testbed` в имя тестовой среды.
+    Это должно, вероятно, совпадать с машиной, выбранной в `runs-on`.
+    Смотрите [документацию `--testbed`][testbed option] для более подробной информации.
+    (например: `--testbed ubuntu-latest`)
+12. Установите опцию `--adapter` в желаемый адаптер инструмента для бенчмаркинга.
+    Смотрите [адаптеры инструментов для бенчмаркинга][adapters] для полного обзора.
+    (например: `--adapter json`)
+13. Установите флаг `--err`, чтобы команда завершалась с ошибкой, если сгенерировано предупреждение.
+    Смотрите [Пороги и Предупреждения][alerts] для полного обзора.
+    (например: `--err`)
+14. Укажите аргументы команды бенчмарка.
+    Смотрите [команду бенчмарка][command argument] для полного обзора.
+    (например: `bencher mock`)
+
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github actions push]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#push
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+
+[статистический непрерывный бенчмаркинг]: /ru/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[bencher run]: /ru/docs/explanation/bencher-run/
+[project option]: /ru/docs/explanation/bencher-run/#--project-project
+[token option]: /ru/docs/explanation/bencher-run/#--token-token
+[branch selection branch]: /ru/docs/explanation/branch-selection/#--branch-branch
+[testbed option]: /ru/docs/explanation/bencher-run/#--testbed-testbed
+[adapters]: /ru/docs/explanation/adapters/
+[alerts]: /ru/docs/explanation/thresholds/#alerts
+[command argument]: /ru/docs/explanation/bencher-run/#benchmark-command

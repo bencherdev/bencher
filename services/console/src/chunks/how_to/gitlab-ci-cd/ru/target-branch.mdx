@@ -1,0 +1,65 @@
+import TargetBranchCode from "../target-branch-code.mdx";
+
+## Целевая ветвь
+
+Угловым камнем [Статистического Непрерывного Бенчмаркинга][statistical continuous benchmarking]
+является наличие исторической базы для вашей целевой ветви.
+Затем эту историческую базу можно использовать для выявления регрессий производительности в запросах на слияние.
+
+<TargetBranchCode />
+
+1. Создайте файл GitLab CI/CD.
+   (например, `.gitlab-ci.yml`)
+2. Создайте задание GitLab CI/CD.
+   (например, `benchmark_target_branch`)
+3. Запустите `if` если пайплайн был вызван `push` в ветвь `main`.
+   Смотрите [документацию по `правилам` GitLab CI/CD][gitlab ci cd rules]
+   и [документацию по предопределенным переменным GitLab CI/CD][gitlab ci cd redefined variables] для полного обзора.
+   (например, `rules: - if: ...`)
+4. Установите `image` в котором будет выполняться задание.
+   Смотрите [документацию по `image` GitLab CI/CD][gitlab ci cd image]
+   для полного обзора.
+   (например, `image: debian:bullseye`)
+5. Установите CLI Bencher с помощью [удобного скрипта][install bencher cli].
+   (например, `before_script: ...`)
+6. Используйте подкоманду CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
+   для запуска бенчмарков вашей ветви `main`.
+   Смотрите [подкоманду CLI `bencher run`][bencher run] для полного обзора.
+   (например, `bencher run`)
+7. Установите опцию `--project` в слаг проекта.
+   Смотрите [документацию по `--project`][project option] для получения дополнительной информации.
+   (например, `--project save-walter-white-1234abcd`)
+8. Установите опцию `--token` в маскированную переменную среды `BENCHER_API_TOKEN`.
+   Смотрите [документацию по `--token`][token option] для получения дополнительной информации.
+   (например, `--token "$BENCHER_API_TOKEN"`)
+9.  Установите опцию `--branch` в имя ветви.
+    Смотрите [выбор ветви][branch selection branch] для полного обзора.
+    (например, `--branch main`)
+10. Установите опцию `--testbed` в имя тестового стенда.
+    Это должно совпадать с машиной, выбранной в `image`.
+    Смотрите [документацию по `--testbed`][testbed option] для получения дополнительной информации.
+    (например, `--testbed debian:bullseye`)
+11. Установите опцию `--adapter` в нужный адаптер для замеров производительности.
+    Смотрите [адаптеры для замеров производительности][adapters] для полного обзора.
+    (например, `--adapter json`)
+12. Установите флаг `--err` для прерывания команды, если было сгенерировано оповещение.
+    Смотрите [Пороги и Оповещения][alerts] для полного обзора.
+    (например, `--err`)
+13. Укажите аргументы команды для бенчмарка.
+    Смотрите [аргумент команды][command argument] для полного обзора.
+    (например, `bencher mock`)
+
+[gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
+[gitlab ci cd redefined variables]: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
+[gitlab ci cd image]: https://docs.gitlab.com/ee/ci/yaml/index.html#image
+
+[statistical continuous benchmarking]: /ru/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[install bencher cli]: /ru/docs/how-to/install-cli/#install-cli-with-script
+[bencher run]: /ru/docs/explanation/bencher-run/
+[project option]: /ru/docs/explanation/bencher-run/#--project-project
+[token option]: /ru/docs/explanation/bencher-run/#--token-token
+[branch selection branch]: /ru/docs/explanation/branch-selection/#--branch-branch
+[testbed option]: /ru/docs/explanation/bencher-run/#--testbed-testbed
+[adapters]: /ru/docs/explanation/adapters/
+[alerts]: /ru/docs/explanation/thresholds/#alerts
+[command argument]: /ru/docs/explanation/bencher-run/#benchmark-command

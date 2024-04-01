@@ -1,20 +1,16 @@
 ```yaml
-name: Track Benchmarks
+name: Track Benchmarks with Bencher
 
 on:
   workflow_run:
     workflows: [Run and Cache Benchmarks]
-    types:
-      - completed
+    types: [completed]
 
 jobs:
-  track_with_bencher:
+  track_fork_pr_branch:
     if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     env:
-      BENCHER_PROJECT: save-walter-white
-      BENCHER_ADAPTER: json
-      BENCHER_TESTBED: ubuntu-latest
       BENCHMARK_RESULTS: benchmark_results.json
       PR_EVENT: event.json
     steps:
@@ -57,18 +53,21 @@ jobs:
             let prEvent = JSON.parse(fs.readFileSync(process.env.PR_EVENT, {encoding: 'utf8'}));
             core.exportVariable("PR_HEAD", `${prEvent.number}/merge`);
             core.exportVariable("PR_BASE", prEvent.pull_request.base.ref);
-            core.exportVariable("PR_DEFAULT", prEvent.pull_request.base.repo.default_branch);
+            core.exportVariable("PR_BASE_SHA", prEvent.pull_request.base.sha);
             core.exportVariable("PR_NUMBER", prEvent.number);
       - uses: bencherdev/bencher@main
       - name: Track Benchmarks with Bencher
         run: |
           bencher run \
-          --if-branch '${{ env.PR_HEAD }}' \
-          --else-if-branch '${{ env.PR_BASE }}' \
-          --else-if-branch '${{ env.PR_DEFAULT }}' \
-          --ci-number '${{ env.PR_NUMBER }}' \
-          --github-actions "${{ secrets.GITHUB_TOKEN }}" \
-          --token "${{ secrets.BENCHER_API_TOKEN }}" \
+          --project save-walter-white-1234abcd \
+          --token '${{ secrets.BENCHER_API_TOKEN }}' \
+          --branch '${{ env.PR_HEAD }}' \
+          --branch-start-point '${{ env.PR_BASE }}' \
+          --branch-start-point-hash '${{ env.PR_BASE_SHA }}' \
+          --testbed ubuntu-latest \
+          --adapter json \
           --err \
+          --github-actions '${{ secrets.GITHUB_TOKEN }}' \
+          --ci-number '${{ env.PR_NUMBER }}' \
           --file "$BENCHMARK_RESULTS"
 ```

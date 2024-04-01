@@ -1,0 +1,133 @@
+import PullRequestsForkRunCode from "../pull-requests-fork-run-code.mdx";
+import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
+
+### デフォルトブランチからのフォークPRのベンチマークとアップロード
+
+これは、フォークプルリクエストに[継続的ベンチマーキング][continuous benchmarking]を追加するための安全で推奨される方法です。
+これには2つの別々のワークフローが必要です。
+最初のワークフローは、`pull_request`コンテキストでベンチマーク結果を実行してキャッシュします。
+`BENCHER_API_TOKEN`や`GITHUB_TOKEN`などのシークレットはここでは利用できません。
+次に、2つ目のワークフローがキャッシュされたベンチマーク結果を`workflow_run`コンテキストでダウンロードし、それをBencherにアップロードします。
+これは、`workflow_run`がリポジトリのデフォルトブランチのコンテキストで実行されるため、`BENCHER_API_TOKEN`や`GITHUB_TOKEN`などのシークレットが利用可能であるため実現します。
+最初の`pull_request`ワークフローで使用されたプルリクエスト番号、ヘッドブランチ、およびベースブランチは、それらがそこで利用可能でないため、`workflow_run`ワークフローに明示的に渡される必要があります。
+これらのワークフローは、_デフォルト_ ブランチに存在する場合にのみ実行されます。
+詳細については、[トリガーワークフローからのデータの使用][github actions trigger workflow]をご覧ください。
+
+<PullRequestsForkRunCode />
+
+1. 最初のGitHub Actions `workflow`ファイルを作成します。
+   (例: `.github/workflows/run_fork_pr_benchmarks.yml`)
+2. このワークフローに名前を付けて、2番目のワークフローから参照できるようにします。
+   (例: `name: Run and Cache Benchmarks`)
+3. `pull_request`イベントで実行します:
+    - `opened` - プルリクエストが作成されました。
+    - `reopened` - 以前に閉じられたプルリクエストが再開されました。
+    - `edited` - プルリクエストのタイトルまたはボディが編集されたか、プルリクエストのベースブランチが変更されました。
+    - `synchronize` - プルリクエストのヘッドブランチが更新されました。
+      例えば、ヘッドブランチがベースブランチから更新されたか、ヘッドブランチに新しいコミットがプッシュされました。
+
+   詳細については、[GitHub Actions `on` ドキュメント][github actions on]
+   と [GitHub Actions `pull_request` ドキュメント][github action pull_request]をご覧ください。
+   (例: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
+4. GitHub Actions `job`を作成します。
+   (例: `jobs: benchmark_fork_pr_branch`)
+5. ジョブが実行されるマシンのタイプを設定します。
+   詳細については、[GitHub Actions `runs-on` ドキュメント][github actions runs-on]
+   をご覧ください。
+   (例: `runs-on: ubuntu-latest`)
+6. フォークPRブランチのソースコードをチェックアウトします。
+   (例: `uses: actions/checkout@v4`)
+7. ベンチマークを実行し、結果をファイルに保存します。
+   (例: `/bin/echo '{ ... }' > benchmark_results.json`)
+8. ベンチマーク結果ファイルをアーティファクトとしてアップロードします。
+   (例: `uses: actions/upload-artifact@v4`)
+9. `pull_request`イベントオブジェクトをアーティファクトとしてアップロードします。
+  (例: `uses: actions/upload-artifact@v4`)
+
+<PullRequestsForkTrackCode />
+
+1. 最初のGitHub Actions `workflow`ファイルを作成します。
+   (例: `.github/workflows/track_fork_pr_benchmarks.yml`)
+2. このワークフローに名前を付けて、2番目のワークフローとして名付けます。
+   (例: `name: Track Benchmarks with Bencher`)
+3. [the `workflow_run` イベント][github actions workflow_run]で2つのワークフローを連鎖させます。
+   (例: `on: workflow_run: ...`)
+4. GitHub Actions `job`を作成します。
+   (例: `jobs: track_fork_pr_branch`)
+5. 前のワークフローの結論が成功だった場合のみこのジョブを実行します。
+   [GitHub Actions `workflow_run` イベント][github actions workflow_run]を使用します。
+   (例: `if: github.event.workflow_run.conclusion == 'success'`)
+6. ジョブが実行されるマシンのタイプを設定します。
+   詳紀については、[GitHub Actions `runs-on` ドキュメント][github actions runs-on]
+   をご覧ください。
+   (例: `runs-on: ubuntu-latest`)
+7. ベンチマーク結果と`pull_request`イベントオブジェクトファイル名を環境変数として設定します。
+   (例: `env: ...`)
+8. キャッシュされたベンチマーク結果と`pull_request`イベントをダウンロードします。
+   (例: `uses: actions/github-script@v6`)
+9. キャッシュされたベンチマーク結果と`pull_request`イベントを展開します。
+   (例: `unzip ...`)
+10. `pull_request`イベントから必要なデータを環境変数としてエクスポートします。
+    (例: `core.exportVariable(...)`)
+11. [GitHub Action][bencher cli github action]を使用してBencher CLIをインストールします。
+   (例: `uses: bencherdev/bencher@main`)
+12. <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用して、フォークプルブランチのベンチマークを追跡します。
+    詳細については、[the `bencher run` CLIサブコマンド][bencher run]をご覧ください。
+    (例: `bencher run`)
+13. `--project`オプションをプロジェクトのスラグに設定します。
+    詳細については、[the `--project` ドキュメント][project option]をご覧ください。
+    (例: `--project save-walter-white-1234abcd`)
+14. `--token`オプションを`BENCHER_API_TOKEN` **リポジトリ** シークレットに設定します。
+    詳細については、[the `--token` ドキュメント][token option]をご覧ください。
+    (例: `--token '${{ secrets.BENCHER_API_TOKEN }}'`)
+15. `--branch`オプションを、[GitHub Actions `pull_request` イベント][github action pull_request]を使用してフォーマットしたフォークPR番号に設定します。
+    詳細については、[branch selection][branch selection branch]をご覧ください。
+    (例: `--branch '${{ env.PR_HEAD }}'`)
+16. `--branch-start-point`オプションを、[GitHub Actions `pull_request` イベント][github action pull_request]を使用してフォークPRベースブランチの起点に設定します。
+    詳細については、[branch selection][branch selection start point]をご覧ください。
+    (例: `--branch-start-point '${{ env.PR_BASE }}'`)
+17. `--branch-start-point-hash`オプションを、[GitHub Actions `pull_request` イベント][github action pull_request]を使用してフォークPRベースブランチの起点ハッシュに設定します。
+    詳細については、[branch selection][branch selection start point hash]をご覧ください。
+    (例: `--branch-start-point-hash '${{ env.PR_BASE_SHA }}'`)
+18. `--testbed`オプションをテストベッド名に設定します。
+    これは、`runs-on`で選択されたマシンと一致すべきです。
+    詳細については、[the `--testbed` ドキュメント][testbed option]をご覧ください。
+    (例: `--testbed ubuntu-latest`)
+19. `--adapter`オプションを、望むベンチマークハーネスアダプターに設定します。
+    詳細については、[benchmark harness adapters][adapters]をご覧ください。
+    (例: `--adapter json`)
+20. アラートが生成された場合にコマンドを失敗させるために`--err`フラグを設定します。
+    詳細については、[Threshold & Alerts][alerts]をご覧ください。
+    (例: `--err`)
+21. [the GitHub Actions `GITHUB_TOKEN` 環境変数][github token]を使用してGitHub API認証トークンを`--github-actions`オプションに設定し、プルリクエストに結果をコメントとして投稿します。
+    詳細については、[the `--github-actions` ドキュメント][github actions option]をご覧ください。
+    (例: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+22. `--ci-number`オプションをプルリクエスト番号に設定します。
+    詳細については、[the `--ci-number` ドキュメント][ci number option]をご覧ください。
+    (例: `--ci-number '${{ env.PR_NUMBER }}'`)
+23. `--file`オプションをベンチマーク結果ファイルのパスに設定します。
+    詳細については、[benchmark command][command argument]をご覧ください。
+    (例: `--file "$BENCHMARK_RESULTS"`)
+
+
+[github actions trigger workflow]: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow
+[github actions on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github action pull_request]: https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+[github actions workflow_run]: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run
+[github actions runs-on]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+[github token]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication
+
+[continuous benchmarking]: /ja/docs/explanation/continuous-benchmarking/
+[bencher run]: /ja/docs/explanation/bencher-run/
+[project option]: /ja/docs/explanation/bencher-run/#--project-project
+[token option]: /ja/docs/explanation/bencher-run/#--token-token
+[branch selection branch]: /ja/docs/explanation/branch-selection/#--branch-branch
+[branch selection start point]: /ja/docs/explanation/branch-selection/#--branch-start-point-branch
+[branch selection start point hash]: /ja/docs/explanation/branch-selection/#--branch-start-point-hash-hash
+[testbed option]: /ja/docs/explanation/bencher-run/#--testbed-testbed
+[adapters]: /ja/docs/explanation/adapters/
+[alerts]: /ja/docs/explanation/thresholds/#alerts
+[github actions option]: /ja/docs/explanation/bencher-run/#--github-actions-github_token
+[ci number option]: /ja/docs/explanation/bencher-run/#--ci-id-id
+[command argument]: /ja/docs/explanation/bencher-run/#benchmark-command

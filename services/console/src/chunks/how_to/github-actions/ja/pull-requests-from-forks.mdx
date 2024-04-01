@@ -1,0 +1,17 @@
+## フォークからのプルリクエスト
+
+公開されたオープンソースプロジェクトではよくあることですが、フォークからプルリクエストを受け付ける予定の場合、少し異なる扱いが必要になります。
+セキュリティ上の理由から、`BENCHER_API_TOKEN`や`GITHUB_TOKEN`などの秘密情報は、フォークのPRでGitHub Actionsでは利用できません。
+つまり、外部のコントリビュータがフォークからPRを開いた場合、上記の例は**動作しません**。
+フォークのPRには2つの選択肢があります：
+
+- ⛑️ より安全：[フォークPRをベンチマークしてデフォルトブランチからアップロードする][benchmark fork pr and upload from default branch]
+- ⚠️ よりリスク：[ターゲットブランチから必須レビュアー付きでフォークPRをベンチマークする][benchmark fork pr from target branch with required reviewers]
+
+pwnリクエストを防ぐためのフルオーバービューについては、この[GitHub Security Labの記事][github actions pwn requests]と[このブログ投稿][nathandavison.com blog]を参照してください。
+
+[github actions pwn requests]: https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
+[nathandavison.com blog]: https://nathandavison.com/blog/github-actions-and-the-threat-of-malicious-pull-requests
+
+[benchmark fork pr and upload from default branch]: #benchmark-fork-pr-and-upload-from-default-branch
+[benchmark fork pr from target branch with required reviewers]: #benchmark-fork-pr-from-target-branch-with-required-reviewers
