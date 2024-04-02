@@ -353,14 +353,6 @@ async fn patch_inner(
 
     let query_branch =
         QueryBranch::from_resource_id(conn_lock!(context), query_project.id, &path_params.branch)?;
-    let update_branch = UpdateBranch::from(json_branch.clone());
-    diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
-        .set(&update_branch)
-        .execute(conn_lock!(context))
-        .map_err(resource_conflict_err!(
-            Branch,
-            (&query_branch, &json_branch)
-        ))?;
 
     // If there is a hash then try to see if there is already a code version for
     // this branch with that particular hash.
@@ -372,7 +364,21 @@ async fn patch_inner(
             query_branch.id,
             Some(hash),
         )?;
+
+        // Don't mark the branch as updated if only the hash is being updated.
+        if json_branch.is_hash_only() {
+            return query_branch.into_json_for_project(conn_lock!(context), &query_project);
+        }
     }
+
+    let update_branch = UpdateBranch::from(json_branch.clone());
+    diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
+        .set(&update_branch)
+        .execute(conn_lock!(context))
+        .map_err(resource_conflict_err!(
+            Branch,
+            (&query_branch, &json_branch)
+        ))?;
 
     conn_lock!(context, |conn| QueryBranch::get(conn, query_branch.id)
         .map_err(resource_not_found_err!(Branch, query_branch))

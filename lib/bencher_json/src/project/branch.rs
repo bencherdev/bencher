@@ -144,6 +144,13 @@ pub struct JsonUpdateBranch {
     pub hash: Option<GitHash>,
 }
 
+impl JsonUpdateBranch {
+    // Check whether only the `git` hash is being updated.
+    pub fn is_hash_only(&self) -> bool {
+        self.name.is_none() && self.slug.is_none() && self.hash.is_some()
+    }
+}
+
 #[typeshare::typeshare]
 #[derive(
     Debug, Clone, Copy, Default, PartialEq, Eq, Hash, derive_more::Display, Serialize, Deserialize,
