@@ -220,7 +220,13 @@ impl Run {
     async fn generate_report(&self) -> Result<Option<JsonNewReport>, RunError> {
         let branch = self
             .branch
-            .get(&self.project, self.dry_run, self.log, &self.backend)
+            .get(
+                &self.project,
+                self.hash.as_ref(),
+                self.dry_run,
+                self.log,
+                &self.backend,
+            )
             .await?;
         let testbed = self
             .testbed

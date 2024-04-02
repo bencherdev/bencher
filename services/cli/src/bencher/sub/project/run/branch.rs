@@ -79,6 +79,8 @@ pub enum BranchError {
     CreateBranch(crate::BackendError),
     #[error("Failed to update detached branch: {0}")]
     UpdateBranch(crate::BackendError),
+    #[error("Failed to update branch to reserve next hash: {0}")]
+    NextBranchHash(crate::BackendError),
 }
 
 impl TryFrom<CliRunBranch> for Branch {
@@ -125,12 +127,13 @@ impl Branch {
     pub async fn get(
         &self,
         project: &ResourceId,
+        hash: Option<&GitHash>,
         dry_run: bool,
         log: bool,
         backend: &AuthBackend,
     ) -> Result<NameId, BranchError> {
         if !dry_run {
-            self.exists_or_create(project, log, backend).await?;
+            self.exists_or_create(project, hash, log, backend).await?;
         }
         Ok(self.branch.clone())
     }
@@ -138,12 +141,13 @@ impl Branch {
     async fn exists_or_create(
         &self,
         project: &ResourceId,
+        hash: Option<&GitHash>,
         log: bool,
         backend: &AuthBackend,
     ) -> Result<(), BranchError> {
         // Check to make sure that the branch exists before running the benchmarks.
         // Then check that the start point branch matches, if specified.
-        match (&self.branch)
+        let branch = match (&self.branch)
             .try_into()
             .map_err(BranchError::ParseBranch)?
         {
@@ -151,14 +155,16 @@ impl Branch {
                 let branch = get_branch(project, &uuid.into(), backend)
                     .await
                     .map_err(BranchError::GetBranchUuid)?;
-                self.check_start_point(project, branch, log, backend)
+                self.check_start_point(project, &branch, log, backend)
                     .await?;
+                branch
             },
             NameIdKind::Slug(slug) => {
                 match get_branch(project, &slug.clone().into(), backend).await {
                     Ok(branch) => {
-                        self.check_start_point(project, branch, log, backend)
+                        self.check_start_point(project, &branch, log, backend)
                             .await?;
+                        branch
                     },
                     Err(crate::BackendError::Client(ClientError::ErrorResponse(
                         ErrorResponse {
@@ -178,15 +184,16 @@ impl Branch {
                             log,
                             backend,
                         )
-                        .await?;
+                        .await?
                     },
                     Err(e) => return Err(BranchError::GetBranchSlug(e)),
                 }
             },
             NameIdKind::Name(name) => match get_branch_by_name(project, &name, backend).await {
                 Ok(Some(branch)) => {
-                    self.check_start_point(project, branch, log, backend)
+                    self.check_start_point(project, &branch, log, backend)
                         .await?;
+                    branch
                 },
                 Ok(None) => {
                     cli_println_quietable!(
@@ -194,18 +201,22 @@ impl Branch {
                         "Failed to find branch with name \"{name}\" in project \"{project}\"."
                     );
                     create_branch(project, name, None, self.start_point.clone(), log, backend)
-                        .await?;
+                        .await?
                 },
                 Err(e) => return Err(e),
             },
-        }
-        Ok(())
+        };
+
+        // If there is a hash specified for this report,
+        // then go ahead and reserve it as the next hash for the branch.
+        // This will help prevent race conditions for any other branches that use this one as their start point.
+        reserve_hash(project, &branch, hash, backend).await
     }
 
     async fn check_start_point(
         &self,
         project: &ResourceId,
-        current_branch: JsonBranch,
+        current_branch: &JsonBranch,
         log: bool,
         backend: &AuthBackend,
     ) -> Result<(), BranchError> {
@@ -242,7 +253,7 @@ impl Branch {
                     );
                     return rename_and_create_branch(
                         project,
-                        &current_branch,
+                        current_branch,
                         Some(start_point),
                         log,
                         backend,
@@ -261,7 +272,7 @@ impl Branch {
                             );
                             rename_and_create_branch(
                                 project,
-                                &current_branch,
+                                current_branch,
                                 Some(start_point),
                                 log,
                                 backend,
@@ -278,7 +289,7 @@ impl Branch {
                         );
                         rename_and_create_branch(
                             project,
-                            &current_branch,
+                            current_branch,
                             Some(start_point),
                             log,
                             backend,
@@ -302,7 +313,7 @@ impl Branch {
                     log,
                     "No current start point branch and a start point branch was specified.",
                 );
-                rename_and_create_branch(project, &current_branch, Some(start_point), log, backend)
+                rename_and_create_branch(project, current_branch, Some(start_point), log, backend)
                     .await?;
             },
             // If a start point is not specified and reset is not set, then there is nothing to check.
@@ -315,7 +326,7 @@ impl Branch {
                 // If reset is set then the branch needs to be reset.
                 if self.reset {
                     cli_println_quietable!(log, "Branch will be reset to an empty start point.",);
-                    rename_and_create_branch(project, &current_branch, None, log, backend).await?;
+                    rename_and_create_branch(project, current_branch, None, log, backend).await?;
                 }
             },
         }
@@ -486,7 +497,7 @@ async fn rename_branch(
     // TODO archive the detached branch
     match update_branch(
         project,
-        &current_branch.slug.clone().into(),
+        &current_branch.uuid.into(),
         Some(branch_name.clone().into()),
         Some(branch_slug.clone().into()),
         backend,
@@ -512,7 +523,7 @@ async fn rename_branch(
             );
             update_branch(
                 project,
-                &current_branch.slug.clone().into(),
+                &current_branch.uuid.into(),
                 Some(branch_name.clone().into()),
                 Some(branch_slug.clone().into()),
                 backend,
@@ -530,7 +541,11 @@ async fn update_branch(
     slug: Option<bencher_client::types::Slug>,
     backend: &AuthBackend,
 ) -> Result<JsonBranch, BranchError> {
-    let update_branch = &JsonUpdateBranch { name, slug };
+    let update_branch = &JsonUpdateBranch {
+        name,
+        slug,
+        hash: None,
+    };
     backend
         .send_with(|client| async move {
             client
@@ -572,4 +587,36 @@ async fn rename_branch_suffix(
         format!("version/{}", current_start_point.version.number)
     };
     Ok(format!("{branch_name}/{version_suffix}"))
+}
+
+async fn reserve_hash(
+    project: &ResourceId,
+    branch: &JsonBranch,
+    hash: Option<&GitHash>,
+    backend: &AuthBackend,
+) -> Result<(), BranchError> {
+    let Some(hash) = hash else {
+        return Ok(());
+    };
+
+    let slug = &ResourceId::from(branch.slug.clone());
+    let update_branch = &JsonUpdateBranch {
+        name: None,
+        slug: None,
+        hash: Some(hash.clone().into()),
+    };
+    backend
+        .send(|client| async move {
+            client
+                .proj_branch_patch()
+                .project(project.clone())
+                .branch(slug.clone())
+                .body(update_branch.clone())
+                .send()
+                .await
+        })
+        .await
+        .map_err(BranchError::NextBranchHash)?;
+
+    Ok(())
 }

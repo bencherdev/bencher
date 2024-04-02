@@ -1,5 +1,5 @@
 use bencher_client::types::JsonUpdateBranch;
-use bencher_json::{BranchName, ResourceId, Slug};
+use bencher_json::{BranchName, GitHash, ResourceId, Slug};
 
 use crate::{
     bencher::{backend::AuthBackend, sub::SubCmd},
@@ -13,6 +13,7 @@ pub struct Update {
     pub branch: ResourceId,
     pub name: Option<BranchName>,
     pub slug: Option<Slug>,
+    pub hash: Option<GitHash>,
     pub backend: AuthBackend,
 }
 
@@ -25,6 +26,7 @@ impl TryFrom<CliBranchUpdate> for Update {
             branch,
             name,
             slug,
+            hash,
             backend,
         } = create;
         Ok(Self {
@@ -32,6 +34,7 @@ impl TryFrom<CliBranchUpdate> for Update {
             branch,
             name,
             slug,
+            hash,
             backend: backend.try_into()?,
         })
     }
@@ -39,10 +42,13 @@ impl TryFrom<CliBranchUpdate> for Update {
 
 impl From<Update> for JsonUpdateBranch {
     fn from(update: Update) -> Self {
-        let Update { name, slug, .. } = update;
+        let Update {
+            name, slug, hash, ..
+        } = update;
         Self {
             name: name.map(Into::into),
             slug: slug.map(Into::into),
+            hash: hash.map(Into::into),
         }
     }
 }

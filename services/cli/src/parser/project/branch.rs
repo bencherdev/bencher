@@ -119,6 +119,10 @@ pub struct CliBranchUpdate {
     #[clap(long)]
     pub slug: Option<Slug>,
 
+    /// Next version of the branch `git` hash
+    #[clap(long)]
+    pub hash: Option<GitHash>,
+
     #[clap(flatten)]
     pub backend: CliBackend,
 }

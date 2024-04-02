@@ -9504,6 +9504,15 @@
       "JsonUpdateBranch": {
         "type": "object",
         "properties": {
+          "hash": {
+            "nullable": true,
+            "description": "The full `git` hash for the next version of the branch. This is useful in cases where there may be a race condition to update a start point branch, such as when a start point branch has been updated but its benchmarks have not yet finished.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GitHash"
+              }
+            ]
+          },
           "name": {
             "nullable": true,
             "description": "The new name of the branch. Maximum length is 256 characters.",

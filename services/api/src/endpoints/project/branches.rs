@@ -22,13 +22,13 @@ use crate::{
         Endpoint,
     },
     error::{resource_conflict_err, resource_not_found_err},
-    model::user::auth::{AuthUser, PubBearerToken},
     model::{
         project::{
             branch::{InsertBranch, QueryBranch, UpdateBranch},
+            version::QueryVersion,
             QueryProject,
         },
-        user::auth::BearerToken,
+        user::auth::{AuthUser, BearerToken, PubBearerToken},
     },
     schema,
     util::search::Search,
@@ -361,6 +361,18 @@ async fn patch_inner(
             Branch,
             (&query_branch, &json_branch)
         ))?;
+
+    // If there is a hash then try to see if there is already a code version for
+    // this branch with that particular hash.
+    // Otherwise, create a new code version for this branch with the hash.
+    if let Some(hash) = &json_branch.hash {
+        QueryVersion::get_or_increment(
+            conn_lock!(context),
+            query_project.id,
+            query_branch.id,
+            Some(hash),
+        )?;
+    }
 
     conn_lock!(context, |conn| QueryBranch::get(conn, query_branch.id)
         .map_err(resource_not_found_err!(Branch, query_branch))

@@ -359,7 +359,7 @@ pub struct UpdateBranch {
 
 impl From<JsonUpdateBranch> for UpdateBranch {
     fn from(update: JsonUpdateBranch) -> Self {
-        let JsonUpdateBranch { name, slug } = update;
+        let JsonUpdateBranch { name, slug, .. } = update;
         Self {
             name,
             slug,
