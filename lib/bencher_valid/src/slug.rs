@@ -79,6 +79,7 @@ pub fn is_valid_slug(slug: &str) -> bool {
 
 impl Slug {
     pub const MAX: usize = MAX_LEN;
+    #[cfg(feature = "full")]
     const RAND_LEN: usize = 8;
 
     pub fn new<S>(slug: S) -> Self

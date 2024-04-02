@@ -80,6 +80,15 @@ const get_x_axis = (range: PerfRange): [string, string] => {
 	}
 };
 
+const get_x_type = (range: PerfRange) => {
+	switch (range) {
+		case PerfRange.DATE_TIME:
+			return "time";
+		case PerfRange.VERSION:
+			return "point";
+	}
+};
+
 const is_active = (alert: JsonPerfAlert) =>
 	alert?.status && alert.status == AlertStatus.Active;
 
@@ -357,6 +366,7 @@ const LinePlot = (props: Props) => {
 						{addTooltips(
 							Plot.plot({
 								x: {
+									type: get_x_type(props.range()),
 									grid: true,
 									label: `${x_axis_label} ➡`,
 									labelOffset: 36,

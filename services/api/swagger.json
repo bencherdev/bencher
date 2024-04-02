@@ -9506,7 +9506,7 @@
         "properties": {
           "hash": {
             "nullable": true,
-            "description": "The full `git` hash for the next version of the branch. This is useful in cases where there may be a race condition to update a start point branch, such as when a start point branch has been updated but its benchmarks have not yet finished.",
+            "description": "The full `git` commit hash for the next version of the branch. This is useful in cases where there may be a race condition when a start point branch has been updated but its benchmarks have not yet finished.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/GitHash"

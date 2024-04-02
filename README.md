@@ -30,16 +30,16 @@ Bencher consists of:
 
 <br />
 
-The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tutorial/quick-start/) tutorial.
-
 Though Bencher is open source, there is also a hosted version available [Bencher Cloud](https://bencher.dev/).
+
+The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tutorial/quick-start/) tutorial.
 
 <br />
 <p align="center">
-  <a href="https://discord.gg/yGEsdUh7R4">
+  <a href="https://bencher.dev/docs/tutorial/quick-start/">
     <img
-      src="https://s3.amazonaws.com/public.bencher.dev/chat/discord_invite.png"
-      alt="Bencher Discord Server"
+      src="https://s3.amazonaws.com/public.bencher.dev/github/continuous-benchmarking.png"
+      alt="Start Continuous Benchmarking"
     />
   </a>
 </p>

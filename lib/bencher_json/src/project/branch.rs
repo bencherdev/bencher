@@ -138,9 +138,9 @@ pub struct JsonUpdateBranch {
     /// The preferred new slug for the branch.
     /// Maximum length is 64 characters.
     pub slug: Option<Slug>,
-    /// The full `git` hash for the next version of the branch.
-    /// This is useful in cases where there may be a race condition to update a start point branch,
-    /// such as when a start point branch has been updated but its benchmarks have not yet finished.
+    /// The full `git` commit hash for the next version of the branch.
+    /// This is useful in cases where there may be a race condition
+    /// when a start point branch has been updated but its benchmarks have not yet finished.
     pub hash: Option<GitHash>,
 }
 
