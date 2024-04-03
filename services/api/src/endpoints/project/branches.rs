@@ -198,37 +198,37 @@ async fn post_inner(
         Permission::Create,
     )?;
 
-    // Soft creation
-    // If the new branch name already exists then return the existing branch
-    // instead of erroring due to the unique constraint
-    // This is useful to help prevent race conditions in CI
-    if let Some(true) = json_branch.soft {
-        conn_lock!(
-            context,
-            |conn| if let Ok(branch) = QueryBranch::belonging_to(&query_project)
+    let insert_branch =
+        InsertBranch::from_json(conn_lock!(context), query_project.id, json_branch.clone())?;
+
+    // Hold the same lock across checking for soft creation and inserting the branch
+    conn_lock!(context, |conn| {
+        // Soft creation
+        // If the new branch name already exists then return the existing branch
+        // instead of erroring due to the unique constraint
+        // This is useful to help prevent race conditions in CI
+        if let Some(true) = json_branch.soft {
+            if let Ok(branch) = QueryBranch::belonging_to(&query_project)
                 .filter(schema::branch::name.eq(json_branch.name.as_ref()))
                 .first::<QueryBranch>(conn)
             {
                 return branch.into_json_for_project(conn, &query_project);
             }
-        );
-    }
-    let start_point_thresholds = json_branch
+        }
+        diesel::insert_into(schema::branch::table)
+            .values(&insert_branch)
+            .execute(conn)
+            .map_err(resource_conflict_err!(Branch, insert_branch))?;
+    });
+
+    // Clone data and optionally thresholds from the start point
+    let clone_thresholds = json_branch
         .start_point
         .as_ref()
         .and_then(|sp| sp.thresholds)
         .unwrap_or_default();
-    let insert_branch =
-        InsertBranch::from_json(conn_lock!(context), query_project.id, json_branch)?;
-
-    diesel::insert_into(schema::branch::table)
-        .values(&insert_branch)
-        .execute(conn_lock!(context))
-        .map_err(resource_conflict_err!(Branch, insert_branch))?;
-
-    // Clone data and optionally thresholds from the start point
     insert_branch
-        .start_point(log, context, start_point_thresholds)
+        .start_point(log, context, clone_thresholds)
         .await?;
 
     conn_lock!(context, |conn| schema::branch::table
