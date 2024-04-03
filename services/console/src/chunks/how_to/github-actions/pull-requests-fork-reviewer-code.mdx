@@ -24,7 +24,7 @@ jobs:
       - name: Track Fork PR Benchmarks with Bencher
         run: |
           bencher run \
-          --project save-walter-white-1234abcd
+          --project save-walter-white-1234abcd \
           --token '${{ secrets.BENCHER_API_TOKEN }}' \
           --branch '${{ github.event.number }}/merge' \
           --branch-start-point '${{ github.base_ref }}' \
