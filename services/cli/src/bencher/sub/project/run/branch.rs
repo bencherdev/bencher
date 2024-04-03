@@ -22,28 +22,10 @@ pub struct Branch {
 }
 
 #[derive(Debug, Clone)]
-pub struct StartPoint {
+struct StartPoint {
     branch: NameId,
     hash: Option<GitHash>,
     self_ref: bool,
-}
-
-impl StartPoint {
-    // Check to see if the start point branch is the same as the specified branch.
-    fn is_self_ref(&self) -> bool {
-        self.self_ref
-    }
-
-    // Check to see if the start point branch matches the specified branch.
-    // If so, then the branch will start from the renamed version of itself.
-    fn rename_self_ref(mut self, branch: &JsonBranch) -> Self {
-        if self.is_self_ref() {
-            self.branch = branch.uuid.into();
-            self
-        } else {
-            self
-        }
-    }
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -335,6 +317,19 @@ impl Branch {
     }
 }
 
+impl StartPoint {
+    // Check to see if the start point branch matches the specified branch.
+    // If so, then the branch will start from the renamed version of itself.
+    fn rename_self_ref(mut self, branch: &JsonBranch) -> Self {
+        if self.self_ref {
+            self.branch = branch.uuid.into();
+            self
+        } else {
+            self
+        }
+    }
+}
+
 async fn get_branch(
     project: &ResourceId,
     branch: &ResourceId,
@@ -395,21 +390,18 @@ async fn create_branch(
     backend: &AuthBackend,
 ) -> Result<JsonBranch, BranchError> {
     let (start_point, message) = if let Some(StartPoint { branch, hash, .. }) = start_point {
-        let message = format!(
-            " with start point branch \"{branch}\"{}",
-            hash.as_ref()
-                .map(|hash| format!(" and hash \"{hash}\""))
-                .unwrap_or_default(),
-        );
-        // Only create a new branch with a start point if the branch is not the same as the start point.
-        // This is useful for relative benchmarking, where you want to be able to create a new bare branch, without a start point,
-        // and still take advantage of all the rename semantics found here.
         // Default to cloning the thresholds from the start point branch
         let start_point = JsonNewStartPoint {
             branch: branch.clone().into(),
             hash: hash.clone().map(Into::into),
             thresholds: Some(true),
         };
+        let message = format!(
+            " with start point branch \"{branch}\"{}",
+            hash.as_ref()
+                .map(|hash| format!(" and hash \"{hash}\""))
+                .unwrap_or_default(),
+        );
         (Some(start_point), Some(message))
     } else {
         (None, None)
@@ -566,6 +558,7 @@ async fn rename_branch_suffix(
     start_point: Option<&StartPoint>,
     backend: &AuthBackend,
 ) -> Result<String, BranchError> {
+    // If there is no current start point, then the branch will be detached.
     let Some(current_start_point) = current_start_point else {
         return Ok("detached".to_owned());
     };
@@ -576,7 +569,10 @@ async fn rename_branch_suffix(
             .await
             .map_err(BranchError::GetCurrentStartPoint)?;
 
-    let branch_name = if start_point.map(StartPoint::is_self_ref).unwrap_or_default() {
+    // If the start point is self-referential, then simply name it `HEAD` to avoid confusing recursive names.
+    // While `HEAD` isn't the most accurate name, it is a reserved name in git so it should not be used by any other branches.
+    // Otherwise, just use the name of the current start point branch.
+    let branch_name = if start_point.map(|sp| sp.self_ref).unwrap_or_default() {
         "HEAD"
     } else {
         current_start_point_branch.name.as_ref()
@@ -595,6 +591,7 @@ async fn reserve_hash(
     hash: Option<&GitHash>,
     backend: &AuthBackend,
 ) -> Result<(), BranchError> {
+    // If there is no hash specified, then there is nothing to reserve.
     let Some(hash) = hash else {
         return Ok(());
     };

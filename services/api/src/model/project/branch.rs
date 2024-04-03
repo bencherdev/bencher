@@ -157,12 +157,7 @@ impl InsertBranch {
         let slug = ok_slug!(conn, project_id, &name, slug, branch, QueryBranch)?;
         let timestamp = DateTime::now();
 
-        let start_point_id = if let Some(JsonNewStartPoint {
-            branch,
-            hash,
-            thresholds,
-        }) = start_point
-        {
+        let start_point_id = if let Some(JsonNewStartPoint { branch, hash, .. }) = start_point {
             // Get the start point branch
             let start_point_branch = QueryBranch::from_name_id(conn, project_id, &branch)?;
             let mut query = schema::branch_version::table
@@ -186,7 +181,7 @@ impl InsertBranch {
                     .first::<BranchVersionId>(conn)
                     .map_err(resource_not_found_err!(
                         BranchVersion,
-                        (branch, hash, thresholds)
+                        (branch, hash)
                     ))?,
             )
         } else {

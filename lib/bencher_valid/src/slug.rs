@@ -126,7 +126,7 @@ impl Slug {
 
     #[cfg(feature = "full")]
     #[must_use]
-    pub fn add_rand_suffix(self) -> Self {
+    pub fn with_rand_suffix(self) -> Self {
         let truncated = if self.as_ref().len() + 1 + Self::RAND_LEN > Self::MAX {
             let mid = Self::MAX - (1 + Self::RAND_LEN);
             slug::slugify(self.as_ref().split_at(mid).0)

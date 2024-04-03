@@ -17,7 +17,7 @@ where
 {
     let new_slug = Slug::unwrap_or_new(name, slug);
     Ok(if exists(conn, project_id, new_slug.as_ref()) {
-        new_slug.add_rand_suffix()
+        new_slug.with_rand_suffix()
     } else {
         new_slug
     })
