@@ -50,18 +50,18 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
 
 - Tutorial
   - [Quick Start](https://bencher.dev/docs/tutorial/quick-start/)
-  - [Docker](https://bencher.dev/docs/tutorial/docker/)
+  - [Docker Self-Hosted](https://bencher.dev/docs/tutorial/docker/)
 - How To
   - [Install CLI](https://bencher.dev/docs/how-to/install-cli/)
-  - [Track Benchmarks](https://bencher.dev/docs/how-to/track-benchmarks/)
+  - [Track Benchmarks in CI](https://bencher.dev/docs/how-to/track-benchmarks/)
   - [GitHub Actions](https://bencher.dev/docs/how-to/github-actions/)
   - [GitLab CI/CD](https://bencher.dev/docs/how-to/gitlab-ci-cd/)
   - [Self-Hosted GitHub App](https://bencher.dev/docs/how-to/github-app/)
 - Explanation
   - [Benchmarking Overview](https://bencher.dev/docs/explanation/benchmarking/)
   - [`bencher run`](https://bencher.dev/docs/explanation/bencher-run/)
-  - [Benchmark Adapters](https://bencher.dev/docs/explanation/adapters/)
   - [Branch Selection](https://bencher.dev/docs/explanation/branch-selection/)
+  - [Benchmark Adapters](https://bencher.dev/docs/explanation/adapters/)
   - [Thresholds & Alerts](https://bencher.dev/docs/explanation/thresholds/)
   - [Continuous Benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking/)
   - [Talks](https://bencher.dev/docs/explanation/talks/)
@@ -298,7 +298,7 @@ Otherwise, it will default to using the latest CLI version.
 ```yaml
 - uses: bencherdev/bencher@main
   with:
-    version: 0.3.0
+    version: 0.4.5
 ```
 
 Specify an exact version if using Bencher _Self-Hosted_.

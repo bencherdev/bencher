@@ -1,10 +1,11 @@
-## Pending `v0.4.5`
+## `v0.4.5`
 - Move Bencher Cloud out of BETA
 - Add tab loading progress bar to perf pages
 - Add `--branch-start-point` and `--branch-start-point-hash` options to `bencher run` to track rebasing and other branch changes
-- Deprecated: The `bencher run` options `--if-branch`, `--else-if-branch`, `--else-branch`, and `--endif-branch`
+- Deprecated: The `bencher run` options and flags `--if-branch`, `--else-if-branch`, `--else-branch`, and `--endif-branch`
   have been deprecated in favor of using `--branch` and `--branch-start-point`
-- **BREAKING CHANGE** `--if-branch` will now hard fail instead of skipping the run if not specified or if an empty string is provided
+- **BREAKING CHANGE** `--if-branch` will now hard fail instead of skipping the run if not specified or if an empty string is provided, and it will always be created even without `--else-branch` set
+- **BREAKING CHANGE** `--else-if-branch` will only use the first branch specified as the start point and it must exist, if it is a non-empty string
 - Update branch date time plot to use local time and version plot to be discrete along the x-axis
 
 ## `v0.4.4`
