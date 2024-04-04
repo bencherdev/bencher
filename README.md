@@ -261,7 +261,7 @@ Supported Operating Systems:
 
 ### Repository Secrets
 
-Add `BENCHER_API_TOKEN` to you **Repository** secrets (ex: `Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`). You can find your API tokens by running `bencher token ls --user my-user-slug` or by going to the Bencher Console (ex: `https://bencher.dev/console/users/my-user-slug/tokens`).
+Add `BENCHER_API_TOKEN` to you **Repository** secrets (ex: `Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`). You can find your API tokens by running `bencher token list my-user-slug` or [view them in the Bencher Console](https://bencher.dev/console/users/tokens).
 
 ### Error on Alert
 
