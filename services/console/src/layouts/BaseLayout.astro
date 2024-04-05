@@ -4,7 +4,7 @@ import "../styles/styles.scss";
 import Navbar from "../components/navbar/Navbar.astro";
 import Footer from "../components/site/Footer.astro";
 import { BENCHER_TITLE, BENCHER_DESCRIPTION } from "../util/resource";
-import { BENCHER_SITE_URL, BENCHER_WORDMARK } from "../util/ext";
+import { BENCHER_SITE_URL } from "../util/ext";
 import { defaultLang } from "../i18n/ui.ts";
 import { Author } from "../components/docs/author";
 // import { ViewTransitions } from "astro:transitions";
@@ -23,6 +23,18 @@ interface Props {
 // https://docs.astro.build/en/reference/directives-reference/#definevars
 const PUBLIC_GOOGLE_ANALYTICS_ID = import.meta.env.PUBLIC_GOOGLE_ANALYTICS_ID;
 const { title, titleFmt, description, published, modified, lang, author, canonical} = Astro.props;
+
+const BENCHER_OG_IMAGE = "https://s3.amazonaws.com/public.bencher.dev/img/bencher-og-image.png";
+
+const image = () => {
+  return {
+    url: BENCHER_OG_IMAGE,
+    type: "image/png",
+    width: 1200,
+    height: 630,
+    alt: "🐰 Bencher",
+  }
+}
 
 const article = () => {
   const article: {
@@ -73,12 +85,13 @@ const article = () => {
         basic: {
           title: titleFmt ? titleFmt(title) : title,
           type: "website",
-          image: BENCHER_WORDMARK,
+          image: BENCHER_OG_IMAGE,
         },
         optional: {
           siteName: "🐰 Bencher",
           description: description ?? BENCHER_DESCRIPTION,
         },
+        image: image(),
         article: article(),
       }}
       twitter={{
