@@ -10,13 +10,15 @@ interface Props {
   titleFmt?: undefined | ((title: string) => string);
   description: string;
   heading?: string;
+  published?: undefined | string;
+  modified?: undefined | string;
   lang?: string;
   collection?: undefined | Collection;
   slug?: undefined | string;
   author?: Author;
 }
 
-const { title, titleFmt, description, heading, lang, collection, slug, author } = Astro.props;
+const { title, titleFmt, description, heading, published, modified, lang, collection, slug, author } = Astro.props;
 ---
 
 <InnerLayout
@@ -24,6 +26,8 @@ const { title, titleFmt, description, heading, lang, collection, slug, author } 
   titleFmt={titleFmt ?? ((title) => `🐰 ${heading ?? title}`)}
   description={description}
   heading={heading}
+  published={published}
+  modified={modified}
   tab={DocsTab.Learn}
   lang={lang}
   collection={collection}

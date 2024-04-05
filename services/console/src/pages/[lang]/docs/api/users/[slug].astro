@@ -4,6 +4,7 @@ import ApiLayout from "../../../../../layouts/docs/ApiLayout.astro";
 import Operation from "../../../../../components/docs/api/Operation.astro";
 import { otherLanguages } from "../../../../../i18n/ui";
 import Collection from "../../../../../util/collection";
+import { API_DOCS_MODIFIED, API_DOCS_PUBLISHED } from "../../../../../i18n/utils";
 
 const collection = Collection.users;
 
@@ -28,6 +29,8 @@ const { lang, slug } = Astro.params;
   titleFmt={(_title) => `🐰 ${page.data.heading}`}
   description={page.data.description}
   heading={page.data.heading}
+  published={API_DOCS_PUBLISHED}
+  modified={API_DOCS_MODIFIED}
   collection={collection}
   slug={slug}
   lang={lang}

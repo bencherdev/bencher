@@ -73,3 +73,6 @@ export const getEnCollection = async (collection: Collection) => {
 		.filter(filterDraft)
 		.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 };
+
+export const API_DOCS_PUBLISHED = "2024-02-12T07:26:00Z";
+export const API_DOCS_MODIFIED = "2024-04-03T11:23:00Z";

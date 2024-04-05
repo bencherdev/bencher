@@ -10,12 +10,14 @@ interface Props {
   titleFmt?: undefined | ((title: string) => string);
   description: string;
   heading?: string;
+  published?: undefined | string;
+  modified?: undefined | string;
   lang?: string;
   collection?: Collection;
   slug?: undefined | string;
 }
 
-const { title, titleFmt, description, heading, lang, collection, slug } = Astro.props;
+const { title, titleFmt, description, heading, published, modified, lang, collection, slug } = Astro.props;
 
 const canonical = () => {
   if (collection && slug) {
@@ -35,6 +37,8 @@ const canonical = () => {
   titleFmt={titleFmt ?? ((title) => `🧑‍💻 ${heading ?? `${title} API`}`)}
   description={description}
   heading={heading}
+  published={published}
+  modified={modified}
   tab={DocsTab.Api}
   collection={collection}
   slug={slug}

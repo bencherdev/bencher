@@ -5,12 +5,15 @@ import DocsMenu from "../../components/docs/menu/DocsMenu.astro";
 import { DocsTab } from "../../components/docs/menu/docs_tab";
 import { Author } from "../../components/docs/author";
 import type Collection from "../../util/collection";
+import { fmtDateTime } from "../../config/util";
 
 interface Props {
   title: string;
   titleFmt?: undefined | ((title: string) => string);
   description: string;
   heading?: undefined | string;
+  published?: undefined | string;
+  modified?: undefined | string;
   tab?: DocsTab;
   lang?: undefined | string;
   collection?: undefined | Collection;
@@ -19,13 +22,15 @@ interface Props {
   canonical?: undefined | string;
 }
 
-const { title, titleFmt, description, heading, tab, lang, collection, slug, author, canonical } = Astro.props;
+const { title, titleFmt, description, heading, published, modified, tab, lang, collection, slug, author, canonical } = Astro.props;
 ---
 
 <BaseLayout
   title={title}
   titleFmt={titleFmt}
   description={description}
+  published={published}
+  modified={modified}
   lang={lang}
   author={author}
   canonical={canonical}
@@ -64,6 +69,13 @@ const { title, titleFmt, description, heading, tab, lang, collection, slug, auth
               ) : (
                 <slot />
               )
+            }
+            {published &&
+              <br />
+              <hr />
+              <p>Published: {fmtDateTime(published)}
+              {modified && modified !== published && <>| Last Updated: {fmtDateTime(modified)}</>}
+              </p>
             }
           </div>
         </section>

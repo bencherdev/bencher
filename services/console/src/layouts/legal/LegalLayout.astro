@@ -7,15 +7,19 @@ interface Props {
   titleFmt?: (title: string) => string;
   description: string;
   heading: string;
+  published?: undefined | string;
+  modified?: undefined | string;
 }
 
-const { title, titleFmt, description, heading } = Astro.props;
+const { title, titleFmt, description, heading, published, modified } = Astro.props;
 ---
 
 <BaseLayout
   title={title}
   titleFmt={titleFmt ?? ((title) => `⚖️ ${title}`)}
   description={description}
+  published={published}
+  modified={modified}
 >
   <!-- Note that the AuthNavbar does *not* fill the slot `navbar`. It is a client-side override.  -->
   <AuthNavbar client:only="solid-js" />

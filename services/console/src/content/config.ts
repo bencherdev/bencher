@@ -9,6 +9,8 @@ const page = defineCollection({
 		title: z.string(),
 		description: z.string(),
 		heading: z.string(),
+		published: z.string().optional(),
+		modified: z.string().optional(),
 		sortOrder: z.number(),
 		draft: z.boolean().optional(),
 	}),
@@ -20,6 +22,8 @@ const swagger = defineCollection({
 		title: z.string(),
 		description: z.string(),
 		heading: z.string(),
+		published: z.string().optional(),
+		modified: z.string().optional(),
 		sortOrder: z.number(),
 		draft: z.boolean().optional(),
 		paths: z.array(

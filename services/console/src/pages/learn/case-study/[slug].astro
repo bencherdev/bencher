@@ -22,6 +22,8 @@ const { Content } = await page.render();
   titleFmt={(_title) => `🔬 ${page.data.heading}`}
   description={page.data.description}
   heading={page.data.heading}
+  published={page.data.published}
+  modified={page.data.modified}
   author={Author.everett}
   collection={collection}
   slug={slug}

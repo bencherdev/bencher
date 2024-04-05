@@ -13,6 +13,8 @@ interface Props {
   title: string;
   titleFmt?: undefined | ((title: string) => string);
   description: string;
+  published?: undefined | string;
+  modified?: undefined | string;
   lang?: undefined | string;
   author?: undefined | Author;
   canonical?: undefined | string;
@@ -20,7 +22,30 @@ interface Props {
 
 // https://docs.astro.build/en/reference/directives-reference/#definevars
 const PUBLIC_GOOGLE_ANALYTICS_ID = import.meta.env.PUBLIC_GOOGLE_ANALYTICS_ID;
-const { title, titleFmt, description, lang, author, canonical} = Astro.props;
+const { title, titleFmt, description, published, modified, lang, author, canonical} = Astro.props;
+
+const article = () => {
+  const article: {
+      publishedTime?: string;
+      modifiedTime?: string;
+      expirationTime?: string;
+      authors?: string[];
+      section?: string;
+      tags?: string[];
+    } = {};
+  if (published) {
+    article.publishedTime = published;
+  }
+  if (modified) {
+    article.modifiedTime = modified;
+  }
+  if (author) {
+    article.authors = [author];
+    article.section = "Technology";
+    article.tags = ["Technology", "Software", "Programming", "Benchmarks", "Benchmarking", "Performance", "Continuous Integration", "Continuous Benchmarking"];
+  }
+  return article;
+}
 ---
 
 <!DOCTYPE html>
@@ -54,11 +79,7 @@ const { title, titleFmt, description, lang, author, canonical} = Astro.props;
           siteName: "🐰 Bencher",
           description: description ?? BENCHER_DESCRIPTION,
         },
-        article: author ? {
-          authors: [author],
-          section: "Technology",
-          tags: ["Technology", "Software", "Programming", "Benchmarks", "Benchmarking", "Performance", "Continuous Integration", "Continuous Benchmarking"],
-        } : {},
+        article: article(),
       }}
       twitter={{
         creator: author === Author.everett ? "@epompeii" : "@bencherdev",
