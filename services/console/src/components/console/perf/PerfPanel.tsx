@@ -88,13 +88,16 @@ const EMBED_HEADER_PARAM = "embed_header";
 const EMBED_KEY_PARAM = "embed_key";
 
 // This is used to trim down the number of query params when embedding, etc.
-export const PERF_PLOT_PARAMS = [
+export const PERF_QUERY_PARAMS = [
 	BRANCHES_PARAM,
 	TESTBEDS_PARAM,
 	BENCHMARKS_PARAM,
 	MEASURES_PARAM,
 	START_TIME_PARAM,
 	END_TIME_PARAM,
+];
+export const PERF_PLOT_PARAMS = [
+	...PERF_QUERY_PARAMS,
 	REPORT_PARAM,
 	REPORTS_PER_PAGE_PARAM,
 	BRANCHES_PER_PAGE_PARAM,

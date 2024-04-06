@@ -15,6 +15,7 @@ interface Props {
   description: string;
   published?: undefined | string;
   modified?: undefined | string;
+  perfImage?: undefined | string;
   lang?: undefined | string;
   author?: undefined | Author;
   canonical?: undefined | string;
@@ -22,11 +23,27 @@ interface Props {
 
 // https://docs.astro.build/en/reference/directives-reference/#definevars
 const PUBLIC_GOOGLE_ANALYTICS_ID = import.meta.env.PUBLIC_GOOGLE_ANALYTICS_ID;
-const { title, titleFmt, description, published, modified, lang, author, canonical} = Astro.props;
+const { title, titleFmt, description, published, modified, perfImage, lang, author, canonical} = Astro.props;
 
 const BENCHER_OG_IMAGE = "https://s3.amazonaws.com/public.bencher.dev/img/bencher-og-image.png";
 
+const imageUrl = () => {
+  if (perfImage) {
+    return perfImage;
+  }
+  return BENCHER_OG_IMAGE;
+}
+
 const image = () => {
+  if (perfImage) {
+    return {
+      url: perfImage,
+      type: "image/jpg",
+      width: 1024,
+      height: 768,
+      alt: `Track the performance for ${title}`
+    }
+  }
   return {
     url: BENCHER_OG_IMAGE,
     type: "image/png",
@@ -85,7 +102,7 @@ const article = () => {
         basic: {
           title: titleFmt ? titleFmt(title) : title,
           type: "website",
-          image: BENCHER_OG_IMAGE,
+          image: imageUrl(),
         },
         optional: {
           siteName: "🐰 Bencher",

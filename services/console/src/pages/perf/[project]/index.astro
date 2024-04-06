@@ -6,7 +6,7 @@ import PublicProject from "../../../components/perf/PublicProject";
 import type { JsonProject } from "../../../types/bencher";
 import Tetris from "../../../components/site/Tetris.astro";
 import Notification from "../../../components/site/Notification";
-import { fetchSSR } from "../../../components/perf/util";
+import { fetchSSR, hasPerfImage } from "../../../components/perf/util";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
@@ -35,6 +35,11 @@ try {
   description = "View continuous benchmarking results and performance regressions";
 }
 
+let image: undefined | string;
+if (hasPerfImage(Astro.url)) {
+  image = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${params.project}/perf/img${Astro.url.search}`;
+}
+
 // GitHub query for use of imgs:
 // /https:\/\/api.bencher.dev\/v0\/projects\/.*\/perf/
 ---
@@ -43,6 +48,7 @@ try {
   title={title}
   titleFmt={(title) => `📈 ${title}`}
   description={description}
+  image={image}
 >
   { notFound ?
   <section class="section">

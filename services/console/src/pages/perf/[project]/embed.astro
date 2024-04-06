@@ -4,7 +4,7 @@ export const prerender = false;
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import type { JsonProject } from "../../../types/bencher";
 import PerfPanel from "../../../components/console/perf/PerfPanel";
-import { fetchSSR } from "../../../components/perf/util";
+import { fetchSSR, hasPerfImage } from "../../../components/perf/util";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
@@ -33,6 +33,11 @@ try {
   description = "View continuous benchmarking results and performance regressions";
 }
 
+let image: undefined | string;
+if (hasPerfImage(Astro.url)) {
+  image = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${params.project}/perf/img${Astro.url.search}`;
+}
+
 // GitHub query for use of embeds:
 // /https:\/\/bencher.dev\/perf\/.*\/embed/
 ---
@@ -41,6 +46,7 @@ try {
   title={title}
   titleFmt={(title) => `📈 ${title}`}
   description={description}
+  perfImage={image}
   canonical={`/perf/${params.project}`}
 >
     <div slot="navbar"></div>
