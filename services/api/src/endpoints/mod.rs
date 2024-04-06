@@ -209,8 +209,10 @@ impl Api {
 
         // Users
         if http_options {
+            api.register(user::users::users_options)?;
             api.register(user::users::user_options)?;
         }
+        api.register(user::users::users_get)?;
         api.register(user::users::user_get)?;
         api.register(user::users::user_patch)?;
 

@@ -5945,6 +5945,120 @@
         }
       }
     },
+    "/v0/users": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "List users",
+        "description": "List all users. The user must be an admin on the server to use this route.",
+        "operationId": "users_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
+            "schema": {
+              "$ref": "#/components/schemas/JsonDirection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
+            "schema": {
+              "$ref": "#/components/schemas/UsersSort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "description": "Filter by user name, exact match.",
+            "schema": {
+              "$ref": "#/components/schemas/UserName"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "description": "Search by user name, slug, or UUID.",
+            "schema": {
+              "$ref": "#/components/schemas/Search"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonUsers"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/users/{user}": {
       "get": {
         "tags": [
@@ -9855,6 +9969,12 @@
           "uuid"
         ]
       },
+      "JsonUsers": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonUser"
+        }
+      },
       "JsonVersion": {
         "type": "object",
         "properties": {
@@ -10295,6 +10415,17 @@
             "type": "string",
             "enum": [
               "modified"
+            ]
+          }
+        ]
+      },
+      "UsersSort": {
+        "oneOf": [
+          {
+            "description": "Sort by user name.",
+            "type": "string",
+            "enum": [
+              "name"
             ]
           }
         ]

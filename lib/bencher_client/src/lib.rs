@@ -138,6 +138,7 @@ try_from_client!(
     JsonSpec,
     JsonTokens,
     JsonToken,
+    JsonUsers,
     JsonUser
 );
 

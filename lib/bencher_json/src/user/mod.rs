@@ -7,6 +7,12 @@ use serde::{Deserialize, Serialize};
 
 crate::typed_uuid::typed_uuid!(UserUuid);
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonUsers(pub Vec<JsonUser>);
+
+crate::from_vec!(JsonUsers[JsonUser]);
+
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
