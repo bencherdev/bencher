@@ -1,0 +1,34 @@
+### `--branch-start-point <BRANCH>`
+
+<br />
+
+Use the specified Branch name, slug, or UUID as the [Start Point][start point] for the [`branch`](#--branch-branch) option.
+For GitHub this is usually [the `base` branch for a Pull Request][github base],
+and for GitLab this is usually [the `target` branch for a Merge Request][gitlab target].
+The primary use case for `--branch-start-point` is [Statistical Continuous Benchmarking](/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking).
+
+- If the specified Start Point is an empty string, then this option is ignored.
+- If `branch` does not exist, it will be created using this Start Point.
+- If `branch` does exist and the Start Point is the same, then this option is ignored.
+- If `branch` does exist and the Start Point is different,
+  the old version of `branch` will be renamed
+  and a new `branch` will be created using this updated Start Point.
+
+If a new `branch` is created with a Start Point,
+then all the data and Thresholds from the specified Start Point are copied over.
+
+For example, if `feature_branch` does not yet exist, but `main` does exist and has historical data.
+Then using `--branch feature_branch --branch-start-point main` would:
+1. Create a new Branch named `feature_branch`
+2. Copy of all the data and Thresholds from `main` to `feature_branch`
+3. `bencher run` would proceed using `feature_branch`
+
+[github base]: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-branches#working-with-branches
+[gitlab target]: https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html#from-the-merge-request-list
+
+[start point]: /docs/explanation/benchmarking/#start-point
+
+<br />
+
+> 🐰 Note: Whenever using environment variables they should be wrapped in double quotes (ie `--branch-start-point "$MY_BRANCH_ENV_VAR"`),
+> if you would like `bencher run` to not error when `MY_BRANCH_ENV_VAR` is undefined.

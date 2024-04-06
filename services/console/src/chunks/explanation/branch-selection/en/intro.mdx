@@ -1,0 +1,19 @@
+A Branch is the `git` ref (ie branch name or tag).
+When using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand,
+select a Branch with the `--branch` option or the `BENCHER_BRANCH` environment variable.
+By default all projects start with a `main` Branch, and
+`main` is used by default if neither are specified.
+
+When [Continuous Benchmarking][continuous benchmarking], that is benchmarking in CI,
+you will often want to create or rebase a `branch` on an already existing Branch.
+This is called a Branch [Start Point][start point].
+A Start Point is another Branch at a specific version (and `git` hash, if available).
+When using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand,
+select a Start Point with the `--branch-start-point` option.
+Additionally, use the `--branch-start-point-hash` option to specify a specific `git` hash for the Start Point.
+All the data and [Thresholds][thresholds] are copied over from the Start Point.
+
+[start point]: /docs/explanation/benchmarking/#start-point
+
+[continuous benchmarking]: /docs/explanation/continuous-benchmarking/
+[thresholds]: /docs/explanation/thresholds/
