@@ -1,0 +1,30 @@
+### `--branch-start-point-hash <HASH>`
+
+<br />
+
+Utiliza el hash completo de Git especificado como [Punto de Inicio][start point] para la opción `branch`.
+Esta opción requiere que se establezca la opción [`--branch-start-point`][branch start point].
+
+- Si `branch` no existe, se creará a partir de `branch-start-point` en el hash especificado.
+- Si `branch` ya existe y tanto `branch-start-point` como el hash especificado son iguales,
+  entonces esta opción se ignora.
+- Si `branch` ya existe y tanto el `branch-start-point` como el hash especificado son diferentes,
+  la antigua versión de `branch` se renombrará
+  y se creará una nueva `branch` a partir de `branch-start-point` en el hash especificado.
+
+Si se crea una nueva `branch` con un Punto de Inicio,
+entonces todos los datos y Umbrales desde el `branch-start-point` en el hash especificado se copian.
+
+Por ejemplo, si `feature_branch` existe con su Punto de Inicio siendo la rama `main`
+en el hash `32aea434d751648726097ed3ac760b57107edd8b`
+entonces usar `--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`
+haría:
+
+1. Renombrar la antigua `feature_branch` a `feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b`
+2. Crear una nueva rama nombrada `feature_branch`
+3. Copiar todos los datos y Umbrales desde `main` en el hash `68b12758509ca5e2b1e3983525625e532eb5f562` a la nueva `feature_branch`
+4. `bencher run` procedería utilizando la nueva `feature_branch`
+
+[start point]: /es/docs/explanation/benchmarking/#start-point
+
+[branch start point]: #--branch-start-point-branch

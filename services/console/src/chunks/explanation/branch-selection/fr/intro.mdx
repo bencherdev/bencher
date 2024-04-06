@@ -1,0 +1,18 @@
+Une Branche est le référentiel `git` (c'est-à-dire le nom de la branche ou le tag).
+Lors de l'utilisation de la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>,
+sélectionnez une Branche avec l'option `--branch` ou la variable d'environnement `BENCHER_BRANCH`.
+Par défaut, tous les projets commencent avec une Branche `main`, et
+`main` est utilisée par défaut si aucune des deux n'est spécifiée.
+
+Lors de [l'Évaluation Continue][évaluation continue], c'est-à-dire l'évaluation dans l'IC (Intégration Continue),
+vous voudrez souvent créer ou rebase une `branche` sur une Branche déjà existante.
+Ceci est appelé un Point de Départ de Branche [Point de Départ][point de départ].
+Un Point de Départ est une autre Branche à une version spécifique (et `git` hash, si disponible).
+Lors de l'utilisation de la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>,
+sélectionnez un Point de Départ avec l'option `--branch-start-point`.
+De plus, utilisez l'option `--branch-start-point-hash` pour spécifier un hash `git` spécifique pour le Point de Départ.
+Toutes les données et [Seuils][seuils] sont copiés à partir du Point de Départ.
+
+[évaluation continue]: /fr/docs/explanation/continuous-benchmarking/
+[point de départ]: /fr/docs/explanation/benchmarking/#start-point
+[seuils]: /fr/docs/explanation/thresholds/

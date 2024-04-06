@@ -1,0 +1,28 @@
+### `--branch-start-point-hash <HASH>`
+
+<br />
+
+`branch` 옵션을 위한 시작점으로 지정된 전체 Git 해쉬를 사용하십시오.
+이 옵션은 [`--branch-start-point`][branch start point] 옵션이 설정되어야 합니다.
+
+- `branch`가 존재하지 않는 경우, 지정된 해쉬에서 `branch-start-point`를 기반으로 생성됩니다.
+- `branch`가 이미 존재하고 `branch-start-point`와 지정된 해쉬가 동일한 경우,
+  이 옵션은 무시됩니다.
+- `branch`가 이미 존재하고 `branch-start-point`나 지정된 해쉬 중 하나라도 다른 경우,
+  이전 버전의 `branch`는 이름이 변경되고
+  지정된 해쉬에서 `branch-start-point`를 기반으로 새로운 `branch`가 생성됩니다.
+
+새로운 `branch`가 시작점으로 생성된 경우,
+지정된 해쉬에서 `branch-start-point`의 모든 데이터와 임계값이 복사됩니다.
+
+예를 들어, `feature_branch`가 `main` Branch의 시작점이 되는 해쉬 `32aea434d751648726097ed3ac760b57107edd8b`와 함께 존재한다면
+`--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`을 사용하면:
+
+1. 이전 `feature_branch`의 이름을 `feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b`로 변경합니다.
+2. `feature_branch`라는 새 Branch를 생성합니다.
+3. 해쉬 `68b12758509ca5e2b1e3983525625e532eb5f562`에서 `main`의 모든 데이터와 임계값을 새 `feature_branch`로 복사합니다.
+4. `bencher 실행`은 새로운 `feature_branch`를 사용하여 진행됩니다.
+
+[start point]: /ko/docs/explanation/benchmarking/#start-point
+
+[branch start point]: #--branch-start-point-branch

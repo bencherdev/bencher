@@ -1,0 +1,25 @@
+### `--branch-reset`
+
+<br />
+
+Restablece la `branch` especificada.
+El principal caso de uso para `--branch-reset` es el [Benchmarking Continuo Relativo][benchmarking continuo relativo].
+Esta bandera es incompatible con la opción [`--branch-start-point`][punto de inicio de branch].
+
+- Si `branch` no existe, será creada.
+- Si `branch` ya existe, la versión antigua de `branch` será renombrada
+  y se creará una nueva `branch`.
+
+Cuando se crea una nueva `branch`, esta no tendrá datos históricos ni Umbrales.
+
+Por ejemplo, si `feature_branch` existe sin un Punto Inicial
+entonces usar `--branch feature_branch --branch-reset`
+haría:
+
+1. Renombrar la antigua `feature_branch` a `feature_branch@detached`
+2. Crear una nueva Branch llamada `feature_branch`
+3. `bencher run` procedería usando la nueva `feature_branch`
+
+[benchmarking continuo relativo]: /es/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+
+[punto de inicio de branch]: #--branch-start-point-branch

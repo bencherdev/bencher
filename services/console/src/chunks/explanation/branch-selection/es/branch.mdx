@@ -1,0 +1,10 @@
+### `--branch <BRANCH>`
+
+<br />
+
+Para seleccionar una Rama, establezca la opción `--branch` o la variable de entorno `BENCHER_BRANCH`
+al nombre, slug o UUID de la Rama.
+Si el valor especificado es un nombre o slug y la Rama no existe previamente, se creará para usted.
+Sin embargo, si el valor especificado es un UUID, entonces la Rama ya debe existir.
+Si ambos están especificados, la opción `--branch` tiene precedencia sobre la variable de entorno `BENCHER_BRANCH`.
+Si ninguno está especificado, entonces `main` se utiliza como la Rama predeterminada.

@@ -1,110 +1,32 @@
 ---
 title: "Selección de Ramas"
-description: "Resumen de las formas de seleccionar una rama de git usando el subcomando CLI bencher run"
+description: "Visión general de la gestión de ramas de git cuando se hace Benchmark Continuo con el subcomando bencher run CLI"
 heading: "Selección de Ramas con bencher run"
 published: "2023-10-27T08:40:00Z"
-modified: "2024-03-27T07:50:00Z"
+modified: "2024-04-06T12:51:00Z"
 sortOrder: 3
 ---
 
-Hay varias maneras de establecer la rama del proyecto en el subcomando CLI de <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>.
-Si no se utilizan ninguna de estas opciones o banderas, entonces `main` se usa como la rama predeterminada.
+import Intro from "../../../chunks/explanation/branch-selection/es/intro.mdx";
+import Branch from "../../../chunks/explanation/branch-selection/es/branch.mdx";
+import BranchStartPoint from "../../../chunks/explanation/branch-selection/es/branch-start-point.mdx";
+import BranchStartPointHash from "../../../chunks/explanation/branch-selection/es/branch-start-point-hash.mdx";
+import BranchReset from "../../../chunks/explanation/branch-selection/es/branch-reset.mdx";
+
+<Intro />
+
+<Branch />
+
+<BranchStartPoint />
+
+<BranchStartPointHash />
+
+<BranchReset />
 
 <br />
 
-### `--branch <BRANCH>`
-
-<br />
-
-La forma más sencilla es establecer la opción `--branch` o la variable de entorno `BENCHER_BRANCH` en el slug o UUID de una rama ya existente.
-Si ambos están definidos, la opción `--branch` tiene prioridad sobre la variable de entorno `BENCHER_BRANCH`.
-
-Sin embargo, si ambos están ausentes o el valor proporcionado es inválido, el comando `bencher run` dará error.
-Esto no es lo más conveniente en los entornos de CI/CD, donde aparecen nuevas ramas todo el tiempo.
-En lugar de utilizar `--branch` o la variable de entorno `BENCHER_BRANCH`, existe una opción `--if-branch`.
-
-<br />
-
-### `--if-branch <BRANCH_NAME>`
-
-<br />
-
-La opción `--if-branch` espera un argumento de _nombre_ de rama y consulta para ver si existe una única rama con ese nombre.
-Si se encuentra exactamente una rama, entonces `bencher run` procede utilizando esa rama.
-De lo contrario, `bencher run` simplemente registra y sale exitosamente.
-
-Por ejemplo, si `main` existe, entonces usar `--if-branch main` lo encontraría. Luego, `bencher run` procedería usando `main`.
-
-La opción `--branch` entra en conflicto con la opción `--if-branch`, pero la variable de entorno `BENCHER_BRANCH` tiene prioridad sobre la opción `--if-branch`.
-
-<br />
-
-> 🐰 Nota: Siempre que utilices variables de entorno, estas deben ir entre comillas dobles (es decir, `--if-branch "$MY_ENV_VAR"`).
-
-<br />
-
-### `--else-if-branch <BRANCH_NAME>`
-
-<br />
-
-A menudo, al trabajar en ramas de características, sería útil tener datos históricos de la rama principal o base.
-Aquí es donde entra la opción `--else-if-branch`.
-La opción `--else-if-branch` espera otro argumento de _nombre_ de rama.
-Si `--if-branch` falla, entonces `--else-if-branch` consulta para ver si existe una única rama con ese nombre.
-Si se encuentra exactamente una rama, entonces todos los datos y umbrales de esta rama de partida se copian a una nueva rama con el nombre dado a `--if-branch`.
-
-Por ejemplo, si `feature_branch` aún no existe, pero `main` sí existe y tiene datos históricos.
-Entonces, al usar `--if-branch feature_branch --else-if-branch main`, se creará una nueva rama llamada `feature_branch`,
-y tendría una copia de todos los datos y umbrales de `main`.
-Luego, `bencher run` procedería usando `feature_branch`.
-
-También es posible usar múltiples opciones `--else-if-branch`.
-Por ejemplo, si `mia_branch` no existe, `--if-branch feature_branch --else-if-branch mia_branch --else-if-branch main`
-funcionaría de la misma manera que el ejemplo anterior, copiando todos los datos y umbrales de `main` y procediendo luego.
-
-Si la consulta `--if-branch` tiene éxito, entonces `--else-if-branch` nunca se ejecuta, y si tanto `--if-branch` como `--else-if-branch` fallan, `bencher run` simplemente registra y sale exitosamente.
-
-<br />
-
-> 🐰 Nota: Siempre que utilices variables de entorno, estas deben ir entre comillas dobles (es decir, `--else-if-branch "$MY_ENV_VAR"`).
-
-<br />
-
-### `--else-branch`
-
-<br />
-
-Para garantizar en todos los casos que las métricas de una ejecución se guarden, existe una bandera `--else-branch`.
-La bandera `--else-branch` no toma argumentos.
-Si `--if-branch` falla, entonces `--else-branch` simplemente crea una nueva rama con el nombre dado a `--if-branch`.
-
-Por ejemplo, si `feature_branch` aún no existe.
-Entonces, usar `--if-branch feature_branch --else-branch`, crearía una nueva rama llamada `feature_branch`,
-y no tendría datos ni umbrales iniciales.
-Luego, `bencher run` procedería usando `feature_branch`.
-
-También es posible encadenar las tres banderas: `--if-branch`, `--else-if-branch`, y `--else-branch`.
-Por ejemplo, `--if-branch feature_branch --else-if-branch main --else-branch`.
-
-Si la consulta `--if-branch` tiene éxito, entonces `--else-branch` nunca se ejecuta, y del mismo modo, si `--if-else-branch` tiene éxito, entonces `--else-branch` nunca se ejecuta.
-Y se espera que `--else-branch` siempre tenga éxito y salga exitosamente.
-
-<br />
-
-### `--endif-branch`
-
-<br />
-
-La bandera `--endif-branch` funciona como una bandera opcional noop para indicar el fin de la declaración `--if-branch`.
-
-Es posible encadenar las cuatro banderas: `--if-branch`, `--else-if-branch`, `--else-branch`, y `--endif-branch`.
-Por ejemplo, `--if-branch feature_branch --else-if-branch "$MY_ENV_VAR" --else-branch --endif-branch`.
-
-<br />
-<br />
-
-> 🐰 ¡Felicidades! ¡Has aprendido todo sobre la selección de ramas! 🎉
+> 🐰 ¡Felicidades! Has aprendido todo sobre la selección de ramas. 🎉
 
 <br/>
 
-<h2><a href="/es/docs/explanation/adapters/">Continúa: Adaptadores de Benchmarks ➡</a></h2>
+<h2><a href="/es/docs/explanation/adapters/">Continúa: Adaptadores de Harness de Benchmark ➡</a></h2>

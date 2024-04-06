@@ -1,0 +1,24 @@
+### `--branch-reset`
+
+<br />
+
+重置指定的`branch`。
+`--branch-reset`的主要用例是[相对持续基准测试][相对持续基准测试]。
+此标志与[`--branch-start-point`][分支起点]选项相冲突。
+
+- 如果`branch`不存在，将被创建。
+- 如果`branch`已存在，原有版本的`branch`将被重命名，
+  并且将创建新的`branch`。
+
+当新的`branch`被创建时，它不会有历史数据或阈值。
+
+例如，如果`feature_branch`存在而没有起点，
+那么使用`--branch feature_branch --branch-reset`将会：
+
+1. 将旧的`feature_branch`重命名为`feature_branch@detached`
+2. 创建一个名为`feature_branch`的新分支
+3. `bencher run`将使用新的`feature_branch`继续进行
+
+[相对持续基准测试]: /zh/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+
+[分支起点]: #--branch-start-point-branch

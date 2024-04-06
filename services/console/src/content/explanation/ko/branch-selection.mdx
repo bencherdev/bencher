@@ -1,110 +1,32 @@
 ---
 title: "브랜치 선택"
-description: "bencher run CLI 서브커맨드를 사용하여 git 브랜치를 선택하는 방법에 대한 개요"
+description: "bencher run CLI 서브커맨드를 사용할 때 지속적 벤치마킹을 위한 git 브랜치 관리 개요"
 heading: "bencher run을 사용한 브랜치 선택"
 published: "2023-10-27T08:40:00Z"
-modified: "2024-03-27T07:50:00Z"
+modified: "2024-04-06T12:51:00Z"
 sortOrder: 3
 ---
 
-<code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드에서 프로젝트 브랜치를 설정하는 방법이 몇 가지 있습니다.
-이런 옵션 또는 플래그를 사용하지 않으면 `main`이 기본 브랜치로 사용됩니다.
+import Intro from "../../../chunks/explanation/branch-selection/ko/intro.mdx";
+import Branch from "../../../chunks/explanation/branch-selection/ko/branch.mdx";
+import BranchStartPoint from "../../../chunks/explanation/branch-selection/ko/branch-start-point.mdx";
+import BranchStartPointHash from "../../../chunks/explanation/branch-selection/ko/branch-start-point-hash.mdx";
+import BranchReset from "../../../chunks/explanation/branch-selection/ko/branch-reset.mdx";
 
-<br />
+<Intro />
 
-### `--branch <BRANCH>`
+<Branch />
 
-<br />
+<BranchStartPoint />
 
-가장 간단한 방법은 `--branch` 옵션을 설정하거나 `BENCHER_BRANCH` 환경 변수를 이미 존재하는 브랜치의 슬러그 또는 UUID로 설정하는 것입니다.
-두 가지 모두 정의된 경우 `--branch` 옵션이 `BENCHER_BRANCH` 환경 변수보다 우선합니다.
+<BranchStartPointHash />
 
-그러나, 두 가지 모두가 누락되거나 제공된 값이 유효하지 않으면 `bencher run` 명령은 오류를 반환합니다.
-이는 새로운 브랜치가 계속 생겨나는 CI/CD 환경에서는 최선의 방법이 아닙니다.
-`--branch` 또는 `BENCHER_BRANCH` 환경 변수를 사용하는 대신에 `--if-branch` 옵션이 있습니다.
+<BranchReset />
 
-<br />
-
-### `--if-branch <BRANCH_NAME>`
-
-<br />
-
-`--if-branch` 옵션은 브랜치 _이름_ 인수를 예상하고 해당 이름으로 된 단일 브랜치가 있는지 확인합니다.
-정확히 하나의 브랜치가 찾아지면 `bencher run`이 그 브랜치를 사용하여 진행합니다.
-그렇지 않으면 `bencher run`은 단순히 로그를 쓰고 성공적으로 종료합니다.
-
-예를 들어, `main`이 존재한다면 `--if-branch main`을 사용하면 찾을 수 있습니다. 그런 다음 `bencher run`은 `main`을 사용하여 진행합니다.
-
-`--branch` 옵션은 `--if-branch` 옵션과 충돌하지만, `BENCHER_BRANCH` 환경 변수는 `--if-branch` 옵션에 우선합니다.
-
-<br />
-
-> 🐰 참고: 환경 변수를 사용할 때는 항상 큰따옴표로 묶어야 합니다 (예: `--if-branch "$MY_ENV_VAR"`).
-
-<br />
-
-### `--else-if-branch <BRANCH_NAME>`
-
-<br />
-
-기능 브랜치에서 작업할 때는 대부분 부모/기반 브랜치의 이력 데이터를 이용하는 것이 유용합니다.
-이때 `--else-if-branch` 옵션이 필요합니다.
-`--else-if-branch` 옵션은 또한 브랜치 _이름_ 인수를 예상합니다.
-`--if-branch`가 실패하면 `--else-if-branch`는 해당 이름으로 된 단일 브랜치가 있는지 확인합니다.
-정확히 하나의 브랜치가 찾아지면 시작 브랜치의 모든 데이터와 임계값이 `--if-branch`에 제공된 이름의 새 브랜치로 복사됩니다.
-
-예를 들어, `feature_branch`는 아직 존재하지 않지만, `main`은 존재하고 이력 데이터가 있습니다.
-그럼 `--if-branch feature_branch --else-if-branch main`을 사용하면 `feature_branch`라는 새 브랜치를 만드는데,
-이 브랜치는 `main`의 모든 데이터와 임계값의 복사본을 가지게 됩니다.
-그런 다음 `bencher run`은 `feature_branch`를 사용하여 진행합니다.
-
-여러 `--else-if-branch` 옵션을 사용할 수도 있습니다.
-예를 들어, `mia_branch`가 존재하지 않으면, `--if-branch feature_branch --else-if-branch mia_branch --else-if-branch main`
-은 이전의 예제와 동일한 기능을 수행하며, `main`의 모든 데이터와 임계값을 복사하고 진행합니다.
-
-`--if-branch` 쿼리가 성공하면 `--else-if-branch`는 실행되지 않고, `--if-branch`와 `--else-if-branch` 모두 실패하면 `bencher run`은 단순히 로그를 쓰고 성공적으로 종료합니다.
-
-<br />
-
-> 🐰 참고: 환경 변수를 사용할 때는 항상 큰따옴표로 묶어야 합니다 (예: `--else-if-branch "$MY_ENV_VAR"`).
-
-<br />
-
-### `--else-branch`
-
-<br />
-
-모든 경우에 실행의 매트릭스가 저장되도록 보장하기 위해 `--else-branch` 플래그가 있습니다.
-`--else-branch` 플래그는 인수를 필요로 하지 않습니다.
-`--if-branch`가 실패하면 `--else-branch`는 단순히 `--if-branch`에 제공된 이름의 새 브랜치를 생성합니다.
-
-예를 들어, `feature_branch`가 아직 존재하지 않습니다.
-그럼 `--if-branch feature_branch --else-branch`을 사용하면 `feature_branch`라는 새 브랜치를 만들고, 
-이 브랜치는 초기 데이터와 임계값이 없습니다.
-그런 다음 `bencher run`은 `feature_branch`를 사용하여 진행합니다.
-
-`--if-branch`, `--else-if-branch`, 그리고 `--else-branch` 세 가지 플래그를 모두 연결하여 사용할 수 있습니다.
-예를 들어, `--if-branch feature_branch --else-if-branch main --else-branch`.
-
-`--if-branch` 쿼리가 성공하면 `--else-branch`는 실행되지 않고, 마찬가지로, `--if-else-branch`가 성공하면 `--else-branch`는 실행되지 않습니다.
-그리고 `--else-branch`는 항상 성공하고 성공적으로 종료한다고 예상됩니다.
-
-<br />
-
-### `--endif-branch`
-
-<br />
-
-`--endif-branch` 플래그는 `--if-branch` 명령문의 끝을 나타내는 선택적 noop 플래그로 작동합니다.
-
-`--if-branch`, `--else-if-branch`, `--else-branch`, 그리고 `--endif-branch` 네 가지 플래그를 모두 연결하여 사용할 수 있습니다.
-예를 들어, `--if-branch feature_branch --else-if-branch "$MY_ENV_VAR" --else-branch --endif-branch`.
-
-<br />
 <br />
 
 > 🐰 축하합니다! 브랜치 선택에 대해 모두 배웠습니다! 🎉
 
 <br/>
 
-<h2><a href="/ko/docs/explanation/adapters/">계속하기: 벤치마크 하네스 어댑터 ➡</a></h2>
+<h2><a href="/ko/docs/explanation/adapters/">계속하십시오: 벤치마크 하네스 어댑터 ➡</a></h2>

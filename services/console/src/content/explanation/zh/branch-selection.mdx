@@ -1,106 +1,32 @@
 ---
 title: "分支选择"
-description: "使用bencher run CLI子命令选择git分支的方法概述"
-heading: "使用bencher run的分支选择"
+description: "在持续性能基准测试中使用 bencher run CLI 子命令时关于 git 分支管理的概述"
+heading: "使用 bencher run 进行分支选择"
+published: "2023-10-27T08:40:00Z"
+modified: "2024-04-06T12:51:00Z"
 sortOrder: 3
 ---
 
-有几种设置项目分支的方法，在<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI子命令中。
-如果没有使用这些选项或标志，那么`main`将被用作默认分支。
+import Intro from "../../../chunks/explanation/branch-selection/zh/intro.mdx";
+import Branch from "../../../chunks/explanation/branch-selection/zh/branch.mdx";
+import BranchStartPoint from "../../../chunks/explanation/branch-selection/zh/branch-start-point.mdx";
+import BranchStartPointHash from "../../../chunks/explanation/branch-selection/zh/branch-start-point-hash.mdx";
+import BranchReset from "../../../chunks/explanation/branch-selection/zh/branch-reset.mdx";
+
+<Intro />
+
+<Branch />
+
+<BranchStartPoint />
+
+<BranchStartPointHash />
+
+<BranchReset />
 
 <br />
 
-### `--branch <BRANCH>`
-
-<br />
-
-最简单的方法是将 `--branch` 选项或 `BENCHER_BRANCH` 环境变量设置为已有分支的缩写或UUID。
-如果这两个都已定义，`--branch` 选项优先使用 `BENCHER_BRANCH` 环境变量。
-
-但是，如果这两者都缺失或提供的值无效，那么 `bencher run` 命令将报错。
-这在 CI/CD 环境中并不是最方便的，因为新的分支总是不断出现。
-有一个 `--if-branch` 选项，可以代替使用 `--branch` 或 `BENCHER_BRANCH` 环境变量。
-
-<br />
-
-### `--if-branch <BRANCH_NAME>`
-
-<br />
-
-`--if-branch` 选项需要一个分支 _名称_ 参数，并查询是否存在一个与该名称相符的分支。
-如果只找到一个分支，那么 `bencher run` 将使用该分支进行操作。
-否则，`bencher run` 将简单地记录日志并成功退出。
-
-例如，如果`main`存在，那么使用`--if-branch main`就能找到它。然后 `bencher run` 将继续使用 `main`。
-
-`--branch` 选项与 `--if-branch` 选项冲突，但 `BENCHER_BRANCH` 环境变量优先于 `--if-branch` 选项。
-
-<br />
-
-> 🐰 注意：在使用环境变量时，需要用双引号包裹（例如 `--if-branch "$MY_ENV_VAR"`）。
-
-<br />
-
-### `--else-if-branch <BRANCH_NAME>`
-
-<br />
-
-通常，在处理特性分支时，我们需要有父分支/基础分支的历史数据，这时 `--else-if-branch` 选项就派上用场了。
-`--else-if-branch` 选项需要另一个分支 _名称_ 参数。
-如果 `--if-branch` 失败，则 `--else-if-branch` 将进行查询，看是否存在一个与该名称相符的分支。
-如果只找到一个分支，那么所有来自这个起始点分支的数据和阈值将被复制到一个新创建的分支，这个新分支的名称是给 `--if-branch` 的。
-
-例如，如果 `feature_branch` 尚不存在，但 `main` 存在并具有历史数据。
-那么使用 `--if-branch feature_branch --else-if-branch main`，将创建一个新的分支名为 `feature_branch`，并且它将复制所有的 `main` 的数据和阈值。
-然后 `bencher run` 将继续使用 `feature_branch`。
-
-可以使用多个 `--else-if-branch` 选项。
-例如，如果 `mia_branch` 不存在，`--if-branch feature_branch --else-if-branch mia_branch --else-if-branch main`
-将与前一个例子效果相同，复制所有的 `main` 数据和阈值并继续。
-
-如果 `--if-branch` 查询成功则 `--else-if-branch` 不会运行，如果 `--if-branch` 和 `--else-if-branch` 都失败，`bencher run` 将简单地记录日志并成功退出。
-
-<br />
-
-> 🐰 注意：在使用环境变量时，需要用双引号包裹（例如 `--else-if-branch "$MY_ENV_VAR"`）。
-
-<br />
-
-### `--else-branch`
-
-<br />
-
-为了确保在所有情况下运行的指标都被存储，我们增加了 `--else-branch` 标记。
-`--else-branch` 标记不需要任何参数。
-如果 `--if-branch` 失败了，那么 `--else-branch` 仅创建一个新分支，该分支的名称是给 `--if-branch` 的。
-
-例如，如果 `feature_branch` 尚不存在。
-那么使用 `--if-branch feature_branch --else-branch`，将创建一个名为 `feature_branch` 的新分支，
-并且它将不包含任何初始数据或阈值。
-然后 `bencher run` 将继续使用 `feature_branch`。
-
-也可以将这三个标记一起使用：`--if-branch`，`--else-if-branch`，和 `--else-branch`。
-例如，`--if-branch feature_branch --else-if-branch main --else-branch`。
-
-如果 `--if-branch` 查询成功，则 `--else-branch` 不会运行，同样，如果 `--if-else-branch` 成功，则 `--else-branch` 不会运行。
-而 `--else-branch` 预期始终成功并成功退出。
-
-<br />
-
-### `--endif-branch`
-
-<br />
-
-`--endif-branch`标志作为一个可选的noop标志，用于指示`--if-branch`语句的结束。
-
-可以将所有四个标记链接在一起：`--if-branch`，`--else-if-branch`，`--else-branch`，和`--endif-branch`。
-例如：`--if-branch feature_branch --else-if-branch "$MY_ENV_VAR" --else-branch --endif-branch`。
-
-<br />
-<br />
-
-> 🐰 恭喜！你已经学会了关于分支选择的所有内容！🎉
+> 🐰 恭喜！您已经学会了所有关于分支选择的知识！🎉
 
 <br/>
 
-<h2><a href="/zh/docs/explanation/adapters/">继续学习: 基准测试工具适配器 ➡ </a></h2>
+<h2><a href="/zh/docs/explanation/adapters/">继续前进：基准测试适配器 ➡</a></h2>

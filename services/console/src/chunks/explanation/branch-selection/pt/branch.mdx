@@ -1,0 +1,10 @@
+### `--branch <BRANCH>`
+
+<br />
+
+Para selecionar um Ramo, defina a opção `--branch` ou a variável de ambiente `BENCHER_BRANCH`
+para o nome, identificador ou UUID do Ramo.
+Se o valor especificado for um nome ou identificador e o Ramo ainda não existir, ele será criado para você.
+No entanto, se o valor especificado for um UUID, então o Ramo já deve existir.
+Se ambos forem especificados, a opção `--branch` tem precedência sobre a variável de ambiente `BENCHER_BRANCH`.
+Se nenhum dos dois for especificado, então `main` é usado como o Ramo padrão.

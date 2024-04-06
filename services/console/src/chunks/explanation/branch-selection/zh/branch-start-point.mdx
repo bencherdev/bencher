@@ -1,0 +1,34 @@
+### `--branch-start-point <BRANCH>`
+
+<br />
+
+使用指定的分支名称、别名或UUID作为[`branch`](#--branch-branch)选项的[起始点][起始点]。
+对于GitHub，通常是[Pull Request的`base`分支][github base]；
+对于GitLab，通常是[Merge Request的`target`分支][gitlab target]。
+`--branch-start-point`的主要用途是[统计持续基准测试](/zh/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking)。
+
+- 如果指定的起始点是空字符串，则忽略此选项。
+- 如果`branch`不存在，将使用此起始点创建它。
+- 如果`branch`已存在且起始点相同，则忽略此选项。
+- 如果`branch`已存在但起始点不同，
+  则旧版本的`branch`将被重命名，
+  并使用此更新的起始点创建一个新的`branch`。
+
+如果使用起始点创建了一个新的`branch`，
+则所有指定起始点的数据和阈值都会被复制过来。
+
+例如，如果`feature_branch`还不存在，但`main`已存在并拥有历史数据。
+然后使用`--branch feature_branch --branch-start-point main`将：
+1. 创建一个名为`feature_branch`的新分支
+2. 将`main`的所有数据和阈值复制到`feature_branch`
+3. `bencher run`将使用`feature_branch`继续
+
+[github base]: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-branches#working-with-branches
+[gitlab target]: https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html#from-the-merge-request-list
+
+[起始点]: /zh/docs/explanation/benchmarking/#start-point
+
+<br />
+
+> 🐰 注意：使用环境变量时，它们应该用双引号包裹（即`--branch-start-point "$MY_BRANCH_ENV_VAR"`），
+> 如果你不希望在`MY_BRANCH_ENV_VAR`未定义时`bencher run`报错。

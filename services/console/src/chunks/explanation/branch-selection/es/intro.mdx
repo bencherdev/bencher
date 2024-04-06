@@ -1,0 +1,18 @@
+Una Rama es la referencia `git` (es decir, nombre de la rama o etiqueta).
+Al usar el subcomando de la interfaz de línea de comandos <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>,
+selecciona una Rama con la opción `--branch` o la variable de entorno `BENCHER_BRANCH`.
+Por defecto, todos los proyectos comienzan con una Rama `main`, y
+`main` se utiliza por defecto si no se especifica ninguna.
+
+Cuando se realiza [Benchmarking Continuo][continuous benchmarking], es decir, benchmarking en CI,
+a menudo querrás crear o rebase una `branch` en una Rama ya existente.
+Esto se llama un Punto de Inicio de Rama [Start Point][start point].
+Un Punto de Inicio es otra Rama en una versión específica (y hash `git`, si está disponible).
+Al usar el subcomando de la interfaz de línea de comandos <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>,
+selecciona un Punto de Inicio con la opción `--branch-start-point`.
+Adicionalmente, utiliza la opción `--branch-start-point-hash` para especificar un hash `git` específico para el Punto de Inicio.
+Todos los datos y [Umbrales][thresholds] se copian desde el Punto de Inicio.
+
+[continuous benchmarking]: /es/docs/explanation/continuous-benchmarking/
+[start point]: /es/docs/explanation/benchmarking/#start-point
+[thresholds]: /es/docs/explanation/thresholds/

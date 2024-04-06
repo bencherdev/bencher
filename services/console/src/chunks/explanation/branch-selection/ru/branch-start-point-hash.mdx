@@ -1,0 +1,29 @@
+### `--branch-start-point-hash <HASH>`
+
+<br />
+
+Используйте указанный полный хеш Git как [Начальную точку][начальная точка] для опции `branch`.
+Для этой опции необходимо установить опцию [`--branch-start-point`][branch start point].
+
+- Если `branch` не существует, он будет создан из `branch-start-point` с указанным хешом.
+- Если `branch` уже существует и `branch-start-point` и указанный хеш совпадают,
+  тогда данная опция игнорируется.
+- Если `branch` уже существует и либо `branch-start-point`, либо указанный хеш отличаются,
+  старая версия `branch` будет переименована,
+  и новый `branch` будет создан из `branch-start-point` с указанным хешом.
+
+Если новая `branch` создается с Начальной точкой,
+то все данные и Пороги из `branch-start-point` с указанным хешом копируются.
+
+Например, если `feature_branch` существует с его Начальной точкой, являющейся веткой `main`
+с хешем `32aea434d751648726097ed3ac760b57107edd8b`,
+тогда использование `--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`:
+
+1. Переименует старый `feature_branch` в `feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b`
+2. Создаст новую ветку с именем `feature_branch`
+3. Копирует все данные и Пороги из `main` с хешем `68b12758509ca5e2b1e3983525625e532eb5f562` в новый `feature_branch`
+4. `bencher run` будет произведен с использованием нового `feature_branch`
+
+[начальная точка]: /ru/docs/explanation/benchmarking/#start-point
+
+[branch start point]: #--branch-start-point-branch

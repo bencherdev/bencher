@@ -1,0 +1,18 @@
+Um Branch é o `git` ref (isto é, nome do branch ou tag).
+Ao usar o subcomando CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>,
+selecione um Branch com a opção `--branch` ou a variável de ambiente `BENCHER_BRANCH`.
+Por padrão, todos os projetos começam com um Branch `main`, e
+`main` é usado por padrão se nenhum deles for especificado.
+
+Quando se faz [Benchmarking Contínuo][benchmarking contínuo], ou seja, benchmarking em CI,
+você vai querer frequentemente criar ou fazer rebase de um `branch` em um Branch já existente.
+Isso é chamado de [Ponto de Início][ponto de início] de um Branch.
+Um Ponto de Início é outro Branch em uma versão específica (e `git` hash, se disponível).
+Ao usar o subcomando CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>,
+selecione um Ponto de Início com a opção `--branch-start-point`.
+Adicionalmente, use a opção `--branch-start-point-hash` para especificar um `git` hash específico para o Ponto de Início.
+Todos os dados e [Limites][limites] são copiados do Ponto de Início.
+
+[benchmarking contínuo]: /pt/docs/explanation/continuous-benchmarking/
+[ponto de início]: /pt/docs/explanation/benchmarking/#start-point
+[limites]: /pt/docs/explanation/thresholds/

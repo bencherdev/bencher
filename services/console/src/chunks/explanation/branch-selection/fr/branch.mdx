@@ -1,0 +1,10 @@
+### `--branch <BRANCH>`
+
+<br />
+
+Pour sélectionner une Branche, définissez l'option `--branch` ou la variable d'environnement `BENCHER_BRANCH`
+sur le nom, le slug ou l'UUID de la Branche.
+Si la valeur spécifiée est un nom ou un slug et que la Branche n'existe pas déjà, elle sera créée pour vous.
+Cependant, si la valeur spécifiée est un UUID, alors la Branche doit déjà exister.
+Si les deux sont spécifiés, l'option `--branch` a la priorité sur la variable d'environnement `BENCHER_BRANCH`.
+Si aucun n'est spécifié, alors `main` est utilisé comme Branche par défaut.

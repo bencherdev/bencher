@@ -1,110 +1,32 @@
 ---
-title: "Sélection de Branche"
-description: "Aperçu des façons de sélectionner une branche git en utilisant la sous-commande CLI bencher run"
+title: "Sélection de branche"
+description: "Aperçu de la gestion des branches git lors de l'utilisation continue du benchmarking avec la sous-commande CLI bencher run"
 heading: "Sélection de branche avec bencher run"
 published: "2023-10-27T08:40:00Z"
-modified: "2024-03-27T07:50:00Z"
+modified: "2024-04-06T12:51:00Z"
 sortOrder: 3
 ---
 
-Il existe plusieurs façons de définir la branche de projet dans la sous-commande <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code> CLI.
-Si aucune de ces options ou drapeaux n'est utilisée, alors `main` est utilisée comme branche par défaut.
+import Intro from "../../../chunks/explanation/branch-selection/fr/intro.mdx";
+import Branch from "../../../chunks/explanation/branch-selection/fr/branch.mdx";
+import BranchStartPoint from "../../../chunks/explanation/branch-selection/fr/branch-start-point.mdx";
+import BranchStartPointHash from "../../../chunks/explanation/branch-selection/fr/branch-start-point-hash.mdx";
+import BranchReset from "../../../chunks/explanation/branch-selection/fr/branch-reset.mdx";
+
+<Intro />
+
+<Branch />
+
+<BranchStartPoint />
+
+<BranchStartPointHash />
+
+<BranchReset />
 
 <br />
 
-### `--branch <BRANCH>`
-
-<br />
-
-La façon la plus simple est de définir l'option `--branch` ou la variable d'environnement `BENCHER_BRANCH` sur le slug ou UUID d'une branche déjà existante.
-Si les deux sont définis, l'option `--branch` prime sur la variable d'environnement `BENCHER_BRANCH`.
-
-Cependant, si ces deux éléments sont manquants ou si la valeur fournie est invalide, alors la commande `bencher run` donnera une erreur.
-Ce n'est pas le plus pratique dans les environnements CI/CD, où de nouvelles branches apparaissent tout le temps.
-Au lieu d'utiliser `--branch` ou la variable d'environnement `BENCHER_BRANCH`, il existe une option `--if-branch`.
-
-<br />
-
-### `--if-branch <BRANCH_NAME>`
-
-<br />
-
-L'option `--if-branch` attend un argument de _nom_ de branche et effectue une requête pour voir si une seule branche avec ce nom existe.
-S'il existe exactement une branche, alors `bencher run` continue avec cette branche.
-Sinon, `bencher run` se contentera de se connecter et de quitter avec succès.
-
-Par exemple, si `main` existe alors l'utilisation de `--if-branch main` le trouverait. Puis `bencher run` continuerait en utilisant `main`.
-
-L'option `--branch` est en conflit avec l'option `--if-branch`, mais la variable d'environnement `BENCHER_BRANCH` prime sur l'option `--if-branch`.
-
-<br />
-
-> 🐰 Note : Lorsque vous utilisez des variables d'environnement, elles doivent être entourées de guillemets doubles (par exemple `--if-branch "$MY_ENV_VAR"`).
-
-<br />
-
-### `--else-if-branch <BRANCH_NAME>`
-
-<br />
-
-Souvent, lorsqu'on travaille sur des branches de fonctionnalités, il serait utile d'avoir des données historiques de la branche parent/base.
-C'est ici que l'option `--else-if-branch` entre en jeu.
-L'option `--else-if-branch` attend un autre argument de _nom_ de branche.
-Si `--if-branch` échoue, alors `--else-if-branch` effectue une requête pour voir si une seule branche avec ce nom existe.
-Si exactement une branche est trouvée, alors toutes les données et seuils de cette branche de départ seront copiés sur une nouvelle branche créée avec le nom donné à `--if-branch`.
-
-Par exemple, si `feature_branch` n'existe pas encore, mais que `main` existe et a des données historiques.
-Alors l'utilisation de `--if-branch feature_branch --else-if-branch main`, créerait une nouvelle branche nommée `feature_branch`,
-et elle aurait une copie de toutes les données et seuils de `main`.
-Puis `bencher run` continuerait en utilisant `feature_branch`.
-
-Il est aussi possible d'utiliser plusieurs options `--else-if-branch`.
-Par exemple si `mia_branch` n'existe pas, `--if-branch feature_branch --else-if-branch mia_branch --else-if-branch main`
-fonctionnerait efficacement de la même manière que l'exemple précédent, en copiant toutes les données et seuils de `main` et en continuant.
-
-Si la requête `--if-branch` réussit alors `--else-if-branch` n'est jamais exécuté, et si `--if-branch` et `--else-if-branch` échouent, `bencher run` se connectera simplement et quittera avec succès.
-
-<br />
-
-> 🐰 Note : Lorsque vous utilisez des variables d'environnement, elles doivent être entourées de guillemets doubles (par exemple `--else-if-branch "$MY_ENV_VAR"`).
-
-<br />
-
-### `--else-branch`
-
-<br />
-
-Pour garantir dans tous les cas que les mesures d'une exécution sont stockées, il existe un drapeau `--else-branch`.
-Le drapeau `--else-branch` ne prend aucun argument.
-Si `--if-branch` échoue, alors `--else-branch` crée simplement une nouvelle branche avec le nom donné à `--if-branch`.
-
-Par exemple, si `feature_branch` n'existe pas encore.
-Alors en utilisant `--if-branch feature_branch --else-branch`, une nouvelle branche nommée `feature_branch` serait créée,
-et elle n'aurait aucune donnée initiale ni seuil.
-Puis `bencher run` continuerait en utilisant `feature_branch`.
-
-Il est également possible de chaîner les trois drapeaux ensemble: `--if-branch`, `--else-if-branch`, et `--else-branch`.
-Par exemple, `--if-branch feature_branch --else-if-branch main --else-branch`.
-
-Si la requête `--if-branch` réussit alors `--else-branch` n'est jamais exécuté, et de même, si `--if-else-branch` réussit alors `--else-branch` n'est jamais exécuté.
-Et `--else-branch` est censé toujours réussir et quitter avec succès.
-
-<br />
-
-### `--endif-branch`
-
-<br />
-
-Le drapeau `--endif-branch` fonctionne comme un drapeau noop optionnel pour indiquer la fin de l'instruction `--if-branch`.
-
-Il est possible de chaîner les quatre drapeaux ensemble: `--if-branch`, `--else-if-branch`, `--else-branch`, et `--endif-branch`.
-Par exemple, `--if-branch feature_branch --else-if-branch "$MY_ENV_VAR" --else-branch --endif-branch`.
-
-<br />
-<br />
-
-> 🐰 Félicitations ! Vous avez tout appris sur la sélection de branche ! 🎉
+> 🐰 Félicitations ! Vous avez appris tout ce qu'il faut savoir sur la sélection de branches ! 🎉
 
 <br/>
 
-<h2><a href="/fr/docs/explanation/adapters/">Continuer : Adaptateurs de Harnais de Benchmark ➡</a></h2>
+<h2><a href="/fr/docs/explanation/adapters/">Continuez : Adaptateurs de banc d'essai ➡</a></h2>

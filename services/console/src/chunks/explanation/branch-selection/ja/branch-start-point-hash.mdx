@@ -1,0 +1,28 @@
+### `--branch-start-point-hash <HASH>`
+
+<br />
+
+`branch`オプションの[スタートポイント][start point]として指定された完全なGitハッシュを使用します。
+このオプションは、[`--branch-start-point`][branch start point]オプションが設定されている場合にのみ必要です。
+
+- `branch`が存在しない場合、指定されたハッシュで`branch-start-point`から作成されます。
+- `branch`が存在し、`branch-start-point`と指定されたハッシュが同じ場合、
+  このオプションは無視されます。
+- `branch`が既に存在し、`branch-start-point`または指定されたハッシュが異なる場合、
+  古いバージョンの`branch`はリネームされ、
+  指定されたハッシュで`branch-start-point`から新しい`branch`が作成されます。
+
+新しい`branch`がスタートポイントで作成される場合、
+指定されたハッシュでの`branch-start-point`からすべてのデータとしきい値がコピーされます。
+
+例えば、`feature_branch`がそのスタートポイントが`main`ブランチでハッシュ`32aea434d751648726097ed3ac760b57107edd8b`で存在する場合、
+`--branch feature_branch --branch-start-point main --branch-start-point-hash 68b12758509ca5e2b1e3983525625e532eb5f562`を使用すると：
+
+1. 古い`feature_branch`を`feature_branch@main/hash/32aea434d751648726097ed3ac760b57107edd8b`にリネームします。
+2. `feature_branch`という新しいブランチを作成します。
+3. `main`のハッシュ`68b12758509ca5e2b1e3983525625e532eb5f562`からすべてのデータとしきい値を新しい`feature_branch`にコピーします。
+4. `bencher run`は新しい`feature_branch`を使用して実行されます。
+
+[start point]: /ja/docs/explanation/benchmarking/#start-point
+
+[branch start point]: #--branch-start-point-branch

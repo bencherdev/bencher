@@ -1,0 +1,24 @@
+### `--branch-reset`
+
+<br />
+
+지정된 `branch`를 리셋합니다.
+`--branch-reset`의 주요 사용 사례는 [상대 연속 벤치마킹][relative continuous benchmarking]입니다.
+이 플래그는 [`--branch-start-point`][branch start point] 옵션과 충돌합니다.
+
+- `branch`가 존재하지 않는 경우 생성됩니다.
+- `branch`가 이미 존재하는 경우, 기존의 `branch`는 이름이 변경되고
+  새로운 `branch`가 생성됩니다.
+
+새로운 `branch`가 생성되면 이전 데이터나 임계값이 없을 것입니다.
+
+예를 들어, 시작점 없이 `feature_branch`가 존재하는 경우
+`--branch feature_branch --branch-reset`을 사용하면:
+
+1. 기존의 `feature_branch`는 `feature_branch@detached`로 이름이 바뀝니다
+2. `feature_branch`라는 이름의 새로운 Branch가 생성됩니다
+3. `bencher run`은 새로운 `feature_branch`를 사용하여 진행됩니다
+
+[상대 연속 벤치마킹]: /ko/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+
+[branch start point]: #--branch-start-point-branch

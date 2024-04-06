@@ -1,0 +1,34 @@
+### `--branch-start-point <BRANCH>`
+
+<br />
+
+Utilice el nombre de la Rama, slug o UUID especificado como el [Punto de Inicio][punto de inicio] para la opción [`branch`](#--branch-branch).
+Para GitHub, esto suele ser [la `base` branch para una Pull Request][github base],
+y para GitLab, esto suele ser [la `branch` objetivo para una Merge Request][gitlab target].
+El caso de uso principal para `--branch-start-point` es [Benchmarking Continuo Estadístico](/es/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking).
+
+- Si el Punto de Inicio especificado es una cadena vacía, entonces esta opción se ignora.
+- Si `branch` no existe, se creará usando este Punto de Inicio.
+- Si `branch` ya existe y el Punto de Inicio es el mismo, entonces esta opción se ignora.
+- Si `branch` ya existe y el Punto de Inicio es diferente,
+  la versión antigua de `branch` será renombrada
+  y se creará una nueva `branch` usando este Punto de Inicio actualizado.
+
+Si se crea una nueva `branch` con un Punto de Inicio,
+entonces todos los datos y Umbrales del Punto de Inicio especificado se copian.
+
+Por ejemplo, si `feature_branch` aún no existe, pero `main` existe y tiene datos históricos.
+Entonces, usando `--branch feature_branch --branch-start-point main` se:
+1. Crearía una nueva Rama llamada `feature_branch`
+2. Copiaría todos los datos y Umbrales de `main` a `feature_branch`
+3. `bencher run` procedería usando `feature_branch`
+
+[github base]: https://docs.github.com/es/pull-requests/colaborar-con-solicitudes-de-extraccion/sugerir-cambios-en-tu-trabajo-con-solicitudes-de-extraccion/about-branches#working-with-branches
+[gitlab target]: https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html#from-the-merge-request-list
+
+[punto de inicio]: /es/docs/explanation/benchmarking/#start-point
+
+<br />
+
+> 🐰 Nota: Siempre que se utilicen variables de entorno, se deben envolver entre comillas dobles (es decir, `--branch-start-point "$MY_BRANCH_ENV_VAR"`),
+> si desea que `bencher run` no falle cuando `MY_BRANCH_ENV_VAR` esté indefinido.

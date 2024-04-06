@@ -1,0 +1,18 @@
+Ветка - это ссылка `git` (то есть имя ветки или тег).
+При использовании подкоманды CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>,
+выберите Ветку с помощью опции `--branch` или переменной окружения `BENCHER_BRANCH`.
+По умолчанию все проекты начинаются с Ветки `main`, и
+`main` используется по умолчанию, если ни один из них не указан.
+
+При [Постоянном Бенчмаркинге][continuous benchmarking], то есть бенчмаркинге в CI,
+вы часто захотите создать или перебазировать `branch` на уже существующей Ветке.
+Это называется Начальной Точкой Ветки [Start Point][start point].
+Начальная Точка - это другая Ветка в конкретной версии (и `git` хэш, если доступен).
+При использовании подкоманды CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>,
+выберите Начальную Точку с помощью опции `--branch-start-point`.
+Кроме того, используйте опцию `--branch-start-point-hash` для указания конкретного `git` хэша для Начальной Точки.
+Вся информация и [Пороги][thresholds] копируются из Начальной Точки.
+
+[continuous benchmarking]: /ru/docs/explanation/continuous-benchmarking/
+[start point]: /ru/docs/explanation/benchmarking/#start-point
+[thresholds]: /ru/docs/explanation/thresholds/

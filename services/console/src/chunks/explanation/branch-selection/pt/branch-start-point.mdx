@@ -1,0 +1,34 @@
+### `--branch-start-point <BRANCH>`
+
+<br />
+
+Use o nome da Branch, slug ou UUID especificado como [Ponto de Início][start point] para a opção [`branch`](#--branch-branch).
+Para o GitHub, isso é geralmente [a `base` branch para um Pull Request][github base],
+e para o GitLab, isso é geralmente [a `target` branch para um Merge Request][gitlab target].
+O principal caso de uso para `--branch-start-point` é [Benchmarks Estatísticos Contínuos](/pt/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking).
+
+- Se o Ponto de Início especificado for uma string vazia, então essa opção será ignorada.
+- Se `branch` não existir, ela será criada usando esse Ponto de Início.
+- Se `branch` já existir e o Ponto de Início for o mesmo, então essa opção será ignorada.
+- Se `branch` já existir e o Ponto de Início for diferente,
+  a versão antiga de `branch` será renomeada
+  e uma nova `branch` será criada usando esse Ponto de Início atualizado.
+
+Se uma nova `branch` for criada com um Ponto de Início,
+então todos os dados e Limiares do Ponto de Início especificado serão copiados.
+
+Por exemplo, se `feature_branch` ainda não existir, mas `main` existir e tiver dados históricos.
+Então, usar `--branch feature_branch --branch-start-point main` faria:
+1. Criar uma nova Branch chamada `feature_branch`
+2. Copiar todos os dados e Limiares de `main` para `feature_branch`
+3. `bencher run` prosseguiria usando `feature_branch`
+
+[github base]: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-branches#working-with-branches
+[gitlab target]: https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html#from-the-merge-request-list
+
+[start point]: /pt/docs/explanation/benchmarking/#start-point
+
+<br />
+
+> 🐰 Nota: Sempre que utilizar variáveis de ambiente, elas devem ser envolvidas em aspas duplas (ou seja, `--branch-start-point "$MY_BRANCH_ENV_VAR"`),
+> caso você queira que `bencher run` não apresente erro quando `MY_BRANCH_ENV_VAR` estiver indefinido.
