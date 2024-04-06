@@ -46,6 +46,8 @@ if (hasPerfImage(Astro.url)) {
   title={title}
   titleFmt={(title) => `📈 ${title}`}
   description={description}
+  published={jsonProject?.created}
+  modified={jsonProject?.modified}
   perfImage={image}
   canonical={`/perf/${params.project}`}
 >

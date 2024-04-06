@@ -40,6 +40,8 @@ try {
   title={title}
   titleFmt={(title) => `🚨 ${title}`}
   description={description}
+  published={jsonAlert?.created}
+  modified={jsonAlert?.modified}
 >
   { notFound ?
   <section class="section">

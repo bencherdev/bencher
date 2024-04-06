@@ -2,7 +2,7 @@
 export const prerender = false;
 
 import PerfLayout from "../../../../layouts/perf/PerfLayout.astro";
-import { JsonThreshold } from "../../../../types/bencher";
+import type { JsonThreshold } from "../../../../types/bencher";
 import PublicThreshold from "../../../../components/perf/PublicThreshold";
 import Tetris from "../../../../components/site/Tetris.astro";
 import { fetchSSR } from "../../../../components/perf/util";
@@ -23,7 +23,7 @@ try {
   jsonThreshold = await thresholdResponse.json();
   if (jsonThreshold?.uuid) {
     title = `${jsonThreshold?.branch?.name} | ${jsonThreshold?.testbed?.name} | ${jsonThreshold?.measure?.name}`;
-    description = `View a continuous benchmarking threshold for the ${jsonThreshold?.project?.name} benchmark on Bencher`;
+    description = "View a continuous benchmarking threshold on Bencher";
   } else {
     title = "Not Found";
     description = "Public Project Threshold not found";
@@ -40,6 +40,8 @@ try {
   title={title}
   titleFmt={(title) => `🚨 ${title}`}
   description={description}
+  published={jsonThreshold?.created}
+  modified={jsonThreshold?.modified}
 >
   { notFound ?
   <section class="section">
