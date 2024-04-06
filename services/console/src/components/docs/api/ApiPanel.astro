@@ -2,6 +2,7 @@
 import ApiLayout from "../../../layouts/docs/ApiLayout.astro";
 import { Language,  defaultLang } from "../../../i18n/ui";
 import ApiList from "../menu/ApiList.astro";
+import { API_DOCS_MODIFIED, API_DOCS_PUBLISHED } from "../../../i18n/utils";
 
 interface Props {
   lang: undefined | string;
@@ -55,7 +56,14 @@ const description = () => {
 }
 ---
 
-<ApiLayout title={title()} description={description()} heading={title()} lang={lang}>
+<ApiLayout
+  title={title()}
+  description={description()}
+  heading={title()}
+  published={API_DOCS_PUBLISHED}
+  modified={API_DOCS_MODIFIED}
+  lang={lang}
+>
   <nav class="menu">
     <ApiList lang={lang} />
   </nav>
