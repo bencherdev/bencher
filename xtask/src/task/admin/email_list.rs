@@ -25,7 +25,9 @@ impl EmailList {
             .send_with(|client| async move { client.users_get().per_page(u8::MAX).send().await })
             .await?;
         for user in users.into_inner() {
-            println!("{}", user.email);
+            if !user.email.as_ref().ends_with("@bencher.dev") {
+                println!("{}", user.email);
+            }
         }
         Ok(())
     }

@@ -6,7 +6,7 @@ edition.workspace = true
 
 [features]
 default = ["plus"]
-# admin = ["dep:bencher_client"]
+admin = ["dep:bencher_client"]
 api = ["dep:bencher_api"]
 cli = ["dep:bencher_cli"]
 plus = [
@@ -24,8 +24,7 @@ anyhow.workspace = true
 bencher_api = { workspace = true, optional = true }
 bencher_bing_index = { workspace = true, optional = true }
 bencher_cli = { workspace = true, optional = true }
-bencher_client = { workspace = true }
-# bencher_client = { workspace = true, optional = true }
+bencher_client = { workspace = true, optional = true }
 bencher_json = { workspace = true, features = ["lite"] }
 bencher_license = { workspace = true, optional = true }
 bencher_google_index = { workspace = true, optional = true }

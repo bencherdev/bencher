@@ -1,5 +1,7 @@
 use clap::{Parser, Subcommand};
 
+#[cfg(feature = "admin")]
+mod admin;
 mod notify;
 mod package;
 #[cfg(feature = "plus")]
@@ -9,9 +11,9 @@ mod template;
 mod test;
 mod types;
 mod version;
-// #[cfg(feature = "admin")]
-mod admin;
 
+#[cfg(feature = "admin")]
+pub use admin::email_list::TaskEmailList;
 pub use notify::TaskNotify;
 #[cfg(feature = "cli")]
 pub use package::{TaskDeb, TaskMan};
@@ -30,8 +32,6 @@ pub use test::{
 #[cfg(feature = "api")]
 pub use types::{TaskSwagger, TaskTypes, TaskTypeshare};
 pub use version::TaskVersion;
-// #[cfg(feature = "admin")]
-pub use admin::email_list::TaskEmailList;
 
 /// Bencher CLI
 #[derive(Parser, Debug)]
@@ -96,7 +96,7 @@ pub enum TaskSub {
     #[clap(subcommand)]
     /// License management
     License(TaskLicense),
-    // #[cfg(feature = "admin")]
+    #[cfg(feature = "admin")]
     /// Generate email list
     EmailList(TaskEmailList),
 }
