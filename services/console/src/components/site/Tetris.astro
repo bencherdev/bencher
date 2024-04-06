@@ -45,6 +45,7 @@
 </div>
 
 <script>
+try {
 // https://tetris.fandom.com/wiki/Tetris_Guideline
 
 // get a random integer between the range of [min,max]
@@ -175,6 +176,9 @@ function showGameOver() {
 }
 
 const canvas = document.getElementById('game');
+if (!canvas) {
+  throw new Error("Canvas not found");
+}
 const context = canvas.getContext('2d');
 const grid = 32;
 const tetrominoSequence = [];
@@ -357,4 +361,7 @@ document.addEventListener('keydown', function(e) {
 
 // start the game
 rAF = requestAnimationFrame(loop);
+} catch (error) {
+  // console.error(error);
+}
 </script>
