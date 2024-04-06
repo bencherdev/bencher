@@ -8152,6 +8152,7 @@ dependencies = [
  "bencher_api",
  "bencher_bing_index",
  "bencher_cli",
+ "bencher_client",
  "bencher_google_index",
  "bencher_json",
  "bencher_license",

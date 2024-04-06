@@ -2,6 +2,8 @@ use clap::Parser;
 
 use crate::parser::{TaskSub, TaskTask};
 
+// #[cfg(feature = "admin")]
+mod admin;
 mod notify;
 #[cfg(feature = "cli")]
 mod package;
@@ -14,6 +16,8 @@ mod test;
 mod types;
 mod version;
 
+// #[cfg(feature = "admin")]
+use admin::email_list::EmailList;
 use notify::Notify;
 #[cfg(feature = "cli")]
 use package::{deb::Deb, man::Man};
@@ -69,6 +73,8 @@ pub enum Sub {
     Notify(Notify),
     #[cfg(feature = "plus")]
     License(License),
+    // #[cfg(feature = "admin")]
+    EmailList(EmailList),
 }
 
 impl TryFrom<TaskTask> for Task {
@@ -116,6 +122,8 @@ impl TryFrom<TaskSub> for Sub {
             TaskSub::Notify(notify) => Self::Notify(notify.try_into()?),
             #[cfg(feature = "plus")]
             TaskSub::License(license) => Self::License(license.try_into()?),
+            // #[cfg(feature = "admin")]
+            TaskSub::EmailList(email_list) => Self::EmailList(email_list.try_into()?),
         })
     }
 }
@@ -163,6 +171,8 @@ impl Sub {
             Self::Notify(notify) => notify.exec().await,
             #[cfg(feature = "plus")]
             Self::License(license) => license.exec(),
+            // #[cfg(feature = "admin")]
+            Self::EmailList(email_list) => email_list.exec().await,
         }
     }
 }
