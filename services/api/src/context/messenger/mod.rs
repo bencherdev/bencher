@@ -17,6 +17,7 @@ pub enum Messenger {
 
 impl Messenger {
     pub fn send(&self, log: &Logger, message: Message) {
+        slog::debug!(log, "Sending message: {message:?}");
         match self {
             Self::StdOut => info!(log, "{message}"),
             Self::Email(email) => email.send(log, message),

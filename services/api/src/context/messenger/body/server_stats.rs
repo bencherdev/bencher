@@ -1,7 +1,10 @@
 #![cfg(feature = "plus")]
 
+use slog::Logger;
+
 use super::FmtBody;
 
+#[derive(Debug)]
 pub struct ServerStatsBody {
     pub server_stats: String,
 }
@@ -12,7 +15,7 @@ impl FmtBody for ServerStatsBody {
         server_stats.clone()
     }
 
-    fn html(&self) -> String {
+    fn html(&self, _log: &Logger) -> String {
         self.text()
     }
 }

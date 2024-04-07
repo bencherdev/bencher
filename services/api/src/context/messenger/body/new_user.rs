@@ -1,3 +1,4 @@
+use slog::Logger;
 use url::Url;
 
 #[cfg(feature = "plus")]
@@ -5,6 +6,7 @@ use crate::endpoints::system::auth::github::GITHUB_OAUTH2;
 
 use super::FmtBody;
 
+#[derive(Debug)]
 pub struct NewUserBody {
     pub admin: String,
     pub console_url: Url,
@@ -37,7 +39,7 @@ impl FmtBody for NewUserBody {
         )
     }
 
-    fn html(&self) -> String {
+    fn html(&self, _log: &Logger) -> String {
         let Self {
             admin,
             console_url,

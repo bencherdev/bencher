@@ -1,5 +1,8 @@
+use slog::Logger;
+
 use super::FmtBody;
 
+#[derive(Debug)]
 pub struct ButtonBody {
     pub title: String,
     pub preheader: String,
@@ -36,7 +39,7 @@ impl FmtBody for ButtonBody {
 
     // https://github.com/leemunroe/responsive-html-email-template
     #[allow(clippy::too_many_lines)]
-    fn html(&self) -> String {
+    fn html(&self, log: &Logger) -> String {
         let Self {
             title,
             preheader,
@@ -126,7 +129,14 @@ impl FmtBody for ButtonBody {
 "
         );
 
+        slog::debug!(log, "Inlining CSS into HTML");
         // TODO log this error
-        css_inline::inline(&html).unwrap_or(html)
+        match css_inline::inline(&html) {
+            Ok(html) => html,
+            Err(e) => {
+                slog::error!(log, "Failed to inline CSS: {e}");
+                html
+            },
+        }
     }
 }

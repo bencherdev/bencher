@@ -2,6 +2,7 @@ use std::fmt;
 
 use super::body::{Body, FmtBody};
 
+#[derive(Debug)]
 pub struct Message {
     pub to_name: Option<String>,
     pub to_email: String,

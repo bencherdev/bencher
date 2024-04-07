@@ -39,17 +39,20 @@ impl Email {
         }
 
         if let Some(body) = message.body {
+            slog::debug!(log, "Setting email body: {body:?}");
             message_builder = message_builder
                 .text_body(body.text())
-                .html_body(body.html());
+                .html_body(body.html(log));
         }
 
+        slog::debug!(log, "Creating client builder");
         // Connect to an SMTP relay server over TLS and
         // authenticate using the provided credentials.
         let client_builder = SmtpClientBuilder::new(self.hostname.clone(), self.port)
             .credentials((self.username.clone(), String::from(self.secret.clone())))
             .implicit_tls(!self.starttls);
 
+        slog::debug!(log, "Spawning email send task");
         let send_log = log.clone();
         tokio::spawn(async move {
             async fn send(

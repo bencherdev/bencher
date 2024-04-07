@@ -7,12 +7,14 @@ pub use button::ButtonBody;
 pub use new_user::NewUserBody;
 #[cfg(feature = "plus")]
 pub use server_stats::ServerStatsBody;
+use slog::Logger;
 
 pub trait FmtBody {
     fn text(&self) -> String;
-    fn html(&self) -> String;
+    fn html(&self, log: &Logger) -> String;
 }
 
+#[derive(Debug)]
 pub enum Body {
     Button(Box<ButtonBody>),
     NewUser(NewUserBody),
@@ -30,12 +32,12 @@ impl FmtBody for Body {
         }
     }
 
-    fn html(&self) -> String {
+    fn html(&self, log: &Logger) -> String {
         match self {
-            Self::Button(body) => body.html(),
-            Self::NewUser(body) => body.html(),
+            Self::Button(body) => body.html(log),
+            Self::NewUser(body) => body.html(log),
             #[cfg(feature = "plus")]
-            Self::ServerStats(body) => body.html(),
+            Self::ServerStats(body) => body.html(log),
         }
     }
 }
