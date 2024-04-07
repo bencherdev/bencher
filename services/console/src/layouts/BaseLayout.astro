@@ -6,7 +6,7 @@ import Footer from "../components/site/Footer.astro";
 import { BENCHER_TITLE, BENCHER_DESCRIPTION } from "../util/resource";
 import { BENCHER_SITE_URL } from "../util/ext";
 import { defaultLang } from "../i18n/ui.ts";
-import { Author } from "../components/docs/author";
+import { Author, TWITTER_BENCHER, twitter } from "../components/docs/author";
 // import { ViewTransitions } from "astro:transitions";
 
 interface Props {
@@ -34,22 +34,29 @@ const imageUrl = () => {
   return BENCHER_OG_IMAGE;
 }
 
+const imageAlt = () => {
+  if (perfImage) {
+    return `Track the performance for ${title}`;
+  }
+  return "🐰 Bencher";
+}
+
 const image = () => {
   if (perfImage) {
     return {
-      url: perfImage,
+      url: imageUrl(),
       type: "image/jpg",
       width: 1024,
       height: 768,
-      alt: `Track the performance for ${title}`
+      alt: imageAlt()
     }
   }
   return {
-    url: BENCHER_OG_IMAGE,
+    url: imageUrl(),
     type: "image/png",
     width: 1200,
     height: 630,
-    alt: "🐰 Bencher",
+    alt: imageAlt(),
   }
 }
 
@@ -112,7 +119,13 @@ const article = () => {
         article: article(),
       }}
       twitter={{
-        creator: author === Author.everett ? "@epompeii" : "@bencherdev",
+        card: "summary_large_image",
+        site: TWITTER_BENCHER,
+        creator: author ? twitter(author) : TWITTER_BENCHER,
+        title: titleFmt ? titleFmt(title) : title,
+        description: description ?? BENCHER_DESCRIPTION,
+        image: imageUrl(),
+        imageAlt: imageAlt(),
       }}
     />
     <!-- https://devicon.dev/ -->
