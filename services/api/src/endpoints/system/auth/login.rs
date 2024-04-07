@@ -74,7 +74,7 @@ async fn post_inner(
         title: "Confirm Bencher Login".into(),
         preheader: "Click the provided link to login.".into(),
         greeting: format!("Ahoy {},", query_user.name),
-        pre_body: "Please, click the button below or use the provided code to login to Bencher."
+        pre_body: "Please, click the button below or use the provided token to login to Bencher."
             .into(),
         button_text: "Confirm Login".into(),
         button_url: context

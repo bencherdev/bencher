@@ -252,7 +252,7 @@ async fn post_inner(
         greeting: if let Some(name) = name {
             format!("Ahoy {name}!") } else { "Ahoy!".into() },
         pre_body: format!(
-            "Please, click the button below or use the provided code to accept the invitation from {user_name} ({user_email}) to join {org_name} as a {org_role} on Bencher.",
+            "Please, click the button below or use the provided token to accept the invitation from {user_name} ({user_email}) to join {org_name} as a {org_role} on Bencher.",
             user_name = auth_user.user.name,
             user_email = auth_user.user.email,
         ),

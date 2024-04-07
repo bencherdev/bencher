@@ -84,7 +84,7 @@ impl FmtBody for ButtonBody {
     <div class=\"box\">
       <div class=\"columns is-centered\">
         <div class=\"column\">
-          <h1 class=\"title\">{title}</h1>
+          <h1 class=\"title\"><img src=\"https://bencher.dev/favicon.png\" width=\"32\" height=\"32\" alt=\"🐰\" /> {title}</h1>
           <br/>
           <p>{greeting}</p>
           <p>{pre_body}</p>
@@ -98,11 +98,9 @@ impl FmtBody for ButtonBody {
           </div>
           <br/>
           <div class=\"content has-text-centered\">
-            <small>
-              <code style=\"word-break: break-word;\">
-                  {clipboard_target}
-              </code>
-            </small>
+            <code style=\"word-break: break-all;\">
+              {clipboard_target}
+            </code>
           </div>
           <p>{post_body}</p>
           <br/>
@@ -120,11 +118,6 @@ impl FmtBody for ButtonBody {
     </div>
     </section>
   </body>
-  <script>
-    function copy_to_clipboard(id) {{
-        navigator.clipboard.writeText(document.getElementById(id)?.innerHTML);
-    }}
-  </script>
 </html>
 "
         );

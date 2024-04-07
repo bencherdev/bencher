@@ -79,7 +79,7 @@ async fn post_inner(
         title: "Confirm Bencher Signup".into(),
         preheader: "Click the provided link to signup.".into(),
         greeting: format!("Ahoy {},", insert_user.name),
-        pre_body: "Please, click the button below or use the provided code to signup for Bencher."
+        pre_body: "Please, click the button below or use the provided token to signup for Bencher."
             .into(),
         button_text: "Confirm Email".into(),
         button_url: context
