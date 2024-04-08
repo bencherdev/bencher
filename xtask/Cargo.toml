@@ -44,7 +44,7 @@ tokio = { workspace = true, features = ["macros", "rt"] }
 url.workspace = true
 # Crate
 assert_cmd = "2.0"
-async-openai = { version = "0.18", optional = true }
+async-openai = { version = "0.20", optional = true }
 clap_mangen = "0.2"
 dotenvy = "0.15"
 minijinja = { version = "1.0", features = ["loader"] }
