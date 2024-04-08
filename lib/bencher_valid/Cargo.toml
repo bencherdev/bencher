@@ -38,7 +38,7 @@ typeshare.workspace = true
 url = { workspace = true, features = ["serde"] }
 uuid = { workspace = true, features = ["serde"] }
 # Crate
-base64 = "0.21"
+base64 = "0.22"
 console_error_panic_hook = { version = "0.1", optional = true }
 email_address = "0.2"
 gix-hash = "0.14"

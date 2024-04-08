@@ -1080,7 +1080,7 @@ dependencies = [
 name = "bencher_valid"
 version = "0.4.5"
 dependencies = [
- "base64 0.21.7",
+ "base64 0.22.0",
  "chrono",
  "console_error_panic_hook",
  "derive_more",
