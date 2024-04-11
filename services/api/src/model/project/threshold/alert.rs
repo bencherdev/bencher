@@ -47,12 +47,11 @@ impl QueryAlert {
     ) -> Result<Self, HttpError> {
         schema::alert::table
             .filter(schema::alert::uuid.eq(uuid.to_string()))
-            .inner_join(
-                schema::boundary::table.inner_join(
-                    schema::metric::table
-                        .inner_join(schema::perf::table.inner_join(schema::benchmark::table)),
+            .inner_join(schema::boundary::table.inner_join(
+                schema::metric::table.inner_join(
+                    schema::report_benchmark::table.inner_join(schema::benchmark::table),
                 ),
-            )
+            ))
             .filter(schema::benchmark::project_id.eq(project_id))
             .select(QueryAlert::as_select())
             .first(conn)
@@ -66,7 +65,7 @@ impl QueryAlert {
                 .inner_join(
                     schema::boundary::table.inner_join(
                         schema::metric::table.inner_join(
-                            schema::perf::table
+                            schema::report_benchmark::table
                                 .inner_join(schema::report::table)
                                 .inner_join(schema::benchmark::table),
                         ),
@@ -75,7 +74,7 @@ impl QueryAlert {
                 .select((
                     schema::report::uuid,
                     schema::report::created,
-                    schema::perf::iteration,
+                    schema::report_benchmark::iteration,
                     QueryBenchmark::as_select(),
                     QueryMetric::as_select(),
                     QueryBoundary::as_select(),

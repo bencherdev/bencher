@@ -40,7 +40,7 @@ pub use project::{
     measure::{JsonMeasure, JsonMeasures, JsonNewMeasure, MeasureUuid},
     metric::{JsonMetric, JsonMetricsMap, JsonResultsMap, MeasureNameId, MetricUuid},
     model::{JsonModel, ModelUuid},
-    perf::{JsonPerf, JsonPerfQuery, PerfUuid},
+    perf::{JsonPerf, JsonPerfQuery, ReportBenchmarkUuid},
     report::{JsonNewReport, JsonReport, JsonReports, ReportUuid},
     testbed::{JsonNewTestbed, JsonTestbed, JsonTestbeds, TestbedUuid},
     threshold::{JsonNewThreshold, JsonThreshold, JsonThresholds, ThresholdUuid},

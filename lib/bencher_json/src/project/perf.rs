@@ -17,7 +17,7 @@ use super::metric::JsonMetric;
 use super::report::Iteration;
 use super::threshold::JsonThresholdModel;
 
-crate::typed_uuid::typed_uuid!(PerfUuid);
+crate::typed_uuid::typed_uuid!(ReportBenchmarkUuid);
 
 /// `JsonPerfQueryParams` is the actual query parameters accepted by the server.
 /// All query parameter values are therefore scalar values.

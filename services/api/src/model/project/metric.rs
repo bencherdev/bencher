@@ -10,7 +10,7 @@ use crate::{
 
 use super::{
     measure::{MeasureId, QueryMeasure},
-    perf::{PerfId, QueryPerf},
+    report::report_benchmark::{QueryReportBenchmark, ReportBenchmarkId},
 };
 
 crate::util::typed_id::typed_id!(MetricId);
@@ -19,12 +19,12 @@ crate::util::typed_id::typed_id!(MetricId);
     Debug, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
 )]
 #[diesel(table_name = metric_table)]
-#[diesel(belongs_to(QueryPerf, foreign_key = perf_id))]
+#[diesel(belongs_to(QueryReportBenchmark, foreign_key = report_benchmark_id))]
 #[diesel(belongs_to(QueryMeasure, foreign_key = measure_id))]
 pub struct QueryMetric {
     pub id: MetricId,
     pub uuid: MetricUuid,
-    pub perf_id: PerfId,
+    pub report_benchmark_id: ReportBenchmarkId,
     pub measure_id: MeasureId,
     pub value: f64,
     pub lower_value: Option<f64>,
@@ -48,7 +48,7 @@ impl QueryMetric {
     ) -> Result<u32, HttpError> {
         schema::metric::table
             .inner_join(
-                schema::perf::table
+                schema::report_benchmark::table
                     .inner_join(schema::benchmark::table.inner_join(schema::project::table))
                     .inner_join(schema::report::table),
             )
@@ -96,7 +96,7 @@ impl QueryMetric {
 #[diesel(table_name = metric_table)]
 pub struct InsertMetric {
     pub uuid: MetricUuid,
-    pub perf_id: PerfId,
+    pub report_benchmark_id: ReportBenchmarkId,
     pub measure_id: MeasureId,
     pub value: f64,
     pub lower_value: Option<f64>,
@@ -104,7 +104,11 @@ pub struct InsertMetric {
 }
 
 impl InsertMetric {
-    pub fn from_json(perf_id: PerfId, measure_id: MeasureId, metric: JsonMetric) -> Self {
+    pub fn from_json(
+        report_benchmark_id: ReportBenchmarkId,
+        measure_id: MeasureId,
+        metric: JsonMetric,
+    ) -> Self {
         let JsonMetric {
             value,
             lower_value,
@@ -112,7 +116,7 @@ impl InsertMetric {
         } = metric;
         Self {
             uuid: MetricUuid::new(),
-            perf_id,
+            report_benchmark_id,
             measure_id,
             value: value.into(),
             lower_value: lower_value.map(Into::into),

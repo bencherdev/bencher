@@ -30,6 +30,7 @@ use crate::{
     util::fn_get::{fn_get_id, fn_get_uuid},
 };
 
+pub mod report_benchmark;
 pub mod results;
 
 crate::util::typed_id::typed_id!(ReportId);
@@ -105,8 +106,8 @@ fn get_report_results(
     project: &QueryProject,
     report_id: ReportId,
 ) -> Result<JsonReportResults, HttpError> {
-    schema::perf::table
-    .filter(schema::perf::report_id.eq(report_id))
+    schema::report_benchmark::table
+    .filter(schema::report_benchmark::report_id.eq(report_id))
     .inner_join(schema::benchmark::table)
     .inner_join(schema::metric::table
         .inner_join(schema::measure::table)
@@ -118,9 +119,9 @@ fn get_report_results(
     )
     // It is important to order by the iteration first in order to make sure they are grouped together below
     // Then ordering by measure and finally benchmark name makes sure that the benchmarks are in the same order for each iteration
-    .order((schema::perf::iteration, schema::measure::name, schema::benchmark::name))
+    .order((schema::report_benchmark::iteration, schema::measure::name, schema::benchmark::name))
     .select((
-        schema::perf::iteration,
+        schema::report_benchmark::iteration,
         QueryBenchmark::as_select(),
         QueryMeasure::as_select(),
         QueryMetric::as_select(),
@@ -163,7 +164,7 @@ fn get_report_results(
     ))
     .load::<ResultsQuery>(conn)
     .map(|results| into_report_results_json(log, project, results))
-    .map_err(resource_not_found_err!(Perf, project))
+    .map_err(resource_not_found_err!(ReportBenchmark, project))
 }
 
 fn into_report_results_json(
@@ -256,18 +257,18 @@ fn get_report_alerts(
         .inner_join(
             schema::boundary::table.inner_join(
                 schema::metric::table.inner_join(
-                    schema::perf::table
+                    schema::report_benchmark::table
                         .inner_join(schema::report::table)
                         .inner_join(schema::benchmark::table),
                 ),
             ),
         )
         .filter(schema::report::id.eq(report_id))
-        .order((schema::perf::iteration, schema::benchmark::name))
+        .order((schema::report_benchmark::iteration, schema::benchmark::name))
         .select((
             schema::report::uuid,
             schema::report::created,
-            schema::perf::iteration,
+            schema::report_benchmark::iteration,
             QueryAlert::as_select(),
             QueryBenchmark::as_select(),
             QueryMetric::as_select(),

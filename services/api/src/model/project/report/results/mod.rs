@@ -22,7 +22,7 @@ use crate::{
         branch::BranchId,
         measure::{MeasureId, QueryMeasure},
         metric::{InsertMetric, QueryMetric},
-        perf::{InsertPerf, QueryPerf},
+        report::report_benchmark::{InsertReportBenchmark, QueryReportBenchmark},
         testbed::TestbedId,
         ProjectId,
     },
@@ -145,17 +145,22 @@ impl ReportResults {
         let (benchmark_name, ignore_benchmark) = benchmark_name.to_strip_ignore();
         let benchmark_id = self.benchmark_id(context, benchmark_name).await?;
 
-        let insert_perf = InsertPerf::from_json(self.report_id, iteration, benchmark_id);
-        diesel::insert_into(schema::perf::table)
-            .values(&insert_perf)
+        let insert_report_benchmark =
+            InsertReportBenchmark::from_json(self.report_id, iteration, benchmark_id);
+        diesel::insert_into(schema::report_benchmark::table)
+            .values(&insert_report_benchmark)
             .execute(conn_lock!(context))
-            .map_err(resource_conflict_err!(Perf, insert_perf))?;
-        let perf_id = QueryPerf::get_id(conn_lock!(context), insert_perf.uuid)?;
+            .map_err(resource_conflict_err!(
+                ReportBenchmark,
+                insert_report_benchmark
+            ))?;
+        let report_benchmark_id =
+            QueryReportBenchmark::get_id(conn_lock!(context), insert_report_benchmark.uuid)?;
 
         for (measure_key, metric) in metrics.inner {
             let measure_id = self.measure_id(context, measure_key).await?;
 
-            let insert_metric = InsertMetric::from_json(perf_id, measure_id, metric);
+            let insert_metric = InsertMetric::from_json(report_benchmark_id, measure_id, metric);
             diesel::insert_into(schema::metric::table)
                 .values(&insert_metric)
                 .execute(conn_lock!(context))
@@ -176,7 +181,7 @@ impl ReportResults {
                     issue_error(
                         StatusCode::NOT_FOUND,
                         "Failed to find metric",
-                        &format!("Failed to find new metric ({insert_metric:?}) for perf ({insert_perf:?}) even though it was just created on Bencher."),
+                        &format!("Failed to find new metric ({insert_metric:?}) for report benchmark ({insert_report_benchmark:?}) even though it was just created."),
                         e,
                     )
                 })?;

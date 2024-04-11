@@ -27,7 +27,7 @@ pub fn metrics_data(
     let mut query =
         schema::metric::table
             .inner_join(
-                schema::perf::table
+                schema::report_benchmark::table
                     .inner_join(
                         schema::report::table
                             .inner_join(schema::version::table.inner_join(
@@ -63,7 +63,7 @@ pub fn metrics_data(
     let mut query = query.order((
         schema::version::number.desc(),
         schema::report::start_time.desc(),
-        schema::perf::iteration.desc(),
+        schema::report_benchmark::iteration.desc(),
     ));
 
     if let Some(max_sample_size) = model.max_sample_size {

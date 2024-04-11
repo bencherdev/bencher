@@ -145,7 +145,7 @@ pub fn get_stats(
 
     // metrics and median metrics per report
     let mut weekly_metrics = schema::metric::table
-        .inner_join(schema::perf::table.inner_join(schema::report::table))
+        .inner_join(schema::report_benchmark::table.inner_join(schema::report::table))
         .filter(schema::report::created.ge(this_week))
         .group_by(schema::report::id)
         .select(count(schema::metric::id))
@@ -155,7 +155,7 @@ pub fn get_stats(
     let weekly_metrics_per_project = median(&mut weekly_metrics);
 
     let mut monthly_metrics = schema::metric::table
-        .inner_join(schema::perf::table.inner_join(schema::report::table))
+        .inner_join(schema::report_benchmark::table.inner_join(schema::report::table))
         .filter(schema::report::created.ge(this_month))
         .group_by(schema::report::id)
         .select(count(schema::metric::id))
@@ -165,7 +165,7 @@ pub fn get_stats(
     let monthly_metrics_per_project = median(&mut monthly_metrics);
 
     let mut total_metrics = schema::metric::table
-        .inner_join(schema::perf::table.inner_join(schema::report::table))
+        .inner_join(schema::report_benchmark::table.inner_join(schema::report::table))
         .group_by(schema::report::id)
         .select(count(schema::metric::id))
         .load::<i64>(conn)
@@ -188,7 +188,7 @@ pub fn get_stats(
     // top projects
     let weekly_project_metrics = schema::metric::table
         .inner_join(
-            schema::perf::table
+            schema::report_benchmark::table
                 .inner_join(schema::report::table.inner_join(schema::project::table)),
         )
         .filter(schema::report::created.ge(this_week))
@@ -200,7 +200,7 @@ pub fn get_stats(
 
     let monthly_project_metrics = schema::metric::table
         .inner_join(
-            schema::perf::table
+            schema::report_benchmark::table
                 .inner_join(schema::report::table.inner_join(schema::project::table)),
         )
         .filter(schema::report::created.ge(this_month))
@@ -212,7 +212,7 @@ pub fn get_stats(
 
     let total_project_metrics = schema::metric::table
         .inner_join(
-            schema::perf::table
+            schema::report_benchmark::table
                 .inner_join(schema::report::table.inner_join(schema::project::table)),
         )
         .filter(schema::report::created.ge(this_month))

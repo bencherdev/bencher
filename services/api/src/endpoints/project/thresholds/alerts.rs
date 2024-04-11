@@ -104,7 +104,7 @@ async fn get_ls_inner(
         .inner_join(
             schema::boundary::table.inner_join(
                 schema::metric::table.inner_join(
-                    schema::perf::table
+                    schema::report_benchmark::table
                         .inner_join(schema::report::table)
                         .inner_join(schema::benchmark::table),
                 ),
@@ -120,13 +120,13 @@ async fn get_ls_inner(
                 schema::alert::status.asc(),
                 schema::report::start_time.asc(),
                 schema::benchmark::name.asc(),
-                schema::perf::iteration.asc(),
+                schema::report_benchmark::iteration.asc(),
             )),
             Some(JsonDirection::Desc) => query.order((
                 schema::alert::status.asc(),
                 schema::report::start_time.desc(),
                 schema::benchmark::name.asc(),
-                schema::perf::iteration.asc(),
+                schema::report_benchmark::iteration.asc(),
             )),
         },
         ProjAlertsSort::Modified => match pagination_params.direction {
@@ -134,13 +134,13 @@ async fn get_ls_inner(
                 schema::alert::status.asc(),
                 schema::alert::modified.asc(),
                 schema::benchmark::name.asc(),
-                schema::perf::iteration.asc(),
+                schema::report_benchmark::iteration.asc(),
             )),
             Some(JsonDirection::Desc) | None => query.order((
                 schema::alert::status.asc(),
                 schema::alert::modified.desc(),
                 schema::benchmark::name.asc(),
-                schema::perf::iteration.asc(),
+                schema::report_benchmark::iteration.asc(),
             )),
         },
     };
@@ -335,18 +335,18 @@ async fn get_stats_inner(
         auth_user,
     )?;
 
-    let active = schema::alert::table
-        .filter(schema::alert::status.eq(AlertStatus::Active))
-        .inner_join(
-            schema::boundary::table.inner_join(
-                schema::metric::table
-                    .inner_join(schema::perf::table.inner_join(schema::benchmark::table)),
-            ),
-        )
-        .filter(schema::benchmark::project_id.eq(query_project.id))
-        .select(count(schema::alert::id))
-        .first::<i64>(conn_lock!(context))
-        .map_err(resource_not_found_err!(Alert, query_project))?;
+    let active =
+        schema::alert::table
+            .filter(schema::alert::status.eq(AlertStatus::Active))
+            .inner_join(schema::boundary::table.inner_join(
+                schema::metric::table.inner_join(
+                    schema::report_benchmark::table.inner_join(schema::benchmark::table),
+                ),
+            ))
+            .filter(schema::benchmark::project_id.eq(query_project.id))
+            .select(count(schema::alert::id))
+            .first::<i64>(conn_lock!(context))
+            .map_err(resource_not_found_err!(Alert, query_project))?;
 
     Ok(JsonAlertStats {
         active: u64::try_from(active).unwrap_or_default().into(),

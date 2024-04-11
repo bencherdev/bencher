@@ -227,7 +227,7 @@ async fn perf_query(
 ) -> Result<Vec<PerfQuery>, HttpError> {
     let mut query = schema::metric::table
         .inner_join(
-            schema::perf::table.inner_join(
+            schema::report_benchmark::table.inner_join(
                 schema::report::table
                     .inner_join(schema::version::table
                         .inner_join(schema::branch_version::table
@@ -276,7 +276,7 @@ async fn perf_query(
         .order((
             schema::version::number,
             schema::report::start_time,
-            schema::perf::iteration,
+            schema::report_benchmark::iteration,
         ))
         .select((
             QueryBranch::as_select(),
@@ -284,7 +284,7 @@ async fn perf_query(
             QueryBenchmark::as_select(),
             QueryMeasure::as_select(),
             schema::report::uuid,
-            schema::perf::iteration,
+            schema::report_benchmark::iteration,
             schema::report::start_time,
             schema::report::end_time,
             schema::version::number,
