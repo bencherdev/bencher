@@ -28,7 +28,9 @@ use crate::{
     view,
 };
 
-use super::metric_boundary::QueryMetricBoundary;
+use super::{
+    metric::QueryMetric, metric_boundary::QueryMetricBoundary, threshold::boundary::QueryBoundary,
+};
 
 pub mod report_benchmark;
 pub mod results;
@@ -197,9 +199,10 @@ fn into_report_results_json(
             }
         }
 
+        let (query_metric, query_boundary) = query_metric_boundary.split();
         // Create a benchmark metric out of the benchmark, metric, and boundary
         let benchmark_metric =
-            query_benchmark.into_benchmark_metric_json(project, query_metric_boundary);
+            query_benchmark.into_benchmark_metric_json(project, query_metric, query_boundary);
 
         // If there is a current report result, add the benchmark metric to it.
         // Otherwise, create a new report result and add the benchmark to it.
@@ -236,10 +239,12 @@ fn get_report_alerts(
 ) -> Result<JsonReportAlerts, HttpError> {
     let alerts = schema::alert::table
         .inner_join(
-            view::metric_boundary::table.inner_join(
-                schema::report_benchmark::table
-                    .inner_join(schema::report::table)
-                    .inner_join(schema::benchmark::table),
+            schema::boundary::table.inner_join(
+                schema::metric::table.inner_join(
+                    schema::report_benchmark::table
+                        .inner_join(schema::report::table)
+                        .inner_join(schema::benchmark::table),
+                ),
             ),
         )
         .filter(schema::report::id.eq(report_id))
@@ -250,7 +255,8 @@ fn get_report_alerts(
             schema::report_benchmark::iteration,
             QueryAlert::as_select(),
             QueryBenchmark::as_select(),
-            QueryMetricBoundary::as_select(),
+            QueryMetric::as_select(),
+            QueryBoundary::as_select(),
         ))
         .load::<(
             ReportUuid,
@@ -258,13 +264,21 @@ fn get_report_alerts(
             Iteration,
             QueryAlert,
             QueryBenchmark,
-            QueryMetricBoundary,
+            QueryMetric,
+            QueryBoundary,
         )>(conn)
         .map_err(resource_not_found_err!(Alert, report_id))?;
 
     let mut report_alerts = Vec::new();
-    for (report_uuid, created, iteration, query_alert, query_benchmark, query_metric_boundary) in
-        alerts
+    for (
+        report_uuid,
+        created,
+        iteration,
+        query_alert,
+        query_benchmark,
+        query_metric,
+        query_boundary,
+    ) in alerts
     {
         let json_alert = query_alert.into_json_for_report(
             conn,
@@ -273,7 +287,8 @@ fn get_report_alerts(
             created,
             iteration,
             query_benchmark,
-            query_metric_boundary,
+            query_metric,
+            query_boundary,
         )?;
         report_alerts.push(json_alert);
     }

@@ -26,7 +26,6 @@ diesel::joinable!(metric_boundary -> measure (measure_id));
 diesel::joinable!(metric_boundary -> report_benchmark (report_benchmark_id));
 diesel::joinable!(metric_boundary -> model (model_id));
 diesel::joinable!(metric_boundary -> threshold (threshold_id));
-diesel::joinable!(alert -> metric_boundary (boundary_id));
 
 diesel::allow_tables_to_appear_in_same_query!(metric_boundary, alert);
 diesel::allow_tables_to_appear_in_same_query!(metric_boundary, benchmark);

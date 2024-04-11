@@ -30,7 +30,9 @@ use crate::{
             measure::QueryMeasure,
             metric_boundary::QueryMetricBoundary,
             testbed::QueryTestbed,
-            threshold::{alert::QueryAlert, model::QueryModel, QueryThreshold},
+            threshold::{
+                alert::QueryAlert, boundary::QueryBoundary, model::QueryModel, QueryThreshold,
+            },
             QueryProject,
         },
         user::auth::{AuthUser, PubBearerToken},
@@ -250,7 +252,7 @@ async fn perf_query(
         .left_join(schema::threshold::table)
         .left_join(schema::model::table)
         // There may or may not be an alert for any given boundary
-        .left_join(schema::alert::table)
+        .left_join(schema::alert::table.on(view::metric_boundary::boundary_id.eq(schema::alert::boundary_id.nullable())))
         .into_boxed();
 
     let Times {
@@ -423,7 +425,9 @@ fn new_perf_metric(
         } else {
             (None, None)
         };
-    let (metric, boundary) = QueryMetricBoundary::into_json(query_metric_boundary);
+    let (metric, boundary) = QueryMetricBoundary::split(query_metric_boundary);
+    let metric = metric.into_json();
+    let boundary = boundary.map(QueryBoundary::into_json);
 
     JsonPerfMetric {
         report: report_uuid,

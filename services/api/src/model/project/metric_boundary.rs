@@ -1,4 +1,4 @@
-use bencher_json::{BoundaryUuid, JsonBoundary, JsonMetric, MetricUuid};
+use bencher_json::{BoundaryUuid, MetricUuid};
 
 use crate::{model::project::metric::MetricId, view::metric_boundary as metric_boundary_table};
 
@@ -40,7 +40,7 @@ pub struct QueryMetricBoundary {
 }
 
 impl QueryMetricBoundary {
-    pub fn into_json(self) -> (JsonMetric, Option<JsonBoundary>) {
+    pub fn split(self) -> (QueryMetric, Option<QueryBoundary>) {
         let Self {
             metric_id,
             metric_uuid,
@@ -57,7 +57,7 @@ impl QueryMetricBoundary {
             lower_limit,
             upper_limit,
         } = self;
-        let json_metric = QueryMetric {
+        let query_metric = QueryMetric {
             id: metric_id,
             uuid: metric_uuid,
             report_benchmark_id,
@@ -65,27 +65,23 @@ impl QueryMetricBoundary {
             value,
             lower_value,
             upper_value,
-        }
-        .into_json();
-        let json_boundary = if let (Some(id), Some(uuid), Some(threshold_id), Some(model_id)) =
+        };
+        let query_boundary = if let (Some(id), Some(uuid), Some(threshold_id), Some(model_id)) =
             (boundary_id, boundary_uuid, threshold_id, model_id)
         {
-            Some(
-                QueryBoundary {
-                    id,
-                    uuid,
-                    threshold_id,
-                    model_id,
-                    metric_id,
-                    baseline,
-                    lower_limit,
-                    upper_limit,
-                }
-                .into_json(),
-            )
+            Some(QueryBoundary {
+                id,
+                uuid,
+                threshold_id,
+                model_id,
+                metric_id,
+                baseline,
+                lower_limit,
+                upper_limit,
+            })
         } else {
             None
         };
-        (json_metric, json_boundary)
+        (query_metric, query_boundary)
     }
 }

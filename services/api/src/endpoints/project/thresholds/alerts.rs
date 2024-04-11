@@ -16,14 +16,15 @@ use crate::{
         Endpoint,
     },
     error::{resource_conflict_err, resource_not_found_err},
+    model::user::auth::{AuthUser, PubBearerToken},
     model::{
         project::{
             threshold::alert::{QueryAlert, UpdateAlert},
             QueryProject,
         },
-        user::auth::{AuthUser, BearerToken, PubBearerToken},
+        user::auth::BearerToken,
     },
-    schema, view,
+    schema,
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -101,10 +102,12 @@ async fn get_ls_inner(
 
     let mut query = schema::alert::table
         .inner_join(
-            view::metric_boundary::table.inner_join(
-                schema::report_benchmark::table
-                    .inner_join(schema::report::table)
-                    .inner_join(schema::benchmark::table),
+            schema::boundary::table.inner_join(
+                schema::metric::table.inner_join(
+                    schema::report_benchmark::table
+                        .inner_join(schema::report::table)
+                        .inner_join(schema::benchmark::table),
+                ),
             ),
         )
         .filter(schema::benchmark::project_id.eq(query_project.id))
@@ -332,16 +335,18 @@ async fn get_stats_inner(
         auth_user,
     )?;
 
-    let active = schema::alert::table
-        .filter(schema::alert::status.eq(AlertStatus::Active))
-        .inner_join(
-            view::metric_boundary::table
-                .inner_join(schema::report_benchmark::table.inner_join(schema::benchmark::table)),
-        )
-        .filter(schema::benchmark::project_id.eq(query_project.id))
-        .select(count(schema::alert::id))
-        .first::<i64>(conn_lock!(context))
-        .map_err(resource_not_found_err!(Alert, query_project))?;
+    let active =
+        schema::alert::table
+            .filter(schema::alert::status.eq(AlertStatus::Active))
+            .inner_join(schema::boundary::table.inner_join(
+                schema::metric::table.inner_join(
+                    schema::report_benchmark::table.inner_join(schema::benchmark::table),
+                ),
+            ))
+            .filter(schema::benchmark::project_id.eq(query_project.id))
+            .select(count(schema::alert::id))
+            .first::<i64>(conn_lock!(context))
+            .map_err(resource_not_found_err!(Alert, query_project))?;
 
     Ok(JsonAlertStats {
         active: u64::try_from(active).unwrap_or_default().into(),

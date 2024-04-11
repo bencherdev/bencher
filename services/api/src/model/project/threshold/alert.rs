@@ -8,7 +8,6 @@ use bencher_json::{
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
 use dropshot::HttpError;
-use http::StatusCode;
 
 use super::{
     boundary::{BoundaryId, QueryBoundary},
@@ -16,13 +15,11 @@ use super::{
 };
 use crate::{
     context::DbConnection,
-    error::{issue_error, resource_conflict_err, resource_not_found_err},
-    model::project::{
-        benchmark::QueryBenchmark, metric_boundary::QueryMetricBoundary, ProjectId, QueryProject,
-    },
-    schema::{self, alert as alert_table},
+    error::{resource_conflict_err, resource_not_found_err},
+    model::project::{benchmark::QueryBenchmark, metric::QueryMetric, ProjectId, QueryProject},
+    schema::alert as alert_table,
+    schema::{self},
     util::fn_get::{fn_get, fn_get_id, fn_get_uuid},
-    view,
 };
 
 crate::util::typed_id::typed_id!(AlertId);
@@ -50,11 +47,11 @@ impl QueryAlert {
     ) -> Result<Self, HttpError> {
         schema::alert::table
             .filter(schema::alert::uuid.eq(uuid.to_string()))
-            .inner_join(
-                view::metric_boundary::table.inner_join(
+            .inner_join(schema::boundary::table.inner_join(
+                schema::metric::table.inner_join(
                     schema::report_benchmark::table.inner_join(schema::benchmark::table),
                 ),
-            )
+            ))
             .filter(schema::benchmark::project_id.eq(project_id))
             .select(QueryAlert::as_select())
             .first(conn)
@@ -62,14 +59,16 @@ impl QueryAlert {
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonAlert, HttpError> {
-        let (report_uuid, created, iteration, query_benchmark, query_metric_boundary) =
+        let (report_uuid, created, iteration, query_benchmark, query_metric, query_boundary) =
             schema::alert::table
                 .filter(schema::alert::id.eq(self.id))
                 .inner_join(
-                    view::metric_boundary::table.inner_join(
-                        schema::report_benchmark::table
-                            .inner_join(schema::report::table)
-                            .inner_join(schema::benchmark::table),
+                    schema::boundary::table.inner_join(
+                        schema::metric::table.inner_join(
+                            schema::report_benchmark::table
+                                .inner_join(schema::report::table)
+                                .inner_join(schema::benchmark::table),
+                        ),
                     ),
                 )
                 .select((
@@ -77,14 +76,16 @@ impl QueryAlert {
                     schema::report::created,
                     schema::report_benchmark::iteration,
                     QueryBenchmark::as_select(),
-                    QueryMetricBoundary::as_select(),
+                    QueryMetric::as_select(),
+                    QueryBoundary::as_select(),
                 ))
                 .first::<(
                     ReportUuid,
                     DateTime,
                     Iteration,
                     QueryBenchmark,
-                    QueryMetricBoundary,
+                    QueryMetric,
+                    QueryBoundary,
                 )>(conn)
                 .map_err(resource_not_found_err!(Alert, self))?;
         let project = QueryProject::get(conn, query_benchmark.project_id)?;
@@ -95,7 +96,8 @@ impl QueryAlert {
             created,
             iteration,
             query_benchmark,
-            query_metric_boundary,
+            query_metric,
+            query_boundary,
         )
     }
 
@@ -108,7 +110,8 @@ impl QueryAlert {
         created: DateTime,
         iteration: Iteration,
         query_benchmark: QueryBenchmark,
-        query_metric_boundary: QueryMetricBoundary,
+        query_metric: QueryMetric,
+        query_boundary: QueryBoundary,
     ) -> Result<JsonAlert, HttpError> {
         let Self {
             uuid,
@@ -117,24 +120,15 @@ impl QueryAlert {
             modified,
             ..
         } = self;
-        let (Some(threshold_id), Some(model_id)) = (
-            query_metric_boundary.threshold_id,
-            query_metric_boundary.model_id,
-        ) else {
-            return Err(issue_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Alert is missing threshold and/or model",
-                "Alert is missing threshold and/or model",
-                format!("{query_metric_boundary:?}"),
-            ));
-        };
-        let threshold = QueryThreshold::get_json(conn, threshold_id, model_id)?;
-        let benchmark = query_benchmark.into_benchmark_metric_json(project, query_metric_boundary);
+        let threshold_id = query_boundary.threshold_id;
+        let model_id = query_boundary.model_id;
+        let benchmark =
+            query_benchmark.into_benchmark_metric_json(project, query_metric, Some(query_boundary));
         Ok(JsonAlert {
             uuid,
             report: report_uuid,
             iteration,
-            threshold,
+            threshold: QueryThreshold::get_json(conn, threshold_id, model_id)?,
             benchmark,
             limit: boundary_limit,
             status,

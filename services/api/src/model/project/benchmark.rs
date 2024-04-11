@@ -5,7 +5,7 @@ use bencher_json::{
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
-use super::{metric_boundary::QueryMetricBoundary, ProjectId, QueryProject};
+use super::{metric::QueryMetric, threshold::boundary::QueryBoundary, ProjectId, QueryProject};
 use crate::{
     context::DbConnection,
     error::{assert_parentage, resource_conflict_err, resource_not_found_err, BencherResource},
@@ -112,7 +112,8 @@ impl QueryBenchmark {
     pub fn into_benchmark_metric_json(
         self,
         project: &QueryProject,
-        query_metric_boundary: QueryMetricBoundary,
+        query_metric: QueryMetric,
+        query_boundary: Option<QueryBoundary>,
     ) -> JsonBenchmarkMetric {
         let JsonBenchmark {
             uuid,
@@ -122,7 +123,8 @@ impl QueryBenchmark {
             created,
             modified,
         } = self.into_json_for_project(project);
-        let (metric, boundary) = query_metric_boundary.into_json();
+        let metric = query_metric.into_json();
+        let boundary = query_boundary.map(QueryBoundary::into_json);
         JsonBenchmarkMetric {
             uuid,
             project,
