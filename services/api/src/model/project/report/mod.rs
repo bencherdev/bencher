@@ -16,19 +16,19 @@ use crate::{
             benchmark::QueryBenchmark,
             branch::{BranchId, QueryBranch},
             measure::QueryMeasure,
-            metric::QueryMetric,
             testbed::{QueryTestbed, TestbedId},
-            threshold::model::QueryModel,
-            threshold::{alert::QueryAlert, boundary::QueryBoundary, QueryThreshold},
+            threshold::{alert::QueryAlert, model::QueryModel, QueryThreshold},
             version::VersionId,
             ProjectId, QueryProject,
         },
         user::{QueryUser, UserId},
     },
-    schema,
-    schema::report as report_table,
+    schema::{self, report as report_table},
     util::fn_get::{fn_get_id, fn_get_uuid},
+    view,
 };
+
+use super::metric_boundary::QueryMetricBoundary;
 
 pub mod report_benchmark;
 pub mod results;
@@ -95,8 +95,7 @@ type ResultsQuery = (
     Iteration,
     QueryBenchmark,
     QueryMeasure,
-    QueryMetric,
-    Option<QueryBoundary>,
+    QueryMetricBoundary,
     Option<(QueryThreshold, QueryModel)>,
 );
 
@@ -109,13 +108,11 @@ fn get_report_results(
     schema::report_benchmark::table
     .filter(schema::report_benchmark::report_id.eq(report_id))
     .inner_join(schema::benchmark::table)
-    .inner_join(schema::metric::table
+    .inner_join(view::metric_boundary::table
         .inner_join(schema::measure::table)
         // There may or may not be a boundary for any given metric
-        .left_join(schema::boundary::table
-            .inner_join(schema::threshold::table)
-            .inner_join(schema::model::table)
-        )
+        .left_join(schema::threshold::table)
+        .left_join(schema::model::table)
     )
     // It is important to order by the iteration first in order to make sure they are grouped together below
     // Then ordering by measure and finally benchmark name makes sure that the benchmarks are in the same order for each iteration
@@ -124,17 +121,7 @@ fn get_report_results(
         schema::report_benchmark::iteration,
         QueryBenchmark::as_select(),
         QueryMeasure::as_select(),
-        QueryMetric::as_select(),
-        (
-            schema::boundary::id,
-            schema::boundary::uuid,
-            schema::boundary::threshold_id,
-            schema::boundary::model_id,
-            schema::boundary::metric_id,
-            schema::boundary::baseline,
-            schema::boundary::lower_limit,
-            schema::boundary::upper_limit,
-        ).nullable(),
+        QueryMetricBoundary::as_select(),
         (
             (
                 schema::threshold::id,
@@ -176,14 +163,8 @@ fn into_report_results_json(
     let mut report_iteration = Vec::new();
     let mut prev_iteration = None;
     let mut report_result: Option<JsonReportResult> = None;
-    for (
-        iteration,
-        query_benchmark,
-        query_measure,
-        query_metric,
-        query_boundary,
-        threshold_model,
-    ) in results
+    for (iteration, query_benchmark, query_measure, query_metric_boundary, threshold_model) in
+        results
     {
         // If onto a new iteration, then add the result to the report iteration list.
         // Then add the report iteration list to the report results list.
@@ -218,7 +199,7 @@ fn into_report_results_json(
 
         // Create a benchmark metric out of the benchmark, metric, and boundary
         let benchmark_metric =
-            query_benchmark.into_benchmark_metric_json(project, query_metric, query_boundary);
+            query_benchmark.into_benchmark_metric_json(project, query_metric_boundary);
 
         // If there is a current report result, add the benchmark metric to it.
         // Otherwise, create a new report result and add the benchmark to it.
@@ -255,12 +236,10 @@ fn get_report_alerts(
 ) -> Result<JsonReportAlerts, HttpError> {
     let alerts = schema::alert::table
         .inner_join(
-            schema::boundary::table.inner_join(
-                schema::metric::table.inner_join(
-                    schema::report_benchmark::table
-                        .inner_join(schema::report::table)
-                        .inner_join(schema::benchmark::table),
-                ),
+            view::metric_boundary::table.inner_join(
+                schema::report_benchmark::table
+                    .inner_join(schema::report::table)
+                    .inner_join(schema::benchmark::table),
             ),
         )
         .filter(schema::report::id.eq(report_id))
@@ -271,8 +250,7 @@ fn get_report_alerts(
             schema::report_benchmark::iteration,
             QueryAlert::as_select(),
             QueryBenchmark::as_select(),
-            QueryMetric::as_select(),
-            QueryBoundary::as_select(),
+            QueryMetricBoundary::as_select(),
         ))
         .load::<(
             ReportUuid,
@@ -280,21 +258,13 @@ fn get_report_alerts(
             Iteration,
             QueryAlert,
             QueryBenchmark,
-            QueryMetric,
-            QueryBoundary,
+            QueryMetricBoundary,
         )>(conn)
         .map_err(resource_not_found_err!(Alert, report_id))?;
 
     let mut report_alerts = Vec::new();
-    for (
-        report_uuid,
-        created,
-        iteration,
-        query_alert,
-        query_benchmark,
-        query_metric,
-        query_boundary,
-    ) in alerts
+    for (report_uuid, created, iteration, query_alert, query_benchmark, query_metric_boundary) in
+        alerts
     {
         let json_alert = query_alert.into_json_for_report(
             conn,
@@ -303,8 +273,7 @@ fn get_report_alerts(
             created,
             iteration,
             query_benchmark,
-            query_metric,
-            query_boundary,
+            query_metric_boundary,
         )?;
         report_alerts.push(json_alert);
     }

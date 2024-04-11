@@ -1,6 +1,6 @@
 PRAGMA foreign_keys = off;
 -- perf
-CREATE TABLE down_perf (
+CREATE TABLE perf (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     report_id INTEGER NOT NULL,
@@ -10,7 +10,7 @@ CREATE TABLE down_perf (
     FOREIGN KEY (benchmark_id) REFERENCES benchmark (id),
     UNIQUE(report_id, iteration, benchmark_id)
 );
-INSERT INTO down_perf(
+INSERT INTO perf(
         id,
         uuid,
         report_id,
@@ -24,8 +24,6 @@ SELECT id,
     benchmark_id
 FROM report_benchmark;
 DROP TABLE report_benchmark;
-ALTER TABLE down_perf
-    RENAME TO perf;
 -- metric
 CREATE TABLE down_metric (
     id INTEGER PRIMARY KEY NOT NULL,

@@ -11,6 +11,8 @@ pub mod model;
 #[allow(unused_qualifications)]
 pub mod schema;
 pub mod util;
+#[allow(unused_qualifications)]
+pub mod view;
 
 pub const API_VERSION: &str = env!("CARGO_PKG_VERSION");
 

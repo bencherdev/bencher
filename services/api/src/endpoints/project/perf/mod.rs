@@ -28,16 +28,14 @@ use crate::{
             benchmark::QueryBenchmark,
             branch::QueryBranch,
             measure::QueryMeasure,
-            metric::QueryMetric,
+            metric_boundary::QueryMetricBoundary,
             testbed::QueryTestbed,
-            threshold::{
-                alert::QueryAlert, boundary::QueryBoundary, model::QueryModel, QueryThreshold,
-            },
+            threshold::{alert::QueryAlert, model::QueryModel, QueryThreshold},
             QueryProject,
         },
         user::auth::{AuthUser, PubBearerToken},
     },
-    schema,
+    schema, view,
 };
 
 pub mod img;
@@ -225,7 +223,7 @@ async fn perf_query(
     measure_uuid: MeasureUuid,
     times: Times,
 ) -> Result<Vec<PerfQuery>, HttpError> {
-    let mut query = schema::metric::table
+    let mut query = view::metric_boundary::table
         .inner_join(
             schema::report_benchmark::table.inner_join(
                 schema::report::table
@@ -249,13 +247,10 @@ async fn perf_query(
         .filter(schema::benchmark::uuid.eq(benchmark_uuid))
         .filter(schema::measure::uuid.eq(measure_uuid))
         // There may or may not be a boundary for any given metric
-        .left_join(
-            schema::boundary::table
-                .inner_join(schema::threshold::table)
-                .inner_join(schema::model::table)
-                // There may or may not be an alert for any given boundary
-                .left_join(schema::alert::table),
-        )
+        .left_join(schema::threshold::table)
+        .left_join(schema::model::table)
+        // There may or may not be an alert for any given boundary
+        .left_join(schema::alert::table)
         .into_boxed();
 
     let Times {
@@ -315,16 +310,6 @@ async fn perf_query(
                     schema::model::replaced,
                 ),
                 (
-                    schema::boundary::id,
-                    schema::boundary::uuid,
-                    schema::boundary::threshold_id,
-                    schema::boundary::model_id,
-                    schema::boundary::metric_id,
-                    schema::boundary::baseline,
-                    schema::boundary::lower_limit,
-                    schema::boundary::upper_limit,
-                ),
-                (
                     schema::alert::id,
                     schema::alert::uuid,
                     schema::alert::boundary_id,
@@ -333,7 +318,7 @@ async fn perf_query(
                     schema::alert::modified,
                 ).nullable(),
             ).nullable(),
-            QueryMetric::as_select(),
+            QueryMetricBoundary::as_select(),
         ))
         // Acquire the lock on the database connection for every query.
         // This helps to avoid resource contention when the database is under heavy load.
@@ -353,13 +338,8 @@ type PerfQuery = (
     DateTime,
     VersionNumber,
     Option<GitHash>,
-    Option<(
-        QueryThreshold,
-        QueryModel,
-        QueryBoundary,
-        Option<QueryAlert>,
-    )>,
-    QueryMetric,
+    Option<(QueryThreshold, QueryModel, Option<QueryAlert>)>,
+    QueryMetricBoundary,
 );
 
 struct QueryDimensions {
@@ -376,13 +356,8 @@ type PerfMetricQuery = (
     DateTime,
     VersionNumber,
     Option<GitHash>,
-    Option<(
-        QueryThreshold,
-        QueryModel,
-        QueryBoundary,
-        Option<QueryAlert>,
-    )>,
-    QueryMetric,
+    Option<(QueryThreshold, QueryModel, Option<QueryAlert>)>,
+    QueryMetricBoundary,
 );
 
 fn split_perf_query(
@@ -399,7 +374,7 @@ fn split_perf_query(
         version_number,
         version_hash,
         boundary_limit,
-        query_metric,
+        query_metric_boundary,
     ): PerfQuery,
 ) -> (QueryDimensions, JsonPerfMetric) {
     let query_dimensions = QueryDimensions {
@@ -416,7 +391,7 @@ fn split_perf_query(
         version_number,
         version_hash,
         boundary_limit,
-        query_metric,
+        query_metric_boundary,
     );
     (query_dimensions, new_perf_metric(project, metric_query))
 }
@@ -431,7 +406,7 @@ fn new_perf_metric(
         version_number,
         version_hash,
         boundary_limit,
-        query_metric,
+        query_metric_boundary,
     ): PerfMetricQuery,
 ) -> JsonPerfMetric {
     let version = JsonVersion {
@@ -439,16 +414,16 @@ fn new_perf_metric(
         hash: version_hash,
     };
 
-    let (boundary, threshold, alert) =
-        if let Some((query_threshold, query_model, query_boundary, query_alert)) = boundary_limit {
-            let boundary = Some(query_boundary.into_json());
+    let (threshold, alert) =
+        if let Some((query_threshold, query_model, query_alert)) = boundary_limit {
             let threshold =
                 Some(query_threshold.into_threshold_model_json_for_project(project, query_model));
             let alert = query_alert.map(QueryAlert::into_perf_json);
-            (boundary, threshold, alert)
+            (threshold, alert)
         } else {
-            (None, None, None)
+            (None, None)
         };
+    let (metric, boundary) = QueryMetricBoundary::into_json(query_metric_boundary);
 
     JsonPerfMetric {
         report: report_uuid,
@@ -457,7 +432,7 @@ fn new_perf_metric(
         end_time,
         version,
         threshold,
-        metric: query_metric.into_json(),
+        metric,
         boundary,
         alert,
     }

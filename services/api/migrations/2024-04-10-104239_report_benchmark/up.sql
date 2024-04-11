@@ -1,6 +1,6 @@
 PRAGMA foreign_keys = off;
 -- report_benchmark
-CREATE TABLE up_report_benchmark (
+CREATE TABLE report_benchmark (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     report_id INTEGER NOT NULL,
@@ -10,7 +10,7 @@ CREATE TABLE up_report_benchmark (
     FOREIGN KEY (benchmark_id) REFERENCES benchmark (id),
     UNIQUE(report_id, iteration, benchmark_id)
 );
-INSERT INTO up_report_benchmark(
+INSERT INTO report_benchmark(
         id,
         uuid,
         report_id,
@@ -24,8 +24,6 @@ SELECT id,
     benchmark_id
 FROM perf;
 DROP TABLE perf;
-ALTER TABLE up_report_benchmark
-    RENAME TO report_benchmark;
 -- metric
 CREATE TABLE up_metric (
     id INTEGER PRIMARY KEY NOT NULL,
