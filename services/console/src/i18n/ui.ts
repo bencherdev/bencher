@@ -238,3 +238,26 @@ export const caseStudy = (lang: Language) => {
 			return "案例研究";
 	}
 };
+
+export const engineering = (lang: Language) => {
+	switch (lang) {
+		case Language.en:
+			return "Engineering";
+		case Language.de:
+			return "Ingenieurwesen";
+		case Language.es:
+			return "Ingeniería";
+		case Language.fr:
+			return "Ingénierie";
+		case Language.ja:
+			return "エンジニアリング";
+		case Language.ko:
+			return "공학";
+		case Language.pt:
+			return "Engenharia";
+		case Language.ru:
+			return "Инженерия";
+		case Language.zh:
+			return "工程";
+	}
+};

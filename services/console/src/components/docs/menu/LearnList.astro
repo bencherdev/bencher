@@ -1,5 +1,5 @@
 ---
-import { benchmarking, caseStudy } from "../../../i18n/ui.ts";
+import { benchmarking, caseStudy, engineering } from "../../../i18n/ui.ts";
 import { getLangCollection, langPath} from "../../../i18n/utils.ts"
 import Collection, { collectionPath } from "../../../util/collection.ts";
 
@@ -10,6 +10,7 @@ interface Props {
 // Learn
 const rustCollection = await getLangCollection(Collection.rust);
 const caseStudyCollection = await getLangCollection(Collection.case_study);
+const engineeringCollection = await getLangCollection(Collection.engineering);
 
 const { lang } = Astro.props;
 ---
@@ -32,6 +33,16 @@ const { lang } = Astro.props;
         section: null,
         collection: Collection.case_study,
         content: caseStudyCollection,
+      }
+    ],
+  },
+  {
+    label: engineering(lang),
+    sections: [
+      {
+        section: null,
+        collection: Collection.engineering,
+        content: engineeringCollection,
       }
     ],
   },

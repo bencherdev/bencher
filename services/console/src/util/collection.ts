@@ -14,6 +14,7 @@ enum Collection {
 	// Learn
 	rust = "rust",
 	case_study = "case_study",
+	engineering = "engineering",
 }
 
 export const ApiCollections = [Collection.organizations];
@@ -42,6 +43,8 @@ export const collectionPath = (collection: Collection) => {
 			return "benchmarking/rust";
 		case Collection.case_study:
 			return "case-study";
+		case Collection.engineering:
+			return "engineering";
 	}
 };
 

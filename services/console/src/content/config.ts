@@ -54,6 +54,7 @@ export const collections = {
 	// learn
 	rust: page,
 	case_study: page,
+	engineering: page,
 };
 
 export const keywords = ["Continuous Benchmarking"];

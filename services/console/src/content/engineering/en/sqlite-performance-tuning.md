@@ -1,3 +1,12 @@
+---
+title: "SQLite Performance Tuning"
+description: "Learn how Bencher benchmarked, profiled, and tuned its SQLite database to enable better continuous benchmarking."
+heading: "Bencher Perf is now 30x Faster with some SQLite Performance Tuning"
+published: "2024-03-19T07:39:00Z"
+modified: "2024-03-20T07:36:00Z"
+sortOrder: -2024.0411
+---
+
 It took 38.83 seconds to load this query Rustls report with 112 benchmarks:
 
 now taks 1.48 seconds

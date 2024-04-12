@@ -30,6 +30,7 @@ const serverCollection = await getEnCollection(Collection.server);
 // Learn
 const rustCollection = await getLangCollection(Collection.rust);
 const caseStudyCollection = await getLangCollection(Collection.case_study);
+const engineeringCollection = await getLangCollection(Collection.engineering);
 
 const { tab, collection, slug } = Astro.props;
 const lang: Language = Astro.props.lang ?? defaultLang;
@@ -66,7 +67,7 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
       case DocsMenuId.Api:
         return 1 + organizationsCollection.length + 1 + projectsCollection.length + 1 + usersCollection.length + 1 + serverCollection.length;
       case DocsMenuId.Learn:
-        return 1 + rustCollection[lang].length + 1 + caseStudyCollection[lang].length;
+        return 1 + rustCollection[lang].length + 1 + caseStudyCollection[lang].length + 1 + engineeringCollection[lang].length;
     }
   }
   return `display: ${isVisible(menu, tab) ? "block" : "none"}; margin-bottom: ${marginBottom(menu) * 1.5}rem;`;
