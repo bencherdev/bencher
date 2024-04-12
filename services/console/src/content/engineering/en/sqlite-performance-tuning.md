@@ -1,11 +1,82 @@
 ---
 title: "SQLite Performance Tuning"
 description: "Learn how Bencher benchmarked, profiled, and tuned its SQLite database to enable better continuous benchmarking."
-heading: "Bencher Perf is now 30x Faster with some SQLite Performance Tuning"
+heading: "Practice What You Preach: Bencher Perf is now 30x Faster with some SQLite Performance Tuning"
 published: "2024-03-19T07:39:00Z"
 modified: "2024-03-20T07:36:00Z"
 sortOrder: -2024.0411
 ---
+
+A couple of days ago, I got some indirect feedback [in a GitHub issues comment][github bitcoin 27284]
+that [their Bencher Perf Page][0xb10c perf page] was taking a while to load.
+So I dedecided to check it out, and oh, man were they being nice.
+It took sooo long to load! Embarrassingly long.
+Especially for the leading [Continuous Benchmarking][continuous benchmarking] tool.
+
+In the past, I've used the [Rustls Perf Page] as my litmus test.
+They have 113 benchmarks and [one of the most impressive Continuous Benchmarking setups out there][rustls case study].
+It used to take about 5 seconds load. This time around it took... ⏳👀 ... 38.8 seconds!
+With that sort of latency, I had to dig in. Performance bugs are bugs, after all!
+
+[github bitcoin 27284]: https://github.com/bitcoin/bitcoin/issues/27284#issuecomment-2046870296
+
+[0xb10c perf page]: /perf/0xb10c-s-bitcoin-core
+[continuous benchmarking]: /docs/explanation/continuous-benchmarking/
+[rustls perf page]: /perf/rustls-821705769
+[rustls case study]: /learn/case-study/rustls/
+
+## History
+
+From the very start, I knew that the [Bencher Perf API][perf query]
+was going to be one of the most demanding endpoints performance wise.
+I believe the main reason that so many folks have had to [reinvent the benchmark tracking wheel][prior art]
+is that the existing off-the-shelf tools don't handle the high dimensionality required.
+By "high dimensionality", I mean being able to track performance over time and accross multiple dimensions:
+[Branches][branch], [Testbeds][testbed], [Benchmarks][benchmarks], and [Measures][measures].
+This ability to slice and dice across five different dimensions leads to a very complex model.
+
+Because of this inheret complexity and the nature of the data,
+I considered using a time series database for Bencher.
+In the end though, I settled on using SQLite instead.
+I figured it was better to [do things that don't scale][do things that dont scale]
+than to spend the extra time learning an entirely new database architecture that may or may not actually help.
+
+Over time, the demands on the Bencher Perf API have also increased.
+Originally, you had to select all of the dimensions that you wanted to plot manually.
+This created a lot of friction for users to get to a useful plot.
+To solve this, I [added a list of the most recent Reports][github issue 133] to the Perf Pages,
+and by default, the most recent Report was selected and plotted.
+This means that if there were 113 benchmarks in the most recent Report, then all 113 would be plotted.
+The model also got even more complicated with the ability to track and visualize [Threshold Boundaries][thresholds].
+
+With this in mind, I made a few performance related improvements.
+Since the Perf Plot needs the most recent Report to start plotting,
+I refactored the [Reports API][reports api] to get all Report data in a single call to the database instead of iterating.
+I also drastically reduced the scope of all database handles/lock contention.
+To help communicate to users, I added a status bar spinner for both [the Perf Plot][bencher v0317] and [the dimension tabs][bencher v045].
+
+I also had a failed attempt last fall at using a composite query to get all Perf results in a single query.
+This lead to me hitting the [Rust type system recusion limit][recusion limit],
+overflowing the stack on my M1 MacBook Pro,
+suffering through insane (much longer than 38 seconds) compile time,
+and finally dead ending at [SQLite's max number of terms in a compound select statement][sqlite limits].
+
+[do things that dont scale]: https://paulgraham.com/ds.html
+[github issue 133]: https://github.com/bencherdev/bencher/issues/133
+[recusion limit]: https://doc.rust-lang.org/reference/attributes/limits.html#the-recursion_limit-attribute
+[sqlite limits]: https://www.sqlite.org/limits.html
+
+[perf query]: /docs/api/projects/perf/#get-v0projectsprojectperf
+[prior art]: /docs/reference/prior-art/#benchmark-tracking-tools
+[branch]: /docs/explanation/benchmarking/#branch
+[testbed]: /docs/explanation/benchmarking/#testbed
+[benchmarks]: /docs/explanation/benchmarking/#benchmarks
+[measures]: /docs/explanation/benchmarking/#measures
+[thresholds]: /docs/explanation/thresholds/
+[reports api]: /docs/api/projects/reports/#get-v0projectsprojectreports
+[bencher v0317]: /docs/reference/changelog/#v0317
+[bencher v045]: /docs/reference/changelog/#v045
+
 
 It took 38.83 seconds to load this query Rustls report with 112 benchmarks:
 

@@ -50,7 +50,7 @@ const getTypes = (parameter) => {
   if (Array.isArray(refSchema?.oneOf)) {
     const oneOf = refSchema.oneOf.map(schema => schema?.enum).flat();
     // This will break when there are multiple oneOfs
-    const defaultParam = oneOf.length === 1 ? oneOf[0] : null;
+    const defaultParam = oneOf?.length === 1 ? oneOf[0] : null;
     return ["string", defaultParam, oneOf];
   }
 
