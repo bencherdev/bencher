@@ -25,7 +25,7 @@ With that sort of latency, I had to dig in. Performance bugs are bugs, after all
 [rustls perf page]: /perf/rustls-821705769
 [rustls case study]: /learn/case-study/rustls/
 
-## History
+## Background
 
 From the very start, I knew that the [Bencher Perf API][perf query]
 was going to be one of the most demanding endpoints performance wise.
@@ -51,20 +51,31 @@ The model also got even more complicated with the ability to track and visualize
 
 With this in mind, I made a few performance related improvements.
 Since the Perf Plot needs the most recent Report to start plotting,
-I refactored the [Reports API][reports api] to get all Report data in a single call to the database instead of iterating.
-I also drastically reduced the scope of all database handles/lock contention.
+I refactored the [Reports API][reports api] to get a Report's result data in a single call to the database instead of iterating.
+The time window for the default Report query was set to four weeks, instead of being unbounded.
+I also drastically limited the scope of all database handles, reducing lock contention.
 To help communicate to users, I added a status bar spinner for both [the Perf Plot][bencher v0317] and [the dimension tabs][bencher v045].
 
-I also had a failed attempt last fall at using a composite query to get all Perf results in a single query.
+I also had a failed attempt last fall at using a composite query to get all Perf results into a single query.
 This lead to me hitting the [Rust type system recusion limit][recusion limit],
 overflowing the stack on my M1 MacBook Pro,
-suffering through insane (much longer than 38 seconds) compile time,
+suffering through insane (much longer than 38 seconds) compile times,
 and finally dead ending at [SQLite's max number of terms in a compound select statement][sqlite limits].
+
+With all of that under my belt, I knew that I really needed to dig in here
+and put my performance engineer pants on.
+I had never profiled a SQLite database before,
+and honestly, I had never really profiled _any_ database before.
+Now wait a minute you might might be thinking.
+[My LinkedIn profile][linkedin epompeii] says I was a "Database Administrator" for almost two years.
+And I _never_ profiled a database‽
+Yep. That's a story for another time I suppose.
 
 [do things that dont scale]: https://paulgraham.com/ds.html
 [github issue 133]: https://github.com/bencherdev/bencher/issues/133
 [recusion limit]: https://doc.rust-lang.org/reference/attributes/limits.html#the-recursion_limit-attribute
 [sqlite limits]: https://www.sqlite.org/limits.html
+[linkedin epompeii]: https://www.linkedin.com/in/epompeii/
 
 [perf query]: /docs/api/projects/perf/#get-v0projectsprojectperf
 [prior art]: /docs/reference/prior-art/#benchmark-tracking-tools
