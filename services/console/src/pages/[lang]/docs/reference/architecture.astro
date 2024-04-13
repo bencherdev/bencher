@@ -7,56 +7,58 @@ import Collection from "../../../../util/collection";
 const collection = Collection.reference;
 
 export async function getStaticPaths() {
-    return otherLanguages.map((lang) => {return { params: { lang } }});
+	return otherLanguages.map((lang) => {
+		return { params: { lang } };
+	});
 }
 
 const { lang } = Astro.params;
 
 const description = () => {
-  switch (lang) {
-    case Language.en:
-      return "Diagram of the Bencher Architecture";
-    case Language.de:
-      return "Diagramm der Bencher-Architektur";
-    case Language.es:
-      return "Diagrama de la arquitectura de Bencher";
-    case Language.fr:
-      return "Diagramme de l'architecture de Bencher";
-    case Language.ja:
-      return "Bencherアーキテクチャの図";
-    case Language.ko:
-      return "Bencher 아키텍처 다이어그램";
-    case Language.pt:
-      return "Diagrama da Arquitetura Bencher";
-    case Language.ru:
-      return "Диаграмма архитектуры Bencher";
-    case Language.zh:
-      return "Bencher架构图";
-  }
-}
+	switch (lang) {
+		case Language.en:
+			return "Diagram of the Bencher Architecture";
+		case Language.de:
+			return "Diagramm der Bencher-Architektur";
+		case Language.es:
+			return "Diagrama de la arquitectura de Bencher";
+		case Language.fr:
+			return "Diagramme de l'architecture de Bencher";
+		case Language.ja:
+			return "Bencherアーキテクチャの図";
+		case Language.ko:
+			return "Bencher 아키텍처 다이어그램";
+		case Language.pt:
+			return "Diagrama da Arquitetura Bencher";
+		case Language.ru:
+			return "Диаграмма архитектуры Bencher";
+		case Language.zh:
+			return "Bencher架构图";
+	}
+};
 
 const heading = () => {
-  switch (lang) {
-    case Language.en:
-      return "Bencher Architecture";
-    case Language.de:
-      return "Bencher-Architektur";
-    case Language.es:
-      return "Arquitectura de Bencher";
-    case Language.fr:
-      return "Architecture de Bencher";
-    case Language.ja:
-      return "Bencherアーキテクチャ";
-    case Language.ko:
-      return "Bencher 아키텍처";
-    case Language.pt:
-      return "Arquitetura Bencher";
-    case Language.ru:
-      return "Архитектура Bencher";
-    case Language.zh:
-      return "Bencher架构";
-  }
-}
+	switch (lang) {
+		case Language.en:
+			return "Bencher Architecture";
+		case Language.de:
+			return "Bencher-Architektur";
+		case Language.es:
+			return "Arquitectura de Bencher";
+		case Language.fr:
+			return "Architecture de Bencher";
+		case Language.ja:
+			return "Bencherアーキテクチャ";
+		case Language.ko:
+			return "Bencher 아키텍처";
+		case Language.pt:
+			return "Arquitetura Bencher";
+		case Language.ru:
+			return "Архитектура Bencher";
+		case Language.zh:
+			return "Bencher架构";
+	}
+};
 
 const published = "2023-09-26T10:25:00Z";
 const modified = "2024-02-06T07:56:00Z";

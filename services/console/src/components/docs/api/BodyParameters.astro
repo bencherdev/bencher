@@ -5,10 +5,10 @@ import BodyParametersInner from "./BodyParametersInner.astro";
 import type { Language } from "../../../i18n/ui";
 
 interface Props {
-  lang: Language;
-  path: string;
-  method: MethodKind;
-  requestBody: object;
+	lang: Language;
+	path: string;
+	method: MethodKind;
+	requestBody: object;
 }
 
 const { lang, path, method, requestBody } = Astro.props;
@@ -16,27 +16,27 @@ const { lang, path, method, requestBody } = Astro.props;
 const schema = getSchema(requestBody?.content?.["application/json"]?.schema);
 
 const getProperties = () => {
-  if (schema?.properties) {
-    return schema?.properties;
-  }
-  const nullable = nullablePatch(schema?.anyOf);
-  if (nullable) {
-    return nullable;
-  }
-}
+	if (schema?.properties) {
+		return schema?.properties;
+	}
+	const nullable = nullablePatch(schema?.anyOf);
+	if (nullable) {
+		return nullable;
+	}
+};
 
 const nullablePatch = (anyOf) => {
-  if (anyOf?.length !== 2) {
-    return;
-  }
-  const base = parseSchemaRef(anyOf?.[0]);
-  const nullable = parseSchemaRef(anyOf?.[1]);
-  // This relies on the convention that the nullable type is the base type with "Null" appended
-  if (`${base}Null` !== nullable) {
-    return;
-  }
-  return openapi?.components?.schemas?.[base]?.properties;
-}
+	if (anyOf?.length !== 2) {
+		return;
+	}
+	const base = parseSchemaRef(anyOf?.[0]);
+	const nullable = parseSchemaRef(anyOf?.[1]);
+	// This relies on the convention that the nullable type is the base type with "Null" appended
+	if (`${base}Null` !== nullable) {
+		return;
+	}
+	return openapi?.components?.schemas?.[base]?.properties;
+};
 ---
 
 {schema && (

@@ -3,15 +3,15 @@ import { MethodKind, getSchema } from "./method";
 import BodyParametersInner from "./BodyParametersInner.astro";
 
 interface Props {
-  path: string;
-  method: MethodKind;
-  propertyKey: string;
-  propertyValue: object;
+	path: string;
+	method: MethodKind;
+	propertyKey: string;
+	propertyValue: object;
 }
 
 const { path, method, propertyKey, propertyValue } = Astro.props;
 
-const properties = getSchema(propertyValue?.allOf?.[0])?.properties ;
+const properties = getSchema(propertyValue?.allOf?.[0])?.properties;
 ---
 
 <details>

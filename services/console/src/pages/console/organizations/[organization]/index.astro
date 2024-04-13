@@ -1,5 +1,7 @@
 ---
 export const prerender = false;
 
-return Astro.redirect(`/console/organizations/${Astro.params.organization}/projects`);
+return Astro.redirect(
+	`/console/organizations/${Astro.params.organization}/projects`,
+);
 ---

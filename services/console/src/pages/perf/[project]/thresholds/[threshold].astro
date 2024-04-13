@@ -12,27 +12,29 @@ const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const INTERNAL_API_URL = import.meta.env.INTERNAL_API_URL;
 const params = Astro.params;
 
-const getThresholdUrl =  `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${params.project}/thresholds/${params.threshold}`;
+const getThresholdUrl = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${
+	params.project
+}/thresholds/${params.threshold}`;
 
 let jsonThreshold: undefined | JsonThreshold;
 let title: string;
 let description: string;
 let notFound: boolean = false;
 try {
-  const thresholdResponse = await fetchSSR(getThresholdUrl);
-  jsonThreshold = await thresholdResponse.json();
-  if (jsonThreshold?.uuid) {
-    title = `${jsonThreshold?.branch?.name} | ${jsonThreshold?.testbed?.name} | ${jsonThreshold?.measure?.name}`;
-    description = "View a continuous benchmarking threshold on Bencher";
-  } else {
-    title = "Not Found";
-    description = "Public Project Threshold not found";
-    notFound = true;
-  }
+	const thresholdResponse = await fetchSSR(getThresholdUrl);
+	jsonThreshold = await thresholdResponse.json();
+	if (jsonThreshold?.uuid) {
+		title = `${jsonThreshold?.branch?.name} | ${jsonThreshold?.testbed?.name} | ${jsonThreshold?.measure?.name}`;
+		description = "View a continuous benchmarking threshold on Bencher";
+	} else {
+		title = "Not Found";
+		description = "Public Project Threshold not found";
+		notFound = true;
+	}
 } catch (e) {
-  console.error(`Failed to fetch threshold data: ${e}`);
-  title = "Public Threshold";
-  description = "View a continuous benchmarking threshold";
+	console.error(`Failed to fetch threshold data: ${e}`);
+	title = "Public Threshold";
+	description = "View a continuous benchmarking threshold";
 }
 ---
 

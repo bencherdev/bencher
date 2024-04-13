@@ -6,29 +6,41 @@ import { BENCHER_SITE_URL } from "../../util/ext";
 import { collectionPath } from "../../util/collection";
 
 interface Props {
-  title: string;
-  titleFmt?: undefined | ((title: string) => string);
-  description: string;
-  heading?: string;
-  published?: undefined | string;
-  modified?: undefined | string;
-  lang?: string;
-  collection?: Collection;
-  slug?: undefined | string;
+	title: string;
+	titleFmt?: undefined | ((title: string) => string);
+	description: string;
+	heading?: string;
+	published?: undefined | string;
+	modified?: undefined | string;
+	lang?: string;
+	collection?: Collection;
+	slug?: undefined | string;
 }
 
-const { title, titleFmt, description, heading, published, modified, lang, collection, slug } = Astro.props;
+const {
+	title,
+	titleFmt,
+	description,
+	heading,
+	published,
+	modified,
+	lang,
+	collection,
+	slug,
+} = Astro.props;
 
 const canonical = () => {
-  if (collection && slug) {
-    return `${BENCHER_SITE_URL}/docs/api/${collectionPath(collection)}/${slug}/`;
-  } else if (collection) {
-    return `${BENCHER_SITE_URL}/docs/api/${collectionPath(collection)}/`;
-  } else if (slug) {
-    return `${BENCHER_SITE_URL}/docs/api/${slug}/`;
-  } else {
-    return `${BENCHER_SITE_URL}/docs/api/`;
-  }
+	if (collection && slug) {
+		return `${BENCHER_SITE_URL}/docs/api/${collectionPath(
+			collection,
+		)}/${slug}/`;
+	} else if (collection) {
+		return `${BENCHER_SITE_URL}/docs/api/${collectionPath(collection)}/`;
+	} else if (slug) {
+		return `${BENCHER_SITE_URL}/docs/api/${slug}/`;
+	} else {
+		return `${BENCHER_SITE_URL}/docs/api/`;
+	}
 };
 ---
 

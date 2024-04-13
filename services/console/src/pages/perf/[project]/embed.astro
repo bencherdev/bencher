@@ -10,32 +10,37 @@ import { fetchSSR, hasPerfImage } from "../../../components/perf/util";
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const INTERNAL_API_URL = import.meta.env.INTERNAL_API_URL;
 const params = Astro.params;
-const getProjectUrl =  `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${params.project}`;
+const getProjectUrl = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${
+	params.project
+}`;
 
 let jsonProject: undefined | JsonProject;
 let title: string;
 let description: string;
 let notFound: boolean = false;
 try {
-  const projectResponse = await fetchSSR(getProjectUrl);
-  jsonProject = await projectResponse.json();
-  if (jsonProject?.uuid) {
-    title = `${jsonProject?.name}`;
-    description = `View ${jsonProject?.name} continuous benchmarking results and performance regressions on Bencher`;
-  } else {
-    title = "Not Found";
-    description = "Public Project not found";
-    notFound = true;
-  }
+	const projectResponse = await fetchSSR(getProjectUrl);
+	jsonProject = await projectResponse.json();
+	if (jsonProject?.uuid) {
+		title = `${jsonProject?.name}`;
+		description = `View ${jsonProject?.name} continuous benchmarking results and performance regressions on Bencher`;
+	} else {
+		title = "Not Found";
+		description = "Public Project not found";
+		notFound = true;
+	}
 } catch (e) {
-  console.error(`Failed to fetch project data: ${e}`);
-  title = "Public Project";
-  description = "View continuous benchmarking results and performance regressions";
+	console.error(`Failed to fetch project data: ${e}`);
+	title = "Public Project";
+	description =
+		"View continuous benchmarking results and performance regressions";
 }
 
 let image: undefined | string;
 if (hasPerfImage(Astro.url)) {
-  image = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${params.project}/perf/img${Astro.url.search}`;
+	image = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${
+		params.project
+	}/perf/img${Astro.url.search}`;
 }
 
 // GitHub query for use of embeds:

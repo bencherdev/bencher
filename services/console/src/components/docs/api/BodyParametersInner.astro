@@ -5,77 +5,98 @@ import type { Language } from "../../../i18n/ui";
 import { langPath } from "../../../i18n/utils";
 
 interface Props {
-  lang: Language;
-  schema: object;
-  path: string;
-  method: MethodKind;
-  properties: object;
+	lang: Language;
+	schema: object;
+	path: string;
+	method: MethodKind;
+	properties: object;
 }
 
 const { lang, schema, path, method, properties } = Astro.props;
 
 const getDefault = (name) => {
-  switch (name) {
-    case "visibility":
-      if (path === "/v0/organizations/{organization}/projects" && method === MethodKind.Post) {
-        return "public";
-      }
-      return;
-    case "adapter":
-      if (path === "/v0/projects/{project}/reports" && method === MethodKind.Post) {
-        return "magic";
-      }
-      return;
-    case "delay":
-      if ((path === "/v0/server/restart" && method === MethodKind.Post) || (path === "/v0/server/config" && method === MethodKind.Put)) {
-        return 3;
-      }
-      return;
-    default:
-      return;
-  }
+	switch (name) {
+		case "visibility":
+			if (
+				path === "/v0/organizations/{organization}/projects" &&
+				method === MethodKind.Post
+			) {
+				return "public";
+			}
+			return;
+		case "adapter":
+			if (
+				path === "/v0/projects/{project}/reports" &&
+				method === MethodKind.Post
+			) {
+				return "magic";
+			}
+			return;
+		case "delay":
+			if (
+				(path === "/v0/server/restart" && method === MethodKind.Post) ||
+				(path === "/v0/server/config" && method === MethodKind.Put)
+			) {
+				return 3;
+			}
+			return;
+		default:
+			return;
+	}
 };
 
 const getTypes = (propertyKey, propertyValue) => {
-  if (Array.isArray(propertyValue?.allOf)) {
-    const types = propertyValue.allOf.map(schema => {
-        const schemaRef = getSchema(schema);
-        if (schemaRef?.type) {
-            return schemaRef.type;
-        }
-        if (schemaRef?.oneOf) {
-            return schemaRef.oneOf.map(one => one?.type).filter((v) => v).flat();
-        }
-    });
+	if (Array.isArray(propertyValue?.allOf)) {
+		const types = propertyValue.allOf.map((schema) => {
+			const schemaRef = getSchema(schema);
+			if (schemaRef?.type) {
+				return schemaRef.type;
+			}
+			if (schemaRef?.oneOf) {
+				return schemaRef.oneOf
+					.map((one) => one?.type)
+					.filter((v) => v)
+					.flat();
+			}
+		});
 
-    const variants = propertyValue.allOf.map(schema => {
-        const schemaRef = getSchema(schema);
-        if (schemaRef?.enum) {
-            return schemaRef.enum;
-        }
-        if (schemaRef?.oneOf) {
-            return schemaRef.oneOf.map(one => one?.enum).filter((v) => v).flat();
-        }
-    }).filter((v) => v).flat();
-    const oneOf = variants?.length > 0 ? variants : null;
+		const variants = propertyValue.allOf
+			.map((schema) => {
+				const schemaRef = getSchema(schema);
+				if (schemaRef?.enum) {
+					return schemaRef.enum;
+				}
+				if (schemaRef?.oneOf) {
+					return schemaRef.oneOf
+						.map((one) => one?.enum)
+						.filter((v) => v)
+						.flat();
+				}
+			})
+			.filter((v) => v)
+			.flat();
+		const oneOf = variants?.length > 0 ? variants : null;
 
-    // Filter out undefined types and join the types into a comma-separated list
-    return [types?.filter(t => t).join(", "), getDefault(propertyKey), oneOf];
-  }
+		// Filter out undefined types and join the types into a comma-separated list
+		return [types?.filter((t) => t).join(", "), getDefault(propertyKey), oneOf];
+	}
 
-  if (propertyValue?.type === "array" && propertyValue?.items?.type === "string") {
-    return ["array of strings", getDefault(propertyKey), null];
-  }
+	if (
+		propertyValue?.type === "array" &&
+		propertyValue?.items?.type === "string"
+	) {
+		return ["array of strings", getDefault(propertyKey), null];
+	}
 
-  if (propertyValue?.type === "boolean") {
-    return ["boolean", getDefault(propertyKey), null];
-  }
+	if (propertyValue?.type === "boolean") {
+		return ["boolean", getDefault(propertyKey), null];
+	}
 
-  if (propertyValue?.type === "integer") {
-    return ["integer", getDefault(propertyKey), null];
-  }
+	if (propertyValue?.type === "integer") {
+		return ["integer", getDefault(propertyKey), null];
+	}
 
-  return [null, null, null];
+	return [null, null, null];
 };
 ---
 

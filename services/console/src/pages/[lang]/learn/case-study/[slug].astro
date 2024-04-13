@@ -9,8 +9,8 @@ const collection = Collection.case_study;
 
 // 1. Generate a new path for every collection entry
 export async function getStaticPaths() {
-  const collection = Collection.case_study;
-  return await getLangPaths(collection);
+	const collection = Collection.case_study;
+	return await getLangPaths(collection);
 }
 // 2. When it's time to render, you can get the entry directly from the prop
 const { lang, slug } = Astro.params;

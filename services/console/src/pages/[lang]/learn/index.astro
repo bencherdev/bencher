@@ -2,7 +2,9 @@
 import LearnPanel from "../../../components/learn/LearnPanel.astro";
 import { otherLanguages } from "../../../i18n/ui";
 export async function getStaticPaths() {
-    return otherLanguages.map((lang) => {return { params: { lang } }});
+	return otherLanguages.map((lang) => {
+		return { params: { lang } };
+	});
 }
 const { lang } = Astro.params;
 ---

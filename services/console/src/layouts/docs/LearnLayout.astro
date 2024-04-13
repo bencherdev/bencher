@@ -6,19 +6,30 @@ import type Collection from "../../util/collection";
 import SelfHostedRedirect from "../../components/site/SelfHostedRedirct";
 
 interface Props {
-  title: string;
-  titleFmt?: undefined | ((title: string) => string);
-  description: string;
-  heading?: string;
-  published?: undefined | string;
-  modified?: undefined | string;
-  lang?: string;
-  collection?: undefined | Collection;
-  slug?: undefined | string;
-  author?: Author;
+	title: string;
+	titleFmt?: undefined | ((title: string) => string);
+	description: string;
+	heading?: string;
+	published?: undefined | string;
+	modified?: undefined | string;
+	lang?: string;
+	collection?: undefined | Collection;
+	slug?: undefined | string;
+	author?: Author;
 }
 
-const { title, titleFmt, description, heading, published, modified, lang, collection, slug, author } = Astro.props;
+const {
+	title,
+	titleFmt,
+	description,
+	heading,
+	published,
+	modified,
+	lang,
+	collection,
+	slug,
+	author,
+} = Astro.props;
 ---
 
 <InnerLayout

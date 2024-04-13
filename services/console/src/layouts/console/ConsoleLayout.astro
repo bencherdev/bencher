@@ -6,14 +6,15 @@ import type { Params } from "astro";
 import AnonRedirect from "../../components/console/redirects/AnonRedirect";
 
 interface Props {
-  apiUrl: string;
-  params: Params;
-  title: string;
-  suppressNotification?: undefined | boolean;
+	apiUrl: string;
+	params: Params;
+	title: string;
+	suppressNotification?: undefined | boolean;
 }
 
 const { apiUrl, params, title, suppressNotification } = Astro.props;
-const description = "Sign up for Bencher! Add continuous benchmarking to your project and catch performance regressions in CI.";
+const description =
+	"Sign up for Bencher! Add continuous benchmarking to your project and catch performance regressions in CI.";
 ---
 
 <BaseLayout title={title} description={description}>

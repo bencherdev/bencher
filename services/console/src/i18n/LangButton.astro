@@ -1,40 +1,48 @@
 ---
 import { DocsTab } from "../components/docs/menu/docs_tab";
 import Collection, { collectionPath } from "../util/collection";
-import { Language, allLanguages, langBoxId, langButtonId, languageName } from "./ui";
+import {
+	Language,
+	allLanguages,
+	langBoxId,
+	langButtonId,
+	languageName,
+} from "./ui";
 import { langPath } from "./utils";
 
 interface Props {
-  lang: Language;
-  tab: DocsTab;
-  collection?: undefined | Collection;
-  slug?: undefined | string;
+	lang: Language;
+	tab: DocsTab;
+	collection?: undefined | Collection;
+	slug?: undefined | string;
 }
 
 const { tab, collection, slug } = Astro.props;
 const lang: Language = Astro.props.lang;
 
 const path = (langauge: Language) => {
-  if (collection && slug) {
-    return `/${langPath(langauge)}${tabPath()}/${collectionPath(collection)}/${slug}/`;
-  } else if (collection) {
-    return `/${langPath(langauge)}${tabPath()}/${collectionPath(collection)}/`;
-  } else if (slug) {
-    return `/${langPath(langauge)}${tabPath()}/${slug}/`;
-  } else {
-    return `/${langPath(langauge)}${tabPath()}/`;
-  }
+	if (collection && slug) {
+		return `/${langPath(langauge)}${tabPath()}/${collectionPath(
+			collection,
+		)}/${slug}/`;
+	} else if (collection) {
+		return `/${langPath(langauge)}${tabPath()}/${collectionPath(collection)}/`;
+	} else if (slug) {
+		return `/${langPath(langauge)}${tabPath()}/${slug}/`;
+	} else {
+		return `/${langPath(langauge)}${tabPath()}/`;
+	}
 };
 const tabPath = () => {
-  switch (tab) {
-    case DocsTab.Docs:
-      return "docs";
-    case DocsTab.Api:
-      return "docs/api";
-    case DocsTab.Learn:
-      return "learn";
-  }
-}
+	switch (tab) {
+		case DocsTab.Docs:
+			return "docs";
+		case DocsTab.Api:
+			return "docs/api";
+		case DocsTab.Learn:
+			return "learn";
+	}
+};
 ---
 
 <nav>

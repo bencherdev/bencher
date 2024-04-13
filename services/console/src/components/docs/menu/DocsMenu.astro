@@ -1,7 +1,7 @@
 ---
-import {DocsTab, DocsMenuId} from "./docs_tab.tsx";
-import {Language, defaultLang } from "../../../i18n/ui.ts";
-import {getEnCollection, getLangCollection } from "../../../i18n/utils.ts"
+import { DocsTab, DocsMenuId } from "./docs_tab.tsx";
+import { Language, defaultLang } from "../../../i18n/ui.ts";
+import { getEnCollection, getLangCollection } from "../../../i18n/utils.ts";
 import LangButton from "../../../i18n/LangButton.astro";
 import Collection from "../../../util/collection.ts";
 import DocsList from "./DocsList.astro";
@@ -9,10 +9,10 @@ import ApiList from "./ApiList.astro";
 import LearnList from "./LearnList.astro";
 
 interface Props {
-  tab: DocsTab;
-  lang?: undefined | string;
-  collection?: undefined | Collection;
-  slug?: undefined | string;
+	tab: DocsTab;
+	lang?: undefined | string;
+	collection?: undefined | Collection;
+	slug?: undefined | string;
 }
 
 // Docs
@@ -36,42 +36,69 @@ const { tab, collection, slug } = Astro.props;
 const lang: Language = Astro.props.lang ?? defaultLang;
 
 const tabClass = (tab: DocsTab, current: DocsTab) => {
-  const isCurrent = (tab: DocsTab, current: DocsTab) => {
-    switch (tab) {
-      case DocsTab.Docs:
-        return current === DocsTab.Docs;
-      case DocsTab.Api:
-        return current === DocsTab.Api;
-      case DocsTab.Learn:
-        return current === DocsTab.Learn;
-    }
-  }
-  return isCurrent(tab, current) ? "is-active" : "";
-}
+	const isCurrent = (tab: DocsTab, current: DocsTab) => {
+		switch (tab) {
+			case DocsTab.Docs:
+				return current === DocsTab.Docs;
+			case DocsTab.Api:
+				return current === DocsTab.Api;
+			case DocsTab.Learn:
+				return current === DocsTab.Learn;
+		}
+	};
+	return isCurrent(tab, current) ? "is-active" : "";
+};
 
 const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
-  const isVisible = (menu: DocsMenuId, tab: DocsTab) => {
-    switch (menu) {
-      case DocsMenuId.Docs:
-        return tab === DocsTab.Docs;
-      case DocsMenuId.Api:
-        return tab === DocsTab.Api;
-      case DocsMenuId.Learn:
-        return tab === DocsTab.Learn;
-    }
-  }
-  const marginBottom = (menu: DocsMenuId) => {
-    switch (menu) {
-      case DocsMenuId.Docs:
-        return 1 + tutorialCollection[lang]?.length + 1 + howToCollection[lang]?.length + 1 + explanationCollection[lang]?.length + 1 + referenceCollection[lang]?.length;
-      case DocsMenuId.Api:
-        return 1 + organizationsCollection?.length + 1 + projectsCollection?.length + 1 + usersCollection?.length + 1 + serverCollection?.length;
-      case DocsMenuId.Learn:
-        return 1 + rustCollection[lang]?.length + 1 + caseStudyCollection[lang]?.length + 1 + engineeringCollection[lang]?.length;
-    }
-  }
-  return `display: ${isVisible(menu, tab) ? "block" : "none"}; margin-bottom: ${marginBottom(menu) * 1.5}rem;`;
-}
+	const isVisible = (menu: DocsMenuId, tab: DocsTab) => {
+		switch (menu) {
+			case DocsMenuId.Docs:
+				return tab === DocsTab.Docs;
+			case DocsMenuId.Api:
+				return tab === DocsTab.Api;
+			case DocsMenuId.Learn:
+				return tab === DocsTab.Learn;
+		}
+	};
+	const marginBottom = (menu: DocsMenuId) => {
+		switch (menu) {
+			case DocsMenuId.Docs:
+				return (
+					1 +
+					tutorialCollection[lang]?.length +
+					1 +
+					howToCollection[lang]?.length +
+					1 +
+					explanationCollection[lang]?.length +
+					1 +
+					referenceCollection[lang]?.length
+				);
+			case DocsMenuId.Api:
+				return (
+					1 +
+					organizationsCollection?.length +
+					1 +
+					projectsCollection?.length +
+					1 +
+					usersCollection?.length +
+					1 +
+					serverCollection?.length
+				);
+			case DocsMenuId.Learn:
+				return (
+					1 +
+					rustCollection[lang]?.length +
+					1 +
+					caseStudyCollection[lang]?.length +
+					1 +
+					engineeringCollection[lang]?.length
+				);
+		}
+	};
+	return `display: ${isVisible(menu, tab) ? "block" : "none"}; margin-bottom: ${
+		marginBottom(menu) * 1.5
+	}rem;`;
+};
 ---
 
 <aside class="menu is-sticky">

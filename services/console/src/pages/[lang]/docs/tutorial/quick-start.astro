@@ -10,33 +10,33 @@ const collection = Collection.tutorial;
 
 // 1. Generate a new path for every collection entry
 export async function getStaticPaths() {
-  const collection = Collection.tutorial;
-  const pages = await getLangPaths(collection);
-  return pages.filter(page => page.params.slug === "quick-start");
+	const collection = Collection.tutorial;
+	const pages = await getLangPaths(collection);
+	return pages.filter((page) => page.params.slug === "quick-start");
 }
 // 2. When it's time to render, you can get the entry directly from the prop
 const lang = Astro.params.lang as Language;
 
 const signupText = () => {
-  switch (lang) {
-    case Language.de:
-      return "Sie sind für Bencher Cloud angemeldet";
-    case Language.es:
-      return "Estás registrado en Bencher Cloud";
-    case Language.fr:
-      return "Vous êtes inscrit à Bencher Cloud";
-    case Language.ja:
-      return "ベンチャー クラウド にサインアップしています";
-    case Language.pt:
-      return "Você está inscrito no Bencher Cloud";
-    case Language.ru:
-      return "Вы зарегистрированы в Bencher Cloud";
-    case Language.zh:
-      return "您已注册 Bencher Cloud";
-    default:
-      return "You are signed up for Bencher Cloud";
-  }
-}
+	switch (lang) {
+		case Language.de:
+			return "Sie sind für Bencher Cloud angemeldet";
+		case Language.es:
+			return "Estás registrado en Bencher Cloud";
+		case Language.fr:
+			return "Vous êtes inscrit à Bencher Cloud";
+		case Language.ja:
+			return "ベンチャー クラウド にサインアップしています";
+		case Language.pt:
+			return "Você está inscrito no Bencher Cloud";
+		case Language.ru:
+			return "Вы зарегистрированы в Bencher Cloud";
+		case Language.zh:
+			return "您已注册 Bencher Cloud";
+		default:
+			return "You are signed up for Bencher Cloud";
+	}
+};
 
 const page = Astro.props;
 const { Content } = await page.render();

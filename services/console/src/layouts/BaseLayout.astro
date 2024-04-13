@@ -10,78 +10,98 @@ import { Author, TWITTER_BENCHER, twitter } from "../components/docs/author";
 // import { ViewTransitions } from "astro:transitions";
 
 interface Props {
-  title: string;
-  titleFmt?: undefined | ((title: string) => string);
-  description: string;
-  published?: undefined | string;
-  modified?: undefined | string;
-  perfImage?: undefined | string;
-  lang?: undefined | string;
-  author?: undefined | Author;
-  canonical?: undefined | string;
+	title: string;
+	titleFmt?: undefined | ((title: string) => string);
+	description: string;
+	published?: undefined | string;
+	modified?: undefined | string;
+	perfImage?: undefined | string;
+	lang?: undefined | string;
+	author?: undefined | Author;
+	canonical?: undefined | string;
 }
 
 // https://docs.astro.build/en/reference/directives-reference/#definevars
 const PUBLIC_GOOGLE_ANALYTICS_ID = import.meta.env.PUBLIC_GOOGLE_ANALYTICS_ID;
-const { title, titleFmt, description, published, modified, perfImage, lang, author, canonical} = Astro.props;
+const {
+	title,
+	titleFmt,
+	description,
+	published,
+	modified,
+	perfImage,
+	lang,
+	author,
+	canonical,
+} = Astro.props;
 
-const BENCHER_OG_IMAGE = "https://s3.amazonaws.com/public.bencher.dev/img/bencher-og-image.png";
+const BENCHER_OG_IMAGE =
+	"https://s3.amazonaws.com/public.bencher.dev/img/bencher-og-image.png";
 
 const imageUrl = () => {
-  if (perfImage) {
-    return perfImage;
-  }
-  return BENCHER_OG_IMAGE;
-}
+	if (perfImage) {
+		return perfImage;
+	}
+	return BENCHER_OG_IMAGE;
+};
 
 const imageAlt = () => {
-  if (perfImage) {
-    return `Track the performance for ${title}`;
-  }
-  return "🐰 Bencher";
-}
+	if (perfImage) {
+		return `Track the performance for ${title}`;
+	}
+	return "🐰 Bencher";
+};
 
 const image = () => {
-  if (perfImage) {
-    return {
-      url: imageUrl(),
-      type: "image/jpg",
-      width: 1024,
-      height: 768,
-      alt: imageAlt()
-    }
-  }
-  return {
-    url: imageUrl(),
-    type: "image/png",
-    width: 1200,
-    height: 630,
-    alt: imageAlt(),
-  }
-}
+	if (perfImage) {
+		return {
+			url: imageUrl(),
+			type: "image/jpg",
+			width: 1024,
+			height: 768,
+			alt: imageAlt(),
+		};
+	}
+	return {
+		url: imageUrl(),
+		type: "image/png",
+		width: 1200,
+		height: 630,
+		alt: imageAlt(),
+	};
+};
 
 const article = () => {
-  const article: {
-      publishedTime?: string;
-      modifiedTime?: string;
-      expirationTime?: string;
-      authors?: string[];
-      section?: string;
-      tags?: string[];
-    } = {};
-  if (published) {
-    article.publishedTime = published;
-  }
-  if (modified) {
-    article.modifiedTime = modified;
-  }
-  if (author) {
-    article.authors = [author];
-    article.section = "Technology";
-    article.tags = ["Technology", "Software", "Programming", "Benchmarks", "Benchmarking", "Performance", "Continuous Integration", "Continuous Benchmarking"];
-  }
-  return article;
-}
+	const article: {
+		publishedTime?: string;
+		modifiedTime?: string;
+		expirationTime?: string;
+		authors?: string[];
+		section?: string;
+		tags?: string[];
+	} = {};
+	if (published) {
+		article.publishedTime = published;
+	}
+	if (modified) {
+		article.modifiedTime = modified;
+	}
+	if (author) {
+		article.authors = [author];
+		article.section = "Technology";
+		article.tags = [
+			"Technology",
+			"Software",
+			"Programming",
+			"Benchmarks",
+			"Benchmarking",
+			"Performance",
+			"Continuous Integration",
+			"Continuous Benchmarking",
+		];
+	}
+	return article;
+};
 ---
 
 <!DOCTYPE html>

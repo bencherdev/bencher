@@ -1,32 +1,31 @@
 ---
-import { HeadersKind } from './method';
+import { HeadersKind } from "./method";
 
 interface Props {
-  headers: HeadersKind;
+	headers: HeadersKind;
 }
 
 const { headers } = Astro.props;
 
 const contentType = () => {
-    switch (headers) {
-        case HeadersKind.Pub:
-        case HeadersKind.Auth:
-            return "application/json";
-        case HeadersKind.Img:
-            return "image/jpeg";
-    }
-}
+	switch (headers) {
+		case HeadersKind.Pub:
+		case HeadersKind.Auth:
+			return "application/json";
+		case HeadersKind.Img:
+			return "image/jpeg";
+	}
+};
 
 const authBearerRequired = () => {
-    switch (headers) {
-        case HeadersKind.Auth:
-            return true;
-        case HeadersKind.Pub:
-        case HeadersKind.Img:
-            return false;
-    }
-}
-
+	switch (headers) {
+		case HeadersKind.Auth:
+			return true;
+		case HeadersKind.Pub:
+		case HeadersKind.Img:
+			return false;
+	}
+};
 ---
 
 <h3 class="title is-5" style="margin-top: 2rem;">Headers</h3>

@@ -2,7 +2,9 @@
 import ApiPanel from "../../../../components/docs/api/ApiPanel.astro";
 import { otherLanguages } from "../../../../i18n/ui";
 export async function getStaticPaths() {
-    return otherLanguages.map((lang) => {return { params: { lang } }});
+	return otherLanguages.map((lang) => {
+		return { params: { lang } };
+	});
 }
 const { lang } = Astro.params;
 ---

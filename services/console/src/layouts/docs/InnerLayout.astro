@@ -8,21 +8,34 @@ import type Collection from "../../util/collection";
 import { fmtDateTime } from "../../config/util";
 
 interface Props {
-  title: string;
-  titleFmt?: undefined | ((title: string) => string);
-  description: string;
-  heading?: undefined | string;
-  published?: undefined | string;
-  modified?: undefined | string;
-  tab?: DocsTab;
-  lang?: undefined | string;
-  collection?: undefined | Collection;
-  slug?: undefined | string;
-  author?: undefined | Author;
-  canonical?: undefined | string;
+	title: string;
+	titleFmt?: undefined | ((title: string) => string);
+	description: string;
+	heading?: undefined | string;
+	published?: undefined | string;
+	modified?: undefined | string;
+	tab?: DocsTab;
+	lang?: undefined | string;
+	collection?: undefined | Collection;
+	slug?: undefined | string;
+	author?: undefined | Author;
+	canonical?: undefined | string;
 }
 
-const { title, titleFmt, description, heading, published, modified, tab, lang, collection, slug, author, canonical } = Astro.props;
+const {
+	title,
+	titleFmt,
+	description,
+	heading,
+	published,
+	modified,
+	tab,
+	lang,
+	collection,
+	slug,
+	author,
+	canonical,
+} = Astro.props;
 ---
 
 <BaseLayout

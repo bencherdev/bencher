@@ -3,15 +3,16 @@ import AuthNavbar from "../../components/navbar/AuthNavbar";
 import BaseLayout from "../BaseLayout.astro";
 
 interface Props {
-  title: string;
-  titleFmt?: (title: string) => string;
-  description: string;
-  heading: string;
-  published?: undefined | string;
-  modified?: undefined | string;
+	title: string;
+	titleFmt?: (title: string) => string;
+	description: string;
+	heading: string;
+	published?: undefined | string;
+	modified?: undefined | string;
 }
 
-const { title, titleFmt, description, heading, published, modified } = Astro.props;
+const { title, titleFmt, description, heading, published, modified } =
+	Astro.props;
 ---
 
 <BaseLayout
