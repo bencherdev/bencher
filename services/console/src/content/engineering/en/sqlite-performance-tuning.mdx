@@ -1,7 +1,7 @@
 ---
 title: "SQLite Performance Tuning"
-description: "Learn how Bencher benchmarked, profiled, and tuned its SQLite database to enable better continuous benchmarking."
-heading: "Practice What You Preach: Bencher Perf is now 30x Faster with some SQLite Performance Tuning"
+description: "Learn why Bencher benchmarked, profiled, and tuned its SQLite database to enable better continuous benchmarking."
+heading: "Why SQLite Performance Tuning made Bencher 30x Faster"
 published: "2024-03-19T07:39:00Z"
 modified: "2024-03-20T07:36:00Z"
 sortOrder: -2024.0411
@@ -16,7 +16,7 @@ It took sooo long to load! Embarrassingly long.
 Especially for the leading [Continuous Benchmarking][continuous benchmarking] tool.
 
 In the past, I've used the [Rustls Perf Page] as my litmus test.
-They have 113 benchmarks and [one of the most impressive Continuous Benchmarking setups out there][rustls case study].
+They have 112 benchmarks and [one of the most impressive Continuous Benchmarking setups out there][rustls case study].
 It used to take about 5 seconds load. This time around it took... ⏳👀 ... 38.8 seconds!
 With that sort of latency, I had to dig in. Performance bugs are bugs, after all!
 
@@ -48,7 +48,7 @@ Originally, you had to select all of the dimensions that you wanted to plot manu
 This created a lot of friction for users to get to a useful plot.
 To solve this, I [added a list of the most recent Reports][github issue 133] to the Perf Pages,
 and by default, the most recent Report was selected and plotted.
-This means that if there were 113 benchmarks in the most recent Report, then all 113 would be plotted.
+This means that if there were 112 benchmarks in the most recent Report, then all 112 would be plotted.
 The model also got even more complicated with the ability to track and visualize [Threshold Boundaries][thresholds].
 
 With this in mind, I made a few performance related improvements.
@@ -374,7 +374,7 @@ The performance differences of this change were negligible on my test database
 due to the size of the tables at play.
 
 <details>
-    <summary>Click to view test database benchmarks</summary>
+    <summary>Click to view test database benchmark results</summary>
     <br />
 
     Before:
@@ -412,7 +412,7 @@ due to the size of the tables at play.
 
 All of this leads me to believe that this isn't actually the right place to try to eat my own dogfood.
 I can still practice what I preach, by caring about performance.
-Yet I can think that an application performance monitoring (APM) or observability tool
+Yet I can think that an Application Performance Monitoring (APM) or Observability tool
 would be a better fit for this use case than Bencher.
 And that is okay!
 
