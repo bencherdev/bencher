@@ -69,10 +69,16 @@
   - https://llvm.org/docs/Benchmarking.html
   - https://pyperf.readthedocs.io/en/latest/system.html
   - https://github.com/softdevteam/krun
+  - https://www.mongodb.com/blog/post/reducing-variability-performance-tests-ec2-setup-key-results
 - What to do with benchmarking outliers
   - https://github.com/dotnet/BenchmarkDotNet/issues/1256#issuecomment-538746032
 - Database profiling
   - https://www.youtube.com/watch?v=lDoEqZOCdM0&t=444s
+- Change point detection
+  - https://github.com/mongodb/signal-processing-algorithms
+- Benchmarketing
+- DeWitt clause
+  - https://www.brentozar.com/archive/2018/05/the-dewitt-clause-why-you-rarely-see-database-benchmarks/
 
 ## Tools
 - Assembly viewer

@@ -58,7 +58,8 @@ The time window for the default Report query was set to four weeks, instead of b
 I also drastically limited the scope of all database handles, reducing lock contention.
 To help communicate to users, I added a status bar spinner for both [the Perf Plot][bencher v0317] and [the dimension tabs][bencher v045].
 
-I also had a failed attempt last fall at using a composite query to get all Perf results into a single query.
+I also had a failed attempt last fall at using a composite query to get all Perf results into a single query,
+instead of using a quadruple nested for loop.
 This lead to me hitting the [Rust type system recursion limit][recusion limit],
 overflowing the stack on my M1 MacBook Pro,
 suffering through insane (much longer than 38 seconds) compile times,
