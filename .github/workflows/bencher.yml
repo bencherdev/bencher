@@ -359,11 +359,6 @@ jobs:
     # This will fail whenever Bencher Cloud is down
     # or there are any breaking changes to the report format
     continue-on-error: true
-    env:
-      BENCHER_PROJECT: bencher
-      BENCHER_TESTBED: ubuntu-latest
-      BENCHER_ADAPTER: rust
-      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
@@ -383,12 +378,15 @@ jobs:
       - name: Dogfooding Benchmarks with Bencher
         run: |
           bencher run \
-          --host https://api.bencher.dev \
-          --if-branch "$GITHUB_REF_NAME" \
-          --else-if-branch "$GITHUB_BASE_REF" \
+          --project bencher \
+          --token '${{ secrets.BENCHER_API_TOKEN }}' \
+          --branch "$GITHUB_REF_NAME" \
+          --branch-start-point "$GITHUB_BASE_REF" \
+          --testbed ubuntu-latest \
+          --adapter rust_criterion \
           --err \
           --github-actions ${{ secrets.GITHUB_TOKEN }} \
-          "cargo bench --package bencher_adapter"
+          cargo bench --package bencher_adapter
 
   # Cargo Audit
   cargo_audit:
