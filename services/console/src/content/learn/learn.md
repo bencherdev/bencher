@@ -51,6 +51,7 @@
 
 ## Case Study
 - Diesel
+- Rustc Perf
 
 ## Engineering
 - Issue Bounty Programs: The Cobra Effect for Maintainer Burnout?
