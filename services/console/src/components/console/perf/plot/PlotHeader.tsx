@@ -143,7 +143,7 @@ const FullPlotHeader = (props: Props) => {
 							<p id={BENCHER_MEASURE_ID} class="level-item">
 								Measure
 							</p>
-							<Show when={props.isConsole}>
+							<Show when={props.isConsole && measure() && measure()?.uuid != BENCHER_MEASURE}>
 								<a
 									class="level-item button is-small is-outlined is-rounded"
 									title={`View ${measure()?.name}`}
