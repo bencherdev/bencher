@@ -251,34 +251,11 @@ jobs:
   # API Smoke Test
   api_smoke_test:
     name: API Smoke Test
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # Linux
-          - os: ubuntu-latest
-            smoke_test: localhost
-          # TODO re-enable when non-arm images are pushed
-          # - os: ubuntu-latest
-          #   smoke_test: docker
-          # MacOS
-          - os: macos-latest
-            smoke_test: localhost
-          # https://github.com/actions/runner-images/issues/17#issuecomment-614726536
-          # - os: macos-latest
-          #   smoke_test: docker
-          # Windows
-          - os: windows-latest
-            smoke_test: localhost
-          # https://github.com/orgs/community/discussions/25491#discussioncomment-3248089
-          # - os: windows-latest
-          #   smoke_test: docker
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') && matrix.smoke_test == 'docker' }}
+    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: jlumbroso/free-disk-space@main
-        if: matrix.os == 'ubuntu-latest'
         with:
           large-packages: false
       - uses: actions/checkout@v4
@@ -292,6 +269,41 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-xtask
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
+      - name: Install `bencher` CLI
+        run: cargo install --debug --path services/cli --locked --force
+      - name: Run Smoke Test
+        run: cargo xtask smoke-test localhost
+
+  release_api_smoke_test:
+    name: Release API Smoke Test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            smoke_test: docker
+          - os: macos-latest
+            smoke_test: localhost
+          # https://github.com/actions/runner-images/issues/17#issuecomment-614726536
+          # - os: macos-latest
+          #   smoke_test: docker
+          - os: windows-latest
+            smoke_test: localhost
+          # https://github.com/orgs/community/discussions/25491#discussioncomment-3248089
+          # - os: windows-latest
+          #   smoke_test: docker
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') && matrix.smoke_test == 'docker' }}
+    steps:
+      - uses: jlumbroso/free-disk-space@main
+        if: matrix.smoke_test == 'docker'
+        with:
+          large-packages: false
+      - uses: actions/checkout@v4
       - uses: rui314/setup-mold@v1
         if: matrix.os == 'ubuntu-latest'
         with:
@@ -1115,6 +1127,7 @@ jobs:
       # Test
       - cargo_test
       - api_smoke_test
+      - release_api_smoke_test
       - cargo_check_api_minus
       - cargo_check_cli_minus
       - cargo_bench
