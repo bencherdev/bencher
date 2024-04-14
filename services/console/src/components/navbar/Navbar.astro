@@ -1,4 +1,6 @@
 ---
+import { Image } from "astro:assets";
+
 import { BENCHER_GITHUB_URL, BENCHER_WORDMARK } from "../../util/ext";
 import BENCHER_NAVBAR_ID, {
 	BENCHER_NAVBAR_BURGER_ID,
@@ -18,7 +20,7 @@ import BENCHER_NAVBAR_ID, {
 			title="Bencher - Continuous Benchmarking"
 			href="/"
 		>
-			<img src={BENCHER_WORDMARK} width="150" alt="🐰 Bencher" />
+			<Image src={BENCHER_WORDMARK} width="150" height="28.25" alt="🐰 Bencher" />
 		</a>
 
 		<button

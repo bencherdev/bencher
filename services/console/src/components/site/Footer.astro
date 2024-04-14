@@ -1,4 +1,6 @@
 ---
+import { Image } from "astro:assets";
+
 import {
 	BENCHER_CHAT_URL,
 	BENCHER_GITHUB_URL,
@@ -14,7 +16,7 @@ import {
 				<div class="content">
 					<h4 class="title is-4">
 						<a class="navbar-item" title="🐰 Bencher" href="/">
-							<img src={BENCHER_WORDMARK} width="150" alt="🐰 Bencher" />
+							<Image src={BENCHER_WORDMARK} width="150" height="28.25" alt="🐰 Bencher" />
 						</a>
 					</h4>
 					<h5 class="subtitle is-5"><a href="/docs/explanation/continuous-benchmarking/">Continuous Benchmarking</a></h5>
