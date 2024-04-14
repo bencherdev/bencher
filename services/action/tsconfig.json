@@ -1,17 +1,12 @@
 {
-  "extends": "@tsconfig/node16/tsconfig.json",
-  "compilerOptions": {
-    "outDir": "./lib",
-    // "rootDir": "./src",
-    "sourceMap": true,
-    // https://www.typescriptlang.org/tsconfig#resolveJsonModule
-    "resolveJsonModule": true
-  },
-  "include": [
-    "src"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules"
-  ]
+	"extends": "@tsconfig/node16/tsconfig.json",
+	"compilerOptions": {
+		"outDir": "./lib",
+		// "rootDir": "./src",
+		"sourceMap": true,
+		// https://www.typescriptlang.org/tsconfig#resolveJsonModule
+		"resolveJsonModule": true
+	},
+	"include": ["src"],
+	"exclude": ["dist", "node_modules"]
 }
