@@ -20,6 +20,18 @@ They have 112 benchmarks and [one of the most impressive Continuous Benchmarking
 It used to take about 5 seconds load. This time around it took... ⏳👀 ... 38.8 seconds!
 With that sort of latency, I had to dig in. Performance bugs are bugs, after all!
 
+<div class="content has-text-centered">
+<figure>
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/engineering/sqlite-performance-tuning/http-response-times.png"
+    width="2368"
+    height="1472"
+    alt="High HTTP Response Times"
+/>
+<figcaption>The worst HTTP response time hit 2 minutes!</figcaption>
+</figure>
+</div>
+
 [github bitcoin 27284]: https://github.com/bitcoin/bitcoin/issues/27284#issuecomment-2046870296
 
 [0xb10c perf page]: /perf/0xb10c-s-bitcoin-core
@@ -341,6 +353,21 @@ QUERY PLAN
 ```
 
 Look at all of those beautify `SEARCH`es all with existing indexes! 🥲
+
+And after deploying my changes to production:
+
+<div class="content has-text-centered">
+<figure>
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/engineering/sqlite-performance-tuning/http-response-times-sql-performance-tuning.png"
+    width="2368"
+    height="1472"
+    alt="Fixed High HTTP Response Times"
+/>
+<figcaption>The new HTTP response times don't even register on the old scale!</figcaption>
+</figure>
+
+</div>
 
 Now it was time for the final test.
 How fast does that Rustls Perf page load?
