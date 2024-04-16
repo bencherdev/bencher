@@ -1,0 +1,54 @@
+## SQLite Query Planner
+
+The SQLite website has [great documentation for its Query Planner][sqlite query planner].
+It explains exactly how SQLite goes about executing your SQL query,
+and it teaches you which indexes are useful and what operations to look out for, like full table scans.
+
+In order to see how the Query Planner would execute my Perf query,
+I needed to add a new tool to my tool belt: [`EXPLAIN QUERY PLAN`][eqp]
+You can either prefix your SQL query with `EXPLAIN QUERY PLAN`
+or run the `.eqp on` dot command before your query.
+Either way, I got a result that looks like this:
+
+```
+QUERY PLAN
+|--MATERIALIZE (join-5)
+|  |--SCAN boundary
+|  |--SEARCH threshold USING INTEGER PRIMARY KEY (rowid=?)
+|  |--SEARCH model USING INTEGER PRIMARY KEY (rowid=?)
+|  |--BLOOM FILTER ON alert (boundary_id=?)
+|  `--SEARCH alert USING AUTOMATIC COVERING INDEX (boundary_id=?) LEFT-JOIN
+|--SEARCH branch USING INDEX sqlite_autoindex_branch_1 (uuid=?)
+|--SEARCH measure USING INDEX sqlite_autoindex_measure_1 (uuid=?)
+|--SEARCH benchmark USING INDEX sqlite_autoindex_benchmark_1 (uuid=?)
+|--SEARCH testbed USING INDEX sqlite_autoindex_testbed_1 (uuid=?)
+|--SCAN metric
+|--SEARCH report_benchmark USING INTEGER PRIMARY KEY (rowid=?)
+|--SEARCH report USING INTEGER PRIMARY KEY (rowid=?)
+|--SEARCH version USING INTEGER PRIMARY KEY (rowid=?)
+|--SEARCH branch_version USING COVERING INDEX sqlite_autoindex_branch_version_1 (branch_id=? AND version_id=?)
+|--BLOOM FILTER ON (join-5) (metric_id=?)
+|--SEARCH (join-5) USING AUTOMATIC COVERING INDEX (metric_id=?) LEFT-JOIN
+`--USE TEMP B-TREE FOR ORDER BY
+```
+
+Oh, boy!
+There is a lot here.
+But the three big things that jumped out to me where:
+
+1. SQLite is creating a materialized view on-the-fly that scans the _entire_ `boundary` table
+2. SQLite is then scanning the _entire_ `metric` table
+3. SQLite is creating two on the fly indexes
+
+And just how big are the `metric` and `boundary` tables?
+Well they just so happen to be the two largest tables,
+as they are where all the [Metrics][metrics] and [Boundaries][thresholds] are stored.
+
+Since this was my first SQLite performance tuning rodeo,
+I wanted to consult an expert before making any changes.
+
+[sqlite query planner]: https://www.sqlite.org/queryplanner.html
+[eqp]: https://www.sqlite.org/eqp.html
+
+[thresholds]: /docs/explanation/thresholds/
+[metrics]: /docs/explanation/benchmarking/#metrics

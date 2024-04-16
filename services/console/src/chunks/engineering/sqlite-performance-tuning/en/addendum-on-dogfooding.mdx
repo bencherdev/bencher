@@ -1,0 +1,72 @@
+## Addendum on Dogfooding
+
+I'm already [dogfooding Bencher with Bencher][bencher perf],
+but all of the existing [benchmark harness adapters][adapters] are for micro-benchmarking harnesses.
+Most HTTP harnesses are really load testing harnesses,
+and [load testing is different than benchmarking][continuous benchmarking load testing].
+Further, I'm not looking to expand Bencher into load testing anytime soon.
+That is a very different use case that would require very different design considerations,
+like that time series database for instance.
+Even if I did have load testing in place,
+I would really need to be running against a fresh pull of production data for this to have been caught.
+The performance differences for these changes were negligible with my test database.
+
+<details>
+    <summary>Click to view test database benchmark results</summary>
+    <br />
+
+    Before:
+
+    ```
+    Run Time: real 0.081 user 0.019532 sys 0.005618
+    Run Time: real 0.193 user 0.022192 sys 0.003368
+    Run Time: real 0.070 user 0.021390 sys 0.003369
+    Run Time: real 0.062 user 0.022676 sys 0.002290
+    Run Time: real 0.057 user 0.012053 sys 0.006638
+    Run Time: real 0.052 user 0.018797 sys 0.002016
+    Run Time: real 0.059 user 0.022806 sys 0.002437
+    Run Time: real 0.066 user 0.021869 sys 0.004525
+    Run Time: real 0.060 user 0.021037 sys 0.002864
+    Run Time: real 0.059 user 0.018397 sys 0.003668
+    ```
+
+    After indexes and materialized view:
+
+    ```
+    Run Time: real 0.063 user 0.008671 sys 0.004898
+    Run Time: real 0.053 user 0.010671 sys 0.003334
+    Run Time: real 0.053 user 0.010337 sys 0.002884
+    Run Time: real 0.052 user 0.008087 sys 0.002165
+    Run Time: real 0.045 user 0.007265 sys 0.002123
+    Run Time: real 0.038 user 0.008793 sys 0.002240
+    Run Time: real 0.040 user 0.011022 sys 0.002420
+    Run Time: real 0.049 user 0.010004 sys 0.002831
+    Run Time: real 0.059 user 0.010472 sys 0.003661
+    Run Time: real 0.046 user 0.009968 sys 0.002628
+    ```
+</details>
+
+<br />
+
+All of this leads me to believe that I should create a micro-benchmark
+that runs against the Perf API endpoint and dogfood the results with Bencher.
+This will require a sizable test database
+to make sure that these sort of performance regressions get caught in CI.
+I have [created a tracking issue][github issue 367] for this work, if you would like to follow along.
+
+This has all got me thinking though:
+What if you could do [snapshot testing][snapshot testing] of your SQL database query plan?
+That is, you could compare your current vs candidate SQL database query plans.
+SQL query plan testing would sort of be like instruction count based benchmarking for databases.
+The query plan helps to indicate that there may be an issue with the runtime performance,
+without having to actually benchmark the database query.
+I have [created a tracking issue][github issue 368] for this as well.
+Please, feel free to add a comment with thoughts or any prior art that you are aware of!
+
+[github issue 367]: https://github.com/bencherdev/bencher/issues/367
+[github issue 368]: https://github.com/bencherdev/bencher/issues/368
+
+[bencher perf]: /perf/bencher
+[adapters]: /docs/explanation/adapters/
+[continuous benchmarking load testing]: /docs/explanation/continuous-benchmarking/#continuous-benchmarking-vs-continuous-load-testing
+[snapshot testing]: https://en.wikipedia.org/wiki/Software_testing#Output_comparison_testing
