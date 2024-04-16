@@ -9,13 +9,13 @@ sortOrder: -2024.0411
 
 import BencherFooter from "../../../chunks/learn/en/bencher-footer.mdx";
 
-A couple of days ago, I got [feedback from a user][github bitcoin 27284]
+Last week, I got [feedback from a user][github bitcoin 27284]
 that [their Bencher Perf Page][0xb10c perf page] was taking a while to load.
 So I decided to check it out, and oh, man were they being nice.
 It took sooo long to load! Embarrassingly long.
 Especially for the leading [Continuous Benchmarking][continuous benchmarking] tool.
 
-In the past, I've used the [Rustls Perf Page] as my litmus test.
+In the past, I've used the [Rustls Perf Page][rustls perf page] as my litmus test.
 They have 112 benchmarks and [one of the most impressive Continuous Benchmarking setups out there][rustls case study].
 It used to take about 5 seconds load. This time around it took... ⏳👀 ... 38.8 seconds!
 With that sort of latency, I had to dig in. Performance bugs are bugs, after all!
@@ -73,7 +73,7 @@ To help communicate to users, I added a status bar spinner for both [the Perf Pl
 I also had a failed attempt last fall at using a composite query to get all Perf results into a single query,
 instead of using a quadruple nested for loop.
 This lead to me hitting the [Rust type system recursion limit][recusion limit],
-overflowing the stack on my M1 MacBook Pro,
+repeatedly overflowing the stack,
 suffering through insane (much longer than 38 seconds) compile times,
 and finally dead ending at [SQLite's max number of terms in a compound select statement][sqlite limits].
 
@@ -249,7 +249,7 @@ So I could have just expanded the `metric` table to include all of the `boundary
 Or I could create a separate `boundary` table with a `UNIQUE` foreign key to `metric` table.
 To me the latter option felt a lot cleaner, and I figured I could always deal with any performance implications later.
 
-These were the queries used to create the `metric` and `boundary` tables:
+These were the effective queries used to create the `metric` and `boundary` tables:
 
 ```sql
 CREATE TABLE metric (
@@ -332,7 +332,7 @@ See [Bonus Bug][bonus bug] for all the juicy details.
 
 ## Wrap Up
 
-With the three new indexes and a materialized view added, with is what the Query Planner showed me:
+With the three new indexes and a materialized view added, this is what the Query Planner now shows:
 
 ```
 QUERY PLAN
@@ -398,8 +398,7 @@ That is a very different use case that would require very different design consi
 like that time series database for instance.
 Even if I did have load testing in place,
 I would really need to be running against a fresh pull of production data for this to have been caught.
-The performance differences of this change were negligible on my test database
-due to the size of the tables at play.
+The performance differences for these changes were negligible with my test database.
 
 <details>
     <summary>Click to view test database benchmark results</summary>
@@ -438,16 +437,28 @@ due to the size of the tables at play.
 
 <br />
 
-All of this leads me to believe that this isn't actually the right place to try to eat my own dogfood.
-I can still practice what I preach, by caring about performance.
-Yet I can think that an Application Performance Monitoring (APM) or Observability tool
-would be a better fit for this use case than Bencher.
-And that is okay!
+All of this leads me to believe that I should create a micro-benchmark
+that runs against the Perf API endpoint and dogfood the results with Bencher.
+This will require a sizable test database
+to make sure that these sort of performance regressions get caught in CI.
+I have [created a tracking issue][github issue 367] for this work, if you would like to follow along.
+
+This has all got me thinking though:
+What if you could do [snapshot testing][snapshot testing] of your SQL database query plan?
+That is, you could compare your current vs candidate SQL database query plans.
+SQL query plan testing would sort of be like instruction count based benchmarking for databases.
+The query plan helps to indicate that there may be an issue with the runtime performance,
+without having to actually benchmark the database query.
+I have [created a tracking issue][github issue 368] for this as well.
+Please, feel free to add a comment with thoughts or any prior art that you are aware of!
+
+[github issue 367]: https://github.com/bencherdev/bencher/issues/367
+[github issue 368]: https://github.com/bencherdev/bencher/issues/368
 
 [bencher perf]: /perf/bencher
 [adapters]: /docs/explanation/adapters/
 [continuous benchmarking load testing]: /docs/explanation/continuous-benchmarking/#continuous-benchmarking-vs-continuous-load-testing
-
+[snapshot testing]: https://en.wikipedia.org/wiki/Software_testing#Output_comparison_testing
 
 ## Bonus Bug
 
