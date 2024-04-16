@@ -35,9 +35,9 @@ import {
 	timeToDate,
 	timeToDateOnlyIso,
 } from "../../../util/convert";
-import { httpGet } from "../../../util/http";
-import { NotifyKind, pageNotify } from "../../../util/notify";
-import { useSearchParams } from "../../../util/url";
+import { apiUrl, httpGet } from "../../../util/http";
+import { MAX_NOTIFY_TIMEOUT, NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM, NOTIFY_TIMEOUT_PARAM, NotifyKind, navigateNotify, pageNotify } from "../../../util/notify";
+import { useNavigate, useSearchParams } from "../../../util/url";
 import { DEBOUNCE_DELAY, validU32 } from "../../../util/valid";
 import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
@@ -510,10 +510,20 @@ const PerfPanel = (props: Props) => {
 			.then((resp) => resp?.data)
 			.catch((error) => {
 				console.error(error);
-				pageNotify(
-					NotifyKind.ERROR,
-					"Lettuce romaine calm! Failed to get perf. Please, try again.",
-				);
+				// If the URL is exactly 2000 characters, then it may have been truncated by the browser.
+				// There isn't much that we can do other than notify the user.
+				if(window.location.href.length === 2000 ) {
+					pageNotify(
+						NotifyKind.ERROR,
+						`This URL is exactly 2,000 characters. It may have been truncated by your web browser. Please, try opening the original link in a different web browser.`,
+						{ [NOTIFY_TIMEOUT_PARAM]: MAX_NOTIFY_TIMEOUT }
+					);
+				} else {
+					pageNotify(
+						NotifyKind.ERROR,
+						"Lettuce romaine calm! Failed to get perf. Please, try again.",
+					);
+				}
 				return EMPTY_OBJECT;
 			});
 	};
@@ -607,7 +617,10 @@ const PerfPanel = (props: Props) => {
 		if (
 			!clear() &&
 			first_report &&
-			isPlotInit() &&
+			branches().length === 0 &&
+			testbeds().length === 0 &&
+			benchmarks().length === 0 &&
+			measures().length === 0 &&
 			tab() === DEFAULT_PERF_TAB
 		) {
 			const first_measure =

@@ -6,6 +6,8 @@ export const NOTIFY_TIMEOUT_PARAM = "notify_timeout";
 export const NOTIFY_LINK_URL_PARAM = "notify_link_url";
 export const NOTIFY_LINK_TEXT_PARAM = "notify_link_text";
 
+export const MAX_NOTIFY_TIMEOUT = 2147483647;
+
 export enum NotifyKind {
 	OK = "ok",
 	ALERT = "alert",
@@ -112,12 +114,13 @@ export const navigateNotify = (
 	}
 };
 
-export const pageNotify = (notifyKind: NotifyKind, notifyText: string) => {
+export const pageNotify = (notifyKind: NotifyKind, notifyText: string, notifyOptions?: { [NOTIFY_TIMEOUT_PARAM]: undefined | number }) => {
 	const [_searchParams, setSearchParams] = useSearchParams();
 	setSearchParams(
 		{
 			[NOTIFY_KIND_PARAM]: notifyKind,
 			[NOTIFY_TEXT_PARAM]: notifyText,
+			...(notifyOptions ?? {}),
 		},
 		{ replace: true },
 	);
