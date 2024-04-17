@@ -1,0 +1,38 @@
+```mdx
+import SqliteQueryPlan from "../sqlite-query-plan.mdx";
+
+## SQLite Abfrageplaner
+
+Die SQLite-Website bietet [hervorragende Dokumentation für ihren Abfrageplaner][sqlite query planner].
+Sie erklärt genau, wie SQLite Ihre SQL-Abfrage ausführt,
+und sie lehrt Sie, welche Indizes nützlich sind und auf welche Operationen Sie achten sollten, wie z.B. vollständige Tabellenscans.
+
+Um zu sehen, wie der Abfrageplaner meine Perf-Abfrage ausführen würde,
+musste ich ein neues Werkzeug zu meinem Werkzeuggürtel hinzufügen: [`EXPLAIN QUERY PLAN`][eqp]
+Sie können entweder Ihrer SQL-Abfrage `EXPLAIN QUERY PLAN` voranstellen
+oder den Befehl `.eqp on` vor Ihrer Abfrage ausführen.
+So oder so, ich erhielt ein Ergebnis, das so aussieht:
+
+<SqliteQueryPlan />
+
+Oh, Junge!
+Das ist eine Menge.
+Aber die drei großen Dinge, die mir sofort ins Auge sprangen, waren:
+
+1. SQLite erstellt on-the-fly eine materialisierte Ansicht, die die _gesamte_ `boundary` Tabelle scannt
+2. SQLite scannt dann die _gesamte_ `metric` Tabelle
+3. SQLite erstellt zwei on-the-fly Indizes
+
+Und wie groß sind die `metric` und `boundary` Tabellen?
+Nun, es stellt sich heraus, dass sie die zwei größten Tabellen sind,
+da dort alle [Metriken][metrics] und [Grenzwerte][thresholds] gespeichert sind.
+
+Da dies mein erstes Rodeo mit der Leistungsoptimierung von SQLite war,
+wollte ich vor irgendwelchen Änderungen einen Experten zu Rate ziehen.
+
+[sqlite query planner]: https://www.sqlite.org/queryplanner.html
+[eqp]: https://www.sqlite.org/eqp.html
+
+[thresholds]: /de/docs/explanation/thresholds/
+[metrics]: /de/docs/explanation/benchmarking/#metrics
+```

@@ -1,0 +1,21 @@
+import SqliteExpertOutput from "../sqlite-expert-output.mdx";
+import SqliteIndexes from "../sqlite-indexes.mdx";
+
+# Expert SQLite
+
+SQLite dispose d'un mode "expert" expérimental qui peut être activé avec [la commande `.expert on`][expert on].
+Il suggère des index pour les requêtes, donc j'ai décidé de l'essayer.
+Voici ce qu'il a suggéré :
+
+<SqliteExpertOutput />
+
+C'est définitivement une amélioration !
+Il a supprimé le scan sur la table `metric` et les deux index créés à la volée.
+Honnêtement, je n'aurais pas trouvé les deux premiers index par moi-même.
+Merci, SQLite Expert !
+
+<SqliteIndexes />
+
+Maintenant, la seule chose qu'il reste à éliminer, c'est cette fichue vue matérialisée créée à la volée.
+
+[expert on]: https://sqlite.org/cli.html#special_commands_to_sqlite3_dot_commands_

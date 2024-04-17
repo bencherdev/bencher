@@ -1,0 +1,36 @@
+import SqliteQueryPlan from "../sqlite-query-plan.mdx";
+
+## Planificador de Consultas SQLite
+
+El sitio web de SQLite tiene [una excelente documentación para su Planificador de Consultas][planificador de consultas sqlite].
+Explica exactamente cómo SQLite ejecuta tu consulta SQL,
+y te enseña qué índices son útiles y en qué operaciones debes prestar atención, como los escaneos completos de tablas.
+
+Para ver cómo el Planificador de Consultas ejecutaría mi consulta Perf,
+necesitaba agregar una nueva herramienta a mi cinturón de herramientas: [`EXPLAIN QUERY PLAN`][eqp]
+Puedes prefijar tu consulta SQL con `EXPLAIN QUERY PLAN`
+o ejecutar el comando de punto `.eqp on` antes de tu consulta.
+De cualquier manera, obtuve un resultado que se ve así:
+
+<SqliteQueryPlan />
+
+¡Vaya!
+Hay mucho aquí.
+Pero las tres grandes cosas que me llamaron la atención fueron:
+
+1. SQLite está creando una vista materializada al vuelo que escanea la tabla `boundary` _completa_
+2. Luego, SQLite está escaneando la tabla `metric` _completa_
+3. SQLite está creando dos índices al vuelo
+
+¿Y qué tan grandes son las tablas `metric` y `boundary`?
+Bueno, resulta que son las dos tablas más grandes,
+ya que es donde se almacenan todos los [Métricos][metricas] y [Límites][umbrales].
+
+Dado que este era mi primer rodeo de ajuste de rendimiento de SQLite,
+quería consultar a un experto antes de hacer cualquier cambio.
+
+[planificador de consultas sqlite]: https://www.sqlite.org/queryplanner.html
+[eqp]: https://www.sqlite.org/eqp.html
+
+[umbrales]: /es/docs/explanation/thresholds/
+[metricas]: /es/docs/explanation/benchmarking/#metrics

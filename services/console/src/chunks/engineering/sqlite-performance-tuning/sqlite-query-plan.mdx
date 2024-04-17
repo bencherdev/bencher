@@ -1,0 +1,21 @@
+```
+QUERY PLAN
+|--MATERIALIZE (join-5)
+|  |--SCAN boundary
+|  |--SEARCH threshold USING INTEGER PRIMARY KEY (rowid=?)
+|  |--SEARCH model USING INTEGER PRIMARY KEY (rowid=?)
+|  |--BLOOM FILTER ON alert (boundary_id=?)
+|  `--SEARCH alert USING AUTOMATIC COVERING INDEX (boundary_id=?) LEFT-JOIN
+|--SEARCH branch USING INDEX sqlite_autoindex_branch_1 (uuid=?)
+|--SEARCH measure USING INDEX sqlite_autoindex_measure_1 (uuid=?)
+|--SEARCH benchmark USING INDEX sqlite_autoindex_benchmark_1 (uuid=?)
+|--SEARCH testbed USING INDEX sqlite_autoindex_testbed_1 (uuid=?)
+|--SCAN metric
+|--SEARCH report_benchmark USING INTEGER PRIMARY KEY (rowid=?)
+|--SEARCH report USING INTEGER PRIMARY KEY (rowid=?)
+|--SEARCH version USING INTEGER PRIMARY KEY (rowid=?)
+|--SEARCH branch_version USING COVERING INDEX sqlite_autoindex_branch_version_1 (branch_id=? AND version_id=?)
+|--BLOOM FILTER ON (join-5) (metric_id=?)
+|--SEARCH (join-5) USING AUTOMATIC COVERING INDEX (metric_id=?) LEFT-JOIN
+`--USE TEMP B-TREE FOR ORDER BY
+```

@@ -1,3 +1,6 @@
+import QueryTimeBefore from "../query-time-before.mdx";
+import QueryTimeAfter from "../query-time-after.mdx";
+
 ## Addendum on Dogfooding
 
 I'm already [dogfooding Bencher with Bencher][bencher perf],
@@ -17,33 +20,11 @@ The performance differences for these changes were negligible with my test datab
 
     Before:
 
-    ```
-    Run Time: real 0.081 user 0.019532 sys 0.005618
-    Run Time: real 0.193 user 0.022192 sys 0.003368
-    Run Time: real 0.070 user 0.021390 sys 0.003369
-    Run Time: real 0.062 user 0.022676 sys 0.002290
-    Run Time: real 0.057 user 0.012053 sys 0.006638
-    Run Time: real 0.052 user 0.018797 sys 0.002016
-    Run Time: real 0.059 user 0.022806 sys 0.002437
-    Run Time: real 0.066 user 0.021869 sys 0.004525
-    Run Time: real 0.060 user 0.021037 sys 0.002864
-    Run Time: real 0.059 user 0.018397 sys 0.003668
-    ```
+    <QueryTimeBefore />
 
     After indexes and materialized view:
 
-    ```
-    Run Time: real 0.063 user 0.008671 sys 0.004898
-    Run Time: real 0.053 user 0.010671 sys 0.003334
-    Run Time: real 0.053 user 0.010337 sys 0.002884
-    Run Time: real 0.052 user 0.008087 sys 0.002165
-    Run Time: real 0.045 user 0.007265 sys 0.002123
-    Run Time: real 0.038 user 0.008793 sys 0.002240
-    Run Time: real 0.040 user 0.011022 sys 0.002420
-    Run Time: real 0.049 user 0.010004 sys 0.002831
-    Run Time: real 0.059 user 0.010472 sys 0.003661
-    Run Time: real 0.046 user 0.009968 sys 0.002628
-    ```
+    <QueryTimeAfter />
 </details>
 
 <br />

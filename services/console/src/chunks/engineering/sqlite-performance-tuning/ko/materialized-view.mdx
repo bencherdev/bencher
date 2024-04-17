@@ -1,0 +1,49 @@
+import MetricTable from "../metric-table.mdx";
+import BoundaryTable from "../boundary-table.mdx";
+import MetricBoundaryView from "../metric-boundary-view.mdx";
+
+## 머티리얼라이즈드 뷰(Materialized View)
+
+지난해 [임계 경계][thresholds]를 추적 및 시각화할 수 있는 기능을 추가했을 때,
+데이터베이스 모델에서 결정을 내려야 했습니다.
+메트릭과 해당 경계 사이에는 1대0 또는 1대1 관계가 있습니다.
+즉, 메트릭은 경계와 관련이 없거나 하나의 경계와 관련될 수 있고, 경계는 한 메트릭과만 관련될 수 있습니다.
+그래서 `metric` 테이블을 확장하여 모든 `boundary` 데이터를 포함시키고, `boundary` 관련 필드를 모두 null 허용할 수도 있었습니다.
+또는 `metric` 테이블에 `UNIQUE` 외래 키를 가진 별도의 `boundary` 테이블을 생성할 수도 있었습니다.
+저에게는 후자의 옵션이 훨씬 깔끔해 보였고, 성능 문제는 나중에 언제든지 처리할 수 있을 것이라고 생각했습니다.
+
+`metric` 테이블과 `boundary` 테이블을 생성하기 위해 사용된 실제 쿼리는 다음과 같습니다:
+
+<MetricTable />
+
+<BoundaryTable />
+
+그리고 "나중"이 도착했습니다.
+단순히 `boundary(metric_id)`에 대한 인덱스를 추가해 보려고 했지만 도움이 되지 않았습니다.
+이유는 `metric` 테이블에서 파생된 Perf 쿼리는
+그 관계가 0/1이거나 다시 말해 null 허용이므로 스캔되어야 하고(O(n))
+검색할 수는 없다(O(log(n)))는 사실과 관련이 있다고 믿습니다.
+
+이는 저에게 명확한 해결책을 남겼습니다.
+SQLite가 동적으로 머티리얼라이즈드 뷰를 생성하는 것을 방지하기 위해
+`metric`과 `boundary` 관계를 평면화하는 머티리얼라이즈드 뷰를 생성해야 했습니다.
+
+새로운 `metric_boundary` 머티리얼라이즈드 뷰를 생성하기 위해 사용된 쿼리는 다음과 같습니다:
+
+<MetricBoundaryView />
+
+이 솔루션으로 공간을 런타임 성능과 교환합니다.
+얼마나 많은 공간이냐고요?
+놀랍게도 이 뷰는 데이터베이스에서 가장 큰 두 테이블에 대한 것임에도 불구하고 약 4%의 증가에 불과합니다.
+최고의 부분은, 이를 통해 소스 코드에서 눈앞의 이익을 얻을 수 있다는 것입니다.
+
+Diesel을 사용하여 머티리얼라이즈드 뷰를 생성하는 것이 놀랍도록 쉬웠습니다.
+평소 스키마를 생성할 때 Diesel이 사용하는 정확히 같은 매크로를 사용하기만 하면 됩니다.
+이 과정을 통해, 저는 Diesel을 훨씬 더 평가하게 되었습니다.
+모든 맛있는 세부 사항은 [보너스 버그][bonus bug]를 참조하세요.
+
+[diesel view]: https://deterministic.space/diesel-view-table-trick.html
+
+[thresholds]: /ko/docs/explanation/thresholds/
+
+[bonus bug]: #bonus-bug

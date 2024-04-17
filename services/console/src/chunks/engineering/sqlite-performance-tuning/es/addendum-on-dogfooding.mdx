@@ -1,0 +1,53 @@
+import QueryTimeBefore from "../query-time-before.mdx";
+import QueryTimeAfter from "../query-time-after.mdx";
+
+## Addendum sobre Dogfooding
+
+Ya estoy [utilizando Bencher con Bencher][bencher perf],
+pero todos los [adaptadores de arneses de referencia][adaptadores] existentes son para arneses de micro-referencia.
+La mayoría de los arneses HTTP son realmente arneses de pruebas de carga,
+y [las pruebas de carga son diferentes de las pruebas de rendimiento][continuous benchmarking load testing].
+Además, no estoy buscando expandir Bencher a pruebas de carga en el corto plazo.
+Ese es un caso de uso muy diferente que requeriría consideraciones de diseño muy distintas,
+como esa base de datos de series temporales, por ejemplo.
+Incluso si tuviera pruebas de carga en lugar,
+realmente necesitaría estar ejecutándolas contra una extracción reciente de datos de producción para que esto se hubiera detectado.
+Las diferencias de rendimiento para estos cambios fueron insignificantes con mi base de datos de prueba.
+
+<details>
+    <summary>Haz clic para ver los resultados de la referencia de la base de datos de prueba</summary>
+    <br />
+
+    Antes:
+
+    <QueryTimeBefore />
+
+    Después de índices y vista materializada:
+
+    <QueryTimeAfter />
+</details>
+
+<br />
+
+Todo esto me lleva a creer que debería crear un micro-referencia
+que se ejecute contra el punto final de la API de Perf y utilizar los resultados con Bencher.
+Esto requerirá una base de datos de prueba considerable
+para asegurarse de que este tipo de regresiones de rendimiento se detecten en CI.
+He [creado un problema de seguimiento][github issue 367] para este trabajo, si te gustaría seguir el progreso.
+
+Todo esto me ha hecho pensar:
+¿Y si pudieras hacer [pruebas de instantáneas][snapshot testing] del plan de consulta de tu base de datos SQL?
+Es decir, podrías comparar tus planes de consulta de base de datos SQL actuales versus candidatos.
+Las pruebas de plan de consulta SQL serían algo así como referencias basadas en el conteo de instrucciones para bases de datos.
+El plan de consulta ayuda a indicar que puede haber un problema con el rendimiento en tiempo de ejecución,
+sin tener que referenciar realmente la consulta de la base de datos.
+También he [creado un problema de seguimiento][github issue 368] para esto.
+¡Por favor, siéntete libre de agregar un comentario con tus pensamientos o cualquier trabajo previo que conozcas!
+
+[github issue 367]: https://github.com/bencherdev/bencher/issues/367
+[github issue 368]: https://github.com/bencherdev/bencher/issues/368
+
+[bencher perf]: /perf/bencher
+[adaptadores]: /es/docs/explanation/adapters/
+[continuous benchmarking load testing]: /es/docs/explanation/continuous-benchmarking/#continuous-benchmarking-vs-continuous-load-testing
+[pruebas de instantáneas]: https://en.wikipedia.org/wiki/Software_testing#Output_comparison_testing

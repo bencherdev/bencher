@@ -1,0 +1,63 @@
+## Hintergrund
+
+Von Anfang an war mir klar, dass die [Bencher Perf API][perf query]
+eine der leistungsanspruchsvollsten Endpunkte sein würde.
+Ich glaube, der Hauptgrund, warum so viele Leute das Rad der Leistungsmessung neu erfinden mussten, 
+liegt daran, dass die bestehenden Tools von der Stange die erforderliche hohe Dimensionalität nicht bewältigen.
+Mit "hoher Dimensionalität" meine ich die Fähigkeit, die Leistung über die Zeit und über mehrere Dimensionen hinweg zu verfolgen:
+[Branches][branch], [Testbeds][testbed], [Benchmarks][benchmarks] und [Maße][measures].
+Diese Fähigkeit, quer durch fünf verschiedene Dimensionen zu schneiden und zu würfeln, führt zu einem sehr komplexen Modell.
+
+Aufgrund dieser inhärenten Komplexität und der Art der Daten
+erwog ich die Verwendung einer Zeitreihendatenbank für Bencher.
+Letztendlich entschied ich mich jedoch dafür, SQLite zu verwenden.
+Ich fand, es war besser, [Dinge zu tun, die sich nicht skalieren lassen][do things that dont scale],
+anstatt zusätzliche Zeit damit zu verbringen, eine völlig neue Datenbankarchitektur zu erlernen, die möglicherweise gar nicht hilft.
+
+Im Laufe der Zeit haben auch die Anforderungen an die Bencher Perf API zugenommen.
+Ursprünglich mussten Sie alle Dimensionen, die Sie plotten wollten, manuell auswählen.
+Dies schuf viel Reibung für die Benutzer, um zu einem nützlichen Plot zu gelangen.
+Um dies zu lösen, [fügte ich eine Liste der neuesten Berichte][github issue 133] zu den Perf-Seiten hinzu,
+und standardmäßig wurde der neueste Bericht ausgewählt und geplottet.
+Das bedeutet, dass, wenn es im neuesten Bericht 112 Benchmarks gab, alle 112 geplottet wurden.
+Das Modell wurde noch komplizierter mit der Fähigkeit, [Schwellenwertgrenzen][thresholds] zu verfolgen und zu visualisieren.
+
+Mit diesem Hintergrund machte ich einige leistungsbezogene Verbesserungen.
+Da der Perf-Plot den neuesten Bericht benötigt, um mit dem Plotten zu beginnen,
+refaktorierte ich die [Berichte-API][reports api], um die Ergebnisdaten eines Berichts mit einem einzigen Aufruf der Datenbank zu erhalten, anstatt zu iterieren.
+Das Zeitfenster für die Standardberichtabfrage wurde auf vier Wochen festgelegt, anstatt unbegrenzt zu sein.
+Ich beschränkte auch drastisch den Umfang aller Datenbank-Handles, wodurch der Lock-Wettbewerb verringert wurde.
+Um den Benutzern zu helfen, fügte ich einen Statusleisten-Spinner sowohl für [den Perf-Plot][bencher v0317] als auch für [die Dimension-Reiter][bencher v045] hinzu.
+
+Ich hatte auch einen erfolglosen Versuch im letzten Herbst, eine zusammengesetzte Abfrage zu verwenden, um alle Perf-Ergebnisse in einer einzigen Abfrage zu erhalten,
+anstatt eine vierfach geschachtelte Schleife zu verwenden.
+Dies führte dazu, dass ich an das [Rekursion-Grenzwertsystem von Rust][recusion limit] stieß,
+wiederholt den Stack überlief,
+wahnsinnige (viel länger als 38 Sekunden) Kompilierzeiten durchlitt
+und schließlich in einer Sackgasse bei [SQLite's maximaler Anzahl von Begriffen in einer zusammengesetzten SELECT-Anweisung][sqlite limits] endete.
+
+Mit all dem unter meinem Gürtel wusste ich, dass ich mich hier wirklich einarbeiten musste
+und meine Leistungsingenieur-Hose anziehen.
+Ich hatte noch nie zuvor eine SQLite-Datenbank profiliert,
+und ehrlich gesagt, hatte ich noch nie _irgendeine_ Datenbank zuvor profiliert.
+Nun ja, magst du vielleicht denken.
+[Mein LinkedIn-Profil][linkedin epompeii] sagt, ich war fast zwei Jahre lang "Datenbankadministrator".
+Und ich habe _nie_ eine Datenbank profiliert‽
+Ja. Das ist wohl eine Geschichte für ein andermal.
+
+[do things that dont scale]: https://paulgraham.com/ds.html
+[github issue 133]: https://github.com/bencherdev/bencher/issues/133
+[recusion limit]: https://doc.rust-lang.org/reference/attributes/limits.html#the-recursion_limit-attribute
+[sqlite limits]: https://www.sqlite.org/limits.html
+[linkedin epompeii]: https://www.linkedin.com/in/epompeii/
+
+[perf query]: /de/docs/api/projects/perf/#get-v0projectsprojectperf
+[prior art]: /de/docs/reference/prior-art/#benchmark-tracking-tools
+[branch]: /de/docs/explanation/benchmarking/#branch
+[testbed]: /de/docs/explanation/benchmarking/#testbed
+[benchmarks]: /de/docs/explanation/benchmarking/#benchmarks
+[measures]: /de/docs/explanation/benchmarking/#measures
+[thresholds]: /de/docs/explanation/thresholds/
+[reports api]: /de/docs/api/projects/reports/#get-v0projectsprojectreports
+[bencher v0317]: /de/docs/reference/changelog/#v0317
+[bencher v045]: /de/docs/reference/changelog/#v045

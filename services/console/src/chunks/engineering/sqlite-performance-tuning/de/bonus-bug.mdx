@@ -1,0 +1,43 @@
+import BonusBugSql from "../bonus-bug-sql.mdx";
+import BonusBugSqlIssue from "../bonus-bug-sql-issue.mdx";
+import BonusBugSqlFix from "../bonus-bug-sql-fix.mdx";
+import BonusBugRustSchema from "../bonus-bug-rust-schema.mdx";
+import BonusBugRustLeftJoin from "../bonus-bug-rust-left-join.mdx";
+
+## Bonus Bug
+
+Ursprünglich hatte ich einen Fehler in meinem [materialisierten View][materialized view]-Code.
+So sah die SQL-Abfrage aus:
+
+<BonusBugSql />
+
+Siehst du das Problem? Nein. Ich auch nicht!
+
+Das Problem liegt hier:
+
+<BonusBugSqlIssue />
+
+Es sollte tatsächlich sein:
+
+<BonusBugSqlFix />
+
+Ich wollte zu clever sein,
+und in meinem Diesel-Materialized View Schema hatte ich diesen Join zugelassen:
+
+<BonusBugRustSchema />
+
+Ich ging davon aus, dass diese Makro irgendwie schlau genug wäre,
+`alert.boundary_id` mit `metric_boundary.boundary_id` in Verbindung zu bringen.
+Aber das war leider nicht der Fall.
+Es scheint einfach die erste Spalte von `metric_boundary` (`metric_id`) gewählt zu haben, um sie mit `alert` in Verbindung zu bringen.
+
+Als ich den Fehler entdeckte, war es einfach, ihn zu beheben.
+Ich musste nur einen expliziten Join in der Perf-Abfrage verwenden:
+
+<BonusBugRustLeftJoin />
+
+<br />
+
+> 🐰 Das war's, Leute!
+
+[materialized view]: #materialized-view

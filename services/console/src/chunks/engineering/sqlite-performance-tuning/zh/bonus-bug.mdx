@@ -1,0 +1,43 @@
+import BonusBugSql from "../bonus-bug-sql.mdx";
+import BonusBugSqlIssue from "../bonus-bug-sql-issue.mdx";
+import BonusBugSqlFix from "../bonus-bug-sql-fix.mdx";
+import BonusBugRustSchema from "../bonus-bug-rust-schema.mdx";
+import BonusBugRustLeftJoin from "../bonus-bug-rust-left-join.mdx";
+
+## 额外的错误
+
+我最初在我的[物化视图][materialized view]代码中遇到了一个错误。
+SQL查询看起来像这样：
+
+<BonusBugSql />
+
+你看出问题了吗？没有。我也没有！
+
+问题就出在这里：
+
+<BonusBugSqlIssue />
+
+实际上，它应该是：
+
+<BonusBugSqlFix />
+
+我尝试过于聪明，
+并且在我的Diesel物化视图架构中允许了这种连接：
+
+<BonusBugRustSchema />
+
+我假设这个宏在某种程度上足够智能，
+能够将`alert.boundary_id`与`metric_boundary.boundary_id`关联起来。
+但遗憾的是，它并不是。
+看来它仅仅选择了`metric_boundary`的第一列（`metric_id`）来与`alert`关联。
+
+一旦我发现了这个错误，修复就变得容易了。
+我只需要在Perf查询中使用显式连接：
+
+<BonusBugRustLeftJoin />
+
+<br />
+
+> 🐰 就是这些了！
+
+[materialized view]: #materialized-view

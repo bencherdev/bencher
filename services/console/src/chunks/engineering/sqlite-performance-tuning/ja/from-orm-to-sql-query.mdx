@@ -1,0 +1,33 @@
+import DieselDebugQuery from "../diesel-debug-query.mdx";
+import DieselSql from "../diesel-sql.mdx";
+
+## ORMからSQLクエリへ
+
+最初の障害は、RustコードからSQLクエリを取り出すことでした。
+Bencherのオブジェクトリレーショナルマッパー（ORM）として、[Diesel][github diesel]を使用しています。
+
+> 🐰 興味深い事実：Dieselは、自身の[相対的な連続ベンチマーク][relative continuous benchmarking]のためにBencherを使用しています。
+> [Dieselのパフォーマンスページ][diesel perf page]をチェックしてみてください！
+
+Dieselはパラメーター化されたクエリを生成します。
+SQLクエリとそのバインドパラメーターをデータベースに別々に送信します。
+つまり、置換はデータベースによって行われます。
+そのため、Dieselはユーザーに完全なクエリを提供することができません。
+見つけた最善の方法は、[the `diesel::debug_query`関数][diesel debug query]を使用して、パラメーター化されたクエリを出力することでした：
+
+<DieselDebugQuery />
+
+その後、手作業で清掃し、クエリを有効なSQLにパラメーター化しました：
+
+<DieselSql />
+
+もっと良い方法をご存知でしたら、教えてください！
+これは、[プロジェクトのメンテナーが提案した方法][stackoverflow diesel]ですので、それに従いました。
+SQLクエリを手に入れたので、ついに...大量のドキュメントを読む準備が整いました。
+
+[github diesel]: https://github.com/diesel-rs/diesel
+[diesel debug query]: https://docs.rs/diesel/2.1.5/diesel/fn.debug_query.html
+[stackoverflow diesel]: https://stackoverflow.com/questions/76467831/ho-to-get-final-sql-query-from-diesel
+
+[relative continuous benchmarking]: /ja/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+[diesel perf page]: /ja/perf/diesel

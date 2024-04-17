@@ -1,0 +1,19 @@
+```sql
+CREATE VIEW metric_boundary AS
+SELECT metric.id AS metric_id,
+    metric.uuid AS metric_uuid,
+    metric.report_benchmark_id,
+    metric.measure_id,
+    metric.value,
+    metric.lower_value,
+    metric.upper_value,
+    boundary.id,
+    boundary.uuid AS boundary_uuid,
+    boundary.threshold_id AS threshold_id,
+    boundary.model_id,
+    boundary.baseline,
+    boundary.lower_limit,
+    boundary.upper_limit
+FROM metric
+    LEFT OUTER JOIN boundary ON (boundary.metric_id = metric.id);
+```

@@ -1,0 +1,29 @@
+지난주에 한 사용자로부터 [피드백을 받았습니다][github bitcoin 27284]. 
+그들의 [Bencher Perf 페이지][0xb10c perf page]가 로딩하는 데 시간이 걸린다고 했습니다.
+그래서 저도 확인해 보기로 했는데, 정말, 그들이 상냥하게 말한 것이었네요.
+로딩하는 데 너무나 오래 걸렸어요! 부끄럽게도 오래 걸렸습니다.
+특히 [지속적 벤치마킹][continuous benchmarking] 도구의 선두주자에게는 더욱이요.
+
+과거에, 저는 [Rustls Perf 페이지][rustls perf page]를 리트머스 시험지로 사용해 왔습니다.
+그들은 112개의 벤치마크를 가지고 있고 [가장 인상적인 지속적 벤치마킹 설정 중 하나를 가지고 있습니다][rustls case study].
+이전에는 로딩하는 데 대략 5초가 걸렸습니다. 이번에는... ⏳👀 ... 38.8초가 걸렸네요!
+이런 종류의 지연 시간으로는, 저는 파고들 수밖에 없었습니다. 성능 버그도 결국 버그니까요!
+
+<div class="content has-text-centered">
+<figure>
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/engineering/sqlite-performance-tuning/http-response-times.png"
+    width="2368"
+    height="1472"
+    alt="높은 HTTP 응답 시간"
+/>
+<figcaption>가장 나쁜 HTTP 응답 시간은 2분에 달했습니다!</figcaption>
+</figure>
+</div>
+
+[github bitcoin 27284]: https://github.com/bitcoin/bitcoin/issues/27284#issuecomment-2046870296
+
+[0xb10c perf page]: /perf/0xb10c-s-bitcoin-core
+[continuous benchmarking]: /ko/docs/explanation/continuous-benchmarking/
+[rustls perf page]: /perf/rustls-821705769?notify_kind=alert&notify_text=지속적+벤치마킹에+대해+더+알아보기+위해+Rustls+프로젝트를+탐색하세요.&notify_timeout=2147483647&notify_link_url=https%3A%2F%2Fbencher.dev%2Flearn%2Fcase-study%2Frustls%2F&notify_link_text=케이스+스터디+읽기
+[rustls case study]: /learn/case-study/rustls/

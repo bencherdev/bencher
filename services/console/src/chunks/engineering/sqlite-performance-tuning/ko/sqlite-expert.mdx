@@ -1,0 +1,21 @@
+import SqliteExpertOutput from "../sqlite-expert-output.mdx";
+import SqliteIndexes from "../sqlite-indexes.mdx";
+
+# SQLite 전문가
+
+SQLite에는 [`.expert on` 명령어][expert on]로 활성화할 수 있는 실험적인 "전문가" 모드가 있습니다.
+이 모드는 쿼리에 대한 인덱스를 제안하므로, 한번 사용해 보기로 했습니다.
+이것이 제안한 것입니다:
+
+<SqliteExpertOutput />
+
+분명히 개선되었습니다!
+`metric` 테이블에 대한 스캔과 현장에서 생성된 인덱스 두 개를 없앴습니다.
+솔직히, 저 혼자서는 처음 두 인덱스를 떠올리지 못했을 겁니다.
+고마워요, SQLite 전문가!
+
+<SqliteIndexes />
+
+이제 남은 것은 그 성가신 현장에서 생성된 머티리얼라이즈드 뷰를 없애는 것뿐입니다.
+
+[expert on]: https://sqlite.org/cli.html#special_commands_to_sqlite3_dot_commands_

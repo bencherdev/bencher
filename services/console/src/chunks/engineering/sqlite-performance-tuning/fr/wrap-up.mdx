@@ -1,0 +1,34 @@
+import SqliteNewQueryPlan from "../sqlite-new-query-plan.mdx";
+import RustlsEmbed from "../rustls-embed.mdx";
+
+## Conclusion
+
+Avec l'ajout des trois nouveaux index et d'une vue matérialisée, voici ce que montre désormais le Planificateur de requêtes :
+
+<SqliteNewQueryPlan />
+
+Regardez toutes ces magnifiques recherches `SEARCH` réalisées avec des index existants ! 🥲
+
+Et après avoir déployé mes modifications en production :
+
+<div class="content has-text-centered">
+<figure>
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/engineering/sqlite-performance-tuning/http-response-times-sql-performance-tuning.png"
+    width="2368"
+    height="1472"
+    alt="Temps de réponse HTTP corrigés"
+/>
+<figcaption>Les nouveaux temps de réponse HTTP ne sont même pas perceptibles à l'échelle précédente !</figcaption>
+</figure>
+
+</div>
+
+Il était alors temps pour le test final.
+À quelle vitesse la page de performance Rustls se charge-t-elle ?
+
+Voici même un lien ancre. Cliquez dessus puis rafraîchissez la page.
+
+### La performance compte
+
+<RustlsEmbed />

@@ -1,0 +1,63 @@
+## Contexto
+
+Desde o início, eu sabia que o [Bencher Perf API][perf query]
+seria um dos endpoints mais exigentes em termos de desempenho.
+Acredito que o principal motivo pelo qual muitas pessoas tiveram que [reinventar a roda de acompanhamento de benchmarks][prior art]
+é que as ferramentas disponíveis no mercado não lidam com a alta dimensionalidade necessária.
+Por "alta dimensionalidade", eu quero dizer ser capaz de acompanhar o desempenho ao longo do tempo e em várias dimensões:
+[Branches][branch], [Ambientes de Teste][testbed], [Benchmarks][benchmarks] e [Medidas][measures].
+Essa capacidade de segmentar e cruzar cinco dimensões diferentes leva a um modelo muito complexo.
+
+Devido a essa complexidade inerente e à natureza dos dados,
+eu considerei usar um banco de dados de séries temporais para o Bencher.
+No final, porém, optei por usar o SQLite.
+Eu concluí que era melhor [fazer coisas que não escalonam][do things that dont scale]
+do que gastar tempo extra aprendendo uma arquitetura de banco de dados totalmente nova que talvez não ajudasse de fato.
+
+Com o tempo, as demandas sobre a Bencher Perf API também aumentaram.
+Originalmente, você tinha que selecionar todas as dimensões que queria plotar manualmente.
+Isso criava muita fricção para os usuários obterem um gráfico útil.
+Para resolver isso, eu [adicionei uma lista dos Relatórios mais recentes][github issue 133] às Páginas de Desempenho,
+e por padrão, o Relatório mais recente era selecionado e plotado.
+Isso significa que se houvesse 112 benchmarks no Relatório mais recente, então todos os 112 seriam plotados.
+O modelo também ficou ainda mais complicado com a capacidade de acompanhar e visualizar [Limites de Limiar][thresholds].
+
+Com isso em mente, fiz algumas melhorias relacionadas ao desempenho.
+Uma vez que o Gráfico de Desempenho precisa do Relatório mais recente para começar a plotar,
+eu refatorei a [API de Relatórios][reports api] para obter os dados de resultado de um Relatório em uma única chamada ao banco de dados, em vez de iterar.
+O período de tempo para a consulta padrão do Relatório foi definido para quatro semanas, em vez de ser ilimitado.
+Eu também limitei drasticamente o escopo de todos os handles do banco de dados, reduzindo a contenção de bloqueios.
+Para ajudar a comunicar aos usuários, eu adicionei um indicador de status giratório tanto para [o Gráfico de Desempenho][bencher v0317] quanto para [as abas de dimensão][bencher v045].
+
+Eu também tive uma tentativa frustrada no último outono de usar uma consulta composta para obter todos os resultados do Perf em uma única query,
+em vez de usar um loop aninhado quádruplo.
+Isso me levou a atingir o [limite de recursão do sistema de tipos do Rust][recusion limit],
+transbordando repetidamente a pilha,
+sofrendo com tempos de compilação insanos (muito mais longos que 38 segundos),
+e finalmente chegando a um beco sem saída no [limite máximo de número de termos em uma instrução select composta do SQLite][sqlite limits].
+
+Com tudo isso na bagagem, eu sabia que realmente precisava me aprofundar aqui
+e vestir as calças de engenheiro de desempenho.
+Eu nunca havia perfilado um banco de dados SQLite antes,
+e, honestamente, nunca havia perfilado _nenhum_ banco de dados antes.
+Agora espere um minuto, você pode estar pensando.
+[Meu perfil no LinkedIn][linkedin epompeii] diz que fui "Administrador de Banco de Dados" por quase dois anos.
+E eu _nunca_ profilei um banco de dados‽
+Sim. Essa é uma história para outra hora, suponho.
+
+[do things that dont scale]: https://paulgraham.com/ds.html
+[github issue 133]: https://github.com/bencherdev/bencher/issues/133
+[recusion limit]: https://doc.rust-lang.org/reference/attributes/limits.html#the-recursion_limit-attribute
+[sqlite limits]: https://www.sqlite.org/limits.html
+[linkedin epompeii]: https://www.linkedin.com/in/epompeii/
+
+[perf query]: /pt/docs/api/projects/perf/#get-v0projectsprojectperf
+[prior art]: /pt/docs/reference/prior-art/#benchmark-tracking-tools
+[branch]: /pt/docs/explanation/benchmarking/#branch
+[testbed]: /pt/docs/explanation/benchmarking/#testbed
+[benchmarks]: /pt/docs/explanation/benchmarking/#benchmarks
+[measures]: /pt/docs/explanation/benchmarking/#measures
+[thresholds]: /pt/docs/explanation/thresholds/
+[reports api]: /pt/docs/api/projects/reports/#get-v0projectsprojectreports
+[bencher v0317]: /pt/docs/reference/changelog/#v0317
+[bencher v045]: /pt/docs/reference/changelog/#v045

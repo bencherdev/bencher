@@ -1,0 +1,23 @@
+```
+CREATE INDEX report_benchmark_idx_fc6f3e5b ON report_benchmark(report_id, benchmark_id);
+CREATE INDEX report_idx_55aae6d8 ON report(testbed_id, end_time);
+CREATE INDEX alert_idx_e1882f70 ON alert(boundary_id);
+
+MATERIALIZE (join-5)
+SCAN boundary
+SEARCH threshold USING INTEGER PRIMARY KEY (rowid=?)
+SEARCH model USING INTEGER PRIMARY KEY (rowid=?)
+SEARCH alert USING INDEX alert_idx_e1882f70 (boundary_id=?) LEFT-JOIN
+SEARCH branch USING INDEX sqlite_autoindex_branch_1 (uuid=?)
+SEARCH benchmark USING INDEX sqlite_autoindex_benchmark_1 (uuid=?)
+SEARCH testbed USING INDEX sqlite_autoindex_testbed_1 (uuid=?)
+SEARCH measure USING INDEX sqlite_autoindex_measure_1 (uuid=?)
+SEARCH report USING INDEX report_idx_55aae6d8 (testbed_id=? AND end_time<?)
+SEARCH version USING INTEGER PRIMARY KEY (rowid=?)
+SEARCH branch_version USING COVERING INDEX sqlite_autoindex_branch_version_1 (branch_id=? AND version_id=?)
+SEARCH report_benchmark USING INDEX report_benchmark_idx_fc6f3e5b (report_id=? AND benchmark_id=?)
+SEARCH metric USING INDEX sqlite_autoindex_metric_2 (report_benchmark_id=? AND measure_id=?)
+BLOOM FILTER ON (join-5) (metric_id=?)
+SEARCH (join-5) USING AUTOMATIC COVERING INDEX (metric_id=?) LEFT-JOIN
+USE TEMP B-TREE FOR ORDER BY
+```

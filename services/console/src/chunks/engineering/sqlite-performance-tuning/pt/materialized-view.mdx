@@ -1,0 +1,49 @@
+import MetricTable from "../metric-table.mdx";
+import BoundaryTable from "../boundary-table.mdx";
+import MetricBoundaryView from "../metric-boundary-view.mdx";
+
+## Visão Materializada
+
+Quando adicionei a capacidade de rastrear e visualizar [Limites de Limiares][thresholds] no ano passado,
+eu tinha uma decisão a tomar no modelo de banco de dados.
+Existe um relacionamento de 1-para-0/1 entre uma Métrica e seu Limite correspondente.
+Isso significa que uma Métrica pode se relacionar a zero ou um Limite, e um Limite só pode se relacionar a uma Métrica.
+Então, eu poderia simplesmente expandir a tabela `metric` para incluir todos os dados de `boundary` com todos os campos relacionados a `boundary` sendo nulos.
+Ou eu poderia criar uma tabela `boundary` separada com uma chave estrangeira `UNIQUE` para a tabela `metric`.
+Para mim, a última opção pareceu muito mais limpa, e eu imaginei que sempre poderia lidar com quaisquer implicações de desempenho mais tarde.
+
+Estas foram as consultas efetivas usadas para criar as tabelas `metric` e `boundary`:
+
+<MetricTable />
+
+<BoundaryTable />
+
+E acontece que "mais tarde" chegou.
+Eu tentei simplesmente adicionar um índice para `boundary(metric_id)`, mas isso não ajudou.
+Eu acredito que o motivo tem a ver com o fato de que a consulta de Perf está se originando da tabela `metric`
+e porque essa relação é 0/1, ou de outra forma, nula, ela tem que ser escaneada (O(n))
+e não pode ser buscada (O(log(n))).
+
+Isso me deixou com uma opção clara.
+Eu precisava criar uma visão materializada que achatasse a relação `metric` e `boundary`
+para evitar que o SQLite tenha que criar uma visão materializada na hora.
+
+Esta é a consulta que usei para criar a nova visão materializada `metric_boundary`:
+
+<MetricBoundaryView />
+
+Com essa solução, estou trocando espaço por desempenho de execução.
+Quanto espaço?
+Surpreendentemente, apenas cerca de um aumento de 4%, mesmo que esta visão seja para as duas maiores tabelas no banco de dados.
+Melhor de tudo, isso me permite ter meu bolo e comê-lo também no meu código-fonte.
+
+[Criar uma visão materializada com Diesel][diesel view] foi surpreendentemente fácil.
+Eu apenas tive que usar as mesmas macros que o Diesel usa quando gerando meu esquema normal.
+Com isso dito, aprendi a apreciar muito mais o Diesel ao longo dessa experiência.
+Veja [Bug Bônus][bonus bug] para todos os detalhes suculentos.
+
+[diesel view]: https://deterministic.space/diesel-view-table-trick.html
+
+[thresholds]: /pt/docs/explanation/thresholds/
+
+[bonus bug]: #bonus-bug

@@ -1,0 +1,43 @@
+import BonusBugSql from "../bonus-bug-sql.mdx";
+import BonusBugSqlIssue from "../bonus-bug-sql-issue.mdx";
+import BonusBugSqlFix from "../bonus-bug-sql-fix.mdx";
+import BonusBugRustSchema from "../bonus-bug-rust-schema.mdx";
+import BonusBugRustLeftJoin from "../bonus-bug-rust-left-join.mdx";
+
+## Bonus Bug
+
+J'avais initialement un bug dans mon code de [vue matérialisée][vue matérialisée].
+Voici à quoi ressemblait la requête SQL :
+
+<BonusBugSql />
+
+Avez-vous vu le problème ? Non. Moi non plus !
+
+Le problème est ici :
+
+<BonusBugSqlIssue />
+
+Cela aurait dû être :
+
+<BonusBugSqlFix />
+
+J'essayais d'être trop astucieux,
+et dans mon schéma de vue matérialisée Diesel, j'avais permis cette jointure :
+
+<BonusBugRustSchema />
+
+Je supposais que cette macro était d'une certaine manière assez intelligente
+pour relier `alert.boundary_id` à `metric_boundary.boundary_id`.
+Mais hélas, ce n'était pas le cas.
+Il semble qu'elle ait juste choisi la première colonne de `metric_boundary` (`metric_id`) pour se rapporter à `alert`.
+
+Une fois que j'ai découvert le bug, il était facile à corriger.
+Il suffisait simplement d'utiliser une jointure explicite dans la requête Perf :
+
+<BonusBugRustLeftJoin />
+
+<br />
+
+> 🐰 C'est tout, folks !
+
+[vue matérialisée]: #vue-matérialisée

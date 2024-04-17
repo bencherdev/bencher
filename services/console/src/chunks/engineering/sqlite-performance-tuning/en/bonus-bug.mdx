@@ -1,33 +1,30 @@
+import BonusBugSql from "../bonus-bug-sql.mdx";
+import BonusBugSqlIssue from "../bonus-bug-sql-issue.mdx";
+import BonusBugSqlFix from "../bonus-bug-sql-fix.mdx";
+import BonusBugRustSchema from "../bonus-bug-rust-schema.mdx";
+import BonusBugRustLeftJoin from "../bonus-bug-rust-left-join.mdx";
+
 ## Bonus Bug
 
 I originally had a bug in my [materialized view][materialized view] code.
 This is what the SQL query looked like:
 
-```sql
-SELECT branch.id, branch.uuid, branch.project_id, branch.name, branch.slug, branch.start_point_id, branch.created, branch.modified, testbed.id, testbed.uuid, testbed.project_id, testbed.name, testbed.slug, testbed.created, testbed.modified, benchmark.id, benchmark.uuid, benchmark.project_id, benchmark.name, benchmark.slug, benchmark.created, benchmark.modified, measure.id, measure.uuid, measure.project_id, measure.name, measure.slug, measure.units, measure.created, measure.modified, report.uuid, report_benchmark.iteration, report.start_time, report.end_time, version.number, version.hash, threshold.id, threshold.uuid, threshold.project_id, threshold.measure_id, threshold.branch_id, threshold.testbed_id, threshold.model_id, threshold.created, threshold.modified, model.id, model.uuid, model.threshold_id, model.test, model.min_sample_size, model.max_sample_size, model.window, model.lower_boundary, model.upper_boundary, model.created, model.replaced, alert.id, alert.uuid, alert.boundary_id, alert.boundary_limit, alert.status, alert.modified, metric_boundary.metric_id, metric_boundary.metric_uuid, metric_boundary.report_benchmark_id, metric_boundary.measure_id, metric_boundary.value, metric_boundary.lower_value, metric_boundary.upper_value, metric_boundary.boundary_id, metric_boundary.boundary_uuid, metric_boundary.threshold_id, metric_boundary.model_id, metric_boundary.baseline, metric_boundary.lower_limit, metric_boundary.upper_limit FROM (((((metric_boundary INNER JOIN ((report_benchmark INNER JOIN ((report INNER JOIN (version INNER JOIN (branch_version INNER JOIN branch ON (branch_version.branch_id = branch.id)) ON (branch_version.version_id = version.id)) ON (report.version_id = version.id)) INNER JOIN testbed ON (report.testbed_id = testbed.id)) ON (report_benchmark.report_id = report.id)) INNER JOIN benchmark ON (report_benchmark.benchmark_id = benchmark.id)) ON (metric_boundary.report_benchmark_id = report_benchmark.id)) INNER JOIN measure ON (metric_boundary.measure_id = measure.id)) LEFT OUTER JOIN threshold ON (metric_boundary.threshold_id = threshold.id)) LEFT OUTER JOIN model ON (metric_boundary.model_id = model.id)) LEFT OUTER JOIN alert ON (alert.boundary_id = metric_boundary.metric_id)) WHERE ((((((branch.uuid = 'a7d8366a-4f9b-452e-987e-2ae56e4bf4a3') AND (testbed.uuid = '5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e')) AND (benchmark.uuid = '88375e7c-f1e0-4cbb-bde1-bdb7773022ae')) AND (measure.uuid = 'b2275bbc-2044-4f8e-aecd-3c739bd861b9')) AND (report.start_time >= 0)) AND (report.end_time <= 1712838648197)) ORDER BY version.number, report.start_time, report_benchmark.iteration;
-```
+<BonusBugSql />
 
 Do you see the problem? Nope. Neither did I!
 
 The issue is right here:
 
-```sql
-LEFT OUTER JOIN alert ON (alert.boundary_id = metric_boundary.metric_id)
-```
+<BonusBugSqlIssue />
 
 It should actually be:
 
-
-```sql
-LEFT OUTER JOIN alert ON (alert.boundary_id = metric_boundary.boundary_id)
-```
+<BonusBugSqlFix />
 
 I was trying to be too clever,
 and in my Diesel materialized view schema I had allowed this join:
 
-```rust
-diesel::joinable!(alert -> metric_boundary (boundary_id));
-```
+<BonusBugRustSchema />
 
 I assumed that this macro was somehow smart enough
 to relate the `alert.boundary_id` to the `metric_boundary.boundary_id`.
@@ -37,9 +34,7 @@ It seems to have just picked the first column of `metric_boundary` (`metric_id`)
 Once I discovered the bug, it was easy to fix.
 I just had to use an explicit join in the Perf query:
 
-```rust
-.left_join(schema::alert::table.on(view::metric_boundary::boundary_id.eq(schema::alert::boundary_id.nullable())))
-```
+<BonusBugRustLeftJoin />
 
 <br />
 

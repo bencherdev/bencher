@@ -1,0 +1,49 @@
+import MetricTable from "../metric-table.mdx";
+import BoundaryTable from "../boundary-table.mdx";
+import MetricBoundaryView from "../metric-boundary-view.mdx";
+
+## Materialisierte Ansicht
+
+Als ich letztes Jahr die Fähigkeit hinzufügte, [Schwellenwertgrenzen][thresholds] zu verfolgen und zu visualisieren,
+stand ich vor einer Entscheidung im Datenbankmodell.
+Es gibt eine 1-zu-0/1-Beziehung zwischen einem Metrik und seiner entsprechenden Grenze.
+Das bedeutet, eine Metrik kann sich auf null oder eine Grenze beziehen, und eine Grenze kann sich immer nur auf eine Metrik beziehen.
+Ich hätte also einfach die `metric`-Tabelle erweitern können, um alle `boundary`-Daten einzuschließen, wobei jedes `boundary`-bezogene Feld nullbar wäre.
+Oder ich könnte eine separate `boundary`-Tabelle mit einem `UNIQUE` Fremdschlüssel zur `metric`-Tabelle erstellen.
+Für mich fühlte sich die letztere Option viel sauberer an, und ich dachte, ich könnte immer später mit eventuellen Leistungsimplikationen umgehen.
+
+Das waren die effektiven Abfragen, um die `metric`- und `boundary`-Tabellen zu erstellen:
+
+<MetricTable />
+
+<BoundaryTable />
+
+Und es stellt sich heraus, dass "später" gekommen war.
+Ich habe versucht, einfach einen Index für `boundary(metric_id)` hinzuzufügen, aber das half nicht.
+Ich glaube, der Grund liegt darin, dass die Perf-Abfrage von der `metric`-Tabelle ausgeht
+und weil diese Beziehung 0/1 ist, oder anders gesagt, nullbar ist, muss sie gescannt werden (O(n))
+und kann nicht gesucht werden (O(log(n))).
+
+Das ließ mich mit einer klaren Option zurück.
+Ich musste eine materialisierte Ansicht erstellen, die die `metric`- und `boundary`-Beziehung abflachte,
+um zu verhindern, dass SQLite eine ad-hoc materialisierte Ansicht erstellen muss.
+
+Das ist die Abfrage, die ich verwendet habe, um die neue `metric_boundary` materialisierte Ansicht zu erstellen:
+
+<MetricBoundaryView />
+
+Mit dieser Lösung tausche ich Platz gegen Laufzeitleistung.
+Wie viel Platz?
+Überraschenderweise nur etwa 4% mehr, obwohl diese Ansicht für die zwei größten Tabellen in der Datenbank ist.
+Das Beste daran ist, dass es mir erlaubt, in meinem Quellcode sowohl zu haben als auch zu essen.
+
+[Eine materialisierte Ansicht mit Diesel zu erstellen][diesel view] war überraschend einfach.
+Ich musste nur genau dieselben Makros verwenden, die Diesel verwendet, wenn ich mein normales Schema generiere.
+Mit dem gesagt, habe ich gelernt, Diesel im Laufe dieser Erfahrung viel mehr zu schätzen.
+Siehe [Bonus Bug][bonus bug] für alle saftigen Details.
+
+[diesel view]: https://deterministic.space/diesel-view-table-trick.html
+
+[thresholds]: /de/docs/explanation/thresholds/
+
+[bonus bug]: #bonus-bug

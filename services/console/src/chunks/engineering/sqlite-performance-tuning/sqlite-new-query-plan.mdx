@@ -1,0 +1,17 @@
+```
+QUERY PLAN
+|--SEARCH branch USING INDEX sqlite_autoindex_branch_1 (uuid=?)
+|--SEARCH testbed USING INDEX sqlite_autoindex_testbed_1 (uuid=?)
+|--SEARCH benchmark USING INDEX sqlite_autoindex_benchmark_1 (uuid=?)
+|--SEARCH measure USING INDEX sqlite_autoindex_measure_1 (uuid=?)
+|--SEARCH report USING INDEX index_report_testbed_end_time (testbed_id=? AND end_time<?)
+|--SEARCH version USING INTEGER PRIMARY KEY (rowid=?)
+|--SEARCH branch_version USING COVERING INDEX sqlite_autoindex_branch_version_1 (branch_id=? AND version_id=?)
+|--SEARCH report_benchmark USING INDEX index_report_benchmark (report_id=? AND benchmark_id=?)
+|--SEARCH metric USING INDEX sqlite_autoindex_metric_2 (report_benchmark_id=? AND measure_id=?)
+|--SEARCH boundary USING INDEX sqlite_autoindex_boundary_2 (metric_id=?) LEFT-JOIN
+|--SEARCH threshold USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN
+|--SEARCH model USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN
+|--SEARCH alert USING INDEX index_alert_boundary (boundary_id=?) LEFT-JOIN
+`--USE TEMP B-TREE FOR ORDER BY
+```

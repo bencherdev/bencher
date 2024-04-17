@@ -1,0 +1,34 @@
+import DieselDebugQuery from "../diesel-debug-query.mdx";
+import DieselSql from "../diesel-sql.mdx";
+
+## 从 ORM 到 SQL 查询
+
+我遇到的第一个障碍是如何从我的 Rust 代码中获取 SQL 查询。
+我使用 [Diesel][github diesel] 作为 Bencher 的对象关系映射器（ORM）。
+
+> 🐰 趣事：Diesel 使用 Bencher 进行[相对连续的基准测试][relative continuous benchmarking]。
+> 查看 [Diesel 性能页面][diesel perf page]！
+
+Diesel 创建参数化查询。
+它将 SQL 查询及其绑定参数分别发送到数据库。
+也就是说，替换由数据库完成。
+因此，Diesel 无法向用户提供完整的查询。
+我找到的最佳方法是使用 [the `diesel::debug_query` function][diesel debug query] 来输出参数化查询：
+
+<DieselDebugQuery />
+
+然后手动清理并参数化查询为有效的 SQL：
+
+<DieselSql />
+
+如果您知道更好的方法，请告诉我！
+这是[项目维护者建议的方法][stackoverflow diesel]，
+所以我就采用了这种方法。
+现在我已经有了一个 SQL 查询，我终于准备好了......阅读大量的文档。
+
+[github diesel]: https://github.com/diesel-rs/diesel
+[diesel debug query]: https://docs.rs/diesel/2.1.5/diesel/fn.debug_query.html
+[stackoverflow diesel]: https://stackoverflow.com/questions/76467831/ho-to-get-final-sql-query-from-diesel
+
+[relative continuous benchmarking]: /zh/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+[diesel perf page]: /zh/perf/diesel

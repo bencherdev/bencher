@@ -1,0 +1,34 @@
+import SqliteNewQueryPlan from "../sqlite-new-query-plan.mdx";
+import RustlsEmbed from "../rustls-embed.mdx";
+
+## Zusammenfassung
+
+Mit den drei neuen Indizes und einer materialisierten Sicht, die hinzugefügt wurden, zeigt der Abfrageplaner nun Folgendes:
+
+<SqliteNewQueryPlan />
+
+Sehen Sie sich all diese wunderschönen `SEARCH` Operationen an, alle mit vorhandenen Indizes! 🥲
+
+Und nachdem ich meine Änderungen in der Produktion eingesetzt habe:
+
+<div class="content has-text-centered">
+<figure>
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/engineering/sqlite-performance-tuning/http-response-times-sql-performance-tuning.png"
+    width="2368"
+    height="1472"
+    alt="Behobene hohe HTTP-Antwortzeiten"
+/>
+<figcaption>Die neuen HTTP-Antwortzeiten sind auf der alten Skala gar nicht mehr zu erkennen!</figcaption>
+</figure>
+
+</div>
+
+Nun war es Zeit für den finalen Test.
+Wie schnell lädt nun die Rustls Perf-Seite?
+
+Hier gebe ich Ihnen sogar einen Anker-Tag. Klicken Sie darauf und aktualisieren Sie dann die Seite.
+
+### Performance ist wichtig
+
+<RustlsEmbed />

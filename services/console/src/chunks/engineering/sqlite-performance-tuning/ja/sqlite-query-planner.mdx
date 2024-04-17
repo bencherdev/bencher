@@ -1,0 +1,31 @@
+import SqliteQueryPlan from "../sqlite-query-plan.mdx";
+
+## SQLite クエリプランナー
+
+SQLiteのウェブサイトには、[クエリプランナーに関する素晴らしいドキュメント][sqlite query planner]があります。
+これは、SQLiteがどのようにSQLクエリを実行するか、どのインデックスが役立つか、また、フルテーブルスキャンのように注意すべき操作が何かを正確に説明しています。
+
+Perfクエリの実行方法をクエリプランナーで確認するために、新しいツールをツールベルトに追加する必要がありました: [`EXPLAIN QUERY PLAN`][eqp]
+SQLクエリの前に `EXPLAIN QUERY PLAN` を付けるか、クエリの前に `.eqp on` ドットコマンドを実行するかのどちらかです。
+どちらにしても、こんな感じの結果が得られました:
+
+<SqliteQueryPlan />
+
+おやおや！
+ここにはたくさんのことがありますね。
+しかし、私にとって特に目立ったのは３つの大きなことでした:
+
+1. SQLiteは、`boundary` テーブルの _全体_ をスキャンするフライでマテリアライズドビューを作成しています
+2. 次に、SQLiteは `metric` テーブルの _全体_ をスキャンしています
+3. SQLiteは二つのフライでインデックスを作成しています
+
+そして、`metric` と `boundary` テーブルの大きさはどの程度でしょうか？
+実はこれらは二つの最大のテーブルで、[Metrics][metrics] と [Boundaries][thresholds]が格納されている場所です。
+
+これが私の最初のSQLiteパフォーマンスチューニングの経験だったので、変更を加える前に専門家に相談したいと思いました。
+
+[sqlite query planner]: https://www.sqlite.org/queryplanner.html
+[eqp]: https://www.sqlite.org/eqp.html
+
+[thresholds]: /ja/docs/explanation/thresholds/
+[metrics]: /ja/docs/explanation/benchmarking/#metrics

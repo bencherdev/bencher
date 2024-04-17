@@ -1,0 +1,43 @@
+import BonusBugSql from "../bonus-bug-sql.mdx";
+import BonusBugSqlIssue from "../bonus-bug-sql-issue.mdx";
+import BonusBugSqlFix from "../bonus-bug-sql-fix.mdx";
+import BonusBugRustSchema from "../bonus-bug-rust-schema.mdx";
+import BonusBugRustLeftJoin from "../bonus-bug-rust-left-join.mdx";
+
+## Bônus Bug
+
+Eu originalmente encontrei um bug no meu código de [visão materializada][visão materializada].
+A consulta SQL parecia com isso:
+
+<BonusBugSql />
+
+Você vê o problema? Não. Eu também não!
+
+O problema está justamente aqui:
+
+<BonusBugSqlIssue />
+
+Na verdade, deveria ser:
+
+<BonusBugSqlFix />
+
+Eu estava tentando ser muito esperto,
+e na minha estrutura de visão materializada Diesel eu permiti essa junção:
+
+<BonusBugRustSchema />
+
+Eu assumi que essa macro era de alguma forma inteligente o suficiente
+para relacionar o `alert.boundary_id` ao `metric_boundary.boundary_id`.
+Mas, infelizmente, não era.
+Parece que ela apenas escolheu a primeira coluna de `metric_boundary` (`metric_id`) para relacionar com `alert`.
+
+Uma vez que descobri o bug, foi fácil de corrigir.
+Eu só tive que usar uma junção explícita na consulta Perf:
+
+<BonusBugRustLeftJoin />
+
+<br />
+
+> 🐰 Isso é tudo, pessoal!
+
+[visão materializada]: #visão-materializada

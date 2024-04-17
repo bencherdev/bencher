@@ -1,0 +1,42 @@
+import BonusBugSql from "../bonus-bug-sql.mdx";
+import BonusBugSqlIssue from "../bonus-bug-sql-issue.mdx";
+import BonusBugSqlFix from "../bonus-bug-sql-fix.mdx";
+import BonusBugRustSchema from "../bonus-bug-rust-schema.mdx";
+import BonusBugRustLeftJoin from "../bonus-bug-rust-left-join.mdx";
+
+## ボーナス バグ
+
+私はもともと、[マテリアライズドビュー][materialized view] のコードにバグがありました。
+SQLクエリはこのように見えました：
+
+<BonusBugSql />
+
+問題点を見つけられますか？いいえ、私もです！
+
+問題はここにあります：
+
+<BonusBugSqlIssue />
+
+実際には次のようにすべきでした：
+
+<BonusBugSqlFix />
+
+私は賢く行こうとしすぎていましたが、
+Dieselマテリアライズドビュースキーマでは、この結合を許可していました：
+
+<BonusBugRustSchema />
+
+このマクロが何らかの方法で`alert.boundary_id`を`metric_boundary.boundary_id`と関連付けるのに十分賢いと思っていました。
+しかし、残念ながらそうではありませんでした。
+`metric_boundary`の最初の列（`metric_id`）を`alert`と関連付けるように選択したようです。
+
+バグを発見した一度、それを修正するのは簡単でした。
+Perfクエリで明示的な結合を使う必要がありました：
+
+<BonusBugRustLeftJoin />
+
+<br />
+
+> 🐰 以上です！
+
+[マテリアライズドビュー]: #materialized-view

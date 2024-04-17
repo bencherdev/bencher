@@ -1,0 +1,14 @@
+```sql
+CREATE TABLE metric (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL UNIQUE,
+    report_benchmark_id INTEGER NOT NULL,
+    measure_id INTEGER NOT NULL,
+    value DOUBLE NOT NULL,
+    lower_value DOUBLE,
+    upper_value DOUBLE,
+    FOREIGN KEY (report_benchmark_id) REFERENCES report_benchmark (id) ON DELETE CASCADE,
+    FOREIGN KEY (measure_id) REFERENCES measure (id),
+    UNIQUE(report_benchmark_id, measure_id)
+);
+```

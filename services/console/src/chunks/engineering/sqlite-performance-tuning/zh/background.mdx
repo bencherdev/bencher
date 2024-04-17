@@ -1,0 +1,30 @@
+## 背景
+
+从一开始，我就知道 [Bencher Perf API][perf query] 将会是性能要求最高的一个端点之一。我认为许多人不得不[重新发明基准跟踪轮子][prior art]的主要原因是，现有的现成工具无法处理所需的高维度。所谓“高维度”，我指的是能够随时间和跨多个维度跟踪性能：[分支][branch]、[测试床][testbed]、[基准测试][benchmarks]和[度量][measures]。这种能力在五个不同维度上进行切分和切块导致了一个非常复杂的模型。
+
+由于这种固有的复杂性和数据的性质，我考虑使用时间序列数据库来实现Bencher。但最终，我决定使用SQLite。我认为，[做一些不可扩展的事情][do things that dont scale]比花额外的时间学习一个全新的数据库架构（这个架构可能有帮助，也可能没有）要好。
+
+随着时间的推移，对Bencher Perf API的需求也增加了。最初，你必须手动选择你想绘制的所有维度。这为用户创造了许多摩擦，使他们难以得到一个有用的绘图。为了解决这个问题，我[在Perf页面中添加了最新报告的列表][github issue 133]，并且默认情况下，最新的报告会被选择和绘制。这意味着，如果最新报告中有112个基准测试，那么所有112个都会被绘制。模型通过能够跟踪和可视化[阈值边界][thresholds]变得更加复杂。
+
+考虑到这一点，我进行了一些与性能相关的改进。由于Perf绘图需要最新的报告来开始绘制，我重构了[报告API][reports api]，使得可以通过一次对数据库的调用而不是迭代来获取报告的结果数据。默认报告查询的时间窗口设置为四周，而不是无限制。我还大大限制了所有数据库句柄的范围，减少了锁竞争。为了帮助向用户通信，我为[Perf绘图][bencher v0317]和[维度标签页][bencher v045]都添加了状态栏旋转器。
+
+去年秋天，我尝试使用一个复合查询来获取所有Perf结果的单个查询，而不是使用四重嵌套循环，但这次尝试失败了。这导致我触及了[Rust类型系统递归限制][recusion limit]，反复溢出栈，遭受疯狂的（远超38秒的）编译时间，最终因[SQLite在复合选择语句中的最大术语数限制][sqlite limits]而陷入僵局。
+
+经历了这一切后，我知道我真的需要在这里深入挖掘，并穿上我的性能工程师裤子。我之前从未对SQLite数据库进行过性能分析，说实话，我之前实际上从未对任何数据库进行过性能分析。这时候你可能会想，我的[LinkedIn资料][linkedin epompeii]显示我曾经做了近两年的“数据库管理员”。而我_从未_对数据库进行过分析？是的。我想这是另一个可以讲的故事了。
+
+[do things that dont scale]: https://paulgraham.com/ds.html
+[github issue 133]: https://github.com/bencherdev/bencher/issues/133
+[recusion limit]: https://doc.rust-lang.org/reference/attributes/limits.html#the-recursion_limit-attribute
+[sqlite limits]: https://www.sqlite.org/limits.html
+[linkedin epompeii]: https://www.linkedin.com/in/epompeii/
+
+[perf query]: /zh/docs/api/projects/perf/#get-v0projectsprojectperf
+[prior art]: /zh/docs/reference/prior-art/#benchmark-tracking-tools
+[branch]: /zh/docs/explanation/benchmarking/#branch
+[testbed]: /zh/docs/explanation/benchmarking/#testbed
+[benchmarks]: /zh/docs/explanation/benchmarking/#benchmarks
+[measures]: /zh/docs/explanation/benchmarking/#measures
+[thresholds]: /zh/docs/explanation/thresholds/
+[reports api]: /zh/docs/api/projects/reports/#get-v0projectsprojectreports
+[bencher v0317]: /zh/docs/reference/changelog/#v0317
+[bencher v045]: /zh/docs/reference/changelog/#v045

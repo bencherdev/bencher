@@ -1,0 +1,21 @@
+import SqliteExpertOutput from "../sqlite-expert-output.mdx";
+import SqliteIndexes from "../sqlite-indexes.mdx";
+
+# SQLite 专家模式
+
+SQLite 有一个实验性的“专家”模式，可以通过[`.expert on` 命令][expert on]启用。
+它会为查询建议索引，因此我决定尝试一下。
+这是它的建议：
+
+<SqliteExpertOutput />
+
+这绝对是一个提升！
+它消除了对 `metric` 表的扫描和两个即时索引。
+老实说，我自己不会想到前两个索引。
+谢谢你，SQLite 专家！
+
+<SqliteIndexes />
+
+现在唯一需要解决的就是那个讨厌的即时物化视图了。
+
+[expert on]: https://sqlite.org/cli.html#special_commands_to_sqlite3_dot_commands_

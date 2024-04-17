@@ -1,0 +1,34 @@
+import QueryTimeBefore from "../query-time-before.mdx";
+import QueryTimeAfter from "../query-time-after.mdx";
+
+## Nachtrag zum Dogfooding
+
+Ich setze [Bencher bereits mit Bencher ein][bencher perf], aber alle existierenden [Benchmark-Harness-Adapter][adapters] sind für Micro-Benchmarking-Harnesses. Die meisten HTTP-Harnesses sind tatsächlich Load-Testing-Harnesses und [Load Testing unterscheidet sich vom Benchmarking][continuous benchmarking load testing]. Weiterhin habe ich nicht vor, Bencher in absehbarer Zeit auf Load Testing auszuweiten. Das ist ein sehr unterschiedlicher Anwendungsfall, der ganz andere Designüberlegungen erfordern würde, wie zum Beispiel eine Zeitreihendatenbank. Selbst wenn ich Load Testing implementiert hätte, hätte ich wirklich gegen einen frischen Pull von Produktionsdaten laufen müssen, damit dies erkannt worden wäre. Die Leistungsunterschiede für diese Änderungen waren mit meiner Testdatenbank vernachlässigbar.
+
+<details>
+    <summary>Klicken, um die Benchmark-Ergebnisse der Testdatenbank anzuzeigen</summary>
+    <br />
+
+    Vorher:
+
+    <QueryTimeBefore />
+
+    Nach Indizes und materialisierten Ansichten:
+
+    <QueryTimeAfter />
+</details>
+
+<br />
+
+All dies führt mich zu dem Schluss, dass ich ein Micro-Benchmark erstellen sollte, das gegen den Perf API-Endpunkt läuft und die Ergebnisse mit Bencher dogfoodet. Dies wird eine beträchtliche Testdatenbank erfordern, um sicherzustellen, dass solche Leistungsregressionen in CI erfasst werden. Ich habe [ein Tracking-Issue][github issue 367] für diese Arbeit erstellt, falls Sie folgen möchten.
+
+Das bringt mich allerdings zum Nachdenken:
+Was wäre, wenn Sie [Snapshot-Testing][snapshot testing] Ihres SQL-Datenbankabfrageplans durchführen könnten? Das heißt, Sie könnten Ihre aktuellen und kandidierenden SQL-Datenbankabfragepläne vergleichen. SQL-Abfrageplan-Testing wäre so etwas wie Benchmarking auf Basis von Instruktionszählungen für Datenbanken. Der Abfrageplan hilft zu erkennen, dass es möglicherweise ein Problem mit der Laufzeitleistung gibt, ohne dass die Datenbankabfrage tatsächlich einem Benchmark unterzogen werden muss. Ich habe auch [ein Tracking-Issue][github issue 368] dafür erstellt. Bitte zögern Sie nicht, einen Kommentar mit Gedanken oder vorheriger Kunst, von der Sie wissen, hinzuzufügen!
+
+[github issue 367]: https://github.com/bencherdev/bencher/issues/367
+[github issue 368]: https://github.com/bencherdev/bencher/issues/368
+
+[bencher perf]: /perf/bencher
+[adapters]: /de/docs/explanation/adapters/
+[continuous benchmarking load testing]: /de/docs/explanation/continuous-benchmarking/#continuous-benchmarking-vs-continuous-load-testing
+[snapshot testing]: https://en.wikipedia.org/wiki/Software_testing#Output_comparison_testing

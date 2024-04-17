@@ -1,0 +1,46 @@
+import MetricTable from "../metric-table.mdx";
+import BoundaryTable from "../boundary-table.mdx";
+import MetricBoundaryView from "../metric-boundary-view.mdx";
+
+## 物化视图
+
+去年我增加了追踪和可视化[阈值边界][thresholds]的能力时，我在数据库模型上面临了一个决定。
+度量（Metric）与其相应的边界（Boundary）之间存在 1 至 0/1 的关系。即一个度量可以与零个或一个边界相关联，而一个边界只能与一个度量相关联。
+我本可以只扩展 `metric` 表格来包含所有的 `boundary` 数据，其中每个与 `boundary` 相关的字段都可以为空。
+或者我可以创建一个单独的 `boundary` 表格，其中包含指向 `metric` 表格的 `UNIQUE` 外键。
+对我来说，后一种选项感觉更干净，而且我想我总是可以稍后解决任何性能问题。
+
+以下是用来创建 `metric` 和 `boundary` 表格的有效查询：
+
+<MetricTable />
+
+<BoundaryTable />
+
+结果证明，“稍后”到了。
+我尝试简单地为 `boundary(metric_id)` 添加一个索引，但这没有帮助。
+我相信原因与 Perf 查询是从 `metric` 表格起始，因为那种关系是 0/1，或换句话说，是可空的，所以它必须被扫描（O(n)）
+而不能被搜索（O(log(n))）。
+
+这给我留下了一个明确的选项。
+我需要创建一个物化视图，将 `metric` 和 `boundary` 的关系扁平化，
+以防止 SQLite 不得不创建一个即时的物化视图。
+
+以下是我用来创建新的 `metric_boundary` 物化视图的查询：
+
+<MetricBoundaryView />
+
+通过这个解决方案，我在运行时性能与空间之间进行了权衡。
+需要多少空间？
+令人惊讶的是，即使这个视图是数据库中两个最大表的，其空间增量也仅约 4%。
+最重要的是，它让我在我的源代码中既得到我的蛋糕，又能吃到它。
+
+使用 Diesel 创建物化视图[diesel view]出奇地简单。
+我只需使用 Diesel 在生成我的正常架构时使用的完全相同的宏。
+话虽如此，通过这次经验我对 Diesel 的欣赏更深了。
+查看[额外的 Bug][bonus bug] 获取所有精彩的细节。
+
+[diesel view]: https://deterministic.space/diesel-view-table-trick.html
+
+[thresholds]: /zh/docs/explanation/thresholds/
+
+[bonus bug]: #bonus-bug

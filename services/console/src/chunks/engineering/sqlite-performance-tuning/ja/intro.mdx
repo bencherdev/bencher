@@ -1,0 +1,28 @@
+先週、ユーザーから[フィードバックを受け取りました][github bitcoin 27284]。[彼らのBencherパフォーマンスページ][0xb10c perf page]のロードに時間がかかるとのことでした。
+そこで、調査してみることにしましたが、彼らが言っていた以上に遅かったです。
+とても長いロード時間でした！恥ずかしいほど長いです。
+特に、リードする[連続ベンチマーキング][continuous benchmarking]ツールにとっては。
+
+過去には、[Rustlsパフォーマンスページ][rustls perf page]を試金石として使っていました。
+彼らは112のベンチマークを持っており、[一番印象的な連続ベンチマーキングの設定を持っています][rustls case study]。
+以前は約5秒でロードされていました。しかし今回は... ⏳👀 ... 38.8秒かかりました！
+このような遅延があると、掘り下げなければなりませんでした。パフォーマンスのバグはやはりバグですからね！
+
+<div class="content has-text-centered">
+<figure>
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/engineering/sqlite-performance-tuning/http-response-times.png"
+    width="2368"
+    height="1472"
+    alt="高いHTTP応答時間"
+/>
+<figcaption>最悪のHTTP応答時間は2分に達しました！</figcaption>
+</figure>
+</div>
+
+[github bitcoin 27284]: https://github.com/bitcoin/bitcoin/issues/27284#issuecomment-2046870296
+
+[0xb10c perf page]: /ja/perf/0xb10c-s-bitcoin-core
+[continuous benchmarking]: /ja/docs/explanation/continuous-benchmarking/
+[rustls perf page]: /ja/perf/rustls-821705769?notify_kind=alert&notify_text=Learn+more+about+continuous+benchmarking+for+the+Rustls+project.&notify_timeout=2147483647&notify_link_url=https%3A%2F%2Fbencher.dev%2Flearn%2Fcase-study%2Frustls%2F&notify_link_text=Read+the+case+study
+[rustls case study]: /ja/learn/case-study/rustls/

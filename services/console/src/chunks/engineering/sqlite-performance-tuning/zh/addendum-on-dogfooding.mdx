@@ -1,0 +1,52 @@
+import QueryTimeBefore from "../query-time-before.mdx";
+import QueryTimeAfter from "../query-time-after.mdx";
+
+## 自我使用附录
+
+我已经在[使用 Bencher 自测 Bencher][bencher perf]，
+但所有现有的[基准测试适配器][adapters]都是针对微基准测试适配器。
+大多数 HTTP 适配器实际上都是负载测试适配器，
+而[负载测试与基准测试不同][continuous benchmarking load testing]。
+更进一步，我暂时不打算将 Bencher 扩展到负载测试。
+那是一个非常不同的用例，需要非常不同的设计考虑，
+例如，时间序列数据库实例。
+即便我实施了负载测试，
+为了发现这个问题，我真的需要针对最新抽取的生产数据进行测试。
+这些更改对我的测试数据库的性能差异可以忽略不计。
+
+<details>
+    <summary>点击查看测试数据库基准测试结果</summary>
+    <br />
+
+    更改前：
+
+    <QueryTimeBefore />
+
+    添加索引和物化视图后：
+
+    <QueryTimeAfter />
+</details>
+
+<br />
+
+这一切让我相信，我应该创建一个针对 Perf API 端点运行的微基准测试，并且使用 Bencher 自测结果。
+这将需要一个相当大的测试数据库
+来保证这类性能回滚在 CI 中被捕获。
+如果您想跟进，我已经为这项工作[创建了一个追踪问题][github issue 367]。
+
+这一切都让我思考：
+如果你能对你的 SQL 数据库查询计划进行[快照测试][snapshot testing]怎么样？
+也就是说，你可以比较你当前的与候选的 SQL 数据库查询计划。
+SQL 查询计划测试有点像是数据库的基于指令计数的基准测试。
+查询计划有助于指出运行性能可能存在的问题，
+而无需实际对数据库查询进行基准测试。
+我也为此[创建了一个追踪问题][github issue 368]。
+请随时添加评论，分享您的想法或您所知道的任何现有作品！
+
+[github issue 367]: https://github.com/bencherdev/bencher/issues/367
+[github issue 368]: https://github.com/bencherdev/bencher/issues/368
+
+[bencher perf]: /perf/bencher
+[adapters]: /zh/docs/explanation/adapters/
+[continuous benchmarking load testing]: /zh/docs/explanation/continuous-benchmarking/#continuous-benchmarking-vs-continuous-load-testing
+[snapshot testing]: https://en.wikipedia.org/wiki/Software_testing#Output_comparison_testing

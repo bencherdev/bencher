@@ -1,0 +1,36 @@
+import SqliteQueryPlan from "../sqlite-query-plan.mdx";
+
+## SQLite 查询规划器
+
+SQLite 官网有一份[关于其查询规划器的极佳文档][sqlite query planner]。
+它详细解释了 SQLite 是如何执行您的 SQL 查询的，
+并教您哪些索引有用，以及需要注意的操作，如全表扫描。
+
+为了看到查询规划器是如何执行我的 Perf 查询的，
+我需要向我的工具包中添加一个新工具：[`EXPLAIN QUERY PLAN`][eqp]
+您可以在 SQL 查询前加上 `EXPLAIN QUERY PLAN`
+或在查询前运行 `.eqp on` 命令。
+无论哪种方式，我都得到了这样的结果：
+
+<SqliteQueryPlan />
+
+噢，天哪！
+这里有很多内容。
+但有三件大事跃然纸上：
+
+1. SQLite 即时创建了一个物化视图，它扫描了整个 `boundary` 表
+2. SQLite 然后扫描了整个 `metric` 表
+3. SQLite 即时创建了两个索引
+
+那么 `metric` 和 `boundary` 表有多大呢？
+它们恰好是两个最大的表，
+因为它们存储了所有的[指标][metrics]和[边界][thresholds]。
+
+由于这是我第一次进行 SQLite 性能调优，
+我想在做出任何改变之前咨询一个专家。
+
+[sqlite query planner]: https://www.sqlite.org/queryplanner.html
+[eqp]: https://www.sqlite.org/eqp.html
+
+[thresholds]: /zh/docs/explanation/thresholds/
+[metrics]: /zh/docs/explanation/benchmarking/#metrics

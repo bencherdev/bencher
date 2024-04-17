@@ -1,0 +1,53 @@
+import QueryTimeBefore from "../query-time-before.mdx";
+import QueryTimeAfter from "../query-time-after.mdx";
+
+## Adendo sobre Dogfooding
+
+Já estou [utilizando o Bencher com o Bencher][bencher perf],
+mas todos os [adaptadores de harness de benchmark][adapters] existentes são para harnesses de micro-benchmarking.
+A maioria dos harnesses HTTP são realmente harnesses para testes de carga,
+e [testes de carga são diferentes de benchmarking][continuous benchmarking load testing].
+Além disso, não estou procurando expandir o Bencher para testes de carga tão cedo.
+Esse é um caso de uso muito diferente que exigiria considerações de design muito distintas,
+como aquele banco de dados de séries temporais, por exemplo.
+Mesmo se eu tivesse implementado testes de carga,
+realmente precisaria estar executando contra uma nova extração de dados de produção para que isso fosse identificado.
+As diferenças de desempenho para essas mudanças foram insignificantes com meu banco de dados de teste.
+
+<details>
+    <summary>Clique para visualizar os resultados de benchmark do banco de dados de teste</summary>
+    <br />
+
+    Antes:
+
+    <QueryTimeBefore />
+
+    Após índices e visão materializada:
+
+    <QueryTimeAfter />
+</details>
+
+<br />
+
+Tudo isso me leva a crer que devo criar um micro-benchmark
+que rode contra o endpoint da API Perf e utilizar os resultados com o Bencher.
+Isso vai exigir um banco de dados de teste considerável
+para garantir que esse tipo de regressão de desempenho seja capturado em CI.
+Eu [criei um issue de acompanhamento][github issue 367] para este trabalho, caso você queira seguir o andamento.
+
+Isso tudo me fez pensar:
+E se você pudesse fazer [teste de snapshot][snapshot testing] do plano de consulta do seu banco de dados SQL?
+Ou seja, você poderia comparar seus planos de consulta do banco de dados atual e candidato.
+Testes do plano de consulta SQL seriam como um benchmarking baseado em contagem de instrução para bancos de dados.
+O plano de consulta ajuda a indicar que pode haver um problema com o desempenho em tempo de execução,
+sem precisar realmente fazer o benchmark da consulta ao banco de dados.
+Eu [criei um issue de acompanhamento][github issue 368] para isso também.
+Por favor, sinta-se livre para adicionar um comentário com pensamentos ou qualquer trabalho anterior que você conheça!
+
+[github issue 367]: https://github.com/bencherdev/bencher/issues/367
+[github issue 368]: https://github.com/bencherdev/bencher/issues/368
+
+[bencher perf]: /perf/bencher
+[adapters]: /pt/docs/explanation/adapters/
+[continuous benchmarking load testing]: /pt/docs/explanation/continuous-benchmarking/#continuous-benchmarking-vs-continuous-load-testing
+[snapshot testing]: https://en.wikipedia.org/wiki/Software_testing#Output_comparison_testing

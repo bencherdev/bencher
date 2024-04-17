@@ -1,0 +1,21 @@
+import SqliteExpertOutput from "../sqlite-expert-output.mdx";
+import SqliteIndexes from "../sqlite-indexes.mdx";
+
+# Эксперт по SQLite
+
+В SQLite есть экспериментальный режим "эксперта", который можно активировать с помощью [команды `.expert on`][expert on].
+Он предлагает индексы для запросов, поэтому я решил его испытать.
+Вот что он предложил:
+
+<SqliteExpertOutput />
+
+Это определенно улучшение!
+Теперь не происходит сканирование таблицы `metric` и оба индекса "на лету" исчезли.
+Честно говоря, первые два индекса я бы сам не придумал.
+Спасибо, Эксперт по SQLite!
+
+<SqliteIndexes />
+
+Теперь осталось только избавиться от этого проклятого материализованного представления "на лету".
+
+[expert on]: https://sqlite.org/cli.html#special_commands_to_sqlite3_dot_commands_

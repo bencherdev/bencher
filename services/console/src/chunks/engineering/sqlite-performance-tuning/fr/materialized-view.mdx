@@ -1,0 +1,49 @@
+import MetricTable from "../metric-table.mdx";
+import MetricBoundaryView from "../metric-boundary-view.mdx";
+import BoundaryTable from "../boundary-table.mdx";
+
+## Vue Matérialisée
+
+Lorsque j'ai ajouté la capacité de suivre et de visualiser les [Limites de Seuil][thresholds] l'année dernière,
+j'avais une décision à prendre concernant le modèle de base de données.
+Il existe une relation de 1 à 0/1 entre une Métrique et sa Limite correspondante.
+C'est-à-dire qu'une Métrique peut être liée à zéro ou une Limite, et une Limite ne peut être liée qu'à une seule Métrique.
+J'aurais donc pu simplement étendre la table `métrique` pour inclure toutes les données de `limite` avec chaque champ lié à `limite` étant nullable.
+Ou je pourrais créer une table `limite` séparée avec une clé étrangère `UNIQUE` pour la table `métrique`.
+Pour moi, la dernière option semblait beaucoup plus propre, et je me disais que je pourrais toujours gérer les implications de performance plus tard.
+
+Voici les requêtes effectives utilisées pour créer les tables `métrique` et `limite` :
+
+<MetricTable />
+
+<BoundaryTable />
+
+Et il s'avère que "plus tard" est arrivé.
+J'ai tenté d'ajouter simplement un index pour `limite(metric_id)` mais cela n'a pas aidé.
+Je crois que la raison a à voir avec le fait que la requête Perf provient de la table `métrique`
+et parce que cette relation est de 0/1 ou pour le dire autrement, nullable elle doit être balayée (O(n))
+et ne peut pas être cherchée (O(log(n))).
+
+Cela m'a laissé une option claire.
+Je devais créer une vue matérialisée qui aplatit la relation entre `métrique` et `limite`
+pour empêcher SQLite de devoir créer une vue matérialisée à la volée.
+
+Voici la requête que j'ai utilisée pour créer la nouvelle vue matérialisée `metric_boundary` :
+
+<MetricBoundaryView />
+
+Avec cette solution, je troque de l'espace contre des performances d'exécution.
+Combien d'espace ?
+Étonnamment, seulement environ une augmentation de 4 %, même si cette vue concerne les deux plus grandes tables de la base de données.
+Le mieux dans tout ça, c'est que ça me permet d'avoir le beurre et l'argent du beurre dans mon code source.
+
+[Créer une vue matérialisée avec Diesel][diesel view] a été étonnamment facile.
+Il suffisait d'utiliser exactement les mêmes macros que Diesel utilise lors de la génération de mon schéma normal.
+Cela dit, j'ai appris à apprécier beaucoup plus Diesel tout au long de cette expérience.
+Voir [Bug Bonus][bonus bug] pour tous les détails croustillants.
+
+[diesel view]: https://deterministic.space/diesel-view-table-trick.html
+
+[thresholds]: /fr/docs/explanation/thresholds/
+
+[bonus bug]: #bonus-bug

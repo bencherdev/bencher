@@ -1,0 +1,46 @@
+import QueryTimeBefore from "../query-time-before.mdx";
+import QueryTimeAfter from "../query-time-after.mdx";
+
+## ドッグフーディングについての補足
+
+既に[BencherでBencherをドッグフーディングしています][bencher perf]が、既存の[ベンチマークハーネスアダプタ][adapters]は、マイクロベンチマーク用のものばかりです。
+多くのHTTPハーネスは、実際にはロードテスト用のハーネスですが、[ロードテストとベンチマーキングは異なります][continuous benchmarking load testing]。
+さらに、私はBencherをロードテストに拡大する予定は近いうちにはないです。
+それは、非常に異なる使用事例であり、たとえば時系列データベースのような、全く異なる設計上の考慮が必要になるでしょう。
+たとえロードテストを導入していたとしても、この問題を発見するためには、実際には本番データの新しいプルに対して実行する必要があったでしょう。
+これらの変更に対するパフォーマンスの違いは、私のテストデータベースでは無視できるものでした。
+
+<details>
+    <summary>テストデータベースのベンチマーク結果を見るにはクリックしてください</summary>
+    <br />
+
+    Before（変更前）:
+
+    <QueryTimeBefore />
+
+    インデックスとマテリアライズドビューを追加後:
+
+    <QueryTimeAfter />
+</details>
+
+<br />
+
+これらすべてから、Perf APIエンドポイントに対して実行するマイクロベンチマークを作成し、Bencherでその結果をドッグフーディングするべきだと思い至りました。
+CIでこのようなパフォーマンスの退行を捉えるためには、かなりのサイズのテストデータベースが必要になります。
+この作業について追跡するissueを[作成しました][github issue 367]。興味があればフォローしてください。
+
+しかし、これで思いついたことがあります：
+あなたのSQLデータベースクエリプランの[snapshot testing][snapshot testing]ができたらどうでしょう？
+つまり、現在のSQLデータベースクエリプランと候補のSQLデータベースクエリプランを比較できるということです。
+SQLクエリプランテストは、データベースの命令数に基づくベンチマーキングのようなものになります。
+クエリプランは、実際にデータベースクエリをベンチマークすることなく、ランタイムパフォーマンスに問題があるかもしれないことを示してくれます。
+これについても[追跡するissueを作成しました][github issue 368]。
+ぜひ、思いつきや知っている先行技術についてコメントを追加してください！
+
+[github issue 367]: https://github.com/bencherdev/bencher/issues/367
+[github issue 368]: https://github.com/bencherdev/bencher/issues/368
+
+[bencher perf]: /perf/bencher
+[adapters]: /ja/docs/explanation/adapters/
+[continuous benchmarking load testing]: /ja/docs/explanation/continuous-benchmarking/#continuous-benchmarking-vs-continuous-load-testing
+[snapshot testing]: https://en.wikipedia.org/wiki/Software_testing#Output_comparison_testing

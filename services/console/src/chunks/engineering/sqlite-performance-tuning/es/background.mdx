@@ -1,0 +1,63 @@
+## Antecedentes
+
+Desde el principio, sabía que la [API Bencher Perf][perf query]
+iba a ser uno de los puntos finales más exigentes en términos de rendimiento.
+Creo que la razón principal por la que muchas personas han tenido que [reinventar la rueda del seguimiento de benchmarks][prior art]
+es que las herramientas existentes no manejan la alta dimensionalidad requerida.
+Por "alta dimensionalidad", me refiero a la capacidad de rastrear el rendimiento a lo largo del tiempo y a través de múltiples dimensiones:
+[Branches][branch], [Testbeds][testbed], [Benchmarks][benchmarks] y [Medidas][measures].
+Esta capacidad para cortar y dividir en cinco dimensiones diferentes conduce a un modelo muy complejo.
+
+Debido a esta complejidad inherente y la naturaleza de los datos,
+consideré usar una base de datos de series temporales para Bencher.
+Al final, sin embargo, opté por usar SQLite en su lugar.
+Pensé que era mejor [hacer cosas que no escalan][do things that dont scale]
+en vez de pasar el tiempo extra aprendiendo una arquitectura de base de datos completamente nueva que podría o no ser de ayuda.
+
+Con el tiempo, las demandas en la API de Bencher Perf también han aumentado.
+Originalmente, tenías que seleccionar todas las dimensiones que querías trazar manualmente.
+Esto creó mucha fricción para los usuarios para llegar a una trama útil.
+Para resolver esto, [añadí una lista de los Informes más recientes][github issue 133] a las Páginas de Perf,
+y por defecto, se seleccionaba y trazaba el Informe más reciente.
+Esto significa que si había 112 benchmarks en el Informe más reciente, entonces todos los 112 serían trazados.
+El modelo también se volvió aún más complicado con la capacidad de rastrear y visualizar [Límites de Umbrales][thresholds].
+
+Con esto en mente, hice algunas mejoras relacionadas con el rendimiento.
+Dado que el Gráfico de Perf necesita el Informe más reciente para comenzar a trazar,
+refactoricé la [API de Informes][reports api] para obtener los datos de resultados de un Informe en una sola llamada a la base de datos en lugar de iterar.
+El intervalo de tiempo para la consulta del Informe predeterminado se estableció en cuatro semanas, en lugar de ser ilimitado.
+También limité drásticamente el alcance de todos los manejadores de base de datos, reduciendo la contención de bloqueos.
+Para ayudar a comunicar a los usuarios, añadí un indicador de estado cargando tanto para [el Gráfico de Perf][bencher v0317] como para [las pestañas de dimensión][bencher v045].
+
+También tuve un intento fallido el otoño pasado de usar una consulta compuesta para obtener todos los resultados de Perf en una sola consulta,
+en lugar de usar un bucle anidado cuádruple.
+Esto me llevó a chocar con [el límite de recursión del sistema de tipos de Rust][recusion limit],
+desbordando repetidamente la pila,
+sufriendo tiempos de compilación locos (mucho más largos de 38 segundos),
+y finalmente en un callejón sin salida en [el número máximo de términos de SQLite en una declaración select compuesta][sqlite limits].
+
+Con todo eso bajo mi cinturón, sabía que realmente necesitaba profundizar aquí
+y ponerme mis pantalones de ingeniero de rendimiento.
+Nunca había perfilado una base de datos SQLite antes,
+y honestamente, realmente nunca había perfilado _ninguna_ base de datos antes.
+Ahora espera un minuto, podrías estar pensando.
+[Mi perfil de LinkedIn][linkedin epompeii] dice que fui "Administrador de Bases de Datos" por casi dos años.
+¿Y nunca perfilé una base de datos‽
+Sí. Supongo que esa es una historia para otro momento.
+
+[do things that dont scale]: https://paulgraham.com/ds.html
+[github issue 133]: https://github.com/bencherdev/bencher/issues/133
+[recusion limit]: https://doc.rust-lang.org/reference/attributes/limits.html#the-recursion_limit-attribute
+[sqlite limits]: https://www.sqlite.org/limits.html
+[linkedin epompeii]: https://www.linkedin.com/in/epompeii/
+
+[perf query]: /es/docs/api/projects/perf/#get-v0projectsprojectperf
+[prior art]: /es/docs/reference/prior-art/#benchmark-tracking-tools
+[branch]: /es/docs/explanation/benchmarking/#branch
+[testbed]: /es/docs/explanation/benchmarking/#testbed
+[benchmarks]: /es/docs/explanation/benchmarking/#benchmarks
+[measures]: /es/docs/explanation/benchmarking/#measures
+[thresholds]: /es/docs/explanation/thresholds/
+[reports api]: /es/docs/api/projects/reports/#get-v0projectsprojectreports
+[bencher v0317]: /es/docs/reference/changelog/#v0317
+[bencher v045]: /es/docs/reference/changelog/#v045

@@ -1,0 +1,60 @@
+## 배경
+
+처음부터, [Bencher Perf API][perf query]
+가 성능 측면에서 가장 요구가 많은 엔드포인트 중 하나가 될 것이라는 것을 알고 있었습니다.
+많은 사람들이 [벤치마크 추적 도구를 다시 만들어야 했던][prior art] 주된 이유는
+기존의 현장 도구들이 필요한 고차원성을 처리하지 못하기 때문입니다.
+"고차원성"이란 시간 경과에 따른 성능을 추적하고 [브랜치][branch], [테스트베드][testbed], [벤치마크][benchmarks], [측정치][measures] 등 여러 차원을 통해 추적할 수 있는 능력을 의미합니다.
+이 다섯 가지 다른 차원을 통한 분석 능력은 매우 복잡한 모델로 이어집니다.
+
+이러한 내재적 복잡성과 데이터의 성격 때문에,
+Bencher에 시계열 데이터베이스를 사용하는 것을 고려했습니다.
+결국에는, SQLite를 사용하기로 결정했습니다.
+스케일링하지 않는 일을 처리하는 것이 [스케일링하지 않는 일 하기][do things that dont scale]는 실제로 도움이 될지 그렇지 않을지 알 수 없는 전혀 새로운 데이터베이스 아키텍처를 배우는 데 추가 시간을 소비하는 것보다 낫다고 판단했습니다.
+
+시간이 지남에 따라 Bencher Perf API에 대한 요구 사항도 증가했습니다.
+원래는 사용자가 수동으로 그래프에 표시하고자 하는 모든 차원을 선택해야 했습니다.
+이것은 사용자가 유용한 그래프에 도달하는 데 많은 마찰을 일으켰습니다.
+이를 해결하기 위해, Perf 페이지에 [가장 최근 보고서 목록을 추가했습니다][github issue 133].
+기본적으로 가장 최근 보고서가 선택되어 그래프에 표시되었습니다.
+이는 가장 최근 보고서에 112개의 벤치마크가 있을 경우 112개 모두가 그래프에 표시됨을 의미합니다.
+모델은 또한 [임계값 경계][thresholds]를 추적하고 시각화하는 기능으로 더욱 복잡해졌습니다.
+
+이러한 점을 염두에 두고, 성능 관련 개선을 몇 가지 실행했습니다.
+Perf 그래프가 가장 최근 보고서로부터 플로팅을 시작해야 하므로,
+[Reports API][reports api]를 리팩토링하여 데이터베이스를 순회하는 대신 단일 호출로 보고서의 결과 데이터를 얻었습니다.
+기본 보고서 쿼리의 시간 창을 무제한이 아닌 네 주로 설정했습니다.
+또한 모든 데이터베이스 핸들의 범위를 대폭 제한하여 잠금 경합을 줄였습니다.
+사용자와 소통을 돕기 위해 [Perf 플롯][bencher v0317]과 [차원 탭][bencher v045] 모두에 상태 바 스피너를 추가했습니다.
+
+작년 가을에 단일 쿼리로 모든 Perf 결과를 가져오기 위해 복합 쿼리를 사용하려는 시도는 실패했습니다.
+이는 사중 중첩된 for 루프를 사용하는 대신이었습니다.
+이로 인해 [Rust 타입 시스템 재귀 제한][recusion limit]에 도달하게 되었고,
+스택이 반복적으로 오버플로우되며,
+정신이 나갈 것 같은(38초 이상) 컴파일 시간을 겪은 끝에,
+[SQLite 복합 선택문의 최대 항목 수 제한][sqlite limits]에서 궁극적으로 실패로 돌아왔습니다.
+
+이 모든 경험을 바탕으로, 여기서 정말로 성능 엔지니어 체제를 갖추고 주력해야 한다는 것을 알았습니다.
+SQLite 데이터베이스를 프로파일링한 적이 없었고,
+솔직히 말해서 어떤 데이터베이스도 실제로 프로파일링한 적이 없었습니다.
+잠깐, 당신이 생각할지도 모릅니다.
+[내 LinkedIn 프로필][linkedin epompeii]에는 거의 2년 동안 "데이터베이스 관리자"였다고 되어 있습니다.
+그리고 저는 _한 번도_ 데이터베이스를 프로파일링하지 않았습니까?
+네. 아마도 그 이야기는 다음에 할 기회가 있겠죠.
+
+[do things that dont scale]: https://paulgraham.com/ds.html
+[github issue 133]: https://github.com/bencherdev/bencher/issues/133
+[recusion limit]: https://doc.rust-lang.org/reference/attributes/limits.html#the-recursion_limit-attribute
+[sqlite limits]: https://www.sqlite.org/limits.html
+[linkedin epompeii]: https://www.linkedin.com/in/epompeii/
+
+[perf query]: /ko/docs/api/projects/perf/#get-v0projectsprojectperf
+[prior art]: /ko/docs/reference/prior-art/#benchmark-tracking-tools
+[branch]: /ko/docs/explanation/benchmarking/#branch
+[testbed]: /ko/docs/explanation/benchmarking/#testbed
+[benchmarks]: /ko/docs/explanation/benchmarking/#benchmarks
+[measures]: /ko/docs/explanation/benchmarking/#measures
+[thresholds]: /ko/docs/explanation/thresholds/
+[reports api]: /ko/docs/api/projects/reports/#get-v0projectsprojectreports
+[bencher v0317]: /ko/docs/reference/changelog/#v0317
+[bencher v045]: /ko/docs/reference/changelog/#v045

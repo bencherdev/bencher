@@ -1,0 +1,21 @@
+import SqliteExpertOutput from "../sqlite-expert-output.mdx";
+import SqliteIndexes from "../sqlite-indexes.mdx";
+
+# SQLite エキスパート
+
+SQLiteには、[`.expert on` コマンド][expert on]で有効にできる実験的な「エキスパート」モードがあります。
+このモードはクエリに対してインデックスの提案を行なうため、試してみることにしました。
+これがその提案です：
+
+<SqliteExpertOutput />
+
+これは間違いなく改善です！
+`metric` テーブルのスキャンと、その場で作成されるインデックスの両方をなくしました。
+正直、自分だけでは最初の2つのインデックスは思いつきませんでした。
+ありがとう、SQLite エキスパート！
+
+<SqliteIndexes />
+
+これで残すは、その場でマテリアライズされるビューをなくすだけです。
+
+[expert on]: https://sqlite.org/cli.html#special_commands_to_sqlite3_dot_commands_

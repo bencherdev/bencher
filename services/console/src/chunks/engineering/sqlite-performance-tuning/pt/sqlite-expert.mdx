@@ -1,0 +1,21 @@
+import SqliteExpertOutput from "../sqlite-expert-output.mdx";
+import SqliteIndexes from "../sqlite-indexes.mdx";
+
+# SQLite Expert
+
+SQLite possui um modo "expert" experimental que pode ser ativado com [o comando `.expert on`][expert on].
+Ele sugere índices para consultas; então, decidi experimentar.
+Eis o que ele sugeriu:
+
+<SqliteExpertOutput />
+
+Definitivamente, isso é uma melhoria!
+Ele eliminou a varredura na tabela `metric` e ambos os índices criados em tempo de execução.
+Sinceramente, eu não teria chegado aos dois primeiros índices por conta própria.
+Obrigado, SQLite Expert!
+
+<SqliteIndexes />
+
+Agora, a única coisa que resta eliminar é aquela maldita visualização materializada criada em tempo de execução.
+
+[expert on]: https://sqlite.org/cli.html#special_commands_to_sqlite3_dot_commands_

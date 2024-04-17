@@ -1,0 +1,38 @@
+```mdx
+import SqliteQueryPlan from "../sqlite-query-plan.mdx";
+
+## SQLite 쿼리 플래너
+
+SQLite 웹사이트에는 쿼리 플래너에 대한 [훌륭한 문서][sqlite query planner]가 있습니다.
+이 문서는 SQLite가 SQL 쿼리를 어떻게 실행하는지 정확히 설명하고,
+어떤 인덱스가 유용한지, 전체 테이블 스캔 같은 주의해야 할 작업이 무엇인지 알려줍니다.
+
+내 Perf 쿼리를 쿼리 플래너가 어떻게 실행할지 보기 위해서,
+내 도구 상자에 새로운 도구를 추가할 필요가 있었습니다: [`EXPLAIN QUERY PLAN`][eqp]
+SQL 쿼리 앞에 `EXPLAIN QUERY PLAN`을 붙이거나
+쿼리 전에 `.eqp on` 도트 명령을 실행할 수 있습니다.
+어느 쪽이든, 이렇게 생긴 결과를 얻었습니다:
+
+<SqliteQueryPlan />
+
+오, 보이시나요!
+여기에는 많은 것들이 있습니다.
+하지만 저에게 눈에 띄는 세 가지 큰 사항은 다음과 같습니다:
+
+1. SQLite가 `boundary` 테이블의 _전체_ 를 스캔하는 즉석에서 만들어진 머티리얼라이즈드 뷰를 생성하고 있습니다
+2. SQLite가 그 다음으로 `metric` 테이블의 _전체_ 를 스캔하고 있습니다
+3. SQLite가 즉석에서 두 개의 인덱스를 생성하고 있습니다
+
+그렇다면 `metric`과 `boundary` 테이블의 크기는 얼마나 될까요?
+이들은 바로 가장 큰 두 테이블입니다,
+왜냐하면 모든 [메트릭][metrics]과 [경계값들][thresholds]이 여기에 저장되기 때문입니다.
+
+SQLite 성능 튜닝의 첫 번째 경험이었기 때문에,
+변경을 하기 전에 전문가와 상의하고 싶었습니다.
+
+[sqlite query planner]: https://www.sqlite.org/queryplanner.html
+[eqp]: https://www.sqlite.org/eqp.html
+
+[thresholds]: /ko/docs/explanation/thresholds/
+[metrics]: /ko/docs/explanation/benchmarking/#metrics
+```

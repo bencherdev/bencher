@@ -1,0 +1,53 @@
+import QueryTimeBefore from "../query-time-before.mdx";
+import QueryTimeAfter from "../query-time-after.mdx";
+
+## Addendum sur l'Auto-utilisation
+
+Je suis déjà en train d'[auto-utiliser Bencher avec Bencher][bencher perf],
+mais tous les [adaptateurs de harnais de benchmark existants][adapters] sont pour des harnais de micro-benchmarking.
+La plupart des harnais HTTP sont réellement des harnais de test de charge,
+et [le test de charge est différent du benchmarking][continuous benchmarking load testing].
+De plus, je ne cherche pas à étendre Bencher au test de charge de si tôt.
+C'est un cas d'utilisation très différent qui nécessiterait des considérations de conception très différentes,
+comme cette base de données en série temporelle par exemple.
+Même si j'avais mis en place des tests de charge,
+j'aurais vraiment besoin de travailler contre une nouvelle extraction de données de production pour que cela soit détecté.
+Les différences de performance pour ces changements étaient négligeables avec ma base de données de test.
+
+<details>
+    <summary>Cliquez pour voir les résultats des benchmarks de la base de données de test</summary>
+    <br />
+
+    Avant :
+
+    <QueryTimeBefore />
+
+    Après les index et la vue matérialisée :
+
+    <QueryTimeAfter />
+</details>
+
+<br />
+
+Tout cela me conduit à croire que je devrais créer un micro-benchmark
+qui s'exécute contre le point de terminaison de l'API Perf et auto-utiliser les résultats avec Bencher.
+Cela nécessitera une base de données de test de taille considérable
+pour s'assurer que ce type de régressions de performance soit détecté dans l'IC.
+J'ai [créé un problème de suivi][github issue 367] pour ce travail, si vous souhaitez suivre l'évolution.
+
+Tout cela m'a toutefois fait réfléchir :
+Et si vous pouviez faire des [tests de captures instantanées][snapshot testing] de votre plan de requête de base de données SQL ?
+C'est-à-dire, vous pourriez comparer vos plans de requête de base de données actuels par rapport à ceux candidats.
+Les tests de plan de requête SQL seraient une sorte de benchmarking basé sur le nombre d'instructions pour les bases de données.
+Le plan de requête aide à indiquer qu'il peut y avoir un problème avec la performance d'exécution,
+sans avoir à réellement benchmark la requête de la base de données.
+J'ai [créé un problème de suivi][github issue 368] pour cela également.
+N'hésitez pas à ajouter un commentaire avec vos pensées ou toute œuvre antérieure que vous connaissez !
+
+[github issue 367]: https://github.com/bencherdev/bencher/issues/367
+[github issue 368]: https://github.com/bencherdev/bencher/issues/368
+
+[bencher perf]: /perf/bencher
+[adapters]: /fr/docs/explanation/adapters/
+[continuous benchmarking load testing]: /fr/docs/explanation/continuous-benchmarking/#continuous-benchmarking-vs-continuous-load-testing
+[snapshot testing]: https://en.wikipedia.org/wiki/Software_testing#Output_comparison_testing

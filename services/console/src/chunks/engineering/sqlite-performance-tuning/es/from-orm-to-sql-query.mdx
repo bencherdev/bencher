@@ -1,0 +1,34 @@
+import DieselDebugQuery from "../diesel-debug-query.mdx";
+import DieselSql from "../diesel-sql.mdx";
+
+## De ORM a Consulta SQL
+
+El primer obstáculo con el que me encontré fue obtener la consulta SQL de mi código Rust.
+Utilizo [Diesel][github diesel] como el mapeador objeto-relacional (ORM) para Bencher.
+
+> 🐰 Dato Curioso: Diesel utiliza Bencher para su [Benchmarking Continuo Relativo][relative continuous benchmarking].
+> ¡Echa un vistazo [a la página de rendimiento de Diesel][diesel perf page]!
+
+Diesel crea consultas parametrizadas.
+Envía la consulta SQL y sus parámetros vinculados por separado a la base de datos.
+Es decir, la sustitución la realiza la base de datos.
+Por lo tanto, Diesel no puede proporcionar una consulta completa al usuario.
+El mejor método que encontré fue usar [la función `diesel::debug_query`][diesel debug query] para obtener la consulta parametrizada:
+
+<DieselDebugQuery />
+
+Y luego limpiar y parametrizar manualmente la consulta en SQL válido:
+
+<DieselSql />
+
+Si conoces una mejor manera, ¡por favor házmelo saber!
+Esta es la forma que [el mantenedor del proyecto sugirió][stackoverflow diesel] sin embargo,
+así que simplemente seguí con ello.
+Ahora que tenía una consulta SQL, finalmente estaba listo para... leer muchísima documentación.
+
+[github diesel]: https://github.com/diesel-rs/diesel
+[diesel debug query]: https://docs.rs/diesel/2.1.5/diesel/fn.debug_query.html
+[stackoverflow diesel]: https://stackoverflow.com/questions/76467831/ho-to-get-final-sql-query-from-diesel
+
+[relative continuous benchmarking]: /es/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+[diesel perf page]: /perf/diesel

@@ -1,0 +1,36 @@
+import SqliteQueryPlan from "../sqlite-query-plan.mdx";
+
+## Planificateur de requêtes SQLite
+
+Le site web de SQLite propose une [documentation excellente pour son planificateur de requêtes][sqlite query planner].
+Elle explique précisément comment SQLite exécute votre requête SQL,
+et elle vous enseigne quels indices sont utiles et quels opérations surveiller, comme les balayages complets de table.
+
+Afin de voir comment le planificateur de requêtes exécuterait ma requête Perf,
+j'ai dû ajouter un nouvel outil à ma boîte à outils : [`EXPLAIN QUERY PLAN`][eqp]
+Vous pouvez soit préfixer votre requête SQL avec `EXPLAIN QUERY PLAN`
+ou exécuter la commande `.eqp on` avant votre requête.
+Dans les deux cas, j'ai obtenu un résultat qui ressemble à ceci :
+
+<SqliteQueryPlan />
+
+Oh, là là !
+Il y a beaucoup à digérer ici.
+Mais les trois grandes choses qui m'ont sauté aux yeux sont :
+
+1. SQLite crée une vue matérialisée à la volée qui scanne la table `boundary` _en entier_
+2. Ensuite, SQLite scanne la table `metric` _en entier_
+3. SQLite crée deux index à la volée
+
+Et à quel point les tables `metric` et `boundary` sont-elles volumineuses ?
+Eh bien, il se trouve qu'elles sont justement les deux tables les plus volumineuses,
+car c'est là que sont stockées toutes les [Métriques][metrics] et les [Seuils][thresholds].
+
+Comme c'était mon premier rodéo de tuning de performance SQLite,
+je voulais consulter un expert avant de faire des changements.
+
+[sqlite query planner]: https://www.sqlite.org/queryplanner.html
+[eqp]: https://www.sqlite.org/eqp.html
+
+[thresholds]: /fr/docs/explanation/thresholds/
+[metrics]: /fr/docs/explanation/benchmarking/#metrics

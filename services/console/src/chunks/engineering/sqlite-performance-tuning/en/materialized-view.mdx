@@ -1,3 +1,7 @@
+import MetricTable from "../metric-table.mdx";
+import BoundaryTable from "../boundary-table.mdx";
+import MetricBoundaryView from "../metric-boundary-view.mdx";
+
 ## Materialized View
 
 When I added the ability to track and visualize [Threshold Boundaries][thresholds] last year,
@@ -10,36 +14,9 @@ To me the latter option felt a lot cleaner, and I figured I could always deal wi
 
 These were the effective queries used to create the `metric` and `boundary` tables:
 
-```sql
-CREATE TABLE metric (
-    id INTEGER PRIMARY KEY NOT NULL,
-    uuid TEXT NOT NULL UNIQUE,
-    report_benchmark_id INTEGER NOT NULL,
-    measure_id INTEGER NOT NULL,
-    value DOUBLE NOT NULL,
-    lower_value DOUBLE,
-    upper_value DOUBLE,
-    FOREIGN KEY (report_benchmark_id) REFERENCES report_benchmark (id) ON DELETE CASCADE,
-    FOREIGN KEY (measure_id) REFERENCES measure (id),
-    UNIQUE(report_benchmark_id, measure_id)
-);
-```
+<MetricTable />
 
-```sql
-CREATE TABLE boundary (
-    id INTEGER PRIMARY KEY NOT NULL,
-    uuid TEXT NOT NULL UNIQUE,
-    threshold_id INTEGER NOT NULL,
-    statistic_id INTEGER NOT NULL,
-    metric_id INTEGER NOT NULL UNIQUE,
-    baseline DOUBLE NOT NULL,
-    lower_limit DOUBLE,
-    upper_limit DOUBLE,
-    FOREIGN KEY (threshold_id) REFERENCES threshold (id),
-    FOREIGN KEY (statistic_id) REFERENCES statistic (id),
-    FOREIGN KEY (metric_id) REFERENCES metric (id) ON DELETE CASCADE
-);
-```
+<BoundaryTable />
 
 And it turns out "later" had arrived.
 I tried to simply add an index for `boundary(metric_id)` but that did not help.
@@ -53,25 +30,7 @@ to keep SQLite from having to create an on-the-fly materialized view.
 
 This is the query I used to create the new `metric_boundary` materialized view:
 
-```sql
-CREATE VIEW metric_boundary AS
-SELECT metric.id AS metric_id,
-    metric.uuid AS metric_uuid,
-    metric.report_benchmark_id,
-    metric.measure_id,
-    metric.value,
-    metric.lower_value,
-    metric.upper_value,
-    boundary.id,
-    boundary.uuid AS boundary_uuid,
-    boundary.threshold_id AS threshold_id,
-    boundary.model_id,
-    boundary.baseline,
-    boundary.lower_limit,
-    boundary.upper_limit
-FROM metric
-    LEFT OUTER JOIN boundary ON (boundary.metric_id = metric.id);
-```
+<MetricBoundaryView />
 
 With this solution, I'm trading off space for runtime performance.
 How much space?

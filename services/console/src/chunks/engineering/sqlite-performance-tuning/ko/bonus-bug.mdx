@@ -1,0 +1,42 @@
+import BonusBugSql from "../bonus-bug-sql.mdx";
+import BonusBugSqlIssue from "../bonus-bug-sql-issue.mdx";
+import BonusBugSqlFix from "../bonus-bug-sql-fix.mdx";
+import BonusBugRustSchema from "../bonus-bug-rust-schema.mdx";
+import BonusBugRustLeftJoin from "../bonus-bug-rust-left-join.mdx";
+
+## 보너스 버그
+
+저는 최근에 제 [머티리얼라이즈드 뷰][materialized view] 코드에 버그가 있었습니다.
+이게 SQL 쿼리의 모습입니다:
+
+<BonusBugSql />
+
+문제를 보시겠나요? 아니요. 저도 못 봤습니다!
+
+문제는 바로 여기에 있습니다:
+
+<BonusBugSqlIssue />
+
+실제로는 이렇게 되어야 하죠:
+
+<BonusBugSqlFix />
+
+저는 너무 영리하려고 했는데,
+제 Diesel 머티리얼라이즈드 뷰 스키마에서 이 조인을 허용했습니다:
+
+<BonusBugRustSchema />
+
+저는 이 매크로가 어떻게든 `alert.boundary_id`를 `metric_boundary.boundary_id`와 연관짓는지 알아낼 수 있을 거라고 생각했습니다.
+하지만 그렇지 않았습니다.
+그것은 단지 `metric_boundary`의 첫 번째 열(`metric_id`)을 `alert`과 관련시키는 것처럼 보였습니다.
+
+버그를 발견한 후에는 수정하기 쉬웠습니다.
+Perf 쿼리에서 명시적 조인을 사용하기만 하면 됐습니다:
+
+<BonusBugRustLeftJoin />
+
+<br />
+
+> 🐰 여러분, 이게 전부입니다!
+
+[materialized view]: #materialized-view

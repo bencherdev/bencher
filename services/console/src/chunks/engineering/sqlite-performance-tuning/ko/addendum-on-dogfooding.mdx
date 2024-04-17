@@ -1,0 +1,48 @@
+import QueryTimeBefore from "../query-time-before.mdx";
+import QueryTimeAfter from "../query-time-after.mdx";
+
+## 도그푸딩에 관한 추가 사항
+
+저는 이미 [Bencher로 Bencher를 도그푸딩][bencher perf]하고 있지만, 기존의 [벤치마크 하네스 어댑터들][adapters]은 모두 마이크로-벤치마킹 하네스를 위한 것입니다.
+대부분의 HTTP 하네스는 실제로 부하 테스트 하네스이며, [부하 테스트는 벤치마킹과 다릅니다][continuous benchmarking load testing].
+더욱이, 저는 Bencher를 부하 테스트로 확장할 계획이 없습니다.
+그것은 매우 다른 사용 사례이며 예를 들어 시계열 데이터베이스 같은 매우 다른 설계 고려사항을 요구할 것입니다.
+심지어 부하 테스트를 갖추고 있다고 하더라도, 이를 발견하기 위해서는 제가 신규로 생성한 프로덕션 데이터에 대해 실행해야 할 것입니다.
+이러한 변경으로 인한 성능 차이는 제 테스트 데이터베이스로는 무시할 수 있었습니다.
+
+<details>
+    <summary>테스트 데이터베이스 벤치마크 결과 보기</summary>
+    <br />
+
+    변경 전:
+
+    <QueryTimeBefore />
+
+    인덱스 및 머티리얼라이즈드 뷰 변경 후:
+
+    <QueryTimeAfter />
+</details>
+
+<br />
+
+이 모든 것이 저로 하여금 마이크로-벤치마크를 생성하게 했습니다.
+그것은 Perf API 엔드포인트에 대해 실행되고 Bencher로 결과를 도그푸딩할 것입니다.
+이러한 종류의 성능 회귀를 CI에서 잡을 수 있도록 상당한 크기의 테스트 데이터베이스가 필요할 것입니다.
+이 작업을 추적하기 위해 [트래킹 이슈를 생성했습니다][github issue 367]. 관심이 있다면 따라와 주세요.
+
+이 모든 것이 저를 생각하게 합니다:
+만약 여러분이 SQL 데이터베이스 쿼리 플랜의 [스냅샷 테스팅][snapshot testing]을 할 수 있다면 어떨까요?
+즉, 현재 대비 후보 SQL 데이터베이스 쿼리 플랜을 비교할 수 있습니다.
+SQL 쿼리 플랜 테스팅은 데이터베이스를 위한 지침 수 기반의 벤치마킹과 같은 종류가 될 것입니다.
+쿼리 플랜은 데이터베이스 쿼리의 런타임 성능에 문제가 있을 수 있음을 나타내는 데 도움이 됩니다.
+실제로 데이터베이스 쿼리를 벤치마킹할 필요 없이 말이죠.
+이에 대해서도 [트래킹 이슈를 생성했습니다][github issue 368].
+생각이나 알고 있는 선행 연구에 대해 의견을 추가해 주시면 감사하겠습니다!
+
+[github issue 367]: https://github.com/bencherdev/bencher/issues/367
+[github issue 368]: https://github.com/bencherdev/bencher/issues/368
+
+[bencher perf]: /perf/bencher
+[adapters]: /ko/docs/explanation/adapters/
+[continuous benchmarking load testing]: /ko/docs/explanation/continuous-benchmarking/#continuous-benchmarking-vs-continuous-load-testing
+[snapshot testing]: https://en.wikipedia.org/wiki/Software_testing#Output_comparison_testing

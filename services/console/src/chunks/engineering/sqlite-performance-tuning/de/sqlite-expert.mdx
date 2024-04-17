@@ -1,0 +1,21 @@
+import SqliteExpertOutput from "../sqlite-expert-output.mdx";
+import SqliteIndexes from "../sqlite-indexes.mdx";
+
+# SQLite Experte
+
+SQLite hat einen experimentellen "Experten" Modus, der mit dem Befehl [`.expert on`][expert on] aktiviert werden kann.
+Es schlägt Indizes für Abfragen vor, also habe ich beschlossen, es auszuprobieren.
+Das hat es vorgeschlagen:
+
+<SqliteExpertOutput />
+
+Das ist definitiv eine Verbesserung!
+Es hat das Scannen der `metric` Tabelle und beide Indizes auf die Fliege beseitigt.
+Ehrlich gesagt, hätte ich die ersten zwei Indizes nicht alleine gefunden.
+Danke, SQLite Experte!
+
+<SqliteIndexes />
+
+Jetzt bleibt nur noch, diese verdammte on-the-fly materialisierte Ansicht loszuwerden.
+
+[expert on]: https://sqlite.org/cli.html#special_commands_to_sqlite3_dot_commands_

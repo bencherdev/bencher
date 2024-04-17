@@ -1,0 +1,28 @@
+上周，我收到了一位用户的[反馈][github bitcoin 27284]，说[他们的 Bencher 性能页面][0xb10c perf page]加载速度很慢。
+所以我决定去看看，哦，天哪，他们说得太客气了。
+加载速度慢得尴尬！
+尤其是对于领先的[持续性能基准测试][continuous benchmarking]工具来说。
+
+在过去，我常把[Rustls 性能页面][rustls perf page]作为我的试金石。
+他们有112个基准测试，并且[拥有其中最令人印象深刻的持续性能基准测试设置][rustls case study]。
+它过去加载大约需要5秒钟。这次却花了... ⏳👀 ... 38.8秒！
+面对这样的延迟，我不得不深入研究。毕竟，性能问题也是bug！
+
+<div class="content has-text-centered">
+<figure>
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/engineering/sqlite-performance-tuning/http-response-times.png"
+    width="2368"
+    height="1472"
+    alt="高HTTP响应时间"
+/>
+<figcaption>最糟糕的HTTP响应时间达到了2分钟！</figcaption>
+</figure>
+</div>
+
+[github bitcoin 27284]: https://github.com/bitcoin/bitcoin/issues/27284#issuecomment-2046870296
+
+[0xb10c perf page]: /zh/perf/0xb10c-s-bitcoin-core
+[continuous benchmarking]: /zh/docs/explanation/continuous-benchmarking/
+[rustls perf page]: /zh/perf/rustls-821705769?notify_kind=alert&notify_text=了解有关Rustls项目持续性能基准测试的更多信息。&notify_timeout=2147483647&notify_link_url=https%3A%2F%2Fbencher.dev%2Flearn%2Fcase-study%2Frustls%2F&notify_link_text=阅读案例研究
+[rustls case study]: /zh/learn/case-study/rustls/

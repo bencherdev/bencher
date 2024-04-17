@@ -1,0 +1,34 @@
+import SqliteNewQueryPlan from "../sqlite-new-query-plan.mdx";
+import RustlsEmbed from "../rustls-embed.mdx";
+
+## 정리
+
+세 개의 새로운 인덱스와 머티리얼라이즈드 뷰를 추가하면서, 이제 질의 계획자가 보여주는 것은 다음과 같습니다:
+
+<SqliteNewQueryPlan />
+
+모든 `SEARCH`가 기존 인덱스를 사용하여 아름답게 표시됩니다! 🥲
+
+그리고 제 변경 사항을 프로덕션에 배포한 후:
+
+<div class="content has-text-centered">
+<figure>
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/engineering/sqlite-performance-tuning/http-response-times-sql-performance-tuning.png"
+    width="2368"
+    height="1472"
+    alt="고정된 높은 HTTP 응답 시간"
+/>
+<figcaption>새로운 HTTP 응답 시간은 예전 척도에도 등록되지 않습니다!</figcaption>
+</figure>
+
+</div>
+
+이제 마지막 테스트 시간이었습니다.
+Rustls Perf 페이지가 얼마나 빨리 로드되는지?
+
+여기 앵커 태그도 드리겠습니다. 클릭하고 나서 페이지를 새로고침하세요.
+
+### 성능은 중요합니다
+
+<RustlsEmbed />

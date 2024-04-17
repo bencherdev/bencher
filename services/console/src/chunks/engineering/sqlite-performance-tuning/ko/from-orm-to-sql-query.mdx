@@ -1,0 +1,34 @@
+import DieselDebugQuery from "../diesel-debug-query.mdx";
+import DieselSql from "../diesel-sql.mdx";
+
+## ORM에서 SQL 쿼리로
+
+제가 처음 마주친 문제는 Rust 코드에서 SQL 쿼리를 추출하는 것이었습니다.
+저는 Bencher의 객체 관계 매퍼(ORM)로 [Diesel][github diesel]을 사용합니다.
+
+> 🐰 재미있는 사실: Diesel은 [상대적 연속 벤치마킹][relative continuous benchmarking]을 위해 Bencher를 사용합니다.
+> [Diesel 성능 페이지][diesel perf page]를 확인해보세요!
+
+Diesel은 매개변수화된 쿼리를 생성합니다.
+즉, SQL 쿼리와 해당 바인드 매개변수를 데이터베이스에 별도로 전송합니다.
+즉, 대체 작업은 데이터베이스에서 수행됩니다.
+따라서, Diesel은 사용자에게 완전한 쿼리를 제공할 수 없습니다.
+제가 찾은 가장 좋은 방법은 [the `diesel::debug_query` 함수][diesel debug query]를 사용하여 매개변수화된 쿼리를 출력하는 것이었습니다:
+
+<DieselDebugQuery />
+
+그리고 유효한 SQL로 쿼리를 손으로 정리하고 매개변수화했습니다:
+
+<DieselSql />
+
+더 나은 방법을 알고 계시다면 알려주세요!
+이 방법은 [프로젝트 관리자가 제안한 방법][stackoverflow diesel]이긴 하지만,
+그래서 저는 그대로 따랐습니다.
+이제 SQL 쿼리를 얻었으니, 마침내... 많은 문서를 읽을 준비가 되었습니다.
+
+[github diesel]: https://github.com/diesel-rs/diesel
+[diesel debug query]: https://docs.rs/diesel/2.1.5/diesel/fn.debug_query.html
+[stackoverflow diesel]: https://stackoverflow.com/questions/76467831/ho-to-get-final-sql-query-from-diesel
+
+[relative continuous benchmarking]: /ko/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+[diesel perf page]: /perf/diesel
