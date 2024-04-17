@@ -36,7 +36,15 @@ import {
 	timeToDateOnlyIso,
 } from "../../../util/convert";
 import { apiUrl, httpGet } from "../../../util/http";
-import { MAX_NOTIFY_TIMEOUT, NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM, NOTIFY_TIMEOUT_PARAM, NotifyKind, navigateNotify, pageNotify } from "../../../util/notify";
+import {
+	MAX_NOTIFY_TIMEOUT,
+	NOTIFY_KIND_PARAM,
+	NOTIFY_TEXT_PARAM,
+	NOTIFY_TIMEOUT_PARAM,
+	NotifyKind,
+	navigateNotify,
+	pageNotify,
+} from "../../../util/notify";
 import { useNavigate, useSearchParams } from "../../../util/url";
 import { DEBOUNCE_DELAY, validU32 } from "../../../util/valid";
 import PerfHeader from "./PerfHeader";
@@ -512,11 +520,11 @@ const PerfPanel = (props: Props) => {
 				console.error(error);
 				// If the URL is exactly 2000 characters, then it may have been truncated by the browser.
 				// There isn't much that we can do other than notify the user.
-				if(window.location.href.length === 2000 ) {
+				if (window.location.href.length === 2000) {
 					pageNotify(
 						NotifyKind.ERROR,
 						`This URL is exactly 2,000 characters. It may have been truncated by your web browser. Please, try opening the original link in a different web browser.`,
-						{ [NOTIFY_TIMEOUT_PARAM]: MAX_NOTIFY_TIMEOUT }
+						{ [NOTIFY_TIMEOUT_PARAM]: MAX_NOTIFY_TIMEOUT },
 					);
 				} else {
 					pageNotify(

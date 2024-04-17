@@ -114,7 +114,11 @@ export const navigateNotify = (
 	}
 };
 
-export const pageNotify = (notifyKind: NotifyKind, notifyText: string, notifyOptions?: { [NOTIFY_TIMEOUT_PARAM]: undefined | number }) => {
+export const pageNotify = (
+	notifyKind: NotifyKind,
+	notifyText: string,
+	notifyOptions?: { [NOTIFY_TIMEOUT_PARAM]: undefined | number },
+) => {
 	const [_searchParams, setSearchParams] = useSearchParams();
 	setSearchParams(
 		{
