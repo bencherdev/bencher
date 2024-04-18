@@ -7,12 +7,13 @@ interface Props {
 	apiUrl: string;
 	params: Params;
 	title: string;
+	redirect?: string;
 }
 
-const { apiUrl, params, title } = Astro.props;
+const { apiUrl, params, title, redirect } = Astro.props;
 ---
 
-<ConsoleLayout apiUrl={apiUrl} params={params} title={title}>
+<ConsoleLayout apiUrl={apiUrl} params={params} title={title} redirect={redirect}>
   <ProjectMenu client:only="solid-js" slot="menu" apiUrl={apiUrl} params={params} />
   <slot />
 </ConsoleLayout>

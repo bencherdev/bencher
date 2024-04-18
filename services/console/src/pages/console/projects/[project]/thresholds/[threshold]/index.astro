@@ -9,9 +9,10 @@ import { BencherResource } from "../../../../../../config/types";
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
 const title = "View Threshold";
+const redirect = `/perf/${params.project}/thresholds/${params.threshold}${Astro.url.search}`
 ---
 
-<ProjectLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
+<ProjectLayout apiUrl={BENCHER_API_URL} params={params} title={title} redirect={redirect}>
   <DeckPanel
     client:only="solid-js"
     apiUrl={BENCHER_API_URL}

@@ -8,9 +8,10 @@ import PerfPanel from "../../../../components/console/perf/PerfPanel";
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
 const title = "Project Perf";
+const redirect = `/perf/${params.project}${Astro.url.search}`
 ---
 
-<ProjectLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
+<ProjectLayout apiUrl={BENCHER_API_URL} params={params} title={title} redirect={redirect}>
   <PerfPanel
     client:only="solid-js"
     apiUrl={BENCHER_API_URL}
