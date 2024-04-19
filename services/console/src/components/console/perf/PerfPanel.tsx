@@ -35,17 +35,14 @@ import {
 	timeToDate,
 	timeToDateOnlyIso,
 } from "../../../util/convert";
-import { apiUrl, httpGet } from "../../../util/http";
+import { httpGet } from "../../../util/http";
 import {
 	MAX_NOTIFY_TIMEOUT,
-	NOTIFY_KIND_PARAM,
-	NOTIFY_TEXT_PARAM,
 	NOTIFY_TIMEOUT_PARAM,
 	NotifyKind,
-	navigateNotify,
 	pageNotify,
 } from "../../../util/notify";
-import { useNavigate, useSearchParams } from "../../../util/url";
+import { useSearchParams } from "../../../util/url";
 import { DEBOUNCE_DELAY, validU32 } from "../../../util/valid";
 import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
@@ -146,8 +143,8 @@ const DEFAULT_PERF_BOUNDARY = false;
 const DEFAULT_EMBED_HEADER = true;
 const DEFAULT_EMBED_KEY = true;
 
-const DEFAULT_PER_PAGE = 8;
-const REPORTS_PER_PAGE = 4;
+export const DEFAULT_PER_PAGE = 8;
+export const REPORTS_PER_PAGE = 4;
 export const DEFAULT_PAGE = 1;
 
 // 30 days
@@ -368,29 +365,29 @@ const PerfPanel = (props: Props) => {
 
 	// Pagination query params
 	const reports_per_page = createMemo(() =>
-		Number(searchParams[REPORTS_PER_PAGE_PARAM]),
+		Number(searchParams[REPORTS_PER_PAGE_PARAM] ?? REPORTS_PER_PAGE),
 	);
 	const branches_per_page = createMemo(() =>
-		Number(searchParams[BRANCHES_PER_PAGE_PARAM]),
+		Number(searchParams[BRANCHES_PER_PAGE_PARAM] ?? DEFAULT_PER_PAGE),
 	);
 	const testbeds_per_page = createMemo(() =>
-		Number(searchParams[TESTBEDS_PER_PAGE_PARAM]),
+		Number(searchParams[TESTBEDS_PER_PAGE_PARAM] ?? DEFAULT_PER_PAGE),
 	);
 	const benchmarks_per_page = createMemo(() =>
-		Number(searchParams[BENCHMARKS_PER_PAGE_PARAM]),
+		Number(searchParams[BENCHMARKS_PER_PAGE_PARAM] ?? DEFAULT_PER_PAGE),
 	);
 
 	const reports_page = createMemo(() =>
-		Number(searchParams[REPORTS_PAGE_PARAM]),
+		Number(searchParams[REPORTS_PAGE_PARAM] ?? DEFAULT_PAGE),
 	);
 	const branches_page = createMemo(() =>
-		Number(searchParams[BRANCHES_PAGE_PARAM]),
+		Number(searchParams[BRANCHES_PAGE_PARAM] ?? DEFAULT_PAGE),
 	);
 	const testbeds_page = createMemo(() =>
-		Number(searchParams[TESTBEDS_PAGE_PARAM]),
+		Number(searchParams[TESTBEDS_PAGE_PARAM] ?? DEFAULT_PAGE),
 	);
 	const benchmarks_page = createMemo(() =>
-		Number(searchParams[BENCHMARKS_PAGE_PARAM]),
+		Number(searchParams[BENCHMARKS_PAGE_PARAM] ?? DEFAULT_PAGE),
 	);
 
 	const reports_start_time = createMemo(

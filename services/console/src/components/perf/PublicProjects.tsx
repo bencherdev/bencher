@@ -136,7 +136,7 @@ const PublicProjects = (props: Props) => {
 								}
 							>
 								<Match when={projects.loading}>
-									<For each={Array(per_page() ?? DEFAULT_PER_PAGE)}>
+									<For each={Array(per_page())}>
 										{() => (
 											<div class="box">
 												<p>Loading...</p>

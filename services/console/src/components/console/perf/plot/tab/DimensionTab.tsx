@@ -49,11 +49,7 @@ const DimensionsTab = (props: {
 										<div class="level-item">
 											<div class="columns is-vcentered is-mobile">
 												<div class="column is-narrow">
-													<input
-														type="checkbox"
-														checked={false}
-														disabled={true}
-													/>
+													<input type="checkbox" checked={false} />
 												</div>
 												<div class="column">
 													<small style="word-break: break-word;"></small>
@@ -61,6 +57,13 @@ const DimensionsTab = (props: {
 											</div>
 										</div>
 									</div>
+									<Show when={props.isConsole}>
+										<div class="level-right">
+											<div class="level-item">
+												<a class="button">View</a>
+											</div>
+										</div>
+									</Show>
 								</div>
 							</div>
 						)}
