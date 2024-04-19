@@ -61,6 +61,7 @@ const Tab = (props: {
 			<Match
 				when={
 					props.isConsole &&
+					!props.loading() &&
 					tabList().length === 0 &&
 					props.page() === DEFAULT_PAGE &&
 					!props.search() &&
@@ -76,7 +77,7 @@ const Tab = (props: {
 					</div>
 				</div>
 			</Match>
-			<Match when={tabList().length === 0 && props.page() !== DEFAULT_PAGE}>
+			<Match when={!props.loading() && tabList().length === 0 && props.page() !== DEFAULT_PAGE}>
 				<div class="box">
 					<div class="columns is-centered">
 						<div class="column is-5">
@@ -92,7 +93,7 @@ const Tab = (props: {
 			<Match
 				when={
 					props.tab() === PerfTab.REPORTS &&
-					(typeof props.reports_start_date() === "string" ||
+					(props.loading() || typeof props.reports_start_date() === "string" ||
 						typeof props.reports_end_date() === "string" ||
 						tabList().length > 0)
 				}
@@ -100,9 +101,11 @@ const Tab = (props: {
 				<ReportsTab
 					project_slug={props.project_slug}
 					isConsole={props.isConsole}
+					loading={props.loading}
 					measures={props.measures}
 					tab={props.tab}
 					tabList={tabList as Accessor<TabList<JsonReport>>}
+					per_page={props.per_page}
 					start_date={props.reports_start_date}
 					end_date={props.reports_end_date}
 					handleChecked={props.handleChecked}

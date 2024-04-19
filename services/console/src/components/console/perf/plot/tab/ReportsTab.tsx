@@ -1,4 +1,4 @@
-import { type Accessor, For, Show } from "solid-js";
+import { type Accessor, For, Show, Switch, Match } from "solid-js";
 import { PerfTab } from "../../../../../config/types";
 import { fmtDateTime } from "../../../../../config/util";
 import type { JsonReport } from "../../../../../types/bencher";
@@ -12,9 +12,11 @@ import DateRange from "../../../../field/kinds/DateRange";
 const ReportsTab = (props: {
 	project_slug: Accessor<undefined | string>;
 	isConsole: boolean;
+	loading: Accessor<boolean>;
 	measures: Accessor<string[]>;
 	tab: Accessor<PerfTab>;
 	tabList: Accessor<TabList<JsonReport>>;
+	per_page: Accessor<number>;
 	start_date: Accessor<undefined | string>;
 	end_date: Accessor<undefined | string>;
 	handleChecked: (index: number, slug?: string) => void;
@@ -31,24 +33,70 @@ const ReportsTab = (props: {
 					handleEndTime={props.handleEndTime}
 				/>
 			</div>
-			<Show
-				when={props.tabList().length > 0}
+			<Switch
 				fallback={<div class="panel-block">🐰 No reports found</div>}
 			>
-				<For each={props.tabList()}>
-					{(report, index) => (
-						<ReportRow
-							project_slug={props.project_slug}
-							isConsole={props.isConsole}
-							measures={props.measures}
-							tab={props.tab}
-							report={report}
-							index={index}
-							handleChecked={props.handleChecked}
-						/>
+				<Match when={props.loading()}>
+					<For each={Array(props.per_page())}>
+					{(_) => (
+					<div class="panel-block is-block">
+						<div class="level">
+							<a
+								class="level-left"
+								style="color: black;"
+							>
+								<div class="level-item">
+									<div class="columns is-vcentered is-mobile">
+										<div class="column is-narrow">
+											<input
+												type="radio"
+												checked={
+													false
+												}
+												disabled={true}
+											/>
+										</div>
+										<div class="column">
+											<small style="word-break: break-word;">
+												⠀⠀⠀
+											</small>
+											<ReportDimension
+												icon={BRANCH_ICON}
+												name="⠀"
+											/>
+											<ReportDimension
+												icon={TESTBED_ICON}
+												name="⠀"
+											/>
+											<ReportDimension
+												icon={MEASURE_ICON}
+												name="⠀"
+											/>
+										</div>
+									</div>
+								</div>
+							</a>
+						</div>
+					</div>
 					)}
-				</For>
-			</Show>
+					</For>
+				</Match>
+				<Match when={props.tabList().length > 0}>
+					<For each={props.tabList()}>
+						{(report, index) => (
+							<ReportRow
+								project_slug={props.project_slug}
+								isConsole={props.isConsole}
+								measures={props.measures}
+								tab={props.tab}
+								report={report}
+								index={index}
+								handleChecked={props.handleChecked}
+							/>
+						)}
+					</For>
+				</Match>
+			</Switch>
 		</>
 	);
 };
