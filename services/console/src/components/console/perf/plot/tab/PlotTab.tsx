@@ -234,6 +234,7 @@ const PlotTab = (props: Props) => {
 				benchmarks_tab={props.benchmarks_tab}
 				loading={loading}
 				tab={props.tab}
+				per_page={perPage}
 				page={page}
 				search={search}
 				reports_start_date={props.reports_start_date}

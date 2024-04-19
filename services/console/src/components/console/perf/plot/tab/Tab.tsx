@@ -24,6 +24,7 @@ const Tab = (props: {
 	benchmarks_tab: TabList<JsonBenchmark>;
 	loading: Accessor<boolean>;
 	tab: Accessor<PerfTab>;
+	per_page: Accessor<number>;
 	page: Accessor<number>;
 	search: Accessor<undefined | string>;
 	reports_start_date: Accessor<undefined | string>;
@@ -57,15 +58,6 @@ const Tab = (props: {
 				</div>
 			}
 		>
-			<Match when={props.loading()}>
-				<div class="panel-block is-block">
-					<progress
-						class="progress is-primary"
-						style="margin-top: 4rem; margin-bottom: 6rem;"
-						max="100"
-					/>
-				</div>
-			</Match>
 			<Match
 				when={
 					props.isConsole &&
@@ -121,18 +113,20 @@ const Tab = (props: {
 			<Match
 				when={
 					props.tab() !== PerfTab.REPORTS &&
-					(typeof props.search() === "string" || tabList().length > 0)
+					(props.loading() || typeof props.search() === "string" || tabList().length > 0)
 				}
 			>
 				<DimensionsTab
 					project_slug={props.project_slug}
 					isConsole={props.isConsole}
+					loading={props.loading}
 					tab={props.tab}
 					tabList={
 						tabList as Accessor<
 							TabList<JsonBranch | JsonTestbed | JsonBenchmark>
 						>
 					}
+					per_page={props.per_page}
 					search={props.search}
 					handleChecked={props.handleChecked}
 					handleSearch={props.handleSearch}

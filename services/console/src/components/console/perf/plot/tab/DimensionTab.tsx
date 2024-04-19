@@ -1,4 +1,4 @@
-import { type Accessor, For, Show } from "solid-js";
+import { type Accessor, For, Show, Switch, Match } from "solid-js";
 import { PerfTab } from "../../../../../config/types";
 import type {
 	JsonBenchmark,
@@ -14,8 +14,10 @@ import FieldKind from "../../../../field/kind";
 const DimensionsTab = (props: {
 	project_slug: Accessor<undefined | string>;
 	isConsole: boolean;
+	loading: Accessor<boolean>;
 	tab: Accessor<PerfTab>;
 	tabList: Accessor<TabList<JsonBranch | JsonTestbed | JsonBenchmark>>;
+	per_page: Accessor<number>;
 	search: Accessor<undefined | string>;
 	handleChecked: (index: number, slug?: string) => void;
 	handleSearch: FieldHandler;
@@ -35,23 +37,49 @@ const DimensionsTab = (props: {
 					handleField={props.handleSearch}
 				/>
 			</div>
-			<Show
-				when={props.tabList().length > 0}
+			<Switch
 				fallback={<div class="panel-block">🐰 No {props.tab()} found</div>}
 			>
-				<For each={props.tabList()}>
-					{(dimension, index) => (
-						<DimensionRow
-							project_slug={props.project_slug}
-							isConsole={props.isConsole}
-							tab={props.tab}
-							dimension={dimension}
-							index={index}
-							handleChecked={props.handleChecked}
-						/>
-					)}
-				</For>
-			</Show>
+				<Match when={props.loading()}>
+					<For each={Array(props.per_page())}>
+						{(_) => (
+							<div class="panel-block is-block">
+								<div class="level">
+									<div
+										class="level-left"
+										style="color: black;"
+									>
+										<div class="level-item">
+											<div class="columns is-vcentered is-mobile">
+												<div class="column is-narrow">
+													<input type="checkbox" checked={false} disabled={true} />
+												</div>
+												<div class="column">
+													<small style="word-break: break-word;"></small>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						)}
+					</For>
+				</Match>
+				<Match when={props.tabList().length > 0}>
+					<For each={props.tabList()}>
+						{(dimension, index) => (
+							<DimensionRow
+								project_slug={props.project_slug}
+								isConsole={props.isConsole}
+								tab={props.tab}
+								dimension={dimension}
+								index={index}
+								handleChecked={props.handleChecked}
+							/>
+						)}
+					</For>
+				</Match>
+			</Switch>
 		</>
 	);
 };
