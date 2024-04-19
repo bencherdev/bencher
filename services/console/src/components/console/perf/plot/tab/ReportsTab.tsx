@@ -33,52 +33,30 @@ const ReportsTab = (props: {
 					handleEndTime={props.handleEndTime}
 				/>
 			</div>
-			<Switch
-				fallback={<div class="panel-block">🐰 No reports found</div>}
-			>
+			<Switch fallback={<div class="panel-block">🐰 No reports found</div>}>
 				<Match when={props.loading()}>
 					<For each={Array(props.per_page())}>
-					{(_) => (
-					<div class="panel-block is-block">
-						<div class="level">
-							<a
-								class="level-left"
-								style="color: black;"
-							>
-								<div class="level-item">
-									<div class="columns is-vcentered is-mobile">
-										<div class="column is-narrow">
-											<input
-												type="radio"
-												checked={
-													false
-												}
-												disabled={true}
-											/>
+						{(_) => (
+							<div class="panel-block is-block">
+								<div class="level">
+									<a class="level-left" style="color: black;">
+										<div class="level-item">
+											<div class="columns is-vcentered is-mobile">
+												<div class="column is-narrow">
+													<input type="radio" checked={false} disabled={true} />
+												</div>
+												<div class="column">
+													<small style="word-break: break-word;">⠀</small>
+													<ReportDimension icon={BRANCH_ICON} name="⠀" />
+													<ReportDimension icon={TESTBED_ICON} name="⠀" />
+													<ReportDimension icon={MEASURE_ICON} name="⠀" />
+												</div>
+											</div>
 										</div>
-										<div class="column">
-											<small style="word-break: break-word;">
-												⠀⠀⠀
-											</small>
-											<ReportDimension
-												icon={BRANCH_ICON}
-												name="⠀"
-											/>
-											<ReportDimension
-												icon={TESTBED_ICON}
-												name="⠀"
-											/>
-											<ReportDimension
-												icon={MEASURE_ICON}
-												name="⠀"
-											/>
-										</div>
-									</div>
+									</a>
 								</div>
-							</a>
-						</div>
-					</div>
-					)}
+							</div>
+						)}
 					</For>
 				</Match>
 				<Match when={props.tabList().length > 0}>

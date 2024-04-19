@@ -9,7 +9,7 @@ import { BencherResource } from "../../../../../config/types";
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 const params = Astro.params;
 const title = "View Alert";
-const redirect = `/perf/${params.project}/alerts/${params.alert}${Astro.url.search}`
+const redirect = `/perf/${params.project}/alerts/${params.alert}${Astro.url.search}`;
 ---
 
 <ProjectLayout apiUrl={BENCHER_API_URL} params={params} title={title} redirect={redirect}>

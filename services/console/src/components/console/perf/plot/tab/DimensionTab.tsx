@@ -45,14 +45,15 @@ const DimensionsTab = (props: {
 						{(_) => (
 							<div class="panel-block is-block">
 								<div class="level">
-									<div
-										class="level-left"
-										style="color: black;"
-									>
+									<div class="level-left" style="color: black;">
 										<div class="level-item">
 											<div class="columns is-vcentered is-mobile">
 												<div class="column is-narrow">
-													<input type="checkbox" checked={false} disabled={true} />
+													<input
+														type="checkbox"
+														checked={false}
+														disabled={true}
+													/>
 												</div>
 												<div class="column">
 													<small style="word-break: break-word;"></small>
