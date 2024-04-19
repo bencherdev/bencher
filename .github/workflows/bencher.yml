@@ -915,16 +915,11 @@ jobs:
       - cargo_test
       - api_smoke_test
       - cargo_bench
-      - cargo_audit
-      - cargo_udeps
       - test_bencher_valid_wasm
       - npx_vitest
       # Build
       - build_api_docker
       - build_ui
-      - build_cli
-    env:
-      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN_ADMIN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
@@ -942,7 +937,13 @@ jobs:
       - name: Install `bencher` CLI
         run: cargo install --debug --path services/cli --locked --force
       - name: Backup API Server Database
-        run: bencher server backup --host https://api.bencher.dev --compress --data-store aws_s3 --rm
+        run: |
+          bencher server backup \
+          --host https://api.bencher.dev \
+          --token ${{ secrets.BENCHER_API_TOKEN_ADMIN }} \
+          --compress \
+          --data-store aws_s3 \
+          --rm
 
   deploy_api_fly:
     name: Deploy API to Fly.io Prod
