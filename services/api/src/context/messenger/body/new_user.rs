@@ -71,8 +71,11 @@ impl FmtBody for NewUserBody {
         <br />
         <p>Name: {name}</p>
         <p>Email: {email}</p>
-        <br/>
+        <br />
         {github_link}
+        <br />
+        <a href=\"mailto:{email}?subject=Any%20advice%3F\">Ask for advice</a>
+        <br />
         <p>🐰 Bencher</p>
     </body>
 </html>",
