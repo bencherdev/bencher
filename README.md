@@ -167,6 +167,17 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
     </td>
     <td>
       <p align="center">
+        <a href="https://bencher.dev/perf/tailcall?key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&branches=3646cfed-fd77-417e-b8d5-90eab450e855&testbeds=5823e8f8-162f-4a86-862d-3ed9b3415a75&benchmarks=5022fcf2-e392-4dc6-8b62-cb2da9a6e36a%2Cd1499469-f2dc-4b38-91ba-83ecf11ce678%2C851fc472-d9d7-42b8-ba91-b0f90e3c9909%2Cdbea7f22-5076-4a91-a83e-bb2cadddb069&measures=d6846b7a-7a7a-4e2e-91a1-131232a131e3&start_time=1710981217000&end_time=1713573818000&clear=true&upper_boundary=false&range=version&tab=branches">
+          <img
+            src="https://s3.amazonaws.com/public.bencher.dev/case-study/tailcall.svg"
+            alt="Tailcall"
+          />
+        </a>
+      </p>
+      <p align="center">Tailcall</p>
+    </td>
+    <td>
+      <p align="center">
         <a href="https://bencher.dev/perf/greptimedb?key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&report=8dcbda4a-c239-4a9e-8399-4fc699f775b4&branches=3b46708f-b87f-4f52-b1bb-1d9cc7bfee2d&testbeds=6d3be02f-9efe-4e47-8a5d-e389c228172d&benchmarks=da5c8cbe-9aef-431e-9168-11ef0821c8db%2Cbb7ce469-5c34-4a69-ab2f-d9769ca5be2a&measures=a2f1689d-44d5-4d5e-863f-47d285cedf97&start_time=1707524593000&end_time=1710116593000&clear=true">
           <img
             src="https://s3.amazonaws.com/public.bencher.dev/case-study/greptimedb.png"
@@ -175,17 +186,6 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
         </a>
       </p>
       <p align="center">GreptimeDB</p>
-    </td>
-    <td>
-      <p align="center">
-        <a href="https://bencher.dev/perf/hotstar?key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&report=dbab4284-e7fb-48a6-8c6b-051a98957079&branches=d6949a6e-ce6b-457b-bb69-9ab4d62eae71&testbeds=45bf0733-efb6-4d8a-8abc-a98099f3f4f2&benchmarks=a95083a3-b57c-429c-ab57-6569b27530e1%2C4f02a4e8-0158-49b9-bf78-b5977c2ce9fb%2C29a32a7a-244e-4d13-ad87-1a4b81e77428%2C2c760c7d-b860-47d0-9b9e-f60ab6204705%2C7b643e87-25c3-442a-8060-8aa1625661fc&measures=5ed5ccea-b820-42df-8974-704d3284a5c9&start_time=1698066511000&end_time=1700658511000&clear=true&range=version">
-          <img
-            src="https://s3.amazonaws.com/public.bencher.dev/case-study/disney-hotstar.png"
-            alt="Disney+ Hotstar"
-          />
-        </a>
-      </p>
-      <p align="center">Disney+ Hotstar</p>
     </td>
   </tr>
   <tr>
