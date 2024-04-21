@@ -13,6 +13,7 @@ const page = defineCollection({
 		modified: z.string().optional(),
 		sortOrder: z.number(),
 		draft: z.boolean().optional(),
+		canonicalize: z.boolean().optional(),
 	}),
 });
 
@@ -26,6 +27,7 @@ const swagger = defineCollection({
 		modified: z.string().optional(),
 		sortOrder: z.number(),
 		draft: z.boolean().optional(),
+		canonicalize: z.boolean().optional(),
 		paths: z.array(
 			z.object({
 				path: z.string(),
