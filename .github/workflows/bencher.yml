@@ -1237,7 +1237,7 @@ jobs:
       - name: Generate Release Notes
         run: cargo xtask release-notes
       - name: GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           prerelease: ${{ endsWith(github.ref, '-rc*') }}
           body_path: release-notes.md

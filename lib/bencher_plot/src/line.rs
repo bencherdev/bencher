@@ -2,7 +2,7 @@ use std::{io::Cursor, ops::Range};
 
 use bencher_json::{project::perf::JsonPerfMetrics, JsonPerf};
 use chrono::{DateTime, Duration, Utc};
-use image::ImageBuffer;
+use image::{GenericImageView, ImageBuffer};
 use once_cell::sync::Lazy;
 use ordered_float::OrderedFloat;
 use plotters::{
@@ -40,7 +40,9 @@ static WORDMARK_ELEMENT: Lazy<BitMapElement<(i32, i32)>> = Lazy::new(|| {
     let wordmark_cursor = Cursor::new(BENCHER_WORDMARK);
     let wordmark_image =
         image::load(wordmark_cursor, image::ImageFormat::Png).expect("Failed to load wordmark");
-    ((0, 5), wordmark_image).into()
+    let size = wordmark_image.dimensions();
+    let buf = wordmark_image.to_rgb8().into_raw();
+    BitMapElement::with_owned_buffer((0, 5), size, buf).expect("Failed to create wordmark")
 });
 
 pub struct LinePlot {
@@ -200,7 +202,7 @@ impl LinePlot {
             ImageBuffer::from_vec(self.width, self.height, plot_buffer)
                 .ok_or(PlotError::ImageBuffer)?;
         let mut image_cursor = Cursor::new(Vec::with_capacity(BUFFER_SIZE));
-        image_buffer.write_to(&mut image_cursor, image::ImageOutputFormat::Jpeg(100))?;
+        image_buffer.write_to(&mut image_cursor, image::ImageFormat::Jpeg)?;
 
         Ok(image_cursor.into_inner())
     }
