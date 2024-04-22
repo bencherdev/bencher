@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bencher_valid::{DateTime, DateTimeMillis, GitHash};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -77,7 +79,7 @@ const SHELL_INT: i32 = 100;
 const SHELL_HYPERFINE_INT: i32 = 101;
 
 #[typeshare::typeshare]
-#[derive(Debug, Clone, Copy, Default, derive_more::Display, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
@@ -111,6 +113,39 @@ pub enum Adapter {
     RubyBenchmark = RUBY_BENCHMARK_INT,
     Shell = SHELL_INT,
     ShellHyperfine = SHELL_HYPERFINE_INT,
+}
+
+impl fmt::Display for Adapter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Magic => write!(f, "magic"),
+            Self::Json => write!(f, "json"),
+            Self::Rust => write!(f, "rust"),
+            Self::RustBench => write!(f, "rust_bench"),
+            Self::RustCriterion => write!(f, "rust_criterion"),
+            Self::RustIai => write!(f, "rust_iai"),
+            Self::RustIaiCallgrind => write!(f, "rust_iai_callgrind"),
+            Self::Cpp => write!(f, "cpp"),
+            Self::CppGoogle => write!(f, "cpp_google"),
+            Self::CppCatch2 => write!(f, "cpp_catch2"),
+            Self::Go => write!(f, "go"),
+            Self::GoBench => write!(f, "go_bench"),
+            Self::Java => write!(f, "java"),
+            Self::JavaJmh => write!(f, "java_jmh"),
+            Self::CSharp => write!(f, "c_sharp"),
+            Self::CSharpDotNet => write!(f, "c_sharp_dot_net"),
+            Self::Js => write!(f, "js"),
+            Self::JsBenchmark => write!(f, "js_benchmark"),
+            Self::JsTime => write!(f, "js_time"),
+            Self::Python => write!(f, "python"),
+            Self::PythonAsv => write!(f, "python_asv"),
+            Self::PythonPytest => write!(f, "python_pytest"),
+            Self::Ruby => write!(f, "ruby"),
+            Self::RubyBenchmark => write!(f, "ruby_benchmark"),
+            Self::Shell => write!(f, "shell"),
+            Self::ShellHyperfine => write!(f, "shell_hyperfine"),
+        }
+    }
 }
 
 #[cfg(feature = "db")]

@@ -138,9 +138,10 @@ impl ReportComment {
         public_links: bool,
     ) {
         let Some((_benchmark, measures)) = self.benchmark_urls.0.first_key_value() else {
-            html.push_str("<b>No benchmarks found!</b>");
+            html.push_str("<blockquote><b>⚠️ WARNING:</b> No benchmarks found!</blockquote>");
             return;
         };
+        self.html_no_threshold_warning(html, measures);
         html.push_str("<table>");
         self.html_benchmarks_table_header(
             html,
@@ -151,6 +152,41 @@ impl ReportComment {
         );
         self.html_benchmarks_table_body(html, with_metrics, require_threshold, public_links);
         html.push_str("</table>");
+    }
+
+    // Check to see if any measure has a threshold set
+    fn html_no_threshold_warning(&self, html: &mut String, measures: &MeasuresMap) {
+        let no_threshold = measures.iter().fold(
+            Vec::new(),
+            |mut nt, (measure, MeasureData { boundary, .. })| {
+                if boundary.is_none() {
+                    nt.push(measure);
+                }
+                nt
+            },
+        );
+        if no_threshold.is_empty() {
+            return;
+        }
+        let plural_measure = if no_threshold.len() == 1 {
+            "Measure does"
+        } else {
+            "Measures do"
+        };
+        html.push_str(&format!("<blockquote><p><b>⚠️ WARNING:</b> The following {plural_measure} not have a Threshold. Without a Threshold, no Alerts will ever be generated!</p>"));
+        html.push_str("<ul>");
+        for measure in no_threshold {
+            html.push_str(&format!(
+                "<li>{name} ({slug})</li>",
+                name = measure.name,
+                slug = measure.slug
+            ));
+        }
+        html.push_str("</ul>");
+        html.push_str(&format!("<p><a href=\"{console_url}console/projects/{project}/thresholds/add\">Click here to create a new Threshold</a><br />", console_url = self.console_url, project = self.project_slug));
+        html.push_str("For more information, see <a href=\"https://bencher.dev/docs/explanation/thresholds/\">the Threshold documentation</a>.<br />");
+        html.push_str("To ignore this warning, set <a href=\"https://bencher.dev/docs/explanation/bencher-run/#--ci-allow-no-threshold\">the <code lang=\"rust\">--ci-allow-no-threshold</code> CLI flag</a>.</p>");
+        html.push_str("</blockquote>");
     }
 
     fn html_benchmarks_table_header(
@@ -347,9 +383,9 @@ impl ReportComment {
         let id = id.map_or_else(
             || {
                 format!(
-                    "{branch}/{testbed}/{adapter:?}",
-                    branch = self.json_report.branch.uuid,
-                    testbed = self.json_report.testbed.uuid,
+                    "{branch}/{testbed}/{adapter}",
+                    branch = self.json_report.branch.slug,
+                    testbed = self.json_report.testbed.slug,
                     adapter = self.json_report.adapter
                 )
             },
@@ -357,7 +393,7 @@ impl ReportComment {
         );
         format!(
             r#"<div id="bencher.dev/projects/{project}/id/{id}"></div>"#,
-            project = self.json_report.project.uuid,
+            project = self.json_report.project.slug,
         )
     }
 
