@@ -1,7 +1,10 @@
 use std::{collections::BTreeMap, time::Duration};
 
 use bencher_json::{
-    project::perf::{LOWER_BOUNDARY, UPPER_BOUNDARY},
+    project::{
+        boundary::BoundaryLimit,
+        perf::{LOWER_BOUNDARY, UPPER_BOUNDARY},
+    },
     AlertUuid, BenchmarkName, BenchmarkUuid, BranchUuid, DateTime, JsonBoundary, JsonPerfQuery,
     JsonReport, MeasureUuid, ResourceName, Slug, TestbedUuid,
 };
@@ -62,7 +65,7 @@ impl ReportComment {
         let public_links = self.json_report.project.visibility.is_public();
         self.html_header(html_mut);
         self.html_report_table(html_mut, public_links);
-        self.html_benchmarks_table(html_mut, with_metrics, require_threshold, public_links);
+        self.html_benchmarks(html_mut, with_metrics, require_threshold, public_links);
         self.html_footer(html_mut);
         // DO NOT MOVE: The Bencher tag must be the last thing in the HTML for updates to work
         self.html_bencher_tag(html_mut, id);
@@ -130,7 +133,7 @@ impl ReportComment {
         html.push_str("</table>");
     }
 
-    fn html_benchmarks_table(
+    fn html_benchmarks(
         &self,
         html: &mut String,
         with_metrics: bool,
@@ -142,16 +145,31 @@ impl ReportComment {
             return;
         };
         self.html_no_threshold_warning(html, measures);
-        html.push_str("<table>");
-        self.html_benchmarks_table_header(
+
+        let alerts_len = self.alert_urls.0.len();
+        if alerts_len > 0 {
+            html.push_str("<br />");
+            let (capital, lower) = if alerts_len == 1 {
+                ("", "")
+            } else {
+                ("S", "s")
+            };
+            html.push_str(&format!(
+                "<blockquote><b>🚨 {alerts_len} ALERT{capital}:</b> Threshold Boundary Limit{lower} exceeded!</blockquote>",
+            ));
+            self.html_alerts_table(html, public_links);
+            html.push_str("<br />");
+        }
+
+        html.push_str("<details><summary>Click to view all benchmark results</summary>");
+        self.html_benchmarks_table(
             html,
             measures,
             with_metrics,
             require_threshold,
             public_links,
         );
-        self.html_benchmarks_table_body(html, with_metrics, require_threshold, public_links);
-        html.push_str("</table>");
+        html.push_str("</details>");
     }
 
     // Check to see if any measure has a threshold set
@@ -185,8 +203,91 @@ impl ReportComment {
         html.push_str("</ul>");
         html.push_str(&format!("<p><a href=\"{console_url}console/projects/{project}/thresholds/add\">Click here to create a new Threshold</a><br />", console_url = self.console_url, project = self.project_slug));
         html.push_str("For more information, see <a href=\"https://bencher.dev/docs/explanation/thresholds/\">the Threshold documentation</a>.<br />");
-        html.push_str("To ignore this warning, set <a href=\"https://bencher.dev/docs/explanation/bencher-run/#--ci-allow-no-threshold\">the <code lang=\"rust\">--ci-allow-no-threshold</code> CLI flag</a>.</p>");
+        html.push_str("To ignore this warning, set <a href=\"https://bencher.dev/docs/explanation/bencher-run/#--ci-ignore-no-threshold\">the <code lang=\"rust\">--ci-ignore-no-threshold</code> CLI flag</a>.</p>");
         html.push_str("</blockquote>");
+    }
+
+    fn html_alerts_table(&self, html: &mut String, public_links: bool) {
+        html.push_str("<table>");
+        html.push_str("<tr><th>Benchmark</th><th>Measure (units)</th><th>View</th><th>Value</th><th>Lower Boundary</th><th>Upper Boundary</th></tr>");
+        for ((benchmark, measure), alert) in &self.alert_urls.0 {
+            let Some(data) = self
+                .benchmark_urls
+                .0
+                .get(benchmark)
+                .and_then(|m| m.get(measure))
+            else {
+                continue;
+            };
+
+            html.push_str("<tr>");
+            if public_links {
+                html.push_str(&format!("<td>{name}</td>", name = benchmark.name));
+                html.push_str(&format!(
+                    "<td>{name} ({units})</td>",
+                    name = measure.name,
+                    units = measure.units
+                ));
+                html.push_str(&format!(
+                    r#"<td>🚨 (<a href="{}">view plot</a> | <a href="{}">view alert</a>)</td>"#,
+                    data.public_url, alert.public_url,
+                ));
+            } else {
+                let benchmark_path = format!(
+                    "/console/projects/{}/benchmarks/{}",
+                    self.project_slug, benchmark.slug
+                );
+                let url = self.console_url.clone();
+                let url = url.join(&benchmark_path).unwrap_or(url);
+                html.push_str(&format!(
+                    r#"<td><a href="{url}">{name}</a></td>"#,
+                    name = benchmark.name,
+                ));
+                let measure_path = format!(
+                    "/console/projects/{}/measure/{}",
+                    self.project_slug, measure.slug
+                );
+                let url = self.console_url.clone();
+                let url = url.join(&measure_path).unwrap_or(url);
+                html.push_str(&format!(
+                    r#"<td><a href="{url}">{name}</a></td>"#,
+                    name = measure.name,
+                ));
+                html.push_str(&format!(
+                    r#"<td>🚨 (<a href="{}">view plot</a> | <a href="{}">view alert</a>)</td>"#,
+                    data.console_url, alert.console_url,
+                ));
+            }
+            Self::html_metric_boundary_cells(
+                html,
+                data.value,
+                data.boundary,
+                Some(alert.limit),
+                true,
+            );
+            html.push_str("</tr>");
+        }
+        html.push_str("</table>");
+    }
+
+    fn html_benchmarks_table(
+        &self,
+        html: &mut String,
+        measures: &MeasuresMap,
+        with_metrics: bool,
+        require_threshold: bool,
+        public_links: bool,
+    ) {
+        html.push_str("<table>");
+        self.html_benchmarks_table_header(
+            html,
+            measures,
+            with_metrics,
+            require_threshold,
+            public_links,
+        );
+        self.html_benchmarks_table_body(html, with_metrics, require_threshold, public_links);
+        html.push_str("</table>");
     }
 
     fn html_benchmarks_table_header(
@@ -217,35 +318,37 @@ impl ReportComment {
             }
 
             if with_metrics {
-                let units = &measure.units;
-                // If there is a boundary then we will show the percentage difference
-                if boundary.is_some() {
-                    html.push_str(&format!(
-                        "<th>{measure_name} Results<br/>{units} | (Δ%)</th>",
-                    ));
-                } else {
-                    html.push_str(&format!("<th>{measure_name} Results<br/>{units}</th>",));
-                }
-
-                let Some(boundary) = boundary else {
-                    continue;
-                };
-                if boundary.lower_limit.is_some() {
-                    html.push_str(&format!(
-                        "<th>{measure_name} Lower Boundary<br/>{units} | (%)</th>"
-                    ));
-                }
-                if boundary.upper_limit.is_some() {
-                    html.push_str(&format!(
-                        "<th>{measure_name} Upper Boundary<br/>{units} | (%)</th>"
-                    ));
-                }
+                Self::html_metric_boundary_header(html, measure, *boundary);
             }
         }
         html.push_str("</tr>");
     }
 
-    #[allow(clippy::too_many_lines)]
+    fn html_metric_boundary_header(
+        html: &mut String,
+        measure: &Measure,
+        boundary: Option<Boundary>,
+    ) {
+        let name = &measure.name;
+        let units = &measure.units;
+        // If there is a boundary then we will show the percentage difference
+        if boundary.is_some() {
+            html.push_str(&format!("<th>{name} Results<br/>{units} | (Δ%)</th>",));
+        } else {
+            html.push_str(&format!("<th>{name} Results<br/>{units}</th>",));
+        }
+
+        let Some(boundary) = boundary else {
+            return;
+        };
+        if boundary.lower_limit.is_some() {
+            html.push_str(&format!("<th>{name} Lower Boundary<br/>{units} | (%)</th>"));
+        }
+        if boundary.upper_limit.is_some() {
+            html.push_str(&format!("<th>{name} Upper Boundary<br/>{units} | (%)</th>"));
+        }
+    }
+
     fn html_benchmarks_table_body(
         &self,
         html: &mut String,
@@ -287,22 +390,25 @@ impl ReportComment {
                 } else {
                     console_url
                 };
-                let alert_url = self
-                    .alert_urls
-                    .0
-                    .get(&(benchmark.clone(), measure.clone()))
-                    .map(
-                        |AlertData {
-                             public_url,
-                             console_url,
-                         }| {
-                            if public_links {
-                                public_url
-                            } else {
-                                console_url
-                            }
-                        },
-                    );
+                let (alert_url, limit) = if let Some(alert) =
+                    self.alert_urls.0.get(&(benchmark.clone(), measure.clone()))
+                {
+                    let AlertData {
+                        public_url,
+                        console_url,
+                        limit,
+                    } = alert;
+                    (
+                        Some(if public_links {
+                            public_url
+                        } else {
+                            console_url
+                        }),
+                        Some(*limit),
+                    )
+                } else {
+                    (None, None)
+                };
                 let row = if let Some(alert_url) = alert_url {
                     format!(
                         r#"🚨 (<a href="{plot_url}">view plot</a> | <a href="{alert_url}">view alert</a>)"#,
@@ -315,49 +421,81 @@ impl ReportComment {
                 html.push_str(&format!(r#"<td>{row}</td>"#));
 
                 if with_metrics {
-                    let value = *value;
-                    // If there is a boundary with a baseline then show the percentage difference
-                    if let Some(Boundary {
-                        baseline: Some(baseline),
-                        ..
-                    }) = boundary
-                    {
-                        let value_percent = if value.is_normal() && baseline.is_normal() {
-                            ((value - baseline) / baseline) * 100.0
-                        } else {
-                            0.0
-                        };
-                        let value_plus = if value_percent > 0.0 { "+" } else { "" };
-
-                        html.push_str(&format!(
-                            "<td>{value:.3} ({value_plus}{value_percent:.2}%)</td>"
-                        ));
-                    } else {
-                        html.push_str(&format!("<td>{value:.3}</td>"));
-                    }
-
-                    let Some(boundary) = boundary else {
-                        continue;
-                    };
-                    if let Some(lower_limit) = boundary.lower_limit {
-                        let limit_percent = if value.is_normal() && lower_limit.is_normal() {
-                            (lower_limit / value) * 100.0
-                        } else {
-                            0.0
-                        };
-                        html.push_str(&format!("<td>{lower_limit:.3} ({limit_percent:.2}%)</td>"));
-                    }
-                    if let Some(upper_limit) = boundary.upper_limit {
-                        let limit_percent = if value.is_normal() && upper_limit.is_normal() {
-                            (value / upper_limit) * 100.0
-                        } else {
-                            0.0
-                        };
-                        html.push_str(&format!("<td>{upper_limit:.3} ({limit_percent:.2}%)</td>"));
-                    }
+                    Self::html_metric_boundary_cells(html, *value, *boundary, limit, false);
                 }
             }
             html.push_str("</tr>");
+        }
+    }
+
+    fn html_metric_boundary_cells(
+        html: &mut String,
+        value: f64,
+        boundary: Option<Boundary>,
+        limit: Option<BoundaryLimit>,
+        pad: bool,
+    ) {
+        // If there is a boundary with a baseline then show the percentage difference
+        if let Some(Boundary {
+            baseline: Some(baseline),
+            ..
+        }) = boundary
+        {
+            let value_percent = if value.is_normal() && baseline.is_normal() {
+                ((value - baseline) / baseline) * 100.0
+            } else {
+                0.0
+            };
+            let value_plus = if value_percent > 0.0 { "+" } else { "" };
+
+            let bold = limit.is_some();
+            html.push_str(&format!(
+                "<td>{}{} ({value_plus}{}%){}</td>",
+                if bold { "<b>" } else { "" },
+                format_number(value),
+                format_number(value_percent),
+                if bold { "</b>" } else { "" },
+            ));
+        } else {
+            html.push_str(&format!("<td>{}</td>", format_number(value)));
+        }
+
+        let Some(boundary) = boundary else {
+            return;
+        };
+        if let Some(lower_limit) = boundary.lower_limit {
+            let limit_percent = if value.is_normal() && lower_limit.is_normal() {
+                (lower_limit / value) * 100.0
+            } else {
+                0.0
+            };
+            let bold = matches!(limit, Some(BoundaryLimit::Lower));
+            html.push_str(&format!(
+                "<td>{}{} ({}%){}</td>",
+                if bold { "<b>" } else { "" },
+                format_number(lower_limit),
+                format_number(limit_percent),
+                if bold { "</b>" } else { "" },
+            ));
+        } else if pad {
+            html.push_str("<td></td>");
+        }
+        if let Some(upper_limit) = boundary.upper_limit {
+            let limit_percent = if value.is_normal() && upper_limit.is_normal() {
+                (value / upper_limit) * 100.0
+            } else {
+                0.0
+            };
+            let bold = matches!(limit, Some(BoundaryLimit::Upper));
+            html.push_str(&format!(
+                "<td>{}{} ({}%){}</td>",
+                if bold { "<b>" } else { "" },
+                format_number(upper_limit),
+                format_number(limit_percent),
+                if bold { "</b>" } else { "" },
+            ));
+        } else if pad {
+            html.push_str("<td></td>");
         }
     }
 
@@ -612,6 +750,7 @@ pub struct AlertUrls(BTreeMap<(Benchmark, Measure), AlertData>);
 pub struct AlertData {
     pub public_url: Url,
     pub console_url: Url,
+    pub limit: BoundaryLimit,
 }
 
 impl AlertUrls {
@@ -635,6 +774,7 @@ impl AlertUrls {
             let data = AlertData {
                 public_url,
                 console_url,
+                limit: alert.limit,
             };
             urls.insert((benchmark, measure), data);
         }
@@ -651,4 +791,38 @@ impl AlertUrls {
         console_url.set_path(&format!("/console/projects/{project_slug}/alerts/{alert}"));
         console_url
     }
+}
+
+enum Position {
+    Whole(usize),
+    Point,
+    Decimal,
+}
+
+fn format_number(number: f64) -> String {
+    let mut number_str = String::new();
+    let mut position = Position::Decimal;
+    for c in format!("{:.2}", number.abs()).chars().rev() {
+        match position {
+            Position::Whole(place) => {
+                if place % 3 == 0 {
+                    number_str.push(',');
+                }
+                position = Position::Whole(place + 1);
+            },
+            Position::Point => {
+                position = Position::Whole(1);
+            },
+            Position::Decimal => {
+                if c == '.' {
+                    position = Position::Point;
+                }
+            },
+        }
+        number_str.push(c);
+    }
+    if number < 0.0 {
+        number_str.push('-');
+    }
+    number_str.chars().rev().collect()
 }
