@@ -18,7 +18,7 @@ Oh, boy!
 There is a lot here.
 But the three big things that jumped out to me where:
 
-1. SQLite is creating a materialized view on-the-fly that scans the _entire_ `boundary` table
+1. SQLite is creating [an on-the-fly view][sqlite materialized hint] that scans the _entire_ `boundary` table
 2. SQLite is then scanning the _entire_ `metric` table
 3. SQLite is creating two on the fly indexes
 
@@ -31,6 +31,7 @@ I wanted to consult an expert before making any changes.
 
 [sqlite query planner]: https://www.sqlite.org/queryplanner.html
 [eqp]: https://www.sqlite.org/eqp.html
+[sqlite materialized hint]: https://www.sqlite.org/lang_with.html#materialization_hints
 
 [thresholds]: /docs/explanation/thresholds/
 [metrics]: /docs/explanation/benchmarking/#metrics

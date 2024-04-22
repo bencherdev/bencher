@@ -2,7 +2,7 @@ import MetricTable from "../metric-table.mdx";
 import BoundaryTable from "../boundary-table.mdx";
 import MetricBoundaryView from "../metric-boundary-view.mdx";
 
-## Materialized View
+## SQLite View
 
 When I added the ability to track and visualize [Threshold Boundaries][thresholds] last year,
 I had a decision to make in the database model.
@@ -19,29 +19,30 @@ These were the effective queries used to create the `metric` and `boundary` tabl
 <BoundaryTable />
 
 And it turns out "later" had arrived.
-I tried to simply add an index for `boundary(metric_id)` but that did not help.
+I tried to simply add an index for `boundary(metric_id)`, but that did not help.
 I believe the reason has to do with the fact that the Perf query is originating from the `metric` table
 and because that relationship is 0/1 or put another way, nullable it has to be scanned (O(n))
 and cannot be searched (O(log(n))).
 
 This left me with one clear option.
-I needed to create a materialized view that flattened the `metric` and `boundary` relationship
-to keep SQLite from having to create an on-the-fly materialized view.
+I needed to create a view that flattened the `metric` and `boundary` relationship
+to keep SQLite from having to do a full of the `boundary` table.
 
-This is the query I used to create the new `metric_boundary` materialized view:
+This is the query I used to create the new `metric_boundary` view:
 
 <MetricBoundaryView />
 
-With this solution, I'm trading off space for runtime performance.
-How much space?
-Surprisingly only about a 4% increase, even though this view is for the two largest tables in the database.
+With this solution, I created [a pre-packaged `SELECT` statement][sqlite view].
+This view only caused about a 4% increase in the size of the database,
+even though it is for the two largest tables.
 Best of all, it lets me have my cake and eat it too in my source code.
 
-[Creating a materialized view with Diesel][diesel view] was surprisingly easy.
+[Creating a view with Diesel][diesel view] was surprisingly easy.
 I just had to use the exact same macros that Diesel uses when generating my normal schema.
 With that said, I learned to appreciate Diesel a lot more throughout this experience.
 See [Bonus Bug][bonus bug] for all the juicy details.
 
+[sqlite view]: https://www.sqlite.org/lang_createview.html
 [diesel view]: https://deterministic.space/diesel-view-table-trick.html
 
 [thresholds]: /docs/explanation/thresholds/
