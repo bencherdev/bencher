@@ -1,0 +1,19 @@
+Benchmarking execution/naive/select_1_column/10
+Benchmarking execution/naive/select_1_column/10: Warming up for 3.0000 s
+Benchmarking execution/naive/select_1_column/10: Collecting 100 samples in estimated 5.0403 s (490k iterations)
+Benchmarking execution/naive/select_1_column/10: Analyzing
+execution/naive/select_1_column/10
+                        time:   [7.6998 µs 7.7152 µs 7.7294 µs]
+                        thrpt:  [1.2938 Melem/s 1.2961 Melem/s 1.2987 Melem/s]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high severe
+Benchmarking execution/naive/select_1_column/100
+Benchmarking execution/naive/select_1_column/100: Warming up for 3.0000 s
+Benchmarking execution/naive/select_1_column/100: Collecting 100 samples in estimated 5.1599 s (141k iterations)
+Benchmarking execution/naive/select_1_column/100: Analyzing
+execution/naive/select_1_column/100
+                        time:   [30.910 µs 30.946 µs 30.991 µs]
+                        thrpt:  [3.2268 Melem/s 3.2314 Melem/s 3.2352 Melem/s]
+Found 2 outliers among 100 measurements (2.00%)
+  1 (1.00%) high mild
+  1 (1.00%) high severe

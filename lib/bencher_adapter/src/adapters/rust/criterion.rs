@@ -1,7 +1,7 @@
 use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonMetric};
 use nom::{
     bytes::complete::tag,
-    character::complete::{anychar, space1},
+    character::complete::{anychar, space1, space0},
     combinator::{eof, map, map_res},
     multi::many_till,
     sequence::{delimited, tuple},
@@ -48,8 +48,9 @@ fn parse_criterion<'i>(
     input: &'i str,
 ) -> IResult<&'i str, (BenchmarkName, JsonMetric)> {
     map_res(
-        many_till(anychar, parse_criterion_time),
-        |(name_chars, json_metric)| -> Result<(BenchmarkName, JsonMetric), NomError> {
+        many_till(anychar, tuple((parse_criterion_time, nom::combinator::opt(tuple((nom::character::complete::multispace1, parse_criterion_throughput)))))),
+        |(name_chars, (json_metric, throuput))| -> Result<(BenchmarkName, JsonMetric), NomError> {
+            dbg!(throuput);
             let name: String = if name_chars.is_empty() {
                 prior_line.ok_or_else(|| nom_error(String::new()))?.into()
             } else {
@@ -65,32 +66,43 @@ fn parse_criterion_time(input: &str) -> IResult<&str, JsonMetric> {
     map(
         tuple((
             tuple((space1, tag("time:"), space1)),
-            parse_criterion_metric,
+            parse_criterion_metric(parse_criterion_duration),
             eof,
         )),
         |(_, json_metric, _)| json_metric,
     )(input)
 }
 
-fn parse_criterion_metric(input: &str) -> IResult<&str, JsonMetric> {
+fn parse_criterion_throughput(input: &str) -> IResult<&str, JsonMetric> {
+    dbg!(input);
     map(
-        delimited(
-            tag("["),
-            tuple((
-                parse_criterion_duration,
-                space1,
-                parse_criterion_duration,
-                space1,
-                parse_criterion_duration,
-            )),
-            tag("]"),
-        ),
-        |(lower_value, _, value, _, upper_value)| JsonMetric {
+        tuple((
+            tuple((space0, tag("thrpt:"), space1)),
+            parse_criterion_metric(parse_criterion_elements),
+            eof,
+        )),
+        |(_, metric, _)| metric,
+    )(input)
+}
+
+fn parse_criterion_metric<'i, P>(mut part: P) -> impl FnMut(&'i str) -> IResult<&'i str, JsonMetric> where P: FnMut(&'i str) -> IResult<&'i str, OrderedFloat<f64>> + Copy {
+    move |input| {
+        let (input, _) = tag("[")(input)?;
+
+        let (input, lower_value) = part(input)?;
+        let (input, _) = space1(input)?;
+        let (input, value) = part(input)?;
+        let (input, _) = space1(input)?;
+        let (input, upper_value) = part(input)?;
+
+        let (input, _) = tag("]")(input)?;
+       
+        Ok((input, JsonMetric {
             value,
             lower_value: Some(lower_value),
             upper_value: Some(upper_value),
-        },
-    )(input)
+        }))
+    }
 }
 
 fn parse_criterion_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
@@ -100,18 +112,32 @@ fn parse_criterion_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
     )(input)
 }
 
+fn parse_criterion_elements(input: &str) -> IResult<&str, OrderedFloat<f64>> {
+    map(
+        tuple((
+            parse_f64, space1, nom::branch::alt((
+                map(tag("Melem/s"), |_| 1000 * 1000),
+                map(tag("Kelem/s"), |_| 1000),
+                map(tag("elem/s"), |_| 1),
+            )),
+        )),
+        |(base, _, multiplier)| OrderedFloat(base * multiplier as f64),
+    )(input)
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 pub(crate) mod test_rust_criterion {
     use bencher_json::{project::report::JsonAverage, JsonMetric};
     use pretty_assertions::assert_eq;
+    use ordered_float::OrderedFloat;
 
     use crate::{
         adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
         Adaptable, AdapterResults, Settings,
     };
 
-    use super::{parse_criterion, AdapterRustCriterion};
+    use super::{parse_criterion, parse_criterion_throughput, AdapterRustCriterion};
 
     fn convert_rust_criterion(suffix: &str) -> AdapterResults {
         let file_path = format!("./tool_output/rust/criterion/{suffix}.txt");
@@ -257,5 +283,15 @@ pub(crate) mod test_rust_criterion {
 
         let metrics = results.get("Adapter::Rust").unwrap();
         validate_latency(metrics, 14884.0, Some(14881.0), Some(14887.0));
+    }
+
+    #[test]
+    fn parse_throughputs() {
+        let (_, tmp) = parse_criterion_throughput("thrpt:  [3.2268 Melem/s 3.2314 Melem/s 3.2352 Melem/s]").unwrap();
+        assert_eq!(JsonMetric {
+            value: OrderedFloat(3231400.0),
+            lower_value: Some(OrderedFloat(3226800.0)),
+            upper_value: Some(OrderedFloat(3235200.0)),
+        }, tmp);
     }
 }
