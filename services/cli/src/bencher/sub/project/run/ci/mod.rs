@@ -22,25 +22,24 @@ impl TryFrom<CliRunCi> for Option<Ci> {
 
     fn try_from(ci: CliRunCi) -> Result<Self, Self::Error> {
         let CliRunCi {
-            ci_no_metrics,
+            github_actions,
             ci_only_thresholds,
             ci_only_on_alert,
             ci_public_links,
             ci_id,
             ci_number,
             ci_i_am_vulnerable_to_pwn_requests,
-            github_actions,
+            ci_deprecated: _,
         } = ci;
         Ok(github_actions.map(|token| {
             Ci::GitHubActions(GitHubActions {
-                ci_no_metrics,
+                token,
                 ci_only_thresholds,
                 ci_only_on_alert,
                 ci_public_links,
                 ci_id,
                 ci_number,
                 ci_i_am_vulnerable_to_pwn_requests,
-                token,
             })
         }))
     }

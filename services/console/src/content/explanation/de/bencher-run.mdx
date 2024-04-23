@@ -3,7 +3,7 @@ title: "bencher run"
 description: "Überblick über das bencher run CLI-Unterkommando und alle seine Flags, Argumente und Funktionen"
 heading: "bencher run CLI-Unterbefehl"
 published: "2023-10-27T08:40:00Z"
-modified: "2024-03-27T07:50:00Z"
+modified: "2024-04-23T12:23:00Z"
 sortOrder: 2
 ---
 
@@ -107,15 +107,6 @@ Der bequemste Weg, dies zu tun, ist die [GitHub Actions `GITHUB_TOKEN` Umgebungs
 
 <br />
 
-### `--ci-no-metrics`
-
-<br />
-
-Optional: Überspringen Sie Benchmark-Metriken und Grenzwerte.
-Benötigt: `--github-actions`
-
-<br />
-
 ### `--ci-only-thresholds`
 
 <br />
@@ -133,15 +124,6 @@ Erforderlich: `--github-actions`
 Optional: Ergebnisse nur an CI posten, wenn [ein Alarm](/de/docs/explanation/thresholds/) erzeugt wird.
 Wenn ein Alarm erzeugt wird, werden auch nachfolgende Ergebnisse, auch wenn sie keine Alarme enthalten, gepostet.
 Erforderlich: `--github-actions`
-
-<br />
-
-### `--ci-public-links`
-
-<br />
-
-Optional: Alle Links sollten auf öffentliche URLs zeigen, die kein Login erfordern.
-Benötigt: `--github-actions`
 
 <br />
 

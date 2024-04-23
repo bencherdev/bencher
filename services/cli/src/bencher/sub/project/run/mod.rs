@@ -288,12 +288,8 @@ impl Run {
         let report_comment = ReportComment::new(console_url, json_report);
 
         if self.html {
-            let with_metrics = true;
             let require_threshold = false;
-            cli_println!(
-                "{}",
-                report_comment.html(with_metrics, require_threshold, None)
-            );
+            cli_println!("{}", report_comment.html(require_threshold, None));
         } else {
             cli_println!("{}", report_comment.text());
         }

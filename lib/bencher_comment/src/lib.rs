@@ -59,13 +59,13 @@ impl ReportComment {
         comment
     }
 
-    pub fn html(&self, with_metrics: bool, require_threshold: bool, id: Option<&str>) -> String {
+    pub fn html(&self, require_threshold: bool, id: Option<&str>) -> String {
         let mut html = String::new();
         let html_mut = &mut html;
         let public_links = self.json_report.project.visibility.is_public();
         self.html_header(html_mut);
         self.html_report_table(html_mut, public_links);
-        self.html_benchmarks(html_mut, with_metrics, require_threshold, public_links);
+        self.html_benchmarks(html_mut, require_threshold, public_links);
         self.html_footer(html_mut);
         // DO NOT MOVE: The Bencher tag must be the last thing in the HTML for updates to work
         self.html_bencher_tag(html_mut, id);
@@ -133,13 +133,7 @@ impl ReportComment {
         html.push_str("</table>");
     }
 
-    fn html_benchmarks(
-        &self,
-        html: &mut String,
-        with_metrics: bool,
-        require_threshold: bool,
-        public_links: bool,
-    ) {
+    fn html_benchmarks(&self, html: &mut String, require_threshold: bool, public_links: bool) {
         let Some((_benchmark, measures)) = self.benchmark_urls.0.first_key_value() else {
             html.push_str("<blockquote><b>⚠️ WARNING:</b> No benchmarks found!</blockquote>");
             return;
@@ -162,13 +156,7 @@ impl ReportComment {
         }
 
         html.push_str("<details><summary>Click to view all benchmark results</summary>");
-        self.html_benchmarks_table(
-            html,
-            measures,
-            with_metrics,
-            require_threshold,
-            public_links,
-        );
+        self.html_benchmarks_table(html, measures, require_threshold, public_links);
         html.push_str("</details>");
     }
 
@@ -203,7 +191,7 @@ impl ReportComment {
         html.push_str("</ul>");
         html.push_str(&format!("<p><a href=\"{console_url}console/projects/{project}/thresholds/add\">Click here to create a new Threshold</a><br />", console_url = self.console_url, project = self.project_slug));
         html.push_str("For more information, see <a href=\"https://bencher.dev/docs/explanation/thresholds/\">the Threshold documentation</a>.<br />");
-        html.push_str("To ignore this warning, set <a href=\"https://bencher.dev/docs/explanation/bencher-run/#--ci-ignore-no-threshold\">the <code lang=\"rust\">--ci-ignore-no-threshold</code> CLI flag</a>.</p>");
+        html.push_str("To only post results if a Threshold exists, set <a href=\"https://bencher.dev/docs/explanation/bencher-run/#--ci-only-thresholds\">the <code lang=\"rust\">--ci-only-thresholds</code> CLI flag</a>.</p>");
         html.push_str("</blockquote>");
     }
 
@@ -274,19 +262,12 @@ impl ReportComment {
         &self,
         html: &mut String,
         measures: &MeasuresMap,
-        with_metrics: bool,
         require_threshold: bool,
         public_links: bool,
     ) {
         html.push_str("<table>");
-        self.html_benchmarks_table_header(
-            html,
-            measures,
-            with_metrics,
-            require_threshold,
-            public_links,
-        );
-        self.html_benchmarks_table_body(html, with_metrics, require_threshold, public_links);
+        self.html_benchmarks_table_header(html, measures, require_threshold, public_links);
+        self.html_benchmarks_table_body(html, require_threshold, public_links);
         html.push_str("</table>");
     }
 
@@ -294,7 +275,6 @@ impl ReportComment {
         &self,
         html: &mut String,
         measures: &MeasuresMap,
-        with_metrics: bool,
         require_threshold: bool,
         public_links: bool,
     ) {
@@ -316,10 +296,7 @@ impl ReportComment {
                 let url = url.join(&measure_path).unwrap_or(url);
                 html.push_str(&format!(r#"<th><a href="{url}">{measure_name}</a></th>"#));
             }
-
-            if with_metrics {
-                Self::html_metric_boundary_header(html, measure, *boundary);
-            }
+            Self::html_metric_boundary_header(html, measure, *boundary);
         }
         html.push_str("</tr>");
     }
@@ -352,7 +329,6 @@ impl ReportComment {
     fn html_benchmarks_table_body(
         &self,
         html: &mut String,
-        with_metrics: bool,
         require_threshold: bool,
         public_links: bool,
     ) {
@@ -420,9 +396,7 @@ impl ReportComment {
                 };
                 html.push_str(&format!(r#"<td>{row}</td>"#));
 
-                if with_metrics {
-                    Self::html_metric_boundary_cells(html, *value, *boundary, limit, false);
-                }
+                Self::html_metric_boundary_cells(html, *value, *boundary, limit, false);
             }
             html.push_str("</tr>");
         }

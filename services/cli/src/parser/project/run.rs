@@ -258,9 +258,6 @@ pub struct CliRunCi {
     /// GitHub API authentication token for GitHub Actions to comment on PRs (ie `--github-actions ${{ secrets.GITHUB_TOKEN }}`)
     #[clap(long)]
     pub github_actions: Option<String>,
-    /// Omit Benchmark Metrics and Boundary Limits (requires: `--github-actions`)
-    #[clap(long, requires = "ci_cd")]
-    pub ci_no_metrics: bool,
     /// Only post results to CI if a Threshold exists for the Branch, Testbed, and Measure (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_only_thresholds: bool,
@@ -279,4 +276,7 @@ pub struct CliRunCi {
     /// CAUTION: Override safety checks and accept that you are vulnerable to pwn requests (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_i_am_vulnerable_to_pwn_requests: bool,
+    /// Deprecated: Do not use. This will soon be removed.
+    #[clap(long, alias = "ci-no-metrics")]
+    pub ci_deprecated: bool,
 }

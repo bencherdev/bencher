@@ -3,7 +3,7 @@ title: "bencher run"
 description: "Overview of the bencher run CLI subcommand and all of its flags, arguments, and features"
 heading: "bencher run CLI Subcommand"
 published: "2023-08-12T16:07:00Z"
-modified: "2024-03-27T07:50:00Z"
+modified: "2024-04-23T12:23:00Z"
 sortOrder: 2
 ---
 
@@ -107,15 +107,6 @@ The most convenient way to do this is the [GitHub Actions `GITHUB_TOKEN` environ
 
 <br />
 
-### `--ci-no-metrics`
-
-<br />
-
-Optional: Omit Benchmark Metrics and Boundary Limits from results.
-Requires: `--github-actions`
-
-<br />
-
 ### `--ci-only-thresholds`
 
 <br />
@@ -130,8 +121,8 @@ Requires: `--github-actions`
 
 <br />
 
-Optional: Only start posting results to CI if [an Alert is generated](/docs/explanation/thresholds/).
-If an Alert is generated, then follow up results even if they don't contain any Alerts will also be posted.
+Optional: Only start posting results to CI if [an Alert is generated](/docs/explanation/thresholds/#alerts).
+If an Alert is generated, then all follow up results will also be posted even if they don't contain any Alerts.
 Requires: `--github-actions`
 
 <br />

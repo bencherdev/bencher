@@ -157,7 +157,7 @@ const testSelectConfig = (modelTest: ModelTest) => {
 		label: (
 			<div class="level is-mobile">
 				<div class="level-left">
-					<p class="level-item">Significance Test</p>
+					<p class="level-item">Threshold Model</p>
 					<a
 						class="level-item"
 						href={`https://bencher.dev/docs/explanation/thresholds/#${testFragment(

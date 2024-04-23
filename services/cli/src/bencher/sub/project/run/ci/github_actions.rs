@@ -16,14 +16,13 @@ const FULL_NAME: &str = "full_name";
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug)]
 pub struct GitHubActions {
-    pub ci_no_metrics: bool,
+    pub token: String,
     pub ci_only_thresholds: bool,
     pub ci_only_on_alert: bool,
     pub ci_public_links: bool,
     pub ci_id: Option<String>,
     pub ci_number: Option<u64>,
     pub ci_i_am_vulnerable_to_pwn_requests: bool,
-    pub token: String,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -217,11 +216,7 @@ impl GitHubActions {
 
         // Update or create the comment
         let issue_handler = github_client.issues(owner, repo);
-        let body = report_comment.html(
-            !self.ci_no_metrics,
-            self.ci_only_thresholds,
-            self.ci_id.as_deref(),
-        );
+        let body = report_comment.html(self.ci_only_thresholds, self.ci_id.as_deref());
         // Always update the comment if it exists
         let comment = if let Some(comment_id) = comment_id {
             issue_handler.update_comment(comment_id, body).await
