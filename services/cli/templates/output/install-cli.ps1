@@ -5,7 +5,7 @@
 <#
 .SYNOPSIS
 
-Bencher CLI v0.4.7-rc1 Installer
+Bencher CLI v0.4.7 Installer
 
 .DESCRIPTION
 
@@ -33,7 +33,7 @@ Print help
 
 param (
     [Parameter(HelpMessage = "The URL of the directory where artifacts can be fetched from")]
-    [string]$ArtifactDownloadUrl = 'https://bencher.dev/download/0.4.7-rc1',
+    [string]$ArtifactDownloadUrl = 'https://bencher.dev/download/0.4.7',
     [Parameter(HelpMessage = "Don't add the install directory to PATH")]
     [switch]$NoModifyPath,
     [Parameter(HelpMessage = "Print Help")]
@@ -41,7 +41,7 @@ param (
 )
 
 $app_name = 'bencher'
-$app_version = '0.4.7-rc1'
+$app_version = '0.4.7'
 
 function Install-Binary($install_args) {
   if ($Help) {
@@ -53,13 +53,13 @@ function Install-Binary($install_args) {
 
   $platforms = @{
     "x86_64-pc-windows-msvc" = @{
-      "artifact_name" = "bencher-v0.4.7-rc1-windows-x86-64.exe"
+      "artifact_name" = "bencher-v0.4.7-windows-x86-64.exe"
       "zip_ext" = ""
       "bins" = "bencher"
       "bin" = "bencher"
     }
     "aarch64-pc-windows-msvc" = @{
-      "artifact_name" = "bencher-v0.4.7-rc1-windows-arm-64.exe"
+      "artifact_name" = "bencher-v0.4.7-windows-arm-64.exe"
       "zip_ext" = ""
       "bins" = "bencher"
       "bin" = "bencher"

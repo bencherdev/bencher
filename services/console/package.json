@@ -1,7 +1,7 @@
 {
 	"name": "bencher-console",
 	"type": "module",
-	"version": "0.4.7-rc1",
+	"version": "0.4.7",
 	"scripts": {
 		"fmt": "npx biome format --write .",
 		"typeshare": "typeshare ../.. --lang=typescript --output-file=./src/types/bencher.ts",
