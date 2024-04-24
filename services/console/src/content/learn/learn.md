@@ -50,6 +50,10 @@
 - How to use perf
   - https://www.youtube.com/watch?v=nXaxk27zwlk
 
+# Machine Learning
+- https://harvard-edge.github.io/cs249r_book/contents/benchmarking/benchmarking.html
+- https://www.neuraldesigner.com/blog/how-to-benchmark-the-performance-of-machine-learning-platforms/
+
 ## Case Study
 - Diesel
 - Rustc Perf

@@ -25,3 +25,5 @@
 // Given the corpus of the internet and its abundant documentation of CVEs, this tool may end up grabbing some of them or coming up with some of them on their own. Either way, showing that you can effectively DOS their tool will make the security folks in the room start paying attention. That plus the buzzy-ness around LLMs and you've got yourself fodder for a conference talk!
 //
 // I'm not really sure how effective this will be for getting library security folks to really care, as a lot of their use cases are embedded. But as far as getting attention towards the project and speaking at conferences, this seems like a good idea.
+//
+// Not to be confused with benchmarking a fuzzer: https://github.com/google/fuzzbench
