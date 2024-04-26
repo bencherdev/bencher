@@ -1,0 +1,118 @@
+---
+title: "Diesel"
+description: "A continuous benchmarking case study for the Diesel project. Learn how they catch performance regressions in CI."
+heading: "Diesel: Continuous Benchmarking Case Study"
+published: "2024-04-26T07:39:00Z"
+modified: "2024-04-26T07:39:00Z"
+sortOrder: 2
+draft: true
+---
+
+import BencherFooter from "../../../chunks/learn/en/bencher-footer.mdx";
+
+## What is Diesel?
+
+[Diesel][github diesel] is a safe, extensible object relational mapper (ORM) and query builder for Rust.
+An ORM is used to translate between a relational database and a programming language.
+Diesel is a strongly typed ORM.
+It checks all database interactions at compile time, preventing runtime errors.
+This compile time checking also makes Diesel a zero-cost abstraction over SQL.
+By eliminating all the boilerplate, Diesel lets you focus on what really matters in your Rust code.
+
+Diesel support [the three most popular databases][stackoverflow databases]:
+
+- PostgreSQL
+- MySQL
+- SQLite
+
+> 🐰 Fun Fact: Bencher uses Diesel to [manage our SQLite database][sqlite]!
+
+[github diesel]: https://github.com/diesel-rs/diesel
+[stackoverflow databases]: https://survey.stackoverflow.co/2023/#most-popular-technologies-database-prof
+
+[sqlite]: /learn/engineering/sqlite-performance-tuning/
+
+## Benchmarking Diesel
+
+Diesel's [first commit][github diesel first commit] was made by the project's creator [Sage Griffin][github sgrif] on 23 August 2015.
+This was just three months after [Rust 1.0 was released][rust v1],
+so they originally used the built-in [libtest bench][libtest bench] benchmarking harness.
+Then [on 02 November 2020][github diesel criterion], they switched over to using [Criterion][criterion] as their benchmarking harness.
+
+When Diesel switched over to using Criterion,
+they also started to [benchmark themselves against other Rust ORMs][github diesel bench].
+This benchmark comparison suite now includes:
+
+- Diesel
+- SQLx
+- Rustorm
+- Quaint
+- Postgres
+- Rusqlite
+- Mysql
+- diesel-async
+- wtx
+
+It wasn't until 05 May 2021 that contributor and now lead maintainer
+[Georg Semmler][github weiznich] started tracking the Diesel benchmark results over time.
+He created [a nightly GitHub Action][github actions diesel metrics] to run the benchmarks
+and [a separate metrics repo][github diesel metrics] to track the benchmark results.
+Due to the noise of the GitHub Action runners, these results are only relied upon to show a general trend for large changes.
+There's also no monitoring setup, so the Diesel maintainers have to manually check the results to spot a performance regression.
+
+[github diesel first commit]: https://github.com/diesel-rs/diesel/commit/b6b65709ae0c4591713d286273afc293f4e36ca1
+[github sgrif]: https://github.com/sgrif
+[rust v1]: https://blog.rust-lang.org/2015/05/15/Rust-1.0.html
+[github diesel criterion]: https://github.com/diesel-rs/diesel/commit/11a989d0ce626d0482939ab3edf9da1fe0591365
+[github diesel bench]: https://github.com/diesel-rs/diesel/tree/master/diesel_bench
+[github weiznich]: https://github.com/weiznich
+[github diesel metrics]: https://github.com/diesel-rs/metrics
+[github actions diesel metrics]: https://github.com/diesel-rs/diesel/commit/f585d63ce573259fc848ff2d561fe5e86faadd6e
+
+[libtest bench]: /learn/benchmarking/rust/libtest-bench/
+[criterion]: /learn/benchmarking/rust/criterion/
+
+## Continuous Benchmarking for Diesel
+
+Before Diesel started to track their benchmarks,
+Georg Semmler set up [Relative Continuous Benchmarking][relative continuous benchmarking] for the Diesel project.
+Between 02 November 2020 and 29 January 2021,
+he [add a GitHub Actions workflow][github actions diesel benches] that was activated via a `run-benchmarks` label on a pull request.
+Once the label was added, GitHub Actions would run the benchmarks on both the current `master` and the PR branch
+and then compare the results using [`critcmp`][github critcmp].
+Due to security concerns around [pwn requests][github pwn requests], he had not yet found a way to safely post the results to the PR itself.
+This meant that the benchmark results had to be manually inspected to detect a performance regression,
+and the results would [be deleted in 90 days][github actions logs].
+
+After finding out about [Bencher][bencher],
+he wanted to take advantage of Bencher's [advanced statistical thresholds and alerts][thresholds]
+and Bencher's [ability to safely comment on pull requests][github actions].
+Bencher was also flexible enough to allow Diesel to still use it's `run-benchmarks` tag and keep `critcmp` as a fallback.
+With these changes [merge into Diesel][github issue 3849],
+they are now able to more easily compare their Relative Continuous Benchmarking results
+and catch performance regressions in pull requests.
+
+[github actions diesel benches]: https://github.com/diesel-rs/diesel/commit/6670f96f0ecccd8f28d302299750d6d6a9bd0524
+[github pwn requests]: https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
+[github critcmp]: https://github.com/BurntSushi/critcmp
+[github actions logs]: https://docs.github.com/en/organizations/managing-organization-settings/configuring-the-retention-period-for-github-actions-artifacts-and-logs-in-your-organization
+[github issue 3849]: https://github.com/diesel-rs/diesel/pull/3849
+
+[relative continuous benchmarking]: /docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+[bencher]: /
+[thresholds]: /docs/explanation/thresholds/
+[github actions]: /docs/how-to/github-actions/
+
+## Trophy Case
+
+[PR #3944][pr 3944]: This was the first pull request to use the new Bencher integration!
+Georg Semmler still had to run the benchmarks locally in order to detect a performance regression.
+So let's take this chance to celebrate a false negative and tune those thresholds!
+
+[pr 3944]: https://github.com/diesel-rs/diesel/pull/3944
+
+## Wrap Up
+
+<BencherFooter>
+The Diesel project uses Bencher to catch performance regressions in CI for performance sensitive pull requests.
+</BencherFooter>

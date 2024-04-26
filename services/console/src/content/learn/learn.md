@@ -2,6 +2,7 @@
 - Rust
   - The Ultimate Guide on how to Benchmark Rust Code
   - How to create a custom benchmarking harness in Rust
+  - How to track benchmarks in Rust
 - C++
   - Google
   - Catch2
