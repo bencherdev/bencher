@@ -3,9 +3,11 @@ import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import { createEffect, createMemo, createResource } from "solid-js";
 import { authUser } from "../../../util/auth";
 import { useNavigate, useSearchParams } from "../../../util/url";
-import { validJwt } from "../../../util/valid";
+import { validJwt, validPlanLevel } from "../../../util/valid";
 import { httpGet, httpPost } from "../../../util/http";
-import type { JsonNewToken, JsonToken } from "../../../types/bencher";
+import { PlanLevel, type JsonNewToken, type JsonToken } from "../../../types/bencher";
+import { PLAN_PARAM, planParam } from "../../auth/auth";
+import OnboardSteps, { OnboardStep } from "./OnboardSteps";
 
 export interface Props {
 	apiUrl: string;
@@ -16,8 +18,24 @@ const OnboardToken = (props: Props) => {
 		async () => await bencher_valid_init(),
 	);
 	const user = authUser();
-	const [searchParams, _setSearchParams] = useSearchParams();
+	const [searchParams, setSearchParams] = useSearchParams();
 	const navigate = useNavigate();
+
+	const plan = createMemo(() => searchParams[PLAN_PARAM] as PlanLevel);
+
+	createEffect(() => {
+		if (!bencher_valid()) {
+			return;
+		}
+
+		const initParams: Record<string, null | string> = {};
+		if (!validPlanLevel(searchParams[PLAN_PARAM])) {
+			initParams[PLAN_PARAM] = null;
+		}
+		if (Object.keys(initParams).length !== 0) {
+			setSearchParams(initParams);
+		}
+	});
 
 	const tokensFetcher = createMemo(() => {
 		return {
@@ -102,6 +120,15 @@ const OnboardToken = (props: Props) => {
 
 	return (
 		<>
+		<OnboardSteps step={OnboardStep.API_TOKEN} plan={plan} />
+
+		<section class="section">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-half">
+        <div class="content has-text-centered">
+        <h1 class="title is-1">Use this API token</h1>
+        <h2 class="subtitle is-4">Authenticate with Bencher using this API token.</h2>
 			<figure class="frame">
 				<pre data-language="plaintext">
 					<code>
@@ -126,7 +153,7 @@ const OnboardToken = (props: Props) => {
 			</figure>
 			<br />
 			<br />
-			<a class="button is-primary is-fullwidth" href="/console/onboard/project">
+			<a class="button is-primary is-fullwidth" href={`/console/onboard/project?${planParam(plan())}`}>
 				<span class="icon-text">
 					<span>Next Step</span>
 					<span class="icon">
@@ -134,6 +161,11 @@ const OnboardToken = (props: Props) => {
 					</span>
 				</span>
 			</a>
+			</div>
+    </div>
+    </div>
+  </div>
+</section>
 		</>
 	);
 };

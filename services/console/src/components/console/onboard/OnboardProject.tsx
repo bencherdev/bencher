@@ -10,7 +10,11 @@ import {
 } from "solid-js";
 import { authUser } from "../../../util/auth";
 import { useNavigate, useSearchParams } from "../../../util/url";
-import { validJwt, validResourceName } from "../../../util/valid";
+import {
+	validJwt,
+	validPlanLevel,
+	validResourceName,
+} from "../../../util/valid";
 import { httpGet, httpPatch, httpPost } from "../../../util/http";
 import type {
 	JsonNewProject,
@@ -18,10 +22,13 @@ import type {
 	JsonOrganization,
 	JsonProject,
 	JsonToken,
+	PlanLevel,
 } from "../../../types/bencher";
 import Field, { type FieldHandler } from "../../field/Field";
 import FieldKind from "../../field/kind";
 import { set } from "mermaid/dist/diagrams/state/id-cache.js";
+import { PLAN_PARAM, planParam } from "../../auth/auth";
+import OnboardSteps, { OnboardStep } from "./OnboardSteps";
 
 export interface Props {
 	apiUrl: string;
@@ -32,8 +39,24 @@ const OnboardProject = (props: Props) => {
 		async () => await bencher_valid_init(),
 	);
 	const user = authUser();
-	const [searchParams, _setSearchParams] = useSearchParams();
+	const [searchParams, setSearchParams] = useSearchParams();
 	const navigate = useNavigate();
+
+	const plan = createMemo(() => searchParams[PLAN_PARAM] as PlanLevel);
+
+	createEffect(() => {
+		if (!bencher_valid()) {
+			return;
+		}
+
+		const initParams: Record<string, null | string> = {};
+		if (!validPlanLevel(searchParams[PLAN_PARAM])) {
+			initParams[PLAN_PARAM] = null;
+		}
+		if (Object.keys(initParams).length !== 0) {
+			setSearchParams(initParams);
+		}
+	});
 
 	const orgsFetcher = createMemo(() => {
 		return {
@@ -239,72 +262,91 @@ const OnboardProject = (props: Props) => {
 
 	return (
 		<>
-			<form
-				onSubmit={(e) => {
-					e.preventDefault();
-				}}
-			>
-				<Field
-					kind={FieldKind.INPUT}
-					fieldKey="name"
-					value={renameProject() ?? project()?.name ?? ""}
-					valid={renameValid()}
-					config={{
-						label: "Project Name",
-						type: "text",
-						placeholder: project()?.name ?? "Project Name",
-						icon: "fas fa-project-diagram",
-						help: "Must be non-empty string",
-						validate: validResourceName,
-					}}
-					handleField={handleField}
-				/>
-				<button
-					class="button is-primary is-outlined is-fullwidth"
-					title="Copy project slug to clipboard"
-					onClick={(e) => {
-						e.preventDefault;
-						setSubmitting(true);
-					}}
-				>
-					Save Project Name
-				</button>
-			</form>
+			<OnboardSteps step={OnboardStep.PROJECT} plan={plan} />
 
-			<figure class="frame">
-				<h3 class="title is-5">Use this slug for your project</h3>
-				<pre data-language="plaintext">
-					<code>
-						<div class="code">{project()?.slug}</div>
-					</code>
-				</pre>
-				<button
-					class="button is-outlined is-fullwidth"
-					title="Copy project slug to clipboard"
-					onClick={(e) => {
-						e.preventDefault;
-						navigator.clipboard.writeText(project()?.slug);
-					}}
-				>
-					<span class="icon-text">
-						<span class="icon">
-							<i class="far fa-copy"></i>
-						</span>
-						<span>Copy to Clipboard</span>
-					</span>
-				</button>
-			</figure>
-			<br />
-			<br />
+			<section class="section">
+				<div class="container">
+					<div class="columns is-centered">
+						<div class="column is-half">
+							<div class="content has-text-centered">
+								<h1 class="title is-1">Name your first project</h1>
+								<h2 class="subtitle is-4">
+									Pick a name for your project. You can always change it later.
+								</h2>
+								<form
+									onSubmit={(e) => {
+										e.preventDefault();
+									}}
+								>
+									<Field
+										kind={FieldKind.INPUT}
+										fieldKey="name"
+										value={renameProject() ?? project()?.name ?? ""}
+										valid={renameValid()}
+										config={{
+											label: "Project Name",
+											type: "text",
+											placeholder: project()?.name ?? "Project Name",
+											icon: "fas fa-project-diagram",
+											help: "Must be non-empty string",
+											validate: validResourceName,
+										}}
+										handleField={handleField}
+									/>
+									<button
+										class="button is-primary is-outlined is-fullwidth"
+										title="Save project name"
+										onClick={(e) => {
+											e.preventDefault;
+											setSubmitting(true);
+										}}
+									>
+										Save Project Name
+									</button>
+								</form>
 
-			<a class="button is-primary is-fullwidth" href="/console/onboard/run">
-				<span class="icon-text">
-					<span>Next Step</span>
-					<span class="icon">
-						<i class="fas fa-chevron-right"></i>
-					</span>
-				</span>
-			</a>
+								<figure class="frame">
+									<h3 class="title is-5">Use this slug for your project</h3>
+									<pre data-language="plaintext">
+										<code>
+											<div class="code">{project()?.slug}</div>
+										</code>
+									</pre>
+									<button
+										class="button is-outlined is-fullwidth"
+										title="Copy project slug to clipboard"
+										onClick={(e) => {
+											e.preventDefault;
+											navigator.clipboard.writeText(project()?.slug);
+										}}
+									>
+										<span class="icon-text">
+											<span class="icon">
+												<i class="far fa-copy"></i>
+											</span>
+											<span>Copy to Clipboard</span>
+										</span>
+									</button>
+								</figure>
+								<br />
+								<br />
+
+								<a
+									class="button is-primary is-fullwidth"
+									href={`/console/onboard/run?${planParam(plan())}`}
+								>
+									<span class="icon-text">
+										<span>Next Step</span>
+										<span class="icon">
+											<i class="fas fa-chevron-right"></i>
+										</span>
+									</span>
+								</a>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
 		</>
 	);
 };

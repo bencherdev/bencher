@@ -1,3 +1,4 @@
+import type { PlanLevel } from "../../types/bencher";
 import { validEmail, validJwt, validUserName } from "../../util/valid";
 import { EMAIL, USERNAME } from "./authFields";
 
@@ -5,6 +6,9 @@ export const PLAN_PARAM = "plan";
 export const INVITE_PARAM = "invite";
 export const EMAIL_PARAM = "email";
 export const TOKEN_PARAM = "token";
+
+export const planParam = (plan: undefined | PlanLevel) =>
+	plan ? `${PLAN_PARAM}=${plan}` : "";
 
 export const AUTH_FIELDS = {
 	username: {

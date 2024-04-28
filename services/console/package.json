@@ -27,7 +27,7 @@
 		"@observablehq/plot": "^0.6.13",
 		"@solid-primitives/resize-observer": "^2.0.25",
 		"@solid-primitives/scheduled": "^1.4.3",
-		"astro": "^4.6.0",
+		"astro": "^4.7.0",
 		"astro-expressive-code": "^0.34.1",
 		"astro-seo": "^0.8.3",
 		"axios": "^1.6.8",

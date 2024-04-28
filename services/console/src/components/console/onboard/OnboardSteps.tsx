@@ -1,8 +1,11 @@
-import { For } from "solid-js";
+import { For, createMemo, type Accessor } from "solid-js";
 import { BENCHER_WORDMARK } from "../../../util/ext";
+import type { PlanLevel } from "../../../types/bencher";
+import { PLAN_PARAM } from "../../auth/auth";
 
 interface Props {
 	step: OnboardStep;
+	plan?: Accessor<PlanLevel>;
 }
 
 export enum OnboardStep {
@@ -13,7 +16,7 @@ export enum OnboardStep {
 	PLUS = 5,
 }
 
-const stepHref = (step: OnboardStep) => {
+const stepPath = (step: OnboardStep) => {
 	switch (step) {
 		case OnboardStep.API_TOKEN:
 			return "/console/onboard/token";
@@ -29,6 +32,13 @@ const stepHref = (step: OnboardStep) => {
 };
 
 const OnboardSteps = (props: Props) => {
+
+	const stepHref = (step: OnboardStep) => {
+		const path = stepPath(step);
+		const plan = props.plan?.();
+		return plan ? `${path}?plan=${plan}` : path;
+	};
+
 	return (
 		<section class="section">
 			<div class="container">
@@ -61,7 +71,10 @@ const OnboardSteps = (props: Props) => {
 											props.step >= step ? " is-active is-primary" : ""
 										}`}
 									>
-										<a class="step-marker" href={stepHref(step)}>
+										<a
+											class="step-marker"
+											href={stepHref(step)}
+										>
 											{step}
 										</a>
 									</div>
