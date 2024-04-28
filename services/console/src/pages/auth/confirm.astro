@@ -7,7 +7,7 @@ import AuthRedirect from "../../components/auth/AuthRedirect";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
-const title = "Confirm Token";
+const title = "Check your inbox";
 const description =
 	"Bencher uses a one-time token to confirm your email address instead of a password.";
 ---
@@ -15,11 +15,21 @@ const description =
 <AuthLayout title={title} description={description}>
   <AuthRedirect client:only="solid-js" apiUrl={BENCHER_API_URL} path="/console" />
 
-  <h1 class="title is-1">{title}</h1>
-  <h2 class="subtitle is-4">
-    Please check your email for a one-time token. Either click the link or paste
-    the token here.
-  </h2>
+  <div class="columns is-centered">
+    <div class="column is-narrow">
+      <span class="icon is-large has-text-primary">
+        <i class="fas fa-inbox fa-3x" aria-hidden="true" />
+      </span>
+    </div>
+  </div>
+  <div class="content has-text-centered">
+    <h1 class="title is-1">{title}</h1>
+    <h2 class="subtitle is-4">
+      We've sent a one-time token to your email.
+      <br />
+      Please click the link or paste the token here.
+    </h2>
+  </div>
 
   <ConfirmForm client:only="solid-js" apiUrl={BENCHER_API_URL} />
 </AuthLayout>
