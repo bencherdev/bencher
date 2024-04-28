@@ -354,6 +354,31 @@ export enum Visibility {
 	Private = "private",
 }
 
+export interface JsonNewProject {
+	/**
+	 * The name of the project.
+	 * Maximum length is 64 characters.
+	 */
+	name: ResourceName;
+	/**
+	 * The preferred slug for the project.
+	 * If not provided, the slug will be generated from the name.
+	 * If the provided or generated slug is already in use, a unique slug will be generated.
+	 * Maximum length is 64 characters.
+	 */
+	slug?: Slug;
+	/**
+	 * The URL for the project.
+	 * If the project is public, the URL will be accessible listed on its Perf Page.
+	 */
+	url?: Url;
+	/**
+	 * ➕ Bencher Plus: Set the visibility of the project.
+	 * Creating a `private` project requires a valid Bencher Plus subscription.
+	 */
+	visibility?: Visibility;
+}
+
 export interface JsonProject {
 	uuid: Uuid;
 	organization: Uuid;
@@ -549,6 +574,19 @@ export interface JsonUpdateUser {
 	 * Must be an admin to update this field.
 	 */
 	locked?: boolean;
+}
+
+export interface JsonNewToken {
+	/**
+	 * The name of the token.
+	 * Maximum length is 64 characters.
+	 */
+	name: ResourceName;
+	/**
+	 * The time-to-live (TTL) for the token in seconds.
+	 * If not provided, the token will not expire for over 128 years.
+	 */
+	ttl?: number;
 }
 
 export interface JsonToken {

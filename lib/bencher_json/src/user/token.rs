@@ -7,6 +7,7 @@ use crate::UserUuid;
 
 crate::typed_uuid::typed_uuid!(TokenUuid);
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewToken {

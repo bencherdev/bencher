@@ -1,0 +1,35 @@
+---
+export const prerender = false;
+
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import OnboardSteps, {
+	OnboardStep,
+} from "../../../components/console/onboard/OnboardSteps";
+import OnboardToken from "../../../components/console/onboard/OnboardToken";
+
+// Using `meta.env` requires `prerender = false`
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
+---
+
+<BaseLayout
+  title="API Token"
+  description="Setup a new API token for Bencher"
+>
+<OnboardSteps slot="navbar" step={OnboardStep.API_TOKEN} />
+
+<section class="section">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-half">
+        <div class="content has-text-centered">
+        <h1 class="title is-1">Use this API token</h1>
+        <h2 class="subtitle is-4">Authenticate with Bencher using this API token.</h2>
+        <OnboardToken client:only="solid-js" apiUrl={BENCHER_API_URL} />
+      </div>
+    </div>
+    </div>
+  </div>
+</section>
+
+<div slot="footer" />
+</BaseLayout>
