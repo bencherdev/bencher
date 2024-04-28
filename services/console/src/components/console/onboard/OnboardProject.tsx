@@ -1,4 +1,4 @@
-import bencher_valid_init, { type InitOutput } from "bencher_valid";
+import bencher_valid_init, { type InitOutput, new_slug } from "bencher_valid";
 
 import {
 	Match,
@@ -6,11 +6,12 @@ import {
 	createEffect,
 	createMemo,
 	createResource,
+	createSignal,
 } from "solid-js";
 import { authUser } from "../../../util/auth";
 import { useNavigate, useSearchParams } from "../../../util/url";
-import { validJwt } from "../../../util/valid";
-import { httpGet, httpPost } from "../../../util/http";
+import { validJwt, validResourceName } from "../../../util/valid";
+import { httpGet, httpPatch, httpPost } from "../../../util/http";
 import type {
 	JsonNewProject,
 	JsonNewToken,
@@ -18,6 +19,9 @@ import type {
 	JsonProject,
 	JsonToken,
 } from "../../../types/bencher";
+import Field, { type FieldHandler } from "../../field/Field";
+import FieldKind from "../../field/kind";
+import { set } from "mermaid/dist/diagrams/state/id-cache.js";
 
 export interface Props {
 	apiUrl: string;
@@ -105,10 +109,9 @@ const OnboardProject = (props: Props) => {
 				return null;
 			});
 	};
-	const [projects] = createResource<null | JsonProject[]>(
-		projectsFetcher,
-		getProjects,
-	);
+	const [projects, { refetch: refetchProjects }] = createResource<
+		null | JsonProject[]
+	>(projectsFetcher, getProjects);
 
 	const organizationProject = createMemo(() =>
 		Array.isArray(projects()) && (projects()?.length ?? 0) >= 1
@@ -161,15 +164,115 @@ const OnboardProject = (props: Props) => {
 				return null;
 			});
 	};
-	const [project] = createResource<null | JsonProject[]>(
+	const [project] = createResource<null | JsonProject>(
 		projectFetcher,
 		getProject,
 	);
 
+	const [renameProject, setRenameProject] = createSignal(null);
+	const [renameValid, setRenameValid] = createSignal(null);
+	const [submitting, setSubmitting] = createSignal(false);
+
+	const handleField: FieldHandler = (_key, value, valid) => {
+		setRenameProject(value);
+		setRenameValid(valid);
+	};
+
+	const updateProjectFetcher = createMemo(() => {
+		return {
+			bencher_valid: bencher_valid(),
+			token: user.token,
+			project: project(),
+			renameProject: renameProject(),
+			renameValid: renameValid(),
+			submitting: submitting(),
+		};
+	});
+	const updateProject = async (fetcher: {
+		bencher_valid: InitOutput;
+		token: string;
+		project: undefined | JsonProject;
+		renameProject: null | string;
+		renameValid: null | boolean;
+		submitting: boolean;
+	}) => {
+		if (!fetcher.submitting) {
+			return null;
+		}
+		setSubmitting(false);
+		if (!fetcher.bencher_valid) {
+			return undefined;
+		}
+		if (!validJwt(fetcher.token)) {
+			return null;
+		}
+		if (fetcher.project === undefined) {
+			return undefined;
+		}
+		if (
+			fetcher.project === null ||
+			fetcher.renameProject === null ||
+			fetcher.renameValid === null ||
+			fetcher.renameValid === false
+		) {
+			return null;
+		}
+		const path = `/v0/projects/${fetcher.project?.slug}`;
+		const data = {
+			name: fetcher.renameProject,
+			slug: new_slug(fetcher.renameProject),
+		};
+		return await httpPatch(props.apiUrl, path, fetcher.token, data)
+			.then((resp) => {
+				refetchProjects();
+				return resp?.data;
+			})
+			.catch((error) => {
+				console.error(error);
+				return null;
+			});
+	};
+	const [_updatedProject] = createResource<null | JsonProject>(
+		updateProjectFetcher,
+		updateProject,
+	);
+
 	return (
 		<>
+			<form
+				onSubmit={(e) => {
+					e.preventDefault();
+				}}
+			>
+				<Field
+					kind={FieldKind.INPUT}
+					fieldKey="name"
+					value={renameProject() ?? project()?.name ?? ""}
+					valid={renameValid()}
+					config={{
+						label: "Project Name",
+						type: "text",
+						placeholder: project()?.name ?? "Project Name",
+						icon: "fas fa-project-diagram",
+						help: "Must be non-empty string",
+						validate: validResourceName,
+					}}
+					handleField={handleField}
+				/>
+				<button
+					class="button is-primary is-outlined is-fullwidth"
+					title="Copy project slug to clipboard"
+					onClick={(e) => {
+						e.preventDefault;
+						setSubmitting(true);
+					}}
+				>
+					Save Project Name
+				</button>
+			</form>
+
 			<figure class="frame">
-				<h3 class="title is-5">Use this slug for your project:</h3>
+				<h3 class="title is-5">Use this slug for your project</h3>
 				<pre data-language="plaintext">
 					<code>
 						<div class="code">{project()?.slug}</div>
@@ -194,7 +297,7 @@ const OnboardProject = (props: Props) => {
 			<br />
 			<br />
 
-			<a class="button is-primary is-fullwidth" href="/console/onboard/project">
+			<a class="button is-primary is-fullwidth" href="/console/onboard/run">
 				<span class="icon-text">
 					<span>Next Step</span>
 					<span class="icon">

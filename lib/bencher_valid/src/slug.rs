@@ -77,6 +77,12 @@ pub fn is_valid_slug(slug: &str) -> bool {
     is_valid_len(slug) && slug == slug::slugify(slug)
 }
 
+#[allow(dead_code)]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+pub fn new_slug(slug: &str) -> String {
+    Slug::new(slug).0
+}
+
 impl Slug {
     pub const MAX: usize = MAX_LEN;
     #[cfg(feature = "full")]

@@ -177,15 +177,22 @@ const UpdateCard = (props: Props) => {
 			</div>
 			<div class="card-content">
 				<div class="content">
-					<Field
-						params={props.params}
-						kind={props.card?.field?.kind}
-						fieldKey={props.card?.field?.key}
-						value={form?.[props.card?.field?.key]?.value}
-						valid={form?.[props.card?.field?.key]?.valid}
-						config={props.card?.field?.config}
-						handleField={handleField}
-					/>
+					<form
+						onSubmit={(e) => {
+							e.preventDefault();
+							sendForm();
+						}}
+					>
+						<Field
+							params={props.params}
+							kind={props.card?.field?.kind}
+							fieldKey={props.card?.field?.key}
+							value={form?.[props.card?.field?.key]?.value}
+							valid={form?.[props.card?.field?.key]?.valid}
+							config={props.card?.field?.config}
+							handleField={handleField}
+						/>
+					</form>
 				</div>
 			</div>
 			<div class="card-footer">
