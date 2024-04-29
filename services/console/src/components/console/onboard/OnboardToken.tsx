@@ -2,7 +2,7 @@ import bencher_valid_init, { type InitOutput } from "bencher_valid";
 
 import { createEffect, createMemo, createResource } from "solid-js";
 import { authUser } from "../../../util/auth";
-import { useNavigate, useSearchParams } from "../../../util/url";
+import { useSearchParams } from "../../../util/url";
 import { validJwt, validPlanLevel } from "../../../util/valid";
 import { httpGet, httpPost } from "../../../util/http";
 import { PlanLevel, type JsonNewToken, type JsonToken } from "../../../types/bencher";
@@ -19,7 +19,6 @@ const OnboardToken = (props: Props) => {
 	);
 	const user = authUser();
 	const [searchParams, setSearchParams] = useSearchParams();
-	const navigate = useNavigate();
 
 	const plan = createMemo(() => searchParams[PLAN_PARAM] as PlanLevel);
 
@@ -37,6 +36,8 @@ const OnboardToken = (props: Props) => {
 		}
 	});
 
+	const tokenName = createMemo(() => `${user?.user?.name}'s token`);
+
 	const tokensFetcher = createMemo(() => {
 		return {
 			bencher_valid: bencher_valid(),
@@ -53,7 +54,7 @@ const OnboardToken = (props: Props) => {
 		if (!validJwt(fetcher.token)) {
 			return null;
 		}
-		const path = `/v0/users/${user?.user?.uuid}/tokens`;
+		const path = `/v0/users/${user?.user?.uuid}/tokens?name=${encodeURIComponent(tokenName())}`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
 				return resp?.data;
@@ -92,20 +93,13 @@ const OnboardToken = (props: Props) => {
 		if (fetcher.tokens === null) {
 			return null;
 		}
-		const now = new Date();
-		for (let i = 0; i < fetcher.tokens.length; i++) {
-			const expiration = fetcher.tokens[i]?.expiration;
-			if (!expiration) {
-				continue;
-			}
-			const expirationDate = new Date(expiration);
-			if (expirationDate > now) {
-				return fetcher.tokens[i];
-			}
+		// There should only ever be one token
+		if (fetcher.tokens.length > 0) {
+			return fetcher.tokens[0];
 		}
 		const path = `/v0/users/${user?.user?.uuid}/tokens`;
 		const data: JsonNewToken = {
-			name: `${user?.user?.name}'s token`,
+			name: tokenName(),
 		};
 		return await httpPost(props.apiUrl, path, fetcher.token, data)
 			.then((resp) => {
@@ -116,56 +110,56 @@ const OnboardToken = (props: Props) => {
 				return null;
 			});
 	};
-	const [apiToken] = createResource<null | JsonToken[]>(tokenFetcher, getToken);
+	const [apiToken] = createResource<null | JsonToken>(tokenFetcher, getToken);
 
 	return (
 		<>
 		<OnboardSteps step={OnboardStep.API_TOKEN} plan={plan} />
 
 		<section class="section">
-  <div class="container">
-    <div class="columns is-centered">
-      <div class="column is-half">
-        <div class="content has-text-centered">
-        <h1 class="title is-1">Use this API token</h1>
-        <h2 class="subtitle is-4">Authenticate with Bencher using this API token.</h2>
-			<figure class="frame">
-				<pre data-language="plaintext">
-					<code>
-						<div class="code">{apiToken()?.token}</div>
-					</code>
-				</pre>
-				<button
-					class="button is-outlined is-fullwidth"
-					title="Copy API token to clipboard"
-					onClick={(e) => {
-						e.preventDefault;
-						navigator.clipboard.writeText(apiToken()?.token);
-					}}
-				>
-					<span class="icon-text">
-						<span class="icon">
-							<i class="far fa-copy"></i>
-						</span>
-						<span>Copy to Clipboard</span>
-					</span>
-				</button>
-			</figure>
-			<br />
-			<br />
-			<a class="button is-primary is-fullwidth" href={`/console/onboard/project?${planParam(plan())}`}>
-				<span class="icon-text">
-					<span>Next Step</span>
-					<span class="icon">
-						<i class="fas fa-chevron-right"></i>
-					</span>
-				</span>
-			</a>
+			<div class="container">
+				<div class="columns is-centered">
+					<div class="column is-half">
+						<div class="content has-text-centered">
+							<h1 class="title is-1">Use this API token</h1>
+							<h2 class="subtitle is-4">Authenticate with Bencher using this API token.</h2>
+							<figure class="frame">
+								<pre data-language="plaintext">
+									<code>
+										<div class="code">{apiToken()?.token}</div>
+									</code>
+								</pre>
+								<button
+									class="button is-outlined is-fullwidth"
+									title="Copy API token to clipboard"
+									onClick={(e) => {
+										e.preventDefault;
+										navigator.clipboard.writeText(apiToken()?.token ?? "");
+									}}
+								>
+									<span class="icon-text">
+										<span class="icon">
+											<i class="far fa-copy"></i>
+										</span>
+										<span>Copy to Clipboard</span>
+									</span>
+								</button>
+							</figure>
+							<br />
+							<br />
+							<a class="button is-primary is-fullwidth" href={`/console/onboard/project?${planParam(plan())}`}>
+								<span class="icon-text">
+									<span>Next Step</span>
+									<span class="icon">
+										<i class="fas fa-chevron-right"></i>
+									</span>
+								</span>
+							</a>
+						</div>
+					</div>
+				</div>
 			</div>
-    </div>
-    </div>
-  </div>
-</section>
+		</section>
 		</>
 	);
 };

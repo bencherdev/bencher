@@ -90,7 +90,7 @@ const OnboardProject = (props: Props) => {
 	);
 
 	const organization = createMemo(() =>
-		Array.isArray(organizations()) && (organizations()?.length ?? 0) >= 1
+		Array.isArray(organizations()) && (organizations()?.length ?? 0) > 0
 			? (organizations()?.[0] as JsonOrganization)
 			: null,
 	);
@@ -137,7 +137,7 @@ const OnboardProject = (props: Props) => {
 	>(projectsFetcher, getProjects);
 
 	const organizationProject = createMemo(() =>
-		Array.isArray(projects()) && (projects()?.length ?? 0) >= 1
+		Array.isArray(projects()) && (projects()?.length ?? 0) > 0
 			? (projects()?.[0] as JsonProject)
 			: null,
 	);
