@@ -1,0 +1,83 @@
+---
+export const prerender = false;
+
+import { getEntry } from "astro:content";
+
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import OnboardInvite from "../../../components/console/onboard/OnboardInvite";
+import OnboardSteps, {
+	OnboardStep,
+} from "../../../components/console/onboard/OnboardSteps";
+import Collection from "../../../util/collection";
+
+// Using `meta.env` requires `prerender = false`
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
+---
+
+<BaseLayout
+  title="Invite Your Collaborators"
+  description="Invite collaborators to your project on Bencher"
+>
+<div slot="navbar" />
+
+<OnboardInvite client:only="solid-js" apiUrl={BENCHER_API_URL}>
+  <div slot="fallback">
+    <OnboardSteps step={OnboardStep.INVITE} />
+    <section class="section">
+      <div class="container">
+        <div class="columns is-centered">
+          <div class="column is-half">
+            <div class="content has-text-centered">
+              <h1 class="title is-1">Invite your collaborators</h1>
+              <h2 class="subtitle is-4">
+                Add collaborators as members of your organization.
+              </h2>
+              <form>
+                <div class="field">
+                  <div class="control has-icons-left has-icons-right">
+                    <span class="icon is-small is-left">
+                    </span>
+                    <input
+                      class="input"
+                    />
+                  </div>
+                  </div>
+                  <div class="field">
+                    <div class="control has-icons-left has-icons-right">
+                      <span class="icon is-small is-left">
+                      </span>
+                      <input
+                        class="input"
+                      />
+                    </div>
+                    </div>
+                <button
+                  class="button is-primary is-outlined is-fullwidth"
+                  title="Send invite to collaborator"
+                  disabled={true}
+                >
+                  Send Invite
+                </button>
+              </form>
+              <br />
+              <br />
+              <a
+                class="button is-primary is-fullwidth"
+              >
+                <span class="icon-text">
+                  <span>Next Step</span>
+                  <span class="icon">
+                    <i class="fas fa-chevron-right"></i>
+                  </span>
+                </span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</OnboardInvite>
+
+<div slot="footer" />
+</BaseLayout>

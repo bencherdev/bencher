@@ -1,8 +1,6 @@
 import bencher_valid_init, { type InitOutput, new_slug } from "bencher_valid";
 
 import {
-	Match,
-	Switch,
 	createEffect,
 	createMemo,
 	createResource,
@@ -18,15 +16,12 @@ import {
 import { httpGet, httpPatch, httpPost } from "../../../util/http";
 import type {
 	JsonNewProject,
-	JsonNewToken,
 	JsonOrganization,
 	JsonProject,
-	JsonToken,
 	PlanLevel,
 } from "../../../types/bencher";
 import Field, { type FieldHandler } from "../../field/Field";
 import FieldKind from "../../field/kind";
-import { set } from "mermaid/dist/diagrams/state/id-cache.js";
 import { PLAN_PARAM, planParam } from "../../auth/auth";
 import OnboardSteps, { OnboardStep } from "./OnboardSteps";
 
@@ -40,7 +35,6 @@ const OnboardProject = (props: Props) => {
 	);
 	const user = authUser();
 	const [searchParams, setSearchParams] = useSearchParams();
-	const navigate = useNavigate();
 
 	const plan = createMemo(() => searchParams[PLAN_PARAM] as PlanLevel);
 
@@ -69,10 +63,10 @@ const OnboardProject = (props: Props) => {
 		token: string;
 	}) => {
 		if (!fetcher.bencher_valid) {
-			return undefined;
+			return;
 		}
 		if (!validJwt(fetcher.token)) {
-			return null;
+			return;
 		}
 		const path = "/v0/organizations";
 		return await httpGet(props.apiUrl, path, fetcher.token)
@@ -81,19 +75,20 @@ const OnboardProject = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
-				return null;
+				return;
 			});
 	};
-	const [organizations] = createResource<null | JsonOrganization[]>(
+	const [organizations] = createResource<undefined | JsonOrganization[]>(
 		orgsFetcher,
 		getOrganizations,
 	);
 
-	const organization = createMemo(() =>
-		Array.isArray(organizations()) && (organizations()?.length ?? 0) > 0
-			? (organizations()?.[0] as JsonOrganization)
-			: null,
-	);
+	const organization = createMemo(() => {
+		const orgs = organizations();
+		return Array.isArray(orgs) && (orgs?.length ?? 0) > 0
+			? (orgs?.[0] as JsonOrganization)
+			: undefined;
+	});
 
 	const projectsFetcher = createMemo(() => {
 		return {
@@ -108,19 +103,14 @@ const OnboardProject = (props: Props) => {
 		organization: undefined | JsonOrganization;
 	}) => {
 		if (!fetcher.bencher_valid) {
-			return undefined;
+			return;
 		}
-		if (!validJwt(fetcher.token)) {
-			return null;
-		}
-		if (organizations.loading) {
-			return undefined;
-		}
-		if (fetcher.organization === undefined) {
-			return undefined;
-		}
-		if (fetcher.organization === null) {
-			return null;
+		if (
+			!validJwt(fetcher.token) ||
+			organizations.loading ||
+			fetcher.organization === undefined
+		) {
+			return;
 		}
 		const path = `/v0/organizations/${fetcher.organization?.slug}/projects`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
@@ -129,18 +119,19 @@ const OnboardProject = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
-				return null;
+				return;
 			});
 	};
 	const [projects, { refetch: refetchProjects }] = createResource<
-		null | JsonProject[]
+		undefined | JsonProject[]
 	>(projectsFetcher, getProjects);
 
-	const organizationProject = createMemo(() =>
-		Array.isArray(projects()) && (projects()?.length ?? 0) > 0
-			? (projects()?.[0] as JsonProject)
-			: null,
-	);
+	const organizationProject = createMemo(() => {
+		const orgProjects = projects();
+		return Array.isArray(orgProjects) && (orgProjects?.length ?? 0) > 0
+			? (orgProjects?.[0] as JsonProject)
+			: undefined;
+	});
 
 	const projectFetcher = createMemo(() => {
 		return {
@@ -157,19 +148,16 @@ const OnboardProject = (props: Props) => {
 		project: undefined | JsonProject;
 	}) => {
 		if (!fetcher.bencher_valid) {
-			return undefined;
+			return;
 		}
-		if (!validJwt(fetcher.token)) {
-			return null;
-		}
-		if (organizations.loading || projects.loading) {
-			return undefined;
-		}
-		if (fetcher.organization === undefined || fetcher.project === undefined) {
-			return undefined;
-		}
-		if (fetcher.organization === null) {
-			return null;
+		if (
+			!validJwt(fetcher.token) ||
+			organizations.loading ||
+			fetcher.organization === undefined ||
+			projects.loading ||
+			fetcher.project === undefined
+		) {
+			return;
 		}
 		if (fetcher.project) {
 			return fetcher.project;
@@ -184,21 +172,26 @@ const OnboardProject = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
-				return null;
+				return;
 			});
 	};
-	const [project] = createResource<null | JsonProject>(
+	const [project] = createResource<undefined | JsonProject>(
 		projectFetcher,
 		getProject,
 	);
 
-	const [renameProject, setRenameProject] = createSignal(null);
-	const [renameValid, setRenameValid] = createSignal(null);
+	const [renameProject, setRenameProject] = createSignal<null | string>(null);
+	const [renameValid, setRenameValid] = createSignal<null | boolean>(null);
 	const [submitting, setSubmitting] = createSignal(false);
 
+	const isSendable = (): boolean =>
+		!submitting() &&
+		renameProject() !== project()?.name &&
+		(renameValid() ?? false);
+
 	const handleField: FieldHandler = (_key, value, valid) => {
-		setRenameProject(value);
-		setRenameValid(valid);
+		setRenameProject(value as string);
+		setRenameValid(valid as boolean);
 	};
 
 	const updateProjectFetcher = createMemo(() => {
@@ -219,25 +212,18 @@ const OnboardProject = (props: Props) => {
 		renameValid: null | boolean;
 		submitting: boolean;
 	}) => {
-		if (!fetcher.submitting) {
-			return null;
-		}
-		setSubmitting(false);
-		if (!fetcher.bencher_valid) {
-			return undefined;
-		}
-		if (!validJwt(fetcher.token)) {
-			return null;
-		}
-		if (fetcher.project === undefined) {
+		if (!fetcher.submitting || !fetcher.bencher_valid) {
+			setSubmitting(false);
 			return undefined;
 		}
 		if (
-			fetcher.project === null ||
+			!validJwt(fetcher.token) ||
+			fetcher.project === undefined ||
 			fetcher.renameProject === null ||
 			fetcher.renameValid === null ||
 			fetcher.renameValid === false
 		) {
+			setSubmitting(false);
 			return null;
 		}
 		const path = `/v0/projects/${fetcher.project?.slug}`;
@@ -247,15 +233,17 @@ const OnboardProject = (props: Props) => {
 		};
 		return await httpPatch(props.apiUrl, path, fetcher.token, data)
 			.then((resp) => {
+				setSubmitting(false);
 				refetchProjects();
 				return resp?.data;
 			})
 			.catch((error) => {
+				setSubmitting(false);
 				console.error(error);
-				return null;
+				return;
 			});
 	};
-	const [_updatedProject] = createResource<null | JsonProject>(
+	const [_updatedProject] = createResource<undefined | JsonProject>(
 		updateProjectFetcher,
 		updateProject,
 	);
@@ -296,8 +284,9 @@ const OnboardProject = (props: Props) => {
 									<button
 										class="button is-primary is-outlined is-fullwidth"
 										title="Save project name"
+										disabled={!isSendable()}
 										onClick={(e) => {
-											e.preventDefault;
+											e.preventDefault();
 											setSubmitting(true);
 										}}
 									>
@@ -316,7 +305,7 @@ const OnboardProject = (props: Props) => {
 										class="button is-outlined is-fullwidth"
 										title="Copy project slug to clipboard"
 										onClick={(e) => {
-											e.preventDefault;
+											e.preventDefault();
 											navigator.clipboard.writeText(project()?.slug);
 										}}
 									>
@@ -333,7 +322,7 @@ const OnboardProject = (props: Props) => {
 
 								<a
 									class="button is-primary is-fullwidth"
-									href={`/console/onboard/run?${planParam(plan())}`}
+									href={`/console/onboard/run${planParam(plan())}`}
 								>
 									<span class="icon-text">
 										<span>Next Step</span>

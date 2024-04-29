@@ -53,10 +53,10 @@ const OnboardToken = (props: Props) => {
 		token: string;
 	}) => {
 		if (!fetcher.bencher_valid) {
-			return undefined;
+			return;
 		}
 		if (!validJwt(fetcher.token)) {
-			return null;
+			return;
 		}
 		const path = `/v0/users/${
 			user?.user?.uuid
@@ -67,10 +67,10 @@ const OnboardToken = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
-				return null;
+				return;
 			});
 	};
-	const [apiTokens] = createResource<null | JsonToken[]>(
+	const [apiTokens] = createResource<undefined | JsonToken[]>(
 		tokensFetcher,
 		getTokens,
 	);
@@ -85,19 +85,13 @@ const OnboardToken = (props: Props) => {
 	const getToken = async (fetcher: {
 		bencher_valid: InitOutput;
 		token: string;
-		tokens: undefined | null | JsonToken[];
+		tokens: undefined | JsonToken[];
 	}) => {
 		if (!fetcher.bencher_valid) {
-			return undefined;
+			return;
 		}
-		if (!validJwt(fetcher.token)) {
-			return null;
-		}
-		if (fetcher.tokens === undefined) {
-			return undefined;
-		}
-		if (fetcher.tokens === null) {
-			return null;
+		if (!validJwt(fetcher.token) || fetcher.tokens === undefined) {
+			return;
 		}
 		// There should only ever be one token
 		if (fetcher.tokens.length > 0) {
@@ -113,10 +107,13 @@ const OnboardToken = (props: Props) => {
 			})
 			.catch((error) => {
 				console.error(error);
-				return null;
+				return;
 			});
 	};
-	const [apiToken] = createResource<null | JsonToken>(tokenFetcher, getToken);
+	const [apiToken] = createResource<undefined | JsonToken>(
+		tokenFetcher,
+		getToken,
+	);
 
 	return (
 		<>
@@ -141,7 +138,7 @@ const OnboardToken = (props: Props) => {
 										class="button is-outlined is-fullwidth"
 										title="Copy API token to clipboard"
 										onClick={(e) => {
-											e.preventDefault;
+											e.preventDefault();
 											navigator.clipboard.writeText(apiToken()?.token ?? "");
 										}}
 									>
@@ -157,7 +154,7 @@ const OnboardToken = (props: Props) => {
 								<br />
 								<a
 									class="button is-primary is-fullwidth"
-									href={`/console/onboard/project?${planParam(plan())}`}
+									href={`/console/onboard/project${planParam(plan())}`}
 								>
 									<span class="icon-text">
 										<span>Next Step</span>

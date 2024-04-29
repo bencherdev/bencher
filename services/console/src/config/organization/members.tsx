@@ -6,7 +6,7 @@ import { OrganizationPermission } from "../../types/bencher";
 import { isAllowedOrganization } from "../../util/auth";
 import FieldKind from "../../components/field/kind";
 
-const MEMBER_FIELDS = {
+export const MEMBER_FIELDS = {
 	name: {
 		type: "text",
 		placeholder: "Member Name",

@@ -18,7 +18,70 @@ const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 <div slot="navbar" />
 
 <OnboardProject client:only="solid-js" apiUrl={BENCHER_API_URL}>
-  <OnboardSteps slot="fallback" step={OnboardStep.PROJECT} />
+  <div slot="fallback">
+    <OnboardSteps step={OnboardStep.PROJECT} />
+    <section class="section">
+      <div class="container">
+        <div class="columns is-centered">
+          <div class="column is-half">
+            <div class="content has-text-centered">
+              <h1 class="title is-1">Name your first project</h1>
+              <h2 class="subtitle is-4">
+                Pick a name for your project. You can always change it later.
+              </h2>
+              <form>
+                <div class="field">
+                <div class="control has-icons-left has-icons-right">
+                  <span class="icon is-small is-left">
+                  </span>
+                  <input
+                    class="input"
+                  />
+                </div>
+                </div>
+                <button
+                  class="button is-primary is-outlined is-fullwidth"
+                  title="Save project name"
+                  disabled={true}
+                >
+                  Save Project Name
+                </button>
+              </form>
+
+              <figure class="frame">
+                <h3 class="title is-5">This is your project slug</h3>
+                <pre data-language="plaintext">
+                </pre>
+                <button
+                  class="button is-outlined is-fullwidth"
+                  title="Copy project slug to clipboard"
+                >
+                  <span class="icon-text">
+                    <span class="icon">
+                      <i class="far fa-copy"></i>
+                    </span>
+                    <span>Copy to Clipboard</span>
+                  </span>
+                </button>
+              </figure>
+              <br />
+              <br />
+              <a
+                class="button is-primary is-fullwidth"
+              >
+                <span class="icon-text">
+                  <span>Next Step</span>
+                  <span class="icon">
+                    <i class="fas fa-chevron-right"></i>
+                  </span>
+                </span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
 </OnboardProject>
 
 <div slot="footer" />

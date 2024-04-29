@@ -18,7 +18,50 @@ const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 <div slot="navbar" />
 
 <OnboardToken client:only="solid-js" apiUrl={BENCHER_API_URL} >
-  <OnboardSteps slot="fallback" step={OnboardStep.API_TOKEN} />
+  <div slot="fallback">
+    <OnboardSteps step={OnboardStep.API_TOKEN} />
+    <section class="section">
+      <div class="container">
+        <div class="columns is-centered">
+          <div class="column is-half">
+            <div class="content has-text-centered">
+              <h1 class="title is-1">Use this API token</h1>
+              <h2 class="subtitle is-4">
+                Authenticate with Bencher using this API token.
+              </h2>
+              <figure class="frame">
+                <pre data-language="plaintext">
+                </pre>
+                <button
+                  class="button is-outlined is-fullwidth"
+                  title="Copy API token to clipboard"
+                >
+                  <span class="icon-text">
+                    <span class="icon">
+                      <i class="far fa-copy"></i>
+                    </span>
+                    <span>Copy to Clipboard</span>
+                  </span>
+                </button>
+              </figure>
+              <br />
+              <br />
+              <a
+                class="button is-primary is-fullwidth"
+              >
+                <span class="icon-text">
+                  <span>Next Step</span>
+                  <span class="icon">
+                    <i class="fas fa-chevron-right"></i>
+                  </span>
+                </span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
 </OnboardToken>
 
 <div slot="footer" />

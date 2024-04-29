@@ -196,6 +196,24 @@ export type Url = string;
 
 export type UserName = string;
 
+export enum OrganizationRole {
+	/** The organization leader role. */
+	Leader = "leader",
+}
+
+export interface JsonNewMember {
+	/** The user name for the invitee. */
+	name?: UserName;
+	/**
+	 * The email for the invitee.
+	 * This will be used to both send the invite
+	 * and to create the user account if they do not exist.
+	 */
+	email: Email;
+	/** The organization role for the invitee. */
+	role: OrganizationRole;
+}
+
 export interface JsonOrganization {
 	uuid: Uuid;
 	name: ResourceName;

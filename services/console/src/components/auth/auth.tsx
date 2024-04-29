@@ -8,7 +8,7 @@ export const EMAIL_PARAM = "email";
 export const TOKEN_PARAM = "token";
 
 export const planParam = (plan: undefined | PlanLevel) =>
-	plan ? `${PLAN_PARAM}=${plan}` : "";
+	plan ? `?${PLAN_PARAM}=${plan}` : "";
 
 export const AUTH_FIELDS = {
 	username: {

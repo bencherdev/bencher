@@ -1,7 +1,6 @@
-import { For, createMemo, type Accessor } from "solid-js";
+import { For, type Accessor } from "solid-js";
 import { BENCHER_WORDMARK } from "../../../util/ext";
 import type { PlanLevel } from "../../../types/bencher";
-import { PLAN_PARAM } from "../../auth/auth";
 
 interface Props {
 	step: OnboardStep;
@@ -13,7 +12,7 @@ export enum OnboardStep {
 	PROJECT = 2,
 	RUN = 3,
 	INVITE = 4,
-	PLUS = 5,
+	PLAN = 5,
 }
 
 const stepPath = (step: OnboardStep) => {
@@ -26,8 +25,8 @@ const stepPath = (step: OnboardStep) => {
 			return "/console/onboard/run";
 		case OnboardStep.INVITE:
 			return "/console/onboard/invite";
-		case OnboardStep.PLUS:
-			return "/console/onboard/billing";
+		case OnboardStep.PLAN:
+			return "/console/onboard/plan";
 	}
 };
 
@@ -61,7 +60,7 @@ const OnboardSteps = (props: Props) => {
 									OnboardStep.PROJECT,
 									OnboardStep.RUN,
 									OnboardStep.INVITE,
-									OnboardStep.PLUS,
+									OnboardStep.PLAN,
 								]}
 							>
 								{(step) => (

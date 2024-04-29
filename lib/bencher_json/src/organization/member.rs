@@ -10,6 +10,7 @@ use crate::UserUuid;
 pub const MEMBER_ROLE: &str = "member";
 pub const LEADER_ROLE: &str = "leader";
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewMember {
@@ -55,6 +56,7 @@ pub struct JsonUpdateMember {
     pub role: Option<OrganizationRole>,
 }
 
+#[typeshare::typeshare]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]

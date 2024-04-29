@@ -14,7 +14,6 @@ import Collection from "../../../util/collection";
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 
 const collection = Collection.onboard;
-// Get `src/content/blog/enterprise.md`
 const page = await getEntry(collection, "en/install-cli");
 const { Content } = await page.render();
 ---
@@ -26,7 +25,50 @@ const { Content } = await page.render();
 <div slot="navbar" />
 
 <OnboardRun client:only="solid-js" apiUrl={BENCHER_API_URL}>
-  <OnboardSteps slot="fallback" step={OnboardStep.RUN} />
+  <div slot="fallback">
+    <OnboardSteps step={OnboardStep.RUN} />
+    <section class="section">
+      <div class="container">
+        <div class="columns is-centered">
+          <div class="column is-half">
+            <div class="content has-text-centered">
+              <h1 class="title is-1">Track your benchmarks</h1>
+              <h2 class="subtitle is-4">
+                Install the Bencher CLI and run your first benchmarks.
+              </h2>
+              <figure class="frame">
+                <pre data-language="plaintext">
+                </pre>
+                <button
+                  class="button is-outlined is-fullwidth"
+                  title="Copy command to clipboard"
+                >
+                  <span class="icon-text">
+                    <span class="icon">
+                      <i class="far fa-copy"></i>
+                    </span>
+                    <span>Copy to Clipboard</span>
+                  </span>
+                </button>
+              </figure>
+              <br />
+              <br />
+              <a
+                class="button is-primary is-fullwidth"
+              >
+                <span class="icon-text">
+                  <span>Next Step</span>
+                  <span class="icon">
+                    <i class="fas fa-chevron-right"></i>
+                  </span>
+                </span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
 </OnboardRun>
 
 <section class="section">

@@ -35,7 +35,7 @@ export interface Props {
 	apiUrl: string;
 }
 
-const OnboardProject = (props: Props) => {
+const OnboardRun = (props: Props) => {
 	const [bencher_valid] = createResource(
 		async () => await bencher_valid_init(),
 	);
@@ -219,7 +219,7 @@ const OnboardProject = (props: Props) => {
 										class="button is-outlined is-fullwidth"
 										title="Copy command to clipboard"
 										onClick={(e) => {
-											e.preventDefault;
+											e.preventDefault();
 											navigator.clipboard.writeText(runCode());
 										}}
 									>
@@ -235,7 +235,7 @@ const OnboardProject = (props: Props) => {
 								<br />
 								<a
 									class="button is-primary is-fullwidth"
-									href={`/console/onboard/invite?${planParam(plan())}`}
+									href={`/console/onboard/invite${planParam(plan())}`}
 								>
 									<span class="icon-text">
 										<span>Next Step</span>
@@ -253,4 +253,4 @@ const OnboardProject = (props: Props) => {
 	);
 };
 
-export default OnboardProject;
+export default OnboardRun;
