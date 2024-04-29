@@ -57,6 +57,8 @@ export const collections = {
 	rust: page,
 	case_study: page,
 	engineering: page,
+	// onboard
+	onboard: page,
 };
 
 export const keywords = ["Continuous Benchmarking"];

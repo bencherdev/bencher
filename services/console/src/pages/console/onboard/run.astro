@@ -1,0 +1,45 @@
+---
+export const prerender = false;
+
+import { getEntry } from "astro:content";
+
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import OnboardRun from "../../../components/console/onboard/OnboardRun";
+import OnboardSteps, {
+	OnboardStep,
+} from "../../../components/console/onboard/OnboardSteps";
+import Collection from "../../../util/collection";
+
+// Using `meta.env` requires `prerender = false`
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
+
+const collection = Collection.onboard;
+// Get `src/content/blog/enterprise.md`
+const page = await getEntry(collection, "en/install-cli");
+const { Content } = await page.render();
+---
+
+<BaseLayout
+  title="Track Your Benchmarks"
+  description="Track your benchmarks with Bencher"
+>
+<div slot="navbar" />
+
+<OnboardRun client:only="solid-js" apiUrl={BENCHER_API_URL}>
+  <OnboardSteps slot="fallback" step={OnboardStep.RUN} />
+</OnboardRun>
+
+<section class="section">
+  <div class="continer">
+    <div class="columns is-centered">
+      <div class="column is-half">
+        <div class="content">
+          <Content />
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div slot="footer" />
+</BaseLayout>

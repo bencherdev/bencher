@@ -29,6 +29,7 @@ import FieldKind from "../../field/kind";
 import { set } from "mermaid/dist/diagrams/state/id-cache.js";
 import { PLAN_PARAM, planParam } from "../../auth/auth";
 import OnboardSteps, { OnboardStep } from "./OnboardSteps";
+import { isBencherCloud } from "../../../util/ext";
 
 export interface Props {
 	apiUrl: string;
@@ -132,29 +133,22 @@ const OnboardProject = (props: Props) => {
 				return null;
 			});
 	};
-	const [projects, { refetch: refetchProjects }] = createResource<
-		null | JsonProject[]
-	>(projectsFetcher, getProjects);
-
-	const organizationProject = createMemo(() =>
-		Array.isArray(projects()) && (projects()?.length ?? 0) > 0
-			? (projects()?.[0] as JsonProject)
-			: null,
+	const [projects] = createResource<null | JsonProject[]>(
+		projectsFetcher,
+		getProjects,
 	);
 
-	const projectFetcher = createMemo(() => {
+	const tokenName = createMemo(() => `${user?.user?.name}'s token`);
+
+	const tokensFetcher = createMemo(() => {
 		return {
 			bencher_valid: bencher_valid(),
 			token: user.token,
-			organization: organization(),
-			project: organizationProject(),
 		};
 	});
-	const getProject = async (fetcher: {
+	const getTokens = async (fetcher: {
 		bencher_valid: InitOutput;
 		token: string;
-		organization: undefined | JsonOrganization;
-		project: undefined | JsonProject;
 	}) => {
 		if (!fetcher.bencher_valid) {
 			return undefined;
@@ -162,23 +156,10 @@ const OnboardProject = (props: Props) => {
 		if (!validJwt(fetcher.token)) {
 			return null;
 		}
-		if (organizations.loading || projects.loading) {
-			return undefined;
-		}
-		if (fetcher.organization === undefined || fetcher.project === undefined) {
-			return undefined;
-		}
-		if (fetcher.organization === null) {
-			return null;
-		}
-		if (fetcher.project) {
-			return fetcher.project;
-		}
-		const path = `/v0/organizations/${fetcher.organization?.slug}/projects`;
-		const data: JsonNewProject = {
-			name: `${user?.user?.name}'s project`,
-		};
-		return await httpPost(props.apiUrl, path, fetcher.token, data)
+		const path = `/v0/users/${
+			user?.user?.uuid
+		}/tokens?name=${encodeURIComponent(tokenName())}`;
+		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
 				return resp?.data;
 			})
@@ -187,137 +168,59 @@ const OnboardProject = (props: Props) => {
 				return null;
 			});
 	};
-	const [project] = createResource<null | JsonProject>(
-		projectFetcher,
-		getProject,
+	const [apiTokens] = createResource<null | JsonToken[]>(
+		tokensFetcher,
+		getTokens,
 	);
 
-	const [renameProject, setRenameProject] = createSignal(null);
-	const [renameValid, setRenameValid] = createSignal(null);
-	const [submitting, setSubmitting] = createSignal(false);
-
-	const handleField: FieldHandler = (_key, value, valid) => {
-		setRenameProject(value);
-		setRenameValid(valid);
-	};
-
-	const updateProjectFetcher = createMemo(() => {
-		return {
-			bencher_valid: bencher_valid(),
-			token: user.token,
-			project: project(),
-			renameProject: renameProject(),
-			renameValid: renameValid(),
-			submitting: submitting(),
-		};
+	const runCode = createMemo(() => {
+		if (projects.loading) {
+			return "";
+		}
+		const orgProjects = projects();
+		const project =
+			Array.isArray(orgProjects) && (orgProjects?.length ?? 0) > 0
+				? (orgProjects?.[0] as JsonProject)
+				: {
+						slug: bencher_valid()
+							? new_slug(`${user?.user?.name}'s project`)
+							: "",
+					};
+		const token =
+			Array.isArray(apiTokens()) && (apiTokens()?.length ?? 0) > 0
+				? (apiTokens()?.[0] as JsonToken)
+				: {
+						token: "YOUR_TOKEN_HERE",
+					};
+		const host = isBencherCloud() ? "" : `--host ${props.apiUrl} `;
+		return `bencher run --project ${project.slug} --token ${token.token} ${host}bencher mock`;
 	});
-	const updateProject = async (fetcher: {
-		bencher_valid: InitOutput;
-		token: string;
-		project: undefined | JsonProject;
-		renameProject: null | string;
-		renameValid: null | boolean;
-		submitting: boolean;
-	}) => {
-		if (!fetcher.submitting) {
-			return null;
-		}
-		setSubmitting(false);
-		if (!fetcher.bencher_valid) {
-			return undefined;
-		}
-		if (!validJwt(fetcher.token)) {
-			return null;
-		}
-		if (fetcher.project === undefined) {
-			return undefined;
-		}
-		if (
-			fetcher.project === null ||
-			fetcher.renameProject === null ||
-			fetcher.renameValid === null ||
-			fetcher.renameValid === false
-		) {
-			return null;
-		}
-		const path = `/v0/projects/${fetcher.project?.slug}`;
-		const data = {
-			name: fetcher.renameProject,
-			slug: new_slug(fetcher.renameProject),
-		};
-		return await httpPatch(props.apiUrl, path, fetcher.token, data)
-			.then((resp) => {
-				refetchProjects();
-				return resp?.data;
-			})
-			.catch((error) => {
-				console.error(error);
-				return null;
-			});
-	};
-	const [_updatedProject] = createResource<null | JsonProject>(
-		updateProjectFetcher,
-		updateProject,
-	);
 
 	return (
 		<>
-			<OnboardSteps step={OnboardStep.PROJECT} plan={plan} />
+			<OnboardSteps step={OnboardStep.RUN} plan={plan} />
 
 			<section class="section">
 				<div class="container">
 					<div class="columns is-centered">
 						<div class="column is-half">
 							<div class="content has-text-centered">
-								<h1 class="title is-1">Name your first project</h1>
+								<h1 class="title is-1">Track your benchmarks</h1>
 								<h2 class="subtitle is-4">
-									Pick a name for your project. You can always change it later.
+									Install the Bencher CLI and run your first benchmarks.
 								</h2>
-								<form
-									onSubmit={(e) => {
-										e.preventDefault();
-									}}
-								>
-									<Field
-										kind={FieldKind.INPUT}
-										fieldKey="name"
-										value={renameProject() ?? project()?.name ?? ""}
-										valid={renameValid()}
-										config={{
-											label: "Project Name",
-											type: "text",
-											placeholder: project()?.name ?? "Project Name",
-											icon: "fas fa-project-diagram",
-											help: "Must be non-empty string",
-											validate: validResourceName,
-										}}
-										handleField={handleField}
-									/>
-									<button
-										class="button is-primary is-outlined is-fullwidth"
-										title="Save project name"
-										onClick={(e) => {
-											e.preventDefault;
-											setSubmitting(true);
-										}}
-									>
-										Save Project Name
-									</button>
-								</form>
-
 								<figure class="frame">
-									<h3 class="title is-5">This is your project slug</h3>
 									<pre data-language="plaintext">
 										<code>
-											<div class="code">{project()?.slug}</div>
+											<div class="code">{runCode()}</div>
 										</code>
 									</pre>
 									<button
 										class="button is-outlined is-fullwidth"
-										title="Copy project slug to clipboard"
+										title="Copy command to clipboard"
 										onClick={(e) => {
 											e.preventDefault;
-											navigator.clipboard.writeText(project()?.slug);
+											navigator.clipboard.writeText(runCode());
 										}}
 									>
 										<span class="icon-text">
@@ -330,10 +233,9 @@ const OnboardProject = (props: Props) => {
 								</figure>
 								<br />
 								<br />
-
 								<a
 									class="button is-primary is-fullwidth"
-									href={`/console/onboard/run?${planParam(plan())}`}
+									href={`/console/onboard/invite?${planParam(plan())}`}
 								>
 									<span class="icon-text">
 										<span>Next Step</span>

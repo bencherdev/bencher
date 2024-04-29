@@ -23,7 +23,7 @@ const stepPath = (step: OnboardStep) => {
 		case OnboardStep.PROJECT:
 			return "/console/onboard/project";
 		case OnboardStep.RUN:
-			return "/console/onboard/report";
+			return "/console/onboard/run";
 		case OnboardStep.INVITE:
 			return "/console/onboard/invite";
 		case OnboardStep.PLUS:
@@ -32,7 +32,6 @@ const stepPath = (step: OnboardStep) => {
 };
 
 const OnboardSteps = (props: Props) => {
-
 	const stepHref = (step: OnboardStep) => {
 		const path = stepPath(step);
 		const plan = props.plan?.();
@@ -71,10 +70,7 @@ const OnboardSteps = (props: Props) => {
 											props.step >= step ? " is-active is-primary" : ""
 										}`}
 									>
-										<a
-											class="step-marker"
-											href={stepHref(step)}
-										>
+										<a class="step-marker" href={stepHref(step)}>
 											{step}
 										</a>
 									</div>

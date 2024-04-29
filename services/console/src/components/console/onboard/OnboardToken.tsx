@@ -5,7 +5,11 @@ import { authUser } from "../../../util/auth";
 import { useSearchParams } from "../../../util/url";
 import { validJwt, validPlanLevel } from "../../../util/valid";
 import { httpGet, httpPost } from "../../../util/http";
-import { PlanLevel, type JsonNewToken, type JsonToken } from "../../../types/bencher";
+import {
+	PlanLevel,
+	type JsonNewToken,
+	type JsonToken,
+} from "../../../types/bencher";
 import { PLAN_PARAM, planParam } from "../../auth/auth";
 import OnboardSteps, { OnboardStep } from "./OnboardSteps";
 
@@ -54,7 +58,9 @@ const OnboardToken = (props: Props) => {
 		if (!validJwt(fetcher.token)) {
 			return null;
 		}
-		const path = `/v0/users/${user?.user?.uuid}/tokens?name=${encodeURIComponent(tokenName())}`;
+		const path = `/v0/users/${
+			user?.user?.uuid
+		}/tokens?name=${encodeURIComponent(tokenName())}`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
 				return resp?.data;
@@ -114,52 +120,57 @@ const OnboardToken = (props: Props) => {
 
 	return (
 		<>
-		<OnboardSteps step={OnboardStep.API_TOKEN} plan={plan} />
+			<OnboardSteps step={OnboardStep.API_TOKEN} plan={plan} />
 
-		<section class="section">
-			<div class="container">
-				<div class="columns is-centered">
-					<div class="column is-half">
-						<div class="content has-text-centered">
-							<h1 class="title is-1">Use this API token</h1>
-							<h2 class="subtitle is-4">Authenticate with Bencher using this API token.</h2>
-							<figure class="frame">
-								<pre data-language="plaintext">
-									<code>
-										<div class="code">{apiToken()?.token}</div>
-									</code>
-								</pre>
-								<button
-									class="button is-outlined is-fullwidth"
-									title="Copy API token to clipboard"
-									onClick={(e) => {
-										e.preventDefault;
-										navigator.clipboard.writeText(apiToken()?.token ?? "");
-									}}
+			<section class="section">
+				<div class="container">
+					<div class="columns is-centered">
+						<div class="column is-half">
+							<div class="content has-text-centered">
+								<h1 class="title is-1">Use this API token</h1>
+								<h2 class="subtitle is-4">
+									Authenticate with Bencher using this API token.
+								</h2>
+								<figure class="frame">
+									<pre data-language="plaintext">
+										<code>
+											<div class="code">{apiToken()?.token}</div>
+										</code>
+									</pre>
+									<button
+										class="button is-outlined is-fullwidth"
+										title="Copy API token to clipboard"
+										onClick={(e) => {
+											e.preventDefault;
+											navigator.clipboard.writeText(apiToken()?.token ?? "");
+										}}
+									>
+										<span class="icon-text">
+											<span class="icon">
+												<i class="far fa-copy"></i>
+											</span>
+											<span>Copy to Clipboard</span>
+										</span>
+									</button>
+								</figure>
+								<br />
+								<br />
+								<a
+									class="button is-primary is-fullwidth"
+									href={`/console/onboard/project?${planParam(plan())}`}
 								>
 									<span class="icon-text">
+										<span>Next Step</span>
 										<span class="icon">
-											<i class="far fa-copy"></i>
+											<i class="fas fa-chevron-right"></i>
 										</span>
-										<span>Copy to Clipboard</span>
 									</span>
-								</button>
-							</figure>
-							<br />
-							<br />
-							<a class="button is-primary is-fullwidth" href={`/console/onboard/project?${planParam(plan())}`}>
-								<span class="icon-text">
-									<span>Next Step</span>
-									<span class="icon">
-										<i class="fas fa-chevron-right"></i>
-									</span>
-								</span>
-							</a>
+								</a>
+							</div>
 						</div>
 					</div>
 				</div>
-			</div>
-		</section>
+			</section>
 		</>
 	);
 };
