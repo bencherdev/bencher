@@ -12,7 +12,12 @@ import {
 import consoleConfig from "../../../config/console";
 import { Host } from "../../../config/organization/billing";
 import { BencherResource } from "../../../config/types";
-import { type JsonUsage, type Jwt, UsageKind, type JsonAuthUser } from "../../../types/bencher";
+import {
+	type JsonUsage,
+	type Jwt,
+	UsageKind,
+	type JsonAuthUser,
+} from "../../../types/bencher";
 import { authUser } from "../../../util/auth";
 import {
 	fmtDate,
@@ -89,17 +94,20 @@ const BillingPanel = (props: Props) => {
 	);
 
 	return (
-		<Show when={!props.onboard} fallback={
-			<BillingPanelSwitch
-				apiUrl={props.apiUrl}
-				params={props.params}
-				onboard={true}
-				bencher_valid={bencher_valid}
-				user={user}
-				usage={usage}
-				handleRefresh={refetch}
-			/>
-		}>
+		<Show
+			when={!props.onboard}
+			fallback={
+				<BillingPanelSwitch
+					apiUrl={props.apiUrl}
+					params={props.params}
+					onboard={true}
+					bencher_valid={bencher_valid}
+					user={user}
+					usage={usage}
+					handleRefresh={refetch}
+				/>
+			}
+		>
 			<BillingHeader config={config()?.header} />
 			<section class="section">
 				<div class="container">
@@ -122,18 +130,17 @@ const BillingPanel = (props: Props) => {
 	);
 };
 
-const BillingPanelSwitch = (props: { apiUrl: string;
+const BillingPanelSwitch = (props: {
+	apiUrl: string;
 	params: Params;
 	onboard: boolean;
 	bencher_valid: Resource<InitOutput>;
 	user: JsonAuthUser;
 	usage: Resource<null | JsonUsage>;
-	handleRefresh: () => void; } ) => {
-
+	handleRefresh: () => void;
+}) => {
 	return (
-		<Switch fallback={
-			<ConsoleFallbackPricingTable hideFree={props.onboard}/>
-		}>
+		<Switch fallback={<ConsoleFallbackPricingTable hideFree={props.onboard} />}>
 			{/* Bencher Cloud */}
 			<Match when={props.usage()?.kind === UsageKind.CloudFree}>
 				<BillingForm
@@ -152,10 +159,11 @@ const BillingPanelSwitch = (props: { apiUrl: string;
 			<Match when={props.usage()?.kind === UsageKind.CloudLicensed}>
 				<CloudLicensedPanel usage={props.usage} />
 			</Match>
-			<Match
-				when={props.usage()?.kind === UsageKind.CloudSelfHostedLicensed}
-			>
-				<CloudSelfHostedLicensedPanel onboard={props.onboard} usage={props.usage} />
+			<Match when={props.usage()?.kind === UsageKind.CloudSelfHostedLicensed}>
+				<CloudSelfHostedLicensedPanel
+					onboard={props.onboard}
+					usage={props.usage}
+				/>
 			</Match>
 			{/* Self-Hosted */}
 			<Match when={props.usage()?.kind === UsageKind.SelfHostedFree}>
@@ -173,7 +181,7 @@ const BillingPanelSwitch = (props: { apiUrl: string;
 			</Match>
 		</Switch>
 	);
-}
+};
 
 const CloudMeteredPanel = (props: {
 	usage: Resource<null | JsonUsage>;
@@ -290,16 +298,17 @@ const CloudSelfHostedLicensedPanel = (props: {
 							Click here to copy your Self-Hosted license key
 						</a>
 					</li>
-					{props.onboard ?
-					<li>
-						Navigate to the Organization Billing page in your Bencher Self-Hosted account
-					</li>
-					:
-					<li>
-						Navigate to this same page on your Bencher Self-Hosted account,
-						Organization Billing
-					</li>
-					}
+					{props.onboard ? (
+						<li>
+							Navigate to the Organization Billing page in your Bencher
+							Self-Hosted account
+						</li>
+					) : (
+						<li>
+							Navigate to this same page on your Bencher Self-Hosted account,
+							Organization Billing
+						</li>
+					)}
 					<li>Enter your license key in the "Self-Hosted License Key" box</li>
 					<li>
 						🎉 Lettuce turnip the beet! You now have a Bencher Plus Self-Hosted
@@ -386,16 +395,17 @@ const SelfHostedFreePanel = (props: {
 						</a>{" "}
 						if you don't already have one
 					</li>
-					{props.onboard ?
-					<li>
-						Navigate to the Organization Billing page in your Bencher Cloud account
-					</li>
-					:
-					<li>
-						Navigate to this same page on your Bencher Cloud account,
-						Organization Billing
-					</li>
-					}
+					{props.onboard ? (
+						<li>
+							Navigate to the Organization Billing page in your Bencher Cloud
+							account
+						</li>
+					) : (
+						<li>
+							Navigate to this same page on your Bencher Cloud account,
+							Organization Billing
+						</li>
+					)}
 					<li>Select either the "Team" or "Enterprise" plan</li>
 					<li>Select "Self-Hosted License"</li>
 					<li>
@@ -427,7 +437,7 @@ const SelfHostedFreePanel = (props: {
 					</li>
 				</ol>
 			</h4>
-			<div class={`columns ${props.onboard ? "is-centered": ""}`}>
+			<div class={`columns ${props.onboard ? "is-centered" : ""}`}>
 				<div class={`column ${props.onboard ? "" : "is-two-thirds"}`}>
 					<Field
 						kind={FieldKind.INPUT}

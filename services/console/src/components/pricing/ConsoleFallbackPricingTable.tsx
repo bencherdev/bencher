@@ -4,7 +4,7 @@ export const FREE_TEXT = "Stick with Free";
 export const TEAM_TEXT = "Go with Team";
 export const ENTERPRISE_TEXT = "Go with Enterprise";
 
-const ConsoleFallbackPricingTable = (props: { hideFree: boolean; }) => {
+const ConsoleFallbackPricingTable = (props: { hideFree: boolean }) => {
 	return (
 		<Pricing
 			freeText={FREE_TEXT}

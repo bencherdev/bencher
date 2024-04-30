@@ -115,6 +115,11 @@ export const isAllowedOrganizationEdit = (apiUrl: string, params: Params) =>
 export const isAllowedOrganizationManage = (apiUrl: string, params: Params) =>
 	isAllowedOrganization(apiUrl, params, OrganizationPermission.Manage);
 
+export const isAllowedOrganizationDeleteRole = (
+	apiUrl: string,
+	params: Params,
+) => isAllowedOrganization(apiUrl, params, OrganizationPermission.DeleteRole);
+
 export const isAllowedProjectEdit = (apiUrl: string, params: Params) =>
 	isAllowedProject(apiUrl, params, ProjectPermission.Edit);
 

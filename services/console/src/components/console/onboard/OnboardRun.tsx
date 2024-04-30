@@ -1,16 +1,9 @@
 import bencher_valid_init, { type InitOutput, new_slug } from "bencher_valid";
 
-import {
-	createEffect,
-	createMemo,
-	createResource,
-} from "solid-js";
+import { createEffect, createMemo, createResource } from "solid-js";
 import { authUser } from "../../../util/auth";
 import { useSearchParams } from "../../../util/url";
-import {
-	validJwt,
-	validPlanLevel,
-} from "../../../util/valid";
+import { validJwt, validPlanLevel } from "../../../util/valid";
 import { httpGet } from "../../../util/http";
 import type {
 	JsonOrganization,

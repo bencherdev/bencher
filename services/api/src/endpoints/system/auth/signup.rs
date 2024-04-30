@@ -56,9 +56,6 @@ async fn post_inner(
         ));
     }
 
-    #[cfg(feature = "plus")]
-    let plan = json_signup.plan.unwrap_or_default();
-
     let invited = json_signup.invite.is_some();
     let insert_user =
         InsertUser::insert_from_json(conn_lock!(context), &context.token_key, &json_signup)?;
@@ -88,8 +85,10 @@ async fn post_inner(
             .join("/auth/confirm")
             .map(|mut url| {
                 #[cfg(feature = "plus")]
-                url.query_pairs_mut()
-                    .append_pair(super::PLAN_ARG, plan.as_ref());
+                if let Some(plan) = json_signup.plan {
+                    url.query_pairs_mut()
+                        .append_pair(super::PLAN_ARG, plan.as_ref());
+                }
                 url.query_pairs_mut().append_pair(TOKEN_ARG, &token);
                 url.into()
             })

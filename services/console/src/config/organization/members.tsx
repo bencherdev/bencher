@@ -1,9 +1,12 @@
 import type { Params } from "astro";
 import { validEmail, validSlug, validUserName } from "../../util/valid";
-import { Button, Card, Display, Operation, Row } from "../types";
+import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { invitePath, parentPath, viewSlugPath } from "../util";
 import { OrganizationPermission } from "../../types/bencher";
-import { isAllowedOrganization } from "../../util/auth";
+import {
+	isAllowedOrganization,
+	isAllowedOrganizationDeleteRole,
+} from "../../util/auth";
 import FieldKind from "../../components/field/kind";
 
 export const MEMBER_FIELDS = {
@@ -204,6 +207,15 @@ const MembersConfig = {
 						validate: false,
 						config: MEMBER_FIELDS.role,
 					},
+				},
+			],
+			buttons: [
+				{
+					kind: ActionButton.DELETE,
+					subtitle:
+						"⚠️ Are you sure you want to remove this member from your organization? ⚠️",
+					path: parentPath,
+					is_allowed: isAllowedOrganizationDeleteRole,
 				},
 			],
 		},

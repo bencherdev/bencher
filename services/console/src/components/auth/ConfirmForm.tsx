@@ -41,9 +41,9 @@ const ConfirmForm = (props: Props) => {
 		return !submitting() && valid();
 	};
 
-	const token = createMemo(() => searchParams[TOKEN_PARAM]?.trim() as Jwt);
-	const plan = createMemo(() => searchParams[PLAN_PARAM]?.trim() as PlanLevel);
-	const email = createMemo(() => searchParams[EMAIL_PARAM]?.trim() as Email);
+	const token = createMemo(() => searchParams[TOKEN_PARAM] as Jwt);
+	const plan = createMemo(() => searchParams[PLAN_PARAM] as PlanLevel);
+	const email = createMemo(() => searchParams[EMAIL_PARAM] as Email);
 
 	const [submitted, setSubmitted] = createSignal();
 	const [form, setForm] = createStore<{
@@ -79,7 +79,7 @@ const ConfirmForm = (props: Props) => {
 				if (setUser(user)) {
 					navigateNotify(
 						NotifyKind.OK,
-						`Hoppy to ${plan() ? "meet you" : "see you again"}, ${
+						`Hoppy to see you, ${
 							user.user.name
 						}!`,
 						"/console",
@@ -104,8 +104,8 @@ const ConfirmForm = (props: Props) => {
 		setSubmitting(true);
 
 		const login: JsonLogin = {
-			email: email().trim(),
-			plan: plan()?.trim() as PlanLevel,
+			email: email(),
+			plan: plan() as PlanLevel,
 		};
 		httpPost(props.apiUrl, "/v0/auth/login", null, login)
 			.then((_resp) => {
@@ -146,7 +146,7 @@ const ConfirmForm = (props: Props) => {
 		if (!validEmail(searchParams[EMAIL_PARAM])) {
 			initParams[EMAIL_PARAM] = null;
 		}
-		const token_value = form.token?.value;
+		const token_value = form.token?.value.trim();
 		if (validJwt(token_value)) {
 			initParams[TOKEN_PARAM] = token_value;
 		}

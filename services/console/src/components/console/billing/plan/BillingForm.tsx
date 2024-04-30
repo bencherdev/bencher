@@ -26,7 +26,11 @@ import Pricing from "./Pricing";
 // Toggle checkout flow
 // import PaymentCard from "./PaymentCard";
 import Checkout from "./Checkout";
-import { ENTERPRISE_TEXT, FREE_TEXT, TEAM_TEXT } from "../../../pricing/ConsoleFallbackPricingTable";
+import {
+	ENTERPRISE_TEXT,
+	FREE_TEXT,
+	TEAM_TEXT,
+} from "../../../pricing/ConsoleFallbackPricingTable";
 
 interface Props {
 	apiUrl: string;
@@ -116,6 +120,8 @@ const BillingForm = (props: Props) => {
 		}
 		if (!validPlanLevel(searchParams[PLAN_PARAM])) {
 			setPlanLevel(props.onboard ? PlanLevel.Team : PlanLevel.Free);
+		} else if (props.onboard && plan() === PlanLevel.Free) {
+			setPlanLevel(PlanLevel.Team);
 		}
 	});
 

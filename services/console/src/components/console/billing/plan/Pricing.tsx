@@ -27,38 +27,38 @@ const Pricing = (props: Props) => {
 	return (
 		<div id="plans" class="pricing-table is-comparative">
 			<Show when={!props.hideFree}>
-			<div
-				class={`pricing-plan ${props.plan === PlanLevel.Free && "is-active"}`}
-			>
-				<div class="plan-header">
-					<h2 class="title is-2">Free</h2>
-				</div>
-				<div class="plan-price">
-					<span class="plan-price-amount">$0</span>
-				</div>
-				<div class="content has-text-centered">
-					<sup>per benchmark result</sup>
-				</div>
-				<div class="plan-items">
-					<div class="plan-item">Public Projects</div>
-					<div class="plan-item" data-feature="Private Projects">
-						⎯⎯⎯
+				<div
+					class={`pricing-plan ${props.plan === PlanLevel.Free && "is-active"}`}
+				>
+					<div class="plan-header">
+						<h2 class="title is-2">Free</h2>
 					</div>
-					<div class="plan-item">Community Support</div>
-					<div class="plan-item" data-feature="Single Sign-On (SSO)">
-						⎯⎯⎯
+					<div class="plan-price">
+						<span class="plan-price-amount">$0</span>
 					</div>
-					<div class="plan-item" data-feature="Dedicated Onboarding">
-						⎯⎯⎯
+					<div class="content has-text-centered">
+						<sup>per benchmark result</sup>
 					</div>
+					<div class="plan-items">
+						<div class="plan-item">Public Projects</div>
+						<div class="plan-item" data-feature="Private Projects">
+							⎯⎯⎯
+						</div>
+						<div class="plan-item">Community Support</div>
+						<div class="plan-item" data-feature="Single Sign-On (SSO)">
+							⎯⎯⎯
+						</div>
+						<div class="plan-item" data-feature="Dedicated Onboarding">
+							⎯⎯⎯
+						</div>
+					</div>
+					<Footer
+						active={props.plan}
+						plan={PlanLevel.Free}
+						text={props.freeText}
+						handlePlanLevel={props.handleFree}
+					/>
 				</div>
-				<Footer
-					active={props.plan}
-					plan={PlanLevel.Free}
-					text={props.freeText}
-					handlePlanLevel={props.handleFree}
-				/>
-			</div>
 			</Show>
 
 			<div

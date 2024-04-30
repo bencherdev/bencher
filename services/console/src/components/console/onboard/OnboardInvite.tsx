@@ -9,10 +9,7 @@ import {
 } from "solid-js";
 import { authUser } from "../../../util/auth";
 import { useSearchParams } from "../../../util/url";
-import {
-	validJwt,
-	validPlanLevel,
-} from "../../../util/valid";
+import { validJwt, validPlanLevel } from "../../../util/valid";
 import { httpGet, httpPost } from "../../../util/http";
 import {
 	OrganizationRole,

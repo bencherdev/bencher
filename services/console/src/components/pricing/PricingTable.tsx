@@ -5,14 +5,15 @@ import InnerPricingTable from "./InnerPricingTable";
 const PricingTable = () => {
 	const navigate = useNavigate();
 
+	const URL = "/auth/signup";
 	const url = (plan: PlanLevel) => {
-		return `/auth/signup?plan=${plan}`;
+		return `${URL}?plan=${plan}`;
 	};
 
 	return (
 		<InnerPricingTable
 			handleFree={() => {
-				navigate(url(PlanLevel.Free));
+				navigate(URL);
 			}}
 			handleTeam={() => {
 				navigate(url(PlanLevel.Team));

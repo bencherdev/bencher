@@ -105,10 +105,7 @@ const OnboardProject = (props: Props) => {
 		if (!fetcher.bencher_valid) {
 			return;
 		}
-		if (
-			!validJwt(fetcher.token) ||
-			fetcher.organization === undefined
-		) {
+		if (!validJwt(fetcher.token) || fetcher.organization === undefined) {
 			return;
 		}
 		const path = `/v0/organizations/${fetcher.organization?.slug}/projects`;

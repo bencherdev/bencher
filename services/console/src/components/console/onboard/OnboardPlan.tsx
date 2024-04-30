@@ -1,21 +1,11 @@
 import bencher_valid_init, { type InitOutput } from "bencher_valid";
 
-import {
-	createEffect,
-	createMemo,
-	createResource,
-} from "solid-js";
+import { createEffect, createMemo, createResource } from "solid-js";
 import { authUser } from "../../../util/auth";
 import { useSearchParams } from "../../../util/url";
-import {
-	validJwt,
-	validPlanLevel,
-} from "../../../util/valid";
+import { validJwt, validPlanLevel } from "../../../util/valid";
 import { httpGet } from "../../../util/http";
-import {
-	type JsonOrganization,
-	type PlanLevel,
-} from "../../../types/bencher";
+import { type JsonOrganization, type PlanLevel } from "../../../types/bencher";
 import { PLAN_PARAM } from "../../auth/auth";
 import OnboardSteps, { OnboardStep } from "./OnboardSteps";
 import BillingPanel from "../billing/BillingPanel";
@@ -100,9 +90,15 @@ const OnboardPlan = (props: Props) => {
 								</h2>
 							</div>
 							<br />
-							<BillingPanel apiUrl={props.apiUrl} params={{ organization: organization()?.slug ?? "" }} onboard={true} />
+							<BillingPanel
+								apiUrl={props.apiUrl}
+								params={{ organization: organization()?.slug ?? "" }}
+								onboard={true}
+							/>
 							<div class="content has-text-centered">
-								<a class="button is-small is-black is-inverted" href="/console">I want to use the free plan for now</a>
+								<a class="button is-small is-black is-inverted" href="/console">
+									I want to use the free plan for now
+								</a>
 							</div>
 						</div>
 					</div>
