@@ -24,7 +24,17 @@ const description =
   <AuthForm client:only="solid-js" apiUrl={BENCHER_API_URL} newUser={newUser} >
     <LoginForm slot="fallback"/>
   </AuthForm>
-  <OAuthForm client:only="solid-js" newUser={newUser} githubClientId={GITHUB_CLIENT_ID} />
+  <OAuthForm client:only="solid-js" newUser={newUser} githubClientId={GITHUB_CLIENT_ID}>
+    <div slot="fallback">
+      <div class="is-divider" data-content="OR"></div>
+      <a class="button is-fullwidth is-outlined">
+        <span class="icon">
+          <i class="fab fa-github" aria-hidden="true" />
+        </span>
+        <span>Log in with GitHub</span>
+      </a>
+  </div>
+</OAuthForm>
 
   <hr />
 

@@ -12,7 +12,6 @@ import { useSearchParams } from "../../../util/url";
 import {
 	validJwt,
 	validPlanLevel,
-	validResourceName,
 } from "../../../util/valid";
 import { httpGet, httpPost } from "../../../util/http";
 import {
@@ -141,7 +140,6 @@ const OnboardInvite = (props: Props) => {
 		}
 		if (
 			!validJwt(fetcher.token) ||
-			organizations.loading ||
 			!fetcher.organization ||
 			!fetcher.submitting ||
 			!fetcher.valid

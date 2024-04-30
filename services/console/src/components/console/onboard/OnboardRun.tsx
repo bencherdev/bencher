@@ -1,32 +1,23 @@
 import bencher_valid_init, { type InitOutput, new_slug } from "bencher_valid";
 
 import {
-	Match,
-	Switch,
 	createEffect,
 	createMemo,
 	createResource,
-	createSignal,
 } from "solid-js";
 import { authUser } from "../../../util/auth";
-import { useNavigate, useSearchParams } from "../../../util/url";
+import { useSearchParams } from "../../../util/url";
 import {
 	validJwt,
 	validPlanLevel,
-	validResourceName,
 } from "../../../util/valid";
-import { httpGet, httpPatch, httpPost } from "../../../util/http";
+import { httpGet } from "../../../util/http";
 import type {
-	JsonNewProject,
-	JsonNewToken,
 	JsonOrganization,
 	JsonProject,
 	JsonToken,
 	PlanLevel,
 } from "../../../types/bencher";
-import Field, { type FieldHandler } from "../../field/Field";
-import FieldKind from "../../field/kind";
-import { set } from "mermaid/dist/diagrams/state/id-cache.js";
 import { PLAN_PARAM, planParam } from "../../auth/auth";
 import OnboardSteps, { OnboardStep } from "./OnboardSteps";
 import { isBencherCloud } from "../../../util/ext";
@@ -41,7 +32,6 @@ const OnboardRun = (props: Props) => {
 	);
 	const user = authUser();
 	const [searchParams, setSearchParams] = useSearchParams();
-	const navigate = useNavigate();
 
 	const plan = createMemo(() => searchParams[PLAN_PARAM] as PlanLevel);
 
@@ -174,9 +164,6 @@ const OnboardRun = (props: Props) => {
 	);
 
 	const runCode = createMemo(() => {
-		if (projects.loading) {
-			return "";
-		}
 		const orgProjects = projects();
 		const project =
 			Array.isArray(orgProjects) && (orgProjects?.length ?? 0) > 0

@@ -13,9 +13,10 @@ export const per_metric_cost = (plan: PlanLevel) => {
 };
 
 interface Props {
-	plan: PlanLevel;
+	plan?: PlanLevel;
 	freeText: string;
 	handleFree: () => void;
+	hideFree?: undefined | boolean;
 	teamText: string;
 	handleTeam: () => void;
 	enterpriseText: string;
@@ -25,6 +26,7 @@ interface Props {
 const Pricing = (props: Props) => {
 	return (
 		<div id="plans" class="pricing-table is-comparative">
+			<Show when={!props.hideFree}>
 			<div
 				class={`pricing-plan ${props.plan === PlanLevel.Free && "is-active"}`}
 			>
@@ -57,6 +59,7 @@ const Pricing = (props: Props) => {
 					handlePlanLevel={props.handleFree}
 				/>
 			</div>
+			</Show>
 
 			<div
 				class={`pricing-plan ${props.plan === PlanLevel.Team && "is-active"}`}
@@ -122,7 +125,7 @@ const Pricing = (props: Props) => {
 };
 
 const Footer = (props: {
-	active: string;
+	active: undefined | string;
 	plan: string;
 	text: string;
 	handlePlanLevel: () => void;

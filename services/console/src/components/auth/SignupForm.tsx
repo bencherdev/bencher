@@ -1,7 +1,7 @@
 import Input from "../field/kinds/Input";
 import { EMAIL, USERNAME } from "./authFields";
 
-const LoginForm = () => {
+const SignupForm = () => {
 	return (
 		<form class="box">
 			<div class="field">
@@ -23,11 +23,11 @@ const LoginForm = () => {
 							e.preventDefault();
 						}}
 					>
-						Log in
+						Sign up
 					</button>
 				</p>
 			</div>
 		</form>
 	);
 };
-export default LoginForm;
+export default SignupForm;

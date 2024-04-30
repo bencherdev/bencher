@@ -7,7 +7,7 @@ import {
 	createSignal,
 } from "solid-js";
 import { authUser } from "../../../util/auth";
-import { useNavigate, useSearchParams } from "../../../util/url";
+import { useSearchParams } from "../../../util/url";
 import {
 	validJwt,
 	validPlanLevel,
@@ -107,7 +107,6 @@ const OnboardProject = (props: Props) => {
 		}
 		if (
 			!validJwt(fetcher.token) ||
-			organizations.loading ||
 			fetcher.organization === undefined
 		) {
 			return;
@@ -138,6 +137,7 @@ const OnboardProject = (props: Props) => {
 			bencher_valid: bencher_valid(),
 			token: user.token,
 			organization: organization(),
+			projects: projects(),
 			project: organizationProject(),
 		};
 	});
@@ -145,6 +145,7 @@ const OnboardProject = (props: Props) => {
 		bencher_valid: InitOutput;
 		token: string;
 		organization: undefined | JsonOrganization;
+		projects: undefined | JsonProject[];
 		project: undefined | JsonProject;
 	}) => {
 		if (!fetcher.bencher_valid) {
@@ -152,10 +153,8 @@ const OnboardProject = (props: Props) => {
 		}
 		if (
 			!validJwt(fetcher.token) ||
-			organizations.loading ||
 			fetcher.organization === undefined ||
-			projects.loading ||
-			fetcher.project === undefined
+			fetcher.projects === undefined
 		) {
 			return;
 		}

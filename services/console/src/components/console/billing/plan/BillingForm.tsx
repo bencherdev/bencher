@@ -26,10 +26,12 @@ import Pricing from "./Pricing";
 // Toggle checkout flow
 // import PaymentCard from "./PaymentCard";
 import Checkout from "./Checkout";
+import { ENTERPRISE_TEXT, FREE_TEXT, TEAM_TEXT } from "../../../pricing/ConsoleFallbackPricingTable";
 
 interface Props {
 	apiUrl: string;
 	params: Params;
+	onboard: boolean;
 	bencher_valid: Resource<InitOutput>;
 	user: JsonAuthUser;
 	usage: Resource<null | JsonUsage>;
@@ -113,7 +115,7 @@ const BillingForm = (props: Props) => {
 			return;
 		}
 		if (!validPlanLevel(searchParams[PLAN_PARAM])) {
-			setPlanLevel(PlanLevel.Free);
+			setPlanLevel(props.onboard ? PlanLevel.Team : PlanLevel.Free);
 		}
 	});
 
@@ -121,11 +123,12 @@ const BillingForm = (props: Props) => {
 		<>
 			<Pricing
 				plan={plan()}
-				freeText="Stick with Free"
+				freeText={FREE_TEXT}
 				handleFree={() => setPlanLevel(PlanLevel.Free)}
-				teamText="Go with Team"
+				hideFree={props.onboard}
+				teamText={TEAM_TEXT}
 				handleTeam={() => setPlanLevel(PlanLevel.Team)}
-				enterpriseText="Go with Enterprise"
+				enterpriseText={ENTERPRISE_TEXT}
 				handleEnterprise={() => setPlanLevel(PlanLevel.Enterprise)}
 			/>
 			<Show
@@ -159,6 +162,7 @@ const BillingForm = (props: Props) => {
 				<Checkout
 					apiUrl={props.apiUrl}
 					params={props.params}
+					onboard={props.onboard}
 					bencher_valid={props.bencher_valid}
 					user={props.user}
 					organization={props.usage()?.organization}

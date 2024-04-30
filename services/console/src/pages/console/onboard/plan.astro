@@ -1,0 +1,44 @@
+---
+export const prerender = false;
+
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import OnboardPlan from "../../../components/console/onboard/OnboardPlan";
+import OnboardSteps, {
+	OnboardStep,
+} from "../../../components/console/onboard/OnboardSteps";
+import ConsoleFallbackPricingTable from "../../../components/pricing/ConsoleFallbackPricingTable";
+
+// Using `meta.env` requires `prerender = false`
+const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
+---
+
+<BaseLayout
+  title="Activate Your Plan"
+  description="Invite collaborators to your project on Bencher"
+>
+<div slot="navbar" />
+
+<OnboardPlan client:only="solid-js" apiUrl={BENCHER_API_URL}>
+  <div slot="fallback">
+    <OnboardSteps step={OnboardStep.PLAN} />
+    <section class="section">
+      <div class="container">
+        <div class="columns is-centered">
+          <div class="column is-half">
+            <div class="content has-text-centered">
+              <h1 class="title is-1">Activate your account</h1>
+              <h2 class="subtitle is-4">
+                All plans come with a 30-day money-back guarantee.
+              </h2>
+            </div>
+            <br />
+            <ConsoleFallbackPricingTable hideFree={true} />
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</OnboardPlan>
+
+<div slot="footer" />
+</BaseLayout>

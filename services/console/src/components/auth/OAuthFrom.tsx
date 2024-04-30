@@ -30,7 +30,7 @@ const OAuthForm = (props: Props) => {
 					<span class="icon">
 						<i class="fab fa-github" aria-hidden="true" />
 					</span>
-					<span>{props.newUser ? "Sign up" : "Sign in"} with GitHub</span>
+					<span>{props.newUser ? "Sign up" : "Log in"} with GitHub</span>
 				</a>
 			</>
 		);

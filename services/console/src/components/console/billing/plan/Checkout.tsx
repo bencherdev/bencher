@@ -14,6 +14,7 @@ import { validJwt } from "../../../../util/valid";
 interface Props {
 	apiUrl: string;
 	params: Params;
+	onboard: boolean;
 	bencher_valid: Resource<InitOutput>;
 	user: JsonAuthUser;
 	organization: undefined | string;
@@ -69,7 +70,7 @@ const Checkout = (props: Props) => {
 
 	return (
 		<div class="columns is-centered" style="margin-top: 1rem;">
-			<div class="column is-half">
+			<div class={`column ${props.onboard ? "" : "is-half"}`}>
 				<button
 					class="button is-primary is-fullwidth"
 					type="submit"
@@ -79,7 +80,12 @@ const Checkout = (props: Props) => {
 						sendForm();
 					}}
 				>
-					Subscribe
+					<span class="icon-text">
+						<span>Activate</span>
+						<span class="icon">
+							<i class="fas fa-chevron-right"></i>
+						</span>
+					</span>
 				</button>
 			</div>
 		</div>

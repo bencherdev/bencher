@@ -1,14 +1,11 @@
 ---
 export const prerender = false;
 
-import { getEntry } from "astro:content";
-
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import OnboardInvite from "../../../components/console/onboard/OnboardInvite";
 import OnboardSteps, {
 	OnboardStep,
 } from "../../../components/console/onboard/OnboardSteps";
-import Collection from "../../../util/collection";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
