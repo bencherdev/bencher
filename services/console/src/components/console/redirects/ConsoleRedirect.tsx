@@ -72,7 +72,7 @@ const ConsoleRedirect = (props: Props) => {
 						navigate("/console/organizations", { replace: true });
 						break;
 				}
-				return resp?.data;
+				return orgs;
 			})
 			.catch((error) => {
 				console.error(error);
@@ -121,8 +121,8 @@ const ConsoleRedirect = (props: Props) => {
 		const path = `/v0/organizations/${fetcher.organization?.slug}/projects?per_page=1`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
-				const projs = resp?.data;
-				switch (projs?.length) {
+				const projects = resp?.data;
+				switch (projects?.length) {
 					case 0:
 						navigate(
 							forwardParams(`/console/onboard/token`, [PLAN_PARAM], []),
@@ -139,7 +139,7 @@ const ConsoleRedirect = (props: Props) => {
 							{ replace: true },
 						);
 				}
-				return resp?.data;
+				return projects;
 			})
 			.catch((error) => {
 				console.error(error);
