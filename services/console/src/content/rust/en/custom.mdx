@@ -1,0 +1,84 @@
+---
+title: "Custom Harness"
+description: "A step-by-step guide on how to build a custom benchmarking harness for Rust code"
+heading: "How to build a Custom Benchmarking Harness in Rust"
+published: "2024-05-01T06:43:00Z"
+sortOrder: 4
+draft: true
+---
+
+import Benchmarking from "../../../chunks/benchmarking/en/benchmarking.mdx";
+import BenchmarkingRust from "../../../chunks/rust/en/benchmarking-rust.mdx";
+
+<Benchmarking />
+
+<BenchmarkingRust />
+
+With all that in mind, if you are looking to benchmark your code's wall clock time
+then you should probably use Criterion.
+If you are looking to benchmark your code in CI,
+that is implement [Continuous Benchmarking][continuous benchmarking],
+with shared runners then it may be worth checking out Iai.
+Note though, Iai hasn't been update [in over 3 years](https://github.com/bheisler/iai/commits/main/).
+So you might consider [using Iai-Callgrind](/docs/explanation/adapters/#-rust-iai-callgrind) instead.
+
+But what if you don't want to benchmark wall clock time or instruction counts?
+What if you want to track some completely different benchmark‽
+Luckily, Rust makes it incredibly easy to create a custom benchmarking harness.
+
+## How `cargo bench` Works
+
+Before building a custom benchmarking harness,
+it would be a good to understand how Rust benchmarks work.
+For most Rust developers this means running [the `cargo bench` command][cargo bench].
+The `cargo bench` command compiles and executes your benchmarks.
+By default, `cargo bench` will try to use the built-in (but unstable) libtest bench harness.
+libtest bench will then go through your code and run all functions annotated with the `#[bench]` attribute.
+In order to use a custom benchmarking harness, we need to tell `cargo bench` to not use libtest bench.
+
+[cargo bench]: https://doc.rust-lang.org/cargo/commands/cargo-bench.html
+
+## Using a Non-Default Benchmarking Harness
+
+To get `cargo bench` to not use libtest bench,
+we need to add the following to our `Cargo.toml` file:
+
+```toml
+[[bench]]
+harness = false
+```
+
+Unfortunately, we can't use the `#[bench]` attribute with our custom benchmarking harness.
+[Maybe one day soon][github 2], but not today.
+Instead, we have to create a separate `benches` directory to hold our benchmarks.
+The `benches` directory is to benchmarks
+what [the `tests` directory][tests directory] is to integration tests.
+Each file inside of the `benches` directory is treated as a separate crate.
+The crate being benchmarked must therefore be a library crate.
+That is, it must have a `lib.rs` file.
+
+For example, if we had a basic library crate named `game`
+then we could add a custom benchmark file named `play_game` to the `benches` directory.
+Our directory structure would then look like this:
+
+```
+game
+├── Cargo.lock
+├── Cargo.toml
+└── benches
+    └── play_game.rs
+└── src
+    └── lib.rs
+```
+
+Next we need to let `cargo bench` know about our custom benchmark crate, `play_game`.
+So we update our `Cargo.toml` file:
+
+```toml ins={2}
+[[bench]]
+name = "play_game"
+harness = false
+```
+
+[github 2]: https://github.com/rust-lang/testing-devex-team/issues/2
+[tests directory]: https://doc.rust-lang.org/book/ch11-03-test-organization.html#the-tests-directory
