@@ -7,11 +7,34 @@ modified: "2024-04-01T07:00:00Z"
 sortOrder: 1
 ---
 
-import CliInstallScripts from "../../../chunks/general/en/cli-install-scripts.mdx";
-import CliInstallSource from "../../../chunks/how_to/install-cli/en/cli-install-source.mdx";
+<h2>Install CLI</h2>
 
-## Install CLI
+<h3>Linux, Mac, & Unix</h3>
+For Linux, Mac, and other Unix-like systems run the following in your terminal:
 
-<CliInstallScripts />
+```sh
+curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
+```
 
-<CliInstallSource />
+<h3>Windows</h3>
+For Windows systems run the following in a _PowerShell_ terminal:
+
+```powershell
+irm https://bencher.dev/download/install-cli.ps1 | iex
+```
+
+<br />
+
+> 🐰 If you get an error that says `running scripts is disabled on this system`:
+> - `Open Powershell` with `Run as Administrator`
+> - Run: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
+> - Enter: `Y`
+> - Rerun this script
+
+<h3>From Source</h3>
+
+For all other environments, you can try to install from source. This requires you to [install Rust](https://rustup.rs/).
+
+```sh
+cargo install --git https://github.com/bencherdev/bencher --branch main --locked bencher_cli
+```

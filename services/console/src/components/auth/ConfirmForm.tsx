@@ -79,9 +79,7 @@ const ConfirmForm = (props: Props) => {
 				if (setUser(user)) {
 					navigateNotify(
 						NotifyKind.OK,
-						`Hoppy to see you, ${
-							user.user.name
-						}!`,
+						`Hoppy to see you, ${user.user.name}!`,
 						"/console",
 						[PLAN_PARAM],
 						null,

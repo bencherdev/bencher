@@ -78,6 +78,15 @@ export const PROJECTS: Project[][] = [
 	],
 	[
 		{
+			name: "Gosub",
+			about:
+				"An HTML5 tokenizer/parser that will hopefully grow up to be a browser.",
+			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/gosub.svg",
+			slug: "gosub-engine",
+			query:
+				"clear=true&key=true&reports_per_page=8&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&tab=benchmarks&measures=9c57f6b8-aba7-4aaa-a120-e29758e9b9c2&branches=feab055c-2ce3-409d-b9cb-b883b60abff8&testbeds=88eb4029-f702-4ce3-a8af-a868574e0bcd&benchmarks=df214ffd-30d9-435f-84ec-9e688c43a0bd%2C27555e7f-13a6-441e-9fa0-3f631776eff9%2Cefa4201d-1dcb-4ba9-82ba-b2eee2b2f3a2%2C1de24bf6-72b5-4976-bbef-76f9e159eeaa",
+		},
+		{
 			name: "K Framework",
 			about:
 				"A framework for defining programming languages and their semantics",
@@ -85,14 +94,6 @@ export const PROJECTS: Project[][] = [
 			slug: "k-framework",
 			query:
 				"key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&report=503f3fbc-3266-4389-b87e-8c6a7f7f6240&branches=f7830a8b-198d-4ac5-b5f2-23b8026b0a4f&testbeds=d9eea46c-dd6c-4d0e-a830-30581a4e4446&benchmarks=29feeefd-7ac2-4aca-9b7b-ac95826f2a41&measures=8ad04853-f0fd-410e-b075-104ae5162c82&start_time=1707828269000&end_time=1710420305000&clear=true&tab=benchmarks",
-		},
-		{
-			name: "raft",
-			about: "Asynchronous C implementation of the Raft consensus protocol",
-			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/raft.png",
-			slug: "raft",
-			query:
-				"key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&report=96e8a26e-1084-4de2-8ee1-d1da172141ce&branches=eeae6157-d12a-4c11-b900-9b30a9a7d497&testbeds=64e77684-ceb1-4eba-8e0b-f81f0864a608&benchmarks=58c2071b-67bc-421b-83f2-d896eb52b712%2Ce35dfc29-bfef-432d-b167-060dbbfc42ab&measures=76ecf81a-972d-4e1a-8e80-a052f2cbaf74&start_time=1707921099000&end_time=1710513101000&clear=true&tab=branches",
 		},
 		{
 			name: "Stratum",
