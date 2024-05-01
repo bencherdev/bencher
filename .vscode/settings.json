@@ -12,6 +12,7 @@
     "Cargo.toml",
   ],
   // "rust-analyzer.check.allTargets": false,
+  "biome.lspBin": "./services/console/node_modules/.bin/biome",
   // https://code.visualstudio.com/docs/languages/identifiers#_known-language-identifiers
   "[rust]": {
     "editor.formatOnSave": true,

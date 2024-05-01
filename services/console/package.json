@@ -47,7 +47,7 @@
 		"vite-plugin-wasm-pack": "^0.1.12"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^1.6.4",
+		"@biomejs/biome": "^1.7.2",
 		"@types/d3": "^7.4.3",
 		"hast-util-from-html-isomorphic": "^2.0.0",
 		"rehype-autolink-headings": "^7.1.0",

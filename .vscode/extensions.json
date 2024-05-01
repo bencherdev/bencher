@@ -21,8 +21,8 @@
     "tamasfe.even-better-toml",
     "unifiedjs.vscode-mdx",
     "vadimcn.vscode-lldb",
+    "vitest.explorer",
     "wcrichton.flowistry",
     "yzhang.markdown-all-in-one",
-    "ZixuanChen.vitest-explorer"
   ]
 }
