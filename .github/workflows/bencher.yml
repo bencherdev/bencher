@@ -423,9 +423,7 @@ jobs:
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
-      - uses: actions-rs/audit-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: cargo audit
 
   # Cargo Unused Deps
   cargo_udeps:
