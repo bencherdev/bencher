@@ -813,7 +813,7 @@ jobs:
         working-directory: ./services/console
         run: npm run netlify
       - name: Test Links
-        uses: lycheeverse/lychee-action@v1.9.3
+        uses: lycheeverse/lychee-action@v1.10.0
         with:
           args: --config ./services/console/lychee.toml ./services/console/dist
       - name: Failed Lychee
