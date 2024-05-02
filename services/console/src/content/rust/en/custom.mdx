@@ -16,15 +16,20 @@ import BenchmarkingRust from "../../../chunks/rust/en/benchmarking-rust.mdx";
 
 With all that in mind, if you are looking to benchmark your code's wall clock time
 then you should probably use Criterion.
-If you are looking to benchmark your code in CI,
-that is implement [Continuous Benchmarking][continuous benchmarking],
+If you are looking to [benchmark your code in CI][continuous benchmarking]
 with shared runners then it may be worth checking out Iai.
-Note though, Iai hasn't been update [in over 3 years](https://github.com/bheisler/iai/commits/main/).
-So you might consider [using Iai-Callgrind](/docs/explanation/adapters/#-rust-iai-callgrind) instead.
+Note though, Iai hasn't been update [in over 3 years][github iai].
+So you might consider [using Iai-Callgrind][adapters iai callgrind] instead.
 
 But what if you don't want to benchmark wall clock time or instruction counts?
 What if you want to track some completely different benchmark‽
 Luckily, Rust makes it incredibly easy to create a custom benchmarking harness.
+
+[github iai]: https://github.com/bheisler/iai/commits/main/
+
+[continuous benchmarking]: /docs/explanation/continuous-benchmarking/
+[adapters iai callgrind]: /docs/explanation/adapters/#-rust-iai-callgrind
+
 
 ## How `cargo bench` Works
 
@@ -59,7 +64,7 @@ That is, it must have a `lib.rs` file.
 
 For example, if we had a basic library crate named `game`
 then we could add a custom benchmark file named `play_game` to the `benches` directory.
-Our directory structure would then look like this:
+Our directory structure would look like this:
 
 ```
 game
@@ -71,7 +76,7 @@ game
     └── lib.rs
 ```
 
-Next we need to let `cargo bench` know about our custom benchmark crate, `play_game`.
+Next we need to let `cargo bench` know about our custom benchmark crate `play_game`.
 So we update our `Cargo.toml` file:
 
 ```toml ins={2}
