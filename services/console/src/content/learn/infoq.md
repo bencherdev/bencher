@@ -20,9 +20,10 @@ In this article we will walk through creating a basic eBPF program in Rust.
 This simple and approachable eBPF program will intentionally include a performance regression.
 We will then explore using an instrumenting profiler and a sampling profiler to try to locate this performance bug.
 Once we have located the bug, we will need to create benchmarks to measure our performance optimizations.
-Finally, we will track our benchmarks with a Continuous Benchmarking tool to catch performance regressions as a part of continuous integration (CI).
+Finally, we will track our benchmarks with a [Continuous Benchmarking] tool to catch performance regressions as a part of continuous integration (CI).
 
 [silent eBPF revolution]: https://www.infoq.com/articles/ebpf-cloud-native-platforms/
+[Continuous Benchmarking]: https://bencher.dev/docs/explanation/continuous-benchmarking/
 
 ## Getting Started with eBPF
 
@@ -50,72 +51,126 @@ Initially known as Berkeley Packet Filtering (BPF), it evolved into eBPF as new 
 | RedBPF    | 🦀 Rust         | 🦀 Rust | 🪤 C      |
 | Aya       | 🦀 Rust         | 🦀 Rust | 🦀 Rust   |
 
-Several languages and tool sets are available for working with eBPF.
-This includes the canonical `libbpf` developed within the Linux kernel source tree.
+eBPF programs can be written with several different programming languages and tool sets.
+This includes the canonical `libbpf` developed in C within the Linux kernel source tree.
 Additional tools like `bcc` and `ebpf-go` allow user space programs to be written in Python and Go, respectively.
+However, they require C and `libbpf` for the eBPF side of things.
 The Rust eBPF ecosystem includes `libbpf-rs`, RedBPF, and Aya.
-Aya enables writing user space and eBPF programs in Rust without a dependency on `libbpf`.
+[Aya][github aya] enables writing user space and eBPF programs in Rust without a dependency on `libbpf`.
 We will be using Aya throughout the rest of this article.
 Aya will allow us to leverage Rust's strengths in performance, safety, and productivity for systems programming.
+
+[github aya]: https://github.com/aya-rs/aya
 
 ## Building an eBPF Profiler
 
 For our example, we're going to create a very basic eBPF sampling profiler.
 A sampling profiler sits outside of your target application and at a set interval it samples the state of your application.
 We will discuss the benefits and drawbacks of sampling profilers in depth later in this article.
-For now, its just important to understand that our goal is to periodically get a snapshot of state of the target application.
-
-We will use the `cpu-clock` counter to time our sampling frequency.
-At every proverbial tick, we will run our eBPF program and take a sample.
-These samples are then aggregated to tell where the target application spends the most resources.
+For now, its just important to understand that our goal is to periodically get a snapshot of the stack of a target application.
+Let's dive in!
 
 ```rust
-use aya_ebpf::{maps::ring_buf::RingBuf, programs::perf_event};
-
-// Use the Aya `perf_event` procedural macro to create an eBPF perf event.
-// We take in one argument, which is the context for the perf event.
-// This context is provided by the Linux kernel.
-#[perf_event]
-pub fn perf_profiler(ctx: PerfEventContext) -> u32 {
-    // Run our `get_sample` function with the provided context.
-    // If we fail to get a sample, we log that to user space.
-    if get_sample(&ctx).is_none() {
-        aya_log_ebpf::error!(&ctx, "Failed to run `perf_event` hook.");
-    }
-    // Our result is a signed 32-bit integer, which we always set to `0`.
-    0
-}
+// We use the `aya_ebpf` crate to make the magic happen.
+use aya_ebpf::{
+    helpers::gen::{bpf_ktime_get_ns, bpf_get_stack},
+    maps::ring_buf::RingBuf,
+    programs::perf_event
+};
+use profiler_common::{Sample, SampleHeader};
 
 // Create a global variable that will be set by user space.
-// It will be set to the process identifier (PID) of the profiled process.
+// It will be set to the process identifier (PID) of the target application.
 // To do this, we have to use the `no_mangle` attribute.
 // This keeps Rust from mangling the `PID` symbol so it can be properly linked.
 #[no_mangle]
 static PID: u32 = 0;
 
 // Use the Aya `map` procedural macro to create a ring buffer eBPF map.
+// This map will be used to hold our profile samples.
 // The byte size for the ring buffer must be a power of 2 multiple of the page size.
 #[map]
-static PERF_EVENTS: RingBuf = RingBuf::with_byte_size(4_096 * 4_096, 0)
+static SAMPLES: RingBuf = RingBuf::with_byte_size(4_096 * 4_096, 0)
 
-// Now for the fun part.
-// The `get_sample` function is where we actually get the profile sample for our process.
-fn get_sample(&ctx: PerfEventContext) -> Option<()> {
+// Use the Aya `perf_event` procedural macro to create an eBPF perf event.
+// We take in one argument, which is the context for the perf event.
+// This context is provided by the Linux kernel.
+#[perf_event]
+pub fn perf_profiler(ctx: PerfEventContext) -> u32 {
     // Reserve memory in the ring buffer to fit our sample.
     // If the ring buffer is full then we return early.
-    let mut perf_event = PERF_EVENTS
-        .reserve::<Event<SamplesEvent>>(0)?;
+    let mut Some(sample) = SAMPLES.reserve::<Sample>(0) else {
+        aya_log_ebpf::error!(&ctx, "Failed to reserve sample.");
+        return 0;
+    };
 
+    // The rest of our code is `unsafe` as we are dealing with raw pointers.
+    unsafe {
+        // Use the eBPF `bpf_get_stack` helper function to get a user space stack trace.
+        let stack_len = bpf_get_stack(
+            // Provide the Linux kernel context for the tracing program.
+            ctx.as_ptr(),
+            // Write the stack trace to the reserved sample buffer.
+            // We make sure to offset by the size of the sample header.
+            sample.as_mut_ptr().byte_add(Sample::HEADER_SIZE) as *mut core::ffi::c_void,
+            // The size of the reserved sample buffer alloted for the stack trace.
+            Sample::STACK_SIZE,
+            // Set the flag to collect a user space stack trace.
+            aya_ebpf::bindings::BPF_F_USER_STACK,
+        );
+
+        // If the length of the stack trace is negative, then there was an error.
+        let Ok(stack_len: u64) = stack_len.try_into() else {
+            aya_log_ebpf::error!(&ctx, "Failed to get stack.");
+            return 0;
+        }
+
+        // Write the sample header to the reserved sample buffer.
+        // This header includes important metadata about the stack trace.
+        core::ptr::write_unaligned(
+            sample.as_mut_ptr() as *mut core::ffi::c_void,
+            SampleHeader {
+                // Get the current time in nanoseconds since system boot.
+                ktime: bpf_ktime_get_ns(),
+                // Get the current thread group ID.
+                pid: ctx.tgid(),
+                // Get the current thread ID, confusingly called the `pid`.
+                tid: ctx.pid(),
+                // The length of the stack trace.
+                // This is needed to safely read the stack trace in user space.
+                stack_len
+            }
+        )
+    }
+
+    // Commit our sample as an entry in the ring buffer.
+    // The sample will then be made visible to user space.
+    sample.submit(0);
+
+    // Our result is a signed 32-bit integer, which we always set to `0`.
+    0
 }
 
+// Finally, we have to create a custom panic handler.
+// This custom panic handler tells the Rust compiler that we should never panic.
+// Making this guarantee is required to satisfy the eBPF verifier.
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    unsafe { core::hint::unreachable_unchecked() }
+}
 ```
 
 This Rust program uses the Aya to turn the `perf_profiler` function into an [eBPF perf event][brendan gregg perf].
-That is, this code gets turned into eBPF and run inside the kernel.
+Every time this perf event is triggered, we capture a stack trace for our target application using [the `bpf_get_stack` eBPF helper function][man7 bpf_get_stack].
 To get our eBPF loaded into the kernel, we need to set things up in user space.
 
+[brendan gregg perf]: https://www.brendangregg.com/perf.html
+[man7 bpf_get_stack]: https://man7.org/linux/man-pages/man7/bpf-helpers.7.html
+
 ```rust
-use aya::programs::perf_event;
+// In user space we use the `aya` crate to make the magic happen.
+use aya::{maps::ring_buf::RingBuf, programs::perf_event};
+use profiler_common::Sample;
 
 // Run our `main` function using the `tokio` async runtime.
 // On success, simply return a unit tuple.
@@ -137,7 +192,7 @@ async fn main() -> Result<(), anyhow::Error> {
             "../../target/bpfel-unknown-none/release/perf_profiler"
         ))?;
     // Initialize the eBPF logger.
-    // This allows us to receive logs from our eBPF program.
+    // This allows us to receive the logs from our eBPF program.
     aya_log::EbpfLogger::init(&mut ebpf)?;
 
     // Get a handle to our `perf_event` eBPF program named `perf_profiler`.
@@ -154,6 +209,7 @@ async fn main() -> Result<(), anyhow::Error> {
         // We will use the `cpu-clock` counter to time our sampling frequency.
         perf_event::perf_sw_ids::PERF_COUNT_SW_CPU_CLOCK as u64,
         // We want to profile just a single process across any CPU.
+        // That process is the one we have the PID for.
         perf_event::PerfEventScope::OneProcessAnyCpu { pid },
         // We want to collect samples 100 times per second.
         perf_event::SamplePolicy::Frequency(100),
@@ -161,11 +217,51 @@ async fn main() -> Result<(), anyhow::Error> {
         true,
     )?;
 
+    // Spawn a task to handle reading profile samples.
+    tokio::spawn(async move {
+        // Create a user space handle to our `SAMPLES` ring buffer eBPF map.
+        let mut samples: RingBuf<Sample> = ebpf.map_mut("SAMPLES").try_into()?;
+
+        // While the ring buffer is valid, try to read the next sample.
+        // To keep things simple, we just log each sample.
+        while let Some(sample) = samples.next() {
+            tracing::info!("{sample:?}");
+            // Don't look at me!
+            tokio::time::sleep(std::time::Duration::from_millis(u64::from(chrono::Utc::now().timestamp_subsec_millis())))
+        }
+    });
+
     // Run our program until the user enters `CTL` + `c`.
     tokio::signal::ctrl_c().await?;
     Ok(())
 }
 ```
+
+Our user space code can now loads our perf event eBPF program.
+Once loaded, our eBPF program will use the `cpu-clock` counter to time our sampling frequency.
+One hundred times a second, we will sample the target application
+and capture a stack trace sample.
+This stack trace sample is then sent over to user space via the ring buffer.
+Finally, the stack trace sample is printed to standard out.
+
+This is obviously a very simple profiler.
+We aren't symbolicating the call stack,
+so we are just printing is a list of memory addresses with some metadata.
+Nor are we able to sample our target program while it is sleeping.
+For that we would have to add a `sched` tracepoint for `sched_switch`.
+However, this is already enough code for us to have a performance regression. Did you spot it?
+
+## Profiling the Profiler
+
+
+
+
+
+
+
+
+That is, this code gets turned into eBPF and run inside the kernel.
+
 
 /// This is similar to [`crate::maps::PerfEventArray`], but different in a few ways:
 /// * It's shared across all CPUs, which allows a strong ordering between events.
@@ -192,7 +288,6 @@ async fn main() -> Result<(), anyhow::Error> {
 /// The minimum kernel version required to use this feature is 5.8.
 
 
-[brendan gregg perf]: https://www.brendangregg.com/perf.html
 
 
 eBPF XDP programs provide efficient, custom packet handling by running before the kernel’s network stack.

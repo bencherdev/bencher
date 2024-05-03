@@ -1,24 +1,46 @@
+# Docs
+- How to Track Custom Benchmarks Over Time
+  - Basic example
+  - Use JSON adapter
+- How to Track Binary Size Over Time
+
+# Learn
+
 ## Benchmark
 - Rust
   - The Ultimate Guide on how to Benchmark Rust Code
   - How to create a custom benchmarking harness in Rust
   - How to track benchmarks in Rust
+  - How to profile executable size in Rust
+    - [cargo-bloat](https://github.com/RazrFalcon/cargo-bloat)
+    - https://github.com/rust-lang/backtrace-rs/pull/542
 - C++
   - Google
   - Catch2
+  - How to track benchmarks in C++
+  - How to profile executable size in C++
+    - https://github.com/google/bloaty
 - Python
   - pytest
   - asv
+  - How to track benchmarks in Python
 - Go
   - go
+  - How to track benchmarks in Go
 - Shell
   - hyperfine
+  - How to track benchmarks for command line applications
 - C#
   - DotNet
+  - How to track benchmarks in C#
+  - How to profile executable size on Windows
+    - https://devblogs.microsoft.com/performance-diagnostics/sizebench-a-new-tool-for-analyzing-windows-binary-size/
 - Java
   - JMH
+  - How to track benchmarks in Java
 - Ruby
   - Benchmark
+  - How to track benchmarks in Ruby
 
 ## Benchmarking
 - https://www.researchgate.net/publication/334047447_Pro_NET_Benchmarking_The_Art_of_Performance_Measurement
