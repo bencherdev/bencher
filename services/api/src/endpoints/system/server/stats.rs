@@ -107,7 +107,7 @@ async fn post_inner(
         conn_lock!(context),
         &context.messenger,
         &server_stats,
-        false,
+        Some(json_server_stats.server.uuid),
     )?;
 
     Ok(())
