@@ -3,6 +3,9 @@
   - Basic example
   - Use JSON adapter
 - How to Track Binary Size Over Time
+  - https://techcrunch.com/2021/11/03/emerge-tools-raises-1-7m-to-help-make-apps-smaller/
+- How to Track Bundle Size Over Time
+  - https://about.codecov.io/blog/improve-web-performance-by-optimizing-javascript-bundle-sizes/
 
 # Learn
 
@@ -82,6 +85,20 @@
 - Rustc Perf
 
 ## Engineering
+- Engineering Bets Scorecard
+  - Rust
+    - Dropshot
+      - Proginator
+    - Oso
+  - Litestream
+    - Killed replication
+    - LiteFS
+    - SQLite DX is amazing
+  - Typescript
+    - Solidjs
+      - SolidStart
+    - Astro
+      - Things break a lot
 - Issue Bounty Programs: The Cobra Effect for Maintainer Burnout?
 - CPU Caches:
   - https://www.youtube.com/watch?v=WDIkqP4JbkE
@@ -113,3 +130,12 @@
 - Assembly viewer
   - https://godbolt.org/
   - https://cppinsights.io/
+
+# Binary Size
+
+permissionless pilot
+https://techcrunch.com/2023/09/05/create-a-permissionless-pilot-program-that-drives-sales-and-delights-customers/
+https://www.emergetools.com/explore
+- https://github.com/RazrFalcon/cargo-bloat
+- https://github.com/google/bloaty
+- https://www.emergetools.com/app/example/ios/wikipedia

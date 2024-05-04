@@ -6,7 +6,7 @@
 User space bindings to eBPF are often written in C, C++, Rust, Go, or Python.
 Using Rust for both kernel and user space code provides unmatched speed, safety, and developer experience.
 - ~~Premature~~ Blind optimization is the root of all evil.
-Profiling your eBPF code allows you to see where to focus your performance optimizations.
+Profiling your code allows you to see where to focus your performance optimizations.
 - Different profiling techniques may illuminate different areas of interest.
 Use several profiling tools and triangulate on the root cause of your performance problems.
 - Benchmarking allows you to measure your performance optimizations
@@ -69,6 +69,10 @@ A sampling profiler sits outside of your target application and at a set interva
 We will discuss the benefits and drawbacks of sampling profilers in depth later in this article.
 For now, its just important to understand that our goal is to periodically get a snapshot of the stack of a target application.
 Let's dive in!
+
+Use Aya to [setup an eBPF development environment][aya dev env].
+Name your project `profiler`.
+Inside of `profiler-ebpf/src/main.rs` we're going to add:
 
 ```rust
 // We use the `aya_ebpf` crate to make the magic happen.
@@ -163,9 +167,7 @@ fn panic(_info: &core::panic::PanicInfo) -> ! {
 This Rust program uses the Aya to turn the `perf_profiler` function into an [eBPF perf event][brendan gregg perf].
 Every time this perf event is triggered, we capture a stack trace for our target application using [the `bpf_get_stack` eBPF helper function][man7 bpf_get_stack].
 To get our eBPF loaded into the kernel, we need to set things up in user space.
-
-[brendan gregg perf]: https://www.brendangregg.com/perf.html
-[man7 bpf_get_stack]: https://man7.org/linux/man-pages/man7/bpf-helpers.7.html
+Inside of `profiler/src/main.rs` we're going to add:
 
 ```rust
 // In user space we use the `aya` crate to make the magic happen.
@@ -225,9 +227,9 @@ async fn main() -> Result<(), anyhow::Error> {
         // While the ring buffer is valid, try to read the next sample.
         // To keep things simple, we just log each sample.
         while let Some(sample) = samples.next() {
-            tracing::info!("{sample:?}");
             // Don't look at me!
-            tokio::time::sleep(std::time::Duration::from_millis(u64::from(chrono::Utc::now().timestamp_subsec_millis())))
+            let _oops = Box::new(tokio::time::sleep(std::time::Duration::from_millis(u64::from(chrono::Utc::now().timestamp_subsec_millis()))).await);
+            tracing::info!("{sample:?}");
         }
     });
 
@@ -251,85 +253,307 @@ Nor are we able to sample our target program while it is sleeping.
 For that we would have to add a `sched` tracepoint for `sched_switch`.
 However, this is already enough code for us to have a performance regression. Did you spot it?
 
+[aya dev env]: https://aya-rs.dev/book/start/development/
+[brendan gregg perf]: https://www.brendangregg.com/perf.html
+[man7 bpf_get_stack]: https://man7.org/linux/man-pages/man7/bpf-helpers.7.html
+
 ## Profiling the Profiler
 
+Users of our simple profiler have given us feedback that it seems to be rather sluggish.
+They don't mind having to symbolicate the call stack for their sleepless programs by hand.
+What really bothers them is the samples take a while to print.
+Sometimes things even appear to be getting backed up.
+Right about now the seemingly ubiquitous adage
+"premature optimization is the root of all evil"
+usually starts to get bandied around.
 
+However, lets take a look at what Donald Knuth actually said all the way back in 1974:
 
+> Programmers waste enormous amounts of time thinking about, or worrying about,
+> the speed of noncritical parts of their programs,
+> and these attempts at efficiency actually have a strong negative impact when debugging and maintenance are considered.
+> We should forget about small efficiencies, say about 97% of the time: pre-mature optimization is the root of all evil.
+> Yet we should not pass up our opportunities in that critical 3%.
+>
+> Donald E. Knuth, [Structured Programming with `go to` Statements](https://dl.acm.org/doi/10.1145/356635.356640)
 
+So that is exactly what we need to do, look for "opportunities in that critical 3%".
+In order to do so we are going to explore two different kinds of profilers, sampling and instrumenting.
+We will then use each type of profiler to find that critical 3% in our own simple profiler.
 
+Our basic eBPF profiler is an example of a sampling profiler.
+It sits outside of the target application.
+At a given interval, it collects a sample of the target application's stack trace.
+Because a sampling profiler only runs periodically, it has relatively little overhead.
+However, this means that we may miss some things.
+By analogy, this is like watching a movie by only looking at one out of say every one hundred frames.
+Movies are usually shot at 24 frames per second.
+That means you would only see a new frame once every 4 seconds.
+Besides being a very boring way to watch a film,
+this can also lead to a distorted view of what is actually going on.
+The frame you happen to get could really just be a momentary flashback (overweighting).
+Conversely, there could have just been an amazing action sequence,
+and you only caught the closeup on the lead actor's face on either side of it (underweighting).
 
+The other major kind of profiler is an instrumenting profiler.
+Unlike a sampling profiler, an instrumenting profiler is a part of the target application.
+Inside of the target application, a sampling profiler collects information about the work being done.
+This usually leads instrumenting profilers to have much higher overhead than sampling profilers.
+Therefore a sampling profiler is more likely to give you an accurate picture
+of what is going on in production than an instrumenting profiler.
+To continue our analogy from above, an instrumenting profiler is like watching a movie
+that was shot on an old 35mm hand cranked camera.
+Being hand cranked, it was nye impossible to consistently film at 24 frames per second.
+So cinematographers settled for around 18 frames per second.
+Likewise with an instrumenting profiler, you can view all of the proverbial frames,
+but everything has to run much slower.
+You run right into [the observer effect][wikipedia heisenbug].
 
+[wikipedia heisenbug]: https://en.wikipedia.org/wiki/Heisenbug
 
-That is, this code gets turned into eBPF and run inside the kernel.
+### Sampling Profiler
 
+The go to sampling profiler on Linux is `perf`.
+Under the hood, `perf` uses the exact same perf events as our own simple profiler.
+There is a fantastic tool for Rust developers that wraps `perf`
+and generates beautiful [flamegraphs][brendan gregg flamegraphs].
+It is aptly named `flamegraph`.
+Flamegraphs are a technique used to visualize stack traces created by Brendan Gregg.
 
-/// This is similar to [`crate::maps::PerfEventArray`], but different in a few ways:
-/// * It's shared across all CPUs, which allows a strong ordering between events.
-/// * Data notifications are delivered precisely instead of being sampled for every N events; the
-///   eBPF program can also control notification delivery if sampling is desired for performance
-///   reasons. By default, a notification will be sent if the consumer is caught up at the time of
-///   committing. The eBPF program can use the `BPF_RB_NO_WAKEUP` or `BPF_RB_FORCE_WAKEUP` flags to
-///   control this behavior.
-/// * On the eBPF side, it supports the reverse-commit pattern where the event can be directly
-///   written into the ring without copying from a temporary location.
-/// * Dropped sample notifications go to the eBPF program as the return value of `reserve`/`output`,
-///   and not the userspace reader. This might require extra code to handle, but allows for more
-///   flexible schemes to handle dropped samples.
-///
-/// To receive events you need to:
-/// * Construct [`RingBuf`] using [`RingBuf::try_from`].
-/// * Call [`RingBuf::next`] to poll events from the [`RingBuf`].
-///
-/// To receive async notifications of data availability, you may construct an
-/// [`tokio::io::unix::AsyncFd`] from the [`RingBuf`]'s file descriptor and poll it for readiness.
-///
-/// # Minimum kernel version
-///
-/// The minimum kernel version required to use this feature is 5.8.
+To get started, follow [the `flamegraph` installation steps][github flamegraph].
+Once you have `flamegraph` installed,
+we can finally profile the profiler!
 
+![flamegraph.svg]
 
+The flamegraph that is produced is an interactive SVG file.
+The length along x-axis indicates the percentage of time that a stack was present in the samples.
+This is accomplished by sorting the stacks alphabetically
+and then merged identically named stacks into a single rectangle.
+It is important to note that the x-axis of a flamegraph is _not_ sorted by time.
+Instead it is meant to show the proportion of time used,
+sort of like a mini rectangular pie chart for each row of the diagram.
+The height along the y-axis indicates the stack depth, going from the bottom up.
+That is, the longest lived stacks are on the bottom and newer generations are on top.
+Therefore, the stacks with a top edge exposed were the bits of code that were actively running when a sample was taken.
 
+![peak_flamegraph.svg]
 
-eBPF XDP programs provide efficient, custom packet handling by running before the kernel’s network stack.
+Zooming in here to this peak, we can see the call stack for our task that reads from the samples map.
+We also seem to be doing quite a bit of sleeping...
+Now lets hope over to using an instrumenting profiler to get another vantage point.
 
-eBPF XDP programs [can perform one of four actions][ebpf xdp]:
-- `XDP_PASS`: Pass the packet to the network stack with optional modifications
-- `XDP_DROP`: Quickly drop the packet
-- `XDP_TX`: Forward the packet to the same network interface it arrived on with optional modifications
-- `XDP_ABORTED`: Drop the packet due to an error in the eBPF program
+### Instrumenting Profiler
 
-We're going to keep the packet handling simple and mainly focus on the eBPF inter-process communication in our example.
-Therefore, if everything goes well we will just return `XDP_PASS` with no modifications to the packet.
-Otherwise, we will return `XDP_ABORTED`.
+There are many different things that one could measure at runtime within their application.
+Some of these are idiosyncratic to the application under observation and others are more general.
+For measures particular to your application, [the `counts` crate][github counts] is a useful tool.
+To keep things stream lined though, we're going be measuring heap allocations.
+This is accomplished by using a special Rust allocator with [the `dhat-rs` crate][github dhat rs].
 
-This is what our basic eBPF program looks like:
+We have to update our `profiler/src/main.rs` file:
 
+```rust
+...
+
+// Create a custom global allocator
+#[cfg(feature = "dhat-heap")]
+#[global_allocator]
+static ALLOC: dhat::Alloc = dhat::Alloc;
+
+// Run our `main` function using the `tokio` async runtime.
+// On success, simply return a unit tuple.
+// If there is an error, return a catch-all `anyhow::Error`.
+#[tokio::main]
+async fn main() -> Result<(), anyhow::Error> {
+    // Instantiate an instance of the heap instrumenting profiler
+    #[cfg(feature = "dhat-heap")]
+    let _profiler = dhat::Profiler::new_heap();
+
+    ...
+}
 ```
-#[xdp(name = "fun_xdp")]
-pub fn fun_xdp(ctx: XdpContext) -> u32 {
-    match try_fun_xdp(&ctx) {
-        Ok(ret) => ret,
-        Err(_) => xdp_action::XDP_ABORTED,
+
+With `dhat-heap` added as a feature
+and our release builds set to keep debug symbols in our `Cargo.toml` file,
+we can now run our simple profiler with the `--features dhat-heap` option.
+
+<!-- STUB RESULTS -->
+```
+dhat: Total:     1,256 bytes in 6 blocks
+dhat: At t-gmax: 1,256 bytes in 6 blocks
+dhat: At t-end:  1,256 bytes in 6 blocks
+dhat: The data has been saved to dhat-heap.json, and is viewable with dhat/dh_view.html
+```
+
+The `Total` is the total memory allocated by our simple profiler.
+That is a total of 1,256 bytes in 6 allocations.
+Next, `At t-gmax` indicates the largest that the heap got while running.
+Finally, `At t-end` is the size of the heap at the end of our application.
+
+As for that `dhat-heap.json`,
+you can open it in [the online viewer][dh view].
+
+![dh_view.png]
+
+This shows you a tree structure of when and where heap allocations occurred.
+The outer nodes are the parent and the inner nodes are its children.
+That is, the longest lived stacks are on the outside and newer generations are on the inside.
+Zooming in on one of those blocks, we can take a look at the allocation stack trace.
+
+![dh_view_allocated_at.png]
+
+Here the highest numbered field is going to be the line from our source code.
+As we descend numerically, we are actually going up the stack trace.
+Now spin around three times and tell [which way an icicle graph goes][polar signals].
+
+Looking at the percentages in the DHAT viewer it seems like we are doing quite a bit of allocating...
+To get a more visual representation of the DHAT results,
+we can open them in [the Firefox Profiler][firefox profiler].
+The Firefox Profiler also allows you to create sharable links.
+This is [the link][fp link] for my DHAT profile.
+
+At this point I think we have narrowed down the culprit:
+
+```rust
+// Don't look at me!
+let _oops = Box::new(tokio::time::sleep(std::time::Duration::from_millis(u64::from(chrono::Utc::now().timestamp_subsec_millis()))).await);
+```
+
+We could probably just remove this line and call it a day.
+However, let's heed the words on Donald Knuth
+and really make sure we have found that critical 3%.
+
+[github counts]: https://github.com/nnethercote/counts
+[github dhat rs]: https://github.com/nnethercote/dhat-rs
+[dh view]: https://nnethercote.github.io/dh_view/dh_view.html
+[polar signals]: https://www.polarsignals.com/blog/posts/2023/03/28/how-to-read-icicle-and-flame-graphs
+[firefox profiler]: https://profiler.firefox.com
+[fp link]: https://profiler.firefox.com/tbd
+
+## Benchmarking the Profiler
+
+It seems like our slowdown is in the user space side of things,
+so that is where we are going to focus our benchmarking efforts.
+If that were not the case, we would have to [build a custom eBPF benchmarking harness][thenewstack ebpf benchmark].
+Lucky for us, we can use a less bespoke solution to test our user space source code.
+
+We will need to refactor our `profiler/src/main.rs` file.
+Benchmarks in Rust can only be run against libraries and not binaries.
+Thus, we have to create a new `profiler_common/src/lib.rs` file
+that will be used by both our binary and our benchmarks.
+
+Refactoring our code to break out our sample processing logic,
+gives us this library function:
+
+```rust
+pub async fn process_sample(sample: Sample) -> Result<(), anyhow::Error> {
+    // Don't look at me!
+    let _oops = Box::new(tokio::time::sleep(std::time::Duration::from_millis(u64::from(chrono::Utc::now().timestamp_subsec_millis()))).await);
+    tracing::info!("{sample:?}");
+
+    Ok(())
+}
+```
+
+Next we are going to add benchmarks using [Criterion][github criterion].
+After adding Criterion as our benchmarking harness in our `Cargo.toml`,
+we can create a benchmark for our `process_sample` library function.
+
+```rust
+fn bench_process_sample(c: &mut Criterion) {
+    c.bench_function("process_sample", |b| {
+        b.iter(|| {
+            for sample in TEST_SAMPLES {
+                profiler_common::process_sample(sample).unwrap();
+            }
+        })
+    });
+}
+```
+
+When we run our benchmark we get a result that looks something like this:
+
+<!-- STUB RESULTS -->
+```
+     Running benches/adapter.rs (/Users/epompeii/Code/bencher/target/release/deps/adapter-386b3ef4962988a8)
+Gnuplot not found, using plotters backend
+Benchmarking Adapter::Magic (JSON): Collecting 100 samples in estimated 5.0
+Adapter::Magic (JSON)   time:   [3.3547 µs 3.3705 µs 3.3864 µs]
+Found 4 outliers among 100 measurements (4.00%)
+  3 (3.00%) low mild
+  1 (1.00%) high mild
+```
+
+Now lets remove that pesky `oops` line and see how performance improved:
+
+<!-- STUB RESULTS -->
+```
+     Running benches/adapter.rs (/Users/epompeii/Code/bencher/target/release/deps/adapter-865fae6b02d66e20)
+Gnuplot not found, using plotters backend
+Benchmarking Adapter::Rust: Collecting 100 samples in estim
+Adapter::Rust           time:   [2.4256 µs 2.4402 µs 2.4563 µs]
+                        change: [-2.7353% -1.8949% -1.0559%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 4 outliers among 100 measurements (4.00%)
+  3 (3.00%) high mild
+  1 (1.00%) high severe
+```
+
+Excellent!
+Criterion is able to compare the results between our local runs
+and let us know that our performance has improved.
+Going the other way, if we now add that `oops` line back,
+Criterion will let us know that we have a performance regression.
+You can also dig deeper into [how to benchmark Rust code with Criterion][bencher criterion],
+if you're interested in a step-by-step guide.
+
+With our performance regression fixed, it's tempting to call this a job well done.
+However, what's preventing us from introducing another performance regression just like `oops` in the future?
+For most software teams the answer to that is surprisingly, "Nothing."
+This is where Continuous Benchmarking comes in.
+
+[thenewstack ebpf benchmark]: https://thenewstack.io/catch-performance-regressions-benchmark-ebpf-program/
+[github criterion]: https://github.com/bheisler/criterion.rs
+[bencher criterion]: https://bencher.dev/learn/benchmarking/rust/criterion/
+
+## Continuous Benchmarking
+
+
+
+
+Next, our simple eBPF profiler needs a target application.
+We're going to use this very lovely program that finds [amicable pairs][wikipedia amicable pairs].
+
+```rust
+fn main() {
+    for i in 1..(u32::from(u16::MAX)) {
+        let sum = (1..i/2+1).filter(|n| i % n == 0).sum();
+        if i > sum && (1..sum/2+1).filter(|n| sum % n == 0).sum::<u32>() == i {
+            println!("{i} {sum}");
+        }
     }
 }
 ```
 
-
-In the basic example, the focus is on scaffolding and interprocess communication rather than packet handling.  The initial version of the eBPF XDP application will log the IPv4 source address for each received packet.
-
-
-In a basic example, the focus is on scaffolding and interprocess communication rather than packet handling, so only the XDP_PASS action is used, logging the IPv4 source address for each received packet.
+With our simple eBPF profiler running against our amicable pairs target application,
+we can finally profile the profiler!
 
 
-[ebpf xdp]: https://prototype-kernel.readthedocs.io/en/latest/networking/XDP/implementation/xdp_actions.html
 
-> Programmers waste enormous amounts of time thinking about, or worrying about, the speed of noncritical parts of their programs, and these attempts at efficiency actually have a strong negative impact when debugging and maintenance are considered. We should forget about small efficiencies, say about 97% of the time: pre-mature optimization is the root of all evil. Yet we should not pass up our opportunities in that critical 3%.
 
-Donald E. Knuth
 
-https://dl.acm.org/doi/10.1145/356635.356640
 
-"We should forget about small efficiencies, say about 97% of the time: premature optimization is the root of all evil. Yet we should not pass up our opportunities in that critical 3%"
+
+
+
+
+
+With everything installed, we can finally profiler our profiler!
+
+[brendan gregg flamegraphs]: https://www.brendangregg.com/flamegraphs.html
+[github flamegraph]: https://github.com/flamegraph-rs/flamegraph#installation
+[wikipedia amicable pairs]: https://en.wikipedia.org/wiki/Amicable_numbers
 
 
 
@@ -341,14 +565,6 @@ Sampling profiler
 - separate form code take samples
 - more performant
 https://www.youtube.com/watch?v=JX0aVnpHomk
-
-
-
-
-
-There is no doubt that the grail of efficiency leads to abuse. Programmers waste enormous amounts of time thinking about, or worrying about, the speed of noncritical parts of their programs, and these attempts at efficiency actually have a strong negative impact when debugging and maintenance are considered. We should forget about small efficiencies, say about 97% of the time: pre-mature optimization is the root of all evil.
-Yet we should not pass up our opportunities in that critical 3%. A good programmer will not be lulled into complacency by such reasoning, he will be wise to look carefully at the critical code; but only after that code has been identified. It is often a mistake to make a priori judgments about what parts of a program are really critical, since the universal experience of programmers who have been using measurement tools has been that their intuitive guesses fail.
-
 
 Make sure to include the 5 key takeaways at the beginning of the article.
 
