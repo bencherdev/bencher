@@ -1862,15 +1862,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "custom"
-version = "0.4.7"
-dependencies = [
- "bencher_adapter",
- "inventory",
- "serde_json",
-]
-
-[[package]]
 name = "darling"
 version = "0.20.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4244,12 +4235,6 @@ dependencies = [
  "quote",
  "syn 2.0.60",
 ]
-
-[[package]]
-name = "inventory"
-version = "0.3.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f958d3d68f4167080a18141e10381e7634563984a537f2a49a30fd8e53ac5767"
 
 [[package]]
 name = "io-close"

@@ -55,6 +55,23 @@ async fn get_one_inner(context: &ApiContext) -> Result<JsonServerStats, HttpErro
     query_server.get_stats(conn_lock!(context), is_bencher_cloud)
 }
 
+// TODO remove in due time
+// Due to a bug in the original server stats implementation,
+// the endpoint was set to the API server root path
+// instead of the `/v0/server/stats` path.
+#[endpoint {
+    method = POST,
+    path =  "/",
+    tags = ["server", "stats"]
+}]
+pub async fn root_server_stats_post(
+    rqctx: RequestContext<ApiContext>,
+    body: TypedBody<JsonServerStats>,
+) -> Result<ResponseAccepted<()>, HttpError> {
+    post_inner(&rqctx.log, rqctx.context(), body.into_inner()).await?;
+    Ok(Post::auth_response_accepted(()))
+}
+
 #[endpoint {
     method = POST,
     path =  "/v0/server/stats",

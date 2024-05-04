@@ -256,6 +256,8 @@ impl Api {
             api.register(system::server::stats::server_stats_get)?;
             // Bencher Cloud only
             if is_bencher_cloud {
+                // TODO remove in due time
+                api.register(system::server::stats::root_server_stats_post)?;
                 api.register(system::server::stats::server_stats_post)?;
             }
         }

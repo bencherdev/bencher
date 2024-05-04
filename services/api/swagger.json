@@ -63,6 +63,75 @@
             "$ref": "#/components/responses/Error"
           }
         }
+      },
+      "post": {
+        "tags": [
+          "server",
+          "stats"
+        ],
+        "operationId": "root_server_stats_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonServerStats"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Null",
+                  "type": "string",
+                  "enum": [
+                    null
+                  ]
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
       }
     },
     "/v0/auth/accept": {
@@ -7268,7 +7337,7 @@
             "$ref": "#/components/schemas/JsonSecurity"
           },
           "server": {
-            "$ref": "#/components/schemas/JsonServer"
+            "$ref": "#/components/schemas/JsonServer2"
           },
           "smtp": {
             "nullable": true,
@@ -9072,6 +9141,21 @@
       "JsonServer": {
         "type": "object",
         "properties": {
+          "created": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/ServerUuid"
+          }
+        },
+        "required": [
+          "created",
+          "uuid"
+        ]
+      },
+      "JsonServer2": {
+        "type": "object",
+        "properties": {
           "bind_address": {
             "type": "string"
           },
@@ -9092,21 +9176,6 @@
         "required": [
           "bind_address",
           "request_body_max_bytes"
-        ]
-      },
-      "JsonServer2": {
-        "type": "object",
-        "properties": {
-          "created": {
-            "$ref": "#/components/schemas/DateTime"
-          },
-          "uuid": {
-            "$ref": "#/components/schemas/ServerUuid"
-          }
-        },
-        "required": [
-          "created",
-          "uuid"
         ]
       },
       "JsonServerStats": {
@@ -9169,7 +9238,7 @@
             ]
           },
           "server": {
-            "$ref": "#/components/schemas/JsonServer2"
+            "$ref": "#/components/schemas/JsonServer"
           },
           "timestamp": {
             "$ref": "#/components/schemas/DateTime"

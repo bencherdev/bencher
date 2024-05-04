@@ -7,6 +7,7 @@ use bencher_license::Licensor;
 use chrono::{Duration, Utc};
 use diesel::RunQueryDsl;
 use dropshot::HttpError;
+use once_cell::sync::Lazy;
 use slog::Logger;
 
 use crate::{
@@ -23,6 +24,16 @@ mod stats;
 crate::util::typed_id::typed_id!(ServerId);
 
 const SERVER_ID: ServerId = ServerId(1);
+
+const LICENSE_GRACE_PERIOD: usize = 7;
+
+#[allow(clippy::panic)]
+pub static BENCHER_STATS_API_URL: Lazy<url::Url> = Lazy::new(|| {
+    BENCHER_API_URL
+        .clone()
+        .join("/v0/server/stats")
+        .unwrap_or_else(|e| panic!("Failed to parse stats API endpoint: {e}"))
+});
 
 #[derive(Debug, Clone, Copy, diesel::Queryable)]
 pub struct QueryServer {
@@ -82,17 +93,23 @@ impl QueryServer {
                     match LicenseUsage::get_for_server(conn, licensor, Some(PlanLevel::Team)) {
                         Ok(license_usages) if license_usages.is_empty() => {
                             violations += 1;
-                            // Be kind. Even though they don't have a valid license, we should still honor their request to not send stats.
-                            slog::warn!(log, "Sending stats is disabled but there is no valid Bencher Plus license key! This is violation #{violations} of the Bencher License: https://bencher.dev/legal/license/");
+                            // Be kind. Allow for a seven day grace period.
+                            slog::warn!(log, "Sending stats is disabled, but there is no valid Bencher Plus license key! This is violation #{violations} of the Bencher License: https://bencher.dev/legal/license");
+                            if let Some(remaining) = LICENSE_GRACE_PERIOD.checked_sub(violations) {
+                                slog::warn!(log, "You have {remaining} days remaining in your Bencher License grace period. Please purchase a license key: https://bencher.dev/pricing");
+                                continue;
+                            }
+                            slog::warn!(log, "Sending stats at {}. Please purchase a license key: https://bencher.dev/pricing",  Utc::now());
                         },
                         Ok(_) => {
                             slog::debug!(log, "Sending stats is disabled");
+                            continue;
                         },
                         Err(e) => {
                             slog::error!(log, "Failed to check stats: {e}");
+                            continue;
                         },
                     }
-                    continue;
                 } else {
                     let err = "Bencher Cloud server stats are disabled!";
                     slog::error!(log, "{err}");
@@ -124,7 +141,7 @@ impl QueryServer {
                 } else {
                     let client = reqwest::Client::new();
                     if let Err(e) = client
-                        .post(BENCHER_API_URL.clone())
+                        .post(BENCHER_STATS_API_URL.clone())
                         .body(json_stats_str)
                         .send()
                         .await

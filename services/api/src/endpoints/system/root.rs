@@ -17,7 +17,15 @@ use crate::{
 pub async fn server_root_options(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into()]))
+    Ok(Endpoint::cors(&[
+        Get.into(),
+        // TODO remove in due time
+        // Due to a bug in the original server stats implementation,
+        // the endpoint was set to the API server root path
+        // instead of the `/v0/server/stats` path.
+        #[cfg(feature = "plus")]
+        crate::endpoints::endpoint::Post.into(),
+    ]))
 }
 
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
