@@ -1,5 +1,6 @@
 #![cfg(feature = "plus")]
 
+use bencher_billing::Biller;
 use bencher_json::{
     organization::plan::{JsonNewPlan, JsonPlan},
     DateTime, ResourceId,
@@ -291,6 +292,29 @@ async fn delete_inner(
         .map_err(resource_not_found_err!(Plan, query_organization))?;
 
     let remote = query_params.remote.unwrap_or(true);
+    // Wait to return the result of the biller delete until after the plan has been deleted locally
+    let delete_plan_result = delete_plan(context, biller, &query_organization, &query_plan, remote)
+        .await
+        .map_err(|e| {
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(&e);
+            e
+        });
+
+    diesel::delete(schema::plan::table.filter(schema::plan::id.eq(query_plan.id)))
+        .execute(conn_lock!(context))
+        .map_err(resource_conflict_err!(Plan, query_plan))?;
+
+    delete_plan_result
+}
+
+async fn delete_plan(
+    context: &ApiContext,
+    biller: &Biller,
+    query_organization: &QueryOrganization,
+    query_plan: &QueryPlan,
+    remote: bool,
+) -> Result<(), HttpError> {
     if let Some(metered_plan_id) = query_plan.metered_plan.as_ref() {
         if remote {
             biller
@@ -330,10 +354,6 @@ async fn delete_inner(
             "Failed to find subscription for plan deletion"
             ));
     }
-
-    diesel::delete(schema::plan::table.filter(schema::plan::id.eq(query_plan.id)))
-        .execute(conn_lock!(context))
-        .map_err(resource_conflict_err!(Plan, query_plan))?;
 
     Ok(())
 }
