@@ -14,6 +14,7 @@ import type {
 import { PLAN_PARAM, planParam } from "../../auth/auth";
 import OnboardSteps, { OnboardStep } from "./OnboardSteps";
 import { isBencherCloud } from "../../../util/ext";
+import CopyButton from "./CopyButton";
 
 export interface Props {
 	apiUrl: string;
@@ -195,21 +196,7 @@ const OnboardRun = (props: Props) => {
 											<div class="code">{runCode()}</div>
 										</code>
 									</pre>
-									<button
-										class="button is-outlined is-fullwidth"
-										title="Copy command to clipboard"
-										onClick={(e) => {
-											e.preventDefault();
-											navigator.clipboard.writeText(runCode());
-										}}
-									>
-										<span class="icon-text">
-											<span class="icon">
-												<i class="far fa-copy"></i>
-											</span>
-											<span>Copy to Clipboard</span>
-										</span>
-									</button>
+									<CopyButton text={runCode()} />
 								</figure>
 								<br />
 								<br />

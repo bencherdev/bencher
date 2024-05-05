@@ -12,6 +12,7 @@ import {
 } from "../../../types/bencher";
 import { PLAN_PARAM, planParam } from "../../auth/auth";
 import OnboardSteps, { OnboardStep } from "./OnboardSteps";
+import CopyButton from "./CopyButton";
 
 export interface Props {
 	apiUrl: string;
@@ -134,21 +135,7 @@ const OnboardToken = (props: Props) => {
 											<div class="code">{apiToken()?.token}</div>
 										</code>
 									</pre>
-									<button
-										class="button is-outlined is-fullwidth"
-										title="Copy API token to clipboard"
-										onClick={(e) => {
-											e.preventDefault();
-											navigator.clipboard.writeText(apiToken()?.token ?? "");
-										}}
-									>
-										<span class="icon-text">
-											<span class="icon">
-												<i class="far fa-copy"></i>
-											</span>
-											<span>Copy to Clipboard</span>
-										</span>
-									</button>
+									<CopyButton text={apiToken()?.token ?? ""} />
 								</figure>
 								<br />
 								<br />

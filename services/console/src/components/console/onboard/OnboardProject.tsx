@@ -24,6 +24,7 @@ import Field, { type FieldHandler } from "../../field/Field";
 import FieldKind from "../../field/kind";
 import { PLAN_PARAM, planParam } from "../../auth/auth";
 import OnboardSteps, { OnboardStep } from "./OnboardSteps";
+import CopyButton from "./CopyButton";
 
 export interface Props {
 	apiUrl: string;
@@ -297,21 +298,7 @@ const OnboardProject = (props: Props) => {
 											<div class="code">{project()?.slug}</div>
 										</code>
 									</pre>
-									<button
-										class="button is-outlined is-fullwidth"
-										title="Copy project slug to clipboard"
-										onClick={(e) => {
-											e.preventDefault();
-											navigator.clipboard.writeText(project()?.slug);
-										}}
-									>
-										<span class="icon-text">
-											<span class="icon">
-												<i class="far fa-copy"></i>
-											</span>
-											<span>Copy to Clipboard</span>
-										</span>
-									</button>
+									<CopyButton text={project()?.slug ?? ""} />
 								</figure>
 								<br />
 								<br />
