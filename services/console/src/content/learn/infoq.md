@@ -472,27 +472,28 @@ fn bench_process_sample(c: &mut Criterion) {
 }
 ```
 
-When we run our benchmark we get a result that looks something like this:
+When we run our benchmark with `cargo bench`
+we get a result that looks something like this:
 
 <!-- STUB RESULTS -->
 ```
      Running benches/adapter.rs (/Users/epompeii/Code/bencher/target/release/deps/adapter-386b3ef4962988a8)
 Gnuplot not found, using plotters backend
-Benchmarking Adapter::Magic (JSON): Collecting 100 samples in estimated 5.0
-Adapter::Magic (JSON)   time:   [3.3547 µs 3.3705 µs 3.3864 µs]
+Benchmarking process_sample: Collecting 100 samples in estimated 5.0
+process_sample   time:   [3.3547 µs 3.3705 µs 3.3864 µs]
 Found 4 outliers among 100 measurements (4.00%)
   3 (3.00%) low mild
   1 (1.00%) high mild
 ```
 
-Now lets remove that pesky `oops` line and see how performance improved:
+Now lets remove that pesky `oops` line from `process_sample` and see how performance improved:
 
 <!-- STUB RESULTS -->
 ```
      Running benches/adapter.rs (/Users/epompeii/Code/bencher/target/release/deps/adapter-865fae6b02d66e20)
 Gnuplot not found, using plotters backend
-Benchmarking Adapter::Rust: Collecting 100 samples in estim
-Adapter::Rust           time:   [2.4256 µs 2.4402 µs 2.4563 µs]
+Benchmarking process_sample: Collecting 100 samples in estim
+process_sample          time:   [2.4256 µs 2.4402 µs 2.4563 µs]
                         change: [-2.7353% -1.8949% -1.0559%] (p = 0.00 < 0.05)
                         Performance has improved.
 Found 4 outliers among 100 measurements (4.00%)
@@ -503,12 +504,26 @@ Found 4 outliers among 100 measurements (4.00%)
 Excellent!
 Criterion is able to compare the results between our local runs
 and let us know that our performance has improved.
-Going the other way, if we now add that `oops` line back,
-Criterion will let us know that we have a performance regression.
 You can also dig deeper into [how to benchmark Rust code with Criterion][bencher criterion],
 if you're interested in a step-by-step guide.
+Going the other way, if we now add that `oops` line back,
+Criterion will let us know that we have a performance regression.
 
-With our performance regression fixed, it's tempting to call this a job well done.
+<!-- STUB RESULTS -->
+```
+     Running benches/adapter.rs (/Users/epompeii/Code/bencher/target/release/deps/adapter-865fae6b02d66e20)
+Gnuplot not found, using plotters backend
+Benchmarking process_sample: Collecting 100 samples in estim
+process_sample          time:   [3.1768 µs 3.1976 µs 3.2226 µs]
+                        change: [+3.3789% +5.3157% +7.5451%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 8 outliers among 100 measurements (8.00%)
+  4 (4.00%) high mild
+  4 (4.00%) high severe
+```
+
+It's tempting to call this a job well done.
+We have have found and fixed our opportunity in that critical 3%.
 However, what's preventing us from introducing another performance regression just like `oops` in the future?
 For most software teams the answer to that is surprisingly, "Nothing."
 This is where Continuous Benchmarking comes in.
@@ -519,109 +534,138 @@ This is where Continuous Benchmarking comes in.
 
 ## Continuous Benchmarking
 
+Continuous Benchmarking is a software development practice of frequent,
+automated benchmarking to quickly detect performance regressions.
+This reduces the cycle time for detecting performance regressions
+from days and weeks to hours and minutes.
+For the same reasons that unit tests are run as a part of Continuous Integration for each code change,
+benchmarks should be run as a part of Continuous Benchmarking for each code change.
 
+To add Continuous Benchmarking to our simple profiler,
+we're going to use [Bencher][bencher].
+Bencher is an [open source Continuous Benchmarking tool][github bencher].
+This means you can easily self-host Bencher.
+However, for this tutorial we are going to use a free account on Bencher Cloud.
+Go ahead and [signup for a free account][bencher signup].
+Once you are logged in, new user onboarding should provide you with an API token
+and ask you to name your first project.
+Name your project `Simple Profiler`.
+Next, follow the instructions to [install the `bencher` CLI][bencher cli].
+With the `bencher` CLI installed, we can now start tracking our benchmarks.
 
-
-Next, our simple eBPF profiler needs a target application.
-We're going to use this very lovely program that finds [amicable pairs][wikipedia amicable pairs].
-
-```rust
-fn main() {
-    for i in 1..(u32::from(u16::MAX)) {
-        let sum = (1..i/2+1).filter(|n| i % n == 0).sum();
-        if i > sum && (1..sum/2+1).filter(|n| sum % n == 0).sum::<u32>() == i {
-            println!("{i} {sum}");
-        }
-    }
-}
+```
+bencher run \
+    --project simple-profiler \
+    --token $BENCHER_API_TOKEN \
+    cargo bench
 ```
 
-With our simple eBPF profiler running against our amicable pairs target application,
-we can finally profile the profiler!
+This command uses the `bencher` CLI to run `cargo bench` for us.
+The `bencher run` command parses the results of `cargo bench`
+and sends them to the Bencher API server under our `Simple Profiler` project.
+Click on the link in the CLI output to view a plot of your first results.
+After running our benchmarks a few times, my perf page looks like this:
 
+<!-- STUB RESULTS -->
+<iframe src="https://bencher.dev/perf/rustls-821705769/embed?key=true&reports_per_page=8&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&clear=true&tab=branches&measures=013468de-9c37-4605-b363-aebbbf63268d&branches=28fae530-2b53-4482-acd4-47e16030d54f&testbeds=62ed31c3-8a58-479c-b828-52521ed67bee&benchmarks=bd25f73c-b2b9-4188-91b4-f632287c0a1b%2C8d443816-7a23-40a1-a54c-59de911eb517%2C42edb37f-ca91-4984-8835-445514575c85&start_time=1704067200000" title="rustls" width="100%" height="780px" allow="fullscreen"></iframe>
 
+By saving our results to Bencher,
+we can now track and compare our results over time
+and across several different dimensions.
+Bench supports tracking results based on the:
 
+- Branch: The `git` branch used (ex: `main`)
+- Testbed: The testing environment (ex: `ubuntu-latest` for GitHub Actions)
+- Benchmark: The performance test that was run (ex: `process_sample`)
+- Measure: The unit of measure for the benchmark (ex: `latency` in nanoseconds)
 
+Now that we have tracking in place,
+it is time take care of the "continuous" part.
+There are step-by-step guides for Continuous Benchmarking
+in [GitHub Actions][bencher github actions] and [GitLab CI/CD][bencher gitlab ci cd].
+For our example though, we're going to implement Continuous Benchmarking
+without worrying about the specific CI provider.
 
+We will have two different CI jobs.
+One to track our default `main` branch,
+and another to catch performance regressions in candidate branches
+(pull requests, merge requests, ect.).
 
+For our `main` branch job, we'll have a command like this:
 
+```
+bencher run \
+    --project simple-profiler \
+    --token $BENCHER_API_TOKEN \
+    --branch main \
+    --testbed ci-runner \
+    --err \
+    cargo bench
+```
 
+For clarity, we explicitly set our `branch` as `main`.
+We also set our `testbed` to a name for the CI runner, `ci-runner`.
+Finally, we set things to fail if we generate an alert
+with the `--err` flag.
 
+For the candidate branch, we'll have a command like this:
 
+```
+bencher run \
+    --project simple-profiler \
+    --token $BENCHER_API_TOKEN \
+    --branch $CANDIDATE_BRANCH \
+    --branch-start-point $DEFAULT_BRANCH \
+    --branch-start-point-hash $DEFAULT_BRANCH_HASH \
+    --testbed ci-runner \
+    --err \
+    bencher mock
+```
 
-With everything installed, we can finally profiler our profiler!
+Here things get a little more complicated.
+Since we want our candidate branch to be compared to our default branch,
+we are going to use need to use some environment variable provided by our CI system.
 
-[brendan gregg flamegraphs]: https://www.brendangregg.com/flamegraphs.html
-[github flamegraph]: https://github.com/flamegraph-rs/flamegraph#installation
-[wikipedia amicable pairs]: https://en.wikipedia.org/wiki/Amicable_numbers
+- `$CANDIDATE_BRANCH` should be the candidate branch name
+- `$DEFAULT_BRANCH` should be the default branch name (ie: `main`)
+- `$DEFAULT_BRANCH_HASH` should be the current default branch `git` hash
 
+For a more detailed guide, see [how to track benchmarks in CI][bencher track benchmarks]
+for a step-by-step walk through.
 
+With Continuous Benchmarking in place,
+we can now iterate on on your simple profiler
+without worrying about introducing performance regressions into our code.
+Continuous Benchmarking is not meant to replace profiling or running benchmarks locally.
+It is meant to complement both of these practices.
+Analogously, continuous integration has not replaced using a debugger or running unit tests locally.
+It has complemented them by providing a backstop for feature regressions.
+In this same vein, Continuous Benchmarking provides a backstop for preventing performance regressions before they make it to production.
 
+[bencher]: https://bencher.dev
+[github bencher]: https://github.com/bencherdev/bencher
+[bencher signup]: https://bencher.dev/auth/signup
+[bencher cli]: https://bencher.dev/docs/how-to/install-cli/
+[bencher github actions]: https://bencher.dev/docs/how-to/github-actions/
+[bencher gitlab ci cd]: https://bencher.dev/docs/how-to/gitlab-ci-cd/
+[bencher track benchmarks]: https://bencher.dev/docs/how-to/track-benchmarks/
 
-Instrumenting profiler
-- have to compile into code DHAT
+## Wrap Up
 
-Sampling profiler
-- separate form code take samples
-- more performant
-https://www.youtube.com/watch?v=JX0aVnpHomk
+eBPF is a powerful tool that allows software engineers to add custom capabilities to the Linux kernel,
+without having to be a kernel developer.
+We surveyed the existing options for creating eBPF programs.
+Based on the requirements of speed, safety, and developer experience,
+we chose to build our sample program in Rust using Aya.
 
-Make sure to include the 5 key takeaways at the beginning of the article.
+The simple profiler that we built contained a performance regression.
+Following the wisdom of Donald Knuth, we set out to discover what critical 3% of our simple profiler we needed to fix.
+We triangulated our performance regressions by using
+a sampling profiler based on `perf` that was visualized with flamegraphs
+and an instrumenting profiler with a custom allocator based on DHAT.
 
-1. Write a basic eBPF program in Rust
-2. Profile the source code
-3. Benchmark the user space Rust code
-4. Benchmark the kernel space eBPF code
-5. Catch performance regressions in CI
-
-The target reader for the article
-
-A mid to senior level developer with an interest in eBPF and cursory knowledge of Rust.
-They desire to understand how to gauge the performance impact of their eBPF code before deploying to
-production.
-
-How is this proposed article different and unique from other articles already published on the same
-topic? Please provide specific use case information and technical details to help better assess the
-proposal.
-
-There are no existing articles that cover the profiling and benchmarking eBPF code written in Rust, for
-both user space and kernel space.
-The addition of continuous benchmarking to catch performance regressions in CI is a further
-differentiator.
-
-Technologies and tools discussed in the article
-
-- eBPF
-- Rust (language)
-- Aya (Rust eBPF framework)
-- DHAT (heap profiling)
-- perf (profiling)
-- flamegraph (visualizer perf output)
-- cargo (for Rust)
-- Bencher (for continuous benchmarking)
-
-Any case studies and use cases you cover in the article?
-
-The code example (see below) will be used to illustrate the use cases:
-- profiling and catching a performance regression
-- benchmarking to validate fixing the performance regression
-- continuous benchmarking to prevent any future performance regressions
-
-Are there code examples you will include?
-
-Yes, there will be a simple and approachable Rust program that intentionally includes a performance
-regression. The profiling tools will be used to detect this regression. Then a custom benchmarking
-harness will be constructed to validate fixing the performance regression. Finally the custom
-benchmarking harness will be hooked up to continuous benchmarking to prevent any future performance
-regressions.
-
-Five key takeaways of the article. This is the most relevant information in the article
-summarized in 5 complete sentences.
-Define specific takeaways from the article. A reader of your article should be able to walk away with a
-set of actions to perform, a new theory to think about, or a thought-provoking question to answer.
-
-1. Building an eBPF program in Rust is very approachable using Aya.
-2. DHAT heap based profiling is easy to add to your user space code.
-3. The flamegraph CLI is a very developer friendly way to visualize the profile of your user space code.
-4. A custom benchmarking harness can be used to track the performance of eBPF kernel code.
-5. Continuous benchmarking with tools like Bencher help prevent performance regressions
+With our performance regression pinpointed,
+we then set about verifying our fix with a benchmark.
+The Criterion benchmarking harness provide invaluable for local benchmarking.
+However, to prevent performance regressions before they get merged in we implemented Continuous Benchmarking.
+Using Bencher, we were able set up Continuous Benchmarking to catch performance regressions in CI.
