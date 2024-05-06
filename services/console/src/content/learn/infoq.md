@@ -3,12 +3,12 @@
 ## Key Takeaways
 
 - Kernel space eBPF code can be written in C or Rust.
-User space bindings to eBPF are often written in C, C++, Rust, Go, or Python.
+User space bindings to eBPF are often written in C, Rust, Go, or Python.
 Using Rust for both kernel and user space code provides unmatched speed, safety, and developer experience.
 - ~~Premature~~ Blind optimization is the root of all evil.
 Profiling your code allows you to see where to focus your performance optimizations.
 - Different profiling techniques may illuminate different areas of interest.
-Use several profiling tools and triangulate on the root cause of your performance problems.
+Use several profiling tools and triangulate the root cause of your performance problems.
 - Benchmarking allows you to measure your performance optimizations
 for both your kernel and user space eBPF Rust code.
 - Continuous benchmarking with tools like Bencher help prevent performance regressions before they get released.
@@ -29,15 +29,18 @@ Finally, we will track our benchmarks with a [Continuous Benchmarking] tool to c
 
 Extended Berkeley Packet Filter (eBPF) is a virtual machine within the Linux kernel
 that executes bytecode compiled from languages like C and Rust.
-eBPF allows you to extend the functionality of the kernel without having to maintain a kernel module.
+eBPF allows you to extend the functionality of the kernel without having to develop and maintain a kernel module.
 The eBPF verifier ensures that your code doesn't harm the kernel by checking it at load time.
 These load time checks include:
 a one million instruction limit,
 no unbounded loops,
-and no waiting for user-space events.
+no heap allocations,
+and no waiting for user space events.
 Once verified, the eBPF bytecode is loaded into the eBPF virtual machine
-and executed within the kernel to perform tasks like tracing syscalls,
+and executed within the kernel to perform tasks like:
+tracing syscalls,
 probing user or kernel space,
+capturing perf events,
 instrumenting Linux Security Modules (LSM),
 and filtering packets.
 Initially known as Berkeley Packet Filtering (BPF), it evolved into eBPF as new use cases were added.
@@ -67,10 +70,10 @@ Aya will allow us to leverage Rust's strengths in performance, safety, and produ
 For our example, we're going to create a very basic eBPF sampling profiler.
 A sampling profiler sits outside of your target application and at a set interval it samples the state of your application.
 We will discuss the benefits and drawbacks of sampling profilers in depth later in this article.
-For now, its just important to understand that our goal is to periodically get a snapshot of the stack of a target application.
+For now, it's just important to understand that our goal is to periodically get a snapshot of the stack of a target application.
 Let's dive in!
 
-Use Aya to [setup an eBPF development environment][aya dev env].
+First, use Aya to [set up an eBPF development environment][aya dev env].
 Name your project `profiler`.
 Inside of `profiler-ebpf/src/main.rs` we're going to add:
 
@@ -110,7 +113,8 @@ pub fn perf_profiler(ctx: PerfEventContext) -> u32 {
 
     // The rest of our code is `unsafe` as we are dealing with raw pointers.
     unsafe {
-        // Use the eBPF `bpf_get_stack` helper function to get a user space stack trace.
+        // Use the eBPF `bpf_get_stack` helper function
+        // to get a user space stack trace.
         let stack_len = bpf_get_stack(
             // Provide the Linux kernel context for the tracing program.
             ctx.as_ptr(),
@@ -123,7 +127,8 @@ pub fn perf_profiler(ctx: PerfEventContext) -> u32 {
             aya_ebpf::bindings::BPF_F_USER_STACK,
         );
 
-        // If the length of the stack trace is negative, then there was an error.
+        // If the length of the stack trace is negative,
+        // then there was an error.
         let Ok(stack_len: u64) = stack_len.try_into() else {
             aya_log_ebpf::error!(&ctx, "Failed to get stack.");
             return 0;
@@ -183,7 +188,7 @@ async fn main() -> Result<(), anyhow::Error> {
     // the process identifier (PID) for the process to be profiled.
     let pid: u32 = std::env::args().last().unwrap().parse()?;
 
-    // Use Aya to setup our eBPF program.
+    // Use Aya to set up our eBPF program.
     // The eBPF byte code is included in our user space binary
     // to make it much easier to deploy.
     // When loading the eBPF byte code,
@@ -191,7 +196,7 @@ async fn main() -> Result<(), anyhow::Error> {
     let mut ebpf = aya::EbpfLoader::new()
         .set_global("PID", &pid, true)
         .load(include_bytes_aligned!(
-            "../../target/bpfel-unknown-none/release/perf_profiler"
+            "../../target/bpfel-unknown-none/release/profiler"
         ))?;
     // Initialize the eBPF logger.
     // This allows us to receive the logs from our eBPF program.
@@ -233,7 +238,7 @@ async fn main() -> Result<(), anyhow::Error> {
         }
     });
 
-    // Run our program until the user enters `CTL` + `c`.
+    // Run our program until the user enters `CTRL` + `c`.
     tokio::signal::ctrl_c().await?;
     Ok(())
 }
@@ -242,13 +247,13 @@ async fn main() -> Result<(), anyhow::Error> {
 Our user space code can now loads our perf event eBPF program.
 Once loaded, our eBPF program will use the `cpu-clock` counter to time our sampling frequency.
 One hundred times a second, we will sample the target application
-and capture a stack trace sample.
+and capture a stack trace.
 This stack trace sample is then sent over to user space via the ring buffer.
 Finally, the stack trace sample is printed to standard out.
 
 This is obviously a very simple profiler.
 We aren't symbolicating the call stack,
-so we are just printing is a list of memory addresses with some metadata.
+so we are just printing a list of memory addresses with some metadata.
 Nor are we able to sample our target program while it is sleeping.
 For that we would have to add a `sched` tracepoint for `sched_switch`.
 However, this is already enough code for us to have a performance regression. Did you spot it?
@@ -267,7 +272,7 @@ Right about now the seemingly ubiquitous adage
 "premature optimization is the root of all evil"
 usually starts to get bandied around.
 
-However, lets take a look at what Donald Knuth actually said all the way back in 1974:
+However, let's take a look at what Donald Knuth actually said all the way back in 1974:
 
 > Programmers waste enormous amounts of time thinking about, or worrying about,
 > the speed of noncritical parts of their programs,
@@ -281,17 +286,17 @@ So that is exactly what we need to do, look for "opportunities in that critical 
 In order to do so we are going to explore two different kinds of profilers, sampling and instrumenting.
 We will then use each type of profiler to find that critical 3% in our own simple profiler.
 
-Our basic eBPF profiler is an example of a sampling profiler.
+Our simple eBPF profiler is an example of a sampling profiler.
 It sits outside of the target application.
 At a given interval, it collects a sample of the target application's stack trace.
 Because a sampling profiler only runs periodically, it has relatively little overhead.
 However, this means that we may miss some things.
-By analogy, this is like watching a movie by only looking at one out of say every one hundred frames.
+By analogy, this is like watching a movie by only looking at one out of every one hundred frames.
 Movies are usually shot at 24 frames per second.
-That means you would only see a new frame once every 4 seconds.
+That means you would only see a new frame about once every 4 seconds.
 Besides being a very boring way to watch a film,
 this can also lead to a distorted view of what is actually going on.
-The frame you happen to get could really just be a momentary flashback (overweighting).
+The frame you happen to see could really just be a momentary flashback (overweighting).
 Conversely, there could have just been an amazing action sequence,
 and you only caught the closeup on the lead actor's face on either side of it (underweighting).
 
@@ -303,11 +308,11 @@ Therefore a sampling profiler is more likely to give you an accurate picture
 of what is going on in production than an instrumenting profiler.
 To continue our analogy from above, an instrumenting profiler is like watching a movie
 that was shot on an old 35mm hand cranked camera.
-Being hand cranked, it was nye impossible to consistently film at 24 frames per second.
+Being hand cranked, it was nigh impossible to consistently film at 24 frames per second.
 So cinematographers settled for around 18 frames per second.
 Likewise with an instrumenting profiler, you can view all of the proverbial frames,
 but everything has to run much slower.
-You run right into [the observer effect][wikipedia heisenbug].
+You can run right into [the observer effect][wikipedia heisenbug].
 
 [wikipedia heisenbug]: https://en.wikipedia.org/wiki/Heisenbug
 
@@ -327,7 +332,7 @@ we can finally profile the profiler!
 ![flamegraph.svg]
 
 The flamegraph that is produced is an interactive SVG file.
-The length along x-axis indicates the percentage of time that a stack was present in the samples.
+The length along the x-axis indicates the percentage of time that a stack was present in the samples.
 This is accomplished by sorting the stacks alphabetically
 and then merged identically named stacks into a single rectangle.
 It is important to note that the x-axis of a flamegraph is _not_ sorted by time.
@@ -335,23 +340,27 @@ Instead it is meant to show the proportion of time used,
 sort of like a mini rectangular pie chart for each row of the diagram.
 The height along the y-axis indicates the stack depth, going from the bottom up.
 That is, the longest lived stacks are on the bottom and newer generations are on top.
-Therefore, the stacks with a top edge exposed were the bits of code that were actively running when a sample was taken.
+Therefore, the stack frames with a top edge exposed were the bits of code that were actively running when a sample was taken.
 
 ![peak_flamegraph.svg]
 
 Zooming in here to this peak, we can see the call stack for our task that reads from the samples map.
-We also seem to be doing quite a bit of sleeping...
-Now lets hope over to using an instrumenting profiler to get another vantage point.
+We seem to be doing quite a bit of sleeping...
+Now lets hop over to using an instrumenting profiler to get another vantage point.
+
+[brendan gregg flamegraphs]: https://www.brendangregg.com/flamegraphs.html
+[github flamegraph]: https://github.com/flamegraph-rs/flamegraph
 
 ### Instrumenting Profiler
 
 There are many different things that one could measure at runtime within their application.
 Some of these are idiosyncratic to the application under observation and others are more general.
 For measures particular to your application, [the `counts` crate][github counts] is a useful tool.
-To keep things stream lined though, we're going be measuring heap allocations.
-This is accomplished by using a special Rust allocator with [the `dhat-rs` crate][github dhat rs].
+A measure that is useful for almost all applications is heap allocations.
+The easiest way to measure heap allocations in Rust
+is with [the `dhat-rs` crate][github dhat rs].
 
-We have to update our `profiler/src/main.rs` file:
+To use `dhat-rs` we have to update our `profiler/src/main.rs` file:
 
 ```rust
 ...
@@ -361,9 +370,6 @@ We have to update our `profiler/src/main.rs` file:
 #[global_allocator]
 static ALLOC: dhat::Alloc = dhat::Alloc;
 
-// Run our `main` function using the `tokio` async runtime.
-// On success, simply return a unit tuple.
-// If there is an error, return a catch-all `anyhow::Error`.
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     // Instantiate an instance of the heap instrumenting profiler
@@ -398,7 +404,7 @@ you can open it in [the online viewer][dh view].
 
 This shows you a tree structure of when and where heap allocations occurred.
 The outer nodes are the parent and the inner nodes are its children.
-That is, the longest lived stacks are on the outside and newer generations are on the inside.
+That is, the longest lived stacks frames are on the outside and newer generations are on the inside.
 Zooming in on one of those blocks, we can take a look at the allocation stack trace.
 
 ![dh_view_allocated_at.png]
@@ -410,7 +416,7 @@ Now spin around three times and tell [which way an icicle graph goes][polar sign
 Looking at the percentages in the DHAT viewer it seems like we are doing quite a bit of allocating...
 To get a more visual representation of the DHAT results,
 we can open them in [the Firefox Profiler][firefox profiler].
-The Firefox Profiler also allows you to create sharable links.
+The Firefox Profiler also allows you to create shareable links.
 This is [the link][fp link] for my DHAT profile.
 
 At this point I think we have narrowed down the culprit:
@@ -461,15 +467,26 @@ After adding Criterion as our benchmarking harness in our `Cargo.toml`,
 we can create a benchmark for our `process_sample` library function.
 
 ```rust
-fn bench_process_sample(c: &mut Criterion) {
+// The benchmark function for `process_sample`
+fn bench_process_sample(c: &mut criterion::Criterion) {
     c.bench_function("process_sample", |b| {
+        // Criterion will run our benchmark multiple times
+        // to try to get a statistically significant result.
         b.iter(|| {
+            // Iterate through a fixed set of test samples.
             for sample in TEST_SAMPLES {
+                // Call our `process_sample` library function.
                 profiler_common::process_sample(sample).unwrap();
             }
         })
     });
 }
+
+// Create a custom benchmarking harness named `benchmark_profiler`
+criterion::criterion_main!(benchmark_profiler);
+// Register our `bench_process_sample` benchmark
+// with our custom `benchmark_profiler` benchmarking harness.
+criterion::criterion_group!(benchmark_profiler, bench_process_sample);
 ```
 
 When we run our benchmark with `cargo bench`
@@ -486,7 +503,7 @@ Found 4 outliers among 100 measurements (4.00%)
   1 (1.00%) high mild
 ```
 
-Now lets remove that pesky `oops` line from `process_sample` and see how performance improved:
+Now lets remove that pesky `oops` line from `process_sample` and see what happens:
 
 <!-- STUB RESULTS -->
 ```
@@ -523,9 +540,9 @@ Found 8 outliers among 100 measurements (8.00%)
 ```
 
 It's tempting to call this a job well done.
-We have have found and fixed our opportunity in that critical 3%.
+We have found and fixed our opportunity in that critical 3%.
 However, what's preventing us from introducing another performance regression just like `oops` in the future?
-For most software teams the answer to that is surprisingly, "Nothing."
+For most software projects the answer to that is surprisingly, "Nothing."
 This is where Continuous Benchmarking comes in.
 
 [thenewstack ebpf benchmark]: https://thenewstack.io/catch-performance-regressions-benchmark-ebpf-program/
@@ -579,17 +596,17 @@ Bench supports tracking results based on the:
 - Benchmark: The performance test that was run (ex: `process_sample`)
 - Measure: The unit of measure for the benchmark (ex: `latency` in nanoseconds)
 
-Now that we have tracking in place,
-it is time take care of the "continuous" part.
+Now that we have benchmark tracking in place,
+it is time to take care of the "continuous" part.
 There are step-by-step guides for Continuous Benchmarking
-in [GitHub Actions][bencher github actions] and [GitLab CI/CD][bencher gitlab ci cd].
+in [GitHub Actions][bencher github actions] and [GitLab CI/CD][bencher gitlab ci cd] available.
 For our example though, we're going to implement Continuous Benchmarking
 without worrying about the specific CI provider.
 
 We will have two different CI jobs.
 One to track our default `main` branch,
 and another to catch performance regressions in candidate branches
-(pull requests, merge requests, ect.).
+(pull requests, merge requests, etc).
 
 For our `main` branch job, we'll have a command like this:
 
@@ -624,7 +641,7 @@ bencher run \
 
 Here things get a little more complicated.
 Since we want our candidate branch to be compared to our default branch,
-we are going to use need to use some environment variable provided by our CI system.
+we are going to need to use some environment variables provided by our CI system.
 
 - `$CANDIDATE_BRANCH` should be the candidate branch name
 - `$DEFAULT_BRANCH` should be the default branch name (ie: `main`)
@@ -637,7 +654,7 @@ With Continuous Benchmarking in place,
 we can now iterate on on your simple profiler
 without worrying about introducing performance regressions into our code.
 Continuous Benchmarking is not meant to replace profiling or running benchmarks locally.
-It is meant to complement both of these practices.
+It is meant to complement them.
 Analogously, continuous integration has not replaced using a debugger or running unit tests locally.
 It has complemented them by providing a backstop for feature regressions.
 In this same vein, Continuous Benchmarking provides a backstop for preventing performance regressions before they make it to production.
@@ -662,10 +679,10 @@ The simple profiler that we built contained a performance regression.
 Following the wisdom of Donald Knuth, we set out to discover what critical 3% of our simple profiler we needed to fix.
 We triangulated our performance regressions by using
 a sampling profiler based on `perf` that was visualized with flamegraphs
-and an instrumenting profiler with a custom allocator based on DHAT.
+and an instrumenting profiler for heap allocations based on DHAT.
 
 With our performance regression pinpointed,
 we then set about verifying our fix with a benchmark.
-The Criterion benchmarking harness provide invaluable for local benchmarking.
-However, to prevent performance regressions before they get merged in we implemented Continuous Benchmarking.
-Using Bencher, we were able set up Continuous Benchmarking to catch performance regressions in CI.
+The Criterion benchmarking harness proved invaluable for local benchmarking.
+However, to prevent performance regressions before they get merged we implemented Continuous Benchmarking.
+Using Bencher, we were able to set up Continuous Benchmarking to catch performance regressions in CI.

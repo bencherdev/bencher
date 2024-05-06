@@ -131,6 +131,10 @@
   - https://godbolt.org/
   - https://cppinsights.io/
 
+## Programming
+- Create error message help pages for each supported programming language
+  - https://kinsta.com/knowledgebase/dns-server-not-responding/
+
 # Binary Size
 
 permissionless pilot
