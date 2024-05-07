@@ -100,6 +100,7 @@
     - Astro
       - Things break a lot
 - Issue Bounty Programs: The Cobra Effect for Maintainer Burnout?
+- Escaping down the stack: Why I choose Rust in the age of LLMs
 - CPU Caches:
   - https://www.youtube.com/watch?v=WDIkqP4JbkE
   - https://people.freebsd.org/~lstewart/articles/cpumemory.pdf
