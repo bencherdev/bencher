@@ -1,28 +1,49 @@
-## 基准测试指令
+import ShellForm from "../shell-form.mdx";
+import ExecForm from "../exec-form.mdx";
 
-传递给 `bencher run` 的第一个参数是可选的基准测试指令。
-这是将要被执行的命令，调用你的基准测试工具。
-也可以通过 `BENCHER_CMD` 环境变量来设置此命令。
-默认情况下，此命令在 shell 中执行，可以通过 `--shell` 和 `--flag` 选项配置。
-其输出由一个基准测试工具适配器解析，可以通过 `--adapter` 选项设置。
-然而，如果基准测试工具输出到文件，那么还必须使用 `--file` 选项指定输出文件路径。
+## 基准命令
 
-如果你更喜欢不在 shell 中执行命令，你可以使用 `--exec` 标志，或者简单地将额外的参数作为 `bencher run` 的额外参数。
+`bencher run` 的第一个参数是可选的基准命令。
+这是将被执行的命令，用以调用您的基准测试环节。
+也可以通过设置 `BENCHER_CMD` 环境变量来指定。
+默认情况下，这个命令在一个 shell 中执行，
+可以通过 [`--shell`][shell option] 和 [`--flag`][flag option] 选项来配置。
+其输出由一个 [基准测试适配器][benchmark harness adapters] 解析，
+可以使用 [`--adapter`][adapter option] 选项来设置。
+然而，如果基准测试装置输出到一个文件，则必须同时使用 [`--file`][file option] 选项
+来指定输出文件路径。
+如果您希望跟踪输出文件的大小（即二进制大小）而不是其内容，
+则使用 [`--file-size`][file size option] 选项来指定输出文件路径。
 
-Shell 表单:
-```bash
-bencher run "bencher mock"
-```
+如果您更希望不在 shell 中执行命令，您可以使用 `--exec` 标志，或者简单地将额外的命令参数作为 `bencher run` 的附加参数提供。
 
-Exec 表单:
-```bash
-bencher run bencher mock
-```
+Shell 表单：
+<ShellForm />
 
-基准测试指令可以使用 `--iter` 选项运行多次，
-并且这些结果可以使用 `--fold` 选项合并为一个结果。
-如果其中任何一个迭代失败，那么整个命令都被认为是失败的，除非设置了 `--allow-failure` 标志。
+Exec 表单：
+<ExecForm />
 
-如果未指定基准测试命令，但设置了 `--file` 选项，那么 `bencher run` 会从输出文件路径读取。
-如果既未指定基准测试命令也未指定 `--file` 选项，那么 `bencher run` 将从 `stdin` 读取。
-这允许你将其他命令的输出保存到文件，或者把它管道传送到 `bencher run`。
+使用 [`--iter`][iter option] 选项，可以多次运行基准命令，
+并且可以使用 [`--fold`][fold option] 选项将这些结果折叠成一个结果。
+如果任何迭代失败，则除非设置了 [`--allow-failure`][allow failure flag] 标志，
+整个命令都被视为失败。
+
+如果没有指定基准命令但指定了 [`--file`][file option] 选项，
+那么 `bencher run` 将只读取指定的输出文件路径。
+类似地，如果没有指定基准命令但指定了 [`--file-size`][file size option] 选项，
+那么 `bencher run` 将只读取给定文件路径处文件的大小。
+如果没有指定基准命令、[`--file`][file option] 选项
+或 [`--file-size`][file size option] 选项，
+那么 `bencher run` 将改为从 `stdin` 读取。
+这允许您将另一个命令的输出保存到文件中或者管道传输到 `bencher run`。
+
+[benchmark harness adapters]: /zh/docs/explanation/adapters/
+
+[shell option]: #--shell-shell
+[flag option]: #--flag-flag
+[adapter option]: #--adapter-adapter
+[file option]: #--file-file
+[file size option]: #--file-size-file
+[iter option]: #--iter-iter
+[fold option]: #--fold-fold
+[allow failure flag]: #--allow-failure

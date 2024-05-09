@@ -1,3 +1,6 @@
+import ShellForm from "../shell-form.mdx";
+import ExecForm from "../exec-form.mdx";
+
 ## Benchmark Command
 
 The first argument to `bencher run` is the optional benchmark command.
@@ -15,14 +18,10 @@ use the [`--file-size`][file size option] option to specify the output file path
 If you would prefer to not have the command executed in a shell, you can use the `--exec` flag or simply provide additional arguments to your command as additional arguments to `bencher run`.
 
 Shell Form:
-```bash
-bencher run "bencher mock"
-```
+<ShellForm />
 
 Exec Form:
-```bash
-bencher run bencher mock
-```
+<ExecForm />
 
 The benchmark command can be run multiple times using the [`--iter`][iter option] option,
 and those results can be folded into a single result using the [`--fold`][fold option] option.

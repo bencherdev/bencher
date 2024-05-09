@@ -1,28 +1,49 @@
-## Comando Benchmark
+import ShellForm from "../shell-form.mdx";
+import ExecForm from "../exec-form.mdx";
 
-El primer argumento para `bencher run` es el comando benchmark opcional.
-Este es el comando que se ejecutará, invocando tu arnés de pruebas de rendimiento.
+## Comando de Benchmark
+
+El primer argumento para `bencher run` es el comando de benchmark opcional.
+Este es el comando que se ejecutará, invocando tu arnés de referencia.
 También se puede establecer usando la variable de entorno `BENCHER_CMD`.
-Por defecto, este comando se ejecuta en un shell, que se puede configurar con las opciones `--shell` y `--flag`.
-Su salida es analizada por un adaptador de arnés de pruebas de rendimiento, que se puede establecer usando la opción `--adapter`.
-Sin embargo, si el arnés de pruebas de rendimiento muestra los resultados en un archivo, entonces la opción `--file` también debe ser usada para especificar la ruta del archivo de salida.
+Por defecto, este comando se ejecuta en una shell,
+que se puede configurar con las opciones [`--shell`][shell option] y [`--flag`][flag option].
+Su salida es analizada por un [adaptador del arnés de referencia][benchmark harness adapters],
+que se puede establecer usando la opción [`--adapter`][adapter option].
+Sin embargo, si el arnés de referencia genera salida a un archivo, entonces la opción [`--file`][file option]
+también debe usarse para especificar la ruta del archivo de salida.
+Alternativamente, para rastrear el tamaño del archivo de salida (es decir, tamaño binario) en lugar de su contenido,
+usa la opción [`--file-size`][file size option] para especificar la ruta del archivo de salida.
 
-Si prefieres no tener el comando ejecutado en un shell, puedes usar la bandera `--exec` o simplemente proporcionar argumentos adicionales a tu comando como argumentos adicionales para `bencher run`.
+Si prefieres que el comando no se ejecute en una shell, puedes usar la bandera `--exec` o simplemente proporcionar argumentos adicionales a tu comando como argumentos adicionales a `bencher run`.
 
 Forma Shell:
-```bash
-bencher run "bencher mock"
-```
+<ShellForm />
 
 Forma Exec:
-```bash
-bencher run bencher mock
-```
+<ExecForm />
 
-El comando benchmark puede ejecutarse varias veces usando la opción `--iter`,
-y esos resultados pueden consolidarse en un solo resultado usando la opción `--fold`.
-Si alguna de las iteraciones falla, entonces se considera que todo el comando ha fallado a menos que se establezca la bandera `--allow-failure`.
+El comando de benchmark se puede ejecutar múltiples veces usando la opción [`--iter`][iter option],
+y esos resultados pueden ser combinados en un solo resultado usando la opción [`--fold`][fold option].
+Si alguna de las iteraciones falla, entonces se considera que todo el comando ha fallado
+a menos que la bandera [`--allow-failure`][allow failure flag] esté establecida.
 
-Si el comando benchmark no se especifica pero la opción `--file` sí, entonces `bencher run` leerá la ruta del archivo de salida en su lugar.
-Si ni el comando benchmark ni  la opción `--file` están especificados, entonces `bencher run` leerá desde `stdin` en su lugar.
-Esto te permite guardar la salida de otro comando en un archivo o canalizarlo a `bencher run`, respectivamente.
+Si el comando de benchmark no se especifica pero la opción [`--file`][file option] sí,
+entonces `bencher run` simplemente leerá de la ruta del archivo de salida en su lugar.
+De manera similar, si el comando de benchmark no se especifica pero la opción [`--file-size`][file size option] sí,
+entonces `bencher run` simplemente leerá el tamaño del archivo en la ruta de archivo dada en su lugar.
+Si ni el comando de benchmark, la opción [`--file`][file option],
+ni la opción [`--file-size`][file size option] están especificados,
+entonces `bencher run` leerá desde `stdin` en su lugar.
+Esto te permite guardar la salida de otro comando en un archivo o canalizarlo a `bencher run`.
+
+[benchmark harness adapters]: /es/docs/explanation/adapters/
+
+[shell option]: #--shell-shell
+[flag option]: #--flag-flag
+[adapter option]: #--adapter-adapter
+[file option]: #--file-file
+[file size option]: #--file-size-file
+[iter option]: #--iter-iter
+[fold option]: #--fold-fold
+[allow failure flag]: #--allow-failure

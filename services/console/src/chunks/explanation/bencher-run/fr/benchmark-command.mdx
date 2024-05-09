@@ -1,28 +1,29 @@
+import ShellForm from "../shell-form.mdx";
+import ExecForm from "../exec-form.mdx";
+
 ## Commande de Benchmark
 
-Le premier argument à `bencher run` est la commande de benchmark optionnelle.
-C'est la commande qui sera exécutée, invoquant votre harnais de benchmark.
-Elle peut également être définie en utilisant la variable d'environnement `BENCHER_CMD`.
-Par défaut, cette commande est exécutée dans un shell, qui peut être configuré avec les options `--shell` et `--flag`.
-Sa sortie est analysée par un adaptateur de harnais de benchmark, qui peut être défini en utilisant l'option `--adapter`.
-Cependant, si le harnais de benchmark sort vers un fichier alors l'option `--file` doit également être utilisée pour spécifier le chemin du fichier de sortie.
+Le premier argument de `bencher run` est la commande de benchmark optionnelle. C'est la commande qui sera exécutée, invoquant votre harnais de benchmark. Elle peut également être définie en utilisant la variable d'environnement `BENCHER_CMD`. Par défaut, cette commande est exécutée dans un shell, qui peut être configuré avec les options [`--shell`][shell option] et [`--flag`][flag option]. Son output est analysé par un [adaptateur de harnais de benchmark][benchmark harness adapters], qui peut être défini en utilisant l'option [`--adapter`][adapter option] option. Toutefois, si le harnais de benchmark effectue une sortie vers un fichier, l'option [`--file`][file option] doit également être utilisée pour spécifier le chemin du fichier de sortie. Alternativement, pour suivre la taille du fichier de sortie (c'est-à-dire la taille binaire) au lieu de son contenu, utilisez l'option [`--file-size`][file size option] pour spécifier le chemin du fichier de sortie.
 
-Si vous préférez ne pas avoir la commande exécutée dans un shell, vous pouvez utiliser le drapeau `--exec` ou simplement fournir des arguments supplémentaires à votre commande en tant qu'arguments supplémentaires à `bencher run`.
+Si vous préférez ne pas exécuter la commande dans un shell, vous pouvez utiliser l'indicateur `--exec` ou simplement fournir des arguments supplémentaires à votre commande comme arguments supplémentaires à `bencher run`.
 
-Forme Shell :
-```bash
-bencher run "bencher mock"
-```
+Formulaire Shell :
+<ShellForm />
 
-Forme Exec :
-```bash
-bencher run bencher mock
-```
+Formulaire Exec :
+<ExecForm />
 
-La commande de benchmark peut être exécutée plusieurs fois en utilisant l'option `--iter`,
-et ces résultats peuvent être regroupés en un seul résultat en utilisant l'option `--fold`.
-Si l'une des itérations échoue, alors la commande entière est considérée comme ayant échoué à moins que le drapeau `--allow-failure` soit défini.
+La commande de benchmark peut être exécutée plusieurs fois en utilisant l'option [`--iter`][iter option], et ces résultats peuvent être consolidés en un seul résultat en utilisant l'option [`--fold`][fold option]. Si l'une des itérations échoue, alors la commande entière est considérée comme ayant échoué, à moins que le drapeau [`--allow-failure`][allow failure flag] ne soit défini.
 
-Si la commande de benchmark n'est pas spécifiée mais que l'option `--file` l'est, alors `bencher run` lira à partir du chemin du fichier de sortie à la place.
-Si ni la commande de benchmark ni l'option `--file` ne sont spécifiées, alors `bencher run` lira à partir de `stdin` à la place.
-Cela vous permet d'enregistrer la sortie d'une autre commande dans un fichier ou de la faire passer dans `bencher run`, respectivement.
+Si la commande de benchmark n'est pas spécifiée mais que l'option [`--file`][file option] l'est, alors `bencher run` lira simplement à partir du chemin du fichier de sortie à la place. De même, si la commande de benchmark n'est pas spécifiée mais que l'option [`--file-size`][file size option] l'est, alors `bencher run` lira simplement la taille du fichier au chemin donné à la place. Si ni la commande de benchmark, ni l'option [`--file`][file option], ni l'option [`--file-size`][file size option] ne sont spécifiées, alors `bencher run` lira depuis `stdin` à la place. Cela vous permet de sauvegarder la sortie d'une autre commande dans un fichier ou de la rediriger vers `bencher run`.
+
+[benchmark harness adapters]: /fr/docs/explanation/adapters/
+
+[shell option]: #--shell-shell
+[flag option]: #--flag-flag
+[adapter option]: #--adapter-adapter
+[file option]: #--file-file
+[file size option]: #--file-size-file
+[iter option]: #--iter-iter
+[fold option]: #--fold-fold
+[allow failure flag]: #--allow-failure

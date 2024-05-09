@@ -1,28 +1,48 @@
+import ShellForm from "../shell-form.mdx";
+import ExecForm from "../exec-form.mdx";
+
 ## Benchmark-Befehl
 
 Das erste Argument für `bencher run` ist der optionale Benchmark-Befehl.
-Dies ist der Befehl, der ausgeführt wird und Ihren Benchmark-Harness aufruft.
+Dies ist der Befehl, der ausgeführt wird, um Ihr Benchmark-Harness zu starten.
 Er kann auch über die Umgebungsvariable `BENCHER_CMD` gesetzt werden.
-Standardmäßig wird dieser Befehl in einer Shell ausgeführt, welche mit den Optionen `--shell` und `--flag` konfiguriert werden kann.
-Seine Ausgabe wird von einem Benchmark-Harness-Adapter analysiert, der mit der Option `--adapter` festgelegt werden kann.
-Wenn der Benchmark-Harness jedoch in eine Datei ausgibt, muss auch die Option `--file` verwendet werden, um den Ausgabedateipfad zu spezifizieren.
+Standardmäßig wird dieser Befehl in einer Shell ausgeführt,
+die mit den Optionen [`--shell`][shell option] und [`--flag`][flag option] konfiguriert werden kann.
+Seine Ausgabe wird von einem [Benchmark-Harness-Adapter][benchmark harness adapters] geparst,
+der mit der Option [`--adapter`][adapter option] festgelegt werden kann.
+Wenn das Benchmark-Harness jedoch in eine Datei schreibt, dann muss auch die Option [`--file`][file option] verwendet werden, um den Pfad der Ausgabedatei anzugeben.
+Alternative, um die Größe der Ausgabedatei (z. B. Binärgröße) anstelle ihres Inhalts zu verfolgen,
+verwenden Sie die Option [`--file-size`][file size option], um den Pfad der Ausgabedatei anzugeben.
 
-Wenn Sie bevorzugen, dass der Befehl nicht in einer Shell ausgeführt wird, können Sie die `--exec`-Flag verwenden oder einfach zusätzliche Argumente zu Ihrem Befehl als zusätzliche Argumente zu `bencher run` hinzufügen.
+Wenn Sie bevorzugen, dass der Befehl nicht in einer Shell ausgeführt wird, können Sie den `--exec` Flag verwenden oder einfach zusätzliche Argumente zu Ihrem Befehl als zusätzliche Argumente zu `bencher run` hinzufügen.
 
-Shell-Form:
-```bash
-bencher run "bencher mock"
-```
+Shell-Formular:
+<ShellForm />
 
-Exec-Form:
-```bash
-bencher run bencher mock
-```
+Ausführungsformular:
+<ExecForm />
 
-Der Benchmark-Befehl kann mehrere Male mit der Option `--iter` ausgeführt werden,
-und diese Ergebnisse können mit der Option `--fold` zu einem einzigen Ergebnis zusammengefasst werden.
-Wenn eine der Iterationen fehlschlägt, gilt der gesamte Befehl als fehlgeschlagen, es sei denn, die Flag `--allow-failure` ist gesetzt.
+Der Benchmark-Befehl kann mehrmals mit der Option [`--iter`][iter option] ausgeführt werden,
+und diese Ergebnisse können mit der Option [`--fold`][fold option] zu einem einzigen Ergebnis zusammengefasst werden.
+Wenn eine der Iterationen fehlschlägt, gilt der gesamte Befehl als fehlgeschlagen,
+es sei denn, der Flag [`--allow-failure`][allow failure flag] wird gesetzt.
 
-Wenn der Benchmark-Befehl nicht angegeben ist, aber die `--file`-Option besteht, dann liest `bencher run` stattdessen aus dem Ausgabedateipfad.
-Wenn weder der Benchmark-Befehl noch die `--file`-Option angegeben sind, dann liest `bencher run` stattdessen von `stdin`.
-Dies ermöglicht es Ihnen, die Ausgabe eines anderen Befehls in eine Datei zu speichern oder in `bencher run` zu leiten.
+Wenn der Benchmark-Befehl nicht angegeben ist, aber die Option [`--file`][file option] verwendet wird,
+dann wird `bencher run` stattdessen einfach den Pfad der Ausgabedatei lesen.
+Ähnlich, wenn der Benchmark-Befehl nicht angegeben ist, aber die Option [`--file-size`][file size option] verwendet wird,
+dann wird `bencher run` einfach die Größe der Datei am angegebenen Dateipfad lesen.
+Wenn weder der Benchmark-Befehl, die Option [`--file`][file option],
+noch die Option [`--file-size`][file size option] angegeben sind,
+wird `bencher run` stattdessen von `stdin` lesen.
+Dies ermöglicht es Ihnen, die Ausgabe eines anderen Befehls in eine Datei zu speichern oder in `bencher run` zu pipen.
+
+[benchmark harness adapters]: /de/docs/explanation/adapters/
+
+[shell option]: #--shell-shell
+[flag option]: #--flag-flag
+[adapter option]: #--adapter-adapter
+[file option]: #--file-file
+[file size option]: #--file-size-file
+[iter option]: #--iter-iter
+[fold option]: #--fold-fold
+[allow failure flag]: #--allow-failure

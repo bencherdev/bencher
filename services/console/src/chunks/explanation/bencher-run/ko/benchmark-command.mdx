@@ -1,28 +1,38 @@
 ## 벤치마크 명령어
 
-`bencher run`에 대한 첫 번째 인수는 선택적인 벤치마크 명령입니다.
-이 명령은 벤치마크 하네스를 호출할 때 실행됩니다.
+`bencher run`의 첫 번째 인자는 선택적인 벤치마크 명령어입니다.
+이는 벤치마크 하네스를 호출하여 실행될 명령어입니다.
 `BENCHER_CMD` 환경 변수를 사용하여 설정할 수도 있습니다.
-기본적으로 이 명령은 `--shell` 및 `--flag` 옵션으로 구성할 수 있는 쉘에서 실행됩니다.
-출력은 벤치마크 하네스 어댑터에 의해 파싱되며, 이는 `--adapter` 옵션을 사용하여 설정할 수 있습니다.
-그러나 벤치마크 하네스가 파일에 출력하면, 출력 파일 경로를 지정하기 위해 `--file` 옵션도 사용해야 합니다.
+기본적으로 이 명령어는 셸에서 실행되며, 이는 [`--shell`][shell option] 및 [`--flag`][flag option] 옵션으로 구성할 수 있습니다.
+그 출력은 [벤치마크 하네스 어댑터][벤치마크 하네스 어댑터]에 의해 파싱되며, [`--adapter`][adapter option] 옵션을 사용해 설정할 수 있습니다.
+그러나, 벤치마크 하네스가 파일로 출력하는 경우, 출력 파일 경로를 지정하기 위해 반드시 [`--file`][file option] 옵션을 사용해야 합니다.
+대신 내용보다는 출력 파일(예: 바이너리 크기)의 크기를 추적하려면, 출력 파일 경로를 지정하기 위해 [`--file-size`][file size option] 옵션을 사용하세요.
 
-쉘에서 명령을 실행하고 싶지 않다면, `--exec` 플래그를 사용하거나 단순히 `bencher run`에 추가 인수로 명령에 추가 인수를 제공할 수 있습니다.
+명령어를 셸에서 실행하지 않길 원한다면, `--exec` 플래그를 사용하거나 `bencher run`에 추가 인자로 명령어에 추가 인자를 제공할 수 있습니다.
 
-쉘 형식:
-```bash
-bencher run "bencher mock"
-```
+Shell Form:
+<ShellForm />
 
-Exec 형식:
-```bash
-bencher run bencher mock
-```
+Exec Form:
+<ExecForm />
 
-벤치마크 명령은 `--iter` 옵션을 사용하여 여러 번 실행할 수 있으며,
-그 결과는 `--fold` 옵션을 사용하여 하나의 결과로 합칠 수 있습니다.
-반복 중 어느 하나가 실패하면, `--allow-failure` 플래그가 설정되지 않은 경우 전체 명령이 실패한 것으로 간주됩니다.
+[`--iter`][iter option] 옵션을 사용하면 벤치마크 명령어를 여러 번 실행할 수 있으며,
+[`--fold`][fold option] 옵션을 사용하여 그 결과를 단일 결과로 합칠 수 있습니다.
+반복 실행 중 하나라도 실패하면, [`--allow-failure`][allow failure flag] 플래그가 설정되지 않은 경우 전체 명령어는 실패한 것으로 간주됩니다.
 
-벤치마크 명령이 지정되지 않고 `--file` 옵션이 있는 경우, 그러면 `bencher run`은 대신 출력 파일 경로에서 읽습니다.
-벤치마크 명령 또는 `--file` 옵션이 지정되지 않은 경우, 그러면 `bencher run`은 `stdin`에서 대신 읽습니다.
-이를 통해 다른 명령의 출력을 파일에 저장하거나 `bencher run`으로 파이프할 수 있습니다.
+벤치마크 명령어가 지정되지 않았지만 [`--file`][file option] 옵션이 지정된 경우, 그러면 `bencher run`은 대신 출력 파일 경로에서 읽기만 할 것입니다.
+마찬가지로, 벤치마크 명령어가 지정되지 않았지만 [`--file-size`][file size option] 옵션이 지정된 경우, `bencher run`은 지정된 파일 경로에서 파일의 크기만 읽을 것입니다.
+벤치마크 명령어, [`--file`][file option] 옵션, 또는 [`--file-size`][file size option] 옵션 중 어느 것도 지정되지 않으면,
+`bencher run`은 대신 `stdin`에서 읽을 것입니다.
+이를 통해 다른 명령어의 출력을 파일에 저장하거나 `bencher run`으로 파이프할 수 있습니다.
+
+[벤치마크 하네스 어댑터]: /ko/docs/explanation/adapters/
+
+[shell option]: #--shell-shell
+[flag option]: #--flag-flag
+[adapter option]: #--adapter-adapter
+[file option]: #--file-file
+[file size option]: #--file-size-file
+[iter option]: #--iter-iter
+[fold option]: #--fold-fold
+[allow failure flag]: #--allow-failure
