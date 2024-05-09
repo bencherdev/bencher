@@ -1,0 +1,5 @@
+## ☕️ Java JMH
+
+The Java JMH Adapter (`java_jmh`) expects [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh) output in [JSON format (ie `-rf json`)](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java).
+Both `latency` and `throughput` Measures (ie `nanoseconds (ns)` and `operations / second (ops/sec)`) may be gathered.
+The `lower_value` and `upper_value` are the lower and upper confidence intervals for the mean (ie `value`) respectively.

@@ -1,0 +1,20 @@
+```yml
+description: Benchmark Name
+type: object
+additionalProperties:
+  description: Measure Name, Slug, or UUID
+  type: object
+  properties:
+    value:
+      type: number
+      format: float
+      required: true
+    lower_value:
+      type: number
+      format: float
+      required: false
+    upper_value:
+      type: number
+      format: float
+      required: false
+```

@@ -1,0 +1,11 @@
+## 🐍 Python Pytest
+
+The Python Pytest Adapter (`python_pytest`) expects [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) output in [JSON format (ie `--benchmark-json results.json`)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options).
+This JSON output is saved to a file, so you must use the `bencher run` CLI `--file` argument to specify that file path (ie `bencher run --file results.json "pipenv run pytest --benchmark-json results.json benchmarks.py"`).
+The `latency` Measure (ie `nanoseconds (ns)`) is gathered.
+
+There are two options for the Metric:
+- `mean` (default):  The `lower_value` and `upper_value` are one standard deviation below and above the mean (ie `value`) respectively.
+- `median`: The `lower_value` and `upper_value` are one interquartile range below and above the median (ie `value`) respectively.
+
+This can be specified in the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand with the optional `--average` argument.
