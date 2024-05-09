@@ -1,0 +1,21 @@
+```import FileSizeCode from "../file-size-code.mdx";
+
+## ⚖️ Dateigröße
+
+Das <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterkommando
+kann verwendet werden, um die Dateigröße (d.h. Binärgröße) Ihrer Lieferobjekte mit der Option `--file-size` zu verfolgen.
+Die Option `--file-size` erwartet einen Dateipfad zur Datei, deren Größe gemessen wird.
+Intern gibt <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code>
+die Ergebnisse im [Bencher Metric Format (BMF) JSON][json] aus.
+Es ist daher eine gute Praxis, explizit den `json` Adapter festzulegen.
+
+<FileSizeCode />
+
+Die `file-size` Messung (d.h. `bytes (B)`) wird erfasst.
+Nur der Dateigrößenwert (d.h. `value`) ist verfügbar.
+Weder `lower_value` noch `upper_value` werden gesammelt.
+Die `file-size` Messung wird nicht standardmäßig für alle Projekte erstellt.
+Wenn Sie jedoch die Option `--file-size` verwenden, wird diese Messung automatisch für Ihr Projekt erstellt.
+
+[json]: #-json
+```

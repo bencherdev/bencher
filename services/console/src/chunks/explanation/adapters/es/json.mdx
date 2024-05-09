@@ -1,0 +1,36 @@
+import BmfExample from "../bmf-example.mdx";
+import BmfSchema from "../bmf-schema.mdx";
+
+## JSON \{...\}
+
+El Adaptador JSON (`json`) espera JSON BMF.
+Es perfecto para integrar arneses de referencia personalizados con Bencher.
+
+Ejemplo de BMF:
+
+<BmfExample />
+
+En este ejemplo, la clave `benchmark_name` sería el nombre de un punto de referencia.
+Los nombres de los puntos de referencia pueden ser cualquier cadena no vacía de hasta 1024 caracteres.
+El objeto `benchmark_name` contiene nombres de Medición, slugs o UUIDs como claves.
+En este ejemplo, `latency` es el slug para la Medida de Latencia.
+Cada Proyecto por defecto tiene una Medida de Latencia (es decir, `latency`) y de Rendimiento (es decir, `throughput`),
+que se miden en `nanosegundo (ns)` y `operaciones / segundo (ops/s)` respectivamente.
+El objeto Medida contiene una Métrica con hasta tres valores: `value`, `lower_value` y `upper_value`.
+Los valores `lower_value` y `upper_value` son opcionales,
+y su cálculo es específico del arnés de referencia.
+
+En este ejemplo, el objeto Medida `latency` contiene los siguientes valores:
+
+- Un `value` de `88.0`
+- Un `lower_value` de `87.42`
+- Un `upper_value` de `88.88`
+
+Si el JSON BMF se almacena en un archivo,
+entonces puedes usar el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code> con el argumento opcional `--file` para especificar esa ruta de archivo.
+Esto funciona tanto con un comando de punto de referencia (ej: `bencher run --file results.json "bencher mock > results.json"`)
+como sin un comando de punto de referencia (ej: `bencher mock > results.json && bencher run --file results.json`).
+
+<BmfSchema />
+
+> 🐰 Nota: El subcomando CLI `bencher mock` genera Métricas BMF simuladas.

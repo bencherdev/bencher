@@ -1,0 +1,7 @@
+## 🦀 Rust Iai
+
+Rust Iai 适配器（`rust_iai`）期望 [Iai](https://github.com/bheisler/iai) 输出。
+将收集 `instructions`、`l1_access`、`l2_access`、`ram_access` 和 `estimated_cycles` 测量值。
+只有这些测量值（即 `value`）可用。没有 `lower_value` 和 `upper_value` 测量值。
+对于所有项目，这个适配器的测量值默认不会被创建。
+然而，当你使用这个适配器时，这些测量值将会为你的项目自动创建。

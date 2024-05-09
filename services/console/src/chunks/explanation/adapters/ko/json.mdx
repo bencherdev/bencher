@@ -1,0 +1,38 @@
+```jsx
+import BmfExample from "../bmf-example.mdx";
+import BmfSchema from "../bmf-schema.mdx";
+```
+
+## \{...\} JSON
+
+JSON 어댑터(`json`)는 BMF JSON을 요구합니다.
+이는 커스텀 벤치마크 하니스를 Bencher와 통합하는 데에 완벽합니다.
+
+BMF의 예는 다음과 같습니다:
+
+<BmfExample />
+
+이 예시에서, 키 `benchmark_name`은 벤치마크의 이름이 됩니다.
+벤치마크 이름은 빈 문자열이 아닌 최대 1024자까지의 문자열이 될 수 있습니다.
+`benchmark_name` 객체는 측정 이름, 슬러그 또는 UUID를 키로 포함합니다.
+이 예시에서, `latency`는 대기 시간 측정을 위한 슬러그입니다.
+각 프로젝트는 기본적으로 대기 시간(즉 `latency`) 및 처리량(즉 `throughput`) 측정을 가집니다,
+이는 각각 `나노초(ns)`와 `초당 연산 횟수(ops/s)`로 측정됩니다.
+측정 객체는 최대 세 가지 값인 `value`, `lower_value`, `upper_value`를 포함하는 메트릭을 포함합니다.
+`lower_value` 및 `upper_value` 값은 선택 사항이며,
+그 계산은 벤치마크 하니스에 특정됩니다.
+
+이 예시에서, `latency` 측정 객체는 다음 값을 포함합니다:
+
+- `value`는 `88.0`
+- `lower_value`는 `87.42`
+- `upper_value`는 `88.88`
+
+BMF JSON이 파일에 저장된 경우,
+해당 파일 경로를 지정하려면 선택적인 `--file` 인자와 함께 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 하위 명령어를 사용할 수 있습니다.
+이는 벤치마크 명령어가 있는 경우(예: `bencher run --file results.json "bencher mock > results.json"`)
+와 없는 경우 모두(예: `bencher mock > results.json && bencher run --file results.json`)에서 작동합니다.
+
+<BmfSchema />
+
+> 🐰 참고: `bencher mock` CLI 하위 명령어는 모의 BMF 메트릭을 생성합니다.

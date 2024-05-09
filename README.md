@@ -88,6 +88,8 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
 
 - {...} JSON
   - [Custom benchmark harness support](https://bencher.dev/docs/explanation/adapters/#-json)
+- ⚖️ File Size
+  - [File Size (Binary Size)](https://bencher.dev/docs/explanation/adapters/#%EF%B8%8F-file-size)
 - #️⃣ C#
   - [BenchmarkDotNet](https://bencher.dev/docs/explanation/adapters/#%EF%B8%8F%E2%83%A3-c-dotnet)
 - ➕ C++

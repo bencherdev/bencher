@@ -1,0 +1,10 @@
+## #️⃣ C# DotNet
+
+C# DotNet 适配器 (`c_sharp_dot_net`) 期望[BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet)的输出为[JSON格式（即使用 `--exporters json` 选项）](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson)。
+会收集`延迟`度量（即 `纳秒 (ns)`）。
+
+度量有两个选项：
+- `mean`（默认）：`lower_value` 和 `upper_value` 分别是标准差下方和上方的平均值（即 `value`）。
+- `median`：`lower_value` 和 `upper_value` 分别是四分位距下方和上方的中位数（即 `value`）。
+
+这可以在 <code><a href="/zh/docs/explanation/bencher-run/">bencher运行</a></code> CLI 子命令中用 `--average` 选项来指定。

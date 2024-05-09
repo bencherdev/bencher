@@ -1,0 +1,36 @@
+import BmfExample from "../bmf-example.mdx";
+import BmfSchema from "../bmf-schema.mdx";
+
+## \{...\} JSON
+
+JSON 适配器（`json`）期望 BMF JSON。
+它非常适合将自定义基准测试套件与 Bencher 集成。
+
+BMF 的示例：
+
+<BmfExample />
+
+在此示例中，键 `benchmark_name` 将是基准测试的名称。
+基准测试名称可以是任何非空字符串，最多 1024 个字符。
+`benchmark_name` 对象包含度量名称、别名或 UUID 作为键。
+在此示例中，`latency` 是 Latency 度量的别名。
+每个项目默认具有 Latency（即 `latency`）和 Throughput（即 `throughput`）度量，
+分别以 `纳秒 (ns)` 和 `操作数 / 秒 (ops/s)` 计量。
+度量对象包含最多三个值：`value`, `lower_value` 和 `upper_value`。
+`lower_value` 和 `upper_value` 值是可选的，
+并且其计算是基准测试套件特定的。
+
+在此示例中，`latency` 度量对象包含以下值：
+
+- 一个 `value` 为 `88.0`
+- 一个 `lower_value` 为 `87.42`
+- 一个 `upper_value` 为 `88.88`
+
+如果 BMF JSON 存储在一个文件中，
+那么您可以使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令，并使用可选的 `--file` 参数来指定该文件路径。
+这适用于有基准测试命令（例如：`bencher run --file results.json "bencher mock > results.json"`）
+和没有基准测试命令（例如：`bencher mock > results.json && bencher run --file results.json`）的情况。
+
+<BmfSchema />
+
+> 🐰 注意：`bencher mock` CLI 子命令生成模拟 BMF 指标。

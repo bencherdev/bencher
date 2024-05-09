@@ -1,0 +1,10 @@
+## #️⃣ C# DotNet
+
+C# DotNet 어댑터(`c_sharp_dot_net`)는 [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) 출력을 [JSON 포맷(즉 `--exporters json`)](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson)으로 기대합니다.
+`latency` 측정값(즉 `나노초(ns)`)이 수집됩니다.
+
+메트릭에는 두 가지 옵션이 있습니다:
+- `mean`(기본값): `lower_value`와 `upper_value`는 평균(즉 `value`)보다 표준편차 하나 아래와 위에 각각 있습니다.
+- `median`: `lower_value`와 `upper_value`는 중앙값(즉 `value`)보다 사분위수 범위 하나 아래와 위에 각각 있습니다.
+
+이는 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 하위 명령어에서 `--average` 옵션으로 지정할 수 있습니다.

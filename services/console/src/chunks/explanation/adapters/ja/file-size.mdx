@@ -1,0 +1,20 @@
+```jsx
+import FileSizeCode from "../file-size-code.mdx";
+
+## ⚖️ ファイルサイズ
+
+<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドは、`--file-size` オプションを使用して、納品物のファイルサイズ（バイナリサイズ）を追跡することができます。
+`--file-size` オプションは、サイズが測定されるファイルへのファイルパスを期待します。
+内部では、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> は結果を [Bencher Metric Format (BMF) JSON][json] で出力します。
+したがって、`json` アダプタを明示的に設定することが良い実践です。
+
+<FileSizeCode />
+
+`file-size` 測定（例：`bytes (B)`）が行われます。
+利用可能なのはファイルサイズ値（例：`value`）のみです。
+`lower_value` や `upper_value` は収集されません。
+`file-size` 測定は、すべてのプロジェクトでデフォルトで作成されるわけではありません。
+しかし、`--file-size` オプションを使用するとき、この測定はプロジェクトに自動的に作成されます。
+
+[json]: #-json
+```

@@ -1,0 +1,5 @@
+## ☕️ Java JMH
+
+Java JMH アダプター (`java_jmh`) は、[Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh) の出力を [JSON形式 (つまり `-rf json`)](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java)で期待しています。
+`latency` と `throughput` の測定値（つまり `ナノ秒 (ns)` と `秒間操作数 (ops/sec)`）が収集されることがあります。
+`lower_value` と `upper_value` は、それぞれ平均（つまり `value`）の下限および上限の信頼区間です。

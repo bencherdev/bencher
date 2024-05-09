@@ -1,0 +1,22 @@
+Adapter konvertieren die Ausgabe von Benchmark-Harness in das standardisierte JSON,
+Bencher Metric Format (BMF).
+Die Adapter werden auf dem API-Server ausgeführt, wenn ein neuer Bericht empfangen wird.
+Siehe die [Übersicht über das Benchmarking][benchmarking overview] für eine ausführlichere Erklärung.
+Sie können für das [CLI-Unterkommando `bencher run`][bencher run]
+mit der Option `--adapter` angegeben werden.
+Wenn kein Adapter angegeben ist, wird standardmäßig [der `magic` Adapter][magic adapter] verwendet.
+
+Es ist am besten, den spezifischsten Adapter für Ihren Anwendungsfall zu verwenden.
+Dies stellt sowohl die genaueste als auch leistungsstärkste Analyse zur Verfügung.
+Wenn Sie zum Beispiel Rust [libtest bench][rust libtest]-Ausgabe parsen,
+sollten Sie den `rust_bench` Adapter und nicht den `magic` Adapter verwenden.
+Sehen Sie auf unserer
+[Bencher Perf-Seite][perf page] einen guten Vergleich.
+
+[rust libtest]: https://doc.rust-lang.org/rustc/tests/index.html#benchmarks
+[perf page]: https://bencher.dev/perf/bencher?key=true&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1688083200000&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&end_time=1704067200000&clear=true
+
+[benchmarking overview]: /de/docs/explanation/benchmarking/
+[bencher run]: /de/docs/explanation/bencher-run/
+
+[magic adapter]: #-magic-default

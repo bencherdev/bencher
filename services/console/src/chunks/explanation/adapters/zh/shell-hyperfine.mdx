@@ -1,0 +1,9 @@
+## ❯_️ Shell Hyperfine
+
+Shell Hyperfine 适配器（`shell_hyperfine`）期望 [Hyperfine](https://github.com/sharkdp/hyperfine) 的输出以 [JSON格式（即 `--export-json results.json`）](https://github.com/sharkdp/hyperfine/tree/master/scripts#example) 出现。这个 JSON 输出会被保存到一个文件中，因此你必须使用 `bencher run` CLI 的 `--file` 参数来指定该文件路径（即 `bencher run --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`）。将会收集到 `latency` 测量值（即 `纳秒 (ns)`）。
+
+对于指标有两个选项：
+- `mean`（默认）：`lower_value` 和 `upper_value` 分别为标准差以下和以上的平均值（即 `value`）。
+- `median`：`lower_value` 和 `upper_value` 分别为 `min` 和 `max` 值。
+
+这可以在 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令中使用 `--average` 选项来指定。

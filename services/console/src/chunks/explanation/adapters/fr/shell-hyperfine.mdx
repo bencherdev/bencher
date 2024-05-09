@@ -1,0 +1,11 @@
+## ❯_️ Adaptateur Shell Hyperfine
+
+L'adaptateur Shell Hyperfine (`shell_hyperfine`) attend une sortie [Hyperfine](https://github.com/sharkdp/hyperfine) au format [JSON (c'est-à-dire `--export-json results.json`)](https://github.com/sharkdp/hyperfine/tree/master/scripts#example).
+Cette sortie JSON est sauvegardée dans un fichier, donc vous devez utiliser l'argument `--file` de la CLI `bencher run` pour spécifier le chemin de ce fichier (c'est-à-dire `bencher run --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`).
+La mesure de `latency` (c'est-à-dire `nanosecondes (ns)`) est recueillie.
+
+Il y a deux options pour la Métrique :
+- `mean` (par défaut) : Les valeurs `lower_value` et `upper_value` sont un écart-type en dessous et au-dessus de la moyenne (c'est-à-dire `value`) respectivement.
+- `median` : Les valeurs `lower_value` et `upper_value` sont les valeurs `min` et `max` respectivement.
+
+Ceci peut être spécifié dans la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code> avec l'option `--average`.

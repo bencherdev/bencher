@@ -1,0 +1,22 @@
+Adaptadores convertem a saída do harness de benchmark para JSON padronizado,
+Formato de Métrica do Bencher (BMF).
+Os adaptadores são executados no servidor API quando um novo relatório é recebido.
+Veja a [visão geral de benchmarking][visão geral de benchmarking] para uma explicação mais aprofundada.
+Eles podem ser especificados para o subcomando CLI [o `bencher run`][bencher run]
+com a opção `--adapter`.
+Se nenhum adaptador for especificado, [o adaptador `magic`][adaptador magic] é usado por padrão.
+
+É melhor usar o adaptador mais específico para o seu caso de uso.
+Isso proporcionará a análise mais precisa e performática.
+Por exemplo, se você estiver analisando a saída do bench [libtest do Rust][rust libtest],
+você deve usar o adaptador `rust_bench`, e não o adaptador `magic`.
+Veja nossa
+[página de desempenho do Bencher][página perf] para uma boa comparação.
+
+[rust libtest]: https://doc.rust-lang.org/rustc/tests/index.html#benchmarks
+[página perf]: https://bencher.dev/perf/bencher?key=true&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1688083200000&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&end_time=1704067200000&clear=true
+
+[visão geral de benchmarking]: /pt/docs/explanation/benchmarking/
+[bencher run]: /pt/docs/explanation/bencher-run/
+
+[adaptador magic]: #-magic-default

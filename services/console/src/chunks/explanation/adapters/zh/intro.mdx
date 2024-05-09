@@ -1,0 +1,11 @@
+适配器将基准测试harness的输出转换为标准化的JSON，即Bencher度量格式（BMF）。当收到新报告时，这些适配器在API服务器上运行。查看[基准测试概览][benchmarking overview]以获取更深入的解释。它们可以通过`--adapter`选项为[the `bencher run` CLI子命令][bencher run]指定。如果没有指定适配器，则默认使用[the `magic` 适配器][magic adapter]。
+
+最好使用最适合您用例的特定适配器。这将提供最准确和最高性能的解析。例如，如果您正在解析Rust [libtest bench][rust libtest]输出，您应该使用`rust_bench`适配器，而不是`magic` 适配器。请查看我们的[Bencher 性能页面][perf page]，以进行好的比较。
+
+[rust libtest]: https://doc.rust-lang.org/rustc/tests/index.html#benchmarks
+[perf page]: https://bencher.dev/perf/bencher?key=true&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1688083200000&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&end_time=1704067200000&clear=true
+
+[benchmarking overview]: /zh/docs/explanation/benchmarking/
+[bencher run]: /zh/docs/explanation/bencher-run/
+
+[magic adapter]: #-magic-default

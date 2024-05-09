@@ -2,6 +2,6 @@
 
 The Rust Iai Adapter (`rust_iai_callgrind`) expects [Iai-Callgrind](https://github.com/iai-callgrind/iai-callgrind) output.
 The `instructions`, `l1_access`, `l2_access`, `ram_access`, `total_accesses`, and `estimated_cycles` Measures are gathered.
-Only these measures (ie `value`) are available. There are no `lower_value` and `upper_value` measures.
+Only `value` is available. Neither `lower_value` nor `upper_value` are collected.
 The Measures for this adapter are not created by default for all projects.
 However, when you use this adapter, these Measures will be automatically created for your Project.

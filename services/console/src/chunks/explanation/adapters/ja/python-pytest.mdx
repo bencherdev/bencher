@@ -1,0 +1,11 @@
+## 🐍 Python Pytest
+
+Python Pytest アダプタ (`python_pytest`) は、[pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) の出力を [JSON 形式 (つまり `--benchmark-json results.json`)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options) で期待します。
+この JSON 出力はファイルに保存されるため、ファイルパスを指定するために `bencher run` CLI の `--file` 引数を使用する必要があります (つまり `bencher run --file results.json "pipenv run pytest --benchmark-json results.json benchmarks.py"` )。
+`latency` 測定（つまり `ナノ秒 (ns)`）が収集されます。
+
+メトリックには2つのオプションがあります：
+- `mean` (デフォルト)：`lower_value` と `upper_value` はそれぞれ平均値 (つまり `value`) の1標準偏差以下と上になります。
+- `median`：`lower_value` と `upper_value` はそれぞれ中央値 (つまり `value`) の1四分位範囲以下と上になります。
+
+これは、オプションの `--average` 引数を使用して <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLI サブコマンドで指定できます。

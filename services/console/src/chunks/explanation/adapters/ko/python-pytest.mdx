@@ -1,0 +1,11 @@
+## 🐍 파이썬 Pytest
+
+파이썬 Pytest 어댑터 (`python_pytest`)는 [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) 출력을 [JSON 형식 (`--benchmark-json results.json`옵션을 사용하여)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options)으로 기대합니다.
+이 JSON 출력은 파일로 저장되므로 파일 경로를 지정하기 위해 `bencher run` CLI의 `--file` 인자를 사용해야 합니다(예: `bencher run --file results.json "pipenv run pytest --benchmark-json results.json benchmarks.py"`).
+`latency` 측정값은 (예: `나노초 (ns)`) 수집됩니다.
+
+메트릭에는 두 가지 옵션이 있습니다:
+- `mean` (기본값): `lower_value`와 `upper_value`는 각각 평균(예: `value`) 아래와 위에 한 표준편차입니다.
+- `median`: `lower_value`와 `upper_value`는 각각 중앙값(예: `value`) 아래와 위에 하나의 사분위 범위입니다.
+
+이는 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드에서 선택적 `--average` 인자를 사용하여 지정할 수 있습니다.

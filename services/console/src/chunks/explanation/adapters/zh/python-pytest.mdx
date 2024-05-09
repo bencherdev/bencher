@@ -1,0 +1,11 @@
+## 🐍 Python Pytest
+
+Python Pytest 适配器（`python_pytest`）期望 [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) 的输出以 [JSON 格式（即 `--benchmark-json results.json`）](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options)。
+这个 JSON 输出被保存到一个文件中，因此你必须使用 `bencher run` CLI 的 `--file` 参数来指定该文件路径（即 `bencher run --file results.json "pipenv run pytest --benchmark-json results.json benchmarks.py"`）。
+`延迟` 测量指标（即 `纳秒 (ns)`）会被收集。
+
+有两个选项用于指标：
+- `平均值`（默认）：`lower_value` 和 `upper_value` 分别是平均值（即 `value`）标准差以下和以上。
+- `中位数`：`lower_value` 和 `upper_value` 分别是中位数（即 `value`）的四分位距以下和以上。
+
+可以使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令中的可选 `--average` 参数来指定这一点。

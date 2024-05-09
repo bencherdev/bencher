@@ -1,0 +1,10 @@
+## #️⃣ C# DotNet
+
+Der C# DotNet Adapter (`c_sharp_dot_net`) erwartet [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet)-Ausgabe im [JSON-Format (d.h. `--exporters json`)](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson).
+Die `latency`-Messung (d.h. `Nanosekunden (ns)`) wird gesammelt.
+
+Es gibt zwei Optionen für die Metrik:
+- `mean` (Standard): Die `lower_value` und `upper_value` sind eine Standardabweichung unter und über dem Mittelwert (d.h. `value`) entsprechend.
+- `median`: Die `lower_value` und `upper_value` sind einen Interquartilabstand unter und über dem Median (d.h. `value`) entsprechend.
+
+Dies kann im <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl mit der Option `--average` angegeben werden.
