@@ -7,4 +7,9 @@ auf den Namen, den Slug oder die UUID des Branches.
 Wenn der angegebene Wert ein Name oder Slug ist und der Branch noch nicht existiert, wird er für Sie erstellt.
 Wenn jedoch der angegebene Wert eine UUID ist, muss der Branch bereits existieren.
 Wenn beides angegeben ist, hat die `--branch` Option Vorrang vor der `BENCHER_BRANCH` Umgebungsvariablen.
-Wenn keines angegeben ist, wird `main` als Standard Branch verwendet.
+
+Wenn keines angegeben ist, versucht das Bencher CLI, den aktuellen `git`-Zweig zu finden.
+Es beginnt mit der Suche nach einem `git`-Repository im aktuellen Arbeitsverzeichnis.
+Falls dies erfolglos ist, setzt es seine Suche im übergeordneten Verzeichnis fort und wiederholt dies bis zum Stammverzeichnis.
+Wenn ein `git`-Repository gefunden wird, dann wird der aktuelle kurze Zweigname verwendet.
+Wenn jedoch kein `git`-Repository gefunden wird, dann wird `main` als Standardzweig verwendet.

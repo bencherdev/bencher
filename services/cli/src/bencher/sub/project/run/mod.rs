@@ -2,14 +2,14 @@ use std::{future::Future, pin::Pin};
 
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings};
 use bencher_comment::ReportComment;
-use bencher_json::{DateTime, GitHash, JsonConsole, JsonReport, ResourceId};
+use bencher_json::{DateTime, JsonConsole, JsonReport, ResourceId};
 use clap::ValueEnum;
 use url::Url;
 
 use crate::{
     bencher::backend::AuthBackend,
     cli_eprintln_quietable, cli_println, cli_println_quietable,
-    parser::project::run::{CliRun, CliRunAdapter, CliRunHash},
+    parser::project::run::{CliRun, CliRunAdapter},
     CliError,
 };
 
@@ -41,7 +41,6 @@ const BENCHER_CMD: &str = "BENCHER_CMD";
 pub struct Run {
     project: ResourceId,
     branch: Branch,
-    hash: Option<GitHash>,
     testbed: Testbed,
     adapter: Option<Adapter>,
     average: Option<JsonAverage>,
@@ -65,8 +64,7 @@ impl TryFrom<CliRun> for Run {
     fn try_from(run: CliRun) -> Result<Self, Self::Error> {
         let CliRun {
             project,
-            run_branch,
-            run_hash,
+            branch,
             testbed,
             adapter,
             average,
@@ -83,8 +81,7 @@ impl TryFrom<CliRun> for Run {
         } = run;
         Ok(Self {
             project: unwrap_project(project)?,
-            branch: run_branch.try_into().map_err(RunError::Branch)?,
-            hash: map_hash(run_hash),
+            branch: branch.try_into().map_err(RunError::Branch)?,
             testbed: testbed.try_into().map_err(RunError::Testbed)?,
             adapter: map_adapter(adapter),
             average: average.map(Into::into),
@@ -111,26 +108,6 @@ fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, RunError> {
     } else {
         return Err(RunError::NoProject);
     })
-}
-
-fn map_hash(CliRunHash { hash, no_hash }: CliRunHash) -> Option<GitHash> {
-    if let Some(hash) = hash {
-        return Some(hash);
-    } else if no_hash {
-        return None;
-    }
-
-    let current_dir = std::env::current_dir().ok()?;
-    for directory in current_dir.ancestors() {
-        let Some(repo) = gix::open(directory).ok() else {
-            continue;
-        };
-        let head_id = repo.head_id().ok()?;
-        let head_object = head_id.object().ok()?;
-        return Some(head_object.id.into());
-    }
-
-    None
 }
 
 fn map_adapter(adapter: Option<CliRunAdapter>) -> Option<Adapter> {
@@ -218,15 +195,9 @@ impl Run {
     }
 
     async fn generate_report(&self) -> Result<Option<JsonNewReport>, RunError> {
-        let branch = self
+        let (branch, hash) = self
             .branch
-            .get(
-                &self.project,
-                self.hash.as_ref(),
-                self.dry_run,
-                self.log,
-                &self.backend,
-            )
+            .get(&self.project, self.dry_run, self.log, &self.backend)
             .await?;
         let testbed = self
             .testbed
@@ -265,7 +236,7 @@ impl Run {
 
         Ok(Some(JsonNewReport {
             branch: branch.into(),
-            hash: self.hash.clone().map(Into::into),
+            hash: hash.map(Into::into),
             testbed: testbed.into(),
             start_time: start_time.into(),
             end_time: end_time.into(),

@@ -7,4 +7,9 @@ al nombre, slug o UUID de la Rama.
 Si el valor especificado es un nombre o slug y la Rama no existe previamente, se creará para usted.
 Sin embargo, si el valor especificado es un UUID, entonces la Rama ya debe existir.
 Si ambos están especificados, la opción `--branch` tiene precedencia sobre la variable de entorno `BENCHER_BRANCH`.
-Si ninguno está especificado, entonces `main` se utiliza como la Rama predeterminada.
+
+Si no se especifica ninguno, el CLI de Bencher intenta encontrar la rama actual de `git`.
+Comienza buscando un repositorio de `git` en el directorio de trabajo actual.
+Si no tiene éxito, continúa con el directorio padre y reintentar hasta llegar al directorio raíz.
+Si se encuentra un repositorio de `git`, entonces se usa el nombre corto de la rama actual.
+Sin embargo, si no se encuentra un repositorio de `git`, entonces `main` se utiliza como la rama predeterminada.

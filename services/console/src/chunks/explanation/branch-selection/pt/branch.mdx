@@ -7,4 +7,9 @@ para o nome, identificador ou UUID do Ramo.
 Se o valor especificado for um nome ou identificador e o Ramo ainda não existir, ele será criado para você.
 No entanto, se o valor especificado for um UUID, então o Ramo já deve existir.
 Se ambos forem especificados, a opção `--branch` tem precedência sobre a variável de ambiente `BENCHER_BRANCH`.
-Se nenhum dos dois for especificado, então `main` é usado como o Ramo padrão.
+
+Se nenhum dos dois for especificado, o CLI do Bencher tenta encontrar o branch atual do `git`.
+Ele começa procurando por um repositório `git` no diretório de trabalho atual.
+Se não for bem-sucedido, continua para o diretório pai e tenta novamente, até chegar ao diretório raiz.
+Se um repositório `git` for encontrado, então o nome curto do branch atual é usado.
+No entanto, se um repositório `git` não for encontrado, então `main` é usado como o Branch padrão.

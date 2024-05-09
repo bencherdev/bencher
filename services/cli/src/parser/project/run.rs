@@ -12,10 +12,7 @@ pub struct CliRun {
     pub project: Option<ResourceId>,
 
     #[clap(flatten)]
-    pub run_branch: CliRunBranch,
-
-    #[clap(flatten)]
-    pub run_hash: CliRunHash,
+    pub branch: CliRunBranch,
 
     /// Testbed name, slug, or UUID (or set BENCHER_TESTBED) (default is "localhost").
     /// If a name or slug is provided, the testbed will be created if it does not exist
@@ -98,6 +95,9 @@ pub struct CliRunBranch {
     /// Deprecated: Do not use. This will soon be removed.
     #[clap(long, alias = "else-branch", alias = "endif-branch")]
     pub deprecated: bool,
+
+    #[clap(flatten)]
+    pub hash: CliRunHash,
 }
 
 #[derive(Args, Debug)]

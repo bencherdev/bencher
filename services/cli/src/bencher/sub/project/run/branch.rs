@@ -8,7 +8,9 @@ use bencher_json::{
 };
 
 use crate::{
-    bencher::backend::AuthBackend, cli_println_quietable, parser::project::run::CliRunBranch,
+    bencher::backend::AuthBackend,
+    cli_println_quietable,
+    parser::project::run::{CliRunBranch, CliRunHash},
 };
 
 use super::BENCHER_BRANCH;
@@ -19,6 +21,7 @@ pub struct Branch {
     branch: NameId,
     start_point: Option<StartPoint>,
     reset: bool,
+    hash: Option<GitHash>,
 }
 
 #[derive(Debug, Clone)]
@@ -75,6 +78,7 @@ impl TryFrom<CliRunBranch> for Branch {
             branch_start_point_hash,
             branch_reset,
             deprecated: _,
+            hash,
         } = run_branch;
         let branch = if let Some(branch) = branch {
             branch
@@ -83,6 +87,8 @@ impl TryFrom<CliRunBranch> for Branch {
                 .as_str()
                 .parse()
                 .map_err(BranchError::ParseBranch)?
+        } else if let Some(branch) = find_branch() {
+            branch
         } else {
             BRANCH_MAIN_STR.parse().map_err(BranchError::ParseBranch)?
         };
@@ -101,29 +107,59 @@ impl TryFrom<CliRunBranch> for Branch {
             branch,
             start_point,
             reset: branch_reset,
+            hash: map_hash(hash),
         })
     }
+}
+
+fn find_branch() -> Option<NameId> {
+    if let Some(repo) = find_repo() {
+        if let Ok(Some(branch)) = repo.head_name() {
+            return branch.shorten().to_string().parse().ok();
+        }
+    }
+    None
+}
+
+fn map_hash(CliRunHash { hash, no_hash }: CliRunHash) -> Option<GitHash> {
+    if let Some(hash) = hash {
+        return Some(hash);
+    } else if no_hash {
+        return None;
+    }
+    let repo = find_repo()?;
+    let head_id = repo.head_id().ok()?;
+    let head_object = head_id.object().ok()?;
+    Some(head_object.id.into())
+}
+
+fn find_repo() -> Option<gix::Repository> {
+    let current_dir = std::env::current_dir().ok()?;
+    for directory in current_dir.ancestors() {
+        if let Ok(repo) = gix::open(directory) {
+            return Some(repo);
+        }
+    }
+    None
 }
 
 impl Branch {
     pub async fn get(
         &self,
         project: &ResourceId,
-        hash: Option<&GitHash>,
         dry_run: bool,
         log: bool,
         backend: &AuthBackend,
-    ) -> Result<NameId, BranchError> {
+    ) -> Result<(NameId, Option<GitHash>), BranchError> {
         if !dry_run {
-            self.exists_or_create(project, hash, log, backend).await?;
+            self.exists_or_create(project, log, backend).await?;
         }
-        Ok(self.branch.clone())
+        Ok((self.branch.clone(), self.hash.clone()))
     }
 
     async fn exists_or_create(
         &self,
         project: &ResourceId,
-        hash: Option<&GitHash>,
         log: bool,
         backend: &AuthBackend,
     ) -> Result<(), BranchError> {
@@ -192,7 +228,7 @@ impl Branch {
         // If there is a hash specified for this report,
         // then go ahead and reserve it as the next hash for the branch.
         // This will help prevent race conditions for any other branches that use this one as their start point.
-        reserve_hash(project, &branch, hash, backend).await
+        reserve_hash(project, &branch, self.hash.as_ref(), backend).await
     }
 
     async fn check_start_point(
