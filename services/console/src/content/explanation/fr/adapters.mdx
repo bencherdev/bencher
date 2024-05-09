@@ -61,7 +61,7 @@ Dans cet exemple, l'objet du type de mesure `latence` contient les mesures suiva
 
 Si le BMF JSON est stocké dans un fichier,
 alors vous pouvez utiliser la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code> avec l'argument optionnel `--file` pour spécifier ce chemin de fichier.
-Cela fonctionne à la fois avec une commande de benchmark (ex : `bencher run "bencher mock > results.json" --file results.json`)
+Cela fonctionne à la fois avec une commande de benchmark (ex : `bencher run --file results.json "bencher mock > results.json"`)
 et sans une commande de benchmark (ex : `bencher mock > results.json && bencher run --file results.json`).
 
 <BmfSchema />

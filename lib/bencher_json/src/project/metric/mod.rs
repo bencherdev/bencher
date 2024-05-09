@@ -40,6 +40,17 @@ impl JsonMetric {
             upper_value: upper_value.map(OrderedFloat),
         }
     }
+
+    pub fn new_results(
+        results: Vec<(BenchmarkName, Vec<(MeasureNameId, JsonMetric)>)>,
+    ) -> JsonResultsMap {
+        results
+            .into_iter()
+            .map(|(benchmark_name, measure_metrics)| {
+                (benchmark_name, measure_metrics.into_iter().collect())
+            })
+            .collect()
+    }
 }
 
 impl fmt::Display for JsonMetric {

@@ -1,12 +1,13 @@
 use bencher_json::{
     project::measure::{
         JsonUpdateMeasure, MeasureUuid, ESTIMATED_CYCLES_NAME_STR, ESTIMATED_CYCLES_SLUG_STR,
-        INSTRUCTIONS_NAME_STR, INSTRUCTIONS_SLUG_STR, L1_ACCESSES_NAME_STR, L1_ACCESSES_SLUG_STR,
-        L2_ACCESSES_NAME_STR, L2_ACCESSES_SLUG_STR, LATENCY_NAME_STR, LATENCY_SLUG_STR,
-        RAM_ACCESSES_NAME_STR, RAM_ACCESSES_SLUG_STR, THROUGHPUT_NAME_STR, THROUGHPUT_SLUG_STR,
+        FILE_SIZE_NAME_STR, FILE_SIZE_SLUG_STR, INSTRUCTIONS_NAME_STR, INSTRUCTIONS_SLUG_STR,
+        L1_ACCESSES_NAME_STR, L1_ACCESSES_SLUG_STR, L2_ACCESSES_NAME_STR, L2_ACCESSES_SLUG_STR,
+        LATENCY_NAME_STR, LATENCY_SLUG_STR, MEASURE_UNITS, RAM_ACCESSES_NAME_STR,
+        RAM_ACCESSES_SLUG_STR, THROUGHPUT_NAME_STR, THROUGHPUT_SLUG_STR, TOTAL_ACCESSES_NAME_STR,
         TOTAL_ACCESSES_SLUG_STR,
     },
-    DateTime, JsonMeasure, JsonNewMeasure, MeasureNameId, ResourceName, Slug,
+    DateTime, JsonMeasure, JsonNewMeasure, MeasureNameId, NameIdKind, ResourceName, Slug,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
@@ -72,16 +73,51 @@ impl QueryMeasure {
         // Or recreate default measures if they were previously deleted
         let insert_measure = match measure.as_ref() {
             // Recreate
-            LATENCY_SLUG_STR => InsertMeasure::latency(conn, project_id),
-            THROUGHPUT_SLUG_STR => InsertMeasure::throughput(conn, project_id),
+            LATENCY_NAME_STR | LATENCY_SLUG_STR => InsertMeasure::latency(conn, project_id),
+            THROUGHPUT_NAME_STR | THROUGHPUT_SLUG_STR => {
+                InsertMeasure::throughput(conn, project_id)
+            },
             // Adapter specific
-            INSTRUCTIONS_SLUG_STR => InsertMeasure::instructions(conn, project_id),
-            L1_ACCESSES_SLUG_STR => InsertMeasure::l1_accesses(conn, project_id),
-            L2_ACCESSES_SLUG_STR => InsertMeasure::l2_accesses(conn, project_id),
-            RAM_ACCESSES_SLUG_STR => InsertMeasure::ram_accesses(conn, project_id),
-            TOTAL_ACCESSES_SLUG_STR => InsertMeasure::total_accesses(conn, project_id),
-            ESTIMATED_CYCLES_SLUG_STR => InsertMeasure::estimated_cycles(conn, project_id),
-            _ => return Err(http_error),
+            // Iai
+            INSTRUCTIONS_NAME_STR | INSTRUCTIONS_SLUG_STR => {
+                InsertMeasure::instructions(conn, project_id)
+            },
+            L1_ACCESSES_NAME_STR | L1_ACCESSES_SLUG_STR => {
+                InsertMeasure::l1_accesses(conn, project_id)
+            },
+            L2_ACCESSES_NAME_STR | L2_ACCESSES_SLUG_STR => {
+                InsertMeasure::l2_accesses(conn, project_id)
+            },
+            RAM_ACCESSES_NAME_STR | RAM_ACCESSES_SLUG_STR => {
+                InsertMeasure::ram_accesses(conn, project_id)
+            },
+            TOTAL_ACCESSES_NAME_STR | TOTAL_ACCESSES_SLUG_STR => {
+                InsertMeasure::total_accesses(conn, project_id)
+            },
+            ESTIMATED_CYCLES_NAME_STR | ESTIMATED_CYCLES_SLUG_STR => {
+                InsertMeasure::estimated_cycles(conn, project_id)
+            },
+            // File size
+            FILE_SIZE_NAME_STR | FILE_SIZE_SLUG_STR => InsertMeasure::file_size(conn, project_id),
+            _ => {
+                let Ok(kind) = NameIdKind::<ResourceName>::try_from(measure) else {
+                    return Err(http_error);
+                };
+                let measure = match kind {
+                    NameIdKind::Uuid(_) => return Err(http_error),
+                    NameIdKind::Slug(slug) => JsonNewMeasure {
+                        name: slug.clone().into(),
+                        slug: Some(slug),
+                        units: MEASURE_UNITS.clone(),
+                    },
+                    NameIdKind::Name(name) => JsonNewMeasure {
+                        name,
+                        slug: None,
+                        units: MEASURE_UNITS.clone(),
+                    },
+                };
+                InsertMeasure::from_json(conn, project_id, measure)
+            },
         }?;
         diesel::insert_into(schema::measure::table)
             .values(&insert_measure)
@@ -89,10 +125,6 @@ impl QueryMeasure {
             .map_err(resource_conflict_err!(Measure, insert_measure))?;
 
         Self::get_id(conn, insert_measure.uuid)
-    }
-
-    pub fn is_system(&self) -> bool {
-        is_system(self.name.as_ref(), self.slug.as_ref())
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonMeasure, HttpError> {
@@ -199,33 +231,9 @@ impl InsertMeasure {
         Self::from_json(conn, project_id, JsonNewMeasure::estimated_cycles())
     }
 
-    pub fn is_system(&self) -> bool {
-        is_system(self.name.as_ref(), self.slug.as_ref())
+    pub fn file_size(conn: &mut DbConnection, project_id: ProjectId) -> Result<Self, HttpError> {
+        Self::from_json(conn, project_id, JsonNewMeasure::file_size())
     }
-}
-
-fn is_system(name: &str, slug: &str) -> bool {
-    matches!(
-        name,
-        LATENCY_NAME_STR
-            | THROUGHPUT_NAME_STR
-            | INSTRUCTIONS_NAME_STR
-            | L1_ACCESSES_NAME_STR
-            | L2_ACCESSES_NAME_STR
-            | RAM_ACCESSES_NAME_STR
-            | TOTAL_ACCESSES_SLUG_STR
-            | ESTIMATED_CYCLES_NAME_STR
-    ) || matches!(
-        slug,
-        LATENCY_SLUG_STR
-            | THROUGHPUT_SLUG_STR
-            | INSTRUCTIONS_SLUG_STR
-            | L1_ACCESSES_SLUG_STR
-            | L2_ACCESSES_SLUG_STR
-            | RAM_ACCESSES_SLUG_STR
-            | TOTAL_ACCESSES_SLUG_STR
-            | ESTIMATED_CYCLES_SLUG_STR
-    )
 }
 
 #[derive(Debug, Clone, diesel::AsChangeset)]

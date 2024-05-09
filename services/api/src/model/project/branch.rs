@@ -1,5 +1,5 @@
 use bencher_json::{
-    project::branch::{JsonBranchVersion, JsonNewStartPoint, JsonUpdateBranch, BRANCH_MAIN_STR},
+    project::branch::{JsonBranchVersion, JsonNewStartPoint, JsonUpdateBranch},
     BranchName, BranchUuid, DateTime, JsonBranch, JsonNewBranch, Slug,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -122,11 +122,6 @@ impl QueryBranch {
             created,
             modified,
         })
-    }
-
-    pub fn is_system(&self) -> bool {
-        matches!(self.name.as_ref(), BRANCH_MAIN_STR)
-            || matches!(self.slug.as_ref(), BRANCH_MAIN_STR)
     }
 }
 

@@ -1,0 +1,37 @@
+{
+  "bencher::mock_4": {
+    "latency": {
+      "value": 44.139614190145785,
+      "lower_value": 39.72565277113121,
+      "upper_value": 48.55357560916036
+    }
+  },
+  "bencher::mock_2": {
+    "latency": {
+      "value": 28.780278606183792,
+      "lower_value": 25.90225074556541,
+      "upper_value": 31.658306466802173
+    }
+  },
+  "bencher::mock_1": {
+    "latency": {
+      "value": 19.437667141619762,
+      "lower_value": 17.493900427457785,
+      "upper_value": 21.38143385578174
+    }
+  },
+  "bencher::mock_0": {
+    "latency": {
+      "value": 0.80612801527848,
+      "lower_value": 0.725515213750632,
+      "upper_value": 0.886740816806328
+    }
+  },
+  "bencher::mock_3": {
+    "latency": {
+      "value": 36.27299263203977,
+      "lower_value": 32.64569336883579,
+      "upper_value": 39.90029189524374
+    }
+  }
+}

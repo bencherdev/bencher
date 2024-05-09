@@ -57,7 +57,7 @@ Measure オブジェクトには、最大3つの測定値が含まれていま�
 - `upper_value`が`88.88`
 
 もしBMF JSONがファイルに保存されているなら、そのファイルのパスを指定するためにオプションの`--file`引数を付けた<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用できます。
-ベンチマークコマンドにも（例：`bencher run "bencher mock > results.json" --file results.json`）、ベンチマークコマンドなしにも（例：`bencher mock > results.json && bencher run --file results.json`）対応します。
+ベンチマークコマンドにも（例：`bencher run --file results.json "bencher mock > results.json"`）、ベンチマークコマンドなしにも（例：`bencher mock > results.json && bencher run --file results.json`）対応します。
 
 <BmfSchema />
 

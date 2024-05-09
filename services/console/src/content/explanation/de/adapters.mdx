@@ -61,7 +61,7 @@ In diesem Beispiel enthält das `latency`-Metrikart-Objekt die folgenden Maßnah
 
 Wenn das BMF JSON in einer Datei gespeichert ist,
 dann können Sie den <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl mit dem optionalen `--file`-Argument verwenden, um diesen Dateipfad anzugeben.
-Dies funktioniert sowohl mit einem Benchmark-Befehl (z.B.: `bencher run "bencher mock > results.json" --file results.json`)
+Dies funktioniert sowohl mit einem Benchmark-Befehl (z.B.: `bencher run --file results.json "bencher mock > results.json"`)
 als auch ohne einen Benchmark-Befehl (z.B.: `bencher mock > results.json && bencher run --file results.json`).
 
 <BmfSchema />

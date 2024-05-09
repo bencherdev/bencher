@@ -61,7 +61,7 @@ Measure 객체는 최대 세 가지 측정치를 포함하는 Metric을 포함�
 
 만약 BMF JSON이 파일에 저장되어 있다면,
 그 파일 경로를 지정하기 위해 선택적 `--file` 인수를 사용하여 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드를 사용할 수 있습니다.
-이것은 벤치마크 커맨드(ex: `bencher run "bencher mock > results.json" --file results.json`)와 벤치마크 커맨드 없이도 동작합니다(ex: `bencher mock > results.json && bencher run --file results.json`).
+이것은 벤치마크 커맨드(ex: `bencher run --file results.json "bencher mock > results.json"`)와 벤치마크 커맨드 없이도 동작합니다(ex: `bencher mock > results.json && bencher run --file results.json`).
 
 <BmfSchema />
 

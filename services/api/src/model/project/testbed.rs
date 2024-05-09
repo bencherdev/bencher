@@ -1,6 +1,6 @@
 use bencher_json::{
-    project::testbed::{JsonUpdateTestbed, TESTBED_LOCALHOST_STR},
-    DateTime, JsonNewTestbed, JsonTestbed, ResourceName, Slug, TestbedUuid,
+    project::testbed::JsonUpdateTestbed, DateTime, JsonNewTestbed, JsonTestbed, ResourceName, Slug,
+    TestbedUuid,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
@@ -77,11 +77,6 @@ impl QueryTestbed {
             created,
             modified,
         }
-    }
-
-    pub fn is_system(&self) -> bool {
-        matches!(self.name.as_ref(), TESTBED_LOCALHOST_STR)
-            || matches!(self.slug.as_ref(), TESTBED_LOCALHOST_STR)
     }
 }
 

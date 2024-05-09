@@ -61,7 +61,7 @@ BMF的例子：
 
 如果BMF JSON存储在文件中，
 那么你可以使用<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI子命令并使用可选的`--file`参数来指定那个文件路径。
-这对于具有基准测试命令（例如：`bencher run "bencher mock > results.json" --file results.json`）
+这对于具有基准测试命令（例如：`bencher run --file results.json "bencher mock > results.json"`）
 和没有基准测试命令的情况都适用（例如：`bencher mock > results.json && bencher run --file results.json`）。
 
 <BmfSchema />

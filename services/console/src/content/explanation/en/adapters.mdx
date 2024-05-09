@@ -61,7 +61,7 @@ In this example, the `latency` Measure object contains the following values:
 
 If the BMF JSON is stored in a file,
 then you can use the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand with the optional `--file` argument to specify that file path.
-This works both with a benchmark command (ex: `bencher run "bencher mock > results.json" --file results.json`)
+This works both with a benchmark command (ex: `bencher run --file results.json "bencher mock > results.json"`)
 and without a benchmark command (ex: `bencher mock > results.json && bencher run --file results.json`).
 
 <BmfSchema />

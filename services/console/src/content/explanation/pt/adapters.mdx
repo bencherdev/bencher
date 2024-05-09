@@ -60,7 +60,7 @@ Neste exemplo, o objeto Tipo de Métrica `latency` contém as seguintes medidas:
 
 Se o JSON BMF estiver armazenado em um arquivo,
 então você pode usar o subcomando <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code> CLI com o argumento opcional `--file` para especificar esse caminho do arquivo.
-Isso funciona tanto com um comando de benchmark (ex: `bencher run "bencher mock > results.json" --file results.json`)
+Isso funciona tanto com um comando de benchmark (ex: `bencher run --file results.json "bencher mock > results.json"`)
 quanto sem um comando de benchmark (ex: `bencher mock > results.json && bencher run --file results.json`).
 
 <BmfSchema />

@@ -57,6 +57,12 @@ pub enum RunError {
     },
     #[error("Failed to read from output file: {0}")]
     OutputFileRead(std::io::Error),
+    #[error("Failed to parse the output file name: {0}")]
+    OutputFileName(bencher_json::ValidError),
+    #[error("Failed to read size of output file: {0}")]
+    OutputFileSize(std::io::Error),
+    #[error("Failed to serialize file size results: {0}")]
+    SerializeFileSize(serde_json::Error),
 
     #[error("Failed to serialize report JSON: {0}")]
     SerializeReport(serde_json::Error),

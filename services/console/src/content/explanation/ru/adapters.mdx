@@ -61,7 +61,7 @@ import RustIaiCallgrind from "../../../chunks/explanation/ru/adapter-rust-iai-ca
 
 Если BMF JSON сохранен в файл,
 то вы можете использовать подкоманду CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code> с опциональным аргументом `--file` чтобы указать путь к этому файлу.
-Это работает как с командой тестирования производительности (например: `bencher run "bencher mock > results.json" --file results.json`),
+Это работает как с командой тестирования производительности (например: `bencher run --file results.json "bencher mock > results.json"`),
 так и без команды тестирования производительности (например: `bencher mock > results.json && bencher run --file results.json`).
 
 <BmfSchema />
