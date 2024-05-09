@@ -1,12 +1,11 @@
-```jsx
 import FileSizeCode from "../file-size-code.mdx";
 
 ## ⚖️ 文件大小
 
-`<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code>` CLI 子命令
+<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令
 可以通过 `--file-size` 选项用来追踪你的交付物（例如二进制大小）的文件大小。
 `--file-size` 选项需要一个文件路径，以测量该文件的大小。
-在底层，`<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code>`
+在底层，<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code>
 以 [Bencher Metric Format (BMF) JSON][json] 输出结果。
 因此，明确设置 `json` 适配器是一个好习惯。
 
@@ -19,4 +18,3 @@ import FileSizeCode from "../file-size-code.mdx";
 然而，当你使用 `--file-size` 选项时，此测量将会为你的项目自动创建。
 
 [json]: #-json
-```

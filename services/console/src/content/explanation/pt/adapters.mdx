@@ -7,207 +7,56 @@ modified: "2024-05-09T17:17:00Z"
 sortOrder: 4
 ---
 
-import BmfExample from "../../../chunks/explanation/bmf-example.mdx";
-import BmfSchema from "../../../chunks/explanation/bmf-schema.mdx";
+import Intro from "../../../chunks/explanation/adapters/pt/intro.mdx";
+import Magic from "../../../chunks/explanation/adapters/pt/magic.mdx";
+import Json from "../../../chunks/explanation/adapters/pt/json.mdx";
+import FileSize from "../../../chunks/explanation/adapters/pt/file-size.mdx";
+import CSharpDotNet from "../../../chunks/explanation/adapters/pt/c-sharp-dot-net.mdx";
+import CppCatch2 from "../../../chunks/explanation/adapters/pt/cpp-catch2.mdx";
+import CppGoogle from "../../../chunks/explanation/adapters/pt/cpp-google.mdx";
+import GoBench from "../../../chunks/explanation/adapters/pt/go-bench.mdx";
+import JavaJmh from "../../../chunks/explanation/adapters/pt/java-jmh.mdx";
+import JsBenchmark from "../../../chunks/explanation/adapters/pt/js-benchmark.mdx";
+import JsTime from "../../../chunks/explanation/adapters/pt/js-time.mdx";
+import PythonAsv from "../../../chunks/explanation/adapters/pt/python-asv.mdx";
+import PythonPytest from "../../../chunks/explanation/adapters/pt/python-pytest.mdx";
+import RubyBenchmark from "../../../chunks/explanation/adapters/pt/ruby-benchmark.mdx";
+import RustBench from "../../../chunks/explanation/adapters/pt/rust-bench.mdx";
+import RustCriterion from "../../../chunks/explanation/adapters/pt/rust-criterion.mdx";
+import RustIai from "../../../chunks/explanation/adapters/pt/rust-iai.mdx";
+import RustIaiCallgrind from "../../../chunks/explanation/adapters/pt/rust-iai-callgrind.mdx";
+import ShellHyperfine from "../../../chunks/explanation/adapters/pt/shell-hyperfine.mdx";
 
-import RustIaiCallgrind from "../../../chunks/explanation/pt/adapter-rust-iai-callgrind.mdx";
-
-Os adaptadores convertem a saída da ferramenta de benchmark em JSON padronizado, no Formato de Métrica do Bencher (BMF).
-Os adaptadores são executados no servidor API quando um novo relatório é recebido.
-Veja a [visão geral do benchmarking](/pt/docs/explanation/benchmarking/) para uma explicação mais aprofundada.
-Eles podem ser especificados no subcomando <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code> CLI com a flag opcional `--adapter`.
-Se nenhum adaptador estiver especificado, [o adaptador `magic`](#-magic-default) é usado por padrão.
-
-É melhor usar o adaptador mais específico para o seu caso.
-Isso fornecerá uma análise mais precisa e performática.
-Por exemplo, se você está fazendo parse da saída do [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks) em Rust
-, você deve usar o adaptador `rust_bench`, e não os adaptadores `magic` ou `rust`.
-Veja nossa
-[página de desempenho do Bencher](https://bencher.dev/perf/bencher?key=true&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C5655ed2a-3e45-4622-bdbd-39cdd9837af8%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674777600000)
-para uma boa comparação.
-
-## 🪄 Magic <small>(padrão)</small>
-
-O Adaptador Magic (`magic`) é um superconjunto de todos os outros adaptadores.
-Por esse motivo, é o adaptador padrão para `bencher run`,
-mas é melhor usá-lo apenas para exploração.
-No CI, você deve usar o adaptador mais específico para o seu caso.
-
-## \{...\} JSON
-
-O Adaptador JSON (`json`) espera um JSON no formato BMF.
-É perfeito para integrar ferramentas de benchmark personalizadas com o Bencher.
-
-Exemplo de BMF:
-
-<BmfExample />
-
-Neste exemplo, a chave `benchmark_name` seria o nome de um benchmark.
-Os nomes do benchmark podem ser qualquer string não vazia de até 1024 caracteres.
-O objeto `benchmark_name` contém slugs de Tipo de Métrica ou UUIDs como chaves.
-Neste exemplo, `latency` é o slug para o Tipo de Métrica Latência.
-Cada Projeto, por padrão, tem um Tipo de Métrica Latência (ou seja, `latency`) e Throughput (ou seja, `throughput`),
-que são medidos em `nanossegundo (ns)` e `operações / segundo (ops/s)` respectivamente.
-O objeto Tipo de Métrica contém uma Métrica com até três medidas: `value`, `lower_value` e `upper_value`.
-A `lower_value` e `upper_value` são opcionais,
-e seu cálculo é específico para a ferramenta de benchmark.
-
-Neste exemplo, o objeto Tipo de Métrica `latency` contém as seguintes medidas:
-
-- Uma `value` de `88.0`
-- Uma `lower_value` de `87.42`
-- Uma `upper_value` de `88.88`
-
-Se o JSON BMF estiver armazenado em um arquivo,
-então você pode usar o subcomando <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code> CLI com o argumento opcional `--file` para especificar esse caminho do arquivo.
-Isso funciona tanto com um comando de benchmark (ex: `bencher run --file results.json "bencher mock > results.json"`)
-quanto sem um comando de benchmark (ex: `bencher mock > results.json && bencher run --file results.json`).
-
-<BmfSchema />
-
-> 🐰 Nota: O subcomando CLI `bencher mock` gera Métricas BMF falsas.
-
-## #️⃣ C#
-
-O Adaptador C# (`c_sharp`) é um superconjunto de `c_sharp_dot_net`.
-
-## #️⃣ C# DotNet
-
-O Adaptador C# DotNet (`c_sharp_dot_net`) espera a saída do [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) no [formato JSON (ou seja, `--exporters json`)](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson).
-A Métrica de Tipo Latência (ou seja, `nanosecond (ns)`) é coletada.
-
-Existem duas opções para a Métrica:
-- `mean` (padrão):  A `lower_value` e `upper_value` estão uma desvio padrão abaixo e acima da média (ou seja, `value`) respectivamente.
-- `median`: A `lower_value` e `upper_value` estão um intervalo interquartil abaixo e acima da mediana (ou seja, `value`) respectivamente.
-
-Isso pode ser especificado no subcomando <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code> CLI com a flag opcional `--average`.
-
-## ➕ C++
-
-O Adaptador C++ (`cpp`) é um superconjunto de `cpp_catch2` e `cpp_google`.
-
-## ➕ C++ Catch2
-
-O Adaptador C++ Catch2 (`cpp_catch2`) espera a saída do [Catch2](https://github.com/catchorg/Catch2).
-O Tipo de Métrica Latência (ou seja, `nanoseconds (ns)`) é coletado.
-A `lower_value` e `upper_value` estão um desvio padrão abaixo e acima da média (ou seja, `value`) respectivamente.
-
-## ➕ C++ Google
-
-O Adaptador C++ Google (`cpp_google`) espera a saída do [Google Benchmark](https://github.com/google/benchmark) no [formato JSON (ou seja, `--benchmark_format=json`)](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats).
-O Tipo de Métrica Latência (ou seja, `nanoseconds (ns)`) é coletado.
-Apenas a média (ou seja, `value`) está disponível. Não existem `lower_value` e `upper_value`.
-
-## 🕳 Go
-
-O Adaptador Go (`go`) é um superconjunto de `go_bench`.
-
-## 🕳 Go Bench
-
-O Adaptador Go Bench (`go_bench`) espera a saída do [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks).
-O Tipo de Métrica Latência (ou seja, `nanoseconds (ns)`) é coletado.
-Apenas a média (ou seja, `value`) está disponível. Não existem `lower_value` e `upper_value`.
-
-## ☕️ Java
-
-O Adaptador Java (`java`) é um superconjunto de `java_jmh`.
-
-## ☕️ Java JMH
-
-O Adaptador Java JMH (`java_jmh`) espera a saída do [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh) no [formato JSON (ou seja, `-rf json`)](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java).
-Os Tipos de Métrica `latency` e `throughput` (ou seja, `nanoseconds (ns)` e `operations / second (ops/sec)`) podem ser coletados.
-A `lower_value` e `upper_value` são os intervalos de confiança inferior e superior para a média (ou seja, `value`) respectivamente.
-
-## 🕸 JavaScript
-
-O Adaptador JavaScript (`js`) é um superconjunto de `js_benchmark` e `js_time`.
-
-## 🕸 JavaScript Benchmark
-
-O Adaptador JavaScript Benchmark (`js_benchmark`) espera a saída do [Benchmark.js](https://github.com/bestiejs/benchmark.js).
-O Tipo de Métrica Throughput (ie `operations / second (ops/sec)`) é coletado.
-A `lower_value` e `upper_value` são a margem de erro relativo abaixo e acima da mediana (ou seja, `value`) respectivamente.
-
-## 🕸 JavaScript Time
-
-O Adaptador JavaScript Time (`js_time`) espera a saída do [console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd).
-O Tipo de Métrica Latência (ou seja, `nanoseconds (ns)`) é coletado.
-Apenas o tempo de operação (ou seja, `value`) está disponível. Não existem `lower_value` e `upper_value`.
-
-## 🐍 Python
-
-O Adaptador Python (`python`) é um superconjunto de `python_asv` e `python_pytest`.
-
-## 🐍 Python ASV
-
-O Adaptador Python ASV (`python_asv`) espera a saída da CLI [airspeed velocity](https://github.com/airspeed-velocity/asv) [asv run](https://asv.readthedocs.io/en/stable/commands.html#asv-run).
-O Tipo de Métrica Latência (ou seja, `nanoseconds (ns)`) é coletado.
-A `lower_value` e `upper_value` são o intervalo interquartil abaixo e acima da mediana (ie `value`) respectivamente.
-
-## 🐍 Python Pytest
-
-O Adaptador Python Pytest (`python_pytest`) espera a saída do [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) no [formato JSON (ou seja, `--benchmark-json results.json`)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options).
-Esta saída JSON é salva em um arquivo, portanto, você deve usar o argumento `--file` do CLI `bencher run` para especificar esse caminho do arquivo (ou seja, `bencher run --file results.json "pipenv run pytest --benchmark-json results.json benchmarks.py"`).
-O Tipo de Métrica Latência (ou seja, `nanoseconds (ns)`) é coletado.
-
-Existem duas opções para a Métrica:
-- `mean` (default):  A `lower_value` e `upper_value` estão uma desvio padrão abaixo e acima da média (ou seja, `value`) respectivamente.
-- `median`: A `lower_value` e `upper_value` estão um intervalo interquartil abaixo e acima da mediana (ou seja, `value`) respectivamente.
-
-Isso pode ser especificado no subcomando <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code> CLI com a argumento opcional `--average`.
-
-## ♦️ Ruby
-
-O Adaptador Ruby (`ruby`) é um superconjunto de `ruby_benchmark`.
-
-## ♦️ Ruby Benchmark
-
-O Adaptador Ruby Benchmark (`ruby_benchmark`) espera a saída do [módulo Benchmark](https://github.com/ruby/benchmark) para os métodos `#bm`, `#bmbm`, e `#benchmark`.
-Um rótulo é necessário para cada benchmark.
-O Tipo de Métrica Latência (ou seja, `nanoseconds (ns)`) é coletado.
-Apenas o valor informado (ou seja, `value`) está disponível. Não existem `lower_value` e `upper_value`.
-
-## 🦀 Rust
-
-O Adaptador Rust (`rust`) é um superconjunto de `rust_bench` e `rust_criterion`.
-
-## 🦀 Rust Bench
-
-O Adaptador Rust Bench (`rust_bench`) espera a saída do [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks).
-O Tipo de Métrica Latência (ou seja, `nanoseconds (ns)`) é coletado.
-A `lower_value` e `upper_value` são o desvio abaixo e acima da mediana (ou seja, `value`) respectivamente.
-
-## 🦀 Rust Criterion
-
-O Adaptador Rust Criterion (`rust_criterion`) espera a saída do [Criterion](https://github.com/bheisler/criterion.rs).
-O Tipo de Métrica Latência (ou seja, `nanoseconds (ns)`) é coletado.
-A `lower_value` e `upper_value` são os limites inferior e superior do gradiente (se disponível) ou da média (se não) (ou seja, `value`) respectivamente.
-
-## 🦀 Rust Iai
-
-O Adaptador Rust Iai (`rust_iai`) espera a saída do [Iai](https://github.com/bheisler/iai).
-Os Tipos de Métrica `instructions`, `l1_access`, `l2_access`, `ram_access`, e `estimated_cycles` são coletados.
-Apenas essas medidas (ou seja, `value`) estão disponíveis. Não existem medidas `lower_value` e `upper_value`.
-Os Tipos de Métrica para este adaptador não são criados por padrão para todos os projetos.
-Entretanto, quando você usa este adaptador, esses Tipos de Métrica serão automaticamente criados para o seu Projeto.
-
+<Intro />
+<Magic />
+<br />
+<Json />
+<br />
+<FileSize />
+<br />
+<CSharpDotNet />
+<br />
+<CppCatch2 />
+<CppGoogle />
+<br />
+<GoBench />
+<br />
+<JavaJmh />
+<br />
+<JsBenchmark />
+<JsTime />
+<br />
+<PythonAsv />
+<PythonPytest />
+<br />
+<RubyBenchmark />
+<br />
+<RustBench />
+<RustCriterion />
+<RustIai />
 <RustIaiCallgrind />
-
-## ❯_ Shell
-
-O Adaptador Shell (`shell`) é um superconjunto de `shell_hyperfine`.
-
-## ❯_️ Shell Hyperfine
-
-O Adaptador Shell Hyperfine (`shell_hyperfine`) espera a saída do [Hyperfine](https://github.com/sharkdp/hyperfine) no [formato JSON (ou seja, `--export-json results.json`)](https://github.com/sharkdp/hyperfine/tree/master/scripts#example).
-Essa saída JSON é salva em um arquivo, portanto, você deve usar o argumento CLI do `bencher run` `--file` para especificar esse caminho de arquivo (ou seja, `bencher run --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`).
-A métrica `latency` Kind (ou seja, `nanoseconds (ns)`) é coletada.
-
-Existem duas opções para a métrica:
-- `mean` (padrão): O `lower_value` e `upper_value` são um desvio padrão abaixo e acima da média (ou seja, `value`) respectivamente.
-- `median`: O `lower_value` e `upper_value` são os valores `min` e `max` respectivamente.
-
-Isso pode ser especificado no subcomando CLI do <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code> com o sinalizador opcional `--average`.
+<br />
+<ShellHyperfine />
 
 <br />
 <br />
