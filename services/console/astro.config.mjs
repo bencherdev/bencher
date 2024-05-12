@@ -108,6 +108,7 @@ export default defineConfig({
 					behavior: "append",
 					properties: {
 						style: "padding-left: 0.3em; color: #fdb07e;",
+						"aria-label": "Link to section",
 					},
 					content: fromHtmlIsomorphic(
 						'<small><i class="fas fa-link" aria-hidden="true" /></small>',
