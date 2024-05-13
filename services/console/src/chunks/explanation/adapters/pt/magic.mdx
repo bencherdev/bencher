@@ -1,6 +1,24 @@
 ## 🪄 Magia <small>(padrão)</small>
 
 O Adaptador Mágico (`magic`) é um superconjunto de todos os outros adaptadores.
-Por essa razão, é o adaptador padrão para `bencher run`,
-mas é melhor utilizado apenas para exploração.
-Em CI, você deve usar o adaptador mais específico para o seu caso de uso.
+Por essa razão, ele é o adaptador padrão para `bencher run`.
+No entanto, o adaptador `magic` deve ser usado apenas para exploração.
+
+Para melhores resultados, você deve especificar um adaptador de suporte de benchmark:
+
+- [\{...\} JSON](#-json)
+- [#️⃣ C# BenchmarkDotNet](#%EF%B8%8F%E2%83%A3-c-dotnet)
+- [➕ C++ Catch2](#-c-catch2)
+- [➕ C++ Google Benchmark](#-c-google)
+- [🕳 Go test -bench](#-go-bench)
+- [☕️ Java Microbenchmark Harness (JMH)](#%EF%B8%8F-java-jmh)
+- [🕸 JavaScript Benchmark.js](#-javascript-benchmark)
+- [🕸 JavaScript console.time/console.timeEnd](#-javascript-time)
+- [🐍 Python airspeed velocity (asv)](#-python-asv)
+- [🐍 Python pytest-benchmark](#-python-pytest)
+- [♦️ Ruby Benchmark](#%EF%B8%8F-ruby-benchmark)
+- [🦀 Rust libtest bench](#-rust-bench)
+- [🦀 Rust Criterion](#-rust-criterion)
+- [🦀 Rust Iai](#-rust-iai)
+- [🦀 Rust Iai-Callgrind](#-rust-iai-callgrind)
+- [❯_ Shell Hyperfine](#_%EF%B8%8F-shell-hyperfine)

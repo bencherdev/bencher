@@ -1,6 +1,24 @@
-## 🪄 マジック <small>(デフォルト)</small>
+## 🪄 マジック <small>（デフォルト）</small>
 
-マジックアダプター (`magic`) は、他のすべてのアダプターのスーパーセットです。
-そのため、`bencher run` のデフォルトアダプターになっていますが、
-探索用途にのみ最適です。
-CIでは、使用事例に最も具体的なアダプターを使用すべきです。
+Magicアダプター（`magic`）は、他のすべてのアダプターのスーパーセットです。
+そのため、`bencher run`のデフォルトアダプターとなっています。
+ただし、`magic`アダプターは探索用途のみに使用すべきです。
+
+最適な結果を得るためには、ベンチマークハーネスアダプターを指定するべきです：
+
+- [\{...\} JSON](#-json)
+- [#️⃣ C# BenchmarkDotNet](#%EF%B8%8F%E2%83%A3-c-dotnet)
+- [➕ C++ Catch2](#-c-catch2)
+- [➕ C++ Google Benchmark](#-c-google)
+- [🕳 Go test -bench](#-go-bench)
+- [☕️ Java Microbenchmark Harness (JMH)](#%EF%B8%8F-java-jmh)
+- [🕸 JavaScript Benchmark.js](#-javascript-benchmark)
+- [🕸 JavaScript console.time/console.timeEnd](#-javascript-time)
+- [🐍 Python airspeed velocity (asv)](#-python-asv)
+- [🐍 Python pytest-benchmark](#-python-pytest)
+- [♦️ Ruby Benchmark](#%EF%B8%8F-ruby-benchmark)
+- [🦀 Rust libtest bench](#-rust-bench)
+- [🦀 Rust Criterion](#-rust-criterion)
+- [🦀 Rust Iai](#-rust-iai)
+- [🦀 Rust Iai-Callgrind](#-rust-iai-callgrind)
+- [❯_ Shell Hyperfine](#_%EF%B8%8F-shell-hyperfine)

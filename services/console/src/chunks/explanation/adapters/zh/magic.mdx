@@ -1,6 +1,24 @@
-## 🪄 魔法 <small>(默认)</small>
+## 🪄 魔法 <small>（默认）</small>
 
-魔法适配器（`magic`）是所有其它适配器的超集。
-因此，它是 `bencher run` 的默认适配器，
-但最好只用于探索。
-在 CI 中，你应该使用最适合你的使用场景的特定适配器。
+魔法适配器（`magic`）是所有其他适配器的超集。
+因此，它是 `bencher run` 的默认适配器。
+然而，`magic` 适配器应仅用于探索。
+
+为获得最佳结果，您应该指定一个基准测试驱动适配器：
+
+- [\{...\} JSON](#-json)
+- [#️⃣ C# BenchmarkDotNet](#%EF%B8%8F%E2%83%A3-c-dotnet)
+- [➕ C++ Catch2](#-c-catch2)
+- [➕ C++ Google Benchmark](#-c-google)
+- [🕳 Go test -bench](#-go-bench)
+- [☕️ Java 微基准测试套件（JMH）](#%EF%B8%8F-java-jmh)
+- [🕸 JavaScript Benchmark.js](#-javascript-benchmark)
+- [🕸 JavaScript console.time/console.timeEnd](#-javascript-time)
+- [🐍 Python airspeed velocity (asv)](#-python-asv)
+- [🐍 Python pytest-benchmark](#-python-pytest)
+- [♦️ Ruby Benchmark](#%EF%B8%8F-ruby-benchmark)
+- [🦀 Rust libtest bench](#-rust-bench)
+- [🦀 Rust Criterion](#-rust-criterion)
+- [🦀 Rust Iai](#-rust-iai)
+- [🦀 Rust Iai-Callgrind](#-rust-iai-callgrind)
+- [❯_ Shell Hyperfine](#_%EF%B8%8F-shell-hyperfine)

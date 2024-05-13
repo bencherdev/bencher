@@ -1,6 +1,24 @@
-## 🪄 매직 <small>(기본값)</small>
+## 🪄 마법 <small>(기본)</small>
 
-매직 어댑터(`magic`)는 모든 다른 어댑터의 상위 집합입니다.
-그 때문에 `bencher run`의 기본 어댑터가 매직 어댑터입니다.
-하지만 탐색용으로만 사용하는 것이 가장 좋습니다.
-CI에서는 사용 사례에 가장 적합한 구체적인 어댑터를 사용해야 합니다.
+Magic Adapter (`magic`)는 다른 모든 어댑터의 상위 집합입니다.
+그런 이유로, 기본 어댑터로 `bencher run`에 사용됩니다.
+그러나, `magic` 어댑터는 탐색용으로만 사용해야 합니다.
+
+최상의 결과를 위해, 벤치마크 하네스 어댑터를 지정해야 합니다:
+
+- [\{...\} JSON](#-json)
+- [#️⃣ C# BenchmarkDotNet](#%EF%B8%8F%E2%83%A3-c-dotnet)
+- [➕ C++ Catch2](#-c-catch2)
+- [➕ C++ Google Benchmark](#-c-google)
+- [🕳 Go test -bench](#-go-bench)
+- [☕️ Java Microbenchmark Harness (JMH)](#%EF%B8%8F-java-jmh)
+- [🕸 JavaScript Benchmark.js](#-javascript-benchmark)
+- [🕸 JavaScript console.time/console.timeEnd](#-javascript-time)
+- [🐍 Python airspeed velocity (asv)](#-python-asv)
+- [🐍 Python pytest-benchmark](#-python-pytest)
+- [♦️ Ruby Benchmark](#%EF%B8%8F-ruby-benchmark)
+- [🦀 Rust libtest bench](#-rust-bench)
+- [🦀 Rust Criterion](#-rust-criterion)
+- [🦀 Rust Iai](#-rust-iai)
+- [🦀 Rust Iai-Callgrind](#-rust-iai-callgrind)
+- [❯_ Shell Hyperfine](#_%EF%B8%8F-shell-hyperfine)

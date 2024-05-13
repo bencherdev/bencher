@@ -1,38 +1,9 @@
-```mdx
-import BmfExample from "../bmf-example.mdx";
-import BmfSchema from "../bmf-schema.mdx";
-
 ## \{...\} JSON
 
-L'adaptateur JSON (`json`) attend du JSON BMF.
+L'adaptateur JSON (`json`) attend du JSON au format [Bencher Metric Format (BMF)][bmf].
 Il est parfait pour intégrer des harnais de benchmark personnalisés avec Bencher.
+Pour plus de détails, consultez [comment suivre des benchmarks personnalisés][benchmarks personnalisés]
+et la [référence JSON BMF][bmf].
 
-Exemple de BMF :
-
-<BmfExample />
-
-Dans cet exemple, la clé `benchmark_name` serait le nom d'un benchmark.
-Les noms de benchmarks peuvent être n'importe quelle chaîne de caractères non vide jusqu'à 1024 caractères.
-L'objet `benchmark_name` contient les noms des Mesures, les slugs ou les UUIDs comme clés.
-Dans cet exemple, `latency` est le slug pour la Mesure de Latence.
-Chaque Projet a par défaut une Mesure de Latence (c'est-à-dire `latency`) et de Débit (c'est-à-dire `throughput`),
-qui sont mesurées en `nanoseconde (ns)` et `opérations / seconde (ops/s)` respectivement.
-L'objet Mesure contient une Métrique pouvant avoir jusqu'à trois valeurs : `value`, `lower_value`, et `upper_value`.
-Les valeurs `lower_value` et `upper_value` sont optionnelles,
-et leur calcul est spécifique au harnais de benchmark.
-
-Dans cet exemple, l'objet Mesure `latency` contient les valeurs suivantes :
-
-- Une `value` de `88.0`
-- Une `lower_value` de `87.42`
-- Une `upper_value` de `88.88`
-
-Si le JSON BMF est stocké dans un fichier,
-alors vous pouvez utiliser la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code> avec l'argument optionnel `--file` pour spécifier le chemin de ce fichier.
-Cela fonctionne à la fois avec une commande de benchmark (ex : `bencher run --file results.json "bencher mock > results.json"`)
-et sans commande de benchmark (ex : `bencher mock > results.json && bencher run --file results.json`).
-
-<BmfSchema />
-
-> 🐰 Note : La sous-commande CLI `bencher mock` génère des Métriques BMF simulées.
-```
+[bmf]: /fr/docs/reference/bencher-metric-format/
+[benchmarks personnalisés]: /fr/docs/how-to/track-custom-benchmarks/

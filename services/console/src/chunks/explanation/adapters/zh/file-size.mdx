@@ -1,20 +1,20 @@
-import FileSizeCode from "../file-size-code.mdx";
-
 ### ⚖️ 文件大小
 
-<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令
-可以通过 `--file-size` 选项用来追踪你的交付物（例如二进制大小）的文件大小。
-`--file-size` 选项需要一个文件路径，以测量该文件的大小。
+<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI子命令
+可以用来通过`--file-size`选项追踪你的交付物的文件大小（即二进制大小）。
+`--file-size`选项期望一个文件路径，来测量该文件的大小。
 在底层，<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code>
-以 [Bencher Metric Format (BMF) JSON][json] 输出结果。
-因此，明确设置 `json` 适配器是一个好习惯。
+将结果输出为[Bencher度量格式（BMF）JSON][bmf]。
+因此，明确使用[the `json` adapter][json]是一个好习惯。
+更多详情参见[如何追踪文件大小][file size]。
 
-<FileSizeCode />
-
-将会收集 `file-size` 测量值（即 `bytes (B)`）。
-只有文件大小值（即 `value`）是可用的。
-不收集 `lower_value` 或 `upper_value`。
-`file-size` 测量默认不为所有项目创建。
-然而，当你使用 `--file-size` 选项时，此测量将会为你的项目自动创建。
+收集到的`file-size`度量（即`字节（B）`）。
+只有文件大小值（即`value`）是可用的。
+不收集`lower_value`或`upper_value`。
+默认情况下不会为所有项目创建`file-size`度量。
+然而，当你使用`--file-size`选项时，这个度量会自动为你的项目创建。
 
 [json]: #-json
+
+[bmf]: /zh/docs/reference/bencher-metric-format/
+[file size]: /zh/docs/how-to/track-file-size/

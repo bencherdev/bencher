@@ -56,6 +56,8 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
   - [Track Benchmarks in CI](https://bencher.dev/docs/how-to/track-benchmarks/)
   - [GitHub Actions](https://bencher.dev/docs/how-to/github-actions/)
   - [GitLab CI/CD](https://bencher.dev/docs/how-to/gitlab-ci-cd/)
+  - [Track Custom Benchmarks](https://bencher.dev/docs/how-to/track-custom-benchmarks/)
+  - [Track File Size](https://bencher.dev/docs/how-to/track-file-size/)
   - [Self-Hosted GitHub App](https://bencher.dev/docs/how-to/github-app/)
 - Explanation
   - [Benchmarking Overview](https://bencher.dev/docs/explanation/benchmarking/)
@@ -69,6 +71,7 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
   - [REST API](https://bencher.dev/docs/api/)
   - [Architecture](https://bencher.dev/docs/reference/architecture/)
   - [Server Config](https://bencher.dev/docs/reference/server-config/)
+  - [Bencher Metric Format](https://bencher.dev/docs/reference/bencher-metric-format/)
   - [Prior Art](https://bencher.dev/docs/reference/prior-art/)
   - [Roadmap](https://bencher.dev/docs/reference/roadmap/)
   - [Changelog](https://bencher.dev/docs/reference/changelog/)
@@ -88,7 +91,6 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
 
 - {...} JSON
   - [Custom benchmark harness support](https://bencher.dev/docs/explanation/adapters/#-json)
-- ⚖️ File Size
   - [File Size (Binary Size)](https://bencher.dev/docs/explanation/adapters/#%EF%B8%8F-file-size)
 - #️⃣ C#
   - [BenchmarkDotNet](https://bencher.dev/docs/explanation/adapters/#%EF%B8%8F%E2%83%A3-c-dotnet)

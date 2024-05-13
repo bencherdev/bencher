@@ -1,36 +1,10 @@
-import BmfExample from "../bmf-example.mdx";
-import BmfSchema from "../bmf-schema.mdx";
-
 ## \{...\} JSON
 
-O Adaptador JSON (`json`) espera por JSON BMF.
-É perfeito para integrar customização de sistemas de referência com o Bencher.
+O Adaptador JSON (`json`) espera [Bencher Metric Format (BMF) JSON][bmf].
+É perfeito para integrar sistemas de benchmark personalizados com o Bencher.
+Para mais detalhes, veja [como rastrear benchmarks personalizados][custom benchmarks]
+e a [referência BMF JSON][bmf].
 
-Exemplo de BMF:
-
-<BmfExample />
-
-Neste exemplo, a chave `benchmark_name` seria o nome de um benchmark.
-Nomes de benchmarks podem ser qualquer string não vazia com até 1024 caracteres.
-O objeto `benchmark_name` contém nomes de Medidas, slugs ou UUIDs como chaves.
-Neste exemplo, `latency` é o slug para a Medida de Latência.
-Cada Projeto por padrão tem uma Medida de Latência (ou seja, `latency`) e Throughput (ou seja, `throughput`),
-que são medidos em `nanosegundo (ns)` e `operações / segundo (ops/s)`, respectivamente.
-O objeto Medida contém uma Métrica com até três valores: `value`, `lower_value` e `upper_value`.
-Os valores `lower_value` e `upper_value` são opcionais,
-e o seu cálculo é específico ao sistema de referência.
-
-Neste exemplo, o objeto Medida `latency` contém os seguintes valores:
-
-- Um `value` de `88.0`
-- Um `lower_value` de `87.42`
-- Um `upper_value` de `88.88`
-
-Se o JSON BMF está armazenado em um arquivo,
-então você pode usar o subcomando da CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code> com o argumento opcional `--file` para especificar o caminho desse arquivo.
-Isso funciona tanto com um comando de benchmark (ex: `bencher run --file results.json "bencher mock > results.json"`)
-quanto sem um comando de benchmark (ex: `bencher mock > results.json && bencher run --file results.json`).
-
-<BmfSchema />
-
-> 🐰 Nota: O subcomando CLI `bencher mock` gera métricas simuladas BMF.
+[bmf]: /pt/docs/reference/bencher-metric-format/
+[bencher run]: /pt/docs/explanation/bencher-run/#benchmark-command
+[custom benchmarks]: /pt/docs/how-to/track-custom-benchmarks/

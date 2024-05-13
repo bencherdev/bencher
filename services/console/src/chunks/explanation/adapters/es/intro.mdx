@@ -1,18 +1,11 @@
-Los adaptadores convierten la salida del sistema de referencia de pruebas a un JSON estandarizado, Formato de Métrica de Bencher (BMF, por sus siglas en inglés).
+Los adaptadores convierten la salida del arnés de referencia en el formato JSON de Métricas de Bencher ([Bencher Metric Format (BMF) JSON][bmf]).
 Los adaptadores se ejecutan en el servidor API cuando se recibe un nuevo informe.
-Vea la [visión general del benchmarking][benchmarking overview] para obtener una explicación más detallada.
-Se pueden especificar para el subcomando CLI de [`bencher run`][bencher run] con la opción `--adapter`.
-Si no se especifica un adaptador, se utiliza por defecto [el adaptador `magic`][magic adapter].
+Consulta [el resumen de benchmarking][benchmarking overview] para más detalles.
+Un adaptador puede ser especificado para [el subcomando CLI `bencher run`][bencher run]
+con la opción `--adapter`.
+Si no se especifica un adaptador, [el adaptador `magic`][magic adapter] se utiliza por defecto.
 
-Es mejor usar el adaptador más específico para su caso de uso.
-Esto proporcionará el análisis más preciso y de mejor rendimiento.
-Por ejemplo, si está analizando la salida del bench de [libtest de Rust][rust libtest], debería usar el adaptador `rust_bench`, y no el adaptador `magic`.
-Vea nuestra
-[página de rendimiento de Bencher][perf page] para una buena comparación.
-
-[rust libtest]: https://doc.rust-lang.org/rustc/tests/index.html#benchmarks
-[perf page]: https://bencher.dev/perf/bencher?key=true&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1688083200000&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&end_time=1704067200000&clear=true
-
+[bmf]: /es/docs/reference/bencher-metric-format/
 [benchmarking overview]: /es/docs/explanation/benchmarking/
 [bencher run]: /es/docs/explanation/bencher-run/
 

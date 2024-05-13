@@ -1,20 +1,20 @@
-import FileSizeCode from "../file-size-code.mdx";
-
 ### ⚖️ 파일 크기
 
-<code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드는
-`--file-size` 옵션을 사용하여 배포물의 파일 크기(즉, 이진 크기)를 추적하는 데 사용될 수 있습니다.
+<code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드는 `--file-size` 옵션을 사용하여
+배포하는 파일(즉, 바이너리 크기)의 크기를 추적하는 데 사용될 수 있습니다.
 `--file-size` 옵션은 크기가 측정될 파일의 파일 경로를 기대합니다.
-내부적으로, <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code>
-은 결과를 [Bencher Metric Format (BMF) JSON][json]으로 출력합니다.
-그러므로 `json` 어댑터를 명시적으로 설정하는 것이 좋습니다.
+내부적으로, <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code>은[Bencher Metric Format (BMF) JSON][bmf]으로
+결과를 출력합니다.
+따라서 [the `json` adapter][json]를 명시적으로 사용하는 것이 좋은 관행입니다.
+더 자세한 내용은 [파일 크기 추적 방법][file size]을 참조하세요.
 
-<FileSizeCode />
-
-`file-size` 측정(즉 `bytes (B)`)이 수집됩니다.
-파일 크기 값(즉 `value`)만 사용할 수 있습니다.
-`lower_value`나 `upper_value`는 수집되지 않습니다.
+`file-size` 측정(즉, `bytes (B)`)이 수집됩니다.
+파일 크기 값(즉, `value`)만 사용할 수 있습니다.
+`lower_value` 또는 `upper_value`은 수집되지 않습니다.
 `file-size` 측정은 모든 프로젝트에 대해 기본적으로 생성되지 않습니다.
-그러나, `--file-size` 옵션을 사용할 때 이 측정은 프로젝트에 자동으로 생성됩니다.
+하지만, `--file-size` 옵션을 사용할 때, 이 측정은 프로젝트에 대해 자동으로 생성됩니다.
 
 [json]: #-json
+
+[bmf]: /ko/docs/reference/bencher-metric-format/
+[file size]: /ko/docs/how-to/track-file-size/

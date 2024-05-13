@@ -1,20 +1,20 @@
-import FileSizeCode from "../file-size-code.mdx";
-
 ### ⚖️ Размер файла
 
-CLI подкоманда <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
-может быть использована для отслеживания размера файла (т.е. размера бинарного файла) ваших результатов при помощи опции `--file-size`.
+Команда CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
+может быть использована для отслеживания размера файла (т.е. размера бинарного файла) ваших продуктов с использованием опции `--file-size`.
 Опция `--file-size` ожидает путь к файлу, размер которого будет измерен.
-Под капотом, <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
-выводит результаты в [формате JSON метрик Bencher (BMF)][json].
-Поэтому рекомендуется явно установить адаптер `json`.
+Внутри, <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
+выводит результаты в формате [Bencher Metric Format (BMF) JSON][bmf].
+Поэтому рекомендуется явно использовать [адаптер `json`][json].
+Для получения дополнительной информации смотрите [как отслеживать размер файла][file size].
 
-<FileSizeCode />
-
-Собирается мера `file-size` (т.е. `байты (B)`).
+Измеряется `file-size` Measure (т.е. `bytes (B)`).
 Доступно только значение размера файла (т.е. `value`).
 Ни `lower_value`, ни `upper_value` не собираются.
 Мера `file-size` не создается по умолчанию для всех проектов.
 Однако, когда вы используете опцию `--file-size`, эта мера будет автоматически создана для вашего проекта.
 
 [json]: #-json
+
+[bmf]: /ru/docs/reference/bencher-metric-format/
+[file size]: /ru/docs/how-to/track-file-size/

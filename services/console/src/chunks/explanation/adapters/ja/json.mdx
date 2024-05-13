@@ -1,36 +1,10 @@
-import BmfExample from "../bmf-example.mdx";
-import BmfSchema from "../bmf-schema.mdx";
-
 ## \{...\} JSON
 
-JSONアダプター（`json`）はBMF JSONを期待しています。
-カスタムベンチマークハーネスをBencherと統合するのに最適です。
+JSON アダプタ（`json`）は、[Bencher Metric Format (BMF) JSON][bmf]を期待しています。
+これは、カスタムベンチマークハーネスをBencherと統合するのに最適です。
+詳細については、[カスタムベンチマークの追跡方法][custom benchmarks]と
+[BMF JSON リファレンス][bmf]をご覧ください。
 
-BMFの例:
-
-<BmfExample />
-
-この例では、キー`benchmark_name`はベンチマークの名前です。
-ベンチマーク名は、1024文字までの任意の非空の文字列にできます。
-`benchmark_name`オブジェクトには、キーとしてメジャー名、スラグ、またはUUIDが含まれます。
-この例では、`latency`はレイテンシー測定のスラグです。
-各プロジェクトにはデフォルトでレイテンシー（例：`latency`）とスループット（例：`throughput`）のメジャーがあり、
-それぞれ`ナノ秒 (ns)`と`操作 / 秒 (ops/s)`で測定されます。
-メジャーオブジェクトには最大3つの値を含むメトリクスが含まれています：`value`、`lower_value`、および`upper_value`。
-`lower_value`および`upper_value`の値はオプションで、
-その計算はベンチマークハーネス固有のものです。
-
-この例では、`latency`メジャーオブジェクトには以下の値が含まれます：
-
-- `value`の値`88.0`
-- `lower_value`の値`87.42`
-- `upper_value`の値`88.88`
-
-BMF JSONがファイルに保存されている場合、
-オプショナルな`--file`引数を使ってそのファイルパスを指定する<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用できます。
-これはベンチマークコマンド（例：`bencher run --file results.json "bencher mock > results.json"`）と
-ベンチマークコマンドなし（例：`bencher mock > results.json && bencher run --file results.json`）の両方で動作します。
-
-<BmfSchema />
-
-> 🐰 注記: `bencher mock` CLIサブコマンドはモックBMFメトリクスを生成します。
+[bmf]: /ja/docs/reference/bencher-metric-format/
+[bencher run]: /ja/docs/explanation/bencher-run/#benchmark-command
+[custom benchmarks]: /ja/docs/how-to/track-custom-benchmarks/

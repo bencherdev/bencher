@@ -1,19 +1,11 @@
-Adapterは、ベンチマークハーネスの出力を標準化されたJSON、Bencher Metric Format（BMF）に変換します。
-アダプターは、新しいレポートが受信されるとAPIサーバー上で実行されます。
-[ベンチマークの概要][ベンチマークの概要]で、より詳細な説明を参照してください。
-[`bencher run` CLIサブコマンド][bencher run]で`--adapter`オプションを使用して指定することができます。
-アダプターが指定されていない場合、[デフォルトの`magic`アダプター][magic adapter]が使用されます。
+アダプタはベンチマークハーネスの出力を [Bencher Metric Format (BMF) JSON][bmf] に変換します。
+新しいレポートが受け取られた時、アダプタはAPIサーバー上で実行されます。
+詳細については[ベンチマーキングの概要][benchmarking overview]を参照してください。
+アダプタは[`bencher run` CLIサブコマンド][bencher run]で `--adapter` オプションを使用して指定することができます。
+アダプタが指定されていない場合、[デフォルトの`magic` アダプタ][magic adapter]が使用されます。
 
-ユースケースに最も具体的なアダプターを使用することが最善です。
-これにより、最も正確でパフォーマンスの高い解析が提供されます。
-例えば、Rustの[libtest bench][rust libtest]出力を解析する場合、
-`magic`アダプターではなく、`rust_bench`アダプターを使用するべきです。
-[Bencher perfページ][perf page]で、良い比較を見ることができます。
-
-[rust libtest]: https://doc.rust-lang.org/rustc/tests/index.html#benchmarks
-[perf page]: https://bencher.dev/perf/bencher?key=true&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1688083200000&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&end_time=1704067200000&clear=true
-
-[ベンチマークの概要]: /ja/docs/explanation/benchmarking/
+[bmf]: /ja/docs/reference/bencher-metric-format/
+[benchmarking overview]: /ja/docs/explanation/benchmarking/
 [bencher run]: /ja/docs/explanation/bencher-run/
 
 [magic adapter]: #-magic-default
