@@ -1,7 +1,7 @@
 ## ❯_️ Shell Hyperfine
 
 The Shell Hyperfine Adapter (`shell_hyperfine`) expects [Hyperfine](https://github.com/sharkdp/hyperfine) output in [JSON format (ie `--export-json results.json`)](https://github.com/sharkdp/hyperfine/tree/master/scripts#example).
-This JSON output is saved to a file, so you must use the `bencher run` CLI `--file` argument to specify that file path (ie `bencher run --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`).
+This JSON output is saved to a file, so you must use the `bencher run` CLI `--file` option to specify that file path (ie `bencher run --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`).
 The `latency` Measure (ie `nanoseconds (ns)`) is gathered.
 
 There are two options for the Metric:

@@ -1,7 +1,7 @@
 ## 🐍 Python Pytest
 
 The Python Pytest Adapter (`python_pytest`) expects [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) output in [JSON format (ie `--benchmark-json results.json`)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options).
-This JSON output is saved to a file, so you must use the `bencher run` CLI `--file` argument to specify that file path (ie `bencher run --file results.json "pipenv run pytest --benchmark-json results.json benchmarks.py"`).
+This JSON output is saved to a file, so you must use the `bencher run` CLI `--file` option to specify that file path (ie `bencher run --file results.json "pipenv run pytest --benchmark-json results.json benchmarks.py"`).
 The `latency` Measure (ie `nanoseconds (ns)`) is gathered.
 
 There are two options for the Metric:

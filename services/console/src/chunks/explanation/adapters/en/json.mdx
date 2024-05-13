@@ -1,36 +1,26 @@
-import BmfExample from "../bmf-example.mdx";
-import BmfSchema from "../bmf-schema.mdx";
+import FileCmdExample from "../file-cmd-example.mdx";
+import FileNoCmdExample from "../file-no-cmd-example.mdx";
 
 ## \{...\} JSON
 
-The JSON Adapter (`json`) expects BMF JSON.
-It is perfect for integrating custom benchmark harnesses with Bencher.
-
-Example of BMF:
-
-<BmfExample />
-
-In this example, the key `benchmark_name` would be the name of a benchmark.
-Benchmark names can be any non-empty string up to 1024 characters.
-The `benchmark_name` object contains Measure names, slugs, or UUIDs as keys.
-In this example, `latency` is the slug for the Latency Measure.
-Each Project by default has a Latency (ie `latency`) and Throughput (ie `throughput`) Measure,
-which are measured in `nanosecond (ns)` and `operations / second (ops/s)` respectively.
-The Measure object contains a Metric with up to three values: `value`, `lower_value`, and `upper_value`.
-The `lower_value` and `upper_value` values are optional,
-and their calculation is benchmark harness specific.
-
-In this example, the `latency` Measure object contains the following values:
-
-- A `value` of `88.0`
-- A `lower_value` of `87.42`
-- An `upper_value` of `88.88`
-
+The JSON Adapter (`json`) expects [Bencher Metric Format (BMF) JSON][bmf].
 If the BMF JSON is stored in a file,
-then you can use the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand with the optional `--file` argument to specify that file path.
-This works both with a benchmark command (ex: `bencher run --file results.json "bencher mock > results.json"`)
-and without a benchmark command (ex: `bencher mock > results.json && bencher run --file results.json`).
+then you can use the `bencher run` CLI `--file` option to specify the file path.
+This works both with [a benchmark command][bencher run] and without one.
 
-<BmfSchema />
+With a command:
+<FileCmdExample />
 
+Without a command:
+<FileNoCmdExample />
+
+<br />
 > 🐰 Note: The `bencher mock` CLI subcommand generates mock BMF Metrics.
+
+The `json` adapter is perfect for integrating custom benchmark harnesses with Bencher.
+For more details see [how to track custom benchmarks][custom benchmarks]
+and the [BMF JSON reference][bmf].
+
+[bmf]: /docs/reference/bencher-metric-format/
+[bencher run]: /docs/explanation/bencher-run/#benchmark-command
+[custom benchmarks]: /docs/how-to/custom-benchmarks/

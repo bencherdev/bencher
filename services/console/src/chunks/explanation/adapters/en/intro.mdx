@@ -1,21 +1,11 @@
-Adapters convert benchmark harness output into standardized JSON,
-Bencher Metric Format (BMF).
+Adapters convert benchmark harness output into [Bencher Metric Format (BMF) JSON][bmf].
 The adapters run on the API server when a new report is received.
-See the [benchmarking overview][benchmarking overview] for a more in-depth explanation.
-They can be specified for [the `bencher run` CLI subcommand][bencher run]
+See [the benchmarking overview][benchmarking overview] for more details.
+An adapter can be specified for [the `bencher run` CLI subcommand][bencher run]
 with the `--adapter` option.
 If no adapter is specified, [the `magic` adapter][magic adapter] is used by default.
 
-It is best to use the most specific adapter for your use case.
-This will provide both the most accurate and performant parsing.
-For example if you are parsing Rust [libtest bench][rust libtest] output,
-you should use the `rust_bench` adapter and not the `magic` adapter.
-See our
-[Bencher perf page][perf page] for a good comparison.
-
-[rust libtest]: https://doc.rust-lang.org/rustc/tests/index.html#benchmarks
-[perf page]: https://bencher.dev/perf/bencher?key=true&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1688083200000&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&end_time=1704067200000&clear=true
-
+[bmf]: /docs/reference/bencher-metric-format/
 [benchmarking overview]: /docs/explanation/benchmarking/
 [bencher run]: /docs/explanation/bencher-run/
 
