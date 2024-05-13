@@ -3,7 +3,7 @@ enum Collection {
 	legal = "legal",
 	// Docs
 	tutorial = "tutorial",
-	how_to = "how_to",
+	how_to = "how-to",
 	explanation = "explanation",
 	reference = "reference",
 	// API
