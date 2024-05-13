@@ -7,42 +7,15 @@ modified: "2024-05-12T07:44:00Z"
 sortOrder: 5
 ---
 
-import BmfExample from "../../../chunks/explanation/bmf-example.mdx";
+import Intro from "../../../chunks/how_to/custom-benchmarks/en/intro.mdx";
+import BmfExample from "../../../chunks/how_to/custom-benchmarks/en/example.mdx";
+import Run from "../../../chunks/how_to/custom-benchmarks/en/run.mdx";
+import ResultsFile from "../../../chunks/how_to/custom-benchmarks/en/results-file.mdx";
 
-Bencher supports [the most popular benchmarking harnesses][adapters] out-of-the-box,
-and we are always [open to suggestions][github issue] for new adapters.
-However there can be situations where an off-the-shelf benchmarking harness doesn't fit your needs,
-necessitating the creation of a custom benchmarking harness.
-Lucky for you, Bencher also supports using a custom benchmarking harness.
-The easiest way to integrate your custom benchmark harness with Bencher
-is to output [Bencher Metric Format (BMF) JSON][bmf json].
-
-This is an example of BMF JSON:
-
+<Intro />
 <BmfExample />
-
-
-
-
-If the BMF JSON is stored in a file,
-then you can use the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand with the optional `--file` option to specify that file path.
-This works both with a benchmark command (ex: `bencher run --file results.json "bencher mock > results.json"`)
-and without a benchmark command (ex: `bencher mock > results.json && bencher run --file results.json`).
-
-```shell
-bencher run --file results.json "bencher mock > results.json"
-```
-
-```shell
-bencher mock > results.json && bencher run --file results.json
-```
-
-
-[github issue]: https://github.com/bencherdev/bencher/issues/new?title=Add+new+adapter
-
-[adapters]: /docs/explanation/adapters/
-[bmf json]: /docs/explanation/adapters/#-json
-
+<Run />
+<ResultsFile/>
 
 <br/>
 

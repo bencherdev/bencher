@@ -4,20 +4,7 @@ import FileNoCmdExample from "../file-no-cmd-example.mdx";
 ## \{...\} JSON
 
 The JSON Adapter (`json`) expects [Bencher Metric Format (BMF) JSON][bmf].
-If the BMF JSON is stored in a file,
-then you can use the `bencher run` CLI `--file` option to specify the file path.
-This works both with [a benchmark command][bencher run] and without one.
-
-With a command:
-<FileCmdExample />
-
-Without a command:
-<FileNoCmdExample />
-
-<br />
-> 🐰 Note: The `bencher mock` CLI subcommand generates mock BMF Metrics.
-
-The `json` adapter is perfect for integrating custom benchmark harnesses with Bencher.
+It is perfect for integrating custom benchmark harnesses with Bencher.
 For more details see [how to track custom benchmarks][custom benchmarks]
 and the [BMF JSON reference][bmf].
 
