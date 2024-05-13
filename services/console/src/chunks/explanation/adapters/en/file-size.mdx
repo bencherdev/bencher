@@ -1,20 +1,12 @@
-import FileSizeCmdExample from "../file-size-cmd-example.mdx";
-import FileSizeNoCmdExample from "../file-size-no-cmd-example.mdx";
-
 ### ⚖️ File Size
 
 The <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand
 can be used to track the file size (ie binary size) of your deliverables with the `--file-size` option.
 The `--file-size` option expects a file path to the file who's size will be measured.
 Under the hood, <code><a href="/docs/explanation/bencher-run/">bencher run</a></code>
-outputs the results as [Bencher Metric Format (BMF) JSON][json].
-It is therefore good practice to explicitly use the `json` adapter.
-
-With a command:
-<FileSizeCmdExample />
-
-Without a command:
-<FileSizeNoCmdExample />
+outputs the results as[Bencher Metric Format (BMF) JSON][bmf].
+It is therefore good practice to explicitly use [the `json` adapter][json].
+For more details see [how to track file size][file size].
 
 The `file-size` Measure (ie `bytes (B)`) is gathered.
 Only the file size value (ie `value`) is available.
@@ -23,3 +15,6 @@ The `file-size` Measure is not created by default for all Projects.
 However, when you use the `--file-size` option, this Measures will be automatically created for your Project.
 
 [json]: #-json
+
+[bmf]: /docs/reference/bencher-metric-format/
+[file size]: /docs/how-to/file-size/
