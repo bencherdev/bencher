@@ -1,0 +1,5 @@
+Bencher 默认支持[最受欢迎的基准测试工具][adapters]。但有时候，您可能想要测量交付物本身的大小，例如您的可执行文件的二进制大小。幸运的是，Bencher 也支持跟踪文件大小。跟踪文件大小最简单的方法是使用<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令，配合 `--file-size` 选项。`--file-size` 选项需要一个文件路径，指向将被测量大小的文件。在底层，<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code>以 [Bencher Metric Format (BMF) JSON][bmf] 输出结果。因此，明确使用 [`json` 适配器][json adapter] 是一个好习惯。
+
+[adapters]: /zh/docs/explanation/adapters/
+[bmf]: /zh/docs/reference/bencher-metric-format/
+[json adapter]: /zh/docs/explanation/adapters/#json-适配器

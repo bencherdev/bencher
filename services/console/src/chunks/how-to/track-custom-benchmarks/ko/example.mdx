@@ -1,0 +1,27 @@
+import BmfExample from "../bmf-example.mdx";
+
+BMF JSON의 예시입니다:
+
+<BmfExample />
+
+이 예시에서 `benchmark_name` 키는 [벤치마크][benchmark]의 이름을 의미합니다.
+벤치마크 이름은 최대 1024자까지의 비어 있지 않은 문자열일 수 있습니다.
+`benchmark_name` 객체는 여러 [측정][measure] 이름, 슬러그, 또는 UUID를 키로 포함할 수 있습니다.
+지정된 값이 이름이나 슬러그이고 해당 측정이 아직 존재하지 않는 경우, 자동으로 생성됩니다.
+하지만, 지정된 값이 UUID인 경우 해당 측정이 이미 존재해야 합니다.
+이 예시에서, `latency`는 기본 제공 Latency 측정의 슬러그입니다.
+기본적으로 각 프로젝트는 Latency(예: `latency`)와 Throughput(예: `throughput`) 측정을 가지고 있으며,
+이는 각각 `나노초(ns)`와 `초당 연산(ops/s)`으로 측정됩니다.
+측정 객체는 최대 세 개의 값이 있는 [메트릭][metric]을 포함합니다:
+`value`, `lower_value`, `upper_value`.
+`lower_value`와 `upper_value` 값은 선택 사항입니다.
+
+이 예시에서, `latency` 측정 객체는 다음과 같은 값을 포함합니다:
+
+- `value` 값은 `88.0`
+- `lower_value` 값은 `87.42`
+- `upper_value` 값은 `88.88`
+
+[benchmark]: /ko/docs/explanation/benchmarking/#benchmarks
+[measure]: /ko/docs/explanation/benchmarking/#measures
+[metric]: /ko/docs/explanation/benchmarking/#metrics

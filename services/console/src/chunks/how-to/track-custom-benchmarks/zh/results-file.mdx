@@ -1,0 +1,14 @@
+import FileCmdExample from "../file-cmd-example.mdx";
+import FileNoCmdExample from "../file-no-cmd-example.mdx";
+
+如果你的结果被存储在一个名为 `results.json` 的文件中，
+那么你可以使用 `--file` 选项来指定文件路径。
+这适用于有[基准测试命令][bencher run]的情况和没有的情况。
+
+使用基准测试命令时:
+<FileCmdExample />
+
+不使用基准测试命令时:
+<FileNoCmdExample />
+
+[bencher run]: /zh/docs/explanation/bencher-run/#benchmark-command

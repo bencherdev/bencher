@@ -1,0 +1,14 @@
+Bencher unterstützt direkt die [beliebtesten Benchmarking-Harnesses][adapters]. Manchmal möchten Sie jedoch die Größe Ihrer Lieferobjekte selbst messen,
+wie zum Beispiel die Binärgröße Ihres ausführbaren Programms.
+Glücklicherweise unterstützt Bencher auch das Verfolgen der Dateigröße.
+Der einfachste Weg, die Dateigröße zu verfolgen, ist die Verwendung des
+<code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehls
+mit der Option `--file-size`.
+Die Option `--file-size` erwartet einen Dateipfad zu der Datei, deren Größe gemessen werden soll.
+Unter der Haube gibt <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code>
+die Ergebnisse als [Bencher Metric Format (BMF) JSON][bmf] aus.
+Es ist daher eine gute Praxis, explizit [den `json` Adapter][json adapter] zu verwenden.
+
+[adapters]: /de/docs/explanation/adapters/
+[bmf]: /de/docs/reference/bencher-metric-format/
+[json adapter]: /de/docs/explanation/adapters/#-json

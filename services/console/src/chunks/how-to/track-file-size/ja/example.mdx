@@ -1,0 +1,33 @@
+import CmdExample from "../cmd-example.mdx";
+import NoCmdExample from "../no-cmd-example.mdx";
+import JsonExample from "../json-example.mdx";
+
+スクリプトが `./my_build_script.sh` にあり、バイナリを `./path/to/my_binary` にビルドする場合、
+<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code>
+と[the `json` adapter][json adapter]を用いて、このバイナリファイルのサイズを追跡できます。
+これは、[ベンチマークコマンド][bencher run]がある場合とない場合の両方で機能します。
+
+ベンチマークコマンドがある場合：
+<CmdExample />
+
+ベンチマークコマンドがない場合：
+<NoCmdExample />
+
+どちらの場合でも、`my_binary` のサイズが `42` バイトであれば、生成される BMF JSON は次のようになります：
+
+<JsonExample />
+
+この例では、キー `my_binary` はバイナリファイルの名前です。
+[ベンチマーク][benchmark]の名前として使用されます。
+`my_binary` オブジェクトには `file-size` キーが含まれます。
+`file-size` は、内蔵されたファイルサイズ [Measure][measure]のスラッグです。
+ファイルサイズ Measure は、すべてのプロジェクトに対してデフォルトで作成されるわけではありません。
+しかし、ファイルサイズ Measure を使用すると、プロジェクトに対して自動的に作成されます。
+ファイルサイズ Measure オブジェクトには、ファイルサイズ `value` をバイト単位で持つ [Metric][metric]が含まれます、`42.0`。
+
+[json adapter]: /ja/docs/explanation/adapters/#-json
+[bencher run]: /ja/docs/explanation/bencher-run/#benchmark-command
+
+[benchmark]: /ja/docs/explanation/benchmarking/#benchmarks
+[measure]: /ja/docs/explanation/benchmarking/#measures
+[metric]: /ja/docs/explanation/benchmarking/#metrics

@@ -1,0 +1,20 @@
+如果你有一个位于 `./my_build_script.sh` 的脚本，用于构建位于 `./path/to/my_binary` 路径的二进制文件，那么你可以使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> 和 [json 适配器][json adapter] 来跟踪这个二进制文件的大小。无论是使用 [benchmark 命令][bencher run] 还是不使用都可以。
+
+使用 benchmark 命令时：
+<CmdExample />
+
+不使用 benchmark 命令时：
+<NoCmdExample />
+
+在任何情况下，如果 `my_binary` 的大小为 `42` 字节，生成的 BMF JSON 将如下所示：
+
+<JsonExample />
+
+在此示例中，键 `my_binary` 是二进制文件名。它被用作 [Benchmark][benchmark] 的名称。`my_binary` 对象包含 `file-size` 键。`file-size` 是内置文件大小 [Measure][measure] 的别名。文件大小 Measure 默认不为所有项目创建。然而，当你使用文件大小 Measure 时，它将自动为你的项目创建。文件大小 Measure 对象包含有文件大小 `value`（以字节为单位，`42.0`）的 [Metric][metric]。
+
+[json adapter]: /zh/docs/explanation/adapters/#-json
+[bencher run]: /zh/docs/explanation/bencher-run/#benchmark-command
+
+[benchmark]: /zh/docs/explanation/benchmarking/#benchmarks
+[measure]: /zh/docs/explanation/benchmarking/#measures
+[metric]: /zh/docs/explanation/benchmarking/#metrics

@@ -1,0 +1,14 @@
+Bencher поддерживает [самые популярные средства бенчмаркинга][adapters] "из коробки".
+Иногда, однако, вы хотите измерить размер ваших результатов, например, размер исполняемого файла.
+К счастью, Bencher также поддерживает отслеживание размера файла.
+Самый простой способ отслеживания размера файла - использовать подкоманду CLI
+<code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
+с опцией `--file-size`.
+Опция `--file-size` ожидает путь к файлу, размер которого будет измерен.
+Под капотом, <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
+выводит результаты в формате [Bencher Metric Format (BMF) JSON][bmf].
+Поэтому рекомендуется явно использовать [адаптер `json`][json adapter].
+
+[adapters]: /ru/docs/explanation/adapters/
+[bmf]: /ru/docs/reference/bencher-metric-format/
+[json adapter]: /ru/docs/explanation/adapters/#-json

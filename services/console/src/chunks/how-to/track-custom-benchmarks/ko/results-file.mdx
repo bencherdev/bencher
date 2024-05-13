@@ -1,0 +1,13 @@
+import FileCmdExample from "../file-cmd-example.mdx";
+import FileNoCmdExample from "../file-no-cmd-example.mdx";
+
+만약 여러분의 결과가 `results.json`이라는 파일에 저장되어 있다면, 파일 경로를 지정하기 위해 `--file` 옵션을 사용할 수 있습니다.
+이것은 [벤치마크 명령어][bencher run]가 있는 경우와 없는 경우 모두에서 작동합니다.
+
+벤치마크 명령어가 있는 경우:
+<FileCmdExample />
+
+벤치마크 명령어가 없는 경우:
+<FileNoCmdExample />
+
+[bencher run]: /ko/docs/explanation/bencher-run/#benchmark-command

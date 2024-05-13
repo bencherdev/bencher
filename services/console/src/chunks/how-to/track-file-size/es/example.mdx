@@ -1,0 +1,38 @@
+import CmdExample from "../cmd-example.mdx";
+import NoCmdExample from "../no-cmd-example.mdx";
+import JsonExample from "../json-example.mdx";
+
+Si tuvieras un script ubicado en `./my_build_script.sh` que construyera tu binario
+en la ruta `./path/to/my_binary`,
+entonces podrías rastrear el tamaño de este archivo binario con
+<code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
+y [el adaptador `json`][json adapter].
+Esto funcionaría tanto con [un comando de benchmark][bencher run] como sin él.
+
+Con un comando de benchmark:
+<CmdExample />
+
+Sin un comando de benchmark:
+<NoCmdExample />
+
+En cualquier caso, el BMF JSON generado se vería así,
+si `my_binary` tuviera un tamaño de `42` bytes:
+
+<JsonExample />
+
+En este ejemplo, la clave `my_binary` es el nombre del archivo binario.
+Se utiliza como el nombre del [Benchmark][benchmark].
+El objeto `my_binary` contiene la clave `file-size`.
+`file-size` es el identificador para la [Medida][measure] de Tamaño de Archivo incorporada.
+La Medida de Tamaño de Archivo no se crea por defecto para todos los Proyectos.
+Sin embargo, cuando usas la Medida de Tamaño de Archivo,
+se creará automáticamente para tu Proyecto.
+El objeto de la Medida de Tamaño de Archivo contiene una [Métrica][metric]
+con el `valor` del tamaño de archivo en bytes, `42.0`.
+
+[json adapter]: /es/docs/explanation/adapters/#-json
+[bencher run]: /es/docs/explanation/bencher-run/#benchmark-command
+
+[benchmark]: /es/docs/explanation/benchmarking/#benchmarks
+[measure]: /es/docs/explanation/benchmarking/#measures
+[metric]: /es/docs/explanation/benchmarking/#metrics

@@ -1,0 +1,37 @@
+import CmdExample from "../cmd-example.mdx";
+import NoCmdExample from "../no-cmd-example.mdx";
+import JsonExample from "../json-example.mdx";
+
+Если у вас есть скрипт, расположенный в `./my_build_script.sh`, который собирает ваш двоичный файл по пути `./path/to/my_binary`,
+то вы можете отслеживать размер этого двоичного файла с помощью
+<code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
+и [адаптера `json`][json adapter].
+Это будет работать как с [командой бенчмарка][bencher run], так и без нее.
+
+С командой бенчмарка:
+<CmdExample />
+
+Без команды бенчмарка:
+<NoCmdExample />
+
+В любом случае сгенерированный BMF JSON будет выглядеть так,
+если `my_binary` имеет размер `42` байта:
+
+<JsonExample />
+
+В этом примере ключ `my_binary` является именем двоичного файла.
+Он используется в качестве названия [Benchmark][benchmark].
+Объект `my_binary` содержит ключ `file-size`.
+`file-size` - это слаг для встроенного измерения размера файла [Measure][measure].
+Измерение размера файла по умолчанию не создается для всех проектов.
+Однако, когда вы используете измерение размера файла,
+оно будет автоматически создано для вашего проекта.
+Объект измерения размера файла содержит [Metric][metric]
+с размером файла `value` в байтах, `42.0`.
+
+[json adapter]: /ru/docs/explanation/adapters/#-json
+[bencher run]: /ru/docs/explanation/bencher-run/#benchmark-command
+
+[benchmark]: /ru/docs/explanation/benchmarking/#benchmarks
+[measure]: /ru/docs/explanation/benchmarking/#measures
+[metric]: /ru/docs/explanation/benchmarking/#metrics

@@ -1,0 +1,15 @@
+Bencher prend en charge [les harnais de benchmarking les plus populaires][adapters] directement.
+Cependant, parfois, vous souhaitez mesurer la taille de vos livrables eux-mêmes,
+comme la taille binaire de votre exécutable.
+Heureusement pour vous, Bencher prend également en charge le suivi de la taille des fichiers.
+La manière la plus simple de suivre la taille des fichiers est d'utiliser la sous-commande CLI
+<code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>
+avec l'option `--file-size`.
+L'option `--file-size` attend un chemin de fichier vers le fichier dont la taille sera mesurée.
+Sous le capot, <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>
+produit les résultats au format [Bencher Metric Format (BMF) JSON][bmf].
+Il est donc de bonne pratique d'utiliser explicitement [l'adaptateur `json`][json adapter].
+
+[adapters]: /fr/docs/explanation/adapters/
+[bmf]: /fr/docs/reference/bencher-metric-format/
+[json adapter]: /fr/docs/explanation/adapters/#-json

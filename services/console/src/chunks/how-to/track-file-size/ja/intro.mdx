@@ -1,0 +1,13 @@
+Bencherは、[最も人気のあるベンチマークハーネス][adapters]をすぐに使用できます。
+ただし、実行可能ファイルのバイナリサイズのように、納品物自体のサイズを測定したい場合もあります。
+幸いなことに、Bencherはファイルサイズの追跡もサポートしています。
+ファイルサイズを追跡する最も簡単な方法は、`--file-size` オプションを使用して
+<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用することです。
+`--file-size` オプションは、サイズが測定されるファイルへのファイルパスを期待しています。
+内部では、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code>
+は結果を [Bencher Metric Format (BMF) JSON][bmf] として出力します。
+したがって、明示的に[the `json` adapter][json adapter]を使用することが良い習慣です。
+
+[adapters]: /ja/docs/explanation/adapters/
+[bmf]: /ja/docs/reference/bencher-metric-format/
+[json adapter]: /ja/docs/explanation/adapters/#json

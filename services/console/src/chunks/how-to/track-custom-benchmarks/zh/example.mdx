@@ -1,0 +1,27 @@
+import BmfExample from "../bmf-example.mdx";
+
+这是一个BMF JSON的案例：
+
+<BmfExample />
+
+在这个例子中，键 `benchmark_name` 将是一个[基准测试][benchmark]的名称。
+基准测试名称可以是任何非空字符串，最多1024个字符。
+`benchmark_name` 对象可以包含多个[度量][measure]名称、缩写或UUID作为键。
+如果指定的值是名称或缩写，并且度量不存在，则将为您创建它。
+然而，如果指定的值是UUID，则度量必须已经存在。
+在这个例子中，`latency` 是内置延迟度量的缩写。
+每个项目默认有延迟（即 `latency`）和吞吐量（即 `throughput`）度量，
+分别以 `纳秒 (ns)` 和 `操作数/秒 (ops/s)` 测量。
+度量对象包含一个带有最多三个值的[指标][metric]：
+`value`、`lower_value`和`upper_value`。
+`lower_value` 和 `upper_value` 值是可选的。
+
+在这个例子中，`latency` 度量对象包含以下值：
+
+- 一个 `value` 为 `88.0`
+- 一个 `lower_value` 为 `87.42`
+- 一个 `upper_value` 为 `88.88`
+
+[benchmark]: /zh/docs/explanation/benchmarking/#benchmarks
+[measure]: /zh/docs/explanation/benchmarking/#measures
+[metric]: /zh/docs/explanation/benchmarking/#metrics

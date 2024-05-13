@@ -1,0 +1,12 @@
+import RunCmdExample from "../run-cmd-example.mdx";
+
+如果您有一个位于 `./run/my/benchmarks.sh` 的脚本，该脚本运行您的基准测试
+并将结果以 BMF JSON 的形式打印到标准输出，
+那么您可以使用以下命令，
+通过<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code>
+和 [JSON 适配器][json adapter]
+来跟踪它们：
+
+<RunCmdExample />
+
+[json adapter]: /zh/docs/explanation/adapters/#-json

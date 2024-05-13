@@ -1,0 +1,12 @@
+import RunCmdExample from "../run-cmd-example.mdx";
+
+Если у вас есть скрипт, расположенный в `./run/my/benchmarks.sh`, который запускает ваши бенчмарки
+и выводит результаты в стандартный вывод как BMF JSON,
+то вы могли бы отслеживать их используя
+<code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
+и [адаптер `json`][json adapter]
+с помощью следующей команды:
+
+<RunCmdExample />
+
+[json adapter]: /ru/docs/explanation/adapters/#-json

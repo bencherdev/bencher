@@ -1,0 +1,34 @@
+import CmdExample from "../cmd-example.mdx";
+import NoCmdExample from "../no-cmd-example.mdx";
+import JsonExample from "../json-example.mdx";
+
+`./my_build_script.sh`에 위치한 스크립트로 `./path/to/my_binary` 경로에서 바이너리를 빌드할 경우,
+<code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code>
+및 [the `json` 어댑터][json adapter]를 사용하여 이 바이너리 파일의 크기를 추적할 수 있습니다.
+이는 [벤치마크 명령어][bencher run]가 있는 경우와 없는 경우 모두에 작동합니다.
+
+벤치마크 명령어가 있는 경우:
+<CmdExample />
+
+벤치마크 명령어가 없는 경우:
+<NoCmdExample />
+
+어느 경우든, `my_binary`의 크기가 `42` 바이트일 경우 생성된 BMF JSON은 다음과 같습니다:
+
+<JsonExample />
+
+이 예제에서, 키 `my_binary`는 바이너리 파일 이름입니다.
+이는 [Benchmark][benchmark]의 이름으로 사용됩니다.
+`my_binary` 객체는 `file-size` 키를 포함합니다.
+`file-size`는 내장된 파일 크기 [Measure][measure]의 슬러그입니다.
+파일 크기 Measure는 모든 프로젝트에 대해 기본적으로 생성되지 않습니다.
+하지만, 파일 크기 Measure를 사용할 때,
+해당 Measure는 프로젝트에 자동으로 생성됩니다.
+파일 크기 Measure 객체에는 파일 크기 `value`를 바이트 단위로 담은 [Metric][metric]이 포함되어 있으며, 이 경우 `42.0`입니다.
+
+[json adapter]: /ko/docs/explanation/adapters/#-json
+[bencher run]: /ko/docs/explanation/bencher-run/#benchmark-command
+
+[benchmark]: /ko/docs/explanation/benchmarking/#benchmarks
+[measure]: /ko/docs/explanation/benchmarking/#measures
+[metric]: /ko/docs/explanation/benchmarking/#metrics

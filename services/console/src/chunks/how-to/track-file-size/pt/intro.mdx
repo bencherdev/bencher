@@ -1,0 +1,15 @@
+O Bencher suporta os [dispositivos de medição de desempenho mais populares][adapters] de forma nativa.
+Por vezes, no entanto, você deseja medir o tamanho dos seus entregáveis em si,
+como o tamanho binário do seu executável.
+Sorte a sua, o Bencher também suporta o rastreamento do tamanho de arquivo.
+A maneira mais fácil de rastrear o tamanho de um arquivo é usar o
+subcomando da CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>
+com a opção `--file-size`.
+A opção `--file-size` espera um caminho de arquivo para o arquivo cujo tamanho será medido.
+Por baixo dos panos, <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>
+apresenta os resultados como [Bencher Metric Format (BMF) JSON][bmf].
+Portanto, é uma boa prática usar explicitamente [o adaptador `json`][json adapter].
+
+[adapters]: /pt/docs/explanation/adapters/
+[bmf]: /pt/docs/reference/bencher-metric-format/
+[json adapter]: /pt/docs/explanation/adapters/#-json

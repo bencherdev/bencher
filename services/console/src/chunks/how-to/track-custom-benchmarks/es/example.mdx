@@ -1,0 +1,27 @@
+import BmfExample from "../bmf-example.mdx";
+
+Este es un ejemplo de BMF JSON:
+
+<BmfExample />
+
+En este ejemplo, la clave `benchmark_name` sería el nombre de un [Benchmark][benchmark].
+Los nombres de Benchmark pueden ser cualquier cadena no vacía de hasta 1024 caracteres.
+El objeto `benchmark_name` puede contener múltiples nombres, slugs o UUIDs de [Medida][measure] como claves.
+Si el valor especificado es un nombre o slug y la Medida no existe previamente, se creará para usted.
+Sin embargo, si el valor especificado es un UUID entonces la Medida debe existir previamente.
+En este ejemplo, `latency` es el slug para la Medida de Latencia integrada.
+Cada Proyecto por defecto tiene una Medida de Latencia (es decir `latency`) y Rendimiento (es decir `throughput`),
+que se miden en `nanosegundo (ns)` y `operaciones / segundo (ops/s)` respectivamente.
+El objeto Medida contiene una [Métrica][metric] con hasta tres valores:
+`value`, `lower_value` y `upper_value`.
+Los valores `lower_value` y `upper_value` son opcionales.
+
+En este ejemplo, el objeto Medida `latency` contiene los siguientes valores:
+
+- Un `value` de `88.0`
+- Un `lower_value` de `87.42`
+- Un `upper_value` de `88.88`
+
+[benchmark]: /es/docs/explanation/benchmarking/#benchmarks
+[measure]: /es/docs/explanation/benchmarking/#measures
+[metric]: /es/docs/explanation/benchmarking/#metrics

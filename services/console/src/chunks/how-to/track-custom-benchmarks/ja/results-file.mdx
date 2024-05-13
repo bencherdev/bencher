@@ -1,0 +1,13 @@
+import FileCmdExample from "../file-cmd-example.mdx";
+import FileNoCmdExample from "../file-no-cmd-example.mdx";
+
+結果が `results.json` という名前のファイルに格納されている場合は、ファイルパスを指定するために `--file` オプションを使用できます。
+これは、[ベンチマークコマンド][bencher run]がある場合とない場合の両方で機能します。
+
+ベンチマークコマンドあり：
+<FileCmdExample />
+
+ベンチマークコマンドなし：
+<FileNoCmdExample />
+
+[bencher run]: /ja/docs/explanation/bencher-run/#benchmark-command

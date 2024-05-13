@@ -1,0 +1,15 @@
+Bencher admite [los adaptadores de evaluación comparativa más populares][adapters] de manera predeterminada.
+Sin embargo, a veces quieres medir el tamaño de tus entregables en sí mismos,
+como el tamaño binario de tu ejecutable.
+Afortunadamente, Bencher también admite el seguimiento del tamaño de archivo.
+La forma más fácil de rastrear el tamaño de archivo es usar el
+subcomando de CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
+con la opción `--file-size`.
+La opción `--file-size` espera una ruta de archivo al archivo cuyo tamaño será medido.
+Bajo el capó, <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
+muestra los resultados como [Formato de Métrica de Bencher (BMF) JSON][bmf].
+Por lo tanto, es una buena práctica usar explícitamente [el adaptador `json`][json adapter].
+
+[adapters]: /es/docs/explanation/adapters/
+[bmf]: /es/docs/reference/bencher-metric-format/
+[json adapter]: /es/docs/explanation/adapters/#-json

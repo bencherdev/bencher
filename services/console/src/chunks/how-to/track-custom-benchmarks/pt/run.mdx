@@ -1,0 +1,12 @@
+import RunCmdExample from "../run-cmd-example.mdx";
+
+Se você tivesse um script localizado em `./run/my/benchmarks.sh` que executasse seus benchmarks
+e imprimisse os resultados na saída padrão como JSON do BMF,
+então você poderia rastreá-los usando
+<code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>
+e [o adaptador `json`][json adapter]
+com o seguinte comando:
+
+<RunCmdExample />
+
+[json adapter]: /pt/docs/explanation/adapters/#-json
