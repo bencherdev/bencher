@@ -19,16 +19,20 @@ It checks all database interactions at compile time, preventing runtime errors.
 This compile time checking also makes Diesel a zero-cost abstraction over SQL.
 By eliminating all the boilerplate, Diesel lets you focus on what really matters in your Rust code.
 
-Diesel support [the three most popular databases][stackoverflow databases]:
+Diesel supports [the three most popular open source databases][stackoverflow databases]:
 
 - PostgreSQL
 - MySQL
 - SQLite
 
+There is also a third-party crate that extends Diesel
+to add support for [Oracle][github diesel oci].
+
 > 🐰 Fun Fact: Bencher uses Diesel to [manage our SQLite database][sqlite]!
 
 [github diesel]: https://github.com/diesel-rs/diesel
 [stackoverflow databases]: https://survey.stackoverflow.co/2023/#most-popular-technologies-database-prof
+[github diesel oci]: https://github.com/GiGainfosystems/diesel-oci
 
 [sqlite]: /learn/engineering/sqlite-performance-tuning/
 
@@ -151,6 +155,8 @@ They use this comparison as a chance to learn from other ORMs on where they can 
 Diesel has woven together a patchwork of benchmarking solutions to catch performance regressions before they get released.
 If your project does not have the time and resources to build and maintain a bespoke continuous benchmarking solution,
 [like the Rustls project][rustls] then you may want to take a page from the Diesel project's playbook.
+
+A very special thank you to Georg Semmler for reviewing this case study.
 
 [rustls]: /learn/case-study/rustls/
 
