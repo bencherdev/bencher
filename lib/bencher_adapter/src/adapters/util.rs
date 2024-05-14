@@ -2,8 +2,12 @@ use std::{fmt, str::FromStr};
 
 use bencher_json::BenchmarkName;
 use nom::{
-    branch::alt, bytes::complete::tag, character::complete::digit1, combinator::map,
-    multi::fold_many1, IResult,
+    branch::alt,
+    bytes::complete::tag,
+    character::complete::digit1,
+    combinator::{map, map_res},
+    multi::fold_many1,
+    IResult,
 };
 use ordered_float::OrderedFloat;
 use rust_decimal::prelude::ToPrimitive;
@@ -167,14 +171,18 @@ impl Visitor<'_> for UnitsVisitor {
     }
 }
 
+pub fn parse_number_as_f64(input: &str) -> IResult<&str, f64> {
+    // It is important to try to parse as a float first,
+    // in order to avoid a false positive when parsing an integer.
+    map_res(alt((parse_float, parse_int)), into_number)(input)
+}
+
 pub fn parse_u64(input: &str) -> IResult<&str, u64> {
-    let (remainder, int) = parse_int(input)?;
-    Ok((remainder, into_number(int)?))
+    map_res(parse_int, into_number)(input)
 }
 
 pub fn parse_f64(input: &str) -> IResult<&str, f64> {
-    let (remainder, float) = parse_float(input)?;
-    Ok((remainder, into_number(float)?))
+    map_res(parse_float, into_number)(input)
 }
 
 pub fn parse_int(input: &str) -> IResult<&str, Vec<&str>> {

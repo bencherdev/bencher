@@ -8,7 +8,9 @@ use nom::{
 };
 
 use crate::{
-    adapters::util::{latency_as_nanos, parse_benchmark_name, parse_u64, parse_units, NomError},
+    adapters::util::{
+        latency_as_nanos, parse_benchmark_name, parse_number_as_f64, parse_units, NomError,
+    },
     results::adapter_results::AdapterResults,
     Adaptable, Settings,
 };
@@ -62,12 +64,16 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
         tuple((
             tag("bench:"),
             space1,
-            parse_u64,
+            parse_number_as_f64,
             space1,
             parse_units,
             tag("/iter"),
             space1,
-            delimited(tag("("), tuple((tag("+/-"), space1, parse_u64)), tag(")")),
+            delimited(
+                tag("("),
+                tuple((tag("+/-"), space1, parse_number_as_f64)),
+                tag(")"),
+            ),
         )),
         |(_, _, duration, _, units, _, _, (_, _, variance))| {
             let value = latency_as_nanos(duration, units);
@@ -229,5 +235,36 @@ pub(crate) mod test_rust_bench {
 
         let metrics = results.get("tests::benchmark_c").unwrap();
         validate_latency(metrics, 3_215.0, Some(2_859.0), Some(3_571.0));
+    }
+
+    #[test]
+    #[allow(clippy::unreadable_literal)]
+    fn test_issue_390() {
+        let results = convert_rust_bench("issue_390");
+        assert_eq!(results.inner.len(), 4);
+
+        let metrics = results.get("bleu::benchmark::bench_batch_bleu").unwrap();
+        validate_latency(
+            metrics,
+            13_967_756.3,
+            Some(13_700_986.66),
+            Some(14_234_525.940000001),
+        );
+
+        let metrics = results.get("bleu::benchmark::bench_bleu").unwrap();
+        validate_latency(
+            metrics,
+            298_794.1,
+            Some(296_154.12),
+            Some(301_434.07999999996),
+        );
+
+        let metrics = results.get("ngram::benchmark::bench_ngram").unwrap();
+        validate_latency(metrics, 49_480.28, Some(48_978.95), Some(49_981.61));
+
+        let metrics = results
+            .get("tokenizer::benchmark::bench_tokenizer")
+            .unwrap();
+        validate_latency(metrics, 15_690.73, Some(8_940.759999999998), Some(22440.7));
     }
 }

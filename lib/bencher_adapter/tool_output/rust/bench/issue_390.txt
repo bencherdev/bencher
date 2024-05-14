@@ -1,0 +1,18 @@
+
+running 13 tests
+test bleu::test::test_add_vectors ... ignored
+test bleu::test::test_bleu ... ignored
+test bleu::test::test_stat_agg ... ignored
+test ngram::test::test_get_ngram_long ... ignored
+test ngram::test::test_get_ngram_short ... ignored
+test ngram::test::test_get_token_ngram_long ... ignored
+test ngram::test::test_get_token_ngram_short ... ignored
+test tokenizer::test::test_tokenize_13a_regex ... ignored
+test tokenizer::test::test_tokenize_regex ... ignored
+test bleu::benchmark::bench_batch_bleu     ... bench:  13,967,756.30 ns/iter (+/- 266,769.64)
+test bleu::benchmark::bench_bleu           ... bench:     298,794.10 ns/iter (+/- 2,639.98)
+test ngram::benchmark::bench_ngram         ... bench:      49,480.28 ns/iter (+/- 501.33)
+test tokenizer::benchmark::bench_tokenizer ... bench:      15,690.73 ns/iter (+/- 6,749.97)
+
+test result: ok. 0 passed; 0 failed; 9 ignored; 4 measured; 0 filtered out; finished in 4.88s
+
