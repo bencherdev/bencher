@@ -1,4 +1,3 @@
-
 running 13 tests
 test bleu::test::test_add_vectors ... ignored
 test bleu::test::test_bleu ... ignored
