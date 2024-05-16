@@ -47,26 +47,26 @@ impl TryFrom<CliRunCommand> for Runner {
                 }
                 Command::new_exec(program, arguments)
             };
-            Ok(if let Some(file) = cmd.file {
-                Self::CommandToFile(command, FilePath::new(file))
-            } else if let Some(file) = cmd.file_size {
-                Self::CommandToFileSize(command, FileSize::new(file))
+            Ok(if let Some(file_path) = cmd.file {
+                Self::CommandToFile(command, FilePath::new(file_path))
+            } else if let Some(file_paths) = cmd.file_size {
+                Self::CommandToFileSize(command, FileSize::new(file_paths))
             } else {
                 Self::Command(command)
             })
         } else if let Ok(command) = std::env::var(BENCHER_CMD) {
             let command = Command::new_shell(cmd.sh_c, command)?;
-            Ok(if let Some(file) = cmd.file {
-                Self::CommandToFile(command, FilePath::new(file))
-            } else if let Some(file) = cmd.file_size {
-                Self::CommandToFileSize(command, FileSize::new(file))
+            Ok(if let Some(file_path) = cmd.file {
+                Self::CommandToFile(command, FilePath::new(file_path))
+            } else if let Some(file_paths) = cmd.file_size {
+                Self::CommandToFileSize(command, FileSize::new(file_paths))
             } else {
                 Self::Command(command)
             })
-        } else if let Some(file) = cmd.file {
-            Ok(Self::File(FilePath::new(file)))
-        } else if let Some(file) = cmd.file_size {
-            Ok(Self::FileSize(FileSize::new(file)))
+        } else if let Some(file_path) = cmd.file {
+            Ok(Self::File(FilePath::new(file_path)))
+        } else if let Some(file_paths) = cmd.file_size {
+            Ok(Self::FileSize(FileSize::new(file_paths)))
         } else if let Some(pipe) = Pipe::new() {
             Ok(Self::Pipe(pipe))
         } else {

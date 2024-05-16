@@ -1,0 +1,16 @@
+import MultiExample from "../multi-example.mdx";
+import MultiJsonExample from "../multi-json-example.mdx";
+
+파일 크기는 항상 전체 바이트 단위 증가로 표시됩니다.
+즉, `42.5`와 같은 소수점 단위는 _절대_ 없습니다.
+하지만, BMF JSON은 광범위한 값 범위를 지원해야 하기 때문에, 정수 대신 부동 소수를 사용합니다.
+
+여러 파일의 크기를 추적하려면,
+동일한 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> 명령에서 여러 번 `--file-size` 옵션을 사용하면 됩니다.
+예를 들어, `my_binary`와 Windows 실행 파일 버전인 `my_binary.exe`의 크기를 추적할 수 있습니다.
+
+<MultiExample />
+
+`my_binary.exe`의 크기가 `48` 바이트인 경우 생성된 BMF JSON은 다음과 같습니다:
+
+<MultiJsonExample />

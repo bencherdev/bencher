@@ -1,0 +1,18 @@
+import MultiExample from "../multi-example.mdx";
+import MultiJsonExample from "../multi-json-example.mdx";
+
+The File Size will always be a whole byte increment.
+That is, it will _never_ have a decimal like `42.5`.
+However, BMF JSON needs to support a wide range of possible values,
+so it uses floats instead of integers.
+
+If you want to track the size of multiple files,
+you can simply use the `--file-size` option multiple times in the same
+<code><a href="/docs/explanation/bencher-run/">bencher run</a></code> command.
+For example, you could track both `my_binary` and a Windows executable version, `my_binary.exe`.
+
+<MultiExample />
+
+The generated BMF JSON would look like this if `my_binary.exe` had a size of `48` bytes:
+
+<MultiJsonExample />

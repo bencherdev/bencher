@@ -124,7 +124,7 @@ pub struct CliRunCommand {
 
     /// Track the size of a file at the given file path
     #[clap(long, conflicts_with = "file")]
-    pub file_size: Option<Utf8PathBuf>,
+    pub file_size: Option<Vec<Utf8PathBuf>>,
 
     #[clap(flatten)]
     pub sh_c: CliRunShell,

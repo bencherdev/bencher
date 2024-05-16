@@ -1,0 +1,16 @@
+import MultiExample from "../multi-example.mdx";
+import MultiJsonExample from "../multi-json-example.mdx";
+
+文件大小总是以整字节增量计算。
+也就是说，它 _绝不会_ 有像 `42.5` 这样的十进制数。
+但是，BMF JSON 需要支持各种可能的值，所以它使用浮点数而不是整数。
+
+如果你想跟踪多个文件的大小，你只需在同一个
+<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> 命令中多次使用 `--file-size` 选项。
+例如，你可以跟踪 `my_binary` 和一个 Windows 可执行文件版本 `my_binary.exe`。
+
+<MultiExample />
+
+如果 `my_binary.exe` 的大小是 `48` 字节，生成的 BMF JSON 会是这样的：
+
+<MultiJsonExample />

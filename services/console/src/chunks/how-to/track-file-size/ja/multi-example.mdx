@@ -1,0 +1,17 @@
+import MultiExample from "../multi-example.mdx";
+import MultiJsonExample from "../multi-json-example.mdx";
+
+ファイルサイズは常にバイト単位で計算されます。
+つまり、小数点以下の値（例：`42.5`）は_決して_含まれません。
+しかし、BMF JSONは幅広い値をサポートする必要があるため、整数ではなく浮動小数点数を使用します。
+
+複数ファイルのサイズを追跡したい場合は、
+同じ<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code>コマンドで
+`--file-size`オプションを複数回使用するだけで簡単に実行できます。
+例えば、`my_binary`とWindows実行可能ファイルバージョンである`my_binary.exe`の両方を追跡することができます。
+
+<MultiExample />
+
+`my_binary.exe`が`48`バイトのサイズの場合、生成されるBMF JSONは以下のようになります：
+
+<MultiJsonExample />

@@ -1,0 +1,18 @@
+import MultiExample from "../multi-example.mdx";
+import MultiJsonExample from "../multi-json-example.mdx";
+
+Die Dateigröße wird immer in ganzen Byte-Schritten angegeben.
+Das heißt, sie wird _niemals_ eine Dezimalstelle wie `42.5` haben.
+Da BMF JSON jedoch eine breite Palette möglicher Werte unterstützen muss,
+verwendet es Gleitkommazahlen anstelle von Ganzzahlen.
+
+Wenn Sie die Größe mehrerer Dateien verfolgen möchten,
+können Sie die Option `--file-size` einfach mehrfach im selben
+<code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code>-Befehl verwenden.
+Zum Beispiel könnten Sie sowohl `my_binary` als auch eine Windows ausführbare Version, `my_binary.exe`, verfolgen.
+
+<MultiExample />
+
+Das generierte BMF JSON würde so aussehen, wenn `my_binary.exe` eine Größe von `48` Bytes hat:
+
+<MultiJsonExample />
