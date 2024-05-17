@@ -1,0 +1,73 @@
+---
+import { THEME_TOGGLE_ID, ThemeId } from "./theme";
+
+// https://docs.astro.build/en/tutorial/6-islands/2/
+---
+
+<button id={THEME_TOGGLE_ID} class="button" title="Toggle light/dark mode">
+  <span id={ThemeId.Light} class="icon has-text-primary">
+    <i class="fas fa-sun" aria-hidden="true" />
+  </span>
+  <span id={ThemeId.Dark} class="icon has-text-primary" style="display: block;">
+    <i class="far fa-moon" aria-hidden="true" />
+  </span>
+</button>
+
+<script>
+  import {THEME_KEY, Theme, THEME_TOGGLE_ID, ThemeId} from "./theme";
+
+  const sunIcon = document.getElementById(ThemeId.Light);
+  const moonIcon = document.getElementById(ThemeId.Dark);
+
+    const getTheme = (() => {
+      if (typeof localStorage !== "undefined") {
+        const theme = localStorage.getItem(THEME_KEY);
+        switch (theme) {
+          case Theme.Light:
+          case Theme.Dark:
+            return theme;
+          case null:
+            break;
+          default:
+            localStorage.removeItem(THEME_KEY);
+        }
+      }
+      if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        return Theme.Dark;
+      }
+        return Theme.Light;
+    });
+
+    const setTheme = (theme: Theme) => {
+        switch (theme) {
+          case Theme.Light:
+            sunIcon ? sunIcon.style.display = "block" : null;
+            moonIcon ? moonIcon.style.display = "none" : null;
+            break;
+          case Theme.Dark:
+            sunIcon ? sunIcon.style.display = "none" : null;
+            moonIcon ? moonIcon.style.display = "block" : null;
+            break;
+        }
+        document.documentElement.setAttribute("data-theme", theme);
+        window.localStorage.setItem(THEME_KEY, theme);
+    }
+
+    const initTheme = () => {
+        const theme = getTheme();
+        setTheme(theme);
+    }
+
+    const toggleTheme = () => {
+        const theme = getTheme();
+        switch (theme) {
+          case Theme.Light:
+            return setTheme(Theme.Dark);
+          case Theme.Dark:
+            return setTheme(Theme.Light);
+        }
+    }
+
+    initTheme();
+    document.getElementById(THEME_TOGGLE_ID)?.addEventListener("click", toggleTheme);
+</script>

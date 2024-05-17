@@ -32,7 +32,7 @@
 		"astro-expressive-code": "^0.34.1",
 		"astro-seo": "^0.8.3",
 		"axios": "^1.6.8",
-		"bulma": "^0.9.4",
+		"bulma": "^1.0.0",
 		"bulma-divider": "^0.2.0",
 		"bulma-pricingtable": "^0.2.0",
 		"bulma-steps": "^2.2.1",
@@ -52,7 +52,7 @@
 		"hast-util-from-html-isomorphic": "^2.0.0",
 		"rehype-autolink-headings": "^7.1.0",
 		"rehype-slug": "^6.0.0",
-		"sass": "^1.75.0",
+		"sass": "^1.77.2",
 		"vitest": "^1.5.0"
 	}
 }

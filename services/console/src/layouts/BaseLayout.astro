@@ -19,6 +19,7 @@ interface Props {
 	lang?: undefined | string;
 	author?: undefined | Author;
 	canonical?: undefined | string;
+  theme?: undefined | string;
 }
 
 // https://docs.astro.build/en/reference/directives-reference/#definevars
@@ -33,6 +34,7 @@ const {
 	lang,
 	author,
 	canonical,
+  theme,
 } = Astro.props;
 
 const BENCHER_OG_IMAGE =
@@ -105,7 +107,7 @@ const article = () => {
 ---
 
 <!DOCTYPE html>
-<html lang={lang ?? defaultLang}>
+<html lang={lang ?? defaultLang} data-theme={theme}>
   <head>
     <meta charset="UTF-8" />
     <meta

@@ -1,30 +1,39 @@
-@import "./variables.scss";
-
-$primary: $orange !default;
-
-$link: $orange !default;
-$link-visited: $orange !default;
-
-$link-focus-border: $orange !default;
-
-$input-focus-border-color: $orange !default;
-$input-focus-box-shadow-color: $orange !default;
-
-$breadcrumb-item-color: $orange !default;
-
-$badoge-z-index: 5 !default;
+$orange: #ed6704;
+$disabled: #fdb07e;
 
 // @charset "utf-8";
-@import "../node_modules/bulma/bulma.sass";
-@import "../node_modules/bulma-divider/src/sass/index.sass";
-@import "../node_modules/bulma-pricingtable/src/sass/index.sass";
-@import "../node_modules/bulma-switch/src/sass/index.sass";
-@import "../node_modules/bulma-tooltip/src/sass/index.sass";
-@import "../node_modules/bulma-steps/src/sass/index.sass";
+// Path to Bulma's sass folder
+@use "../node_modules/bulma/sass" with ($primary: $orange, $link: $orange);
+
+// $primary: $orange !default;
+
+// $link: $orange !default;
+// $link-visited: $orange !default;
+
+// $link-focus-border: $orange !default;
+
+// $input-focus-border-color: $orange !default;
+// $input-focus-box-shadow-color: $orange !default;
+
+// $breadcrumb-item-color: $orange !default;
+
+// $badoge-z-index: 5 !default;
+
+// @import "../node_modules/bulma-divider/src/sass/index.sass";
+// @import "../node_modules/bulma-pricingtable/src/sass/index.sass";
+// @import "../node_modules/bulma-switch/src/sass/index.sass";
+// @import "../node_modules/bulma-tooltip/src/sass/index.sass";
+// @import "../node_modules/bulma-steps/src/sass/index.sass";
 
 .rows {
   display: flex;
   flex-direction: column;
+}
+
+@mixin mobile {
+  @media (max-width: 600px) {
+    @content;
+  }
 }
 
 .columns.is-reverse-mobile {
