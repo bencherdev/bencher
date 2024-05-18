@@ -44,7 +44,7 @@ const DeckHeader = (props: Props) => {
 		<div class="columns is-centered">
 			<div class="column is-narrow">
 				<a
-					class="button is-outlined is-fullwidth"
+					class="button is-fullwidth"
 					title={`Back to ${props.config?.path_to}`}
 					href={decodePath(props.config?.path(pathname()))}
 				>

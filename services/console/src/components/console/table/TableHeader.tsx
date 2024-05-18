@@ -110,7 +110,7 @@ const TableHeaderButton = (props: {
 				</Match>
 				<Match when={props.button.kind === Button.ADD}>
 					<a
-						class="button is-outlined"
+						class="button"
 						title={`Add ${props.button.title}`}
 						href={props.button.path(pathname())}
 					>
@@ -122,7 +122,7 @@ const TableHeaderButton = (props: {
 				</Match>
 				<Match when={props.button.kind === Button.INVITE && isAllowed()}>
 					<a
-						class="button is-outlined"
+						class="button"
 						title={`Invite to ${props.button.title}`}
 						href={props.button.path(pathname())}
 					>
@@ -134,7 +134,7 @@ const TableHeaderButton = (props: {
 				</Match>
 				<Match when={props.button.kind === Button.REFRESH}>
 					<button
-						class="button is-outlined"
+						class="button"
 						type="button"
 						title={`Refresh ${props.title}`}
 						onClick={(e) => {

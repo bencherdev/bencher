@@ -101,7 +101,7 @@ const Notification = (props: { suppress?: undefined | boolean }) => {
 							<div class="columns is-centered">
 								<div class="column is-half">
 									<a
-										class="button is-primary is-outlined is-inverted is-fullwidth"
+										class="button is-primary is-inverted is-fullwidth"
 										href={notifyLinkUrl()}
 									>
 										{notifyLinkText()}

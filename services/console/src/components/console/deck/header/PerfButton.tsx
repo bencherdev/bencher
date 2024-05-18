@@ -42,7 +42,7 @@ const PerfButton = (props: Props) => {
 
 	return (
 		<a
-			class="button is-outlined is-fullwidth"
+			class="button is-fullwidth"
 			type="button"
 			title="View Alert"
 			href={url()}

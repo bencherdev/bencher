@@ -70,7 +70,7 @@ const ProjectMenu = (props: Props) => {
 		<aside class="menu is-sticky">
 			<div class="menu-label">
 				<a
-					class="button is-outlined is-fullwidth"
+					class="button is-fullwidth"
 					title="View Project Perf"
 					href={path(Section.PERF)}
 				>

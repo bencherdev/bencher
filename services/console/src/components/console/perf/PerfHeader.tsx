@@ -65,7 +65,7 @@ const PerfHeader = (props: Props) => {
 						<Show when={props.project()?.url}>
 							<div class="level-item">
 								<a
-									class="button is-outlined is-fullwidth"
+									class="button is-fullwidth"
 									title={`View ${props.project()?.name} website`}
 									href={props.project()?.url ?? ""}
 									rel="noreferrer nofollow"
@@ -83,7 +83,7 @@ const PerfHeader = (props: Props) => {
 								<Show when={props.project()?.visibility === Visibility.Public}>
 									<div class="level-item">
 										<button
-											class="button is-outlined is-fullwidth"
+											class="button is-fullwidth"
 											type="button"
 											title={`Share ${props.project()?.name}`}
 											onClick={(e) => {
@@ -101,7 +101,7 @@ const PerfHeader = (props: Props) => {
 
 								<div class="level-item">
 									<button
-										class="button is-outlined is-fullwidth"
+										class="button is-fullwidth"
 										type="button"
 										title="Refresh Query"
 										onClick={(e) => {
@@ -316,7 +316,7 @@ const ShareModal = (props: ShareProps) => {
 
 				<footer class="modal-card-foot">
 					<button
-						class="button is-primary is-outlined is-fullwidth"
+						class="button is-primary is-fullwidth"
 						type="button"
 						onClick={(e) => {
 							e.preventDefault();

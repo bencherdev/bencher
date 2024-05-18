@@ -90,7 +90,7 @@ const StatusButton = (props: Props) => {
 			</Match>
 			<Match when={props.data()?.status === AlertStatus.Dismissed}>
 				<button
-					class="button is-outlined is-fullwidth"
+					class="button is-fullwidth"
 					type="button"
 					title="Reactivate alert"
 					disabled={submitting()}

@@ -10,7 +10,7 @@ export interface Props {
 const ConsoleButton = (props: Props) => {
 	return (
 		<a
-			class="button is-outlined is-fullwidth"
+			class="button is-fullwidth"
 			type="button"
 			title="View in Console"
 			href={`/console/projects/${props.params?.project}/${props.resource}/${

@@ -31,7 +31,7 @@ const AuthNavbar = () => {
 					<div class="navbar-end">
 						<div class="navbar-item">
 							<div class="navbar-item">
-								<a class="button is-outlined" href="/help/">
+								<a class="button" href="/help/">
 									<span class="icon has-text-primary">
 										<i class="fas fa-life-ring" aria-hidden="true" />
 									</span>
@@ -39,7 +39,7 @@ const AuthNavbar = () => {
 								</a>
 							</div>
 							<div class="navbar-item" />
-							<a class="button is-outlined" href={decodePath("/console")}>
+							<a class="button" href={decodePath("/console")}>
 								<span class="icon has-text-primary">
 									<i class="fas fa-angle-left" aria-hidden="true" />
 								</span>

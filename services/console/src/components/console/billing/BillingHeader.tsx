@@ -14,7 +14,7 @@ const BillingHeader = (props: Props) => {
 		<nav class="level">
 			<div class="level-left">
 				<a
-					class="button is-outlined"
+					class="button"
 					type="button"
 					href={decodePath(props.config?.path(pathname()))}
 				>

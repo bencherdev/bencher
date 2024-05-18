@@ -29,7 +29,7 @@ const DeckHeaderButton = (props: Props) => {
 		<Switch>
 			<Match when={props.button.kind === Button.EDIT}>
 				<a
-					class="button is-outlined is-fullwidth"
+					class="button is-fullwidth"
 					title={`Edit ${props.title()}`}
 					href={`${
 						props.button?.path?.(pathname()) ?? "#"
@@ -66,7 +66,7 @@ const DeckHeaderButton = (props: Props) => {
 			</Match>
 			<Match when={props.button.kind === Button.REFRESH}>
 				<button
-					class="button is-outlined is-fullwidth"
+					class="button is-fullwidth"
 					type="button"
 					title={`Refresh ${props.title()}`}
 					onClick={(e) => {

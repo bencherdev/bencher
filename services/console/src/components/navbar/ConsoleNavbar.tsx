@@ -86,7 +86,7 @@ const ConsoleNavbar = (props: Props) => {
 					<div class="navbar-item">
 						<div class="navbar-item">
 							<a
-								class="button is-outlined"
+								class="button"
 								href={`/console/users/${
 									user?.user?.slug
 								}/help/?${BACK_PARAM}=${encodePath()}`}
@@ -125,7 +125,7 @@ const ConsoleNavbar = (props: Props) => {
 								</a>
 								<hr class="navbar-divider" />
 								<div class="navbar-item">
-									<a class="button is-light is-fullwidth" href="/auth/logout">
+									<a class="button is-fullwidth" href="/auth/logout">
 										Log out
 									</a>
 								</div>

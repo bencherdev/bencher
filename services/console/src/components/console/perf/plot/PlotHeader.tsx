@@ -151,7 +151,7 @@ const FullPlotHeader = (props: Props) => {
 								}
 							>
 								<a
-									class="level-item button is-small is-outlined is-rounded"
+									class="level-item button is-small is-rounded"
 									title={`View ${measure()?.name}`}
 									href={`/console/projects/${props.project_slug()}/measures/${
 										measure()?.slug
@@ -319,7 +319,7 @@ const SharedPlot = (props: Props) => {
 						</div>
 					</div>
 					<button
-						class="button is-outlined is-fullwidth"
+						class="button is-fullwidth"
 						type="button"
 						title={
 							props.range() === PerfRange.DATE_TIME
@@ -381,7 +381,7 @@ const SharedPlot = (props: Props) => {
 						Clear
 					</p>
 					<button
-						class="button is-outlined is-fullwidth"
+						class="button is-fullwidth"
 						type="reset"
 						title="Clear Query"
 						onClick={(e) => {
@@ -408,7 +408,7 @@ const LineArrowButton = (props: {
 	return (
 		<button
 			class={`button ${
-				props.param_key() ? "is-primary" : "is-outlined"
+				props.param_key() ? "is-primary" : ""
 			} is-fullwidth`}
 			type="button"
 			title={`${props.param_key() ? "Hide" : "Show"} ${props.position}`}

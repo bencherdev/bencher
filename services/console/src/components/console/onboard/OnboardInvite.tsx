@@ -212,7 +212,7 @@ const OnboardInvite = (props: Props) => {
 										handleField={handleField}
 									/>
 									<button
-										class="button is-primary is-outlined is-fullwidth"
+										class="button is-primary is-fullwidth"
 										title="Send invite to collaborator"
 										disabled={!isSendable()}
 										onClick={(e) => {

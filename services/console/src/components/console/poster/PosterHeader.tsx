@@ -15,7 +15,7 @@ const PosterHeader = (props: Props) => {
 		<nav class="level">
 			<div class="level-left">
 				<a
-					class="button is-outlined"
+					class="button"
 					title={`Back to ${props.config?.path_to}`}
 					href={decodePath(props.config?.path(pathname()))}
 				>

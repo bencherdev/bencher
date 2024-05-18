@@ -5,7 +5,7 @@ const HelpHeader = () => {
 		<nav class="level">
 			<div class="level-left">
 				<a
-					class="button is-outlined"
+					class="button"
 					title="Back"
 					href={decodePath("/console")}
 				>

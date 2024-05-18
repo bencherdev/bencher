@@ -169,7 +169,6 @@ const KeyButton = (props: {
 	return (
 		<button
 			// On click toggle visibility of key
-			// move button over to being is-outlined
 			class="button is-small is-fullwidth"
 			type="button"
 			title={

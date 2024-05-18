@@ -11,7 +11,7 @@ const CopyButton = (props: Props) => {
 
 	return (
 		<button
-			class="button is-outlined is-fullwidth"
+			class="button is-fullwidth"
 			title="Copy to clipboard"
 			onClick={(e) => {
 				e.preventDefault();

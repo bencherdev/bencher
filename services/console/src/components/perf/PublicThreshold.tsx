@@ -97,7 +97,7 @@ const PublicThreshold = (props: Props) => {
 					<Show when={back()}>
 						<div class="column is-narrow">
 							<a
-								class="button is-outlined is-fullwidth"
+								class="button is-fullwidth"
 								title="Go back"
 								href={decodePath(`/perf/${props.params?.project}`)}
 							>
