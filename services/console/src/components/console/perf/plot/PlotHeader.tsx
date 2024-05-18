@@ -152,6 +152,7 @@ const FullPlotHeader = (props: Props) => {
 							>
 								<a
 									class="level-item button is-small is-rounded"
+									style="margin-left: 1rem;"
 									title={`View ${measure()?.name}`}
 									href={`/console/projects/${props.project_slug()}/measures/${
 										measure()?.slug
