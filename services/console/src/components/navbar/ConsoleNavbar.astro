@@ -2,7 +2,6 @@
 import { Image } from "astro:assets";
 
 import {
-	BENCHER_GITHUB_URL,
 	BENCHER_WORDMARK,
 	BENCHER_WORDMARK_ID,
 } from "../../util/ext";
@@ -11,7 +10,12 @@ import BENCHER_NAVBAR_ID, {
 	BENCHER_NAVBAR_MENU_ID,
 } from "./id";
 import ThemeToggle from "./theme/ThemeToggle.astro";
-import NavbarHelp from "./NavbarHelp.astro";
+import NavbarProjects from "./NavbarProjects";
+import NavbarDropdown from "./NavbarDropdown";
+import NavbarHelp from "./NavbarHelp";
+import FallbackNavbarHelp from "./NavbarHelp.astro";
+
+const { apiUrl, params } = Astro.props;
 ---
 
 <nav
@@ -51,17 +55,8 @@ import NavbarHelp from "./NavbarHelp.astro";
 			<a class="navbar-item" href="/explore/">
 				Explore
 			</a>
-			<a class="navbar-item" href="/pricing/">
-				Pricing
-			</a>
-			<a
-				class="navbar-item"
-				href={BENCHER_GITHUB_URL}
-				target="_blank"
-				rel="noreferrer"
-			>
-				GitHub
-			</a>
+
+			<NavbarProjects client:only="solid-js" apiUrl={apiUrl} params={params} />
 		</div>
 
 		<div class="navbar-end">
@@ -71,17 +66,21 @@ import NavbarHelp from "./NavbarHelp.astro";
 				</div>
 
 				<div class="navbar-item">
-					<NavbarHelp />
+					<NavbarHelp client:only="solid-js">
+						<FallbackNavbarHelp slot="fallback" />
+					</NavbarHelp>
 				</div>
+				<NavbarDropdown client:only="solid-js">
+					<div slot="fallback" class="navbar-item has-dropdown is-hoverable is-active">
+						<a class="navbar-link">
+							{("").padStart(
+								12,
+								"\xa0",
+							)}
+						</a>
+					</div>
+				</NavbarDropdown>
 				<div class="navbar-item" />
-				<div class="buttons">
-					<a class="button" href="/auth/login">
-						Log in
-					</a>
-					<a class="button is-primary" href="/auth/signup">
-						<strong>Sign up</strong>
-					</a>
-				</div>
 			</div>
 		</div>
 	</div>

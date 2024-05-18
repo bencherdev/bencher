@@ -1,6 +1,6 @@
 ---
 import BaseLayout from "../BaseLayout.astro";
-import ConsoleNavbar from "../../components/navbar/ConsoleNavbar";
+import ConsoleNavbar from "../../components/navbar/ConsoleNavbar.astro";
 import Notification from "../../components/site/Notification";
 import type { Params } from "astro";
 import AnonRedirect from "../../components/console/redirects/AnonRedirect";
@@ -19,7 +19,7 @@ const description =
 ---
 
 <BaseLayout title={title} description={description}>
-  <ConsoleNavbar client:only="solid-js" slot="navbar" apiUrl={apiUrl} params={params} />
+  <ConsoleNavbar slot="navbar" apiUrl={apiUrl} params={params} />
   <AnonRedirect client:only="solid-js" path={redirect ?? "/auth/login"} />
   <div class="is-widescreen">
     <div class="columns is-reverse-mobile">
