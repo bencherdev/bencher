@@ -64,12 +64,12 @@ const { apiUrl, params } = Astro.props;
 				<div class="navbar-item">
 					<ThemeToggle />
 				</div>
-
 				<div class="navbar-item">
 					<NavbarHelp client:only="solid-js">
 						<FallbackNavbarHelp slot="fallback" />
 					</NavbarHelp>
 				</div>
+				<div class="navbar-item" />
 				<NavbarDropdown client:only="solid-js">
 					<div slot="fallback" class="navbar-item has-dropdown is-hoverable is-active">
 						<a class="navbar-link">
