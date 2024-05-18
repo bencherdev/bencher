@@ -10,7 +10,7 @@ import {
 import { Row } from "../../../config/types";
 import { fmtDateTime } from "../../../config/util";
 import type { Slug } from "../../../types/bencher";
-import { fmtNestedValue, fmtValues } from "../../../util/resource";
+import { fmtValues } from "../../../util/resource";
 import { BACK_PARAM, encodePath, pathname } from "../../../util/url";
 
 export enum TableState {
@@ -62,56 +62,18 @@ const Table = (props: Props) => {
 			</Match>
 
 			<Match when={props.state() === TableState.OK}>
-				{" "}
-				<div class="pricing-table is-horizontal">
-					<For each={props.tableData()}>
-						{(datum, _i) => (
-							<div class="pricing-plan is-primary">
-								<div class="plan-header">
-									<RowHeader config={props.config?.row} datum={datum} />
-								</div>
-								<div class="plan-items">
-									<For each={props.config?.row?.items}>
-										{(item: ItemConfig, _i) => (
-											<div class="plan-item">
-												<p style="word-break: break-word;">
-													<Switch fallback="-">
-														<Match when={item.kind === Row.TEXT}>
-															{item.key && datum[item.key]}
-														</Match>
-														<Match when={item.kind === Row.BOOL}>
-															{item.text}:{" "}
-															{item.key && datum[item.key] ? "true" : "false"}
-														</Match>
-														<Match when={item.kind === Row.SELECT}>
-															{item.key &&
-																item.value?.options.reduce((field, option) => {
-																	if (
-																		item.key &&
-																		datum[item.key] === option.value
-																	) {
-																		return option.option;
-																	} else {
-																		return field;
-																	}
-																}, datum[item.key])}
-														</Match>
-														<Match when={item.kind === Row.NESTED_TEXT}>
-															{item.keys && fmtNestedValue(datum, item.keys)}
-														</Match>
-													</Switch>
-												</p>
-											</div>
-										)}
-									</For>
-								</div>
-								<div class="plan-footer">
-									<RowButton config={props.config?.row?.button} datum={datum} />
-								</div>
+				<For each={props.tableData()}>
+					{(datum, _i) => (
+						<div class="card" style="margin-bottom: 2rem;">
+							<div class="card-header">
+								<RowHeader config={props.config?.row} datum={datum} />
 							</div>
-						)}
-					</For>
-				</div>
+							<div class="card-footer">
+								<RowButton config={props.config?.row?.button} datum={datum} />
+							</div>
+						</div>
+					)}
+				</For>
 			</Match>
 
 			<Match when={props.state() === TableState.END}>
@@ -180,16 +142,17 @@ const RowHeader = (props: {
 	config: RowConfig;
 	datum: Record<string, any>;
 }) => {
+	const header = (() => {
 	if (props.config?.kind === Row.DATE_TIME && props.config?.key) {
 		return fmtDateTime(props.datum[props.config?.key]);
 	}
-	const header = fmtValues(
+	return fmtValues(
 		props.datum,
 		props.config?.key,
 		props.config?.keys,
 		" | ",
-	);
-	return <p style="word-break: break-word;">{header}</p>;
+	);})();
+	return <p class="card-header-title title is-3" style="word-break: break-word;">{header}</p>;
 };
 
 const RowButton = (props: {
@@ -198,8 +161,7 @@ const RowButton = (props: {
 }) => {
 	return (
 		<a
-			class="button is-fullwidth"
-			type="button"
+			class="card-footer-item is-fullwidth"
 			href={`${props.config?.path?.(
 				pathname(),
 				props.datum,
