@@ -6,11 +6,13 @@ import {
 	BENCHER_SITE_URL,
 	BENCHER_VERSION,
 	BENCHER_WORDMARK,
+	BENCHER_WORDMARK_ID,
 	isBencherCloud,
 } from "../../util/ext";
 import ProjectSelect from "./ProjectSelect";
 import BENCHER_NAVBAR_ID from "./id";
 import { BACK_PARAM, encodePath } from "../../util/url";
+import ThemeToggle from "./theme/ThemeToggle";
 
 export interface Props {
 	apiUrl: string;
@@ -32,7 +34,7 @@ const ConsoleNavbar = (props: Props) => {
 		>
 			<div class="navbar-brand">
 				<a class="navbar-item" title="Console Home" href="/console">
-					<img src={BENCHER_WORDMARK} width="150" alt="🐰 Bencher" />
+					<img id={BENCHER_WORDMARK_ID} src={BENCHER_WORDMARK} width="150" alt="🐰 Bencher" />
 				</a>
 
 				<button
@@ -83,6 +85,10 @@ const ConsoleNavbar = (props: Props) => {
 				</div>
 
 				<div class="navbar-end">
+					<div class="navbar-item">
+						<ThemeToggle />
+					</div>
+
 					<div class="navbar-item">
 						<div class="navbar-item">
 							<a
