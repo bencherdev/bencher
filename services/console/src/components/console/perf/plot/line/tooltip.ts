@@ -3,7 +3,7 @@
 import * as d3 from "d3";
 import { html } from "htl";
 
-export const addTooltips = (chart, styles) => {
+export const addTooltips = (chart, styles, hoverStyles) => {
 	const stroke_styles = { stroke: "blue", "stroke-width": 3 };
 	const fill_styles = { fill: "blue", opacity: 0.5 };
 
@@ -58,7 +58,7 @@ export const addTooltips = (chart, styles) => {
 			.on("pointerenter pointermove", function (event) {
 				const text = d3.select(this).attr("__title");
 				const pointer = d3.pointer(event, wrapper.node());
-				if (text) tip.call(hover, pointer, text.split("\n"));
+				if (text) tip.call((tip, pos, text) => hover(tip, pos, text, hoverStyles), pointer, text.split("\n"));
 				else tip.selectAll("*").remove();
 
 				// Raise it
@@ -98,7 +98,10 @@ export const addTooltips = (chart, styles) => {
 	return chart;
 };
 
-const hover = (tip, pos, text) => {
+const hover = (tip, pos, text, styles) => {
+	const box_styles = { fill: "white", stroke: "#d3d3d3" };
+	if (styles === undefined) styles = box_styles;
+
 	const side_padding = 10;
 	const vertical_padding = 5;
 	const vertical_offset = 15;
@@ -128,8 +131,8 @@ const hover = (tip, pos, text) => {
 		.attr("x", bbox.x - side_padding)
 		.attr("width", bbox.width + side_padding * 2)
 		.attr("height", bbox.height + vertical_padding * 2)
-		.style("fill", "white")
-		.style("stroke", "#d3d3d3")
+		.style("fill", styles.fill)
+		.style("stroke", styles.stroke)
 		.lower();
 };
 

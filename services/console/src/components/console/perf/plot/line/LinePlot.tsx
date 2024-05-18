@@ -5,6 +5,7 @@ import {
 	type Resource,
 	createEffect,
 	createSignal,
+	createMemo,
 } from "solid-js";
 import { PerfRange } from "../../../../../config/types";
 import {
@@ -16,6 +17,7 @@ import {
 } from "../../../../../types/bencher";
 import { addTooltips } from "./tooltip";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
+import { Theme } from "../../../../navbar/theme/theme";
 
 // Source: https://twemoji.twitter.com
 // License: https://creativecommons.org/licenses/by/4.0
@@ -24,6 +26,7 @@ const WARNING_URL =
 const SIREN_URL = "https://s3.amazonaws.com/public.bencher.dev/perf/siren.png";
 
 export interface Props {
+	theme: Accessor<Theme>;
 	isConsole: boolean;
 	perfData: Resource<JsonPerf>;
 	range: Accessor<PerfRange>;
@@ -100,7 +103,22 @@ const boundary_skipped = (
 ) => boundary && !limit;
 
 const LinePlot = (props: Props) => {
-	const [is_plotted, setIsPlotted] = createSignal(false);
+	const hoverStyles = createMemo(() => {
+		switch (props.theme()) {
+			case Theme.Light:
+				return {
+					fill: "white",
+					stroke: "grey",
+				};
+			case Theme.Dark:
+				return {
+					fill: "black",
+					stroke: "white",
+				};
+		}
+	})
+
+	const [isPlotted, setIsPlotted] = createSignal(false);
 	const [y_label_area_size, set_y_label_area_size] = createSignal(512);
 
 	const [range, setRange] = createSignal(props.range());
@@ -110,7 +128,7 @@ const LinePlot = (props: Props) => {
 	const [upper_boundary, setUpperBoundary] = createSignal(props.upper_boundary());
 
 	createEffect(() => {
-		if (is_plotted()) {
+		if (isPlotted()) {
 			let y_axis = document.querySelector(
 				"svg [aria-label='y-axis tick label']",
 			);
@@ -407,11 +425,12 @@ const LinePlot = (props: Props) => {
 								marginLeft: y_label_area_size(),
 							}),
 							{
-								stroke: "#ed6704",
-								opacity: 0.5,
+								stroke: "gray",
+								opacity: 0.75,
 								"stroke-width": "3px",
 								fill: "gray",
 							},
+							hoverStyles(),
 						)}
 					</div>
 					<>{setIsPlotted(true)}</>

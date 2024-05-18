@@ -133,6 +133,7 @@ const PerfPlot = (props: Props) => {
 						<Switch
 							fallback={
 								<Plot
+									theme={props.theme}
 									isConsole={props.isConsole}
 									isEmbed={props.isEmbed}
 									range={props.range}

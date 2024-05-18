@@ -11,8 +11,10 @@ import type { PerfRange } from "../../../../config/types";
 import type { JsonPerf } from "../../../../types/bencher";
 import LinePlot from "./line/LinePlot";
 import PlotKey from "./key/PlotKey";
+import type { Theme } from "../../../navbar/theme/theme";
 
 export interface Props {
+	theme: Accessor<Theme>;
 	isConsole: boolean;
 	isEmbed: boolean;
 	range: Accessor<PerfRange>;
@@ -60,6 +62,7 @@ const Plot = (props: Props) => {
 		<div class="container">
 			<div ref={(e) => (plot_ref = e)}>
 				<LinePlot
+					theme={props.theme}
 					isConsole={props.isConsole}
 					perfData={props.perfData}
 					range={props.range}
