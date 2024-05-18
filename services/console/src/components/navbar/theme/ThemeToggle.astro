@@ -38,15 +38,23 @@ import { THEME_TOGGLE_ID, ThemeId } from "./theme";
         return Theme.Light;
     });
 
+    const setLightTheme = () => {
+      sunIcon ? sunIcon.style.display = "block" : null;
+      moonIcon ? moonIcon.style.display = "none" : null;
+    }
+
+    const setDarkTheme = () => {
+      sunIcon ? sunIcon.style.display = "none" : null;
+      moonIcon ? moonIcon.style.display = "block" : null;
+    }
+
     const setTheme = (theme: Theme) => {
         switch (theme) {
           case Theme.Light:
-            sunIcon ? sunIcon.style.display = "block" : null;
-            moonIcon ? moonIcon.style.display = "none" : null;
+            setLightTheme();
             break;
           case Theme.Dark:
-            sunIcon ? sunIcon.style.display = "none" : null;
-            moonIcon ? moonIcon.style.display = "block" : null;
+            setDarkTheme();
             break;
         }
         document.documentElement.setAttribute("data-theme", theme);
