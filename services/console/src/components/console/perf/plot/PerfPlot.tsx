@@ -13,7 +13,7 @@ import Plot from "./Plot";
 import PlotHeader from "./PlotHeader";
 import PlotInit from "./PlotInit";
 import PlotTab, { type TabList } from "./tab/PlotTab";
-import type { Theme } from "../../../navbar/theme/theme";
+import { themeColor, type Theme } from "../../../navbar/theme/theme";
 
 export interface Props {
 	apiUrl: string;
@@ -98,7 +98,7 @@ const PerfPlot = (props: Props) => {
 	return (
 		<div class="columns">
 			<div class="column">
-				<nav class="panel">
+				<nav class={`panel ${themeColor(props.theme())}`}>
 					<PlotHeader
 						apiUrl={props.apiUrl}
 						user={props.user}

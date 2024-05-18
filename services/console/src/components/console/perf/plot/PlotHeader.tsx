@@ -165,6 +165,7 @@ const FullPlotHeader = (props: Props) => {
 				</div>
 				<select
 					class="card-header-title level-item"
+					style="color: black;"
 					title="Select Measure"
 					onInput={(e) => handleInput(e.currentTarget.value)}
 				>
@@ -242,17 +243,8 @@ const SharedPlot = (props: Props) => {
 			<Show when={!props.isPlotInit()}>
 				<div class="column is-narrow">
 					<div class="level is-mobile" style="margin-bottom: 0;">
-						<div class="level-item">
-							<div
-								class={`icon-text ${props.isEmbed ? "has-tooltip-bottom" : ""}`}
-								data-tooltip="Display lower/upper Metric values"
-							>
-								<span style="padding-left: 1em">Value</span>
-								<span class="icon">
-									<i class="fas fa-info-circle" aria-hidden="true" />
-								</span>
-								<span style="padding-right: 1em" />
-							</div>
+						<div class="level-item" title="Display lower/upper Metric values">
+								<span style="padding-left: 1em; padding-right: 1em">Value</span>
 						</div>
 					</div>
 					<div class="level is-mobile">
@@ -274,16 +266,8 @@ const SharedPlot = (props: Props) => {
 				</div>
 				<div class="column is-narrow">
 					<div class="level is-mobile" style="margin-bottom: 0;">
-						<div class="level-item">
-							<div
-								class={`icon-text ${props.isEmbed ? "has-tooltip-bottom" : ""}`}
-								data-tooltip="Display lower/upper Threshold Boundary Limits"
-							>
-								<span>Boundary</span>
-								<span class="icon">
-									<i class="fas fa-info-circle" aria-hidden="true" />
-								</span>
-							</div>
+						<div class="level-item" title="Display lower/upper Threshold Boundary Limits">
+							Boundary
 						</div>
 					</div>
 					<div class="level is-mobile">
@@ -305,17 +289,8 @@ const SharedPlot = (props: Props) => {
 				</div>
 				<div class="column is-narrow">
 					<div class="level is-mobile" style="margin-bottom: 0;">
-						<div class="level-item">
-							<div
-								class={`icon-text ${props.isEmbed ? "has-tooltip-bottom" : ""}`}
-								data-tooltip="Toggle X-Axis between Date and Branch Version"
-							>
-								<span style="padding-left: 0.5em">X-Axis</span>
-								<span class="icon">
-									<i class="fas fa-info-circle" aria-hidden="true" />
-								</span>
-								<span style="padding-right: 0.5em" />
-							</div>
+						<div class="level-item" title="Toggle X-Axis between Date and Branch Version">
+							X-Axis
 						</div>
 					</div>
 					<button
@@ -347,7 +322,7 @@ const SharedPlot = (props: Props) => {
 					<div class="level-item">
 						<div class="columns">
 							<div class="column">
-								<p>Start Date</p>
+								<p title="Select a start date">Start Date</p>
 								<input
 									title="Start Date"
 									type="date"
@@ -360,7 +335,7 @@ const SharedPlot = (props: Props) => {
 					<div class="level-item">
 						<div class="columns">
 							<div class="column">
-								<p>End Date</p>
+								<p title="Select an end date">End Date</p>
 								<input
 									title="End Date"
 									type="date"
@@ -377,6 +352,7 @@ const SharedPlot = (props: Props) => {
 					<p
 						class="has-text-centered"
 						style="padding-left: 0.5em; padding-right: 0.5em;"
+						title="Clear the current query"
 					>
 						Clear
 					</p>

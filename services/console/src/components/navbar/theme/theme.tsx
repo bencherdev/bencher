@@ -39,3 +39,12 @@ export const themeText = (theme: Theme) => {
         return "has-text-light";
     }
 }
+
+export const themeColor = (theme: Theme) => {
+    switch (theme) {
+    case Theme.Light:
+        return "is-light";
+    case Theme.Dark:
+        return "is-dark";
+    }
+}
