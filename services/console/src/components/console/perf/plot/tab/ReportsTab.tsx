@@ -8,9 +8,11 @@ import { TESTBED_ICON } from "../../../../../config/project/testbeds";
 import { MEASURE_ICON } from "../../../../../config/project/measures";
 import type { TabElement, TabList } from "./PlotTab";
 import DateRange from "../../../../field/kinds/DateRange";
+import { themeText, type Theme } from "../../../../navbar/theme/theme";
 
 const ReportsTab = (props: {
 	project_slug: Accessor<undefined | string>;
+	theme: Accessor<Theme>;
 	isConsole: boolean;
 	loading: Accessor<boolean>;
 	measures: Accessor<string[]>;
@@ -39,7 +41,7 @@ const ReportsTab = (props: {
 						{(_) => (
 							<div class="panel-block is-block">
 								<div class="level">
-									<a class="level-left" style="color: black;">
+									<a class={`level-left ${themeText(props.theme())}`}>
 										<div class="level-item">
 											<div class="columns is-vcentered is-mobile">
 												<div class="column is-narrow">
@@ -71,6 +73,7 @@ const ReportsTab = (props: {
 						{(report, index) => (
 							<ReportRow
 								project_slug={props.project_slug}
+								theme={props.theme}
 								isConsole={props.isConsole}
 								measures={props.measures}
 								tab={props.tab}
@@ -88,6 +91,7 @@ const ReportsTab = (props: {
 
 const ReportRow = (props: {
 	project_slug: Accessor<undefined | string>;
+	theme: Accessor<Theme>;
 	isConsole: boolean;
 	measures: Accessor<string[]>;
 	tab: Accessor<PerfTab>;
@@ -102,7 +106,7 @@ const ReportRow = (props: {
 			fallback={
 				<div class="panel-block is-block">
 					<div class="level">
-						<div class="level-left" style="color: black;">
+						<div class={`level-left ${themeText(props.theme())}`}>
 							<div class="level-item">
 								<div class="columns is-vcentered is-mobile">
 									<div class="column is-narrow">
@@ -140,8 +144,7 @@ const ReportRow = (props: {
 					<div class="panel-block is-block">
 						<div class="level">
 							<a
-								class="level-left"
-								style="color: black;"
+								class={`level-left ${themeText(props.theme())}`}
 								title={`View Report from ${fmtDateTime(resource?.start_time)}`}
 								// biome-ignore lint/a11y/useValidAnchor: stateful anchor
 								onClick={(_e) =>

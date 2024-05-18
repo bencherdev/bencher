@@ -10,6 +10,7 @@ import type {
 import Pagination, { PaginationSize } from "../../../../site/Pagination";
 import Tab from "./Tab";
 import type { FieldHandler } from "../../../../field/Field";
+import type { Theme } from "../../../../navbar/theme/theme";
 
 export type TabList<T> = TabElement<T>[];
 
@@ -27,6 +28,7 @@ const perf_tabs = [
 
 export interface Props {
 	project_slug: Accessor<undefined | string>;
+	theme: Accessor<Theme>;
 	isConsole: boolean;
 	measures: Accessor<string[]>;
 	tab: Accessor<PerfTab>;
@@ -226,6 +228,7 @@ const PlotTab = (props: Props) => {
 			</div>
 			<Tab
 				project_slug={props.project_slug}
+				theme={props.theme}
 				isConsole={props.isConsole}
 				measures={props.measures}
 				reports_tab={props.reports_tab}

@@ -10,9 +10,11 @@ import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import type { TabElement, TabList } from "./PlotTab";
 import Field, { type FieldHandler } from "../../../../field/Field";
 import FieldKind from "../../../../field/kind";
+import { themeText, type Theme } from "../../../../navbar/theme/theme";
 
 const DimensionsTab = (props: {
 	project_slug: Accessor<undefined | string>;
+	theme: Accessor<Theme>;
 	isConsole: boolean;
 	loading: Accessor<boolean>;
 	tab: Accessor<PerfTab>;
@@ -45,7 +47,7 @@ const DimensionsTab = (props: {
 						{(_) => (
 							<div class="panel-block is-block">
 								<div class="level">
-									<div class="level-left" style="color: black;">
+									<div class={`level-left ${themeText(props.theme())}`}>
 										<div class="level-item">
 											<div class="columns is-vcentered is-mobile">
 												<div class="column is-narrow">
@@ -74,6 +76,7 @@ const DimensionsTab = (props: {
 						{(dimension, index) => (
 							<DimensionRow
 								project_slug={props.project_slug}
+								theme={props.theme}
 								isConsole={props.isConsole}
 								tab={props.tab}
 								dimension={dimension}
@@ -90,6 +93,7 @@ const DimensionsTab = (props: {
 
 const DimensionRow = (props: {
 	project_slug: Accessor<undefined | string>;
+	theme: Accessor<Theme>;
 	isConsole: boolean;
 	tab: Accessor<PerfTab>;
 	dimension: TabElement<JsonBranch | JsonTestbed | JsonBenchmark>;
@@ -105,8 +109,7 @@ const DimensionRow = (props: {
 		<div class="panel-block is-block">
 			<div class="level">
 				<a
-					class="level-left"
-					style="color: black;"
+					class={`level-left ${themeText(props.theme())}`}
 					title={`${props.dimension?.checked ? "Remove" : "Add"} ${
 						resource?.name
 					}`}

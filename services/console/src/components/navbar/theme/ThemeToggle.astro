@@ -15,32 +15,13 @@ import { THEME_TOGGLE_ID, ThemeId } from "./theme";
 
 <script>
   import {BENCHER_WORDMARK_ID, BENCHER_WORDMARK_FOOTER_ID, BENCHER_WORDMARK, BENCHER_WORDMARK_DARK} from "../../../util/ext.ts";
-  import {THEME_KEY, Theme, THEME_TOGGLE_ID, ThemeId} from "./theme";
+  import {THEME_KEY, Theme, THEME_TOGGLE_ID, ThemeId, getTheme} from "./theme";
 
   const wordmark = document.getElementById(BENCHER_WORDMARK_ID);
   const wordmarkFooter = document.getElementById(BENCHER_WORDMARK_FOOTER_ID);
   const themeToggle = document.getElementById(THEME_TOGGLE_ID);
   const sunIcon = document.getElementById(ThemeId.Light);
   const moonIcon = document.getElementById(ThemeId.Dark);
-
-  const getTheme = (() => {
-    if (typeof localStorage !== "undefined") {
-      const theme = localStorage.getItem(THEME_KEY);
-      switch (theme) {
-        case Theme.Light:
-        case Theme.Dark:
-          return theme;
-        case null:
-          break;
-        default:
-          localStorage.removeItem(THEME_KEY);
-      }
-    }
-    if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-      return Theme.Dark;
-    }
-      return Theme.Light;
-  });
 
   const setLightTheme = () => {
     wordmark ? wordmark.src = BENCHER_WORDMARK : null;

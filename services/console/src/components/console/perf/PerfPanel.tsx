@@ -48,6 +48,7 @@ import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
 import type { TabList } from "./plot/tab/PlotTab";
 import { debounce } from "@solid-primitives/scheduled";
+import { Theme, getTheme } from "../../navbar/theme/theme";
 
 // Perf query params
 const BRANCHES_PARAM = PerfQueryKey.Branches;
@@ -896,6 +897,9 @@ const PerfPanel = (props: Props) => {
 		DEBOUNCE_DELAY,
 	);
 
+	const [theme, setTheme] = createSignal(Theme.Light);
+	setInterval(() => {const newTheme = getTheme(); if (theme() != newTheme) { setTheme(newTheme)} }, 100);
+
 	return (
 		<>
 			<Show when={!props.isEmbed}>
@@ -914,6 +918,7 @@ const PerfPanel = (props: Props) => {
 				user={user}
 				project={project}
 				project_slug={project_slug}
+				theme={theme}
 				isConsole={props.isConsole === true}
 				isEmbed={props.isEmbed === true}
 				isPlotInit={isPlotInit}

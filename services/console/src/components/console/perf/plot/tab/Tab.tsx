@@ -12,9 +12,11 @@ import ReportsTab from "./ReportsTab";
 import DimensionsTab from "./DimensionTab";
 import type { FieldHandler } from "../../../../field/Field";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
+import type { Theme } from "../../../../navbar/theme/theme";
 
 const Tab = (props: {
 	project_slug: Accessor<undefined | string>;
+	theme: Accessor<Theme>;
 	isConsole: boolean;
 	measures: Accessor<string[]>;
 	// Tabs
@@ -107,6 +109,7 @@ const Tab = (props: {
 			>
 				<ReportsTab
 					project_slug={props.project_slug}
+					theme={props.theme}
 					isConsole={props.isConsole}
 					loading={props.loading}
 					measures={props.measures}
@@ -130,6 +133,7 @@ const Tab = (props: {
 			>
 				<DimensionsTab
 					project_slug={props.project_slug}
+					theme={props.theme}
 					isConsole={props.isConsole}
 					loading={props.loading}
 					tab={props.tab}

@@ -13,12 +13,14 @@ import Plot from "./Plot";
 import PlotHeader from "./PlotHeader";
 import PlotInit from "./PlotInit";
 import PlotTab, { type TabList } from "./tab/PlotTab";
+import type { Theme } from "../../../navbar/theme/theme";
 
 export interface Props {
 	apiUrl: string;
 	user: JsonAuthUser;
 	project: Resource<JsonProject>;
 	project_slug: Accessor<undefined | string>;
+	theme: Accessor<Theme>;
 	isConsole: boolean;
 	isEmbed: boolean;
 	isPlotInit: Accessor<boolean>;
@@ -166,6 +168,7 @@ const PerfPlot = (props: Props) => {
 					<Show when={!props.isEmbed}>
 						<PlotTab
 							project_slug={props.project_slug}
+							theme={props.theme}
 							isConsole={props.isConsole}
 							measures={props.measures}
 							tab={props.tab}
