@@ -4,11 +4,11 @@ import { THEME_TOGGLE_ID, ThemeId } from "./theme";
 // https://docs.astro.build/en/tutorial/6-islands/2/
 ---
 
-<button id={THEME_TOGGLE_ID} class="button" title="Toggle light/dark mode">
+<button id={THEME_TOGGLE_ID} class="button" title="Toggle dark mode">
   <span id={ThemeId.Light} class="icon has-text-primary">
     <i class="fas fa-sun" aria-hidden="true" />
   </span>
-  <span id={ThemeId.Dark} class="icon has-text-primary" style="display: block;">
+  <span id={ThemeId.Dark} class="icon has-text-light">
     <i class="far fa-moon" aria-hidden="true" />
   </span>
 </button>
@@ -19,6 +19,7 @@ import { THEME_TOGGLE_ID, ThemeId } from "./theme";
 
   const wordmark = document.getElementById(BENCHER_WORDMARK_ID);
   const wordmarkFooter = document.getElementById(BENCHER_WORDMARK_FOOTER_ID);
+  const themeToggle = document.getElementById(THEME_TOGGLE_ID);
   const sunIcon = document.getElementById(ThemeId.Light);
   const moonIcon = document.getElementById(ThemeId.Dark);
 
@@ -44,15 +45,20 @@ import { THEME_TOGGLE_ID, ThemeId } from "./theme";
   const setLightTheme = () => {
     wordmark ? wordmark.src = BENCHER_WORDMARK : null;
     wordmarkFooter ? wordmarkFooter.src = BENCHER_WORDMARK : null;
-    sunIcon ? sunIcon.style.display = "block" : null;
-    moonIcon ? moonIcon.style.display = "none" : null;
+    themeToggle ? themeToggle.title = "Toggle dark mode" : null;
+    sunIcon?.classList.remove("has-text-dark");
+    sunIcon?.classList.add("has-text-primary");
+    moonIcon?.classList.remove("has-text-primary");
+    moonIcon?.classList.add("has-text-light");
   }
-
   const setDarkTheme = () => {
     wordmark ? wordmark.src = BENCHER_WORDMARK_DARK : null;
     wordmarkFooter ? wordmarkFooter.src = BENCHER_WORDMARK_DARK : null;
-    sunIcon ? sunIcon.style.display = "none" : null;
-    moonIcon ? moonIcon.style.display = "block" : null;
+    themeToggle ? themeToggle.title = "Toggle light mode" : null;
+    sunIcon?.classList.remove("has-text-primary");
+    sunIcon?.classList.add("has-text-dark");
+    moonIcon?.classList.remove("has-text-light");
+    moonIcon?.classList.add("has-text-primary");
   }
 
   const setTheme = (theme: Theme) => {
@@ -84,5 +90,5 @@ import { THEME_TOGGLE_ID, ThemeId } from "./theme";
   }
 
   initTheme();
-  document.getElementById(THEME_TOGGLE_ID)?.addEventListener("click", toggleTheme);
+  themeToggle?.addEventListener("click", toggleTheme);
 </script>
