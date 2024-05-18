@@ -51,13 +51,13 @@ const methodClass = new Method(method);
               <span class={`tag ${methodClass.color()} is-medium is-rounded`}>{methodClass.name()}</span>
           </div>
           <div class="level-item">
-              <p>{path}</p>
+              <code>{path}</code>
           </div>
       </div>
     </div>
     <Endpoint />
     { cli &&
-    <div class="card">
+    <div class="card" style="margin-top: 2rem;">
       <header class="card-header">
           <p class="card-header-title">Bencher CLI</p>
       </header>
