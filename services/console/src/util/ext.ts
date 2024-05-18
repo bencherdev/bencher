@@ -15,6 +15,7 @@ export const BENCHER_LINKEDIN_URL: string =
 
 export const BENCHER_LOGO: string = "/favicon.svg";
 export const BENCHER_WORDMARK_ID: string = "bencher-wordmark";
+export const BENCHER_WORDMARK_FOOTER_ID: string = "bencher-wordmark-footer";
 export const BENCHER_WORDMARK: string = "/wordmark.svg";
 export const BENCHER_WORDMARK_DARK: string = "/wordmark-dark.svg";
 

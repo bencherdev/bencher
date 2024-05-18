@@ -14,10 +14,11 @@ import { THEME_TOGGLE_ID, ThemeId } from "./theme";
 </button>
 
 <script>
-  import {BENCHER_WORDMARK_ID, BENCHER_WORDMARK, BENCHER_WORDMARK_DARK} from "../../../util/ext.ts";
+  import {BENCHER_WORDMARK_ID, BENCHER_WORDMARK_FOOTER_ID, BENCHER_WORDMARK, BENCHER_WORDMARK_DARK} from "../../../util/ext.ts";
   import {THEME_KEY, Theme, THEME_TOGGLE_ID, ThemeId} from "./theme";
 
   const wordmark = document.getElementById(BENCHER_WORDMARK_ID);
+  const wordmarkFooter = document.getElementById(BENCHER_WORDMARK_FOOTER_ID);
   const sunIcon = document.getElementById(ThemeId.Light);
   const moonIcon = document.getElementById(ThemeId.Dark);
 
@@ -42,12 +43,14 @@ import { THEME_TOGGLE_ID, ThemeId } from "./theme";
 
   const setLightTheme = () => {
     wordmark ? wordmark.src = BENCHER_WORDMARK : null;
+    wordmarkFooter ? wordmarkFooter.src = BENCHER_WORDMARK : null;
     sunIcon ? sunIcon.style.display = "block" : null;
     moonIcon ? moonIcon.style.display = "none" : null;
   }
 
   const setDarkTheme = () => {
     wordmark ? wordmark.src = BENCHER_WORDMARK_DARK : null;
+    wordmarkFooter ? wordmarkFooter.src = BENCHER_WORDMARK_DARK : null;
     sunIcon ? sunIcon.style.display = "none" : null;
     moonIcon ? moonIcon.style.display = "block" : null;
   }
