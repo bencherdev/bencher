@@ -14,68 +14,72 @@ import { THEME_TOGGLE_ID, ThemeId } from "./theme";
 </button>
 
 <script>
+  import {BENCHER_WORDMARK_ID, BENCHER_WORDMARK, BENCHER_WORDMARK_DARK} from "../../../util/ext.ts";
   import {THEME_KEY, Theme, THEME_TOGGLE_ID, ThemeId} from "./theme";
 
+  const wordmark = document.getElementById(BENCHER_WORDMARK_ID);
   const sunIcon = document.getElementById(ThemeId.Light);
   const moonIcon = document.getElementById(ThemeId.Dark);
 
-    const getTheme = (() => {
-      if (typeof localStorage !== "undefined") {
-        const theme = localStorage.getItem(THEME_KEY);
-        switch (theme) {
-          case Theme.Light:
-          case Theme.Dark:
-            return theme;
-          case null:
-            break;
-          default:
-            localStorage.removeItem(THEME_KEY);
-        }
+  const getTheme = (() => {
+    if (typeof localStorage !== "undefined") {
+      const theme = localStorage.getItem(THEME_KEY);
+      switch (theme) {
+        case Theme.Light:
+        case Theme.Dark:
+          return theme;
+        case null:
+          break;
+        default:
+          localStorage.removeItem(THEME_KEY);
       }
-      if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-        return Theme.Dark;
-      }
-        return Theme.Light;
-    });
-
-    const setLightTheme = () => {
-      sunIcon ? sunIcon.style.display = "block" : null;
-      moonIcon ? moonIcon.style.display = "none" : null;
     }
-
-    const setDarkTheme = () => {
-      sunIcon ? sunIcon.style.display = "none" : null;
-      moonIcon ? moonIcon.style.display = "block" : null;
+    if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      return Theme.Dark;
     }
+      return Theme.Light;
+  });
 
-    const setTheme = (theme: Theme) => {
-        switch (theme) {
-          case Theme.Light:
-            setLightTheme();
-            break;
-          case Theme.Dark:
-            setDarkTheme();
-            break;
-        }
-        document.documentElement.setAttribute("data-theme", theme);
-        window.localStorage.setItem(THEME_KEY, theme);
+  const setLightTheme = () => {
+    wordmark ? wordmark.src = BENCHER_WORDMARK : null;
+    sunIcon ? sunIcon.style.display = "block" : null;
+    moonIcon ? moonIcon.style.display = "none" : null;
+  }
+
+  const setDarkTheme = () => {
+    wordmark ? wordmark.src = BENCHER_WORDMARK_DARK : null;
+    sunIcon ? sunIcon.style.display = "none" : null;
+    moonIcon ? moonIcon.style.display = "block" : null;
+  }
+
+  const setTheme = (theme: Theme) => {
+    switch (theme) {
+      case Theme.Light:
+        setLightTheme();
+        break;
+      case Theme.Dark:
+        setDarkTheme();
+        break;
     }
+    document.documentElement.setAttribute("data-theme", theme);
+    window.localStorage.setItem(THEME_KEY, theme);
+  }
 
-    const initTheme = () => {
-        const theme = getTheme();
-        setTheme(theme);
+  const initTheme = () => {
+    const theme = getTheme();
+    setTheme(theme);
+  }
+
+  const toggleTheme = () => {
+    const theme = getTheme();
+    switch (theme) {
+      case Theme.Light:
+        return setTheme(Theme.Dark);
+      case Theme.Dark:
+        return setTheme(Theme.Light);
     }
+  }
 
-    const toggleTheme = () => {
-        const theme = getTheme();
-        switch (theme) {
-          case Theme.Light:
-            return setTheme(Theme.Dark);
-          case Theme.Dark:
-            return setTheme(Theme.Light);
-        }
-    }
-
-    initTheme();
-    document.getElementById(THEME_TOGGLE_ID)?.addEventListener("click", toggleTheme);
+  initTheme();
+  document.getElementById(THEME_TOGGLE_ID)?.addEventListener("click", toggleTheme);
 </script>
