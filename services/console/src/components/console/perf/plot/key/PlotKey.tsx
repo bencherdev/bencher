@@ -119,10 +119,10 @@ const MinimizeKeyButton = (props: { handleKey: (key: boolean) => void }) => {
 		<button
 			title="Minimize Key"
 			type="button"
-			class="button is-small is-fullwidth is-primary is-inverted"
+			class="button is-small is-fullwidth"
 			onClick={() => props.handleKey(false)}
 		>
-			<span class="icon">
+			<span class="icon has-text-primary">
 				<i class="far fa-minus-square fa-2x" aria-hidden="true" />
 			</span>
 		</button>
@@ -134,10 +134,10 @@ const MaximizeKeyButton = (props: { handleKey: (key: boolean) => void }) => {
 		<button
 			title="Expand Key"
 			type="button"
-			class="button is-small is-fullwidth is-primary is-inverted"
+			class="button is-small is-fullwidth"
 			onClick={() => props.handleKey(true)}
 		>
-			<span class="icon">
+			<span class="icon has-text-primary">
 				<i class="far fa-plus-square fa-2x" aria-hidden="true" />
 			</span>
 		</button>
@@ -200,14 +200,14 @@ const KeyToggle = (props: {
 
 	return (
 		<button
-			class="button is-small is-fullwidth is-primary is-inverted"
+			class="button is-small is-fullwidth"
 			type="button"
 			title={allActive() ? `Hide all plots` : `Show all plots`}
 			onClick={() => {
 				props.togglePerfActive();
 			}}
 		>
-			<span class="icon">
+			<span class="icon has-text-primary">
 				<Show
 					when={allActive()}
 					fallback={<i class="far fa-eye fa-1x" aria-hidden="true" />}

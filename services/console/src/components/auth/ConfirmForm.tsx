@@ -199,7 +199,7 @@ const ConfirmForm = (props: Props) => {
 
 					<div class="content has-text-centered">
 						<button
-							class="button is-small is-black is-inverted"
+							class="button is-small"
 							type="submit"
 							disabled={submitting() || coolDown()}
 							onClick={(e) => {

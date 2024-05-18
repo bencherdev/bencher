@@ -96,7 +96,7 @@ const OnboardPlan = (props: Props) => {
 								onboard={true}
 							/>
 							<div class="content has-text-centered">
-								<a class="button is-small is-black is-inverted" href="/console">
+								<a class="button is-small" href="/console">
 									I want to use the free plan for now
 								</a>
 							</div>
