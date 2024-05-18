@@ -64,14 +64,9 @@ const Table = (props: Props) => {
 			<Match when={props.state() === TableState.OK}>
 				<For each={props.tableData()}>
 					{(datum, _i) => (
-						<div class="card" style="margin-bottom: 2rem;">
-							<div class="card-header">
-								<RowHeader config={props.config?.row} datum={datum} />
-							</div>
-							<div class="card-footer">
-								<RowButton config={props.config?.row?.button} datum={datum} />
-							</div>
-						</div>
+						<a class="box" style="margin-bottom: 1rem;" href={rowHref(props.config?.row?.button, datum)}>
+							{rowText(props.config?.row, datum)}
+						</a>
 					)}
 				</For>
 			</Match>
@@ -138,39 +133,28 @@ export interface RowsButtonConfig {
 	path: (pathname: string, datum: { [slug: string]: Slug }) => string;
 }
 
-const RowHeader = (props: {
-	config: RowConfig;
-	datum: Record<string, any>;
-}) => {
-	const header = (() => {
-	if (props.config?.kind === Row.DATE_TIME && props.config?.key) {
-		return fmtDateTime(props.datum[props.config?.key]);
+const rowText = (
+	config: RowConfig,
+	datum: Record<string, any>,
+) => {
+	if (config?.kind === Row.DATE_TIME && config?.key) {
+		return fmtDateTime(datum[config?.key]);
 	}
 	return fmtValues(
-		props.datum,
-		props.config?.key,
-		props.config?.keys,
+		datum,
+		config?.key,
+		config?.keys,
 		" | ",
-	);})();
-	return <p class="card-header-title title is-3" style="word-break: break-word;">{header}</p>;
-};
-
-const RowButton = (props: {
-	config: RowsButtonConfig;
-	datum: Record<string, any>;
-}) => {
-	return (
-		<a
-			class="card-footer-item is-fullwidth"
-			href={`${props.config?.path?.(
-				pathname(),
-				props.datum,
-			)}?${BACK_PARAM}=${encodePath()}`}
-		>
-			{props.config?.text}
-		</a>
 	);
 };
+
+const rowHref = (
+	config: RowsButtonConfig,
+	datum: Record<string, any>,
+) => `${config?.path?.(
+	pathname(),
+	datum,
+)}?${BACK_PARAM}=${encodePath()}`;
 
 const BackButton = (props: {
 	name: string;

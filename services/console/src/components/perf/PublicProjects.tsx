@@ -149,6 +149,7 @@ const PublicProjects = (props: Props) => {
 										{(project) => (
 											<a
 												class="box"
+												style="margin-bottom: 1rem;"
 												title={`View ${project.name}`}
 												href={`/perf/${project.slug}`}
 											>
