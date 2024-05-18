@@ -100,8 +100,14 @@ const boundary_skipped = (
 ) => boundary && !limit;
 
 const LinePlot = (props: Props) => {
-	const [is_plotted, set_is_plotted] = createSignal(false);
+	const [is_plotted, setIsPlotted] = createSignal(false);
 	const [y_label_area_size, set_y_label_area_size] = createSignal(512);
+
+	const [range, setRange] = createSignal(props.range());
+	const [lower_value, setLowerValue] = createSignal(props.lower_value());
+	const [upper_value, setUpperValue] = createSignal(props.upper_value());
+	const [lower_boundary, setLowerBoundary] = createSignal(props.lower_boundary());
+	const [upper_boundary, setUpperBoundary] = createSignal(props.upper_boundary());
 
 	createEffect(() => {
 		if (is_plotted()) {
@@ -113,6 +119,24 @@ const LinePlot = (props: Props) => {
 			}
 			const width = y_axis.getBoundingClientRect().width;
 			set_y_label_area_size(width * 1.12);
+		}
+		// If any of these change, it is possible for the y-axis labels to change.
+		// Therefore, we need to recalculate the plot's `marginLeft` to make sure the new y-axis labels fits.
+		if (props.range() !== range()) {
+			setRange(props.range());
+			setIsPlotted(false);
+		} else if (props.lower_value() !== lower_value()) {
+			setLowerValue(props.lower_value());
+			setIsPlotted(false);
+		} else if (props.upper_value() !== upper_value()) {
+			setUpperValue(props.upper_value());
+			setIsPlotted(false);
+		} else if (props.lower_boundary() !== lower_boundary()) {
+			setLowerBoundary(props.lower_boundary());
+			setIsPlotted(false);
+		} else if (props.upper_boundary() !== upper_boundary()) {
+			setUpperBoundary(props.upper_boundary());
+			setIsPlotted(false);
 		}
 	});
 
@@ -390,7 +414,7 @@ const LinePlot = (props: Props) => {
 							},
 						)}
 					</div>
-					<>{set_is_plotted(true)}</>
+					<>{setIsPlotted(true)}</>
 				</>
 			);
 		} else {
