@@ -4,11 +4,7 @@ const HelpHeader = () => {
 	return (
 		<nav class="level">
 			<div class="level-left">
-				<a
-					class="button"
-					title="Back"
-					href={decodePath("/console")}
-				>
+				<a class="button" title="Back" href={decodePath("/console")}>
 					<span class="icon">
 						<i class="fas fa-chevron-left" aria-hidden="true" />
 					</span>

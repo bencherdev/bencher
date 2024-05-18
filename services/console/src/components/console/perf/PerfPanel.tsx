@@ -898,7 +898,12 @@ const PerfPanel = (props: Props) => {
 	);
 
 	const [theme, setTheme] = createSignal(Theme.Light);
-	setInterval(() => {const newTheme = getTheme(); if (theme() != newTheme) { setTheme(newTheme)} }, 100);
+	setInterval(() => {
+		const newTheme = getTheme();
+		if (theme() != newTheme) {
+			setTheme(newTheme);
+		}
+	}, 100);
 
 	return (
 		<>

@@ -244,7 +244,7 @@ const SharedPlot = (props: Props) => {
 				<div class="column is-narrow">
 					<div class="level is-mobile" style="margin-bottom: 0;">
 						<div class="level-item" title="Display lower/upper Metric values">
-								<span style="padding-left: 1em; padding-right: 1em">Value</span>
+							<span style="padding-left: 1em; padding-right: 1em">Value</span>
 						</div>
 					</div>
 					<div class="level is-mobile">
@@ -266,7 +266,10 @@ const SharedPlot = (props: Props) => {
 				</div>
 				<div class="column is-narrow">
 					<div class="level is-mobile" style="margin-bottom: 0;">
-						<div class="level-item" title="Display lower/upper Threshold Boundary Limits">
+						<div
+							class="level-item"
+							title="Display lower/upper Threshold Boundary Limits"
+						>
 							Boundary
 						</div>
 					</div>
@@ -289,7 +292,10 @@ const SharedPlot = (props: Props) => {
 				</div>
 				<div class="column is-narrow">
 					<div class="level is-mobile" style="margin-bottom: 0;">
-						<div class="level-item" title="Toggle X-Axis between Date and Branch Version">
+						<div
+							class="level-item"
+							title="Toggle X-Axis between Date and Branch Version"
+						>
 							X-Axis
 						</div>
 					</div>
@@ -383,9 +389,7 @@ const LineArrowButton = (props: {
 }) => {
 	return (
 		<button
-			class={`button ${
-				props.param_key() ? "is-primary" : ""
-			} is-fullwidth`}
+			class={`button ${props.param_key() ? "is-primary" : ""} is-fullwidth`}
 			type="button"
 			title={`${props.param_key() ? "Hide" : "Show"} ${props.position}`}
 			onClick={(e) => {
