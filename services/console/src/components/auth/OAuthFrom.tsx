@@ -25,8 +25,7 @@ const OAuthForm = (props: Props) => {
 	if (props.githubClientId) {
 		return (
 			<>
-				<div class="is-divider" data-content="OR"></div>
-				<a class="button is-fullwidth is-outlined" href={githubPath()}>
+				<a class="button is-fullwidth" href={githubPath()} style="margin-top: 3rem;">
 					<span class="icon">
 						<i class="fab fa-github" aria-hidden="true" />
 					</span>

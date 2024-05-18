@@ -282,7 +282,7 @@ const ShareModal = (props: ShareProps) => {
 					<br />
 					<blockquote>🐰 Add me to your README!</blockquote>
 
-					<div class="is-divider" data-content="OR" />
+					<hr />
 
 					<h4 class="title is-4">Embed Perf Plot</h4>
 					<h4 class="subtitle is-4">Click to Copy Embed Tag</h4>
@@ -298,7 +298,7 @@ const ShareModal = (props: ShareProps) => {
 						{embed_tag()}
 					</a>
 
-					<div class="is-divider" data-content="OR" />
+					<hr />
 
 					<h4 class="title is-4">Click to Copy Public URL</h4>
 					{/* biome-ignore lint/a11y/useValidAnchor: Copy link */}
