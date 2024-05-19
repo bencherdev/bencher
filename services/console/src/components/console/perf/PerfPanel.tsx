@@ -48,7 +48,7 @@ import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
 import type { TabList } from "./plot/tab/PlotTab";
 import { debounce } from "@solid-primitives/scheduled";
-import { Theme, getTheme,  } from "../../navbar/theme/theme";
+import { Theme, getTheme } from "../../navbar/theme/theme";
 import { themeSignal } from "../../navbar/theme/util";
 
 // Perf query params
@@ -898,7 +898,6 @@ const PerfPanel = (props: Props) => {
 			}),
 		DEBOUNCE_DELAY,
 	);
-
 
 	return (
 		<>

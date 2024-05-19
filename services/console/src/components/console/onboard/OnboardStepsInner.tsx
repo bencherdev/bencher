@@ -54,7 +54,10 @@ const OnboardSteps = (props: Props) => {
 							</div>
 						</div>
 						<br />
-						<nav class="breadcrumb is-centered has-bullet-separator" aria-label="breadcrumbs">
+						<nav
+							class="breadcrumb is-centered has-bullet-separator"
+							aria-label="breadcrumbs"
+						>
 							<ul>
 								<For
 									each={[
@@ -67,10 +70,17 @@ const OnboardSteps = (props: Props) => {
 								>
 									{(step) => (
 										<li class={props.step === step ? "is-active" : ""}>
-											<a href={stepHref(step)} aria-current={props.step === step ? "page" : undefined}>
-												<span class={`tag ${
-											props.step >= step ? "is-primary" : ""
-										}`}>{step}</span>
+											<a
+												href={stepHref(step)}
+												aria-current={props.step === step ? "page" : undefined}
+											>
+												<span
+													class={`tag ${
+														props.step >= step ? "is-primary" : ""
+													}`}
+												>
+													{step}
+												</span>
 											</a>
 										</li>
 									)}

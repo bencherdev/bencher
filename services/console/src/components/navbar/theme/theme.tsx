@@ -58,4 +58,4 @@ export const themeWordmark = (theme: Theme) => {
 		case Theme.Dark:
 			return BENCHER_WORDMARK_DARK;
 	}
-}
+};

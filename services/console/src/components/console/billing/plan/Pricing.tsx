@@ -25,30 +25,47 @@ interface Props {
 }
 
 const Pricing = (props: Props) => {
-	const Free = <PlanPanel themeColor={props.themeColor} active={props.plan} plan={PlanLevel.Free} buttonText={props.freeText} handlePlanLevel={props.handleFree} />;
-	const Team = <PlanPanel themeColor={props.themeColor} active={props.plan} plan={PlanLevel.Team} buttonText={props.teamText} handlePlanLevel={props.handleTeam} />;
-	const Enterprise = <PlanPanel themeColor={props.themeColor} active={props.plan} plan={PlanLevel.Enterprise} buttonText={props.enterpriseText} handlePlanLevel={props.handleEnterprise} />;
+	const Free = (
+		<PlanPanel
+			themeColor={props.themeColor}
+			active={props.plan}
+			plan={PlanLevel.Free}
+			buttonText={props.freeText}
+			handlePlanLevel={props.handleFree}
+		/>
+	);
+	const Team = (
+		<PlanPanel
+			themeColor={props.themeColor}
+			active={props.plan}
+			plan={PlanLevel.Team}
+			buttonText={props.teamText}
+			handlePlanLevel={props.handleTeam}
+		/>
+	);
+	const Enterprise = (
+		<PlanPanel
+			themeColor={props.themeColor}
+			active={props.plan}
+			plan={PlanLevel.Enterprise}
+			buttonText={props.enterpriseText}
+			handlePlanLevel={props.handleEnterprise}
+		/>
+	);
 	return (
 		<div class="columns is-centered">
-			<Show when={props.hideFree} fallback={
-				<>
-				<div class="column is-3">
-					{Free}
-				</div>
-				<div class="column is-3">
-					{Team}
-				</div>
-				<div class="column is-3">
-					{Enterprise}
-				</div>
-				</>
-			}>
-				<div class="column is-6">
-					{Team}
-				</div>
-				<div class="column is-6">
-					{Enterprise}
-				</div>
+			<Show
+				when={props.hideFree}
+				fallback={
+					<>
+						<div class="column is-3">{Free}</div>
+						<div class="column is-3">{Team}</div>
+						<div class="column is-3">{Enterprise}</div>
+					</>
+				}
+			>
+				<div class="column is-6">{Team}</div>
+				<div class="column is-6">{Enterprise}</div>
 			</Show>
 		</div>
 	);
@@ -90,7 +107,7 @@ const PlanCopy = {
 			"Dedicated Onboarding",
 		],
 	},
-}
+};
 
 const PlanPanel = (props: {
 	themeColor: string;
@@ -104,32 +121,34 @@ const PlanPanel = (props: {
 		<div class={`panel ${props.themeColor}`}>
 			<div class="panel-heading">
 				<div class="content has-text-centered">
-				<h2 class="title is-2">{plan.title}</h2>
-				<h3 class="subtitle is-1">{plan.price}</h3>
-				<br />
-				<sup>per benchmark result</sup>
+					<h2 class="title is-2">{plan.title}</h2>
+					<h3 class="subtitle is-1">{plan.price}</h3>
+					<br />
+					<sup>per benchmark result</sup>
 				</div>
 			</div>
 			<For each={plan.features}>
 				{(feature) => (
-					<Show when={feature === NO_FEATURE} fallback={
-						<div class="panel-block">
-							<span class="panel-icon">
-								<i class="fas fa-check" aria-hidden="true"></i>
-							</span>
-							{feature}
-						</div>
-					}>
-						<div class="panel-block">
-							{feature}
-						</div>
+					<Show
+						when={feature === NO_FEATURE}
+						fallback={
+							<div class="panel-block">
+								<span class="panel-icon">
+									<i class="fas fa-check" aria-hidden="true"></i>
+								</span>
+								{feature}
+							</div>
+						}
+					>
+						<div class="panel-block">{feature}</div>
 					</Show>
-				)
-				}
+				)}
 			</For>
 			<div class="panel-block">
 				<button
-					class={`button is-fullwidth ${props.plan === props.active && "is-primary"}`}
+					class={`button is-fullwidth ${
+						props.plan === props.active && "is-primary"
+					}`}
 					type="button"
 					onClick={(e) => {
 						e.preventDefault();
@@ -140,7 +159,7 @@ const PlanPanel = (props: {
 				</button>
 			</div>
 		</div>
-	)
-}
+	);
+};
 
 export default Pricing;
