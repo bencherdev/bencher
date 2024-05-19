@@ -116,7 +116,7 @@ const LinePlot = (props: Props) => {
 					stroke: "white",
 				};
 		}
-	})
+	});
 
 	const [isPlotted, setIsPlotted] = createSignal(false);
 	const [y_label_area_size, set_y_label_area_size] = createSignal(512);
@@ -124,8 +124,12 @@ const LinePlot = (props: Props) => {
 	const [range, setRange] = createSignal(props.range());
 	const [lower_value, setLowerValue] = createSignal(props.lower_value());
 	const [upper_value, setUpperValue] = createSignal(props.upper_value());
-	const [lower_boundary, setLowerBoundary] = createSignal(props.lower_boundary());
-	const [upper_boundary, setUpperBoundary] = createSignal(props.upper_boundary());
+	const [lower_boundary, setLowerBoundary] = createSignal(
+		props.lower_boundary(),
+	);
+	const [upper_boundary, setUpperBoundary] = createSignal(
+		props.upper_boundary(),
+	);
 
 	createEffect(() => {
 		if (isPlotted()) {

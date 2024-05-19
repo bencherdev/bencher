@@ -105,7 +105,9 @@ const ProjectMenu = (props: Props) => {
 							<div class="level-left">
 								<div class="level-item">Alerts</div>
 								<Show when={active_alerts()}>
-									<span class={`tag is-primary is-small is-rounded`}>{active_alerts()}</span>
+									<span class={`tag is-primary is-small is-rounded`}>
+										{active_alerts()}
+									</span>
 								</Show>
 							</div>
 						</nav>

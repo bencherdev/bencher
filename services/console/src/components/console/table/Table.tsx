@@ -64,7 +64,11 @@ const Table = (props: Props) => {
 			<Match when={props.state() === TableState.OK}>
 				<For each={props.tableData()}>
 					{(datum, _i) => (
-						<a class="box" style="margin-bottom: 1rem;" href={rowHref(props.config?.row?.button, datum)}>
+						<a
+							class="box"
+							style="margin-bottom: 1rem;"
+							href={rowHref(props.config?.row?.button, datum)}
+						>
 							{rowText(props.config?.row, datum)}
 						</a>
 					)}
@@ -133,28 +137,15 @@ export interface RowsButtonConfig {
 	path: (pathname: string, datum: { [slug: string]: Slug }) => string;
 }
 
-const rowText = (
-	config: RowConfig,
-	datum: Record<string, any>,
-) => {
+const rowText = (config: RowConfig, datum: Record<string, any>) => {
 	if (config?.kind === Row.DATE_TIME && config?.key) {
 		return fmtDateTime(datum[config?.key]);
 	}
-	return fmtValues(
-		datum,
-		config?.key,
-		config?.keys,
-		" | ",
-	);
+	return fmtValues(datum, config?.key, config?.keys, " | ");
 };
 
-const rowHref = (
-	config: RowsButtonConfig,
-	datum: Record<string, any>,
-) => `${config?.path?.(
-	pathname(),
-	datum,
-)}?${BACK_PARAM}=${encodePath()}`;
+const rowHref = (config: RowsButtonConfig, datum: Record<string, any>) =>
+	`${config?.path?.(pathname(), datum)}?${BACK_PARAM}=${encodePath()}`;
 
 const BackButton = (props: {
 	name: string;

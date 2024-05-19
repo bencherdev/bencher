@@ -13,9 +13,7 @@ const NavbarProjects = (props: Props) => {
 	const user = authUser();
 
 	return (
-		<Show
-			when={user && (props.params?.organization || props.params?.project)}
-		>
+		<Show when={user && (props.params?.organization || props.params?.project)}>
 			<div class="navbar-item">
 				<ProjectSelect
 					apiUrl={props.apiUrl}

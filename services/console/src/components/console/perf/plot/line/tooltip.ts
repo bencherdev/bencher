@@ -58,7 +58,12 @@ export const addTooltips = (chart, styles, hoverStyles) => {
 			.on("pointerenter pointermove", function (event) {
 				const text = d3.select(this).attr("__title");
 				const pointer = d3.pointer(event, wrapper.node());
-				if (text) tip.call((tip, pos, text) => hover(tip, pos, text, hoverStyles), pointer, text.split("\n"));
+				if (text)
+					tip.call(
+						(tip, pos, text) => hover(tip, pos, text, hoverStyles),
+						pointer,
+						text.split("\n"),
+					);
 				else tip.selectAll("*").remove();
 
 				// Raise it

@@ -1,8 +1,6 @@
 import { createSignal } from "solid-js";
 import { authUser } from "../../util/auth";
-import {
-	BENCHER_VERSION,
-} from "../../util/ext";
+import { BENCHER_VERSION } from "../../util/ext";
 import { BACK_PARAM, encodePath } from "../../util/url";
 
 const NavbarDropdown = () => {
@@ -17,10 +15,7 @@ const NavbarDropdown = () => {
 			}`}
 		>
 			<a class="navbar-link" onClick={(_e) => setDropdown(!dropdown())}>
-				{(user?.user?.name ? user?.user?.name : "Account").padStart(
-					12,
-					"\xa0",
-				)}
+				{(user?.user?.name ? user?.user?.name : "Account").padStart(12, "\xa0")}
 			</a>
 			<div class="navbar-dropdown">
 				<a
