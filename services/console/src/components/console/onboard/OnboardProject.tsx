@@ -290,7 +290,7 @@ const OnboardProject = (props: Props) => {
 										Save Project Name
 									</button>
 								</form>
-
+								<br />
 								<figure class="frame">
 									<h3 class="title is-5">This is your project slug</h3>
 									<pre data-language="plaintext">
