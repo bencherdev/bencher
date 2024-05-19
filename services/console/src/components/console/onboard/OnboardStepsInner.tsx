@@ -54,29 +54,29 @@ const OnboardSteps = (props: Props) => {
 							</div>
 						</div>
 						<br />
-						<div class="steps">
-							<For
-								each={[
-									OnboardStep.API_TOKEN,
-									OnboardStep.PROJECT,
-									OnboardStep.RUN,
-									OnboardStep.INVITE,
-									OnboardStep.PLAN,
-								]}
-							>
-								{(step) => (
-									<div
-										class={`step-item ${
-											props.step >= step ? " is-active is-primary" : ""
-										}`}
-									>
-										<a class="step-marker" href={stepHref(step)}>
-											{step}
-										</a>
-									</div>
-								)}
-							</For>
-						</div>
+						<nav class="breadcrumb is-centered has-bullet-separator" aria-label="breadcrumbs">
+							<ul>
+								<For
+									each={[
+										OnboardStep.API_TOKEN,
+										OnboardStep.PROJECT,
+										OnboardStep.RUN,
+										OnboardStep.INVITE,
+										OnboardStep.PLAN,
+									]}
+								>
+									{(step) => (
+										<li class={props.step === step ? "is-active" : ""}>
+											<a href={stepHref(step)} aria-current={props.step === step ? "page" : undefined}>
+												<span class={`tag ${
+											props.step >= step ? "is-primary" : ""
+										}`}>{step}</span>
+											</a>
+										</li>
+									)}
+								</For>
+							</ul>
+						</nav>
 					</div>
 				</div>
 			</div>
