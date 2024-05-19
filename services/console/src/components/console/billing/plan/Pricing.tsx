@@ -25,33 +25,36 @@ interface Props {
 }
 
 const Pricing = (props: Props) => {
+	const Free = <PlanPanel themeColor={props.themeColor} active={props.plan} plan={PlanLevel.Free} buttonText={props.freeText} handlePlanLevel={props.handleFree} />;
+	const Team = <PlanPanel themeColor={props.themeColor} active={props.plan} plan={PlanLevel.Team} buttonText={props.teamText} handlePlanLevel={props.handleTeam} />;
+	const Enterprise = <PlanPanel themeColor={props.themeColor} active={props.plan} plan={PlanLevel.Enterprise} buttonText={props.enterpriseText} handlePlanLevel={props.handleEnterprise} />;
 	return (
 		<div class="columns is-centered">
 			<Show when={props.hideFree} fallback={
 				<>
 				<div class="column is-3">
-					<PlanPanel themeColor={props.themeColor} active={props.plan} plan={PlanLevel.Free} buttonText={props.freeText} handlePlanLevel={props.handleFree} />
+					{Free}
 				</div>
 				<div class="column is-3">
-					<PlanPanel themeColor={props.themeColor} active={props.plan} plan={PlanLevel.Team} buttonText={props.teamText} handlePlanLevel={props.handleTeam} />
+					{Team}
 				</div>
 				<div class="column is-3">
-					<PlanPanel themeColor={props.themeColor} active={props.plan} plan={PlanLevel.Enterprise} buttonText={props.enterpriseText} handlePlanLevel={props.handleEnterprise} />
+					{Enterprise}
 				</div>
 				</>
 			}>
-				<div class="column is-5">
-					<PlanPanel themeColor={props.themeColor} active={props.plan} plan={PlanLevel.Team} buttonText={props.teamText} handlePlanLevel={props.handleTeam} />
+				<div class="column is-6">
+					{Team}
 				</div>
-				<div class="column is-5">
-					<PlanPanel themeColor={props.themeColor} active={props.plan} plan={PlanLevel.Enterprise} buttonText={props.enterpriseText} handlePlanLevel={props.handleEnterprise} />
+				<div class="column is-6">
+					{Enterprise}
 				</div>
 			</Show>
 		</div>
 	);
 };
 
-const NO_FEATURE = "⎯⎯⎯";
+const NO_FEATURE = "\xa0";
 
 const PlanCopy = {
 	[PlanLevel.Free]: {

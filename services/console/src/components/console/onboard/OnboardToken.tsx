@@ -11,8 +11,9 @@ import {
 	type JsonToken,
 } from "../../../types/bencher";
 import { PLAN_PARAM, planParam } from "../../auth/auth";
-import OnboardSteps, { OnboardStep } from "./OnboardSteps";
+import OnboardSteps from "./OnboardSteps";
 import CopyButton from "./CopyButton";
+import { OnboardStep } from "./OnboardStepsInner";
 
 export interface Props {
 	apiUrl: string;

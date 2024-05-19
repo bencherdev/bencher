@@ -5,9 +5,8 @@ import { getEntry } from "astro:content";
 
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import OnboardRun from "../../../components/console/onboard/OnboardRun";
-import OnboardSteps, {
-	OnboardStep,
-} from "../../../components/console/onboard/OnboardSteps";
+import OnboardStepsFallback from "../../../components/console/onboard/OnboardStepsFallback";
+import { OnboardStep } from "../../../components/console/onboard/OnboardStepsInner";
 import Collection from "../../../util/collection";
 
 // Using `meta.env` requires `prerender = false`
@@ -26,7 +25,7 @@ const { Content } = await page.render();
 
 <OnboardRun client:only="solid-js" apiUrl={BENCHER_API_URL}>
   <div slot="fallback">
-    <OnboardSteps step={OnboardStep.RUN} />
+    <OnboardStepsFallback step={OnboardStep.RUN} />
     <section class="section">
       <div class="container">
         <div class="columns is-centered">

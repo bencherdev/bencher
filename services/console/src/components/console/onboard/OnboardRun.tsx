@@ -12,9 +12,10 @@ import type {
 	PlanLevel,
 } from "../../../types/bencher";
 import { PLAN_PARAM, planParam } from "../../auth/auth";
-import OnboardSteps, { OnboardStep } from "./OnboardSteps";
+import OnboardSteps from "./OnboardSteps";
 import { isBencherCloud } from "../../../util/ext";
 import CopyButton from "./CopyButton";
+import { OnboardStep } from "./OnboardStepsInner";
 
 export interface Props {
 	apiUrl: string;

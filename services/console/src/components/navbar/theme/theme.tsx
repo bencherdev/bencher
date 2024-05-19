@@ -1,3 +1,5 @@
+import { BENCHER_WORDMARK, BENCHER_WORDMARK_DARK } from "../../../util/ext";
+
 export const THEME_KEY = "theme";
 
 export enum Theme {
@@ -48,3 +50,12 @@ export const themeColor = (theme: Theme) => {
 			return "is-dark";
 	}
 };
+
+export const themeWordmark = (theme: Theme) => {
+	switch (theme) {
+		case Theme.Light:
+			return BENCHER_WORDMARK;
+		case Theme.Dark:
+			return BENCHER_WORDMARK_DARK;
+	}
+}

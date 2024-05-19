@@ -7,8 +7,9 @@ import { validJwt, validPlanLevel } from "../../../util/valid";
 import { httpGet } from "../../../util/http";
 import { type JsonOrganization, type PlanLevel } from "../../../types/bencher";
 import { PLAN_PARAM } from "../../auth/auth";
-import OnboardSteps, { OnboardStep } from "./OnboardSteps";
+import OnboardSteps from "./OnboardSteps";
 import BillingPanel from "../billing/BillingPanel";
+import { OnboardStep } from "./OnboardStepsInner";
 
 export interface Props {
 	apiUrl: string;

@@ -21,9 +21,10 @@ import {
 import Field, { type FieldHandler } from "../../field/Field";
 import FieldKind from "../../field/kind";
 import { PLAN_PARAM, planParam } from "../../auth/auth";
-import OnboardSteps, { OnboardStep } from "./OnboardSteps";
+import OnboardSteps from "./OnboardSteps";
 import { createStore } from "solid-js/store";
 import { MEMBER_FIELDS } from "../../../config/organization/members";
+import { OnboardStep } from "./OnboardStepsInner";
 
 export interface Props {
 	apiUrl: string;

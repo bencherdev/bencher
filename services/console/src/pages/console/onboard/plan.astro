@@ -3,9 +3,8 @@ export const prerender = false;
 
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import OnboardPlan from "../../../components/console/onboard/OnboardPlan";
-import OnboardSteps, {
-	OnboardStep,
-} from "../../../components/console/onboard/OnboardSteps";
+import OnboardStepsFallback from "../../../components/console/onboard/OnboardStepsFallback";
+import { OnboardStep } from "../../../components/console/onboard/OnboardStepsInner";
 import ConsoleFallbackPricingTable from "../../../components/pricing/ConsoleFallbackPricingTable";
 
 // Using `meta.env` requires `prerender = false`
@@ -20,7 +19,7 @@ const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
 
 <OnboardPlan client:only="solid-js" apiUrl={BENCHER_API_URL}>
   <div slot="fallback">
-    <OnboardSteps step={OnboardStep.PLAN} />
+    <OnboardStepsFallback step={OnboardStep.PLAN} />
     <section class="section">
       <div class="container">
         <div class="columns is-centered">

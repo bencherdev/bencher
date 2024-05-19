@@ -23,8 +23,9 @@ import type {
 import Field, { type FieldHandler } from "../../field/Field";
 import FieldKind from "../../field/kind";
 import { PLAN_PARAM, planParam } from "../../auth/auth";
-import OnboardSteps, { OnboardStep } from "./OnboardSteps";
+import OnboardSteps from "./OnboardSteps";
 import CopyButton from "./CopyButton";
+import { OnboardStep } from "./OnboardStepsInner";
 
 export interface Props {
 	apiUrl: string;
