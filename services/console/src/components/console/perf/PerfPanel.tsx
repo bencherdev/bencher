@@ -48,7 +48,8 @@ import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
 import type { TabList } from "./plot/tab/PlotTab";
 import { debounce } from "@solid-primitives/scheduled";
-import { Theme, getTheme } from "../../navbar/theme/theme";
+import { Theme, getTheme,  } from "../../navbar/theme/theme";
+import { themeSignal } from "../../navbar/theme/util";
 
 // Perf query params
 const BRANCHES_PARAM = PerfQueryKey.Branches;
@@ -175,6 +176,7 @@ const PerfPanel = (props: Props) => {
 	const params = createMemo(() => props.params);
 	const [searchParams, setSearchParams] = useSearchParams();
 	const user = authUser();
+	const theme = themeSignal;
 
 	// Sanitize all query params
 	createEffect(() => {
@@ -897,13 +899,6 @@ const PerfPanel = (props: Props) => {
 		DEBOUNCE_DELAY,
 	);
 
-	const [theme, setTheme] = createSignal(Theme.Light);
-	setInterval(() => {
-		const newTheme = getTheme();
-		if (theme() != newTheme) {
-			setTheme(newTheme);
-		}
-	}, 100);
 
 	return (
 		<>

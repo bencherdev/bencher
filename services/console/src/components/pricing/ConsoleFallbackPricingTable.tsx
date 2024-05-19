@@ -7,6 +7,7 @@ export const ENTERPRISE_TEXT = "Go with Enterprise";
 const ConsoleFallbackPricingTable = (props: { hideFree: boolean }) => {
 	return (
 		<Pricing
+			themeColor="is-light"
 			freeText={FREE_TEXT}
 			handleFree={() => {}}
 			hideFree={props.hideFree}

@@ -1,7 +1,7 @@
-import { PlanLevel } from "../../types/bencher";
 import Pricing from "../console/billing/plan/Pricing";
 
 interface Props {
+	themeColor: string;
 	handleFree: () => void;
 	handleTeam: () => void;
 	handleEnterprise: () => void;
@@ -10,7 +10,7 @@ interface Props {
 const InnerPricingTable = (props: Props) => {
 	return (
 		<Pricing
-			plan={PlanLevel.Team}
+			themeColor={props.themeColor}
 			freeText="Sign up for free"
 			handleFree={props.handleFree}
 			teamText="Continue with Team"

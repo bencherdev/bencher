@@ -31,6 +31,7 @@ import {
 	FREE_TEXT,
 	TEAM_TEXT,
 } from "../../../pricing/ConsoleFallbackPricingTable";
+import { getThemeColor } from "../../../navbar/theme/util";
 
 interface Props {
 	apiUrl: string;
@@ -50,6 +51,7 @@ enum PlanKind {
 
 const BillingForm = (props: Props) => {
 	const [searchParams, setSearchParams] = useSearchParams();
+	const themeColor = getThemeColor;
 
 	const setPlanLevel = (planLevel: PlanLevel) => {
 		setSearchParams({ [PLAN_PARAM]: planLevel });
@@ -128,6 +130,7 @@ const BillingForm = (props: Props) => {
 	return (
 		<>
 			<Pricing
+				themeColor={themeColor()}
 				plan={plan()}
 				freeText={FREE_TEXT}
 				handleFree={() => setPlanLevel(PlanLevel.Free)}
