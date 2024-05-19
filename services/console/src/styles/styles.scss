@@ -1,34 +1,9 @@
+$old-orange: #ed6704;
 $orange: #e26000;
 $disabled: #fdb07e;
 
-// @charset "utf-8";
 // Path to Bulma's sass folder
 @use "../node_modules/bulma/sass" with ($primary: $orange, $link: $orange);
-
-// $primary: $orange !default;
-
-// $link: $orange !default;
-// $link-visited: $orange !default;
-
-// $link-focus-border: $orange !default;
-
-// $input-focus-border-color: $orange !default;
-// $input-focus-box-shadow-color: $orange !default;
-
-// $breadcrumb-item-color: $orange !default;
-
-// $badoge-z-index: 5 !default;
-
-// @import "../node_modules/bulma-divider/src/sass/index.sass";
-// @import "../node_modules/bulma-pricingtable/src/sass/index.sass";
-// @import "../node_modules/bulma-switch/src/sass/index.sass";
-// @import "../node_modules/bulma-tooltip/src/sass/index.sass";
-// @import "../node_modules/bulma-steps/src/sass/index.sass";
-
-.rows {
-  display: flex;
-  flex-direction: column;
-}
 
 @mixin mobile {
   @media (max-width: 600px) {
@@ -66,101 +41,3 @@ $disabled: #fdb07e;
   flex-direction: column;
   height: 100%;
 }
-
-// https://www.ostraining.com/blog/coding/responsive-google-maps/
-.map-responsive {
-  overflow: hidden;
-  padding-bottom: 56.25%;
-  position: relative;
-  height: 0;
-}
-
-.map-responsive iframe {
-  left: 0;
-  top: 0;
-  height: 100%;
-  width: 100%;
-  position: absolute;
-}
-
-// source: https://codepen.io/AllThingsSmitty/pen/MyqmdM
-// table {
-//   border: 1px solid #ccc;
-//   border-collapse: collapse;
-//   margin: 0;
-//   padding: 0;
-//   width: 100%;
-//   table-layout: fixed;
-// }
-
-// table caption {
-//   font-size: 1.5em;
-//   margin: 0.5em 0 0.75em;
-// }
-
-// table tr {
-//   background-color: #f8f8f8;
-//   border: 1px solid #ddd;
-//   padding: 0.35em;
-// }
-
-// table th,
-// table td {
-//   padding: 0.625em;
-//   text-align: center;
-// }
-
-// table th {
-//   font-size: 0.85em;
-//   letter-spacing: 0.1em;
-//   text-transform: uppercase;
-// }
-
-// @media screen and (max-width: 600px) {
-//   table {
-//     border: 0;
-//   }
-
-//   table caption {
-//     font-size: 1.3em;
-//   }
-
-//   table thead {
-//     border: none;
-//     clip: rect(0 0 0 0);
-//     height: 1px;
-//     margin: -1px;
-//     overflow: hidden;
-//     padding: 0;
-//     position: absolute;
-//     width: 1px;
-//   }
-
-//   table tr {
-//     border-bottom: 3px solid #ddd;
-//     display: block;
-//     margin-bottom: 0.625em;
-//   }
-
-//   table td {
-//     border-bottom: 1px solid #ddd;
-//     display: block;
-//     font-size: 0.8em;
-//     text-align: right;
-//   }
-
-//   table td::before {
-//     /*
-//     * aria-label has no advantage, it won't be read inside a table
-//     content: attr(aria-label);
-//     */
-//     content: attr(data-label);
-//     float: left;
-//     font-weight: bold;
-//     text-transform: uppercase;
-//   }
-
-//   table td:last-child {
-//     border-bottom: 0;
-//   }
-// }
