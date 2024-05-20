@@ -59,11 +59,11 @@ pub enum CliPerfTableStyle {
     Sharp,
     /// Analog of `sharp` but with rounded corners
     Rounded,
-    /// Mimics a PostgreSQL table style
+    /// Mimics a `PostgreSQL` table style
     Psql,
     /// Mimics a Markdown table style
     Markdown,
-    /// Mimics a ReStructuredText table style
+    /// Mimics a `ReStructuredText` table style
     ReStructuredText,
     /// Style using chars which resembles 2 lines
     Extended,

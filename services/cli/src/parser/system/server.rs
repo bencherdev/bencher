@@ -6,7 +6,7 @@ use crate::parser::CliBackend;
 pub enum CliServer {
     /// Server version
     Version(CliVersion),
-    /// Server OpenAPI Spec
+    /// Server `OpenAPI` Spec
     Spec(CliSpec),
     /// Restart server
     Restart(CliRestart),

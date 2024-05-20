@@ -60,7 +60,7 @@ pub enum TaskSub {
     Template(TaskTemplate),
     #[cfg(feature = "plus")]
     #[clap(subcommand)]
-    /// URLindexing
+    /// `URLindexing`
     Index(TaskIndex),
     #[cfg(feature = "plus")]
     /// Send stats to bencher.dev

@@ -100,7 +100,7 @@ async fn get_ls_inner(
     if let Some(auth_user) = auth_user {
         if !auth_user.is_admin(&context.rbac) {
             let projects =
-                auth_user.projects(&context.rbac, bencher_rbac::project::Permission::View);
+                auth_user.projects(&context.rbac, Permission::View);
             query = query.filter(
                 schema::project::id
                     .eq_any(projects)
@@ -323,7 +323,7 @@ async fn delete_inner(
         &context.rbac,
         &path_params.project,
         auth_user,
-        bencher_rbac::project::Permission::Delete,
+        Permission::Delete,
     )?;
 
     diesel::delete(schema::project::table.filter(schema::project::id.eq(query_project.id)))

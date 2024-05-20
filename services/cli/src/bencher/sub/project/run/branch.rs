@@ -608,7 +608,7 @@ async fn rename_branch_suffix(
     // If the start point is self-referential, then simply name it `HEAD` to avoid confusing recursive names.
     // While `HEAD` isn't the most accurate name, it is a reserved name in git so it should not be used by any other branches.
     // Otherwise, just use the name of the current start point branch.
-    let branch_name = if start_point.map(|sp| sp.self_ref).unwrap_or_default() {
+    let branch_name = if start_point.is_some_and(|sp| sp.self_ref) {
         "HEAD"
     } else {
         current_start_point_branch.name.as_ref()

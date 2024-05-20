@@ -70,65 +70,65 @@ impl fmt::Display for BencherResource {
 
 pub fn bad_request_error<E>(error: E) -> HttpError
 where
-    E: std::fmt::Display,
+    E: fmt::Display,
 {
     HttpError::for_client_error(None, StatusCode::BAD_REQUEST, error.to_string())
 }
 
 pub fn unauthorized_error<E>(error: E) -> HttpError
 where
-    E: std::fmt::Display,
+    E: fmt::Display,
 {
     HttpError::for_client_error(None, StatusCode::UNAUTHORIZED, error.to_string())
 }
 
 pub fn payment_required_error<E>(error: E) -> HttpError
 where
-    E: std::fmt::Display,
+    E: fmt::Display,
 {
     HttpError::for_client_error(None, StatusCode::PAYMENT_REQUIRED, error.to_string())
 }
 
 pub fn forbidden_error<E>(error: E) -> HttpError
 where
-    E: std::fmt::Display,
+    E: fmt::Display,
 {
     HttpError::for_client_error(None, StatusCode::FORBIDDEN, error.to_string())
 }
 
 pub fn not_found_error<E>(error: E) -> HttpError
 where
-    E: std::fmt::Display,
+    E: fmt::Display,
 {
     HttpError::for_client_error(None, StatusCode::NOT_FOUND, error.to_string())
 }
 
 pub fn conflict_error<E>(error: E) -> HttpError
 where
-    E: std::fmt::Display,
+    E: fmt::Display,
 {
     HttpError::for_client_error(None, StatusCode::CONFLICT, error.to_string())
 }
 
 pub fn locked_error<E>(error: E) -> HttpError
 where
-    E: std::fmt::Display,
+    E: fmt::Display,
 {
     HttpError::for_client_error(None, StatusCode::LOCKED, error.to_string())
 }
 
 pub fn resource_not_found_error<V, E>(resource: BencherResource, value: V, error: E) -> HttpError
 where
-    V: std::fmt::Debug,
-    E: std::fmt::Display,
+    V: fmt::Debug,
+    E: fmt::Display,
 {
     not_found_error(format!("{resource} ({value:?}) not found: {error}",))
 }
 
 pub fn resource_conflict_error<V, E>(resource: BencherResource, value: V, error: E) -> HttpError
 where
-    V: std::fmt::Debug,
-    E: std::fmt::Display,
+    V: fmt::Debug,
+    E: fmt::Display,
 {
     conflict_error(format!("{resource} ({value:?}) has conflict: {error}",))
 }
@@ -170,7 +170,7 @@ pub(crate) use resource_conflict_err;
 
 pub fn issue_error<E>(status_code: StatusCode, title: &str, body: &str, error: E) -> HttpError
 where
-    E: std::fmt::Display,
+    E: fmt::Display,
 {
     let error_code = uuid::Uuid::new_v4();
     let issue_url = github_issue_url(
@@ -205,7 +205,7 @@ pub fn github_issue_url(title: &str, body: &str) -> url::Url {
 #[derive(Debug, Error)]
 pub enum ParentageError<Id>
 where
-    Id: std::fmt::Debug + std::fmt::Display,
+    Id: fmt::Debug + fmt::Display,
 {
     #[error(
         "{parent_resource} ID ({parent_id}) mismatch for {resource} parent ID ({expected_parent_id})"
@@ -223,7 +223,7 @@ pub fn assert_parentage<Id>(
     resource: BencherResource,
     expected_parent_id: Id,
 ) where
-    Id: PartialEq + std::fmt::Debug + std::fmt::Display,
+    Id: PartialEq + fmt::Debug + fmt::Display,
 {
     if parent_id != expected_parent_id {
         let err = ParentageError::Mismatch {

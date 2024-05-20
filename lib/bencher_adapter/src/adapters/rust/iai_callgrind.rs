@@ -252,7 +252,7 @@ pub(crate) mod test_rust_iai_callgrind {
   RAM Hits:                       3|N/A             (*********)
   Total read+write:            2362|N/A             (*********)
   Estimated Cycles:            2464|N/A             (*********)";
-        let output = super::AdapterRustIaiCallgrind::parse(input, crate::Settings::default());
+        let output = AdapterRustIaiCallgrind::parse(input, crate::Settings::default());
         assert!(output.is_some());
     }
 

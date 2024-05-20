@@ -166,7 +166,7 @@ fn seed(api_url: &Url, token: Option<&Jwt>) -> anyhow::Result<()> {
     println!("Seeding API deploy at {api_url}");
     let seed_test = SeedTest::try_from(TaskSeedTest {
         url: Some(api_url.clone()),
-        token: token.map(Clone::clone),
+        token: token.cloned(),
     })?;
     seed_test.exec()
 }
@@ -175,7 +175,7 @@ fn examples(api_url: &Url, token: Option<&Jwt>) -> anyhow::Result<()> {
     println!("Running examples at {api_url}");
     let examples = Examples::try_from(TaskExamples {
         url: Some(api_url.clone()),
-        token: token.map(Clone::clone),
+        token: token.cloned(),
         example: None,
     })?;
     examples.exec()

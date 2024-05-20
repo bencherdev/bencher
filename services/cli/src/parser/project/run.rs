@@ -7,19 +7,19 @@ use crate::parser::CliBackend;
 #[derive(Parser, Debug)]
 #[allow(clippy::option_option, clippy::struct_excessive_bools)]
 pub struct CliRun {
-    /// Project slug or UUID (or set BENCHER_PROJECT)
+    /// Project slug or UUID (or set `BENCHER_PROJECT`)
     #[clap(long)]
     pub project: Option<ResourceId>,
 
     #[clap(flatten)]
     pub branch: CliRunBranch,
 
-    /// Testbed name, slug, or UUID (or set BENCHER_TESTBED) (default is "localhost").
+    /// Testbed name, slug, or UUID (or set `BENCHER_TESTBED`) (default is "localhost").
     /// If a name or slug is provided, the testbed will be created if it does not exist
     #[clap(long)]
     pub testbed: Option<NameId>,
 
-    /// Benchmark harness adapter (or set BENCHER_ADAPTER) (default is "magic")
+    /// Benchmark harness adapter (or set `BENCHER_ADAPTER`) (default is "magic")
     #[clap(value_enum, long)]
     pub adapter: Option<CliRunAdapter>,
 
@@ -69,7 +69,7 @@ pub struct CliRun {
 #[derive(Args, Debug)]
 #[allow(clippy::option_option)]
 pub struct CliRunBranch {
-    /// Branch name, slug, or UUID (or set BENCHER_BRANCH) (default is "main").
+    /// Branch name, slug, or UUID (or set `BENCHER_BRANCH`) (default is "main").
     /// If `branch` does not already exist, it will be created if a name or slug is provided.
     #[clap(long, alias = "if-branch")]
     pub branch: Option<NameId>,
@@ -164,7 +164,7 @@ pub enum CliRunAdapter {
     Json,
     /// #️⃣ C#
     CSharp,
-    /// #️⃣ C# DotNet
+    /// #️⃣ C# `DotNet`
     CSharpDotNet,
     /// ➕ C++
     Cpp,

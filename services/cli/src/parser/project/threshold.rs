@@ -86,9 +86,9 @@ pub struct CliThresholdCreate {
         .args(&["threshold_project", "project"]),
 ))]
 pub struct CliThresholdCreateProject {
-    /// Project slug or UUID (or set BENCHER_PROJECT)
+    /// Project slug or UUID (or set `BENCHER_PROJECT`)
     pub threshold_project: Option<ResourceId>,
-    /// Project slug or UUID (or set BENCHER_PROJECT)
+    /// Project slug or UUID (or set `BENCHER_PROJECT`)
     #[clap(long)]
     pub project: Option<ResourceId>,
 }

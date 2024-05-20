@@ -156,7 +156,7 @@ impl BencherClient {
         Json: DeserializeOwned + Serialize + TryFrom<T, Error = E>,
         E: std::error::Error + Send + Sync + 'static,
     {
-        let timeout = std::time::Duration::from_secs(15);
+        let timeout = Duration::from_secs(15);
         let mut client_builder = reqwest::ClientBuilder::new()
             .connect_timeout(timeout)
             .timeout(timeout);

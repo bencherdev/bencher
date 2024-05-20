@@ -219,7 +219,7 @@ pub(crate) mod test_rust_iai {
   L2 Accesses:                    1
   RAM Accesses:                   1
   Estimated Cycles:            2404";
-        let output = super::AdapterRustIai::parse(input, crate::Settings::default());
+        let output = AdapterRustIai::parse(input, crate::Settings::default());
         assert!(output.is_some());
     }
 
