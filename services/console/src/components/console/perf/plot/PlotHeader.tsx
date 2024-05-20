@@ -215,7 +215,12 @@ const EmbedPlotHeader = (props: Props) => {
 				<div class="column has-text-centered">
 					{/* biome-ignore lint/a11y/noBlankTarget: internal */}
 					<a href={perfUrl()} target="_blank">
-						<img id={BENCHER_WORDMARK_ID} src={BENCHER_WORDMARK} width="128em" alt="🐰 Bencher" />
+						<img
+							id={BENCHER_WORDMARK_ID}
+							src={BENCHER_WORDMARK}
+							width="128em"
+							alt="🐰 Bencher"
+						/>
 					</a>
 					{title()}
 				</div>

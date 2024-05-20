@@ -10,6 +10,8 @@ import { BENCHER_NAVBAR_BURGER_ID, BENCHER_NAVBAR_MENU_ID } from "./id";
 import ThemeToggle from "./theme/ThemeToggle.astro";
 import NavbarHelp from "./NavbarHelp.astro";
 import AuthButtons from "./AuthButtons";
+import PricingLink from "./PricingLink";
+import GitHubLink from "./GitHubLink";
 ---
 
 <nav
@@ -48,17 +50,21 @@ import AuthButtons from "./AuthButtons";
 			<a class="navbar-item" href="/explore/">
 				Explore
 			</a>
-			<a class="navbar-item" href="/pricing/">
-				Pricing
-			</a>
-			<a
-				class="navbar-item"
-				href={BENCHER_GITHUB_URL}
-				target="_blank"
-				rel="noreferrer"
-			>
-				GitHub
-			</a>
+			<PricingLink client:only="solid-js">
+				<a slot="fallback" class="navbar-item" href="/pricing/">
+					Pricing
+				</a>
+			</PricingLink>
+			<GitHubLink client:only="solid-js">
+				<a slot="fallback"
+						class="navbar-item"
+						href={BENCHER_GITHUB_URL}
+						target="_blank"
+						rel="noreferrer"
+					>
+						GitHub
+				</a>
+			</GitHubLink>
 		</div>
 
 		<div class="navbar-end">
