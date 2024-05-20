@@ -6,13 +6,10 @@ import {
 	BENCHER_WORDMARK,
 	BENCHER_WORDMARK_ID,
 } from "../../util/ext";
-import {
-	BENCHER_NAVBAR_AUTH_ID,
-	BENCHER_NAVBAR_BURGER_ID,
-	BENCHER_NAVBAR_MENU_ID,
-} from "./id";
+import { BENCHER_NAVBAR_BURGER_ID, BENCHER_NAVBAR_MENU_ID } from "./id";
 import ThemeToggle from "./theme/ThemeToggle.astro";
 import NavbarHelp from "./NavbarHelp.astro";
+import AuthButtons from "./AuthButtons";
 ---
 
 <nav
@@ -73,15 +70,19 @@ import NavbarHelp from "./NavbarHelp.astro";
 					<NavbarHelp />
 				</div>
 				<div class="navbar-item" />
-				<div id={BENCHER_NAVBAR_AUTH_ID}>
-					<div class="buttons">
-						<a class="button" href="/auth/login">
-							Log in
-						</a>
-						<a class="button is-primary" href="/auth/signup">
-							<strong>Sign up</strong>
-						</a>
-					</div>
+				<div class="navbar-item">
+					<AuthButtons client:only="solid-js">
+						<div slot="fallback">
+							<div class="buttons">
+								<a class="button" href="/auth/login">
+									Log in
+								</a>
+								<a class="button is-primary" href="/auth/signup">
+									<strong>Sign up</strong>
+								</a>
+							</div>
+						</div>
+					</AuthButtons>
 				</div>
 			</div>
 		</div>

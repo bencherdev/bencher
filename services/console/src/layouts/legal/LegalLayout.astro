@@ -1,5 +1,4 @@
 ---
-import AuthNavbar from "../../components/navbar/DocsNavbar";
 import BaseLayout from "../BaseLayout.astro";
 
 interface Props {
@@ -22,8 +21,6 @@ const { title, titleFmt, description, heading, published, modified } =
   published={published}
   modified={modified}
 >
-  <!-- Note that the AuthNavbar does *not* fill the slot `navbar`. It is a client-side override.  -->
-  <AuthNavbar client:only="solid-js" />
   <section class="section">
     <div class="container">
       <div class="columns">
