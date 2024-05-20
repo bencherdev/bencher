@@ -13,7 +13,7 @@ serde_json.workspace = true
 thiserror.workspace = true
 url = { workspace = true, features = ["serde"] }
 # Crate
-tame-oauth = "0.9"
+tame-oauth = "0.10"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros"] }

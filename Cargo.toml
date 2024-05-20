@@ -62,8 +62,8 @@ url = "2.5"
 uuid = "1.8"
 # oxide
 dropshot = "0.10"
-progenitor = "0.6"
-progenitor-client = "0.6"
+progenitor = "0.7"
+progenitor-client = "0.7"
 
 [workspace.lints.rust]
 # https://doc.rust-lang.org/rustc/lints/listing/index.html
