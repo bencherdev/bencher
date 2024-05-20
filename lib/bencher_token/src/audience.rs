@@ -1,3 +1,5 @@
+use std::fmt;
+
 const AUDIENCE_AUTH: &str = "auth";
 const AUDIENCE_CLIENT: &str = "client";
 const AUDIENCE_API_KEY: &str = "api_key";
@@ -10,15 +12,18 @@ pub enum Audience {
     ApiKey,
     Invite,
 }
-
-impl ToString for Audience {
-    fn to_string(&self) -> String {
-        match self {
-            Self::Auth => AUDIENCE_AUTH.into(),
-            Self::Client => AUDIENCE_CLIENT.into(),
-            Self::ApiKey => AUDIENCE_API_KEY.into(),
-            Self::Invite => AUDIENCE_INVITE.into(),
-        }
+impl fmt::Display for Audience {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Auth => AUDIENCE_AUTH,
+                Self::Client => AUDIENCE_CLIENT,
+                Self::ApiKey => AUDIENCE_API_KEY,
+                Self::Invite => AUDIENCE_INVITE,
+            }
+        )
     }
 }
 

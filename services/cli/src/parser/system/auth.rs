@@ -17,6 +17,7 @@ pub enum CliAuth {
     Accept(CliAuthAccept),
 }
 
+#[allow(clippy::doc_markdown)]
 #[derive(Parser, Debug)]
 pub struct CliAuthSignup {
     /// User email

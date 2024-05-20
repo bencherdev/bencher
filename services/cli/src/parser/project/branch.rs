@@ -74,7 +74,7 @@ pub struct CliBranchCreate {
     pub backend: CliBackend,
 }
 
-#[allow(clippy::struct_field_names)]
+#[allow(clippy::doc_markdown, clippy::struct_field_names)]
 #[derive(Args, Debug)]
 pub struct CliBranchStartPoint {
     /// Branch name, slug, or UUID to use as the new branch start point

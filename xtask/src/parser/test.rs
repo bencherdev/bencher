@@ -47,6 +47,7 @@ pub struct TaskSmokeTest {
 /// Template kind
 #[derive(ValueEnum, Debug, Clone, Copy, Default)]
 #[clap(rename_all = "snake_case")]
+#[allow(clippy::doc_markdown)]
 pub enum TaskTestEnvironment {
     /// https://localhost:61016
     #[default]

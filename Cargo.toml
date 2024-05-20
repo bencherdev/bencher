@@ -67,6 +67,7 @@ progenitor-client = "0.7"
 
 [workspace.lints.rust]
 # https://doc.rust-lang.org/rustc/lints/listing/index.html
+dead_code = "warn"
 explicit_outlives_requirements = "warn"
 invalid_reference_casting = "warn"
 let_underscore_drop = "warn"
@@ -84,7 +85,6 @@ unused_import_braces = "warn"
 unused_lifetimes = "warn"
 unused_macro_rules = "warn"
 unused_qualifications = "warn"
-unused_tuple_struct_fields = "warn"
 variant_size_differences = "warn"
 
 [workspace.lints.clippy]

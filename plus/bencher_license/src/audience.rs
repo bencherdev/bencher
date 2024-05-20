@@ -1,3 +1,5 @@
+use std::fmt;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -7,10 +9,10 @@ pub enum Audience {
     Bencher,
 }
 
-impl ToString for Audience {
-    fn to_string(&self) -> String {
+impl fmt::Display for Audience {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Bencher => "bencher".into(),
+            Self::Bencher => write!(f, "bencher"),
         }
     }
 }

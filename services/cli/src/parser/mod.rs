@@ -99,6 +99,7 @@ pub enum CliSub {
     Logs(CliLogs),
 }
 
+#[allow(clippy::doc_markdown)]
 #[derive(Args, Debug)]
 pub struct CliBackend {
     /// Backend host URL (default https://api.bencher.dev)
