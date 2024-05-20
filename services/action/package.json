@@ -10,9 +10,9 @@
 		"@actions/tool-cache": "^2.0.1"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "1.6.4",
+		"@biomejs/biome": "^1.7.3",
 		"@tsconfig/node16": "^1.0.3",
-		"@types/node": "^20.12.7",
+		"@types/node": "^20.12.12",
 		"@vercel/ncc": "^0.38.1",
 		"typescript": "^5.4.5"
 	}
