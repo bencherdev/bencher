@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.4.9"
+    "version": "0.4.10"
   },
   "paths": {
     "/": {
