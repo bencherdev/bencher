@@ -14,10 +14,11 @@ import { THEME_TOGGLE_ID, ThemeId } from "./theme";
 </button>
 
 <script>
-  import {BENCHER_WORDMARK_ID, BENCHER_WORDMARK_FOOTER_ID, BENCHER_WORDMARK, BENCHER_WORDMARK_DARK} from "../../../util/ext.ts";
+  import {BENCHER_WORDMARK_ID, BENCHER_WORDMARK_INLINE_ID, BENCHER_WORDMARK_FOOTER_ID, BENCHER_WORDMARK, BENCHER_WORDMARK_DARK} from "../../../util/ext.ts";
   import {THEME_KEY, Theme, THEME_TOGGLE_ID, ThemeId, getTheme} from "./theme";
 
   const wordmark = document.getElementById(BENCHER_WORDMARK_ID);
+  const wordmarkInline = document.getElementById(BENCHER_WORDMARK_INLINE_ID);
   const wordmarkFooter = document.getElementById(BENCHER_WORDMARK_FOOTER_ID);
   const themeToggle = document.getElementById(THEME_TOGGLE_ID);
   const sunIcon = document.getElementById(ThemeId.Light);
@@ -25,6 +26,7 @@ import { THEME_TOGGLE_ID, ThemeId } from "./theme";
 
   const setLightTheme = () => {
     wordmark ? wordmark.src = BENCHER_WORDMARK : null;
+    wordmarkInline ? wordmarkInline.src = BENCHER_WORDMARK : null;
     wordmarkFooter ? wordmarkFooter.src = BENCHER_WORDMARK : null;
     themeToggle ? themeToggle.title = "Toggle dark mode" : null;
     sunIcon?.classList.remove("has-text-dark");
@@ -34,6 +36,7 @@ import { THEME_TOGGLE_ID, ThemeId } from "./theme";
   }
   const setDarkTheme = () => {
     wordmark ? wordmark.src = BENCHER_WORDMARK_DARK : null;
+    wordmarkInline ? wordmarkInline.src = BENCHER_WORDMARK_DARK : null;
     wordmarkFooter ? wordmarkFooter.src = BENCHER_WORDMARK_DARK : null;
     themeToggle ? themeToggle.title = "Toggle light mode" : null;
     sunIcon?.classList.remove("has-text-primary");

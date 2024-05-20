@@ -14,7 +14,7 @@ import type {
 	JsonMeasure,
 	JsonProject,
 } from "../../../../types/bencher";
-import { BENCHER_WORDMARK } from "../../../../util/ext";
+import { BENCHER_WORDMARK, BENCHER_WORDMARK_ID } from "../../../../util/ext";
 import { httpGet } from "../../../../util/http";
 import { BENCHER_MEASURE_ID } from "./util";
 import { BACK_PARAM, encodePath } from "../../../../util/url";
@@ -215,7 +215,7 @@ const EmbedPlotHeader = (props: Props) => {
 				<div class="column has-text-centered">
 					{/* biome-ignore lint/a11y/noBlankTarget: internal */}
 					<a href={perfUrl()} target="_blank">
-						<img src={BENCHER_WORDMARK} width="128em" alt="🐰 Bencher" />
+						<img id={BENCHER_WORDMARK_ID} src={BENCHER_WORDMARK} width="128em" alt="🐰 Bencher" />
 					</a>
 					{title()}
 				</div>
