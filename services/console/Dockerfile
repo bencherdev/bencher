@@ -1,5 +1,5 @@
 # https://hub.docker.com/_/rust
-FROM rust:1.76.0-bookworm as wasm-builder
+FROM rust:1.78.0-bookworm as wasm-builder
 
 RUN curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 

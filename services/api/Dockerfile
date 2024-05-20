@@ -1,5 +1,5 @@
 # https://hub.docker.com/_/rust
-FROM rust:1.76.0-bookworm as builder
+FROM rust:1.78.0-bookworm as builder
 
 RUN apt-get update \
     && apt-get install -y \
