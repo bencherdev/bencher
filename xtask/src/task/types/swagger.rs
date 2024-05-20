@@ -75,7 +75,7 @@ impl Swagger {
 }
 
 pub fn test_swagger_spec() -> anyhow::Result<()> {
-    let swagger_spec_str = std::fs::read_to_string(SWAGGER_PATH)?;
+    let swagger_spec_str = fs::read_to_string(SWAGGER_PATH)?;
     let swagger_spec: bencher_json::JsonSpec = serde_json::from_str(&swagger_spec_str)?;
     let version = swagger_spec
         .version()
