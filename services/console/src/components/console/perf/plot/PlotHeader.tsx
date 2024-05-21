@@ -238,9 +238,9 @@ const SharedPlot = (props: Props) => {
 	const range_icon = createMemo(() => {
 		switch (props.range()) {
 			case PerfRange.DATE_TIME:
-				return <i class="far fa-calendar" aria-hidden="true" />;
+				return <i class="far fa-calendar" />;
 			case PerfRange.VERSION:
-				return <i class="fas fa-code-branch" aria-hidden="true" />;
+				return <i class="fas fa-code-branch" />;
 		}
 	});
 
@@ -378,7 +378,7 @@ const SharedPlot = (props: Props) => {
 						}}
 					>
 						<span class="icon">
-							<i class="fas fa-times-circle" aria-hidden="true" />
+							<i class="fas fa-times-circle" />
 						</span>
 					</button>
 				</div>
@@ -404,7 +404,7 @@ const LineArrowButton = (props: {
 			}}
 		>
 			<span class="icon">
-				<i class={`fas fa-arrow-${props.arrow}`} aria-hidden="true" />
+				<i class={`fas fa-arrow-${props.arrow}`} />
 			</span>
 		</button>
 	);

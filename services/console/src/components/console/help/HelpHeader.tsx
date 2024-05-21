@@ -6,7 +6,7 @@ const HelpHeader = () => {
 			<div class="level-left">
 				<a class="button" title="Back" href={decodePath("/console")}>
 					<span class="icon">
-						<i class="fas fa-chevron-left" aria-hidden="true" />
+						<i class="fas fa-chevron-left" />
 					</span>
 					<span>Back</span>
 				</a>

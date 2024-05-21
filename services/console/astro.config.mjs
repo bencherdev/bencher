@@ -111,7 +111,7 @@ export default defineConfig({
 						"aria-label": "Link to section",
 					},
 					content: fromHtmlIsomorphic(
-						'<small><i class="fas fa-link" aria-hidden="true" /></small>',
+						'<small><i class="fas fa-link" /></small>',
 						{
 							fragment: true,
 						},

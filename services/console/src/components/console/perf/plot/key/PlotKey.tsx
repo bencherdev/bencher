@@ -123,7 +123,7 @@ const MinimizeKeyButton = (props: { handleKey: (key: boolean) => void }) => {
 			onClick={() => props.handleKey(false)}
 		>
 			<span class="icon has-text-primary">
-				<i class="far fa-minus-square fa-2x" aria-hidden="true" />
+				<i class="far fa-minus-square fa-2x" />
 			</span>
 		</button>
 	);
@@ -138,7 +138,7 @@ const MaximizeKeyButton = (props: { handleKey: (key: boolean) => void }) => {
 			onClick={() => props.handleKey(true)}
 		>
 			<span class="icon has-text-primary">
-				<i class="far fa-plus-square fa-2x" aria-hidden="true" />
+				<i class="far fa-plus-square fa-2x" />
 			</span>
 		</button>
 	);
@@ -148,7 +148,7 @@ const KeyResource = (props: { icon: string; name: string }) => {
 	return (
 		<div>
 			<span class="icon">
-				<i class={props.icon} aria-hidden="true" />
+				<i class={props.icon} />
 			</span>
 			<small style="word-break: break-all;">
 				<Show when={props.name} fallback={"Loading..."}>
@@ -210,9 +210,9 @@ const KeyToggle = (props: {
 			<span class="icon has-text-primary">
 				<Show
 					when={allActive()}
-					fallback={<i class="far fa-eye fa-1x" aria-hidden="true" />}
+					fallback={<i class="far fa-eye fa-1x" />}
 				>
-					<i class="far fa-eye-slash fa-1x" aria-hidden="true" />
+					<i class="far fa-eye-slash fa-1x" />
 				</Show>
 			</span>
 		</button>

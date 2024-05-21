@@ -75,7 +75,7 @@ const ProjectMenu = (props: Props) => {
 					href={path(Section.PERF)}
 				>
 					<span class="icon">
-						<i class="fas fa-chart-line" aria-hidden="true" />
+						<i class="fas fa-chart-line" />
 					</span>
 				</a>
 			</div>

@@ -36,7 +36,7 @@ const DeckHeaderButton = (props: Props) => {
 					}?${BACK_PARAM}=${encodePath()}`}
 				>
 					<span class="icon">
-						<i class="fas fa-pen" aria-hidden="true" />
+						<i class="fas fa-pen" />
 					</span>
 					<span>Edit</span>
 				</a>
@@ -75,7 +75,7 @@ const DeckHeaderButton = (props: Props) => {
 					}}
 				>
 					<span class="icon">
-						<i class="fas fa-sync-alt" aria-hidden="true" />
+						<i class="fas fa-sync-alt" />
 					</span>
 					<span>Refresh</span>
 				</button>

@@ -115,7 +115,7 @@ const TableHeaderButton = (props: {
 						href={props.button.path(pathname())}
 					>
 						<span class="icon">
-							<i class="fas fa-plus" aria-hidden="true" />
+							<i class="fas fa-plus" />
 						</span>
 						<span>Add</span>
 					</a>
@@ -127,7 +127,7 @@ const TableHeaderButton = (props: {
 						href={props.button.path(pathname())}
 					>
 						<span class="icon">
-							<i class="fas fa-envelope" aria-hidden="true" />
+							<i class="fas fa-envelope" />
 						</span>
 						<span>Invite</span>
 					</a>
@@ -143,7 +143,7 @@ const TableHeaderButton = (props: {
 						}}
 					>
 						<span class="icon">
-							<i class="fas fa-sync-alt" aria-hidden="true" />
+							<i class="fas fa-sync-alt" />
 						</span>
 						<span>Refresh</span>
 					</button>

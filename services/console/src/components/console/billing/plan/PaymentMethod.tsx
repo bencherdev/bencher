@@ -74,7 +74,7 @@ const CreditCardBrand = (props: {
 		<h4 class="subtitle is-4">
 			<span class="icon-text">
 				<span class="icon">
-					<i class={props.brand} aria-hidden="true" />
+					<i class={props.brand} />
 				</span>
 				<span>{props.name}</span>
 			</span>

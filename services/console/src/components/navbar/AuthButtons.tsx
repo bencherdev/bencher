@@ -19,7 +19,7 @@ const AuthButtons = () => {
 		>
 			<a class="button" href={decodePath("/console")}>
 				<span class="icon has-text-primary">
-					<i class="fas fa-angle-left" aria-hidden="true" />
+					<i class="fas fa-angle-left" />
 				</span>
 				<span>Back to Console</span>
 			</a>

@@ -1,5 +1,5 @@
 import { type Accessor, For, Show, Switch, Match } from "solid-js";
-import { PerfTab } from "../../../../../config/types";
+import type { PerfTab } from "../../../../../config/types";
 import { fmtDateTime } from "../../../../../config/util";
 import type { JsonReport } from "../../../../../types/bencher";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
@@ -224,7 +224,7 @@ const ReportDimension = (props: { icon: string; name: string }) => {
 	return (
 		<div>
 			<span class="icon">
-				<i class={props.icon} aria-hidden="true" />
+				<i class={props.icon} />
 			</span>
 			<small style="word-break: break-all;">{props.name}</small>
 		</div>

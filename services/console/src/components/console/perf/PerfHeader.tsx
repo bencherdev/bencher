@@ -72,7 +72,7 @@ const PerfHeader = (props: Props) => {
 									target="_blank"
 								>
 									<span class="icon">
-										<i class="fas fa-globe" aria-hidden="true" />
+										<i class="fas fa-globe" />
 									</span>
 									<span>Website</span>
 								</a>
@@ -92,7 +92,7 @@ const PerfHeader = (props: Props) => {
 											}}
 										>
 											<span class="icon">
-												<i class="fas fa-share" aria-hidden="true" />
+												<i class="fas fa-share" />
 											</span>
 											<span>Share</span>
 										</button>
@@ -110,7 +110,7 @@ const PerfHeader = (props: Props) => {
 										}}
 									>
 										<span class="icon">
-											<i class="fas fa-sync-alt" aria-hidden="true" />
+											<i class="fas fa-sync-alt" />
 										</span>
 										<span>Refresh</span>
 									</button>

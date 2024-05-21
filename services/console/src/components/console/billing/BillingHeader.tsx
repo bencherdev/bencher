@@ -19,7 +19,7 @@ const BillingHeader = (props: Props) => {
 					href={decodePath(props.config?.path(pathname()))}
 				>
 					<span class="icon">
-						<i class="fas fa-chevron-left" aria-hidden="true" />
+						<i class="fas fa-chevron-left" />
 					</span>
 					<span>Back</span>
 				</a>

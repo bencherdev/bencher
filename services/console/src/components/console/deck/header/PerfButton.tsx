@@ -48,7 +48,7 @@ const PerfButton = (props: Props) => {
 			href={url()}
 		>
 			<span class="icon">
-				<i class="fas fa-chart-line" aria-hidden="true" />
+				<i class="fas fa-chart-line" />
 			</span>
 			<span>Perf Plot</span>
 		</a>

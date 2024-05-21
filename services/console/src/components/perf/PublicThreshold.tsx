@@ -102,7 +102,7 @@ const PublicThreshold = (props: Props) => {
 								href={decodePath(`/perf/${props.params?.project}`)}
 							>
 								<span class="icon">
-									<i class="fas fa-chevron-left" aria-hidden="true" />
+									<i class="fas fa-chevron-left" />
 								</span>
 								<span>Back</span>
 							</a>

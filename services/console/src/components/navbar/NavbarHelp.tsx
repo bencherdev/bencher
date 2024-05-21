@@ -12,7 +12,7 @@ const NavbarHelp = () => {
 			}/help/?${BACK_PARAM}=${encodePath()}`}
 		>
 			<span class="icon has-text-primary">
-				<i class="fas fa-life-ring" aria-hidden="true" />
+				<i class="fas fa-life-ring" />
 			</span>
 			<span>Help</span>
 		</a>

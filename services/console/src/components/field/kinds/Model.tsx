@@ -168,7 +168,7 @@ const testSelectConfig = (modelTest: ModelTest) => {
 						title="Open documentation in new tab"
 					>
 						<span class="icon">
-							<i class="fas fa-book-open" aria-hidden="true" />
+							<i class="fas fa-book-open" />
 						</span>
 					</a>
 				</div>

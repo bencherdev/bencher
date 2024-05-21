@@ -83,7 +83,7 @@ const StatusButton = (props: Props) => {
 					}}
 				>
 					<span class="icon">
-						<i class="far fa-bell" aria-hidden="true" />
+						<i class="far fa-bell" />
 					</span>
 					<span>Dismiss</span>
 				</button>
@@ -100,7 +100,7 @@ const StatusButton = (props: Props) => {
 					}}
 				>
 					<span class="icon">
-						<i class="far fa-bell-slash" aria-hidden="true" />
+						<i class="far fa-bell-slash" />
 					</span>
 					<span>Reactivate</span>
 				</button>

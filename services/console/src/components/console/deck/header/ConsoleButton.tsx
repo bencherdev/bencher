@@ -18,7 +18,7 @@ const ConsoleButton = (props: Props) => {
 			}?${BACK_PARAM}=${encodePath()}`}
 		>
 			<span class="icon">
-				<i class="far fa-window-maximize" aria-hidden="true" />
+				<i class="far fa-window-maximize" />
 			</span>
 			<span>View in Console</span>
 		</a>
