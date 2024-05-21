@@ -99,8 +99,7 @@ async fn get_ls_inner(
     // All users should just see the public projects if the query is for public projects
     if let Some(auth_user) = auth_user {
         if !auth_user.is_admin(&context.rbac) {
-            let projects =
-                auth_user.projects(&context.rbac, Permission::View);
+            let projects = auth_user.projects(&context.rbac, Permission::View);
             query = query.filter(
                 schema::project::id
                     .eq_any(projects)
