@@ -19,7 +19,7 @@ const getThresholdUrl = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${
 let jsonThreshold: undefined | JsonThreshold;
 let title: string;
 let description: string;
-let notFound: boolean = false;
+let notFound = false;
 try {
 	const thresholdResponse = await fetchSSR(getThresholdUrl);
 	jsonThreshold = await thresholdResponse.json();

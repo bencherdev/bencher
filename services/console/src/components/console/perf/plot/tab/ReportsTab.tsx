@@ -41,6 +41,7 @@ const ReportsTab = (props: {
 						{(_) => (
 							<div class="panel-block is-block">
 								<div class="level">
+									{/* biome-ignore lint/a11y/useValidAnchor: loading fallback */}
 									<a class={`level-left ${themeText(props.theme())}`}>
 										<div class="level-item">
 											<div class="columns is-vcentered is-mobile">
@@ -59,6 +60,7 @@ const ReportsTab = (props: {
 									<Show when={props.isConsole}>
 										<div class="level-right">
 											<div class="level-item">
+												{/* biome-ignore lint/a11y/useValidAnchor: loading fallback */}
 												<a class="button">View</a>
 											</div>
 										</div>

@@ -19,7 +19,7 @@ const getAlertUrl = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${
 let jsonAlert: undefined | JsonAlert;
 let title: string;
 let description: string;
-let notFound: boolean = false;
+let notFound = false;
 try {
 	const alertResponse = await fetchSSR(getAlertUrl);
 	jsonAlert = await alertResponse.json();

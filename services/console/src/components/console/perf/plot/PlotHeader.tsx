@@ -147,7 +147,7 @@ const FullPlotHeader = (props: Props) => {
 								when={
 									props.isConsole &&
 									measure() &&
-									measure()?.uuid != BENCHER_MEASURE
+									measure()?.uuid !== BENCHER_MEASURE
 								}
 							>
 								<a

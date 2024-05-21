@@ -19,7 +19,7 @@ const getProjectUrl = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${
 let jsonProject: undefined | JsonProject;
 let title: string;
 let description: string;
-let notFound: boolean = false;
+let notFound = false;
 try {
 	const projectResponse = await fetchSSR(getProjectUrl);
 	jsonProject = await projectResponse.json();

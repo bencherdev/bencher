@@ -105,6 +105,7 @@ export const addTooltips = (chart, styles, hoverStyles) => {
 
 const hover = (tip, pos, text, styles) => {
 	const box_styles = { fill: "white", stroke: "#d3d3d3" };
+	/* biome-ignore lint/style/noParameterAssign: vendored */
 	if (styles === undefined) styles = box_styles;
 
 	const side_padding = 10;
@@ -142,7 +143,7 @@ const hover = (tip, pos, text, styles) => {
 };
 
 const id_generator = () => {
-	const S4 = function () {
+	const S4 = () => {
 		return (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
 	};
 	return `a${S4()}${S4()}`;

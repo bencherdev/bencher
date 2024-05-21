@@ -202,16 +202,13 @@ const KeyToggle = (props: {
 		<button
 			class="button is-small is-fullwidth"
 			type="button"
-			title={allActive() ? `Hide all plots` : `Show all plots`}
+			title={allActive() ? "Hide all plots" : "Show all plots"}
 			onClick={() => {
 				props.togglePerfActive();
 			}}
 		>
 			<span class="icon has-text-primary">
-				<Show
-					when={allActive()}
-					fallback={<i class="far fa-eye fa-1x" />}
-				>
+				<Show when={allActive()} fallback={<i class="far fa-eye fa-1x" />}>
 					<i class="far fa-eye-slash fa-1x" />
 				</Show>
 			</span>

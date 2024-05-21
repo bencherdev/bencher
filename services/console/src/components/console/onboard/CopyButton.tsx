@@ -27,12 +27,12 @@ const CopyButton = (props: Props) => {
 					when={copied()}
 					fallback={
 						<span class="icon">
-							<i class="far fa-copy"></i>
+							<i class="far fa-copy" />
 						</span>
 					}
 				>
 					<span class="icon has-text-success">
-						<i class="far fa-check-circle"></i>
+						<i class="far fa-check-circle" />
 					</span>
 				</Show>
 				<span>Copy to Clipboard</span>

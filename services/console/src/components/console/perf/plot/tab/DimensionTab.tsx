@@ -1,5 +1,5 @@
 import { type Accessor, For, Show, Switch, Match } from "solid-js";
-import { PerfTab } from "../../../../../config/types";
+import type { PerfTab } from "../../../../../config/types";
 import type {
 	JsonBenchmark,
 	JsonBranch,
@@ -54,7 +54,7 @@ const DimensionsTab = (props: {
 													<input type="checkbox" checked={false} />
 												</div>
 												<div class="column">
-													<small style="word-break: break-word;"></small>
+													<small style="word-break: break-word;" />
 												</div>
 											</div>
 										</div>
@@ -62,6 +62,7 @@ const DimensionsTab = (props: {
 									<Show when={props.isConsole}>
 										<div class="level-right">
 											<div class="level-item">
+												{/* biome-ignore lint/a11y/useValidAnchor: loading fallback */}
 												<a class="button">View</a>
 											</div>
 										</div>

@@ -134,7 +134,7 @@ const PlanPanel = (props: {
 						fallback={
 							<div class="panel-block">
 								<span class="panel-icon">
-									<i class="fas fa-check"></i>
+									<i class="fas fa-check" />
 								</span>
 								{feature}
 							</div>

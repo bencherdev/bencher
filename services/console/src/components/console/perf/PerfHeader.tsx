@@ -235,6 +235,10 @@ const ShareModal = (props: ShareProps) => {
 					e.preventDefault();
 					props.setShare(false);
 				}}
+				onKeyDown={(e) => {
+					e.preventDefault();
+					props.setShare(false);
+				}}
 			/>
 			<div class="modal-card">
 				<header class="modal-card-head">

@@ -233,7 +233,7 @@ const OnboardInvite = (props: Props) => {
 									<span class="icon-text">
 										<span>Next Step</span>
 										<span class="icon">
-											<i class="fas fa-chevron-right"></i>
+											<i class="fas fa-chevron-right" />
 										</span>
 									</span>
 								</a>

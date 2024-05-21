@@ -69,9 +69,8 @@ const get_units = (json_perf: JsonPerf) => {
 	const units = json_perf?.results?.[0]?.measure?.units;
 	if (units) {
 		return units;
-	} else {
-		return "units";
 	}
+	return "units";
 };
 
 const get_x_axis = (range: PerfRange): [string, string] => {
@@ -93,7 +92,7 @@ const get_x_type = (range: PerfRange) => {
 };
 
 const is_active = (alert: JsonPerfAlert) =>
-	alert?.status && alert.status == AlertStatus.Active;
+	alert?.status && alert.status === AlertStatus.Active;
 
 // A boundary is skipped if it is defined but its limit undefined
 // This indicates that the the boundary limit could not be calculated for the metric
@@ -133,7 +132,7 @@ const LinePlot = (props: Props) => {
 
 	createEffect(() => {
 		if (isPlotted()) {
-			let y_axis = document.querySelector(
+			const y_axis = document.querySelector(
 				"svg [aria-label='y-axis tick label']",
 			);
 			if (!y_axis) {
@@ -437,23 +436,22 @@ const LinePlot = (props: Props) => {
 							hoverStyles(),
 						)}
 					</div>
-					<>{setIsPlotted(true)}</>
+					{setIsPlotted(true)}
 				</>
 			);
-		} else {
-			return (
-				<section class="section">
-					<div class="container">
-						<div class="content">
-							<div>
-								<h3 class="title is-3">No data found</h3>
-								<h4 class="subtitle is-4">{new Date(Date.now()).toString()}</h4>
-							</div>
+		}
+		return (
+			<section class="section">
+				<div class="container">
+					<div class="content">
+						<div>
+							<h3 class="title is-3">No data found</h3>
+							<h4 class="subtitle is-4">{new Date(Date.now()).toString()}</h4>
 						</div>
 					</div>
-				</section>
-			);
-		}
+				</div>
+			</section>
+		);
 	};
 
 	return <>{plotted()}</>;

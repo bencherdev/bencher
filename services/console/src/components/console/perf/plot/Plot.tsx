@@ -33,9 +33,11 @@ const Plot = (props: Props) => {
 
 	const [_active] = createResource(props.perfData, (json_perf) => {
 		const active: boolean[] = [];
-		json_perf?.results?.forEach(() => {
-			active.push(true);
-		});
+		if (json_perf?.results) {
+			for (const _ of json_perf.results) {
+				active.push(true);
+			}
+		}
 		setPerfActive(active);
 		return active;
 	});
@@ -60,7 +62,11 @@ const Plot = (props: Props) => {
 
 	return (
 		<div class="container">
-			<div ref={(e) => (plot_ref = e)}>
+			<div
+				ref={(e) => {
+					plot_ref = e;
+				}}
+			>
 				<LinePlot
 					theme={props.theme}
 					isConsole={props.isConsole}

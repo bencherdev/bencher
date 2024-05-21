@@ -1,5 +1,5 @@
 import { type Accessor, Match, type Resource, Show, Switch } from "solid-js";
-import { type PerfRange, type PerfTab } from "../../../../config/types";
+import type { PerfRange, PerfTab } from "../../../../config/types";
 import type {
 	JsonAuthUser,
 	JsonBenchmark,
