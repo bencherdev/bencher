@@ -1,6 +1,6 @@
 import * as core from "@actions/core";
 import * as toolCache from "@actions/tool-cache";
-import { chmod } from "fs/promises";
+import { chmod } from "node:fs/promises";
 
 import swagger from "../../api/swagger.json";
 
