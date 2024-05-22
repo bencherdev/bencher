@@ -43,7 +43,7 @@ interface Props {
 }
 
 interface TablePanelConfig {
-	redirect: (tableData: Record<string, any>[]) => null | string;
+	redirect: (tableData: object[]) => null | string;
 	header: TableHeaderConfig;
 	table: TableConfig;
 }
@@ -125,7 +125,7 @@ const TablePanel = (props: Props) => {
 		};
 		token: string;
 	}) => {
-		const EMPTY_ARRAY: Record<string, any>[] = [];
+		const EMPTY_ARRAY: object[] = [];
 		if (!fetcher.bencher_valid || !validJwt(fetcher.token)) {
 			return EMPTY_ARRAY;
 		}
@@ -161,10 +161,7 @@ const TablePanel = (props: Props) => {
 				return EMPTY_ARRAY;
 			});
 	};
-	const [tableData, { refetch }] = createResource<Record<string, any>[]>(
-		fetcher,
-		getData,
-	);
+	const [tableData, { refetch }] = createResource<object[]>(fetcher, getData);
 	const tableDataLength = createMemo(() => tableData()?.length);
 
 	const handlePage = (page: number) => {

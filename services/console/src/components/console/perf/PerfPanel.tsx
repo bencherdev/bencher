@@ -523,7 +523,7 @@ const PerfPanel = (props: Props) => {
 				if (window.location.href.length === 2000) {
 					pageNotify(
 						NotifyKind.ERROR,
-						`This URL is exactly 2,000 characters. It may have been truncated by your web browser. Please, try opening the original link in a different web browser.`,
+						"This URL is exactly 2,000 characters. It may have been truncated by your web browser. Please, try opening the original link in a different web browser.",
 						{ [NOTIFY_TIMEOUT_PARAM]: MAX_NOTIFY_TIMEOUT },
 					);
 				} else {
@@ -732,12 +732,15 @@ const PerfPanel = (props: Props) => {
 		);
 	};
 	const handleChecked = (
-		resource_tab: any[],
+		resource_tab: TabList<JsonBranch | JsonTestbed | JsonBenchmark>,
 		index: number,
 		param: string,
 		param_array: string[],
 	) => {
 		const item = resource_tab?.[index];
+		if (!item) {
+			return;
+		}
 		const checked = item.checked;
 		if (typeof checked !== "boolean") {
 			return;

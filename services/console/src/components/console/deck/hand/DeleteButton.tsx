@@ -19,9 +19,9 @@ export interface Props {
 	apiUrl: string;
 	user: JsonAuthUser;
 	path: Accessor<string>;
-	data: Resource<Record<string, any>>;
+	data: Resource<object>;
 	subtitle: string;
-	redirect: (pathname: string, data: Record<string, any>) => string;
+	redirect: (pathname: string, data: object) => string;
 }
 
 const DeleteButton = (props: Props) => {

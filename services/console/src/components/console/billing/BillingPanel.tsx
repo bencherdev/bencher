@@ -276,6 +276,7 @@ const CloudSelfHostedLicensedPanel = (props: {
 			<code style="word-break: break-word;">
 				<a
 					title="Copy to clipboard"
+					// biome-ignore lint/a11y/useValidAnchor: copy to clipboard
 					onClick={(_) =>
 						navigator.clipboard.writeText(props.usage()?.license?.key ?? "")
 					}
@@ -291,6 +292,7 @@ const CloudSelfHostedLicensedPanel = (props: {
 					<li>
 						<a
 							title="Copy to clipboard"
+							// biome-ignore lint/a11y/useValidAnchor: copy to clipboard
 							onClick={(_) =>
 								navigator.clipboard.writeText(props.usage()?.license?.key ?? "")
 							}
@@ -369,7 +371,7 @@ const SelfHostedFreePanel = (props: {
 				console.error(error);
 				pageNotify(
 					NotifyKind.ERROR,
-					`Lettuce romaine calm! Failed to post license. Please, try again.`,
+					"Lettuce romaine calm! Failed to post license. Please, try again.",
 				);
 			});
 	};
@@ -390,7 +392,7 @@ const SelfHostedFreePanel = (props: {
 				<ol>
 					<li>
 						Create an account on{" "}
-						<a href="https://bencher.dev" target="_blank">
+						<a href="https://bencher.dev" target="_blank" rel="noreferrer">
 							Bencher Cloud
 						</a>{" "}
 						if you don't already have one
@@ -417,6 +419,7 @@ const SelfHostedFreePanel = (props: {
 						<code style="word-break: break-word;">
 							<a
 								title="Copy to clipboard"
+								// biome-ignore lint/a11y/useValidAnchor: copy to clipboard
 								onClick={(_) =>
 									navigator.clipboard.writeText(
 										props.usage()?.organization ?? "",

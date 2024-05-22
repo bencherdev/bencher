@@ -14,10 +14,9 @@ enum HttpMethod {
 export const apiHost = (hostname: string): string => {
 	if (hostname) {
 		return hostname;
-	} else {
-		const location = window.location;
-		return `${location.protocol}//${location.hostname}:61016`;
 	}
+	const location = window.location;
+	return `${location.protocol}//${location.hostname}:61016`;
 };
 
 export const apiUrl = (hostname: string, pathname: string): string =>
@@ -44,13 +43,13 @@ export const httpPost = async (
 	hostname: string,
 	pathname: string,
 	token: undefined | null | string,
-	data: {},
+	data: object,
 ) => axios(postOptions(hostname, pathname, token, data));
 export const postOptions = (
 	hostname: string,
 	pathname: string,
 	token: undefined | null | string,
-	data: {},
+	data: object,
 ) => {
 	return dataOptions(hostname, pathname, HttpMethod.POST, token, data);
 };
@@ -59,13 +58,13 @@ export const httpPut = async (
 	hostname: string,
 	pathname: string,
 	token: undefined | null | string,
-	data: {},
+	data: object,
 ) => axios(putOptions(hostname, pathname, token, data));
 export const putOptions = (
 	hostname: string,
 	pathname: string,
 	token: undefined | null | string,
-	data: {},
+	data: object,
 ) => {
 	return dataOptions(hostname, pathname, HttpMethod.PUT, token, data);
 };
@@ -74,13 +73,13 @@ export const httpPatch = async (
 	hostname: string,
 	pathname: string,
 	token: undefined | null | string,
-	data: {},
+	data: object,
 ) => axios(pathOptions(hostname, pathname, token, data));
 export const pathOptions = (
 	hostname: string,
 	pathname: string,
 	token: undefined | null | string,
-	data: Record<string, any>,
+	data: object,
 ) => {
 	return dataOptions(hostname, pathname, HttpMethod.PATCH, token, data);
 };
@@ -112,9 +111,8 @@ const headers = (token: undefined | null | string) => {
 			...HEADERS_CONTENT_TYPE,
 			Authorization: `Bearer ${token}`,
 		};
-	} else {
-		return HEADERS_CONTENT_TYPE;
 	}
+	return HEADERS_CONTENT_TYPE;
 };
 
 export const dataOptions = (
@@ -122,7 +120,7 @@ export const dataOptions = (
 	pathname: string,
 	method: HttpMethod,
 	token: undefined | null | string,
-	data: {},
+	data: object,
 ) => {
 	return {
 		url: apiUrl(hostname, pathname),

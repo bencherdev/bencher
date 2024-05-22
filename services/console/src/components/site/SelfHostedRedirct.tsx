@@ -1,7 +1,8 @@
 import { Show } from "solid-js";
 import { isBencherCloud } from "../../util/ext";
 import Redirect from "./Redirect";
-import Collection, { ApiCollections } from "../../util/collection";
+import type Collection from "../../util/collection";
+import { ApiCollections } from "../../util/collection";
 
 const SelfHostedRedirect = (props: {
 	path: string;

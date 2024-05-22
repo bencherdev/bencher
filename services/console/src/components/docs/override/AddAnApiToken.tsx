@@ -4,6 +4,7 @@ const AddAnApiToken = (props: { text: string }) => (
 	<a
 		href={`/console/users/${authUser()?.user?.slug}/tokens/add`}
 		target="_blank"
+		rel="noreferrer"
 	>
 		{props.text}
 	</a>

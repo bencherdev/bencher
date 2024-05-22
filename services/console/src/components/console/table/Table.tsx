@@ -24,7 +24,7 @@ export enum TableState {
 export interface Props {
 	config: TableConfig;
 	state: Accessor<TableState>;
-	tableData: Resource<any[]>;
+	tableData: Resource<object[]>;
 	start_date: Accessor<undefined | string>;
 	end_date: Accessor<undefined | string>;
 	search: Accessor<undefined | string>;
@@ -137,14 +137,14 @@ export interface RowsButtonConfig {
 	path: (pathname: string, datum: { [slug: string]: Slug }) => string;
 }
 
-const rowText = (config: RowConfig, datum: Record<string, any>) => {
+const rowText = (config: RowConfig, datum: Record<string, string>) => {
 	if (config?.kind === Row.DATE_TIME && config?.key) {
-		return fmtDateTime(datum[config?.key]);
+		return fmtDateTime(datum[config?.key] ?? "");
 	}
 	return fmtValues(datum, config?.key, config?.keys, " | ");
 };
 
-const rowHref = (config: RowsButtonConfig, datum: Record<string, any>) =>
+const rowHref = (config: RowsButtonConfig, datum: Record<string, string>) =>
 	`${config?.path?.(pathname(), datum)}?${BACK_PARAM}=${encodePath()}`;
 
 const BackButton = (props: {

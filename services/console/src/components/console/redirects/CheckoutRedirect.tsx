@@ -34,11 +34,11 @@ const CheckoutRedirect = (props: Props) => {
 			return;
 		}
 
-		const checkout = searchParams["checkout"];
-		const level = searchParams["level"];
-		const entitlementsString = searchParams["entitlements"];
-		const entitlements = parseInt(entitlementsString);
-		const self_hosted = searchParams["self_hosted"];
+		const checkout = searchParams.checkout;
+		const level = searchParams.level;
+		const entitlementsString = searchParams.entitlements;
+		const entitlements = Number.parseInt(entitlementsString);
+		const self_hosted = searchParams.self_hosted;
 		const billing = `/console/organizations/${props.organization}/billing`;
 		if (
 			!checkout ||

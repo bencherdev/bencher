@@ -11,7 +11,7 @@ const PricingLink = () => {
 				</a>
 			}
 		>
-			<div></div>
+			<div />
 		</Show>
 	);
 };

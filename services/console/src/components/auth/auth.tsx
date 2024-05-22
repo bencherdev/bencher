@@ -27,19 +27,19 @@ export const AUTH_FIELDS = {
 				{" "}
 				I agree to the{" "}
 				{
-					<a href="/legal/terms-of-use" target="_blank">
+					<a href="/legal/terms-of-use" target="_blank" rel="noreferrer">
 						terms of use
 					</a>
 				}
 				,{" "}
 				{
-					<a href="/legal/privacy" target="_blank">
+					<a href="/legal/privacy" target="_blank" rel="noreferrer">
 						privacy policy
 					</a>
 				}
 				, and{" "}
 				{
-					<a href="/legal/license" target="_blank">
+					<a href="/legal/license" target="_blank" rel="noreferrer">
 						license agreement
 					</a>
 				}

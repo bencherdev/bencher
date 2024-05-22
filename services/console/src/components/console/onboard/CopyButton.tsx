@@ -11,6 +11,7 @@ const CopyButton = (props: Props) => {
 
 	return (
 		<button
+			type="button"
 			class="button is-fullwidth"
 			title="Copy to clipboard"
 			onClick={(e) => {

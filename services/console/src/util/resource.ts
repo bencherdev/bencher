@@ -1,29 +1,29 @@
 export const fmtValues = (
-	data: undefined | Record<string, any>,
+	data: undefined | Record<string, number | string>,
 	key: undefined | string,
 	keys: undefined | string[][],
 	separator: string,
 ): undefined | number | string => {
 	if (!data) {
 		return;
-	} else if (key) {
+	}
+	if (key) {
 		return data[key];
-	} else if (keys) {
+	}
+	if (keys) {
 		return keys.reduce((accumulator, current, index) => {
 			const value = fmtNestedValue(data, current);
 			if (index === 0) {
 				return value;
-			} else {
-				return accumulator + separator + value;
 			}
+			return accumulator + separator + value;
 		}, "");
-	} else {
-		return "Unknown Item";
 	}
+	return "Unknown Item";
 };
 
 export const fmtNestedValue = (
-	datum: undefined | Record<string, any>,
+	datum: undefined | Record<string, string>,
 	keys: undefined | string[],
 ): string => {
 	if (!datum) {
@@ -33,9 +33,8 @@ export const fmtNestedValue = (
 		keys?.reduce((accumulator, current, index) => {
 			if (index === 0) {
 				return datum[current];
-			} else {
-				return accumulator?.[current];
 			}
+			return accumulator?.[current];
 		}, "") ?? ""
 	);
 };
@@ -51,7 +50,6 @@ export const setPageTitle = (title: undefined | string) => {
 	const page_title = fmtPageTitle(title);
 	if (document.title === page_title) {
 		return;
-	} else {
-		document.title = page_title;
 	}
+	document.title = page_title;
 };

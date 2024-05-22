@@ -19,7 +19,7 @@ export interface Props {
 	user: JsonAuthUser;
 	config: DeckHeaderConfig;
 	path: Accessor<string>;
-	data: Resource<Record<string, any>>;
+	data: Resource<object>;
 	handleRefresh: () => void;
 }
 

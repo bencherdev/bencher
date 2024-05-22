@@ -342,9 +342,9 @@ const FIELDS = {
 	[ModelTest.DeltaIqr]: iqrConfig(ModelTest.DeltaIqr),
 };
 
-const initForm = (fields) => {
-	let newForm = {};
-	fields.forEach((field) => {
+const initForm = (fields: object[]) => {
+	const newForm = {};
+	for (const field of fields) {
 		if (field.key) {
 			newForm[field.key] = {
 				kind: field.kind,
@@ -355,7 +355,7 @@ const initForm = (fields) => {
 				nullable: field.nullable,
 			};
 		}
-	});
+	}
 	return newForm;
 };
 
@@ -406,7 +406,9 @@ const Model = (props: Props) => {
 			}
 
 			if (form?.[key]?.nullable && !value) {
+				// biome-ignore lint/style/noParameterAssign: TODO
 				value = null;
+				// biome-ignore lint/style/noParameterAssign: TODO
 				valid = true;
 			}
 

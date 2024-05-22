@@ -44,9 +44,8 @@ const ViewCard = (props: Props) => {
 							{props.card?.field?.value?.options.reduce((field, option) => {
 								if (props.value === option.value) {
 									return option.option;
-								} else {
-									return field;
 								}
+								return field;
 							}, props.value)}
 						</Match>
 					</Switch>
@@ -56,6 +55,7 @@ const ViewCard = (props: Props) => {
 				<div class="card-footer">
 					<a
 						class="card-footer-item"
+						// biome-ignore lint/a11y/useValidAnchor: card link
 						onClick={(e) => {
 							e.preventDefault();
 							props.toggleUpdate();

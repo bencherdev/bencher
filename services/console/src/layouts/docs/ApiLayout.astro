@@ -34,13 +34,14 @@ const canonical = () => {
 		return `${BENCHER_SITE_URL}/docs/api/${collectionPath(
 			collection,
 		)}/${slug}/`;
-	} else if (collection) {
-		return `${BENCHER_SITE_URL}/docs/api/${collectionPath(collection)}/`;
-	} else if (slug) {
-		return `${BENCHER_SITE_URL}/docs/api/${slug}/`;
-	} else {
-		return `${BENCHER_SITE_URL}/docs/api/`;
 	}
+	if (collection) {
+		return `${BENCHER_SITE_URL}/docs/api/${collectionPath(collection)}/`;
+	}
+	if (slug) {
+		return `${BENCHER_SITE_URL}/docs/api/${slug}/`;
+	}
+	return `${BENCHER_SITE_URL}/docs/api/`;
 };
 ---
 

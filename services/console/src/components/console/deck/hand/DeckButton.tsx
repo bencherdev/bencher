@@ -10,14 +10,14 @@ export interface Props {
 	user: JsonAuthUser;
 	config: DeckButtonConfig;
 	path: Accessor<string>;
-	data: Resource<Record<string, any>>;
+	data: Resource<object>;
 }
 
 export interface DeckButtonConfig {
 	kind: ActionButton;
 	subtitle: string;
-	path: (pathname: string, data: Record<string, any>) => string;
-	is_allowed?: (apiUrl: string, data: Record<string, any>) => boolean;
+	path: (pathname: string, data: object) => string;
+	is_allowed?: (apiUrl: string, data: object) => boolean;
 }
 
 const DeckButton = (props: Props) => {

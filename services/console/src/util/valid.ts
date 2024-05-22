@@ -89,12 +89,12 @@ export const validateNumber = (
 ): boolean => {
 	if (input.length === 0) {
 		return false;
-	} else if (typeof input === "string") {
+	}
+	if (typeof input === "string") {
 		const num = Number(input.trim());
 		return validator(num);
-	} else {
-		return false;
 	}
+	return false;
 };
 
 export const validU32 = (input: undefined | number | string) => {
@@ -149,9 +149,7 @@ export const validCardNumber = (card_number: string): boolean => {
 };
 
 export const cleanCardNumber = (card_number: string): string => {
-	return card_number
-		.replace(new RegExp(" ", "g"), "")
-		.replace(new RegExp("-", "g"), "");
+	return card_number.replace(/ /g, "").replace(/-/g, "");
 };
 
 export const validExpiration = (expiration: string): boolean => {
@@ -162,9 +160,8 @@ export const validExpiration = (expiration: string): boolean => {
 
 		if (cleanExpiration(expiration) === null) {
 			return false;
-		} else {
-			return true;
 		}
+		return true;
 	});
 };
 

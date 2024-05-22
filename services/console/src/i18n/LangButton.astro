@@ -1,8 +1,9 @@
 ---
 import { DocsTab } from "../components/docs/menu/docs_tab";
-import Collection, { collectionPath } from "../util/collection";
+import type Collection from "../util/collection";
+import { collectionPath } from "../util/collection";
 import {
-	Language,
+	type Language,
 	allLanguages,
 	langBoxId,
 	langButtonId,
@@ -25,13 +26,14 @@ const path = (langauge: Language) => {
 		return `/${langPath(langauge)}${tabPath()}/${collectionPath(
 			collection,
 		)}/${slug}/`;
-	} else if (collection) {
-		return `/${langPath(langauge)}${tabPath()}/${collectionPath(collection)}/`;
-	} else if (slug) {
-		return `/${langPath(langauge)}${tabPath()}/${slug}/`;
-	} else {
-		return `/${langPath(langauge)}${tabPath()}/`;
 	}
+  if (collection) {
+		return `/${langPath(langauge)}${tabPath()}/${collectionPath(collection)}/`;
+	}
+  if (slug) {
+		return `/${langPath(langauge)}${tabPath()}/${slug}/`;
+	}
+  return `/${langPath(langauge)}${tabPath()}/`;
 };
 const tabPath = () => {
 	switch (tab) {

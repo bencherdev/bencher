@@ -45,6 +45,7 @@ const DisclosureInner = (props: {
 			<a
 				href={`https://github.com/bencherdev/bencher/issues/new?title=Issue+with+translation+to+${props.lang}&body=Issue+with+translation+to+${props.lang}+for+${props.page}&labels=documentation`}
 				target="_blank"
+				rel="noreferrer"
 			>
 				{props.linkText}
 			</a>

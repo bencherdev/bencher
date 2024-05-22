@@ -76,8 +76,8 @@ const UpdateCard = (props: Props) => {
 		}
 
 		setSubmitting(true);
-		let data = {};
-		for (let key of Object.keys(form)) {
+		const data = {};
+		for (const key of Object.keys(form)) {
 			const value = form?.[key]?.value;
 			switch (form?.[key]?.kind) {
 				case FieldKind.SELECT:
@@ -127,23 +127,23 @@ const UpdateCard = (props: Props) => {
 			});
 	};
 
-	const updatePath = (data: Record<string, any>) => {
+	const updatePath = (data: object) => {
 		// TODO once the above navigation moves over to a soft redirect
 		// Then these refreshes can be reenabled as opposed to a hard page reload
 		if (props.card?.path) {
 			const path = props.card?.path(props.params, data);
 			// props.handleLoopback(path);
 			return path;
-		} else {
-			// props.handleRefresh();
-			return;
 		}
+		return;
 	};
 
 	const handleField = (key: string, value: FieldValue, valid: boolean) => {
 		if (key && form?.[key]) {
 			if (form?.[key]?.nullable && !value) {
+				// biome-ignore lint/style/noParameterAssign: TODO
 				value = null;
+				// biome-ignore lint/style/noParameterAssign: TODO
 				valid = true;
 			}
 
@@ -199,6 +199,7 @@ const UpdateCard = (props: Props) => {
 				<a
 					class="card-footer-item"
 					style={!isSendable() ? "pointer-events:none;color:#fdb07e;" : ""}
+					// biome-ignore lint/a11y/useValidAnchor: card link
 					onClick={(e) => {
 						e.preventDefault();
 						sendForm();
@@ -208,6 +209,7 @@ const UpdateCard = (props: Props) => {
 				</a>
 				<a
 					class="card-footer-item"
+					// biome-ignore lint/a11y/useValidAnchor: card link
 					onClick={(e) => {
 						e.preventDefault();
 						props.toggleUpdate();

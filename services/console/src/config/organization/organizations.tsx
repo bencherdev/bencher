@@ -46,7 +46,7 @@ const organizationsConfig = {
 			buttons: [{ kind: Button.SEARCH }, { kind: Button.REFRESH }],
 		},
 		table: {
-			url: (_params: Params) => `/v0/organizations`,
+			url: (_params: Params) => "/v0/organizations",
 			row: {
 				key: "name",
 				items: [

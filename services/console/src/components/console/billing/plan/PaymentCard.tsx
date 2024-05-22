@@ -56,9 +56,8 @@ const PaymentCard = (props: Props) => {
 			form?.cvc?.valid
 		) {
 			return true;
-		} else {
-			return false;
 		}
+		return false;
 	};
 
 	const handleField = (key: string, value: FieldValue, valid: boolean) => {
@@ -300,7 +299,7 @@ const CARD_FIELDS = {
 				{" "}
 				I agree to the{" "}
 				{
-					<a href="/legal/subscription" target="_blank">
+					<a href="/legal/subscription" target="_blank" rel="noreferrer">
 						subscription agreement
 					</a>
 				}

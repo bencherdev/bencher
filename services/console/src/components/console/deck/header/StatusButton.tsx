@@ -14,7 +14,7 @@ export interface Props {
 	apiUrl: string;
 	user: JsonAuthUser;
 	path: Accessor<string>;
-	data: Resource<Record<string, any>>;
+	data: Resource<object>;
 	handleRefresh: () => void;
 }
 

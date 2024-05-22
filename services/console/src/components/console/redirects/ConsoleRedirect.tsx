@@ -125,7 +125,7 @@ const ConsoleRedirect = (props: Props) => {
 				switch (projects?.length) {
 					case 0:
 						navigate(
-							forwardParams(`/console/onboard/token`, [PLAN_PARAM], []),
+							forwardParams("/console/onboard/token", [PLAN_PARAM], []),
 							{ replace: true },
 						);
 						break;

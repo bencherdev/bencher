@@ -44,9 +44,9 @@ interface Props {
 }
 
 enum PlanKind {
-	Metered,
-	Licensed,
-	SelfHosted,
+	Metered = "metered",
+	Licensed = "licensed",
+	SelfHosted = "self-hosted",
 }
 
 const BillingForm = (props: Props) => {

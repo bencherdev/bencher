@@ -12,7 +12,7 @@ export interface Props {
 	user: JsonAuthUser;
 	config: DeckConfig;
 	path: Accessor<string>;
-	data: Resource<Record<string, any>>;
+	data: Resource<object>;
 	handleRefresh: () => void;
 	handleLoopback: (pathname: null | string) => void;
 }

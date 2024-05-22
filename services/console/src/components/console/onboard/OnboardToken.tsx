@@ -5,10 +5,10 @@ import { authUser } from "../../../util/auth";
 import { useSearchParams } from "../../../util/url";
 import { validJwt, validPlanLevel } from "../../../util/valid";
 import { httpGet, httpPost } from "../../../util/http";
-import {
+import type {
 	PlanLevel,
-	type JsonNewToken,
-	type JsonToken,
+	JsonNewToken,
+	JsonToken,
 } from "../../../types/bencher";
 import { PLAN_PARAM, planParam } from "../../auth/auth";
 import OnboardSteps from "./OnboardSteps";

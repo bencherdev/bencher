@@ -37,9 +37,8 @@ const OAuthForm = (props: Props) => {
 				</a>
 			</>
 		);
-	} else {
-		return <></>;
 	}
+	return <></>;
 };
 
 export default OAuthForm;

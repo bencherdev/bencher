@@ -1,18 +1,19 @@
 ---
 import { MethodKind, getSchema } from "./method";
 import BodyObject from "./BodyObject.astro";
-import type { Language } from "../../../i18n/ui";
+import { defaultLang, type Language } from "../../../i18n/ui";
 import { langPath } from "../../../i18n/utils";
 
 interface Props {
-	lang: Language;
+	lang?: Language;
 	schema: object;
 	path: string;
 	method: MethodKind;
 	properties: object;
 }
 
-const { lang, schema, path, method, properties } = Astro.props;
+const lang: Language = Astro.props.lang ?? defaultLang;
+const { schema, path, method, properties } = Astro.props;
 
 const getDefault = (name) => {
 	switch (name) {

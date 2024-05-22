@@ -14,7 +14,7 @@ export interface Props {
 	user: JsonAuthUser;
 	button: DeckHeaderButtonConfig;
 	path: Accessor<string>;
-	data: Resource<Record<string, any>>;
+	data: Resource<object>;
 	title: Accessor<string | number | undefined>;
 	handleRefresh: () => void;
 }

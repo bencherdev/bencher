@@ -26,20 +26,18 @@ export const setUser = (user: JsonAuthUser): boolean => {
 	if (validUser(user)) {
 		window.localStorage.setItem(BENCHER_USER_KEY, JSON.stringify(user));
 		return true;
-	} else {
-		console.error("Invalid user", user);
-		return false;
 	}
+	console.error("Invalid user", user);
+	return false;
 };
 
 export const getUser = (): JsonAuthUser => {
 	const user = getUserRaw();
 	if (validUser(user)) {
 		return user;
-	} else {
-		console.error("Invalid user", user);
-		return defaultUser;
 	}
+	console.error("Invalid user", user);
+	return defaultUser;
 };
 
 export const getUserRaw = (): JsonAuthUser => {

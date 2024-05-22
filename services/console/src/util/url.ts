@@ -53,6 +53,7 @@ setInterval(() => {
 	}
 }, 100);
 
+// biome-ignore lint/suspicious/noExplicitAny: vendor solid-js
 const [windowState, setWindowState] = createSignal<any>(window.history.state);
 setInterval(() => {
 	const state = window.history.state;
@@ -125,6 +126,7 @@ export function extractSearchParams(url: URL): Params {
 
 export function mergeSearchString(search: string, params: SetParams) {
 	const merged = new URLSearchParams(search);
+	// biome-ignore lint/complexity/noForEach: vendor solid-js
 	Object.entries(params).forEach(([key, value]) => {
 		if (value == null || value === "") {
 			merged.delete(key);
@@ -138,6 +140,7 @@ export function mergeSearchString(search: string, params: SetParams) {
 
 export function createLocation(
 	path: Accessor<string>,
+	// biome-ignore lint/suspicious/noExplicitAny: vendor solid-js
 	state: Accessor<any>,
 ): Location {
 	const origin = new URL("http://sar");
@@ -188,6 +191,7 @@ export function createMemoObject<T extends Record<string | symbol, unknown>>(
 	fn: () => T,
 ): T {
 	const map = new Map();
+	// biome-ignore lint/style/noNonNullAssertion: vendor solid-js
 	const owner = getOwner()!;
 	return new Proxy(<T>{}, {
 		get(_, property) {

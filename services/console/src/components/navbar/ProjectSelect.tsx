@@ -58,7 +58,7 @@ const ProjectSelect = (props: Props) => {
 		const path = `/v0/projects/${fetcher.project_slug}`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
-				let json_project: JsonProject = resp?.data;
+				const json_project: JsonProject = resp?.data;
 				return json_project.organization;
 			})
 			.catch((error) => {
@@ -72,9 +72,8 @@ const ProjectSelect = (props: Props) => {
 		const slug = params()?.project;
 		if (slug === undefined) {
 			return BENCHER_ALL_PROJECTS;
-		} else {
-			return slug;
 		}
+		return slug;
 	};
 	const [selected, setSelected] = createSignal(getSelected());
 
@@ -133,7 +132,7 @@ const ProjectSelect = (props: Props) => {
 		}
 
 		const p = projects();
-		for (let i in p) {
+		for (const i in p) {
 			const project = p[i];
 			const slug = project?.slug;
 			if (slug === target) {

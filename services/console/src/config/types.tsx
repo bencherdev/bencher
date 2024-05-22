@@ -1,18 +1,18 @@
 export enum BencherResource {
-	ORGANIZATIONS,
-	MEMBERS,
-	BILLING,
-	PROJECTS,
-	REPORTS,
-	BRANCHES,
-	TESTBEDS,
-	BENCHMARKS,
-	MEASURES,
-	THRESHOLDS,
-	ALERTS,
-	USERS,
-	TOKENS,
-	HELP,
+	ORGANIZATIONS = "organizations",
+	MEMBERS = "members",
+	BILLING = "billing",
+	PROJECTS = "projects",
+	REPORTS = "reports",
+	BRANCHES = "branches",
+	TESTBEDS = "testbeds",
+	BENCHMARKS = "benchmarks",
+	MEASURES = "measures",
+	THRESHOLDS = "thresholds",
+	ALERTS = "alerts",
+	USERS = "users",
+	TOKENS = "tokens",
+	HELP = "help",
 }
 
 export const resourceSingular = (resource: BencherResource) => {
@@ -82,48 +82,48 @@ export const resourcePlural = (resource: BencherResource) => {
 };
 
 export enum Operation {
-	LIST,
-	ADD,
-	VIEW,
-	EDIT,
-	DELETE,
+	LIST = "list",
+	ADD = "add",
+	VIEW = "view",
+	EDIT = "edit",
+	DELETE = "delete",
 }
 
 export enum Button {
-	ADD,
-	INVITE,
-	EDIT,
-	STATUS,
-	CONSOLE,
-	PERF,
-	REFRESH,
-	BACK,
-	SEARCH,
-	DATE_TIME,
+	ADD = "add",
+	INVITE = "invite",
+	EDIT = "edit",
+	STATUS = "status",
+	CONSOLE = "console",
+	PERF = "perf",
+	REFRESH = "refresh",
+	BACK = "back",
+	SEARCH = "search",
+	DATE_TIME = "date_time",
 }
 
 export enum ActionButton {
-	DELETE,
+	DELETE = "delete",
 }
 
 export enum Row {
-	TEXT,
-	DATE_TIME,
-	BOOL,
-	SELECT,
-	NESTED_TEXT,
+	TEXT = "text",
+	DATE_TIME = "date_time",
+	BOOL = "bool",
+	SELECT = "select",
+	NESTED_TEXT = "nested_text",
 }
 
 export enum Card {
-	FIELD,
-	TABLE,
-	NESTED_FIELD,
+	FIELD = "field",
+	TABLE = "table",
+	NESTED_FIELD = "nested_field",
 }
 
 export enum Display {
-	RAW,
-	SWITCH,
-	SELECT,
+	RAW = "raw",
+	SWITCH = "switch",
+	SELECT = "select",
 }
 
 export enum PerfTab {

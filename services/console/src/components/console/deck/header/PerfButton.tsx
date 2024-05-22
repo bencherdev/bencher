@@ -6,7 +6,7 @@ import { dateTimeMillis } from "../../../../util/convert";
 export interface Props {
 	isConsole: boolean;
 	params: Params;
-	data: Resource<Record<string, any>>;
+	data: Resource<object>;
 }
 
 // 30 days

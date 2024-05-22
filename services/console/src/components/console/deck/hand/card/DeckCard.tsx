@@ -1,4 +1,4 @@
-import { Accessor, Match, Resource, Switch } from "solid-js";
+import { type Accessor, Match, type Resource, Switch } from "solid-js";
 import FieldCard from "./FieldCard";
 import type { JsonAuthUser } from "../../../../../types/bencher";
 import { Card } from "../../../../../config/types";
@@ -12,7 +12,7 @@ export interface Props {
 	user: JsonAuthUser;
 	path: Accessor<string>;
 	card: CardConfig;
-	data: Resource<Record<string, any>>;
+	data: Resource<object>;
 	handleRefresh: () => void;
 	handleLoopback: (pathname: null | string) => void;
 }

@@ -4,7 +4,7 @@ import { Theme, getTheme, themeColor } from "./theme";
 const [theme, setTheme] = createSignal(Theme.Light);
 setInterval(() => {
 	const newTheme = getTheme();
-	if (theme() != newTheme) {
+	if (theme() !== newTheme) {
 		setTheme(newTheme);
 	}
 }, 100);

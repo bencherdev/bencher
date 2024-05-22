@@ -41,7 +41,7 @@ const Notification = (props: { suppress?: undefined | boolean }) => {
 	const notifyKind = createMemo(() => searchParams[NOTIFY_KIND_PARAM]);
 	const notifyText = createMemo(() => searchParams[NOTIFY_TEXT_PARAM]);
 	const notifyTimeout = createMemo(() =>
-		parseInt(searchParams[NOTIFY_TIMEOUT_PARAM] ?? `${NOTIFY_TIMEOUT}`),
+		Number.parseInt(searchParams[NOTIFY_TIMEOUT_PARAM] ?? `${NOTIFY_TIMEOUT}`),
 	);
 	const notifyLinkUrl = createMemo(() => searchParams[NOTIFY_LINK_URL_PARAM]);
 	const notifyLinkText = createMemo(() => searchParams[NOTIFY_LINK_TEXT_PARAM]);

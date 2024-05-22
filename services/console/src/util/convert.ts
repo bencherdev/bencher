@@ -28,13 +28,13 @@ export const fmtDate = (date_str: undefined | string) => {
 	return null;
 };
 
-export const addToArray = (array: any[], add: any): string[] => {
+export const addToArray = (array: string[], add: string): string[] => {
 	if (!array.includes(add)) {
 		array.push(add);
 	}
 	return array;
 };
-export const removeFromArray = (array: any[], remove: any): string[] => {
+export const removeFromArray = (array: string[], remove: string): string[] => {
 	const index = array.indexOf(remove);
 	if (index > -1) {
 		array.splice(index, 1);
@@ -49,11 +49,11 @@ export const arrayFromString = (array_str: undefined | string): string[] => {
 	}
 	return [];
 };
-export const arrayToString = (array: any[]) => array.join();
+export const arrayToString = (array: string[]) => array.join();
 
 export const timeToDate = (time_str: undefined | string): null | Date => {
 	if (typeof time_str === "string") {
-		const time = parseInt(time_str);
+		const time = Number.parseInt(time_str);
 		if (Number.isInteger(time)) {
 			const date = new Date(time);
 			if (date) {

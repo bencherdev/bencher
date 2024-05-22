@@ -17,7 +17,7 @@ const GitHubLink = () => {
 				</a>
 			}
 		>
-			<div></div>
+			<div />
 		</Show>
 	);
 };

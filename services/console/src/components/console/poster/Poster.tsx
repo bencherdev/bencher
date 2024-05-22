@@ -6,7 +6,11 @@ import { createStore } from "solid-js/store";
 import { authUser } from "../../../util/auth";
 import { BACK_PARAM, pathname } from "../../../util/url";
 import { validJwt } from "../../../util/valid";
-import { Operation, Resource, resourceSingular } from "../../../config/types";
+import {
+	Operation,
+	type BencherResource,
+	resourceSingular,
+} from "../../../config/types";
 import { httpPost, httpPut } from "../../../util/http";
 import type { Params } from "astro";
 import { NotifyKind, navigateNotify, pageNotify } from "../../../util/notify";
@@ -14,7 +18,7 @@ import { NotifyKind, navigateNotify, pageNotify } from "../../../util/notify";
 export interface Props {
 	apiUrl: string;
 	params: Params;
-	resource: Resource;
+	resource: BencherResource;
 	operation: Operation;
 	config: PosterConfig;
 }
@@ -22,7 +26,7 @@ export interface Props {
 export interface PosterConfig {
 	url: (params: Params) => string;
 	fields: PosterFieldConfig[];
-	path: (pathname: string, resp: any) => string;
+	path: (pathname: string, resp: object) => string;
 	button: string;
 }
 
@@ -49,8 +53,8 @@ export interface PosterField {
 }
 
 const initForm = (fields: PosterFieldConfig[]) => {
-	let newForm: PosterForm = {};
-	fields.forEach((field) => {
+	const newForm: PosterForm = {};
+	for (const field of fields) {
 		if (field.key) {
 			newForm[field.key] = {
 				kind: field.kind,
@@ -61,7 +65,7 @@ const initForm = (fields: PosterFieldConfig[]) => {
 				nullable: field.nullable,
 			};
 		}
-	});
+	}
 	return newForm;
 };
 
@@ -85,6 +89,7 @@ const Poster = (props: Props) => {
 		switch (props.operation) {
 			case Operation.EDIT:
 				return await httpPut(props.apiUrl, path, token, data);
+			// biome-ignore lint/complexity/noUselessSwitchCase: code as docs
 			case Operation.ADD:
 			default:
 				return await httpPost(props.apiUrl, path, token, data);
@@ -167,7 +172,9 @@ const Poster = (props: Props) => {
 	const handleField = (key: string, value: FieldValue, valid: boolean) => {
 		if (key && form?.[key]) {
 			if (form?.[key]?.nullable && !value) {
+				// biome-ignore lint/style/noParameterAssign: TODO
 				value = null;
+				// biome-ignore lint/style/noParameterAssign: TODO
 				valid = true;
 			}
 

@@ -39,7 +39,7 @@ export enum HeadersKind {
 
 export const getSchema = (schema) => getRef(parseSchemaRef(schema));
 
-export const parseSchemaRef = (schema) => schema?.["$ref"]?.split("/")?.pop();
+export const parseSchemaRef = (schema) => schema?.$ref?.split("/")?.pop();
 
 export const getRef = (ref) => openapi?.components?.schemas?.[ref];
 

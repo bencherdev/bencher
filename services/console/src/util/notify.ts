@@ -32,7 +32,7 @@ export const isNotifyText = (text: undefined | string) =>
 export const isNotifyTimeout = (timeout: undefined | string) =>
 	typeof timeout === "string" &&
 	timeout.length > 0 &&
-	Number.isInteger(parseInt(timeout));
+	Number.isInteger(Number.parseInt(timeout));
 
 export const forwardParams = (
 	pathname: string,
@@ -46,8 +46,8 @@ export const forwardParams = (
 		return pathname;
 	}
 
-	let searchParams = new URLSearchParams();
-	let currentParams = new URLSearchParams(window.location.search);
+	const searchParams = new URLSearchParams();
+	const currentParams = new URLSearchParams(window.location.search);
 
 	if (Array.isArray(keepParams)) {
 		for (const [key, value] of currentParams.entries()) {
@@ -67,14 +67,13 @@ export const forwardParams = (
 		}
 	}
 
-	let params_str = searchParams.toString();
+	const params_str = searchParams.toString();
 	// console.log(`${href}?${params_str}`);
 	if (params_str.length === 0) {
 		return pathname;
-	} else {
-		// console.log(params_str);
-		return `${pathname}?${params_str}`;
 	}
+	// console.log(params_str);
+	return `${pathname}?${params_str}`;
 };
 
 export const notifyPath = (
@@ -84,15 +83,12 @@ export const notifyPath = (
 	keepParams: null | string[],
 	setParams: null | [string, string][],
 ) => {
-	if (setParams === null) {
-		setParams = [];
-	}
-	setParams = [
+	const params = [
 		[NOTIFY_KIND_PARAM, notifyKind.toString()],
 		[NOTIFY_TEXT_PARAM, notifyText],
-		...setParams,
+		...(setParams ?? []),
 	];
-	return forwardParams(pathname, keepParams, setParams);
+	return forwardParams(pathname, keepParams, params);
 };
 
 export const navigateNotify = (
@@ -103,10 +99,13 @@ export const navigateNotify = (
 	setParams: null | [string, string][],
 	hidden?: boolean,
 ) => {
-	if (to === null) {
-		to = pathname();
-	}
-	const path = notifyPath(notifyKind, notifyText, to, keepParams, setParams);
+	const path = notifyPath(
+		notifyKind,
+		notifyText,
+		to ?? pathname(),
+		keepParams,
+		setParams,
+	);
 	if (hidden) {
 		hiddenRedirect(path);
 	} else {

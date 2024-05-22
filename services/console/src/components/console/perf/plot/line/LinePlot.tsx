@@ -183,11 +183,10 @@ const LinePlot = (props: Props) => {
 		let metrics_found = false;
 		const colors = d3.schemeTableau10;
 		const project_slug = json_perf.project.slug;
-		// biome-ignore lint/complexity/noForEach: <explanation>
-		json_perf.results.forEach((result, index) => {
+		for (const [index, result] of json_perf.results.entries()) {
 			const perf_metrics = result.metrics;
 			if (!(Array.isArray(perf_metrics) && props.perfActive[index])) {
-				return;
+				continue;
 			}
 
 			const line_data = [];
@@ -400,7 +399,7 @@ const LinePlot = (props: Props) => {
 					),
 				),
 			);
-		});
+		}
 		// This allows the alert images to appear on top of the plot lines.
 		plot_arrays.push(...warn_arrays, ...alert_arrays);
 

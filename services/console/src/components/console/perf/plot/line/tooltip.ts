@@ -25,10 +25,12 @@ export const addTooltips = (chart, styles, hoverStyles) => {
 			d3.select(this).attr("fill") === "none"
 		) {
 			d3.select(this).style("pointer-events", "visibleStroke");
+			/* biome-ignore lint/style/noParameterAssign: vendored */
 			if (styles === undefined) styles = stroke_styles;
 		}
 	});
 
+	/* biome-ignore lint/style/noParameterAssign: vendored */
 	if (styles === undefined) styles = fill_styles;
 
 	const tip = wrapper

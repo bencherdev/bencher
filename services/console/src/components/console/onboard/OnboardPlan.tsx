@@ -5,7 +5,7 @@ import { authUser } from "../../../util/auth";
 import { useSearchParams } from "../../../util/url";
 import { validJwt, validPlanLevel } from "../../../util/valid";
 import { httpGet } from "../../../util/http";
-import { type JsonOrganization, type PlanLevel } from "../../../types/bencher";
+import type { JsonOrganization, PlanLevel } from "../../../types/bencher";
 import { PLAN_PARAM } from "../../auth/auth";
 import OnboardSteps from "./OnboardSteps";
 import BillingPanel from "../billing/BillingPanel";

@@ -280,6 +280,7 @@ const OnboardProject = (props: Props) => {
 										handleField={handleField}
 									/>
 									<button
+										type="button"
 										class="button is-primary is-fullwidth"
 										title="Save project name"
 										disabled={!isSendable()}
