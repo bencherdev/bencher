@@ -13,7 +13,7 @@ enum Collection {
 	server = "server",
 	// Learn
 	rust = "rust",
-	case_study = "case_study",
+	case_study = "case-study",
 	engineering = "engineering",
 	// Onboard,
 	onboard = "onboard",
