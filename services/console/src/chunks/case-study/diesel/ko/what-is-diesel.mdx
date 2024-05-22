@@ -1,0 +1,24 @@
+## Diesel이란 무엇인가요?
+
+[Diesel][github diesel]은 Rust를 위한 안전하고 확장 가능한 객체 관계 매핑(ORM) 및 쿼리 빌더입니다.
+ORM은 관계형 데이터베이스와 프로그래밍 언어 간의 변환을 위해 사용됩니다.
+Diesel은 강력한 타입의 ORM입니다.
+모든 데이터베이스 상호작용을 컴파일 시점에 체크하여 런타임 오류를 방지합니다.
+이 컴파일 시점 체크로 인해 Diesel은 SQL에 대한 무비용 추상화를 제공합니다.
+모든 보일러플레이트 코드를 제거함으로써, Diesel은 Rust 코드에서 진정으로 중요한 것에 집중할 수 있게 합니다.
+
+Diesel은 [세 가지 가장 인기 있는 오픈 소스 데이터베이스][stackoverflow databases]를 지원합니다:
+
+- PostgreSQL
+- MySQL
+- SQLite
+
+또한 Diesel을 확장하여 [Oracle][github diesel oci]을 지원하는 서드파티 크레이트도 있습니다.
+
+> 🐰 재미있는 사실: Bencher는 [우리의 SQLite 데이터베이스를 관리하기 위해][sqlite] Diesel을 사용합니다!
+
+[github diesel]: https://github.com/diesel-rs/diesel
+[stackoverflow databases]: https://survey.stackoverflow.co/2023/#most-popular-technologies-database-prof
+[github diesel oci]: https://github.com/GiGainfosystems/diesel-oci
+
+[sqlite]: /ko/learn/engineering/sqlite-performance-tuning/

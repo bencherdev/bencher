@@ -1,0 +1,30 @@
+## Kontinuierliches Benchmarking für Diesel
+
+Bevor Diesel begann, ihre Benchmarks zu verfolgen,
+richtete Georg Semmler [Relative Continuous Benchmarking][relative continuous benchmarking] für das Diesel-Projekt ein.
+Zwischen dem 2. November 2020 und dem 29. Januar 2021,
+fügte er einen [GitHub Actions Workflow][github actions diesel benches] hinzu, der über ein `run-benchmarks` Label in einem Pull-Request aktiviert wurde.
+Sobald das Label hinzugefügt wurde, führte GitHub Actions die Benchmarks sowohl auf dem aktuellen `master`-Zweig als auch auf dem PR-Zweig aus
+und verglich anschließend die Ergebnisse mit [`critcmp`][github critcmp].
+Aufgrund von Sicherheitsbedenken bezüglich [pwn requests][github pwn requests] hatte er noch keinen Weg gefunden, die Ergebnisse sicher im PR selbst zu veröffentlichen.
+Dies bedeutete, dass die Benchmark-Ergebnisse manuell überprüft werden mussten, um eine Leistungsverschlechterung zu erkennen,
+und die Ergebnisse [nach 90 Tagen gelöscht würden][github actions logs].
+
+Nach der Entdeckung von [Bencher][bencher],
+wollte er die fortschrittlichen statistischen Schwellenwerte und Alarme von Bencher [ausnutzen][thresholds]
+und Bencher's [Fähigkeit, sicher Kommentare zu Pull-Requests zu hinterlassen][github actions].
+Bencher war auch flexibel genug, um Diesel weiterhin die Verwendung des `run-benchmarks`-Tags und `critcmp` als Fallback zu ermöglichen.
+Mit diesen Änderungen [im Diesel integriert am 23. Februar 2024][github issue 3849],
+können sie nun ihre Ergebnisse des Relativen Kontinuierlichen Benchmarkings viel einfacher vergleichen
+und Leistungsverschlechterungen in Pull-Requests erkennen.
+
+[github actions diesel benches]: https://github.com/diesel-rs/diesel/commit/6670f96f0ecccd8f28d302299750d6d6a9bd0524
+[github pwn requests]: https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
+[github critcmp]: https://github.com/BurntSushi/critcmp
+[github actions logs]: https://docs.github.com/en/organizations/managing-organization-settings/configuring-the-retention-period-for-github-actions-artifacts-and-logs-in-your-organization
+[github issue 3849]: https://github.com/diesel-rs/diesel/pull/3849
+
+[relative continuous benchmarking]: /de/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+[bencher]: /
+[thresholds]: /de/docs/explanation/thresholds/
+[github actions]: /de/docs/how-to/github-actions/

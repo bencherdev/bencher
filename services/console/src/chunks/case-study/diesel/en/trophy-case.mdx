@@ -1,0 +1,25 @@
+## Trophy Case
+
+- [PR #3180][pr 3180]: The benchmarks caught a >13% performance regression in boxed query performance.
+- [PR #2774][pr 2774] | [PR #2788][pr 2788] | [PR #3098][pr 3098]: The benchmarks showed that the proposed optimizations were not necessary.
+That is, they did not result in the expected performance improvements, so they were not merged.
+- [PR #2799][pr 2799]: The benchmarks caught a slight performance regressions in the SQLite and MySQL backends.
+These regressions were deemed acceptable by the maintainers given the ergonomic improvements afforded by the changes.
+- [PR #2827][pr 2827]: The benchmarks showed that using prepared statements for inserts improved performance by >10% and up to 2x-3x for SQLite.
+- [PR #2931][pr 2931]: The benchmarks showed that rewriting the bind serialization layer for SQLite created a >35% performance improvement on inserts.
+- [PR #3109][pr 3109]: The instruction count based benchmarks show that optimizing the SQLite statement iterator lead to a 1-6% improvement in query performance.
+- [PR #3110][pr 3110]: The instruction count based benchmarks showed that inlining building from a SQL row lead to a 5% improvement.
+- [PR #3944][pr 3944]: This was the first pull request to use the new Bencher integration!
+The benchmarks still had to be run locally in order to detect a performance regression.
+So let's take this chance to celebrate a false negative and tune those thresholds!
+
+[pr 3180]: https://github.com/diesel-rs/diesel/pull/3180
+[pr 2774]: https://github.com/diesel-rs/diesel/pull/2774
+[pr 2788]: https://github.com/diesel-rs/diesel/pull/2788
+[pr 3098]: https://github.com/diesel-rs/diesel/pull/3098
+[pr 2799]: https://github.com/diesel-rs/diesel/pull/2799
+[pr 2827]: https://github.com/diesel-rs/diesel/pull/2827
+[pr 2931]: https://github.com/diesel-rs/diesel/pull/2931
+[pr 3109]: https://github.com/diesel-rs/diesel/pull/3109
+[pr 3110]: https://github.com/diesel-rs/diesel/pull/3110
+[pr 3944]: https://github.com/diesel-rs/diesel/pull/3944

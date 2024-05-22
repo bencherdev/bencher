@@ -1,0 +1,18 @@
+## Conclusión
+
+El proyecto Diesel y Georg Semmler en particular, han dedicado mucho tiempo y esfuerzo para asegurarse de que Diesel se mantenga rápido.
+Tienen un conjunto integral de pruebas de rendimiento que se pueden ejecutar tanto localmente como en CI para pruebas basadas en el tiempo de reloj.
+Las pruebas basadas en el conteo de instrucciones deben ejecutarse localmente, lo que requiere un poco más de esfuerzo por parte de los mantenedores para utilizarlas.
+También rastrean sus resultados de pruebas de rendimiento a lo largo del tiempo para detectar cualquier cambio de rendimiento imprevisto.
+
+Además de las pruebas de rendimiento propias, también han creado y mantenido un conjunto de pruebas de rendimiento comparativas.
+Esto permite a Diesel compararse con los otros ocho ORM más populares en el ecosistema de Rust.
+Usan esta comparación como una oportunidad para aprender de otros ORM en dónde pueden mejorar.
+
+Diesel ha tejido un mosaico de soluciones de pruebas de rendimiento para detectar regresiones de rendimiento antes de que se liberen.
+Si tu proyecto no tiene el tiempo y los recursos para construir y mantener una solución personalizada de pruebas de rendimiento continuas,
+[como el proyecto Rustls][rustls], entonces podría ser útil seguir el ejemplo del proyecto Diesel.
+
+Un agradecimiento muy especial a Georg Semmler por revisar este estudio de caso.
+
+[rustls]: /es/learn/case-study/rustls/

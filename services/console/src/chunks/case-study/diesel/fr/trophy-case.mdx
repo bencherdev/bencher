@@ -1,0 +1,25 @@
+## Vitrine des Trophées
+
+- [PR #3180][pr 3180] : Les benchmarks ont détecté une régression de performance de plus de 13% dans la performance des requêtes encapsulées.
+- [PR #2774][pr 2774] | [PR #2788][pr 2788] | [PR #3098][pr 3098] : Les benchmarks ont montré que les optimisations proposées n'étaient pas nécessaires.
+Autrement dit, elles n'ont pas donné les améliorations de performance escomptées, donc elles n'ont pas été fusionnées.
+- [PR #2799][pr 2799] : Les benchmarks ont détecté de légères régressions de performance dans les backends SQLite et MySQL.
+Ces régressions ont été jugées acceptables par les mainteneurs compte tenu des améliorations ergonomiques apportées par les changements.
+- [PR #2827][pr 2827] : Les benchmarks ont montré que l'utilisation de déclarations préparées pour les insertions améliorait la performance de plus de 10% et jusqu'à 2x-3x pour SQLite.
+- [PR #2931][pr 2931] : Les benchmarks ont montré que la réécriture de la couche de sérialisation de liaison pour SQLite a créé une amélioration de performance de plus de 35% sur les insertions.
+- [PR #3109][pr 3109] : Les benchmarks basés sur le nombre d'instructions montrent que l'optimisation de l'itérateur de déclaration SQLite a conduit à une amélioration de 1-6% des performances des requêtes.
+- [PR #3110][pr 3110] : Les benchmarks basés sur le nombre d'instructions ont montré que l'inlining en construisant à partir d'une ligne SQL a conduit à une amélioration de 5%.
+- [PR #3944][pr 3944] : Ceci était la première pull request à utiliser la nouvelle intégration Bencher !
+Les benchmarks devaient encore être exécutés localement afin de détecter une régression de performance.
+Profitons donc de cette occasion pour célébrer un faux négatif et ajuster ces seuils !
+
+[pr 3180]: https://github.com/diesel-rs/diesel/pull/3180
+[pr 2774]: https://github.com/diesel-rs/diesel/pull/2774
+[pr 2788]: https://github.com/diesel-rs/diesel/pull/2788
+[pr 3098]: https://github.com/diesel-rs/diesel/pull/3098
+[pr 2799]: https://github.com/diesel-rs/diesel/pull/2799
+[pr 2827]: https://github.com/diesel-rs/diesel/pull/2827
+[pr 2931]: https://github.com/diesel-rs/diesel/pull/2931
+[pr 3109]: https://github.com/diesel-rs/diesel/pull/3109
+[pr 3110]: https://github.com/diesel-rs/diesel/pull/3110
+[pr 3944]: https://github.com/diesel-rs/diesel/pull/3944

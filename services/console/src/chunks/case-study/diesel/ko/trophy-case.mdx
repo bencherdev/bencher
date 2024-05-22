@@ -1,0 +1,25 @@
+## 트로피 케이스
+
+- [PR #3180][pr 3180]: 벤치마크가 박싱된 쿼리 성능에서 13% 이상의 성능 저하를 잡아냈습니다.
+- [PR #2774][pr 2774] | [PR #2788][pr 2788] | [PR #3098][pr 3098]: 벤치마크는 제안된 최적화가 필요하지 않음을 보여주었습니다.
+즉, 예상되는 성능 개선이 이루어지지 않았으므로 병합되지 않았습니다.
+- [PR #2799][pr 2799]: 벤치마크가 SQLite 및 MySQL 백엔드에서 약간의 성능 저하를 잡아냈습니다.
+이러한 성능 저하는 변경 사항이 제공하는 사용성 개선을 고려할 때 유지 관리자가 수용할 수 있는 수준으로 판단되었습니다.
+- [PR #2827][pr 2827]: 삽입을 위한 준비된 문장을 사용하면 SQLite의 경우 10% 이상에서 최대 2배에서 3배까지 성능이 향상됨을 벤치마크가 보여주었습니다.
+- [PR #2931][pr 2931]: SQLite의 바인드 직렬화 레이어를 다시 작성하면 삽입 작업에서 35% 이상의 성능 개선이 이루어짐을 벤치마크가 보여주었습니다.
+- [PR #3109][pr 3109]: 명령어 수 기반 벤치마크는 SQLite 문장 반복자를 최적화하면 쿼리 성능이 1-6% 향상됨을 보여줍니다.
+- [PR #3110][pr 3110]: 명령어 수 기반 벤치마크는 SQL 행에서 빌딩을 인라인 처리하면 5%의 성능 개선을 보여줍니다.
+- [PR #3944][pr 3944]: 이것은 새로운 Bencher 통합을 사용한 첫 번째 풀 리퀘스트였습니다!
+벤치마크는 성능 저하를 감지하기 위해 여전히 로컬에서 실행해야 했습니다.
+그러므로 이 기회를 통해 false negative를 기념하고 그 임계값을 조정합시다!
+
+[pr 3180]: https://github.com/diesel-rs/diesel/pull/3180
+[pr 2774]: https://github.com/diesel-rs/diesel/pull/2774
+[pr 2788]: https://github.com/diesel-rs/diesel/pull/2788
+[pr 3098]: https://github.com/diesel-rs/diesel/pull/3098
+[pr 2799]: https://github.com/diesel-rs/diesel/pull/2799
+[pr 2827]: https://github.com/diesel-rs/diesel/pull/2827
+[pr 2931]: https://github.com/diesel-rs/diesel/pull/2931
+[pr 3109]: https://github.com/diesel-rs/diesel/pull/3109
+[pr 3110]: https://github.com/diesel-rs/diesel/pull/3110
+[pr 3944]: https://github.com/diesel-rs/diesel/pull/3944

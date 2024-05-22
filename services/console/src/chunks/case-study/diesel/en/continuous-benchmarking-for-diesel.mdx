@@ -1,0 +1,31 @@
+## Continuous Benchmarking for Diesel
+
+Before Diesel started to track their benchmarks,
+Georg Semmler set up [Relative Continuous Benchmarking][relative continuous benchmarking] for the Diesel project.
+Between 02 November 2020 and 29 January 2021,
+he [add a GitHub Actions workflow][github actions diesel benches] that was activated via a `run-benchmarks` label on a pull request.
+Once the label was added, GitHub Actions would run the benchmarks on both the current `master` and the PR branch
+and then compare the results using [`critcmp`][github critcmp].
+Due to security concerns around [pwn requests][github pwn requests], he had not yet found a way to safely post the results to the PR itself.
+This meant that the benchmark results had to be manually inspected to detect a performance regression,
+and the results would [be deleted in 90 days][github actions logs].
+
+After finding out about [Bencher][bencher],
+he wanted to take advantage of Bencher's [advanced statistical thresholds and alerts][thresholds]
+and Bencher's [ability to safely comment on pull requests][github actions].
+Bencher was also flexible enough to allow Diesel to still use it's `run-benchmarks` tag and keep `critcmp` as a fallback.
+With these changes [merge into Diesel on 23 February 2024][github issue 3849],
+they are now able to more easily compare their Relative Continuous Benchmarking results
+and catch performance regressions in pull requests.
+
+[github actions diesel benches]: https://github.com/diesel-rs/diesel/commit/6670f96f0ecccd8f28d302299750d6d6a9bd0524
+[github pwn requests]: https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
+[github critcmp]: https://github.com/BurntSushi/critcmp
+[github actions logs]: https://docs.github.com/en/organizations/managing-organization-settings/configuring-the-retention-period-for-github-actions-artifacts-and-logs-in-your-organization
+[github issue 3849]: https://github.com/diesel-rs/diesel/pull/3849
+
+[relative continuous benchmarking]: /docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+[bencher]: /
+[thresholds]: /docs/explanation/thresholds/
+[github actions]: /docs/how-to/github-actions/
+

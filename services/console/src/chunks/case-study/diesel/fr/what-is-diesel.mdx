@@ -1,0 +1,25 @@
+## Qu'est-ce que Diesel ?
+
+[Diesel][github diesel] est un mappeur objet-relationnel (ORM) sécurisé et extensible, ainsi qu'un constructeur de requêtes pour Rust.
+Un ORM est utilisé pour traduire entre une base de données relationnelle et un langage de programmation.
+Diesel est un ORM fortement typé.
+Il vérifie toutes les interactions avec la base de données au moment de la compilation, empêchant ainsi les erreurs d'exécution.
+Cette vérification au moment de la compilation fait également de Diesel une abstraction à coût nul sur SQL.
+En éliminant tout le code passe-partout, Diesel vous permet de vous concentrer sur ce qui compte vraiment dans votre code Rust.
+
+Diesel prend en charge [les trois bases de données open source les plus populaires][stackoverflow databases] :
+
+- PostgreSQL
+- MySQL
+- SQLite
+
+Il existe également un crate tiers qui étend Diesel
+pour ajouter la prise en charge d'[Oracle][github diesel oci].
+
+> 🐰 Fait amusant : Bencher utilise Diesel pour [gérer notre base de données SQLite][sqlite] !
+
+[github diesel]: https://github.com/diesel-rs/diesel
+[stackoverflow databases]: https://survey.stackoverflow.co/2023/#most-popular-technologies-database-prof
+[github diesel oci]: https://github.com/GiGainfosystems/diesel-oci
+
+[sqlite]: /fr/learn/engineering/sqlite-performance-tuning/

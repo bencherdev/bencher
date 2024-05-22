@@ -1,0 +1,25 @@
+## 什么是 Diesel？
+
+[Diesel][github diesel] 是一个安全、可扩展的面向对象关系映射（ORM）和查询生成器，用于 Rust。
+ORM 用于在关系数据库和编程语言之间进行转换。
+Diesel 是一个强类型 ORM。
+它在编译时检查所有的数据库交互，防止运行时错误。
+这种编译时检查也使得 Diesel 成为 SQL 的零成本抽象。
+通过消除所有的样板代码，Diesel 让你能够专注于 Rust 代码中真正重要的部分。
+
+Diesel 支持[三个最受欢迎的开源数据库][stackoverflow databases]：
+
+- PostgreSQL
+- MySQL
+- SQLite
+
+还有一个第三方 crate 扩展了 Diesel，
+增加了对 [Oracle][github diesel oci] 的支持。
+
+> 🐰 有趣小知识：Bencher 使用 Diesel 来[管理我们的 SQLite 数据库][sqlite]！
+
+[github diesel]: https://github.com/diesel-rs/diesel
+[stackoverflow databases]: https://survey.stackoverflow.co/2023/#most-popular-technologies-database-prof
+[github diesel oci]: https://github.com/GiGainfosystems/diesel-oci
+
+[sqlite]: /zh/learn/engineering/sqlite-performance-tuning/

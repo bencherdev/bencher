@@ -1,0 +1,31 @@
+## Dieselのための継続的ベンチマーク
+
+Dieselがベンチマークのトラッキングを始める前に、
+Georg SemmlerはDieselプロジェクトのために[相対継続ベンチマーク][relative continuous benchmarking]を設置しました。
+2020年11月2日から2021年1月29日までの間に、
+彼は[`run-benchmarks`ラベル][github actions diesel benches]がプルリクエストに追加されると
+GitHub Actionsが現在の`master`ブランチとPRブランチの両方でベンチマークを実行し、
+結果を[`critcmp`][github critcmp]を使って比較するワークフローを追加しました。
+[不正リクエスト][github pwn requests]に関するセキュリティ上の懸念から、
+彼はまだ結果をPR自体に安全に投稿する方法を見つけていませんでした。
+これにより、パフォーマンスの低下を検出するためにベンチマークの結果を手動でチェックする必要があり、
+結果は[90日後に削除される][github actions logs]ことになります。
+
+[Bencher][bencher]を知った後、
+彼はBencherの[高度な統計的閾値とアラート][thresholds]や
+Bencherの[プルリクエストに安全にコメントする][github actions]能力を利用したいと考えました。
+Bencherは柔軟性があり、Dieselが`run-benchmarks`タグを使用し続け、`critcmp`をフォールバックとして維持することが可能でした。
+これらの変更が[2024年2月23日にDieselにマージされ][github issue 3849]、
+それ以降は相対継続ベンチマークの結果をより簡単に比較し、
+プルリクエストでのパフォーマンスの低下をキャッチできるようになりました。
+
+[relative continuous benchmarking]: /ja/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+[bencher]: /
+[thresholds]: /ja/docs/explanation/thresholds/
+[github actions]: /ja/docs/how-to/github-actions/
+
+[github actions diesel benches]: https://github.com/diesel-rs/diesel/commit/6670f96f0ecccd8f28d302299750d6d6a9bd0524
+[github pwn requests]: https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
+[github critcmp]: https://github.com/BurntSushi/critcmp
+[github actions logs]: https://docs.github.com/en/organizations/managing-organization-settings/configuring-the-retention-period-for-github-actions-artifacts-and-logs-in-your-organization
+[github issue 3849]: https://github.com/diesel-rs/diesel/pull/3849

@@ -1,0 +1,55 @@
+## Diesel 벤치마킹
+
+Diesel의 [첫 커밋][github diesel first commit]은 프로젝트의 창시자인 [Sage Griffin][github sgrif]이 2015년 8월 23일에 커밋하였습니다.
+이 시점은 [Rust 1.0이 출시된][rust v1] 지 3개월 후였으며, 이들은 처음에 내장된 [libtest bench][libtest bench] 벤치마킹 도구를 사용하였습니다.
+그러다가 [2020년 11월 3일][github diesel 2507], 벤치마킹 도구로 [Criterion][criterion]을 사용하기 시작했습니다.
+
+Diesel이 Criterion으로 전환했을 때, [다른 Rust ORM과 비교하여 벤치마킹][github diesel bench]도 시작했습니다.
+이 벤치마크 비교 모음에는 이제 다음과 같은 것들이 포함됩니다:
+
+- [Diesel][github diesel]
+- [SQLx][github sqlx]
+- [Rustorm][github rustorm]
+- [Quaint][github quaint]
+- [Postgres][github postgres]
+- [Rusqlite][github rusqlite]
+- [Mysql][github mysql]
+- [diesel-async][github diesel async]
+- [wtx][github wtx]
+- [SeaORM][github seaorm]
+
+콘트리뷰터이자 현재 리드 유지 보수자인 [Georg Semmler][github weiznich]가 Diesel 벤치마크 결과를 계속 추적하기 시작한 것은 2021년 5월 5일이었습니다.
+그는 [야간 GitHub 액션][github actions diesel metrics]을 만들어 벤치마크를 실행하고
+[별도의 메트릭 저장소][github diesel metrics]를 생성하여 벤치마크 결과를 추적했습니다.
+GitHub 액션 러너의 잡음으로 인해, 이 결과는 큰 변화에 대한 일반적인 추세를 보여주는 데만 의존합니다.
+또한, 모니터링 설정이 없기 때문에 Diesel 유지 보수자들은 성능 저하를 파악하기 위해 결과를 수동으로 확인해야 합니다.
+
+변화의 성능 영향을 더 잘 이해하기 위해,
+[2022년 3월 20일][github diesel 3103]
+[`criterion-perf-events`를 사용한][github criterion perf events] 명령어 카운트 기반 벤치마킹이 추가되었습니다.
+`criterion-perf-events`는 Linux `perf` 이벤트를 사용하기 때문에, GitHub 액션에서는 실행할 수 없습니다.
+따라서 이러한 벤치마크는 로컬에서 실행해야 합니다.
+
+[github diesel first commit]: https://github.com/diesel-rs/diesel/commit/b6b65709ae0c4591713d286273afc293f4e36ca1
+[github sgrif]: https://github.com/sgrif
+[rust v1]: https://blog.rust-lang.org/2015/05/15/Rust-1.0.html
+[github diesel 2507]: https://github.com/diesel-rs/diesel/pull/2507
+[github diesel bench]: https://github.com/diesel-rs/diesel/tree/master/diesel_bench
+[github diesel]: https://github.com/diesel-rs/diesel
+[github sqlx]: https://github.com/launchbadge/sqlx
+[github rustorm]: https://github.com/ivanceras/rustorm
+[github quaint]: https://github.com/prisma/quaint
+[github postgres]: https://github.com/sfackler/rust-postgres
+[github rusqlite]: https://github.com/rusqlite/rusqlite
+[github mysql]: https://github.com/blackbeam/rust-mysql-simple
+[github diesel async]: https://github.com/weiznich/diesel_async
+[github wtx]: https://github.com/c410-f3r/wtx
+[github seaorm]: https://github.com/SeaQL/sea-orm
+[github weiznich]: https://github.com/weiznich
+[github diesel metrics]: https://github.com/diesel-rs/metrics
+[github actions diesel metrics]: https://github.com/diesel-rs/diesel/commit/f585d63ce573259fc848ff2d561fe5e86faadd6e
+[github criterion perf events]: https://github.com/jbreitbart/criterion-perf-events
+[github diesel 3103]: https://github.com/diesel-rs/diesel/pull/3103
+
+[libtest bench]: /ko/learn/benchmarking/rust/libtest-bench/
+[criterion]: /ko/learn/benchmarking/rust/criterion/

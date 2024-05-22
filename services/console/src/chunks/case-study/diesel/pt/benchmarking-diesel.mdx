@@ -1,0 +1,58 @@
+## Benchmarking Diesel
+
+O [primeiro commit][github diesel first commit] do Diesel foi feito pelo criador do projeto [Sage Griffin][github sgrif] em 23 de agosto de 2015.
+Isso foi apenas três meses após o [lançamento do Rust 1.0][rust v1],
+então eles inicialmente usaram o mecanismo de benchmarking [libtest bench][libtest bench] embutido.
+Então, [em 03 de novembro de 2020][github diesel 2507], eles mudaram para o uso do [Criterion][criterion] como seu mecanismo de benchmarking.
+
+Quando o Diesel mudou para usar o Criterion,
+eles também começaram a [se benchmark contra outros ORMs Rust][github diesel bench].
+Este conjunto de comparação de benchmarks agora inclui:
+
+- [Diesel][github diesel]
+- [SQLx][github sqlx]
+- [Rustorm][github rustorm]
+- [Quaint][github quaint]
+- [Postgres][github postgres]
+- [Rusqlite][github rusqlite]
+- [Mysql][github mysql]
+- [diesel-async][github diesel async]
+- [wtx][github wtx]
+- [SeaORM][github seaorm]
+
+Não foi até 05 de maio de 2021 que o colaborador e agora mantenedor principal
+[Georg Semmler][github weiznich] começou a rastrear os resultados do benchmark do Diesel ao longo do tempo.
+Ele criou [uma GitHub Action noturna][github actions diesel metrics] para executar os benchmarks
+e [um repositório de métricas separado][github diesel metrics] para rastrear os resultados dos benchmarks.
+Devido ao ruído dos runners do GitHub Action, esses resultados são confiáveis apenas para mostrar uma tendência geral para grandes mudanças.
+Também não há configuração de monitoramento, então os mantenedores do Diesel precisam verificar manualmente os resultados para detectar uma regressão de desempenho.
+
+Para obter uma compreensão ainda melhor do impacto de desempenho de uma mudança,
+[em 20 de março de 2022][github diesel 3103]
+foi adicionado o benchmarking baseado em contagem de instruções [usando `criterion-perf-events`][github criterion perf events].
+Devido ao uso de eventos `perf` do Linux pelo `criterion-perf-events`, ele não pode ser executado nas GitHub Actions.
+Portanto, esses benchmarks precisam ser executados localmente.
+
+[github diesel first commit]: https://github.com/diesel-rs/diesel/commit/b6b65709ae0c4591713d286273afc293f4e36ca1
+[github sgrif]: https://github.com/sgrif
+[rust v1]: https://blog.rust-lang.org/2015/05/15/Rust-1.0.html
+[github diesel 2507]: https://github.com/diesel-rs/diesel/pull/2507
+[github diesel bench]: https://github.com/diesel-rs/diesel/tree/master/diesel_bench
+[github diesel]: https://github.com/diesel-rs/diesel
+[github sqlx]: https://github.com/launchbadge/sqlx
+[github rustorm]: https://github.com/ivanceras/rustorm
+[github quaint]: https://github.com/prisma/quaint
+[github postgres]: https://github.com/sfackler/rust-postgres
+[github rusqlite]: https://github.com/rusqlite/rusqlite
+[github mysql]: https://github.com/blackbeam/rust-mysql-simple
+[github diesel async]: https://github.com/weiznich/diesel_async
+[github wtx]: https://github.com/c410-f3r/wtx
+[github seaorm]: https://github.com/SeaQL/sea-orm
+[github weiznich]: https://github.com/weiznich
+[github diesel metrics]: https://github.com/diesel-rs/metrics
+[github actions diesel metrics]: https://github.com/diesel-rs/diesel/commit/f585d63ce573259fc848ff2d561fe5e86faadd6e
+[github criterion perf events]: https://github.com/jbreitbart/criterion-perf-events
+[github diesel 3103]: https://github.com/diesel-rs/diesel/pull/3103
+
+[libtest bench]: /pt/learn/benchmarking/rust/libtest-bench/
+[criterion]: /pt/learn/benchmarking/rust/criterion/

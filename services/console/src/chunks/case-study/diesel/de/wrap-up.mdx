@@ -1,0 +1,18 @@
+## Abschluss
+
+Das Diesel-Projekt und insbesondere Georg Semmler haben viel Zeit und Mühe investiert, um sicherzustellen, dass Diesel schnell bleibt.
+Sie haben ein umfassendes Benchmarking-Suite, die sowohl lokal als auch in CI für Benchmarks basierend auf der Echtzeit-Uhr ausgeführt werden kann.
+Die auf der Anzahl der Anweisungen basierenden Benchmarks müssen lokal ausgeführt werden, was etwas mehr Aufwand seitens der Maintainer erfordert.
+Sie verfolgen auch ihre Benchmark-Ergebnisse im Laufe der Zeit, um unvorhergesehene Leistungsänderungen zu erkennen.
+
+Zusätzlich zum eigenen Benchmarking haben sie auch eine vergleichende Benchmarking-Suite erstellt und gepflegt.
+Dies ermöglicht Diesel, sich mit den anderen acht beliebtesten ORMs im Rust-Ökosystem zu vergleichen.
+Sie nutzen diesen Vergleich als Gelegenheit, von anderen ORMs zu lernen, wo sie sich verbessern können.
+
+Diesel hat eine Patchwork-Lösung von Benchmarking-Tools zusammengestellt, um Leistungsverschlechterungen zu erkennen, bevor sie veröffentlicht werden.
+Wenn Ihr Projekt nicht die Zeit und Ressourcen hat, um eine maßgeschneiderte kontinuierliche Benchmarking-Lösung zu erstellen und zu pflegen,
+[wie das Rustls-Projekt][rustls], dann möchten Sie vielleicht einen Blick auf die Praktiken des Diesel-Projekts werfen.
+
+Ein ganz besonderes Dankeschön an Georg Semmler für die Überprüfung dieser Fallstudie.
+
+[rustls]: /de/learn/case-study/rustls/

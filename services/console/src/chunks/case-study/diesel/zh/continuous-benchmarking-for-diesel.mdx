@@ -1,0 +1,29 @@
+## Diesel的持续基准测试
+
+在Diesel开始跟踪他们的基准测试之前，
+Georg Semmler为Diesel项目设置了[相对持续基准测试][relative continuous benchmarking]。
+在2020年11月2日到2021年1月29日期间，
+他[添加了一个GitHub Actions工作流程][github actions diesel benches]，该工作流程通过拉取请求上的`run-benchmarks`标签激活。
+一旦标签被添加，GitHub Actions会在当前的`master`和PR分支上运行基准测试，
+然后使用[`critcmp`][github critcmp]比较结果。
+由于[防止pwn请求][github pwn requests]的安全问题，他还没找到一种安全的方式将结果发布到PR本身。
+这意味着必须手动检查基准测试结果以检测性能回归，
+并且结果会在[90天后被删除][github actions logs]。
+
+在了解[Bencher][bencher]后，
+他想利用Bencher的[高级统计阈值和警报][thresholds]和Bencher[安全注释拉取请求的能力][github actions]。
+Bencher还足够灵活，允许Diesel继续使用其`run-benchmarks`标签，并保留`critcmp`作为备用。
+随着这些改变[在2024年2月23日合并到Diesel][github issue 3849]，
+他们现在能更轻松地比较相对持续基准测试结果，
+并在拉取请求中捕捉性能回归。
+
+[relative continuous benchmarking]: /zh/docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+[bencher]: /
+[thresholds]: /zh/docs/explanation/thresholds/
+[github actions]: /zh/docs/how-to/github-actions/
+
+[github actions diesel benches]: https://github.com/diesel-rs/diesel/commit/6670f96f0ecccd8f28d302299750d6d6a9bd0524
+[github pwn requests]: https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
+[github critcmp]: https://github.com/BurntSushi/critcmp
+[github actions logs]: https://docs.github.com/en/organizations/managing-organization-settings/configuring-the-retention-period-for-github-actions-artifacts-and-logs-in-your-organization
+[github issue 3849]: https://github.com/diesel-rs/diesel/pull/3849

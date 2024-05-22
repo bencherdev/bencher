@@ -1,0 +1,18 @@
+## Conclusão
+
+O projeto Diesel e, em particular, Georg Semmler dedicaram muito tempo e esforço para garantir que o Diesel permaneça rápido.
+Eles possuem um suíte de benchmarking abrangente que pode ser executado localmente e em CI para benchmarks baseados no relógio de parede.
+Os benchmarks baseados na contagem de instruções devem ser executados localmente, o que requer um pouco mais de esforço por parte dos mantenedores.
+Eles também acompanham os resultados dos benchmarks ao longo do tempo para identificar quaisquer mudanças de desempenho inesperadas.
+
+Além de realizar os próprios benchmarks, eles também criaram e mantêm um suíte de benchmarking comparativo.
+Isso permite que o Diesel se compare com os outros oito ORMs mais populares no ecossistema Rust.
+Eles usam essa comparação como uma oportunidade para aprender com outros ORMs sobre onde podem melhorar.
+
+O Diesel costurou um patchwork de soluções de benchmarking para detectar regressões de desempenho antes de serem lançadas.
+Se seu projeto não tiver tempo e recursos para construir e manter uma solução de benchmarking contínua personalizada,
+[como o projeto Rustls][rustls], você pode querer seguir o exemplo do projeto Diesel.
+
+Um agradecimento muito especial a Georg Semmler por revisar este estudo de caso.
+
+[rustls]: /pt/learn/case-study/rustls/
