@@ -15,13 +15,12 @@ const collection = Collection.projects;
 export async function getStaticPaths() {
 	const collection = Collection.projects;
 	const pages = await getCollection(collection);
-	return otherLanguages
-		.flatMap((lang) => {
-			return pages.map((page) => ({
-				params: { lang, slug: page.slug },
-				props: { page },
-			}));
-		});
+	return otherLanguages.flatMap((lang) => {
+		return pages.map((page) => ({
+			params: { lang, slug: page.slug },
+			props: { page },
+		}));
+	});
 }
 // 2. When it's time to render, you can get the entry directly from the prop
 const { page } = Astro.props;

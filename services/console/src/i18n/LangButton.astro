@@ -27,13 +27,13 @@ const path = (langauge: Language) => {
 			collection,
 		)}/${slug}/`;
 	}
-  if (collection) {
+	if (collection) {
 		return `/${langPath(langauge)}${tabPath()}/${collectionPath(collection)}/`;
 	}
-  if (slug) {
+	if (slug) {
 		return `/${langPath(langauge)}${tabPath()}/${slug}/`;
 	}
-  return `/${langPath(langauge)}${tabPath()}/`;
+	return `/${langPath(langauge)}${tabPath()}/`;
 };
 const tabPath = () => {
 	switch (tab) {
