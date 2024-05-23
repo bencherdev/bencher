@@ -1,0 +1,29 @@
+---
+import Pagination, { PaginationSize } from "../../site/Pagination";
+import FallbackTable from "./FallbackTable";
+
+const DEFAULT_PER_PAGE = 8;
+const DEFAULT_PAGE = 1;
+---
+
+<div>
+    <nav class="level">
+            <div class="level-left">
+                <div class="level-item">
+                    <h3 class="title is-3">&nbsp;</h3>
+                </div>
+            </div>
+    </nav>
+    <FallbackTable />
+    <section class="section">
+      <div class="container">
+        <Pagination
+            size={PaginationSize.REGULAR}
+            data_len={() => 0}
+            per_page={() => DEFAULT_PER_PAGE}
+            page={() => DEFAULT_PAGE}
+            handlePage={(_page) => {}}
+        />
+      </div>
+    </section>
+  </div>

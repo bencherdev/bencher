@@ -1,7 +1,8 @@
 ---
+import type { Params } from "astro";
 import ConsoleLayout from "./ConsoleLayout.astro";
 import UserMenu from "../../components/console/menu/UserMenu";
-import type { Params } from "astro";
+import UserFallbackMenu from "../../components/console/menu/UserFallbackMenu";
 
 interface Props {
 	apiUrl: string;
@@ -13,6 +14,8 @@ const { apiUrl, params, title } = Astro.props;
 ---
 
 <ConsoleLayout apiUrl={apiUrl} params={params} title={title}>
-  <UserMenu client:only="solid-js" slot="menu" />
+  <UserMenu client:only="solid-js" slot="menu">
+	<UserFallbackMenu slot="fallback" />
+  </UserMenu>
   <slot />
 </ConsoleLayout>

@@ -4,6 +4,7 @@ export const prerender = false;
 import ProjectLayout from "../../../../../layouts/console/ProjectLayout.astro";
 import TablePanel from "../../../../../components/console/table/TablePanel";
 import { BencherResource } from "../../../../../config/types";
+import FallbackTablePanel from "../../../../../components/console/table/FallbackTablePanel.astro";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
@@ -17,5 +18,7 @@ const title = "Branches";
     apiUrl={BENCHER_API_URL}
     params={params}
     resource={BencherResource.BRANCHES}
-  />
+  >
+    <FallbackTablePanel slot="fallback" />
+  </TablePanel>
 </ProjectLayout>

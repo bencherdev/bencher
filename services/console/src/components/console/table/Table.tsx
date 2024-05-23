@@ -12,6 +12,7 @@ import { fmtDateTime } from "../../../config/util";
 import type { Slug } from "../../../types/bencher";
 import { fmtValues } from "../../../util/resource";
 import { BACK_PARAM, encodePath, pathname } from "../../../util/url";
+import FallbackTable from "./FallbackTable";
 
 export enum TableState {
 	LOADING = 0,
@@ -43,8 +44,7 @@ const Table = (props: Props) => {
 	return (
 		<Switch fallback={<p>ERROR: Unknown table state</p>}>
 			<Match when={props.state() === TableState.LOADING}>
-				{/* biome-ignore lint/complexity/noUselessFragments: loading */}
-				<></>
+				<FallbackTable />
 			</Match>
 
 			<Match when={props.state() === TableState.EMPTY}>
