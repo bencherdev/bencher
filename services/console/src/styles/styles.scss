@@ -5,8 +5,9 @@ $disabled: #fdb07e;
 // Path to Bulma's sass folder
 @use "../node_modules/bulma/sass" with ($primary: $orange, $link: $orange);
 
+// https://bulma.io/documentation/start/responsiveness/#breakpoints
 @mixin mobile {
-  @media (max-width: 600px) {
+  @media (max-width: 768px) {
     @content;
   }
 }
