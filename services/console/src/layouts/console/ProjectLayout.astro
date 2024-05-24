@@ -2,6 +2,7 @@
 import ConsoleLayout from "./ConsoleLayout.astro";
 import ProjectMenu from "../../components/console/menu/ProjectMenu";
 import type { Params } from "astro";
+import ProjectFallbackMenu from "../../components/console/menu/ProjectFallbackMenu";
 
 interface Props {
 	apiUrl: string;
@@ -14,6 +15,8 @@ const { apiUrl, params, title, redirect } = Astro.props;
 ---
 
 <ConsoleLayout apiUrl={apiUrl} params={params} title={title} redirect={redirect}>
-  <ProjectMenu client:only="solid-js" slot="menu" apiUrl={apiUrl} params={params} />
+  <ProjectMenu client:only="solid-js" slot="menu" apiUrl={apiUrl} params={params}>
+	<ProjectFallbackMenu slot="fallback" />
+  </ProjectMenu>
   <slot />
 </ConsoleLayout>
