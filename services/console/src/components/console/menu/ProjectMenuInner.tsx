@@ -16,11 +16,24 @@ const ProjectMenuInner = (props: {
 	project: Accessor<undefined | string>;
 	active_alerts: Accessor<number>;
 }) => {
-	const path = (section: Section) =>
-		`/console/projects/${props.project()}/${section}`;
+	const path = (section?: Section) =>
+		section
+			? `/console/projects/${props.project()}/${section}`
+			: `/console/projects/${props.project()}`;
 
 	return (
 		<aside class="menu is-sticky">
+			{/* <div class="menu-label">
+				<a
+					class="button is-fullwidth"
+					title="View Project Dashboard"
+					href={path()}
+				>
+					<span class="icon">
+						<i class="fas fa-th-large" />
+					</span>
+				</a>
+			</div> */}
 			<div class="menu-label">
 				<a
 					class="button is-fullwidth"
