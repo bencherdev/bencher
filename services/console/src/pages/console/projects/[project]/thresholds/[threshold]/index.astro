@@ -4,6 +4,7 @@ export const prerender = false;
 import ProjectLayout from "../../../../../../layouts/console/ProjectLayout.astro";
 import DeckPanel from "../../../../../../components/console/deck/DeckPanel";
 import { BencherResource } from "../../../../../../config/types";
+import FallbackDeckPanel from "../../../../../../components/console/deck/FallbackDeckPanel.astro";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
@@ -18,5 +19,7 @@ const redirect = `/perf/${params.project}/thresholds/${params.threshold}${Astro.
     apiUrl={BENCHER_API_URL}
     params={params}
     resource={BencherResource.THRESHOLDS}
-  />
+  >
+    <FallbackDeckPanel slot="fallback" cards={10} />
+  </DeckPanel>
 </ProjectLayout>

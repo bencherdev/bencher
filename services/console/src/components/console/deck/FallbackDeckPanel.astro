@@ -1,0 +1,16 @@
+---
+import FallbackHand from "./hand/FallbackHand.astro";
+
+const { cards } = Astro.props;
+---
+
+<div class="columns is-centered">
+    <div class="column">
+        <div class="content has-text-centered">
+            <h3 class="title is-3" style="word-break: break-word;">
+                &nbsp;
+            </h3>
+        </div>
+    </div>
+</div>
+<FallbackHand card={cards} />

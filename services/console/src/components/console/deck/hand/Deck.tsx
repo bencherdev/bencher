@@ -28,22 +28,16 @@ const Deck = (props: Props) => {
 		<>
 			<For each={props.config?.cards}>
 				{(card) => (
-					<div class="columns">
-						<div class="column">
-							<div class="card">
-								<DeckCard
-									apiUrl={props.apiUrl}
-									params={props.params}
-									user={props.user}
-									path={props.path}
-									card={card}
-									data={props.data}
-									handleRefresh={props.handleRefresh}
-									handleLoopback={props.handleLoopback}
-								/>
-							</div>
-						</div>
-					</div>
+					<DeckCard
+						apiUrl={props.apiUrl}
+						params={props.params}
+						user={props.user}
+						path={props.path}
+						card={card}
+						data={props.data}
+						handleRefresh={props.handleRefresh}
+						handleLoopback={props.handleLoopback}
+					/>
 				)}
 			</For>
 			<Show when={props.isConsole !== false && props.config?.buttons}>
