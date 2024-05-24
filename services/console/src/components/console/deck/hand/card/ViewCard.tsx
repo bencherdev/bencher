@@ -1,5 +1,5 @@
 import type { Params } from "astro";
-import { Match, Switch, createResource } from "solid-js";
+import { Match, Show, Switch, createMemo, createResource } from "solid-js";
 import { Display } from "../../../../../config/types";
 import type CardConfig from "./CardConfig";
 
@@ -7,7 +7,7 @@ export interface Props {
 	apiUrl: string;
 	params: Params;
 	card: CardConfig;
-	value: boolean | string;
+	value: boolean | string | object;
 	toggleUpdate: () => void;
 }
 
@@ -47,6 +47,21 @@ const ViewCard = (props: Props) => {
 								}
 								return field;
 							}, props.value)}
+						</Match>
+						<Match when={props.card?.display === Display.START_POINT}>
+							<Show when={props.value}>
+								<a
+									href={`/console/projects/${props.params?.project}/branches/${props.value?.branch}`}
+								>
+									View Start Point
+									<br />
+									Version Number: {props.value?.version?.number}
+									<br />
+									{props.value?.version?.hash && (
+										<>Version Hash: {props.value?.version?.hash}</>
+									)}
+								</a>
+							</Show>
 						</Match>
 					</Switch>
 				</div>

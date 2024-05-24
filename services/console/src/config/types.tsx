@@ -124,6 +124,7 @@ export enum Display {
 	RAW = "raw",
 	SWITCH = "switch",
 	SELECT = "select",
+	START_POINT = "start_point",
 }
 
 export enum PerfTab {

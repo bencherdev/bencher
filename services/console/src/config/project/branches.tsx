@@ -150,6 +150,12 @@ const branchesConfig = {
 					key: "uuid",
 					display: Display.RAW,
 				},
+				{
+					kind: Card.FIELD,
+					label: "Branch Start Point",
+					key: "start_point",
+					display: Display.START_POINT,
+				},
 			],
 			buttons: [
 				{
