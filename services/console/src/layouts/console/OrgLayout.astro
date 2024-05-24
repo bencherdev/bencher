@@ -2,6 +2,7 @@
 import ConsoleLayout from "./ConsoleLayout.astro";
 import OrgMenu from "../../components/console/menu/OrgMenu";
 import type { Params } from "astro";
+import OrgFallbackMenu from "../../components/console/menu/OrgFallbackMenu";
 
 interface Props {
 	apiUrl: string;
@@ -19,6 +20,8 @@ const { apiUrl, params, title, suppressNotification } = Astro.props;
   title={title}
   suppressNotification={suppressNotification}
 >
-  <OrgMenu client:only="solid-js" slot="menu" apiUrl={apiUrl} params={params} />
+  <OrgMenu client:only="solid-js" slot="menu" apiUrl={apiUrl} params={params}>
+    <OrgFallbackMenu slot="fallback" />
+  </OrgMenu>
   <slot />
 </ConsoleLayout>

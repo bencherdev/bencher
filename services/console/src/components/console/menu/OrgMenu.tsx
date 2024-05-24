@@ -1,19 +1,13 @@
-import { Show, createMemo, createResource } from "solid-js";
+import { createMemo, createResource } from "solid-js";
 import { isAllowedOrganization } from "../../../util/auth";
 import { OrganizationPermission } from "../../../types/bencher";
 import bencher_valid_init from "bencher_valid";
 import type { Params } from "astro";
+import OrgMenuInner from "./OrgMenuInner";
 
 interface Props {
 	apiUrl: string;
 	params: Params;
-}
-
-enum Section {
-	PROJECTS = "projects",
-	MEMBERS = "members",
-	SETTINGS = "settings",
-	BILLING = "billing",
 }
 
 const OrgMenu = (props: Props) => {
@@ -21,6 +15,7 @@ const OrgMenu = (props: Props) => {
 		async () => await bencher_valid_init(),
 	);
 	const params = createMemo(() => props.params);
+	const organization = createMemo(() => params().organization);
 	const [billing] = createResource(bencher_valid, async (bv) => {
 		if (!bv) {
 			return false;
@@ -32,30 +27,7 @@ const OrgMenu = (props: Props) => {
 		);
 	});
 
-	const path = (section: Section) =>
-		`/console/organizations/${params()?.organization}/${section}`;
-
-	return (
-		<aside class="menu is-sticky">
-			<p class="menu-label">Organization</p>
-			<ul class="menu-list">
-				<li>
-					<a href={path(Section.PROJECTS)}>Projects</a>
-				</li>
-				<li>
-					<a href={path(Section.MEMBERS)}>Members</a>
-				</li>
-				<li>
-					<a href={path(Section.SETTINGS)}>Settings</a>
-				</li>
-				<Show when={billing}>
-					<li>
-						<a href={path(Section.BILLING)}>Billing</a>
-					</li>
-				</Show>
-			</ul>
-		</aside>
-	);
+	return <OrgMenuInner organization={organization} billing={billing} />;
 };
 
 export default OrgMenu;
