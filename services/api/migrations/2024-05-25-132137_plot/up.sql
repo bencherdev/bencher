@@ -8,7 +8,7 @@ CREATE TABLE plot (
     upper_value BOOLEAN NOT NULL,
     lower_boundary BOOLEAN NOT NULL,
     upper_boundary BOOLEAN NOT NULL,
-    axis INTEGER NOT NULL,
+    x_axis INTEGER NOT NULL,
     window BIGINT NOT NULL,
     created BIGINT NOT NULL,
     modified BIGINT NOT NULL,

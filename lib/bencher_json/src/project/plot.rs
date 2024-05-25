@@ -1,20 +1,46 @@
 use std::fmt;
 
-use bencher_valid::{DateTime, ResourceName};
+use bencher_valid::{DateTime, ResourceName, Window};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::ProjectUuid;
+use crate::{BenchmarkUuid, BranchUuid, MeasureUuid, ProjectUuid, TestbedUuid};
 
 crate::typed_uuid::typed_uuid!(PlotUuid);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[allow(clippy::struct_excessive_bools)]
 pub struct JsonNewPlot {
     /// The name of the testbed.
     /// Maximum length is 64 characters.
     pub name: ResourceName,
+    /// Display metric lower values.
+    pub lower_value: bool,
+    /// Display metric upper values.
+    pub upper_value: bool,
+    /// Display lower boundary limits.
+    pub lower_boundary: bool,
+    /// Display upper boundary limits.
+    pub upper_boundary: bool,
+    /// The x-axis to use for the plot.
+    pub x_axis: XAxis,
+    /// The window of time for the plot, in seconds.
+    /// Metrics outside of this window will be omitted.
+    pub window: Window,
+    /// The branches to include in the plot.
+    /// At least one branch must be specified.
+    pub branches: Vec<BranchUuid>,
+    /// The testbeds to include in the plot.
+    /// At least one testbed must be specified.
+    pub testbeds: Vec<TestbedUuid>,
+    /// The benchmarks to include in the plot.
+    /// At least one benchmark must be specified.
+    pub benchmarks: Vec<BenchmarkUuid>,
+    /// The measures to include in the plot.
+    /// At least one measure must be specified.
+    pub measures: Vec<MeasureUuid>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,10 +52,21 @@ crate::from_vec!(JsonPlots[JsonPlot]);
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[allow(clippy::struct_excessive_bools)]
 pub struct JsonPlot {
     pub uuid: PlotUuid,
     pub project: ProjectUuid,
     pub name: ResourceName,
+    pub lower_value: bool,
+    pub upper_value: bool,
+    pub lower_boundary: bool,
+    pub upper_boundary: bool,
+    pub x_axis: XAxis,
+    pub window: Window,
+    pub branches: Vec<BranchUuid>,
+    pub testbeds: Vec<TestbedUuid>,
+    pub benchmarks: Vec<BenchmarkUuid>,
+    pub measures: Vec<MeasureUuid>,
     pub created: DateTime,
     pub modified: DateTime,
 }
@@ -58,7 +95,7 @@ const BRANCH_VERSION_INT: i32 = 1;
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
 #[serde(rename_all = "snake_case")]
 #[repr(i32)]
-pub enum PlotAxis {
+pub enum XAxis {
     #[default]
     DateTime = DATE_TIME_INT,
     BranchVersion = BRANCH_VERSION_INT,
@@ -66,15 +103,15 @@ pub enum PlotAxis {
 
 #[cfg(feature = "db")]
 mod plot_axis {
-    use super::{PlotAxis, BRANCH_VERSION_INT, DATE_TIME_INT};
+    use super::{XAxis, BRANCH_VERSION_INT, DATE_TIME_INT};
 
     #[derive(Debug, thiserror::Error)]
-    pub enum PlotAxisError {
+    pub enum XAxisError {
         #[error("Invalid plot axis value: {0}")]
         Invalid(i32),
     }
 
-    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for PlotAxis
+    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for XAxis
     where
         DB: diesel::backend::Backend,
         i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>,
@@ -90,7 +127,7 @@ mod plot_axis {
         }
     }
 
-    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for PlotAxis
+    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for XAxis
     where
         DB: diesel::backend::Backend,
         i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
@@ -99,7 +136,7 @@ mod plot_axis {
             match i32::from_sql(bytes)? {
                 DATE_TIME_INT => Ok(Self::DateTime),
                 BRANCH_VERSION_INT => Ok(Self::BranchVersion),
-                value => Err(Box::new(PlotAxisError::Invalid(value))),
+                value => Err(Box::new(XAxisError::Invalid(value))),
             }
         }
     }
