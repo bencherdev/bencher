@@ -151,7 +151,7 @@ const PerfPlot = (props: Props) => {
 							<Match when={props.perfData.loading}>
 								<progress
 									class="progress is-primary"
-									style="margin-top: 8rem; margin-bottom: 12rem;"
+									style="margin-top: 8rem; margin-bottom: 16rem;"
 									max="100"
 								/>
 							</Match>

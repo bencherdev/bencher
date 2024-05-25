@@ -1,0 +1,87 @@
+---
+import Pagination, { PaginationSize } from "../../site/Pagination";
+
+const DEFAULT_PER_PAGE = 4;
+const DEFAULT_PAGE = 1;
+---
+
+<div class="columns">
+    <div class="column">
+        <h1 class="title is-3" style="word-break: break-word;">
+            &nbsp;
+        </h1>
+    </div>
+</div>
+<div class="columns">
+    <div class="column">
+        <nav class="panel">
+            <nav class="panel-heading columns is-vcentered">
+                <div class="column">
+                    &nbsp;
+                    <br/>
+                    &nbsp;
+                </div>
+            </nav>
+            <div class="panel-block">
+                <progress
+                    class="progress is-primary"
+                    style="margin-top: 8rem; margin-bottom: 16rem;"
+                    max="100"
+                />
+            </div>
+            <div class="panel-tabs">
+                <a>&nbsp;</a>
+            </div>
+            <div class="panel-block is-block">
+                &nbsp;
+                <br/>
+                &nbsp;
+            </div>
+            <div class="panel-block is-block">
+                &nbsp;
+                <br/>
+                &nbsp;
+                <br/>
+                &nbsp;
+            </div>
+            <div class="panel-block is-block">
+                &nbsp;
+                <br/>
+                &nbsp;
+                <br/>
+                &nbsp;
+            </div>
+            <div class="panel-block is-block">
+                &nbsp;
+                <br/>
+                &nbsp;
+                <br/>
+                &nbsp;
+            </div>
+            <div class="panel-block is-block">
+                &nbsp;
+                <br/>
+                &nbsp;
+                <br/>
+                &nbsp;
+            </div>
+            <div class="panel-block">
+				<div class="container">
+					<div class="columns is-centered">
+						<div class="column is-11">
+							<br />
+							<Pagination
+								size={PaginationSize.SMALL}
+								data_len={() => 0}
+                                per_page={() => DEFAULT_PER_PAGE}
+                                page={() => DEFAULT_PAGE}
+                                handlePage={(_page) => {}}
+							/>
+							<br />
+						</div>
+					</div>
+				</div>
+			</div>
+        </nav>
+    </div>
+</div>
