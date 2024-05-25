@@ -41,6 +41,7 @@ pub use project::{
     metric::{JsonMetric, JsonMetricsMap, JsonResultsMap, MeasureNameId, MetricUuid},
     model::{JsonModel, ModelUuid},
     perf::{JsonPerf, JsonPerfQuery, ReportBenchmarkUuid},
+    plot::{JsonNewPlot, JsonPlot, JsonPlots, PlotUuid},
     report::{JsonNewReport, JsonReport, JsonReports, ReportUuid},
     testbed::{JsonNewTestbed, JsonTestbed, JsonTestbeds, TestbedUuid},
     threshold::{JsonNewThreshold, JsonThreshold, JsonThresholds, ThresholdUuid},

@@ -74,7 +74,7 @@ impl Visitor<'_> for WindowVisitor {
     type Value = Window;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a model sample size greater than or equal to 2")
+        formatter.write_str("a model window greater than or equal to 1")
     }
 
     fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>

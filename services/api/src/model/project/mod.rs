@@ -28,6 +28,7 @@ pub mod branch_version;
 pub mod measure;
 pub mod metric;
 pub mod metric_boundary;
+pub mod plot;
 pub mod project_role;
 pub mod report;
 pub mod testbed;
