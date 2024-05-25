@@ -1,5 +1,6 @@
 use bencher_json::{
-    project::plot::JsonUpdatePlot, DateTime, PlotUuid, ResourceName, TestbedUuid, Window,
+    project::plot::{JsonUpdatePlot, PlotAxis},
+    DateTime, PlotUuid, ResourceName, TestbedUuid, Window,
 };
 
 use super::{ProjectId, QueryProject};
@@ -22,7 +23,7 @@ pub struct QueryPlot {
     pub upper_value: bool,
     pub lower_boundary: bool,
     pub upper_boundary: bool,
-    pub axis: i32,
+    pub axis: PlotAxis,
     pub window: Window,
     pub created: DateTime,
     pub modified: DateTime,
@@ -41,7 +42,7 @@ pub struct InsertPlot {
     pub upper_value: bool,
     pub lower_boundary: bool,
     pub upper_boundary: bool,
-    pub axis: i32,
+    pub axis: PlotAxis,
     pub window: Window,
     pub created: DateTime,
     pub modified: DateTime,
