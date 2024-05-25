@@ -134,6 +134,51 @@ diesel::table! {
 }
 
 diesel::table! {
+    plot (id) {
+        id -> Integer,
+        uuid -> Text,
+        project_id -> Integer,
+        name -> Text,
+        lower_value -> Bool,
+        upper_value -> Bool,
+        lower_boundary -> Bool,
+        upper_boundary -> Bool,
+        axis -> Integer,
+        window -> BigInt,
+        created -> BigInt,
+        modified -> BigInt,
+    }
+}
+
+diesel::table! {
+    plot_benchmark (plot_id, benchmark_id) {
+        plot_id -> Integer,
+        benchmark_id -> Integer,
+    }
+}
+
+diesel::table! {
+    plot_branch (plot_id, branch_id) {
+        plot_id -> Integer,
+        branch_id -> Integer,
+    }
+}
+
+diesel::table! {
+    plot_measure (plot_id, measure_id) {
+        plot_id -> Integer,
+        measure_id -> Integer,
+    }
+}
+
+diesel::table! {
+    plot_testbed (plot_id, testbed_id) {
+        plot_id -> Integer,
+        testbed_id -> Integer,
+    }
+}
+
+diesel::table! {
     project (id) {
         id -> Integer,
         uuid -> Text,
@@ -266,6 +311,15 @@ diesel::joinable!(metric -> measure (measure_id));
 diesel::joinable!(metric -> report_benchmark (report_benchmark_id));
 diesel::joinable!(organization_role -> organization (organization_id));
 diesel::joinable!(organization_role -> user (user_id));
+diesel::joinable!(plot -> project (project_id));
+diesel::joinable!(plot_benchmark -> benchmark (benchmark_id));
+diesel::joinable!(plot_benchmark -> plot (plot_id));
+diesel::joinable!(plot_branch -> branch (branch_id));
+diesel::joinable!(plot_branch -> plot (plot_id));
+diesel::joinable!(plot_measure -> measure (measure_id));
+diesel::joinable!(plot_measure -> plot (plot_id));
+diesel::joinable!(plot_testbed -> plot (plot_id));
+diesel::joinable!(plot_testbed -> testbed (testbed_id));
 diesel::joinable!(project -> organization (organization_id));
 diesel::joinable!(project_role -> project (project_id));
 diesel::joinable!(project_role -> user (user_id));
@@ -296,6 +350,11 @@ diesel::allow_tables_to_appear_in_same_query!(
     organization,
     organization_role,
     plan,
+    plot,
+    plot_benchmark,
+    plot_branch,
+    plot_measure,
+    plot_testbed,
     project,
     project_role,
     report,
