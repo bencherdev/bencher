@@ -1,11 +1,12 @@
 use bencher_json::{
     project::plot::{JsonUpdatePlot, XAxis},
-    DateTime, PlotUuid, ResourceName, TestbedUuid, Window,
+    DateTime, JsonNewPlot, PlotUuid, ResourceName, Window,
 };
-use bencher_rank::Rank;
+use bencher_rank::{Rank, Ranked};
+use dropshot::HttpError;
 
 use super::{ProjectId, QueryProject};
-use crate::schema::plot as plot_table;
+use crate::{context::DbConnection, schema::plot as plot_table};
 
 crate::util::typed_id::typed_id!(PlotId);
 
@@ -33,11 +34,17 @@ pub struct QueryPlot {
 
 impl QueryPlot {}
 
+impl Ranked for QueryPlot {
+    fn rank(&self) -> Rank {
+        self.rank
+    }
+}
+
 #[derive(Debug, diesel::Insertable)]
 #[diesel(table_name = plot_table)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct InsertPlot {
-    pub uuid: TestbedUuid,
+    pub uuid: PlotUuid,
     pub project_id: ProjectId,
     pub name: ResourceName,
     pub rank: Rank,
@@ -51,7 +58,42 @@ pub struct InsertPlot {
     pub modified: DateTime,
 }
 
-impl InsertPlot {}
+impl InsertPlot {
+    pub fn from_json(
+        conn: &mut DbConnection,
+        project_id: ProjectId,
+        plot: JsonNewPlot,
+    ) -> Result<Self, HttpError> {
+        let JsonNewPlot {
+            name,
+            lower_value,
+            upper_value,
+            lower_boundary,
+            upper_boundary,
+            x_axis,
+            window,
+            branches,
+            testbeds,
+            benchmarks,
+            measures,
+        } = plot;
+        let timestamp = DateTime::now();
+        Ok(Self {
+            uuid: PlotUuid::new(),
+            project_id,
+            name,
+            rank: Rank::calculate::<QueryPlot>(&[], 0).unwrap(),
+            lower_value,
+            upper_value,
+            lower_boundary,
+            upper_boundary,
+            x_axis,
+            window,
+            created: timestamp,
+            modified: timestamp,
+        })
+    }
+}
 
 #[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = plot_table)]
