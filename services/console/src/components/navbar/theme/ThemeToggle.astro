@@ -59,8 +59,11 @@ import { THEME_TOGGLE_ID, ThemeId } from "./theme";
   }
 
   const initTheme = () => {
-    const theme = getTheme();
-    setTheme(theme);
+    // Only set the theme if the user has a preference for one.
+    const theme = localStorage.getItem(THEME_KEY);
+    if (theme) {
+      setTheme(theme);
+    }
   }
 
   const toggleTheme = () => {
