@@ -24,6 +24,7 @@ pub enum BencherResource {
     Model,
     Boundary,
     Alert,
+    Plot,
     User,
     Token,
     #[cfg(feature = "plus")]
@@ -55,6 +56,7 @@ impl fmt::Display for BencherResource {
                 Self::Model => "Model",
                 Self::Boundary => "Boundary",
                 Self::Alert => "Alert",
+                Self::Plot => "Plot",
                 Self::User => "User",
                 Self::Token => "Token",
                 #[cfg(feature = "plus")]

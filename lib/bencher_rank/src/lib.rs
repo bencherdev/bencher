@@ -147,5 +147,16 @@ mod tests {
             Rank::calculate(&ranks, 4),
             Some(Rank(4_611_686_018_427_387_906))
         );
+
+        let ranks = vec![TestRank::new(4)];
+        assert_eq!(Rank::calculate(&ranks, 0), Some(Rank(2)));
+        assert_eq!(
+            Rank::calculate(&ranks, 1),
+            Some(Rank(4_611_686_018_427_387_905))
+        );
+        assert_eq!(
+            Rank::calculate(&ranks, 2),
+            Some(Rank(4_611_686_018_427_387_905))
+        );
     }
 }

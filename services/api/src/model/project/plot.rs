@@ -3,10 +3,14 @@ use bencher_json::{
     DateTime, JsonNewPlot, PlotUuid, ResourceName, Window,
 };
 use bencher_rank::{Rank, Ranked};
+use diesel::{
+    BelongingToDsl, BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods,
+    QueryDsl, RunQueryDsl, SelectableHelper, TextExpressionMethods,
+};
 use dropshot::HttpError;
 
 use super::{ProjectId, QueryProject};
-use crate::{context::DbConnection, schema::plot as plot_table};
+use crate::{context::DbConnection, error::resource_not_found_err, schema::plot as plot_table};
 
 crate::util::typed_id::typed_id!(PlotId);
 
@@ -32,7 +36,17 @@ pub struct QueryPlot {
     pub modified: DateTime,
 }
 
-impl QueryPlot {}
+impl QueryPlot {
+    pub fn for_project(
+        conn: &mut DbConnection,
+        query_project: &QueryProject,
+    ) -> Result<Vec<Self>, HttpError> {
+        Self::belonging_to(query_project)
+            .order(plot_table::rank.asc())
+            .load::<Self>(conn)
+            .map_err(resource_not_found_err!(Plot, &query_project))
+    }
+}
 
 impl Ranked for QueryPlot {
     fn rank(&self) -> Rank {
@@ -66,6 +80,7 @@ impl InsertPlot {
     ) -> Result<Self, HttpError> {
         let JsonNewPlot {
             name,
+            index,
             lower_value,
             upper_value,
             lower_boundary,
@@ -77,12 +92,15 @@ impl InsertPlot {
             benchmarks,
             measures,
         } = plot;
+        let Some(rank) = Rank::calculate::<QueryPlot>(&[], index.unwrap_or_default().into()) else {
+            todo!();
+        };
         let timestamp = DateTime::now();
         Ok(Self {
             uuid: PlotUuid::new(),
             project_id,
             name,
-            rank: Rank::calculate::<QueryPlot>(&[], 0).unwrap(),
+            rank,
             lower_value,
             upper_value,
             lower_boundary,

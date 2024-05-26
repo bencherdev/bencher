@@ -16,6 +16,9 @@ pub struct JsonNewPlot {
     /// The name of the plot.
     /// Maximum length is 64 characters.
     pub name: ResourceName,
+    /// The index of the plot.
+    /// Maximum index is 255.
+    pub index: Option<u8>,
     /// Display metric lower values.
     pub lower_value: bool,
     /// Display metric upper values.
