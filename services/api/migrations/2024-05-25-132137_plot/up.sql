@@ -4,6 +4,7 @@ CREATE TABLE plot (
     uuid TEXT NOT NULL UNIQUE,
     project_id INTEGER NOT NULL,
     name TEXT NOT NULL,
+    rank BIGINT NOT NULL,
     lower_value BOOLEAN NOT NULL,
     upper_value BOOLEAN NOT NULL,
     lower_boundary BOOLEAN NOT NULL,
@@ -12,8 +13,7 @@ CREATE TABLE plot (
     window BIGINT NOT NULL,
     created BIGINT NOT NULL,
     modified BIGINT NOT NULL,
-    FOREIGN KEY (project_id) REFERENCES project (id) ON DELETE CASCADE,
-    UNIQUE(project_id, name)
+    FOREIGN KEY (project_id) REFERENCES project (id) ON DELETE CASCADE
 );
 CREATE TABLE plot_branch (
     plot_id INTEGER NOT NULL,
