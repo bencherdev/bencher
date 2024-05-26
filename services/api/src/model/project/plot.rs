@@ -2,6 +2,7 @@ use bencher_json::{
     project::plot::{JsonUpdatePlot, XAxis},
     DateTime, PlotUuid, ResourceName, TestbedUuid, Window,
 };
+use bencher_rank::Rank;
 
 use super::{ProjectId, QueryProject};
 use crate::schema::plot as plot_table;
@@ -19,7 +20,7 @@ pub struct QueryPlot {
     pub uuid: PlotUuid,
     pub project_id: ProjectId,
     pub name: ResourceName,
-    pub rank: i64,
+    pub rank: Rank,
     pub lower_value: bool,
     pub upper_value: bool,
     pub lower_boundary: bool,
@@ -39,7 +40,7 @@ pub struct InsertPlot {
     pub uuid: TestbedUuid,
     pub project_id: ProjectId,
     pub name: ResourceName,
-    pub rank: i64,
+    pub rank: Rank,
     pub lower_value: bool,
     pub upper_value: bool,
     pub lower_boundary: bool,

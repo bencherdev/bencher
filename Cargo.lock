@@ -865,6 +865,7 @@ dependencies = [
  "bencher_license",
  "bencher_logger",
  "bencher_plot",
+ "bencher_rank",
  "bencher_rbac",
  "bencher_token",
  "chrono",
@@ -1080,6 +1081,14 @@ dependencies = [
  "plotters",
  "plotters-bitmap",
  "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "bencher_rank"
+version = "0.4.10"
+dependencies = [
+ "diesel",
  "thiserror",
 ]
 

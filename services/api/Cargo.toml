@@ -30,6 +30,7 @@ bencher_json = { workspace = true, features = ["full", "db", "schema"] }
 bencher_license = { workspace = true, optional = true }
 bencher_logger.workspace = true
 bencher_plot.workspace = true
+bencher_rank.workspace = true
 bencher_rbac.workspace = true
 bencher_token.workspace = true
 chrono.workspace = true

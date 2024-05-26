@@ -1,0 +1,12 @@
+[package]
+name = "bencher_rank"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+diesel.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

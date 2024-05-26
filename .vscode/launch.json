@@ -67,6 +67,24 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug unit tests for `bencher_rank`",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=bencher_rank",
+                ],
+                "filter": {
+                    "name": "bencher_rank",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug unit tests for `bencher_rbac`",
             "cargo": {
                 "args": [
