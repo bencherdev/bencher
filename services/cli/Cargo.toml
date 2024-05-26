@@ -32,7 +32,7 @@ url.workspace = true
 # Crate
 bollard = "0.16"
 futures-util = "0.3"
-gix = { version = "0.62", features = ["revision"] }
+gix = { version = "0.63", features = ["revision"] }
 
 [lints]
 workspace = true
