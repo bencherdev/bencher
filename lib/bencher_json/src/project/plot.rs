@@ -13,7 +13,7 @@ crate::typed_uuid::typed_uuid!(PlotUuid);
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[allow(clippy::struct_excessive_bools)]
 pub struct JsonNewPlot {
-    /// The name of the testbed.
+    /// The name of the plot.
     /// Maximum length is 64 characters.
     pub name: ResourceName,
     /// Display metric lower values.
@@ -80,9 +80,12 @@ impl fmt::Display for JsonPlot {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonUpdatePlot {
-    /// The new name of the testbed.
+    /// The new name of the plot.
     /// Maximum length is 64 characters.
     pub name: Option<ResourceName>,
+    /// The new rank for the plot.
+    /// Maximum rank is 255.
+    pub rank: Option<u8>,
 }
 
 const DATE_TIME_INT: i32 = 0;

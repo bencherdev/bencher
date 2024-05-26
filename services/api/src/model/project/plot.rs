@@ -57,14 +57,16 @@ impl InsertPlot {}
 #[diesel(table_name = plot_table)]
 pub struct UpdatePlot {
     pub name: Option<ResourceName>,
+    pub rank: Option<Rank>,
     pub modified: DateTime,
 }
 
 impl From<JsonUpdatePlot> for UpdatePlot {
     fn from(update: JsonUpdatePlot) -> Self {
-        let JsonUpdatePlot { name } = update;
+        let JsonUpdatePlot { name, rank } = update;
         Self {
             name,
+            rank: rank.map(Into::into),
             modified: DateTime::now(),
         }
     }
