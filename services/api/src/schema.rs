@@ -155,6 +155,7 @@ diesel::table! {
     plot_benchmark (plot_id, benchmark_id) {
         plot_id -> Integer,
         benchmark_id -> Integer,
+        rank -> BigInt,
     }
 }
 
@@ -162,6 +163,7 @@ diesel::table! {
     plot_branch (plot_id, branch_id) {
         plot_id -> Integer,
         branch_id -> Integer,
+        rank -> BigInt,
     }
 }
 
@@ -169,6 +171,7 @@ diesel::table! {
     plot_measure (plot_id, measure_id) {
         plot_id -> Integer,
         measure_id -> Integer,
+        rank -> BigInt,
     }
 }
 
@@ -176,6 +179,7 @@ diesel::table! {
     plot_testbed (plot_id, testbed_id) {
         plot_id -> Integer,
         testbed_id -> Integer,
+        rank -> BigInt,
     }
 }
 

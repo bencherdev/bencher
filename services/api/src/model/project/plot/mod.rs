@@ -9,12 +9,16 @@ use diesel::{
 };
 use dropshot::HttpError;
 
-use super::{ProjectId, QueryProject};
+use super::{branch::QueryBranch, ProjectId, QueryProject};
 use crate::{
     context::DbConnection,
     error::{assert_parentage, resource_not_found_err, BencherResource},
     schema::plot as plot_table,
 };
+
+pub mod branch;
+
+use branch::QueryPlotBranch;
 
 crate::util::typed_id::typed_id!(PlotId);
 
@@ -51,7 +55,23 @@ impl QueryPlot {
             .map_err(resource_not_found_err!(Plot, &query_project))
     }
 
-    pub fn into_json_for_project(self, project: &QueryProject) -> JsonPlot {
+    pub fn into_json_for_project(
+        self,
+        conn: &mut DbConnection,
+        project: &QueryProject,
+    ) -> Result<JsonPlot, HttpError> {
+        let branches = QueryPlotBranch::get_all_for_plot(conn, &self)?
+            .into_iter()
+            .filter_map(|p| match QueryBranch::get_uuid(conn, p.branch_id) {
+                Ok(uuid) => Some(uuid),
+                Err(err) => {
+                    debug_assert!(false, "{err}");
+                    #[cfg(feature = "sentry")]
+                    sentry::capture_error(&err);
+                    None
+                },
+            })
+            .collect();
         let Self {
             uuid,
             project_id,
@@ -72,7 +92,7 @@ impl QueryPlot {
             BencherResource::Plot,
             project_id,
         );
-        JsonPlot {
+        Ok(JsonPlot {
             uuid,
             project: project.uuid,
             name,
@@ -82,13 +102,13 @@ impl QueryPlot {
             upper_boundary,
             x_axis,
             window,
-            branches: vec![],
+            branches,
             testbeds: vec![],
             benchmarks: vec![],
             measures: vec![],
             created,
             modified,
-        }
+        })
     }
 }
 

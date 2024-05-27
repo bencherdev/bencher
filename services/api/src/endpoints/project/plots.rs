@@ -135,14 +135,24 @@ async fn get_ls_inner(
         },
     };
 
-    Ok(query
+    conn_lock!(context, |conn| Ok(query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryPlot>(conn_lock!(context))
+        .load::<QueryPlot>(conn)
         .map_err(resource_not_found_err!(Plot, &query_project))?
         .into_iter()
-        .map(|plot| plot.into_json_for_project(&query_project))
-        .collect())
+        .filter_map(
+            |plot| match plot.into_json_for_project(conn, &query_project) {
+                Ok(plot) => Some(plot),
+                Err(err) => {
+                    debug_assert!(false, "{err}");
+                    #[cfg(feature = "sentry")]
+                    sentry::capture_error(&err);
+                    None
+                },
+            }
+        )
+        .collect()))
 }
 
 // /// Create a plot
