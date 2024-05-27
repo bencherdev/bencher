@@ -124,6 +124,9 @@ export const isAllowedProjectEdit = (apiUrl: string, params: Params) =>
 export const isAllowedProjectDelete = (apiUrl: string, params: Params) =>
 	isAllowedProject(apiUrl, params, ProjectPermission.Delete);
 
+export const isAllowedProjectManage = (apiUrl: string, params: Params) =>
+	isAllowedProject(apiUrl, params, ProjectPermission.Manage);
+
 export const isSameUser = (_apiUrl: string, params: Params) =>
 	params?.user === authUsr().user.uuid ||
 	params?.user === authUsr().user.slug ||

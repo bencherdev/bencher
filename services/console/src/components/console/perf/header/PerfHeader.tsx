@@ -4,6 +4,7 @@ import {
 	Show,
 	createEffect,
 	createSignal,
+	createResource,
 } from "solid-js";
 import {
 	type JsonAuthUser,
@@ -14,10 +15,10 @@ import {
 import { setPageTitle } from "../../../../util/resource";
 import ShareModal from "./ShareModal";
 import PinModal from "./PinModal";
+import { isAllowedProjectManage } from "../../../../util/auth";
 
 export interface Props {
 	apiUrl: string;
-	isConsole: boolean;
 	user: JsonAuthUser;
 	project: Resource<JsonProject>;
 	isPlotInit: Accessor<boolean>;
@@ -28,6 +29,12 @@ export interface Props {
 const PerfHeader = (props: Props) => {
 	const [share, setShare] = createSignal(false);
 	const [pin, setPin] = createSignal(false);
+
+	const [showPin] = createResource(props.project, (project) =>
+		isAllowedProjectManage(props.apiUrl, {
+			project: project.uuid,
+		}),
+	);
 
 	createEffect(() => {
 		setPageTitle(props.project()?.name);
@@ -98,7 +105,7 @@ const PerfHeader = (props: Props) => {
 									</div>
 								</Show>
 
-								<Show when={props.project()?.visibility === Visibility.Public}>
+								<Show when={showPin()}>
 									<div class="level-item">
 										<button
 											class="button is-fullwidth"
