@@ -1,4 +1,7 @@
 pub mod db;
+mod generator;
+
+pub use generator::RankGenerator;
 
 #[allow(clippy::integer_division)]
 const MID_RANK: i64 = i64::MAX / 2;

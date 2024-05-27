@@ -5,7 +5,7 @@ use dropshot::HttpError;
 
 use crate::{
     context::DbConnection,
-    error::resource_not_found_err,
+    error::{resource_conflict_err, resource_not_found_err},
     model::project::branch::{BranchId, QueryBranch},
     schema::plot_branch as plot_branch_table,
 };
@@ -49,11 +49,16 @@ impl InsertPlotBranch {
         plot_id: PlotId,
         branch_uuid: BranchUuid,
         rank: Rank,
-    ) -> Result<Self, HttpError> {
-        Ok(Self {
+    ) -> Result<(), HttpError> {
+        let insert_plot_branch = Self {
             plot_id,
             branch_id: QueryBranch::get_id(conn, branch_uuid)?,
             rank,
-        })
+        };
+        diesel::insert_into(plot_branch_table::table)
+            .values(&insert_plot_branch)
+            .execute(conn)
+            .map_err(resource_conflict_err!(PlotBranch, insert_plot_branch))?;
+        Ok(())
     }
 }

@@ -2,17 +2,19 @@ use bencher_json::{
     project::plot::{JsonUpdatePlot, XAxis},
     DateTime, JsonNewPlot, JsonPlot, PlotUuid, ResourceName, Window,
 };
-use bencher_rank::{Rank, Ranked};
+use bencher_rank::{Rank, RankGenerator, Ranked};
 use diesel::{
     BelongingToDsl, BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods,
     QueryDsl, RunQueryDsl, SelectableHelper, TextExpressionMethods,
 };
 use dropshot::HttpError;
 
+use self::branch::InsertPlotBranch;
+
 use super::{branch::QueryBranch, ProjectId, QueryProject};
 use crate::{
     context::DbConnection,
-    error::{assert_parentage, resource_not_found_err, BencherResource},
+    error::{assert_parentage, resource_conflict_err, resource_not_found_err, BencherResource},
     schema::plot as plot_table,
 };
 
@@ -139,9 +141,9 @@ pub struct InsertPlot {
 impl InsertPlot {
     pub fn from_json(
         conn: &mut DbConnection,
-        project_id: ProjectId,
+        query_project: &QueryProject,
         plot: JsonNewPlot,
-    ) -> Result<Self, HttpError> {
+    ) -> Result<QueryPlot, HttpError> {
         let JsonNewPlot {
             name,
             rank,
@@ -156,13 +158,15 @@ impl InsertPlot {
             benchmarks,
             measures,
         } = plot;
-        let Some(rank) = Rank::calculate::<QueryPlot>(&[], rank.unwrap_or_default().into()) else {
-            todo!();
+        let plots = QueryPlot::all_for_project(conn, query_project)?;
+        let Some(rank) = Rank::calculate(&plots, rank.unwrap_or_default().into()) else {
+            todo!("If we fail to calulate the rank, then we should reset/redistribute all of the current ranks and try again.");
         };
+
         let timestamp = DateTime::now();
-        Ok(Self {
+        let insert_plot = Self {
             uuid: PlotUuid::new(),
-            project_id,
+            project_id: query_project.id,
             name,
             rank,
             lower_value,
@@ -173,7 +177,23 @@ impl InsertPlot {
             window,
             created: timestamp,
             modified: timestamp,
-        })
+        };
+        diesel::insert_into(plot_table::table)
+            .values(&insert_plot)
+            .execute(conn)
+            .map_err(resource_conflict_err!(Plot, insert_plot))?;
+
+        let query_plot = plot_table::table
+            .filter(plot_table::uuid.eq(&insert_plot.uuid))
+            .first::<QueryPlot>(conn)
+            .map_err(resource_not_found_err!(Plot, insert_plot))?;
+
+        let branch_ranker = RankGenerator::new(branches.len());
+        for (branch, rank) in branches.into_iter().zip(branch_ranker) {
+            InsertPlotBranch::from_json(conn, query_plot.id, branch, rank)?;
+        }
+
+        Ok(query_plot)
     }
 }
 

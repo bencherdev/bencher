@@ -155,76 +155,51 @@ async fn get_ls_inner(
         .collect()))
 }
 
-// /// Create a plot
-// ///
-// /// Create a plot for a project.
-// /// The user must have `create` permissions for the project.
-// #[endpoint {
-//     method = POST,
-//     path =  "/v0/projects/{project}/plots",
-//     tags = ["projects", "plots"]
-// }]
-// pub async fn proj_plot_post(
-//     rqctx: RequestContext<ApiContext>,
-//     bearer_token: BearerToken,
-//     path_params: Path<ProjPlotsParams>,
-//     body: TypedBody<JsonNewPlot>,
-// ) -> Result<ResponseCreated<JsonPlot>, HttpError> {
-//     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-//     let json = post_inner(
-//         rqctx.context(),
-//         path_params.into_inner(),
-//         body.into_inner(),
-//         &auth_user,
-//     )
-//     .await?;
-//     Ok(Post::auth_response_created(json))
-// }
+/// Create a plot
+///
+/// Create a plot for a project.
+/// The user must have `manage` permissions for the project.
+#[endpoint {
+    method = POST,
+    path =  "/v0/projects/{project}/plots",
+    tags = ["projects", "plots"]
+}]
+pub async fn proj_plot_post(
+    rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
+    path_params: Path<ProjPlotsParams>,
+    body: TypedBody<JsonNewPlot>,
+) -> Result<ResponseCreated<JsonPlot>, HttpError> {
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    let json = post_inner(
+        rqctx.context(),
+        path_params.into_inner(),
+        body.into_inner(),
+        &auth_user,
+    )
+    .await?;
+    Ok(Post::auth_response_created(json))
+}
 
-// async fn post_inner(
-//     context: &ApiContext,
-//     path_params: ProjPlotsParams,
-//     json_plot: JsonNewPlot,
-//     auth_user: &AuthUser,
-// ) -> Result<JsonPlot, HttpError> {
-//     // Verify that the user is allowed
-//     let query_project = QueryProject::is_allowed(
-//         conn_lock!(context),
-//         &context.rbac,
-//         &path_params.project,
-//         auth_user,
-//         Permission::Create,
-//     )?;
+async fn post_inner(
+    context: &ApiContext,
+    path_params: ProjPlotsParams,
+    json_plot: JsonNewPlot,
+    auth_user: &AuthUser,
+) -> Result<JsonPlot, HttpError> {
+    // Verify that the user is allowed
+    let query_project = QueryProject::is_allowed(
+        conn_lock!(context),
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+        Permission::Manage,
+    )?;
 
-//     let insert_plot =
-//         InsertPlot::from_json(conn_lock!(context), query_project.id, json_plot.clone())?;
+    let query_plot = InsertPlot::from_json(conn_lock!(context), &query_project, json_plot)?;
 
-//     // Hold the same lock across checking for soft creation and inserting the plot
-//     conn_lock!(context, |conn| {
-//         // Soft creation
-//         // If the new plot name already exists then return the existing plot
-//         // instead of erroring due to the unique constraint
-//         // This is useful to help prevent race conditions in CI
-//         if let Some(true) = json_plot.soft {
-//             if let Ok(plot) = QueryPlot::belonging_to(&query_project)
-//                 .filter(schema::plot::name.eq(json_plot.name.as_ref()))
-//                 .first::<QueryPlot>(conn)
-//             {
-//                 return Ok(plot.into_json_for_project(&query_project));
-//             }
-//         }
-//         diesel::insert_into(schema::plot::table)
-//             .values(&insert_plot)
-//             .execute(conn)
-//             .map_err(resource_conflict_err!(Plot, insert_plot))?;
-//     });
-
-//     schema::plot::table
-//         .filter(schema::plot::uuid.eq(&insert_plot.uuid))
-//         .first::<QueryPlot>(conn_lock!(context))
-//         .map(|plot| plot.into_json_for_project(&query_project))
-//         .map_err(resource_not_found_err!(Plot, insert_plot))
-// }
+    query_plot.into_json_for_project(conn_lock!(context), &query_project)
+}
 
 // #[derive(Deserialize, JsonSchema)]
 // pub struct ProjPlotParams {
