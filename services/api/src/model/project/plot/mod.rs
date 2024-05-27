@@ -13,8 +13,12 @@ use self::branch::InsertPlotBranch;
 
 use super::{branch::QueryBranch, ProjectId, QueryProject};
 use crate::{
+    conn_lock,
     context::DbConnection,
-    error::{assert_parentage, resource_conflict_err, resource_not_found_err, BencherResource},
+    error::{
+        assert_parentage, resource_conflict_err, resource_conflict_error, resource_not_found_err,
+        BencherResource,
+    },
     schema::plot as plot_table,
 };
 
@@ -55,6 +59,37 @@ impl QueryPlot {
             .order(plot_table::rank.asc())
             .load::<Self>(conn)
             .map_err(resource_not_found_err!(Plot, &query_project))
+    }
+
+    fn next_rank(
+        conn: &mut DbConnection,
+        query_project: &QueryProject,
+        index: u8,
+    ) -> Result<Rank, HttpError> {
+        let index = index.into();
+
+        // Get the current plots.
+        let plots = QueryPlot::all_for_project(conn, query_project)?;
+        // Try to calculate the rank within the current plots.
+        if let Some(rank) = Rank::calculate(&plots, index) {
+            return Ok(rank);
+        }
+
+        // If the rank cannot be calculated, then we need to redistribute the ranks.
+        let plot_ranker = RankGenerator::new(plots.len());
+        for (plot, rank) in plots.iter().zip(plot_ranker) {
+            UpdatePlot::update_rank(conn, plot, rank)?;
+        }
+
+        // Try to calculate the rank within the redistributed plots.
+        let redistributed_plots = QueryPlot::all_for_project(conn, query_project)?;
+        Rank::calculate(&redistributed_plots, index).ok_or_else(|| {
+            resource_conflict_error(
+                BencherResource::Plot,
+                (redistributed_plots, index),
+                "Failed to redistribute plots.",
+            )
+        })
     }
 
     pub fn into_json_for_project(
@@ -158,11 +193,7 @@ impl InsertPlot {
             benchmarks,
             measures,
         } = plot;
-        let plots = QueryPlot::all_for_project(conn, query_project)?;
-        let Some(rank) = Rank::calculate(&plots, rank.unwrap_or_default().into()) else {
-            todo!("If we fail to calulate the rank, then we should reset/redistribute all of the current ranks and try again.");
-        };
-
+        let rank = QueryPlot::next_rank(conn, query_project, rank.unwrap_or_default())?;
         let timestamp = DateTime::now();
         let insert_plot = Self {
             uuid: PlotUuid::new(),
@@ -188,10 +219,7 @@ impl InsertPlot {
             .first::<QueryPlot>(conn)
             .map_err(resource_not_found_err!(Plot, insert_plot))?;
 
-        let branch_ranker = RankGenerator::new(branches.len());
-        for (branch, rank) in branches.into_iter().zip(branch_ranker) {
-            InsertPlotBranch::from_json(conn, query_plot.id, branch, rank)?;
-        }
+        InsertPlotBranch::from_json(conn, query_plot.id, branches)?;
 
         Ok(query_plot)
     }
@@ -213,5 +241,26 @@ impl From<JsonUpdatePlot> for UpdatePlot {
             rank: rank.map(Into::into),
             modified: DateTime::now(),
         }
+    }
+}
+
+impl UpdatePlot {
+    fn update_rank(
+        conn: &mut DbConnection,
+        query_plot: &QueryPlot,
+        rank: Rank,
+    ) -> Result<(), HttpError> {
+        let update_plot = UpdatePlot {
+            name: None,
+            rank: Some(rank),
+            modified: DateTime::now(),
+        };
+
+        diesel::update(plot_table::table.filter(plot_table::id.eq(query_plot.id)))
+            .set(&update_plot)
+            .execute(conn)
+            .map_err(resource_conflict_err!(Plot, (query_plot, &update_plot)))?;
+
+        Ok(())
     }
 }

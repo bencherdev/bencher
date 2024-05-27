@@ -1,5 +1,5 @@
 use bencher_json::BranchUuid;
-use bencher_rank::Rank;
+use bencher_rank::{Rank, RankGenerator};
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
@@ -47,18 +47,20 @@ impl InsertPlotBranch {
     pub fn from_json(
         conn: &mut DbConnection,
         plot_id: PlotId,
-        branch_uuid: BranchUuid,
-        rank: Rank,
+        branches: Vec<BranchUuid>,
     ) -> Result<(), HttpError> {
-        let insert_plot_branch = Self {
-            plot_id,
-            branch_id: QueryBranch::get_id(conn, branch_uuid)?,
-            rank,
-        };
-        diesel::insert_into(plot_branch_table::table)
-            .values(&insert_plot_branch)
-            .execute(conn)
-            .map_err(resource_conflict_err!(PlotBranch, insert_plot_branch))?;
+        let ranker = RankGenerator::new(branches.len());
+        for (uuid, rank) in branches.into_iter().zip(ranker) {
+            let insert_plot_branch = Self {
+                plot_id,
+                branch_id: QueryBranch::get_id(conn, uuid)?,
+                rank,
+            };
+            diesel::insert_into(plot_branch_table::table)
+                .values(&insert_plot_branch)
+                .execute(conn)
+                .map_err(resource_conflict_err!(PlotBranch, insert_plot_branch))?;
+        }
         Ok(())
     }
 }
