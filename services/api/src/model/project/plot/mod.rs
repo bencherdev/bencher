@@ -10,9 +10,7 @@ use diesel::{
 };
 use dropshot::HttpError;
 
-use self::branch::InsertPlotBranch;
-
-use super::{branch::QueryBranch, ProjectId, QueryProject};
+use super::{branch::QueryBranch, testbed::QueryTestbed, ProjectId, QueryProject};
 use crate::{
     conn_lock,
     context::{ApiContext, DbConnection},
@@ -23,9 +21,11 @@ use crate::{
     schema::plot as plot_table,
 };
 
-pub mod branch;
+mod branch;
+mod testbed;
 
-use branch::QueryPlotBranch;
+use branch::{InsertPlotBranch, QueryPlotBranch};
+use testbed::{InsertPlotTestbed, QueryPlotTestbed};
 
 const MAX_PLOTS: usize = 256;
 
@@ -109,6 +109,12 @@ impl QueryPlot {
         conn: &mut DbConnection,
         project: &QueryProject,
     ) -> Result<JsonPlot, HttpError> {
+        assert_parentage(
+            BencherResource::Project,
+            project.id,
+            BencherResource::Plot,
+            self.project_id,
+        );
         let branches = QueryPlotBranch::get_all_for_plot(conn, &self)?
             .into_iter()
             .filter_map(|p| match QueryBranch::get_uuid(conn, p.branch_id) {
@@ -121,9 +127,20 @@ impl QueryPlot {
                 },
             })
             .collect();
+        let testbeds = QueryPlotTestbed::get_all_for_plot(conn, &self)?
+            .into_iter()
+            .filter_map(|p| match QueryTestbed::get_uuid(conn, p.testbed_id) {
+                Ok(uuid) => Some(uuid),
+                Err(err) => {
+                    debug_assert!(false, "{err}");
+                    #[cfg(feature = "sentry")]
+                    sentry::capture_error(&err);
+                    None
+                },
+            })
+            .collect();
         let Self {
             uuid,
-            project_id,
             name,
             lower_value,
             upper_value,
@@ -135,12 +152,7 @@ impl QueryPlot {
             modified,
             ..
         } = self;
-        assert_parentage(
-            BencherResource::Project,
-            project.id,
-            BencherResource::Plot,
-            project_id,
-        );
+
         Ok(JsonPlot {
             uuid,
             project: project.uuid,
@@ -152,7 +164,7 @@ impl QueryPlot {
             x_axis,
             window,
             branches,
-            testbeds: vec![],
+            testbeds,
             benchmarks: vec![],
             measures: vec![],
             created,
@@ -233,6 +245,7 @@ impl InsertPlot {
             .map_err(resource_not_found_err!(Plot, insert_plot))?;
 
         InsertPlotBranch::from_json(context, query_plot.id, branches).await?;
+        InsertPlotTestbed::from_json(context, query_plot.id, testbeds).await?;
 
         Ok(query_plot)
     }
