@@ -1,21 +1,12 @@
 import { debounce } from "@solid-primitives/scheduled";
-import {
-	type Accessor,
-	type Resource,
-	Show,
-	createEffect,
-	createMemo,
-	createSignal,
-} from "solid-js";
+import { type Accessor, Show, createMemo, createSignal } from "solid-js";
 import { embedHeight } from "../../../../config/types";
-import {
-	type JsonAuthUser,
-	type JsonPerfQuery,
-	type JsonProject,
-	Visibility,
+import type {
+	JsonAuthUser,
+	JsonPerfQuery,
+	JsonProject,
 } from "../../../../types/bencher";
 import { apiUrl } from "../../../../util/http";
-import { setPageTitle } from "../../../../util/resource";
 import Field from "../../../field/Field";
 import FieldKind from "../../../field/kind";
 import { DEBOUNCE_DELAY } from "../../../../util/valid";
