@@ -44,7 +44,7 @@ import {
 } from "../../../util/notify";
 import { useSearchParams } from "../../../util/url";
 import { DEBOUNCE_DELAY, validU32 } from "../../../util/valid";
-import PerfHeader from "./PerfHeader";
+import PerfHeader from "./header/PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
 import type { TabList } from "./plot/tab/PlotTab";
 import { debounce } from "@solid-primitives/scheduled";

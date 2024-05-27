@@ -7,24 +7,24 @@ import {
 	createMemo,
 	createSignal,
 } from "solid-js";
-import { embedHeight } from "../../../config/types";
+import { embedHeight } from "../../../../config/types";
 import {
 	type JsonAuthUser,
 	type JsonPerfQuery,
 	type JsonProject,
 	Visibility,
-} from "../../../types/bencher";
-import { apiUrl } from "../../../util/http";
-import { setPageTitle } from "../../../util/resource";
-import Field from "../../field/Field";
-import FieldKind from "../../field/kind";
-import { DEBOUNCE_DELAY } from "../../../util/valid";
-import { useSearchParams } from "../../../util/url";
+} from "../../../../types/bencher";
+import { apiUrl } from "../../../../util/http";
+import { setPageTitle } from "../../../../util/resource";
+import Field from "../../../field/Field";
+import FieldKind from "../../../field/kind";
+import { DEBOUNCE_DELAY } from "../../../../util/valid";
+import { useSearchParams } from "../../../../util/url";
 import {
 	EMBED_TITLE_PARAM,
 	PERF_PLOT_EMBED_PARAMS,
 	PERF_PLOT_PARAMS,
-} from "./PerfPanel";
+} from "../PerfPanel";
 
 export interface Props {
 	apiUrl: string;
