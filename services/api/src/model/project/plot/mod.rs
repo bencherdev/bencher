@@ -3,6 +3,7 @@ use bencher_json::{
     DateTime, JsonNewPlot, JsonPlot, PlotUuid, ResourceName, Window,
 };
 use bencher_rank::{Rank, RankGenerator, Ranked};
+use chrono::format;
 use diesel::{
     BelongingToDsl, BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods,
     QueryDsl, RunQueryDsl, SelectableHelper, TextExpressionMethods,
@@ -14,7 +15,7 @@ use self::branch::InsertPlotBranch;
 use super::{branch::QueryBranch, ProjectId, QueryProject};
 use crate::{
     conn_lock,
-    context::DbConnection,
+    context::{ApiContext, DbConnection},
     error::{
         assert_parentage, resource_conflict_err, resource_conflict_error, resource_not_found_err,
         BencherResource,
@@ -25,6 +26,8 @@ use crate::{
 pub mod branch;
 
 use branch::QueryPlotBranch;
+
+const MAX_PLOTS: usize = 256;
 
 crate::util::typed_id::typed_id!(PlotId);
 
@@ -70,6 +73,15 @@ impl QueryPlot {
 
         // Get the current plots.
         let plots = QueryPlot::all_for_project(conn, query_project)?;
+        // Check if the maximum number of plots has been reached.
+        if plots.len() >= MAX_PLOTS {
+            return Err(resource_conflict_error(
+                BencherResource::Plot,
+                (query_project, &plots),
+                format!("Cannot create more than {MAX_PLOTS} plots for a project."),
+            ));
+        }
+
         // Try to calculate the rank within the current plots.
         if let Some(rank) = Rank::calculate(&plots, index) {
             return Ok(rank);
@@ -174,8 +186,8 @@ pub struct InsertPlot {
 }
 
 impl InsertPlot {
-    pub fn from_json(
-        conn: &mut DbConnection,
+    pub async fn from_json(
+        context: &ApiContext,
         query_project: &QueryProject,
         plot: JsonNewPlot,
     ) -> Result<QueryPlot, HttpError> {
@@ -193,7 +205,8 @@ impl InsertPlot {
             benchmarks,
             measures,
         } = plot;
-        let rank = QueryPlot::next_rank(conn, query_project, rank.unwrap_or_default())?;
+        let rank =
+            QueryPlot::next_rank(conn_lock!(context), query_project, rank.unwrap_or_default())?;
         let timestamp = DateTime::now();
         let insert_plot = Self {
             uuid: PlotUuid::new(),
@@ -211,15 +224,15 @@ impl InsertPlot {
         };
         diesel::insert_into(plot_table::table)
             .values(&insert_plot)
-            .execute(conn)
+            .execute(conn_lock!(context))
             .map_err(resource_conflict_err!(Plot, insert_plot))?;
 
         let query_plot = plot_table::table
             .filter(plot_table::uuid.eq(&insert_plot.uuid))
-            .first::<QueryPlot>(conn)
+            .first::<QueryPlot>(conn_lock!(context))
             .map_err(resource_not_found_err!(Plot, insert_plot))?;
 
-        InsertPlotBranch::from_json(conn, query_plot.id, branches)?;
+        InsertPlotBranch::from_json(context, query_plot.id, branches).await?;
 
         Ok(query_plot)
     }

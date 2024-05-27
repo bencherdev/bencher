@@ -196,7 +196,7 @@ async fn post_inner(
         Permission::Manage,
     )?;
 
-    let query_plot = InsertPlot::from_json(conn_lock!(context), &query_project, json_plot)?;
+    let query_plot = InsertPlot::from_json(context, &query_project, json_plot).await?;
 
     query_plot.into_json_for_project(conn_lock!(context), &query_project)
 }
