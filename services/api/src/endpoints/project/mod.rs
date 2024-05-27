@@ -3,6 +3,7 @@ pub mod benchmarks;
 pub mod branches;
 pub mod measures;
 pub mod perf;
+pub mod plots;
 pub mod projects;
 pub mod reports;
 pub mod testbeds;

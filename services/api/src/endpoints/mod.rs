@@ -141,6 +141,17 @@ impl Api {
         }
         api.register(project::perf::img::proj_perf_img_get)?;
 
+        // Plots
+        if http_options {
+            api.register(project::plots::proj_plots_options)?;
+            // api.register(project::plots::proj_plot_options)?;
+        }
+        api.register(project::plots::proj_plots_get)?;
+        // api.register(project::plots::proj_plot_post)?;
+        // api.register(project::plots::proj_plot_get)?;
+        // api.register(project::plots::proj_plot_patch)?;
+        // api.register(project::plots::proj_plot_delete)?;
+
         // Branches
         if http_options {
             api.register(project::branches::proj_branches_options)?;

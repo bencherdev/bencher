@@ -1,6 +1,6 @@
 use bencher_json::{
     project::plot::{JsonUpdatePlot, XAxis},
-    DateTime, JsonNewPlot, PlotUuid, ResourceName, Window,
+    DateTime, JsonNewPlot, JsonPlot, PlotUuid, ResourceName, Window,
 };
 use bencher_rank::{Rank, Ranked};
 use diesel::{
@@ -10,7 +10,11 @@ use diesel::{
 use dropshot::HttpError;
 
 use super::{ProjectId, QueryProject};
-use crate::{context::DbConnection, error::resource_not_found_err, schema::plot as plot_table};
+use crate::{
+    context::DbConnection,
+    error::{assert_parentage, resource_not_found_err, BencherResource},
+    schema::plot as plot_table,
+};
 
 crate::util::typed_id::typed_id!(PlotId);
 
@@ -37,7 +41,7 @@ pub struct QueryPlot {
 }
 
 impl QueryPlot {
-    pub fn for_project(
+    pub fn all_for_project(
         conn: &mut DbConnection,
         query_project: &QueryProject,
     ) -> Result<Vec<Self>, HttpError> {
@@ -45,6 +49,46 @@ impl QueryPlot {
             .order(plot_table::rank.asc())
             .load::<Self>(conn)
             .map_err(resource_not_found_err!(Plot, &query_project))
+    }
+
+    pub fn into_json_for_project(self, project: &QueryProject) -> JsonPlot {
+        let Self {
+            uuid,
+            project_id,
+            name,
+            lower_value,
+            upper_value,
+            lower_boundary,
+            upper_boundary,
+            x_axis,
+            window,
+            created,
+            modified,
+            ..
+        } = self;
+        assert_parentage(
+            BencherResource::Project,
+            project.id,
+            BencherResource::Plot,
+            project_id,
+        );
+        JsonPlot {
+            uuid,
+            project: project.uuid,
+            name,
+            lower_value,
+            upper_value,
+            lower_boundary,
+            upper_boundary,
+            x_axis,
+            window,
+            branches: vec![],
+            testbeds: vec![],
+            benchmarks: vec![],
+            measures: vec![],
+            created,
+            modified,
+        }
     }
 }
 
@@ -80,7 +124,7 @@ impl InsertPlot {
     ) -> Result<Self, HttpError> {
         let JsonNewPlot {
             name,
-            index,
+            rank,
             lower_value,
             upper_value,
             lower_boundary,
@@ -92,7 +136,7 @@ impl InsertPlot {
             benchmarks,
             measures,
         } = plot;
-        let Some(rank) = Rank::calculate::<QueryPlot>(&[], index.unwrap_or_default().into()) else {
+        let Some(rank) = Rank::calculate::<QueryPlot>(&[], rank.unwrap_or_default().into()) else {
             todo!();
         };
         let timestamp = DateTime::now();

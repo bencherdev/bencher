@@ -13,6 +13,7 @@ pub enum BencherResource {
     ProjectRole,
     Report,
     ReportBenchmark,
+    Plot,
     Branch,
     Version,
     BranchVersion,
@@ -24,7 +25,6 @@ pub enum BencherResource {
     Model,
     Boundary,
     Alert,
-    Plot,
     User,
     Token,
     #[cfg(feature = "plus")]
@@ -45,6 +45,7 @@ impl fmt::Display for BencherResource {
                 Self::ProjectRole => "Project Role",
                 Self::Report => "Report",
                 Self::ReportBenchmark => "Report Benchmark",
+                Self::Plot => "Plot",
                 Self::Branch => "Branch",
                 Self::Version => "Version",
                 Self::BranchVersion => "Branch Version",
@@ -56,7 +57,6 @@ impl fmt::Display for BencherResource {
                 Self::Model => "Model",
                 Self::Boundary => "Boundary",
                 Self::Alert => "Alert",
-                Self::Plot => "Plot",
                 Self::User => "User",
                 Self::Token => "Token",
                 #[cfg(feature = "plus")]
