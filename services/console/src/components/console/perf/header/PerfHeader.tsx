@@ -13,6 +13,7 @@ import {
 } from "../../../../types/bencher";
 import { setPageTitle } from "../../../../util/resource";
 import ShareModal from "./ShareModal";
+import PinModal from "./PinModal";
 
 export interface Props {
 	apiUrl: string;
@@ -26,6 +27,7 @@ export interface Props {
 
 const PerfHeader = (props: Props) => {
 	const [share, setShare] = createSignal(false);
+	const [pin, setPin] = createSignal(false);
 
 	createEffect(() => {
 		setPageTitle(props.project()?.name);
@@ -46,6 +48,15 @@ const PerfHeader = (props: Props) => {
 				project={props.project}
 				share={share}
 				setShare={setShare}
+			/>
+			<PinModal
+				apiUrl={props.apiUrl}
+				user={props.user}
+				perfQuery={props.perfQuery}
+				isPlotInit={props.isPlotInit}
+				project={props.project}
+				share={pin}
+				setShare={setPin}
 			/>
 			<div class="column is-narrow">
 				<nav class="level">
@@ -83,6 +94,25 @@ const PerfHeader = (props: Props) => {
 												<i class="fas fa-share" />
 											</span>
 											<span>Share</span>
+										</button>
+									</div>
+								</Show>
+
+								<Show when={props.project()?.visibility === Visibility.Public}>
+									<div class="level-item">
+										<button
+											class="button is-fullwidth"
+											type="button"
+											title={`Pin to ${props.project()?.name} dashboard`}
+											onClick={(e) => {
+												e.preventDefault();
+												setPin(true);
+											}}
+										>
+											<span class="icon">
+												<i class="fas fa-thumbtack" />
+											</span>
+											<span>Pin</span>
 										</button>
 									</div>
 								</Show>
