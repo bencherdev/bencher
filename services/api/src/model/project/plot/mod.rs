@@ -3,15 +3,12 @@ use bencher_json::{
     DateTime, JsonNewPlot, JsonPlot, PlotUuid, ResourceName, Window,
 };
 use bencher_rank::{Rank, RankGenerator, Ranked};
-use chrono::format;
-use diesel::{
-    BelongingToDsl, BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods,
-    QueryDsl, RunQueryDsl, SelectableHelper, TextExpressionMethods,
-};
+use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
 use super::{
-    benchmark::QueryBenchmark, branch::QueryBranch, testbed::QueryTestbed, ProjectId, QueryProject,
+    benchmark::QueryBenchmark, branch::QueryBranch, measure::QueryMeasure, testbed::QueryTestbed,
+    ProjectId, QueryProject,
 };
 use crate::{
     conn_lock,
@@ -25,10 +22,12 @@ use crate::{
 
 mod benchmark;
 mod branch;
+mod measure;
 mod testbed;
 
 use benchmark::{InsertPlotBenchmark, QueryPlotBenchmark};
 use branch::{InsertPlotBranch, QueryPlotBranch};
+use measure::{InsertPlotMeasure, QueryPlotMeasure};
 use testbed::{InsertPlotTestbed, QueryPlotTestbed};
 
 const MAX_PLOTS: usize = 256;
@@ -155,6 +154,18 @@ impl QueryPlot {
                 },
             })
             .collect();
+        let measures = QueryPlotMeasure::get_all_for_plot(conn, &self)?
+            .into_iter()
+            .filter_map(|p| match QueryMeasure::get_uuid(conn, p.measure_id) {
+                Ok(uuid) => Some(uuid),
+                Err(err) => {
+                    debug_assert!(false, "{err}");
+                    #[cfg(feature = "sentry")]
+                    sentry::capture_error(&err);
+                    None
+                },
+            })
+            .collect();
         let Self {
             uuid,
             name,
@@ -168,7 +179,6 @@ impl QueryPlot {
             modified,
             ..
         } = self;
-
         Ok(JsonPlot {
             uuid,
             project: project.uuid,
@@ -182,7 +192,7 @@ impl QueryPlot {
             branches,
             testbeds,
             benchmarks,
-            measures: vec![],
+            measures,
             created,
             modified,
         })
@@ -263,6 +273,7 @@ impl InsertPlot {
         InsertPlotBranch::from_json(context, query_plot.id, branches).await?;
         InsertPlotTestbed::from_json(context, query_plot.id, testbeds).await?;
         InsertPlotBenchmark::from_json(context, query_plot.id, benchmarks).await?;
+        InsertPlotMeasure::from_json(context, query_plot.id, measures).await?;
 
         Ok(query_plot)
     }
