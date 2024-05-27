@@ -10,7 +10,9 @@ use diesel::{
 };
 use dropshot::HttpError;
 
-use super::{branch::QueryBranch, testbed::QueryTestbed, ProjectId, QueryProject};
+use super::{
+    benchmark::QueryBenchmark, branch::QueryBranch, testbed::QueryTestbed, ProjectId, QueryProject,
+};
 use crate::{
     conn_lock,
     context::{ApiContext, DbConnection},
@@ -21,9 +23,11 @@ use crate::{
     schema::plot as plot_table,
 };
 
+mod benchmark;
 mod branch;
 mod testbed;
 
+use benchmark::{InsertPlotBenchmark, QueryPlotBenchmark};
 use branch::{InsertPlotBranch, QueryPlotBranch};
 use testbed::{InsertPlotTestbed, QueryPlotTestbed};
 
@@ -139,6 +143,18 @@ impl QueryPlot {
                 },
             })
             .collect();
+        let benchmarks = QueryPlotBenchmark::get_all_for_plot(conn, &self)?
+            .into_iter()
+            .filter_map(|p| match QueryBenchmark::get_uuid(conn, p.benchmark_id) {
+                Ok(uuid) => Some(uuid),
+                Err(err) => {
+                    debug_assert!(false, "{err}");
+                    #[cfg(feature = "sentry")]
+                    sentry::capture_error(&err);
+                    None
+                },
+            })
+            .collect();
         let Self {
             uuid,
             name,
@@ -165,7 +181,7 @@ impl QueryPlot {
             window,
             branches,
             testbeds,
-            benchmarks: vec![],
+            benchmarks,
             measures: vec![],
             created,
             modified,
@@ -246,6 +262,7 @@ impl InsertPlot {
 
         InsertPlotBranch::from_json(context, query_plot.id, branches).await?;
         InsertPlotTestbed::from_json(context, query_plot.id, testbeds).await?;
+        InsertPlotBenchmark::from_json(context, query_plot.id, benchmarks).await?;
 
         Ok(query_plot)
     }
