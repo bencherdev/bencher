@@ -63,6 +63,7 @@ export interface Props {
 	branches_search: Accessor<undefined | string>;
 	testbeds_search: Accessor<undefined | string>;
 	benchmarks_search: Accessor<undefined | string>;
+	embed_logo: Accessor<undefined | string>;
 	embed_title: Accessor<undefined | string>;
 	embed_header: Accessor<boolean>;
 	embed_key: Accessor<boolean>;
@@ -118,6 +119,7 @@ const PerfPlot = (props: Props) => {
 						upper_value={props.upper_value}
 						lower_boundary={props.lower_boundary}
 						upper_boundary={props.upper_boundary}
+						embed_logo={props.embed_logo}
 						embed_title={props.embed_title}
 						embed_header={props.embed_header}
 						handleMeasure={props.handleMeasure}

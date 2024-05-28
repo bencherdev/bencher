@@ -4,6 +4,7 @@
 "OrganizationUuid" = "Uuid"
 "ProjectUuid" = "Uuid"
 "ReportUuid" = "Uuid"
+"PlotUuid" = "Uuid"
 "BranchUuid" = "Uuid"
 "TestbedUuid" = "Uuid"
 "BenchmarkUuid" = "Uuid"

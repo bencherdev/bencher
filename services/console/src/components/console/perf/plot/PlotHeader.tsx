@@ -14,10 +14,15 @@ import {
 	type JsonMeasure,
 	type JsonProject,
 } from "../../../../types/bencher";
-import { BENCHER_WORDMARK, BENCHER_WORDMARK_ID } from "../../../../util/ext";
+import {
+	BENCHER_WORDMARK,
+	BENCHER_WORDMARK_DARK,
+	BENCHER_WORDMARK_ID,
+} from "../../../../util/ext";
 import { httpGet } from "../../../../util/http";
 import { BENCHER_MEASURE_ID } from "./util";
 import { BACK_PARAM, encodePath } from "../../../../util/url";
+import { Theme, getTheme, themeWordmark } from "../../../navbar/theme/theme";
 
 const BENCHER_MEASURE = "--bencher-measure--";
 
@@ -39,6 +44,7 @@ export interface Props {
 	upper_value: Accessor<boolean>;
 	lower_boundary: Accessor<boolean>;
 	upper_boundary: Accessor<boolean>;
+	embed_logo: Accessor<undefined | string>;
 	embed_title: Accessor<undefined | string>;
 	embed_header: Accessor<boolean>;
 	handleMeasure: (measure: null | string) => void;
@@ -195,6 +201,29 @@ const EmbedPlotHeader = (props: Props) => {
 		}/perf/${props.project()?.slug}/${location.search}`;
 	});
 
+	const logo = createMemo(() => {
+		const embedLogo = props.embed_logo();
+		if (embedLogo === "") {
+			return <></>;
+		}
+		return (
+			<a href={perfUrl()} target="_blank">
+				<img
+					src={themeWordmark(
+						(() => {
+							if (embedLogo === Theme.Light || embedLogo === Theme.Dark) {
+								return embedLogo;
+							}
+							return getTheme();
+						})(),
+					)}
+					width="128em"
+					alt="🐰 Bencher"
+				/>
+			</a>
+		);
+	});
+
 	const title = createMemo(() => {
 		const embedTitle = props.embed_title();
 		switch (embedTitle) {
@@ -213,15 +242,7 @@ const EmbedPlotHeader = (props: Props) => {
 		<nav class="panel-heading">
 			<div class="columns is-mobile is-centered is-vcentered is-gapless">
 				<div class="column has-text-centered">
-					{/* biome-ignore lint/a11y/noBlankTarget: internal */}
-					<a href={perfUrl()} target="_blank">
-						<img
-							id={BENCHER_WORDMARK_ID}
-							src={BENCHER_WORDMARK}
-							width="128em"
-							alt="🐰 Bencher"
-						/>
-					</a>
+					{logo()}
 					{title()}
 				</div>
 			</div>

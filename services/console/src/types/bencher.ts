@@ -502,7 +502,7 @@ export interface JsonNewPlot {
 }
 
 export interface JsonPlot {
-	uuid: PlotUuid;
+	uuid: Uuid;
 	project: Uuid;
 	name: ResourceName;
 	lower_value: boolean;

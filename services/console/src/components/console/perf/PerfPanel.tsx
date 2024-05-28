@@ -88,6 +88,7 @@ const CLEAR_PARAM = "clear";
 // These are currently for internal use only
 // TODO add a way to set these in the Share modal
 // The title can be set but there is no way to set an empty title
+const EMBED_LOGO_PARAM = "embed_logo";
 export const EMBED_TITLE_PARAM = "embed_title";
 const EMBED_HEADER_PARAM = "embed_header";
 const EMBED_KEY_PARAM = "embed_key";
@@ -128,6 +129,7 @@ export const PERF_PLOT_PARAMS = [
 ];
 export const PERF_PLOT_EMBED_PARAMS = [
 	...PERF_PLOT_PARAMS,
+	EMBED_LOGO_PARAM,
 	EMBED_TITLE_PARAM,
 	EMBED_HEADER_PARAM,
 	EMBED_KEY_PARAM,
@@ -296,6 +298,9 @@ const PerfPanel = (props: Props) => {
 		}
 
 		// Embed params
+		if (typeof searchParams[EMBED_LOGO_PARAM] !== "string") {
+			initParams[EMBED_LOGO_PARAM] = null;
+		}
 		if (typeof searchParams[EMBED_TITLE_PARAM] !== "string") {
 			initParams[EMBED_TITLE_PARAM] = null;
 		}
@@ -437,6 +442,7 @@ const PerfPanel = (props: Props) => {
 	);
 
 	// Embed params
+	const embed_logo = createMemo(() => searchParams[EMBED_LOGO_PARAM]);
 	const embed_title = createMemo(() => searchParams[EMBED_TITLE_PARAM]);
 	const embed_header = createMemo(() =>
 		isBoolParamOrDefault(EMBED_HEADER_PARAM, DEFAULT_EMBED_HEADER),
@@ -843,6 +849,7 @@ const PerfPanel = (props: Props) => {
 					[UPPER_VALUE_PARAM]: null,
 					[LOWER_BOUNDARY_PARAM]: null,
 					[UPPER_BOUNDARY_PARAM]: null,
+					[X_AXIS_PARAM]: null,
 					[TAB_PARAM]: DEFAULT_PERF_TAB,
 					[REPORTS_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
 					[BRANCHES_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
@@ -857,6 +864,7 @@ const PerfPanel = (props: Props) => {
 					[BRANCHES_SEARCH_PARAM]: null,
 					[TESTBEDS_SEARCH_PARAM]: null,
 					[BENCHMARKS_SEARCH_PARAM]: null,
+					[EMBED_LOGO_PARAM]: null,
 					[EMBED_TITLE_PARAM]: null,
 					[EMBED_HEADER_PARAM]: null,
 					[EMBED_KEY_PARAM]: null,
@@ -994,6 +1002,7 @@ const PerfPanel = (props: Props) => {
 				branches_search={branches_search}
 				testbeds_search={testbeds_search}
 				benchmarks_search={benchmarks_search}
+				embed_logo={embed_logo}
 				embed_title={embed_title}
 				embed_header={embed_header}
 				embed_key={embed_key}
