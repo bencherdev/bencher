@@ -152,6 +152,7 @@ const DEFAULT_PERF_CLEAR = false;
 const DEFAULT_PERF_END_VALUE = false;
 const DEFAULT_PERF_BOUNDARY = false;
 
+const DEFAULT_EMBED_LOGO = true;
 const DEFAULT_EMBED_HEADER = true;
 const DEFAULT_EMBED_KEY = true;
 
@@ -442,7 +443,9 @@ const PerfPanel = (props: Props) => {
 	);
 
 	// Embed params
-	const embed_logo = createMemo(() => searchParams[EMBED_LOGO_PARAM]);
+	const embed_logo = createMemo(() =>
+		isBoolParamOrDefault(EMBED_LOGO_PARAM, DEFAULT_EMBED_LOGO),
+	);
 	const embed_title = createMemo(() => searchParams[EMBED_TITLE_PARAM]);
 	const embed_header = createMemo(() =>
 		isBoolParamOrDefault(EMBED_HEADER_PARAM, DEFAULT_EMBED_HEADER),

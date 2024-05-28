@@ -63,7 +63,7 @@ export interface Props {
 	branches_search: Accessor<undefined | string>;
 	testbeds_search: Accessor<undefined | string>;
 	benchmarks_search: Accessor<undefined | string>;
-	embed_logo: Accessor<undefined | string>;
+	embed_logo: Accessor<boolean>;
 	embed_title: Accessor<undefined | string>;
 	embed_header: Accessor<boolean>;
 	embed_key: Accessor<boolean>;

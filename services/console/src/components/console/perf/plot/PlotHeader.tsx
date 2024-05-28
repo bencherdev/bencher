@@ -44,7 +44,7 @@ export interface Props {
 	upper_value: Accessor<boolean>;
 	lower_boundary: Accessor<boolean>;
 	upper_boundary: Accessor<boolean>;
-	embed_logo: Accessor<undefined | string>;
+	embed_logo: Accessor<boolean>;
 	embed_title: Accessor<undefined | string>;
 	embed_header: Accessor<boolean>;
 	handleMeasure: (measure: null | string) => void;
@@ -203,23 +203,12 @@ const EmbedPlotHeader = (props: Props) => {
 
 	const logo = createMemo(() => {
 		const embedLogo = props.embed_logo();
-		if (embedLogo === "") {
+		if (embedLogo === false) {
 			return <></>;
 		}
 		return (
-			<a href={perfUrl()} target="_blank">
-				<img
-					src={themeWordmark(
-						(() => {
-							if (embedLogo === Theme.Light || embedLogo === Theme.Dark) {
-								return embedLogo;
-							}
-							return getTheme();
-						})(),
-					)}
-					width="128em"
-					alt="🐰 Bencher"
-				/>
+			<a href={perfUrl()} target="_blank" rel="noreferrer">
+				<img src={themeWordmark(getTheme())} width="128em" alt="🐰 Bencher" />
 			</a>
 		);
 	});

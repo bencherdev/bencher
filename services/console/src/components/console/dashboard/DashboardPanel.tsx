@@ -16,6 +16,7 @@ import {
 import { setPageTitle } from "../../../util/resource";
 import { authUser } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
+import { plotQueryString } from "./util";
 
 export interface Props {
 	apiUrl: string;
@@ -102,68 +103,31 @@ const DashboardPanel = (props: Props) => {
 	});
 
 	return (
-		<>
-			<For each={plotPairs()}>
-				{([left, right]) => (
-					<div class="columns">
-						<div class="column is-half">
-							<div id={left?.uuid} class="box">
-								<PinnedPlot plot={left} />
-								<PinnedSettings plot={left} />
-							</div>
-						</div>
-						<div class="column is-half">
-							<Show
-								when={right}
-								fallback={<PinNewPlot project_slug={project_slug} />}
-							>
-								<div id={(right as JsonPlot)?.uuid} class="box">
-									<PinnedPlot plot={right as JsonPlot} />
-									<PinnedSettings plot={right as JsonPlot} />
-								</div>
-							</Show>
+		<div class="columns is-multiline is-vcentered">
+			<For each={plots()}>
+				{(plot) => (
+					<div class="column is-11-tablet is-12-desktop is-6-widescreen">
+						<div id={plot?.uuid} class="box">
+							<PinnedPlot plot={plot} />
+							<PinnedSettings plot={plot} />
 						</div>
 					</div>
 				)}
 			</For>
-			<Show when={plots()?.length % 2 === 0}>
-				<div class="columns">
-					<div class="column is-half">
-						<PinNewPlot project_slug={project_slug} />
-					</div>
-				</div>
-			</Show>
-		</>
+			<div class="column is-11-tablet is-12-desktop is-6-widescreen">
+				<PinNewPlot project_slug={project_slug} />
+			</div>
+		</div>
 	);
 };
 
 const PinnedPlot = (props: { plot: JsonPlot }) => {
-	const plotQueryString = () => {
-		const newParams = new URLSearchParams();
-		newParams.set(PlotKey.LowerValue, props.plot?.lower_value.toString());
-		newParams.set(PlotKey.UpperValue, props.plot?.upper_value.toString());
-		newParams.set(PlotKey.LowerBoundary, props.plot?.lower_boundary.toString());
-		newParams.set(PlotKey.UpperBoundary, props.plot?.upper_boundary.toString());
-		newParams.set(PlotKey.XAxis, props.plot?.x_axis);
-		newParams.set(PerfQueryKey.Branches, props.plot?.branches.toString());
-		newParams.set(PerfQueryKey.Testbeds, props.plot?.testbeds.toString());
-		newParams.set(PerfQueryKey.Benchmarks, props.plot?.benchmarks.toString());
-		newParams.set(PerfQueryKey.Measures, props.plot?.measures.toString());
-		const now = new Date().getTime();
-		newParams.set(
-			PerfQueryKey.StartTime,
-			(now - (props.plot?.window ?? 0) * 1_000).toString(),
-		);
-		newParams.set(PerfQueryKey.EndTime, now.toString());
-		return newParams.toString();
-	};
-
 	return (
 		<iframe
 			loading="lazy"
-			src={`/perf/${props.plot?.project}/embed?embed_logo=&embed_title=${
+			src={`/perf/${props.plot?.project}/embed?embed_logo=false&embed_title=${
 				props.plot?.name
-			}&embed_header=false&embed_key=false&${plotQueryString()}`}
+			}&embed_header=false&embed_key=false&${plotQueryString(props.plot)}`}
 			title={props.plot?.name}
 			width="100%"
 			height="600px"
@@ -174,6 +138,18 @@ const PinnedPlot = (props: { plot: JsonPlot }) => {
 const PinnedSettings = (props: { plot: JsonPlot }) => {
 	return (
 		<div class="buttons is-right">
+			<a
+				type="button"
+				class="button is-small"
+				title={`View ${props.plot?.name} Perf Plot`}
+				href={`/console/projects/${props.plot?.project}/perf?${plotQueryString(
+					props.plot,
+				)}`}
+			>
+				<span class="icon is-small">
+					<i class="fas fa-external-link-alt" />
+				</span>
+			</a>
 			<button type="button" class="button is-small">
 				<span class="icon is-small">
 					<i class="fas fa-cog" />
