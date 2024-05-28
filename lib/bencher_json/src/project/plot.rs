@@ -9,6 +9,7 @@ use crate::{BenchmarkUuid, BranchUuid, MeasureUuid, ProjectUuid, TestbedUuid};
 
 crate::typed_uuid::typed_uuid!(PlotUuid);
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[allow(clippy::struct_excessive_bools)]

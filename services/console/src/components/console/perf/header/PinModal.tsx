@@ -1,4 +1,5 @@
 import { debounce } from "@solid-primitives/scheduled";
+import bencher_valid_init from "bencher_valid";
 import {
 	type Accessor,
 	Show,
@@ -9,56 +10,44 @@ import {
 import { embedHeight } from "../../../../config/types";
 import type {
 	JsonAuthUser,
+	JsonNewPlot,
 	JsonPerfQuery,
 	JsonProject,
 } from "../../../../types/bencher";
-import { apiUrl } from "../../../../util/http";
-import Field from "../../../field/Field";
+import { apiUrl, httpPost } from "../../../../util/http";
+import Field, { type FieldHandler } from "../../../field/Field";
 import FieldKind from "../../../field/kind";
-import { DEBOUNCE_DELAY } from "../../../../util/valid";
-import { useSearchParams } from "../../../../util/url";
+import { DEBOUNCE_DELAY, validResourceName } from "../../../../util/valid";
+import { useNavigate, useSearchParams } from "../../../../util/url";
 import {
 	EMBED_TITLE_PARAM,
 	PERF_PLOT_EMBED_PARAMS,
 	PERF_PLOT_PARAMS,
 	PERF_PLOT_PIN_PARAMS,
 } from "../PerfPanel";
+import { createStore } from "solid-js/store";
+import { NotifyKind, pageNotify } from "../../../../util/notify";
 
 export interface Props {
 	apiUrl: string;
 	user: JsonAuthUser;
+	project: Accessor<undefined | JsonProject>;
 	perfQuery: Accessor<JsonPerfQuery>;
 	lower_value: Accessor<boolean>;
 	upper_value: Accessor<boolean>;
 	lower_boundary: Accessor<boolean>;
 	upper_boundary: Accessor<boolean>;
 	isPlotInit: Accessor<boolean>;
-	project: Accessor<undefined | JsonProject>;
-	share: Accessor<boolean>;
-	setShare: (share: boolean) => void;
+	pin: Accessor<boolean>;
+	setPin: (share: boolean) => void;
 }
 
 const PinModal = (props: Props) => {
-	const location = window.location;
-	const [searchParams, _setSearchParams] = useSearchParams();
-
-	const [title, setTitle] = createSignal(null);
-
-	const handle_title = debounce(
-		(_key, value, _valid) => setTitle(value),
-		DEBOUNCE_DELAY,
+	const [bencher_valid] = createResource(
+		async () => await bencher_valid_init(),
 	);
 
-	const perfPlotPinParams = createMemo(() => {
-		const newParams = new URLSearchParams();
-		for (const [key, value] of Object.entries(searchParams)) {
-			if (value && PERF_PLOT_PIN_PARAMS.includes(key)) {
-				newParams.set(key, value);
-			}
-		}
-		return newParams;
-	});
-
+	const navigate = useNavigate();
 	const pinFetcher = createMemo(() => {
 		return {
 			perfQuery: props.perfQuery(),
@@ -69,25 +58,90 @@ const PinModal = (props: Props) => {
 			token: props.user?.token,
 		};
 	});
-	const pinned = createResource(pinFetcher, (fetcher) => {});
+
+	const [form, setForm] = createStore(initForm());
+	const [submitting, setSubmitting] = createSignal(false);
+	const [valid, setValid] = createSignal(false);
+
+	const isSendable = (): boolean => {
+		return !submitting() && valid();
+	};
+
+	const handleField: FieldHandler = (key, value, valid) => {
+		setForm({
+			...form,
+			[key]: {
+				value,
+				valid,
+			},
+		});
+
+		setValid(validateForm());
+	};
+
+	const validateForm = () =>
+		(form?.name?.valid && form?.window?.valid && form?.rank?.valid) ?? false;
+
+	const handleSubmit = () => {
+		console.log("submitting");
+		if (!bencher_valid()) {
+			return;
+		}
+		setSubmitting(true);
+
+		const newPlot: JsonNewPlot = {
+			name: form?.name?.value?.trim(),
+			rank: Number.parseInt(form?.rank?.value),
+			window: Number.parseInt(form?.window?.value),
+		};
+
+		httpPost(
+			props.apiUrl,
+			`/v0/projects/${props.project()?.uuid}/plot`,
+			props.user?.token,
+			newPlot,
+		)
+			.then((resp) => {
+				setSubmitting(false);
+				navigate(
+					`/console/projects/${props.project()?.slug}/dashboard#${
+						resp?.data?.uuid
+					}`,
+				);
+			})
+			.catch((error) => {
+				setSubmitting(false);
+				console.error(error);
+				pageNotify(
+					NotifyKind.ERROR,
+					"Failed to pin plot to dashboard. Please, try again.",
+				);
+			});
+	};
 
 	return (
-		<div class={`modal ${props.share() && "is-active"}`}>
+		<form
+			class={`modal ${props.pin() && "is-active"}`}
+			onSubmit={(e) => {
+				e.preventDefault();
+				handleSubmit();
+			}}
+		>
 			<div
 				class="modal-background"
 				onClick={(e) => {
 					e.preventDefault();
-					props.setShare(false);
+					props.setPin(false);
 				}}
 				onKeyDown={(e) => {
 					e.preventDefault();
-					props.setShare(false);
+					props.setPin(false);
 				}}
 			/>
 			<div class="modal-card">
 				<header class="modal-card-head">
 					<p class="modal-card-title">
-						Pin to {props.project()?.name} dashboard
+						Pin to {props.project()?.name} Dashboard
 					</p>
 					<button
 						class="delete"
@@ -95,24 +149,24 @@ const PinModal = (props: Props) => {
 						aria-label="close"
 						onClick={(e) => {
 							e.preventDefault();
-							props.setShare(false);
+							props.setPin(false);
 						}}
 					/>
 				</header>
 				<section class="modal-card-body">
 					<Field
 						kind={FieldKind.INPUT}
-						fieldKey="title"
-						label="Title"
-						value={title()}
-						valid={true}
+						fieldKey="name"
+						label="Plot Name"
+						value={form?.name?.value}
+						valid={form?.name?.valid}
 						config={{
 							type: "text",
 							placeholder: props.project()?.name,
 							icon: "fas fa-chart-line",
-							validate: (_input: string) => true,
+							validate: validResourceName,
 						}}
-						handleField={handle_title}
+						handleField={handleField}
 					/>
 				</section>
 
@@ -120,17 +174,35 @@ const PinModal = (props: Props) => {
 					<button
 						class="button is-primary is-fullwidth"
 						type="button"
+						disabled={!isSendable()}
 						onClick={(e) => {
 							e.preventDefault();
-							props.setShare(false);
+							handleSubmit();
 						}}
 					>
-						Close
+						Pin
 					</button>
 				</footer>
 			</div>
-		</div>
+		</form>
 	);
+};
+
+const initForm = () => {
+	return {
+		name: {
+			value: "",
+			valid: null,
+		},
+		rank: {
+			value: 0,
+			valid: true,
+		},
+		window: {
+			value: 2_419_200,
+			valid: true,
+		},
+	};
 };
 
 export default PinModal;

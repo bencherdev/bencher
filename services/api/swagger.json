@@ -4057,6 +4057,208 @@
         }
       }
     },
+    "/v0/projects/{project}/plots": {
+      "get": {
+        "tags": [
+          "projects",
+          "plots"
+        ],
+        "summary": "List plots for a project",
+        "description": "List all plots for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the plots are sorted in their rank order.",
+        "operationId": "proj_plots_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
+            "schema": {
+              "$ref": "#/components/schemas/JsonDirection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
+            "schema": {
+              "$ref": "#/components/schemas/ProjPlotsSort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "description": "Filter by plot name, exact match.",
+            "schema": {
+              "$ref": "#/components/schemas/ResourceName"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "description": "Search by plot name or UUID.",
+            "schema": {
+              "$ref": "#/components/schemas/Search"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonPlots"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "projects",
+          "plots"
+        ],
+        "summary": "Create a plot",
+        "description": "Create a plot for a project. The user must have `manage` permissions for the project.",
+        "operationId": "proj_plot_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonNewPlot"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "successful creation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonPlot"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/projects/{project}/reports": {
       "get": {
         "tags": [
@@ -8020,6 +8222,99 @@
           "level"
         ]
       },
+      "JsonNewPlot": {
+        "type": "object",
+        "properties": {
+          "benchmarks": {
+            "description": "The benchmarks to include in the plot. At least one benchmark must be specified.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BenchmarkUuid"
+            }
+          },
+          "branches": {
+            "description": "The branches to include in the plot. At least one branch must be specified.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BranchUuid"
+            }
+          },
+          "lower_boundary": {
+            "description": "Display lower boundary limits.",
+            "type": "boolean"
+          },
+          "lower_value": {
+            "description": "Display metric lower values.",
+            "type": "boolean"
+          },
+          "measures": {
+            "description": "The measures to include in the plot. At least one measure must be specified.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeasureUuid"
+            }
+          },
+          "name": {
+            "description": "The name of the plot. Maximum length is 64 characters.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceName"
+              }
+            ]
+          },
+          "rank": {
+            "nullable": true,
+            "description": "The rank of the plot. Maximum rank is 255.",
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0
+          },
+          "testbeds": {
+            "description": "The testbeds to include in the plot. At least one testbed must be specified.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TestbedUuid"
+            }
+          },
+          "upper_boundary": {
+            "description": "Display upper boundary limits.",
+            "type": "boolean"
+          },
+          "upper_value": {
+            "description": "Display metric upper values.",
+            "type": "boolean"
+          },
+          "window": {
+            "description": "The window of time for the plot, in seconds. Metrics outside of this window will be omitted.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Window"
+              }
+            ]
+          },
+          "x_axis": {
+            "description": "The x-axis to use for the plot.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/XAxis"
+              }
+            ]
+          }
+        },
+        "required": [
+          "benchmarks",
+          "branches",
+          "lower_boundary",
+          "lower_value",
+          "measures",
+          "name",
+          "testbeds",
+          "upper_boundary",
+          "upper_value",
+          "window",
+          "x_axis"
+        ]
+      },
       "JsonNewProject": {
         "type": "object",
         "properties": {
@@ -8621,6 +8916,91 @@
           "status",
           "unit_amount"
         ]
+      },
+      "JsonPlot": {
+        "type": "object",
+        "properties": {
+          "benchmarks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BenchmarkUuid"
+            }
+          },
+          "branches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BranchUuid"
+            }
+          },
+          "created": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "lower_boundary": {
+            "type": "boolean"
+          },
+          "lower_value": {
+            "type": "boolean"
+          },
+          "measures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeasureUuid"
+            }
+          },
+          "modified": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "name": {
+            "$ref": "#/components/schemas/ResourceName"
+          },
+          "project": {
+            "$ref": "#/components/schemas/ProjectUuid"
+          },
+          "testbeds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TestbedUuid"
+            }
+          },
+          "upper_boundary": {
+            "type": "boolean"
+          },
+          "upper_value": {
+            "type": "boolean"
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/PlotUuid"
+          },
+          "window": {
+            "$ref": "#/components/schemas/Window"
+          },
+          "x_axis": {
+            "$ref": "#/components/schemas/XAxis"
+          }
+        },
+        "required": [
+          "benchmarks",
+          "branches",
+          "created",
+          "lower_boundary",
+          "lower_value",
+          "measures",
+          "modified",
+          "name",
+          "project",
+          "testbeds",
+          "upper_boundary",
+          "upper_value",
+          "uuid",
+          "window",
+          "x_axis"
+        ]
+      },
+      "JsonPlots": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonPlot"
+        }
       },
       "JsonPlus": {
         "type": "object",
@@ -10142,6 +10522,10 @@
           "unpaid"
         ]
       },
+      "PlotUuid": {
+        "type": "string",
+        "format": "uuid"
+      },
       "ProjectUuid": {
         "type": "string",
         "format": "uuid"
@@ -10308,6 +10692,13 @@
         "format": "uint32",
         "minimum": 0
       },
+      "XAxis": {
+        "type": "string",
+        "enum": [
+          "date_time",
+          "branch_version"
+        ]
+      },
       "JsonDirection": {
         "type": "string",
         "enum": [
@@ -10448,6 +10839,17 @@
         "type": "integer",
         "format": "int64"
       },
+      "ProjPlotsSort": {
+        "oneOf": [
+          {
+            "description": "Sort by plot rank.",
+            "type": "string",
+            "enum": [
+              "rank"
+            ]
+          }
+        ]
+      },
       "ProjReportsSort": {
         "oneOf": [
           {
@@ -10568,6 +10970,9 @@
     },
     {
       "name": "plan"
+    },
+    {
+      "name": "plots"
     },
     {
       "name": "projects",

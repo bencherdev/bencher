@@ -448,6 +448,77 @@ export interface JsonPerf {
 	results: JsonPerfMetrics[];
 }
 
+export enum XAxis {
+	DateTime = "date_time",
+	BranchVersion = "branch_version",
+}
+
+export interface JsonNewPlot {
+	/**
+	 * The name of the plot.
+	 * Maximum length is 64 characters.
+	 */
+	name: ResourceName;
+	/**
+	 * The rank of the plot.
+	 * Maximum rank is 255.
+	 */
+	rank?: number;
+	/** Display metric lower values. */
+	lower_value: boolean;
+	/** Display metric upper values. */
+	upper_value: boolean;
+	/** Display lower boundary limits. */
+	lower_boundary: boolean;
+	/** Display upper boundary limits. */
+	upper_boundary: boolean;
+	/** The x-axis to use for the plot. */
+	x_axis: XAxis;
+	/**
+	 * The window of time for the plot, in seconds.
+	 * Metrics outside of this window will be omitted.
+	 */
+	window: Window;
+	/**
+	 * The branches to include in the plot.
+	 * At least one branch must be specified.
+	 */
+	branches: Uuid[];
+	/**
+	 * The testbeds to include in the plot.
+	 * At least one testbed must be specified.
+	 */
+	testbeds: Uuid[];
+	/**
+	 * The benchmarks to include in the plot.
+	 * At least one benchmark must be specified.
+	 */
+	benchmarks: Uuid[];
+	/**
+	 * The measures to include in the plot.
+	 * At least one measure must be specified.
+	 */
+	measures: Uuid[];
+}
+
+export interface JsonPlot {
+	uuid: PlotUuid;
+	project: Uuid;
+	name: ResourceName;
+	lower_value: boolean;
+	upper_value: boolean;
+	lower_boundary: boolean;
+	upper_boundary: boolean;
+	x_axis: XAxis;
+	window: Window;
+	branches: Uuid[];
+	testbeds: Uuid[];
+	benchmarks: Uuid[];
+	measures: Uuid[];
+	created: string;
+	modified: string;
+}
+
 export interface JsonUser {
 	uuid: Uuid;
 	name: UserName;

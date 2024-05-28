@@ -63,15 +63,15 @@ const PerfHeader = (props: Props) => {
 			<PinModal
 				apiUrl={props.apiUrl}
 				user={props.user}
+				project={props.project}
 				perfQuery={props.perfQuery}
 				lower_value={props.lower_value}
 				upper_value={props.upper_value}
 				lower_boundary={props.lower_boundary}
 				upper_boundary={props.upper_boundary}
 				isPlotInit={props.isPlotInit}
-				project={props.project}
-				share={pin}
-				setShare={setPin}
+				pin={pin}
+				setPin={setPin}
 			/>
 			<div class="column is-narrow">
 				<nav class="level">
