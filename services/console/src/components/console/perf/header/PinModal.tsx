@@ -1,5 +1,11 @@
 import { debounce } from "@solid-primitives/scheduled";
-import { type Accessor, Show, createMemo, createSignal } from "solid-js";
+import {
+	type Accessor,
+	Show,
+	createMemo,
+	createSignal,
+	createResource,
+} from "solid-js";
 import { embedHeight } from "../../../../config/types";
 import type {
 	JsonAuthUser,
@@ -15,12 +21,17 @@ import {
 	EMBED_TITLE_PARAM,
 	PERF_PLOT_EMBED_PARAMS,
 	PERF_PLOT_PARAMS,
+	PERF_PLOT_PIN_PARAMS,
 } from "../PerfPanel";
 
 export interface Props {
 	apiUrl: string;
 	user: JsonAuthUser;
 	perfQuery: Accessor<JsonPerfQuery>;
+	lower_value: Accessor<boolean>;
+	upper_value: Accessor<boolean>;
+	lower_boundary: Accessor<boolean>;
+	upper_boundary: Accessor<boolean>;
 	isPlotInit: Accessor<boolean>;
 	project: Accessor<undefined | JsonProject>;
 	share: Accessor<boolean>;
@@ -38,85 +49,27 @@ const PinModal = (props: Props) => {
 		DEBOUNCE_DELAY,
 	);
 
-	const perfPlotParams = createMemo(() => {
+	const perfPlotPinParams = createMemo(() => {
 		const newParams = new URLSearchParams();
 		for (const [key, value] of Object.entries(searchParams)) {
-			if (value && PERF_PLOT_PARAMS.includes(key)) {
+			if (value && PERF_PLOT_PIN_PARAMS.includes(key)) {
 				newParams.set(key, value);
 			}
 		}
-		return newParams.toString();
+		return newParams;
 	});
 
-	const perf_page_url = createMemo(
-		() =>
-			`${location.protocol}//${location.hostname}${
-				location.port ? `:${location.port}` : ""
-			}/perf/${props.project()?.slug}?${perfPlotParams()}`,
-	);
-
-	const perf_img_url = createMemo(() => {
-		const project_slug = props.project()?.slug;
-		if (
-			props.isPlotInit() ||
-			!(props.share() && project_slug && props.perfQuery())
-		) {
-			return null;
-		}
-
-		const searchParams = new URLSearchParams();
-		for (const [key, value] of Object.entries(props.perfQuery())) {
-			if (value) {
-				searchParams.set(key, value);
-			}
-		}
-		const img_title = title();
-		if (img_title) {
-			searchParams.set("title", img_title);
-		}
-		const url = apiUrl(
-			props.apiUrl,
-			`/v0/projects/${project_slug}/perf/img?${searchParams.toString()}`,
-		);
-		return url;
+	const pinFetcher = createMemo(() => {
+		return {
+			perfQuery: props.perfQuery(),
+			lower_value: props.lower_value(),
+			upper_value: props.upper_value(),
+			lower_boundary: props.lower_boundary(),
+			upper_boundary: props.upper_boundary(),
+			token: props.user?.token,
+		};
 	});
-
-	const perfPlotEmbedParams = createMemo(() => {
-		const newParams = new URLSearchParams();
-		for (const [key, value] of Object.entries(searchParams)) {
-			if (value && PERF_PLOT_EMBED_PARAMS.includes(key)) {
-				newParams.set(key, value);
-			}
-		}
-		const img_title = title();
-		if (img_title) {
-			newParams.set(EMBED_TITLE_PARAM, img_title);
-		}
-		return newParams.toString();
-	});
-
-	const perf_embed_url = createMemo(
-		() =>
-			`${location.protocol}//${location.hostname}${
-				location.port ? `:${location.port}` : ""
-			}/perf/${props.project()?.slug}/embed?${perfPlotEmbedParams()}`,
-	);
-
-	const img_tag = createMemo(
-		() =>
-			`<a href="${perf_page_url()}"><img src="${perf_img_url()}" title="${
-				title() ? title() : props.project()?.name
-			}" alt="${title() ? `${title()} for ` : ""}${
-				props.project()?.name
-			} - Bencher" /></a>`,
-	);
-
-	const embed_tag = createMemo(
-		() =>
-			`<iframe src="${perf_embed_url()}" title="${
-				title() ? title() : props.project()?.name
-			}" width="100%" height="${embedHeight}px" allow="fullscreen"></iframe>`,
-	);
+	const pinned = createResource(pinFetcher, (fetcher) => {});
 
 	return (
 		<div class={`modal ${props.share() && "is-active"}`}>
@@ -150,7 +103,7 @@ const PinModal = (props: Props) => {
 					<Field
 						kind={FieldKind.INPUT}
 						fieldKey="title"
-						label="Title (optional)"
+						label="Title"
 						value={title()}
 						valid={true}
 						config={{
@@ -161,60 +114,6 @@ const PinModal = (props: Props) => {
 						}}
 						handleField={handle_title}
 					/>
-					<br />
-					<Show when={perf_img_url()} fallback={<div>Loading...</div>}>
-						<img src={perf_img_url() ?? ""} alt={props.project()?.name ?? ""} />
-					</Show>
-					<br />
-					<br />
-					<h4 class="title is-4">
-						Click to Copy <code>img</code> Tag
-					</h4>
-					{/* biome-ignore lint/a11y/useValidAnchor: Copy tag */}
-					<a
-						style="word-break: break-all;"
-						href=""
-						onClick={(e) => {
-							e.preventDefault();
-							navigator.clipboard.writeText(img_tag());
-						}}
-					>
-						<code>{img_tag()}</code>
-					</a>
-					<br />
-					<br />
-					<blockquote>🐰 Add me to your README!</blockquote>
-
-					<hr />
-
-					<h4 class="title is-4">Embed Perf Plot</h4>
-					<h4 class="subtitle is-4">Click to Copy Embed Tag</h4>
-					{/* biome-ignore lint/a11y/useValidAnchor: Copy link */}
-					<a
-						style="word-break: break-all;"
-						href=""
-						onClick={(e) => {
-							e.preventDefault();
-							navigator.clipboard.writeText(embed_tag());
-						}}
-					>
-						{embed_tag()}
-					</a>
-
-					<hr />
-
-					<h4 class="title is-4">Click to Copy Public URL</h4>
-					{/* biome-ignore lint/a11y/useValidAnchor: Copy link */}
-					<a
-						style="word-break: break-all;"
-						href=""
-						onClick={(e) => {
-							e.preventDefault();
-							navigator.clipboard.writeText(perf_page_url());
-						}}
-					>
-						{perf_page_url()}
-					</a>
 				</section>
 
 				<footer class="modal-card-foot">

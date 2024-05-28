@@ -23,6 +23,10 @@ export interface Props {
 	project: Resource<JsonProject>;
 	isPlotInit: Accessor<boolean>;
 	perfQuery: Accessor<JsonPerfQuery>;
+	lower_value: Accessor<boolean>;
+	upper_value: Accessor<boolean>;
+	lower_boundary: Accessor<boolean>;
+	upper_boundary: Accessor<boolean>;
 	handleRefresh: () => void;
 }
 
@@ -60,6 +64,10 @@ const PerfHeader = (props: Props) => {
 				apiUrl={props.apiUrl}
 				user={props.user}
 				perfQuery={props.perfQuery}
+				lower_value={props.lower_value}
+				upper_value={props.upper_value}
+				lower_boundary={props.lower_boundary}
+				upper_boundary={props.upper_boundary}
 				isPlotInit={props.isPlotInit}
 				project={props.project}
 				share={pin}

@@ -133,6 +133,16 @@ export const PERF_PLOT_EMBED_PARAMS = [
 	EMBED_HEADER_PARAM,
 	EMBED_KEY_PARAM,
 ];
+export const PERF_PLOT_PIN_PARAMS = [
+	BRANCHES_PARAM,
+	TESTBEDS_PARAM,
+	BENCHMARKS_PARAM,
+	MEASURES_PARAM,
+	LOWER_VALUE_PARAM,
+	UPPER_VALUE_PARAM,
+	LOWER_BOUNDARY_PARAM,
+	UPPER_BOUNDARY_PARAM,
+];
 
 const DEFAULT_PERF_TAB = PerfTab.REPORTS;
 const DEFAULT_PERF_KEY = true;
@@ -910,6 +920,10 @@ const PerfPanel = (props: Props) => {
 					project={project}
 					isPlotInit={isPlotInit}
 					perfQuery={perfQuery}
+					lower_value={lower_value}
+					upper_value={upper_value}
+					lower_boundary={lower_boundary}
+					upper_boundary={upper_boundary}
 					handleRefresh={handleRefresh}
 				/>
 			</Show>
