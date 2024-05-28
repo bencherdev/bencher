@@ -10696,7 +10696,7 @@
         "type": "string",
         "enum": [
           "date_time",
-          "branch_version"
+          "version"
         ]
       },
       "JsonDirection": {

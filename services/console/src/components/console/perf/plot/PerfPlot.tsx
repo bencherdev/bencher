@@ -1,5 +1,5 @@
 import { type Accessor, Match, type Resource, Show, Switch } from "solid-js";
-import type { PerfRange, PerfTab } from "../../../../config/types";
+import type { PerfTab } from "../../../../config/types";
 import type {
 	JsonAuthUser,
 	JsonBenchmark,
@@ -8,6 +8,7 @@ import type {
 	JsonProject,
 	JsonReport,
 	JsonTestbed,
+	XAxis,
 } from "../../../../types/bencher";
 import Plot from "./Plot";
 import PlotHeader from "./PlotHeader";
@@ -35,7 +36,7 @@ export interface Props {
 	perfData: Resource<JsonPerf>;
 	tab: Accessor<PerfTab>;
 	key: Accessor<boolean>;
-	range: Accessor<PerfRange>;
+	x_axis: Accessor<XAxis>;
 	clear: Accessor<boolean>;
 	lower_value: Accessor<boolean>;
 	upper_value: Accessor<boolean>;
@@ -70,7 +71,7 @@ export interface Props {
 	handleEndTime: (end_time: string) => void;
 	handleTab: (tab: PerfTab) => void;
 	handleKey: (key: boolean) => void;
-	handleRange: (range: PerfRange) => void;
+	handleXAxis: (x_axis: XAxis) => void;
 	handleClear: (clear: boolean) => void;
 	handleLowerValue: (lower_value: boolean) => void;
 	handleUpperValue: (upper_value: boolean) => void;
@@ -111,7 +112,7 @@ const PerfPlot = (props: Props) => {
 						start_date={props.start_date}
 						end_date={props.end_date}
 						refresh={props.refresh}
-						range={props.range}
+						x_axis={props.x_axis}
 						clear={props.clear}
 						lower_value={props.lower_value}
 						upper_value={props.upper_value}
@@ -122,7 +123,7 @@ const PerfPlot = (props: Props) => {
 						handleMeasure={props.handleMeasure}
 						handleStartTime={props.handleStartTime}
 						handleEndTime={props.handleEndTime}
-						handleRange={props.handleRange}
+						handleXAxis={props.handleXAxis}
 						handleClear={props.handleClear}
 						handleLowerValue={props.handleLowerValue}
 						handleUpperValue={props.handleUpperValue}
@@ -136,7 +137,7 @@ const PerfPlot = (props: Props) => {
 									theme={props.theme}
 									isConsole={props.isConsole}
 									isEmbed={props.isEmbed}
-									range={props.range}
+									x_axis={props.x_axis}
 									lower_value={props.lower_value}
 									upper_value={props.upper_value}
 									lower_boundary={props.lower_boundary}

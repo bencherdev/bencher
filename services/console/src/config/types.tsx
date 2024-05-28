@@ -1,3 +1,5 @@
+import { XAxis } from "../types/bencher";
+
 export enum BencherResource {
 	ORGANIZATIONS = "organizations",
 	MEMBERS = "members",
@@ -140,12 +142,14 @@ export const isPerfTab = (tab: undefined | string) =>
 	tab === PerfTab.TESTBEDS ||
 	tab === PerfTab.BENCHMARKS;
 
-export enum PerfRange {
-	DATE_TIME = "date_time",
-	VERSION = "version",
-}
-
-export const isPerfRange = (range: undefined | string) =>
-	range === PerfRange.DATE_TIME || range === PerfRange.VERSION;
+export const isXAxis = (xAxis: undefined | string) => {
+	switch (xAxis) {
+		case XAxis.DateTime:
+		case XAxis.Version:
+			return true;
+		default:
+			return false;
+	}
+};
 
 export const embedHeight = 780;

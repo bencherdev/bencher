@@ -11,6 +11,7 @@ import {
 	type JsonPerfQuery,
 	type JsonProject,
 	Visibility,
+	type XAxis,
 } from "../../../../types/bencher";
 import { setPageTitle } from "../../../../util/resource";
 import ShareModal from "./ShareModal";
@@ -27,6 +28,11 @@ export interface Props {
 	upper_value: Accessor<boolean>;
 	lower_boundary: Accessor<boolean>;
 	upper_boundary: Accessor<boolean>;
+	x_axis: Accessor<XAxis>;
+	branches: Accessor<string[]>;
+	testbeds: Accessor<string[]>;
+	benchmarks: Accessor<string[]>;
+	measures: Accessor<string[]>;
 	handleRefresh: () => void;
 }
 
@@ -64,12 +70,17 @@ const PerfHeader = (props: Props) => {
 				apiUrl={props.apiUrl}
 				user={props.user}
 				project={props.project}
+				isPlotInit={props.isPlotInit}
 				perfQuery={props.perfQuery}
 				lower_value={props.lower_value}
 				upper_value={props.upper_value}
 				lower_boundary={props.lower_boundary}
 				upper_boundary={props.upper_boundary}
-				isPlotInit={props.isPlotInit}
+				x_axis={props.x_axis}
+				branches={props.branches}
+				testbeds={props.testbeds}
+				benchmarks={props.benchmarks}
+				measures={props.measures}
 				pin={pin}
 				setPin={setPin}
 			/>

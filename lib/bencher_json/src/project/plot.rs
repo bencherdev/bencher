@@ -92,8 +92,26 @@ pub struct JsonUpdatePlot {
     pub rank: Option<u8>,
 }
 
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum PlotKey {
+    LowerValue,
+    UpperValue,
+    LowerBoundary,
+    UpperBoundary,
+    XAxis,
+}
+
+pub const LOWER_VALUE: &str = "lower_value";
+pub const UPPER_VALUE: &str = "upper_value";
+pub const LOWER_BOUNDARY: &str = "lower_boundary";
+pub const UPPER_BOUNDARY: &str = "upper_boundary";
+pub const X_AXIS: &str = "x_axis";
+
 const DATE_TIME_INT: i32 = 0;
-const BRANCH_VERSION_INT: i32 = 1;
+const VERSION_INT: i32 = 1;
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Default, derive_more::Display, Serialize, Deserialize)]
@@ -105,12 +123,12 @@ const BRANCH_VERSION_INT: i32 = 1;
 pub enum XAxis {
     #[default]
     DateTime = DATE_TIME_INT,
-    BranchVersion = BRANCH_VERSION_INT,
+    Version = VERSION_INT,
 }
 
 #[cfg(feature = "db")]
-mod plot_axis {
-    use super::{XAxis, BRANCH_VERSION_INT, DATE_TIME_INT};
+mod plot_x_axis {
+    use super::{XAxis, DATE_TIME_INT, VERSION_INT};
 
     #[derive(Debug, thiserror::Error)]
     pub enum XAxisError {
@@ -129,7 +147,7 @@ mod plot_axis {
         ) -> diesel::serialize::Result {
             match self {
                 Self::DateTime => DATE_TIME_INT.to_sql(out),
-                Self::BranchVersion => BRANCH_VERSION_INT.to_sql(out),
+                Self::Version => VERSION_INT.to_sql(out),
             }
         }
     }
@@ -142,7 +160,7 @@ mod plot_axis {
         fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
             match i32::from_sql(bytes)? {
                 DATE_TIME_INT => Ok(Self::DateTime),
-                BRANCH_VERSION_INT => Ok(Self::BranchVersion),
+                VERSION_INT => Ok(Self::Version),
                 value => Err(Box::new(XAxisError::Invalid(value))),
             }
         }

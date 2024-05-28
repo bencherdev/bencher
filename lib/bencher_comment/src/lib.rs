@@ -3,7 +3,7 @@ use std::{collections::BTreeMap, time::Duration};
 use bencher_json::{
     project::{
         boundary::BoundaryLimit,
-        perf::{LOWER_BOUNDARY, UPPER_BOUNDARY},
+        plot::{LOWER_BOUNDARY, UPPER_BOUNDARY},
     },
     AlertUuid, BenchmarkName, BenchmarkUuid, BranchUuid, DateTime, JsonBoundary, JsonPerfQuery,
     JsonReport, MeasureUuid, ResourceName, Slug, TestbedUuid,

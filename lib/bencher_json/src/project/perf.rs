@@ -234,9 +234,6 @@ pub enum PerfQueryKey {
     Measures,
     StartTime,
     EndTime,
-    // Console Keys
-    LowerBoundary,
-    UpperBoundary,
 }
 
 pub const BRANCHES: &str = "branches";
@@ -248,9 +245,6 @@ pub const END_TIME: &str = "end_time";
 const QUERY_KEYS: [&str; 6] = [
     BRANCHES, TESTBEDS, BENCHMARKS, MEASURES, START_TIME, END_TIME,
 ];
-// Console Keys
-pub const LOWER_BOUNDARY: &str = "lower_boundary";
-pub const UPPER_BOUNDARY: &str = "upper_boundary";
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]

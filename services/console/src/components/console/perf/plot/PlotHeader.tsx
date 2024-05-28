@@ -8,11 +8,11 @@ import {
 	createResource,
 	createSignal,
 } from "solid-js";
-import { PerfRange } from "../../../../config/types";
-import type {
-	JsonAuthUser,
-	JsonMeasure,
-	JsonProject,
+import {
+	XAxis,
+	type JsonAuthUser,
+	type JsonMeasure,
+	type JsonProject,
 } from "../../../../types/bencher";
 import { BENCHER_WORDMARK, BENCHER_WORDMARK_ID } from "../../../../util/ext";
 import { httpGet } from "../../../../util/http";
@@ -33,7 +33,7 @@ export interface Props {
 	start_date: Accessor<undefined | string>;
 	end_date: Accessor<undefined | string>;
 	refresh: () => void;
-	range: Accessor<PerfRange>;
+	x_axis: Accessor<XAxis>;
 	clear: Accessor<boolean>;
 	lower_value: Accessor<boolean>;
 	upper_value: Accessor<boolean>;
@@ -44,7 +44,7 @@ export interface Props {
 	handleMeasure: (measure: null | string) => void;
 	handleStartTime: (start_time: string) => void;
 	handleEndTime: (end_time: string) => void;
-	handleRange: (range: PerfRange) => void;
+	handleXAxis: (x_axis: XAxis) => void;
 	handleClear: (clear: boolean) => void;
 	handleLowerValue: (lower_value: boolean) => void;
 	handleUpperValue: (upper_value: boolean) => void;
@@ -235,11 +235,11 @@ const EmbedPlotHeader = (props: Props) => {
 };
 
 const SharedPlot = (props: Props) => {
-	const range_icon = createMemo(() => {
-		switch (props.range()) {
-			case PerfRange.DATE_TIME:
+	const xAxisIcon = createMemo(() => {
+		switch (props.x_axis()) {
+			case XAxis.DateTime:
 				return <i class="far fa-calendar" />;
-			case PerfRange.VERSION:
+			case XAxis.Version:
 				return <i class="fas fa-code-branch" />;
 		}
 	});
@@ -308,24 +308,27 @@ const SharedPlot = (props: Props) => {
 					<button
 						class="button is-fullwidth"
 						type="button"
-						title={
-							props.range() === PerfRange.DATE_TIME
-								? "Switch to Version Range"
-								: "Switch to Date Range"
-						}
+						title={(() => {
+							switch (props.x_axis()) {
+								case XAxis.DateTime:
+									return "Switch X-Axis to Branch Version";
+								case XAxis.Version:
+									return "Switch X-Axis to Date";
+							}
+						})()}
 						onClick={(e) => {
 							e.preventDefault();
-							switch (props.range()) {
-								case PerfRange.DATE_TIME:
-									props.handleRange(PerfRange.VERSION);
+							switch (props.x_axis()) {
+								case XAxis.DateTime:
+									props.handleXAxis(XAxis.Version);
 									break;
-								case PerfRange.VERSION:
-									props.handleRange(PerfRange.DATE_TIME);
+								case XAxis.Version:
+									props.handleXAxis(XAxis.DateTime);
 									break;
 							}
 						}}
 					>
-						<span class="icon">{range_icon()}</span>
+						<span class="icon">{xAxisIcon()}</span>
 					</button>
 				</div>
 			</Show>

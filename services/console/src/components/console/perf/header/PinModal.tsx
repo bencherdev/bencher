@@ -13,6 +13,7 @@ import type {
 	JsonNewPlot,
 	JsonPerfQuery,
 	JsonProject,
+	XAxis,
 } from "../../../../types/bencher";
 import { apiUrl, httpPost } from "../../../../util/http";
 import Field, { type FieldHandler } from "../../../field/Field";
@@ -32,12 +33,17 @@ export interface Props {
 	apiUrl: string;
 	user: JsonAuthUser;
 	project: Accessor<undefined | JsonProject>;
+	isPlotInit: Accessor<boolean>;
 	perfQuery: Accessor<JsonPerfQuery>;
 	lower_value: Accessor<boolean>;
 	upper_value: Accessor<boolean>;
 	lower_boundary: Accessor<boolean>;
 	upper_boundary: Accessor<boolean>;
-	isPlotInit: Accessor<boolean>;
+	x_axis: Accessor<XAxis>;
+	branches: Accessor<string[]>;
+	testbeds: Accessor<string[]>;
+	benchmarks: Accessor<string[]>;
+	measures: Accessor<string[]>;
 	pin: Accessor<boolean>;
 	setPin: (share: boolean) => void;
 }
@@ -46,18 +52,7 @@ const PinModal = (props: Props) => {
 	const [bencher_valid] = createResource(
 		async () => await bencher_valid_init(),
 	);
-
 	const navigate = useNavigate();
-	const pinFetcher = createMemo(() => {
-		return {
-			perfQuery: props.perfQuery(),
-			lower_value: props.lower_value(),
-			upper_value: props.upper_value(),
-			lower_boundary: props.lower_boundary(),
-			upper_boundary: props.upper_boundary(),
-			token: props.user?.token,
-		};
-	});
 
 	const [form, setForm] = createStore(initForm());
 	const [submitting, setSubmitting] = createSignal(false);
@@ -83,21 +78,34 @@ const PinModal = (props: Props) => {
 		(form?.name?.valid && form?.window?.valid && form?.rank?.valid) ?? false;
 
 	const handleSubmit = () => {
-		console.log("submitting");
 		if (!bencher_valid()) {
 			return;
 		}
+		// This should never be possible, but just double check.
+		if (props.isPlotInit()) {
+			return;
+		}
+
 		setSubmitting(true);
 
 		const newPlot: JsonNewPlot = {
 			name: form?.name?.value?.trim(),
 			rank: Number.parseInt(form?.rank?.value),
+			lower_value: props.lower_value(),
+			upper_value: props.upper_value(),
+			lower_boundary: props.lower_boundary(),
+			upper_boundary: props.upper_boundary(),
+			x_axis: props.x_axis(),
 			window: Number.parseInt(form?.window?.value),
+			branches: props.branches(),
+			testbeds: props.testbeds(),
+			benchmarks: props.benchmarks(),
+			measures: props.measures(),
 		};
 
 		httpPost(
 			props.apiUrl,
-			`/v0/projects/${props.project()?.uuid}/plot`,
+			`/v0/projects/${props.project()?.uuid}/plots`,
 			props.user?.token,
 			newPlot,
 		)
@@ -195,11 +203,11 @@ const initForm = () => {
 			valid: null,
 		},
 		rank: {
-			value: 0,
+			value: "0",
 			valid: true,
 		},
 		window: {
-			value: 2_419_200,
+			value: "2419200",
 			valid: true,
 		},
 	};

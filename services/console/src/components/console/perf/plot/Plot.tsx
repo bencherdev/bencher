@@ -7,8 +7,7 @@ import {
 	Show,
 } from "solid-js";
 import { createStore } from "solid-js/store";
-import type { PerfRange } from "../../../../config/types";
-import type { JsonPerf } from "../../../../types/bencher";
+import type { JsonPerf, XAxis } from "../../../../types/bencher";
 import LinePlot from "./line/LinePlot";
 import PlotKey from "./key/PlotKey";
 import type { Theme } from "../../../navbar/theme/theme";
@@ -17,7 +16,7 @@ export interface Props {
 	theme: Accessor<Theme>;
 	isConsole: boolean;
 	isEmbed: boolean;
-	range: Accessor<PerfRange>;
+	x_axis: Accessor<XAxis>;
 	lower_value: Accessor<boolean>;
 	upper_value: Accessor<boolean>;
 	lower_boundary: Accessor<boolean>;
@@ -71,7 +70,7 @@ const Plot = (props: Props) => {
 					theme={props.theme}
 					isConsole={props.isConsole}
 					perfData={props.perfData}
-					range={props.range}
+					x_axis={props.x_axis}
 					lower_value={props.lower_value}
 					upper_value={props.upper_value}
 					lower_boundary={props.lower_boundary}

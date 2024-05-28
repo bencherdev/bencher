@@ -7,10 +7,10 @@ import {
 	createSignal,
 	createMemo,
 } from "solid-js";
-import { PerfRange } from "../../../../../config/types";
 import {
 	AlertStatus,
 	BoundaryLimit,
+	XAxis,
 	type Boundary,
 	type JsonPerf,
 	type JsonPerfAlert,
@@ -18,6 +18,7 @@ import {
 import { addTooltips } from "./tooltip";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import { Theme } from "../../../../navbar/theme/theme";
+import type { ScaleType } from "@observablehq/plot";
 
 // Source: https://twemoji.twitter.com
 // License: https://creativecommons.org/licenses/by/4.0
@@ -29,7 +30,7 @@ export interface Props {
 	theme: Accessor<Theme>;
 	isConsole: boolean;
 	perfData: Resource<JsonPerf>;
-	range: Accessor<PerfRange>;
+	x_axis: Accessor<XAxis>;
 	lower_value: Accessor<boolean>;
 	upper_value: Accessor<boolean>;
 	lower_boundary: Accessor<boolean>;
@@ -73,21 +74,12 @@ const get_units = (json_perf: JsonPerf) => {
 	return "units";
 };
 
-const get_x_axis = (range: PerfRange): [string, string] => {
-	switch (range) {
-		case PerfRange.DATE_TIME:
-			return ["date_time", "Report Date and Time"];
-		case PerfRange.VERSION:
-			return ["number", "Branch Version Number"];
-	}
-};
-
-const get_x_type = (range: PerfRange) => {
-	switch (range) {
-		case PerfRange.DATE_TIME:
-			return "time";
-		case PerfRange.VERSION:
-			return "point";
+const get_x_axis = (x_axis: XAxis): [string, ScaleType, string] => {
+	switch (x_axis) {
+		case XAxis.DateTime:
+			return ["date_time", "time", "Report Date and Time"];
+		case XAxis.Version:
+			return ["number", "point", "Branch Version Number"];
 	}
 };
 
@@ -120,7 +112,7 @@ const LinePlot = (props: Props) => {
 	const [isPlotted, setIsPlotted] = createSignal(false);
 	const [y_label_area_size, set_y_label_area_size] = createSignal(512);
 
-	const [range, setRange] = createSignal(props.range());
+	const [x_axis, setRange] = createSignal(props.x_axis());
 	const [lower_value, setLowerValue] = createSignal(props.lower_value());
 	const [upper_value, setUpperValue] = createSignal(props.upper_value());
 	const [lower_boundary, setLowerBoundary] = createSignal(
@@ -143,8 +135,8 @@ const LinePlot = (props: Props) => {
 		}
 		// If any of these change, it is possible for the y-axis labels to change.
 		// Therefore, we need to recalculate the plot's `marginLeft` to make sure the new y-axis labels fits.
-		if (props.range() !== range()) {
-			setRange(props.range());
+		if (props.x_axis() !== x_axis()) {
+			setRange(props.x_axis());
 			setIsPlotted(false);
 		} else if (props.lower_value() !== lower_value()) {
 			setLowerValue(props.lower_value());
@@ -175,7 +167,9 @@ const LinePlot = (props: Props) => {
 		}
 
 		const units = get_units(json_perf);
-		const [x_axis, x_axis_label] = get_x_axis(props.range());
+		const [x_axis_kind, x_axis_scale_type, x_axis_label] = get_x_axis(
+			props.x_axis(),
+		);
 
 		const plot_arrays = [];
 		const warn_arrays = [];
@@ -273,7 +267,7 @@ const LinePlot = (props: Props) => {
 			// Line
 			plot_arrays.push(
 				Plot.line(line_data, {
-					x: x_axis,
+					x: x_axis_kind,
 					y: "value",
 					stroke: color,
 				}),
@@ -281,7 +275,7 @@ const LinePlot = (props: Props) => {
 			// Dots
 			plot_arrays.push(
 				Plot.dot(line_data, {
-					x: x_axis,
+					x: x_axis_kind,
 					y: "value",
 					symbol: "circle",
 					stroke: color,
@@ -295,13 +289,13 @@ const LinePlot = (props: Props) => {
 				plot_arrays.push(
 					Plot.line(
 						line_data,
-						value_end_line(x_axis, BoundaryLimit.Lower, color),
+						value_end_line(x_axis_kind, BoundaryLimit.Lower, color),
 					),
 				);
 				plot_arrays.push(
 					Plot.dot(
 						line_data,
-						value_end_dot(x_axis, BoundaryLimit.Lower, color),
+						value_end_dot(x_axis_kind, BoundaryLimit.Lower, color),
 					),
 				);
 			}
@@ -311,13 +305,13 @@ const LinePlot = (props: Props) => {
 				plot_arrays.push(
 					Plot.line(
 						line_data,
-						value_end_line(x_axis, BoundaryLimit.Upper, color),
+						value_end_line(x_axis_kind, BoundaryLimit.Upper, color),
 					),
 				);
 				plot_arrays.push(
 					Plot.dot(
 						line_data,
-						value_end_dot(x_axis, BoundaryLimit.Upper, color),
+						value_end_dot(x_axis_kind, BoundaryLimit.Upper, color),
 					),
 				);
 			}
@@ -327,14 +321,14 @@ const LinePlot = (props: Props) => {
 				plot_arrays.push(
 					Plot.line(
 						line_data,
-						boundary_line(x_axis, BoundaryLimit.Lower, color),
+						boundary_line(x_axis_kind, BoundaryLimit.Lower, color),
 					),
 				);
 				plot_arrays.push(
 					Plot.dot(
 						boundary_data,
 						boundary_dot(
-							x_axis,
+							x_axis_kind,
 							BoundaryLimit.Lower,
 							color,
 							project_slug,
@@ -345,7 +339,7 @@ const LinePlot = (props: Props) => {
 				warn_arrays.push(
 					Plot.image(
 						skipped_lower_data,
-						warning_image(x_axis, project_slug, props.isConsole),
+						warning_image(x_axis_kind, project_slug, props.isConsole),
 					),
 				);
 			}
@@ -353,7 +347,7 @@ const LinePlot = (props: Props) => {
 				Plot.image(
 					lower_alert_data,
 					alert_image(
-						x_axis,
+						x_axis_kind,
 						BoundaryLimit.Lower,
 						project_slug,
 						props.isConsole,
@@ -366,14 +360,14 @@ const LinePlot = (props: Props) => {
 				plot_arrays.push(
 					Plot.line(
 						line_data,
-						boundary_line(x_axis, BoundaryLimit.Upper, color),
+						boundary_line(x_axis_kind, BoundaryLimit.Upper, color),
 					),
 				);
 				plot_arrays.push(
 					Plot.dot(
 						boundary_data,
 						boundary_dot(
-							x_axis,
+							x_axis_kind,
 							BoundaryLimit.Upper,
 							color,
 							project_slug,
@@ -384,7 +378,7 @@ const LinePlot = (props: Props) => {
 				warn_arrays.push(
 					Plot.image(
 						skipped_upper_data,
-						warning_image(x_axis, project_slug, props.isConsole),
+						warning_image(x_axis_kind, project_slug, props.isConsole),
 					),
 				);
 			}
@@ -392,7 +386,7 @@ const LinePlot = (props: Props) => {
 				Plot.image(
 					upper_alert_data,
 					alert_image(
-						x_axis,
+						x_axis_kind,
 						BoundaryLimit.Upper,
 						project_slug,
 						props.isConsole,
@@ -410,7 +404,7 @@ const LinePlot = (props: Props) => {
 						{addTooltips(
 							Plot.plot({
 								x: {
-									type: get_x_type(props.range()),
+									type: x_axis_scale_type,
 									grid: true,
 									label: `${x_axis_label} ➡`,
 									labelOffset: 36,

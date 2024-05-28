@@ -450,7 +450,7 @@ export interface JsonPerf {
 
 export enum XAxis {
 	DateTime = "date_time",
-	BranchVersion = "branch_version",
+	Version = "version",
 }
 
 export interface JsonNewPlot {
@@ -718,7 +718,13 @@ export enum PerfQueryKey {
 	Measures = "measures",
 	StartTime = "start_time",
 	EndTime = "end_time",
+}
+
+export enum PlotKey {
+	LowerValue = "lower_value",
+	UpperValue = "upper_value",
 	LowerBoundary = "lower_boundary",
 	UpperBoundary = "upper_boundary",
+	XAxis = "x_axis",
 }
 

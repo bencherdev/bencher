@@ -7,12 +7,7 @@ import {
 	createSignal,
 } from "solid-js";
 import { createStore } from "solid-js/store";
-import {
-	PerfRange,
-	PerfTab,
-	isPerfRange,
-	isPerfTab,
-} from "../../../config/types";
+import { PerfTab, isXAxis, isPerfTab } from "../../../config/types";
 import {
 	type JsonBenchmark,
 	type JsonBranch,
@@ -22,6 +17,8 @@ import {
 	type JsonReport,
 	type JsonTestbed,
 	PerfQueryKey,
+	PlotKey,
+	XAxis,
 } from "../../../types/bencher";
 import { authUser } from "../../../util/auth";
 import {
@@ -79,12 +76,14 @@ const BENCHMARKS_SEARCH_PARAM = "benchmarks_search";
 
 const TAB_PARAM = "tab";
 const KEY_PARAM = "key";
+const LOWER_VALUE_PARAM = PlotKey.LowerValue;
+const UPPER_VALUE_PARAM = PlotKey.UpperValue;
+const LOWER_BOUNDARY_PARAM = PlotKey.LowerBoundary;
+const UPPER_BOUNDARY_PARAM = PlotKey.UpperBoundary;
+const X_AXIS_PARAM = PlotKey.XAxis;
+// TODO remove in due time
 const RANGE_PARAM = "range";
 const CLEAR_PARAM = "clear";
-const LOWER_VALUE_PARAM = "lower_value";
-const UPPER_VALUE_PARAM = "upper_value";
-const LOWER_BOUNDARY_PARAM = PerfQueryKey.LowerBoundary;
-const UPPER_BOUNDARY_PARAM = PerfQueryKey.UpperBoundary;
 
 // These are currently for internal use only
 // TODO add a way to set these in the Share modal
@@ -120,7 +119,7 @@ export const PERF_PLOT_PARAMS = [
 	BENCHMARKS_SEARCH_PARAM,
 	TAB_PARAM,
 	KEY_PARAM,
-	RANGE_PARAM,
+	X_AXIS_PARAM,
 	CLEAR_PARAM,
 	LOWER_VALUE_PARAM,
 	UPPER_VALUE_PARAM,
@@ -146,7 +145,7 @@ export const PERF_PLOT_PIN_PARAMS = [
 
 const DEFAULT_PERF_TAB = PerfTab.REPORTS;
 const DEFAULT_PERF_KEY = true;
-const DEFAULT_PERF_RANGE = PerfRange.DATE_TIME;
+const DEFAULT_X_AXIS = XAxis.DateTime;
 const DEFAULT_PERF_CLEAR = false;
 const DEFAULT_PERF_END_VALUE = false;
 const DEFAULT_PERF_BOUNDARY = false;
@@ -223,7 +222,18 @@ const PerfPanel = (props: Props) => {
 		if (!isBoolParam(searchParams[KEY_PARAM])) {
 			initParams[KEY_PARAM] = DEFAULT_PERF_KEY;
 		}
-		if (!isPerfRange(searchParams[RANGE_PARAM])) {
+		if (isXAxis(searchParams[X_AXIS_PARAM])) {
+			// TODO remove in due time
+			initParams[RANGE_PARAM] = null;
+		} else {
+			initParams[X_AXIS_PARAM] = null;
+		}
+		// TODO remove in due time
+		if (isXAxis(searchParams[RANGE_PARAM])) {
+			if (!initParams[X_AXIS_PARAM]) {
+				initParams[X_AXIS_PARAM] = searchParams[RANGE_PARAM];
+			}
+		} else {
 			initParams[RANGE_PARAM] = null;
 		}
 		if (!isBoolParam(searchParams[CLEAR_PARAM])) {
@@ -345,14 +355,19 @@ const PerfPanel = (props: Props) => {
 		isBoolParamOrDefault(KEY_PARAM, DEFAULT_PERF_KEY),
 	);
 
-	const range = createMemo(() => {
+	const x_axis = createMemo(() => {
 		// This check is required for the initial load
 		// before the query params have been sanitized
-		const perfRange = searchParams[RANGE_PARAM];
-		if (perfRange && isPerfRange(perfRange)) {
-			return perfRange as PerfRange;
+		const x = searchParams[X_AXIS_PARAM];
+		if (x && isXAxis(x)) {
+			return x as XAxis;
 		}
-		return DEFAULT_PERF_RANGE;
+		// TODO remove in due time
+		const r = searchParams[RANGE_PARAM];
+		if (r && isXAxis(r)) {
+			return r as XAxis;
+		}
+		return DEFAULT_X_AXIS;
 	});
 
 	// Ironically, a better name for the `clear` param would actually be `dirty`.
@@ -807,9 +822,9 @@ const PerfPanel = (props: Props) => {
 		handleBool(KEY_PARAM, key);
 	};
 
-	const handleRange = (range: PerfRange) => {
-		if (isPerfRange(range)) {
-			setSearchParams({ [RANGE_PARAM]: range });
+	const handleXAxis = (x_axis: XAxis) => {
+		if (isXAxis(x_axis)) {
+			setSearchParams({ [X_AXIS_PARAM]: x_axis });
 		}
 	};
 
@@ -924,6 +939,11 @@ const PerfPanel = (props: Props) => {
 					upper_value={upper_value}
 					lower_boundary={lower_boundary}
 					upper_boundary={upper_boundary}
+					x_axis={x_axis}
+					branches={branches}
+					testbeds={testbeds}
+					benchmarks={benchmarks}
+					measures={measures}
 					handleRefresh={handleRefresh}
 				/>
 			</Show>
@@ -947,7 +967,7 @@ const PerfPanel = (props: Props) => {
 				perfData={perfData}
 				tab={tab}
 				key={key}
-				range={range}
+				x_axis={x_axis}
 				clear={clear}
 				lower_value={lower_value}
 				upper_value={upper_value}
@@ -982,7 +1002,7 @@ const PerfPanel = (props: Props) => {
 				handleEndTime={handleEndTime}
 				handleTab={handleTab}
 				handleKey={handleKey}
-				handleRange={handleRange}
+				handleXAxis={handleXAxis}
 				handleClear={handleClear}
 				handleLowerValue={handleLowerValue}
 				handleUpperValue={handleUpperValue}
