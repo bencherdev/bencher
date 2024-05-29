@@ -1,4 +1,11 @@
-import { Switch, type Accessor, type Resource, Match } from "solid-js";
+import {
+	Switch,
+	type Accessor,
+	type Resource,
+	Match,
+	createResource,
+	createMemo,
+} from "solid-js";
 import type { JsonAuthUser } from "../../../../types/bencher";
 import { ActionButton } from "../../../../config/types";
 import DeleteButton from "./DeleteButton";
@@ -21,21 +28,31 @@ export interface DeckButtonConfig {
 }
 
 const DeckButton = (props: Props) => {
+	const allowedFetcher = createMemo(() => {
+		return {
+			apiUrl: props.apiUrl,
+			params: props.params,
+		};
+	});
+	const getAllowed = async (fetcher: {
+		apiUrl: string;
+		params: Params;
+	}) => {
+		if (!props.config?.is_allowed) {
+			return true;
+		}
+		return await props.config?.is_allowed(fetcher.apiUrl, fetcher.params);
+	};
+	const [isAllowed] = createResource(allowedFetcher, getAllowed);
+
 	return (
-		<div class="columns">
-			<div class="column">
-				<form class="box">
-					<div class="field">
-						<p class="control">
-							<Switch>
-								<Match
-									when={
-										props.config?.kind === ActionButton.DELETE &&
-										props.config?.is_allowed
-											? props.config?.is_allowed?.(props.apiUrl, props.params)
-											: true
-									}
-								>
+		<Switch>
+			<Match when={props.config?.kind === ActionButton.DELETE && isAllowed()}>
+				<div class="columns">
+					<div class="column">
+						<form class="box">
+							<div class="field">
+								<p class="control">
 									<DeleteButton
 										apiUrl={props.apiUrl}
 										user={props.user}
@@ -44,13 +61,13 @@ const DeckButton = (props: Props) => {
 										subtitle={props.config.subtitle}
 										redirect={props.config.path}
 									/>
-								</Match>
-							</Switch>
-						</p>
+								</p>
+							</div>
+						</form>
 					</div>
-				</form>
-			</div>
-		</div>
+				</div>
+			</Match>
+		</Switch>
 	);
 };
 

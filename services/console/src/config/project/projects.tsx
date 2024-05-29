@@ -1,7 +1,7 @@
 import type { Params } from "astro";
 import FieldKind from "../../components/field/kind";
 import { type JsonProject, Visibility } from "../../types/bencher";
-import { isAllowedProjectEdit } from "../../util/auth";
+import { isAllowedProjectDelete, isAllowedProjectEdit } from "../../util/auth";
 import { validResourceName, validOptionUrl, validSlug } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { addPath, parentPath } from "../util";
@@ -235,6 +235,7 @@ const projectsConfig = {
 					subtitle: null,
 					path: (_pathname: string, data: JsonProject) =>
 						`/console/organizations/${data.organization}/projects`,
+					is_allowed: isAllowedProjectDelete,
 				},
 			],
 		},

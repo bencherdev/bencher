@@ -110,6 +110,9 @@ export const isAllowed = async (
 export const isAllowedOrganizationEdit = (apiUrl: string, params: Params) =>
 	isAllowedOrganization(apiUrl, params, OrganizationPermission.Edit);
 
+export const isAllowedOrganizationDelete = (apiUrl: string, params: Params) =>
+	isAllowedOrganization(apiUrl, params, OrganizationPermission.Delete);
+
 export const isAllowedOrganizationManage = (apiUrl: string, params: Params) =>
 	isAllowedOrganization(apiUrl, params, OrganizationPermission.Manage);
 
