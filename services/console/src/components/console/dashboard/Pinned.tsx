@@ -1,7 +1,9 @@
 import {
 	Match,
+	Show,
 	Switch,
 	createMemo,
+	createResource,
 	createSignal,
 	type Accessor,
 	type Resource,
@@ -30,6 +32,7 @@ const Pinned = (props: {
 	params: Params;
 	user: JsonAuthUser;
 	project: Resource<JsonProject>;
+	isAllowed: Resource<boolean>;
 	plot: JsonPlot;
 	index: Accessor<number>;
 	refresh: () => JsonPlot[] | Promise<JsonPlot[]> | null | undefined;
@@ -40,7 +43,11 @@ const Pinned = (props: {
 		<div id={props.plot?.uuid} class="box">
 			<Switch>
 				<Match when={state() === PinnedState.Front}>
-					<PinnedFront plot={props.plot} handleState={setState} />
+					<PinnedFront
+						plot={props.plot}
+						isAllowed={props.isAllowed}
+						handleState={setState}
+					/>
 				</Match>
 				<Match when={state() === PinnedState.Settings}>
 					<PinnedSetting
@@ -48,6 +55,7 @@ const Pinned = (props: {
 						params={props.params}
 						user={props.user}
 						project={props.project}
+						isAllowed={props.isAllowed}
 						plot={props.plot}
 						refresh={props.refresh}
 						handleState={setState}
@@ -60,12 +68,17 @@ const Pinned = (props: {
 
 const PinnedFront = (props: {
 	plot: JsonPlot;
+	isAllowed: Resource<boolean>;
 	handleState: (state: PinnedState) => void;
 }) => {
 	return (
 		<>
 			<PinnedPlot plot={props.plot} />
-			<PinnedButtons plot={props.plot} handleState={props.handleState} />
+			<PinnedButtons
+				isAllowed={props.isAllowed}
+				plot={props.plot}
+				handleState={props.handleState}
+			/>
 		</>
 	);
 };
@@ -85,36 +98,70 @@ const PinnedPlot = (props: { plot: JsonPlot }) => {
 };
 
 const PinnedButtons = (props: {
+	isAllowed: Resource<boolean>;
 	plot: JsonPlot;
 	handleState: (state: PinnedState) => void;
 }) => {
 	return (
-		<div class="buttons is-right">
-			<a
-				type="button"
-				class="button is-small"
-				title="View this Perf Plot"
-				href={`/console/projects/${props.plot?.project}/perf?${plotQueryString(
-					props.plot,
-				)}`}
-			>
-				<span class="icon is-small">
-					<i class="fas fa-external-link-alt" />
-				</span>
-			</a>
-			<button
-				type="button"
-				class="button is-small"
-				onClick={(e) => {
-					e.preventDefault();
-					props.handleState(PinnedState.Settings);
-				}}
-			>
-				<span class="icon is-small">
-					<i class="fas fa-cog" />
-				</span>
-			</button>
-		</div>
+		<nav class="level">
+			<div class="level-left">
+				<Show when={props.isAllowed()}>
+					<div class="field has-addons">
+						<p class="control">
+							<button
+								type="button"
+								class="button is-small"
+								title="Move plot up"
+							>
+								<span class="icon is-small">
+									<i class="fas fa-chevron-down" />
+								</span>
+							</button>
+						</p>
+						<p class="control">
+							<button
+								type="button"
+								class="button is-small"
+								title="Move plot down"
+							>
+								<span class="icon is-small">
+									<i class="fas fa-chevron-up" />
+								</span>
+							</button>
+						</p>
+					</div>
+				</Show>
+			</div>
+
+			<div class="level-right">
+				<div class="buttons">
+					<a
+						type="button"
+						class="button is-small"
+						title="View this Perf Plot"
+						href={`/console/projects/${
+							props.plot?.project
+						}/perf?${plotQueryString(props.plot)}`}
+					>
+						<span class="icon is-small">
+							<i class="fas fa-external-link-alt" />
+						</span>
+					</a>
+					<button
+						type="button"
+						class="button is-small"
+						onClick={(e) => {
+							e.preventDefault();
+							props.handleState(PinnedState.Settings);
+						}}
+					>
+						<span class="icon is-small">
+							<i class="fas fa-cog" />
+						</span>
+					</button>
+				</div>
+			</div>
+		</nav>
 	);
 };
 
@@ -123,6 +170,7 @@ const PinnedSetting = (props: {
 	params: Params;
 	user: JsonAuthUser;
 	project: Resource<JsonProject>;
+	isAllowed: Resource<boolean>;
 	plot: JsonPlot;
 	refresh: () => JsonPlot[] | Promise<JsonPlot[]> | null | undefined;
 	handleState: (state: PinnedState) => void;
@@ -157,7 +205,7 @@ const PinnedSetting = (props: {
 					label: "Title",
 					key: "title",
 					display: Display.RAW,
-					is_allowed: isAllowedProjectManage,
+					is_allowed: (_apiUrl, _params) => props.isAllowed() === true,
 					field: {
 						kind: FieldKind.INPUT,
 						label: "Title",
@@ -174,14 +222,16 @@ const PinnedSetting = (props: {
 				handleLoopback={props.refresh}
 			/>
 			<br />
-			<DeleteButton
-				apiUrl={props.apiUrl}
-				user={props.user}
-				path={path}
-				data={() => props.plot}
-				subtitle="This plot will no longer appear in your dashboard."
-				redirect={(pathname, _data) => pathname}
-			/>
+			<Show when={props.isAllowed()}>
+				<DeleteButton
+					apiUrl={props.apiUrl}
+					user={props.user}
+					path={path}
+					data={() => props.plot}
+					subtitle="This plot will no longer appear in your dashboard."
+					redirect={(pathname, _data) => pathname}
+				/>
+			</Show>
 		</>
 	);
 };

@@ -9,7 +9,7 @@ import {
 	type Accessor,
 } from "solid-js";
 import { setPageTitle } from "../../../util/resource";
-import { authUser } from "../../../util/auth";
+import { authUser, isAllowedProjectManage } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
 import Pinned from "./Pinned";
 
@@ -88,6 +88,20 @@ const DashboardPanel = (props: Props) => {
 		getPlots,
 	);
 
+	const allowedFetcher = createMemo(() => {
+		return {
+			apiUrl: props.apiUrl,
+			params: props.params,
+		};
+	});
+	const getAllowed = async (fetcher: {
+		apiUrl: string;
+		params: Params;
+	}) => {
+		return await isAllowedProjectManage(fetcher.apiUrl, fetcher.params);
+	};
+	const [isAllowed] = createResource(allowedFetcher, getAllowed);
+
 	return (
 		<div class="columns is-multiline is-vcentered">
 			<For each={plots()}>
@@ -98,6 +112,7 @@ const DashboardPanel = (props: Props) => {
 							params={props.params}
 							user={user}
 							project={project}
+							isAllowed={isAllowed}
 							plot={plot}
 							index={index}
 							refresh={refetch}
@@ -105,7 +120,7 @@ const DashboardPanel = (props: Props) => {
 					</div>
 				)}
 			</For>
-			<Show when={plots()?.length <= MAX_PLOTS}>
+			<Show when={isAllowed() && plots()?.length <= MAX_PLOTS}>
 				<div class="column is-11-tablet is-12-desktop is-6-widescreen">
 					<PinNewPlot project_slug={project_slug} />
 				</div>
