@@ -1,5 +1,5 @@
 use bencher_json::{
-    project::plot::{JsonUpdatePlot, XAxis},
+    project::plot::{JsonPlotPatch, JsonPlotPatchNull, JsonUpdatePlot, XAxis},
     DateTime, JsonNewPlot, JsonPlot, PlotUuid, ResourceName, Window,
 };
 use bencher_rank::{Rank, RankGenerator, Ranked};
@@ -293,18 +293,30 @@ impl InsertPlot {
 #[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = plot_table)]
 pub struct UpdatePlot {
-    pub title: Option<ResourceName>,
+    pub title: Option<Option<ResourceName>>,
     pub rank: Option<Rank>,
     pub modified: DateTime,
 }
 
 impl From<JsonUpdatePlot> for UpdatePlot {
     fn from(update: JsonUpdatePlot) -> Self {
-        let JsonUpdatePlot { title, rank } = update;
-        Self {
-            title,
-            rank: rank.map(Into::into),
-            modified: DateTime::now(),
+        match update {
+            JsonUpdatePlot::Patch(patch) => {
+                let JsonPlotPatch { title, rank } = patch;
+                Self {
+                    title: title.map(Some),
+                    rank: rank.map(Into::into),
+                    modified: DateTime::now(),
+                }
+            },
+            JsonUpdatePlot::Null(patch_url) => {
+                let JsonPlotPatchNull { title: (), rank } = patch_url;
+                Self {
+                    title: Some(None),
+                    rank: rank.map(Into::into),
+                    modified: DateTime::now(),
+                }
+            },
         }
     }
 }

@@ -223,107 +223,109 @@ pub async fn proj_plot_options(
     Ok(Endpoint::cors(&[Get.into(), Patch.into(), Delete.into()]))
 }
 
-// /// View a plot
-// ///
-// /// View a plot for a project.
-// /// If the project is public, then the user does not need to be authenticated.
-// /// If the project is private, then the user must be authenticated and have `view` permissions for the project.
-// #[endpoint {
-//     method = GET,
-//     path =  "/v0/projects/{project}/plots/{plot}",
-//     tags = ["projects", "plots"]
-// }]
-// pub async fn proj_plot_get(
-//     rqctx: RequestContext<ApiContext>,
-//     bearer_token: PubBearerToken,
-//     path_params: Path<ProjPlotParams>,
-// ) -> Result<ResponseOk<JsonPlot>, HttpError> {
-//     let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
-//     let json = get_one_inner(
-//         rqctx.context(),
-//         path_params.into_inner(),
-//         auth_user.as_ref(),
-//     )
-//     .await?;
-//     Ok(Get::response_ok(json, auth_user.is_some()))
-// }
+/// View a plot
+///
+/// View a plot for a project.
+/// If the project is public, then the user does not need to be authenticated.
+/// If the project is private, then the user must be authenticated and have `view` permissions for the project.
+#[endpoint {
+    method = GET,
+    path =  "/v0/projects/{project}/plots/{plot}",
+    tags = ["projects", "plots"]
+}]
+pub async fn proj_plot_get(
+    rqctx: RequestContext<ApiContext>,
+    bearer_token: PubBearerToken,
+    path_params: Path<ProjPlotParams>,
+) -> Result<ResponseOk<JsonPlot>, HttpError> {
+    let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
+    let json = get_one_inner(
+        rqctx.context(),
+        path_params.into_inner(),
+        auth_user.as_ref(),
+    )
+    .await?;
+    Ok(Get::response_ok(json, auth_user.is_some()))
+}
 
-// async fn get_one_inner(
-//     context: &ApiContext,
-//     path_params: ProjPlotParams,
-//     auth_user: Option<&AuthUser>,
-// ) -> Result<JsonPlot, HttpError> {
-//     let query_project = QueryProject::is_allowed_public(
-//         conn_lock!(context),
-//         &context.rbac,
-//         &path_params.project,
-//         auth_user,
-//     )?;
+async fn get_one_inner(
+    context: &ApiContext,
+    path_params: ProjPlotParams,
+    auth_user: Option<&AuthUser>,
+) -> Result<JsonPlot, HttpError> {
+    let query_project = QueryProject::is_allowed_public(
+        conn_lock!(context),
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+    )?;
 
-//     QueryPlot::belonging_to(&query_project)
-//         .filter(QueryPlot::eq_resource_id(&path_params.plot)?)
-//         .first::<QueryPlot>(conn_lock!(context))
-//         .map(|plot| plot.into_json_for_project(&query_project))
-//         .map_err(resource_not_found_err!(
-//             Plot,
-//             (&query_project, path_params.plot)
-//         ))
-// }
+    conn_lock!(context, |conn| QueryPlot::get_with_uuid(
+        conn,
+        &query_project,
+        path_params.plot
+    )
+    .and_then(|plot| plot.into_json_for_project(conn, &query_project)))
+}
 
-// /// Update a plot
-// ///
-// /// Update a plot for a project.
-// /// The user must have `edit` permissions for the project.
-// #[endpoint {
-//     method = PATCH,
-//     path =  "/v0/projects/{project}/plots/{plot}",
-//     tags = ["projects", "plots"]
-// }]
-// pub async fn proj_plot_patch(
-//     rqctx: RequestContext<ApiContext>,
-//     bearer_token: BearerToken,
-//     path_params: Path<ProjPlotParams>,
-//     body: TypedBody<JsonUpdatePlot>,
-// ) -> Result<ResponseOk<JsonPlot>, HttpError> {
-//     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-//     let context = rqctx.context();
-//     let json = patch_inner(
-//         context,
-//         path_params.into_inner(),
-//         body.into_inner(),
-//         &auth_user,
-//     )
-//     .await?;
-//     Ok(Patch::auth_response_ok(json))
-// }
+/// Update a plot
+///
+/// Update a plot for a project.
+/// The user must have `manage` permissions for the project.
+#[endpoint {
+    method = PATCH,
+    path =  "/v0/projects/{project}/plots/{plot}",
+    tags = ["projects", "plots"]
+}]
+pub async fn proj_plot_patch(
+    rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
+    path_params: Path<ProjPlotParams>,
+    body: TypedBody<JsonUpdatePlot>,
+) -> Result<ResponseOk<JsonPlot>, HttpError> {
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    let context = rqctx.context();
+    let json = patch_inner(
+        context,
+        path_params.into_inner(),
+        body.into_inner(),
+        &auth_user,
+    )
+    .await?;
+    Ok(Patch::auth_response_ok(json))
+}
 
-// async fn patch_inner(
-//     context: &ApiContext,
-//     path_params: ProjPlotParams,
-//     json_plot: JsonUpdatePlot,
-//     auth_user: &AuthUser,
-// ) -> Result<JsonPlot, HttpError> {
-//     // Verify that the user is allowed
-//     let query_project = QueryProject::is_allowed(
-//         conn_lock!(context),
-//         &context.rbac,
-//         &path_params.project,
-//         auth_user,
-//         Permission::Edit,
-//     )?;
+async fn patch_inner(
+    context: &ApiContext,
+    path_params: ProjPlotParams,
+    json_plot: JsonUpdatePlot,
+    auth_user: &AuthUser,
+) -> Result<JsonPlot, HttpError> {
+    // Verify that the user is allowed
+    let query_project = QueryProject::is_allowed(
+        conn_lock!(context),
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+        Permission::Manage,
+    )?;
 
-//     let query_plot =
-//         QueryPlot::from_resource_id(conn_lock!(context), query_project.id, &path_params.plot)?;
-//     let update_plot = UpdatePlot::from(json_plot.clone());
-//     diesel::update(schema::plot::table.filter(schema::plot::id.eq(query_plot.id)))
-//         .set(&update_plot)
-//         .execute(conn_lock!(context))
-//         .map_err(resource_conflict_err!(Plot, (&query_plot, &json_plot)))?;
+    let query_plot =
+        QueryPlot::get_with_uuid(conn_lock!(context), &query_project, path_params.plot)?;
 
-//     QueryPlot::get(conn_lock!(context), query_plot.id)
-//         .map(|plot| plot.into_json_for_project(&query_project))
-//         .map_err(resource_not_found_err!(Plot, query_plot))
-// }
+    let update_plot = UpdatePlot::from(json_plot.clone());
+    diesel::update(schema::plot::table.filter(schema::plot::id.eq(query_plot.id)))
+        .set(&update_plot)
+        .execute(conn_lock!(context))
+        .map_err(resource_conflict_err!(Plot, (&query_plot, &json_plot)))?;
+
+    conn_lock!(context, |conn| QueryPlot::get_with_uuid(
+        conn,
+        &query_project,
+        path_params.plot
+    )
+    .and_then(|plot| plot.into_json_for_project(conn, &query_project)))
+}
 
 /// Delete a plot
 ///
@@ -356,7 +358,7 @@ async fn delete_inner(
         &context.rbac,
         &path_params.project,
         auth_user,
-        Permission::Delete,
+        Permission::Manage,
     )?;
 
     let query_plot =

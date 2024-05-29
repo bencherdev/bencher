@@ -148,8 +148,8 @@ impl Api {
         }
         api.register(project::plots::proj_plots_get)?;
         api.register(project::plots::proj_plot_post)?;
-        // api.register(project::plots::proj_plot_get)?;
-        // api.register(project::plots::proj_plot_patch)?;
+        api.register(project::plots::proj_plot_get)?;
+        api.register(project::plots::proj_plot_patch)?;
         api.register(project::plots::proj_plot_delete)?;
 
         // Branches

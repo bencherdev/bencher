@@ -52,6 +52,10 @@ export const validUserName = (user_name: string): boolean =>
 export const validResourceName = (resource_name: string): boolean =>
 	validString(resource_name, is_valid_resource_name);
 
+export const validOptionResourceName = (
+	resource_name: undefined | null | string,
+): boolean => validOptionString(resource_name, is_valid_resource_name);
+
 export const validBranchName = (branch_name: string): boolean =>
 	validString(branch_name, is_valid_branch_name);
 

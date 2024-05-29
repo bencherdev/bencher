@@ -28,6 +28,7 @@ import {
 } from "../PerfPanel";
 import { createStore } from "solid-js/store";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
+import { plotFields } from "../../../../config/project/plot";
 
 export interface Props {
 	apiUrl: string;
@@ -175,12 +176,7 @@ const PinModal = (props: Props) => {
 						}
 						value={form?.title?.value}
 						valid={form?.title?.valid}
-						config={{
-							type: "text",
-							placeholder: props.project()?.name,
-							icon: "fas fa-chart-line",
-							validate: validResourceName,
-						}}
+						config={plotFields(props.project()).title}
 						handleField={handleField}
 					/>
 				</section>

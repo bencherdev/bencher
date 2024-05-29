@@ -4,10 +4,21 @@ import {
 	createMemo,
 	createSignal,
 	type Accessor,
+	type Resource,
 } from "solid-js";
-import type { JsonAuthUser, JsonPlot } from "../../../types/bencher";
+import type {
+	JsonAuthUser,
+	JsonPlot,
+	JsonProject,
+} from "../../../types/bencher";
 import { plotQueryString } from "./util";
 import DeleteButton from "../deck/hand/DeleteButton";
+import type { Params } from "astro";
+import DeckCard from "../deck/hand/card/DeckCard";
+import { Card, Display } from "../../../config/types";
+import { isAllowedProjectManage } from "../../../util/auth";
+import { plotFields } from "../../../config/project/plot";
+import FieldKind from "../../field/kind";
 
 enum PinnedState {
 	Front = "front",
@@ -16,8 +27,9 @@ enum PinnedState {
 
 const Pinned = (props: {
 	apiUrl: string;
+	params: Params;
 	user: JsonAuthUser;
-	project_slug: Accessor<string>;
+	project: Resource<JsonProject>;
 	plot: JsonPlot;
 	index: Accessor<number>;
 	refresh: () => JsonPlot[] | Promise<JsonPlot[]> | null | undefined;
@@ -33,8 +45,9 @@ const Pinned = (props: {
 				<Match when={state() === PinnedState.Settings}>
 					<PinnedSetting
 						apiUrl={props.apiUrl}
+						params={props.params}
 						user={props.user}
-						project_slug={props.project_slug}
+						project={props.project}
 						plot={props.plot}
 						refresh={props.refresh}
 						handleState={setState}
@@ -107,14 +120,15 @@ const PinnedButtons = (props: {
 
 const PinnedSetting = (props: {
 	apiUrl: string;
+	params: Params;
 	user: JsonAuthUser;
-	project_slug: Accessor<string>;
+	project: Resource<JsonProject>;
 	plot: JsonPlot;
 	refresh: () => JsonPlot[] | Promise<JsonPlot[]> | null | undefined;
 	handleState: (state: PinnedState) => void;
 }) => {
 	const path = createMemo(
-		() => `/v0/projects/${props.project_slug()}/plots/${props.plot?.uuid}`,
+		() => `/v0/projects/${props.plot?.project}/plots/${props.plot?.uuid}`,
 	);
 
 	return (
@@ -132,6 +146,33 @@ const PinnedSetting = (props: {
 				</span>
 				<span>Back to Plot</span>
 			</button>
+			<br />
+			<DeckCard
+				apiUrl={props.apiUrl}
+				params={props.params}
+				user={props.user}
+				path={path}
+				card={{
+					kind: Card.FIELD,
+					label: "Title",
+					key: "title",
+					display: Display.RAW,
+					is_allowed: isAllowedProjectManage,
+					field: {
+						kind: FieldKind.INPUT,
+						label: "Title",
+						key: "title",
+						value: props.plot?.title ?? "",
+						valid: null,
+						validate: true,
+						nullable: true,
+						config: plotFields(props.project()).title,
+					},
+				}}
+				data={() => props.plot}
+				handleRefresh={props.refresh}
+				handleLoopback={props.refresh}
+			/>
 			<br />
 			<DeleteButton
 				apiUrl={props.apiUrl}

@@ -1,7 +1,9 @@
+use std::fmt;
+
 use bencher_valid::{DateTime, ResourceName, Window};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::{de::Visitor, Deserialize, Deserializer, Serialize};
 
 use crate::{BenchmarkUuid, BranchUuid, MeasureUuid, ProjectUuid, TestbedUuid};
 
@@ -73,15 +75,95 @@ pub struct JsonPlot {
     pub modified: DateTime,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonUpdatePlot {
+#[serde(untagged)]
+pub enum JsonUpdatePlot {
+    Patch(JsonPlotPatch),
+    Null(JsonPlotPatchNull),
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonPlotPatch {
     /// The new title of the plot.
+    /// Set to `null` to remove the current title.
     /// Maximum length is 64 characters.
     pub title: Option<ResourceName>,
     /// The new rank for the plot.
     /// Maximum rank is 255.
     pub rank: Option<u8>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonPlotPatchNull {
+    pub title: (),
+    pub rank: Option<u8>,
+}
+
+impl<'de> Deserialize<'de> for JsonUpdatePlot {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        const TITLE_FIELD: &str = "title";
+        const RANK_FIELD: &str = "rank";
+        const FIELDS: &[&str] = &[TITLE_FIELD, RANK_FIELD];
+
+        #[derive(Deserialize)]
+        #[serde(field_identifier, rename_all = "snake_case")]
+        enum Field {
+            Title,
+            Rank,
+        }
+
+        struct UpdatePlotVisitor;
+
+        impl<'de> Visitor<'de> for UpdatePlotVisitor {
+            type Value = JsonUpdatePlot;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("JsonUpdatePlot")
+            }
+
+            fn visit_map<V>(self, mut map: V) -> Result<Self::Value, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut title = None;
+                let mut rank = None;
+
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        Field::Title => {
+                            if title.is_some() {
+                                return Err(serde::de::Error::duplicate_field(TITLE_FIELD));
+                            }
+                            title = Some(map.next_value()?);
+                        },
+                        Field::Rank => {
+                            if rank.is_some() {
+                                return Err(serde::de::Error::duplicate_field(RANK_FIELD));
+                            }
+                            rank = Some(map.next_value()?);
+                        },
+                    }
+                }
+
+                Ok(match title {
+                    Some(Some(title)) => Self::Value::Patch(JsonPlotPatch {
+                        title: Some(title),
+                        rank,
+                    }),
+                    Some(None) => Self::Value::Null(JsonPlotPatchNull { title: (), rank }),
+                    None => Self::Value::Patch(JsonPlotPatch { title: None, rank }),
+                })
+            }
+        }
+
+        deserializer.deserialize_struct("JsonUpdatePlot", FIELDS, UpdatePlotVisitor)
+    }
 }
 
 #[typeshare::typeshare]

@@ -66,7 +66,7 @@ const DeleteButton = (props: Props) => {
 		<Switch>
 			<Match when={deleteClicked() === false}>
 				<button
-					class="button is-danger is-fullwidth"
+					class="button is-danger is-fullwidth is-small"
 					type="button"
 					onClick={(e) => {
 						e.preventDefault();

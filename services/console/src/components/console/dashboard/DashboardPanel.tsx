@@ -95,8 +95,9 @@ const DashboardPanel = (props: Props) => {
 					<div class="column is-11-tablet is-12-desktop is-6-widescreen">
 						<Pinned
 							apiUrl={props.apiUrl}
+							params={props.params}
 							user={user}
-							project_slug={project_slug}
+							project={project}
 							plot={plot}
 							index={index}
 							refresh={refetch}

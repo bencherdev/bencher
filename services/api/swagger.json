@@ -4260,6 +4260,83 @@
       }
     },
     "/v0/projects/{project}/plots/{plot}": {
+      "get": {
+        "tags": [
+          "projects",
+          "plots"
+        ],
+        "summary": "View a plot",
+        "description": "View a plot for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
+        "operationId": "proj_plot_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plot",
+            "description": "The UUID for a plot.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PlotUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonPlot"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
       "delete": {
         "tags": [
           "projects",
@@ -4318,6 +4395,93 @@
                 "required": true,
                 "schema": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "projects",
+          "plots"
+        ],
+        "summary": "Update a plot",
+        "description": "Update a plot for a project. The user must have `manage` permissions for the project.",
+        "operationId": "proj_plot_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plot",
+            "description": "The UUID for a plot.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PlotUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonUpdatePlot"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonPlot"
                 }
               }
             }
@@ -9072,6 +9236,47 @@
           "x_axis"
         ]
       },
+      "JsonPlotPatch": {
+        "type": "object",
+        "properties": {
+          "rank": {
+            "nullable": true,
+            "description": "The new rank for the plot. Maximum rank is 255.",
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0
+          },
+          "title": {
+            "nullable": true,
+            "description": "The new title of the plot. Set to `null` to remove the current title. Maximum length is 64 characters.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceName"
+              }
+            ]
+          }
+        }
+      },
+      "JsonPlotPatchNull": {
+        "type": "object",
+        "properties": {
+          "rank": {
+            "nullable": true,
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0
+          },
+          "title": {
+            "type": "string",
+            "enum": [
+              null
+            ]
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
       "JsonPlots": {
         "type": "array",
         "items": {
@@ -10242,6 +10447,16 @@
           },
           {
             "$ref": "#/components/schemas/JsonOrganizationPatchNull"
+          }
+        ]
+      },
+      "JsonUpdatePlot": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/JsonPlotPatch"
+          },
+          {
+            "$ref": "#/components/schemas/JsonPlotPatchNull"
           }
         ]
       },
