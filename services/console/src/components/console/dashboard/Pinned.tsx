@@ -1,11 +1,18 @@
+import type { Accessor } from "solid-js";
 import type { JsonPlot } from "../../../types/bencher";
 import { plotQueryString } from "./util";
 
-const Pinned = (props: { plot: JsonPlot }) => {
-	<div id={props.plot?.uuid} class="box">
-		<PinnedPlot plot={props.plot} />
-		<PinnedSettings plot={props.plot} />
-	</div>;
+const Pinned = (props: {
+	plot: JsonPlot;
+	index: Accessor<number>;
+	refresh: () => JsonPlot[] | Promise<JsonPlot[]> | null | undefined;
+}) => {
+	return (
+		<div id={props.plot?.uuid} class="box">
+			<PinnedPlot plot={props.plot} />
+			<PinnedSettings plot={props.plot} />
+		</div>
+	);
 };
 
 const PinnedPlot = (props: { plot: JsonPlot }) => {
