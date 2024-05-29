@@ -11,7 +11,7 @@ export const plotQueryString = (plot: JsonPlot) => {
 	newParams.set(PerfQueryKey.Testbeds, plot?.testbeds.toString());
 	newParams.set(PerfQueryKey.Benchmarks, plot?.benchmarks.toString());
 	newParams.set(PerfQueryKey.Measures, plot?.measures.toString());
-	const now = new Date().getTime();
+	const now = Date.now();
 	newParams.set(
 		PerfQueryKey.StartTime,
 		(now - (plot?.window ?? 0) * 1_000).toString(),

@@ -2,7 +2,7 @@ use bencher_json::{
     project::threshold::{JsonThreshold, JsonThresholdModel},
     DateTime, Model, ModelUuid, ThresholdUuid,
 };
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 use http::StatusCode;
 
@@ -15,7 +15,10 @@ use super::{
 };
 use crate::{
     context::DbConnection,
-    error::{assert_parentage, issue_error, resource_conflict_err, BencherResource},
+    error::{
+        assert_parentage, issue_error, resource_conflict_err, resource_not_found_err,
+        BencherResource,
+    },
     schema::threshold as threshold_table,
     schema::{self},
     util::fn_get::{fn_get, fn_get_id, fn_get_uuid},
@@ -48,6 +51,17 @@ impl QueryThreshold {
     fn_get!(threshold, ThresholdId);
     fn_get_id!(threshold, ThresholdId, ThresholdUuid);
     fn_get_uuid!(threshold, ThresholdId, ThresholdUuid);
+
+    pub fn get_with_uuid(
+        conn: &mut DbConnection,
+        query_project: &QueryProject,
+        uuid: ThresholdUuid,
+    ) -> Result<Self, HttpError> {
+        Self::belonging_to(&query_project)
+            .filter(threshold_table::uuid.eq(uuid))
+            .first::<Self>(conn)
+            .map_err(resource_not_found_err!(Threshold, (query_project, uuid)))
+    }
 
     pub fn model_id(&self) -> Result<ModelId, HttpError> {
         self.model_id.ok_or_else(|| {

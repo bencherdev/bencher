@@ -4259,6 +4259,78 @@
         }
       }
     },
+    "/v0/projects/{project}/plots/{plot}": {
+      "delete": {
+        "tags": [
+          "projects",
+          "plots"
+        ],
+        "summary": "Delete a plot",
+        "description": "Delete a plot for a project. The user must have `delete` permissions for the project. This plot will no longer appear in the project dashboard.",
+        "operationId": "proj_plot_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plot",
+            "description": "The UUID for a plot.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PlotUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "successful deletion",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/projects/{project}/reports": {
       "get": {
         "tags": [

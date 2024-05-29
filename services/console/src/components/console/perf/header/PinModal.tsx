@@ -56,7 +56,7 @@ const PinModal = (props: Props) => {
 
 	const [form, setForm] = createStore(initForm());
 	const [submitting, setSubmitting] = createSignal(false);
-	const [valid, setValid] = createSignal(false);
+	const [valid, setValid] = createSignal(true);
 
 	const isSendable = (): boolean => {
 		return !submitting() && valid();
@@ -75,7 +75,10 @@ const PinModal = (props: Props) => {
 	};
 
 	const validateForm = () =>
-		(form?.name?.valid && form?.window?.valid && form?.rank?.valid) ?? false;
+		((form?.title?.valid ?? true) &&
+			form?.window?.valid &&
+			form?.rank?.valid) ??
+		false;
 
 	const handleSubmit = () => {
 		if (!bencher_valid()) {
@@ -89,7 +92,7 @@ const PinModal = (props: Props) => {
 		setSubmitting(true);
 
 		const newPlot: JsonNewPlot = {
-			name: form?.name?.value?.trim(),
+			title: form?.title?.value ? form?.title?.value?.trim() : undefined,
 			rank: Number.parseInt(form?.rank?.value),
 			lower_value: props.lower_value(),
 			upper_value: props.upper_value(),
@@ -164,10 +167,14 @@ const PinModal = (props: Props) => {
 				<section class="modal-card-body">
 					<Field
 						kind={FieldKind.INPUT}
-						fieldKey="name"
-						label="Plot Name"
-						value={form?.name?.value}
-						valid={form?.name?.valid}
+						fieldKey="title"
+						label={
+							<>
+								Title <small>(optional)</small>
+							</>
+						}
+						value={form?.title?.value}
+						valid={form?.title?.valid}
 						config={{
 							type: "text",
 							placeholder: props.project()?.name,
@@ -198,7 +205,7 @@ const PinModal = (props: Props) => {
 
 const initForm = () => {
 	return {
-		name: {
+		title: {
 			value: "",
 			valid: null,
 		},

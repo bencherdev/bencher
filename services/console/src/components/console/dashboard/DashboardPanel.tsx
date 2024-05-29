@@ -2,6 +2,7 @@ import type { Params } from "astro";
 import type { JsonPlot, JsonProject } from "../../../types/bencher";
 import {
 	For,
+	Show,
 	createEffect,
 	createMemo,
 	createResource,
@@ -11,6 +12,8 @@ import { setPageTitle } from "../../../util/resource";
 import { authUser } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
 import Pinned from "./Pinned";
+
+const MAX_PLOTS = 255;
 
 export interface Props {
 	apiUrl: string;
@@ -70,7 +73,7 @@ const DashboardPanel = (props: Props) => {
 		if (typeof fetcher.token !== "string") {
 			return EMPTY_ARRAY;
 		}
-		const path = `/v0/projects/${fetcher.project_slug}/plots`;
+		const path = `/v0/projects/${fetcher.project_slug}/plots?per_page=${MAX_PLOTS}`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
 				return resp?.data as JsonPlot[];
@@ -90,13 +93,22 @@ const DashboardPanel = (props: Props) => {
 			<For each={plots()}>
 				{(plot, index) => (
 					<div class="column is-11-tablet is-12-desktop is-6-widescreen">
-						<Pinned plot={plot} index={index} refresh={refetch} />
+						<Pinned
+							apiUrl={props.apiUrl}
+							user={user}
+							project_slug={project_slug}
+							plot={plot}
+							index={index}
+							refresh={refetch}
+						/>
 					</div>
 				)}
 			</For>
-			<div class="column is-11-tablet is-12-desktop is-6-widescreen">
-				<PinNewPlot project_slug={project_slug} />
-			</div>
+			<Show when={plots()?.length <= MAX_PLOTS}>
+				<div class="column is-11-tablet is-12-desktop is-6-widescreen">
+					<PinNewPlot project_slug={project_slug} />
+				</div>
+			</Show>
 		</div>
 	);
 };

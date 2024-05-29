@@ -311,13 +311,8 @@ async fn get_one_inner(
         auth_user,
     )?;
 
-    let query_threshold = QueryThreshold::belonging_to(&query_project)
-        .filter(schema::threshold::uuid.eq(path_params.threshold))
-        .first::<QueryThreshold>(conn_lock!(context))
-        .map_err(resource_not_found_err!(
-            Threshold,
-            (&query_project, path_params.threshold)
-        ))?;
+    let query_threshold =
+        QueryThreshold::get_with_uuid(conn_lock!(context), &query_project, path_params.threshold)?;
 
     if let Some(model_uuid) = query_params.model {
         let query_model = QueryModel::from_uuid(conn_lock!(context), query_project.id, model_uuid)?;
@@ -384,13 +379,8 @@ async fn put_inner(
     )?;
 
     // Get the current threshold
-    let query_threshold = QueryThreshold::belonging_to(&query_project)
-        .filter(schema::threshold::uuid.eq(path_params.threshold.to_string()))
-        .first::<QueryThreshold>(conn_lock!(context))
-        .map_err(resource_not_found_err!(
-            Threshold,
-            (&query_project, path_params.threshold)
-        ))?;
+    let query_threshold =
+        QueryThreshold::get_with_uuid(conn_lock!(context), &query_project, path_params.threshold)?;
 
     // Update the current threshold with the new model
     // Hold the database lock across the entire `update_from_json` call
@@ -437,13 +427,9 @@ async fn delete_inner(
         Permission::Delete,
     )?;
 
-    let query_threshold = QueryThreshold::belonging_to(&query_project)
-        .filter(schema::threshold::uuid.eq(path_params.threshold.to_string()))
-        .first::<QueryThreshold>(conn_lock!(context))
-        .map_err(resource_not_found_err!(
-            Threshold,
-            (&query_project, path_params.threshold)
-        ))?;
+    let query_threshold =
+        QueryThreshold::get_with_uuid(conn_lock!(context), &query_project, path_params.threshold)?;
+
     diesel::delete(schema::threshold::table.filter(schema::threshold::id.eq(query_threshold.id)))
         .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Threshold, query_threshold))?;

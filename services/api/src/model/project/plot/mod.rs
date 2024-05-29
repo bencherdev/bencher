@@ -30,7 +30,7 @@ use branch::{InsertPlotBranch, QueryPlotBranch};
 use measure::{InsertPlotMeasure, QueryPlotMeasure};
 use testbed::{InsertPlotTestbed, QueryPlotTestbed};
 
-const MAX_PLOTS: usize = 256;
+const MAX_PLOTS: usize = 255;
 
 crate::util::typed_id::typed_id!(PlotId);
 
@@ -57,7 +57,18 @@ pub struct QueryPlot {
 }
 
 impl QueryPlot {
-    pub fn all_for_project(
+    pub fn get_with_uuid(
+        conn: &mut DbConnection,
+        query_project: &QueryProject,
+        uuid: PlotUuid,
+    ) -> Result<Self, HttpError> {
+        Self::belonging_to(&query_project)
+            .filter(plot_table::uuid.eq(uuid))
+            .first::<Self>(conn)
+            .map_err(resource_not_found_err!(Plot, (query_project, uuid)))
+    }
+
+    fn all_for_project(
         conn: &mut DbConnection,
         query_project: &QueryProject,
     ) -> Result<Vec<Self>, HttpError> {

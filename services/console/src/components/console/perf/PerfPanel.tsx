@@ -761,7 +761,7 @@ const PerfPanel = (props: Props) => {
 				[UPPER_BOUNDARY_PARAM]: null,
 				[CLEAR_PARAM]: true,
 			},
-			{ replace: replace ?? false },
+			{ replace: replace === true },
 		);
 	};
 	const handleChecked = (

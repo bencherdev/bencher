@@ -1,6 +1,6 @@
 use bencher_json::{
     project::plot::JsonUpdatePlot, JsonDirection, JsonNewPlot, JsonPagination, JsonPlot, JsonPlots,
-    ResourceId, ResourceName,
+    PlotUuid, ResourceId, ResourceName,
 };
 use bencher_rbac::project::Permission;
 use diesel::{
@@ -202,26 +202,26 @@ async fn post_inner(
     query_plot.into_json_for_project(conn_lock!(context), &query_project)
 }
 
-// #[derive(Deserialize, JsonSchema)]
-// pub struct ProjPlotParams {
-//     /// The slug or UUID for a project.
-//     pub project: ResourceId,
-//     /// The slug or UUID for a plot.
-//     pub plot: ResourceId,
-// }
+#[derive(Deserialize, JsonSchema)]
+pub struct ProjPlotParams {
+    /// The slug or UUID for a project.
+    pub project: ResourceId,
+    /// The UUID for a plot.
+    pub plot: PlotUuid,
+}
 
-// #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
-// #[endpoint {
-//     method = OPTIONS,
-//     path =  "/v0/projects/{project}/plots/{plot}",
-//     tags = ["projects", "plots"]
-// }]
-// pub async fn proj_plot_options(
-//     _rqctx: RequestContext<ApiContext>,
-//     _path_params: Path<ProjPlotParams>,
-// ) -> Result<CorsResponse, HttpError> {
-//     Ok(Endpoint::cors(&[Get.into(), Patch.into(), Delete.into()]))
-// }
+#[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
+#[endpoint {
+    method = OPTIONS,
+    path =  "/v0/projects/{project}/plots/{plot}",
+    tags = ["projects", "plots"]
+}]
+pub async fn proj_plot_options(
+    _rqctx: RequestContext<ApiContext>,
+    _path_params: Path<ProjPlotParams>,
+) -> Result<CorsResponse, HttpError> {
+    Ok(Endpoint::cors(&[Get.into(), Patch.into(), Delete.into()]))
+}
 
 // /// View a plot
 // ///
@@ -325,46 +325,46 @@ async fn post_inner(
 //         .map_err(resource_not_found_err!(Plot, query_plot))
 // }
 
-// /// Delete a plot
-// ///
-// /// Delete a plot for a project.
-// /// The user must have `delete` permissions for the project.
-// /// All reports and thresholds that use this plot must be deleted first!
-// #[endpoint {
-//     method = DELETE,
-//     path =  "/v0/projects/{project}/plots/{plot}",
-//     tags = ["projects", "plots"]
-// }]
-// pub async fn proj_plot_delete(
-//     rqctx: RequestContext<ApiContext>,
-//     bearer_token: BearerToken,
-//     path_params: Path<ProjPlotParams>,
-// ) -> Result<ResponseDeleted, HttpError> {
-//     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-//     delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
-//     Ok(Delete::auth_response_deleted())
-// }
+/// Delete a plot
+///
+/// Delete a plot for a project.
+/// The user must have `delete` permissions for the project.
+/// This plot will no longer appear in the project dashboard.
+#[endpoint {
+    method = DELETE,
+    path =  "/v0/projects/{project}/plots/{plot}",
+    tags = ["projects", "plots"]
+}]
+pub async fn proj_plot_delete(
+    rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
+    path_params: Path<ProjPlotParams>,
+) -> Result<ResponseDeleted, HttpError> {
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Delete::auth_response_deleted())
+}
 
-// async fn delete_inner(
-//     context: &ApiContext,
-//     path_params: ProjPlotParams,
-//     auth_user: &AuthUser,
-// ) -> Result<(), HttpError> {
-//     // Verify that the user is allowed
-//     let query_project = QueryProject::is_allowed(
-//         conn_lock!(context),
-//         &context.rbac,
-//         &path_params.project,
-//         auth_user,
-//         Permission::Delete,
-//     )?;
+async fn delete_inner(
+    context: &ApiContext,
+    path_params: ProjPlotParams,
+    auth_user: &AuthUser,
+) -> Result<(), HttpError> {
+    // Verify that the user is allowed
+    let query_project = QueryProject::is_allowed(
+        conn_lock!(context),
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+        Permission::Delete,
+    )?;
 
-//     let query_plot =
-//         QueryPlot::from_resource_id(conn_lock!(context), query_project.id, &path_params.plot)?;
+    let query_plot =
+        QueryPlot::get_with_uuid(conn_lock!(context), &query_project, path_params.plot)?;
 
-//     diesel::delete(schema::plot::table.filter(schema::plot::id.eq(query_plot.id)))
-//         .execute(conn_lock!(context))
-//         .map_err(resource_conflict_err!(Plot, query_plot))?;
+    diesel::delete(schema::plot::table.filter(schema::plot::id.eq(query_plot.id)))
+        .execute(conn_lock!(context))
+        .map_err(resource_conflict_err!(Plot, query_plot))?;
 
-//     Ok(())
-// }
+    Ok(())
+}
