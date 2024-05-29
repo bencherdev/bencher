@@ -3,7 +3,7 @@ CREATE TABLE plot (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     project_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
+    title TEXT,
     rank BIGINT NOT NULL,
     lower_value BOOLEAN NOT NULL,
     upper_value BOOLEAN NOT NULL,

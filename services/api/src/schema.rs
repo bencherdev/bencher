@@ -138,7 +138,7 @@ diesel::table! {
         id -> Integer,
         uuid -> Text,
         project_id -> Integer,
-        name -> Text,
+        title -> Nullable<Text>,
         rank -> BigInt,
         lower_value -> Bool,
         upper_value -> Bool,

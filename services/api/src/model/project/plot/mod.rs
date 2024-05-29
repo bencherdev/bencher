@@ -44,7 +44,7 @@ pub struct QueryPlot {
     pub id: PlotId,
     pub uuid: PlotUuid,
     pub project_id: ProjectId,
-    pub name: ResourceName,
+    pub title: Option<ResourceName>,
     pub rank: Rank,
     pub lower_value: bool,
     pub upper_value: bool,
@@ -168,7 +168,7 @@ impl QueryPlot {
             .collect();
         let Self {
             uuid,
-            name,
+            title,
             lower_value,
             upper_value,
             lower_boundary,
@@ -182,7 +182,7 @@ impl QueryPlot {
         Ok(JsonPlot {
             uuid,
             project: project.uuid,
-            name,
+            title,
             lower_value,
             upper_value,
             lower_boundary,
@@ -211,7 +211,7 @@ impl Ranked for QueryPlot {
 pub struct InsertPlot {
     pub uuid: PlotUuid,
     pub project_id: ProjectId,
-    pub name: ResourceName,
+    pub title: Option<ResourceName>,
     pub rank: Rank,
     pub lower_value: bool,
     pub upper_value: bool,
@@ -230,7 +230,7 @@ impl InsertPlot {
         plot: JsonNewPlot,
     ) -> Result<QueryPlot, HttpError> {
         let JsonNewPlot {
-            name,
+            title,
             rank,
             lower_value,
             upper_value,
@@ -249,7 +249,7 @@ impl InsertPlot {
         let insert_plot = Self {
             uuid: PlotUuid::new(),
             project_id: query_project.id,
-            name,
+            title,
             rank,
             lower_value,
             upper_value,
@@ -282,16 +282,16 @@ impl InsertPlot {
 #[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = plot_table)]
 pub struct UpdatePlot {
-    pub name: Option<ResourceName>,
+    pub title: Option<ResourceName>,
     pub rank: Option<Rank>,
     pub modified: DateTime,
 }
 
 impl From<JsonUpdatePlot> for UpdatePlot {
     fn from(update: JsonUpdatePlot) -> Self {
-        let JsonUpdatePlot { name, rank } = update;
+        let JsonUpdatePlot { title, rank } = update;
         Self {
-            name,
+            title,
             rank: rank.map(Into::into),
             modified: DateTime::now(),
         }
@@ -305,7 +305,7 @@ impl UpdatePlot {
         rank: Rank,
     ) -> Result<(), HttpError> {
         let update_plot = UpdatePlot {
-            name: None,
+            title: None,
             rank: Some(rank),
             modified: DateTime::now(),
         };

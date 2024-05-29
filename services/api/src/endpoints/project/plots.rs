@@ -4,8 +4,8 @@ use bencher_json::{
 };
 use bencher_rbac::project::Permission;
 use diesel::{
-    BelongingToDsl, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl,
-    TextExpressionMethods,
+    BelongingToDsl, BoolExpressionMethods, ExpressionMethods, NullableExpressionMethods, QueryDsl,
+    RunQueryDsl, TextExpressionMethods,
 };
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
@@ -51,9 +51,9 @@ pub enum ProjPlotsSort {
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjPlotsQuery {
-    /// Filter by plot name, exact match.
-    pub name: Option<ResourceName>,
-    /// Search by plot name or UUID.
+    /// Filter by plot title, exact match.
+    pub title: Option<ResourceName>,
+    /// Search by plot title or UUID.
     pub search: Option<Search>,
 }
 
@@ -117,12 +117,13 @@ async fn get_ls_inner(
 
     let mut query = QueryPlot::belonging_to(&query_project).into_boxed();
 
-    if let Some(name) = query_params.name.as_ref() {
-        query = query.filter(schema::plot::name.eq(name));
+    if let Some(title) = query_params.title.as_ref() {
+        query = query.filter(schema::plot::title.nullable().eq(title));
     }
     if let Some(search) = query_params.search.as_ref() {
         query = query.filter(
-            schema::plot::name
+            schema::plot::title
+                .nullable()
                 .like(search)
                 .or(schema::plot::uuid.like(search)),
         );

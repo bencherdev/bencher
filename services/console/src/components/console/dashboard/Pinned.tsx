@@ -20,9 +20,9 @@ const PinnedPlot = (props: { plot: JsonPlot }) => {
 		<iframe
 			loading="lazy"
 			src={`/perf/${props.plot?.project}/embed?embed_logo=false&embed_title=${
-				props.plot?.name
+				props.plot?.title
 			}&embed_header=false&embed_key=false&${plotQueryString(props.plot)}`}
-			title={props.plot?.name}
+			title={props.plot?.title ?? "Perf Plot"}
 			width="100%"
 			height="600px"
 		/>
@@ -35,7 +35,7 @@ const PinnedSettings = (props: { plot: JsonPlot }) => {
 			<a
 				type="button"
 				class="button is-small"
-				title={`View ${props.plot?.name} Perf Plot`}
+				title="View this Perf Plot"
 				href={`/console/projects/${props.plot?.project}/perf?${plotQueryString(
 					props.plot,
 				)}`}

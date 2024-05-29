@@ -4116,18 +4116,18 @@
           },
           {
             "in": "query",
-            "name": "name",
-            "description": "Filter by plot name, exact match.",
+            "name": "search",
+            "description": "Search by plot title or UUID.",
             "schema": {
-              "$ref": "#/components/schemas/ResourceName"
+              "$ref": "#/components/schemas/Search"
             }
           },
           {
             "in": "query",
-            "name": "search",
-            "description": "Search by plot name or UUID.",
+            "name": "title",
+            "description": "Filter by plot title, exact match.",
             "schema": {
-              "$ref": "#/components/schemas/Search"
+              "$ref": "#/components/schemas/ResourceName"
             }
           }
         ],
@@ -8254,14 +8254,6 @@
               "$ref": "#/components/schemas/MeasureUuid"
             }
           },
-          "name": {
-            "description": "The name of the plot. Maximum length is 64 characters.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ResourceName"
-              }
-            ]
-          },
           "rank": {
             "nullable": true,
             "description": "The rank of the plot. Maximum rank is 255.",
@@ -8275,6 +8267,15 @@
             "items": {
               "$ref": "#/components/schemas/TestbedUuid"
             }
+          },
+          "title": {
+            "nullable": true,
+            "description": "The title of the plot. Maximum length is 64 characters.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceName"
+              }
+            ]
           },
           "upper_boundary": {
             "description": "Display upper boundary limits.",
@@ -8307,7 +8308,6 @@
           "lower_boundary",
           "lower_value",
           "measures",
-          "name",
           "testbeds",
           "upper_boundary",
           "upper_value",
@@ -8950,9 +8950,6 @@
           "modified": {
             "$ref": "#/components/schemas/DateTime"
           },
-          "name": {
-            "$ref": "#/components/schemas/ResourceName"
-          },
           "project": {
             "$ref": "#/components/schemas/ProjectUuid"
           },
@@ -8961,6 +8958,14 @@
             "items": {
               "$ref": "#/components/schemas/TestbedUuid"
             }
+          },
+          "title": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResourceName"
+              }
+            ]
           },
           "upper_boundary": {
             "type": "boolean"
@@ -8986,7 +8991,6 @@
           "lower_value",
           "measures",
           "modified",
-          "name",
           "project",
           "testbeds",
           "upper_boundary",

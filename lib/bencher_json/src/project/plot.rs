@@ -1,5 +1,3 @@
-use std::fmt;
-
 use bencher_valid::{DateTime, ResourceName, Window};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -14,9 +12,9 @@ crate::typed_uuid::typed_uuid!(PlotUuid);
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[allow(clippy::struct_excessive_bools)]
 pub struct JsonNewPlot {
-    /// The name of the plot.
+    /// The title of the plot.
     /// Maximum length is 64 characters.
-    pub name: ResourceName,
+    pub title: Option<ResourceName>,
     /// The rank of the plot.
     /// Maximum rank is 255.
     pub rank: Option<u8>,
@@ -60,7 +58,7 @@ crate::from_vec!(JsonPlots[JsonPlot]);
 pub struct JsonPlot {
     pub uuid: PlotUuid,
     pub project: ProjectUuid,
-    pub name: ResourceName,
+    pub title: Option<ResourceName>,
     pub lower_value: bool,
     pub upper_value: bool,
     pub lower_boundary: bool,
@@ -75,18 +73,12 @@ pub struct JsonPlot {
     pub modified: DateTime,
 }
 
-impl fmt::Display for JsonPlot {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name)
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonUpdatePlot {
-    /// The new name of the plot.
+    /// The new title of the plot.
     /// Maximum length is 64 characters.
-    pub name: Option<ResourceName>,
+    pub title: Option<ResourceName>,
     /// The new rank for the plot.
     /// Maximum rank is 255.
     pub rank: Option<u8>,

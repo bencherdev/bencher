@@ -455,10 +455,10 @@ export enum XAxis {
 
 export interface JsonNewPlot {
 	/**
-	 * The name of the plot.
+	 * The title of the plot.
 	 * Maximum length is 64 characters.
 	 */
-	name: ResourceName;
+	title?: ResourceName;
 	/**
 	 * The rank of the plot.
 	 * Maximum rank is 255.
@@ -504,7 +504,7 @@ export interface JsonNewPlot {
 export interface JsonPlot {
 	uuid: Uuid;
 	project: Uuid;
-	name: ResourceName;
+	title?: ResourceName;
 	lower_value: boolean;
 	upper_value: boolean;
 	lower_boundary: boolean;
