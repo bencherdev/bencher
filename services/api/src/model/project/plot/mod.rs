@@ -298,30 +298,38 @@ pub struct UpdatePlot {
     pub modified: DateTime,
 }
 
-impl From<JsonUpdatePlot> for UpdatePlot {
-    fn from(update: JsonUpdatePlot) -> Self {
-        match update {
+impl UpdatePlot {
+    pub async fn from_json(
+        context: &ApiContext,
+        query_project: &QueryProject,
+        update: JsonUpdatePlot,
+    ) -> Result<Self, HttpError> {
+        let (title, index) = match update {
             JsonUpdatePlot::Patch(patch) => {
                 let JsonPlotPatch { title, rank } = patch;
-                Self {
-                    title: title.map(Some),
-                    rank: rank.map(Into::into),
-                    modified: DateTime::now(),
-                }
+                (title.map(Some), rank)
             },
             JsonUpdatePlot::Null(patch_url) => {
                 let JsonPlotPatchNull { title: (), rank } = patch_url;
-                Self {
-                    title: Some(None),
-                    rank: rank.map(Into::into),
-                    modified: DateTime::now(),
-                }
+                (Some(None), rank)
             },
-        }
+        };
+        let rank = if let Some(index) = index {
+            Some(QueryPlot::next_rank(
+                conn_lock!(context),
+                query_project,
+                index,
+            )?)
+        } else {
+            None
+        };
+        Ok(Self {
+            title,
+            rank,
+            modified: DateTime::now(),
+        })
     }
-}
 
-impl UpdatePlot {
     fn update_rank(
         conn: &mut DbConnection,
         query_plot: &QueryPlot,

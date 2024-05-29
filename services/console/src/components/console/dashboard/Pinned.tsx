@@ -1,3 +1,4 @@
+import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import {
 	Match,
 	Show,
@@ -21,6 +22,8 @@ import { Card, Display } from "../../../config/types";
 import { isAllowedProjectManage } from "../../../util/auth";
 import { plotFields } from "../../../config/project/plot";
 import FieldKind from "../../field/kind";
+import { set } from "astro/zod";
+import { httpPatch } from "../../../util/http";
 
 enum PinnedState {
 	Front = "front",
@@ -35,6 +38,7 @@ const Pinned = (props: {
 	isAllowed: Resource<boolean>;
 	plot: JsonPlot;
 	index: Accessor<number>;
+	total: Accessor<number>;
 	refresh: () => JsonPlot[] | Promise<JsonPlot[]> | null | undefined;
 }) => {
 	const [state, setState] = createSignal(PinnedState.Front);
@@ -44,8 +48,13 @@ const Pinned = (props: {
 			<Switch>
 				<Match when={state() === PinnedState.Front}>
 					<PinnedFront
-						plot={props.plot}
+						apiUrl={props.apiUrl}
+						user={props.user}
 						isAllowed={props.isAllowed}
+						plot={props.plot}
+						index={props.index}
+						total={props.total}
+						refresh={props.refresh}
 						handleState={setState}
 					/>
 				</Match>
@@ -67,16 +76,26 @@ const Pinned = (props: {
 };
 
 const PinnedFront = (props: {
-	plot: JsonPlot;
+	apiUrl: string;
+	user: JsonAuthUser;
 	isAllowed: Resource<boolean>;
+	plot: JsonPlot;
+	index: Accessor<number>;
+	total: Accessor<number>;
+	refresh: () => JsonPlot[] | Promise<JsonPlot[]> | null | undefined;
 	handleState: (state: PinnedState) => void;
 }) => {
 	return (
 		<>
 			<PinnedPlot plot={props.plot} />
 			<PinnedButtons
+				apiUrl={props.apiUrl}
+				user={props.user}
 				isAllowed={props.isAllowed}
 				plot={props.plot}
+				index={props.index}
+				total={props.total}
+				refresh={props.refresh}
 				handleState={props.handleState}
 			/>
 		</>
@@ -97,11 +116,56 @@ const PinnedPlot = (props: { plot: JsonPlot }) => {
 	);
 };
 
+enum Rank {
+	Down = 2,
+	None = 0,
+	Up = -1,
+}
+
 const PinnedButtons = (props: {
+	apiUrl: string;
+	user: JsonAuthUser;
 	isAllowed: Resource<boolean>;
 	plot: JsonPlot;
+	index: Accessor<number>;
+	total: Accessor<number>;
+	refresh: () => JsonPlot[] | Promise<JsonPlot[]> | null | undefined;
 	handleState: (state: PinnedState) => void;
 }) => {
+	const [rank, setRank] = createSignal(-1);
+
+	const rankFetcher = createMemo(() => {
+		return {
+			token: props.user.token,
+			plot: props.plot,
+			rank: rank(),
+		};
+	});
+	const patchRank = async (fetcher: {
+		token: string;
+		plot: JsonPlot;
+		rank: number;
+	}) => {
+		if (fetcher.rank < 0) {
+			return fetcher.plot;
+		}
+		setRank(-1);
+		const path = `/v0/projects/${fetcher.plot?.project}/plots/${fetcher.plot?.uuid}`;
+		const data = {
+			rank: fetcher.rank,
+		};
+		return await httpPatch(props.apiUrl, path, fetcher.token, data)
+			.then((resp) => {
+				props.refresh();
+				return resp?.data;
+			})
+			.catch((error) => {
+				console.error(error);
+				return;
+			});
+	};
+	const [_rank] = createResource<JsonPlot>(rankFetcher, patchRank);
+
 	return (
 		<nav class="level">
 			<div class="level-left">
@@ -111,7 +175,31 @@ const PinnedButtons = (props: {
 							<button
 								type="button"
 								class="button is-small"
-								title="Move plot up"
+								title="Move plot to bottom"
+								disabled={props.index() === props.total() - 1}
+								onClick={(e) => {
+									e.preventDefault();
+									setRank(props.total() + 1);
+								}}
+							>
+								<span class="icon is-small">
+									<i class="fas fa-angle-double-down" />
+								</span>
+							</button>
+						</p>
+						<p class="control">
+							<button
+								type="button"
+								class="button is-small"
+								title="Move plot down"
+								disabled={props.index() === props.total() - 1}
+								onClick={(e) => {
+									e.preventDefault();
+									// Because the ranking algorithm looks backwards,
+									// we need to jump ahead, further down the list by two instead of one.
+									// Otherwise, the plot will be placed in the same position, albeit with a different rank.
+									setRank(props.index() + 2);
+								}}
 							>
 								<span class="icon is-small">
 									<i class="fas fa-chevron-down" />
@@ -122,10 +210,31 @@ const PinnedButtons = (props: {
 							<button
 								type="button"
 								class="button is-small"
-								title="Move plot down"
+								title="Move plot up"
+								disabled={props.index() === 0}
+								onClick={(e) => {
+									e.preventDefault();
+									setRank(props.index() - 1);
+								}}
 							>
 								<span class="icon is-small">
 									<i class="fas fa-chevron-up" />
+								</span>
+							</button>
+						</p>
+						<p class="control">
+							<button
+								type="button"
+								class="button is-small"
+								title="Move plot to top"
+								disabled={props.index() === 0}
+								onClick={(e) => {
+									e.preventDefault();
+									setRank(0);
+								}}
+							>
+								<span class="icon is-small">
+									<i class="fas fa-angle-double-up" />
 								</span>
 							</button>
 						</p>
@@ -138,7 +247,7 @@ const PinnedButtons = (props: {
 					<a
 						type="button"
 						class="button is-small"
-						title="View this Perf Plot"
+						title="View plot"
 						href={`/console/projects/${
 							props.plot?.project
 						}/perf?${plotQueryString(props.plot)}`}
@@ -150,6 +259,7 @@ const PinnedButtons = (props: {
 					<button
 						type="button"
 						class="button is-small"
+						title="Plot settings"
 						onClick={(e) => {
 							e.preventDefault();
 							props.handleState(PinnedState.Settings);

@@ -1,3 +1,4 @@
+import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import type { Params } from "astro";
 import type { JsonPlot, JsonProject } from "../../../types/bencher";
 import {
@@ -12,6 +13,7 @@ import { setPageTitle } from "../../../util/resource";
 import { authUser, isAllowedProjectManage } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
 import Pinned from "./Pinned";
+import { validJwt } from "../../../util/valid";
 
 const MAX_PLOTS = 255;
 
@@ -22,6 +24,10 @@ export interface Props {
 }
 
 const DashboardPanel = (props: Props) => {
+	const [bencher_valid] = createResource(
+		async () => await bencher_valid_init(),
+	);
+
 	const params = createMemo(() => props.params);
 	const user = authUser();
 
@@ -32,20 +38,25 @@ const DashboardPanel = (props: Props) => {
 	const project_slug = createMemo(() => params().project);
 	const projectFetcher = createMemo(() => {
 		return {
+			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			token: user?.token,
 		};
 	});
 	const getProject = async (fetcher: {
+		bencher_valid: InitOutput;
 		project_slug: string;
 		token: string;
 	}) => {
 		const EMPTY_OBJECT = {};
-		if (typeof fetcher.token !== "string") {
+		if (!fetcher.bencher_valid) {
 			return EMPTY_OBJECT;
 		}
 		if (props.project) {
 			return props.project;
+		}
+		if (!validJwt(fetcher.token)) {
+			return EMPTY_OBJECT;
 		}
 		const path = `/v0/projects/${fetcher.project_slug}`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
@@ -61,16 +72,21 @@ const DashboardPanel = (props: Props) => {
 
 	const plotsFetcher = createMemo(() => {
 		return {
+			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			token: user?.token,
 		};
 	});
 	const getPlots = async (fetcher: {
+		bencher_valid: InitOutput;
 		project_slug: string;
 		token: string;
 	}) => {
 		const EMPTY_ARRAY: JsonPlot[] = [];
-		if (typeof fetcher.token !== "string") {
+		if (!fetcher.bencher_valid) {
+			return EMPTY_ARRAY;
+		}
+		if (!validJwt(fetcher.token)) {
 			return EMPTY_ARRAY;
 		}
 		const path = `/v0/projects/${fetcher.project_slug}/plots?per_page=${MAX_PLOTS}`;
@@ -87,6 +103,7 @@ const DashboardPanel = (props: Props) => {
 		plotsFetcher,
 		getPlots,
 	);
+	const plotsLength = createMemo(() => plots()?.length);
 
 	const allowedFetcher = createMemo(() => {
 		return {
@@ -115,6 +132,7 @@ const DashboardPanel = (props: Props) => {
 							isAllowed={isAllowed}
 							plot={plot}
 							index={index}
+							total={plotsLength}
 							refresh={refetch}
 						/>
 					</div>

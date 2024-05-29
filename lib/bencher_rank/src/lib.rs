@@ -25,12 +25,6 @@ pub trait Ranked {
     fn rank(&self) -> Rank;
 }
 
-impl From<u8> for Rank {
-    fn from(rank: u8) -> Self {
-        Self(i64::from(rank))
-    }
-}
-
 impl Rank {
     /// Check if the ranks are sorted.
     pub fn is_sorted<R>(ranks: &[R]) -> bool

@@ -313,7 +313,7 @@ async fn patch_inner(
     let query_plot =
         QueryPlot::get_with_uuid(conn_lock!(context), &query_project, path_params.plot)?;
 
-    let update_plot = UpdatePlot::from(json_plot.clone());
+    let update_plot = UpdatePlot::from_json(context, &query_project, json_plot.clone()).await?;
     diesel::update(schema::plot::table.filter(schema::plot::id.eq(query_plot.id)))
         .set(&update_plot)
         .execute(conn_lock!(context))
