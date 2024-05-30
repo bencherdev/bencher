@@ -9,5 +9,6 @@ export const plotFields = (project: undefined | JsonProject) => {
 			icon: "fas fa-chart-line",
 			validate: validOptionResourceName,
 		},
+		rank: {},
 	};
 };

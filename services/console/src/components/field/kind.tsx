@@ -7,6 +7,7 @@ enum FieldKind {
 	RADIO = "radio",
 	MODEL = "model",
 	SEARCH = "search",
+	PLOT_RANK = "plot_rank",
 }
 
 export default FieldKind;

@@ -167,79 +167,80 @@ const PinnedButtons = (props: {
 	const [_rank] = createResource<JsonPlot>(rankFetcher, patchRank);
 
 	return (
-		<nav class="level">
+		<nav class="level is-mobile">
 			<div class="level-left">
-				<Show when={props.isAllowed()}>
-					<div class="field has-addons">
-						<p class="control">
-							<button
-								type="button"
-								class="button is-small"
-								title="Move plot to bottom"
-								disabled={props.index() === props.total() - 1}
-								onClick={(e) => {
-									e.preventDefault();
-									setRank(props.total() + 1);
-								}}
-							>
-								<span class="icon is-small">
-									<i class="fas fa-angle-double-down" />
-								</span>
-							</button>
-						</p>
-						<p class="control">
-							<button
-								type="button"
-								class="button is-small"
-								title="Move plot down"
-								disabled={props.index() === props.total() - 1}
-								onClick={(e) => {
-									e.preventDefault();
-									// Because the ranking algorithm looks backwards,
-									// we need to jump ahead, further down the list by two instead of one.
-									// Otherwise, the plot will be placed in the same position, albeit with a different rank.
-									setRank(props.index() + 2);
-								}}
-							>
-								<span class="icon is-small">
-									<i class="fas fa-chevron-down" />
-								</span>
-							</button>
-						</p>
-						<p class="control">
-							<button
-								type="button"
-								class="button is-small"
-								title="Move plot up"
-								disabled={props.index() === 0}
-								onClick={(e) => {
-									e.preventDefault();
-									setRank(props.index() - 1);
-								}}
-							>
-								<span class="icon is-small">
-									<i class="fas fa-chevron-up" />
-								</span>
-							</button>
-						</p>
-						<p class="control">
-							<button
-								type="button"
-								class="button is-small"
-								title="Move plot to top"
-								disabled={props.index() === 0}
-								onClick={(e) => {
-									e.preventDefault();
-									setRank(0);
-								}}
-							>
-								<span class="icon is-small">
-									<i class="fas fa-angle-double-up" />
-								</span>
-							</button>
-						</p>
+				<div class="level is-mobile">
+					<div class="level-item">
+						<span class="tag is-primary is-small is-rounded">
+							{props.index() + 1}
+						</span>
 					</div>
-				</Show>
+					<Show when={props.isAllowed()}>
+						<div class="level-item">
+							<div class="buttons has-addons">
+								<button
+									type="button"
+									class="button is-small"
+									title="Move plot to bottom"
+									disabled={props.index() === props.total() - 1}
+									onClick={(e) => {
+										e.preventDefault();
+										setRank(props.total() + 1);
+									}}
+								>
+									<span class="icon is-small">
+										<i class="fas fa-angle-double-down" />
+									</span>
+								</button>
+								<button
+									type="button"
+									class="button is-small"
+									title="Move plot down"
+									disabled={props.index() === props.total() - 1}
+									onClick={(e) => {
+										e.preventDefault();
+										// Because the ranking algorithm looks backwards,
+										// we need to jump ahead, further down the list by two instead of one.
+										// Otherwise, the plot will be placed in the same position, albeit with a different rank.
+										setRank(props.index() + 2);
+									}}
+								>
+									<span class="icon is-small">
+										<i class="fas fa-chevron-down" />
+									</span>
+								</button>
+								<button
+									type="button"
+									class="button is-small"
+									title="Move plot up"
+									disabled={props.index() === 0}
+									onClick={(e) => {
+										e.preventDefault();
+										setRank(props.index() - 1);
+									}}
+								>
+									<span class="icon is-small">
+										<i class="fas fa-chevron-up" />
+									</span>
+								</button>
+								<button
+									type="button"
+									class="button is-small"
+									title="Move plot to top"
+									disabled={props.index() === 0}
+									onClick={(e) => {
+										e.preventDefault();
+										setRank(0);
+									}}
+								>
+									<span class="icon is-small">
+										<i class="fas fa-angle-double-up" />
+									</span>
+								</button>
+							</div>
+						</div>
+					</Show>
+				</div>
 			</div>
 
 			<div class="level-right">

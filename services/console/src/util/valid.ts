@@ -102,7 +102,7 @@ export const validateNumber = (
 };
 
 export const validU32 = (input: undefined | number | string) => {
-	if (!input) {
+	if (input === undefined || input === null) {
 		return false;
 	}
 	if (typeof input === "string" && input.length === 0) {
@@ -110,6 +110,17 @@ export const validU32 = (input: undefined | number | string) => {
 	}
 	const num = Number(input);
 	return Number.isInteger(num) && num >= 0 && num <= 4_294_967_295;
+};
+
+export const validU8 = (input: undefined | number | string) => {
+	if (input === undefined || input === null) {
+		return false;
+	}
+	if (typeof input === "string" && input.length === 0) {
+		return false;
+	}
+	const num = Number(input);
+	return Number.isInteger(num) && num >= 0 && num <= 255;
 };
 
 export const validBoundary = (boundary: string): boolean => {

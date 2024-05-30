@@ -94,7 +94,7 @@ const PinModal = (props: Props) => {
 
 		const newPlot: JsonNewPlot = {
 			title: form?.title?.value ? form?.title?.value?.trim() : undefined,
-			rank: Number.parseInt(form?.rank?.value),
+			rank: Number.parseInt(form?.rank?.value - 1),
 			lower_value: props.lower_value(),
 			upper_value: props.upper_value(),
 			lower_boundary: props.lower_boundary(),
@@ -179,6 +179,16 @@ const PinModal = (props: Props) => {
 						config={plotFields(props.project()).title}
 						handleField={handleField}
 					/>
+
+					<Field
+						kind={FieldKind.PLOT_RANK}
+						fieldKey="rank"
+						label="Insert Location"
+						value={form?.rank?.value}
+						valid={form?.rank?.valid}
+						config={plotFields(props.project()).rank}
+						handleField={handleField}
+					/>
 				</section>
 
 				<footer class="modal-card-foot">
@@ -206,7 +216,7 @@ const initForm = () => {
 			valid: null,
 		},
 		rank: {
-			value: "0",
+			value: 1,
 			valid: true,
 		},
 		window: {
