@@ -15,7 +15,7 @@ import { THEME_TOGGLE_ID, ThemeId } from "./theme";
 
 <script>
   import {BENCHER_WORDMARK_ID, BENCHER_WORDMARK_INLINE_ID, BENCHER_WORDMARK_FOOTER_ID, BENCHER_WORDMARK, BENCHER_WORDMARK_DARK} from "../../../util/ext.ts";
-  import {THEME_KEY, Theme, THEME_TOGGLE_ID, ThemeId, getTheme} from "./theme";
+  import {THEME_KEY, Theme, THEME_TOGGLE_ID, ThemeId, getTheme, getCachedTheme} from "./theme";
 
   const wordmark = document.getElementById(BENCHER_WORDMARK_ID);
   const wordmarkInline = document.getElementById(BENCHER_WORDMARK_INLINE_ID);
@@ -59,8 +59,10 @@ import { THEME_TOGGLE_ID, ThemeId } from "./theme";
   }
 
   const initTheme = () => {
-    const theme = getTheme();
-    setTheme(theme);
+    const theme = getCachedTheme();
+    if (theme) {
+      setTheme(theme);
+    }
   }
 
   const toggleTheme = () => {
