@@ -11,7 +11,9 @@ export interface Props {
 }
 
 export interface PlotRankConfig {
-	placeholder: string;
+	bottom: string;
+	top: string;
+	total?: number;
 }
 
 enum Button {
@@ -25,9 +27,15 @@ const PlotRank = (props: Props) => {
 		const IS_SELECTED = " is-primary is-selected";
 		switch (button) {
 			case Button.Bottom:
+				return (props.config?.total ?? button) === props.value
+					? IS_SELECTED
+					: "";
 			case Button.Top:
 				return button === props.value ? IS_SELECTED : "";
 			case Button.Custom:
+				if (props.config?.total && props.config?.total === props.value) {
+					return "";
+				}
 				return props.value !== Button.Bottom && props.value !== Button.Top
 					? IS_SELECTED
 					: "";
@@ -40,6 +48,9 @@ const PlotRank = (props: Props) => {
 			case Button.Top:
 				return null;
 			default:
+				if (props.config?.total && props.config?.total === props.value) {
+					return null;
+				}
 				return props.value;
 		}
 	});
@@ -50,21 +61,21 @@ const PlotRank = (props: Props) => {
 				<button
 					type="button"
 					class={`button is-small${isSelected(Button.Bottom)}`}
-					title="Insert at bottom"
+					title={props.config?.bottom}
 					onClick={(e) => {
 						e.preventDefault();
-						props.handleField(Button.Bottom);
+						props.handleField(props.config?.total ?? Button.Bottom);
 					}}
 				>
 					<span class="icon is-small">
 						<i class="fas fa-angle-double-down" />
 					</span>
-					<span>Insert at bottom</span>
+					<span>{props.config?.bottom}</span>
 				</button>
 				<button
 					type="button"
 					class={`button is-small${isSelected(Button.Top)}`}
-					title="Insert at top"
+					title={props.config?.top}
 					onClick={(e) => {
 						e.preventDefault();
 						props.handleField(Button.Top);
@@ -73,7 +84,7 @@ const PlotRank = (props: Props) => {
 					<span class="icon is-small">
 						<i class="fas fa-angle-double-up" />
 					</span>
-					<span>Insert at top</span>
+					<span>{props.config?.top}</span>
 				</button>
 			</div>
 			<div class="field has-addons">
@@ -81,7 +92,7 @@ const PlotRank = (props: Props) => {
 					<button
 						type="button"
 						class={`button is-small${isSelected(Button.Custom)}`}
-						title="Insert at custom location"
+						title="Custom location"
 					>
 						Custom
 					</button>

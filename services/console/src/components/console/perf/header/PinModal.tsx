@@ -186,7 +186,10 @@ const PinModal = (props: Props) => {
 						label="Insert Location"
 						value={form?.rank?.value}
 						valid={form?.rank?.valid}
-						config={plotFields(props.project()).rank}
+						config={{
+							bottom: "Insert at bottom",
+							top: "Insert at top",
+						}}
 						handleField={handleField}
 					/>
 				</section>

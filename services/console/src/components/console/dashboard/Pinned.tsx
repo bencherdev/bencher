@@ -24,9 +24,12 @@ import { plotFields } from "../../../config/project/plot";
 import FieldKind from "../../field/kind";
 import { set } from "astro/zod";
 import { httpPatch } from "../../../util/http";
+import Field, { type FieldHandler } from "../../field/Field";
+import { createStore } from "solid-js/store";
 
 enum PinnedState {
 	Front = "front",
+	Rank = "rank",
 	Settings = "settings",
 }
 
@@ -50,6 +53,20 @@ const Pinned = (props: {
 					<PinnedFront
 						apiUrl={props.apiUrl}
 						user={props.user}
+						isAllowed={props.isAllowed}
+						plot={props.plot}
+						index={props.index}
+						total={props.total}
+						refresh={props.refresh}
+						handleState={setState}
+					/>
+				</Match>
+				<Match when={state() === PinnedState.Rank}>
+					<PinnedRank
+						apiUrl={props.apiUrl}
+						params={props.params}
+						user={props.user}
+						project={props.project}
 						isAllowed={props.isAllowed}
 						plot={props.plot}
 						index={props.index}
@@ -116,12 +133,6 @@ const PinnedPlot = (props: { plot: JsonPlot }) => {
 	);
 };
 
-enum Rank {
-	Down = 2,
-	None = 0,
-	Up = -1,
-}
-
 const PinnedButtons = (props: {
 	apiUrl: string;
 	user: JsonAuthUser;
@@ -171,27 +182,22 @@ const PinnedButtons = (props: {
 			<div class="level-left">
 				<div class="level is-mobile">
 					<div class="level-item">
-						<span class="tag is-primary is-small is-rounded">
+						<button
+							type="button"
+							class="button tag is-primary is-small is-rounded"
+							title="Move plot"
+							disabled={!props.isAllowed()}
+							onClick={(e) => {
+								e.preventDefault();
+								props.handleState(PinnedState.Rank);
+							}}
+						>
 							{props.index() + 1}
-						</span>
+						</button>
 					</div>
 					<Show when={props.isAllowed()}>
 						<div class="level-item">
 							<div class="buttons has-addons">
-								<button
-									type="button"
-									class="button is-small"
-									title="Move plot to bottom"
-									disabled={props.index() === props.total() - 1}
-									onClick={(e) => {
-										e.preventDefault();
-										setRank(props.total() + 1);
-									}}
-								>
-									<span class="icon is-small">
-										<i class="fas fa-angle-double-down" />
-									</span>
-								</button>
 								<button
 									type="button"
 									class="button is-small"
@@ -221,20 +227,6 @@ const PinnedButtons = (props: {
 								>
 									<span class="icon is-small">
 										<i class="fas fa-chevron-up" />
-									</span>
-								</button>
-								<button
-									type="button"
-									class="button is-small"
-									title="Move plot to top"
-									disabled={props.index() === 0}
-									onClick={(e) => {
-										e.preventDefault();
-										setRank(0);
-									}}
-								>
-									<span class="icon is-small">
-										<i class="fas fa-angle-double-up" />
 									</span>
 								</button>
 							</div>
@@ -273,6 +265,110 @@ const PinnedButtons = (props: {
 				</div>
 			</div>
 		</nav>
+	);
+};
+
+const PinnedRank = (props: {
+	apiUrl: string;
+	params: Params;
+	user: JsonAuthUser;
+	project: Resource<JsonProject>;
+	isAllowed: Resource<boolean>;
+	plot: JsonPlot;
+	index: Accessor<number>;
+	total: Accessor<number>;
+	refresh: () => JsonPlot[] | Promise<JsonPlot[]> | null | undefined;
+	handleState: (state: PinnedState) => void;
+}) => {
+	const [rank, setRank] = createSignal(props.index() + 1);
+	const [valid, setValid] = createSignal(true);
+	const [submitting, setSubmitting] = createSignal(false);
+
+	const handleField: FieldHandler = (_key, value, valid) => {
+		setRank(value);
+		setValid(valid);
+	};
+
+	const rankFetcher = createMemo(() => {
+		return {
+			token: props.user.token,
+			plot: props.plot,
+			rank: rank(),
+			submitting: submitting(),
+		};
+	});
+	const patchRank = async (fetcher: {
+		token: string;
+		plot: JsonPlot;
+		rank: number;
+	}) => {
+		if (!submitting()) {
+			return;
+		}
+		const path = `/v0/projects/${fetcher.plot?.project}/plots/${fetcher.plot?.uuid}`;
+		const data = {
+			rank: fetcher.rank - 1,
+		};
+		return await httpPatch(props.apiUrl, path, fetcher.token, data)
+			.then((resp) => {
+				setSubmitting(false);
+				props.refresh();
+				return resp?.data;
+			})
+			.catch((error) => {
+				setSubmitting(false);
+				console.error(error);
+				return;
+			});
+	};
+	const [_rank] = createResource<JsonPlot>(rankFetcher, patchRank);
+
+	return (
+		<>
+			<button
+				type="button"
+				class="button is-small is-fullwidth"
+				onClick={(e) => {
+					e.preventDefault();
+					props.handleState(PinnedState.Front);
+				}}
+			>
+				<span class="icon is-small">
+					<i class="fas fa-arrow-left" />
+				</span>
+				<span>Back to Plot</span>
+			</button>
+			<br />
+			<Field
+				kind={FieldKind.PLOT_RANK}
+				fieldKey="rank"
+				label="Move Location"
+				value={rank()}
+				valid={valid()}
+				config={{
+					bottom: "Move to bottom",
+					top: "Move to top",
+					total: props.total() + 1,
+				}}
+				handleField={handleField}
+			/>
+			<br />
+			<button
+				class="button is-primary is-fullwidth is-small"
+				type="button"
+				disabled={
+					!valid() ||
+					Number.parseInt(rank()?.toString()) === props.index() + 1 ||
+					submitting()
+				}
+				onClick={(e) => {
+					e.preventDefault();
+					setSubmitting(true);
+				}}
+			>
+				Move
+			</button>
+		</>
 	);
 };
 
