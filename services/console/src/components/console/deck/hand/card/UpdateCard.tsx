@@ -114,7 +114,9 @@ const UpdateCard = (props: Props) => {
 				} else {
 					props.toggleUpdate();
 					props.handleRefresh();
-					pageNotify(NotifyKind.OK, text);
+					if (props.card?.notify ?? true) {
+						pageNotify(NotifyKind.OK, text);
+					}
 				}
 			})
 			.catch((error) => {

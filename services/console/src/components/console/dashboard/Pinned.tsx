@@ -23,7 +23,7 @@ import { isAllowedProjectManage } from "../../../util/auth";
 import { plotFields } from "../../../config/project/plot";
 import FieldKind from "../../field/kind";
 import { set } from "astro/zod";
-import { httpPatch } from "../../../util/http";
+import { httpGet, httpPatch } from "../../../util/http";
 import Field, { type FieldHandler } from "../../field/Field";
 import { createStore } from "solid-js/store";
 
@@ -42,9 +42,44 @@ const Pinned = (props: {
 	plot: JsonPlot;
 	index: Accessor<number>;
 	total: Accessor<number>;
-	refresh: () => JsonPlot[] | Promise<JsonPlot[]> | null | undefined;
+	movePlot: (from: number, to: number) => void;
+	updatePlot: (index: number, plot: JsonPlot) => void;
 }) => {
 	const [state, setState] = createSignal(PinnedState.Front);
+
+	const [refresh, setRefresh] = createSignal(false);
+	const handleRefresh = () => {
+		setRefresh(true);
+	};
+	const plotFetcher = createMemo(() => {
+		return {
+			plot: props.plot,
+			token: props.user?.token,
+			refresh: refresh(),
+		};
+	});
+	const getPlot = async (fetcher: {
+		plot: JsonPlot;
+		token: string;
+		refresh: boolean;
+	}) => {
+		if (!fetcher.refresh) {
+			return fetcher.plot;
+		}
+		setRefresh(false);
+		const path = `/v0/projects/${fetcher.plot?.project}/plots/${fetcher.plot?.uuid}`;
+		return await httpGet(props.apiUrl, path, fetcher.token)
+			.then((resp) => {
+				const p = resp?.data as JsonPlot;
+				props.updatePlot(props.index(), p);
+				return p;
+			})
+			.catch((error) => {
+				console.error(error);
+				return fetcher.plot;
+			});
+	};
+	const [plot] = createResource<JsonPlot>(plotFetcher, getPlot);
 
 	return (
 		<div id={props.plot?.uuid} class="box">
@@ -54,10 +89,10 @@ const Pinned = (props: {
 						apiUrl={props.apiUrl}
 						user={props.user}
 						isAllowed={props.isAllowed}
-						plot={props.plot}
+						plot={plot()}
 						index={props.index}
 						total={props.total}
-						refresh={props.refresh}
+						movePlot={props.movePlot}
 						handleState={setState}
 					/>
 				</Match>
@@ -68,10 +103,10 @@ const Pinned = (props: {
 						user={props.user}
 						project={props.project}
 						isAllowed={props.isAllowed}
-						plot={props.plot}
+						plot={plot()}
 						index={props.index}
 						total={props.total}
-						refresh={props.refresh}
+						movePlot={props.movePlot}
 						handleState={setState}
 					/>
 				</Match>
@@ -82,8 +117,8 @@ const Pinned = (props: {
 						user={props.user}
 						project={props.project}
 						isAllowed={props.isAllowed}
-						plot={props.plot}
-						refresh={props.refresh}
+						plot={plot()}
+						refresh={handleRefresh}
 						handleState={setState}
 					/>
 				</Match>
@@ -99,7 +134,7 @@ const PinnedFront = (props: {
 	plot: JsonPlot;
 	index: Accessor<number>;
 	total: Accessor<number>;
-	refresh: () => JsonPlot[] | Promise<JsonPlot[]> | null | undefined;
+	movePlot: (from: number, to: number) => void;
 	handleState: (state: PinnedState) => void;
 }) => {
 	return (
@@ -112,7 +147,7 @@ const PinnedFront = (props: {
 				plot={props.plot}
 				index={props.index}
 				total={props.total}
-				refresh={props.refresh}
+				movePlot={props.movePlot}
 				handleState={props.handleState}
 			/>
 		</>
@@ -140,7 +175,7 @@ const PinnedButtons = (props: {
 	plot: JsonPlot;
 	index: Accessor<number>;
 	total: Accessor<number>;
-	refresh: () => JsonPlot[] | Promise<JsonPlot[]> | null | undefined;
+	movePlot: (from: number, to: number) => void;
 	handleState: (state: PinnedState) => void;
 }) => {
 	const [rank, setRank] = createSignal(-1);
@@ -167,7 +202,7 @@ const PinnedButtons = (props: {
 		};
 		return await httpPatch(props.apiUrl, path, fetcher.token, data)
 			.then((resp) => {
-				props.refresh();
+				props.movePlot(props.index(), fetcher.rank);
 				return resp?.data;
 			})
 			.catch((error) => {
@@ -208,7 +243,7 @@ const PinnedButtons = (props: {
 										// Because the ranking algorithm looks backwards,
 										// we need to jump ahead, further down the list by two instead of one.
 										// Otherwise, the plot will be placed in the same position, albeit with a different rank.
-										setRank(props.index() + 2);
+										setRank(props.index() + 1);
 									}}
 								>
 									<span class="icon is-small">
@@ -277,7 +312,7 @@ const PinnedRank = (props: {
 	plot: JsonPlot;
 	index: Accessor<number>;
 	total: Accessor<number>;
-	refresh: () => JsonPlot[] | Promise<JsonPlot[]> | null | undefined;
+	movePlot: (from: number, to: number) => void;
 	handleState: (state: PinnedState) => void;
 }) => {
 	const [rank, setRank] = createSignal(props.index() + 1);
@@ -312,7 +347,8 @@ const PinnedRank = (props: {
 		return await httpPatch(props.apiUrl, path, fetcher.token, data)
 			.then((resp) => {
 				setSubmitting(false);
-				props.refresh();
+				props.movePlot(props.index(), fetcher.rank - 1);
+				props.handleState(PinnedState.Front);
 				return resp?.data;
 			})
 			.catch((error) => {
@@ -324,7 +360,11 @@ const PinnedRank = (props: {
 	const [_rank] = createResource<JsonPlot>(rankFetcher, patchRank);
 
 	return (
-		<>
+		<form
+			onSubmit={(e) => {
+				e.preventDefault();
+			}}
+		>
 			<button
 				type="button"
 				class="button is-small is-fullwidth"
@@ -348,7 +388,7 @@ const PinnedRank = (props: {
 				config={{
 					bottom: "Move to bottom",
 					top: "Move to top",
-					total: props.total() + 1,
+					total: props.total(),
 				}}
 				handleField={handleField}
 			/>
@@ -368,7 +408,7 @@ const PinnedRank = (props: {
 			>
 				Move
 			</button>
-		</>
+		</form>
 	);
 };
 
@@ -379,7 +419,7 @@ const PinnedSetting = (props: {
 	project: Resource<JsonProject>;
 	isAllowed: Resource<boolean>;
 	plot: JsonPlot;
-	refresh: () => JsonPlot[] | Promise<JsonPlot[]> | null | undefined;
+	refresh: () => void;
 	handleState: (state: PinnedState) => void;
 }) => {
 	const path = createMemo(
@@ -413,6 +453,7 @@ const PinnedSetting = (props: {
 					key: "title",
 					display: Display.RAW,
 					is_allowed: (_apiUrl, _params) => props.isAllowed() === true,
+					notify: false,
 					field: {
 						kind: FieldKind.INPUT,
 						label: "Title",

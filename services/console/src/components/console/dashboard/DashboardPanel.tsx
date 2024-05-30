@@ -14,6 +14,8 @@ import { authUser, isAllowedProjectManage } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
 import Pinned from "./Pinned";
 import { validJwt } from "../../../util/valid";
+import { createStore } from "solid-js/store";
+import { create } from "d3";
 
 const MAX_PLOTS = 255;
 
@@ -99,11 +101,29 @@ const DashboardPanel = (props: Props) => {
 				return EMPTY_ARRAY;
 			});
 	};
-	const [plots, { refetch }] = createResource<JsonPlot[]>(
-		plotsFetcher,
-		getPlots,
-	);
+	const [plots] = createResource<JsonPlot[]>(plotsFetcher, getPlots);
+	const [plotArray, setPlotArray] = createStore<JsonPlot[]>([]);
 	const plotsLength = createMemo(() => plots()?.length);
+
+	createEffect(() => {
+		if (plots() && plotArray.length !== plotsLength()) {
+			setPlotArray(plots());
+		}
+	});
+
+	const movePlot = (from: number, to: number) => {
+		console.log(from, to);
+		const newPlots = [...plotArray];
+		const [removed] = newPlots.splice(from, 1);
+		newPlots.splice(to, 0, removed);
+		setPlotArray(newPlots);
+	};
+
+	const updatePlot = (index: number, plot: JsonPlot) => {
+		const newPlots = [...plotArray];
+		newPlots[index] = plot;
+		setPlotArray(newPlots);
+	};
 
 	const allowedFetcher = createMemo(() => {
 		return {
@@ -121,7 +141,7 @@ const DashboardPanel = (props: Props) => {
 
 	return (
 		<div class="columns is-multiline is-vcentered">
-			<For each={plots()}>
+			<For each={plotArray}>
 				{(plot, index) => (
 					<div class="column is-11-tablet is-12-desktop is-6-widescreen">
 						<Pinned
@@ -133,7 +153,8 @@ const DashboardPanel = (props: Props) => {
 							plot={plot}
 							index={index}
 							total={plotsLength}
-							refresh={refetch}
+							movePlot={movePlot}
+							updatePlot={updatePlot}
 						/>
 					</div>
 				)}

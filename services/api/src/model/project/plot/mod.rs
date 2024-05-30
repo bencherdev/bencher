@@ -78,7 +78,19 @@ impl QueryPlot {
             .map_err(resource_not_found_err!(Plot, &query_project))
     }
 
-    fn next_rank(
+    fn all_others_for_project(
+        &self,
+        conn: &mut DbConnection,
+        query_project: &QueryProject,
+    ) -> Result<Vec<Self>, HttpError> {
+        Self::belonging_to(query_project)
+            .filter(plot_table::id.ne(self.id))
+            .order(plot_table::rank.asc())
+            .load::<Self>(conn)
+            .map_err(resource_not_found_err!(Plot, &query_project))
+    }
+
+    fn new_rank(
         conn: &mut DbConnection,
         query_project: &QueryProject,
         index: u8,
@@ -109,6 +121,40 @@ impl QueryPlot {
 
         // Try to calculate the rank within the redistributed plots.
         let redistributed_plots = QueryPlot::all_for_project(conn, query_project)?;
+        Rank::calculate(&redistributed_plots, index).ok_or_else(|| {
+            resource_conflict_error(
+                BencherResource::Plot,
+                (redistributed_plots, index),
+                "Failed to redistribute plots.",
+            )
+        })
+    }
+
+    fn update_rank(
+        &self,
+        conn: &mut DbConnection,
+        query_project: &QueryProject,
+        index: u8,
+    ) -> Result<Rank, HttpError> {
+        let index = index.into();
+
+        // Get the current plots, except for self.
+        let other_plots = self.all_others_for_project(conn, query_project)?;
+
+        // Try to calculate the rank within the current plots.
+        if let Some(rank) = Rank::calculate(&other_plots, index) {
+            return Ok(rank);
+        }
+
+        // If the rank cannot be calculated, then we need to redistribute all the ranks.
+        let all_plots = QueryPlot::all_for_project(conn, query_project)?;
+        let plot_ranker = RankGenerator::new(all_plots.len());
+        for (plot, rank) in all_plots.iter().zip(plot_ranker) {
+            UpdatePlot::update_rank(conn, plot, rank)?;
+        }
+
+        // Try to calculate the rank within the redistributed plots.
+        let redistributed_plots = self.all_others_for_project(conn, query_project)?;
         Rank::calculate(&redistributed_plots, index).ok_or_else(|| {
             resource_conflict_error(
                 BencherResource::Plot,
@@ -255,7 +301,7 @@ impl InsertPlot {
             measures,
         } = plot;
         let rank =
-            QueryPlot::next_rank(conn_lock!(context), query_project, rank.unwrap_or_default())?;
+            QueryPlot::new_rank(conn_lock!(context), query_project, rank.unwrap_or_default())?;
         let timestamp = DateTime::now();
         let insert_plot = Self {
             uuid: PlotUuid::new(),
@@ -302,6 +348,7 @@ impl UpdatePlot {
     pub async fn from_json(
         context: &ApiContext,
         query_project: &QueryProject,
+        query_plot: &QueryPlot,
         update: JsonUpdatePlot,
     ) -> Result<Self, HttpError> {
         let (title, index) = match update {
@@ -315,11 +362,7 @@ impl UpdatePlot {
             },
         };
         let rank = if let Some(index) = index {
-            Some(QueryPlot::next_rank(
-                conn_lock!(context),
-                query_project,
-                index,
-            )?)
+            Some(query_plot.update_rank(conn_lock!(context), query_project, index)?)
         } else {
             None
         };

@@ -11,6 +11,7 @@ export interface CardConfig {
 	field: PosterFieldConfig;
 	is_allowed: (apiUrl: string, params: Params) => boolean;
 	path: (params: Params, data: object) => string;
+	notify?: boolean;
 }
 
 export default CardConfig;
