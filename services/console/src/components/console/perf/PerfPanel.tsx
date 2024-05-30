@@ -533,7 +533,9 @@ const PerfPanel = (props: Props) => {
 		// Don't even send query if there isn't at least one: branch, testbed, and benchmark
 		if (
 			(props.isConsole && typeof fetcher.token !== "string") ||
-			isPlotInit()
+			isPlotInit() ||
+			!fetcher.project_slug ||
+			fetcher.project_slug === "undefined"
 		) {
 			return EMPTY_OBJECT;
 		}
