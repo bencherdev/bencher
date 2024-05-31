@@ -7,6 +7,7 @@ import {
 	createEffect,
 	createMemo,
 	createResource,
+	createSignal,
 	type Accessor,
 } from "solid-js";
 import { setPageTitle } from "../../../util/resource";
@@ -16,6 +17,7 @@ import Pinned from "./Pinned";
 import { validJwt } from "../../../util/valid";
 import { createStore } from "solid-js/store";
 import { create } from "d3";
+import { set } from "astro/zod";
 
 const MAX_PLOTS = 255;
 
@@ -103,11 +105,16 @@ const DashboardPanel = (props: Props) => {
 	};
 	const [plots] = createResource<JsonPlot[]>(plotsFetcher, getPlots);
 	const [plotArray, setPlotArray] = createStore<JsonPlot[]>([]);
+	// This is necessary to keep the fetched plots from overwriting the plots store after a deletion.
+	const [plotsLoaded, setPlotsLoaded] = createSignal(false);
 	const plotsLength = createMemo(() => plots()?.length);
 
 	createEffect(() => {
-		if (plots() && plotArray.length !== plotsLength()) {
+		// It is important to check the array length for the fetched plots,
+		// as this is a way to make sure we only set the plots store once the fetched plots are actually loaded.
+		if (plots() && plotArray.length !== plotsLength() && !plotsLoaded()) {
 			setPlotArray(plots());
+			setPlotsLoaded(true);
 		}
 	});
 
@@ -122,6 +129,12 @@ const DashboardPanel = (props: Props) => {
 	const updatePlot = (index: number, plot: JsonPlot) => {
 		const newPlots = [...plotArray];
 		newPlots[index] = plot;
+		setPlotArray(newPlots);
+	};
+
+	const removePlot = (index: number) => {
+		const newPlots = [...plotArray];
+		newPlots.splice(index, 1);
 		setPlotArray(newPlots);
 	};
 
@@ -155,6 +168,7 @@ const DashboardPanel = (props: Props) => {
 							total={plotsLength}
 							movePlot={movePlot}
 							updatePlot={updatePlot}
+							removePlot={removePlot}
 						/>
 					</div>
 				)}

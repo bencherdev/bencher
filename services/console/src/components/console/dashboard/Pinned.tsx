@@ -1,4 +1,3 @@
-import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import {
 	Match,
 	Show,
@@ -19,13 +18,10 @@ import DeleteButton from "../deck/hand/DeleteButton";
 import type { Params } from "astro";
 import DeckCard from "../deck/hand/card/DeckCard";
 import { Card, Display } from "../../../config/types";
-import { isAllowedProjectManage } from "../../../util/auth";
 import { plotFields } from "../../../config/project/plot";
 import FieldKind from "../../field/kind";
-import { set } from "astro/zod";
 import { httpGet, httpPatch } from "../../../util/http";
 import Field, { type FieldHandler } from "../../field/Field";
-import { createStore } from "solid-js/store";
 
 enum PinnedState {
 	Front = "front",
@@ -44,6 +40,7 @@ const Pinned = (props: {
 	total: Accessor<number>;
 	movePlot: (from: number, to: number) => void;
 	updatePlot: (index: number, plot: JsonPlot) => void;
+	removePlot: (index: number) => void;
 }) => {
 	const [state, setState] = createSignal(PinnedState.Front);
 
@@ -117,6 +114,8 @@ const Pinned = (props: {
 						project={props.project}
 						isAllowed={props.isAllowed}
 						plot={plot()}
+						index={props.index}
+						removePlot={props.removePlot}
 						refresh={handleRefresh}
 						handleState={setState}
 						handleRefresh={handleRefresh}
@@ -423,6 +422,8 @@ const PinnedSetting = (props: {
 	project: Resource<JsonProject>;
 	isAllowed: Resource<boolean>;
 	plot: JsonPlot;
+	index: Accessor<number>;
+	removePlot: (index: number) => void;
 	refresh: () => void;
 	handleState: (state: PinnedState) => void;
 	handleRefresh: () => void;
@@ -433,6 +434,11 @@ const PinnedSetting = (props: {
 
 	const handleUpdate = () => {
 		props.handleRefresh();
+		props.handleState(PinnedState.Front);
+	};
+
+	const handleDelete = () => {
+		props.removePlot(props.index());
 		props.handleState(PinnedState.Front);
 	};
 
@@ -473,7 +479,8 @@ const PinnedSetting = (props: {
 					path={path}
 					data={() => props.plot}
 					subtitle="This plot will no longer appear in your dashboard."
-					redirect={(pathname, _data) => pathname}
+					redirect={handleDelete}
+					notify={false}
 				/>
 			</Show>
 		</>

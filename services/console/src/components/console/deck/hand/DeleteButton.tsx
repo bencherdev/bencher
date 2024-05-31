@@ -22,6 +22,7 @@ export interface Props {
 	data: Resource<object>;
 	subtitle: string;
 	redirect: (pathname: string, data: object) => string;
+	notify?: boolean;
 }
 
 const DeleteButton = (props: Props) => {
@@ -44,13 +45,17 @@ const DeleteButton = (props: Props) => {
 		httpDelete(props.apiUrl, props.path(), token)
 			.then((_resp) => {
 				setDeleting(false);
-				navigateNotify(
-					NotifyKind.OK,
-					"That won't turnip again. Delete successful!",
-					props.redirect(pathname(), data),
-					null,
-					null,
-				);
+				if (props.notify ?? true) {
+					navigateNotify(
+						NotifyKind.OK,
+						"That won't turnip again. Delete successful!",
+						props.redirect(pathname(), data),
+						null,
+						null,
+					);
+				} else {
+					props.redirect(pathname(), data);
+				}
 			})
 			.catch((error) => {
 				setDeleting(false);
