@@ -7,6 +7,7 @@ import {
 	is_valid_email,
 	is_valid_expiration_month,
 	is_valid_expiration_year,
+	is_valid_index,
 	is_valid_jwt,
 	is_valid_non_empty,
 	is_valid_resource_name,
@@ -20,6 +21,7 @@ import {
 	is_valid_cdf_boundary,
 	is_valid_iqr_boundary,
 	is_valid_model,
+	is_valid_window,
 } from "bencher_valid";
 import type { JsonAuthUser } from "../types/bencher";
 
@@ -112,38 +114,31 @@ export const validU32 = (input: undefined | number | string) => {
 	return Number.isInteger(num) && num >= 0 && num <= 4_294_967_295;
 };
 
-export const validU8 = (input: undefined | number | string) => {
-	if (input === undefined || input === null) {
-		return false;
-	}
-	if (typeof input === "string" && input.length === 0) {
-		return false;
-	}
-	const num = Number(input);
-	return Number.isInteger(num) && num >= 0 && num <= 255;
-};
+const validNumberStr = (
+	numberStr: undefined | number | string,
+	validator: (input: number) => boolean,
+) => validateNumber(numberStr?.toString() ?? "", validator);
 
-export const validBoundary = (boundary: string): boolean => {
-	return validateNumber(boundary, is_valid_boundary);
-};
+export const validWindow = (window: undefined | number | string): boolean =>
+	validNumberStr(window, is_valid_window);
 
-export const validPercentageBoundary = (boundary: string): boolean => {
-	return validateNumber(boundary, is_valid_percentage_boundary);
-};
+export const validIndex = (index: undefined | number | string): boolean =>
+	validNumberStr(index, is_valid_index);
 
-export const validCdfBoundary = (boundary: string): boolean => {
-	return validateNumber(boundary, is_valid_cdf_boundary);
-};
+export const validBoundary = (boundary: string): boolean =>
+	validateNumber(boundary, is_valid_boundary);
 
-export const validIqrBoundary = (boundary: string): boolean => {
-	return validateNumber(boundary, is_valid_iqr_boundary);
-};
+export const validPercentageBoundary = (boundary: string): boolean =>
+	validateNumber(boundary, is_valid_percentage_boundary);
 
-export const validSampleSize = (sample_size: string) => {
-	return (
-		validU32(sample_size) && validateNumber(sample_size, is_valid_sample_size)
-	);
-};
+export const validCdfBoundary = (boundary: string): boolean =>
+	validateNumber(boundary, is_valid_cdf_boundary);
+
+export const validIqrBoundary = (boundary: string): boolean =>
+	validateNumber(boundary, is_valid_iqr_boundary);
+
+export const validSampleSize = (sample_size: string) =>
+	validU32(sample_size) && validateNumber(sample_size, is_valid_sample_size);
 
 export const validModel = (model: object) => {
 	if (!model || typeof model !== "object") {

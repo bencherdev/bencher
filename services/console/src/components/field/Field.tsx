@@ -9,11 +9,12 @@ import FieldKind from "./kind";
 import Radio, { type RadioConfig, type RadioValue } from "./kinds/Radio";
 import type { Params } from "astro";
 import Model from "./kinds/Model";
-import { validModel, validU8 } from "../../util/valid";
+import { validModel, validIndex } from "../../util/valid";
 import type { SearchConfig, SearchValue } from "./kinds/Search";
 import Search from "./kinds/Search";
 import type { PlotRankConfig, PlotRankValue } from "./kinds/PlotRank";
 import PlotRank from "./kinds/PlotRank";
+import type { PlotWindowConfig, PlotWindowValue } from "./kinds/PlotWindow";
 
 export type FieldValue =
 	| SwitchValue
@@ -22,6 +23,7 @@ export type FieldValue =
 	| SelectValue
 	| RadioValue
 	| SearchValue
+	| PlotWindowValue
 	| PlotRankValue;
 
 export type FieldConfig =
@@ -31,6 +33,7 @@ export type FieldConfig =
 	| SelectConfig
 	| RadioConfig
 	| SearchConfig
+	| PlotWindowConfig
 	| PlotRankConfig;
 
 export type FieldHandler = (
@@ -86,8 +89,11 @@ const Field = (props: Props) => {
 			case FieldKind.SEARCH:
 				props.handleField(props.fieldKey, value, true);
 				break;
+			case FieldKind.PLOT_WINDOW:
+				props.handleField(props.fieldKey, value, validWindow(value));
+				break;
 			case FieldKind.PLOT_RANK:
-				props.handleField(props.fieldKey, value, validU8(value - 1));
+				props.handleField(props.fieldKey, value, validIndex(value));
 				break;
 		}
 	};
