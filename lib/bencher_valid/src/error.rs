@@ -52,6 +52,10 @@ pub enum ValidError {
     Window(u32),
     #[error("Failed to parse model window: {0}")]
     WindowStr(std::num::ParseIntError),
+    #[error("Invalid plot index: {0}")]
+    Index(u8),
+    #[error("Failed to parse plot index: {0}")]
+    IndexStr(std::num::ParseIntError),
 
     #[cfg(feature = "plus")]
     #[error("Failed to validate plan level: {0}")]

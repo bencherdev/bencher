@@ -168,6 +168,8 @@ export type Email = string;
 
 export type GitHash = string;
 
+export type Index = number;
+
 export type Jwt = string;
 
 export type NonEmpty = string;
@@ -460,10 +462,10 @@ export interface JsonNewPlot {
 	 */
 	title?: ResourceName;
 	/**
-	 * The rank of the plot.
-	 * Maximum rank is 255.
+	 * The index of the plot.
+	 * Maximum index is 64.
 	 */
-	rank?: number;
+	index?: Index;
 	/** Display metric lower values. */
 	lower_value: boolean;
 	/** Display metric upper values. */

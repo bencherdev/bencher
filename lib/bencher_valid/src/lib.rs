@@ -9,6 +9,7 @@ mod date_time;
 mod email;
 mod error;
 mod git_hash;
+mod index;
 mod jwt;
 mod model;
 mod name_id;
@@ -31,6 +32,7 @@ pub use date_time::{DateTime, DateTimeMillis};
 pub use email::Email;
 pub use error::ValidError;
 use error::REGEX_ERROR;
+pub use index::Index;
 pub use jwt::Jwt;
 pub use model::{
     boundary::{Boundary, CdfBoundary, IqrBoundary, PercentageBoundary},

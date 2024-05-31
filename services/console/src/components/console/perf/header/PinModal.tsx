@@ -78,7 +78,7 @@ const PinModal = (props: Props) => {
 	const validateForm = () =>
 		((form?.title?.valid ?? true) &&
 			form?.window?.valid &&
-			form?.rank?.valid) ??
+			form?.index?.valid) ??
 		false;
 
 	const handleSubmit = () => {
@@ -94,7 +94,7 @@ const PinModal = (props: Props) => {
 
 		const newPlot: JsonNewPlot = {
 			title: form?.title?.value ? form?.title?.value?.trim() : undefined,
-			rank: Number.parseInt(form?.rank?.value - 1),
+			index: Number.parseInt(form?.index?.value - 1),
 			lower_value: props.lower_value(),
 			upper_value: props.upper_value(),
 			lower_boundary: props.lower_boundary(),
@@ -182,10 +182,10 @@ const PinModal = (props: Props) => {
 
 					<Field
 						kind={FieldKind.PLOT_RANK}
-						fieldKey="rank"
+						fieldKey="index"
 						label="Insert Location"
-						value={form?.rank?.value}
-						valid={form?.rank?.valid}
+						value={form?.index?.value}
+						valid={form?.index?.valid}
 						config={{
 							bottom: "Insert at bottom",
 							top: "Insert at top",
@@ -218,7 +218,7 @@ const initForm = () => {
 			value: "",
 			valid: null,
 		},
-		rank: {
+		index: {
 			value: 1,
 			valid: true,
 		},

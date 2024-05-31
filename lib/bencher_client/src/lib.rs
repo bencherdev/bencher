@@ -42,13 +42,15 @@ from_client!(
     Slug,
     Url,
     UserName,
-    Window
+    Window,
+    Index
 );
 
 from_client!(
     OrganizationUuid,
     ProjectUuid,
     ReportUuid,
+    PlotUuid,
     BranchUuid,
     TestbedUuid,
     BenchmarkUuid,

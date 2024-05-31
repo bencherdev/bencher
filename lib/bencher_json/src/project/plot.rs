@@ -1,6 +1,6 @@
 use std::fmt;
 
-use bencher_valid::{DateTime, ResourceName, Window};
+use bencher_valid::{DateTime, Index, ResourceName, Window};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize};
@@ -17,9 +17,9 @@ pub struct JsonNewPlot {
     /// The title of the plot.
     /// Maximum length is 64 characters.
     pub title: Option<ResourceName>,
-    /// The rank of the plot.
-    /// Maximum rank is 255.
-    pub rank: Option<u8>,
+    /// The index of the plot.
+    /// Maximum index is 64.
+    pub index: Option<Index>,
     /// Display metric lower values.
     pub lower_value: bool,
     /// Display metric upper values.
@@ -90,16 +90,16 @@ pub struct JsonPlotPatch {
     /// Set to `null` to remove the current title.
     /// Maximum length is 64 characters.
     pub title: Option<ResourceName>,
-    /// The new rank for the plot.
-    /// Maximum rank is 255.
-    pub rank: Option<u8>,
+    /// The new index for the plot.
+    /// Maximum index is 64.
+    pub index: Option<Index>,
 }
 
 #[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPlotPatchNull {
     pub title: (),
-    pub rank: Option<u8>,
+    pub index: Option<Index>,
 }
 
 impl<'de> Deserialize<'de> for JsonUpdatePlot {
@@ -108,14 +108,14 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
         D: Deserializer<'de>,
     {
         const TITLE_FIELD: &str = "title";
-        const RANK_FIELD: &str = "rank";
-        const FIELDS: &[&str] = &[TITLE_FIELD, RANK_FIELD];
+        const INDEX_FIELD: &str = "index";
+        const FIELDS: &[&str] = &[TITLE_FIELD, INDEX_FIELD];
 
         #[derive(Deserialize)]
         #[serde(field_identifier, rename_all = "snake_case")]
         enum Field {
             Title,
-            Rank,
+            Index,
         }
 
         struct UpdatePlotVisitor;
@@ -132,7 +132,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                 V: serde::de::MapAccess<'de>,
             {
                 let mut title = None;
-                let mut rank = None;
+                let mut index = None;
 
                 while let Some(key) = map.next_key()? {
                     match key {
@@ -142,11 +142,11 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                             }
                             title = Some(map.next_value()?);
                         },
-                        Field::Rank => {
-                            if rank.is_some() {
-                                return Err(serde::de::Error::duplicate_field(RANK_FIELD));
+                        Field::Index => {
+                            if index.is_some() {
+                                return Err(serde::de::Error::duplicate_field(INDEX_FIELD));
                             }
-                            rank = Some(map.next_value()?);
+                            index = Some(map.next_value()?);
                         },
                     }
                 }
@@ -154,10 +154,10 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                 Ok(match title {
                     Some(Some(title)) => Self::Value::Patch(JsonPlotPatch {
                         title: Some(title),
-                        rank,
+                        index,
                     }),
-                    Some(None) => Self::Value::Null(JsonPlotPatchNull { title: (), rank }),
-                    None => Self::Value::Patch(JsonPlotPatch { title: None, rank }),
+                    Some(None) => Self::Value::Null(JsonPlotPatchNull { title: (), index }),
+                    None => Self::Value::Patch(JsonPlotPatch { title: None, index }),
                 })
             }
         }

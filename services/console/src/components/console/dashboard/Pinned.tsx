@@ -201,7 +201,7 @@ const PinnedButtons = (props: {
 		setRank(-1);
 		const path = `/v0/projects/${fetcher.plot?.project}/plots/${fetcher.plot?.uuid}`;
 		const data = {
-			rank: fetcher.rank,
+			index: fetcher.rank,
 		};
 		return await httpPatch(props.apiUrl, path, fetcher.token, data)
 			.then((resp) => {
@@ -360,7 +360,7 @@ const PinnedRank = (props: {
 		}
 		const path = `/v0/projects/${fetcher.plot?.project}/plots/${fetcher.plot?.uuid}`;
 		const data = {
-			rank: fetcher.rank - 1,
+			index: fetcher.rank - 1,
 		};
 		return await httpPatch(props.apiUrl, path, fetcher.token, data)
 			.then((resp) => {

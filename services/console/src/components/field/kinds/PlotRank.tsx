@@ -17,7 +17,7 @@ export interface PlotRankConfig {
 }
 
 enum Button {
-	Bottom = 256,
+	Bottom = 64,
 	Top = 1,
 	Custom = 0,
 }

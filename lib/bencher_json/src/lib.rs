@@ -1,6 +1,6 @@
 pub use bencher_valid::{
     BenchmarkName, Boundary, BranchName, CdfBoundary, DateTime, DateTimeMillis, Email, GitHash,
-    IqrBoundary, Jwt, Model, ModelTest, NameId, NameIdKind, NonEmpty, PercentageBoundary,
+    Index, IqrBoundary, Jwt, Model, ModelTest, NameId, NameIdKind, NonEmpty, PercentageBoundary,
     ResourceId, ResourceIdKind, ResourceName, SampleSize, Sanitize, Secret, Slug, Url, UserName,
     ValidError, Window,
 };

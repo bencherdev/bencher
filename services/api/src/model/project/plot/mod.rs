@@ -1,6 +1,6 @@
 use bencher_json::{
     project::plot::{JsonPlotPatch, JsonPlotPatchNull, JsonUpdatePlot, XAxis},
-    DateTime, JsonNewPlot, JsonPlot, PlotUuid, ResourceName, Window,
+    DateTime, Index, JsonNewPlot, JsonPlot, PlotUuid, ResourceName, Window,
 };
 use bencher_rank::{Rank, RankGenerator, Ranked};
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -29,10 +29,6 @@ use benchmark::{InsertPlotBenchmark, QueryPlotBenchmark};
 use branch::{InsertPlotBranch, QueryPlotBranch};
 use measure::{InsertPlotMeasure, QueryPlotMeasure};
 use testbed::{InsertPlotTestbed, QueryPlotTestbed};
-
-// The maximum number of plots that can be created for a project.
-// This is 254 because in order to be able to set a rank at the end of the list we need to subtract 1.
-const MAX_PLOTS: usize = u8::MAX as usize - 1;
 
 crate::util::typed_id::typed_id!(PlotId);
 
@@ -95,20 +91,12 @@ impl QueryPlot {
     fn new_rank(
         conn: &mut DbConnection,
         query_project: &QueryProject,
-        index: u8,
+        index: Option<Index>,
     ) -> Result<Rank, HttpError> {
-        let index = index.into();
+        let index = u8::from(index.unwrap_or_default()).into();
 
         // Get the current plots.
         let plots = QueryPlot::all_for_project(conn, query_project)?;
-        // Check if the maximum number of plots has been reached.
-        if plots.len() >= MAX_PLOTS {
-            return Err(resource_conflict_error(
-                BencherResource::Plot,
-                (query_project, &plots),
-                format!("Cannot create more than {MAX_PLOTS} plots for a project."),
-            ));
-        }
 
         // Try to calculate the rank within the current plots.
         if let Some(rank) = Rank::calculate(&plots, index) {
@@ -136,9 +124,9 @@ impl QueryPlot {
         &self,
         conn: &mut DbConnection,
         query_project: &QueryProject,
-        index: u8,
+        index: Index,
     ) -> Result<Rank, HttpError> {
-        let index = index.into();
+        let index = u8::from(index).into();
 
         // Get the current plots, except for self.
         let other_plots = self.all_others_for_project(conn, query_project)?;
@@ -290,7 +278,7 @@ impl InsertPlot {
     ) -> Result<QueryPlot, HttpError> {
         let JsonNewPlot {
             title,
-            rank,
+            index,
             lower_value,
             upper_value,
             lower_boundary,
@@ -302,8 +290,7 @@ impl InsertPlot {
             benchmarks,
             measures,
         } = plot;
-        let rank =
-            QueryPlot::new_rank(conn_lock!(context), query_project, rank.unwrap_or_default())?;
+        let rank = QueryPlot::new_rank(conn_lock!(context), query_project, index)?;
         let timestamp = DateTime::now();
         let insert_plot = Self {
             uuid: PlotUuid::new(),
@@ -355,12 +342,12 @@ impl UpdatePlot {
     ) -> Result<Self, HttpError> {
         let (title, index) = match update {
             JsonUpdatePlot::Patch(patch) => {
-                let JsonPlotPatch { title, rank } = patch;
-                (title.map(Some), rank)
+                let JsonPlotPatch { title, index } = patch;
+                (title.map(Some), index)
             },
             JsonUpdatePlot::Null(patch_url) => {
-                let JsonPlotPatchNull { title: (), rank } = patch_url;
-                (Some(None), rank)
+                let JsonPlotPatchNull { title: (), index } = patch_url;
+                (Some(None), index)
             },
         };
         let rank = if let Some(index) = index {

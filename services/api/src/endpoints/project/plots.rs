@@ -160,7 +160,7 @@ async fn get_ls_inner(
 ///
 /// Create a plot for a project.
 /// The user must have `manage` permissions for the project.
-/// A project can have a maximum of 254 plots at a time.
+/// A project can have a maximum of 64 plots at a time.
 #[endpoint {
     method = POST,
     path =  "/v0/projects/{project}/plots",

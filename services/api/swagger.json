@@ -4186,7 +4186,7 @@
           "plots"
         ],
         "summary": "Create a plot",
-        "description": "Create a plot for a project. The user must have `manage` permissions for the project.",
+        "description": "Create a plot for a project. The user must have `manage` permissions for the project. A project can have a maximum of 64 plots at a time.",
         "operationId": "proj_plot_post",
         "parameters": [
           {
@@ -7250,6 +7250,11 @@
           "append"
         ]
       },
+      "Index": {
+        "type": "integer",
+        "format": "uint8",
+        "minimum": 0
+      },
       "Iteration": {
         "type": "integer",
         "format": "uint32",
@@ -8475,6 +8480,15 @@
               "$ref": "#/components/schemas/BranchUuid"
             }
           },
+          "index": {
+            "nullable": true,
+            "description": "The index of the plot. Maximum index is 64.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Index"
+              }
+            ]
+          },
           "lower_boundary": {
             "description": "Display lower boundary limits.",
             "type": "boolean"
@@ -8489,13 +8503,6 @@
             "items": {
               "$ref": "#/components/schemas/MeasureUuid"
             }
-          },
-          "rank": {
-            "nullable": true,
-            "description": "The rank of the plot. Maximum rank is 255.",
-            "type": "integer",
-            "format": "uint8",
-            "minimum": 0
           },
           "testbeds": {
             "description": "The testbeds to include in the plot. At least one testbed must be specified.",
@@ -9239,12 +9246,14 @@
       "JsonPlotPatch": {
         "type": "object",
         "properties": {
-          "rank": {
+          "index": {
             "nullable": true,
-            "description": "The new rank for the plot. Maximum rank is 255.",
-            "type": "integer",
-            "format": "uint8",
-            "minimum": 0
+            "description": "The new index for the plot. Maximum index is 64.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Index"
+              }
+            ]
           },
           "title": {
             "nullable": true,
@@ -9260,11 +9269,13 @@
       "JsonPlotPatchNull": {
         "type": "object",
         "properties": {
-          "rank": {
+          "index": {
             "nullable": true,
-            "type": "integer",
-            "format": "uint8",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Index"
+              }
+            ]
           },
           "title": {
             "type": "string",
