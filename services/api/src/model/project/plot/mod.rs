@@ -30,7 +30,9 @@ use branch::{InsertPlotBranch, QueryPlotBranch};
 use measure::{InsertPlotMeasure, QueryPlotMeasure};
 use testbed::{InsertPlotTestbed, QueryPlotTestbed};
 
-const MAX_PLOTS: usize = 255;
+// The maximum number of plots that can be created for a project.
+// This is 254 because in order to be able to set a rank at the end of the list we need to subtract 1.
+const MAX_PLOTS: usize = u8::MAX as usize - 1;
 
 crate::util::typed_id::typed_id!(PlotId);
 

@@ -83,19 +83,18 @@ const Pinned = (props: {
 
 	return (
 		<div id={props.plot?.uuid} class="box">
+			<PinnedFront
+				apiUrl={props.apiUrl}
+				user={props.user}
+				isAllowed={props.isAllowed}
+				plot={plot()}
+				index={props.index}
+				total={props.total}
+				movePlot={props.movePlot}
+				state={state}
+				handleState={setState}
+			/>
 			<Switch>
-				<Match when={state() === PinnedState.Front}>
-					<PinnedFront
-						apiUrl={props.apiUrl}
-						user={props.user}
-						isAllowed={props.isAllowed}
-						plot={plot()}
-						index={props.index}
-						total={props.total}
-						movePlot={props.movePlot}
-						handleState={setState}
-					/>
-				</Match>
 				<Match when={state() === PinnedState.Rank}>
 					<PinnedRank
 						apiUrl={props.apiUrl}
@@ -120,6 +119,7 @@ const Pinned = (props: {
 						plot={plot()}
 						refresh={handleRefresh}
 						handleState={setState}
+						handleRefresh={handleRefresh}
 					/>
 				</Match>
 			</Switch>
@@ -135,6 +135,7 @@ const PinnedFront = (props: {
 	index: Accessor<number>;
 	total: Accessor<number>;
 	movePlot: (from: number, to: number) => void;
+	state: Accessor<PinnedState>;
 	handleState: (state: PinnedState) => void;
 }) => {
 	return (
@@ -148,6 +149,7 @@ const PinnedFront = (props: {
 				index={props.index}
 				total={props.total}
 				movePlot={props.movePlot}
+				state={props.state}
 				handleState={props.handleState}
 			/>
 		</>
@@ -176,6 +178,7 @@ const PinnedButtons = (props: {
 	index: Accessor<number>;
 	total: Accessor<number>;
 	movePlot: (from: number, to: number) => void;
+	state: Accessor<PinnedState>;
 	handleState: (state: PinnedState) => void;
 }) => {
 	const [rank, setRank] = createSignal(-1);
@@ -203,6 +206,7 @@ const PinnedButtons = (props: {
 		return await httpPatch(props.apiUrl, path, fetcher.token, data)
 			.then((resp) => {
 				props.movePlot(props.index(), fetcher.rank);
+				props.handleState(PinnedState.Front);
 				return resp?.data;
 			})
 			.catch((error) => {
@@ -224,7 +228,14 @@ const PinnedButtons = (props: {
 							disabled={!props.isAllowed()}
 							onClick={(e) => {
 								e.preventDefault();
-								props.handleState(PinnedState.Rank);
+								switch (props.state()) {
+									case PinnedState.Rank:
+										props.handleState(PinnedState.Front);
+										break;
+									default:
+										props.handleState(PinnedState.Rank);
+										break;
+								}
 							}}
 						>
 							{props.index() + 1}
@@ -290,7 +301,14 @@ const PinnedButtons = (props: {
 						title="Plot settings"
 						onClick={(e) => {
 							e.preventDefault();
-							props.handleState(PinnedState.Settings);
+							switch (props.state()) {
+								case PinnedState.Settings:
+									props.handleState(PinnedState.Front);
+									break;
+								default:
+									props.handleState(PinnedState.Settings);
+									break;
+							}
 						}}
 					>
 						<span class="icon is-small">
@@ -365,20 +383,6 @@ const PinnedRank = (props: {
 				e.preventDefault();
 			}}
 		>
-			<button
-				type="button"
-				class="button is-small is-fullwidth"
-				onClick={(e) => {
-					e.preventDefault();
-					props.handleState(PinnedState.Front);
-				}}
-			>
-				<span class="icon is-small">
-					<i class="fas fa-arrow-left" />
-				</span>
-				<span>Back to Plot</span>
-			</button>
-			<br />
 			<Field
 				kind={FieldKind.PLOT_RANK}
 				fieldKey="rank"
@@ -421,27 +425,19 @@ const PinnedSetting = (props: {
 	plot: JsonPlot;
 	refresh: () => void;
 	handleState: (state: PinnedState) => void;
+	handleRefresh: () => void;
 }) => {
 	const path = createMemo(
 		() => `/v0/projects/${props.plot?.project}/plots/${props.plot?.uuid}`,
 	);
 
+	const handleUpdate = () => {
+		props.handleRefresh();
+		props.handleState(PinnedState.Front);
+	};
+
 	return (
 		<>
-			<button
-				type="button"
-				class="button is-small is-fullwidth"
-				onClick={(e) => {
-					e.preventDefault();
-					props.handleState(PinnedState.Front);
-				}}
-			>
-				<span class="icon is-small">
-					<i class="fas fa-arrow-left" />
-				</span>
-				<span>Back to Plot</span>
-			</button>
-			<br />
 			<DeckCard
 				apiUrl={props.apiUrl}
 				params={props.params}
@@ -466,8 +462,8 @@ const PinnedSetting = (props: {
 					},
 				}}
 				data={() => props.plot}
-				handleRefresh={props.refresh}
-				handleLoopback={props.refresh}
+				handleRefresh={handleUpdate}
+				handleLoopback={handleUpdate}
 			/>
 			<br />
 			<Show when={props.isAllowed()}>
