@@ -11,14 +11,14 @@ export interface Props {
 }
 
 export interface PlotWindowConfig {
-	bottom: string;
-	top: string;
-	total?: number;
+	help: string;
 }
 
+// 60 seconds * 60 minutes * 24 hours * 7 days
 enum Button {
-	Bottom = 64,
-	Top = 1,
+	FourWeeks = 60 * 60 * 24 * 7 * 4,
+	EightWeeks = 60 * 60 * 24 * 7 * 8,
+	TwelveWeeks = 60 * 60 * 24 * 7 * 12,
 	Custom = 0,
 }
 
@@ -26,17 +26,14 @@ const PlotWindow = (props: Props) => {
 	const isSelected = (button: Button) => {
 		const IS_SELECTED = " is-primary is-selected";
 		switch (button) {
-			case Button.Bottom:
-				return (props.config?.total ?? button) === props.value
-					? IS_SELECTED
-					: "";
-			case Button.Top:
+			case Button.FourWeeks:
+			case Button.EightWeeks:
+			case Button.TwelveWeeks:
 				return button === props.value ? IS_SELECTED : "";
 			case Button.Custom:
-				if (props.config?.total && props.config?.total === props.value) {
-					return "";
-				}
-				return props.value !== Button.Bottom && props.value !== Button.Top
+				return props.value !== Button.FourWeeks &&
+					props.value !== Button.EightWeeks &&
+					props.value !== Button.TwelveWeeks
 					? IS_SELECTED
 					: "";
 		}
@@ -44,13 +41,11 @@ const PlotWindow = (props: Props) => {
 
 	const rank = createMemo(() => {
 		switch (props.value) {
-			case Button.Bottom:
-			case Button.Top:
+			case Button.FourWeeks:
+			case Button.EightWeeks:
+			case Button.TwelveWeeks:
 				return null;
 			default:
-				if (props.config?.total && props.config?.total === props.value) {
-					return null;
-				}
 				return props.value;
 		}
 	});
@@ -60,31 +55,36 @@ const PlotWindow = (props: Props) => {
 			<div class="buttons has-addons">
 				<button
 					type="button"
-					class={`button is-small${isSelected(Button.Bottom)}`}
+					class={`button is-small${isSelected(Button.FourWeeks)}`}
 					title={props.config?.bottom}
 					onClick={(e) => {
 						e.preventDefault();
-						props.handleField(props.config?.total ?? Button.Bottom);
+						props.handleField(Button.FourWeeks);
 					}}
 				>
-					<span class="icon is-small">
-						<i class="fas fa-angle-double-down" />
-					</span>
-					<span>{props.config?.bottom}</span>
+					4 Weeks
 				</button>
 				<button
 					type="button"
-					class={`button is-small${isSelected(Button.Top)}`}
-					title={props.config?.top}
+					class={`button is-small${isSelected(Button.EightWeeks)}`}
+					title={props.config?.bottom}
 					onClick={(e) => {
 						e.preventDefault();
-						props.handleField(Button.Top);
+						props.handleField(Button.EightWeeks);
 					}}
 				>
-					<span class="icon is-small">
-						<i class="fas fa-angle-double-up" />
-					</span>
-					<span>{props.config?.top}</span>
+					8 Weeks
+				</button>
+				<button
+					type="button"
+					class={`button is-small${isSelected(Button.TwelveWeeks)}`}
+					title={props.config?.bottom}
+					onClick={(e) => {
+						e.preventDefault();
+						props.handleField(Button.TwelveWeeks);
+					}}
+				>
+					12 Weeks
 				</button>
 			</div>
 			<div class="field has-addons">

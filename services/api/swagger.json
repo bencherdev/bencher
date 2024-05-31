@@ -9263,6 +9263,15 @@
                 "$ref": "#/components/schemas/ResourceName"
               }
             ]
+          },
+          "window": {
+            "nullable": true,
+            "description": "The window of time for the plot, in seconds. Metrics outside of this window will be omitted.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Window"
+              }
+            ]
           }
         }
       },
@@ -9281,6 +9290,14 @@
             "type": "string",
             "enum": [
               null
+            ]
+          },
+          "window": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Window"
+              }
             ]
           }
         },

@@ -330,6 +330,7 @@ impl InsertPlot {
 pub struct UpdatePlot {
     pub title: Option<Option<ResourceName>>,
     pub rank: Option<Rank>,
+    pub window: Option<Window>,
     pub modified: DateTime,
 }
 
@@ -340,14 +341,22 @@ impl UpdatePlot {
         query_plot: &QueryPlot,
         update: JsonUpdatePlot,
     ) -> Result<Self, HttpError> {
-        let (title, index) = match update {
+        let (title, index, window) = match update {
             JsonUpdatePlot::Patch(patch) => {
-                let JsonPlotPatch { title, index } = patch;
-                (title.map(Some), index)
+                let JsonPlotPatch {
+                    title,
+                    index,
+                    window,
+                } = patch;
+                (title.map(Some), index, window)
             },
             JsonUpdatePlot::Null(patch_url) => {
-                let JsonPlotPatchNull { title: (), index } = patch_url;
-                (Some(None), index)
+                let JsonPlotPatchNull {
+                    title: (),
+                    index,
+                    window,
+                } = patch_url;
+                (Some(None), index, window)
             },
         };
         let rank = if let Some(index) = index {
@@ -358,6 +367,7 @@ impl UpdatePlot {
         Ok(Self {
             title,
             rank,
+            window,
             modified: DateTime::now(),
         })
     }
@@ -370,6 +380,7 @@ impl UpdatePlot {
         let update_plot = UpdatePlot {
             title: None,
             rank: Some(rank),
+            window: None,
             modified: DateTime::now(),
         };
 

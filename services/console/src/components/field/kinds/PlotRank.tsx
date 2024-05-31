@@ -14,6 +14,7 @@ export interface PlotRankConfig {
 	bottom: string;
 	top: string;
 	total?: number;
+	help: string;
 }
 
 enum Button {

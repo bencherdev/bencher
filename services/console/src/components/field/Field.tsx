@@ -9,12 +9,13 @@ import FieldKind from "./kind";
 import Radio, { type RadioConfig, type RadioValue } from "./kinds/Radio";
 import type { Params } from "astro";
 import Model from "./kinds/Model";
-import { validModel, validIndex } from "../../util/valid";
+import { validModel, validIndex, validWindow } from "../../util/valid";
 import type { SearchConfig, SearchValue } from "./kinds/Search";
 import Search from "./kinds/Search";
 import type { PlotRankConfig, PlotRankValue } from "./kinds/PlotRank";
 import PlotRank from "./kinds/PlotRank";
 import type { PlotWindowConfig, PlotWindowValue } from "./kinds/PlotWindow";
+import PlotWindow from "./kinds/PlotWindow";
 
 export type FieldValue =
 	| SwitchValue
@@ -161,6 +162,15 @@ const Field = (props: Props) => {
 						handleField={handleField}
 					/>
 				);
+			case FieldKind.PLOT_WINDOW:
+				return (
+					<PlotWindow
+						value={props.value as PlotWindowValue}
+						valid={props.valid}
+						config={props.config as PlotWindowConfig}
+						handleField={handleField}
+					/>
+				);
 			case FieldKind.PLOT_RANK:
 				return (
 					<PlotRank
@@ -186,6 +196,7 @@ const Field = (props: Props) => {
 			case FieldKind.INPUT:
 			case FieldKind.NUMBER:
 			case FieldKind.MODEL:
+			case FieldKind.PLOT_WINDOW:
 			case FieldKind.PLOT_RANK:
 				return true;
 		}

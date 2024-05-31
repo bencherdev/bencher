@@ -93,6 +93,9 @@ pub struct JsonPlotPatch {
     /// The new index for the plot.
     /// Maximum index is 64.
     pub index: Option<Index>,
+    /// The window of time for the plot, in seconds.
+    /// Metrics outside of this window will be omitted.
+    pub window: Option<Window>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -100,6 +103,7 @@ pub struct JsonPlotPatch {
 pub struct JsonPlotPatchNull {
     pub title: (),
     pub index: Option<Index>,
+    pub window: Option<Window>,
 }
 
 impl<'de> Deserialize<'de> for JsonUpdatePlot {
@@ -109,13 +113,15 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
     {
         const TITLE_FIELD: &str = "title";
         const INDEX_FIELD: &str = "index";
-        const FIELDS: &[&str] = &[TITLE_FIELD, INDEX_FIELD];
+        const WINDOW_FIELD: &str = "window";
+        const FIELDS: &[&str] = &[TITLE_FIELD, INDEX_FIELD, WINDOW_FIELD];
 
         #[derive(Deserialize)]
         #[serde(field_identifier, rename_all = "snake_case")]
         enum Field {
             Title,
             Index,
+            Window,
         }
 
         struct UpdatePlotVisitor;
@@ -133,6 +139,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
             {
                 let mut title = None;
                 let mut index = None;
+                let mut window = None;
 
                 while let Some(key) = map.next_key()? {
                     match key {
@@ -148,6 +155,12 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                             }
                             index = Some(map.next_value()?);
                         },
+                        Field::Window => {
+                            if window.is_some() {
+                                return Err(serde::de::Error::duplicate_field(WINDOW_FIELD));
+                            }
+                            window = Some(map.next_value()?);
+                        },
                     }
                 }
 
@@ -155,9 +168,18 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                     Some(Some(title)) => Self::Value::Patch(JsonPlotPatch {
                         title: Some(title),
                         index,
+                        window,
                     }),
-                    Some(None) => Self::Value::Null(JsonPlotPatchNull { title: (), index }),
-                    None => Self::Value::Patch(JsonPlotPatch { title: None, index }),
+                    Some(None) => Self::Value::Null(JsonPlotPatchNull {
+                        title: (),
+                        index,
+                        window,
+                    }),
+                    None => Self::Value::Patch(JsonPlotPatch {
+                        title: None,
+                        index,
+                        window,
+                    }),
                 })
             }
         }

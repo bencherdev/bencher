@@ -76,10 +76,7 @@ const PinModal = (props: Props) => {
 	};
 
 	const validateForm = () =>
-		((form?.title?.valid ?? true) &&
-			form?.window?.valid &&
-			form?.index?.valid) ??
-		false;
+		(form?.window?.valid && form?.index?.valid) ?? false;
 
 	const handleSubmit = () => {
 		if (!bencher_valid()) {
@@ -132,13 +129,7 @@ const PinModal = (props: Props) => {
 	};
 
 	return (
-		<form
-			class={`modal ${props.pin() && "is-active"}`}
-			onSubmit={(e) => {
-				e.preventDefault();
-				handleSubmit();
-			}}
-		>
+		<form class={`modal ${props.pin() && "is-active"}`}>
 			<div
 				class="modal-background"
 				onClick={(e) => {
@@ -179,7 +170,23 @@ const PinModal = (props: Props) => {
 						config={plotFields(props.project()).title}
 						handleField={handleField}
 					/>
-
+					<hr />
+					<Field
+						kind={FieldKind.PLOT_WINDOW}
+						fieldKey="window"
+						label={
+							<>
+								Time Window <small>(seconds)</small>
+							</>
+						}
+						value={form?.window?.value}
+						valid={form?.window?.valid}
+						config={{
+							help: plotFields().window.help,
+						}}
+						handleField={handleField}
+					/>
+					<hr />
 					<Field
 						kind={FieldKind.PLOT_RANK}
 						fieldKey="index"
@@ -189,6 +196,7 @@ const PinModal = (props: Props) => {
 						config={{
 							bottom: "Insert at bottom",
 							top: "Insert at top",
+							help: plotFields().index.help,
 						}}
 						handleField={handleField}
 					/>
@@ -223,7 +231,7 @@ const initForm = () => {
 			valid: true,
 		},
 		window: {
-			value: "2419200",
+			value: 2419200,
 			valid: true,
 		},
 	};

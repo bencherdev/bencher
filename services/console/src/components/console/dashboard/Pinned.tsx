@@ -392,6 +392,7 @@ const PinnedRank = (props: {
 					bottom: "Move to bottom",
 					top: "Move to top",
 					total: props.total(),
+					help: plotFields().index.help,
 				}}
 				handleField={handleField}
 			/>
@@ -465,6 +466,34 @@ const PinnedSetting = (props: {
 						validate: true,
 						nullable: true,
 						config: plotFields(props.project()).title,
+					},
+				}}
+				data={() => props.plot}
+				handleRefresh={handleUpdate}
+				handleLoopback={handleUpdate}
+			/>
+			<br />
+			<DeckCard
+				apiUrl={props.apiUrl}
+				params={props.params}
+				user={props.user}
+				path={path}
+				card={{
+					kind: Card.FIELD,
+					label: "Window",
+					key: "window",
+					display: Display.RAW,
+					is_allowed: (_apiUrl, _params) => props.isAllowed() === true,
+					notify: false,
+					field: {
+						kind: FieldKind.PLOT_WINDOW,
+						label: "Window",
+						key: "window",
+						value: props.plot?.window ?? "",
+						valid: null,
+						validate: true,
+						nullable: true,
+						config: plotFields(props.project()).window,
 					},
 				}}
 				data={() => props.plot}

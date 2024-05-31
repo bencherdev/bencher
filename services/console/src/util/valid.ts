@@ -117,7 +117,8 @@ export const validU32 = (input: undefined | number | string) => {
 const validNumberStr = (
 	numberStr: undefined | number | string,
 	validator: (input: number) => boolean,
-) => validateNumber(numberStr?.toString() ?? "", validator);
+) =>
+	validU32(numberStr) && validateNumber(numberStr?.toString() ?? "", validator);
 
 export const validWindow = (window: undefined | number | string): boolean =>
 	validNumberStr(window, is_valid_window);
