@@ -19,6 +19,7 @@ import { createStore } from "solid-js/store";
 import { useSearchParams } from "../../../util/url";
 import PlotsHeader from "./PlotsHeader";
 import { debounce } from "@solid-primitives/scheduled";
+import FallbackPlots from "./FallbackPlots";
 
 const SEARCH_PARAM = "search";
 const MAX_PLOTS = 64;
@@ -137,7 +138,7 @@ const PlotsPanel = (props: Props) => {
 				return EMPTY_ARRAY;
 			});
 	};
-	const [_plots, { refetch }] = createResource<JsonPlot[]>(
+	const [projectPlots, { refetch }] = createResource<JsonPlot[]>(
 		plotsFetcher,
 		getPlots,
 	);
@@ -187,6 +188,9 @@ const PlotsPanel = (props: Props) => {
 				handleRefresh={refetch}
 				handleSearch={handleSearch}
 			/>
+			<Show when={projectPlots.loading}>
+				<FallbackPlots />
+			</Show>
 			<div class="columns is-multiline is-vcentered">
 				<For each={plots}>
 					{(plot, index) => (

@@ -3,6 +3,7 @@ export const prerender = false;
 
 import ProjectLayout from "../../../../../layouts/console/ProjectLayout.astro";
 import PlotsPanel from "../../../../../components/console/plots/PlotsPanel";
+import FallbackPlots from "../../../../../components/console/plots/FallbackPlots";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
@@ -16,5 +17,16 @@ const redirect = `/perf/${params.project}${Astro.url.search}`;
     client:only="solid-js"
     apiUrl={BENCHER_API_URL}
     params={params}
-  />
+  >
+    <div slot="fallback">
+      <nav class="level">
+        <div class="level-left">
+          <div class="level-item">
+            <h3 class="title is-3">&nbsp;</h3>
+          </div>
+        </div>
+      </nav>
+      <FallbackPlots />
+    </div>
+  </PlotsPanel>
 </ProjectLayout>
