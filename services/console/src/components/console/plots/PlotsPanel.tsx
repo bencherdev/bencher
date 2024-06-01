@@ -26,7 +26,6 @@ const MAX_PLOTS = 64;
 export interface Props {
 	apiUrl: string;
 	params: Params;
-	project?: undefined | JsonProject;
 }
 
 const PlotsPanel = (props: Props) => {
@@ -73,9 +72,6 @@ const PlotsPanel = (props: Props) => {
 		const EMPTY_OBJECT = {};
 		if (!fetcher.bencher_valid) {
 			return EMPTY_OBJECT;
-		}
-		if (props.project) {
-			return props.project;
 		}
 		if (!validJwt(fetcher.token)) {
 			return EMPTY_OBJECT;
@@ -198,6 +194,7 @@ const PlotsPanel = (props: Props) => {
 							<Pinned
 								apiUrl={props.apiUrl}
 								params={props.params}
+								project_slug={project_slug}
 								user={user}
 								isAllowed={isAllowed}
 								plot={plot}

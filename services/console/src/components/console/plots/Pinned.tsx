@@ -8,11 +8,7 @@ import {
 	type Accessor,
 	type Resource,
 } from "solid-js";
-import type {
-	JsonAuthUser,
-	JsonPlot,
-	JsonProject,
-} from "../../../types/bencher";
+import type { JsonAuthUser, JsonPlot } from "../../../types/bencher";
 import { plotQueryString } from "./util";
 import DeleteButton from "../deck/hand/DeleteButton";
 import type { Params } from "astro";
@@ -33,6 +29,7 @@ const Pinned = (props: {
 	apiUrl: string;
 	params: Params;
 	user: JsonAuthUser;
+	project_slug: Accessor<undefined | string>;
 	isAllowed: Resource<boolean>;
 	plot: JsonPlot;
 	index: Accessor<number>;
@@ -83,6 +80,7 @@ const Pinned = (props: {
 			<PinnedFront
 				apiUrl={props.apiUrl}
 				user={props.user}
+				project_slug={props.project_slug}
 				isAllowed={props.isAllowed}
 				plot={plot()}
 				index={props.index}
@@ -128,6 +126,7 @@ const Pinned = (props: {
 const PinnedFront = (props: {
 	apiUrl: string;
 	user: JsonAuthUser;
+	project_slug: Accessor<undefined | string>;
 	isAllowed: Resource<boolean>;
 	plot: JsonPlot;
 	index: Accessor<number>;
@@ -143,6 +142,7 @@ const PinnedFront = (props: {
 			<PinnedButtons
 				apiUrl={props.apiUrl}
 				user={props.user}
+				project_slug={props.project_slug}
 				isAllowed={props.isAllowed}
 				plot={props.plot}
 				index={props.index}
@@ -173,6 +173,7 @@ const PinnedPlot = (props: { plot: JsonPlot }) => {
 const PinnedButtons = (props: {
 	apiUrl: string;
 	user: JsonAuthUser;
+	project_slug: Accessor<undefined | string>;
 	isAllowed: Resource<boolean>;
 	plot: JsonPlot;
 	index: Accessor<number>;
@@ -292,11 +293,11 @@ const PinnedButtons = (props: {
 						type="button"
 						class="button is-small"
 						title="View plot"
-						href={`/console/projects/${
-							props.plot?.project
-						}/perf?${plotQueryString(props.plot)}&tab=plots&plot=${
+						href={`/console/projects/${props.project_slug()}/perf?${plotQueryString(
+							props.plot,
+						)}&tab=plots&plot=${props.plot?.uuid}&plots_search=${
 							props.plot?.uuid
-						}&plots_search=${props.plot?.uuid}`}
+						}`}
 					>
 						<span class="icon is-small">
 							<i class="fas fa-external-link-alt" />
