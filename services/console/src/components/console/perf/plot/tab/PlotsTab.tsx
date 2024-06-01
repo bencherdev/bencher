@@ -81,8 +81,10 @@ const PlotsTab = (props: {
 
 const PlotRow = (props: {
 	theme: Accessor<Theme>;
+	isConsole: boolean;
 	plot: TabElement<JsonPlot>;
 	index: Accessor<number>;
+	tab: Accessor<PerfTab>;
 	handleChecked: (index: number, slug?: string) => void;
 }) => {
 	const plot = createMemo(() => props.plot.resource);
@@ -108,6 +110,17 @@ const PlotRow = (props: {
 						</div>
 					</div>
 				</a>
+				<Show when={props.isConsole}>
+					<div class="level-right">
+						<div class="level-item">
+							<ViewReportButton
+								project_slug={props.project_slug}
+								tab={props.tab}
+								plot={plot}
+							/>
+						</div>
+					</div>
+				</Show>
 			</div>
 		</div>
 	);
@@ -116,29 +129,18 @@ const PlotRow = (props: {
 const ViewReportButton = (props: {
 	project_slug: Accessor<undefined | string>;
 	tab: Accessor<PerfTab>;
-	report: JsonReport;
+	plot: Accessor<JsonPlot>;
 }) => {
 	return (
 		<a
 			class="button"
-			title={`View Report from ${fmtDateTime(props.report?.start_time)}`}
-			href={`/console/projects/${props.project_slug()}/${props.tab()}/${
-				props.report?.uuid
-			}?${BACK_PARAM}=${encodePath()}`}
+			title="View Pinned Plot"
+			href={`/console/projects/${props.project_slug()}/${props.tab()}?search=${
+				props.plot()?.uuid
+			}`}
 		>
 			View
 		</a>
-	);
-};
-
-const ReportDimension = (props: { icon: string; name: string }) => {
-	return (
-		<div>
-			<span class="icon">
-				<i class={props.icon} />
-			</span>
-			<small style="word-break: break-all;">{props.name}</small>
-		</div>
 	);
 };
 
