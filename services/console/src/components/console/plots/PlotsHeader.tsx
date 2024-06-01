@@ -1,17 +1,7 @@
-import {
-	createResource,
-	For,
-	Match,
-	Switch,
-	type Accessor,
-	type Resource,
-} from "solid-js";
-import { pathname } from "../../../util/url";
-import { Button } from "../../../config/types";
+import type { Accessor, Resource } from "solid-js";
 import type { Params } from "astro";
 import Field from "../../field/Field";
 import FieldKind from "../../field/kind";
-import DateRange from "../../field/kinds/DateRange";
 import type { JsonProject } from "../../../types/bencher";
 
 export interface Props {
@@ -39,7 +29,7 @@ const PlotsHeader = (props: Props) => {
 						fieldKey="search"
 						value={props.search() ?? ""}
 						config={{
-							placeholder: "Search Pinned Plots",
+							placeholder: "Search Plots",
 						}}
 						handleField={(_key, search, _valid) =>
 							props.handleSearch(search as string)
@@ -49,7 +39,7 @@ const PlotsHeader = (props: Props) => {
 				<p class="level-item">
 					<a
 						class="button"
-						title="Add a Plot"
+						title="Add a plot"
 						href={`/console/projects/${props.project()?.slug}/perf?clear=true`}
 					>
 						<span class="icon">

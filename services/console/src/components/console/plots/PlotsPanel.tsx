@@ -14,9 +14,11 @@ import { setPageTitle } from "../../../util/resource";
 import { authUser, isAllowedProjectManage } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
 import Pinned from "./Pinned";
-import { validJwt } from "../../../util/valid";
+import { DEBOUNCE_DELAY, validJwt } from "../../../util/valid";
 import { createStore } from "solid-js/store";
 import { useSearchParams } from "../../../util/url";
+import PlotsHeader from "./PlotsHeader";
+import { debounce } from "@solid-primitives/scheduled";
 
 const SEARCH_PARAM = "search";
 const MAX_PLOTS = 64;
@@ -49,6 +51,11 @@ const PlotsPanel = (props: Props) => {
 	});
 
 	const search = createMemo(() => searchParams[SEARCH_PARAM]);
+	const handleSearch = debounce(
+		(search: string) =>
+			setSearchParams({ [SEARCH_PARAM]: search }, { scroll: true }),
+		DEBOUNCE_DELAY,
+	);
 
 	const project_slug = createMemo(() => params().project);
 	const projectFetcher = createMemo(() => {
@@ -126,6 +133,7 @@ const PlotsPanel = (props: Props) => {
 		}/plots?${searchParams.toString()}`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
+				setPlots(resp?.data as JsonPlot[]);
 				return resp?.data as JsonPlot[];
 			})
 			.catch((error) => {
@@ -133,39 +141,30 @@ const PlotsPanel = (props: Props) => {
 				return EMPTY_ARRAY;
 			});
 	};
-	const [plots] = createResource<JsonPlot[]>(plotsFetcher, getPlots);
-	const [plotArray, setPlotArray] = createStore<JsonPlot[]>([]);
-	// This is necessary to keep the fetched plots from overwriting the plots store after a deletion.
-	const [plotsLoaded, setPlotsLoaded] = createSignal(false);
-	const plotsLength = createMemo(() => plots()?.length);
-
-	createEffect(() => {
-		// It is important to check the array length for the fetched plots,
-		// as this is a way to make sure we only set the plots store once the fetched plots are actually loaded.
-		if (plots() && plotArray.length !== plotsLength() && !plotsLoaded()) {
-			setPlotArray(plots());
-			setPlotsLoaded(true);
-		}
-	});
+	const [_plots, { refetch }] = createResource<JsonPlot[]>(
+		plotsFetcher,
+		getPlots,
+	);
+	const [plots, setPlots] = createStore<JsonPlot[]>([]);
+	const plotsLength = createMemo(() => plots?.length);
 
 	const movePlot = (from: number, to: number) => {
-		console.log(from, to);
-		const newPlots = [...plotArray];
+		const newPlots = [...plots];
 		const [removed] = newPlots.splice(from, 1);
 		newPlots.splice(to, 0, removed);
-		setPlotArray(newPlots);
+		setPlots(newPlots);
 	};
 
 	const updatePlot = (index: number, plot: JsonPlot) => {
-		const newPlots = [...plotArray];
+		const newPlots = [...plots];
 		newPlots[index] = plot;
-		setPlotArray(newPlots);
+		setPlots(newPlots);
 	};
 
 	const removePlot = (index: number) => {
-		const newPlots = [...plotArray];
+		const newPlots = [...plots];
 		newPlots.splice(index, 1);
-		setPlotArray(newPlots);
+		setPlots(newPlots);
 	};
 
 	const allowedFetcher = createMemo(() => {
@@ -183,32 +182,42 @@ const PlotsPanel = (props: Props) => {
 	const [isAllowed] = createResource(allowedFetcher, getAllowed);
 
 	return (
-		<div class="columns is-multiline is-vcentered">
-			<For each={plotArray}>
-				{(plot, index) => (
+		<>
+			<PlotsHeader
+				apiUrl={props.apiUrl}
+				params={props.params}
+				project={project}
+				search={search}
+				handleRefresh={refetch}
+				handleSearch={handleSearch}
+			/>
+			<div class="columns is-multiline is-vcentered">
+				<For each={plots}>
+					{(plot, index) => (
+						<div class="column is-11-tablet is-12-desktop is-6-widescreen">
+							<Pinned
+								apiUrl={props.apiUrl}
+								params={props.params}
+								user={user}
+								project={project}
+								isAllowed={isAllowed}
+								plot={plot}
+								index={index}
+								total={plotsLength}
+								movePlot={movePlot}
+								updatePlot={updatePlot}
+								removePlot={removePlot}
+							/>
+						</div>
+					)}
+				</For>
+				<Show when={isAllowed() && plotsLength() < MAX_PLOTS}>
 					<div class="column is-11-tablet is-12-desktop is-6-widescreen">
-						<Pinned
-							apiUrl={props.apiUrl}
-							params={props.params}
-							user={user}
-							project={project}
-							isAllowed={isAllowed}
-							plot={plot}
-							index={index}
-							total={plotsLength}
-							movePlot={movePlot}
-							updatePlot={updatePlot}
-							removePlot={removePlot}
-						/>
+						<PinNewPlot project_slug={project_slug} />
 					</div>
-				)}
-			</For>
-			<Show when={isAllowed() && plots()?.length <= MAX_PLOTS}>
-				<div class="column is-11-tablet is-12-desktop is-6-widescreen">
-					<PinNewPlot project_slug={project_slug} />
-				</div>
-			</Show>
-		</div>
+				</Show>
+			</div>
+		</>
 	);
 };
 
