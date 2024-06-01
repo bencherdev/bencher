@@ -3,6 +3,7 @@ import { PerfTab } from "../../../../../config/types";
 import type {
 	JsonBenchmark,
 	JsonBranch,
+	JsonPlot,
 	JsonReport,
 	JsonTestbed,
 } from "../../../../../types/bencher";
@@ -13,6 +14,7 @@ import DimensionsTab from "./DimensionTab";
 import type { FieldHandler } from "../../../../field/Field";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import type { Theme } from "../../../../navbar/theme/theme";
+import PlotsTab from "./PlotsTab";
 
 const Tab = (props: {
 	project_slug: Accessor<undefined | string>;
@@ -24,6 +26,7 @@ const Tab = (props: {
 	branches_tab: TabList<JsonBranch>;
 	testbeds_tab: TabList<JsonTestbed>;
 	benchmarks_tab: TabList<JsonBenchmark>;
+	plots_tab: TabList<JsonPlot>;
 	loading: Accessor<boolean>;
 	tab: Accessor<PerfTab>;
 	per_page: Accessor<number>;
@@ -47,6 +50,8 @@ const Tab = (props: {
 				return props.testbeds_tab;
 			case PerfTab.BENCHMARKS:
 				return props.benchmarks_tab;
+			case PerfTab.PLOTS:
+				return props.plots_tab;
 			default:
 				return [];
 		}
@@ -125,6 +130,31 @@ const Tab = (props: {
 			</Match>
 			<Match
 				when={
+					props.tab() === PerfTab.PLOTS &&
+					(props.loading() ||
+						typeof props.search() === "string" ||
+						tabList().length > 0)
+				}
+			>
+				<PlotsTab
+					project_slug={props.project_slug}
+					theme={props.theme}
+					isConsole={props.isConsole}
+					loading={props.loading}
+					tab={props.tab}
+					tabList={
+						tabList as Accessor<
+							TabList<JsonBranch | JsonTestbed | JsonBenchmark>
+						>
+					}
+					per_page={props.per_page}
+					search={props.search}
+					handleChecked={props.handleChecked}
+					handleSearch={props.handleSearch}
+				/>
+			</Match>
+			<Match
+				when={
 					props.tab() !== PerfTab.REPORTS &&
 					(props.loading() ||
 						typeof props.search() === "string" ||
@@ -164,6 +194,8 @@ const AddButton = (props: {
 			case PerfTab.REPORTS:
 			case PerfTab.BENCHMARKS:
 				return `https://bencher.dev/docs/how-to/track-benchmarks?${BACK_PARAM}=${encodePath()}`;
+			case PerfTab.PLOTS:
+				return `/console/projects/${props.project_slug()}/${props.tab()}?${BACK_PARAM}=${encodePath()}`;
 			default:
 				return "#";
 		}
@@ -178,6 +210,8 @@ const AddButton = (props: {
 			case PerfTab.REPORTS:
 			case PerfTab.BENCHMARKS:
 				return "Track Your Benchmarks";
+			case PerfTab.PLOTS:
+				return "Pin a Plot";
 			default:
 				return "Unknown Tab";
 		}

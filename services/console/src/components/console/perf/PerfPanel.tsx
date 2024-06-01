@@ -19,6 +19,7 @@ import {
 	PerfQueryKey,
 	PlotKey,
 	XAxis,
+	type JsonPlot,
 } from "../../../types/bencher";
 import { authUser } from "../../../util/auth";
 import {
@@ -57,22 +58,26 @@ const END_TIME_PARAM = PerfQueryKey.EndTime;
 
 // Console UI state query params
 const REPORT_PARAM = "report";
+const PLOT_PARAM = "plot";
 
 const REPORTS_PER_PAGE_PARAM = "reports_per_page";
 const BRANCHES_PER_PAGE_PARAM = "branches_per_page";
 const TESTBEDS_PER_PAGE_PARAM = "testbeds_per_page";
 const BENCHMARKS_PER_PAGE_PARAM = "benchmarks_per_page";
+const PLOTS_PER_PAGE_PARAM = "plots_per_page";
 
 const REPORTS_PAGE_PARAM = "reports_page";
 const BRANCHES_PAGE_PARAM = "branches_page";
 const TESTBEDS_PAGE_PARAM = "testbeds_page";
 const BENCHMARKS_PAGE_PARAM = "benchmarks_page";
+const PLOTS_PAGE_PARAM = "plots_page";
 
 const REPORTS_START_TIME_PARAM = "reports_start_time";
 const REPORTS_END_TIME_PARAM = "reports_end_time";
 const BRANCHES_SEARCH_PARAM = "branches_search";
 const TESTBEDS_SEARCH_PARAM = "testbeds_search";
 const BENCHMARKS_SEARCH_PARAM = "benchmarks_search";
+const PLOTS_SEARCH_PARAM = "plots_search";
 
 const TAB_PARAM = "tab";
 const KEY_PARAM = "key";
@@ -109,15 +114,18 @@ export const PERF_PLOT_PARAMS = [
 	BRANCHES_PER_PAGE_PARAM,
 	TESTBEDS_PER_PAGE_PARAM,
 	BENCHMARKS_PER_PAGE_PARAM,
+	PLOTS_PER_PAGE_PARAM,
 	REPORTS_PAGE_PARAM,
 	BRANCHES_PAGE_PARAM,
 	TESTBEDS_PAGE_PARAM,
 	BENCHMARKS_PAGE_PARAM,
+	PLOTS_PAGE_PARAM,
 	REPORTS_START_TIME_PARAM,
 	REPORTS_END_TIME_PARAM,
 	BRANCHES_SEARCH_PARAM,
 	TESTBEDS_SEARCH_PARAM,
 	BENCHMARKS_SEARCH_PARAM,
+	PLOTS_SEARCH_PARAM,
 	TAB_PARAM,
 	KEY_PARAM,
 	X_AXIS_PARAM,
@@ -268,6 +276,9 @@ const PerfPanel = (props: Props) => {
 		if (!validU32(searchParams[BENCHMARKS_PER_PAGE_PARAM])) {
 			initParams[BENCHMARKS_PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
 		}
+		if (!validU32(searchParams[PLOTS_PER_PAGE_PARAM])) {
+			initParams[PLOTS_PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
+		}
 
 		if (!validU32(searchParams[REPORTS_PAGE_PARAM])) {
 			initParams[REPORTS_PAGE_PARAM] = DEFAULT_PAGE;
@@ -280,6 +291,9 @@ const PerfPanel = (props: Props) => {
 		}
 		if (!validU32(searchParams[BENCHMARKS_PAGE_PARAM])) {
 			initParams[BENCHMARKS_PAGE_PARAM] = DEFAULT_PAGE;
+		}
+		if (!validU32(searchParams[PLOTS_PAGE_PARAM])) {
+			initParams[PLOTS_PAGE_PARAM] = DEFAULT_PAGE;
 		}
 
 		if (!timeToDate(searchParams[REPORTS_START_TIME_PARAM])) {
@@ -296,6 +310,9 @@ const PerfPanel = (props: Props) => {
 		}
 		if (typeof searchParams[BENCHMARKS_SEARCH_PARAM] !== "string") {
 			initParams[BENCHMARKS_SEARCH_PARAM] = null;
+		}
+		if (typeof searchParams[PLOTS_SEARCH_PARAM] !== "string") {
+			initParams[PLOTS_SEARCH_PARAM] = null;
 		}
 
 		// Embed params
@@ -331,6 +348,8 @@ const PerfPanel = (props: Props) => {
 	const benchmarks = createMemo(() =>
 		arrayFromString(searchParams[BENCHMARKS_PARAM]),
 	);
+	const plot = createMemo(() => searchParams[PLOT_PARAM]);
+
 	// start/end_time is used for the query
 	const start_time = createMemo(() => searchParams[START_TIME_PARAM]);
 	const end_time = createMemo(() => searchParams[END_TIME_PARAM]);
@@ -409,6 +428,9 @@ const PerfPanel = (props: Props) => {
 	const benchmarks_per_page = createMemo(() =>
 		Number(searchParams[BENCHMARKS_PER_PAGE_PARAM] ?? DEFAULT_PER_PAGE),
 	);
+	const plots_per_page = createMemo(() =>
+		Number(searchParams[PLOTS_PER_PAGE_PARAM] ?? DEFAULT_PER_PAGE),
+	);
 
 	const reports_page = createMemo(() =>
 		Number(searchParams[REPORTS_PAGE_PARAM] ?? DEFAULT_PAGE),
@@ -421,6 +443,9 @@ const PerfPanel = (props: Props) => {
 	);
 	const benchmarks_page = createMemo(() =>
 		Number(searchParams[BENCHMARKS_PAGE_PARAM] ?? DEFAULT_PAGE),
+	);
+	const plots_page = createMemo(() =>
+		Number(searchParams[PLOTS_PAGE_PARAM] ?? DEFAULT_PAGE),
 	);
 
 	const reports_start_time = createMemo(
@@ -441,6 +466,7 @@ const PerfPanel = (props: Props) => {
 	const benchmarks_search = createMemo(
 		() => searchParams[BENCHMARKS_SEARCH_PARAM],
 	);
+	const plots_search = createMemo(() => searchParams[PLOTS_SEARCH_PARAM]);
 
 	// Embed params
 	const embed_logo = createMemo(() =>
@@ -580,8 +606,9 @@ const PerfPanel = (props: Props) => {
 	const [benchmarks_tab, setBenchmarksTab] = createStore<
 		TabList<JsonBenchmark>
 	>([]);
+	const [plots_tab, setPlotsTab] = createStore<TabList<JsonPlot>>([]);
 
-	// Resource tabs data: Reports, Branches, Testbeds, Benchmarks
+	// Resource tabs data: Reports, Branches, Testbeds, Benchmarks, Plots
 	async function getPerfTab<T>(
 		perfTab: PerfTab,
 		fetcher: {
@@ -733,6 +760,26 @@ const PerfPanel = (props: Props) => {
 		}
 	});
 
+	const plots_fetcher = createMemo(() => {
+		return {
+			project_slug: project_slug(),
+			per_page: plots_per_page(),
+			page: plots_page(),
+			search: plots_search(),
+			refresh: refresh(),
+			token: user?.token,
+		};
+	});
+	const [plots_data] = createResource(plots_fetcher, async (fetcher) =>
+		getPerfTab<JsonPlot>(PerfTab.PLOTS, fetcher),
+	);
+	createEffect(() => {
+		const data = plots_data();
+		if (data) {
+			setPlotsTab(resourcesToCheckable(data, [plot()]));
+		}
+	});
+
 	const handleReportChecked = (
 		index: number,
 		measure_uuid: undefined | string,
@@ -753,6 +800,7 @@ const PerfPanel = (props: Props) => {
 				[TESTBEDS_PARAM]: report?.testbed?.uuid,
 				[BENCHMARKS_PARAM]: arrayToString(benchmarks ?? []),
 				[MEASURES_PARAM]: measure_uuid,
+				[PLOT_PARAM]: null,
 				[START_TIME_PARAM]: start_time
 					? start_time - DEFAULT_REPORT_HISTORY
 					: null,
@@ -783,15 +831,17 @@ const PerfPanel = (props: Props) => {
 		const uuid = item.resource.uuid;
 		if (checked) {
 			setSearchParams({
-				[CLEAR_PARAM]: true,
 				[REPORT_PARAM]: null,
+				[PLOT_PARAM]: null,
 				[param]: arrayToString(removeFromArray(param_array, uuid)),
+				[CLEAR_PARAM]: true,
 			});
 		} else {
 			setSearchParams({
-				[CLEAR_PARAM]: true,
 				[REPORT_PARAM]: null,
+				[PLOT_PARAM]: null,
 				[param]: arrayToString(addToArray(param_array, uuid)),
+				[CLEAR_PARAM]: true,
 			});
 		}
 	};
@@ -808,6 +858,26 @@ const PerfPanel = (props: Props) => {
 		setSearchParams({
 			[REPORT_PARAM]: null,
 			[MEASURES_PARAM]: measure,
+			[PLOT_PARAM]: null,
+			[CLEAR_PARAM]: true,
+		});
+	};
+	const handlePlotChecked = (index: number) => {
+		const plot = plots_tab?.[index]?.resource;
+		const now = Date.now();
+		setSearchParams({
+			[REPORT_PARAM]: null,
+			[BRANCHES_PARAM]: plot?.branches?.join(","),
+			[TESTBEDS_PARAM]: plot?.testbeds?.join(","),
+			[BENCHMARKS_PARAM]: plot?.benchmarks?.join(","),
+			[MEASURES_PARAM]: plot?.measures?.join(","),
+			[PLOT_PARAM]: plot?.uuid,
+			[START_TIME_PARAM]: now - (plot?.window ?? 1) * 1_000,
+			[END_TIME_PARAM]: now,
+			[LOWER_VALUE_PARAM]: plot?.lower_value,
+			[UPPER_VALUE_PARAM]: plot?.upper_value,
+			[LOWER_BOUNDARY_PARAM]: plot?.lower_boundary,
+			[UPPER_BOUNDARY_PARAM]: plot?.upper_boundary,
 			[CLEAR_PARAM]: true,
 		});
 	};
@@ -848,6 +918,7 @@ const PerfPanel = (props: Props) => {
 					[TESTBEDS_PARAM]: null,
 					[BENCHMARKS_PARAM]: null,
 					[MEASURES_PARAM]: null,
+					[PLOT_PARAM]: null,
 					[START_TIME_PARAM]: null,
 					[END_TIME_PARAM]: null,
 					[LOWER_VALUE_PARAM]: null,
@@ -860,15 +931,18 @@ const PerfPanel = (props: Props) => {
 					[BRANCHES_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
 					[TESTBEDS_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
 					[BENCHMARKS_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
+					[PLOTS_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
 					[REPORTS_PAGE_PARAM]: DEFAULT_PAGE,
 					[BRANCHES_PAGE_PARAM]: DEFAULT_PAGE,
 					[TESTBEDS_PAGE_PARAM]: DEFAULT_PAGE,
 					[BENCHMARKS_PAGE_PARAM]: DEFAULT_PAGE,
+					[PLOTS_PAGE_PARAM]: DEFAULT_PAGE,
 					[REPORTS_START_TIME_PARAM]: null,
 					[REPORTS_END_TIME_PARAM]: null,
 					[BRANCHES_SEARCH_PARAM]: null,
 					[TESTBEDS_SEARCH_PARAM]: null,
 					[BENCHMARKS_SEARCH_PARAM]: null,
+					[PLOTS_SEARCH_PARAM]: null,
 					[EMBED_LOGO_PARAM]: null,
 					[EMBED_TITLE_PARAM]: null,
 					[EMBED_HEADER_PARAM]: null,
@@ -903,6 +977,8 @@ const PerfPanel = (props: Props) => {
 		setSearchParams({ [TESTBEDS_PAGE_PARAM]: page });
 	const handleBenchmarksPage = (page: number) =>
 		setSearchParams({ [BENCHMARKS_PAGE_PARAM]: page });
+	const handlePlotsPage = (page: number) =>
+		setSearchParams({ [PLOTS_PAGE_PARAM]: page });
 
 	const handleReportsStartTime = (date: string) =>
 		setSearchParams({
@@ -935,6 +1011,14 @@ const PerfPanel = (props: Props) => {
 			setSearchParams({
 				[BENCHMARKS_PAGE_PARAM]: DEFAULT_PAGE,
 				[BENCHMARKS_SEARCH_PARAM]: search,
+			}),
+		DEBOUNCE_DELAY,
+	);
+	const handlePlotsSearch = debounce(
+		(search: string) =>
+			setSearchParams({
+				[PLOTS_PAGE_PARAM]: DEFAULT_PAGE,
+				[PLOTS_SEARCH_PARAM]: search,
 			}),
 		DEBOUNCE_DELAY,
 	);
@@ -990,23 +1074,28 @@ const PerfPanel = (props: Props) => {
 				branches_data={branches_data}
 				testbeds_data={testbeds_data}
 				benchmarks_data={benchmarks_data}
+				plots_data={plots_data}
 				reports_tab={reports_tab}
 				branches_tab={branches_tab}
 				testbeds_tab={testbeds_tab}
 				benchmarks_tab={benchmarks_tab}
+				plots_tab={plots_tab}
 				reports_per_page={reports_per_page}
 				branches_per_page={branches_per_page}
 				testbeds_per_page={testbeds_per_page}
 				benchmarks_per_page={benchmarks_per_page}
+				plots_per_page={plots_per_page}
 				reports_page={reports_page}
 				branches_page={branches_page}
 				testbeds_page={testbeds_page}
 				benchmarks_page={benchmarks_page}
+				plots_page={plots_page}
 				reports_start_date={reports_start_date}
 				reports_end_date={reports_end_date}
 				branches_search={branches_search}
 				testbeds_search={testbeds_search}
 				benchmarks_search={benchmarks_search}
+				plots_search={plots_search}
 				embed_logo={embed_logo}
 				embed_title={embed_title}
 				embed_header={embed_header}
@@ -1026,15 +1115,18 @@ const PerfPanel = (props: Props) => {
 				handleBranchChecked={handleBranchChecked}
 				handleTestbedChecked={handleTestbedChecked}
 				handleBenchmarkChecked={handleBenchmarkChecked}
+				handlePlotChecked={handlePlotChecked}
 				handleReportsPage={handleReportsPage}
 				handleBranchesPage={handleBranchesPage}
 				handleTestbedsPage={handleTestbedsPage}
 				handleBenchmarksPage={handleBenchmarksPage}
+				handlePlotsPage={handlePlotsPage}
 				handleReportsStartTime={handleReportsStartTime}
 				handleReportsEndTime={handleReportsEndTime}
 				handleBranchesSearch={handleBranchesSearch}
 				handleTestbedsSearch={handleTestbedsSearch}
 				handleBenchmarksSearch={handleBenchmarksSearch}
+				handlePlotsSearch={handlePlotsSearch}
 			/>
 		</>
 	);

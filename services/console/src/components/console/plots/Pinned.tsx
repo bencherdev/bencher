@@ -290,7 +290,9 @@ const PinnedButtons = (props: {
 						title="View plot"
 						href={`/console/projects/${
 							props.plot?.project
-						}/perf?${plotQueryString(props.plot)}`}
+						}/perf?${plotQueryString(props.plot)}&tab=plots&plot=${
+							props.plot?.uuid
+						}&plots_search=${props.plot?.uuid}`}
 					>
 						<span class="icon is-small">
 							<i class="fas fa-external-link-alt" />

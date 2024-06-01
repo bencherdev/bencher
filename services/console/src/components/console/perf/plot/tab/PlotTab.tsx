@@ -1,9 +1,9 @@
 import { type Accessor, For, createMemo, type Resource } from "solid-js";
 import { PerfTab } from "../../../../../config/types";
-import { toCapitalized } from "../../../../../config/util";
 import type {
 	JsonBenchmark,
 	JsonBranch,
+	JsonPlot,
 	JsonReport,
 	JsonTestbed,
 } from "../../../../../types/bencher";
@@ -24,6 +24,7 @@ const perf_tabs = [
 	PerfTab.BRANCHES,
 	PerfTab.TESTBEDS,
 	PerfTab.BENCHMARKS,
+	PerfTab.PLOTS,
 ];
 
 export interface Props {
@@ -38,27 +39,32 @@ export interface Props {
 	branches_data: Resource<JsonBranch>;
 	testbeds_data: Resource<JsonTestbed>;
 	benchmarks_data: Resource<JsonBenchmark>;
+	plots_data: Resource<JsonPlot>;
 	// Tabs
 	reports_tab: TabList<JsonReport>;
 	branches_tab: TabList<JsonBranch>;
 	testbeds_tab: TabList<JsonTestbed>;
 	benchmarks_tab: TabList<JsonBenchmark>;
+	plots_tab: TabList<JsonPlot>;
 	// Per page
 	reports_per_page: Accessor<number>;
 	branches_per_page: Accessor<number>;
 	testbeds_per_page: Accessor<number>;
 	benchmarks_per_page: Accessor<number>;
+	plots_per_page: Accessor<number>;
 	// Page
 	reports_page: Accessor<number>;
 	branches_page: Accessor<number>;
 	testbeds_page: Accessor<number>;
 	benchmarks_page: Accessor<number>;
+	plots_page: Accessor<number>;
 	// Search
 	reports_start_date: Accessor<undefined | string>;
 	reports_end_date: Accessor<undefined | string>;
 	branches_search: Accessor<undefined | string>;
 	testbeds_search: Accessor<undefined | string>;
 	benchmarks_search: Accessor<undefined | string>;
+	plots_search: Accessor<undefined | string>;
 	// Handle checked
 	handleReportChecked: (
 		index: number,
@@ -67,17 +73,20 @@ export interface Props {
 	handleBranchChecked: (index: number) => void;
 	handleTestbedChecked: (index: number) => void;
 	handleBenchmarkChecked: (index: number) => void;
+	handlePlotChecked: (index: number) => void;
 	// Handle page
 	handleReportsPage: (reports_page: number) => void;
 	handleBranchesPage: (branches_page: number) => void;
 	handleTestbedsPage: (testbeds_page: number) => void;
 	handleBenchmarksPage: (benchmarks_page: number) => void;
+	handlePlotsPage: (plots_page: number) => void;
 	// Handle search
 	handleReportsStartTime: (start_time: string) => void;
 	handleReportsEndTime: (end_time: string) => void;
 	handleBranchesSearch: (branches_search: string) => void;
 	handleTestbedsSearch: (testbeds_search: string) => void;
 	handleBenchmarksSearch: (benchmarks_search: string) => void;
+	handlePlotsSearch: (plots_search: string) => void;
 }
 
 const PlotTab = (props: Props) => {
@@ -91,6 +100,8 @@ const PlotTab = (props: Props) => {
 				return props.testbeds_data.loading;
 			case PerfTab.BENCHMARKS:
 				return props.benchmarks_data.loading;
+			case PerfTab.PLOTS:
+				return props.plots_data.loading;
 			default:
 				return false;
 		}
@@ -106,6 +117,8 @@ const PlotTab = (props: Props) => {
 				return props.testbeds_page();
 			case PerfTab.BENCHMARKS:
 				return props.benchmarks_page();
+			case PerfTab.PLOTS:
+				return props.plots_page();
 			default:
 				return 1;
 		}
@@ -121,6 +134,8 @@ const PlotTab = (props: Props) => {
 				return props.handleTestbedsPage(page);
 			case PerfTab.BENCHMARKS:
 				return props.handleBenchmarksPage(page);
+			case PerfTab.PLOTS:
+				return props.handlePlotsPage(page);
 			default:
 				return console.error("No handle for tab", props.tab(), page);
 		}
@@ -136,6 +151,8 @@ const PlotTab = (props: Props) => {
 				return props.handleTestbedChecked(index);
 			case PerfTab.BENCHMARKS:
 				return props.handleBenchmarkChecked(index);
+			case PerfTab.PLOTS:
+				return props.handlePlotChecked(index);
 			default:
 				return [];
 		}
@@ -146,6 +163,7 @@ const PlotTab = (props: Props) => {
 	const branchesLength = createMemo(() => props.branches_tab.length);
 	const testbedsLength = createMemo(() => props.testbeds_tab.length);
 	const benchmarksLength = createMemo(() => props.benchmarks_tab.length);
+	const plotsLength = createMemo(() => props.plots_tab.length);
 	const tabLength = createMemo(() => {
 		switch (props.tab()) {
 			case PerfTab.REPORTS:
@@ -156,6 +174,8 @@ const PlotTab = (props: Props) => {
 				return testbedsLength();
 			case PerfTab.BENCHMARKS:
 				return benchmarksLength();
+			case PerfTab.PLOTS:
+				return plotsLength();
 			default:
 				return 0;
 		}
@@ -171,6 +191,8 @@ const PlotTab = (props: Props) => {
 				return props.testbeds_per_page();
 			case PerfTab.BENCHMARKS:
 				return props.benchmarks_per_page();
+			case PerfTab.PLOTS:
+				return props.plots_per_page();
 			default:
 				return 8;
 		}
@@ -184,6 +206,8 @@ const PlotTab = (props: Props) => {
 				return props.testbeds_search();
 			case PerfTab.BENCHMARKS:
 				return props.benchmarks_search();
+			case PerfTab.PLOTS:
+				return props.plots_search();
 			default:
 				return undefined;
 		}
@@ -197,6 +221,8 @@ const PlotTab = (props: Props) => {
 				return props.handleTestbedsSearch(search);
 			case PerfTab.BENCHMARKS:
 				return props.handleBenchmarksSearch(search);
+			case PerfTab.PLOTS:
+				return props.handlePlotsSearch(search);
 			default:
 				return console.error("No handle for tab", props.tab(), search);
 		}
@@ -210,13 +236,13 @@ const PlotTab = (props: Props) => {
 						<>
 							<a
 								class={props.tab() === tab ? "is-active" : ""}
-								title={`View ${toCapitalized(tab)}`}
+								title={`View ${formatTab(tab)}`}
 								// biome-ignore lint/a11y/useValidAnchor: stateful anchor
 								onClick={() => props.handleTab(tab)}
 							>
-								{toCapitalized(tab)}
+								{formatTab(tab)}
 							</a>
-							{index() === 0 && (
+							{(index() === 0 || index() === 3) && (
 								// biome-ignore lint/a11y/useValidAnchor: disabled anchor
 								<a style="pointer-events: none; cursor: default; color: #fdb07e;">
 									||
@@ -235,6 +261,7 @@ const PlotTab = (props: Props) => {
 				branches_tab={props.branches_tab}
 				testbeds_tab={props.testbeds_tab}
 				benchmarks_tab={props.benchmarks_tab}
+				plots_tab={props.plots_tab}
 				loading={loading}
 				tab={props.tab}
 				per_page={perPage}
@@ -267,6 +294,21 @@ const PlotTab = (props: Props) => {
 			</div>
 		</>
 	);
+};
+
+const formatTab = (tab: PerfTab) => {
+	switch (tab) {
+		case PerfTab.REPORTS:
+			return "Reports";
+		case PerfTab.BRANCHES:
+			return "Branches";
+		case PerfTab.TESTBEDS:
+			return "Testbeds";
+		case PerfTab.BENCHMARKS:
+			return "Benchmarks";
+		case PerfTab.PLOTS:
+			return "Pinned";
+	}
 };
 
 export default PlotTab;

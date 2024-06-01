@@ -1,25 +1,21 @@
-import { type Accessor, For, Show, Switch, Match } from "solid-js";
+import { type Accessor, For, Show, Switch, Match, createMemo } from "solid-js";
 import type { PerfTab } from "../../../../../config/types";
-import type {
-	JsonBenchmark,
-	JsonBranch,
-	JsonMeasure,
-	JsonTestbed,
-} from "../../../../../types/bencher";
+import { fmtDateTime } from "../../../../../config/util";
+import type { JsonPlot, JsonReport } from "../../../../../types/bencher";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import type { TabElement, TabList } from "./PlotTab";
+import { themeText, type Theme } from "../../../../navbar/theme/theme";
 import Field, { type FieldHandler } from "../../../../field/Field";
 import FieldKind from "../../../../field/kind";
-import { themeText, type Theme } from "../../../../navbar/theme/theme";
-import { toCapitalized } from "../../../../../config/util";
 
-const DimensionsTab = (props: {
+const PlotsTab = (props: {
 	project_slug: Accessor<undefined | string>;
 	theme: Accessor<Theme>;
 	isConsole: boolean;
 	loading: Accessor<boolean>;
+	measures: Accessor<string[]>;
 	tab: Accessor<PerfTab>;
-	tabList: Accessor<TabList<JsonBranch | JsonTestbed | JsonBenchmark>>;
+	tabList: Accessor<TabList<JsonReport>>;
 	per_page: Accessor<number>;
 	search: Accessor<undefined | string>;
 	handleChecked: (index: number, slug?: string) => void;
@@ -33,39 +29,30 @@ const DimensionsTab = (props: {
 					fieldKey="search"
 					value={props.search() ?? ""}
 					config={{
-						placeholder: `Search ${toCapitalized(props.tab())}`,
+						placeholder: "Search Pinned Plots",
 					}}
 					handleField={props.handleSearch}
 				/>
 			</div>
-			<Switch
-				fallback={<div class="panel-block">🐰 No {props.tab()} found</div>}
-			>
+			<Switch fallback={<div class="panel-block">🐰 No plots found</div>}>
 				<Match when={props.loading()}>
 					<For each={Array(props.per_page())}>
 						{(_) => (
 							<div class="panel-block is-block">
 								<div class="level">
-									<div class={`level-left ${themeText(props.theme())}`}>
+									{/* biome-ignore lint/a11y/useValidAnchor: loading fallback */}
+									<a class={`level-left ${themeText(props.theme())}`}>
 										<div class="level-item">
 											<div class="columns is-vcentered is-mobile">
 												<div class="column is-narrow">
-													<input type="checkbox" checked={false} />
+													<input type="radio" checked={false} />
 												</div>
 												<div class="column">
-													<small style="word-break: break-word;" />
+													<small style="word-break: break-word;">⠀</small>
 												</div>
 											</div>
 										</div>
-									</div>
-									<Show when={props.isConsole}>
-										<div class="level-right">
-											<div class="level-item">
-												{/* biome-ignore lint/a11y/useValidAnchor: loading fallback */}
-												<a class="button">View</a>
-											</div>
-										</div>
-									</Show>
+									</a>
 								</div>
 							</div>
 						)}
@@ -73,13 +60,14 @@ const DimensionsTab = (props: {
 				</Match>
 				<Match when={props.tabList().length > 0}>
 					<For each={props.tabList()}>
-						{(dimension, index) => (
-							<DimensionRow
+						{(plot, index) => (
+							<PlotRow
 								project_slug={props.project_slug}
 								theme={props.theme}
 								isConsole={props.isConsole}
+								measures={props.measures}
 								tab={props.tab}
-								dimension={dimension}
+								plot={plot}
 								index={index}
 								handleChecked={props.handleChecked}
 							/>
@@ -91,69 +79,51 @@ const DimensionsTab = (props: {
 	);
 };
 
-const DimensionRow = (props: {
-	project_slug: Accessor<undefined | string>;
+const PlotRow = (props: {
 	theme: Accessor<Theme>;
-	isConsole: boolean;
-	tab: Accessor<PerfTab>;
-	dimension: TabElement<JsonBranch | JsonTestbed | JsonBenchmark>;
+	plot: TabElement<JsonPlot>;
 	index: Accessor<number>;
 	handleChecked: (index: number, slug?: string) => void;
 }) => {
-	const resource = props.dimension?.resource as
-		| JsonBranch
-		| JsonTestbed
-		| JsonBenchmark
-		| JsonMeasure;
+	const plot = createMemo(() => props.plot.resource);
+
 	return (
 		<div class="panel-block is-block">
 			<div class="level">
 				<a
 					class={`level-left ${themeText(props.theme())}`}
-					title={`${props.dimension?.checked ? "Remove" : "Add"} ${
-						resource?.name
-					}`}
-					// biome-ignore lint/a11y/useValidAnchor: stateful anchor
-					onClick={(_e) => props.handleChecked(props.index())}
+					onClick={(_e) => props.handleChecked(props.index?.(), plot().uuid)}
 				>
 					<div class="level-item">
 						<div class="columns is-vcentered is-mobile">
 							<div class="column is-narrow">
-								<input type="checkbox" checked={props.dimension?.checked} />
+								<input type="radio" checked={props.plot?.checked} />
 							</div>
 							<div class="column">
-								<small style="word-break: break-word;">{resource?.name}</small>
+								<small style="word-break: break-word;">
+									{plot().title ??
+										`Unnamed Plot (${fmtDateTime(plot().created)})`}
+								</small>
 							</div>
 						</div>
 					</div>
 				</a>
-				<Show when={props.isConsole}>
-					<div class="level-right">
-						<div class="level-item">
-							<ViewDimensionButton
-								project_slug={props.project_slug}
-								tab={props.tab}
-								dimension={resource}
-							/>
-						</div>
-					</div>
-				</Show>
 			</div>
 		</div>
 	);
 };
 
-const ViewDimensionButton = (props: {
+const ViewReportButton = (props: {
 	project_slug: Accessor<undefined | string>;
 	tab: Accessor<PerfTab>;
-	dimension: JsonBranch | JsonTestbed | JsonBenchmark | JsonMeasure;
+	report: JsonReport;
 }) => {
 	return (
 		<a
 			class="button"
-			title={`View ${props.dimension?.name}`}
+			title={`View Report from ${fmtDateTime(props.report?.start_time)}`}
 			href={`/console/projects/${props.project_slug()}/${props.tab()}/${
-				props.dimension?.slug
+				props.report?.uuid
 			}?${BACK_PARAM}=${encodePath()}`}
 		>
 			View
@@ -161,4 +131,15 @@ const ViewDimensionButton = (props: {
 	);
 };
 
-export default DimensionsTab;
+const ReportDimension = (props: { icon: string; name: string }) => {
+	return (
+		<div>
+			<span class="icon">
+				<i class={props.icon} />
+			</span>
+			<small style="word-break: break-all;">{props.name}</small>
+		</div>
+	);
+};
+
+export default PlotsTab;

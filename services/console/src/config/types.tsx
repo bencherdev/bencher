@@ -134,13 +134,15 @@ export enum PerfTab {
 	BRANCHES = "branches",
 	TESTBEDS = "testbeds",
 	BENCHMARKS = "benchmarks",
+	PLOTS = "plots",
 }
 
 export const isPerfTab = (tab: undefined | string) =>
 	tab === PerfTab.REPORTS ||
 	tab === PerfTab.BRANCHES ||
 	tab === PerfTab.TESTBEDS ||
-	tab === PerfTab.BENCHMARKS;
+	tab === PerfTab.BENCHMARKS ||
+	tab === PerfTab.PLOTS;
 
 export const isXAxis = (xAxis: undefined | string) => {
 	switch (xAxis) {
