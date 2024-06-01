@@ -16,23 +16,24 @@ const getProjectUrl = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${
 
 let jsonProject: undefined | JsonProject;
 let title = "Public Project";
-let description ="View continuous benchmarking results and performance regressions";
+let description =
+	"View continuous benchmarking results and performance regressions";
 let notFound = false;
 if (params.project && params.project !== "undefined") {
-  try {
-    const projectResponse = await fetchSSR(getProjectUrl);
-    jsonProject = await projectResponse.json();
-    if (jsonProject?.uuid) {
-      title = `${jsonProject?.name}`;
-      description = `View ${jsonProject?.name} continuous benchmarking results and performance regressions on Bencher`;
-    } else {
-      title = "Not Found";
-      description = "Public Project not found";
-      notFound = true;
-    }
-  } catch (e) {
-    console.error(`Failed to fetch project data: ${e}`);
-  }
+	try {
+		const projectResponse = await fetchSSR(getProjectUrl);
+		jsonProject = await projectResponse.json();
+		if (jsonProject?.uuid) {
+			title = `${jsonProject?.name}`;
+			description = `View ${jsonProject?.name} continuous benchmarking results and performance regressions on Bencher`;
+		} else {
+			title = "Not Found";
+			description = "Public Project not found";
+			notFound = true;
+		}
+	} catch (e) {
+		console.error(`Failed to fetch project data: ${e}`);
+	}
 }
 
 let image: undefined | string;

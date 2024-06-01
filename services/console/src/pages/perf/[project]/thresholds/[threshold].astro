@@ -21,20 +21,20 @@ let title = "Public Threshold";
 let description = "View a continuous benchmarking threshold";
 let notFound = false;
 if (params.project && params.project !== "undefined") {
-  try {
-    const thresholdResponse = await fetchSSR(getThresholdUrl);
-    jsonThreshold = await thresholdResponse.json();
-    if (jsonThreshold?.uuid) {
-      title = `${jsonThreshold?.branch?.name} | ${jsonThreshold?.testbed?.name} | ${jsonThreshold?.measure?.name}`;
-      description = "View a continuous benchmarking threshold on Bencher";
-    } else {
-      title = "Not Found";
-      description = "Public Project Threshold not found";
-      notFound = true;
-    }
-  } catch (e) {
-    console.error(`Failed to fetch threshold data: ${e}`);
-  }
+	try {
+		const thresholdResponse = await fetchSSR(getThresholdUrl);
+		jsonThreshold = await thresholdResponse.json();
+		if (jsonThreshold?.uuid) {
+			title = `${jsonThreshold?.branch?.name} | ${jsonThreshold?.testbed?.name} | ${jsonThreshold?.measure?.name}`;
+			description = "View a continuous benchmarking threshold on Bencher";
+		} else {
+			title = "Not Found";
+			description = "Public Project Threshold not found";
+			notFound = true;
+		}
+	} catch (e) {
+		console.error(`Failed to fetch threshold data: ${e}`);
+	}
 }
 ---
 
