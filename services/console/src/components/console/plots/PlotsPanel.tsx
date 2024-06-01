@@ -25,7 +25,7 @@ export interface Props {
 	project?: undefined | JsonProject;
 }
 
-const DashboardPanel = (props: Props) => {
+const PlotsPanel = (props: Props) => {
 	const [bencher_valid] = createResource(
 		async () => await bencher_valid_init(),
 	);
@@ -206,4 +206,4 @@ const PinNewPlot = (props: { project_slug: Accessor<undefined | string> }) => {
 	);
 };
 
-export default DashboardPanel;
+export default PlotsPanel;

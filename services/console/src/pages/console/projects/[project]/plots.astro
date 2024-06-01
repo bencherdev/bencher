@@ -2,7 +2,7 @@
 export const prerender = false;
 
 import ProjectLayout from "../../../../layouts/console/ProjectLayout.astro";
-import DashboardPanel from "../../../../components/console/dashboard/DashboardPanel";
+import PlotsPanel from "../../../../components/console/plots/PlotsPanel";
 
 // Using `meta.env` requires `prerender = false`
 const BENCHER_API_URL = import.meta.env.BENCHER_API_URL;
@@ -12,7 +12,7 @@ const redirect = `/perf/${params.project}${Astro.url.search}`;
 ---
 
 <ProjectLayout apiUrl={BENCHER_API_URL} params={params} title={title} redirect={redirect}>
-  <DashboardPanel
+  <PlotsPanel
     client:only="solid-js"
     apiUrl={BENCHER_API_URL}
     params={params}
