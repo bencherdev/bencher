@@ -13,7 +13,7 @@ import FieldKind from "../../../field/kind";
 import { useNavigate } from "../../../../util/url";
 import { createStore } from "solid-js/store";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
-import { plotFields } from "../../../../config/project/plot";
+import { PLOT_FIELDS } from "../../../../config/project/plot";
 
 export interface Props {
 	apiUrl: string;
@@ -147,7 +147,7 @@ const PinModal = (props: Props) => {
 						}
 						value={form?.title?.value}
 						valid={form?.title?.valid}
-						config={plotFields(props.project()).title}
+						config={PLOT_FIELDS.title}
 						handleField={handleField}
 					/>
 					<hr />
@@ -162,7 +162,7 @@ const PinModal = (props: Props) => {
 						value={form?.window?.value}
 						valid={form?.window?.valid}
 						config={{
-							help: plotFields().window.help,
+							help: PLOT_FIELDS.window.help,
 						}}
 						handleField={handleField}
 					/>
@@ -176,7 +176,7 @@ const PinModal = (props: Props) => {
 						config={{
 							bottom: "Insert at bottom",
 							top: "Insert at top",
-							help: plotFields().index.help,
+							help: PLOT_FIELDS.index.help,
 						}}
 						handleField={handleField}
 					/>

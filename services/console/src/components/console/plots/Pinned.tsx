@@ -18,7 +18,7 @@ import DeleteButton from "../deck/hand/DeleteButton";
 import type { Params } from "astro";
 import DeckCard from "../deck/hand/card/DeckCard";
 import { Card, Display } from "../../../config/types";
-import { plotFields } from "../../../config/project/plot";
+import { PLOT_FIELDS } from "../../../config/project/plot";
 import FieldKind from "../../field/kind";
 import { httpGet, httpPatch } from "../../../util/http";
 import Field, { type FieldHandler } from "../../field/Field";
@@ -33,7 +33,6 @@ const Pinned = (props: {
 	apiUrl: string;
 	params: Params;
 	user: JsonAuthUser;
-	project: Resource<JsonProject>;
 	isAllowed: Resource<boolean>;
 	plot: JsonPlot;
 	index: Accessor<number>;
@@ -99,7 +98,6 @@ const Pinned = (props: {
 						apiUrl={props.apiUrl}
 						params={props.params}
 						user={props.user}
-						project={props.project}
 						isAllowed={props.isAllowed}
 						plot={plot()}
 						index={props.index}
@@ -113,7 +111,6 @@ const Pinned = (props: {
 						apiUrl={props.apiUrl}
 						params={props.params}
 						user={props.user}
-						project={props.project}
 						isAllowed={props.isAllowed}
 						plot={plot()}
 						index={props.index}
@@ -337,7 +334,6 @@ const PinnedRank = (props: {
 	apiUrl: string;
 	params: Params;
 	user: JsonAuthUser;
-	project: Resource<JsonProject>;
 	isAllowed: Resource<boolean>;
 	plot: JsonPlot;
 	index: Accessor<number>;
@@ -405,7 +401,7 @@ const PinnedRank = (props: {
 					bottom: "Move to bottom",
 					top: "Move to top",
 					total: props.total(),
-					help: plotFields().index.help,
+					help: PLOT_FIELDS.index.help,
 				}}
 				handleField={handleField}
 			/>
@@ -433,7 +429,6 @@ const PinnedSetting = (props: {
 	apiUrl: string;
 	params: Params;
 	user: JsonAuthUser;
-	project: Resource<JsonProject>;
 	isAllowed: Resource<boolean>;
 	plot: JsonPlot;
 	index: Accessor<number>;
@@ -478,7 +473,7 @@ const PinnedSetting = (props: {
 						valid: null,
 						validate: true,
 						nullable: true,
-						config: plotFields(props.project()).title,
+						config: PLOT_FIELDS.title,
 					},
 				}}
 				data={() => props.plot}
@@ -506,7 +501,7 @@ const PinnedSetting = (props: {
 						valid: null,
 						validate: true,
 						nullable: true,
-						config: plotFields(props.project()).window,
+						config: PLOT_FIELDS.window,
 					},
 				}}
 				data={() => props.plot}

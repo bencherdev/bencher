@@ -199,7 +199,6 @@ const PlotsPanel = (props: Props) => {
 								apiUrl={props.apiUrl}
 								params={props.params}
 								user={user}
-								project={project}
 								isAllowed={isAllowed}
 								plot={plot}
 								index={index}
