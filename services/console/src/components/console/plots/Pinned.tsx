@@ -222,7 +222,9 @@ const PinnedButtons = (props: {
 					<div class="level-item">
 						<button
 							type="button"
-							class="button tag is-primary is-small is-rounded"
+							class={`button is-small is-rounded${
+								props.state() === PinnedState.Rank ? " is-active" : ""
+							}`}
 							title="Move plot"
 							disabled={!props.isAllowed()}
 							onClick={(e) => {
@@ -296,7 +298,9 @@ const PinnedButtons = (props: {
 					</a>
 					<button
 						type="button"
-						class="button is-small"
+						class={`button is-small${
+							props.state() === PinnedState.Settings ? " is-active" : ""
+						}`}
 						title="Plot settings"
 						onClick={(e) => {
 							e.preventDefault();

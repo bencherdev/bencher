@@ -96,7 +96,7 @@ const projectsConfig = {
 				button: {
 					text: "Select",
 					path: (_pathname: string, datum: JsonProject) =>
-						`/console/projects/${datum?.slug}/perf`,
+						`/console/projects/${datum?.slug}/plots`,
 				},
 			},
 			name: "projects",
