@@ -15,25 +15,24 @@ const getProjectUrl = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${
 }`;
 
 let jsonProject: undefined | JsonProject;
-let title: string;
-let description: string;
+let title = "Public Project";
+let description ="View continuous benchmarking results and performance regressions";
 let notFound = false;
-try {
-	const projectResponse = await fetchSSR(getProjectUrl);
-	jsonProject = await projectResponse.json();
-	if (jsonProject?.uuid) {
-		title = `${jsonProject?.name}`;
-		description = `View ${jsonProject?.name} continuous benchmarking results and performance regressions on Bencher`;
-	} else {
-		title = "Not Found";
-		description = "Public Project not found";
-		notFound = true;
-	}
-} catch (e) {
-	console.error(`Failed to fetch project data: ${e}`);
-	title = "Public Project";
-	description =
-		"View continuous benchmarking results and performance regressions";
+if (params.project && params.project !== "undefined") {
+  try {
+    const projectResponse = await fetchSSR(getProjectUrl);
+    jsonProject = await projectResponse.json();
+    if (jsonProject?.uuid) {
+      title = `${jsonProject?.name}`;
+      description = `View ${jsonProject?.name} continuous benchmarking results and performance regressions on Bencher`;
+    } else {
+      title = "Not Found";
+      description = "Public Project not found";
+      notFound = true;
+    }
+  } catch (e) {
+    console.error(`Failed to fetch project data: ${e}`);
+  }
 }
 
 let image: undefined | string;
@@ -57,14 +56,7 @@ if (hasPerfImage(Astro.url)) {
   canonical={`/perf/${params.project}`}
 >
     <div slot="navbar"></div>
-    <PerfPanel
-      client:only="solid-js"
-      apiUrl={BENCHER_API_URL}
-      params={params}
-      project={jsonProject}
-      isEmbed={true}
-    />
-    {notFound && (
+    {notFound ? (
       <div class="container box">
         <div class="columns is-centered">
           <div class="column is-narrow">
@@ -75,6 +67,28 @@ if (hasPerfImage(Astro.url)) {
           </div>
         </div>
       </div>
-    )}
+    ) :
+    <PerfPanel
+      client:only="solid-js"
+      apiUrl={BENCHER_API_URL}
+      params={params}
+      project={jsonProject}
+      isEmbed={true}
+    >
+      <nav slot="fallback" class="panel" >
+        <nav class="panel-heading columns is-vcentered">
+            <div class="column">
+                &nbsp;
+            </div>
+        </nav>
+        <div class="panel-block">
+            <progress
+                class="progress is-primary"
+                style="margin-top: 8rem; margin-bottom: 16rem;"
+                max="100"
+            />
+        </div>
+      </nav>
+    </PerfPanel>}
     <div slot="footer"></div>
 </BaseLayout>

@@ -17,26 +17,26 @@ const getAlertUrl = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${
 }/alerts/${params.alert}`;
 
 let jsonAlert: undefined | JsonAlert;
-let title: string;
-let description: string;
+let title = "Public Alert";
+let description = "View a continuous benchmarking alert";
 let notFound = false;
-try {
-	const alertResponse = await fetchSSR(getAlertUrl);
-	jsonAlert = await alertResponse.json();
-	if (jsonAlert?.uuid) {
-		title = `${jsonAlert?.benchmark?.name} Alert (${
-			jsonAlert?.status === AlertStatus.Active ? "🔔" : "🔕"
-		})`;
-		description = `View a continuous benchmarking alert for the ${jsonAlert?.benchmark?.name} benchmark on Bencher`;
-	} else {
-		title = "Not Found";
-		description = "Public Project Alert not found";
-		notFound = true;
-	}
-} catch (e) {
-	console.error(`Failed to fetch alert data: ${e}`);
-	title = "Public Alert";
-	description = "View a continuous benchmarking alert";
+if (params.project && params.project !== "undefined") {
+  try {
+    const alertResponse = await fetchSSR(getAlertUrl);
+    jsonAlert = await alertResponse.json();
+    if (jsonAlert?.uuid) {
+      title = `${jsonAlert?.benchmark?.name} Alert (${
+        jsonAlert?.status === AlertStatus.Active ? "🔔" : "🔕"
+      })`;
+      description = `View a continuous benchmarking alert for the ${jsonAlert?.benchmark?.name} benchmark on Bencher`;
+    } else {
+      title = "Not Found";
+      description = "Public Project Alert not found";
+      notFound = true;
+    }
+  } catch (e) {
+    console.error(`Failed to fetch alert data: ${e}`);
+  }
 }
 ---
 
