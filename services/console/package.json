@@ -4,6 +4,7 @@
 	"version": "0.4.10",
 	"scripts": {
 		"fmt": "npx biome format --write .",
+		"lint": "npx biome lint .",
 		"typeshare": "typeshare ../.. --lang=typescript --output-file=./src/types/bencher.ts",
 		"wasm": "./build_wasm.sh",
 		"copy": "cp -r ../cli/templates/output ./public/download && cp ../api/swagger.json ./public/download/openapi.json",

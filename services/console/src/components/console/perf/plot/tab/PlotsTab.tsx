@@ -94,6 +94,7 @@ const PlotRow = (props: {
 			<div class="level">
 				<a
 					class={`level-left ${themeText(props.theme())}`}
+					// biome-ignore lint/a11y/useValidAnchor: loading fallback
 					onClick={(_e) => props.handleChecked(props.index?.(), plot().uuid)}
 				>
 					<div class="level-item">
