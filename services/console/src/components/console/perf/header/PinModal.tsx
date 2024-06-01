@@ -98,7 +98,7 @@ const PinModal = (props: Props) => {
 			.then((resp) => {
 				setSubmitting(false);
 				navigate(
-					`/console/projects/${props.project()?.slug}/dashboard#${
+					`/console/projects/${props.project()?.slug}/plots#${
 						resp?.data?.uuid
 					}`,
 				);
@@ -106,10 +106,7 @@ const PinModal = (props: Props) => {
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
-				pageNotify(
-					NotifyKind.ERROR,
-					"Failed to pin plot to dashboard. Please, try again.",
-				);
+				pageNotify(NotifyKind.ERROR, "Failed to save plot. Please, try again.");
 			});
 	};
 
@@ -128,9 +125,7 @@ const PinModal = (props: Props) => {
 			/>
 			<div class="modal-card">
 				<header class="modal-card-head">
-					<p class="modal-card-title">
-						Pin to {props.project()?.name} Dashboard
-					</p>
+					<p class="modal-card-title">Pin this plot</p>
 					<button
 						class="delete"
 						type="button"

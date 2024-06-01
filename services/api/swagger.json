@@ -4343,7 +4343,7 @@
           "plots"
         ],
         "summary": "Delete a plot",
-        "description": "Delete a plot for a project. The user must have `delete` permissions for the project. This plot will no longer appear in the project dashboard.",
+        "description": "Delete a plot for a project. The user must have `delete` permissions for the project.",
         "operationId": "proj_plot_delete",
         "parameters": [
           {

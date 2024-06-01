@@ -16,8 +16,6 @@ import { httpGet } from "../../../util/http";
 import Pinned from "./Pinned";
 import { validJwt } from "../../../util/valid";
 import { createStore } from "solid-js/store";
-import { create } from "d3";
-import { set } from "astro/zod";
 
 const MAX_PLOTS = 255;
 
@@ -36,7 +34,7 @@ const DashboardPanel = (props: Props) => {
 	const user = authUser();
 
 	createEffect(() => {
-		setPageTitle(`${project()?.name ?? "Project"} Dashboard`);
+		setPageTitle(`${project()?.name ?? "Project"} Plots`);
 	});
 
 	const project_slug = createMemo(() => params().project);
@@ -186,7 +184,7 @@ const PinNewPlot = (props: { project_slug: Accessor<undefined | string> }) => {
 	return (
 		<div class="box">
 			<div class="content has-text-centered">
-				<h2 class="title is-2">Add a Perf Plot to your Project Dashboard</h2>
+				<h2 class="title is-2">Pin a Perf Plot</h2>
 			</div>
 			<div class="content">
 				<ol>
@@ -194,7 +192,7 @@ const PinNewPlot = (props: { project_slug: Accessor<undefined | string> }) => {
 					<li>
 						Click the <code>Pin</code> button.
 					</li>
-					<li>Name the pinned Perf Plot and set the time window.</li>
+					<li>Name the Perf Plot and set a time window.</li>
 				</ol>
 			</div>
 			<a

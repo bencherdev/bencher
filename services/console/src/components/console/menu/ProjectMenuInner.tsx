@@ -1,6 +1,7 @@
 import { Show, type Accessor } from "solid-js";
 
 enum Section {
+	PLOTS = "plots",
 	PERF = "perf",
 	REPORTS = "reports",
 	BRANCHES = "branches",
@@ -23,17 +24,17 @@ const ProjectMenuInner = (props: {
 
 	return (
 		<aside class="menu is-sticky">
-			{/* <div class="menu-label">
+			<div class="menu-label">
 				<a
 					class="button is-fullwidth"
-					title="View Project Dashboard"
-					href={path()}
+					title="View Project Plots"
+					href={path(Section.PLOTS)}
 				>
 					<span class="icon">
 						<i class="fas fa-th-large" />
 					</span>
 				</a>
-			</div> */}
+			</div>
 			<div class="menu-label">
 				<a
 					class="button is-fullwidth"

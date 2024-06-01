@@ -333,7 +333,6 @@ async fn patch_inner(
 ///
 /// Delete a plot for a project.
 /// The user must have `delete` permissions for the project.
-/// This plot will no longer appear in the project dashboard.
 #[endpoint {
     method = DELETE,
     path =  "/v0/projects/{project}/plots/{plot}",

@@ -507,7 +507,7 @@ const PinnedSetting = (props: {
 					user={props.user}
 					path={path}
 					data={() => props.plot}
-					subtitle="This plot will no longer appear in your dashboard."
+					subtitle="This plot will be unpinned."
 					redirect={handleDelete}
 					notify={false}
 				/>

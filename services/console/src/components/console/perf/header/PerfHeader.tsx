@@ -129,7 +129,7 @@ const PerfHeader = (props: Props) => {
 										<button
 											class="button is-fullwidth"
 											type="button"
-											title={`Pin to ${props.project()?.name} dashboard`}
+											title="Pin this plot"
 											onClick={(e) => {
 												e.preventDefault();
 												setPin(true);
