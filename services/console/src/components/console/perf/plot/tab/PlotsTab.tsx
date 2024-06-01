@@ -2,7 +2,6 @@ import { type Accessor, For, Show, Switch, Match, createMemo } from "solid-js";
 import type { PerfTab } from "../../../../../config/types";
 import { fmtDateTime } from "../../../../../config/util";
 import type { JsonPlot, JsonReport } from "../../../../../types/bencher";
-import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import type { TabElement, TabList } from "./PlotTab";
 import { themeText, type Theme } from "../../../../navbar/theme/theme";
 import Field, { type FieldHandler } from "../../../../field/Field";
@@ -13,7 +12,6 @@ const PlotsTab = (props: {
 	theme: Accessor<Theme>;
 	isConsole: boolean;
 	loading: Accessor<boolean>;
-	measures: Accessor<string[]>;
 	tab: Accessor<PerfTab>;
 	tabList: Accessor<TabList<JsonReport>>;
 	per_page: Accessor<number>;
@@ -65,7 +63,6 @@ const PlotsTab = (props: {
 								project_slug={props.project_slug}
 								theme={props.theme}
 								isConsole={props.isConsole}
-								measures={props.measures}
 								tab={props.tab}
 								plot={plot}
 								index={index}
@@ -114,7 +111,7 @@ const PlotRow = (props: {
 				<Show when={props.isConsole}>
 					<div class="level-right">
 						<div class="level-item">
-							<ViewReportButton
+							<ViewPlotButton
 								project_slug={props.project_slug}
 								tab={props.tab}
 								plot={plot}
@@ -127,7 +124,7 @@ const PlotRow = (props: {
 	);
 };
 
-const ViewReportButton = (props: {
+const ViewPlotButton = (props: {
 	project_slug: Accessor<undefined | string>;
 	tab: Accessor<PerfTab>;
 	plot: Accessor<JsonPlot>;

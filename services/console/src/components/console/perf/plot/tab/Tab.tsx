@@ -142,11 +142,7 @@ const Tab = (props: {
 					isConsole={props.isConsole}
 					loading={props.loading}
 					tab={props.tab}
-					tabList={
-						tabList as Accessor<
-							TabList<JsonBranch | JsonTestbed | JsonBenchmark>
-						>
-					}
+					tabList={tabList as Accessor<TabList<JsonPlot>>}
 					per_page={props.per_page}
 					search={props.search}
 					handleChecked={props.handleChecked}
