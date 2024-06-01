@@ -332,7 +332,7 @@ async fn patch_inner(
 /// Delete a plot
 ///
 /// Delete a plot for a project.
-/// The user must have `delete` permissions for the project.
+/// The user must have `manage` permissions for the project.
 #[endpoint {
     method = DELETE,
     path =  "/v0/projects/{project}/plots/{plot}",
