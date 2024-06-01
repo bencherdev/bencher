@@ -883,9 +883,12 @@ const PerfPanel = (props: Props) => {
 	};
 
 	const handleStartTime = (date: string) =>
-		setSearchParams({ [START_TIME_PARAM]: dateToTime(date) });
+		setSearchParams({
+			[PLOT_PARAM]: null,
+			[START_TIME_PARAM]: dateToTime(date),
+		});
 	const handleEndTime = (date: string) =>
-		setSearchParams({ [END_TIME_PARAM]: dateToTime(date) });
+		setSearchParams({ [PLOT_PARAM]: null, [END_TIME_PARAM]: dateToTime(date) });
 
 	const handleTab = (tab: PerfTab) => {
 		if (isPerfTab(tab)) {
@@ -895,7 +898,7 @@ const PerfPanel = (props: Props) => {
 
 	const handleBool = (param: string, value: boolean) => {
 		if (typeof value === "boolean") {
-			setSearchParams({ [param]: value });
+			setSearchParams({ [PLOT_PARAM]: null, [param]: value });
 		}
 	};
 
@@ -905,7 +908,7 @@ const PerfPanel = (props: Props) => {
 
 	const handleXAxis = (x_axis: XAxis) => {
 		if (isXAxis(x_axis)) {
-			setSearchParams({ [X_AXIS_PARAM]: x_axis });
+			setSearchParams({ [PLOT_PARAM]: null, [X_AXIS_PARAM]: x_axis });
 		}
 	};
 
@@ -1041,6 +1044,7 @@ const PerfPanel = (props: Props) => {
 					testbeds={testbeds}
 					benchmarks={benchmarks}
 					measures={measures}
+					plot={plot}
 					handleRefresh={handleRefresh}
 				/>
 			</Show>

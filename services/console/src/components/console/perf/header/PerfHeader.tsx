@@ -5,6 +5,7 @@ import {
 	createEffect,
 	createSignal,
 	createResource,
+	createMemo,
 } from "solid-js";
 import {
 	type JsonAuthUser,
@@ -33,6 +34,7 @@ export interface Props {
 	testbeds: Accessor<string[]>;
 	benchmarks: Accessor<string[]>;
 	measures: Accessor<string[]>;
+	plot: Accessor<undefined | string>;
 	handleRefresh: () => void;
 }
 
@@ -40,11 +42,20 @@ const PerfHeader = (props: Props) => {
 	const [share, setShare] = createSignal(false);
 	const [pin, setPin] = createSignal(false);
 
-	const [showPin] = createResource(props.project, (project) =>
-		isAllowedProjectManage(props.apiUrl, {
-			project: project.uuid,
-		}),
+	const isAllowedFetcher = createMemo(() => {
+		return {
+			apiUrl: props.apiUrl,
+			project: props.project(),
+		};
+	});
+	const [isAllowed] = createResource(
+		isAllowedFetcher,
+		async ({ apiUrl, project }) =>
+			isAllowedProjectManage(apiUrl, {
+				project: project?.uuid,
+			}),
 	);
+	const showPin = createMemo(() => isAllowed() && props.plot() === undefined);
 
 	createEffect(() => {
 		setPageTitle(props.project()?.name);

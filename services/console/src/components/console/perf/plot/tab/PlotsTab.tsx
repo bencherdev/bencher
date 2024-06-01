@@ -104,7 +104,7 @@ const PlotRow = (props: {
 							<div class="column">
 								<small style="word-break: break-word;">
 									{plot().title ??
-										`Unnamed Plot (${fmtDateTime(plot().created)})`}
+										`Untitled Plot (${fmtDateTime(plot().created)})`}
 								</small>
 							</div>
 						</div>
