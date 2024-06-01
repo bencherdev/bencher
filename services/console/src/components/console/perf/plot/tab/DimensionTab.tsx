@@ -62,7 +62,7 @@ const DimensionsTab = (props: {
 										<div class="level-right">
 											<div class="level-item">
 												{/* biome-ignore lint/a11y/useValidAnchor: loading fallback */}
-												<a class="button">View</a>
+												<a class="button">Manage</a>
 											</div>
 										</div>
 									</Show>

@@ -159,12 +159,12 @@ const FullPlotHeader = (props: Props) => {
 								<a
 									class="level-item button is-small is-rounded"
 									style="margin-left: 1rem;"
-									title={`View ${measure()?.name}`}
+									title={`Manage ${measure()?.name}`}
 									href={`/console/projects/${props.project_slug()}/measures/${
 										measure()?.slug
 									}?${BACK_PARAM}=${encodePath()}`}
 								>
-									<small>View</small>
+									<small>Manage</small>
 								</a>
 							</Show>
 						</div>
