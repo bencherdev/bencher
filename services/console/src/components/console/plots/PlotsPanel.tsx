@@ -16,8 +16,10 @@ import { httpGet } from "../../../util/http";
 import Pinned from "./Pinned";
 import { validJwt } from "../../../util/valid";
 import { createStore } from "solid-js/store";
+import { useSearchParams } from "../../../util/url";
 
-const MAX_PLOTS = 255;
+const SEARCH_PARAM = "search";
+const MAX_PLOTS = 64;
 
 export interface Props {
 	apiUrl: string;
@@ -29,13 +31,24 @@ const PlotsPanel = (props: Props) => {
 	const [bencher_valid] = createResource(
 		async () => await bencher_valid_init(),
 	);
+	const [searchParams, setSearchParams] = useSearchParams();
 
 	const params = createMemo(() => props.params);
 	const user = authUser();
 
 	createEffect(() => {
 		setPageTitle(`${project()?.name ?? "Project"} Plots`);
+
+		const initParams: Record<string, null | number | boolean> = {};
+		if (typeof searchParams[SEARCH_PARAM] !== "string") {
+			initParams[SEARCH_PARAM] = null;
+		}
+		if (Object.keys(initParams).length !== 0) {
+			setSearchParams(initParams, { replace: true });
+		}
 	});
+
+	const search = createMemo(() => searchParams[SEARCH_PARAM]);
 
 	const project_slug = createMemo(() => params().project);
 	const projectFetcher = createMemo(() => {
@@ -72,16 +85,27 @@ const PlotsPanel = (props: Props) => {
 	};
 	const [project] = createResource<JsonProject>(projectFetcher, getProject);
 
+	const searchQuery = createMemo(() => {
+		return {
+			per_page: MAX_PLOTS,
+			search: search(),
+		};
+	});
 	const plotsFetcher = createMemo(() => {
 		return {
 			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
+			searchQuery: searchQuery(),
 			token: user?.token,
 		};
 	});
 	const getPlots = async (fetcher: {
 		bencher_valid: InitOutput;
 		project_slug: string;
+		searchQuery: {
+			per_page: number;
+			search: undefined | string;
+		};
 		token: string;
 	}) => {
 		const EMPTY_ARRAY: JsonPlot[] = [];
@@ -91,7 +115,15 @@ const PlotsPanel = (props: Props) => {
 		if (!validJwt(fetcher.token)) {
 			return EMPTY_ARRAY;
 		}
-		const path = `/v0/projects/${fetcher.project_slug}/plots?per_page=${MAX_PLOTS}`;
+		const searchParams = new URLSearchParams();
+		for (const [key, value] of Object.entries(fetcher.searchQuery)) {
+			if (value) {
+				searchParams.set(key, value.toString());
+			}
+		}
+		const path = `/v0/projects/${
+			fetcher.project_slug
+		}/plots?${searchParams.toString()}`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
 				return resp?.data as JsonPlot[];
