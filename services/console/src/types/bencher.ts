@@ -457,15 +457,15 @@ export enum XAxis {
 
 export interface JsonNewPlot {
 	/**
-	 * The title of the plot.
-	 * Maximum length is 64 characters.
-	 */
-	title?: ResourceName;
-	/**
 	 * The index of the plot.
 	 * Maximum index is 64.
 	 */
 	index?: Index;
+	/**
+	 * The title of the plot.
+	 * Maximum length is 64 characters.
+	 */
+	title?: ResourceName;
 	/** Display metric lower values. */
 	lower_value: boolean;
 	/** Display metric upper values. */

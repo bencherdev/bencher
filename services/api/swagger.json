@@ -4064,7 +4064,7 @@
           "plots"
         ],
         "summary": "List plots for a project",
-        "description": "List all plots for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the plots are sorted in their rank order.",
+        "description": "List all plots for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project. By default, the plots are sorted in their index order.",
         "operationId": "proj_plots_get",
         "parameters": [
           {
@@ -11161,10 +11161,10 @@
       "ProjPlotsSort": {
         "oneOf": [
           {
-            "description": "Sort by plot rank.",
+            "description": "Sort by plot index.",
             "type": "string",
             "enum": [
-              "rank"
+              "index"
             ]
           }
         ]

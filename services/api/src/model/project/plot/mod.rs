@@ -42,8 +42,8 @@ pub struct QueryPlot {
     pub id: PlotId,
     pub uuid: PlotUuid,
     pub project_id: ProjectId,
-    pub title: Option<ResourceName>,
     pub rank: Rank,
+    pub title: Option<ResourceName>,
     pub lower_value: bool,
     pub upper_value: bool,
     pub lower_boundary: bool,
@@ -258,8 +258,8 @@ impl Ranked for QueryPlot {
 pub struct InsertPlot {
     pub uuid: PlotUuid,
     pub project_id: ProjectId,
-    pub title: Option<ResourceName>,
     pub rank: Rank,
+    pub title: Option<ResourceName>,
     pub lower_value: bool,
     pub upper_value: bool,
     pub lower_boundary: bool,
@@ -277,8 +277,8 @@ impl InsertPlot {
         plot: JsonNewPlot,
     ) -> Result<QueryPlot, HttpError> {
         let JsonNewPlot {
-            title,
             index,
+            title,
             lower_value,
             upper_value,
             lower_boundary,
@@ -295,8 +295,8 @@ impl InsertPlot {
         let insert_plot = Self {
             uuid: PlotUuid::new(),
             project_id: query_project.id,
-            title,
             rank,
+            title,
             lower_value,
             upper_value,
             lower_boundary,
@@ -328,8 +328,8 @@ impl InsertPlot {
 #[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = plot_table)]
 pub struct UpdatePlot {
-    pub title: Option<Option<ResourceName>>,
     pub rank: Option<Rank>,
+    pub title: Option<Option<ResourceName>>,
     pub window: Option<Window>,
     pub modified: DateTime,
 }
@@ -341,22 +341,22 @@ impl UpdatePlot {
         query_plot: &QueryPlot,
         update: JsonUpdatePlot,
     ) -> Result<Self, HttpError> {
-        let (title, index, window) = match update {
+        let (index, title, window) = match update {
             JsonUpdatePlot::Patch(patch) => {
                 let JsonPlotPatch {
-                    title,
                     index,
+                    title,
                     window,
                 } = patch;
-                (title.map(Some), index, window)
+                (index, title.map(Some), window)
             },
             JsonUpdatePlot::Null(patch_url) => {
                 let JsonPlotPatchNull {
-                    title: (),
                     index,
+                    title: (),
                     window,
                 } = patch_url;
-                (Some(None), index, window)
+                (index, Some(None), window)
             },
         };
         let rank = if let Some(index) = index {
@@ -365,8 +365,8 @@ impl UpdatePlot {
             None
         };
         Ok(Self {
-            title,
             rank,
+            title,
             window,
             modified: DateTime::now(),
         })
@@ -378,8 +378,8 @@ impl UpdatePlot {
         rank: Rank,
     ) -> Result<(), HttpError> {
         let update_plot = UpdatePlot {
-            title: None,
             rank: Some(rank),
+            title: None,
             window: None,
             modified: DateTime::now(),
         };

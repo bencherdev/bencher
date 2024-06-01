@@ -44,9 +44,9 @@ pub type ProjPlotsPagination = JsonPagination<ProjPlotsSort>;
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjPlotsSort {
-    /// Sort by plot rank.
+    /// Sort by plot index.
     #[default]
-    Rank,
+    Index,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -77,7 +77,7 @@ pub async fn proj_plots_options(
 /// List all plots for a project.
 /// If the project is public, then the user does not need to be authenticated.
 /// If the project is private, then the user must be authenticated and have `view` permissions for the project.
-/// By default, the plots are sorted in their rank order.
+/// By default, the plots are sorted in their index order.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/plots",
@@ -130,7 +130,7 @@ async fn get_ls_inner(
     }
 
     query = match pagination_params.order() {
-        ProjPlotsSort::Rank => match pagination_params.direction {
+        ProjPlotsSort::Index => match pagination_params.direction {
             Some(JsonDirection::Asc) | None => query.order(schema::plot::rank.asc()),
             Some(JsonDirection::Desc) => query.order(schema::plot::rank.desc()),
         },

@@ -14,12 +14,12 @@ crate::typed_uuid::typed_uuid!(PlotUuid);
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[allow(clippy::struct_excessive_bools)]
 pub struct JsonNewPlot {
-    /// The title of the plot.
-    /// Maximum length is 64 characters.
-    pub title: Option<ResourceName>,
     /// The index of the plot.
     /// Maximum index is 64.
     pub index: Option<Index>,
+    /// The title of the plot.
+    /// Maximum length is 64 characters.
+    pub title: Option<ResourceName>,
     /// Display metric lower values.
     pub lower_value: bool,
     /// Display metric upper values.
@@ -86,13 +86,13 @@ pub enum JsonUpdatePlot {
 #[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPlotPatch {
+    /// The new index for the plot.
+    /// Maximum index is 64.
+    pub index: Option<Index>,
     /// The new title of the plot.
     /// Set to `null` to remove the current title.
     /// Maximum length is 64 characters.
     pub title: Option<ResourceName>,
-    /// The new index for the plot.
-    /// Maximum index is 64.
-    pub index: Option<Index>,
     /// The window of time for the plot, in seconds.
     /// Metrics outside of this window will be omitted.
     pub window: Option<Window>,
@@ -101,8 +101,8 @@ pub struct JsonPlotPatch {
 #[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPlotPatchNull {
-    pub title: (),
     pub index: Option<Index>,
+    pub title: (),
     pub window: Option<Window>,
 }
 
@@ -111,16 +111,16 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
     where
         D: Deserializer<'de>,
     {
-        const TITLE_FIELD: &str = "title";
         const INDEX_FIELD: &str = "index";
+        const TITLE_FIELD: &str = "title";
         const WINDOW_FIELD: &str = "window";
-        const FIELDS: &[&str] = &[TITLE_FIELD, INDEX_FIELD, WINDOW_FIELD];
+        const FIELDS: &[&str] = &[INDEX_FIELD, TITLE_FIELD, WINDOW_FIELD];
 
         #[derive(Deserialize)]
         #[serde(field_identifier, rename_all = "snake_case")]
         enum Field {
-            Title,
             Index,
+            Title,
             Window,
         }
 
@@ -137,23 +137,23 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
             where
                 V: serde::de::MapAccess<'de>,
             {
-                let mut title = None;
                 let mut index = None;
+                let mut title = None;
                 let mut window = None;
 
                 while let Some(key) = map.next_key()? {
                     match key {
-                        Field::Title => {
-                            if title.is_some() {
-                                return Err(serde::de::Error::duplicate_field(TITLE_FIELD));
-                            }
-                            title = Some(map.next_value()?);
-                        },
                         Field::Index => {
                             if index.is_some() {
                                 return Err(serde::de::Error::duplicate_field(INDEX_FIELD));
                             }
                             index = Some(map.next_value()?);
+                        },
+                        Field::Title => {
+                            if title.is_some() {
+                                return Err(serde::de::Error::duplicate_field(TITLE_FIELD));
+                            }
+                            title = Some(map.next_value()?);
                         },
                         Field::Window => {
                             if window.is_some() {
@@ -166,18 +166,18 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
 
                 Ok(match title {
                     Some(Some(title)) => Self::Value::Patch(JsonPlotPatch {
-                        title: Some(title),
                         index,
+                        title: Some(title),
                         window,
                     }),
                     Some(None) => Self::Value::Null(JsonPlotPatchNull {
-                        title: (),
                         index,
+                        title: (),
                         window,
                     }),
                     None => Self::Value::Patch(JsonPlotPatch {
-                        title: None,
                         index,
+                        title: None,
                         window,
                     }),
                 })

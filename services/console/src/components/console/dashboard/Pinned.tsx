@@ -480,14 +480,14 @@ const PinnedSetting = (props: {
 				path={path}
 				card={{
 					kind: Card.FIELD,
-					label: "Window",
+					label: "Window (seconds)",
 					key: "window",
 					display: Display.RAW,
 					is_allowed: (_apiUrl, _params) => props.isAllowed() === true,
 					notify: false,
 					field: {
 						kind: FieldKind.PLOT_WINDOW,
-						label: "Window",
+						label: "Window (seconds)",
 						key: "window",
 						value: props.plot?.window ?? "",
 						valid: null,

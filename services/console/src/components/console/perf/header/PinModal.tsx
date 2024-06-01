@@ -1,13 +1,5 @@
-import { debounce } from "@solid-primitives/scheduled";
 import bencher_valid_init from "bencher_valid";
-import {
-	type Accessor,
-	Show,
-	createMemo,
-	createSignal,
-	createResource,
-} from "solid-js";
-import { embedHeight } from "../../../../config/types";
+import { type Accessor, createSignal, createResource } from "solid-js";
 import type {
 	JsonAuthUser,
 	JsonNewPlot,
@@ -15,17 +7,10 @@ import type {
 	JsonProject,
 	XAxis,
 } from "../../../../types/bencher";
-import { apiUrl, httpPost } from "../../../../util/http";
+import { httpPost } from "../../../../util/http";
 import Field, { type FieldHandler } from "../../../field/Field";
 import FieldKind from "../../../field/kind";
-import { DEBOUNCE_DELAY, validResourceName } from "../../../../util/valid";
-import { useNavigate, useSearchParams } from "../../../../util/url";
-import {
-	EMBED_TITLE_PARAM,
-	PERF_PLOT_EMBED_PARAMS,
-	PERF_PLOT_PARAMS,
-	PERF_PLOT_PIN_PARAMS,
-} from "../PerfPanel";
+import { useNavigate } from "../../../../util/url";
 import { createStore } from "solid-js/store";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
 import { plotFields } from "../../../../config/project/plot";
@@ -90,8 +75,8 @@ const PinModal = (props: Props) => {
 		setSubmitting(true);
 
 		const newPlot: JsonNewPlot = {
-			title: form?.title?.value ? form?.title?.value?.trim() : undefined,
 			index: Number.parseInt(form?.index?.value - 1),
+			title: form?.title?.value ? form?.title?.value?.trim() : undefined,
 			lower_value: props.lower_value(),
 			upper_value: props.upper_value(),
 			lower_boundary: props.lower_boundary(),
@@ -226,12 +211,12 @@ const initForm = () => {
 			value: "",
 			valid: null,
 		},
-		index: {
-			value: 1,
-			valid: true,
-		},
 		window: {
 			value: 2419200,
+			valid: true,
+		},
+		index: {
+			value: 1,
 			valid: true,
 		},
 	};
