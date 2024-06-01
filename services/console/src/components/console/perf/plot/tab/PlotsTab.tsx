@@ -134,12 +134,12 @@ const ViewReportButton = (props: {
 	return (
 		<a
 			class="button"
-			title="View Pinned Plot"
+			title="Manage Pinned Plot"
 			href={`/console/projects/${props.project_slug()}/${props.tab()}?search=${
 				props.plot()?.uuid
 			}`}
 		>
-			View
+			Manage
 		</a>
 	);
 };

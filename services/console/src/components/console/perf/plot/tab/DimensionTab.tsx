@@ -151,12 +151,12 @@ const ViewDimensionButton = (props: {
 	return (
 		<a
 			class="button"
-			title={`View ${props.dimension?.name}`}
+			title={`Manage ${props.dimension?.name}`}
 			href={`/console/projects/${props.project_slug()}/${props.tab()}/${
 				props.dimension?.slug
 			}?${BACK_PARAM}=${encodePath()}`}
 		>
-			View
+			Manage
 		</a>
 	);
 };

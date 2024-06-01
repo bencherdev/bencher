@@ -212,12 +212,12 @@ const ViewReportButton = (props: {
 	return (
 		<a
 			class="button"
-			title={`View Report from ${fmtDateTime(props.report?.start_time)}`}
+			title={`Manage Report from ${fmtDateTime(props.report?.start_time)}`}
 			href={`/console/projects/${props.project_slug()}/${props.tab()}/${
 				props.report?.uuid
 			}?${BACK_PARAM}=${encodePath()}`}
 		>
-			View
+			Manage
 		</a>
 	);
 };
