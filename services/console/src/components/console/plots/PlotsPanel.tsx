@@ -207,6 +207,7 @@ const PlotsPanel = (props: Props) => {
 								movePlot={movePlot}
 								updatePlot={updatePlot}
 								removePlot={removePlot}
+								search={search}
 							/>
 						</div>
 					)}

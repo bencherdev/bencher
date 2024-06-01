@@ -41,6 +41,7 @@ const Pinned = (props: {
 	movePlot: (from: number, to: number) => void;
 	updatePlot: (index: number, plot: JsonPlot) => void;
 	removePlot: (index: number) => void;
+	search: Accessor<undefined | string>;
 }) => {
 	const [state, setState] = createSignal(PinnedState.Front);
 
@@ -88,6 +89,7 @@ const Pinned = (props: {
 				index={props.index}
 				total={props.total}
 				movePlot={props.movePlot}
+				search={props.search}
 				state={state}
 				handleState={setState}
 			/>
@@ -134,6 +136,7 @@ const PinnedFront = (props: {
 	index: Accessor<number>;
 	total: Accessor<number>;
 	movePlot: (from: number, to: number) => void;
+	search: Accessor<undefined | string>;
 	state: Accessor<PinnedState>;
 	handleState: (state: PinnedState) => void;
 }) => {
@@ -148,6 +151,7 @@ const PinnedFront = (props: {
 				index={props.index}
 				total={props.total}
 				movePlot={props.movePlot}
+				search={props.search}
 				state={props.state}
 				handleState={props.handleState}
 			/>
@@ -177,6 +181,7 @@ const PinnedButtons = (props: {
 	index: Accessor<number>;
 	total: Accessor<number>;
 	movePlot: (from: number, to: number) => void;
+	search: Accessor<undefined | string>;
 	state: Accessor<PinnedState>;
 	handleState: (state: PinnedState) => void;
 }) => {
@@ -218,68 +223,70 @@ const PinnedButtons = (props: {
 	return (
 		<nav class="level is-mobile">
 			<div class="level-left">
-				<div class="level is-mobile">
-					<div class="level-item">
-						<button
-							type="button"
-							class={`button is-small is-rounded${
-								props.state() === PinnedState.Rank ? " is-active" : ""
-							}`}
-							title="Move plot"
-							disabled={!props.isAllowed()}
-							onClick={(e) => {
-								e.preventDefault();
-								switch (props.state()) {
-									case PinnedState.Rank:
-										props.handleState(PinnedState.Front);
-										break;
-									default:
-										props.handleState(PinnedState.Rank);
-										break;
-								}
-							}}
-						>
-							{props.index() + 1}
-						</button>
-					</div>
-					<Show when={props.isAllowed()}>
+				<Show when={props.search() === undefined}>
+					<div class="level is-mobile">
 						<div class="level-item">
-							<div class="buttons has-addons">
-								<button
-									type="button"
-									class="button is-small"
-									title="Move plot down"
-									disabled={props.index() === props.total() - 1}
-									onClick={(e) => {
-										e.preventDefault();
-										// Because the ranking algorithm looks backwards,
-										// we need to jump ahead, further down the list by two instead of one.
-										// Otherwise, the plot will be placed in the same position, albeit with a different rank.
-										setRank(props.index() + 1);
-									}}
-								>
-									<span class="icon is-small">
-										<i class="fas fa-chevron-down" />
-									</span>
-								</button>
-								<button
-									type="button"
-									class="button is-small"
-									title="Move plot up"
-									disabled={props.index() === 0}
-									onClick={(e) => {
-										e.preventDefault();
-										setRank(props.index() - 1);
-									}}
-								>
-									<span class="icon is-small">
-										<i class="fas fa-chevron-up" />
-									</span>
-								</button>
-							</div>
+							<button
+								type="button"
+								class={`button is-small is-rounded${
+									props.state() === PinnedState.Rank ? " is-active" : ""
+								}`}
+								title="Move plot"
+								disabled={!props.isAllowed()}
+								onClick={(e) => {
+									e.preventDefault();
+									switch (props.state()) {
+										case PinnedState.Rank:
+											props.handleState(PinnedState.Front);
+											break;
+										default:
+											props.handleState(PinnedState.Rank);
+											break;
+									}
+								}}
+							>
+								{props.index() + 1}
+							</button>
 						</div>
-					</Show>
-				</div>
+						<Show when={props.isAllowed()}>
+							<div class="level-item">
+								<div class="buttons has-addons">
+									<button
+										type="button"
+										class="button is-small"
+										title="Move plot down"
+										disabled={props.index() === props.total() - 1}
+										onClick={(e) => {
+											e.preventDefault();
+											// Because the ranking algorithm looks backwards,
+											// we need to jump ahead, further down the list by two instead of one.
+											// Otherwise, the plot will be placed in the same position, albeit with a different rank.
+											setRank(props.index() + 1);
+										}}
+									>
+										<span class="icon is-small">
+											<i class="fas fa-chevron-down" />
+										</span>
+									</button>
+									<button
+										type="button"
+										class="button is-small"
+										title="Move plot up"
+										disabled={props.index() === 0}
+										onClick={(e) => {
+											e.preventDefault();
+											setRank(props.index() - 1);
+										}}
+									>
+										<span class="icon is-small">
+											<i class="fas fa-chevron-up" />
+										</span>
+									</button>
+								</div>
+							</div>
+						</Show>
+					</div>
+				</Show>
 			</div>
 
 			<div class="level-right">
