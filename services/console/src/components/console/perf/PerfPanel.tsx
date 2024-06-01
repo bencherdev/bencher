@@ -524,9 +524,11 @@ const PerfPanel = (props: Props) => {
 		if (props.isConsole && typeof fetcher.token !== "string") {
 			return EMPTY_OBJECT;
 		}
-
 		if (props.project) {
 			return props.project;
+		}
+		if (!fetcher.project_slug || fetcher.project_slug === "undefined") {
+			return EMPTY_OBJECT;
 		}
 		const path = `/v0/projects/${fetcher.project_slug}`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
