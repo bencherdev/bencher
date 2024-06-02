@@ -164,7 +164,7 @@ const PinnedPlot = (props: { plot: JsonPlot }) => {
 			loading="lazy"
 			src={`/perf/${props.plot?.project}/embed?embed_logo=false&embed_title=${
 				props.plot?.title ?? ""
-			}&embed_header=false&embed_key=false&${plotQueryString(props.plot)}`}
+			}&embed_header=false&key=false&${plotQueryString(props.plot)}`}
 			title={props.plot?.title ?? "Perf Plot"}
 			width="100%"
 			height="600px"
