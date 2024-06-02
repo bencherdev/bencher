@@ -1,9 +1,14 @@
 import type { Params } from "astro";
 import Pinned from "./Pinned";
-import { authUser, isAllowedProjectManage } from "../../../util/auth";
+import {
+	authUser,
+	isAllowedProjectDelete,
+	isAllowedProjectEdit,
+} from "../../../util/auth";
 import { createMemo, createResource } from "solid-js";
 import { httpGet } from "../../../util/http";
 import type { JsonPlot } from "../../../types/bencher";
+import { NotifyKind, navigateNotify } from "../../../util/notify";
 
 export interface Props {
 	apiUrl: string;
@@ -32,7 +37,7 @@ const PinnedPlot = (props: Props) => {
 				return;
 			});
 	};
-	const [plot] = createResource<JsonPlot>(plotFetcher, getPlot);
+	const [plot, { refetch }] = createResource<JsonPlot>(plotFetcher, getPlot);
 
 	const allowedFetcher = createMemo(() => {
 		return {
@@ -40,13 +45,20 @@ const PinnedPlot = (props: Props) => {
 			params: props.params,
 		};
 	});
-	const getAllowed = async (fetcher: {
+	const getAllowedEdit = async (fetcher: {
 		apiUrl: string;
 		params: Params;
 	}) => {
-		return await isAllowedProjectManage(fetcher.apiUrl, fetcher.params);
+		return await isAllowedProjectEdit(fetcher.apiUrl, fetcher.params);
 	};
-	const [isAllowed] = createResource(allowedFetcher, getAllowed);
+	const [isAllowedEdit] = createResource(allowedFetcher, getAllowedEdit);
+	const getAllowedDelete = async (fetcher: {
+		apiUrl: string;
+		params: Params;
+	}) => {
+		return await isAllowedProjectDelete(fetcher.apiUrl, fetcher.params);
+	};
+	const [isAllowedDelete] = createResource(allowedFetcher, getAllowedDelete);
 
 	return (
 		<Pinned
@@ -54,13 +66,24 @@ const PinnedPlot = (props: Props) => {
 			params={props.params}
 			user={user}
 			project_slug={project_slug}
-			isAllowed={isAllowed}
+			isAllowedEdit={isAllowedEdit}
+			isAllowedDelete={isAllowedDelete}
 			plot={plot()}
 			index={() => 0}
 			total={() => 1}
 			movePlot={() => {}}
-			updatePlot={() => {}}
-			removePlot={() => {}}
+			updatePlot={() => {
+				refetch();
+			}}
+			removePlot={() => {
+				navigateNotify(
+					NotifyKind.OK,
+					"Hare today, gone tomorrow. Plot removed!",
+					`/console/projects/${props.params?.project}/plots`,
+					null,
+					null,
+				);
+			}}
 			search={() => props.params?.plot}
 		/>
 	);

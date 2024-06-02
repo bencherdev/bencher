@@ -11,6 +11,6 @@ export const PLOT_FIELDS = {
 		help: "Must be a positive integer less than or equal to 64",
 	},
 	window: {
-		help: "Must be a non-zero positive integer less than or equal to 4,294,967,295",
+		help: "Must be a non-zero positive integer",
 	},
 };

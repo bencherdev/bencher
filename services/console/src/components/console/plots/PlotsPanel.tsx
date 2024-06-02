@@ -239,6 +239,22 @@ const PlotsPanel = (props: Props) => {
 						<PinNewPlot project_slug={project_slug} />
 					</div>
 				</Show>
+				<Show when={!isAllowedCreate() && plotsLength() === 0}>
+					<div class="column is-11-tablet is-12-desktop is-6-widescreen">
+						<div class="box">
+							<div class="content has-text-centered">
+								<h2 class="title is-2">This project has no pinned plots</h2>
+							</div>
+							<a
+								type="button"
+								class="button is-primary is-fullwidth"
+								href={`/console/projects/${project_slug()}/perf`}
+							>
+								View a Perf Plot
+							</a>
+						</div>
+					</div>
+				</Show>
 			</div>
 		</>
 	);
