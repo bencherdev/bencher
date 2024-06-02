@@ -6,10 +6,7 @@ use bencher_rank::{Rank, RankGenerator, Ranked};
 use diesel::{BelongingToDsl, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
-use super::{
-    benchmark::QueryBenchmark, branch::QueryBranch, measure::QueryMeasure, testbed::QueryTestbed,
-    ProjectId, QueryProject,
-};
+use super::{ProjectId, QueryProject};
 use crate::{
     conn_lock,
     context::{ApiContext, DbConnection},
@@ -165,54 +162,10 @@ impl QueryPlot {
             BencherResource::Plot,
             self.project_id,
         );
-        let branches = QueryPlotBranch::get_all_for_plot(conn, &self)?
-            .into_iter()
-            .filter_map(|p| match QueryBranch::get_uuid(conn, p.branch_id) {
-                Ok(uuid) => Some(uuid),
-                Err(err) => {
-                    debug_assert!(false, "{err}");
-                    #[cfg(feature = "sentry")]
-                    sentry::capture_error(&err);
-                    None
-                },
-            })
-            .collect();
-        let testbeds = QueryPlotTestbed::get_all_for_plot(conn, &self)?
-            .into_iter()
-            .filter_map(|p| match QueryTestbed::get_uuid(conn, p.testbed_id) {
-                Ok(uuid) => Some(uuid),
-                Err(err) => {
-                    debug_assert!(false, "{err}");
-                    #[cfg(feature = "sentry")]
-                    sentry::capture_error(&err);
-                    None
-                },
-            })
-            .collect();
-        let benchmarks = QueryPlotBenchmark::get_all_for_plot(conn, &self)?
-            .into_iter()
-            .filter_map(|p| match QueryBenchmark::get_uuid(conn, p.benchmark_id) {
-                Ok(uuid) => Some(uuid),
-                Err(err) => {
-                    debug_assert!(false, "{err}");
-                    #[cfg(feature = "sentry")]
-                    sentry::capture_error(&err);
-                    None
-                },
-            })
-            .collect();
-        let measures = QueryPlotMeasure::get_all_for_plot(conn, &self)?
-            .into_iter()
-            .filter_map(|p| match QueryMeasure::get_uuid(conn, p.measure_id) {
-                Ok(uuid) => Some(uuid),
-                Err(err) => {
-                    debug_assert!(false, "{err}");
-                    #[cfg(feature = "sentry")]
-                    sentry::capture_error(&err);
-                    None
-                },
-            })
-            .collect();
+        let branches = QueryPlotBranch::into_json_for_plot(conn, &self)?;
+        let testbeds = QueryPlotTestbed::into_json_for_plot(conn, &self)?;
+        let benchmarks = QueryPlotBenchmark::into_json_for_plot(conn, &self)?;
+        let measures = QueryPlotMeasure::into_json_for_plot(conn, &self)?;
         let Self {
             uuid,
             title,

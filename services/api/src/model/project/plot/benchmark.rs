@@ -25,7 +25,7 @@ pub struct QueryPlotBenchmark {
     pub rank: Rank,
 }
 impl QueryPlotBenchmark {
-    pub fn get_all_for_plot(
+    fn get_all_for_plot(
         conn: &mut DbConnection,
         query_plot: &QueryPlot,
     ) -> Result<Vec<Self>, HttpError> {
@@ -33,6 +33,24 @@ impl QueryPlotBenchmark {
             .order(plot_benchmark_table::rank.asc())
             .load::<Self>(conn)
             .map_err(resource_not_found_err!(PlotBenchmark, query_plot))
+    }
+
+    pub fn into_json_for_plot(
+        conn: &mut DbConnection,
+        query_plot: &QueryPlot,
+    ) -> Result<Vec<BenchmarkUuid>, HttpError> {
+        Ok(Self::get_all_for_plot(conn, query_plot)?
+            .into_iter()
+            .filter_map(|p| match QueryBenchmark::get_uuid(conn, p.benchmark_id) {
+                Ok(uuid) => Some(uuid),
+                Err(err) => {
+                    debug_assert!(false, "{err}");
+                    #[cfg(feature = "sentry")]
+                    sentry::capture_error(&err);
+                    None
+                },
+            })
+            .collect())
     }
 }
 

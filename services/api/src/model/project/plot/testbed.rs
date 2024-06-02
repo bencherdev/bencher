@@ -25,7 +25,7 @@ pub struct QueryPlotTestbed {
     pub rank: Rank,
 }
 impl QueryPlotTestbed {
-    pub fn get_all_for_plot(
+    fn get_all_for_plot(
         conn: &mut DbConnection,
         query_plot: &QueryPlot,
     ) -> Result<Vec<Self>, HttpError> {
@@ -33,6 +33,24 @@ impl QueryPlotTestbed {
             .order(plot_testbed_table::rank.asc())
             .load::<Self>(conn)
             .map_err(resource_not_found_err!(PlotTestbed, query_plot))
+    }
+
+    pub fn into_json_for_plot(
+        conn: &mut DbConnection,
+        query_plot: &QueryPlot,
+    ) -> Result<Vec<TestbedUuid>, HttpError> {
+        Ok(Self::get_all_for_plot(conn, query_plot)?
+            .into_iter()
+            .filter_map(|p| match QueryTestbed::get_uuid(conn, p.testbed_id) {
+                Ok(uuid) => Some(uuid),
+                Err(err) => {
+                    debug_assert!(false, "{err}");
+                    #[cfg(feature = "sentry")]
+                    sentry::capture_error(&err);
+                    None
+                },
+            })
+            .collect())
     }
 }
 
