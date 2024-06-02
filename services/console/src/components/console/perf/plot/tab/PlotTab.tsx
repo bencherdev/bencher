@@ -31,9 +31,13 @@ export interface Props {
 	project_slug: Accessor<undefined | string>;
 	theme: Accessor<Theme>;
 	isConsole: boolean;
-	measures: Accessor<string[]>;
 	tab: Accessor<PerfTab>;
 	handleTab: (tab: PerfTab) => void;
+	// Tab UUID
+	branches: Accessor<string[]>;
+	testbeds: Accessor<string[]>;
+	benchmarks: Accessor<string[]>;
+	measures: Accessor<string[]>;
 	// Tab data
 	reports_data: Resource<JsonReport>;
 	branches_data: Resource<JsonBranch>;
@@ -70,9 +74,9 @@ export interface Props {
 		index: number,
 		measure_uuid: undefined | string,
 	) => void;
-	handleBranchChecked: (index: number) => void;
-	handleTestbedChecked: (index: number) => void;
-	handleBenchmarkChecked: (index: number) => void;
+	handleBranchChecked: (index: undefined | number) => void;
+	handleTestbedChecked: (index: undefined | number) => void;
+	handleBenchmarkChecked: (index: undefined | number) => void;
 	handlePlotChecked: (index: number) => void;
 	// Handle page
 	handleReportsPage: (reports_page: number) => void;
@@ -141,7 +145,7 @@ const PlotTab = (props: Props) => {
 		}
 	};
 
-	const handleChecked = (index: number, uuid?: string) => {
+	const handleChecked = (index?: number, uuid?: string) => {
 		switch (props.tab()) {
 			case PerfTab.REPORTS:
 				return props.handleReportChecked(index, uuid);
@@ -256,6 +260,9 @@ const PlotTab = (props: Props) => {
 				project_slug={props.project_slug}
 				theme={props.theme}
 				isConsole={props.isConsole}
+				branches={props.branches}
+				testbeds={props.testbeds}
+				benchmarks={props.benchmarks}
 				measures={props.measures}
 				reports_tab={props.reports_tab}
 				branches_tab={props.branches_tab}

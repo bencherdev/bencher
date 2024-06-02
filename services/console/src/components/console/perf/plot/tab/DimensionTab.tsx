@@ -19,24 +19,43 @@ const DimensionsTab = (props: {
 	isConsole: boolean;
 	loading: Accessor<boolean>;
 	tab: Accessor<PerfTab>;
+	tabUuids: Accessor<string[]>;
 	tabList: Accessor<TabList<JsonBranch | JsonTestbed | JsonBenchmark>>;
 	per_page: Accessor<number>;
 	search: Accessor<undefined | string>;
-	handleChecked: (index: number, slug?: string) => void;
+	handleChecked: (index?: number, slug?: string) => void;
 	handleSearch: FieldHandler;
 }) => {
 	return (
 		<>
 			<div class="panel-block is-block">
-				<Field
-					kind={FieldKind.SEARCH}
-					fieldKey="search"
-					value={props.search() ?? ""}
-					config={{
-						placeholder: `Search ${toCapitalized(props.tab())}`,
-					}}
-					handleField={props.handleSearch}
-				/>
+				<div class="columns is-vcentered">
+					<div class="column">
+						<Field
+							kind={FieldKind.SEARCH}
+							fieldKey="search"
+							value={props.search() ?? ""}
+							config={{
+								placeholder: `Search ${toCapitalized(props.tab())}`,
+							}}
+							handleField={props.handleSearch}
+						/>
+					</div>
+					<Show when={props.tabUuids().length > 0}>
+						<div class="column is-narrow">
+							<button
+								type="button"
+								class="button is-small"
+								onClick={(e) => {
+									e.preventDefault();
+									props.handleChecked();
+								}}
+							>
+								Clear {toCapitalized(props.tab())}
+							</button>
+						</div>
+					</Show>
+				</div>
 			</div>
 			<Switch
 				fallback={<div class="panel-block">🐰 No {props.tab()} found</div>}

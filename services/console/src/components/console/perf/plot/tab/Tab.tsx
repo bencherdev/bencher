@@ -20,6 +20,10 @@ const Tab = (props: {
 	project_slug: Accessor<undefined | string>;
 	theme: Accessor<Theme>;
 	isConsole: boolean;
+	// Tab UUIDs
+	branches: Accessor<string[]>;
+	testbeds: Accessor<string[]>;
+	benchmarks: Accessor<string[]>;
 	measures: Accessor<string[]>;
 	// Tabs
 	reports_tab: TabList<JsonReport>;
@@ -35,11 +39,25 @@ const Tab = (props: {
 	reports_start_date: Accessor<undefined | string>;
 	reports_end_date: Accessor<undefined | string>;
 	handlePage: (page: number) => void;
-	handleChecked: (index: number, slug?: string) => void;
+	handleChecked: (index?: number, slug?: string) => void;
 	handleSearch: FieldHandler;
 	handleReportsStartTime: (start_time: string) => void;
 	handleReportsEndTime: (end_time: string) => void;
 }) => {
+	const tabUuids = createMemo(() => {
+		switch (props.tab()) {
+			case PerfTab.BRANCHES:
+				return props.branches();
+			case PerfTab.TESTBEDS:
+				return props.testbeds();
+			case PerfTab.BENCHMARKS:
+				return props.benchmarks();
+			case PerfTab.REPORTS:
+			case PerfTab.PLOTS:
+				return [];
+		}
+	});
+
 	const tabList = createMemo(() => {
 		switch (props.tab()) {
 			case PerfTab.REPORTS:
@@ -163,6 +181,7 @@ const Tab = (props: {
 					isConsole={props.isConsole}
 					loading={props.loading}
 					tab={props.tab}
+					tabUuids={tabUuids}
 					tabList={
 						tabList as Accessor<
 							TabList<JsonBranch | JsonTestbed | JsonBenchmark>

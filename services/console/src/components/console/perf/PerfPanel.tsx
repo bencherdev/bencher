@@ -818,10 +818,20 @@ const PerfPanel = (props: Props) => {
 	};
 	const handleChecked = (
 		resource_tab: TabList<JsonBranch | JsonTestbed | JsonBenchmark>,
-		index: number,
+		index: undefined | number,
 		param: string,
 		param_array: string[],
 	) => {
+		// Uncheck all
+		if (index === undefined) {
+			setSearchParams({
+				[REPORT_PARAM]: null,
+				[PLOT_PARAM]: null,
+				[param]: null,
+				[CLEAR_PARAM]: true,
+			});
+			return;
+		}
 		const item = resource_tab?.[index];
 		if (!item) {
 			return;
@@ -847,13 +857,13 @@ const PerfPanel = (props: Props) => {
 			});
 		}
 	};
-	const handleBranchChecked = (index: number) => {
+	const handleBranchChecked = (index: undefined | number) => {
 		handleChecked(branches_tab, index, BRANCHES_PARAM, branches());
 	};
-	const handleTestbedChecked = (index: number) => {
+	const handleTestbedChecked = (index: undefined | number) => {
 		handleChecked(testbeds_tab, index, TESTBEDS_PARAM, testbeds());
 	};
-	const handleBenchmarkChecked = (index: number) => {
+	const handleBenchmarkChecked = (index: undefined | number) => {
 		handleChecked(benchmarks_tab, index, BENCHMARKS_PARAM, benchmarks());
 	};
 	const handleMeasure = (measure: null | string) => {

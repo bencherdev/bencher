@@ -88,9 +88,9 @@ export interface Props {
 		index: number,
 		measure_uuid: undefined | string,
 	) => void;
-	handleBranchChecked: (index: number) => void;
-	handleTestbedChecked: (index: number) => void;
-	handleBenchmarkChecked: (index: number) => void;
+	handleBranchChecked: (index: undefined | number) => void;
+	handleTestbedChecked: (index: undefined | number) => void;
+	handleBenchmarkChecked: (index: undefined | number) => void;
 	handlePlotChecked: (index: number) => void;
 	handleReportsPage: (reports_page: number) => void;
 	handleBranchesPage: (branches_page: number) => void;
@@ -183,6 +183,9 @@ const PerfPlot = (props: Props) => {
 							project_slug={props.project_slug}
 							theme={props.theme}
 							isConsole={props.isConsole}
+							branches={props.branches}
+							testbeds={props.testbeds}
+							benchmarks={props.benchmarks}
 							measures={props.measures}
 							tab={props.tab}
 							reports_data={props.reports_data}
