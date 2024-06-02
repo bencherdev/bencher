@@ -1,7 +1,11 @@
 import type { Params } from "astro";
 import FieldKind from "../../components/field/kind";
 import type { JsonMeasure } from "../../types/bencher";
-import { isAllowedProjectDelete, isAllowedProjectEdit } from "../../util/auth";
+import {
+	isAllowedProjectCreate,
+	isAllowedProjectDelete,
+	isAllowedProjectEdit,
+} from "../../util/auth";
 import { validResourceName, validSlug } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { addPath, createdSlugPath, parentPath, viewSlugPath } from "../util";
@@ -43,6 +47,7 @@ const measuresConfig = {
 					kind: Button.ADD,
 					title: "Measure",
 					path: addPath,
+					is_allowed: isAllowedProjectCreate,
 				},
 				{ kind: Button.REFRESH },
 			],

@@ -1,6 +1,10 @@
 import type { Params } from "astro";
 import FieldKind from "../../components/field/kind";
-import { isAllowedProjectDelete } from "../../util/auth";
+import {
+	isAllowedProjectCreate,
+	isAllowedProjectDelete,
+	isAllowedProjectEdit,
+} from "../../util/auth";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { addPath, createdUuidPath, parentPath, viewUuidPath } from "../util";
 
@@ -56,6 +60,7 @@ const thresholdsConfig = {
 					kind: Button.ADD,
 					title: "Threshold",
 					path: addPath,
+					is_allowed: isAllowedProjectCreate,
 				},
 				{ kind: Button.REFRESH },
 			],
@@ -169,6 +174,7 @@ const thresholdsConfig = {
 				{
 					kind: Button.EDIT,
 					path: (pathname: string) => `${pathname}/edit`,
+					is_allowed: isAllowedProjectEdit,
 				},
 				{ kind: Button.REFRESH },
 			],

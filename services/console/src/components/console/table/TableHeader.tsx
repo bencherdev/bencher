@@ -1,4 +1,11 @@
-import { createResource, For, Match, Switch, type Accessor } from "solid-js";
+import {
+	createResource,
+	For,
+	Match,
+	Show,
+	Switch,
+	type Accessor,
+} from "solid-js";
 import { pathname } from "../../../util/url";
 import { Button } from "../../../config/types";
 import type { Params } from "astro";
@@ -109,28 +116,62 @@ const TableHeaderButton = (props: {
 					/>
 				</Match>
 				<Match when={props.button.kind === Button.ADD}>
-					<a
-						class="button"
-						title={`Add ${props.button.title}`}
-						href={props.button.path(pathname())}
+					<Show
+						when={isAllowed.loading || isAllowed()}
+						fallback={
+							<button
+								type="button"
+								class="button"
+								title={`Add ${props.button.title}`}
+								disabled={true}
+							>
+								<span class="icon">
+									<i class="fas fa-plus" />
+								</span>
+								<span>Add</span>
+							</button>
+						}
 					>
-						<span class="icon">
-							<i class="fas fa-plus" />
-						</span>
-						<span>Add</span>
-					</a>
+						<a
+							class="button"
+							title={`Add ${props.button.title}`}
+							href={props.button.path(pathname())}
+						>
+							<span class="icon">
+								<i class="fas fa-plus" />
+							</span>
+							<span>Add</span>
+						</a>
+					</Show>
 				</Match>
-				<Match when={props.button.kind === Button.INVITE && isAllowed()}>
-					<a
-						class="button"
-						title={`Invite to ${props.button.title}`}
-						href={props.button.path(pathname())}
+				<Match when={props.button.kind === Button.INVITE}>
+					<Show
+						when={isAllowed()}
+						fallback={
+							<button
+								type="button"
+								class="button"
+								title={`Invite to ${props.button.title}`}
+								disabled={true}
+							>
+								<span class="icon">
+									<i class="fas fa-envelope" />
+								</span>
+								<span>Invite</span>
+							</button>
+						}
 					>
-						<span class="icon">
-							<i class="fas fa-envelope" />
-						</span>
-						<span>Invite</span>
-					</a>
+						<a
+							class="button"
+							title={`Invite to ${props.button.title}`}
+							href={props.button.path(pathname())}
+						>
+							<span class="icon">
+								<i class="fas fa-envelope" />
+							</span>
+							<span>Invite</span>
+						</a>
+					</Show>
 				</Match>
 				<Match when={props.button.kind === Button.REFRESH}>
 					<button

@@ -1,7 +1,11 @@
 import type { Params } from "astro";
 import FieldKind from "../../components/field/kind";
 import { type JsonProject, Visibility } from "../../types/bencher";
-import { isAllowedProjectDelete, isAllowedProjectEdit } from "../../util/auth";
+import {
+	isAllowedOrganizationCreate,
+	isAllowedProjectDelete,
+	isAllowedProjectEdit,
+} from "../../util/auth";
 import { validResourceName, validOptionUrl, validSlug } from "../../util/valid";
 import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { addPath, parentPath } from "../util";
@@ -58,6 +62,7 @@ const projectsConfig = {
 					kind: Button.ADD,
 					title: "Project",
 					path: addPath,
+					is_allowed: isAllowedOrganizationCreate,
 				},
 				{ kind: Button.REFRESH },
 			],

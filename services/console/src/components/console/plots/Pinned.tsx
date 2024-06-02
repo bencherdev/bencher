@@ -30,7 +30,8 @@ const Pinned = (props: {
 	params: Params;
 	user: JsonAuthUser;
 	project_slug: Accessor<undefined | string>;
-	isAllowed: Resource<boolean>;
+	isAllowedEdit: Resource<boolean>;
+	isAllowedDelete: Resource<boolean>;
 	plot: JsonPlot;
 	index: Accessor<number>;
 	total: Accessor<number>;
@@ -81,7 +82,7 @@ const Pinned = (props: {
 				apiUrl={props.apiUrl}
 				user={props.user}
 				project_slug={props.project_slug}
-				isAllowed={props.isAllowed}
+				isAllowedEdit={props.isAllowedEdit}
 				plot={plot()}
 				index={props.index}
 				total={props.total}
@@ -96,7 +97,7 @@ const Pinned = (props: {
 						apiUrl={props.apiUrl}
 						params={props.params}
 						user={props.user}
-						isAllowed={props.isAllowed}
+						isAllowedEdit={props.isAllowedEdit}
 						plot={plot()}
 						index={props.index}
 						total={props.total}
@@ -109,7 +110,8 @@ const Pinned = (props: {
 						apiUrl={props.apiUrl}
 						params={props.params}
 						user={props.user}
-						isAllowed={props.isAllowed}
+						isAllowedEdit={props.isAllowedEdit}
+						isAllowedDelete={props.isAllowedDelete}
 						plot={plot()}
 						index={props.index}
 						removePlot={props.removePlot}
@@ -127,7 +129,7 @@ const PinnedFront = (props: {
 	apiUrl: string;
 	user: JsonAuthUser;
 	project_slug: Accessor<undefined | string>;
-	isAllowed: Resource<boolean>;
+	isAllowedEdit: Resource<boolean>;
 	plot: JsonPlot;
 	index: Accessor<number>;
 	total: Accessor<number>;
@@ -143,7 +145,7 @@ const PinnedFront = (props: {
 				apiUrl={props.apiUrl}
 				user={props.user}
 				project_slug={props.project_slug}
-				isAllowed={props.isAllowed}
+				isAllowedEdit={props.isAllowedEdit}
 				plot={props.plot}
 				index={props.index}
 				total={props.total}
@@ -174,7 +176,7 @@ const PinnedButtons = (props: {
 	apiUrl: string;
 	user: JsonAuthUser;
 	project_slug: Accessor<undefined | string>;
-	isAllowed: Resource<boolean>;
+	isAllowedEdit: Resource<boolean>;
 	plot: JsonPlot;
 	index: Accessor<number>;
 	total: Accessor<number>;
@@ -230,7 +232,7 @@ const PinnedButtons = (props: {
 									props.state() === PinnedState.Rank ? " is-active" : ""
 								}`}
 								title="Move plot"
-								disabled={!props.isAllowed()}
+								disabled={!props.isAllowedEdit()}
 								onClick={(e) => {
 									e.preventDefault();
 									switch (props.state()) {
@@ -246,7 +248,7 @@ const PinnedButtons = (props: {
 								{props.index() + 1}
 							</button>
 						</div>
-						<Show when={props.isAllowed()}>
+						<Show when={props.isAllowedEdit()}>
 							<div class="level-item">
 								<div class="buttons has-addons">
 									<button
@@ -335,7 +337,7 @@ const PinnedRank = (props: {
 	apiUrl: string;
 	params: Params;
 	user: JsonAuthUser;
-	isAllowed: Resource<boolean>;
+	isAllowedEdit: Resource<boolean>;
 	plot: JsonPlot;
 	index: Accessor<number>;
 	total: Accessor<number>;
@@ -430,7 +432,8 @@ const PinnedSetting = (props: {
 	apiUrl: string;
 	params: Params;
 	user: JsonAuthUser;
-	isAllowed: Resource<boolean>;
+	isAllowedEdit: Resource<boolean>;
+	isAllowedDelete: Resource<boolean>;
 	plot: JsonPlot;
 	index: Accessor<number>;
 	removePlot: (index: number) => void;
@@ -464,7 +467,7 @@ const PinnedSetting = (props: {
 					label: "Title",
 					key: "title",
 					display: Display.RAW,
-					is_allowed: (_apiUrl, _params) => props.isAllowed() === true,
+					is_allowed: (_apiUrl, _params) => props.isAllowedEdit() === true,
 					notify: false,
 					field: {
 						kind: FieldKind.INPUT,
@@ -492,7 +495,7 @@ const PinnedSetting = (props: {
 					label: "Window (seconds)",
 					key: "window",
 					display: Display.RAW,
-					is_allowed: (_apiUrl, _params) => props.isAllowed() === true,
+					is_allowed: (_apiUrl, _params) => props.isAllowedEdit() === true,
 					notify: false,
 					field: {
 						kind: FieldKind.PLOT_WINDOW,
@@ -510,7 +513,7 @@ const PinnedSetting = (props: {
 				handleLoopback={handleUpdate}
 			/>
 			<br />
-			<Show when={props.isAllowed()}>
+			<Show when={props.isAllowedDelete()}>
 				<DeleteButton
 					apiUrl={props.apiUrl}
 					user={props.user}

@@ -4,7 +4,11 @@ import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, addPath, viewSlugPath, createdSlugPath } from "../util";
 import type { JsonTestbed } from "../../types/bencher";
 import FieldKind from "../../components/field/kind";
-import { isAllowedProjectDelete, isAllowedProjectEdit } from "../../util/auth";
+import {
+	isAllowedProjectCreate,
+	isAllowedProjectDelete,
+	isAllowedProjectEdit,
+} from "../../util/auth";
 
 export const TESTBED_ICON = "fas fa-server";
 
@@ -36,6 +40,7 @@ const testbedsConfig = {
 					kind: Button.ADD,
 					title: "Testbed",
 					path: addPath,
+					is_allowed: isAllowedProjectCreate,
 				},
 				{ kind: Button.REFRESH },
 			],

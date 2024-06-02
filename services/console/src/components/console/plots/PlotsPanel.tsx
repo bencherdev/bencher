@@ -11,7 +11,13 @@ import {
 	type Accessor,
 } from "solid-js";
 import { setPageTitle } from "../../../util/resource";
-import { authUser, isAllowedProjectManage } from "../../../util/auth";
+import {
+	authUser,
+	isAllowedProjectCreate,
+	isAllowedProjectDelete,
+	isAllowedProjectEdit,
+	isAllowedProjectManage,
+} from "../../../util/auth";
 import { httpGet } from "../../../util/http";
 import Pinned from "./Pinned";
 import { DEBOUNCE_DELAY, validJwt } from "../../../util/valid";
@@ -170,13 +176,27 @@ const PlotsPanel = (props: Props) => {
 			params: props.params,
 		};
 	});
-	const getAllowed = async (fetcher: {
+	const getAllowedCreate = async (fetcher: {
 		apiUrl: string;
 		params: Params;
 	}) => {
-		return await isAllowedProjectManage(fetcher.apiUrl, fetcher.params);
+		return await isAllowedProjectCreate(fetcher.apiUrl, fetcher.params);
 	};
-	const [isAllowed] = createResource(allowedFetcher, getAllowed);
+	const [isAllowedCreate] = createResource(allowedFetcher, getAllowedCreate);
+	const getAllowedEdit = async (fetcher: {
+		apiUrl: string;
+		params: Params;
+	}) => {
+		return await isAllowedProjectEdit(fetcher.apiUrl, fetcher.params);
+	};
+	const [isAllowedEdit] = createResource(allowedFetcher, getAllowedEdit);
+	const getAllowedDelete = async (fetcher: {
+		apiUrl: string;
+		params: Params;
+	}) => {
+		return await isAllowedProjectDelete(fetcher.apiUrl, fetcher.params);
+	};
+	const [isAllowedDelete] = createResource(allowedFetcher, getAllowedDelete);
 
 	return (
 		<>
@@ -185,6 +205,7 @@ const PlotsPanel = (props: Props) => {
 				params={props.params}
 				project={project}
 				search={search}
+				isAllowedCreate={isAllowedCreate}
 				handleRefresh={refetch}
 				handleSearch={handleSearch}
 			/>
@@ -200,7 +221,8 @@ const PlotsPanel = (props: Props) => {
 								params={props.params}
 								project_slug={project_slug}
 								user={user}
-								isAllowed={isAllowed}
+								isAllowedEdit={isAllowedEdit}
+								isAllowedDelete={isAllowedDelete}
 								plot={plot}
 								index={index}
 								total={plotsLength}
@@ -212,7 +234,7 @@ const PlotsPanel = (props: Props) => {
 						</div>
 					)}
 				</For>
-				<Show when={isAllowed() && plotsLength() < MAX_PLOTS}>
+				<Show when={isAllowedCreate() && plotsLength() < MAX_PLOTS}>
 					<div class="column is-11-tablet is-12-desktop is-6-widescreen">
 						<PinNewPlot project_slug={project_slug} />
 					</div>

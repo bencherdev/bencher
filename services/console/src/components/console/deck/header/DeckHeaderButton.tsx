@@ -1,5 +1,12 @@
 import type { Params } from "astro";
-import { type Accessor, Match, type Resource, Switch } from "solid-js";
+import {
+	type Accessor,
+	Match,
+	type Resource,
+	Switch,
+	createResource,
+	Show,
+} from "solid-js";
 import { Button } from "../../../../config/types";
 import type { JsonAuthUser } from "../../../../types/bencher";
 import { BACK_PARAM, encodePath, pathname } from "../../../../util/url";
@@ -22,26 +29,48 @@ export interface Props {
 export interface DeckHeaderButtonConfig {
 	kind: Button;
 	path?: (pathname: string) => string;
+	is_allowed?: (apiUrl: string, params: Params) => boolean;
 }
 
 const DeckHeaderButton = (props: Props) => {
+	const [isAllowed] = createResource(props.params, (params) =>
+		props.button.is_allowed?.(props.apiUrl, params),
+	);
+
 	return (
 		<Switch>
 			<Match when={props.button.kind === Button.EDIT}>
-				<a
-					class="button is-fullwidth"
-					title={`Edit ${props.title()}`}
-					href={`${
-						props.button?.path?.(pathname()) ?? "#"
-					}?${BACK_PARAM}=${encodePath()}`}
+				<Show
+					when={isAllowed()}
+					fallback={
+						<button
+							type="button"
+							class="button is-fullwidth"
+							title={`Edit ${props.title()}`}
+							disabled={true}
+						>
+							<span class="icon">
+								<i class="fas fa-pen" />
+							</span>
+							<span>Edit</span>
+						</button>
+					}
 				>
-					<span class="icon">
-						<i class="fas fa-pen" />
-					</span>
-					<span>Edit</span>
-				</a>
+					<a
+						class="button is-fullwidth"
+						title={`Edit ${props.title()}`}
+						href={`${
+							props.button?.path?.(pathname()) ?? "#"
+						}?${BACK_PARAM}=${encodePath()}`}
+					>
+						<span class="icon">
+							<i class="fas fa-pen" />
+						</span>
+						<span>Edit</span>
+					</a>
+				</Show>
 			</Match>
-			<Match when={props.button.kind === Button.STATUS}>
+			<Match when={props.button.kind === Button.STATUS && isAllowed()}>
 				<StatusButton
 					apiUrl={props.apiUrl}
 					user={props.user}

@@ -159,7 +159,7 @@ async fn get_ls_inner(
 /// Create a plot
 ///
 /// Create a plot for a project.
-/// The user must have `manage` permissions for the project.
+/// The user must have `create` permissions for the project.
 /// A project can have a maximum of 64 plots at a time.
 #[endpoint {
     method = POST,
@@ -195,7 +195,7 @@ async fn post_inner(
         &context.rbac,
         &path_params.project,
         auth_user,
-        Permission::Manage,
+        Permission::Create,
     )?;
 
     let query_plot = InsertPlot::from_json(context, &query_project, json_plot).await?;
@@ -272,7 +272,7 @@ async fn get_one_inner(
 /// Update a plot
 ///
 /// Update a plot for a project.
-/// The user must have `manage` permissions for the project.
+/// The user must have `edit` permissions for the project.
 #[endpoint {
     method = PATCH,
     path =  "/v0/projects/{project}/plots/{plot}",
@@ -308,7 +308,7 @@ async fn patch_inner(
         &context.rbac,
         &path_params.project,
         auth_user,
-        Permission::Manage,
+        Permission::Edit,
     )?;
 
     let query_plot =
@@ -332,7 +332,7 @@ async fn patch_inner(
 /// Delete a plot
 ///
 /// Delete a plot for a project.
-/// The user must have `manage` permissions for the project.
+/// The user must have `delete` permissions for the project.
 #[endpoint {
     method = DELETE,
     path =  "/v0/projects/{project}/plots/{plot}",
@@ -359,7 +359,7 @@ async fn delete_inner(
         &context.rbac,
         &path_params.project,
         auth_user,
-        Permission::Manage,
+        Permission::Delete,
     )?;
 
     let query_plot =

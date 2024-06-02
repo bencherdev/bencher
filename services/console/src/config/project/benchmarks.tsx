@@ -4,7 +4,11 @@ import { ActionButton, Button, Card, Display, Operation } from "../types";
 import { addPath, createdSlugPath, parentPath, viewSlugPath } from "../util";
 import type { JsonBenchmark } from "../../types/bencher";
 import FieldKind from "../../components/field/kind";
-import { isAllowedProjectDelete, isAllowedProjectEdit } from "../../util/auth";
+import {
+	isAllowedProjectCreate,
+	isAllowedProjectDelete,
+	isAllowedProjectEdit,
+} from "../../util/auth";
 
 export const BENCHMARK_ICON = "fas fa-tachometer-alt";
 
@@ -36,6 +40,7 @@ const benchmarksConfig = {
 					kind: Button.ADD,
 					title: "Benchmark",
 					path: addPath,
+					is_allowed: isAllowedProjectCreate,
 				},
 				{ kind: Button.REFRESH },
 			],

@@ -1,6 +1,7 @@
 import type { Params } from "astro";
 import { Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, viewUuidPath } from "../util";
+import { isAllowedProjectEdit } from "../../util/auth";
 
 const alertsConfig = {
 	[Operation.LIST]: {
@@ -62,7 +63,10 @@ const alertsConfig = {
 			path: parentPath,
 			path_to: "Alerts",
 			buttons: [
-				{ kind: Button.STATUS },
+				{
+					kind: Button.STATUS,
+					is_allowed: isAllowedProjectEdit,
+				},
 				{ kind: Button.PERF },
 				{ kind: Button.REFRESH },
 			],

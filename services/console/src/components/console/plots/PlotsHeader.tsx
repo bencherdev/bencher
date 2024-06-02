@@ -1,4 +1,4 @@
-import type { Accessor, Resource } from "solid-js";
+import { Show, type Accessor, type Resource } from "solid-js";
 import type { Params } from "astro";
 import Field from "../../field/Field";
 import FieldKind from "../../field/kind";
@@ -9,6 +9,7 @@ export interface Props {
 	params: Params;
 	project: Resource<JsonProject>;
 	search: Accessor<undefined | string>;
+	isAllowedCreate: Resource<boolean>;
 	handleRefresh: () => void;
 	handleSearch: (search: string) => void;
 }
@@ -38,16 +39,35 @@ const PlotsHeader = (props: Props) => {
 					/>
 				</p>
 				<p class="level-item">
-					<a
-						class="button"
-						title="Add a plot"
-						href={`/console/projects/${props.project()?.slug}/perf?clear=true`}
+					<Show
+						when={props.isAllowedCreate.loading || props.isAllowedCreate()}
+						fallback={
+							<button
+								type="button"
+								class="button"
+								title="Add a plot"
+								disabled={true}
+							>
+								<span class="icon">
+									<i class="fas fa-plus" />
+								</span>
+								<span>Add</span>
+							</button>
+						}
 					>
-						<span class="icon">
-							<i class="fas fa-plus" />
-						</span>
-						<span>Add</span>
-					</a>
+						<a
+							class="button"
+							title="Add a plot"
+							href={`/console/projects/${
+								props.project()?.slug
+							}/perf?clear=true`}
+						>
+							<span class="icon">
+								<i class="fas fa-plus" />
+							</span>
+							<span>Add</span>
+						</a>
+					</Show>
 				</p>
 				<p class="level-item">
 					<button
