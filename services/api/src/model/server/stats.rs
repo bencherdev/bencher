@@ -8,7 +8,7 @@ use dropshot::HttpError;
 use crate::{
     context::DbConnection,
     error::resource_not_found_err,
-    model::{organization::QueryOrganization, project::QueryProject},
+    model::{organization::QueryOrganization, project::QueryProject, user::QueryUser},
     schema,
 };
 
@@ -43,6 +43,21 @@ pub fn get_stats(
                 .map_err(resource_not_found_err!(Organization))?
                 .into_iter()
                 .map(QueryOrganization::into_json)
+                .collect(),
+        )
+    };
+
+    // admins
+    let admins = if is_bencher_cloud {
+        None
+    } else {
+        Some(
+            schema::user::table
+                .filter(schema::user::admin.eq(true))
+                .load::<QueryUser>(conn)
+                .map_err(resource_not_found_err!(User))?
+                .into_iter()
+                .map(QueryUser::into_json)
                 .collect(),
         )
     };
@@ -232,6 +247,7 @@ pub fn get_stats(
         server: query_server.into_json(),
         timestamp: now,
         organizations,
+        admins,
         users: Some(users_cohort),
         projects: Some(projects_cohort),
         active_projects: Some(active_projects_cohort),

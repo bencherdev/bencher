@@ -5,7 +5,7 @@ use bencher_valid::{DateTime, ResourceName};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{JsonOrganizations, ProjectUuid};
+use crate::{JsonOrganizations, JsonUsers, ProjectUuid};
 
 crate::typed_uuid::typed_uuid!(ServerUuid);
 
@@ -24,6 +24,8 @@ pub struct JsonServerStats {
     pub timestamp: DateTime,
     // Server organizations
     pub organizations: Option<JsonOrganizations>,
+    // Server admins
+    pub admins: Option<JsonUsers>,
     // Number of users (created)
     pub users: Option<JsonCohort>,
     // Number of projects (created)

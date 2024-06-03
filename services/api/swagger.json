@@ -9878,6 +9878,14 @@
               }
             ]
           },
+          "admins": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonUsers"
+              }
+            ]
+          },
           "metrics": {
             "nullable": true,
             "allOf": [
