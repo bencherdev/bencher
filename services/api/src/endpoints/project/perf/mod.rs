@@ -248,6 +248,11 @@ async fn perf_query(
         .filter(schema::testbed::uuid.eq(testbed_uuid))
         .filter(schema::benchmark::uuid.eq(benchmark_uuid))
         .filter(schema::measure::uuid.eq(measure_uuid))
+        // Make sure that the project is the same for all dimensions
+        .filter(schema::branch::project_id.eq(project.id))
+        .filter(schema::testbed::project_id.eq(project.id))
+        .filter(schema::benchmark::project_id.eq(project.id))
+        .filter(schema::measure::project_id.eq(project.id))
         // There may or may not be a boundary for any given metric
         .left_join(schema::threshold::table)
         .left_join(schema::model::table)
