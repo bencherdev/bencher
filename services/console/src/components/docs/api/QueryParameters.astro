@@ -1,5 +1,5 @@
 ---
-import { getSchema, getSchemaRecursive } from "./method";
+import { getSchemaRecursive } from "./method";
 
 interface Props {
 	path: string;
@@ -76,6 +76,10 @@ const getTypes = (parameter) => {
                 <p>{types}</p>
             </div>
             }
+			{parameter?.required === true &&
+            <div class="level-item">
+              <b>Required</b>
+            </div>}
         </div>
       </div>
     </p>
