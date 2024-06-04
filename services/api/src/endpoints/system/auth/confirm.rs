@@ -63,5 +63,19 @@ async fn post_inner(
             )
         })?;
 
-    Ok(JsonAuthUser { user, token })
+    let claims = context.token_key.validate_client(&token).map_err(|e| {
+        issue_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to validate new client JWT",
+            &format!("Failed to validate new client JWT: {token}"),
+            e,
+        )
+    })?;
+
+    Ok(JsonAuthUser {
+        user,
+        token,
+        creation: claims.issued_at(),
+        expiration: claims.expiration(),
+    })
 }

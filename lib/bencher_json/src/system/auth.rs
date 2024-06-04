@@ -1,4 +1,4 @@
-use bencher_valid::{Email, Jwt, Slug, UserName};
+use bencher_valid::{DateTime, Email, Jwt, Slug, UserName};
 #[cfg(feature = "plus")]
 use bencher_valid::{PlanLevel, Secret};
 #[cfg(feature = "schema")]
@@ -69,4 +69,6 @@ pub struct JsonAuthAck {
 pub struct JsonAuthUser {
     pub user: JsonUser,
     pub token: Jwt,
+    pub creation: DateTime,
+    pub expiration: DateTime,
 }

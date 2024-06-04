@@ -610,6 +610,8 @@ export interface JsonAuthAck {
 export interface JsonAuthUser {
 	user: JsonUser;
 	token: Jwt;
+	creation: string;
+	expiration: string;
 }
 
 export interface JsonCard {

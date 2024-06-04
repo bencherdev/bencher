@@ -7,6 +7,7 @@ import {
 import { validUser } from "./valid";
 import { httpGet } from "./http";
 import type { Params } from "astro";
+import { dateTimeMillis } from "./convert";
 
 const BENCHER_USER_KEY: string = "BENCHER_USER";
 
@@ -56,6 +57,11 @@ const [authUsr, setAuthUsr] = createSignal<JsonAuthUser>(getUserRaw());
 setInterval(() => {
 	const usr = authUsr();
 	const userRaw = getUserRaw();
+	const exp = dateTimeMillis(userRaw?.expiration);
+	if ((exp ?? 0) < Date.now()) {
+		removeUser();
+		return;
+	}
 	if (usr.toString() !== userRaw.toString()) {
 		setAuthUsr(userRaw);
 	}

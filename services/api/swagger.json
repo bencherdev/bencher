@@ -7367,6 +7367,12 @@
       "JsonAuthUser": {
         "type": "object",
         "properties": {
+          "creation": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "expiration": {
+            "$ref": "#/components/schemas/DateTime"
+          },
           "token": {
             "$ref": "#/components/schemas/Jwt"
           },
@@ -7375,6 +7381,8 @@
           }
         },
         "required": [
+          "creation",
+          "expiration",
           "token",
           "user"
         ]
