@@ -1,11 +1,6 @@
 # Docs
-- How to Track Custom Benchmarks Over Time
-  - Basic example
-  - Use JSON adapter
-- How to Track Binary Size Over Time
-  - https://techcrunch.com/2021/11/03/emerge-tools-raises-1-7m-to-help-make-apps-smaller/
-- How to Track Bundle Size Over Time
-  - https://about.codecov.io/blog/improve-web-performance-by-optimizing-javascript-bundle-sizes/
+- How to set up disaster recovery
+- Explanation: How It Works
 
 # Learn
 
@@ -84,6 +79,8 @@
 - Diesel
 - Rustc Perf
 
+Intention + Obstacle
+
 ## Engineering
 - Engineering Bets Scorecard
   - Rust
@@ -136,11 +133,22 @@
 - Create error message help pages for each supported programming language
   - https://kinsta.com/knowledgebase/dns-server-not-responding/
 
-# Binary Size
+# Binary Size Profiling
 
 permissionless pilot
 https://techcrunch.com/2023/09/05/create-a-permissionless-pilot-program-that-drives-sales-and-delights-customers/
 https://www.emergetools.com/explore
 - https://github.com/RazrFalcon/cargo-bloat
 - https://github.com/google/bloaty
+- https://github.com/rustwasm/twiggy
 - https://www.emergetools.com/app/example/ios/wikipedia
+
+# Daily Code Games
+
+Think Advent of Code meets Wordle
+A daily Shenzhen I/O style puzzle maybe using a more practical instruction set, something like RISC-V.
+
+- https://en.m.wikipedia.org/wiki/Shenzhen_I/O
+- https://en.wikipedia.org/wiki/RISC-V
+
+Could also lend itself well to having documentation on RISC-V itself.

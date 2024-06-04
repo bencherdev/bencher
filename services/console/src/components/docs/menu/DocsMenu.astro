@@ -7,6 +7,7 @@ import Collection from "../../../util/collection.ts";
 import DocsList from "./DocsList.astro";
 import ApiList from "./ApiList.astro";
 import LearnList from "./LearnList.astro";
+import { isBencherCloud } from "../../../util/ext";
 
 interface Props {
 	tab: DocsTab;
@@ -106,9 +107,9 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
   <!-- Docs -->
   <div class="tabs is-centered">
     <ul>
-      <li id={DocsTab.Docs} class={tabClass(DocsTab.Docs, tab)}><a href="#">Docs</a></li>
+      {isBencherCloud() && <li id={DocsTab.Docs} class={tabClass(DocsTab.Docs, tab)}><a href="#">Docs</a></li>}
       <li id={DocsTab.Api} class={tabClass(DocsTab.Api, tab)}><a href="#">API</a></li>
-      <li id={DocsTab.Learn} class={tabClass(DocsTab.Learn, tab)}><a href="#">Learn</a></li>
+      {isBencherCloud() && <li id={DocsTab.Learn} class={tabClass(DocsTab.Learn, tab)}><a href="#">Learn</a></li>}
     </ul>
   </div>
   <nav id={DocsMenuId.Docs} style={displayStyle(DocsMenuId.Docs, tab)}>
