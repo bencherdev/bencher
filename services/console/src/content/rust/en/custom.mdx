@@ -34,7 +34,7 @@ Luckily, Rust makes it incredibly easy to create a custom benchmarking harness.
 ## How `cargo bench` Works
 
 Before building a custom benchmarking harness,
-it would be a good to understand how Rust benchmarks work.
+we need to understand how Rust benchmarks work.
 For most Rust developers this means running [the `cargo bench` command][cargo bench].
 The `cargo bench` command compiles and executes your benchmarks.
 By default, `cargo bench` will try to use the built-in (but unstable) libtest bench harness.
@@ -48,13 +48,13 @@ In order to use a custom benchmarking harness, we need to tell `cargo bench` to 
 To get `cargo bench` to not use libtest bench,
 we need to add the following to our `Cargo.toml` file:
 
-```toml
+```toml title="Cargo.toml"
 [[bench]]
 harness = false
 ```
 
 Unfortunately, we can't use the `#[bench]` attribute with our custom benchmarking harness.
-[Maybe one day soon][github 2], but not today.
+[Maybe one day soon][github issue 2], but not today.
 Instead, we have to create a separate `benches` directory to hold our benchmarks.
 The `benches` directory is to benchmarks
 what [the `tests` directory][tests directory] is to integration tests.
@@ -66,7 +66,7 @@ For example, if we had a basic library crate named `game`
 then we could add a custom benchmark file named `play_game` to the `benches` directory.
 Our directory structure would look like this:
 
-```
+```txt ins={4-5}
 game
 ├── Cargo.lock
 ├── Cargo.toml
@@ -79,11 +79,37 @@ game
 Next we need to let `cargo bench` know about our custom benchmark crate `play_game`.
 So we update our `Cargo.toml` file:
 
-```toml ins={2}
+```toml title="Cargo.toml" ins={2}
 [[bench]]
 name = "play_game"
 harness = false
 ```
 
-[github 2]: https://github.com/rust-lang/testing-devex-team/issues/2
+[github issue 2]: https://github.com/rust-lang/testing-devex-team/issues/2
 [tests directory]: https://doc.rust-lang.org/book/ch11-03-test-organization.html#the-tests-directory
+
+## Creating a Custom Benchmarking Harness
+
+Inside of `benches/play_game` we are going to create our very own custom benchmarking harness.
+First though, we need to decide what it is we are going to measure and therefore benchmark.
+For our example, we are going to measure heap allocations using [the `dhat-rs` crate][crates dhat].
+`dhat-rs` is a fantastic tool for measuring heap allocations in Rust programs
+by Rust performance expert [Nicholas Nethercote][github nnethercote].
+To help us manage our heap allocation benchmarks,
+we will be using [the `inventory` crate][crates inventory]
+by the astoundingly prolific [David Tolnay][github dtolnay].
+
+Let's add `dhat-rs` and `inventory` to our `Cargo.toml` file as `dev-dependencies`:
+
+```toml title="Cargo.toml"
+[dev-dependencies]
+dhat = "0.3"
+inventory = "0.3"
+```
+
+[crates dhat]: https://docs.rs/dhat/latest/dhat/
+[github nnethercote]: https://github.com/nnethercote
+[crates inventory]: https://crates.io/crates/inventory
+[github dtolnay]: https://github.com/dtolnay
+
+
