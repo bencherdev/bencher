@@ -11,3 +11,4 @@
   - [Criterion](rust/criterion)
   - [iai](rust/iai)
   - [iai-callgrind](rust/iai_callgrind)
+  - [Custom Harness](rust/custom)

@@ -21,6 +21,8 @@ export const defaultUser: JsonAuthUser = {
 		locked: true,
 	},
 	token: "",
+	creation: "",
+	expiration: "",
 };
 
 export const setUser = (user: JsonAuthUser): boolean => {
@@ -57,13 +59,13 @@ const [authUsr, setAuthUsr] = createSignal<JsonAuthUser>(getUserRaw());
 setInterval(() => {
 	const usr = authUsr();
 	const userRaw = getUserRaw();
-	const exp = dateTimeMillis(userRaw?.expiration);
-	if ((exp ?? 0) < Date.now()) {
-		removeUser();
-		return;
-	}
 	if (usr.toString() !== userRaw.toString()) {
 		setAuthUsr(userRaw);
+	} else if (
+		userRaw?.token &&
+		(dateTimeMillis(userRaw?.expiration) ?? 0) < Date.now()
+	) {
+		removeUser();
 	}
 }, 100);
 

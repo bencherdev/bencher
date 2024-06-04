@@ -1,11 +1,12 @@
-pub fn play_game(n: u32, print: bool) {
+pub fn play_game(n: u32, print: bool) -> String {
     let result = fizz_buzz_fibonacci(n);
     if print {
         println!("{result}");
     }
+    result
 }
 
-pub fn fizz_buzz_fibonacci(n: u32) -> String {
+fn fizz_buzz_fibonacci(n: u32) -> String {
     if is_fibonacci_number(n) {
         "Fibonacci".to_string()
     } else {

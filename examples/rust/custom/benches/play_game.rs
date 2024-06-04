@@ -1,38 +1,69 @@
 #![allow(clippy::unit_arg)]
 
-use bencher_adapter::{AdapterResults, JsonMetric};
+#[global_allocator]
+static ALLOC: dhat::Alloc = dhat::Alloc;
+
 use custom::play_game;
 
 #[derive(Debug)]
-pub struct CustomBenchmark {
-    pub name: &'static str,
-    pub benchmark_fn: fn(),
+struct CustomBenchmark {
+    name: &'static str,
+    benchmark_fn: fn() -> dhat::HeapStats,
+}
+inventory::collect!(CustomBenchmark);
+
+impl CustomBenchmark {
+    fn run(&self) -> serde_json::Value {
+        let heap_stats = (self.benchmark_fn)();
+        let measures = serde_json::json!({
+            "Final Blocks": {
+                "value": heap_stats.curr_blocks,
+            },
+            "Final Bytes": {
+                "value": heap_stats.curr_bytes,
+            },
+            "Max Blocks": {
+                "value": heap_stats.max_blocks,
+            },
+            "Max Bytes": {
+                "value": heap_stats.max_bytes,
+            },
+            "Total Blocks": {
+                "value": heap_stats.total_blocks,
+            },
+            "Total Bytes": {
+                "value": heap_stats.total_bytes,
+            },
+        });
+        let mut benchmark_map = serde_json::Map::new();
+        benchmark_map.insert(self.name.to_string(), measures);
+        benchmark_map.into()
+    }
 }
 
-inventory::collect!(CustomBenchmark);
+fn bench_play_game() -> dhat::HeapStats {
+    let _profiler = dhat::Profiler::builder().testing().build();
+
+    std::hint::black_box(for i in 1..=100 {
+        play_game(i, false);
+    });
+
+    dhat::HeapStats::get()
+}
 inventory::submit!(CustomBenchmark {
     name: "bench_play_game",
     benchmark_fn: bench_play_game
 });
 
-fn bench_play_game() {
-    std::hint::black_box(for i in 1..=100 {
-        play_game(i, false);
-    });
-}
-
 fn main() {
-    let mut results = Vec::new();
+    let mut bmf = serde_json::Map::new();
 
     for benchmark in inventory::iter::<CustomBenchmark> {
-        let benchmark_name = benchmark.name.parse().unwrap();
-        (benchmark.benchmark_fn)();
-        let json_metric = JsonMetric::new(0.0, None, None);
-        println!("{benchmark_name}: {json_metric}");
-        results.push((benchmark_name, json_metric));
+        let mut results = benchmark.run();
+        bmf.append(results.as_object_mut().unwrap());
     }
 
-    let adapter_results = AdapterResults::new_latency(results).unwrap();
-    let adapter_results_str = serde_json::to_string_pretty(&adapter_results).unwrap();
-    println!("{adapter_results_str}");
+    let bmf_str = serde_json::to_string_pretty(&bmf).unwrap();
+    std::fs::write("results.json", &bmf_str).unwrap();
+    println!("{bmf_str}");
 }
