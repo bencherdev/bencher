@@ -1,6 +1,6 @@
 import { BENCHER_WORDMARK, BENCHER_WORDMARK_DARK } from "../../../util/ext";
 
-export const THEME_KEY = "theme";
+export const BENCHER_THEME_KEY = "BENCHER_THEME";
 
 export enum Theme {
 	Light = "light",
@@ -14,20 +14,11 @@ export enum ThemeId {
 	Dark = "dark-theme",
 }
 
-export const getTheme = () => {
-	const theme = getCachedTheme();
-	if (theme) {
-		return theme;
-	}
-	if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-		return Theme.Dark;
-	}
-	return Theme.Light;
-};
+export const getTheme = () => getCachedTheme() ?? getColorScheme();
 
-export const getCachedTheme = () => {
+const getCachedTheme = () => {
 	if (typeof localStorage !== "undefined") {
-		const theme = localStorage.getItem(THEME_KEY);
+		const theme = localStorage.getItem(BENCHER_THEME_KEY);
 		switch (theme) {
 			case Theme.Light:
 			case Theme.Dark:
@@ -35,10 +26,17 @@ export const getCachedTheme = () => {
 			case null:
 				return null;
 			default:
-				localStorage.removeItem(THEME_KEY);
+				localStorage.removeItem(BENCHER_THEME_KEY);
 		}
 	}
 	return null;
+};
+
+const getColorScheme = () => {
+	if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+		return Theme.Dark;
+	}
+	return Theme.Light;
 };
 
 export const themeText = (theme: Theme) => {
