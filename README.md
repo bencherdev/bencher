@@ -177,7 +177,7 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
       <p align="center">
         <a href="https://bencher.dev/perf/greptimedb?key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&report=8dcbda4a-c239-4a9e-8399-4fc699f775b4&branches=3b46708f-b87f-4f52-b1bb-1d9cc7bfee2d&testbeds=6d3be02f-9efe-4e47-8a5d-e389c228172d&benchmarks=da5c8cbe-9aef-431e-9168-11ef0821c8db%2Cbb7ce469-5c34-4a69-ab2f-d9769ca5be2a&measures=a2f1689d-44d5-4d5e-863f-47d285cedf97&start_time=1707524593000&end_time=1710116593000&clear=true">
           <img
-            src="https://s3.amazonaws.com/public.bencher.dev/case-study/greptimedb.png"
+            src="https://s3.amazonaws.com/public.bencher.dev/case-study/greptimedb.svg"
             alt="GreptimeDB"
             width="300px"
           />
