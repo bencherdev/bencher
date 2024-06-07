@@ -129,10 +129,11 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
           <img
             src="https://s3.amazonaws.com/public.bencher.dev/case-study/microsoft.png"
             alt="Microsoft"
+            width="300px"
           />
         </a>
       </p>
-      <p align="center">Microsoft</p>
+      <p align="center">Microsoft CCF</p>
     </td>
     <td>
       <p align="center">
@@ -140,6 +141,7 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
           <img
             src="https://s3.amazonaws.com/public.bencher.dev/case-study/rustls-rust-tls.png"
             alt="Rustls TLS Library"
+            width="300px"
           />
         </a>
       </p>
@@ -151,6 +153,7 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
           <img
             src="https://s3.amazonaws.com/public.bencher.dev/case-study/diesel.svg"
             alt="Diesel"
+            width="300px"
           />
         </a>
       </p>
@@ -164,6 +167,7 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
           <img
             src="https://s3.amazonaws.com/public.bencher.dev/case-study/hydra-db.svg"
             alt="Hydra Database"
+            width="300px"
           />
         </a>
       </p>
@@ -175,6 +179,7 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
           <img
             src="https://s3.amazonaws.com/public.bencher.dev/case-study/greptimedb.png"
             alt="GreptimeDB"
+            width="300px"
           />
         </a>
       </p>
@@ -186,6 +191,7 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
           <img
             src="https://s3.amazonaws.com/public.bencher.dev/case-study/tailcall.svg"
             alt="Tailcall"
+            width="300px"
           />
         </a>
       </p>
@@ -199,6 +205,7 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
           <img
             src="https://s3.amazonaws.com/public.bencher.dev/case-study/poolifier.png"
             alt="Poolifier"
+            width="300px"
           />
         </a>
       </p>
@@ -210,6 +217,7 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
           <img
             src="https://s3.amazonaws.com/public.bencher.dev/case-study/k-framework.png"
             alt="K Framework"
+            width="300px"
           />
         </a>
       </p>
@@ -221,6 +229,7 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
           <img
             src="https://s3.amazonaws.com/public.bencher.dev/case-study/stratum.svg"
             alt="Stratum"
+            width="300px"
           />
         </a>
       </p>
