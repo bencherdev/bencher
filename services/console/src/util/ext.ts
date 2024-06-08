@@ -13,6 +13,8 @@ export const BENCHER_CHAT_URL: string = "https://discord.gg/yGEsdUh7R4";
 export const BENCHER_LINKEDIN_URL: string =
 	"https://www.linkedin.com/company/bencher";
 
+export const BENCHER_REDDIT_URL: string = "https://www.reddit.com/r/bencher";
+
 export const BENCHER_LOGO: string = "/favicon.svg";
 export const BENCHER_WORDMARK_ID: string = "bencher-wordmark";
 export const BENCHER_WORDMARK_INLINE_ID: string = "bencher-wordmark-inline";

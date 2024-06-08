@@ -5,6 +5,7 @@ import {
 	BENCHER_CHAT_URL,
 	BENCHER_GITHUB_URL,
 	BENCHER_LINKEDIN_URL,
+	BENCHER_REDDIT_URL,
 	BENCHER_WORDMARK,
 	BENCHER_WORDMARK_FOOTER_ID,
 } from "../../util/ext";
@@ -12,7 +13,7 @@ import {
 
 <footer class="footer" style="margin-top: 1rem;">
 	<div class="container">
-		<div class="columns is-vcentered is-mobile">
+		<div class="columns is-vcentered">
 			<div class="column">
 				<div class="content">
 					<h2 class="title is-4">
@@ -21,97 +22,6 @@ import {
 						</a>
 					</h2>
 					<h3 class="is-5"><a href="/docs/explanation/continuous-benchmarking/">Continuous Benchmarking</a></h3>
-					<nav class="level">
-						<div class="level-left">
-							<div class="level-item has-text-centered">
-								<p>
-									<a href="/docs/">Docs</a>
-								</p>
-							</div>
-							<div class="level-item has-text-centered">
-								<p>
-									<a href="/pricing/">Pricing</a>
-								</p>
-							</div>
-							<div class="level-item has-text-centered">
-								<p>
-									<a href="/help/">Help</a>
-								</p>
-							</div>
-							<div class="level-item has-text-centered">
-								<p>
-									<a href="/docs/api/">API</a>
-								</p>
-							</div>
-							<div class="level-item has-text-centered">
-								<p>
-									<a href="/learn/">Learn</a>
-								</p>
-							</div>
-						</div>
-					</nav>
-					<nav class="level">
-						<div class="level-left">
-							<div class="level-item has-text-centered">
-								<p>
-									<a href="/explore/">Explore</a>
-								</p>
-							</div>
-							<div class="level-item has-text-centered">
-								<p>
-									<a href="/perf/">Public Projects</a>
-								</p>
-							</div>
-							<div class="level-item has-text-centered">
-								<p>
-									<a href="/play/">Play</a>
-								</p>
-							</div>
-						</div>
-					</nav>
-					<nav class="level">
-						<div class="level-left">
-							<div class="level-item has-text-centered">
-								<p>
-									<a href="/download/">Download</a>
-								</p>
-							</div>
-							<div class="level-item has-text-centered">
-								<p>
-									<a href="/legal/">Legal</a>
-								</p>
-							</div>
-							<div class="level-item has-text-centered">
-								<p>
-									<a href="/brand/">Brand</a>
-								</p>
-							</div>
-							<div class="level-item has-text-centered">
-								<p>
-									<a href="/sitemap-index.xml">Sitemap</a>
-								</p>
-							</div>
-						</div>
-					</nav>
-					<nav class="level">
-						<div class="level-left">
-							<div class="level-item has-text-centered">
-								<p>
-									<a href="/legal/terms-of-use/">Terms of Use</a>
-								</p>
-							</div>
-							<div class="level-item has-text-centered">
-								<p>
-									<a href="/legal/privacy/">Privacy Policy</a>
-								</p>
-							</div>
-							<div class="level-item has-text-centered">
-								<p>
-									<a href="/legal/license/">License Agreement</a>
-								</p>
-							</div>
-						</div>
-					</nav>
 				</div>
 			</div>
 			<div class="column is-narrow">
@@ -155,11 +65,115 @@ import {
 							</span>
 						</a>
 					</div>
+					<div class="level-item has-text-centered">
+						<a
+							class="navbar-item"
+							href={BENCHER_REDDIT_URL}
+							target="_blank"
+							aria-label="Reddit"
+							rel="noreferrer"
+						>
+							<span class="icon has-text-primary">
+								<i class="fab fa-reddit-alien fa-2x" />
+							</span>
+						</a>
+					</div>
 				</nav>
 			</div>
 		</div>
 		<div class="content">
-			<p>© {new Date().getFullYear()} Bencher</p>
+			<nav class="level">
+				<div class="level-left">
+					<div class="level-item has-text-centered">
+						<p>
+							<a href="/docs/">Docs</a>
+						</p>
+					</div>
+					<div class="level-item has-text-centered">
+						<p>
+							<a href="/pricing/">Pricing</a>
+						</p>
+					</div>
+					<div class="level-item has-text-centered">
+						<p>
+							<a href="/help/">Help</a>
+						</p>
+					</div>
+					<div class="level-item has-text-centered">
+						<p>
+							<a href="/docs/api/">API</a>
+						</p>
+					</div>
+					<div class="level-item has-text-centered">
+						<p>
+							<a href="/learn/">Learn</a>
+						</p>
+					</div>
+				</div>
+			</nav>
+			<nav class="level">
+				<div class="level-left">
+					<div class="level-item has-text-centered">
+						<p>
+							<a href="/explore/">Explore</a>
+						</p>
+					</div>
+					<div class="level-item has-text-centered">
+						<p>
+							<a href="/perf/">Public Projects</a>
+						</p>
+					</div>
+					<div class="level-item has-text-centered">
+						<p>
+							<a href="/play/">Play</a>
+						</p>
+					</div>
+				</div>
+			</nav>
+			<nav class="level">
+				<div class="level-left">
+					<div class="level-item has-text-centered">
+						<p>
+							<a href="/download/">Download</a>
+						</p>
+					</div>
+					<div class="level-item has-text-centered">
+						<p>
+							<a href="/legal/">Legal</a>
+						</p>
+					</div>
+					<div class="level-item has-text-centered">
+						<p>
+							<a href="/brand/">Brand</a>
+						</p>
+					</div>
+					<div class="level-item has-text-centered">
+						<p>
+							<a href="/sitemap-index.xml">Sitemap</a>
+						</p>
+					</div>
+				</div>
+			</nav>
+			<nav class="level">
+				<div class="level-left">
+					<div class="level-item has-text-centered">
+						<p>
+							<a href="/legal/terms-of-use/">Terms of Use</a>
+						</p>
+					</div>
+					<div class="level-item has-text-centered">
+						<p>
+							<a href="/legal/privacy/">Privacy Policy</a>
+						</p>
+					</div>
+					<div class="level-item has-text-centered">
+						<p>
+							<a href="/legal/license/">License Agreement</a>
+						</p>
+					</div>
+				</div>
+			</nav>
 		</div>
+		<p>© {new Date().getFullYear()} Bencher</p>
 	</div>
 </footer>
