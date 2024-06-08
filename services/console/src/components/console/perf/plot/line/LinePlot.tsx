@@ -280,7 +280,7 @@ const LinePlot = (props: Props) => {
 					symbol: "circle",
 					stroke: color,
 					fill: color,
-					title: (datum) => to_title(`${datum.value}`, datum, ""),
+					title: (datum) => to_title(`${datum.value}`, result, datum, ""),
 				}),
 			);
 
@@ -295,7 +295,7 @@ const LinePlot = (props: Props) => {
 				plot_arrays.push(
 					Plot.dot(
 						line_data,
-						value_end_dot(x_axis_kind, BoundaryLimit.Lower, color),
+						value_end_dot(x_axis_kind, BoundaryLimit.Lower, color, result),
 					),
 				);
 			}
@@ -311,7 +311,7 @@ const LinePlot = (props: Props) => {
 				plot_arrays.push(
 					Plot.dot(
 						line_data,
-						value_end_dot(x_axis_kind, BoundaryLimit.Upper, color),
+						value_end_dot(x_axis_kind, BoundaryLimit.Upper, color, result),
 					),
 				);
 			}
@@ -332,6 +332,7 @@ const LinePlot = (props: Props) => {
 							BoundaryLimit.Lower,
 							color,
 							project_slug,
+							result,
 							props.isConsole,
 						),
 					),
@@ -350,6 +351,7 @@ const LinePlot = (props: Props) => {
 						x_axis_kind,
 						BoundaryLimit.Lower,
 						project_slug,
+						result,
 						props.isConsole,
 					),
 				),
@@ -371,6 +373,7 @@ const LinePlot = (props: Props) => {
 							BoundaryLimit.Upper,
 							color,
 							project_slug,
+							result,
 							props.isConsole,
 						),
 					),
@@ -389,6 +392,7 @@ const LinePlot = (props: Props) => {
 						x_axis_kind,
 						BoundaryLimit.Upper,
 						project_slug,
+						result,
 						props.isConsole,
 					),
 				),
@@ -450,7 +454,7 @@ const LinePlot = (props: Props) => {
 	return <>{plotted()}</>;
 };
 
-const to_title = (prefix, datum, suffix) =>
+const to_title = (prefix, result, datum, suffix) =>
 	`${prefix}\n${datum.date_time?.toLocaleString(undefined, {
 		weekday: "short",
 		year: "numeric",
@@ -460,9 +464,13 @@ const to_title = (prefix, datum, suffix) =>
 		hour12: false,
 		minute: "2-digit",
 		second: "2-digit",
-	})}\nVersion Number: ${datum.number}${
+	})}\nIteration: ${datum.iteration}\nBranch: ${
+		result.branch?.name
+	}\nVersion Number: ${datum.number}${
 		datum.hash ? `\nVersion Hash: ${datum.hash}` : ""
-	}\nIteration: ${datum.iteration}${suffix}`;
+	}\nTestbed: ${result.testbed?.name}\nBenchmark: ${
+		result.benchmark?.name
+	}\nMeasure: ${result.measure?.name}${suffix}`;
 
 const value_end_line = (
 	x_axis: string,
@@ -479,7 +487,12 @@ const value_end_line = (
 	};
 };
 
-const value_end_dot = (x_axis: string, limit: BoundaryLimit, color: string) => {
+const value_end_dot = (
+	x_axis: string,
+	limit: BoundaryLimit,
+	color: string,
+	result: object,
+) => {
 	return {
 		x: x_axis,
 		y: value_end_position_key(limit),
@@ -489,7 +502,7 @@ const value_end_dot = (x_axis: string, limit: BoundaryLimit, color: string) => {
 		strokeOpacity: 0.9,
 		fill: color,
 		fillOpacity: 0.9,
-		title: (datum) => value_end_title(limit, datum, ""),
+		title: (datum) => value_end_title(limit, result, datum, ""),
 	};
 };
 
@@ -509,6 +522,7 @@ const boundary_dot = (
 	limit: BoundaryLimit,
 	color: string,
 	project_slug: string,
+	result: object,
 	isConsole: boolean,
 ) => {
 	return {
@@ -520,7 +534,8 @@ const boundary_dot = (
 		strokeOpacity: 0.666,
 		fill: color,
 		fillOpacity: 0.666,
-		title: (datum) => limit_title(limit, datum, "\nClick to view Threshold"),
+		title: (datum) =>
+			limit_title(limit, result, datum, "\nClick to view Threshold"),
 		href: (datum) => thresholdUrl(project_slug, isConsole, datum),
 	};
 };
@@ -556,6 +571,7 @@ const alert_image = (
 	x_axis: string,
 	limit: BoundaryLimit,
 	project_slug: string,
+	result: object,
 	isConsole: boolean,
 ) => {
 	return {
@@ -563,7 +579,8 @@ const alert_image = (
 		y: boundary_position_key(limit),
 		src: SIREN_URL,
 		width: 18,
-		title: (datum) => limit_title(limit, datum, "\nClick to view Alert"),
+		title: (datum) =>
+			limit_title(limit, result, datum, "\nClick to view Alert"),
 		href: (datum) =>
 			`${
 				isConsole
@@ -575,16 +592,18 @@ const alert_image = (
 	};
 };
 
-const value_end_title = (limit: BoundaryLimit, datum, suffix) =>
+const value_end_title = (limit: BoundaryLimit, result, datum, suffix) =>
 	to_title(
 		`${position_label(limit)} Value: ${datum[value_end_position_key(limit)]}`,
+		result,
 		datum,
 		suffix,
 	);
 
-const limit_title = (limit: BoundaryLimit, datum, suffix) =>
+const limit_title = (limit: BoundaryLimit, result, datum, suffix) =>
 	to_title(
 		`${position_label(limit)} Limit: ${datum[boundary_position_key(limit)]}`,
+		result,
 		datum,
 		suffix,
 	);
