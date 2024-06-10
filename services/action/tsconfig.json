@@ -7,6 +7,7 @@
 		// https://www.typescriptlang.org/tsconfig#resolveJsonModule
 		"resolveJsonModule": true
 	},
+	"allowJs": false,
 	"include": ["src"],
 	"exclude": ["dist", "node_modules"]
 }
