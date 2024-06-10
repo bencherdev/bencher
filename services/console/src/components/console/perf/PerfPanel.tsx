@@ -197,8 +197,12 @@ const PerfPanel = (props: Props) => {
 	const user = authUser();
 	const theme = themeSignal;
 
+	const [init, setInit] = createSignal(false);
 	// Sanitize all query params
 	createEffect(() => {
+		if (init()) {
+			return;
+		}
 		const initParams: Record<
 			string,
 			undefined | null | boolean | number | string
@@ -329,7 +333,9 @@ const PerfPanel = (props: Props) => {
 			initParams[EMBED_KEY_PARAM] = null;
 		}
 
-		if (Object.keys(initParams).length !== 0) {
+		if (Object.keys(initParams).length === 0) {
+			setInit(true);
+		} else {
 			setSearchParams(initParams, { replace: true });
 		}
 	});
