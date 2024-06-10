@@ -6,10 +6,18 @@
     - ⛑️ 更安全：[从默认分支对分叉PR进行基准测试并上传][benchmark fork pr and upload from default branch]
     - ⚠️ 风险更高：[从目标分支对分叉PR进行基准测试并要求审查者][benchmark fork pr from target branch with required reviewers]
 
-> 🐰 在继续之前，请确保您已[创建一个API令牌][create an api token]
-> 并将其设置为名为`BENCHER_API_TOKEN`的**仓库**秘密！
-> 导航至`您的仓库 -> 设置 -> 秘密和变量 -> 操作 -> 新仓库秘密`。
-> 将秘密命名为`BENCHER_API_TOKEN`，并将秘密值设置为您的API令牌。
+在继续之前，请确保您已[创建一个API令牌][create an api token]
+并将其设置为名为`BENCHER_API_TOKEN`的**仓库**秘密！
+导航至`您的仓库 -> 设置 -> 秘密和变量 -> 操作 -> 新仓库秘密`。
+将秘密命名为`BENCHER_API_TOKEN`，并将秘密值设置为您的API令牌。
+
+在 GitHub Actions 中，
+[当工作流程从分叉的存储库触发时，秘密不会传递给运行器][github actions secrets]。
+因此，当将以下任何工作流程添加到您的存储库并提交拉取请求时，您需要使用_相同_存储库中的分支。
+如果您尝试从一个分叉提交拉取请求来添加 Bencher，那么 `BENCHER_API_TOKEN` 秘密将不可用。
+`${{ secrets.BENCHER_API_TOKEN }}` 将会是一个空字符串。
+
+[github actions secrets]: https://docs.github.com/zh/actions/security-guides/using-secrets-in-github-actions#using-secrets-in-a-workflow
 
 [continuous benchmarking]: /zh/docs/explanation/continuous-benchmarking/
 [create an api token]: /zh/docs/tutorial/quick-start/#create-an-api-token

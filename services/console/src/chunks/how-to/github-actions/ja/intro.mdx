@@ -6,10 +6,20 @@ GitHub Actionsであなたのユースケースに応じて、以下のために
     - ⛑️ 安全: [デフォルトブランチからフォークPRをベンチマークしてアップロード][デフォルトブランチからフォークPRをベンチマークしてアップロード]
     - ⚠️ リスキー: [ターゲットブランチからフォークPRをベンチマークしてレビュアーが必要][ターゲットブランチからフォークPRをベンチマークしてレビュアーが必要]
 
-> 🐰 APIトークンを[作成したこと][create an api token]を
-> 確認し、それを`BENCHER_API_TOKEN`という名前の**リポジトリ**シークレットとして設定する前に進むこと！
-> `Your Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`に移動します。
-> シークレットの名前を`BENCHER_API_TOKEN`に設定し、シークレットの値にあなたのAPIトークンを設定してください。
+APIトークンを[作成したこと][create an api token]を
+確認し、それを`BENCHER_API_TOKEN`という名前の**リポジトリ**シークレットとして設定する前に進むこと！
+`Your Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`に移動します。
+シークレットの名前を`BENCHER_API_TOKEN`に設定し、シークレットの値にあなたのAPIトークンを設定してください。
+
+GitHub Actionsでは、
+[ワークフローがフォークされたリポジトリからトリガーされた場合、セcretsはランナーに渡されません][github actions secrets]。
+したがって、以下のいずれかのワークフローをプルリクエストでリポジトリに追加する場合は、
+_同じ_ リポジトリのブランチを使用する必要があります。
+フォークからプルリクエストでBencherを追加しようとすると、
+`BENCHER_API_TOKEN` secretが利用できません。
+`${{ secrets.BENCHER_API_TOKEN }}`は空の文字列になります。
+
+[github actions secrets]: https://docs.github.com/ja/actions/security-guides/using-secrets-in-github-actions#using-secrets-in-a-workflow
 
 [継続的ベンチマーキング]: /ja/docs/explanation/continuous-benchmarking/
 [create an api token]: /ja/docs/tutorial/quick-start/#create-an-api-token

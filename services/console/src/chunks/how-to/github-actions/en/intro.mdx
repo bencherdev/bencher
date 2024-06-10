@@ -6,10 +6,20 @@ Depending on your use case, you can set up [Continuous Benchmarking][continuous 
     - ⛑️ Safer: [Benchmark Fork PR and Upload from Default Branch][benchmark fork pr and upload from default branch]
     - ⚠️ Riskier: [Benchmark Fork PR from Target Branch with Required Reviewers][benchmark fork pr from target branch with required reviewers]
 
-> 🐰 Make sure you have [created an API token][create an api token]
-> and set it as a **Repository** secret named `BENCHER_API_TOKEN` before continuing on!
-> Navigate to `Your Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`.
-> Name the secret `BENCHER_API_TOKEN` and set the secret value to your API token.
+Make sure you have [created an API token][create an api token]
+and set it as a **Repository** secret named `BENCHER_API_TOKEN` before continuing on!
+Navigate to `Your Repo -> Settings -> Secrets and variables -> Actions -> New repository secret`.
+Name the secret `BENCHER_API_TOKEN` and set the secret value to your API token.
+
+In GitHub Actions,
+[secrets are not passed to the runner when a workflow is triggered from a forked repository][github actions secrets].
+Therefore, you will need to use a branch from the _same_ repository
+when adding any of the workflows below to your repository with a pull request.
+If you try to add Bencher with a pull request from a fork,
+then the `BENCHER_API_TOKEN` secret will not be available.
+`${{ secrets.BENCHER_API_TOKEN }}` will be an empty string.
+
+[github actions secrets]: https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#using-secrets-in-a-workflow
 
 [continuous benchmarking]: /docs/explanation/continuous-benchmarking/
 [create an api token]: /docs/tutorial/quick-start/#create-an-api-token

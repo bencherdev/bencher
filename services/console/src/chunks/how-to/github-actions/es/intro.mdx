@@ -6,10 +6,20 @@ Dependiendo de su caso de uso, puede configurar [Evaluación continua][continuou
     - ⛑️ Más seguro: [Evaluar PR de Fork y Subir desde la Rama Predeterminada][benchmark fork pr and upload from default branch]
     - ⚠️ Más arriesgado: [Evaluar PR de Fork desde la Rama Objetivo con Revisores Requeridos][benchmark fork pr from target branch with required reviewers]
 
-> 🐰 ¡Asegúrese de haber [creado un token de API][create an api token]
-> y de haberlo establecido como un secreto del **Repositorio** llamado `BENCHER_API_TOKEN` antes de continuar!
-> Navegue a `Su Repo -> Configuración -> Secretos y variables -> Acciones -> Nuevo secreto del repositorio`.
-> Nombre el secreto `BENCHER_API_TOKEN` y establezca el valor del secreto para su token de API.
+¡Asegúrese de haber [creado un token de API][create an api token]
+y de haberlo establecido como un secreto del **Repositorio** llamado `BENCHER_API_TOKEN` antes de continuar!
+Navegue a `Su Repo -> Configuración -> Secretos y variables -> Acciones -> Nuevo secreto del repositorio`.
+Nombre el secreto `BENCHER_API_TOKEN` y establezca el valor del secreto para su token de API.
+
+En GitHub Actions,
+[los secretos no se pasan al ejecutor cuando un flujo de trabajo se activa desde un repositorio bifurcado][github actions secrets].
+Por lo tanto, necesitarás usar una rama del _mismo_ repositorio
+al agregar cualquiera de los flujos de trabajo a continuación a tu repositorio con una solicitud de extracción.
+Si intentas agregar Bencher con una solicitud de extracción desde un bifurcación,
+entonces el secreto `BENCHER_API_TOKEN` no estará disponible.
+`${{ secrets.BENCHER_API_TOKEN }}` será una cadena vacía.
+
+[github actions secrets]: https://docs.github.com/es/actions/security-guides/using-secrets-in-github-actions#using-secrets-in-a-workflow
 
 [continuous benchmarking]: /es/docs/explanation/continuous-benchmarking/
 [create an api token]: /es/docs/tutorial/quick-start/#create-an-api-token
