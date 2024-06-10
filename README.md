@@ -255,8 +255,8 @@ jobs:
     name: Benchmark with Bencher
     runs-on: ubuntu-latest
     env:
-      - BENCHER_PROJECT: my-project-slug
-      - BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+      BENCHER_PROJECT: my-project-slug
+      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: bencherdev/bencher@main
