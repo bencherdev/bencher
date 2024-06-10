@@ -66,6 +66,7 @@ setInterval(() => {
 		(dateTimeMillis(userRaw?.expiration) ?? 0) < Date.now()
 	) {
 		removeUser();
+		setAuthUsr(defaultUser);
 	}
 }, 100);
 
