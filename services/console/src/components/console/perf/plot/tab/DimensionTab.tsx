@@ -45,7 +45,7 @@ const DimensionsTab = (props: {
 						<div class="column is-narrow">
 							<button
 								type="button"
-								class="button is-small"
+								class="button is-small is-fullwidth"
 								onClick={(e) => {
 									e.preventDefault();
 									props.handleChecked();

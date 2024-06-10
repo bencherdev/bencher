@@ -235,26 +235,67 @@ const PlotTab = (props: Props) => {
 	return (
 		<>
 			<div class="panel-tabs">
-				<For each={perf_tabs}>
-					{(tab, index) => (
-						<>
-							<a
-								class={props.tab() === tab ? "is-active" : ""}
-								title={`View ${formatTab(tab)}`}
-								// biome-ignore lint/a11y/useValidAnchor: stateful anchor
-								onClick={() => props.handleTab(tab)}
-							>
-								{formatTab(tab)}
-							</a>
-							{(index() === 0 || index() === 3) && (
-								// biome-ignore lint/a11y/useValidAnchor: disabled anchor
+				<nav class="level">
+					<div class="level-item">
+						<div class="level is-mobile">
+							<div class="level-item">
+								<TabName
+									tab={props.tab}
+									perfTab={PerfTab.REPORTS}
+									handleTab={props.handleTab}
+								/>
+							</div>
+							<div class="level-item">
+								{/* biome-ignore lint/a11y/useValidAnchor: <explanation> */}
 								<a style="pointer-events: none; cursor: default; color: #fdb07e;">
 									||
 								</a>
-							)}
-						</>
-					)}
-				</For>
+							</div>
+						</div>
+					</div>
+					<div class="level-item">
+						<div class="level is-mobile">
+							<div class="level-item">
+								<TabName
+									tab={props.tab}
+									perfTab={PerfTab.BRANCHES}
+									handleTab={props.handleTab}
+								/>
+							</div>
+							<div class="level-item">
+								<TabName
+									tab={props.tab}
+									perfTab={PerfTab.TESTBEDS}
+									handleTab={props.handleTab}
+								/>
+							</div>
+							<div class="level-item">
+								<TabName
+									tab={props.tab}
+									perfTab={PerfTab.BENCHMARKS}
+									handleTab={props.handleTab}
+								/>
+							</div>
+						</div>
+					</div>
+					<div class="level-item">
+						<div class="level is-mobile">
+							<div class="level-item">
+								{/* biome-ignore lint/a11y/useValidAnchor: <explanation> */}
+								<a style="pointer-events: none; cursor: default; color: #fdb07e;">
+									||
+								</a>
+							</div>
+							<div class="level-item">
+								<TabName
+									tab={props.tab}
+									perfTab={PerfTab.PLOTS}
+									handleTab={props.handleTab}
+								/>
+							</div>
+						</div>
+					</div>
+				</nav>
 			</div>
 			<Tab
 				project_slug={props.project_slug}
@@ -300,6 +341,23 @@ const PlotTab = (props: Props) => {
 				</div>
 			</div>
 		</>
+	);
+};
+
+const TabName = (props: {
+	tab: Accessor<PerfTab>;
+	perfTab: PerfTab;
+	handleTab: (tab: PerfTab) => void;
+}) => {
+	return (
+		<a
+			class={props.tab() === props.perfTab ? "is-active" : ""}
+			title={`View ${formatTab(props.perfTab)}`}
+			// biome-ignore lint/a11y/useValidAnchor: stateful anchor
+			onClick={() => props.handleTab(props.perfTab)}
+		>
+			{formatTab(props.perfTab)}
+		</a>
 	);
 };
 
