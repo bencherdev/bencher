@@ -12,7 +12,9 @@ exclude = [
     "https://discord.gg/yGEsdUh7R4",
     "https://github.com/bencherdev/bencher/issues/new*",
     "https://www.linkedin.com/in/epompeii/",
+    "https://www.reddit.com/r/bencher",
     "https://0123abc1023abc@987efg987efg.ingest.sentry.io/0123456789",
+    "https://www.nsa.gov/Cybersecurity/Partnership/National-Cross-Domain-Strategy-Management-Office/",
     "saul@bettercallsaul.com",
     # TODO figure out why this page 404s
     # "https://bencher.dev/docs/[a-z]{2}/reference/api",
