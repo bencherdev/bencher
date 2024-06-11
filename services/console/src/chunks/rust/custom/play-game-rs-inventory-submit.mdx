@@ -1,0 +1,15 @@
+```rust title="benches/play_game.rs" ins={10-13}
+fn bench_play_game() -> dhat::HeapStats {
+    let _profiler = dhat::Profiler::builder().testing().build();
+
+    std::hint::black_box(for i in 1..=100 {
+        play_game(i, false);
+    });
+
+    dhat::HeapStats::get()
+}
+inventory::submit!(CustomBenchmark {
+    name: "bench_play_game",
+    benchmark_fn: bench_play_game
+});
+```

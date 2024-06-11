@@ -1,0 +1,21 @@
+## Wrap Up
+
+We started this post looking at the three most popular benchmarking harnesses in the Rust ecosystem:
+[libtest bench][libtest bench], [Criterion][criterion], and [Iai][iai].
+Even though they may cover the majority of the use cases,
+sometimes you may need to measure something other than wall clock time or instruction counts.
+This set us down the road to creating a custom benchmarking harness.
+
+Our custom benchmarking harness measures heap allocations using `dhat-rs`.
+The benchmark functions were collected using `inventory`.
+When run, our benchmarks output results as Bencher Metric Format (BMF) JSON.
+We could then use Bencher to track our custom benchmark results over time
+and catch performance regressions in CI.
+
+All of the source code for this guide is [available on GitHub][github bencher].
+
+[github bencher]: https://github.com/bencherdev/bencher/tree/main/examples/rust/custom
+
+[libtest bench]: /learn/benchmarking/rust/libtest-bench/
+[criterion]: /learn/benchmarking/rust/criterion/
+[iai]: /learn/benchmarking/rust/iai/

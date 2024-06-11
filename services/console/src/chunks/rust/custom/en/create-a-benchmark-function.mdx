@@ -1,0 +1,37 @@
+import PlayGameRsBenchPlayGame from "../play-game-rs-bench-play-game.mdx";
+
+### Create a Benchmark Function
+
+Now, we can create a benchmark function that plays the FizzBuzzFibonacci game:
+
+<PlayGameRsBenchPlayGame />
+
+Going line by line:
+- Create a benchmark function that matches the signature used in `CustomBenchmark`.
+- Create a `dhat::Profiler` in testing mode,
+  to collect results from our `dhat::Alloc` custom, global allocator.
+- Run our `play_game` function inside of a “black box” so the compiler doesn’t optimize our code.
+- Iterate from `1` to `100` inclusively.
+- For each number, call `play_game`, with `print` set to `false`.
+- Return our heap allocation stats as `dhat::HeapStats`.
+
+> 🐰 We set `print` to `false` for the `play_game` function.
+> This keeps `play_game` from printing to standard out.
+> Parameterizing your library functions like this
+> can make them more amenable to benchmarking.
+> However, this does mean that we may not be benchmarking the library
+> in exactly the same way that it is used in production.
+>
+> In this case, we have to ask ourselves:
+> 1. Are the resources it takes to print to standard out something we care about?
+> 2. Is printing to standard out a possible source of noise?
+>
+> For our example, we've gone with:
+> 1. No, we don't care about printing to standard out.
+> 2. Yes, it is a very likely source of noise.
+>
+> Therefore, we have omitted printing to standard out as a part of this benchmark.
+> Benchmarking is hard, and there often isn't one right answer to questions like these.
+> [It depends][changelog it depends].
+
+[changelog it depends]: https://changelog.com/topic/itdepends

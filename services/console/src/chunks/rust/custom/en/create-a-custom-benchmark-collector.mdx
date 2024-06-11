@@ -1,0 +1,16 @@
+import PlayGameRsCustomBenchmark from "../play-game-rs-custom-benchmark.mdx";
+import PlayGameRsInventoryCollect from "../play-game-rs-inventory-collect.mdx";
+
+### Create a Custom Benchmark Collector
+
+To create a custom benchmarking harness,
+we need a way identify and store our benchmark functions.
+We will use a struct, aptly named `CustomBenchmark` to encapsulate each benchmark function.
+
+<PlayGameRsCustomBenchmark />
+
+A `CustomBenchmark` has a name and a benchmark function that returns `dhat::HeapStats` as its output.
+
+Then we'll use the `inventory` crate to create a collection for all of our `CustomBenchmark`s:
+
+<PlayGameRsInventoryCollect />

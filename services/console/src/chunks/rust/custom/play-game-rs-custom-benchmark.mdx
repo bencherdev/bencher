@@ -1,0 +1,7 @@
+```rust title="benches/play_game.rs"
+#[derive(Debug)]
+struct CustomBenchmark {
+    name: &'static str,
+    benchmark_fn: fn() -> dhat::HeapStats,
+}
+```

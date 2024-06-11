@@ -1,0 +1,20 @@
+import PlayGameAlloc from "../play-game-rs-alloc.mdx";
+
+### Create a Custom Allocator
+
+Since our custom benchmarking harness will be measuring heap allocations,
+we will need to use a custom heap allocator.
+Rust allows you to configuring a custom, global heap allocator
+using [the `#[global_allocator]` attribute][rust global allocator].
+Add the following to the top of `benches/play_game.rs`:
+
+<PlayGameAlloc />
+
+This tells Rust to use `dhat::Alloc` as our global heap allocator.
+
+> 🐰 You can only set **one** global heap allocator at a time.
+> If you want to switch between multiple global allocators,
+> they have to be managed through conditional compilation with [Rust features].
+
+[rust global allocator]: https://doc.rust-lang.org/std/alloc/index.html#the-global_allocator-attribute
+[rust features]: https://doc.rust-lang.org/cargo/reference/features.html

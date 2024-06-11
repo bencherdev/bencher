@@ -1,0 +1,22 @@
+import CargoBench from "../cargo-bench.mdx";
+import CargoBenchJson from "../cargo-bench-json.mdx";
+
+## Run the Custom Benchmark Harness
+
+Everything is now in place.
+We can finally run our custom benchmark harness.
+
+<CargoBench />
+
+The output both to standard out
+and to a file named `results.json` should look like this:
+
+<CargoBenchJson />
+
+The exact numbers that you see may be a little bit different based on your computer's architecture.
+But the important thing is that you at least of some values for the last four metrics.
+
+[bmf json]: /docs/reference/bencher-metric-format/
+[measures]: /docs/explanation/benchmarking/#measures
+
+[crates serde json]: https://crates.io/crates/serde_json

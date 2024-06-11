@@ -1,0 +1,35 @@
+import CargoTomlSerdeJson from "../cargo-toml-serde-json.mdx";
+import PlayGameRsRun from "../play-game-rs-run.mdx";
+import PlayGameMain from "../play-game-rs-main.mdx";
+
+### Create a Custom Benchmark Runner
+
+Finally, we need to create a runner for our custom benchmark harness.
+A custom benchmark harness is really just a binary
+that runs all of our benchmarks for us and reports its results.
+The benchmark runner is what orchestrates all of that.
+
+We want our results to be output in [Bencher Metric Format (BMF) JSON][bmf json].
+To accomplish this, we need to add one final dependency,
+[the `serde_json` crate][crates serde json] by... you guessed it, David Tolnay!
+
+<CargoTomlSerdeJson />
+
+Next, we will implement a method for `CustomBenchmark` to run its benchmark function
+and then return the results as BMF JSON.
+
+<PlayGameRsRun />
+
+The BMF JSON results contain six [Measures][measures] for each benchmark:
+
+- Final Blocks: Final number of blocks allocated when the benchmark finished.
+- Final Bytes: Final number of bytes allocated when the benchmark finished.
+- Max Blocks: Maximum number of blocks allocated at one time during the benchmark run.
+- Max Bytes: Maximum number of bytes allocated at one time during the benchmark run.
+- Total Blocks: Total number of blocks allocated during the benchmark run.
+- Total Bytes: Total number of bytes allocated during the benchmark run.
+
+Finally, we can create a `main` function to run all of the benchmarks in our `inventory` collection
+and output the results as BMF JSON.
+
+<PlayGameMain />

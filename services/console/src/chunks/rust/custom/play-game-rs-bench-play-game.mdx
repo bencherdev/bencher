@@ -1,0 +1,11 @@
+```rust title="benches/play_game.rs"
+fn bench_play_game() -> dhat::HeapStats {
+    let _profiler = dhat::Profiler::builder().testing().build();
+
+    std::hint::black_box(for i in 1..=100 {
+        play_game(i, false);
+    });
+
+    dhat::HeapStats::get()
+}
+```

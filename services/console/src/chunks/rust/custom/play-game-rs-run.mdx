@@ -1,0 +1,30 @@
+```rust title="benches/play_game.rs"
+impl CustomBenchmark {
+    fn run(&self) -> serde_json::Value {
+        let heap_stats = (self.benchmark_fn)();
+        let measures = serde_json::json!({
+            "Final Blocks": {
+                "value": heap_stats.curr_blocks,
+            },
+            "Final Bytes": {
+                "value": heap_stats.curr_bytes,
+            },
+            "Max Blocks": {
+                "value": heap_stats.max_blocks,
+            },
+            "Max Bytes": {
+                "value": heap_stats.max_bytes,
+            },
+            "Total Blocks": {
+                "value": heap_stats.total_blocks,
+            },
+            "Total Bytes": {
+                "value": heap_stats.total_bytes,
+            },
+        });
+        let mut benchmark_map = serde_json::Map::new();
+        benchmark_map.insert(self.name.to_string(), measures);
+        benchmark_map.into()
+    }
+}
+```

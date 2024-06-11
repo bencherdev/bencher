@@ -1,0 +1,11 @@
+## How `cargo bench` Works
+
+Before building a custom benchmarking harness,
+we need to understand how Rust benchmarks work.
+For most Rust developers this means running [the `cargo bench` command][cargo bench].
+The `cargo bench` command compiles and executes your benchmarks.
+By default, `cargo bench` will try to use the built-in (but unstable) libtest bench harness.
+libtest bench will then go through your code and run all functions annotated with the `#[bench]` attribute.
+In order to use a custom benchmarking harness, we need to tell `cargo bench` to not use libtest bench.
+
+[cargo bench]: https://doc.rust-lang.org/cargo/commands/cargo-bench.html

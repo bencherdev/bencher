@@ -1,0 +1,14 @@
+```rust title="benches/play_game.rs"
+fn main() {
+    let mut bmf = serde_json::Map::new();
+
+    for benchmark in inventory::iter::<CustomBenchmark> {
+        let mut results = benchmark.run();
+        bmf.append(results.as_object_mut().unwrap());
+    }
+
+    let bmf_str = serde_json::to_string_pretty(&bmf).unwrap();
+    std::fs::write("results.json", &bmf_str).unwrap();
+    println!("{bmf_str}");
+}
+```

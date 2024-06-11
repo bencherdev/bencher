@@ -1,0 +1,27 @@
+import BencherRun from "../bencher-run.mdx";
+
+## Track Custom Benchmark Results
+
+Most benchmark results are ephemeral.
+They disappear as soon as your terminal reaches its scrollback limit.
+Some benchmark harnesses let you cache results, but that's a lot of work to implement.
+And even then, we could only store our results locally.
+Lucky for us, our custom benchmarking harness will work with Bencher!
+[Bencher][bencher] is a suite of continuous benchmarking tools
+that allows us to track the results of our benchmarks over time
+and catch performance regressions _before_ they make it to production.
+
+Once you are all set up using [Bencher Cloud][quick start] or [Bencher Self-Hosted][docker quick start],
+you can track the results from our custom benchmarking harness by running:
+
+<BencherRun />
+
+You can also read more about [how to track custom benchmarks with Bencher][custom benchmarks]
+and the [JSON benchmark adapter][json adapter].
+
+[bencher]: /
+[install cli]: /docs/how-to/install-cli/
+[quick start]: /docs/tutorial/quick-start/
+[docker quick start]: /docs/tutorial/docker/
+[custom benchmarks]: /docs/how-to/track-custom-benchmarks/
+[json adapter]: http://localhost:3000/docs/explanation/adapters/#-json
