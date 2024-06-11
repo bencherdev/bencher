@@ -8,7 +8,7 @@ import PlayGameRsBenchPlayGame from "../play-game-rs-bench-play-game.mdx";
 
 一行ずつ確認していきます：
 - `CustomBenchmark`で使用された署名に一致するベンチマーク関数を作成します。
-- テストモードで`dhat::Profiler`を作成し、  
+- テストモードで`dhat::Profiler`を作成し、
   `dhat::Alloc`のカスタムグローバルアロケーターから結果を収集します。
 - コンパイラがコードを最適化しないように、「ブラックボックス」内で`play_game`関数を実行します。
 - `1`から`100`まで反復します（包含）。

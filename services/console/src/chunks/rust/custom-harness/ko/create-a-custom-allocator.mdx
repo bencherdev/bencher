@@ -4,7 +4,7 @@ import PlayGameAlloc from "../play-game-rs-alloc.mdx";
 
 우리의 커스텀 벤치마킹 하네스가 힙 할당을 측정할 것이므로,
 커스텀 힙 할당자를 사용해야 합니다.
-Rust는 [ `#[global_allocator]` 애트리뷰트][rust global allocator]를 사용하여 
+Rust는 [ `#[global_allocator]` 애트리뷰트][rust global allocator]를 사용하여
 사용자 정의 전역 힙 할당자를 설정할 수 있게 합니다.
 `benches/play_game.rs` 파일의 맨 위에 다음을 추가하세요:
 
