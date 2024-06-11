@@ -1,0 +1,40 @@
+import CargoTomlSerdeJson from "../cargo-toml-serde-json.mdx";
+import PlayGameRsRun from "../play-game-rs-run.mdx";
+import PlayGameMain from "../play-game-rs-main.mdx";
+
+### Erstellen eines benutzerdefinierten Benchmark-Runners
+
+Schließlich müssen wir einen Runner für unser benutzerdefiniertes Benchmark-Harness erstellen.
+Ein benutzerdefiniertes Benchmark-Harness ist eigentlich nur ein Binärprogramm,
+das alle unsere Benchmarks für uns ausführt und seine Ergebnisse meldet.
+Der Benchmark-Runner ist das, was all dies orchestriert.
+
+Wir möchten, dass unsere Ergebnisse im [Bencher-Metrik-Format (BMF) JSON][bmf json] ausgegeben werden.
+Um dies zu erreichen, müssen wir eine letzte Abhängigkeit hinzufügen,
+[das `serde_json` Crate][crates serde json], genau, David Tolnay!
+
+<CargoTomlSerdeJson />
+
+Als Nächstes implementieren wir eine Methode für `CustomBenchmark`, um seine Benchmark-Funktion auszuführen
+und dann die Ergebnisse als BMF JSON zurückzugeben.
+
+<PlayGameRsRun />
+
+Die BMF JSON-Ergebnisse enthalten sechs [Messungen][measures] für jeden Benchmark:
+
+- Final Blocks: Endgültige Anzahl der Blöcke, die beim Abschluss des Benchmarks zugewiesen wurden.
+- Final Bytes: Endgültige Anzahl der Bytes, die beim Abschluss des Benchmarks zugewiesen wurden.
+- Max Blocks: Maximale Anzahl der Blöcke, die während des Benchmark-Laufs zu einem Zeitpunkt zugewiesen wurden.
+- Max Bytes: Maximale Anzahl der Bytes, die während des Benchmark-Laufs zu einem Zeitpunkt zugewiesen wurden.
+- Total Blocks: Gesamte Anzahl der Blöcke, die während des Benchmark-Laufs zugewiesen wurden.
+- Total Bytes: Gesamte Anzahl der Bytes, die während des Benchmark-Laufs zugewiesen wurden.
+
+Schließlich können wir eine `main`-Funktion erstellen, um alle Benchmarks in unserer `inventory`-Sammlung auszuführen
+und die Ergebnisse als BMF JSON auszugeben.
+
+<PlayGameMain />
+
+[bmf json]: /de/docs/reference/bencher-metric-format/
+[measures]: /de/docs/explanation/benchmarking/#measures
+
+[crates serde json]: https://crates.io/crates/serde_json

@@ -1,0 +1,11 @@
+## Cómo Funciona `cargo bench`
+
+Antes de construir un arnés de evaluación personalizado,
+necesitamos entender cómo funcionan los benchmarks en Rust.
+Para la mayoría de los desarrolladores de Rust, esto significa ejecutar [el comando `cargo bench`][cargo bench].
+El comando `cargo bench` compila y ejecuta tus benchmarks.
+Por defecto, `cargo bench` intentará usar el arnés de bench libtest incorporado (pero inestable).
+libtest bench luego recorrerá tu código y ejecutará todas las funciones anotadas con el atributo `#[bench]`.
+Para usar un arnés de evaluación personalizado, necesitamos decirle a `cargo bench` que no use libtest bench.
+
+[cargo bench]: https://doc.rust-lang.org/cargo/commands/cargo-bench.html

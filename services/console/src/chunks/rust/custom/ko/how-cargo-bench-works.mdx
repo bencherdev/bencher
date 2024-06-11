@@ -1,0 +1,11 @@
+## `cargo bench` 작동 방식
+
+사용자 정의 벤치마킹 하네스를 만들기 전에,
+러스트 벤치마크가 어떻게 작동하는지 이해해야 합니다.
+대부분의 러스트 개발자에게 이는 [`cargo bench` 명령어를 실행하는 것][cargo bench]을 의미합니다.
+`cargo bench` 명령어는 벤치마크를 컴파일하고 실행합니다.
+기본적으로, `cargo bench`는 기본적으로 내장되어 있지만 불안정한 libtest 벤치 하네스를 사용하려고 합니다.
+libtest 벤치 하네스는 코드를 살펴보고 `#[bench]` 속성이 주석된 모든 함수를 실행합니다.
+사용자 정의 벤치마킹 하네스를 사용하려면, `cargo bench`에 libtest 벤치를 사용하지 않도록 지시해야 합니다.
+
+[cargo bench]: https://doc.rust-lang.org/cargo/commands/cargo-bench.html

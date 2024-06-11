@@ -1,0 +1,13 @@
+## Conclusion
+
+Nous avons commencé ce billet en examinant les trois harnais de benchmarking les plus populaires dans l'écosystème Rust : [libtest bench][libtest bench], [Criterion][criterion], et [Iai][iai]. Bien qu'ils puissent couvrir la majorité des cas d'utilisation, il peut parfois être nécessaire de mesurer autre chose que le temps d'horloge murale ou le nombre d'instructions. Cela nous a conduit à créer un harnais de benchmarking personnalisé.
+
+Notre harnais de benchmarking personnalisé mesure les allocations de tas en utilisant `dhat-rs`. Les fonctions de benchmark ont été collectées à l'aide d'`inventory`. Lors de l'exécution, nos benchmarks produisent des résultats au format JSON Bencher Metric Format (BMF). Nous pouvions ensuite utiliser Bencher pour suivre nos résultats de benchmark personnalisés au fil du temps et détecter les régressions de performance dans CI.
+
+Tout le code source de ce guide est [disponible sur GitHub][github bencher].
+
+[github bencher]: https://github.com/bencherdev/bencher/tree/main/examples/rust/custom
+
+[libtest bench]: /fr/learn/benchmarking/rust/libtest-bench/
+[criterion]: /fr/learn/benchmarking/rust/criterion/
+[iai]: /fr/learn/benchmarking/rust/iai/

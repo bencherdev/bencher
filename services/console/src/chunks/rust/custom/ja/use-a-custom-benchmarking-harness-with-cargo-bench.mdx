@@ -1,0 +1,30 @@
+import CargoToml from "../cargo-toml.mdx";
+import FileTree from "../file-tree.mdx";
+import CargoTomlBenchName from "../cargo-toml-bench-name.mdx";
+
+## `cargo bench`でカスタムベンチマークハーネスを使用する
+
+`cargo bench`にlibtestのベンチを使用させないようにするためには、`Cargo.toml`ファイルに以下を追加する必要があります。
+
+<CargoToml />
+
+残念ながら、カスタムベンチマークハーネスでは`#[bench]`属性を使用できません。
+[いつの日か使えるようになるかもしれませんが][github issue 2]、今日はまだです。
+その代わりに、ベンチマークを保持するための別の`benches`ディレクトリを作成する必要があります。
+`benches`ディレクトリは、統合テストにおける[ `tests`ディレクトリ][tests directory] に相当します。
+`benches`ディレクトリ内の各ファイルは別々のクレートとして扱われます。
+そのため、ベンチマークの対象となるクレートはライブラリクレートでなければなりません。
+つまり、`lib.rs`ファイルを持っている必要があります。
+
+例えば、`game`という基本的なライブラリクレートがあれば、`benches`ディレクトリに`play_game`という名前のカスタムベンチマークファイルを追加することができます。
+ディレクトリ構造は以下のようになります：
+
+<FileTree />
+
+次に、`cargo bench`にカスタムベンチマーククレート`play_game`について知らせる必要があります。
+そのために、`Cargo.toml`ファイルを更新します：
+
+<CargoTomlBenchName />
+
+[github issue 2]: https://github.com/rust-lang/testing-devex-team/issues/2
+[tests directory]: https://doc.rust-lang.org/book/ch11-03-test-organization.html#the-tests-directory

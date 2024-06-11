@@ -1,0 +1,11 @@
+## Como o `cargo bench` Funciona
+
+Antes de construir um mecanismo de benchmarking personalizado,
+precisamos entender como funcionam os benchmarks em Rust.
+Para a maioria dos desenvolvedores Rust, isso significa executar [o comando `cargo bench`][cargo bench].
+O comando `cargo bench` compila e executa seus benchmarks.
+Por padrão, `cargo bench` tentará usar o mecanismo de bench integrado (mas instável) libtest.
+O libtest bench então percorrerá seu código e executará todas as funções anotadas com o atributo `#[bench]`.
+Para usar um mecanismo de benchmarking personalizado, precisamos informar ao `cargo bench` para não usar o libtest bench.
+
+[cargo bench]: https://doc.rust-lang.org/cargo/commands/cargo-bench.html

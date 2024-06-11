@@ -1,0 +1,16 @@
+import PlayGameRsCustomBenchmark from "../play-game-rs-custom-benchmark.mdx";
+import PlayGameRsInventoryCollect from "../play-game-rs-inventory-collect.mdx";
+
+### Создание пользовательского сборщика бенчмарков
+
+Чтобы создать пользовательский бенчмарк-харнесс,
+нам нужно определить и сохранять наши функции бенчмарков.
+Мы будем использовать структуру, которая будет называться `CustomBenchmark`, чтобы инкапсулировать каждую функцию бенчмарка.
+
+<PlayGameRsCustomBenchmark />
+
+`CustomBenchmark` имеет имя и функцию бенчмарка, которая возвращает `dhat::HeapStats` в качестве своего вывода.
+
+Затем мы используем крейт `inventory`, чтобы создать коллекцию для всех наших `CustomBenchmark`:
+
+<PlayGameRsInventoryCollect />

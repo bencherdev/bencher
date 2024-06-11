@@ -1,0 +1,39 @@
+```jsx
+import PlayGameRsBenchPlayGame from "../play-game-rs-bench-play-game.mdx";
+
+### Crear una Función de Benchmark
+
+Ahora, podemos crear una función de benchmark que juegue el juego FizzBuzzFibonacci:
+
+<PlayGameRsBenchPlayGame />
+
+Línea por línea:
+- Crear una función de benchmark que coincida con la firma utilizada en `CustomBenchmark`.
+- Crear un `dhat::Profiler` en modo de prueba,
+  para recopilar resultados de nuestro `dhat::Alloc` asignador global personalizado.
+- Ejecutar nuestra función `play_game` dentro de una "caja negra" para que el compilador no optimice nuestro código.
+- Iterar de `1` a `100` inclusivamente.
+- Para cada número, llamar a `play_game`, con `print` establecido en `false`.
+- Devolver nuestras estadísticas de asignación de heap como `dhat::HeapStats`.
+
+> 🐰 Establecemos `print` en `false` para la función `play_game`.
+> Esto evita que `play_game` imprima en la salida estándar.
+> Parametrizar las funciones de tu librería de esta manera
+> puede hacerlas más adecuadas para el benchmarking.
+> Sin embargo, esto significa que puede que no estemos evaluando la librería
+> de la misma manera que se usa en producción.
+>
+> En este caso, debemos preguntarnos:
+> 1. ¿Nos importan los recursos que se necesitan para imprimir en la salida estándar?
+> 2. ¿Es la impresión en la salida estándar una posible fuente de ruido?
+>
+> Para nuestro ejemplo, hemos decidido:
+> 1. No, no nos importa imprimir en la salida estándar.
+> 2. Sí, es una fuente de ruido muy probable.
+>
+> Por lo tanto, hemos omitido la impresión en la salida estándar como parte de este benchmark.
+> El benchmarking es difícil y, a menudo, no hay una respuesta correcta a preguntas como estas.
+> [Depende][changelog it depends].
+
+[changelog it depends]: https://changelog.com/topic/itdepends
+```

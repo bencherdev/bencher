@@ -1,0 +1,33 @@
+import CargoToml from "../cargo-toml.mdx";
+import FileTree from "../file-tree.mdx";
+import CargoTomlBenchName from "../cargo-toml-bench-name.mdx";
+
+## Usar un Harness de Benchmarking Personalizado con `cargo bench`
+
+Para que `cargo bench` no use `libtest bench`,
+necesitamos añadir lo siguiente a nuestro archivo `Cargo.toml`:
+
+<CargoToml />
+
+Desafortunadamente, no podemos usar el atributo `#[bench]` con nuestro harness de benchmarking personalizado.
+[Quizás algún día pronto][github issue 2], pero no hoy.
+En su lugar, tenemos que crear un directorio separado `benches` para guardar nuestros benchmarks.
+El directorio `benches` es para benchmarks
+lo que [el directorio `tests`][tests directory] es para pruebas de integración.
+Cada archivo dentro del directorio `benches` se trata como un crate separado.
+El crate que está siendo evaluado debe ser por lo tanto un crate de biblioteca.
+Es decir, debe tener un archivo `lib.rs`.
+
+Por ejemplo, si tuviéramos un crate de biblioteca básico llamado `game`
+entonces podríamos añadir un archivo de benchmark personalizado llamado `play_game` al directorio `benches`.
+Nuestra estructura de directorios se vería así:
+
+<FileTree />
+
+A continuación, necesitamos informar a `cargo bench` sobre nuestro crate de benchmark personalizado `play_game`.
+Así que actualizamos nuestro archivo `Cargo.toml`:
+
+<CargoTomlBenchName />
+
+[github issue 2]: https://github.com/rust-lang/testing-devex-team/issues/2
+[tests directory]: https://doc.rust-lang.org/book/ch11-03-test-organization.html#the-tests-directory

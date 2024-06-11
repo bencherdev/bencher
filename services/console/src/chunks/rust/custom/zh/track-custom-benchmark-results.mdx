@@ -1,0 +1,26 @@
+import BencherRun from "../bencher-run.mdx";
+
+## 跟踪自定义基准测试结果
+
+大多数基准测试结果都是临时的。
+当终端滚动到其回滚限制时，它们就会消失。
+有些基准测试工具允许您缓存结果，但实现起来非常麻烦。
+即使这样，我们也只能本地存储结果。
+幸运的是，我们的自定义基准测试工具可以与 Bencher 一起工作！
+[Bencher][bencher] 是一套连续基准测试工具，
+它允许我们随着时间的推移跟踪基准测试的结果，
+并在性能回归 _进入生产环境之前_ 就捕获它们。
+
+一旦您使用 [Bencher Cloud][quick start] 或 [Bencher Self-Hosted][docker quick start] 完成设置，
+您可以通过运行以下命令来跟踪我们的自定义基准测试工具的结果：
+
+<BencherRun />
+
+您还可以阅读更多关于[如何使用 Bencher 跟踪自定义基准测试][custom benchmarks]和 [JSON 基准测试适配器][json adapter] 的信息。
+
+[bencher]: /
+[install cli]: /zh/docs/how-to/install-cli/
+[quick start]: /zh/docs/tutorial/quick-start/
+[docker quick start]: /zh/docs/tutorial/docker/
+[custom benchmarks]: /zh/docs/how-to/track-custom-benchmarks/
+[json adapter]: http://localhost:3000/docs/explanation/adapters/#-json

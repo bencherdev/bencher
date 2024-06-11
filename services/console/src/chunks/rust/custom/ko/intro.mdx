@@ -1,0 +1,15 @@
+With all that in mind, if you are looking to benchmark your code's wall clock time
+then you should probably use Criterion.
+If you are looking to [benchmark your code in CI][continuous benchmarking]
+with shared runners then it may be worth checking out Iai.
+Note though, Iai hasn't been update [in over 3 years][github iai].
+So you might consider [using Iai-Callgrind][adapters iai callgrind] instead.
+
+But what if you don't want to benchmark wall clock time or instruction counts?
+What if you want to track some completely different benchmark‽
+Luckily, Rust makes it incredibly easy to create a custom benchmarking harness.
+
+[github iai]: https://github.com/bheisler/iai/commits/main/
+
+[continuous benchmarking]: /ko/docs/explanation/continuous-benchmarking/
+[adapters iai callgrind]: /ko/docs/explanation/adapters/#-rust-iai-callgrind

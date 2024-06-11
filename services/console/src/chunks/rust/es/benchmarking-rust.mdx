@@ -1,23 +1,24 @@
-## Benchmarking en Rust
+## Evaluación de rendimiento en Rust
 
-Las tres opciones populares para el benchmarking en Rust son:
+Las tres opciones populares para la evaluación de rendimiento en Rust son:
 [libtest bench](/es/learn/benchmarking/rust/libtest-bench/),
-[Criterion](/es/learn/benchmarking/rust/criterion/), y
+[Criterion](/es/learn/benchmarking/rust/criterion/), e
 [Iai](/es/learn/benchmarking/rust/iai/).
 
-libtest es el marco de pruebas unitarias y benchmarking incorporado en Rust.
-Aunque es parte de la librería estándar de Rust, libtest bench aún se considera inestable,
-por lo que solo está disponible en las versiones `nightly` del compilador.
+libtest es el marco de evaluación de pruebas unitarias y rendimiento integrado de Rust.
+Aunque forma parte de la biblioteca estándar de Rust, libtest bench todavía se considera inestable,
+por lo que solo está disponible en versiones del compilador `nightly`.
 Para trabajar en el compilador estable de Rust,
-se necesita usar [un arnés de benchmarking separado](https://github.com/bluss/bencher).
-Sin embargo, ninguno de los dos está en desarrollo activo.
+[se necesita un arnés de evaluación de rendimiento separado](https://github.com/bluss/bencher).
+Sin embargo, ninguno está siendo desarrollado activamente.
 
-El arnés de benchmarking más activamente mantenida dentro del ecosistema de Rust es Criterion.
-Funciona tanto con las versiones de compilador estables como `nightly` de Rust,
-y se ha convertido en el estándar dentro de la comunidad de Rust.
-Criterion también es mucho más rico en características en comparación con libtest bench.
+El arnés de evaluación de rendimiento más popular dentro del ecosistema de Rust es Criterion.
+Funciona tanto en versiones del compilador Rust estable como `nightly`,
+y se ha convertido en el estándar de facto dentro de la comunidad Rust.
+Criterion también es mucho más rico en funcionalidades en comparación con libtest bench.
 
-Una alternativa experimental a Criterion es Iai, del mismo creador que Criterion.
-Sin embargo, utiliza recuentos de instrucciones en lugar de tiempo de reloj de pared:
+Una alternativa experimental a Criterion es Iai, del mismo creador de Criterion.
+Sin embargo, utiliza el conteo de instrucciones en lugar del tiempo de pared:
 instrucciones de CPU, accesos a L1, accesos a L2 y accesos a RAM.
-Esto permite el benchmarking de disparo único, ya que estas métricas deberían permanecer casi idénticas entre ejecuciones.
+Esto permite evaluaciones de rendimiento de una sola ejecución,
+ya que estas métricas deberían mantenerse casi idénticas entre ejecuciones.

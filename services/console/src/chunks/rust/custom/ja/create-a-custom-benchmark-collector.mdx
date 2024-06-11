@@ -1,0 +1,15 @@
+import PlayGameRsCustomBenchmark from "../play-game-rs-custom-benchmark.mdx";
+import PlayGameRsInventoryCollect from "../play-game-rs-inventory-collect.mdx";
+
+### カスタムベンチマークコレクターの作成
+
+カスタムベンチマークハーネスを作成するためには、ベンチマーク関数を識別して保存する方法が必要です。
+`CustomBenchmark` という構造体を使用して、各ベンチマーク関数をカプセル化します。
+
+<PlayGameRsCustomBenchmark />
+
+`CustomBenchmark` は名前と、結果として `dhat::HeapStats` を返すベンチマーク関数を持ちます。
+
+次に、`inventory` クレートを使用して、すべての `CustomBenchmark` のコレクションを作成します:
+
+<PlayGameRsInventoryCollect />

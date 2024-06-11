@@ -1,0 +1,11 @@
+## `cargo bench` 是如何工作的
+
+在构建自定义基准测试框架之前，
+我们需要了解 Rust 基准测试的工作原理。
+对于大多数 Rust 开发者来说，这意味着运行 [`cargo bench` 命令][cargo bench]。
+`cargo bench` 命令会编译并执行你的基准测试。
+默认情况下，`cargo bench` 会尝试使用内置的（但不稳定的）libtest 基准测试框架。
+libtest 基准测试框架会遍历你的代码并运行所有用 `#[bench]` 属性标注的函数。
+为了使用自定义基准测试框架，我们需要告诉 `cargo bench` 不要使用 libtest 基准测试框架。
+
+[cargo bench]: https://doc.rust-lang.org/cargo/commands/cargo-bench.html

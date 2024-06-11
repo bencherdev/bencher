@@ -1,0 +1,21 @@
+import CargoTomlDevDependencies from "../cargo-toml-dev-dependencies.mdx";
+
+## Создание пользовательской системы бенчмаркинга
+
+Мы собираемся создать пользовательскую систему бенчмаркинга внутри `benches/play_game.rs`.
+Эта пользовательская система бенчмаркинга будет измерять выделения кучи
+с использованием [библиотеки `dhat-rs`][crates dhat].
+`dhat-rs` — это фантастический инструмент для отслеживания выделений кучи в программах на Rust,
+созданный экспертом по производительности на Rust [Николасом Нетеркотом][github nnethercote].
+Чтобы помочь нам управлять нашими функциями бенчмаркинга,
+мы будем использовать [библиотеку `inventory`][crates inventory],
+созданную невероятно продуктивным [Дэвидом Толнэем][github dtolnay].
+
+Давайте добавим `dhat-rs` и `inventory` в наш файл `Cargo.toml` как `dev-dependencies`:
+
+<CargoTomlDevDependencies />
+
+[crates dhat]: https://docs.rs/dhat/latest/dhat/
+[github nnethercote]: https://github.com/nnethercote
+[crates inventory]: https://crates.io/crates/inventory
+[github dtolnay]: https://github.com/dtolnay

@@ -1,0 +1,13 @@
+Com tudo isso em mente, se você está procurando medir o tempo de execução do seu código, é recomendável usar o Criterion.
+Se você está procurando [medir o desempenho do seu código no CI][continuous benchmarking] com runners compartilhados, pode valer a pena conferir o Iai.
+Note, no entanto, que o Iai não é atualizado [há mais de 3 anos][github iai].
+Portanto, você pode considerar [usar Iai-Callgrind][adapters iai callgrind] em vez disso.
+
+Mas e se você não quiser medir o tempo de execução ou a contagem de instruções?
+E se você quiser rastrear um benchmark completamente diferente‽
+Felizmente, o Rust torna extremamente fácil criar um conjunto de testes de desempenho personalizado.
+
+[github iai]: https://github.com/bheisler/iai/commits/main/
+
+[continuous benchmarking]: /pt/docs/explanation/continuous-benchmarking/
+[adapters iai callgrind]: /pt/docs/explanation/adapters/#-rust-iai-callgrind

@@ -1,24 +1,24 @@
-## Le Benchmarking en Rust
+## Benchmarking en Rust
 
 Les trois options populaires pour le benchmarking en Rust sont :
-[libtest bench](/fr/learn/benchmarking/rust/libtest-bench/),
-[Criterion](/fr/learn/benchmarking/rust/criterion/), et
-[Iai](/fr/learn/benchmarking/rust/iai/).
+[libtest bench](/fr/docs/benchmarking/rust/libtest-bench/),
+[Criterion](/fr/docs/benchmarking/rust/criterion/), et
+[Iai](/fr/docs/benchmarking/rust/iai/).
 
-libtest est le framework intégré de Rust pour le test unitaire et le benchmarking.
-Bien qu'il fasse partie de la bibliothèque standard de Rust, libtest bench est toujours considéré comme instable,
-il est donc uniquement disponible sur les versions `nightly` du compilateur.
+libtest est le framework intégré de tests unitaires et de benchmarking de Rust.
+Bien qu'il fasse partie de la bibliothèque standard de Rust, libtest bench est encore considéré comme instable,
+il n'est donc disponible que sur les versions `nightly` du compilateur.
 Pour fonctionner sur le compilateur Rust stable,
 [un harnais de benchmarking séparé](https://github.com/bluss/bencher)
 doit être utilisé.
 Cependant, aucun des deux n'est activement développé.
 
-Le harnais de benchmarking le plus activement maintenu dans l'écosystème Rust est Criterion.
-Il fonctionne sur les versions stable et `nightly` du compilateur Rust,
-et il est devenu la norme de facto au sein de la communauté Rust.
-Criterion est également beaucoup plus riche en fonctionnalités par rapport à libtest bench.
+Le harnais de benchmarking le plus populaire dans l'écosystème Rust est Criterion.
+Il fonctionne à la fois sur les versions stables et `nightly` du compilateur Rust,
+et il est devenu le standard de facto au sein de la communauté Rust.
+Criterion est également beaucoup plus riche en fonctionnalités comparé à libtest bench.
 
-Une alternative expérimentale à Criterion est Iai, du même créateur que Criterion.
-Cependant, il utilise des comptages d'instructions au lieu du temps d'horloge murale :
+Une alternative expérimentale à Criterion est Iai, créé par le même auteur que Criterion.
+Cependant, il utilise des comptes d'instructions plutôt que du temps d'horloge murale :
 instructions CPU, accès L1, accès L2 et accès RAM.
-Cela permet un benchmarking en une seule fois car ces métriques devraient rester presque identiques entre les exécutions.
+Cela permet un benchmarking en une seule passe puisque ces métriques devraient rester quasiment identiques entre les exécutions.

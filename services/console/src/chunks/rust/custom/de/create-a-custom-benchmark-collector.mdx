@@ -1,0 +1,16 @@
+import PlayGameRsCustomBenchmark from "../play-game-rs-custom-benchmark.mdx";
+import PlayGameRsInventoryCollect from "../play-game-rs-inventory-collect.mdx";
+
+### Einen benutzerdefinierten Benchmark-Sammler erstellen
+
+Um ein benutzerdefiniertes Benchmarking-Framework zu erstellen,
+brauchen wir eine Möglichkeit, unsere Benchmark-Funktionen zu identifizieren und zu speichern.
+Wir werden eine Struktur verwenden, die passend `CustomBenchmark` genannt wird, um jede Benchmark-Funktion zu kapseln.
+
+<PlayGameRsCustomBenchmark />
+
+Ein `CustomBenchmark` hat einen Namen und eine Benchmark-Funktion, die `dhat::HeapStats` als Ausgabe zurückgibt.
+
+Dann werden wir das `inventory`-Crate verwenden, um eine Sammlung für alle unsere `CustomBenchmark`s zu erstellen:
+
+<PlayGameRsInventoryCollect />

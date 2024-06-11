@@ -1,0 +1,40 @@
+import CargoTomlSerdeJson from "../cargo-toml-serde-json.mdx";
+import PlayGameRsRun from "../play-game-rs-run.mdx";
+import PlayGameMain from "../play-game-rs-main.mdx";
+
+### Créer un Exécuteur de Benchmark Personnalisé
+
+Enfin, nous devons créer un exécuteur pour notre harnais de benchmark personnalisé.
+Un harnais de benchmark personnalisé est en réalité juste un binaire
+qui exécute tous nos benchmarks pour nous et rapporte ses résultats.
+L'exécuteur de benchmark est ce qui orchestre tout cela.
+
+Nous voulons que nos résultats soient produits en [Format de Métrique Bencher (BMF) JSON][bmf json].
+Pour ce faire, nous devons ajouter une dernière dépendance,
+la crate [`serde_json`][crates serde json] de... vous l'avez deviné, David Tolnay !
+
+<CargoTomlSerdeJson />
+
+Ensuite, nous allons implémenter une méthode pour que `CustomBenchmark` exécute sa fonction de benchmark
+et retourne ensuite les résultats en BMF JSON.
+
+<PlayGameRsRun />
+
+Les résultats BMF JSON contiennent six [Mesures][measures] pour chaque benchmark :
+
+- Blocs Finaux : Nombre final de blocs alloués lorsque le benchmark s'est terminé.
+- Octets Finaux : Nombre final d'octets alloués lorsque le benchmark s'est terminé.
+- Blocs Max : Nombre maximal de blocs alloués à un moment donné pendant l'exécution du benchmark.
+- Octets Max : Nombre maximal d'octets alloués à un moment donné pendant l'exécution du benchmark.
+- Blocs Totaux : Nombre total de blocs alloués pendant l'exécution du benchmark.
+- Octets Totaux : Nombre total d'octets alloués pendant l'exécution du benchmark.
+
+Enfin, nous pouvons créer une fonction `main` pour exécuter tous les benchmarks de notre collection `inventory`
+et produire les résultats en BMF JSON.
+
+<PlayGameMain />
+
+[bmf json]: /fr/docs/reference/bencher-metric-format/
+[measures]: /fr/docs/explanation/benchmarking/#measures
+
+[crates serde json]: https://crates.io/crates/serde_json

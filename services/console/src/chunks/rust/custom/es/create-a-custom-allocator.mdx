@@ -1,0 +1,20 @@
+import PlayGameAlloc from "../play-game-rs-alloc.mdx";
+
+### Crear un Asignador Personalizado
+
+Dado que nuestro arnés de evaluación personalizado medirá las asignaciones en el montón,
+necesitaremos usar un asignador de montón personalizado.
+Rust permite configurar un asignador de montón global personalizado
+usando [el atributo `#[global_allocator]`][rust global allocator].
+Añade lo siguiente al principio de `benches/play_game.rs`:
+
+<PlayGameAlloc />
+
+Esto le dice a Rust que use `dhat::Alloc` como nuestro asignador de montón global.
+
+> 🐰 Solo puedes establecer **un** asignador de montón global a la vez.
+> Si deseas cambiar entre varios asignadores globales,
+> tienen que ser administrados a través de la compilación condicional con [características de Rust].
+
+[rust global allocator]: https://doc.rust-lang.org/std/alloc/index.html#the-global_allocator-attribute
+[rust features]: https://doc.rust-lang.org/cargo/reference/features.html

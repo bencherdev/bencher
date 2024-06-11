@@ -1,0 +1,10 @@
+## `cargo bench` の動作
+
+カスタムベンチマークハーネスを作成する前に、Rust ベンチマークの仕組みを理解する必要があります。
+ほとんどのRust開発者にとって、これは [`cargo bench` コマンド][cargo bench] を実行することを意味します。
+`cargo bench` コマンドはベンチマークをコンパイルして実行します。
+デフォルトでは、`cargo bench` は組み込み（ただし不安定な）libtest ベンチハーネスを使用しようとします。
+libtest ベンチはコードを通過して `#[bench]` 属性で注釈されたすべての関数を実行します。
+カスタムベンチマークハーネスを使用するためには、`cargo bench` に libtest ベンチを使用しないように指示する必要があります。
+
+[cargo bench]: https://doc.rust-lang.org/cargo/commands/cargo-bench.html

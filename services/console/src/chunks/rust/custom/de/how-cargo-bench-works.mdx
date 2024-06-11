@@ -1,0 +1,11 @@
+## Wie `cargo bench` Funktioniert
+
+Bevor wir ein benutzerdefiniertes Benchmarking-Harness erstellen,
+müssen wir verstehen, wie Rust-Benchmarks funktionieren.
+Für die meisten Rust-Entwickler bedeutet dies, das [das `cargo bench` Kommando][cargo bench] auszuführen.
+Das `cargo bench` Kommando kompiliert und führt Ihre Benchmarks aus.
+Standardmäßig versucht `cargo bench`, das eingebaute (aber instabile) libtest Bench-Harness zu verwenden.
+libtest bench wird dann Ihren Code durchgehen und alle Funktionen ausführen, die mit dem `#[bench]` Attribut gekennzeichnet sind.
+Um ein benutzerdefiniertes Benchmarking-Harness zu verwenden, müssen wir `cargo bench` mitteilen, dass libtest bench nicht verwendet werden soll.
+
+[cargo bench]: https://doc.rust-lang.org/cargo/commands/cargo-bench.html

@@ -1,0 +1,19 @@
+import LibRs from "../lib-rs.mdx";
+
+## Code zum Benchmarken schreiben
+
+Bevor wir einen Leistungstest schreiben können, benötigen wir etwas Bibliothekscode zum Benchmarken.
+Für unser Beispiel werden wir das FizzBuzzFibonacci-Spiel spielen.
+
+Die Regeln für FizzBuzzFibonacci sind wie folgt:
+
+> Schreibe ein Programm, das die Ganzzahlen von `1` bis `100` (einschließlich) druckt:
+> - Für Vielfache von drei drucke `Fizz`
+> - Für Vielfache von fünf drucke `Buzz`
+> - Für Vielfache von sowohl drei als auch fünf drucke `FizzBuzz`
+> - Für Zahlen, die Teil der Fibonacci-Sequenz sind, drucke nur `Fibonacci`
+> - Für alle anderen drucke die Zahl
+
+So sieht unsere Implementierung in `src/lib.rs` aus:
+
+<LibRs />

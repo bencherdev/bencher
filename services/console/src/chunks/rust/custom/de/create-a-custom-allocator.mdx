@@ -1,0 +1,20 @@
+import PlayGameAlloc from "../play-game-rs-alloc.mdx";
+
+### Einen benutzerdefinierten Allokator erstellen
+
+Da unser benutzerdefinierter Benchmarking-Harness Heap-Allocierungen messen wird,
+müssen wir einen benutzerdefinierten Heap-Allokator verwenden.
+Rust erlaubt die Konfiguration eines benutzerdefinierten, globalen Heap-Allokators
+mit dem [Attribut `#[global_allocator]`][rust global allocator].
+Fügen Sie Folgendes an den Anfang von `benches/play_game.rs` hinzu:
+
+<PlayGameAlloc />
+
+Dies teilt Rust mit, dass `dhat::Alloc` als unser globaler Heap-Allokator verwendet werden soll.
+
+> 🐰 Es kann nur **ein** globaler Heap-Allokator gleichzeitig gesetzt werden.
+> Wenn Sie zwischen mehreren globalen Allokatoren wechseln möchten,
+> müssen diese durch bedingte Kompilierung mit [Rust-Features] verwaltet werden.
+
+[rust global allocator]: https://doc.rust-lang.org/std/alloc/index.html#the-global_allocator-attribute
+[rust features]: https://doc.rust-lang.org/cargo/reference/features.html

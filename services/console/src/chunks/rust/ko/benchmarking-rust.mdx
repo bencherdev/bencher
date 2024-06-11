@@ -1,24 +1,23 @@
-## Rust에서의 벤치마킹
+## 러스트에서의 벤치마킹
 
-Rust에서 벤치마킹에 대해 일반적으로 선호하는 세 가지 옵션은 
+러스트에서 벤치마킹을 위한 세 가지 인기 있는 옵션은 다음과 같습니다:
 [libtest bench](/ko/learn/benchmarking/rust/libtest-bench/),
 [Criterion](/ko/learn/benchmarking/rust/criterion/), 그리고
-[Iai](/ko/learn/benchmarking/rust/iai/)입니다.
+[Iai](/ko/learn/benchmarking/rust/iai/).
 
-libtest는 Rust의 내장 유닛 테스트 및 벤치마킹 프레임워크입니다.
-Rust 표준 라이브러리의 일부임에도 불구하고, libtest bench는 여전히 불안정하다고 판단되므로,
-`nightly` 컴파일러 릴리스에서만 사용 가능합니다.
-안정적인 Rust 컴파일러에서 작업하려면,
-[별도의 벤치마킹 하네스](https://github.com/bluss/bencher)를
-사용해야 합니다.
-그러나 둘 다 적극적으로 개발되고 있지는 않습니다.
+libtest는 러스트의 내장 단위 테스트 및 벤치마킹 프레임워크입니다.
+러스트 표준 라이브러리의 일부이지만, libtest 벤치는 여전히 불안정한 상태로 간주되어
+`nightly` 컴파일러 릴리스에서만 사용할 수 있습니다.
+안정적인 러스트 컴파일러에서 작업하려면,
+[별도의 벤치마킹 하네스](https://github.com/bluss/bencher)를 사용해야 합니다.
+하지만 그 어느 것도 활발히 개발되고 있지는 않습니다.
 
-Rust 생태계 내에서 가장 활발히 유지 관리되는 벤치마킹 하네스는 Criterion입니다.
-안정적인 릴리스와 `nightly` Rust 컴파일러 릴리스 모두에서 작동하며,
-Rust 커뮤니티 내에서 사실상의 표준이 되었습니다.
-또한 Criterion은 libtest bench와 비교하여 훨씬 더 풍부한 기능을 제공합니다.
+러스트 생태계 내에서 가장 인기 있는 벤치마킹 하네스는 Criterion입니다.
+이것은 안정적인 컴파일러와 `nightly` 컴파일러에서 모두 작동하며,
+러스트 커뮤니티 내에서 사실상의 표준이 되었습니다.
+Criterion은 libtest 벤치에 비해 훨씬 더 많은 기능을 제공합니다.
 
-Criterion의 실험적인 대안으로서 동일한 생성자가 만든 Iai가 있습니다.
-그러나, 벽 시계 시간 대신 명령어 수를 사용합니다: 
+Criterion의 실험적 대안은 같은 제작자로부터 나온 Iai입니다.
+그러나 이는 월드 시계 시간을 대신하여 명령어 수를 사용합니다:
 CPU 명령어, L1 접근, L2 접근 및 RAM 접근.
-이를 통해 단일 샷 벤치마킹을 할 수 있으며, 이러한 메트릭은 실행 사이에 거의 동일하게 유지되어야 합니다.
+이로 인해 이러한 메트릭은 실행 간에 거의 동일하게 유지되므로 단일 샷 벤치마킹이 가능합니다.

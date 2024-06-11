@@ -1,0 +1,20 @@
+import CargoTomlDevDependencies from "../cargo-toml-dev-dependencies.mdx";
+
+## カスタムベンチマークハーネスの作成
+
+`benches/play_game.rs` 内にカスタムベンチマークハーネスを作成します。
+このカスタムベンチマークハーネスはヒープの割り当てを測定するものです。
+測定には [the `dhat-rs` crate][crates dhat] を使用します。
+`dhat-rs` は Rust プログラムのヒープ割り当てを追跡するための素晴らしいツールで、
+Rust のパフォーマンスエキスパートである [Nicholas Nethercote][github nnethercote] によって作成されました。
+ベンチマーク関数の管理を支援するために、
+非常に多作な [David Tolnay][github dtolnay] による [the `inventory` crate][crates inventory] を使用します。
+
+それでは、`dhat-rs` と `inventory` を `Cargo.toml` ファイルに `dev-dependencies` として追加しましょう：
+
+<CargoTomlDevDependencies />
+
+[crates dhat]: https://docs.rs/dhat/latest/dhat/
+[github nnethercote]: https://github.com/nnethercote
+[crates inventory]: https://crates.io/crates/inventory
+[github dtolnay]: https://github.com/dtolnay

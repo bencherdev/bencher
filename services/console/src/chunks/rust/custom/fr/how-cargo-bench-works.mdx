@@ -1,0 +1,5 @@
+## Comment fonctionne `cargo bench`
+
+Avant de construire un harnais de benchmarking personnalisé, nous devons comprendre comment fonctionnent les benchmarks en Rust. Pour la plupart des développeurs Rust, cela signifie exécuter [la commande `cargo bench`][cargo bench]. La commande `cargo bench` compile et exécute vos benchmarks. Par défaut, `cargo bench` essaiera d'utiliser le harnais de benchmark intégré (mais instable) libtest. libtest bench parcourra ensuite votre code et exécutera toutes les fonctions annotées avec l'attribut `#[bench]`. Pour utiliser un harnais de benchmarking personnalisé, nous devons indiquer à `cargo bench` de ne pas utiliser libtest bench.
+
+[cargo bench]: https://doc.rust-lang.org/cargo/commands/cargo-bench.html

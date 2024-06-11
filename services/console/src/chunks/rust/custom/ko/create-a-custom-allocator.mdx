@@ -1,0 +1,20 @@
+import PlayGameAlloc from "../play-game-rs-alloc.mdx";
+
+### 사용자 정의 할당자 생성
+
+우리의 커스텀 벤치마킹 하네스가 힙 할당을 측정할 것이므로,
+커스텀 힙 할당자를 사용해야 합니다.
+Rust는 [ `#[global_allocator]` 애트리뷰트][rust global allocator]를 사용하여 
+사용자 정의 전역 힙 할당자를 설정할 수 있게 합니다.
+`benches/play_game.rs` 파일의 맨 위에 다음을 추가하세요:
+
+<PlayGameAlloc />
+
+이 코드는 Rust에게 `dhat::Alloc`을 전역 힙 할당자로 사용하라고 지시합니다.
+
+> 🐰 **하나의** 전역 힙 할당자만 한 번에 설정할 수 있습니다.
+> 여러 전역 할당자 간 전환을 원한다면,
+> [Rust 기능][rust features]을 통해 조건부 컴파일로 관리해야 합니다.
+
+[rust global allocator]: https://doc.rust-lang.org/std/alloc/index.html#the-global_allocator-attribute
+[rust features]: https://doc.rust-lang.org/cargo/reference/features.html

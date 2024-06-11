@@ -1,0 +1,13 @@
+## Conclusión
+
+Comenzamos este artículo examinando los tres arneses de evaluación comparativa más populares en el ecosistema de Rust: [libtest bench][libtest bench], [Criterion][criterion], y [Iai][iai]. Aunque pueden cubrir la mayoría de los casos de uso, a veces es posible que necesites medir algo más que el tiempo de reloj de pared o el recuento de instrucciones. Esto nos llevó a crear un arnés de evaluación comparativa personalizado.
+
+Nuestro arnés de evaluación comparativa personalizado mide las asignaciones en el montón utilizando `dhat-rs`. Las funciones de evaluación se recopilaron utilizando `inventory`. Al ejecutarse, nuestras evaluaciones producen resultados en formato JSON de Bencher Metric Format (BMF). Luego podríamos usar Bencher para rastrear nuestros resultados personalizados de evaluación comparativa a lo largo del tiempo y detectar regresiones de rendimiento en CI.
+
+Todo el código fuente de esta guía está [disponible en GitHub][github bencher].
+
+[github bencher]: https://github.com/bencherdev/bencher/tree/main/examples/rust/custom
+
+[libtest bench]: /es/learn/benchmarking/rust/libtest-bench/
+[criterion]: /es/learn/benchmarking/rust/criterion/
+[iai]: /es/learn/benchmarking/rust/iai/

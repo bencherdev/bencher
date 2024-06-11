@@ -1,0 +1,27 @@
+import BencherRun from "../bencher-run.mdx";
+
+## Benutzerdefinierte Benchmark-Ergebnisse verfolgen
+
+Die meisten Benchmark-Ergebnisse sind flüchtig.
+Sie verschwinden, sobald Ihr Terminal die Scrollback-Grenze erreicht.
+Einige Benchmark-Harnesses lassen Sie Ergebnisse zwischenspeichern, aber das ist viel Aufwand.
+Und selbst dann könnten wir unsere Ergebnisse nur lokal speichern.
+Zum Glück für uns funktioniert unser benutzerdefiniertes Benchmarking-Harness mit Bencher!
+[Bencher][bencher] ist eine Suite von kontinuierlichen Benchmarking-Tools,
+die es uns ermöglicht, die Ergebnisse unserer Benchmarks über die Zeit zu verfolgen
+und Leistungsregressionen _vor_ ihrer Einführung in die Produktion zu erfassen.
+
+Sobald Sie Bencher mit [Bencher Cloud][quick start] oder [Bencher Self-Hosted][docker quick start] eingerichtet haben,
+können Sie die Ergebnisse unseres benutzerdefinierten Benchmarking-Harnesses verfolgen, indem Sie ausführen:
+
+<BencherRun />
+
+Sie können auch mehr darüber lesen, [wie man benutzerdefinierte Benchmarks mit Bencher verfolgt][custom benchmarks]
+und den [JSON Benchmark Adapter][json adapter].
+
+[bencher]: /
+[install cli]: /de/docs/how-to/install-cli/
+[quick start]: /de/docs/tutorial/quick-start/
+[docker quick start]: /de/docs/tutorial/docker/
+[custom benchmarks]: /de/docs/how-to/track-custom-benchmarks/
+[json adapter]: http://localhost:3000/docs/explanation/adapters/#-json

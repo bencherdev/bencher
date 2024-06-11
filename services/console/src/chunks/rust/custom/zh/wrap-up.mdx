@@ -1,0 +1,21 @@
+## 总结
+
+我们在本文开始时，探讨了Rust生态系统中最流行的三种基准测试工具：
+[libtest bench][libtest bench]， [Criterion][criterion]， 和 [Iai][iai]。
+尽管它们可能涵盖了大多数用例，
+有时候您可能需要测量不同于挂钟时间或指令计数的东西。
+这使我们走上了创建自定义基准测试工具的道路。
+
+我们的自定义基准测试工具使用 `dhat-rs` 测量堆分配。
+基准测试函数使用 `inventory` 收集。
+运行时，我们的基准测试会以Bencher Metric Format (BMF) JSON格式输出结果。
+然后我们可以使用Bencher跟踪自定义基准测试结果，
+并在CI中捕捉性能回归。
+
+本指南的所有源代码都[可在 GitHub 上获得][github bencher]。
+
+[github bencher]: https://github.com/bencherdev/bencher/tree/main/examples/rust/custom
+
+[libtest bench]: /zh/learn/benchmarking/rust/libtest-bench/
+[criterion]: /zh/learn/benchmarking/rust/criterion/
+[iai]: /zh/learn/benchmarking/rust/iai/

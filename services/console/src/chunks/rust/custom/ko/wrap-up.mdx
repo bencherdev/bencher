@@ -1,0 +1,20 @@
+## 마무리
+
+이 게시물은 Rust 생태계에서 가장 인기 있는 벤치마킹 도구 세 가지, 즉 [libtest bench][libtest bench], [Criterion][criterion], 그리고 [Iai][iai]를 살펴보는 것으로 시작했습니다.
+이 도구들이 대부분의 사용 사례를 다루고 있음에도 불구하고,
+때로는 벽 시계 시간이나 명령어 수 이외의 다른 것을 측정해야 할 수도 있습니다.
+이로 인해 커스텀 벤치마킹 도구를 만드는 길로 접어들게 되었습니다.
+
+우리의 커스텀 벤치마킹 도구는 `dhat-rs`를 사용하여 힙 할당을 측정합니다.
+벤치마크 함수는 `inventory`를 사용하여 수집되었습니다.
+실행되면 벤치마크는 Bencher Metric Format (BMF) JSON으로 결과를 출력합니다.
+그런 다음 Bencher를 사용하여 시간 경과에 따른 커스텀 벤치마크 결과를 추적하고
+CI에서 성능 회귀를 잡아낼 수 있습니다.
+
+이 가이드의 모든 소스 코드는 [GitHub에서 제공됩니다][github bencher].
+
+[github bencher]: https://github.com/bencherdev/bencher/tree/main/examples/rust/custom
+
+[libtest bench]: /ko/learn/benchmarking/rust/libtest-bench/
+[criterion]: /ko/learn/benchmarking/rust/criterion/
+[iai]: /ko/learn/benchmarking/rust/iai/

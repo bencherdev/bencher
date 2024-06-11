@@ -1,0 +1,34 @@
+```markdown
+import CargoToml from "../cargo-toml.mdx";
+import FileTree from "../file-tree.mdx";
+import CargoTomlBenchName from "../cargo-toml-bench-name.mdx";
+
+## 使用定制的基准测试工具与 `cargo bench`
+
+为了让 `cargo bench` 不使用 libtest bench，
+我们需要在我们的 `Cargo.toml` 文件中添加以下内容：
+
+<CargoToml />
+
+不幸的是，我们不能在自定义基准测试工具中使用 `#[bench]` 属性。
+[也许有一天可以][github issue 2]，但不是今天。
+相反，我们必须创建一个单独的 `benches` 目录来存放我们的基准测试。
+`benches` 目录对于基准测试来说，就像 [`tests` 目录][tests directory] 对于集成测试一样。
+`benches` 目录中的每个文件都被视为一个独立的 crate。
+因此，被测试的 crate 必须是一个库 crate。
+也就是说，它必须有一个 `lib.rs` 文件。
+
+例如，如果我们有一个名为 `game` 的基本库 crate，
+我们可以在 `benches` 目录中添加一个名为 `play_game` 的自定义基准测试文件。
+我们的目录结构将如下所示：
+
+<FileTree />
+
+接下来，我们需要让 `cargo bench` 知道我们的自定义基准测试 crate `play_game`。
+因此我们更新我们的 `Cargo.toml` 文件：
+
+<CargoTomlBenchName />
+
+[github issue 2]: https://github.com/rust-lang/testing-devex-team/issues/2
+[tests directory]: https://doc.rust-lang.org/book/ch11-03-test-organization.html#the-tests-directory
+```

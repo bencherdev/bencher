@@ -1,0 +1,36 @@
+import PlayGameRsBenchPlayGame from "../play-game-rs-bench-play-game.mdx";
+
+### Erstellen Sie eine Benchmark-Funktion
+
+Nun können wir eine Benchmark-Funktion erstellen, die das FizzBuzzFibonacci-Spiel spielt:
+
+<PlayGameRsBenchPlayGame />
+
+Zeile für Zeile:
+- Erstellen Sie eine Benchmark-Funktion, die der Signatur in `CustomBenchmark` entspricht.
+- Erstellen Sie einen `dhat::Profiler` im Testmodus, um Ergebnisse von unserem `dhat::Alloc` benutzerdefinierten, globalen Speicherzuteiler zu sammeln.
+- Führen Sie unsere `play_game` Funktion in einer „black box“ aus, damit der Compiler unseren Code nicht optimiert.
+- Iterieren Sie von `1` bis `100` inklusive.
+- Rufen Sie für jede Zahl `play_game` auf, wobei `print` auf `false` gesetzt ist.
+- Geben Sie unsere Speicherbelegungsstatistiken als `dhat::HeapStats` zurück.
+
+> 🐰 Wir setzen `print` auf `false` für die `play_game` Funktion.
+> Dies verhindert, dass `play_game` auf Standardausgabe druckt.
+> Das Parameterisieren Ihrer Bibliotheksfunktionen auf diese Weise
+> kann sie besser für Benchmarking geeignet machen.
+> Allerdings bedeutet dies, dass wir die Bibliothek möglicherweise
+> nicht genau so benchmarken wie sie in der Produktion verwendet wird.
+>
+> In diesem Fall müssen wir uns fragen:
+> 1. Sind die Ressourcen, die zum Drucken auf Standardausgabe benötigt werden, für uns relevant?
+> 2. Ist das Drucken auf Standardausgabe eine mögliche Rauschquelle?
+>
+> Für unser Beispiel haben wir folgende Antworten gewählt:
+> 1. Nein, uns ist das Drucken auf Standardausgabe nicht wichtig.
+> 2. Ja, es ist sehr wahrscheinlich eine Rauschquelle.
+>
+> Daher haben wir das Drucken auf Standardausgabe als Teil dieses Benchmarks weggelassen.
+> Benchmarking ist schwierig, und oft gibt es nicht die eine richtige Antwort auf solche Fragen.
+> [Es kommt darauf an][changelog it depends].
+
+[changelog it depends]: https://changelog.com/topic/itdepends

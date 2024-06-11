@@ -1,0 +1,20 @@
+import CargoTomlDevDependencies from "../cargo-toml-dev-dependencies.mdx";
+
+## 创建一个自定义基准测试工具
+
+我们将在 `benches/play_game.rs` 中创建一个自定义基准测试工具。
+这个自定义基准测试工具将使用 [`dhat-rs` crate][crates dhat] 来测量堆分配情况。
+`dhat-rs` 是一个跟踪 Rust 程序中堆分配的出色工具，
+由 Rust 性能专家 [Nicholas Nethercote][github nnethercote] 创建。
+为了帮助我们管理基准测试函数，
+我们将使用 [`inventory` crate][crates inventory]，
+由多产的 [David Tolnay][github dtolnay] 创建。
+
+让我们把 `dhat-rs` 和 `inventory` 添加到 `Cargo.toml` 文件的 `dev-dependencies` 中：
+
+<CargoTomlDevDependencies />
+
+[crates dhat]: https://docs.rs/dhat/latest/dhat/
+[github nnethercote]: https://github.com/nnethercote
+[crates inventory]: https://crates.io/crates/inventory
+[github dtolnay]: https://github.com/dtolnay

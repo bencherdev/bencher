@@ -1,0 +1,21 @@
+import CargoTomlDevDependencies from "../cargo-toml-dev-dependencies.mdx";
+
+## Erstellen eines benutzerdefinierten Benchmarking-Harness
+
+Wir werden ein benutzerdefiniertes Benchmarking-Harness in `benches/play_game.rs` erstellen.
+Dieses benutzerdefinierte Benchmarking-Harness wird Speicherallokationen messen
+unter Verwendung des [dhat-rs Crate][crates dhat].
+`dhat-rs` ist ein fantastisches Werkzeug zur Verfolgung von Speicherallokationen in Rust-Programmen,
+erstellt von Rust-Performance-Experte [Nicholas Nethercote][github nnethercote].
+Um uns bei der Verwaltung unserer Benchmark-Funktionen zu helfen,
+werden wir das [inventory Crate][crates inventory] 
+verwenden, entwickelt vom erstaunlich produktiven [David Tolnay][github dtolnay].
+
+Fügen wir `dhat-rs` und `inventory` als `dev-dependencies` zu unserer `Cargo.toml` Datei hinzu:
+
+<CargoTomlDevDependencies />
+
+[crates dhat]: https://docs.rs/dhat/latest/dhat/
+[github nnethercote]: https://github.com/nnethercote
+[crates inventory]: https://crates.io/crates/inventory
+[github dtolnay]: https://github.com/dtolnay

@@ -1,0 +1,40 @@
+import CargoTomlSerdeJson from "../cargo-toml-serde-json.mdx";
+import PlayGameRsRun from "../play-game-rs-run.mdx";
+import PlayGameMain from "../play-game-rs-main.mdx";
+
+### 创建自定义基准测试运行器
+
+最后，我们需要为自定义基准测试工具创建一个运行器。
+自定义基准测试工具其实就是一个二进制文件，
+它为我们运行所有的基准测试并报告其结果。
+而基准测试运行器就是负责协调所有这些工作的。
+
+我们希望将结果输出为 [Bencher Metric Format (BMF) JSON][bmf json]。
+为了实现这一点，我们需要添加最后一个依赖项，
+[由David Tolnay创建的 `serde_json` crate][crates serde json]！
+
+<CargoTomlSerdeJson />
+
+接下来，我们将为 `CustomBenchmark` 实现一个方法来运行其基准测试函数
+然后返回BMF JSON格式的结果。
+
+<PlayGameRsRun />
+
+BMF JSON结果包含每个基准测试的六个[衡量标准][measures]：
+
+- 最终块数：基准测试完成时分配的最终块数。
+- 最终字节数：基准测试完成时分配的最终字节数。
+- 最大块数：基准测试运行期间同时分配的最大块数。
+- 最大字节数：基准测试运行期间同时分配的最大字节数。
+- 总块数：基准测试期间分配的总块数。
+- 总字节数：基准测试期间分配的总字节数。
+
+最后，我们可以创建一个 `main` 函数来运行 `inventory` 集合中的所有基准测试
+并将结果输出为BMF JSON。
+
+<PlayGameMain />
+
+[bmf json]: /zh/docs/reference/bencher-metric-format/
+[measures]: /zh/docs/explanation/benchmarking/#measures
+
+[crates serde json]: https://crates.io/crates/serde_json

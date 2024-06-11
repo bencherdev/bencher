@@ -1,0 +1,21 @@
+## Conclusão
+
+Começamos este post analisando os três frameworks de benchmarking mais populares no ecossistema Rust:
+[libtest bench][libtest bench], [Criterion][criterion] e [Iai][iai].
+Mesmo que eles cubram a maioria dos casos de uso,
+às vezes você pode precisar medir algo além do tempo de relógio ou contagem de instruções.
+Isso nos levou a criar um framework de benchmarking personalizado.
+
+Nosso framework de benchmarking personalizado mede alocações de heap usando `dhat-rs`.
+As funções de benchmark foram coletadas usando `inventory`.
+Quando executados, nossos benchmarks geram resultados no formato JSON do Bencher Metric Format (BMF).
+Podemos então usar o Bencher para rastrear os resultados dos nossos benchmarks personalizados ao longo do tempo
+e detectar regressões de desempenho no CI.
+
+Todo o código fonte deste guia está [disponível no GitHub][github bencher].
+
+[github bencher]: https://github.com/bencherdev/bencher/tree/main/examples/rust/custom
+
+[libtest bench]: /pt/learn/benchmarking/rust/libtest-bench/
+[criterion]: /pt/learn/benchmarking/rust/criterion/
+[iai]: /pt/learn/benchmarking/rust/iai/

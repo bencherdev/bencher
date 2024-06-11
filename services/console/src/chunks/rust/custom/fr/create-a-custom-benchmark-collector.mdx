@@ -1,0 +1,16 @@
+import PlayGameRsCustomBenchmark from "../play-game-rs-custom-benchmark.mdx";
+import PlayGameRsInventoryCollect from "../play-game-rs-inventory-collect.mdx";
+
+### Créer un Collecteur de Benchmark Personnalisé
+
+Pour créer un harnais de benchmarking personnalisé,
+nous avons besoin d'un moyen d'identifier et de stocker nos fonctions de benchmark.
+Nous utiliserons une struct, judicieusement nommée `CustomBenchmark` pour encapsuler chaque fonction de benchmark.
+
+<PlayGameRsCustomBenchmark />
+
+Un `CustomBenchmark` a un nom et une fonction de benchmark qui retourne `dhat::HeapStats` comme sortie.
+
+Ensuite, nous utiliserons la crate `inventory` pour créer une collection pour tous nos `CustomBenchmark`s :
+
+<PlayGameRsInventoryCollect />

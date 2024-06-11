@@ -1,0 +1,17 @@
+```import PlayGameRsCustomBenchmark from "../play-game-rs-custom-benchmark.mdx";
+import PlayGameRsInventoryCollect from "../play-game-rs-inventory-collect.mdx";
+
+### 创建自定义基准收集器
+
+要创建一个自定义的基准测试工具，
+我们需要一种方法来识别和存储我们的基准测试函数。
+我们将使用一个名为 `CustomBenchmark` 的结构体来封装每个基准测试函数。
+
+<PlayGameRsCustomBenchmark />
+
+一个 `CustomBenchmark` 有一个名字和一个返回 `dhat::HeapStats` 作为其输出的基准测试函数。
+
+然后我们将使用 `inventory` crate 来为所有的 `CustomBenchmark` 创建一个集合：
+
+<PlayGameRsInventoryCollect />
+```

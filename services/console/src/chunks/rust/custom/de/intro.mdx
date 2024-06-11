@@ -1,0 +1,13 @@
+Mit all dem im Hinterkopf, wenn du die Laufzeit deiner Codes messen möchtest, dann solltest du wahrscheinlich Criterion verwenden.
+Wenn du [deinen Code in CI benchmarken][continuous benchmarking] möchtest mit geteilten Runnern, könnte es sich lohnen, Iai auszuprobieren.
+Beachte jedoch, dass Iai [seit über 3 Jahren nicht aktualisiert wurde][github iai].
+Du könntest stattdessen [Iai-Callgrind verwenden][adapters iai callgrind].
+
+Aber was, wenn du weder die Laufzeit noch die Anzahl der Anweisungen benchmarken willst?
+Was, wenn du eine völlig andere Benchmark verfolgen möchtest‽
+Glücklicherweise macht es Rust unglaublich einfach, ein benutzerdefiniertes Benchmarking-Harness zu erstellen.
+
+[github iai]: https://github.com/bheisler/iai/commits/main/
+
+[continuous benchmarking]: /de/docs/explanation/continuous-benchmarking/
+[adapters iai callgrind]: /de/docs/explanation/adapters/#-rust-iai-callgrind

@@ -1,0 +1,37 @@
+import PlayGameRsBenchPlayGame from "../play-game-rs-bench-play-game.mdx";
+
+### Crie uma Função de Benchmark
+
+Agora, podemos criar uma função de benchmark que joga o jogo FizzBuzzFibonacci:
+
+<PlayGameRsBenchPlayGame />
+
+Linha por linha:
+- Crie uma função de benchmark que corresponda à assinatura usada em `CustomBenchmark`.
+- Crie um `dhat::Profiler` em modo de teste,
+  para coletar resultados do nosso alocador global personalizado `dhat::Alloc`.
+- Execute nossa função `play_game` dentro de uma "caixa preta" para que o compilador não otimize nosso código.
+- Itere de `1` a `100`, inclusivamente.
+- Para cada número, chame `play_game`, com `print` definido como `false`.
+- Retorne nossas estatísticas de alocação de heap como `dhat::HeapStats`.
+
+> 🐰 Definimos `print` como `false` para a função `play_game`.
+> Isso impede que `play_game` imprima no padrão de saída.
+> Parametrizar suas funções de biblioteca desta maneira
+> pode torná-las mais adequadas para benchmark.
+> No entanto, isso significa que talvez não estejamos fazendo benchmark da biblioteca
+> exatamente da mesma maneira que ela é usada em produção.
+>
+> Neste caso, temos que nos perguntar:
+> 1. Nos importamos com os recursos necessários para imprimir no padrão de saída?
+> 2. Imprimir no padrão de saída é uma possível fonte de ruído?
+>
+> Para nosso exemplo, optamos por:
+> 1. Não, não nos importamos com a impressão no padrão de saída.
+> 2. Sim, é uma fonte muito provável de ruído.
+>
+> Portanto, omitimos a impressão no padrão de saída como parte deste benchmark.
+> Fazer benchmark é difícil, e muitas vezes não há uma resposta certa para perguntas como essas.
+> [Depende][changelog it depends].
+
+[changelog it depends]: https://changelog.com/topic/itdepends

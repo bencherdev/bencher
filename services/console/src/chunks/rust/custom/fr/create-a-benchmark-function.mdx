@@ -1,0 +1,37 @@
+import PlayGameRsBenchPlayGame from "../play-game-rs-bench-play-game.mdx";
+
+### Créer une Fonction de Benchmark
+
+Maintenant, nous pouvons créer une fonction de benchmark qui joue au jeu FizzBuzzFibonacci :
+
+<PlayGameRsBenchPlayGame />
+
+Ligne par ligne :
+- Créer une fonction de benchmark qui correspond à la signature utilisée dans `CustomBenchmark`.
+- Créer un `dhat::Profiler` en mode test,
+  pour collecter les résultats de notre `dhat::Alloc` personnalisé, allocateur global.
+- Exécuter notre fonction `play_game` à l'intérieur d'une « boîte noire » afin que le compilateur n'optimise pas notre code.
+- Itérer de `1` à `100` inclusivement.
+- Pour chaque nombre, appeler `play_game`, avec `print` défini sur `false`.
+- Retourner nos statistiques d'allocation sur le tas comme `dhat::HeapStats`.
+
+> 🐰 Nous avons défini `print` sur `false` pour la fonction `play_game`.
+> Cela empêche `play_game` d'afficher des informations sur la sortie standard.
+> Paramétrer vos fonctions de bibliothèque de cette manière
+> peut les rendre plus adaptées au benchmarking.
+> Cependant, cela signifie aussi que nous ne benchmarkons peut-être pas la bibliothèque 
+> exactement comme elle est utilisée en production.
+>
+> Dans ce cas, nous devons nous demander :
+> 1. Les ressources nécessaires pour afficher sur la sortie standard sont-elles importants pour nous ?
+> 2. L'affichage sur la sortie standard est-il une source potentielle de bruit ?
+>
+> Pour notre exemple, nous avons conclu :
+> 1. Non, afficher sur la sortie standard n'est pas important pour nous.
+> 2. Oui, c'est une source de bruit très probable.
+>
+> Par conséquent, nous avons omis l'affichage sur la sortie standard dans ce benchmark.
+> Le benchmarking est difficile, et il n'y a souvent pas de réponse unique à des questions comme celles-ci.
+> [Ça dépend][changelog it depends].
+
+[changelog it depends]: https://changelog.com/topic/itdepends

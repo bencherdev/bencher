@@ -1,0 +1,19 @@
+import CargoTomlDevDependencies from "../cargo-toml-dev-dependencies.mdx";
+
+## 사용자 정의 벤치마킹 하네스 만들기
+
+`benches/play_game.rs` 내에 사용자 정의 벤치마킹 하네스를 만들겠습니다.
+이 사용자 정의 벤치마킹 하네스는 [the `dhat-rs` crate][crates dhat]을 사용하여 힙 할당을 측정할 것입니다.
+`dhat-rs`는 Rust 프로그램에서 힙 할당을 추적하는 데 탁월한 도구로,
+Rust 성능 전문가 [Nicholas Nethercote][github nnethercote]가 만들었습니다.
+벤치마크 함수를 관리하는 데 도움이 되도록
+놀랍도록 다작하는 [David Tolnay][github dtolnay]가 만든 [the `inventory` crate][crates inventory]를 사용할 것입니다.
+
+`Cargo.toml` 파일에 `dhat-rs` 및 `inventory`를 `dev-dependencies`로 추가합시다:
+
+<CargoTomlDevDependencies />
+
+[crates dhat]: https://docs.rs/dhat/latest/dhat/
+[github nnethercote]: https://github.com/nnethercote
+[crates inventory]: https://crates.io/crates/inventory
+[github dtolnay]: https://github.com/dtolnay

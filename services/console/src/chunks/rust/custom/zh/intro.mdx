@@ -1,0 +1,12 @@
+考虑到所有这些，如果你想要基准测试代码的墙钟时间，那么你可能应该使用Criterion。
+如果你想要在CI中[基准测试你的代码][continuous benchmarking]，并且使用共享运行器，那么可能值得查看一下Iai。
+不过请注意，Iai已经[超过3年没有更新][github iai]了。所以你可能考虑[使用Iai-Callgrind][adapters iai callgrind]来代替。
+
+但是如果你不想基准测试墙钟时间或者指令计数呢？
+如果你想跟踪一些完全不同的基准测试怎么办‽
+幸运的是，Rust让创建自定义基准测试工具非常简单。
+
+[github iai]: https://github.com/bheisler/iai/commits/main/
+
+[continuous benchmarking]: /zh/docs/explanation/continuous-benchmarking/
+[adapters iai callgrind]: /zh/docs/explanation/adapters/#-rust-iai-callgrind

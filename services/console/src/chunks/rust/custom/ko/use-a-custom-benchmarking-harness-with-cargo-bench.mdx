@@ -1,0 +1,33 @@
+import CargoToml from "../cargo-toml.mdx";
+import FileTree from "../file-tree.mdx";
+import CargoTomlBenchName from "../cargo-toml-bench-name.mdx";
+
+## `cargo bench`와 함께 사용자 정의 벤치마크 하니스를 사용하기
+
+`cargo bench`에서 libtest 벤치마크를 사용하지 않도록 하려면,
+다음 내용을 `Cargo.toml` 파일에 추가해야 합니다:
+
+<CargoToml />
+
+안타깝게도, 사용자 정의 벤치마크 하니스에서는 `#[bench]` 속성을 사용할 수 없습니다.
+[언젠가는 가능할지도 모릅니다][github issue 2], 하지만 오늘은 아닙니다.
+대신, 벤치마크를 보관할 별도의 `benches` 디렉토리를 생성해야 합니다.
+`benches` 디렉토리는
+[통합 테스트용 `tests` 디렉토리][tests directory]와 같은 역할을 합니다.
+`benches` 디렉토리 내의 각 파일은 개별 크레이트로 취급됩니다.
+따라서 벤치마크 대상 크레이트는 라이브러리 크레이트여야 합니다.
+즉, `lib.rs` 파일이 있어야 합니다.
+
+예를 들어, `game`이라는 기본 라이브러리 크레이트가 있다면,
+`benches` 디렉토리에 `play_game`이라는 사용자 정의 벤치마크 파일을 추가할 수 있습니다.
+디렉토리 구조는 다음과 같습니다:
+
+<FileTree />
+
+다음으로, `cargo bench`에 사용자 정의 벤치마크 크레이트 `play_game`을 알려야 합니다.
+이를 위해 `Cargo.toml` 파일을 업데이트합니다:
+
+<CargoTomlBenchName />
+
+[github issue 2]: https://github.com/rust-lang/testing-devex-team/issues/2
+[tests directory]: https://doc.rust-lang.org/book/ch11-03-test-organization.html#the-tests-directory

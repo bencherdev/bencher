@@ -1,0 +1,21 @@
+## Fazit
+
+Wir haben diesen Beitrag begonnen, indem wir uns die drei beliebtesten Benchmarking-Gerüste im Rust-Ökosystem angesehen haben:
+[libtest bench][libtest bench], [Criterion][criterion], und [Iai][iai].
+Auch wenn diese die Mehrheit der Anwendungsfälle abdecken mögen,
+kann es manchmal notwendig sein, etwas anderes als die Echtzeit oder die Anzahl der Anweisungen zu messen.
+Dies führte uns dazu, ein benutzerdefiniertes Benchmarking-Gerüst zu erstellen.
+
+Unser benutzerdefiniertes Benchmarking-Gerüst misst Heap-Allokationen unter Verwendung von `dhat-rs`.
+Die Benchmark-Funktionen wurden mit `inventory` gesammelt.
+Beim Ausführen geben unsere Benchmarks die Ergebnisse als Bencher Metric Format (BMF) JSON aus.
+Wir konnten dann Bencher nutzen, um unsere benutzerdefinierten Benchmark-Ergebnisse im Laufe der Zeit zu verfolgen
+und Performance-Regressionen in der CI zu erfassen.
+
+Der gesamte Quellcode für diese Anleitung ist [auf GitHub verfügbar][github bencher].
+
+[github bencher]: https://github.com/bencherdev/bencher/tree/main/examples/rust/custom
+
+[libtest bench]: /de/learn/benchmarking/rust/libtest-bench/
+[criterion]: /de/learn/benchmarking/rust/criterion/
+[iai]: /de/learn/benchmarking/rust/iai/

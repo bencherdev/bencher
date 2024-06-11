@@ -1,0 +1,17 @@
+import PlayGameAlloc from "../play-game-rs-alloc.mdx";
+
+### カスタムアロケータの作成
+
+独自のベンチマークハーネスではヒープ割り当てを測定するため、カスタムヒープアロケータを使用する必要があります。
+Rustでは、[ `#[global_allocator]` 属性 ][rust global allocator] を使用してカスタムのグローバルヒープアロケータを設定できます。
+`benches/play_game.rs` の先頭に次のコードを追加します:
+
+<PlayGameAlloc />
+
+これにより、Rustは `dhat::Alloc` をグローバルヒープアロケータとして使用することを指示します。
+
+> 🐰 グローバルヒープアロケータを設定できるのは**一つだけ**です。
+> 複数のグローバルアロケータを切り替える場合は、[Rustのフィーチャー][rust features] を使用した条件付きコンパイルで管理する必要があります。
+
+[rust global allocator]: https://doc.rust-lang.org/std/alloc/index.html#the-global_allocator-attribute
+[rust features]: https://doc.rust-lang.org/cargo/reference/features.html

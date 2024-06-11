@@ -1,0 +1,26 @@
+import BencherRun from "../bencher-run.mdx";
+
+## 사용자 정의 벤치마크 결과 추적
+
+대부분의 벤치마크 결과는 휘발성입니다.
+터미널의 스크롤백 제한에 도달하면 사라집니다.
+일부 벤치마크 하네스는 결과를 캐시할 수 있게 해주지만, 구현하는 데 많은 작업이 필요합니다.
+그리고 그렇게 하더라도 결과를 로컬에만 저장할 수 있습니다.
+다행히도, 우리의 사용자 정의 벤치마크 하네스는 Bencher와 함께 작동합니다!
+[Bencher][bencher]는 지속적인 벤치마킹 도구 모음으로
+벤치마크 결과를 시간이 지남에 따라 추적하고
+성능 회귀를 프로덕션에 도달하기 _전에_ 잡아낼 수 있게 해줍니다.
+
+[Bencher Cloud][quick start] 또는 [Bencher Self-Hosted][docker quick start]를 사용하여 모든 준비가 완료되면,
+다음 명령을 실행하여 사용자 정의 벤치마크 하네스의 결과를 추적할 수 있습니다:
+
+<BencherRun />
+
+또한, [Bencher로 사용자 정의 벤치마크를 추적하는 방법][custom benchmarks] 및 [JSON 벤치마크 어댑터][json adapter]에 대해 더 읽어볼 수 있습니다.
+
+[bencher]: /
+[install cli]: /ko/docs/how-to/install-cli/
+[quick start]: /ko/docs/tutorial/quick-start/
+[docker quick start]: /ko/docs/tutorial/docker/
+[custom benchmarks]: /ko/docs/how-to/track-custom-benchmarks/
+[json adapter]: http://localhost:3000/ko/docs/explanation/adapters/#-json

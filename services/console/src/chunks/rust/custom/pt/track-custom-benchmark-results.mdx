@@ -1,0 +1,27 @@
+import BencherRun from "../bencher-run.mdx";
+
+## Acompanhe Resultados Personalizados de Benchmark
+
+A maioria dos resultados de benchmark são efêmeros.
+Eles desaparecem assim que o seu terminal alcança seu limite de rolagem.
+Alguns frameworks de benchmark permitem que você armazene os resultados em cache, mas isso dá muito trabalho para implementar.
+E mesmo assim, só poderíamos armazenar nossos resultados localmente.
+Por sorte, nosso framework personalizado de benchmark vai funcionar com o Bencher!
+[Bencher][bencher] é um conjunto de ferramentas contínuas de benchmark
+que nos permite acompanhar os resultados de nossos benchmarks ao longo do tempo
+e detectar regressões de desempenho _antes_ que elas cheguem à produção.
+
+Uma vez que você tenha configurado o [Bencher Cloud][quick start] ou o [Bencher Self-Hosted][docker quick start],
+você pode acompanhar os resultados do nosso framework personalizado de benchmark executando:
+
+<BencherRun />
+
+Você também pode ler mais sobre [como acompanhar benchmarks personalizados com o Bencher][custom benchmarks]
+e o [adaptador de benchmark JSON][json adapter].
+
+[bencher]: /
+[install cli]: /pt/docs/how-to/install-cli/
+[quick start]: /pt/docs/tutorial/quick-start/
+[docker quick start]: /pt/docs/tutorial/docker/
+[custom benchmarks]: /pt/docs/how-to/track-custom-benchmarks/
+[json adapter]: http://localhost:3000/docs/explanation/adapters/#-json

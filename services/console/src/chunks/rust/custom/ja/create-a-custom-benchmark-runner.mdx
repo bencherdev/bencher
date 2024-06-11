@@ -1,0 +1,38 @@
+import CargoTomlSerdeJson from "../cargo-toml-serde-json.mdx";
+import PlayGameRsRun from "../play-game-rs-run.mdx";
+import PlayGameMain from "../play-game-rs-main.mdx";
+
+### カスタムベンチマークランナーの作成
+
+最後に、カスタムベンチマークハーネスのためのランナーを作成する必要があります。
+カスタムベンチマークハーネスは、実際にはベンチマークをすべて実行し、結果を報告するバイナリです。
+ベンチマークランナーはそのすべてを統括します。
+
+結果を[Bencher Metric Format (BMF) JSON][bmf json]で出力したいと思います。
+これを実現するために、最後の依存関係として
+[David Tolnayによる`serde_json`クレート][crates serde json]を追加します！
+
+<CargoTomlSerdeJson />
+
+次に、`CustomBenchmark`がベンチマーク関数を実行し、その結果をBMF JSONとして返すメソッドを実装します。
+
+<PlayGameRsRun />
+
+BMF JSON結果には、各ベンチマークに対して6つの[メトリクス][measures]が含まれます：
+
+- Final Blocks: ベンチマーク終了時に割り当てられた最終的なブロック数。
+- Final Bytes: ベンチマーク終了時に割り当てられた最終的なバイト数。
+- Max Blocks: ベンチマーク実行中に一度に割り当てられた最大ブロック数。
+- Max Bytes: ベンチマーク実行中に一度に割り当てられた最大バイト数。
+- Total Blocks: ベンチマーク実行中に割り当てられた総ブロック数。
+- Total Bytes: ベンチマーク実行中に割り当てられた総バイト数。
+
+最後に、`inventory`コレクション内のすべてのベンチマークを実行し、
+その結果をBMF JSONとして出力する`main`関数を作成できます。
+
+<PlayGameMain />
+
+[bmf json]: /ja/docs/reference/bencher-metric-format/
+[measures]: /ja/docs/explanation/benchmarking/#measures
+
+[crates serde json]: https://crates.io/crates/serde_json/

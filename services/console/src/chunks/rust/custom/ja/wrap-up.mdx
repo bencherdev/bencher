@@ -1,0 +1,13 @@
+## まとめ
+
+この投稿では、Rustエコシステムで最も人気のある3つのベンチマークハーネスについて紹介しました：[libtest bench][libtest bench]、[Criterion][criterion]、および[Iai][iai]です。これらは大部分のユースケースをカバーしますが、場合によってはウォールクロックタイムや命令カウント以外のものを測定する必要があるかもしれません。そのために、カスタムベンチマークハーネスを作成することにしました。
+
+私たちのカスタムベンチマークハーネスは、`dhat-rs`を使用してヒープアロケーションを測定します。ベンチマーク関数は `inventory` を使用して収集されます。実行すると、ベンチマーク結果は Bencher Metric Format (BMF) JSON として出力されます。そして、Bencherを使用してカスタムベンチマーク結果を時間経過とともに追跡し、CIでパフォーマンスのリグレッションを検出することができます。
+
+このガイドのすべてのソースコードは[GitHubで利用可能です][github bencher]。
+
+[github bencher]: https://github.com/bencherdev/bencher/tree/main/examples/rust/custom
+
+[libtest bench]: /ja/learn/benchmarking/rust/libtest-bench/
+[criterion]: /ja/learn/benchmarking/rust/criterion/
+[iai]: /ja/learn/benchmarking/rust/iai/

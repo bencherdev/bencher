@@ -1,0 +1,27 @@
+import BencherRun from "../bencher-run.mdx";
+
+## カスタムベンチマーク結果を追跡する
+
+ほとんどのベンチマーク結果は一時的なものです。
+ターミナルのスクロールバック制限に達すると消えてしまいます。
+一部のベンチマークハーネスでは結果をキャッシュできますが、それを実装するのは非常に手間がかかります。
+さらに、その結果をローカルに保存することしかできません。
+幸運なことに、私たちのカスタムベンチマークハーネスはBencherと連携します！
+[Bencher][bencher]は継続的ベンチマークツールのスイートであり、
+ベンチマークの結果を時間をかけて追跡し、
+パフォーマンスの退行を本番環境に到達する_前に_捕捉することができます。
+
+[Bencher Cloud][quick start]または[Bencher Self-Hosted][docker quick start]のセットアップが完了すると、
+次のコマンドを実行して、カスタムベンチマークハーネスからの結果を追跡できます：
+
+<BencherRun />
+
+また、[カスタムベンチマークをBencherで追跡する方法][custom benchmarks]に関する詳細や、
+[JSONベンチマークアダプター][json adapter]についても読むことができます。
+
+[bencher]: /
+[install cli]: /ja/docs/how-to/install-cli/
+[quick start]: /ja/docs/tutorial/quick-start/
+[docker quick start]: /ja/docs/tutorial/docker/
+[custom benchmarks]: /ja/docs/how-to/track-custom-benchmarks/
+[json adapter]: http://localhost:3000/docs/explanation/adapters/#-json

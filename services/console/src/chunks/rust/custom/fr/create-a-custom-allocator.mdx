@@ -1,0 +1,20 @@
+import PlayGameAlloc from "../play-game-rs-alloc.mdx";
+
+### Créer un Allocateur Personnalisé
+
+Étant donné que notre banc d'essai personnalisé mesurera les allocations de tas,
+nous aurons besoin d'utiliser un allocateur de tas personnalisé.
+Rust vous permet de configurer un allocateur de tas global personnalisé
+en utilisant [l'attribut `#[global_allocator]`][allocateur global rust].
+Ajoutez ce qui suit en haut de `benches/play_game.rs` :
+
+<PlayGameAlloc />
+
+Cela indique à Rust d'utiliser `dhat::Alloc` comme notre allocateur de tas global.
+
+> 🐰 Vous ne pouvez définir **qu'un seul** allocateur de tas global à la fois.
+> Si vous souhaitez basculer entre plusieurs allocateurs globaux,
+> ils doivent être gérés via la compilation conditionnelle avec [les fonctionnalités de Rust].
+
+[allocateur global rust]: https://doc.rust-lang.org/std/alloc/index.html#the-global_allocator-attribute
+[les fonctionnalités de Rust]: https://doc.rust-lang.org/cargo/reference/features.html

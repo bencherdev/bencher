@@ -1,0 +1,15 @@
+import PlayGameAlloc from "../play-game-rs-alloc.mdx";
+
+### 创建自定义分配器
+
+由于我们自定义的基准测试工具将测量堆分配，因此我们需要使用自定义堆分配器。Rust 允许通过使用 [ `#[global_allocator]` 属性][rust global allocator] 配置自定义的全局堆分配器。在 `benches/play_game.rs` 的顶部添加以下内容：
+
+<PlayGameAlloc />
+
+这告诉 Rust 使用 `dhat::Alloc` 作为我们的全局堆分配器。
+
+> 🐰 你一次只能设置 **一个** 全局堆分配器。
+> 如果你想在多个全局分配器之间切换，它们必须通过 [Rust 功能][rust features] 进行条件编译管理。
+
+[rust global allocator]: https://doc.rust-lang.org/std/alloc/index.html#the-global_allocator-attribute
+[rust features]: https://doc.rust-lang.org/cargo/reference/features.html
