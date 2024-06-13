@@ -10,6 +10,7 @@ pub mod benchmark;
 pub mod branch;
 pub mod measure;
 pub mod perf;
+pub mod plot;
 pub mod report;
 pub mod run;
 pub mod testbed;

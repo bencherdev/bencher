@@ -14,7 +14,7 @@ use mock::Mock;
 pub use mock::MockError;
 use organization::{member::Member, organization::Organization};
 use project::{
-    alert::Alert, benchmark::Benchmark, branch::Branch, measure::Measure, perf::Perf,
+    alert::Alert, benchmark::Benchmark, branch::Branch, measure::Measure, perf::Perf, plot::Plot,
     project::Project, report::Report, run::Run, testbed::Testbed, threshold::Threshold,
 };
 pub use project::{
@@ -36,6 +36,7 @@ pub enum Sub {
     Run(Box<Run>),
     Report(Report),
     Perf(Perf),
+    Plot(Plot),
     Branch(Branch),
     Testbed(Testbed),
     Benchmark(Benchmark),
@@ -65,6 +66,7 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Run(run) => Self::Run(Box::new((*run).try_into()?)),
             CliSub::Report(report) => Self::Report(report.try_into()?),
             CliSub::Perf(perf) => Self::Perf(perf.try_into()?),
+            CliSub::Plot(plot) => Self::Plot(plot.try_into()?),
             CliSub::Branch(branch) => Self::Branch(branch.try_into()?),
             CliSub::Testbed(testbed) => Self::Testbed(testbed.try_into()?),
             CliSub::Benchmark(benchmark) => Self::Benchmark(benchmark.try_into()?),
@@ -94,6 +96,7 @@ impl SubCmd for Sub {
             Self::Run(run) => run.exec().await,
             Self::Report(report) => report.exec().await,
             Self::Perf(perf) => perf.exec().await,
+            Self::Plot(plot) => plot.exec().await,
             Self::Branch(branch) => branch.exec().await,
             Self::Testbed(testbed) => testbed.exec().await,
             Self::Benchmark(benchmark) => benchmark.exec().await,

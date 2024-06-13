@@ -2,21 +2,26 @@
 title: "Project Plots"
 description: "The Bencher Project Plots REST API"
 heading: "Project Plots REST API"
-sortOrder: 3
+sortOrder: 4
 paths:
   - path: /v0/projects/{project}/plots
     method: get
     headers: pub
+    cli: plot list PROJECT
   - path: /v0/projects/{project}/plots
     method: post
     headers: auth
+    cli: plot create PROJECT
   - path: /v0/projects/{project}/plots/{plot}
     method: get
     headers: pub
+    cli: plot view PROJECT PLOT
   - path: /v0/projects/{project}/plots/{plot}
     method: patch
     headers: auth
+    cli: plot update PROJECT PLOT
   - path: /v0/projects/{project}/plots/{plot}
     method: delete
     headers: auth
+    cli: plot delete PROJECT PLOT
 ---

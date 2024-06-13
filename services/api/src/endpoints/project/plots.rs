@@ -47,6 +47,8 @@ pub enum ProjPlotsSort {
     /// Sort by plot index.
     #[default]
     Index,
+    /// Sort by plot title.
+    Title,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -133,6 +135,10 @@ async fn get_ls_inner(
         ProjPlotsSort::Index => match pagination_params.direction {
             Some(JsonDirection::Asc) | None => query.order(schema::plot::rank.asc()),
             Some(JsonDirection::Desc) => query.order(schema::plot::rank.desc()),
+        },
+        ProjPlotsSort::Title => match pagination_params.direction {
+            Some(JsonDirection::Asc) | None => query.order(schema::plot::title.asc()),
+            Some(JsonDirection::Desc) => query.order(schema::plot::title.desc()),
         },
     };
 

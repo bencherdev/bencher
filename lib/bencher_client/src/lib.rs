@@ -33,6 +33,7 @@ from_client!(
     BranchName,
     Email,
     GitHash,
+    Index,
     Jwt,
     NameId,
     NonEmpty,
@@ -42,8 +43,7 @@ from_client!(
     Slug,
     Url,
     UserName,
-    Window,
-    Index
+    Window
 );
 
 from_client!(
@@ -103,30 +103,36 @@ macro_rules! try_from_client {
 }
 
 try_from_client!(
-    JsonMember,
-    JsonMembers,
-    JsonAllowed,
-    JsonOrganization,
     JsonOrganizations,
+    JsonOrganization,
+    JsonMembers,
+    JsonMember,
+    JsonAllowed,
+    JsonProjects,
+    JsonProject,
+    JsonReports,
+    JsonReport,
+    JsonPerf,
+    JsonPlots,
+    JsonPlot,
+    JsonBranches,
+    JsonBranch,
+    JsonBenchmarks,
+    JsonBenchmark,
+    JsonTestbeds,
+    JsonTestbed,
+    JsonMeasures,
+    JsonMeasure,
+    JsonThresholds,
+    JsonThreshold,
+    JsonModel,
     JsonAlerts,
     JsonAlertStats,
     JsonAlert,
-    JsonBenchmarks,
-    JsonBenchmark,
-    JsonBranches,
-    JsonBranch,
-    JsonMeasures,
-    JsonMeasure,
-    JsonProjects,
-    JsonProject,
-    JsonPerf,
-    JsonReports,
-    JsonReport,
-    JsonModel,
-    JsonTestbeds,
-    JsonTestbed,
-    JsonThresholds,
-    JsonThreshold,
+    JsonUsers,
+    JsonUser,
+    JsonTokens,
+    JsonToken,
     JsonSignup,
     JsonLogin,
     JsonConfirm,
@@ -137,11 +143,7 @@ try_from_client!(
     JsonConfig,
     JsonConsole,
     JsonApiVersion,
-    JsonSpec,
-    JsonTokens,
-    JsonToken,
-    JsonUsers,
-    JsonUser
+    JsonSpec
 );
 
 #[cfg(feature = "plus")]
@@ -181,16 +183,17 @@ macro_rules! into_uuids {
 }
 
 into_uuids!(
-    JsonMembers[JsonMember],
     JsonOrganizations[JsonOrganization],
-    JsonAlerts[JsonAlert],
-    JsonBenchmarks[JsonBenchmark],
-    JsonBranches[JsonBranch],
-    JsonMeasures[JsonMeasure],
+    JsonMembers[JsonMember],
     JsonProjects[JsonProject],
     JsonReports[JsonReport],
+    JsonPlots[JsonPlot],
+    JsonBranches[JsonBranch],
     JsonTestbeds[JsonTestbed],
-    JsonThresholds[JsonThreshold]
+    JsonBenchmarks[JsonBenchmark],
+    JsonMeasures[JsonMeasure],
+    JsonThresholds[JsonThreshold],
+    JsonAlerts[JsonAlert]
 );
 
 macro_rules! into_uuid {
@@ -211,15 +214,16 @@ macro_rules! into_uuid {
 }
 
 into_uuid!(
-    JsonMember,
     JsonOrganization,
-    JsonAlert,
-    JsonBenchmark,
-    JsonBranch,
-    JsonMeasure,
+    JsonMember,
     JsonProject,
     JsonReport,
-    JsonModel,
+    JsonPlot,
+    JsonBranch,
     JsonTestbed,
-    JsonThreshold
+    JsonBenchmark,
+    JsonMeasure,
+    JsonThreshold,
+    JsonModel,
+    JsonAlert
 );

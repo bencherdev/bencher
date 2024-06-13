@@ -11182,6 +11182,13 @@
             "enum": [
               "index"
             ]
+          },
+          {
+            "description": "Sort by plot title.",
+            "type": "string",
+            "enum": [
+              "title"
+            ]
           }
         ]
       },
