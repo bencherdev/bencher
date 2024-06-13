@@ -11,9 +11,13 @@ pub struct CliUp {
     #[clap(long)]
     pub pull: Option<CliUpPull>,
 
-    /// Pass environment variables to containers. Same semantic than docker run --env option.
-    #[clap(short, long, value_parser = check_key_value)]
+    /// Pass environment variables to containers. Same semantic than docker run "--env" option.
+    #[clap(short, long, value_parser = check_key_value::<'='>)]
     pub env: Vec<String>,
+
+    /// Pass volume information to containers. Same semantic than docker run "--volume" option.
+    #[clap(short, long = "volume", value_parser = check_key_value::<':'>)]
+    pub volumes: Vec<String>,
 }
 
 #[derive(ValueEnum, Debug, Clone, Copy, Default)]
@@ -34,10 +38,12 @@ pub struct CliLogs {
     pub container: Option<String>,
 }
 
-/// check that input argument is in the form 'key=value'
-fn check_key_value(s: &str) -> Result<String, Box<dyn Error + Send + Sync + 'static>> {
-    s.find('=')
-        .ok_or_else(|| format!("invalid KEY=value: no `=` found in `{s}`"))?;
+/// check that input argument is in the form 'key<separator>value'
+fn check_key_value<const SEPARATOR: char>(
+    s: &str,
+) -> Result<String, Box<dyn Error + Send + Sync + 'static>> {
+    s.find(SEPARATOR)
+        .ok_or_else(|| format!("invalid KEY{SEPARATOR}value: no `{SEPARATOR}` found in `{s}`"))?;
 
     Ok(String::from(s))
 }
