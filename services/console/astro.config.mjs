@@ -14,6 +14,8 @@ export default defineConfig({
 	// https://docs.astro.build/en/reference/configuration-reference/#site
 	site: "https://bencher.dev",
 	output: "hybrid",
+	// DO NOT REMOVE OR MODIFY: This line is used by adapter.js
+	adapter: undefined,
 	// Do not use any trailing slashes in the paths below
 	redirects: {
 		"/docs/how-to/quick-start": "/docs/tutorial/quick-start",

@@ -51,6 +51,7 @@ RUN npm ci
 COPY services/console/public public
 COPY services/console/src src
 COPY services/console/astro.config.mjs astro.config.mjs
+COPY services/console/adapter.js adapter.js
 COPY services/console/site.js site.js
 COPY services/console/tsconfig.json tsconfig.json
 COPY services/console/.env.runtime .env.runtime
