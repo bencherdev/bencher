@@ -7,7 +7,6 @@
 ## Benchmark
 - Rust
   - The Ultimate Guide on how to Benchmark Rust Code
-  - How to create a custom benchmarking harness in Rust
   - How to track benchmarks in Rust
   - How to profile executable size in Rust
     - [cargo-bloat](https://github.com/RazrFalcon/cargo-bloat)
@@ -42,6 +41,7 @@
 
 ## Benchmarking
 - https://www.researchgate.net/publication/334047447_Pro_NET_Benchmarking_The_Art_of_Performance_Measurement
+- https://blog.nelhage.com/post/reflections-on-performance/
 
 ## Continuous Benchmarking
 - The Ultimate Guide to Continuous Benchmarking
@@ -70,6 +70,7 @@
   - https://en.wikipedia.org/wiki/Profile-guided_optimization
 - How to use perf
   - https://www.youtube.com/watch?v=nXaxk27zwlk
+- Building your own eBPF based profiler
 
 # Machine Learning
 - https://harvard-edge.github.io/cs249r_book/contents/benchmarking/benchmarking.html
@@ -83,6 +84,7 @@ Intention + Obstacle
 
 ## Engineering
 - Engineering Bets Scorecard
+  - https://mcfunley.com/choose-boring-technology
   - Rust
     - Dropshot
       - Proginator
