@@ -96,11 +96,13 @@ const OnboardPlan = (props: Props) => {
 								params={{ organization: organization()?.slug ?? "" }}
 								onboard={true}
 							/>
+							<br />
 							<div class="content has-text-centered">
-								<a class="button is-small" href="/console">
+								<a class="button" href="/console">
 									I want to use the free plan for now
 								</a>
 							</div>
+							<br />
 						</div>
 					</div>
 				</div>
