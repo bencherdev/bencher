@@ -12,6 +12,7 @@
 !services/console/public
 !services/console/src
 !services/console/astro.config.mjs
+!services/console/adapter.js
 !services/console/site.js
 !services/console/tsconfig.json
 !services/console/.env.runtime
