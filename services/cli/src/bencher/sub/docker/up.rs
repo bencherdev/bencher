@@ -29,6 +29,8 @@ use super::{
 pub struct Up {
     detach: bool,
     pull: Pull,
+    env: Vec<String>,
+    volumes: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -40,10 +42,17 @@ enum Pull {
 
 impl From<CliUp> for Up {
     fn from(up: CliUp) -> Self {
-        let CliUp { detach, pull } = up;
+        let CliUp {
+            detach,
+            pull,
+            env,
+            volumes,
+        } = up;
         Self {
             detach,
             pull: pull.unwrap_or_default().into(),
+            env,
+            volumes,
         }
     }
 }
@@ -65,9 +74,13 @@ impl SubCmd for Up {
         stop_container(&docker, BENCHER_CONSOLE_CONTAINER).await?;
         stop_container(&docker, BENCHER_API_CONTAINER).await?;
 
+        let env: Vec<&str> = self.env.iter().map(|s| &**s).collect();
+
         start_container(
             &docker,
             self.pull,
+            env.clone(),
+            self.volumes.clone(),
             BENCHER_API_IMAGE,
             BENCHER_API_CONTAINER,
             BENCHER_API_PORT,
@@ -76,6 +89,8 @@ impl SubCmd for Up {
         start_container(
             &docker,
             self.pull,
+            env,
+            self.volumes.clone(),
             BENCHER_CONSOLE_IMAGE,
             BENCHER_CONSOLE_CONTAINER,
             BENCHER_CONSOLE_PORT,
@@ -104,6 +119,8 @@ impl SubCmd for Up {
 async fn start_container(
     docker: &Docker,
     pull: Pull,
+    env: Vec<&str>,
+    volumes: Vec<String>,
     image: &str,
     container: &str,
     port: u16,
@@ -135,11 +152,14 @@ async fn start_container(
             }]),
         }),
         publish_all_ports: Some(true),
+        binds: Some(volumes),
         ..Default::default()
     });
+
     let config = Config {
         image: Some(image),
         host_config,
+        env: Some(env),
         exposed_ports: Some(literally::hmap! {
             tcp_port.as_str() => literally::hmap! {}
         }),
