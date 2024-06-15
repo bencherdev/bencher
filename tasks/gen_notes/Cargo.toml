@@ -4,54 +4,12 @@ version.workspace = true
 authors.workspace = true
 edition.workspace = true
 
-[features]
-default = ["plus"]
-admin = ["dep:bencher_client"]
-api = ["dep:bencher_api"]
-cli = ["dep:bencher_cli"]
-plus = [
-    "bencher_json/plus",
-    "dep:async-openai",
-    "dep:bencher_bing_index",
-    "dep:bencher_license",
-    "dep:bencher_google_index",
-    "dep:notify-rust",
-]
 
 [dependencies]
 # Workspace
 anyhow.workspace = true
-bencher_api = { workspace = true, optional = true }
-bencher_bing_index = { workspace = true, optional = true }
-bencher_cli = { workspace = true, optional = true }
-bencher_client = { workspace = true, optional = true }
-bencher_json = { workspace = true, features = ["lite"] }
-bencher_license = { workspace = true, optional = true }
-bencher_google_index = { workspace = true, optional = true }
-bencher_logger.workspace = true
 camino.workspace = true
-chrono.workspace = true
 clap.workspace = true
-dropshot.workspace = true
-literally.workspace = true
-once_cell.workspace = true
-pretty_assertions.workspace = true
-reqwest = { workspace = true, features = ["default"] }
-serde.workspace = true
-serde_json.workspace = true
-serde_urlencoded.workspace = true
-slug.workspace = true
-tokio = { workspace = true, features = ["macros", "rt"] }
-url.workspace = true
-# Crate
-assert_cmd = "2.0"
-async-openai = { version = "0.20", optional = true }
-clap_mangen = "0.2"
-dotenvy = "0.15"
-minijinja = { version = "1.0", features = ["loader"] }
-newline-converter = "0.3"
-notify-rust = { version = "4.11", optional = true }
-openapiv3 = "2.0"
 
 [lints]
 workspace = true

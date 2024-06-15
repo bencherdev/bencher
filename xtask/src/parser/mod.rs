@@ -2,19 +2,14 @@ use clap::{Parser, Subcommand};
 
 #[cfg(feature = "admin")]
 mod admin;
-mod notify;
-mod package;
 #[cfg(feature = "plus")]
 mod plus;
-mod release;
-mod template;
 mod test;
 mod types;
 mod version;
 
 #[cfg(feature = "admin")]
 pub use admin::email_list::TaskEmailList;
-pub use notify::TaskNotify;
 #[cfg(feature = "cli")]
 pub use package::{TaskDeb, TaskMan};
 #[cfg(feature = "plus")]
@@ -24,8 +19,6 @@ pub use plus::{
     prompt::{TaskImage, TaskLanguage, TaskPrompt, TaskTranslate},
     stats::TaskStats,
 };
-pub use release::TaskReleaseNotes;
-pub use template::{TaskTemplate, TaskTemplateKind};
 pub use test::{
     TaskExample, TaskExamples, TaskNetlifyTest, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment,
 };
@@ -56,8 +49,6 @@ pub enum TaskSub {
     #[cfg(feature = "api")]
     /// Generate typeshare and OpenAPI spec
     Types(TaskTypes),
-    /// Template CLI install scripts
-    Template(TaskTemplate),
     #[cfg(feature = "plus")]
     #[clap(subcommand)]
     /// `URLindexing`
@@ -82,16 +73,6 @@ pub enum TaskSub {
     SmokeTest(TaskSmokeTest),
     /// Run tests against Netlify deployment
     NetlifyTest(TaskNetlifyTest),
-    #[cfg(feature = "cli")]
-    /// Create CLI man page
-    Man(TaskMan),
-    #[cfg(feature = "cli")]
-    /// Create CLI .deb
-    Deb(TaskDeb),
-    /// Generate release notes
-    ReleaseNotes(TaskReleaseNotes),
-    /// Notify
-    Notify(TaskNotify),
     #[cfg(feature = "plus")]
     #[clap(subcommand)]
     /// License management
