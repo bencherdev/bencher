@@ -995,16 +995,17 @@ jobs:
       - name: Build Console UI
         working-directory: ./services/console
         run: npm run netlify
-      - uses: netlify/actions/cli@master
-        id: netlify
-        with:
-          args: |
-            deploy \
-            --alias ${GITHUB_REF#refs/*/} \
-            --message "${{ github.event.head_commit.message }}"
+      - name: Install Netlify CLI
+        run: npm install --save-dev netlify-cli@17.27.0
+      - name: Deploy Console UI to Netlify Dev
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: |
+          npx netlify-cli \
+          deploy \
+          --alias ${GITHUB_REF#refs/*/} \
+          --message "${{ github.event.head_commit.message }}"
       - uses: actions/cache@v4
         with:
           path: |
@@ -1060,17 +1061,18 @@ jobs:
       - name: Build Console UI
         working-directory: ./services/console
         run: npm run netlify
-      - uses: netlify/actions/cli@master
-        id: netlify
-        with:
-          args: |
-            deploy \
-            --alias ${GITHUB_REF#refs/*/} \
-            --message "${{ github.event.head_commit.message }}" \
-            --prod
+      - name: Install Netlify CLI
+        run: npm install --save-dev netlify-cli@17.27.0
+      - name: Deploy Console UI to Netlify
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: |
+          npx netlify-cli \
+          deploy \
+          --alias ${GITHUB_REF#refs/*/} \
+          --message "${{ github.event.head_commit.message }}" \
+          --prod
       - uses: actions/cache@v4
         with:
           path: |
