@@ -16,8 +16,8 @@ fi
 set -u
 
 APP_NAME=bencher
-APP_VERSION="0.4.12"
-ARTIFACT_DOWNLOAD_URL="${INSTALLER_DOWNLOAD_URL:-https://bencher.dev/download/0.4.12}"
+APP_VERSION="0.4.13"
+ARTIFACT_DOWNLOAD_URL="${INSTALLER_DOWNLOAD_URL:-https://bencher.dev/download/0.4.13}"
 PRINT_VERBOSE=${INSTALLER_PRINT_VERBOSE:-0}
 PRINT_QUIET=${INSTALLER_PRINT_QUIET:-0}
 NO_MODIFY_PATH=${INSTALLER_NO_MODIFY_PATH:-0}
@@ -33,7 +33,7 @@ usage() {
     cat <<EOF
 install-cli.sh
 
-Bencher CLI v0.4.12 Installer
+Bencher CLI v0.4.13 Installer
 
 This script detects what platform you're on and fetches an appropriate archive from https://bencher.dev.
 It then unpacks the binaries and installs them to \$CARGO_HOME/bin (\$HOME/.cargo/bin).
@@ -127,25 +127,25 @@ download_binary_and_run_installer() {
     # Lookup what to download/unpack based on platform
     case "$_arch" in 
         "x86_64-unknown-linux-gnu")
-            _artifact_name="bencher-v0.4.12-linux-x86-64"
+            _artifact_name="bencher-v0.4.13-linux-x86-64"
             _zip_ext=""
             _bins="bencher"
             _bin="bencher"
             ;;
         "aarch64-unknown-linux-gnu")
-            _artifact_name="bencher-v0.4.12-linux-arm-64"
+            _artifact_name="bencher-v0.4.13-linux-arm-64"
             _zip_ext=""
             _bins="bencher"
             _bin="bencher"
             ;;
         "x86_64-apple-darwin")
-            _artifact_name="bencher-v0.4.12-macos-x86-64"
+            _artifact_name="bencher-v0.4.13-macos-x86-64"
             _zip_ext=""
             _bins="bencher"
             _bin="bencher"
             ;;
         "aarch64-apple-darwin")
-            _artifact_name="bencher-v0.4.12-macos-arm-64"
+            _artifact_name="bencher-v0.4.13-macos-arm-64"
             _zip_ext=""
             _bins="bencher"
             _bin="bencher"

@@ -1,7 +1,7 @@
 {
 	"name": "bencher-console",
 	"type": "module",
-	"version": "0.4.12",
+	"version": "0.4.13",
 	"scripts": {
 		"fmt": "npx biome format --write .",
 		"lint": "npx biome lint .",

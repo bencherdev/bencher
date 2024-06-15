@@ -284,8 +284,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            smoke_test: docker
+          # This will not work on release as it tries to pull the current version
+          # - os: ubuntu-latest
+          #   smoke_test: docker
           - os: macos-latest
             smoke_test: localhost
           # https://github.com/actions/runner-images/issues/17#issuecomment-614726536
