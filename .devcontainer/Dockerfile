@@ -20,7 +20,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - && \
     sudo apt-get install -y nodejs
 
 # Install `biome`: https://biomejs.dev/guides/getting-started/
-RUN sudo npm install -g --save-exact @biomejs/biome
+RUN sudo npm install -g --save-exact @biomejs/biome@1.7.3
 
 # Install `@esbuild/linux-arm64` and `@rometools/cli-linux-arm64` for `aarch64`
 RUN test $(uname -m) = "aarch64" && sudo npm install -g @esbuild/linux-arm64 @rometools/cli-linux-arm64; true
@@ -48,9 +48,9 @@ RUN rustup update
 RUN rustup toolchain install $RUST_VERSION-$(uname -m)-unknown-linux-gnu
 RUN rustup component add clippy rust-src rustfmt --toolchain $RUST_VERSION-$(uname -m)-unknown-linux-gnu
 RUN rustup target add wasm32-unknown-unknown --toolchain $RUST_VERSION-$(uname -m)-unknown-linux-gnu
-RUN cargo install diesel_cli --no-default-features --features sqlite --locked
-RUN cargo install typeshare-cli --locked
-RUN cargo install lychee --locked
+RUN cargo install diesel_cli --version 2.1.1 --locked --no-default-features --features sqlite
+RUN cargo install typeshare-cli --version 1.9.2 --locked
+RUN cargo install lychee --version 0.15.1 --locked
 
 # Install `flyctl`: https://fly.io/docs/getting-started/installing-flyctl/
 RUN curl -L https://fly.io/install.sh | sh
