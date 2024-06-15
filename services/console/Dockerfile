@@ -22,6 +22,10 @@ RUN cargo init --lib bencher_bing_index
 RUN cargo init --lib bencher_license
 RUN cargo init --lib bencher_google_index
 
+WORKDIR /usr/src/bencher/tasks
+RUN cargo init --bin gen_swagger
+RUN cargo init --bin test_netlify
+
 WORKDIR /usr/src/bencher
 COPY Cargo.toml Cargo.toml
 COPY Cargo.lock Cargo.lock

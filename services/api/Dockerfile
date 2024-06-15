@@ -46,6 +46,10 @@ COPY plus/bencher_bing_index bencher_bing_index
 COPY plus/bencher_license bencher_license
 COPY plus/bencher_google_index bencher_google_index
 
+WORKDIR /usr/src/bencher/tasks
+RUN cargo init --bin gen_swagger
+RUN cargo init --bin test_netlify
+
 WORKDIR /usr/src/bencher
 COPY Cargo.toml Cargo.toml
 COPY Cargo.lock Cargo.lock
