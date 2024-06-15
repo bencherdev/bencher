@@ -9,6 +9,7 @@ gen-installer = "run --manifest-path ./tasks/gen_installer/Cargo.toml --"
 gen-pkg = "run --manifest-path ./tasks/gen_pkg/Cargo.toml --"
 gen-notes = "run --manifest-path ./tasks/gen_notes/Cargo.toml --"
 gen-swagger = "run --manifest-path ./tasks/gen_swagger/Cargo.toml --"
+test-api = "run --manifest-path ./tasks/test_api/Cargo.toml --"
 test-netlify = "run --manifest-path ./tasks/test_netlify/Cargo.toml --"
 
 [target.x86_64-unknown-linux-gnu]

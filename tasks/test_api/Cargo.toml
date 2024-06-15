@@ -1,0 +1,19 @@
+[package]
+name = "test_api"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+# Workspace
+bencher_json = { workspace = true, features = ["lite"] }
+anyhow.workspace = true
+clap.workspace = true
+once_cell.workspace = true
+pretty_assertions.workspace = true
+serde_json.workspace = true
+# Crate
+assert_cmd = "2.0"
+
+[lints]
+workspace = true

@@ -7,7 +7,7 @@ while ! nc -z localhost 61016; do
   sleep 1
 done
 
-cargo xtask seed-test
+cargo test-api seed
 
 echo "Bencher development environment is ready!"
 echo "Bencher UI Server: http://localhost:3000"

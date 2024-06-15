@@ -259,14 +259,14 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-xtask
+          key: ${{ runner.os }}-cargo
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Install `bencher` CLI
         run: cargo install --debug --path services/cli --locked --force
       - name: Run Smoke Test
-        run: cargo xtask smoke-test localhost
+        run: cargo test-api smoke localhost
 
   release_api_smoke_test:
     name: Release API Smoke Test
@@ -303,7 +303,7 @@ jobs:
       - name: Install `bencher` CLI
         run: cargo install --debug --path services/cli --locked --force
       - name: Run Smoke Test
-        run: cargo xtask smoke-test ${{ matrix.smoke_test }}
+        run: cargo test-api smoke ${{ matrix.smoke_test }}
 
   # Cargo Check (Minus)
   cargo_check_api_minus:
@@ -313,16 +313,6 @@ jobs:
     continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-minus
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -337,16 +327,6 @@ jobs:
     continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-minus
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -373,7 +353,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo
+          key: ${{ runner.os }}-cargo-release
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -832,14 +812,14 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-xtask
+          key: ${{ runner.os }}-cargo-cli
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Install `bencher` CLI
         run: cargo install --debug --path services/cli --locked --force
       - name: Run Smoke Test
-        run: cargo xtask smoke-test dev
+        run: cargo test-api smoke dev
 
   deploy_api_fly_test:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/express' || github.ref == 'refs/heads/devel'
@@ -862,20 +842,11 @@ jobs:
       - name: Deploy Litestream API to Fly.io Test
         working-directory: ./services/api
         run: flyctl deploy --local-only --config fly/fly.test.toml --wait-timeout 300
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-xtask
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Run Smoke Test
-        run: cargo xtask smoke-test test
+        run: cargo test-api smoke test
 
   backup_database:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/express'
@@ -908,7 +879,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo
+          key: ${{ runner.os }}-cargo-cli
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -945,20 +916,11 @@ jobs:
       - name: Deploy API to Fly.io Prod
         working-directory: ./services/api
         run: flyctl deploy --local-only --config fly/fly.toml --wait-timeout 300
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-xtask
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Run Smoke Test
-        run: cargo xtask smoke-test prod
+        run: cargo test-api smoke prod
 
   # UI Netlify
   deploy_ui_netlify_dev:
