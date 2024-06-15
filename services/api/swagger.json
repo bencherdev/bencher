@@ -11314,7 +11314,8 @@
       "name": "plan"
     },
     {
-      "name": "plots"
+      "name": "plots",
+      "description": "Plots"
     },
     {
       "name": "projects",

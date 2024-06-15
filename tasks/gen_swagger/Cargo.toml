@@ -1,0 +1,23 @@
+[package]
+name = "gen_swagger"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[features]
+default = ["plus"]
+plus = ["bencher_json/plus"]
+
+[dependencies]
+# Workspace
+bencher_api.workspace = true
+bencher_json.workspace = true
+bencher_logger.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+dropshot.workspace = true
+literally.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

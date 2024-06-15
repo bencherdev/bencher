@@ -2784,6 +2784,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "gen_swagger"
+version = "0.4.13"
+dependencies = [
+ "anyhow",
+ "bencher_api",
+ "bencher_json",
+ "bencher_logger",
+ "clap",
+ "dropshot",
+ "literally",
+ "serde_json",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
