@@ -1,5 +1,12 @@
 [workspace]
-members = ["services/api", "services/cli", "lib/*", "plus/*", "xtask"]
+members = [
+    "services/api",
+    "services/cli",
+    "lib/*",
+    "plus/*",
+    "tasks/*",
+    "xtask",
+]
 resolver = "2"
 
 [workspace.package]

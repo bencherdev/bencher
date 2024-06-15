@@ -1008,44 +1008,11 @@ jobs:
           --message "${{ github.event.head_commit.message }}" \
           --json \
           | tee netlify.json
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-xtask
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
-      # https://docs.github.com/en/actions/learn-github-actions/contexts#steps-context
-      # https://docs.github.com/en/enterprise-cloud@latest/actions/learn-github-actions/expressions#tojson
-      # https://github.com/netlify/actions/blob/375963b92b795c7b979927c580dd6f2a65ebcf28/cli/entrypoint.sh#L20
       - name: Run Netlify Dev Test
-        run: cargo xtask netlify-test --dev
-
-  deploy_notify_dev:
-    name: Notify of deployment
-    runs-on: ubuntu-latest
-    needs: deploy_ui_netlify_dev
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-xtask
-      - uses: rui314/setup-mold@v1
-        with:
-          mold-version: ${{ env.MOLD_VERSION }}
-      - name: Notify of deployment
-        run: cargo xtask notify "Deployed ${{ github.ref_name }}"
+        run: cargo test-netlify dev ${{ github.ref_name }}
 
   deploy_ui_netlify:
     name: Deploy UI to Netlify Prod
@@ -1075,44 +1042,11 @@ jobs:
           --message "${{ github.event.head_commit.message }}" \
           --json \
           | tee netlify.json
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-xtask
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
-      # https://docs.github.com/en/actions/learn-github-actions/contexts#steps-context
-      # https://docs.github.com/en/enterprise-cloud@latest/actions/learn-github-actions/expressions#tojson
-      # https://github.com/netlify/actions/blob/375963b92b795c7b979927c580dd6f2a65ebcf28/cli/entrypoint.sh#L20
       - name: Run Netlify Test
-        run: cargo xtask netlify-test
-
-  deploy_notify:
-    name: Notify of deployment
-    runs-on: ubuntu-latest
-    needs: deploy_ui_netlify
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-xtask
-      - uses: rui314/setup-mold@v1
-        with:
-          mold-version: ${{ env.MOLD_VERSION }}
-      - name: Notify of deployment
-        run: cargo xtask notify "Deployed ${{ github.ref_name }}"
+        run: cargo test-netlify prod ${{ github.ref_name }}
 
   # Release
   release_bencher:
