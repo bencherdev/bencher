@@ -16,6 +16,10 @@ pub struct CliUp {
     #[clap(long)]
     pub pull: Option<CliUpPull>,
 
+    /// Specify the image tag. (default: same version as the CLI)
+    #[clap(long)]
+    pub tag: Option<String>,
+
     /// Pass an environment variable to the API container.
     /// Similar to the `--env` option for `docker run`.
     #[clap(long, value_parser = check_env)]

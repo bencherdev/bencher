@@ -109,7 +109,7 @@ fn api_run() -> anyhow::Result<Child> {
 
 fn bencher_up() -> anyhow::Result<()> {
     Command::new("cargo")
-        .args(["run", "--", "up", "-d", "api"])
+        .args(["run", "--", "up", "--detach", "--tag", "latest", "api"])
         .current_dir("./services/cli")
         .status()?;
 

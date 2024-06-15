@@ -4,18 +4,13 @@ use bencher_json::{
     BENCHER_API_PORT, BENCHER_CONSOLE_PORT, LOCALHOST_BENCHER_API_URL_STR,
     LOCALHOST_BENCHER_URL_STR,
 };
-use once_cell::sync::Lazy;
 
 use crate::CLI_VERSION;
 
 const BENCHER_API_IMAGE: &str = "ghcr.io/bencherdev/bencher-api";
-pub static BENCHER_API_IMAGE_TAGGED: Lazy<String> =
-    Lazy::new(|| format!("{BENCHER_API_IMAGE}:v{CLI_VERSION}"));
 const BENCHER_API_CONTAINER: &str = "bencher_api";
 
 const BENCHER_CONSOLE_IMAGE: &str = "ghcr.io/bencherdev/bencher-console";
-pub static BENCHER_CONSOLE_IMAGE_TAGGED: Lazy<String> =
-    Lazy::new(|| format!("{BENCHER_CONSOLE_IMAGE}:v{CLI_VERSION}"));
 const BENCHER_CONSOLE_CONTAINER: &str = "bencher_console";
 
 #[derive(Debug, Clone, Copy)]
@@ -40,10 +35,22 @@ impl fmt::Display for Container {
 }
 
 impl Container {
-    pub fn image(self) -> &'static str {
+    pub fn image(self, tag: Option<&str>) -> String {
         match self {
-            Self::Api => &BENCHER_API_IMAGE_TAGGED,
-            Self::Console => &BENCHER_CONSOLE_IMAGE_TAGGED,
+            Self::Api => {
+                if let Some(tag) = tag {
+                    format!("{BENCHER_API_IMAGE}:{tag}")
+                } else {
+                    format!("{BENCHER_API_IMAGE}:v{CLI_VERSION}")
+                }
+            },
+            Self::Console => {
+                if let Some(tag) = tag {
+                    format!("{BENCHER_CONSOLE_IMAGE}:{tag}")
+                } else {
+                    format!("{BENCHER_CONSOLE_IMAGE}:v{CLI_VERSION}")
+                }
+            },
         }
     }
 

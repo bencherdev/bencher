@@ -22,6 +22,7 @@ pub struct Up {
     service: CliService,
     detach: bool,
     pull: CliUpPull,
+    tag: Option<String>,
     api_env: Option<Vec<String>>,
     console_env: Option<Vec<String>>,
     api_volume: Option<Vec<String>>,
@@ -34,6 +35,7 @@ impl From<CliUp> for Up {
             service,
             detach,
             pull,
+            tag,
             api_env,
             console_env,
             api_volume,
@@ -43,6 +45,7 @@ impl From<CliUp> for Up {
             service: service.unwrap_or_default(),
             detach,
             pull: pull.unwrap_or_default(),
+            tag,
             api_env,
             console_env,
             api_volume,
@@ -83,10 +86,10 @@ impl SubCmd for Up {
 impl Up {
     async fn pull_images(&self, docker: &Docker) -> Result<(), DockerError> {
         if let CliService::All | CliService::Console = self.service {
-            pull_image(docker, Container::Console, self.pull).await?;
+            pull_image(docker, Container::Console, self.pull, self.tag.as_deref()).await?;
         }
         if let CliService::All | CliService::Api = self.service {
-            pull_image(docker, Container::Api, self.pull).await?;
+            pull_image(docker, Container::Api, self.pull, self.tag.as_deref()).await?;
         }
         Ok(())
     }
@@ -96,9 +99,8 @@ impl Up {
             start_container(
                 docker,
                 Container::Api,
-                self.api_env
-                    .as_ref()
-                    .map(|e| e.iter().map(String::as_str).collect()),
+                self.tag.as_deref(),
+                self.api_env.clone(),
                 self.api_volume.clone(),
             )
             .await?;
@@ -107,9 +109,8 @@ impl Up {
             start_container(
                 docker,
                 Container::Console,
-                self.console_env
-                    .as_ref()
-                    .map(|e| e.iter().map(String::as_str).collect()),
+                self.tag.as_deref(),
+                self.console_env.clone(),
                 self.console_volume.clone(),
             )
             .await?;
@@ -122,21 +123,22 @@ async fn pull_image(
     docker: &Docker,
     container: Container,
     pull: CliUpPull,
+    tag: Option<&str>,
 ) -> Result<(), DockerError> {
+    let image = container.image(tag);
     match pull {
         CliUpPull::Always => {},
         CliUpPull::Missing => {
-            if docker.inspect_image(container.image()).await.is_ok() {
+            if docker.inspect_image(&image).await.is_ok() {
                 return Ok(());
             }
         },
         CliUpPull::Never => return Ok(()),
     }
 
-    let image = container.image();
     cli_println!("Pulling `{image}` image...");
     let options = Some(CreateImageOptions {
-        from_image: image,
+        from_image: image.as_str(),
         ..Default::default()
     });
     docker
@@ -150,7 +152,7 @@ async fn pull_image(
                 cli_eprintln!(r#"Try running: & 'C:\Program Files\Docker\Docker\DockerCli.exe' -SwitchLinuxEngine"#);
             }
             DockerError::CreateImage {
-                image: image.to_owned(),
+                image,
                 err,
             }
         })?;
@@ -160,7 +162,8 @@ async fn pull_image(
 async fn start_container(
     docker: &Docker,
     container: Container,
-    env: Option<Vec<&str>>,
+    tag: Option<&str>,
+    env: Option<Vec<String>>,
     volume: Option<Vec<String>>,
 ) -> Result<(), DockerError> {
     let tcp_port = format!("{port}/tcp", port = container.port());
@@ -183,7 +186,7 @@ async fn start_container(
     });
 
     let config = Config {
-        image: Some(container.image()),
+        image: Some(container.image(tag)),
         host_config,
         env,
         exposed_ports: Some(literally::hmap! {
