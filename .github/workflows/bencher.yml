@@ -514,7 +514,7 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-wasm
-      - run: cargo install wasm-pack --version 0.12.1 --locked
+      - run: cargo install wasm-pack --version 0.12.1 --locked --force
       - name: WASM pack `bencher_valid`
         working-directory: ./lib/bencher_valid
         run: |
@@ -1005,7 +1005,9 @@ jobs:
           npx netlify-cli \
           deploy \
           --alias ${GITHUB_REF#refs/*/} \
-          --message "${{ github.event.head_commit.message }}"
+          --message "${{ github.event.head_commit.message }}" \
+          --json \
+          | tee netlify.json
       - uses: actions/cache@v4
         with:
           path: |
@@ -1022,9 +1024,7 @@ jobs:
       # https://docs.github.com/en/enterprise-cloud@latest/actions/learn-github-actions/expressions#tojson
       # https://github.com/netlify/actions/blob/375963b92b795c7b979927c580dd6f2a65ebcf28/cli/entrypoint.sh#L20
       - name: Run Netlify Dev Test
-        run: |
-          echo '${{ toJson(steps.netlify.outputs) }}' > ./netlify.json
-          cargo xtask netlify-test --dev
+        run: cargo xtask netlify-test --dev
 
   deploy_notify_dev:
     name: Notify of deployment
@@ -1070,9 +1070,11 @@ jobs:
         run: |
           npx netlify-cli \
           deploy \
+          --prod \
           --alias ${GITHUB_REF#refs/*/} \
           --message "${{ github.event.head_commit.message }}" \
-          --prod
+          --json \
+          | tee netlify.json
       - uses: actions/cache@v4
         with:
           path: |
@@ -1089,9 +1091,7 @@ jobs:
       # https://docs.github.com/en/enterprise-cloud@latest/actions/learn-github-actions/expressions#tojson
       # https://github.com/netlify/actions/blob/375963b92b795c7b979927c580dd6f2a65ebcf28/cli/entrypoint.sh#L20
       - name: Run Netlify Test
-        run: |
-          echo '${{ toJson(steps.netlify.outputs) }}' > ./netlify.json
-          cargo xtask netlify-test
+        run: cargo xtask netlify-test
 
   deploy_notify:
     name: Notify of deployment
