@@ -2795,6 +2795,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "gen_pkg"
+version = "0.4.13"
+dependencies = [
+ "anyhow",
+ "bencher_cli",
+ "camino",
+ "clap",
+ "clap_mangen",
+]
+
+[[package]]
 name = "gen_swagger"
 version = "0.4.13"
 dependencies = [

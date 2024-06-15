@@ -708,16 +708,6 @@ jobs:
       CLI_DEB_DIR: deb
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-xtask
       - name: Download CLI Artifact
         if: (!startsWith(matrix.build, 'windows'))
         uses: actions/download-artifact@v4
@@ -730,7 +720,7 @@ jobs:
       # Debian .deb
       - name: Build .deb package
         if: startsWith(matrix.build, 'linux')
-        run: cargo xtask-cli deb --dir ${{ env.CLI_DEB_DIR }} --arch ${{ matrix.arch }} ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
+        run: cargo gen-pkg deb --dir ${{ env.CLI_DEB_DIR }} --arch ${{ matrix.arch }} ${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}
       - name: Test install .deb package
         if: matrix.build == 'linux-x86-64'
         run: sudo dpkg -i ${{ env.CLI_DEB_DIR }}/${{ env.CLI_BIN_NAME }}-${{ github.ref_name }}-${{ matrix.build }}.deb

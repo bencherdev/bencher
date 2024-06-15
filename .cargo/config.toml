@@ -6,6 +6,7 @@ xtypes = "run --manifest-path ./xtask/Cargo.toml --features api -- types"
 xadmin = "run --manifest-path ./xtask/Cargo.toml --features admin --"
 # Breakout
 gen-installer = "run --manifest-path ./tasks/gen_installer/Cargo.toml --"
+gen-pkg = "run --manifest-path ./tasks/gen_pkg/Cargo.toml --"
 gen-swagger = "run --manifest-path ./tasks/gen_swagger/Cargo.toml --"
 test-netlify = "run --manifest-path ./tasks/test_netlify/Cargo.toml --"
 

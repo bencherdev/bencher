@@ -1,0 +1,18 @@
+[package]
+name = "gen_pkg"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+
+[dependencies]
+# Workspace
+bencher_cli.workspace = true
+anyhow.workspace = true
+camino.workspace = true
+clap.workspace = true
+# Crate
+clap_mangen = "0.2"
+
+[lints]
+workspace = true

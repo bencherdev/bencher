@@ -23,7 +23,8 @@ RUN cargo init --lib bencher_license
 RUN cargo init --lib bencher_google_index
 
 WORKDIR /usr/src/bencher/tasks
-RUN cargo init --bin gen_script
+RUN cargo init --bin gen_installer
+RUN cargo init --bin gen_pkg
 RUN cargo init --bin gen_swagger
 RUN cargo init --bin test_netlify
 
