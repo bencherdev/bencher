@@ -877,7 +877,7 @@ dependencies = [
  "diesel",
  "diesel_migrations",
  "dropshot",
- "http 0.2.12",
+ "http 1.1.0",
  "hyper 0.14.29",
  "jsonwebtoken",
  "libsqlite3-sys",
@@ -1015,7 +1015,7 @@ dependencies = [
 name = "bencher_google_index"
 version = "0.4.13"
 dependencies = [
- "http 0.2.12",
+ "http 1.1.0",
  "reqwest 0.11.27",
  "serde",
  "serde_json",
