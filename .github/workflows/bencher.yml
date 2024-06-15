@@ -181,11 +181,11 @@ jobs:
       - name: Check OpenAPI Spec for changes
         run: git diff --exit-code
       - name: Generate Unix CLI install scripts
-        run: cargo gen-script sh
+        run: cargo gen-installer sh
       - name: Check Unix CLI install script for changes
         run: git diff --exit-code
       - name: Generate Windows CLI install scripts
-        run: cargo gen-script ps1
+        run: cargo gen-installer ps1
       - name: Check Windows CLI install script for changes
         run: git diff --exit-code
 
@@ -1156,20 +1156,11 @@ jobs:
           docker tag ${{ env.CONSOLE_DOCKER_IMAGE }} ${DOCKER_HUB_IMAGE}:${GITHUB_REF#refs/*/}
           docker push ${DOCKER_HUB_IMAGE}:latest
           docker push ${DOCKER_HUB_IMAGE}:${GITHUB_REF#refs/*/}
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-xtask
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Generate Release Notes
-        run: cargo xtask release-notes
+        run: cargo gen-notes
       - name: GitHub Release
         uses: softprops/action-gh-release@v2
         with:

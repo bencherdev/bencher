@@ -11,8 +11,8 @@ cargo xtypes
 git add ./services/api/swagger.json
 git add ./services/console/src/types/bencher.ts
 
-# Generate CLI scripts
-cargo gen-script
+# Generate CLI installer scripts
+cargo gen-installer
 git add ./services/cli/templates/output/install-cli.sh
 git add ./services/cli/templates/output/install-cli.ps1
 
