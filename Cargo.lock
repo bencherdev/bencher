@@ -2784,6 +2784,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "gen_installer"
+version = "0.4.13"
+dependencies = [
+ "anyhow",
+ "clap",
+ "minijinja",
+ "newline-converter",
+ "serde",
+]
+
+[[package]]
 name = "gen_swagger"
 version = "0.4.13"
 dependencies = [

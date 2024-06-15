@@ -12,7 +12,7 @@ git add ./services/api/swagger.json
 git add ./services/console/src/types/bencher.ts
 
 # Generate CLI scripts
-cargo xtask template
+cargo gen-script
 git add ./services/cli/templates/output/install-cli.sh
 git add ./services/cli/templates/output/install-cli.ps1
 

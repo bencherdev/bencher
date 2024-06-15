@@ -173,16 +173,6 @@ jobs:
     continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-xtask
       - uses: rui314/setup-mold@v1
         with:
           mold-version: ${{ env.MOLD_VERSION }}
@@ -191,11 +181,11 @@ jobs:
       - name: Check OpenAPI Spec for changes
         run: git diff --exit-code
       - name: Generate Unix CLI install scripts
-        run: cargo xtask template sh
+        run: cargo gen-script sh
       - name: Check Unix CLI install script for changes
         run: git diff --exit-code
       - name: Generate Windows CLI install scripts
-        run: cargo xtask template ps1
+        run: cargo gen-script ps1
       - name: Check Windows CLI install script for changes
         run: git diff --exit-code
 

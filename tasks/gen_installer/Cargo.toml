@@ -1,0 +1,18 @@
+[package]
+name = "gen_installer"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+
+[dependencies]
+# Workspace
+anyhow.workspace = true
+clap.workspace = true
+serde.workspace = true
+# Crate
+minijinja = { version = "1.0", features = ["loader"] }
+newline-converter = "0.3"
+
+[lints]
+workspace = true
