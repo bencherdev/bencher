@@ -79,25 +79,29 @@ impl Example {
     pub fn require(self) -> anyhow::Result<()> {
         match self {
             Self::RustBench => {
-                Command::new("rustup")
+                let status = Command::new("rustup")
                     .args(["install", "nightly"])
                     .status()?;
+                assert!(status.success(), "{status}");
                 Ok(())
             },
             Self::RustCriterion | Self::RustCustom => Ok(()),
             Self::RustIai => {
-                Command::new("sudo")
-                    .args(["apt", "install", "valgrind"])
+                let status = Command::new("sudo")
+                    .args(["apt", "install", "valgrind", "-y"])
                     .status()?;
+                assert!(status.success(), "{status}");
                 Ok(())
             },
             Self::RustIaiCallgrind => {
-                Command::new("sudo")
-                    .args(["apt", "install", "valgrind"])
+                let status = Command::new("sudo")
+                    .args(["apt", "install", "valgrind", "-y"])
                     .status()?;
-                Command::new("cargo")
-                    .args(["install", "iai-callgrind-runner"])
+                assert!(status.success(), "{status}");
+                let status = Command::new("cargo")
+                    .args(["install", "iai-callgrind-runner", "--force"])
                     .status()?;
+                assert!(status.success(), "{status}");
                 Ok(())
             },
         }
@@ -128,7 +132,7 @@ fn run_example(api_url: &Url, token: &Jwt, example: Example) -> anyhow::Result<(
 
     example.require()?;
 
-    Command::new("bencher")
+    let status = Command::new("bencher")
         .args([
             "run",
             "--host",
@@ -145,6 +149,7 @@ fn run_example(api_url: &Url, token: &Jwt, example: Example) -> anyhow::Result<(
         ])
         .current_dir(example.dir())
         .status()?;
+    assert!(status.success(), "{status}");
 
     Ok(())
 }

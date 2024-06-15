@@ -108,10 +108,12 @@ fn api_run() -> anyhow::Result<Child> {
 }
 
 fn bencher_up() -> anyhow::Result<()> {
-    Command::new("cargo")
+    // Use the `latest`` image tag so this test doesn't fail when releasing a new version.
+    let status = Command::new("cargo")
         .args(["run", "--", "up", "--detach", "--tag", "latest", "api"])
         .current_dir("./services/cli")
         .status()?;
+    assert!(status.success(), "{status}");
 
     while std::net::TcpStream::connect("localhost:61016").is_err() {
         std::thread::sleep(std::time::Duration::from_secs(1));
@@ -122,10 +124,11 @@ fn bencher_up() -> anyhow::Result<()> {
 }
 
 fn bencher_down() -> anyhow::Result<()> {
-    Command::new("cargo")
+    let status = Command::new("cargo")
         .args(["run", "--", "down", "api"])
         .current_dir("./services/cli")
         .status()?;
+    assert!(status.success(), "{status}");
 
     Ok(())
 }

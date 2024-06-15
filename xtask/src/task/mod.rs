@@ -4,8 +4,6 @@ use crate::parser::{TaskSub, TaskTask};
 
 #[cfg(feature = "admin")]
 mod admin;
-#[cfg(feature = "cli")]
-mod package;
 #[cfg(feature = "plus")]
 mod plus;
 mod test;

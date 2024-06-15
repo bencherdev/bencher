@@ -274,25 +274,34 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # This will not work on release as it tries to pull the current version
-          # - os: ubuntu-latest
-          #   smoke_test: docker
           - os: macos-latest
-            smoke_test: localhost
-          # https://github.com/actions/runner-images/issues/17#issuecomment-614726536
-          # - os: macos-latest
-          #   smoke_test: docker
           - os: windows-latest
-            smoke_test: localhost
-          # https://github.com/orgs/community/discussions/25491#discussioncomment-3248089
-          # - os: windows-latest
-          #   smoke_test: docker
     runs-on: ${{ matrix.os }}
     timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') && matrix.smoke_test == 'docker' }}
+    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install `bencher` CLI
+        run: cargo install --debug --path services/cli --locked --force
+      - name: Run Smoke Test
+        run: cargo test-api smoke localhost
+
+  docker_api_smoke_test:
+    name: Docker API Smoke Test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+          # https://github.com/actions/runner-images/issues/17#issuecomment-614726536
+          # - os: macos-latest
+          # https://github.com/orgs/community/discussions/25491#discussioncomment-3248089
+          # - os: windows-latest
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
+    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: jlumbroso/free-disk-space@main
-        if: matrix.smoke_test == 'docker'
         with:
           large-packages: false
       - uses: actions/checkout@v4
@@ -303,7 +312,7 @@ jobs:
       - name: Install `bencher` CLI
         run: cargo install --debug --path services/cli --locked --force
       - name: Run Smoke Test
-        run: cargo test-api smoke ${{ matrix.smoke_test }}
+        run: cargo test-api smoke docker
 
   # Cargo Check (Minus)
   cargo_check_api_minus:

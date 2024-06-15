@@ -10,8 +10,6 @@ mod version;
 
 #[cfg(feature = "admin")]
 pub use admin::email_list::TaskEmailList;
-#[cfg(feature = "cli")]
-pub use package::{TaskDeb, TaskMan};
 #[cfg(feature = "plus")]
 pub use plus::{
     index::{TaskIndex, TaskIndexDelete, TaskIndexUpdate, TaskSearchEngine},

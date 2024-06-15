@@ -15,10 +15,11 @@ impl TryFrom<TaskTypeshare> for Typeshare {
 
 impl Typeshare {
     pub fn exec(&self) -> anyhow::Result<()> {
-        Command::new("npm")
+        let status = Command::new("npm")
             .args(["run", "typeshare"])
             .current_dir("./services/console")
             .status()?;
+        assert!(status.success(), "{status}");
 
         println!("Saved to: ./services/console/src/types/bencher.ts");
 
