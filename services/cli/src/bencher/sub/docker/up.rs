@@ -13,13 +13,13 @@ use crate::{
         SubCmd,
     },
     cli_eprintln, cli_println,
-    parser::docker::{CliContainer, CliUp, CliUpPull},
+    parser::docker::{CliService, CliUp, CliUpPull},
     CliError,
 };
 
 #[derive(Debug, Clone)]
 pub struct Up {
-    container: CliContainer,
+    service: CliService,
     detach: bool,
     pull: CliUpPull,
     api_env: Option<Vec<String>>,
@@ -31,7 +31,7 @@ pub struct Up {
 impl From<CliUp> for Up {
     fn from(up: CliUp) -> Self {
         let CliUp {
-            container,
+            service,
             detach,
             pull,
             api_env,
@@ -40,7 +40,7 @@ impl From<CliUp> for Up {
             console_volume,
         } = up;
         Self {
-            container: container.unwrap_or_default(),
+            service: service.unwrap_or_default(),
             detach,
             pull: pull.unwrap_or_default(),
             api_env,
@@ -54,15 +54,15 @@ impl From<CliUp> for Up {
 impl SubCmd for Up {
     async fn exec(&self) -> Result<(), CliError> {
         let docker = Docker::connect_with_local_defaults().map_err(DockerError::Daemon)?;
-        stop_containers(&docker, self.container).await?;
+        stop_containers(&docker, self.service).await?;
         self.pull_images(&docker).await?;
         self.start_containers(&docker).await?;
 
         cli_println!("🐰 Bencher Self-Hosted is up and running!");
-        if let CliContainer::All | CliContainer::Console = self.container {
+        if let CliService::All | CliService::Console = self.service {
             cli_println!("Web Console: {}", Container::Console.url());
         }
-        if let CliContainer::All | CliContainer::Api = self.container {
+        if let CliService::All | CliService::Api = self.service {
             cli_println!("API Server: {}", Container::Api.url());
         }
         cli_println!("");
@@ -72,8 +72,8 @@ impl SubCmd for Up {
         } else {
             cli_println!("Press Ctrl+C to stop Bencher Self-Hosted.");
             cli_println!("");
-            tail_container_logs(&docker, self.container).await;
-            stop_containers(&docker, self.container).await?;
+            tail_container_logs(&docker, self.service).await;
+            stop_containers(&docker, self.service).await?;
         }
 
         Ok(())
@@ -82,17 +82,17 @@ impl SubCmd for Up {
 
 impl Up {
     async fn pull_images(&self, docker: &Docker) -> Result<(), DockerError> {
-        if let CliContainer::All | CliContainer::Console = self.container {
+        if let CliService::All | CliService::Console = self.service {
             pull_image(docker, Container::Console, self.pull).await?;
         }
-        if let CliContainer::All | CliContainer::Api = self.container {
+        if let CliService::All | CliService::Api = self.service {
             pull_image(docker, Container::Api, self.pull).await?;
         }
         Ok(())
     }
 
     async fn start_containers(&self, docker: &Docker) -> Result<(), DockerError> {
-        if let CliContainer::All | CliContainer::Api = self.container {
+        if let CliService::All | CliService::Api = self.service {
             start_container(
                 docker,
                 Container::Api,
@@ -103,7 +103,7 @@ impl Up {
             )
             .await?;
         }
-        if let CliContainer::All | CliContainer::Console = self.container {
+        if let CliService::All | CliService::Console = self.service {
             start_container(
                 docker,
                 Container::Console,

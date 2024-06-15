@@ -96,10 +96,10 @@ pub enum CliSub {
 
     /// Run `docker compose up` for Bencher Self-Hosted
     Up(CliUp),
-    /// Run `docker compose down` for Bencher Self-Hosted
-    Down(CliDown),
     /// Run `docker compose logs` for Bencher Self-Hosted
     Logs(CliLogs),
+    /// Run `docker compose down` for Bencher Self-Hosted
+    Down(CliDown),
 }
 
 #[allow(clippy::doc_markdown)]

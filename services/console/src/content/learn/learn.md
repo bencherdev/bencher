@@ -43,6 +43,9 @@
 - https://www.researchgate.net/publication/334047447_Pro_NET_Benchmarking_The_Art_of_Performance_Measurement
 - https://blog.nelhage.com/post/reflections-on-performance/
 
+- Why use a black box when benchmarking?
+  - I'm confused about the part where you use the black box for the benchmark function. Is there a reason to profile unoptimized code?
+
 ## Continuous Benchmarking
 - The Ultimate Guide to Continuous Benchmarking
     - https://launchdarkly.com/the-definitive-guide-to-feature-management/

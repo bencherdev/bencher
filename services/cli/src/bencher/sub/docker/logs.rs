@@ -1,6 +1,6 @@
 use crate::{
     bencher::sub::SubCmd,
-    parser::docker::{CliContainer, CliLogs},
+    parser::docker::{CliLogs, CliService},
     CliError,
 };
 use bollard::{
@@ -15,14 +15,14 @@ use super::{Container, DockerError};
 
 #[derive(Debug, Clone)]
 pub struct Logs {
-    container: CliContainer,
+    service: CliService,
 }
 
 impl From<CliLogs> for Logs {
     fn from(logs: CliLogs) -> Self {
-        let CliLogs { container } = logs;
+        let CliLogs { service } = logs;
         Self {
-            container: container.unwrap_or_default(),
+            service: service.unwrap_or_default(),
         }
     }
 }
@@ -30,18 +30,18 @@ impl From<CliLogs> for Logs {
 impl SubCmd for Logs {
     async fn exec(&self) -> Result<(), CliError> {
         let docker = Docker::connect_with_local_defaults().map_err(DockerError::Daemon)?;
-        tail_container_logs(&docker, self.container).await;
+        tail_container_logs(&docker, self.service).await;
         Ok(())
     }
 }
 
-pub(super) async fn tail_container_logs(docker: &Docker, container: CliContainer) {
-    let mut api_logs = if let CliContainer::All | CliContainer::Api = container {
+pub(super) async fn tail_container_logs(docker: &Docker, service: CliService) {
+    let mut api_logs = if let CliService::All | CliService::Api = service {
         Some(container_logs(docker, Container::Api))
     } else {
         None
     };
-    let mut console_logs = if let CliContainer::All | CliContainer::Console = container {
+    let mut console_logs = if let CliService::All | CliService::Console = service {
         Some(container_logs(docker, Container::Console))
     } else {
         None
@@ -49,7 +49,6 @@ pub(super) async fn tail_container_logs(docker: &Docker, container: CliContainer
     cli_println!("🐰 Bencher Self-Hosted logs...");
     cli_println!("");
 
-    let mut closed = false;
     loop {
         tokio::select! {
             _ = tokio::signal::ctrl_c() => {
@@ -69,10 +68,7 @@ pub(super) async fn tail_container_logs(docker: &Docker, container: CliContainer
                     Err(err) => {
                         cli_println!("");
                         cli_eprintln!("🐰 Bencher Self-Hosted API logs closed: {err}");
-                        if closed {
-                            break;
-                        }
-                        closed = true;
+                        break;
                     }
                 }
             },
@@ -88,10 +84,7 @@ pub(super) async fn tail_container_logs(docker: &Docker, container: CliContainer
                     Err(err) => {
                         cli_println!("");
                         cli_eprintln!("🐰 Bencher Self-Hosted UI logs closed: {err}");
-                        if closed {
-                            break;
-                        }
-                        closed = true;
+                        break;
                     }
                 }
             },

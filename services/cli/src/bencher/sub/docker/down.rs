@@ -1,6 +1,6 @@
 use crate::{
     bencher::sub::SubCmd,
-    parser::docker::{CliContainer, CliDown},
+    parser::docker::{CliDown, CliService},
     CliError,
 };
 use bollard::{
@@ -14,14 +14,14 @@ use super::{Container, DockerError};
 
 #[derive(Debug, Clone)]
 pub struct Down {
-    container: CliContainer,
+    service: CliService,
 }
 
 impl From<CliDown> for Down {
     fn from(down: CliDown) -> Self {
-        let CliDown { container } = down;
+        let CliDown { service } = down;
         Self {
-            container: container.unwrap_or_default(),
+            service: service.unwrap_or_default(),
         }
     }
 }
@@ -29,7 +29,7 @@ impl From<CliDown> for Down {
 impl SubCmd for Down {
     async fn exec(&self) -> Result<(), CliError> {
         let docker = Docker::connect_with_local_defaults().map_err(DockerError::Daemon)?;
-        stop_containers(&docker, self.container).await?;
+        stop_containers(&docker, self.service).await?;
         cli_println!("🐰 Bencher Self-Hosted has been stopped.");
         Ok(())
     }
@@ -37,12 +37,12 @@ impl SubCmd for Down {
 
 pub(super) async fn stop_containers(
     docker: &Docker,
-    container: CliContainer,
+    service: CliService,
 ) -> Result<(), DockerError> {
-    if let CliContainer::All | CliContainer::Console = container {
+    if let CliService::All | CliService::Console = service {
         stop_container(docker, Container::Console).await?;
     }
-    if let CliContainer::All | CliContainer::Api = container {
+    if let CliService::All | CliService::Api = service {
         stop_container(docker, Container::Api).await?;
     }
     Ok(())

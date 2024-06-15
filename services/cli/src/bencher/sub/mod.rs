@@ -48,8 +48,8 @@ pub enum Sub {
     Server(Server),
     Mock(Mock),
     Up(Up),
-    Down(Down),
     Logs(Logs),
+    Down(Down),
 }
 
 impl TryFrom<CliSub> for Sub {
@@ -78,8 +78,8 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Server(server) => Self::Server(server.try_into()?),
             CliSub::Mock(mock) => Self::Mock(mock.into()),
             CliSub::Up(up) => Self::Up(up.into()),
-            CliSub::Down(down) => Self::Down(down.into()),
             CliSub::Logs(logs) => Self::Logs(logs.into()),
+            CliSub::Down(down) => Self::Down(down.into()),
         })
     }
 }
@@ -108,8 +108,8 @@ impl SubCmd for Sub {
             Self::Server(server) => server.exec().await,
             Self::Mock(mock) => mock.exec().await,
             Self::Up(up) => up.exec().await,
-            Self::Down(down) => down.exec().await,
             Self::Logs(logs) => logs.exec().await,
+            Self::Down(down) => down.exec().await,
         }
     }
 }
