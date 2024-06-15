@@ -1,4 +1,8 @@
-use crate::{bencher::sub::SubCmd, parser::docker::CliLogs, CliError};
+use crate::{
+    bencher::sub::SubCmd,
+    parser::docker::{CliContainer, CliLogs},
+    CliError,
+};
 use bollard::{
     container::{LogOutput, LogsOptions},
     Docker,
@@ -7,59 +11,41 @@ use futures_util::stream::StreamExt;
 
 use crate::{cli_eprintln, cli_println};
 
-use super::{DockerError, BENCHER_API_CONTAINER, BENCHER_CONSOLE_CONTAINER};
+use super::{Container, DockerError};
 
 #[derive(Debug, Clone)]
 pub struct Logs {
-    container: Option<String>,
+    container: CliContainer,
 }
 
 impl From<CliLogs> for Logs {
     fn from(logs: CliLogs) -> Self {
         let CliLogs { container } = logs;
-        Self { container }
+        Self {
+            container: container.unwrap_or_default(),
+        }
     }
 }
 
 impl SubCmd for Logs {
     async fn exec(&self) -> Result<(), CliError> {
         let docker = Docker::connect_with_local_defaults().map_err(DockerError::Daemon)?;
-
-        if let Some(container) = &self.container {
-            let mut logs = container_logs(&docker, container);
-            cli_println!("🐰 Bencher Self-Hosted (`{container}`) logs...");
-            cli_println!("");
-
-            loop {
-                tokio::select! {
-                    _ = tokio::signal::ctrl_c() => {
-                        cli_println!("");
-                        cli_println!("🐰 Bencher Self-Hosted (`{container}`) logs closed.");
-                        break;
-                    }
-                    Some(log) = logs.next() => {
-                        match log {
-                            Ok(log) => cli_println!("{log}"),
-                            Err(err) => {
-                                cli_println!("");
-                                cli_eprintln!("🐰 Bencher Self-Hosted (`{container}`) logs closed: {err}");
-                                break;
-                            }
-                        }
-                    },
-                }
-            }
-        } else {
-            tail_container_logs(&docker).await;
-        }
-
+        tail_container_logs(&docker, self.container).await;
         Ok(())
     }
 }
 
-pub async fn tail_container_logs(docker: &Docker) {
-    let mut api_logs = container_logs(docker, BENCHER_API_CONTAINER);
-    let mut ui_logs = container_logs(docker, BENCHER_CONSOLE_CONTAINER);
+pub(super) async fn tail_container_logs(docker: &Docker, container: CliContainer) {
+    let mut api_logs = if let CliContainer::All | CliContainer::Api = container {
+        Some(container_logs(docker, Container::Api))
+    } else {
+        None
+    };
+    let mut console_logs = if let CliContainer::All | CliContainer::Console = container {
+        Some(container_logs(docker, Container::Console))
+    } else {
+        None
+    };
     cli_println!("🐰 Bencher Self-Hosted logs...");
     cli_println!("");
 
@@ -71,7 +57,13 @@ pub async fn tail_container_logs(docker: &Docker) {
                 cli_println!("🐰 Bencher Self-Hosted logs closed.");
                 break;
             }
-            Some(log) = api_logs.next() => {
+            Some(log) = async {
+                if let Some(logs) = api_logs.as_mut() {
+                    logs.next().await
+                } else {
+                    None
+                }
+            } => {
                 match log {
                     Ok(log) => cli_println!("{log}"),
                     Err(err) => {
@@ -84,7 +76,13 @@ pub async fn tail_container_logs(docker: &Docker) {
                     }
                 }
             },
-            Some(log) = ui_logs.next() => {
+            Some(log) = async {
+                if let Some(logs) = console_logs.as_mut() {
+                    logs.next().await
+                } else {
+                    None
+                }
+            } => {
                 match log {
                     Ok(log) => cli_println!("{log}"),
                     Err(err) => {
@@ -103,7 +101,7 @@ pub async fn tail_container_logs(docker: &Docker) {
 
 fn container_logs(
     docker: &Docker,
-    container: &str,
+    container: Container,
 ) -> impl futures_util::Stream<Item = Result<LogOutput, bollard::errors::Error>> {
     let options = Some(LogsOptions {
         follow: true,
@@ -112,5 +110,5 @@ fn container_logs(
         tail: "all".to_owned(),
         ..Default::default()
     });
-    docker.logs(container, options)
+    docker.logs(container.as_ref(), options)
 }

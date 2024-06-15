@@ -1,12 +1,9 @@
+pub mod container;
 pub mod down;
 pub mod logs;
 pub mod up;
 
-const BENCHER_API_IMAGE: &str = "ghcr.io/bencherdev/bencher-api:latest";
-const BENCHER_API_CONTAINER: &str = "bencher_api";
-
-const BENCHER_CONSOLE_IMAGE: &str = "ghcr.io/bencherdev/bencher-console:latest";
-const BENCHER_CONSOLE_CONTAINER: &str = "bencher_console";
+use container::Container;
 
 #[derive(thiserror::Error, Debug)]
 pub enum DockerError {
@@ -14,12 +11,12 @@ pub enum DockerError {
     Daemon(bollard::errors::Error),
     #[error("Failed to stop Docker container (`{container}`): {err}")]
     StopContainer {
-        container: String,
+        container: Container,
         err: bollard::errors::Error,
     },
     #[error("Failed to remove Docker container (`{container}`): {err}")]
     RemoveContainer {
-        container: String,
+        container: Container,
         err: bollard::errors::Error,
     },
     #[error("Failed to pull Docker image (`{image}`): {err}")]
@@ -29,12 +26,12 @@ pub enum DockerError {
     },
     #[error("Failed to create Docker container (`{container}`): {err}")]
     CreateContainer {
-        container: String,
+        container: Container,
         err: bollard::errors::Error,
     },
     #[error("Failed to start Docker container (`{container}`): {err}")]
     StartContainer {
-        container: String,
+        container: Container,
         err: bollard::errors::Error,
     },
 }

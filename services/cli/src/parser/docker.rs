@@ -2,11 +2,17 @@ use clap::{Parser, ValueEnum};
 
 #[derive(Parser, Debug)]
 pub struct CliUp {
+    /// Select the container to run (default: all)
+    #[clap(long)]
+    pub container: Option<CliContainer>,
+
     /// Detached mode: Run containers in the background
+    /// Similar to the `--detach` option for `docker run`.
     #[clap(short, long)]
     pub detach: bool,
 
     /// Pull image before running ("always"|"missing"|"never")
+    /// Similar to the `--pull` option for `docker run`.
     #[clap(long)]
     pub pull: Option<CliUpPull>,
 
@@ -33,6 +39,15 @@ pub struct CliUp {
 
 #[derive(ValueEnum, Debug, Clone, Copy, Default)]
 #[clap(rename_all = "snake_case")]
+pub enum CliContainer {
+    #[default]
+    All,
+    Api,
+    Console,
+}
+
+#[derive(ValueEnum, Debug, Clone, Copy, Default)]
+#[clap(rename_all = "snake_case")]
 pub enum CliUpPull {
     #[default]
     Always,
@@ -41,12 +56,15 @@ pub enum CliUpPull {
 }
 
 #[derive(Parser, Debug)]
-pub struct CliDown {}
+pub struct CliDown {
+    /// Select the container to stop (default: all)
+    pub container: Option<CliContainer>,
+}
 
 #[derive(Parser, Debug)]
 pub struct CliLogs {
-    /// Docker container name
-    pub container: Option<String>,
+    /// Select the container to view logs for
+    pub container: Option<CliContainer>,
 }
 
 fn check_env(arg: &str) -> Result<String, String> {
