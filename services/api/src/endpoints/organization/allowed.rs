@@ -11,7 +11,7 @@ use crate::{
         Endpoint,
     },
     model::{
-        organization::QueryOrganization,
+        organization::{organization_role::Permission, QueryOrganization},
         user::auth::{AuthUser, BearerToken},
     },
 };
@@ -63,8 +63,7 @@ async fn get_inner(
             &context.rbac,
             &path_params.organization,
             auth_user,
-            crate::model::organization::organization_role::Permission::from(path_params.permission)
-                .into(),
+            Permission::from(path_params.permission).into(),
         )
         .is_ok(),
     })

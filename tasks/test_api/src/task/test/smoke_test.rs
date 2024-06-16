@@ -1,4 +1,9 @@
-use std::process::{Child, Command};
+use std::{
+    net::TcpStream,
+    process::{Child, Command},
+    thread,
+    time::Duration,
+};
 
 use bencher_json::{
     JsonApiVersion, Jwt, Url, DEV_BENCHER_API_URL, LOCALHOST_BENCHER_API_URL, PROD_BENCHER_API_URL,
@@ -99,8 +104,8 @@ fn api_run() -> anyhow::Result<Child> {
         .current_dir("./services/api")
         .spawn()?;
 
-    while std::net::TcpStream::connect("localhost:61016").is_err() {
-        std::thread::sleep(std::time::Duration::from_secs(1));
+    while TcpStream::connect("localhost:61016").is_err() {
+        thread::sleep(Duration::from_secs(1));
         println!("Waiting for API server to start...");
     }
 
@@ -115,8 +120,8 @@ fn bencher_up() -> anyhow::Result<()> {
         .status()?;
     assert!(status.success(), "{status}");
 
-    while std::net::TcpStream::connect("localhost:61016").is_err() {
-        std::thread::sleep(std::time::Duration::from_secs(1));
+    while TcpStream::connect("localhost:61016").is_err() {
+        thread::sleep(Duration::from_secs(1));
         println!("Waiting for API server to start...");
     }
 

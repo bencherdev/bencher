@@ -2,6 +2,8 @@ use bencher_json::{JsonMetric, MetricUuid};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
+#[cfg(feature = "plus")]
+use crate::model::organization::OrganizationId;
 use crate::{
     context::DbConnection,
     error::resource_not_found_err,
@@ -42,7 +44,7 @@ impl QueryMetric {
     #[cfg(feature = "plus")]
     pub fn usage(
         conn: &mut DbConnection,
-        organization_id: crate::model::organization::OrganizationId,
+        organization_id: OrganizationId,
         start_time: bencher_json::DateTime,
         end_time: bencher_json::DateTime,
     ) -> Result<u32, HttpError> {

@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::{fs::File, thread, time::Duration};
 
 use bencher_json::PROD_BENCHER_URL_STR;
 use camino::Utf8PathBuf;
@@ -52,7 +52,7 @@ impl TestNetlify {
         for i in 0..5 {
             if let Err(e) = test_ui_project(&console_url, project_slug, find_str).await {
                 println!("Netlify deploy not ready yet: {e}");
-                std::thread::sleep(std::time::Duration::from_secs(i));
+                thread::sleep(Duration::from_secs(i));
             } else {
                 break;
             }

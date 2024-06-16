@@ -95,6 +95,7 @@ impl From<Create> for JsonNewPlot {
             upper_value,
             lower_boundary,
             upper_boundary,
+            #[allow(clippy::absolute_paths)]
             x_axis: match x_axis {
                 XAxis::DateTime => bencher_client::types::XAxis::DateTime,
                 XAxis::Version => bencher_client::types::XAxis::Version,

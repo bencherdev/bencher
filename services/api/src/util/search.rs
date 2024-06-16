@@ -5,6 +5,7 @@ use serde::Deserialize;
 #[diesel(sql_type = diesel::sql_types::Text)]
 pub struct Search(String);
 
+#[allow(clippy::absolute_paths)]
 impl<DB> diesel::serialize::ToSql<diesel::sql_types::Text, DB> for Search
 where
     DB: diesel::backend::Backend,

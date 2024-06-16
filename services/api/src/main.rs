@@ -12,8 +12,9 @@ use sentry::ClientInitGuard;
 use slog::{error, info, Logger};
 #[cfg(feature = "plus")]
 use tokio::process::Command;
-use tokio::task::JoinHandle;
+use tokio::{sync, task::JoinHandle};
 
+#[allow(clippy::absolute_paths)]
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {
     #[error("{0}")]
@@ -65,14 +66,14 @@ async fn run(
         #[cfg(all(feature = "plus", feature = "sentry"))]
         let _guard = init_sentry(&config);
 
-        let (restart_tx, mut restart_rx) = tokio::sync::mpsc::channel(1);
+        let (restart_tx, mut restart_rx) = sync::mpsc::channel(1);
         #[cfg(feature = "plus")]
         if let Some(litestream) = config
             .plus
             .as_ref()
             .and_then(|plus| plus.litestream.clone())
         {
-            let (replicate_tx, replicate_rx) = tokio::sync::oneshot::channel();
+            let (replicate_tx, replicate_rx) = sync::oneshot::channel();
             let mut litestream_handle = run_litestream(log, &config, litestream, replicate_tx)?;
             // Wait for Litestream to start replicating
             replicate_rx.await.map_err(LitestreamError::ReplicateRecv)?;
@@ -142,6 +143,7 @@ fn init_sentry(config: &Config) -> Option<ClientInitGuard> {
 }
 
 #[cfg(feature = "plus")]
+#[allow(clippy::absolute_paths)]
 #[derive(Debug, thiserror::Error)]
 pub enum LitestreamError {
     #[error("Failed to absolutize the database path: {0}")]
@@ -157,7 +159,7 @@ pub enum LitestreamError {
     #[error("Failed to send replication start message")]
     ReplicateSend(()),
     #[error("Failed to receive replication start message")]
-    ReplicateRecv(tokio::sync::oneshot::error::RecvError),
+    ReplicateRecv(sync::oneshot::error::RecvError),
     #[error("Failed to replicate: {0}")]
     ReplicateExit(std::process::ExitStatus),
     #[error("Failed to join Litestream handle: {0}")]
@@ -169,7 +171,7 @@ fn run_litestream(
     log: &Logger,
     config: &Config,
     litestream: JsonLitestream,
-    replicate_tx: tokio::sync::oneshot::Sender<()>,
+    replicate_tx: sync::oneshot::Sender<()>,
 ) -> Result<JoinHandle<Result<(), LitestreamError>>, LitestreamError> {
     // Get the absolute database path from the config
     let db_path = if config.database.file.is_absolute() {
@@ -226,7 +228,7 @@ fn run_litestream(
 
 fn run_api_server(
     config: Config,
-    restart_tx: tokio::sync::mpsc::Sender<()>,
+    restart_tx: sync::mpsc::Sender<()>,
 ) -> JoinHandle<Result<(), ApiError>> {
     let config_tx = ConfigTx { config, restart_tx };
     tokio::spawn(async move {

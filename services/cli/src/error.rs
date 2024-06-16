@@ -1,3 +1,5 @@
+#![allow(clippy::absolute_paths)]
+
 #[derive(thiserror::Error, Debug)]
 pub enum CliError {
     #[error("{0}")]

@@ -20,6 +20,8 @@ use dropshot::{
 use slog::{debug, error, info, Logger};
 use tokio::sync::mpsc::Sender;
 
+#[cfg(feature = "plus")]
+use crate::model::server::QueryServer;
 use crate::{
     context::{ApiContext, Database, DbConnection, Email, Messenger},
     endpoints::Api,
@@ -116,9 +118,8 @@ impl ConfigTx {
         #[cfg(feature = "plus")]
         {
             let conn = context.database.connection.clone();
-            let query_server =
-                crate::model::server::QueryServer::get_or_create(&mut *conn.lock().await)
-                    .map_err(ConfigTxError::ServerId)?;
+            let query_server = QueryServer::get_or_create(&mut *conn.lock().await)
+                .map_err(ConfigTxError::ServerId)?;
             info!(log, "Bencher API Server ID: {}", query_server.uuid);
 
             // Bencher Cloud does not need to send stats to itself,

@@ -5,6 +5,7 @@ use async_trait::async_trait;
 use bencher_json::system::payment::JsonCustomer;
 use bencher_json::{Email, Jwt, Sanitize};
 use bencher_rbac::{
+    server::Permission,
     user::{OrganizationRoles, ProjectRoles},
     Organization, Project, Server, User as RbacUser,
 };
@@ -191,11 +192,7 @@ impl AuthUser {
     }
 
     pub fn is_admin(&self, rbac: &Rbac) -> bool {
-        rbac.is_allowed_unwrap(
-            self,
-            bencher_rbac::server::Permission::Administer,
-            Server {},
-        )
+        rbac.is_allowed_unwrap(self, Permission::Administer, Server {})
     }
 
     pub fn organizations(

@@ -1,3 +1,4 @@
+use std::fs;
 #[cfg(unix)]
 use std::{fs::Permissions, os::unix::fs::PermissionsExt};
 
@@ -70,9 +71,9 @@ impl Template {
             );
             println!("Using context: {ctx:#?}");
             println!("Saving to: {path}");
-            std::fs::write(&path, cleaned)?;
+            fs::write(&path, cleaned)?;
             #[cfg(unix)]
-            std::fs::set_permissions(&path, Permissions::from_mode(0o755))?;
+            fs::set_permissions(&path, Permissions::from_mode(0o755))?;
         }
 
         Ok(())
@@ -118,7 +119,7 @@ impl TemplateKind {
             Self::Sh => SH_TEMPLATE,
             Self::Ps1 => PS1_TEMPLATE,
         };
-        std::fs::read_to_string(format!("{CLI_TEMPLATES}/{file}")).map(|t| (file, t))
+        fs::read_to_string(format!("{CLI_TEMPLATES}/{file}")).map(|t| (file, t))
     }
 
     pub fn artifacts(self) -> Vec<TemplateArtifact> {

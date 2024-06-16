@@ -4,7 +4,7 @@ use bencher_json::{
     project::{JsonProjectPatch, JsonProjectPatchNull, JsonUpdateProject, Visibility},
     DateTime, JsonNewProject, JsonProject, ProjectUuid, ResourceId, ResourceName, Slug, Url,
 };
-use bencher_rbac::{Organization, Project};
+use bencher_rbac::{project::Permission, Organization, Project};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
@@ -81,7 +81,7 @@ impl QueryProject {
         rbac: &Rbac,
         project: &ResourceId,
         auth_user: &AuthUser,
-        permission: bencher_rbac::project::Permission,
+        permission: Permission,
     ) -> Result<Self, HttpError> {
         let query_project = Self::from_resource_id(conn, project)?;
         rbac.is_allowed_project(auth_user, permission, &query_project)
@@ -103,12 +103,8 @@ impl QueryProject {
         } else if let Some(auth_user) = auth_user {
             // If there is an `AuthUser` then validate access
             // Verify that the user is allowed
-            rbac.is_allowed_project(
-                auth_user,
-                bencher_rbac::project::Permission::View,
-                &query_project,
-            )
-            .map_err(forbidden_error)?;
+            rbac.is_allowed_project(auth_user, Permission::View, &query_project)
+                .map_err(forbidden_error)?;
             Ok(query_project)
         } else {
             Err(unauthorized_error(format!(

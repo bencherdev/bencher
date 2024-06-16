@@ -18,6 +18,8 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use slog::Logger;
 
+#[cfg(feature = "plus")]
+use crate::model::organization::plan::PlanKind;
 use crate::{
     conn_lock,
     context::ApiContext,
@@ -235,7 +237,7 @@ async fn post_inner(
     // Check to see if the project is public or private
     // If private, then validate that there is an active subscription or license
     #[cfg(feature = "plus")]
-    let plan_kind = crate::model::organization::plan::PlanKind::new_for_project(
+    let plan_kind = PlanKind::new_for_project(
         conn_lock!(context),
         context.biller.as_ref(),
         &context.licensor,

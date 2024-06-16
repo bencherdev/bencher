@@ -11,7 +11,7 @@ use crate::{
         Endpoint,
     },
     model::{
-        project::QueryProject,
+        project::{project_role::Permission, QueryProject},
         user::auth::{AuthUser, BearerToken},
     },
 };
@@ -63,7 +63,7 @@ async fn get_inner(
             &context.rbac,
             &path_params.project,
             auth_user,
-            crate::model::project::project_role::Permission::from(path_params.permission).into(),
+            Permission::from(path_params.permission).into(),
         )
         .is_ok(),
     })

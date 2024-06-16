@@ -1,5 +1,7 @@
 use dropshot::{endpoint, HttpError, RequestContext};
 
+#[cfg(feature = "plus")]
+use crate::endpoints::endpoint::Post;
 use crate::{
     context::ApiContext,
     endpoints::{
@@ -24,7 +26,7 @@ pub async fn server_root_options(
         // the endpoint was set to the API server root path
         // instead of the `/v0/server/stats` path.
         #[cfg(feature = "plus")]
-        crate::endpoints::endpoint::Post.into(),
+        Post.into(),
     ]))
 }
 

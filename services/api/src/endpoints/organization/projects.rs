@@ -12,6 +12,8 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use slog::Logger;
 
+#[cfg(feature = "plus")]
+use crate::model::organization::plan::PlanKind;
 use crate::{
     conn_lock,
     context::ApiContext,
@@ -193,7 +195,7 @@ async fn post_inner(
     #[cfg(not(feature = "plus"))]
     QueryProject::is_visibility_public(json_project.visibility)?;
     #[cfg(feature = "plus")]
-    crate::model::organization::plan::PlanKind::new(
+    PlanKind::new(
         conn_lock!(context),
         context.biller.as_ref(),
         &context.licensor,

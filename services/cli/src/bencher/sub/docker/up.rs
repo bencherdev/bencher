@@ -1,5 +1,6 @@
 use bollard::{
     container::{Config, CreateContainerOptions, StartContainerOptions},
+    errors::Error as BollardError,
     image::CreateImageOptions,
     service::{HostConfig, PortBinding},
     Docker,
@@ -146,7 +147,7 @@ async fn pull_image(
         .try_collect::<Vec<_>>()
         .await
         .map_err(|err| {
-            if let bollard::errors::Error::DockerStreamError { error } = &err {
+            if let BollardError::DockerStreamError { error } = &err {
                 cli_eprintln!("{error}");
                 cli_eprintln!("Are you on Windows? Are you running in Linux container mode?");
                 cli_eprintln!(r#"Try running: & 'C:\Program Files\Docker\Docker\DockerCli.exe' -SwitchLinuxEngine"#);

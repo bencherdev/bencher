@@ -3,8 +3,11 @@ use std::str::FromStr;
 use bencher_json::organization::plan::JsonLicense;
 use bencher_json::{Entitlements, Jwt, OrganizationUuid, PlanLevel, Secret, BENCHER_URL_STR};
 use chrono::Utc;
-use jsonwebtoken::{decode, encode, Algorithm, Header, TokenData, Validation};
-use jsonwebtoken::{DecodingKey, EncodingKey};
+use jsonwebtoken::{
+    decode, encode,
+    errors::{Error as JsonWebTokenError, ErrorKind as JsonWebTokenErrorKind},
+    Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation,
+};
 use once_cell::sync::Lazy;
 
 use crate::{audience::Audience, billing_cycle::BillingCycle, claims::Claims, LicenseError};
@@ -217,10 +220,7 @@ fn decoding_key(public_key: Option<PublicKey>) -> Result<DecodingKey, LicenseErr
 fn check_expiration(time: i64) -> Result<(), LicenseError> {
     let now = Utc::now().timestamp();
     if time < now {
-        Err(
-            jsonwebtoken::errors::Error::from(jsonwebtoken::errors::ErrorKind::ExpiredSignature)
-                .into(),
-        )
+        Err(JsonWebTokenError::from(JsonWebTokenErrorKind::ExpiredSignature).into())
     } else {
         Ok(())
     }

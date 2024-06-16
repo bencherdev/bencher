@@ -1,5 +1,6 @@
 use super::runner::{command::Command, Runner};
 
+#[allow(clippy::absolute_paths)]
 #[derive(thiserror::Error, Debug)]
 pub enum RunError {
     #[error("Failed to find Bencher project. Set the `--project` argument or the `BENCHER_PROJECT` environment variable.")]
