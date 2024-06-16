@@ -1,6 +1,5 @@
 pub mod accept;
 pub mod confirm;
-#[cfg(feature = "plus")]
 pub mod github;
 pub mod login;
 pub mod signup;

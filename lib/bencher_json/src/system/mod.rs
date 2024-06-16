@@ -2,10 +2,8 @@ pub mod auth;
 pub mod backup;
 pub mod config;
 pub mod endpoint;
-#[cfg(feature = "plus")]
 pub mod payment;
 pub mod restart;
-#[cfg(feature = "plus")]
 pub mod server;
 pub mod spec;
 pub mod version;

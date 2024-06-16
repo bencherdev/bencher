@@ -14,7 +14,6 @@ mod jwt;
 mod model;
 mod name_id;
 mod non_empty;
-#[cfg(feature = "plus")]
 mod plus;
 mod resource_id;
 mod resource_name;

@@ -4,9 +4,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 use crate::parser::CliBackend;
 
 pub mod member;
-#[cfg(feature = "plus")]
 pub mod plan;
-#[cfg(feature = "plus")]
 pub mod usage;
 
 #[cfg(feature = "plus")]

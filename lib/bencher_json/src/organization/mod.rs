@@ -7,9 +7,7 @@ use schemars::JsonSchema;
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize};
 
 pub mod member;
-#[cfg(feature = "plus")]
 pub mod plan;
-#[cfg(feature = "plus")]
 pub mod usage;
 
 crate::typed_uuid::typed_uuid!(OrganizationUuid);

@@ -22,7 +22,7 @@ impl Products {
 }
 
 pub struct Product {
-    #[allow(clippy::struct_field_names)]
+    #[allow(dead_code, clippy::struct_field_names)]
     pub product: StripeProduct,
     pub metered: HashMap<String, StripePrice>,
     pub licensed: HashMap<String, StripePrice>,

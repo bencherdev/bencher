@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 mod console;
 mod database;
 mod logging;
-#[cfg(feature = "plus")]
 mod plus;
 mod security;
 mod server;

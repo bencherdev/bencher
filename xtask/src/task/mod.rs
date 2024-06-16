@@ -2,7 +2,6 @@ use clap::Parser;
 
 use crate::parser::{TaskSub, TaskTask};
 
-#[cfg(feature = "plus")]
 mod plus;
 mod types;
 mod version;

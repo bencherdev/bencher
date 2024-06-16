@@ -4,7 +4,6 @@ mod allowed;
 mod create;
 mod list;
 mod update;
-#[cfg(feature = "plus")]
 mod usage;
 mod view;
 

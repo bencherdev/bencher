@@ -4,7 +4,6 @@ mod backup;
 mod config;
 mod restart;
 mod spec;
-#[cfg(feature = "plus")]
 mod stats;
 mod version;
 

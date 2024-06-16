@@ -14,7 +14,6 @@ use crate::config::plus::StatsSettings;
 use crate::model::project::QueryProject;
 
 mod database;
-#[cfg(feature = "plus")]
 mod indexer;
 mod messenger;
 mod rbac;

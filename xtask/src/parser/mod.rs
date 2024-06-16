@@ -1,6 +1,5 @@
 use clap::{Parser, Subcommand};
 
-#[cfg(feature = "plus")]
 mod plus;
 mod types;
 mod version;

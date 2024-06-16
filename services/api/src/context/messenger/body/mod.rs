@@ -1,6 +1,5 @@
 mod button;
 mod new_user;
-#[cfg(feature = "plus")]
 mod server_stats;
 
 pub use button::ButtonBody;
