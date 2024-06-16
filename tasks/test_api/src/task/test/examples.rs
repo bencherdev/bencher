@@ -126,6 +126,13 @@ impl Example {
         }
     }
 
+    pub fn args(&self) -> Option<Vec<&str>> {
+        match self {
+            Self::RustBench | Self::RustCriterion | Self::RustIai | Self::RustIaiCallgrind => None,
+            Self::RustCustom => Some(vec!["--file", "results.json"]),
+        }
+    }
+
     pub fn cmd(&self) -> &str {
         match self {
             Self::RustBench => "cargo +nightly bench",
@@ -141,21 +148,26 @@ fn run_example(api_url: &Url, token: &Jwt, example: Example) -> anyhow::Result<(
 
     example.require()?;
 
+    let mut args = vec![
+        "run",
+        "--host",
+        api_url.as_ref(),
+        "--token",
+        token.as_ref(),
+        "--project",
+        "the-computer",
+        "--branch",
+        "master",
+        "--testbed",
+        "base",
+    ];
+    if let Some(example_args) = example.args() {
+        args.extend(example_args);
+    }
+    args.push(example.cmd());
+
     let status = Command::new("bencher")
-        .args([
-            "run",
-            "--host",
-            api_url.as_ref(),
-            "--token",
-            token.as_ref(),
-            "--project",
-            "the-computer",
-            "--branch",
-            "master",
-            "--testbed",
-            "base",
-            example.cmd(),
-        ])
+        .args(&args)
         .current_dir(example.dir())
         .status()?;
     assert!(status.success(), "{status}");
