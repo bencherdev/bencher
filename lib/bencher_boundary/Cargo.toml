@@ -15,7 +15,7 @@ ordered-float.workspace = true
 slog.workspace = true
 thiserror.workspace = true
 # Crate
-statrs = "0.16"
+statrs = "0.17"
 
 [dev-dependencies]
 bencher_logger.workspace = true
