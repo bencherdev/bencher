@@ -48,6 +48,12 @@ mod test_magic {
     }
 
     #[test]
+    fn test_adapter_magic_json_dhat() {
+        let results = convert_file_path::<AdapterMagic>("./tool_output/json/report_dhat.json");
+        test_json::validate_adapter_json_dhat(&results);
+    }
+
+    #[test]
     fn test_adapter_magic_c_sharp_dot_net() {
         let results = convert_file_path::<AdapterCSharp>("./tool_output/c_sharp/dot_net/two.json");
         test_c_sharp_dot_net::validate_adapter_c_sharp_dot_net(&results);

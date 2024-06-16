@@ -11,6 +11,7 @@ impl Adaptable for AdapterJson {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 pub(crate) mod test_json {
+    use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
     use super::AdapterJson;
@@ -41,5 +42,30 @@ pub(crate) mod test_json {
 
         let metrics = results.get("tests::benchmark_c").unwrap();
         validate_latency(metrics, 3361.0, Some(1093.0), Some(1093.0));
+    }
+
+    #[test]
+    fn test_adapter_json_dhat() {
+        let results = convert_json("dhat");
+        validate_adapter_json_dhat(&results);
+    }
+
+    pub fn validate_adapter_json_dhat(results: &AdapterResults) {
+        assert_eq!(results.inner.len(), 1);
+        let metrics = results.get("bench_play_game").unwrap();
+        assert_eq!(metrics.inner.len(), 6);
+        for (key, value) in [
+            ("Final Blocks", 0.0),
+            ("Final Bytes", 0.0),
+            ("Max Blocks", 1.0),
+            ("Max Bytes", 9.0),
+            ("Total Blocks", 100.0),
+            ("Total Bytes", 662.0),
+        ] {
+            let metric = metrics.get(key).unwrap();
+            assert_eq!(metric.value, OrderedFloat::from(value));
+            assert_eq!(metric.lower_value, None);
+            assert_eq!(metric.upper_value, None);
+        }
     }
 }

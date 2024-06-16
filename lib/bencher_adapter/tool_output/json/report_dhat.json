@@ -1,0 +1,22 @@
+{
+    "bench_play_game": {
+      "Final Blocks": {
+        "value": 0
+      },
+      "Final Bytes": {
+        "value": 0
+      },
+      "Max Blocks": {
+        "value": 1
+      },
+      "Max Bytes": {
+        "value": 9
+      },
+      "Total Blocks": {
+        "value": 100
+      },
+      "Total Bytes": {
+        "value": 662
+      }
+    }
+}
