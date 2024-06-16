@@ -2,19 +2,15 @@ use clap::Parser;
 
 use crate::parser::{TaskSub, TaskTask};
 
-#[cfg(feature = "admin")]
-mod admin;
 #[cfg(feature = "plus")]
 mod plus;
 mod types;
 mod version;
 
-#[cfg(feature = "admin")]
-use admin::email_list::EmailList;
 #[cfg(feature = "plus")]
 use plus::{
-    image::Image, index::Index, license::License, prompt::Prompt, stats::Stats,
-    translate::Translate,
+    email_list::EmailList, image::Image, index::Index, license::License, prompt::Prompt,
+    stats::Stats, translate::Translate,
 };
 use types::Types;
 use version::Version;
@@ -41,7 +37,7 @@ pub enum Sub {
     Image(Image),
     #[cfg(feature = "plus")]
     License(License),
-    #[cfg(feature = "admin")]
+    #[cfg(feature = "plus")]
     EmailList(EmailList),
 }
 
@@ -74,7 +70,7 @@ impl TryFrom<TaskSub> for Sub {
             TaskSub::Image(image) => Self::Image(image.try_into()?),
             #[cfg(feature = "plus")]
             TaskSub::License(license) => Self::License(license.try_into()?),
-            #[cfg(feature = "admin")]
+            #[cfg(feature = "plus")]
             TaskSub::EmailList(email_list) => Self::EmailList(email_list.try_into()?),
         })
     }
@@ -107,7 +103,7 @@ impl Sub {
             Self::Image(image) => image.exec().await,
             #[cfg(feature = "plus")]
             Self::License(license) => license.exec(),
-            #[cfg(feature = "admin")]
+            #[cfg(feature = "plus")]
             Self::EmailList(email_list) => email_list.exec().await,
         }
     }

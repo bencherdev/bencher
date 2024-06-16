@@ -1,16 +1,13 @@
 use clap::{Parser, Subcommand};
 
-#[cfg(feature = "admin")]
-mod admin;
 #[cfg(feature = "plus")]
 mod plus;
 mod types;
 mod version;
 
-#[cfg(feature = "admin")]
-pub use admin::email_list::TaskEmailList;
 #[cfg(feature = "plus")]
 pub use plus::{
+    email_list::TaskEmailList,
     index::{TaskIndex, TaskIndexDelete, TaskIndexUpdate, TaskSearchEngine},
     license::{TaskBillingCycle, TaskLicense, TaskLicenseGenerate, TaskLicenseValidate},
     prompt::{TaskImage, TaskLanguage, TaskPrompt, TaskTranslate},
@@ -19,21 +16,17 @@ pub use plus::{
 pub use types::TaskTypes;
 pub use version::TaskVersion;
 
-/// Bencher CLI
 #[derive(Parser, Debug)]
-#[clap(name = "bencher", author, version, about, long_about = None)]
 pub struct TaskTask {
-    /// Bencher subcommands
     #[clap(subcommand)]
     pub sub: TaskSub,
 }
 
-#[allow(variant_size_differences, clippy::large_enum_variant)]
 #[derive(Subcommand, Debug)]
 pub enum TaskSub {
     /// Get current API version
     Version(TaskVersion),
-    /// Generate typeshare and OpenAPI spec
+    /// Generate `OpenAPI` spec and Typescript types
     Types(TaskTypes),
     #[cfg(feature = "plus")]
     #[clap(subcommand)]
@@ -55,7 +48,7 @@ pub enum TaskSub {
     #[clap(subcommand)]
     /// License management
     License(TaskLicense),
-    #[cfg(feature = "admin")]
+    #[cfg(feature = "plus")]
     /// Generate email list
     EmailList(TaskEmailList),
 }

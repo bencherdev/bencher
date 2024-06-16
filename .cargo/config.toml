@@ -1,6 +1,5 @@
 [alias]
 xtask = "run --manifest-path ./xtask/Cargo.toml --"
-xadmin = "run --manifest-path ./xtask/Cargo.toml --features admin --"
 # Tasks
 gen-installer = "run --manifest-path ./tasks/gen_installer/Cargo.toml --"
 gen-pkg = "run --manifest-path ./tasks/gen_pkg/Cargo.toml --"
