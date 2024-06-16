@@ -101,7 +101,14 @@ impl Example {
                     .status()?;
                 assert!(status.success(), "{status}");
                 let status = Command::new("cargo")
-                    .args(["install", "iai-callgrind-runner", "--force"])
+                    .args([
+                        "install",
+                        "iai-callgrind-runner",
+                        "--version",
+                        "0.10.2",
+                        "--locked",
+                        "--force",
+                    ])
                     .status()?;
                 assert!(status.success(), "{status}");
                 Ok(())
