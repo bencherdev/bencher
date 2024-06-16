@@ -51,6 +51,7 @@ RUN cargo init --bin gen_installer
 RUN cargo init --bin gen_pkg
 RUN cargo init --bin gen_notes
 RUN cargo init --bin gen_swagger
+RUN cargo init --bin gen_ts
 RUN cargo init --bin test_api
 RUN cargo init --bin test_netlify
 
