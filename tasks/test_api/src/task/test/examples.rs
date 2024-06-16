@@ -79,8 +79,10 @@ impl Example {
     pub fn require(self) -> anyhow::Result<()> {
         match self {
             Self::RustBench => {
+                // Skip self-update on Windows
+                // https://github.com/rust-lang/rustup/issues/3709
                 let status = Command::new("rustup")
-                    .args(["install", "nightly"])
+                    .args(["install", "nightly", "--no-self-update"])
                     .status()?;
                 assert!(status.success(), "{status}");
                 Ok(())
