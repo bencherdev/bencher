@@ -11,7 +11,7 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 
-use crate::ValidError;
+use crate::{secret::SANITIZED_SECRET, Sanitize, ValidError};
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
@@ -44,6 +44,12 @@ impl AsRef<str> for Email {
 impl From<Email> for String {
     fn from(email: Email) -> Self {
         email.0
+    }
+}
+
+impl Sanitize for Email {
+    fn sanitize(&mut self) {
+        self.0 = SANITIZED_SECRET.into();
     }
 }
 

@@ -3,7 +3,7 @@ use std::ops::Deref;
 use async_trait::async_trait;
 #[cfg(feature = "plus")]
 use bencher_json::system::payment::JsonCustomer;
-use bencher_json::{Email, Jwt};
+use bencher_json::{Email, Jwt, Sanitize};
 use bencher_rbac::{
     user::{OrganizationRoles, ProjectRoles},
     Organization, Project, Server, User as RbacUser,
@@ -238,6 +238,12 @@ impl Deref for AuthUser {
 
     fn deref(&self) -> &Self::Target {
         &self.user
+    }
+}
+
+impl Sanitize for AuthUser {
+    fn sanitize(&mut self) {
+        self.user.sanitize();
     }
 }
 

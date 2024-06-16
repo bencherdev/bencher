@@ -1,6 +1,6 @@
 use bencher_json::{
     organization::member::OrganizationRole, DateTime, Email, JsonSignup, JsonUpdateUser, JsonUser,
-    Jwt, Slug, UserName, UserUuid,
+    Jwt, Sanitize, Slug, UserName, UserUuid,
 };
 use bencher_token::TokenKey;
 use diesel::{dsl::count, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -145,6 +145,12 @@ impl QueryUser {
             admin,
             locked,
         }
+    }
+}
+
+impl Sanitize for QueryUser {
+    fn sanitize(&mut self) {
+        self.email.sanitize();
     }
 }
 

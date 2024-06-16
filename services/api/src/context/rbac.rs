@@ -1,3 +1,4 @@
+use bencher_json::Sanitize;
 use bencher_rbac::{Organization, Project};
 use oso::{Oso, ToPolar};
 
@@ -76,10 +77,14 @@ impl Rbac {
         let organization = organization.into();
         self.is_allowed_unwrap(auth_user, permission, organization.clone())
             .then_some(())
-            .ok_or_else(|| RbacError::IsAllowedOrganization {
-                auth_user: auth_user.clone(),
-                permission,
-                organization,
+            .ok_or_else(|| {
+                let mut auth_user = auth_user.clone();
+                auth_user.sanitize();
+                RbacError::IsAllowedOrganization {
+                    auth_user,
+                    permission,
+                    organization,
+                }
             })
     }
 
@@ -95,10 +100,14 @@ impl Rbac {
         let project = project.into();
         self.is_allowed_unwrap(auth_user, permission, project.clone())
             .then_some(())
-            .ok_or_else(|| RbacError::IsAllowedProject {
-                auth_user: auth_user.clone(),
-                permission,
-                project,
+            .ok_or_else(|| {
+                let mut auth_user = auth_user.clone();
+                auth_user.sanitize();
+                RbacError::IsAllowedProject {
+                    auth_user,
+                    permission,
+                    project,
+                }
             })
     }
 }
