@@ -1,9 +1,13 @@
 #![allow(let_underscore_drop, clippy::unwrap_used)]
 
+#[cfg(unix)]
+use std::os::unix;
+use std::{fs, path::Path};
+
 fn main() {
     let src = "../../services/api/swagger.json";
     println!("cargo:rerun-if-changed={src}");
-    let file = std::fs::File::open(src).unwrap();
+    let file = fs::File::open(src).unwrap();
     let spec = serde_json::from_reader(file).unwrap();
     let mut generator = progenitor::Generator::new(
         progenitor::GenerationSettings::default()
@@ -14,14 +18,14 @@ fn main() {
     let ast = syn::parse2(tokens).unwrap();
     let content = prettyplease::unparse(&ast);
 
-    let mut out_file = std::path::Path::new(&std::env::var("OUT_DIR").unwrap()).to_path_buf();
+    let mut out_file = Path::new(&std::env::var("OUT_DIR").unwrap()).to_path_buf();
     out_file.push("codegen.rs");
 
     #[cfg(unix)]
     {
-        let _ = std::fs::remove_file("./codegen.rs");
-        let _ = std::os::unix::fs::symlink(&out_file, "./codegen.rs");
+        let _ = fs::remove_file("./codegen.rs");
+        let _ = unix::fs::symlink(&out_file, "./codegen.rs");
     }
 
-    std::fs::write(out_file, content).unwrap();
+    fs::write(out_file, content).unwrap();
 }

@@ -3,7 +3,10 @@ use std::fmt;
 use bencher_valid::{DateTime, Index, ResourceName, Window};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use serde::{de::Visitor, Deserialize, Deserializer, Serialize};
+use serde::{
+    de::{self, Visitor},
+    Deserialize, Deserializer, Serialize,
+};
 
 use crate::{BenchmarkUuid, BranchUuid, MeasureUuid, ProjectUuid, TestbedUuid};
 
@@ -135,7 +138,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
 
             fn visit_map<V>(self, mut map: V) -> Result<Self::Value, V::Error>
             where
-                V: serde::de::MapAccess<'de>,
+                V: de::MapAccess<'de>,
             {
                 let mut index = None;
                 let mut title = None;
@@ -145,19 +148,19 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                     match key {
                         Field::Index => {
                             if index.is_some() {
-                                return Err(serde::de::Error::duplicate_field(INDEX_FIELD));
+                                return Err(de::Error::duplicate_field(INDEX_FIELD));
                             }
                             index = Some(map.next_value()?);
                         },
                         Field::Title => {
                             if title.is_some() {
-                                return Err(serde::de::Error::duplicate_field(TITLE_FIELD));
+                                return Err(de::Error::duplicate_field(TITLE_FIELD));
                             }
                             title = Some(map.next_value()?);
                         },
                         Field::Window => {
                             if window.is_some() {
-                                return Err(serde::de::Error::duplicate_field(WINDOW_FIELD));
+                                return Err(de::Error::duplicate_field(WINDOW_FIELD));
                             }
                             window = Some(map.next_value()?);
                         },

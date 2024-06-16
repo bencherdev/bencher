@@ -1,4 +1,4 @@
-use std::process::ExitCode;
+use std::{io::ErrorKind, process::ExitCode};
 
 use bencher_cli::{CliError, RunError};
 
@@ -9,7 +9,7 @@ async fn main() -> ExitCode {
         Ok(()) => ExitCode::SUCCESS,
         // https://github.com/rust-lang/rust/issues/46016#issuecomment-1242039016
         Err(CliError::Run(RunError::RunCommand { err, .. }))
-            if err.kind() == std::io::ErrorKind::BrokenPipe =>
+            if err.kind() == ErrorKind::BrokenPipe =>
         {
             ExitCode::SUCCESS
         },

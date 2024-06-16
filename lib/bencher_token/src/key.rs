@@ -3,7 +3,8 @@ use std::str::FromStr;
 use bencher_json::{organization::member::OrganizationRole, Email, Jwt, OrganizationUuid, Secret};
 use chrono::Utc;
 use jsonwebtoken::{
-    decode, encode, Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation,
+    decode, encode, errors::ErrorKind as JsonWebTokenErrorKind, Algorithm, DecodingKey,
+    EncodingKey, Header, TokenData, Validation,
 };
 use once_cell::sync::Lazy;
 
@@ -89,7 +90,7 @@ impl TokenKey {
             Err(TokenError::Expired {
                 exp,
                 now,
-                error: jsonwebtoken::errors::ErrorKind::ExpiredSignature.into(),
+                error: JsonWebTokenErrorKind::ExpiredSignature.into(),
             })
         } else {
             Ok(token_data)

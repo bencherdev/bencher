@@ -24,6 +24,7 @@ pub struct GitHub {
     oauth2_client: BasicClient,
 }
 
+#[allow(clippy::absolute_paths)]
 #[derive(Debug, thiserror::Error)]
 pub enum GitHubError {
     #[error("Failed to exchange code for access token: {0}")]

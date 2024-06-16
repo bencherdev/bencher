@@ -1,6 +1,6 @@
 #![cfg(feature = "plus")]
 
-use std::sync::Arc;
+use std::{cmp, sync::Arc};
 
 use bencher_json::{DateTime, JsonServer, JsonServerStats, PlanLevel, ServerUuid, BENCHER_API_URL};
 use bencher_license::Licensor;
@@ -77,9 +77,9 @@ impl QueryServer {
             loop {
                 let now = Utc::now().naive_utc().time();
                 let sleep_time = match now.cmp(&offset) {
-                    std::cmp::Ordering::Less => offset - now,
-                    std::cmp::Ordering::Equal => Duration::days(1),
-                    std::cmp::Ordering::Greater => Duration::days(1) - (now - offset),
+                    cmp::Ordering::Less => offset - now,
+                    cmp::Ordering::Equal => Duration::days(1),
+                    cmp::Ordering::Greater => Duration::days(1) - (now - offset),
                 }
                 .to_std()
                 .unwrap_or(std::time::Duration::from_secs(24 * 60 * 60));

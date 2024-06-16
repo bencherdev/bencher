@@ -1,3 +1,5 @@
+use std::cmp;
+
 use bencher_json::IqrBoundary;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -15,7 +17,7 @@ impl Quartiles {
         }
 
         let mut data = data.to_vec();
-        data.sort_unstable_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
+        data.sort_unstable_by(|x, y| x.partial_cmp(y).unwrap_or(cmp::Ordering::Equal));
 
         Some(Self {
             q1: Self::q1(&data)?,
@@ -98,7 +100,7 @@ impl Quartiles {
                 Self::abs_percent_change(window[0], window[1])
             })
             .collect::<Vec<_>>();
-        changes.sort_unstable_by(|l, r| l.partial_cmp(r).unwrap_or(std::cmp::Ordering::Equal));
+        changes.sort_unstable_by(|l, r| l.partial_cmp(r).unwrap_or(cmp::Ordering::Equal));
         changes
     }
 

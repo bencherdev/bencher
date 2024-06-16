@@ -1,4 +1,7 @@
-use base64::Engine;
+use base64::{
+    engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig},
+    Engine,
+};
 use derive_more::Display;
 use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
@@ -114,10 +117,9 @@ pub fn is_valid_jwt(jwt: &str) -> bool {
     let (payload, header) = expect_two!(message.rsplitn(2, '.'));
 
     // A URL safe encoding that does not have trailing `=` characters
-    let url_safe = base64::engine::general_purpose::GeneralPurpose::new(
+    let url_safe = GeneralPurpose::new(
         &base64::alphabet::URL_SAFE,
-        base64::engine::general_purpose::GeneralPurposeConfig::new()
-            .with_decode_padding_mode(base64::engine::DecodePaddingMode::RequireNone),
+        GeneralPurposeConfig::new().with_decode_padding_mode(DecodePaddingMode::RequireNone),
     );
 
     url_safe.decode(header).is_ok()

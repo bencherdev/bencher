@@ -1,3 +1,5 @@
+#![allow(clippy::absolute_paths)]
+
 use bencher_json::{Jwt, BENCHER_API_URL};
 use serde::{de::DeserializeOwned, Serialize};
 use tokio::time::{sleep, Duration};
@@ -16,6 +18,7 @@ pub struct BencherClient {
     pub log: bool,
 }
 
+#[allow(clippy::absolute_paths)]
 #[derive(thiserror::Error, Debug)]
 pub enum ClientError {
     #[error("Failed to build. Missing `host` field.")]

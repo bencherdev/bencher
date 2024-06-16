@@ -4,7 +4,10 @@ use bencher_valid::{DateTime, ResourceName, Slug, Url};
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use serde::{de::Visitor, Deserialize, Deserializer, Serialize};
+use serde::{
+    de::{self, Visitor},
+    Deserialize, Deserializer, Serialize,
+};
 
 use crate::OrganizationUuid;
 
@@ -146,7 +149,7 @@ impl<'de> Deserialize<'de> for JsonUpdateProject {
 
             fn visit_map<V>(self, mut map: V) -> Result<Self::Value, V::Error>
             where
-                V: serde::de::MapAccess<'de>,
+                V: de::MapAccess<'de>,
             {
                 let mut name = None;
                 let mut slug = None;
@@ -157,25 +160,25 @@ impl<'de> Deserialize<'de> for JsonUpdateProject {
                     match key {
                         Field::Name => {
                             if name.is_some() {
-                                return Err(serde::de::Error::duplicate_field(NAME_FIELD));
+                                return Err(de::Error::duplicate_field(NAME_FIELD));
                             }
                             name = Some(map.next_value()?);
                         },
                         Field::Slug => {
                             if slug.is_some() {
-                                return Err(serde::de::Error::duplicate_field(SLUG_FIELD));
+                                return Err(de::Error::duplicate_field(SLUG_FIELD));
                             }
                             slug = Some(map.next_value()?);
                         },
                         Field::Url => {
                             if url.is_some() {
-                                return Err(serde::de::Error::duplicate_field(URL_FIELD));
+                                return Err(de::Error::duplicate_field(URL_FIELD));
                             }
                             url = Some(map.next_value()?);
                         },
                         Field::Visibility => {
                             if visibility.is_some() {
-                                return Err(serde::de::Error::duplicate_field(VISIBILITY_FIELD));
+                                return Err(de::Error::duplicate_field(VISIBILITY_FIELD));
                             }
                             visibility = Some(map.next_value()?);
                         },

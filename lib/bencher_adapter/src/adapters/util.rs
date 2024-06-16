@@ -6,6 +6,7 @@ use nom::{
     bytes::complete::tag,
     character::complete::digit1,
     combinator::{map, map_res},
+    error::ErrorKind as NomErrorKind,
     multi::fold_many1,
     IResult,
 };
@@ -25,10 +26,7 @@ pub fn nom_error<T>(input: T) -> NomError
 where
     T: Into<String>,
 {
-    nom::Err::Error(nom::error::make_error(
-        input.into(),
-        nom::error::ErrorKind::Tag,
-    ))
+    nom::Err::Error(nom::error::make_error(input.into(), NomErrorKind::Tag))
 }
 
 pub fn latency_as_nanos<T>(time: T, units: Units) -> OrderedFloat<f64>
@@ -225,7 +223,7 @@ where
     }
 
     T::from_str(&number)
-        .map_err(|_e| nom::Err::Error(nom::error::make_error("\0", nom::error::ErrorKind::Tag)))
+        .map_err(|_e| nom::Err::Error(nom::error::make_error("\0", NomErrorKind::Tag)))
 }
 
 pub fn parse_benchmark_name_chars(name_chars: &[char]) -> Result<BenchmarkName, NomError> {

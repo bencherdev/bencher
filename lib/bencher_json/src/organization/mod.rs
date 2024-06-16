@@ -4,7 +4,10 @@ use bencher_valid::{DateTime, ResourceName, Slug};
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use serde::{de::Visitor, Deserialize, Deserializer, Serialize};
+use serde::{
+    de::{self, Visitor},
+    Deserialize, Deserializer, Serialize,
+};
 
 pub mod member;
 pub mod plan;
@@ -124,7 +127,7 @@ impl<'de> Deserialize<'de> for JsonUpdateOrganization {
 
             fn visit_map<V>(self, mut map: V) -> Result<Self::Value, V::Error>
             where
-                V: serde::de::MapAccess<'de>,
+                V: de::MapAccess<'de>,
             {
                 let mut name = None;
                 let mut slug = None;
@@ -135,20 +138,20 @@ impl<'de> Deserialize<'de> for JsonUpdateOrganization {
                     match key {
                         Field::Name => {
                             if name.is_some() {
-                                return Err(serde::de::Error::duplicate_field(NAME_FIELD));
+                                return Err(de::Error::duplicate_field(NAME_FIELD));
                             }
                             name = Some(map.next_value()?);
                         },
                         Field::Slug => {
                             if slug.is_some() {
-                                return Err(serde::de::Error::duplicate_field(SLUG_FIELD));
+                                return Err(de::Error::duplicate_field(SLUG_FIELD));
                             }
                             slug = Some(map.next_value()?);
                         },
                         #[cfg(feature = "plus")]
                         Field::License => {
                             if license.is_some() {
-                                return Err(serde::de::Error::duplicate_field(LICENSE_FIELD));
+                                return Err(de::Error::duplicate_field(LICENSE_FIELD));
                             }
                             license = Some(map.next_value()?);
                         },

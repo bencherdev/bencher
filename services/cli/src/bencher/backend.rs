@@ -1,4 +1,4 @@
-use std::{fmt, ops::Deref};
+use std::{fmt, ops::Deref, str::FromStr};
 
 use bencher_json::{JsonApiVersion, Jwt, Url, BENCHER_API_URL};
 use serde::{de::DeserializeOwned, Serialize};
@@ -87,7 +87,7 @@ fn map_host(host: Option<Url>) -> Result<Option<url::Url>, BackendError> {
     host.map(Into::into)
         .or_else(|| std::env::var(BENCHER_HOST).ok())
         .as_deref()
-        .map(std::str::FromStr::from_str)
+        .map(FromStr::from_str)
         .transpose()
         .map_err(BackendError::ParseHost)
 }

@@ -1,5 +1,6 @@
 use bencher_json::{organization::member::OrganizationRole, DateTime, Email, OrganizationUuid};
 use chrono::Utc;
+use jsonwebtoken::errors::ErrorKind as JsonWebTokenErrorKind;
 use serde::{Deserialize, Serialize};
 
 use super::{audience::Audience, TokenError};
@@ -80,7 +81,7 @@ impl TryFrom<Claims> for InviteClaims {
                 org,
             }),
             None => Err(TokenError::Invite {
-                error: jsonwebtoken::errors::ErrorKind::MissingRequiredClaim("org".into()).into(),
+                error: JsonWebTokenErrorKind::MissingRequiredClaim("org".into()).into(),
             }),
         }
     }

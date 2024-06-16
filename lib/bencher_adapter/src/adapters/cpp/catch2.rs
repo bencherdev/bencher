@@ -110,7 +110,7 @@ fn parse_catch2_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
 fn parse_catch2_benchmark_name(input: &str) -> IResult<&str, BenchmarkName> {
     map_res(
         many_till(anychar, parse_catch2_prelude),
-        |(name_chars, _)| -> Result<BenchmarkName, nom::Err<nom::error::Error<String>>> {
+        |(name_chars, _)| -> Result<BenchmarkName, NomError> {
             parse_benchmark_name_chars(&name_chars)
         },
     )(input)
