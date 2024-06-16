@@ -1,5 +1,6 @@
 use bencher_json::{
-    user::JsonUsers, JsonDirection, JsonPagination, JsonUpdateUser, JsonUser, ResourceId, UserName,
+    user::JsonUsers, JsonDirection, JsonPagination, JsonUpdateUser, JsonUser, ResourceId, Sanitize,
+    UserName,
 };
 use diesel::{
     BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods,
@@ -210,8 +211,10 @@ async fn patch_inner(
     same_user!(auth_user, context.rbac, query_user.uuid);
 
     let admin_only_error = |field: &str| {
+        let mut auth_user = auth_user.clone();
+        auth_user.sanitize();
         forbidden_error(format!(
-            "Only admins can update the `{field}` field for a user. User {auth_user:?} is not an admin.",
+            "Only admins can update the `{field}` field for a user. User is not an admin: {auth_user:?}",
         ))
     };
     if json_user.admin.is_some() && !auth_user.is_admin(&context.rbac) {

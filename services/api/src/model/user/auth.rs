@@ -72,9 +72,12 @@ impl AuthUser {
 
         // Hold the connection for all permissions related queries
         let conn = conn_lock!(context);
-        let query_user = QueryUser::get_with_email(conn, email)?;
+        let mut query_user = QueryUser::get_with_email(conn, email)?;
         if query_user.locked {
-            return Err(forbidden_error(format!("User account is locked ({email})")));
+            query_user.sanitize();
+            return Err(forbidden_error(format!(
+                "User account is locked: {query_user:?}"
+            )));
         }
         let (org_ids, org_roles) = Self::organization_roles(conn, query_user.id, email)?;
         let (proj_ids, proj_roles) = Self::project_roles(conn, query_user.id, email)?;

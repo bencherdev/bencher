@@ -1,3 +1,4 @@
+use bencher_json::Sanitize;
 use dropshot::HttpError;
 
 use crate::{context::ApiContext, error::forbidden_error};
@@ -11,10 +12,11 @@ impl AdminUser {
         context: &ApiContext,
         bearer_token: BearerToken,
     ) -> Result<Self, HttpError> {
-        let auth_user = AuthUser::from_token(context, bearer_token).await?;
+        let mut auth_user = AuthUser::from_token(context, bearer_token).await?;
         if !auth_user.is_admin(&context.rbac) {
+            auth_user.sanitize();
             return Err(forbidden_error(format!(
-                "User is not an admin ({auth_user:?})."
+                "User is not an admin: {auth_user:?}"
             )));
         }
         Ok(Self(auth_user))

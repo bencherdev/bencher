@@ -102,9 +102,10 @@ impl QueryUser {
     /// Check to see if the user account has been locked
     pub fn check_is_locked(&self) -> Result<(), HttpError> {
         if self.locked {
+            let mut query_user = self.clone();
+            query_user.sanitize();
             Err(forbidden_error(format!(
-                "Your account ({email}) has been locked. Please contact support.",
-                email = self.email
+                "Your account has been locked. Please contact support: {query_user:?}",
             )))
         } else {
             Ok(())
