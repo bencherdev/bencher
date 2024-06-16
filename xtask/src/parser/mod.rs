@@ -16,8 +16,7 @@ pub use plus::{
     prompt::{TaskImage, TaskLanguage, TaskPrompt, TaskTranslate},
     stats::TaskStats,
 };
-#[cfg(feature = "api")]
-pub use types::{TaskSwagger, TaskTypes, TaskTypeshare};
+pub use types::TaskTypes;
 pub use version::TaskVersion;
 
 /// Bencher CLI
@@ -34,13 +33,6 @@ pub struct TaskTask {
 pub enum TaskSub {
     /// Get current API version
     Version(TaskVersion),
-    #[cfg(feature = "api")]
-    /// Generate typeshare
-    Typeshare(TaskTypeshare),
-    #[cfg(feature = "api")]
-    /// Generate OpenAPI spec
-    Swagger(TaskSwagger),
-    #[cfg(feature = "api")]
     /// Generate typeshare and OpenAPI spec
     Types(TaskTypes),
     #[cfg(feature = "plus")]

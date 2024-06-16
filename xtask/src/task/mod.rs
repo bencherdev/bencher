@@ -6,7 +6,6 @@ use crate::parser::{TaskSub, TaskTask};
 mod admin;
 #[cfg(feature = "plus")]
 mod plus;
-#[cfg(feature = "api")]
 mod types;
 mod version;
 
@@ -17,8 +16,7 @@ use plus::{
     image::Image, index::Index, license::License, prompt::Prompt, stats::Stats,
     translate::Translate,
 };
-#[cfg(feature = "api")]
-use types::{swagger::Swagger, types::Types, typeshare::Typeshare};
+use types::Types;
 use version::Version;
 
 #[derive(Debug)]
@@ -30,11 +28,6 @@ pub struct Task {
 #[derive(Debug)]
 pub enum Sub {
     Version(Version),
-    #[cfg(feature = "api")]
-    Typeshare(Typeshare),
-    #[cfg(feature = "api")]
-    Swagger(Swagger),
-    #[cfg(feature = "api")]
     Types(Types),
     #[cfg(feature = "plus")]
     Index(Index),
@@ -68,11 +61,6 @@ impl TryFrom<TaskSub> for Sub {
     fn try_from(sub: TaskSub) -> Result<Self, Self::Error> {
         Ok(match sub {
             TaskSub::Version(version) => Self::Version(version.try_into()?),
-            #[cfg(feature = "api")]
-            TaskSub::Typeshare(typeshare) => Self::Typeshare(typeshare.try_into()?),
-            #[cfg(feature = "api")]
-            TaskSub::Swagger(swagger) => Self::Swagger(swagger.try_into()?),
-            #[cfg(feature = "api")]
             TaskSub::Types(types) => Self::Types(types.try_into()?),
             #[cfg(feature = "plus")]
             TaskSub::Index(index) => Self::Index(index.try_into()?),
@@ -106,11 +94,6 @@ impl Sub {
     pub async fn exec(&self) -> anyhow::Result<()> {
         match self {
             Self::Version(version) => version.exec(),
-            #[cfg(feature = "api")]
-            Self::Typeshare(typeshare) => typeshare.exec(),
-            #[cfg(feature = "api")]
-            Self::Swagger(swagger) => swagger.exec(),
-            #[cfg(feature = "api")]
             Self::Types(types) => types.exec(),
             #[cfg(feature = "plus")]
             Self::Index(index) => index.exec().await,

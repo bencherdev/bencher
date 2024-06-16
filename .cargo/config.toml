@@ -1,15 +1,13 @@
 [alias]
 xtask = "run --manifest-path ./xtask/Cargo.toml --"
-xtask-api = "run --manifest-path ./xtask/Cargo.toml --features api --"
-xtask-cli = "run --manifest-path ./xtask/Cargo.toml --features cli --"
-xtypes = "run --manifest-path ./xtask/Cargo.toml --features api -- types"
 xadmin = "run --manifest-path ./xtask/Cargo.toml --features admin --"
-# Breakout
+# Tasks
 gen-installer = "run --manifest-path ./tasks/gen_installer/Cargo.toml --"
 gen-pkg = "run --manifest-path ./tasks/gen_pkg/Cargo.toml --"
 gen-notes = "run --manifest-path ./tasks/gen_notes/Cargo.toml --"
 gen-swagger = "run --manifest-path ./tasks/gen_swagger/Cargo.toml --"
 gen-ts = "run --manifest-path ./tasks/gen_ts/Cargo.toml --"
+gen-types = "run --manifest-path ./xtask/Cargo.toml -- types"
 test-api = "run --manifest-path ./tasks/test_api/Cargo.toml --"
 test-netlify = "run --manifest-path ./tasks/test_netlify/Cargo.toml --"
 

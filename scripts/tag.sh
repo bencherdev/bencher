@@ -7,7 +7,7 @@ git add Cargo.lock
 git add ./services/console/src/chunks/reference/en/changelog.mdx
 
 # Generate the API docs from the server and the types for the UI
-cargo xtypes
+cargo gen-types
 git add ./services/api/swagger.json
 git add ./services/console/src/types/bencher.ts
 
