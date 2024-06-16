@@ -48,7 +48,7 @@ assert_cmd = "2.0"
 async-openai = { version = "0.20", optional = true }
 clap_mangen = "0.2"
 dotenvy = "0.15"
-minijinja = { version = "1.0", features = ["loader"] }
+minijinja = { version = "2.0", features = ["loader"] }
 newline-converter = "0.3"
 notify-rust = { version = "4.11", optional = true }
 openapiv3 = "2.0"
