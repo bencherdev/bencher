@@ -2,9 +2,8 @@
 
 [package]
 name = "custom"
-version.workspace = true
-authors.workspace = true
-edition.workspace = true
+version = "0.1.0"
+edition = "2021"
 
 [dev-dependencies]
 dhat = "0.3"
