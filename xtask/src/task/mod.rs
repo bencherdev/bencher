@@ -6,7 +6,6 @@ use crate::parser::{TaskSub, TaskTask};
 mod admin;
 #[cfg(feature = "plus")]
 mod plus;
-mod test;
 #[cfg(feature = "api")]
 mod types;
 mod version;
@@ -17,9 +16,6 @@ use admin::email_list::EmailList;
 use plus::{
     image::Image, index::Index, license::License, prompt::Prompt, stats::Stats,
     translate::Translate,
-};
-use test::{
-    examples::Examples, netlify_test::NetlifyTest, seed_test::SeedTest, smoke_test::SmokeTest,
 };
 #[cfg(feature = "api")]
 use types::{swagger::Swagger, types::Types, typeshare::Typeshare};
@@ -50,10 +46,6 @@ pub enum Sub {
     Translate(Translate),
     #[cfg(feature = "plus")]
     Image(Image),
-    SeedTest(SeedTest),
-    Examples(Examples),
-    SmokeTest(SmokeTest),
-    NetlifyTest(NetlifyTest),
     #[cfg(feature = "plus")]
     License(License),
     #[cfg(feature = "admin")]
@@ -92,10 +84,6 @@ impl TryFrom<TaskSub> for Sub {
             TaskSub::Translate(translate) => Self::Translate(translate.try_into()?),
             #[cfg(feature = "plus")]
             TaskSub::Image(image) => Self::Image(image.try_into()?),
-            TaskSub::SeedTest(seed_test) => Self::SeedTest(seed_test.try_into()?),
-            TaskSub::Examples(examples) => Self::Examples(examples.try_into()?),
-            TaskSub::SmokeTest(smoke_test) => Self::SmokeTest(smoke_test.try_into()?),
-            TaskSub::NetlifyTest(netlify_test) => Self::NetlifyTest(netlify_test.try_into()?),
             #[cfg(feature = "plus")]
             TaskSub::License(license) => Self::License(license.try_into()?),
             #[cfg(feature = "admin")]
@@ -134,10 +122,6 @@ impl Sub {
             Self::Translate(translate) => translate.exec().await,
             #[cfg(feature = "plus")]
             Self::Image(image) => image.exec().await,
-            Self::SeedTest(seed_test) => seed_test.exec(),
-            Self::Examples(examples) => examples.exec(),
-            Self::SmokeTest(smoke_test) => smoke_test.exec(),
-            Self::NetlifyTest(netlify_test) => netlify_test.exec().await,
             #[cfg(feature = "plus")]
             Self::License(license) => license.exec(),
             #[cfg(feature = "admin")]

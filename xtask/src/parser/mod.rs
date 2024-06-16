@@ -4,7 +4,6 @@ use clap::{Parser, Subcommand};
 mod admin;
 #[cfg(feature = "plus")]
 mod plus;
-mod test;
 mod types;
 mod version;
 
@@ -16,9 +15,6 @@ pub use plus::{
     license::{TaskBillingCycle, TaskLicense, TaskLicenseGenerate, TaskLicenseValidate},
     prompt::{TaskImage, TaskLanguage, TaskPrompt, TaskTranslate},
     stats::TaskStats,
-};
-pub use test::{
-    TaskExample, TaskExamples, TaskNetlifyTest, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment,
 };
 #[cfg(feature = "api")]
 pub use types::{TaskSwagger, TaskTypes, TaskTypeshare};
@@ -63,14 +59,6 @@ pub enum TaskSub {
     #[cfg(feature = "plus")]
     /// Prompt to generate image
     Image(TaskImage),
-    /// Run Seed test
-    SeedTest(TaskSeedTest),
-    // Run Example(s)
-    Examples(TaskExamples),
-    /// Run smoke test
-    SmokeTest(TaskSmokeTest),
-    /// Run tests against Netlify deployment
-    NetlifyTest(TaskNetlifyTest),
     #[cfg(feature = "plus")]
     #[clap(subcommand)]
     /// License management
