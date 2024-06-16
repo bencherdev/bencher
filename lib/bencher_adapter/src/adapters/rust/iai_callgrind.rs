@@ -34,6 +34,8 @@ impl Adaptable for AdapterRustIaiCallgrind {
             None => {},
             Some(JsonAverage::Mean | JsonAverage::Median) => return None,
         }
+        // Clean up the input by removing ANSI escape codes.
+        let input = strip_ansi_escapes::strip_str(input);
 
         let mut benchmark_metrics = Vec::new();
         let lines = input.lines().collect::<Vec<_>>();
@@ -296,8 +298,9 @@ pub(crate) mod test_rust_iai_callgrind {
     }
 
     #[test]
-    fn test_adapter_rust_iai_callgrind_change() {
-        let results = convert_rust_iai_callgrind("change");
+    fn test_adapter_rust_iai_callgrind_issue_345() {
+        let contents = "running 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\u{001b}[32mrust_iai_callgrind::bench_fibonacci_group::bench_fibonacci\u{001b}[0m \u{001b}[36mshort\u{001b}[0m\u{001b}[36m:\u{001b}[0m\u{001b}[1;34m10\u{001b}[0m\n  Instructions:     \u{001b}[1m           1684\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)\n  L1 Hits:          \u{001b}[1m           2309\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)\n  L2 Hits:          \u{001b}[1m              0\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)\n  RAM Hits:         \u{001b}[1m              3\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)\n  Total read+write: \u{001b}[1m           2312\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)\n  Estimated Cycles: \u{001b}[1m           2414\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)\n\u{001b}[32mrust_iai_callgrind::bench_fibonacci_group::bench_fibonacci\u{001b}[0m \u{001b}[36mlong\u{001b}[0m\u{001b}[36m:\u{001b}[0m\u{001b}[1;34m30\u{001b}[0m\n  Instructions:     \u{001b}[1m       25457719\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)\n  L1 Hits:          \u{001b}[1m       34881604\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)\n  L2 Hits:          \u{001b}[1m              0\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)\n  RAM Hits:         \u{001b}[1m              3\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)\n  Total read+write: \u{001b}[1m       34881607\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)\n  Estimated Cycles: \u{001b}[1m       34881709\u{001b}[0m|N/A             (\u{001b}[90m*********\u{001b}[0m)";
+        let results = AdapterRustIaiCallgrind::parse(contents, crate::Settings::default()).unwrap();
         assert_eq!(results.inner.len(), 2);
 
         let metrics = results
@@ -306,12 +309,12 @@ pub(crate) mod test_rust_iai_callgrind {
         validate_iai_callgrind(
             metrics,
             [
-                (INSTRUCTIONS_SLUG_STR, 1650.0),
-                (L1_ACCESSES_SLUG_STR, 2275.0),
+                (INSTRUCTIONS_SLUG_STR, 1684.0),
+                (L1_ACCESSES_SLUG_STR, 2309.0),
                 (L2_ACCESSES_SLUG_STR, 0.0),
                 (RAM_ACCESSES_SLUG_STR, 3.0),
-                (TOTAL_ACCESSES_SLUG_STR, 2278.0),
-                (ESTIMATED_CYCLES_SLUG_STR, 2380.0),
+                (TOTAL_ACCESSES_SLUG_STR, 2312.0),
+                (ESTIMATED_CYCLES_SLUG_STR, 2414.0),
             ],
         );
         let metrics = results
@@ -320,12 +323,12 @@ pub(crate) mod test_rust_iai_callgrind {
         validate_iai_callgrind(
             metrics,
             [
-                (INSTRUCTIONS_SLUG_STR, 24_943_490.0),
-                (L1_ACCESSES_SLUG_STR, 34_367_375.0),
+                (INSTRUCTIONS_SLUG_STR, 25_457_719.0),
+                (L1_ACCESSES_SLUG_STR, 34_881_604.0),
                 (L2_ACCESSES_SLUG_STR, 0.0),
                 (RAM_ACCESSES_SLUG_STR, 3.0),
-                (TOTAL_ACCESSES_SLUG_STR, 34_367_378.0),
-                (ESTIMATED_CYCLES_SLUG_STR, 34_367_480.0),
+                (TOTAL_ACCESSES_SLUG_STR, 34_881_607.0),
+                (ESTIMATED_CYCLES_SLUG_STR, 34_881_709.0),
             ],
         );
     }
