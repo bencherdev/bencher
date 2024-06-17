@@ -1,8 +1,12 @@
+import Pytest from "../pytest.mdx";
+
 ## 🐍 Python Pytest
 
 L'adaptateur Python Pytest (`python_pytest`) attend une sortie de [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) au format [JSON (c'est-à-dire `--benchmark-json results.json`)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options).
-Cette sortie JSON est sauvegardée dans un fichier, vous devez donc utiliser l'argument `--file` du CLI `bencher run` pour spécifier le chemin de ce fichier (c'est-à-dire `bencher run --file results.json "pipenv run pytest --benchmark-json results.json benchmarks.py"`).
+Cette sortie JSON est sauvegardée dans un fichier, vous devez donc utiliser l'argument `--file` du CLI `bencher run` pour spécifier le chemin de ce fichier.
 La mesure de `latence` (c'est-à-dire `nanosecondes (ns)`) est recueillie.
+
+<Pytest />
 
 Il y a deux options pour la Métrique :
 - `mean` (par défaut) : Les `lower_value` et `upper_value` sont une déviation standard en dessous et au-dessus de la moyenne (c'est-à-dire `value`) respectivement.

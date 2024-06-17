@@ -1,7 +1,11 @@
+import Hyperfine from "../hyperfine.mdx";
+
 ## ❯_️ Shell Hyperfine
 
-Shell Hyperfineアダプター (`shell_hyperfine`) は、[Hyperfine](https://github.com/sharkdp/hyperfine) の出力を [JSON形式（例： `--export-json results.json`）](https://github.com/sharkdp/hyperfine/tree/master/scripts#example)で期待しています。このJSON出力はファイルに保存されるので、そのファイルパスを指定するために `bencher run` CLIの `--file` 引数を使用する必要があります（例：`bencher run --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`）。
+Shell Hyperfineアダプター (`shell_hyperfine`) は、[Hyperfine](https://github.com/sharkdp/hyperfine) の出力を [JSON形式（例： `--export-json results.json`）](https://github.com/sharkdp/hyperfine/tree/master/scripts#example)で期待しています。このJSON出力はファイルに保存されるので、そのファイルパスを指定するために `bencher run` CLIの `--file` 引数を使用する必要があります。
 `latency` 測定項目では、（例：`nanoseconds (ns)`）が収集されます。
+
+<Hyperfine />
 
 メトリックには2つのオプションがあります：
 - `mean`（デフォルト）：`lower_value` と `upper_value` は、それぞれ平均値（`value`）よりも1標準偏差下と上にあります。

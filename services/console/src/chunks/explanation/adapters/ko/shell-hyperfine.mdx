@@ -1,8 +1,12 @@
+import Hyperfine from "../hyperfine.mdx";
+
 ## ❯_️ 셸 하이퍼파인
 
 셸 하이퍼파인 어댑터(`shell_hyperfine`)는 [Hyperfine](https://github.com/sharkdp/hyperfine) 출력을 [JSON 포맷(`--export-json results.json` 예시)](https://github.com/sharkdp/hyperfine/tree/master/scripts#example)으로 기대합니다.
-이 JSON 출력은 파일에 저장되므로, 파일 경로를 지정하기 위해 `bencher run` CLI `--file` 인수를 사용해야 합니다(예: `bencher run --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`).
+이 JSON 출력은 파일에 저장되므로, 파일 경로를 지정하기 위해 `bencher run` CLI `--file` 인수를 사용해야 합니다.
 `latency`(예: `나노초(ns)`) 측정값이 수집됩니다.
+
+<Hyperfine />
 
 지표에는 두 가지 옵션이 있습니다:
 - `mean`(기본값): `lower_value`와 `upper_value`는 각각 평균(예: `value`)보다 한 표준편차 아래와 위입니다.

@@ -1,8 +1,12 @@
+import Hyperfine from "../hyperfine.mdx";
+
 ## ❯_️ Shell Hyperfine
 
 Адаптер Shell Hyperfine (`shell_hyperfine`) ожидает вывод [Hyperfine](https://github.com/sharkdp/hyperfine) в [формате JSON (т.е. `--export-json results.json`)](https://github.com/sharkdp/hyperfine/tree/master/scripts#example).
-Этот вывод JSON сохраняется в файл, поэтому вы должны использовать аргумент `--file` CLI `bencher run`, чтобы указать путь к этому файлу (например, `bencher run --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`).
+Этот вывод JSON сохраняется в файл, поэтому вы должны использовать аргумент `--file` CLI `bencher run`, чтобы указать путь к этому файлу.
 Измеряется `latency` (т.е. `наносекунды (ns)`).
+
+<Hyperfine />
 
 Существует два варианта для метрики:
 - `mean` (по умолчанию): `lower_value` и `upper_value` находятся на одно стандартное отклонение ниже и выше среднего значения (т.е. `value`) соответственно.
