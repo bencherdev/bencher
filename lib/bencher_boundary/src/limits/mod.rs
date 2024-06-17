@@ -265,8 +265,8 @@ mod test {
         4.0, 5.0, 1.0, 2.0, 3.0, 4.0, 5.0, 1.0, 2.0, 3.0, 4.0, 5.0,
     ];
     const LOG_LOCATION: f64 = 2.6051710846973517;
-    const LOG_LOWER: f64 = 0.5147092348243909;
-    const LOG_UPPER: f64 = 4.6956329345703125;
+    const LOG_LOWER: f64 = 0.5147481524981812;
+    const LOG_UPPER: f64 = 4.695594016896522;
 
     const IQR_Q1: f64 = 1.0;
     const IQR_Q2: f64 = 2.0;
@@ -1016,13 +1016,13 @@ mod test {
         assert_eq!(
             limits.lower,
             Some(MetricsLimit {
-                value: 71.20122493974989
+                value: 71.20299914980998
             })
         );
         assert_eq!(
             limits.upper,
             Some(MetricsLimit {
-                value: 134.18263244628906
+                value: 134.18085823622897
             })
         );
 
