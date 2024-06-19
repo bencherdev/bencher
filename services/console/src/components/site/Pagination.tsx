@@ -25,7 +25,7 @@ const Pagination = (props: {
 				type="button"
 				title="Go to previous page"
 				disabled={props.page() < 2}
-				onClick={(e) => {
+				onMouseDown={(e) => {
 					e.preventDefault();
 					props.handlePage(props.page() - 1);
 				}}
@@ -39,7 +39,7 @@ const Pagination = (props: {
 							class="pagination-link"
 							type="button"
 							title="Go to page 1"
-							onClick={(e) => {
+							onMouseDown={(e) => {
 								e.preventDefault();
 								props.handlePage(1);
 							}}
@@ -59,7 +59,7 @@ const Pagination = (props: {
 							class="pagination-link"
 							type="button"
 							title={`Go to page ${props.page() - 1}`}
-							onClick={(e) => {
+							onMouseDown={(e) => {
 								e.preventDefault();
 								props.handlePage(props.page() - 1);
 							}}
@@ -84,7 +84,7 @@ const Pagination = (props: {
 							class="pagination-link"
 							type="button"
 							title={`Go to page ${props.page() + 1}`}
-							onClick={(e) => {
+							onMouseDown={(e) => {
 								e.preventDefault();
 								props.handlePage(props.page() + 1);
 							}}
@@ -99,7 +99,7 @@ const Pagination = (props: {
 				type="button"
 				title="Go to next page"
 				disabled={(props.data_len() ?? 0) < props.per_page()}
-				onClick={(e) => {
+				onMouseDown={(e) => {
 					e.preventDefault();
 					props.handlePage(props.page() + 1);
 				}}

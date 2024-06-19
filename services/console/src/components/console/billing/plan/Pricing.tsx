@@ -150,7 +150,7 @@ const PlanPanel = (props: {
 						props.plan === props.active && "is-primary"
 					}`}
 					type="button"
-					onClick={(e) => {
+					onMouseDown={(e) => {
 						e.preventDefault();
 						props.handlePlanLevel();
 					}}

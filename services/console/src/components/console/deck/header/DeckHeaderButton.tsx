@@ -98,7 +98,7 @@ const DeckHeaderButton = (props: Props) => {
 					class="button is-fullwidth"
 					type="button"
 					title={`Refresh ${props.title()}`}
-					onClick={(e) => {
+					onMouseDown={(e) => {
 						e.preventDefault();
 						props.handleRefresh();
 					}}

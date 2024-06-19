@@ -122,11 +122,7 @@ const ShareModal = (props: Props) => {
 		<div class={`modal ${props.share() && "is-active"}`}>
 			<div
 				class="modal-background"
-				onClick={(e) => {
-					e.preventDefault();
-					props.setShare(false);
-				}}
-				onKeyDown={(e) => {
+				onMouseDown={(e) => {
 					e.preventDefault();
 					props.setShare(false);
 				}}
@@ -138,7 +134,7 @@ const ShareModal = (props: Props) => {
 						class="delete"
 						type="button"
 						aria-label="close"
-						onClick={(e) => {
+						onMouseDown={(e) => {
 							e.preventDefault();
 							props.setShare(false);
 						}}
@@ -171,8 +167,7 @@ const ShareModal = (props: Props) => {
 					{/* biome-ignore lint/a11y/useValidAnchor: Copy tag */}
 					<a
 						style="word-break: break-all;"
-						href=""
-						onClick={(e) => {
+						onMouseDown={(e) => {
 							e.preventDefault();
 							navigator.clipboard.writeText(img_tag());
 						}}
@@ -190,8 +185,7 @@ const ShareModal = (props: Props) => {
 					{/* biome-ignore lint/a11y/useValidAnchor: Copy link */}
 					<a
 						style="word-break: break-all;"
-						href=""
-						onClick={(e) => {
+						onMouseDown={(e) => {
 							e.preventDefault();
 							navigator.clipboard.writeText(embed_tag());
 						}}
@@ -205,8 +199,7 @@ const ShareModal = (props: Props) => {
 					{/* biome-ignore lint/a11y/useValidAnchor: Copy link */}
 					<a
 						style="word-break: break-all;"
-						href=""
-						onClick={(e) => {
+						onMouseDown={(e) => {
 							e.preventDefault();
 							navigator.clipboard.writeText(perf_page_url());
 						}}
@@ -219,7 +212,7 @@ const ShareModal = (props: Props) => {
 					<button
 						class="button is-primary is-fullwidth"
 						type="button"
-						onClick={(e) => {
+						onMouseDown={(e) => {
 							e.preventDefault();
 							props.setShare(false);
 						}}

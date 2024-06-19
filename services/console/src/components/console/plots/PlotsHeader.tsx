@@ -74,7 +74,7 @@ const PlotsHeader = (props: Props) => {
 						class="button"
 						type="button"
 						title="Refresh all plots"
-						onClick={(e) => {
+						onMouseDown={(e) => {
 							e.preventDefault();
 							props.handleRefresh();
 						}}

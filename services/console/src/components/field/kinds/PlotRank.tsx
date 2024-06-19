@@ -63,7 +63,7 @@ const PlotRank = (props: Props) => {
 					type="button"
 					class={`button is-small${isSelected(Button.Bottom)}`}
 					title={props.config?.bottom}
-					onClick={(e) => {
+					onMouseDown={(e) => {
 						e.preventDefault();
 						props.handleField(props.config?.total ?? Button.Bottom);
 					}}
@@ -77,7 +77,7 @@ const PlotRank = (props: Props) => {
 					type="button"
 					class={`button is-small${isSelected(Button.Top)}`}
 					title={props.config?.top}
-					onClick={(e) => {
+					onMouseDown={(e) => {
 						e.preventDefault();
 						props.handleField(Button.Top);
 					}}

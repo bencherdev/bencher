@@ -326,7 +326,7 @@ const SharedPlot = (props: Props) => {
 									return "Switch X-Axis to Date";
 							}
 						})()}
-						onClick={(e) => {
+						onMouseDown={(e) => {
 							e.preventDefault();
 							switch (props.x_axis()) {
 								case XAxis.DateTime:
@@ -385,7 +385,7 @@ const SharedPlot = (props: Props) => {
 						class="button is-fullwidth"
 						type="reset"
 						title="Clear Query"
-						onClick={(e) => {
+						onMouseDown={(e) => {
 							e.preventDefault();
 							props.handleClear(true);
 						}}
@@ -411,7 +411,7 @@ const LineArrowButton = (props: {
 			class={`button ${props.param_key() ? "is-primary" : ""} is-fullwidth`}
 			type="button"
 			title={`${props.param_key() ? "Hide" : "Show"} ${props.position}`}
-			onClick={(e) => {
+			onMouseDown={(e) => {
 				e.preventDefault();
 				props.handleParamKey(!props.param_key());
 			}}

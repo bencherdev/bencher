@@ -68,10 +68,10 @@ const ViewCard = (props: Props) => {
 			</div>
 			{is_allowed() && (
 				<div class="card-footer">
+					{/* biome-ignore lint/a11y/useValidAnchor: card link */}
 					<a
 						class="card-footer-item"
-						// biome-ignore lint/a11y/useValidAnchor: card link
-						onClick={(e) => {
+						onMouseDown={(e) => {
 							e.preventDefault();
 							props.toggleUpdate();
 						}}

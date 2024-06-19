@@ -89,10 +89,12 @@ const PlotRow = (props: {
 	return (
 		<div class="panel-block is-block">
 			<div class="level">
+				{/* biome-ignore lint/a11y/useValidAnchor: action on press */}
 				<a
 					class={`level-left ${themeText(props.theme())}`}
-					// biome-ignore lint/a11y/useValidAnchor: plot tab format
-					onClick={(_e) => props.handleChecked(props.index?.(), plot().uuid)}
+					onMouseDown={(_e) =>
+						props.handleChecked(props.index?.(), plot().uuid)
+					}
 				>
 					<div class="level-item">
 						<div class="columns is-vcentered is-mobile">

@@ -217,7 +217,7 @@ const OnboardInvite = (props: Props) => {
 										class="button is-primary is-fullwidth"
 										title="Send invite to collaborator"
 										disabled={!isSendable()}
-										onClick={(e) => {
+										onMouseDown={(e) => {
 											e.preventDefault();
 											setSubmitting(true);
 										}}

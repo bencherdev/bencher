@@ -46,7 +46,7 @@ const DimensionsTab = (props: {
 							<button
 								type="button"
 								class="button is-small is-fullwidth"
-								onClick={(e) => {
+								onMouseDown={(e) => {
 									e.preventDefault();
 									props.handleChecked();
 								}}
@@ -127,13 +127,13 @@ const DimensionRow = (props: {
 	return (
 		<div class="panel-block is-block">
 			<div class="level">
+				{/* biome-ignore lint/a11y/useValidAnchor: action on press */}
 				<a
 					class={`level-left ${themeText(props.theme())}`}
 					title={`${props.dimension?.checked ? "Remove" : "Add"} ${
 						resource?.name
 					}`}
-					// biome-ignore lint/a11y/useValidAnchor: stateful anchor
-					onClick={(_e) => props.handleChecked(props.index())}
+					onMouseDown={(_e) => props.handleChecked(props.index())}
 				>
 					<div class="level-item">
 						<div class="columns is-vcentered is-mobile">

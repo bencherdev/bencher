@@ -122,7 +122,7 @@ const PerfHeader = (props: Props) => {
 											class="button is-fullwidth"
 											type="button"
 											title={`Share ${props.project()?.name}`}
-											onClick={(e) => {
+											onMouseDown={(e) => {
 												e.preventDefault();
 												setShare(true);
 											}}
@@ -141,7 +141,7 @@ const PerfHeader = (props: Props) => {
 											class="button is-fullwidth"
 											type="button"
 											title="Pin this plot"
-											onClick={(e) => {
+											onMouseDown={(e) => {
 												e.preventDefault();
 												setPin(true);
 											}}
@@ -159,7 +159,7 @@ const PerfHeader = (props: Props) => {
 										class="button is-fullwidth"
 										type="button"
 										title="Refresh Query"
-										onClick={(e) => {
+										onMouseDown={(e) => {
 											e.preventDefault();
 											props.handleRefresh();
 										}}

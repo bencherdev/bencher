@@ -15,7 +15,7 @@ const NavbarDropdown = () => {
 			}`}
 		>
 			{/* biome-ignore lint/a11y/useValidAnchor: navbar link */}
-			<a class="navbar-link" onClick={(_e) => setDropdown(!dropdown())}>
+			<a class="navbar-link" onMouseDown={(_e) => setDropdown(!dropdown())}>
 				{(user?.user?.name ? user.user.name : "Account").padStart(12, "\xa0")}
 			</a>
 			<div class="navbar-dropdown">

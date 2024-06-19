@@ -178,7 +178,7 @@ const TableHeaderButton = (props: {
 						class="button"
 						type="button"
 						title={`Refresh ${props.title}`}
-						onClick={(e) => {
+						onMouseDown={(e) => {
 							e.preventDefault();
 							props.handleRefresh();
 						}}

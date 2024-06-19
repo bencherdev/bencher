@@ -77,7 +77,7 @@ const StatusButton = (props: Props) => {
 					type="button"
 					title="Dismiss alert"
 					disabled={submitting()}
-					onClick={(e) => {
+					onMouseDown={(e) => {
 						e.preventDefault();
 						sendStatus();
 					}}
@@ -94,7 +94,7 @@ const StatusButton = (props: Props) => {
 					type="button"
 					title="Reactivate alert"
 					disabled={submitting()}
-					onClick={(e) => {
+					onMouseDown={(e) => {
 						e.preventDefault();
 						sendStatus();
 					}}

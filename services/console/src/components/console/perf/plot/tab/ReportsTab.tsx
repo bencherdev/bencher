@@ -145,11 +145,11 @@ const ReportRow = (props: {
 				{(result, _index) => (
 					<div class="panel-block is-block">
 						<div class="level">
+							{/* biome-ignore lint/a11y/useValidAnchor: action on press */}
 							<a
 								class={`level-left ${themeText(props.theme())}`}
 								title={`View Report from ${fmtDateTime(resource?.start_time)}`}
-								// biome-ignore lint/a11y/useValidAnchor: stateful anchor
-								onClick={(_e) =>
+								onMouseDown={(_e) =>
 									// Send the Measure UUID instead of the Report UUID
 									props.handleChecked(props.index?.(), result.measure?.uuid)
 								}

@@ -114,7 +114,7 @@ const PinModal = (props: Props) => {
 		<form class={`modal ${props.pin() && "is-active"}`}>
 			<div
 				class="modal-background"
-				onClick={(e) => {
+				onMouseDown={(e) => {
 					e.preventDefault();
 					props.setPin(false);
 				}}
@@ -130,7 +130,7 @@ const PinModal = (props: Props) => {
 						class="delete"
 						type="button"
 						aria-label="close"
-						onClick={(e) => {
+						onMouseDown={(e) => {
 							e.preventDefault();
 							props.setPin(false);
 						}}
@@ -187,7 +187,7 @@ const PinModal = (props: Props) => {
 						class="button is-primary is-fullwidth"
 						type="button"
 						disabled={!isSendable()}
-						onClick={(e) => {
+						onMouseDown={(e) => {
 							e.preventDefault();
 							handleSubmit();
 						}}

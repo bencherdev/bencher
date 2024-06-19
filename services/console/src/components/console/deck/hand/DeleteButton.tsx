@@ -73,7 +73,7 @@ const DeleteButton = (props: Props) => {
 				<button
 					class="button is-danger is-fullwidth is-small"
 					type="button"
-					onClick={(e) => {
+					onMouseDown={(e) => {
 						e.preventDefault();
 						setDeleteClicked(true);
 					}}
@@ -92,7 +92,7 @@ const DeleteButton = (props: Props) => {
 							class="button is-fullwidth"
 							type="submit"
 							disabled={deleting()}
-							onClick={(e) => {
+							onMouseDown={(e) => {
 								e.preventDefault();
 								sendDelete();
 							}}
@@ -104,7 +104,7 @@ const DeleteButton = (props: Props) => {
 						<button
 							class="button is-primary is-fullwidth"
 							type="button"
-							onClick={(e) => {
+							onMouseDown={(e) => {
 								e.preventDefault();
 								setDeleteClicked(false);
 							}}

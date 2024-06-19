@@ -14,7 +14,7 @@ const CopyButton = (props: Props) => {
 			type="button"
 			class="button is-fullwidth"
 			title="Copy to clipboard"
-			onClick={(e) => {
+			onMouseDown={(e) => {
 				e.preventDefault();
 				navigator.clipboard.writeText(props.text);
 				setCopied(true);

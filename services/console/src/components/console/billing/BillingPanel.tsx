@@ -274,10 +274,10 @@ const CloudSelfHostedLicensedPanel = (props: {
 			</h4>
 			<h4>Self-Hosted License Key:</h4>
 			<code style="word-break: break-word;">
+				{/* biome-ignore lint/a11y/useValidAnchor: action on press */}
 				<a
 					title="Copy to clipboard"
-					// biome-ignore lint/a11y/useValidAnchor: copy to clipboard
-					onClick={(_) =>
+					onMouseDown={(_) =>
 						navigator.clipboard.writeText(props.usage()?.license?.key ?? "")
 					}
 				>
@@ -290,10 +290,10 @@ const CloudSelfHostedLicensedPanel = (props: {
 			<h4>
 				<ol>
 					<li>
+						{/* biome-ignore lint/a11y/useValidAnchor: copy to clipboard */}
 						<a
 							title="Copy to clipboard"
-							// biome-ignore lint/a11y/useValidAnchor: copy to clipboard
-							onClick={(_) =>
+							onMouseDown={(_) =>
 								navigator.clipboard.writeText(props.usage()?.license?.key ?? "")
 							}
 						>
@@ -417,10 +417,10 @@ const SelfHostedFreePanel = (props: {
 					<li>
 						Enter your "Self-Hosted Organization UUID":{" "}
 						<code style="word-break: break-word;">
+							{/* biome-ignore lint/a11y/useValidAnchor: copy to clipboard */}
 							<a
 								title="Copy to clipboard"
-								// biome-ignore lint/a11y/useValidAnchor: copy to clipboard
-								onClick={(_) =>
+								onMouseDown={(_) =>
 									navigator.clipboard.writeText(
 										props.usage()?.organization ?? "",
 									)
@@ -467,7 +467,7 @@ const SelfHostedFreePanel = (props: {
 								class="button is-primary is-fullwidth"
 								type="submit"
 								disabled={!isSendable()}
-								onClick={(e) => {
+								onMouseDown={(e) => {
 									e.preventDefault();
 									sendForm();
 								}}

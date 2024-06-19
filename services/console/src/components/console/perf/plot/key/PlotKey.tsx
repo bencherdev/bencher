@@ -120,7 +120,7 @@ const MinimizeKeyButton = (props: { handleKey: (key: boolean) => void }) => {
 			title="Minimize Key"
 			type="button"
 			class="button is-small is-fullwidth"
-			onClick={() => props.handleKey(false)}
+			onMouseDown={() => props.handleKey(false)}
 		>
 			<span class="icon has-text-primary">
 				<i class="far fa-minus-square fa-2x" />
@@ -135,7 +135,7 @@ const MaximizeKeyButton = (props: { handleKey: (key: boolean) => void }) => {
 			title="Expand Key"
 			type="button"
 			class="button is-small is-fullwidth"
-			onClick={() => props.handleKey(true)}
+			onMouseDown={() => props.handleKey(true)}
 		>
 			<span class="icon has-text-primary">
 				<i class="far fa-plus-square fa-2x" />
@@ -181,7 +181,7 @@ const KeyButton = (props: {
 					? `background-color:${color};`
 					: `border-color:${color};color:${color};`
 			}
-			onClick={() => props.handlePerfActive(props.index())}
+			onMouseDown={() => props.handlePerfActive(props.index())}
 		>
 			{number}
 		</button>
@@ -203,7 +203,7 @@ const KeyToggle = (props: {
 			class="button is-small is-fullwidth"
 			type="button"
 			title={allActive() ? "Hide all plots" : "Show all plots"}
-			onClick={() => {
+			onMouseDown={() => {
 				props.togglePerfActive();
 			}}
 		>

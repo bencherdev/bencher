@@ -57,7 +57,7 @@ const PlotWindow = (props: Props) => {
 					type="button"
 					class={`button is-small${isSelected(Button.FourWeeks)}`}
 					title={props.config?.bottom}
-					onClick={(e) => {
+					onMouseDown={(e) => {
 						e.preventDefault();
 						props.handleField(Button.FourWeeks);
 					}}
@@ -68,7 +68,7 @@ const PlotWindow = (props: Props) => {
 					type="button"
 					class={`button is-small${isSelected(Button.EightWeeks)}`}
 					title={props.config?.bottom}
-					onClick={(e) => {
+					onMouseDown={(e) => {
 						e.preventDefault();
 						props.handleField(Button.EightWeeks);
 					}}
@@ -79,7 +79,7 @@ const PlotWindow = (props: Props) => {
 					type="button"
 					class={`button is-small${isSelected(Button.TwelveWeeks)}`}
 					title={props.config?.bottom}
-					onClick={(e) => {
+					onMouseDown={(e) => {
 						e.preventDefault();
 						props.handleField(Button.TwelveWeeks);
 					}}

@@ -233,7 +233,7 @@ const PinnedButtons = (props: {
 								}`}
 								title="Move plot"
 								disabled={!props.isAllowedEdit()}
-								onClick={(e) => {
+								onMouseDown={(e) => {
 									e.preventDefault();
 									switch (props.state()) {
 										case PinnedState.Rank:
@@ -256,7 +256,7 @@ const PinnedButtons = (props: {
 										class="button is-small"
 										title="Move plot down"
 										disabled={props.index() === props.total() - 1}
-										onClick={(e) => {
+										onMouseDown={(e) => {
 											e.preventDefault();
 											// Because the ranking algorithm looks backwards,
 											// we need to jump ahead, further down the list by two instead of one.
@@ -273,7 +273,7 @@ const PinnedButtons = (props: {
 										class="button is-small"
 										title="Move plot up"
 										disabled={props.index() === 0}
-										onClick={(e) => {
+										onMouseDown={(e) => {
 											e.preventDefault();
 											setRank(props.index() - 1);
 										}}
@@ -311,7 +311,7 @@ const PinnedButtons = (props: {
 							props.state() === PinnedState.Settings ? " is-active" : ""
 						}`}
 						title="Plot settings"
-						onClick={(e) => {
+						onMouseDown={(e) => {
 							e.preventDefault();
 							switch (props.state()) {
 								case PinnedState.Settings:
@@ -417,7 +417,7 @@ const PinnedRank = (props: {
 					Number.parseInt(rank()?.toString()) === props.index() + 1 ||
 					submitting()
 				}
-				onClick={(e) => {
+				onMouseDown={(e) => {
 					e.preventDefault();
 					setSubmitting(true);
 				}}

@@ -21,7 +21,7 @@ const LoginForm = () => {
 						class="button is-primary is-fullwidth"
 						type="submit"
 						disabled={true}
-						onClick={(e) => {
+						onMouseDown={(e) => {
 							e.preventDefault();
 						}}
 					>

@@ -30,10 +30,10 @@ const PlotInit = (props: Props) => {
 						disabled={true}
 					/>
 					Select at least one{" "}
+					{/* biome-ignore lint/a11y/useValidAnchor: action on press */}
 					<a
 						title="View Branches"
-						// biome-ignore lint/a11y/useValidAnchor: stateful anchor
-						onClick={(_e) => {
+						onMouseDown={(_e) => {
 							props.handleTab(PerfTab.BRANCHES);
 						}}
 					>
@@ -48,10 +48,10 @@ const PlotInit = (props: Props) => {
 						disabled={true}
 					/>
 					Select at least one{" "}
+					{/* biome-ignore lint/a11y/useValidAnchor: action on press */}
 					<a
 						title="View Testbeds"
-						// biome-ignore lint/a11y/useValidAnchor: stateful anchor
-						onClick={(_e) => {
+						onMouseDown={(_e) => {
 							props.handleTab(PerfTab.TESTBEDS);
 						}}
 					>
@@ -66,10 +66,10 @@ const PlotInit = (props: Props) => {
 						disabled={true}
 					/>
 					Select at least one{" "}
+					{/* biome-ignore lint/a11y/useValidAnchor: action on press */}
 					<a
 						title="View Benchmarks"
-						// biome-ignore lint/a11y/useValidAnchor: stateful anchor
-						onClick={(_e) => {
+						onMouseDown={(_e) => {
 							props.handleTab(PerfTab.BENCHMARKS);
 						}}
 					>

@@ -253,7 +253,7 @@ const BackButton = (props: {
 			class="button is-primary is-fullwidth"
 			type="button"
 			title="Go back to the previous page"
-			onClick={(e) => {
+			onMouseDown={(e) => {
 				e.preventDefault();
 				props.handlePage(props.page() - 1);
 			}}

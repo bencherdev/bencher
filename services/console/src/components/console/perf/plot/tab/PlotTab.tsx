@@ -350,11 +350,11 @@ const TabName = (props: {
 	handleTab: (tab: PerfTab) => void;
 }) => {
 	return (
+		// biome-ignore lint/a11y/useValidAnchor: <explanation>
 		<a
 			class={props.tab() === props.perfTab ? "is-active" : ""}
 			title={`View ${formatTab(props.perfTab)}`}
-			// biome-ignore lint/a11y/useValidAnchor: stateful anchor
-			onClick={() => props.handleTab(props.perfTab)}
+			onMouseDown={() => props.handleTab(props.perfTab)}
 		>
 			{formatTab(props.perfTab)}
 		</a>

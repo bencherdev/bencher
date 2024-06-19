@@ -189,7 +189,7 @@ const AuthForm = (props: Props) => {
 						class="button is-primary is-fullwidth"
 						type="submit"
 						disabled={!isSendable()}
-						onClick={(e) => {
+						onMouseDown={(e) => {
 							e.preventDefault();
 							handleSubmit();
 						}}

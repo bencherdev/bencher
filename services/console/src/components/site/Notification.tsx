@@ -90,7 +90,7 @@ const Notification = (props: { suppress?: undefined | boolean }) => {
 				<button
 					class="delete"
 					type="button"
-					onClick={(e) => {
+					onMouseDown={(e) => {
 						e.preventDefault();
 						removeNotification();
 					}}

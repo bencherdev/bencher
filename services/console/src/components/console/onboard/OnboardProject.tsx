@@ -284,7 +284,7 @@ const OnboardProject = (props: Props) => {
 										class="button is-primary is-fullwidth"
 										title="Save project name"
 										disabled={!isSendable()}
-										onClick={(e) => {
+										onMouseDown={(e) => {
 											e.preventDefault();
 											setSubmitting(true);
 										}}

@@ -232,7 +232,7 @@ const PlanLocality = (props: {
 									props.planKind() === kind && "is-primary is-selected"
 								}`}
 								type="button"
-								onClick={(_e) => props.handlePlanKind(kind as PlanKind)}
+								onMouseDown={(_e) => props.handlePlanKind(kind as PlanKind)}
 							>
 								{name}
 							</button>
