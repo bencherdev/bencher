@@ -1,7 +1,12 @@
+import Dotnet from "../dotnet.mdx";
+
 ## #️⃣ C# DotNet
 
 Адаптер C# DotNet (`c_sharp_dot_net`) ожидает вывод [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) в [формате JSON (то есть `--exporters json`)](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson).
 Измеряется `задержка` (то есть `наносекунды (ns)`).
+Этот вывод в формате JSON сохраняется в файл, поэтому вы должны использовать аргумент `--file` командной строки `bencher run`, чтобы указать путь к этому файлу.
+
+<Dotnet />
 
 Есть два варианта для метрики:
 - `среднее` (по умолчанию): `нижнее_значение` и `верхнее_значение` находятся на одно стандартное отклонение ниже и выше среднего значения (то есть `значение`) соответственно.

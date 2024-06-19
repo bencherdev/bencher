@@ -1,3 +1,9 @@
+import Java from "../java.mdx";
+
 ## ☕️ 자바 JMH
 
-자바 JMH 어댑터(`java_jmh`)는 [Java 마이크로벤치마크 하니스(JMH)](https://github.com/openjdk/jmh) 출력을 [JSON 형식(즉, `-rf json`)](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java)으로 기대합니다. `latency` 및 `throughput` 측정치(즉, `나노초(ns)` 및 `초당 작업 수(ops/sec)`)를 수집할 수 있습니다. `lower_value` 및 `upper_value`는 각각 평균(즉, `value`)에 대한 하한 및 상한 신뢰 구간입니다.
+자바 JMH 어댑터(`java_jmh`)는 [Java 마이크로벤치마크 하니스(JMH)](https://github.com/openjdk/jmh) 출력을 [JSON 형식(즉, `-rf json`)](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java)으로 기대합니다.
+이 JSON 출력은 파일로 저장되므로 파일 경로를 지정하기 위해 `bencher run` CLI의 `--file` 인자를 사용해야 합니다.
+`latency` 및 `throughput` 측정치(즉, `나노초(ns)` 및 `초당 작업 수(ops/sec)`)를 수집할 수 있습니다. `lower_value` 및 `upper_value`는 각각 평균(즉, `value`)에 대한 하한 및 상한 신뢰 구간입니다.
+
+<Java />

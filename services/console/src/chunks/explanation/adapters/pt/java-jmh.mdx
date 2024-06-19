@@ -1,5 +1,11 @@
+import Java from "../java.mdx";
+
 ## ☕ Java JMH
 
 O Adaptador Java JMH (`java_jmh`) espera a saída do [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh) em [formato JSON (ou seja, `-rf json`)](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java).
+Essa saída JSON é salva em um arquivo, então você deve usar o argumento `--file` da CLI `bencher run` para especificar o caminho desse arquivo.
 Medidas de `latência` e `vazão` (ou seja, `nanosegundos (ns)` e `operações / segundo (ops/sec)`) podem ser coletadas.
 Os `valores_inferior` e `superior` são os intervalos de confiança inferior e superior para a média (ou seja, `valor`) respectivamente.
+
+
+<Java />

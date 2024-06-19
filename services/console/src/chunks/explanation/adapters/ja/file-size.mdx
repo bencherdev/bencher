@@ -1,10 +1,13 @@
+import Binary from "../binary.mdx";
+
 ### ⚖️ ファイルサイズ
 
 <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドは、`--file-size` オプションを使用して、納品物のファイルサイズ（つまりバイナリーサイズ）を追跡するために使用できます。`--file-size` オプションは、サイズが測定されるファイルのファイルパスを期待します。内部的に、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code>は結果を[Bencher Metric Format (BMF) JSON][bmf]として出力します。したがって、明示的に[the `json` adapter][json]を使用することが良い習慣です。詳細については、[ファイルサイズを追跡する方法][file size]を参照してください。
 
 `file-size` 測定（つまり `bytes (B)`）が収集されます。利用可能なのはファイルサイズ値（つまり `value`）のみです。`lower_value` や `upper_value` は収集されません。`file-size` 測定は、すべてのプロジェクトにデフォルトで作成されるわけではありません。しかし、`--file-size` オプションを使用した場合、この測定はプロジェクトに自動的に作成されます。
-
 `--file-size`オプションは、複数回使用して複数のファイルサイズを追跡することができます。
+
+<Binary />
 
 [json]: #-json
 

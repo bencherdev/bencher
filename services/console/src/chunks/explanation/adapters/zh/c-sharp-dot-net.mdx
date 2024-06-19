@@ -1,7 +1,12 @@
+import Dotnet from "../dotnet.mdx";
+
 ## #️⃣ C# DotNet
 
 C# DotNet 适配器 (`c_sharp_dot_net`) 期望[BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet)的输出为[JSON格式（即使用 `--exporters json` 选项）](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson)。
 会收集`延迟`度量（即 `纳秒 (ns)`）。
+这个 JSON 输出被保存到一个文件中，因此你必须使用 `bencher run` CLI 的 `--file` 参数来指定该文件路径。
+
+<Dotnet />
 
 度量有两个选项：
 - `mean`（默认）：`lower_value` 和 `upper_value` 分别是标准差下方和上方的平均值（即 `value`）。

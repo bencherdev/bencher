@@ -1,7 +1,12 @@
+import Dotnet from "../dotnet.mdx";
+
 ## #️⃣ C# DotNet
 
 C# DotNet 어댑터(`c_sharp_dot_net`)는 [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) 출력을 [JSON 포맷(즉 `--exporters json`)](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson)으로 기대합니다.
 `latency` 측정값(즉 `나노초(ns)`)이 수집됩니다.
+이 JSON 출력은 파일로 저장되므로 파일 경로를 지정하기 위해 `bencher run` CLI의 `--file` 인자를 사용해야 합니다.
+
+<Dotnet />
 
 메트릭에는 두 가지 옵션이 있습니다:
 - `mean`(기본값): `lower_value`와 `upper_value`는 평균(즉 `value`)보다 표준편차 하나 아래와 위에 각각 있습니다.

@@ -1,7 +1,12 @@
+import Dotnet from "../dotnet.mdx";
+
 ## #️⃣ C# DotNet
 
 The C# DotNet Adapter (`c_sharp_dot_net`) expects [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) output in [JSON format (ie `--exporters json`)](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson).
 The `latency` Measure (ie `nanoseconds (ns)`) is gathered.
+This JSON output is saved to a file, so you must use the `bencher run` CLI `--file` option to specify that file path.
+
+<Dotnet />
 
 There are two options for the Metric:
 - `mean` (default):  The `lower_value` and `upper_value` are one standard deviation below and above the mean (ie `value`) respectively.

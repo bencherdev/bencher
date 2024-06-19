@@ -1,3 +1,9 @@
+import Java from "../java.mdx";
+
 ## ☕️ Java JMH
 
-Java JMH 适配器（`java_jmh`）期望 [Java 微基准测试工具 (JMH)](https://github.com/openjdk/jmh) 的输出以 [JSON格式（即 `-rf json`）](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java) 出现。可以收集`延迟`和`吞吐量`度量（即`纳秒（ns）`和`每秒操作数（ops/sec）`）。`lower_value` 和 `upper_value` 分别是均值（即`value`）的下限和上限置信区间。
+Java JMH 适配器（`java_jmh`）期望 [Java 微基准测试工具 (JMH)](https://github.com/openjdk/jmh) 的输出以 [JSON格式（即 `-rf json`）](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java) 出现
+这个 JSON 输出被保存到一个文件中，因此你必须使用 `bencher run` CLI 的 `--file` 参数来指定该文件路径。
+可以收集`延迟`和`吞吐量`度量（即`纳秒（ns）`和`每秒操作数（ops/sec）`）。`lower_value` 和 `upper_value` 分别是均值（即`value`）的下限和上限置信区间。
+
+<Java />

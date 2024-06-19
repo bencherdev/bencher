@@ -1,6 +1,10 @@
+import MakeCppGoogle from "../make-cpp-google.mdx";
+
 ## ➕ C++ Google
 
 The C++ Google Adapter (`cpp_google`) expects [Google Benchmark](https://github.com/google/benchmark) output in [JSON format (ie `--benchmark_format=json`)](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats).
 The `latency` Measure (ie `nanoseconds (ns)`) is gathered.
 Only the mean (ie `value`) is available.
 Neither `lower_value` nor `upper_value` are collected.
+
+<MakeCppGoogle />
