@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, collections::HashMap, fmt, iter::Sum, ops::Add};
 
-use bencher_valid::{BenchmarkName, NameId};
+use bencher_valid::{BenchmarkName, DateTime, NameId};
 use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -11,6 +11,12 @@ mod median;
 
 pub use mean::Mean;
 pub use median::Median;
+
+use crate::{
+    JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure, JsonTestbed, ReportUuid, ThresholdUuid,
+};
+
+use super::report::Iteration;
 
 crate::typed_uuid::typed_uuid!(MetricUuid);
 
@@ -27,16 +33,6 @@ pub type MeasureNameId = NameId;
 #[derive(Debug, Copy, Clone, Default, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewMetric {
-    pub value: OrderedFloat<f64>,
-    pub lower_value: Option<OrderedFloat<f64>>,
-    pub upper_value: Option<OrderedFloat<f64>>,
-}
-
-#[typeshare::typeshare]
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonMetric {
-    pub uuid: MetricUuid,
     pub value: OrderedFloat<f64>,
     pub lower_value: Option<OrderedFloat<f64>>,
     pub upper_value: Option<OrderedFloat<f64>>,
@@ -159,8 +155,35 @@ impl Mean for JsonNewMetric {}
 
 impl Median for JsonNewMetric {}
 
+#[typeshare::typeshare]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonMetric {
+    pub uuid: MetricUuid,
+    pub value: OrderedFloat<f64>,
+    pub lower_value: Option<OrderedFloat<f64>>,
+    pub upper_value: Option<OrderedFloat<f64>>,
+}
+
 impl fmt::Display for JsonMetric {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.value)
     }
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonIsolatedMetric {
+    pub uuid: MetricUuid,
+    pub report: ReportUuid,
+    pub iteration: Iteration,
+    pub branch: JsonBranch,
+    pub testbed: JsonTestbed,
+    pub benchmark: JsonBenchmark,
+    pub measure: JsonMeasure,
+    pub metric: JsonMetric,
+    pub threshold: Option<ThresholdUuid>,
+    pub boundary: Option<JsonBoundary>,
+    pub created: DateTime,
 }

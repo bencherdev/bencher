@@ -2,6 +2,7 @@ pub mod allowed;
 pub mod benchmarks;
 pub mod branches;
 pub mod measures;
+pub mod metrics;
 pub mod perf;
 pub mod plots;
 pub mod projects;

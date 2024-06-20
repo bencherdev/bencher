@@ -39,7 +39,8 @@ pub use project::{
     branch::{BranchUuid, JsonBranch, JsonBranches, JsonNewBranch, JsonStartPoint, VersionUuid},
     measure::{JsonMeasure, JsonMeasures, JsonNewMeasure, MeasureUuid},
     metric::{
-        JsonMetric, JsonMetricsMap, JsonNewMetric, JsonResultsMap, MeasureNameId, MetricUuid,
+        JsonIsolatedMetric, JsonMetric, JsonMetricsMap, JsonNewMetric, JsonResultsMap,
+        MeasureNameId, MetricUuid,
     },
     model::{JsonModel, ModelUuid},
     perf::{JsonPerf, JsonPerfQuery, ReportBenchmarkUuid},

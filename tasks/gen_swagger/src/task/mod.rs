@@ -58,6 +58,7 @@ impl Task {
                 "testbeds" => TagDetails { description: Some("Testbeds".into()), external_docs: None},
                 "benchmarks" => TagDetails { description: Some("Benchmarks".into()), external_docs: None},
                 "measures" => TagDetails { description: Some("Measures".into()), external_docs: None},
+                "metrics" => TagDetails { description: Some("Metrics".into()), external_docs: None},
                 "thresholds" => TagDetails { description: Some("Thresholds".into()), external_docs: None},
                 "models" => TagDetails { description: Some("Models".into()), external_docs: None},
                 "alerts" => TagDetails { description: Some("Alerts".into()), external_docs: None},
