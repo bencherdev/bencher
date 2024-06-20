@@ -1,6 +1,5 @@
 use bencher_json::{
-    project::{branch::VersionNumber, report::Iteration},
-    DateTime, GitHash, JsonIsolatedMetric, MetricUuid, ReportUuid, ResourceId,
+    project::report::Iteration, DateTime, JsonOneMetric, MetricUuid, ReportUuid, ResourceId,
 };
 use diesel::{
     ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
@@ -25,13 +24,18 @@ use crate::{
             measure::QueryMeasure,
             metric_boundary::QueryMetricBoundary,
             testbed::QueryTestbed,
-            threshold::{alert::QueryAlert, model::QueryModel, QueryThreshold},
+            threshold::{
+                alert::QueryAlert, boundary::QueryBoundary, model::QueryModel, QueryThreshold,
+            },
+            version::VersionId,
             QueryProject,
         },
         user::auth::{AuthUser, PubBearerToken},
     },
     schema, view,
 };
+
+use super::perf::threshold_model_alert;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjMetricParams {
@@ -68,7 +72,7 @@ pub async fn proj_metric_get(
     rqctx: RequestContext<ApiContext>,
     bearer_token: PubBearerToken,
     path_params: Path<ProjMetricParams>,
-) -> Result<ResponseOk<JsonIsolatedMetric>, HttpError> {
+) -> Result<ResponseOk<JsonOneMetric>, HttpError> {
     let auth_user = AuthUser::from_pub_token(rqctx.context(), bearer_token).await?;
     let json = get_one_inner(
         rqctx.context(),
@@ -83,7 +87,7 @@ async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjMetricParams,
     auth_user: Option<&AuthUser>,
-) -> Result<JsonIsolatedMetric, HttpError> {
+) -> Result<JsonOneMetric, HttpError> {
     let query_project = QueryProject::is_allowed_public(
         conn_lock!(context),
         &context.rbac,
@@ -91,7 +95,7 @@ async fn get_one_inner(
         auth_user,
     )?;
 
-    let query = view::metric_boundary::table
+    let perf_query = view::metric_boundary::table
         .inner_join(
             schema::report_benchmark::table.inner_join(
                 schema::report::table
@@ -127,8 +131,7 @@ async fn get_one_inner(
             schema::report_benchmark::iteration,
             schema::report::start_time,
             schema::report::end_time,
-            schema::version::number,
-            schema::version::hash,
+            schema::version::id,
             (
                 (
                     schema::threshold::id,
@@ -166,12 +169,12 @@ async fn get_one_inner(
             QueryMetricBoundary::as_select(),
         ))
         .first::<MetricQuery>(conn_lock!(context))
-        .map_err(resource_not_found_err!(Metric, (query_project,  &path_params.metric)))?;
+        .map_err(resource_not_found_err!(Metric, (&query_project,  &path_params.metric)))?;
 
-    todo!()
+    metric_query_json(context, &query_project, perf_query).await
 }
 
-type MetricQuery = (
+pub(super) type MetricQuery = (
     QueryBranch,
     QueryTestbed,
     QueryBenchmark,
@@ -180,8 +183,52 @@ type MetricQuery = (
     Iteration,
     DateTime,
     DateTime,
-    VersionNumber,
-    Option<GitHash>,
+    VersionId,
     Option<(QueryThreshold, QueryModel, Option<QueryAlert>)>,
     QueryMetricBoundary,
 );
+
+async fn metric_query_json(
+    context: &ApiContext,
+    project: &QueryProject,
+    (
+        branch,
+        testbed,
+        benchmark,
+        measure,
+        report,
+        iteration,
+        start_time,
+        end_time,
+        version_id,
+        tma,
+        query_metric_boundary,
+    ): MetricQuery,
+) -> Result<JsonOneMetric, HttpError> {
+    let branch = branch.into_branch_version_json(conn_lock!(context), version_id)?;
+    let testbed = testbed.into_json_for_project(project);
+    let benchmark = benchmark.into_json_for_project(project);
+    let measure = measure.into_json_for_project(project);
+
+    let (threshold, alert) = threshold_model_alert(project, tma);
+    let (metric, boundary) = QueryMetricBoundary::split(query_metric_boundary);
+    let metric_uuid = metric.uuid;
+    let metric = metric.into_json();
+    let boundary = boundary.map(QueryBoundary::into_json);
+
+    Ok(JsonOneMetric {
+        uuid: metric_uuid,
+        report,
+        iteration,
+        start_time,
+        end_time,
+        branch,
+        testbed,
+        benchmark,
+        measure,
+        metric,
+        threshold,
+        boundary,
+        alert,
+    })
+}

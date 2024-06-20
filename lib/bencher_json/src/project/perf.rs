@@ -276,9 +276,9 @@ pub struct JsonPerfMetric {
     pub start_time: DateTime,
     pub end_time: DateTime,
     pub version: JsonVersion,
+    pub metric: JsonMetric,
     // The threshold model is necessary for each metric as it may change over time
     pub threshold: Option<JsonThresholdModel>,
-    pub metric: JsonMetric,
     pub boundary: Option<JsonBoundary>,
     pub alert: Option<JsonPerfAlert>,
 }

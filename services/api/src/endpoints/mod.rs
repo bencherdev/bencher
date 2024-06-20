@@ -196,6 +196,12 @@ impl Api {
         api.register(project::measures::proj_measure_patch)?;
         api.register(project::measures::proj_measure_delete)?;
 
+        // Metrics
+        if http_options {
+            api.register(project::metrics::proj_metric_options)?;
+        }
+        api.register(project::metrics::proj_metric_get)?;
+
         // Thresholds
         if http_options {
             api.register(project::thresholds::proj_thresholds_options)?;

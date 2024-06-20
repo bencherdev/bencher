@@ -61,25 +61,8 @@ impl QueryBranch {
         branch_id: BranchId,
         version_id: VersionId,
     ) -> Result<JsonBranchVersion, HttpError> {
-        let JsonBranch {
-            uuid,
-            project,
-            name,
-            slug,
-            start_point,
-            created,
-            modified,
-        } = Self::get(conn, branch_id)?.into_json(conn)?;
-        Ok(JsonBranchVersion {
-            uuid,
-            project,
-            name,
-            slug,
-            version: QueryVersion::get(conn, version_id)?.into_json(),
-            start_point,
-            created,
-            modified,
-        })
+        let branch = Self::get(conn, branch_id)?;
+        branch.into_branch_version_json(conn, version_id)
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonBranch, HttpError> {
@@ -118,6 +101,41 @@ impl QueryBranch {
             project: project.uuid,
             name,
             slug,
+            start_point,
+            created,
+            modified,
+        })
+    }
+
+    pub fn into_branch_version_json(
+        self,
+        conn: &mut DbConnection,
+        version_id: VersionId,
+    ) -> Result<JsonBranchVersion, HttpError> {
+        let project_id = self.project_id;
+        let JsonBranch {
+            uuid,
+            project,
+            name,
+            slug,
+            start_point,
+            created,
+            modified,
+        } = self.into_json(conn)?;
+        let version = QueryVersion::get(conn, version_id)?;
+        // Make sure that the version is in the same project as the branch
+        assert_parentage(
+            BencherResource::Project,
+            project_id,
+            BencherResource::Version,
+            version.project_id,
+        );
+        Ok(JsonBranchVersion {
+            uuid,
+            project,
+            name,
+            slug,
+            version: version.into_json(),
             start_point,
             created,
             modified,

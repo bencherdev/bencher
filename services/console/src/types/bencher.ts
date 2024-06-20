@@ -376,6 +376,21 @@ export interface JsonBranchVersion {
 	modified: string;
 }
 
+export interface JsonOneMetric {
+	uuid: MetricUuid;
+	report: Uuid;
+	iteration: Iteration;
+	branch: JsonBranchVersion;
+	testbed: JsonTestbed;
+	benchmark: JsonBenchmark;
+	measure: JsonMeasure;
+	metric: JsonMetric;
+	threshold?: JsonThresholdModel;
+	boundary?: JsonBoundary;
+	alert?: JsonPerfAlert;
+	created: string;
+}
+
 export enum Visibility {
 	Public = "public",
 	Private = "private",
@@ -436,8 +451,8 @@ export interface JsonPerfMetric {
 	start_time: string;
 	end_time: string;
 	version: JsonVersion;
-	threshold?: JsonThresholdModel;
 	metric: JsonMetric;
+	threshold?: JsonThresholdModel;
 	boundary?: JsonBoundary;
 	alert?: JsonPerfAlert;
 }

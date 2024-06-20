@@ -12,11 +12,12 @@ mod median;
 pub use mean::Mean;
 pub use median::Median;
 
-use crate::{
-    JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure, JsonTestbed, ReportUuid, ThresholdUuid,
-};
+use crate::{JsonBenchmark, JsonBoundary, JsonMeasure, JsonTestbed, ReportUuid};
 
-use super::report::Iteration;
+use super::{
+    alert::JsonPerfAlert, branch::JsonBranchVersion, report::Iteration,
+    threshold::JsonThresholdModel,
+};
 
 crate::typed_uuid::typed_uuid!(MetricUuid);
 
@@ -174,16 +175,18 @@ impl fmt::Display for JsonMetric {
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonIsolatedMetric {
+pub struct JsonOneMetric {
     pub uuid: MetricUuid,
     pub report: ReportUuid,
     pub iteration: Iteration,
-    pub branch: JsonBranch,
+    pub start_time: DateTime,
+    pub end_time: DateTime,
+    pub branch: JsonBranchVersion,
     pub testbed: JsonTestbed,
     pub benchmark: JsonBenchmark,
     pub measure: JsonMeasure,
     pub metric: JsonMetric,
-    pub threshold: Option<ThresholdUuid>,
+    pub threshold: Option<JsonThresholdModel>,
     pub boundary: Option<JsonBoundary>,
-    pub created: DateTime,
+    pub alert: Option<JsonPerfAlert>,
 }

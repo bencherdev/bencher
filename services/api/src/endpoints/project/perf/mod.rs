@@ -1,8 +1,10 @@
 use bencher_json::{
     project::{
+        alert::JsonPerfAlert,
         branch::{JsonVersion, VersionNumber},
         perf::{JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
         report::Iteration,
+        threshold::JsonThresholdModel,
     },
     BenchmarkUuid, BranchUuid, DateTime, GitHash, JsonPerf, JsonPerfQuery, MeasureUuid, ReportUuid,
     ResourceId, TestbedUuid,
@@ -412,7 +414,7 @@ fn new_perf_metric(
         end_time,
         version_number,
         version_hash,
-        boundary_limit,
+        tma,
         query_metric_boundary,
     ): PerfMetricQuery,
 ) -> JsonPerfMetric {
@@ -421,15 +423,7 @@ fn new_perf_metric(
         hash: version_hash,
     };
 
-    let (threshold, alert) =
-        if let Some((query_threshold, query_model, query_alert)) = boundary_limit {
-            let threshold =
-                Some(query_threshold.into_threshold_model_json_for_project(project, query_model));
-            let alert = query_alert.map(QueryAlert::into_perf_json);
-            (threshold, alert)
-        } else {
-            (None, None)
-        };
+    let (threshold, alert) = threshold_model_alert(project, tma);
     let (metric, boundary) = QueryMetricBoundary::split(query_metric_boundary);
     let metric = metric.into_json();
     let boundary = boundary.map(QueryBoundary::into_json);
@@ -440,10 +434,24 @@ fn new_perf_metric(
         start_time,
         end_time,
         version,
-        threshold,
         metric,
+        threshold,
         boundary,
         alert,
+    }
+}
+
+pub(super) fn threshold_model_alert(
+    project: &QueryProject,
+    tma: Option<(QueryThreshold, QueryModel, Option<QueryAlert>)>,
+) -> (Option<JsonThresholdModel>, Option<JsonPerfAlert>) {
+    if let Some((query_threshold, query_model, query_alert)) = tma {
+        let threshold =
+            Some(query_threshold.into_threshold_model_json_for_project(project, query_model));
+        let alert = query_alert.map(QueryAlert::into_perf_json);
+        (threshold, alert)
+    } else {
+        (None, None)
     }
 }
 

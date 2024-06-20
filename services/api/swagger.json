@@ -3842,6 +3842,85 @@
         }
       }
     },
+    "/v0/projects/{project}/metrics/{metric}": {
+      "get": {
+        "tags": [
+          "projects",
+          "metrics"
+        ],
+        "summary": "View a metric",
+        "description": "View a metric for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project.",
+        "operationId": "proj_metric_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "metric",
+            "description": "The UUID for a metric.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/MetricUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonOneMetric"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/projects/{project}/perf": {
       "get": {
         "tags": [
@@ -8880,6 +8959,73 @@
           "code"
         ]
       },
+      "JsonOneMetric": {
+        "type": "object",
+        "properties": {
+          "alert": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonPerfAlert"
+              }
+            ]
+          },
+          "benchmark": {
+            "$ref": "#/components/schemas/JsonBenchmark"
+          },
+          "boundary": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonBoundary"
+              }
+            ]
+          },
+          "branch": {
+            "$ref": "#/components/schemas/JsonBranchVersion"
+          },
+          "created": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "iteration": {
+            "$ref": "#/components/schemas/Iteration"
+          },
+          "measure": {
+            "$ref": "#/components/schemas/JsonMeasure"
+          },
+          "metric": {
+            "$ref": "#/components/schemas/JsonMetric"
+          },
+          "report": {
+            "$ref": "#/components/schemas/ReportUuid"
+          },
+          "testbed": {
+            "$ref": "#/components/schemas/JsonTestbed"
+          },
+          "threshold": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonThresholdModel"
+              }
+            ]
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/MetricUuid"
+          }
+        },
+        "required": [
+          "benchmark",
+          "branch",
+          "created",
+          "iteration",
+          "measure",
+          "metric",
+          "report",
+          "testbed",
+          "uuid"
+        ]
+      },
       "JsonOrganization": {
         "type": "object",
         "properties": {
@@ -11305,6 +11451,10 @@
     },
     {
       "name": "members"
+    },
+    {
+      "name": "metrics",
+      "description": "Metrics"
     },
     {
       "name": "models",
