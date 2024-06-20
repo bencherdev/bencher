@@ -18,7 +18,7 @@ crate::typed_uuid::typed_uuid!(MetricUuid);
 pub type JsonResultsMap = HashMap<BenchmarkName, JsonMetricsMap>;
 
 #[typeshare::typeshare]
-pub type JsonMetricsMap = HashMap<MeasureNameId, JsonMetric>;
+pub type JsonMetricsMap = HashMap<MeasureNameId, JsonNewMetric>;
 
 #[typeshare::typeshare]
 pub type MeasureNameId = NameId;
@@ -26,24 +26,24 @@ pub type MeasureNameId = NameId;
 #[typeshare::typeshare]
 #[derive(Debug, Copy, Clone, Default, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonMetric {
+pub struct JsonNewMetric {
     pub value: OrderedFloat<f64>,
     pub lower_value: Option<OrderedFloat<f64>>,
     pub upper_value: Option<OrderedFloat<f64>>,
 }
 
-impl JsonMetric {
-    pub fn new(value: f64, lower_value: Option<f64>, upper_value: Option<f64>) -> Self {
-        Self {
-            value: OrderedFloat(value),
-            lower_value: lower_value.map(OrderedFloat),
-            upper_value: upper_value.map(OrderedFloat),
-        }
-    }
+#[typeshare::typeshare]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonMetric {
+    pub uuid: MetricUuid,
+    pub value: OrderedFloat<f64>,
+    pub lower_value: Option<OrderedFloat<f64>>,
+    pub upper_value: Option<OrderedFloat<f64>>,
+}
 
-    pub fn new_results(
-        results: Vec<(BenchmarkName, Vec<(MeasureNameId, JsonMetric)>)>,
-    ) -> JsonResultsMap {
+impl JsonNewMetric {
+    pub fn results(results: Vec<(BenchmarkName, Vec<(MeasureNameId, Self)>)>) -> JsonResultsMap {
         results
             .into_iter()
             .map(|(benchmark_name, measure_metrics)| {
@@ -53,13 +53,7 @@ impl JsonMetric {
     }
 }
 
-impl fmt::Display for JsonMetric {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.value)
-    }
-}
-
-impl PartialEq for JsonMetric {
+impl PartialEq for JsonNewMetric {
     fn eq(&self, other: &Self) -> bool {
         self.value == other.value
             && option_eq(self.lower_value, other.lower_value)
@@ -82,13 +76,13 @@ where
     }
 }
 
-impl PartialOrd for JsonMetric {
+impl PartialOrd for JsonNewMetric {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for JsonMetric {
+impl Ord for JsonNewMetric {
     fn cmp(&self, other: &Self) -> Ordering {
         let value_order = self.value.cmp(&other.value);
         if Ordering::Equal == value_order {
@@ -104,7 +98,7 @@ impl Ord for JsonMetric {
     }
 }
 
-impl Add for JsonMetric {
+impl Add for JsonNewMetric {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
@@ -139,7 +133,7 @@ where
     }
 }
 
-impl Sum for JsonMetric {
+impl Sum for JsonNewMetric {
     fn sum<I>(iter: I) -> Self
     where
         I: Iterator<Item = Self>,
@@ -148,7 +142,7 @@ impl Sum for JsonMetric {
     }
 }
 
-impl std::ops::Div<usize> for JsonMetric {
+impl std::ops::Div<usize> for JsonNewMetric {
     type Output = Self;
 
     #[allow(clippy::cast_precision_loss)]
@@ -161,6 +155,12 @@ impl std::ops::Div<usize> for JsonMetric {
     }
 }
 
-impl Mean for JsonMetric {}
+impl Mean for JsonNewMetric {}
 
-impl Median for JsonMetric {}
+impl Median for JsonNewMetric {}
+
+impl fmt::Display for JsonMetric {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.value)
+    }
+}

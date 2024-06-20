@@ -1,4 +1,4 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonNewMetric};
 
 use nom::{
     bytes::complete::tag,
@@ -39,10 +39,10 @@ impl Adaptable for AdapterJsTime {
     }
 }
 
-fn parse_time(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
+fn parse_time(input: &str) -> IResult<&str, (BenchmarkName, JsonNewMetric)> {
     map_res(
         many_till(anychar, parse_time_time),
-        |(name_chars, json_metric)| -> Result<(BenchmarkName, JsonMetric), NomError> {
+        |(name_chars, json_metric)| -> Result<(BenchmarkName, JsonNewMetric), NomError> {
             if name_chars.is_empty() {
                 return Err(nom_error(String::new()));
             }
@@ -52,7 +52,7 @@ fn parse_time(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
     )(input)
 }
 
-fn parse_time_time(input: &str) -> IResult<&str, JsonMetric> {
+fn parse_time_time(input: &str) -> IResult<&str, JsonNewMetric> {
     map(
         tuple((
             tuple((tag(":"), space1)),
@@ -70,7 +70,7 @@ fn parse_time_time(input: &str) -> IResult<&str, JsonMetric> {
         )),
         |(_, duration, units, _)| {
             let value = latency_as_nanos(duration, units);
-            JsonMetric {
+            JsonNewMetric {
                 value,
                 lower_value: None,
                 upper_value: None,

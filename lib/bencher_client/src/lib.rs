@@ -123,6 +123,7 @@ try_from_client!(
     JsonTestbed,
     JsonMeasures,
     JsonMeasure,
+    JsonMetric,
     JsonThresholds,
     JsonThreshold,
     JsonModel,

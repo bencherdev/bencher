@@ -1,6 +1,6 @@
 use std::{collections::HashMap, str::FromStr};
 
-use bencher_json::{JsonMetric, MeasureNameId};
+use bencher_json::{JsonNewMetric, MeasureNameId};
 use serde::{Deserialize, Serialize};
 
 use super::{CombinedKind, OrdKind};
@@ -11,7 +11,7 @@ pub struct AdapterMetrics {
     pub inner: MetricsMap,
 }
 
-pub type MetricsMap = HashMap<MeasureNameId, JsonMetric>;
+pub type MetricsMap = HashMap<MeasureNameId, JsonNewMetric>;
 
 impl From<MetricsMap> for AdapterMetrics {
     fn from(inner: MetricsMap) -> Self {
@@ -41,7 +41,7 @@ impl AdapterMetrics {
         metric_map.into()
     }
 
-    pub fn get(&self, key: &str) -> Option<&JsonMetric> {
+    pub fn get(&self, key: &str) -> Option<&JsonNewMetric> {
         self.inner.get(&MeasureNameId::from_str(key).ok()?)
     }
 }

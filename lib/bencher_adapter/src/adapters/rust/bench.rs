@@ -1,4 +1,4 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonNewMetric};
 use nom::{
     bytes::complete::{tag, take_until1},
     character::complete::space1,
@@ -38,7 +38,7 @@ impl Adaptable for AdapterRustBench {
     }
 }
 
-fn parse_cargo(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
+fn parse_cargo(input: &str) -> IResult<&str, (BenchmarkName, JsonNewMetric)> {
     map_res(
         tuple((
             tag("test"),
@@ -50,7 +50,7 @@ fn parse_cargo(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
             parse_cargo_bench,
             eof,
         )),
-        |(_, _, name, _, _, _, json_metric, _)| -> Result<(BenchmarkName, JsonMetric), NomError> {
+        |(_, _, name, _, _, _, json_metric, _)| -> Result<(BenchmarkName, JsonNewMetric), NomError> {
             let benchmark_name = parse_benchmark_name(name)?;
             Ok((benchmark_name, json_metric))
         },
@@ -59,7 +59,7 @@ fn parse_cargo(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
 
 // cargo bench
 // TODO cargo test -- -Z unstable-options --format json
-fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
+fn parse_cargo_bench(input: &str) -> IResult<&str, JsonNewMetric> {
     map(
         tuple((
             tag("bench:"),
@@ -78,7 +78,7 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
         |(_, _, duration, _, units, _, _, (_, _, variance))| {
             let value = latency_as_nanos(duration, units);
             let variance = Some(latency_as_nanos(variance, units));
-            JsonMetric {
+            JsonNewMetric {
                 value,
                 lower_value: variance.map(|v| value - v),
                 upper_value: variance.map(|v| value + v),
@@ -90,7 +90,7 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 pub(crate) mod test_rust_bench {
-    use bencher_json::{project::report::JsonAverage, JsonMetric};
+    use bencher_json::{project::report::JsonAverage, JsonNewMetric};
     use pretty_assertions::assert_eq;
 
     use crate::{
@@ -149,7 +149,7 @@ pub(crate) mod test_rust_bench {
                 "",
                 (
                     "tests::is_bench_test".parse().unwrap(),
-                    JsonMetric {
+                    JsonNewMetric {
                         value: 5_280.0.into(),
                         lower_value: Some(4_947.0.into()),
                         upper_value: Some(5_613.0.into()),

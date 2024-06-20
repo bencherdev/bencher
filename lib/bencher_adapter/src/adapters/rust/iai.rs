@@ -6,7 +6,7 @@ use bencher_json::{
         },
         report::JsonAverage,
     },
-    BenchmarkName, JsonMetric,
+    BenchmarkName, JsonNewMetric,
 };
 use nom::{
     branch::alt,
@@ -65,7 +65,7 @@ fn parse_iai_lines(
         (
             INSTRUCTIONS_NAME_STR,
             instructions_line,
-            IaiMeasure::Instructions as fn(JsonMetric) -> IaiMeasure,
+            IaiMeasure::Instructions as fn(JsonNewMetric) -> IaiMeasure,
         ),
         (
             L1_ACCESSES_NAME_STR,
@@ -99,7 +99,7 @@ fn parse_iai_lines(
 }
 
 #[allow(clippy::cast_precision_loss)]
-fn parse_iai_metric<'a>(input: &'a str, measure: &'static str) -> IResult<&'a str, JsonMetric> {
+fn parse_iai_metric<'a>(input: &'a str, measure: &'static str) -> IResult<&'a str, JsonNewMetric> {
     map(
         tuple((
             space0,
@@ -129,7 +129,7 @@ fn parse_iai_metric<'a>(input: &'a str, measure: &'static str) -> IResult<&'a st
                 ),
             )),
         )),
-        |(_, _, _, _, metric, ())| JsonMetric {
+        |(_, _, _, _, metric, ())| JsonNewMetric {
             value: (metric as f64).into(),
             lower_value: None,
             upper_value: None,
@@ -150,7 +150,7 @@ pub(crate) mod test_rust_iai {
             ESTIMATED_CYCLES_SLUG_STR, INSTRUCTIONS_NAME_STR, INSTRUCTIONS_SLUG_STR,
             L1_ACCESSES_SLUG_STR, L2_ACCESSES_SLUG_STR, RAM_ACCESSES_SLUG_STR,
         },
-        JsonMetric,
+        JsonNewMetric,
     };
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
@@ -178,7 +178,7 @@ pub(crate) mod test_rust_iai {
             super::parse_iai_metric("  Instructions:  1234", INSTRUCTIONS_NAME_STR),
             Ok((
                 "",
-                JsonMetric {
+                JsonNewMetric {
                     value: 1234.0.into(),
                     upper_value: None,
                     lower_value: None
@@ -190,7 +190,7 @@ pub(crate) mod test_rust_iai {
             super::parse_iai_metric("  Instructions:  1234 (No change)", INSTRUCTIONS_NAME_STR),
             Ok((
                 "",
-                JsonMetric {
+                JsonNewMetric {
                     value: 1234.0.into(),
                     upper_value: None,
                     lower_value: None
@@ -202,7 +202,7 @@ pub(crate) mod test_rust_iai {
             super::parse_iai_metric("  Instructions:  1234 (+3.14%)", INSTRUCTIONS_NAME_STR),
             Ok((
                 "",
-                JsonMetric {
+                JsonNewMetric {
                     value: 1234.0.into(),
                     upper_value: None,
                     lower_value: None

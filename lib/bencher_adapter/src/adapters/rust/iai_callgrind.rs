@@ -3,7 +3,7 @@ use bencher_json::{
         measure::{ESTIMATED_CYCLES_NAME_STR, INSTRUCTIONS_NAME_STR},
         report::JsonAverage,
     },
-    BenchmarkName, JsonMetric,
+    BenchmarkName, JsonNewMetric,
 };
 use nom::{
     branch::alt,
@@ -68,7 +68,7 @@ fn parse_iai_lines(
         (
             INSTRUCTIONS_NAME_STR,
             instructions_line,
-            IaiCallgrindMeasure::Instructions as fn(JsonMetric) -> IaiCallgrindMeasure,
+            IaiCallgrindMeasure::Instructions as fn(JsonNewMetric) -> IaiCallgrindMeasure,
         ),
         (
             L1_HITS_NAME_STR,
@@ -111,7 +111,7 @@ fn parse_iai_lines(
 fn parse_iai_callgrind_metric<'a>(
     input: &'a str,
     measure: &'static str,
-) -> IResult<&'a str, JsonMetric> {
+) -> IResult<&'a str, JsonNewMetric> {
     map(
         tuple((
             space0,
@@ -153,7 +153,7 @@ fn parse_iai_callgrind_metric<'a>(
             )),
             eof,
         )),
-        |(_, _, _, _, metric, _, (), _)| JsonMetric {
+        |(_, _, _, _, metric, _, (), _)| JsonNewMetric {
             value: (metric as f64).into(),
             lower_value: None,
             upper_value: None,
@@ -175,7 +175,7 @@ pub(crate) mod test_rust_iai_callgrind {
             L1_ACCESSES_SLUG_STR, L2_ACCESSES_SLUG_STR, RAM_ACCESSES_SLUG_STR,
             TOTAL_ACCESSES_SLUG_STR,
         },
-        JsonMetric,
+        JsonNewMetric,
     };
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
@@ -206,7 +206,7 @@ pub(crate) mod test_rust_iai_callgrind {
             ),
             Ok((
                 "",
-                JsonMetric {
+                JsonNewMetric {
                     value: 1234.0.into(),
                     upper_value: None,
                     lower_value: None
@@ -221,7 +221,7 @@ pub(crate) mod test_rust_iai_callgrind {
             ),
             Ok((
                 "",
-                JsonMetric {
+                JsonNewMetric {
                     value: 1234.0.into(),
                     upper_value: None,
                     lower_value: None
@@ -236,7 +236,7 @@ pub(crate) mod test_rust_iai_callgrind {
             ),
             Ok((
                 "",
-                JsonMetric {
+                JsonNewMetric {
                     value: 1234.0.into(),
                     upper_value: None,
                     lower_value: None

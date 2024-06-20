@@ -1,4 +1,4 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonNewMetric};
 use nom::{
     character::complete::{anychar, space0, space1},
     combinator::{eof, map, map_res},
@@ -54,10 +54,10 @@ fn parse_catch2<'i>(
     benchmark_name_line: &str,
     mean_line: &str,
     input: &'i str,
-) -> IResult<&'i str, (BenchmarkName, JsonMetric)> {
+) -> IResult<&'i str, (BenchmarkName, JsonNewMetric)> {
     map_res(
         parse_catch2_time,
-        |std_dev| -> Result<(BenchmarkName, JsonMetric), NomError> {
+        |std_dev| -> Result<(BenchmarkName, JsonNewMetric), NomError> {
             #[allow(clippy::map_err_ignore)]
             let (benchmark_name_remainder, benchmark_name) =
                 parse_catch2_benchmark_name(benchmark_name_line)
@@ -68,7 +68,7 @@ fn parse_catch2<'i>(
                 parse_catch2_time(mean_line).map_err(|_| nom_error(mean_line))?;
 
             if benchmark_name_remainder.is_empty() && mean_remainder.is_empty() {
-                let json_metric = JsonMetric {
+                let json_metric = JsonNewMetric {
                     value: mean,
                     lower_value: Some(mean - std_dev),
                     upper_value: Some(mean + std_dev),

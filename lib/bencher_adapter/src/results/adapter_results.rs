@@ -9,7 +9,7 @@ use bencher_json::{
         },
         metric::Mean,
     },
-    BenchmarkName, JsonMetric, NameId,
+    BenchmarkName, JsonNewMetric, NameId,
 };
 use literally::hmap;
 use once_cell::sync::Lazy;
@@ -67,27 +67,27 @@ impl From<ResultsMap> for AdapterResults {
 
 #[derive(Debug, Clone)]
 pub enum AdapterMeasure {
-    Latency(JsonMetric),
-    Throughput(JsonMetric),
+    Latency(JsonNewMetric),
+    Throughput(JsonNewMetric),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IaiMeasure {
-    Instructions(JsonMetric),
-    L1Accesses(JsonMetric),
-    L2Accesses(JsonMetric),
-    RamAccesses(JsonMetric),
-    EstimatedCycles(JsonMetric),
+    Instructions(JsonNewMetric),
+    L1Accesses(JsonNewMetric),
+    L2Accesses(JsonNewMetric),
+    RamAccesses(JsonNewMetric),
+    EstimatedCycles(JsonNewMetric),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IaiCallgrindMeasure {
-    Instructions(JsonMetric),
-    L1Accesses(JsonMetric),
-    L2Accesses(JsonMetric),
-    RamAccesses(JsonMetric),
-    TotalReadWrite(JsonMetric),
-    EstimatedCycles(JsonMetric),
+    Instructions(JsonNewMetric),
+    L1Accesses(JsonNewMetric),
+    L2Accesses(JsonNewMetric),
+    RamAccesses(JsonNewMetric),
+    TotalReadWrite(JsonNewMetric),
+    EstimatedCycles(JsonNewMetric),
 }
 
 impl AdapterResults {
@@ -118,7 +118,7 @@ impl AdapterResults {
         Some(results_map.into())
     }
 
-    pub fn new_latency(benchmark_metrics: Vec<(BenchmarkName, JsonMetric)>) -> Option<Self> {
+    pub fn new_latency(benchmark_metrics: Vec<(BenchmarkName, JsonNewMetric)>) -> Option<Self> {
         Self::new(
             benchmark_metrics
                 .into_iter()
@@ -129,7 +129,7 @@ impl AdapterResults {
         )
     }
 
-    pub fn new_throughput(benchmark_metrics: Vec<(BenchmarkName, JsonMetric)>) -> Option<Self> {
+    pub fn new_throughput(benchmark_metrics: Vec<(BenchmarkName, JsonNewMetric)>) -> Option<Self> {
         Self::new(
             benchmark_metrics
                 .into_iter()

@@ -8168,12 +8168,16 @@
             "type": "number",
             "format": "double"
           },
+          "uuid": {
+            "$ref": "#/components/schemas/MetricUuid"
+          },
           "value": {
             "type": "number",
             "format": "double"
           }
         },
         "required": [
+          "uuid",
           "value"
         ]
       },
@@ -10796,6 +10800,10 @@
         ]
       },
       "MeasureUuid": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "MetricUuid": {
         "type": "string",
         "format": "uuid"
       },

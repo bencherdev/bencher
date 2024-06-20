@@ -1,4 +1,4 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonNewMetric};
 use nom::{
     bytes::complete::tag,
     character::complete::{anychar, space1},
@@ -46,10 +46,10 @@ impl Adaptable for AdapterRustCriterion {
 fn parse_criterion<'i>(
     prior_line: Option<&str>,
     input: &'i str,
-) -> IResult<&'i str, (BenchmarkName, JsonMetric)> {
+) -> IResult<&'i str, (BenchmarkName, JsonNewMetric)> {
     map_res(
         many_till(anychar, parse_criterion_time),
-        |(name_chars, json_metric)| -> Result<(BenchmarkName, JsonMetric), NomError> {
+        |(name_chars, json_metric)| -> Result<(BenchmarkName, JsonNewMetric), NomError> {
             let name: String = if name_chars.is_empty() {
                 prior_line.ok_or_else(|| nom_error(String::new()))?.into()
             } else {
@@ -61,7 +61,7 @@ fn parse_criterion<'i>(
     )(input)
 }
 
-fn parse_criterion_time(input: &str) -> IResult<&str, JsonMetric> {
+fn parse_criterion_time(input: &str) -> IResult<&str, JsonNewMetric> {
     map(
         tuple((
             tuple((space1, tag("time:"), space1)),
@@ -72,7 +72,7 @@ fn parse_criterion_time(input: &str) -> IResult<&str, JsonMetric> {
     )(input)
 }
 
-fn parse_criterion_metric(input: &str) -> IResult<&str, JsonMetric> {
+fn parse_criterion_metric(input: &str) -> IResult<&str, JsonNewMetric> {
     map(
         delimited(
             tag("["),
@@ -85,7 +85,7 @@ fn parse_criterion_metric(input: &str) -> IResult<&str, JsonMetric> {
             )),
             tag("]"),
         ),
-        |(lower_value, _, value, _, upper_value)| JsonMetric {
+        |(lower_value, _, value, _, upper_value)| JsonNewMetric {
             value,
             lower_value: Some(lower_value),
             upper_value: Some(upper_value),
@@ -103,7 +103,7 @@ fn parse_criterion_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 pub(crate) mod test_rust_criterion {
-    use bencher_json::{project::report::JsonAverage, JsonMetric};
+    use bencher_json::{project::report::JsonAverage, JsonNewMetric};
     use pretty_assertions::assert_eq;
 
     use crate::{
@@ -126,7 +126,7 @@ pub(crate) mod test_rust_criterion {
                     "",
                     (
                         "criterion_benchmark".parse().unwrap(),
-                        JsonMetric {
+                        JsonNewMetric {
                             value: 280.0.into(),
                             lower_value: Some(222.2.into()),
                             upper_value: Some(333.33.into()),
@@ -140,7 +140,7 @@ pub(crate) mod test_rust_criterion {
                     "",
                     (
                         "criterion_benchmark".parse().unwrap(),
-                        JsonMetric {
+                        JsonNewMetric {
                             value: 5.280.into(),
                             lower_value: Some(0.222.into()),
                             upper_value: Some(0.33333.into()),
@@ -154,7 +154,7 @@ pub(crate) mod test_rust_criterion {
                     "",
                     (
                         "criterion_benchmark".parse().unwrap(),
-                        JsonMetric {
+                        JsonNewMetric {
                             value: 18_019.0.into(),
                             lower_value: Some(16_652.0.into()),
                             upper_value: Some(19_562.0.into()),

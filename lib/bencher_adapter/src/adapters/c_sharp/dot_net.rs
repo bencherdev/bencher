@@ -1,4 +1,4 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonAny, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonAny, JsonNewMetric};
 
 use rust_decimal::Decimal;
 use serde::Deserialize;
@@ -80,7 +80,7 @@ impl DotNet {
             };
             let value = latency_as_nanos(average, units);
             let spread = latency_as_nanos(spread, units);
-            let json_metric = JsonMetric {
+            let json_metric = JsonNewMetric {
                 value,
                 lower_value: Some(value - spread),
                 upper_value: Some(value + spread),

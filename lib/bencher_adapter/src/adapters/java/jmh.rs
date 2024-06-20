@@ -1,4 +1,4 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonAny, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonAny, JsonNewMetric};
 
 use rust_decimal::Decimal;
 use serde::Deserialize;
@@ -75,7 +75,7 @@ impl TryFrom<Jmh> for Option<AdapterResults> {
                 let value = latency_as_nanos(score, time_unit);
                 let lower_value = latency_as_nanos(score_confidence.0, time_unit);
                 let upper_value = latency_as_nanos(score_confidence.1, time_unit);
-                let json_metric = JsonMetric {
+                let json_metric = JsonNewMetric {
                     value,
                     lower_value: Some(lower_value),
                     upper_value: Some(upper_value),
@@ -90,7 +90,7 @@ impl TryFrom<Jmh> for Option<AdapterResults> {
                 let value = throughput_as_secs(score, time_unit);
                 let lower_value = throughput_as_secs(score_confidence.0, time_unit);
                 let upper_value = throughput_as_secs(score_confidence.1, time_unit);
-                let json_metric = JsonMetric {
+                let json_metric = JsonNewMetric {
                     value,
                     lower_value: Some(lower_value),
                     upper_value: Some(upper_value),

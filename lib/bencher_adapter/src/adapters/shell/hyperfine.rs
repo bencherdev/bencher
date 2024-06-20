@@ -1,4 +1,4 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonAny, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonAny, JsonNewMetric};
 use ordered_float::OrderedFloat;
 use serde::Deserialize;
 
@@ -71,7 +71,7 @@ impl Hyperfine {
                     Some(latency_as_nanos(upper, units)),
                 )
             });
-            let json_metric = JsonMetric {
+            let json_metric = JsonNewMetric {
                 value,
                 lower_value,
                 upper_value,

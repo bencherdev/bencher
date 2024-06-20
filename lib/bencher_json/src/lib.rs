@@ -38,7 +38,9 @@ pub use project::{
     boundary::{BoundaryUuid, JsonBoundaries, JsonBoundary},
     branch::{BranchUuid, JsonBranch, JsonBranches, JsonNewBranch, JsonStartPoint, VersionUuid},
     measure::{JsonMeasure, JsonMeasures, JsonNewMeasure, MeasureUuid},
-    metric::{JsonMetric, JsonMetricsMap, JsonResultsMap, MeasureNameId, MetricUuid},
+    metric::{
+        JsonMetric, JsonMetricsMap, JsonNewMetric, JsonResultsMap, MeasureNameId, MetricUuid,
+    },
     model::{JsonModel, ModelUuid},
     perf::{JsonPerf, JsonPerfQuery, ReportBenchmarkUuid},
     plot::{JsonNewPlot, JsonPlot, JsonPlots, PlotUuid},

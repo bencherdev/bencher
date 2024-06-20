@@ -1,4 +1,4 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonNewMetric};
 use nom::{
     bytes::complete::{tag, take_until1, take_while1},
     character::complete::{space0, space1},
@@ -38,7 +38,7 @@ impl Adaptable for AdapterPythonAsv {
     }
 }
 
-fn parse_asv(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
+fn parse_asv(input: &str) -> IResult<&str, (BenchmarkName, JsonNewMetric)> {
     map_res(
         tuple((
             tuple((
@@ -51,7 +51,7 @@ fn parse_asv(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
             space1,
             parse_asv_time,
         )),
-        |(_, name, _, json_metric)| -> Result<(BenchmarkName, JsonMetric), NomError> {
+        |(_, name, _, json_metric)| -> Result<(BenchmarkName, JsonNewMetric), NomError> {
             if name.is_empty() {
                 return Err(nom_error(String::new()));
             }
@@ -61,13 +61,13 @@ fn parse_asv(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
     )(input)
 }
 
-fn parse_asv_time(input: &str) -> IResult<&str, JsonMetric> {
+fn parse_asv_time(input: &str) -> IResult<&str, JsonNewMetric> {
     map(
         tuple((parse_f64, tag("±"), parse_f64, parse_units, eof)),
         |(duration, _, range, units, _)| {
             let value = latency_as_nanos(duration, units);
             let range = latency_as_nanos(range, units);
-            JsonMetric {
+            JsonNewMetric {
                 value,
                 lower_value: Some(value - range),
                 upper_value: Some(value + range),

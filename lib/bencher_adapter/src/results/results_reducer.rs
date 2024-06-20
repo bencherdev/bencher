@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bencher_json::{project::metric::Median, BenchmarkName, JsonMetric, MeasureNameId};
+use bencher_json::{project::metric::Median, BenchmarkName, JsonNewMetric, MeasureNameId};
 
 use super::{
     adapter_metrics::AdapterMetrics, adapter_results::AdapterResults, AdapterResultsArray,
@@ -50,14 +50,14 @@ impl ResultsReducer {
 
 #[derive(Debug, Clone)]
 pub struct MeasuresMap {
-    pub inner: HashMap<MeasureNameId, Vec<JsonMetric>>,
+    pub inner: HashMap<MeasureNameId, Vec<JsonNewMetric>>,
 }
 
 impl MeasuresMap {
     pub(crate) fn median(self) -> AdapterMetrics {
         let mut metric_map = HashMap::new();
         for (measure, metric) in self.inner {
-            if let Some(median) = JsonMetric::median(metric) {
+            if let Some(median) = JsonNewMetric::median(metric) {
                 metric_map.insert(measure, median);
             }
         }

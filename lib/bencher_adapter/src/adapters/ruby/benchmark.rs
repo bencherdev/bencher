@@ -1,4 +1,4 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonNewMetric};
 use nom::{
     bytes::complete::tag,
     character::complete::{anychar, space1},
@@ -62,17 +62,17 @@ fn parse_header(input: &str) -> IResult<&str, ()> {
     )(input)
 }
 
-fn parse_ruby(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
+fn parse_ruby(input: &str) -> IResult<&str, (BenchmarkName, JsonNewMetric)> {
     map_res(
         many_till(anychar, parse_ruby_benchmark),
-        |(name, json_metric)| -> Result<(BenchmarkName, JsonMetric), NomError> {
+        |(name, json_metric)| -> Result<(BenchmarkName, JsonNewMetric), NomError> {
             let benchmark_name = parse_benchmark_name_chars(&name)?;
             Ok((benchmark_name, json_metric))
         },
     )(input)
 }
 
-fn parse_ruby_benchmark(input: &str) -> IResult<&str, JsonMetric> {
+fn parse_ruby_benchmark(input: &str) -> IResult<&str, JsonNewMetric> {
     map_res(
         tuple((
             space1,
@@ -85,10 +85,10 @@ fn parse_ruby_benchmark(input: &str) -> IResult<&str, JsonMetric> {
             delimited(tag("("), tuple((space1, parse_f64)), tag(")")),
             eof,
         )),
-        |(_, _user, _, _system, _, _total, _, (_, real), _)| -> Result<JsonMetric, NomError> {
+        |(_, _user, _, _system, _, _total, _, (_, real), _)| -> Result<JsonNewMetric, NomError> {
             let units = Units::Sec;
             let value = latency_as_nanos(real, units);
-            Ok(JsonMetric {
+            Ok(JsonNewMetric {
                 value,
                 lower_value: None,
                 upper_value: None,

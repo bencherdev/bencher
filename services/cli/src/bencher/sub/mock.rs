@@ -4,7 +4,7 @@ use bencher_adapter::{
     results::{adapter_metrics::AdapterMetrics, adapter_results::LATENCY_NAME_ID},
     AdapterResults,
 };
-use bencher_json::JsonMetric;
+use bencher_json::JsonNewMetric;
 use literally::hmap;
 use rand::{distributions::Uniform, prelude::Distribution, Rng};
 
@@ -93,7 +93,7 @@ impl Mock {
                     .map_err(MockError::ParseBenchmarkName)?,
                 AdapterMetrics {
                     inner: hmap! {
-                        LATENCY_NAME_ID.clone() => JsonMetric {
+                        LATENCY_NAME_ID.clone() => JsonNewMetric {
                              value: value.into(),
                              lower_value: Some((value - variance).into()),
                              upper_value: Some((value + variance).into()),

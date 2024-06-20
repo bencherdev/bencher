@@ -1,4 +1,4 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonAny, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonAny, JsonNewMetric};
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
@@ -55,7 +55,7 @@ impl TryFrom<Google> for Option<AdapterResults> {
                 time_unit,
             } = benchmark;
             let value = latency_as_nanos(real_time, time_unit);
-            let json_metric = JsonMetric {
+            let json_metric = JsonNewMetric {
                 value,
                 lower_value: None,
                 upper_value: None,

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use bencher_json::{project::measure::FILE_SIZE_SLUG, JsonMetric};
+use bencher_json::{project::measure::FILE_SIZE_SLUG, JsonNewMetric};
 use camino::Utf8PathBuf;
 
 use crate::RunError;
@@ -45,14 +45,14 @@ impl FileSize {
                 file_name,
                 vec![(
                     file_size_slug,
-                    JsonMetric {
+                    JsonNewMetric {
                         value,
                         ..Default::default()
                     },
                 )],
             ));
         }
-        let results = JsonMetric::new_results(results);
+        let results = JsonNewMetric::results(results);
         serde_json::to_string(&results).map_err(RunError::SerializeFileSize)
     }
 }

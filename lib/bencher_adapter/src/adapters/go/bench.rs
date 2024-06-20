@@ -1,4 +1,4 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonNewMetric};
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_till1},
@@ -40,7 +40,7 @@ impl Adaptable for AdapterGoBench {
     }
 }
 
-fn parse_go(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
+fn parse_go(input: &str) -> IResult<&str, (BenchmarkName, JsonNewMetric)> {
     map_res(
         tuple((
             take_till1(|c| c == ' ' || c == '\t'),
@@ -56,19 +56,19 @@ fn parse_go(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
                 ),
             )),
         )),
-        |(name, _, _iter, _, json_metric, ())| -> Result<(BenchmarkName, JsonMetric), NomError> {
+        |(name, _, _iter, _, json_metric, ())| -> Result<(BenchmarkName, JsonNewMetric), NomError> {
             let benchmark_name = parse_benchmark_name(name)?;
             Ok((benchmark_name, json_metric))
         },
     )(input)
 }
 
-fn parse_go_bench(input: &str) -> IResult<&str, JsonMetric> {
+fn parse_go_bench(input: &str) -> IResult<&str, JsonNewMetric> {
     map_res(
         tuple((parse_f64, space1, parse_units, tag("/op"))),
-        |(duration, _, units, _)| -> Result<JsonMetric, NomError> {
+        |(duration, _, units, _)| -> Result<JsonNewMetric, NomError> {
             let value = latency_as_nanos(duration, units);
-            Ok(JsonMetric {
+            Ok(JsonNewMetric {
                 value,
                 lower_value: None,
                 upper_value: None,
@@ -80,7 +80,7 @@ fn parse_go_bench(input: &str) -> IResult<&str, JsonMetric> {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 pub(crate) mod test_go_bench {
-    use bencher_json::{project::report::JsonAverage, JsonMetric};
+    use bencher_json::{project::report::JsonAverage, JsonNewMetric};
     use pretty_assertions::assert_eq;
 
     use crate::{
@@ -103,7 +103,7 @@ pub(crate) mod test_go_bench {
                     "",
                     (
                         "BenchmarkFib10-8".parse().unwrap(),
-                        JsonMetric {
+                        JsonNewMetric {
                             value: 325.0.into(),
                             lower_value: None,
                             upper_value: None,
@@ -117,7 +117,7 @@ pub(crate) mod test_go_bench {
                     "",
                     (
                         "BenchmarkFib20".parse().unwrap(),
-                        JsonMetric {
+                        JsonNewMetric {
                             value: 40_537.123.into(),
                             lower_value: None,
                             upper_value: None,
@@ -131,7 +131,7 @@ pub(crate) mod test_go_bench {
                     "",
                     (
                         "BenchmarkFib/my_tabled_benchmark_-_10-8".parse().unwrap(),
-                        JsonMetric {
+                        JsonNewMetric {
                             value: 325.0.into(),
                             lower_value: None,
                             upper_value: None,
@@ -145,7 +145,7 @@ pub(crate) mod test_go_bench {
                     "",
                     (
                         "BenchmarkFib/my_tabled_benchmark_-_20".parse().unwrap(),
-                        JsonMetric {
+                        JsonNewMetric {
                             value: 40_537.123.into(),
                             lower_value: None,
                             upper_value: None,
@@ -159,7 +159,7 @@ pub(crate) mod test_go_bench {
                     "",
                     (
                         "BenchmarkFib/my/tabled/benchmark_-_20".parse().unwrap(),
-                        JsonMetric {
+                        JsonNewMetric {
                             value: 40_537.456.into(),
                             lower_value: None,
                             upper_value: None,
@@ -173,7 +173,7 @@ pub(crate) mod test_go_bench {
                     "",
                     (
                         "BenchmarkFib20WithAuxMetric-8".parse().unwrap(),
-                        JsonMetric {
+                        JsonNewMetric {
                             value: 25_829.0.into(),
                             lower_value: None,
                             upper_value: None,

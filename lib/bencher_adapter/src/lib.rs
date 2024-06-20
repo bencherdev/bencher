@@ -19,7 +19,7 @@ use adapters::{
     shell::{hyperfine::AdapterShellHyperfine, AdapterShell},
 };
 use bencher_json::project::report::{Adapter, JsonAverage};
-pub use bencher_json::{BenchmarkName, JsonMetric};
+pub use bencher_json::{BenchmarkName, JsonNewMetric};
 pub use error::AdapterError;
 pub use results::{adapter_results::AdapterResults, AdapterResultsArray};
 

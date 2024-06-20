@@ -1,4 +1,4 @@
-use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonNewMetric};
 
 use nom::{
     bytes::complete::tag,
@@ -41,10 +41,10 @@ impl Adaptable for AdapterJsBenchmark {
     }
 }
 
-fn parse_benchmark(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
+fn parse_benchmark(input: &str) -> IResult<&str, (BenchmarkName, JsonNewMetric)> {
     map_res(
         many_till(anychar, parse_benchmark_time),
-        |(name_chars, json_metric)| -> Result<(BenchmarkName, JsonMetric), NomError> {
+        |(name_chars, json_metric)| -> Result<(BenchmarkName, JsonNewMetric), NomError> {
             if name_chars.is_empty() {
                 return Err(nom_error(String::new()));
             }
@@ -54,7 +54,7 @@ fn parse_benchmark(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
     )(input)
 }
 
-fn parse_benchmark_time(input: &str) -> IResult<&str, JsonMetric> {
+fn parse_benchmark_time(input: &str) -> IResult<&str, JsonNewMetric> {
     map(
         tuple((
             tuple((space1, tag("x"), space1)),
@@ -75,7 +75,7 @@ fn parse_benchmark_time(input: &str) -> IResult<&str, JsonMetric> {
         |(_, throughput, _, percent_error, _)| {
             let value = throughput_as_secs(throughput, Units::Sec);
             let error = value * percent_error;
-            JsonMetric {
+            JsonNewMetric {
                 value,
                 lower_value: Some(value - error),
                 upper_value: Some(value + error),

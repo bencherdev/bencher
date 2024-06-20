@@ -1,4 +1,4 @@
-use bencher_json::{JsonMetric, MetricUuid};
+use bencher_json::{JsonMetric, JsonNewMetric, MetricUuid};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
@@ -71,22 +71,16 @@ impl QueryMetric {
             )
     }
 
-    pub fn json(value: f64, lower_value: Option<f64>, upper_value: Option<f64>) -> JsonMetric {
-        JsonMetric {
-            value: value.into(),
-            lower_value: lower_value.map(Into::into),
-            upper_value: upper_value.map(Into::into),
-        }
-    }
-
     pub fn into_json(self) -> JsonMetric {
         let Self {
+            uuid,
             value,
             lower_value,
             upper_value,
             ..
         } = self;
         JsonMetric {
+            uuid,
             value: value.into(),
             lower_value: lower_value.map(Into::into),
             upper_value: upper_value.map(Into::into),
@@ -109,9 +103,9 @@ impl InsertMetric {
     pub fn from_json(
         report_benchmark_id: ReportBenchmarkId,
         measure_id: MeasureId,
-        metric: JsonMetric,
+        metric: JsonNewMetric,
     ) -> Self {
-        let JsonMetric {
+        let JsonNewMetric {
             value,
             lower_value,
             upper_value,

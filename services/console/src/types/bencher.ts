@@ -10,13 +10,13 @@ export type NameId = string;
 
 export type MeasureNameId = NameId;
 
-export interface JsonMetric {
+export interface JsonNewMetric {
 	value: number;
 	lower_value?: number;
 	upper_value?: number;
 }
 
-export type JsonMetricsMap = Record<MeasureNameId, JsonMetric>;
+export type JsonMetricsMap = Record<MeasureNameId, JsonNewMetric>;
 
 export type JsonResultsMap = Record<BenchmarkName, JsonMetricsMap>;
 
@@ -73,6 +73,13 @@ export interface JsonThresholdModel {
 	statistic?: JsonModel;
 	model: JsonModel;
 	created: string;
+}
+
+export interface JsonMetric {
+	uuid: MetricUuid;
+	value: number;
+	lower_value?: number;
+	upper_value?: number;
 }
 
 export interface JsonBoundary {
