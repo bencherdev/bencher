@@ -9,7 +9,8 @@ use dropshot::HttpError;
 use slog::Logger;
 
 use crate::{
-    context::DbConnection,
+    conn_lock,
+    context::{ApiContext, DbConnection},
     error::resource_not_found_err,
     model::{
         project::{
@@ -58,7 +59,11 @@ impl QueryReport {
     fn_get_id!(report, ReportId, ReportUuid);
     fn_get_uuid!(report, ReportId, ReportUuid);
 
-    pub fn into_json(self, log: &Logger, conn: &mut DbConnection) -> Result<JsonReport, HttpError> {
+    pub async fn into_json(
+        self,
+        log: &Logger,
+        context: &ApiContext,
+    ) -> Result<JsonReport, HttpError> {
         let Self {
             id,
             uuid,
@@ -73,19 +78,29 @@ impl QueryReport {
             created,
         } = self;
 
-        let query_project = QueryProject::get(conn, project_id)?;
-        let results = get_report_results(log, conn, &query_project, id)?;
-        let alerts = get_report_alerts(conn, &query_project, id)?;
+        let query_project = QueryProject::get(conn_lock!(context), project_id)?;
+        let user = QueryUser::get(conn_lock!(context), user_id)?.into_json();
+        let branch = QueryBranch::get_branch_version_json_for_project(
+            conn_lock!(context),
+            &query_project,
+            branch_id,
+            version_id,
+        )?;
+        let testbed = QueryTestbed::get(conn_lock!(context), testbed_id)?
+            .into_json_for_project(&query_project);
+        let results = get_report_results(log, conn_lock!(context), &query_project, id)?;
+        let alerts = get_report_alerts(conn_lock!(context), &query_project, id)?;
 
+        let project = query_project.into_json(conn_lock!(context))?;
         Ok(JsonReport {
             uuid,
-            user: QueryUser::get(conn, user_id)?.into_json(),
-            project: query_project.into_json(conn)?,
-            branch: QueryBranch::get_branch_version_json(conn, branch_id, version_id)?,
-            testbed: QueryTestbed::get(conn, testbed_id)?.into_json(conn)?,
-            adapter,
+            user,
+            project,
+            branch,
+            testbed,
             start_time,
             end_time,
+            adapter,
             results,
             alerts,
             created,

@@ -27,7 +27,7 @@ use crate::{
             threshold::{
                 alert::QueryAlert, boundary::QueryBoundary, model::QueryModel, QueryThreshold,
             },
-            version::VersionId,
+            version::QueryVersion,
             QueryProject,
         },
         user::auth::{AuthUser, PubBearerToken},
@@ -124,6 +124,7 @@ async fn get_one_inner(
         .left_join(schema::alert::table.on(view::metric_boundary::boundary_id.eq(schema::alert::boundary_id.nullable())))
         .select((
             QueryBranch::as_select(),
+            QueryVersion::as_select(),
             QueryTestbed::as_select(),
             QueryBenchmark::as_select(),
             QueryMeasure::as_select(),
@@ -131,7 +132,6 @@ async fn get_one_inner(
             schema::report_benchmark::iteration,
             schema::report::start_time,
             schema::report::end_time,
-            schema::version::id,
             (
                 (
                     schema::threshold::id,
@@ -176,6 +176,7 @@ async fn get_one_inner(
 
 pub(super) type MetricQuery = (
     QueryBranch,
+    QueryVersion,
     QueryTestbed,
     QueryBenchmark,
     QueryMeasure,
@@ -183,7 +184,6 @@ pub(super) type MetricQuery = (
     Iteration,
     DateTime,
     DateTime,
-    VersionId,
     Option<(QueryThreshold, QueryModel, Option<QueryAlert>)>,
     QueryMetricBoundary,
 );
@@ -193,6 +193,7 @@ async fn metric_query_json(
     project: &QueryProject,
     (
         branch,
+        version,
         testbed,
         benchmark,
         measure,
@@ -200,12 +201,12 @@ async fn metric_query_json(
         iteration,
         start_time,
         end_time,
-        version_id,
         tma,
         query_metric_boundary,
     ): MetricQuery,
 ) -> Result<JsonOneMetric, HttpError> {
-    let branch = branch.into_branch_version_json(conn_lock!(context), version_id)?;
+    let branch =
+        branch.into_branch_version_json_for_project(conn_lock!(context), project, version)?;
     let testbed = testbed.into_json_for_project(project);
     let benchmark = benchmark.into_json_for_project(project);
     let measure = measure.into_json_for_project(project);

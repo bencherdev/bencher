@@ -159,23 +159,27 @@ async fn get_ls_inner(
         },
     };
 
-    conn_lock!(context, |conn| Ok(query
+    // Separate out this query to prevent a deadlock when getting the conn_lock
+    let reports = query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .select(QueryReport::as_select())
-        .load(conn)
-        .map_err(resource_not_found_err!(Report, &query_project))?
-        .into_iter()
-        .filter_map(|report| match report.into_json(log, conn) {
-            Ok(report) => Some(report),
+        .load(conn_lock!(context))
+        .map_err(resource_not_found_err!(Report, &query_project))?;
+
+    let mut json_reports = Vec::with_capacity(reports.len());
+    for report in reports {
+        match report.into_json(log, context).await {
+            Ok(report) => json_reports.push(report),
             Err(err) => {
                 debug_assert!(false, "{err}");
                 #[cfg(feature = "sentry")]
                 sentry::capture_error(&err);
-                None
             },
-        })
-        .collect()))
+        }
+    }
+
+    Ok(json_reports.into())
 }
 
 /// Create a report
@@ -316,7 +320,7 @@ async fn post_inner(
     // Don't return the error from processing the report until after the metrics usage has been checked
     processed_report?;
     // If the report was processed successfully, then return the report with the results
-    query_report.into_json(log, conn_lock!(context))
+    query_report.into_json(log, context).await
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -379,14 +383,16 @@ async fn get_one_inner(
         auth_user,
     )?;
 
-    conn_lock!(context, |conn| QueryReport::belonging_to(&query_project)
+    // Separate out this query to prevent a deadlock when getting the conn_lock
+    let report = QueryReport::belonging_to(&query_project)
         .filter(schema::report::uuid.eq(path_params.report.to_string()))
-        .first::<QueryReport>(conn)
+        .first::<QueryReport>(conn_lock!(context))
         .map_err(resource_not_found_err!(
             Report,
             (&query_project, path_params.report)
-        ))?
-        .into_json(log, conn))
+        ))?;
+
+    report.into_json(log, context).await
 }
 
 /// Delete a report
