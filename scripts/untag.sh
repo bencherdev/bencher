@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION=$(cargo xtask version)
+VERSION=$(cargo bin-version)
 TAG="v$VERSION"
 git tag -d $TAG
 git push --delete origin $TAG

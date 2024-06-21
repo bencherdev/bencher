@@ -1,7 +1,6 @@
 use clap::{Parser, Subcommand};
 
 mod plus;
-mod version;
 
 #[cfg(feature = "plus")]
 pub use plus::{
@@ -11,7 +10,6 @@ pub use plus::{
     prompt::{TaskImage, TaskLanguage, TaskPrompt, TaskTranslate},
     stats::TaskStats,
 };
-pub use version::TaskVersion;
 
 #[derive(Parser, Debug)]
 pub struct TaskTask {
@@ -21,8 +19,6 @@ pub struct TaskTask {
 
 #[derive(Subcommand, Debug)]
 pub enum TaskSub {
-    /// Get current API version
-    Version(TaskVersion),
     #[cfg(feature = "plus")]
     #[clap(subcommand)]
     /// `URLindexing`

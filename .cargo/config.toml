@@ -1,6 +1,7 @@
 [alias]
 xtask = "run --manifest-path ./xtask/Cargo.toml --"
 # Tasks
+bin-version = "run --manifest-path ./tasks/bin_version/Cargo.toml --"
 gen-installer = "run --manifest-path ./tasks/gen_installer/Cargo.toml --"
 gen-pkg = "run --manifest-path ./tasks/gen_pkg/Cargo.toml --"
 gen-notes = "run --manifest-path ./tasks/gen_notes/Cargo.toml --"

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION=$(cargo xtask version)
+VERSION=$(cargo bin-version)
 
 git add Cargo.toml
 git add Cargo.lock

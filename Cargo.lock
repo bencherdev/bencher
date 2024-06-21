@@ -1152,6 +1152,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "bin_version"
+version = "0.4.13"
+
+[[package]]
 name = "bit-set"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
