@@ -5,7 +5,7 @@
 !Cargo.toml
 !Cargo.lock
 !lib/bencher_valid/
-!services/api/swagger.json
+!services/api/openapi.json
 !services/cli/templates/output
 !services/console/package-lock.json
 !services/console/package.json

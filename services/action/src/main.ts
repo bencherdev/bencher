@@ -2,7 +2,7 @@ import * as core from "@actions/core";
 import * as toolCache from "@actions/tool-cache";
 import { chmod } from "node:fs/promises";
 
-import swagger from "../../api/swagger.json";
+import spec from "../../api/openapi.json";
 
 const run = async () => {
 	const { bin, url, semVer } = getUrl();
@@ -31,8 +31,8 @@ const getSemVer = () => {
 		case "":
 		// Except that it magically defaults to `latest` for `version`
 		case "latest":
-			// Get latest semantic version from swagger.json
-			return `${swagger?.info?.version}`;
+			// Get latest semantic version from openapi.json
+			return `${spec?.info?.version}`;
 		default:
 			// Use user-specified version
 			// Remove leading `v` if present

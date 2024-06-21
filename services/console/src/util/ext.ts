@@ -1,4 +1,4 @@
-import swagger from "../../../api/swagger.json";
+import swagger from "../../../api/openapi.json";
 
 export const BENCHER_SITE_URL = "https://bencher.dev";
 export const BENCHER_CLOUD_API_URL: string = "https://api.bencher.dev";

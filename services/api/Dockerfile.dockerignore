@@ -11,4 +11,4 @@
 !services/api/src/
 !services/api/Cargo.toml
 !services/api/diesel.toml
-!services/api/swagger.json
+!services/api/openapi.json

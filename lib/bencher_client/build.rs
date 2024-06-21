@@ -5,7 +5,7 @@ use std::os::unix;
 use std::{fs, path::Path};
 
 fn main() {
-    let src = "../../services/api/swagger.json";
+    let src = "../../services/api/openapi.json";
     println!("cargo:rerun-if-changed={src}");
     let file = fs::File::open(src).unwrap();
     let spec = serde_json::from_reader(file).unwrap();

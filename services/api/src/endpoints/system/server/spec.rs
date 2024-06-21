@@ -7,7 +7,7 @@ use crate::{
         endpoint::{CorsResponse, Get, ResponseOk},
         Endpoint,
     },
-    SWAGGER_SPEC,
+    SPEC,
 };
 
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]
@@ -39,5 +39,5 @@ pub async fn server_spec_options(
 pub async fn server_spec_get(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<ResponseOk<JsonSpec>, HttpError> {
-    Ok(Get::pub_response_ok(SWAGGER_SPEC.clone()))
+    Ok(Get::pub_response_ok(SPEC.clone()))
 }

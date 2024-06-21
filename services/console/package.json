@@ -7,7 +7,7 @@
 		"lint": "npx biome lint .",
 		"typeshare": "typeshare ../.. --lang=typescript --output-file=./src/types/bencher.ts",
 		"wasm": "./build_wasm.sh",
-		"copy": "cp -r ../cli/templates/output ./public/download && cp ../api/swagger.json ./public/download/openapi.json",
+		"copy": "cp -r ../cli/templates/output ./public/download && cp ../api/openapi.json ./public/download/openapi.json",
 		"setup": "npm run typeshare && npm run wasm && npm run copy",
 		"dev": "npm run setup && export BENCHER_API_URL=http://127.0.0.1:61016 && export GITHUB_CLIENT_ID=Iv1.46f0fd7a007ef1af && astro dev --port 3000",
 		"start": "astro dev --port 3000",

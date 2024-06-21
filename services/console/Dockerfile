@@ -47,7 +47,7 @@ RUN ./build_wasm.sh
 
 # https://hub.docker.com/_/node
 FROM node:20.11.0-bookworm as builder
-COPY services/api/swagger.json /usr/src/bencher/services/api/swagger.json
+COPY services/api/openapi.json /usr/src/bencher/services/api/openapi.json
 COPY services/cli/templates/output /usr/src/bencher/services/cli/templates/output
 COPY --from=wasm-builder /usr/src/bencher/lib/bencher_valid/pkg /usr/src/bencher/lib/bencher_valid/pkg
 

@@ -5,7 +5,7 @@ use dropshot::{ApiDescription, EndpointTagPolicy, TagConfig, TagDetails};
 
 use crate::{parser::TaskSpec, API_VERSION};
 
-const SWAGGER_PATH: &str = "./services/api/swagger.json";
+const SPEC_PATH: &str = "./services/api/openapi.json";
 
 #[derive(Debug)]
 pub struct Spec {}
@@ -25,7 +25,7 @@ impl Spec {
 
         println!("🐰 Bencher OpenAPI Spec v{API_VERSION}",);
 
-        println!("Generating OpenAPI JSON file at: {SWAGGER_PATH}");
+        println!("Generating OpenAPI Spec JSON file at: {SPEC_PATH}");
         let mut api_description = ApiDescription::new();
         // TODO add an argument to toggle whether to include the plus endpoints
         Api::register(
@@ -35,7 +35,7 @@ impl Spec {
             true,
         )
         .map_err(|e| anyhow::anyhow!("Failed to register API: {e}"))?;
-        let mut swagger_file = fs::File::create(SWAGGER_PATH)?;
+        let mut spec_file = fs::File::create(SPEC_PATH)?;
 
         api_description.tag_config(TagConfig {
             allow_other_tags: false,
@@ -60,31 +60,28 @@ impl Spec {
                 "server" => TagDetails { description: Some("Server".into()), external_docs: None},
         }})
             .openapi(bencher_api::config::API_NAME, API_VERSION)
-            .write(&mut swagger_file)
+            .write(&mut spec_file)
             ?;
 
-        println!("Saved OpenAPI JSON file to: {SWAGGER_PATH}");
+        println!("Saved OpenAPI JSON file to: {SPEC_PATH}");
 
-        test_swagger_spec()?;
+        test_spec()?;
         fs::create_dir_all("./services/console/public/download")?;
-        fs::copy(
-            SWAGGER_PATH,
-            "./services/console/public/download/openapi.json",
-        )?;
+        fs::copy(SPEC_PATH, "./services/console/public/download/openapi.json")?;
 
         Ok(())
     }
 }
 
-pub fn test_swagger_spec() -> anyhow::Result<()> {
-    let swagger_spec_str = fs::read_to_string(SWAGGER_PATH)?;
-    let swagger_spec: bencher_json::JsonSpec = serde_json::from_str(&swagger_spec_str)?;
-    let version = swagger_spec
+pub fn test_spec() -> anyhow::Result<()> {
+    let spec_str = fs::read_to_string(SPEC_PATH)?;
+    let spec: bencher_json::JsonSpec = serde_json::from_str(&spec_str)?;
+    let version = spec
         .version()
-        .ok_or_else(|| anyhow::anyhow!("No version found in swagger.json"))?;
+        .ok_or_else(|| anyhow::anyhow!("No version found in openapi.json"))?;
     anyhow::ensure!(
         version == API_VERSION,
-        "Swagger version {version} does not match current version {API_VERSION}"
+        "OpenAPI Spec version {version} does not match current version {API_VERSION}"
     );
     Ok(())
 }

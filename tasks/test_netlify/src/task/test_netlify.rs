@@ -102,7 +102,7 @@ async fn test_ui_version(console_url: &str) -> anyhow::Result<()> {
         };
         if console_version != API_VERSION {
             return Err(anyhow::anyhow!(
-                "Console version {console_version} does not match swagger.json version {API_VERSION}"
+                "Console version {console_version} does not match current version {API_VERSION}"
             ));
         }
     }

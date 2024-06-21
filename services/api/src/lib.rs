@@ -16,12 +16,7 @@ pub mod view;
 
 pub const API_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub const SWAGGER_SPEC_STR: &str = include_str!("../swagger.json");
+pub const SPEC_STR: &str = include_str!("../openapi.json");
 #[allow(clippy::expect_used)]
-pub static SWAGGER_SPEC: Lazy<JsonSpec> = Lazy::new(|| {
-    JsonSpec(
-        SWAGGER_SPEC_STR
-            .parse()
-            .expect("Failed to parse OpenAPI spec"),
-    )
-});
+pub static SPEC: Lazy<JsonSpec> =
+    Lazy::new(|| JsonSpec(SPEC_STR.parse().expect("Failed to parse OpenAPI spec")));
