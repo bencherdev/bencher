@@ -145,22 +145,26 @@ async fn get_ls_inner(
         },
     };
 
-    conn_lock!(context, |conn| Ok(query
+    // Separate out this query to prevent a deadlock when getting the conn_lock
+    let alerts = query
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load(conn)
-        .map_err(resource_not_found_err!(Alert, &query_project))?
-        .into_iter()
-        .filter_map(|alert| match alert.into_json(conn) {
-            Ok(alert) => Some(alert),
+        .load(conn_lock!(context))
+        .map_err(resource_not_found_err!(Alert, &query_project))?;
+
+    let mut json_alerts = Vec::with_capacity(alerts.len());
+    for alert in alerts {
+        match alert.into_json(context).await {
+            Ok(alert) => json_alerts.push(alert),
             Err(err) => {
                 debug_assert!(false, "{err}");
                 #[cfg(feature = "sentry")]
                 sentry::capture_error(&err);
-                None
             },
-        })
-        .collect()))
+        }
+    }
+
+    Ok(json_alerts.into())
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -221,12 +225,10 @@ async fn get_one_inner(
         auth_user,
     )?;
 
-    conn_lock!(context, |conn| QueryAlert::from_uuid(
-        conn,
-        query_project.id,
-        path_params.alert
-    )?
-    .into_json(conn))
+    // Separate out this query to prevent a deadlock when getting the conn_lock
+    let alert = QueryAlert::from_uuid(conn_lock!(context), query_project.id, path_params.alert)?;
+
+    alert.into_json(context).await
 }
 
 /// Update an alert
@@ -279,8 +281,10 @@ async fn patch_inner(
         .execute(conn_lock!(context))
         .map_err(resource_conflict_err!(Alert, (&query_alert, &json_alert)))?;
 
-    conn_lock!(context, |conn| QueryAlert::get(conn, query_alert.id)?
-        .into_json(conn))
+    // Separate out this query to prevent a deadlock when getting the conn_lock
+    let alert = QueryAlert::get(conn_lock!(context), query_alert.id)?;
+
+    alert.into_json(context).await
 }
 
 #[allow(clippy::no_effect_underscore_binding, clippy::unused_async)]

@@ -10,7 +10,7 @@ use slog::Logger;
 
 use crate::{
     conn_lock,
-    context::{ApiContext, DbConnection},
+    context::ApiContext,
     error::resource_not_found_err,
     model::{
         project::{
@@ -90,8 +90,8 @@ impl QueryReport {
         .await?;
         let testbed = QueryTestbed::get(conn_lock!(context), testbed_id)?
             .into_json_for_project(&query_project);
-        let results = get_report_results(log, conn_lock!(context), &query_project, id)?;
-        let alerts = get_report_alerts(conn_lock!(context), &query_project, id)?;
+        let results = get_report_results(log, context, &query_project, id).await?;
+        let alerts = get_report_alerts(context, &query_project, id).await?;
 
         let project = query_project.into_json(conn_lock!(context))?;
         Ok(JsonReport {
@@ -118,9 +118,9 @@ type ResultsQuery = (
     Option<(QueryThreshold, QueryModel)>,
 );
 
-fn get_report_results(
+async fn get_report_results(
     log: &Logger,
-    conn: &mut DbConnection,
+    context: &ApiContext,
     project: &QueryProject,
     report_id: ReportId,
 ) -> Result<JsonReportResults, HttpError> {
@@ -168,7 +168,7 @@ fn get_report_results(
             )
         ).nullable(),
     ))
-    .load::<ResultsQuery>(conn)
+    .load::<ResultsQuery>(conn_lock!(context))
     .map(|results| into_report_results_json(log, project, results))
     .map_err(resource_not_found_err!(ReportBenchmark, project))
 }
@@ -249,8 +249,8 @@ fn into_report_results_json(
     report_results
 }
 
-fn get_report_alerts(
-    conn: &mut DbConnection,
+async fn get_report_alerts(
+    context: &ApiContext,
     project: &QueryProject,
     report_id: ReportId,
 ) -> Result<JsonReportAlerts, HttpError> {
@@ -283,7 +283,7 @@ fn get_report_alerts(
             QueryBenchmark,
             QueryMetric,
             QueryBoundary,
-        )>(conn)
+        )>(conn_lock!(context))
         .map_err(resource_not_found_err!(Alert, report_id))?;
 
     let mut report_alerts = Vec::new();
@@ -297,16 +297,18 @@ fn get_report_alerts(
         query_boundary,
     ) in alerts
     {
-        let json_alert = query_alert.into_json_for_report(
-            conn,
-            project,
-            report_uuid,
-            created,
-            iteration,
-            query_benchmark,
-            query_metric,
-            query_boundary,
-        )?;
+        let json_alert = query_alert
+            .into_json_for_report(
+                context,
+                project,
+                report_uuid,
+                created,
+                iteration,
+                query_benchmark,
+                query_metric,
+                query_boundary,
+            )
+            .await?;
         report_alerts.push(json_alert);
     }
 

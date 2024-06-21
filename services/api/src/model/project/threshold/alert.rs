@@ -14,11 +14,11 @@ use super::{
     QueryThreshold,
 };
 use crate::{
-    context::DbConnection,
+    conn_lock,
+    context::{ApiContext, DbConnection},
     error::{resource_conflict_err, resource_not_found_err},
     model::project::{benchmark::QueryBenchmark, metric::QueryMetric, ProjectId, QueryProject},
-    schema::alert as alert_table,
-    schema::{self},
+    schema::{self, alert as alert_table},
     util::fn_get::{fn_get, fn_get_id, fn_get_uuid},
 };
 
@@ -58,7 +58,7 @@ impl QueryAlert {
             .map_err(resource_not_found_err!(Alert, (project_id, uuid)))
     }
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonAlert, HttpError> {
+    pub async fn into_json(self, context: &ApiContext) -> Result<JsonAlert, HttpError> {
         let (report_uuid, created, iteration, query_benchmark, query_metric, query_boundary) =
             schema::alert::table
                 .filter(schema::alert::id.eq(self.id))
@@ -86,11 +86,11 @@ impl QueryAlert {
                     QueryBenchmark,
                     QueryMetric,
                     QueryBoundary,
-                )>(conn)
+                )>(conn_lock!(context))
                 .map_err(resource_not_found_err!(Alert, self))?;
-        let project = QueryProject::get(conn, query_benchmark.project_id)?;
+        let project = QueryProject::get(conn_lock!(context), query_benchmark.project_id)?;
         self.into_json_for_report(
-            conn,
+            context,
             &project,
             report_uuid,
             created,
@@ -99,12 +99,13 @@ impl QueryAlert {
             query_metric,
             query_boundary,
         )
+        .await
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn into_json_for_report(
+    pub async fn into_json_for_report(
         self,
-        conn: &mut DbConnection,
+        context: &ApiContext,
         project: &QueryProject,
         report_uuid: ReportUuid,
         created: DateTime,
@@ -128,7 +129,7 @@ impl QueryAlert {
             uuid,
             report: report_uuid,
             iteration,
-            threshold: QueryThreshold::get_json(conn, threshold_id, model_id)?,
+            threshold: QueryThreshold::get_json(conn_lock!(context), threshold_id, model_id)?,
             benchmark,
             limit: boundary_limit,
             status,
