@@ -282,6 +282,35 @@ impl PlanKind {
         .await
     }
 
+    pub async fn check_for_organization(
+        conn: &mut DbConnection,
+        biller: Option<&Biller>,
+        licensor: &Licensor,
+        query_organization: &QueryOrganization,
+        visibility: Visibility,
+    ) -> Result<(), HttpError> {
+        // Check if the project is public to skip having to call the billing backend
+        if visibility.is_public() {
+            return Ok(());
+        }
+        Self::new(conn, biller, licensor, query_organization, visibility).await?;
+        Ok(())
+    }
+
+    pub async fn check_for_project(
+        conn: &mut DbConnection,
+        biller: Option<&Biller>,
+        licensor: &Licensor,
+        project: &QueryProject,
+    ) -> Result<(), HttpError> {
+        // Check if the project is public to skip having to call the billing backend
+        if project.visibility.is_public() {
+            return Ok(());
+        }
+        Self::new_for_project(conn, biller, licensor, project).await?;
+        Ok(())
+    }
+
     pub async fn check_usage(
         self,
         biller: Option<&Biller>,

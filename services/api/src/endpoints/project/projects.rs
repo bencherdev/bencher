@@ -256,7 +256,7 @@ async fn patch_inner(
     #[cfg(not(feature = "plus"))]
     QueryProject::is_visibility_public(json_project.visibility())?;
     #[cfg(feature = "plus")]
-    PlanKind::new_for_project(
+    PlanKind::check_for_project(
         conn_lock!(context),
         context.biller.as_ref(),
         &context.licensor,
