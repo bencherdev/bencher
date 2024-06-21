@@ -38,8 +38,6 @@ use crate::{
     util::name_id::{filter_branch_name_id, filter_measure_name_id, filter_testbed_name_id},
 };
 
-pub mod alerts;
-
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjThresholdsParams {
     /// The slug or UUID for a project.

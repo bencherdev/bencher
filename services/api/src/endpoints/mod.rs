@@ -215,14 +215,14 @@ impl Api {
 
         // Threshold Alerts
         if http_options {
-            api.register(project::thresholds::alerts::proj_alerts_options)?;
-            api.register(project::thresholds::alerts::proj_alert_options)?;
-            api.register(project::thresholds::alerts::proj_alert_stats_options)?;
+            api.register(project::alerts::proj_alerts_options)?;
+            api.register(project::alerts::proj_alert_options)?;
+            api.register(project::alerts::proj_alert_stats_options)?;
         }
-        api.register(project::thresholds::alerts::proj_alerts_get)?;
-        api.register(project::thresholds::alerts::proj_alert_get)?;
-        api.register(project::thresholds::alerts::proj_alert_patch)?;
-        api.register(project::thresholds::alerts::proj_alert_stats_get)?;
+        api.register(project::alerts::proj_alerts_get)?;
+        api.register(project::alerts::proj_alert_get)?;
+        api.register(project::alerts::proj_alert_patch)?;
+        api.register(project::alerts::proj_alert_stats_get)?;
 
         // Users
         if http_options {

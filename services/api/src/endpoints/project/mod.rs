@@ -1,3 +1,4 @@
+pub mod alerts;
 pub mod allowed;
 pub mod benchmarks;
 pub mod branches;
