@@ -85,7 +85,6 @@ fn parse_benchmark_time(input: &str) -> IResult<&str, JsonNewMetric> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 pub(crate) mod test_js_benchmark {
     use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;

@@ -98,7 +98,6 @@ pub fn is_valid_plan_level(plan_level: &str) -> bool {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod test {
     use super::is_valid_plan_level;
     use pretty_assertions::assert_eq;

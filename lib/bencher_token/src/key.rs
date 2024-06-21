@@ -117,7 +117,6 @@ impl TokenKey {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod test {
     use std::{thread, time};
 

@@ -62,7 +62,6 @@ pub struct JsonLicense {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod test {
     use bencher_valid::{ExpirationMonth, ExpirationYear};
 

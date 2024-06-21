@@ -162,7 +162,6 @@ fn parse_iai_callgrind_metric<'a>(
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 pub(crate) mod test_rust_iai_callgrind {
 
     use crate::{

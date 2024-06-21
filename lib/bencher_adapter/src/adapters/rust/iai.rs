@@ -138,7 +138,6 @@ fn parse_iai_metric<'a>(input: &'a str, measure: &'static str) -> IResult<&'a st
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 pub(crate) mod test_rust_iai {
 
     use crate::{

@@ -90,7 +90,6 @@ impl Pytest {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 pub(crate) mod test_python_pytest {
     use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;

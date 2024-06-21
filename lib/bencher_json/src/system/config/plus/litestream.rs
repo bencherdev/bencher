@@ -421,7 +421,6 @@ mod db {
     }
 
     #[test]
-    #[allow(clippy::unwrap_used)]
     fn test_into_yaml() {
         let json_litestream = JsonLitestream {
             replicas: vec![JsonReplica::S3 {

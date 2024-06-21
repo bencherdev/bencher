@@ -680,7 +680,6 @@ fn into_payment_card(card: JsonCard) -> PaymentCard {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod test {
 
     use bencher_json::{

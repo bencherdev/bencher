@@ -31,6 +31,14 @@ There are four replication `scheme`s:
     - `path`: (Optional) Path in bucket
     - `GOOGLE_APPLICATION_CREDENTIALS`: Environment variable set to file path pointing to service account credentials
 
+All four replica `scheme`s have the following additional options:
+
+- `retention`: (Optional)  The amount of time that snapshot & WAL files will be kept. After the retention period, a new snapshot will be created and the old one will be removed. WAL files that exist before the oldest snapshot will also be removed. Defaults to `24h`.
+- `retention_check_interval`: (Optional) Specifies how often Bencher will check if retention needs to be enforced. Defaults to `1h`.
+- `snapshot_interval`: (Optional) Specifies how often new snapshots will be created. This is used to reduce the time to restore since newer snapshots will have fewer WAL frames to apply. Retention still applies to these snapshots. If you do not set a snapshot interval then a new snapshot will be created whenever retention is performed. Retention occurs every 24 hours by default.
+- `validation_interval`: (Optional) When specified, Bencher will automatically restore and validate that the data on the replica matches the local copy. Disabled by default. Enabling this may significantly increase the cost of running Bencher as most cloud services charge for downloads.
+- `sync_interval`: (Optional) Frequency in which frames are pushed to the replica. Defaults to `1s`. Increasing frequency can increase cloud storage costs significantly.
+
 |           Name           |  Example  | Default | Required |                                     Description                                     |
 | :----------------------: | :-------: | :-----: | :------: | :---------------------------------------------------------------------------------: |
 |         replicas         |  [ ... ]  |   ---   |   Yes    |                           Specifies an array of replicas.                           |

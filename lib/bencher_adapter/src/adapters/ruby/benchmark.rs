@@ -98,7 +98,6 @@ fn parse_ruby_benchmark(input: &str) -> IResult<&str, JsonNewMetric> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 pub(crate) mod test_ruby_benchmark {
     use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;

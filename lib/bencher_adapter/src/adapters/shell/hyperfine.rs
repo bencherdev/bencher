@@ -85,7 +85,6 @@ impl Hyperfine {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 pub(crate) mod test_shell_hyperfine {
     use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;

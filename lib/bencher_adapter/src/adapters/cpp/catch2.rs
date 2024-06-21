@@ -148,7 +148,6 @@ fn parse_catch2_prelude(input: &str) -> IResult<&str, Prelude> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 pub(crate) mod test_cpp_catch2 {
     use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;

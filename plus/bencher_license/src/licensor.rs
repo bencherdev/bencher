@@ -227,7 +227,6 @@ fn check_expiration(time: i64) -> Result<(), LicenseError> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod test {
     use bencher_json::{OrganizationUuid, PlanLevel, Secret, BENCHER_URL_STR};
     use once_cell::sync::Lazy;

@@ -77,7 +77,6 @@ fn parse_asv_time(input: &str) -> IResult<&str, JsonNewMetric> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 pub(crate) mod test_python_asv {
     use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;

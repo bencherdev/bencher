@@ -9,7 +9,6 @@ impl Adaptable for AdapterJson {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 pub(crate) mod test_json {
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
