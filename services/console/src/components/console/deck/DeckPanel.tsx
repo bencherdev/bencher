@@ -61,7 +61,10 @@ const DeckPanel = (props: Props) => {
 			return EMPTY_OBJECT;
 		}
 		return await httpGet(props.apiUrl, path(), fetcher.token)
-			.then((resp) => resp?.data)
+			.then((resp) => {
+				// console.log(resp?.data);
+				return resp?.data;
+			})
 			.catch((error) => {
 				console.error(error);
 				pageNotify(

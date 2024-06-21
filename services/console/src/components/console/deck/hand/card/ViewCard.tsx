@@ -2,6 +2,9 @@ import type { Params } from "astro";
 import { Match, Show, Switch, createMemo, createResource } from "solid-js";
 import { Display } from "../../../../../config/types";
 import type CardConfig from "./CardConfig";
+import { authUser } from "../../../../../util/auth";
+import { httpGet } from "../../../../../util/http";
+import type { JsonProject } from "../../../../../types/bencher";
 
 export interface Props {
 	apiUrl: string;
@@ -63,6 +66,9 @@ const ViewCard = (props: Props) => {
 								</a>
 							</Show>
 						</Match>
+						<Match when={props.card?.display === Display.GIT_HASH}>
+							<GitHashCard {...props} />
+						</Match>
 					</Switch>
 				</div>
 			</div>
@@ -82,6 +88,54 @@ const ViewCard = (props: Props) => {
 			)}
 		</div>
 	);
+};
+
+const GitHashCard = (props: Props) => {
+	const user = authUser();
+	const projectFetcher = createMemo(() => {
+		return {
+			project_slug: props.params.project,
+			token: user?.token,
+		};
+	});
+	const getProject = async (fetcher: {
+		project_slug: string;
+		refresh: number;
+		token: string;
+	}) => {
+		const EMPTY_OBJECT = {};
+		if (!fetcher.project_slug || fetcher.project_slug === "undefined") {
+			return EMPTY_OBJECT;
+		}
+		const path = `/v0/projects/${fetcher.project_slug}`;
+		return await httpGet(props.apiUrl, path, fetcher.token)
+			.then((resp) => {
+				return resp?.data as JsonProject;
+			})
+			.catch((error) => {
+				console.error(error);
+				return EMPTY_OBJECT;
+			});
+	};
+	const [project] = createResource<JsonProject>(projectFetcher, getProject);
+
+	const hash = createMemo(() => {
+		const url = project()?.url;
+		if (url && isGitHubRepoUrl(url)) {
+			return (
+				<a href={`${url.endsWith("/") ? url : `${url}/`}commit/${props.value}`}>
+					{props.value as string}
+				</a>
+			);
+		}
+		return <p style="word-break: break-word;">{props.value as string}</p>;
+	});
+	function isGitHubRepoUrl(url: string) {
+		const regex = /^https:\/\/github\.com\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\/?$/;
+		return regex.test(url);
+	}
+
+	return <>{hash()}</>;
 };
 
 export default ViewCard;

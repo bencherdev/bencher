@@ -9,6 +9,7 @@
 "TestbedUuid" = "Uuid"
 "BenchmarkUuid" = "Uuid"
 "MeasureUuid" = "Uuid"
+"MetricUuid" = "Uuid"
 "ThresholdUuid" = "Uuid"
 "StatisticUuid" = "Uuid"
 "AlertUuid" = "Uuid"

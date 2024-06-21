@@ -13,8 +13,8 @@ use mock::CliMock;
 use organization::{member::CliMember, CliOrganization};
 use project::{
     alert::CliAlert, benchmark::CliBenchmark, branch::CliBranch, measure::CliMeasure,
-    perf::CliPerf, plot::CliPlot, report::CliReport, run::CliRun, testbed::CliTestbed,
-    threshold::CliThreshold, CliProject,
+    metric::CliMetric, perf::CliPerf, plot::CliPlot, report::CliReport, run::CliRun,
+    testbed::CliTestbed, threshold::CliThreshold, CliProject,
 };
 use system::{auth::CliAuth, server::CliServer};
 use user::{token::CliToken, CliUser};
@@ -66,21 +66,24 @@ pub enum CliSub {
     /// Manage testbeds
     #[clap(subcommand)]
     Testbed(CliTestbed),
-    /// View benchmarks
+    /// Manage benchmarks
     #[clap(subcommand)]
     Benchmark(CliBenchmark),
     /// Manage measures
     #[clap(subcommand)]
     Measure(CliMeasure),
+    /// Manage metrics
+    #[clap(subcommand)]
+    Metric(CliMetric),
 
     /// Manage thresholds
     #[clap(subcommand)]
     Threshold(CliThreshold),
-    /// View alerts
+    /// Manage alerts
     #[clap(subcommand)]
     Alert(CliAlert),
 
-    /// View user
+    /// Manage user
     #[clap(subcommand)]
     User(CliUser),
     /// Manage user API tokens

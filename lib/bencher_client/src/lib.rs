@@ -55,6 +55,7 @@ from_client!(
     TestbedUuid,
     BenchmarkUuid,
     MeasureUuid,
+    MetricUuid,
     ThresholdUuid,
     ModelUuid,
     AlertUuid,

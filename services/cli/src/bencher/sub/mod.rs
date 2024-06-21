@@ -14,8 +14,9 @@ use mock::Mock;
 pub use mock::MockError;
 use organization::{member::Member, organization::Organization};
 use project::{
-    alert::Alert, benchmark::Benchmark, branch::Branch, measure::Measure, perf::Perf, plot::Plot,
-    project::Project, report::Report, run::Run, testbed::Testbed, threshold::Threshold,
+    alert::Alert, benchmark::Benchmark, branch::Branch, measure::Measure, metric::Metric,
+    perf::Perf, plot::Plot, project::Project, report::Report, run::Run, testbed::Testbed,
+    threshold::Threshold,
 };
 pub use project::{
     run::{runner::output::Output, RunError},
@@ -41,6 +42,7 @@ pub enum Sub {
     Testbed(Testbed),
     Benchmark(Benchmark),
     Measure(Measure),
+    Metric(Metric),
     Threshold(Threshold),
     Alert(Alert),
     User(User),
@@ -71,6 +73,7 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Testbed(testbed) => Self::Testbed(testbed.try_into()?),
             CliSub::Benchmark(benchmark) => Self::Benchmark(benchmark.try_into()?),
             CliSub::Measure(measure) => Self::Measure(measure.try_into()?),
+            CliSub::Metric(metric) => Self::Metric(metric.try_into()?),
             CliSub::Threshold(threshold) => Self::Threshold(threshold.try_into()?),
             CliSub::Alert(alert) => Self::Alert(alert.try_into()?),
             CliSub::User(user) => Self::User(user.try_into()?),
@@ -101,6 +104,7 @@ impl SubCmd for Sub {
             Self::Testbed(testbed) => testbed.exec().await,
             Self::Benchmark(benchmark) => benchmark.exec().await,
             Self::Measure(measure) => measure.exec().await,
+            Self::Metric(metric) => metric.exec().await,
             Self::Threshold(threshold) => threshold.exec().await,
             Self::Alert(alert) => alert.exec().await,
             Self::User(user) => user.exec().await,

@@ -76,7 +76,7 @@ export interface JsonThresholdModel {
 }
 
 export interface JsonMetric {
-	uuid: MetricUuid;
+	uuid: Uuid;
 	value: number;
 	lower_value?: number;
 	upper_value?: number;
@@ -377,7 +377,7 @@ export interface JsonBranchVersion {
 }
 
 export interface JsonOneMetric {
-	uuid: MetricUuid;
+	uuid: Uuid;
 	report: Uuid;
 	iteration: Iteration;
 	start_time: string;

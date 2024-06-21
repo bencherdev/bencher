@@ -10,6 +10,7 @@ export enum BencherResource {
 	TESTBEDS = "testbeds",
 	BENCHMARKS = "benchmarks",
 	MEASURES = "measures",
+	METRICS = "metrics",
 	THRESHOLDS = "thresholds",
 	ALERTS = "alerts",
 	USERS = "users",
@@ -37,6 +38,8 @@ export const resourceSingular = (resource: BencherResource) => {
 			return "benchmark";
 		case BencherResource.MEASURES:
 			return "measure";
+		case BencherResource.METRICS:
+			return "metric";
 		case BencherResource.THRESHOLDS:
 			return "threshold";
 		case BencherResource.ALERTS:
@@ -70,6 +73,8 @@ export const resourcePlural = (resource: BencherResource) => {
 			return "benchmarks";
 		case BencherResource.MEASURES:
 			return "measures";
+		case BencherResource.METRICS:
+			return "metrics";
 		case BencherResource.THRESHOLDS:
 			return "thresholds";
 		case BencherResource.ALERTS:
@@ -127,6 +132,7 @@ export enum Display {
 	SWITCH = "switch",
 	SELECT = "select",
 	START_POINT = "start_point",
+	GIT_HASH = "git_hash",
 }
 
 export enum PerfTab {

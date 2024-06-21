@@ -5,6 +5,7 @@ import alertsConfig from "./project/alerts";
 import benchmarksConfig from "./project/benchmarks";
 import branchesConfig from "./project/branches";
 import measuresConfig from "./project/measures";
+import metricsConfig from "./project/metrics";
 import projectsConfig from "./project/projects";
 import reportsConfig from "./project/reports";
 import testbedsConfig from "./project/testbeds";
@@ -25,6 +26,7 @@ const consoleConfig = {
 	[BencherResource.TESTBEDS]: testbedsConfig,
 	[BencherResource.BENCHMARKS]: benchmarksConfig,
 	[BencherResource.MEASURES]: measuresConfig,
+	[BencherResource.METRICS]: metricsConfig,
 	[BencherResource.THRESHOLDS]: thresholdsConfig,
 	[BencherResource.ALERTS]: alertsConfig,
 	// User

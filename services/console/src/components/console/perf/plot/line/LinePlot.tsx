@@ -193,6 +193,7 @@ const LinePlot = (props: Props) => {
 			perf_metrics.forEach((perf_metric) => {
 				const datum = {
 					report: perf_metric.report,
+					metric: perf_metric.metric?.uuid,
 					value: perf_metric.metric?.value,
 					lower_value: perf_metric.metric?.lower_value,
 					upper_value: perf_metric.metric?.upper_value,
@@ -280,7 +281,9 @@ const LinePlot = (props: Props) => {
 					symbol: "circle",
 					stroke: color,
 					fill: color,
-					title: (datum) => to_title(`${datum.value}`, result, datum, ""),
+					title: (datum) =>
+						to_title(`${datum.value}`, result, datum, "\nClick to view Metric"),
+					href: (datum) => dotUrl(project_slug, props.isConsole, datum),
 				}),
 			);
 
@@ -555,6 +558,13 @@ const warning_image = (
 		href: (datum) => thresholdUrl(project_slug, isConsole, datum),
 	};
 };
+
+const dotUrl = (project_slug: string, isConsole: boolean, datum: object) =>
+	`${
+		isConsole
+			? `/console/projects/${project_slug}/metric/${datum.metric}`
+			: `/perf/${project_slug}/metrics/${datum.metric}`
+	}?${BACK_PARAM}=${encodePath()}`;
 
 const thresholdUrl = (
 	project_slug: string,

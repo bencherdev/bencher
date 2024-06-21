@@ -9,6 +9,7 @@ pub mod alert;
 pub mod benchmark;
 pub mod branch;
 pub mod measure;
+pub mod metric;
 pub mod perf;
 pub mod plot;
 pub mod report;
