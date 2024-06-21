@@ -170,6 +170,13 @@ fn into_context(
 
     info!(&log, "Running database migrations");
     run_migrations(&mut database_connection)?;
+
+    #[cfg(feature = "plus")]
+    if plus.as_ref().is_some_and(|plus| plus.litestream.is_some()) {
+        info!(&log, "Configuring Litestream");
+        run_litestream(&mut database_connection)?;
+    }
+
     let data_store = if let Some(data_store) = json_database.data_store {
         Some(data_store.try_into().map_err(ConfigTxError::DataStore)?)
     } else {
@@ -256,6 +263,43 @@ fn run_migrations(database: &mut DbConnection) -> Result<(), ConfigTxError> {
     database
         .batch_execute("PRAGMA foreign_keys = ON")
         .map_err(ConfigTxError::Pragma)?;
+    // Enable busy timeout
+    // https://litestream.io/tips/#busy-timeout
+    // https://www.sqlite.org/pragma.html#pragma_busy_timeout
+    database
+        .batch_execute("PRAGMA busy_timeout = 5000")
+        .map_err(ConfigTxError::Pragma)?;
+
+    Ok(())
+}
+
+#[cfg(feature = "plus")]
+fn run_litestream(database: &mut DbConnection) -> Result<(), ConfigTxError> {
+    // Enable WAL mode
+    // https://litestream.io/tips/#wal-journal-mode
+    // https://sqlite.org/wal.html
+    database
+        .batch_execute("PRAGMA journal_mode = WAL")
+        .map_err(ConfigTxError::Pragma)?;
+    // Enable busy timeout
+    // https://litestream.io/tips/#busy-timeout
+    // https://www.sqlite.org/pragma.html#pragma_busy_timeout
+    database
+        .batch_execute("PRAGMA busy_timeout = 5000")
+        .map_err(ConfigTxError::Pragma)?;
+    // Relax synchronous mode because we are using WAL mode
+    // https://litestream.io/tips/#synchronous-pragma
+    // https://www.sqlite.org/pragma.html#pragma_synchronous
+    database
+        .batch_execute("PRAGMA synchronous = NORMAL")
+        .map_err(ConfigTxError::Pragma)?;
+    // Disable auto-checkpoints
+    // https://litestream.io/tips/#disable-autocheckpoints-for-high-write-load-servers
+    // https://sqlite.org/wal.html#automatic_checkpoint
+    database
+        .batch_execute("PRAGMA wal_autocheckpoint = 0")
+        .map_err(ConfigTxError::Pragma)?;
+
     Ok(())
 }
 
