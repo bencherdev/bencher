@@ -380,6 +380,8 @@ export interface JsonOneMetric {
 	uuid: MetricUuid;
 	report: Uuid;
 	iteration: Iteration;
+	start_time: string;
+	end_time: string;
 	branch: JsonBranchVersion;
 	testbed: JsonTestbed;
 	benchmark: JsonBenchmark;
@@ -388,7 +390,6 @@ export interface JsonOneMetric {
 	threshold?: JsonThresholdModel;
 	boundary?: JsonBoundary;
 	alert?: JsonPerfAlert;
-	created: string;
 }
 
 export enum Visibility {

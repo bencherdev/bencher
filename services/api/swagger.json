@@ -8984,7 +8984,7 @@
           "branch": {
             "$ref": "#/components/schemas/JsonBranchVersion"
           },
-          "created": {
+          "end_time": {
             "$ref": "#/components/schemas/DateTime"
           },
           "iteration": {
@@ -8998,6 +8998,9 @@
           },
           "report": {
             "$ref": "#/components/schemas/ReportUuid"
+          },
+          "start_time": {
+            "$ref": "#/components/schemas/DateTime"
           },
           "testbed": {
             "$ref": "#/components/schemas/JsonTestbed"
@@ -9017,11 +9020,12 @@
         "required": [
           "benchmark",
           "branch",
-          "created",
+          "end_time",
           "iteration",
           "measure",
           "metric",
           "report",
+          "start_time",
           "testbed",
           "uuid"
         ]
@@ -9682,11 +9686,31 @@
               "path": {
                 "type": "string"
               },
+              "retention": {
+                "nullable": true,
+                "type": "string"
+              },
+              "retention_check_interval": {
+                "nullable": true,
+                "type": "string"
+              },
               "scheme": {
                 "type": "string",
                 "enum": [
                   "file"
                 ]
+              },
+              "snapshot_interval": {
+                "nullable": true,
+                "type": "string"
+              },
+              "sync_interval": {
+                "nullable": true,
+                "type": "string"
+              },
+              "validation_interval": {
+                "nullable": true,
+                "type": "string"
               }
             },
             "required": [
@@ -9721,13 +9745,33 @@
                 "format": "uint16",
                 "minimum": 0
               },
+              "retention": {
+                "nullable": true,
+                "type": "string"
+              },
+              "retention_check_interval": {
+                "nullable": true,
+                "type": "string"
+              },
               "scheme": {
                 "type": "string",
                 "enum": [
                   "sftp"
                 ]
               },
+              "snapshot_interval": {
+                "nullable": true,
+                "type": "string"
+              },
+              "sync_interval": {
+                "nullable": true,
+                "type": "string"
+              },
               "user": {
+                "type": "string"
+              },
+              "validation_interval": {
+                "nullable": true,
                 "type": "string"
               }
             },
@@ -9759,6 +9803,14 @@
                 "nullable": true,
                 "type": "string"
               },
+              "retention": {
+                "nullable": true,
+                "type": "string"
+              },
+              "retention_check_interval": {
+                "nullable": true,
+                "type": "string"
+              },
               "scheme": {
                 "type": "string",
                 "enum": [
@@ -9767,6 +9819,18 @@
               },
               "secret_access_key": {
                 "$ref": "#/components/schemas/Secret"
+              },
+              "snapshot_interval": {
+                "nullable": true,
+                "type": "string"
+              },
+              "sync_interval": {
+                "nullable": true,
+                "type": "string"
+              },
+              "validation_interval": {
+                "nullable": true,
+                "type": "string"
               }
             },
             "required": [
@@ -9791,11 +9855,31 @@
               "path": {
                 "type": "string"
               },
+              "retention": {
+                "nullable": true,
+                "type": "string"
+              },
+              "retention_check_interval": {
+                "nullable": true,
+                "type": "string"
+              },
               "scheme": {
                 "type": "string",
                 "enum": [
                   "abs"
                 ]
+              },
+              "snapshot_interval": {
+                "nullable": true,
+                "type": "string"
+              },
+              "sync_interval": {
+                "nullable": true,
+                "type": "string"
+              },
+              "validation_interval": {
+                "nullable": true,
+                "type": "string"
               }
             },
             "required": [
@@ -9816,11 +9900,31 @@
                 "nullable": true,
                 "type": "string"
               },
+              "retention": {
+                "nullable": true,
+                "type": "string"
+              },
+              "retention_check_interval": {
+                "nullable": true,
+                "type": "string"
+              },
               "scheme": {
                 "type": "string",
                 "enum": [
                   "gcs"
                 ]
+              },
+              "snapshot_interval": {
+                "nullable": true,
+                "type": "string"
+              },
+              "sync_interval": {
+                "nullable": true,
+                "type": "string"
+              },
+              "validation_interval": {
+                "nullable": true,
+                "type": "string"
               }
             },
             "required": [

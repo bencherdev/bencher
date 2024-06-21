@@ -1,31 +1,24 @@
 use std::fs;
 
 use bencher_api::endpoints::Api;
-use clap::Parser;
 use dropshot::{ApiDescription, EndpointTagPolicy, TagConfig, TagDetails};
 
-use crate::API_VERSION;
+use crate::{parser::TaskSpec, API_VERSION};
 
 const SWAGGER_PATH: &str = "./services/api/swagger.json";
 
-use crate::parser::TaskTask;
-
 #[derive(Debug)]
-pub struct Task {}
+pub struct Spec {}
 
-impl TryFrom<TaskTask> for Task {
+impl TryFrom<TaskSpec> for Spec {
     type Error = anyhow::Error;
 
-    fn try_from(_task: TaskTask) -> Result<Self, Self::Error> {
+    fn try_from(_task: TaskSpec) -> Result<Self, Self::Error> {
         Ok(Self {})
     }
 }
 
-impl Task {
-    pub fn new() -> anyhow::Result<Self> {
-        TaskTask::parse().try_into()
-    }
-
+impl Spec {
     #[allow(clippy::unused_self)]
     pub fn exec(&self) -> anyhow::Result<()> {
         let _log = bencher_logger::bootstrap_logger();

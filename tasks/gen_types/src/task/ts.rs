@@ -1,19 +1,19 @@
 use std::process::Command;
 
-use crate::parser::TaskTypeshare;
+use crate::parser::TaskTs;
 
 #[derive(Debug)]
-pub struct Typeshare {}
+pub struct Ts {}
 
-impl TryFrom<TaskTypeshare> for Typeshare {
+impl TryFrom<TaskTs> for Ts {
     type Error = anyhow::Error;
 
-    fn try_from(_typeshare: TaskTypeshare) -> Result<Self, Self::Error> {
+    fn try_from(_typeshare: TaskTs) -> Result<Self, Self::Error> {
         Ok(Self {})
     }
 }
 
-impl Typeshare {
+impl Ts {
     #[allow(clippy::unused_self)]
     pub fn exec(&self) -> anyhow::Result<()> {
         let status = Command::new("npm")

@@ -3,7 +3,6 @@ use clap::Parser;
 use crate::parser::{TaskSub, TaskTask};
 
 mod plus;
-mod types;
 mod version;
 
 #[cfg(feature = "plus")]
@@ -11,7 +10,6 @@ use plus::{
     email_list::EmailList, image::Image, index::Index, license::License, prompt::Prompt,
     stats::Stats, translate::Translate,
 };
-use types::Types;
 use version::Version;
 
 #[derive(Debug)]
@@ -23,7 +21,6 @@ pub struct Task {
 #[derive(Debug)]
 pub enum Sub {
     Version(Version),
-    Types(Types),
     #[cfg(feature = "plus")]
     Index(Index),
     #[cfg(feature = "plus")]
@@ -56,7 +53,6 @@ impl TryFrom<TaskSub> for Sub {
     fn try_from(sub: TaskSub) -> Result<Self, Self::Error> {
         Ok(match sub {
             TaskSub::Version(version) => Self::Version(version.try_into()?),
-            TaskSub::Types(types) => Self::Types(types.try_into()?),
             #[cfg(feature = "plus")]
             TaskSub::Index(index) => Self::Index(index.try_into()?),
             #[cfg(feature = "plus")]
@@ -89,7 +85,6 @@ impl Sub {
     pub async fn exec(&self) -> anyhow::Result<()> {
         match self {
             Self::Version(version) => version.exec(),
-            Self::Types(types) => types.exec(),
             #[cfg(feature = "plus")]
             Self::Index(index) => index.exec().await,
             #[cfg(feature = "plus")]

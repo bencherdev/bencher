@@ -1,7 +1,6 @@
 use clap::{Parser, Subcommand};
 
 mod plus;
-mod types;
 mod version;
 
 #[cfg(feature = "plus")]
@@ -12,7 +11,6 @@ pub use plus::{
     prompt::{TaskImage, TaskLanguage, TaskPrompt, TaskTranslate},
     stats::TaskStats,
 };
-pub use types::TaskTypes;
 pub use version::TaskVersion;
 
 #[derive(Parser, Debug)]
@@ -25,8 +23,6 @@ pub struct TaskTask {
 pub enum TaskSub {
     /// Get current API version
     Version(TaskVersion),
-    /// Generate `OpenAPI` spec and Typescript types
-    Types(TaskTypes),
     #[cfg(feature = "plus")]
     #[clap(subcommand)]
     /// `URLindexing`

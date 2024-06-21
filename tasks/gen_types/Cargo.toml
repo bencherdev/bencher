@@ -1,5 +1,5 @@
 [package]
-name = "gen_swagger"
+name = "gen_types"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true

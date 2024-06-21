@@ -177,7 +177,7 @@ jobs:
         with:
           mold-version: ${{ env.MOLD_VERSION }}
       - name: Generate OpenAPI Spec
-        run: cargo gen-swagger
+        run: cargo gen-spec
       - name: Check OpenAPI Spec for changes
         run: git diff --exit-code
       - name: Generate Unix CLI install scripts
