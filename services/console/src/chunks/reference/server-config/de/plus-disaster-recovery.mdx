@@ -1,0 +1,46 @@
+### `plus.disaster_recovery`
+
+Dieser Abschnitt spezifiziert die Konfiguration der Notfallwiederherstellung.
+Bencher unterstützt das kontinuierliche Replizieren aller Datenbankänderungen.
+Für die Durchführung von bedarfs- oder zeitgesteuerten Backups siehe den Abschnitt `database.data_store` der Konfiguration.
+
+Es gibt vier Replikations-`scheme`s:
+- `file`: Replikation zu einem lokalen Dateipfad
+    - `path`: Pfad, zu dem repliziert wird
+- `sftp`: Replikation über SFTP
+    - `host`: Zielsystem-Hostname
+    - `port`: Zielsystem-Portnummer
+    - `user`: Benutzername auf dem Zielsystem
+    - `password`: (Optional) Passwort auf dem Zielsystem
+    - `path`: (Optional) Pfad auf dem Zielsystem
+    - `key_path`: (Optional) Pfad zum SSH-Schlüssel
+- `s3`: Replikation zu einem S3-kompatiblen Blob-Speicher
+    - `bucket`: Bucket-Name
+    - `path`: (Optional) Pfad im Bucket
+    - `endpoint`: (AWS: Optional | Nicht-AWS: Erforderlich) Replikationsendpunkt
+    - `region`: (Optional) Bucket-Region
+    - `access_key_id`: S3-Zugangsschlüssel
+    - `secret_access_key`: S3-Geheimzugangsschlüssel
+- `abs`: Replikation zu Azure Blob Storage
+    - `account_name`: Kontoname
+    - `bucket`: Bucket-Name
+    - `path`: (Optional) Pfad im Bucket
+    - `account_key`: Azure-Kontoschlüssel
+- `gcs`: Replikation zu Google Cloud Storage
+    - `bucket`: Bucket-Name
+    - `path`: (Optional) Pfad im Bucket
+    - `GOOGLE_APPLICATION_CREDENTIALS`: Umgebungsvariable, die auf den Dateipfad zeigt, der auf die Dienstkontoanmeldeinformationen verweist
+
+Alle vier Replikations-`scheme`s haben die folgenden zusätzlichen Optionen:
+
+- `retention`: (Optional) Die Dauer, die Schnappschuss- und WAL-Dateien aufbewahrt werden. Nach dem Ablauf der Aufbewahrungsfrist wird ein neuer Schnappschuss erstellt und der alte entfernt. WAL-Dateien, die vor dem ältesten Schnappschuss existieren, werden ebenfalls entfernt. Standardwert ist `24h`.
+- `retention_check_interval`: (Optional) Gibt an, wie oft Bencher überprüft, ob die Aufbewahrung durchgesetzt werden muss. Standardwert ist `1h`.
+- `snapshot_interval`: (Optional) Gibt an, wie oft neue Schnappschüsse erstellt werden. Dies wird verwendet, um die Zeit für die Wiederherstellung zu verkürzen, da neuere Schnappschüsse weniger WAL-Frames zum Anwenden haben. Die Aufbewahrung gilt auch für diese Schnappschüsse. Wenn Sie kein Schnappschussintervall festlegen, wird ein neuer Schnappschuss erstellt, wann immer die Aufbewahrung durchgeführt wird. Die Aufbewahrung erfolgt standardmäßig alle 24 Stunden.
+- `validation_interval`: (Optional) Wenn angegeben, wird Bencher automatisch wiederherstellen und validieren, dass die Daten auf der Replik mit der lokalen Kopie übereinstimmen. Standardmäßig deaktiviert. Das Aktivieren kann die Kosten für den Betrieb von Bencher erheblich erhöhen, da die meisten Cloud-Services Gebühren für Downloads erheben.
+- `sync_interval`: (Optional) Häufigkeit, mit der Frames zur Replik übertragen werden. Standardwert ist `1s`. Eine höhere Frequenz kann die Kosten für Cloud-Speicher erheblich erhöhen.
+
+|            Name           |  Beispiel  | Standardwert | Erforderlich |                                     Beschreibung                                     |
+| :-----------------------: | :--------: | :----------: | :----------: | :----------------------------------------------------------------------------------: |
+|         replicas          |  [ ... ]   |     ---      |     Ja       |                           Gibt ein Array von Repliken an.                           |
+|     replicas[replica]     | \{ ... \}  |     ---      |     Ja       |                             Gibt ein Replikationsobjekt an.                            |
+| replicas[replica].scheme  |   "s3"     |     ---      |     Ja       | Gibt das Replikationsschema an. Für alle anderen `replica`-Schlüssel siehe die obige Liste. |

@@ -1,0 +1,15 @@
+## `smtp`
+
+This section specifies an [SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol) service configuration.
+The entire section is optional.
+If not specified, all messages will be sent to `logging` instead.
+
+|    Name    |          Example           | Default | Required |                                                      Description                                                      |
+| :--------: | :------------------------: | :-----: | :------: | :-------------------------------------------------------------------------------------------------------------------: |
+|  hostname  |      "mailbonobo.com"      |   ---   |   Yes    |                                             Specifies the SMTP hostname.                                              |
+|    port    |            587             |   587   |    No    |                                               Specifies the SMTP port.                                                |
+|  starttls  |            true            |  true   |    No    |                           Controls whether the SMTP connection uses the STARTTLS protocol.                            |
+|  username  |         "bencher"          |   ---   |   Yes    |                                       Specifies the username at the SMTP host.                                        |
+|   secret   | "WM3F2u9cqSNdBPLfy9sJ5kk9" |   ---   |   Yes    | Specifies the secret for the username at the SMTP host. Whenever logged, it will appear obfuscated as `************`. |
+| from_name  |         "Bencher"          |   ---   |   Yes    |                        Specifies the name that will appear in the from section of all emails.                         |
+| from_email | "info@bencher.example.com" |   ---   |   Yes    |                        Spefifies the email that will appear in the from section of all emails.                        |

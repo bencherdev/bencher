@@ -1,0 +1,15 @@
+## `smtp`
+
+Cette section spécifie une configuration de service [SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol).
+La section entière est facultative.
+Si elle n'est pas spécifiée, tous les messages seront envoyés à `logging` .
+
+|    Nom     |          Exemple           | Par défaut | Requis |                                                                       Description                                                                        |
+| :--------: | :------------------------: | :--------: | :----: | :------------------------------------------------------------------------------------------------------------------------------------------------------: |
+|  hostname  |      "mailbonobo.com"      |    ---     |  Oui   |                                                               Spécifie le nom d'hôte SMTP.                                                               |
+|    port    |            587             |    587     |  Non   |                                                                  Spécifie le port SMTP.                                                                  |
+|  starttls  |            true            |    true    |  Non   |                                               Contrôle si la connexion SMTP utilise le protocole STARTTLS.                                               |
+|  username  |         "bencher"          |    ---     |  Oui   |                                                      Spécifie le nom d'utilisateur sur l'hôte SMTP.                                                      |
+|   secret   | "WM3F2u9cqSNdBPLfy9sJ5kk9" |    ---     |  Oui   | Spécifie le secret pour le nom d'utilisateur sur l'hôte SMTP. Lorsqu'il est enregistré, il apparaîtra sous forme obfusquée, c'est-à-dire `************`. |
+| from_name  |         "Bencher"          |    ---     |  Oui   |                                        Spécifie le nom qui apparaîtra dans la section d'envoi de tous les emails.                                        |
+| from_email | "info@bencher.example.com" |    ---     |  Oui   |                                       Spécifie l'email qui apparaîtra dans la section d'envoi de tous les emails.                                        |

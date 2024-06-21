@@ -1,0 +1,19 @@
+import Example from "../example.mdx";
+
+Der Bencher API-Server erfordert eine JSON-Konfiguration beim Start.
+Die Konfiguration kann auf drei Arten bereitgestellt werden:
+- `BENCHER_CONFIG` Umgebungsvariable: Der Wert sollte auf die JSON-Konfiguration gesetzt sein
+- `BENCHER_CONFIG_PATH` Umgebungsvariable: Der Wert sollte auf den Pfad einer Datei gesetzt sein, die die JSON-Konfiguration enthält
+- `/etc/bencher/bencher.json` Datei: Eine Datei an diesem Ort, die die JSON-Konfiguration enthält
+
+Wenn keine Konfiguration gefunden wird, wird eine Standardkonfiguration geladen.
+
+Um die Konfiguration zu aktualisieren, während der Server läuft,
+kann ein Administrator den CLI-Befehl `bencher server config update` verwenden,
+der den [PUT `/v0/server/config` Endpunkt](/de/docs/api/server/config/#put-v0serverconfig) ansteuert.
+Alle aktualisierten Konfigurationen werden in der `BENCHER_CONFIG` Umgebungsvariable
+und auf der Festplatte bei `BENCHER_CONFIG_PATH` gespeichert.
+
+Beispiel einer JSON-Konfiguration:
+
+<Example />

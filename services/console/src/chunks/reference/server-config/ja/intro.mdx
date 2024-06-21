@@ -1,0 +1,19 @@
+import Example from "../example.mdx";
+
+Bencher APIサーバーは、起動時にJSON構成を必要とします。
+構成は以下の3つの方法で提供可能です:
+- `BENCHER_CONFIG`環境変数: 値はJSON構成に設定する必要があります
+- `BENCHER_CONFIG_PATH`環境変数: 値はJSON構成を含むファイルのパスに設定する必要があります
+- `/etc/bencher/bencher.json`ファイル: この場所にあるJSON構成を含むファイル
+
+構成が見つからない場合、デフォルト構成が読み込まれます。
+
+サーバーが実行中に構成を更新するには、
+管理者はCLI `bencher server config update`コマンドを使用し、
+[PUT `/v0/server/config` エンドポイント](/ja/docs/api/server/config/#put-v0serverconfig)を呼び出します。
+すべての更新された構成は`BENCHER_CONFIG`環境変数に保存され、
+`BENCHER_CONFIG_PATH`にディスク上に保存されます。
+
+JSON構成の例:
+
+<Example />

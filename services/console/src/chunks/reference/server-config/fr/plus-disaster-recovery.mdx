@@ -1,0 +1,46 @@
+### `plus.disaster_recovery`
+
+Cette section spécifie la configuration de la récupération en cas de sinistre.
+Bencher prend en charge la réplication continue de tous les changements de base de données.
+Pour exécuter des sauvegardes à la demande ou programmées, consultez la section `database.data_store` de la configuration.
+
+Il existe quatre `schéma`s de réplication :
+- `file`: Répliquer vers un chemin de fichier local
+    - `path`: Chemin de réplication
+- `sftp`: Répliquer via SFTP
+    - `host`: Nom d'hôte du système cible
+    - `port`: Numéro de port du système cible
+    - `user`: Nom d'utilisateur sur le système cible
+    - `password`: (Optionnel) Mot de passe sur le système cible
+    - `path`: (Optionnel) Chemin sur le système cible
+    - `key_path`: (Optionnel) Chemin vers la clé SSH
+- `s3`: Répliquer vers un stockage de blob compatible S3
+    - `bucket`: Nom du bucket
+    - `path`: (Optionnel) Chemin dans le bucket
+    - `endpoint`: (AWS: Optionnel | Non-AWS: Requis) Point de terminaison de réplication
+    - `region`: (Optionnel) Région du bucket
+    - `access_key_id`: Clé d'accès S3
+    - `secret_access_key`: Clé d'accès secret S3
+- `abs`: Répliquer vers Azure Blob Storage
+    - `account_name`: Nom du compte
+    - `bucket`: Nom du bucket
+    - `path`: (Optionnel) Chemin dans le bucket
+    - `account_key`: Clé de compte Azure
+- `gcs`: Répliquer vers Google Cloud Storage
+    - `bucket`: Nom du bucket
+    - `path`: (Optionnel) Chemin dans le bucket
+    - `GOOGLE_APPLICATION_CREDENTIALS`: Variable d'environnement définie avec le chemin du fichier pointant vers les informations d'identification du compte de service
+
+Les quatre schémas de réplique ont les options supplémentaires suivantes :
+
+- `retention`: (Optionnel) La durée pendant laquelle les fichiers snapshot & WAL seront conservés. Après la période de rétention, un nouveau snapshot sera créé et l'ancien sera supprimé. Les fichiers WAL existants avant le snapshot le plus ancien seront également supprimés. La valeur par défaut est `24h`.
+- `retention_check_interval`: (Optionnel) Spécifie la fréquence à laquelle Bencher vérifiera si la rétention doit être appliquée. La valeur par défaut est `1h`.
+- `snapshot_interval`: (Optionnel) Spécifie la fréquence de création des nouveaux snapshots. Cela permet de réduire le temps de restauration car les snapshots plus récents auront moins de trames WAL à appliquer. La rétention s'applique toujours à ces snapshots. Si vous ne définissez pas d'intervalle de snapshot, un nouveau snapshot sera créé chaque fois que la rétention sera effectuée. La rétention se produit toutes les 24 heures par défaut.
+- `validation_interval`: (Optionnel) Lorsqu'il est spécifié, Bencher restaurera automatiquement et validera que les données sur la réplique correspondent à la copie locale. Désactivé par défaut. Activer cela peut augmenter considérablement le coût d'exécution de Bencher car la plupart des services cloud facturent les téléchargements.
+- `sync_interval`: (Optionnel) Fréquence à laquelle les trames sont poussées vers la réplique. La valeur par défaut est `1s`. Augmenter la fréquence peut augmenter considérablement les coûts de stockage cloud.
+
+|           Nom           |  Exemples  | Défaut  | Requis   |                                 Description                                     |
+| :----------------------: | :-------: | :-----: | :------: | :----------------------------------------------------------------------------: |
+|         replicas         |  [ ... ]  |   ---   |   Oui    |                          Spécifie un tableau de répliques.                           |
+|    replicas[replica]     | \{ ... \} |   ---   |   Oui    |                          Spécifie un objet réplique.                            |
+| replicas[replica].scheme |   "s3"    |   ---   |   Oui    | Spécifie le schéma de réplication. Pour toutes les autres clés de `replica`, voir la liste ci-dessus. |

@@ -1,0 +1,7 @@
+## `security`
+
+|    Nome    |                    Exemplo                     |      Padrão       | Obrigatório |                                                                                         Descrição                                                                                          |
+| :--------: | :--------------------------------------------: | :---------------: | :---------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+|   issuer   |       "https://api.bencher.example.com"        |   "bencher.dev"   |     Não     |                           Indica o emissor do JSON Web Token (JWT). **ATENÇÃO** Alterar este valor fará com que todos os JWTs gerados anteriormente não validem.                           |
+| secret_key | "UJu7Cpxb-zFaJYqXD-3mDDSDyj-ZvfxZFZs-X58xjxPy" | UUID v4 aleatório |     Sim     | Indica a chave usada para gerar todos os tokens. **DEVE SER MUITO SEGURA!** O valor padrão é um UUID v4 gerado aleatoriamente. Sempre que exibido, aparecerá ofuscado como `************`. |
+

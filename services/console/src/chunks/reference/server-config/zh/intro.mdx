@@ -1,0 +1,19 @@
+import Example from "../example.mdx";
+
+Bencher API 服务器在启动时需要一个 JSON 配置。
+这个配置可以通过以下三种方式提供：
+- `BENCHER_CONFIG` 环境变量：该值应设置为 JSON 配置
+- `BENCHER_CONFIG_PATH` 环境变量：该值应设置为包含 JSON 配置文件的路径
+- `/etc/bencher/bencher.json` 文件：此位置的文件包含 JSON 配置
+
+如果没有找到配置，则加载默认配置。
+
+要在服务器运行时更新配置，
+管理员可以使用 CLI `bencher server config update` 命令，
+它访问 [PUT `/v0/server/config` 端点](/zh/docs/api/server/config/#put-v0serverconfig)。
+所有更新后的配置都会保存到 `BENCHER_CONFIG` 环境变量中，
+并且在磁盘上的 `BENCHER_CONFIG_PATH`。
+
+示例 JSON 配置：
+
+<Example />

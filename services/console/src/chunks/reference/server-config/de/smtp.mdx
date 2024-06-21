@@ -1,0 +1,15 @@
+## `smtp`
+
+Dieser Abschnitt spezifiziert eine [SMTP](https://de.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol) Dienstkonfiguration.
+Der gesamte Abschnitt ist optional.
+Wird er nicht angegeben, werden alle Nachrichten stattdessen an `logging` geschickt.
+
+|    Name    |          Beispiel          | Standard | Erforderlich |                                               Beschreibung                                                |
+| :--------: | :------------------------: | :------: | :----------: | :-------------------------------------------------------------------------------------------------------: |
+|  hostname  |      "mailbonobo.com"      |   ---    |      Ja      |                                        Gibt den SMTP-Hostname an.                                         |
+|    port    |            587             |   587    |     Nein     |                                          Gibt den SMTP-Port an.                                           |
+|  starttls  |            true            |   true   |     Nein     |                  Kontrolliert, ob die SMTP-Verbindung das STARTTLS-Protokoll verwendet.                   |
+|  username  |         "bencher"          |   ---    |      Ja      |                                 Gibt den Benutzernamen beim SMTP-Host an.                                 |
+|   secret   | "WM3F2u9cqSNdBPLfy9sJ5kk9" |   ---    |      Ja      | Gibt das Geheimnis für den Benutzernamen beim SMTP-Host an. Im Protokoll erscheint es als `************`. |
+| from_name  |         "Bencher"          |   ---    |      Ja      |                    Gibt den Namen an, der im Absenderbereich aller E-Mails erscheint.                     |
+| from_email | "info@bencher.example.com" |   ---    |      Ja      |                    Gibt die E-Mail an, die im Absenderbereich aller E-Mails erscheint.                    |

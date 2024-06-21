@@ -1,0 +1,15 @@
+## `smtp`
+
+Esta seção especifica uma configuração de serviço [SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol).
+A seção inteira é opcional.
+Se não especificada, todas as mensagens serão enviadas para `logging` em vez disso.
+
+|    Nome    |          Exemplo           | Padrão | Obrigatório |                                                              Descrição                                                               |
+| :--------: | :------------------------: | :----: | :---------: | :----------------------------------------------------------------------------------------------------------------------------------: |
+|  hostname  |      "mailbonobo.com"      |  ---   |     Sim     |                                                    Especifica o hostname do SMTP.                                                    |
+|    port    |            587             |  587   |     Não     |                                                     Especifica a porta do SMTP.                                                      |
+|  starttls  |            true            |  true  |     Não     |                                       Controla se a conexão do SMTP usa o protocolo STARTTLS.                                        |
+|  username  |         "bencher"          |  ---   |     Sim     |                                            Especifica o nome de usuário no host do SMTP.                                             |
+|   secret   | "WM3F2u9cqSNdBPLfy9sJ5kk9" |  ---   |     Sim     | Especifica o segredo para o nome de usuário no host do SMTP. Sempre que for registrado, ele aparecerá obfuscado como `************`. |
+| from_name  |         "Bencher"          |  ---   |     Sim     |                              Especifica o nome que aparecerá na seção de remetente de todos os e-mails.                              |
+| from_email | "info@bencher.example.com" |  ---   |     Sim     |                             Especifica o e-mail que aparecerá na seção de remetente de todos os e-mails.                             |

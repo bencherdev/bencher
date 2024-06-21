@@ -1,0 +1,46 @@
+### `plus.disaster_recovery`
+
+Esta sección especifica la configuración de recuperación ante desastres.
+Bencher admite la replicación continua de todos los cambios en la base de datos.
+Para ejecutar copias de seguridad bajo demanda o programadas, consulte la sección `database.data_store` de la configuración.
+
+Hay cuatro esquemas de replicación:
+- `file`: Replicar a una ruta de archivo local
+    - `path`: Ruta para replicar a
+- `sftp`: Replicar a través de SFTP
+    - `host`: Nombre de host del sistema de destino
+    - `port`: Número de puerto del sistema de destino
+    - `user`: Nombre de usuario en el sistema de destino
+    - `password`: (Opcional) Contraseña en el sistema de destino
+    - `path`: (Opcional) Ruta en el sistema de destino
+    - `key_path`: (Opcional) Ruta a la clave SSH
+- `s3`: Replicar a cualquier almacenamiento compatible con S3
+    - `bucket`: Nombre del bucket
+    - `path`: (Opcional) Ruta en el bucket
+    - `endpoint`: (AWS: Opcional | No AWS: Requerido) Punto final de replicación
+    - `region`: (Opcional) Región del bucket
+    - `access_key_id`: Clave de acceso S3
+    - `secret_access_key`: Clave secreta de acceso S3
+- `abs`: Replicar en Azure Blob Storage
+    - `account_name`: Nombre de cuenta
+    - `bucket`: Nombre del bucket
+    - `path`: (Opcional) Ruta en el bucket
+    - `account_key`: Clave de cuenta de Azure
+- `gcs`: Replicar a Google Cloud Storage
+    - `bucket`: Nombre del bucket
+    - `path`: (Opcional) Ruta en el bucket
+    - `GOOGLE_APPLICATION_CREDENTIALS`: Variable de entorno establecida en la ruta del archivo que apunta a las credenciales de la cuenta de servicio
+
+Los cuatro esquemas de réplica tienen las siguientes opciones adicionales:
+
+- `retention`: (Opcional) Cantidad de tiempo que se conservarán los archivos de snapshot y WAL. Después del período de retención, se creará una nueva instantánea y se eliminará la antigua. Los archivos WAL que existan antes de la instantánea más antigua también se eliminarán. Por defecto es `24h`.
+- `retention_check_interval`: (Opcional) Especifica con qué frecuencia Bencher comprobará si necesita aplicar la retención. Por defecto es `1h`.
+- `snapshot_interval`: (Opcional) Especifica con qué frecuencia se crearán nuevas instantáneas. Esto se utiliza para reducir el tiempo de restauración, ya que las instantáneas más nuevas tendrán menos marcos WAL que aplicar. La retención aún se aplica a estas instantáneas. Si no establece un intervalo de instantáneas, se creará una nueva instantánea siempre que se realice la retención. Por defecto, la retención ocurre cada 24 horas.
+- `validation_interval`: (Opcional) Cuando se especifica, Bencher restaurará automáticamente y validará que los datos en la réplica coincidan con la copia local. Deshabilitado por defecto. Habilitar esto puede aumentar significativamente el costo de ejecutar Bencher, ya que la mayoría de los servicios en la nube cobran por las descargas.
+- `sync_interval`: (Opcional) Frecuencia en la que se envían marcos a la réplica. Por defecto es `1s`. Aumentar la frecuencia puede aumentar significativamente los costos de almacenamiento en la nube.
+
+|            Nombre            |   Ejemplo   | Por defecto | Requerido |                                      Descripción                                      |
+| :--------------------------: | :---------: | :---------: | :-------: | :-----------------------------------------------------------------------------------: |
+|          replicas            |   [ ... ]   |     ---     |    Sí     |                              Especifica una matriz de réplicas.                       |
+|     replicas[replica]        | \{ ... \}   |     ---     |    Sí     |                              Especifica un objeto de réplica.                        |
+| replicas[replica].scheme     |    "s3"     |     ---     |    Sí     | Especifica el esquema de replicación. Para todas las demás claves `replica`, consulte la lista anterior. |
