@@ -1,5 +1,5 @@
 use bencher_json::{
-    project::branch::{JsonBranchVersion, JsonNewStartPoint, JsonUpdateBranch},
+    project::branch::{JsonNewStartPoint, JsonUpdateBranch},
     BranchName, BranchUuid, DateTime, JsonBranch, JsonNewBranch, Slug,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -83,7 +83,7 @@ impl QueryBranch {
             project_id,
         );
         let start_point = if let Some(start_point_id) = start_point_id {
-            Some(QueryBranchVersion::get(conn, start_point_id)?.into_json(conn)?)
+            Some(QueryBranchVersion::get(conn, start_point_id)?.into_start_point_json(conn)?)
         } else {
             None
         };
@@ -92,53 +92,6 @@ impl QueryBranch {
             project: project.uuid,
             name,
             slug,
-            start_point,
-            created,
-            modified,
-        })
-    }
-
-    pub fn get_branch_version_json_for_project(
-        conn: &mut DbConnection,
-        project: &QueryProject,
-        branch_id: BranchId,
-        version_id: VersionId,
-    ) -> Result<JsonBranchVersion, HttpError> {
-        let branch = Self::get(conn, branch_id)?;
-        let version = QueryVersion::get(conn, version_id)?;
-        branch.into_branch_version_json_for_project(conn, project, version)
-    }
-
-    pub fn into_branch_version_json_for_project(
-        self,
-        conn: &mut DbConnection,
-        project: &QueryProject,
-        version: QueryVersion,
-    ) -> Result<JsonBranchVersion, HttpError> {
-        let project_id = self.project_id;
-        let JsonBranch {
-            uuid,
-            project,
-            name,
-            slug,
-            start_point,
-            created,
-            modified,
-        } = self.into_json_for_project(conn, project)?;
-        // Make sure that the version is in the same project as the branch
-        assert_parentage(
-            BencherResource::Project,
-            project_id,
-            BencherResource::Version,
-            version.project_id,
-        );
-        let version = version.into_json();
-        Ok(JsonBranchVersion {
-            uuid,
-            project,
-            name,
-            slug,
-            version,
             start_point,
             created,
             modified,

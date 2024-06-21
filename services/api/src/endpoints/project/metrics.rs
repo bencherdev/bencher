@@ -21,6 +21,7 @@ use crate::{
         project::{
             benchmark::QueryBenchmark,
             branch::QueryBranch,
+            branch_version::QueryBranchVersion,
             measure::QueryMeasure,
             metric_boundary::QueryMetricBoundary,
             testbed::QueryTestbed,
@@ -206,7 +207,7 @@ async fn metric_query_json(
     ): MetricQuery,
 ) -> Result<JsonOneMetric, HttpError> {
     let branch =
-        branch.into_branch_version_json_for_project(conn_lock!(context), project, version)?;
+        QueryBranchVersion::into_json_for_project(context, project, branch, version).await?;
     let testbed = testbed.into_json_for_project(project);
     let benchmark = benchmark.into_json_for_project(project);
     let measure = measure.into_json_for_project(project);
