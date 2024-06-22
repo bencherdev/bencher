@@ -3,6 +3,7 @@ name = "test_api"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+publish = false
 
 [dependencies]
 # Workspace

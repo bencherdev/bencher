@@ -5,7 +5,7 @@ edition = "2021"
 publish = false
 
 [features]
-dhat-heap = [] 
+dhat-heap = []
 
 [dependencies]
 aya = "0.12"
@@ -15,7 +15,13 @@ anyhow = "1"
 env_logger = "0.10"
 libc = "0.2"
 log = "0.4"
-tokio = { version = "1.25", features = ["macros", "rt", "rt-multi-thread", "net", "signal"] }
+tokio = { version = "1.25", features = [
+    "macros",
+    "rt",
+    "rt-multi-thread",
+    "net",
+    "signal",
+] }
 chrono = "0.4"
 dhat = "0.3"
 

@@ -3,7 +3,7 @@ name = "gen_installer"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
-
+publish = false
 
 [dependencies]
 # Workspace

@@ -1,9 +1,10 @@
 [workspace]
 
 [package]
-name = "rust_iai_callgrind"
+name = "game"
 version = "0.1.0"
 edition = "2021"
+publish = false
 
 [dev-dependencies]
 iai-callgrind = "0.10.2"
