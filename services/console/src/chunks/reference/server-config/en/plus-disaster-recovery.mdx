@@ -4,7 +4,7 @@ This section specifies the disaster recovery configuration.
 Bencher supports continuously replicating all database changes.
 For running on demand or scheduled backups, see the `database.data_store` section of the configuration.
 
-There are four replication `scheme`s:
+There are five replication `scheme`s:
 - `file`: Replicate to a local file path
     - `path`: Path to replicate to
 - `sftp`: Replicate over SFTP
@@ -31,7 +31,7 @@ There are four replication `scheme`s:
     - `path`: (Optional) Path in bucket
     - `GOOGLE_APPLICATION_CREDENTIALS`: Environment variable set to file path pointing to service account credentials
 
-All four replica `scheme`s have the following additional options:
+All five replica `scheme`s have the following additional options:
 
 - `retention`: (Optional)  The amount of time that snapshot & WAL files will be kept. After the retention period, a new snapshot will be created and the old one will be removed. WAL files that exist before the oldest snapshot will also be removed. Defaults to `24h`.
 - `retention_check_interval`: (Optional) Specifies how often Bencher will check if retention needs to be enforced. Defaults to `1h`.
