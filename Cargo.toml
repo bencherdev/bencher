@@ -10,7 +10,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.4.13"
+version = "0.4.14"
 authors = ["Everett Pompeii <everett@bencher.dev>"]
 edition = "2021"
 
