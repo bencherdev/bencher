@@ -89,6 +89,8 @@ impl Example {
             },
             Self::RustCriterion | Self::RustCustom => Ok(()),
             Self::RustIai => {
+                let status = Command::new("sudo").args(["apt-get", "update"]).status()?;
+                assert!(status.success(), "{status}");
                 let status = Command::new("sudo")
                     .args(["apt", "install", "valgrind", "-y"])
                     .status()?;
@@ -96,6 +98,8 @@ impl Example {
                 Ok(())
             },
             Self::RustIaiCallgrind => {
+                let status = Command::new("sudo").args(["apt-get", "update"]).status()?;
+                assert!(status.success(), "{status}");
                 let status = Command::new("sudo")
                     .args(["apt", "install", "valgrind", "-y"])
                     .status()?;
