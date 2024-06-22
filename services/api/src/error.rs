@@ -138,9 +138,34 @@ where
 pub fn resource_conflict_error<V, E>(resource: BencherResource, value: V, error: E) -> HttpError
 where
     V: fmt::Debug,
-    E: fmt::Display,
+    E: fmt::Debug + fmt::Display,
 {
-    conflict_error(format!("{resource} ({value:?}) has conflict: {error}",))
+    let database_is_locked = error.to_string().contains("database is locked");
+    let err = ResourceError::Conflict {
+        resource,
+        value,
+        error,
+    };
+    if database_is_locked {
+        debug_assert!(false, "{err}");
+        #[cfg(feature = "sentry")]
+        sentry::capture_error(&err);
+    }
+    conflict_error(err)
+}
+
+#[derive(Debug, Error)]
+pub enum ResourceError<V, E>
+where
+    V: fmt::Debug,
+    E: fmt::Debug + fmt::Display,
+{
+    #[error("{resource} ({value:?}) has conflict: {error}")]
+    Conflict {
+        resource: BencherResource,
+        value: V,
+        error: E,
+    },
 }
 
 macro_rules! resource_not_found_err {
