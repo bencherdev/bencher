@@ -562,7 +562,7 @@ const warning_image = (
 const dotUrl = (project_slug: string, isConsole: boolean, datum: object) =>
 	`${
 		isConsole
-			? `/console/projects/${project_slug}/metric/${datum.metric}`
+			? `/console/projects/${project_slug}/metrics/${datum.metric}`
 			: `/perf/${project_slug}/metrics/${datum.metric}`
 	}?${BACK_PARAM}=${encodePath()}`;
 
