@@ -150,6 +150,18 @@ pub struct InsertBenchmark {
 }
 
 impl InsertBenchmark {
+    fn new(project_id: ProjectId, name: BenchmarkName, slug: Slug) -> Self {
+        let timestamp = DateTime::now();
+        Self {
+            uuid: BenchmarkUuid::new(),
+            project_id,
+            name,
+            slug,
+            created: timestamp,
+            modified: timestamp,
+        }
+    }
+
     pub fn from_json(
         conn: &mut DbConnection,
         project_id: ProjectId,
@@ -167,18 +179,6 @@ impl InsertBenchmark {
     ) -> Result<Self, HttpError> {
         let slug = ok_slug!(conn, project_id, &name, None, benchmark, QueryBenchmark)?;
         Ok(Self::new(project_id, name, slug))
-    }
-
-    fn new(project_id: ProjectId, name: BenchmarkName, slug: Slug) -> Self {
-        let timestamp = DateTime::now();
-        Self {
-            uuid: BenchmarkUuid::new(),
-            project_id,
-            name,
-            slug,
-            created: timestamp,
-            modified: timestamp,
-        }
     }
 }
 

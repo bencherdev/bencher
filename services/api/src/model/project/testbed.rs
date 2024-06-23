@@ -1,16 +1,16 @@
 use bencher_json::{
-    project::testbed::JsonUpdateTestbed, DateTime, JsonNewTestbed, JsonTestbed, ResourceName, Slug,
-    TestbedUuid,
+    project::testbed::JsonUpdateTestbed, DateTime, JsonNewTestbed, JsonTestbed, NameId, NameIdKind,
+    ResourceName, Slug, TestbedUuid,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
 
 use super::{ProjectId, QueryProject};
 use crate::{
-    context::DbConnection,
-    error::{assert_parentage, BencherResource},
-    schema,
-    schema::testbed as testbed_table,
+    conn_lock,
+    context::{ApiContext, DbConnection},
+    error::{assert_parentage, resource_conflict_err, BencherResource},
+    schema::{self, testbed as testbed_table},
     util::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
         name_id::{fn_eq_name_id, fn_from_name_id},
@@ -47,6 +47,43 @@ impl QueryTestbed {
     fn_get_id!(testbed, TestbedId, TestbedUuid);
     fn_get_uuid!(testbed, TestbedId, TestbedUuid);
     fn_from_uuid!(testbed, TestbedUuid, Testbed);
+
+    pub async fn get_or_create(
+        context: &ApiContext,
+        project_id: ProjectId,
+        testbed: &NameId,
+    ) -> Result<TestbedId, HttpError> {
+        let query_testbed = Self::from_name_id(conn_lock!(context), project_id, testbed);
+
+        let http_error = match query_testbed {
+            Ok(testbed) => return Ok(testbed.id),
+            Err(e) => e,
+        };
+
+        let Ok(kind) = NameIdKind::<ResourceName>::try_from(testbed) else {
+            return Err(http_error);
+        };
+        let testbed = match kind {
+            NameIdKind::Uuid(_) => return Err(http_error),
+            NameIdKind::Slug(slug) => JsonNewTestbed {
+                name: slug.clone().into(),
+                slug: Some(slug),
+                soft: None,
+            },
+            NameIdKind::Name(name) => JsonNewTestbed {
+                name,
+                slug: None,
+                soft: None,
+            },
+        };
+        let insert_testbed = InsertTestbed::from_json(conn_lock!(context), project_id, testbed)?;
+        diesel::insert_into(schema::testbed::table)
+            .values(&insert_testbed)
+            .execute(conn_lock!(context))
+            .map_err(resource_conflict_err!(Testbed, insert_testbed))?;
+
+        Self::get_id(conn_lock!(context), insert_testbed.uuid)
+    }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonTestbed, HttpError> {
         let project = QueryProject::get(conn, self.project_id)?;
