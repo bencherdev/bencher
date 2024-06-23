@@ -232,9 +232,9 @@ async fn post_inner(
     )?;
     let project_id = project.id;
 
-    // Verify that the branch and testbed are part of the same project
+    // Get or create the branch and testbed
     let branch_id =
-        QueryBranch::from_name_id(conn_lock!(context), project_id, &json_report.branch)?.id;
+        QueryBranch::get_or_create(context, project_id, &json_report.branch, None).await?;
     let testbed_id = QueryTestbed::get_or_create(context, project_id, &json_report.testbed).await?;
 
     // Check to see if the project is public or private

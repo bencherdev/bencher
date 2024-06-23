@@ -1,6 +1,6 @@
 use bencher_json::{
     project::branch::{JsonNewStartPoint, JsonUpdateBranch},
-    BranchName, BranchUuid, DateTime, JsonBranch, JsonNewBranch, Slug,
+    BranchName, BranchUuid, DateTime, JsonBranch, JsonNewBranch, NameId, NameIdKind, Slug,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::HttpError;
@@ -55,6 +55,46 @@ impl QueryBranch {
     fn_get_id!(branch, BranchId, BranchUuid);
     fn_get_uuid!(branch, BranchId, BranchUuid);
     fn_from_uuid!(branch, BranchUuid, Branch);
+
+    pub async fn get_or_create(
+        context: &ApiContext,
+        project_id: ProjectId,
+        branch: &NameId,
+        start_point: Option<JsonNewStartPoint>,
+    ) -> Result<BranchId, HttpError> {
+        let query_branch = Self::from_name_id(conn_lock!(context), project_id, branch);
+
+        let http_error = match query_branch {
+            Ok(branch) => return Ok(branch.id),
+            Err(e) => e,
+        };
+
+        let Ok(kind) = NameIdKind::<BranchName>::try_from(branch) else {
+            return Err(http_error);
+        };
+        let branch = match kind {
+            NameIdKind::Uuid(_) => return Err(http_error),
+            NameIdKind::Slug(slug) => JsonNewBranch {
+                name: slug.clone().into(),
+                slug: Some(slug),
+                soft: None,
+                start_point,
+            },
+            NameIdKind::Name(name) => JsonNewBranch {
+                name,
+                slug: None,
+                soft: None,
+                start_point,
+            },
+        };
+        let insert_branch = InsertBranch::from_json(conn_lock!(context), project_id, branch)?;
+        diesel::insert_into(schema::branch::table)
+            .values(&insert_branch)
+            .execute(conn_lock!(context))
+            .map_err(resource_conflict_err!(Branch, insert_branch))?;
+
+        Self::get_id(conn_lock!(context), insert_branch.uuid)
+    }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonBranch, HttpError> {
         let project = QueryProject::get(conn, self.project_id)?;
