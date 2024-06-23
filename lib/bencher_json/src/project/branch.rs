@@ -38,11 +38,6 @@ pub struct JsonNewBranch {
     /// If the provided or generated slug is already in use, a unique slug will be generated.
     /// Maximum length is 64 characters.
     pub slug: Option<Slug>,
-    /// If set to `true` and a branch with the same name already exits,
-    /// the existing branch will be returned without an error.
-    /// This is useful in cases where there may be a race condition to create a new branch,
-    /// such as multiple jobs in a CI/CD pipeline.
-    pub soft: Option<bool>,
     /// The start point for the new branch.
     /// All branch versions from the start point branch will be shallow copied over to the new branch.
     /// That is, all historical metrics data for the start point branch will appear in queries for the new branch.
@@ -57,7 +52,6 @@ impl JsonNewBranch {
         Self {
             name: BRANCH_MAIN.clone(),
             slug: BRANCH_MAIN_SLUG.clone(),
-            soft: None,
             start_point: None,
         }
     }

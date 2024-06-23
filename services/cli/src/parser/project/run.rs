@@ -74,6 +74,9 @@ pub struct CliRunBranch {
     #[clap(long, alias = "if-branch")]
     pub branch: Option<NameId>,
 
+    #[clap(flatten)]
+    pub hash: CliRunHash,
+
     /// Use the specified branch name, slug, or UUID as the start point for `branch`.
     /// If `branch` already exists and the start point is different, a new branch will be created.
     /// Specifying more than one start point is now deprecated.
@@ -95,9 +98,6 @@ pub struct CliRunBranch {
     /// Deprecated: Do not use. This will soon be removed.
     #[clap(long, alias = "else-branch", alias = "endif-branch")]
     pub deprecated: bool,
-
-    #[clap(flatten)]
-    pub hash: CliRunHash,
 }
 
 #[derive(Args, Debug)]

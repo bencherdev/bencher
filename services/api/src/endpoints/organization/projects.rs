@@ -241,7 +241,7 @@ async fn post_inner(
     slog::debug!(log, "Added project role: {insert_proj_role:?}");
 
     // Add a `main` branch to the project
-    let insert_branch = InsertBranch::main(conn_lock!(context), query_project.id)?;
+    let insert_branch = InsertBranch::main(context, query_project.id).await?;
     diesel::insert_into(schema::branch::table)
         .values(&insert_branch)
         .execute(conn_lock!(context))

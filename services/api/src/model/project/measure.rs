@@ -71,39 +71,27 @@ impl QueryMeasure {
 
         // Dynamically create adapter specific measures
         // Or recreate default measures if they were previously deleted
-        let insert_measure = match measure.as_ref() {
+        let measure = match measure.as_ref() {
             // Recreate
-            LATENCY_NAME_STR | LATENCY_SLUG_STR => InsertMeasure::latency(conn, project_id),
-            THROUGHPUT_NAME_STR | THROUGHPUT_SLUG_STR => {
-                InsertMeasure::throughput(conn, project_id)
-            },
+            LATENCY_NAME_STR | LATENCY_SLUG_STR => JsonNewMeasure::latency(),
+            THROUGHPUT_NAME_STR | THROUGHPUT_SLUG_STR => JsonNewMeasure::throughput(),
             // Adapter specific
             // Iai
-            INSTRUCTIONS_NAME_STR | INSTRUCTIONS_SLUG_STR => {
-                InsertMeasure::instructions(conn, project_id)
-            },
-            L1_ACCESSES_NAME_STR | L1_ACCESSES_SLUG_STR => {
-                InsertMeasure::l1_accesses(conn, project_id)
-            },
-            L2_ACCESSES_NAME_STR | L2_ACCESSES_SLUG_STR => {
-                InsertMeasure::l2_accesses(conn, project_id)
-            },
-            RAM_ACCESSES_NAME_STR | RAM_ACCESSES_SLUG_STR => {
-                InsertMeasure::ram_accesses(conn, project_id)
-            },
-            TOTAL_ACCESSES_NAME_STR | TOTAL_ACCESSES_SLUG_STR => {
-                InsertMeasure::total_accesses(conn, project_id)
-            },
+            INSTRUCTIONS_NAME_STR | INSTRUCTIONS_SLUG_STR => JsonNewMeasure::instructions(),
+            L1_ACCESSES_NAME_STR | L1_ACCESSES_SLUG_STR => JsonNewMeasure::l1_accesses(),
+            L2_ACCESSES_NAME_STR | L2_ACCESSES_SLUG_STR => JsonNewMeasure::l2_accesses(),
+            RAM_ACCESSES_NAME_STR | RAM_ACCESSES_SLUG_STR => JsonNewMeasure::ram_accesses(),
+            TOTAL_ACCESSES_NAME_STR | TOTAL_ACCESSES_SLUG_STR => JsonNewMeasure::total_accesses(),
             ESTIMATED_CYCLES_NAME_STR | ESTIMATED_CYCLES_SLUG_STR => {
-                InsertMeasure::estimated_cycles(conn, project_id)
+                JsonNewMeasure::estimated_cycles()
             },
             // File size
-            FILE_SIZE_NAME_STR | FILE_SIZE_SLUG_STR => InsertMeasure::file_size(conn, project_id),
+            FILE_SIZE_NAME_STR | FILE_SIZE_SLUG_STR => JsonNewMeasure::file_size(),
             _ => {
                 let Ok(kind) = NameIdKind::<ResourceName>::try_from(measure) else {
                     return Err(http_error);
                 };
-                let measure = match kind {
+                match kind {
                     NameIdKind::Uuid(_) => return Err(http_error),
                     NameIdKind::Slug(slug) => JsonNewMeasure {
                         name: slug.clone().into(),
@@ -115,10 +103,10 @@ impl QueryMeasure {
                         slug: None,
                         units: MEASURE_UNITS.clone(),
                     },
-                };
-                InsertMeasure::from_json(conn, project_id, measure)
+                }
             },
-        }?;
+        };
+        let insert_measure = InsertMeasure::from_json(conn, project_id, measure)?;
         diesel::insert_into(schema::measure::table)
             .values(&insert_measure)
             .execute(conn)

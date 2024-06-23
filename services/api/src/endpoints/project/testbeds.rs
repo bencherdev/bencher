@@ -190,25 +190,10 @@ async fn post_inner(
     let insert_testbed =
         InsertTestbed::from_json(conn_lock!(context), query_project.id, json_testbed.clone())?;
 
-    // Hold the same lock across checking for soft creation and inserting the testbed
-    conn_lock!(context, |conn| {
-        // Soft creation
-        // If the new testbed name already exists then return the existing testbed
-        // instead of erroring due to the unique constraint
-        // This is useful to help prevent race conditions in CI
-        if let Some(true) = json_testbed.soft {
-            if let Ok(testbed) = QueryTestbed::belonging_to(&query_project)
-                .filter(schema::testbed::name.eq(json_testbed.name.as_ref()))
-                .first::<QueryTestbed>(conn)
-            {
-                return Ok(testbed.into_json_for_project(&query_project));
-            }
-        }
-        diesel::insert_into(schema::testbed::table)
-            .values(&insert_testbed)
-            .execute(conn)
-            .map_err(resource_conflict_err!(Testbed, insert_testbed))?;
-    });
+    diesel::insert_into(schema::testbed::table)
+        .values(&insert_testbed)
+        .execute(conn_lock!(context))
+        .map_err(resource_conflict_err!(Testbed, insert_testbed))?;
 
     schema::testbed::table
         .filter(schema::testbed::uuid.eq(&insert_testbed.uuid))

@@ -3,7 +3,7 @@ use bencher_json::{
     AlertUuid, JsonAlert, JsonAlerts, JsonDirection, JsonPagination, ResourceId,
 };
 use bencher_rbac::project::Permission;
-use diesel::{dsl::count, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -348,8 +348,8 @@ async fn get_stats_inner(
                 ),
             ))
             .filter(schema::benchmark::project_id.eq(query_project.id))
-            .select(count(schema::alert::id))
-            .first::<i64>(conn_lock!(context))
+            .count()
+            .get_result::<i64>(conn_lock!(context))
             .map_err(resource_not_found_err!(Alert, query_project))?;
 
     Ok(JsonAlertStats {

@@ -12,7 +12,6 @@ pub struct Create {
     pub project: ResourceId,
     pub name: BranchName,
     pub slug: Option<Slug>,
-    pub soft: bool,
     pub start_point_branch: Option<NameId>,
     pub start_point_hash: Option<GitHash>,
     pub start_point_thresholds: bool,
@@ -27,7 +26,6 @@ impl TryFrom<CliBranchCreate> for Create {
             project,
             name,
             slug,
-            soft,
             start_point,
             backend,
         } = create;
@@ -40,7 +38,6 @@ impl TryFrom<CliBranchCreate> for Create {
             project,
             name,
             slug,
-            soft,
             start_point_branch,
             start_point_hash,
             start_point_thresholds,
@@ -54,7 +51,6 @@ impl From<Create> for JsonNewBranch {
         let Create {
             name,
             slug,
-            soft,
             start_point_branch,
             start_point_hash,
             start_point_thresholds,
@@ -68,7 +64,6 @@ impl From<Create> for JsonNewBranch {
         Self {
             name: name.into(),
             slug: slug.map(Into::into),
-            soft: Some(soft),
             start_point,
         }
     }

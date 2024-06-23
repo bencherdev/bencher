@@ -1,13 +1,16 @@
 use bencher_json::{
-    project::branch::{JsonNewStartPoint, JsonUpdateBranch},
+    project::{
+        branch::{JsonNewStartPoint, JsonUpdateBranch},
+        report::JsonReportStartPoint,
+    },
     BranchName, BranchUuid, DateTime, JsonBranch, JsonNewBranch, NameId, NameIdKind, Slug,
 };
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods};
 use dropshot::HttpError;
 use slog::Logger;
 
 use super::{
-    branch_version::{BranchVersionId, InsertBranchVersion, QueryBranchVersion},
+    branch_version::{BranchVersionId, InsertBranchVersion, QueryBranchVersion, StartPoint},
     threshold::model::{InsertModel, QueryModel},
     version::{QueryVersion, VersionId},
     ProjectId, QueryProject,
@@ -56,16 +59,51 @@ impl QueryBranch {
     fn_get_uuid!(branch, BranchId, BranchUuid);
     fn_from_uuid!(branch, BranchUuid, Branch);
 
+    pub async fn create_from_json(
+        log: &Logger,
+        context: &ApiContext,
+        project_id: ProjectId,
+        branch: JsonNewBranch,
+    ) -> Result<Self, HttpError> {
+        let insert_branch = InsertBranch::from_json(context, project_id, branch.clone()).await?;
+
+        diesel::insert_into(schema::branch::table)
+            .values(&insert_branch)
+            .execute(conn_lock!(context))
+            .map_err(resource_conflict_err!(Branch, insert_branch))?;
+
+        // Clone data and optionally thresholds from the start point
+        let clone_thresholds = branch
+            .start_point
+            .as_ref()
+            .and_then(|sp| sp.thresholds)
+            .unwrap_or_default();
+        insert_branch
+            .start_point(log, context, clone_thresholds)
+            .await?;
+
+        schema::branch::table
+            .filter(schema::branch::uuid.eq(&insert_branch.uuid))
+            .first::<Self>(conn_lock!(context))
+            .map_err(resource_not_found_err!(Branch, insert_branch))
+    }
+
     pub async fn get_or_create(
+        log: &Logger,
         context: &ApiContext,
         project_id: ProjectId,
         branch: &NameId,
-        start_point: Option<JsonNewStartPoint>,
+        report_start_point: Option<&JsonReportStartPoint>,
     ) -> Result<BranchId, HttpError> {
         let query_branch = Self::from_name_id(conn_lock!(context), project_id, branch);
 
         let http_error = match query_branch {
-            Ok(branch) => return Ok(branch.id),
+            Ok(branch) => {
+                return branch
+                    .with_start_point(log, context, project_id, report_start_point)
+                    .await
+                    .map(|branch| branch.id);
+            },
             Err(e) => e,
         };
 
@@ -77,23 +115,245 @@ impl QueryBranch {
             NameIdKind::Slug(slug) => JsonNewBranch {
                 name: slug.clone().into(),
                 slug: Some(slug),
-                soft: None,
-                start_point,
+                start_point: report_start_point.and_then(JsonReportStartPoint::to_new_start_point),
             },
             NameIdKind::Name(name) => JsonNewBranch {
                 name,
                 slug: None,
-                soft: None,
-                start_point,
+                start_point: report_start_point.and_then(JsonReportStartPoint::to_new_start_point),
             },
         };
-        let insert_branch = InsertBranch::from_json(conn_lock!(context), project_id, branch)?;
-        diesel::insert_into(schema::branch::table)
-            .values(&insert_branch)
-            .execute(conn_lock!(context))
-            .map_err(resource_conflict_err!(Branch, insert_branch))?;
+        Self::create_from_json(log, context, project_id, branch)
+            .await
+            .map(|branch| branch.id)
+    }
 
-        Self::get_id(conn_lock!(context), insert_branch.uuid)
+    async fn with_start_point(
+        self,
+        log: &Logger,
+        context: &ApiContext,
+        project_id: ProjectId,
+        report_start_point: Option<&JsonReportStartPoint>,
+    ) -> Result<Self, HttpError> {
+        // Get the current start point.
+        let current_start_point = self.get_start_point(context).await?;
+        // Get the new start point, if there is a branch specified.
+        let new_start_point = if let Some(JsonReportStartPoint {
+            branch: Some(branch),
+            hash,
+            ..
+        }) = report_start_point
+        {
+            Some(
+                QueryBranchVersion::get_start_point(context, project_id, branch, hash.as_ref())
+                    .await?
+                    .to_start_point(context)
+                    .await?,
+            )
+        } else {
+            None
+        };
+        let clone_thresholds = report_start_point.and_then(|rsp| rsp.thresholds);
+
+        // Compare the current start point against the new start point.
+        match (&current_start_point, &new_start_point) {
+            // If there is both a current and new start point, then they need to be compared.
+            (Some(current), Some(new)) => {
+                // Check if the current and new branches match.
+                if current.branch.uuid == new.branch.uuid {
+                    // If the current and new start point branches match, then check the hashes.
+                    match (&current.version.hash, &new.version.hash) {
+                        (Some(current_hash), Some(hash)) => {
+                            if current_hash == hash {
+                                Ok(self)
+                            } else {
+                                // Rename and create a new branch, if the hashes do not match.
+                                self.rename_and_create(
+                                    log,
+                                    context,
+                                    current_start_point.as_ref(),
+                                    new_start_point.as_ref(),
+                                    clone_thresholds,
+                                )
+                                .await
+                            }
+                        },
+                        // Rename the current branch if it does not have a start point hash and the provided start point does.
+                        // This should only rarely happen going forward, as most branches with a start point will have a hash.
+                        (None, Some(_)) => {
+                            self.rename_and_create(
+                                log,
+                                context,
+                                current_start_point.as_ref(),
+                                new_start_point.as_ref(),
+                                clone_thresholds,
+                            )
+                            .await
+                        },
+                        // If a start point hash is not specified, then there is nothing to check.
+                        // Even if the current branch has a start point hash, it does not need to always be specified.
+                        // That is, adding a start point hash is a one way operation with `bencher run`.
+                        // Alternatively, this could actually follow the HEAD here, so not specifying a hash is equivalent to specifying the HEAD.
+                        // However, that behavior will likely be confusing to users.
+                        // Further, this would be a breaking change for users who have already specified a start point without a hash.
+                        (_, None) => Ok(self),
+                    }
+                } else {
+                    // If the current start point branch does not match the new start point branch,
+                    // then the branch needs to be recreated from that new start point.
+                    self.rename_and_create(
+                        log,
+                        context,
+                        current_start_point.as_ref(),
+                        new_start_point.as_ref(),
+                        clone_thresholds,
+                    )
+                    .await
+                }
+            },
+            // If the current branch does not have a start point and one is specified, then the branch needs to be recreated from that start point.
+            // Because adding a start point is a one way operation with `bencher run`, this operation will only ever be performed once.
+            // Therefore, using a set naming convention for the detached branch name and slug is okay: `branch_name@detached`
+            (None, Some(_)) => {
+                self.rename_and_create(
+                    log,
+                    context,
+                    current_start_point.as_ref(),
+                    new_start_point.as_ref(),
+                    clone_thresholds,
+                )
+                .await
+            },
+            // If a start point is not specified, check to see if reset is.
+            (_, None) => {
+                // If reset is set then the branch needs to be reset.
+                if let Some(JsonReportStartPoint {
+                    reset: Some(true), ..
+                }) = report_start_point
+                {
+                    self.rename_and_create(
+                        log,
+                        context,
+                        current_start_point.as_ref(),
+                        new_start_point.as_ref(),
+                        clone_thresholds,
+                    )
+                    .await
+                } else {
+                    // If a start point is not specified and reset is not set, then there is nothing to check.
+                    // Even if the current branch has a start point, it does not need to always be specified.
+                    // That is, adding a start point is a one way operation with `bencher run`.
+                    // Alternatively, this could actually rename and create a new branch if there is a current start point,
+                    // so not specifying a start point when there is a current start point is equivalent to resetting the branch.
+                    // However, that behavior will likely be confusing to users.
+                    Ok(self)
+                }
+            },
+        }
+    }
+
+    async fn get_start_point(&self, context: &ApiContext) -> Result<Option<StartPoint>, HttpError> {
+        let Some(start_point_id) = self.start_point_id else {
+            return Ok(None);
+        };
+        let branch_version = QueryBranchVersion::get(conn_lock!(context), start_point_id)?;
+        let branch = Self::get(conn_lock!(context), branch_version.branch_id)?;
+        let version = QueryVersion::get(conn_lock!(context), branch_version.version_id)?;
+        Ok(Some(StartPoint { branch, version }))
+    }
+
+    pub async fn rename_and_create(
+        self,
+        log: &Logger,
+        context: &ApiContext,
+        current_start_point: Option<&StartPoint>,
+        new_start_point: Option<&StartPoint>,
+        clone_thresholds: Option<bool>,
+    ) -> Result<Self, HttpError> {
+        // Update the current branch name and slug
+        self.rename(context, current_start_point, new_start_point)
+            .await?;
+        // Create new branch with the same name and slug as the current branch
+        let branch = JsonNewBranch {
+            name: self.name.clone(),
+            slug: Some(self.slug.clone()),
+            start_point: new_start_point.map(|start_point| JsonNewStartPoint {
+                branch: NameId::from(start_point.branch.uuid),
+                hash: start_point.version.hash.clone(),
+                thresholds: clone_thresholds,
+            }),
+        };
+        Self::create_from_json(log, context, self.project_id, branch).await
+    }
+
+    pub async fn rename(
+        &self,
+        context: &ApiContext,
+        current_start_point: Option<&StartPoint>,
+        new_start_point: Option<&StartPoint>,
+    ) -> Result<(), HttpError> {
+        let suffix = self.rename_branch_suffix(current_start_point, new_start_point);
+        let branch_name = format!("{branch_name}@{suffix}", branch_name = &self.name);
+
+        let count = schema::branch::table
+            .filter(schema::branch::name.like(&format!("{branch_name}%")))
+            .count()
+            .get_result::<i64>(conn_lock!(context))
+            .map_err(resource_not_found_err!(Branch, (&self, &branch_name)))?;
+
+        let branch_name = if count > 0 {
+            format!(
+                "{branch_name}/{count}",
+                branch_name = &branch_name,
+                count = count
+            )
+        } else {
+            branch_name
+        };
+
+        let branch_slug = Slug::new(&branch_name);
+        let json_update_branch = JsonUpdateBranch {
+            name: Some(
+                branch_name
+                    .parse()
+                    .map_err(resource_conflict_err!(Branch, (&self, &branch_name)))?,
+            ),
+            slug: Some(branch_slug),
+            hash: None,
+        };
+        let update_branch = UpdateBranch::from(json_update_branch);
+        diesel::update(schema::branch::table.filter(schema::branch::id.eq(self.id)))
+            .set(&update_branch)
+            .execute(conn_lock!(context))
+            .map_err(resource_conflict_err!(Branch, (&self, &update_branch)))?;
+
+        Ok(())
+    }
+
+    fn rename_branch_suffix(
+        &self,
+        current_start_point: Option<&StartPoint>,
+        new_start_point: Option<&StartPoint>,
+    ) -> String {
+        // If there is no current start point, then the branch will be detached.
+        let Some(current_start_point) = current_start_point else {
+            return "detached".to_owned();
+        };
+
+        // If the start point is self-referential, then simply name it `HEAD` to avoid confusing recursive names.
+        // While `HEAD` isn't the most accurate name, it is a reserved name in git so it should not be used by any other branches.
+        // Otherwise, just use the name of the current start point branch.
+        let branch_name = if new_start_point.is_some_and(|new| self.uuid == new.branch.uuid) {
+            "HEAD"
+        } else {
+            current_start_point.branch.name.as_ref()
+        };
+        let version_suffix = if let Some(hash) = &current_start_point.version.hash {
+            format!("hash/{hash}")
+        } else {
+            format!("version/{}", current_start_point.version.number)
+        };
+        format!("{branch_name}/{version_suffix}")
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonBranch, HttpError> {
@@ -152,8 +412,8 @@ pub struct InsertBranch {
 }
 
 impl InsertBranch {
-    pub fn from_json(
-        conn: &mut DbConnection,
+    pub async fn from_json(
+        context: &ApiContext,
         project_id: ProjectId,
         branch: JsonNewBranch,
     ) -> Result<Self, HttpError> {
@@ -161,37 +421,22 @@ impl InsertBranch {
             name,
             slug,
             start_point,
-            ..
         } = branch;
-        let slug = ok_slug!(conn, project_id, &name, slug, branch, QueryBranch)?;
+        let slug = conn_lock!(context, |conn| ok_slug!(
+            conn,
+            project_id,
+            &name,
+            slug,
+            branch,
+            QueryBranch
+        )?);
         let timestamp = DateTime::now();
 
         let start_point_id = if let Some(JsonNewStartPoint { branch, hash, .. }) = start_point {
-            // Get the start point branch
-            let start_point_branch = QueryBranch::from_name_id(conn, project_id, &branch)?;
-            let mut query = schema::branch_version::table
-                .inner_join(schema::version::table)
-                // Filter for the start point branch
-                .filter(schema::branch_version::branch_id.eq(start_point_branch.id))
-                // Sanity check that we are in the right project
-                .filter(schema::version::project_id.eq(project_id))
-                .into_boxed();
-
-            if let Some(hash) = hash.as_ref() {
-                // Make sure the start point version has the correct hash, if specified.
-                query = query.filter(schema::version::hash.eq(hash));
-            }
-
             Some(
-                query
-                    // If the hash is not specified, get the most recent version.
-                    .order(schema::version::number.desc())
-                    .select(schema::branch_version::id)
-                    .first::<BranchVersionId>(conn)
-                    .map_err(resource_not_found_err!(
-                        BranchVersion,
-                        (branch, hash)
-                    ))?,
+                QueryBranchVersion::get_start_point(context, project_id, &branch, hash.as_ref())
+                    .await?
+                    .id,
             )
         } else {
             None
@@ -208,8 +453,8 @@ impl InsertBranch {
         })
     }
 
-    pub fn main(conn: &mut DbConnection, project_id: ProjectId) -> Result<Self, HttpError> {
-        Self::from_json(conn, project_id, JsonNewBranch::main())
+    pub async fn main(context: &ApiContext, project_id: ProjectId) -> Result<Self, HttpError> {
+        Self::from_json(context, project_id, JsonNewBranch::main()).await
     }
 
     pub async fn start_point(

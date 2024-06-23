@@ -24,7 +24,7 @@ use crate::{
     error::{resource_conflict_err, resource_not_found_err},
     model::{
         project::{
-            branch::{InsertBranch, QueryBranch, UpdateBranch},
+            branch::{QueryBranch, UpdateBranch},
             version::QueryVersion,
             QueryProject,
         },
@@ -198,46 +198,10 @@ async fn post_inner(
         Permission::Create,
     )?;
 
-    let insert_branch =
-        InsertBranch::from_json(conn_lock!(context), query_project.id, json_branch.clone())?;
+    let query_branch =
+        QueryBranch::create_from_json(log, context, query_project.id, json_branch).await?;
 
-    // Hold the same lock across checking for soft creation and inserting the branch
-    conn_lock!(context, |conn| {
-        // Soft creation
-        // If the new branch name already exists then return the existing branch
-        // instead of erroring due to the unique constraint
-        // This is useful to help prevent race conditions in CI
-        if let Some(true) = json_branch.soft {
-            if let Ok(branch) = QueryBranch::belonging_to(&query_project)
-                .filter(schema::branch::name.eq(json_branch.name.as_ref()))
-                .first::<QueryBranch>(conn)
-            {
-                return branch.into_json_for_project(conn, &query_project);
-            }
-        }
-        diesel::insert_into(schema::branch::table)
-            .values(&insert_branch)
-            .execute(conn)
-            .map_err(resource_conflict_err!(Branch, insert_branch))?;
-    });
-
-    // Clone data and optionally thresholds from the start point
-    let clone_thresholds = json_branch
-        .start_point
-        .as_ref()
-        .and_then(|sp| sp.thresholds)
-        .unwrap_or_default();
-    insert_branch
-        .start_point(log, context, clone_thresholds)
-        .await?;
-
-    conn_lock!(context, |conn| schema::branch::table
-        .filter(schema::branch::uuid.eq(&insert_branch.uuid))
-        .first::<QueryBranch>(conn)
-        .map_err(resource_not_found_err!(Branch, insert_branch))
-        .and_then(
-            |branch| branch.into_json_for_project(conn, &query_project)
-        ))
+    query_branch.into_json_for_project(conn_lock!(context), &query_project)
 }
 
 #[derive(Deserialize, JsonSchema)]

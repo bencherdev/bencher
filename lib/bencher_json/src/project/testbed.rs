@@ -37,11 +37,6 @@ pub struct JsonNewTestbed {
     /// If the provided or generated slug is already in use, a unique slug will be generated.
     /// Maximum length is 64 characters.
     pub slug: Option<Slug>,
-    /// If set to `true` and a testbed with the same name already exits,
-    /// the existing testbed will be returned without an error.
-    /// This is useful in cases where there may be a race condition to create a new testbed,
-    /// such as multiple jobs in a CI/CD pipeline.
-    pub soft: Option<bool>,
 }
 
 impl JsonNewTestbed {
@@ -49,7 +44,6 @@ impl JsonNewTestbed {
         Self {
             name: TESTBED_LOCALHOST.clone(),
             slug: TESTBED_LOCALHOST_SLUG.clone(),
-            soft: None,
         }
     }
 }

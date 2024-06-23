@@ -1,5 +1,5 @@
 use bencher_json::{DateTime, GitHash, NameId, ReportUuid, ResourceId};
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use super::run::{CliRunAdapter, CliRunAverage, CliRunFold};
 use crate::parser::{CliBackend, CliPagination};
@@ -68,6 +68,9 @@ pub struct CliReportCreate {
     #[clap(long)]
     pub hash: Option<GitHash>,
 
+    #[clap(flatten)]
+    pub start_point: CliReportStartPoint,
+
     /// Testbed name, slug, or UUID
     #[clap(long)]
     pub testbed: NameId,
@@ -98,6 +101,29 @@ pub struct CliReportCreate {
 
     #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+#[allow(clippy::struct_field_names)]
+#[derive(Args, Debug)]
+pub struct CliReportStartPoint {
+    /// Use the specified branch name, slug, or UUID as the start point for `branch`.
+    /// If `branch` already exists and the start point is different, a new branch will be created.
+    #[clap(long)]
+    pub start_point_branch: Option<NameId>,
+
+    /// Use the specified full `git` hash as the start point for `branch` (requires: `--start-point-branch`).
+    /// If `branch` already exists and the start point hash is different, a new branch will be created.
+    #[clap(long, requires = "start_point_branch")]
+    pub start_point_hash: Option<GitHash>,
+
+    /// Clone all thresholds if a new branch is created from the start point (requires: `--start-point-branch`).
+    #[clap(long, requires = "start_point_branch")]
+    pub start_point_thresholds: bool,
+
+    /// Reset `branch` to an empty state (conflicts with: `--start-point-branch`).
+    /// If `branch` already exists, a new empty branch will be created.
+    #[clap(long, conflicts_with = "start_point_branch")]
+    pub start_point_reset: bool,
 }
 
 #[derive(Parser, Debug)]

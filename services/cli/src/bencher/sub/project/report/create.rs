@@ -1,11 +1,12 @@
 use bencher_client::types::{
-    Adapter, DateTime, GitHash, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings, NameId,
+    Adapter, DateTime, GitHash, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings,
+    JsonReportStartPoint, NameId,
 };
 use bencher_json::ResourceId;
 
 use crate::{
     bencher::{backend::AuthBackend, sub::SubCmd},
-    parser::project::report::CliReportCreate,
+    parser::project::report::{CliReportCreate, CliReportStartPoint},
     CliError,
 };
 
@@ -14,6 +15,7 @@ pub struct Create {
     pub project: ResourceId,
     pub branch: NameId,
     pub hash: Option<GitHash>,
+    pub start_point: Option<JsonReportStartPoint>,
     pub testbed: NameId,
     pub start_time: DateTime,
     pub end_time: DateTime,
@@ -32,6 +34,7 @@ impl TryFrom<CliReportCreate> for Create {
             project,
             branch,
             hash,
+            start_point,
             testbed,
             start_time,
             end_time,
@@ -41,10 +44,24 @@ impl TryFrom<CliReportCreate> for Create {
             fold,
             backend,
         } = create;
+        let CliReportStartPoint {
+            start_point_branch,
+            start_point_hash,
+            start_point_thresholds,
+            start_point_reset,
+        } = start_point;
+        let start_point =
+            (start_point_branch.is_some() || start_point_reset).then(|| JsonReportStartPoint {
+                branch: start_point_branch.map(Into::into),
+                hash: start_point_hash.map(Into::into),
+                thresholds: Some(start_point_thresholds),
+                reset: Some(start_point_reset),
+            });
         Ok(Self {
             project,
             branch: branch.into(),
             hash: hash.map(Into::into),
+            start_point: start_point.map(Into::into),
             testbed: testbed.into(),
             start_time: start_time.into(),
             end_time: end_time.into(),
@@ -62,6 +79,7 @@ impl From<Create> for JsonNewReport {
         let Create {
             branch,
             hash,
+            start_point,
             testbed,
             start_time,
             end_time,
@@ -74,6 +92,7 @@ impl From<Create> for JsonNewReport {
         Self {
             branch,
             hash,
+            start_point,
             testbed,
             start_time,
             end_time,

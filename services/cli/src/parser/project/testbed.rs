@@ -62,11 +62,6 @@ pub struct CliTestbedCreate {
     #[clap(long)]
     pub slug: Option<Slug>,
 
-    /// Soft creation
-    /// If the new testbed name already exists then return the existing testbed
-    #[clap(long)]
-    pub soft: bool,
-
     #[clap(flatten)]
     pub backend: CliBackend,
 }

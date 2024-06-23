@@ -11,7 +11,9 @@ use crate::{
 };
 
 use super::{
-    benchmark::JsonBenchmarkMetric, branch::JsonBranchVersion, threshold::JsonThresholdModel,
+    benchmark::JsonBenchmarkMetric,
+    branch::{JsonBranchVersion, JsonNewStartPoint},
+    threshold::JsonThresholdModel,
 };
 
 crate::typed_uuid::typed_uuid!(ReportUuid);
@@ -20,12 +22,24 @@ crate::typed_uuid::typed_uuid!(ReportUuid);
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewReport {
     /// Branch UUID, slug, or name.
+    /// If the branch does not exist, it will be created.
     pub branch: NameId,
     /// Full `git` commit hash.
     /// All reports with the same `git` commit hash will be considered part of the same branch version.
     /// This can be useful for tracking the performance of a specific commit across multiple testbeds.
     pub hash: Option<GitHash>,
+    /// The start point for the report branch.
+    /// If the branch already exists and the start point is not provided, the current branch will be used.
+    /// If the branch already exists and the start point provided is different, a new branch will be created from the new start point.
+    /// If the branch does not exist, the start point will be used to create a new branch.
+    /// If a new branch is created with a start point,
+    /// all branch versions from the start point branch will be shallow copied over to the new branch.
+    /// That is, all historical metrics data for the start point branch will appear in queries for the branch.
+    /// For example, pull request branches often use their base branch as their start point branch.
+    /// If a new branch is created, it is not kept in sync with the start point branch.
+    pub start_point: Option<JsonReportStartPoint>,
     /// Testbed UUID, slug, or name.
+    /// If the testbed does not exist, it will be created.
     pub testbed: NameId,
     /// Start time for the report. Must be an ISO 8601 formatted string.
     pub start_time: DateTime,
@@ -35,6 +49,40 @@ pub struct JsonNewReport {
     pub results: Vec<String>,
     /// Settings for how to handle the report.
     pub settings: Option<JsonReportSettings>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonReportStartPoint {
+    /// The UUID, slug, or name of the branch to use as the start point.
+    pub branch: Option<NameId>,
+    /// The full git hash of the branch to use as the start point.
+    /// Requires the `branch` field to be set.
+    pub hash: Option<GitHash>,
+    /// If set to `true`, the thresholds from the start point branch will be deep copied to the new branch.
+    /// This can be useful for pull request branches that should have the same thresholds as their target branch.
+    /// Requires the `branch` field to be set.
+    pub thresholds: Option<bool>,
+    /// Reset the branch to an empty state.
+    /// If the branch already exists, a new empty branch will be created.
+    /// Will not take effect if the `branch` field is set.
+    pub reset: Option<bool>,
+}
+
+impl JsonReportStartPoint {
+    pub fn to_new_start_point(&self) -> Option<JsonNewStartPoint> {
+        let JsonReportStartPoint {
+            branch,
+            hash,
+            thresholds,
+            reset: _,
+        } = self;
+        Some(JsonNewStartPoint {
+            branch: branch.clone()?,
+            hash: hash.clone(),
+            thresholds: *thresholds,
+        })
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]

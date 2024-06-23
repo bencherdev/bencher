@@ -68,13 +68,8 @@ impl QueryTestbed {
             NameIdKind::Slug(slug) => JsonNewTestbed {
                 name: slug.clone().into(),
                 slug: Some(slug),
-                soft: None,
             },
-            NameIdKind::Name(name) => JsonNewTestbed {
-                name,
-                slug: None,
-                soft: None,
-            },
+            NameIdKind::Name(name) => JsonNewTestbed { name, slug: None },
         };
         let insert_testbed = InsertTestbed::from_json(conn_lock!(context), project_id, testbed)?;
         diesel::insert_into(schema::testbed::table)
@@ -134,7 +129,7 @@ impl InsertTestbed {
         project_id: ProjectId,
         testbed: JsonNewTestbed,
     ) -> Result<Self, HttpError> {
-        let JsonNewTestbed { name, slug, .. } = testbed;
+        let JsonNewTestbed { name, slug } = testbed;
         let slug = ok_slug!(conn, project_id, &name, slug, testbed, QueryTestbed)?;
         let timestamp = DateTime::now();
         Ok(Self {

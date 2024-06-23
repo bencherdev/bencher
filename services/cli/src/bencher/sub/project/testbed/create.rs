@@ -12,7 +12,6 @@ pub struct Create {
     pub project: ResourceId,
     pub name: ResourceName,
     pub slug: Option<Slug>,
-    pub soft: bool,
     pub backend: AuthBackend,
 }
 
@@ -24,14 +23,12 @@ impl TryFrom<CliTestbedCreate> for Create {
             project,
             name,
             slug,
-            soft,
             backend,
         } = create;
         Ok(Self {
             project,
             name,
             slug,
-            soft,
             backend: backend.try_into()?,
         })
     }
@@ -39,13 +36,10 @@ impl TryFrom<CliTestbedCreate> for Create {
 
 impl From<Create> for JsonNewTestbed {
     fn from(create: Create) -> Self {
-        let Create {
-            name, slug, soft, ..
-        } = create;
+        let Create { name, slug, .. } = create;
         Self {
             name: name.into(),
             slug: slug.map(Into::into),
-            soft: Some(soft),
         }
     }
 }

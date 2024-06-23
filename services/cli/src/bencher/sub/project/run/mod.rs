@@ -195,15 +195,6 @@ impl Run {
     }
 
     async fn generate_report(&self) -> Result<Option<JsonNewReport>, RunError> {
-        let (branch, hash) = self
-            .branch
-            .get(&self.project, self.dry_run, self.log, &self.backend)
-            .await?;
-        let testbed = self
-            .testbed
-            .get(&self.project, self.dry_run, self.log, &self.backend)
-            .await?;
-
         let start_time = DateTime::now();
         let mut results = Vec::with_capacity(self.iter);
         for _ in 0..self.iter {
@@ -234,10 +225,12 @@ impl Run {
             (start_time, end_time)
         };
 
+        let (branch, hash, start_point) = self.branch.clone().into();
         Ok(Some(JsonNewReport {
-            branch: branch.into(),
-            hash: hash.map(Into::into),
-            testbed: testbed.into(),
+            branch,
+            hash,
+            start_point,
+            testbed: self.testbed.clone().into(),
             start_time: start_time.into(),
             end_time: end_time.into(),
             results,

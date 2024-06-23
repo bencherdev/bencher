@@ -8376,11 +8376,6 @@
               }
             ]
           },
-          "soft": {
-            "nullable": true,
-            "description": "If set to `true` and a branch with the same name already exits, the existing branch will be returned without an error. This is useful in cases where there may be a race condition to create a new branch, such as multiple jobs in a CI/CD pipeline.",
-            "type": "boolean"
-          },
           "start_point": {
             "nullable": true,
             "description": "The start point for the new branch. All branch versions from the start point branch will be shallow copied over to the new branch. That is, all historical metrics data for the start point branch will appear in queries for the new branch. For example, pull request branches often use their base branch as their start point branch. After the new branch is created, it is not kept in sync with the start point branch. If not provided, the new branch will have no historical data.",
@@ -8696,7 +8691,7 @@
         "type": "object",
         "properties": {
           "branch": {
-            "description": "Branch UUID, slug, or name.",
+            "description": "Branch UUID, slug, or name. If the branch does not exist, it will be created.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/NameId"
@@ -8736,6 +8731,15 @@
               }
             ]
           },
+          "start_point": {
+            "nullable": true,
+            "description": "The start point for the report branch. If the branch already exists and the start point is not provided, the current branch will be used. If the branch already exists and the start point provided is different, a new branch will be created from the new start point. If the branch does not exist, the start point will be used to create a new branch. If a new branch is created with a start point, all branch versions from the start point branch will be shallow copied over to the new branch. That is, all historical metrics data for the start point branch will appear in queries for the branch. For example, pull request branches often use their base branch as their start point branch. If a new branch is created, it is not kept in sync with the start point branch.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonReportStartPoint"
+              }
+            ]
+          },
           "start_time": {
             "description": "Start time for the report. Must be an ISO 8601 formatted string.",
             "allOf": [
@@ -8745,7 +8749,7 @@
             ]
           },
           "testbed": {
-            "description": "Testbed UUID, slug, or name.",
+            "description": "Testbed UUID, slug, or name. If the testbed does not exist, it will be created.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/NameId"
@@ -8810,11 +8814,6 @@
                 "$ref": "#/components/schemas/Slug"
               }
             ]
-          },
-          "soft": {
-            "nullable": true,
-            "description": "If set to `true` and a testbed with the same name already exits, the existing testbed will be returned without an error. This is useful in cases where there may be a race condition to create a new testbed, such as multiple jobs in a CI/CD pipeline.",
-            "type": "boolean"
           }
         },
         "required": [
@@ -10053,6 +10052,39 @@
                 "$ref": "#/components/schemas/JsonFold"
               }
             ]
+          }
+        }
+      },
+      "JsonReportStartPoint": {
+        "type": "object",
+        "properties": {
+          "branch": {
+            "nullable": true,
+            "description": "The UUID, slug, or name of the branch to use as the start point.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NameId"
+              }
+            ]
+          },
+          "hash": {
+            "nullable": true,
+            "description": "The full git hash of the branch to use as the start point. Requires the `branch` field to be set.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GitHash"
+              }
+            ]
+          },
+          "reset": {
+            "nullable": true,
+            "description": "Reset the branch to an empty state. If the branch already exists, a new empty branch will be created. Will not take effect if the `branch` field is set.",
+            "type": "boolean"
+          },
+          "thresholds": {
+            "nullable": true,
+            "description": "If set to `true`, the thresholds from the start point branch will be deep copied to the new branch. This can be useful for pull request branches that should have the same thresholds as their target branch. Requires the `branch` field to be set.",
+            "type": "boolean"
           }
         }
       },
