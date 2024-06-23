@@ -85,6 +85,8 @@ jobs:
             source: download
           - os: ubuntu-latest
             source: script
+          - os: ubuntu-latest
+            source: cargo
           # MacOS
           - os: macos-latest
             source: main
@@ -94,6 +96,8 @@ jobs:
             source: download
           - os: macos-latest
             source: script
+          - os: macos-latest
+            source: cargo
           # Windows
           - os: windows-latest
             source: main
@@ -103,9 +107,11 @@ jobs:
             source: download
           - os: windows-latest
             source: script
+          - os: windows-latest
+            source: cargo
     runs-on: ${{ matrix.os }}
     # This is expected to fail on `devel` when tagging a new release
-    continue-on-error: ${{ startsWith(github.ref, 'refs/tags/') && matrix.source == 'devel' }}
+    continue-on-error: ${{ startsWith(github.ref, 'refs/tags/') && ( matrix.source == 'devel' || matrix.source == 'cargo' ) }}
     steps:
       - uses: bencherdev/bencher@main
         if: matrix.source == 'main'
@@ -125,6 +131,9 @@ jobs:
       - name: Windows CLI Install Script
         if: matrix.source == 'script' && matrix.os == 'windows-latest'
         run: gc -Raw services/cli/templates/output/install-cli.ps1 | iex
+      - name: Cargo CLI Install
+        if: matrix.source == 'cargo'
+        run: cargo install --git https://github.com/bencherdev/bencher --branch main --locked bencher_cli
       - name: Run current Bencher CLI GitHub Action
         run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
 
