@@ -13,6 +13,7 @@ import { BACK_PARAM, encodePath, pathname } from "../../../../util/url";
 import ConsoleButton from "./ConsoleButton";
 import PerfButton from "./PerfButton";
 import StatusButton from "./StatusButton";
+import { authUser } from "../../../../util/auth";
 
 export interface Props {
 	isConsole: boolean;
@@ -79,7 +80,7 @@ const DeckHeaderButton = (props: Props) => {
 					handleRefresh={props.handleRefresh}
 				/>
 			</Match>
-			<Match when={props.button.kind === Button.CONSOLE}>
+			<Match when={props.button.kind === Button.CONSOLE && props.user?.token}>
 				<ConsoleButton
 					params={props.params}
 					resource={props.button.resource}
