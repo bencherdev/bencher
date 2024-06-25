@@ -3,10 +3,10 @@ name: Bencher
 on:
   workflow_dispatch:
   push:
-    branches: [main, devel, express]
+    branches: [main, cloud, devel]
     tags: [v**]
   pull_request:
-    branches: [main, devel]
+    branches: [main, cloud, devel]
 
 env:
   # General
@@ -32,28 +32,9 @@ env:
   # Dev Container
   DEV_CONTAINER_DOCKER_IMAGE: bencher-dev-container
   # Cache
-  CACHE_NAME: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/')) && github.ref_name) || (github.ref == 'refs/heads/express' && 'main') || (github.event_name == 'pull_request' && github.event.number) }}
+  CACHE_NAME: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/')) && github.ref_name) || (github.event_name == 'pull_request' && github.event.number) }}
 
 jobs:
-  first_time_interaction:
-    if: (!github.ref == 'refs/heads/express')
-    name: Bencher First Time Interaction
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/first-interaction@v1
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          issue-message: |-
-            🐰 Congratulations on your first issue! 🎉
-            If you haven't already, hop on over to our [Discord server](https://discord.gg/yGEsdUh7R4).
-            <br />
-            <p align="center"><a href="https://discord.gg/yGEsdUh7R4"><img src="https://s3.amazonaws.com/public.bencher.dev/chat/discord_invite.png" alt="Bencher Discord Server" /></a></p>
-          pr-message: |-
-            🐰 Congratulations on your first PR! 🎉
-            If you haven't already, hop on over to our [Discord server](https://discord.gg/yGEsdUh7R4).
-            <br />
-            <p align="center"><a href="https://discord.gg/yGEsdUh7R4"><img src="https://s3.amazonaws.com/public.bencher.dev/chat/discord_invite.png" alt="Bencher Discord Server" /></a></p>
-
   # Bencher CLI GitHub Action
   build_github_action:
     name: Build GitHub Action
@@ -78,62 +59,71 @@ jobs:
         include:
           # Linux
           - os: ubuntu-latest
-            source: main
+            source: action-main
           - os: ubuntu-latest
-            source: devel
+            source: action-devel
           - os: ubuntu-latest
-            source: download
+            source: script-cloud
           - os: ubuntu-latest
-            source: script
+            source: script-gen
           - os: ubuntu-latest
-            source: cargo
+            source: cargo-main
+          - os: ubuntu-latest
+            source: cargo-devel
           # MacOS
           - os: macos-latest
-            source: main
+            source: action-main
           - os: macos-latest
-            source: devel
+            source: action-devel
           - os: macos-latest
-            source: download
+            source: script-cloud
           - os: macos-latest
-            source: script
+            source: script-gen
           - os: macos-latest
-            source: cargo
+            source: cargo-main
+          - os: macos-latest
+            source: cargo-devel
           # Windows
           - os: windows-latest
-            source: main
+            source: action-main
           - os: windows-latest
-            source: devel
+            source: action-devel
           - os: windows-latest
-            source: download
+            source: script-cloud
           - os: windows-latest
-            source: script
+            source: script-gen
           - os: windows-latest
-            source: cargo
+            source: cargo-main
+          - os: windows-latest
+            source: cargo-devel
     runs-on: ${{ matrix.os }}
-    # This is expected to fail on `devel` when tagging a new release
-    continue-on-error: ${{ startsWith(github.ref, 'refs/tags/') && ( matrix.source == 'devel' || matrix.source == 'cargo' ) }}
+    # This is expected to fail when tagging a new release
+    continue-on-error: ${{ startsWith(github.ref, 'refs/tags/') && ( matrix.source == 'action-devel' || matrix.source == 'cargo-devel' || matrix.source == 'cargo-main' ) }}
     steps:
       - uses: bencherdev/bencher@main
-        if: matrix.source == 'main'
+        if: matrix.source == 'action-main'
       - uses: bencherdev/bencher@devel
-        if: matrix.source == 'devel'
+        if: matrix.source == 'action-devel'
       - name: Unix CLI Download Install Script
-        if: matrix.source == 'download' && matrix.os != 'windows-latest'
+        if: matrix.source == 'script-cloud' && matrix.os != 'windows-latest'
         run: curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
       - name: Windows CLI Download Install Script
-        if: matrix.source == 'download' && matrix.os == 'windows-latest'
+        if: matrix.source == 'script-cloud' && matrix.os == 'windows-latest'
         run: irm https://bencher.dev/download/install-cli.ps1 | iex
       - uses: actions/checkout@v4
-        if: matrix.source == 'script'
+        if: matrix.source == 'script-gen'
       - name: Unix CLI Install Script
-        if: matrix.source == 'script' && matrix.os != 'windows-latest'
+        if: matrix.source == 'script-gen' && matrix.os != 'windows-latest'
         run: cat services/cli/templates/output/install-cli.sh | sh
       - name: Windows CLI Install Script
-        if: matrix.source == 'script' && matrix.os == 'windows-latest'
+        if: matrix.source == 'script-gen' && matrix.os == 'windows-latest'
         run: gc -Raw services/cli/templates/output/install-cli.ps1 | iex
-      - name: Cargo CLI Install
-        if: matrix.source == 'cargo'
+      - name: Cargo CLI Install main
+        if: matrix.source == 'cargo-main'
         run: cargo install --git https://github.com/bencherdev/bencher --branch main --locked bencher_cli
+      - name: Cargo CLI Install devel
+        if: matrix.source == 'cargo-devel'
+        run: cargo install --git https://github.com/bencherdev/bencher --branch devel --locked bencher_cli
       - name: Run current Bencher CLI GitHub Action
         run: bencher run --project bencher --token ${{ secrets.BENCHER_API_TOKEN }} --dry-run "bencher mock"
 
@@ -141,8 +131,6 @@ jobs:
   cargo_fmt:
     name: Cargo Format
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - name: Add fmt
@@ -153,12 +141,10 @@ jobs:
   cargo_clippy:
     name: Cargo Clippy
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         with:
           path: |
             ~/.cargo/bin/
@@ -178,8 +164,6 @@ jobs:
   check_generated:
     name: Check Generated
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - uses: rui314/setup-mold@v1
@@ -200,11 +184,9 @@ jobs:
 
   # Cargo Test
   cargo_test:
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     name: Cargo Test
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     env:
       TEST_BILLING_KEY: ${{ secrets.TEST_BILLING_KEY }}
     steps:
@@ -252,15 +234,13 @@ jobs:
   api_smoke_test:
     name: API Smoke Test
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: jlumbroso/free-disk-space@main
         with:
           large-packages: false
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         with:
           path: |
             ~/.cargo/bin/
@@ -286,8 +266,6 @@ jobs:
           - os: macos-latest
           - os: windows-latest
     runs-on: ${{ matrix.os }}
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - name: Install `bencher` CLI
@@ -307,8 +285,6 @@ jobs:
           # https://github.com/orgs/community/discussions/25491#discussioncomment-3248089
           # - os: windows-latest
     runs-on: ${{ matrix.os }}
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: jlumbroso/free-disk-space@main
         with:
@@ -327,8 +303,6 @@ jobs:
   cargo_check_api_minus:
     name: Cargo Check API (Minus)
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - uses: rui314/setup-mold@v1
@@ -341,8 +315,6 @@ jobs:
   cargo_check_cli_minus:
     name: Cargo Check CLI (Minus)
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - uses: rui314/setup-mold@v1
@@ -354,10 +326,9 @@ jobs:
 
   # Cargo Benchmark
   cargo_bench:
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     name: Cargo Bench
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
     # This will fail whenever Bencher Cloud is down
     # or there are any breaking changes to the report format
     continue-on-error: true
@@ -393,10 +364,9 @@ jobs:
 
   # Cargo Audit
   cargo_audit:
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     name: Cargo Audit
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -418,12 +388,11 @@ jobs:
   cargo_udeps:
     name: Cargo Unused Deps
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
     continue-on-error: ${{ !startsWith(github.ref, 'refs/tags/') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         with:
           path: |
             ~/.cargo/bin/
@@ -452,8 +421,6 @@ jobs:
   npx_biome_format:
     name: Biome Format
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - name: Biome format Action
@@ -470,7 +437,6 @@ jobs:
   npx_biome_lint:
     name: Biome Lint
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
     steps:
       - uses: actions/checkout@v4
       - name: Biome check Action
@@ -493,7 +459,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         with:
           path: |
             ~/.cargo/bin/
@@ -521,13 +487,11 @@ jobs:
   test_bencher_valid_wasm:
     name: Test `bencher_valid` WASM
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     needs: build_bencher_valid_wasm
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/express' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         with:
           path: |
             ~/.cargo/bin/
@@ -547,8 +511,6 @@ jobs:
   npx_vitest:
     name: vitest
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     needs: build_bencher_valid_wasm
     steps:
       - uses: actions/checkout@v4
@@ -635,8 +597,6 @@ jobs:
             os: windows-latest
             target: aarch64-pc-windows-msvc
     runs-on: ${{ matrix.os }}
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       # Install
@@ -699,8 +659,6 @@ jobs:
             target: aarch64-unknown-linux-gnu
             arch: arm64
     runs-on: ${{ matrix.os }}
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     needs: build_cli
     env:
       CLI_DEB_DIR: deb
@@ -739,8 +697,6 @@ jobs:
   build_console_docker:
     name: Build Console Docker
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.ref == 'refs/heads/express' && 1) || 60 }}
-    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
@@ -774,7 +730,7 @@ jobs:
           path: ./${{ env.CONSOLE_DOCKER_IMAGE }}.tar.gz
           if-no-files-found: error
 
-  build_ui:
+  build_console:
     if: (!startsWith(github.ref, 'refs/tags/'))
     name: Build Console UI
     runs-on: ubuntu-latest
@@ -805,7 +761,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build_api_docker
-      - build_ui
+      - build_console
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
@@ -840,7 +796,7 @@ jobs:
         run: cargo test-api smoke dev
 
   deploy_api_fly_test:
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/express' || github.ref == 'refs/heads/devel'
+    if: github.ref == 'refs/heads/cloud' || github.ref == 'refs/heads/devel'
     name: Deploy API to Fly.io Test
     runs-on: ubuntu-latest
     needs: build_api_docker
@@ -867,10 +823,9 @@ jobs:
         run: cargo test-api smoke test
 
   backup_database:
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/express'
+    if: github.ref == 'refs/heads/cloud'
     name: Backup Database
     runs-on: ubuntu-latest
-    continue-on-error: ${{ github.ref == 'refs/heads/express' }}
     needs:
       # Lint
       - cargo_fmt
@@ -886,7 +841,7 @@ jobs:
       - npx_vitest
       # Build
       - build_api_docker
-      - build_ui
+      - build_console
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
@@ -934,11 +889,13 @@ jobs:
       - name: Deploy API to Fly.io Prod
         working-directory: ./services/api
         run: flyctl deploy --local-only --config fly/fly.toml --wait-timeout 300
-      - uses: rui314/setup-mold@v1
-        with:
-          mold-version: ${{ env.MOLD_VERSION }}
-      - name: Run Smoke Test
-        run: cargo test-api smoke prod
+      - name: Rebase main on cloud
+        run: |
+            git fetch
+            git checkout main
+            git pull
+            git rebase --no-ff cloud
+            git push
 
   # UI Netlify
   deploy_ui_netlify_dev:
@@ -974,7 +931,7 @@ jobs:
       - name: Run Netlify Dev Test
         run: cargo test-netlify dev ${{ github.ref_name }}
 
-  deploy_ui_netlify:
+  deploy_console_netlify:
     name: Deploy Console UI to Netlify Prod
     runs-on: ubuntu-latest
     needs: deploy_api_fly
