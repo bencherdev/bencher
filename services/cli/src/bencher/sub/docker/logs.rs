@@ -30,7 +30,11 @@ impl From<CliLogs> for Logs {
 impl SubCmd for Logs {
     async fn exec(&self) -> Result<(), CliError> {
         let docker = Docker::connect_with_local_defaults().map_err(DockerError::Daemon)?;
+        // https://github.com/fussybeaver/bollard/issues/383
+        docker.ping().await.map_err(DockerError::Ping)?;
+
         tail_container_logs(&docker, self.service).await;
+
         Ok(())
     }
 }

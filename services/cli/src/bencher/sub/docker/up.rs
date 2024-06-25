@@ -58,6 +58,9 @@ impl From<CliUp> for Up {
 impl SubCmd for Up {
     async fn exec(&self) -> Result<(), CliError> {
         let docker = Docker::connect_with_local_defaults().map_err(DockerError::Daemon)?;
+        // https://github.com/fussybeaver/bollard/issues/383
+        docker.ping().await.map_err(DockerError::Ping)?;
+
         stop_containers(&docker, self.service).await?;
         self.pull_images(&docker).await?;
         self.start_containers(&docker).await?;

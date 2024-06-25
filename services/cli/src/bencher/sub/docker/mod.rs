@@ -9,6 +9,8 @@ use container::Container;
 pub enum DockerError {
     #[error("Failed to connect to Docker daemon. Are you sure Docker is running?\nError: {0}")]
     Daemon(bollard::errors::Error),
+    #[error("Failed to ping the Docker daemon. Are you sure Docker is running?\nError: {0}")]
+    Ping(bollard::errors::Error),
     #[error("Failed to stop Docker container (`{container}`): {err}")]
     StopContainer {
         container: Container,
