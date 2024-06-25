@@ -85,3 +85,15 @@ impl InsertPlotBranch {
         Ok(())
     }
 }
+
+#[derive(Debug, Clone, Copy, diesel::AsChangeset)]
+#[diesel(table_name = plot_branch_table)]
+pub struct UpdatePlotBranch {
+    pub branch_id: BranchId,
+}
+
+impl From<BranchId> for UpdatePlotBranch {
+    fn from(branch_id: BranchId) -> Self {
+        Self { branch_id }
+    }
+}

@@ -11,6 +11,7 @@ use slog::Logger;
 
 use super::{
     branch_version::{BranchVersionId, InsertBranchVersion, QueryBranchVersion, StartPoint},
+    plot::UpdatePlot,
     threshold::model::{InsertModel, QueryModel},
     version::{QueryVersion, VersionId},
     ProjectId, QueryProject,
@@ -269,6 +270,7 @@ impl QueryBranch {
         // Update the current branch name and slug
         self.rename(context, current_start_point, new_start_point)
             .await?;
+
         // Create new branch with the same name and slug as the current branch
         let branch = JsonNewBranch {
             name: self.name.clone(),
@@ -279,7 +281,12 @@ impl QueryBranch {
                 thresholds: clone_thresholds,
             }),
         };
-        Self::create_from_json(log, context, self.project_id, branch).await
+        let new_branch = Self::create_from_json(log, context, self.project_id, branch).await?;
+
+        // Update all plots for the current branch and to the new branch
+        UpdatePlot::update_branch_for_all_plots(conn_lock!(context), self.id, new_branch.id)?;
+
+        Ok(new_branch)
     }
 
     pub async fn rename(
