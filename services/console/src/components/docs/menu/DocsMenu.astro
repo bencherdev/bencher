@@ -107,9 +107,9 @@ const displayStyle = (menu: DocsMenuId, tab: DocsTab) => {
   <!-- Docs -->
   <div class="tabs is-centered">
     <ul>
-      {isBencherCloud() && <li id={DocsTab.Docs} class={tabClass(DocsTab.Docs, tab)}><a href="#">Docs</a></li>}
-      <li id={DocsTab.Api} class={tabClass(DocsTab.Api, tab)}><a href="#">API</a></li>
-      {isBencherCloud() && <li id={DocsTab.Learn} class={tabClass(DocsTab.Learn, tab)}><a href="#">Learn</a></li>}
+      {isBencherCloud() && <li id={DocsTab.Docs} class={tabClass(DocsTab.Docs, tab)}><a>Docs</a></li>}
+      <li id={DocsTab.Api} class={tabClass(DocsTab.Api, tab)}><a>API</a></li>
+      {isBencherCloud() && <li id={DocsTab.Learn} class={tabClass(DocsTab.Learn, tab)}><a>Learn</a></li>}
     </ul>
   </div>
   <nav id={DocsMenuId.Docs} style={displayStyle(DocsMenuId.Docs, tab)}>

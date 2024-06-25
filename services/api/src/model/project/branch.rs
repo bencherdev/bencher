@@ -164,6 +164,7 @@ impl QueryBranch {
                     // If the current and new start point branches match, then check the hashes.
                     match (&current.version.hash, &new.version.hash) {
                         (Some(current_hash), Some(hash)) => {
+                            // If the hashes match, then there is nothing to do.
                             if current_hash == hash {
                                 Ok(self)
                             } else {
@@ -178,7 +179,7 @@ impl QueryBranch {
                                 .await
                             }
                         },
-                        // Rename the current branch if it does not have a start point hash and the provided start point does.
+                        // Rename the current branch if it does not have a start point hash and the new start point does.
                         // This should only rarely happen going forward, as most branches with a start point will have a hash.
                         (None, Some(_)) => {
                             self.rename_and_create(
@@ -192,10 +193,9 @@ impl QueryBranch {
                         },
                         // If a start point hash is not specified, then there is nothing to check.
                         // Even if the current branch has a start point hash, it does not need to always be specified.
-                        // That is, adding a start point hash is a one way operation with `bencher run`.
-                        // Alternatively, this could actually follow the HEAD here, so not specifying a hash is equivalent to specifying the HEAD.
-                        // However, that behavior will likely be confusing to users.
-                        // Further, this would be a breaking change for users who have already specified a start point without a hash.
+                        // That is, setting the start point hash is not required on every run.
+                        // Requiring it on every run would be a breaking change
+                        // for users who have already specified a start point without a hash.
                         (_, None) => Ok(self),
                     }
                 } else {
@@ -211,9 +211,9 @@ impl QueryBranch {
                     .await
                 }
             },
-            // If the current branch does not have a start point and one is specified, then the branch needs to be recreated from that start point.
-            // Because adding a start point is a one way operation with `bencher run`, this operation will only ever be performed once.
-            // Therefore, using a set naming convention for the detached branch name and slug is okay: `branch_name@detached`
+            // If the current branch does not have a start point and one is specified,
+            // then the branch needs to be recreated from that start point.
+            // The naming convention for this will be a detached branch name and slug is okay: `branch_name@detached`
             (None, Some(_)) => {
                 self.rename_and_create(
                     log,
@@ -242,10 +242,7 @@ impl QueryBranch {
                 } else {
                     // If a start point is not specified and reset is not set, then there is nothing to check.
                     // Even if the current branch has a start point, it does not need to always be specified.
-                    // That is, adding a start point is a one way operation with `bencher run`.
-                    // Alternatively, this could actually rename and create a new branch if there is a current start point,
-                    // so not specifying a start point when there is a current start point is equivalent to resetting the branch.
-                    // However, that behavior will likely be confusing to users.
+                    // That is, setting the start point is not required on every run.
                     Ok(self)
                 }
             },
@@ -257,9 +254,8 @@ impl QueryBranch {
             return Ok(None);
         };
         let branch_version = QueryBranchVersion::get(conn_lock!(context), start_point_id)?;
-        let branch = Self::get(conn_lock!(context), branch_version.branch_id)?;
-        let version = QueryVersion::get(conn_lock!(context), branch_version.version_id)?;
-        Ok(Some(StartPoint { branch, version }))
+        let start_point = branch_version.to_start_point(context).await?;
+        Ok(Some(start_point))
     }
 
     pub async fn rename_and_create(
@@ -302,22 +298,17 @@ impl QueryBranch {
             .map_err(resource_not_found_err!(Branch, (&self, &branch_name)))?;
 
         let branch_name = if count > 0 {
-            format!(
-                "{branch_name}/{count}",
-                branch_name = &branch_name,
-                count = count
-            )
+            format!("{branch_name}/{count}")
         } else {
             branch_name
         };
-
+        let branch_name = branch_name
+            .parse()
+            .map_err(resource_conflict_err!(Branch, (&self, &branch_name)))?;
         let branch_slug = Slug::new(&branch_name);
+
         let json_update_branch = JsonUpdateBranch {
-            name: Some(
-                branch_name
-                    .parse()
-                    .map_err(resource_conflict_err!(Branch, (&self, &branch_name)))?,
-            ),
+            name: Some(branch_name),
             slug: Some(branch_slug),
             hash: None,
         };

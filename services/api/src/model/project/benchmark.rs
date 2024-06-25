@@ -69,7 +69,8 @@ impl QueryBenchmark {
             return Ok(id);
         }
 
-        let insert_benchmark = InsertBenchmark::from_name(conn, project_id, name)?;
+        let benchmark = JsonNewBenchmark { name, slug: None };
+        let insert_benchmark = InsertBenchmark::from_json(conn, project_id, benchmark)?;
         diesel::insert_into(schema::benchmark::table)
             .values(&insert_benchmark)
             .execute(conn)
@@ -150,18 +151,6 @@ pub struct InsertBenchmark {
 }
 
 impl InsertBenchmark {
-    fn new(project_id: ProjectId, name: BenchmarkName, slug: Slug) -> Self {
-        let timestamp = DateTime::now();
-        Self {
-            uuid: BenchmarkUuid::new(),
-            project_id,
-            name,
-            slug,
-            created: timestamp,
-            modified: timestamp,
-        }
-    }
-
     pub fn from_json(
         conn: &mut DbConnection,
         project_id: ProjectId,
@@ -169,16 +158,15 @@ impl InsertBenchmark {
     ) -> Result<Self, HttpError> {
         let JsonNewBenchmark { name, slug } = benchmark;
         let slug = ok_slug!(conn, project_id, &name, slug, benchmark, QueryBenchmark)?;
-        Ok(Self::new(project_id, name, slug))
-    }
-
-    fn from_name(
-        conn: &mut DbConnection,
-        project_id: ProjectId,
-        name: BenchmarkName,
-    ) -> Result<Self, HttpError> {
-        let slug = ok_slug!(conn, project_id, &name, None, benchmark, QueryBenchmark)?;
-        Ok(Self::new(project_id, name, slug))
+        let timestamp = DateTime::now();
+        Ok(Self {
+            uuid: BenchmarkUuid::new(),
+            project_id,
+            name,
+            slug,
+            created: timestamp,
+            modified: timestamp,
+        })
     }
 }
 
