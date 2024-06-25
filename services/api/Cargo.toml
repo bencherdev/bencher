@@ -59,7 +59,7 @@ uuid = { workspace = true, features = ["v4", "serde"] }
 # Crate
 async-compression = { version = "0.4", features = ["tokio", "gzip"] }
 aws-credential-types = "1.2"
-aws-sdk-s3 = { version = "1.36", features = ["behavior-version-latest"] }
+aws-sdk-s3 = { version = "1.38", features = ["behavior-version-latest"] }
 css-inline = "0.14"
 diesel_migrations = "2.2"
 mail-send = "0.4"
