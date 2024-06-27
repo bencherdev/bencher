@@ -160,9 +160,7 @@ impl BencherClient {
         E: std::error::Error + Send + Sync + 'static,
     {
         let timeout = Duration::from_secs(15);
-        let mut client_builder = reqwest::ClientBuilder::new()
-            .connect_timeout(timeout)
-            .timeout(timeout);
+        let mut client_builder = reqwest::ClientBuilder::new().connect_timeout(timeout);
 
         if let Some(token) = &self.token {
             let mut headers = reqwest::header::HeaderMap::new();
