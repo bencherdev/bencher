@@ -1,7 +1,6 @@
 ---
 import LegalLayout from "../layouts/legal/LegalLayout.astro";
 import PubHelp from "../components/console/help/Help.astro";
-import UserRedirect from "../components/console/redirects/UserRedirect";
 
 const title = "Help";
 const titleFmt = (title: string) => `🛟 ${title}`;
@@ -9,6 +8,5 @@ const description = "Get help with Bencher and continuous benchmarking";
 ---
 
 <LegalLayout title={title} titleFmt={titleFmt} description={description} heading={title}>
-  <UserRedirect client:only="solid-js" path="help" />
   <PubHelp />
 </LegalLayout>

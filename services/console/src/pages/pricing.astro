@@ -3,7 +3,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import PricingTable from "../components/pricing/PricingTable";
 import FallbackPricingTable from "../components/pricing/FallbackPricingTable";
 import { BENCHER_CALENDLY_URL } from "../util/ext";
-import AuthRedirect from "../components/auth/AuthRedirect";
 import SelfHostedRedirect from "../components/site/SelfHostedRedirct";
 import LinkFragment from "../components/site/LinkFragment.astro";
 
@@ -14,7 +13,6 @@ const description =
 
 <BaseLayout title={title} description={description}>
   <SelfHostedRedirect client:only="solid-js" path="/console" />
-  <AuthRedirect client:only="solid-js" path="/console" />
   <div>
     <section class="hero">
       <div class="hero-body">
