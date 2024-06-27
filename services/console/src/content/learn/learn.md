@@ -147,6 +147,8 @@ https://www.emergetools.com/explore
 - https://github.com/google/bloaty
 - https://github.com/rustwasm/twiggy
 - https://www.emergetools.com/app/example/ios/wikipedia
+- https://linux.die.net/man/1/pahole
+- https://linux.die.net/man/1/readelf
 
 # Daily Code Games
 
