@@ -1,0 +1,9 @@
+---
+import Img, { type Props } from "./DocsImg.tsx";
+
+const { light, dark, height, width, alt }: Props = Astro.props;
+---
+
+<Img client:only="solid-js" light={light} dark={dark} height={height} width={width} alt={alt}>
+	<img slot="fallback" src={light} height={height} width={width} alt={alt} />
+</Img>
