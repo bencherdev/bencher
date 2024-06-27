@@ -39,6 +39,9 @@ const getColorScheme = () => {
 	return Theme.Light;
 };
 
+export const storeTheme = (theme: Theme) =>
+	window.localStorage.setItem(BENCHER_THEME_KEY, theme);
+
 export const themeText = (theme: Theme) => {
 	switch (theme) {
 		case Theme.Light:

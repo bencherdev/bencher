@@ -1,14 +1,11 @@
 ---
-import { Image } from "astro:assets";
-
 import {
 	BENCHER_CHAT_URL,
 	BENCHER_GITHUB_URL,
 	BENCHER_LINKEDIN_URL,
 	BENCHER_REDDIT_URL,
-	BENCHER_WORDMARK,
-	BENCHER_WORDMARK_FOOTER_ID,
 } from "../../util/ext";
+import ThemeWordmark from "../navbar/theme/ThemeWordmark.astro";
 ---
 
 <footer class="footer" style="margin-top: 1rem;">
@@ -18,7 +15,7 @@ import {
 				<div class="content">
 					<h2 class="title is-4">
 						<a class="navbar-item" title="🐰 Bencher" href="/">
-							<Image id={BENCHER_WORDMARK_FOOTER_ID} src={BENCHER_WORDMARK} width="150" height="28.25" alt="🐰 Bencher" />
+							<ThemeWordmark />
 						</a>
 					</h2>
 					<h3 class="is-5"><a href="/docs/explanation/continuous-benchmarking/">Continuous Benchmarking</a></h3>

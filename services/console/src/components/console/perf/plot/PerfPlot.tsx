@@ -1,4 +1,11 @@
-import { type Accessor, Match, type Resource, Show, Switch } from "solid-js";
+import {
+	type Accessor,
+	Match,
+	type Resource,
+	Show,
+	Switch,
+	createMemo,
+} from "solid-js";
 import type { PerfTab } from "../../../../config/types";
 import type {
 	JsonAuthUser,
@@ -106,15 +113,18 @@ export interface Props {
 }
 
 const PerfPlot = (props: Props) => {
+	const theme = createMemo(() => themeColor(props.theme()));
+
 	return (
 		<div class="columns">
 			<div class="column">
-				<nav class={`panel ${themeColor(props.theme())}`}>
+				<nav class={`panel ${theme()}`}>
 					<PlotHeader
 						apiUrl={props.apiUrl}
 						user={props.user}
 						project={props.project}
 						project_slug={props.project_slug}
+						theme={props.theme}
 						isConsole={props.isConsole}
 						isEmbed={props.isEmbed}
 						isPlotInit={props.isPlotInit}

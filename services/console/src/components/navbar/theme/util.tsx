@@ -6,6 +6,7 @@ setInterval(() => {
 	const newTheme = getTheme();
 	if (theme() !== newTheme) {
 		setTheme(newTheme);
+		document.documentElement.setAttribute("data-theme", newTheme);
 	}
 }, 100);
 export const themeSignal = theme;

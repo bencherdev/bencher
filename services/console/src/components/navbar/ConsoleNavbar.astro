@@ -1,13 +1,11 @@
 ---
-import { Image } from "astro:assets";
-
-import { BENCHER_WORDMARK, BENCHER_WORDMARK_ID } from "../../util/ext";
 import { BENCHER_NAVBAR_BURGER_ID, BENCHER_NAVBAR_MENU_ID } from "./id";
 import ThemeToggle from "./theme/ThemeToggle.astro";
 import NavbarProjects from "./NavbarProjects";
 import NavbarDropdown from "./NavbarDropdown";
 import NavbarHelp from "./NavbarHelp";
 import FallbackNavbarHelp from "./NavbarHelp.astro";
+import ThemeWordmark from "./theme/ThemeWordmark.astro";
 
 const { apiUrl, params } = Astro.props;
 ---
@@ -23,7 +21,7 @@ const { apiUrl, params } = Astro.props;
 			title="Bencher - Continuous Benchmarking"
 			href="/console"
 		>
-			<Image id={BENCHER_WORDMARK_ID} src={BENCHER_WORDMARK} width="150" height="28.25" alt="🐰 Bencher" />
+			<ThemeWordmark />
 		</a>
 
 		<button

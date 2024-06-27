@@ -12,6 +12,7 @@ import NavbarHelp from "./NavbarHelp.astro";
 import AuthButtons from "./AuthButtons";
 import PricingLink from "./PricingLink";
 import GitHubLink from "./GitHubLink";
+import AuthWordmark from "./AuthWordmark";
 ---
 
 <nav
@@ -20,13 +21,16 @@ import GitHubLink from "./GitHubLink";
 	aria-label="main navigation"
 >
 	<div class="navbar-brand">
-		<a
-			class="navbar-item"
-			title="Bencher - Continuous Benchmarking"
-			href="/"
-		>
-			<Image id={BENCHER_WORDMARK_ID} src={BENCHER_WORDMARK} width="150" height="28.25" alt="🐰 Bencher" />
-		</a>
+		<AuthWordmark client:only="solid-js">
+			<a
+				slot="fallback"
+				class="navbar-item"
+				title="Bencher - Continuous Benchmarking"
+				href="/"
+			>
+				<Image id={BENCHER_WORDMARK_ID} src={BENCHER_WORDMARK} width="150" height="28.25" alt="🐰 Bencher" />
+			</a>
+		</AuthWordmark>
 
 		<button
 			id={BENCHER_NAVBAR_BURGER_ID}

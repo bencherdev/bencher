@@ -14,15 +14,10 @@ import {
 	type JsonMeasure,
 	type JsonProject,
 } from "../../../../types/bencher";
-import {
-	BENCHER_WORDMARK,
-	BENCHER_WORDMARK_DARK,
-	BENCHER_WORDMARK_ID,
-} from "../../../../util/ext";
 import { httpGet } from "../../../../util/http";
 import { BENCHER_MEASURE_ID } from "./util";
 import { BACK_PARAM, encodePath } from "../../../../util/url";
-import { Theme, getTheme, themeWordmark } from "../../../navbar/theme/theme";
+import { type Theme, themeWordmark } from "../../../navbar/theme/theme";
 
 const BENCHER_MEASURE = "--bencher-measure--";
 
@@ -31,6 +26,7 @@ export interface Props {
 	user: JsonAuthUser;
 	project: Resource<JsonProject>;
 	project_slug: Accessor<undefined | string>;
+	theme: Accessor<Theme>;
 	isConsole: boolean;
 	isEmbed: boolean;
 	isPlotInit: Accessor<boolean>;
@@ -208,7 +204,11 @@ const EmbedPlotHeader = (props: Props) => {
 		}
 		return (
 			<a href={perfUrl()} target="_blank" rel="noreferrer">
-				<img src={themeWordmark(getTheme())} width="128em" alt="🐰 Bencher" />
+				<img
+					src={themeWordmark(props.theme())}
+					width="128em"
+					alt="🐰 Bencher"
+				/>
 			</a>
 		);
 	});

@@ -1,0 +1,8 @@
+---
+import Wordmark from "./DocsWordmark.tsx";
+import { BENCHER_WORDMARK } from "../../../util/ext.ts";
+---
+
+<Wordmark client:only="solid-js">
+	<img slot="fallback" src={BENCHER_WORDMARK} width="90%" alt="🐰 Bencher" />
+</Wordmark>
