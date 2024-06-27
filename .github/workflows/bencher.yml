@@ -891,10 +891,10 @@ jobs:
         run: flyctl deploy --local-only --config fly/fly.toml --wait-timeout 300
       - name: Rebase main on cloud
         run: |
-            git fetch
+            git fetch origin main
             git checkout main
             git pull
-            git rebase --no-ff cloud
+            git rebase origin/cloud
             git push
 
   # UI Netlify
@@ -918,11 +918,12 @@ jobs:
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          DEPLOY_MESSAGE: "${{ github.event.head_commit.message }}"
         run: |
           npx netlify-cli \
           deploy \
           --alias ${GITHUB_REF#refs/*/} \
-          --message "${{ github.event.head_commit.message }}" \
+          --message '${{ env.DEPLOY_MESSAGE }}' \
           --json \
           | tee netlify.json
       - uses: rui314/setup-mold@v1
