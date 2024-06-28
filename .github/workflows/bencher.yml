@@ -891,6 +891,9 @@ jobs:
         run: flyctl deploy --local-only --config fly/fly.toml --wait-timeout 300
       - name: Rebase main on cloud
         run: |
+            git fetch origin cloud
+            git checkout cloud
+            git pull
             git fetch origin main
             git checkout main
             git pull
